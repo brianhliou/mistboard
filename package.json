@@ -144,9 +144,9 @@
     }
   },
   "devDependencies": {
-    "@biomejs/biome": "2.5.6",
+    "@biomejs/biome": "2.5.12",
     "@playwright/test": "^1.62.1",
-    "concurrently": "10.0.4",
+    "concurrently": "10.0.5",
     "madge": "8.0.0",
     "opentype.js": "^2.0.0"
   }
