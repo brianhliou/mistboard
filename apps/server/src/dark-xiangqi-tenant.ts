@@ -348,7 +348,10 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
         darkXiangqiCaptureLedger(events),
       ),
     truthView: (state, events) =>
-      darkXiangqiTruthView(state, darkXiangqiObservedCaptures(darkXiangqiCaptureLedger(events), 'truth')),
+      darkXiangqiTruthView(
+        state,
+        darkXiangqiObservedCaptures(darkXiangqiCaptureLedger(events), 'truth'),
+      ),
   },
   engine: {
     terminalContext: 'fog-observation',

@@ -12055,7 +12055,8 @@
                   },
                   "a1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "b1": {
                     "color": "black",
@@ -12064,59 +12065,73 @@
                   },
                   "c1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "g1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "i1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "h3": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "cannon",
+                    "faceDown": false
                   },
                   "a4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "c4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "e4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "g4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "i4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "a7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "c7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "e7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "g7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "i7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "f10": {
                     "color": "red",
@@ -12125,15 +12140,18 @@
                   },
                   "g10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "h10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "horse",
+                    "faceDown": false
                   },
                   "i10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "b10": {
                     "color": "black",
@@ -12149,7 +12167,7 @@
                   },
                   {
                     "owner": "red",
-                    "role": null
+                    "role": "horse"
                   },
                   {
                     "owner": "black",
@@ -12157,7 +12175,7 @@
                   },
                   {
                     "owner": "red",
-                    "role": null
+                    "role": "advisor"
                   },
                   {
                     "owner": "black",
@@ -12169,7 +12187,7 @@
                   },
                   {
                     "owner": "red",
-                    "role": null
+                    "role": "advisor"
                   },
                   {
                     "owner": "black",
@@ -12177,7 +12195,7 @@
                   },
                   {
                     "owner": "red",
-                    "role": null
+                    "role": "horse"
                   }
                 ],
                 "inCheck": false,
@@ -12387,7 +12405,7 @@
               "seatProfiles": {},
               "state": {
                 "id": "jq_golden-a",
-                "perspective": "black",
+                "perspective": "red",
                 "board": {
                   "e1": {
                     "color": "red",
@@ -12401,7 +12419,8 @@
                   },
                   "a1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "b1": {
                     "color": "black",
@@ -12410,59 +12429,73 @@
                   },
                   "c1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "g1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "i1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "h3": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "cannon",
+                    "faceDown": false
                   },
                   "a4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "c4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "e4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "g4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "i4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "a7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "c7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "e7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "g7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "i7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "f10": {
                     "color": "red",
@@ -12471,15 +12504,18 @@
                   },
                   "g10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "h10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "horse",
+                    "faceDown": false
                   },
                   "i10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "b10": {
                     "color": "black",
@@ -12491,7 +12527,7 @@
                 "captured": [
                   {
                     "owner": "black",
-                    "role": null
+                    "role": "horse"
                   },
                   {
                     "owner": "red",
@@ -12499,7 +12535,7 @@
                   },
                   {
                     "owner": "black",
-                    "role": null
+                    "role": "advisor"
                   },
                   {
                     "owner": "red",
@@ -12507,11 +12543,11 @@
                   },
                   {
                     "owner": "black",
-                    "role": null
+                    "role": "chariot"
                   },
                   {
                     "owner": "black",
-                    "role": null
+                    "role": "elephant"
                   },
                   {
                     "owner": "red",
@@ -12519,7 +12555,7 @@
                   },
                   {
                     "owner": "black",
-                    "role": null
+                    "role": "advisor"
                   },
                   {
                     "owner": "red",
@@ -12567,7 +12603,164 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "jq_golden-a",
+                  "gameSpecId": "jieqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "jq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "jq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "jq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "jq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "b3",
+                    "to": "b10"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "jq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "h8",
+                    "to": "h1"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "jq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "b10",
+                    "to": "d10"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "jq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "h1",
+                    "to": "f1"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "jq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "d10",
+                    "to": "a10"
+                  },
+                  "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "jq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "b8",
+                    "to": "b10"
+                  },
+                  "ply": 6
+                },
+                {
+                  "type": "move-played",
+                  "at": 40000,
+                  "roomId": "jq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a10",
+                    "to": "c10"
+                  },
+                  "ply": 7
+                },
+                {
+                  "type": "move-played",
+                  "at": 45000,
+                  "roomId": "jq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "f1",
+                    "to": "d1"
+                  },
+                  "ply": 8
+                },
+                {
+                  "type": "move-played",
+                  "at": 50000,
+                  "roomId": "jq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "c10",
+                    "to": "f10"
+                  },
+                  "ply": 9
+                },
+                {
+                  "type": "move-played",
+                  "at": 55000,
+                  "roomId": "jq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "d1",
+                    "to": "b1"
+                  },
+                  "ply": 10
+                },
+                {
+                  "type": "seat-resigned",
+                  "at": 100000,
+                  "roomId": "jq_golden-a",
+                  "color": "red"
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -12577,16 +12770,173 @@
               "state": {
                 "id": "jq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "e1": {
+                    "color": "red",
+                    "role": "general",
+                    "faceDown": false
+                  },
+                  "e10": {
+                    "color": "black",
+                    "role": "general",
+                    "faceDown": false
+                  },
+                  "a1": {
+                    "color": "red",
+                    "role": "chariot",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "color": "black",
+                    "role": "cannon",
+                    "faceDown": false
+                  },
+                  "c1": {
+                    "color": "red",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "g1": {
+                    "color": "red",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "i1": {
+                    "color": "red",
+                    "role": "chariot",
+                    "faceDown": false
+                  },
+                  "h3": {
+                    "color": "red",
+                    "role": "cannon",
+                    "faceDown": false
+                  },
+                  "a4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "c4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "e4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "g4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "i4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "a7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "i7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "f10": {
+                    "color": "red",
+                    "role": "cannon",
+                    "faceDown": false
+                  },
+                  "g10": {
+                    "color": "black",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "h10": {
+                    "color": "black",
+                    "role": "horse",
+                    "faceDown": false
+                  },
+                  "i10": {
+                    "color": "black",
+                    "role": "chariot",
+                    "faceDown": false
+                  },
+                  "b10": {
+                    "color": "black",
+                    "role": "cannon",
+                    "faceDown": false
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "horse"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "horse"
+                  },
+                  {
+                    "owner": "black",
+                    "role": "advisor"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "advisor"
+                  },
+                  {
+                    "owner": "black",
+                    "role": "chariot"
+                  },
+                  {
+                    "owner": "black",
+                    "role": "elephant"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "advisor"
+                  },
+                  {
+                    "owner": "black",
+                    "role": "advisor"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "horse"
+                  }
+                ],
                 "inCheck": false,
                 "status": {
                   "type": "finished",
                   "winner": "black",
                   "reason": "resignation"
                 },
-                "moveNumber": 6
+                "moveNumber": 6,
+                "lastMove": {
+                  "from": "d1",
+                  "to": "b1"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -17342,27 +17692,33 @@
                   },
                   "a1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "b1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "horse",
+                    "faceDown": false
                   },
                   "c1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "d1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "advisor",
+                    "faceDown": false
                   },
                   "f1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "advisor",
+                    "faceDown": false
                   },
                   "g1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "h1": {
                     "color": "black",
@@ -17371,59 +17727,73 @@
                   },
                   "i1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "h3": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "cannon",
+                    "faceDown": false
                   },
                   "a4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "c4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "e4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "g4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "i4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "a7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "c7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "e7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "g7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "i7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "b8": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "cannon",
+                    "faceDown": false
                   },
                   "a10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "b10": {
                     "color": "red",
@@ -17432,27 +17802,33 @@
                   },
                   "c10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "d10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "advisor",
+                    "faceDown": false
                   },
                   "f10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "advisor",
+                    "faceDown": false
                   },
                   "g10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "h10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "horse",
+                    "faceDown": false
                   },
                   "i10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   }
                 },
                 "legalMoves": [],
@@ -17463,7 +17839,7 @@
                   },
                   {
                     "owner": "red",
-                    "role": null
+                    "role": "horse"
                   }
                 ],
                 "inCheck": false,
@@ -17594,7 +17970,7 @@
               "seatProfiles": {},
               "state": {
                 "id": "jq_golden-c",
-                "perspective": "black",
+                "perspective": "red",
                 "board": {
                   "e1": {
                     "color": "red",
@@ -17608,27 +17984,33 @@
                   },
                   "a1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "b1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "horse",
+                    "faceDown": false
                   },
                   "c1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "d1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "advisor",
+                    "faceDown": false
                   },
                   "f1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "advisor",
+                    "faceDown": false
                   },
                   "g1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "h1": {
                     "color": "black",
@@ -17637,59 +18019,73 @@
                   },
                   "i1": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "h3": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "cannon",
+                    "faceDown": false
                   },
                   "a4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "c4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "e4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "g4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "i4": {
                     "color": "red",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "a7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "c7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "e7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "g7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "i7": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "soldier",
+                    "faceDown": false
                   },
                   "b8": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "cannon",
+                    "faceDown": false
                   },
                   "a10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   },
                   "b10": {
                     "color": "red",
@@ -17698,34 +18094,40 @@
                   },
                   "c10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "d10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "advisor",
+                    "faceDown": false
                   },
                   "f10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "advisor",
+                    "faceDown": false
                   },
                   "g10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "elephant",
+                    "faceDown": false
                   },
                   "h10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "horse",
+                    "faceDown": false
                   },
                   "i10": {
                     "color": "black",
-                    "faceDown": true
+                    "role": "chariot",
+                    "faceDown": false
                   }
                 },
                 "legalMoves": [],
                 "captured": [
                   {
                     "owner": "black",
-                    "role": null
+                    "role": "horse"
                   },
                   {
                     "owner": "red",
@@ -17773,7 +18175,85 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "jq_golden-c",
+                  "gameSpecId": "jieqi",
+                  "timeControl": {
+                    "initialMs": 60000,
+                    "incrementMs": 1000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "jq_golden-c",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 1000,
+                    "initialMs": 60000,
+                    "remainingMs": {
+                      "black": 60000,
+                      "red": 60000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "jq_golden-c",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "jq_golden-c",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "jq_golden-c",
+                  "color": "red",
+                  "move": {
+                    "from": "b3",
+                    "to": "b10"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "jq_golden-c",
+                  "color": "black",
+                  "move": {
+                    "from": "h8",
+                    "to": "h1"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "clock-expired",
+                  "at": 90000,
+                  "roomId": "jq_golden-c",
+                  "color": "red",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 1000,
+                    "initialMs": 60000,
+                    "remainingMs": {
+                      "black": 61000,
+                      "red": 0
+                    },
+                    "runningSince": null
+                  }
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -17783,16 +18263,180 @@
               "state": {
                 "id": "jq_golden-c",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "e1": {
+                    "color": "red",
+                    "role": "general",
+                    "faceDown": false
+                  },
+                  "e10": {
+                    "color": "black",
+                    "role": "general",
+                    "faceDown": false
+                  },
+                  "a1": {
+                    "color": "red",
+                    "role": "chariot",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "color": "red",
+                    "role": "horse",
+                    "faceDown": false
+                  },
+                  "c1": {
+                    "color": "red",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "d1": {
+                    "color": "red",
+                    "role": "advisor",
+                    "faceDown": false
+                  },
+                  "f1": {
+                    "color": "red",
+                    "role": "advisor",
+                    "faceDown": false
+                  },
+                  "g1": {
+                    "color": "red",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "h1": {
+                    "color": "black",
+                    "role": "cannon",
+                    "faceDown": false
+                  },
+                  "i1": {
+                    "color": "red",
+                    "role": "chariot",
+                    "faceDown": false
+                  },
+                  "h3": {
+                    "color": "red",
+                    "role": "cannon",
+                    "faceDown": false
+                  },
+                  "a4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "c4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "e4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "g4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "i4": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "a7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "i7": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "cannon",
+                    "faceDown": false
+                  },
+                  "a10": {
+                    "color": "black",
+                    "role": "chariot",
+                    "faceDown": false
+                  },
+                  "b10": {
+                    "color": "red",
+                    "role": "cannon",
+                    "faceDown": false
+                  },
+                  "c10": {
+                    "color": "black",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "d10": {
+                    "color": "black",
+                    "role": "advisor",
+                    "faceDown": false
+                  },
+                  "f10": {
+                    "color": "black",
+                    "role": "advisor",
+                    "faceDown": false
+                  },
+                  "g10": {
+                    "color": "black",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "h10": {
+                    "color": "black",
+                    "role": "horse",
+                    "faceDown": false
+                  },
+                  "i10": {
+                    "color": "black",
+                    "role": "chariot",
+                    "faceDown": false
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "horse"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "horse"
+                  }
+                ],
                 "inCheck": false,
                 "status": {
                   "type": "finished",
                   "winner": "black",
                   "reason": "timeout"
                 },
-                "moveNumber": 2
+                "moveNumber": 2,
+                "lastMove": {
+                  "from": "h8",
+                  "to": "h1"
+                }
               },
               "timeControl": {
                 "initialMs": 60000,

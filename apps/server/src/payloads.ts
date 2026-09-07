@@ -10,11 +10,7 @@ import {
 } from '@mistboard/game';
 import { engineVersionDisplayName } from './engine-registry.js';
 import type { LiveSeatProfile } from './first-party-bots.js';
-import {
-  type GameAccessMode,
-  modeForProjection,
-  roomViewPolicy,
-} from './server-policy.js';
+import { type GameAccessMode, modeForProjection, roomViewPolicy } from './server-policy.js';
 
 export type Seat = Color | 'spectator';
 

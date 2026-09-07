@@ -130,6 +130,28 @@ export function getJungleFlipClientView(
   return getJungleFlipPlayerView(state, client.seat);
 }
 
+// The unredacted board, served to every client once the game is FINISHED
+// (docs-private/spectator-visibility-matrix.md). The runtime owns the WHEN via
+// roomViewPolicy; this only says what truth looks like on the wire.
+//
+// Face-down tiles come back with their dealt colour and role. Same reasoning as
+// banqi, its symmetric-information sibling: the postgame truth history already
+// exposes the whole board once a game ends, so the room is catching up with the
+// review page rather than disclosing something new.
+export function getJungleFlipTruthView(state: JungleFlipGameState): JungleFlipPlayerView {
+  const base = getJungleFlipPlayerView(state, JUNGLE_FLIP_SEATS[0]);
+  const board: JungleFlipPlayerView['board'] = {};
+  for (const [square, piece] of Object.entries(state.board)) {
+    if (!piece) continue;
+    board[square as JungleFlipSquare] = {
+      color: piece.color,
+      role: piece.role,
+      faceDown: false,
+    };
+  }
+  return { ...base, board, legalMoves: [] };
+}
+
 // Kernel end reason -> persisted GameTermination. Total by construction: adding a
 // JungleFlipGameEndReason without a termination is a compile error here.
 const JUNGLE_FLIP_TERMINATIONS: Record<JungleFlipGameEndReason, persistence.GameTermination> = {
@@ -173,6 +195,7 @@ export const jungleFlipTenant: JungleFlipTenant = {
   visibility: {
     clientEventFor: jungleFlipClientEventFor,
     viewForClient: (state, client) => getJungleFlipClientView(state, client),
+    truthView: (state) => getJungleFlipTruthView(state),
   },
   // Mark the MistyJungleFlip engine seat as always-present so the disconnect-forfeit
   // logic never forfeits it (a PvE engine has no WS client) and the client stops

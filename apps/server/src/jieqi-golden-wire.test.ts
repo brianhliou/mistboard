@@ -347,7 +347,12 @@ test('jieqi golden wire: the server-secret deal never reaches any client', () =>
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
       const snapshots = wireSnapshots(step);
-      for (const seat of SEATS) {
+      // The deal stays off the wire at EVERY status, spectators included. A
+      // finished room reveals the log and the true board, which tells a reader
+      // the same identities; the raw `setup` field is server bookkeeping and
+      // never ships. Deliberately NOT scoped to live steps: this is the one
+      // assertion here that must survive the finished-game reveal untouched.
+      for (const seat of [...SEATS, 'spectator'] as const) {
         for (const event of snapshots[seat]!.events) {
           assert.ok(
             !('setup' in event),
@@ -355,11 +360,18 @@ test('jieqi golden wire: the server-secret deal never reaches any client', () =>
           );
         }
       }
-      // Both players still receive the room-created event (deal-stripped);
-      // spectators receive no events at all.
+      // Both players always receive room-created (deal-stripped). Spectators get
+      // no events while the game is live, and the whole log once it ends.
       const redCreated = snapshots.red!.events.filter((e) => e.type === 'room-created');
       assert.equal(redCreated.length, 1, `${script.id}/${step.label}: red must see room-created`);
-      assert.equal(snapshots.spectator!.events.length, 0);
+      if (isFinishedStep(step)) {
+        assert.ok(
+          snapshots.spectator!.events.length > 0,
+          `${script.id}/${step.label}: a finished room must hand the spectator its log`,
+        );
+      } else {
+        assert.equal(snapshots.spectator!.events.length, 0);
+      }
     }
   }
   // And directly at the redaction boundary: a room-created carrying a deal is
@@ -400,10 +412,25 @@ test('jieqi golden wire: a face-down board entry carries a colour but never a ro
   }
 });
 
-test('jieqi golden wire: capture reveal is capturer-only (the victim never learns it)', () => {
+// A step whose recorded status is finished. Read from the payload rather than
+// matched on the label, so a new terminal script step is classified correctly
+// without anyone remembering to add its name here.
+function isFinishedStep(step: GoldenStep): boolean {
+  // The recorded snapshot type does not declare `status` (the fixtures only
+  // model the fields each test reads), so read it through a narrow cast rather
+  // than widening a shared fixture type for one predicate.
+  const state = wireSnapshots(step).spectator?.state as { status?: { type?: string } } | undefined;
+  return state?.status?.type === 'finished';
+}
+
+test('jieqi golden wire: capture reveal is capturer-only while the game is live', () => {
   let hiddenCaptureSeen = false;
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
+      // A finished room reveals every captured role to everyone, so the
+      // capturer-only rule is a LIVE invariant. Asserted for finished steps by
+      // 'a finished room opens fully to a spectator' below.
+      if (isFinishedStep(step)) continue;
       const snapshots = wireSnapshots(step);
       const red = snapshots.red!.state.captured;
       const black = snapshots.black!.state.captured;
@@ -465,9 +492,10 @@ test('jieqi golden wire: the position is public — both seats share moves and l
   }
 });
 
-test('jieqi golden wire: spectators get an empty view and no events', () => {
+test('jieqi golden wire: spectators get an empty view while the game is live', () => {
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
+      if (isFinishedStep(step)) continue;
       const spectator = wireSnapshots(step).spectator!;
       assert.deepStrictEqual(spectator.state.board, {});
       assert.deepStrictEqual(spectator.state.captured, []);
@@ -476,6 +504,38 @@ test('jieqi golden wire: spectators get an empty view and no events', () => {
       assert.deepStrictEqual(spectator.events, []);
     }
   }
+});
+
+test('jieqi golden wire: a finished room opens fully to a spectator', () => {
+  // The other half of the matrix row above. Split so the live invariant cannot
+  // be silently widened: weakening either test leaves the other failing.
+  let finishedSteps = 0;
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      if (!isFinishedStep(step)) continue;
+      finishedSteps += 1;
+      const spectator = wireSnapshots(step).spectator!;
+      assert.ok(
+        Object.keys(spectator.state.board).length > 0,
+        `${script.id}/${step.label}: finished board must not be empty`,
+      );
+      assert.ok(spectator.events.length > 0, `${script.id}/${step.label}: log must be delivered`);
+      // Face-down identities open up, which is what truth means here and is
+      // already public via the postgame truth history (see f2ad3e9).
+      for (const [square, entry] of Object.entries(spectator.state.board)) {
+        assert.equal(
+          entry.faceDown,
+          false,
+          `${script.id}/${step.label}: ${square} still face-down`,
+        );
+      }
+      // And every captured role is known, not just the capturer's.
+      for (const captured of spectator.state.captured) {
+        assert.notEqual(captured.role, null, `${script.id}/${step.label}: captured role withheld`);
+      }
+    }
+  }
+  assert.ok(finishedSteps > 0, 'no finished step in the scripts: this test asserted nothing');
 });
 
 test('jieqi golden wire: snapshot marks room mode and omits chess-only wire keys', () => {

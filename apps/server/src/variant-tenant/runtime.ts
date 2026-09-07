@@ -15,13 +15,13 @@
 
 import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';
 import { clockPolicyKindFor, isAbortReason, maybeGameSpecForId } from '@mistboard/game';
-import { roomViewPolicy } from '../server-policy.js';
 import { countDeployGatingRooms } from '../deploy-gate.js';
 import {
   firstPartyBotForEngine,
   firstPartyBotForId,
   type LiveSeatProfile,
 } from '../first-party-bots.js';
+import { roomViewPolicy } from '../server-policy.js';
 import type {
   TenantClientEvent,
   TenantClockState,
@@ -722,15 +722,28 @@ export function tenantEventsForClient<
   for (const event of room.events) {
     if (event.type === 'move-played') ply += 1;
     const visible = reveal
-      ? ((event.type === 'move-played' ? { ...event, ply } : event) as TenantClientEvent<
-          C,
-          M,
-          Spec
-        >)
+      ? ((event.type === 'move-played'
+          ? { ...event, ply }
+          : revealedNonMoveEvent(event)) as TenantClientEvent<C, M, Spec>)
       : tenant.visibility.clientEventFor(event, client.seat, ply);
     if (visible) out.push(visible);
   }
   return out;
+}
+
+// Revealing a finished game opens the MOVE LOG, not the server's bookkeeping.
+// `room-created.setup` is the per-game deal: a crypto secret the tenants strip
+// from every client event, and the one field a naive "send the raw log" reveal
+// would leak by accident. It stays stripped, because the truth board already
+// carries the identities it would have told you. Same information to a reader,
+// one less internal field on the wire.
+function revealedNonMoveEvent<C extends string, M, Spec extends string>(
+  event: TenantRoomEvent<C, M, Spec>,
+): TenantRoomEvent<C, M, Spec> {
+  if (event.type !== 'room-created' || event.setup === undefined) return event;
+  const redacted = { ...event };
+  delete redacted.setup;
+  return redacted;
 }
 
 function tenantRoomRevealsTruth<

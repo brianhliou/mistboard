@@ -138,6 +138,31 @@ export function getJieqiClientView(
   return getJieqiPlayerView(state, perspective);
 }
 
+// The unredacted board, served to every client once the game is FINISHED
+// (docs-private/spectator-visibility-matrix.md). The runtime owns the WHEN via
+// roomViewPolicy; this only says what truth looks like on the wire.
+//
+// Two things open up that no seat could see during play: face-down pieces carry
+// their real role, and every captured piece carries its role rather than null
+// for the ones the viewer did not capture. Both are already public once a game
+// ends (the postgame truth history reveals the whole board, and f2ad3e9
+// reconstructed a full deal from exactly that), so this is the room catching up
+// with the review page rather than a new disclosure.
+export function getJieqiTruthView(state: JieqiGameState): JieqiPlayerView {
+  const base = getJieqiPlayerView(state, 'red');
+  const board: JieqiPlayerView['board'] = {};
+  for (const [square, piece] of Object.entries(state.board)) {
+    if (!piece) continue;
+    board[square as JieqiMove['from']] = { color: piece.color, role: piece.role, faceDown: false };
+  }
+  return {
+    ...base,
+    board,
+    captured: state.captures.map((capture) => ({ owner: capture.owner, role: capture.role })),
+    legalMoves: [],
+  };
+}
+
 export const jieqiTenant: JieqiTenant = {
   kind: 'jieqi',
   gameSpecId: JIEQI_SPEC_ID,
@@ -168,6 +193,7 @@ export const jieqiTenant: JieqiTenant = {
   visibility: {
     clientEventFor: jieqiClientEventFor,
     viewForClient: (state, client) => getJieqiClientView(state, client),
+    truthView: (state) => getJieqiTruthView(state),
   },
   engine: {
     terminalContext: 'repetition-window',

@@ -449,10 +449,24 @@ function wireSnapshots(step: GoldenStep): Record<string, WireSnapshot> {
   return JSON.parse(JSON.stringify(step.snapshots));
 }
 
-test('dark chess golden wire: move events never cross seats, at any status', () => {
+// A step whose recorded status is finished. Read from the payload rather than
+// matched on the label, so a new terminal script step is classified correctly
+// without anyone remembering to add its name here.
+function isFinishedStep(step: GoldenStep): boolean {
+  // The recorded snapshot type does not declare `status` (the fixtures only
+  // model the fields each test reads), so read it through a narrow cast rather
+  // than widening a shared fixture type for one predicate.
+  const state = wireSnapshots(step).white?.state as { status?: { type?: string } } | undefined;
+  return state?.status?.type === 'finished';
+}
+
+test('dark chess golden wire: move events never cross seats while the game is live', () => {
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
       if (step.label === 'admin-probe') continue;
+      // Fog is a LIVE invariant. A finished room hands everyone the whole log,
+      // asserted by 'a finished room opens fully to a spectator' below.
+      if (isFinishedStep(step)) continue;
       const snapshots = wireSnapshots(step);
       for (const seat of ['white', 'black', 'spectator'] as const) {
         const others =
@@ -482,10 +496,11 @@ test('dark chess golden wire: move events never cross seats, at any status', () 
   }
 });
 
-test('dark chess golden wire: spectators get the empty fog view', () => {
+test('dark chess golden wire: spectators get the empty fog view while live', () => {
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
       if (step.label === 'admin-probe') continue;
+      if (isFinishedStep(step)) continue;
       const view = wireSnapshots(step).spectator!.state;
       assert.deepStrictEqual(view.board, {}, `${script.id}/${step.label}`);
       assert.deepStrictEqual(view.visibleSquares, []);
@@ -563,4 +578,31 @@ test('dark chess golden wire: devViews reveal is admin-probe-only', () => {
     }
     assert.ok(sawAdminProbe, `${script.id}: missing admin probe step`);
   }
+});
+
+test('dark chess golden wire: a finished room opens fully to a spectator', () => {
+  // The other half of the two live invariants above. Split so neither can be
+  // silently widened: weakening one leaves the other failing.
+  let finishedSteps = 0;
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      if (step.label === 'admin-probe') continue;
+      if (!isFinishedStep(step)) continue;
+      finishedSteps += 1;
+      const spectator = wireSnapshots(step).spectator!;
+      assert.ok(
+        Object.keys(spectator.state.board).length > 0,
+        `${script.id}/${step.label}: finished board must not be empty`,
+      );
+      assert.ok(spectator.events.length > 0, `${script.id}/${step.label}: log must be delivered`);
+      // Both seats' moves are present, which is exactly what the live invariant
+      // forbids and the finished state allows. Same content /game/:id already
+      // serves to any signed-out stranger.
+      const colors = new Set(
+        spectator.events.filter((e) => e.type === 'move-played').map((e) => e.color),
+      );
+      assert.ok(colors.size === 2, `${script.id}/${step.label}: expected both colors' moves`);
+    }
+  }
+  assert.ok(finishedSteps > 0, 'no finished step in the scripts: this test asserted nothing');
 });

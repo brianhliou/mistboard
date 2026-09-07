@@ -4,7 +4,6 @@ import {
   type XiangqiCapture,
   type XiangqiColor,
   type XiangqiGameState,
-  type XiangqiSquare,
 } from '@mistboard/game';
 import { darkXiangqiRooms } from './../dark-xiangqi-registration.js';
 import type {

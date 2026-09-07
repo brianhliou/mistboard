@@ -313,7 +313,11 @@ test('live fog replay API returns 403 for every mode', () => {
   });
 });
 
-test('finished Fog of War room stays fogged for a seated player (model A: no in-room reveal)', () => {
+// The finished half of the visibility matrix. The LIVE half is covered by the
+// four 'live Fog of War ...' tests above, and those must keep passing untouched:
+// this pair changing is a deliberate behaviour change, those changing would be a
+// hidden-information leak.
+test('finished Fog of War room reveals the whole game to a seated player', () => {
   const room = fogRoomFixture({
     status: { type: 'finished', winner: 'white', reason: 'king-captured' },
   });
@@ -326,16 +330,17 @@ test('finished Fog of War room stays fogged for a seated player (model A: no in-
     }),
   );
 
-  // White sees its own piece, never the opponent's hidden queen on h8, and
-  // never black's move-played event — finish does not lift the fog. The public
-  // reveal lives only at /game/:id (eventReplayResponse), never in the room.
+  // Once the game is over the fog lifts in the room too: white now sees the
+  // opponent's queen on h8 and black's move events. This is the same content
+  // /game/:id (eventReplayResponse) already serves to any signed-out stranger,
+  // so nothing escapes here that was not already public.
   assert.match(payload, /"a1"/);
-  assert.doesNotMatch(payload, /"h8"/);
-  assert.doesNotMatch(payload, /queen/);
-  assert.doesNotMatch(payload, /move-played/);
+  assert.match(payload, /"h8"/);
+  assert.match(payload, /queen/);
+  assert.match(payload, /move-played/);
 });
 
-test('finished Fog of War room reveals nothing to a spectator (model A: no in-room reveal)', () => {
+test('finished Fog of War room reveals the whole game to a spectator', () => {
   const room = fogRoomFixture({
     status: { type: 'finished', winner: 'white', reason: 'king-captured' },
   });
@@ -346,11 +351,14 @@ test('finished Fog of War room reveals nothing to a spectator (model A: no in-ro
     solo: false,
   });
 
-  assert.deepEqual(payload.state.board, {});
-  assert.deepEqual(payload.state.visibleSquares, []);
+  // The row that makes a shared room link worth sending: a stranger opening a
+  // finished fog room gets the game rather than a blank board.
+  assert.ok(Object.keys(payload.state.board).length > 0, 'finished board must not be empty');
+  assert.ok(payload.state.visibleSquares.length > 0, 'finished view must see the whole board');
   assert.equal(
     payload.events.some((event) => event.type === 'move-played'),
-    false,
+    true,
+    'a finished room must hand the spectator the move log',
   );
 });
 

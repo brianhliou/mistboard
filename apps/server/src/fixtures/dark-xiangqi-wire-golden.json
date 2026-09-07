@@ -11851,6 +11851,17 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 15000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a10",
+                    "to": "a8"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
                   "at": 20000,
                   "roomId": "dxq_golden-a",
                   "color": "red",
@@ -11862,6 +11873,17 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 25000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a6"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
                   "at": 30000,
                   "roomId": "dxq_golden-a",
                   "color": "red",
@@ -11870,6 +11892,17 @@
                     "to": "a2"
                   },
                   "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a6",
+                    "to": "a5"
+                  },
+                  "ply": 6
                 },
                 {
                   "type": "seat-resigned",
@@ -11944,24 +11977,10 @@
                     },
                     "shrouded": false
                   },
-                  "i4": {
-                    "piece": {
-                      "color": "red",
-                      "role": "soldier"
-                    },
-                    "shrouded": false
-                  },
                   "a2": {
                     "piece": {
                       "color": "red",
                       "role": "chariot"
-                    },
-                    "shrouded": false
-                  },
-                  "a4": {
-                    "piece": {
-                      "color": "red",
-                      "role": "soldier"
                     },
                     "shrouded": false
                   },
@@ -11979,9 +11998,9 @@
                     },
                     "shrouded": false
                   },
-                  "a5": {
+                  "a4": {
                     "piece": {
-                      "color": "black",
+                      "color": "red",
                       "role": "soldier"
                     },
                     "shrouded": false
@@ -12007,235 +12026,16 @@
                     },
                     "shrouded": false
                   },
-                  "b8": {
-                    "color": "black",
-                    "shrouded": true
-                  },
-                  "h8": {
-                    "color": "black",
-                    "shrouded": true
-                  },
-                  "b10": {
+                  "i4": {
                     "piece": {
-                      "color": "black",
-                      "role": "horse"
-                    },
-                    "shrouded": false
-                  },
-                  "h10": {
-                    "piece": {
-                      "color": "black",
-                      "role": "horse"
-                    },
-                    "shrouded": false
-                  }
-                },
-                "visibleSquares": [
-                  "a1",
-                  "a2",
-                  "a3",
-                  "a4",
-                  "a5",
-                  "b1",
-                  "b10",
-                  "b2",
-                  "b3",
-                  "b4",
-                  "b5",
-                  "b6",
-                  "b7",
-                  "b8",
-                  "c1",
-                  "c2",
-                  "c3",
-                  "c4",
-                  "c5",
-                  "d1",
-                  "d2",
-                  "d3",
-                  "e1",
-                  "e2",
-                  "e3",
-                  "e4",
-                  "e5",
-                  "f1",
-                  "f2",
-                  "f3",
-                  "g1",
-                  "g2",
-                  "g3",
-                  "g4",
-                  "g5",
-                  "h1",
-                  "h10",
-                  "h2",
-                  "h3",
-                  "h4",
-                  "h5",
-                  "h6",
-                  "h7",
-                  "h8",
-                  "i1",
-                  "i2",
-                  "i3",
-                  "i4",
-                  "i5"
-                ],
-                "legalMoves": [],
-                "status": {
-                  "type": "finished",
-                  "winner": "black",
-                  "reason": "resignation"
-                },
-                "moveNumber": 4,
-                "captures": {
-                  "red": [],
-                  "black": []
-                }
-              },
-              "timeControl": {
-                "initialMs": 180000,
-                "incrementMs": 2000
-              }
-            },
-            "black": {
-              "type": "snapshot",
-              "roomId": "dxq_golden-a",
-              "gameSpecId": "dark-xiangqi",
-              "serverAt": 0,
-              "clients": 0,
-              "seat": "black",
-              "solo": false,
-              "abortDeadline": null,
-              "clock": {
-                "activeColor": null,
-                "incrementMs": 2000,
-                "initialMs": 180000,
-                "remainingMs": {
-                  "black": 176000,
-                  "red": 151000
-                },
-                "runningSince": null
-              },
-              "connectedSeats": {
-                "red": false,
-                "black": false
-              },
-              "events": [
-                {
-                  "type": "room-created",
-                  "at": 1000,
-                  "roomId": "dxq_golden-a",
-                  "gameSpecId": "dark-xiangqi",
-                  "creatorPreference": "red",
-                  "timeControl": {
-                    "initialMs": 180000,
-                    "incrementMs": 2000
-                  }
-                },
-                {
-                  "type": "clock-started",
-                  "at": 1000,
-                  "roomId": "dxq_golden-a",
-                  "clock": {
-                    "activeColor": null,
-                    "incrementMs": 2000,
-                    "initialMs": 180000,
-                    "remainingMs": {
-                      "black": 180000,
-                      "red": 180000
-                    },
-                    "runningSince": null
-                  }
-                },
-                {
-                  "type": "seat-assigned",
-                  "at": 2000,
-                  "roomId": "dxq_golden-a",
-                  "clientId": "client-red-1",
-                  "seat": "red"
-                },
-                {
-                  "type": "seat-vacated",
-                  "at": 2500,
-                  "roomId": "dxq_golden-a",
-                  "clientId": "client-red-1",
-                  "seat": "red"
-                },
-                {
-                  "type": "seat-assigned",
-                  "at": 2800,
-                  "roomId": "dxq_golden-a",
-                  "clientId": "client-red",
-                  "seat": "red"
-                },
-                {
-                  "type": "seat-assigned",
-                  "at": 3000,
-                  "roomId": "dxq_golden-a",
-                  "clientId": "client-black",
-                  "seat": "black"
-                },
-                {
-                  "type": "move-played",
-                  "at": 15000,
-                  "roomId": "dxq_golden-a",
-                  "color": "black",
-                  "move": {
-                    "from": "a10",
-                    "to": "a8"
-                  },
-                  "ply": 2
-                },
-                {
-                  "type": "move-played",
-                  "at": 25000,
-                  "roomId": "dxq_golden-a",
-                  "color": "black",
-                  "move": {
-                    "from": "a7",
-                    "to": "a6"
-                  },
-                  "ply": 4
-                },
-                {
-                  "type": "move-played",
-                  "at": 35000,
-                  "roomId": "dxq_golden-a",
-                  "color": "black",
-                  "move": {
-                    "from": "a6",
-                    "to": "a5"
-                  },
-                  "ply": 6
-                },
-                {
-                  "type": "seat-resigned",
-                  "at": 60000,
-                  "roomId": "dxq_golden-a",
-                  "color": "red"
-                }
-              ],
-              "seats": {
-                "red": "client-red",
-                "black": "client-black"
-              },
-              "seatDisplayNames": {},
-              "seatProfiles": {},
-              "state": {
-                "id": "dxq_golden-a",
-                "perspective": "black",
-                "board": {
-                  "a5": {
-                    "piece": {
-                      "color": "black",
+                      "color": "red",
                       "role": "soldier"
                     },
                     "shrouded": false
                   },
-                  "a4": {
+                  "a5": {
                     "piece": {
-                      "color": "red",
+                      "color": "black",
                       "role": "soldier"
                     },
                     "shrouded": false
@@ -12344,19 +12144,321 @@
                       "role": "chariot"
                     },
                     "shrouded": false
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "i1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "i2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "i3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "i4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "i5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "i6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "i7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8",
+                  "i8",
+                  "a9",
+                  "b9",
+                  "c9",
+                  "d9",
+                  "e9",
+                  "f9",
+                  "g9",
+                  "h9",
+                  "i9",
+                  "a10",
+                  "b10",
+                  "c10",
+                  "d10",
+                  "e10",
+                  "f10",
+                  "g10",
+                  "h10",
+                  "i10"
+                ],
+                "legalMoves": [],
+                "status": {
+                  "type": "finished",
+                  "winner": "black",
+                  "reason": "resignation"
+                },
+                "moveNumber": 4,
+                "lastMove": {
+                  "from": "a6",
+                  "to": "a5"
+                },
+                "captures": {
+                  "red": [],
+                  "black": []
+                }
+              },
+              "timeControl": {
+                "initialMs": 180000,
+                "incrementMs": 2000
+              }
+            },
+            "black": {
+              "type": "snapshot",
+              "roomId": "dxq_golden-a",
+              "gameSpecId": "dark-xiangqi",
+              "serverAt": 0,
+              "clients": 0,
+              "seat": "black",
+              "solo": false,
+              "abortDeadline": null,
+              "clock": {
+                "activeColor": null,
+                "incrementMs": 2000,
+                "initialMs": 180000,
+                "remainingMs": {
+                  "black": 176000,
+                  "red": 151000
+                },
+                "runningSince": null
+              },
+              "connectedSeats": {
+                "red": false,
+                "black": false
+              },
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "dxq_golden-a",
+                  "gameSpecId": "dark-xiangqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "dxq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "dxq_golden-a",
+                  "clientId": "client-red-1",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-vacated",
+                  "at": 2500,
+                  "roomId": "dxq_golden-a",
+                  "clientId": "client-red-1",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2800,
+                  "roomId": "dxq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "dxq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "dxq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
                   },
-                  "b3": {
-                    "color": "red",
-                    "shrouded": true
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a10",
+                    "to": "a8"
                   },
-                  "h3": {
-                    "color": "red",
-                    "shrouded": true
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "dxq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a2",
+                    "to": "a1"
                   },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a6"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "dxq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a6",
+                    "to": "a5"
+                  },
+                  "ply": 6
+                },
+                {
+                  "type": "seat-resigned",
+                  "at": 60000,
+                  "roomId": "dxq_golden-a",
+                  "color": "red"
+                }
+              ],
+              "seats": {
+                "red": "client-red",
+                "black": "client-black"
+              },
+              "seatDisplayNames": {},
+              "seatProfiles": {},
+              "state": {
+                "id": "dxq_golden-a",
+                "perspective": "red",
+                "board": {
                   "b1": {
                     "piece": {
                       "color": "red",
                       "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "c1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "d1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "e1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "general"
+                    },
+                    "shrouded": false
+                  },
+                  "f1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "g1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "elephant"
                     },
                     "shrouded": false
                   },
@@ -12366,56 +12468,274 @@
                       "role": "horse"
                     },
                     "shrouded": false
+                  },
+                  "i1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "a2": {
+                    "piece": {
+                      "color": "red",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "b3": {
+                    "piece": {
+                      "color": "red",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "h3": {
+                    "piece": {
+                      "color": "red",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "a4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "c4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "e4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "g4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "i4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "a5": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "c7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "e7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "g7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "i7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "a8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "b8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "h8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "b10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "c10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "d10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "e10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "general"
+                    },
+                    "shrouded": false
+                  },
+                  "f10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "g10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "h10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "i10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
                   }
                 },
                 "visibleSquares": [
-                  "a10",
-                  "a4",
-                  "a5",
-                  "a6",
-                  "a7",
-                  "a8",
-                  "a9",
+                  "a1",
                   "b1",
-                  "b10",
-                  "b3",
-                  "b4",
-                  "b5",
-                  "b6",
-                  "b7",
-                  "b8",
-                  "b9",
-                  "c10",
-                  "c6",
-                  "c7",
-                  "c8",
-                  "d10",
-                  "d8",
-                  "e10",
-                  "e6",
-                  "e7",
-                  "e8",
-                  "e9",
-                  "f10",
-                  "f8",
-                  "g10",
-                  "g6",
-                  "g7",
-                  "g8",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
                   "h1",
-                  "h10",
+                  "i1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "i2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
+                  "i3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
                   "h4",
+                  "i4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
                   "h5",
+                  "i5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
                   "h6",
-                  "h7",
-                  "h8",
-                  "h9",
-                  "i10",
                   "i6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
                   "i7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8",
                   "i8",
-                  "i9"
+                  "a9",
+                  "b9",
+                  "c9",
+                  "d9",
+                  "e9",
+                  "f9",
+                  "g9",
+                  "h9",
+                  "i9",
+                  "a10",
+                  "b10",
+                  "c10",
+                  "d10",
+                  "e10",
+                  "f10",
+                  "g10",
+                  "h10",
+                  "i10"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -12517,6 +12837,72 @@
                   "seat": "black"
                 },
                 {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "dxq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a10",
+                    "to": "a8"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "dxq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a2",
+                    "to": "a1"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a6"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "dxq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "dxq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a6",
+                    "to": "a5"
+                  },
+                  "ply": 6
+                },
+                {
                   "type": "seat-resigned",
                   "at": 60000,
                   "roomId": "dxq_golden-a",
@@ -12532,8 +12918,324 @@
               "state": {
                 "id": "dxq_golden-a",
                 "perspective": "red",
-                "board": {},
-                "visibleSquares": [],
+                "board": {
+                  "b1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "c1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "d1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "e1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "general"
+                    },
+                    "shrouded": false
+                  },
+                  "f1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "g1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "h1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "i1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "a2": {
+                    "piece": {
+                      "color": "red",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "b3": {
+                    "piece": {
+                      "color": "red",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "h3": {
+                    "piece": {
+                      "color": "red",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "a4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "c4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "e4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "g4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "i4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "a5": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "c7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "e7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "g7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "i7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "a8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "b8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "h8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "b10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "c10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "d10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "e10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "general"
+                    },
+                    "shrouded": false
+                  },
+                  "f10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "g10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "h10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "i10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "i1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "i2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "i3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "i4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "i5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "i6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "i7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8",
+                  "i8",
+                  "a9",
+                  "b9",
+                  "c9",
+                  "d9",
+                  "e9",
+                  "f9",
+                  "g9",
+                  "h9",
+                  "i9",
+                  "a10",
+                  "b10",
+                  "c10",
+                  "d10",
+                  "e10",
+                  "f10",
+                  "g10",
+                  "h10",
+                  "i10"
+                ],
                 "legalMoves": [],
                 "status": {
                   "type": "finished",
@@ -12541,6 +13243,10 @@
                   "reason": "resignation"
                 },
                 "moveNumber": 4,
+                "lastMove": {
+                  "from": "a6",
+                  "to": "a5"
+                },
                 "captures": {
                   "red": [],
                   "black": []
@@ -17248,6 +17954,17 @@
                   "ply": 1
                 },
                 {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "dxq_golden-c",
+                  "color": "black",
+                  "move": {
+                    "from": "a10",
+                    "to": "a8"
+                  },
+                  "ply": 2
+                },
+                {
                   "type": "clock-expired",
                   "at": 90000,
                   "roomId": "dxq_golden-c",
@@ -17330,24 +18047,10 @@
                     },
                     "shrouded": false
                   },
-                  "i4": {
-                    "piece": {
-                      "color": "red",
-                      "role": "soldier"
-                    },
-                    "shrouded": false
-                  },
                   "a2": {
                     "piece": {
                       "color": "red",
                       "role": "chariot"
-                    },
-                    "shrouded": false
-                  },
-                  "a4": {
-                    "piece": {
-                      "color": "red",
-                      "role": "soldier"
                     },
                     "shrouded": false
                   },
@@ -17362,6 +18065,13 @@
                     "piece": {
                       "color": "red",
                       "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "a4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
                     },
                     "shrouded": false
                   },
@@ -17386,198 +18096,13 @@
                     },
                     "shrouded": false
                   },
-                  "b8": {
-                    "color": "black",
-                    "shrouded": true
-                  },
-                  "h8": {
-                    "color": "black",
-                    "shrouded": true
-                  },
-                  "b10": {
+                  "i4": {
                     "piece": {
-                      "color": "black",
-                      "role": "horse"
+                      "color": "red",
+                      "role": "soldier"
                     },
                     "shrouded": false
                   },
-                  "h10": {
-                    "piece": {
-                      "color": "black",
-                      "role": "horse"
-                    },
-                    "shrouded": false
-                  }
-                },
-                "visibleSquares": [
-                  "a1",
-                  "a2",
-                  "a3",
-                  "a4",
-                  "a5",
-                  "b1",
-                  "b10",
-                  "b2",
-                  "b3",
-                  "b4",
-                  "b5",
-                  "b6",
-                  "b7",
-                  "b8",
-                  "c1",
-                  "c2",
-                  "c3",
-                  "c4",
-                  "c5",
-                  "d1",
-                  "d2",
-                  "d3",
-                  "e1",
-                  "e2",
-                  "e3",
-                  "e4",
-                  "e5",
-                  "f1",
-                  "f2",
-                  "f3",
-                  "g1",
-                  "g2",
-                  "g3",
-                  "g4",
-                  "g5",
-                  "h1",
-                  "h10",
-                  "h2",
-                  "h3",
-                  "h4",
-                  "h5",
-                  "h6",
-                  "h7",
-                  "h8",
-                  "i1",
-                  "i2",
-                  "i3",
-                  "i4",
-                  "i5"
-                ],
-                "legalMoves": [],
-                "status": {
-                  "type": "finished",
-                  "winner": "black",
-                  "reason": "timeout"
-                },
-                "moveNumber": 2,
-                "captures": {
-                  "red": [],
-                  "black": []
-                }
-              },
-              "timeControl": {
-                "initialMs": 60000,
-                "incrementMs": 1000
-              }
-            },
-            "black": {
-              "type": "snapshot",
-              "roomId": "dxq_golden-c",
-              "gameSpecId": "dark-xiangqi",
-              "serverAt": 0,
-              "clients": 0,
-              "seat": "black",
-              "solo": false,
-              "abortDeadline": null,
-              "clock": {
-                "activeColor": null,
-                "incrementMs": 1000,
-                "initialMs": 60000,
-                "remainingMs": {
-                  "black": 61000,
-                  "red": 0
-                },
-                "runningSince": null
-              },
-              "connectedSeats": {
-                "red": false,
-                "black": false
-              },
-              "events": [
-                {
-                  "type": "room-created",
-                  "at": 1000,
-                  "roomId": "dxq_golden-c",
-                  "gameSpecId": "dark-xiangqi",
-                  "timeControl": {
-                    "initialMs": 60000,
-                    "incrementMs": 1000
-                  }
-                },
-                {
-                  "type": "clock-started",
-                  "at": 1000,
-                  "roomId": "dxq_golden-c",
-                  "clock": {
-                    "activeColor": null,
-                    "incrementMs": 1000,
-                    "initialMs": 60000,
-                    "remainingMs": {
-                      "black": 60000,
-                      "red": 60000
-                    },
-                    "runningSince": null
-                  }
-                },
-                {
-                  "type": "seat-assigned",
-                  "at": 2000,
-                  "roomId": "dxq_golden-c",
-                  "clientId": "client-red",
-                  "seat": "red"
-                },
-                {
-                  "type": "seat-assigned",
-                  "at": 3000,
-                  "roomId": "dxq_golden-c",
-                  "clientId": "client-black",
-                  "seat": "black"
-                },
-                {
-                  "type": "move-played",
-                  "at": 15000,
-                  "roomId": "dxq_golden-c",
-                  "color": "black",
-                  "move": {
-                    "from": "a10",
-                    "to": "a8"
-                  },
-                  "ply": 2
-                },
-                {
-                  "type": "clock-expired",
-                  "at": 90000,
-                  "roomId": "dxq_golden-c",
-                  "color": "red",
-                  "clock": {
-                    "activeColor": null,
-                    "incrementMs": 1000,
-                    "initialMs": 60000,
-                    "remainingMs": {
-                      "black": 61000,
-                      "red": 0
-                    },
-                    "runningSince": null
-                  }
-                }
-              ],
-              "seats": {
-                "red": "client-red",
-                "black": "client-black"
-              },
-              "seatDisplayNames": {},
-              "seatProfiles": {},
-              "state": {
-                "id": "dxq_golden-c",
-                "perspective": "black",
-                "board": {
                   "a7": {
                     "piece": {
                       "color": "black",
@@ -17689,19 +18214,272 @@
                       "role": "chariot"
                     },
                     "shrouded": false
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "i1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "i2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "i3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "i4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "i5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "i6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "i7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8",
+                  "i8",
+                  "a9",
+                  "b9",
+                  "c9",
+                  "d9",
+                  "e9",
+                  "f9",
+                  "g9",
+                  "h9",
+                  "i9",
+                  "a10",
+                  "b10",
+                  "c10",
+                  "d10",
+                  "e10",
+                  "f10",
+                  "g10",
+                  "h10",
+                  "i10"
+                ],
+                "legalMoves": [],
+                "status": {
+                  "type": "finished",
+                  "winner": "black",
+                  "reason": "timeout"
+                },
+                "moveNumber": 2,
+                "lastMove": {
+                  "from": "a10",
+                  "to": "a8"
+                },
+                "captures": {
+                  "red": [],
+                  "black": []
+                }
+              },
+              "timeControl": {
+                "initialMs": 60000,
+                "incrementMs": 1000
+              }
+            },
+            "black": {
+              "type": "snapshot",
+              "roomId": "dxq_golden-c",
+              "gameSpecId": "dark-xiangqi",
+              "serverAt": 0,
+              "clients": 0,
+              "seat": "black",
+              "solo": false,
+              "abortDeadline": null,
+              "clock": {
+                "activeColor": null,
+                "incrementMs": 1000,
+                "initialMs": 60000,
+                "remainingMs": {
+                  "black": 61000,
+                  "red": 0
+                },
+                "runningSince": null
+              },
+              "connectedSeats": {
+                "red": false,
+                "black": false
+              },
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "dxq_golden-c",
+                  "gameSpecId": "dark-xiangqi",
+                  "timeControl": {
+                    "initialMs": 60000,
+                    "incrementMs": 1000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "dxq_golden-c",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 1000,
+                    "initialMs": 60000,
+                    "remainingMs": {
+                      "black": 60000,
+                      "red": 60000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "dxq_golden-c",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "dxq_golden-c",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "dxq_golden-c",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
                   },
-                  "b3": {
-                    "color": "red",
-                    "shrouded": true
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "dxq_golden-c",
+                  "color": "black",
+                  "move": {
+                    "from": "a10",
+                    "to": "a8"
                   },
-                  "h3": {
-                    "color": "red",
-                    "shrouded": true
-                  },
+                  "ply": 2
+                },
+                {
+                  "type": "clock-expired",
+                  "at": 90000,
+                  "roomId": "dxq_golden-c",
+                  "color": "red",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 1000,
+                    "initialMs": 60000,
+                    "remainingMs": {
+                      "black": 61000,
+                      "red": 0
+                    },
+                    "runningSince": null
+                  }
+                }
+              ],
+              "seats": {
+                "red": "client-red",
+                "black": "client-black"
+              },
+              "seatDisplayNames": {},
+              "seatProfiles": {},
+              "state": {
+                "id": "dxq_golden-c",
+                "perspective": "red",
+                "board": {
                   "b1": {
                     "piece": {
                       "color": "red",
                       "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "c1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "d1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "e1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "general"
+                    },
+                    "shrouded": false
+                  },
+                  "f1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "g1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "elephant"
                     },
                     "shrouded": false
                   },
@@ -17711,54 +18489,274 @@
                       "role": "horse"
                     },
                     "shrouded": false
+                  },
+                  "i1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "a2": {
+                    "piece": {
+                      "color": "red",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "b3": {
+                    "piece": {
+                      "color": "red",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "h3": {
+                    "piece": {
+                      "color": "red",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "a4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "c4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "e4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "g4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "i4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "a7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "c7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "e7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "g7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "i7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "a8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "b8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "h8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "b10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "c10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "d10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "e10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "general"
+                    },
+                    "shrouded": false
+                  },
+                  "f10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "g10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "h10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "i10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
                   }
                 },
                 "visibleSquares": [
-                  "a10",
-                  "a6",
-                  "a7",
-                  "a8",
-                  "a9",
+                  "a1",
                   "b1",
-                  "b10",
-                  "b3",
-                  "b4",
-                  "b5",
-                  "b6",
-                  "b7",
-                  "b8",
-                  "b9",
-                  "c10",
-                  "c6",
-                  "c7",
-                  "c8",
-                  "d10",
-                  "d8",
-                  "e10",
-                  "e6",
-                  "e7",
-                  "e8",
-                  "e9",
-                  "f10",
-                  "f8",
-                  "g10",
-                  "g6",
-                  "g7",
-                  "g8",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
                   "h1",
-                  "h10",
+                  "i1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "i2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
+                  "i3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
                   "h4",
+                  "i4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
                   "h5",
+                  "i5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
                   "h6",
-                  "h7",
-                  "h8",
-                  "h9",
-                  "i10",
                   "i6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
                   "i7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8",
                   "i8",
-                  "i9"
+                  "a9",
+                  "b9",
+                  "c9",
+                  "d9",
+                  "e9",
+                  "f9",
+                  "g9",
+                  "h9",
+                  "i9",
+                  "a10",
+                  "b10",
+                  "c10",
+                  "d10",
+                  "e10",
+                  "f10",
+                  "g10",
+                  "h10",
+                  "i10"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -17845,6 +18843,28 @@
                   "seat": "black"
                 },
                 {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "dxq_golden-c",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "dxq_golden-c",
+                  "color": "black",
+                  "move": {
+                    "from": "a10",
+                    "to": "a8"
+                  },
+                  "ply": 2
+                },
+                {
                   "type": "clock-expired",
                   "at": 90000,
                   "roomId": "dxq_golden-c",
@@ -17870,8 +18890,324 @@
               "state": {
                 "id": "dxq_golden-c",
                 "perspective": "red",
-                "board": {},
-                "visibleSquares": [],
+                "board": {
+                  "b1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "c1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "d1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "e1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "general"
+                    },
+                    "shrouded": false
+                  },
+                  "f1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "g1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "h1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "i1": {
+                    "piece": {
+                      "color": "red",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "a2": {
+                    "piece": {
+                      "color": "red",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "b3": {
+                    "piece": {
+                      "color": "red",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "h3": {
+                    "piece": {
+                      "color": "red",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "a4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "c4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "e4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "g4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "i4": {
+                    "piece": {
+                      "color": "red",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "a7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "c7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "e7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "g7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "i7": {
+                    "piece": {
+                      "color": "black",
+                      "role": "soldier"
+                    },
+                    "shrouded": false
+                  },
+                  "a8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  },
+                  "b8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "h8": {
+                    "piece": {
+                      "color": "black",
+                      "role": "cannon"
+                    },
+                    "shrouded": false
+                  },
+                  "b10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "c10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "d10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "e10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "general"
+                    },
+                    "shrouded": false
+                  },
+                  "f10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "advisor"
+                    },
+                    "shrouded": false
+                  },
+                  "g10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "elephant"
+                    },
+                    "shrouded": false
+                  },
+                  "h10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "horse"
+                    },
+                    "shrouded": false
+                  },
+                  "i10": {
+                    "piece": {
+                      "color": "black",
+                      "role": "chariot"
+                    },
+                    "shrouded": false
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "i1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "i2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "i3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "i4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "i5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "i6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "i7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8",
+                  "i8",
+                  "a9",
+                  "b9",
+                  "c9",
+                  "d9",
+                  "e9",
+                  "f9",
+                  "g9",
+                  "h9",
+                  "i9",
+                  "a10",
+                  "b10",
+                  "c10",
+                  "d10",
+                  "e10",
+                  "f10",
+                  "g10",
+                  "h10",
+                  "i10"
+                ],
                 "legalMoves": [],
                 "status": {
                   "type": "finished",
@@ -17879,6 +19215,10 @@
                   "reason": "timeout"
                 },
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a10",
+                  "to": "a8"
+                },
                 "captures": {
                   "red": [],
                   "black": []

@@ -306,9 +306,23 @@ function wireSnapshots(step: GoldenStep): Record<string, WireSnapshot> {
   return JSON.parse(JSON.stringify(step.snapshots));
 }
 
-test('dxq golden wire: opponent moves never reach the other seat or spectators', () => {
+// A step whose recorded status is finished. Read from the payload rather than
+// matched on the label, so a new terminal script step is classified correctly
+// without anyone remembering to add its name here.
+function isFinishedStep(step: GoldenStep): boolean {
+  // The recorded snapshot type does not declare `status` (the fixtures only
+  // model the fields each test reads), so read it through a narrow cast rather
+  // than widening a shared fixture type for one predicate.
+  const state = wireSnapshots(step).red?.state as { status?: { type?: string } } | undefined;
+  return state?.status?.type === 'finished';
+}
+
+test('dxq golden wire: opponent moves never cross seats while the game is live', () => {
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
+      // Fog is a LIVE invariant. A finished room hands everyone the whole log,
+      // asserted by 'a finished room opens fully to a spectator' below.
+      if (isFinishedStep(step)) continue;
       const snapshots = wireSnapshots(step);
       for (const seat of ['red', 'black', 'spectator'] as const) {
         const others = seat === 'red' ? ['black'] : seat === 'black' ? ['red'] : ['red', 'black'];
@@ -334,9 +348,10 @@ test('dxq golden wire: opponent moves never reach the other seat or spectators',
   }
 });
 
-test('dxq golden wire: shrouded board entries never carry piece identity', () => {
+test('dxq golden wire: shrouded entries never carry piece identity while live', () => {
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
+      if (isFinishedStep(step)) continue;
       const snapshots = wireSnapshots(step);
       for (const seat of ['red', 'black'] as const) {
         const view = snapshots[seat]!.state;
@@ -383,4 +398,35 @@ test('dxq golden wire: snapshot omits engine/rated/rematch keys (dxq wire shape)
       assert.ok(!(key in snapshot), `dxq snapshot must not carry '${key}'`);
     }
   }
+});
+
+test('dxq golden wire: a finished room opens fully to a spectator', () => {
+  // The other half of the two live invariants above. Split so neither can be
+  // silently widened: weakening one leaves the other failing.
+  let finishedSteps = 0;
+  for (const script of runAllScripts()) {
+    for (const step of script.steps) {
+      if (!isFinishedStep(step)) continue;
+      finishedSteps += 1;
+      const spectator = wireSnapshots(step).spectator!;
+      assert.ok(
+        Object.keys(spectator.state.board).length > 0,
+        `${script.id}/${step.label}: finished board must not be empty`,
+      );
+      assert.ok(spectator.events.length > 0, `${script.id}/${step.label}: log must be delivered`);
+      // Nothing is shrouded once the game is over: that is what truth means,
+      // and it is the same content /api/dark-xiangqi/games/:id already serves
+      // to any signed-out stranger.
+      for (const [square, entry] of Object.entries(spectator.state.board)) {
+        assert.equal(entry.shrouded, false, `${script.id}/${step.label}: ${square} still shrouded`);
+      }
+      // Both seats' moves are present, which is precisely what the live
+      // invariant forbids and the finished state allows.
+      const colors = new Set(
+        spectator.events.filter((e) => e.type === 'move-played').map((e) => e.color),
+      );
+      assert.ok(colors.size === 2, `${script.id}/${step.label}: expected both colors' moves`);
+    }
+  }
+  assert.ok(finishedSteps > 0, 'no finished step in the scripts: this test asserted nothing');
 });
