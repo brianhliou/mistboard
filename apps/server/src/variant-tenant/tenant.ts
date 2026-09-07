@@ -386,6 +386,20 @@ export type VariantTenant<
       client: TenantSnapshotClient<C>,
       events: readonly TenantRoomEvent<C, M, Spec>[],
     ): View;
+    // The unredacted board, served to every client once the game is FINISHED
+    // (docs-private/spectator-visibility-matrix.md). The runtime decides when,
+    // via roomViewPolicy; the tenant only says what truth looks like on the
+    // wire, because that shape is variant-specific.
+    //
+    // Optional, and its absence is fail-closed: a tenant that does not
+    // implement it keeps serving viewForClient forever, which is today's
+    // no-reveal behaviour. Adding a tenant can therefore fail to open a board,
+    // never accidentally open one.
+    //
+    // Perfect-information tenants do not need it. viewForClient already returns
+    // everything for them, and roomViewPolicy('open', …) is 'truth' at every
+    // status regardless.
+    truthView?(state: State, events: readonly TenantRoomEvent<C, M, Spec>[]): View;
   };
   engine?: {
     // Required declaration of how the live engine preserves history-dependent terminal

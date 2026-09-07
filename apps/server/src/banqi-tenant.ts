@@ -146,6 +146,25 @@ export function getBanqiClientView(
   return getBanqiPlayerView(state, client.seat);
 }
 
+// The unredacted board, served to every client once the game is FINISHED
+// (docs-private/spectator-visibility-matrix.md). The runtime owns the WHEN via
+// roomViewPolicy; this only says what truth looks like on the wire.
+//
+// Tiles that were never flipped come back with their dealt identity, which
+// exposes the deal. That is not a new disclosure: the postgame truth history
+// already reveals all 32 tiles once a game ends, and an earlier session
+// reconstructed a whole deal from exactly that public data to build the rules
+// page (commit f2ad3e9). The room was the last surface still withholding it.
+export function getBanqiTruthView(state: BanqiGameState): BanqiPlayerView {
+  const base = getBanqiPlayerView(state, BANQI_SEATS[0]);
+  const board: BanqiPlayerView['board'] = {};
+  for (const [square, piece] of Object.entries(state.board)) {
+    if (!piece) continue;
+    board[square as BanqiSquare] = { color: piece.color, role: piece.role, faceDown: false };
+  }
+  return { ...base, board, legalMoves: [] };
+}
+
 export const banqiTenant: BanqiTenant = {
   kind: 'banqi',
   gameSpecId: BANQI_SPEC_ID,
@@ -176,6 +195,7 @@ export const banqiTenant: BanqiTenant = {
   visibility: {
     clientEventFor: banqiClientEventFor,
     viewForClient: (state, client) => getBanqiClientView(state, client),
+    truthView: (state) => getBanqiTruthView(state),
   },
   // Mark the MistyBanqi engine seat as always-present so the disconnect-forfeit
   // logic never forfeits it (a PvE engine has no WS client). Without this, the

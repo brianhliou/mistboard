@@ -18,6 +18,7 @@ import {
   darkXiangqiCaptureLedger,
   darkXiangqiObservedCaptures,
   darkXiangqiTenant,
+  darkXiangqiTruthView,
   getDarkXiangqiClientView,
 } from './../dark-xiangqi-tenant.js';
 import { darkXiangqiEnabled } from './../feature-flags.js';
@@ -415,36 +416,6 @@ function latestDarkXiangqiMoveColor(events: readonly DarkXiangqiEvent[]): Xiangq
     if (event.type === 'move-played') return event.color;
   }
   return undefined;
-}
-
-function darkXiangqiTruthView(
-  state: XiangqiGameState,
-  captures: DarkXiangqiWirePlayerView['captures'],
-): DarkXiangqiWirePlayerView {
-  return {
-    id: state.id,
-    perspective: 'red',
-    board: Object.fromEntries(
-      Object.entries(state.board).map(([square, piece]) => [square, { piece, shrouded: false }]),
-    ) as DarkXiangqiWirePlayerView['board'],
-    visibleSquares: allXiangqiSquares(),
-    legalMoves: [],
-    status: state.status,
-    moveNumber: state.moveNumber,
-    lastMove: state.lastMove,
-    captures,
-  };
-}
-
-function allXiangqiSquares(): XiangqiSquare[] {
-  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'];
-  const squares: XiangqiSquare[] = [];
-  for (let rank = 1; rank <= 10; rank += 1) {
-    for (const file of files) {
-      squares.push(`${file}${rank}` as XiangqiSquare);
-    }
-  }
-  return squares;
 }
 
 function oppositeXiangqiColor(color: XiangqiColor): XiangqiColor {

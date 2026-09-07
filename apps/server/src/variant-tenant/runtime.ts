@@ -14,7 +14,8 @@
  */
 
 import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';
-import { clockPolicyKindFor, isAbortReason } from '@mistboard/game';
+import { clockPolicyKindFor, isAbortReason, maybeGameSpecForId } from '@mistboard/game';
+import { roomViewPolicy } from '../server-policy.js';
 import { countDeployGatingRooms } from '../deploy-gate.js';
 import {
   firstPartyBotForEngine,
@@ -617,7 +618,15 @@ export function tenantSnapshotPayload<
   room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
   client: TenantSnapshotClient<C>,
 ): TenantSnapshotPayload<C, M, View, Spec> & Record<string, unknown> {
-  const state = tenant.visibility.viewForClient(room.projection.state, client, room.events);
+  // Board half of the finished-game reveal, paired with the event half in
+  // tenantClientEvents. Both consult the same roomViewPolicy so a finished room
+  // can never hand out a full move list beside an empty board, which is what a
+  // one-sided change produces.
+  const reveal = tenantRoomRevealsTruth(tenant, room, client);
+  const state =
+    reveal && tenant.visibility.truthView
+      ? tenant.visibility.truthView(room.projection.state, room.events)
+      : tenant.visibility.viewForClient(room.projection.state, client, room.events);
   return {
     type: 'snapshot' as const,
     roomId: room.id,
@@ -697,13 +706,64 @@ export function tenantEventsForClient<
   client: TenantSnapshotClient<C>,
 ): TenantClientEvent<C, M, Spec>[] {
   const out: TenantClientEvent<C, M, Spec>[] = [];
+  // A finished game hands every client the whole log, unredacted. This is the
+  // event half of the same matrix row that opens the board (see
+  // docs-private/spectator-visibility-matrix.md); without it a spectator on a
+  // finished fog room gets the truth board and an EMPTY move list, because
+  // clientEventFor strips every move-played event the viewer did not own.
+  //
+  // Gated here rather than inside each tenant's clientEventFor because this is
+  // the replay path: the whole log is rebuilt for a client on join and on
+  // reconnect, so a rule applied only to the live broadcast would be silently
+  // wrong exactly here. The runtime is also the layer holding canonical status,
+  // which is what the decision has to read.
+  const reveal = tenantRoomRevealsTruth(tenant, room, client);
   let ply = 0;
   for (const event of room.events) {
     if (event.type === 'move-played') ply += 1;
-    const visible = tenant.visibility.clientEventFor(event, client.seat, ply);
+    const visible = reveal
+      ? ((event.type === 'move-played' ? { ...event, ply } : event) as TenantClientEvent<
+          C,
+          M,
+          Spec
+        >)
+      : tenant.visibility.clientEventFor(event, client.seat, ply);
     if (visible) out.push(visible);
   }
   return out;
+}
+
+function tenantRoomRevealsTruth<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+  room: TenantRuntimeRoom<Kind, C, M, State, Spec>,
+  client: TenantSnapshotClient<C>,
+): boolean {
+  const spec = maybeGameSpecForId(tenant.gameSpecId);
+  if (!spec) return false;
+  // A tenant reveals as a unit or not at all. Requiring truthView here is what
+  // keeps the board and the event log in step: without it, a tenant that has
+  // not implemented truthView would still get its events unredacted by the
+  // policy above and serve a full move list beside a blank board.
+  //
+  // Perfect-information tenants are unaffected. They implement no truthView and
+  // do not need one: viewForClient already returns everything and their
+  // clientEventFor passes every event through, so the un-revealed path is
+  // already full disclosure for them.
+  if (!tenant.visibility.truthView) return false;
+  return (
+    roomViewPolicy(
+      spec.visibility,
+      room.projection.state.status.type === 'finished',
+      client.seat === 'spectator' ? 'spectator' : 'player',
+    ) === 'truth'
+  );
 }
 
 export function tenantPlyAtEventIndex(

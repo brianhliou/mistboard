@@ -168,6 +168,48 @@ export function canServeLiveBoard(gameSpecId: string): boolean {
   return liveObservePolicy(spec.visibility, spec.id) === 'open';
 }
 
+// What a room serves a given client, keyed on the spec's visibility class and
+// the game's status. This is the executable form of the signed-off matrix in
+// docs-private/spectator-visibility-matrix.md, and it is the ONE place that
+// decision lives: both the legacy chess payload path and the variant tenants
+// consult it, so the two can never disagree about when a fog board opens up.
+//
+//   'truth'       — canonical state. Only ever returned for a FINISHED game,
+//                   which is exactly what /game/:id already serves to any
+//                   signed-out stranger, so this reveals nothing new.
+//   'own-view'    — the seat's redacted view; what that player legitimately knows.
+//   'public-view' — what a neutral observer infers from play alone. Narrower
+//                   than either seat's view for asymmetric variants.
+//   'nothing'     — no board at all.
+//
+// The `finished` argument MUST come from canonical projection state. It is the
+// single line separating "reveal a completed game" from "reveal a live fog
+// game", which is the only catastrophic failure in this table.
+export type RoomViewPolicy = 'truth' | 'own-view' | 'public-view' | 'nothing';
+
+export function roomViewPolicy(
+  visibility: VisibilityRulesId,
+  finished: boolean,
+  seat: 'player' | 'spectator',
+): RoomViewPolicy {
+  // Every visibility class opens fully at completion, for players and
+  // spectators alike (Brian, 2026-09-06). Before this, the room never revealed
+  // at any status and the public reveal lived only at /game/:id, which left a
+  // shared room link showing a blank board.
+  if (finished) return 'truth';
+  switch (visibility) {
+    case 'open':
+      // Nothing is hidden by the rules, so there is nothing to redact.
+      return 'truth';
+    case 'hidden-identity':
+      return seat === 'player' ? 'own-view' : 'public-view';
+    case 'dark':
+      // The invariant: a live fog board never leaves the server for anyone but
+      // the seat that owns it.
+      return seat === 'player' ? 'own-view' : 'nothing';
+  }
+}
+
 // SPA fallback allowlist. The web client owns these routes (see apps/web/src/main.ts);
 // the server must hand them index.html so direct hits and refreshes don't 404. Keep in
 // sync with main.ts — server-policy.test.ts covers literal-route parity, and
