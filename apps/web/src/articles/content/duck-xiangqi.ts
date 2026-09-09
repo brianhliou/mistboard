@@ -35,7 +35,7 @@ export const duckXiangqiArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Dr Tim Paulden invented Duck Chess in early 2016 and published it at [duckchess.com](https://duckchess.com). This page applies that rule to the 9 by 10 board. Chess has one way of blocking a piece and xiangqi has four, so moving the duck across raised questions the original never had to answer. The sections below are where they land.',
+      text: 'Dr Tim Paulden invented Duck Chess in early 2016 and published it at [duckchess.com](https://duckchess.com). The duck has an older ancestor: Jim Aikin put eight neutral stones on the board in [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999, stones either player could move and that blocked exactly as a friendly piece would. This page applies the one-duck version to the 9 by 10 board. Chess has one way of blocking a piece and xiangqi has four, so moving the duck across raised questions the original never had to answer. The sections below are where they land.',
     },
   ],
   sections: [
