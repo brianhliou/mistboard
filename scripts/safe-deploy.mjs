@@ -35,7 +35,12 @@
 //   4   window elapsed with games still active (drain is cancelled)
 //   130 SIGINT — drain was cancelled
 
-import { DRAIN_TOKEN_KEYCHAIN_SERVICE, resolveDrainToken } from './lib/drain-token.mjs';
+import {
+  DRAIN_TOKEN_KEYCHAIN_FALLBACK,
+  DRAIN_TOKEN_KEYCHAIN_SERVICE,
+  describeDrainToken,
+  resolveDrainToken,
+} from './lib/drain-token.mjs';
 
 const DEFAULT_BASE_URL = 'https://mistboard.com';
 const DEFAULT_WINDOW_MS = 15 * 60 * 1000;
@@ -50,13 +55,14 @@ const pollMs = options.pollMs ?? DEFAULT_POLL_MS;
 const token = resolveDrainToken();
 
 if (!token) {
-  console.error('error: no drain token (checked MISTBOARD_DRAIN_TOKEN, then the keychain).');
-  console.error('  - Get it from the Railway dashboard for the web service.');
-  console.error('  - Store it once; -w prompts, so it stays out of shell history:');
-  console.error(
-    `      security add-generic-password -a "$USER" -s ${DRAIN_TOKEN_KEYCHAIN_SERVICE} -w`,
-  );
+  // Say WHICH failure. "Never stored", "stored empty", and "macOS refused the
+  // read" have nothing in common as remedies, and printing one generic line
+  // for all three is what made this undiagnosable on 2026-09-09.
+  const why = describeDrainToken();
+  console.error(`error: drain token not usable (${why.status}).`);
+  console.error(`  ${why.detail}`);
   console.error('  - Or for a single run: MISTBOARD_DRAIN_TOKEN=… node scripts/safe-deploy.mjs');
+  console.error('  - Check this at any time: npm run drain:token-status');
   process.exit(1);
 }
 
@@ -280,7 +286,8 @@ function parseArgs(argv) {
         'Usage: safe-deploy.mjs [--base-url URL] [--window-ms MS] [--poll-ms MS] [--yes] [--commit] [--cancel] [--owner ID]',
       );
       console.log(
-        `Drain token: MISTBOARD_DRAIN_TOKEN, else keychain service "${DRAIN_TOKEN_KEYCHAIN_SERVICE}".`,
+        `Drain token: MISTBOARD_DRAIN_TOKEN, else keychain item "${DRAIN_TOKEN_KEYCHAIN_SERVICE}" ` +
+          `or "${DRAIN_TOKEN_KEYCHAIN_FALLBACK}".`,
       );
       process.exit(0);
     } else {

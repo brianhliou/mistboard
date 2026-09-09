@@ -6,7 +6,7 @@ import { hostname } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
-import { DRAIN_TOKEN_KEYCHAIN_SERVICE, resolveDrainToken } from './lib/drain-token.mjs';
+import { describeDrainToken } from './lib/drain-token.mjs';
 import {
   DEFAULT_TEST_DATABASE_URL,
   isDatabaseReachable,
@@ -127,13 +127,19 @@ try {
     // two sources, so the value never crosses this process's argv or output;
     // checking here just keeps a release from running ci:quick and then dying
     // at the drain step.
-    if (release.drainRequired && !resolveDrainToken()) {
-      throw new Error(
-        'A drain token is required to drain the active games for this deploy, and neither ' +
-          'MISTBOARD_DRAIN_TOKEN nor the keychain has one. Get it from the Railway web service ' +
-          'dashboard, then store it once (prompts, so it stays out of shell history): ' +
-          `security add-generic-password -a "$USER" -s ${DRAIN_TOKEN_KEYCHAIN_SERVICE} -w`,
-      );
+    if (release.drainRequired) {
+      // describeDrainToken separates "never stored" from "stored but this
+      // process cannot read it" — remedies that share nothing. The old message
+      // named only the first, which on 2026-09-09 sent a session to the
+      // Railway dashboard for an answer the lookup already had.
+      const token = describeDrainToken();
+      if (!token.ok) {
+        throw new Error(
+          `A drain token is required for this deploy (${
+            liveGames === null ? 'active game count unreadable' : `${liveGames} active game(s)`
+          }), and it is not usable here (${token.status}). ${token.detail}`,
+        );
+      }
     }
   }
 
