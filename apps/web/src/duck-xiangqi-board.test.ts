@@ -147,9 +147,39 @@ describe('duckXiangqiBoardSvg', () => {
       targets: [],
     });
     expect(svg).toContain('data-duck-square="e6"');
-    expect(svg).toContain('dkx-duck-disc');
+    expect(svg).toContain('/piece-sets/xiangqi/animal-dobutsu/duck.png');
     // A duck drawn through the piece renderer would carry a piece slot.
     expect(svg).not.toContain('data-piece-square="e6"');
+  });
+
+  // ONE drawing, every set: the duck is an object rather than a role, so it has
+  // no per-idiom form to switch to. Only its FRAME follows the set.
+  it('draws the same duck in every piece set', () => {
+    const view = getDuckXiangqiPlayerView(afterOneTurn(), 'red');
+    const sets = [
+      'international',
+      'international-flat',
+      'animal-dobutsu',
+      'traditional',
+      'simplified',
+      'western',
+      'symbols',
+    ] as const;
+    for (const pieceSet of sets) {
+      const svg = duckXiangqiBoardSvg(view, 'red', {
+        interactive: false,
+        phase: PIECE_PHASE(null),
+        targets: [],
+        pieceSet,
+      });
+      expect(svg, pieceSet).toContain('/piece-sets/xiangqi/animal-dobutsu/duck.png');
+      // Wherever the set draws a ring, that ring is NEUTRAL: it is how this
+      // board says "no seat", and the duck has none. `international-flat` is
+      // the one set with no disc at all, so it has no ring to make neutral.
+      if (pieceSet !== 'international-flat') {
+        expect(svg, pieceSet).toContain('#6f7b83');
+      }
+    }
   });
 
   // Phase one and phase two must not look alike: a player who has just moved and

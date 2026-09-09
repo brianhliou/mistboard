@@ -29,9 +29,9 @@ import {
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import {
-  animalDuckMarks,
   animalTreasureMarks,
   cjkGlyphMark,
+  duckPieceMarks,
   internationalFlatTreasureMarks,
   internationalTreasureMarks,
   renderXiangqiPieceGlyphed,
@@ -396,18 +396,8 @@ function duckXiangqiBody(ctx: MiniCtx): string {
   // the rank-4 soldiers, so the duck reads as a thing standing in open space.
   const cx = px(3);
   const cy = g.py(2);
-  const r = disc * 0.46;
-  // The drawn duck when the reader is on the set it was drawn for, and the
-  // neutral token otherwise. Same split the live board makes: only Dobutsu has
-  // duck art, and a Dobutsu duck sitting among hanzi pieces would be the one
-  // token on the tile in a different idiom.
-  const duck =
-    ctx.xqSet === 'animal-dobutsu'
-      ? `<g transform="translate(${cx - disc / 2},${cy - disc / 2}) scale(${disc / 100})">${animalDuckMarks()}</g>`
-      : [
-          `<circle cx="${cx}" cy="${cy}" r="${r}" fill="#f6c343" stroke="#8a6400" stroke-width="1.4"/>`,
-          `<circle cx="${cx}" cy="${cy}" r="${r * 0.62}" fill="none" stroke="#8a6400" stroke-width="1" opacity="0.55"/>`,
-        ].join('');
+  // The same duck the live board draws, in whatever frame the reader's set uses.
+  const duck = `<g transform="translate(${cx - disc / 2},${cy - disc / 2}) scale(${disc / 100})">${duckPieceMarks(ctx.xqSet)}</g>`;
   return [xiangqiCourtBody(false, ctx), duck].join('');
 }
 

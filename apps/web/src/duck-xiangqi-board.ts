@@ -40,7 +40,7 @@ import {
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
-import { animalDuckMarks } from './xiangqi-piece-sets.js';
+import { duckPieceMarks, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
 // This board draws no coordinate labels, so it must not reserve their gutter -
 // the standard board swaps the same way when labels are off. Leaving it in put
@@ -72,7 +72,10 @@ export type DuckXiangqiBoardState = {
   /** Legal destinations for the CURRENT phase. The caller computes these. */
   targets: readonly DuckXiangqiSquare[];
   layout?: XiangqiBoardLayout;
-  pieceSet?: Parameters<typeof renderXiangqiPiece>[1] extends { pieceSet?: infer P } ? P : never;
+  // Named directly rather than inferred off `renderXiangqiPiece`'s options. The
+  // clever conditional this replaces collapsed to `undefined`, so the field was
+  // impossible to pass and the board could only ever use the stored preference.
+  pieceSet?: XiangqiPieceSet;
   /** Right-click arrows and circles, from the shared board-annotation store. */
   arrows?: readonly XiangqiBoardArrow[];
   markers?: readonly XiangqiBoardMarker[];
@@ -108,26 +111,18 @@ function duckLayer(
   if (!duck) return '';
   const p = point(duck, perspective, layout);
   const size = XIANGQI_LIVE_PIECE_SIZE;
-  // Resolve the set the same way `renderXiangqiPiece` does when the caller
-  // passes none, or the duck keeps its fallback token on a board whose pieces
-  // are already Dobutsu.
+  // Resolve the set the way `renderXiangqiPiece` does when the caller passes
+  // none, so the duck's frame always matches the pieces beside it.
   const resolved = pieceSet ?? readStoredXiangqiPieceSet();
-  const inner =
-    resolved === 'animal-dobutsu'
-      ? // The drawn duck, on the set's own cream disc with a NEUTRAL ring.
-        // Authored in the same 100-unit piece box as every animal disc, so it
-        // scales with the pieces instead of being sized independently.
-        `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">${animalDuckMarks()}</g>`
-      : // The other six piece sets have no duck art yet, so they keep the
-        // neutral token. It is deliberately NOT either seat's colour, and it is
-        // drawn to the same radius the art occupies so a set switch does not
-        // move the duck or change its footprint.
-        [
-          `<circle cx="${p.x}" cy="${p.y}" r="${size * 0.46}" class="dkx-duck-disc"/>`,
-          `<circle cx="${p.x}" cy="${p.y}" r="${size * 0.46 * 0.82}" class="dkx-duck-ring"/>`,
-          `<text x="${p.x}" y="${p.y + size * 0.46 * 0.36}" class="dkx-duck-glyph" text-anchor="middle" font-size="${size * 0.46 * 1.1}">\u{1F986}</text>`,
-        ].join('');
-  return `<g class="dkx-duck" data-duck-square="${duck}" aria-label="duck">${inner}</g>`;
+  // Authored in the same 100-unit piece box as every disc on this board, so the
+  // duck scales with the pieces instead of being sized on its own.
+  return [
+    `<g class="dkx-duck" data-duck-square="${duck}" aria-label="duck">`,
+    `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
+    duckPieceMarks(resolved),
+    `</g>`,
+    `</g>`,
+  ].join('');
 }
 
 function pieceLayer(

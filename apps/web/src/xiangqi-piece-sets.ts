@@ -401,11 +401,55 @@ export function animalDuckHref(): string {
   return `/piece-sets/xiangqi/animal-dobutsu/duck.png?v=${ANIMAL_ART_VERSION}`;
 }
 
-export function animalDuckMarks(): string {
+// ONE drawing, every set. The seven sets are seven ways of writing the same
+// seven ROLES, and a role is an idea that each idiom renders in its own hand: a
+// horse is 馬, a knight figurine, a cartoon horse. The duck is not a role and has
+// no cast to join. It is a single object that Duck Chess put on the board, and
+// it looks like itself in every idiom, the way a football looks like a football
+// whoever is drawing the players.
+//
+// What DOES change per set is the FRAME. Each set has its own disc grammar, and
+// the duck sits in the board's furniture correctly by keeping it: the Dobutsu
+// cream disc with one ring, the international disc, the flat set's bare image,
+// and the double ring the glyph sets use. The ring ink is neutral in all of
+// them, because that is the board's way of saying "no seat" and the duck has
+// none.
+function duckImageMark(box: number): string {
+  const inset = (100 - box) / 2;
+  return `<image href="${animalDuckHref()}" x="${inset}" y="${inset}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`;
+}
+
+export function duckPieceMarks(set: XiangqiPieceSet): string {
+  if (isAnimalPieceSet(set)) {
+    // 0.88 inside the disc: the set's animals run 62-70% of the square tall and
+    // this master is 76.2%, so it is fitted down into the same band rather than
+    // crowding the ring (physical-set MANIFEST, render scale).
+    return [
+      animalDiscMark(),
+      duckImageMark(88),
+      `<circle cx="50" cy="50" r="45" fill="none" stroke="${DUCK_NEUTRAL_RING}" stroke-width="3.2"/>`,
+    ].join('');
+  }
+  if (set === 'international') {
+    return [
+      `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${DUCK_NEUTRAL_RING}" stroke-width="2.8"/>`,
+      duckImageMark(84),
+    ].join('');
+  }
+  if (set === 'international-flat') {
+    // No disc in this set, so nothing frames the figure and it carries the whole
+    // square. The other flat pieces are scaled up for the same reason.
+    return duckImageMark(100);
+  }
+  // The glyph sets (traditional, simplified, western, symbols) share one
+  // double-ring disc. The art has to live INSIDE the inner ring, where those
+  // sets put their character: the master is ~80% content inside its own box, so
+  // a 74-unit box lands ~59 units tall against the inner ring's 76 diameter,
+  // which is the same visual weight as a 46pt glyph.
   return [
-    animalDiscMark(),
-    `<image href="${animalDuckHref()}" x="6" y="6" width="88" height="88" preserveAspectRatio="xMidYMid meet"/>`,
-    `<circle cx="50" cy="50" r="45" fill="none" stroke="${DUCK_NEUTRAL_RING}" stroke-width="3.2"/>`,
+    `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${DUCK_NEUTRAL_RING}" stroke-width="2.5"/>`,
+    `<circle cx="50" cy="50" r="38" fill="none" stroke="${DUCK_NEUTRAL_RING}" stroke-width="1.5"/>`,
+    duckImageMark(74),
   ].join('');
 }
 

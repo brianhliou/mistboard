@@ -27,24 +27,9 @@
   width: 100%;
 }
 
-.dkx-duck-disc {
-  fill: #f6c343;
-  stroke: #8a6400;
-  stroke-width: 1.6;
-}
-
-.dkx-duck-ring {
-  fill: none;
-  stroke: #8a6400;
-  stroke-width: 1;
-  opacity: 0.55;
-}
-
-.dkx-duck-glyph {
-  dominant-baseline: auto;
-  pointer-events: none;
-  user-select: none;
-}
+/* The duck token itself is drawn by `duckPieceMarks` in xiangqi-piece-sets.ts,
+   in each set's own disc grammar, so it has no classes here: it has to match the
+   pieces around it, and those are drawn by the shared piece renderer. */
 
 /* Phase two: where the DUCK can go. Deliberately a different colour and a
    larger dot. A player who has just moved a piece and suddenly sees dots again
