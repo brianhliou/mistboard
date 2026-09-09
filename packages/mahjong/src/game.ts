@@ -252,7 +252,18 @@ export function applyClaim(game: MahjongGame, claim: Claim): MahjongGame {
   const discards = replaceSeat(game.discards, discarder, pond);
 
   if (claim.kind === 'win') {
-    return { ...game, discards, phase: { type: 'won', winners: [claim.seat], selfDrawn: false } };
+    // The winning tile joins the hand. Leaving it in neither the pond nor the
+    // hand ends the game on thirteen tiles, which scores as no hand at all -
+    // and the scorer, the final display and the replay all read that state.
+    const winning = [...(game.hands[claim.seat] as readonly number[])];
+    winning[discard] = (winning[discard] ?? 0) + 1;
+    return {
+      ...game,
+      discards,
+      hands: replaceSeat(game.hands, claim.seat, winning),
+      drawn: discard,
+      phase: { type: 'won', winners: [claim.seat], selfDrawn: false },
+    };
   }
 
   const hand = [...(game.hands[claim.seat] as readonly number[])];

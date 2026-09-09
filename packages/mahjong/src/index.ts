@@ -8,3 +8,6 @@ export * from './hk-faan.js';
 export * from './hk-detect.js';
 export * from './claims.js';
 export * from './game.js';
+export * from './bots.js';
+export * from './autoplay.js';
+export * from './ladder.js';

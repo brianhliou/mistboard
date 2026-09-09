@@ -17,7 +17,8 @@
     "build": "tsc -p tsconfig.json",
     "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js",
     "test:unit": "tsx --test --test-concurrency=4 src/**/*.test.ts",
-    "typecheck": "tsc -p tsconfig.json --noEmit"
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:ladder": "tsx --test 'src/**/*.slowtest.ts'"
   },
   "devDependencies": {
     "tsx": "^4.23.1",
