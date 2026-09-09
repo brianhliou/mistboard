@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 import { ANALYSIS_VARIANTS } from './analysis-catalog.js';
 import { mountAnalysisPage } from './analysis-page.js';
+import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 // End-to-end wiring (jsdom): every catalog variant mounts a working analysis
 // board — the variant dropdown (with the current variant selected), the meta
@@ -19,7 +20,13 @@ describe('analysis page', () => {
         const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
         expect(select, 'variant dropdown').not.toBeNull();
         expect(select!.value).toBe(variant.id);
-        expect(select!.options.length).toBe(ANALYSIS_VARIANTS.length);
+        // Every LAUNCHED variant, plus this board's own even when it is not
+        // launched yet. The dropdown stopped being "one option per catalog
+        // entry" when unlaunched boards became reachable but unadvertised.
+        const expected = ANALYSIS_VARIANTS.filter(
+          (entry) => entry.id === variant.id || variantPublicSurfaceEnabled(entry.id),
+        );
+        expect(select!.options.length).toBe(expected.length);
 
         // The selected option carries the site label.
         expect(select!.selectedOptions[0]?.textContent).toBe(variant.label);
@@ -42,4 +49,36 @@ describe('analysis page', () => {
       }
     });
   }
+});
+
+// The dropdown is a public surface. An unlaunched variant keeps a working board
+// at its own URL (this file mounts every catalog entry, duck included) but is
+// not OFFERED, so nothing advertises it before it launches.
+describe('analysis variant picker', () => {
+  it('does not offer an unlaunched variant from a launched board', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    try {
+      await mountAnalysisPage(root, 'xiangqi');
+      const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
+      const offered = [...(select?.options ?? [])].map((option) => option.value);
+      expect(offered).toContain('xiangqi');
+      expect(offered).not.toContain('duck-xiangqi');
+    } finally {
+      root.remove();
+    }
+  });
+
+  it('lists the unlaunched variant when it IS the board being viewed', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    try {
+      await mountAnalysisPage(root, 'duck-xiangqi');
+      const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
+      expect([...(select?.options ?? [])].map((option) => option.value)).toContain('duck-xiangqi');
+      expect(select?.value).toBe('duck-xiangqi');
+    } finally {
+      root.remove();
+    }
+  });
 });

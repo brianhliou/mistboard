@@ -10,6 +10,7 @@ import { EDITOR_VARIANTS, type EditorVariantId } from './editor/editor-catalog.j
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { renderVariantMarker } from './variant-markers.js';
+import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
 import { variantMiniIdForGameSpec } from './variants.js';
 
 type AnalysisMount = (root: HTMLElement, picker: HTMLElement) => void | Promise<void>;
@@ -76,7 +77,15 @@ export function buildVariantPicker(
     'aria-label',
     t(basePath === '/editor' ? 'editor.variantPicker' : 'analysis.variantPicker'),
   );
-  for (const variant of basePath === '/editor' ? EDITOR_VARIANTS : ANALYSIS_VARIANTS) {
+  // Unlaunched variants are reachable by direct URL but are NOT offered here.
+  // The dropdown is a public surface: listing a variant nobody has been told
+  // about, and that has no bot to play it against, advertises it early. The
+  // variant the reader is ALREADY on always stays in the list, or the picker
+  // would show a selection it does not contain.
+  const offered = (basePath === '/editor' ? EDITOR_VARIANTS : ANALYSIS_VARIANTS).filter(
+    (variant) => variant.id === current || variantPublicSurfaceEnabled(variant.id),
+  );
+  for (const variant of offered) {
     const option = document.createElement('option');
     option.value = variant.id;
     option.textContent = variantDisplayLabel(variant.id);
