@@ -3,10 +3,11 @@
  * generic tenant room factory, hydration, WebSocket runtime and HTTP create
  * route.
  *
- * MVP scope, deliberately narrow while the variant is flag-gated: PvP only.
- * No engine (the bot needs a patched Fairy-Stockfish on engine-worker, which is
- * its own deploy), no lobby seek, no watch channel, no export binding. Each of
- * those is additive and none of them gates playing a game.
+ * Scope while the variant is flag-gated: PvP only. No engine (the bot needs a
+ * patched Fairy-Stockfish on engine-worker, which is its own deploy) and no
+ * lobby seek, since a public seek would advertise a game nobody can accept.
+ * The watch channel and the export binding are here, and both inherit this
+ * tenant's `enabled` predicate, so they stay dark until the flag flips.
  */
 
 import type {
@@ -18,6 +19,7 @@ import type {
 } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
 import { type DuckXiangqiEvent, duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { duckXiangqiExportUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleDuckXiangqiCreate, requestsDuckXiangqi } from './routes/duck-xiangqi-rooms.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
@@ -101,6 +103,16 @@ registerVariantTenant({
   ownsSpecRouting: true,
   errorPrefix: 'duck_xiangqi',
   enabled: duckXiangqiTenant.enabled,
+  // Mistboard TV channel. This block is the whole switch: the watch channel
+  // list, the /api/games/showcase pool and the homepage featured board are all
+  // derived from the registrations that declare one, and the channel inherits
+  // this tenant's own `enabled` predicate, so it stays dark behind the flag.
+  watch: {
+    channelId: 'duck-xiangqi',
+    family: 'xiangqi',
+    label: 'Duck Xiangqi',
+    legacyVariants: ['duck-xiangqi'],
+  },
   rooms: duckXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
   activeGameCount: () => countActiveTenantGames(duckXiangqiRooms.values()),
   getOrLoadRoom: (roomId) => getOrLoadDuckXiangqiRoom(roomId) as Promise<TenantManagedRoom | null>,
@@ -127,6 +139,10 @@ registerVariantTenant({
   // No public seek while the variant is hidden: a lobby entry would advertise a
   // game nobody can accept.
   lobby: null,
+  export: tenantExportBinding(duckXiangqiTenant, {
+    gameRouteBase: '/duck-xiangqi/game',
+    uci: duckXiangqiExportUci,
+  }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,
 });

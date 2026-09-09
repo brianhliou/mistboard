@@ -125,6 +125,21 @@ export async function mountStudyReview(
           : undefined,
       });
     }
+    // Duck Xiangqi's start is deterministic, but its root FEN is NOT optional
+    // extra detail: a chapter composed from a mid-game position has the duck
+    // somewhere, and the duck decides every piece's move set. The seventh field
+    // of its FEN carries it (duck-xiangqi-fen.ts), so a chapter with no rootFen
+    // opens at the standard start with the duck off the board, which is the
+    // right answer rather than a fallback.
+    case 'duck-xiangqi': {
+      const [{ mountDuckXiangqiReview }, { duckXiangqiFen, parseDuckXiangqiFen }] =
+        await Promise.all([import('./duck-xiangqi-review.js'), import('@mistboard/game')]);
+      const parsed = rootFen ? parseDuckXiangqiFen(rootFen) : null;
+      return mountDuckXiangqiReview(root, {
+        ...base,
+        root: parsed?.ok ? { truth: parsed.state, fen: duckXiangqiFen(parsed.state) } : undefined,
+      });
+    }
     case 'dark-chess': {
       const [{ mountDarkChessReview }, { parseDarkChessFen, darkChessFen }] = await Promise.all([
         import('./dark-chess-review.js'),

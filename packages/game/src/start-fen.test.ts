@@ -18,12 +18,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { banqiStateToDealtFen } from './banqi-fen.js';
+import { duckXiangqiFen } from './duck-xiangqi-fen.js';
 import { jieqiStateToDealtFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
 import { jungleFlipStateToDealtFen } from './jungle-flip-fen.js';
 import { hasStartFen, normalizeStartFen, START_FEN_SPEC_IDS } from './start-fen.js';
 import { darkChessVariant, parseDarkChessFen } from './variants.js';
 import { createInitialBanqiState } from './variants-banqi.js';
+import { createInitialDuckXiangqiState } from './variants-duck-xiangqi.js';
 import {
   createInitialFortressXiangqiState,
   type FortressXiangqiGameState,
@@ -43,6 +45,9 @@ test('every start-fen spec round-trips its own standard start', () => {
     jungle: jungleStateToEngineFen(createInitialJungleState('t')),
     'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),
     'dark-chess': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    // Duck Xiangqi: the standard six fields plus a SEVENTH naming the duck's
+    // point, '-' at the start because the duck enters on Red's first turn.
+    'duck-xiangqi': duckXiangqiFen(createInitialDuckXiangqiState('t')),
     // Hidden-deal variants: the canonical spelling is the six-field DEALT fen.
     banqi: banqiStateToDealtFen(createInitialBanqiState('t')),
     jieqi: jieqiStateToDealtFen(createInitialJieqiState('t')),

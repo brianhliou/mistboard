@@ -27,6 +27,7 @@ const STUDY_VARIANT_IDS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'duck-xiangqi',
 ] as const satisfies readonly GameSpecId[];
 
 export type StudyVariantId = (typeof STUDY_VARIANT_IDS)[number];

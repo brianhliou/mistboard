@@ -231,6 +231,13 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Duck Xiangqi qualifies on the same two counts as the rest: it has a
+  // tree-review stack (review/duck-xiangqi-tree-adapter.ts + -review.ts) and a
+  // deterministic start position spellable as a FEN (duck-xiangqi-fen.ts, whose
+  // seventh field carries the duck). Last in the list because it is last in
+  // canonicalVariantOrderIndex — unlisted specs sort to the end, and the picker
+  // order test reads that index rather than this array.
+  DUCK_XIANGQI_SPEC_ID,
 ];
 
 /** Fail-closed membership test for {@link STUDY_ELIGIBLE_SPEC_IDS} — narrows an

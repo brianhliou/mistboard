@@ -17,6 +17,10 @@
 //                                   identity it reveals is not part of the move.
 //   drop        "<ROLE>@<square>"   a piece placed from hand (fortress xiangqi),
 //                                   role letter as in the fortress puzzle labels.
+//   duck turn   "<from><to>@<duck>" both halves of a Duck Xiangqi turn, e.g.
+//                                   "b3e3@e6". A turn capturing the general ends
+//                                   the game before the duck moves and writes the
+//                                   board move alone.
 // `san` is null unless the tenant has a real notation for the ply (xiangqi
 // WXF). Clocks-after ride under `<color>_clock_ms_after` for each tenant color.
 
@@ -74,6 +78,15 @@ export function flipUci(square: string): string {
 // Flip variants (banqi, flip jungle) spell a flip as the self-move {X, X}.
 export function flipOrBoardMoveUci(move: { from: string; to: string }): string {
   return move.from === move.to ? flipUci(move.from) : boardMoveUci(move);
+}
+
+// Duck Xiangqi: a move is a TURN, so the encoding has to carry all three
+// squares or the export cannot be replayed. "b3e3@e6" is the piece move plus the
+// duck's destination, reusing the `@` the flip encoders already spend on a
+// square that is placed rather than moved from. A turn that captures the general
+// ends the game before the duck moves and carries no third square.
+export function duckXiangqiExportUci(move: { from: string; to: string; duckTo: string | null }) {
+  return move.duckTo === null ? boardMoveUci(move) : `${boardMoveUci(move)}${flipUci(move.duckTo)}`;
 }
 
 // Fortress: drops reuse the puzzle label ("R@d4"); board moves drop the dash.

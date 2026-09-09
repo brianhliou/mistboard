@@ -22,6 +22,7 @@ const SHEET_VARIANTS: ReadonlyArray<{ labelKey: I18nKey; channel: string }> = [
   { labelKey: 'variant.darkMiniXiangqi.name', channel: 'dark-mini-xiangqi' },
   { labelKey: 'variant.dropMiniXiangqi.name', channel: 'drop-mini-xiangqi' },
   { labelKey: 'variant.fortressXiangqi.name', channel: 'fortress-xiangqi' },
+  { labelKey: 'variant.duckXiangqi.name', channel: 'duck-xiangqi' },
 ];
 
 async function firstGameForChannel(channel: string): Promise<FeaturedGame | null> {

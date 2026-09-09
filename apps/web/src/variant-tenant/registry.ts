@@ -852,6 +852,21 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           () =>
             bootstrapDuckXiangqiLiveRoom(),
       ),
+    gameRouteBase: '/duck-xiangqi/game',
+    reviewRouteBase: '/duck-xiangqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../duck-xiangqi-postgame.js').then(({ mountDuckXiangqiPostgame }) =>
+        mountDuckXiangqiPostgame(root, roomId),
+      ),
+    // Mistboard TV channel; renders in the 'xiangqi' family (intersection
+    // board). Watch-route dispatch keys on the channel spec id, not the family.
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-duck-xiangqi-replay.js').then(({ mountDuckXiangqiWatchReplay }) =>
+          mountDuckXiangqiWatchReplay(root, roomId, options),
+        ),
+    },
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,

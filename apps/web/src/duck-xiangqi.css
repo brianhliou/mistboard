@@ -16,9 +16,12 @@
   --uni-board-aspect: calc(540 / 612);
 }
 
-:root[data-board-coordinates="on"] .live-route--duck-xiangqi {
-  --uni-board-aspect: calc(576 / 636);
-}
+/* NO coordinates rule here, on purpose. The standard board reserves a gutter
+   when the reader turns coordinates on, so its aspect changes; this board pins
+   `coordGutter: 0` and never draws labels, so its viewBox is identical either
+   way. The rule that used to sit here copied the standard board's 576/636 and
+   so was wrong for exactly the readers who had that preference on. The host
+   clips with overflow:hidden, so it ate their outer rank and nobody else's. */
 
 .live-route--duck-xiangqi .board-status {
   width: 100%;

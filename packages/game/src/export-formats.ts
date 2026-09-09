@@ -24,6 +24,11 @@ export const GAME_EXPORT_FORMATS = {
   jieqi: ['json'],
   banqi: ['json'],
   'fortress-xiangqi': ['json'],
+  // JSON only, for the same reason as the others: a turn here is a piece move
+  // AND a duck placement, and neither WXF nor ICCS has anything to say about the
+  // second half. Publishing the xiangqi half as PGN would emit a movetext that
+  // does not reconstruct the game.
+  'duck-xiangqi': ['json'],
   jungle: ['json'],
   'jungle-flip': ['json'],
 } as const satisfies Readonly<Record<string, readonly GameExportFormat[]>>;

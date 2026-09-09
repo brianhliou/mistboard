@@ -48,6 +48,11 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'fog-openings',
   'fog-chess-concepts',
   'shogi',
+  // Duck Xiangqi is behind a server flag with no bot and no games, so a public
+  // rules page would advertise something nobody can start. Publishing is three
+  // one-line changes made together: status 'published' here and in
+  // articles-data, and the 'duck-xiangqi' switch in variant-public-surfaces.
+  'duck-xiangqi',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -173,6 +178,12 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.',
+  },
+  'duck-xiangqi': {
+    title: 'Duck Xiangqi Rules',
+    kind: 'rules',
+    description:
+      'Duck Chess on the xiangqi board: a turn is a legal move plus a duck placement, the duck screens for cannons and blocks the horse, and the general falls by capture.',
   },
   'fortress-xiangqi': {
     title: 'Fortress Xiangqi Rules',

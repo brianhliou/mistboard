@@ -45,6 +45,18 @@ export const ANALYSIS_VARIANTS: readonly AnalysisVariant[] = [
   entry('jungle-flip'),
 ];
 
+// NOT HERE YET: duck-xiangqi. Its tree-review stack exists
+// (review/duck-xiangqi-review.ts) and mounts through this page's dispatch
+// unchanged, but AnalysisVariantId is also the key of two OTHER exhaustive maps
+// — analysis-page.ts's mount table and, load-bearingly, editor/editor-specs.ts's
+// EDITOR_SPECS. Listing a variant here therefore asserts it has a BOARD EDITOR,
+// and the editor's model has no way to hold the duck: the duck is not in the
+// placement (it rides the seventh FEN field) and it belongs to neither colour,
+// so every EditorSpec hook would hand back a position with the duck dropped.
+// Adding the row before that is settled would ship a surface that silently loses
+// half the position. Splitting an EditorVariantId out of AnalysisVariantId is
+// the unblock, and it is a decision about the editor, not about this catalog.
+
 export function analysisVariantLabel(id: AnalysisVariantId): string {
   return gameSpecForId(id).publicName;
 }

@@ -70,8 +70,10 @@ const duckWebTenant: WebVariantTenant<DuckXiangqiColor> = {
   isColor: isDuckColor,
   oppositeColor: (color) => (color === 'red' ? 'black' : 'red'),
   enabled: duckXiangqiEnabled,
-  // No dedicated review route yet, so finished games land on the legacy shell.
-  reviewUrl: (roomId) => `/game/${encodeURIComponent(roomId)}`,
+  // Must match `gameRouteBase` in the web tenant registry. Left pointing at the
+  // bare `/game/:id` shell, a player who just finished a game lands on the CHESS
+  // postgame, which 403s on a tenant event log.
+  reviewUrl: (roomId) => `/duck-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: duckReasonPhrase,
   disabledTitle: 'Duck Xiangqi disabled',
   disabledBody: 'This client build has the room renderer off.',
