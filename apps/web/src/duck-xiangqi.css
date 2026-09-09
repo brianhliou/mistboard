@@ -1,0 +1,56 @@
+/* Duck Xiangqi board chrome. The base board inherits every xiangqi surface
+   style; only the duck and the two-phase targets are new. */
+
+.dkx-duck-disc {
+  fill: #f6c343;
+  stroke: #8a6400;
+  stroke-width: 1.6;
+}
+
+.dkx-duck-ring {
+  fill: none;
+  stroke: #8a6400;
+  stroke-width: 1;
+  opacity: 0.55;
+}
+
+.dkx-duck-glyph {
+  dominant-baseline: auto;
+  pointer-events: none;
+  user-select: none;
+}
+
+/* Phase one: where the selected piece can go. Same language as every other
+   board here, so a xiangqi player reads it without being taught. */
+.dkx-target {
+  fill: rgb(20 20 20 / 32%);
+  pointer-events: none;
+}
+
+/* Phase two: where the DUCK can go. Deliberately a different colour and a
+   larger dot. A player who has just moved a piece and suddenly sees dots again
+   must be able to tell at a glance that these are duck squares, not more moves,
+   or the second click feels like the board misread the first. */
+.dkx-target--duck {
+  fill: rgb(246 195 67 / 62%);
+  stroke: rgb(138 100 0 / 70%);
+  stroke-width: 1;
+}
+
+/* The board says which half of the turn it is waiting for. Two-action turns are
+   unfamiliar; a player who does not know the duck is pending will think the
+   move failed and click the piece again. */
+.dkx-phase-notice {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.45rem 0.7rem;
+  border-radius: 8px;
+  background: rgb(246 195 67 / 16%);
+  border: 1px solid rgb(138 100 0 / 35%);
+  font-size: 0.9rem;
+}
+
+.dkx-phase-notice strong {
+  font-weight: 600;
+}

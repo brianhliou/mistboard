@@ -25,6 +25,7 @@ import {
   DROP_MINI_XIANGQI_SPEC_ID,
   DUAL_CHESS_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
   type GameSpecId,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -47,6 +48,7 @@ import {
   darkXiangqiEnabled,
   dropMiniXiangqiEnabled,
   fortressXiangqiEnabled,
+  duckXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
@@ -833,6 +835,39 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         kind: 'container',
       })),
       defaultEngineId: 'fairy-stockfish-fortress-xiangqi-level-4',
+    },
+  },
+  {
+    // Duck Xiangqi: standard 9x10 xiangqi plus Duck Chess's shared, uncapturable
+    // duck, which both players move — one placement at the end of every turn.
+    // Hidden until launch: no menu entry, no deep link, PvP only, no bot yet.
+    // Rules engine: packages/game/src/variants-duck-xiangqi.ts.
+    gameSpecId: DUCK_XIANGQI_SPEC_ID,
+    roomIdPrefix: 'dkx_',
+    enabled: duckXiangqiEnabled,
+    pageTitle: 'Duck Xiangqi',
+    loadLiveRoomClient: () =>
+      import('../live-duck-xiangqi.js').then(
+        ({ bootstrapDuckXiangqiLiveRoom }) =>
+          () =>
+            bootstrapDuckXiangqiLiveRoom(),
+      ),
+    landing: {
+      capabilities: {
+        ...XIANGQI_CAPABILITIES_BASE,
+        supportsRated: false,
+        supportsStartFormat: false,
+        supportsTimeControl: true,
+      },
+      // Games run ~177 plies at engine strength, far longer than the fog
+      // tenants, so the short presets are omitted: a 1+1 game here would be
+      // decided by the clock rather than the board.
+      timePresetIds: ['5m5', '10m5'],
+      // Both gated on the SAME predicate. The conformance test checks exactly
+      // this, because gating the menu and the deep link on neighbouring flags
+      // has shipped twice.
+      offerInMenu: hiddenFromMenu,
+      acceptsDeepLink: hiddenFromMenu,
     },
   },
   {
