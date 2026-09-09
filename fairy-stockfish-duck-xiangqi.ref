@@ -1,0 +1,42 @@
+1b5bdd40499bd5c7417bdc532d52fef8847bdf3f
+# ^ The Fairy-Stockfish commit the prod image builds for the Duck Xiangqi bot
+# (railpack reads the first line; this comment is ignored). Deliberately the
+# SAME upstream commit as fairy-stockfish-xiangqi.ref: our patch applies cleanly
+# to it, so there is one upstream pin to move rather than two, and no fork to
+# maintain (contrast pikafish-jieqi.ref, whose fork branch makes a bump a
+# three-part change across two repos).
+#
+# Why a THIRD FSF binary exists. Stock Fairy-Stockfish cannot play Duck Xiangqi,
+# and neither limitation is reachable from variants.ini:
+#
+#   1. MAX_MOVES is a compile-time constant, 1024 in a build without ALLVARS.
+#      A turn here is a piece move AND a duck placement, so the opening array
+#      alone generates 2,554 legal moves and random play peaks near 4,901.
+#      Overflowing it is a stack smash inside MovePicker (its `moves` array is a
+#      stack member) that presents as a SIGSEGV with a corrupted backtrace.
+#   2. `wallingRule = duck` refuses a royal king, so the general is a non-royal
+#      wazir - and FSF's flying-general rule guards on `count<KING>()`, so it
+#      switches ITSELF off. The duck also moves each turn, so a duck that was the
+#      only thing blocking the general file can vacate it, which stock FSF never
+#      re-tests.
+#
+# Why not just patch the xiangqi binary and share one. The patch drops MAX_PLY
+# from 246 to 100 to keep MovePicker (8192 * 8 = 64KB per ply) inside the 8MB
+# thread stack. Quietly capping the search depth of an already-rated ladder is
+# not a side effect worth having, so the xiangqi binary is left alone.
+#
+# The patch is fairy-stockfish-duck-xiangqi.patch, applied by railpack after
+# checkout. It is part of this bot's identity as much as the ref is: a change to
+# EITHER is a different engine, and DUCK_XIANGQI_FSF_ENGINE_REF carries a digest
+# of both so a rated identity cannot silently change how it plays.
+#
+# The build is gated on perft(1) = 2554, the kernel's own count for the opening
+# array. A binary generating only the 44 piece moves would not crash, it would
+# just play a different game, so the gate asserts agreement with the rules the
+# server enforces rather than merely that the binary runs.
+#
+# No NNUE. The pinned net is a standard-xiangqi net; this variant runs classical
+# eval, the same footing as xiangqi rungs 1-7.
+#
+# Bumping: change the SHA here, re-check the patch still applies, and re-run the
+# EvE calibration so the bot ratings are measured on the new binary.

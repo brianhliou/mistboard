@@ -1,0 +1,115 @@
+diff --git a/src/position.cpp b/src/position.cpp
+index 352b6d5..ea71aed 100644
+--- a/src/position.cpp
++++ b/src/position.cpp
+@@ -1265,11 +1265,32 @@ bool Position::legal(Move m) const {
+   // In case of bikjang passing is always allowed, even when in check
+   if (st->bikjang && is_pass(m))
+       return true;
+-  if ((var->flyingGeneral && count<KING>(us)) || st->bikjang)
++  // MISTBOARD PATCH (Duck Xiangqi): the flying general rule is written against
++  // the royal KING, but a variant may make the general NON-royal - the parser
++  // refuses `wallingRule = duck` while any royal king exists - and then the
++  // extinction piece type is the general. Unpatched, this rule switches ITSELF
++  // off, because its own guard asks whether a royal king is present.
++  // Falls back to KING whenever one exists, so every other variant is unchanged.
++  const PieceType generalType = general_type(us);
++  if ((var->flyingGeneral && pieces(us, generalType)) || st->bikjang)
+   {
+-      Square s = type_of(moved_piece(m)) == KING ? to : square<KING>(us);
+-      if (attacks_bb(~us, ROOK, s, occupied) & pieces(~us, KING) & ~square_bb(to))
++      Square s = type_of(moved_piece(m)) == generalType ? to : lsb(pieces(us, generalType));
++      // Half one: the position after the PIECE move, duck still where it stood.
++      if (attacks_bb(~us, ROOK, s, occupied) & pieces(~us, generalType) & ~square_bb(to))
+           return false;
++      // MISTBOARD PATCH: half two. Under `wallingRule = duck` the duck also moves
++      // this turn, so a duck that was the only thing blocking the general file can
++      // vacate it. Re-test with the duck lifted from where it stood and placed
++      // where it lands. Both halves must pass: a turn may neither create nor
++      // leave a facing position.
++      // `walling()`, not `is_gating(m)`: a walling move does not set the gating
++      // flag, which is why FSF's own pseudo-royal path above tests it this way.
++      if (walling_rule() == DUCK && walling())
++      {
++          Bitboard occDuck = (occupied & ~st->wallSquares) | gating_square(m);
++          if (attacks_bb(~us, ROOK, s, occDuck) & pieces(~us, generalType) & ~square_bb(to))
++              return false;
++      }
+   }
+ 
+   // Makpong rule
+@@ -2516,10 +2537,14 @@ bool Position::see_ge(Move m, Value threshold) const {
+   // Flying general rule
+   if (var->flyingGeneral)
+   {
+-      if (attackers & pieces(stm, KING))
+-          attackers |= attacks_bb(stm, ROOK, to, occupied & ~pieces(ROOK)) & pieces(~stm, KING);
+-      if (attackers & pieces(~stm, KING))
+-          attackers |= attacks_bb(~stm, ROOK, to, occupied & ~pieces(ROOK)) & pieces(stm, KING);
++      // MISTBOARD PATCH: same non-royal general substitution as in legal().
++      // This one is search QUALITY, not legality - perft cannot see it - so a
++      // mistake here costs playing strength rather than correctness.
++      const PieceType gtStm = general_type(stm), gtOpp = general_type(~stm);
++      if (attackers & pieces(stm, gtStm))
++          attackers |= attacks_bb(stm, ROOK, to, occupied & ~pieces(ROOK)) & pieces(~stm, gtOpp);
++      if (attackers & pieces(~stm, gtOpp))
++          attackers |= attacks_bb(~stm, ROOK, to, occupied & ~pieces(ROOK)) & pieces(stm, gtStm);
+   }
+ 
+   // Janggi cannons can not capture each other
+diff --git a/src/position.h b/src/position.h
+index 685c079..5934881 100644
+--- a/src/position.h
++++ b/src/position.h
+@@ -205,6 +205,7 @@ public:
+   Value extinction_value(int ply = 0) const;
+   bool extinction_claim() const;
+   PieceSet extinction_piece_types() const;
++  PieceType general_type(Color c) const;
+   bool extinction_single_piece() const;
+   int extinction_piece_count() const;
+   int extinction_opponent_piece_count() const;
+@@ -1022,6 +1023,17 @@ inline PieceSet Position::extinction_piece_types() const {
+   return var->extinctionPieceTypes;
+ }
+ 
++// MISTBOARD PATCH (Duck Xiangqi): which piece is acting as the general.
++// Normally the royal KING; in a variant that cannot have one - `wallingRule =
++// duck` forbids royal kings - it is the sole extinction piece type. Returning
++// KING when the answer is ambiguous keeps every other variant unchanged.
++inline PieceType Position::general_type(Color c) const {
++  if (count<KING>(c)) return KING;
++  PieceSet ps = extinction_piece_types();
++  if (ps && (uint64_t(ps) & (uint64_t(ps) - 1)) == 0) return pop_lsb(ps);
++  return KING;
++}
++
+ inline bool Position::extinction_single_piece() const {
+   assert(var != nullptr);
+   return   var->extinctionValue == -VALUE_MATE
+diff --git a/src/types.h b/src/types.h
+index 844d195..b9a10a6 100644
+--- a/src/types.h
++++ b/src/types.h
+@@ -239,8 +239,19 @@ constexpr int MAX_PLY = 60;
+ #endif
+ /// endif USE_HEAP_INSTEAD_OF_STACK_FOR_MOVE_LIST
+ #else
+-constexpr int MAX_MOVES = 1024;
+-constexpr int MAX_PLY = 246;
++// MISTBOARD PATCH (Duck Xiangqi): 1024 is far too small for a walling variant
++// on a 9x10 board. A turn is a piece move AND a duck placement, so the opening
++// array alone generates 2,554 legal moves and random play peaks near 4,901.
++// Overflowing this buffer is a stack smash inside MovePicker (whose `moves`
++// array is a stack member, unlike MoveList which is heap-allocated here), and
++// it presents as a SIGSEGV in MovePicker::next_move with a corrupted backtrace.
++//
++// Upstream raises this to 8192 only under ALLVARS, which is also where the
++// chess duck variant lives - that gate is about branching factor, not curation.
++// MAX_PLY comes down to match: MovePicker is 8192 * 8 = 64KB per ply, and the
++// thread stack is TH_STACK_SIZE = 8MB, so 246 plies would need 15.7MB.
++constexpr int MAX_MOVES = 8192;
++constexpr int MAX_PLY = 100;
+ #endif
+ /// endif ALLVARS
+ 
