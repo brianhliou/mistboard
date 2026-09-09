@@ -26,6 +26,13 @@ const EXEMPT: Readonly<Record<string, string>> = {
   'dark-draft960': 'prod:smoke:engines (same engine and path as dark-chess)',
   // Flag-gated and not live in production; /api/bots offers it no PvE.
   'crossroads-chess': 'flag-gated, no PvE offered in production',
+  // The ladder is built and playable, but MISTBOARD_DUCK_XIANGQI_ENABLED
+  // defaults off, so a prod smoke would 501 on every release. This exemption
+  // expires at launch: flipping that flag means adding a
+  // variant-smoke-configs row plus a release smoke row and deleting this line,
+  // or the patched duck binary ships unwatched — the exact gap the 2026-09-02
+  // jieqi incident named.
+  'duck-xiangqi': 'flag-gated off; swap for a real smoke when the flag flips',
   // Retired under #306: puzzles are live, games 501.
   'drop-mini-xiangqi': 'retired (#306), games 501',
   'mini-xiangqi': 'reserved in the gate, never built; every request 501s (#306)',

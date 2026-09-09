@@ -9,7 +9,7 @@
 //                        jungle) under one identity.
 //   - Pikafish         — the boss: full-strength Pikafish for xiangqi + jieqi.
 //   - Fairy-Stockfish Level 1..8 — the ladder, one bot per level, each playing
-//                        xiangqi and fortress xiangqi.
+//                        xiangqi, fortress xiangqi, and duck xiangqi.
 // Retired rosters (crossroads / drop-mini / mini families, pre-merge Misty and
 // Pikafish tiers) stay resolvable through `legacyBotIds` and
 // `attributionEngineIds` so old rooms, replays, and game attribution keep their
@@ -60,6 +60,7 @@ function fairyStockfishLevelProfile(level: number): FirstPartyBotProfile {
     engines: {
       xiangqi: `fairy-stockfish-xiangqi-level-${level}`,
       'fortress-xiangqi': `fairy-stockfish-fortress-xiangqi-level-${level}`,
+      'duck-xiangqi': `fairy-stockfish-duck-xiangqi-level-${level}`,
     },
     defaultGameSpecId: 'xiangqi',
     legacyBotIds: [`fairy-stockfish-xiangqi-level-${level}`, ...(legacy ? [legacy.botId] : [])],

@@ -24,6 +24,11 @@ import {
   isDuckXiangqiLegalTurn,
   oppositeDuckXiangqiColor,
 } from '@mistboard/game';
+import {
+  duckXiangqiEngineDisplayName,
+  duckXiangqiEngineVersion,
+  isDuckXiangqiEngineClientId,
+} from './duck-xiangqi-fsf-engine.js';
 import { duckXiangqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
 import { tenantForfeitDeadlineForClient, tenantPveEngineId } from './variant-tenant/runtime.js';
@@ -155,6 +160,16 @@ export const duckXiangqiTenant: DuckXiangqiTenantType = {
   visibility: {
     clientEventFor: duckXiangqiClientEventFor,
     viewForClient: (state, client) => getDuckXiangqiClientView(state, client),
+  },
+  engine: {
+    // The engine is replayed from the whole move list every ply
+    // (`position startpos moves …`), so it sees repetition and the no-progress
+    // count exactly as the kernel does.
+    terminalContext: 'full-history',
+    isEngineClientId: isDuckXiangqiEngineClientId,
+    displayName: duckXiangqiEngineDisplayName,
+    engineVersion: duckXiangqiEngineVersion,
+    reservationReleaseTag: 'duck-xiangqi',
   },
   wire: {
     snapshotExtras: (room, client) => {

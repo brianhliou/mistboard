@@ -840,7 +840,9 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   {
     // Duck Xiangqi: standard 9x10 xiangqi plus Duck Chess's shared, uncapturable
     // duck, which both players move — one placement at the end of every turn.
-    // Hidden until launch: no menu entry, no deep link, PvP only, no bot yet.
+    // Hidden until launch: no menu entry and no deep link. PvE against the
+    // Fairy-Stockfish ladder is wired, so a hand-built create request gets a
+    // bot; the variant is simply not offered anywhere yet.
     // Rules engine: packages/game/src/variants-duck-xiangqi.ts.
     gameSpecId: DUCK_XIANGQI_SPEC_ID,
     roomIdPrefix: 'dkx_',
@@ -883,6 +885,18 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // has shipped twice.
       offerInMenu: hiddenFromMenu,
       acceptsDeepLink: hiddenFromMenu,
+      // Eight-level Fairy-Stockfish ladder on the patched duck binary, ordered
+      // strongest-first like the other xiangqi pickers. Node-anchored and
+      // classical: the node budgets are lower than the fortress ladder's at the
+      // same level because the branching factor here is ~2,554 at the root, so a
+      // given budget buys far less depth.
+      engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
+        id: `fairy-stockfish-duck-xiangqi-level-${level}`,
+        name: `Fairy-Stockfish Level ${level}`,
+        familyName: 'Fairy-Stockfish',
+        kind: 'container',
+      })),
+      defaultEngineId: 'fairy-stockfish-duck-xiangqi-level-4',
     },
   },
   {

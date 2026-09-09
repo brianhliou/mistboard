@@ -10,9 +10,11 @@
 // read-only: it never changes serving behavior, only observes and reports.
 
 import { banqiEnginePath } from './banqi-engine.js';
+import { duckXiangqiFsfPath } from './duck-xiangqi-fsf-engine.js';
 import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
   banqiEnabled,
+  duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
@@ -53,6 +55,16 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     binary: 'fairy-stockfish',
     enabled: fortressXiangqiEnabled,
     resolvePath: fairyStockfishPath,
+  },
+  {
+    // Its OWN binary, not the shared Fairy-Stockfish: stock FSF cannot play this
+    // variant at all (MAX_MOVES = 1024 against a 4,901-turn peak), so
+    // duckXiangqiFsfPath deliberately has no fallback and this probe reports a
+    // missing patched build as missing rather than as a quietly wrong engine.
+    variant: 'duck-xiangqi',
+    binary: 'fairy-stockfish-duck-xiangqi',
+    enabled: duckXiangqiEnabled,
+    resolvePath: duckXiangqiFsfPath,
   },
   { variant: 'jieqi', binary: 'pikafish-jieqi', enabled: jieqiEnabled, resolvePath: pikaJieqiPath },
   { variant: 'banqi', binary: 'banqi-engine', enabled: banqiEnabled, resolvePath: banqiEnginePath },

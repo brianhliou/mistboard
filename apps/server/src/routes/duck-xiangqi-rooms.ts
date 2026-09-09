@@ -1,10 +1,13 @@
 /**
- * Duck Xiangqi room-create route. PvP only for now: no `engine` block, because
- * the bot needs a patched Fairy-Stockfish built on engine-worker and that is a
- * separate deploy with its own hazards.
+ * Duck Xiangqi room-create route: PvP, plus PvE against the Fairy-Stockfish
+ * ladder that runs on the patched duck binary (duck-xiangqi-fsf-engine.ts).
  */
 
 import { DUCK_XIANGQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import {
+  DUCK_XIANGQI_DEFAULT_ENGINE_ID,
+  isDuckXiangqiEngineClientId,
+} from './../server-duck-xiangqi-engine.js';
 import { createTenantRoomsRoute } from './../variant-tenant/rooms-route.js';
 
 export type DuckXiangqiCreateContext = {
@@ -15,6 +18,7 @@ export type DuckXiangqiCreateContext = {
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
     rated?: boolean,
+    engine?: { engineId: string; seat: 'red' | 'black'; botId?: string },
   ): Promise<
     | { ok: true; room: { id: string; gameSpecId: string; rated: boolean } }
     | {
@@ -23,6 +27,8 @@ export type DuckXiangqiCreateContext = {
       }
   >;
 };
+
+const DUCK_XIANGQI_SEATS = ['red', 'black'] as const;
 
 const duckXiangqiRoute = createTenantRoomsRoute<
   DuckXiangqiCreateContext,
@@ -33,18 +39,21 @@ const duckXiangqiRoute = createTenantRoomsRoute<
   errorPrefix: 'duck_xiangqi',
   hasDisabledFlag: true,
   preferredColors: ['red', 'black', 'random'],
-  // PvP only for now. `rejectEngineId: true` turns away a request that asks for
-  // a bot rather than silently creating a human room the player will sit alone
-  // in — the failure mode is a seat nobody ever takes.
-  engine: { kind: 'none', rejectEngineId: true },
-  // Unrated until the `duck_xiangqi` pool exists in the user_ratings CHECK and
-  // the bot ladder is calibrated. `reject-as-surface` is what the other
-  // PvP-only tenants use (banqi, jungle, dark-shogi): a rated request is turned
-  // away as unsupported by the surface rather than as a rating-eligibility
-  // failure, which is the honest reason here.
+  engine: {
+    kind: 'seated',
+    defaultEngineId: DUCK_XIANGQI_DEFAULT_ENGINE_ID,
+    isEngineClientId: isDuckXiangqiEngineClientId,
+    seats: DUCK_XIANGQI_SEATS,
+  },
+  // PvE stays UNRATED here, and the policy is unchanged by the bot shipping:
+  // the `duck_xiangqi` pool does not exist in the user_ratings CHECK and the
+  // ladder has no EvE calibration behind it. `reject-as-surface` is what the
+  // other unrated tenants use (banqi, jungle, dark-shogi): a rated request is
+  // turned away as unsupported by the surface rather than as a
+  // rating-eligibility failure, which is the honest reason here.
   rated: { kind: 'reject-as-surface' },
-  createRoom: (ctx, { timeControl, preferredColor, rated }) =>
-    ctx.createDuckXiangqiRoom(timeControl, preferredColor, rated),
+  createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
+    ctx.createDuckXiangqiRoom(timeControl, preferredColor, rated, engine),
 });
 
 export const requestsDuckXiangqi = duckXiangqiRoute.matchesCreateRequest;

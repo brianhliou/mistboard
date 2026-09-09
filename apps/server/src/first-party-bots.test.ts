@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import {
   FIRST_PARTY_BOT_PROFILES,
   firstPartyBotEngineFor,
@@ -65,7 +66,7 @@ test('the merged Pikafish identity fronts xiangqi and jieqi', () => {
   }
 });
 
-test('each Fairy-Stockfish level plays xiangqi and fortress through one identity', () => {
+test('each Fairy-Stockfish level plays xiangqi, fortress and duck through one identity', () => {
   for (let level = 1; level <= 8; level += 1) {
     const botId = `fairy-stockfish-level-${level}`;
     const bot = firstPartyBotForId(botId);
@@ -78,6 +79,10 @@ test('each Fairy-Stockfish level plays xiangqi and fortress through one identity
     assert.equal(
       firstPartyBotEngineFor(botId, 'fortress-xiangqi'),
       `fairy-stockfish-fortress-xiangqi-level-${level}`,
+    );
+    assert.equal(
+      firstPartyBotEngineFor(botId, 'duck-xiangqi'),
+      `fairy-stockfish-duck-xiangqi-level-${level}`,
     );
     // The old per-variant bot id keeps resolving.
     assert.equal(firstPartyBotForId(`fairy-stockfish-xiangqi-level-${level}`)?.id, botId);
@@ -97,7 +102,7 @@ test('each Fairy-Stockfish level plays xiangqi and fortress through one identity
   );
 });
 
-test('every public xiangqi and fortress engine resolves to a first-party bot', () => {
+test('every public xiangqi, fortress and duck engine resolves to a first-party bot', () => {
   for (const tier of XIANGQI_PLAYABLE_ENGINES) {
     const bot = firstPartyBotForEngine(tier.id);
     assert.ok(bot, `${tier.id}: no first-party bot profile claims this engine id`);
@@ -106,6 +111,11 @@ test('every public xiangqi and fortress engine resolves to a first-party bot', (
     const bot = firstPartyBotForEngine(tier.id);
     assert.ok(bot, `${tier.id}: no first-party bot profile claims this engine id`);
     assert.equal(firstPartyBotEngineFor(bot.id, 'fortress-xiangqi'), tier.id);
+  }
+  for (const tier of DUCK_XIANGQI_PLAYABLE_ENGINES) {
+    const bot = firstPartyBotForEngine(tier.id);
+    assert.ok(bot, `${tier.id}: no first-party bot profile claims this engine id`);
+    assert.equal(firstPartyBotEngineFor(bot.id, 'duck-xiangqi'), tier.id);
   }
 });
 

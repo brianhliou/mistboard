@@ -3,11 +3,15 @@
  * generic tenant room factory, hydration, WebSocket runtime and HTTP create
  * route.
  *
- * Scope while the variant is flag-gated: PvP only. No engine (the bot needs a
- * patched Fairy-Stockfish on engine-worker, which is its own deploy) and no
- * lobby seek, since a public seek would advertise a game nobody can accept.
- * The watch channel and the export binding are here, and both inherit this
- * tenant's `enabled` predicate, so they stay dark until the flag flips.
+ * Scope while the variant is flag-gated: PvP and PvE against the Fairy-Stockfish
+ * ladder, but no lobby seek, since a public seek would advertise a game nobody
+ * can accept. The watch channel and the export binding are here, and all of it
+ * inherits this tenant's `enabled` predicate, so it stays dark until the flag
+ * flips.
+ *
+ * The bot is deliberately fortress-shaped: a playable ladder with no
+ * engine-vs-engine tournament entry and no published bot ratings. The EvE
+ * pipeline only knows dark-chess and xiangqi, and widening it is its own job.
  */
 
 import type {
@@ -22,6 +26,7 @@ import { type DuckXiangqiEvent, duckXiangqiTenant } from './duck-xiangqi-tenant.
 import { duckXiangqiExportUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleDuckXiangqiCreate, requestsDuckXiangqi } from './routes/duck-xiangqi-rooms.js';
+import { scheduleDuckXiangqiEngineMove } from './server-duck-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import {
@@ -29,6 +34,7 @@ import {
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
+import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
 import { countActiveTenantGames } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
@@ -63,12 +69,15 @@ export type DuckXiangqiLiveRoomCreation =
 
 export const duckXiangqiRooms = new Map<string, DuckXiangqiRuntimeRoom>();
 
-const duckXiangqiWs = createTenantWsRuntime(duckXiangqiTenant);
+const duckXiangqiWs = createTenantWsRuntime(duckXiangqiTenant, {
+  scheduleEngineMove: (ctx, room) => scheduleDuckXiangqiEngineMove(ctx, room),
+});
 
 export async function createDuckXiangqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: DuckXiangqiColor | 'random',
   rated = false,
+  engine?: TenantRoomEngineSeat<DuckXiangqiColor>,
 ): Promise<DuckXiangqiLiveRoomCreation> {
   const created = await createTenantLiveRoom(
     duckXiangqiTenant,
@@ -82,7 +91,7 @@ export async function createDuckXiangqiRoom(
       recordPersistenceError: (roomId, seq, eventType, err) =>
         recordTenantPersistenceError(duckXiangqiTenant, roomId, seq, eventType, err),
     },
-    { timeControl, creatorPreference, rated },
+    { timeControl, creatorPreference, rated, engine },
   );
   if (!created.ok) {
     return created.error === 'disabled'
@@ -100,6 +109,8 @@ registerVariantTenant({
   kind: duckXiangqiTenant.kind,
   gameSpecId: duckXiangqiTenant.gameSpecId,
   roomIdPrefix: duckXiangqiTenant.roomIdPrefix,
+  isEngineClientId: duckXiangqiTenant.engine?.isEngineClientId,
+  engineDisplayName: (clientId) => duckXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
   errorPrefix: 'duck_xiangqi',
   enabled: duckXiangqiTenant.enabled,
