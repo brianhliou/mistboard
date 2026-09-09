@@ -1,9 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
+  allDuckXiangqiSquares,
   applyDuckXiangqiTurn,
-  DUCK_XIANGQI_PROGRESS_LIMIT,
   createInitialDuckXiangqiState,
+  DUCK_XIANGQI_PROGRESS_LIMIT,
   type DuckXiangqiBoard,
   type DuckXiangqiGameState,
   type DuckXiangqiSquare,
@@ -12,11 +13,9 @@ import {
   duckXiangqiGeneralsFace,
   duckXiangqiMovesFrom,
   duckXiangqiPseudoMovesFrom,
-  duckXiangqiSquareOf,
   getDuckXiangqiLegalTurns,
-  allDuckXiangqiSquares,
 } from './variants-duck-xiangqi.js';
-import { createInitialXiangqiState, type XiangqiSquare } from './variants-xiangqi.js';
+import { createInitialXiangqiState } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
   getStandardXiangqiLegalMoves,
@@ -57,10 +56,7 @@ function generalCapturable(board: DuckXiangqiBoard, color: 'red' | 'black'): boo
  * plus the two filters standard play has and Duck Xiangqi does not (D4 removes
  * check; D5 keeps facing, so facing is applied in both).
  */
-function standardMovesViaDuckKernel(
-  board: DuckXiangqiBoard,
-  mover: 'red' | 'black',
-): string[] {
+function standardMovesViaDuckKernel(board: DuckXiangqiBoard, mover: 'red' | 'black'): string[] {
   const out: string[] = [];
   for (const from of allDuckXiangqiSquares()) {
     const piece = board[from];
@@ -98,10 +94,7 @@ test('duckless geometry agrees with the elephantops-backed standard kernel', () 
       const reference = getStandardXiangqiLegalMoves(state)
         .map((m) => `${m.from}${m.to}`)
         .sort();
-      const mine = standardMovesViaDuckKernel(
-        state.board as DuckXiangqiBoard,
-        state.status.turn,
-      );
+      const mine = standardMovesViaDuckKernel(state.board as DuckXiangqiBoard, state.status.turn);
       assert.deepEqual(mine, reference, `ply ${ply} of game ${game}`);
       compared++;
       if (reference.length === 0) break;
@@ -165,9 +158,7 @@ test('the duck must move to a DIFFERENT point, and may take the vacated one', ()
 
 // ── D1/D2: the duck is an ordinary piece, and it screens ───────────────────
 
-function boardOf(
-  entries: [DuckXiangqiSquare, string][],
-): DuckXiangqiBoard {
+function boardOf(entries: [DuckXiangqiSquare, string][]): DuckXiangqiBoard {
   const roles: Record<string, string> = {
     k: 'general',
     a: 'advisor',
@@ -200,10 +191,7 @@ test('(D2) the duck screens for a cannon', () => {
     !duckXiangqiPseudoMovesFrom(board, undefined, 'a1').includes('a5'),
     'no screen, no shot',
   );
-  assert.ok(
-    duckXiangqiPseudoMovesFrom(board, 'a3', 'a1').includes('a5'),
-    'the duck is the screen',
-  );
+  assert.ok(duckXiangqiPseudoMovesFrom(board, 'a3', 'a1').includes('a5'), 'the duck is the screen');
 });
 
 test('(D2) the duck is a SECOND screen, which kills the shot', () => {
@@ -477,9 +465,7 @@ test('(D9) a position with no legal turn exists, and each rule is load-bearing',
 
   // D1: move the duck off e2 and red's soldier is free.
   const duckAway = { ...stalematePosition(), duck: 'i5' as DuckXiangqiSquare };
-  assert.ok(
-    getDuckXiangqiLegalTurns(duckAway).some((t) => t.from === 'e1' && t.to === 'e2'),
-  );
+  assert.ok(getDuckXiangqiLegalTurns(duckAway).some((t) => t.from === 'e1' && t.to === 'e2'));
 
   // D5: block the d-file further up and the general may capture on d2 after all.
   const base = stalematePosition();
@@ -487,9 +473,7 @@ test('(D9) a position with no legal turn exists, and each rule is load-bearing',
     ...base,
     board: { ...base.board, d6: { color: 'black', role: 'soldier' } },
   };
-  assert.ok(
-    getDuckXiangqiLegalTurns(fileBlocked).some((t) => t.from === 'd1' && t.to === 'd2'),
-  );
+  assert.ok(getDuckXiangqiLegalTurns(fileBlocked).some((t) => t.from === 'd1' && t.to === 'd2'));
 });
 
 test('(D9) stalemate is a LOSS for the side to move, the opposite of Duck Chess', () => {
@@ -515,7 +499,6 @@ test('(D9) stalemate is a LOSS for the side to move, the opposite of Duck Chess'
     reason: 'stalemate',
   });
 });
-
 
 // ── D8: the draw rule ──────────────────────────────────────────────────────
 
@@ -586,6 +569,9 @@ test('(D8) a capture resets the clock and clears repetition history', () => {
   assert.equal(s2.progressPlies, 0, 'a capture resets it');
   // History is cleared, then the position the capture produced is counted, so
   // exactly one entry survives - not zero.
-  assert.deepEqual(Object.values(s2.positionCounts), [1],
-    'earlier positions become unreachable; only the new one is tracked');
+  assert.deepEqual(
+    Object.values(s2.positionCounts),
+    [1],
+    'earlier positions become unreachable; only the new one is tracked',
+  );
 });

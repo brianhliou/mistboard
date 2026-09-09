@@ -258,11 +258,7 @@ export function allDuckXiangqiSquares(): readonly DuckXiangqiSquare[] {
 // these region-bound rather than owner-bound because its pieces change sides;
 // nothing changes sides here, so these are the standard rules verbatim.
 
-export function duckXiangqiInPalace(
-  color: DuckXiangqiColor,
-  file: number,
-  rank: number,
-): boolean {
+export function duckXiangqiInPalace(color: DuckXiangqiColor, file: number, rank: number): boolean {
   if (file < 3 || file > 5) return false;
   return color === 'red' ? rank <= 2 : rank >= 7;
 }
@@ -391,10 +387,7 @@ function horseTargets(
   return out;
 }
 
-function soldierSteps(
-  square: DuckXiangqiSquare,
-  color: DuckXiangqiColor,
-): DuckXiangqiSquare[] {
+function soldierSteps(square: DuckXiangqiSquare, color: DuckXiangqiColor): DuckXiangqiSquare[] {
   const { file, rank } = duckXiangqiCoordOf(square);
   const out: DuckXiangqiSquare[] = [];
   const forwardRank = color === 'red' ? rank + 1 : rank - 1;
@@ -528,10 +521,7 @@ export function duckXiangqiPseudoMovesFrom(
 
 // ── The facing rule (D5, D5a) ──────────────────────────────────────────────
 
-function generalSquare(
-  board: DuckXiangqiBoard,
-  color: DuckXiangqiColor,
-): DuckXiangqiSquare | null {
+function generalSquare(board: DuckXiangqiBoard, color: DuckXiangqiColor): DuckXiangqiSquare | null {
   for (const square of allDuckXiangqiSquares()) {
     const piece = board[square];
     if (piece && piece.role === 'general' && piece.color === color) return square;
@@ -772,12 +762,9 @@ export function isDuckXiangqiLegalTurn(
     return turn.duckTo === null;
   }
   if (turn.duckTo === null) return false;
-  return duckXiangqiDuckDestinations(
-    state.board,
-    state.duck,
-    turn.from,
-    turn.to,
-  ).includes(turn.duckTo);
+  return duckXiangqiDuckDestinations(state.board, state.duck, turn.from, turn.to).includes(
+    turn.duckTo,
+  );
 }
 
 // ── State ──────────────────────────────────────────────────────────────────
@@ -954,8 +941,7 @@ export function getDuckXiangqiPlayerView(
     // an empty list makes every selection reconcile itself away instantly and
     // the board silently refuses to select anything. Perfect information means
     // there is nothing to hide here anyway.
-    legalPieceMoves:
-      state.status.type === 'playing' ? getDuckXiangqiLegalPieceMoves(state) : [],
+    legalPieceMoves: state.status.type === 'playing' ? getDuckXiangqiLegalPieceMoves(state) : [],
     status: state.status,
     moveNumber: state.moveNumber,
     lastMove: turn ? { from: turn.from, to: turn.to } : undefined,
