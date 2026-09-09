@@ -37,6 +37,8 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'reveal-chess': false,
   jungle: true,
   'jungle-flip': true,
+  // Registered but not on any public surface: no web client yet.
+  'duck-xiangqi': false,
 } satisfies Record<GameSpecId, boolean>;
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));

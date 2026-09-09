@@ -32,7 +32,12 @@ export type MovementRulesId =
   | 'jungle'
   | 'jungle-flip'
   | 'fortress-xiangqi'
-  | 'luzhanqi';
+  | 'luzhanqi'
+  // Duck Xiangqi: standard xiangqi geometry plus a shared, uncapturable duck
+  // that moves every turn. Its own movement id because the duck is an ordinary
+  // blocking piece for every xiangqi geometry at once - it screens for cannons,
+  // blocks the horse's leg and the elephant's eye, and breaks a general file.
+  | 'duck-xiangqi';
 // 'royal-capture-or-race': capture/checkmate the royal OR race it to the enemy
 // home rank (the Crossroads Chess "Try"). Open mode keeps checkmate, dark switches to
 // king-capture; the visibility axis + rules module resolve which.
@@ -105,7 +110,9 @@ export type RatingPoolBaseId =
   | 'jungle_flip'
   | 'fortress_xiangqi'
   | 'luzhanqi'
-  | 'xiangqi';
+  | 'xiangqi'
+  // Owes a user_ratings CHECK migration adding 'duck_xiangqi' before it is rated.
+  | 'duck_xiangqi';
 
 export type GameSpecId =
   | 'dark-chess'
@@ -131,6 +138,10 @@ export type GameSpecId =
   | 'jungle-flip'
   | 'fortress-xiangqi'
   | 'luzhanqi'
+  // Duck Xiangqi: Duck Chess's shared blocker on the xiangqi board. Rules engine:
+  // packages/game/src/variants-duck-xiangqi.ts. Design notes and the balance
+  // measurement: docs-private/duck-xiangqi/.
+  | 'duck-xiangqi'
   // Standard (open-information) Xiangqi — ordinary 9x10 Chinese chess. The
   // open-info sibling of Dark Xiangqi; check-aware legality + checkmate via the
   // elephantops CHECKED path (packages/game/src/variants-xiangqi-standard.ts).
@@ -184,6 +195,7 @@ export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
 export const LUZHANQI_SPEC_ID = 'luzhanqi' satisfies GameSpecId;
 export const XIANGQI_SPEC_ID = 'xiangqi' satisfies GameSpecId;
+export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
 // Compatibility aliases for records and links created before the Crossroads
 // rename. New code should use CROSSROADS_CHESS_SPEC_ID.
 export const DUAL_CHESS_SPEC_ID = 'dual-chess' satisfies GameSpecAliasId;
@@ -564,6 +576,36 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'luzhanqi',
+    publicSurface: 'hidden',
+    runtimeStatus: 'live',
+  },
+  {
+    // Duck Xiangqi: W. D. Troyka's... no - Dr Tim Paulden's Duck Chess (2016),
+    // applied to the 9x10 xiangqi board. A turn is a legal xiangqi move, then the
+    // shared duck moves to any other empty point. The duck can never be captured
+    // and is an ordinary blocking piece for every xiangqi geometry: it screens
+    // for cannons, blocks the horse's leg and the elephant's eye, and breaks a
+    // flying-general file.
+    //
+    // No check (you win by CAPTURING the general), the generals may still never
+    // be left facing, stalemate is a LOSS (xiangqi's answer, the opposite of Duck
+    // Chess's "fowling" rule), and 60 moves without a capture is a draw.
+    //
+    // Rules engine: packages/game/src/variants-duck-xiangqi.ts.
+    // Design decisions D1-D9 and the balance measurement: docs-private/duck-xiangqi/.
+    id: DUCK_XIANGQI_SPEC_ID,
+    publicName: 'Duck Xiangqi',
+    family: 'xiangqi',
+    board: 'xiangqi-9x10',
+    movement: 'duck-xiangqi',
+    objective: 'general-capture',
+    visibility: 'open',
+    setup: 'standard',
+    reserves: 'none',
+    // The duck is not a drop: it has no reserve and is neither player's piece.
+    dropPolicy: 'none',
+    ratingPoolBase: 'duck_xiangqi',
+    // Not rated until the pool migration lands and the bot ladder is calibrated.
     publicSurface: 'hidden',
     runtimeStatus: 'live',
   },

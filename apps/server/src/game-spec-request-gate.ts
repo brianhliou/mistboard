@@ -142,6 +142,11 @@ const GATED_GAME_SPECS = {
     disabledError: 'xiangqi_disabled',
     notIntegratedError: 'xiangqi_not_integrated',
   },
+  'duck-xiangqi': {
+    enabled: () => process.env.MISTBOARD_DUCK_XIANGQI_ENABLED === '1',
+    disabledError: 'duck_xiangqi_disabled',
+    notIntegratedError: 'duck_xiangqi_not_integrated',
+  },
 } satisfies { readonly [Id in GatedGameSpecId]: GateSpecEntry<Id> };
 
 type GateEntryUnion = (typeof GATED_GAME_SPECS)[GatedGameSpecId];
