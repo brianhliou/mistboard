@@ -15,8 +15,10 @@ export interface BoardDragHandlers {
   // The persistent container that holds the `[data-square]` hit elements. Its
   // inner SVG is replaced on every render, but the container itself stays.
   board: HTMLElement;
-  // Pixel size of the floating ghost piece. A function lets responsive boards
-  // match the currently rendered cell size instead of their internal SVG units.
+  // Size of the floating ghost piece. A NUMBER is read as the board SVG's own
+  // viewBox units and scaled to the rendered board (a phone renders the same
+  // viewBox much smaller, and an unscaled ghost is visibly bigger than the piece
+  // it was lifted from). A FUNCTION returns CSS pixels and is used as given.
   ghostSizePx: number | (() => number);
   // A click (tap) on `square` — the existing click-to-move handler.
   onSquareClick: (square: string) => void;
@@ -36,9 +38,20 @@ export interface BoardDragHandlers {
 
 const MOVE_THRESHOLD_PX = 4;
 
+// Rendered CSS pixels per board-SVG viewBox unit. 1 when the board has not been
+// laid out yet (jsdom, pre-paint) so the caller's constant is used unscaled.
+function boardSvgScale(board: HTMLElement): number {
+  const svg = board.querySelector('svg');
+  if (!svg) return 1;
+  const units = svg.viewBox?.baseVal?.width ?? 0;
+  const rendered = svg.getBoundingClientRect().width;
+  return units > 0 && rendered > 0 ? rendered / units : 1;
+}
+
 function ghostSizePx(handlers: BoardDragHandlers): number {
   const size = handlers.ghostSizePx;
-  return typeof size === 'function' ? size() : size;
+  if (typeof size === 'function') return size(); // already CSS pixels
+  return size * boardSvgScale(handlers.board);
 }
 
 function squareOf(target: EventTarget | null): string | null {
@@ -53,18 +66,14 @@ function squareUnderPoint(x: number, y: number): string | null {
 
 export function installBoardDrag(handlers: BoardDragHandlers): void {
   let suppressNextClick = false;
-  let ghost: HTMLDivElement | null = null;
 
-  const removeGhost = (): void => {
-    ghost?.remove();
-    ghost = null;
-  };
-  const positionGhost = (x: number, y: number): void => {
-    if (!ghost) return;
-    const size = ghostSizePx(handlers);
-    ghost.style.left = `${x - size / 2}px`;
-    ghost.style.top = `${y - size / 2}px`;
-  };
+  // Touch drags belong to us, not to the page scroller. Without this the browser
+  // claims any vertical-ish touch on the board as a page scroll and answers with
+  // pointercancel, so drag-to-move never completes on a phone. preventDefault()
+  // on pointerdown cannot do this; touch-action is the only lever. Cost: a swipe
+  // that STARTS on the board no longer scrolls the page (lichess makes the same
+  // trade on cg-board) — the panels below the board still scroll normally.
+  handlers.board.style.touchAction = 'none';
 
   handlers.board.addEventListener('click', (event) => {
     if (suppressNextClick) {
@@ -88,6 +97,31 @@ export function installBoardDrag(handlers: BoardDragHandlers): void {
     const startX = event.clientX;
     const startY = event.clientY;
     let dragging = false;
+    // Ghost state is per-drag, never per-install: one shared reference lets a
+    // second drag overwrite the first and strand its node in <body> forever.
+    let ghost: HTMLDivElement | null = null;
+
+    const removeGhost = (): void => {
+      ghost?.remove();
+      ghost = null;
+    };
+    const positionGhost = (x: number, y: number): void => {
+      if (!ghost) return;
+      const size = ghostSizePx(handlers);
+      ghost.style.left = `${x - size / 2}px`;
+      ghost.style.top = `${y - size / 2}px`;
+    };
+    const detach = (): void => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onCancel);
+    };
+    const swallowTrailingClick = (): void => {
+      suppressNextClick = true;
+      setTimeout(() => {
+        suppressNextClick = false;
+      }, 0);
+    };
 
     const onMove = (move: PointerEvent): void => {
       if (!dragging) {
@@ -115,20 +149,30 @@ export function installBoardDrag(handlers: BoardDragHandlers): void {
     };
 
     const onUp = (up: PointerEvent): void => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
+      detach();
       if (!dragging) return; // a tap — let the click handler run click-to-move
       removeGhost();
-      suppressNextClick = true;
-      setTimeout(() => {
-        suppressNextClick = false;
-      }, 0);
+      swallowTrailingClick();
       const to = squareUnderPoint(up.clientX, up.clientY);
       handlers.onDrop(from, to && to !== from ? to : null);
     };
 
+    // The browser took the gesture (system edge swipe, a second finger, the page
+    // scroller). No pointerup follows, so this is the ONLY place the ghost and
+    // the lifted-piece state get cleaned up on that path. Without it the ghost
+    // stays welded to the viewport (it is position: fixed) for the rest of the
+    // session, one per interrupted drag.
+    const onCancel = (): void => {
+      detach();
+      if (!dragging) return;
+      removeGhost();
+      swallowTrailingClick();
+      handlers.onDrop(from, null); // put the lifted piece back
+    };
+
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onCancel);
   });
 }
 
