@@ -13,6 +13,7 @@ import type { DuckXiangqiPlayerView } from '@mistboard/game';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import {
   type DuckXiangqiPostgameResponse,
+  duckXiangqiTurnLabel,
   loadDuckXiangqiPostgame,
   postgameReplayMaxPly,
   postgameViewAtPly,
@@ -51,6 +52,14 @@ export function mountDuckXiangqiWatchReplay(
       // The wire view carries no captured pool, so the per-pane capture strips
       // have nothing to draw.
       fillCaptures: () => {},
+      // The default `${from}-${to}` would publish half of every turn: the duck
+      // placement is the other half and is not derivable from the piece move.
+      moveLabel: (move) =>
+        duckXiangqiTurnLabel({
+          from: String(move.from),
+          to: String(move.to),
+          duckTo: typeof move.duckTo === 'string' ? move.duckTo : null,
+        }),
       // Deliberately no animateMove. A ply here moves TWO things, the piece and
       // the duck, and the shared helper animates one move. Gliding the piece
       // while the duck teleports reads as a rendering fault rather than as a

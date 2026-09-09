@@ -13,11 +13,15 @@
 // the same URL shape without restating it.
 
 import type { AnalysisVariantId } from '../analysis-catalog.js';
+import type { EditorVariantId } from '../editor/editor-catalog.js';
 
 export function analysisHref(variant: AnalysisVariantId, fen: string): string {
   return `/analysis/${variant}?fen=${encodeURIComponent(fen)}`;
 }
 
-export function editorHref(variant: AnalysisVariantId, fen: string): string {
+/** EditorVariantId, not AnalysisVariantId: the editor covers a subset of the
+ *  catalog, so a review board for a variant with no editor cannot build a
+ *  "Board editor" link that would 404 (it omits `boardEditorHref` instead). */
+export function editorHref(variant: EditorVariantId, fen: string): string {
   return `/editor/${variant}?fen=${encodeURIComponent(fen)}`;
 }

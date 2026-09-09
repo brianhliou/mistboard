@@ -92,6 +92,11 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   // pane is a per-color view rather than truth).
   renderBoard(view: View, orientation: 'red' | 'black', key: ViewKey): string;
   fillCaptures(host: HTMLElement, view: View, owner: 'red' | 'black'): void;
+  // Label one ply for the move list. The default writes `${from}-${to}`, which
+  // is every tenant whose move IS a from/to pair. A tenant whose move carries
+  // more than that (Duck Xiangqi: a piece move AND a duck placement) must pass
+  // its own, or the TV list silently publishes half of each turn.
+  moveLabel?(move: Record<string, unknown>): string;
   // Drop/reserve variants (drop-mini-xiangqi, crazyhouse, shogi) where the hand IS
   // the position: the compact showcase flanks the board with vertical reserve
   // strips (each side's hand) instead of top/bottom capture rows.
@@ -288,7 +293,10 @@ function seatCell(name: string): SeatCell {
 // (the `${from}-${to}` convention the tenant postgame reviews use). Drop moves
 // (no `from`) fall back to the destination square. Entries without a `move`
 // (terminal events) are skipped.
-function buildTenantMoveEntries(postgame: WatchPostgameMeta): MoveListEntry[] {
+function buildTenantMoveEntries(
+  postgame: WatchPostgameMeta,
+  moveLabel?: (move: Record<string, unknown>) => string,
+): MoveListEntry[] {
   const entries: MoveListEntry[] = [];
   for (const event of postgame.timeline ?? []) {
     const move = event.move;
@@ -298,7 +306,7 @@ function buildTenantMoveEntries(postgame: WatchPostgameMeta): MoveListEntry[] {
     if (!from && !to) continue;
     entries.push({
       ply: typeof event.ply === 'number' ? event.ply : entries.length + 1,
-      label: from && to ? `${from}-${to}` : to || from,
+      label: moveLabel ? moveLabel(move) : from && to ? `${from}-${to}` : to || from,
     });
   }
   return entries;
@@ -1002,7 +1010,8 @@ export async function mountTenantWatchReplay<
     // manualJump already pauses autoplay, clamps, and re-syncs (which fires
     // onPlyChange). The /watch move list + scrubber drive the board through it.
     jumpToPly: (ply: number) => manualJump(ply),
-    moveEntries: () => (activePostgame ? buildTenantMoveEntries(activePostgame) : []),
+    moveEntries: () =>
+      activePostgame ? buildTenantMoveEntries(activePostgame, adapter.moveLabel) : [],
     // The clocks the players actually had, reconstructed from the move timestamps. A live
     // game projects the server clock to now (so polling this ticks it down at real speed);
     // a replay reports the ply's recorded value and does not move between plies. Null (no

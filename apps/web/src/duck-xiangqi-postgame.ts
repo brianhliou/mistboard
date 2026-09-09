@@ -100,8 +100,16 @@ type LoadResult =
  * point and this is a static page. `x…#` is the general capture, the one turn
  * that ends the game before the duck would have moved and so the one turn with
  * no `@` half.
+ *
+ * Takes the STRUCTURAL shape rather than `DuckXiangqiTurn`, because the watch
+ * renderer labels moves straight off the wire, where a square is only a string.
+ * Narrowing there would mean casting an untrusted value into the square union.
  */
-export function duckXiangqiTurnLabel(turn: DuckXiangqiTurn): string {
+export function duckXiangqiTurnLabel(turn: {
+  from: string;
+  to: string;
+  duckTo: string | null;
+}): string {
   return turn.duckTo === null
     ? `${turn.from}x${turn.to}#`
     : `${turn.from}-${turn.to}@${turn.duckTo}`;

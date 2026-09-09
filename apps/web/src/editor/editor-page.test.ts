@@ -1,15 +1,17 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { ANALYSIS_VARIANTS, type AnalysisVariantId } from '../analysis-catalog.js';
+import { EDITOR_VARIANTS, type EditorVariantId } from './editor-catalog.js';
 import { mountEditorPage } from './editor-page.js';
 
-// End-to-end wiring (happy-dom): every catalog variant mounts a working editor
+// End-to-end wiring (happy-dom): every EDITOR variant mounts a working editor
 // (picker, board, FEN field, analysis-board link), and the xiangqi / banqi /
 // jieqi flows exercise the brushes, the FEN seed, and the dealt-variant rules
-// the editor enforces itself.
+// the editor enforces itself. The editor's list is a subset of the analysis
+// catalog (editor-catalog.ts), and its dropdown shows that shorter list: an
+// analysis variant with no editor must not be offered a route that 404s.
 
 let root: HTMLElement | null = null;
 
-function mount(variant: AnalysisVariantId, fen?: string): HTMLElement {
+function mount(variant: EditorVariantId, fen?: string): HTMLElement {
   root = document.createElement('div');
   document.body.append(root);
   mountEditorPage(root, variant, { fen: fen ?? null });
@@ -51,13 +53,13 @@ function buttonNamed(el: HTMLElement, text: string): HTMLButtonElement {
 }
 
 describe('editor page', () => {
-  for (const variant of ANALYSIS_VARIANTS) {
+  for (const variant of EDITOR_VARIANTS) {
     it(`mounts the ${variant.id} editor`, () => {
       const el = mount(variant.id);
       const select = el.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
       expect(select, 'variant picker').not.toBeNull();
       expect(select!.value).toBe(variant.id);
-      expect(select!.options.length).toBe(ANALYSIS_VARIANTS.length);
+      expect(select!.options.length).toBe(EDITOR_VARIANTS.length);
       expect(el.querySelector('.editor-board__svg svg'), 'board svg').not.toBeNull();
       expect(el.querySelectorAll('.editor-square').length).toBeGreaterThan(0);
       expect(fenField(el).value).not.toBe('');

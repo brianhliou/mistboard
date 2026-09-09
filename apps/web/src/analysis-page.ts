@@ -6,6 +6,7 @@
 
 import './analysis-picker.css';
 import { ANALYSIS_VARIANTS, type AnalysisVariantId } from './analysis-catalog.js';
+import { EDITOR_VARIANTS, type EditorVariantId } from './editor/editor-catalog.js';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -25,6 +26,7 @@ const LOADERS: Record<AnalysisVariantId, () => Promise<AnalysisMount>> = {
   jieqi: () => variantMount('jieqi'),
   'dark-xiangqi': () => variantMount('dark-xiangqi'),
   'dark-chess': () => variantMount('dark-chess'),
+  'duck-xiangqi': () => variantMount('duck-xiangqi'),
 };
 
 function variantMount(id: Exclude<AnalysisVariantId, 'xiangqi'>): Promise<AnalysisMount> {
@@ -47,8 +49,17 @@ export async function mountAnalysisPage(
 // The top-left variant dropdown (lichess analysis anatomy): the ONLY element in
 // the left rail — [variant marker] [select], one bordered card. Switching
 // navigates to the target board fresh (seeded ?moves= / ?fen= links are
-// variant-specific, so the query is dropped deliberately). The board editor
-// (/editor) shares the picker and the catalog; it passes its own base path.
+// variant-specific, so the query is dropped deliberately).
+//
+// The board editor (/editor) shares the picker; it passes its own base path and
+// gets its own SHORTER list, because the editor covers a subset of the analysis
+// catalog (editor-catalog.ts). Listing an editor-less variant in the editor's
+// dropdown would offer the reader a 404. The overloads make the pairing a type
+// error rather than a convention: an '/editor' picker only accepts an
+// EditorVariantId.
+export function buildVariantPicker(current: AnalysisVariantId): HTMLElement;
+export function buildVariantPicker(current: AnalysisVariantId, basePath: '/analysis'): HTMLElement;
+export function buildVariantPicker(current: EditorVariantId, basePath: '/editor'): HTMLElement;
 export function buildVariantPicker(
   current: AnalysisVariantId,
   basePath: '/analysis' | '/editor' = '/analysis',
@@ -65,7 +76,7 @@ export function buildVariantPicker(
     'aria-label',
     t(basePath === '/editor' ? 'editor.variantPicker' : 'analysis.variantPicker'),
   );
-  for (const variant of ANALYSIS_VARIANTS) {
+  for (const variant of basePath === '/editor' ? EDITOR_VARIANTS : ANALYSIS_VARIANTS) {
     const option = document.createElement('option');
     option.value = variant.id;
     option.textContent = variantDisplayLabel(variant.id);

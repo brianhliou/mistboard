@@ -6,6 +6,13 @@
 //
 // This module is imported by main.ts route matching: keep it tiny (types + the
 // list + the path parser; no review/board imports).
+//
+// THE BOARD EDITOR IS A SUBSET OF THIS LIST, NOT A MIRROR OF IT. Every editor
+// variant is an analysis variant (the editor hands its position to the analysis
+// board), but not the other way round: EDITOR_VARIANT_IDS in
+// editor/editor-catalog.ts is the editor's own allowlist, derived from this
+// union with `satisfies`. Membership here therefore asserts a tree-review stack
+// and nothing else.
 
 import { type GameSpecId, gameSpecForId } from '@mistboard/game';
 
@@ -18,7 +25,8 @@ export type AnalysisVariantId =
   | 'fortress-xiangqi'
   | 'jieqi'
   | 'dark-xiangqi'
-  | 'dark-chess';
+  | 'dark-chess'
+  | 'duck-xiangqi';
 
 export type AnalysisVariant = {
   id: AnalysisVariantId;
@@ -43,19 +51,14 @@ export const ANALYSIS_VARIANTS: readonly AnalysisVariant[] = [
   entry('dark-chess'),
   entry('jungle'),
   entry('jungle-flip'),
+  // Unlisted in CANONICAL_VARIANT_ORDER, so it sorts last. ANALYSIS ONLY, with
+  // no board editor: the editor's model is a piece map keyed by square, and the
+  // duck is not a piece (it belongs to neither colour, has no role, and rides
+  // the seventh FEN field), so an EditorSpec would hand back every position
+  // with the duck silently dropped. EDITOR_VARIANT_IDS therefore omits it and
+  // /editor/duck-xiangqi 404s.
+  entry('duck-xiangqi'),
 ];
-
-// NOT HERE YET: duck-xiangqi. Its tree-review stack exists
-// (review/duck-xiangqi-review.ts) and mounts through this page's dispatch
-// unchanged, but AnalysisVariantId is also the key of two OTHER exhaustive maps
-// — analysis-page.ts's mount table and, load-bearingly, editor/editor-specs.ts's
-// EDITOR_SPECS. Listing a variant here therefore asserts it has a BOARD EDITOR,
-// and the editor's model has no way to hold the duck: the duck is not in the
-// placement (it rides the seventh FEN field) and it belongs to neither colour,
-// so every EditorSpec hook would hand back a position with the duck dropped.
-// Adding the row before that is settled would ship a surface that silently loses
-// half the position. Splitting an EditorVariantId out of AnalysisVariantId is
-// the unblock, and it is a decision about the editor, not about this catalog.
 
 export function analysisVariantLabel(id: AnalysisVariantId): string {
   return gameSpecForId(id).publicName;
