@@ -7,3 +7,4 @@ export * from './hk-patterns.js';
 export * from './hk-faan.js';
 export * from './hk-detect.js';
 export * from './claims.js';
+export * from './game.js';
