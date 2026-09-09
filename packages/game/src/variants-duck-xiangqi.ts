@@ -165,6 +165,39 @@ export type DuckXiangqiGameStatus =
     }
   | { type: 'aborted'; reason: AbortReason };
 
+/**
+ * What a client is shown. Duck Xiangqi is perfect information, so this is the
+ * whole truth - it exists to shape the PAYLOAD, not to hide anything.
+ *
+ * It carries legal PIECE MOVES, not legal turns, and that is deliberate. There
+ * are ~2,554 legal turns from the opening array; serialising them would put
+ * roughly 38KB on the wire every frame, against ~660 bytes for the 44 piece
+ * moves. The client resolves phase two locally with
+ * `duckXiangqiDuckDestinations`, which it can do because the kernel is a shared
+ * package and the position is public. The server still validates the whole turn
+ * on arrival - the client's copy is a convenience, never an authority.
+ */
+export type DuckXiangqiPlayerView = {
+  id: string;
+  perspective: DuckXiangqiColor;
+  board: DuckXiangqiBoard;
+  /** Undefined only before Red's first turn. */
+  duck?: DuckXiangqiSquare;
+  /** First half of every legal turn. Pair with duckXiangqiDuckDestinations. */
+  legalPieceMoves: { from: DuckXiangqiSquare; to: DuckXiangqiSquare }[];
+  status: DuckXiangqiGameStatus;
+  moveNumber: number;
+  /**
+   * Named `lastMove`, not `lastTurn`, on purpose: the shared last-move renderer
+   * and the generic tenant plumbing both read `lastMove`, and the kernel's state
+   * field is `lastTurn`. Translating here keeps that mismatch in one place
+   * instead of every consumer.
+   */
+  lastMove?: { from: DuckXiangqiSquare; to: DuckXiangqiSquare };
+  /** Where the duck stood before the last turn, so the board can mark it. */
+  lastDuck?: DuckXiangqiSquare;
+};
+
 export type DuckXiangqiGameState = {
   id: string;
   board: DuckXiangqiBoard;
@@ -897,4 +930,31 @@ export function applyDuckXiangqiTurn(
     };
   }
   return next;
+}
+
+/**
+ * Perfect information, so both seats get the same truth and `perspective` only
+ * decides which way the board is drawn.
+ */
+export function getDuckXiangqiPlayerView(
+  state: DuckXiangqiGameState,
+  perspective: DuckXiangqiColor,
+): DuckXiangqiPlayerView {
+  const turn = state.lastTurn;
+  return {
+    id: state.id,
+    perspective,
+    board: state.board,
+    duck: state.duck,
+    // Only the side to move gets a move list; the waiting client has nothing to
+    // do with one, and omitting it keeps a frame from implying it is your turn.
+    legalPieceMoves:
+      state.status.type === 'playing' && state.status.turn === perspective
+        ? getDuckXiangqiLegalPieceMoves(state)
+        : [],
+    status: state.status,
+    moveNumber: state.moveNumber,
+    lastMove: turn ? { from: turn.from, to: turn.to } : undefined,
+    lastDuck: turn?.duckTo ?? undefined,
+  };
 }

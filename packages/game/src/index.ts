@@ -34,6 +34,7 @@ export * from './variants-crazyhouse.js';
 export * from './variants-crossroads-chess.js';
 export * from './variants-drop-mini-xiangqi.js';
 export * from './variants-fortress-xiangqi.js';
+export * from './variants-duck-xiangqi.js';
 export * from './variants-jieqi.js';
 export * from './variants-jungle.js';
 export * from './variants-jungle-flip.js';

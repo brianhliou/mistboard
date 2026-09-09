@@ -5,6 +5,8 @@ export type ClientMessage = {
   drop?: string;
   from?: string;
   to?: string;
+  /** Duck Xiangqi: where the shared duck lands, second half of one turn. */
+  duckTo?: string;
   promotion?: string;
   setup?: unknown;
   token?: string;

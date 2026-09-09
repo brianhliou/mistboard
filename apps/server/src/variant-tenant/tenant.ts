@@ -269,6 +269,9 @@ export type VariantTenant<
       from?: string;
       to?: string;
       promotion?: string;
+      /** Duck Xiangqi: a turn is a piece move AND a duck placement, sent as one
+       *  message so a client that disconnects mid-placement sends nothing. */
+      duckTo?: string;
     }): M | null;
     // STATE-DEPENDENT canonicalization: resolve the parsed move to the exact
     // legal-move object to append (e.g. Crossroads re-attaches promotion from

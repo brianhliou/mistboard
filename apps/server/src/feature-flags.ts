@@ -49,6 +49,14 @@ export function fortressXiangqiEnabled(): boolean {
   return process.env.MISTBOARD_FORTRESS_XIANGQI_ENABLED === 'true';
 }
 
+// Duck Xiangqi (9x10 xiangqi + Duck Chess's shared blocker) live rooms.
+// Server-side opt-in, default off — the tenant exists but is not launched. Flip
+// to `return true` at launch, alongside the rated flag + the user_ratings CHECK
+// migration for the `duck_xiangqi` pool.
+export function duckXiangqiEnabled(): boolean {
+  return process.env.MISTBOARD_DUCK_XIANGQI_ENABLED === 'true';
+}
+
 // Jieqi (full-board xiangqi with hidden identities) live rooms. Server-side
 // opt-in, default off — the tenant exists but is not launched.
 export function jieqiEnabled(): boolean {

@@ -8,6 +8,7 @@ import {
   darkShogiEnabled,
   darkXiangqiEnabled,
   dropMiniXiangqiEnabled,
+  duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
@@ -143,7 +144,7 @@ const GATED_GAME_SPECS = {
     notIntegratedError: 'xiangqi_not_integrated',
   },
   'duck-xiangqi': {
-    enabled: () => process.env.MISTBOARD_DUCK_XIANGQI_ENABLED === '1',
+    enabled: duckXiangqiEnabled,
     disabledError: 'duck_xiangqi_disabled',
     notIntegratedError: 'duck_xiangqi_not_integrated',
   },
