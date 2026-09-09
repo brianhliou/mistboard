@@ -1,5 +1,28 @@
 /* Duck Xiangqi board chrome. The base board inherits every xiangqi surface
-   style; only the duck and the two-phase targets are new. */
+   style; only the duck, the two-phase targets, and the board aspect are new. */
+
+/* WITHOUT THIS the board renders at the wrong aspect and overflows the page,
+   with nothing failing anywhere — `live-layout.ts` toggles a route class per
+   spec and the CSS behind it is a separate, hand-maintained thing. Caught by
+   opening the page, not by 3,288 green tests.
+
+   Duck Xiangqi draws the same 9x10 intersection surface as standard xiangqi
+   with no coordinate gutter, so it takes the same ratios. */
+.live-route--duck-xiangqi {
+  --uni-board-aspect: calc(552 / 612);
+}
+
+:root[data-xiangqi-board-layout="cell"] .live-route--duck-xiangqi {
+  --uni-board-aspect: calc(540 / 612);
+}
+
+:root[data-board-coordinates="on"] .live-route--duck-xiangqi {
+  --uni-board-aspect: calc(576 / 636);
+}
+
+.live-route--duck-xiangqi .board-status {
+  width: 100%;
+}
 
 .dkx-duck-disc {
   fill: #f6c343;
@@ -20,13 +43,6 @@
   user-select: none;
 }
 
-/* Phase one: where the selected piece can go. Same language as every other
-   board here, so a xiangqi player reads it without being taught. */
-.dkx-target {
-  fill: rgb(20 20 20 / 32%);
-  pointer-events: none;
-}
-
 /* Phase two: where the DUCK can go. Deliberately a different colour and a
    larger dot. A player who has just moved a piece and suddenly sees dots again
    must be able to tell at a glance that these are duck squares, not more moves,
@@ -35,22 +51,4 @@
   fill: rgb(246 195 67 / 62%);
   stroke: rgb(138 100 0 / 70%);
   stroke-width: 1;
-}
-
-/* The board says which half of the turn it is waiting for. Two-action turns are
-   unfamiliar; a player who does not know the duck is pending will think the
-   move failed and click the piece again. */
-.dkx-phase-notice {
-  display: flex;
-  align-items: center;
-  gap: 0.5rem;
-  padding: 0.45rem 0.7rem;
-  border-radius: 8px;
-  background: rgb(246 195 67 / 16%);
-  border: 1px solid rgb(138 100 0 / 35%);
-  font-size: 0.9rem;
-}
-
-.dkx-phase-notice strong {
-  font-weight: 600;
 }

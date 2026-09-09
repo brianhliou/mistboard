@@ -121,12 +121,7 @@ registerVariantTenant({
     matchesCreateRequest: requestsDuckXiangqi,
     handleCreate: async (ctx, request, response, body) => {
       const accountUser = body.rated === true ? await currentAccountUser(request) : null;
-      await handleDuckXiangqiCreate(
-        { ...ctx, createDuckXiangqiRoom },
-        response,
-        body,
-        accountUser,
-      );
+      await handleDuckXiangqiCreate({ ...ctx, createDuckXiangqiRoom }, response, body, accountUser);
     },
   },
   // No public seek while the variant is hidden: a lobby entry would advertise a

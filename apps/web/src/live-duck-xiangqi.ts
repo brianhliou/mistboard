@@ -23,6 +23,10 @@ import {
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
 } from './duck-xiangqi-board.js';
+// The xiangqi surface stylesheets. WITHOUT THESE the board ground, palace
+// diagonals and river label are all drawn and all invisible — the markup is
+// correct and the page looks broken.
+import './live-xiangqi.css';
 import './duck-xiangqi.css';
 import { duckXiangqiEnabled } from './feature-flags.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
@@ -31,6 +35,7 @@ import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
 import {
   annotationOwner,
   type BoardAnnotations,
+  drawnBoardOverlays,
   installBoardAnnotations,
 } from './variant-tenant/board-annotations.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
@@ -51,7 +56,6 @@ let core: TenantLiveClientContext<DuckXiangqiColor, DuckXiangqiPlayerView> | nul
 let phase: DuckXiangqiBoardPhase = { kind: 'piece', selected: null };
 let annotations: BoardAnnotations | null = null;
 let roomMode: 'pvp' | 'pve' = 'pvp';
-let pveEngineId: string | null = null;
 let forfeitDeadline: number | null = null;
 let lastStatusType: string | null = null;
 
@@ -93,8 +97,6 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
   }),
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
-    if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
-    else if (frame.roomMode !== 'pve') pveEngineId = null;
     forfeitDeadline = typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
     const event = frame.event;
     if (
@@ -109,7 +111,6 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
   resetState: () => {
     phase = { kind: 'piece', selected: null };
     roomMode = 'pvp';
-    pveEngineId = null;
     forfeitDeadline = null;
     lastStatusType = null;
   },
@@ -129,7 +130,7 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
     window.addEventListener(xiangqiAppearanceChangedEvent, ctx.renderAll);
     installSelectionClickAway({
       roots: () => [core?.refs.board],
-        hasSelection: () => {
+      hasSelection: () => {
         const current = phase;
         return current.kind === 'duck' || current.selected !== null;
       },
@@ -205,10 +206,15 @@ function renderBoard(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | null): vo
     liveRefs.board.replaceChildren();
     return;
   }
+  // Right-click arrows and circles. `installBoardAnnotations` below captures the
+  // gesture, but the shapes only exist on screen if each render draws them.
+  const drawn = drawnBoardOverlays<DuckXiangqiSquare>(annotations?.shapes() ?? []);
   liveRefs.board.innerHTML = duckXiangqiBoardSvg(view, orientationFor(view), {
     interactive: true,
     phase,
     targets: targetsForPhase(view),
+    arrows: drawn.arrows,
+    markers: drawn.markers,
   });
 }
 
@@ -218,13 +224,22 @@ function renderBoard(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | null): vo
  * having failed, and clicks the piece again.
  */
 function renderPhaseNotice(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | null): void {
-  liveRefs.actionStatus.replaceChildren();
+  // Return WITHOUT clearing when there is nothing to say. The shared room
+  // chrome owns this element: it writes "Invite opponent" and "Viewing replay"
+  // into it and hides the whole section during normal connected play. Clearing
+  // unconditionally here blanked those, and unhiding is what makes this one
+  // visible at all - the section is `hidden` in the markup, so appending to it
+  // rendered a notice nobody could see. Same shape as the fortress check notice.
   if (!view || phase.kind !== 'duck' || !canInteract(view)) return;
+  liveRefs.actionSection.hidden = false;
+  liveRefs.actionStatus.replaceChildren();
   const notice = document.createElement('div');
-  notice.className = 'dkx-phase-notice';
+  // The site's own notice card, in the pending tone, rather than a bespoke one:
+  // a player has seen this exact card say "Invite opponent" a minute earlier.
+  notice.className = 'action-notice pending';
   const strong = document.createElement('strong');
-  strong.textContent = 'Now place the duck.';
-  const body = document.createElement('span');
+  strong.textContent = 'Now place the duck';
+  const body = document.createElement('p');
   body.textContent = 'Any empty point. Your move is not sent until you do.';
   notice.append(strong, body);
   liveRefs.actionStatus.append(notice);

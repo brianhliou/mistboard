@@ -21,6 +21,15 @@
 
 import type { DuckXiangqiPlayerView, DuckXiangqiSquare, DuckXiangqiTurn } from '@mistboard/game';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  LIVE_BOARD_GEO,
+  LIVE_BOARD_SURFACE,
+  XIANGQI_LIVE_PIECE_SIZE,
+  type XiangqiBoardArrow,
+  type XiangqiBoardMarker,
+  xiangqiArrowSvg,
+  xiangqiMarkerSvg,
+} from './xiangqi-board.js';
 import { xiangqiBoardPoint, xiangqiBoardViewBox } from './xiangqi-board-geometry.js';
 import {
   xiangqiSurfaceGrid,
@@ -28,11 +37,16 @@ import {
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
-import {
-  LIVE_BOARD_GEO,
-  LIVE_BOARD_SURFACE,
-  XIANGQI_LIVE_PIECE_SIZE,
-} from './xiangqi-board.js';
+
+// This board draws no coordinate labels, so it must not reserve their gutter -
+// the standard board swaps the same way when labels are off. Leaving it in put
+// a band of dead space around the grid.
+const DUCK_SURFACE = {
+  ...LIVE_BOARD_SURFACE,
+  geo: { ...LIVE_BOARD_SURFACE.geo, coordGutter: 0 },
+};
+
+import { boardLastMoveMarkersSvg } from './board-lastmove.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
 type Color = 'red' | 'black';
@@ -55,6 +69,9 @@ export type DuckXiangqiBoardState = {
   targets: readonly DuckXiangqiSquare[];
   layout?: XiangqiBoardLayout;
   pieceSet?: Parameters<typeof renderXiangqiPiece>[1] extends { pieceSet?: infer P } ? P : never;
+  /** Right-click arrows and circles, from the shared board-annotation store. */
+  arrows?: readonly XiangqiBoardArrow[];
+  markers?: readonly XiangqiBoardMarker[];
 };
 
 const SQUARES = (() => {
@@ -126,12 +143,16 @@ function targetLayer(
   // piece and now sees dots everywhere needs to know instantly that these are
   // duck squares, not more moves — otherwise the second click feels like the
   // board misread the first.
-  const cls = phase.kind === 'duck' ? 'dkx-target dkx-target--duck' : 'dkx-target';
-  const r = XIANGQI_LIVE_PIECE_SIZE * (phase.kind === 'duck' ? 0.2 : 0.16);
+  // Phase one reuses the board's own hint dot so a xiangqi player reads it
+  // without being taught. Phase two gets its own mark, deliberately different:
+  // a player who has just moved and suddenly sees dots again must know at a
+  // glance that these are DUCK squares, not more moves.
   return targets
     .map((square) => {
       const p = point(square, perspective, layout);
-      return `<circle cx="${p.x}" cy="${p.y}" r="${r}" class="${cls}"/>`;
+      return phase.kind === 'duck'
+        ? `<circle class="dkx-target--duck" cx="${p.x}" cy="${p.y}" r="10"/>`
+        : `<circle class="xq-live-hint-dot" cx="${p.x}" cy="${p.y}" r="7"/>`;
     })
     .join('');
 }
@@ -142,19 +163,19 @@ function lastMoveLayer(
   layout: XiangqiBoardLayout,
 ): string {
   if (!view.lastMove) return '';
-  const r = XIANGQI_LIVE_PIECE_SIZE * 0.5;
-  return [view.lastMove.from, view.lastMove.to]
-    .map((square) => {
-      const p = point(square, perspective, layout);
-      return `<circle cx="${p.x}" cy="${p.y}" r="${r}" class="xq-lastmove-ring"/>`;
-    })
-    .join('');
+  // The SHARED marker markup, not an invented class: origin shadow disc plus a
+  // gold destination ring, tuned on the standard xiangqi board and used by every
+  // token board here. Rolling my own gave two unstyled circles.
+  return boardLastMoveMarkersSvg(
+    {
+      from: point(view.lastMove.from, perspective, layout),
+      to: point(view.lastMove.to, perspective, layout),
+    },
+    XIANGQI_LIVE_PIECE_SIZE,
+  );
 }
 
-function clickLayer(
-  perspective: Color,
-  layout: XiangqiBoardLayout,
-): string {
+function clickLayer(perspective: Color, layout: XiangqiBoardLayout): string {
   // Every point is clickable; the pure decision function below works out what a
   // click means. Hit areas are uniform so a duck placement onto an empty point
   // is exactly as easy to hit as a piece.
@@ -165,19 +186,35 @@ function clickLayer(
   }).join('');
 }
 
+// Right-click arrows and circles. The point band sits UNDER the arrows and the
+// glyph band OVER them, which is the standard board's split and the reason it
+// exists: an arrow landing on an annotated point would otherwise cover the badge
+// it is competing with for attention.
+function markerBand(
+  markers: readonly XiangqiBoardMarker[],
+  perspective: Color,
+  layout: XiangqiBoardLayout,
+  band: 'point' | 'glyph',
+): string {
+  return markers
+    .filter((marker) => (marker.kind === 'glyph') === (band === 'glyph'))
+    .map((marker) => xiangqiMarkerSvg(marker, perspective, layout))
+    .join('');
+}
+
 export function duckXiangqiBoardSvg(
   view: DuckXiangqiPlayerView,
   perspective: Color,
   state: DuckXiangqiBoardState,
 ): string {
   const layout = state.layout ?? 'intersection';
-  const vb = xiangqiBoardViewBox(layout, LIVE_BOARD_SURFACE.geo);
+  const vb = xiangqiBoardViewBox(layout, DUCK_SURFACE.geo);
   const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
   const selected = state.phase.kind === 'piece' ? state.phase.selected : null;
   const selectionSvg = selected
     ? (() => {
         const p = point(selected, perspective, layout);
-        return `<circle cx="${p.x}" cy="${p.y}" r="${XIANGQI_LIVE_PIECE_SIZE * 0.52}" class="xq-selection-ring"/>`;
+        return `<circle class="xq-live-selection-cell" cx="${p.x}" cy="${p.y}" r="30"/>`;
       })()
     : '';
   // In phase two the piece has already moved on screen but not on the server.
@@ -200,15 +237,20 @@ export function duckXiangqiBoardSvg(
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} dkx-live-svg xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
-      <g class="xq-live-grid">${xiangqiSurfaceGrid(LIVE_BOARD_SURFACE, layout)}</g>
-      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(LIVE_BOARD_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-palace">${xiangqiSurfacePalace(LIVE_BOARD_SURFACE, perspective, layout)}</g>
-      <g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(LIVE_BOARD_SURFACE, perspective, layout)}</g>
+      <g class="xq-live-grid">${xiangqiSurfaceGrid(DUCK_SURFACE, layout)}</g>
+      <g class="xq-live-palace-bands">${xiangqiSurfacePalaceBands(DUCK_SURFACE, perspective, layout)}</g>
+      <g class="xq-live-palace">${xiangqiSurfacePalace(DUCK_SURFACE, perspective, layout)}</g>
+      <g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(DUCK_SURFACE, perspective, layout)}</g>
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout)}</g>
       <g class="xq-live-selection">${selectionSvg}</g>
       <g class="dkx-live-targets">${state.interactive ? targetLayer(state.targets, state.phase, perspective, layout) : ''}</g>
       <g class="xq-live-pieces">${pieceLayer(shown, perspective, layout, state.pieceSet)}</g>
       <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout)}</g>
+      <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'point')}</g>
+      <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(state.arrows ?? [])
+        .map((arrow) => xiangqiArrowSvg(arrow, perspective, layout))
+        .join('')}</g>
+      <g class="xq-live-glyphs" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'glyph')}</g>
       <g class="xq-live-clicks">${state.interactive ? clickLayer(perspective, layout) : ''}</g>
     </svg>
   `;

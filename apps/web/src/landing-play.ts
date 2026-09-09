@@ -13,6 +13,7 @@ import {
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUAL_CHESS_SPEC_ID,
+  type DUCK_XIANGQI_SPEC_ID,
   engineTimeControlPin,
   FORTRESS_XIANGQI_SPEC_ID,
   gameSpecForId,
@@ -27,7 +28,6 @@ import {
   type TimeClass,
   type TimeControlId,
   XIANGQI_SPEC_ID,
-  DUCK_XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
   classifyTimeControl,

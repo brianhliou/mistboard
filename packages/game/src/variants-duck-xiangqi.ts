@@ -946,12 +946,16 @@ export function getDuckXiangqiPlayerView(
     perspective,
     board: state.board,
     duck: state.duck,
-    // Only the side to move gets a move list; the waiting client has nothing to
-    // do with one, and omitting it keeps a frame from implying it is your turn.
+    // Always populated for the side to move, regardless of which seat is asking.
+    //
+    // An earlier version gated this on `turn === perspective`, reasoning that a
+    // waiting client has no use for a move list. That was a nicety that created
+    // a bug class: the client uses this list to validate its own selection, so
+    // an empty list makes every selection reconcile itself away instantly and
+    // the board silently refuses to select anything. Perfect information means
+    // there is nothing to hide here anyway.
     legalPieceMoves:
-      state.status.type === 'playing' && state.status.turn === perspective
-        ? getDuckXiangqiLegalPieceMoves(state)
-        : [],
+      state.status.type === 'playing' ? getDuckXiangqiLegalPieceMoves(state) : [],
     status: state.status,
     moveNumber: state.moveNumber,
     lastMove: turn ? { from: turn.from, to: turn.to } : undefined,
