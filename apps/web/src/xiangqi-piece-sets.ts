@@ -378,6 +378,37 @@ export function animalTreasureMarks(color: XiangqiColor): string {
   ].join('');
 }
 
+// The Duck Xiangqi duck, wired like the Treasure rather than like a role: it is
+// not a XiangqiPieceRole, so it needs its own href and its own marks.
+//
+// It takes NO COLOR, which is the whole point. Every other disc on this board
+// declares its seat through `animalRingMark(color)`, and the duck belongs to
+// neither seat: it is shared, it is uncapturable, and both players move it. So
+// it gets the same cream disc and the same ring geometry with a NEUTRAL ink, and
+// says "no seat" inside the board's own grammar rather than by opting out of it.
+//
+// Drawing it as a bare cutout was the first call and was reversed: kernel rule
+// D1 makes the duck an ordinary blocker (it screens cannons, blocks the horse's
+// leg and the elephant's eye), so drawing it as furniture would contradict a
+// decision made deliberately elsewhere.
+//
+// Art provenance and the palette reasoning live in the physical-set repo at
+// duck-xiangqi-dobutsu-minimal/MANIFEST.md. Only the Dobutsu set has duck art;
+// the other six sets fall back to the neutral token in duck-xiangqi-board.ts.
+const DUCK_NEUTRAL_RING = '#6f7b83';
+
+export function animalDuckHref(): string {
+  return `/piece-sets/xiangqi/animal-dobutsu/duck.png?v=${ANIMAL_ART_VERSION}`;
+}
+
+export function animalDuckMarks(): string {
+  return [
+    animalDiscMark(),
+    `<image href="${animalDuckHref()}" x="6" y="6" width="88" height="88" preserveAspectRatio="xMidYMid meet"/>`,
+    `<circle cx="50" cy="50" r="45" fill="none" stroke="${DUCK_NEUTRAL_RING}" stroke-width="3.2"/>`,
+  ].join('');
+}
+
 export function internationalTreasureMarks(color: XiangqiColor): string {
   return [
     internationalDiscMark(color),

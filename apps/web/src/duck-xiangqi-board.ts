@@ -20,7 +20,10 @@
  */
 
 import type { DuckXiangqiPlayerView, DuckXiangqiSquare, DuckXiangqiTurn } from '@mistboard/game';
-import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
+import {
+  readStoredXiangqiPieceSet,
+  type XiangqiBoardLayout,
+} from './xiangqi-appearance-storage.js';
 import {
   LIVE_BOARD_GEO,
   LIVE_BOARD_SURFACE,
@@ -37,6 +40,7 @@ import {
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
+import { animalDuckMarks } from './xiangqi-piece-sets.js';
 
 // This board draws no coordinate labels, so it must not reserve their gutter -
 // the standard board swaps the same way when labels are off. Leaving it in put
@@ -99,17 +103,31 @@ function duckLayer(
   duck: DuckXiangqiSquare | undefined,
   perspective: Color,
   layout: XiangqiBoardLayout,
+  pieceSet: DuckXiangqiBoardState['pieceSet'],
 ): string {
   if (!duck) return '';
   const p = point(duck, perspective, layout);
-  const r = XIANGQI_LIVE_PIECE_SIZE * 0.46;
-  return [
-    `<g class="dkx-duck" data-duck-square="${duck}" aria-label="duck">`,
-    `<circle cx="${p.x}" cy="${p.y}" r="${r}" class="dkx-duck-disc"/>`,
-    `<circle cx="${p.x}" cy="${p.y}" r="${r * 0.82}" class="dkx-duck-ring"/>`,
-    `<text x="${p.x}" y="${p.y + r * 0.36}" class="dkx-duck-glyph" text-anchor="middle" font-size="${r * 1.1}">🦆</text>`,
-    `</g>`,
-  ].join('');
+  const size = XIANGQI_LIVE_PIECE_SIZE;
+  // Resolve the set the same way `renderXiangqiPiece` does when the caller
+  // passes none, or the duck keeps its fallback token on a board whose pieces
+  // are already Dobutsu.
+  const resolved = pieceSet ?? readStoredXiangqiPieceSet();
+  const inner =
+    resolved === 'animal-dobutsu'
+      ? // The drawn duck, on the set's own cream disc with a NEUTRAL ring.
+        // Authored in the same 100-unit piece box as every animal disc, so it
+        // scales with the pieces instead of being sized independently.
+        `<g transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">${animalDuckMarks()}</g>`
+      : // The other six piece sets have no duck art yet, so they keep the
+        // neutral token. It is deliberately NOT either seat's colour, and it is
+        // drawn to the same radius the art occupies so a set switch does not
+        // move the duck or change its footprint.
+        [
+          `<circle cx="${p.x}" cy="${p.y}" r="${size * 0.46}" class="dkx-duck-disc"/>`,
+          `<circle cx="${p.x}" cy="${p.y}" r="${size * 0.46 * 0.82}" class="dkx-duck-ring"/>`,
+          `<text x="${p.x}" y="${p.y + size * 0.46 * 0.36}" class="dkx-duck-glyph" text-anchor="middle" font-size="${size * 0.46 * 1.1}">\u{1F986}</text>`,
+        ].join('');
+  return `<g class="dkx-duck" data-duck-square="${duck}" aria-label="duck">${inner}</g>`;
 }
 
 function pieceLayer(
@@ -245,7 +263,7 @@ export function duckXiangqiBoardSvg(
       <g class="xq-live-selection">${selectionSvg}</g>
       <g class="dkx-live-targets">${state.interactive ? targetLayer(state.targets, state.phase, perspective, layout) : ''}</g>
       <g class="xq-live-pieces">${pieceLayer(shown, perspective, layout, state.pieceSet)}</g>
-      <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout)}</g>
+      <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout, state.pieceSet)}</g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(state.arrows ?? [])
         .map((arrow) => xiangqiArrowSvg(arrow, perspective, layout))
