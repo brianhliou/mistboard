@@ -218,6 +218,13 @@ export interface TreePresentation<Move, Truth, View, Color, Arrow, Marker> {
    *  FEN). Null for variants with no client engine: the panel and gauge are then
    *  omitted and the board carries no eval affordance. */
   engine: EnginePresentation<Move, Truth, Arrow, Marker> | null;
+  /** How this variant writes a position as FEN, for the Share card and the
+   *  import block. Serialising a position belongs to the VARIANT, not to the
+   *  engine: `engine.fen` is the older home for it, and while it was the only
+   *  one every engine-less board had a permanently blank FEN box, which makes
+   *  "Set position" a one-way door. Supply this and the box fills whether or not
+   *  there is an engine. Falls back to `engine.fen` when omitted. */
+  fen?: (truth: Truth) => string;
   /** Format a whole-game-analysis best move (server `evals[].best`, in the ANALYSIS
    *  engine's UCI dialect) for the "… was best" advice line. Omit to use the default
    *  xiangqi/FSF formatter (correct for xiangqi/fortress/jungle, whose display coords
@@ -1732,13 +1739,14 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // Opening statistics follow the board like every other per-node panel.
     config.explorer?.setTruth(node.truth);
     // Live-refresh the Share tab's FEN + move export for the current node/line.
-    if (presentation.engine) shareFenInput.value = presentation.engine.fen(node.truth);
+    const fenOf = presentation.fen ?? presentation.engine?.fen;
+    if (fenOf) shareFenInput.value = fenOf(node.truth);
     shareMovesInput.value = uciTo(node).join(' ');
     // The import block mirrors the same live state: FEN of the current node, and
     // the current line in display notation — but never over a paste in progress.
     if (importPanel) {
-      if (presentation.engine && document.activeElement !== importPanel.fenInput) {
-        importPanel.fenInput.value = presentation.engine.fen(node.truth);
+      if (fenOf && document.activeElement !== importPanel.fenInput) {
+        importPanel.fenInput.value = fenOf(node.truth);
       }
       if (document.activeElement !== importPanel.movesInput) {
         importPanel.movesInput.value = lineLabels(node).join(' ');
