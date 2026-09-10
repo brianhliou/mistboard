@@ -97,6 +97,42 @@ definePersistenceTests('room bot play requests', () => {
     assert.equal((JSON.parse(response.body) as { url?: string }).url, '/room/bot-room');
   });
 
+  // The one-click "play this bot" buttons name no side. The bot profile carries a
+  // hardcoded preferredColor of 'random' that this route used to fall back on,
+  // which coin-flipped every such start; the profile field is advertising, not a
+  // room default, so an unnamed side leaves the human on the opening move.
+  test('a bot-id create that names no side seats the human as White', async () => {
+    await insertBotProfile('sideless-bot', 'Sideless Bot', 'public');
+    let reserved: { color: 'white' | 'black'; engineId: string } | null = null;
+    const ctx = createContext({
+      createRoom: async (mode, variant, engineId, _hiddenDraft960, timeControl) =>
+        roomFixture({
+          id: 'sideless-room',
+          mode,
+          pveEngineId: engineId,
+          randomEngine: mode === 'pve',
+          timeControl,
+          variant,
+        }),
+      reserveLiveEngineSeat: async (engineId, color) => {
+        reserved = { color, engineId };
+        return 'reservation-1';
+      },
+    });
+    const response = captureResponse();
+
+    const handled = await tryHandle(
+      ctx,
+      jsonPost({ botId: 'sideless-bot', mode: 'pve' }),
+      response,
+      '/api/rooms',
+    );
+
+    assert.equal(handled, true);
+    assert.equal(response.status, 201);
+    assert.deepEqual(reserved, { color: 'black', engineId: 'python-v2-v1.6' });
+  });
+
   test('a fog bot profile stored at an unplayable pace starts at the pin, not a 400', async () => {
     // Bot profiles carry a standing clock in the DB. The fog rows predate the
     // engine pin and sit at the house 3+2 (#283). A bot-id create that omits a
@@ -374,6 +410,37 @@ test('a fog PvE create that names no pace starts at the pin, not the house defau
   assert.equal(human.status, 201);
 
   assert.deepEqual(startedPaces, [{ initialMs: 300_000, incrementMs: 5_000 }, undefined]);
+});
+
+// An omitted side means "nobody asked", and nobody asking must not cost the
+// player the opening move. Every tenant route already reads it that way through
+// resolveFirstMoverHumanSeat; chess and fog chess used to coin-flip instead, so
+// the same request produced a different contract depending on the variant.
+test('a fog PvE create that names no side seats the human as White', async () => {
+  const engineSeats: ('white' | 'black' | undefined)[] = [];
+  const base = createContext({
+    createRoom: async (mode, variant, _engineId, _hiddenDraft960, timeControl, _rated, options) => {
+      engineSeats.push(options?.engineColor);
+      return roomFixture({ id: 'sided-room', mode, timeControl, variant });
+    },
+  });
+  const ctx: HttpApiContext = { ...base, databaseRequired: false };
+
+  const omitted = captureResponse();
+  await tryHandle(ctx, jsonPost({ mode: 'pve', variant: 'dark-chess' }), omitted, '/api/rooms');
+  assert.equal(omitted.status, 201);
+
+  // An explicit pick is still honored, and still names the HUMAN's seat.
+  const chosen = captureResponse();
+  await tryHandle(
+    ctx,
+    jsonPost({ mode: 'pve', variant: 'dark-chess', preferredColor: 'black' }),
+    chosen,
+    '/api/rooms',
+  );
+  assert.equal(chosen.status, 201);
+
+  assert.deepEqual(engineSeats, ['black', 'white']);
 });
 
 test('room creation rejects a fog chess bot game at a pace the engine cannot honor', async () => {

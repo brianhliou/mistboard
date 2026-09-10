@@ -72,7 +72,10 @@ export async function tryHandle(
     //   - omitted → backward-compat. Legacy first-come-first-served:
     //     creator (first arrival) gets white, invitee gets black. PvE
     //     falls through to the legacy engineColor body field (still
-    //     accepted for smoke scripts/bots).
+    //     accepted for smoke scripts/bots), then seats the HUMAN as the
+    //     first mover — matching resolveFirstMoverHumanSeat, which every
+    //     tenant route uses. An omitted side means "nobody asked", and
+    //     nobody asking should not cost the player the opening move.
     // Distinguishing omitted from explicit 'random' is load-bearing for
     // the documented backward-compat contract.
     const preferredColor: 'white' | 'black' | 'random' | undefined =
@@ -89,7 +92,7 @@ export async function tryHandle(
         engineColor = randomBytes(1)[0]! < 128 ? 'white' : 'black';
       else if (body.engineColor === 'white') engineColor = 'white';
       else if (body.engineColor === 'black') engineColor = 'black';
-      else engineColor = randomBytes(1)[0]! < 128 ? 'white' : 'black';
+      else engineColor = 'black';
     } else {
       engineColor = 'black';
     }
@@ -357,7 +360,11 @@ export async function resolveBotRoomRequest(
     gameSpecId,
     engineId,
     timeControl,
-    preferredColor: body.preferredColor ?? bot.play.preferredColor,
+    // preferredColor is deliberately NOT defaulted here: `...body` carries an
+    // explicit request through, and an absent one stays absent so the seat
+    // resolvers seat the human as the first mover. bot.play.preferredColor is a
+    // hardcoded 'random' advertised on the profile, and reading it here is what
+    // used to coin-flip every one-click bot start.
     rated: body.rated ?? false,
     ...(gameSpecId === 'dark-chess' ? { variant: 'dark-chess' } : {}),
     ...(gameSpecId === 'dark-draft960' ? { hiddenDraft960: true, variant: 'dark-chess' } : {}),
