@@ -24,6 +24,7 @@ import {
 import type {
   TenantClientEvent,
   TenantClockState,
+  TenantEndReason,
   TenantGameStateLike,
   TenantGameStatus,
   TenantProjection,
@@ -33,7 +34,7 @@ import type {
   TenantSnapshotClient,
   VariantTenant,
 } from './tenant.js';
-import { lastSeat } from './tenant.js';
+import { assertForfeitPolicy, forfeitWinnerOf, lastSeat } from './tenant.js';
 
 export type TenantRoomCreation<
   Kind extends string,
@@ -182,6 +183,10 @@ export function createTenantRuntimeRoom<
     timeControl?: RoomTimeControl;
   } = {},
 ): TenantRoomCreation<Kind, C, M, State, Spec> {
+  // A tenant with more than two seats that has not said what a forfeit does
+  // would hang the first room where a connection dropped. Fail on the first
+  // room rather than discovering it mid-game.
+  assertForfeitPolicy(tenant);
   if (!tenant.enabled()) return { ok: false, error: 'disabled' };
 
   const now = options.now ?? Date.now();
@@ -335,6 +340,32 @@ export function replayTenantEvents<
   );
 }
 
+/**
+ * Finish a game whose loser is known. Throws when the tenant has no answer,
+ * which assertForfeitPolicy makes unreachable by refusing to register such a
+ * tenant at all. Belt and braces: the alternative is a silently hung room.
+ */
+function finishByForfeit<C extends string, State>(
+  tenant: {
+    kind: string;
+    colors: readonly C[];
+    oppositeColor(color: C): C;
+    forfeitWinner?(color: C): C | null;
+    rules: { finish(state: State, winner: C, reason: TenantEndReason): State };
+  },
+  state: State,
+  forfeiting: C,
+  reason: TenantEndReason,
+): State {
+  const winner = forfeitWinnerOf(tenant, forfeiting);
+  if (winner === null) {
+    throw new Error(
+      `tenant ${tenant.kind}: ${reason} by ${forfeiting} has no winner and no abort path`,
+    );
+  }
+  return tenant.rules.finish(state, winner, reason);
+}
+
 export function applyTenantEvent<
   Kind extends string,
   C extends string,
@@ -413,7 +444,7 @@ export function applyTenantEvent<
     return {
       ...projection,
       clock: event.clock,
-      state: tenant.rules.finish(projection.state, tenant.oppositeColor(event.color), 'timeout'),
+      state: finishByForfeit(tenant, projection.state, event.color, 'timeout'),
     };
   }
   if (event.type === 'seat-resigned') {
@@ -421,11 +452,7 @@ export function applyTenantEvent<
     return {
       ...projection,
       clock: event.clock ?? freezeTenantClock(projection.clock, event.at),
-      state: tenant.rules.finish(
-        projection.state,
-        tenant.oppositeColor(event.color),
-        'resignation',
-      ),
+      state: finishByForfeit(tenant, projection.state, event.color, 'resignation'),
     };
   }
   if (event.type === 'game-aborted') {
@@ -442,11 +469,7 @@ export function applyTenantEvent<
     return {
       ...projection,
       clock: event.clock ?? freezeTenantClock(projection.clock, event.at),
-      state: tenant.rules.finish(
-        projection.state,
-        tenant.oppositeColor(event.color),
-        'abandonment',
-      ),
+      state: finishByForfeit(tenant, projection.state, event.color, 'abandonment'),
     };
   }
   return projection;

@@ -388,3 +388,42 @@ export function seatAfter<C extends string>(tenant: { colors: readonly C[] }, se
   if (at < 0) throw new Error(`seat ${seat} is not one of this tenant's seats`);
   return tenant.colors[(at + 1) % tenant.colors.length] as C;
 }
+
+/**
+ * Who is awarded the game when `seat` times out, resigns or abandons.
+ *
+ * At two seats this is the opposite seat and always has an answer. At more it
+ * may not: three players do not collectively "win" because a fourth walked
+ * away, and AbortReason is a CHECK-constrained union with no value that fits a
+ * mid-game forfeit, so the runtime cannot invent one either. A tenant with more
+ * than two seats must therefore answer this itself.
+ *
+ * Null is a real answer meaning "no winner", and callers must handle it. It is
+ * unreachable for every tenant that ships today.
+ */
+export function forfeitWinnerOf<C extends string>(
+  tenant: { colors: readonly C[]; oppositeColor(color: C): C; forfeitWinner?(color: C): C | null },
+  seat: C,
+): C | null {
+  if (tenant.forfeitWinner) return tenant.forfeitWinner(seat);
+  if (tenant.colors.length === 2) return tenant.oppositeColor(seat);
+  return null;
+}
+
+/**
+ * Registration-time guard. A tenant with more than two seats that has not said
+ * what a forfeit does is a bug that would otherwise surface as a hung game the
+ * first time someone's connection dropped - fail at boot instead.
+ */
+export function assertForfeitPolicy<C extends string>(tenant: {
+  kind: string;
+  colors: readonly C[];
+  forfeitWinner?(color: C): C | null;
+}): void {
+  if (tenant.colors.length > 2 && !tenant.forfeitWinner) {
+    throw new Error(
+      `tenant ${tenant.kind} has ${tenant.colors.length} seats and must implement ` +
+        'forfeitWinner: oppositeColor has no meaning beyond two seats',
+    );
+  }
+}
