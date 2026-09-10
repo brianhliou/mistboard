@@ -765,9 +765,14 @@
 }
 
 /* The dark-theme card-thumb rule (theme.css) paints a panel-soft square behind
-   every .articles-index-card-thumb; the rail markers want no tile, so restore
-   the transparent background at higher specificity in that theme too. */
-:root[data-effective-theme="dark"] .article-variant-sidebar .variant-marker-thumb {
+   every .articles-index-card-thumb, and renderVariantMiniThumb always attaches
+   that class. A marker is a glyph, not a tile, so it wants no square ANYWHERE
+   it is rendered: scope this to the shared .variant-marker-thumb rather than to
+   one call site, or the next surface to use markers inherits the square again
+   (the rules landing did, for exactly this reason).
+   Both classes are named on purpose: a single-class override ties theme.css on
+   specificity and would be decided by built-chunk order. */
+:root[data-effective-theme="dark"] .articles-index-card-thumb.variant-marker-thumb {
   background: transparent;
   border-color: transparent;
 }
@@ -799,28 +804,19 @@
   margin: 0 0 12px;
 }
 
-.rules-landing-group-title {
-  margin: 24px 0 0;
-  font-size: 12px;
-  font-weight: 700;
-  letter-spacing: 0.6px;
-  text-transform: uppercase;
-  color: var(--site-muted);
-}
-
 .rules-landing-grid {
   list-style: none;
   margin: 12px 0 0;
   padding: 0;
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(128px, 1fr));
+  grid-template-columns: repeat(auto-fill, minmax(140px, 1fr));
   gap: 16px;
 }
 
-/* The desktop rail is the picker; the tile grid (and its group titles) only
-   serve the below-rail breakpoint. */
+/* The desktop rail is the picker; the tile grid only serves the below-rail
+   breakpoint. Same entries, same order, so this is a reflow of one list
+   rather than a second, differently organised page. */
 @media (min-width: 1280px) {
-  .rules-landing-group-title,
   .rules-landing-grid {
     display: none;
   }
@@ -829,6 +825,9 @@
 .rules-landing-tile {
   display: block;
   text-decoration: none;
+  /* The marker is centred in its track; the label has to be too, or every
+     tile reads as two pieces that belong to different columns. */
+  text-align: center;
 }
 
 .rules-landing-tile .articles-index-card-thumb {
@@ -840,8 +839,8 @@
 .rules-landing-tile .variant-marker-thumb {
   display: grid;
   place-items: center;
-  width: 64px;
-  height: 64px;
+  width: 76px;
+  height: 76px;
   margin: 0 auto;
   aspect-ratio: 1 / 1;
   border-radius: 0;
@@ -851,8 +850,8 @@
 }
 
 .rules-landing-tile .variant-marker-thumb .variant-marker {
-  width: 56px;
-  height: 56px;
+  width: 68px;
+  height: 68px;
 }
 
 .rules-landing-tile-label {
@@ -861,17 +860,6 @@
   font-size: 14px;
   line-height: 1.35;
   color: var(--site-heading);
-}
-
-.rules-playable-badge {
-  display: inline-block;
-  margin-top: 5px;
-  padding: 2px 7px;
-  border-radius: 999px;
-  background: color-mix(in srgb, var(--site-success, #639b24) 14%, transparent);
-  color: color-mix(in srgb, var(--site-success, #639b24) 78%, var(--site-text));
-  font-size: 11px;
-  font-weight: 700;
 }
 
 .rules-landing-tile:hover .rules-landing-tile-label {

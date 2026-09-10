@@ -11,8 +11,6 @@ import {
   type Color,
   canonicalVariantOrderIndex,
   DARK_SHOGI_SPEC_ID,
-  type GameFamilyId,
-  gameSpecForId,
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
@@ -144,54 +142,11 @@ function isArticleListedInThisEnv(article: Article): boolean {
   return true;
 }
 
-type RulesArticleGroupId = 'chess' | 'xiangqi' | 'shogi' | 'jungle' | 'other';
-
-// Group order mirrors CANONICAL_VARIANT_ORDER (game-specs.ts) by each family's
-// first appearance there: xiangqi leads, Fog Chess bridges into the chess
-// family, then Jungle. The rules rail itself is globally sorted, not grouped.
-const RULES_ARTICLE_GROUP_ORDER: readonly RulesArticleGroupId[] = [
-  'xiangqi',
-  'chess',
-  'jungle',
-  'shogi',
-  'other',
-];
-
-const BASE_RULE_GROUP_BY_SLUG: Record<string, RulesArticleGroupId> = {
-  chess: 'chess',
-  xiangqi: 'xiangqi',
-  shogi: 'shogi',
-  shogi4: 'shogi',
-};
-
-// Floats a family's base-rules article to the top of its group. Only for base
-// games NOT in CANONICAL_VARIANT_ORDER (chess, shogi) — they'd otherwise sort to
-// the bottom. Xiangqi IS in the canonical order, so it is left unpinned and takes
-// its canonical slot.
-const BASE_RULE_ORDER: Record<string, number> = {
-  chess: -100,
-  shogi: -100,
-  shogi4: 100,
-};
-
 const RULES_ARTICLE_RAIL_HIDDEN_SLUGS = new Set(['shogi']);
-
-const RULES_GROUP_TITLE_KEYS: Record<RulesArticleGroupId, I18nKey> = {
-  chess: 'rules.group.chess',
-  xiangqi: 'rules.group.xiangqi',
-  shogi: 'rules.group.shogi',
-  jungle: 'rules.group.jungle',
-  other: 'rules.group.other',
-};
 
 const ARTICLE_STATUS_KEYS: Record<'draft' | 'outline', I18nKey> = {
   draft: 'articles.status.draft',
   outline: 'articles.status.outline',
-};
-
-type RulesArticleGroup = {
-  title: string;
-  items: Article[];
 };
 
 function articleLocale(lang?: ArticleLang): Locale {
@@ -309,6 +264,12 @@ function buildArticleCommunityRail(locale: Locale, activeView: ArticleIndexView)
 // /rules is a landing page in the pychess shape: a short intro in the sheet
 // with the variant rail as the selector. Below the rail breakpoint a
 // thumbnail tile grid takes over as the picker.
+//
+// The two pickers hold the SAME entries in the SAME order, ungrouped, so the
+// swap at 1280px reflows one list instead of substituting a differently
+// organised page. The grid used to carry family headings (Xiangqi / Chess /
+// Animal) that the rail has no equivalent of, which is what made the
+// compressed page read as a different page rather than a narrower one.
 function buildRulesLanding(lang?: ArticleLang): HTMLElement {
   const locale = articleLocale(lang);
   const main = document.createElement('main');
@@ -335,38 +296,29 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
   const entries = articles.filter(
     (article) => article.kind === 'rules' && isArticleListedInThisEnv(article),
   );
-  const tileGroups = buildRulesArticleGroups(entries, locale);
-  for (const group of tileGroups) {
-    const groupTitle = document.createElement('h2');
-    groupTitle.className = 'rules-landing-group-title';
-    groupTitle.textContent = group.title;
-    const grid = document.createElement('ul');
-    grid.className = 'rules-landing-grid';
-    for (const article of group.items) {
-      const articleLang = publishedArticleLang(article.slug, lang);
-      const localized = articleLang ? translateArticle(article, articleLang) : article;
-      const li = document.createElement('li');
-      const tile = document.createElement('a');
-      tile.className = 'rules-landing-tile';
-      tile.href = localizedArticleHref(article, locale);
-      const miniTile = renderVariantMiniThumb(article.slug);
-      if (miniTile) tile.append(miniTile);
-      else if (article.thumbnail) tile.append(renderArticleThumbnail(article.thumbnail));
-      const label = document.createElement('span');
-      label.className = 'rules-landing-tile-label';
-      label.textContent = variantNavLabel(localized.title);
-      tile.append(label);
-      if (article.playableOnMistboard) {
-        const playable = document.createElement('span');
-        playable.className = 'rules-playable-badge';
-        playable.textContent = t('rules.playableHere', {}, locale);
-        tile.append(playable);
-      }
-      li.append(tile);
-      grid.append(li);
-    }
-    sheet.append(groupTitle, grid);
+  const grid = document.createElement('ul');
+  grid.className = 'rules-landing-grid';
+  // Rail order, not the index's own sort: this grid IS the rail at a narrower
+  // width, and two orders for one list is what a reader notices when the
+  // layout swaps under them.
+  for (const article of buildRulesArticleRailEntries(entries)) {
+    const articleLang = publishedArticleLang(article.slug, lang);
+    const localized = articleLang ? translateArticle(article, articleLang) : article;
+    const li = document.createElement('li');
+    const tile = document.createElement('a');
+    tile.className = 'rules-landing-tile';
+    tile.href = localizedArticleHref(article, locale);
+    const miniTile = renderVariantMiniThumb(article.slug);
+    if (miniTile) tile.append(miniTile);
+    else if (article.thumbnail) tile.append(renderArticleThumbnail(article.thumbnail));
+    const label = document.createElement('span');
+    label.className = 'rules-landing-tile-label';
+    label.textContent = variantNavLabel(localized.title);
+    tile.append(label);
+    li.append(tile);
+    grid.append(li);
   }
+  sheet.append(grid);
 
   const variantNav = buildVariantSidebar(null, lang);
   if (variantNav) main.append(variantNav);
@@ -1072,53 +1024,14 @@ function variantNavLabel(title: string): string {
     .trim();
 }
 
-function buildRulesArticleGroups(entries: readonly Article[], locale: Locale): RulesArticleGroup[] {
-  return RULES_ARTICLE_GROUP_ORDER.map((id) => ({
-    title: t(RULES_GROUP_TITLE_KEYS[id], {}, locale),
-    items: entries
-      .filter((article) => rulesArticleGroup(article) === id)
-      .sort(compareRulesArticles),
-  })).filter((group) => group.items.length > 0);
-}
-
 function buildRulesArticleRailEntries(entries: readonly Article[]): Article[] {
   return [...entries].sort(compareRulesArticleRailEntries);
-}
-
-function compareRulesArticles(a: Article, b: Article): number {
-  const order = rulesArticleSortIndex(a) - rulesArticleSortIndex(b);
-  if (order !== 0) return order;
-  return a.title.localeCompare(b.title);
 }
 
 function compareRulesArticleRailEntries(a: Article, b: Article): number {
   const order = rulesArticleRailSortIndex(a) - rulesArticleRailSortIndex(b);
   if (order !== 0) return order;
   return a.title.localeCompare(b.title);
-}
-
-function rulesArticleGroup(article: Article): RulesArticleGroupId {
-  const baseGroup = BASE_RULE_GROUP_BY_SLUG[article.slug];
-  if (baseGroup) return baseGroup;
-  const gameSpecId = article.gameSpecId ?? article.slug;
-  if (!isGameSpecId(gameSpecId)) return 'other';
-  return rulesGroupForFamily(gameSpecForId(gameSpecId).family);
-}
-
-function rulesGroupForFamily(family: GameFamilyId): RulesArticleGroupId {
-  if (family === 'chess') return 'chess';
-  if (family === 'xiangqi') return 'xiangqi';
-  if (family === 'shogi') return 'shogi';
-  if (family === 'jungle') return 'jungle';
-  return 'other';
-}
-
-function rulesArticleSortIndex(article: Article): number {
-  const baseOrder = BASE_RULE_ORDER[article.slug];
-  if (baseOrder !== undefined) return baseOrder;
-  const gameSpecId = article.gameSpecId ?? article.slug;
-  if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
-  return Number.MAX_SAFE_INTEGER;
 }
 
 function rulesArticleRailSortIndex(article: Article): number {

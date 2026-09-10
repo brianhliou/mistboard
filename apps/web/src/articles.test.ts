@@ -688,11 +688,22 @@ describe('article public listing gates', () => {
     }
   });
 
-  it('marks playable games on rules tiles without adding dots to the desktop rail', () => {
+  // A rules tile is a marker and a label, nothing else. The landing used to
+  // hang a "Playable here" badge off every tile, which carried no information:
+  // playableOnMistboard is true for every rules article that exists, so the
+  // badge appeared on all of them and distinguished nothing. If a genuinely
+  // unplayable variant ever gets a rules page, mark THAT one, not all the rest.
+  it('renders rules tiles as marker plus label, with no per-tile badge', () => {
     const index = buildRulesIndex();
-    expect(index.querySelectorAll('.rules-playable-badge').length).toBeGreaterThan(0);
-    expect(index.textContent).toContain('Playable here');
-    expect(index.querySelectorAll('.article-variant-sidebar .rules-playable-dot')).toHaveLength(0);
+    const tiles = [...index.querySelectorAll('.rules-landing-tile')];
+
+    expect(tiles.length).toBeGreaterThan(0);
+    expect(index.textContent).not.toContain('Playable here');
+    for (const tile of tiles) {
+      const href = tile.getAttribute('href') ?? '';
+      expect(tile.querySelectorAll('.rules-landing-tile-label'), href).toHaveLength(1);
+      expect(tile.children, href).toHaveLength(2);
+    }
   });
 });
 
@@ -827,10 +838,24 @@ describe('rules variant sidebar', () => {
     ).not.toBeNull();
   });
 
-  it('renders the rules landing with the rail and a tile grid picker', () => {
+  // The rail is the desktop picker and the grid is the same list reflowed for
+  // narrow widths, so both render and CSS chooses. They must agree on entries
+  // and order: a swap at 1280px that also reorders (or regroups) the list is
+  // what makes the compressed page read as a different page.
+  it('renders the rules landing with the rail and a matching tile grid', () => {
     const landing = buildRulesIndex();
     expect(landing.querySelector('.article-variant-sidebar')).not.toBeNull();
     expect(landing.querySelector('.rules-landing-paragraph')).not.toBeNull();
+    expect(landing.querySelector('.rules-landing-group-title')).toBeNull();
+
+    const railHrefs = [...landing.querySelectorAll('.article-variant-sidebar a')].map((link) =>
+      link.getAttribute('href'),
+    );
+    const tileHrefs = [...landing.querySelectorAll('.rules-landing-tile')].map((tile) =>
+      tile.getAttribute('href'),
+    );
+    expect(tileHrefs.length).toBeGreaterThan(0);
+    expect(tileHrefs).toEqual(railHrefs);
     const tile = landing.querySelector<HTMLAnchorElement>(
       '.rules-landing-tile[href="/rules/fog-chess"]',
     );
@@ -863,24 +888,30 @@ describe('rules variant sidebar', () => {
     ).toBeNull();
   });
 
-  it('groups the tile grid without the parked Shogi family', () => {
+  // One flat grid, mirroring the rail. The de-listing assertions are the point
+  // of this test and outlive the layout: parked and de-listed slugs stay out of
+  // the picker while remaining reachable by direct URL.
+  it('lists the tile grid as one flat picker without the parked families', () => {
     const landing = buildRulesIndex();
-    const titles = [...landing.querySelectorAll('.rules-landing-group-title')].map(
-      (el) => el.textContent,
-    );
-    expect(titles).toEqual(['Xiangqi variants', 'Chess variants', 'Animal chess']);
     const grids = landing.querySelectorAll('.rules-landing-grid');
-    expect(grids[0]?.querySelector('a[href="/rules/xiangqi"]')).not.toBeNull();
-    // Xiangqi pivot: the mini xiangqi trio is de-listed from the tile grid
-    // (still reachable by direct URL).
-    expect(grids[0]?.querySelector('a[href="/rules/drop-mini-xiangqi"]')).toBeNull();
-    expect(grids[0]?.querySelector('a[href="/rules/fog-xiangqi"]')).not.toBeNull();
-    expect(grids[1]?.querySelector('a[href="/rules/fog-chess"]')).not.toBeNull();
-    expect(grids[2]?.querySelector('a[href="/rules/jungle"]')).not.toBeNull();
-    expect(grids[2]?.querySelector('a[href="/rules/jungle-flip"]')).not.toBeNull();
-    // The chess reference article is de-listed from the tile grid.
-    expect(grids[1]?.querySelector('a[href="/rules/chess"]')).toBeNull();
-    expect(grids).toHaveLength(3);
+    expect(grids).toHaveLength(1);
+    expect(landing.querySelectorAll('.rules-landing-group-title')).toHaveLength(0);
+
+    const grid = grids[0];
+    for (const href of [
+      '/rules/xiangqi',
+      '/rules/fog-xiangqi',
+      '/rules/fog-chess',
+      '/rules/jungle',
+      '/rules/jungle-flip',
+    ]) {
+      expect(grid?.querySelector(`a[href="${href}"]`), href).not.toBeNull();
+    }
+    // Xiangqi pivot: the mini xiangqi trio and the chess reference article are
+    // de-listed from the tile grid (still reachable by direct URL).
+    for (const href of ['/rules/drop-mini-xiangqi', '/rules/chess', '/rules/shogi']) {
+      expect(grid?.querySelector(`a[href="${href}"]`), href).toBeNull();
+    }
   });
 
   it('renders Jieqi visual diagrams instead of placeholder notes', () => {
