@@ -35,8 +35,10 @@ import type { EditorVariantId } from './editor-catalog.js';
 import {
   capturedKey,
   cloneModel,
+  DUCK_SUBJECT,
   type EditorColor,
   type EditorPiece,
+  type EditorPlacementSubject,
   type EditorTurn,
   samePiece,
 } from './editor-model.js';
@@ -44,12 +46,20 @@ import {
   COLOR_LABEL_KEY,
   type EditorPaletteEntry,
   type EditorSpec,
+  type EditorTokenEntry,
   editorSpec,
   faceDownCounts,
   poolRows,
 } from './editor-specs.js';
 
-type Brush = { kind: 'pointer' } | { kind: 'delete' } | { kind: 'piece'; piece: EditorPiece };
+// 'duck' is its own brush kind rather than a piece brush carrying a pretend
+// piece: it writes model.duck, not model.board, and the duck has no colour and
+// no role to pretend with (editor-model.ts).
+type Brush =
+  | { kind: 'pointer' }
+  | { kind: 'delete' }
+  | { kind: 'piece'; piece: EditorPiece }
+  | { kind: 'duck' };
 
 export interface EditorPageOptions {
   /** Seed position; an unreadable one falls back to the start position. */
@@ -161,6 +171,9 @@ export function mountEditorPage(
   const clearButton = button(t('editor.clearBoard'), () => {
     model.board.clear();
     model.captured.clear();
+    // An empty board has no duck on it either. `null` is off the board, which is
+    // a real state (the opening), not the absence of the field.
+    if (model.duck) model.duck.square = null;
     selected = null;
     notice = null;
     update();
@@ -286,8 +299,13 @@ export function mountEditorPage(
       update();
       return;
     }
+    if (brush.kind === 'duck') {
+      placeDuck(square);
+      update();
+      return;
+    }
     if (brush.kind === 'delete') {
-      model.board.delete(square);
+      deleteAt(square);
       selected = null;
       update();
       return;
@@ -303,13 +321,31 @@ export function mountEditorPage(
   }
 
   function placePiece(square: string, piece: EditorPiece): boolean {
-    const problem = spec.placementProblem(square, piece);
-    if (problem) {
-      notice = t(problem.key, translateParams(problem.params));
-      return false;
-    }
+    if (!allowed(square, piece)) return false;
     model.board.set(square, piece);
     return true;
+  }
+
+  /** There is exactly ONE duck, so painting it is a move, not an addition: the
+   *  model holds a single square and setting it is what takes the duck off the
+   *  point it was on. Nothing here can produce a second one. */
+  function placeDuck(square: string): void {
+    if (!model.duck || !allowed(square, DUCK_SUBJECT)) return;
+    model.duck.square = square;
+  }
+
+  function allowed(square: string, subject: EditorPlacementSubject): boolean {
+    const problem = spec.placementProblem(square, subject, model);
+    if (!problem) return true;
+    notice = t(problem.key, translateParams(problem.params));
+    return false;
+  }
+
+  /** The delete brush clears the point, whatever is standing on it. The duck is
+   *  not in the piece map, so a board-only delete would leave it unremovable. */
+  function deleteAt(square: string): void {
+    model.board.delete(square);
+    if (model.duck?.square === square) model.duck.square = null;
   }
 
   function movePiece(from: string, to: string): void {
@@ -384,6 +420,9 @@ export function mountEditorPage(
       el.style.height = `${(hit / box.height) * 100}%`;
       if (square === selected) el.classList.add('is-selected');
       if (model.board.has(square)) el.classList.add('has-piece');
+      // Its own class, not `has-piece`: that one also means "draggable under the
+      // pointer brush", and the duck is not in the piece map to drag.
+      if (model.duck?.square === square) el.classList.add('has-duck');
       parts.push(el);
     }
     hits.replaceChildren(...parts);
@@ -433,9 +472,38 @@ export function mountEditorPage(
     brushes.replaceChildren();
     brushes.append(
       brushButton('pointer', 'editor.brushPointer', pointerIcon()),
+      // Both colourless brushes sit on this row rather than in either palette,
+      // for the same reason: a palette is one seat's pieces, and neither the
+      // face-down tile nor the duck belongs to a seat.
       ...(spec.tileEntry ? [paletteButton(spec.tileEntry)] : []),
+      ...(spec.duckEntry ? [duckButton(spec.duckEntry)] : []),
       brushButton('delete', 'editor.brushDelete', deleteIcon()),
     );
+  }
+
+  /** The duck brush. Shaped like a palette button (it is a token you paint with,
+   *  at token size) but it is not a palette entry: it has no colour and no
+   *  piece, so `paletteButton` has nothing to build it from. */
+  function duckButton(entry: EditorTokenEntry): HTMLButtonElement {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'editor-palette__piece';
+    const label = t(entry.labelKey);
+    el.setAttribute('aria-label', label);
+    el.title = label;
+    el.dataset.role = entry.role;
+    el.dataset.color = 'none';
+    el.innerHTML = entry.svg();
+    const active = brush.kind === 'duck';
+    el.setAttribute('aria-pressed', active ? 'true' : 'false');
+    if (active) el.classList.add('is-active');
+    el.addEventListener('click', () => {
+      brush = active ? { kind: 'pointer' } : { kind: 'duck' };
+      selected = null;
+      renderPalettes();
+      renderHits();
+    });
+    return el;
   }
 
   function brushButton(kind: 'pointer' | 'delete', labelKey: I18nKey, icon: string): HTMLElement {

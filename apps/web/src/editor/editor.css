@@ -89,11 +89,13 @@
   cursor: grab;
 }
 
-.editor-board__hits[data-brush="delete"] .editor-square.has-piece {
+.editor-board__hits[data-brush="delete"] .editor-square.has-piece,
+.editor-board__hits[data-brush="delete"] .editor-square.has-duck {
   cursor: cell;
 }
 
-.editor-board__hits[data-brush="piece"] .editor-square {
+.editor-board__hits[data-brush="piece"] .editor-square,
+.editor-board__hits[data-brush="duck"] .editor-square {
   cursor: copy;
 }
 

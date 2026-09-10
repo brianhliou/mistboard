@@ -3,11 +3,17 @@
 // THE EDITOR COVERS A SUBSET OF THE ANALYSIS CATALOG, AND THIS LIST IS THAT
 // SUBSET. It used to be the whole catalog, and editor-specs.ts keyed its
 // exhaustive EDITOR_SPECS record on AnalysisVariantId, which meant listing a
-// variant on the analysis board asserted it also had a position editor. That is
-// not true of Duck Xiangqi: the editor's model is a piece map keyed by square,
-// and the duck belongs to neither colour, has no role, and rides the seventh
-// FEN field, so an EditorSpec would round-trip every position with the duck
-// dropped.
+// variant on the analysis board asserted it also had a position editor.
+//
+// Duck Xiangqi is why the two lists were split, and (since 2026-09-10) also the
+// proof the split was the right shape: the editor's board is a piece map keyed
+// by square and the duck belongs to neither colour and has no role, so it sat
+// on the analysis board with NO editor until EditorModel grew a field that
+// could hold a duck (`duck?: EditorDuckExtras`, editor-model.ts). The list is
+// the thing that moved; nothing else had to. It happens to name every analysis
+// variant again today, which is a fact about today and not a rule: a variant
+// whose position the model cannot represent belongs on the analysis board and
+// off this list, exactly as duck-xiangqi was.
 //
 // The list is the type. EDITOR_VARIANT_IDS is `as const satisfies readonly
 // AnalysisVariantId[]`, so a member that is not an analysis variant (a typo, or
@@ -40,6 +46,7 @@ export const EDITOR_VARIANT_IDS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'duck-xiangqi',
 ] as const satisfies readonly AnalysisVariantId[];
 
 /** Slugs the /editor route serves. A strict subset of AnalysisVariantId. */

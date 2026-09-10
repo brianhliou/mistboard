@@ -255,14 +255,14 @@ describe('perfect-info analysis boards', () => {
   });
 });
 
-// /analysis/duck-xiangqi is the one board here with no position editor behind
-// it: the duck is not a piece, so there is no /editor/duck-xiangqi route
-// (editor/editor-catalog.ts) and the hand-off must be absent rather than
-// linking to a 404.
+// /analysis/duck-xiangqi had no position editor behind it until 2026-09-10 (the
+// duck is not a piece, so the editor's model could not hold it). It has one now,
+// and the hand-off must carry the SEVENTH FEN field: an editor link that dropped
+// the duck would open a different position.
 describe('duck xiangqi analysis board', () => {
   const DUCK_ON_E6 = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1 e6';
 
-  it('mounts the duck presentation and offers no board editor', async () => {
+  it('mounts the duck presentation and hands off to the board editor', async () => {
     const root = await mountAt('duck-xiangqi');
     // The duck presentation, not another xiangqi-family board: its own board
     // host class and its own duck layer.
@@ -270,7 +270,7 @@ describe('duck xiangqi analysis board', () => {
     expect(root.querySelector('.dkx-live-duck'), 'duck layer').not.toBeNull();
     expect(root.querySelectorAll('[data-piece-square]').length).toBe(32);
     expect(root.querySelector('.review-move-list')).not.toBeNull();
-    expect(menuItem(root, 'Board editor'), 'no editor for this variant').toBeUndefined();
+    expect(menuItem(root, 'Board editor'), 'editor hand-off').toBeDefined();
     expect(menuItem(root, 'New deal')).toBeUndefined();
   });
 

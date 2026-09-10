@@ -16,6 +16,7 @@ export const ZH_HANT_EDITOR = {
   'editor.brushDelete': '刪除棋子',
   'editor.faceDownTile': '暗子',
   'editor.darkPiece': '暗子',
+  'editor.duck': '鴨子',
   'editor.sideToMove': '走棋方',
   'editor.opening': '開局（尚未確定顏色）',
   'editor.colorRed': '紅',
@@ -48,6 +49,8 @@ export const ZH_HANT_EDITOR = {
   'editor.poolMismatchColor':
     '棋盤上的{color}方暗子（{tiles}）必須與{color}方暗子池（{pieces}）一致。',
   'editor.jieqiHomeOnly': '{color}方暗子只能放在{color}方的原始位置上。',
+  'editor.duckOnPiece': '鴨子不能與棋子佔據同一個點。',
+  'editor.pieceOnDuck': '棋子不能放在鴨子所在的點上。',
   'editor.role.general': '將',
   'editor.role.advisor': '士',
   'editor.role.elephant': '象',
