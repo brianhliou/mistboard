@@ -21,7 +21,11 @@ export async function createBotGame(request: BotPlayRequest): Promise<string> {
       botId: request.botId,
       gameSpecId: request.gameSpecId,
       ...(request.timeControl ? { timeControl: request.timeControl } : {}),
-      preferredColor: request.preferredColor ?? 'random',
+      // Omitted, not 'random': a one-click bot start names no side, and the
+      // server reads an absent preferredColor as "the human opens". Sending an
+      // explicit 'random' would re-arm the coin flip these buttons are meant to
+      // avoid, since the setup dialog is not in the loop on this path.
+      ...(request.preferredColor ? { preferredColor: request.preferredColor } : {}),
       rated: false,
     }),
   });
