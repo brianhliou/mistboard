@@ -75,20 +75,27 @@ function search(
   const blocks = sets + meldCount + partials;
   const count = counts[i] as number;
 
-  if (count >= 3) {
-    counts[i] = count - 3;
-    search(counts, i, sets + 1, partials, hasPair, meldCount, best);
-    counts[i] = count;
-  }
+  // The cap applies to SETS as well as partials. A set is a block, and gating
+  // only the partials lets the search build five partials and then add a set on
+  // top of them, reporting six blocks and a hand one tile closer to winning
+  // than it is. Every ordering is explored, so a hand that genuinely wants the
+  // set reaches it by forming the set first.
+  if (blocks < MAX_BLOCKS) {
+    if (count >= 3) {
+      counts[i] = count - 3;
+      search(counts, i, sets + 1, partials, hasPair, meldCount, best);
+      counts[i] = count;
+    }
 
-  if (canStartRun(i) && (counts[i + 1] as number) > 0 && (counts[i + 2] as number) > 0) {
-    counts[i] -= 1;
-    counts[i + 1] -= 1;
-    counts[i + 2] -= 1;
-    search(counts, i, sets + 1, partials, hasPair, meldCount, best);
-    counts[i] += 1;
-    counts[i + 1] += 1;
-    counts[i + 2] += 1;
+    if (canStartRun(i) && (counts[i + 1] as number) > 0 && (counts[i + 2] as number) > 0) {
+      counts[i] -= 1;
+      counts[i + 1] -= 1;
+      counts[i + 2] -= 1;
+      search(counts, i, sets + 1, partials, hasPair, meldCount, best);
+      counts[i] += 1;
+      counts[i + 1] += 1;
+      counts[i + 2] += 1;
+    }
   }
 
   if (blocks < MAX_BLOCKS) {

@@ -46,6 +46,21 @@ test('five blocks with no pair costs an extra exchange', () => {
   assert.equal(standardShanten(counts('123m456m789m12p45s')), 1);
 });
 
+test('a set cannot be added on top of five partials', () => {
+  // Found by differential test against an independent implementation, not by
+  // anything written here. The cap was applied to partials only, so the search
+  // could build five partials and then add a SET, reporting six blocks and a
+  // hand one tile closer to winning than it is.
+  //
+  // 346788m 2457p 456s 6z: the six-block reading is 34m 67m 88m 24p 57p plus
+  // 456s, which scores 1. The real answer takes 678m and 456s as sets with
+  // 34m 24p 57p, five blocks and no pair, so 8-4-3 = 1 and the no-pair
+  // correction makes it 2.
+  assert.equal(standardShanten(counts('346788m2457p456s6z')), 2);
+  assert.equal(standardShanten(counts('3568m245679p222s7z')), 2);
+  assert.equal(standardShanten(counts('389m23p125578s111z')), 2);
+});
+
 test('blocks beyond the fifth do not reduce shanten', () => {
   // One set and five partial runs: six blocks in thirteen tiles. Only five can
   // ever be used, and none of them is a pair. Counting all six reads 1; the

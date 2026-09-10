@@ -18,10 +18,14 @@
     "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js",
     "test:unit": "tsx --test --test-concurrency=4 src/**/*.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
-    "test:ladder": "tsx --test 'src/**/*.slowtest.ts'"
+    "test:ladder": "tsx --test src/bots.slowtest.ts",
+    "test:differential": "tsx --test src/shanten.differential.slowtest.ts"
   },
   "devDependencies": {
     "tsx": "^4.23.1",
     "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@kobalab/majiang-core": "^1.4.1"
   }
 }
