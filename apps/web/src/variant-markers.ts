@@ -27,10 +27,8 @@ export const FINAL_VARIANT_MARKERS = {
   'dark-xiangqi': {
     path: '/variant-markers/final/fog-elephant-chess.png',
   },
-  // SVG, unlike its neighbours: this one is drawn from paths rather than
-  // exported from artwork. The mask reads alpha either way.
   'duck-xiangqi': {
-    path: '/variant-markers/final/duck-elephant-chess.svg',
+    path: '/variant-markers/final/duck-elephant-chess.png',
   },
   'dark-chess': {
     path: '/variant-markers/final/fog-chess.png',
