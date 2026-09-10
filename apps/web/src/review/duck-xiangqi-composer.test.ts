@@ -78,8 +78,12 @@ describe('duck xiangqi review composer', () => {
     // The piece move alone must NOT reach the tree: a turn is not a turn until
     // the duck is placed.
     expect(mainlineUcis(serialize())).toEqual([]);
-    // ...and the board is now asking for the duck, with its own distinct mark.
-    expect(board.querySelectorAll('.dkx-target--duck').length).toBeGreaterThan(0);
+    // ...and the board is asking for the duck. It no longer says so with a mark
+    // on every empty point: "anywhere" is not a constraint, and 58 dots buried
+    // the position. What says it now is the optimistic board — the piece has
+    // moved and nothing has been committed — plus the ghost under the cursor.
+    expect(board.querySelectorAll('.dkx-target--duck')).toHaveLength(0);
+    expect(board.querySelector('.dkx-duck-ghost')).not.toBeNull();
     // The piece shows at its destination while the duck is pending, so the two
     // steps read as one move rather than as lag.
     expect(board.querySelector(`[data-piece-square="${FIRST_MOVE.to}"]`)).not.toBeNull();
@@ -106,7 +110,9 @@ describe('duck xiangqi review composer', () => {
 
     clickPoint(board, FIRST_MOVE.from);
     clickPoint(board, FIRST_MOVE.to);
-    expect(board.querySelectorAll('.dkx-target--duck').length).toBeGreaterThan(0);
+    // In phase two: piece moved on screen, nothing committed.
+    expect(board.querySelector(`[data-piece-square="${FIRST_MOVE.to}"]`)).not.toBeNull();
+    expect(mainlineUcis(serialize())).toEqual([]);
 
     // A phase-two click on a NON-target (the point the piece just landed on is
     // occupied, so the duck cannot go there) cancels the whole turn. Free:
@@ -132,7 +138,9 @@ describe('duck xiangqi review composer', () => {
     // Now half-make BLACK's reply and navigate before placing the duck.
     clickPoint(board, REPLY.from);
     clickPoint(board, REPLY.to);
-    expect(board.querySelectorAll('.dkx-target--duck').length).toBeGreaterThan(0);
+    // Half-made: the reply shows on the board and the tree still has one ply.
+    expect(board.querySelector(`[data-piece-square="${REPLY.to}"]`)).not.toBeNull();
+    expect(mainlineUcis(serialize())).toHaveLength(1);
 
     // Left arrow steps the review back a node; the pending piece move was chosen
     // from a position that is no longer on screen and must not survive it.

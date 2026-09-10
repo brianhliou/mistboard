@@ -22,6 +22,7 @@ import {
   type DuckXiangqiBoardPhase,
   duckXiangqiBoardSvg,
   duckXiangqiClickResult,
+  installDuckXiangqiGhost,
 } from './duck-xiangqi-board.js';
 // The xiangqi surface stylesheets. WITHOUT THESE the board ground, palace
 // diagonals and river label are all drawn and all invisible — the markup is
@@ -256,6 +257,24 @@ function installBoardInteraction(liveRefs: LiveRefs): void {
     repaint: () => {
       if (core?.state.view) renderBoard(liveRefs, core.state.view);
     },
+  });
+  // Phase two shows no target dots when the duck may go anywhere, so the ghost
+  // under the cursor IS the affordance. Installed once on the board element; it
+  // writes into the ghost layer rather than triggering a render.
+  installDuckXiangqiGhost({
+    board: liveRefs.board,
+    active: () => {
+      const view = core?.state.view;
+      return !!view && phase.kind === 'duck' && canInteract(view);
+    },
+    isTarget: (square) => {
+      const view = core?.state.view;
+      return !!view && targetsForPhase(view).includes(square);
+    },
+    perspective: () => orientationFor(core?.state.view ?? null),
+    // Mirrors the renderer's own default: this client never passes a layout.
+    layout: () => 'intersection',
+    pieceSet: () => undefined,
   });
   installBoardDrag({
     board: liveRefs.board,

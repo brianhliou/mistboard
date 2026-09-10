@@ -177,6 +177,45 @@ export async function playDuckXiangqiEngineMoveIfReady(
   // turn is a move being appended.
   const legalTurns = getDuckXiangqiLegalTurns(room.projection.state);
 
+  // TAKE THE WIN. Capturing the general ends the game, and a rung is weakened by
+  // Skill Level, which works by choosing a move OTHER than the best one it found.
+  // Measured at level 1 on a real game: the engine reported `score mate 1` with
+  // the capture in its own PV and played elsewhere, declining the same win five
+  // times in one game while the human watched.
+  //
+  // Weakness belongs in how the bot builds a position, not in refusing to finish
+  // one: a bot that will not take a general on offer makes a game unendable, and
+  // reads as broken rather than as beginner. This is the mirror of the
+  // immediate-loss guards the fortress and drop-mini loops already run, and it is
+  // far cheaper than they are: the legal turns are already materialised, and a
+  // capture is a property of the destination square, so it costs a scan and no
+  // search at all.
+  const winning = legalTurns.find((turn) => {
+    const target = room.projection.state.board[turn.to];
+    return target?.role === 'general' && target.color !== seat;
+  });
+  if (winning) {
+    logger.info(
+      {
+        kind: 'duck_xiangqi_engine_took_the_win',
+        room_id: room.id,
+        engine_id: engineId,
+        move: duckXiangqiTurnToFsfUci(winning),
+      },
+      'Duck Xiangqi engine captured the general without searching',
+    );
+    const win: TenantRoomEvent<DuckXiangqiColor, DuckXiangqiTurn, typeof DUCK_XIANGQI_SPEC_ID> = {
+      type: 'move-played',
+      at: Date.now(),
+      roomId: room.id,
+      color: seat,
+      move: winning,
+    };
+    const winSeq = await ctx.appendEvent(room, win);
+    ctx.broadcastEventAppended(room, win, winSeq);
+    return;
+  }
+
   const startedAt = Date.now();
   let lastSearch: UciEval | null = null;
   const {
