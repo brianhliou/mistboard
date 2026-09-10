@@ -226,11 +226,36 @@ export async function playDuckXiangqiEngineMoveIfReady(
       legalUci: legalTurns.map(duckXiangqiTurnToFsfUci),
       attempts,
     });
-    reportEngineFallback(record, 'duck_xiangqi_engine_failed_closed', 'Duck Xiangqi');
-    const resign: TenantRoomEvent<DuckXiangqiColor, DuckXiangqiTurn, typeof DUCK_XIANGQI_SPEC_ID> =
-      { type: 'seat-resigned', at: Date.now(), roomId: room.id, color: seat };
-    const seq = await ctx.appendEvent(room, resign);
-    ctx.broadcastEventAppended(room, resign, seq);
+    // An engine that NEVER ANSWERED at the opening is an infrastructure failure,
+    // not a game. Resigning there hands the human a win and writes it to the
+    // games table as an ordinary resignation, so a broken deploy looks like a
+    // run of legitimate results instead of an incident. A missing binary is
+    // exactly this case: the resolver throws rather than falling back, because
+    // stock Fairy-Stockfish cannot play this variant.
+    //
+    // REACHABLE ONLY WHEN THE BOT HAS RED. The runtime's reducer accepts a
+    // `game-aborted` only while `moveNumber === 1`, and this kernel counts
+    // moveNumber per TURN rather than per full move, so the window shuts after
+    // Red's first turn. A bot on black is already at moveNumber 2 when it first
+    // moves and can only resign. That divergence is the kernel's, not this
+    // loop's: variants whose moveNumber is a real full-move number get the whole
+    // opening. Worth aligning, and not worth special-casing here.
+    const abortable = record.unreachable && room.projection.state.moveNumber === 1;
+    reportEngineFallback(
+      record,
+      'duck_xiangqi_engine_failed_closed',
+      'Duck Xiangqi',
+      abortable ? 'abort' : 'resign',
+    );
+    const terminal: TenantRoomEvent<
+      DuckXiangqiColor,
+      DuckXiangqiTurn,
+      typeof DUCK_XIANGQI_SPEC_ID
+    > = abortable
+      ? { type: 'game-aborted', at: Date.now(), roomId: room.id, reason: 'engine-unavailable' }
+      : { type: 'seat-resigned', at: Date.now(), roomId: room.id, color: seat };
+    const seq = await ctx.appendEvent(room, terminal);
+    ctx.broadcastEventAppended(room, terminal, seq);
     return;
   }
 
