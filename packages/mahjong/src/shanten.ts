@@ -12,7 +12,7 @@
  * ruleset question and HK Old Style tables disagree about both.
  */
 
-import { TERMINALS_AND_HONOURS, TILE_COUNT, canStartRun, isHonour } from './tiles.js';
+import { canStartRun, isHonour, TERMINALS_AND_HONOURS, TILE_COUNT } from './tiles.js';
 
 export interface ShantenOptions {
   /** Sets already exposed or declared (pung, chow, kong). Each is one of the four. */

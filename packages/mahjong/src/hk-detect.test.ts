@@ -77,7 +77,10 @@ test('a lone dragon pung scores one faan per dragon', () => {
 test('seat and round wind score separately and stack when they coincide', () => {
   const east = 27;
   const apart = scoreHand(counts('111z123m456m789m11p'), [], { seatWind: east, roundWind: 28 });
-  const together = scoreHand(counts('111z123m456m789m11p'), [], { seatWind: east, roundWind: east });
+  const together = scoreHand(counts('111z123m456m789m11p'), [], {
+    seatWind: east,
+    roundWind: east,
+  });
   assert.ok(apart && together);
   assert.equal(together.faan - apart.faan, 1, 'double east should be worth one more faan');
 });

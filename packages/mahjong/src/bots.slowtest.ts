@@ -12,12 +12,13 @@ import { runLadder, seededRng } from './ladder.js';
  */
 test('efficiency beats random over a long run', () => {
   const result = runLadder(
-    (hand) => ({
-      0: efficiencyBot(),
-      1: randomBot(seededRng(50_000 + hand)),
-      2: efficiencyBot(),
-      3: randomBot(seededRng(90_000 + hand)),
-    }) as Record<Seat, Bot>,
+    (hand) =>
+      ({
+        0: efficiencyBot(),
+        1: randomBot(seededRng(50_000 + hand)),
+        2: efficiencyBot(),
+        3: randomBot(seededRng(90_000 + hand)),
+      }) as Record<Seat, Bot>,
     600,
     7_000,
   );

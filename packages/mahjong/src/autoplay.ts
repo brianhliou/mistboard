@@ -8,20 +8,20 @@
 
 import type { Bot, PlayerView } from './bots.js';
 import { viewFor } from './bots.js';
-import { type Claim, type Seat, SEATS, legalClaims, resolveClaims } from './claims.js';
 import type { ClaimOptions } from './claims.js';
+import { type Claim, legalClaims, resolveClaims, SEATS, type Seat } from './claims.js';
 import type { HandSet } from './decompose.js';
 import {
-  type MahjongGame,
   applyClaim,
   applyDiscard,
   applyDraw,
   applyPass,
   applySelfDraw,
   isFinished,
+  type MahjongGame,
 } from './game.js';
-import { scoreHand } from './hk-detect.js';
 import type { HkHandContext } from './hk-detect.js';
+import { scoreHand } from './hk-detect.js';
 
 export interface PlayOptions extends ClaimOptions {
   /** Safety valve. A correct loop terminates long before this. */

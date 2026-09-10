@@ -11,7 +11,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import { standardShanten } from './shanten.js';
-import { TILE_COUNT, canStartRun, formatTiles, toCounts } from './tiles.js';
+import { canStartRun, formatTiles, TILE_COUNT, toCounts } from './tiles.js';
 
 /** Can these tiles be split entirely into triplets and runs? */
 function decomposesIntoSets(counts: number[], index: number): boolean {

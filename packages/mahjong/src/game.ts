@@ -15,9 +15,9 @@
  * and they add a second claim window with different rules.
  */
 
-import { type Claim, type Seat, SEATS, nextSeat, seatAfterPass } from './claims.js';
+import { type Claim, nextSeat, SEATS, type Seat, seatAfterPass } from './claims.js';
 import type { HandSet } from './decompose.js';
-import { EAST, type TileIndex, TILE_COUNT } from './tiles.js';
+import { EAST, TILE_COUNT, type TileIndex } from './tiles.js';
 
 /** Flowers ride in the wall above the 34 hand types, so a wall is one array. */
 export const FLOWER_BASE = 34;
@@ -124,7 +124,11 @@ function drawNonFlower(surface: DrawSurface, initial: WallTile | undefined): Til
  * Deal a wall into a hand: 13 tiles each, dealer 14, flowers exposed and
  * replaced as they appear.
  */
-export function dealGame(wall: readonly WallTile[], dealer: Seat = 0, roundWind = EAST): MahjongGame {
+export function dealGame(
+  wall: readonly WallTile[],
+  dealer: Seat = 0,
+  roundWind = EAST,
+): MahjongGame {
   if (wall.length !== WALL_SIZE) {
     throw new Error(`a wall is ${WALL_SIZE} tiles, got ${wall.length}`);
   }

@@ -1,7 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import { type HandSet, decompose, isWinningHand } from './decompose.js';
+import { decompose, type HandSet, isWinningHand } from './decompose.js';
 import { formatTiles, parseTiles, toCounts } from './tiles.js';
 
 const counts = (notation: string) => toCounts(parseTiles(notation));
@@ -29,10 +29,7 @@ test('111222333 splits two ways and both are returned', () => {
   assert.equal(results.length, 2);
 
   const shapes = results.map((result) => shapeOf(result.sets)).sort();
-  assert.deepEqual(shapes, [
-    'chow:1m chow:1m chow:1m chow:4m',
-    'chow:4m pung:1m pung:2m pung:3m',
-  ]);
+  assert.deepEqual(shapes, ['chow:1m chow:1m chow:1m chow:4m', 'chow:4m pung:1m pung:2m pung:3m']);
   for (const result of results) assert.equal(formatTiles([result.pair]), '1p');
 });
 

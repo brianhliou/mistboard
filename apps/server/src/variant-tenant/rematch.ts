@@ -97,7 +97,7 @@ export function broadcastTenantRematchState<
   Spec extends string,
   Client extends TenantRematchClient<C>,
 >(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   ctx: TenantRematchContext<Kind, C, M, State, Spec, Client>,
   room: TenantRematchRoom<Kind, C, M, State, Spec, Client>,
 ): void {
@@ -121,7 +121,7 @@ export function offerTenantRematch<
   Spec extends string,
   Client extends TenantRematchClient<C>,
 >(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   ctx: TenantRematchContext<Kind, C, M, State, Spec, Client>,
   room: TenantRematchRoom<Kind, C, M, State, Spec, Client>,
   client: Client,
@@ -146,7 +146,7 @@ export function cancelTenantRematch<
   Spec extends string,
   Client extends TenantRematchClient<C>,
 >(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   ctx: TenantRematchContext<Kind, C, M, State, Spec, Client>,
   room: TenantRematchRoom<Kind, C, M, State, Spec, Client>,
   client: Client,
@@ -166,7 +166,7 @@ export function declineTenantRematch<
   Spec extends string,
   Client extends TenantRematchClient<C>,
 >(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   ctx: TenantRematchContext<Kind, C, M, State, Spec, Client>,
   room: TenantRematchRoom<Kind, C, M, State, Spec, Client>,
   client: Client,
@@ -197,7 +197,7 @@ export async function finalizeTenantRematchIfReady<
   Spec extends string,
   Client extends TenantRematchClient<C>,
 >(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   ctx: TenantRematchContext<Kind, C, M, State, Spec, Client>,
   room: TenantRematchRoom<Kind, C, M, State, Spec, Client>,
 ): Promise<TenantRuntimeRoom<Kind, C, M, State, Spec> | null> {

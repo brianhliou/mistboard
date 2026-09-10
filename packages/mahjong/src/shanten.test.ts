@@ -1,12 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 
-import {
-  sevenPairsShanten,
-  shanten,
-  standardShanten,
-  thirteenOrphansShanten,
-} from './shanten.js';
+import { sevenPairsShanten, shanten, standardShanten, thirteenOrphansShanten } from './shanten.js';
 import { formatTiles, parseTiles, toCounts } from './tiles.js';
 
 const counts = (notation: string) => toCounts(parseTiles(notation));

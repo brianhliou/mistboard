@@ -3,20 +3,20 @@ import test from 'node:test';
 
 import type { Claim, Seat } from './claims.js';
 import {
-  DEAD_WALL_SIZE,
-  FLOWER_BASE,
-  type MahjongGame,
-  WALL_SIZE,
   applyClaim,
   applyDiscard,
   applyDraw,
   applyPass,
   applySelfDraw,
+  DEAD_WALL_SIZE,
   dealGame,
+  FLOWER_BASE,
   isFinished,
+  type MahjongGame,
   orderedWall,
   shuffleWall,
   visibleToSeat,
+  WALL_SIZE,
 } from './game.js';
 import { TILE_COUNT, tileIndex } from './tiles.js';
 
@@ -54,7 +54,10 @@ test('a wall is 144 tiles: 136 plus eight flowers', () => {
 test('shuffling preserves the multiset', () => {
   const shuffled = shuffleWall(rng(7));
   assert.equal(shuffled.length, WALL_SIZE);
-  assert.deepEqual([...shuffled].sort((a, b) => a - b), [...orderedWall()].sort((a, b) => a - b));
+  assert.deepEqual(
+    [...shuffled].sort((a, b) => a - b),
+    [...orderedWall()].sort((a, b) => a - b),
+  );
 });
 
 test('the deal gives thirteen tiles each and fourteen to the dealer', () => {
@@ -234,7 +237,10 @@ test('a hand played out to the end exhausts rather than hanging', () => {
     }
     if (game.phase.type === 'discard') {
       const hand = game.hands[game.turn] as readonly number[];
-      game = applyDiscard(game, hand.findIndex((n) => n > 0));
+      game = applyDiscard(
+        game,
+        hand.findIndex((n) => n > 0),
+      );
       continue;
     }
     if (game.phase.type === 'claim-window') game = applyPass(game);

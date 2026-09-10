@@ -8,8 +8,8 @@
  * simulator.
  */
 
-import { playHand } from './autoplay.js';
 import type { PlayOptions } from './autoplay.js';
+import { playHand } from './autoplay.js';
 import type { Bot } from './bots.js';
 import type { Seat } from './claims.js';
 import { dealGame, shuffleWall } from './game.js';

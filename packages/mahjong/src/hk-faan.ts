@@ -7,11 +7,7 @@
  * house-rule pattern quietly scoring at an orthodox table.
  */
 
-import {
-  HK_PATTERNS,
-  type HkPatternId,
-  type ScoredPattern,
-} from './hk-patterns.js';
+import { HK_PATTERNS, type HkPatternId, type ScoredPattern } from './hk-patterns.js';
 
 export type PatternSet = 'orthodox' | 'with-custom';
 

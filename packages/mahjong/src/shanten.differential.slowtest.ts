@@ -23,12 +23,8 @@ import assert from 'node:assert/strict';
 import { createRequire } from 'node:module';
 import test from 'node:test';
 
-import {
-  sevenPairsShanten,
-  standardShanten,
-  thirteenOrphansShanten,
-} from './shanten.js';
-import { TILE_COUNT, formatTiles, rankOf, suitOf } from './tiles.js';
+import { sevenPairsShanten, standardShanten, thirteenOrphansShanten } from './shanten.js';
+import { formatTiles, rankOf, suitOf, TILE_COUNT } from './tiles.js';
 
 const require = createRequire(import.meta.url);
 // eslint-disable-next-line @typescript-eslint/no-explicit-any
@@ -100,13 +96,19 @@ function compare(label: string, pool: number[], size: number, trials: number, se
     for (const key of ['standard', 'sevenPairs', 'thirteenOrphans'] as const) {
       if (mine[key] !== other[key]) {
         const tiles = counts.flatMap((n, tile) => Array.from({ length: n }, () => tile));
-        disagreements.push(`${key} on ${formatTiles(tiles)}: ours ${mine[key]}, theirs ${other[key]}`);
+        disagreements.push(
+          `${key} on ${formatTiles(tiles)}: ours ${mine[key]}, theirs ${other[key]}`,
+        );
       }
     }
   }
 
   console.log(`  ${label.padEnd(26)} ${checked} hands, ${disagreements.length} disagreements`);
-  assert.deepEqual(disagreements.slice(0, 10), [], `${label}: ${disagreements.length} disagreements`);
+  assert.deepEqual(
+    disagreements.slice(0, 10),
+    [],
+    `${label}: ${disagreements.length} disagreements`,
+  );
   return checked;
 }
 

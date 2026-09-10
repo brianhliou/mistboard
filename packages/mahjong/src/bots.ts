@@ -12,7 +12,7 @@
  * tenant exists. They never knew where they were running.
  */
 
-import { type Claim, type Seat, SEATS } from './claims.js';
+import { type Claim, SEATS, type Seat } from './claims.js';
 import type { HandSet } from './decompose.js';
 import type { MahjongGame, Phase } from './game.js';
 import { shanten } from './shanten.js';
@@ -117,11 +117,7 @@ export function efficiencyBot(): Bot {
   return {
     name: 'efficiency',
     chooseDiscard(view) {
-      const options = rankDiscards(
-        view.hand,
-        { meldCount: meldCountOf(view) },
-        seenByOthers(view),
-      );
+      const options = rankDiscards(view.hand, { meldCount: meldCountOf(view) }, seenByOthers(view));
       const best = options[0];
       if (!best) throw new Error('asked to discard from an empty hand');
       return best.discard;

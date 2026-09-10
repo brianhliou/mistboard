@@ -181,7 +181,7 @@ export type TenantGamePublication = {
 // first / second mover for every variant, so they are the last fallback.
 function playerHandles(
   summary: RecentEveGameRecord,
-  colors: readonly [string, string],
+  colors: readonly string[],
 ): Record<string, string | null> {
   const players = postgamePlayers(summary.participants ?? [], {
     whiteName: summary.whiteName,

@@ -3,10 +3,10 @@ import test from 'node:test';
 
 import {
   type Claim,
-  type Seat,
   legalClaims,
   nextSeat,
   resolveClaims,
+  type Seat,
   seatAfterClaim,
   seatAfterPass,
   seatDistance,
@@ -85,9 +85,17 @@ test('a hand below the minimum cannot be declared, which makes the claim illegal
   assert.ok(!kinds(short).includes('win'));
 
   // The same hand at a table with no minimum is a legal win.
-  const anyTable = legalClaims(counts('123m456m789m123p5s'), [], tileIndex('s', 5), 2, 0, {}, {
-    minFaan: 0,
-  });
+  const anyTable = legalClaims(
+    counts('123m456m789m123p5s'),
+    [],
+    tileIndex('s', 5),
+    2,
+    0,
+    {},
+    {
+      minFaan: 0,
+    },
+  );
   assert.ok(kinds(anyTable).includes('win'));
 });
 

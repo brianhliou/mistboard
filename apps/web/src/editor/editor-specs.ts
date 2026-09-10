@@ -144,7 +144,7 @@ export interface PlacementProblem {
 export interface EditorSpec {
   id: AnalysisVariantId;
   /** [the colour at the bottom of the board by default, the colour at the top]. */
-  colors: readonly [EditorColor, EditorColor];
+  colors: readonly EditorColor[];
   /** Banqi and jungle-flip show one fixed orientation. */
   flippable: boolean;
   /** Whether side-to-move may be '-' (banqi / jungle-flip's untouched opening). */

@@ -56,7 +56,7 @@ export type WebVariantTenant<C extends string> = {
   metaGlyph?: string;
   // Move order: [first mover, second mover]; also the board's default
   // top-to-bottom reading for a colors[0] viewer.
-  colors: readonly [C, C];
+  colors: readonly C[];
   isColor(value: unknown): value is C;
   oppositeColor(color: C): C;
   enabled(): boolean;

@@ -20,7 +20,11 @@ test('the derived totals match the values the HK tables publish', () => {
   ];
 
   for (const [id, expected] of published) {
-    assert.equal(totalFaan(only(id)).faan, expected, `${HK_PATTERNS[id].chinese} should be ${expected}`);
+    assert.equal(
+      totalFaan(only(id)).faan,
+      expected,
+      `${HK_PATTERNS[id].chinese} should be ${expected}`,
+    );
   }
 });
 

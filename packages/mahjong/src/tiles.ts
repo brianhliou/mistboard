@@ -42,7 +42,19 @@ export const DRAGONS: readonly TileIndex[] = [WHITE_DRAGON, GREEN_DRAGON, RED_DR
 
 /** 1m 9m 1p 9p 1s 9s plus the seven honours. */
 export const TERMINALS_AND_HONOURS: readonly TileIndex[] = [
-  0, 8, 9, 17, 18, 26, EAST, SOUTH, WEST, NORTH, WHITE_DRAGON, GREEN_DRAGON, RED_DRAGON,
+  0,
+  8,
+  9,
+  17,
+  18,
+  26,
+  EAST,
+  SOUTH,
+  WEST,
+  NORTH,
+  WHITE_DRAGON,
+  GREEN_DRAGON,
+  RED_DRAGON,
 ];
 
 export function isHonour(tile: TileIndex): boolean {
@@ -104,7 +116,8 @@ export function parseTiles(notation: string): TileIndex[] {
     for (const rank of pending) tiles.push(tileIndex(ch as Suit, rank));
     pending = [];
   }
-  if (pending.length > 0) throw new Error(`trailing ranks with no suit letter: ${pending.join('')}`);
+  if (pending.length > 0)
+    throw new Error(`trailing ranks with no suit letter: ${pending.join('')}`);
   return tiles;
 }
 

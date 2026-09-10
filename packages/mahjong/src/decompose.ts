@@ -13,7 +13,7 @@
  * a silent bug in it that shows up on maybe one hand in fifty.
  */
 
-import { TILE_COUNT, type TileIndex, canStartRun } from './tiles.js';
+import { canStartRun, TILE_COUNT, type TileIndex } from './tiles.js';
 
 export type SetKind = 'pung' | 'chow' | 'kong';
 
@@ -113,9 +113,6 @@ export function decompose(
 }
 
 /** True when the tiles form four sets and a pair by any split. */
-export function isWinningHand(
-  counts: readonly number[],
-  melds: readonly HandSet[] = [],
-): boolean {
+export function isWinningHand(counts: readonly number[], melds: readonly HandSet[] = []): boolean {
   return decompose(counts, melds).length > 0;
 }

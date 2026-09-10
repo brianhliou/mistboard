@@ -27,6 +27,7 @@ import type {
   TenantRuntimeRoom,
   TenantSeat,
 } from './tenant.js';
+import { firstSeat, seatAfter } from './tenant.js';
 
 // The projection+log slice the abort/deadline derivations read. Satisfied by
 // both TenantRuntimeRoom (event-writer side) and TenantLifecycleRoom (timer
@@ -74,7 +75,7 @@ export type TenantLifecycleContext<
 };
 
 export type TenantLifecycleTenant<C extends string> = {
-  colors: readonly [C, C];
+  colors: readonly C[];
   engine?: { isEngineClientId(clientId: string | undefined): boolean };
   persistence: { logKindPrefix: string; logLabel: string };
 };
@@ -150,7 +151,8 @@ export function tenantAbortPhaseFor<
   for (const color of tenant.colors) {
     if (!room.projection.seats[color]) return 'unjoined';
   }
-  return lastMove === undefined ? `${tenant.colors[0]}-1` : `${tenant.colors[1]}-1`;
+  const first = firstSeat(tenant);
+  return lastMove === undefined ? `${first}-1` : `${seatAfter(tenant, first)}-1`;
 }
 
 // The durable (sweeper-enforced) deadline of a days-per-move room: who must
@@ -177,7 +179,8 @@ export function tenantDurableDeadlineFor<
   // arbitrarily and anchor at 0, flagging an unfilled correspondence room
   // immediately for the wrong player.
   if (phase !== null && phase !== 'unjoined') {
-    const seat = phase === `${tenant.colors[0]}-1` ? tenant.colors[0] : tenant.colors[1];
+    const first = firstSeat(tenant);
+    const seat = phase === `${first}-1` ? first : seatAfter(tenant, first);
     return { seat, dueAt: tenantAbortAnchorAt(tenant, room, phase) + allowanceMs };
   }
   if (phase === 'unjoined') return null;
@@ -256,7 +259,7 @@ export function tenantAbortAnchorAt<
   room: TenantProjectedRoom<C, M, State, Spec>,
   phase: TenantAbortPhase<C>,
 ): number {
-  const firstMoverPhase = phase === `${tenant.colors[0]}-1`;
+  const firstMoverPhase = phase === `${firstSeat(tenant)}-1`;
   let anchor = 0;
   for (const event of room.events) {
     if (event.type === 'room-created') anchor = Math.max(anchor, event.at);
@@ -303,7 +306,7 @@ function someSeatConnected<
 }
 
 export function tenantConnectedSeats<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   clients: Iterable<TenantLifecycleClient<C>>,
 ): Record<C, boolean> {
   const connected = {} as Record<C, boolean>;

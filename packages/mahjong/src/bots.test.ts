@@ -4,9 +4,9 @@ import test from 'node:test';
 import { outcomeOf, playHand } from './autoplay.js';
 import { type Bot, efficiencyBot, randomBot, seatBots, seenByOthers, viewFor } from './bots.js';
 import type { Seat } from './claims.js';
-import { WALL_SIZE, dealGame, shuffleWall } from './game.js';
+import { dealGame, shuffleWall, WALL_SIZE } from './game.js';
 import { runLadder, seededRng } from './ladder.js';
-import { TILE_COUNT, parseTiles, tileIndex, toCounts } from './tiles.js';
+import { parseTiles, TILE_COUNT, tileIndex, toCounts } from './tiles.js';
 
 const rng = (seed: number) => {
   let s = seed;
@@ -45,7 +45,10 @@ test('what others have seen excludes your own hand', () => {
     assert.ok((seen[tile] ?? 0) + (view.hand[tile] ?? 0) <= 4, `tile ${tile} over-counted`);
   }
   // Nothing has been discarded or melded yet, so nothing is visible at all.
-  assert.equal(seen.reduce((a, b) => a + b, 0), 0);
+  assert.equal(
+    seen.reduce((a, b) => a + b, 0),
+    0,
+  );
 });
 
 test('the efficiency bot discards the widest tile, not the first one', () => {
@@ -86,7 +89,10 @@ test('the efficiency bot always takes a win', () => {
 test('four bots play a hand to a legal end without losing a tile', () => {
   for (const seed of [2, 4, 8, 16, 32]) {
     const game = dealGame(shuffleWall(rng(seed)));
-    const played = playHand(game, seatBots(() => efficiencyBot()));
+    const played = playHand(
+      game,
+      seatBots(() => efficiencyBot()),
+    );
 
     assert.ok(['won', 'exhausted'].includes(played.phase.type), `seed ${seed}`);
 
@@ -106,7 +112,10 @@ test('four bots play a hand to a legal end without losing a tile', () => {
 test('a declared win always meets the table minimum', () => {
   // The loop must never declare a hand that could not legally be declared.
   for (const seed of [3, 6, 12, 24, 48, 96]) {
-    const played = playHand(dealGame(shuffleWall(rng(seed))), seatBots(() => efficiencyBot()));
+    const played = playHand(
+      dealGame(shuffleWall(rng(seed))),
+      seatBots(() => efficiencyBot()),
+    );
     const outcome = outcomeOf(played);
     if (outcome.exhausted) continue;
     assert.ok(outcome.faan !== null, `seed ${seed} won with an unscoreable hand`);
@@ -117,12 +126,13 @@ test('a declared win always meets the table minimum', () => {
 test('efficiency beats random over a short run', () => {
   // Fast smoke of the calibration; the meaningful run is bots.slowtest.ts.
   const result = runLadder(
-    (hand) => ({
-      0: efficiencyBot(),
-      1: randomBot(seededRng(50_000 + hand)),
-      2: efficiencyBot(),
-      3: randomBot(seededRng(90_000 + hand)),
-    }) as Record<Seat, Bot>,
+    (hand) =>
+      ({
+        0: efficiencyBot(),
+        1: randomBot(seededRng(50_000 + hand)),
+        2: efficiencyBot(),
+        3: randomBot(seededRng(90_000 + hand)),
+      }) as Record<Seat, Bot>,
     60,
     400,
   );

@@ -62,7 +62,7 @@ export function assignTenantSeat<
   C extends string,
   Client extends { displaced: boolean; seat: string },
 >(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   room: TenantSeatRoom<C, Client>,
   clientId: string,
   rawToken: string | undefined,
@@ -173,7 +173,7 @@ export function mintTenantSeatToken<C extends string>(
 }
 
 function nextAvailableTenantSeat<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   creatorPreference: C | 'random' | undefined,
   occupiedSeats: ReadonlySet<string>,
 ): C | null {
@@ -181,7 +181,10 @@ function nextAvailableTenantSeat<C extends string>(
     if (!occupiedSeats.has(creatorPreference)) return creatorPreference;
   }
   if (creatorPreference === 'random' && occupiedSeats.size === 0) {
-    return randomBytes(1)[0]! < 128 ? tenant.colors[0] : tenant.colors[1];
+    // Uniform over however many seats there are. A coin flip silently ignores
+    // the third and fourth.
+    const seats = tenant.colors;
+    return seats[randomBytes(1)[0]! % seats.length] as C;
   }
   for (const color of tenant.colors) {
     if (!occupiedSeats.has(color)) return color;

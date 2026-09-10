@@ -11,18 +11,11 @@
  * tiles and arrive through `HkHandContext`.
  */
 
-import { type Decomposition, type HandSet, decompose } from './decompose.js';
+import { type Decomposition, decompose, type HandSet } from './decompose.js';
 import { type FaanOptions, type FaanResult, totalFaan } from './hk-faan.js';
-import { DEFAULT_HK_PAYMENT, type HkPaymentRules, type Settlement, settle } from './hk-payment.js';
 import type { HkPatternId, ScoredPattern } from './hk-patterns.js';
-import {
-  DRAGONS,
-  type TileIndex,
-  WINDS,
-  isHonour,
-  isTerminal,
-  suitOf,
-} from './tiles.js';
+import { DEFAULT_HK_PAYMENT, type HkPaymentRules, type Settlement, settle } from './hk-payment.js';
+import { DRAGONS, isHonour, isTerminal, suitOf, type TileIndex, WINDS } from './tiles.js';
 
 export interface HkHandContext {
   readonly selfDrawn?: boolean;

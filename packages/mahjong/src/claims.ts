@@ -12,10 +12,10 @@
  * belong with the rules.
  */
 
-import { type HandSet, decompose } from './decompose.js';
-import { type HkHandContext, scoreHand } from './hk-detect.js';
+import { decompose, type HandSet } from './decompose.js';
 import type { HkScoreOptions } from './hk-detect.js';
-import { type TileIndex, isHonour, suitOf } from './tiles.js';
+import { type HkHandContext, scoreHand } from './hk-detect.js';
+import { isHonour, suitOf, type TileIndex } from './tiles.js';
 
 /** Seats in turn order: East, South, West, North. Play proceeds 0 -> 1 -> 2 -> 3. */
 export type Seat = 0 | 1 | 2 | 3;
@@ -158,8 +158,7 @@ export function resolveClaims(
   const best = ordered[0] as Claim;
   const wins = ordered.filter((claim) => claim.kind === 'win');
 
-  const winners =
-    best.kind === 'win' && options.multipleWinners && wins.length > 1 ? wins : [best];
+  const winners = best.kind === 'win' && options.multipleWinners && wins.length > 1 ? wins : [best];
 
   const taken = new Set(winners);
   return {

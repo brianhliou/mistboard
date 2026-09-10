@@ -120,7 +120,7 @@ export type TenantExportPgnResult = '1-0' | '0-1' | '1/2-1/2' | '*';
 
 export type TenantExportGame = {
   // Move order: [first mover, second mover], the tenant's own color words.
-  colors: readonly [string, string];
+  colors: readonly string[];
   plies: readonly TenantExportPly[];
   // Flip variants only (banqi, jungle-flip): the ink the first-mover seat bound
   // on its opening flip. The result is recorded by seat, so a consumer needs

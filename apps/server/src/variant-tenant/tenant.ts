@@ -240,12 +240,23 @@ export type VariantTenant<
   kind: Kind;
   gameSpecId: Spec;
   roomIdPrefix: string;
-  // Move order: [first mover, second mover]. Drives seat iteration, summary
-  // participant order, rematch color swap, and clock arming (the clock arms
-  // once the second mover completes the first full move).
-  colors: readonly [C, C];
+  // Move order, in turn sequence starting from the first mover. Drives seat
+  // iteration, summary participant order, rematch color swap, and clock arming
+  // (the clock arms once the LAST seat completes the first go-around).
+  //
+  // Widened from a fixed pair 2026-09-10. Every existing tenant passes two and
+  // behaves exactly as before; the array is what lets a four-seat game exist at
+  // all. Read positions through firstSeat/lastSeat/seatAfter rather than by
+  // index, so a tenant with more than two seats cannot be silently mis-read.
+  colors: readonly C[];
   enabled(): boolean;
+  // Only meaningful where there are exactly two seats: it answers "who wins if
+  // this seat forfeits". A four-seat tenant has no such answer and must supply
+  // forfeitWinner instead.
   oppositeColor(color: C): C;
+  // Who is awarded the game when `color` times out or abandons. Defaults to
+  // oppositeColor, which is right for two seats and undefined for more.
+  forfeitWinner?(color: C): C | null;
   rules: {
     // `setup` is the server-secret per-game setup persisted in the room-created
     // event (see TenantRoomEvent.setup). Tenants without hidden setup ignore it.
@@ -354,3 +365,26 @@ export type VariantTenant<
     logLabel: string;
   };
 };
+
+/** The seat that moves first. Throws rather than returning undefined: a tenant
+ *  with no seats is a programming error, not a runtime condition. */
+export function firstSeat<C extends string>(tenant: { colors: readonly C[] }): C {
+  const seat = tenant.colors[0];
+  if (seat === undefined) throw new Error('tenant declares no seats');
+  return seat;
+}
+
+/** The seat that moves last in a go-around. For two seats this is the second
+ *  mover, which is what clock arming has always keyed on. */
+export function lastSeat<C extends string>(tenant: { colors: readonly C[] }): C {
+  const seat = tenant.colors[tenant.colors.length - 1];
+  if (seat === undefined) throw new Error('tenant declares no seats');
+  return seat;
+}
+
+/** The next seat in turn order, wrapping. For two seats this is the opposite. */
+export function seatAfter<C extends string>(tenant: { colors: readonly C[] }, seat: C): C {
+  const at = tenant.colors.indexOf(seat);
+  if (at < 0) throw new Error(`seat ${seat} is not one of this tenant's seats`);
+  return tenant.colors[(at + 1) % tenant.colors.length] as C;
+}

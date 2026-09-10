@@ -33,6 +33,7 @@ import type {
   TenantSnapshotClient,
   VariantTenant,
 } from './tenant.js';
+import { lastSeat } from './tenant.js';
 
 export type TenantRoomCreation<
   Kind extends string,
@@ -59,7 +60,7 @@ export function isTenantRoomId(tenant: { roomIdPrefix: string }, roomId: string)
 }
 
 export function createTenantClock<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   initialMs: number,
   incrementMs: number,
 ): TenantClockState<C> {
@@ -75,7 +76,7 @@ export function createTenantClock<C extends string>(
 }
 
 export function nextTenantClockForMove<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   clock: TenantClockState<C> | undefined,
   at: number,
   movedColor: C,
@@ -89,7 +90,9 @@ export function nextTenantClockForMove<C extends string>(
       ...clock.remainingMs,
       [movedColor]: clock.remainingMs[movedColor] + clock.incrementMs,
     };
-    const armsNow = movedColor === tenant.colors[1] && prevMoveNumber === 1;
+    // Arms once the LAST seat has completed the first go-around. For two seats
+    // that is the second mover, unchanged; index 1 would be wrong for more.
+    const armsNow = movedColor === lastSeat(tenant) && prevMoveNumber === 1;
     if (armsNow && nextStatus.type === 'playing') {
       return { ...clock, activeColor: nextStatus.turn, remainingMs, runningSince: at };
     }
@@ -577,7 +580,7 @@ export function tenantSnapshotPayload<
 }
 
 export function tenantRematchOfferFlags<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   room: { rematch: { offers: Partial<Record<C, unknown>> } },
 ): Record<C, boolean> {
   const flags = {} as Record<C, boolean>;
@@ -806,7 +809,7 @@ function isRoomTimeControl(value: unknown): value is RoomTimeControl {
 }
 
 export function isTenantClockState<C extends string>(
-  tenant: { colors: readonly [C, C]; rules: { isColor(value: unknown): value is C } },
+  tenant: { colors: readonly C[]; rules: { isColor(value: unknown): value is C } },
   value: unknown,
 ): value is TenantClockState<C> {
   if (typeof value !== 'object' || value === null) return false;
@@ -845,7 +848,7 @@ export function countActiveTenantGames(
 
 export function computeTenantConnectedSeats<C extends string>(
   tenant: {
-    colors: readonly [C, C];
+    colors: readonly C[];
     engine?: { isEngineClientId(clientId: string | undefined): boolean };
   },
   clients: Iterable<{ seat: TenantSeat<C>; displaced: boolean }>,
