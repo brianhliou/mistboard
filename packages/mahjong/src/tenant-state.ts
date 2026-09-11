@@ -19,22 +19,24 @@
  */
 
 import {
+  type Claim,
+  type ClaimKind,
+  legalClaims,
+  resolveClaims,
+  SEATS,
+  type Seat,
+} from './claims.js';
+import {
   applyClaim,
   applyDiscard,
   applyDraw,
   applyPass,
   applySelfDraw,
-  type Claim,
-  type ClaimKind,
   dealGame,
-  legalClaims,
   type MahjongGame,
-  resolveClaims,
-  SEATS,
-  type Seat,
-  type TileIndex,
   type WallTile,
-} from './index.js';
+} from './game.js';
+import type { TileIndex } from './tiles.js';
 
 /** Seat names on the wire. Index matches the kernel's 0-3. */
 export const MAHJONG_SEATS = ['east', 'south', 'west', 'north'] as const;

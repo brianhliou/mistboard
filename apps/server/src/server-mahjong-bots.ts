@@ -12,10 +12,12 @@
  * three seats move instantly reads as a machine rather than as a game.
  */
 
+import type { MAHJONG_SPEC_ID } from '@mistboard/game';
 import {
   applyMahjongMove,
   claimsFor,
   efficiencyBot,
+  MAHJONG_SEATS,
   type MahjongMove,
   type MahjongSeat,
   type MahjongTenantState,
@@ -24,7 +26,6 @@ import {
   seatIndex,
   viewFor,
 } from '@mistboard/mahjong';
-import { mahjongTenant } from './mahjong-tenant.js';
 import { logger } from './obs.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
@@ -53,14 +54,12 @@ type MahjongRoom = TenantRuntimeRoom<
   MahjongSeat,
   MahjongMove,
   MahjongTenantState,
-  typeof mahjongTenant.gameSpecId
+  typeof MAHJONG_SPEC_ID
 >;
 
 /** Seats held by a bot, in turn order. */
 function botSeats(room: MahjongRoom): MahjongSeat[] {
-  return mahjongTenant.colors.filter(
-    (seat) => room.projection.seats[seat] === MAHJONG_BOT_CLIENT_ID,
-  );
+  return MAHJONG_SEATS.filter((seat) => room.projection.seats[seat] === MAHJONG_BOT_CLIENT_ID);
 }
 
 /** The move this bot seat wants to make, or null if it has nothing to do. */
