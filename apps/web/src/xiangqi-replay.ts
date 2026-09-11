@@ -5,6 +5,7 @@
 
 import {
   ARBITER_ADJUDICATED_DRAWS,
+  applyStandardXiangqiMove,
   applyMove as applyXiangqiMove,
   createInitialXiangqiState,
   formatXiangqiMoves,
@@ -92,6 +93,11 @@ export type XiangqiReplayAnnotation = {
   line?: string;
   /** Optional human note, shown under the line. Prose is ours, never lifted. */
   note?: string;
+  /**
+   * Tag on the branch, replacing "Better was". For a line that is not an
+   * improvement but an alternative: a second mate, a transposition.
+   */
+  label?: string;
   /**
    * Assessment at the END of `line`, in the chess-literature symbols (+−, ±, ⩲,
    * =, ⩱, ∓, −+). Deliberately not derived from `cp`: that eval is the
@@ -618,6 +624,21 @@ export function mountXiangqiReplay(
     return legal;
   }
 
+  /** "1-0" or "0-1" when the line ends the game with a winner, else null.
+   *  Replayed through the STANDARD kernel: the stepper's own applier is the
+   *  fog one, pseudo-legal by design, and it never reports a mate. */
+  function lineResult(ply: number, line: XiangqiMove[]): string | null {
+    let state = states[ply - 1]!;
+    for (const mv of line) {
+      if (state.status.type !== 'playing') return null;
+      const next = applyStandardXiangqiMove(state, mv);
+      if (next === state) return null;
+      state = next;
+    }
+    if (state.status.type !== 'finished' || !state.status.winner) return null;
+    return state.status.winner === 'red' ? '1-0' : '0-1';
+  }
+
   function labelsForLine(ply: number, line: XiangqiMove[]): string[] {
     const cached = variationLabels.get(ply);
     if (cached) return cached;
@@ -757,9 +778,10 @@ export function mountXiangqiReplay(
       const tag = document.createElement('span');
       tag.className = 'xq-replay-branch-tag';
       // "engine" named the source; this names the thing, which is what a reader
-      // needs. Every branch belongs to a ?!/?/?? move, so it is always a line
-      // that was better than the one played.
-      tag.textContent = copy.betterWas;
+      // needs. An engine branch belongs to a ?!/?/?? move, so by default it is
+      // a line that was better than the one played; an author can name it
+      // otherwise (a second answer that is not better, only different).
+      tag.textContent = a?.label ?? copy.betterWas;
       branch.appendChild(tag);
       // A line replacing a Black move starts mid-pair, so it opens the way a
       // score sheet does: the move number, then an ellipsis standing in for
@@ -790,11 +812,14 @@ export function mountXiangqiReplay(
           }),
         );
       });
-      // The line's verdict, where a reader's eye already is: at its end.
-      if (a?.lineEval) {
+      // The line's verdict, where a reader's eye already is: at its end. A line
+      // that mates on the board is a finished game and gets the result; an
+      // assessment symbol is for a line that stops short of one.
+      const result = lineResult(ply, line);
+      if (result || a?.lineEval) {
         const verdict = document.createElement('span');
         verdict.className = 'xq-replay-branch-eval';
-        verdict.textContent = a.lineEval;
+        verdict.textContent = result ?? a?.lineEval ?? '';
         branch.appendChild(verdict);
       }
       moveList.appendChild(branch);
@@ -882,12 +907,14 @@ export function mountXiangqiReplay(
     if (variation) {
       narrative.textContent = `Engine line, ${variation.cursor} of ${variation.moves.length}`;
     } else if (index === 0) {
-      narrative.textContent = copy.intro;
+      // A chapter set from a Black-to-move FEN opens with Black; the intro and
+      // the mover attribution below follow the FEN, not the game's convention.
+      narrative.textContent = firstMover === 'red' ? copy.intro : copy.introSecond;
     } else if (index === total) {
       narrative.textContent = spec.resultText;
     } else {
       const mv = moves[index - 1]!;
-      const mover = index % 2 === 1 ? copy.first : copy.second;
+      const mover = (index % 2 === 1) === (firstMover === 'red') ? copy.first : copy.second;
       narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${mv.from}–${mv.to}`;
     }
     // The card always shows the result, the way a game page does; the running

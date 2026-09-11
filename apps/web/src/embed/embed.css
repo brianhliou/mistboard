@@ -626,15 +626,37 @@ body.embed-body {
      clipped the difference with no scrollbar and no other symptom. A measured
      constant would go stale the next time that button row changes; min-content
      cannot. */
-  grid-template-columns:
-    minmax(0, calc(var(--puzzle-surface-size) * 552 / 612))
-    minmax(min-content, 1fr);
-  gap: 10px;
+  /* The study card's split (articles.css .xq-replay-annotated .xq-replay-grid):
+     roughly 70/30 with a 226px floor on the sheet, so a puzzle beside a study
+     replay shows the same board width and the same sheet width. The board is
+     width-driven inside its column (the trainer's own min(100%, height budget)
+     rule), and a host sizes the frame so the height budget does not bind; the
+     stacked layout below keeps the height-driven arithmetic it needs. */
+  grid-template-columns: minmax(0, 2.85fr) minmax(226px, 1fr);
+  /* The board is also bounded by the frame's height. In a frame wider than
+     that bound allows, the split would leave the board floating at the left
+     of an empty column, so the card caps its own width at what the bounded
+     board plus its 30% sheet need, and centres in the frame. The mat is the
+     24px; the 3.85/2.85 is the split's total over the board's share. */
+  width: 100%;
+  max-width: calc((var(--puzzle-surface-size) * 552 / 612 + 24px) * 3.85 / 2.85);
+  align-self: center;
+  /* The study and game embeds' card (this file, .embed-game): one bordered
+     panel holding the board column and, behind a rule, the sheet. The trainer
+     page draws the sheet as its own boxed card beside a bare board, which is
+     why the three embeds read as different objects in an article that shows
+     them side by side. The rule between the columns is the sheet's left
+     border, below. */
+  gap: 0;
   align-items: start;
-  flex: 1;
+  flex: 0 0 auto;
+  max-height: 100%;
   min-height: 0;
   min-width: 0;
-  background: transparent;
+  overflow: hidden;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 10px;
+  background: var(--site-panel, transparent);
 }
 
 .embed-puzzle .puzzle-board .puzzle-xiangqi-board,
@@ -642,18 +664,93 @@ body.embed-body {
   min-width: 0;
 }
 
-/* Beside the board the panel is shorter than it (a move list of one or two
-   plies, the verdict block, the actions), and top-aligned it left the bottom
-   third of the column empty against a full-height board. Centred, the two
-   read as one row. The stacked layout below overrides this with stretch. */
-.embed-puzzle .puzzle-side-panel {
-  max-height: var(--puzzle-page-height);
-  align-self: center;
+/* The board sits on a mat inside the card rather than running to its edge,
+   the study card's 12px inset (.xq-replay-annotated .raw-svg-stepper-frame-xq). */
+.embed-puzzle .puzzle-board {
+  box-sizing: border-box;
+  padding: 12px;
+  justify-items: stretch;
 }
 
+.embed-puzzle .puzzle-board .puzzle-xiangqi-board {
+  min-width: 0;
+}
+
+/* The verdict block was drawn for the trainer page's wide sidebar (a 66px
+   icon, 24px title, 22px by 28px padding). In a 226px sheet that wraps
+   "Black to move" onto two lines and pushes the buttons under the icon, so
+   inside the card it takes the sheet's scale. */
+.embed-puzzle .puzzle-feedback {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+}
+
+.embed-puzzle .puzzle-feedback-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.embed-puzzle .puzzle-feedback-title {
+  font-size: 16px;
+}
+
+.embed-puzzle .puzzle-feedback-body {
+  font-size: 13px;
+}
+
+/* The sheet column: the trainer's boxed card loses its own border, radius and
+   shadow and becomes the right-hand column behind a rule, the way the game
+   embed's move sheet sits behind .embed-game-rail's rule. */
+.embed-puzzle .puzzle-trainer-panel {
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.embed-puzzle .puzzle-side-panel {
+  border-left: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+}
+
+/* The stepper row takes the game card's control-row grammar: a rule above,
+   borderless muted buttons, no floating gap. */
+.embed-puzzle .puzzle-actions {
+  gap: 0;
+  grid-template-columns: repeat(4, 1fr);
+  min-height: 38px;
+  border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+}
+
+.embed-puzzle .puzzle-button {
+  width: auto;
+  height: 38px;
+  border-radius: 0;
+  font-size: 20px;
+}
+
+.embed-puzzle .puzzle-button:hover:not(:disabled) {
+  background: var(--site-hover);
+  color: var(--site-heading, inherit);
+}
+
+/* Beside the board the sheet runs the board's full height, so the rule
+   between them is continuous and the stepper row sits on the card's bottom
+   edge: the move list takes the slack, the way the game card's sheet does.
+   (It used to centre a shorter panel against the board, which read as one
+   row when the panel was its own box; inside one card it reads as a gap.) */
+.embed-puzzle .puzzle-side-panel {
+  height: auto;
+  max-height: var(--puzzle-page-height);
+  align-self: stretch;
+  min-height: 0;
+}
+
+/* The line above the card, the game embed's header (.embed-game-header). */
 .embed-puzzle-caption {
   color: var(--site-muted);
-  font-size: 13px;
+  font-size: 14px;
+  font-weight: 600;
   text-align: center;
 }
 

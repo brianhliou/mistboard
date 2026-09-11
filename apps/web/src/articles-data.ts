@@ -35,6 +35,7 @@ import { jieqiArticle } from './articles/content/jieqi.js';
 import { jungleArticle } from './articles/content/jungle.js';
 import { jungleFlipArticle } from './articles/content/jungle-flip.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
+import { puzzleTwoAnswersArticle } from './articles/content/puzzles-with-more-than-one-solution.js';
 import { kriegspielArticle } from './articles/content/kriegspiel.js';
 import { miniXiangqiArticle } from './articles/content/mini-xiangqi.js';
 import { mistyArticle } from './articles/content/misty.js';
@@ -86,6 +87,7 @@ export const articles: Article[] = [
   banqiEngineArticle,
   banqiLuckArticle,
   puzzleMiningArticle,
+  puzzleTwoAnswersArticle,
   riverbankCannonArticle,
   titledPlayersArticle,
   revealChessArticle,

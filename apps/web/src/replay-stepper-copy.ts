@@ -16,6 +16,8 @@ export type ReplayStepperCopy = {
   sliderLabel: string;
   start: string;
   intro: string;
+  /** Intro when the line starts from a position with the second side to move. */
+  introSecond: string;
   movePrefix: (moveNumber: number) => string;
   /** Labels the engine's preferred line under a move it faulted. */
   betterWas: string;
@@ -43,7 +45,14 @@ export type ReplayStepperCopy = {
   noPieces: string;
 };
 
-type FamilyStrings = { intro: string; first: string; second: string; pocket: string };
+type FamilyStrings = {
+  intro: string;
+  /** Intro for a line that starts from a position with the second side to move. */
+  introSecond: string;
+  first: string;
+  second: string;
+  pocket: string;
+};
 
 const COMMON: Record<
   ArticleLang | 'en',
@@ -124,18 +133,21 @@ const FAMILIES: Record<ReplayStepperFamily, Record<ArticleLang | 'en', FamilyStr
   xiangqi: {
     en: {
       intro: 'Step through the moves. Red moves first.',
+      introSecond: 'Step through the moves. Black moves first.',
       first: 'Red',
       second: 'Black',
       pocket: ' reserve',
     },
     'zh-Hans': {
       intro: '逐步回放这盘棋。红方先走。',
+      introSecond: '逐步回放这盘棋。黑方先走。',
       first: '红方',
       second: '黑方',
       pocket: '手牌',
     },
     'zh-Hant': {
       intro: '逐步回放這盤棋。紅方先走。',
+      introSecond: '逐步回放這盤棋。黑方先走。',
       first: '紅方',
       second: '黑方',
       pocket: '手牌',
@@ -144,18 +156,21 @@ const FAMILIES: Record<ReplayStepperFamily, Record<ArticleLang | 'en', FamilyStr
   chess: {
     en: {
       intro: 'Step through the moves. White moves first.',
+      introSecond: 'Step through the moves. Black moves first.',
       first: 'White',
       second: 'Black',
       pocket: ' reserve',
     },
     'zh-Hans': {
       intro: '逐步回放这盘棋。白方先走。',
+      introSecond: '逐步回放这盘棋。黑方先走。',
       first: '白方',
       second: '黑方',
       pocket: '手牌',
     },
     'zh-Hant': {
       intro: '逐步回放這盤棋。白方先走。',
+      introSecond: '逐步回放這盤棋。黑方先走。',
       first: '白方',
       second: '黑方',
       pocket: '手牌',
@@ -164,18 +179,21 @@ const FAMILIES: Record<ReplayStepperFamily, Record<ArticleLang | 'en', FamilyStr
   shogi: {
     en: {
       intro: 'Step through the moves. Sente moves first.',
+      introSecond: 'Step through the moves. Gote moves first.',
       first: 'Sente',
       second: 'Gote',
       pocket: ' hand',
     },
     'zh-Hans': {
       intro: '逐步回放这盘棋。先手先走。',
+      introSecond: '逐步回放这盘棋。后手先走。',
       first: '先手',
       second: '后手',
       pocket: '手牌',
     },
     'zh-Hant': {
       intro: '逐步回放這盤棋。先手先走。',
+      introSecond: '逐步回放這盤棋。後手先走。',
       first: '先手',
       second: '後手',
       pocket: '手牌',
@@ -184,18 +202,21 @@ const FAMILIES: Record<ReplayStepperFamily, Record<ArticleLang | 'en', FamilyStr
   crossroads: {
     en: {
       intro: 'Step through the game. White moves first.',
+      introSecond: 'Step through the game. Black moves first.',
       first: 'White',
       second: 'Red',
       pocket: ' reserve',
     },
     'zh-Hans': {
       intro: '逐步回放这盘棋。白方先走。',
+      introSecond: '逐步回放这盘棋。黑方先走。',
       first: '白方',
       second: '红方',
       pocket: '手牌',
     },
     'zh-Hant': {
       intro: '逐步回放這盤棋。白方先走。',
+      introSecond: '逐步回放這盤棋。黑方先走。',
       first: '白方',
       second: '紅方',
       pocket: '手牌',
@@ -204,18 +225,21 @@ const FAMILIES: Record<ReplayStepperFamily, Record<ArticleLang | 'en', FamilyStr
   jieqi: {
     en: {
       intro: 'Step through the game. Red moves first; dark pieces flip as they move.',
+      introSecond: 'Step through the game. Black moves first; dark pieces flip as they move.',
       first: 'Red',
       second: 'Black',
       pocket: ' reserve',
     },
     'zh-Hans': {
       intro: '逐步回放这盘棋。红方先走；暗子走动时翻开亮明身份。',
+      introSecond: '逐步回放这盘棋。黑方先走；暗子走动时翻开亮明身份。',
       first: '红方',
       second: '黑方',
       pocket: '手牌',
     },
     'zh-Hant': {
       intro: '逐步回放這盤棋。紅方先走；暗子走動時翻開亮明身分。',
+      introSecond: '逐步回放這盤棋。黑方先走；暗子走動時翻開亮明身分。',
       first: '紅方',
       second: '黑方',
       pocket: '手牌',
