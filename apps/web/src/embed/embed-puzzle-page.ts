@@ -11,8 +11,10 @@ import type { EmbedPuzzleRoute } from './embed-route.js';
 import './embed.css';
 
 // Height the caption and credit lines take out of the frame, so the board's
-// surface budget leaves room for them.
-const CHROME_PX = 44;
+// surface budget leaves room for them: two text lines (13px and 12px, ~20px
+// and ~18px with line-height) and the two 6px flex gaps. 44 undershot that by
+// a few pixels and the credit line sat on the board's bottom edge.
+const CHROME_PX = 52;
 
 type DailyPayload = { puzzle?: { id?: string } };
 

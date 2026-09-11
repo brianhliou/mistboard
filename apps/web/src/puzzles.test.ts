@@ -2,11 +2,13 @@ import {
   attemptMiniXiangqiPuzzleLine,
   attemptStandardXiangqiPuzzleLine,
   DROP_MINI_XIANGQI_SPEC_ID,
+  detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
   MINI_XIANGQI_PUZZLES,
   MINI_XIANGQI_SPEC_ID,
   type MiniXiangqiPuzzle,
   standardXiangqiPuzzleMoveEquals,
+  XIANGQI_MOTIF_BY_ID,
   XIANGQI_PUZZLES,
   XIANGQI_SPEC_ID,
   type XiangqiMove,
@@ -29,6 +31,7 @@ function publicSummary(puzzle: MiniXiangqiPuzzle | XiangqiPuzzle) {
     sideToMove: puzzle.initial.status.type === 'playing' ? puzzle.initial.status.turn : null,
     goal: puzzle.goal,
     themes: puzzle.themes,
+    motifs: puzzle.variant === XIANGQI_SPEC_ID ? detectXiangqiPuzzleMotifs(puzzle) : [],
     solutionPlyCount: puzzle.solution.length,
     rating: 1500,
     ratingProvisional: true,
@@ -836,6 +839,31 @@ describe('standard xiangqi puzzles', () => {
       `/api/puzzles/${puzzle.id}/attempt`,
       expect.objectContaining({ method: 'POST' }),
     );
+  });
+
+  it('names the kill pattern in the themes card once a mate puzzle is solved', async () => {
+    const puzzle = XIANGQI_PUZZLES.find(
+      (candidate) =>
+        candidate.goal.type === 'checkmate' && detectXiangqiPuzzleMotifs(candidate).length > 0,
+    );
+    expect(puzzle, 'the seed corpus must hold one tagged mate puzzle').toBeDefined();
+    const motif = XIANGQI_MOTIF_BY_ID.get(detectXiangqiPuzzleMotifs(puzzle!)[0]!)!;
+    vi.stubGlobal('fetch', xiangqiFetchMock([puzzle!]));
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountPuzzles(root, puzzle!.id);
+    // Spoiler-gated: the pattern names the mate, so it stays hidden until solved.
+    expect(root.querySelector('.puzzle-tag-motif')).toBeNull();
+    for (const move of solverMovesOf(puzzle!)) {
+      clickMove(root, move);
+      await vi.waitFor(() => expect(root.textContent).toMatch(/Correct\.|Success!/));
+    }
+
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+    const chip = root.querySelector<HTMLElement>('.puzzle-tag-motif');
+    expect(chip?.textContent).toBe(`${motif.hanzi} ${motif.label}`);
+    expect(chip?.title).toBe(motif.pinyin);
   });
 
   it('glides ONLY the scripted opponent reply after a correct move, and reverses on a back-step', async () => {

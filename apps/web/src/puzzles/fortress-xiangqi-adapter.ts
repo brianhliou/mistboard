@@ -32,6 +32,7 @@ import {
   fortressXiangqiDropTargets,
   fortressXiangqiMoveLabel,
 } from '../fortress-xiangqi-view.js';
+import { t } from '../i18n/catalog.js';
 import { installBoardDrag } from '../variant-tenant/board-drag.js';
 import { installHandDrag } from '../variant-tenant/hand-drag.js';
 import {
@@ -44,7 +45,6 @@ import {
   type PuzzleMove,
   type PuzzleSession,
 } from './adapter.js';
-import { puzzlePrompt } from './prompt.js';
 
 function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
   const { session } = ctx;
@@ -259,7 +259,7 @@ async function handleFortressBoardClick(
   } else {
     session.selectedSquare = null;
     session.selectedDrop = null;
-    session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+    session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   }
   ctx.renderSession();
 }
@@ -291,7 +291,7 @@ async function handleFortressBoardDrop(
   }
   session.selectedSquare = null;
   session.selectedDrop = null;
-  session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+  session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   ctx.renderSession();
 }
 
@@ -317,7 +317,7 @@ async function handleFortressReserveDrop(
     await ctx.submitMove({ drop: role, to });
     return;
   }
-  session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+  session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   ctx.renderSession();
 }
 

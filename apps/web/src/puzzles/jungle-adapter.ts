@@ -14,6 +14,7 @@ import {
   type JunglePlayerView,
   type JungleSquare,
 } from '@mistboard/game';
+import { t } from '../i18n/catalog.js';
 import {
   animateJungleBoardMove,
   JUNGLE_BOARD_VIEW,
@@ -30,7 +31,6 @@ import {
   type PuzzleMove,
   type PuzzleSession,
 } from './adapter.js';
-import { puzzlePrompt } from './prompt.js';
 
 function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
   const { session } = ctx;
@@ -140,7 +140,7 @@ async function handleJungleBoardClick(
   } else {
     session.selectedSquare = null;
     session.selectedDrop = null;
-    session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+    session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   }
   ctx.renderSession();
 }
@@ -172,7 +172,7 @@ async function handleJungleBoardDrop(
   }
   session.selectedSquare = null;
   session.selectedDrop = null;
-  session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+  session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   ctx.renderSession();
 }
 

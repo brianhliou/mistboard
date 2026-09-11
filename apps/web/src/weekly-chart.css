@@ -1,0 +1,214 @@
+/* Weekly multi-series line chart (weekly-chart.ts), admin /metrics only.
+ * Series colours are fixed slots validated as a categorical set (blue, orange,
+ * violet, aqua) on each theme's panel: the nth series always wears the nth
+ * colour. The dark steps are the same hues re-stepped for the dark panel, not
+ * a flip. Aqua sits under 3:1 on the light panel, which the legend, tooltip
+ * and table cover. */
+
+.weekly-chart {
+  --weekly-series-0: #2a78d6;
+  --weekly-series-1: #eb6834;
+  --weekly-series-2: #4a3aa7;
+  --weekly-series-3: #1baf7a;
+  display: grid;
+  gap: 10px;
+  margin: 0;
+  padding: 14px 16px 12px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: linear-gradient(180deg, var(--site-panel) 0%, var(--site-panel-soft) 100%);
+}
+
+:root[data-effective-theme="dark"] .weekly-chart {
+  --weekly-series-0: #3987e5;
+  --weekly-series-1: #d95926;
+  --weekly-series-2: #9085e9;
+  --weekly-series-3: #199e70;
+}
+
+.weekly-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px 16px;
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  color: var(--site-text);
+  font-size: 12.5px;
+}
+
+.weekly-chart-legend li {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.weekly-chart-swatch {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 2px;
+  background: var(--weekly-series-color, var(--site-accent));
+}
+
+.weekly-chart-series-0 {
+  --weekly-series-color: var(--weekly-series-0);
+}
+
+.weekly-chart-series-1 {
+  --weekly-series-color: var(--weekly-series-1);
+}
+
+.weekly-chart-series-2 {
+  --weekly-series-color: var(--weekly-series-2);
+}
+
+.weekly-chart-series-3 {
+  --weekly-series-color: var(--weekly-series-3);
+}
+
+.weekly-chart-plot {
+  position: relative;
+  width: 100%;
+}
+
+.weekly-chart-svg {
+  display: block;
+  width: 100%;
+  aspect-ratio: 720 / 260;
+}
+
+.weekly-chart-y-axis line {
+  stroke: var(--site-border-soft);
+  stroke-width: 1;
+}
+
+.weekly-chart-y-axis text,
+.weekly-chart-x-axis text {
+  fill: var(--site-muted);
+  font-size: 11px;
+}
+
+.weekly-chart-y-axis text {
+  text-anchor: end;
+}
+
+.weekly-chart-x-axis line {
+  stroke: var(--site-border);
+  stroke-width: 1;
+}
+
+.weekly-chart-x-axis text {
+  text-anchor: middle;
+}
+
+.weekly-chart-empty {
+  fill: var(--site-muted);
+  font-size: 13px;
+  text-anchor: middle;
+}
+
+.weekly-chart-line {
+  fill: none;
+  stroke: var(--weekly-series-color);
+  stroke-linecap: round;
+  stroke-linejoin: round;
+  stroke-width: 2;
+}
+
+.weekly-chart-line-partial {
+  stroke-dasharray: 4 4;
+}
+
+.weekly-chart-guide {
+  stroke: var(--site-muted);
+  stroke-width: 1;
+  stroke-dasharray: 3 3;
+  pointer-events: none;
+  transition: opacity 0.08s ease;
+}
+
+.weekly-chart-dot {
+  fill: var(--weekly-series-color);
+  stroke: var(--site-panel);
+  stroke-width: 2;
+  pointer-events: none;
+  transition: opacity 0.08s ease;
+}
+
+.weekly-chart-tooltip[hidden] {
+  display: none;
+}
+
+.weekly-chart-tooltip {
+  position: absolute;
+  z-index: 2;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+  padding: 6px 10px;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+  box-shadow: 0 6px 18px rgb(0 0 0 / 22%);
+  transform: translate(12px, calc(-100% - 8px));
+  pointer-events: none;
+  white-space: nowrap;
+  font-size: 12.5px;
+}
+
+.weekly-chart-tooltip.is-left {
+  transform: translate(calc(-100% - 12px), calc(-100% - 8px));
+}
+
+.weekly-chart-tooltip-week {
+  color: var(--site-muted);
+  font-size: 11.5px;
+}
+
+.weekly-chart-tooltip-row {
+  display: grid;
+  grid-template-columns: auto 1fr auto;
+  align-items: center;
+  gap: 8px;
+  color: var(--site-text);
+}
+
+.weekly-chart-tooltip-row strong {
+  color: var(--site-heading);
+  font-variant-numeric: tabular-nums;
+}
+
+.weekly-chart-table {
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.weekly-chart-table summary {
+  cursor: pointer;
+}
+
+.weekly-chart-table table {
+  margin-top: 8px;
+  border-collapse: collapse;
+  color: var(--site-text);
+  font-variant-numeric: tabular-nums;
+}
+
+.weekly-chart-table th,
+.weekly-chart-table td {
+  padding: 3px 10px 3px 0;
+  border-bottom: 1px solid var(--site-border-soft);
+  text-align: right;
+}
+
+.weekly-chart-table th:first-child,
+.weekly-chart-table td:first-child {
+  text-align: left;
+}
+
+@media (max-width: 720px) {
+  .weekly-chart {
+    padding: 12px;
+  }
+}

@@ -3,6 +3,10 @@
 // count. Admin-gated by /api/admin/accounts (open in local dev). Reached from
 // the account menu's admin group beside /database and /engines; the page
 // itself is English-only like the other admin tools.
+//
+// Sorting is by column header (click toggles direction), the roster is paged
+// 50 at a time with the row number continuing across pages, and the search box
+// filters as you type. Sort, search, and page live in the URL.
 import './accounts-admin.css';
 import { buildNav } from './site-shell.js';
 
@@ -19,10 +23,20 @@ type AccountRow = {
   createdAt: string;
   lastSeenAt: string | null;
   closedAt: string | null;
+  statsExcluded?: boolean;
   gamesPlayed: number;
 };
 
-type RosterSort = 'newest' | 'seen' | 'games';
+// Mirrors ADMIN_ACCOUNT_SORTS in apps/server/src/persistence-admin-accounts.ts.
+type RosterSort =
+  | 'newest'
+  | 'oldest'
+  | 'seen'
+  | 'seen-asc'
+  | 'games'
+  | 'games-asc'
+  | 'name'
+  | 'name-desc';
 
 type RosterPage = {
   accounts: AccountRow[];
@@ -31,15 +45,33 @@ type RosterPage = {
   offset: number;
 };
 
-const rosterSorts: Record<RosterSort, string> = {
-  newest: 'Newest',
-  seen: 'Last seen',
-  games: 'Most games',
+// Each sortable column knows its two sorts; the header click toggles between
+// them, starting on `first` (the direction an admin usually wants).
+type SortColumn = { label: string; first: RosterSort; second: RosterSort };
+
+const SORT_COLUMNS: Record<'name' | 'joined' | 'seen' | 'games', SortColumn> = {
+  name: { label: 'Account', first: 'name', second: 'name-desc' },
+  joined: { label: 'Joined', first: 'newest', second: 'oldest' },
+  seen: { label: 'Last seen', first: 'seen', second: 'seen-asc' },
+  games: { label: 'Games', first: 'games', second: 'games-asc' },
 };
 
-// One fetch covers the whole roster at today's scale; the Show more control
-// exists so the page keeps working past it instead of silently truncating.
-const pageSize = 200;
+const ROSTER_SORTS: readonly RosterSort[] = Object.values(SORT_COLUMNS).flatMap((column) => [
+  column.first,
+  column.second,
+]);
+
+// Ascending-by-value sorts point up; the rest point down. Joined "newest" is
+// descending by date even though it is the natural first click.
+const ASCENDING_SORTS: ReadonlySet<RosterSort> = new Set([
+  'oldest',
+  'seen-asc',
+  'games-asc',
+  'name',
+]);
+
+export const ACCOUNTS_PAGE_SIZE = 50;
+const SEARCH_DEBOUNCE_MS = 250;
 
 class AdminRequiredError extends Error {}
 
@@ -57,7 +89,7 @@ export async function mountAccountsAdmin(root: HTMLElement): Promise<void> {
   const sub = document.createElement('p');
   sub.className = 'accounts-admin-sub';
   sub.textContent =
-    'Internal · admin only. Every registered account, closed and private ones included, with completed games per account.';
+    'Internal · admin only. Every registered account, closed and private ones included, with completed games per account. Click a column to sort.';
 
   const state = stateFromUrl();
 
@@ -69,23 +101,13 @@ export async function mountAccountsAdmin(root: HTMLElement): Promise<void> {
   search.className = 'accounts-admin-input';
   search.placeholder = 'Handle, name, or email';
   search.setAttribute('aria-label', 'Search accounts');
+  search.autocomplete = 'off';
   search.value = state.search;
-  const sort = document.createElement('select');
-  sort.name = 'sort';
-  sort.className = 'accounts-admin-select';
-  sort.setAttribute('aria-label', 'Sort');
-  for (const [value, label] of Object.entries(rosterSorts)) {
-    const option = document.createElement('option');
-    option.value = value;
-    option.textContent = label;
-    option.selected = value === state.sort;
-    sort.append(option);
-  }
   const submit = document.createElement('button');
   submit.type = 'submit';
   submit.className = 'accounts-admin-btn';
   submit.textContent = 'Search';
-  form.append(search, sort, submit);
+  form.append(search, submit);
 
   const summary = document.createElement('p');
   summary.className = 'accounts-admin-summary';
@@ -94,80 +116,99 @@ export async function mountAccountsAdmin(root: HTMLElement): Promise<void> {
   body.className = 'accounts-admin-body';
   body.append(statusLine('Loading…'));
 
-  const more = document.createElement('button');
-  more.type = 'button';
-  more.className = 'accounts-admin-btn accounts-admin-more';
-  more.hidden = true;
+  const pager = buildPager();
 
-  shell.append(heading, sub, form, summary, body, more);
+  shell.append(heading, sub, form, summary, body, pager.element);
   root.append(buildNav(), shell);
 
-  let loaded: AccountRow[] = [];
   let total = 0;
-  let loading = false;
+  // Each load gets a ticket; a stale response (typed past, paged past) is
+  // dropped instead of overwriting the newer view.
+  let ticket = 0;
 
-  async function load(append: boolean): Promise<void> {
-    if (loading) return;
-    loading = true;
-    more.disabled = true;
-    if (!append) {
-      loaded = [];
-      body.replaceChildren(statusLine('Loading…'));
-    }
+  async function load(): Promise<void> {
+    const mine = ++ticket;
+    body.replaceChildren(statusLine('Loading…'));
+    pager.setDisabled(true);
     try {
-      const page = await fetchRoster(state, append ? loaded.length : 0);
-      loaded = append ? loaded.concat(page.accounts) : page.accounts;
+      const page = await fetchRoster(state);
+      if (mine !== ticket) return;
       total = page.total;
+      // A page past the end (stale URL after accounts closed, or a narrower
+      // search) snaps back to the last real page.
+      const pageCount = Math.max(1, Math.ceil(total / ACCOUNTS_PAGE_SIZE));
+      if (state.page > pageCount) {
+        state.page = pageCount;
+        syncUrl(state);
+        void load();
+        return;
+      }
       summary.textContent = summaryText(page.summary, total, state.search);
       body.replaceChildren(
-        loaded.length === 0
+        page.accounts.length === 0
           ? statusLine(state.search ? 'No accounts match.' : 'No accounts yet.')
-          : buildTable(loaded),
+          : buildTable(page.accounts, page.offset, state.sort, (sort) => {
+              state.sort = sort;
+              state.page = 1;
+              syncUrl(state);
+              void load();
+            }),
       );
-      more.hidden = loaded.length >= total;
-      more.textContent = `Show more (${loaded.length} of ${total})`;
+      pager.update(state.page, pageCount, total);
     } catch (err) {
+      if (mine !== ticket) return;
       body.replaceChildren(
         statusLine(err instanceof AdminRequiredError ? err.message : 'Could not load accounts.'),
       );
-      more.hidden = true;
-    } finally {
-      loading = false;
-      more.disabled = false;
+      pager.update(1, 1, 0);
     }
   }
 
+  function applySearch(): void {
+    const next = search.value.trim();
+    if (next === state.search) return;
+    state.search = next;
+    state.page = 1;
+    syncUrl(state);
+    void load();
+  }
+
+  let debounce: ReturnType<typeof setTimeout> | null = null;
+  search.addEventListener('input', () => {
+    if (debounce) clearTimeout(debounce);
+    debounce = setTimeout(applySearch, SEARCH_DEBOUNCE_MS);
+  });
   form.addEventListener('submit', (event) => {
     event.preventDefault();
-    state.search = search.value.trim();
-    syncUrl(state);
-    void load(false);
+    if (debounce) clearTimeout(debounce);
+    applySearch();
   });
-  sort.addEventListener('change', () => {
-    state.sort = isRosterSort(sort.value) ? sort.value : 'newest';
+  pager.onPage((page) => {
+    state.page = page;
     syncUrl(state);
-    void load(false);
+    void load();
   });
-  more.addEventListener('click', () => void load(true));
 
-  await load(false);
+  await load();
 }
 
-type RosterState = { sort: RosterSort; search: string };
+type RosterState = { sort: RosterSort; search: string; page: number };
 
 function isRosterSort(value: string): value is RosterSort {
-  return value in rosterSorts;
+  return (ROSTER_SORTS as readonly string[]).includes(value);
 }
 
-// The sort and search live in the URL so a filtered view can be reloaded or
-// shared with another admin; defaults are dropped so the bare /accounts stays
-// clean.
+// The sort, search, and page live in the URL so a filtered view can be
+// reloaded or shared with another admin; defaults are dropped so the bare
+// /accounts stays clean.
 function stateFromUrl(): RosterState {
   const params = new URLSearchParams(window.location.search);
   const sort = params.get('sort') ?? '';
+  const page = Number(params.get('page') ?? '1');
   return {
     sort: isRosterSort(sort) ? sort : 'newest',
     search: (params.get('q') ?? '').trim(),
+    page: Number.isInteger(page) && page > 0 ? page : 1,
   };
 }
 
@@ -175,15 +216,16 @@ function syncUrl(state: RosterState): void {
   const params = new URLSearchParams();
   if (state.search) params.set('q', state.search);
   if (state.sort !== 'newest') params.set('sort', state.sort);
+  if (state.page > 1) params.set('page', String(state.page));
   const query = params.toString();
   window.history.replaceState(null, '', `${window.location.pathname}${query ? `?${query}` : ''}`);
 }
 
-async function fetchRoster(state: RosterState, offset: number): Promise<RosterPage> {
+async function fetchRoster(state: RosterState): Promise<RosterPage> {
   const params = new URLSearchParams({
     sort: state.sort,
-    limit: String(pageSize),
-    offset: String(offset),
+    limit: String(ACCOUNTS_PAGE_SIZE),
+    offset: String((state.page - 1) * ACCOUNTS_PAGE_SIZE),
   });
   if (state.search) params.set('q', state.search);
   const resp = await fetch(`/api/admin/accounts?${params.toString()}`, {
@@ -206,17 +248,82 @@ function summaryText(summary: RosterPage['summary'], total: number, search: stri
   return parts.join(' · ');
 }
 
-function buildTable(accounts: AccountRow[]): HTMLElement {
+// ── pager ────────────────────────────────────────────────────────────────────
+type Pager = {
+  element: HTMLElement;
+  update(page: number, pageCount: number, total: number): void;
+  setDisabled(disabled: boolean): void;
+  onPage(handler: (page: number) => void): void;
+};
+
+function buildPager(): Pager {
+  const nav = document.createElement('nav');
+  nav.className = 'accounts-admin-pager';
+  nav.setAttribute('aria-label', 'Pages');
+  nav.hidden = true;
+
+  const prev = document.createElement('button');
+  prev.type = 'button';
+  prev.className = 'accounts-admin-btn accounts-admin-pager-prev';
+  prev.textContent = 'Previous';
+  const label = document.createElement('span');
+  label.className = 'accounts-admin-pager-label';
+  const next = document.createElement('button');
+  next.type = 'button';
+  next.className = 'accounts-admin-btn accounts-admin-pager-next';
+  next.textContent = 'Next';
+  nav.append(prev, label, next);
+
+  let current = 1;
+  let count = 1;
+  let handler: (page: number) => void = () => {};
+  prev.addEventListener('click', () => {
+    if (current > 1) handler(current - 1);
+  });
+  next.addEventListener('click', () => {
+    if (current < count) handler(current + 1);
+  });
+
+  return {
+    element: nav,
+    update(page, pageCount, total) {
+      current = page;
+      count = pageCount;
+      nav.hidden = total <= ACCOUNTS_PAGE_SIZE;
+      const from = (page - 1) * ACCOUNTS_PAGE_SIZE + 1;
+      const to = Math.min(total, page * ACCOUNTS_PAGE_SIZE);
+      label.textContent = `${from}–${to} of ${total} · page ${page} of ${pageCount}`;
+      prev.disabled = page <= 1;
+      next.disabled = page >= pageCount;
+    },
+    setDisabled(disabled) {
+      prev.disabled = disabled;
+      next.disabled = disabled;
+    },
+    onPage(next) {
+      handler = next;
+    },
+  };
+}
+
+// ── table ────────────────────────────────────────────────────────────────────
+function buildTable(
+  accounts: AccountRow[],
+  offset: number,
+  activeSort: RosterSort,
+  onSort: (sort: RosterSort) => void,
+): HTMLElement {
   const table = document.createElement('table');
   table.className = 'accounts-admin-table';
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  for (const label of ['#', 'Account', 'Joined', 'Last seen', 'Games', 'Notes']) {
-    const th = document.createElement('th');
-    th.textContent = label;
-    headRow.append(th);
-  }
+  headRow.append(headerCell('#'));
+  headRow.append(sortHeaderCell(SORT_COLUMNS.name, activeSort, onSort));
+  headRow.append(sortHeaderCell(SORT_COLUMNS.joined, activeSort, onSort));
+  headRow.append(sortHeaderCell(SORT_COLUMNS.seen, activeSort, onSort));
+  headRow.append(sortHeaderCell(SORT_COLUMNS.games, activeSort, onSort));
+  headRow.append(headerCell('Notes'));
   thead.append(headRow);
   table.append(thead);
 
@@ -225,7 +332,9 @@ function buildTable(accounts: AccountRow[]): HTMLElement {
     const tr = document.createElement('tr');
     if (account.closedAt) tr.classList.add('is-closed');
 
-    const rank = cell(String(index + 1));
+    // Row number continues across pages so "the 73rd account" means the same
+    // row on page 2 as it would on one long page.
+    const rank = cell(String(offset + index + 1));
     rank.classList.add('accounts-admin-rank');
 
     const joined = cell(formatDate(account.createdAt));
@@ -249,6 +358,41 @@ function buildTable(accounts: AccountRow[]): HTMLElement {
   scroller.className = 'accounts-admin-table-scroll';
   scroller.append(table);
   return scroller;
+}
+
+function headerCell(label: string): HTMLTableCellElement {
+  const th = document.createElement('th');
+  th.scope = 'col';
+  th.textContent = label;
+  return th;
+}
+
+function sortHeaderCell(
+  column: SortColumn,
+  activeSort: RosterSort,
+  onSort: (sort: RosterSort) => void,
+): HTMLTableCellElement {
+  const th = document.createElement('th');
+  th.scope = 'col';
+  const active = activeSort === column.first || activeSort === column.second;
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'accounts-admin-sort';
+  if (active) button.classList.add('is-active');
+  button.textContent = column.label;
+  const arrow = document.createElement('span');
+  arrow.className = 'accounts-admin-sort-arrow';
+  arrow.setAttribute('aria-hidden', 'true');
+  arrow.textContent = active ? (ASCENDING_SORTS.has(activeSort) ? '▲' : '▼') : '';
+  button.append(arrow);
+  if (active) {
+    th.setAttribute('aria-sort', ASCENDING_SORTS.has(activeSort) ? 'ascending' : 'descending');
+  }
+  button.addEventListener('click', () => {
+    onSort(activeSort === column.first ? column.second : column.first);
+  });
+  th.append(button);
+  return th;
 }
 
 function accountCell(account: AccountRow): HTMLTableCellElement {
@@ -279,6 +423,7 @@ function notesCell(account: AccountRow): HTMLTableCellElement {
   if (account.accountRole === 'admin') badges.push({ label: 'Admin' });
   if (account.title) badges.push({ label: account.title });
   if (account.patron) badges.push({ label: 'Patron' });
+  if (account.statsExcluded) badges.push({ label: 'Not counted in stats' });
   if (!account.emailVerified) badges.push({ label: 'Unverified', tone: 'warn' });
   if (account.profileVisibility !== 'public') {
     badges.push({ label: account.profileVisibility === 'private' ? 'Private' : 'Unlisted' });

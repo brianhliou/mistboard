@@ -12,6 +12,7 @@ import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 
 export type StaticPageKey =
   | 'about'
+  | 'stats'
   | 'news'
   | 'faq'
   | 'contact'
@@ -40,6 +41,7 @@ type StaticRailLink = {
 const STATIC_RAIL_GROUPS: ReadonlyArray<ReadonlyArray<StaticRailLink>> = [
   [
     { key: 'about', href: '/about', labelKey: 'about.heading' },
+    { key: 'stats', href: '/stats', labelKey: 'stats.heading' },
     { key: 'news', href: '/feed', labelKey: 'news.feedHeading' },
     { key: 'faq', href: '/faq', labelKey: 'faq.heading' },
     { key: 'contact', href: '/contact', labelKey: 'contact.heading' },

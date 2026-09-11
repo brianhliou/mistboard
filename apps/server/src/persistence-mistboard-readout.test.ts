@@ -80,6 +80,13 @@ definePersistenceTests('Mistboard readout', () => {
 
   test('product facts count people and periods, not just finished games', async () => {
     // periodStart 2026-07-13, periodEnd 2026-07-20, previous week from 07-06.
+    // A counted seat needs a users row behind it (the exclusion flag lives
+    // there), so the signed-in player exists as an account, created before the
+    // previous period so it does not count as a new account.
+    await getPool().query(
+      `INSERT INTO users (id, email, handle, display_name, created_at)
+       VALUES ('user-1', 'one@example.com', 'one', 'One', '2026-06-01T09:00:00Z')`,
+    );
     await insertGame({
       roomId: 'room-current-pvp',
       variant: 'xiangqi',
@@ -125,6 +132,22 @@ definePersistenceTests('Mistboard readout', () => {
       endedAt: '2026-07-18T12:00:00Z',
       participants: [],
     });
+    // An operator account excluded from statistics: neither the account nor
+    // its game reaches any product figure.
+    await getPool().query(
+      `INSERT INTO users (id, email, handle, display_name, created_at, stats_excluded_at)
+       VALUES ('user-op', 'op@example.com', 'op', 'Op', '2026-07-14T09:00:00Z', now())`,
+    );
+    await insertGame({
+      roomId: 'room-current-internal',
+      variant: 'jieqi',
+      mode: 'pvp',
+      endedAt: '2026-07-18T13:00:00Z',
+      participants: [
+        { color: 'white', subjectType: 'user', subjectId: 'user-op' },
+        { color: 'black', subjectType: 'guest', subjectId: 'guest-4' },
+      ],
+    });
 
     const { report } = await generateMistboardReadout({
       trigger: 'manual',
@@ -147,13 +170,20 @@ definePersistenceTests('Mistboard readout', () => {
     assert.equal(product.completedGames, 2);
     assert.equal(product.previousCompletedGames, 1);
     assert.equal(product.abortedGames, 1);
-    assert.equal(product.humanPlayers, 2);
-    assert.equal(product.previousHumanPlayers, 2);
+    // Players are signed-in accounts only. The guest seats here carry ids the
+    // fixture invented; production writes NULL, and the query must not count
+    // them either way.
+    assert.equal(product.humanPlayers, 1);
+    assert.equal(product.previousHumanPlayers, 1);
     assert.equal(product.signedInPlayers, 1);
-    // user-1 played in the previous week, guest-1 is new this week.
+    // user-1 played in the previous week too.
     assert.equal(product.returningPlayers, 1);
+    // 28 days back from periodEnd (07-20) covers both weeks: user-1 once.
+    assert.equal(product.activeAccounts28d, 1);
+    assert.equal(product.previousActiveAccounts28d, 0);
     assert.deepEqual(product.completedGamesByMode, { eve: 1, pve: 1, pvp: 1 });
     assert.deepEqual(product.completedGamesByVariant, [{ variant: 'xiangqi', count: 2 }]);
+    assert.equal(product.accountsCreated, 0);
   });
 
   test('the weekly trend reads prior weekly snapshots and skips daily ones', async () => {

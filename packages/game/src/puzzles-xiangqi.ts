@@ -30,10 +30,6 @@
 
 import { type GameSpecId, XIANGQI_SPEC_ID } from './game-specs.js';
 import { FIXTURE_XIANGQI_PUZZLES } from './puzzles-xiangqi-fixtures.js';
-import {
-  XIANGQI_MATE_SEARCH_MAX_SOLVER_MOVES,
-  xiangqiMoveForcesMate,
-} from './puzzles-xiangqi-mate-search.js';
 import { trimXiangqiWinningAdvantageMoves } from './puzzles-xiangqi-trim.js';
 import type {
   XiangqiColor,
@@ -346,9 +342,9 @@ export function attemptStandardXiangqiPuzzleLine(
       return attemptFailure(puzzle, 'line-too-long', playedMoves.length, state, move);
     }
     if (!standardXiangqiPuzzleMoveEquals(move, expected)) {
-      // Not the stored move. On a checkmate puzzle it may still force mate, in
-      // which case the solver has done what was asked and the old code charged
-      // them rating for it.
+      // Not the stored move. On a checkmate puzzle a move that mates on the
+      // spot is still a solve: the solver did what was asked and only the
+      // notation differs.
       const alternative = acceptAlternativeMate(puzzle, state, move);
       if (!alternative) {
         return attemptFailure(puzzle, 'incorrect-move', playedMoves.length, state, move);
@@ -417,14 +413,18 @@ export function attemptStandardXiangqiPuzzleLine(
 }
 
 /**
- * A move that is not the stored one, on a checkmate puzzle, that still forces
- * mate. Returns the position after it, or null to grade strictly.
+ * A move that is not the stored one, on a checkmate puzzle, that mates in one.
+ * Returns the position after it, or null to grade strictly.
  *
- * The budget passed is the search cap rather than the stored line's length, on
- * purpose: the solver was told to find a win, never told how fast. Requiring a
- * mate as quick as the stored one accepts almost nothing — measured over forty
- * corpus puzzles it accepted zero — because the complaint is precisely that a
- * SLOWER mate is marked wrong.
+ * This is the lichess rule, adopted 2026-09-11: the miner only publishes a mate
+ * puzzle whose mating move is unique at every solver ply, and the grader's one
+ * concession is any move that ends the game right now (checkmate or stalemate,
+ * which is a win in xiangqi). No search: the alternative is a board check. A
+ * slower forced mate is graded against the stored line, because the gate
+ * guarantees there is no such move on a served puzzle. Between 2026-09-02 and
+ * this change the grader ran a three-move kernel mate search here to patch a
+ * gate that admitted "fastest of two mates"; the gate is strict now, so the
+ * patch is gone.
  */
 function acceptAlternativeMate(
   puzzle: XiangqiPuzzle,
@@ -432,9 +432,12 @@ function acceptAlternativeMate(
   move: XiangqiMove,
 ): XiangqiGameState | null {
   if (puzzle.goal.type !== 'checkmate') return null;
-  const search = xiangqiMoveForcesMate(state, move, XIANGQI_MATE_SEARCH_MAX_SOLVER_MOVES);
-  if (!search.forcesMate) return null;
-  return applyPuzzleMove(state, move);
+  if (state.status.type !== 'playing') return null;
+  const mover = state.status.turn;
+  const after = applyPuzzleMove(state, move);
+  if (!after || after.status.type !== 'finished') return null;
+  if (after.status.reason !== 'checkmate' && after.status.reason !== 'stalemate') return null;
+  return after.status.winner === mover ? after : null;
 }
 
 function applyPuzzleMove(state: XiangqiGameState, move: XiangqiMove): XiangqiGameState | null {

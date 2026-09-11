@@ -65,6 +65,7 @@ export const ZH_HANT_SHELL = {
   'home.storeTitle': '商店',
   'home.storeSubtitle': '即將推出',
   'site.more': '更多 »',
+  'footer.stats': '統計',
   'footer.about': '關於',
   'footer.news': '更新',
   'footer.faq': '常見問題',

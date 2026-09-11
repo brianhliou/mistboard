@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import type { AdminAccountRow, AdminAccountsQuery } from '../persistence-admin-accounts.js';
+import {
+  ADMIN_ACCOUNT_SORTS,
+  type AdminAccountRow,
+  type AdminAccountsQuery,
+} from '../persistence-admin-accounts.js';
 import {
   ADMIN_ACCOUNTS_DEFAULT_LIMIT,
   type AdminAccountsApiPersistence,
@@ -23,6 +27,7 @@ const alice: AdminAccountRow = {
   createdAt: new Date('2026-08-01T10:00:00.000Z'),
   lastSeenAt: new Date('2026-08-27T09:30:00.000Z'),
   closedAt: null,
+  statsExcludedAt: null,
   gamesPlayed: 12,
 };
 
@@ -36,6 +41,7 @@ const bob: AdminAccountRow = {
   patronSince: null,
   lastSeenAt: null,
   closedAt: new Date('2026-08-20T00:00:00.000Z'),
+  statsExcludedAt: null,
   gamesPlayed: 0,
 };
 
@@ -63,7 +69,7 @@ test('query defaults to newest, the default page size, and no search', () => {
 });
 
 test('query accepts every sort, trims the search, and clamps an over-ask to the cap', () => {
-  for (const sort of ['newest', 'seen', 'games'] as const) {
+  for (const sort of ADMIN_ACCOUNT_SORTS) {
     const parsed = parseAdminAccountsQuery(new URLSearchParams({ sort }));
     assert.equal(parsed.ok && parsed.query.sort, sort);
   }
@@ -80,7 +86,7 @@ test('query accepts every sort, trims the search, and clamps an over-ask to the 
 });
 
 test('query rejects unknown sorts and malformed paging fail-closed', () => {
-  assert.deepEqual(parseAdminAccountsQuery(new URLSearchParams({ sort: 'oldest' })), {
+  assert.deepEqual(parseAdminAccountsQuery(new URLSearchParams({ sort: 'random' })), {
     ok: false,
     error: 'invalid_sort',
   });
@@ -127,6 +133,7 @@ test('the API passes the parsed query through and serializes rows for the browse
         createdAt: '2026-08-01T10:00:00.000Z',
         lastSeenAt: '2026-08-27T09:30:00.000Z',
         closedAt: null,
+        statsExcluded: false,
         gamesPlayed: 12,
       },
       {
@@ -142,6 +149,7 @@ test('the API passes the parsed query through and serializes rows for the browse
         createdAt: '2026-08-01T10:00:00.000Z',
         lastSeenAt: null,
         closedAt: '2026-08-20T00:00:00.000Z',
+        statsExcluded: false,
         gamesPlayed: 0,
       },
     ],

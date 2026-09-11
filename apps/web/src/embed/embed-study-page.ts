@@ -83,6 +83,8 @@ export async function mountEmbedStudy(root: HTMLElement, route: EmbedStudyRoute)
   frame.append(credit);
 
   root.replaceChildren(frame);
-  mountXiangqiReplay(host, spec);
+  // Pinned, as the game card's foot is: framed beside games, the study card
+  // should say who won without a scroll to the end of the list.
+  mountXiangqiReplay(host, spec, { resultPlacement: 'pinned' });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

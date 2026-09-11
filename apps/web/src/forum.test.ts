@@ -1460,11 +1460,10 @@ describe('forum pages', () => {
       expect(iframe?.getAttribute('src')).toBe('/embed/game/room-1?ply=30&pov=black');
       expect(iframe?.getAttribute('loading')).toBe('lazy');
       expect(iframe?.title).toBe('Alice vs Bob · red-wins · Mistboard');
-      // The link survives as the caption, so the permalink is still one tap.
-      const caption = figure?.querySelector<HTMLAnchorElement>('.forum-embed-caption a');
-      expect(caption?.getAttribute('href')).toBe(
-        'https://mistboard.com/dark-xiangqi/game/room-1/black#30',
-      );
+      // The link was the placeholder; the frame replaces it outright (the
+      // embed carries its own credit link to the same game).
+      expect(figure?.querySelector('.forum-embed-caption')).toBeNull();
+      expect(figure?.querySelector('a')).toBeNull();
       // The prose around it is untouched.
       const paragraphs = Array.from(root.querySelectorAll('.forum-post-paragraph'));
       expect(paragraphs.map((p) => p.textContent)).toEqual([

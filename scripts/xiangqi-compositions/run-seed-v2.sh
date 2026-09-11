@@ -1,5 +1,10 @@
 #!/bin/sh
-# Invoked via: command railway run -s Postgres -- sh <this> [--dry-run] [--replace]
+# Seed a mined manual into studies, with the Postgres credential supplied by
+# Railway rather than by a human.
+#
+#   command railway run -s Postgres -- sh run-seed-v2.sh \
+#     --app <repo checkout> --data <mined.json> --titles <titles-en.json> \
+#     [--dry-run] [--replace]
 #
 # railway run injects the Postgres service env. The internal host only resolves
 # inside Railway's network, so a laptop run needs the PUBLIC url. Done in a script
@@ -7,19 +12,22 @@
 # silently dropped the override once already.
 #
 # The value is expanded here and handed to the child. It is never echoed.
+#
+# `command railway` (not bare `railway`) matters: a shell function in the Claude
+# Code snapshot injects a stale API token that shadows the working browser login.
 set -e
-S=/private/tmp/claude-501/-Users-brianliou-projects-mistboard/3d8642e6-80f1-4d8c-bdc0-d062476f33d1/scratchpad
-APP=/Users/brianliou/projects/mistboard-study
+
+HERE=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 
 if [ -z "$DATABASE_PUBLIC_URL" ]; then
-  echo "DATABASE_PUBLIC_URL not set; run through 'railway run -s Postgres'" >&2
+  echo "DATABASE_PUBLIC_URL not set; run through 'command railway run -s Postgres'" >&2
   exit 1
 fi
 
-DATABASE_URL="$DATABASE_PUBLIC_URL" exec node "$S/seed-v2.mjs" \
-  --app "$APP" \
-  --data "$S/sqyq-full.json" \
-  --titles "$S/titles-en.json" \
+# Every path is an argument now. The previous version hardcoded a session
+# scratchpad that was later deleted, which is how this whole pipeline came to
+# exist only inside a transcript.
+DATABASE_URL="$DATABASE_PUBLIC_URL" exec node "$HERE/seed-v2.mjs" \
   --email brian@mistboard.com \
   --visibility unlisted \
   "$@"

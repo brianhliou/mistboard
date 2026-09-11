@@ -25,6 +25,7 @@ import {
   standardXiangqiPuzzleNextMove,
   standardXiangqiPuzzleSideToMove,
   XIANGQI_SPEC_ID,
+  type XiangqiMotifId,
   type XiangqiMove,
   type XiangqiPuzzle,
 } from '@mistboard/game';
@@ -91,6 +92,8 @@ type PuzzleSummary = {
   sideToMove: ReturnType<typeof miniXiangqiPuzzleSideToMove>;
   goal: PublicPuzzle['goal'];
   themes: readonly string[];
+  /** Named kill patterns (杀法) by id; empty outside standard-xiangqi mates. */
+  motifs: readonly XiangqiMotifId[];
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;
@@ -135,6 +138,7 @@ export async function tryHandle(
           puzzle,
           ratings.get(puzzle.id) ??
             seededPuzzleRatingSummary(puzzle.solution.length, store.difficultyById.get(puzzle.id)),
+          store.motifsById.get(puzzle.id) ?? [],
         ),
       ),
       attemptedIds,
@@ -498,6 +502,7 @@ function parsePuzzleVariant(value: string | null): PublicPuzzleVariant | null | 
 function puzzleSummary(
   puzzle: PublicPuzzle,
   rating: { rating: number; provisional: boolean },
+  motifs: readonly XiangqiMotifId[],
 ): PuzzleSummary {
   return {
     id: puzzle.id,
@@ -506,6 +511,7 @@ function puzzleSummary(
     sideToMove: puzzleSideToMove(puzzle),
     goal: puzzle.goal,
     themes: puzzle.themes,
+    motifs,
     solutionPlyCount: puzzle.solution.length,
     rating: rating.rating,
     ratingProvisional: rating.provisional,
@@ -514,15 +520,14 @@ function puzzleSummary(
 
 async function puzzleDetail(puzzle: PublicPuzzle): Promise<PuzzleDetail> {
   const stored = await getPuzzleRating(puzzle.id);
+  const store = await getPuzzleStore();
   return {
     ...puzzleSummary(
       puzzle,
       stored
         ? { rating: stored.rating, provisional: stored.provisional }
-        : seededPuzzleRatingSummary(
-            puzzle.solution.length,
-            (await getPuzzleStore()).difficultyById.get(puzzle.id),
-          ),
+        : seededPuzzleRatingSummary(puzzle.solution.length, store.difficultyById.get(puzzle.id)),
+      store.motifsById.get(puzzle.id) ?? [],
     ),
     initial: puzzle.initial,
     ...(puzzle.variant === XIANGQI_SPEC_ID && puzzle.sourceGame
