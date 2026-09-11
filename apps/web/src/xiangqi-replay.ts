@@ -5,6 +5,7 @@
 
 import {
   ARBITER_ADJUDICATED_DRAWS,
+  applyStandardXiangqiMove,
   applyMove as applyXiangqiMove,
   createInitialXiangqiState,
   formatXiangqiMoves,
@@ -623,12 +624,16 @@ export function mountXiangqiReplay(
     return legal;
   }
 
-  /** "1-0" or "0-1" when the line ends the game with a winner, else null. */
+  /** "1-0" or "0-1" when the line ends the game with a winner, else null.
+   *  Replayed through the STANDARD kernel: the stepper's own applier is the
+   *  fog one, pseudo-legal by design, and it never reports a mate. */
   function lineResult(ply: number, line: XiangqiMove[]): string | null {
     let state = states[ply - 1]!;
     for (const mv of line) {
       if (state.status.type !== 'playing') return null;
-      state = applyXiangqiMove(state, mv);
+      const next = applyStandardXiangqiMove(state, mv);
+      if (next === state) return null;
+      state = next;
     }
     if (state.status.type !== 'finished' || !state.status.winner) return null;
     return state.status.winner === 'red' ? '1-0' : '0-1';

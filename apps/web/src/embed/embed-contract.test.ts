@@ -63,14 +63,27 @@ const embedCssPath = ['src/embed/embed.css', 'apps/web/src/embed/embed.css']
 const embedCss = readFileSync(embedCssPath as string, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 describe('the puzzle embed grid', () => {
-  it('floors the sidebar column at its own min-content, not a fixed width', () => {
+  it('splits its columns the way the study card does, with the sheet floored at 226px', () => {
+    // Beside a study replay in an article the two cards must show the same
+    // board width and the same sheet width, so the split is the study card's
+    // (articles.css .xq-replay-annotated .xq-replay-grid), not a board track
+    // sized from the frame's height with the sheet taking what is left.
     const grid = /\.embed-puzzle\s*\{[\s\S]*?grid-template-columns:([\s\S]*?);/.exec(embedCss);
     expect(grid, 'no grid-template-columns on .embed-puzzle').not.toBeNull();
-    const sidebarTrack = (grid?.[1] ?? '').split('minmax').pop() ?? '';
-    expect(
-      sidebarTrack,
-      `sidebar track "${sidebarTrack.trim()}" pins a width; a constant cannot track .puzzle-actions`,
-    ).toContain('min-content');
+    expect((grid?.[1] ?? '').replace(/\s+/g, ' ').trim()).toBe(
+      'minmax(0, 2.85fr) minmax(226px, 1fr)',
+    );
+  });
+
+  it('keeps the stepper row fluid so a fixed sheet width cannot clip it', () => {
+    // The sheet used to be floored at its own min-content because the trainer's
+    // .puzzle-actions is four 48px buttons plus a clamped gap (222-264px), and a
+    // narrower track clipped the row with no scrollbar and no other symptom.
+    // With a 226px floor the row has to give instead: four fluid tracks, no gap.
+    const actions = /\.embed-puzzle \.puzzle-actions\s*\{([\s\S]*?)\}/.exec(embedCss);
+    expect(actions, 'no .embed-puzzle .puzzle-actions rule').not.toBeNull();
+    expect(actions?.[1]).toContain('grid-template-columns: repeat(4, 1fr)');
+    expect(actions?.[1]).toContain('gap: 0');
   });
 
   it('stacks on the frame width, not on the reader viewport', () => {

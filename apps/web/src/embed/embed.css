@@ -626,9 +626,13 @@ body.embed-body {
      clipped the difference with no scrollbar and no other symptom. A measured
      constant would go stale the next time that button row changes; min-content
      cannot. */
-  grid-template-columns:
-    minmax(0, calc(var(--puzzle-surface-size) * 552 / 612))
-    minmax(min-content, 1fr);
+  /* The study card's split (articles.css .xq-replay-annotated .xq-replay-grid):
+     roughly 70/30 with a 226px floor on the sheet, so a puzzle beside a study
+     replay shows the same board width and the same sheet width. The board is
+     width-driven inside its column (the trainer's own min(100%, height budget)
+     rule), and a host sizes the frame so the height budget does not bind; the
+     stacked layout below keeps the height-driven arithmetic it needs. */
+  grid-template-columns: minmax(0, 2.85fr) minmax(226px, 1fr);
   /* The study and game embeds' card (this file, .embed-game): one bordered
      panel holding the board column and, behind a rule, the sheet. The trainer
      page draws the sheet as its own boxed card beside a bare board, which is
@@ -653,10 +657,38 @@ body.embed-body {
 }
 
 /* The board sits on a mat inside the card rather than running to its edge,
-   the game card's 8px inset (.embed-game .embed-board). */
+   the study card's 12px inset (.xq-replay-annotated .raw-svg-stepper-frame-xq). */
 .embed-puzzle .puzzle-board {
   box-sizing: border-box;
-  padding: 8px;
+  padding: 12px;
+  justify-items: stretch;
+}
+
+.embed-puzzle .puzzle-board .puzzle-xiangqi-board {
+  min-width: 0;
+}
+
+/* The verdict block was drawn for the trainer page's wide sidebar (a 66px
+   icon, 24px title, 22px by 28px padding). In a 226px sheet that wraps
+   "Black to move" onto two lines and pushes the buttons under the icon, so
+   inside the card it takes the sheet's scale. */
+.embed-puzzle .puzzle-feedback {
+  grid-template-columns: 40px minmax(0, 1fr);
+  gap: 10px;
+  padding: 12px 12px 12px 14px;
+}
+
+.embed-puzzle .puzzle-feedback-icon {
+  width: 40px;
+  height: 40px;
+}
+
+.embed-puzzle .puzzle-feedback-title {
+  font-size: 16px;
+}
+
+.embed-puzzle .puzzle-feedback-body {
+  font-size: 13px;
 }
 
 /* The sheet column: the trainer's boxed card loses its own border, radius and

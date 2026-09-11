@@ -188,12 +188,13 @@ export const puzzleTwoAnswersArticle: Article = {
           kind: 'embed',
           path: embedPuzzlePath(),
           title: 'Today\u2019s xiangqi puzzle',
-          // Board beside the panel, the way /puzzles shows it. The widget sizes
-          // the board from the frame's HEIGHT, so at column width a tall frame
-          // leaves the verdict panel a sliver and "Black to move" wraps, and
-          // under 543px it stacks into the phone layout. A squat frame keeps
-          // the board smaller and gives the panel its room.
-          aspect: [702, 460],
+          // The card splits 70/30 like the study replays above it, and the
+          // board is width-driven inside its column as long as the frame is
+          // tall enough that the widget's height budget does not bind: at the
+          // 702px column that is a 452px board, 501px tall, plus the mat and
+          // the header and credit lines. Shorter, and the board shrinks away
+          // from the study card's; taller, and the card floats in empty frame.
+          aspect: [702, 590],
         } as ArticleBlock,
         {
           kind: 'cta',
