@@ -40,6 +40,12 @@ export type StudyRailActions = {
   // before the old rail left the DOM. Null/absent on first mount, where the
   // active chapter is centered instead.
   previousListScrollTop?: number | null;
+  /** The errata invitation. It is a property of the STUDY and the underboard is
+   *  per-chapter, so rendering it there put a study-wide note under all 92
+   *  chapters. It closes the rail instead, which is where study.css already
+   *  said it belonged. (The favourite moved for the same reason, to the info
+   *  card's title row.) */
+  errata?: HTMLElement | null;
 };
 
 export function buildStudyRail(
@@ -259,6 +265,10 @@ export function buildStudyRail(
     add.addEventListener('click', actions.onAdd);
     panel.append(add);
   }
+
+  // Closes the rail rather than opening the underboard: an admission that a
+  // transcription can be wrong belongs with the study it is about, once.
+  if (actions.errata) panel.append(actions.errata);
 
   // Restore the reader's place across the rail rebuild a chapter switch
   // performs; center the active chapter only on first mount (deep links into
