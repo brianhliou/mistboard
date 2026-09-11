@@ -25,6 +25,14 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-09-11',
+    kind: 'article',
+    headline: 'Puzzles with more than one solution.',
+    body: 'A solver found a real checkmate and the site told them to try again. The puzzle had two answers, and the grader knew one. Mate puzzles now follow the rule lichess settled on: every move of the solution must be the only mating move, except the last, where any mate counts. The 382 served puzzles that failed it are withdrawn, and the article walks through the position that started it.',
+    href: '/blog/puzzles-with-more-than-one-solution',
+    cta: 'Read the article',
+  },
+  {
+    date: '2026-09-11',
     kind: 'status',
     headline: 'The statistics count visitor games only.',
     body: 'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.',

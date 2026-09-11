@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-11 (puzzles with more than one solution) ── 题目 / 将死 / 评分器 follow
+  // article-i18n.ts for the same article.
+  'Puzzles with more than one solution.': '有不止一个答案的题目。',
+  'A solver found a real checkmate and the site told them to try again. The puzzle had two answers, and the grader knew one. Mate puzzles now follow the rule lichess settled on: every move of the solution must be the only mating move, except the last, where any mate counts. The 382 served puzzles that failed it are withdrawn, and the article walks through the position that started it.':
+    '一位解题者找到了一个真正的将死，网站却让他再试一次。那道题有两个答案，而评分器只知道其中一个。将死题目现在采用 lichess 定下的规则：解法中的每一步都必须是唯一能将死的走法，最后一步除外，那一步任何将死都算。不符合这条规则的 382 道已上线题目已经撤下，文章从引发这件事的那个局面讲起。',
   // ── 2026-09-11 (statistics count visitor games) ── 统计 / 已完成对局 / 引擎对引擎的比赛 /
   // 测试对局 沿用 content.zh-hans.ts 的 stats.* 说法。
   'The statistics count visitor games only.': '统计只计入访客的对局。',
@@ -339,6 +344,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-11 (puzzles with more than one solution) ── 題目 / 將死 / 評分器 follow
+  // article-i18n.ts for the same article.
+  'Puzzles with more than one solution.': '有不止一個答案的題目。',
+  'A solver found a real checkmate and the site told them to try again. The puzzle had two answers, and the grader knew one. Mate puzzles now follow the rule lichess settled on: every move of the solution must be the only mating move, except the last, where any mate counts. The 382 served puzzles that failed it are withdrawn, and the article walks through the position that started it.':
+    '一位解題者找到了一個真正的將死，網站卻讓他再試一次。那道題有兩個答案，而評分器只知道其中一個。將死題目現在採用 lichess 定下的規則：解法中的每一步都必須是唯一能將死的走法，最後一步除外，那一步任何將死都算。不符合這條規則的 382 道已上線題目已經撤下，文章從引發這件事的那個局面講起。',
   // ── 2026-09-11 (statistics count visitor games) ── 統計 / 已完成對局 / 引擎對引擎的比賽 /
   // 測試對局 沿用 content.zh-hant.ts 的 stats.* 說法。
   'The statistics count visitor games only.': '統計只計入訪客的對局。',
