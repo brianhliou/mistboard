@@ -544,7 +544,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   thumb.className = 'landing-article-card-thumb';
   // Variant articles use their shared marker;
   // non-variant articles (e.g. concept pieces) keep their own diagram.
-  const mini = renderVariantMiniThumb(article.slug);
+  const mini = renderCardVariantThumb(article.slug);
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
@@ -2449,7 +2449,7 @@ function articleCard(
 
   const thumb = document.createElement('div');
   thumb.className = 'articles-index-card-media';
-  const mini = renderVariantMiniThumb(article.slug);
+  const mini = renderCardVariantThumb(article.slug);
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
@@ -2586,6 +2586,23 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
 };
+
+// Slugs whose OWN thumbnail beats the shared variant marker on card surfaces.
+//
+// The marker is a one-colour mask, which is the right call for the /rules
+// tiles and the rules rail: those are a uniform set where every variant reads
+// the same way, and duck's mono marker was cut to match them. A card is a
+// picture at ten times the size, and there the mask reads as a grey silhouette
+// of art that is actually coloured. Card call sites use
+// `renderCardVariantThumb`; the tile and rail call sites keep the marker.
+const CARD_THUMB_PREFERS_ARTICLE = new Set<string>(['duck-xiangqi']);
+
+/** The card-surface variant thumbnail: the marker, unless this slug's own
+ *  thumbnail is the better picture. Returning null makes the caller fall
+ *  through to `article.thumbnail`, which is the existing precedence. */
+function renderCardVariantThumb(slug: string): HTMLElement | null {
+  return CARD_THUMB_PREFERS_ARTICLE.has(slug) ? null : renderVariantMiniThumb(slug);
+}
 
 // A rail/landing thumbnail rendered as the variant's marker, or null if the
 // slug has no mini (caller falls back to the article's own thumbnail).

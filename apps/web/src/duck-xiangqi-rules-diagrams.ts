@@ -125,23 +125,38 @@ export const DUCK_XIANGQI_START_BOARD = () =>
     }),
   );
 
-export const DUCK_XIANGQI_THUMBNAIL = () =>
-  xqSvg(
-    XQ_BOARD_W,
-    FIGURE_H,
-    xqBoardSvg({
-      state: state('duck-rules-thumb', START_BOARD),
-      x: 0,
-      y: 0,
-      label: 'DUCK XIANGQI',
-      perspective: 'red',
-      // x0 MUST match the board's own x above. It read PAIR_GAP_X / 2 while the
-      // board sat at 0, which is more than a full board width, so the duck was
-      // drawn past the right edge of a canvas one board wide and the thumbnail
-      // showed an empty starting position.
-      overlay: duckOverlay('e3', 0, 0),
-    }),
-  );
+// The card thumbnail is the DUCK, not a board.
+//
+// A 9x10 board shrunk into a 16:10 card is a grid of specks with a duck
+// somewhere in it, and the card surfaces preferred the shared variant marker
+// over this anyway -- a one-colour mask painted with currentColor, which is
+// where the grey came from.
+//
+// `duckPieceMarks` is the same function the live board and every figure in
+// this file call, so the card cannot drift from the piece a player actually
+// meets: change the art or the piece set and this follows.
+//
+// 16:10 to match the card media box (.articles-index-card-media, 16/10;
+// .landing-article-card-thumb, 8/5), so it fills the frame rather than
+// letterboxing inside it.
+const DUCK_THUMB_W = 160;
+const DUCK_THUMB_H = 100;
+// Nearly the full height. The disc is the subject; the margin only keeps its
+// gold ring off the card's edge, which at this scale is about four pixels.
+const DUCK_THUMB_SIZE = 92;
+
+export const DUCK_XIANGQI_THUMBNAIL = () => {
+  const x = (DUCK_THUMB_W - DUCK_THUMB_SIZE) / 2;
+  const y = (DUCK_THUMB_H - DUCK_THUMB_SIZE) / 2;
+  return [
+    `<svg class="xq-article-svg" viewBox="0 0 ${DUCK_THUMB_W} ${DUCK_THUMB_H}"`,
+    ` role="img" aria-label="Duck Xiangqi" xmlns="http://www.w3.org/2000/svg">`,
+    `<g aria-label="duck">`,
+    `<g transform="translate(${x},${y}) scale(${DUCK_THUMB_SIZE / 100})">`,
+    duckPieceMarks(activeXiangqiPieceSet),
+    `</g></g></svg>`,
+  ].join('');
+};
 
 // ── One turn, two actions ───────────────────────────────────────────────────
 
