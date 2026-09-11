@@ -19,19 +19,23 @@ import {
   type DuckXiangqiBoard,
   type DuckXiangqiSquare,
   duckXiangqiDuckDestinations,
+  duckXiangqiGeneralsFace,
   duckXiangqiMovesFrom,
   type XiangqiPiece,
   type XiangqiSquare,
 } from '@mistboard/game';
 import {
+  activeXiangqiPieceSet,
   XQ_BOARD_H,
   XQ_BOARD_W,
   xqBoardSvg,
   xqCoord,
+  xqPieceSize,
   xqPoint,
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
+import { duckPieceMarks } from './xiangqi-piece-sets.js';
 
 // Same pair canvas the Jieqi figures use, so two-board rows on this page line
 // up with two-board rows everywhere else in the xiangqi family.
@@ -65,18 +69,25 @@ function blockedByDuck(
 }
 
 /**
- * The duck token. A neutral disc with the duck glyph, drawn above the pieces so
- * it never reads as either seat's material, which is the one thing a shared
- * blocker must not be mistaken for.
+ * The duck token, drawn above the pieces so it never reads as either seat's
+ * material, which is the one thing a shared blocker must not be mistaken for.
+ *
+ * This is the SAME art the live board and every piece set use
+ * (`duckPieceMarks`), not a local drawing: the marks are authored in the same
+ * 100-unit piece box as every disc here, so the duck follows the reader's
+ * piece-set picker exactly as the pieces around it do. It used to be a 🦆 emoji
+ * on a flat yellow circle, which ignored the picker and did not match the duck
+ * a reader meets the moment they open a game.
  */
 function duckOverlay(square: DuckXiangqiSquare, x0: number, y0: number): string {
   const { file, rank } = xqCoord(square as XiangqiSquare);
   const { x, y } = xqPoint(file, rank, 'red', x0, y0 + BOARD_Y_OFFSET);
-  const r = 13;
+  const size = xqPieceSize();
   return [
     `<g aria-label="duck">`,
-    `<circle cx="${x}" cy="${y}" r="${r}" fill="#facc15" stroke="#854d0e" stroke-width="1.5"/>`,
-    `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${r * 1.15}">\u{1F986}</text>`,
+    `<g transform="translate(${x - size / 2},${y - size / 2}) scale(${size / 100})">`,
+    duckPieceMarks(activeXiangqiPieceSet),
+    `</g>`,
     `</g>`,
   ].join('');
 }
@@ -117,14 +128,18 @@ export const DUCK_XIANGQI_THUMBNAIL = () =>
 
 // ── One turn, two actions ───────────────────────────────────────────────────
 
-// Red opens with the central cannon and then puts the duck in the river. Both
-// halves are one turn; the move is verified legal by the kernel's own test
-// suite, and the second board is the position the turn actually produces.
+// The ENGINE's own first choice from the opening array, not a hand-picked move:
+// `b1c3,c3c8`, depth 11, from the patched Fairy-Stockfish build. The UCI token
+// carries both halves of the turn, and the duck half's "from" is a redundant
+// echo of the piece's destination, so this is horse b1 to c3, then the duck to
+// c8. Worth showing over a tidy opening move that stays near home: the engine
+// parks the duck in Black's half on move one, which demonstrates the placement
+// rule instead of only asserting it.
 const TURN_AFTER_MOVE: DuckXiangqiBoard = (() => {
   const board = { ...START_BOARD };
-  const cannon = board.h3;
-  delete board.h3;
-  if (cannon) board.e3 = cannon;
+  const horse = board.b1;
+  delete board.b1;
+  if (horse) board.c3 = horse;
   return board;
 })();
 
@@ -139,7 +154,7 @@ export const DUCK_XIANGQI_TURN_PAIR = () =>
         y: 0,
         label: 'FIRST: A LEGAL XIANGQI MOVE',
         perspective: 'red',
-        arrows: [{ from: 'h3' as XiangqiSquare, to: 'e3' as XiangqiSquare }],
+        arrows: [{ from: 'b1' as XiangqiSquare, to: 'c3' as XiangqiSquare }],
       }),
       xqBoardSvg({
         state: state('duck-rules-turn-duck', TURN_AFTER_MOVE),
@@ -147,7 +162,7 @@ export const DUCK_XIANGQI_TURN_PAIR = () =>
         y: 0,
         label: 'THEN: THE DUCK',
         perspective: 'red',
-        overlay: duckOverlay('e5', PAIR_GAP_X, 0),
+        overlay: duckOverlay('c8', PAIR_GAP_X, 0),
       }),
     ].join(''),
   );
@@ -216,16 +231,32 @@ export const DUCK_XIANGQI_CANNON_SCREEN = () => {
   );
 };
 
-// ── The generals may not face ───────────────────────────────────────────────
+// ── The generals may face ───────────────────────────────────────────────────
 
-// Nothing stands on file e but the duck, so the duck is the only thing keeping
-// the position legal, and it still has to move. Its destinations come from the
-// kernel for a turn that leaves the file alone (a soldier step on file a).
+// Nothing stands on file e but the duck, so the duck is the only reason Red
+// still has a general, and it has to move every turn.
+//
+// REDRAWN 2026-09-10 with D5. The dots used to be the duck's LEGAL placements,
+// because the kernel confined it to this segment. Every empty point is legal
+// now, so dotting the legal set would paint 86 marks and say nothing. The dots
+// are the placements that do not LOSE: the ones that leave the generals still
+// blocked from each other. Filtered from the kernel's own answer with the
+// kernel's own threat predicate, never hand-listed, so this figure follows the
+// rule if the rule moves again.
 const FACING_BOARD: DuckXiangqiBoard = {
   e2: { color: 'red', role: 'general' },
   e9: { color: 'black', role: 'general' },
   a4: { color: 'red', role: 'soldier' },
 };
+
+/** The board the illustrated turn produces, before the duck lands. */
+const FACING_AFTER_MOVE: DuckXiangqiBoard = (() => {
+  const board = { ...FACING_BOARD };
+  const soldier = board.a4;
+  delete board.a4;
+  if (soldier) board.a5 = soldier;
+  return board;
+})();
 
 export const DUCK_XIANGQI_FACING_PIN = () =>
   xqSvg(
@@ -235,9 +266,13 @@ export const DUCK_XIANGQI_FACING_PIN = () =>
       state: state('duck-rules-facing', FACING_BOARD),
       x: 0,
       y: 0,
-      label: 'A PINNED DUCK',
+      label: 'THE ONLY PLACEMENTS THAT SURVIVE',
       perspective: 'red',
-      dots: dots(duckXiangqiDuckDestinations(FACING_BOARD, 'e5', 'a4', 'a5')),
+      dots: dots(
+        duckXiangqiDuckDestinations(FACING_BOARD, 'e5', 'a4', 'a5').filter(
+          (square) => !duckXiangqiGeneralsFace(FACING_AFTER_MOVE, square),
+        ),
+      ),
       overlay: duckOverlay('e5', 0, 0),
     }),
   );

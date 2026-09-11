@@ -170,10 +170,13 @@ function targetLayer(
   // under decoration and tells the player something they already know from the
   // notice. The hover ghost answers "where exactly?" one point at a time.
   //
-  // The dots survive for the case where the set is a real constraint: generals
-  // facing down an open file, where the duck is the only thing that can keep the
-  // position legal and must land on the segment between them. There, four to
-  // eight marks are the whole answer to "what am I allowed to do".
+  // The dots used to survive for one case: generals facing down an open file,
+  // where the duck was the only thing keeping the position legal and had to
+  // land on the segment between them. D5 changed on 2026-09-10 and that case is
+  // gone, so `duckAnywhere` is now true for every duck phase and this always
+  // returns early. The guard stays because it is derived from the kernel's own
+  // answer rather than assumed: if a future rule constrains the duck again, the
+  // dots come back on their own instead of silently staying hidden.
   if (phase.kind === 'duck' && duckAnywhere) return '';
   // Phase two is marked differently on purpose. A player who has just moved a
   // piece and now sees dots everywhere needs to know instantly that these are

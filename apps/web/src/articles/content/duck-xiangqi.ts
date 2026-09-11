@@ -35,7 +35,7 @@ export const duckXiangqiArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Dr Tim Paulden invented Duck Chess in early 2016 and published it at [duckchess.com](https://duckchess.com). The duck has an older ancestor: Jim Aikin put eight neutral stones on the board in [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999, stones either player could move and that blocked exactly as a friendly piece would. This page applies the one-duck version to the 9 by 10 board. Chess has one way of blocking a piece and xiangqi has four, so moving the duck across raised questions the original never had to answer. The sections below are where they land.',
+      text: 'Dr Tim Paulden invented Duck Chess in 2016 and published it at [duckchess.com](https://duckchess.com); Jim Aikin had already put movable neutral stones on a chessboard in [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999. Brian Liou adapted the one-duck game to the 9 by 10 board for Mistboard, and we have not found an earlier Chinese chess version of it. Chess has one way of blocking a piece and xiangqi has four, so the port raised questions the original never had to answer, and the sections below are where they land.',
     },
   ],
   sections: [
@@ -60,11 +60,11 @@ export const duckXiangqiArticle: Article = {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_TURN_PAIR,
           caption:
-            'One turn. Red plays the cannon to the middle file, then sends the duck to the river. The move alone is not a turn, and neither is the placement.',
+            'One turn, and it is the engine’s own first choice here: Red plays the horse to c3, then sends the duck to c8, deep in Black’s half. The move alone is not a turn, and neither is the placement.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'There is one turn with no duck placement in it. A move that captures the enemy general ends the game on the spot, so the duck never gets to move.',
+          text: 'The one exception is the move that captures the enemy general. That ends the game on the spot, so the duck never gets its half of the turn.',
         },
       ],
     },
@@ -104,32 +104,28 @@ export const duckXiangqiArticle: Article = {
           kind: 'paragraph',
           text: 'No check, no checkmate, no warning. You are allowed to leave your general attacked, and your opponent wins by actually capturing it. Miss the threat and you lose the game, not a tempo.',
         },
-        {
-          kind: 'paragraph',
-          text: 'A player who has no legal turn loses. That is xiangqi’s answer to stalemate, and it is the opposite of the chess game’s, where a player with no move wins.',
-        },
       ],
     },
     {
-      heading: 'The generals may still never face',
+      heading: 'The generals may face, and then one of them dies',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'One xiangqi rule survives the loss of check. The two generals may never be left facing each other down a file with nothing in between.',
+          text: 'Xiangqi says the two generals may never be left facing each other down a file with nothing in between. The reason is that they attack each other along that file, so leaving them facing puts your own general in check, and standard xiangqi never lets you find out what would happen next.',
         },
         {
           kind: 'paragraph',
-          text: 'It is checked twice, once for each half of the turn. Your piece move may not leave the generals facing, and neither may your duck placement. Opening the file with a piece and closing it again with the duck is not a rescue, because the piece move was already illegal.',
+          text: 'Here you find out. There is no check, so the attack becomes a move: a general may fly the length of an open file and capture the other one, which ends the game. Leaving the generals facing is a legal thing to do and it normally loses. This is the only time a general leaves its palace.',
         },
         {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_FACING_PIN,
           caption:
-            'Nothing stands on file e but the duck, so the duck is what makes the position legal. It still has to move, and the only points it may move to are the five open ones between the generals.',
+            'Nothing stands on file e but the duck, so the duck is the only reason Red still has a general. It has to move somewhere every turn, and every point off the file hands Black the win.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'A duck pinned like that always has somewhere to go. The generals can never be closer than rank 3 and rank 8, so the open stretch between them runs at least four points. Squeezing an opponent’s duck down to a few squares takes their placement away for a turn or two; it cannot by itself leave them with no legal turn at all.',
+          text: 'That makes the duck a defender as well as an obstacle, and an uncomfortable one, because it can never stand still. Holding a file costs you the duck every single turn, and the moment you want it somewhere else you have to find another way to block. The same trick works in reverse: open the file with a piece and you may still close it again with the duck in the same turn, since only the finished turn is judged.',
         },
       ],
     },
@@ -138,7 +134,7 @@ export const duckXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Capturing the enemy general wins. A player with no legal turn loses. Games also end by timeout, resignation, or abandonment, the same as any other game here.',
+          text: 'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.',
         },
         {
           kind: 'paragraph',
