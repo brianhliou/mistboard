@@ -68,3 +68,33 @@ test('assignTenantSeat: the play lock leaves a signed-out player alone', () => {
   assert.ok(assignment.ok);
   assert.equal(assignment.seat, 'white');
 });
+
+// The browser device id (migration 137): stored on a new seat, and learned by
+// a pre-issued seat on the first reconnect that carries one.
+
+test('assignTenantSeat: a new guest seat records the device id', () => {
+  const room = emptyRoom();
+  const assignment = assignTenantSeat(tenant, room, 'guest-client', undefined, null, 'dev-1');
+
+  assert.ok(assignment.ok);
+  assert.equal(assignment.tokenState.deviceId, 'dev-1');
+  assert.equal(room.seatTokens.white?.deviceId, 'dev-1');
+});
+
+test('assignTenantSeat: a reclaimed seat keeps its device and a pre-issued one learns it', () => {
+  const room = emptyRoom();
+  room.seatTokens.white = seatToken('user-1');
+  const learned = assignTenantSeat(tenant, room, 'c2', undefined, account(), 'dev-2');
+  assert.ok(learned.ok);
+  assert.equal(learned.tokenState.deviceId, 'dev-2');
+
+  const kept = assignTenantSeat(tenant, room, 'c3', undefined, account(), 'dev-other');
+  assert.ok(kept.ok);
+  assert.equal(kept.tokenState.deviceId, 'dev-2', 'the first device wins');
+});
+
+test('assignTenantSeat: no device id leaves the seat anonymous', () => {
+  const assignment = assignTenantSeat(tenant, emptyRoom(), 'guest-client', undefined, null);
+  assert.ok(assignment.ok);
+  assert.equal(assignment.tokenState.deviceId, null);
+});

@@ -2,6 +2,7 @@ import {
   COUNTED_USER,
   countedAccountSeat,
   countedHumanGame,
+  countedPlayerSeat,
   excludedSeatExists,
   internalHumanGame,
   preLaunchHumanGame,
@@ -18,13 +19,12 @@ import { PATRON_ACTIVE_STATUSES } from './persistence-patron.js';
 // accounts' own games are reported separately in `engines`, never folded into
 // a player number. See docs-private/metrics-roadmap.md.
 //
-// GUESTS ARE NOT PEOPLE HERE. A guest seat is persisted as subject_type
-// 'guest' with subject_id NULL (room-manager.ts, variant-tenant/events.ts) and
-// the client id is minted per room, so there is no durable guest identity to
-// count. Every "player" figure below is SIGNED-IN players; the guest side is
-// `guestGames`, games with at least one guest seat, which is a game count and
-// not a person count. Making guests countable needs a device id on the seat
-// (roadmap phase 7).
+// Players are distinct (subject_type, subject_id) seats that pass
+// countedPlayerSeat: accounts, plus guest seats carrying a browser device id
+// (migration 137, 2026-09-11). Guest seats before that date have subject_id
+// NULL and are not people, so player series before it are accounts only;
+// `guestGames` (games with a guest seat) is the game-count view of the same
+// visitors and works across the whole window.
 //
 // Weeks are ISO (Monday start), oldest first, the current partial week last.
 // Postgres' date_trunc('week') is Monday-based, which is what the readout and
@@ -37,11 +37,13 @@ export interface AdminMetricsWeek {
   humanGames: number;
   pvpGames: number;
   pveGames: number;
-  // Distinct signed-in accounts that finished a human game this week.
+  // Distinct counted players (accounts + guest browsers) that finished a game
+  // this week; `signedInPlayers` is the account share.
   players: number;
+  signedInPlayers: number;
   newPlayers: number;
   returningPlayers: number;
-  // Distinct signed-in players over the 28 days ending at this week's end (or
+  // Distinct counted players over the 28 days ending at this week's end (or
   // at `now` for the current week). A rolling MAU sampled once per week.
   activePlayers28d: number;
   // Human games this week with at least one guest seat: the only guest figure
@@ -103,9 +105,10 @@ export type AdminMetricsOptions = {
 
 type Queryable = { query: <R>(text: string, params?: unknown[]) => Promise<{ rows: R[] }> };
 
-// Both fragments assume `games g` and `game_participants p`; the exclusion
-// of flagged accounts (users.stats_excluded_at) lives inside them.
+// These fragments assume `games g` and `game_participants p`; the exclusion
+// of flagged accounts and devices lives inside them.
 const HUMAN_GAME = countedHumanGame('g');
+const PLAYER_SEAT = countedPlayerSeat('p');
 const SIGNED_IN_SEAT = countedAccountSeat('p');
 const INTERNAL_GAME = internalHumanGame('g');
 const EXCLUDED_SEAT = excludedSeatExists('g');
@@ -140,6 +143,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
       pvpGames: games?.pvp ?? 0,
       pveGames: games?.pve ?? 0,
       players: players?.players ?? 0,
+      signedInPlayers: players?.signedIn ?? 0,
       newPlayers: players?.newPlayers ?? 0,
       returningPlayers: (players?.players ?? 0) - (players?.newPlayers ?? 0),
       activePlayers28d: mauByWeek.get(weekStart) ?? 0,
@@ -214,10 +218,10 @@ async function collectHeadline(
       active_patrons: number;
     }>(
       `WITH human_players AS (
-         SELECT p.subject_id AS user_id, g.ended_at
+         SELECT p.subject_type, p.subject_id, g.ended_at
          FROM game_participants p
          JOIN games g ON g.room_id = p.game_id
-         WHERE ${SIGNED_IN_SEAT} AND ${HUMAN_GAME}
+         WHERE ${PLAYER_SEAT} AND ${HUMAN_GAME}
            AND g.ended_at >= $1::timestamptz - INTERVAL '56 days'
            AND g.ended_at < $1::timestamptz
        )
@@ -232,9 +236,9 @@ async function collectHeadline(
             AND ended_at > $1::timestamptz - INTERVAL '7 days')::int AS human_games_last7d,
          (SELECT count(*) FROM games g WHERE ${HUMAN_GAME}
             AND visibility = 'public')::int AS public_human_games,
-         (SELECT count(DISTINCT user_id) FROM human_players
+         (SELECT count(DISTINCT (subject_type, subject_id)) FROM human_players
             WHERE ended_at >= $1::timestamptz - INTERVAL '28 days')::int AS active_28d,
-         (SELECT count(DISTINCT user_id) FROM human_players
+         (SELECT count(DISTINCT (subject_type, subject_id)) FROM human_players
             WHERE ended_at < $1::timestamptz - INTERVAL '28 days')::int AS previous_active_28d,
          (SELECT count(DISTINCT account_id) FROM patron_subscriptions
             WHERE is_lifetime = true OR status = ANY($2::text[]))::int AS active_patrons`,
@@ -365,45 +369,47 @@ async function collectPlayersByWeek(
   db: Queryable,
   now: Date,
   weeks: number,
-): Promise<Map<string, { players: number; newPlayers: number }>> {
+): Promise<Map<string, { players: number; signedIn: number; newPlayers: number }>> {
   const result = await db.query<{
     week: Date | string;
     players: number;
+    signed_in: number;
     new_players: number;
   }>(
     `WITH human AS (
-       SELECT p.subject_id AS user_id, g.ended_at
+       SELECT p.subject_type, p.subject_id, g.ended_at
        FROM game_participants p
        JOIN games g ON g.room_id = p.game_id
-       WHERE ${SIGNED_IN_SEAT} AND ${HUMAN_GAME}
+       WHERE ${PLAYER_SEAT} AND ${HUMAN_GAME}
      ),
      first_seen AS (
-       SELECT user_id, date_trunc('week', min(ended_at))::date::text AS first_week
+       SELECT subject_type, subject_id, date_trunc('week', min(ended_at))::date::text AS first_week
        FROM human
-       GROUP BY user_id
+       GROUP BY subject_type, subject_id
      ),
      weekly AS (
-       SELECT DISTINCT date_trunc('week', ended_at)::date::text AS week, user_id
+       SELECT DISTINCT date_trunc('week', ended_at)::date::text AS week, subject_type, subject_id
        FROM human
        WHERE ended_at >= ${WINDOW_START} AND ended_at < $1::timestamptz
      )
      SELECT w.week,
        count(*)::int AS players,
+       count(*) FILTER (WHERE w.subject_type = 'user')::int AS signed_in,
        count(*) FILTER (WHERE f.first_week = w.week)::int AS new_players
      FROM weekly w
-     JOIN first_seen f USING (user_id)
+     JOIN first_seen f USING (subject_type, subject_id)
      GROUP BY w.week`,
     [now, weeks],
   );
   return new Map(
     result.rows.map((row) => [
       isoDate(row.week),
-      { players: row.players, newPlayers: row.new_players },
+      { players: row.players, signedIn: row.signed_in, newPlayers: row.new_players },
     ]),
   );
 }
 
-// Rolling 28-day distinct signed-in players, sampled at each week's end (the
+// Rolling 28-day distinct counted players, sampled at each week's end (the
 // current week samples at `now`). One correlated count per week; fine at this
 // table size, revisit if games passes a few hundred thousand rows.
 async function collectActive28dByWeek(
@@ -420,10 +426,10 @@ async function collectActive28dByWeek(
        ) AS week_start
      )
      SELECT weeks.week_start::date::text AS week,
-       (SELECT count(DISTINCT p.subject_id)
+       (SELECT count(DISTINCT (p.subject_type, p.subject_id))
           FROM game_participants p
           JOIN games g ON g.room_id = p.game_id
-          WHERE ${SIGNED_IN_SEAT} AND ${HUMAN_GAME}
+          WHERE ${PLAYER_SEAT} AND ${HUMAN_GAME}
             AND g.ended_at < LEAST(weeks.week_start + INTERVAL '1 week', $1::timestamptz)
             AND g.ended_at >= LEAST(weeks.week_start + INTERVAL '1 week', $1::timestamptz)
                               - INTERVAL '28 days')::int AS n

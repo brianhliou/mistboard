@@ -1532,7 +1532,11 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
       color: row.color,
       displayName: row.display_name,
       subjectType: row.subject_type,
-      subjectId: row.subject_id,
+      // A guest's subject id is the browser's device id (migration 137): an
+      // aggregate key, never something to hand back to a browser, where it
+      // would let one visitor's games be tied together by anyone reading the
+      // API. Only the SQL aggregates see it.
+      subjectId: row.subject_type === 'guest' ? null : row.subject_id,
       visibility: row.visibility,
       // Omitted-when-null so a non-user (or unlinkable) seat keeps the original
       // participant shape, same convention as the fields below.

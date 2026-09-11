@@ -21,8 +21,8 @@ import {
 import {
   COUNTED_USER,
   countedAbortedGame,
-  countedAccountSeat,
   countedHumanGame,
+  countedPlayerSeat,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
@@ -39,7 +39,7 @@ type Queryable = Pick<pg.Pool, 'query'>;
 // `games g` and `game_participants p`.
 const COUNTED_GAME = countedHumanGame('g');
 const COUNTED_ABORTED = countedAbortedGame('g');
-const COUNTED_SEAT = countedAccountSeat('p');
+const COUNTED_SEAT = countedPlayerSeat('p');
 
 export async function generateMistboardReadout(input: {
   trigger: MistboardReadoutTrigger;
@@ -329,14 +329,12 @@ async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadou
 // grinding the bot, and the game count cannot tell that apart from a week that
 // doubled because eight new people arrived.
 //
-// SIGNED-IN people only. A guest seat is persisted with subject_id NULL and
-// the client id is per room, so there is no guest to count: `humanPlayers` is
-// the account count, and a week of guest-only play reads as zero players
-// here. The filter says `subject_type = 'user'` outright rather than relying
-// on the NULL id, so a test fixture that gives a guest an id cannot make the
-// count look like it includes guests. Guests are visible in the game count and
-// on /metrics as games with a guest seat, nowhere as people, until a seat
-// carries a device id (docs-private/metrics-roadmap.md, phase 7).
+// Counted players are distinct (subject_type, subject_id) seats: accounts,
+// plus guest seats carrying a browser device id (migration 137, 2026-09-11).
+// Guest seats before that date have subject_id NULL and are not people, so
+// snapshots before it are accounts only; `signedInPlayers` is the account
+// share. A person who plays both signed in and out on one browser counts
+// twice, which is the known floor.
 async function collectPlayers(
   db: Queryable,
   period: { periodStart: Date; periodEnd: Date; previousPeriodStart: Date },

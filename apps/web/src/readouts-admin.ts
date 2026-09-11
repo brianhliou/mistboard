@@ -114,7 +114,7 @@ function buildHistoryTable(rows: ReadoutSummary[]): HTMLElement {
     'Trigger',
     'Verdict',
     'Games',
-    'Accounts played',
+    'Players',
     'Active 28d',
     'Actions',
   ]) {

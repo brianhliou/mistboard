@@ -57,6 +57,7 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   pvpGames: 4,
   pveGames: 6,
   players: 5,
+  signedInPlayers: 2,
   newPlayers: 1,
   returningPlayers: 4,
   activePlayers28d: 12,
@@ -209,13 +210,13 @@ describe('metrics page', () => {
 
     expect(root.querySelector('.site-section-heading')?.textContent).toBe('Metrics');
     const cardLabels = [...root.querySelectorAll('.metrics-card-label')].map((n) => n.textContent);
-    expect(cardLabels).toContain('Active accounts');
+    expect(cardLabels).toContain('Active players');
     expect(cardLabels).toContain('Accounts');
     expect(cardLabels).toContain('Patrons');
     expect(cardLabels).toContain('Online now');
 
     const activeCard = [...root.querySelectorAll('.metrics-card')].find((c) =>
-      c.querySelector('.metrics-card-label')?.textContent?.includes('Active accounts'),
+      c.querySelector('.metrics-card-label')?.textContent?.includes('Active players'),
     );
     expect(activeCard?.querySelector('.metrics-card-value')?.textContent).toBe('12');
     expect(activeCard?.querySelector('.metrics-card-note')?.textContent).toBe(
@@ -237,8 +238,8 @@ describe('metrics page', () => {
       (n) => n.textContent,
     );
     expect(sectionTitles).toEqual([
-      'Signed-in players per week',
-      'Active accounts, rolling 28 days',
+      'Players per week',
+      'Active players, rolling 28 days',
       'Games per week',
       'Accounts per week',
       'Puzzles per week',
@@ -258,11 +259,12 @@ describe('metrics page', () => {
     const legend = [...(playersSection?.querySelectorAll('.weekly-chart-legend li') ?? [])].map(
       (n) => n.textContent,
     );
-    expect(legend).toEqual(['Players', 'New', 'Returning']);
+    expect(legend).toEqual(['Players', 'Signed in', 'New', 'Returning']);
     const firstRow = playersSection?.querySelector('.weekly-chart-table tr:nth-child(2)');
     expect([...(firstRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
       '2026-07-20',
       '8',
+      '2',
       '1',
       '4',
     ]);
