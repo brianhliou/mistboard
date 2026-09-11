@@ -46,6 +46,21 @@ export type TenantGameStateLike<C extends string> = {
 // race, ...) never pass through here — they come out of rules.applyMove.
 export type TenantEndReason = 'timeout' | 'resignation' | 'abandonment';
 
+/**
+ * A move the game will make FOR a seat when a wait runs out, and the absolute
+ * time that happens.
+ *
+ * A mahjong claim window is the case this exists for: after a discard, up to
+ * three seats may claim the tile, and the hand cannot continue until each has
+ * answered. One player closing their laptop must not hang the table, so silence
+ * has to become an answer on a deadline.
+ *
+ * It is a real move by a real seat, appended as an ordinary move-played event,
+ * so a replayed game takes the same path as the live one and a spectator sees
+ * why the turn moved.
+ */
+export type TenantPendingAction<C extends string, M> = { at: number; color: C; move: M };
+
 export type TenantEngineTerminalContext =
   | 'full-history'
   | 'repetition-window'
@@ -193,6 +208,9 @@ export type TenantRuntimeRoom<
   clockTimer: ReturnType<typeof setTimeout> | null;
   forfeitTimer: ReturnType<typeof setTimeout> | null;
   forfeitDeadline: number | null;
+  // Fires the tenant's pendingAction. Distinct from the forfeit timer: that one
+  // ends the game, this one continues it.
+  actionTimer: ReturnType<typeof setTimeout> | null;
   forfeitSeat: C | null;
   gameEndRecorded: boolean;
   /**
@@ -307,6 +325,15 @@ export type VariantTenant<
     // different one on reconnect, which the event log will not reveal because
     // every event in it is individually valid.
     seatMayAct?(state: State, seat: C): boolean;
+    // The move to make on this state's behalf if nobody acts, and when.
+    // Null when the state is not waiting on anything, which is every state of
+    // every strictly alternating tenant, so all of them omit this.
+    //
+    // Return ONE action that settles the whole wait, not one per silent seat:
+    // the runtime applies a single action per firing and then re-arms from the
+    // new state, so a hook that settles a four-seat window one seat at a time
+    // costs four round trips through the event writer.
+    pendingAction?(state: State): TenantPendingAction<C, M> | null;
   };
   setupSubmission?: {
     applySetup(state: State, color: C, setup: unknown): State;

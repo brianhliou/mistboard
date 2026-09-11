@@ -495,6 +495,7 @@ function darkXiangqiRoomFixture({
     abortPhase: null,
     clockTimer: null,
     forfeitTimer: null,
+    actionTimer: null,
     forfeitDeadline: null,
     forfeitSeat: null,
     gameEndRecorded: state.status.type !== 'playing',

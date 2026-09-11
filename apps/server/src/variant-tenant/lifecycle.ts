@@ -22,6 +22,7 @@ import { expireTenantClock, tenantClockRemainingMs } from './runtime.js';
 import type {
   TenantAbortPhase,
   TenantGameStateLike,
+  TenantPendingAction,
   TenantProjection,
   TenantRoomEvent,
   TenantRuntimeRoom,
@@ -70,7 +71,11 @@ export type TenantLifecycleContext<
 > = {
   appendEvent(room: Room, event: TenantRoomEvent<C, M, Spec>): Promise<number>;
   broadcastEventAppended(room: Room, event: TenantRoomEvent<C, M, Spec>, seq: number): void;
-  logTimerFailure?(kind: 'abort' | 'clock' | 'forfeit', roomId: string, err: Error): void;
+  logTimerFailure?(
+    kind: 'abort' | 'clock' | 'forfeit' | 'action',
+    roomId: string,
+    err: Error,
+  ): void;
   now?(): number;
 };
 
@@ -84,11 +89,13 @@ export function clearTenantRuntimeTimers(room: {
   abortTimer: ReturnType<typeof setTimeout> | null;
   clockTimer: ReturnType<typeof setTimeout> | null;
   forfeitTimer: ReturnType<typeof setTimeout> | null;
+  actionTimer: ReturnType<typeof setTimeout> | null;
   engineTimer: ReturnType<typeof setTimeout> | null;
 }): void {
   clearTenantAbortTimer(room);
   clearTenantClockTimer(room);
   clearTenantForfeitTimer(room);
+  clearTenantActionTimer(room);
   if (room.engineTimer) clearTimeout(room.engineTimer);
   room.engineTimer = null;
 }
@@ -114,6 +121,13 @@ export function clearTenantForfeitTimer(room: {
   room.forfeitTimer = null;
 }
 
+export function clearTenantActionTimer(room: {
+  actionTimer: ReturnType<typeof setTimeout> | null;
+}): void {
+  if (room.actionTimer) clearTimeout(room.actionTimer);
+  room.actionTimer = null;
+}
+
 export function scheduleTenantLifecycleTimers<
   C extends string,
   M,
@@ -128,6 +142,62 @@ export function scheduleTenantLifecycleTimers<
   scheduleTenantAbortTimeout(tenant, room, ctx);
   scheduleTenantClockTimeout(tenant, room, ctx);
   scheduleTenantForfeitTimeout(tenant, room, ctx);
+  scheduleTenantActionTimeout(tenant, room, ctx);
+}
+
+/**
+ * Arm the tenant's own deadline, if its current state has one.
+ *
+ * Unlike the abort, clock and forfeit timers, this one does not end a game. It
+ * makes a move the game was waiting on and lets play continue, which is what a
+ * mahjong claim window needs when a seat goes quiet.
+ *
+ * One action per firing. The re-arm happens on the way back through
+ * scheduleTenantLifecycleTimers after the event lands, so a tenant that returns
+ * a fresh action every time cannot spin inside a single callback.
+ */
+export function scheduleTenantActionTimeout<
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  Spec extends string,
+  Room extends TenantLifecycleRoom<C, M, State, Spec>,
+>(
+  tenant: TenantLifecycleTenant<C> & {
+    rules?: { pendingAction?(state: State): TenantPendingAction<C, M> | null };
+  },
+  room: Room,
+  ctx: TenantLifecycleContext<C, M, State, Spec, Room>,
+): void {
+  clearTenantActionTimer(room);
+  const pending = tenant.rules?.pendingAction?.(room.projection.state);
+  if (!pending) return;
+  const now = ctx.now?.() ?? Date.now();
+  const delay = Math.max(0, pending.at - now);
+  room.actionTimer = setTimeout(() => {
+    // The window may have settled on its own while the timer was pending: every
+    // seat answered, or a claim resolved the discard. Re-read rather than
+    // trusting the action captured at arming time, or a seat that answered at
+    // the last moment gets overruled by its own timeout.
+    const stillPending = tenant.rules?.pendingAction?.(room.projection.state);
+    if (!stillPending) return;
+    void ctx
+      .appendEvent(room, {
+        type: 'move-played',
+        at: Date.now(),
+        roomId: room.id,
+        color: stillPending.color,
+        move: stillPending.move,
+      })
+      .then((seq) => {
+        const event = room.events[seq];
+        if (event) ctx.broadcastEventAppended(room, event, seq);
+      })
+      .catch((err) => {
+        (ctx.logTimerFailure ?? tenantTimerFailureLogger(tenant))('action', room.id, err as Error);
+      });
+  }, delay + 25);
+  room.actionTimer.unref();
 }
 
 export function tenantAbortPhaseFor<
@@ -495,24 +565,25 @@ function scheduleTenantForfeitTimeout<
 
 function tenantTimerFailureLogger(tenant: {
   persistence: { logKindPrefix: string; logLabel: string };
-}): (kind: 'abort' | 'clock' | 'forfeit', roomId: string, err: Error) => void {
+}): (kind: 'abort' | 'clock' | 'forfeit' | 'action', roomId: string, err: Error) => void {
   return (kind, roomId, err) => logTenantTimerFailure(tenant.persistence, kind, roomId, err);
 }
 
 function logTenantTimerFailure(
   identity: { logKindPrefix: string; logLabel: string },
-  kind: 'abort' | 'clock' | 'forfeit',
+  kind: 'abort' | 'clock' | 'forfeit' | 'action',
   roomId: string,
   err: Error,
 ): void {
+  const kinds: Record<typeof kind, string> = {
+    abort: `${identity.logKindPrefix}_abort_window_failure`,
+    clock: `${identity.logKindPrefix}_clock_failure`,
+    forfeit: `${identity.logKindPrefix}_forfeit_window_failure`,
+    action: `${identity.logKindPrefix}_pending_action_failure`,
+  };
   logger.error(
     {
-      kind:
-        kind === 'abort'
-          ? `${identity.logKindPrefix}_abort_window_failure`
-          : kind === 'clock'
-            ? `${identity.logKindPrefix}_clock_failure`
-            : `${identity.logKindPrefix}_forfeit_window_failure`,
+      kind: kinds[kind],
       room_id: roomId,
       error: err.message,
       at: Date.now(),

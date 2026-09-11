@@ -57,6 +57,7 @@ function makeRoom(id: string, status: 'playing' | 'finished'): CrossroadsChessLi
     engineTimer: null,
     engineReservationId: null,
     forfeitTimer: null,
+    actionTimer: null,
     forfeitDeadline: null,
     forfeitSeat: null,
     gameEndRecorded: status === 'finished',

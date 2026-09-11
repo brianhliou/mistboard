@@ -34,12 +34,7 @@ import type {
   TenantSnapshotClient,
   VariantTenant,
 } from './tenant.js';
-import {
-  assertForfeitPolicy,
-  forfeitWinnerOf,
-  lastSeat,
-  tenantSeatMayAct,
-} from './tenant.js';
+import { assertForfeitPolicy, forfeitWinnerOf, lastSeat, tenantSeatMayAct } from './tenant.js';
 
 export type TenantRoomCreation<
   Kind extends string,
@@ -257,6 +252,7 @@ export function createTenantRuntimeRoomFromEvents<
       abortPhase: null,
       clockTimer: null,
       forfeitTimer: null,
+      actionTimer: null,
       forfeitDeadline: null,
       forfeitSeat: null,
       gameEndRecorded:
