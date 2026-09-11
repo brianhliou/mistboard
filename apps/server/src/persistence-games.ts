@@ -44,8 +44,15 @@ const MIN_TV_PVP_PLY_COUNT = 30;
 // Raise or lower it in ONE place or they drift again.
 //
 // The floor dropped 30 → 20 on 2026-07-30: at Mistboard's liquidity a decisive
-// 20-ply game someone actually played is real activity worth showing, and the
-// abandonment filter already drops the rage-quits the floor was standing in for.
+// 20-ply game someone actually played is real activity worth showing.
+//
+// The floor is the WHOLE bar since 2026-09-10. Until then the curated cut also
+// dropped every abandonment, so a 26-ply jieqi game a human walked out of never
+// fronted the homepage while a 20-ply resignation did, and the site's "latest
+// game" lagged real activity by a day when the last four finishes were all
+// walk-aways. Twenty plies in, a walk-away is a game someone actually played;
+// the floor alone already drops the rage-quits the termination filter was
+// doubling up on.
 const CURATED_MIN_PLY = 20;
 
 export type GameResult = 'white-wins' | 'black-wins' | 'red-wins' | 'draw';
@@ -162,7 +169,7 @@ export type RecentEveGameRecord = GameRecord & {
 };
 
 export type WatchUnlockedGameOptions = {
-  // Apply the flagship curation bar (CURATED_MIN_PLY + no abandonment) — the
+  // Apply the flagship curation bar (CURATED_MIN_PLY, any termination) — the
   // same filter the homepage showcase pool uses. Only the Featured channel
   // passes it: per-variant channels stay the full "seal until finished" feed,
   // because at Mistboard's liquidity the bar would empty the thin ones.
@@ -579,9 +586,9 @@ export async function listRecentPublicGames(limit = 10): Promise<RecentEveGameRe
 // strongest "alive" signal) → PvE (a real human vs the engine, the product's
 // differentiator). Then ROUND-ROBIN across variants so the pool shows breadth
 // ("not just dark chess") while volume sets the natural weighting. Both tiers use
-// a watch-style filter (any real finish except abandon, since people resign/flag
-// far more than king-capture) and a ply floor, so a board never opens on a
-// near-starting position.
+// a watch-style filter (any finish, since people resign/flag/walk away far more
+// than king-capture) and a ply floor, so a board never opens on a near-starting
+// position.
 //
 // EvE (engine-vs-engine) was a third tier until 2026-08-08 and is now EXCLUDED:
 // the homepage board is the site's "is anyone here" signal, and bakeoff self-play
@@ -591,9 +598,9 @@ export async function listRecentPublicGames(limit = 10): Promise<RecentEveGameRe
 // homepage. Do not re-add it as a low-liquidity filler tier without deciding that
 // tradeoff again.
 //
-// The ply floor + no-abandonment pair is CURATED_MIN_PLY (see its comment): the
-// same bar the Featured watch channel applies, so the homepage's frozen board
-// and /watch?channel=top agree on the site's freshest game.
+// The ply floor is CURATED_MIN_PLY (see its comment): the same bar the Featured
+// watch channel applies, so the homepage's frozen board and /watch?channel=top
+// agree on the site's freshest game.
 // Pool size. Anchored on "games take minutes to finish, low liquidity"; tune from
 // traffic (see also the client poller).
 const SHOWCASE_POOL_SIZE = 14;
@@ -688,7 +695,7 @@ export function interleaveByVariant(
   return out;
 }
 
-// Recent substantial PvP, watch-style: any real finish except a forfeit/abandon.
+// Recent substantial PvP, watch-style: any finish past the ply floor.
 async function queryShowcasePvp(
   limit: number,
   variants: readonly string[],
@@ -701,7 +708,6 @@ async function queryShowcasePvp(
        AND games.visibility = 'public'
        AND games.variant = ANY($3::text[])
        AND games.mode = 'pvp'
-       AND games.termination <> 'abandonment'
        AND games.ply_count >= $1
        AND EXISTS (
          SELECT 1 FROM events WHERE events.room_id = games.room_id LIMIT 1
@@ -714,7 +720,7 @@ async function queryShowcasePvp(
 }
 
 // Recent human-vs-engine games — a real person playing the engine. Same
-// watch-style "any real finish except abandon" filter as PvP; PvE is
+// watch-style "any finish past the ply floor" filter as PvP; PvE is
 // public-by-default (visibility <> 'private') like the watch unlocked feed.
 async function queryShowcasePve(
   limit: number,
@@ -728,7 +734,6 @@ async function queryShowcasePve(
        AND games.visibility <> 'private'
        AND games.variant = ANY($3::text[])
        AND games.mode = 'pve'
-       AND games.termination <> 'abandonment'
        AND games.ply_count >= $1
        AND EXISTS (
          SELECT 1 FROM events WHERE events.room_id = games.room_id LIMIT 1
@@ -767,8 +772,7 @@ export async function listWatchUnlockedGames(
   let curatedClause = '';
   if (options.curated) {
     values.push(CURATED_MIN_PLY);
-    curatedClause = `AND games.termination <> 'abandonment'
-       AND games.ply_count >= $${values.length}`;
+    curatedClause = `AND games.ply_count >= $${values.length}`;
   }
   const { rows } = await getPool().query<RecentEveGameRow>(
     `WITH last_events AS (
