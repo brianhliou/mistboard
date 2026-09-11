@@ -1,12 +1,14 @@
 import {
   DUCK_XIANGQI_CANNON_SCREEN,
+  DUCK_XIANGQI_ELEPHANT_PAIR,
   DUCK_XIANGQI_FACING_PIN,
   DUCK_XIANGQI_HORSE_PAIR,
+  DUCK_XIANGQI_INTRO_BOARD,
   DUCK_XIANGQI_START_BOARD,
   DUCK_XIANGQI_THUMBNAIL,
   DUCK_XIANGQI_TURN_PAIR,
 } from '../../duck-xiangqi-rules-diagrams.js';
-import { relatedClosing } from '../diagrams.js';
+import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 export const duckXiangqiArticle: Article = {
@@ -14,7 +16,7 @@ export const duckXiangqiArticle: Article = {
   gameSpecId: 'duck-xiangqi',
   boardFamily: 'xiangqi',
   kind: 'rules',
-  playableOnMistboard: false,
+  playableOnMistboard: true,
   title: 'Duck Xiangqi Rules',
   summary:
     'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.',
@@ -30,12 +32,22 @@ export const duckXiangqiArticle: Article = {
       text: 'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.',
     },
     {
+      kind: 'raw-svg',
+      svg: DUCK_XIANGQI_INTRO_BOARD,
+      caption:
+        'One turn in. Red moved the horse, then placed the duck on c8, ringed. The duck is not on the board at the start.',
+    } as ArticleBlock,
+    {
       kind: 'paragraph',
-      text: 'The duck belongs to nobody. It cannot be captured, it is not material, and it is not either side’s piece. Its whole job is to be in the way, and both players take turns deciding where.',
+      text: 'Brian H. Liou adapted Duck Xiangqi to the 9 by 10 board in 2026 as a Mistboard original. Dr Tim Paulden invented [Duck Chess](https://duckchess.com) in 2016, and Jim Aikin had already put movable neutral stones on a chessboard in [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999. Nobody had carried the idea across to xiangqi. The cannon is the piece that makes it strange: it captures only by jumping over something, and a duck placed anywhere is something, so every placement you make is a platform your opponent may fire over.',
     },
     {
       kind: 'paragraph',
-      text: 'Dr Tim Paulden invented Duck Chess in 2016 and published it at [duckchess.com](https://duckchess.com); Jim Aikin had already put movable neutral stones on a chessboard in [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999. Brian Liou adapted the one-duck game to the 9 by 10 board for Mistboard, and we have not found an earlier Chinese chess version of it. Chess has one way of blocking a piece and xiangqi has four, so the port raised questions the original never had to answer, and the sections below are where they land.',
+      text: 'The duck belongs to nobody. Nothing can capture it and nothing can land on it, it is never material, and it is not either side\u2019s piece. Its whole job is to be in the way, and both players take turns deciding where.',
+    },
+    {
+      kind: 'paragraph',
+      text: 'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has four. The sections below are where that difference lands.',
     },
   ],
   sections: [
@@ -60,7 +72,7 @@ export const duckXiangqiArticle: Article = {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_TURN_PAIR,
           caption:
-            'One turn, and it is the engine’s own first choice here: Red plays the horse to c3, then sends the duck to c8, deep in Black’s half. The move alone is not a turn, and neither is the placement.',
+            'The move alone is not a turn, and neither is the placement.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
@@ -73,18 +85,24 @@ export const duckXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Wherever xiangqi asks whether a point is occupied, the duck counts as occupied. It stops a chariot. It stands on the horse’s leg and fills the elephant’s eye. It screens for a cannon. It breaks the file between the two generals.',
+          text: 'Wherever xiangqi asks whether a point is occupied, the duck counts as occupied. It stops a chariot. It stands on the horse’s leg and fills the elephant’s eye. It screens for a cannon. It stands between the two generals.',
         },
         {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_HORSE_PAIR,
           caption:
-            'The horse on e5 reaches eight points. Put the duck on e6 and the two destinations that step through it are gone, marked here with crosses.',
+            'The horse on e5 reaches eight points. The duck on e6 stands on its leg, and the two steps through that point are gone.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'That is a deliberate difference from the chess game, where the duck does not block a knight. A chess knight has no path to block. Xiangqi’s horse has a leg, the leg is a real point, and anything standing on it stops the horse. So the duck is stronger here than it is in chess: it freezes a horse from a point the horse was never going to occupy.',
+          text: 'That is a deliberate difference from Duck Chess, where the duck does not block a knight. A chess knight has no path to block. Xiangqi’s horse has a leg, the leg is a real point, and anything standing on it stops the horse. So the duck is stronger here than in Duck Chess: it freezes a horse from a point the horse was never going to occupy.',
         },
+        {
+          kind: 'raw-svg',
+          svg: DUCK_XIANGQI_ELEPHANT_PAIR,
+          caption:
+            'The elephant on c1 reaches a3 and e3. The duck on d2 fills the eye of the second one.',
+        } as ArticleBlock,
         {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_CANNON_SCREEN,
@@ -95,6 +113,10 @@ export const duckXiangqiArticle: Article = {
           kind: 'paragraph',
           text: 'The cannon is where the timing bites. You place the duck at the end of your turn, which means the screen you build is the screen your opponent fires over. Duck placement is never a cannon platform for yourself.',
         },
+        {
+          kind: 'paragraph',
+          text: 'This one was a choice, and it is the choice that most changes how the game feels. Chess has no cannon and no capture that needs a platform, so Duck Chess never had to rule on it. The duck could have been written as a blocker a cannon may not fire over, which would have made it a purely defensive piece and a much quieter game. It counts as a screen instead, exactly as any piece does, because a rule that asks whether a point is occupied should get the same answer whatever is standing there.',
+        },
       ],
     },
     {
@@ -102,30 +124,26 @@ export const duckXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'No check, no checkmate, no warning. You are allowed to leave your general attacked, and your opponent wins by actually capturing it. Miss the threat and you lose the game, not a tempo.',
+          text: 'No check, no checkmate, no warning. That comes straight from Duck Chess. You may move a piece that leaves your general attacked, you may place the duck and still leave it attacked, and you may move the general onto an attacked point. Neither half of the turn is tested for it. Your opponent wins by actually capturing the general, so miss the threat and you lose the game, not a tempo.',
         },
       ],
     },
     {
-      heading: 'The generals may face, and then one of them dies',
+      heading: 'The generals may face',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Xiangqi says the two generals may never be left facing each other down a file with nothing in between. The reason is that they attack each other along that file, so leaving them facing puts your own general in check, and standard xiangqi never lets you find out what would happen next.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'Here you find out. There is no check, so the attack becomes a move: a general may fly the length of an open file and capture the other one, which ends the game. Leaving the generals facing is a legal thing to do and it normally loses. This is the only time a general leaves its palace.',
+          text: 'Xiangqi never lets the two generals sit on one file with nothing between them. Here they may, because a general may fly down that file and capture the other one. That ends the game, and it is the only time a general leaves its palace.',
         },
         {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_FACING_PIN,
           caption:
-            'Nothing stands on file e but the duck, so the duck is the only reason Red still has a general. It has to move somewhere every turn, and every point off the file hands Black the win.',
+            'Only the duck stands on file e. Every point off the file hands Black the general, and the duck has to move somewhere every turn.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'That makes the duck a defender as well as an obstacle, and an uncomfortable one, because it can never stand still. Holding a file costs you the duck every single turn, and the moment you want it somewhere else you have to find another way to block. The same trick works in reverse: open the file with a piece and you may still close it again with the duck in the same turn, since only the finished turn is judged.',
+          text: 'So the duck defends as well as blocks, and it is an uncomfortable defender: holding a file costs you the duck every single turn.',
         },
       ],
     },
@@ -134,7 +152,7 @@ export const duckXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'An engine game at full strength, eight seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in thirty of the hundred and twenty plies, and near the end Red is using it to hold a file its general cannot survive without.',
+          text: 'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.',
         },
         {
           kind: 'duck-xiangqi-replay',
@@ -150,7 +168,7 @@ export const duckXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'This game was chosen from eight played the same way, for how much the duck does in it. All seven decisive games are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.',
+          text: 'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.',
         },
       ],
     },
@@ -167,17 +185,13 @@ export const duckXiangqiArticle: Article = {
         },
       ],
     },
-    relatedClosing({
+    playClosing({
       heading: 'Where to next',
-      lead: 'Duck Xiangqi is not one of the games open for play here yet. Xiangqi is, and so is Fortress Xiangqi, the other variant on this board with a rule the original does not have.',
-      links: [
-        { label: 'Play xiangqi', href: '/?play=computer&gameSpecId=xiangqi', emphasis: 'primary' },
-        { label: 'Xiangqi rules', href: '/rules/xiangqi', emphasis: 'secondary' },
-        {
-          label: 'Fortress Xiangqi rules',
-          href: '/rules/fortress-xiangqi',
-          emphasis: 'secondary',
-        },
+      lead: 'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.',
+      playLabel: 'Play Duck Xiangqi',
+      playHref: '/?play=computer&gameSpecId=duck-xiangqi',
+      secondary: [
+        { label: 'Seven engine games', href: '/study/uMbk76wd', emphasis: 'secondary' },
       ],
     }),
   ],

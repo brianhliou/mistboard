@@ -53,6 +53,9 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   // one-line changes made together: status 'published' here and in
   // articles-data, and the 'duck-xiangqi' switch in variant-public-surfaces.
   'duck-xiangqi',
+  // The build post ships with the variant, for the same reason: it argues from
+  // positions a reader cannot go and set up yet, and links the rules page.
+  'duck-xiangqi-build',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -178,6 +181,12 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.',
+  },
+  'duck-xiangqi-build': {
+    title: 'Duck Xiangqi Is Live',
+    kind: 'article',
+    description:
+      'Duck Chess on the 9 by 10 board. Chess.com made the original an official variant in 2022; nobody had carried it to xiangqi, where four different rules ask whether a point is occupied instead of one.',
   },
   'duck-xiangqi': {
     title: 'Duck Xiangqi Rules',

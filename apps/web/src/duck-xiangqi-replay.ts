@@ -131,6 +131,10 @@ export function mountDuckXiangqiReplay(
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq replay-pane';
   const board = document.createElement('div');
+  // Own class because this widget renders the LIVE board, not an
+  // `xq-article-svg`, so the per-article width overrides in articles.css that
+  // size the other xq replays cannot reach it.
+  board.className = 'dkx-replay-board';
   frame.append(board);
 
   const controls = document.createElement('div');
@@ -155,7 +159,7 @@ export function mountDuckXiangqiReplay(
 
   const slider = document.createElement('input');
   slider.type = 'range';
-  slider.className = 'xq-replay-slider';
+  slider.className = 'xq-replay-slider dkx-replay-slider';
   slider.min = '0';
   slider.max = String(total);
   slider.step = '1';

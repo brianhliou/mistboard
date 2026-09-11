@@ -15,6 +15,7 @@
 // retyped, and the crosses are a diff of the kernel with and without the duck.
 
 import {
+  allDuckXiangqiSquares,
   createInitialDuckXiangqiState,
   type DuckXiangqiBoard,
   type DuckXiangqiSquare,
@@ -41,7 +42,9 @@ import { duckPieceMarks } from './xiangqi-piece-sets.js';
 // up with two-board rows everywhere else in the xiangqi family.
 const PAIR_W = XQ_BOARD_W * 2 + 28;
 const PAIR_GAP_X = XQ_BOARD_W + 28;
-const FIGURE_H = XQ_BOARD_H + 52;
+// 28 for the label above the board and 6 to breathe. It was +52, which left 24
+// units of empty canvas UNDER every board and read as a gap before the caption.
+const FIGURE_H = XQ_BOARD_H + 34;
 // xqBoardSvg draws its board at y + 28, under the label. An overlay has to use
 // the same offset or the duck lands 28px above the point it is standing on.
 const BOARD_Y_OFFSET = 28;
@@ -79,11 +82,23 @@ function blockedByDuck(
  * on a flat yellow circle, which ignored the picker and did not match the duck
  * a reader meets the moment they open a game.
  */
-function duckOverlay(square: DuckXiangqiSquare, x0: number, y0: number): string {
+function duckOverlay(
+  square: DuckXiangqiSquare,
+  x0: number,
+  y0: number,
+  options: { ring?: boolean } = {},
+): string {
   const { file, rank } = xqCoord(square as XiangqiSquare);
   const { x, y } = xqPoint(file, rank, 'red', x0, y0 + BOARD_Y_OFFSET);
   const size = xqPieceSize();
+  // The ring says "this is where it just landed", the same job the board's
+  // last-move marker does in a live game. Drawn UNDER the duck so the art stays
+  // the thing you look at.
+  const ring = options.ring
+    ? `<circle class="xq-live-lastmove-ring" cx="${x}" cy="${y}" r="${size / 2 + 3}" fill="none" stroke="#15781B" stroke-width="3" opacity="0.85"/>`
+    : '';
   return [
+    ring,
     `<g aria-label="duck">`,
     `<g transform="translate(${x - size / 2},${y - size / 2}) scale(${size / 100})">`,
     duckPieceMarks(activeXiangqiPieceSet),
@@ -100,16 +115,15 @@ const START_BOARD = createInitialDuckXiangqiState('duck-rules-start').board;
 
 export const DUCK_XIANGQI_START_BOARD = () =>
   xqSvg(
-    XQ_BOARD_W,
+    PAIR_W,
     FIGURE_H,
     xqBoardSvg({
       state: state('duck-rules-start', START_BOARD),
-      x: 0,
+      x: PAIR_GAP_X / 2,
       y: 0,
       label: 'STARTING POSITION, NO DUCK YET',
       perspective: 'red',
     }),
-    'xq-article-svg--hero',
   );
 
 export const DUCK_XIANGQI_THUMBNAIL = () =>
@@ -122,7 +136,7 @@ export const DUCK_XIANGQI_THUMBNAIL = () =>
       y: 0,
       label: 'DUCK XIANGQI',
       perspective: 'red',
-      overlay: duckOverlay('e5', 0, 0),
+      overlay: duckOverlay('e3', PAIR_GAP_X / 2, 0),
     }),
   );
 
@@ -143,6 +157,25 @@ const TURN_AFTER_MOVE: DuckXiangqiBoard = (() => {
   return board;
 })();
 
+// For the INTRO: the board one full turn in, so a reader sees the duck before
+// any rule is explained. Deliberately the real position after Red's first turn
+// rather than the opening array with a duck dropped onto it: the duck is not on
+// the board at the start, and the very next section says so, so a composed
+// start-with-duck figure would contradict the page two paragraphs later.
+export const DUCK_XIANGQI_INTRO_BOARD = () =>
+  xqSvg(
+    PAIR_W,
+    FIGURE_H,
+    xqBoardSvg({
+      state: state('duck-rules-intro', TURN_AFTER_MOVE),
+      x: PAIR_GAP_X / 2,
+      y: 0,
+      label: 'ONE TURN IN',
+      perspective: 'red',
+      arrows: [{ from: 'b1' as XiangqiSquare, to: 'c3' as XiangqiSquare }],
+    }) + duckOverlay('c8', PAIR_GAP_X / 2, 0, { ring: true }),
+  );
+
 export const DUCK_XIANGQI_TURN_PAIR = () =>
   xqSvg(
     PAIR_W,
@@ -162,7 +195,7 @@ export const DUCK_XIANGQI_TURN_PAIR = () =>
         y: 0,
         label: 'THEN: THE DUCK',
         perspective: 'red',
-        overlay: duckOverlay('c8', PAIR_GAP_X, 0),
+        overlay: duckOverlay('c8', PAIR_GAP_X, 0, { ring: true }),
       }),
     ].join(''),
   );
@@ -199,6 +232,44 @@ export const DUCK_XIANGQI_HORSE_PAIR = () =>
     ].join(''),
   );
 
+// c1, a real elephant point. The piece is confined to seven points on its own
+// half, so putting it anywhere else gives it no moves at all and the figure
+// silently shows nothing.
+const ELEPHANT_BOARD: DuckXiangqiBoard = { c1: { color: 'red', role: 'elephant' } };
+
+// The elephant's eye is the point HALFWAY along its two-step diagonal, and the
+// duck fills it exactly as a piece would. Drawn as its own figure rather than
+// folded into the horse pair because the two blocks are different shapes: the
+// horse's leg is orthogonally adjacent, the elephant's eye is diagonal, and a
+// reader who has only seen the horse will guess the wrong point.
+export const DUCK_XIANGQI_ELEPHANT_PAIR = () =>
+  xqSvg(
+    PAIR_W,
+    FIGURE_H,
+    [
+      xqBoardSvg({
+        state: state('duck-rules-elephant-open', ELEPHANT_BOARD),
+        x: 0,
+        y: 0,
+        label: 'ELEPHANT, OPEN',
+        perspective: 'red',
+        dots: dots(duckXiangqiMovesFrom(ELEPHANT_BOARD, undefined, 'c1')),
+      }),
+      xqBoardSvg({
+        state: state('duck-rules-elephant-blocked', ELEPHANT_BOARD),
+        x: PAIR_GAP_X,
+        y: 0,
+        label: 'ELEPHANT, EYE FILLED',
+        perspective: 'red',
+        dots: [
+          ...dots(duckXiangqiMovesFrom(ELEPHANT_BOARD, 'd2', 'c1')),
+          ...blockedByDuck(ELEPHANT_BOARD, 'd2', 'c1'),
+        ],
+        overlay: duckOverlay('d2', PAIR_GAP_X, 0),
+      }),
+    ].join(''),
+  );
+
 const CANNON_BOARD: DuckXiangqiBoard = {
   e3: { color: 'red', role: 'cannon' },
   e8: { color: 'black', role: 'chariot' },
@@ -214,11 +285,11 @@ function fileEOnly(squares: readonly DuckXiangqiSquare[]): DuckXiangqiSquare[] {
 export const DUCK_XIANGQI_CANNON_SCREEN = () => {
   const targets = fileEOnly(duckXiangqiMovesFrom(CANNON_BOARD, 'e6', 'e3'));
   return xqSvg(
-    XQ_BOARD_W,
+    PAIR_W,
     FIGURE_H,
     xqBoardSvg({
       state: state('duck-rules-cannon', CANNON_BOARD),
-      x: 0,
+      x: PAIR_GAP_X / 2,
       y: 0,
       label: 'THE DUCK IS A SCREEN',
       perspective: 'red',
@@ -226,7 +297,7 @@ export const DUCK_XIANGQI_CANNON_SCREEN = () => {
         square: square as XiangqiSquare,
         capture: CANNON_BOARD[square] !== undefined,
       })),
-      overlay: duckOverlay('e6', 0, 0),
+      overlay: duckOverlay('e6', PAIR_GAP_X / 2, 0),
     }),
   );
 };
@@ -243,36 +314,76 @@ export const DUCK_XIANGQI_CANNON_SCREEN = () => {
 // blocked from each other. Filtered from the kernel's own answer with the
 // kernel's own threat predicate, never hand-listed, so this figure follows the
 // rule if the rule moves again.
+// Two generals and nothing else. An earlier version parked a chariot on the
+// a-file purely so the illustrated turn had a piece move to feed
+// duckXiangqiDuckDestinations; it drew the eye and implied the piece mattered.
+// The safe placements are a property of the BOARD, so they are read straight
+// off the kernel's facing predicate instead.
 const FACING_BOARD: DuckXiangqiBoard = {
   e2: { color: 'red', role: 'general' },
   e9: { color: 'black', role: 'general' },
-  a4: { color: 'red', role: 'soldier' },
 };
-
-/** The board the illustrated turn produces, before the duck lands. */
-const FACING_AFTER_MOVE: DuckXiangqiBoard = (() => {
-  const board = { ...FACING_BOARD };
-  const soldier = board.a4;
-  delete board.a4;
-  if (soldier) board.a5 = soldier;
-  return board;
-})();
 
 export const DUCK_XIANGQI_FACING_PIN = () =>
   xqSvg(
-    XQ_BOARD_W,
+    PAIR_W,
     FIGURE_H,
     xqBoardSvg({
       state: state('duck-rules-facing', FACING_BOARD),
-      x: 0,
+      x: PAIR_GAP_X / 2,
       y: 0,
       label: 'THE ONLY PLACEMENTS THAT SURVIVE',
       perspective: 'red',
+      // Every empty point the duck could take that still keeps the generals
+      // apart. Read from the kernel's own threat predicate, so this figure
+      // follows the rule if the rule moves again.
       dots: dots(
-        duckXiangqiDuckDestinations(FACING_BOARD, 'e5', 'a4', 'a5').filter(
-          (square) => !duckXiangqiGeneralsFace(FACING_AFTER_MOVE, square),
+        allDuckXiangqiSquares().filter(
+          (square) =>
+            FACING_BOARD[square] === undefined &&
+            square !== 'e3' &&
+            !duckXiangqiGeneralsFace(FACING_BOARD, square),
         ),
       ),
-      overlay: duckOverlay('e5', 0, 0),
+      overlay: duckOverlay('e3', PAIR_GAP_X / 2, 0),
     }),
+  );
+
+// ── For the blog post, not the rules page ──────────────────────────────────
+
+// Move 37 of a self-play game (game-4, ply 74 of 120). The duck on e2 is a
+// cannon platform for BOTH sides at once: Red's cannon on g2 and Black's on d2
+// bear on each other along rank 2, and each capture exists only because the
+// duck is between them. Red is to move, so Red collects; on any other turn it
+// would be Black. Reproduced from the recorded game, not composed.
+const SHARED_SCREEN_BOARD: DuckXiangqiBoard = {
+  e1: { color: 'red', role: 'general' },
+  g2: { color: 'red', role: 'cannon' },
+  d2: { color: 'black', role: 'cannon' },
+  c4: { color: 'black', role: 'cannon' },
+  e10: { color: 'black', role: 'general' },
+};
+
+export const DUCK_XIANGQI_SHARED_SCREEN = () =>
+  xqSvg(
+    PAIR_W,
+    FIGURE_H,
+    xqBoardSvg({
+      state: state('duck-blog-shared-screen', SHARED_SCREEN_BOARD),
+      x: PAIR_GAP_X / 2,
+      y: 0,
+      label: 'ONE PLATFORM, TWO ARMIES',
+      perspective: 'red',
+      // Capture MARKERS, not arrows, and both of them. Two arrows along the same
+      // rank in opposite directions collapse into one line with a single head,
+      // which reads as the wrong side capturing; and a single arrow does not
+      // survive either, because d2 and e2 are adjacent, so its head lands under
+      // the neighbouring piece's disc and only the middle segment shows.
+      // Ringing both targets says what is true without implying a direction:
+      // each cannon can take the other, and the caption says who is to move.
+      dots: [
+        { square: 'd2' as XiangqiSquare, capture: true },
+        { square: 'g2' as XiangqiSquare, capture: true },
+      ],
+    }) + duckOverlay('e2', PAIR_GAP_X / 2, 0),
   );

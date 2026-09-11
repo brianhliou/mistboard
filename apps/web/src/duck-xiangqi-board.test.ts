@@ -173,11 +173,16 @@ describe('duckXiangqiBoardSvg', () => {
         pieceSet,
       });
       expect(svg, pieceSet).toContain('/piece-sets/xiangqi/animal-dobutsu/duck.png');
-      // Wherever the set draws a ring, that ring is NEUTRAL: it is how this
-      // board says "no seat", and the duck has none. `international-flat` is
-      // the one set with no disc at all, so it has no ring to make neutral.
+      // Wherever the set draws a ring, that ring is the DUCK's own gold
+      // (#b8860b, the variant's accent), never a seat's red or black: it is how
+      // this board says "no seat", and the duck has none. It was a neutral grey
+      // until 2026-09-11, which said the same thing by being absent and read as
+      // a missing ring at board size. `international-flat` is the one set with
+      // no disc at all, so it has no ring to colour. Asserted positively only:
+      // the SVG is the WHOLE board, so a "never red" check would trip on the
+      // red pieces standing next to the duck.
       if (pieceSet !== 'international-flat') {
-        expect(svg, pieceSet).toContain('#6f7b83');
+        expect(svg, pieceSet).toContain('#b8860b');
       }
     }
   });

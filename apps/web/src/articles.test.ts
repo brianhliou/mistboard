@@ -85,6 +85,10 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The Duck Xiangqi build post is a DRAFT and only appears because this
+      // case stubs DEV. It ships with the variant, for the same reason the
+      // rules page does: it argues from positions nobody can set up yet.
+      '/blog/duck-xiangqi-build',
       // The jieqi pair shipped as one batch on 2026-09-03, because each of the
       // five jieqi pages links another in prose and a published page cannot link
       // a draft. They are dated a day apart anyway, the way the champion pair
