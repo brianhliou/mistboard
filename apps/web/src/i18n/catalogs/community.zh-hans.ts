@@ -341,6 +341,7 @@ export const ZH_HANS_COMMUNITY = {
   'forum.categoryRestricted': '{category}为受限版块',
   'forum.noTopicsOnPage': '本页没有主题。',
   'forum.markdownAvailable': ' 可用于排版。',
+  'forum.embedHint': '将对局、研究或残局链接单独放在一行，即可显示为棋盘。',
   'forum.etiquetteLink': '论坛礼仪',
   'forum.postDeleted': ' · 已删除 {date}',
   'forum.quote': '引用',

@@ -1405,6 +1405,138 @@ describe('forum pages', () => {
     );
   });
 
+  describe('link expansion', () => {
+    function topicWith(bodyText: string, oembed: (url: string) => Response | null) {
+      const oembedUrls: string[] = [];
+      vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+        const url = String(input);
+        if (url.startsWith('/api/forum/topics/topic_strategy')) {
+          return json({
+            topic: {
+              ...topic,
+              posts: [
+                {
+                  id: 'post_1',
+                  author: { handle: 'alice', displayName: 'Alice' },
+                  bodyText,
+                  createdAt: '2026-06-01T00:00:00.000Z',
+                  updatedAt: '2026-06-01T00:00:00.000Z',
+                },
+              ],
+            },
+          });
+        }
+        if (url.startsWith('/api/auth/me')) return json({ user: null });
+        if (url.startsWith('/api/oembed?url=')) {
+          const target = decodeURIComponent(url.slice('/api/oembed?url='.length));
+          oembedUrls.push(target);
+          return oembed(target) ?? new Response('{"error":"not_found"}', { status: 404 });
+        }
+        throw new Error(`unexpected fetch ${url}`);
+      });
+      return oembedUrls;
+    }
+    const frame = (title: string) => json({ title, width: 760, height: 700, html: '<iframe>' });
+    const settle = () => new Promise((resolve) => setTimeout(resolve, 0));
+
+    it('expands a Mistboard link that is alone on its line into a same-origin frame', async () => {
+      const asked = topicWith(
+        'My best fog game yet:\nhttps://mistboard.com/dark-xiangqi/game/room-1/black#30\nSee move 30.',
+        () => frame('Alice vs Bob · red-wins · Mistboard'),
+      );
+      const root = document.createElement('div');
+      const { mountForumTopic } = await import('./forum.js');
+      await mountForumTopic(root, 'topic_strategy');
+      await settle();
+
+      expect(asked).toEqual(['https://mistboard.com/dark-xiangqi/game/room-1/black#30']);
+      const figure = root.querySelector<HTMLElement>('.forum-post-body .forum-embed');
+      expect(figure).not.toBeNull();
+      expect(figure?.classList.contains('forum-embed-live')).toBe(true);
+      const iframe = figure?.querySelector<HTMLIFrameElement>('iframe.forum-embed-frame');
+      // Same-origin path, never the pasted URL: the tenant segment is not
+      // trusted, and the embed page reads the game's own record. The side and
+      // the ply ride along, in lichess's spelling or ours.
+      expect(iframe?.getAttribute('src')).toBe('/embed/game/room-1?ply=30&pov=black');
+      expect(iframe?.getAttribute('loading')).toBe('lazy');
+      expect(iframe?.title).toBe('Alice vs Bob · red-wins · Mistboard');
+      // The link survives as the caption, so the permalink is still one tap.
+      const caption = figure?.querySelector<HTMLAnchorElement>('.forum-embed-caption a');
+      expect(caption?.getAttribute('href')).toBe(
+        'https://mistboard.com/dark-xiangqi/game/room-1/black#30',
+      );
+      // The prose around it is untouched.
+      const paragraphs = Array.from(root.querySelectorAll('.forum-post-paragraph'));
+      expect(paragraphs.map((p) => p.textContent)).toEqual([
+        'My best fog game yet:',
+        'See move 30.',
+      ]);
+    });
+
+    it('leaves a link that is not the whole line, or not a board, as a link', async () => {
+      const asked = topicWith(
+        [
+          'Look at https://mistboard.com/game/room-1 here',
+          'https://mistboard.com/rules/fog-chess',
+          'https://example.com/game/room-1',
+          '> https://mistboard.com/game/room-2',
+        ].join('\n'),
+        () => frame('never'),
+      );
+      const root = document.createElement('div');
+      const { mountForumTopic } = await import('./forum.js');
+      await mountForumTopic(root, 'topic_strategy');
+      await settle();
+
+      // Mid-sentence, a page, another site, and a quoted line: none asked the
+      // provider, none became a frame.
+      expect(asked).toEqual([]);
+      expect(root.querySelector('.forum-embed')).toBeNull();
+      expect(root.querySelector('iframe')).toBeNull();
+      const links = Array.from(root.querySelectorAll<HTMLAnchorElement>('.forum-post-body a'));
+      expect(links).toHaveLength(4);
+    });
+
+    it('keeps the link when the provider refuses: an unfinished game is never framed', async () => {
+      const asked = topicWith('https://mistboard.com/dark-chess/game/live-fog-game', () => null);
+      const root = document.createElement('div');
+      const { mountForumTopic } = await import('./forum.js');
+      await mountForumTopic(root, 'topic_strategy');
+      await settle();
+
+      expect(asked).toEqual(['https://mistboard.com/dark-chess/game/live-fog-game']);
+      const figure = root.querySelector<HTMLElement>('.forum-embed');
+      expect(figure?.classList.contains('forum-embed-live')).toBe(false);
+      expect(root.querySelector('iframe')).toBeNull();
+      expect(
+        figure?.querySelector<HTMLAnchorElement>('.forum-embed-caption a')?.getAttribute('href'),
+      ).toBe('https://mistboard.com/dark-chess/game/live-fog-game');
+    });
+
+    it('caps the frames per post and asks the provider once per distinct URL', async () => {
+      const lines = Array.from({ length: 12 }, (_, i) => `https://mistboard.com/game/room-${i}`);
+      // The first URL is pasted twice: one provider call, two frames.
+      const asked = topicWith([lines[0], ...lines].join('\n'), () => frame('t'));
+      const root = document.createElement('div');
+      const { mountForumTopic } = await import('./forum.js');
+      await mountForumTopic(root, 'topic_strategy');
+      await settle();
+
+      expect(root.querySelectorAll('.forum-embed')).toHaveLength(10);
+      expect(root.querySelectorAll('iframe')).toHaveLength(10);
+      expect(new Set(asked).size).toBe(asked.length);
+      // Past the cap the lines are ordinary autolinked prose.
+      const overflow = Array.from(
+        root.querySelectorAll<HTMLAnchorElement>('.forum-post-paragraph a'),
+      );
+      expect(overflow.map((a) => a.getAttribute('href'))).toEqual([
+        'https://mistboard.com/game/room-9',
+        'https://mistboard.com/game/room-10',
+        'https://mistboard.com/game/room-11',
+      ]);
+    });
+  });
+
   it('renders topic posts as escaped plaintext', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);

@@ -5,6 +5,7 @@ import {
   embedAnalysisRouteFromPath,
   embedChannelFromSearch,
   embedColorFromSearch,
+  embedPovFromSearch,
   embedPuzzleRouteFromPath,
   embedRouteFromPath,
   isEmbedTvPath,
@@ -40,6 +41,14 @@ describe('embed query parameters', () => {
     expect(embedChannelFromSearch('')).toBe('top');
     expect(embedChannelFromSearch('?channel=../x')).toBe('top');
     expect(embedChannelFromSearch('?channel=Xiangqi')).toBe('top');
+  });
+
+  it('reads pov=white|black|truth and nothing else', () => {
+    expect(embedPovFromSearch('?pov=black')).toBe('black');
+    expect(embedPovFromSearch('?pov=white')).toBe('white');
+    expect(embedPovFromSearch('?pov=truth')).toBe('truth');
+    expect(embedPovFromSearch('?pov=red')).toBeNull();
+    expect(embedPovFromSearch('')).toBeNull();
   });
 
   it('reads color=black and defaults to red', () => {

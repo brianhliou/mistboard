@@ -54,12 +54,13 @@ test('a format other than json is 501, as the spec requires', async () => {
   assert.equal(r.status, 501);
 });
 
-test('a url that is neither a study chapter nor a game is not embeddable', async () => {
+test('a url that is a page rather than a frameable surface is not embeddable', async () => {
   for (const url of [
     'https://mistboard.com/blog/xiangqi-champions',
     'https://mistboard.com/watch',
     'https://mistboard.com/game',
-    'https://mistboard.com/embed/tv',
+    'https://mistboard.com/puzzles',
+    'https://mistboard.com/analysis',
   ]) {
     const r = await call(`/api/oembed?url=${encodeURIComponent(url)}`);
     assert.equal(r.status, 404, url);
@@ -96,4 +97,34 @@ test('accepts both the reader permalink and the embed path', async () => {
     // "not_embeddable" branch: the URL parsed.
     assert.notDeepEqual(r.body, { error: 'not_embeddable' }, url);
   }
+});
+
+test('tv and the analysis board embed without a store, from their embed paths only', async () => {
+  const tv = await call('/api/oembed?url=https://mistboard.com/embed/tv?channel=xiangqi');
+  assert.equal(tv.status, 200);
+  const tvBody = tv.body as { html: string; title: string };
+  assert.match(tvBody.html, /src="https:\/\/mistboard\.com\/embed\/tv\?channel=xiangqi"/);
+  assert.equal(tvBody.title, 'Mistboard TV · xiangqi');
+
+  const analysis = await call('/api/oembed?url=https://mistboard.com/embed/analysis');
+  assert.equal(analysis.status, 200);
+  assert.match(
+    (analysis.body as { html: string }).html,
+    /src="https:\/\/mistboard\.com\/embed\/analysis\/xiangqi"/,
+  );
+});
+
+test("today's puzzle embeds without a store; a puzzle by id is looked up", async () => {
+  const daily = await call('/api/oembed?url=https://mistboard.com/embed/puzzle');
+  assert.equal(daily.status, 200);
+  assert.match(
+    (daily.body as { html: string }).html,
+    /src="https:\/\/mistboard\.com\/embed\/puzzle"/,
+  );
+
+  // No store in this harness: an unknown id is a plain not_found, never a
+  // crash, and never the not_embeddable that would mean the URL did not parse.
+  const byId = await call('/api/oembed?url=https://mistboard.com/puzzles/no-such-puzzle');
+  assert.equal(byId.status, 404);
+  assert.deepEqual(byId.body, { error: 'not_found' });
 });

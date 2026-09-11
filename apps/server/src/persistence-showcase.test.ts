@@ -59,7 +59,7 @@ async function seed(games: SeedGame[]): Promise<void> {
 }
 
 definePersistenceTests('showcase + browse queries', () => {
-  test('listShowcaseGames recency-leads, includes substantial PvP, excludes short/abandoned', async () => {
+  test('listShowcaseGames recency-leads, includes substantial PvP, excludes short games', async () => {
     const t = (min: number) => new Date(Date.UTC(2026, 5, 1, 12, min, 0));
     await seed([
       {
@@ -95,6 +95,14 @@ definePersistenceTests('showcase + browse queries', () => {
         endedAt: t(11),
       },
       {
+        roomId: 'sc-pvp-abandon-short',
+        mode: 'pvp',
+        result: 'white-wins',
+        termination: 'abandonment',
+        plyCount: 8,
+        endedAt: t(12),
+      },
+      {
         roomId: 'sc-eve-x',
         mode: 'eve',
         result: 'white-wins',
@@ -109,11 +117,14 @@ definePersistenceTests('showcase + browse queries', () => {
     // Recency-lead: the most-recent finished HUMAN game leads, so the showcase
     // reflects the site's latest real activity; the tiered interleave then fills.
     // The EvE game at t20 is fresher than all of them and still never appears.
-    assert.deepEqual(ids.slice(0, 2), ['sc-pvp-kc', 'sc-pvp-timeout']);
+    // A 50-ply walk-away is a game someone played (rule since 2026-09-10): it
+    // leads on recency like any other finish past the floor.
+    assert.deepEqual(ids.slice(0, 3), ['sc-pvp-abandon', 'sc-pvp-kc', 'sc-pvp-timeout']);
     assert.ok(!ids.includes('sc-eve-x'), 'engine-vs-engine never fronts the homepage');
-    // Under the ply floor and abandonments are not demo-worthy.
+    // The ply floor is the whole bar: short games fall to it whatever the
+    // termination, including an 8-ply abandonment fresher than everything else.
     assert.ok(!ids.includes('sc-pvp-short'));
-    assert.ok(!ids.includes('sc-pvp-abandon'));
+    assert.ok(!ids.includes('sc-pvp-abandon-short'));
   });
 
   // Regression (2026-07-30): the recency lead is elected over the full tiered
@@ -165,8 +176,8 @@ definePersistenceTests('showcase + browse queries', () => {
     assert.equal(games.length, 2, 'the injected lead drops the tail, it does not grow the pool');
   });
 
-  // The human floor is 20 plies: a decisive game someone actually sat through is
-  // real activity, and abandonment filtering already covers quits.
+  // The human floor is 20 plies: a game someone actually sat through is real
+  // activity, and the floor alone covers the rage-quits.
   test('listShowcaseGames admits 20+ ply human games and still rejects shorter ones', async () => {
     const t = (min: number) => new Date(Date.UTC(2026, 5, 1, 16, min, 0));
     await seed([

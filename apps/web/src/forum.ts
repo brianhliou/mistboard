@@ -1,4 +1,10 @@
 import './forum.css';
+import {
+  type EmbedTarget,
+  embedPathForTarget,
+  embedTargetFromUrl,
+  OEMBED_ENDPOINT,
+} from '@mistboard/game';
 import { translationNeeded } from './forum-language.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -1494,6 +1500,7 @@ function postBodyNodes(text: string): HTMLElement[] {
     quoteLines = [];
   };
 
+  let embeds = 0;
   for (const line of text.split(/\r?\n/)) {
     if (line.startsWith('>')) {
       flushParagraph();
@@ -1501,6 +1508,13 @@ function postBodyNodes(text: string): HTMLElement[] {
       continue;
     }
     flushQuote();
+    const embed = embeds < FORUM_EMBEDS_PER_POST ? embedLineTarget(line) : null;
+    if (embed) {
+      flushParagraph();
+      nodes.push(forumEmbedNode(embed));
+      embeds += 1;
+      continue;
+    }
     if (line.trim().length === 0 && paragraphLines.length === 0) continue;
     paragraphLines.push(line);
   }
@@ -1508,6 +1522,92 @@ function postBodyNodes(text: string): HTMLElement[] {
   flushQuote();
   flushParagraph();
   return nodes;
+}
+
+// Link expansion, the way lichess's forum does it: a line that is ONLY a
+// Mistboard URL becomes the board that URL shows, and every other link stays a
+// link. Whole-line is the whole rule; a game mentioned mid-sentence is a
+// reference, a game on its own line is an exhibit. Same-origin iframes of the
+// /embed/* pages, so the forum shows exactly what an external site framing us
+// would, and one code path serves every variant the embed pages already draw.
+//
+// Each frame boots the app, which is why there is a cap and why the frames are
+// lazy: a thread of ten games costs nothing until the reader scrolls to them.
+const FORUM_EMBEDS_PER_POST = 10;
+
+type ForumEmbed = { url: string; target: EmbedTarget };
+
+function embedLineTarget(line: string): ForumEmbed | null {
+  const trimmed = line.trim();
+  if (!/^https?:\/\/\S+$/.test(trimmed)) return null;
+  let url: URL;
+  try {
+    url = new URL(trimmed);
+  } catch {
+    return null;
+  }
+  if (!isMistboardOrigin(url)) return null;
+  const target = embedTargetFromUrl(url.href);
+  return target ? { url: trimmed, target } : null;
+}
+
+function isMistboardOrigin(url: URL): boolean {
+  const host = url.hostname.toLowerCase();
+  return host === 'mistboard.com' || host === 'www.mistboard.com' || url.origin === location.origin;
+}
+
+// The figure starts as the link alone and earns its board from the oEmbed
+// provider: the same endpoint that answers WordPress or Discourse says whether
+// this URL is embeddable right now (finished, public, extant). Anything but a
+// 200 leaves the link as it was, so an in-progress fog game, a private study, or
+// a deleted puzzle never shows a frame that could only say "unavailable".
+function forumEmbedNode(embed: ForumEmbed): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'forum-embed';
+  const caption = document.createElement('figcaption');
+  caption.className = 'forum-embed-caption';
+  caption.append(forumPostLink(embed.url) ?? document.createTextNode(embed.url));
+  figure.append(caption);
+  void hydrateForumEmbed(figure, embed);
+  return figure;
+}
+
+type OEmbedFrame = { title: string; width: number; height: number };
+
+// One provider round trip per distinct URL per page: the same game quoted in
+// three replies is asked about once.
+const oembedByUrl = new Map<string, Promise<OEmbedFrame | null>>();
+
+function oembedFrame(url: string): Promise<OEmbedFrame | null> {
+  let pending = oembedByUrl.get(url);
+  if (!pending) {
+    pending = fetch(`${OEMBED_ENDPOINT}?url=${encodeURIComponent(url)}`, {
+      headers: { accept: 'application/json' },
+    })
+      .then(async (response) => {
+        if (!response.ok) return null;
+        const body = (await response.json()) as Partial<OEmbedFrame>;
+        if (typeof body.width !== 'number' || typeof body.height !== 'number') return null;
+        return { title: body.title ?? 'Mistboard', width: body.width, height: body.height };
+      })
+      .catch(() => null);
+    oembedByUrl.set(url, pending);
+  }
+  return pending;
+}
+
+async function hydrateForumEmbed(figure: HTMLElement, embed: ForumEmbed): Promise<void> {
+  const frame = await oembedFrame(embed.url);
+  // A preview re-render or a page change can have replaced the figure by now.
+  if (!frame || !figure.parentNode) return;
+  const iframe = document.createElement('iframe');
+  iframe.className = 'forum-embed-frame';
+  iframe.src = embedPathForTarget(embed.target);
+  iframe.setAttribute('loading', 'lazy');
+  iframe.title = frame.title;
+  iframe.style.aspectRatio = `${frame.width} / ${frame.height}`;
+  figure.prepend(iframe);
+  figure.classList.add('forum-embed-live');
 }
 
 function appendLinkedText(parent: HTMLElement, text: string): void {
@@ -1796,7 +1896,11 @@ function forumMarkdownNote(): HTMLElement {
   markdown.rel = 'nofollow noopener noreferrer';
   markdown.textContent = t('forum.markdown');
   const formatting = document.createElement('span');
-  formatting.append(markdown, document.createTextNode(t('forum.markdownAvailable')));
+  formatting.append(
+    markdown,
+    document.createTextNode(t('forum.markdownAvailable')),
+    document.createTextNode(` ${t('forum.embedHint')}`),
+  );
   const etiquette = document.createElement('a');
   etiquette.className = 'forum-form-note-etiquette';
   etiquette.href = '/forum/etiquette';

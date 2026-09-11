@@ -49,6 +49,7 @@ import {
 } from './puzzles/api.js';
 import { feedbackPanel } from './puzzles/detail-panels.js';
 import { moveListPanel } from './puzzles/move-list.js';
+import { puzzlePrompt } from './puzzles/prompt.js';
 import { renderQueuePanel } from './puzzles/queue-panel.js';
 import {
   allPuzzleBoardAdapters,
@@ -391,7 +392,7 @@ function createPuzzleSession(puzzle: PuzzleDetail): PuzzleSession {
     selectedSquare: null,
     selectedDrop: null,
     draggingFrom: null,
-    feedback: { kind: 'neutral', text: t('puzzle.findBestMove') },
+    feedback: { kind: 'neutral', text: puzzlePrompt(puzzle) },
     submitting: false,
     solved: false,
     failed: false,

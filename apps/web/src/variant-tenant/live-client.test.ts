@@ -242,10 +242,46 @@ describe('tenant live-client core', () => {
     });
     const rows = [...h.refs().moveList.querySelectorAll('li')];
     expect(rows).toHaveLength(1);
-    const cells = [...rows[0].querySelectorAll('span')];
-    expect(cells[0].textContent).toBe('1.');
-    expect(cells[1].textContent).toBe('a1-a2');
-    expect(cells[2].textContent).toBe('b1-b2');
+    // Number cell stays a span; both played plies are jump buttons.
+    expect(rows[0].querySelector('span')?.textContent).toBe('1.');
+    const cells = [...rows[0].querySelectorAll('button.move-jump')];
+    expect(cells.map((cell) => cell.textContent)).toEqual(['a1-a2', 'b1-b2']);
+  });
+
+  it('scrubs to the clicked ply from the move list', () => {
+    const h = createHarness();
+    // Fed ply by ply so the capture policy banks a snapshot per position: a
+    // fresh hello into a played game holds ONE view, and a jump inside a
+    // single-snapshot history correctly stays live (there is nowhere to go).
+    h.feedHello({ events: [], state: view({}) });
+    h.feedEvent({
+      event: moveEvent('red', 'a1', 'a2', 1),
+      state: view({ squares: { a2: 'red' } }),
+    });
+    h.feedEvent({
+      event: moveEvent('blue', 'b1', 'b2', 2),
+      state: view({ squares: { a2: 'red', b2: 'blue' } }),
+    });
+    expect(h.client.replay.isLive()).toBe(true);
+    const first = h.refs().moveList.querySelector<HTMLButtonElement>('button.move-jump');
+    first?.click();
+    // Off live, anchored at the clicked ply, and the list marks it active.
+    expect(h.client.replay.isLive()).toBe(false);
+    expect(h.client.replay.activePly()).toBe(1);
+    expect(h.refs().moveList.querySelector('.active')?.textContent).toBe('a1-a2');
+  });
+
+  it('leaves an unplayed cell inert rather than offering a jump to it', () => {
+    const h = createHarness();
+    // One ply played: blue's half of the row is an empty, unclickable cell.
+    h.feedHello({
+      events: [moveEvent('red', 'a1', 'a2', 1)],
+      state: view({ squares: { a2: 'red' } }),
+    });
+    const row = h.refs().moveList.querySelector('li');
+    expect(row?.querySelectorAll('button.move-jump')).toHaveLength(1);
+    expect(row?.lastElementChild?.tagName).toBe('SPAN');
+    expect(row?.lastElementChild?.textContent).toBe('');
   });
 
   it('masks redacted plies in fog mode instead of leaving them blank', () => {

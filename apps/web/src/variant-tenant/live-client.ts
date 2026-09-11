@@ -737,19 +737,36 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     activePly: number | null,
     plyCount: number,
   ): HTMLElement {
-    const span = document.createElement('span');
     // A ply within the played range with no notation is a redacted opponent
     // move (fog): render the masked placeholder, never the move.
     const masked = moveList.masked && !text && ply <= plyCount;
-    span.className = [
+    const played = ply <= plyCount;
+    // Only a ply this client can actually display is a jump target, matching the
+    // chess shell (live-move-list.ts): a masked ply is one the server never sent
+    // and an unplayed cell is empty, so offering either as a control would
+    // promise a position that does not exist here. The jump itself is fog-safe
+    // by construction — jumpToPly picks an index in the captured snapshot
+    // history and never reconstructs a view the server withheld.
+    const jumpable = played && !masked && !!text;
+    const cell = document.createElement(jumpable ? 'button' : 'span');
+    cell.className = [
       `${moveList.cellPrefix}__move`,
+      jumpable ? 'move-jump' : '',
       masked ? 'masked' : '',
       activePly === ply ? 'active' : '',
     ]
       .filter(Boolean)
       .join(' ');
-    span.textContent = ply > plyCount ? '' : (text ?? '...');
-    return span;
+    cell.textContent = played ? (text ?? '...') : '';
+    if (cell instanceof HTMLButtonElement) {
+      cell.type = 'button';
+      cell.title = `Move ${Math.ceil(ply / 2)}`;
+      cell.addEventListener('click', () => {
+        replay.jumpToPly(ply);
+        renderAll();
+      });
+    }
+    return cell;
   }
 
   function visibleMoveRows(moves: readonly TenantMovePlayed<C, M>[], plyCount: number): MoveRow[] {

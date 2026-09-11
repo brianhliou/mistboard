@@ -334,8 +334,8 @@ definePersistenceTests('game lists', () => {
         ['watch-short-timeout', shortTimeoutEvent.type, shortTimeoutEvent],
       );
       // A long but ABANDONED game: it clears the consistency guard (abandonment
-      // pairs with seat-forfeited) and the ply floor, so only the curation bar
-      // can drop it. That is what makes the curated assertion below meaningful.
+      // pairs with seat-forfeited) and the ply floor, so the curated cut keeps
+      // it (since 2026-09-10 the bar is the floor alone, not the termination).
       const abandonedEvent: GameEvent = {
         type: 'seat-forfeited',
         at: now.getTime() + 1,
@@ -545,10 +545,10 @@ definePersistenceTests('game lists', () => {
       ],
     );
     // The curated cut (Featured only, shared with the homepage showcase pool):
-    // same recency order, minus the rage-quit and every near-opening stub, so the
-    // channel's head is the game the homepage board freezes on. watch-pve-link
-    // (12 ply) and watch-short-* fall to the floor; watch-abandoned falls to the
-    // termination filter despite being 40 ply.
+    // same recency order, minus every near-opening stub, so the channel's head
+    // is the game the homepage board freezes on. watch-pve-link (12 ply) and
+    // watch-short-* fall to the floor; watch-abandoned stays despite the
+    // termination because it is 40 ply (the floor is the whole bar).
     const curated = await listWatchUnlockedGames({
       curated: true,
       limit: 10,
@@ -558,7 +558,7 @@ definePersistenceTests('game lists', () => {
     });
     assert.deepEqual(
       curated.map((game) => game.roomId),
-      ['watch-pvp-newest', 'watch-old'],
+      ['watch-pvp-newest', 'watch-abandoned', 'watch-old'],
     );
     assert.equal(
       await countWatchSealedGames({

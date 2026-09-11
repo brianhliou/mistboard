@@ -23,7 +23,10 @@ export type PuzzleQualityAggregate = {
   solves: number;
   cleanSolves: number;
   reveals: number;
+  /** Left after making at least one move. A judgment on the puzzle. */
   abandons: number;
+  /** Left without moving. A judgment on the page, so never a terminal outcome. */
+  bounces: number;
   inProgress: number;
   wrongAttempts: number;
   hints: number;
@@ -148,6 +151,15 @@ async function ensureSession(
   );
 }
 
+/**
+ * A terminal session shorter than this was not a person reading a position:
+ * it is an API loop or a browser smoke. Ten such reveals, all from one
+ * embed-testing session on 2026-09-08, flagged that day's daily as high-reveal
+ * and pinned the readout at ACTION with no way for humans to outvote them.
+ * Sessions under the floor never reach any rate the quality gate reads.
+ */
+export const MIN_HUMAN_SESSION_SECONDS = 2;
+
 export async function listPuzzleQualityAggregates(
   db: Queryable,
   variant: string,
@@ -164,6 +176,7 @@ export async function listPuzzleQualityAggregates(
     clean_solves: number;
     reveals: number;
     abandons: number;
+    bounces: number;
     in_progress: number;
     wrong_attempts: number;
     hints: number;
@@ -184,7 +197,17 @@ export async function listPuzzleQualityAggregates(
                 WHERE outcome = 'solved' AND wrong_attempts = 0 AND hint_count = 0
               )::int AS clean_solves,
               count(*) FILTER (WHERE outcome = 'revealed')::int AS reveals,
-              count(*) FILTER (WHERE outcome = 'abandoned')::int AS abandons,
+              -- started_at is set by the first submitted move, so an abandon
+              -- without one is a visitor who looked and left: the page's bounce,
+              -- not the puzzle's verdict. The anonymous landing puzzle is whichever
+              -- sits nearest rating 1500, so a handful of puzzles absorb every
+              -- landing view; folding those into abandonment flagged them.
+              count(*) FILTER (
+                WHERE outcome = 'abandoned' AND started_at IS NOT NULL
+              )::int AS abandons,
+              count(*) FILTER (
+                WHERE outcome = 'abandoned' AND started_at IS NULL
+              )::int AS bounces,
               count(*) FILTER (WHERE outcome IS NULL)::int AS in_progress,
               COALESCE(sum(wrong_attempts), 0)::int AS wrong_attempts,
               COALESCE(sum(hint_count), 0)::int AS hints,
@@ -193,6 +216,8 @@ export async function listPuzzleQualityAggregates(
               avg(EXTRACT(epoch FROM (completed_at - viewed_at)))
                 FILTER (WHERE completed_at IS NOT NULL) AS average_completion_seconds
        FROM puzzle_quality_sessions
+       WHERE completed_at IS NULL
+          OR completed_at - viewed_at >= make_interval(secs => $2)
        GROUP BY puzzle_id
      ), attempts AS (
        SELECT puzzle_id, count(*)::int AS attempts,
@@ -208,6 +233,7 @@ export async function listPuzzleQualityAggregates(
             COALESCE(quality.clean_solves, 0)::int AS clean_solves,
             COALESCE(quality.reveals, 0)::int AS reveals,
             COALESCE(quality.abandons, 0)::int AS abandons,
+            COALESCE(quality.bounces, 0)::int AS bounces,
             COALESCE(quality.in_progress, 0)::int AS in_progress,
             COALESCE(quality.wrong_attempts, 0)::int AS wrong_attempts,
             COALESCE(quality.hints, 0)::int AS hints,
@@ -225,7 +251,7 @@ export async function listPuzzleQualityAggregates(
        ON candidate.id = puzzle.mining_candidate_id
      WHERE puzzle.variant = $1
      ORDER BY puzzle.seq, puzzle.id`,
-    [variant],
+    [variant, MIN_HUMAN_SESSION_SECONDS],
   );
   return rows.map((row) => ({
     puzzleId: row.puzzle_id,
@@ -239,6 +265,7 @@ export async function listPuzzleQualityAggregates(
     cleanSolves: row.clean_solves,
     reveals: row.reveals,
     abandons: row.abandons,
+    bounces: row.bounces,
     inProgress: row.in_progress,
     wrongAttempts: row.wrong_attempts,
     hints: row.hints,

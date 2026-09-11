@@ -1,40 +1,40 @@
-// oEmbed provider for study chapters and finished games.
+// oEmbed provider for every frameable surface.
 //
 //   GET /api/oembed?url=https://mistboard.com/study/:studyId/:chapterId
-//   GET /api/oembed?url=https://mistboard.com/embed/study/:studyId/:chapterId
 //   GET /api/oembed?url=https://mistboard.com/game/:roomId
 //   GET /api/oembed?url=https://mistboard.com/<variant>/game/:roomId
-//   GET /api/oembed?url=https://mistboard.com/embed/game/:roomId
+//   GET /api/oembed?url=https://mistboard.com/puzzles/:puzzleId
+//   GET /api/oembed?url=https://mistboard.com/embed/{study,game,puzzle,tv,analysis}/...
 //
 // oEmbed is the reason this is a contract rather than a URL someone reverse
 // engineers: a consumer that already speaks it (WordPress, Ghost, Discourse,
 // Notion) turns a pasted study link into the embed without knowing anything
 // about us. Both the reader-facing permalink and the embed path are accepted,
-// because the link a person actually copies is the former.
+// because the link a person actually copies is the former. The forum's own
+// link expansion is one more consumer: a line that is only a Mistboard URL
+// asks here before it becomes a board, so the forum can never frame something
+// this endpoint would refuse.
 //
-// Read-only, unauthenticated, and it answers only for studies the anonymous
+// Read-only, unauthenticated, and it answers only for things the anonymous
 // public can already read: the visibility check is the same one the study API
-// applies, so this endpoint can never widen access to a private study.
+// applies, so this endpoint can never widen access to a private study, and a
+// game is answered from the finished-game summary only, so no live fog game
+// can be minted into a frame.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   clampEmbedWidth,
-  embedGamePath,
+  type EmbedTarget,
   embedHeightForWidth,
-  embedStudyPath,
+  embedPathForTarget,
+  embedTargetFromUrl,
   OEMBED_ENDPOINT,
 } from '@mistboard/game';
 import * as persistence from './../persistence.js';
 import { postgamePlayers, requirePersistence, writeJson } from './lib.js';
+import { puzzleById } from './puzzles.js';
 
 const OEMBED_PATH = OEMBED_ENDPOINT;
-
-/** Both the permalink a reader copies and the embed path itself. */
-const STUDY_URL = /\/(?:embed\/)?study\/([A-Za-z0-9_-]{1,64})\/([A-Za-z0-9_-]{1,64})\/?$/;
-/** The review permalink (`/game/:id`, or a tenant's `/<variant>/game/:id`) and
- *  the embed path. The variant segment is not trusted: the game's own record
- *  says what it is. */
-const GAME_URL = /\/(?:embed\/game|game|[a-z0-9-]{1,40}\/game)\/([A-Za-z0-9_-]{1,64})\/?$/;
 
 export async function tryHandle(
   _ctx: unknown,
@@ -61,75 +61,90 @@ export async function tryHandle(
     return true;
   }
 
-  const studyMatch = STUDY_URL.exec(target);
-  const gameMatch = studyMatch ? null : GAME_URL.exec(target);
-  if (!studyMatch && !gameMatch) {
+  // Shape checks first: a URL we cannot embed is answerable without touching
+  // the database, and answering it with a 503 when the store is down would be
+  // wrong about why.
+  const embed = embedTargetFromUrl(target);
+  if (!embed) {
     writeJson(response, 404, { error: 'not_embeddable' });
     return true;
   }
 
-  // Shape checks first: a URL we cannot embed is answerable without touching
-  // the database, and answering it with a 503 when the store is down would be
-  // wrong about why.
-  if (!requirePersistence(response)) return true;
-
   const origin = `https://${request.headers.host ?? 'mistboard.com'}`;
   const width = clampEmbedWidth(parsedUrl.searchParams.get('maxwidth'));
   const height = embedHeightForWidth(width);
+  const frame = (title: string) =>
+    respondWithFrame(response, { origin, path: embedPathForTarget(embed), title, width, height });
 
-  if (gameMatch) {
-    const roomId = gameMatch[1] as string;
-    // Finished games only: the summary read answers nothing for a game still
-    // in progress, so an embed can never be minted for a live fog game.
-    const game = await persistence.getGameSummary(roomId);
-    if (!game) {
-      writeJson(response, 404, { error: 'not_found' });
+  switch (embed.kind) {
+    case 'game': {
+      if (!requirePersistence(response)) return true;
+      // Finished games only: the summary read answers nothing for a game still
+      // in progress, so an embed can never be minted for a live fog game.
+      const game = await persistence.getGameSummary(embed.roomId);
+      if (!game) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      // The same seat roster the review page shows: a seat its owner made
+      // private reads as Anonymous here too, so a title cannot name them.
+      const players = postgamePlayers(game.participants ?? [], {
+        whiteName: game.whiteName,
+        blackName: game.blackName,
+      });
+      // Seats are 'white'/'black' tokens whatever the variant's colours; the
+      // first mover is whichever seat is not black.
+      const first = players.find((p) => p.color !== 'black')?.name ?? game.whiteName ?? 'Anonymous';
+      const second =
+        players.find((p) => p.color === 'black')?.name ?? game.blackName ?? 'Anonymous';
+      frame(`${first} vs ${second} · ${game.result} · Mistboard`);
       return true;
     }
-    // The same seat roster the review page shows: a seat its owner made
-    // private reads as Anonymous here too, so a title cannot name them.
-    const players = postgamePlayers(game.participants ?? [], {
-      whiteName: game.whiteName,
-      blackName: game.blackName,
-    });
-    // Seats are 'white'/'black' tokens whatever the variant's colours; the
-    // first mover is whichever seat is not black.
-    const first = players.find((p) => p.color !== 'black')?.name ?? game.whiteName ?? 'Anonymous';
-    const second = players.find((p) => p.color === 'black')?.name ?? game.blackName ?? 'Anonymous';
-    const title = `${first} vs ${second} · ${game.result} · Mistboard`;
-    respondWithFrame(response, {
-      origin,
-      path: embedGamePath(encodeURIComponent(roomId)),
-      title,
-      width,
-      height,
-    });
-    return true;
+    case 'study': {
+      if (!requirePersistence(response)) return true;
+      const study = await persistence.getStudyById(embed.studyId);
+      // This request is always anonymous, so the owner branch of the study
+      // read cannot apply: private is a 404 here exactly as it is there, with
+      // the same shape, so the endpoint cannot be used to probe for private
+      // studies.
+      if (!study || study.visibility === 'private') {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      const chapter = study.chapters.find((c) => c.id === embed.chapterId);
+      if (!chapter) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      frame(`${chapter.name ?? 'Study'} · ${study.name ?? 'Mistboard'}`);
+      return true;
+    }
+    case 'puzzle': {
+      // Today's puzzle always exists; a puzzle by id is looked up the way the
+      // detail endpoint does it, so a short code embeds the same as a full id.
+      if (embed.puzzleId === null) {
+        frame('Daily puzzle · Mistboard');
+        return true;
+      }
+      const puzzle = await puzzleById(embed.puzzleId);
+      if (!puzzle) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      frame(`${puzzle.title} · Mistboard`);
+      return true;
+    }
+    case 'tv':
+      frame(tvTitle(embed));
+      return true;
+    case 'analysis':
+      frame('Xiangqi analysis board · Mistboard');
+      return true;
   }
+}
 
-  const [, studyId, chapterId] = studyMatch as unknown as [string, string, string];
-  const study = await persistence.getStudyById(studyId);
-  // This request is always anonymous, so the owner branch of the study read
-  // cannot apply: private is a 404 here exactly as it is there, with the same
-  // shape, so the endpoint cannot be used to probe for private studies.
-  if (!study || study.visibility === 'private') {
-    writeJson(response, 404, { error: 'not_found' });
-    return true;
-  }
-  const chapter = study.chapters.find((c) => c.id === chapterId);
-  if (!chapter) {
-    writeJson(response, 404, { error: 'not_found' });
-    return true;
-  }
-
-  respondWithFrame(response, {
-    origin,
-    path: embedStudyPath(encodeURIComponent(studyId), encodeURIComponent(chapterId)),
-    title: `${chapter.name ?? 'Study'} · ${study.name ?? 'Mistboard'}`,
-    width,
-    height,
-  });
-  return true;
+function tvTitle(embed: Extract<EmbedTarget, { kind: 'tv' }>): string {
+  return embed.channel ? `Mistboard TV · ${embed.channel}` : 'Mistboard TV';
 }
 
 function respondWithFrame(

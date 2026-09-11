@@ -18,17 +18,27 @@
 //     node scripts/hide-xiangqi-puzzles.mjs'            # dry run, prints the set
 //   ... node scripts/hide-xiangqi-puzzles.mjs --apply    # writes hidden_reason
 //   ... node scripts/hide-xiangqi-puzzles.mjs --unhide   # clears this reason
+//
+// A second set, selected with --pre-gate: the xiangqi puzzles committed in
+// packages/game/seed/puzzles/xiangqi.json before the Modal audit profile
+// existed. They have no candidate or judgment rows, so nothing has ever checked
+// their uniqueness, and the #336 grading run (2026-09-10) measured them at 30%
+// solve and 42% signed-in solve against 66-78% for every audited run. Withheld
+// until they pass the current profile; --pre-gate --unhide serves them again.
+// The seed sync's upsert does not touch hidden_reason, so this survives a
+// seed-hash change.
 import pg from 'pg';
 import {
   applyStandardXiangqiMove,
   getStandardXiangqiLegalMoves,
 } from '../packages/game/dist/variants-xiangqi-standard.js';
 
-const REASON = 'already-won-free-capture';
 const AHEAD_CP = 300;
 
 const apply = process.argv.includes('--apply');
 const unhide = process.argv.includes('--unhide');
+const preGate = process.argv.includes('--pre-gate');
+const REASON = preGate ? 'pre-gate-seed-unaudited' : 'already-won-free-capture';
 
 /** Nothing can recapture on the square the move landed on. Only meaningful
  *  while the game is still running: a capture that MATES also leaves the
@@ -52,6 +62,29 @@ try {
       [REASON],
     );
     console.log(`un-hid ${rowCount} puzzles`);
+    process.exit(0);
+  }
+
+  if (preGate) {
+    const { rows } = await client.query(
+      `SELECT id, hidden_reason FROM puzzles
+        WHERE variant = 'xiangqi' AND mining_candidate_id IS NULL
+        ORDER BY seq`,
+    );
+    console.log(`pre-gate seed puzzles (no mining candidate): ${rows.length}`);
+    console.log(`already hidden: ${rows.filter((row) => row.hidden_reason).length}`);
+    for (const row of rows.slice(0, 5)) console.log(`  ${row.id}`);
+    if (rows.length > 5) console.log(`  ... ${rows.length - 5} more`);
+    if (!apply) {
+      console.log('\ndry run. pass --apply to write hidden_reason.');
+      process.exit(0);
+    }
+    const { rowCount } = await client.query(
+      `UPDATE puzzles SET hidden_reason = $1
+        WHERE variant = 'xiangqi' AND mining_candidate_id IS NULL AND hidden_reason IS NULL`,
+      [REASON],
+    );
+    console.log(`\nhid ${rowCount} puzzles with reason "${REASON}"`);
     process.exit(0);
   }
 

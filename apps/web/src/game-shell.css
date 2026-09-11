@@ -70,11 +70,20 @@
    round anatomy): presence dot + name, small. Empty until the first frame
    resolves the seats, so they collapse instead of rendering a blank row. */
 .round-table__player {
-  padding: 8px 10px;
+  display: flex;
+  align-items: center;
+  min-height: 36px;
+  padding: 6px 10px;
 }
 
 .round-table__player:empty {
   display: none;
+}
+
+/* The bottom seat row closes the table the way the toolbar band opens it;
+   without a rule it ran straight into the action buttons above it. */
+.round-table__player--bottom:not(:empty) {
+  border-top: 1px solid var(--site-border-soft);
 }
 
 /* The actions row wrapper collapses when nothing renders into it (e.g. an
@@ -83,16 +92,23 @@
   display: none;
 }
 
-/* Replay scrub toolbar: a small flat strip above the move list (lichess round
-   anatomy) — a tinted band, no border lines. */
+/* Replay scrub toolbar: the band that separates the top seat row from the move
+   list (lichess round anatomy). --site-surface was the page background, so the
+   band was invisible and the four arrows floated in dead space; --site-panel-soft
+   tints against the box in both themes, and the hairlines close the band. */
 .round-table__box .replay-controls {
   grid-template-columns: repeat(4, minmax(0, 1fr));
   gap: 0;
-  background: var(--site-surface);
+  background: var(--site-panel-soft);
+  border-top: 1px solid var(--site-border-soft);
+  border-bottom: 1px solid var(--site-border-soft);
 }
 
 .round-table__box .replay-controls button {
-  height: 28px;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -101,6 +117,12 @@
   color: var(--site-text);
   font-size: 13px;
   line-height: 1;
+}
+
+.round-table__box .replay-controls button svg {
+  display: block;
+  width: 15px;
+  height: 15px;
 }
 
 /* Touch floor: these arrows step through a live or watched game, so on a phone
@@ -122,11 +144,104 @@
 }
 
 /* Live move window: roughly four full-move rows, scrolling within (lichess
-   parity); the base .move-list fixed height keeps serving other surfaces. */
+   parity); the base .move-list fixed height keeps serving other surfaces.
+   Sizing stays on max-height, NOT a fixed height: at >=1260px live-review.css
+   sets `height: auto` on this list so the console hugs its content, and a fixed
+   height there loses to it while a max-height still caps the window.
+
+   The gradient paints the ply-number gutter as one continuous column down the
+   list, the way lichess's is, instead of leaving the numbers floating on the
+   panel. background-attachment defaults to `scroll`, which pins the stripe to
+   the padding box, so it stays put while the rows scroll over it.
+   --move-gutter is the width of the row's number cell: the base .move-row puts
+   it flush at 0-34px, and a tenant that insets its rows overrides the variable
+   rather than re-declaring the gradient. */
 .round-table__box .move-list {
+  --move-gutter: 34px;
   height: auto;
   max-height: 142px;
-  padding: 4px 6px;
+  gap: 0;
+  padding: 0;
+  background: linear-gradient(
+    to right,
+    var(--site-panel-soft) 0 var(--move-gutter),
+    transparent var(--move-gutter)
+  );
+}
+
+/* Per-family gutter widths, because each tenant sizes its own number column.
+   Getting one wrong is visible — the stripe cuts through the ply number instead
+   of sitting behind it — so a new tenant move-row style needs a line here.
+
+   The xiangqi family insets its rows 10px before the same 34px number column
+   (live-xiangqi.css), so its gutter runs to 44px. */
+.round-table__box .xiangqi-move-list {
+  --move-gutter: 44px;
+}
+
+.round-table__box .reveal-chess-move-list {
+  --move-gutter: 2.2em;
+}
+
+/* The hidden-info tenants (kriegspiel, dark crazyhouse, dark shogi, dark
+   crossroads) share a 2.4rem number column and set no list class of their own,
+   so they are reached through the row class they DO set. */
+.round-table__box .move-list:has(.ksg-move-row, .dczh-move-row, .dsg-move-row, .ddchess-move-row) {
+  --move-gutter: 2.4rem;
+}
+
+/* No zebra inside the box: the gutter column is what orders the rows now, and
+   the two stripe systems fought each other — the zebra ran across the gutter
+   and broke it into rungs. */
+.round-table__box .move-list .move-row {
+  border-radius: 0;
+}
+
+/* Specificity is deliberate: theme.css re-states the zebra for dark mode at
+   `:root[data-effective-theme="dark"] .move-row:nth-child(odd)`, so a two-class
+   selector here turns it off in light mode only and the stripe survives in
+   dark. Three classes clears both. */
+.round-table__box .move-list .move-row:nth-child(odd) {
+  background: none;
+}
+
+/* A move cell the viewer can scrub to is a real <button> (.move-jump), so it
+   takes focus and Enter like the chess shell's list. The class exists to scope
+   this reset AWAY from that list: the base `.move-list button` rules in
+   styles.css carry the chess shell's cell metrics (30px tall, 5px/7px padding,
+   13px), which are right there and would re-space every tenant row.
+
+   The 1px/6px padding mirrors what every tenant `__move` class already sets
+   (live-xiangqi, live-kriegspiel, live-dark-crazyhouse, live-dark-shogi,
+   live-dark-crossroads-chess, live-reveal-chess all agree on it); a tenant that
+   wants different cell padding has to change it here too. */
+.round-table__box .move-list button.move-jump {
+  height: auto;
+  min-height: 0;
+  padding: 1px 6px;
+  border: 0;
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+/* Kept well under the 16% the scrubbed ply uses: at 10% a hovered cell was
+   near enough to the active one to read as "this is where I am". */
+.round-table__box .move-list button.move-jump:hover,
+.round-table__box .move-list button.move-jump:focus-visible {
+  background: color-mix(in srgb, currentColor 7%, transparent);
+}
+
+/* The scrubbed ply keeps the tenant's quiet highlight. Without this the base
+   `.move-list button.active` rule wins on specificity and swaps in the chess
+   shell's accent block plus a 3px inset bar, so the same game would highlight
+   two different ways depending on which room it was played in. */
+.round-table__box .move-list button.move-jump.active {
+  border-color: transparent;
+  background: color-mix(in srgb, currentColor 16%, transparent);
+  box-shadow: none;
 }
 
 .replay-console {

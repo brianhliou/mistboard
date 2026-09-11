@@ -4,6 +4,7 @@ import {
   embedColorFromSearch,
   embedNotationFromSearch,
   embedPlyFromSearch,
+  embedPovFromSearch,
   embedRouteFromPath,
   embedThemeFromSearch,
 } from './embed/embed-route.js';
@@ -805,9 +806,10 @@ if (replaySample) {
 } else if (embedRoute?.kind === 'game') {
   const gameRoute = embedRoute.route;
   const startPly = embedPlyFromSearch(window.location.search);
+  const pov = embedPovFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-game-page.js').then(({ mountEmbedGame }) =>
-      mountEmbedGame(appRoot, gameRoute, { startPly }),
+      mountEmbedGame(appRoot, gameRoute, { startPly, pov }),
     ),
   );
 } else if (embedRoute?.kind === 'tv') {

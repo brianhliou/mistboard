@@ -208,4 +208,46 @@ describe('Dark Crossroads Chess live room (fog replay path)', () => {
     expect(placeholder).not.toBeNull();
     expect(placeholder?.textContent).toBe('No visible moves yet');
   });
+
+  it('offers a ply jump only on moves this seat was sent, never on a masked one', () => {
+    const h = createHarness('white');
+    h.feedHello({
+      events: [whiteMove('a2', 'a3', 1), whiteMove('a3', 'a4', 3)],
+      state: fogView({ moveNumber: 2, status: { type: 'playing', turn: 'red' } }),
+    });
+    // White's own plies are buttons; red's redacted ply-2 cell stays an inert
+    // span. A control on a masked cell would offer to navigate to a position
+    // the server deliberately withheld from this seat.
+    const jumps = h.moveList().querySelectorAll('button.move-jump');
+    expect(jumps).toHaveLength(2);
+    expect(Array.from(jumps, (b) => b.textContent)).toEqual(['a2a3', 'a3a4']);
+    const masked = h.moveList().querySelector('.ddchess-move-row__move.masked');
+    expect(masked?.tagName).toBe('SPAN');
+    expect(masked?.matches('button, .move-jump')).toBe(false);
+  });
+
+  it('a ply jump lands on a captured view and never resurrects a withheld one', () => {
+    const h = createHarness('white');
+    const v0 = fogView();
+    const v1 = fogView({
+      status: { type: 'playing', turn: 'red' },
+      lastMove: { from: 'a2', to: 'a3' },
+    });
+    const v2 = fogView({ moveNumber: 2, status: { type: 'playing', turn: 'white' } });
+    h.feedHello({ state: v0, events: [] });
+    h.feedEvent({ event: whiteMove('a2', 'a3', 1), state: v1 });
+    h.feedSnapshot({ events: [whiteMove('a2', 'a3', 1)], state: v2 });
+
+    const jump = h.moveList().querySelector<HTMLButtonElement>('button.move-jump');
+    expect(jump).not.toBeNull();
+    jump?.click();
+
+    // The click scrubs through the same captured history the arrows walk: the
+    // landed view is one the server actually sent, by identity, not a rebuild.
+    const landed = h.client.replay.currentView(h.client.state.view);
+    expect([v0, v1, v2]).toContain(landed);
+    expect(h.client.replay.historyLength()).toBe(3);
+    // Scrubbing does not widen what the list will show.
+    expect(document.body.innerHTML).not.toContain('a7a5');
+  });
 });
