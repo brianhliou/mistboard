@@ -584,8 +584,13 @@ body.embed-body {
   min-width: 0;
 }
 
+/* Beside the board the panel is shorter than it (a move list of one or two
+   plies, the verdict block, the actions), and top-aligned it left the bottom
+   third of the column empty against a full-height board. Centred, the two
+   read as one row. The stacked layout below overrides this with stretch. */
 .embed-puzzle .puzzle-side-panel {
   max-height: var(--puzzle-page-height);
+  align-self: center;
 }
 
 .embed-puzzle-caption {

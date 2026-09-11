@@ -682,11 +682,6 @@ a.forum-post-author-name:focus-visible {
   overflow-wrap: anywhere;
 }
 
-.forum-post-body .forum-embed-live .forum-embed-caption a {
-  color: var(--site-muted);
-  font-weight: 500;
-}
-
 .forum-post-header {
   display: flex;
   flex-wrap: wrap;

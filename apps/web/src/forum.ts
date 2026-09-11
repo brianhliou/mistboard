@@ -1560,7 +1560,10 @@ function isMistboardOrigin(url: URL): boolean {
 // provider: the same endpoint that answers WordPress or Discourse says whether
 // this URL is embeddable right now (finished, public, extant). Anything but a
 // 200 leaves the link as it was, so an in-progress fog game, a private study, or
-// a deleted puzzle never shows a frame that could only say "unavailable".
+// a deleted puzzle never shows a frame that could only say "unavailable". Once
+// the frame lands the link comes out: the embed carries its own credit link
+// to the same page, and a raw URL under a board read as a second, unexplained
+// thing in the post.
 function forumEmbedNode(embed: ForumEmbed): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'forum-embed';
@@ -1606,7 +1609,7 @@ async function hydrateForumEmbed(figure: HTMLElement, embed: ForumEmbed): Promis
   iframe.setAttribute('loading', 'lazy');
   iframe.title = frame.title;
   iframe.style.aspectRatio = `${frame.width} / ${frame.height}`;
-  figure.prepend(iframe);
+  figure.replaceChildren(iframe);
   figure.classList.add('forum-embed-live');
 }
 
