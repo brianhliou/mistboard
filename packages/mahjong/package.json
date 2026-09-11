@@ -1,0 +1,31 @@
+{
+  "name": "@mistboard/mahjong",
+  "version": "0.0.0",
+  "private": true,
+  "license": "AGPL-3.0-or-later",
+  "type": "module",
+  "sideEffects": false,
+  "main": "dist/index.js",
+  "types": "dist/index.d.ts",
+  "exports": {
+    ".": {
+      "types": "./dist/index.d.ts",
+      "default": "./dist/index.js"
+    }
+  },
+  "scripts": {
+    "build": "tsc -p tsconfig.json",
+    "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js",
+    "test:unit": "tsx --test --test-concurrency=4 src/**/*.test.ts",
+    "typecheck": "tsc -p tsconfig.json --noEmit",
+    "test:ladder": "tsx --test src/bots.slowtest.ts",
+    "test:differential": "tsx --test src/shanten.differential.slowtest.ts"
+  },
+  "devDependencies": {
+    "tsx": "^4.23.1",
+    "typescript": "^7.0.2"
+  },
+  "dependencies": {
+    "@kobalab/majiang-core": "^1.4.1"
+  }
+}

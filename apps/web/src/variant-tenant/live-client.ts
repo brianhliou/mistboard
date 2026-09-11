@@ -208,7 +208,7 @@ export type TenantPendingAnimation<C extends string, V, M> =
   | { kind: 'live'; move: M; color: C }
   | { kind: 'scrub'; direction: 'forward' | 'back'; prevView: V | null };
 
-export type TenantReplayCaptureConfig<C extends string, V> = {
+export type TenantReplayCaptureConfig<V> = {
   /** Stable serialization of everything the viewer can see in this view. */
   positionKey(view: V): string;
   /**
@@ -278,7 +278,7 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
   /** Viewer's bottom-of-board color. Default: seat, else view.perspective, else colors[0]. */
   orientation?(state: TenantLiveState<C, V>): C;
   moveList: TenantMoveListConfig<C, M>;
-  replayCapture: TenantReplayCaptureConfig<C, V>;
+  replayCapture: TenantReplayCaptureConfig<V>;
   replayHistory?: TenantReplayHistoryConfig<C, V>;
   chrome?: {
     forfeitDeadline?(): number | null;
@@ -355,7 +355,11 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   function canActNow(): boolean {
     const view = state.view;
     if (!view || !replay.isLive() || !tenant.isColor(state.seat)) return false;
-    return view.status.type === 'playing' && view.status.turn === state.seat;
+    if (view.status.type !== 'playing') return false;
+    // Tenants that let several seats act at once (mahjong claim windows) answer
+    // for themselves; everybody else is strictly alternating.
+    if (tenant.seatMayAct) return tenant.seatMayAct(view, state.seat);
+    return view.status.turn === state.seat;
   }
 
   const chrome = createTenantRoomChrome(tenant, {

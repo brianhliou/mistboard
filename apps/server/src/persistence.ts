@@ -505,6 +505,15 @@ export {
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';
+export type { VariantGrant } from './persistence-variant-access.js';
+export {
+  ALLOWLISTED_GAME_SPEC_IDS,
+  grantVariantAccess,
+  isAllowlistedGameSpec,
+  listVariantGrants,
+  mayPlayVariant,
+  revokeVariantAccess,
+} from './persistence-variant-access.js';
 export type {
   StoredXiangqiBroadcastBoard,
   StoredXiangqiBroadcastRound,

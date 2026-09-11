@@ -19,6 +19,7 @@ import type { IncomingMessage } from 'node:http';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from '../account-session.js';
 import { logger, wsCounters } from '../obs.js';
+import { mayPlayVariant } from '../persistence.js';
 import {
   adminDebugTokenFromProtocolHeader,
   canObserveRoom,
@@ -67,6 +68,7 @@ import type {
   TenantSeat,
   VariantTenant,
 } from './tenant.js';
+import { tenantSeatMayAct } from './tenant.js';
 
 export type TenantLiveClient<C extends string> = {
   debugRequested: false;
@@ -162,6 +164,7 @@ export function createTenantWsRuntime<
 
   const eventWriterCtx: TenantEventWriterContext<Kind, C, M, State, Spec> = {
     scheduleLifecycleTimers: (room) => scheduleLifecycleTimers(room as LiveRoom),
+    scheduleEngineMove: (room) => scheduleEngineMove(room as LiveRoom),
   };
 
   const lifecycleCtx: TenantLifecycleContext<C, M, State, Spec, LiveRoom> = {
@@ -190,7 +193,18 @@ export function createTenantWsRuntime<
     const accountUser = await currentAccountUser(request);
     rememberExcludedDevice(deviceId, accountUser);
     const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
-    const assignment = assignTenantSeat(tenant, room, clientId, seatToken, accountUser, deviceId);
+    // Allowlist-gated variants (139) ask the grant table before handing out a
+    // seat. Non-gated specs short-circuit to true without a query.
+    const variantAccessGranted = await mayPlayVariant(accountUser?.id ?? null, tenant.gameSpecId);
+    const assignment = assignTenantSeat(
+      tenant,
+      room,
+      clientId,
+      seatToken,
+      accountUser,
+      deviceId,
+      variantAccessGranted,
+    );
     if (!assignment.ok) {
       // Spectator admission on a full room, via two independent routes:
       //  - canObserveRoom: the spec hides nothing while live, or the game has
@@ -442,7 +456,7 @@ export function createTenantWsRuntime<
     for (const color of tenant.colors) {
       if (!room.projection.seats[color]) return;
     }
-    if (status.turn !== seat) return;
+    if (!tenantSeatMayAct(tenant, room.projection.state, seat)) return;
     // A move that arrives after the mover's flag fell but before the clock
     // timer fired ends the game by expiry instead of landing the move (the
     // chess-stack rule; closes the timer race for every tenant). The guard is
@@ -462,7 +476,7 @@ export function createTenantWsRuntime<
     // Crossroads re-attaches `promotion` from the legal-move list. It doubles
     // as the legality check: null rejects.
     const canonical = tenant.rules.canonicalMove
-      ? tenant.rules.canonicalMove(room.projection.state, move)
+      ? tenant.rules.canonicalMove(room.projection.state, move, seat)
       : tenant.rules.isLegalMove(room.projection.state, move)
         ? move
         : null;

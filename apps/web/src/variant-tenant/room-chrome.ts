@@ -56,8 +56,20 @@ export type WebVariantTenant<C extends string> = {
   metaGlyph?: string;
   // Move order: [first mover, second mover]; also the board's default
   // top-to-bottom reading for a colors[0] viewer.
-  colors: readonly [C, C];
+  colors: readonly C[];
   isColor(value: unknown): value is C;
+  // Optional: may this seat act on this view, beyond "it is their turn"?
+  //
+  // The web mirror of the server's rules.seatMayAct, and it exists for the same
+  // reason. Every variant here is strictly alternating, so the default is
+  // status.turn === seat. Mahjong is not: a discard opens a window in which up
+  // to three other seats may claim, and without this the claim buttons stay
+  // dead for exactly the seats being asked to answer.
+  //
+  // The server decides what is actually legal; this only decides what the
+  // client offers. A tenant that widens one without the other gets a button
+  // that does nothing, or a legal action with no way to take it.
+  seatMayAct?(view: unknown, seat: C): boolean;
   oppositeColor(color: C): C;
   enabled(): boolean;
   reviewUrl(roomId: string): string;
@@ -209,6 +221,19 @@ export function createTenantRoomChrome<C extends string>(
   // anatomy) plus the two-seat clock in the shared clock slots. Top is the
   // opponent (relative to the viewer's orientation), bottom is the viewer.
   // Untimed games still get player rows, just no clocks.
+  /**
+   * Which of the two player panels a seat's line belongs in.
+   *
+   * With two seats it is move order: first mover on top. With four it cannot
+   * be, because three of them would stack into the bottom box alongside the
+   * viewer. Above two seats the rule becomes the one a player already expects
+   * from the board: you are at the bottom, everybody else is above you.
+   */
+  function panelFor(color: unknown, index: number): 'top' | 'bottom' {
+    if (tenant.colors.length <= 2) return index === 0 ? 'top' : 'bottom';
+    return color === ctx.seat() ? 'bottom' : 'top';
+  }
+
   function renderClocks(): void {
     if (!refs) return;
     refs.clockTop.replaceChildren();
@@ -222,7 +247,17 @@ export function createTenantRoomChrome<C extends string>(
     const clock = ctx.clock();
     const view = ctx.view();
     const orientation = ctx.orientation();
-    const colors: C[] = [tenant.oppositeColor(orientation), orientation];
+    // The seats to render, bottom-most last.
+    //
+    // This was literally `[oppositeColor(orientation), orientation]`, a
+    // two-seat list by construction: at a table of four it named two of the
+    // four players and silently dropped the rest. Built from the tenant's own
+    // seats it is the same pair for every two-seat variant and the whole table
+    // for mahjong.
+    const colors: C[] =
+      tenant.colors.length <= 2
+        ? [tenant.oppositeColor(orientation), orientation]
+        : [...tenant.colors.filter((color) => color !== orientation), orientation];
     const armed = !!clock && (clock.activeColor !== null || clock.runningSince !== null);
 
     if (!timeControl || !clock || !armed) {
@@ -256,7 +291,9 @@ export function createTenantRoomChrome<C extends string>(
           toMove.setAttribute('aria-hidden', 'false');
           playerLine.append(toMove);
         }
-        (index === 0 ? refs!.playerTop : refs!.playerBottom).append(playerLine);
+        (panelFor(color, index) === 'top' ? refs!.playerTop : refs!.playerBottom).append(
+          playerLine,
+        );
         if (!timeControl) return;
         const row = document.createElement('div');
         row.className = isTurn ? 'pregame active' : 'pregame';
@@ -327,8 +364,9 @@ export function createTenantRoomChrome<C extends string>(
       const remainingMs = clockRemainingMs(clock, color, displayAt);
       time.textContent = formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive));
       row.append(time);
-      (index === 0 ? refs!.playerTop : refs!.playerBottom).append(playerLine);
-      (index === 0 ? refs!.clockTop : refs!.clockBottom).append(row);
+      const panel = panelFor(color, index);
+      (panel === 'top' ? refs!.playerTop : refs!.playerBottom).append(playerLine);
+      (panel === 'top' ? refs!.clockTop : refs!.clockBottom).append(row);
     });
     lastActiveClockColor = activeColor;
   }

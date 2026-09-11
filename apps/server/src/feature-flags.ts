@@ -57,6 +57,19 @@ export function duckXiangqiEnabled(): boolean {
   return process.env.MISTBOARD_DUCK_XIANGQI_ENABLED === 'true';
 }
 
+// Hong Kong mahjong live rooms. Server-side opt-in, default off.
+//
+// This flag is not the only gate and is not meant to be. Mahjong is also on the
+// per-account allowlist (139), so turning it on in an environment opens the
+// variant to the handful of people holding a grant and to nobody else. That is
+// deliberate: the hand mathematics is proven against an independent
+// implementation, but the faan values were read off sources that disagree with
+// each other and nobody here plays the game. Flipping this to `true` is not a
+// launch.
+export function mahjongEnabled(): boolean {
+  return process.env.MISTBOARD_MAHJONG_ENABLED === 'true';
+}
+
 // Jieqi (full-board xiangqi with hidden identities) live rooms. Server-side
 // opt-in, default off — the tenant exists but is not launched.
 export function jieqiEnabled(): boolean {

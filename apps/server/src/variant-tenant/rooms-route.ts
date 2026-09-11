@@ -81,6 +81,12 @@ export type TenantEnginePolicy<Seat extends string> =
   // PvP-only: no engine branch. `rejectEngineId` mirrors the tenants that fold
   // `body.engineId !== undefined` into their unsupported-surface gate.
   | { kind: 'none'; rejectEngineId: boolean }
+  // The server seats the bots itself, always, and the client never asks for
+  // one. Mahjong: a table needs four players, so every room is bot-seated and
+  // 'pvp' vs 'pve' is not a choice anybody makes. Both modes are accepted and
+  // mean the same room, because a player clicking "play the computer" and a
+  // player following a bare create link should not get different answers.
+  | { kind: 'always-seated' }
   // Server-owned engine seated opposite the human. `seats` is
   // [firstMover, secondMover]; the human keeps the first-mover seat by default.
   | {
@@ -203,11 +209,20 @@ export function createTenantRoomsRoute<
 
     // Supported-surface gate. Returns true when it has written a response.
     const runSurfaceGate = (): boolean => {
-      const modeOk = config.engine.kind === 'none' ? mode === 'pvp' : mode !== null;
+      const modeOk =
+        config.engine.kind === 'none'
+          ? mode === 'pvp'
+          : config.engine.kind === 'always-seated'
+            ? true
+            : mode !== null;
       if (!modeOk) {
         writeJson(response, 501, { error: unsupportedSurfaceError });
         return true;
       }
+      // An engine id is ACCEPTED and ignored where the server picks the seats
+      // itself. The picker offers exactly one option for such a variant, so the
+      // only id a client can send is the one it would have got anyway;
+      // rejecting it instead made the Start button fail.
       if (
         config.engine.kind === 'none' &&
         config.engine.rejectEngineId &&

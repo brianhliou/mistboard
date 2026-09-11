@@ -215,6 +215,7 @@ function dropMiniXiangqiRoom(roomId: string): DropMiniXiangqiRuntimeRoom {
     abortPhase: null,
     clockTimer: null,
     forfeitTimer: null,
+    actionTimer: null,
     forfeitDeadline: null,
     forfeitSeat: null,
     gameEndRecorded: false,

@@ -398,12 +398,12 @@ test('moveFromMessage mirrors live parsing: invalid promotion drops, bad squares
 
 test('canonicalMove: legality is applyMove identity; appended move is the applied lastMove', () => {
   const state = darkChessTenant.rules.createInitialState('canonical-move');
-  const legal = darkChessTenant.rules.canonicalMove?.(state, { from: 'e2', to: 'e4' });
+  const legal = darkChessTenant.rules.canonicalMove?.(state, { from: 'e2', to: 'e4' }, 'white');
   assert.ok(legal);
   const applied = darkChess.applyMove(state as GameState, { from: 'e2', to: 'e4' });
   assert.deepEqual(legal, applied.lastMove ?? { from: 'e2', to: 'e4' });
   assert.equal(
-    darkChessTenant.rules.canonicalMove?.(state, { from: 'e2', to: 'e5' }),
+    darkChessTenant.rules.canonicalMove?.(state, { from: 'e2', to: 'e5' }, 'white'),
     null,
     'an illegal move must reject',
   );

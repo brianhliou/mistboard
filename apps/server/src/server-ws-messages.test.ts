@@ -34,3 +34,25 @@ test('isKnownClientMessageType owns the websocket client allowlist', () => {
   assert.equal(isKnownClientMessageType('move'), true);
   assert.equal(isKnownClientMessageType('unknown:new-message'), false);
 });
+
+test('a tile move survives the parse with its action and tiles intact', () => {
+  // Mahjong moves carry no squares. The parser must pass them through
+  // untouched; validating them is the tenant's job, not the wire's.
+  const parsed = parseClientMessage(
+    JSON.stringify({ type: 'move', action: 'chow', tiles: ['4p', '6p'] }),
+  );
+  assert.equal(parsed?.type, 'move');
+  assert.equal(parsed?.action, 'chow');
+  assert.deepEqual(parsed?.tiles, ['4p', '6p']);
+});
+
+test('the parser does not validate a tile move, and is not supposed to', () => {
+  // parseClientMessage casts; it has never checked field shapes. A tenant's
+  // moveFromMessage is the validation boundary, so nonsense has to arrive
+  // intact rather than being silently dropped here.
+  const parsed = parseClientMessage(
+    JSON.stringify({ type: 'move', action: 42, tiles: 'not-an-array' }),
+  );
+  assert.equal(parsed?.type, 'move');
+  assert.equal((parsed as { action?: unknown }).action, 42);
+});

@@ -50,6 +50,7 @@ function makeRoom(id: string, status: 'playing' | 'finished'): DarkMiniXiangqiLi
     abortPhase: null,
     clockTimer: null,
     forfeitTimer: null,
+    actionTimer: null,
     forfeitDeadline: null,
     forfeitSeat: null,
     gameEndRecorded: status === 'finished',

@@ -37,6 +37,10 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'reveal-chess': false,
   jungle: true,
   'jungle-flip': true,
+  // Hidden until a player has checked the faan table: the hand mathematics is
+  // proven against an independent implementation, the SCORING is not proven at
+  // all, and a listing would invite people to trust numbers nobody has read.
+  mahjong: false,
   'duck-xiangqi': true,
 } satisfies Record<GameSpecId, boolean>;
 

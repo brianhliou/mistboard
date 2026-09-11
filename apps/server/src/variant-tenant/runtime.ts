@@ -24,6 +24,7 @@ import {
 import type {
   TenantClientEvent,
   TenantClockState,
+  TenantEndReason,
   TenantGameStateLike,
   TenantGameStatus,
   TenantProjection,
@@ -33,6 +34,7 @@ import type {
   TenantSnapshotClient,
   VariantTenant,
 } from './tenant.js';
+import { assertForfeitPolicy, forfeitWinnerOf, lastSeat, tenantSeatMayAct } from './tenant.js';
 
 export type TenantRoomCreation<
   Kind extends string,
@@ -59,7 +61,7 @@ export function isTenantRoomId(tenant: { roomIdPrefix: string }, roomId: string)
 }
 
 export function createTenantClock<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   initialMs: number,
   incrementMs: number,
 ): TenantClockState<C> {
@@ -75,7 +77,7 @@ export function createTenantClock<C extends string>(
 }
 
 export function nextTenantClockForMove<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[]; armsClockOnFirstMove?: boolean },
   clock: TenantClockState<C> | undefined,
   at: number,
   movedColor: C,
@@ -89,7 +91,18 @@ export function nextTenantClockForMove<C extends string>(
       ...clock.remainingMs,
       [movedColor]: clock.remainingMs[movedColor] + clock.incrementMs,
     };
-    const armsNow = movedColor === tenant.colors[1] && prevMoveNumber === 1;
+    // Arms once the LAST seat has completed the first go-around. For two seats
+    // that is the second mover.
+    //
+    // `prevMoveNumber === 1` is a two-seat proxy for "everyone has had a go",
+    // and it is not one anywhere else. Mahjong counts a move per ACTION rather
+    // than per turn (draw, discard, claim, pass), so no move-number threshold
+    // marks the first go-around at all: the condition was never true and the
+    // clock never started. A tenant whose clock should run from the opening
+    // move says so instead.
+    const armsNow = tenant.armsClockOnFirstMove
+      ? prevMoveNumber === 0
+      : movedColor === lastSeat(tenant) && prevMoveNumber === 1;
     if (armsNow && nextStatus.type === 'playing') {
       return { ...clock, activeColor: nextStatus.turn, remainingMs, runningSince: at };
     }
@@ -179,6 +192,10 @@ export function createTenantRuntimeRoom<
     timeControl?: RoomTimeControl;
   } = {},
 ): TenantRoomCreation<Kind, C, M, State, Spec> {
+  // A tenant with more than two seats that has not said what a forfeit does
+  // would hang the first room where a connection dropped. Fail on the first
+  // room rather than discovering it mid-game.
+  assertForfeitPolicy(tenant);
   if (!tenant.enabled()) return { ok: false, error: 'disabled' };
 
   const now = options.now ?? Date.now();
@@ -244,6 +261,7 @@ export function createTenantRuntimeRoomFromEvents<
       abortPhase: null,
       clockTimer: null,
       forfeitTimer: null,
+      actionTimer: null,
       forfeitDeadline: null,
       forfeitSeat: null,
       gameEndRecorded:
@@ -325,11 +343,62 @@ export function replayTenantEvents<
   tenant: VariantTenant<Kind, C, M, State, View, Spec>,
   events: readonly TenantRoomEvent<C, M, Spec>[],
 ): TenantProjection<C, State, Spec> {
-  const firstRoomId = events[0]?.roomId ?? 'unknown-room';
-  return events.reduce(
-    (projection, event) => applyTenantEvent(tenant, projection, event),
-    initialTenantProjection(tenant, firstRoomId),
-  );
+  const first = events[0];
+  const firstRoomId = first?.roomId ?? 'unknown-room';
+  // Seed from the room-created event rather than from nothing.
+  //
+  // The seed used to be built with no arguments past the room id, which called
+  // createInitialState with `setup` undefined on every replay, for every
+  // tenant. Tenants whose setup is server-secret (a jieqi deal, a mahjong wall)
+  // therefore dealt a whole throwaway game before the event carrying the real
+  // one was applied a line later. Harmless where a tenant tolerates a missing
+  // setup, fatal where it refuses one, and wasted work in both cases.
+  const seed =
+    first?.type === 'room-created'
+      ? initialTenantProjection(
+          tenant,
+          first.roomId,
+          first.timeControl,
+          first.creatorPreference,
+          first.rated === true,
+          first.setup,
+        )
+      : initialTenantProjection(tenant, firstRoomId);
+  return events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed);
+}
+
+/**
+ * Finish a game whose loser is known. Throws when the tenant has no answer,
+ * which assertForfeitPolicy makes unreachable by refusing to register such a
+ * tenant at all. Belt and braces: the alternative is a silently hung room.
+ */
+function finishByForfeit<C extends string, State>(
+  tenant: {
+    kind: string;
+    colors: readonly C[];
+    oppositeColor(color: C): C;
+    forfeitWinner?(color: C): C | null;
+    rules: {
+      finish(state: State, winner: C, reason: TenantEndReason): State;
+      finishNoWinner?(state: State, reason: TenantEndReason): State;
+    };
+  },
+  state: State,
+  forfeiting: C,
+  reason: TenantEndReason,
+): State {
+  const winner = forfeitWinnerOf(tenant, forfeiting);
+  if (winner === null && tenant.rules.finishNoWinner) {
+    // A table of four has no "other player" to hand the game to. The hand ends
+    // with nobody winning, which is a real outcome here rather than an error.
+    return tenant.rules.finishNoWinner(state, reason);
+  }
+  if (winner === null) {
+    throw new Error(
+      `tenant ${tenant.kind}: ${reason} by ${forfeiting} has no winner and no abort path`,
+    );
+  }
+  return tenant.rules.finish(state, winner, reason);
 }
 
 export function applyTenantEvent<
@@ -386,7 +455,9 @@ export function applyTenantEvent<
   }
   if (event.type === 'move-played') {
     if (status.type !== 'playing') return projection;
-    if (status.turn !== event.color) return projection;
+    // Same predicate the live path uses, so a replayed claim is accepted by
+    // exactly the states that accepted it live.
+    if (!tenantSeatMayAct(tenant, projection.state, event.color)) return projection;
     const prevMoveNumber = projection.state.moveNumber;
     const nextState = tenant.rules.applyMove(projection.state, event.move);
     return {
@@ -410,7 +481,7 @@ export function applyTenantEvent<
     return {
       ...projection,
       clock: event.clock,
-      state: tenant.rules.finish(projection.state, tenant.oppositeColor(event.color), 'timeout'),
+      state: finishByForfeit(tenant, projection.state, event.color, 'timeout'),
     };
   }
   if (event.type === 'seat-resigned') {
@@ -418,11 +489,7 @@ export function applyTenantEvent<
     return {
       ...projection,
       clock: event.clock ?? freezeTenantClock(projection.clock, event.at),
-      state: tenant.rules.finish(
-        projection.state,
-        tenant.oppositeColor(event.color),
-        'resignation',
-      ),
+      state: finishByForfeit(tenant, projection.state, event.color, 'resignation'),
     };
   }
   if (event.type === 'game-aborted') {
@@ -439,11 +506,7 @@ export function applyTenantEvent<
     return {
       ...projection,
       clock: event.clock ?? freezeTenantClock(projection.clock, event.at),
-      state: tenant.rules.finish(
-        projection.state,
-        tenant.oppositeColor(event.color),
-        'abandonment',
-      ),
+      state: finishByForfeit(tenant, projection.state, event.color, 'abandonment'),
     };
   }
   return projection;
@@ -577,7 +640,7 @@ export function tenantSnapshotPayload<
 }
 
 export function tenantRematchOfferFlags<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   room: { rematch: { offers: Partial<Record<C, unknown>> } },
 ): Record<C, boolean> {
   const flags = {} as Record<C, boolean>;
@@ -585,16 +648,21 @@ export function tenantRematchOfferFlags<C extends string>(
   return flags;
 }
 
-// Only the present winning seat (opposite the forfeiting seat) learns the
-// forfeit deadline, so the "you win in Ns" banner never leaks to the leaver.
+// Every seat but the leaver learns the forfeit deadline, so the "you win in Ns"
+// banner never leaks to the leaver itself.
+//
+// This asked oppositeColor for "the winner" until 2026-09-11, which is a
+// question with no answer at a table of four, and mahjong's oppositeColor
+// throws rather than inventing one. Asking instead who is NOT leaving gives the
+// same answer for two seats and a correct one for four.
 export function tenantForfeitDeadlineForClient<C extends string>(
-  tenant: { oppositeColor(color: C): C },
+  _tenant: unknown,
   room: { forfeitSeat: C | null; forfeitDeadline: number | null },
   client: { seat: TenantSeat<C> },
 ): number | null {
-  return room.forfeitSeat !== null && client.seat === tenant.oppositeColor(room.forfeitSeat)
-    ? room.forfeitDeadline
-    : null;
+  if (room.forfeitSeat === null) return null;
+  if (client.seat === 'spectator' || client.seat === room.forfeitSeat) return null;
+  return room.forfeitDeadline;
 }
 
 export function tenantPveEngineId<
@@ -806,7 +874,7 @@ function isRoomTimeControl(value: unknown): value is RoomTimeControl {
 }
 
 export function isTenantClockState<C extends string>(
-  tenant: { colors: readonly [C, C]; rules: { isColor(value: unknown): value is C } },
+  tenant: { colors: readonly C[]; rules: { isColor(value: unknown): value is C } },
   value: unknown,
 ): value is TenantClockState<C> {
   if (typeof value !== 'object' || value === null) return false;
@@ -845,7 +913,7 @@ export function countActiveTenantGames(
 
 export function computeTenantConnectedSeats<C extends string>(
   tenant: {
-    colors: readonly [C, C];
+    colors: readonly C[];
     engine?: { isEngineClientId(clientId: string | undefined): boolean };
   },
   clients: Iterable<{ seat: TenantSeat<C>; displaced: boolean }>,

@@ -46,6 +46,21 @@ export type TenantGameStateLike<C extends string> = {
 // race, ...) never pass through here — they come out of rules.applyMove.
 export type TenantEndReason = 'timeout' | 'resignation' | 'abandonment';
 
+/**
+ * A move the game will make FOR a seat when a wait runs out, and the absolute
+ * time that happens.
+ *
+ * A mahjong claim window is the case this exists for: after a discard, up to
+ * three seats may claim the tile, and the hand cannot continue until each has
+ * answered. One player closing their laptop must not hang the table, so silence
+ * has to become an answer on a deadline.
+ *
+ * It is a real move by a real seat, appended as an ordinary move-played event,
+ * so a replayed game takes the same path as the live one and a spectator sees
+ * why the turn moved.
+ */
+export type TenantPendingAction<C extends string, M> = { at: number; color: C; move: M };
+
 export type TenantEngineTerminalContext =
   | 'full-history'
   | 'repetition-window'
@@ -195,6 +210,9 @@ export type TenantRuntimeRoom<
   clockTimer: ReturnType<typeof setTimeout> | null;
   forfeitTimer: ReturnType<typeof setTimeout> | null;
   forfeitDeadline: number | null;
+  // Fires the tenant's pendingAction. Distinct from the forfeit timer: that one
+  // ends the game, this one continues it.
+  actionTimer: ReturnType<typeof setTimeout> | null;
   forfeitSeat: C | null;
   gameEndRecorded: boolean;
   /**
@@ -242,12 +260,33 @@ export type VariantTenant<
   kind: Kind;
   gameSpecId: Spec;
   roomIdPrefix: string;
-  // Move order: [first mover, second mover]. Drives seat iteration, summary
-  // participant order, rematch color swap, and clock arming (the clock arms
-  // once the second mover completes the first full move).
-  colors: readonly [C, C];
+  // Move order, in turn sequence starting from the first mover. Drives seat
+  // iteration, summary participant order, rematch color swap, and clock arming
+  // (the clock arms once the LAST seat completes the first go-around).
+  //
+  // Widened from a fixed pair 2026-09-10. Every existing tenant passes two and
+  // behaves exactly as before; the array is what lets a four-seat game exist at
+  // all. Read positions through firstSeat/lastSeat/seatAfter rather than by
+  // index, so a tenant with more than two seats cannot be silently mis-read.
+  colors: readonly C[];
+  /**
+   * Start the clock on the very first move rather than after the first
+   * go-around.
+   *
+   * The default waits for every seat to have moved once, which chess wants so a
+   * player who has only just opened the tab is not already losing time. It is
+   * expressed as a move-number threshold, and that only means "everyone has had
+   * a go" where one move is one turn. Set this where it is not.
+   */
+  armsClockOnFirstMove?: boolean;
   enabled(): boolean;
+  // Only meaningful where there are exactly two seats: it answers "who wins if
+  // this seat forfeits". A four-seat tenant has no such answer and must supply
+  // forfeitWinner instead.
   oppositeColor(color: C): C;
+  // Who is awarded the game when `color` times out or abandons. Defaults to
+  // oppositeColor, which is right for two seats and undefined for more.
+  forfeitWinner?(color: C): C | null;
   rules: {
     // `setup` is the server-secret per-game setup persisted in the room-created
     // event (see TenantRoomEvent.setup). Tenants without hidden setup ignore it.
@@ -256,21 +295,37 @@ export type VariantTenant<
     // runtime persists the return value in the room-created event and feeds it
     // back to createInitialState (including on replay).
     createSetup?(): unknown;
+    // Deliberately two parameters. Several tenants pass their kernel's own
+    // applyMove straight through, and those already take a third options
+    // argument, so a positional `at` here would land in that slot. A tenant
+    // that needs the wall-clock (a mahjong claim window deadline) stamps it
+    // onto the move in canonicalMove, which runs once on the live path and
+    // persists into the event log, so replay reads the same value back.
     applyMove(state: State, move: M): State;
     isLegalMove(state: State, move: M): boolean;
     // Terminal-state constructors: the generic runtime never builds variant
     // status objects itself, so variant status unions stay variant-owned.
     finish(state: State, winner: C, reason: TenantEndReason): State;
+    // How the game ends when a seat forfeits and NOBODY is awarded the win.
+    // Only reachable for tenants whose forfeitWinner returns null, which means
+    // tables of more than two: there is no "the other player" to hand it to.
+    // Omitting it on such a tenant makes the forfeit throw rather than guess.
+    finishNoWinner?(state: State, reason: TenantEndReason): State;
     abort(state: State, reason: AbortReason): State;
     isColor(value: unknown): value is C;
     isMove(value: unknown): value is M;
     // Parse + validate a move out of a raw client `move` message; null rejects.
     // STATE-FREE canonicalization (e.g. coordinate parsing) belongs here.
+    // Parse a wire move, or return null. This is the validation boundary: the
+    // message arrived as untyped JSON and was cast, not checked.
     moveFromMessage(message: {
       drop?: string;
       from?: string;
       to?: string;
       promotion?: string;
+      // Tile games: no squares. See ClientMessage in server-ws-messages.ts.
+      action?: string;
+      tiles?: string[];
       /** Duck Xiangqi: a turn is a piece move AND a duck placement, sent as one
        *  message so a client that disconnects mid-placement sends nothing. */
       duckTo?: string;
@@ -279,7 +334,35 @@ export type VariantTenant<
     // legal-move object to append (e.g. Crossroads re-attaches promotion from
     // the legal-move list). Null rejects. When omitted, the ws move path
     // appends the parsed move after an isLegalMove check instead.
-    canonicalMove?(state: State, move: M): M | null;
+    // `seat` is the mover. Every existing tenant ignores it, because in a
+    // strictly alternating game the mover is state.status.turn and the move
+    // carries no identity. Mahjong is the exception: a claim arrives from a
+    // seat whose turn it is NOT, and applyMove receives only the state and the
+    // move, so the seat has to be stamped onto the move here to survive into
+    // the event log and back out on replay.
+    canonicalMove?(state: State, move: M, seat: C): M | null;
+    // May this seat act right now? Defaults to "it is this seat's turn".
+    //
+    // Mahjong is why this exists. Every other tenant is strictly alternating:
+    // the seat to move moves, and anything from anyone else is dropped. A
+    // mahjong discard opens a window in which up to three other seats may
+    // respond, and whoever wins the window takes the turn out of order.
+    //
+    // Read through tenantSeatMayAct, never called directly, because BOTH the
+    // live move path and the replay projection gate on it. A tenant that
+    // widens one and not the other gets a room that plays one game live and a
+    // different one on reconnect, which the event log will not reveal because
+    // every event in it is individually valid.
+    seatMayAct?(state: State, seat: C): boolean;
+    // The move to make on this state's behalf if nobody acts, and when.
+    // Null when the state is not waiting on anything, which is every state of
+    // every strictly alternating tenant, so all of them omit this.
+    //
+    // Return ONE action that settles the whole wait, not one per silent seat:
+    // the runtime applies a single action per firing and then re-arms from the
+    // new state, so a hook that settles a four-seat window one seat at a time
+    // costs four round trips through the event writer.
+    pendingAction?(state: State): TenantPendingAction<C, M> | null;
   };
   setupSubmission?: {
     applySetup(state: State, color: C, setup: unknown): State;
@@ -359,3 +442,83 @@ export type VariantTenant<
     logLabel: string;
   };
 };
+
+/**
+ * Whether `seat` may act on this state: the one question the live move path and
+ * the replay projection must always answer identically.
+ *
+ * The default is strict alternation, which is what every tenant but mahjong
+ * wants. Note it is false for any non-playing status, so callers do not need
+ * their own status check to stay safe.
+ */
+export function tenantSeatMayAct<C extends string, State extends TenantGameStateLike<C>>(
+  tenant: { rules: { seatMayAct?(state: State, seat: C): boolean } },
+  state: State,
+  seat: C,
+): boolean {
+  if (state.status.type !== 'playing') return false;
+  if (tenant.rules.seatMayAct) return tenant.rules.seatMayAct(state, seat);
+  return state.status.turn === seat;
+}
+
+/** The seat that moves first. Throws rather than returning undefined: a tenant
+ *  with no seats is a programming error, not a runtime condition. */
+export function firstSeat<C extends string>(tenant: { colors: readonly C[] }): C {
+  const seat = tenant.colors[0];
+  if (seat === undefined) throw new Error('tenant declares no seats');
+  return seat;
+}
+
+/** The seat that moves last in a go-around. For two seats this is the second
+ *  mover, which is what clock arming has always keyed on. */
+export function lastSeat<C extends string>(tenant: { colors: readonly C[] }): C {
+  const seat = tenant.colors[tenant.colors.length - 1];
+  if (seat === undefined) throw new Error('tenant declares no seats');
+  return seat;
+}
+
+/** The next seat in turn order, wrapping. For two seats this is the opposite. */
+export function seatAfter<C extends string>(tenant: { colors: readonly C[] }, seat: C): C {
+  const at = tenant.colors.indexOf(seat);
+  if (at < 0) throw new Error(`seat ${seat} is not one of this tenant's seats`);
+  return tenant.colors[(at + 1) % tenant.colors.length] as C;
+}
+
+/**
+ * Who is awarded the game when `seat` times out, resigns or abandons.
+ *
+ * At two seats this is the opposite seat and always has an answer. At more it
+ * may not: three players do not collectively "win" because a fourth walked
+ * away, and AbortReason is a CHECK-constrained union with no value that fits a
+ * mid-game forfeit, so the runtime cannot invent one either. A tenant with more
+ * than two seats must therefore answer this itself.
+ *
+ * Null is a real answer meaning "no winner", and callers must handle it. It is
+ * unreachable for every tenant that ships today.
+ */
+export function forfeitWinnerOf<C extends string>(
+  tenant: { colors: readonly C[]; oppositeColor(color: C): C; forfeitWinner?(color: C): C | null },
+  seat: C,
+): C | null {
+  if (tenant.forfeitWinner) return tenant.forfeitWinner(seat);
+  if (tenant.colors.length === 2) return tenant.oppositeColor(seat);
+  return null;
+}
+
+/**
+ * Registration-time guard. A tenant with more than two seats that has not said
+ * what a forfeit does is a bug that would otherwise surface as a hung game the
+ * first time someone's connection dropped - fail at boot instead.
+ */
+export function assertForfeitPolicy<C extends string>(tenant: {
+  kind: string;
+  colors: readonly C[];
+  forfeitWinner?(color: C): C | null;
+}): void {
+  if (tenant.colors.length > 2 && !tenant.forfeitWinner) {
+    throw new Error(
+      `tenant ${tenant.kind} has ${tenant.colors.length} seats and must implement ` +
+        'forfeitWinner: oppositeColor has no meaning beyond two seats',
+    );
+  }
+}

@@ -55,19 +55,25 @@ export type TenantSeatAssignment<C extends string> =
         | 'private room'
         | 'rated requires account'
         | 'correspondence requires account'
-        | 'play disabled';
+        | 'play disabled'
+        | 'variant not granted';
     };
 
 export function assignTenantSeat<
   C extends string,
   Client extends { displaced: boolean; seat: string },
 >(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   room: TenantSeatRoom<C, Client>,
   clientId: string,
   rawToken: string | undefined,
   accountUser: UserAccount | null,
   deviceId: string | null = null,
+  // Whether this account holds a grant for an allowlist-gated variant (139).
+  // Resolved by the caller because the lookup is a query and this function is
+  // synchronous. Defaults to allowed: every non-gated variant, and every test
+  // that predates the gate, behaves exactly as before.
+  variantAccessGranted = true,
 ): TenantSeatAssignment<C> {
   const tokenHash = rawToken ? hashSeatToken(rawToken) : undefined;
   if (tokenHash) {
@@ -131,6 +137,10 @@ export function assignTenantSeat<
   // above have already returned, so locking an account never strands it in a
   // game it is already sitting in.
   if (isPlayDisabled(accountUser)) return { ok: false, reason: 'play disabled' };
+  // Allowlist-gated variant (139). Like the play lock, this is the new-seat
+  // path only: both reclaim branches returned above, so revoking access never
+  // throws somebody out of a hand they are in the middle of playing.
+  if (!variantAccessGranted) return { ok: false, reason: 'variant not granted' };
   if (room.rated && !accountUser) return { ok: false, reason: 'rated requires account' };
   // Correspondence (days-per-move) seats are account-required on BOTH sides:
   // notifications, deadline rows, and cross-device reseat all key off the seat's
@@ -189,7 +199,7 @@ export function mintTenantSeatToken<C extends string>(
 }
 
 function nextAvailableTenantSeat<C extends string>(
-  tenant: { colors: readonly [C, C] },
+  tenant: { colors: readonly C[] },
   creatorPreference: C | 'random' | undefined,
   occupiedSeats: ReadonlySet<string>,
 ): C | null {
@@ -197,7 +207,10 @@ function nextAvailableTenantSeat<C extends string>(
     if (!occupiedSeats.has(creatorPreference)) return creatorPreference;
   }
   if (creatorPreference === 'random' && occupiedSeats.size === 0) {
-    return randomBytes(1)[0]! < 128 ? tenant.colors[0] : tenant.colors[1];
+    // Uniform over however many seats there are. A coin flip silently ignores
+    // the third and fourth.
+    const seats = tenant.colors;
+    return seats[randomBytes(1)[0]! % seats.length] as C;
   }
   for (const color of tenant.colors) {
     if (!occupiedSeats.has(color)) return color;
