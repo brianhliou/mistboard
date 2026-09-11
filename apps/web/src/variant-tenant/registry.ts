@@ -945,8 +945,23 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // test checks exactly this pair.
       offerInMenu: mahjongEnabled,
       acceptsDeepLink: mahjongEnabled,
-      // The three bots are seated by the server, not chosen here: there is no
-      // ladder to pick from and no seat for the player to give away.
+      // Exactly one option, and it must exist: the dialog carries a single
+      // global engine id and sends it for whichever variant is selected, so a
+      // variant with no options of its own inherits the CHESS default and asks
+      // the server for Misty. That is a 503 and a dead Start button.
+      //
+      // Three seats are filled, not one. This names the opponent rather than
+      // offering a choice, because there is no ladder to choose from.
+      engineOptions: [
+        {
+          id: 'mahjong-efficiency',
+          name: 'Mahjong bot',
+          familyName: 'Mistboard',
+          kind: 'container',
+        },
+      ],
+      defaultEngineId: 'mahjong-efficiency',
+      // No seat to give away: the server seats the other three itself.
       hideColorPicker: true,
     },
   },

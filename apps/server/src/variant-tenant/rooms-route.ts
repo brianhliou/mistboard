@@ -219,11 +219,10 @@ export function createTenantRoomsRoute<
         writeJson(response, 501, { error: unsupportedSurfaceError });
         return true;
       }
-      // An engine id is meaningless where the server picks the seats itself.
-      if (config.engine.kind === 'always-seated' && body.engineId !== undefined) {
-        writeJson(response, 501, { error: unsupportedSurfaceError });
-        return true;
-      }
+      // An engine id is ACCEPTED and ignored where the server picks the seats
+      // itself. The picker offers exactly one option for such a variant, so the
+      // only id a client can send is the one it would have got anyway;
+      // rejecting it instead made the Start button fail.
       if (
         config.engine.kind === 'none' &&
         config.engine.rejectEngineId &&

@@ -15,6 +15,7 @@ import {
   jungleFlipEnabled,
   kriegspielEnabled,
   luzhanqiEnabled,
+  mahjongEnabled,
   revealChessEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
@@ -69,7 +70,11 @@ const GATED_GAME_SPECS = {
   },
   // Registered, not built: no tenant, no route, no client. The gate rejects
   // every request for it, which is what 'gated' means at this stage.
-  mahjong: { notIntegratedError: 'mahjong_not_integrated' },
+  mahjong: {
+    enabled: mahjongEnabled,
+    disabledError: 'mahjong_disabled',
+    notIntegratedError: 'mahjong_not_integrated',
+  },
   'dark-antichess': { notIntegratedError: 'dark_antichess_not_integrated' },
   'sun-tzu': { notIntegratedError: 'sun_tzu_not_integrated' },
   'lao-tzu': { notIntegratedError: 'lao_tzu_not_integrated' },

@@ -162,7 +162,7 @@ export type GameSpecId =
   // open-info sibling of Dark Xiangqi; check-aware legality + checkmate via the
   // elephantops CHECKED path (packages/game/src/variants-xiangqi-standard.ts).
   | 'xiangqi'
-  // Hong Kong mahjong. Registered so the fail-closed dispatch can see it;
+  // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
   | 'mahjong';
 export type GameSpecAliasId = 'fog-draft960' | 'dual-chess' | 'dark-dual-chess';
@@ -604,7 +604,11 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'mahjong_hk',
     publicSurface: 'hidden',
-    runtimeStatus: 'future',
+    // Built and playable, and deliberately not public: the same pairing Duck
+    // Xiangqi uses. 'future' was right while this was only a registered id, and
+    // it is what greys the variant out in the play menu as "coming soon", which
+    // is now the wrong statement about it.
+    runtimeStatus: 'live',
   },
   {
     // Luzhanqi / Junqi: computer-refereed two-player dark military chess on the

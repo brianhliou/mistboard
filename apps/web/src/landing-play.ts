@@ -21,6 +21,7 @@ import {
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   KRIEGSPIEL_SPEC_ID,
+  MAHJONG_SPEC_ID,
   MINI_XIANGQI_SPEC_ID,
   RATED_TIME_CONTROLS,
   REVEAL_CHESS_SPEC_ID,
@@ -102,7 +103,8 @@ type LandingGameSpecId =
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID
-  | typeof DUCK_XIANGQI_SPEC_ID;
+  | typeof DUCK_XIANGQI_SPEC_ID
+  | typeof MAHJONG_SPEC_ID;
 type LandingStartFormat = 'standard' | 'draft960';
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
@@ -3409,7 +3411,9 @@ export function roomCreationGameSpecId(
   | typeof JUNGLE_SPEC_ID
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
+  | typeof MAHJONG_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
+  if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return FORTRESS_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
@@ -3426,6 +3430,10 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) return KRIEGSPIEL_SPEC_ID;
   if (setup.gameSpecId === DARK_MINI_XIANGQI_SPEC_ID) return DARK_MINI_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;
+  // NOTE: this fallback is why a variant missing from the ladder above does not
+  // fail, it becomes DARK CHESS. Mahjong hit exactly that: the dialog selected
+  // it, sent the right clock and the right engine, and asked the server for a
+  // fog chess room. Every variant offered in the play menu needs a line here.
   return setup.startFormat === 'draft960' ? DARK_DRAFT960_SPEC_ID : DARK_CHESS_SPEC_ID;
 }
 
