@@ -26,6 +26,7 @@ import {
   type XiangqiSquare,
 } from '@mistboard/game';
 import '../live-xiangqi.css';
+import { t } from '../i18n/catalog.js';
 import { engineArrowsFromLines } from '../review/engine/engine-arrows.js';
 import { createEnginePanel } from '../review/engine/engine-panel.js';
 import { installBoardDrag } from '../variant-tenant/board-drag.js';
@@ -49,7 +50,6 @@ import {
   type PuzzleMove,
   type PuzzleSession,
 } from './adapter.js';
-import { puzzlePrompt } from './prompt.js';
 
 function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
   const { session } = ctx;
@@ -166,7 +166,7 @@ async function handleXiangqiBoardClick(
     } else {
       session.selectedSquare = null;
       session.selectedDrop = null;
-      session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+      session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
     }
   }
   ctx.renderSession();
@@ -199,7 +199,7 @@ async function handleXiangqiBoardDrop(
   }
   session.selectedSquare = null;
   session.selectedDrop = null;
-  session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+  session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   ctx.renderSession();
 }
 

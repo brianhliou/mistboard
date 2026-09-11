@@ -29,6 +29,7 @@ import {
   dropMiniXiangqiTargetMoves,
   fillDropMiniXiangqiReserve,
 } from '../drop-mini-xiangqi-view.js';
+import { t } from '../i18n/catalog.js';
 import {
   animateMiniXiangqiBoardMove,
   installMiniXiangqiBoardStyles,
@@ -49,7 +50,6 @@ import {
   type PuzzleSession,
   type PuzzleState,
 } from './adapter.js';
-import { puzzlePrompt } from './prompt.js';
 
 // Paint the interactive board (+ reserves for Drop Mini) and wire drag. Mini
 // paints straight onto the board host; Drop Mini through a reserve shell.
@@ -231,7 +231,7 @@ async function handleBoardClick(ctx: PuzzleBoardContext, square: MiniXiangqiSqua
   } else {
     session.selectedSquare = null;
     session.selectedDrop = null;
-    session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+    session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   }
   ctx.renderSession();
 }
@@ -263,7 +263,7 @@ async function handleBoardDrop(
 
   session.selectedSquare = null;
   session.selectedDrop = null;
-  session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+  session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   ctx.renderSession();
 }
 
@@ -291,7 +291,7 @@ async function handleReserveDrop(
     return;
   }
 
-  session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
+  session.feedback = { kind: 'neutral', text: t('puzzle.findBestMove') };
   ctx.renderSession();
 }
 

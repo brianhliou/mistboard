@@ -147,7 +147,6 @@ export const ZH_HANS_PLAY = {
   'puzzle.notFound': '未找到该题目',
   'puzzle.noneForVariant': '这个棋种暂无题目。',
   'puzzle.findBestMove': '找出最佳着法。',
-  'puzzle.findFastestMate': '找出最快的杀法。',
   'puzzle.checkingMove': '正在检查着法。',
   'puzzle.solved': '已解开。',
   'puzzle.solvedAlternativeMate': '已解开。这一手同样能成杀。',
