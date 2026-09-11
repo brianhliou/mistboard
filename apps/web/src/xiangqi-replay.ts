@@ -882,12 +882,14 @@ export function mountXiangqiReplay(
     if (variation) {
       narrative.textContent = `Engine line, ${variation.cursor} of ${variation.moves.length}`;
     } else if (index === 0) {
-      narrative.textContent = copy.intro;
+      // A chapter set from a Black-to-move FEN opens with Black; the intro and
+      // the mover attribution below follow the FEN, not the game's convention.
+      narrative.textContent = firstMover === 'red' ? copy.intro : copy.introSecond;
     } else if (index === total) {
       narrative.textContent = spec.resultText;
     } else {
       const mv = moves[index - 1]!;
-      const mover = index % 2 === 1 ? copy.first : copy.second;
+      const mover = (index % 2 === 1) === (firstMover === 'red') ? copy.first : copy.second;
       narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${mv.from}–${mv.to}`;
     }
     // The card always shows the result, the way a game page does; the running
