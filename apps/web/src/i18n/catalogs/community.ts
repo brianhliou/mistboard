@@ -361,6 +361,7 @@ export const EN_COMMUNITY = {
   // happens to put the tool first too, which is what makes the split work; a
   // language that did not would need the sentence rebuilt, not re-keyed.
   'forum.markdownAvailable': ' is available for formatting.',
+  'forum.embedHint': 'A game, study, or puzzle link alone on its line shows as a board.',
   'forum.etiquetteLink': 'forum etiquette',
   'forum.postDeleted': ' · deleted {date}',
   'forum.quote': 'Quote',

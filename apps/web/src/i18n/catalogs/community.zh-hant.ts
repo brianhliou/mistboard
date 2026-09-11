@@ -341,6 +341,7 @@ export const ZH_HANT_COMMUNITY = {
   'forum.categoryRestricted': '{category}為受限版塊',
   'forum.noTopicsOnPage': '本頁沒有主題。',
   'forum.markdownAvailable': ' 可用於排版。',
+  'forum.embedHint': '將對局、研究或殘局連結單獨放在一行，即可顯示為棋盤。',
   'forum.etiquetteLink': '論壇禮儀',
   'forum.postDeleted': ' · 已刪除 {date}',
   'forum.quote': '引用',

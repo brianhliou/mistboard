@@ -1896,7 +1896,11 @@ function forumMarkdownNote(): HTMLElement {
   markdown.rel = 'nofollow noopener noreferrer';
   markdown.textContent = t('forum.markdown');
   const formatting = document.createElement('span');
-  formatting.append(markdown, document.createTextNode(t('forum.markdownAvailable')));
+  formatting.append(
+    markdown,
+    document.createTextNode(t('forum.markdownAvailable')),
+    document.createTextNode(` ${t('forum.embedHint')}`),
+  );
   const etiquette = document.createElement('a');
   etiquette.className = 'forum-form-note-etiquette';
   etiquette.href = '/forum/etiquette';
