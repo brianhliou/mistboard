@@ -2191,6 +2191,10 @@
 .article-embed-frame {
   display: block;
   width: 100%;
+  /* Narrower than the puzzle widget's 543px stack threshold, so it takes the
+     stacked layout (board over panel) rather than two squeezed columns. */
+  max-width: 540px;
+  margin-inline: auto;
   border: 0;
   background: transparent;
   min-height: 360px;
