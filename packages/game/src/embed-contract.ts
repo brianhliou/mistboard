@@ -85,3 +85,79 @@ export function embedPuzzlePath(puzzleId?: string): string {
 export function embedAnalysisPath(): string {
   return '/embed/analysis/xiangqi';
 }
+
+/**
+ * What a pasted Mistboard URL embeds as, or null when it embeds as nothing.
+ *
+ * One parser for the two consumers that must agree on the answer: the oEmbed
+ * provider (which answers "is this URL embeddable" for WordPress, Discourse and
+ * the forum's own link expansion) and the forum client (which decides whether a
+ * line that is only a URL becomes a board). The forum expanding a link the
+ * provider then 404s, or the reverse, is the drift this exists to prevent.
+ *
+ * Games, studies and puzzles match on the permalink a person actually copies
+ * (`/game/:id`, `/xiangqi/game/:id`, `/study/:s/:c`, `/puzzles/:id`) as well as
+ * their embed path. TV and the analysis board match ONLY on their embed path:
+ * `/watch` and `/analysis` are pages, and a link to a page should stay a link.
+ *
+ * The variant segment of a tenant game route is not trusted; the game's own
+ * record says what it is, so it is not carried here.
+ */
+export type EmbedTarget =
+  | { kind: 'game'; roomId: string }
+  | { kind: 'study'; studyId: string; chapterId: string }
+  | { kind: 'puzzle'; puzzleId: string | null }
+  | { kind: 'tv'; channel: string | null }
+  | { kind: 'analysis' };
+
+const ID = '([A-Za-z0-9_-]{1,64})';
+const GAME_TARGET = new RegExp(`^/(?:embed/game|game|[a-z0-9-]{1,40}/game)/${ID}/?$`);
+const STUDY_TARGET = new RegExp(`^/(?:embed/)?study/${ID}/${ID}/?$`);
+const PUZZLE_PERMALINK = new RegExp(`^/puzzles/${ID}/?$`);
+const PUZZLE_EMBED = new RegExp(`^/embed/puzzle(?:/${ID})?/?$`);
+const TV_EMBED = /^\/embed\/tv\/?$/;
+const ANALYSIS_EMBED = /^\/embed\/analysis(?:\/xiangqi)?\/?$/;
+
+/** Accepts an absolute URL or a bare path; a string that is neither is null. */
+export function embedTargetFromUrl(url: string): EmbedTarget | null {
+  let pathname: string;
+  let search: string;
+  try {
+    const parsed = new URL(url, 'https://mistboard.com');
+    pathname = parsed.pathname;
+    search = parsed.search;
+  } catch {
+    return null;
+  }
+  const game = GAME_TARGET.exec(pathname);
+  if (game) return { kind: 'game', roomId: game[1] as string };
+  const study = STUDY_TARGET.exec(pathname);
+  if (study) return { kind: 'study', studyId: study[1] as string, chapterId: study[2] as string };
+  const puzzle = PUZZLE_PERMALINK.exec(pathname) ?? PUZZLE_EMBED.exec(pathname);
+  if (puzzle) return { kind: 'puzzle', puzzleId: puzzle[1] ?? null };
+  if (TV_EMBED.test(pathname)) {
+    const channel = new URLSearchParams(search).get('channel');
+    return { kind: 'tv', channel: channel && /^[a-z0-9-]{1,40}$/.test(channel) ? channel : null };
+  }
+  if (ANALYSIS_EMBED.test(pathname)) return { kind: 'analysis' };
+  return null;
+}
+
+/** The frameable path for a target, the same one the oEmbed provider serves. */
+export function embedPathForTarget(target: EmbedTarget): string {
+  switch (target.kind) {
+    case 'game':
+      return embedGamePath(encodeURIComponent(target.roomId));
+    case 'study':
+      return embedStudyPath(
+        encodeURIComponent(target.studyId),
+        encodeURIComponent(target.chapterId),
+      );
+    case 'puzzle':
+      return embedPuzzlePath(target.puzzleId ? encodeURIComponent(target.puzzleId) : undefined);
+    case 'tv':
+      return embedTvPath(target.channel ?? undefined);
+    case 'analysis':
+      return embedAnalysisPath();
+  }
+}
