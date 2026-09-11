@@ -41,6 +41,9 @@ const CONTROLS_PX = 39;
 // In the stacked layout the sheet keeps at least this much height: the result
 // foot and three rows of moves (embed.css keeps the same number).
 const STACKED_MOVES_MIN_PX = 112;
+// The sheet's width cap beside the board: the review page's move column. Past
+// this the sheet is empty space, so the card stops growing and centres.
+const RAIL_MAX_WIDTH_PX = 380;
 // Gap between the card and the credit line (.embed-frame in embed.css).
 const FRAME_GAP_PX = 6;
 
@@ -233,7 +236,16 @@ export async function mountEmbedCard(
     };
     if (box.width <= 0 || box.height <= 0) return;
     const stacked = box.width < STACK_BELOW_PX;
-    boardCol.style.width = `${fitBoardWidth(box, options.aspect, stacked)}px`;
+    const boardWidth = fitBoardWidth(box, options.aspect, stacked);
+    boardCol.style.width = `${boardWidth}px`;
+    // Beside the board the card asks for the board plus the capped sheet and
+    // the stylesheet's max-width: 100% clamps it to the frame (the sheet then
+    // gets what is left, never less than the floor the board arithmetic kept
+    // for it). Stacked, the sheet is under the board and the card takes the
+    // frame. An explicit width, not a max: with auto margins doing the
+    // centring the card is content-sized, and the sheet has no content width
+    // of its own (its scroller is out of flow).
+    card.style.width = stacked ? '' : `${boardWidth + RAIL_MAX_WIDTH_PX + CARD_BORDER_PX}px`;
   };
   fitBoard();
   if (typeof ResizeObserver !== 'undefined') {
