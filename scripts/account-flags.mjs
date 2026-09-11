@@ -209,7 +209,9 @@ try {
       `DELETE FROM variant_access_grants WHERE user_id = $1 AND game_spec_id = $2`,
       [row.id, revokeVariant],
     );
-    console.log(gone.rowCount ? `Revoked ${revokeVariant}.` : `No ${revokeVariant} grant to revoke.`);
+    console.log(
+      gone.rowCount ? `Revoked ${revokeVariant}.` : `No ${revokeVariant} grant to revoke.`,
+    );
   }
 
   const grants = await client.query(

@@ -20,10 +20,7 @@ const deal = (): MahjongTenantState => createMahjongState(orderedWall());
 /** Every array anywhere in a structure, with the path that reached it. */
 function arraysIn(value: unknown, path = '$'): { path: string; value: unknown[] }[] {
   if (Array.isArray(value)) {
-    return [
-      { path, value },
-      ...value.flatMap((item, i) => arraysIn(item, `${path}[${i}]`)),
-    ];
+    return [{ path, value }, ...value.flatMap((item, i) => arraysIn(item, `${path}[${i}]`))];
   }
   if (value && typeof value === 'object') {
     return Object.entries(value).flatMap(([key, item]) => arraysIn(item, `${path}.${key}`));

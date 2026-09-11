@@ -27,7 +27,10 @@ import { sevenPairsShanten, standardShanten, thirteenOrphansShanten } from './sh
 import { formatTiles, rankOf, suitOf, TILE_COUNT } from './tiles.js';
 
 const require = createRequire(import.meta.url);
-// eslint-disable-next-line @typescript-eslint/no-explicit-any
+// @kobalab/majiang-core ships no type declarations, and the point of this file
+// is to diff against it rather than to model it. The pragma here used to name
+// eslint, which this repo does not run, so it suppressed nothing.
+// biome-ignore lint/suspicious/noExplicitAny: untyped third-party oracle
 const Majiang = require('@kobalab/majiang-core') as any;
 
 /** Their notation puts the suit letter first and groups ranks after it. */

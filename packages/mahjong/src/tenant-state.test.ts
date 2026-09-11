@@ -4,8 +4,8 @@ import test from 'node:test';
 import {
   applyMahjongMove,
   CLAIM_WINDOW_MS,
-  createMahjongState,
   claimsFor,
+  createMahjongState,
   type MahjongTenantState,
   mahjongSeatMayAct,
   orderedWall,
@@ -139,7 +139,13 @@ test('an answer with no window open changes nothing', () => {
     assert.equal(applyMahjongMove(state, { by: 'south', at: 1_000, action }), state);
   }
   assert.equal(
-    applyMahjongMove(state, { by: 'south', at: 1_000, action: 'claim', kind: 'pung', fromHand: [0, 0] }),
+    applyMahjongMove(state, {
+      by: 'south',
+      at: 1_000,
+      action: 'claim',
+      kind: 'pung',
+      fromHand: [0, 0],
+    }),
     state,
   );
 });
@@ -150,9 +156,13 @@ test('a claim naming tiles the seat does not hold is recorded as a decline', () 
   const { state } = toContestedWindow();
   const [first] = pendingClaimants(state);
   assert.ok(first, 'the pinned deal must have a claimant');
-  const next = applyMahjongMove(state, { by: first, at: 1_000, action: 'claim',
+  const next = applyMahjongMove(state, {
+    by: first,
+    at: 1_000,
+    action: 'claim',
     kind: 'pung',
-    fromHand: [99, 99] });
+    fromHand: [99, 99],
+  });
   // Either the window resolved (answers cleared) or it recorded the decline;
   // what must hold in both cases is that it is no longer waiting on this seat.
   assert.ok(!pendingClaimants(next).includes(first));

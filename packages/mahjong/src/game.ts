@@ -15,7 +15,7 @@
  * and they add a second claim window with different rules.
  */
 
-import { type Claim, nextSeat, SEATS, type Seat, seatAfterPass } from './claims.js';
+import { type Claim, SEATS, type Seat, seatAfterPass } from './claims.js';
 import type { HandSet } from './decompose.js';
 import { EAST, TILE_COUNT, type TileIndex } from './tiles.js';
 
