@@ -126,6 +126,38 @@ body.embed-body {
   max-width: 100%;
 }
 
+/* ── Study embed (/embed/study/:studyId/:chapterId) ──────────────────────────
+   The article widget as it is, with two embed-only differences that bring it
+   level with the game card beside it in a forum thread: the result is pinned
+   under the move list (the widget's own foot scrolls with the list), and the
+   board's mat is inset 8px rather than the article's 12px, the same inset the
+   game card uses. */
+.embed-widget.xq-replay-annotated .raw-svg-stepper-frame-xq {
+  padding-inline: 8px;
+}
+
+.embed-widget .xq-replay-result--pinned:empty {
+  display: none;
+}
+
+/* The same height as the control bar beside it (38px plus the rule), text
+   centred, so the two columns end on one line rather than three pixels apart. */
+.embed-widget .xq-replay-result--pinned {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 39px;
+  margin-top: 0;
+  padding: 0 4px;
+  border-top: 1px solid var(--site-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--site-muted);
+  text-align: center;
+}
+
 /* ── Game embed (/embed/game/:roomId) ─────────────────────────────────────────
    One card, the study embed's grammar (articles.css .xq-replay-annotated): a
    bordered panel holding the board column and, behind a rule, the move sheet.
@@ -239,7 +271,7 @@ body.embed-body {
    corner comes from clipping the board element. */
 .embed-game .embed-board {
   box-sizing: border-box;
-  padding-inline: 12px;
+  padding-inline: 8px;
 }
 
 .embed-game .embed-board .replay-board {
@@ -377,10 +409,17 @@ body.embed-body {
   color: var(--site-on-accent, #fff);
 }
 
+/* Same height as the control bar under the board, so the rule above the
+   result and the rule above the controls are one line across the card. */
 .embed-game-result {
+  display: flex;
   flex: none;
-  margin-top: 6px;
-  padding: 8px 4px 10px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 39px;
+  margin-top: 0;
+  padding: 0 4px;
   border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
   color: var(--site-muted);
   font-size: 12px;
@@ -490,7 +529,7 @@ body.embed-body {
 
 /* The mat inset again, at the specificity the reset above took away. */
 .embed-game .embed-board.replay-page {
-  padding-inline: 12px;
+  padding-inline: 8px;
 }
 
 .embed-board .replay-page,

@@ -22,7 +22,7 @@ import type { ArticleLang } from './article-i18n.js';
 import './board-glyph-marker.css';
 import { boardLastMoveMarkersSvg, boardLastMoveOuterRadius } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
+import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
@@ -281,10 +281,33 @@ function iccsToMove(tok: string): XiangqiMove {
   return { from: conv(tok.slice(0, 2)), to: conv(tok.slice(2, 4)) };
 }
 
+export type XiangqiReplayMountOptions = {
+  lang?: ArticleLang;
+  /**
+   * Where the result line sits. `end` (the default, the article widget's
+   * choice) is the last item in the move scroller: the result belongs at the
+   * end of the game and reaching it means scrolling there. `pinned` keeps it
+   * under the list at all times, the way the game card's "Red wins" foot does,
+   * for a host that frames the widget as one game among others (the embed).
+   */
+  resultPlacement?: 'end' | 'pinned';
+};
+
+/** "Red wins" for a PGN-style result tag; nothing for an unfinished `*`; the
+ *  tag itself for a spelling this does not know. */
+export function xiangqiResultLabel(resultText: string, copy: ReplayStepperCopy): string {
+  const tag = resultText.trim();
+  if (tag === '*' || tag === '') return '';
+  if (tag === '1-0') return copy.wins(copy.first);
+  if (tag === '0-1') return copy.wins(copy.second);
+  if (tag === '1/2-1/2' || tag === '½-½') return copy.draw;
+  return tag;
+}
+
 export function mountXiangqiReplay(
   host: HTMLElement,
   spec: XiangqiReplaySpec,
-  options: { lang?: ArticleLang } = {},
+  options: XiangqiReplayMountOptions = {},
 ): XiangqiReplayController {
   const copy = replayStepperCopy(options.lang, 'xiangqi');
   let perspective: XiangqiColor = spec.perspective ?? 'red';
@@ -516,6 +539,10 @@ export function mountXiangqiReplay(
     const moveInner = document.createElement('div');
     moveInner.className = 'xq-replay-move-inner';
     moveInner.append(moveList);
+    if (options.resultPlacement === 'pinned') {
+      resultFoot.classList.add('xq-replay-result--pinned');
+      moveInner.append(resultFoot);
+    }
     moveCol.append(moveInner);
     const grid = document.createElement('div');
     grid.className = 'xq-replay-grid';
@@ -772,8 +799,9 @@ export function mountXiangqiReplay(
       moveList.appendChild(branch);
     }
     // Last item in the scroller, not a pinned footer: the result belongs at the
-    // end of the game, and reaching it should mean scrolling to the end.
-    moveList.appendChild(resultFoot);
+    // end of the game, and reaching it should mean scrolling to the end. A host
+    // that asked for it pinned has it under the list instead (see the mount).
+    if (options.resultPlacement !== 'pinned') moveList.appendChild(resultFoot);
   }
 
   /**
@@ -863,8 +891,12 @@ export function mountXiangqiReplay(
       narrative.textContent = `${copy.movePrefix(Math.ceil(index / 2))} · ${mover}: ${mv.from}–${mv.to}`;
     }
     // The card always shows the result, the way a game page does; the running
-    // narrative line is the plain stepper's job.
-    resultFoot.textContent = spec.resultText;
+    // narrative line is the plain stepper's job. Pinned, it reads as the game
+    // card's foot does ("Red wins"), not as a tag.
+    resultFoot.textContent =
+      options.resultPlacement === 'pinned'
+        ? xiangqiResultLabel(spec.resultText, copy)
+        : spec.resultText;
     renderMoveList();
     if (takeFocusAfterRender) {
       takeFocusAfterRender = false;
