@@ -20,6 +20,7 @@
 import {
   DROP_MINI_XIANGQI_SPEC_ID,
   deriveXiangqiPuzzleDifficulty,
+  detectXiangqiPuzzleMotifs,
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiPuzzle,
   JUNGLE_SPEC_ID,
@@ -27,6 +28,7 @@ import {
   MINI_XIANGQI_SPEC_ID,
   type MiniXiangqiPuzzle,
   XIANGQI_SPEC_ID,
+  type XiangqiMotifId,
   type XiangqiPuzzle,
 } from '@mistboard/game';
 import {
@@ -54,6 +56,12 @@ export type PuzzleStoreSnapshot = {
   // server-side and needs a SQL band query (#302); until then this is the same
   // number with none of the backfill surface.
   difficultyById: ReadonlyMap<string, number>;
+  // Named kill patterns (杀法) per standard-xiangqi checkmate puzzle, derived
+  // the same way and for the same reasons (#324): a pure function of the
+  // solution line, 0.17ms per puzzle, so it can never disagree with the
+  // record it describes. The column #302 anticipates arrives with the SQL
+  // band query that needs it. Only puzzles with at least one motif appear.
+  motifsById: ReadonlyMap<string, readonly XiangqiMotifId[]>;
   source: 'database' | 'seed';
 };
 
@@ -139,10 +147,13 @@ function buildSnapshot(
   source: PuzzleStoreSnapshot['source'],
 ): PuzzleStoreSnapshot {
   const difficultyById = new Map<string, number>();
+  const motifsById = new Map<string, readonly XiangqiMotifId[]>();
   for (const puzzle of puzzles) {
     if (puzzle.variant !== XIANGQI_SPEC_ID) continue;
     try {
       difficultyById.set(puzzle.id, deriveXiangqiPuzzleDifficulty(puzzle).score);
+      const motifs = detectXiangqiPuzzleMotifs(puzzle);
+      if (motifs.length > 0) motifsById.set(puzzle.id, motifs);
     } catch (error) {
       // A puzzle whose line will not replay still has to serve; it simply
       // falls back to the depth-only seed rating at the call site.
@@ -155,6 +166,7 @@ function buildSnapshot(
     puzzles,
     byId: new Map(puzzles.map((puzzle) => [puzzle.id, puzzle])),
     difficultyById,
+    motifsById,
     source,
   };
 }

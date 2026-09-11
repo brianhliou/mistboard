@@ -10,6 +10,7 @@ function puzzle(id: string, rating: number, theme: string): PuzzleSummary {
     sideToMove: 'red',
     goal: { type: 'winning-advantage', winner: 'red' },
     themes: [theme],
+    motifs: [],
     solutionPlyCount: 3,
     rating,
     ratingProvisional: false,

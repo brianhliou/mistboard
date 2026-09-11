@@ -4,8 +4,14 @@
  * themes card, and the settings card (variant picker + auto-next).
  */
 
-import { FORTRESS_XIANGQI_SPEC_ID, puzzleShortCode, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  FORTRESS_XIANGQI_SPEC_ID,
+  puzzleShortCode,
+  XIANGQI_MOTIF_BY_ID,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
+import { currentLocale } from '../i18n/locale.js';
 import { renderVariantMarker } from '../variant-markers.js';
 import { colorLabel, type PuzzleSummary } from './adapter.js';
 import type { UserPuzzleRating } from './api.js';
@@ -346,9 +352,22 @@ function puzzleCodeLine(puzzle: PuzzleSummary): HTMLSpanElement {
   return line;
 }
 
-function tagsPanel(puzzle: Pick<PuzzleSummary, 'themes'>): HTMLElement {
+function tagsPanel(puzzle: Pick<PuzzleSummary, 'themes' | 'motifs'>): HTMLElement {
   const tags = document.createElement('div');
   tags.className = 'puzzle-tags';
+  // Named kill patterns lead: the Chinese name is the name, the English
+  // gloss rides beside it outside zh locales, pinyin sits in the tooltip.
+  const zh = currentLocale().startsWith('zh');
+  for (const id of puzzle.motifs ?? []) {
+    const motif = XIANGQI_MOTIF_BY_ID.get(id);
+    if (!motif) continue;
+    const tag = document.createElement('span');
+    tag.className = 'puzzle-tag puzzle-tag-motif';
+    tag.lang = 'zh';
+    tag.textContent = zh ? motif.hanzi : `${motif.hanzi} ${motif.label}`;
+    tag.title = motif.pinyin;
+    tags.append(tag);
+  }
   for (const theme of puzzle.themes) {
     const tag = document.createElement('span');
     tag.className = 'puzzle-tag';
