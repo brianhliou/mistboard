@@ -13,7 +13,19 @@ import type { AccountRole } from './persistence-accounts.js';
 import { getPool } from './persistence-db.js';
 import type { PlayerTitle } from './persistence-titles.js';
 
-export const ADMIN_ACCOUNT_SORTS = ['newest', 'seen', 'games'] as const;
+// Each sortable column in both directions. The pair naming (`x` / `x-asc`,
+// `name` / `name-desc`) keeps the historical keys stable: `newest`, `seen`,
+// `games` are what saved /accounts URLs already carry.
+export const ADMIN_ACCOUNT_SORTS = [
+  'newest',
+  'oldest',
+  'seen',
+  'seen-asc',
+  'games',
+  'games-asc',
+  'name',
+  'name-desc',
+] as const;
 export type AdminAccountSort = (typeof ADMIN_ACCOUNT_SORTS)[number];
 
 export function isAdminAccountSort(value: string): value is AdminAccountSort {
@@ -54,10 +66,17 @@ export type AdminAccountsPage = {
 
 export const ADMIN_ACCOUNTS_MAX_LIMIT = 500;
 
+// Never-seen accounts sort last in both directions: "least recently seen"
+// is a question about people who have been seen.
 const ORDER_BY: Record<AdminAccountSort, string> = {
   newest: 'u.created_at DESC, u.id',
+  oldest: 'u.created_at ASC, u.id',
   seen: 'u.last_seen_at DESC NULLS LAST, u.created_at DESC, u.id',
+  'seen-asc': 'u.last_seen_at ASC NULLS LAST, u.created_at ASC, u.id',
   games: 'games_played DESC, u.created_at DESC, u.id',
+  'games-asc': 'games_played ASC, u.created_at DESC, u.id',
+  name: 'lower(u.display_name) ASC, lower(u.handle) ASC, u.id',
+  'name-desc': 'lower(u.display_name) DESC, lower(u.handle) DESC, u.id',
 };
 
 // ILIKE pattern for the search box: the user's text is a literal, so its own

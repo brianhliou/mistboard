@@ -10,7 +10,7 @@
 
 .metrics-cards {
   display: grid;
-  grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+  grid-template-columns: repeat(auto-fit, minmax(130px, 1fr));
   gap: 12px;
   margin-bottom: 28px;
 }
@@ -112,4 +112,38 @@
   .metrics-breakdown-bar {
     display: none;
   }
+}
+
+/* Admin additions: the lede under the cards, weekly sections, and the
+ * engines block set apart at the bottom. */
+.metrics-lede {
+  margin: -12px 0 24px;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.5;
+}
+
+.metrics-weekly-section > .weekly-chart {
+  width: 100%;
+}
+
+.metrics-engines-section {
+  margin-top: 40px;
+  padding-top: 24px;
+  border-top: 1px solid var(--site-border);
+}
+
+.metrics-engines-section > .metrics-cards {
+  margin-bottom: 16px;
+}
+
+.metrics-engines-section > .weekly-chart {
+  margin-bottom: 16px;
+}
+
+.metrics-section-note {
+  margin: -6px 0 14px;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.5;
 }

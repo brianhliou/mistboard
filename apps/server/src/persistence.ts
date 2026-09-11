@@ -38,6 +38,12 @@ export {
   listAdminAccounts,
 } from './persistence-admin-accounts.js';
 export type {
+  AdminMetrics,
+  AdminMetricsEngines,
+  AdminMetricsWeek,
+} from './persistence-admin-metrics.js';
+export { ADMIN_METRICS_WEEKS, getAdminMetrics } from './persistence-admin-metrics.js';
+export type {
   AccountClosureChallenge,
   AuthRateLimitInput,
   AuthRateLimitScope,

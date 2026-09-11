@@ -108,7 +108,14 @@ function buildHistoryTable(rows: ReadoutSummary[]): HTMLElement {
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  for (const label of ['Week ending', 'Trigger', 'Verdict', 'Games', 'Players', 'Actions']) {
+  for (const label of [
+    'Week ending',
+    'Trigger',
+    'Verdict',
+    'Games',
+    'Accounts played',
+    'Actions',
+  ]) {
     const th = document.createElement('th');
     th.textContent = label;
     headRow.append(th);

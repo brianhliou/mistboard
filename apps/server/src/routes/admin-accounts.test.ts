@@ -1,7 +1,11 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import type { AdminAccountRow, AdminAccountsQuery } from '../persistence-admin-accounts.js';
+import {
+  ADMIN_ACCOUNT_SORTS,
+  type AdminAccountRow,
+  type AdminAccountsQuery,
+} from '../persistence-admin-accounts.js';
 import {
   ADMIN_ACCOUNTS_DEFAULT_LIMIT,
   type AdminAccountsApiPersistence,
@@ -63,7 +67,7 @@ test('query defaults to newest, the default page size, and no search', () => {
 });
 
 test('query accepts every sort, trims the search, and clamps an over-ask to the cap', () => {
-  for (const sort of ['newest', 'seen', 'games'] as const) {
+  for (const sort of ADMIN_ACCOUNT_SORTS) {
     const parsed = parseAdminAccountsQuery(new URLSearchParams({ sort }));
     assert.equal(parsed.ok && parsed.query.sort, sort);
   }
@@ -80,7 +84,7 @@ test('query accepts every sort, trims the search, and clamps an over-ask to the 
 });
 
 test('query rejects unknown sorts and malformed paging fail-closed', () => {
-  assert.deepEqual(parseAdminAccountsQuery(new URLSearchParams({ sort: 'oldest' })), {
+  assert.deepEqual(parseAdminAccountsQuery(new URLSearchParams({ sort: 'random' })), {
     ok: false,
     error: 'invalid_sort',
   });

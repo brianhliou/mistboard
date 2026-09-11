@@ -78,8 +78,60 @@
   padding: 16px 0;
 }
 
-.accounts-admin-more {
+.accounts-admin-pager {
+  display: flex;
+  align-items: center;
+  gap: 12px;
   margin-top: 12px;
+}
+
+/* display: flex would otherwise beat the [hidden] attribute. */
+.accounts-admin-pager[hidden] {
+  display: none;
+}
+
+.accounts-admin-pager-label {
+  color: var(--site-muted, #8a8f98);
+  font-size: 0.88rem;
+  font-variant-numeric: tabular-nums;
+}
+
+/* Column-header sort buttons read as plain header text with an arrow on the
+   active column; the whole header is the hit target. */
+.accounts-admin-sort {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  margin: 0;
+  padding: 0;
+  border: 0;
+  vertical-align: baseline;
+  border-radius: var(--site-radius-sm, 4px);
+  background: transparent;
+  color: inherit;
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.accounts-admin-sort:hover,
+.accounts-admin-sort.is-active {
+  color: var(--site-heading);
+}
+
+.accounts-admin-sort:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+}
+
+.accounts-admin-sort-arrow {
+  font-size: 0.7em;
+}
+
+.accounts-admin-table th:nth-child(5) .accounts-admin-sort {
+  flex-direction: row-reverse;
+  justify-content: flex-end;
+  width: 100%;
 }
 
 .accounts-admin-table-scroll {

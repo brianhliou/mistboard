@@ -120,6 +120,17 @@ definePersistenceTests('admin-accounts', () => {
         games.accounts.map((p) => p.id),
         ['adm_alice', 'adm_carol', 'adm_bob'],
       );
+      // The reverse of each column: never-seen accounts stay last either way,
+      // oldest signup first, fewest games first, and names A to Z / Z to A.
+      const ids = async (sort: Parameters<typeof listAdminAccounts>[0]['sort']) =>
+        (await listAdminAccounts({ sort, search: null, limit: 200, offset: 0 })).accounts.map(
+          (p) => p.id,
+        );
+      assert.deepEqual(await ids('seen-asc'), ['adm_alice', 'adm_carol', 'adm_bob']);
+      assert.deepEqual(await ids('oldest'), ['adm_carol', 'adm_bob', 'adm_alice']);
+      assert.deepEqual(await ids('games-asc'), ['adm_bob', 'adm_carol', 'adm_alice']);
+      assert.deepEqual(await ids('name'), ['adm_alice', 'adm_bob', 'adm_carol']);
+      assert.deepEqual(await ids('name-desc'), ['adm_carol', 'adm_bob', 'adm_alice']);
     } finally {
       await client.end();
     }
