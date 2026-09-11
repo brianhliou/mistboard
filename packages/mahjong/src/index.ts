@@ -8,6 +8,7 @@ export * from './hk-faan.js';
 export * from './hk-patterns.js';
 export * from './hk-payment.js';
 export * from './ladder.js';
+export * from './player-view.js';
 export * from './shanten.js';
 export * from './tenant-state.js';
 export * from './tiles.js';
