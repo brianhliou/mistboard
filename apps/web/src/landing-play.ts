@@ -13,7 +13,7 @@ import {
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUAL_CHESS_SPEC_ID,
-  type DUCK_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
   engineTimeControlPin,
   FORTRESS_XIANGQI_SPEC_ID,
   gameSpecForId,
@@ -280,6 +280,8 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
       return 'variant.jungleFlip.name';
     case FORTRESS_XIANGQI_SPEC_ID:
       return 'variant.fortressXiangqi.name';
+    case DUCK_XIANGQI_SPEC_ID:
+      return 'variant.duckXiangqi.name';
     case XIANGQI_SPEC_ID:
       return 'variant.xiangqi.name';
     default:

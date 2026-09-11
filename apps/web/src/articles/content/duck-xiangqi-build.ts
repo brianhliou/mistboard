@@ -1,5 +1,4 @@
 import {
-  DUCK_XIANGQI_CANNON_SCREEN,
   DUCK_XIANGQI_SHARED_SCREEN,
   DUCK_XIANGQI_THUMBNAIL,
 } from '../../duck-xiangqi-rules-diagrams.js';
@@ -14,7 +13,7 @@ export const duckXiangqiBuildArticle: Article = {
   title: 'Duck Xiangqi Is Live',
   seoTitle: 'Duck Xiangqi: Duck Chess on the Chinese Chess Board',
   summary:
-    'Chess.com made Duck Chess an official variant in 2022. Nobody had put it on a xiangqi board, where four different rules ask whether a point is occupied instead of one. Now you can play it.',
+    'Chess.com made Duck Chess an official variant in 2022. Nobody had put it on a xiangqi board, where four more rules ask whether a point is occupied. Now you can play it.',
   showSummaryOnPage: false,
   status: 'draft',
   publishedAt: '2026-09-11',
@@ -33,22 +32,16 @@ export const duckXiangqiBuildArticle: Article = {
   ],
   sections: [
     {
-      heading: 'Four ways to be in the way',
+      heading: 'Four more ways to be in the way',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Duck Xiangqi is the game you already know, on the 9 by 10 board, with one duck that both players take turns moving. It is not a reskin. Chess has exactly one way to block a piece: stand on the square it wants. Xiangqi has four.',
+          text: 'Duck Xiangqi is the game you already know, on the 9 by 10 board, with one duck that both players take turns moving. It is not a reskin. In chess the duck blocks the way anything blocks: it stands on the square a piece wants, or in the line it would travel down. Xiangqi does that too, and then it does four more things.',
         },
         {
           kind: 'paragraph',
           text: 'A horse has a leg, and anything on the leg stops it. An elephant has an eye. A cannon needs a screen to capture over, and takes one from any piece at all. The two generals bear on each other down any open file. Every one of those rules asks whether a point is occupied, and the duck occupies.',
         },
-        {
-          kind: 'raw-svg',
-          svg: DUCK_XIANGQI_CANNON_SCREEN,
-          caption:
-            'The cannon on e3 stops short of the duck, and shoots over it to take the chariot on e8. A screen is a screen, whoever it belongs to.',
-        } as ArticleBlock,
         {
           kind: 'paragraph',
           text: 'The cannon is where it gets strange. You place the duck at the end of your turn, which means the screen you just built is your opponent’s to fire over and never yours. The most obstructive square on the board is usually the one that hands their cannon a platform aimed at you.',
@@ -66,17 +59,17 @@ export const duckXiangqiBuildArticle: Article = {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_SHARED_SCREEN,
           caption:
-            'From a real engine game. Both cannons are ringed because either can take the other, and neither capture exists without the duck on e2. It is a battery with an expiry date: whoever moves has to move the duck.',
+            'From a real engine game. Both cannons are ringed because each is available to the other, but only the side to move collects: here that is Red, taking on d2. Neither capture exists without the duck on e2, and whoever moves has to move the duck.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'A platform that belongs to nobody and is guaranteed to be gone next turn is not something a xiangqi board has ever had. Neither has a chessboard.',
+          text: 'A platform that belongs to nobody and is guaranteed to be gone next turn is not something a xiangqi board has ever had.',
         },
       ],
     },
     playClosing({
       heading: 'Play it',
-      lead: 'Eight engine strengths, or a friend. Ratings and a ladder work here the way they do for every variant we run, so the games count. The rules page has the whole thing with diagrams, and there is a study of seven engine games if you want to see it played properly first.',
+      lead: 'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and there is a study of seven engine games if you want to see it played properly first.',
       playLabel: 'Play Duck Xiangqi',
       playHref: '/?play=computer&gameSpecId=duck-xiangqi',
       secondary: [
