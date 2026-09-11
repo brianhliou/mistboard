@@ -225,12 +225,12 @@ export const mahjongTenant: MahjongTenantType = {
   forfeitWinner: () => null,
   rules: {
     createSetup: () => shuffleWall(() => randomInt(2 ** 30) / 2 ** 30, orderedWall()),
-    createInitialState: (_roomId, setup) => {
+    createInitialState: (roomId, setup) => {
       // A room with no persisted wall is a programming error, not a recoverable
       // state: dealing a fresh one here would give a reconnecting player a
       // different hand from the one they were holding.
       if (!Array.isArray(setup)) throw new Error('mahjong room has no persisted wall');
-      return createMahjongState(setup as readonly WallTile[]);
+      return createMahjongState(setup as readonly WallTile[], roomId);
     },
     applyMove: applyMahjongMove,
     isLegalMove: mahjongIsLegalMove,

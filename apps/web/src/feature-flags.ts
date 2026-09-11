@@ -45,6 +45,13 @@ export function fortressXiangqiEnabled(): boolean {
 // Duck Xiangqi renderer. The SERVER flag gates whether rooms can be created at
 // all; this one only gates the client build, so it stays on and the tenant is
 // hidden by its registry surface + the server flag.
+// Hong Kong mahjong. Off by default, and the flag is only half the gate: the
+// variant is also on the per-account allowlist server-side, so turning this on
+// renders the table for people who hold a grant and for nobody else.
+export function mahjongEnabled(): boolean {
+  return import.meta.env.VITE_MAHJONG_ENABLED === 'true';
+}
+
 export function duckXiangqiEnabled(): boolean {
   return true;
 }

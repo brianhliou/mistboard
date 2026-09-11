@@ -30,8 +30,8 @@ import {
   legalClaims,
   type MahjongGame,
   resolveClaims,
-  type Seat,
   SEATS,
+  type Seat,
   type TileIndex,
   type WallTile,
 } from './index.js';
@@ -98,6 +98,8 @@ export type MahjongStatus =
   | { readonly type: 'aborted'; readonly reason: MahjongAbortReason };
 
 export interface MahjongTenantState {
+  /** Room id. Carried so a per-seat view can identify itself on the wire. */
+  readonly id: string;
   readonly status: MahjongStatus;
   readonly moveNumber: number;
   readonly lastMove?: MahjongMove;
@@ -111,9 +113,10 @@ export interface MahjongTenantState {
   readonly windowClosesAt: number | null;
 }
 
-export function createMahjongState(wall: readonly WallTile[]): MahjongTenantState {
+export function createMahjongState(wall: readonly WallTile[], id = ''): MahjongTenantState {
   const game = dealGame(wall);
   return {
+    id,
     status: { type: 'playing', turn: seatName(game.turn) },
     moveNumber: 0,
     game,
@@ -192,10 +195,7 @@ export function mahjongIsLegalMove(state: MahjongTenantState, move: MahjongMove)
  * window only resolves once nobody is still owed. That is what makes a claim a
  * normal event in the log rather than a special case in the runtime.
  */
-export function applyMahjongMove(
-  state: MahjongTenantState,
-  move: MahjongMove,
-): MahjongTenantState {
+export function applyMahjongMove(state: MahjongTenantState, move: MahjongMove): MahjongTenantState {
   const seat = move.by;
   const advanced = (game: MahjongGame, patch: Partial<MahjongTenantState> = {}) =>
     finalize({ ...state, ...patch, game, moveNumber: state.moveNumber + 1, lastMove: move });
@@ -205,7 +205,10 @@ export function applyMahjongMove(
   // applied to a state with no window open, 'pass' would otherwise fall through
   // to settle() and advance the game by a move nobody made.
   const windowOpen = state.game.phase.type === 'claim-window';
-  if (!windowOpen && (move.action === 'claim' || move.action === 'pass' || move.action === 'timeout')) {
+  if (
+    !windowOpen &&
+    (move.action === 'claim' || move.action === 'pass' || move.action === 'timeout')
+  ) {
     return state;
   }
 

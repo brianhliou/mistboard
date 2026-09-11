@@ -54,6 +54,7 @@ export interface MahjongSeatView {
 }
 
 export interface MahjongPlayerView {
+  readonly id: string;
   readonly perspective: MahjongSeat | 'spectator';
   readonly status: MahjongStatus;
   readonly moveNumber: number;
@@ -115,6 +116,7 @@ export function mahjongViewFor(
   });
 
   return {
+    id: state.id,
     perspective,
     status: state.status,
     moveNumber: state.moveNumber,

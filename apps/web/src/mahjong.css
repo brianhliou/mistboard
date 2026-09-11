@@ -1,0 +1,357 @@
+/*
+ * The mahjong table.
+ *
+ * Ported from the prototype, with the two decisions that survived review kept
+ * intact.
+ *
+ * A tile is bone in any light, so its face and its ink do not change with the
+ * theme. That is how a real tile behaves, and it also removes a whole class of
+ * theme bugs: the three suit inks are declared once and mean the same thing on
+ * a light page and a dark one.
+ *
+ * The felt is one surface, not a stack of panels. Border, fill and shadow are
+ * spent once, on the table itself, so the tiles are the only objects on it.
+ * Giving each seat its own card made four boxes compete with the tiles and the
+ * hand stopped being the thing the eye landed on.
+ */
+
+.mahjong-live-board {
+  --mj-tile-w: 30px;
+  --mj-tile-h: 40px;
+  --mj-tile-face: #f7f4ea;
+  --mj-tile-edge: #d9d3c2;
+  --mj-tile-ink: #23261f;
+  /* 萬 red, 索 green, 筒 blue: the suit inks of a printed set. */
+  --mj-wan: #a8382c;
+  --mj-faat: #1d6b48;
+  --mj-tong: #275a80;
+  --mj-felt: #b7c3b0;
+  --mj-felt-edge: #a3b09c;
+  --mj-on-felt: #222a22;
+  --mj-on-felt-soft: #4a544a;
+  --mj-tile-back: #74886d;
+  --mj-shadow: 0 1px 0 rgba(30, 33, 28, 0.06), 0 2px 6px rgba(30, 33, 28, 0.05);
+}
+
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) .mahjong-live-board {
+    --mj-felt: #1e2a1f;
+    --mj-felt-edge: #162017;
+    --mj-on-felt: #dfe6dc;
+    --mj-on-felt-soft: #97a493;
+    --mj-tile-back: #3f5741;
+    --mj-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.4);
+  }
+}
+
+:root[data-theme="dark"] .mahjong-live-board {
+  --mj-felt: #1e2a1f;
+  --mj-felt-edge: #162017;
+  --mj-on-felt: #dfe6dc;
+  --mj-on-felt-soft: #97a493;
+  --mj-tile-back: #3f5741;
+  --mj-shadow: 0 1px 0 rgba(0, 0, 0, 0.4), 0 6px 18px rgba(0, 0, 0, 0.4);
+}
+
+.mj-table {
+  background: var(--mj-felt);
+  border: 1px solid var(--mj-felt-edge);
+  border-radius: 14px;
+  padding: 18px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
+  color: var(--mj-on-felt);
+}
+
+.mj-table-middle {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) minmax(120px, 170px) minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.mj-seat {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.mj-seat-self {
+  width: min(100%, 560px);
+  margin-inline: auto;
+}
+
+.mj-seat-name {
+  display: flex;
+  align-items: center;
+  gap: 7px;
+  font:
+    500 10.5px / 1 "IBM Plex Sans",
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mj-on-felt-soft);
+}
+
+.mj-seat-wind {
+  font:
+    400 13px / 1 Spectral,
+    "PingFang TC",
+    "Songti TC",
+    Georgia,
+    serif;
+  letter-spacing: 0.04em;
+  text-transform: none;
+}
+
+/* The seat to move, and the seats an open window is waiting on, are the two
+   things a player scans for. They read differently: whose move it is, versus
+   who is still deciding. */
+.mj-seat-turn .mj-seat-name {
+  color: var(--mj-tong);
+  font-weight: 600;
+}
+
+.mj-seat-status {
+  margin-left: auto;
+  font-weight: 400;
+  letter-spacing: 0.04em;
+  text-transform: none;
+  color: var(--mj-faat);
+}
+
+.mj-hand,
+.mj-seat-hand,
+.mj-pond,
+.mj-melds {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 3px;
+  min-width: 0;
+}
+
+.mj-hand {
+  gap: 4px;
+}
+
+.mj-melds {
+  gap: 10px;
+}
+
+.mj-meld {
+  display: inline-flex;
+  gap: 2px;
+}
+
+.mj-pond {
+  /* A pond is read in rows of six, the way tiles are actually laid out. */
+  max-width: calc(var(--mj-tile-w) * 6.6);
+  opacity: 0.92;
+}
+
+.mj-tile {
+  width: var(--mj-tile-w);
+  height: var(--mj-tile-h);
+  border-radius: 5px;
+  background: var(--mj-tile-face);
+  border: 1px solid var(--mj-tile-edge);
+  box-shadow: var(--mj-shadow);
+  display: inline-flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 0;
+  color: var(--mj-tile-ink);
+  flex: none;
+}
+
+.mj-tile svg {
+  width: 78%;
+  height: 78%;
+}
+
+.mj-tile-sm {
+  --mj-tile-w: 21px;
+  --mj-tile-h: 28px;
+  border-radius: 4px;
+}
+
+.mj-tile-numeral {
+  font:
+    400 16px / 1 Spectral,
+    "PingFang TC",
+    "Songti TC",
+    Georgia,
+    serif;
+}
+
+.mj-tile-wan-mark {
+  font:
+    400 13px / 1 Spectral,
+    "PingFang TC",
+    "Songti TC",
+    Georgia,
+    serif;
+  color: var(--mj-wan);
+  margin-top: 1px;
+}
+
+.mj-tile-glyph {
+  font:
+    400 22px / 1.05 Spectral,
+    "PingFang TC",
+    "Songti TC",
+    Georgia,
+    serif;
+}
+
+.mj-tile-sm .mj-tile-glyph {
+  font-size: 15px;
+}
+
+.mj-tile-sm .mj-tile-numeral {
+  font-size: 12px;
+}
+
+.mj-tile-sm .mj-tile-wan-mark {
+  font-size: 9px;
+}
+
+.mj-tile-red-dragon .mj-tile-glyph {
+  color: var(--mj-wan);
+}
+
+.mj-tile-green-dragon .mj-tile-glyph {
+  color: var(--mj-faat);
+}
+
+/* A face-down tile is a back, with no face at all: no ink, no border echo of
+   the suit. It must not be possible to read anything off it. */
+.mj-tile-back {
+  background: var(--mj-tile-back);
+  border-color: color-mix(in srgb, var(--mj-tile-back) 78%, black);
+  box-shadow: none;
+}
+
+button.mj-tile {
+  cursor: pointer;
+  transition: transform 90ms ease;
+}
+
+button.mj-tile:hover,
+button.mj-tile:focus-visible {
+  transform: translateY(-4px);
+}
+
+.mj-tile-selected {
+  transform: translateY(-6px);
+}
+
+/* The discard under claim. The window is a few seconds long, so the tile has to
+   be findable at a glance rather than merely marked. */
+.mj-pond-tile-claimable .mj-tile {
+  outline: 2px solid var(--mj-tong);
+  outline-offset: 1px;
+}
+
+.mj-centre {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  gap: 8px;
+  padding: 10px;
+  border-radius: 10px;
+  background: rgba(0, 0, 0, 0.055);
+  text-align: center;
+}
+
+.mj-centre-wind {
+  font:
+    400 26px / 1 Spectral,
+    "PingFang TC",
+    "Songti TC",
+    Georgia,
+    serif;
+  color: var(--mj-on-felt);
+}
+
+.mj-centre-wall {
+  font:
+    500 18px / 1 "IBM Plex Mono",
+    ui-monospace,
+    monospace;
+  color: var(--mj-on-felt);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.mj-centre-wall-label,
+.mj-centre-claim-label {
+  font:
+    400 10px / 1.2 "IBM Plex Sans",
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mj-on-felt-soft);
+}
+
+.mj-centre-claim {
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 4px;
+}
+
+.mj-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+  margin-top: 8px;
+}
+
+.mj-action {
+  padding: 7px 15px;
+  border-radius: 999px;
+  border: 1px solid var(--mj-felt-edge);
+  background: var(--mj-tile-face);
+  color: var(--mj-tile-ink);
+  font:
+    500 13px / 1 "IBM Plex Sans",
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  text-transform: lowercase;
+  cursor: pointer;
+}
+
+.mj-action-win {
+  border-color: var(--mj-wan);
+  color: var(--mj-wan);
+  font-weight: 600;
+}
+
+/* Passing is a button like any other, deliberately. Declining should read as a
+   decision rather than as letting the clock run out. */
+.mj-action-pass {
+  background: transparent;
+  color: var(--mj-on-felt-soft);
+}
+
+@media (max-width: 720px) {
+  .mahjong-live-board {
+    --mj-tile-w: 26px;
+    --mj-tile-h: 35px;
+  }
+
+  .mj-table-middle {
+    grid-template-columns: minmax(0, 1fr);
+  }
+}
