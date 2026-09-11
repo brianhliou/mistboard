@@ -49,6 +49,7 @@ import {
   type PuzzleMove,
   type PuzzleSession,
 } from './adapter.js';
+import { puzzlePrompt } from './prompt.js';
 
 function paintBoard(board: HTMLElement, ctx: PuzzleBoardContext): void {
   const { session } = ctx;
@@ -165,7 +166,7 @@ async function handleXiangqiBoardClick(
     } else {
       session.selectedSquare = null;
       session.selectedDrop = null;
-      session.feedback = { kind: 'neutral', text: 'Find the best move.' };
+      session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
     }
   }
   ctx.renderSession();
@@ -198,7 +199,7 @@ async function handleXiangqiBoardDrop(
   }
   session.selectedSquare = null;
   session.selectedDrop = null;
-  session.feedback = { kind: 'neutral', text: 'Find the best move.' };
+  session.feedback = { kind: 'neutral', text: puzzlePrompt(session.puzzle) };
   ctx.renderSession();
 }
 
