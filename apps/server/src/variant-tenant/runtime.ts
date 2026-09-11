@@ -34,7 +34,12 @@ import type {
   TenantSnapshotClient,
   VariantTenant,
 } from './tenant.js';
-import { assertForfeitPolicy, forfeitWinnerOf, lastSeat } from './tenant.js';
+import {
+  assertForfeitPolicy,
+  forfeitWinnerOf,
+  lastSeat,
+  tenantSeatMayAct,
+} from './tenant.js';
 
 export type TenantRoomCreation<
   Kind extends string,
@@ -420,7 +425,9 @@ export function applyTenantEvent<
   }
   if (event.type === 'move-played') {
     if (status.type !== 'playing') return projection;
-    if (status.turn !== event.color) return projection;
+    // Same predicate the live path uses, so a replayed claim is accepted by
+    // exactly the states that accepted it live.
+    if (!tenantSeatMayAct(tenant, projection.state, event.color)) return projection;
     const prevMoveNumber = projection.state.moveNumber;
     const nextState = tenant.rules.applyMove(projection.state, event.move);
     return {

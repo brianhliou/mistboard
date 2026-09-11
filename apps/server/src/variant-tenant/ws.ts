@@ -66,6 +66,7 @@ import type {
   TenantSeat,
   VariantTenant,
 } from './tenant.js';
+import { tenantSeatMayAct } from './tenant.js';
 
 export type TenantLiveClient<C extends string> = {
   debugRequested: false;
@@ -438,7 +439,7 @@ export function createTenantWsRuntime<
     for (const color of tenant.colors) {
       if (!room.projection.seats[color]) return;
     }
-    if (status.turn !== seat) return;
+    if (!tenantSeatMayAct(tenant, room.projection.state, seat)) return;
     // A move that arrives after the mover's flag fell but before the clock
     // timer fired ends the game by expiry instead of landing the move (the
     // chess-stack rule; closes the timer race for every tenant). The guard is

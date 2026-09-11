@@ -294,6 +294,19 @@ export type VariantTenant<
     // the legal-move list). Null rejects. When omitted, the ws move path
     // appends the parsed move after an isLegalMove check instead.
     canonicalMove?(state: State, move: M): M | null;
+    // May this seat act right now? Defaults to "it is this seat's turn".
+    //
+    // Mahjong is why this exists. Every other tenant is strictly alternating:
+    // the seat to move moves, and anything from anyone else is dropped. A
+    // mahjong discard opens a window in which up to three other seats may
+    // respond, and whoever wins the window takes the turn out of order.
+    //
+    // Read through tenantSeatMayAct, never called directly, because BOTH the
+    // live move path and the replay projection gate on it. A tenant that
+    // widens one and not the other gets a room that plays one game live and a
+    // different one on reconnect, which the event log will not reveal because
+    // every event in it is individually valid.
+    seatMayAct?(state: State, seat: C): boolean;
   };
   setupSubmission?: {
     applySetup(state: State, color: C, setup: unknown): State;
@@ -373,6 +386,24 @@ export type VariantTenant<
     logLabel: string;
   };
 };
+
+/**
+ * Whether `seat` may act on this state: the one question the live move path and
+ * the replay projection must always answer identically.
+ *
+ * The default is strict alternation, which is what every tenant but mahjong
+ * wants. Note it is false for any non-playing status, so callers do not need
+ * their own status check to stay safe.
+ */
+export function tenantSeatMayAct<C extends string, State extends TenantGameStateLike<C>>(
+  tenant: { rules: { seatMayAct?(state: State, seat: C): boolean } },
+  state: State,
+  seat: C,
+): boolean {
+  if (state.status.type !== 'playing') return false;
+  if (tenant.rules.seatMayAct) return tenant.rules.seatMayAct(state, seat);
+  return state.status.turn === seat;
+}
 
 /** The seat that moves first. Throws rather than returning undefined: a tenant
  *  with no seats is a programming error, not a runtime condition. */
