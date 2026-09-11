@@ -35,6 +35,12 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-11 (statistics count visitor games) ── 统计 / 已完成对局 / 引擎对引擎的比赛 /
+  // 测试对局 沿用 content.zh-hans.ts 的 stats.* 说法。
+  'The statistics count visitor games only.': '统计只计入访客的对局。',
+  'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.':
+    '首页和统计页上的已完成对局数，现在只计入自六月网站上线以来访客之间、或访客与引擎之间已完成的对局。引擎对引擎的比赛、我们自己的测试对局，以及在还没有其他人发现这个网站之前我们自己下的棋，都不计入。这样一来，数字降到了原来所显示的三分之一左右；另外三分之二是我们自己。',
+  'See the statistics': '查看统计',
   // ── 2026-09-11 (Elegant Pastime Manual) ── 残局 follows the app catalogs and the
   // study overlays; 古谱 is dpxq's own category word for these manuals.
   'All six volumes of the Elegant Pastime Manual are online.': '《适情雅趣》六卷已全部上线。',
@@ -328,6 +334,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-11 (statistics count visitor games) ── 統計 / 已完成對局 / 引擎對引擎的比賽 /
+  // 測試對局 沿用 content.zh-hant.ts 的 stats.* 說法。
+  'The statistics count visitor games only.': '統計只計入訪客的對局。',
+  'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.':
+    '首頁和統計頁上的已完成對局數，現在只計入自六月網站上線以來訪客之間、或訪客與引擎之間已完成的對局。引擎對引擎的比賽、我們自己的測試對局，以及在還沒有其他人發現這個網站之前我們自己下的棋，都不計入。這樣一來，數字降到了原來所顯示的三分之一左右；另外三分之二是我們自己。',
+  'See the statistics': '查看統計',
   // ── 2026-09-11 (Elegant Pastime Manual) ──
   'All six volumes of the Elegant Pastime Manual are online.': '《適情雅趣》六卷已全部上線。',
   "The Elegant Pastime Manual is a Ming collection of xiangqi endgame compositions. Five hundred and forty-nine of its problems are here now, each on its own board, with the book's solution played out as the mainline and the original four-character title kept beside the English one. Around sixty are draw studies where the source gives its answer in prose rather than as a line, and those notes are quoted as written rather than guessed at. Positions come from dpxq.com and are credited on every composition. One problem is absent: the line recorded for number 479 stops being legal partway through, and half a solution is worse than none.":
