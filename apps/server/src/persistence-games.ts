@@ -58,11 +58,11 @@ const CURATED_MIN_PLY = 20;
 
 // Kept in lockstep with games_result_check (140). A value outside the
 // constraint fails the whole recordGameEnd transaction, participants included.
+// The four wind values are mahjong's: a hand has one winner, or nobody.
 export type GameResult =
   | 'white-wins'
   | 'black-wins'
   | 'red-wins'
-  // Mahjong's four winds (140). A hand has one winner, or nobody.
   | 'east-wins'
   | 'south-wins'
   | 'west-wins'

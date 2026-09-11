@@ -19,6 +19,7 @@
 -- rating a four-player game is a different question from recording one. A rated
 -- mahjong ladder owes its own migration.
 
+-- The four new values are mahjong's winds. A hand has one winner, or nobody.
 ALTER TABLE games
   DROP CONSTRAINT IF EXISTS games_result_check,
   ADD CONSTRAINT games_result_check
@@ -28,7 +29,6 @@ ALTER TABLE games
         'white-wins',
         'black-wins',
         'red-wins',
-        -- Mahjong's four winds. A hand has one winner, or nobody.
         'east-wins',
         'south-wins',
         'west-wins',
