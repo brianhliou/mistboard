@@ -394,6 +394,7 @@ function qualityAggregate(overrides: Partial<PuzzleQualityAggregate> = {}): Puzz
     cleanSolves: 0,
     reveals: 0,
     abandons: 0,
+    bounces: 0,
     inProgress: 0,
     wrongAttempts: 0,
     hints: 0,

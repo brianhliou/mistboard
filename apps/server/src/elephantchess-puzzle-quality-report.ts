@@ -16,6 +16,7 @@ export type PuzzleQualityCohortSummary = {
   cleanSolves: number;
   reveals: number;
   abandons: number;
+  bounces: number;
   wrongAttempts: number;
   hints: number;
   votesUp: number;
@@ -25,7 +26,10 @@ export type PuzzleQualityCohortSummary = {
   solveRate: number | null;
   cleanSolveRate: number | null;
   revealRate: number | null;
+  /** Abandons after at least one move, over starts. */
   abandonmentRate: number | null;
+  /** Views that left without moving, over sessions. The page, not the puzzle. */
+  bounceRate: number | null;
   approvalRate: number | null;
 };
 
@@ -79,6 +83,7 @@ export function summarizePuzzleQuality(
       cleanSolves: summary.cleanSolves + puzzle.cleanSolves,
       reveals: summary.reveals + puzzle.reveals,
       abandons: summary.abandons + puzzle.abandons,
+      bounces: summary.bounces + puzzle.bounces,
       wrongAttempts: summary.wrongAttempts + puzzle.wrongAttempts,
       hints: summary.hints + puzzle.hints,
       votesUp: summary.votesUp + puzzle.votesUp,
@@ -93,6 +98,7 @@ export function summarizePuzzleQuality(
       cleanSolves: 0,
       reveals: 0,
       abandons: 0,
+      bounces: 0,
       wrongAttempts: 0,
       hints: 0,
       votesUp: 0,
@@ -110,7 +116,8 @@ export function summarizePuzzleQuality(
     solveRate: ratio(totals.solves, terminalSessions),
     cleanSolveRate: ratio(totals.cleanSolves, terminalSessions),
     revealRate: ratio(totals.reveals, terminalSessions),
-    abandonmentRate: ratio(totals.abandons, totals.sessions),
+    abandonmentRate: ratio(totals.abandons, totals.starts),
+    bounceRate: ratio(totals.bounces, totals.sessions),
     approvalRate: ratio(totals.votesUp, votes),
   };
 }
@@ -145,7 +152,7 @@ export function buildElephantChessPuzzleQualityReport(input: {
       const votes = puzzle.votesUp + puzzle.votesDown;
       const approvalRate = ratio(puzzle.votesUp, votes);
       const revealRate = ratio(puzzle.reveals, terminalSessions);
-      const abandonmentRate = ratio(puzzle.abandons, puzzle.sessions);
+      const abandonmentRate = ratio(puzzle.abandons, puzzle.starts);
       const wrongAttemptsPerStart = ratio(puzzle.wrongAttempts, puzzle.starts);
       const flags: PuzzleQualityOutlierFlag[] = [];
       if (votes >= perPuzzleVotes && approvalRate !== null && approvalRate < 0.5) {
@@ -155,7 +162,7 @@ export function buildElephantChessPuzzleQualityReport(input: {
         flags.push('high-reveal');
       }
       if (
-        puzzle.sessions >= perPuzzleSessions &&
+        puzzle.starts >= perPuzzleSessions &&
         abandonmentRate !== null &&
         abandonmentRate >= 0.5
       ) {

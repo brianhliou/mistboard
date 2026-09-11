@@ -82,4 +82,31 @@ definePersistenceTests('puzzle quality', () => {
     assert.equal(after.reveals, before.reveals);
     assert.equal(after.inProgress, before.inProgress + 1);
   });
+
+  test('leaving without a move is a bounce, leaving after one is an abandon', async () => {
+    const puzzle = (await getPuzzleStore()).puzzles
+      .filter((candidate) => candidate.variant === XIANGQI_SPEC_ID)
+      .at(-2);
+    assert.ok(puzzle);
+    const before = await findAggregate(puzzle.id);
+    assert.ok(before);
+
+    const bounce = { puzzleId: puzzle.id, sessionId: randomUUID(), variant: puzzle.variant };
+    await recordPuzzleQualityEvent({ ...bounce, event: 'view' });
+    await ageView(puzzle.id, bounce.sessionId);
+    await recordPuzzleQualityEvent({ ...bounce, event: 'abandon' });
+
+    const abandon = { puzzleId: puzzle.id, sessionId: randomUUID(), variant: puzzle.variant };
+    await recordPuzzleQualityEvent({ ...abandon, event: 'view' });
+    await ageView(puzzle.id, abandon.sessionId);
+    await recordPuzzleQualityEvent({ ...abandon, event: 'wrong' });
+    await recordPuzzleQualityEvent({ ...abandon, event: 'abandon' });
+
+    const after = await findAggregate(puzzle.id);
+    assert.ok(after);
+    assert.equal(after.sessions, before.sessions + 2);
+    assert.equal(after.starts, before.starts + 1);
+    assert.equal(after.bounces, before.bounces + 1);
+    assert.equal(after.abandons, before.abandons + 1);
+  });
 });
