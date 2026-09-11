@@ -152,7 +152,7 @@ export type XiangqiPuzzleAttemptResult =
        * The solver did not play the stored line, but their move forces mate
        * anyway and the puzzle's goal is checkmate. Set only in that case, so a
        * caller can say so instead of silently treating it as the stored
-       * solution. See puzzles-xiangqi-mate-search.ts for why this exists.
+       * solution.
        */
       alternativeMate?: true;
     }

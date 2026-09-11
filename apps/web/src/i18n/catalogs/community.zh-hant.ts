@@ -340,7 +340,7 @@ export const ZH_HANT_COMMUNITY = {
   'forum.latestBy': '作者',
   'forum.categoryRestricted': '{category}為受限版塊',
   'forum.noTopicsOnPage': '本頁沒有主題。',
-  'forum.markdownAvailable': ' 可用於排版。',
+  'forum.formattingHint': '空行分段，以 > 開頭的行是引用，連結可點擊。',
   'forum.embedHint': '將對局、研究或殘局連結單獨放在一行，即可顯示為棋盤。',
   'forum.etiquetteLink': '論壇禮儀',
   'forum.postDeleted': ' · 已刪除 {date}',
@@ -369,7 +369,6 @@ export const ZH_HANT_COMMUNITY = {
   'forum.write': '編寫',
   'forum.preview': '預覽',
   'forum.nothingToPreview': '沒有可預覽的內容。',
-  'forum.markdown': 'Markdown',
   'forum.topicCouldNotBePosted': '主題發布失敗。',
   'forum.replyCouldNotBePosted': '回覆發布失敗。',
   'forum.moderation': '管理',
@@ -421,6 +420,13 @@ export const ZH_HANT_COMMUNITY = {
   'forum.etiquetteCategoryHeading': '發在正確的分類裡',
   'forum.etiquetteCategoryBody':
     '把每個主題發到合適的分類。規則提問、戰術策略和綜合討論各有歸處。放錯地方的主題可能被版主移動或關閉。',
+  'forum.etiquetteBoardHeading': '展示對局',
+  'forum.etiquetteBoardBody':
+    '將對局、研究章節或殘局的連結單獨放在一行，它就會在貼文中顯示為可以逐步回放的棋盤。句子中的連結仍是連結。未結束的對局在結束前仍顯示為連結，每則貼文最多顯示十個棋盤。',
+  'forum.etiquetteBoardDo': 'https://mistboard.com/xiangqi/game/abc123 單獨一行',
+  'forum.etiquetteBoardDont': '棋盤截圖，或手動輸入的著法列表',
+  'forum.etiquetteBoardExtras':
+    '在對局連結末尾加上 #30 可從第 30 步打開，在其前面加上 /black 可從黑方視角顯示。在迷霧對局中，這就是黑方實際看到的畫面。',
   'forum.etiquetteSpamHeading': '廣告與洗版',
   'forum.etiquetteSpamBody':
     '純推廣的貼文不受歡迎。請不要在 Mistboard 打廣告，包括招募戰隊或活動成員、以及推廣自己的頻道。',

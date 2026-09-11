@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { resolveWebSocketLiveRuntime, type WebSocketLiveRuntime } from './server-ws-connection.js';
+import {
+  devSwitches,
+  resolveWebSocketLiveRuntime,
+  type WebSocketLiveRuntime,
+} from './server-ws-connection.js';
 import type { TenantManagedRoom, VariantTenantRegistration } from './variant-tenant/registry.js';
 
 // The resolver takes the registrations as data (the production caller passes
@@ -143,3 +147,57 @@ function resolverHarness(options: {
 function roomFixture(id: string): TenantManagedRoom {
   return { id, clients: new Set(), pendingWrites: Promise.resolve() };
 }
+
+// The dev switches on the WebSocket URL are honoured for an authorized caller
+// only. `views=all` always worked that way; `dev=solo`, `dev=engine` and
+// `reset=1` did not, and in production a stranger with a live fog room's id
+// could open it solo, read a draft's picks, move for either side, or evict it.
+
+test('dev switches: an authorized caller (dev runtime, or the admin token) gets all four', () => {
+  const params = new URLSearchParams('dev=solo&reset=1&views=all');
+  assert.deepEqual(devSwitches(params, true), {
+    solo: true,
+    reset: true,
+    randomEngine: false,
+    debugRequested: true,
+    devViews: true,
+  });
+  assert.deepEqual(devSwitches(new URLSearchParams('dev=engine'), true), {
+    solo: false,
+    reset: false,
+    randomEngine: true,
+    debugRequested: true,
+    devViews: true,
+  });
+});
+
+test('dev switches: an unauthorized caller keeps only the request flag, never the effect', () => {
+  const params = new URLSearchParams('dev=solo&reset=1&engine=random&views=all');
+  assert.deepEqual(devSwitches(params, false), {
+    solo: false,
+    reset: false,
+    randomEngine: false,
+    // Still recorded, so the later admin-token message can lift the views.
+    debugRequested: true,
+    devViews: false,
+  });
+  assert.deepEqual(devSwitches(new URLSearchParams('dev=solo'), false), {
+    solo: false,
+    reset: false,
+    randomEngine: false,
+    debugRequested: false,
+    devViews: false,
+  });
+});
+
+test('dev switches: a plain join asks for nothing either way', () => {
+  for (const authorized of [true, false]) {
+    assert.deepEqual(devSwitches(new URLSearchParams('room=abc'), authorized), {
+      solo: false,
+      reset: false,
+      randomEngine: false,
+      debugRequested: false,
+      devViews: false,
+    });
+  }
+});

@@ -134,16 +134,13 @@ export async function handleWebSocketConnection(
     socket.close(1008, gameSpecGate.wsCloseReason);
     return;
   }
-  if (url.searchParams.get('reset') === '1') ctx.resetRoom(roomId, 'manual-reset');
+  const dev = devSwitches(url.searchParams, isDebugViewAuthorized(request));
+  if (dev.reset) ctx.resetRoom(roomId, 'manual-reset');
   if (await ctx.isAbortedRoom(roomId)) {
     socket.close(1008, 'room aborted');
     return;
   }
-  const devMode = url.searchParams.get('dev');
-  const solo = devMode === 'solo';
-  const randomEngine = devMode === 'engine' || url.searchParams.get('engine') === 'random';
-  const debugRequested = randomEngine || url.searchParams.get('views') === 'all';
-  const devViews = debugRequested && isDebugViewAuthorized(request);
+  const { solo, randomEngine, debugRequested, devViews } = dev;
   const accountUser = await currentAccountUser(request);
   const room = await ctx.getOrCreateRoom(
     roomId,
@@ -437,6 +434,46 @@ function isDebugViewAuthorized(request: IncomingMessage): boolean {
   return isAdminDebugToken(
     adminDebugTokenFromProtocolHeader(request.headers['sec-websocket-protocol']),
   );
+}
+
+export type DevSwitches = {
+  /** One client drives both seats and skips the private-room check. */
+  solo: boolean;
+  /** Evict the room before joining it. */
+  reset: boolean;
+  /** Attach the random engine to the room. */
+  randomEngine: boolean;
+  /** Any debug view was asked for (`views=all` or the random engine). */
+  debugRequested: boolean;
+  /** Debug views were asked for AND the caller is authorized to see them. */
+  devViews: boolean;
+};
+
+/**
+ * The dev switches a WebSocket URL may carry, honoured only for an authorized
+ * caller: outside a production-like runtime everyone is, inside one only the
+ * admin debug token is. That is the rule `views=all` always had. `dev=solo`,
+ * `dev=engine` and `reset=1` were not behind it, so in production anyone
+ * holding a live fog room's id could open it as a solo client, read a
+ * dark-draft960 game's picks, move for either side, or evict the room
+ * (found 2026-09-11). An unauthorized switch is dropped, not refused: the
+ * connection proceeds as an ordinary join, which the seat and private-room
+ * checks then judge on their own.
+ */
+export function devSwitches(params: URLSearchParams, authorized: boolean): DevSwitches {
+  const devMode = params.get('dev');
+  const randomEngine = devMode === 'engine' || params.get('engine') === 'random';
+  const debugRequested = randomEngine || params.get('views') === 'all';
+  if (!authorized) {
+    return { solo: false, reset: false, randomEngine: false, debugRequested, devViews: false };
+  }
+  return {
+    solo: devMode === 'solo',
+    reset: params.get('reset') === '1',
+    randomEngine,
+    debugRequested,
+    devViews: debugRequested,
+  };
 }
 
 function recordClientMessage(ctx: WebSocketConnectionContext, client: Client): boolean {

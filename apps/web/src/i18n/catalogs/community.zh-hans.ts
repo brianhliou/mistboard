@@ -340,7 +340,7 @@ export const ZH_HANS_COMMUNITY = {
   'forum.latestBy': '作者',
   'forum.categoryRestricted': '{category}为受限版块',
   'forum.noTopicsOnPage': '本页没有主题。',
-  'forum.markdownAvailable': ' 可用于排版。',
+  'forum.formattingHint': '空行分段，以 > 开头的行是引用，链接可点击。',
   'forum.embedHint': '将对局、研究或残局链接单独放在一行，即可显示为棋盘。',
   'forum.etiquetteLink': '论坛礼仪',
   'forum.postDeleted': ' · 已删除 {date}',
@@ -369,7 +369,6 @@ export const ZH_HANS_COMMUNITY = {
   'forum.write': '编写',
   'forum.preview': '预览',
   'forum.nothingToPreview': '没有可预览的内容。',
-  'forum.markdown': 'Markdown',
   'forum.topicCouldNotBePosted': '主题发布失败。',
   'forum.replyCouldNotBePosted': '回复发布失败。',
   'forum.moderation': '管理',
@@ -421,6 +420,13 @@ export const ZH_HANS_COMMUNITY = {
   'forum.etiquetteCategoryHeading': '发在正确的分类里',
   'forum.etiquetteCategoryBody':
     '把每个主题发到合适的分类。规则提问、战术策略和综合讨论各有归处。放错地方的帖子可能被版主移动或关闭。',
+  'forum.etiquetteBoardHeading': '展示对局',
+  'forum.etiquetteBoardBody':
+    '将对局、研究章节或残局的链接单独放在一行，它就会在帖子中显示为可以逐步回放的棋盘。句子中的链接仍是链接。未结束的对局在结束前仍显示为链接，每个帖子最多显示十个棋盘。',
+  'forum.etiquetteBoardDo': 'https://mistboard.com/xiangqi/game/abc123 单独一行',
+  'forum.etiquetteBoardDont': '棋盘截图，或手动输入的着法列表',
+  'forum.etiquetteBoardExtras':
+    '在对局链接末尾加上 #30 可从第 30 步打开，在其前面加上 /black 可从黑方视角显示。在迷雾对局中，这就是黑方实际看到的画面。',
   'forum.etiquetteSpamHeading': '广告与灌水',
   'forum.etiquetteSpamBody':
     '纯推广的帖子不受欢迎。请不要在 Mistboard 打广告，包括招募战队或活动成员、以及推广自己的频道。',
