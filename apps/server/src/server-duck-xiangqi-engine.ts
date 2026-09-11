@@ -168,6 +168,17 @@ export function scheduleDuckXiangqiEngineMove(
   ctx: DuckXiangqiEngineContext,
   room: DuckXiangqiEngineRoom,
 ): void {
+  logger.info(
+    {
+      kind: 'duck_xiangqi_engine_schedule_entered',
+      room_id: room.id,
+      seats: room.projection.seats,
+      status: room.projection.state.status.type,
+      has_timer: room.engineTimer !== null && room.engineTimer !== undefined,
+      ply: room.events.length,
+    },
+    'Duck Xiangqi engine scheduler entered',
+  );
   if (room.engineTimer) {
     logDuckXiangqiEngineSkip(room, 'already-scheduled');
     return;
@@ -240,6 +251,17 @@ export async function playDuckXiangqiEngineMoveIfReady(
     return;
   }
 
+  logger.info(
+    {
+      kind: 'duck_xiangqi_engine_asking',
+      room_id: room.id,
+      engine_id: engineId,
+      tier: tier.id,
+      ply: room.events.length,
+    },
+    'Duck Xiangqi asking the engine for a move',
+  );
+  const askedAt = Date.now();
   const history = duckXiangqiUciHistory(room.events);
   // Clock-aware per-move budget (shared allocator). The tier's NODE budget is the
   // CPU-independent strength anchor and binds first on a healthy clock; this
@@ -329,6 +351,17 @@ export async function playDuckXiangqiEngineMoveIfReady(
         'Duck Xiangqi engine output rejected by kernel; retrying',
       ),
   });
+  logger.info(
+    {
+      kind: 'duck_xiangqi_engine_answered',
+      room_id: room.id,
+      elapsed_ms: Date.now() - askedAt,
+      validated: validated !== null,
+      aborted,
+      attempts: attempts.length,
+    },
+    'Duck Xiangqi engine call returned',
+  );
   if (aborted || !engineToMove(room, seat)) {
     logDuckXiangqiEngineSkip(room, 'aborted-mid-search');
     return;
