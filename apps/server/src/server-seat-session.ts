@@ -18,6 +18,7 @@ export async function assignSeat(
   clientId: string,
   suppliedSeatToken: string | undefined,
   accountUser: UserAccount | null,
+  deviceId: string | null = null,
 ): Promise<SeatAssignment> {
   // Credential gate for claiming an EXISTING seat. authorizeExistingSeat owns
   // the policy (token vs account identity); see seat-auth.ts. A denial means a
@@ -30,7 +31,14 @@ export async function assignSeat(
     const state = room.seatTokens[decision.seat];
     if (state) {
       state.lastSeenAt = new Date();
-      await touchSeatToken(ctx, room, state);
+      // A seat pre-issued by rematch (or minted before migration 137) learns
+      // its device on the first reconnect that carries one.
+      if (!state.deviceId && deviceId) {
+        state.deviceId = deviceId;
+        await persistSeatToken(ctx, room, state);
+      } else {
+        await touchSeatToken(ctx, room, state);
+      }
     }
     await startLiveClockIfReady(ctx, room);
     // Identity reclaim issues no new raw token (the holder re-authenticates by
@@ -60,29 +68,29 @@ export async function assignSeat(
   }
   if (room.projection.seats.white === clientId) {
     await startLiveClockIfReady(ctx, room);
-    return await existingSeatAssignment(ctx, room, 'white', clientId, accountUser);
+    return await existingSeatAssignment(ctx, room, 'white', clientId, accountUser, deviceId);
   }
   if (room.projection.seats.black === clientId) {
     await startLiveClockIfReady(ctx, room);
-    return await existingSeatAssignment(ctx, room, 'black', clientId, accountUser);
+    return await existingSeatAssignment(ctx, room, 'black', clientId, accountUser, deviceId);
   }
   if (room.randomSeating && !room.projection.seats.white && !room.projection.seats.black) {
     const seat: Color = randomBytes(1)[0]! < 128 ? 'white' : 'black';
     await appendSeatAssigned(ctx, room, clientId, seat);
-    return await newSeatAssignment(ctx, room, seat, clientId, accountUser);
+    return await newSeatAssignment(ctx, room, seat, clientId, accountUser, deviceId);
   }
   if (room.creatorPreference && !room.projection.seats.white && !room.projection.seats.black) {
     const seat = room.creatorPreference;
     await appendSeatAssigned(ctx, room, clientId, seat);
-    return await newSeatAssignment(ctx, room, seat, clientId, accountUser);
+    return await newSeatAssignment(ctx, room, seat, clientId, accountUser, deviceId);
   }
   if (!room.projection.seats.white) {
     await appendSeatAssigned(ctx, room, clientId, 'white');
-    return await newSeatAssignment(ctx, room, 'white', clientId, accountUser);
+    return await newSeatAssignment(ctx, room, 'white', clientId, accountUser, deviceId);
   }
   if (!room.projection.seats.black) {
     await appendSeatAssigned(ctx, room, clientId, 'black');
-    return await newSeatAssignment(ctx, room, 'black', clientId, accountUser);
+    return await newSeatAssignment(ctx, room, 'black', clientId, accountUser, deviceId);
   }
   return { seat: 'spectator' };
 }
@@ -145,12 +153,13 @@ async function existingSeatAssignment(
   seat: Color,
   clientId: string,
   accountUser: UserAccount | null,
+  deviceId: string | null,
 ): Promise<SeatAssignment> {
   const existing = room.seatTokens[seat];
   if (existing) {
     return { seat: 'spectator' };
   }
-  return newSeatAssignment(ctx, room, seat, clientId, accountUser);
+  return newSeatAssignment(ctx, room, seat, clientId, accountUser, deviceId);
 }
 
 async function newSeatAssignment(
@@ -159,6 +168,7 @@ async function newSeatAssignment(
   seat: Color,
   clientId: string,
   accountUser: UserAccount | null,
+  deviceId: string | null,
 ): Promise<SeatAssignment> {
   if (isServerEngineClient(clientId)) return { seat };
   const rawToken = randomBytes(32).toString('base64url');
@@ -166,6 +176,7 @@ async function newSeatAssignment(
   const now = new Date();
   const tokenState: SeatTokenState = {
     clientId,
+    deviceId,
     seat,
     tokenHash,
     userId: accountUser?.id ?? null,

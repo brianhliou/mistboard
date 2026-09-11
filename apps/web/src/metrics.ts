@@ -49,6 +49,7 @@ export type AdminMetricsWeek = {
   pvpGames: number;
   pveGames: number;
   players: number;
+  signedInPlayers: number;
   newPlayers: number;
   returningPlayers: number;
   activePlayers28d: number;
@@ -240,7 +241,7 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
     const lede = document.createElement('p');
     lede.className = 'metrics-lede';
     lede.textContent =
-      'Every number above the last block is visitor play only: games between people or against a bot, with no seat held by an account excluded from statistics, counted from the database at game end, so Do Not Track visitors are included. Player counts are signed-in accounts: a guest seat carries no identity, so guests appear only as games with a guest seat. Weeks start on Monday; the last week is in progress.';
+      'Every number above the last block is visitor play only: games between people or against a bot, with no seat held by an account excluded from statistics, counted from the database at game end, so Do Not Track visitors are included. Players are signed-in accounts plus guest browsers (a guest seat carries a browser id since 2026-09-11; before that date guests appear only as games with a guest seat). Weeks start on Monday; the last week is in progress.';
     parts.push(lede);
     parts.push(...buildWeeklySections(admin, locale));
   }
@@ -296,7 +297,7 @@ function buildHeadlineCards(
   if (admin) {
     grid.append(
       statCard(
-        'Active accounts',
+        'Active players',
         admin.activePlayers28d,
         `played in the last 28 days, ${signedDelta(admin.activePlayers28d - admin.previousActivePlayers28d)} vs the 28 before`,
       ),
@@ -416,18 +417,19 @@ function buildWeeklySections(admin: AdminMetrics, locale: Locale): HTMLElement[]
     );
   return [
     chart(
-      'Signed-in players per week',
+      'Players per week',
       [
         { key: 'players', label: 'Players' },
+        { key: 'signedInPlayers', label: 'Signed in' },
         { key: 'newPlayers', label: 'New' },
         { key: 'returningPlayers', label: 'Returning' },
       ],
-      'Distinct accounts that finished a game each week, split into first-timers and returning',
+      'Distinct accounts and guest browsers that finished a game each week, with the signed-in, first-time and returning shares',
     ),
     chart(
-      'Active accounts, rolling 28 days',
-      [{ key: 'activePlayers28d', label: 'Active accounts' }],
-      'Distinct accounts that finished a game in the 28 days ending each week',
+      'Active players, rolling 28 days',
+      [{ key: 'activePlayers28d', label: 'Active players' }],
+      'Distinct accounts and guest browsers that finished a game in the 28 days ending each week',
     ),
     chart(
       'Games per week',

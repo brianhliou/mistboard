@@ -22,14 +22,23 @@
 
 export const STATS_COUNTED_FROM = '2026-06-01';
 
-// Games alias must be the table alias in the caller's FROM clause.
+// An excluded seat is a signed-in seat of a stats-excluded account, or a
+// guest seat whose device id belongs to a browser such an account has used
+// (stats_excluded_devices, migration 137). Games alias must be the table
+// alias in the caller's FROM clause.
 export function excludedSeatExists(gamesAlias: string): string {
   return `EXISTS (
     SELECT 1 FROM game_participants xp
-    JOIN users xu ON xu.id = xp.subject_id
     WHERE xp.game_id = ${gamesAlias}.room_id
-      AND xp.subject_type = 'user'
-      AND xu.stats_excluded_at IS NOT NULL
+      AND (
+        (xp.subject_type = 'user' AND EXISTS (
+          SELECT 1 FROM users xu
+          WHERE xu.id = xp.subject_id AND xu.stats_excluded_at IS NOT NULL
+        ))
+        OR (xp.subject_type = 'guest' AND xp.subject_id IS NOT NULL AND EXISTS (
+          SELECT 1 FROM stats_excluded_devices xd WHERE xd.device_id = xp.subject_id
+        ))
+      )
   )`;
 }
 
@@ -70,8 +79,26 @@ export function preLaunchHumanGame(gamesAlias = 'g'): string {
 }
 
 // A seat with a countable person behind it: a signed-in account that is not
-// excluded. Guest seats carry no subject id and cannot be counted as people
-// (memory guests_have_no_identity_in_db).
+// excluded, or a guest seat with a device id (migration 137; guest seats
+// before it carry NULL and are not people) from a browser that is not
+// excluded. Distinct (subject_type, subject_id) pairs are then "players": an
+// account is one player, a browser is one player, and a person who plays
+// both signed in and out on one browser is two, which is the known floor.
+export function countedPlayerSeat(participantsAlias = 'p'): string {
+  return `${participantsAlias}.subject_id IS NOT NULL
+    AND (
+      (${participantsAlias}.subject_type = 'user' AND EXISTS (
+        SELECT 1 FROM users cu
+        WHERE cu.id = ${participantsAlias}.subject_id AND cu.stats_excluded_at IS NULL
+      ))
+      OR (${participantsAlias}.subject_type = 'guest' AND NOT EXISTS (
+        SELECT 1 FROM stats_excluded_devices cd
+        WHERE cd.device_id = ${participantsAlias}.subject_id
+      ))
+    )`;
+}
+
+// Signed-in, not excluded: the account half of countedPlayerSeat.
 export function countedAccountSeat(participantsAlias = 'p'): string {
   return `${participantsAlias}.subject_type = 'user'
     AND ${participantsAlias}.subject_id IS NOT NULL

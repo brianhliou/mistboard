@@ -124,6 +124,9 @@ export type UserAccount = {
   // accounts that are identities rather than players (the official @mistboard
   // account), and is orthogonal to accountRole: admins play.
   playDisabledAt: Date | null;
+  // Statistics exclusion (136): this account's games are not site activity.
+  // Optional so fixtures that build accounts by hand keep compiling.
+  statsExcludedAt?: Date | null;
   // Verified player title (088), granted only through the title-verification
   // pipeline (routes/titles.ts). NULL = untitled. Closed vocabulary; see
   // persistence-titles.ts.
@@ -174,6 +177,7 @@ export const USER_COLUMNS = [
   'profile_visibility',
   'account_role',
   'play_disabled_at',
+  'stats_excluded_at',
   'title',
   'flair',
   'locale',
@@ -279,6 +283,7 @@ export type UserRow = {
   profile_visibility: UserAccount['profileVisibility'];
   account_role: AccountRole;
   play_disabled_at: Date | null;
+  stats_excluded_at: Date | null;
   title: PlayerTitle | null;
   flair: FlairKey | null;
   locale: AccountLocale | null;
@@ -308,6 +313,7 @@ export function userFromRow(row: UserRow): UserAccount {
     profileVisibility: row.profile_visibility,
     accountRole: row.account_role,
     playDisabledAt: row.play_disabled_at,
+    statsExcludedAt: row.stats_excluded_at,
     title: row.title,
     flair: row.flair,
     locale: row.locale,

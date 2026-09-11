@@ -39,7 +39,7 @@ async function insertGame(input: {
 }
 
 definePersistenceTests('admin metrics', () => {
-  test('weekly series count signed-in players, guest games, and keep engines apart', async () => {
+  test('weekly series count accounts and guest browsers, and keep engines apart', async () => {
     // now is a Wednesday; the current week starts Monday 2026-07-20 and the
     // 3-week window opens on 2026-07-06.
     const now = new Date('2026-07-22T12:00:00Z');
@@ -139,6 +139,20 @@ definePersistenceTests('admin metrics', () => {
       now: new Date('2026-07-21T09:30:00Z'),
     });
     await getPool().query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'user-op'`);
+    // A browser the excluded account has used: its guest games are out too.
+    await getPool().query(
+      `INSERT INTO stats_excluded_devices (device_id, account_id) VALUES ('guest-7', 'user-op')`,
+    );
+    await insertGame({
+      roomId: 'w2-excluded-device',
+      variant: 'xiangqi',
+      mode: 'pve',
+      endedAt: '2026-07-16T15:00:00Z',
+      participants: [
+        { color: 'white', subjectType: 'guest', subjectId: 'guest-7' },
+        { color: 'black', subjectType: 'engine-version', subjectId: 'engine-1' },
+      ],
+    });
     await insertGame({
       roomId: 'w3-internal',
       variant: 'xiangqi',
@@ -191,25 +205,25 @@ definePersistenceTests('admin metrics', () => {
       ]),
       [
         [1, 0, 1, 1, 0, 0],
-        [1, 1, 0, 1, 1, 0],
+        [1, 1, 0, 1, 1, 1],
         [2, 0, 2, 0, 0, 1],
       ],
     );
-    // Guests have no subject id, so they are not people here: guest-1's
-    // week-1 game shows up only as a guest game. user-1 is new in week 2 and
-    // returning in week 3, counted once despite two games.
+    // Players are accounts plus guest browsers: guest-1 is new in week 1 and
+    // returning in week 2 beside user-1 (new); user-1 alone in week 3,
+    // counted once despite two games. guest-7 sits on an excluded device.
     assert.deepEqual(
-      [w1, w2, w3].map((w) => [w.players, w.newPlayers, w.returningPlayers]),
+      [w1, w2, w3].map((w) => [w.players, w.signedInPlayers, w.newPlayers, w.returningPlayers]),
       [
-        [0, 0, 0],
-        [1, 1, 0],
-        [1, 0, 1],
+        [1, 0, 1, 0],
+        [2, 1, 1, 1],
+        [1, 1, 0, 1],
       ],
     );
-    // Rolling 28 days at each week's end, signed-in only.
+    // Rolling 28 days at each week's end.
     assert.deepEqual(
       [w1, w2, w3].map((w) => w.activePlayers28d),
-      [0, 1, 1],
+      [1, 2, 2],
     );
     assert.deepEqual(
       [w1, w2, w3].map((w) => [w.newAccounts, w.newPatrons, w.chatLines]),
@@ -223,7 +237,7 @@ definePersistenceTests('admin metrics', () => {
     // user-op is not an account here, and its game is not a game.
     assert.equal(metrics.accounts, 2);
     assert.equal(metrics.humanGames, 5);
-    assert.equal(metrics.activePlayers28d, 1);
+    assert.equal(metrics.activePlayers28d, 2);
     assert.equal(metrics.previousActivePlayers28d, 0);
     assert.equal(metrics.activePatrons, 1);
     assert.deepEqual(metrics.humanGamesByVariant, { xiangqi: 4, jieqi: 1 });
@@ -232,8 +246,8 @@ definePersistenceTests('admin metrics', () => {
     assert.equal(metrics.engines.eveGames, 1);
     assert.equal(metrics.engines.importedGames, 1);
     assert.equal(metrics.engines.manualGames, 0);
-    assert.equal(metrics.engines.internalGames, 1);
-    assert.equal(metrics.engines.internalGamesLast7d, 1);
+    assert.equal(metrics.engines.internalGames, 2);
+    assert.equal(metrics.engines.internalGamesLast7d, 2);
     assert.deepEqual(metrics.engines.eveByVariant, { 'dark-chess': 1 });
   });
 });

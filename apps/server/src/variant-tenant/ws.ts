@@ -28,6 +28,7 @@ import {
   seatTokenFromProtocolHeader,
 } from '../server-policy.js';
 import { isKnownClientMessageType, parseClientMessage } from '../server-ws-messages.js';
+import { rememberExcludedDevice } from '../stats-excluded-device.js';
 import {
   appendTenantEvent,
   appendTenantSeatAssigned,
@@ -184,9 +185,12 @@ export function createTenantWsRuntime<
   ): Promise<void> {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
     const clientId = parseClientId(url.searchParams.get('client')) ?? randomUUID();
+    // The browser's durable id; a guest seat is attributed to it at game end.
+    const deviceId = parseClientId(url.searchParams.get('device'));
     const accountUser = await currentAccountUser(request);
+    rememberExcludedDevice(deviceId, accountUser);
     const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
-    const assignment = assignTenantSeat(tenant, room, clientId, seatToken, accountUser);
+    const assignment = assignTenantSeat(tenant, room, clientId, seatToken, accountUser, deviceId);
     if (!assignment.ok) {
       // Spectator admission on a full room, via two independent routes:
       //  - canObserveRoom: the spec hides nothing while live, or the game has

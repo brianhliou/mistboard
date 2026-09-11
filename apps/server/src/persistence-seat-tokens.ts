@@ -7,6 +7,7 @@ export type RoomSeatTokenSeat = Color | XiangqiColor;
 export type RoomSeatTokenRecord<TSeat extends RoomSeatTokenSeat = Color> = {
   seat: TSeat;
   clientId: string;
+  deviceId?: string | null;
   tokenHash: string;
   userId: string | null;
   userHandle: string | null;
@@ -22,6 +23,7 @@ export async function loadRoomSeatTokens<TSeat extends RoomSeatTokenSeat = Color
   const { rows } = await getPool().query<{
     seat: TSeat;
     client_id: string;
+    device_id: string | null;
     token_hash: string;
     user_id: string | null;
     user_handle: string | null;
@@ -30,7 +32,8 @@ export async function loadRoomSeatTokens<TSeat extends RoomSeatTokenSeat = Color
     last_seen_at: Date;
     revoked_at: Date | null;
   }>(
-    `SELECT room_seat_tokens.seat, room_seat_tokens.client_id, room_seat_tokens.token_hash,
+    `SELECT room_seat_tokens.seat, room_seat_tokens.client_id, room_seat_tokens.device_id,
+            room_seat_tokens.token_hash,
             room_seat_tokens.user_id, users.handle AS user_handle, users.display_name AS user_display_name,
             room_seat_tokens.issued_at, room_seat_tokens.last_seen_at, room_seat_tokens.revoked_at
      FROM room_seat_tokens
@@ -44,6 +47,7 @@ export async function loadRoomSeatTokens<TSeat extends RoomSeatTokenSeat = Color
     tokens[row.seat] = {
       seat: row.seat,
       clientId: row.client_id,
+      deviceId: row.device_id,
       tokenHash: row.token_hash,
       userId: row.user_id,
       userHandle: row.user_handle,
@@ -86,10 +90,12 @@ export async function upsertRoomSeatToken(
 ): Promise<void> {
   await getPool().query(
     `INSERT INTO room_seat_tokens
-       (room_id, seat, client_id, token_hash, user_id, issued_at, last_seen_at, revoked_at)
-     VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
+       (room_id, seat, client_id, token_hash, user_id, issued_at, last_seen_at, revoked_at,
+        device_id)
+     VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
      ON CONFLICT (room_id, seat) DO UPDATE SET
        client_id = EXCLUDED.client_id,
+       device_id = EXCLUDED.device_id,
        token_hash = EXCLUDED.token_hash,
        user_id = EXCLUDED.user_id,
        issued_at = EXCLUDED.issued_at,
@@ -104,6 +110,7 @@ export async function upsertRoomSeatToken(
       token.issuedAt,
       token.lastSeenAt,
       token.revokedAt ?? null,
+      token.deviceId ?? null,
     ],
   );
 }

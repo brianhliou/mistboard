@@ -25,6 +25,14 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-09-11',
+    kind: 'status',
+    headline: 'The statistics count visitor games only.',
+    body: 'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.',
+    href: '/stats',
+    cta: 'See the statistics',
+  },
+  {
+    date: '2026-09-11',
     kind: 'release',
     headline: 'Duck Xiangqi has launched.',
     body: "Chinese chess with one duck that both players share. Make your move, then put the duck on any empty point. It blocks a horse's leg, an elephant's eye and the file between the generals, and it works as a cannon screen for whoever moves next, so the screen you build is never yours. There is no check: you win by capturing the general outright, and the two generals may now face each other down an open file, where flying the general is a capture. Play the eight-level bot or a friend.",

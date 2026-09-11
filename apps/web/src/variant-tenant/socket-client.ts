@@ -18,6 +18,7 @@
 
 import {
   clientIdForRoom,
+  deviceIdForBrowser,
   isPlayableSeat,
   resolveWebSocketBaseUrl,
   seatTokenForRoom,
@@ -110,6 +111,8 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
   if (!socketUrl) {
     const socketParams = new URLSearchParams({ room: options.room });
     socketParams.set('client', clientIdForRoom(options.room));
+    const deviceId = deviceIdForBrowser();
+    if (deviceId) socketParams.set('device', deviceId);
     socketUrl = `${resolveWebSocketBaseUrl()}?${socketParams}`;
   }
 

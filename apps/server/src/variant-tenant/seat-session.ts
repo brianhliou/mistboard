@@ -67,6 +67,7 @@ export function assignTenantSeat<
   clientId: string,
   rawToken: string | undefined,
   accountUser: UserAccount | null,
+  deviceId: string | null = null,
 ): TenantSeatAssignment<C> {
   const tokenHash = rawToken ? hashSeatToken(rawToken) : undefined;
   if (tokenHash) {
@@ -76,7 +77,14 @@ export function assignTenantSeat<
         if (state.userId !== null && state.userId !== accountUser?.id) {
           return { ok: false, reason: 'private room' };
         }
-        const tokenState = { ...state, clientId, lastSeenAt: new Date() };
+        // A pre-issued seat (rematch, or minted before migration 137) learns
+        // its device on the first reconnect that carries one.
+        const tokenState = {
+          ...state,
+          clientId,
+          deviceId: state.deviceId ?? deviceId,
+          lastSeenAt: new Date(),
+        };
         room.seatTokens[color] = tokenState;
         return {
           ok: true,
@@ -93,7 +101,12 @@ export function assignTenantSeat<
     for (const color of tenant.colors) {
       const state = room.seatTokens[color];
       if (state && state.revokedAt === null && state.userId === accountUser.id) {
-        const tokenState = { ...state, clientId, lastSeenAt: new Date() };
+        const tokenState = {
+          ...state,
+          clientId,
+          deviceId: state.deviceId ?? deviceId,
+          lastSeenAt: new Date(),
+        };
         room.seatTokens[color] = tokenState;
         return {
           ok: true,
@@ -132,6 +145,7 @@ export function assignTenantSeat<
   const now = new Date();
   const tokenState: TenantSeatTokenState<C> = {
     clientId,
+    deviceId,
     seat,
     tokenHash: seatTokenHash,
     userId: accountUser?.id ?? null,
@@ -159,6 +173,8 @@ export function mintTenantSeatToken<C extends string>(
   const now = new Date();
   const state: TenantSeatTokenState<C> = {
     clientId: randomUUID(),
+    // The holder has not connected yet; assignTenantSeat fills this in.
+    deviceId: null,
     seat,
     tokenHash: hashSeatToken(rawToken),
     userId: identity.userId,

@@ -640,6 +640,49 @@ test('buildGameSummary: engine seat forces rated=false even when room.rated=true
   assert.equal(summary.participants?.[0]?.subjectType, 'engine-version');
 });
 
+test('buildGameSummary: a guest seat carries its browser device id, an anonymous one none', () => {
+  const events: GameEvent[] = [
+    { type: 'room-created', at: 1, roomId: 'room-dev', variant: 'dark-chess', offer: [] },
+    { type: 'seat-assigned', at: 2, roomId: 'room-dev', clientId: 'client-w', seat: 'white' },
+    { type: 'seat-assigned', at: 3, roomId: 'room-dev', clientId: 'client-b', seat: 'black' },
+    { type: 'seat-resigned', at: 4, roomId: 'room-dev', color: 'white' },
+  ];
+  const room = makeRoom('room-dev', 'dark-chess', events);
+  room.rated = false;
+  const now = new Date();
+  room.seatTokens = {
+    white: {
+      clientId: 'client-w',
+      deviceId: 'device-w',
+      seat: 'white',
+      tokenHash: 'hash-w',
+      userId: null,
+      userHandle: null,
+      userDisplayName: null,
+      issuedAt: now,
+      lastSeenAt: now,
+      revokedAt: null,
+    },
+    black: {
+      clientId: 'client-b',
+      seat: 'black',
+      tokenHash: 'hash-b',
+      userId: null,
+      userHandle: null,
+      userDisplayName: null,
+      issuedAt: now,
+      lastSeenAt: now,
+      revokedAt: null,
+    },
+  };
+  const summary = buildGameSummary(makeCtx(), room);
+  const [white, black] = summary.participants ?? [];
+  assert.equal(white?.subjectType, 'guest');
+  assert.equal(white?.subjectId, 'device-w', 'the guest seat is attributed to its browser');
+  assert.equal(black?.subjectType, 'guest');
+  assert.equal(black?.subjectId, null, 'no device, no attribution');
+});
+
 test('buildGameSummary: current first-party engine seat records bot profile identity', () => {
   const events: GameEvent[] = [
     { type: 'room-created', at: 1, roomId: 'room-bot-pve', variant: 'dark-chess', offer: [] },

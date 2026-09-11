@@ -50,6 +50,9 @@ export type Client = {
 
 export type SeatTokenState = {
   clientId: string;
+  // The connecting browser's durable id (migration 137), or null for a seat
+  // pre-issued before its holder connected. Backfilled on reconnect.
+  deviceId?: string | null;
   seat: Color;
   tokenHash: string;
   userId: string | null;

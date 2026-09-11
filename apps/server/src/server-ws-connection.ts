@@ -40,6 +40,7 @@ import {
 import { assignSeat, displaceOlderSeatClients } from './server-seat-session.js';
 import type { Client, Room, SeatAssignment } from './server-types.js';
 import { isKnownClientMessageType, parseClientMessage } from './server-ws-messages.js';
+import { rememberExcludedDevice } from './stats-excluded-device.js';
 import {
   registeredVariantTenants,
   type TenantManagedRoom,
@@ -151,10 +152,14 @@ export async function handleWebSocketConnection(
   );
   if (randomEngine) await ctx.enableRandomEngine(room);
   const clientId = parseClientId(url.searchParams.get('client')) ?? randomUUID();
+  // The browser's durable id (same alphabet as the per-room client id); a
+  // guest seat is attributed to it at game end. Absent from old clients.
+  const deviceId = parseClientId(url.searchParams.get('device'));
+  rememberExcludedDevice(deviceId, accountUser);
   const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
   const assignment = solo
     ? ({ seat: 'spectator' } satisfies SeatAssignment)
-    : await assignSeat(ctx.roomMgrCtx, room, clientId, seatToken, accountUser);
+    : await assignSeat(ctx.roomMgrCtx, room, clientId, seatToken, accountUser, deviceId);
   const seat = assignment.seat;
   if (assignment.deniedReason === 'rated-requires-account') {
     // Hard account-gate (assignSeat): a guest tried to take a seat in a rated

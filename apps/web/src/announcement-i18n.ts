@@ -35,6 +35,12 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-11 (statistics count visitor games) ── 统计 / 已完成对局 / 引擎对引擎的比赛 /
+  // 测试对局 沿用 content.zh-hans.ts 的 stats.* 说法。
+  'The statistics count visitor games only.': '统计只计入访客的对局。',
+  'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.':
+    '首页和统计页上的已完成对局数，现在只计入自六月网站上线以来访客之间、或访客与引擎之间已完成的对局。引擎对引擎的比赛、我们自己的测试对局，以及在还没有其他人发现这个网站之前我们自己下的棋，都不计入。这样一来，数字降到了原来所显示的三分之一左右；另外三分之二是我们自己。',
+  'See the statistics': '查看统计',
   // ── 2026-09-11 (Duck Xiangqi launch) ── 蹩马腿 / 塞象眼 / 炮架 / 将帅照面 all
   // follow article-i18n.ts, and 鸭子象棋 follows variant.duckXiangqi.name.
   'Duck Xiangqi has launched.': '鸭子象棋已上线。',
@@ -333,6 +339,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-11 (statistics count visitor games) ── 統計 / 已完成對局 / 引擎對引擎的比賽 /
+  // 測試對局 沿用 content.zh-hant.ts 的 stats.* 說法。
+  'The statistics count visitor games only.': '統計只計入訪客的對局。',
+  'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.':
+    '首頁和統計頁上的已完成對局數，現在只計入自六月網站上線以來訪客之間、或訪客與引擎之間已完成的對局。引擎對引擎的比賽、我們自己的測試對局，以及在還沒有其他人發現這個網站之前我們自己下的棋，都不計入。這樣一來，數字降到了原來所顯示的三分之一左右；另外三分之二是我們自己。',
+  'See the statistics': '查看統計',
   // ── 2026-09-11 (Duck Xiangqi launch) ── see the ZH_HANS note above.
   'Duck Xiangqi has launched.': '鴨子象棋已上線。',
   "Chinese chess with one duck that both players share. Make your move, then put the duck on any empty point. It blocks a horse's leg, an elephant's eye and the file between the generals, and it works as a cannon screen for whoever moves next, so the screen you build is never yours. There is no check: you win by capturing the general outright, and the two generals may now face each other down an open file, where flying the general is a capture. Play the eight-level bot or a friend.":
