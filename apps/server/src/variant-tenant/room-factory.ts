@@ -72,10 +72,23 @@ export async function createTenantLiveRoom<
     timeControl?: RoomTimeControl;
     creatorPreference?: C | 'random';
     engine?: TenantRoomEngineSeat<C>;
+    /**
+     * PvE at a table of more than two: every seat the humans are not taking.
+     *
+     * `engine` seats one opponent, which is the whole story for a two-player
+     * game. A mahjong room against bots needs three, so this takes a list.
+     * Supply one or the other, never both.
+     */
+    engines?: readonly TenantRoomEngineSeat<C>[];
     rated?: boolean;
   } = {},
 ): Promise<TenantLiveRoomCreation<Kind, C, M, State, Spec>> {
-  const { timeControl, creatorPreference, engine, rated = false } = options;
+  const { timeControl, creatorPreference, engine, engines, rated = false } = options;
+  if (engine && engines) {
+    throw new Error('pass either engine or engines, not both');
+  }
+  const engineSeats: readonly TenantRoomEngineSeat<C>[] = engines ?? (engine ? [engine] : []);
+  const firstEngine = engineSeats[0];
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const roomId = ctx.createRoomId?.() ?? `${tenant.roomIdPrefix}${randomUUID()}`;
     if (ctx.rooms.has(roomId) || ctx.isRoomIdTaken(roomId)) {
@@ -83,7 +96,7 @@ export async function createTenantLiveRoom<
     }
     const created = createTenantRuntimeRoom(tenant, roomId, {
       creatorPreference,
-      pveBotId: engine?.botId,
+      pveBotId: firstEngine?.botId,
       rated,
       timeControl,
     });
@@ -92,16 +105,18 @@ export async function createTenantLiveRoom<
     // PvE: seat the engine before persistence so the seat-assigned event is part
     // of the room's initial event log (durable + replays on hydration). The human
     // then takes the only empty seat on connect.
-    if (engine) {
+    for (const seated of engineSeats) {
       appendTenantRuntimeEvent(tenant, room, {
         type: 'seat-assigned',
         at: Date.now(),
         roomId,
-        clientId: engine.engineId,
-        seat: engine.seat,
+        clientId: seated.engineId,
+        seat: seated.seat,
       });
-      room.engineReservationId = engine.reservationId ?? null;
     }
+    // One reservation per room, which is what the engine service issues. Bots
+    // that run in-process (mahjong) hold none, and leave this null.
+    room.engineReservationId = firstEngine?.reservationId ?? null;
     if (ctx.isPersistenceEnabled()) {
       let writingSeq = 0;
       let writingEventType = 'room-created';
@@ -116,7 +131,7 @@ export async function createTenantLiveRoom<
           writingEventType = 'game-start';
           await ctx.recordGameStart(roomId, {
             variant: tenant.gameSpecId,
-            mode: engine ? 'pve' : 'pvp',
+            mode: engineSeats.length > 0 ? 'pve' : 'pvp',
             startedAt: new Date(room.events[0]?.at ?? Date.now()),
             whiteClient: null,
             blackClient: null,

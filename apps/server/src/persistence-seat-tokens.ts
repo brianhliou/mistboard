@@ -1,8 +1,12 @@
 import { createHash, timingSafeEqual } from 'node:crypto';
 import type { Color, XiangqiColor } from '@mistboard/game';
+import type { MahjongSeat } from '@mistboard/mahjong';
 import { getPool, withTransaction } from './persistence-db.js';
 
-export type RoomSeatTokenSeat = Color | XiangqiColor;
+// Kept in lockstep with room_seat_tokens_seat_check (007, widened by 029 and
+// again by 138). A seat outside the constraint means the token insert fails and
+// the player comes back from a refresh as a spectator at their own table.
+export type RoomSeatTokenSeat = Color | XiangqiColor | MahjongSeat;
 
 export type RoomSeatTokenRecord<TSeat extends RoomSeatTokenSeat = Color> = {
   seat: TSeat;
