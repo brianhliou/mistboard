@@ -1441,7 +1441,7 @@ describe('forum pages', () => {
 
     it('expands a Mistboard link that is alone on its line into a same-origin frame', async () => {
       const asked = topicWith(
-        'My best fog game yet:\nhttps://mistboard.com/dark-xiangqi/game/room-1\nSee move 30.',
+        'My best fog game yet:\nhttps://mistboard.com/dark-xiangqi/game/room-1/black#30\nSee move 30.',
         () => frame('Alice vs Bob · red-wins · Mistboard'),
       );
       const root = document.createElement('div');
@@ -1449,19 +1449,22 @@ describe('forum pages', () => {
       await mountForumTopic(root, 'topic_strategy');
       await settle();
 
-      expect(asked).toEqual(['https://mistboard.com/dark-xiangqi/game/room-1']);
+      expect(asked).toEqual(['https://mistboard.com/dark-xiangqi/game/room-1/black#30']);
       const figure = root.querySelector<HTMLElement>('.forum-post-body .forum-embed');
       expect(figure).not.toBeNull();
       expect(figure?.classList.contains('forum-embed-live')).toBe(true);
       const iframe = figure?.querySelector<HTMLIFrameElement>('iframe.forum-embed-frame');
       // Same-origin path, never the pasted URL: the tenant segment is not
-      // trusted, and the embed page reads the game's own record.
-      expect(iframe?.getAttribute('src')).toBe('/embed/game/room-1');
+      // trusted, and the embed page reads the game's own record. The side and
+      // the ply ride along, in lichess's spelling or ours.
+      expect(iframe?.getAttribute('src')).toBe('/embed/game/room-1?ply=30&pov=black');
       expect(iframe?.getAttribute('loading')).toBe('lazy');
       expect(iframe?.title).toBe('Alice vs Bob · red-wins · Mistboard');
       // The link survives as the caption, so the permalink is still one tap.
       const caption = figure?.querySelector<HTMLAnchorElement>('.forum-embed-caption a');
-      expect(caption?.getAttribute('href')).toBe('https://mistboard.com/dark-xiangqi/game/room-1');
+      expect(caption?.getAttribute('href')).toBe(
+        'https://mistboard.com/dark-xiangqi/game/room-1/black#30',
+      );
       // The prose around it is untouched.
       const paragraphs = Array.from(root.querySelectorAll('.forum-post-paragraph'));
       expect(paragraphs.map((p) => p.textContent)).toEqual([

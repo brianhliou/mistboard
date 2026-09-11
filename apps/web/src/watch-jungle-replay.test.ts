@@ -121,6 +121,38 @@ describe('Jungle watch replay', () => {
     vi.useRealTimers();
   });
 
+  it('compact pov=black seats Black at the bottom; a perfect-info game keeps the truth board', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgameFixture('jgl_pov'))),
+    );
+    const seatNames = (root: HTMLElement) =>
+      [...root.querySelectorAll<HTMLElement>('.showcase-seat-name')].map((el) => el.textContent);
+    const names = { jgl_pov: { first: 'RedSeat', second: 'BlackSeat' } };
+
+    const plain = document.createElement('div');
+    const plainHandle = await mountJungleWatchReplay(plain, 'jgl_pov', {
+      autoplay: false,
+      compact: true,
+      namesByRoomId: names,
+    });
+    // Jungle is perfect information: the showcase seats Red at the bottom.
+    expect(seatNames(plain)).toEqual(['BlackSeat', 'RedSeat']);
+    plainHandle.destroy();
+
+    const flipped = document.createElement('div');
+    const flippedHandle = await mountJungleWatchReplay(flipped, 'jgl_pov', {
+      autoplay: false,
+      compact: true,
+      pov: 'black',
+      namesByRoomId: names,
+    });
+    expect(seatNames(flipped)).toEqual(['RedSeat', 'BlackSeat']);
+    // Still one board, still the truth view: pov on a perfect-info game is a turn, not a mask.
+    expect(flipped.querySelectorAll('.showcase-board, .replay-board').length).toBeGreaterThan(0);
+    flippedHandle.destroy();
+  });
+
   it('a finished game never projects a stored clock, even one left running', async () => {
     vi.useFakeTimers();
     const base = 1_700_000_000_000;

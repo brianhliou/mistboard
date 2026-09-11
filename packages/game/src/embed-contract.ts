@@ -100,18 +100,28 @@ export function embedAnalysisPath(): string {
  * their embed path. TV and the analysis board match ONLY on their embed path:
  * `/watch` and `/analysis` are pages, and a link to a page should stay a link.
  *
+ * A game link can name a position and a side: `?ply=30` or, as lichess writes
+ * it, `#30`, opens on that ply; `?pov=black` (or a `/black` suffix) shows the
+ * game from Black's side, which for a fog variant is Black's own fogged view.
+ *
  * The variant segment of a tenant game route is not trusted; the game's own
  * record says what it is, so it is not carried here.
  */
+export type EmbedPov = 'white' | 'truth' | 'black';
+
 export type EmbedTarget =
-  | { kind: 'game'; roomId: string }
+  | { kind: 'game'; roomId: string; ply: number | null; pov: EmbedPov | null }
   | { kind: 'study'; studyId: string; chapterId: string }
   | { kind: 'puzzle'; puzzleId: string | null }
   | { kind: 'tv'; channel: string | null }
   | { kind: 'analysis' };
 
 const ID = '([A-Za-z0-9_-]{1,64})';
-const GAME_TARGET = new RegExp(`^/(?:embed/game|game|[a-z0-9-]{1,40}/game)/${ID}/?$`);
+// `/black` after the id is lichess's spelling for "seen from Black's side", kept
+// so a habit formed there works here; `?pov=` is ours and wins when both appear.
+const GAME_TARGET = new RegExp(
+  `^/(?:embed/game|game|[a-z0-9-]{1,40}/game)/${ID}(?:/(white|black))?/?$`,
+);
 const STUDY_TARGET = new RegExp(`^/(?:embed/)?study/${ID}/${ID}/?$`);
 const PUZZLE_PERMALINK = new RegExp(`^/puzzles/${ID}/?$`);
 const PUZZLE_EMBED = new RegExp(`^/embed/puzzle(?:/${ID})?/?$`);
@@ -122,15 +132,25 @@ const ANALYSIS_EMBED = /^\/embed\/analysis(?:\/xiangqi)?\/?$/;
 export function embedTargetFromUrl(url: string): EmbedTarget | null {
   let pathname: string;
   let search: string;
+  let hash: string;
   try {
     const parsed = new URL(url, 'https://mistboard.com');
     pathname = parsed.pathname;
     search = parsed.search;
+    hash = parsed.hash;
   } catch {
     return null;
   }
   const game = GAME_TARGET.exec(pathname);
-  if (game) return { kind: 'game', roomId: game[1] as string };
+  if (game) {
+    const params = new URLSearchParams(search);
+    return {
+      kind: 'game',
+      roomId: game[1] as string,
+      ply: embedPly(params.get('ply') ?? hash.slice(1)),
+      pov: embedPov(params.get('pov') ?? game[2] ?? null),
+    };
+  }
   const study = STUDY_TARGET.exec(pathname);
   if (study) return { kind: 'study', studyId: study[1] as string, chapterId: study[2] as string };
   const puzzle = PUZZLE_PERMALINK.exec(pathname) ?? PUZZLE_EMBED.exec(pathname);
@@ -146,8 +166,13 @@ export function embedTargetFromUrl(url: string): EmbedTarget | null {
 /** The frameable path for a target, the same one the oEmbed provider serves. */
 export function embedPathForTarget(target: EmbedTarget): string {
   switch (target.kind) {
-    case 'game':
-      return embedGamePath(encodeURIComponent(target.roomId));
+    case 'game': {
+      const params = new URLSearchParams();
+      if (target.ply !== null) params.set('ply', String(target.ply));
+      if (target.pov !== null) params.set('pov', target.pov);
+      const query = params.toString();
+      return embedGamePath(encodeURIComponent(target.roomId)) + (query ? `?${query}` : '');
+    }
     case 'study':
       return embedStudyPath(
         encodeURIComponent(target.studyId),
@@ -160,4 +185,15 @@ export function embedPathForTarget(target: EmbedTarget): string {
     case 'analysis':
       return embedAnalysisPath();
   }
+}
+
+/** A non-negative integer ply, or null for "the end". Anything else is null. */
+export function embedPly(raw: string | null | undefined): number | null {
+  if (!raw || !/^\d{1,5}$/.test(raw)) return null;
+  return Number(raw);
+}
+
+/** `white`, `black`, or `truth`; anything else is null (the embed's default). */
+export function embedPov(raw: string | null | undefined): EmbedPov | null {
+  return raw === 'white' || raw === 'black' || raw === 'truth' ? raw : null;
 }

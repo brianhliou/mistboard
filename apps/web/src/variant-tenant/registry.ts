@@ -140,6 +140,9 @@ export type WebVariantTenant = {
         // game-end so the outer cycler can advance to the next pooled game.
         // Watch omits both (full TV chrome, loops the single game).
         compact?: boolean;
+        // Compact only: the side to show the game from (the game embed's
+        // ?pov=). Absent, the showcase picks a side itself.
+        pov?: 'white' | 'truth' | 'black';
         onGameEnd?: () => void;
         // Player names for the compact seats (first = red/first-mover, second =
         // black), keyed by room id — the tenant postgames carry no names.

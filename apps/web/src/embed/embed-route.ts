@@ -1,7 +1,10 @@
-// The path matcher on its own, with no imports. main.ts needs to know whether a
-// URL is an embed before it decides what to load; importing the page module for
-// that would pull the replay widget and its CSS into the initial bundle for
-// every visitor, which is the opposite of what a lazily-mounted route is for.
+// The path matcher on its own, importing nothing from the pages. main.ts needs
+// to know whether a URL is an embed before it decides what to load; importing
+// the page module for that would pull the replay widget and its CSS into the
+// initial bundle for every visitor, which is the opposite of what a
+// lazily-mounted route is for. (@mistboard/game is already in that bundle.)
+
+import { type EmbedPov, embedPly, embedPov } from '@mistboard/game';
 
 export type EmbedStudyRoute = { studyId: string; chapterId: string };
 
@@ -141,7 +144,15 @@ export function embedColorFromSearch(search: string): 'red' | 'black' {
  * survives, and anything else means "the end".
  */
 export function embedPlyFromSearch(search: string): number | null {
-  const raw = new URLSearchParams(search).get('ply');
-  if (raw === null || !/^\d{1,5}$/.test(raw)) return null;
-  return Number(raw);
+  return embedPly(new URLSearchParams(search).get('ply'));
+}
+
+/**
+ * `?pov=white|black|truth` on a game embed: which side's view to show. For a
+ * fog game that is that side's own (now public) fogged view, oriented to them;
+ * for a perfect-information game it is just the board turned to that side.
+ * `truth` is the fog-off board. Absent or junk means the page's own default.
+ */
+export function embedPovFromSearch(search: string): EmbedPov | null {
+  return embedPov(new URLSearchParams(search).get('pov'));
 }

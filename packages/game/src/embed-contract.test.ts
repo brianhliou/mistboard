@@ -14,8 +14,40 @@ test('games match on the permalink, a tenant route, and the embed path', () => {
     'https://mistboard.com/embed/game/abc-123',
     '/game/abc-123',
   ]) {
-    assert.deepEqual(embedTargetFromUrl(url), { kind: 'game', roomId: 'abc-123' }, url);
+    assert.deepEqual(
+      embedTargetFromUrl(url),
+      { kind: 'game', roomId: 'abc-123', ply: null, pov: null },
+      url,
+    );
   }
+});
+
+test('a game link can name a ply and a side, in our spelling or in lichess spelling', () => {
+  const game = (ply: number | null, pov: 'white' | 'black' | 'truth' | null) => ({
+    kind: 'game',
+    roomId: 'abc-123',
+    ply,
+    pov,
+  });
+  assert.deepEqual(embedTargetFromUrl('https://mistboard.com/game/abc-123?ply=30'), game(30, null));
+  assert.deepEqual(embedTargetFromUrl('https://mistboard.com/game/abc-123#30'), game(30, null));
+  assert.deepEqual(
+    embedTargetFromUrl('https://mistboard.com/xiangqi/game/abc-123/black#59'),
+    game(59, 'black'),
+  );
+  assert.deepEqual(
+    embedTargetFromUrl('https://mistboard.com/game/abc-123?pov=truth&ply=7'),
+    game(7, 'truth'),
+  );
+  // Ours wins when both spellings appear; junk falls back to the default.
+  assert.deepEqual(
+    embedTargetFromUrl('https://mistboard.com/game/abc-123/black?pov=white'),
+    game(null, 'white'),
+  );
+  assert.deepEqual(
+    embedTargetFromUrl('https://mistboard.com/game/abc-123?ply=-1&pov=red#last'),
+    game(null, null),
+  );
 });
 
 test('studies match on the chapter permalink and the embed path', () => {
@@ -91,6 +123,7 @@ test('pages, malformed ids, and junk are not targets', () => {
 test('the frameable path round-trips through the target', () => {
   const cases: Array<[string, string]> = [
     ['https://mistboard.com/xiangqi/game/abc-123', '/embed/game/abc-123'],
+    ['https://mistboard.com/xiangqi/game/abc-123/black#59', '/embed/game/abc-123?ply=59&pov=black'],
     ['https://mistboard.com/study/ytSzepET/Ue0EgpS7', '/embed/study/ytSzepET/Ue0EgpS7'],
     ['https://mistboard.com/puzzles/xq_0001', '/embed/puzzle/xq_0001'],
     ['https://mistboard.com/embed/puzzle', '/embed/puzzle'],

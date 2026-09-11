@@ -144,6 +144,14 @@ export type TenantWatchReplayOptions = {
    */
   compact?: boolean;
   /**
+   * Compact only: the side to show the game from, instead of the random pick.
+   * A per-color fog tenant shows that side's own (post-reveal, so public) view
+   * oriented to them; a perfect-information tenant keeps the truth board and
+   * turns it to that side; `truth` is the fog-off board. A view the loaded game
+   * does not carry falls back to the orientation alone.
+   */
+  pov?: 'white' | 'truth' | 'black';
+  /**
    * Compact only: suppress the flanking reserve strips for drop/reserve variants
    * (fortress-xiangqi), rendering just the bare board. The "Previously on" queue
    * thumbnails use this — at thumbnail scale the hands are unreadable clutter, so
@@ -664,6 +672,19 @@ export async function mountTenantWatchReplay<
     return { key: choice.key, orientation: choice.side === 'second' ? 'black' : 'red' };
   };
 
+  // The random pick, unless the caller named a side: then that side's own view
+  // when the game carries one, and otherwise the picked view turned their way.
+  const compactTargetFor = (postgame: Postgame): { key: ViewKey; orientation: 'red' | 'black' } => {
+    const picked = pickCompactTarget(postgame);
+    const pov = options.pov;
+    if (!pov) return picked;
+    const orientation: 'red' | 'black' = pov === 'black' ? 'black' : 'red';
+    for (const entry of adapter.viewEntries(postgame)) {
+      if (adapter.paneKind(entry.key) === pov) return { key: entry.key, orientation };
+    }
+    return pov === 'truth' ? picked : { key: picked.key, orientation };
+  };
+
   const buildGame = (postgame: Postgame): void => {
     activePostgame = postgame;
     maxPly = adapter.maxPly(postgame);
@@ -721,7 +742,7 @@ export async function mountTenantWatchReplay<
     // Compact showcase: a single board framed by a player name + real clock on
     // each side (no control-bar/ply-line).
     if (compact) {
-      const target = pickCompactTarget(postgame);
+      const target = compactTargetFor(postgame);
       boardOrientation = target.orientation;
       // Compact never uses the pane's top/bottom capture rows: drop/reserve
       // variants show side strips, and every other variant shows no captures here.
