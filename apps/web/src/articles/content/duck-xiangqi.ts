@@ -150,7 +150,7 @@ export const duckXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'This game was chosen from eight played the same way, for how much the duck does in it. All seven decisive games are in the [companion study](/study/UBeRb8Sp), one chapter each, with a note on how long each stayed competitive and what the duck was doing.',
+          text: 'This game was chosen from eight played the same way, for how much the duck does in it. All seven decisive games are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.',
         },
       ],
     },

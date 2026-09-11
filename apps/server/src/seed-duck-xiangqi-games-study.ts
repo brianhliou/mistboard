@@ -265,8 +265,14 @@ async function main(): Promise<void> {
       chapter: chapters[0],
     });
     if (!created.ok) throw new Error(`create failed: ${created.status} ${await created.text()}`);
-    const study = (await created.json()) as { id: string };
-    studyId = study.id;
+    // The create response nests the study on a real server ({ study, chapters })
+    // and some routes answer flat. Read both rather than assume: getting this
+    // wrong produced `created undefined` and a run of 404s against prod, with
+    // chapter one written and the other six lost.
+    const body = (await created.json()) as { id?: string; study?: { id?: string } };
+    const id = body.study?.id ?? body.id;
+    if (!id) throw new Error(`create returned no study id: ${JSON.stringify(body).slice(0, 200)}`);
+    studyId = id;
     console.log(`created ${studyId} (${visibility})`);
     for (const chapter of chapters.slice(1)) {
       const res = await api.post(`/api/studies/${studyId}/chapters`, chapter);
