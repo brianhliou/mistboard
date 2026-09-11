@@ -196,6 +196,13 @@ export function getMahjongClientView(
  * back together and a finished hand ends up with no record at all. Migration
  * 114 exists because Flip Jungle shipped that exact bug.
  */
+const MAHJONG_RESULTS: Record<MahjongSeat, persistence.GameResult> = {
+  east: 'east-wins',
+  south: 'south-wins',
+  west: 'west-wins',
+  north: 'north-wins',
+};
+
 const MAHJONG_TERMINATION: Record<string, persistence.GameTermination> = {
   // A hand nobody won: the wall ran out. 'draw' is the allowlisted spelling.
   exhausted: 'draw',
@@ -310,10 +317,12 @@ export const mahjongTenant: MahjongTenantType = {
     },
   },
   persistence: {
-    resultForWinner: (winner: MahjongSeat | null): persistence.GameResult => {
-      if (winner === null) return 'draw';
-      return `${winner}-wins`;
-    },
+    // A total map, not a template literal. `${winner}-wins` typechecks only as
+    // long as MahjongSeat resolves, and when the package failed to resolve on
+    // CI it widened to `${any}-wins` and stopped being a GameResult at all. The
+    // map also fails the build if a seat is ever added.
+    resultForWinner: (winner: MahjongSeat | null): persistence.GameResult =>
+      winner === null ? 'draw' : MAHJONG_RESULTS[winner],
     termination: (reason: string): persistence.GameTermination => {
       const mapped = MAHJONG_TERMINATION[reason];
       if (!mapped) {

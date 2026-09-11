@@ -14,7 +14,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const repoRoot = path.resolve(path.dirname(fileURLToPath(import.meta.url)), '..');
-const PACKAGES = ['packages/game', 'packages/board-render'];
+const PACKAGES = ['packages/game', 'packages/board-render', 'packages/mahjong'];
 
 for (const pkg of PACKAGES) {
   const pkgDir = path.join(repoRoot, pkg);
