@@ -8,7 +8,7 @@
 // piece the piece layer knows about.
 //
 // Every dot and cross is computed through the real kernel
-// (duckXiangqiMovesFrom, duckXiangqiDuckDestinations), never hand-listed. A
+// (duckXiangqiMovesFrom, duckXiangqiGeneralsFace), never hand-listed. A
 // rules change that touches blocking or the facing rule redraws these figures
 // instead of leaving them quietly wrong. Where a figure shows a subset (the
 // cannon's own file), it is filtered from the kernel's answer rather than
@@ -19,7 +19,6 @@ import {
   createInitialDuckXiangqiState,
   type DuckXiangqiBoard,
   type DuckXiangqiSquare,
-  duckXiangqiDuckDestinations,
   duckXiangqiGeneralsFace,
   duckXiangqiMovesFrom,
   type XiangqiPiece,
