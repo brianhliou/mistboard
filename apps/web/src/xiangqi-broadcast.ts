@@ -595,7 +595,7 @@ function renderRound(data: BroadcastRoundResponse, cards?: BoardCardCache): HTML
   // useful thing in that slot and the round date is the same on every card.
   const roundPlayedOn =
     data.boards.length > 0 && data.boards.every((board) => board.status !== 'live')
-      ? formatDate(data.round.startsAt)
+      ? formatCardDate(data.round.startsAt)
       : null;
 
   const section = document.createElement('section');
@@ -1271,6 +1271,21 @@ function dateRange(startsAt: string | undefined, endsAt: string | undefined): st
   const end = formatDate(endsAt);
   if (start && end && start !== end) return `${start} to ${end}`;
   return start ?? end;
+}
+
+/** A card footer wants "Aug 16", not "Aug 16, 2026, 6:00 PM". The hero uses the
+ *  full form because it is stating the schedule; a card is stamping twenty
+ *  boards with the same day, so the time carries nothing and the year only
+ *  earns its place outside the current one. */
+function formatCardDate(value: string | undefined): string | null {
+  if (!value) return null;
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return null;
+  return new Intl.DateTimeFormat(undefined, {
+    month: 'short',
+    day: 'numeric',
+    ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }),
+  }).format(date);
 }
 
 function formatDate(value: string | undefined): string | null {
