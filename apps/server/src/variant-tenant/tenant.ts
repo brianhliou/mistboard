@@ -275,11 +275,16 @@ export type VariantTenant<
     isMove(value: unknown): value is M;
     // Parse + validate a move out of a raw client `move` message; null rejects.
     // STATE-FREE canonicalization (e.g. coordinate parsing) belongs here.
+    // Parse a wire move, or return null. This is the validation boundary: the
+    // message arrived as untyped JSON and was cast, not checked.
     moveFromMessage(message: {
       drop?: string;
       from?: string;
       to?: string;
       promotion?: string;
+      // Tile games: no squares. See ClientMessage in server-ws-messages.ts.
+      action?: string;
+      tiles?: string[];
     }): M | null;
     // STATE-DEPENDENT canonicalization: resolve the parsed move to the exact
     // legal-move object to append (e.g. Crossroads re-attaches promotion from

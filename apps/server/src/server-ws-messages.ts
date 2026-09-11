@@ -6,6 +6,16 @@ export type ClientMessage = {
   from?: string;
   to?: string;
   promotion?: string;
+  // Tile-game moves have no squares. `action` names what is being done
+  // ('discard', 'pung', 'chow', 'kong', 'win', 'pass') and `tiles` carries the
+  // tiles it is done with, in the package's standard notation ('5p', '1z').
+  // Added for mahjong; from/to/drop describe a board and there is not one.
+  //
+  // Nothing here is validated on parse - parseClientMessage casts, as it always
+  // has. A tenant's moveFromMessage is the validator and must return null for
+  // anything it does not recognise.
+  action?: string;
+  tiles?: string[];
   setup?: unknown;
   token?: string;
   at?: number;
