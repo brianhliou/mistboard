@@ -19,6 +19,7 @@ import type { IncomingMessage } from 'node:http';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from '../account-session.js';
 import { logger, wsCounters } from '../obs.js';
+import { mayPlayVariant } from '../persistence.js';
 import {
   adminDebugTokenFromProtocolHeader,
   canObserveRoom,
@@ -187,7 +188,17 @@ export function createTenantWsRuntime<
     const clientId = parseClientId(url.searchParams.get('client')) ?? randomUUID();
     const accountUser = await currentAccountUser(request);
     const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
-    const assignment = assignTenantSeat(tenant, room, clientId, seatToken, accountUser);
+    // Allowlist-gated variants (136) ask the grant table before handing out a
+    // seat. Non-gated specs short-circuit to true without a query.
+    const variantAccessGranted = await mayPlayVariant(accountUser?.id ?? null, tenant.gameSpecId);
+    const assignment = assignTenantSeat(
+      tenant,
+      room,
+      clientId,
+      seatToken,
+      accountUser,
+      variantAccessGranted,
+    );
     if (!assignment.ok) {
       // Spectator admission on a full room, via two independent routes:
       //  - canObserveRoom: the spec hides nothing while live, or the game has

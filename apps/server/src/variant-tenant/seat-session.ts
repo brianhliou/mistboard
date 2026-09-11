@@ -55,7 +55,8 @@ export type TenantSeatAssignment<C extends string> =
         | 'private room'
         | 'rated requires account'
         | 'correspondence requires account'
-        | 'play disabled';
+        | 'play disabled'
+        | 'variant not granted';
     };
 
 export function assignTenantSeat<
@@ -67,6 +68,11 @@ export function assignTenantSeat<
   clientId: string,
   rawToken: string | undefined,
   accountUser: UserAccount | null,
+  // Whether this account holds a grant for an allowlist-gated variant (136).
+  // Resolved by the caller because the lookup is a query and this function is
+  // synchronous. Defaults to allowed: every non-gated variant, and every test
+  // that predates the gate, behaves exactly as before.
+  variantAccessGranted = true,
 ): TenantSeatAssignment<C> {
   const tokenHash = rawToken ? hashSeatToken(rawToken) : undefined;
   if (tokenHash) {
@@ -118,6 +124,10 @@ export function assignTenantSeat<
   // above have already returned, so locking an account never strands it in a
   // game it is already sitting in.
   if (isPlayDisabled(accountUser)) return { ok: false, reason: 'play disabled' };
+  // Allowlist-gated variant (136). Like the play lock, this is the new-seat
+  // path only: both reclaim branches returned above, so revoking access never
+  // throws somebody out of a hand they are in the middle of playing.
+  if (!variantAccessGranted) return { ok: false, reason: 'variant not granted' };
   if (room.rated && !accountUser) return { ok: false, reason: 'rated requires account' };
   // Correspondence (days-per-move) seats are account-required on BOTH sides:
   // notifications, deadline rows, and cross-device reseat all key off the seat's
