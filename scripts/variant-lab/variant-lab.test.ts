@@ -9,13 +9,16 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 import { fingerprintOf, makeHeader, readArtifacts, writeArtifact } from './lab/artifacts.js';
-import { buildContext } from './lab/context.js';
+import { perftGate } from './lab/commands/perft-gate.js';
+import { buildContext, contextForVariant } from './lab/context.js';
 import { LabEngine, locateBinary } from './lab/engine.js';
 import { isLegal, playGame, randomPolicy } from './lab/play.js';
 import { mulberry32 } from './lab/rng.js';
 import { canonicalJson, diffRules, parseRuleArgs, resolveRules, rulesHash } from './lab/rules.js';
+import { nonRoyalGeneralLines, sharedStanzaLines } from './lab/stanza.js';
 import { eloFromScore, tally, waldInterval } from './lab/stats.js';
 import type { RuleSchema } from './lab/types.js';
+import { templateVariant } from './lab/variants/_template.js';
 import { duckXiangqiVariant } from './lab/variants/duck-xiangqi.js';
 import { listLabVariants } from './lab/variants/index.js';
 import { STOCK_FSF, xiangqiVariant } from './lab/variants/xiangqi.js';
@@ -215,4 +218,43 @@ test('engine: a dead binary path is reported, not awaited', () => {
     /set LAB_TEST_NOPE/,
   );
   assert.equal(existsSync('/nonexistent/fsf'), false);
+});
+
+test('stanza: the shared vocabulary maps to engine lines, and the unexpressible throws', () => {
+  const base = { facing: 'file', stalemate: 'loss', progressClock: 60, perpetualCheck: 'draw' };
+  assert.deepEqual(sharedStanzaLines(base), [
+    'flyingGeneral = true',
+    'stalemateValue = loss',
+    'nMoveRule = 30',
+    'perpetualCheckIllegal = false',
+    'chasingRule = none',
+    'nFoldValue = draw',
+  ]);
+  assert.equal(sharedStanzaLines({ ...base, facing: 'off' })[0], 'flyingGeneral = false');
+  assert.equal(
+    sharedStanzaLines({ ...base, facing: 'rookline' }, { generalsLeavePalace: true })[0],
+    'flyingGeneral = true',
+  );
+  assert.throws(() => sharedStanzaLines(base, { generalsLeavePalace: true }), /patch/);
+  assert.throws(() => sharedStanzaLines({ ...base, facing: 'capture' }), /patch/);
+  assert.equal(nonRoyalGeneralLines()[0], 'king = -');
+});
+
+test('template: the rule kernel at standard rules passes the full gate against stock FSF', {
+  skip: stockBinary === null ? 'no Fairy-Stockfish binary (set MISTBOARD_FSF_PATH)' : false,
+}, async () => {
+  const out = mkdtempSync(join(tmpdir(), 'lab-template-'));
+  try {
+    const ctx = contextForVariant(templateVariant, { out, seed: 5 });
+    const result = await perftGate(ctx, { depth: 2, positions: 80, games: 20 });
+    assert.equal(result.disagreements.length, 0, JSON.stringify(result.disagreements[0]));
+    assert.deepEqual(result.unparseable, []);
+    assert.ok(
+      result.perft.every((r) => r.kernel === r.engine),
+      'perft counts agree',
+    );
+    assert.ok(result.ok);
+  } finally {
+    rmSync(out, { recursive: true, force: true });
+  }
 });

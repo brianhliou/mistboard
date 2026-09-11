@@ -50,7 +50,14 @@ export type ContextInput = {
 };
 
 export async function buildContext(input: ContextInput): Promise<LabContext> {
-  const variant = await findLabVariant(input.variant);
+  return contextForVariant(await findLabVariant(input.variant), input);
+}
+
+/** A context for an adapter object directly, registered or not (tests, templates). */
+export function contextForVariant(
+  variant: AnyLabVariant,
+  input: Omit<ContextInput, 'variant'>,
+): LabContext {
   const rules = resolveRules(variant.ruleSchema, parseRuleArgs(input.rules ?? []));
   const { kernel, engine: engineSpec } = variant.create(rules);
   const outDir = input.out ? resolve(input.out) : defaultOutDir();

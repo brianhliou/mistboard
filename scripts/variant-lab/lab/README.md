@@ -69,13 +69,33 @@ worktree when run from a task worktree); `LAB_OUT` or `--out` overrides.
 
 ## Adding a variant
 
-One file `variants/<id>.ts` exporting a `LabVariant` (from `types.ts`) whose
-`id` is the file name; the registry discovers it, so nothing shared is edited
-and two variants in two worktrees never touch the same file. A kernel that is
-not (yet) exported from `@mistboard/game` is imported by relative path into
-`packages/game/src/`; the Benedict pattern of an unregistered kernel is the
-default until a variant survives measurement. The adapter binds a rules
-record to:
+Copy `variants/_template.ts` to `variants/<id>.ts`, set `id`, and edit three
+places: the schema (which decisions are open), the kernel config (what they
+mean), and the stanza lines (what the engine is told). The template is
+standard xiangqi through the configurable kernel and the lab's own tests run
+the full gate on it against stock Fairy-Stockfish, so a copy starts from a
+pairing known to agree. The registry discovers `variants/<id>.ts`, so nothing
+shared is edited and two variants in two worktrees never touch the same file.
+
+The foundation the template rests on:
+
+- `packages/game/src/xiangqi-rule-kernel.ts`: one xiangqi geometry with rule
+  hooks (regions per piece, facing, check, compulsory capture, blast on
+  capture, royalty per side, extinction, flag regions, stalemate value,
+  progress clock, repetition) and a lenient FEN codec. Its standard
+  configuration is tied to the elephantops-backed kernel by a differential
+  test, and a variant that only configures it inherits that gate. Hand-roll a
+  kernel only for a rule the hooks cannot express (drops, hidden pieces).
+- `lab/stanza.ts`: the shared rules vocabulary (`facing`, `stalemate`,
+  `progressClock`, `perpetualCheck`), the kernel config it implies, and the
+  Fairy-Stockfish lines that express it, with fragments for a non-royal
+  general and a freed general. What stock FSF cannot express throws rather
+  than silently measuring a different game.
+
+A kernel that is not (yet) exported from `@mistboard/game` is imported by
+relative path into `packages/game/src/`; the Benedict pattern of an
+unregistered kernel is the default until a variant survives measurement. The
+adapter binds a rules record to:
 
 - a `LabKernel`: whole turns in and out, engine notation both ways, an
   engine-acceptable FEN both ways, and (for variants whose turn list is
