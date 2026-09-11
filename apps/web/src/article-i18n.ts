@@ -45,6 +45,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // slug was added. Editing any string here now orphans its key and fails
   // the coverage test, which is the point.
   'how-puzzle-mining-works',
+  // Machine-drafted 2026-09-11, not native-reviewed, locked the day the English
+  // copy published; same terms as the mining explainer it follows on from.
+  'puzzles-with-more-than-one-solution',
   // Machine-drafted 2026-08-30, not native-reviewed, shipped on Brian's explicit
   // call after the risk was raised. This page carries more of that risk than the
   // others: it names living people with criminal convictions, and the readers
@@ -2223,6 +2226,60 @@ const ZH_HANS: Record<string, string> = {
     '可以和八个强度的引擎对战，也可以和朋友下。上面那盘示例对局是配套研究里七盘中的一盘。',
   'Play Duck Xiangqi': '下鸭子象棋',
   'Seven engine games': '七盘引擎对局',
+  // ── puzzles-with-more-than-one-solution (2026-09-11) ──
+  // Machine-drafted, not native-reviewed, per the standing decision above. Terms follow the mining explainer: 题目, 漏着, 着法, 半回合, 复核, 厘兵. 评分器 for the grader, 挖掘器 for the miner.
+  'Puzzles with more than one solution': '有不止一个答案的题目',
+  'Handling xiangqi puzzles with multiple solutions: why 382 were pulled':
+    '如何处理有多个答案的象棋题目：382 道题为什么被撤下',
+  'A solver found a real mate and was told to try again. 382 served puzzles could do that. How the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.':
+    '一位解题者找到了真正的将死，却被告知再试一次。线上有 382 道题目都会这样。挖掘器是怎么把它们放进来的，那个只修好一半的补丁，lichess 采用的规则，以及题库里最终撤下了什么。',
+  'Red to move. The stored answer is the horse to f8: check, the general steps to f10, the cannon lands on f6, mate in two. The horse to g9 is also check, and also mate, one move slower. Until this week the site told that solver "try again" and took rating off them.':
+    '红方先行。存储的答案是马到 f8：将军，将走到 f10，炮落到 f6，两步将死。马到 g9 同样是将军，同样能将死，只是慢一步。直到本周之前，网站都会对这位解题者说"再试一次"，并扣掉他的等级分。',
+  'The stored line is the mainline. Open the line under move 1 to step through the mate the grader used to refuse.':
+    '存储的着法是主线。打开第 1 步下方的分支，可以逐步查看评分器过去拒绝的那个将死。',
+  'Two answers': '两个答案',
+  'Withheld 2026-09-11': '2026-09-11 撤下',
+  'Mate in two, the stored line.': '两步将死，存储的着法。',
+  'That puzzle had been served since August. It was one of 382.':
+    '这道题从八月起就一直在线上。它是 382 道之一。',
+  'How a puzzle gets two answers': '一道题目是怎么有了两个答案的',
+  'The miner keeps a position only when the winning move is unique. For most positions that is a centipawn question: the runner-up has to lose the win, or win a whole piece less. Mates saturate the centipawn scale, so they got their own rule: the best move mates strictly faster than the second-best move.':
+    '挖掘器只在制胜着法唯一时才保留一个局面。对大多数局面来说这是个厘兵问题：次佳着法必须丢掉胜势，或者少赢整整一个子。将死会让厘兵刻度饱和，所以它们有自己的规则：最佳着法必须比次佳着法严格更快地将死。',
+  'That is a race, not uniqueness. Mate in two beats mate in three, the position passes, and nothing in the record says the mate in three exists. By September, 29% of the served mate puzzles had a second mating move at the first ply. Nobody reported it. A solver who is told they are wrong assumes they are wrong.':
+    '这是比快，不是唯一性。两步将死胜过三步将死，局面通过，而记录里没有任何东西说明那个三步将死存在。到九月，线上的将死题目中有 29% 在第一个半回合就有第二个将死着法。没有人报告过。被告知走错的解题者会以为自己真的走错了。',
+  'The patch, and why it went': '那个补丁，以及它为什么被拿掉',
+  'The first fix went into the grader: a move that was not the stored one was searched for a forced mate and accepted if one was found. The search ran on the request path, so it stopped three moves deep, and longer puzzles stayed traps with a special prompt over them. Too shallow, too clever, and none of it should be specific to xiangqi. Chess puzzle sites settled this years ago.':
+    '第一个修复加在评分器里：不是存储着法的一步棋，会被搜索是否有强制将死，找到就接受。搜索跑在请求路径上，所以只搜三步深，更长的题目仍然是陷阱，只是上面多了一条特别的提示。太浅，太取巧，而且这些本来都不该是象棋特有的。国际象棋的题目网站多年前就把这件事定下来了。',
+  'The lichess rule': 'lichess 的规则',
+  'Lichess generates a mate puzzle only if the mating move is unique at every solver move. A runner-up that also mates, at any length, means no puzzle. At play time the solver plays the stored line, with one exception: any move that delivers mate right now is accepted. That needs no search. It is a board check.':
+    'lichess 只有在每一步解题着法的将死着法都唯一时才会生成将死题目。次佳着法同样能将死，无论多少步，就意味着没有题目。解题时解题者按存储的着法走，只有一个例外：任何立刻将死的着法都会被接受。这不需要搜索。只是检查一下棋盘。',
+  'The two halves fit. Everything the grader would have to search for, the generator already refused to publish, so the grader can be dumb. The miner now works this way ([the gate](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi-mining.ts#L213) is one function), the three-move search is gone, and so is the "fastest mate" prompt; what the grader accepts instead is [a board check](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi.ts#L429). The one exception matches lichess’s: a position where the stored move mates in one stays a puzzle even if other moves also mate in one, because the grader takes any of them.':
+    '两半严丝合缝。评分器需要搜索的一切，生成器早已拒绝发布，所以评分器可以很笨。挖掘器现在就是这样工作的（[这道门](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi-mining.ts#L213)只是一个函数），三步搜索没有了，"最快将死"的提示也没有了；评分器转而接受的是[一次棋盘检查](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi.ts#L429)。唯一的例外与 lichess 一致：存储着法一步将死的局面仍然是题目，即使别的着法也能一步将死，因为评分器接受其中任何一个。',
+  'The chariot on a9 mates on a10. The chariot on i9 mates on i10. Both are accepted, and a position like this is still a puzzle. This is the grader’s own test fixture.':
+    'a9 的车在 a10 将死。i9 的车在 i10 将死。两者都被接受，这样的局面仍然是题目。这是评分器自己的测试局面。',
+  'Two mates in one': '两个一步将死',
+  'Still a puzzle': '仍然是题目',
+  'Mate. The chariot on i9 mates the same way.': '将死。i9 的车以同样的方式将死。',
+  '382 puzzles withheld': '撤下 382 道题目',
+  'Reading the audit evidence for every served mate puzzle: 661 of 965 had a second mating move somewhere in the line. Most were on the last move, where the stored move mates in one and so does something else, which the exception covers. 472 had a second mate at a move that was not a mate in one. 90 were already withheld for another reason. The other 382 were withheld on 2026-09-11.':
+    '读取线上每道将死题目的复核证据：965 道中有 661 道在着法序列的某处有第二个将死着法。大多数出现在最后一步，存储着法一步将死，别的着法也能一步将死，这属于例外所涵盖的情况。472 道在不是一步将死的那一步有第二个将死。90 道已经因为别的原因撤下。其余 382 道于 2026-09-11 撤下。',
+  'Mate puzzles': '将死题目',
+  Count: '数量',
+  'In the corpus': '题库中',
+  'With a second mating move somewhere in the line': '着法序列中某处有第二个将死着法',
+  'Second mate at a move that is not a mate in one': '在不是一步将死的那一步有第二个将死',
+  'Already withheld for another reason': '已因别的原因撤下',
+  'Withheld on 2026-09-11': '于 2026-09-11 撤下',
+  'The funnel from every mate puzzle to the ones pulled.': '从全部将死题目到被撤下题目的漏斗。',
+  'That is 27% of the served xiangqi puzzles. The corpus went from 1,415 to 995, and every puzzle left has one answer, checked at every move. The strict rule costs mates: the pilot published about one puzzle for every three games, and the mate half of that will drop by something like 40%. I will know the real number after the next thousand-game batch. Fewer puzzles that are all puzzles is the right trade.':
+    '这占线上象棋题目的 27%。题库从 1,415 道减到 995 道，留下的每一道都只有一个答案，每一步都经过检查。严格的规则会损失将死题：试点批次大约每三局产出一道题目，其中将死的那一半会减少 40% 左右。下一批一千局挖完之后我才会知道真实数字。题目少一些，但每一道都是真正的题目，这是正确的取舍。',
+  'Three things follow from this. The next thousand games get mined under the strict rule, and the yield number goes in the mining explainer. The puzzles that stayed have started carrying the names of the patterns they show (马后炮, 铁门栓, 双车错), which gets its own post once there is a page per pattern. And the rule settles mates only: a position where two different moves both win a piece is still refused outright, and whether to accept a set of answers there is the open question.':
+    '由此有三件事。下一批一千局会按严格规则挖掘，产出数字会写进挖掘器的说明文章。留下的题目已经开始带上它们所展示的杀法名称（马后炮、铁门栓、双车错），等每种杀法都有了自己的页面，会另写一篇。而这条规则只解决了将死：两步不同的着法都能赢下一个子的局面，目前仍然直接拒绝，那里要不要接受一组答案，是尚未解决的问题。',
+  'Try one that has one answer': '试一道只有一个答案的题目',
+  'Today’s puzzle, from the corpus that stayed. If you find a mate the site does not accept, that is now a bug, and I want to hear about it.':
+    '今日题目，来自留下的题库。如果你找到一个网站不接受的将死，那现在就是一个 bug，我想听你说说。',
+  'Today’s xiangqi puzzle': '今日象棋题目',
+  'How the miner works': '挖掘器是怎么工作的',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -4144,6 +4201,60 @@ const ZH_HANT: Record<string, string> = {
     '可以和八個強度的引擎對戰，也可以和朋友下。上面那盤示例對局是配套研究裡七盤中的一盤。',
   'Play Duck Xiangqi': '下鴨子象棋',
   'Seven engine games': '七盤引擎對局',
+  // ── puzzles-with-more-than-one-solution (2026-09-11) ──
+  // Script conversion of the Simplified above, not an independent translation; ASCII token stream identical (the counts, dates, the two GitHub links).
+  'Puzzles with more than one solution': '有不止一個答案的題目',
+  'Handling xiangqi puzzles with multiple solutions: why 382 were pulled':
+    '如何處理有多個答案的象棋題目：382 道題為什麼被撤下',
+  'A solver found a real mate and was told to try again. 382 served puzzles could do that. How the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.':
+    '一位解題者找到了真正的將死，卻被告知再試一次。線上有 382 道題目都會這樣。挖掘器是怎麼把它們放進來的，那個只修好一半的補丁，lichess 採用的規則，以及題庫裡最終撤下了什麼。',
+  'Red to move. The stored answer is the horse to f8: check, the general steps to f10, the cannon lands on f6, mate in two. The horse to g9 is also check, and also mate, one move slower. Until this week the site told that solver "try again" and took rating off them.':
+    '紅方先行。儲存的答案是馬到 f8：將軍，將走到 f10，炮落到 f6，兩步將死。馬到 g9 同樣是將軍，同樣能將死，只是慢一步。直到本週之前，網站都會對這位解題者說"再試一次"，並扣掉他的等級分。',
+  'The stored line is the mainline. Open the line under move 1 to step through the mate the grader used to refuse.':
+    '儲存的著法是主線。打開第 1 步下方的分支，可以逐步查看評分器過去拒絕的那個將死。',
+  'Two answers': '兩個答案',
+  'Withheld 2026-09-11': '2026-09-11 撤下',
+  'Mate in two, the stored line.': '兩步將死，儲存的著法。',
+  'That puzzle had been served since August. It was one of 382.':
+    '這道題從八月起就一直在線上。它是 382 道之一。',
+  'How a puzzle gets two answers': '一道題目是怎麼有了兩個答案的',
+  'The miner keeps a position only when the winning move is unique. For most positions that is a centipawn question: the runner-up has to lose the win, or win a whole piece less. Mates saturate the centipawn scale, so they got their own rule: the best move mates strictly faster than the second-best move.':
+    '挖掘器只在制勝著法唯一時才保留一個局面。對大多數局面來說這是個釐兵問題：次佳著法必須丟掉勝勢，或者少贏整整一個子。將死會讓釐兵刻度飽和，所以它們有自己的規則：最佳著法必須比次佳著法嚴格更快地將死。',
+  'That is a race, not uniqueness. Mate in two beats mate in three, the position passes, and nothing in the record says the mate in three exists. By September, 29% of the served mate puzzles had a second mating move at the first ply. Nobody reported it. A solver who is told they are wrong assumes they are wrong.':
+    '這是比快，不是唯一性。兩步將死勝過三步將死，局面通過，而記錄裡沒有任何東西說明那個三步將死存在。到九月，線上的將死題目中有 29% 在第一個半回合就有第二個將死著法。沒有人報告過。被告知走錯的解題者會以為自己真的走錯了。',
+  'The patch, and why it went': '那個補丁，以及它為什麼被拿掉',
+  'The first fix went into the grader: a move that was not the stored one was searched for a forced mate and accepted if one was found. The search ran on the request path, so it stopped three moves deep, and longer puzzles stayed traps with a special prompt over them. Too shallow, too clever, and none of it should be specific to xiangqi. Chess puzzle sites settled this years ago.':
+    '第一個修復加在評分器裡：不是儲存著法的一步棋，會被搜尋是否有強制將死，找到就接受。搜尋跑在請求路徑上，所以只搜三步深，更長的題目仍然是陷阱，只是上面多了一條特別的提示。太淺，太取巧，而且這些本來都不該是象棋特有的。國際象棋的題目網站多年前就把這件事定下來了。',
+  'The lichess rule': 'lichess 的規則',
+  'Lichess generates a mate puzzle only if the mating move is unique at every solver move. A runner-up that also mates, at any length, means no puzzle. At play time the solver plays the stored line, with one exception: any move that delivers mate right now is accepted. That needs no search. It is a board check.':
+    'lichess 只有在每一步解題著法的將死著法都唯一時才會生成將死題目。次佳著法同樣能將死，無論多少步，就意味著沒有題目。解題時解題者按儲存的著法走，只有一個例外：任何立刻將死的著法都會被接受。這不需要搜尋。只是檢查一下棋盤。',
+  'The two halves fit. Everything the grader would have to search for, the generator already refused to publish, so the grader can be dumb. The miner now works this way ([the gate](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi-mining.ts#L213) is one function), the three-move search is gone, and so is the "fastest mate" prompt; what the grader accepts instead is [a board check](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi.ts#L429). The one exception matches lichess’s: a position where the stored move mates in one stays a puzzle even if other moves also mate in one, because the grader takes any of them.':
+    '兩半嚴絲合縫。評分器需要搜尋的一切，生成器早已拒絕發布，所以評分器可以很笨。挖掘器現在就是這樣工作的（[這道門](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi-mining.ts#L213)只是一個函數），三步搜尋沒有了，"最快將死"的提示也沒有了；評分器轉而接受的是[一次棋盤檢查](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi.ts#L429)。唯一的例外與 lichess 一致：儲存著法一步將死的局面仍然是題目，即使別的著法也能一步將死，因為評分器接受其中任何一個。',
+  'The chariot on a9 mates on a10. The chariot on i9 mates on i10. Both are accepted, and a position like this is still a puzzle. This is the grader’s own test fixture.':
+    'a9 的車在 a10 將死。i9 的車在 i10 將死。兩者都被接受，這樣的局面仍然是題目。這是評分器自己的測試局面。',
+  'Two mates in one': '兩個一步將死',
+  'Still a puzzle': '仍然是題目',
+  'Mate. The chariot on i9 mates the same way.': '將死。i9 的車以同樣的方式將死。',
+  '382 puzzles withheld': '撤下 382 道題目',
+  'Reading the audit evidence for every served mate puzzle: 661 of 965 had a second mating move somewhere in the line. Most were on the last move, where the stored move mates in one and so does something else, which the exception covers. 472 had a second mate at a move that was not a mate in one. 90 were already withheld for another reason. The other 382 were withheld on 2026-09-11.':
+    '讀取線上每道將死題目的複核證據：965 道中有 661 道在著法序列的某處有第二個將死著法。大多數出現在最後一步，儲存著法一步將死，別的著法也能一步將死，這屬於例外所涵蓋的情況。472 道在不是一步將死的那一步有第二個將死。90 道已經因為別的原因撤下。其餘 382 道於 2026-09-11 撤下。',
+  'Mate puzzles': '將死題目',
+  Count: '數量',
+  'In the corpus': '題庫中',
+  'With a second mating move somewhere in the line': '著法序列中某處有第二個將死著法',
+  'Second mate at a move that is not a mate in one': '在不是一步將死的那一步有第二個將死',
+  'Already withheld for another reason': '已因別的原因撤下',
+  'Withheld on 2026-09-11': '於 2026-09-11 撤下',
+  'The funnel from every mate puzzle to the ones pulled.': '從全部將死題目到被撤下題目的漏斗。',
+  'That is 27% of the served xiangqi puzzles. The corpus went from 1,415 to 995, and every puzzle left has one answer, checked at every move. The strict rule costs mates: the pilot published about one puzzle for every three games, and the mate half of that will drop by something like 40%. I will know the real number after the next thousand-game batch. Fewer puzzles that are all puzzles is the right trade.':
+    '這佔線上象棋題目的 27%。題庫從 1,415 道減到 995 道，留下的每一道都只有一個答案，每一步都經過檢查。嚴格的規則會損失將死題：試點批次大約每三局產出一道題目，其中將死的那一半會減少 40% 左右。下一批一千局挖完之後我才會知道真實數字。題目少一些，但每一道都是真正的題目，這是正確的取捨。',
+  'Three things follow from this. The next thousand games get mined under the strict rule, and the yield number goes in the mining explainer. The puzzles that stayed have started carrying the names of the patterns they show (马后炮, 铁门栓, 双车错), which gets its own post once there is a page per pattern. And the rule settles mates only: a position where two different moves both win a piece is still refused outright, and whether to accept a set of answers there is the open question.':
+    '由此有三件事。下一批一千局會按嚴格規則挖掘，產出數字會寫進挖掘器的說明文章。留下的題目已經開始帶上它們所展示的殺法名稱（馬後炮、鐵門栓、雙車錯），等每種殺法都有了自己的頁面，會另寫一篇。而這條規則只解決了將死：兩步不同的著法都能贏下一個子的局面，目前仍然直接拒絕，那裡要不要接受一組答案，是尚未解決的問題。',
+  'Try one that has one answer': '試一道只有一個答案的題目',
+  'Today’s puzzle, from the corpus that stayed. If you find a mate the site does not accept, that is now a bug, and I want to hear about it.':
+    '今日題目，來自留下的題庫。如果你找到一個網站不接受的將死，那現在就是一個 bug，我想聽你說說。',
+  'Today’s xiangqi puzzle': '今日象棋題目',
+  'How the miner works': '挖掘器是怎麼工作的',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

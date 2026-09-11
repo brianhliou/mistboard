@@ -47,7 +47,6 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   // a dead link that the CTA-only link guard does not catch.
   'fog-openings',
   'fog-chess-concepts',
-  'puzzles-with-more-than-one-solution',
   'shogi',
   // The Duck Xiangqi launch post, cut before launch rather than shipped. It
   // restated the rules page at lower resolution and would have competed with it

@@ -347,6 +347,9 @@ export const HOME_ARTICLE_SLUGS = [
   // language but Chinese anywhere else.
   'jieqi-openings',
   'jieqi-platform',
+  // The row orders by publish date, so this leads it until the next post. It
+  // ends on a puzzle to solve, which is the row's own test for a lead.
+  'puzzles-with-more-than-one-solution',
   // Held the lead until the jieqi pair shipped, on the same reasoning: it sends
   // a reader into something they can do rather than something to read about,
   // and the method it documents is not published anywhere else for xiangqi.

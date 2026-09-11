@@ -89,6 +89,7 @@ describe('article public listing gates', () => {
       // case stubs DEV. It ships with the variant, for the same reason the
       // rules page does: it argues from positions nobody can set up yet.
       '/blog/duck-xiangqi-build',
+      '/blog/puzzles-with-more-than-one-solution',
       // The jieqi pair shipped as one batch on 2026-09-03, because each of the
       // five jieqi pages links another in prose and a published page cannot link
       // a draft. They are dated a day apart anyway, the way the champion pair
@@ -117,7 +118,6 @@ describe('article public listing gates', () => {
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
       '/blog/fog-chess-concepts',
-      '/blog/puzzles-with-more-than-one-solution',
     ]);
   });
 
@@ -267,6 +267,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
       '/blog/how-puzzle-mining-works',

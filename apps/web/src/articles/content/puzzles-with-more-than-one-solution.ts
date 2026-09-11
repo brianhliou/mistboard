@@ -7,7 +7,7 @@
 // legal first move through a kernel mate search; its continuation is the
 // defender's longest resistance.
 //
-// Draft until Brian's voice pass. Each string becomes two zh keys on publish.
+// Published 2026-09-11 after Brian's voice pass; zh strings machine-drafted in article-i18n.ts.
 
 import { embedPuzzlePath } from '@mistboard/game';
 import type { Article, ArticleBlock } from '../types.js';
@@ -42,7 +42,8 @@ export const puzzleTwoAnswersArticle: Article = {
   summary:
     'A solver found a real mate and was told to try again. 382 served puzzles could do that. How the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.',
   thumbnail: { kind: 'svg', svg: PTA_THUMBNAIL },
-  status: 'draft',
+  status: 'published',
+  publishedAt: '2026-09-11',
   audience:
     'Players who have been marked wrong on a move that mates, and developers who run a puzzle generator and a grader and want the two to agree.',
   boardFamily: 'xiangqi',
