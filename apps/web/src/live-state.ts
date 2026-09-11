@@ -248,6 +248,23 @@ export function normalizedOffers(
   return { white: primaryOffer, black: primaryOffer };
 }
 
+// The browser's durable id, one per localStorage, sent on every live connect
+// so a guest seat can be attributed to this browser at game end (server
+// migration 137). Random, first-party, never a cookie, never shown to another
+// visitor. Regenerated only if storage is cleared. Returns null when storage
+// is unavailable (private mode that throws), in which case the seat simply
+// has no device and the game counts as an anonymous guest game.
+export function deviceIdForBrowser(): string | null {
+  const key = 'mistboard.device';
+  const existing = readLocalStorage(key);
+  if (existing && /^[a-zA-Z0-9:_-]{8,80}$/.test(existing)) return existing;
+  const next =
+    window.crypto?.randomUUID?.() ??
+    `${Date.now().toString(36)}-${Math.random().toString(16).slice(2)}`;
+  writeLocalStorage(key, next);
+  return readLocalStorage(key) === next ? next : null;
+}
+
 export function clientIdForRoom(roomId: string): string {
   const key = `mistboard.client.${roomId}`;
   const existing = readLocalStorage(key);

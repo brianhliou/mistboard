@@ -96,7 +96,6 @@ export function buildChapter(rec, deps, opts) {
     bookZh: opts.bookZh,
     moveCount: r.moves.length,
     prose: proseFrom(rec),
-    variations: rec.variations?.length ?? 0,
     url: rec.url,
   });
 

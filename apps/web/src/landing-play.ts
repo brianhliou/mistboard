@@ -67,12 +67,18 @@ export type PlayableEngine = {
   kind: string;
 };
 
+// Which door opened the dialog, for the setup_dialog_opened event: the hero
+// button, a deep link (?play=...), the correspondence tab's create button, or
+// the dialog's own mode switcher. Absent means an internal reopen.
+type LandingSetupSource = 'hero' | 'deep-link' | 'correspondence' | 'mode-switch';
+
 type LandingPlayChoice = {
   engineId?: string;
   engines?: PlayableEngine[];
   initialGameSpecId?: LandingGameSpecId;
   locale?: Locale;
   mode: LandingPlayMode;
+  source?: LandingSetupSource;
   // Unified entry point: render the opponent switcher (Computer / A friend /
   // Anyone) at the top of the dialog. Switching rebuilds the dialog in the
   // picked mode, carrying the variant selection and engine roster over.
@@ -395,6 +401,7 @@ export function buildLandingPlayPanel(
       locale,
       mode: 'pve',
       modeSwitcher: true,
+      source: 'hero',
     });
   });
   panel.append(playButton);
@@ -1308,6 +1315,7 @@ function correspondenceCreateButton(locale: Locale): HTMLButtonElement {
       mode: 'lobby',
       initialGameSpecId: defaultCorrespondenceGameSpecId(locale),
       initialTimeMode: 'correspondence',
+      source: 'correspondence',
       // Correspondence is casual-only, so the rated toggle never applies here.
       ratedDisabled: true,
     });
@@ -1573,6 +1581,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
           'lobby',
         ),
         locale,
+        source: 'deep-link',
         mode: 'lobby',
         modeSwitcher: true,
         ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
@@ -1587,6 +1596,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
           'pvp',
         ),
         locale,
+        source: 'deep-link',
         mode: 'pvp',
         modeSwitcher: true,
         ratedDisabled: true,
@@ -1602,6 +1612,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
           'pve',
         ),
         locale,
+        source: 'deep-link',
         mode: 'pve',
         modeSwitcher: true,
       });
@@ -1681,6 +1692,16 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   if (choice.mode === 'pve' && !landingVariantSupportsPve(selectedGameSpecId)) {
     selectedGameSpecId = fallbackGameSpecId;
   }
+  // The top of the play funnel: which door, which mode, which variant the
+  // dialog opened on. game_started is the bottom; the gap between them is the
+  // dialog's own drop-off. Mode switches inside the dialog are a reopen and
+  // carry their own source so they do not read as new arrivals.
+  track('setup_dialog_opened', {
+    source: choice.source ?? 'reopen',
+    mode: choice.mode,
+    time_mode: choice.initialTimeMode ?? 'realtime',
+    ...gameSpecAnalyticsPropsForId(selectedGameSpecId),
+  });
   // A stored preference is the player's own choice and always wins; otherwise
   // the variant's own default, then the house default.
   let selectedPreset: LandingTimePresetId =
@@ -2383,6 +2404,7 @@ function reopenSetupDialogInMode(
     locale,
     mode,
     modeSwitcher: true,
+    source: 'mode-switch',
     ratedDisabled:
       mode === 'pvp'
         ? true

@@ -314,6 +314,8 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
               totalCompletedGames: { type: 'integer' },
               last30dCompletedGames: { type: 'integer' },
               publicGames: { type: 'integer' },
+              accounts: { type: 'integer' },
+              weeklyCompletedGames: { type: 'array', items: { type: 'object' } },
               modeTotals: { type: 'object' },
               variantTotals: { type: 'array', items: { type: 'object' } },
               dailyCompletedGames: { type: 'array', items: { type: 'object' } },

@@ -15,7 +15,7 @@
  * types at the boundary, exactly like the live tenants do.
  */
 
-import { deepCloneJson } from '@mistboard/game';
+import { deepCloneJson, type XiangqiMotifId } from '@mistboard/game';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import type { PuzzleVariant } from './variant-ids.js';
@@ -55,6 +55,8 @@ export type PuzzleSummary = {
   sideToMove: PuzzleColor | null;
   goal: PuzzleGoal;
   themes: string[];
+  /** Named kill patterns (杀法) by id, standard-xiangqi mates only. */
+  motifs: XiangqiMotifId[];
   solutionPlyCount: number;
   rating: number;
   ratingProvisional: boolean;

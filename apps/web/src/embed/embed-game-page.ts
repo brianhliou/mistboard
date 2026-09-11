@@ -17,13 +17,20 @@ import '../app-base.css';
 import '../review/move-list.css';
 import type { EmbedPov, GameEvent } from '@mistboard/game';
 import { banqiResultLabel } from '../banqi-result-label.js';
-import { displayParticipantName, type FeaturedGame, matchupSeats } from '../game-display.js';
-import { gameMetaForGame, reviewUrlForGame } from '../game-meta.js';
+import { seatInkForVariant } from '../flip-seat-ink.js';
+import {
+  displayParticipantName,
+  type FeaturedGame,
+  matchupSeats,
+  variantDisplayLabel,
+} from '../game-display.js';
+import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from '../game-meta.js';
 import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
 import { createMoveList, type MoveList } from '../review/move-list.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from '../showcase-dispatch.js';
+import { seatInkFamily } from '../variant-seat-label.js';
 import { webVariantTenantForSpecId } from '../variant-tenant/registry.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
 import type { EmbedGameRoute } from './embed-route.js';
@@ -238,8 +245,17 @@ export async function mountEmbedGame(
 
   const frame = document.createElement('div');
   frame.className = 'embed-frame';
+  // The line above the card names the game the way the study embed's names its
+  // chapter: what it is, not who played it (the seats say who).
+  const header = document.createElement('div');
+  header.className = 'embed-game-header';
+  header.textContent = embedGameHeader(game);
   const stage = document.createElement('div');
   stage.className = 'embed-game';
+  // The seat-disc ink tokens hang off this family stamp (seat-disc-ink.css), so
+  // a jungle game's second seat paints blue here as it does everywhere else.
+  const inkFamily = seatInkFamily(game.variant);
+  if (inkFamily) stage.dataset.seatInkFamily = inkFamily;
   const boardCol = document.createElement('div');
   boardCol.className = 'embed-game-board';
   const boardHost = document.createElement('div');
@@ -261,7 +277,7 @@ export async function mountEmbedGame(
   railInner.append(movesRoot, resultFoot);
   rail.append(railInner);
   stage.append(boardCol, rail);
-  frame.append(stage);
+  frame.append(header, stage);
 
   const credit = document.createElement('a');
   credit.className = 'embed-credit';
@@ -317,6 +333,8 @@ export async function mountEmbedGame(
     return;
   }
 
+  paintSeatDiscs(boardHost, game);
+
   const entries = handle.moveEntries?.() ?? [];
   maxPly = handle.plyCount?.() ?? entries.length;
   moveList = createMoveList(entries);
@@ -346,4 +364,39 @@ export async function mountEmbedGame(
   else onPlyChange(clampPly(start), maxPly);
 
   document.title = `${first} vs ${second} · Mistboard`;
+}
+
+/** "Xiangqi · 10 + 5", or the variant alone for an unclocked game. */
+export function embedGameHeader(game: FeaturedGame): string {
+  const clock = timeControlLabelForGame(game);
+  const variant = variantDisplayLabel(game.variant);
+  return clock ? `${variant} · ${clock}` : variant;
+}
+
+/**
+ * The ink a seat's disc paints, or null for a flip variant whose opening flip
+ * has not bound a colour (never for a finished game, but the tokens allow it).
+ * The seats are move-order slots; the ink is what is on the board, which for
+ * banqi and flip jungle is decided by the first flip.
+ */
+export function seatDiscInk(game: FeaturedGame, side: 'first' | 'second'): string | null {
+  const [firstSeat, secondSeat] = matchupSeats(game);
+  return seatInkForVariant(
+    game.variant,
+    side === 'first' ? firstSeat : secondSeat,
+    game.firstColor ?? null,
+  );
+}
+
+// The seat rows come from the renderer colour-blind, tagged only with which
+// move-order seat they name; the disc beside the name is the study card's
+// grammar and is painted here, once, from the game's own record.
+function paintSeatDiscs(boardHost: HTMLElement, game: FeaturedGame): void {
+  for (const row of boardHost.querySelectorAll<HTMLElement>('[data-seat]')) {
+    const side = row.dataset.seat === 'second' ? 'second' : 'first';
+    const disc = document.createElement('span');
+    disc.className = `embed-seat-disc embed-seat-disc--${seatDiscInk(game, side) ?? 'unbound'}`;
+    disc.setAttribute('aria-hidden', 'true');
+    row.prepend(disc);
+  }
 }

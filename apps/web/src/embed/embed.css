@@ -126,6 +126,38 @@ body.embed-body {
   max-width: 100%;
 }
 
+/* ── Study embed (/embed/study/:studyId/:chapterId) ──────────────────────────
+   The article widget as it is, with two embed-only differences that bring it
+   level with the game card beside it in a forum thread: the result is pinned
+   under the move list (the widget's own foot scrolls with the list), and the
+   board's mat is inset 8px rather than the article's 12px, the same inset the
+   game card uses. */
+.embed-widget.xq-replay-annotated .raw-svg-stepper-frame-xq {
+  padding-inline: 8px;
+}
+
+.embed-widget .xq-replay-result--pinned:empty {
+  display: none;
+}
+
+/* The same height as the control bar beside it (38px plus the rule), text
+   centred, so the two columns end on one line rather than three pixels apart. */
+.embed-widget .xq-replay-result--pinned {
+  display: flex;
+  flex: none;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 39px;
+  margin-top: 0;
+  padding: 0 4px;
+  border-top: 1px solid var(--site-border);
+  font-size: 12px;
+  font-weight: 600;
+  color: var(--site-muted);
+  text-align: center;
+}
+
 /* ── Game embed (/embed/game/:roomId) ─────────────────────────────────────────
    One card, the study embed's grammar (articles.css .xq-replay-annotated): a
    bordered panel holding the board column and, behind a rule, the move sheet.
@@ -162,10 +194,21 @@ body.embed-body {
   flex: 0 0 auto;
 }
 
-/* Seat bars, top and bottom of the board, the study card's own: the name in
-   heading ink, the clock or score beside it. Scoped to the game card so the TV
-   frame keeps its smaller rows. */
+/* The line above the card, the study embed's chapter title (articles.css
+   .xq-replay-header): here the variant and the clock. */
+.embed-game-header {
+  flex: none;
+  font-size: 14px;
+  font-weight: 600;
+  color: var(--site-muted);
+  text-align: center;
+}
+
+/* Seat bars, top and bottom of the board, the study card's own: a disc in the
+   seat's ink, the name in heading ink, the clock beside it in muted figures.
+   Scoped to the game card so the TV frame keeps its smaller rows. */
 .embed-game .showcase-seat {
+  gap: 9px;
   padding: 9px 14px;
   font-size: 15px;
   font-weight: 600;
@@ -173,8 +216,67 @@ body.embed-body {
   color: var(--site-heading, inherit);
 }
 
+/* The name sits against the disc and takes the room; the clock keeps the far
+   end. The row is space-between for the two-child showcase, which with a disc
+   in front floated the name to the middle. */
+.embed-game .showcase-seat-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .embed-game .showcase-seat-clock {
+  flex: none;
   font-weight: 500;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+/* The disc is the study card's seat marker (articles.css .xq-replay-seat-dot):
+   literal piece inks, not theme tokens, so the black seat stays a dark dot on
+   the dark theme; the border keeps it visible against a dark card. The dark ink
+   reads the seat-disc token so the jungle family paints blue. */
+.embed-seat-disc {
+  flex: none;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  border: 1px solid var(--site-border);
+  background: #f4f1e9;
+}
+
+.embed-seat-disc--red {
+  background: #c0392b;
+  border-color: #c0392b;
+}
+
+.embed-seat-disc--black,
+.embed-seat-disc--blue {
+  background: var(--seat-dark-ink, #2b2b2b);
+  border-color: var(--seat-dark-ink-border, var(--site-border));
+}
+
+.embed-seat-disc--unbound {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+/* The board sits on a mat inside the card rather than running to its edges,
+   with the corners of the mat rounded: the study card's board (articles.css
+   .raw-svg-stepper-frame-xq, 12px inset) and the reason the two embeds read
+   as different objects before this. The renderers draw a square mat, so the
+   corner comes from clipping the board element. */
+.embed-game .embed-board {
+  box-sizing: border-box;
+  padding-inline: 8px;
+}
+
+.embed-game .embed-board .replay-board {
+  border-radius: 8px;
+  overflow: hidden;
 }
 
 /* Back, forward, and the two jumps, with the ply count between them. Under the
@@ -278,10 +380,15 @@ body.embed-body {
   background: transparent;
 }
 
+/* "1." as the study sheet writes it; the review list writes "1". */
 .embed-game-moves .review-move-list__number {
   padding-left: 0;
   font-size: 13.5px;
   font-variant-numeric: tabular-nums;
+}
+
+.embed-game-moves .review-move-list__number::after {
+  content: ".";
 }
 
 .embed-game-moves .review-move-list__move {
@@ -302,10 +409,17 @@ body.embed-body {
   color: var(--site-on-accent, #fff);
 }
 
+/* Same height as the control bar under the board, so the rule above the
+   result and the rule above the controls are one line across the card. */
 .embed-game-result {
+  display: flex;
   flex: none;
-  margin-top: 6px;
-  padding: 8px 4px 10px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 39px;
+  margin-top: 0;
+  padding: 0 4px;
   border-top: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
   color: var(--site-muted);
   font-size: 12px;
@@ -413,6 +527,11 @@ body.embed-body {
   gap: 0;
 }
 
+/* The mat inset again, at the specificity the reset above took away. */
+.embed-game .embed-board.replay-page {
+  padding-inline: 8px;
+}
+
 .embed-board .replay-page,
 .embed-board .replay-layout {
   width: 100%;
@@ -440,8 +559,8 @@ body.embed-body {
 .embed-game .embed-board .replay-pane .replay-clock-row {
   display: flex;
   justify-content: space-between;
-  align-items: baseline;
-  gap: 10px;
+  align-items: center;
+  gap: 9px;
   width: 100%;
   min-height: 0;
   padding: 9px 14px;
@@ -456,6 +575,9 @@ body.embed-body {
 
 .embed-game .embed-board .replay-pane .replay-clock-side {
   order: 0;
+  flex: 1 1 auto;
+  min-width: 0;
+  text-align: left;
   overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
@@ -584,8 +706,13 @@ body.embed-body {
   min-width: 0;
 }
 
+/* Beside the board the panel is shorter than it (a move list of one or two
+   plies, the verdict block, the actions), and top-aligned it left the bottom
+   third of the column empty against a full-height board. Centred, the two
+   read as one row. The stacked layout below overrides this with stretch. */
 .embed-puzzle .puzzle-side-panel {
   max-height: var(--puzzle-page-height);
+  align-self: center;
 }
 
 .embed-puzzle-caption {

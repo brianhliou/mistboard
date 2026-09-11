@@ -342,7 +342,7 @@ test('a stored v1 product renders without undefined or NaN', () => {
     reportWith({ ...emptyFacts, product: v1Product }),
   );
   assert.doesNotMatch(markdown, /undefined|NaN/);
-  assert.doesNotMatch(markdown, /Players:/);
+  assert.doesNotMatch(markdown, /players:/i);
   assert.match(markdown, /Completed games: 78 \(\+56 week over week\)/);
 });
 

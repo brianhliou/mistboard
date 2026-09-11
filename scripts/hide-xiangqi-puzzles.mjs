@@ -27,6 +27,17 @@
 // until they pass the current profile; --pre-gate --unhide serves them again.
 // The seed sync's upsert does not touch hidden_reason, so this survives a
 // seed-hash change.
+//
+// A third set, --runner-up-mates: checkmate puzzles whose audit found a second
+// mating move at a solver ply where the stored move does NOT mate in one. The
+// gate admitted them as "strictly fastest of two mates" until 2026-09-11, when
+// it adopted the lichess rule (a mate puzzle needs a unique mating move at
+// every ply except a mate-in-one; the grader rescues a mate on the spot and
+// nothing else). Under that rule these are traps: a solver who plays the other
+// mate is marked wrong. A second mate on a mate-in-one ply is fine, the grader
+// accepts it, and 661 of 965 mate puzzles have one, mostly on the last ply.
+// The audit's per-ply evidence is the source, not the verify record, because
+// the verify record only covers the first ply.
 import pg from 'pg';
 import {
   applyStandardXiangqiMove,
@@ -38,7 +49,12 @@ const AHEAD_CP = 300;
 const apply = process.argv.includes('--apply');
 const unhide = process.argv.includes('--unhide');
 const preGate = process.argv.includes('--pre-gate');
-const REASON = preGate ? 'pre-gate-seed-unaudited' : 'already-won-free-capture';
+const runnerUpMates = process.argv.includes('--runner-up-mates');
+const REASON = preGate
+  ? 'pre-gate-seed-unaudited'
+  : runnerUpMates
+    ? 'runner-up-mates'
+    : 'already-won-free-capture';
 
 /** Nothing can recapture on the square the move landed on. Only meaningful
  *  while the game is still running: a capture that MATES also leaves the
@@ -62,6 +78,47 @@ try {
       [REASON],
     );
     console.log(`un-hid ${rowCount} puzzles`);
+    process.exit(0);
+  }
+
+  if (runnerUpMates) {
+    const { rows } = await client.query(
+      `WITH audit AS (
+         SELECT DISTINCT ON (candidate_id) candidate_id, evidence
+           FROM xiangqi_puzzle_mining_judgments
+          WHERE stage = 'audit' AND verdict = 'pass'
+          ORDER BY candidate_id, id DESC
+       )
+       SELECT p.id, p.hidden_reason, p.solution_plies,
+              (SELECT count(*) FROM jsonb_array_elements(audit.evidence->'plies') ply
+                WHERE (ply->>'secondMate')::int > 0 AND (ply->>'bestMate')::int > 1)::int AS ambiguous_plies
+         FROM puzzles p
+         JOIN audit ON audit.candidate_id = p.mining_candidate_id
+        WHERE p.variant = 'xiangqi' AND p.goal_type = 'checkmate'
+          AND EXISTS (
+            SELECT 1 FROM jsonb_array_elements(audit.evidence->'plies') ply
+             WHERE (ply->>'secondMate')::int > 0 AND (ply->>'bestMate')::int > 1)
+        ORDER BY p.seq`,
+    );
+    const byLength = {};
+    for (const row of rows) byLength[row.solution_plies] = (byLength[row.solution_plies] ?? 0) + 1;
+    console.log(
+      `checkmate puzzles with a second mate at a ply that is not mate-in-one: ${rows.length}`,
+    );
+    console.log(`by solution length (plies): ${JSON.stringify(byLength)}`);
+    console.log(`already hidden: ${rows.filter((row) => row.hidden_reason).length}`);
+    for (const row of rows.slice(0, 5)) console.log(`  ${row.id}`);
+    if (rows.length > 5) console.log(`  ... ${rows.length - 5} more`);
+    if (!apply) {
+      console.log('\ndry run. pass --apply to write hidden_reason.');
+      process.exit(0);
+    }
+    const { rowCount } = await client.query(
+      `UPDATE puzzles SET hidden_reason = $1
+        WHERE id = ANY($2::text[]) AND hidden_reason IS NULL`,
+      [REASON, rows.map((row) => row.id)],
+    );
+    console.log(`\nhid ${rowCount} puzzles with reason "${REASON}"`);
     process.exit(0);
   }
 

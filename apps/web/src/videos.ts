@@ -14,6 +14,7 @@
 
 import './videos.css';
 
+import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { YOUTUBE_BLOCKED_IN } from './nav-items.js';
@@ -161,6 +162,9 @@ export function buildVideosPage(locale: Locale = currentLocale()): HTMLElement {
   subscribe.target = '_blank';
   subscribe.rel = 'noopener noreferrer';
   subscribe.textContent = t('videos.subscribe', {}, locale);
+  subscribe.addEventListener('click', () => {
+    track('video_clicked', { kind: 'subscribe', source: 'youtube', video_key: null });
+  });
   ours.append(oursHeading, oursIntro, oursList, subscribe);
 
   // Which facet options actually exist in the data. Level always spans its full
@@ -492,6 +496,18 @@ export function buildVideoCard(video: VideoEntry, locale: Locale = currentLocale
     link.target = '_blank';
     link.rel = 'noopener noreferrer';
   }
+  // Outbound clicks are the only signal the library has: a YouTube visit
+  // leaves no pageview here, and the referrer is stripped on the way back.
+  link.addEventListener('click', () => {
+    track('video_clicked', {
+      kind: 'card',
+      source: video.source,
+      video_key: videoKey(video),
+      first_party: FIRST_PARTY_VIDEOS.includes(video),
+      level: video.level,
+      language: video.language,
+    });
+  });
 
   const thumb = document.createElement('span');
   thumb.className = 'videos-thumb';

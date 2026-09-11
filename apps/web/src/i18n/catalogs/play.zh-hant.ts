@@ -147,7 +147,6 @@ export const ZH_HANT_PLAY = {
   'puzzle.notFound': '找不到該題目',
   'puzzle.noneForVariant': '這個棋種尚無題目。',
   'puzzle.findBestMove': '找出最佳著法。',
-  'puzzle.findFastestMate': '找出最快的殺法。',
   'puzzle.checkingMove': '正在檢查著法。',
   'puzzle.solved': '已解開。',
   'puzzle.solvedAlternativeMate': '已解開。這一手同樣能成殺。',

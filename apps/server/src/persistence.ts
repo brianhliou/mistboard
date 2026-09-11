@@ -38,6 +38,12 @@ export {
   listAdminAccounts,
 } from './persistence-admin-accounts.js';
 export type {
+  AdminMetrics,
+  AdminMetricsEngines,
+  AdminMetricsWeek,
+} from './persistence-admin-metrics.js';
+export { ADMIN_METRICS_WEEKS, getAdminMetrics } from './persistence-admin-metrics.js';
+export type {
   AccountClosureChallenge,
   AuthRateLimitInput,
   AuthRateLimitScope,
@@ -452,9 +458,11 @@ export type {
   PublicSiteStats,
   PublicStatsDay,
   PublicStatsMode,
+  PublicStatsWeek,
   SiteStats,
 } from './persistence-site-stats.js';
 export { getPublicSiteStats, getSiteStats } from './persistence-site-stats.js';
+export { rememberStatsExcludedDevice } from './persistence-stats-excluded-devices.js';
 export type {
   AddChapterResult,
   CreateStudyInput,

@@ -114,7 +114,7 @@ const ZH_HANS: Record<string, string> = {
   // The eight reason identifiers stay Latin: the caption calls them the value
   // stored on the candidate, and they should match the database.
   'THE GATE, IN EVALUATION ORDER': '判定关卡，按求值顺序',
-  'best mates, second does not or is slower': '最佳着法能将死，次佳不能或更慢',
+  'best mates in one, or no other move mates': '最佳着法一步将死，或没有其他着法能将死',
   unique: '唯一',
   'win%(best) below 0.8': '最佳胜率低于 0.8',
   rejected: '拒绝',
@@ -2167,7 +2167,7 @@ const ZH_HANT: Record<string, string> = {
   // The eight reason identifiers stay Latin: the caption calls them the value
   // stored on the candidate, and they should match the database.
   'THE GATE, IN EVALUATION ORDER': '判定關卡，按求值順序',
-  'best mates, second does not or is slower': '最佳著法能將死，次佳不能或更慢',
+  'best mates in one, or no other move mates': '最佳著法一步將死，或沒有其他著法能將死',
   unique: '唯一',
   'win%(best) below 0.8': '最佳勝率低於 0.8',
   rejected: '拒絕',

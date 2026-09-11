@@ -132,6 +132,7 @@ function persistenceRecordForSeatToken(token: SeatTokenState): persistence.RoomS
   return {
     seat: token.seat,
     clientId: token.clientId,
+    deviceId: token.deviceId ?? null,
     tokenHash: token.tokenHash,
     userId: token.userId,
     userHandle: token.userHandle,
@@ -163,6 +164,7 @@ export function seatTokenStatesFromPersistence(
     if (!token || token.revokedAt) continue;
     states[token.seat] = {
       clientId: token.clientId,
+      deviceId: token.deviceId ?? null,
       seat: token.seat,
       tokenHash: token.tokenHash,
       userId: token.userId,
@@ -327,7 +329,7 @@ function participantForSeatToken(
       visibility: 'public',
     };
   }
-  return inMemoryParticipant(
+  const participant = inMemoryParticipant(
     color,
     clientId,
     null,
@@ -336,6 +338,12 @@ function participantForSeatToken(
     pveBuiltinEngineClientId,
     botId,
   );
+  // A guest seat carries the browser's device id (migration 137) so the
+  // aggregate player counts can tell one visitor's games from another's.
+  if (participant.subjectType === 'guest' && token?.deviceId) {
+    return { ...participant, subjectId: token.deviceId };
+  }
+  return participant;
 }
 
 export function buildGameSummary(ctx: RoomManagerContext, room: Room): GameSummary {

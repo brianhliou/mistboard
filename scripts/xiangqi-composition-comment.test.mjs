@@ -13,9 +13,12 @@ const base = {
   url: 'http://www.dpxq.com/hldcg/search/view_u_43233.html',
 };
 
-test('a real line is described by its length', () => {
+test('a chapter with a real line says only what the board does not', () => {
   const text = compositionComment({ ...base, moveCount: 33, prose: [] });
-  assert.match(text, /solution runs 33 moves/);
+  // Deliberately silent about the line. "The solution runs 33 moves and is
+  // played out below" shipped on four hundred chapters and restated the board.
+  assert.doesNotMatch(text, /33 moves/);
+  assert.doesNotMatch(text, /printed variation/);
   assert.match(text, /Problem 516 of 適情雅趣, volume 6 \(卷六\)/);
   assert.match(text, /Transcribed from http:\/\/www\.dpxq\.com/);
 });
@@ -36,13 +39,6 @@ test('a one-move record with prose quotes the prose, and drops the false claim',
 test('a one-move record with no prose says exactly that', () => {
   const text = compositionComment({ ...base, moveCount: 1, prose: [] });
   assert.match(text, /records only the opening move of the solution/);
-});
-
-test('printed variations are disclosed, and pluralized', () => {
-  const one = compositionComment({ ...base, moveCount: 9, prose: [], variations: 1 });
-  const many = compositionComment({ ...base, moveCount: 9, prose: [], variations: 4 });
-  assert.match(one, /1 printed variation,/);
-  assert.match(many, /4 printed variations,/);
 });
 
 test('a missing English rendering falls back to the Chinese title alone', () => {

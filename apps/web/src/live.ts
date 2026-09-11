@@ -25,6 +25,7 @@ import {
   clearSeatTokenForRoom,
   clientIdForRoom,
   type DevViews,
+  deviceIdForBrowser,
   liveState,
   resolveWebSocketBaseUrl,
 } from './live-state.js';
@@ -86,6 +87,8 @@ export function bootstrapLiveRoom(): void {
 
   const socketParams = new URLSearchParams({ room });
   socketParams.set('client', clientIdForRoom(room));
+  const deviceId = deviceIdForBrowser();
+  if (deviceId) socketParams.set('device', deviceId);
   if (soloRequested) socketParams.set('dev', 'solo');
   if (engineRequested) socketParams.set('dev', 'engine');
   if (allViewsRequested) socketParams.set('views', 'all');

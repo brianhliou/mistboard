@@ -135,6 +135,7 @@ export function tenantSeatTokenStatesFromPersistence<C extends persistence.RoomS
     if (!token || token.revokedAt) continue;
     states[token.seat] = {
       clientId: token.clientId,
+      deviceId: token.deviceId ?? null,
       seat: token.seat,
       tokenHash: token.tokenHash,
       userId: token.userId,

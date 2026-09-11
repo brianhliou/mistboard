@@ -8,12 +8,44 @@ import {
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 
 definePersistenceTests('seat tokens', () => {
+  test('room seat tokens carry the browser device id and survive a reload', async () => {
+    const at = new Date('2026-09-11T10:00:00.000Z');
+    await upsertRoomSeatToken('device-room', {
+      seat: 'black',
+      clientId: 'black-client',
+      deviceId: 'device-abc-123',
+      tokenHash: 'hash-black',
+      userId: null,
+      userHandle: null,
+      userDisplayName: null,
+      issuedAt: at,
+      lastSeenAt: at,
+      revokedAt: null,
+    });
+    const loaded = await loadRoomSeatTokens('device-room');
+    assert.equal(loaded.black?.deviceId, 'device-abc-123');
+    // A later upsert without a device (a pre-issued rematch seat) clears it.
+    await upsertRoomSeatToken('device-room', {
+      seat: 'black',
+      clientId: 'black-client',
+      tokenHash: 'hash-black-2',
+      userId: null,
+      userHandle: null,
+      userDisplayName: null,
+      issuedAt: at,
+      lastSeenAt: at,
+      revokedAt: null,
+    });
+    assert.equal((await loadRoomSeatTokens('device-room')).black?.deviceId, null);
+  });
+
   test('room seat tokens persist only token hashes and seat metadata', async () => {
     const issuedAt = new Date('2026-05-08T10:00:00.000Z');
     const lastSeenAt = new Date('2026-05-08T10:00:01.000Z');
     await upsertRoomSeatToken('token-room', {
       seat: 'white',
       clientId: 'white-client',
+      deviceId: null,
       tokenHash: 'hash-white',
       userId: null,
       userHandle: null,
@@ -27,6 +59,7 @@ definePersistenceTests('seat tokens', () => {
       white: {
         seat: 'white',
         clientId: 'white-client',
+        deviceId: null,
         tokenHash: 'hash-white',
         userId: null,
         userHandle: null,
@@ -51,6 +84,7 @@ definePersistenceTests('seat tokens', () => {
     await upsertRoomSeatToken('signed-token-room', {
       seat: 'white',
       clientId: 'white-client',
+      deviceId: null,
       tokenHash: 'hash-white',
       userId: 'user_token',
       userHandle: null,
@@ -64,6 +98,7 @@ definePersistenceTests('seat tokens', () => {
       white: {
         seat: 'white',
         clientId: 'white-client',
+        deviceId: null,
         tokenHash: 'hash-white',
         userId: 'user_token',
         userHandle: 'token-player',
@@ -80,6 +115,7 @@ definePersistenceTests('seat tokens', () => {
     await upsertRoomSeatToken('replace-token-room', {
       seat: 'white',
       clientId: 'white-client',
+      deviceId: null,
       tokenHash: 'hash-white',
       userId: null,
       userHandle: null,
@@ -100,6 +136,7 @@ definePersistenceTests('seat tokens', () => {
       black: {
         seat: 'black',
         clientId: 'white-client',
+        deviceId: null,
         tokenHash: 'hash-white',
         userId: null,
         userHandle: null,
@@ -114,6 +151,7 @@ definePersistenceTests('seat tokens', () => {
       black: {
         seat: 'black',
         clientId: 'white-client',
+        deviceId: null,
         tokenHash: 'hash-white',
         userId: null,
         userHandle: null,
@@ -130,6 +168,7 @@ definePersistenceTests('seat tokens', () => {
     await upsertRoomSeatToken('dxq-token-room', {
       seat: 'red',
       clientId: 'red-client',
+      deviceId: null,
       tokenHash: 'hash-red',
       userId: null,
       userHandle: null,
@@ -143,6 +182,7 @@ definePersistenceTests('seat tokens', () => {
       red: {
         seat: 'red',
         clientId: 'red-client',
+        deviceId: null,
         tokenHash: 'hash-red',
         userId: null,
         userHandle: null,

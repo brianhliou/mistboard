@@ -258,15 +258,16 @@ test('isXiangqiSolverMoveUnique: unique when the runner-up trails by a whole pie
   );
 });
 
-test('isXiangqiSolverMoveUnique: mates use strictly-fastest-mate, not cp/win%', () => {
-  // Faster mate over a slower mate: unique.
+test('isXiangqiSolverMoveUnique: a mate is unique only when no other move mates', () => {
+  // Faster mate over a slower mate: NOT unique. The grader only rescues a mate
+  // on the spot, so a served puzzle with a second forced mate is a trap.
   assert.equal(
     isXiangqiSolverMoveUnique(
       { scoreCp: XIANGQI_MATE_SCORE_CP - 3, mate: 3 },
       { scoreCp: XIANGQI_MATE_SCORE_CP - 5, mate: 5 },
       SOLVER_UNIQUE_OPTS,
     ),
-    true,
+    false,
   );
   // Two mates of equal distance: not unique.
   assert.equal(

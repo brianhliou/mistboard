@@ -321,7 +321,6 @@ export const EN_PLAY = {
   'puzzle.notFound': 'Puzzle not found',
   'puzzle.noneForVariant': 'No puzzles for this variant.',
   'puzzle.findBestMove': 'Find the best move.',
-  'puzzle.findFastestMate': 'Find the fastest mate.',
   'puzzle.checkingMove': 'Checking move.',
   'puzzle.solved': 'Solved.',
   // A solver who found a forced mate we did not store. Says so rather than
@@ -525,7 +524,6 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'puzzle.notFound',
   'puzzle.noneForVariant',
   'puzzle.findBestMove',
-  'puzzle.findFastestMate',
   'puzzle.checkingMove',
   'puzzle.solved',
   'puzzle.solvedAlternativeMate',

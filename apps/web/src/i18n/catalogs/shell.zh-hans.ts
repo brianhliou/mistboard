@@ -65,6 +65,7 @@ export const ZH_HANS_SHELL = {
   'home.storeTitle': '商店',
   'home.storeSubtitle': '即将推出',
   'site.more': '更多 »',
+  'footer.stats': '统计',
   'footer.about': '关于',
   'footer.news': '更新',
   'footer.faq': '常见问题',

@@ -83,10 +83,11 @@ test('gate contract: best move below the winning floor fails even when unique-is
   assert.equal(gateVerdict('cp 150', 'cp -50'), false);
 });
 
-test('gate contract: mates gate on strictly-fastest-mate', () => {
-  assert.equal(gateVerdict('mate 3', 'mate 5'), true); // strictly faster
+test('gate contract: a mate is unique only when no other move mates (lichess rule)', () => {
+  assert.equal(gateVerdict('mate 3', 'mate 5'), false); // a slower second mate is a trap
   assert.equal(gateVerdict('mate 3', 'mate 3'), false); // dual mate: two solutions
   assert.equal(gateVerdict('mate 3', 'cp 800'), true); // lone mate beats non-mate
+  assert.equal(gateVerdict('mate 3', 'mate -4'), true); // second gets mated: not a mate
 });
 
 test('gate contract: an only-move (no MultiPV runner-up) is unique', () => {

@@ -16,6 +16,7 @@ type ReadoutSummary = {
   verdict: ReadoutVerdict;
   completedGames: number | null;
   humanPlayers: number | null;
+  activeAccounts28d?: number | null;
   actions: number;
 };
 
@@ -108,7 +109,15 @@ function buildHistoryTable(rows: ReadoutSummary[]): HTMLElement {
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  for (const label of ['Week ending', 'Trigger', 'Verdict', 'Games', 'Players', 'Actions']) {
+  for (const label of [
+    'Week ending',
+    'Trigger',
+    'Verdict',
+    'Games',
+    'Players',
+    'Active 28d',
+    'Actions',
+  ]) {
     const th = document.createElement('th');
     th.textContent = label;
     headRow.append(th);
@@ -126,6 +135,7 @@ function buildHistoryTable(rows: ReadoutSummary[]): HTMLElement {
       verdict,
       cell(formatCount(row.completedGames)),
       cell(formatCount(row.humanPlayers)),
+      cell(formatCount(row.activeAccounts28d ?? null)),
       cell(row.actions === 0 ? '-' : String(row.actions)),
     );
     tbody.append(tr);

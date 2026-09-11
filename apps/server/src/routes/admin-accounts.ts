@@ -1,6 +1,6 @@
 // Admin account roster API (powers the unlisted /accounts surface).
 //
-//   GET /api/admin/accounts?sort=newest|seen|games&q=<text>&limit=<n>&offset=<n>
+//   GET /api/admin/accounts?sort=<ADMIN_ACCOUNT_SORTS>&q=<text>&limit=<n>&offset=<n>
 //
 // Session-admin gated like /api/admin/engines (open in local dev). Returns
 // every registered account, closed and private ones included, each with its
@@ -78,6 +78,7 @@ export type AdminAccountPayload = {
   createdAt: string;
   lastSeenAt: string | null;
   closedAt: string | null;
+  statsExcluded: boolean;
   gamesPlayed: number;
 };
 
@@ -95,6 +96,7 @@ export function serializeAdminAccount(row: AdminAccountRow): AdminAccountPayload
     createdAt: row.createdAt.toISOString(),
     lastSeenAt: row.lastSeenAt ? row.lastSeenAt.toISOString() : null,
     closedAt: row.closedAt ? row.closedAt.toISOString() : null,
+    statsExcluded: row.statsExcludedAt !== null,
     gamesPlayed: row.gamesPlayed,
   };
 }
