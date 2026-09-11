@@ -470,7 +470,7 @@ export function createTenantWsRuntime<
     // Crossroads re-attaches `promotion` from the legal-move list. It doubles
     // as the legality check: null rejects.
     const canonical = tenant.rules.canonicalMove
-      ? tenant.rules.canonicalMove(room.projection.state, move)
+      ? tenant.rules.canonicalMove(room.projection.state, move, seat)
       : tenant.rules.isLegalMove(room.projection.state, move)
         ? move
         : null;

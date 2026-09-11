@@ -92,7 +92,7 @@ test('only the viewer is offered claims', () => {
   let state = deal();
   const hand = state.game.hands[0] as readonly number[];
   const tile = hand.findIndex((count) => count > 0);
-  state = applyMahjongMove(state, 'east', { action: 'discard', tile, at: 1_000 });
+  state = applyMahjongMove(state, { by: 'east', at: 1_000, action: 'discard', tile });
 
   const awaiting = mahjongViewFor(state, 'east').awaiting;
   assert.ok(awaiting.length > 0, 'fixture should open a contested window');

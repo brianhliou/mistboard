@@ -11,6 +11,7 @@ import {
   XIANGQI_SPEC_ID,
   type XiangqiColor,
 } from '@mistboard/game';
+import type { MahjongSeat } from '@mistboard/mahjong';
 import { engineVersionDisplayName } from './engine-registry.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import type {
@@ -55,8 +56,20 @@ const MIN_TV_PVP_PLY_COUNT = 30;
 // doubling up on.
 const CURATED_MIN_PLY = 20;
 
-export type GameResult = 'white-wins' | 'black-wins' | 'red-wins' | 'draw';
-export type GameParticipantColor = Color | XiangqiColor;
+// Kept in lockstep with games_result_check (137). A value outside the
+// constraint fails the whole recordGameEnd transaction, participants included.
+export type GameResult =
+  | 'white-wins'
+  | 'black-wins'
+  | 'red-wins'
+  // Mahjong's four winds (137). A hand has one winner, or nobody.
+  | 'east-wins'
+  | 'south-wins'
+  | 'west-wins'
+  | 'north-wins'
+  | 'draw';
+// Kept in lockstep with game_participants_color_check (137).
+export type GameParticipantColor = Color | XiangqiColor | MahjongSeat;
 export type GameParticipantSubjectType =
   | 'guest'
   | 'user'

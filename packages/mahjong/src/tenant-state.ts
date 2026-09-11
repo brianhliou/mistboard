@@ -57,20 +57,45 @@ export function seatName(seat: Seat): MahjongSeat {
  */
 export const CLAIM_WINDOW_MS = 6_000;
 
-export type MahjongMove =
+/** What a client asks to do. Carries no identity and no time. */
+export type MahjongAction =
   | { readonly action: 'draw' }
-  /** `at` is stamped server-side; it is what the claim window counts from. */
-  | { readonly action: 'discard'; readonly tile: TileIndex; readonly at: number }
+  | { readonly action: 'discard'; readonly tile: TileIndex }
   | { readonly action: 'claim'; readonly kind: ClaimKind; readonly fromHand: readonly TileIndex[] }
   | { readonly action: 'pass' }
   | { readonly action: 'self-draw' }
   /** The window's deadline passed. Played by the discarder, settles the window. */
   | { readonly action: 'timeout' };
 
+/**
+ * A move as it is applied and persisted.
+ *
+ * `by` and `at` are stamped by the server, never read off the wire. They exist
+ * because mahjong is the one variant here where the mover is not implied by the
+ * state: a claim arrives from a seat whose turn it is not, so who acted has to
+ * travel with the move into the event log to survive replay. `at` is the same
+ * story for time - a claim window counts from the discard, and a state
+ * transition has no clock.
+ */
+export type MahjongMove = MahjongAction & {
+  readonly by: MahjongSeat;
+  readonly at: number;
+};
+
+/**
+ * Mirrors @mistboard/game's AbortReason, spelled out rather than imported.
+ *
+ * This package deliberately does not depend on the chess/xiangqi kernel: it is
+ * a standalone mahjong implementation and that one import would pull the whole
+ * thing in. The server tenant asserts the two agree at compile time, so a new
+ * abort reason over there fails the build here rather than drifting.
+ */
+export type MahjongAbortReason = 'pregame-timeout' | 'user-abort' | 'engine-unavailable';
+
 export type MahjongStatus =
   | { readonly type: 'playing'; readonly turn: MahjongSeat }
   | { readonly type: 'finished'; readonly winner: MahjongSeat | null; readonly reason: string }
-  | { readonly type: 'aborted'; readonly reason: string };
+  | { readonly type: 'aborted'; readonly reason: MahjongAbortReason };
 
 export interface MahjongTenantState {
   readonly status: MahjongStatus;
@@ -169,9 +194,9 @@ export function mahjongIsLegalMove(state: MahjongTenantState, move: MahjongMove)
  */
 export function applyMahjongMove(
   state: MahjongTenantState,
-  seat: MahjongSeat,
   move: MahjongMove,
 ): MahjongTenantState {
+  const seat = move.by;
   const advanced = (game: MahjongGame, patch: Partial<MahjongTenantState> = {}) =>
     finalize({ ...state, ...patch, game, moveNumber: state.moveNumber + 1, lastMove: move });
 

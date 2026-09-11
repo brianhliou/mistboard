@@ -317,7 +317,13 @@ export type VariantTenant<
     // legal-move object to append (e.g. Crossroads re-attaches promotion from
     // the legal-move list). Null rejects. When omitted, the ws move path
     // appends the parsed move after an isLegalMove check instead.
-    canonicalMove?(state: State, move: M): M | null;
+    // `seat` is the mover. Every existing tenant ignores it, because in a
+    // strictly alternating game the mover is state.status.turn and the move
+    // carries no identity. Mahjong is the exception: a claim arrives from a
+    // seat whose turn it is NOT, and applyMove receives only the state and the
+    // move, so the seat has to be stamped onto the move here to survive into
+    // the event log and back out on replay.
+    canonicalMove?(state: State, move: M, seat: C): M | null;
     // May this seat act right now? Defaults to "it is this seat's turn".
     //
     // Mahjong is why this exists. Every other tenant is strictly alternating:

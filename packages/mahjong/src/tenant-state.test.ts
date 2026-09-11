@@ -38,10 +38,11 @@ function toContestedWindow(): { state: MahjongTenantState; at: number } {
     t = (t + Math.imul(t ^ (t >>> 7), 61 | t)) ^ t;
     return ((t ^ (t >>> 14)) >>> 0) / 4294967296;
   };
-  const state = applyMahjongMove(createMahjongState(shuffleWall(next, orderedWall())), 'east', {
+  const state = applyMahjongMove(createMahjongState(shuffleWall(next, orderedWall())), {
+    by: 'east',
+    at,
     action: 'discard',
     tile: 24,
-    at,
   });
   return { state, at };
 }
@@ -54,7 +55,7 @@ function toClaimWindow(): { state: MahjongTenantState; at: number } {
   // so east's first act is a discard, not a draw.
   const hand = state.game.hands[0] as readonly number[];
   const tile = hand.findIndex((count) => count > 0);
-  state = applyMahjongMove(state, 'east', { action: 'discard', tile, at });
+  state = applyMahjongMove(state, { by: 'east', at, action: 'discard', tile });
   return { state, at };
 }
 
@@ -100,7 +101,7 @@ test('a seat with no claim to make may not act in the window', () => {
 
 test('a timeout settles the window and play continues', () => {
   const { state } = toClaimWindow();
-  const settled = applyMahjongMove(state, 'east', { action: 'timeout' });
+  const settled = applyMahjongMove(state, { by: 'east', at: 1_000, action: 'timeout' });
   assert.notEqual(settled.game.phase.type, 'claim-window');
   assert.deepEqual(settled.answers, {});
   assert.equal(settled.windowClosesAt, null);
@@ -111,10 +112,10 @@ test('a window with claimants stays open until each has answered', () => {
   const { state } = toContestedWindow();
   const pending = pendingClaimants(state);
   assert.equal(pending.length, 2, 'the pinned deal must really be contested');
-  let next = applyMahjongMove(state, pending[0] as 'south', { action: 'pass' });
+  let next = applyMahjongMove(state, { by: pending[0] as 'south', at: 1_000, action: 'pass' });
   assert.equal(next.game.phase.type, 'claim-window', 'one answer is not every answer');
   for (const seat of pending.slice(1)) {
-    next = applyMahjongMove(next, seat, { action: 'pass' });
+    next = applyMahjongMove(next, { by: seat, at: 1_000, action: 'pass' });
   }
   assert.notEqual(next.game.phase.type, 'claim-window', 'the last answer closes it');
 });
@@ -124,9 +125,9 @@ test('a seat cannot answer twice while the window is open', () => {
   const pending = pendingClaimants(state);
   assert.equal(pending.length, 2, 'the pinned deal must really be contested');
   const first = pending[0] as 'south';
-  const once = applyMahjongMove(state, first, { action: 'pass' });
+  const once = applyMahjongMove(state, { by: first, at: 1_000, action: 'pass' });
   assert.equal(once.game.phase.type, 'claim-window');
-  assert.equal(applyMahjongMove(once, first, { action: 'pass' }), once);
+  assert.equal(applyMahjongMove(once, { by: first, at: 1_000, action: 'pass' }), once);
 });
 
 test('an answer with no window open changes nothing', () => {
@@ -135,10 +136,10 @@ test('an answer with no window open changes nothing', () => {
   const state = deal();
   assert.notEqual(state.game.phase.type, 'claim-window');
   for (const action of ['pass', 'timeout'] as const) {
-    assert.equal(applyMahjongMove(state, 'south', { action }), state);
+    assert.equal(applyMahjongMove(state, { by: 'south', at: 1_000, action }), state);
   }
   assert.equal(
-    applyMahjongMove(state, 'south', { action: 'claim', kind: 'pung', fromHand: [0, 0] }),
+    applyMahjongMove(state, { by: 'south', at: 1_000, action: 'claim', kind: 'pung', fromHand: [0, 0] }),
     state,
   );
 });
@@ -149,11 +150,9 @@ test('a claim naming tiles the seat does not hold is recorded as a decline', () 
   const { state } = toContestedWindow();
   const [first] = pendingClaimants(state);
   assert.ok(first, 'the pinned deal must have a claimant');
-  const next = applyMahjongMove(state, first, {
-    action: 'claim',
+  const next = applyMahjongMove(state, { by: first, at: 1_000, action: 'claim',
     kind: 'pung',
-    fromHand: [99, 99],
-  });
+    fromHand: [99, 99] });
   // Either the window resolved (answers cleared) or it recorded the decline;
   // what must hold in both cases is that it is no longer waiting on this seat.
   assert.ok(!pendingClaimants(next).includes(first));
