@@ -59,6 +59,20 @@ definePersistenceTests('site stats', () => {
     const stats = await getPublicSiteStats({ now });
 
     assert.equal(stats.generatedAt, now.toISOString());
+    // The excluded operator is not a registered account here.
+    assert.equal(stats.accounts, 0);
+    assert.equal(stats.weeklyCompletedGames.length, 26);
+    assert.equal(stats.weeklyCompletedGames.at(-1)?.weekStart, '2026-05-25');
+    // weekOne (04-06, a Monday) and the two `recent` games (05-29, the
+    // current week); the weekTwo game is EvE and the internal one is excluded,
+    // so neither week shows.
+    assert.deepEqual(
+      stats.weeklyCompletedGames.filter((w) => w.completedGames > 0),
+      [
+        { weekStart: '2026-04-06', completedGames: 2 },
+        { weekStart: '2026-05-25', completedGames: 2 },
+      ],
+    );
     assert.equal(stats.totalCompletedGames, 4);
     assert.equal(stats.last30dCompletedGames, 2);
     assert.equal(stats.publicGames, 2);

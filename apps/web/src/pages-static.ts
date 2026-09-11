@@ -10,10 +10,8 @@ import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
 import {
-  buildActivityChart as buildActivityChartSvg,
   formatStatNumber as formatNumber,
   type PublicSiteStats,
-  type PublicStatsDay,
   type PublicStatsMode,
 } from './stats-charts.js';
 
@@ -318,33 +316,13 @@ function renderPlatformActivityStats(
       ),
     );
   }
-  summary.append(document.createTextNode('.'));
-  const chart = buildActivityChart(stats.dailyCompletedGames, locale);
-  body.replaceChildren(summary, chart, buildModeSplit(stats.modeTotals, locale));
-}
-
-function buildActivityChart(days: PublicStatsDay[], locale: Locale = currentLocale()): HTMLElement {
-  const panel = document.createElement('div');
-  panel.className = 'platform-activity-chart';
-
-  const label = document.createElement('h3');
-  label.textContent = t('about.activityChartHeading', {}, locale);
-
-  if (days.length === 0) {
-    const empty = document.createElement('p');
-    empty.className = 'platform-activity-status';
-    empty.textContent = t('about.activityNoGames', {}, locale);
-    panel.append(label, empty);
-    return panel;
-  }
-
-  const ariaLabel = t(
-    'about.activityChartLabel',
-    { count: formatNumber(days.at(-1)?.cumulativeGames ?? 0, locale) },
-    locale,
-  );
-  panel.append(label, buildActivityChartSvg(days, ariaLabel, locale));
-  return panel;
+  summary.append(document.createTextNode('. '));
+  // The chart lives on /stats now (one chart, one home); this section keeps
+  // the sentence and the split and points at the full page.
+  const more = aboutLink(t('about.activityFullStats', {}, locale), '/stats');
+  more.className = 'platform-activity-more';
+  summary.append(more);
+  body.replaceChildren(summary, buildModeSplit(stats.modeTotals, locale));
 }
 
 function buildModeSplit(

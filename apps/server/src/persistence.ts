@@ -458,6 +458,7 @@ export type {
   PublicSiteStats,
   PublicStatsDay,
   PublicStatsMode,
+  PublicStatsWeek,
   SiteStats,
 } from './persistence-site-stats.js';
 export { getPublicSiteStats, getSiteStats } from './persistence-site-stats.js';

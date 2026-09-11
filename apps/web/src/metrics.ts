@@ -1,6 +1,7 @@
 // /stats (public) and /metrics (admin) share this module, the way coach.ts
-// serves both the directory and a detail view. Public shows aggregate games,
-// activity, mode + variant splits. Admin adds the Postgres-true weekly series
+// serves both the directory and a detail view. Public is one of the /about
+// family (static rail, translated): games per week, totals, mode + variant
+// splits. Admin adds the Postgres-true weekly series
 // from /api/stats/admin (players, games, accounts, puzzles, study, community),
 // the result split, the live in-play/online figures, and an "Engines and
 // corpus" block at the bottom that is the ONLY place bot-vs-bot appears. The
@@ -12,6 +13,7 @@ import './metrics.css';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildNav, buildNotice } from './site-shell.js';
+import { buildStaticPageLayout } from './static-page-shell.js';
 import {
   type ActivitySeries,
   buildInteractiveActivityChart,
@@ -92,6 +94,110 @@ export type AdminMetrics = {
 };
 
 export async function mountMetrics(root: HTMLElement, options: { admin: boolean }): Promise<void> {
+  if (options.admin) return mountAdminMetrics(root);
+  return mountPublicStats(root);
+}
+
+// Public /stats: one of the /about family, on the static rail, translated.
+// Games per week leads (the growth read), then the totals a visitor asks
+// about. Nothing per-person, nothing engine, nothing internal.
+async function mountPublicStats(root: HTMLElement): Promise<void> {
+  const locale = currentLocale();
+  root.replaceChildren();
+  root.classList.add('landing-page', 'metrics-route', 'stats-route');
+
+  const section = document.createElement('section');
+  section.className = 'site-section stats-section';
+  const heading = document.createElement('h1');
+  heading.className = 'site-section-heading';
+  heading.textContent = t('stats.heading', {}, locale);
+  const lede = document.createElement('p');
+  lede.textContent = t('stats.lede', {}, locale);
+  const body = document.createElement('div');
+  body.className = 'metrics-body';
+  body.setAttribute('aria-live', 'polite');
+  body.textContent = 'Loading…';
+  section.append(heading, lede, body);
+  root.append(buildNav(locale), buildStaticPageLayout('stats', section, locale));
+
+  const [publicStats, live] = await Promise.all([fetchPublicStats(), fetchLiveStats()]);
+  if (!publicStats) {
+    body.replaceChildren(
+      buildNotice(
+        t('stats.unavailableHeading', {}, locale),
+        t('stats.unavailableBody', {}, locale),
+      ),
+    );
+    return;
+  }
+
+  const parts: HTMLElement[] = [];
+  const cards = document.createElement('div');
+  cards.className = 'metrics-cards';
+  cards.append(
+    statCard(
+      t('stats.gamesPlayed', {}, locale),
+      publicStats.totalCompletedGames,
+      t(
+        'stats.gamesThisMonth',
+        { count: formatStatNumber(publicStats.last30dCompletedGames) },
+        locale,
+      ),
+    ),
+  );
+  if (typeof publicStats.accounts === 'number') {
+    cards.append(statCard(t('stats.accounts', {}, locale), publicStats.accounts));
+  }
+  if (live) cards.append(statCard(t('stats.inPlay', {}, locale), live.playing));
+  parts.push(cards);
+
+  const weekly = publicStats.weeklyCompletedGames ?? [];
+  if (weekly.length > 0) {
+    parts.push(
+      buildChartSection(
+        t('stats.gamesPerWeek', {}, locale),
+        buildWeeklyChart({
+          weeks: weekly.map((week) => week.weekStart),
+          series: [
+            {
+              key: 'games',
+              label: t('stats.gamesPerWeekSeries', {}, locale),
+              values: weekly.map((week) => week.completedGames),
+            },
+          ],
+          ariaLabel: t('stats.gamesPerWeekLabel', { count: String(weekly.length) }, locale),
+          locale,
+        }),
+        'metrics-weekly-section',
+      ),
+    );
+  }
+
+  if (publicStats.dailyCompletedGames.length > 0) {
+    parts.push(
+      buildChartSection(
+        t('stats.gamesOverTime', {}, locale),
+        buildInteractiveActivityChart(buildActivitySeries(publicStats, locale), locale),
+      ),
+    );
+  }
+
+  const variantEntries = publicStats.variantTotals
+    .filter((v) => STATS_VARIANTS.includes(v.variant))
+    .map((v) => ({ label: variantPublicName(v.variant, locale), count: v.count }));
+  if (variantEntries.length > 0) {
+    parts.push(buildBreakdownSection(t('stats.byVariant', {}, locale), variantEntries));
+  }
+  parts.push(
+    buildBreakdownSection(
+      t('stats.byMode', {}, locale),
+      modeEntries(publicStats.modeTotals, locale),
+    ),
+  );
+  body.replaceChildren(...parts);
+}
+
+async function mountAdminMetrics(root: HTMLElement): Promise<void> {
   const locale = currentLocale();
   root.replaceChildren();
   root.classList.add('landing-page', 'metrics-route');
@@ -102,7 +208,7 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
 
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
-  heading.textContent = options.admin ? 'Metrics' : 'Statistics';
+  heading.textContent = 'Metrics';
   shell.append(heading);
 
   const body = document.createElement('div');
@@ -114,7 +220,7 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
   const [publicStats, live, admin] = await Promise.all([
     fetchPublicStats(),
     fetchLiveStats(),
-    options.admin ? fetchAdminMetrics() : Promise.resolve(null),
+    fetchAdminMetrics(),
   ]);
 
   if (!publicStats && !admin) {
@@ -145,32 +251,20 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
     );
   }
 
-  // Variant split, narrowed to the curated live shelf (STATS_VARIANTS) on both
-  // views. Admin counts completed human games from /api/stats/admin; public has
-  // the same scope from /api/stats/public.
-  const variantEntries = (
-    admin
-      ? sortedEntries(admin.humanGamesByVariant).map((e) => ({ variant: e.label, count: e.count }))
-      : (publicStats?.variantTotals ?? [])
-  )
-    .filter((v) => STATS_VARIANTS.includes(v.variant))
-    .map((v) => ({ label: v.variant, count: v.count }));
+  // Variant split, narrowed to the curated live shelf (STATS_VARIANTS), from
+  // the admin endpoint's counted human games.
+  const variantEntries = admin
+    ? sortedEntries(admin.humanGamesByVariant)
+        .filter((e) => STATS_VARIANTS.includes(e.label))
+        .map((e) => ({ label: variantPublicName(e.label, locale), count: e.count }))
+    : [];
   if (variantEntries.length > 0) {
-    parts.push(
-      buildBreakdownSection(
-        'Games by variant',
-        variantEntries.map((entry) => ({
-          label: variantPublicName(entry.label, locale),
-          count: entry.count,
-        })),
-      ),
-    );
+    parts.push(buildBreakdownSection('Games by variant', variantEntries));
   }
 
   if (publicStats) {
-    // Bot-vs-bot is never a mode row here: the public page hides it and the
-    // admin page keeps it in the Engines block below.
-    parts.push(buildBreakdownSection('Games by mode', modeEntries(publicStats.modeTotals)));
+    // Bot-vs-bot is never a mode row here: it lives in the last block.
+    parts.push(buildBreakdownSection('Games by mode', modeEntries(publicStats.modeTotals, locale)));
   }
 
   if (admin) {
@@ -480,13 +574,16 @@ function sectionHeading(text: string): HTMLElement {
 }
 
 // ── data ─────────────────────────────────────────────────────────────────────
-function modeEntries(modeTotals: Record<PublicStatsMode, number>): BreakdownEntry[] {
-  const labels: Record<'pvp' | 'pve', string> = {
-    pvp: 'Human vs human',
-    pve: 'Human vs bot',
+function modeEntries(
+  modeTotals: Record<PublicStatsMode, number>,
+  locale: Locale,
+): BreakdownEntry[] {
+  const labels: Record<'pvp' | 'pve', I18nKey> = {
+    pvp: 'about.modePvp',
+    pve: 'about.modePve',
   };
   return (['pvp', 'pve'] as const)
-    .map((mode) => ({ label: labels[mode], count: modeTotals[mode] ?? 0 }))
+    .map((mode) => ({ label: t(labels[mode], {}, locale), count: modeTotals[mode] ?? 0 }))
     .filter((entry) => entry.count > 0);
 }
 

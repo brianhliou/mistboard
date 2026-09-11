@@ -457,6 +457,7 @@ const HOME_FOOTER_LINKS: ReadonlyArray<{
   blockedIn?: readonly string[];
 }> = [
   { href: '/about', labelKey: 'footer.about' },
+  { href: '/stats', labelKey: 'footer.stats' },
   { href: '/feed', labelKey: 'footer.news' },
   { href: '/faq', labelKey: 'footer.faq' },
   { href: '/patron', labelKey: 'footer.patron' },

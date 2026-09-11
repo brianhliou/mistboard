@@ -1,4 +1,4 @@
-import { countedHumanGame } from './persistence-counted-games.js';
+import { COUNTED_USER, countedHumanGame } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode } from './persistence-game-lifecycle.js';
 
@@ -30,11 +30,26 @@ export interface PublicVariantSeries {
   days: PublicStatsDay[];
 }
 
+export interface PublicStatsWeek {
+  // Monday of the week, ISO date.
+  weekStart: string;
+  completedGames: number;
+}
+
+export const PUBLIC_STATS_WEEKS = 26;
+
 export interface PublicSiteStats {
   generatedAt: string;
   totalCompletedGames: number;
   last30dCompletedGames: number;
   publicGames: number;
+  // Registered accounts (counted ones: stats-excluded operator accounts and
+  // nothing else are left out). A count, never a roster.
+  accounts: number;
+  // Counted games per Monday-start week, oldest first, the current partial
+  // week last. The growth read; the cumulative daily series below always
+  // rises and says less.
+  weeklyCompletedGames: PublicStatsWeek[];
   modeTotals: Record<PublicStatsMode, number>;
   // Completed pvp/pve games by variant id, most-played first. Aggregate counts,
   // safe for the public /stats surface.
@@ -105,8 +120,10 @@ export async function getPublicSiteStats(
     total_completed_games: number;
     last30d_completed_games: number;
     public_games: number;
+    accounts: number;
   }>(
     `SELECT
+       (SELECT count(*) FROM users WHERE ${COUNTED_USER})::int AS accounts,
        count(*) FILTER (WHERE ${COUNTED})::int AS total_completed_games,
        count(*) FILTER (
          WHERE ${COUNTED}
@@ -161,6 +178,30 @@ export async function getPublicSiteStats(
     [now],
   );
 
+  // Weekly axis from generate_series so a quiet week is a zero, not a gap;
+  // week keys cast to text in SQL so a non-UTC dev process cannot shift them.
+  const weekly = await pool.query<{ week: string; n: number }>(
+    `WITH weeks AS (
+       SELECT generate_series(
+         date_trunc('week', $1::timestamptz) - ($2::int - 1) * INTERVAL '1 week',
+         date_trunc('week', $1::timestamptz),
+         INTERVAL '1 week'
+       ) AS week_start
+     )
+     SELECT weeks.week_start::date::text AS week,
+       (SELECT count(*) FROM games g
+          WHERE ${COUNTED}
+            AND g.ended_at >= weeks.week_start
+            AND g.ended_at < LEAST(weeks.week_start + INTERVAL '1 week', $1::timestamptz))::int AS n
+     FROM weeks
+     ORDER BY weeks.week_start`,
+    [now, PUBLIC_STATS_WEEKS],
+  );
+  const weeklyCompletedGames = weekly.rows.map((row) => ({
+    weekStart: row.week,
+    completedGames: row.n,
+  }));
+
   let cumulativeGames = 0;
   const dailyCompletedGames = daily.rows.map((row) => {
     cumulativeGames += row.n;
@@ -207,6 +248,8 @@ export async function getPublicSiteStats(
     totalCompletedGames: row?.total_completed_games ?? 0,
     last30dCompletedGames: row?.last30d_completed_games ?? 0,
     publicGames: row?.public_games ?? 0,
+    accounts: row?.accounts ?? 0,
+    weeklyCompletedGames,
     modeTotals: {
       pvp: 0,
       pve: 0,
