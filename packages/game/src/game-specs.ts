@@ -7,7 +7,8 @@ export type GameFamilyId =
   | 'omega-chess'
   | 'crossroads-chess'
   | 'jungle'
-  | 'military-chess';
+  | 'military-chess'
+  | 'mahjong';
 export type BoardGeometryId =
   | 'chess-8x8'
   | 'xiangqi-7x7'
@@ -19,8 +20,14 @@ export type BoardGeometryId =
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
   | 'xiangqi-7x8'
-  | 'luzhanqi-65-graph';
+  | 'luzhanqi-65-graph'
+  // Mahjong has no board. This dimension names the material instead: the 144
+  // tiles, being the 136 core plus eight flowers. Forcing a geometry here would
+  // be a fiction, and the honest alternative is to say what is actually shared.
+  | 'mahjong-144';
 export type MovementRulesId =
+  // Draw, discard, and claim out of turn. Nothing moves on a board.
+  | 'mahjong-hk'
   | 'orthodox-chess'
   | 'mini-xiangqi'
   | 'xiangqi'
@@ -49,11 +56,18 @@ export type ObjectiveRulesId =
   | 'flag-capture'
   // 'den-or-race': win by moving a piece into the opponent's den OR capturing all
   // their pieces (Jungle / Dou Shou Qi). No royal piece; perfect information.
-  | 'den-or-race';
+  | 'den-or-race'
+  // Mahjong: assemble four sets and a pair from a concealed hand. No royal
+  // piece, no capture, and no position to win on.
+  | 'four-sets-and-a-pair';
 // 'open' = perfect-information (the Crossroads Chess onboarding mode); 'dark' is
 // fog of war (positions hidden); 'hidden-identity' is jieqi/banqi (positions
 // public, piece identities hidden until revealed).
-export type VisibilityRulesId = 'dark' | 'open' | 'hidden-identity';
+// 'concealed-hands' is mahjong: there are no positions to hide, so the
+// distinction is per-seat rather than per-square. Every seat's tiles are
+// private to that seat, the wall is private to everyone, and discards and
+// claimed sets are public the moment they are made.
+export type VisibilityRulesId = 'dark' | 'open' | 'hidden-identity' | 'concealed-hands';
 export type SetupRulesId =
   | 'standard'
   | 'draft960'
@@ -66,7 +80,8 @@ export type SetupRulesId =
   | 'jungle-standard'
   | 'jungle-flip-deal'
   | 'fortress-standard'
-  | 'luzhanqi-formation';
+  | 'luzhanqi-formation'
+  | 'mahjong-deal';
 export type ReserveRulesId = 'none' | 'crazyhouse' | 'shogi-hands' | 'seirawan-gating';
 export type DropPolicyId =
   | 'none'
@@ -105,6 +120,7 @@ export type RatingPoolBaseId =
   | 'jungle_flip'
   | 'fortress_xiangqi'
   | 'luzhanqi'
+  | 'mahjong_hk'
   | 'xiangqi';
 
 export type GameSpecId =
@@ -134,7 +150,10 @@ export type GameSpecId =
   // Standard (open-information) Xiangqi — ordinary 9x10 Chinese chess. The
   // open-info sibling of Dark Xiangqi; check-aware legality + checkmate via the
   // elephantops CHECKED path (packages/game/src/variants-xiangqi-standard.ts).
-  | 'xiangqi';
+  | 'xiangqi'
+  // Hong Kong mahjong. Registered so the fail-closed dispatch can see it;
+  // runtimeStatus is 'future' because nothing is built behind it yet.
+  | 'mahjong';
 export type GameSpecAliasId = 'fog-draft960' | 'dual-chess' | 'dark-dual-chess';
 export type GameSpecLookupId = GameSpecId | GameSpecAliasId;
 
@@ -173,6 +192,7 @@ export const DROP_MINI_XIANGQI_SPEC_ID = 'drop-mini-xiangqi' satisfies GameSpecI
 export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
+export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
 export const DARK_SHOGI_SPEC_ID = 'dark-shogi' satisfies GameSpecId;
 export const DARK_CRAZYHOUSE_SPEC_ID = 'dark-crazyhouse' satisfies GameSpecId;
 export const KRIEGSPIEL_SPEC_ID = 'kriegspiel' satisfies GameSpecId;
@@ -545,6 +565,27 @@ export const GAME_SPECS: readonly GameSpec[] = [
     rated: true,
     publicSurface: 'casual',
     runtimeStatus: 'live',
+  },
+  {
+    // Hong Kong Old Style (清章). Four seats, one human against three bots to
+    // begin with. Registered so the fail-closed dispatch can see it; NOT built:
+    // there is no tenant, no route and no client yet, which is what
+    // runtimeStatus 'future' means. The scoring is also unverified - see
+    // docs-private/mahjong/hk-old-style.md section 8 - so this must not become
+    // discoverable before a player has checked the faan table.
+    id: MAHJONG_SPEC_ID,
+    publicName: 'Mahjong',
+    family: 'mahjong',
+    board: 'mahjong-144',
+    movement: 'mahjong-hk',
+    objective: 'four-sets-and-a-pair',
+    visibility: 'concealed-hands',
+    setup: 'mahjong-deal',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'mahjong_hk',
+    publicSurface: 'hidden',
+    runtimeStatus: 'future',
   },
   {
     // Luzhanqi / Junqi: computer-refereed two-player dark military chess on the

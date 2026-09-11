@@ -223,6 +223,8 @@ export function secondMoverColorName(_gameSpecId: string): string {
 // spec's English publicName rather than inventing a product name.
 export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   banqi: 'variant.banqi.name',
+  // runtimeStatus 'future': falls back to the spec's English publicName.
+  mahjong: null,
   'crossroads-chess': 'variant.crossroadsChess.name',
   'dark-antichess': null,
   'dark-chess': 'variant.darkChess.name',

@@ -150,6 +150,13 @@ export function liveObservePolicy(
       return (gameSpecId && HIDDEN_IDENTITY_LIVE_OBSERVE[gameSpecId]) || 'masked';
     case 'dark':
       return 'sealed';
+    case 'concealed-hands':
+      // Mahjong. A spectator could legitimately see the discards and the melds,
+      // which are public the moment they are made, so the eventual answer here
+      // is 'masked'. Until a masked view exists and has been tested, serve no
+      // live board at all: a concealed hand leaking to a spectator is the same
+      // class of failure as a fogged piece leaking, and this fails closed.
+      return 'sealed';
   }
 }
 

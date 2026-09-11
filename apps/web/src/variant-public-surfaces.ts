@@ -37,6 +37,7 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'reveal-chess': false,
   jungle: true,
   'jungle-flip': true,
+  mahjong: false,
 } satisfies Record<GameSpecId, boolean>;
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
