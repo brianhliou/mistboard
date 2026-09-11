@@ -27,6 +27,7 @@
  * loses the chapter id, its permalink, and its place in the ordering.
  */
 import { readFileSync } from 'node:fs';
+import { compositionComment, proseFrom } from './composition-comment.mjs';
 
 const A = process.argv;
 const arg = (n, d) => {
@@ -137,27 +138,18 @@ function chapterFor(rec) {
   // prose, in its comment tags. The first version of this script had not mined
   // the comments and so told 53 readers the source "records only the opening
   // move", which was false about the record and is the sentence this replaces.
-  const prose = Object.entries(rec.comments ?? {})
-    .sort((a, b) => Number(a[0]) - Number(b[0]))
-    .map(([, text]) => text);
-  let line;
-  if (r.moves.length > 1) {
-    line = `The source's solution runs ${r.moves.length} moves and is played out as the mainline below.`;
-  } else if (prose.length) {
-    line =
-      `The source gives its answer in prose rather than as a line, which is what a draw ` +
-      `study usually needs. Its note reads: ${prose.map((p) => `「${p}」`).join(' ')} ` +
-      `The one move it does record is played below.`;
-  } else {
-    line = `The source records only the opening move of the solution, played below.`;
-  }
-  const comment =
-    `${zh}${en ? ` — "${en}"` : ''}\n\n` +
-    `Problem ${n} of ${BOOK.zh}, volume ${rec.vol} (${VOL_ZH[rec.vol - 1]}). ${line}` +
-    (rec.variations?.length
-      ? ` The source also records ${rec.variations.length} printed variation${rec.variations.length === 1 ? '' : 's'}, not yet included here.`
-      : '') +
-    (rec.url ? `\n\nTranscribed from ${rec.url}` : '');
+  const comment = compositionComment({
+    zh,
+    en,
+    n,
+    vol: rec.vol,
+    volZh: VOL_ZH[rec.vol - 1],
+    bookZh: BOOK.zh,
+    moveCount: r.moves.length,
+    prose: proseFrom(rec),
+    variations: rec.variations?.length ?? 0,
+    url: rec.url,
+  });
 
   const root = {
     version: 1,
