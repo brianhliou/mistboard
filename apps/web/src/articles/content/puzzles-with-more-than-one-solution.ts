@@ -188,11 +188,12 @@ export const puzzleTwoAnswersArticle: Article = {
           kind: 'embed',
           path: embedPuzzlePath(),
           title: 'Today\u2019s xiangqi puzzle',
-          // Under the widget's 543px stack threshold on purpose: two columns
-          // at column width squeeze the verdict panel to a sliver, while the
-          // stacked layout budgets the board at 0.58 of the frame height, so
-          // a tall frame gives a full-size board with the panel under it.
-          aspect: [540, 900],
+          // Board beside the panel, the way /puzzles shows it. The widget sizes
+          // the board from the frame's HEIGHT, so at column width a tall frame
+          // leaves the verdict panel a sliver and "Black to move" wraps, and
+          // under 543px it stacks into the phone layout. A squat frame keeps
+          // the board smaller and gives the panel its room.
+          aspect: [702, 460],
         } as ArticleBlock,
         {
           kind: 'cta',
