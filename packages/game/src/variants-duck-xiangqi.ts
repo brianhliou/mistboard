@@ -602,6 +602,16 @@ export function duckXiangqiGeneralsFace(
 }
 
 /** The board a piece move produces. */
+/** A FULL move completes when black has played, which is the convention every
+ *  other variant on this site uses and the one the shared tenant lifecycle
+ *  reads: its pregame-abort, reaper and forfeit windows are all keyed on
+ *  `moveNumber >= 2`. Duck used to increment on every turn, which put it at 2
+ *  after red's opening move while the rest were still at 1, and silently shut
+ *  the pregame abort before the human had taken a single turn. */
+function fullMoveNumberAfter(moveNumber: number, mover: DuckXiangqiColor): number {
+  return mover === 'black' ? moveNumber + 1 : moveNumber;
+}
+
 function boardAfterMove(
   board: DuckXiangqiBoard,
   from: DuckXiangqiSquare,
@@ -877,7 +887,7 @@ export function applyDuckXiangqiTurn(
       // The duck does not move on a winning turn; it stays where it was.
       duck: state.duck,
       status: { type: 'finished', winner: mover, reason: 'general-captured' },
-      moveNumber: state.moveNumber + 1,
+      moveNumber: fullMoveNumberAfter(state.moveNumber, mover),
       lastTurn: turn,
       progressPlies: 0,
     };
@@ -888,7 +898,7 @@ export function applyDuckXiangqiTurn(
     board,
     duck: turn.duckTo ?? undefined,
     status: { type: 'playing', turn: oppositeDuckXiangqiColor(mover) },
-    moveNumber: state.moveNumber + 1,
+    moveNumber: fullMoveNumberAfter(state.moveNumber, mover),
     lastTurn: turn,
     // A capture is irreversible, so it resets the clock AND makes every earlier
     // position unreachable - keeping their counts would let a repetition fire

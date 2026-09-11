@@ -622,3 +622,25 @@ test('(D8) a capture resets the clock and clears repetition history', () => {
     'earlier positions become unreachable; only the new one is tracked',
   );
 });
+
+test('moveNumber counts FULL moves, the way the shared lifecycle reads it', () => {
+  // Not a cosmetic convention. The tenant lifecycle keys its pregame-abort,
+  // reaper and forfeit windows on `moveNumber >= 2` (ws.ts:557/579,
+  // lifecycle.ts:142/276). Duck used to increment on every TURN, so it hit 2
+  // after red's opening move while every other variant was still at 1, and the
+  // pregame abort handler returned SILENTLY: a player who started a bot game
+  // and immediately backed out got no abort at all and had to resign.
+  let state = createInitialDuckXiangqiState('numbering');
+  assert.equal(state.moveNumber, 1, 'a fresh game is on move 1');
+
+  state = applyDuckXiangqiTurn(state, { from: 'b3', to: 'b5', duckTo: 'e5' });
+  assert.equal(state.status.type === 'playing' && state.status.turn, 'black');
+  assert.equal(state.moveNumber, 1, "red's turn does not complete the move");
+
+  state = applyDuckXiangqiTurn(state, { from: 'b8', to: 'b6', duckTo: 'e6' });
+  assert.equal(state.status.type === 'playing' && state.status.turn, 'red');
+  assert.equal(state.moveNumber, 2, "black's turn completes it");
+
+  state = applyDuckXiangqiTurn(state, { from: 'b5', to: 'b4', duckTo: 'e5' });
+  assert.equal(state.moveNumber, 2, 'and red opens move 2 without advancing it');
+});
