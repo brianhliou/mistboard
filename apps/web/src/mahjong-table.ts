@@ -167,11 +167,34 @@ function ownSeatHtml(seat: MahjongSeatView, view: MahjongPlayerView, canDiscard:
       ${discardsHtml(seat, view.discardUnderClaim)}
       ${seatHeadHtml(seat, isTurn, view.awaiting.includes(seat.seat))}
       ${mahjongActionsHtml(view)}
+      ${handStatusHtml(view)}
       <div class="mj-hand-row">
         <div class="mj-hand" role="group" aria-label="your hand">${tiles}</div>
         ${ownMeldsHtml(seat)}
       </div>
     </div>`;
+}
+
+/**
+ * Where your hand stands, in one line.
+ *
+ * The state this exists for is "complete, and worth nothing". Hong Kong plays
+ * 三番起糊, so four chows and a pung of a stray tile is a finished hand you are
+ * not allowed to declare and must keep playing. Without this the table simply
+ * does not respond to a hand you can see is done, and there is no way to work
+ * out why from anything on screen.
+ */
+function handStatusHtml(view: MahjongPlayerView): string {
+  const hand = view.ownHand;
+  if (view.perspective === 'spectator' || !Number.isFinite(hand.away)) return '';
+  if (hand.complete) {
+    if (hand.meetsMinimum) {
+      return `<div class="mj-hand-status mj-hand-status-ready">Complete, ${hand.faan} faan. You can win with this.</div>`;
+    }
+    return `<div class="mj-hand-status mj-hand-status-short">Complete, but worth ${hand.faan} faan. Hong Kong needs ${hand.minimumFaan} to declare (三番起糊), so play on and build something that scores.</div>`;
+  }
+  const away = hand.away === 0 ? 'Waiting on one tile' : `${hand.away} away from complete`;
+  return `<div class="mj-hand-status">${away}</div>`;
 }
 
 /**
@@ -265,8 +288,18 @@ export function mahjongActionsHtml(view: MahjongPlayerView): string {
       const key = `${claim.kind}:${claim.fromHand.join(',')}`;
       if (seen.has(key)) continue;
       seen.add(key);
+      // A discard of 4 completes 2\u00b73\u00b74, 3\u00b74\u00b75 or 4\u00b75\u00b76.
+      // Three buttons all reading "chow" is a coin toss, so each says its run.
+      const run =
+        claim.kind === 'chow' && view.discardUnderClaim !== null
+          ? [...claim.fromHand, view.discardUnderClaim]
+              .sort((a, b) => a - b)
+              .map((tile) => mahjongTileName(tile).replace(/[^0-9]/g, ''))
+              .join('\u00b7')
+          : '';
+      const label = `${CLAIM_LABELS[claim.kind] ?? claim.kind}${run ? ` ${run}` : ''}`;
       buttons.push(
-        `<button type="button" class="mj-action mj-action-${claim.kind}" data-mj-claim="${claim.kind}" data-mj-from="${claim.fromHand.join(',')}">${CLAIM_LABELS[claim.kind] ?? claim.kind}</button>`,
+        `<button type="button" class="mj-action mj-action-${claim.kind}" data-mj-claim="${claim.kind}" data-mj-from="${claim.fromHand.join(',')}">${label}</button>`,
       );
     }
     // Passing is a button like any other. Declining should read as a decision

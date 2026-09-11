@@ -18,6 +18,7 @@
 import type { Claim } from './claims.js';
 import type { HandSet, SetKind } from './decompose.js';
 import { scoreHand } from './hk-detect.js';
+import { shanten } from './shanten.js';
 import type { MahjongSeat, MahjongStatus, MahjongTenantState } from './tenant-state.js';
 import { claimsFor, MAHJONG_SEATS, pendingClaimants, seatIndex, seatName } from './tenant-state.js';
 import type { TileIndex } from './tiles.js';
@@ -80,10 +81,35 @@ export interface MahjongPlayerView {
    * is simply unwinnable, which is what it was.
    */
   readonly ownSelfDraw: boolean;
+  /**
+   * Where the viewer's hand actually stands, in the terms that decide the game.
+   *
+   * Completeness is NOT the same question as winning. Hong Kong plays 三番起糊:
+   * a hand must be worth three faan before it may be declared at all, so four
+   * chows and a pung of nothing is a finished hand worth zero that you are
+   * obliged to keep playing. A player who knows the game feels that; a player
+   * meeting mahjong through an English-language site sees a completed hand, no
+   * win, and concludes the site is broken. It is the most important number on
+   * the table and nothing was showing it.
+   */
+  readonly ownHand: MahjongHandStatus;
   /** Seats the open window is still waiting on. Public: the table can see who is thinking. */
   readonly awaiting: readonly MahjongSeat[];
   /** When the open window settles itself, so a client can show a countdown. */
   readonly windowClosesAt: number | null;
+}
+
+export interface MahjongHandStatus {
+  /** Four sets and a pair, counting melds. Says nothing about whether it pays. */
+  readonly complete: boolean;
+  /** Tiles away from complete. 0 means waiting on one tile. */
+  readonly away: number;
+  /** What it would score right now, or null when it is not a winning shape. */
+  readonly faan: number | null;
+  /** Whether that clears the table's minimum, and may therefore be declared. */
+  readonly meetsMinimum: boolean;
+  /** The minimum in force, so a client can say "3" rather than hardcode it. */
+  readonly minimumFaan: number;
 }
 
 /** Expand a 34-length count vector into the tiles it represents. */
@@ -140,6 +166,7 @@ export function mahjongViewFor(
     discardUnderClaim: phase.type === 'claim-window' ? phase.discard : null,
     ownClaims: ownIndex === null ? [] : claimsFor(state, ownIndex),
     ownSelfDraw: ownIndex === null ? false : canDeclareSelfDraw(state, ownIndex),
+    ownHand: handStatusFor(state, ownIndex),
     awaiting: pendingClaimants(state),
     windowClosesAt: state.windowClosesAt,
   };
@@ -151,6 +178,36 @@ export function mahjongViewFor(
  * Only correct once the hand is over. Calling it mid-game would hand a seat the
  * other three hands, so it refuses rather than trusting its caller.
  */
+const MINIMUM_FAAN = 3;
+
+/** Where a seat's hand stands: how close, and what it would be worth. */
+function handStatusFor(state: MahjongTenantState, seat: number | null): MahjongHandStatus {
+  const empty: MahjongHandStatus = {
+    complete: false,
+    away: Number.POSITIVE_INFINITY,
+    faan: null,
+    meetsMinimum: false,
+    minimumFaan: MINIMUM_FAAN,
+  };
+  if (seat === null) return empty;
+  const { game } = state;
+  const counts = (game.hands[seat] ?? []) as readonly number[];
+  const melds = (game.melds[seat] ?? []) as readonly HandSet[];
+  const distance = shanten(counts, { meldCount: melds.length }).shanten;
+  const score = scoreHand(counts, melds, {
+    selfDrawn: game.phase.type === 'discard' && game.turn === seat,
+    seatWind: 27 + seat,
+    roundWind: game.roundWind,
+  });
+  return {
+    complete: distance < 0,
+    away: Math.max(0, distance),
+    faan: score?.faan ?? null,
+    meetsMinimum: score?.meetsMinimum ?? false,
+    minimumFaan: MINIMUM_FAAN,
+  };
+}
+
 /**
  * Whether this seat may declare a self-drawn win right now.
  *

@@ -505,3 +505,76 @@ button.mj-tile:focus-visible {
   color: var(--mj-on-felt-soft);
   padding-bottom: 4px;
 }
+
+/* Bigger tiles. The first pass sized them to fit four seats on screen, which
+   made the one hand you actually read too small to read. The opponents are
+   racks now, so the space went back to the tiles. */
+.mahjong-live-board {
+  --mj-tile-w: 38px;
+  --mj-tile-h: 51px;
+}
+
+.mj-tile-sm {
+  --mj-tile-w: 26px;
+  --mj-tile-h: 35px;
+}
+
+.mj-tile-numeral {
+  font-size: 20px;
+}
+
+.mj-tile-wan-mark {
+  font-size: 15px;
+}
+
+.mj-tile-glyph {
+  font-size: 27px;
+}
+
+.mj-tile-sm .mj-tile-glyph {
+  font-size: 18px;
+}
+
+.mj-tile-sm .mj-tile-numeral {
+  font-size: 14px;
+}
+
+.mj-tile-sm .mj-tile-wan-mark {
+  font-size: 10px;
+}
+
+/* Where your hand stands. The line that matters is "complete, worth nothing":
+   without it the table silently refuses a hand you can see is finished. */
+.mj-hand-status {
+  font:
+    400 12px / 1.45 "IBM Plex Sans",
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  color: var(--mj-on-felt-soft);
+  padding: 2px 0 6px;
+  max-width: 62ch;
+}
+
+.mj-hand-status-ready {
+  color: var(--mj-turn);
+  font-weight: 600;
+}
+
+.mj-hand-status-short {
+  color: var(--mj-on-felt);
+}
+
+/* A claim window is six seconds. The bar has to arrive already read, so the
+   buttons are bigger than a normal control rather than smaller. */
+.mj-action {
+  padding: 10px 18px;
+  font-size: 14px;
+}
+
+@media (max-width: 720px) {
+  .mahjong-live-board {
+    --mj-tile-w: 30px;
+    --mj-tile-h: 40px;
+  }
+}
