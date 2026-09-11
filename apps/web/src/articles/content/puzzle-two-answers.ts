@@ -9,21 +9,22 @@
 //
 // Draft until Brian's voice pass. Each string becomes two zh keys on publish.
 
-import { embedAnalysisPath, embedPuzzlePath } from '@mistboard/game';
+import { embedPuzzlePath } from '@mistboard/game';
 import type { Article, ArticleBlock } from '../types.js';
-import { PTA_RACE, PTA_SEARCH_STEPS, PTA_THUMBNAIL } from '../puzzle-two-answers-diagrams.js';
+import { PTA_THUMBNAIL } from '../puzzle-two-answers-diagrams.js';
 
-// The site's own analysis board, opened on a position. Every board in this
-// article is one the reader can play on: the withheld puzzle is not served
-// any more, so the analysis embed is the only way to hand them the position.
-function analysisEmbed(fen: string): string {
-  return `${embedAnalysisPath()}?fen=${encodeURIComponent(fen.replaceAll(' ', '_'))}`;
+// Engine coordinates (ranks 1-10) to ICCS (ranks 0-9), which is what the
+// replay widget ships. Two-digit ranks are why this is not slice(0, 2).
+function iccs(line: string): string {
+  return line
+    .split(' ')
+    .map((token) => {
+      const m = /^([a-i])(10|[1-9])([a-i])(10|[1-9])$/.exec(token);
+      if (!m) throw new Error(`bad move token ${token}`);
+      return `${m[1]}${Number(m[2]) - 1}${m[3]}${Number(m[4]) - 1}`;
+    })
+    .join(' ');
 }
-
-// The analysis board stacks its FEN and move fields under the board, so at
-// column width it wants more height than the puzzle embed's 760x700 or the
-// frame scrolls inside itself.
-const ANALYSIS_ASPECT: [number, number] = [760, 960];
 
 // xq-mined-hxq_2326cfdc2aa04eef6682486d-60, served from August until it was
 // withheld on 2026-09-11 with reason runner-up-mates.
@@ -54,12 +55,29 @@ export const puzzleTwoAnswersArticle: Article = {
       text: 'Red to move. The stored answer is the horse to f8: check, the general steps to f10, the cannon comes to f6 and it is mate in two. A solver who plays the horse to g9 instead is also giving check, and it is also mate, one move slower. Until this week the site told that solver "try again" and took rating off them.',
     },
     {
-      kind: 'embed',
-      path: analysisEmbed(TWO_ANSWERS_FEN),
-      title: 'The puzzle with two answers, on the analysis board',
-      aspect: ANALYSIS_ASPECT,
+      kind: 'xq-replay',
+      spec: {
+        startFen: TWO_ANSWERS_FEN,
+        iccs: iccs('h7f8 e10f10 e6f6'),
+        title: 'Two answers',
+        event: 'Withheld 2026-09-11',
+        perspective: 'red',
+        red: 'Solver',
+        black: 'Defence',
+        resultText: 'Mate in two, the stored line.',
+        annotations: {
+          byPly: {
+            1: {
+              label: 'Also mates',
+              line: iccs('h7g9 e10f10 b5f5 e9f8 f5f8'),
+              note: 'The other answer. Horse to g9, the general steps aside, the chariot checks, the advisor blocks and is taken. Mate in three, every bit as forced, and marked wrong until 2026-09-11.',
+              lineEval: '+−',
+            },
+          },
+        },
+      },
       caption:
-        'Play it. Horse to f8 mates in two (Kf10, then cannon to f6). Horse to g9 mates in three (Kf10, chariot to f5 check, the advisor blocks on f8 and is taken). Until 2026-09-11 the second one cost you rating.',
+        'The stored line is the mainline. Open the line under move 1 to step through the mate the grader used to refuse.',
     } as ArticleBlock,
     {
       kind: 'paragraph',
@@ -75,12 +93,6 @@ export const puzzleTwoAnswersArticle: Article = {
           text: 'The miner keeps a position only when the winning move is unique. For most positions that is a centipawn question: the runner-up has to lose the win, or win a whole piece less. Mates saturate the centipawn scale, so they got their own rule, and the rule I wrote was "the best move mates strictly faster than the second-best move."',
         },
         {
-          kind: 'raw-svg',
-          svg: PTA_RACE,
-          caption:
-            'The old rule compared two mates by length and passed the faster one. The new rule asks a different question: does any other move mate at all.',
-        } as ArticleBlock,
-        {
           kind: 'paragraph',
           text: 'That sounds like uniqueness. It is a race. Mate in two beats mate in three, so the position passes, and nothing in the record says the mate in three exists. On the corpus that had accumulated by September, 29% of mate puzzles had a second mating move at the first ply. I found this by reading the audit evidence, not by anyone reporting it, because a solver who is told they are wrong assumes they are wrong.',
         },
@@ -93,11 +105,6 @@ export const puzzleTwoAnswersArticle: Article = {
           kind: 'paragraph',
           text: 'The first fix, on 2026-09-02, went into the grader. When a solver played a move that was not the stored one, the server searched the position for a forced mate and accepted the move if it found one. It ran on the request path, so it had a budget: three moves deep, about fifty milliseconds. Four moves deep took seconds.',
         },
-        {
-          kind: 'raw-svg-stepper',
-          steps: PTA_SEARCH_STEPS,
-          caption: 'The rescue search, its cap, the label that covered the hole, and its removal.',
-        } as ArticleBlock,
         {
           kind: 'paragraph',
           text: 'So mate-in-two and mate-in-three puzzles stopped being traps, and mate-in-four puzzles stayed traps, and the prompt on those grew a special case: "Find the fastest mate." A third patch was on the board, an engine search at mine time to count how many moves mate, so the gate could reject positions with too many.',
@@ -129,10 +136,17 @@ export const puzzleTwoAnswersArticle: Article = {
           text: 'The miner now rejects a mating position when any other move mates, whatever its length. Two engine lines are enough to know: if the second-best move does not mate, no lower move does. The one exception matches lichess’s: a position where the stored move mates in one is fine even if other moves also mate in one, because the grader will take any of them.',
         },
         {
-          kind: 'embed',
-          path: analysisEmbed(TWO_MATES_IN_ONE_FEN),
-          title: 'Two mates in one, on the analysis board',
-          aspect: ANALYSIS_ASPECT,
+          kind: 'xq-replay',
+          spec: {
+            startFen: TWO_MATES_IN_ONE_FEN,
+            iccs: iccs('a9a10'),
+            title: 'Two mates in one',
+            event: 'Still a puzzle',
+            perspective: 'red',
+            red: 'Solver',
+            black: 'Defence',
+            resultText: 'Mate. The chariot on i9 mates the same way.',
+          },
           caption:
             'The chariot on a9 mates on a10. The chariot on i9 mates on i10. Both are accepted, and a position like this is still a puzzle. This is the grader’s own test fixture.',
         } as ArticleBlock,
@@ -191,6 +205,10 @@ export const puzzleTwoAnswersArticle: Article = {
         },
         {
           kind: 'embed',
+          // Relative, and it has to be: the site is cross-origin isolated for the
+          // WASM engine (COEP), so a page here can frame only its own origin.
+          // The served corpus lives in production, so a dev pair shows "not
+          // available" here; check it on the deployed page.
           path: embedPuzzlePath(MA_HOU_PAO_PUZZLE_ID),
           title: 'A served puzzle: 马后炮, cannon behind the horse',
           caption:

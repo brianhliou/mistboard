@@ -93,6 +93,11 @@ export type XiangqiReplayAnnotation = {
   /** Optional human note, shown under the line. Prose is ours, never lifted. */
   note?: string;
   /**
+   * Tag on the branch, replacing "Better was". For a line that is not an
+   * improvement but an alternative: a second mate, a transposition.
+   */
+  label?: string;
+  /**
    * Assessment at the END of `line`, in the chess-literature symbols (+−, ±, ⩲,
    * =, ⩱, ∓, −+). Deliberately not derived from `cp`: that eval is the
    * position after the move actually PLAYED, one ply deep, while this is the
@@ -757,9 +762,10 @@ export function mountXiangqiReplay(
       const tag = document.createElement('span');
       tag.className = 'xq-replay-branch-tag';
       // "engine" named the source; this names the thing, which is what a reader
-      // needs. Every branch belongs to a ?!/?/?? move, so it is always a line
-      // that was better than the one played.
-      tag.textContent = copy.betterWas;
+      // needs. An engine branch belongs to a ?!/?/?? move, so by default it is
+      // a line that was better than the one played; an author can name it
+      // otherwise (a second answer that is not better, only different).
+      tag.textContent = a?.label ?? copy.betterWas;
       branch.appendChild(tag);
       // A line replacing a Black move starts mid-pair, so it opens the way a
       // score sheet does: the move number, then an ellipsis standing in for
