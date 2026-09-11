@@ -66,7 +66,7 @@ const puzzleQualityRateLimiter = createAuthRateLimiter(300, 60_000);
 // behavioural branch dispatches on `variant` (fail-closed: a new registry
 // needs an explicit branch, not a fallthrough — the store already withholds
 // unknown variants from serving).
-type PublicPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
+export type PublicPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
 type PublicPuzzleVariant =
   | MiniXiangqiPuzzleVariant
   | typeof FORTRESS_XIANGQI_SPEC_ID
@@ -346,7 +346,7 @@ export async function tryHandle(
 // only when that misses do we invert a short code — resolvePuzzleShortCode
 // short-circuits on anything that is not code-shaped, so this stays cheap for
 // the common full-id path.
-async function puzzleById(id: string): Promise<PublicPuzzle | null> {
+export async function puzzleById(id: string): Promise<PublicPuzzle | null> {
   const store = await getPuzzleStore();
   const direct = store.byId.get(id);
   if (direct) return direct;

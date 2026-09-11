@@ -15,7 +15,7 @@
 
 import '../app-base.css';
 import '../review/move-list.css';
-import type { GameEvent } from '@mistboard/game';
+import type { EmbedPov, GameEvent } from '@mistboard/game';
 import { banqiResultLabel } from '../banqi-result-label.js';
 import { displayParticipantName, type FeaturedGame, matchupSeats } from '../game-display.js';
 import { gameMetaForGame, reviewUrlForGame } from '../game-meta.js';
@@ -54,6 +54,8 @@ const FRAME_GAP_PX = 6;
 export type EmbedGameOptions = {
   /** `?ply=N`: open on this ply rather than the final position. */
   startPly?: number | null;
+  /** `?pov=white|black|truth`: which side's view, and which way up. */
+  pov?: EmbedPov | null;
 };
 
 function note(root: HTMLElement, message: string): void {
@@ -74,6 +76,7 @@ type MountBoardOptions = {
   metadataByRoomId: Record<string, GameMeta>;
   namesByRoomId: Record<string, { first: string; second: string }>;
   onPlyChange: (ply: number, maxPly: number) => void;
+  pov: EmbedPov | null;
 };
 
 // The same dispatch /watch uses: a tenant with a watch renderer draws its own
@@ -91,6 +94,7 @@ async function mountBoard(
     return tenant.watch.mountReplay(root, roomId, {
       autoplay: false,
       compact: true,
+      pov: options.pov ?? undefined,
       metadataByRoomId: options.metadataByRoomId,
       namesByRoomId: options.namesByRoomId,
       onGameEnd: () => {},
@@ -98,8 +102,11 @@ async function mountBoard(
     });
   }
   const { mountReplay } = await import('../replay.js');
+  // The chess path takes the orientation up front and switches the view (a
+  // fogged side, or the truth board) through setPov once the game is loaded.
   return mountReplay(root, roomId, {
     autoplay: false,
+    orientation: options.pov === 'black' ? 'black' : 'white',
     showControls: false,
     keyboardNav: false,
     revealOnFinish: true,
@@ -297,10 +304,17 @@ export async function mountEmbedGame(
       metadataByRoomId,
       namesByRoomId,
       onPlyChange,
+      pov: options.pov ?? null,
     });
   } catch {
     note(root, 'This game could not be loaded.');
     return;
+  }
+  // The tenant path honoured the pov at mount; the chess path only took the
+  // orientation, so ask it for the view here. A game without that view (a
+  // perfect-information one has only truth) simply keeps what it showed.
+  if (options.pov && handle.availablePovs?.().includes(options.pov)) {
+    handle.setPov?.(options.pov);
   }
 
   const entries = handle.moveEntries?.() ?? [];

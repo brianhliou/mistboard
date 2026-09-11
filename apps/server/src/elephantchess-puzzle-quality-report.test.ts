@@ -20,6 +20,7 @@ function aggregate(
     cleanSolves: 0,
     reveals: 0,
     abandons: 0,
+    bounces: 0,
     inProgress: 0,
     wrongAttempts: 0,
     hints: 0,
@@ -52,7 +53,8 @@ test('quality report separates the pilot and flags only sample-gated outliers', 
         starts: 20,
         solves: 2,
         reveals: 10,
-        abandons: 24,
+        abandons: 14,
+        bounces: 10,
         wrongAttempts: 50,
         votesUp: 1,
         votesDown: 8,
@@ -98,4 +100,28 @@ test('low solve rate alone is difficulty evidence, not a quality outlier', () =>
 
   assert.deepEqual(report.outliers, []);
   assert.equal(report.recommendation, 'no-manual-review-needed');
+});
+
+test('a landing puzzle that visitors leave without moving is bounce, not abandonment', () => {
+  const report = buildElephantChessPuzzleQualityReport({
+    aggregates: [
+      // The shape of whichever puzzle sits nearest rating 1500: every anonymous
+      // visit lands on it, most never touch a piece.
+      aggregate('landing', 'pilot', {
+        sessions: 40,
+        starts: 6,
+        solves: 3,
+        abandons: 2,
+        bounces: 30,
+        inProgress: 5,
+      }),
+    ],
+    pilotRunId: 'pilot',
+  });
+
+  assert.deepEqual(report.outliers, []);
+  assert.equal(report.pilot.bounces, 30);
+  assert.equal(report.pilot.bounceRate, 0.75);
+  assert.equal(report.pilot.abandonmentRate, 2 / 6);
+  assert.equal(report.pilot.terminalSessions, 5);
 });

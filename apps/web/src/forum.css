@@ -653,6 +653,38 @@ a.forum-post-author-name:focus-visible {
   text-decoration: underline;
 }
 
+/* A Mistboard link on its own line, expanded into the board it points at. The
+   figure is the link alone until the oEmbed provider says the URL embeds, then
+   the frame lands above it and the link becomes the caption. */
+.forum-embed {
+  display: grid;
+  gap: 6px;
+  margin: 4px 0;
+  min-width: 0;
+}
+
+.forum-embed-frame {
+  display: block;
+  width: 100%;
+  border: 1px solid var(--site-border);
+  border-radius: 10px;
+  background: var(--site-panel);
+  /* aspect-ratio is set inline from the provider's width/height; the floor
+     keeps the stacked (phone) layout of the widget from being crushed. */
+  min-height: 360px;
+  max-height: 85vh;
+}
+
+.forum-embed-caption {
+  font-size: 13px;
+  color: var(--site-muted);
+  overflow-wrap: anywhere;
+}
+
+.forum-embed-live .forum-embed-caption a {
+  font-weight: 600;
+}
+
 .forum-post-header {
   display: flex;
   flex-wrap: wrap;

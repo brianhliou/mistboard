@@ -23,7 +23,10 @@ export type PuzzleQualityAggregate = {
   solves: number;
   cleanSolves: number;
   reveals: number;
+  /** Left after making at least one move. A judgment on the puzzle. */
   abandons: number;
+  /** Left without moving. A judgment on the page, so never a terminal outcome. */
+  bounces: number;
   inProgress: number;
   wrongAttempts: number;
   hints: number;
@@ -173,6 +176,7 @@ export async function listPuzzleQualityAggregates(
     clean_solves: number;
     reveals: number;
     abandons: number;
+    bounces: number;
     in_progress: number;
     wrong_attempts: number;
     hints: number;
@@ -193,7 +197,17 @@ export async function listPuzzleQualityAggregates(
                 WHERE outcome = 'solved' AND wrong_attempts = 0 AND hint_count = 0
               )::int AS clean_solves,
               count(*) FILTER (WHERE outcome = 'revealed')::int AS reveals,
-              count(*) FILTER (WHERE outcome = 'abandoned')::int AS abandons,
+              -- started_at is set by the first submitted move, so an abandon
+              -- without one is a visitor who looked and left: the page's bounce,
+              -- not the puzzle's verdict. The anonymous landing puzzle is whichever
+              -- sits nearest rating 1500, so a handful of puzzles absorb every
+              -- landing view; folding those into abandonment flagged them.
+              count(*) FILTER (
+                WHERE outcome = 'abandoned' AND started_at IS NOT NULL
+              )::int AS abandons,
+              count(*) FILTER (
+                WHERE outcome = 'abandoned' AND started_at IS NULL
+              )::int AS bounces,
               count(*) FILTER (WHERE outcome IS NULL)::int AS in_progress,
               COALESCE(sum(wrong_attempts), 0)::int AS wrong_attempts,
               COALESCE(sum(hint_count), 0)::int AS hints,
@@ -219,6 +233,7 @@ export async function listPuzzleQualityAggregates(
             COALESCE(quality.clean_solves, 0)::int AS clean_solves,
             COALESCE(quality.reveals, 0)::int AS reveals,
             COALESCE(quality.abandons, 0)::int AS abandons,
+            COALESCE(quality.bounces, 0)::int AS bounces,
             COALESCE(quality.in_progress, 0)::int AS in_progress,
             COALESCE(quality.wrong_attempts, 0)::int AS wrong_attempts,
             COALESCE(quality.hints, 0)::int AS hints,
@@ -250,6 +265,7 @@ export async function listPuzzleQualityAggregates(
     cleanSolves: row.clean_solves,
     reveals: row.reveals,
     abandons: row.abandons,
+    bounces: row.bounces,
     inProgress: row.in_progress,
     wrongAttempts: row.wrong_attempts,
     hints: row.hints,
