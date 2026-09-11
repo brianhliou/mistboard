@@ -126,6 +126,7 @@ export type MistboardReadoutSummary = {
   verdict: MistboardReadoutV1['verdict'];
   completedGames: number | null;
   humanPlayers: number | null;
+  activeAccounts28d: number | null;
   actions: number;
 };
 
@@ -147,12 +148,14 @@ export async function listMistboardReadoutSummaries(
     verdict: MistboardReadoutV1['verdict'];
     completed_games: number | null;
     human_players: number | null;
+    active_accounts_28d: number | null;
     actions: number;
   }>(
     `SELECT id, snapshot_key, trigger, period_start, period_end, verdict,
             payload ->> 'generatedAt' AS generated_at,
             (payload -> 'product' ->> 'completedGames')::int AS completed_games,
             (payload -> 'product' ->> 'humanPlayers')::int AS human_players,
+            (payload -> 'product' ->> 'activeAccounts28d')::int AS active_accounts_28d,
             COALESCE(jsonb_array_length(payload -> 'actions'), 0)::int AS actions
      FROM ops_readout_snapshots
      WHERE ($2::text IS NULL OR trigger = $2)
@@ -170,6 +173,7 @@ export async function listMistboardReadoutSummaries(
     verdict: row.verdict,
     completedGames: row.completed_games ?? null,
     humanPlayers: row.human_players ?? null,
+    activeAccounts28d: row.active_accounts_28d ?? null,
     actions: row.actions,
   }));
 }
@@ -193,10 +197,12 @@ export async function recentWeeklyTrend(
     period_end: Date;
     completed_games: number | null;
     human_players: number | null;
+    active_accounts_28d: number | null;
   }>(
     `SELECT period_end,
             (payload -> 'product' ->> 'completedGames')::int AS completed_games,
-            (payload -> 'product' ->> 'humanPlayers')::int AS human_players
+            (payload -> 'product' ->> 'humanPlayers')::int AS human_players,
+            (payload -> 'product' ->> 'activeAccounts28d')::int AS active_accounts_28d
      FROM ops_readout_snapshots
      WHERE trigger = 'weekly'
      ORDER BY period_end DESC
@@ -208,6 +214,7 @@ export async function recentWeeklyTrend(
       periodEnd: row.period_end.toISOString(),
       completedGames: row.completed_games ?? null,
       humanPlayers: row.human_players ?? null,
+      activeAccounts28d: row.active_accounts_28d ?? null,
     }))
     .reverse();
 }
@@ -309,11 +316,13 @@ async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadou
 // doubled because eight new people arrived.
 //
 // SIGNED-IN people only. A guest seat is persisted with subject_id NULL and
-// the client id is per room, so the `subject_id IS NOT NULL` filter below
-// drops every guest: `humanPlayers` is the account count, and a week of
-// guest-only play reads as zero players here. Guests are visible in the game
-// count and on /metrics as games with a guest seat, nowhere as people, until a
-// seat carries a device id (docs-private/metrics-roadmap.md, phase 7).
+// the client id is per room, so there is no guest to count: `humanPlayers` is
+// the account count, and a week of guest-only play reads as zero players
+// here. The filter says `subject_type = 'user'` outright rather than relying
+// on the NULL id, so a test fixture that gives a guest an id cannot make the
+// count look like it includes guests. Guests are visible in the game count and
+// on /metrics as games with a guest seat, nowhere as people, until a seat
+// carries a device id (docs-private/metrics-roadmap.md, phase 7).
 async function collectPlayers(
   db: Queryable,
   period: { periodStart: Date; periodEnd: Date; previousPeriodStart: Date },
@@ -322,25 +331,29 @@ async function collectPlayers(
   previousHumanPlayers: number;
   returningPlayers: number;
   signedInPlayers: number;
+  activeAccounts28d: number;
+  previousActiveAccounts28d: number;
 }> {
   const result = await db.query<{
     human_players: number;
     previous_human_players: number;
     returning_players: number;
     signed_in_players: number;
+    active_accounts_28d: number;
+    previous_active_accounts_28d: number;
   }>(
     `WITH current_players AS (
        SELECT DISTINCT p.subject_type, p.subject_id
        FROM game_participants p
        JOIN games g ON g.room_id = p.game_id
-       WHERE p.subject_type IN ('guest', 'user') AND p.subject_id IS NOT NULL
+       WHERE p.subject_type = 'user' AND p.subject_id IS NOT NULL
          AND g.status = 'completed' AND g.mode IN ('pvp', 'pve')
          AND g.ended_at >= $1 AND g.ended_at < $2
      ), previous_players AS (
        SELECT DISTINCT p.subject_type, p.subject_id
        FROM game_participants p
        JOIN games g ON g.room_id = p.game_id
-       WHERE p.subject_type IN ('guest', 'user') AND p.subject_id IS NOT NULL
+       WHERE p.subject_type = 'user' AND p.subject_id IS NOT NULL
          AND g.status = 'completed' AND g.mode IN ('pvp', 'pve')
          AND g.ended_at >= $3 AND g.ended_at < $1
      )
@@ -354,7 +367,22 @@ async function collectPlayers(
           JOIN games g ON g.room_id = p.game_id
           WHERE p.subject_type = c.subject_type AND p.subject_id = c.subject_id
             AND g.status = 'completed' AND g.ended_at < $1
-        ))::int AS returning_players`,
+        ))::int AS returning_players,
+       (SELECT count(DISTINCT (p.subject_type, p.subject_id))
+          FROM game_participants p
+          JOIN games g ON g.room_id = p.game_id
+          WHERE p.subject_type = 'user' AND p.subject_id IS NOT NULL
+            AND g.status = 'completed' AND g.mode IN ('pvp', 'pve')
+            AND g.ended_at >= $2::timestamptz - INTERVAL '28 days'
+            AND g.ended_at < $2)::int AS active_accounts_28d,
+       (SELECT count(DISTINCT (p.subject_type, p.subject_id))
+          FROM game_participants p
+          JOIN games g ON g.room_id = p.game_id
+          WHERE p.subject_type = 'user' AND p.subject_id IS NOT NULL
+            AND g.status = 'completed' AND g.mode IN ('pvp', 'pve')
+            AND g.ended_at >= $2::timestamptz - INTERVAL '56 days'
+            AND g.ended_at < $2::timestamptz - INTERVAL '28 days')::int
+         AS previous_active_accounts_28d`,
     [period.periodStart, period.periodEnd, period.previousPeriodStart],
   );
   const row = result.rows[0];
@@ -363,6 +391,8 @@ async function collectPlayers(
     previousHumanPlayers: row?.previous_human_players ?? 0,
     returningPlayers: row?.returning_players ?? 0,
     signedInPlayers: row?.signed_in_players ?? 0,
+    activeAccounts28d: row?.active_accounts_28d ?? 0,
+    previousActiveAccounts28d: row?.previous_active_accounts_28d ?? 0,
   };
 }
 

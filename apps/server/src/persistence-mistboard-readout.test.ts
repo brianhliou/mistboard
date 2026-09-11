@@ -147,11 +147,17 @@ definePersistenceTests('Mistboard readout', () => {
     assert.equal(product.completedGames, 2);
     assert.equal(product.previousCompletedGames, 1);
     assert.equal(product.abortedGames, 1);
-    assert.equal(product.humanPlayers, 2);
-    assert.equal(product.previousHumanPlayers, 2);
+    // Players are signed-in accounts only. The guest seats here carry ids the
+    // fixture invented; production writes NULL, and the query must not count
+    // them either way.
+    assert.equal(product.humanPlayers, 1);
+    assert.equal(product.previousHumanPlayers, 1);
     assert.equal(product.signedInPlayers, 1);
-    // user-1 played in the previous week, guest-1 is new this week.
+    // user-1 played in the previous week too.
     assert.equal(product.returningPlayers, 1);
+    // 28 days back from periodEnd (07-20) covers both weeks: user-1 once.
+    assert.equal(product.activeAccounts28d, 1);
+    assert.equal(product.previousActiveAccounts28d, 0);
     assert.deepEqual(product.completedGamesByMode, { eve: 1, pve: 1, pvp: 1 });
     assert.deepEqual(product.completedGamesByVariant, [{ variant: 'xiangqi', count: 2 }]);
   });

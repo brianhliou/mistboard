@@ -40,14 +40,22 @@ export type MistboardReadoutProduct = {
   // Games that reached a terminal row without a result (engine failure, guest
   // abort). Demand that the completed count cannot see.
   abortedGames: number;
-  // Distinct guest or account subjects that finished a game in the period. This
-  // is the durable analogue of the PostHog player count, and unlike PostHog it
-  // sees visitors who send Do Not Track.
+  // Distinct SIGNED-IN accounts that finished a game in the period (a guest
+  // seat has no subject id, so guests cannot be counted as people; see
+  // memory guests_have_no_identity_in_db). Unlike PostHog this sees visitors
+  // who send Do Not Track.
   humanPlayers: number;
   previousHumanPlayers: number;
   // Of humanPlayers, how many had finished a game before this period started.
   returningPlayers: number;
+  // Always equal to humanPlayers since 2026-09-11; kept for older snapshots.
   signedInPlayers: number;
+  // Distinct signed-in accounts that finished a game in the 28 days ending at
+  // periodEnd, and in the 28 days before that. The rolling MAU on /metrics,
+  // sampled once per readout. Optional: added 2026-09-11 without a schema
+  // bump, so snapshots before then lack it.
+  activeAccounts28d?: number;
+  previousActiveAccounts28d?: number;
 };
 
 // One prior weekly period, oldest first, so a weekly readout carries a trend
@@ -57,6 +65,7 @@ export type MistboardReadoutTrendPoint = {
   periodEnd: string;
   completedGames: number | null;
   humanPlayers: number | null;
+  activeAccounts28d?: number | null;
 };
 
 export type MistboardReadoutMining = {
@@ -491,6 +500,8 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
     );
     const playersLine = renderPlayers(product);
     if (playersLine) lines.push(playersLine);
+    const activeLine = renderActiveAccounts(product);
+    if (activeLine) lines.push(activeLine);
     const trendLine = renderTrend(report);
     if (trendLine) lines.push(trendLine);
     const modesLine = renderModes(product.completedGamesByMode);
@@ -592,6 +603,17 @@ function renderPlayers(product: MistboardReadoutProduct): string | null {
     parts.push(`${product.returningPlayers} returning`);
   }
   return parts.join(', ');
+}
+
+// The rolling 28-day figure is the one that moves slowly enough to steer by;
+// the weekly count above it swings on a single returning regular.
+function renderActiveAccounts(product: MistboardReadoutProduct): string | null {
+  if (typeof product.activeAccounts28d !== 'number') return null;
+  const delta =
+    typeof product.previousActiveAccounts28d === 'number'
+      ? ` (${signedDelta(product.activeAccounts28d - product.previousActiveAccounts28d)} vs the 28 days before)`
+      : '';
+  return `- Active accounts, 28 days: ${product.activeAccounts28d}${delta}`;
 }
 
 // The by-mode counts include bot-vs-bot, which the headline count deliberately
