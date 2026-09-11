@@ -11,6 +11,8 @@ import {
   type Color,
   canonicalVariantOrderIndex,
   DARK_SHOGI_SPEC_ID,
+  EMBED_DEFAULT_HEIGHT,
+  EMBED_DEFAULT_WIDTH,
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
@@ -39,6 +41,7 @@ import {
   type CtaBlock,
   type DropMiniXiangqiReplayBlock,
   type DuckXiangqiReplayBlock,
+  type EmbedBlock,
   type FaqBlock,
   type FortressXiangqiReplayBlock,
   findArticle,
@@ -1285,6 +1288,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'svg-row') return renderSvgRowBlock(block, lang);
   if (block.kind === 'raw-svg-stepper') return renderRawSvgStepperBlock(block, lang);
   if (block.kind === 'code') return renderCodeBlock(block);
+  if (block.kind === 'embed') return renderEmbedBlock(block);
   if (block.kind === 'table') return renderTableBlock(block);
   if (block.kind === 'faq') return renderFaqBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
@@ -2020,6 +2024,25 @@ function renderFaqBlock(block: FaqBlock): HTMLElement {
     list.append(dt, dd);
   }
   return list;
+}
+
+function renderEmbedBlock(block: EmbedBlock): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-embed';
+  const iframe = document.createElement('iframe');
+  iframe.className = 'article-embed-frame';
+  iframe.src = block.path;
+  iframe.title = block.title;
+  iframe.setAttribute('loading', 'lazy');
+  const [w, h] = block.aspect ?? [EMBED_DEFAULT_WIDTH, EMBED_DEFAULT_HEIGHT];
+  iframe.style.aspectRatio = `${w} / ${h}`;
+  figure.append(iframe);
+  if (block.caption) {
+    const caption = document.createElement('figcaption');
+    caption.textContent = block.caption;
+    figure.append(caption);
+  }
+  return figure;
 }
 
 function renderTableBlock(block: TableBlock): HTMLElement {

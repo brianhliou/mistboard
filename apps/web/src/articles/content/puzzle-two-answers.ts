@@ -9,26 +9,21 @@
 //
 // Draft until Brian's voice pass. Each string becomes two zh keys on publish.
 
+import { embedAnalysisPath, embedPuzzlePath } from '@mistboard/game';
 import type { Article, ArticleBlock } from '../types.js';
-import {
-  PTA_RACE,
-  PTA_SEARCH_STEPS,
-  PTA_THUMBNAIL,
-  PTA_TWO_RULES,
-} from '../puzzle-two-answers-diagrams.js';
+import { PTA_RACE, PTA_SEARCH_STEPS, PTA_THUMBNAIL } from '../puzzle-two-answers-diagrams.js';
 
-// Engine coordinates (ranks 1-10) to ICCS (ranks 0-9), which is what the
-// replay widget ships. Two-digit ranks are why this is not slice(0, 2).
-function iccs(line: string): string {
-  return line
-    .split(' ')
-    .map((token) => {
-      const m = /^([a-i])(10|[1-9])([a-i])(10|[1-9])$/.exec(token);
-      if (!m) throw new Error(`bad move token ${token}`);
-      return `${m[1]}${Number(m[2]) - 1}${m[3]}${Number(m[4]) - 1}`;
-    })
-    .join(' ');
+// The site's own analysis board, opened on a position. Every board in this
+// article is one the reader can play on: the withheld puzzle is not served
+// any more, so the analysis embed is the only way to hand them the position.
+function analysisEmbed(fen: string): string {
+  return `${embedAnalysisPath()}?fen=${encodeURIComponent(fen.replaceAll(' ', '_'))}`;
 }
+
+// The analysis board stacks its FEN and move fields under the board, so at
+// column width it wants more height than the puzzle embed's 760x700 or the
+// frame scrolls inside itself.
+const ANALYSIS_ASPECT: [number, number] = [760, 960];
 
 // xq-mined-hxq_2326cfdc2aa04eef6682486d-60, served from August until it was
 // withheld on 2026-09-11 with reason runner-up-mates.
@@ -38,7 +33,7 @@ const TWO_ANSWERS_FEN = '1r1ak1b2/4a4/2n1b4/pcR4Np/1c2C4/1R7/9/N3B4/4A4/4KA3 r -
 const TWO_MATES_IN_ONE_FEN = '4k4/R7R/9/9/9/9/9/9/9/3K5 r - - 0 1';
 
 // xq-mined-hxq_b8b6762877e07fa8269f2865-23, served, tagged 马后炮.
-const MA_HOU_PAO_FEN = '1rbak1b1r/4a4/4c1n2/p5p1p/9/4n4/P5P1P/N1C1B1N2/4A4/1RB1KA2R b - - 0 12';
+const MA_HOU_PAO_PUZZLE_ID = 'xq-mined-hxq_b8b6762877e07fa8269f2865-23';
 
 export const puzzleTwoAnswersArticle: Article = {
   slug: 'the-puzzle-had-two-answers',
@@ -59,33 +54,12 @@ export const puzzleTwoAnswersArticle: Article = {
       text: 'Red to move. The stored answer is the horse to f8: check, the general steps to f10, the cannon comes to f6 and it is mate in two. A solver who plays the horse to g9 instead is also giving check, and it is also mate, one move slower. Until this week the site told that solver "try again" and took rating off them.',
     },
     {
-      kind: 'xq-replay',
-      spec: {
-        startFen: TWO_ANSWERS_FEN,
-        iccs: iccs('h7f8 e10f10 e6f6'),
-        title: 'The stored answer',
-        event: 'Mate in two',
-        perspective: 'red',
-        red: 'Solver',
-        black: 'Defence',
-        resultText: 'Mate. Correct.',
-      },
-      caption: 'The line the miner stored. Horse to f8 with check, and the cannon finishes on f6.',
-    } as ArticleBlock,
-    {
-      kind: 'xq-replay',
-      spec: {
-        startFen: TWO_ANSWERS_FEN,
-        iccs: iccs('h7g9 e10f10 b5f5 e9f8 f5f8'),
-        title: 'The other answer',
-        event: 'Mate in three',
-        perspective: 'red',
-        red: 'Solver',
-        black: 'Defence',
-        resultText: 'Also mate. Marked wrong until 2026-09-11.',
-      },
+      kind: 'embed',
+      path: analysisEmbed(TWO_ANSWERS_FEN),
+      title: 'The puzzle with two answers, on the analysis board',
+      aspect: ANALYSIS_ASPECT,
       caption:
-        'Same position, horse to g9. The general steps aside, the chariot checks, the advisor interposes and is taken. One move slower, and every bit as forced.',
+        'Play it. Horse to f8 mates in two (Kf10, then cannon to f6). Horse to g9 mates in three (Kf10, chariot to f5 check, the advisor blocks on f8 and is taken). Until 2026-09-11 the second one cost you rating.',
     } as ArticleBlock,
     {
       kind: 'paragraph',
@@ -142,11 +116,6 @@ export const puzzleTwoAnswersArticle: Article = {
           text: 'Lichess generates a mate puzzle only if the mating move is unique at every solver move. If the runner-up also mates, at any length, the position is not a puzzle. At play time the solver has to play the stored line, with exactly one exception: any move that delivers mate right now is accepted. That exception needs no search. It is a board check.',
         },
         {
-          kind: 'raw-svg',
-          svg: PTA_TWO_RULES,
-          caption: 'Two rules, one picture. The generator does the refusing so the grader can stay dumb.',
-        } as ArticleBlock,
-        {
           kind: 'paragraph',
           text: 'Those two rules fit together. Everything the grader would need to search for, the generator already refused to publish. So the grader can be dumb, and the patches come out.',
         },
@@ -160,17 +129,10 @@ export const puzzleTwoAnswersArticle: Article = {
           text: 'The miner now rejects a mating position when any other move mates, whatever its length. Two engine lines are enough to know: if the second-best move does not mate, no lower move does. The one exception matches lichess’s: a position where the stored move mates in one is fine even if other moves also mate in one, because the grader will take any of them.',
         },
         {
-          kind: 'xq-replay',
-          spec: {
-            startFen: TWO_MATES_IN_ONE_FEN,
-            iccs: iccs('a9a10'),
-            title: 'Two mates in one',
-            event: 'Still a puzzle',
-            perspective: 'red',
-            red: 'Solver',
-            black: 'Defence',
-            resultText: 'Mate. The chariot on i9 mates the same way.',
-          },
+          kind: 'embed',
+          path: analysisEmbed(TWO_MATES_IN_ONE_FEN),
+          title: 'Two mates in one, on the analysis board',
+          aspect: ANALYSIS_ASPECT,
           caption:
             'The chariot on a9 mates on a10. The chariot on i9 mates on i10. Both are accepted, and a position like this is still a puzzle. This is the grader’s own test fixture.',
         } as ArticleBlock,
@@ -228,19 +190,11 @@ export const puzzleTwoAnswersArticle: Article = {
           text: 'Xiangqi has a named vocabulary for mates that chess mostly lacks: 马后炮, the cannon behind the horse; 铁门栓, the iron bolt; 双车错, the scissoring chariots; 白脸将, the facing generals. The same day the 382 came out, the puzzles that stayed started carrying those names. Each pattern is a geometry test over the final position and the moves that reached it, and a puzzle is tagged only when the test passes.',
         },
         {
-          kind: 'xq-replay',
-          spec: {
-            startFen: MA_HOU_PAO_FEN,
-            iccs: iccs('e5d3 e1d1 e8d8'),
-            title: '马后炮, cannon behind the horse',
-            event: 'Served puzzle, mate in two',
-            perspective: 'black',
-            red: 'Defence',
-            black: 'Solver',
-            resultText: 'Mate. The cannon fires over the horse.',
-          },
+          kind: 'embed',
+          path: embedPuzzlePath(MA_HOU_PAO_PUZZLE_ID),
+          title: 'A served puzzle: 马后炮, cannon behind the horse',
           caption:
-            'Black to move. The horse checks from d3, the general steps to d1, and the cannon drops onto the d-file behind the horse. The horse is the screen and it covers the escape squares. After you solve it, the site names it: 马后炮, mǎ hòu pào.',
+            'A served puzzle, live. Black to move, mate in two. Solve it and the site names the pattern: 马后炮, mǎ hòu pào, the cannon firing over the horse that also covers the escape squares.',
         } as ArticleBlock,
         {
           kind: 'table',

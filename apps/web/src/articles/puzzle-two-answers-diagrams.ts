@@ -1,7 +1,7 @@
-// Figures for "The puzzle had two answers": the three things a board stepper
-// cannot show. The old gate as a race on a number line, the grader's search
-// budget as a tree with a hole where the hard puzzles live, and the lichess
-// pair of rules as one picture. Same drawing conventions as the mining
+// Figures for "The puzzle had two answers": the two things a board cannot
+// show. The old gate as a race on a number line, and the grader's search
+// budget as a tree with a hole where the hard puzzles live. The boards
+// themselves are the site's own embeds. Same drawing conventions as the mining
 // explainer (Roboto, site colour tokens, 656 wide).
 
 const FONT = 'Roboto, system-ui, sans-serif';
@@ -99,23 +99,6 @@ export const PTA_SEARCH_STEPS: { svg: string; narrative: string }[] = [
       'Both are gone. The miner refuses positions with a second mate, so there is nothing for the grader to search for.',
   },
 ];
-
-// ── Figure 4: lichess's two rules as one picture ─────────────────────────────
-
-function ruleBox(x: number, title: string, lines: string[], accent: boolean): string {
-  const body = lines.map((line, i) => label(x + 18, 78 + i * 20, line, { size: 12.5 })).join('');
-  return `<rect x="${x}" y="34" width="288" height="${60 + lines.length * 20}" rx="10" fill="${PANEL}" stroke="${accent ? ACCENT : BORDER}" stroke-width="${accent ? 2 : 1.5}"/>${label(x + 18, 58, title, { size: 11.5, fill: accent ? ACCENT : MUTED, weight: 700, spacing: 1.2 })}${body}`;
-}
-
-export const PTA_TWO_RULES = `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 656 220" width="656" height="220" role="img" aria-label="Two rules that fit together: the generator refuses any mate position with a second mating move, and the grader accepts the stored line plus any move that mates at once">
-${ruleBox(0, 'AT MINE TIME', ['A mate puzzle is kept only if', 'no other move mates, at any', 'length. One exception: a', 'mate in one, whatever else', 'mates in one too.'], true)}
-${ruleBox(368, 'AT PLAY TIME', ['The stored line solves it.', 'Any move that mates right', 'now also solves it.', 'Nothing else does, and', 'nothing is searched.'], true)}
-<path d="M292 100 L360 100" stroke="${TEXT}" stroke-width="2" fill="none" marker-end="url(#pta-arrow)"/>
-<defs><marker id="pta-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="8" markerHeight="8" orient="auto"><path d="M0 0 L10 5 L0 10 z" fill="${TEXT}"/></marker></defs>
-${label(328, 88, 'nothing left', { size: 11, fill: MUTED, anchor: 'middle' })}
-${label(328, 122, 'to search for', { size: 11, fill: MUTED, anchor: 'middle' })}
-${label(0, 206, 'Everything the grader would need to search for, the generator already refused to publish.', { size: 12, fill: MUTED })}
-</svg>`;
 
 // ── Card art for the index ───────────────────────────────────────────────────
 

@@ -289,6 +289,22 @@ export type CodeBlock = {
   maxHeight?: number;
 };
 
+// One of the site's own embeds (/embed/puzzle/:id, /embed/analysis?fen=...,
+// /embed/game/:id, /embed/study/...) framed at column width. The same frame a
+// forum post or a third-party page gets, so a puzzle in an article is the real
+// trainer: solvable, graded, and it names its pattern after the solve. Use
+// this over a replay stepper whenever the reader should be able to play.
+export type EmbedBlock = {
+  kind: 'embed';
+  /** Site-relative embed path, e.g. `/embed/puzzle/xq-mined-...`. */
+  path: string;
+  /** Frame title, for assistive tech and the tab the frame can open into. */
+  title: string;
+  caption?: string;
+  /** Frame aspect as [width, height]; defaults to the embed contract's 760x700. */
+  aspect?: [number, number];
+};
+
 /**
  * A data table. Added for articles whose argument IS the numbers (opening
  * statistics, engine comparisons), where prose or a code block would bury the
@@ -353,7 +369,8 @@ export type ArticleBlock =
   | BanqiReplayBlock
   | JungleReplayBlock
   | JungleFlipReplayBlock
-  | CodeBlock;
+  | CodeBlock
+  | EmbedBlock;
 
 // `blocks` is the structured body. `paragraphs` is the legacy outline body
 // that still carries `[VISUAL: ...]` markers — sections are migrated to

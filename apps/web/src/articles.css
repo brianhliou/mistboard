@@ -2167,6 +2167,26 @@
   width: 100%;
 }
 
+/* A site embed at column width. No border of its own: the embed page draws its
+   card, and a second rectangle around that read as a frame inside a frame (the
+   forum learned this first). The floor keeps the stacked phone layout of the
+   widget from being crushed. */
+.article-figure-embed {
+  align-items: stretch;
+  width: 100%;
+}
+
+.article-embed-frame {
+  display: block;
+  width: 100%;
+  border: 0;
+  background: transparent;
+  min-height: 360px;
+  /* No viewport cap: the article column bounds the width, so the aspect
+     ratio bounds the height, and a cap only puts a scrollbar inside the
+     widget on short screens. */
+}
+
 /* Data tables scroll inside their own figure rather than widening the article,
    so a wide comparison never forces the page to scroll sideways on a phone. */
 .article-table {
