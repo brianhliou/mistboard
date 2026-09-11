@@ -406,6 +406,113 @@ describe('landing play panel', () => {
     expect(selectedModalTimeControl()).toBe('1 + 1');
   });
 
+  // A rules-page CTA names no side, and landing on second means the board moves
+  // before the visitor has touched anything. On the flip pair the picker is move
+  // order rather than ink, so "Second" is the whole first impression.
+  for (const { gameSpecId, label } of [
+    { gameSpecId: 'jungle-flip', label: 'First' },
+    { gameSpecId: 'banqi', label: 'First' },
+    { gameSpecId: 'jieqi', label: 'Red' },
+  ]) {
+    it(`opens a ${gameSpecId} engine deep link on the first mover`, async () => {
+      const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+        if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+        if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/first_mover' });
+        return jsonResponse({}, { status: 404 });
+      });
+      vi.stubGlobal('fetch', fetchSpy);
+      setRoomNavigator(() => {});
+      window.history.replaceState(null, '', `/?play=computer&gameSpecId=${gameSpecId}`);
+
+      maybeOpenPlayDeepLink([]);
+      expect(selectedModalColor()).toBe(label);
+
+      clickModalButton('Start game');
+      await flushPromises();
+
+      expect(roomPostBody(fetchSpy)).toMatchObject({
+        mode: 'pve',
+        gameSpecId,
+        preferredColor: 'red',
+      });
+    });
+  }
+
+  it('keeps the coin flip on Challenge a friend, where it is the fairness rule', () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
+    );
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Challenge a friend');
+    expect(selectedModalColor()).toBe('Random');
+  });
+
+  // Sides are variant-declared, so an untouched default must not persist as if it
+  // were a pick: xiangqi's 'red' coerces to the SECOND seat in any variant whose
+  // first mover is not red, which would seat a player who never chose anything.
+  it('does not let an untouched engine side follow the player into another variant', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/no_leak' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([
+      { id: 'python-v2-v1.0', name: 'Misty', familyName: 'Misty', kind: 'fog-chess' },
+    ]);
+    document.body.append(panel);
+
+    // Xiangqi (red opens): take the default without touching the picker.
+    openPlaySetup(panel, 'Play a bot');
+    expect(selectedModalColor()).toBe('Red');
+    clickModalButton('Start game');
+    await flushPromises();
+    document.querySelector('.landing-setup-overlay')?.remove();
+    // roomPostBody reads the FIRST /api/rooms POST; drop the xiangqi one so the
+    // assertion below cannot pass on a stale call.
+    fetchSpy.mockClear();
+
+    // Fog Chess opens white. A remembered 'red' would coerce to Black here.
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('dark-chess');
+    expect(selectedModalColor()).toBe('White');
+
+    clickModalButton('Start game');
+    await flushPromises();
+    expect(roomPostBody(fetchSpy)).toMatchObject({
+      mode: 'pve',
+      preferredColor: 'white',
+    });
+  });
+
+  it('remembers an engine side the player actually picked', async () => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/sticky_side' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('jungle-flip');
+    expect(selectedModalColor()).toBe('First');
+    clickModalColor('Second');
+    clickModalButton('Start game');
+    await flushPromises();
+    expect(roomPostBody(fetchSpy)).toMatchObject({ preferredColor: 'black' });
+    document.querySelector('.landing-setup-overlay')?.remove();
+
+    openPlaySetup(panel, 'Play a bot');
+    expect(selectedModalColor()).toBe('Second');
+  });
+
   it('creates a timed Dark Mini Xiangqi room from a friend deep link', async () => {
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
@@ -1001,7 +1108,9 @@ describe('landing play panel', () => {
       mode: 'pve',
       gameSpecId: 'dark-mini-xiangqi',
       timeControl: { initialMs: 180_000, incrementMs: 2_000 },
-      preferredColor: 'random',
+      // A PvE deep link names no side, so the dialog opens on the variant's
+      // first mover (red here) rather than coin-flipping the player into second.
+      preferredColor: 'red',
     });
     expect(window.location.search).toBe('');
   });

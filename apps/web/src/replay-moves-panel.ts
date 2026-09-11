@@ -6,6 +6,12 @@ import {
   type GameEvent,
 } from '@mistboard/game';
 import { t } from './i18n/catalog.js';
+import {
+  REPLAY_ICON_FIRST,
+  REPLAY_ICON_LAST,
+  REPLAY_ICON_NEXT,
+  REPLAY_ICON_PREV,
+} from './replay-icons.js';
 
 type MovePlayedEvent = Extract<GameEvent, { type: 'move-played' }>;
 
@@ -40,10 +46,10 @@ export function createReplayMovesPanel(): ReplayMovesPanelHandle {
 
   const controls = document.createElement('div');
   controls.className = 'replay-controls';
-  const first = iconButton(ICON_FIRST, 'First position');
-  const prev = iconButton(ICON_PREV, 'Previous move');
-  const next = iconButton(ICON_NEXT, 'Next move');
-  const last = iconButton(ICON_LAST, 'Latest position');
+  const first = iconButton(REPLAY_ICON_FIRST, 'First position');
+  const prev = iconButton(REPLAY_ICON_PREV, 'Previous move');
+  const next = iconButton(REPLAY_ICON_NEXT, 'Next move');
+  const last = iconButton(REPLAY_ICON_LAST, 'Latest position');
   controls.append(first, prev, next, last);
 
   const meta = document.createElement('p');
@@ -178,12 +184,3 @@ function iconButton(svgMarkup: string, titleText: string): HTMLButtonElement {
   btn.setAttribute('aria-label', titleText);
   return btn;
 }
-
-const ICON_FIRST =
-  '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 3h1.5v10H4zM6.5 8l5-4v8z" fill="currentColor"/></svg>';
-const ICON_PREV =
-  '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M11 3.5v9L5 8z" fill="currentColor"/></svg>';
-const ICON_NEXT =
-  '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3.5v9L11 8z" fill="currentColor"/></svg>';
-const ICON_LAST =
-  '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10.5 3H12v10h-1.5zM4.5 12V4l5 4z" fill="currentColor"/></svg>';

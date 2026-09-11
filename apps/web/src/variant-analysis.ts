@@ -415,6 +415,35 @@ export async function mountVariantAnalysisPage(
       });
       return;
     }
+    case 'duck-xiangqi': {
+      // The one board here with NO "Board editor" hand-off: the duck is not a
+      // piece, so the position editor has no way to hold it and there is no
+      // /editor/duck-xiangqi route (editor/editor-catalog.ts). Omitting
+      // boardEditorHref is what drops the menu item and the import block's
+      // editor link; the analysis surface is otherwise the full one.
+      const [
+        { mountDuckXiangqiReview },
+        { duckXiangqiTreeAdapter },
+        { duckXiangqiFen, parseDuckXiangqiFen },
+      ] = await Promise.all([
+        import('./review/duck-xiangqi-review.js'),
+        import('./review/duck-xiangqi-tree-adapter.js'),
+        import('@mistboard/game'),
+      ]);
+      // The seventh FEN field carries the duck, so a pasted position keeps it;
+      // a six-field paste reads as "the duck is not on the board yet".
+      const parsed = fenParam ? parseDuckXiangqiFen(fenParam, ANALYSIS_GAME_ID) : null;
+      const rootTruth = parsed?.ok ? parsed.state : duckXiangqiTreeAdapter.initialTruth();
+      mountDuckXiangqiReview(root, {
+        ...base,
+        summary: summaryFor(parsed?.ok === true),
+        root: parsed?.ok ? { truth: parsed.state, fen: duckXiangqiFen(parsed.state) } : undefined,
+        moves: movesFromParam(movesParam, duckXiangqiTreeAdapter, rootTruth),
+        importPanel: makeImportPanel(id, duckXiangqiTreeAdapter, rootTruth),
+        onLineChange: syncLineToUrl(duckXiangqiTreeAdapter),
+      });
+      return;
+    }
     default: {
       // Fail-closed: a new catalog member must get its own case, never another
       // variant's board.

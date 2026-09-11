@@ -20,7 +20,7 @@ export type WatchChannelId = string;
 
 export type WatchChannel = {
   // Whether the channel's completed feed applies the flagship curation bar
-  // (no abandonment, no near-opening stubs) shared with the homepage showcase
+  // (no near-opening stubs, whatever the termination) shared with the homepage showcase
   // pool. True for Featured ONLY: it is the one channel that must agree with
   // the homepage board, and the one whose cross-variant volume can absorb the
   // filter. A per-variant channel stays the full feed — at current liquidity the

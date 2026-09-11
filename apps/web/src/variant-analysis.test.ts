@@ -255,6 +255,60 @@ describe('perfect-info analysis boards', () => {
   });
 });
 
+// /analysis/duck-xiangqi is the one board here with no position editor behind
+// it: the duck is not a piece, so there is no /editor/duck-xiangqi route
+// (editor/editor-catalog.ts) and the hand-off must be absent rather than
+// linking to a 404.
+describe('duck xiangqi analysis board', () => {
+  const DUCK_ON_E6 = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1 e6';
+
+  it('mounts the duck presentation and offers no board editor', async () => {
+    const root = await mountAt('duck-xiangqi');
+    // The duck presentation, not another xiangqi-family board: its own board
+    // host class and its own duck layer.
+    expect(root.querySelector('.duck-xiangqi-live-board'), 'duck board host').not.toBeNull();
+    expect(root.querySelector('.dkx-live-duck'), 'duck layer').not.toBeNull();
+    expect(root.querySelectorAll('[data-piece-square]').length).toBe(32);
+    expect(root.querySelector('.review-move-list')).not.toBeNull();
+    expect(menuItem(root, 'Board editor'), 'no editor for this variant').toBeUndefined();
+    expect(menuItem(root, 'New deal')).toBeUndefined();
+  });
+
+  it('keeps the duck from the seventh fen field', async () => {
+    const root = await mountAt('duck-xiangqi', `?fen=${encodeURIComponent(DUCK_ON_E6)}`);
+    // The seventh field is part of the position, so it survives the round trip
+    // onto the board (a six-field paste would put the duck nowhere).
+    expect(root.querySelector('[data-duck-square="e6"]'), 'duck on e6').not.toBeNull();
+    expect(normalizeStartFen('duck-xiangqi', DUCK_ON_E6)).toEqual({ ok: true, fen: DUCK_ON_E6 });
+    // A perfect-info board leaves ?fen= as shared: no deal to pin.
+    expect(urlFen()).toBe(DUCK_ON_E6);
+    // The FEN box stays empty on an engine-less board (tree-review fills it from
+    // the engine presentation); the box is still editable for Set position.
+    expect(fenBox(root).readOnly).toBe(false);
+  });
+
+  it('a two-phase turn reaches the tree as one move and one ?moves= token', async () => {
+    const root = await mountAt('duck-xiangqi');
+    // Phase one: the piece move alone changes nothing the tree can see.
+    clickSquare(root, 'c4');
+    clickSquare(root, 'c5');
+    expect(urlFen()).toBeNull();
+    expect(new URLSearchParams(window.location.search).get('moves')).toBeNull();
+    // Phase two completes the turn.
+    clickSquare(root, 'e6');
+    expect(new URLSearchParams(window.location.search).get('moves')).toBe('c4-c5@e6');
+    expect(root.querySelector('.move-tree')?.textContent).toContain('c4-c5@e6');
+  });
+
+  it('seeds ?moves= from a duck-carrying line', async () => {
+    const root = await mountAt('duck-xiangqi', '?moves=c4-c5@e6 c7-c6@e5');
+    const tree = root.querySelector('.move-tree')?.textContent ?? '';
+    expect(tree).toContain('c4-c5@e6');
+    expect(tree).toContain('c7-c6@e5');
+    expect(root.textContent).not.toMatch(/Truncated import/i);
+  });
+});
+
 describe('import block', () => {
   const ids = ANALYSIS_VARIANTS.map((variant) => variant.id).filter(
     (id): id is VariantId => id !== 'xiangqi',

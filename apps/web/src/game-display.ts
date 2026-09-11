@@ -248,6 +248,7 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   'reveal-chess': 'variant.revealChess.name',
   'sun-tzu': null,
   xiangqi: 'variant.xiangqi.name',
+  'duck-xiangqi': 'variant.duckXiangqi.name',
 };
 
 // Localized variant name for a spec id, or null when the catalog has no name

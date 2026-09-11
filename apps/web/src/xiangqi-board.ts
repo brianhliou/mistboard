@@ -78,7 +78,10 @@ export const LIVE_BOARD_GEO: XiangqiBoardGeometry = {
 const LIVE_BOARD_GEO_NO_COORDS: XiangqiBoardGeometry = { ...LIVE_BOARD_GEO, coordGutter: 0 };
 // Board-specific facts for the shared surface renderer. Jieqi supplies the same
 // shape at its own scale; fortress supplies a 7x8 board with no river.
-const LIVE_BOARD_SURFACE: XiangqiSurfaceConfig = {
+// Exported so the Duck Xiangqi board renders the SAME surface rather than a
+// copy of these numbers. Board art that gets hand-duplicated drifts; the jungle
+// art proved it twice.
+export const LIVE_BOARD_SURFACE: XiangqiSurfaceConfig = {
   geo: LIVE_BOARD_GEO,
   palaces: [
     { fileMin: 3, fileMax: 5, rankMin: 1, rankMax: 3 },
@@ -87,7 +90,8 @@ const LIVE_BOARD_SURFACE: XiangqiSurfaceConfig = {
   riverAfterRank: 5,
   riverLabel: '楚 河   漢 界',
 };
-const PIECE_SIZE = tokenPieceSize(CELL);
+export const XIANGQI_LIVE_PIECE_SIZE = tokenPieceSize(CELL);
+const PIECE_SIZE = XIANGQI_LIVE_PIECE_SIZE;
 const HIT_HALF = 26;
 const NON_SELECTABLE_RIVER_ATTRS =
   'aria-hidden="true" pointer-events="none" style="-webkit-user-select: none; user-select: none;"';

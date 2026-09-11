@@ -8,6 +8,7 @@ import {
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
+  buildStudyVariantSelect,
   DEFAULT_STUDY_VARIANT,
   isStudyVariantId,
   STUDY_VARIANTS,
@@ -107,6 +108,7 @@ describe('study board dispatch', () => {
       banqi: './banqi-review.js',
       jieqi: './jieqi-review.js',
       'jungle-flip': './jungle-flip-review.js',
+      'duck-xiangqi': './duck-xiangqi-review.js',
     };
     for (const variant of STUDY_VARIANTS) {
       const module = expected[variant.id];
@@ -115,5 +117,24 @@ describe('study board dispatch', () => {
       const nextCase = branch.indexOf("\n    case '");
       expect(nextCase === -1 ? branch : branch.slice(0, nextCase)).toContain(module!);
     }
+  });
+});
+
+// Eligibility is a capability; the picker is a public surface. An unlaunched
+// variant stays eligible (so an existing study of it still opens) and stays OUT
+// of the create dialog until its public surface is switched on.
+describe('create-study variant picker', () => {
+  it('offers only launched variants', () => {
+    const select = buildStudyVariantSelect('variant', DEFAULT_STUDY_VARIANT);
+    const offered = [...select.options].map((option) => option.value);
+    expect(offered).not.toContain('duck-xiangqi');
+    expect(offered).toContain('xiangqi');
+    expect(STUDY_ELIGIBLE_SPEC_IDS).toContain('duck-xiangqi');
+  });
+
+  it('keeps the current selection listed even when it is unlaunched', () => {
+    const select = buildStudyVariantSelect('variant', 'duck-xiangqi');
+    expect([...select.options].map((option) => option.value)).toContain('duck-xiangqi');
+    expect(select.value).toBe('duck-xiangqi');
   });
 });

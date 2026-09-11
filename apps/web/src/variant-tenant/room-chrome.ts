@@ -235,11 +235,16 @@ export function createTenantRoomChrome<C extends string>(
         const playerLine = document.createElement('span');
         playerLine.className = isTurn ? 'clock-player-line active' : 'clock-player-line';
         const serverName = ctx.seatDisplayNames()[color];
+        // Same seat identity as the armed branch below: the dot and the 'You'
+        // fallback belong to the seat, not to the clock. Before this a room read
+        // "Black", dot-less, until the clock armed and the same row became "You"
+        // with a dot, mid-game.
+        playerLine.append(presenceDot(ctx.connectedSeats()[color] ?? false));
         // The seat label is a placeholder for an unnamed seat, so only a
         // server-supplied name carries the seat's profile link.
         playerLine.append(
           playerNameEl(
-            serverName ?? seatName(color),
+            playerName(color),
             serverName ? profileTargetFor(ctx.seatProfiles()[color]) : null,
             'clock-name',
           ),

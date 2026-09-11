@@ -31,6 +31,7 @@ import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import {
   animalTreasureMarks,
   cjkGlyphMark,
+  duckPieceMarks,
   internationalFlatTreasureMarks,
   internationalTreasureMarks,
   renderXiangqiPieceGlyphed,
@@ -62,6 +63,7 @@ export type VariantMiniId =
   | 'dark-mini-xiangqi'
   | 'drop-mini-xiangqi'
   | 'fortress-xiangqi'
+  | 'duck-xiangqi'
   | 'jieqi'
   | 'banqi'
   | 'crossroads'
@@ -378,6 +380,25 @@ function xiangqiCourtBody(showFog: boolean, ctx: MiniCtx): string {
     ...[0, 2, 4].map((f) => xiangqiDisc(px(f), g.py(1), disc, 'red', 'soldier', ctx.xqSet)),
   ];
   return [xqBoard(g), halfPalace, fog.join(''), ...pieces].join('');
+}
+
+// The standard xiangqi court with the duck standing in it. The court crop is
+// reused rather than redrawn: the whole variant IS xiangqi plus one token, and a
+// mini that redrew the board would be claiming a difference that is not there.
+//
+// The duck is a plain gold disc, not the emoji the live board uses. At this size
+// a glyph is a smudge, and the mini has to survive whatever font the reader has.
+function duckXiangqiBody(ctx: MiniCtx): string {
+  const g = xqGeom(5, 5, 11);
+  const disc = g.gx * 0.92;
+  const px = (f: number) => g.px(4 - f);
+  // d3: an empty point in the opening array, clear of the cannon on b3 and of
+  // the rank-4 soldiers, so the duck reads as a thing standing in open space.
+  const cx = px(3);
+  const cy = g.py(2);
+  // The same duck the live board draws, in whatever frame the reader's set uses.
+  const duck = `<g transform="translate(${cx - disc / 2},${cy - disc / 2}) scale(${disc / 100})">${duckPieceMarks(ctx.xqSet)}</g>`;
+  return [xiangqiCourtBody(false, ctx), duck].join('');
 }
 
 function miniXiangqiCutBody(showFog: boolean, ctx: MiniCtx): string {
@@ -904,6 +925,7 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   'dark-mini-xiangqi': (ctx) => miniXiangqiCutBody(true, ctx),
   'drop-mini-xiangqi': dropMiniXiangqiBody,
   'fortress-xiangqi': fortressXiangqiBody,
+  'duck-xiangqi': duckXiangqiBody,
   jieqi: jieqiBody,
   banqi: banqiBody,
   crossroads: crossroadsBody,
@@ -989,6 +1011,15 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'STF',
     accent: '#b45309',
     blurb: 'Xiangqi with a pocket: opposite-corner palaces, crazyhouse drops, and the Treasure.',
+    family: 'xiangqi',
+  },
+  {
+    id: 'duck-xiangqi',
+    label: 'Duck Xiangqi',
+    shortLabel: 'DKX',
+    accent: '#b8860b',
+    blurb:
+      'Xiangqi with a shared duck that both players move, blocking and screening for either side.',
     family: 'xiangqi',
   },
   {

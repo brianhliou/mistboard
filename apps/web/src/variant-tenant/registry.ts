@@ -24,6 +24,7 @@ import {
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUAL_CHESS_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
   JIEQI_SPEC_ID,
@@ -46,6 +47,7 @@ import {
   darkShogiEnabled,
   darkXiangqiEnabled,
   dropMiniXiangqiEnabled,
+  duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
@@ -833,6 +835,68 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         kind: 'container',
       })),
       defaultEngineId: 'fairy-stockfish-fortress-xiangqi-level-4',
+    },
+  },
+  {
+    // Duck Xiangqi: standard 9x10 xiangqi plus Duck Chess's shared, uncapturable
+    // duck, which both players move — one placement at the end of every turn.
+    // Hidden until launch: no menu entry and no deep link. PvE against the
+    // Fairy-Stockfish ladder is wired, so a hand-built create request gets a
+    // bot; the variant is simply not offered anywhere yet.
+    // Rules engine: packages/game/src/variants-duck-xiangqi.ts.
+    gameSpecId: DUCK_XIANGQI_SPEC_ID,
+    roomIdPrefix: 'dkx_',
+    enabled: duckXiangqiEnabled,
+    pageTitle: 'Duck Xiangqi',
+    loadLiveRoomClient: () =>
+      import('../live-duck-xiangqi.js').then(
+        ({ bootstrapDuckXiangqiLiveRoom }) =>
+          () =>
+            bootstrapDuckXiangqiLiveRoom(),
+      ),
+    gameRouteBase: '/duck-xiangqi/game',
+    reviewRouteBase: '/duck-xiangqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../duck-xiangqi-postgame.js').then(({ mountDuckXiangqiPostgame }) =>
+        mountDuckXiangqiPostgame(root, roomId),
+      ),
+    // Mistboard TV channel; renders in the 'xiangqi' family (intersection
+    // board). Watch-route dispatch keys on the channel spec id, not the family.
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-duck-xiangqi-replay.js').then(({ mountDuckXiangqiWatchReplay }) =>
+          mountDuckXiangqiWatchReplay(root, roomId, options),
+        ),
+    },
+    landing: {
+      capabilities: {
+        ...XIANGQI_CAPABILITIES_BASE,
+        supportsRated: false,
+        supportsStartFormat: false,
+        supportsTimeControl: true,
+      },
+      // Games run ~177 plies at engine strength, far longer than the fog
+      // tenants, so the short presets are omitted: a 1+1 game here would be
+      // decided by the clock rather than the board.
+      timePresetIds: ['5m5', '10m5'],
+      // Both gated on the SAME predicate. The conformance test checks exactly
+      // this, because gating the menu and the deep link on neighbouring flags
+      // has shipped twice.
+      offerInMenu: hiddenFromMenu,
+      acceptsDeepLink: hiddenFromMenu,
+      // Eight-level Fairy-Stockfish ladder on the patched duck binary, ordered
+      // strongest-first like the other xiangqi pickers. Node-anchored and
+      // classical: the node budgets are lower than the fortress ladder's at the
+      // same level because the branching factor here is ~2,554 at the root, so a
+      // given budget buys far less depth.
+      engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
+        id: `fairy-stockfish-duck-xiangqi-level-${level}`,
+        name: `Fairy-Stockfish Level ${level}`,
+        familyName: 'Fairy-Stockfish',
+        kind: 'container',
+      })),
+      defaultEngineId: 'fairy-stockfish-duck-xiangqi-level-4',
     },
   },
   {

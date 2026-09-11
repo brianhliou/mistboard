@@ -12,6 +12,7 @@
 // imports) so the create dialog does not pull a board stack.
 
 import { type GameSpecId, gameSpecForId, hasStartFen, XIANGQI_SPEC_ID } from '@mistboard/game';
+import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 // The literal mirror of STUDY_ELIGIBLE_SPEC_IDS. It exists so the client gets a
 // NARROW union — that is what makes the board dispatch in review/study-review.ts
@@ -27,6 +28,7 @@ const STUDY_VARIANT_IDS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  'duck-xiangqi',
 ] as const satisfies readonly GameSpecId[];
 
 export type StudyVariantId = (typeof STUDY_VARIANT_IDS)[number];
@@ -55,7 +57,13 @@ export function studyVariantLabel(id: StudyVariantId): string {
 }
 
 /** The variant `<select>` on the create-study dialog. Chapters inherit the
- *  study's variant, so this is the only place the choice is offered. */
+ *  study's variant, so this is the only place the choice is offered.
+ *
+ *  Eligibility and OFFERING are different questions. `STUDY_ELIGIBLE_SPEC_IDS`
+ *  is a capability ("does this variant have a tree-review stack"), and it stays
+ *  whole so an existing study of an unlaunched variant still opens. This list is
+ *  a public surface, so it offers only what has launched, plus whatever is
+ *  already selected. */
 export function buildStudyVariantSelect(
   ariaLabel: string,
   selected: StudyVariantId,
@@ -63,7 +71,10 @@ export function buildStudyVariantSelect(
   const select = document.createElement('select');
   select.className = 'study-create-dialog__control';
   select.setAttribute('aria-label', ariaLabel);
-  for (const variant of STUDY_VARIANTS) {
+  const offered = STUDY_VARIANTS.filter(
+    (variant) => variant.id === selected || variantPublicSurfaceEnabled(variant.id),
+  );
+  for (const variant of offered) {
     const option = document.createElement('option');
     option.value = variant.id;
     option.textContent = variant.label;

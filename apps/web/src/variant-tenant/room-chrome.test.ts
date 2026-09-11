@@ -225,7 +225,7 @@ describe('tenant room chrome player names', () => {
     expect(refs.playerTop.textContent).toContain('Red');
   });
 
-  it('renders names on the pregame (unarmed) rows with seat-label fallback', () => {
+  it('gives the pregame (unarmed) rows the same seat identity as the armed rows', () => {
     const { chrome, refs } = chromeHarness({
       clock: null,
       timeControl,
@@ -233,7 +233,12 @@ describe('tenant room chrome player names', () => {
     });
     chrome.renderClocks();
     expect(refs.playerTop.textContent).toContain('gm_visitor');
-    expect(refs.playerBottom.textContent).toContain('White');
+    // 'You', not the seat label 'White': the seat's identity does not depend on
+    // whether its clock has armed. The unarmed rows used to read "White" with no
+    // presence dot and then become "You" with one, on the same row, mid-game.
+    expect(refs.playerBottom.textContent).toContain('You');
+    expect(refs.playerTop.querySelector('.presence-dot')).not.toBeNull();
+    expect(refs.playerBottom.querySelector('.presence-dot')).not.toBeNull();
   });
 
   it('gives the meta card the variant marker, not a family glyph', () => {

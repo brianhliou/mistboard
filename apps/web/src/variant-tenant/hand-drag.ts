@@ -35,19 +35,11 @@ function squareUnderPoint(x: number, y: number): string | null {
 
 export function installHandDrag<R extends string>(handlers: HandDragHandlers<R>): void {
   let suppressNextClick = false;
-  let ghost: HTMLDivElement | null = null;
 
-  const removeGhost = (): void => {
-    ghost?.remove();
-    ghost = null;
-  };
-
-  const positionGhost = (x: number, y: number): void => {
-    if (!ghost) return;
-    const size = ghostSizePx(handlers);
-    ghost.style.left = `${x - size / 2}px`;
-    ghost.style.top = `${y - size / 2}px`;
-  };
+  // Same reason as board-drag.ts: a touch drag off the hand strip is ours, not
+  // the page scroller's. Without this the browser claims it and answers with
+  // pointercancel instead of pointerup.
+  handlers.hand.style.touchAction = 'none';
 
   handlers.hand.addEventListener(
     'click',
@@ -68,6 +60,30 @@ export function installHandDrag<R extends string>(handlers: HandDragHandlers<R>)
     const startX = event.clientX;
     const startY = event.clientY;
     let dragging = false;
+    // Per-drag, not per-install — a shared reference strands the previous ghost.
+    let ghost: HTMLDivElement | null = null;
+
+    const removeGhost = (): void => {
+      ghost?.remove();
+      ghost = null;
+    };
+    const positionGhost = (x: number, y: number): void => {
+      if (!ghost) return;
+      const size = ghostSizePx(handlers);
+      ghost.style.left = `${x - size / 2}px`;
+      ghost.style.top = `${y - size / 2}px`;
+    };
+    const detach = (): void => {
+      document.removeEventListener('pointermove', onMove);
+      document.removeEventListener('pointerup', onUp);
+      document.removeEventListener('pointercancel', onCancel);
+    };
+    const swallowTrailingClick = (): void => {
+      suppressNextClick = true;
+      setTimeout(() => {
+        suppressNextClick = false;
+      }, 0);
+    };
 
     const onMove = (move: PointerEvent): void => {
       if (!dragging) {
@@ -95,18 +111,25 @@ export function installHandDrag<R extends string>(handlers: HandDragHandlers<R>)
     };
 
     const onUp = (up: PointerEvent): void => {
-      document.removeEventListener('pointermove', onMove);
-      document.removeEventListener('pointerup', onUp);
+      detach();
       if (!dragging) return;
       removeGhost();
-      suppressNextClick = true;
-      setTimeout(() => {
-        suppressNextClick = false;
-      }, 0);
+      swallowTrailingClick();
       handlers.onDrop(role, squareUnderPoint(up.clientX, up.clientY));
+    };
+
+    // The browser took the gesture: no pointerup follows, so this is the only
+    // path that removes the ghost and puts the lifted reserve piece back.
+    const onCancel = (): void => {
+      detach();
+      if (!dragging) return;
+      removeGhost();
+      swallowTrailingClick();
+      handlers.onDrop(role, null);
     };
 
     document.addEventListener('pointermove', onMove);
     document.addEventListener('pointerup', onUp);
+    document.addEventListener('pointercancel', onCancel);
   });
 }

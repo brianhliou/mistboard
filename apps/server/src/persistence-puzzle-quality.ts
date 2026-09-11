@@ -148,6 +148,15 @@ async function ensureSession(
   );
 }
 
+/**
+ * A terminal session shorter than this was not a person reading a position:
+ * it is an API loop or a browser smoke. Ten such reveals, all from one
+ * embed-testing session on 2026-09-08, flagged that day's daily as high-reveal
+ * and pinned the readout at ACTION with no way for humans to outvote them.
+ * Sessions under the floor never reach any rate the quality gate reads.
+ */
+export const MIN_HUMAN_SESSION_SECONDS = 2;
+
 export async function listPuzzleQualityAggregates(
   db: Queryable,
   variant: string,
@@ -193,6 +202,8 @@ export async function listPuzzleQualityAggregates(
               avg(EXTRACT(epoch FROM (completed_at - viewed_at)))
                 FILTER (WHERE completed_at IS NOT NULL) AS average_completion_seconds
        FROM puzzle_quality_sessions
+       WHERE completed_at IS NULL
+          OR completed_at - viewed_at >= make_interval(secs => $2)
        GROUP BY puzzle_id
      ), attempts AS (
        SELECT puzzle_id, count(*)::int AS attempts,
@@ -225,7 +236,7 @@ export async function listPuzzleQualityAggregates(
        ON candidate.id = puzzle.mining_candidate_id
      WHERE puzzle.variant = $1
      ORDER BY puzzle.seq, puzzle.id`,
-    [variant],
+    [variant, MIN_HUMAN_SESSION_SECONDS],
   );
   return rows.map((row) => ({
     puzzleId: row.puzzle_id,

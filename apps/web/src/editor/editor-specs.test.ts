@@ -1,6 +1,6 @@
 import { normalizeStartFen } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { ANALYSIS_VARIANTS } from '../analysis-catalog.js';
+import { EDITOR_VARIANT_IDS } from './editor-catalog.js';
 import { enPassantCandidates } from './editor-chess.js';
 import {
   type EditorBoard,
@@ -11,9 +11,10 @@ import {
 } from './editor-model.js';
 import { EDITOR_SPECS, faceDownCounts, poolRows } from './editor-specs.js';
 
-// The registry-driven conformance test for the editor: every catalog variant
-// has a spec whose start position the variant's own parser accepts, spelled
-// exactly the way the variant's writer spells it. The three dealt variants
+// The registry-driven conformance test for the editor: every EDITOR variant
+// (the subset of the analysis catalog the editor covers, editor-catalog.ts) has
+// a spec whose start position the variant's own parser accepts, spelled exactly
+// the way the variant's writer spells it. The three dealt variants
 // (banqi, jieqi, jungle-flip) also get structural pool checks, and their
 // canonical spelling is the six-field DEALT fen (dealt-fen.ts): the editor's
 // public five fields plus a sampled hidden field the editor ignores on read.
@@ -33,7 +34,7 @@ function poolTotal(model: EditorModel, spec: (typeof EDITOR_SPECS)[keyof typeof 
 }
 
 describe('editor specs', () => {
-  for (const { id } of ANALYSIS_VARIANTS) {
+  for (const id of EDITOR_VARIANT_IDS) {
     const spec = EDITOR_SPECS[id];
 
     it(`${id}: the start position round-trips through fromFen/toFen`, () => {

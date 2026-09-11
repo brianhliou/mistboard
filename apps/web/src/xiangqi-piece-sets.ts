@@ -378,6 +378,81 @@ export function animalTreasureMarks(color: XiangqiColor): string {
   ].join('');
 }
 
+// The Duck Xiangqi duck, wired like the Treasure rather than like a role: it is
+// not a XiangqiPieceRole, so it needs its own href and its own marks.
+//
+// It takes NO COLOR, which is the whole point. Every other disc on this board
+// declares its seat through `animalRingMark(color)`, and the duck belongs to
+// neither seat: it is shared, it is uncapturable, and both players move it. So
+// it gets the same cream disc and the same ring geometry with a NEUTRAL ink, and
+// says "no seat" inside the board's own grammar rather than by opting out of it.
+//
+// Drawing it as a bare cutout was the first call and was reversed: kernel rule
+// D1 makes the duck an ordinary blocker (it screens cannons, blocks the horse's
+// leg and the elephant's eye), so drawing it as furniture would contradict a
+// decision made deliberately elsewhere.
+//
+// Art provenance and the palette reasoning live in the physical-set repo at
+// duck-xiangqi-dobutsu-minimal/MANIFEST.md. Only the Dobutsu set has duck art;
+// the other six sets fall back to the neutral token in duck-xiangqi-board.ts.
+const DUCK_NEUTRAL_RING = '#6f7b83';
+
+export function animalDuckHref(): string {
+  return `/piece-sets/xiangqi/animal-dobutsu/duck.png?v=${ANIMAL_ART_VERSION}`;
+}
+
+// ONE drawing, every set. The seven sets are seven ways of writing the same
+// seven ROLES, and a role is an idea that each idiom renders in its own hand: a
+// horse is 馬, a knight figurine, a cartoon horse. The duck is not a role and has
+// no cast to join. It is a single object that Duck Chess put on the board, and
+// it looks like itself in every idiom, the way a football looks like a football
+// whoever is drawing the players.
+//
+// What DOES change per set is the FRAME. Each set has its own disc grammar, and
+// the duck sits in the board's furniture correctly by keeping it: the Dobutsu
+// cream disc with one ring, the international disc, the flat set's bare image,
+// and the double ring the glyph sets use. The ring ink is neutral in all of
+// them, because that is the board's way of saying "no seat" and the duck has
+// none.
+function duckImageMark(box: number): string {
+  const inset = (100 - box) / 2;
+  return `<image href="${animalDuckHref()}" x="${inset}" y="${inset}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`;
+}
+
+export function duckPieceMarks(set: XiangqiPieceSet): string {
+  if (isAnimalPieceSet(set)) {
+    // 0.88 inside the disc: the set's animals run 62-70% of the square tall and
+    // this master is 76.2%, so it is fitted down into the same band rather than
+    // crowding the ring (physical-set MANIFEST, render scale).
+    return [
+      animalDiscMark(),
+      duckImageMark(88),
+      `<circle cx="50" cy="50" r="45" fill="none" stroke="${DUCK_NEUTRAL_RING}" stroke-width="3.2"/>`,
+    ].join('');
+  }
+  if (set === 'international') {
+    return [
+      `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${DUCK_NEUTRAL_RING}" stroke-width="2.8"/>`,
+      duckImageMark(84),
+    ].join('');
+  }
+  if (set === 'international-flat') {
+    // No disc in this set, so nothing frames the figure and it carries the whole
+    // square. The other flat pieces are scaled up for the same reason.
+    return duckImageMark(100);
+  }
+  // The glyph sets (traditional, simplified, western, symbols) share one
+  // double-ring disc. The art has to live INSIDE the inner ring, where those
+  // sets put their character: the master is ~80% content inside its own box, so
+  // a 74-unit box lands ~59 units tall against the inner ring's 76 diameter,
+  // which is the same visual weight as a 46pt glyph.
+  return [
+    `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${DUCK_NEUTRAL_RING}" stroke-width="2.5"/>`,
+    `<circle cx="50" cy="50" r="38" fill="none" stroke="${DUCK_NEUTRAL_RING}" stroke-width="1.5"/>`,
+    duckImageMark(74),
+  ].join('');
+}
+
 export function internationalTreasureMarks(color: XiangqiColor): string {
   return [
     internationalDiscMark(color),

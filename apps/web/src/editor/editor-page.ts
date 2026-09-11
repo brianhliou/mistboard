@@ -19,7 +19,6 @@
 // the EditorSpec (editor-specs.ts).
 
 import { normalizeStartFen } from '@mistboard/game';
-import type { AnalysisVariantId } from '../analysis-catalog.js';
 import { buildVariantPicker } from '../analysis-page.js';
 import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
 import { variantDisplayLabel } from '../game-display.js';
@@ -32,6 +31,7 @@ import { installBoardDrag } from '../variant-tenant/board-drag.js';
 // render-only SVG paints black (same contract as the analysis + postgame pages).
 import '../live-xiangqi.css';
 import './editor.css';
+import type { EditorVariantId } from './editor-catalog.js';
 import {
   capturedKey,
   cloneModel,
@@ -58,7 +58,7 @@ export interface EditorPageOptions {
 
 export function mountEditorPage(
   root: HTMLElement,
-  variant: AnalysisVariantId,
+  variant: EditorVariantId,
   options: EditorPageOptions = {},
 ): void {
   const spec = editorSpec(variant);

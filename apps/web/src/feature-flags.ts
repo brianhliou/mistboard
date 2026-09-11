@@ -42,6 +42,13 @@ export function fortressXiangqiEnabled(): boolean {
   return true;
 }
 
+// Duck Xiangqi renderer. The SERVER flag gates whether rooms can be created at
+// all; this one only gates the client build, so it stays on and the tenant is
+// hidden by its registry surface + the server flag.
+export function duckXiangqiEnabled(): boolean {
+  return true;
+}
+
 // Identity-hidden jieqi (揭棋) play surface. Always on in dev for convenience
 // (like DMX/Crossroads/correspondence); in prod/staging it is hidden unless the
 // build opts in.

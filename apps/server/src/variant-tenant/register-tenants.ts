@@ -14,6 +14,7 @@ import '../dark-mini-xiangqi-registration.js';
 import '../dark-shogi-registration.js';
 import '../dark-xiangqi-registration.js';
 import '../drop-mini-xiangqi-registration.js';
+import '../duck-xiangqi-registration.js';
 import '../fortress-xiangqi-registration.js';
 import '../jieqi-registration.js';
 import '../jungle-flip-registration.js';

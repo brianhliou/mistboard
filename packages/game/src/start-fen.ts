@@ -23,10 +23,12 @@
 // does not follow this one.)
 
 import { banqiStateToDealtFen, parseBanqiFen } from './banqi-fen.js';
+import { duckXiangqiFen, parseDuckXiangqiFen } from './duck-xiangqi-fen.js';
 import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
   JIEQI_SPEC_ID,
@@ -54,6 +56,7 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
   BANQI_SPEC_ID,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
 ];
 
 export function hasStartFen(spec: string): boolean {
@@ -117,6 +120,14 @@ export function normalizeStartFen(spec: string, fen: string): NormalizeStartFenR
     case FORTRESS_XIANGQI_SPEC_ID: {
       const parsed = parseFortressXiangqiFen(fen);
       return parsed.ok ? { ok: true, fen: fortressXiangqiEngineFen(parsed.state) } : parsed;
+    }
+    // Duck Xiangqi's canonical spelling is the SEVEN-field form: the duck's point
+    // is part of the position (it blocks, screens and breaks the general file), so
+    // a six-field paste is read as "the duck is not on the board yet" and
+    // normalized to a trailing '-'. See duck-xiangqi-fen.ts.
+    case DUCK_XIANGQI_SPEC_ID: {
+      const parsed = parseDuckXiangqiFen(fen);
+      return parsed.ok ? { ok: true, fen: duckXiangqiFen(parsed.state) } : parsed;
     }
     case DARK_CHESS_SPEC_ID: {
       const parsed = parseDarkChessFen(fen);

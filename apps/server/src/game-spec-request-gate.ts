@@ -8,6 +8,7 @@ import {
   darkShogiEnabled,
   darkXiangqiEnabled,
   dropMiniXiangqiEnabled,
+  duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
@@ -144,6 +145,11 @@ const GATED_GAME_SPECS = {
     enabled: xiangqiEnabled,
     disabledError: 'xiangqi_disabled',
     notIntegratedError: 'xiangqi_not_integrated',
+  },
+  'duck-xiangqi': {
+    enabled: duckXiangqiEnabled,
+    disabledError: 'duck_xiangqi_disabled',
+    notIntegratedError: 'duck_xiangqi_not_integrated',
   },
 } satisfies { readonly [Id in GatedGameSpecId]: GateSpecEntry<Id> };
 

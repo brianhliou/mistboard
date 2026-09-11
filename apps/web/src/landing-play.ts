@@ -13,6 +13,7 @@ import {
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUAL_CHESS_SPEC_ID,
+  type DUCK_XIANGQI_SPEC_ID,
   engineTimeControlPin,
   FORTRESS_XIANGQI_SPEC_ID,
   gameSpecForId,
@@ -100,7 +101,8 @@ type LandingGameSpecId =
   | typeof JUNGLE_SPEC_ID
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
-  | typeof XIANGQI_SPEC_ID;
+  | typeof XIANGQI_SPEC_ID
+  | typeof DUCK_XIANGQI_SPEC_ID;
 type LandingStartFormat = 'standard' | 'draft960';
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
@@ -1715,8 +1717,16 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   }
   let selectedEngineId =
     engineByGameSpec.get(selectedGameSpecId) ?? storedPreference.engineId ?? choice.engineId;
+  // Same shape as presetIsExplicit above, for the same reason. An untouched side
+  // follows the selected variant's declared first mover; without the flag the
+  // default would persist as if it were a pick and then leak sideways, because
+  // the colors are variant-declared: xiangqi storing 'red' would coerce to Gote
+  // (SECOND) in Dark Shogi, whose first mover is black. A stored preference or
+  // the legacy global key counts as a past explicit choice.
+  const storedColor = storedPreference.preferredColor ?? loadStoredColorPreference();
+  let colorIsExplicit = storedColor !== undefined;
   let preferredColor: LandingColorPreference =
-    storedPreference.preferredColor ?? loadStoredColorPreference();
+    storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);
   let syncGameSpecificSections = () => {};
   let syncVariantControls = () => {};
   let syncColorPreferenceControls = () => {};
@@ -2096,7 +2106,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
       selectedPreset,
       preferredColor,
     );
-    storeSetupPreference(choice.mode, setup, selectedPreset, selectedEngineId);
+    storeSetupPreference(choice.mode, setup, selectedPreset, selectedEngineId, colorIsExplicit);
     if (choice.mode === 'lobby') {
       cancelLobbyWait?.();
       // The empty-lobby "play the engine" offer is chess-only (no engine plays
@@ -2150,6 +2160,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
           () => preferredColor,
           (value) => {
             preferredColor = value;
+            colorIsExplicit = true;
             syncSetupAccordion();
           },
           () => selectedGameSpecId,
@@ -2168,7 +2179,11 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
     if (!capabilities.supportsRated) {
       rated = false;
     }
-    preferredColor = coerceColorPreferenceForCapabilities(preferredColor, capabilities);
+    // An untouched side follows the selected variant (each declares its own first
+    // mover); a chosen one sticks, coerced into the colors this variant offers.
+    preferredColor = colorIsExplicit
+      ? coerceColorPreferenceForCapabilities(preferredColor, capabilities)
+      : defaultColorPreference(choice.mode, selectedGameSpecId);
     // Some variants (Banqi) have no choosable side — the ink is bound by the
     // first mover's opening flip — so suppress the color picker and randomize.
     const hideColorPicker =
@@ -2653,14 +2668,34 @@ function buildRatedToggleSection(
 const COLOR_PREFERENCE_STORAGE_KEY = 'mistboard:setup:preferredColor';
 const SETUP_PREFERENCE_STORAGE_PREFIX = 'mistboard:setup:';
 
-function loadStoredColorPreference(): LandingColorPreference {
+// Legacy global key, read-only: nothing has written it since the per-mode
+// preference landed. Returns undefined rather than a color when absent, so the
+// caller can tell "no choice yet" from "chose random" and seed the mode default.
+function loadStoredColorPreference(): LandingColorPreference | undefined {
   try {
     const raw = window.localStorage.getItem(COLOR_PREFERENCE_STORAGE_KEY);
     if (raw === 'white' || raw === 'red' || raw === 'black' || raw === 'random') return raw;
   } catch {
     // ignore — storage may be disabled (private mode, quota); fall through to default
   }
-  return 'random';
+  return undefined;
+}
+
+// The side a freshly opened dialog starts on, before the player touches the
+// picker. PvE seats the human as the variant's first mover: a game against a bot
+// has no fairness argument for a coin flip, and on the flip variants the picker
+// is MOVE ORDER rather than ink (banqi and Flip Jungle bind the ink on the first
+// flip), so landing on "Second" means the board moves before the player has done
+// anything — the worst possible first frame for someone arriving from a rules
+// page CTA. PvP and lobby keep 'random', where the coin flip IS the fairness
+// mechanism. Read from the variant's own capabilities rather than a hardcoded
+// red/white ordering, since each variant declares its own first mover.
+function defaultColorPreference(
+  mode: LandingPlayMode,
+  gameSpecId: LandingGameSpecId,
+): LandingColorPreference {
+  if (mode !== 'pve') return 'random';
+  return landingGameSpecCapabilities(gameSpecId).firstColor;
 }
 
 function setupPreferenceStorageKey(mode: LandingPlayMode): string {
@@ -2691,7 +2726,8 @@ function storeSetupPreference(
   mode: LandingPlayMode,
   setup: LandingRoomSetup,
   timePresetId: LandingTimePresetId,
-  engineId?: string,
+  engineId: string | undefined,
+  colorIsExplicit: boolean,
 ): void {
   // Merge into the existing per-variant engine map so persisting one variant's
   // pick never drops another variant's remembered engine.
@@ -2706,7 +2742,11 @@ function storeSetupPreference(
   if (Object.keys(engineIdByGameSpec).length > 0) {
     preference.engineIdByGameSpec = engineIdByGameSpec;
   }
-  if (mode !== 'lobby') preference.preferredColor = setup.preferredColor;
+  // Only a real pick is remembered. Persisting the untouched default would make
+  // it indistinguishable from a choice on the next open, which is how a default
+  // taken in one variant ends up seating the player in another (see the
+  // colorIsExplicit comment in openLandingSetupDialog).
+  if (mode !== 'lobby' && colorIsExplicit) preference.preferredColor = setup.preferredColor;
   if (mode === 'pve' && engineId) preference.engineId = engineId;
   try {
     window.localStorage.setItem(setupPreferenceStorageKey(mode), JSON.stringify(preference));

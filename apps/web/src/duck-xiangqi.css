@@ -1,0 +1,42 @@
+/* Duck Xiangqi board chrome. The base board inherits every xiangqi surface
+   style; only the duck, the two-phase targets, and the board aspect are new. */
+
+/* WITHOUT THIS the board renders at the wrong aspect and overflows the page,
+   with nothing failing anywhere — `live-layout.ts` toggles a route class per
+   spec and the CSS behind it is a separate, hand-maintained thing. Caught by
+   opening the page, not by 3,288 green tests.
+
+   Duck Xiangqi draws the same 9x10 intersection surface as standard xiangqi
+   with no coordinate gutter, so it takes the same ratios. */
+.live-route--duck-xiangqi {
+  --uni-board-aspect: calc(552 / 612);
+}
+
+:root[data-xiangqi-board-layout="cell"] .live-route--duck-xiangqi {
+  --uni-board-aspect: calc(540 / 612);
+}
+
+/* NO coordinates rule here, on purpose. The standard board reserves a gutter
+   when the reader turns coordinates on, so its aspect changes; this board pins
+   `coordGutter: 0` and never draws labels, so its viewBox is identical either
+   way. The rule that used to sit here copied the standard board's 576/636 and
+   so was wrong for exactly the readers who had that preference on. The host
+   clips with overflow:hidden, so it ate their outer rank and nobody else's. */
+
+.live-route--duck-xiangqi .board-status {
+  width: 100%;
+}
+
+/* The duck token itself is drawn by `duckPieceMarks` in xiangqi-piece-sets.ts,
+   in each set's own disc grammar, so it has no classes here: it has to match the
+   pieces around it, and those are drawn by the shared piece renderer. */
+
+/* Phase two: where the DUCK can go. Deliberately a different colour and a
+   larger dot. A player who has just moved a piece and suddenly sees dots again
+   must be able to tell at a glance that these are duck squares, not more moves,
+   or the second click feels like the board misread the first. */
+.dkx-target--duck {
+  fill: rgb(246 195 67 / 62%);
+  stroke: rgb(138 100 0 / 70%);
+  stroke-width: 1;
+}

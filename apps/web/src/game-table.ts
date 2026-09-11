@@ -1,4 +1,5 @@
 import './game-shell.css';
+import { REPLAY_STEPS } from './replay-icons.js';
 
 export type GameTableRefs = {
   actionSection: HTMLElement;
@@ -41,12 +42,7 @@ export function createGameTable(): GameTable {
     <div class="round-table__box">
       <div data-player-top class="round-table__player round-table__player--top"></div>
       <div class="replay-console">
-        <div data-replay-controls class="replay-controls">
-          <button type="button" data-replay="first" title="First position" aria-label="First move">|&lt;</button>
-          <button type="button" data-replay="prev" title="Previous event" aria-label="Previous move">&lt;</button>
-          <button type="button" data-replay="next" title="Next event" aria-label="Next move">&gt;</button>
-          <button type="button" data-replay="latest" title="Latest position" aria-label="Last move">&gt;|</button>
-        </div>
+        <div data-replay-controls class="replay-controls"></div>
         <div data-game-table-moves>
           <ol data-move-list class="move-list"></ol>
         </div>
@@ -68,6 +64,20 @@ export function createGameTable(): GameTable {
     <div data-hidden-pool class="hidden-pool" aria-label="Pieces still face-down"></div>
     <p data-clocks-note class="clocks-pregame-note" hidden></p>
   `;
+
+  // Built, not inlined in the template above, so the room toolbar draws the same
+  // four arrows as the standalone replay panel (replay-icons.ts) instead of the
+  // ASCII text it used to render.
+  const controls = el.querySelector<HTMLDivElement>('[data-replay-controls]');
+  for (const step of REPLAY_STEPS) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.dataset.replay = step.action;
+    button.title = step.title;
+    button.setAttribute('aria-label', step.label);
+    button.innerHTML = step.icon;
+    controls?.append(button);
+  }
 
   const refs = {
     actionSection: el.querySelector<HTMLElement>('[data-action-section]'),

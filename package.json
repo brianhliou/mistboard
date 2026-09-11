@@ -111,6 +111,7 @@
     "pilot:elephantchess-publish": "npm run pilot:elephantchess-publish --workspace @mistboard/server --",
     "release:local-smoke": "node scripts/release-local-smoke.mjs",
     "release:prod": "node scripts/release-prod.mjs",
+    "drain:token-status": "node scripts/drain-token-status.mjs",
     "deploy:engine-worker": "node scripts/deploy-engine-worker.mjs",
     "prod:smoke:plan": "node scripts/prod-smoke-plan.mjs",
     "prod:wait-revision": "node scripts/wait-prod-revision.mjs",

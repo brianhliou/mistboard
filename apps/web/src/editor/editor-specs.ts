@@ -1,8 +1,13 @@
 // Per-variant editor specs: geometry, palette, start position, FEN in and out,
-// and the render-only board SVG. A Record over AnalysisVariantId with no
-// default branch (variant dispatch is fail-closed): adding a catalog member
-// without a spec is a type error, and the page never guesses another variant's
-// grammar.
+// and the render-only board SVG. A Record over EditorVariantId with no default
+// branch (variant dispatch is fail-closed): adding a member to
+// EDITOR_VARIANT_IDS without a spec is a type error, and the page never guesses
+// another variant's grammar.
+//
+// EditorVariantId, not AnalysisVariantId: the editor covers a SUBSET of the
+// analysis catalog (editor-catalog.ts says which, and why), so an analysis
+// variant the piece-map model cannot represent — Duck Xiangqi, whose duck is
+// not a piece — has no key here and cannot be handed to `editorSpec` at all.
 //
 // FEN assembly mirrors each variant's own writer byte-for-byte for the fields
 // the editor controls (placement, side to move, and the derived pool for the
@@ -45,7 +50,6 @@ import {
   type XiangqiPieceRole,
   type XiangqiSquare,
 } from '@mistboard/game';
-import type { AnalysisVariantId } from '../analysis-catalog.js';
 import { darkChessPieceGhostSvg, renderDarkChessBoardSvg } from '../dark-chess-render.js';
 import {
   fortressXiangqiPieceGhostSvg,
@@ -75,6 +79,7 @@ import {
   xiangqiBoardPoint,
   xiangqiBoardViewBox,
 } from '../xiangqi-board-geometry.js';
+import type { EditorVariantId } from './editor-catalog.js';
 import {
   castlingField,
   effectiveChessExtras,
@@ -142,7 +147,7 @@ export interface PlacementProblem {
 }
 
 export interface EditorSpec {
-  id: AnalysisVariantId;
+  id: EditorVariantId;
   /** [the colour at the bottom of the board by default, the colour at the top]. */
   colors: readonly EditorColor[];
   /** Banqi and jungle-flip show one fixed orientation. */
@@ -1067,7 +1072,7 @@ const DARK_CHESS_SPEC: EditorSpec = {
 
 // ── Registry ────────────────────────────────────────────────────────────────
 
-export const EDITOR_SPECS: Record<AnalysisVariantId, EditorSpec> = {
+export const EDITOR_SPECS: Record<EditorVariantId, EditorSpec> = {
   xiangqi: xiangqiSpec('xiangqi'),
   banqi: BANQI_SPEC,
   jungle: JUNGLE_SPEC,
@@ -1078,6 +1083,6 @@ export const EDITOR_SPECS: Record<AnalysisVariantId, EditorSpec> = {
   'dark-chess': DARK_CHESS_SPEC,
 };
 
-export function editorSpec(id: AnalysisVariantId): EditorSpec {
+export function editorSpec(id: EditorVariantId): EditorSpec {
   return EDITOR_SPECS[id];
 }
