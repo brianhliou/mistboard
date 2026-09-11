@@ -130,6 +130,16 @@ export const puzzleTwoAnswersArticle: Article = {
             red: 'Solver',
             black: 'Defence',
             resultText: 'Mate. The chariot on i9 mates the same way.',
+            annotations: {
+              byPly: {
+                1: {
+                  label: 'Also mates',
+                  line: iccs('i9i10'),
+                  note: 'The other chariot, the same mate. The grader accepts either.',
+                  lineEval: '+−',
+                },
+              },
+            },
           },
           caption:
             'The chariot on a9 mates on a10. The chariot on i9 mates on i10. Both are accepted, and a position like this is still a puzzle. This is the grader\u2019s own test fixture.',

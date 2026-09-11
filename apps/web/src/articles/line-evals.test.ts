@@ -25,8 +25,9 @@ type Board = { spec: { iccs: string; annotations?: { byPly: Record<string, Annot
 const annotated = articles
   .map((article) => ({
     slug: article.slug,
-    boards: (article.sections ?? [])
-      .flatMap((section) => section.blocks ?? [])
+    // Intro boards first, then sections: the order the page renders and the
+    // order the script indexes.
+    boards: [...(article.intro ?? []), ...(article.sections ?? []).flatMap((s) => s.blocks ?? [])]
       .flatMap((block) => (block?.kind === 'xq-replay' ? [block as unknown as Board] : [])),
   }))
   .filter(({ boards }) =>
