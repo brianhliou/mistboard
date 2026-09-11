@@ -27,7 +27,7 @@
  * loses the chapter id, its permalink, and its place in the ordering.
  */
 import { readFileSync } from 'node:fs';
-import { compositionComment, proseFrom } from './composition-comment.mjs';
+import { buildChapter } from './composition-chapter.mjs';
 
 const A = process.argv;
 const arg = (n, d) => {
@@ -37,20 +37,16 @@ const arg = (n, d) => {
 const has = (n) => A.includes(`--${n}`);
 const APP = arg('app', '/app').replace(/\/$/, '');
 
-const { importXiangqiGame, standardXiangqiFen, isStudyEligibleSpecId } = await import(
-  `${APP}/node_modules/@mistboard/game/dist/index.js`
-);
+const {
+  importXiangqiGame,
+  standardXiangqiFen,
+  isStudyEligibleSpecId,
+  xiangqiBoardFromDhtmlxqBinit,
+} = await import(`${APP}/node_modules/@mistboard/game/dist/index.js`);
 const persistence = await import(`${APP}/apps/server/dist/persistence-studies.js`);
 const { findUserByEmail } = await import(`${APP}/apps/server/dist/persistence-accounts.js`);
 const { init: initPersistence } = await import(`${APP}/apps/server/dist/persistence-db.js`);
 const { ensureDealtRoot } = await import(`${APP}/apps/server/dist/routes/studies.js`);
-
-/** Copied verbatim from routes/studies.ts — module-private there. */
-function isSerializedTree(v) {
-  if (!v || typeof v !== 'object') return false;
-  if (v.version !== 1) return false;
-  return !!v.root && typeof v.root === 'object' && Array.isArray(v.root.children);
-}
 
 /** Per-book configuration. Everything that used to be a 適情雅趣 constant. */
 const BOOKS = {
@@ -113,62 +109,15 @@ if (!persistence.isStudyVisibility(visibility)) throw new Error(`bad visibility 
 const email = arg('email');
 if (!email) throw new Error('--email <owner> required');
 
-function chapterFor(rec) {
-  const zh = bare(rec.title);
-  const n = num(rec.title);
-  if (!rec.binit) return { skip: 'no start position on the page' };
-  if (!rec.mainline) return { skip: 'no [0_1_0] mainline segment' };
-  const raw =
-    `[DhtmlXQ]\n[DhtmlXQ_binit]${rec.binit}[/DhtmlXQ_binit]\n` +
-    `[DhtmlXQ_movelist]${rec.mainline}[/DhtmlXQ_movelist]\n[/DhtmlXQ]\n`;
-  const r = importXiangqiGame(raw);
-  // Drop, never truncate: a composition is a puzzle with one answer, so a line
-  // cut short at the first illegal ply is a wrong answer stated confidently.
-  if (r.error) return { skip: r.error };
-  if (!r.initialState || r.moves.length === 0) return { skip: 'no start position or no moves' };
-
-  let child = null;
-  for (const mv of [...r.moves].reverse()) {
-    child = { uci: `${mv.from}${mv.to}`, children: child ? [child] : [] };
-  }
-  const en = englishTitle(zh, n);
-  const name = en ? `${n}. ${en}` : `${n}. ${zh}`;
-  // Say what the source actually gives. A single recorded move is not a
-  // "solution" -- but for many of those the source DOES give an answer, in
-  // prose, in its comment tags. The first version of this script had not mined
-  // the comments and so told 53 readers the source "records only the opening
-  // move", which was false about the record and is the sentence this replaces.
-  const comment = compositionComment({
-    zh,
-    en,
-    n,
-    vol: rec.vol,
-    volZh: VOL_ZH[rec.vol - 1],
-    bookZh: BOOK.zh,
-    moveCount: r.moves.length,
-    prose: proseFrom(rec),
-    variations: rec.variations?.length ?? 0,
-    url: rec.url,
-  });
-
-  const root = {
-    version: 1,
-    rootFen: standardXiangqiFen(r.initialState),
-    root: { annotations: { comments: [{ text: comment }] }, children: child ? [child] : [] },
-  };
-  if (!isStudyEligibleSpecId('xiangqi')) return { skip: 'variant not study-eligible' };
-  if (!isSerializedTree(root)) return { skip: 'tree failed the route shape check' };
-  return {
-    chapter: {
-      name: name.length > 80 ? `${name.slice(0, 77)}...` : name,
-      i18n: { 'zh-Hans': { name: rec.title } },
-      variant: 'xiangqi',
-      orientation: 'red',
-      root: ensureDealtRoot('xiangqi', root),
-    },
-    n,
-  };
-}
+const DEPS = {
+  importXiangqiGame,
+  standardXiangqiFen,
+  isStudyEligibleSpecId,
+  xiangqiBoardFromDhtmlxqBinit,
+  ensureDealtRoot,
+};
+const OPTS = { englishTitle, volZh: VOL_ZH, bookZh: BOOK.zh };
+const chapterFor = (rec) => buildChapter(rec, DEPS, OPTS);
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is not set');
