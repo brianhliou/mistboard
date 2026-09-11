@@ -117,7 +117,7 @@ describe('article public listing gates', () => {
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
       '/blog/fog-chess-concepts',
-      '/blog/the-puzzle-had-two-answers',
+      '/blog/puzzles-with-more-than-one-solution',
     ]);
   });
 

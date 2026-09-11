@@ -623,6 +623,17 @@ export function mountXiangqiReplay(
     return legal;
   }
 
+  /** "1-0" or "0-1" when the line ends the game with a winner, else null. */
+  function lineResult(ply: number, line: XiangqiMove[]): string | null {
+    let state = states[ply - 1]!;
+    for (const mv of line) {
+      if (state.status.type !== 'playing') return null;
+      state = applyXiangqiMove(state, mv);
+    }
+    if (state.status.type !== 'finished' || !state.status.winner) return null;
+    return state.status.winner === 'red' ? '1-0' : '0-1';
+  }
+
   function labelsForLine(ply: number, line: XiangqiMove[]): string[] {
     const cached = variationLabels.get(ply);
     if (cached) return cached;
@@ -796,11 +807,14 @@ export function mountXiangqiReplay(
           }),
         );
       });
-      // The line's verdict, where a reader's eye already is: at its end.
-      if (a?.lineEval) {
+      // The line's verdict, where a reader's eye already is: at its end. A line
+      // that mates on the board is a finished game and gets the result; an
+      // assessment symbol is for a line that stops short of one.
+      const result = lineResult(ply, line);
+      if (result || a?.lineEval) {
         const verdict = document.createElement('span');
         verdict.className = 'xq-replay-branch-eval';
-        verdict.textContent = a.lineEval;
+        verdict.textContent = result ?? a?.lineEval ?? '';
         branch.appendChild(verdict);
       }
       moveList.appendChild(branch);

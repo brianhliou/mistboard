@@ -1,4 +1,4 @@
-// Card art for "The puzzle had two answers". The article itself is boards and
+// Card art for "Puzzles with more than one solution". The article itself is boards and
 // tables: two diagrams (the old gate as a race, the grader's search cap as a
 // tree) were drawn and cut on 2026-09-11, because both illustrated a sentence
 // the prose already carried and read as filler beside a real position.

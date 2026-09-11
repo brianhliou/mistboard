@@ -1221,14 +1221,14 @@
 }
 
 /* Its sequel: same showcase width, for the same reason. */
-[data-article-slug="the-puzzle-had-two-answers"]
+[data-article-slug="puzzles-with-more-than-one-solution"]
   .xq-replay
   .raw-svg-stepper-frame-xq
   > .xq-article-svg[data-xq-layout="single"] {
   width: min(480px, 100%);
 }
 
-[data-article-slug="the-puzzle-had-two-answers"] .xq-replay-slider {
+[data-article-slug="puzzles-with-more-than-one-solution"] .xq-replay-slider {
   width: min(480px, 100%);
 }
 

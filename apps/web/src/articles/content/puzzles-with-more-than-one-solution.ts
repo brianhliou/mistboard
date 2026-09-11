@@ -1,4 +1,4 @@
-// "The puzzle had two answers": the mate-uniqueness rule change of 2026-09-11.
+// "Puzzles with more than one solution": the mate-uniqueness rule change of 2026-09-11.
 //
 // Every position is either a real served puzzle by id or the fixture the
 // grader's own test uses, and every line was replayed through
@@ -11,7 +11,7 @@
 
 import { embedPuzzlePath } from '@mistboard/game';
 import type { Article, ArticleBlock } from '../types.js';
-import { PTA_THUMBNAIL } from '../puzzle-two-answers-diagrams.js';
+import { PTA_THUMBNAIL } from '../puzzles-with-more-than-one-solution-diagrams.js';
 
 // Engine coordinates (ranks 1-10) to ICCS (ranks 0-9), which is what the
 // replay widget ships. Two-digit ranks are why this is not slice(0, 2).
@@ -34,11 +34,11 @@ const TWO_ANSWERS_FEN = '1r1ak1b2/4a4/2n1b4/pcR4Np/1c2C4/1R7/9/N3B4/4A4/4KA3 r -
 const TWO_MATES_IN_ONE_FEN = '4k4/R7R/9/9/9/9/9/9/9/3K5 r - - 0 1';
 
 export const puzzleTwoAnswersArticle: Article = {
-  slug: 'the-puzzle-had-two-answers',
+  slug: 'puzzles-with-more-than-one-solution',
   kind: 'article',
   publisher: 'mistboard',
-  title: 'The puzzle had two answers',
-  seoTitle: 'Why 382 xiangqi puzzles were pulled: mate puzzles with two answers',
+  title: 'Puzzles with more than one solution',
+  seoTitle: 'Handling xiangqi puzzles with multiple solutions: why 382 were pulled',
   summary:
     'A solver found a real mate and was told to try again. 382 served puzzles could do that. How the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.',
   thumbnail: { kind: 'svg', svg: PTA_THUMBNAIL },

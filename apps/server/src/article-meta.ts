@@ -47,7 +47,7 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   // a dead link that the CTA-only link guard does not catch.
   'fog-openings',
   'fog-chess-concepts',
-  'the-puzzle-had-two-answers',
+  'puzzles-with-more-than-one-solution',
   'shogi',
   // The Duck Xiangqi launch post, cut before launch rather than shipped. It
   // restated the rules page at lower resolution and would have competed with it
@@ -288,8 +288,8 @@ export const ARTICLE_META: Record<
     description:
       'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.',
   },
-  'the-puzzle-had-two-answers': {
-    title: 'The puzzle had two answers',
+  'puzzles-with-more-than-one-solution': {
+    title: 'Puzzles with more than one solution',
     kind: 'article',
     description:
       'A solver found a real mate and was told to try again. It turned out 382 served puzzles could do that. Here is how the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.',
