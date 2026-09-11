@@ -633,6 +633,14 @@ body.embed-body {
      rule), and a host sizes the frame so the height budget does not bind; the
      stacked layout below keeps the height-driven arithmetic it needs. */
   grid-template-columns: minmax(0, 2.85fr) minmax(226px, 1fr);
+  /* The board is also bounded by the frame's height. In a frame wider than
+     that bound allows, the split would leave the board floating at the left
+     of an empty column, so the card caps its own width at what the bounded
+     board plus its 30% sheet need, and centres in the frame. The mat is the
+     24px; the 3.85/2.85 is the split's total over the board's share. */
+  width: 100%;
+  max-width: calc((var(--puzzle-surface-size) * 552 / 612 + 24px) * 3.85 / 2.85);
+  align-self: center;
   /* The study and game embeds' card (this file, .embed-game): one bordered
      panel holding the board column and, behind a rule, the sheet. The trainer
      page draws the sheet as its own boxed card beside a bare board, which is

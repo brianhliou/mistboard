@@ -100,11 +100,7 @@ export const puzzleTwoAnswersArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The first fix went into the grader on 2026-09-02: a move that was not the stored one was searched for a forced mate and accepted if one was found. It ran on the request path, so it stopped three moves deep. Mate-in-two and mate-in-three puzzles stopped being traps; mate-in-four puzzles stayed traps and got a special prompt, "Find the fastest mate." A third patch was on the board.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'Three moves is too shallow, the whole thing is too clever, and none of it should be specific to xiangqi. Chess puzzle sites settled this years ago.',
+          text: 'The first fix went into the grader: a move that was not the stored one was searched for a forced mate and accepted if one was found. The search ran on the request path, so it stopped three moves deep, and longer puzzles stayed traps with a special prompt over them. Too shallow, too clever, and none of it should be specific to xiangqi. Chess puzzle sites settled this years ago.',
         },
       ],
     },
@@ -162,7 +158,6 @@ export const puzzleTwoAnswersArticle: Article = {
             ['Second mate at a move that is not a mate in one', '472'],
             ['Already withheld for another reason', '90'],
             ['Withheld on 2026-09-11', '382'],
-            ['Of those: mate in 2 / mate in 3 / mate in 4', '171 / 167 / 134'],
           ],
           highlightRows: [4],
           caption: 'The funnel from every mate puzzle to the ones pulled.',
@@ -170,10 +165,6 @@ export const puzzleTwoAnswersArticle: Article = {
         {
           kind: 'paragraph',
           text: 'That is 27% of the served xiangqi puzzles. The corpus went from 1,415 to 995, and every puzzle left has one answer, checked at every move. The strict rule costs mates: the pilot published about one puzzle for every three games, and the mate half of that will drop by something like 40%. I will know the real number after the next thousand-game batch. Fewer puzzles that are all puzzles is the right trade.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'The mining explainer on this site shows a position with two mates in one being thrown away with the caption "two answers is not one answer." Under the new rule that position passes the two-answers test; it is still rejected, because a one-move puzzle is a spot-check, which the same article explains a paragraph earlier.',
         },
       ],
     },
