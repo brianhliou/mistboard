@@ -1,6 +1,6 @@
 // Admin account roster API (powers the unlisted /accounts surface).
 //
-//   GET /api/admin/accounts?sort=newest|seen|games&q=<text>&limit=<n>&offset=<n>
+//   GET /api/admin/accounts?sort=<ADMIN_ACCOUNT_SORTS>&q=<text>&limit=<n>&offset=<n>
 //
 // Session-admin gated like /api/admin/engines (open in local dev). Returns
 // every registered account, closed and private ones included, each with its

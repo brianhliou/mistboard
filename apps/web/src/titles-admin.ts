@@ -6,6 +6,7 @@
 
 import './titles-admin.css';
 import { isPlayerTitle, titleAbbr, titleFullName } from './player-titles.js';
+import { buildNav } from './site-shell.js';
 
 type AdminTitleRequest = {
   id: string;
@@ -42,7 +43,8 @@ export async function mountTitlesAdmin(root: HTMLElement): Promise<void> {
   decidedHost.className = 'titles-admin-decided-host';
 
   shell.append(heading, sub, pendingHost, decidedHost);
-  root.append(shell);
+  // Same shell as /accounts and /metrics: the page sits under the site nav.
+  root.append(buildNav(), shell);
 
   const refresh = async (): Promise<void> => {
     pendingHost.replaceChildren(statusLine('Loading…'));
