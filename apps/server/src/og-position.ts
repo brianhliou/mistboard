@@ -1,7 +1,7 @@
 // Share cards for POSITION links: /analysis/<variant>?fen=… and
 // /editor/<variant>?fen=…. The card is the position itself on the variant's own
 // board, side to move, and a footer naming the variant. One route serves all
-// eight FEN-capable variants behind a fail-closed dispatch: an unlisted slug
+// nine FEN-capable variants behind a fail-closed dispatch: an unlisted slug
 // falls back to the default card rather than another variant's board.
 //
 // Hidden-information invariant. The hidden-deal variants (banqi, jieqi,
@@ -32,6 +32,7 @@ import {
   banqiSquareOf,
   banqiStateToEngineFen,
   darkChessFen,
+  duckXiangqiFen,
   fortressXiangqiEngineFen,
   fortressXiangqiSquareOf,
   gameSpecForId,
@@ -51,6 +52,7 @@ import {
   jungleTrapOwner,
   parseBanqiFen,
   parseDarkChessFen,
+  parseDuckXiangqiFen,
   parseFortressXiangqiFen,
   parseJieqiFen,
   parseJungleFen,
@@ -82,6 +84,7 @@ export const POSITION_OG_VARIANTS = [
   'banqi',
   'jieqi',
   'fortress-xiangqi',
+  'duck-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',
@@ -135,11 +138,21 @@ type GridTile =
 type TileMark = { kind: 'glyph'; glyph: string } | { kind: 'text'; text: string };
 
 /** Pieces the shared intersection-board renderer cannot draw itself: a jieqi
- *  face-down piece (ink is public, role is not) or a Fortress treasure (a role
- *  outside the xiangqi set). */
+ *  face-down piece (ink is public, role is not), a Fortress treasure (a role
+ *  outside the xiangqi set), or the Duck Xiangqi duck.
+ *
+ *  The duck member carries NO `ink`, and that absence is the point. `Ink` is
+ *  `'red' | 'black'` — a seat — and the duck has no seat: it is shared,
+ *  uncapturable, and both players move it. Giving it either value would draw a
+ *  piece belonging to one side, which is a lie about the position rather than a
+ *  styling choice. `faceDownDisc`'s `Ink | null` is a different statement ("the
+ *  ink exists but is hidden"), so it is not reusable here either. The duck is
+ *  therefore inked in the variant's own neutral gold, the same answer the live
+ *  board reached (DUCK_RING in apps/web/src/xiangqi-piece-sets.ts). */
 type IntersectionExtra =
   | { file: number; rank: number; kind: 'face-down'; ink: Ink }
-  | { file: number; rank: number; kind: 'glyph'; ink: Ink; glyph: string };
+  | { file: number; rank: number; kind: 'glyph'; ink: Ink; glyph: string }
+  | { file: number; rank: number; kind: 'duck' };
 
 type PositionOgBoard =
   | {
@@ -270,6 +283,28 @@ export function resolvePositionOg(
         publicFen: standardXiangqiFen(parsed.state),
         toMove: inkToMove(parsed.state.status.type === 'playing' ? parsed.state.status.turn : null),
         board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras: [] },
+      };
+    }
+    case 'duck-xiangqi': {
+      // Standard xiangqi geometry plus the duck, which rides the SEVENTH FEN
+      // field and is part of the position (it screens cannons and blocks the
+      // horse's leg), so the card has to draw it. '-' there means the duck is
+      // still off the board, which is the start position.
+      const parsed = parseDuckXiangqiFen(trimmed, 'og-card');
+      if (!parsed.ok) return null;
+      const pieces: XiangqiOgPiece[] = [];
+      for (const [square, piece] of Object.entries(parsed.state.board)) {
+        if (!piece) continue;
+        pieces.push({ ...xqCoord(square), color: piece.color, role: piece.role });
+      }
+      const extras: IntersectionExtra[] = parsed.state.duck
+        ? [{ ...xqCoord(parsed.state.duck), kind: 'duck' }]
+        : [];
+      return {
+        variant,
+        publicFen: duckXiangqiFen(parsed.state),
+        toMove: inkToMove(parsed.state.status.type === 'playing' ? parsed.state.status.turn : null),
+        board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras },
       };
     }
     case 'jieqi': {
@@ -437,6 +472,10 @@ const RED = '#b91c1c';
 const BLACK = '#1f2937';
 // The back of a face-down tile: wood, no ink, no glyph.
 const TILE_BACK = '#b48a52';
+// The duck's ink: Duck Xiangqi's own accent, a colour that belongs to NEITHER
+// seat. Same value the live board uses (DUCK_RING, apps/web/src/
+// xiangqi-piece-sets.ts), so the card and the board say "no seat" the same way.
+const DUCK_INK = '#b8860b';
 const WATER = '#7aaed0';
 const DEN = '#6b4f2a';
 const TRAP = '#a8402a';
@@ -527,9 +566,9 @@ function renderIntersectionBoard(
     .map((extra) => {
       const cx = geom.px(extra.file);
       const cy = geom.py(extra.rank);
-      return extra.kind === 'face-down'
-        ? faceDownDisc(cx, cy, geom.pieceSize, extra.ink)
-        : glyphDisc(cx, cy, geom.pieceSize, extra.ink, extra.glyph);
+      if (extra.kind === 'face-down') return faceDownDisc(cx, cy, geom.pieceSize, extra.ink);
+      if (extra.kind === 'duck') return duckDisc(cx, cy, geom.pieceSize);
+      return glyphDisc(cx, cy, geom.pieceSize, extra.ink, extra.glyph);
     })
     .join('');
   // The shared renderer returns one nested <svg>; the extras join its
@@ -548,6 +587,29 @@ function glyphDisc(cx: number, cy: number, size: number, ink: Ink, glyph: string
     `<circle cx="50" cy="50" r="46" fill="${DISC}" stroke="${colorHex}" stroke-width="2.5"/>`,
     `<circle cx="50" cy="50" r="38" fill="none" stroke="${colorHex}" stroke-width="1.5"/>`,
     `<path d="${path}" fill="${colorHex}"/>`,
+    `</g>`,
+  ].join('');
+}
+
+/** The duck: the same disc and ring geometry as a piece, so it sits in the
+ *  board's furniture (kernel rule D1 makes it an ordinary blocker, not
+ *  decoration), but in the neutral gold rather than either seat's ink.
+ *
+ *  The mark is the WORD, not a drawing. The live board uses a PNG, which this
+ *  renderer cannot reach (resvg resolves no hrefs here), and there is no baked
+ *  glyph path for 鴨 — `glyphDisc` would throw. Latin letters are what resvg can
+ *  actually draw with its one font, and this module already leans on that for
+ *  the animal boards (`textDisc`). */
+function duckDisc(cx: number, cy: number, size: number): string {
+  // 20 in the 100-unit box: "DUCK" spans ~54 units, which leaves the inner ring
+  // (76-unit diameter) visible rather than crowded, so the disc still reads as
+  // the same double-ring token as the pieces beside it.
+  const fontSize = 20;
+  return [
+    `<g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${size / 100})">`,
+    `<circle cx="50" cy="50" r="46" fill="${DISC}" stroke="${DUCK_INK}" stroke-width="2.5"/>`,
+    `<circle cx="50" cy="50" r="38" fill="none" stroke="${DUCK_INK}" stroke-width="1.5"/>`,
+    `<text x="50" y="${50 + fontSize * 0.35}" text-anchor="middle" font-family="${OG_FONT}" font-size="${fontSize}" font-weight="700" fill="${DUCK_INK}">DUCK</text>`,
     `</g>`,
   ].join('');
 }

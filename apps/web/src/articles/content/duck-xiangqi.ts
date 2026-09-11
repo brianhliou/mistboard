@@ -21,7 +21,7 @@ export const duckXiangqiArticle: Article = {
   summary:
     'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.',
   showSummaryOnPage: false,
-  status: 'draft',
+  status: 'published',
   updatedAt: '2026-09-09',
   audience:
     'Xiangqi players, and Duck Chess players who want the xiangqi version stated precisely.',
@@ -71,8 +71,7 @@ export const duckXiangqiArticle: Article = {
         {
           kind: 'raw-svg',
           svg: DUCK_XIANGQI_TURN_PAIR,
-          caption:
-            'The move alone is not a turn, and neither is the placement.',
+          caption: 'The move alone is not a turn, and neither is the placement.',
         } as ArticleBlock,
         {
           kind: 'paragraph',
@@ -190,9 +189,7 @@ export const duckXiangqiArticle: Article = {
       lead: 'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.',
       playLabel: 'Play Duck Xiangqi',
       playHref: '/?play=computer&gameSpecId=duck-xiangqi',
-      secondary: [
-        { label: 'Seven engine games', href: '/study/uMbk76wd', emphasis: 'secondary' },
-      ],
+      secondary: [{ label: 'Seven engine games', href: '/study/uMbk76wd', emphasis: 'secondary' }],
     }),
   ],
 };

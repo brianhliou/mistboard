@@ -746,7 +746,7 @@ const QUICK_PAIR_COLUMN_IDS: TimeControlId[] = ['1m1', '3m2', '5m5'];
 // variant gets a pool row and the grid fills the card instead of trailing off
 // into dead space; the cap only bites in the lab profile, where the parked
 // variants would otherwise stretch the panel well past the tabs beside it.
-const QUICK_PAIR_ROW_COUNT = 8;
+const QUICK_PAIR_ROW_COUNT = 9;
 
 // One pool = one variant at one clock, the granularity a chip pairs at. Shared
 // by the chip index and the open-seek counter so the two can only agree.
@@ -3305,6 +3305,25 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
+  if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) {
+    // Duck Xiangqi is open-info red/black 9x10 xiangqi plus the shared duck.
+    // Casual-only: there is no `duck_xiangqi` rating pool, so `rated` is pinned
+    // false here rather than read from the setup, matching the tenant's own
+    // `supportsRated: false`. PvE sends the picked Fairy-Stockfish engine id.
+    return {
+      mode,
+      gameSpecId,
+      timeControl: setup.timeControl,
+      rated: false,
+      preferredColor:
+        setup.preferredColor === 'white'
+          ? 'red'
+          : setup.preferredColor === 'red' || setup.preferredColor === 'black'
+            ? setup.preferredColor
+            : 'random',
+      ...(mode === 'pve' && engineId ? { engineId } : {}),
+    };
+  }
   if (setup.gameSpecId === MINI_XIANGQI_SPEC_ID) {
     // Mini Xiangqi is open-info red/black mini xiangqi without drops, casual-only
     // for now. PvE plays via Fairy-Stockfish's native minixiangqi variant.
@@ -3433,9 +3452,11 @@ export function roomCreationGameSpecId(
   | typeof JUNGLE_SPEC_ID
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
+  | typeof DUCK_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return FORTRESS_XIANGQI_SPEC_ID;
+  if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) return DUCK_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;

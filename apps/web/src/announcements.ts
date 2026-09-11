@@ -26,6 +26,14 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-09-11',
     kind: 'release',
+    headline: 'Duck Xiangqi has launched.',
+    body: "Chinese chess with one duck that both players share. Make your move, then put the duck on any empty point. It blocks a horse's leg, an elephant's eye and the file between the generals, and it works as a cannon screen for whoever moves next, so the screen you build is never yours. There is no check: you win by capturing the general outright, and the two generals may now face each other down an open file, where flying the general is a capture. Play the eight-level bot or a friend.",
+    href: '/rules/duck-xiangqi',
+    cta: 'Study the rules',
+  },
+  {
+    date: '2026-09-11',
+    kind: 'release',
     headline: 'All six volumes of the Elegant Pastime Manual are online.',
     body: "The Elegant Pastime Manual is a Ming collection of xiangqi endgame compositions. Five hundred and forty-nine of its problems are here now, each on its own board, with the book's solution played out as the mainline and the original four-character title kept beside the English one. Around sixty are draw studies where the source gives its answer in prose rather than as a line, and those notes are quoted as written rather than guessed at. Positions come from dpxq.com and are credited on every composition. One problem is absent: the line recorded for number 479 stops being legal partway through, and half a solution is worse than none.",
     href: '/study/0Qi14WbN',

@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-11 (Duck Xiangqi launch) ── 蹩马腿 / 塞象眼 / 炮架 / 将帅照面 all
+  // follow article-i18n.ts, and 鸭子象棋 follows variant.duckXiangqi.name.
+  'Duck Xiangqi has launched.': '鸭子象棋已上线。',
+  "Chinese chess with one duck that both players share. Make your move, then put the duck on any empty point. It blocks a horse's leg, an elephant's eye and the file between the generals, and it works as a cannon screen for whoever moves next, so the screen you build is never yours. There is no check: you win by capturing the general outright, and the two generals may now face each other down an open file, where flying the general is a capture. Play the eight-level bot or a friend.":
+    '双方共用一只鸭子的象棋。先走一步棋，再把鸭子放到任意空点上。它能蹩马腿、塞象眼、挡住将帅之间的一路，也能给下一个走子的人当炮架，所以你搭的炮架永远不是给自己用的。这里没有将军：吃掉将帅才算赢；两位将帅也可以照面，此时飞将就是一步吃子。可挑战八级引擎或好友。',
   // ── 2026-09-11 (Elegant Pastime Manual) ── 残局 follows the app catalogs and the
   // study overlays; 古谱 is dpxq's own category word for these manuals.
   'All six volumes of the Elegant Pastime Manual are online.': '《适情雅趣》六卷已全部上线。',
@@ -328,6 +333,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-11 (Duck Xiangqi launch) ── see the ZH_HANS note above.
+  'Duck Xiangqi has launched.': '鴨子象棋已上線。',
+  "Chinese chess with one duck that both players share. Make your move, then put the duck on any empty point. It blocks a horse's leg, an elephant's eye and the file between the generals, and it works as a cannon screen for whoever moves next, so the screen you build is never yours. There is no check: you win by capturing the general outright, and the two generals may now face each other down an open file, where flying the general is a capture. Play the eight-level bot or a friend.":
+    '雙方共用一隻鴨子的象棋。先走一步棋，再把鴨子放到任意空點上。它能蹩馬腿、塞象眼、擋住將帥之間的一路，也能給下一個走子的人當炮架，所以你搭的炮架永遠不是給自己用的。這裡沒有將軍：吃掉將帥才算贏；兩位將帥也可以照面，此時飛將就是一步吃子。可挑戰八級引擎或好友。',
   // ── 2026-09-11 (Elegant Pastime Manual) ──
   'All six volumes of the Elegant Pastime Manual are online.': '《適情雅趣》六卷已全部上線。',
   "The Elegant Pastime Manual is a Ming collection of xiangqi endgame compositions. Five hundred and forty-nine of its problems are here now, each on its own board, with the book's solution played out as the mainline and the original four-character title kept beside the English one. Around sixty are draw studies where the source gives its answer in prose rather than as a line, and those notes are quoted as written rather than guessed at. Positions come from dpxq.com and are credited on every composition. One problem is absent: the line recorded for number 479 stops being legal partway through, and half a solution is worse than none.":

@@ -42,11 +42,11 @@ export const EDITOR_VARIANT_IDS = [
   'banqi',
   'jieqi',
   'fortress-xiangqi',
+  'duck-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',
-  'duck-xiangqi',
 ] as const satisfies readonly AnalysisVariantId[];
 
 /** Slugs the /editor route serves. A strict subset of AnalysisVariantId. */

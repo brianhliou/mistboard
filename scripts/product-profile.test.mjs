@@ -11,6 +11,7 @@ test('product profile contains exactly the intended live game specs', () => {
   assert.deepEqual(PRODUCT_GAME_SPEC_IDS, [
     'xiangqi',
     'fortress-xiangqi',
+    'duck-xiangqi',
     'banqi',
     'jungle',
     'jungle-flip',

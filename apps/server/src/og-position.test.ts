@@ -5,11 +5,13 @@ import { XIANGQI_GLYPH_PATHS } from '@mistboard/board-render';
 import {
   banqiStateToEngineFen,
   createInitialBanqiState,
+  createInitialDuckXiangqiState,
   createInitialFortressXiangqiState,
   createInitialJieqiState,
   createInitialJungleFlipState,
   createInitialJungleState,
   createInitialXiangqiState,
+  duckXiangqiFen,
   fortressXiangqiEngineFen,
   jieqiStateToPikafishFen,
   jungleFlipStateToEngineFen,
@@ -38,7 +40,14 @@ const START_FENS: Record<PositionOgVariant, string> = {
   'jungle-flip': jungleFlipStateToEngineFen(createInitialJungleFlipState('t')),
   jungle: jungleStateToEngineFen(createInitialJungleState('t')),
   'dark-chess': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+  // The duck starts OFF the board ('-' in the seventh field), so the start
+  // position is the one duck FEN that draws no duck.
+  'duck-xiangqi': duckXiangqiFen(createInitialDuckXiangqiState('t')),
 };
+
+// A duck on the board: Red has played, and the duck sits on e5 (the river
+// crossing on the central file), where it screens both cannons.
+const DUCK_ON_BOARD = `${START_FENS['duck-xiangqi'].replace(/ -$/, '')} e5`;
 
 // Mid-game public positions of the three hidden-deal variants, plus two deals
 // for each (the sixth field) that are permutations of the same pool.
@@ -268,6 +277,35 @@ test('the overlay geometry matches the shared intersection renderer', () => {
   // And a dark piece drawn by the overlay sits on its own point (a1).
   assert.ok(
     svg.includes(`translate(${geom.px(0) - s / 2} ${geom.py(1) - s / 2}) scale(${s / 100})`),
+  );
+});
+
+test("duck-xiangqi: the duck is drawn on its point, in neither seat's ink", () => {
+  const DUCK_INK = '#b8860b';
+  // Off the board at the start: nothing neutral is drawn.
+  const start = svgFor('duck-xiangqi', START_FENS['duck-xiangqi']);
+  assert.ok(!start.includes(DUCK_INK), 'no duck before it enters the board');
+  const withDuck = svgFor('duck-xiangqi', DUCK_ON_BOARD);
+  // On e5, on the same points the shared renderer uses for the pieces.
+  const geom = intersectionGeometry(9, 10, 486);
+  const s = geom.pieceSize;
+  assert.ok(
+    withDuck.includes(`translate(${geom.px(4) - s / 2} ${geom.py(5) - s / 2}) scale(${s / 100})`),
+    'the duck sits on e5',
+  );
+  assert.ok(withDuck.includes(`fill="${DUCK_INK}">DUCK</text>`), 'marked, in the neutral ink');
+  // Neither seat's ink is ever used for it: the duck disc carries no red or
+  // black stroke of its own. Both colours are on the board (32 pieces), so the
+  // check is that the duck's own group is free of them.
+  const group = withDuck.slice(withDuck.indexOf(`${geom.py(5) - s / 2}) scale(`));
+  const duckGroup = group.slice(0, group.indexOf('</g>'));
+  assert.ok(!duckGroup.includes('#b91c1c') && !duckGroup.includes('#1f2937'), 'no seat ink');
+  // And the seventh field survives the round trip, so the card's cache key and
+  // the og:image URL describe the position the duck is actually in.
+  assert.equal(publicPositionFen('duck-xiangqi', DUCK_ON_BOARD), DUCK_ON_BOARD);
+  assert.notEqual(
+    svgFor('duck-xiangqi', DUCK_ON_BOARD),
+    svgFor('duck-xiangqi', START_FENS['duck-xiangqi']),
   );
 });
 

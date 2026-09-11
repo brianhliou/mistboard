@@ -48,13 +48,10 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'fog-openings',
   'fog-chess-concepts',
   'shogi',
-  // Duck Xiangqi is behind a server flag with no bot and no games, so a public
-  // rules page would advertise something nobody can start. Publishing is three
-  // one-line changes made together: status 'published' here and in
-  // articles-data, and the 'duck-xiangqi' switch in variant-public-surfaces.
-  'duck-xiangqi',
-  // The build post ships with the variant, for the same reason: it argues from
-  // positions a reader cannot go and set up yet, and links the rules page.
+  // The Duck Xiangqi launch post, cut before launch rather than shipped. It
+  // restated the rules page at lower resolution and would have competed with it
+  // for the same query on our own domain. Kept in the tree as a draft; the
+  // rules page is the one public surface for the variant.
   'duck-xiangqi-build',
 ]);
 

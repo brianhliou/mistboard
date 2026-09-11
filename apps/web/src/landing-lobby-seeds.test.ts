@@ -35,10 +35,10 @@ describe('landing lobby bot seeks', () => {
     vi.unstubAllEnvs();
   });
 
-  it('renders six distinct variants, opening with the ascending xiangqi ladder', () => {
+  it('renders seven distinct variants, opening with the ascending xiangqi ladder', () => {
     const panel = buildLobbyPanel('en', { hydrate: false });
     const seeds = [...panel.querySelectorAll<HTMLElement>('.landing-lobby-seed')];
-    expect(seeds).toHaveLength(8);
+    expect(seeds).toHaveLength(9);
 
     const signature = seeds.map((seed) => `${seed.dataset.botId}|${seed.dataset.gameSpec}`);
     expect(signature).toEqual([
@@ -46,24 +46,27 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-5|xiangqi',
       'fairy-stockfish-level-8|xiangqi',
       'misty|banqi',
-      'pikafish|jieqi',
+      'fairy-stockfish-level-4|duck-xiangqi',
+      'misty|dark-xiangqi',
       'misty|dark-chess',
       'misty|jungle',
       'misty|jungle-flip',
     ]);
-    expect(new Set(signature).size).toBe(8);
-    expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(6);
+    expect(new Set(signature).size).toBe(9);
+    expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(7);
     // Three paces show here, for three different reasons, in the row order
     // asserted above:
-    //   xiangqi x3 and jieqi at 10+5 — deliberate variants, whose own default
-    //     is slower because guests could not finish a full-board game at 3+2;
-    //   dark-chess at 5+5 — an engine PIN, not a preference: Misty's per-move
-    //     floor outruns a 2s increment and it loses on time (#283);
+    //   xiangqi x3 at 10+5 — a deliberate variant, whose own default is slower
+    //     because guests could not finish a full-board game at 3+2;
+    //   duck at 5+5 — its own default too, for the same reason (~177 plies);
+    //   fog xiangqi and fog chess at 5+5 — an engine PIN, not a preference:
+    //     Misty's per-move floor outruns a 2s increment and it loses on time
+    //     (#283);
     //   banqi, jungle, jungle-flip at 3+2 — the house pace, and their guests
     //     essentially never flag at it.
     expect(
       seeds.map((seed) => seed.querySelector('.landing-lobby-seed-time')?.textContent),
-    ).toEqual(['10+5', '10+5', '10+5', '3+2', '10+5', '5+5', '3+2', '3+2']);
+    ).toEqual(['10+5', '10+5', '10+5', '3+2', '5+5', '5+5', '5+5', '3+2', '3+2']);
   });
 
   it('labels each seed as an engine game rather than a human seek', () => {
@@ -307,6 +310,7 @@ describe('landing lobby bot seeks', () => {
       'banqi',
       'jieqi',
       'fortress-xiangqi',
+      'duck-xiangqi',
       'dark-xiangqi',
       'dark-chess',
       'jungle',
