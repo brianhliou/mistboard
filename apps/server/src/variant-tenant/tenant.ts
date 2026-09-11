@@ -283,6 +283,12 @@ export type VariantTenant<
     // runtime persists the return value in the room-created event and feeds it
     // back to createInitialState (including on replay).
     createSetup?(): unknown;
+    // Deliberately two parameters. Several tenants pass their kernel's own
+    // applyMove straight through, and those already take a third options
+    // argument, so a positional `at` here would land in that slot. A tenant
+    // that needs the wall-clock (a mahjong claim window deadline) stamps it
+    // onto the move in canonicalMove, which runs once on the live path and
+    // persists into the event log, so replay reads the same value back.
     applyMove(state: State, move: M): State;
     isLegalMove(state: State, move: M): boolean;
     // Terminal-state constructors: the generic runtime never builds variant
