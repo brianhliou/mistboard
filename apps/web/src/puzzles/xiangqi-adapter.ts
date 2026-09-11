@@ -242,7 +242,7 @@ function createPuzzleAnalysis(): PuzzleAnalysisController {
   // solver can step through the moves — not just a snapshot of the end.
   const openLink = document.createElement('a');
   openLink.className = 'puzzle-analysis-open-link';
-  openLink.textContent = 'Open in analysis board';
+  openLink.textContent = t('puzzle.openInAnalysis');
 
   return {
     // The engine bar and the jump-out link live in different spots on the puzzle

@@ -607,7 +607,10 @@ body.embed-body {
 .embed-puzzle {
   --puzzle-nav-height: 0px;
   --puzzle-page-height: 600px;
-  --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 10px));
+  /* 26px: the board mat's 24px plus the card's two borders, which sit inside
+     the page-height budget with the board. It was 10px, from before the card
+     grammar, and the card ran 16px past the frame on a 520px host. */
+  --puzzle-surface-fit: min(704px, calc(var(--puzzle-page-height) - 26px));
   --puzzle-surface-size: calc(var(--puzzle-surface-fit) * var(--uni-board-scale, 1));
   --puzzle-column-max-height: var(--puzzle-page-height);
   --puzzle-drop-surface-size: min(
@@ -632,14 +635,24 @@ body.embed-body {
      width-driven inside its column (the trainer's own min(100%, height budget)
      rule), and a host sizes the frame so the height budget does not bind; the
      stacked layout below keeps the height-driven arithmetic it needs. */
-  grid-template-columns: minmax(0, 2.85fr) minmax(226px, 1fr);
-  /* The board is also bounded by the frame's height. In a frame wider than
-     that bound allows, the split would leave the board floating at the left
-     of an empty column, so the card caps its own width at what the bounded
-     board plus its 30% sheet need, and centres in the frame. The mat is the
-     24px; the 3.85/2.85 is the split's total over the board's share. */
+  /* The board's width, in the card's own terms: the height budget's board
+     (552:612 at the surface size), or what is left beside a 226px sheet when
+     the frame is narrower than that. 100cqi is the frame; 2px the card's
+     borders; 24px the mat. A 2.85fr/1fr split used to size the board column
+     as a SHARE, so the board took a share of a wide frame it could not fill
+     (its height bound it) and the card capped its width to hide the gap: on a
+     740x520 host frame that left 130px of frame unused, and the sheet's 1fr
+     came out under its own floor. Sizing the board column from the budget
+     and giving the sheet the rest fills the frame in both directions. */
+  --embed-board-w: min(
+    calc(var(--puzzle-surface-size) * 552 / 612),
+    calc(100cqi - 2px - 226px - 24px)
+  );
+  grid-template-columns: calc(var(--embed-board-w) + 24px) minmax(226px, 1fr);
+  /* Stop the sheet growing past roughly the study card's 70/30 in a frame far
+     wider than the board needs; the card centres in what is left. */
   width: 100%;
-  max-width: calc((var(--puzzle-surface-size) * 552 / 612 + 24px) * 3.85 / 2.85);
+  max-width: calc((var(--embed-board-w) + 24px) * 1.7);
   align-self: center;
   /* The study and game embeds' card (this file, .embed-game): one bordered
      panel holding the board column and, behind a rule, the sheet. The trainer
@@ -648,8 +661,14 @@ body.embed-body {
      them side by side. The rule between the columns is the sheet's left
      border, below. */
   gap: 0;
-  align-items: start;
-  flex: 0 0 auto;
+  align-items: stretch;
+  /* The card may shrink to what the frame leaves after the caption and credit
+     lines (flex-shrink 1, not 0): beside the board it never needs to, since
+     the board is budgeted to fit, but stacked, a reveal adds the engine head
+     and the verdict under a board that already took its 58% share, and with
+     shrink 0 the credit line was pushed 44px out of a 720px frame. The sheet's
+     minmax(0, 1fr) row is what gives, and its move list scrolls. */
+  flex: 0 1 auto;
   max-height: 100%;
   min-height: 0;
   min-width: 0;
@@ -734,16 +753,79 @@ body.embed-body {
   color: var(--site-heading, inherit);
 }
 
-/* Beside the board the sheet runs the board's full height, so the rule
-   between them is continuous and the stepper row sits on the card's bottom
-   edge: the move list takes the slack, the way the game card's sheet does.
-   (It used to centre a shorter panel against the board, which read as one
-   row when the panel was its own box; inside one card it reads as a gap.) */
+/* Beside the board the sheet runs the board's full height and no taller, so
+   the rule between them is continuous and the stepper row sits on the card's
+   bottom edge: the move list takes the slack, the way the game card's sheet
+   does. The height is the board mat's (the board's 612:552 over its width,
+   plus the mat), not the frame's: the trainer's row floors (180px of moves,
+   190px of verdict) plus the engine bar and the stepper come to ~460px, and
+   with the frame as the bound the sheet grew the card past the board on any
+   host frame under ~560px tall and pushed the credit line out of the frame
+   the host cannot scroll. */
 .embed-puzzle .puzzle-side-panel {
   height: auto;
-  max-height: var(--puzzle-page-height);
+  max-height: calc(var(--embed-board-w) * 612 / 552 + 24px);
   align-self: stretch;
   min-height: 0;
+  overflow: hidden;
+}
+
+/* The sheet's contents fit its width. The trainer panel is a grid item with
+   min-width:auto, so anything nowrap inside it (the engine head's status line)
+   set its min-content width and it overflowed the sheet by up to 2x, clipped
+   at the card's edge with the verdict's centred title half gone. */
+.embed-puzzle .puzzle-trainer-panel,
+.embed-puzzle .puzzle-trainer-panel > *,
+.embed-puzzle .puzzle-side-panel > * {
+  min-width: 0;
+}
+
+/* The trainer's row floors are for its own 640px sidebar; in the card the
+   move list takes what the board's height leaves. */
+.embed-puzzle .puzzle-trainer-panel {
+  grid-template-rows: minmax(0, 1fr) auto;
+}
+
+/* After a reveal or solve the trainer page lets the sheet stack its rows from
+   the top and scroll (the engine panel joins it); in the card the stepper row
+   stays on the bottom edge and the move list still absorbs the difference. */
+.embed-puzzle .puzzle-side-panel--analysis {
+  grid-template-rows: minmax(0, 1fr) auto auto;
+  grid-auto-rows: auto;
+  align-content: stretch;
+  overflow: hidden;
+}
+
+.embed-puzzle .puzzle-trainer-panel--analysis {
+  grid-template-rows: auto minmax(0, 1fr) auto;
+}
+
+/* The post-solve panel at the sheet's scale, like the verdict block above:
+   a 20px title, a 76px bar and 12x18 padding are the trainer page's, and in a
+   226px sheet the bar alone was a fifth of the board's height. */
+.embed-puzzle .puzzle-solved-panel h2 {
+  padding: 10px 12px 8px;
+  font-size: 16px;
+}
+
+.embed-puzzle .puzzle-continue-button {
+  gap: 8px;
+  min-height: 44px;
+  padding: 0 12px;
+  font-size: 14px;
+}
+
+.embed-puzzle .puzzle-solved-feedback {
+  gap: 8px;
+  padding: 8px 12px;
+}
+
+/* A third party's frame is never cross-origin isolated, so the local engine
+   can never run there; the head that says so is two lines of apology in a
+   226px sheet. Hide it where it cannot work (the same-origin article frame
+   keeps it, since that one can). */
+.embed-puzzle .engine-panel[data-engine-supported="false"] {
+  display: none;
 }
 
 /* The line above the card, the game embed's header (.embed-game-header). */
@@ -764,8 +846,11 @@ body.embed-body {
    before and no less. */
 @container embed-frame (max-width: 543px) {
   .embed-puzzle {
+    /* Stacked, the board has the card's whole width, and the card the frame's. */
+    --embed-board-w: calc(100cqi - 2px - 24px);
     grid-template-columns: 1fr;
     grid-template-rows: auto minmax(0, 1fr);
+    max-width: none;
     /* Re-budget the board. In two columns the panel sits BESIDE the board, so
        the board can have the frame's whole height; stacked, the panel sits
        UNDER it and needs a share of that same height. Without this the two
@@ -812,17 +897,6 @@ body.embed-body {
     grid-auto-rows: auto;
     align-content: stretch;
     overflow: hidden;
-  }
-
-  /* Stacked, vertical space is the scarce resource, so the trainer's generous
-     row floors (140px of moves, 190px of feedback) are what force the panel
-     past its share. Let those rows take what they are given. */
-  .embed-puzzle .puzzle-trainer-panel {
-    grid-template-rows: minmax(0, 1fr) auto;
-  }
-
-  .embed-puzzle .puzzle-trainer-panel--analysis {
-    grid-template-rows: auto minmax(0, 1fr) auto;
   }
 }
 

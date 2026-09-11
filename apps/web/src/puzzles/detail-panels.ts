@@ -108,7 +108,8 @@ function revealedPanel(navigation: PuzzleNavigation): HTMLElement {
   cont.type = 'button';
   cont.className = 'puzzle-continue-button';
   cont.dataset.puzzleNext = 'true';
-  cont.innerHTML = `${ICON_PLAY}<span>Next puzzle</span>`;
+  cont.innerHTML = `${ICON_PLAY}<span></span>`;
+  (cont.lastElementChild as HTMLElement).textContent = t('puzzle.nextPuzzle');
   cont.setAttribute('aria-label', t('puzzle.nextPuzzle'));
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
@@ -136,8 +137,9 @@ function solvedPanel(
   cont.type = 'button';
   cont.className = 'puzzle-continue-button';
   cont.dataset.puzzleNext = 'true';
-  cont.innerHTML = `${ICON_PLAY}<span>Next puzzle</span>`;
-  cont.setAttribute('aria-label', 'Next puzzle');
+  cont.innerHTML = `${ICON_PLAY}<span></span>`;
+  (cont.lastElementChild as HTMLElement).textContent = t('puzzle.nextPuzzle');
+  cont.setAttribute('aria-label', t('puzzle.nextPuzzle'));
   cont.disabled = !navigation.hasNext;
   cont.addEventListener('click', navigation.goNext);
 

@@ -63,15 +63,39 @@ const embedCssPath = ['src/embed/embed.css', 'apps/web/src/embed/embed.css']
 const embedCss = readFileSync(embedCssPath as string, 'utf8').replace(/\/\*[\s\S]*?\*\//g, '');
 
 describe('the puzzle embed grid', () => {
-  it('splits its columns the way the study card does, with the sheet floored at 226px', () => {
-    // Beside a study replay in an article the two cards must show the same
-    // board width and the same sheet width, so the split is the study card's
-    // (articles.css .xq-replay-annotated .xq-replay-grid), not a board track
-    // sized from the frame's height with the sheet taking what is left.
+  it('sizes the board column from the frame and floors the sheet at 226px', () => {
+    // The board column is the board the height budget allows, or what is left
+    // beside a 226px sheet in a frame narrower than that; the sheet takes the
+    // rest. A 2.85fr/1fr share split (the study card's) sized the board as a
+    // share of a wide frame it could not fill, and on a 740x520 host frame
+    // left 130px of the frame unused with the sheet under its own floor.
     const grid = /\.embed-puzzle\s*\{[\s\S]*?grid-template-columns:([\s\S]*?);/.exec(embedCss);
     expect(grid, 'no grid-template-columns on .embed-puzzle').not.toBeNull();
     expect((grid?.[1] ?? '').replace(/\s+/g, ' ').trim()).toBe(
-      'minmax(0, 2.85fr) minmax(226px, 1fr)',
+      'calc(var(--embed-board-w) + 24px) minmax(226px, 1fr)',
+    );
+    const boardW = /--embed-board-w:\s*min\(([\s\S]*?)\);/.exec(embedCss);
+    expect(boardW, 'no --embed-board-w budget on .embed-puzzle').not.toBeNull();
+    const terms = (boardW?.[1] ?? '').replace(/\s+/g, ' ');
+    expect(terms, 'the board is not bounded by the height budget').toContain(
+      'var(--puzzle-surface-size) * 552 / 612',
+    );
+    expect(terms, 'the board does not leave the sheet its 226px floor').toContain('226px');
+  });
+
+  it('bounds the sheet by the board, not the frame', () => {
+    // The trainer's row floors plus the engine head and stepper come to ~460px,
+    // so a sheet bounded by the frame grew the card past the board on any
+    // host frame under ~560px tall and pushed the credit line out of a frame
+    // the host cannot scroll.
+    // The selector is declared more than once (the rule between the columns
+    // is its own block), so every block is read, not the first.
+    const blocks = [
+      ...embedCss.matchAll(/\.embed-puzzle \.puzzle-side-panel\s*\{([\s\S]*?)\}/g),
+    ].map((m) => (m[1] ?? '').replace(/\s+/g, ' '));
+    expect(blocks.length, 'no .embed-puzzle .puzzle-side-panel rule').toBeGreaterThan(0);
+    expect(blocks.join('\n')).toContain(
+      'max-height: calc(var(--embed-board-w) * 612 / 552 + 24px)',
     );
   });
 
@@ -91,7 +115,7 @@ describe('the puzzle embed grid', () => {
     // why the old @media rule worked. It stops being true the moment the widget
     // is mounted in a sized element, and then the narrow layout never fires.
     const narrow =
-      /@(media|container)([^{]*)\{\s*\.embed-puzzle\s*\{\s*grid-template-columns:\s*1fr/.exec(
+      /@(media|container)([^{]*)\{\s*\.embed-puzzle\s*\{[^}]*grid-template-columns:\s*1fr/.exec(
         embedCss,
       );
     expect(narrow, 'no narrow rule drops .embed-puzzle to one column').not.toBeNull();

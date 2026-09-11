@@ -13,12 +13,6 @@ import { fetchPuzzleDetail } from '../puzzles/api.js';
 import type { EmbedPuzzleRoute } from './embed-route.js';
 import './embed.css';
 
-// Height the caption and credit lines take out of the frame, so the board's
-// surface budget leaves room for them: two text lines (13px and 12px, ~20px
-// and ~18px with line-height) and the two 6px flex gaps. 44 undershot that by
-// a few pixels and the credit line sat on the board's bottom edge.
-const CHROME_PX = 52;
-
 type DailyPayload = { puzzle?: { id?: string } };
 
 function note(root: HTMLElement, message: string): void {
@@ -95,14 +89,39 @@ export async function mountEmbedPuzzle(root: HTMLElement, route: EmbedPuzzleRout
   root.replaceChildren(frame);
 
   // The trainer sizes its board from the viewport height; a frame is the whole
-  // viewport, so the surface budget is the frame minus the two text lines.
+  // viewport, so the surface budget is the frame minus everything else in it:
+  // the root's padding, the caption and credit lines, and the two flex gaps
+  // between them. Measured, not a constant: a 52px constant left out the
+  // root's 16px of padding, and on a 520px host frame the card ran 21px past
+  // the bottom and took the credit line with it.
   const fitBoard = (): void => {
     const height = root.getBoundingClientRect().height;
     if (height === 0) return;
-    host.style.setProperty('--puzzle-page-height', `${Math.max(200, height - CHROME_PX)}px`);
+    const rootStyle = getComputedStyle(root);
+    const gap = Number.parseFloat(getComputedStyle(frame).rowGap) || 0;
+    const chrome =
+      Number.parseFloat(rootStyle.paddingTop) +
+      Number.parseFloat(rootStyle.paddingBottom) +
+      caption.offsetHeight +
+      credit.offsetHeight +
+      gap * 2;
+    host.style.setProperty('--puzzle-page-height', `${Math.max(200, height - chrome)}px`);
   };
   fitBoard();
   if (typeof ResizeObserver !== 'undefined') new ResizeObserver(fitBoard).observe(root);
+
+  // The trainer's jump-out link (added on reveal) targets the document it is
+  // in; in a frame that document is the widget, and the whole site would open
+  // inside a 520px box on someone else's page. Send it to a new tab, the way
+  // the credit line goes.
+  host.addEventListener('click', (event) => {
+    const link = (event.target as Element | null)?.closest<HTMLAnchorElement>(
+      'a.puzzle-analysis-open-link',
+    );
+    if (!link) return;
+    link.target = '_blank';
+    link.rel = 'noopener';
+  });
 
   const { mountPuzzleSolver } = await import('../puzzles.js');
   mountPuzzleSolver(host, puzzle);

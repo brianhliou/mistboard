@@ -95,6 +95,7 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
 
   const el = document.createElement('section');
   el.className = 'engine-panel';
+  el.dataset.engineSupported = supported ? 'true' : 'false';
 
   // Lichess ceval head anatomy: [switch] [big eval] [name / status] … [gear].
   const head = document.createElement('div');

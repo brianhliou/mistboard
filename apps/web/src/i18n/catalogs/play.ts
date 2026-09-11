@@ -381,6 +381,7 @@ export const EN_PLAY = {
   'puzzle.embedNoDaily': 'No puzzle today.',
   'puzzle.embedLoadFailed': 'This puzzle could not be loaded.',
   'puzzle.embedNotAvailable': 'This puzzle is not available.',
+  'puzzle.openInAnalysis': 'Open in analysis board',
   'live.rematch': 'Rematch',
   'live.rematchStarting': 'Starting rematch…',
   'live.rematchWaiting': 'Waiting for opponent…',
@@ -586,4 +587,5 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'puzzle.embedNoDaily',
   'puzzle.embedLoadFailed',
   'puzzle.embedNotAvailable',
+  'puzzle.openInAnalysis',
 ] as const satisfies readonly PlayI18nKey[];

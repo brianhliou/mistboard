@@ -204,6 +204,7 @@ export const ZH_HANT_PLAY = {
   'puzzle.embedNoDaily': '今天沒有題目。',
   'puzzle.embedLoadFailed': '這道題目無法載入。',
   'puzzle.embedNotAvailable': '這道題目暫不可用。',
+  'puzzle.openInAnalysis': '在分析棋盤中開啟',
   'setup.blue': '藍方',
   'live.statusAccessRejected': '存取遭拒',
   'live.statusSessionMoved': '工作階段已轉移',

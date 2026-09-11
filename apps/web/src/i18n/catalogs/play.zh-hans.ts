@@ -204,6 +204,7 @@ export const ZH_HANS_PLAY = {
   'puzzle.embedNoDaily': '今天没有题目。',
   'puzzle.embedLoadFailed': '这道题目无法加载。',
   'puzzle.embedNotAvailable': '这道题目暂不可用。',
+  'puzzle.openInAnalysis': '在分析棋盘中打开',
   'setup.blue': '蓝方',
   'live.statusAccessRejected': '访问被拒绝',
   'live.statusSessionMoved': '会话已转移',
