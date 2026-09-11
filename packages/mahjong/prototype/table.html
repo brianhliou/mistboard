@@ -1,0 +1,660 @@
+<meta charset="utf-8">
+<title>Cantonese Table</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Spectral:wght@400;600&family=IBM+Plex+Mono:wght@400;500&family=IBM+Plex+Sans:wght@400;500;600&display=swap">
+<style>
+:root {
+  --tw: 30px; --th: 40px;
+  /* A tile is bone in any light, so its face and ink never change with the
+     theme. That is authentic AND it removes a whole class of theme bugs: the
+     ink colours below are declared once and mean the same thing in both. */
+  --tile-face: #f7f4ea; --tile-edge: #d9d3c2; --tile-ink: #23261f;
+  --wan: #a8382c; --faat: #1d6b48; --tong: #275a80;
+  --ground: #eceee7; --surface: #f5f6f1; --felt: #b7c3b0; --felt-edge: #a3b09c;
+  --sunk: rgba(0,0,0,.055);
+  --line: #cdd2c5; --line-soft: #dfe1d7;
+  --ink: #1e211c; --ink-soft: #545a50; --ink-faint: #7e8478;
+  --on-felt: #222a22; --on-felt-soft: #4a544a; --tile-back: #74886d;
+  --shadow: 0 1px 0 rgba(30,33,28,.06), 0 2px 6px rgba(30,33,28,.05);
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --ground: #0e100d; --surface: #171b16; --felt: #1e2a1f; --felt-edge: #162017;
+    --sunk: rgba(0,0,0,.25);
+    --line: #2f372e; --line-soft: #232a22;
+    --ink: #e8eae2; --ink-soft: #9aa294; --ink-faint: #6f776a;
+    --on-felt: #dfe6dc; --on-felt-soft: #97a493; --tile-back: #3f5741;
+    --shadow: 0 1px 0 rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.4);
+  }
+}
+:root[data-theme="dark"] {
+  --ground: #0e100d; --surface: #171b16; --felt: #1e2a1f; --felt-edge: #162017;
+  --sunk: rgba(0,0,0,.25);
+  --line: #2f372e; --line-soft: #232a22;
+  --ink: #e8eae2; --ink-soft: #9aa294; --ink-faint: #6f776a;
+  --on-felt: #dfe6dc; --on-felt-soft: #97a493; --tile-back: #3f5741;
+  --shadow: 0 1px 0 rgba(0,0,0,.4), 0 6px 18px rgba(0,0,0,.4);
+}
+* { box-sizing: border-box; }
+body { margin:0; background:var(--ground); color:var(--ink);
+  font:400 15px/1.5 "IBM Plex Sans", ui-sans-serif, system-ui, sans-serif; -webkit-font-smoothing:antialiased; }
+.wrap { max-width: 1200px; margin:0 auto; padding: 28px 20px 56px; }
+
+header { display:flex; align-items:baseline; justify-content:space-between; gap:16px; flex-wrap:wrap; margin-bottom:4px; }
+.headctl { display:flex; gap:10px; align-items:center; }
+.toggle { display:flex; gap:6px; align-items:center; font-size:12.5px; color:var(--ink-soft); cursor:pointer; }
+h1 { font:600 26px/1.1 Spectral, Georgia, serif; margin:0; letter-spacing:-.01em; }
+h1 .cn { font-size:.7em; color:var(--ink-faint); margin-left:9px; font-weight:400; }
+.sub { color:var(--ink-soft); margin:0 0 20px; font-size:14px; max-width:66ch; }
+
+.eyebrow { font:500 10.5px/1 "IBM Plex Sans",sans-serif; letter-spacing:.12em; text-transform:uppercase;
+  color:var(--ink-faint); margin:0 0 10px; }
+
+/* ---- table ---- */
+/* One surface, not a stack of panels. Seats are places ON the felt, marked by
+   position and a label, not by a box each. Border, fill and shadow are spent
+   once - on the table itself - so the tiles are the only objects on it. */
+.table { background:var(--felt); border:1px solid var(--felt-edge); border-radius:14px;
+  padding:22px 20px; display:grid; gap:20px 18px;
+  grid-template-columns: minmax(0,1fr) minmax(150px,190px) minmax(0,1fr);
+  grid-template-areas: "north north north" "west center east" "you you you";
+  align-items:start;
+  box-shadow: inset 0 1px 0 rgba(255,255,255,.06), var(--shadow); }
+@media (max-width:860px){ .table{ grid-template-columns:1fr; gap:16px;
+  grid-template-areas:"north" "west" "east" "center" "you"; } }
+.seat { padding:0; display:flex; flex-direction:column; gap:6px; align-items:stretch; }
+.seat .meta + .pond { margin-top:-2px; }
+.seat .melds { margin-top:0; }
+.seat.north{grid-area:north} .seat.west{grid-area:west} .seat.east{grid-area:east}
+.center{grid-area:center; align-self:center; display:flex; flex-direction:column; gap:9px;
+  align-items:center; justify-content:center; padding:2px 0; }
+.you{grid-area:you}
+.seat h3 { margin:0; font:500 10.5px/1 "IBM Plex Sans",sans-serif;
+  letter-spacing:.13em; text-transform:uppercase; color:var(--on-felt-soft);
+  display:flex; gap:8px; align-items:baseline; flex-wrap:wrap; }
+.seat h3 .wind { text-transform:none; letter-spacing:.04em; font-size:12px; }
+
+/* The seat the game waits on is named, not boxed. */
+.seat.active h3 { color:var(--tong); font-weight:600; }
+.seat h3 .state { margin-left:auto; font-weight:400; font-size:11px; letter-spacing:.04em;
+  text-transform:none; color:var(--on-felt-soft); font-family:"IBM Plex Mono",monospace; }
+.seat h3 .state.tenpai { color:var(--faat); font-weight:600; }
+/* Your side of the table is the one role worth spending a surface on. */
+.you { background:var(--sunk); border-radius:10px; padding:12px 14px; }
+/* One measure shared by the seat above and the seat below, so the table reads
+   on a single axis instead of a wide bar over a narrow panel. */
+.seat.north, .seat.you { width:min(100%, 520px); margin-inline:auto; }
+.seat.you > h3, .seat.you > .hand, .seat.you > .meta, .seat.you > .pond,
+.seat.you > .melds, .seat.you > .waits { margin-inline:0; }
+.seat > .row, .seat > .pond, .seat > .melds { margin-left:auto; margin-right:auto; }
+.you > .hand, .you > .pond, .you > .melds, .you > .waits { margin-left:0; margin-right:auto; }
+.you > h3 { width:100%; margin:0; }
+.seat h3 .wind { font-family:Spectral,"PingFang TC",serif; color:var(--ink-faint); font-weight:400; }
+.seat .meta { font:400 11px/1.3 "IBM Plex Mono",monospace; color:var(--on-felt-soft); text-align:center; }
+.you .meta { text-align:left; }
+
+/* ---- tiles ---- */
+.row { display:flex; flex-wrap:wrap; gap:3px; align-items:flex-end; width:fit-content; max-width:100%; }
+.tile { width:var(--tw); height:var(--th); border-radius:5px; background:var(--tile-face); border:1px solid var(--tile-edge);
+  box-shadow: inset 0 -2px 0 rgba(35,38,31,.10), 0 1px 2px rgba(0,0,0,.28);
+  display:flex; flex-direction:column; align-items:center; justify-content:center; gap:1px;
+  padding:0; font-family:inherit; cursor:default; transition:transform .1s ease; }
+.tile .num { font:400 16px/1 Spectral,"PingFang TC","Songti TC",serif; color:var(--tile-ink); }
+.tile .wan { font:400 13px/1 Spectral,"PingFang TC","Songti TC",serif; color:var(--wan); margin-top:1px; }
+.tile .z { color:var(--tile-ink); }
+.tile .z { font:400 22px/1.05 Spectral,"PingFang TC","Songti TC",serif; }
+.tile svg { display:block; width:88%; height:80%; }
+
+.tile.z.d-c .z{color:var(--wan)} .tile.z.d-f .z{color:var(--faat)}
+/* .sm is kept as a semantic hook only - every tile is the same size now. */
+.tile.back{background:var(--tile-back); border-color:color-mix(in srgb,var(--tile-back) 78%, black);
+  box-shadow: inset 0 -2px 0 rgba(0,0,0,.16), 0 1px 2px rgba(0,0,0,.3)}
+.tile.playable{cursor:pointer}
+.tile.playable:hover{transform:translateY(-4px)}
+.tile.playable:focus-visible{outline:2px solid var(--tong); outline-offset:2px}
+.tile.just{border-color:var(--tong); box-shadow:0 0 0 2px color-mix(in srgb,var(--tong) 25%,transparent)}
+.tile.hint{border-color:var(--faat)}
+.tile.hint::after{content:''; position:absolute; bottom:3px; width:5px; height:5px; border-radius:50%;
+  background:var(--faat)}
+.tile{position:relative}
+.waits { display:flex; gap:4px; align-items:center; flex-wrap:wrap; margin-top:8px; font-size:11.5px;
+  color:var(--ink-soft); }
+.pond { display:flex; flex-wrap:wrap; gap:2px; width:fit-content;
+  max-width:calc(6 * var(--tw) + 5 * 2px + 8px);
+  background:rgba(0,0,0,.10); border-radius:7px; padding:4px; }
+.pond:empty { display:none; }
+.melds { display:flex; gap:8px; flex-wrap:wrap; margin-top:6px; width:fit-content; max-width:100%; }
+.meld { display:flex; gap:2px; padding-left:6px; border-left:2px solid var(--line); }
+
+.hand { display:flex; gap:4px; flex-wrap:wrap; align-items:flex-end; }
+.hand .tile.just { margin-left:11px; }
+.hand .tile.just::before { content:''; position:absolute; left:-7px; top:6px; bottom:6px;
+  width:1px; background:var(--line); }
+
+.wallcount { font:600 34px/1 Spectral,Georgia,serif; font-variant-numeric:tabular-nums;
+  color:var(--on-felt); }
+.wallcount + span { font:500 10px/1 "IBM Plex Sans",sans-serif; letter-spacing:.13em;
+  text-transform:uppercase; color:var(--on-felt-soft); }
+.turnline { font-size:12.5px; color:var(--on-felt-soft); text-align:center; }
+
+/* ---- actions ---- */
+.actions { display:flex; flex-direction:column; gap:7px; align-items:stretch; width:100%; }
+.actions:empty { display:none; }
+button.act { font:500 13px/1 "IBM Plex Sans",sans-serif; padding:9px 14px; border-radius:7px;
+  border:1px solid var(--line); background:var(--surface); color:var(--ink); cursor:pointer; }
+button.act:hover{border-color:var(--tong)}
+button.act:focus-visible{outline:2px solid var(--tong); outline-offset:1px}
+button.act.win{border-color:var(--faat); color:var(--faat); font-weight:600;
+  background:color-mix(in srgb,var(--faat) 10%,transparent)}
+button.act.ghost{color:var(--ink-faint)}
+.prompt { font-size:12.5px; color:var(--on-felt); text-align:center; font-weight:500; }
+.center .turnline.waiting { color:var(--tong); font-weight:600; }
+
+.log { margin-top:20px; max-height:82px; font:400 12.5px/1.7 "IBM Plex Mono",monospace; color:var(--ink-faint);
+  overflow:hidden; padding-top:0; border-top:0;
+  -webkit-mask-image:linear-gradient(to bottom, #000 62%, transparent);
+  mask-image:linear-gradient(to bottom, #000 62%, transparent); }
+.log b{color:var(--ink); font-weight:500}
+
+.result { margin-top:18px; background:var(--surface); border:1px solid var(--line-soft);
+  border-radius:10px; padding:16px 18px; box-shadow:var(--shadow); }
+.result h2 { font:600 20px/1.2 Spectral,Georgia,serif; margin:0 0 10px; }
+.result table{border-collapse:collapse;width:100%;font-size:13.5px}
+.result td{padding:5px 10px 5px 0;border-bottom:1px solid var(--line-soft)}
+.result td.num{text-align:right;font-family:"IBM Plex Mono",monospace;font-variant-numeric:tabular-nums;padding-right:0}
+.result tr:last-child td{border-bottom:0}
+.cn{font-family:Spectral,"PingFang TC","Songti TC",serif}
+footer{margin-top:22px;padding-top:14px;border-top:1px solid var(--line-soft);font-size:12px;color:var(--ink-faint)}
+footer code{font-family:"IBM Plex Mono",monospace}
+@media (prefers-reduced-motion: reduce){*{transition:none!important}}
+</style>
+
+<div class="wrap">
+<header>
+  <h1>Cantonese Table<span class="cn">打麻雀</span></h1>
+  <div class="headctl">
+    <label class="toggle"><input type="checkbox" id="hints"> Show the widest discard</label>
+    <button class="act" id="newgame">New hand</button>
+  </div>
+</header>
+<p class="sub">Hong Kong Old Style against three bots. You are East and deal, so you play first. Click a tile to discard it; when a discard is claimable, the buttons appear. Three faan minimum, so cheap hands cannot be declared.</p>
+
+<div class="table">
+  <div class="seat north" id="seat-2"></div>
+  <div class="seat west" id="seat-1"></div>
+  <div class="center">
+    <div style="text-align:center">
+      <div class="wallcount" id="wall">—</div>
+      <span>tiles left</span>
+    </div>
+    <div class="turnline" id="turnline"></div>
+    <div class="actions" id="actions"></div>
+  </div>
+  <div class="seat east" id="seat-3"></div>
+  <div class="seat you" id="seat-0"></div>
+</div>
+
+<div class="result" id="result" hidden></div>
+<div class="log" id="log"></div>
+
+<footer>
+  Runs <code>@mistboard/mahjong</code> in the browser: the same kernel, claim resolution and bots as the server build. The bots see a player view, never the wall.
+</footer>
+</div>
+
+<script src="./mahjong.bundle.js"></script>
+<script>
+(function () {
+  const M = window.MJ;
+  const HUMAN = 0;
+  const WINDS = ['東','南','西','北'];
+  const NAMES = ['You','South','West','North'];
+  const SUIT = { m:'萬', p:'筒', s:'索' };
+  const HON = ['東','南','西','北','白','發','中'];
+  const $ = (id) => document.getElementById(id);
+
+  let game = null, bots = null, pending = null, timer = null;
+  let hintTiles = new Set();
+
+  /** How far a seat is from winning, in words a non-player can read. */
+  function handState(seat) {
+    const hand = game.hands[seat];
+    const melds = game.melds[seat].length;
+    const held = hand.reduce((a, b) => a + b, 0);
+    const opts = { meldCount: melds };
+    const sh = M.shanten(hand, opts).shanten;
+    const waiting = held % 3 === 1 && sh === 0
+      ? M.waits(hand, opts, M.seenByOthers(M.viewFor(game, seat)))
+      : null;
+    return { shanten: sh, waiting };
+  }
+
+  function stateLabel(st) {
+    if (st.shanten < 0) return 'complete';
+    if (st.waiting) return 'waiting';
+    if (st.shanten === 0) return '1 from winning';
+    return st.shanten + ' from winning';
+  }
+
+  const CN = ['','一','二','三','四','五','六','七','八','九'];
+
+  /**
+   * How the pips sit on a real tile: rows, top to bottom. Not decorative -
+   * these arrangements are how a player recognises a tile without reading it.
+   */
+  const PIP_ROWS = {
+    1: [1], 2: [1, 1], 3: [1, 1, 1], 4: [2, 2], 5: [2, 1, 2],
+    6: [2, 2, 2], 7: [3, 2, 2], 8: [2, 2, 2, 2], 9: [3, 3, 3],
+  };
+
+  /** Circles for 筒, bamboo for 索, drawn rather than spelled out. */
+  function pipFace(suit, rank) {
+    const rows = PIP_ROWS[rank];
+    const W = 24, H = 30;
+    const rowH = H / rows.length;
+    const colour = suit === 'p' ? 'var(--tong)' : 'var(--faat)';
+    let out = '<svg viewBox="0 0 ' + W + ' ' + H + '" aria-hidden="true">';
+    rows.forEach((count, i) => {
+      const colW = W / count;
+      const cy = rowH * (i + 0.5);
+      for (let j = 0; j < count; j += 1) {
+        const cx = colW * (j + 0.5);
+        if (suit === 'p') {
+          const r = Math.min(colW, rowH) * 0.44;
+          out += '<circle cx="' + cx.toFixed(2) + '" cy="' + cy.toFixed(2) + '" r="' + r.toFixed(2) +
+            '" fill="none" stroke="' + colour + '" stroke-width="1.7"/>';
+          out += '<circle cx="' + cx.toFixed(2) + '" cy="' + cy.toFixed(2) + '" r="' + (r * 0.34).toFixed(2) +
+            '" fill="' + colour + '"/>';
+        } else {
+          const bw = Math.min(colW * 0.52, 6.2);
+          const bh = rowH * 0.74;
+          const x = cx - bw / 2, y = cy - bh / 2;
+          out += '<rect x="' + x.toFixed(2) + '" y="' + y.toFixed(2) +
+            '" width="' + bw.toFixed(2) + '" height="' + bh.toFixed(2) +
+            '" rx="' + (bw / 2).toFixed(2) + '" fill="' + colour + '"/>';
+          // The node across the middle is what makes a cane read as bamboo -
+          // but only where the cane is wide enough to survive being cut.
+          if (bw >= 4.2) {
+            out += '<rect x="' + (x - 0.4).toFixed(2) + '" y="' + (cy - 0.45).toFixed(2) +
+              '" width="' + (bw + 0.8).toFixed(2) + '" height="0.9" rx="0.45" fill="var(--tile-face)"/>';
+          }
+        }
+      }
+    });
+    return out + '</svg>';
+  }
+
+  function tileEl(idx, cls) {
+    const b = document.createElement('button');
+    b.type = 'button'; b.className = 'tile ' + (cls || '');
+    if (idx === null) { b.classList.add('back'); b.disabled = true; return b; }
+    const suit = M.suitOf(idx), rank = M.rankOf(idx);
+    if (suit === 'z') {
+      b.classList.add('z');
+      if (idx === 33) b.classList.add('d-c');
+      if (idx === 32) b.classList.add('d-f');
+      b.innerHTML = '<span class="z">' + HON[rank - 1] + '</span>';
+      b.title = HON[rank - 1];
+    } else if (suit === 'm') {
+      b.classList.add('m');
+      b.innerHTML = '<span class="num">' + CN[rank] + '</span><span class="wan">萬</span>';
+      b.title = rank + '萬';
+    } else {
+      b.classList.add(suit);
+      b.innerHTML = pipFace(suit, rank);
+      b.title = rank + SUIT[suit];
+    }
+    return b;
+  }
+
+  function meldEl(meld) {
+    const wrap = document.createElement('div');
+    wrap.className = 'meld';
+    const tiles = meld.kind === 'chow'
+      ? [meld.tile, meld.tile+1, meld.tile+2]
+      : Array.from({length: meld.kind === 'kong' ? 4 : 3}, () => meld.tile);
+    for (const t of tiles) wrap.appendChild(tileEl(t, 'sm'));
+    return wrap;
+  }
+
+  function log(msg) {
+    const el = $('log');
+    const line = document.createElement('div');
+    line.innerHTML = msg;
+    el.prepend(line);
+    while (el.children.length > 40) el.lastChild.remove();
+  }
+
+  function tileName(idx) {
+    const s = M.suitOf(idx), r = M.rankOf(idx);
+    return s === 'z' ? HON[r-1] : r + SUIT[s];
+  }
+
+  function renderSeat(seat) {
+    const box = $('seat-' + seat);
+    const awaiting = pending !== null ? HUMAN : game.turn;
+    box.className = 'seat ' + ['you','east','north','west'][seat] + (awaiting === seat ? ' active' : '');
+    box.textContent = '';
+
+    const h = document.createElement('h3');
+    const wind = (seat - game.dealer + 4) % 4;
+    h.innerHTML = NAMES[seat] + ' <span class="wind">' + WINDS[wind] +
+      (seat === game.dealer ? ' 莊' : '') + '</span>';
+    // Only your own hand's state is knowable; showing it for opponents would
+    // be reading their tiles.
+    let state = null;
+    if (seat === HUMAN && !isOver()) {
+      state = handState(seat);
+      const el = document.createElement('span');
+      el.className = 'state' + (state.waiting || state.shanten <= 0 ? ' tenpai' : '');
+      el.textContent = stateLabel(state);
+      h.appendChild(el);
+    }
+    box.appendChild(h);
+
+    const hand = game.hands[seat];
+    const count = hand.reduce((a,b)=>a+b,0);
+
+    if (seat === HUMAN) {
+      const row = document.createElement('div');
+      row.className = 'hand';
+      const tiles = [];
+      for (let t = 0; t < 34; t++) for (let n = 0; n < hand[t]; n++) tiles.push(t);
+      tiles.sort((a, b) => a - b);
+
+      // The tile that just arrived is held APART from the sorted hand, at the
+      // end - which is how it is held at a table, and the only way the gap
+      // means anything. Sorting it in puts the divider wherever that tile
+      // happens to rank, so it lands mid-hand and reads as a grouping that
+      // does not exist.
+      const drawn = game.turn === HUMAN ? game.drawn : null;
+      let order = tiles;
+      if (drawn !== null) {
+        const at = tiles.indexOf(drawn);
+        if (at >= 0) {
+          order = tiles.slice();
+          order.splice(at, 1);
+          order.push(drawn);
+        }
+      }
+
+      order.forEach((t, i) => {
+        const isDrawn = drawn !== null && i === order.length - 1 && order.length === tiles.length;
+        const el = tileEl(t, (isDrawn ? 'just ' : '') +
+          (hintTiles.has(t) ? 'hint ' : '') +
+          (pending && pending.type === 'discard' ? 'playable' : ''));
+        if (hintTiles.has(t)) el.title = 'Widest discard';
+        if (pending && pending.type === 'discard') {
+          el.addEventListener('click', () => pending.resolve(t));
+        }
+        row.appendChild(el);
+      });
+      box.appendChild(row);
+    } else {
+      const row = document.createElement('div');
+      row.className = 'row';
+      for (let i = 0; i < count; i++) row.appendChild(tileEl(null, 'back sm'));
+      box.appendChild(row);
+    }
+
+    if (seat === HUMAN && state && state.waiting && state.waiting.tiles.length) {
+      const row = document.createElement('div');
+      row.className = 'waits';
+      const lbl = document.createElement('span');
+      lbl.textContent = 'Any of these wins:';
+      row.appendChild(lbl);
+      for (const t of state.waiting.tiles) {
+        const el = tileEl(t.tile, 'sm');
+        el.title = t.remaining + ' still live';
+        row.appendChild(el);
+      }
+      const tot = document.createElement('span');
+      tot.textContent = state.waiting.total + ' live';
+      row.appendChild(tot);
+      box.appendChild(row);
+    }
+
+    if (game.melds[seat].length) {
+      const m = document.createElement('div');
+      m.className = 'melds';
+      for (const meld of game.melds[seat]) m.appendChild(meldEl(meld));
+      box.appendChild(m);
+    }
+
+    const meta = document.createElement('div');
+    meta.className = 'meta';
+    meta.style.marginTop = '8px';
+    const flowers = game.flowers[seat].length;
+    meta.textContent = flowers ? flowers + (flowers === 1 ? ' flower' : ' flowers') : '';
+    if (meta.textContent) box.appendChild(meta);
+
+    const pond = document.createElement('div');
+    pond.className = 'pond';
+    pond.style.marginTop = '4px';
+    const claimable = pending && pending.type === 'claim' && pending.discarder === seat
+      ? game.discards[seat].length - 1 : -1;
+    game.discards[seat].forEach((t, i) => {
+      pond.appendChild(tileEl(t, 'sm' + (i === claimable ? ' just' : '')));
+    });
+    box.appendChild(pond);
+  }
+
+  function render() {
+    for (const seat of [0,1,2,3]) renderSeat(seat);
+    $('wall').textContent = game.wall.length;
+    const phase = game.phase.type;
+    const line = $('turnline');
+    const waiting = pending !== null;
+    line.classList.toggle('waiting', waiting);
+    line.textContent =
+      phase === 'won' ? 'Hand over' :
+      phase === 'exhausted' ? 'Wall exhausted' :
+      pending && pending.type === 'claim' ? 'Your call' :
+      pending && pending.type === 'discard' ? 'Your turn' :
+      NAMES[game.turn] + ' to play';
+  }
+
+  function setActions(nodes, promptText) {
+    const box = $('actions');
+    box.textContent = '';
+    if (promptText) {
+      const p = document.createElement('span');
+      p.className = 'prompt';
+      p.textContent = promptText;
+      box.appendChild(p);
+    }
+    for (const n of nodes) box.appendChild(n);
+  }
+
+  function button(label, cls, onClick) {
+    const b = document.createElement('button');
+    b.className = 'act ' + (cls || '');
+    b.textContent = label;
+    b.addEventListener('click', onClick);
+    return b;
+  }
+
+  const handContext = (seat) => ({
+    seatWind: 27 + ((seat - game.dealer + 4) % 4),
+    roundWind: game.roundWind,
+    seatFlowers: Math.min(2, game.flowers[seat].length),
+  });
+
+  function schedule(fn, ms) { clearTimeout(timer); timer = setTimeout(fn, ms); }
+  function isOver() { return game.phase.type === 'won' || game.phase.type === 'exhausted'; }
+
+  function step() {
+    if (game.phase.type === 'won' || game.phase.type === 'exhausted') return finish();
+
+    if (game.phase.type === 'draw') {
+      game = M.applyDraw(game);
+      render();
+      return schedule(step, 260);
+    }
+
+    if (game.phase.type === 'discard') {
+      const seat = game.turn;
+      const score = M.scoreHand(game.hands[seat], game.melds[seat],
+        { ...handContext(seat), selfDrawn: true }, {});
+      const canWin = score && score.faan >= 3;
+
+      if (seat === HUMAN) {
+        render();
+        const acts = [];
+        if (canWin) acts.push(button('自摸 Win (' + score.faan + ' faan)', 'win', () => {
+          game = M.applySelfDraw(game); finish();
+        }));
+        hintTiles = new Set();
+        if ($('hints').checked) {
+          const best = M.rankDiscards(game.hands[HUMAN],
+            { meldCount: game.melds[HUMAN].length },
+            M.seenByOthers(M.viewFor(game, HUMAN)))[0];
+          if (best) hintTiles.add(best.discard);
+        }
+        setActions(acts, 'Click a tile to discard.');
+        pending = { type: 'discard', resolve: (tile) => {
+          pending = null;
+          hintTiles = new Set();
+          log('<b>You</b> discard ' + tileName(tile));
+          game = M.applyDiscard(game, tile);
+          setActions([]);
+          render();
+          schedule(step, 200);
+        }};
+        render();
+        return;
+      }
+
+      if (canWin) { game = M.applySelfDraw(game); return finish(); }
+      const tile = bots[seat].chooseDiscard(M.viewFor(game, seat));
+      log('<b>' + NAMES[seat] + '</b> discards ' + tileName(tile));
+      game = M.applyDiscard(game, tile);
+      render();
+      return schedule(step, 320);
+    }
+
+    if (game.phase.type === 'claim-window') return claimWindow();
+  }
+
+  function claimWindow() {
+    const { discard, discarder } = game.phase;
+    const botClaims = [];
+    for (const seat of [0,1,2,3]) {
+      if (seat === discarder || seat === HUMAN) continue;
+      const avail = M.legalClaims(game.hands[seat], game.melds[seat], discard, seat, discarder,
+        handContext(seat), {});
+      if (!avail.length) continue;
+      const pick = bots[seat].chooseClaim(M.viewFor(game, seat), avail);
+      if (pick) botClaims.push(pick);
+    }
+
+    const mine = discarder === HUMAN ? [] :
+      M.legalClaims(game.hands[HUMAN], game.melds[HUMAN], discard, HUMAN, discarder,
+        handContext(HUMAN), {});
+
+    if (!mine.length) return applyWindow(botClaims);
+
+    pending = { type: 'claim', discard, discarder };
+    const acts = [];
+    const label = { win:'食糊 Win', kong:'槓 Kong', pung:'碰 Pung', chow:'上 Chow' };
+    for (const c of mine) {
+      const extra = c.kind === 'chow' ? ' ' + c.fromHand.map(tileName).join('+') : '';
+      acts.push(button(label[c.kind] + extra, c.kind === 'win' ? 'win' : '', () => {
+        pending = null;
+        setActions([]);
+        applyWindow(botClaims.concat([c]));
+      }));
+    }
+    acts.push(button('Pass', 'ghost', () => { pending = null; setActions([]); applyWindow(botClaims); }));
+    setActions(acts, NAMES[discarder] + ' discarded ' + tileName(discard));
+    render();
+  }
+
+  function applyWindow(claims) {
+    const { discarder } = game.phase;
+    const resolved = M.resolveClaims(claims, discarder, {});
+    const winner = resolved.winners[0];
+    if (winner) {
+      const label = { win:'wins on', kong:'kongs', pung:'pungs', chow:'chows' }[winner.kind];
+      log('<b>' + NAMES[winner.seat] + '</b> ' + label + ' it');
+      game = M.applyClaim(game, winner);
+    } else {
+      game = M.applyPass(game);
+    }
+    render();
+    schedule(step, winner ? 320 : 200);
+  }
+
+  function finish() {
+    pending = null;
+    render();
+    setActions([]);
+    const box = $('result');
+    box.hidden = false;
+
+    if (game.phase.type === 'exhausted') {
+      box.innerHTML = '<h2>Wall exhausted <span class="cn" style="font-size:.7em;color:var(--ink-faint)">流局</span></h2>' +
+        '<p style="margin:0;color:var(--ink-soft);font-size:14px">Nobody declared a hand. No payments.</p>';
+      log('<b>Wall exhausted.</b>');
+      return;
+    }
+
+    const seat = game.phase.winners[0];
+    const score = M.scoreHand(game.hands[seat], game.melds[seat],
+      { ...handContext(seat), selfDrawn: game.phase.selfDrawn }, {});
+    const s = score ? score.settlement : null;
+    let html = '<h2>' + (seat === HUMAN ? 'You win' : NAMES[seat] + ' wins') +
+      ' <span class="cn" style="font-size:.7em;color:var(--ink-faint)">' +
+      (game.phase.selfDrawn ? '自摸' : '食糊') + '</span></h2>';
+
+    if (score) {
+      html += '<table><tbody>';
+      for (const l of score.lines) {
+        html += '<tr><td>' + l.english + (l.count > 1 ? ' <span style="color:var(--ink-faint)">x'+l.count+'</span>' : '') +
+          '</td><td class="cn">' + l.chinese + '</td><td class="num">' + l.faan + '</td></tr>';
+      }
+      html += '<tr><td colspan="2"><strong>' + (score.limitHand ? 'Limit hand 例牌' : 'Total') +
+        '</strong></td><td class="num"><strong>' + score.faan + ' faan</strong></td></tr>';
+      if (s) {
+        html += '<tr><td colspan="2">Winner receives</td><td class="num">' + s.winnerReceives + '</td></tr>';
+        html += game.phase.selfDrawn
+          ? '<tr><td colspan="2">Each opponent pays</td><td class="num">' + s.eachOtherPays + '</td></tr>'
+          : '<tr><td colspan="2">Discarder pays / others pay</td><td class="num">' + s.discarderPays + ' / ' + s.eachOtherPays + '</td></tr>';
+      }
+      html += '</tbody></table>';
+    }
+    box.innerHTML = html;
+    log('<b>' + NAMES[seat] + '</b> wins' + (score ? ' with ' + score.faan + ' faan' : ''));
+  }
+
+  function newHand() {
+    clearTimeout(timer);
+    pending = null;
+    hintTiles = new Set();
+    $('result').hidden = true;
+    $('log').textContent = '';
+    const seed = (Date.now() ^ (Math.random() * 1e9)) >>> 0;
+    game = M.dealGame(M.shuffleWall(M.seededRng(seed)));
+    bots = { 1: M.efficiencyBot(), 2: M.efficiencyBot(), 3: M.efficiencyBot() };
+    log('<b>New hand.</b> You are East and deal.');
+    render();
+    step();
+  }
+
+  $('hints').addEventListener('change', () => {
+    if (pending && pending.type === 'discard') {
+      hintTiles = new Set();
+      if ($('hints').checked) {
+        const best = M.rankDiscards(game.hands[HUMAN],
+          { meldCount: game.melds[HUMAN].length },
+          M.seenByOthers(M.viewFor(game, HUMAN)))[0];
+        if (best) hintTiles.add(best.discard);
+      }
+      render();
+    }
+  });
+  $('newgame').addEventListener('click', newHand);
+  newHand();
+})();
+</script>
