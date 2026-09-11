@@ -33,6 +33,9 @@ export type ReplayStepperCopy = {
   winChanceGivenUp: (percent: string) => string;
   /** Prefix on the numeric evaluation in the same hover text. */
   evalPrefix: string;
+  /** "Red wins" from the side's own name; `draw` for the split point. */
+  wins: (side: string) => string;
+  draw: string;
   first: string;
   second: string;
   /** Suffix for the hand/reserve strip label ("Red reserve", "Sente hand"). */
@@ -66,6 +69,8 @@ const COMMON: Record<
     },
     winChanceGivenUp: (percent) => `${percent}% win chance given up`,
     evalPrefix: 'eval',
+    wins: (side) => `${side} wins`,
+    draw: 'Draw',
   },
   'zh-Hans': {
     firstMove: '第一步',
@@ -87,6 +92,8 @@ const COMMON: Record<
     },
     winChanceGivenUp: (percent) => `胜率损失 ${percent}%`,
     evalPrefix: '评估',
+    wins: (side) => `${side}胜`,
+    draw: '和棋',
   },
   'zh-Hant': {
     firstMove: '第一步',
@@ -108,6 +115,8 @@ const COMMON: Record<
     },
     winChanceGivenUp: (percent) => `勝率損失 ${percent}%`,
     evalPrefix: '評估',
+    wins: (side) => `${side}勝`,
+    draw: '和棋',
   },
 };
 

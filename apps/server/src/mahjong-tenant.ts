@@ -17,7 +17,7 @@
  *     somebody goes quiet, so one dropped connection cannot hang the table.
  *
  * GATED TWICE, on purpose. The feature flag is off, and the variant is on the
- * per-account allowlist (136). The hand mathematics is proven against an
+ * per-account allowlist (139). The hand mathematics is proven against an
  * independent implementation over 18,000 hands; the faan values are not proven
  * at all, having been read off sources that disagree with each other by nobody
  * who plays the game. Until a player has checked the scoring, the only people

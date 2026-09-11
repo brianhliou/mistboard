@@ -1072,6 +1072,13 @@
   line-height: 1.1;
 }
 
+/* A named kill pattern is the puzzle's name, not a facet: same chip, ink
+   colour, so it reads before the structural tags beside it. */
+.puzzle-tag.puzzle-tag-motif {
+  color: var(--site-text);
+  border-color: var(--site-border);
+}
+
 .puzzles-status {
   color: var(--site-muted);
   font-size: 14px;

@@ -112,6 +112,11 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'reveal-chess': 'reveal-chess',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
+  // Duck Xiangqi. Present in watch-route.ts's copy of this map since the
+  // channel was added; missing here, which would have rendered an empty marker
+  // slot for duck rows the moment the server flag turned on. The two maps are
+  // duplicated deliberately (see above) and so drift exactly like this.
+  'duck-xiangqi': 'duck-xiangqi',
 };
 
 type CardState = {

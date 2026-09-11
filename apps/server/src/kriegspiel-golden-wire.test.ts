@@ -98,7 +98,8 @@ function play(
   color: Color,
   raw: Move,
 ): { event: KriegspielEvent; seq: number } {
-  const canonical = kriegspielTenant.rules.canonicalMove?.(room.projection.state, raw, 'white') ?? raw;
+  const canonical =
+    kriegspielTenant.rules.canonicalMove?.(room.projection.state, raw, 'white') ?? raw;
   assert.ok(canonical, `move ${raw.from}->${raw.to} must be legal`);
   const event: KriegspielEvent = {
     type: 'move-played',

@@ -3,6 +3,8 @@ import { describe, expect, it } from 'vitest';
 import { EDITOR_VARIANT_IDS } from './editor-catalog.js';
 import { enPassantCandidates } from './editor-chess.js';
 import {
+  cloneModel,
+  DUCK_SUBJECT,
   type EditorBoard,
   type EditorModel,
   type PlacementGrammar,
@@ -20,6 +22,14 @@ import { EDITOR_SPECS, faceDownCounts, poolRows } from './editor-specs.js';
 // public five fields plus a sampled hidden field the editor ignores on read.
 
 const DEALT = new Set(['banqi', 'jieqi', 'jungle-flip']);
+
+// Specs whose fromFen goes through the VARIANT KERNEL rather than the lenient
+// shared readPlacement. Duck Xiangqi has to: the duck rides a seventh field and
+// only duck-xiangqi-fen.ts knows that grammar. The consequence is that its
+// fromFen also inherits the kernel's legality bar, so a position the kernel
+// refuses (no generals, facing generals, a duck on an occupied point) does not
+// load at all instead of loading and failing validation on the page.
+const KERNEL_PARSED = new Set(['duck-xiangqi']);
 
 function boardEntries(board: EditorBoard): [string, unknown][] {
   return [...board.entries()].sort(([a], [b]) => a.localeCompare(b));
@@ -56,6 +66,14 @@ describe('editor specs', () => {
       };
       const fen = spec.toFen(model);
       expect(fen.startsWith(String(spec.grammar.files))).toBe(true);
+      if (KERNEL_PARSED.has(id)) {
+        // Writable but not readable back, and deliberately so: the editor spells
+        // an empty board (Clear board has to produce something) while the kernel
+        // refuses a position with no generals. Fail-closed is the right side to
+        // land on for a read.
+        expect(spec.fromFen(fen)).toBeNull();
+        return;
+      }
       expect(spec.fromFen(fen)?.board.size).toBe(0);
     });
 
@@ -124,11 +142,12 @@ describe('editor specs', () => {
     expect(spec.toFen(spec.start())).toBe(
       'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1',
     );
-    expect(spec.placementProblem('e5', { faceDown: true, color: 'red' })).not.toBeNull();
-    expect(spec.placementProblem('a1', { faceDown: true, color: 'red' })).toBeNull();
-    expect(spec.placementProblem('a1', { faceDown: true, color: 'black' })).not.toBeNull();
+    const model = spec.start();
+    expect(spec.placementProblem('e5', { faceDown: true, color: 'red' }, model)).not.toBeNull();
+    expect(spec.placementProblem('a1', { faceDown: true, color: 'red' }, model)).toBeNull();
+    expect(spec.placementProblem('a1', { faceDown: true, color: 'black' }, model)).not.toBeNull();
     expect(
-      spec.placementProblem('e5', { faceDown: false, color: 'red', role: 'soldier' }),
+      spec.placementProblem('e5', { faceDown: false, color: 'red', role: 'soldier' }, model),
     ).toBeNull();
   });
 
@@ -208,6 +227,84 @@ describe('editor specs', () => {
     const rook = spec.start();
     rook.board.delete('a8');
     expect(spec.toFen(rook).split(' ')[2]).toBe('KQk');
+  });
+
+  // The duck is the one thing on any of these boards that is not a piece. Every
+  // assertion here is about it surviving a place where a piece map would drop it.
+  describe('duck-xiangqi', () => {
+    const spec = EDITOR_SPECS['duck-xiangqi'];
+    const START = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1';
+
+    it('starts with the duck OFF the board, and that round-trips', () => {
+      const start = spec.start();
+      // Off the board is a real state, not a missing one: the duck enters as the
+      // second half of Red's first turn, so the opening has no duck on it.
+      expect(start.duck).toEqual({ square: null });
+      expect(spec.toFen(start)).toBe(`${START} -`);
+      const back = spec.fromFen(`${START} -`);
+      expect(back?.duck).toEqual({ square: null });
+      expect(spec.toFen(back!)).toBe(`${START} -`);
+    });
+
+    it('a duck on the board rides the seventh field and comes back', () => {
+      const model = spec.start();
+      model.duck!.square = 'e6';
+      const fen = spec.toFen(model);
+      expect(fen.split(/\s+/)).toHaveLength(7);
+      expect(fen.split(/\s+/)[6]).toBe('e6');
+      const back = spec.fromFen(fen)!;
+      expect(back.duck).toEqual({ square: 'e6' });
+      // And the board came back whole beside it.
+      expect(boardEntries(back.board)).toEqual(boardEntries(model.board));
+      expect(spec.toFen(back)).toBe(fen);
+    });
+
+    it('a six-field paste reads as the duck not yet on the board', () => {
+      expect(spec.fromFen(START)?.duck).toEqual({ square: null });
+    });
+
+    it('the duck is never a palette entry, and its brush is colourless', () => {
+      for (const color of spec.colors) {
+        expect(spec.palette(color).map((entry) => entry.labelKey)).not.toContain('editor.duck');
+      }
+      expect(spec.tileEntry).toBeNull();
+      expect(spec.duckEntry?.role).toBe('duck');
+      expect(spec.duckEntry?.svg()).toContain('<svg');
+    });
+
+    it('the duck cannot go on an occupied point, and a piece cannot go on the duck', () => {
+      const model = spec.start();
+      // a1 holds a red chariot in the start position.
+      expect(spec.placementProblem('a1', DUCK_SUBJECT, model)?.key).toBe('editor.duckOnPiece');
+      expect(spec.placementProblem('e6', DUCK_SUBJECT, model)).toBeNull();
+      model.duck!.square = 'e6';
+      expect(
+        spec.placementProblem('e6', { faceDown: false, color: 'red', role: 'cannon' }, model)?.key,
+      ).toBe('editor.pieceOnDuck');
+      expect(
+        spec.placementProblem('e5', { faceDown: false, color: 'red', role: 'cannon' }, model),
+      ).toBeNull();
+    });
+
+    it('the kernel refuses a FEN whose duck shares a point with a piece', () => {
+      expect(spec.fromFen(`${START} e1`)).toBeNull();
+      // And one whose generals face down a clear file, with no duck to block it.
+      expect(spec.fromFen('4k4/9/9/9/9/9/9/9/9/4K4 w - - 0 1 -')).toBeNull();
+      // The same position IS legal with the duck standing between them, which is
+      // the clearest proof the seventh field is part of the position.
+      expect(spec.fromFen('4k4/9/9/9/9/9/9/9/9/4K4 w - - 0 1 e5')?.duck).toEqual({ square: 'e5' });
+    });
+
+    it('cloneModel copies the duck rather than sharing it', () => {
+      const model = spec.start();
+      model.duck!.square = 'e6';
+      const copy = cloneModel(model);
+      copy.duck!.square = 'e7';
+      expect(model.duck).toEqual({ square: 'e6' });
+      expect(copy.duck).toEqual({ square: 'e7' });
+      // And a model with no duck field keeps none.
+      expect(cloneModel(EDITOR_SPECS.xiangqi.start()).duck).toBeUndefined();
+    });
   });
 
   it('dark-chess: en passant candidates follow the side to move and round-trip', () => {

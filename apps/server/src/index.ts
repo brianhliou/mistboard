@@ -172,6 +172,8 @@ const rematchOrch: RematchOrchestrator = {
     const now = new Date();
     const state: SeatTokenState = {
       clientId: randomUUID(),
+      // Rematch pre-issue: the holder's device is learned on reconnect.
+      deviceId: null,
       seat,
       tokenHash,
       userId: identity.userId,

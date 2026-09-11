@@ -20,11 +20,19 @@ export type PublicVariantSeries = {
   days: PublicStatsDay[];
 };
 
+export type PublicStatsWeek = {
+  weekStart: string;
+  completedGames: number;
+};
+
 export type PublicSiteStats = {
   generatedAt: string;
   totalCompletedGames: number;
   last30dCompletedGames: number;
   publicGames: number;
+  // Both optional so an older cached payload still parses.
+  accounts?: number;
+  weeklyCompletedGames?: PublicStatsWeek[];
   modeTotals: Record<PublicStatsMode, number>;
   variantTotals: Array<{ variant: string; count: number }>;
   dailyCompletedGames: PublicStatsDay[];

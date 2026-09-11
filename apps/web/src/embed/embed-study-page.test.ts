@@ -55,8 +55,32 @@ describe('mountEmbedStudy', () => {
     document.body.append(root);
     await mountEmbedStudy(root, { studyId: 's', chapterId: 'Ue0EgpS7' });
 
-    expect(root.querySelector('.xq-replay')).not.toBeNull();
-    expect(root.querySelector('svg')).not.toBeNull();
+    // The shared card, the same one a game sits in: seat rows with discs in
+    // the seats' inks, the board, the step controls, the score sheet, and a
+    // pinned result in words rather than the tag.
+    expect(root.querySelector('.embed-card')).not.toBeNull();
+    expect(root.querySelector('.embed-board svg')).not.toBeNull();
+    const seats = Array.from(root.querySelectorAll<HTMLElement>('.embed-card-seat'));
+    expect(seats.map((s) => s.dataset.seat)).toEqual(['second', 'first']);
+    expect(seats.map((s) => s.querySelector('.embed-card-seat-name')?.textContent)).toEqual([
+      'Yang Guanlin',
+      'Li Yiting',
+    ]);
+    expect(seats.map((s) => s.querySelector('.embed-seat-disc')?.className)).toEqual([
+      'embed-seat-disc embed-seat-disc--black',
+      'embed-seat-disc embed-seat-disc--red',
+    ]);
+    // A chapter has no clocks; the slots stay empty rather than reading 0:00.
+    expect(seats.every((s) => s.querySelector('.embed-card-seat-clock')?.textContent === '')).toBe(
+      true,
+    );
+    expect(root.querySelector('.embed-card-header')?.textContent).toBe('1956');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
+    // The mainline in the shared score sheet, with the chapter's glyph as a suffix.
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move'));
+    expect(moves.length).toBe(2);
+    expect(root.querySelector('.review-move-list__suffix')?.textContent?.trim()).toBe('?!');
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('0 / 2');
     const credit = root.querySelector<HTMLAnchorElement>('.embed-credit');
     expect(credit?.getAttribute('href')).toBe('/study/s/Ue0EgpS7');
     // It opens out of the frame it is living in.

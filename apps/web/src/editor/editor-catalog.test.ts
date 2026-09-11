@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 import { ANALYSIS_VARIANTS, analysisVariantFromPath } from '../analysis-catalog.js';
-import { EDITOR_VARIANT_IDS, EDITOR_VARIANTS, editorVariantFromPath } from './editor-catalog.js';
+import {
+  EDITOR_VARIANT_IDS,
+  EDITOR_VARIANTS,
+  editorVariantFromPath,
+  isEditorVariant,
+} from './editor-catalog.js';
 
 describe('editorVariantFromPath', () => {
   it('opens the flagship on the bare path', () => {
@@ -27,13 +32,14 @@ describe('editorVariantFromPath', () => {
     }
   });
 
-  // The editor covers a SUBSET of the analysis catalog. An analysis variant the
-  // editor's piece-map model cannot represent fails closed at the route: a 404,
-  // never an editor that silently drops part of the position (Duck Xiangqi's
-  // duck is not a piece and would be dropped on every round trip).
-  it('refuses an analysis variant that has no editor', () => {
+  // Duck Xiangqi was the reason this list exists apart from the analysis
+  // catalog: its duck is not a piece, so it had an analysis board and NO editor
+  // route until the editor model grew a field that could hold a duck
+  // (editor-model.ts). It now opens like every other variant, and the duck
+  // survives the round trip on the seventh FEN field (editor-specs.test.ts).
+  it('opens duck xiangqi, the variant that used to have no editor', () => {
     expect(analysisVariantFromPath('/analysis/duck-xiangqi')).toBe('duck-xiangqi');
-    expect(editorVariantFromPath('/editor/duck-xiangqi')).toBeNull();
+    expect(editorVariantFromPath('/editor/duck-xiangqi')).toBe('duck-xiangqi');
   });
 
   it('is a subset of the analysis catalog, and the dropdown rows match it', () => {
@@ -44,6 +50,15 @@ describe('editorVariantFromPath', () => {
       expect(analysisVariantFromPath(`/analysis/${id}`)).toBe(id);
     }
     expect(EDITOR_VARIANTS.map((variant) => variant.id)).toEqual([...EDITOR_VARIANT_IDS]);
-    expect(EDITOR_VARIANTS.length).toBeLessThan(ANALYSIS_VARIANTS.length);
+    // Subset, not equality, and NOT a count. Every analysis variant happens to
+    // have an editor today, so a strict `<` (which this asserted while duck
+    // xiangqi was the exception) now says something false; and a strict `===`
+    // would forbid the very case the split exists for. What must hold is the
+    // relation: the editor may never serve a route the analysis catalog does
+    // not, and a variant left off this list gets no route at all.
+    expect(EDITOR_VARIANTS.length).toBeLessThanOrEqual(ANALYSIS_VARIANTS.length);
+    for (const id of analysisIds) {
+      expect(editorVariantFromPath(`/editor/${id}`), id).toBe(isEditorVariant(id) ? id : null);
+    }
   });
 });

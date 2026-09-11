@@ -153,6 +153,8 @@ export type TenantClientRef<C extends string> = {
 
 export type TenantSeatTokenState<C extends string> = {
   clientId: string;
+  // See SeatTokenState.deviceId.
+  deviceId?: string | null;
   seat: C;
   tokenHash: string;
   userId: string | null;

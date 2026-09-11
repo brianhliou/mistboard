@@ -22,7 +22,7 @@ import type { ArticleLang } from './article-i18n.js';
 import './board-glyph-marker.css';
 import { boardLastMoveMarkersSvg, boardLastMoveOuterRadius } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
-import { replayStepperCopy } from './replay-stepper-copy.js';
+import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
@@ -281,45 +281,50 @@ function iccsToMove(tok: string): XiangqiMove {
   return { from: conv(tok.slice(0, 2)), to: conv(tok.slice(2, 4)) };
 }
 
-export function mountXiangqiReplay(
-  host: HTMLElement,
-  spec: XiangqiReplaySpec,
-  options: { lang?: ArticleLang } = {},
-): XiangqiReplayController {
-  const copy = replayStepperCopy(options.lang, 'xiangqi');
-  let perspective: XiangqiColor = spec.perspective ?? 'red';
+type XiangqiReplayLine = {
+  moves: XiangqiMove[];
+  /** One position per ply, `states[0]` the start. */
+  states: XiangqiGameState[];
+  startState: XiangqiGameState;
+  firstMover: XiangqiColor;
+  secondMover: XiangqiColor;
+  /** A black-first line is numbered "1... , 2. , 2... , 3.", so the pairing is
+   *  shifted by one half-move. */
+  plyOffset: number;
+  total: number;
+};
+
+/**
+ * Replay once; cache every position so stepping is instant.
+ *
+ * Resuming past an arbiter-adjudicated draw is what makes a tournament record
+ * replayable at all. Xiangqi's repetition and progress-clock draws are claimed
+ * by a player or called by an arbiter, not automatic, so records run straight
+ * past them: a 2015 world championship game shuffled a horse and a cannon for
+ * eight plies, our kernel called the threefold at ply 200, and every position
+ * after that froze. The notation under the board stayed right, because
+ * formatXiangqiMoves already resumes; the board did not, so half the engine
+ * lines pointed at a position that no longer moved.
+ *
+ * Only the two reasons a human decides, from the kernel's own set. Checkmate
+ * and stalemate stay terminal, because no ruleset plays on through those.
+ */
+function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
   const moves = spec.iccs
     .trim()
     .split(/\s+/)
     .filter((t) => /^[a-i]\d[a-i]\d$/.test(t))
     .map(iccsToMove);
-
-  // Replay once; cache every position so stepping is instant.
-  //
-  // Resuming past an arbiter-adjudicated draw is what makes a tournament record
-  // replayable at all. Xiangqi's repetition and progress-clock draws are claimed
-  // by a player or called by an arbiter, not automatic, so records run straight
-  // past them: a 2015 world championship game shuffled a horse and a cannon for
-  // eight plies, our kernel called the threefold at ply 200, and every position
-  // after that froze. The notation under the board stayed right, because
-  // formatXiangqiMoves already resumes; the board did not, so half the engine
-  // lines pointed at a position that no longer moved.
-  //
-  // Only the two reasons a human decides, from the kernel's own set. Checkmate
-  // and stalemate stay terminal, because no ruleset plays on through those.
   const parsedStart = spec.startFen ? parseStandardXiangqiFen(spec.startFen, 'xq-replay') : null;
   const startState: XiangqiGameState =
     parsedStart?.ok === true ? parsedStart.state : createInitialXiangqiState('xq-replay');
   // Red opens a game, but not a chapter set from a FEN. Every ply-parity
-  // decision below counts from here rather than assuming Red is odd: the move
+  // decision counts from here rather than assuming Red is odd: the move
   // numbers, the Red/Black columns, and the two adjudicated-draw resumes.
   const firstMover: XiangqiColor =
     startState.status.type === 'playing' ? startState.status.turn : 'red';
   const secondMover: XiangqiColor = firstMover === 'red' ? 'black' : 'red';
-  // A black-first line is numbered "1... , 2. , 2... , 3.", so the pairing is
-  // shifted by one half-move.
   const plyOffset = firstMover === 'red' ? 0 : 1;
-
   const states: XiangqiGameState[] = [startState];
   for (const [index, move] of moves.entries()) {
     let state = states[states.length - 1]!;
@@ -331,7 +336,30 @@ export function mountXiangqiReplay(
     }
     states.push(applyXiangqiMove(state, move));
   }
-  const total = moves.length;
+  return { moves, states, startState, firstMover, secondMover, plyOffset, total: moves.length };
+}
+
+export type XiangqiReplayMountOptions = { lang?: ArticleLang };
+
+/** "Red wins" for a PGN-style result tag; nothing for an unfinished `*`; the
+ *  tag itself for a spelling this does not know. */
+export function xiangqiResultLabel(resultText: string, copy: ReplayStepperCopy): string {
+  const tag = resultText.trim();
+  if (tag === '*' || tag === '') return '';
+  if (tag === '1-0') return copy.wins(copy.first);
+  if (tag === '0-1') return copy.wins(copy.second);
+  if (tag === '1/2-1/2' || tag === '½-½') return copy.draw;
+  return tag;
+}
+
+export function mountXiangqiReplay(
+  host: HTMLElement,
+  spec: XiangqiReplaySpec,
+  options: XiangqiReplayMountOptions = {},
+): XiangqiReplayController {
+  const copy = replayStepperCopy(options.lang, 'xiangqi');
+  let perspective: XiangqiColor = spec.perspective ?? 'red';
+  const { moves, states, startState, firstMover, secondMover, plyOffset, total } = replayLine(spec);
 
   host.classList.add('xq-replay', 'stepper');
   host.tabIndex = 0;
@@ -1016,5 +1044,103 @@ export function mountXiangqiReplay(
       host.replaceChildren();
       host.classList.remove('xq-replay', 'stepper');
     },
+  };
+}
+
+/** What the board-only mount hands its host: the shape of the game replay
+ *  handles (`ReplayHandle`), so one card can drive a study board or a game
+ *  board without knowing which. */
+export type XiangqiReplayBoardHandle = {
+  destroy: () => void;
+  jumpToPly: (ply: number) => void;
+  plyCount: () => number;
+  /** One entry per mainline ply, labelled in the reader's notation, with the
+   *  judgment glyph as the suffix where the chapter carries one. */
+  moveEntries: () => Array<{ ply: number; label: string; suffix?: string; suffixClass?: string }>;
+  /** Which move-order seat sits at the bottom of the board. */
+  bottomSeat: () => 'first' | 'second';
+};
+
+const GLYPH_SUFFIX_CLASS: Record<string, string> = {
+  '??': 'blunder',
+  '?': 'mistake',
+  '?!': 'inaccuracy',
+  '!!': 'brilliant',
+  '!': 'great',
+};
+
+/**
+ * The board alone: the position at a ply, the last-move marks, the judgment
+ * badge on the played piece, and nothing else. The host draws the seats, the
+ * controls, the move list and the result around it (the embed card does), so
+ * a study and a game framed side by side are one card with two boards.
+ *
+ * Mainline only. Engine sidelines, the flip menu and the narrative are the
+ * article widget's (mountXiangqiReplay); an embed is a preview of a study,
+ * and the credit link is the way to the full thing.
+ */
+export function mountXiangqiReplayBoard(
+  host: HTMLElement,
+  spec: XiangqiReplaySpec,
+  hooks: { onPlyChange?: (ply: number, maxPly: number) => void } = {},
+): XiangqiReplayBoardHandle {
+  const perspective: XiangqiColor = spec.perspective ?? 'red';
+  const { moves, states, startState, firstMover, total } = replayLine(spec);
+  const annotated = spec.annotations;
+
+  const frame = document.createElement('div');
+  frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
+  host.replaceChildren(frame);
+
+  let index = 0;
+  let labels: string[] = [];
+  const relabel = (): void => {
+    labels = formatXiangqiMoves(moves, currentXiangqiNotationStyle(), startState);
+  };
+  relabel();
+
+  const render = (): void => {
+    const glyph = index > 0 ? annotated?.byPly[index]?.glyph : undefined;
+    frame.innerHTML = boardSvg(
+      states[index]!.board,
+      index > 0 ? moves[index - 1] : undefined,
+      perspective,
+      index,
+      glyph,
+    );
+    hooks.onPlyChange?.(index, total);
+  };
+  const onAppearance = (): void => render();
+  const onNotation = (): void => relabel();
+  window.addEventListener(xiangqiAppearanceChangedEvent, onAppearance);
+  window.addEventListener(xiangqiNotationChangedEvent, onNotation);
+  render();
+
+  return {
+    destroy: () => {
+      window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
+      window.removeEventListener(xiangqiNotationChangedEvent, onNotation);
+      host.replaceChildren();
+    },
+    jumpToPly: (ply) => {
+      const clamped = Math.max(0, Math.min(total, ply));
+      if (clamped === index) return;
+      index = clamped;
+      render();
+    },
+    plyCount: () => total,
+    moveEntries: () =>
+      moves.map((_, i) => {
+        const ply = i + 1;
+        const glyph = annotated?.byPly[ply]?.glyph;
+        return {
+          ply,
+          label: labels[i] ?? '',
+          ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
+        };
+      }),
+    // The board is drawn for `perspective`; that side sits at the bottom, and
+    // whether it is the first mover depends on who opened the line.
+    bottomSeat: () => (perspective === firstMover ? 'first' : 'second'),
   };
 }

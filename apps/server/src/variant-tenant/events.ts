@@ -521,7 +521,9 @@ export function tenantParticipant<
     color: color as persistence.GameParticipantColor,
     displayName: 'Guest',
     subjectType: 'guest',
-    subjectId: null,
+    // The browser's device id (migration 137), so guest games are countable
+    // per visitor; null for seats whose holder never connected.
+    subjectId: token?.deviceId ?? null,
     visibility,
   };
 }
@@ -550,6 +552,7 @@ export function persistenceRecordForTenantSeatToken<C extends string>(
   return {
     seat: token.seat as C & persistence.RoomSeatTokenSeat,
     clientId: token.clientId,
+    deviceId: token.deviceId ?? null,
     tokenHash: token.tokenHash,
     userId: token.userId,
     userHandle: token.userHandle,

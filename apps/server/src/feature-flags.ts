@@ -60,7 +60,7 @@ export function duckXiangqiEnabled(): boolean {
 // Hong Kong mahjong live rooms. Server-side opt-in, default off.
 //
 // This flag is not the only gate and is not meant to be. Mahjong is also on the
-// per-account allowlist (136), so turning it on in an environment opens the
+// per-account allowlist (139), so turning it on in an environment opens the
 // variant to the handful of people holding a grant and to nobody else. That is
 // deliberate: the hand mathematics is proven against an independent
 // implementation, but the faan values were read off sources that disagree with

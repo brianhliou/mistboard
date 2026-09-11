@@ -68,7 +68,8 @@ export function assignTenantSeat<
   clientId: string,
   rawToken: string | undefined,
   accountUser: UserAccount | null,
-  // Whether this account holds a grant for an allowlist-gated variant (136).
+  deviceId: string | null = null,
+  // Whether this account holds a grant for an allowlist-gated variant (139).
   // Resolved by the caller because the lookup is a query and this function is
   // synchronous. Defaults to allowed: every non-gated variant, and every test
   // that predates the gate, behaves exactly as before.
@@ -82,7 +83,14 @@ export function assignTenantSeat<
         if (state.userId !== null && state.userId !== accountUser?.id) {
           return { ok: false, reason: 'private room' };
         }
-        const tokenState = { ...state, clientId, lastSeenAt: new Date() };
+        // A pre-issued seat (rematch, or minted before migration 137) learns
+        // its device on the first reconnect that carries one.
+        const tokenState = {
+          ...state,
+          clientId,
+          deviceId: state.deviceId ?? deviceId,
+          lastSeenAt: new Date(),
+        };
         room.seatTokens[color] = tokenState;
         return {
           ok: true,
@@ -99,7 +107,12 @@ export function assignTenantSeat<
     for (const color of tenant.colors) {
       const state = room.seatTokens[color];
       if (state && state.revokedAt === null && state.userId === accountUser.id) {
-        const tokenState = { ...state, clientId, lastSeenAt: new Date() };
+        const tokenState = {
+          ...state,
+          clientId,
+          deviceId: state.deviceId ?? deviceId,
+          lastSeenAt: new Date(),
+        };
         room.seatTokens[color] = tokenState;
         return {
           ok: true,
@@ -124,7 +137,7 @@ export function assignTenantSeat<
   // above have already returned, so locking an account never strands it in a
   // game it is already sitting in.
   if (isPlayDisabled(accountUser)) return { ok: false, reason: 'play disabled' };
-  // Allowlist-gated variant (136). Like the play lock, this is the new-seat
+  // Allowlist-gated variant (139). Like the play lock, this is the new-seat
   // path only: both reclaim branches returned above, so revoking access never
   // throws somebody out of a hand they are in the middle of playing.
   if (!variantAccessGranted) return { ok: false, reason: 'variant not granted' };
@@ -142,6 +155,7 @@ export function assignTenantSeat<
   const now = new Date();
   const tokenState: TenantSeatTokenState<C> = {
     clientId,
+    deviceId,
     seat,
     tokenHash: seatTokenHash,
     userId: accountUser?.id ?? null,
@@ -169,6 +183,8 @@ export function mintTenantSeatToken<C extends string>(
   const now = new Date();
   const state: TenantSeatTokenState<C> = {
     clientId: randomUUID(),
+    // The holder has not connected yet; assignTenantSeat fills this in.
+    deviceId: null,
     seat,
     tokenHash: hashSeatToken(rawToken),
     userId: identity.userId,

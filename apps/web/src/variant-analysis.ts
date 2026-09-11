@@ -416,11 +416,12 @@ export async function mountVariantAnalysisPage(
       return;
     }
     case 'duck-xiangqi': {
-      // The one board here with NO "Board editor" hand-off: the duck is not a
-      // piece, so the position editor has no way to hold it and there is no
-      // /editor/duck-xiangqi route (editor/editor-catalog.ts). Omitting
-      // boardEditorHref is what drops the menu item and the import block's
-      // editor link; the analysis surface is otherwise the full one.
+      // This board had NO "Board editor" hand-off until 2026-09-10: the duck is
+      // not a piece, so the editor's model had nowhere to keep it and there was
+      // no /editor/duck-xiangqi route. The model now carries the duck in its own
+      // field (editor/editor-model.ts), so the hand-off is the ordinary one, and
+      // it carries the SEVEN-field FEN: the seventh field is the duck, and an
+      // editor link that dropped it would open a different position.
       const [
         { mountDuckXiangqiReview },
         { duckXiangqiTreeAdapter },
@@ -441,6 +442,7 @@ export async function mountVariantAnalysisPage(
         moves: movesFromParam(movesParam, duckXiangqiTreeAdapter, rootTruth),
         importPanel: makeImportPanel(id, duckXiangqiTreeAdapter, rootTruth),
         onLineChange: syncLineToUrl(duckXiangqiTreeAdapter),
+        boardEditorHref: (node) => editorHref(id, duckXiangqiFen(node)),
       });
       return;
     }

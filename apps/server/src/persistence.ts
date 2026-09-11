@@ -458,9 +458,11 @@ export type {
   PublicSiteStats,
   PublicStatsDay,
   PublicStatsMode,
+  PublicStatsWeek,
   SiteStats,
 } from './persistence-site-stats.js';
 export { getPublicSiteStats, getSiteStats } from './persistence-site-stats.js';
+export { rememberStatsExcludedDevice } from './persistence-stats-excluded-devices.js';
 export type {
   AddChapterResult,
   CreateStudyInput,

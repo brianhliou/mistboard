@@ -1,19 +1,28 @@
 #!/usr/bin/env node
 // Read and set the account switches that have no UI: the admin role, the play
-// lock, and per-variant access. All are manual-grant only by design, so this
-// script is the whole mechanism outside `db:seed:qa`, which promotes the local
-// QA email.
+// lock, the statistics exclusion, and per-variant access. All are manual-grant
+// only by design, so this script is the whole mechanism outside `db:seed:qa`,
+// which promotes the local QA email. The account is addressed by email, or by
+// @handle.
 //
-//   node scripts/account-flags.mjs <email>                  # show the row, change nothing
-//   node scripts/account-flags.mjs <email> --grant-admin    # promote to admin
-//   node scripts/account-flags.mjs <email> --revoke-admin   # demote to player
-//   node scripts/account-flags.mjs <email> --disable-play   # no games, no puzzles
-//   node scripts/account-flags.mjs <email> --enable-play    # let it play again
-//   node scripts/account-flags.mjs <email> --grant-variant mahjong --note 'hk tester'
-//   node scripts/account-flags.mjs <email> --revoke-variant mahjong
+//   node scripts/account-flags.mjs <email|@handle>                       # show the row, change nothing
+//   node scripts/account-flags.mjs <email|@handle> --grant-admin         # promote to admin
+//   node scripts/account-flags.mjs <email|@handle> --revoke-admin        # demote to player
+//   node scripts/account-flags.mjs <email|@handle> --disable-play        # no games, no puzzles
+//   node scripts/account-flags.mjs <email|@handle> --enable-play         # let it play again
+//   node scripts/account-flags.mjs <email|@handle> --exclude-from-stats  # its games leave every count
+//   node scripts/account-flags.mjs <email|@handle> --include-in-stats    # count them again
+//   node scripts/account-flags.mjs <email|@handle> --grant-variant mahjong --note 'hk tester'
+//   node scripts/account-flags.mjs <email|@handle> --revoke-variant mahjong
 //
-// Variant access (136) is for a variant that runs but whose rules nobody
-// trusted yet: playable by the handful of people who know they are checking it,
+// The statistics exclusion (users.stats_excluded_at, migration 136) is for the
+// operator's own accounts: their games stay on their profiles and in replays,
+// but drop out of /stats, the homepage games-played number, /metrics, and the
+// readout, matching the PostHog test-account filter. On 2026-09-11 those
+// accounts had played 512 of 988 completed human games.
+//
+// Variant access (139) is for a variant that runs but whose rules nobody has
+// checked yet: playable by the handful of people who know they are checking it,
 // and by nobody else. Revoking never removes somebody from a game already in
 // progress; it only stops them taking a new seat.
 //
@@ -44,6 +53,8 @@ const { values, positionals } = parseArgs({
     'revoke-admin': { type: 'boolean', default: false },
     'disable-play': { type: 'boolean', default: false },
     'enable-play': { type: 'boolean', default: false },
+    'exclude-from-stats': { type: 'boolean', default: false },
+    'include-in-stats': { type: 'boolean', default: false },
     'grant-variant': { type: 'string' },
     'revoke-variant': { type: 'string' },
     note: { type: 'string' },
@@ -58,10 +69,14 @@ function fail(message) {
 const email = positionals[0];
 if (!email) {
   fail(
-    'Usage: node scripts/account-flags.mjs <email> ' +
+    'Usage: node scripts/account-flags.mjs <email|@handle> ' +
       '[--grant-admin|--revoke-admin] [--disable-play|--enable-play] ' +
+      '[--exclude-from-stats|--include-in-stats] ' +
       '[--grant-variant <spec>|--revoke-variant <spec>] [--note <text>]',
   );
+}
+if (values['exclude-from-stats'] && values['include-in-stats']) {
+  fail('Pass one of --exclude-from-stats or --include-in-stats, not both.');
 }
 if (values['grant-admin'] && values['revoke-admin']) {
   fail('Pass one of --grant-admin or --revoke-admin, not both.');
@@ -87,16 +102,25 @@ const targetRole = values['grant-admin'] ? 'admin' : values['revoke-admin'] ? 'p
 const targetLock = values['disable-play'] ? true : values['enable-play'] ? false : null;
 const grantVariant = values['grant-variant'] ?? null;
 const revokeVariant = values['revoke-variant'] ?? null;
+const targetExcluded = values['exclude-from-stats']
+  ? true
+  : values['include-in-stats']
+    ? false
+    : null;
 
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
 await client.connect();
 try {
   // lower(email) matches findUserByEmail, so the row this resolves to is the
-  // same one a sign-in resolves to.
+  // same one a sign-in resolves to. A leading @ addresses the handle instead,
+  // for accounts whose mailbox nobody remembers (the official @mistboard).
+  const byHandle = email.startsWith('@');
   const found = await client.query(
-    `SELECT id, email, handle, display_name, account_role, email_verified_at, play_disabled_at
-       FROM users WHERE lower(email) = lower($1) LIMIT 1`,
-    [email],
+    `SELECT id, email, handle, display_name, account_role, email_verified_at, play_disabled_at,
+            stats_excluded_at
+       FROM users WHERE ${byHandle ? 'lower(handle) = lower($1)' : 'lower(email) = lower($1)'}
+       LIMIT 1`,
+    [byHandle ? email.slice(1) : email],
   );
   const row = found.rows[0];
   if (!row) {
@@ -106,10 +130,17 @@ try {
   console.log(
     `${row.email} -> @${row.handle} (${row.display_name}), role=${row.account_role}, ` +
       `play=${row.play_disabled_at ? `disabled since ${row.play_disabled_at.toISOString()}` : 'enabled'}, ` +
+      `stats=${row.stats_excluded_at ? `excluded since ${row.stats_excluded_at.toISOString()}` : 'counted'}, ` +
       `verified=${row.email_verified_at ? 'yes' : 'no'}, id=${row.id}`,
   );
 
-  if (targetRole === null && targetLock === null && !grantVariant && !revokeVariant) {
+  if (
+    targetRole === null &&
+    targetLock === null &&
+    targetExcluded === null &&
+    !grantVariant &&
+    !revokeVariant
+  ) {
     console.log('Read-only run. Pass a flag to change something.');
   }
 
@@ -139,6 +170,24 @@ try {
       );
       console.log(
         `Play ${locked ? 'disabled' : 'enabled'} -> ${targetLock ? 'disabled' : 'enabled'}.`,
+      );
+    }
+  }
+
+  if (targetExcluded !== null) {
+    const excluded = row.stats_excluded_at !== null;
+    if (excluded === targetExcluded) {
+      console.log(`Stats already ${targetExcluded ? 'excluded' : 'counted'}. Nothing to do.`);
+    } else {
+      await client.query(
+        `UPDATE users
+            SET stats_excluded_at = CASE WHEN $2 THEN now() ELSE NULL END,
+                updated_at = now()
+          WHERE id = $1`,
+        [row.id, targetExcluded],
+      );
+      console.log(
+        `Stats ${excluded ? 'excluded' : 'counted'} -> ${targetExcluded ? 'excluded' : 'counted'}.`,
       );
     }
   }
@@ -181,6 +230,12 @@ try {
   console.log(`Admins now: ${admins.rows.map((r) => `@${r.handle}`).join(', ') || '(none)'}`);
   console.log(
     `Play-disabled now: ${locked.rows.map((r) => `@${r.handle}`).join(', ') || '(none)'}`,
+  );
+  const excluded = await client.query(
+    `SELECT handle FROM users WHERE stats_excluded_at IS NOT NULL ORDER BY handle`,
+  );
+  console.log(
+    `Excluded from stats now: ${excluded.rows.map((r) => `@${r.handle}`).join(', ') || '(none)'}`,
   );
 } finally {
   await client.end();

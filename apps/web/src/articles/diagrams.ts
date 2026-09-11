@@ -1358,7 +1358,11 @@ export function withXiangqiBoardLayout(layout: XiangqiBoardLayout, render: () =>
 
 // Piece disc size + fog half-cell for the active layout (the square grid uses a
 // slightly smaller cell than the intersection board).
-function xqPieceSize(): number {
+//
+// Exported because the Duck Xiangqi figures draw the duck as an overlay above
+// the piece layer rather than as a piece, and it has to be sized by exactly this
+// number or it drifts from the discs beside it whenever the layout changes.
+export function xqPieceSize(): number {
   return activeXiangqiBoardLayout === 'cell' ? XQ_CELL_PIECE_SIZE : XQ_PIECE_SIZE;
 }
 function xqHalfCell(): number {

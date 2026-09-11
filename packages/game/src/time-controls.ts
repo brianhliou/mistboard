@@ -8,6 +8,7 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
   type GameSpecId,
   JIEQI_SPEC_ID,
   XIANGQI_SPEC_ID,
@@ -164,6 +165,11 @@ export const ENGINE_PINNED_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
 const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
   [XIANGQI_SPEC_ID]: '10m5',
   [JIEQI_SPEC_ID]: '10m5',
+  // Duck offers only 5+5 and 10+5 (registry.ts): games run ~177 plies at
+  // engine strength, so a 1+1 would be decided by the clock. Without an entry
+  // here the house 3+2 would be preselected and advertised on a variant that
+  // rejects it.
+  [DUCK_XIANGQI_SPEC_ID]: '5m5',
 };
 
 /** The house pace, for every variant that does not name its own. */

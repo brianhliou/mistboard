@@ -27,6 +27,7 @@ const alice: AdminAccountRow = {
   createdAt: new Date('2026-08-01T10:00:00.000Z'),
   lastSeenAt: new Date('2026-08-27T09:30:00.000Z'),
   closedAt: null,
+  statsExcludedAt: null,
   gamesPlayed: 12,
 };
 
@@ -40,6 +41,7 @@ const bob: AdminAccountRow = {
   patronSince: null,
   lastSeenAt: null,
   closedAt: new Date('2026-08-20T00:00:00.000Z'),
+  statsExcludedAt: null,
   gamesPlayed: 0,
 };
 
@@ -131,6 +133,7 @@ test('the API passes the parsed query through and serializes rows for the browse
         createdAt: '2026-08-01T10:00:00.000Z',
         lastSeenAt: '2026-08-27T09:30:00.000Z',
         closedAt: null,
+        statsExcluded: false,
         gamesPlayed: 12,
       },
       {
@@ -146,6 +149,7 @@ test('the API passes the parsed query through and serializes rows for the browse
         createdAt: '2026-08-01T10:00:00.000Z',
         lastSeenAt: null,
         closedAt: '2026-08-20T00:00:00.000Z',
+        statsExcluded: false,
         gamesPlayed: 0,
       },
     ],

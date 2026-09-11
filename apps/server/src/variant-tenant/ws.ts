@@ -29,6 +29,7 @@ import {
   seatTokenFromProtocolHeader,
 } from '../server-policy.js';
 import { isKnownClientMessageType, parseClientMessage } from '../server-ws-messages.js';
+import { rememberExcludedDevice } from '../stats-excluded-device.js';
 import {
   appendTenantEvent,
   appendTenantSeatAssigned,
@@ -187,9 +188,12 @@ export function createTenantWsRuntime<
   ): Promise<void> {
     const url = new URL(request.url ?? '/', `http://${request.headers.host ?? 'localhost'}`);
     const clientId = parseClientId(url.searchParams.get('client')) ?? randomUUID();
+    // The browser's durable id; a guest seat is attributed to it at game end.
+    const deviceId = parseClientId(url.searchParams.get('device'));
     const accountUser = await currentAccountUser(request);
+    rememberExcludedDevice(deviceId, accountUser);
     const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
-    // Allowlist-gated variants (136) ask the grant table before handing out a
+    // Allowlist-gated variants (139) ask the grant table before handing out a
     // seat. Non-gated specs short-circuit to true without a query.
     const variantAccessGranted = await mayPlayVariant(accountUser?.id ?? null, tenant.gameSpecId);
     const assignment = assignTenantSeat(
@@ -198,6 +202,7 @@ export function createTenantWsRuntime<
       clientId,
       seatToken,
       accountUser,
+      deviceId,
       variantAccessGranted,
     );
     if (!assignment.ok) {

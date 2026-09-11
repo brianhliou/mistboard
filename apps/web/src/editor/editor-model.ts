@@ -32,6 +32,26 @@ export interface EditorChessExtras {
   epSquare: string | null;
 }
 
+/**
+ * The duck. Duck Xiangqi only, read by the duck-xiangqi spec alone.
+ *
+ * It rides its own field rather than the board because it is NOT a piece: it
+ * belongs to neither colour and has no role, so there is no honest EditorPiece
+ * to make of it, and inventing one is precisely the bug that kept this variant
+ * out of the editor (every round trip would hand the position back with a
+ * red or black something standing where the duck was).
+ *
+ * `square: null` is a REAL position, not an empty one. The duck starts off the
+ * board and enters as the second half of Red's first turn, so "no duck" is the
+ * opening and has to round-trip; the FEN spells it as a seventh field of '-'
+ * (packages/game/src/duck-xiangqi-fen.ts). The distinction the optional field
+ * carries is therefore three-way: absent = this variant has no duck at all,
+ * `{ square: null }` = off the board, `{ square: 'e5' }` = on e5.
+ */
+export interface EditorDuckExtras {
+  square: string | null;
+}
+
 export interface EditorModel {
   board: EditorBoard;
   turn: EditorTurn;
@@ -42,6 +62,9 @@ export interface EditorModel {
   captured: Map<string, number>;
   /** Chess only: castling rights + en passant. Absent (and ignored) elsewhere. */
   chess?: EditorChessExtras;
+  /** Duck Xiangqi only: the duck's point, or null when it is off the board.
+   *  Absent (and ignored) elsewhere. */
+  duck?: EditorDuckExtras;
 }
 
 export function emptyModel(turn: EditorTurn): EditorModel {
@@ -57,7 +80,28 @@ export function cloneModel(model: EditorModel): EditorModel {
     ...(model.chess
       ? { chess: { castling: { ...model.chess.castling }, epSquare: model.chess.epSquare } }
       : {}),
+    ...(model.duck ? { duck: { square: model.duck.square } } : {}),
   };
+}
+
+// ── Placement subjects ──────────────────────────────────────────────────────
+
+/** The duck, as something a brush can put on a point. Deliberately not an
+ *  EditorPiece: the whole reason the duck has its own model field is that it
+ *  has no colour and no role, and a subject union says that at the one place
+ *  that has to talk about both (`EditorSpec.placementProblem`). */
+export interface EditorDuckSubject {
+  duck: true;
+}
+
+export const DUCK_SUBJECT: EditorDuckSubject = { duck: true };
+
+/** What a placement rule is asked about: a piece bound for `board`, or the duck
+ *  bound for `duck`. */
+export type EditorPlacementSubject = EditorPiece | EditorDuckSubject;
+
+export function isDuckSubject(subject: EditorPlacementSubject): subject is EditorDuckSubject {
+  return 'duck' in subject;
 }
 
 export function capturedKey(color: EditorColor, role: string): string {

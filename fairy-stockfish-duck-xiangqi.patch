@@ -1,44 +1,73 @@
+diff --git a/src/movegen.cpp b/src/movegen.cpp
+index a7b6a9f..b92ed24 100644
+--- a/src/movegen.cpp
++++ b/src/movegen.cpp
+@@ -405,6 +405,42 @@ namespace {
+         moveList = generate_pawn_moves<Us, Type>(pos, moveList, target);
+         for (PieceSet ps = pos.piece_types() & ~(piece_set(PAWN) | KING); ps;)
+             moveList = generate_moves<Us, Type>(pos, moveList, pop_lsb(ps), target);
++
++        // MISTBOARD PATCH (Duck Xiangqi): the flying general, as a real CAPTURE.
++        //
++        // Xiangqi's generals bear on each other down a clear file. Upstream
++        // expresses that as a prohibition in legal(), which is correct while
++        // the general is ROYAL, because then facing is self-check. A variant
++        // whose general is NOT royal has no check to appeal to - Duck Xiangqi
++        // is one, since `wallingRule = duck` refuses a royal king - and there
++        // the same fact has to be expressed the other way round: the attack is
++        // a move, and the game ends when it is played.
++        //
++        // Guarded on count<KING>() so the two readings never both apply. A
++        // royal-king variant (standard xiangqi, janggi) keeps the prohibition
++        // in legal() and never reaches this; only a non-royal general gets the
++        // capture. Restricted to the FILE rather than taking rook attacks
++        // whole: the rank is not part of the rule, and although two palaces on
++        // a 9x10 board can never share a rank, a variants.ini is free to put
++        // them somewhere that can.
++        //
++        // pieces() includes wall squares, so a duck standing on the file
++        // blocks this exactly as a piece does, which is the whole reason the
++        // duck is worth placing there.
++        if (pos.variant()->flyingGeneral && Type != QUIETS && Type != QUIET_CHECKS
++            && !pos.count<KING>(Us))
++        {
++            PieceType gtUs = pos.general_type(Us), gtThem = pos.general_type(~Us);
++            if (pos.pieces(Us, gtUs) && pos.pieces(~Us, gtThem))
++            {
++                Square gfrom = lsb(pos.pieces(Us, gtUs));
++                Bitboard b =  attacks_bb(Us, ROOK, gfrom, pos.pieces())
++                            & file_bb(file_of(gfrom))
++                            & pos.pieces(~Us, gtThem);
++                if (b)
++                    *moveList++ = make_move(gfrom, lsb(b));
++            }
++        }
+         // generate drops
+         if (pos.piece_drops() && Type != CAPTURES && (pos.can_drop(Us, ALL_PIECES) || pos.two_boards()))
+             for (PieceSet ps = pos.piece_types(); ps;)
 diff --git a/src/position.cpp b/src/position.cpp
-index 352b6d5..ea71aed 100644
+index 352b6d5..25ff999 100644
 --- a/src/position.cpp
 +++ b/src/position.cpp
-@@ -1265,11 +1265,32 @@ bool Position::legal(Move m) const {
+@@ -1265,6 +1265,17 @@ bool Position::legal(Move m) const {
    // In case of bikjang passing is always allowed, even when in check
    if (st->bikjang && is_pass(m))
        return true;
--  if ((var->flyingGeneral && count<KING>(us)) || st->bikjang)
-+  // MISTBOARD PATCH (Duck Xiangqi): the flying general rule is written against
-+  // the royal KING, but a variant may make the general NON-royal - the parser
-+  // refuses `wallingRule = duck` while any royal king exists - and then the
-+  // extinction piece type is the general. Unpatched, this rule switches ITSELF
-+  // off, because its own guard asks whether a royal king is present.
-+  // Falls back to KING whenever one exists, so every other variant is unchanged.
-+  const PieceType generalType = general_type(us);
-+  if ((var->flyingGeneral && pieces(us, generalType)) || st->bikjang)
++  // MISTBOARD PATCH (Duck Xiangqi): REVERTED to upstream on 2026-09-10.
++  // This block is the flying-general PROHIBITION, and it is correct only for a
++  // variant that also has check: leaving the generals facing is self-check, and
++  // self-check is the thing actually forbidden. Duck Xiangqi has no check (its
++  // general is a non-royal wazir, because `wallingRule = duck` refuses a royal
++  // king), so there is nothing for the prohibition to rest on. The rule is not
++  // dropped there, it is PROMOTED into a capture, generated in movegen.cpp -
++  // see the MISTBOARD PATCH block in generate_all().
++  // Guarding on count<KING>() is therefore right rather than a bug: it is what
++  // splits "the general is royal, forbid facing" from "the general is not,
++  // allow it and let the capture happen".
+   if ((var->flyingGeneral && count<KING>(us)) || st->bikjang)
    {
--      Square s = type_of(moved_piece(m)) == KING ? to : square<KING>(us);
--      if (attacks_bb(~us, ROOK, s, occupied) & pieces(~us, KING) & ~square_bb(to))
-+      Square s = type_of(moved_piece(m)) == generalType ? to : lsb(pieces(us, generalType));
-+      // Half one: the position after the PIECE move, duck still where it stood.
-+      if (attacks_bb(~us, ROOK, s, occupied) & pieces(~us, generalType) & ~square_bb(to))
-           return false;
-+      // MISTBOARD PATCH: half two. Under `wallingRule = duck` the duck also moves
-+      // this turn, so a duck that was the only thing blocking the general file can
-+      // vacate it. Re-test with the duck lifted from where it stood and placed
-+      // where it lands. Both halves must pass: a turn may neither create nor
-+      // leave a facing position.
-+      // `walling()`, not `is_gating(m)`: a walling move does not set the gating
-+      // flag, which is why FSF's own pseudo-royal path above tests it this way.
-+      if (walling_rule() == DUCK && walling())
-+      {
-+          Bitboard occDuck = (occupied & ~st->wallSquares) | gating_square(m);
-+          if (attacks_bb(~us, ROOK, s, occDuck) & pieces(~us, generalType) & ~square_bb(to))
-+              return false;
-+      }
-   }
- 
-   // Makpong rule
-@@ -2516,10 +2537,14 @@ bool Position::see_ge(Move m, Value threshold) const {
+       Square s = type_of(moved_piece(m)) == KING ? to : square<KING>(us);
+@@ -2516,10 +2527,14 @@ bool Position::see_ge(Move m, Value threshold) const {
    // Flying general rule
    if (var->flyingGeneral)
    {

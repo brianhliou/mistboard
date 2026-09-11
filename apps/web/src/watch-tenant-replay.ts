@@ -442,9 +442,15 @@ export async function mountTenantWatchReplay<
     }
   };
 
-  const compactSeatRow = (name: string): { row: HTMLElement; clockEl: HTMLElement } => {
+  const compactSeatRow = (
+    name: string,
+    side: 'first' | 'second',
+  ): { row: HTMLElement; clockEl: HTMLElement } => {
     const row = document.createElement('div');
     row.className = 'showcase-seat';
+    // Which move-order seat this row names, for a host that wants to paint the
+    // seat's ink beside it (the game embed). The row itself stays colour-blind.
+    row.dataset.seat = side;
     const nameEl = document.createElement('span');
     nameEl.className = 'showcase-seat-name';
     nameEl.textContent = name;
@@ -766,8 +772,8 @@ export async function mountTenantWatchReplay<
           : side === 'first'
             ? t('replay.red', {}, locale)
             : t('replay.black', {}, locale);
-      const topSeat = compactSeatRow(nameFor(topSide));
-      const bottomSeat = compactSeatRow(nameFor(bottomSide));
+      const topSeat = compactSeatRow(nameFor(topSide), topSide);
+      const bottomSeat = compactSeatRow(nameFor(bottomSide), bottomSide);
       compactSeats = {
         top: { row: topSeat.row, clockEl: topSeat.clockEl, side: topSide },
         bottom: { row: bottomSeat.row, clockEl: bottomSeat.clockEl, side: bottomSide },
@@ -1058,6 +1064,7 @@ export async function mountTenantWatchReplay<
       boardOrientation = target.orientation;
       sync();
     },
+    bottomSeat: () => (boardOrientation === 'red' ? 'first' : 'second'),
     availablePovs: () => {
       if (!activePostgame) return [];
       const kinds = new Set<'white' | 'truth' | 'black'>();

@@ -888,8 +888,8 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // Both gated on the SAME predicate. The conformance test checks exactly
       // this, because gating the menu and the deep link on neighbouring flags
       // has shipped twice.
-      offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: hiddenFromMenu,
+      offerInMenu: duckXiangqiEnabled,
+      acceptsDeepLink: duckXiangqiEnabled,
       // Eight-level Fairy-Stockfish ladder on the patched duck binary, ordered
       // strongest-first like the other xiangqi pickers. Node-anchored and
       // classical: the node budgets are lower than the fortress ladder's at the

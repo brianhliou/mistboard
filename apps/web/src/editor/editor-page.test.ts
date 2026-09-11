@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it } from 'vitest';
+import { variantPublicSurfaceEnabled } from '../variant-public-surfaces.js';
 import { EDITOR_VARIANTS, type EditorVariantId } from './editor-catalog.js';
 import { mountEditorPage } from './editor-page.js';
 
@@ -59,7 +60,14 @@ describe('editor page', () => {
       const select = el.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
       expect(select, 'variant picker').not.toBeNull();
       expect(select!.value).toBe(variant.id);
-      expect(select!.options.length).toBe(EDITOR_VARIANTS.length);
+      // The picker is a public surface: an unlaunched variant is reachable by
+      // URL but not offered, except when it is the one you are already on
+      // (buildVariantPicker). Duck Xiangqi is the first editor variant that is
+      // unlaunched, so the row count is the offered list, not the whole list.
+      const offered = EDITOR_VARIANTS.filter(
+        (entry) => entry.id === variant.id || variantPublicSurfaceEnabled(entry.id),
+      );
+      expect(select!.options.length).toBe(offered.length);
       expect(el.querySelector('.editor-board__svg svg'), 'board svg').not.toBeNull();
       expect(el.querySelectorAll('.editor-square').length).toBeGreaterThan(0);
       expect(fenField(el).value).not.toBe('');
@@ -322,6 +330,86 @@ describe('editor page', () => {
     square(el, 'e5').click();
     square(el, 'a5').click();
     expect(window.history.length).toBe(before);
+  });
+
+  // The duck brush is the only brush on any variant that does not paint a piece.
+  // Everything here is about the page keeping that true.
+  describe('duck-xiangqi', () => {
+    const START = 'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR w - - 0 1';
+
+    function duckBrush(el: HTMLElement): HTMLButtonElement {
+      return el.querySelector<HTMLButtonElement>('.editor-palette__piece[data-role="duck"]')!;
+    }
+
+    it('opens with the duck off the board and the brush on the colourless row', () => {
+      const el = mount('duck-xiangqi');
+      expect(fenField(el).value).toBe(`${START} -`);
+      // Colourless: on the brush row, never in either seat's palette.
+      expect(el.querySelector('.editor-brushes [data-role="duck"]')).not.toBeNull();
+      expect(el.querySelector('.editor-palette [data-role="duck"]')).toBeNull();
+      expect(duckBrush(el).dataset.color).toBe('none');
+      const link = el.querySelector<HTMLAnchorElement>('.editor-analysis-link')!;
+      expect(link.getAttribute('aria-disabled')).toBe('false');
+    });
+
+    it('painting the duck twice MOVES it: there is only ever one', () => {
+      const el = mount('duck-xiangqi');
+      duckBrush(el).click();
+      square(el, 'e6').click();
+      expect(fenField(el).value).toBe(`${START} e6`);
+      expect(el.querySelectorAll('[data-duck-square]').length).toBe(1);
+      // The brush stays selected, so a second point is the same duck landing
+      // somewhere else, not a second duck.
+      square(el, 'e5').click();
+      expect(fenField(el).value).toBe(`${START} e5`);
+      expect(el.querySelectorAll('[data-duck-square]').length).toBe(1);
+      expect(el.querySelector('[data-duck-square="e5"]')).not.toBeNull();
+    });
+
+    it('the duck cannot be painted onto an occupied point', () => {
+      const el = mount('duck-xiangqi');
+      duckBrush(el).click();
+      // a1 holds a red chariot.
+      square(el, 'a1').click();
+      expect(fenField(el).value).toBe(`${START} -`);
+      const notice = el.querySelector<HTMLElement>('.editor-notice')!;
+      expect(notice.hidden).toBe(false);
+      expect(notice.textContent).toContain('share a point');
+    });
+
+    it('a piece cannot be moved onto the duck', () => {
+      const el = mount('duck-xiangqi');
+      duckBrush(el).click();
+      square(el, 'a3').click();
+      expect(fenField(el).value).toBe(`${START} a3`);
+      // Red's a-file soldier sits on a4; a3 is the duck.
+      brush(el, 'pointer').click();
+      square(el, 'a4').click();
+      square(el, 'a3').click();
+      expect(fenField(el).value).toBe(`${START} a3`);
+      expect(el.querySelector<HTMLElement>('.editor-notice')!.textContent).toContain(
+        'stand on the duck',
+      );
+    });
+
+    it('the delete brush takes the duck off, and Clear board does too', () => {
+      const el = mount('duck-xiangqi');
+      duckBrush(el).click();
+      square(el, 'e6').click();
+      brush(el, 'delete').click();
+      square(el, 'e6').click();
+      expect(fenField(el).value).toBe(`${START} -`);
+      duckBrush(el).click();
+      square(el, 'e6').click();
+      buttonNamed(el, 'Clear board').click();
+      expect(fenField(el).value).toBe('9/9/9/9/9/9/9/9/9/9 w - - 0 1 -');
+    });
+
+    it('?fen= seeds the duck from the seventh field', () => {
+      const el = mount('duck-xiangqi', `${START} c5`);
+      expect(fenField(el).value).toBe(`${START} c5`);
+      expect(el.querySelector('[data-duck-square="c5"]')).not.toBeNull();
+    });
   });
 
   it('jieqi: the palette has no dark general', () => {

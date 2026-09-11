@@ -89,6 +89,41 @@ test('a duck placement is what distinguishes two turns with the same piece move'
   assert.equal(legalTurnForUci(turns, 'a1a2,a2e1'), null, 'e1 holds the red general');
 });
 
+test('the flying general capture resolves from the token the engine prints', () => {
+  // D5 (2026-09-10) added a move class that had never gone through this matcher:
+  // the general flying down a clear file to take the other general. It is a
+  // general capture, so the kernel gives it `duckTo: null` and one turn.
+  //
+  // The engine prints it with a duck half anyway. Measured from the patched
+  // binary on this exact position: `bestmove e2e9,e9a1`, where a1 is simply
+  // where the duck already stands, because the generated move carries no
+  // gating square and FSF prints the empty one as a1. The duck half is noise
+  // and the piece half is the whole match, which is what the capture branch of
+  // legalTurnForUci already does.
+  const state: DuckXiangqiGameState = {
+    id: 'flying-capture',
+    board: {
+      e2: { color: 'red', role: 'general' },
+      e9: { color: 'black', role: 'general' },
+      a4: { color: 'red', role: 'soldier' },
+    },
+    duck: 'a1',
+    status: { type: 'playing', turn: 'red' },
+    moveNumber: 1,
+    positionCounts: {},
+    progressPlies: 0,
+  };
+  const turns = getDuckXiangqiLegalTurns(state);
+  const flight = turns.filter((turn) => turn.from === 'e2' && turn.to === 'e9');
+  assert.equal(flight.length, 1, 'one turn, not one per duck point');
+  assert.equal(flight[0].duckTo, null);
+  assert.equal(duckXiangqiTurnToFsfUci(flight[0]), 'e2e9', 'we spell it as the piece half alone');
+
+  // Both spellings must land on the same kernel turn: ours, and the engine's.
+  assert.equal(legalTurnForUci(turns, 'e2e9'), flight[0]);
+  assert.equal(legalTurnForUci(turns, 'e2e9,e9a1'), flight[0], "the engine's own token");
+});
+
 test('a general capture is one kernel turn against many engine tokens', () => {
   const turns = getDuckXiangqiLegalTurns(generalCaptureState());
   const capture = turns.filter((turn) => turn.duckTo === null);

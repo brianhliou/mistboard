@@ -13,7 +13,7 @@ import {
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUAL_CHESS_SPEC_ID,
-  type DUCK_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
   engineTimeControlPin,
   FORTRESS_XIANGQI_SPEC_ID,
   gameSpecForId,
@@ -68,12 +68,18 @@ export type PlayableEngine = {
   kind: string;
 };
 
+// Which door opened the dialog, for the setup_dialog_opened event: the hero
+// button, a deep link (?play=...), the correspondence tab's create button, or
+// the dialog's own mode switcher. Absent means an internal reopen.
+type LandingSetupSource = 'hero' | 'deep-link' | 'correspondence' | 'mode-switch';
+
 type LandingPlayChoice = {
   engineId?: string;
   engines?: PlayableEngine[];
   initialGameSpecId?: LandingGameSpecId;
   locale?: Locale;
   mode: LandingPlayMode;
+  source?: LandingSetupSource;
   // Unified entry point: render the opponent switcher (Computer / A friend /
   // Anyone) at the top of the dialog. Switching rebuilds the dialog in the
   // picked mode, carrying the variant selection and engine roster over.
@@ -282,6 +288,8 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
       return 'variant.jungleFlip.name';
     case FORTRESS_XIANGQI_SPEC_ID:
       return 'variant.fortressXiangqi.name';
+    case DUCK_XIANGQI_SPEC_ID:
+      return 'variant.duckXiangqi.name';
     case XIANGQI_SPEC_ID:
       return 'variant.xiangqi.name';
     default:
@@ -397,6 +405,7 @@ export function buildLandingPlayPanel(
       locale,
       mode: 'pve',
       modeSwitcher: true,
+      source: 'hero',
     });
   });
   panel.append(playButton);
@@ -739,7 +748,7 @@ const QUICK_PAIR_COLUMN_IDS: TimeControlId[] = ['1m1', '3m2', '5m5'];
 // variant gets a pool row and the grid fills the card instead of trailing off
 // into dead space; the cap only bites in the lab profile, where the parked
 // variants would otherwise stretch the panel well past the tabs beside it.
-const QUICK_PAIR_ROW_COUNT = 8;
+const QUICK_PAIR_ROW_COUNT = 9;
 
 // One pool = one variant at one clock, the granularity a chip pairs at. Shared
 // by the chip index and the open-seek counter so the two can only agree.
@@ -1310,6 +1319,7 @@ function correspondenceCreateButton(locale: Locale): HTMLButtonElement {
       mode: 'lobby',
       initialGameSpecId: defaultCorrespondenceGameSpecId(locale),
       initialTimeMode: 'correspondence',
+      source: 'correspondence',
       // Correspondence is casual-only, so the rated toggle never applies here.
       ratedDisabled: true,
     });
@@ -1575,6 +1585,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
           'lobby',
         ),
         locale,
+        source: 'deep-link',
         mode: 'lobby',
         modeSwitcher: true,
         ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
@@ -1589,6 +1600,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
           'pvp',
         ),
         locale,
+        source: 'deep-link',
         mode: 'pvp',
         modeSwitcher: true,
         ratedDisabled: true,
@@ -1604,6 +1616,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
           'pve',
         ),
         locale,
+        source: 'deep-link',
         mode: 'pve',
         modeSwitcher: true,
       });
@@ -1683,6 +1696,16 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   if (choice.mode === 'pve' && !landingVariantSupportsPve(selectedGameSpecId)) {
     selectedGameSpecId = fallbackGameSpecId;
   }
+  // The top of the play funnel: which door, which mode, which variant the
+  // dialog opened on. game_started is the bottom; the gap between them is the
+  // dialog's own drop-off. Mode switches inside the dialog are a reopen and
+  // carry their own source so they do not read as new arrivals.
+  track('setup_dialog_opened', {
+    source: choice.source ?? 'reopen',
+    mode: choice.mode,
+    time_mode: choice.initialTimeMode ?? 'realtime',
+    ...gameSpecAnalyticsPropsForId(selectedGameSpecId),
+  });
   // A stored preference is the player's own choice and always wins; otherwise
   // the variant's own default, then the house default.
   let selectedPreset: LandingTimePresetId =
@@ -2385,6 +2408,7 @@ function reopenSetupDialogInMode(
     locale,
     mode,
     modeSwitcher: true,
+    source: 'mode-switch',
     ratedDisabled:
       mode === 'pvp'
         ? true
@@ -3283,6 +3307,25 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
+  if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) {
+    // Duck Xiangqi is open-info red/black 9x10 xiangqi plus the shared duck.
+    // Casual-only: there is no `duck_xiangqi` rating pool, so `rated` is pinned
+    // false here rather than read from the setup, matching the tenant's own
+    // `supportsRated: false`. PvE sends the picked Fairy-Stockfish engine id.
+    return {
+      mode,
+      gameSpecId,
+      timeControl: setup.timeControl,
+      rated: false,
+      preferredColor:
+        setup.preferredColor === 'white'
+          ? 'red'
+          : setup.preferredColor === 'red' || setup.preferredColor === 'black'
+            ? setup.preferredColor
+            : 'random',
+      ...(mode === 'pve' && engineId ? { engineId } : {}),
+    };
+  }
   if (setup.gameSpecId === MINI_XIANGQI_SPEC_ID) {
     // Mini Xiangqi is open-info red/black mini xiangqi without drops, casual-only
     // for now. PvE plays via Fairy-Stockfish's native minixiangqi variant.
@@ -3412,10 +3455,12 @@ export function roomCreationGameSpecId(
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
+  | typeof DUCK_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
   if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return FORTRESS_XIANGQI_SPEC_ID;
+  if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) return DUCK_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;

@@ -100,3 +100,10 @@ scripts/data/win-curve-corpus/
 # Bundled output of scripts/build-benedict-diagrams.mjs
 .benedict-diagrams.mjs
 scripts/.benedict-diagrams.mjs
+
+# Locally built engine binaries. `./bin/<name>` is the cwd-relative dev twin of
+# the container's `/app/bin/<name>`, and every FSF path resolver looks there
+# (see xiangqi-fsf-engine.ts, uci-engine-harness.ts), so following the documented
+# dev path drops a ~47MB binary into `git add -A` range. The container builds its
+# own copy from the pinned refs; nothing here is ever committed.
+/bin/

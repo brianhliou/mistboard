@@ -247,17 +247,17 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   BANQI_SPEC_ID,
   JIEQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
+  // Duck Xiangqi qualifies on the same two counts as the rest: it has a
+  // tree-review stack (review/duck-xiangqi-tree-adapter.ts + -review.ts) and a
+  // deterministic start position spellable as a FEN (duck-xiangqi-fen.ts, whose
+  // seventh field carries the duck). Slotted at its canonical position, not
+  // appended: study-catalog.test.ts asserts the picker built from this list is
+  // sorted by canonicalVariantOrderIndex.
+  DUCK_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
-  // Duck Xiangqi qualifies on the same two counts as the rest: it has a
-  // tree-review stack (review/duck-xiangqi-tree-adapter.ts + -review.ts) and a
-  // deterministic start position spellable as a FEN (duck-xiangqi-fen.ts, whose
-  // seventh field carries the duck). Last in the list because it is last in
-  // canonicalVariantOrderIndex — unlisted specs sort to the end, and the picker
-  // order test reads that index rather than this array.
-  DUCK_XIANGQI_SPEC_ID,
 ];
 
 /** Fail-closed membership test for {@link STUDY_ELIGIBLE_SPEC_IDS} — narrows an
@@ -278,6 +278,7 @@ export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
   BANQI_SPEC_ID,
   JIEQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -657,8 +658,11 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // The duck is not a drop: it has no reserve and is neither player's piece.
     dropPolicy: 'none',
     ratingPoolBase: 'duck_xiangqi',
-    // Not rated until the pool migration lands and the bot ladder is calibrated.
-    publicSurface: 'hidden',
+    // Deliberately NOT `rated: true` the way fortress is. Fortress is
+    // rating-ready behind the global rated flag; duck has no user_ratings CHECK
+    // entry for the duck_xiangqi pool, so a rated game would fail at the point
+    // of writing the result. Casual-only until that migration lands.
+    publicSurface: 'casual',
     runtimeStatus: 'live',
   },
   {

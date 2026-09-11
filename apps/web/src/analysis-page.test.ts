@@ -52,24 +52,30 @@ describe('analysis page', () => {
 });
 
 // The dropdown is a public surface. An unlaunched variant keeps a working board
-// at its own URL (this file mounts every catalog entry, duck included) but is
-// not OFFERED, so nothing advertises it before it launches.
+// at its own URL but is not OFFERED, so nothing advertises it before it
+// launches.
+//
+// That branch is real and still in analysis-catalog.ts, but it is currently
+// UNREACHABLE from a test: duck xiangqi was the last unlaunched analysis
+// variant, and it launched. Asserting "some variant is absent" would now pass
+// by naming any string at all. What is left is the half that does hold, across
+// every variant in the catalog. When the next unlaunched variant lands, restore
+// a case that pins it by name.
 describe('analysis variant picker', () => {
-  it('does not offer an unlaunched variant from a launched board', async () => {
+  it('offers every launched variant, from any board', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     try {
       await mountAnalysisPage(root, 'xiangqi');
       const select = root.querySelector<HTMLSelectElement>('.analysis-variant-picker select');
       const offered = [...(select?.options ?? [])].map((option) => option.value);
-      expect(offered).toContain('xiangqi');
-      expect(offered).not.toContain('duck-xiangqi');
+      expect(offered).toEqual(ANALYSIS_VARIANTS.map((variant) => variant.id));
     } finally {
       root.remove();
     }
   });
 
-  it('lists the unlaunched variant when it IS the board being viewed', async () => {
+  it('lists and selects the variant being viewed', async () => {
     const root = document.createElement('div');
     document.body.append(root);
     try {

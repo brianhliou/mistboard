@@ -395,7 +395,11 @@ export function animalTreasureMarks(color: XiangqiColor): string {
 // Art provenance and the palette reasoning live in the physical-set repo at
 // duck-xiangqi-dobutsu-minimal/MANIFEST.md. Only the Dobutsu set has duck art;
 // the other six sets fall back to the neutral token in duck-xiangqi-board.ts.
-const DUCK_NEUTRAL_RING = '#6f7b83';
+// Duck Xiangqi's own accent from the variant registry. It replaced a neutral
+// grey on 2026-09-11: grey said "no seat" by being absent, gold says it by
+// being a colour that belongs to neither side, and it reads as deliberate
+// rather than as a missing ring at board size.
+const DUCK_RING = '#b8860b';
 
 export function animalDuckHref(): string {
   return `/piece-sets/xiangqi/animal-dobutsu/duck.png?v=${ANIMAL_ART_VERSION}`;
@@ -408,12 +412,27 @@ export function animalDuckHref(): string {
 // it looks like itself in every idiom, the way a football looks like a football
 // whoever is drawing the players.
 //
-// What DOES change per set is the FRAME. Each set has its own disc grammar, and
-// the duck sits in the board's furniture correctly by keeping it: the Dobutsu
-// cream disc with one ring, the international disc, the flat set's bare image,
-// and the double ring the glyph sets use. The ring ink is neutral in all of
-// them, because that is the board's way of saying "no seat" and the duck has
-// none.
+// What DOES change per set is the FRAME. Each set has its own disc grammar and
+// the duck keeps it, so it sits in the board's furniture correctly: the Dobutsu
+// cream disc, the international disc, the flat set's bare image, and the glyph
+// sets' disc. The ring ink is the variant's own gold in all of them, because
+// the board needs a way to say "no seat" and the duck has none.
+//
+// SIZING. The master carries 15.7% padding on every side: the duck fills 79.6%
+// of its own PNG, and it is taller than it is wide, so the drawn art's radius
+// is 0.398 * box. A box of 100 therefore draws a duck of radius 39.8, NOT 50,
+// which is why the boxes below can exceed the glyph height they replace.
+//
+// Each box is derived from its own disc's INNERMOST edge, never from the outer
+// one. That rule is the whole reason the glyph value used to be 74: it was
+// clearing an inner ring at r=38. Dropping that ring is what let the duck grow.
+const DUCK_ART_FILL = 0.796;
+
+/** A box whose DRAWN art reaches `radius`, given the master's own padding. */
+function duckBoxForRadius(radius: number): number {
+  return Math.round((2 * radius) / DUCK_ART_FILL);
+}
+
 function duckImageMark(box: number): string {
   const inset = (100 - box) / 2;
   return `<image href="${animalDuckHref()}" x="${inset}" y="${inset}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`;
@@ -427,12 +446,12 @@ export function duckPieceMarks(set: XiangqiPieceSet): string {
     return [
       animalDiscMark(),
       duckImageMark(88),
-      `<circle cx="50" cy="50" r="45" fill="none" stroke="${DUCK_NEUTRAL_RING}" stroke-width="3.2"/>`,
+      `<circle cx="50" cy="50" r="45" fill="none" stroke="${DUCK_RING}" stroke-width="3.2"/>`,
     ].join('');
   }
   if (set === 'international') {
     return [
-      `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${DUCK_NEUTRAL_RING}" stroke-width="2.8"/>`,
+      `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${DUCK_RING}" stroke-width="2.8"/>`,
       duckImageMark(84),
     ].join('');
   }
@@ -447,8 +466,8 @@ export function duckPieceMarks(set: XiangqiPieceSet): string {
   // a 74-unit box lands ~59 units tall against the inner ring's 76 diameter,
   // which is the same visual weight as a 46pt glyph.
   return [
-    `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${DUCK_NEUTRAL_RING}" stroke-width="2.5"/>`,
-    `<circle cx="50" cy="50" r="38" fill="none" stroke="${DUCK_NEUTRAL_RING}" stroke-width="1.5"/>`,
+    `<circle cx="50" cy="50" r="46" fill="#f3e6c4" stroke="${DUCK_RING}" stroke-width="2.5"/>`,
+    `<circle cx="50" cy="50" r="38" fill="none" stroke="${DUCK_RING}" stroke-width="1.5"/>`,
     duckImageMark(74),
   ].join('');
 }

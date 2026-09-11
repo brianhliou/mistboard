@@ -56,19 +56,19 @@ const MIN_TV_PVP_PLY_COUNT = 30;
 // doubling up on.
 const CURATED_MIN_PLY = 20;
 
-// Kept in lockstep with games_result_check (137). A value outside the
+// Kept in lockstep with games_result_check (140). A value outside the
 // constraint fails the whole recordGameEnd transaction, participants included.
 export type GameResult =
   | 'white-wins'
   | 'black-wins'
   | 'red-wins'
-  // Mahjong's four winds (137). A hand has one winner, or nobody.
+  // Mahjong's four winds (140). A hand has one winner, or nobody.
   | 'east-wins'
   | 'south-wins'
   | 'west-wins'
   | 'north-wins'
   | 'draw';
-// Kept in lockstep with game_participants_color_check (137).
+// Kept in lockstep with game_participants_color_check (140).
 export type GameParticipantColor = Color | XiangqiColor | MahjongSeat;
 export type GameParticipantSubjectType =
   | 'guest'
@@ -1545,7 +1545,11 @@ async function loadGameParticipants(roomIds: string[]): Promise<Map<string, Game
       color: row.color,
       displayName: row.display_name,
       subjectType: row.subject_type,
-      subjectId: row.subject_id,
+      // A guest's subject id is the browser's device id (migration 137): an
+      // aggregate key, never something to hand back to a browser, where it
+      // would let one visitor's games be tied together by anyone reading the
+      // API. Only the SQL aggregates see it.
+      subjectId: row.subject_type === 'guest' ? null : row.subject_id,
       visibility: row.visibility,
       // Omitted-when-null so a non-user (or unlinkable) seat keeps the original
       // participant shape, same convention as the fields below.

@@ -1,19 +1,30 @@
+import {
+  COUNTED_USER,
+  countedAccountSeat,
+  countedHumanGame,
+  countedPlayerSeat,
+  excludedSeatExists,
+  internalHumanGame,
+  preLaunchHumanGame,
+  STATS_COUNTED_FROM,
+  sinceLaunch,
+} from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { PATRON_ACTIVE_STATUSES } from './persistence-patron.js';
 
 // Admin /metrics, Postgres-true. Everything in `weekly` and the headline
-// figures is HUMAN play only: games.mode IN ('pvp', 'pve'). Engine-vs-engine
-// (mode 'eve') and the corpus modes ('imported', 'manual') are reported
-// separately in `engines`, never folded into a player number. See
-// docs-private/metrics-roadmap.md.
+// figures is COUNTED play only (persistence-counted-games.ts): completed
+// pvp/pve games with no seat held by a stats-excluded account. Engine-vs-engine
+// (mode 'eve'), the corpus modes ('imported', 'manual'), and the excluded
+// accounts' own games are reported separately in `engines`, never folded into
+// a player number. See docs-private/metrics-roadmap.md.
 //
-// GUESTS ARE NOT PEOPLE HERE. A guest seat is persisted as subject_type
-// 'guest' with subject_id NULL (room-manager.ts, variant-tenant/events.ts) and
-// the client id is minted per room, so there is no durable guest identity to
-// count. Every "player" figure below is SIGNED-IN players; the guest side is
-// `guestGames`, games with at least one guest seat, which is a game count and
-// not a person count. Making guests countable needs a device id on the seat
-// (roadmap phase 7).
+// Players are distinct (subject_type, subject_id) seats that pass
+// countedPlayerSeat: accounts, plus guest seats carrying a browser device id
+// (migration 137, 2026-09-11). Guest seats before that date have subject_id
+// NULL and are not people, so player series before it are accounts only;
+// `guestGames` (games with a guest seat) is the game-count view of the same
+// visitors and works across the whole window.
 //
 // Weeks are ISO (Monday start), oldest first, the current partial week last.
 // Postgres' date_trunc('week') is Monday-based, which is what the readout and
@@ -26,11 +37,13 @@ export interface AdminMetricsWeek {
   humanGames: number;
   pvpGames: number;
   pveGames: number;
-  // Distinct signed-in accounts that finished a human game this week.
+  // Distinct counted players (accounts + guest browsers) that finished a game
+  // this week; `signedInPlayers` is the account share.
   players: number;
+  signedInPlayers: number;
   newPlayers: number;
   returningPlayers: number;
-  // Distinct signed-in players over the 28 days ending at this week's end (or
+  // Distinct counted players over the 28 days ending at this week's end (or
   // at `now` for the current week). A rolling MAU sampled once per week.
   activePlayers28d: number;
   // Human games this week with at least one guest seat: the only guest figure
@@ -48,6 +61,7 @@ export interface AdminMetricsWeek {
   correspondenceSeeks: number;
   newPatrons: number;
   eveGames: number;
+  internalGames: number;
 }
 
 export interface AdminMetricsEngines {
@@ -55,6 +69,14 @@ export interface AdminMetricsEngines {
   eveGamesLast7d: number;
   importedGames: number;
   manualGames: number;
+  // Completed human games with a seat held by a stats-excluded account (the
+  // operator's own). Left out of every count above this block.
+  internalGames: number;
+  internalGamesLast7d: number;
+  // Completed human games before STATS_COUNTED_FROM with no excluded seat:
+  // the operator's pre-launch guest-seat testing, unreachable by any flag.
+  preLaunchGames: number;
+  countedFrom: string;
   eveByVariant: Record<string, number>;
 }
 
@@ -83,9 +105,15 @@ export type AdminMetricsOptions = {
 
 type Queryable = { query: <R>(text: string, params?: unknown[]) => Promise<{ rows: R[] }> };
 
-const HUMAN_GAME = `status = 'completed' AND mode IN ('pvp', 'pve')`;
-// The only seat with a person behind it that the database can identify.
-const SIGNED_IN_SEAT = `p.subject_type = 'user' AND p.subject_id IS NOT NULL`;
+// These fragments assume `games g` and `game_participants p`; the exclusion
+// of flagged accounts and devices lives inside them.
+const HUMAN_GAME = countedHumanGame('g');
+const PLAYER_SEAT = countedPlayerSeat('p');
+const SIGNED_IN_SEAT = countedAccountSeat('p');
+const INTERNAL_GAME = internalHumanGame('g');
+const EXCLUDED_SEAT = excludedSeatExists('g');
+const PRE_LAUNCH_GAME = preLaunchHumanGame('g');
+const SINCE_LAUNCH = sinceLaunch('g');
 // Start of the oldest week in the window; $1 is `now`, $2 the week count.
 const WINDOW_START = `date_trunc('week', $1::timestamptz) - ($2::int - 1) * INTERVAL '1 week'`;
 
@@ -115,6 +143,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
       pvpGames: games?.pvp ?? 0,
       pveGames: games?.pve ?? 0,
       players: players?.players ?? 0,
+      signedInPlayers: players?.signedIn ?? 0,
       newPlayers: players?.newPlayers ?? 0,
       returningPlayers: (players?.players ?? 0) - (players?.newPlayers ?? 0),
       activePlayers28d: mauByWeek.get(weekStart) ?? 0,
@@ -131,6 +160,7 @@ export async function getAdminMetrics(options: AdminMetricsOptions = {}): Promis
       correspondenceSeeks: act?.correspondenceSeeks ?? 0,
       newPatrons: act?.newPatrons ?? 0,
       eveGames: games?.eve ?? 0,
+      internalGames: games?.internal ?? 0,
     };
   });
 
@@ -188,38 +218,38 @@ async function collectHeadline(
       active_patrons: number;
     }>(
       `WITH human_players AS (
-         SELECT p.subject_id AS user_id, g.ended_at
+         SELECT p.subject_type, p.subject_id, g.ended_at
          FROM game_participants p
          JOIN games g ON g.room_id = p.game_id
-         WHERE ${SIGNED_IN_SEAT} AND g.${HUMAN_GAME}
+         WHERE ${PLAYER_SEAT} AND ${HUMAN_GAME}
            AND g.ended_at >= $1::timestamptz - INTERVAL '56 days'
            AND g.ended_at < $1::timestamptz
        )
        SELECT
-         (SELECT count(*) FROM users)::int AS accounts,
-         (SELECT count(*) FROM users
-            WHERE created_at > $1::timestamptz - INTERVAL '7 days')::int AS accounts_last7d,
-         (SELECT count(*) FROM users
-            WHERE created_at > $1::timestamptz - INTERVAL '30 days')::int AS accounts_last30d,
-         (SELECT count(*) FROM games WHERE ${HUMAN_GAME})::int AS human_games,
-         (SELECT count(*) FROM games WHERE ${HUMAN_GAME}
+         (SELECT count(*) FROM users WHERE ${COUNTED_USER})::int AS accounts,
+         (SELECT count(*) FROM users WHERE ${COUNTED_USER}
+            AND created_at > $1::timestamptz - INTERVAL '7 days')::int AS accounts_last7d,
+         (SELECT count(*) FROM users WHERE ${COUNTED_USER}
+            AND created_at > $1::timestamptz - INTERVAL '30 days')::int AS accounts_last30d,
+         (SELECT count(*) FROM games g WHERE ${HUMAN_GAME})::int AS human_games,
+         (SELECT count(*) FROM games g WHERE ${HUMAN_GAME}
             AND ended_at > $1::timestamptz - INTERVAL '7 days')::int AS human_games_last7d,
-         (SELECT count(*) FROM games WHERE ${HUMAN_GAME}
+         (SELECT count(*) FROM games g WHERE ${HUMAN_GAME}
             AND visibility = 'public')::int AS public_human_games,
-         (SELECT count(DISTINCT user_id) FROM human_players
+         (SELECT count(DISTINCT (subject_type, subject_id)) FROM human_players
             WHERE ended_at >= $1::timestamptz - INTERVAL '28 days')::int AS active_28d,
-         (SELECT count(DISTINCT user_id) FROM human_players
+         (SELECT count(DISTINCT (subject_type, subject_id)) FROM human_players
             WHERE ended_at < $1::timestamptz - INTERVAL '28 days')::int AS previous_active_28d,
          (SELECT count(DISTINCT account_id) FROM patron_subscriptions
             WHERE is_lifetime = true OR status = ANY($2::text[]))::int AS active_patrons`,
       [now, PATRON_ACTIVE_STATUSES],
     ),
     db.query<{ result: string | null; n: number }>(
-      `SELECT result, count(*)::int AS n FROM games WHERE ${HUMAN_GAME}
+      `SELECT result, count(*)::int AS n FROM games g WHERE ${HUMAN_GAME}
        GROUP BY result ORDER BY n DESC`,
     ),
     db.query<{ variant: string; n: number }>(
-      `SELECT variant, count(*)::int AS n FROM games WHERE ${HUMAN_GAME}
+      `SELECT variant, count(*)::int AS n FROM games g WHERE ${HUMAN_GAME}
        GROUP BY variant ORDER BY n DESC, variant ASC`,
     ),
   ]);
@@ -246,15 +276,22 @@ async function collectEngines(db: Queryable, now: Date): Promise<AdminMetricsEng
       eve_games_last7d: number;
       imported_games: number;
       manual_games: number;
+      internal_games: number;
+      internal_games_last7d: number;
+      pre_launch_games: number;
     }>(
       `SELECT
-         count(*) FILTER (WHERE mode = 'eve')::int AS eve_games,
-         count(*) FILTER (WHERE mode = 'eve'
-           AND ended_at > $1::timestamptz - INTERVAL '7 days')::int AS eve_games_last7d,
-         count(*) FILTER (WHERE mode = 'imported')::int AS imported_games,
-         count(*) FILTER (WHERE mode = 'manual')::int AS manual_games
-       FROM games
-       WHERE status = 'completed'`,
+         count(*) FILTER (WHERE g.mode = 'eve')::int AS eve_games,
+         count(*) FILTER (WHERE g.mode = 'eve'
+           AND g.ended_at > $1::timestamptz - INTERVAL '7 days')::int AS eve_games_last7d,
+         count(*) FILTER (WHERE g.mode = 'imported')::int AS imported_games,
+         count(*) FILTER (WHERE g.mode = 'manual')::int AS manual_games,
+         count(*) FILTER (WHERE ${INTERNAL_GAME})::int AS internal_games,
+         count(*) FILTER (WHERE ${INTERNAL_GAME}
+           AND g.ended_at > $1::timestamptz - INTERVAL '7 days')::int AS internal_games_last7d,
+         count(*) FILTER (WHERE ${PRE_LAUNCH_GAME})::int AS pre_launch_games
+       FROM games g
+       WHERE g.status = 'completed'`,
       [now],
     ),
     db.query<{ variant: string; n: number }>(
@@ -269,6 +306,10 @@ async function collectEngines(db: Queryable, now: Date): Promise<AdminMetricsEng
     eveGamesLast7d: row?.eve_games_last7d ?? 0,
     importedGames: row?.imported_games ?? 0,
     manualGames: row?.manual_games ?? 0,
+    internalGames: row?.internal_games ?? 0,
+    internalGamesLast7d: row?.internal_games_last7d ?? 0,
+    preLaunchGames: row?.pre_launch_games ?? 0,
+    countedFrom: STATS_COUNTED_FROM,
     eveByVariant: Object.fromEntries(byVariant.rows.map((r) => [r.variant, r.n])),
   };
 }
@@ -277,27 +318,45 @@ async function collectGamesByWeek(
   db: Queryable,
   now: Date,
   weeks: number,
-): Promise<Map<string, { pvp: number; pve: number; eve: number; guest: number }>> {
-  const result = await db.query<{ week: Date | string; mode: string; n: number; guest: number }>(
-    `SELECT date_trunc('week', g.ended_at)::date::text AS week, g.mode, count(*)::int AS n,
-            count(*) FILTER (WHERE EXISTS (
+): Promise<
+  Map<string, { pvp: number; pve: number; eve: number; guest: number; internal: number }>
+> {
+  // Human-mode rows split into counted (no excluded seat) and internal; EvE
+  // rows are never internal. `guest` is counted rows with a guest seat.
+  const result = await db.query<{
+    week: Date | string;
+    mode: string;
+    n: number;
+    guest: number;
+    internal: number;
+  }>(
+    `SELECT date_trunc('week', g.ended_at)::date::text AS week, g.mode,
+            count(*) FILTER (WHERE NOT ${EXCLUDED_SEAT} AND ${SINCE_LAUNCH})::int AS n,
+            count(*) FILTER (WHERE NOT ${EXCLUDED_SEAT} AND ${SINCE_LAUNCH} AND EXISTS (
               SELECT 1 FROM game_participants p
               WHERE p.game_id = g.room_id AND p.subject_type = 'guest'
-            ))::int AS guest
+            ))::int AS guest,
+            count(*) FILTER (WHERE g.mode <> 'eve' AND ${EXCLUDED_SEAT})::int AS internal
      FROM games g
      WHERE g.status = 'completed' AND g.mode IN ('pvp', 'pve', 'eve')
        AND g.ended_at >= ${WINDOW_START} AND g.ended_at < $1::timestamptz
      GROUP BY week, g.mode`,
     [now, weeks],
   );
-  const out = new Map<string, { pvp: number; pve: number; eve: number; guest: number }>();
+  const out = new Map<
+    string,
+    { pvp: number; pve: number; eve: number; guest: number; internal: number }
+  >();
   for (const row of result.rows) {
     const key = isoDate(row.week);
-    const entry = out.get(key) ?? { pvp: 0, pve: 0, eve: 0, guest: 0 };
+    const entry = out.get(key) ?? { pvp: 0, pve: 0, eve: 0, guest: 0, internal: 0 };
     if (row.mode === 'pvp') entry.pvp = row.n;
     else if (row.mode === 'pve') entry.pve = row.n;
     else if (row.mode === 'eve') entry.eve = row.n;
-    if (row.mode !== 'eve') entry.guest += row.guest;
+    if (row.mode !== 'eve') {
+      entry.guest += row.guest;
+      entry.internal += row.internal;
+    }
     out.set(key, entry);
   }
   return out;
@@ -310,45 +369,47 @@ async function collectPlayersByWeek(
   db: Queryable,
   now: Date,
   weeks: number,
-): Promise<Map<string, { players: number; newPlayers: number }>> {
+): Promise<Map<string, { players: number; signedIn: number; newPlayers: number }>> {
   const result = await db.query<{
     week: Date | string;
     players: number;
+    signed_in: number;
     new_players: number;
   }>(
     `WITH human AS (
-       SELECT p.subject_id AS user_id, g.ended_at
+       SELECT p.subject_type, p.subject_id, g.ended_at
        FROM game_participants p
        JOIN games g ON g.room_id = p.game_id
-       WHERE ${SIGNED_IN_SEAT} AND g.${HUMAN_GAME}
+       WHERE ${PLAYER_SEAT} AND ${HUMAN_GAME}
      ),
      first_seen AS (
-       SELECT user_id, date_trunc('week', min(ended_at))::date::text AS first_week
+       SELECT subject_type, subject_id, date_trunc('week', min(ended_at))::date::text AS first_week
        FROM human
-       GROUP BY user_id
+       GROUP BY subject_type, subject_id
      ),
      weekly AS (
-       SELECT DISTINCT date_trunc('week', ended_at)::date::text AS week, user_id
+       SELECT DISTINCT date_trunc('week', ended_at)::date::text AS week, subject_type, subject_id
        FROM human
        WHERE ended_at >= ${WINDOW_START} AND ended_at < $1::timestamptz
      )
      SELECT w.week,
        count(*)::int AS players,
+       count(*) FILTER (WHERE w.subject_type = 'user')::int AS signed_in,
        count(*) FILTER (WHERE f.first_week = w.week)::int AS new_players
      FROM weekly w
-     JOIN first_seen f USING (user_id)
+     JOIN first_seen f USING (subject_type, subject_id)
      GROUP BY w.week`,
     [now, weeks],
   );
   return new Map(
     result.rows.map((row) => [
       isoDate(row.week),
-      { players: row.players, newPlayers: row.new_players },
+      { players: row.players, signedIn: row.signed_in, newPlayers: row.new_players },
     ]),
   );
 }
 
-// Rolling 28-day distinct signed-in players, sampled at each week's end (the
+// Rolling 28-day distinct counted players, sampled at each week's end (the
 // current week samples at `now`). One correlated count per week; fine at this
 // table size, revisit if games passes a few hundred thousand rows.
 async function collectActive28dByWeek(
@@ -365,10 +426,10 @@ async function collectActive28dByWeek(
        ) AS week_start
      )
      SELECT weeks.week_start::date::text AS week,
-       (SELECT count(DISTINCT p.subject_id)
+       (SELECT count(DISTINCT (p.subject_type, p.subject_id))
           FROM game_participants p
           JOIN games g ON g.room_id = p.game_id
-          WHERE ${SIGNED_IN_SEAT} AND g.${HUMAN_GAME}
+          WHERE ${PLAYER_SEAT} AND ${HUMAN_GAME}
             AND g.ended_at < LEAST(weeks.week_start + INTERVAL '1 week', $1::timestamptz)
             AND g.ended_at >= LEAST(weeks.week_start + INTERVAL '1 week', $1::timestamptz)
                               - INTERVAL '28 days')::int AS n
@@ -407,7 +468,7 @@ async function collectActivityByWeek(
      GROUP BY week`;
   const result = await db.query<{ week: Date | string; metric: keyof ActivityWeek; n: number }>(
     [
-      arm('newAccounts', 'users', 'created_at'),
+      arm('newAccounts', 'users', 'created_at', COUNTED_USER),
       // Distinct visits that started at least one puzzle, not rows: a session
       // that views five puzzles is one session.
       `SELECT date_trunc('week', started_at)::date::text AS week, 'puzzleSessions' AS metric,
@@ -424,7 +485,7 @@ async function collectActivityByWeek(
       arm('chatLines', 'chat_lines', 'created_at', 'hidden_at IS NULL AND shadow = false'),
       arm('dmMessages', 'dm_messages', 'created_at'),
       arm('correspondenceSeeks', 'correspondence_seeks', 'created_at'),
-      arm('newPatrons', 'users', 'patron_since', 'patron_since IS NOT NULL'),
+      arm('newPatrons', 'users', 'patron_since', `patron_since IS NOT NULL AND ${COUNTED_USER}`),
     ].join('\nUNION ALL\n'),
     [now, weeks],
   );

@@ -78,6 +78,7 @@ export type AdminAccountPayload = {
   createdAt: string;
   lastSeenAt: string | null;
   closedAt: string | null;
+  statsExcluded: boolean;
   gamesPlayed: number;
 };
 
@@ -95,6 +96,7 @@ export function serializeAdminAccount(row: AdminAccountRow): AdminAccountPayload
     createdAt: row.createdAt.toISOString(),
     lastSeenAt: row.lastSeenAt ? row.lastSeenAt.toISOString() : null,
     closedAt: row.closedAt ? row.closedAt.toISOString() : null,
+    statsExcluded: row.statsExcludedAt !== null,
     gamesPlayed: row.gamesPlayed,
   };
 }

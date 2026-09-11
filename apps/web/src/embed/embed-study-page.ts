@@ -13,8 +13,11 @@
 
 import '../app-base.css';
 import '../articles.css';
+import { replayStepperCopy } from '../replay-stepper-copy.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
-import { mountXiangqiReplay } from '../xiangqi-replay.js';
+import { boardAspectForSpec } from '../watch-board-aspect.js';
+import { mountXiangqiReplayBoard, xiangqiResultLabel } from '../xiangqi-replay.js';
+import { mountEmbedCard } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import './embed.css';
 
@@ -66,23 +69,25 @@ export async function mountEmbedStudy(root: HTMLElement, route: EmbedStudyRoute)
     return;
   }
 
-  const frame = document.createElement('div');
-  frame.className = 'embed-frame';
-  const host = document.createElement('div');
-  // Named so the stylesheet can make it the flexible row of the frame. The
-  // widget must fill the height it is given rather than take its natural one.
-  host.className = 'embed-widget';
-  frame.append(host);
-
-  const credit = document.createElement('a');
-  credit.className = 'embed-credit';
-  credit.href = `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`;
-  credit.target = '_blank';
-  credit.rel = 'noopener';
-  credit.textContent = `${chapter.name ?? 'Study'} · mistboard.com`;
-  frame.append(credit);
-
-  root.replaceChildren(frame);
-  mountXiangqiReplay(host, spec);
+  // The same card a game sits in (embed-card.ts), with the study's board
+  // underneath: mainline only, no sidelines or flip menu, which are the study
+  // page's; the credit link is the way there. A chapter has no clocks, so the
+  // seat rows' clock slots stay empty.
+  const copy = replayStepperCopy(undefined, 'xiangqi');
+  await mountEmbedCard(root, {
+    header: spec.title ? `${spec.title} · ${spec.event}` : spec.event,
+    seats: {
+      first: { name: spec.red, ink: 'red' },
+      second: { name: spec.black, ink: 'black' },
+    },
+    result: xiangqiResultLabel(spec.resultText, copy),
+    credit: {
+      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
+      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+    },
+    aspect: boardAspectForSpec('xiangqi'),
+    startPly: 0,
+    mountBoard: async (host, hooks) => mountXiangqiReplayBoard(host, spec, hooks),
+  });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

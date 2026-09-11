@@ -3,11 +3,11 @@
  * generic tenant room factory, hydration, WebSocket runtime and HTTP create
  * route.
  *
- * Scope while the variant is flag-gated: PvP and PvE against the Fairy-Stockfish
- * ladder, but no lobby seek, since a public seek would advertise a game nobody
- * can accept. The watch channel and the export binding are here, and all of it
- * inherits this tenant's `enabled` predicate, so it stays dark until the flag
- * flips.
+ * Scope: PvP, PvE against the Fairy-Stockfish ladder, and a lobby seek at
+ * parity with the other tenants. The seek is UNRATED, because there is no
+ * `duck_xiangqi` rating pool yet. The watch channel and the export binding are
+ * here too, and all of it inherits this tenant's `enabled` predicate, so it
+ * stays dark until the flag flips.
  *
  * The bot is deliberately fortress-shaped: a playable ladder with no
  * engine-vs-engine tournament entry and no published bot ratings. The EvE
@@ -26,6 +26,7 @@ import { type DuckXiangqiEvent, duckXiangqiTenant } from './duck-xiangqi-tenant.
 import { duckXiangqiExportUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleDuckXiangqiCreate, requestsDuckXiangqi } from './routes/duck-xiangqi-rooms.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleDuckXiangqiEngineMove } from './server-duck-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
@@ -147,9 +148,24 @@ registerVariantTenant({
       await handleDuckXiangqiCreate({ ...ctx, createDuckXiangqiRoom }, response, body, accountUser);
     },
   },
-  // No public seek while the variant is hidden: a lobby entry would advertise a
-  // game nobody can accept.
-  lobby: null,
+  // Lobby seek, at parity with every other tenant. It was deliberately absent
+  // while the variant was dark, because a public seek would have advertised a
+  // game nobody could accept; that stops being true at launch, and a variant
+  // with no seek is one two humans cannot find each other in.
+  //
+  // NOT rated: `supportsRated: false` matches the tenant's own landing
+  // capability. Duck has no `duck_xiangqi` rating pool (the user_ratings CHECK
+  // constraint would reject it), so a rated seek would fail at the point of
+  // writing the result rather than at the point of creating the game.
+  lobby: {
+    supportsRated: false,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl) => {
+      const created = await createDuckXiangqiRoom(timeControl, 'random', false);
+      if (!created.ok) throw new Error(`duck_xiangqi_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   export: tenantExportBinding(duckXiangqiTenant, {
     gameRouteBase: '/duck-xiangqi/game',
     uci: duckXiangqiExportUci,

@@ -318,7 +318,7 @@ test('the weekly markdown carries players, split, variants and a trend', () => {
     ],
   });
   const markdown = renderMistboardReadoutMarkdown(report);
-  assert.match(markdown, /Signed-in players: 17 \(\+10 week over week\), 4 returning/);
+  assert.match(markdown, /Players: 17 \(\+10 week over week\), 4 returning, 5 signed in/);
   assert.match(markdown, /Modes: pvp 45, pve 33, plus 12 bot-vs-bot outside the count above/);
   assert.match(markdown, /Variants: jieqi 43,.*and 1 more/);
   assert.match(markdown, /Aborted before a result: 2/);

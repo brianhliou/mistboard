@@ -37,12 +37,11 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'reveal-chess': false,
   jungle: true,
   'jungle-flip': true,
+  // Hidden until a player has checked the faan table: the hand mathematics is
+  // proven against an independent implementation, the SCORING is not proven at
+  // all, and a listing would invite people to trust numbers nobody has read.
   mahjong: false,
-  // Registered, and it has a rules page and a web client, but it stays off every
-  // public surface: the variant is behind a server flag with no bot, so listing
-  // it would offer a game nobody can start. The rules article is a draft for the
-  // same reason; flip both together.
-  'duck-xiangqi': false,
+  'duck-xiangqi': true,
 } satisfies Record<GameSpecId, boolean>;
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));

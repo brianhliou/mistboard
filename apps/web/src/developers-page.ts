@@ -50,6 +50,7 @@ const TV_CHANNELS = [
   'banqi',
   'jieqi',
   'fortress-xiangqi',
+  'duck-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',

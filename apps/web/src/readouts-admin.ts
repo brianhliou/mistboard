@@ -16,6 +16,7 @@ type ReadoutSummary = {
   verdict: ReadoutVerdict;
   completedGames: number | null;
   humanPlayers: number | null;
+  activeAccounts28d?: number | null;
   actions: number;
 };
 
@@ -113,7 +114,8 @@ function buildHistoryTable(rows: ReadoutSummary[]): HTMLElement {
     'Trigger',
     'Verdict',
     'Games',
-    'Accounts played',
+    'Players',
+    'Active 28d',
     'Actions',
   ]) {
     const th = document.createElement('th');
@@ -133,6 +135,7 @@ function buildHistoryTable(rows: ReadoutSummary[]): HTMLElement {
       verdict,
       cell(formatCount(row.completedGames)),
       cell(formatCount(row.humanPlayers)),
+      cell(formatCount(row.activeAccounts28d ?? null)),
       cell(row.actions === 0 ? '-' : String(row.actions)),
     );
     tbody.append(tr);

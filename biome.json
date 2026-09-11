@@ -21,6 +21,7 @@
       "!apps/web/public/engine",
       "!apps/web/public/**/*.svg",
       "!apps/server/fixtures/dpxq",
+      "!apps/server/src/fixtures",
       "!packages/game/seed"
     ]
   },

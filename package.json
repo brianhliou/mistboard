@@ -121,6 +121,7 @@
     "prod:smoke:engines": "node scripts/prod-engine-smoke.mjs",
     "prod:smoke:dmx": "node scripts/prod-dmx-smoke.mjs",
     "prod:smoke:dxq": "node scripts/prod-dxq-smoke.mjs",
+    "prod:smoke:duck": "node scripts/prod-duck-smoke.mjs",
     "prod:smoke:fortress": "node scripts/prod-fortress-smoke.mjs",
     "prod:smoke:banqi": "node scripts/prod-banqi-smoke.mjs",
     "prod:smoke:jieqi": "node scripts/prod-jieqi-smoke.mjs",

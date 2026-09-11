@@ -1,4 +1,4 @@
--- 138_mahjong_room_seats.sql
+-- 141_mahjong_room_seats.sql
 -- Let a room seat token name a wind.
 --
 -- Migration 029 widened this from ('white','black') to include 'red' when

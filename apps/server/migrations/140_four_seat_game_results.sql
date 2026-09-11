@@ -1,4 +1,4 @@
--- 137_four_seat_game_results.sql
+-- 140_four_seat_game_results.sql
 -- Let a finished game have four seats and a winner who is not red or black.
 --
 -- Every constraint on these two columns was written when every game on this

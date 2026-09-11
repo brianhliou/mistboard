@@ -25,6 +25,7 @@ import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
 import { darkShogiTenant } from './dark-shogi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { dropMiniXiangqiTenant } from './drop-mini-xiangqi-tenant.js';
+import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
@@ -48,6 +49,7 @@ const TENANTS: any[] = [
   darkMiniXiangqiTenant,
   dropMiniXiangqiTenant,
   fortressXiangqiTenant,
+  duckXiangqiTenant,
   revealChessTenant,
   crossroadsChessTenant,
   darkCrossroadsChessTenant,

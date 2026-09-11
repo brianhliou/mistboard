@@ -48,35 +48,41 @@
 //   D4. NO CHECK. Straight from the original. You may leave your general
 //       attacked, and you win by actually capturing it.
 //
-//   D5. THE GENERALS STILL MAY NEVER BE LEFT FACING. Xiangqi's prohibition
-//       survives intact, even though D4 removes the check rule it normally
-//       rests on. You make a legal xiangqi move and then place the duck, and a
-//       xiangqi move that leaves the generals facing is not a legal xiangqi
-//       move. The alternative was to let the prohibition dissolve into a plain
-//       threat (generals attack down a clear file, facing is legal and losing),
-//       which is what the Benedict kernel's decision (A) reasons about. Rejected
-//       here: it is not a position a xiangqi player accepts looking at.
+//   D5. THE GENERALS MAY FACE, AND THEN ONE OF THEM DIES. The flying general
+//       becomes a real capture: a general may fly down a clear file and take
+//       the enemy general, which ends the game. Leaving the generals facing is
+//       legal and normally loses.
 //
-//   D5a. THE FACING RULE IS CHECKED TWICE, ONCE PER HALF-TURN. The xiangqi move
-//        must not leave the generals facing, AND the duck move must not either.
-//        The generals are never facing, at any point, not even momentarily
-//        between the two halves of a turn.
+//       REVISED 2026-09-10. This kernel first kept xiangqi's prohibition
+//       intact (a move leaving the generals facing was simply not legal),
+//       checked after each half-turn separately, on the grounds that a facing
+//       position "is not a position a xiangqi player accepts looking at." That
+//       was an argument about taste, and it was overruled by the one xiangqi
+//       player whose taste it was protecting.
 //
-//        This is deliberately the STRICTER of two readings, and the looser one
-//        was implemented first and rejected. Checking only at the end of the
-//        turn lets a piece move open the file as long as the duck closes it
-//        again - so a general could step into a facing position and be rescued
-//        by the duck landing behind it. That makes "a legal xiangqi move" false
-//        as a description of the first half of a turn, which is the sentence
-//        the whole rule is supposed to be.
+//       The argument that beat it is consistency. Xiangqi's prohibition is not
+//       a free-standing rule: the generals attack each other down an open file,
+//       so leaving them facing is self-check, and self-check is what is
+//       actually forbidden. D4 deletes check. Keeping the prohibition while
+//       deleting the thing it rests on kept a consequence without its cause.
 //
-//        What survives is the pin: a duck standing between the generals is the
-//        only thing keeping the file blocked, and it has to move every turn, so
-//        it is confined to the open segment. That segment is always at least
-//        four points long (the generals cannot be closer than rank 3 and rank
-//        8), so a pinned duck can always slide and can never by itself leave a
-//        player with no legal turn. It drops the duck from ~58 placements to
-//        3-6, which is a confiscation rather than a trap.
+//       Note this is NOT the same as deleting flyingGeneral. Deleting it gives
+//       a third game where the generals may face and neither can do anything
+//       about it. Here the rule is PROMOTED: it stops being a prohibition and
+//       starts being a capture, which is the same move Duck Chess already
+//       allows for kings ("it is permissible to make a move / capture with your
+//       king that places it on an attacked square", and you win by capturing
+//       the king outright).
+//
+//       What this buys, measured on a board where the generals share a file
+//       and the duck is the only blocker: the duck used to be confined to the
+//       7 open points on that file out of 85 empty ones, a 92% confiscation of
+//       the shared resource that nothing on the board announced. Now all 85 are
+//       legal and 78 of them lose immediately. An invisible legality constraint
+//       became a visible blunder, which is what D4 did for every other attack.
+//
+//       The old D5a (facing checked once per half-turn) is gone with it: there
+//       is nothing left to check twice.
 //
 //   D9. STALEMATE: THE PLAYER WITH NO LEGAL TURN LOSES. Xiangqi's rule, and the
 //       one place the two parents flatly contradict each other - Duck Chess
@@ -309,6 +315,34 @@ function occupied(
   return board[square] !== undefined || duck === square;
 }
 
+/**
+ * The enemy general this general can fly down the file and take, or null.
+ *
+ * Same file, nothing between. The duck counts as something (D1), so a duck on
+ * the file is what stops this, and it has to move every turn.
+ */
+function flyingGeneralTarget(
+  board: DuckXiangqiBoard,
+  duck: DuckXiangqiSquare | undefined,
+  from: DuckXiangqiSquare,
+  color: DuckXiangqiColor,
+): DuckXiangqiSquare | null {
+  const { file, rank } = duckXiangqiCoordOf(from);
+  for (const step of [-1, 1]) {
+    // Ranks are 0-indexed here; the label adds the 1. Walk with the bounds
+    // helper rather than literals so this cannot drift from the convention.
+    for (let r = rank + step; duckXiangqiInBounds(file, r); r += step) {
+      const square = duckXiangqiSquareOf(file, r);
+      const piece = board[square];
+      if (duck === square) break;
+      if (!piece) continue;
+      if (piece.role === 'general' && piece.color !== color) return square;
+      break;
+    }
+  }
+  return null;
+}
+
 // ── Geometry ───────────────────────────────────────────────────────────────
 
 function ray(square: DuckXiangqiSquare, df: number, dr: number): DuckXiangqiSquare[] {
@@ -441,6 +475,14 @@ export function duckXiangqiPseudoMovesFrom(
         const target = duckXiangqiSquareOf(nf, nr);
         if (landable(target)) out.push(target);
       }
+      // D5: the flying general, as an actual capture. Xiangqi has always said
+      // the generals bear on each other down a clear file; standard xiangqi
+      // just never lets you find out, because leaving them facing is
+      // self-check. D4 removes check, so the attack becomes a move you can
+      // play. This is the ONLY way a general leaves its palace, and the game
+      // ends the instant it does.
+      const enemyGeneral = flyingGeneralTarget(board, duck, square, color);
+      if (enemyGeneral) out.push(enemyGeneral);
       break;
     }
     case 'advisor': {
@@ -519,7 +561,7 @@ export function duckXiangqiPseudoMovesFrom(
   return out;
 }
 
-// ── The facing rule (D5, D5a) ──────────────────────────────────────────────
+// ── The facing rule (D5) ───────────────────────────────────────────────────
 
 function generalSquare(board: DuckXiangqiBoard, color: DuckXiangqiColor): DuckXiangqiSquare | null {
   for (const square of allDuckXiangqiSquares()) {
@@ -532,9 +574,14 @@ function generalSquare(board: DuckXiangqiBoard, color: DuckXiangqiColor): DuckXi
 /**
  * Do the two generals bear on each other down a clear file?
  *
- * The duck counts as a blocker (D1), which is what makes D5a bite: a duck on
- * the file between the generals is the thing keeping the position legal, and
- * the duck has to move every turn.
+ * No longer a legality test. Since D5 changed, this is a THREAT predicate: it
+ * says the side to move can capture the enemy general outright by flying down
+ * the file, and equivalently that the side who just moved has blundered. Kept
+ * exported for the UI and the diagrams, which want to mark the position rather
+ * than forbid it.
+ *
+ * The duck counts as a blocker (D1), so a duck standing on the file is what
+ * holds the position together, and it has to move every turn.
  */
 export function duckXiangqiGeneralsFace(
   board: DuckXiangqiBoard,
@@ -581,11 +628,15 @@ function capturesGeneral(
 /**
  * Where the duck may go after a piece has moved from `from` to `to`.
  *
- * Three constraints, and the third is the second half of D5a: the point must be
- * empty on the board the move produced (so the vacated `from` is available and
- * `to` is not), it must differ from where the duck already is, and it may not
- * leave the generals facing. The piece move was already checked against the
- * facing rule on its own; this is the other half.
+ * Two constraints, both mechanical: the point must be empty on the board the
+ * move produced (so the vacated `from` is available and `to` is not), and it
+ * must differ from where the duck already is, because the duck may never stand
+ * still.
+ *
+ * There is no third constraint since D5 changed. The duck may leave the general
+ * file open; that is a losing placement, not an illegal one, and the player is
+ * the one who has to notice. This also removed the special case that used to
+ * dominate the cost here.
  */
 export function duckXiangqiDuckDestinations(
   board: DuckXiangqiBoard,
@@ -594,24 +645,6 @@ export function duckXiangqiDuckDestinations(
   to: DuckXiangqiSquare,
 ): DuckXiangqiSquare[] {
   const next = boardAfterMove(board, from, to);
-
-  // The facing rule partitions this into exactly two cases, and computing which
-  // one applies costs a single file scan instead of a facing test per point.
-  // The naive form - ask `duckXiangqiGeneralsFace` for all 90 points - is ~8,100
-  // square scans per call, which is most of the cost of a ply and far too slow
-  // for the random-play control.
-  const redGeneral = generalSquare(next, 'red');
-  const blackGeneral = generalSquare(next, 'black');
-  const segment = openGeneralSegment(next, redGeneral, blackGeneral);
-
-  if (segment) {
-    // The generals share a file with nothing between them, so the duck is the
-    // only thing that can keep the position legal: it must land on the segment.
-    // Every point on it is empty by construction, so the only exclusion left is
-    // the point the duck already occupies.
-    return segment.filter((square) => square !== duck);
-  }
-
   const out: DuckXiangqiSquare[] = [];
   for (const square of allDuckXiangqiSquares()) {
     if (next[square] !== undefined) continue;
@@ -622,49 +655,20 @@ export function duckXiangqiDuckDestinations(
 }
 
 /**
- * The points strictly between the two generals when they share a file and no
- * PIECE stands between them, otherwise null.
- *
- * Null means the facing rule cannot bite whatever the duck does - either the
- * generals are on different files, or a piece already blocks them.
- */
-function openGeneralSegment(
-  board: DuckXiangqiBoard,
-  red: DuckXiangqiSquare | null,
-  black: DuckXiangqiSquare | null,
-): DuckXiangqiSquare[] | null {
-  if (!red || !black) return null;
-  const a = duckXiangqiCoordOf(red);
-  const b = duckXiangqiCoordOf(black);
-  if (a.file !== b.file) return null;
-  const lo = Math.min(a.rank, b.rank) + 1;
-  const hi = Math.max(a.rank, b.rank);
-  const out: DuckXiangqiSquare[] = [];
-  for (let rank = lo; rank < hi; rank++) {
-    const square = duckXiangqiSquareOf(a.file, rank);
-    if (board[square] !== undefined) return null;
-    out.push(square);
-  }
-  return out;
-}
-
-/**
  * The legal xiangqi moves for the piece on `square` - the FIRST half of a turn,
  * complete on its own.
  *
- * D5a: the facing rule is applied here, to the piece move alone, and again in
- * `duckXiangqiDuckDestinations` to the duck move. A move that opens the general
- * file is illegal even if a duck placement would close it again, because "make
- * a legal xiangqi move, then move the duck" has to mean what it says.
+ * Identical to the pseudo-moves since D5 changed: there is no move a general
+ * can be forbidden from making, because there is nothing left to be in check
+ * from. Opening the general file is a move you are allowed to play and usually
+ * lose to, exactly like stepping in front of a chariot.
  */
 export function duckXiangqiMovesFrom(
   board: DuckXiangqiBoard,
   duck: DuckXiangqiSquare | undefined,
   square: DuckXiangqiSquare,
 ): DuckXiangqiSquare[] {
-  return duckXiangqiPseudoMovesFrom(board, duck, square).filter(
-    (to) => !duckXiangqiGeneralsFace(boardAfterMove(board, square, to), duck),
-  );
+  return duckXiangqiPseudoMovesFrom(board, duck, square);
 }
 
 /**

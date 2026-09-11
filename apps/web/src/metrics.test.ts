@@ -6,6 +6,12 @@ const publicStats = {
   totalCompletedGames: 682,
   last30dCompletedGames: 191,
   publicGames: 540,
+  accounts: 19,
+  weeklyCompletedGames: [
+    { weekStart: '2026-07-06', completedGames: 20 },
+    { weekStart: '2026-07-13', completedGames: 31 },
+    { weekStart: '2026-07-20', completedGames: 4 },
+  ],
   modeTotals: { pvp: 300, pve: 382, eve: 12 },
   variantTotals: [
     { variant: 'xiangqi', count: 402 },
@@ -51,6 +57,7 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   pvpGames: 4,
   pveGames: 6,
   players: 5,
+  signedInPlayers: 2,
   newPlayers: 1,
   returningPlayers: 4,
   activePlayers28d: 12,
@@ -67,6 +74,7 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   correspondenceSeeks: 0,
   newPatrons: 0,
   eveGames: 30,
+  internalGames: 4,
   ...overrides,
 });
 
@@ -91,6 +99,10 @@ const adminMetrics = {
     eveGamesLast7d: 90,
     importedGames: 12,
     manualGames: 1,
+    internalGames: 512,
+    internalGamesLast7d: 5,
+    preLaunchGames: 197,
+    countedFrom: '2026-06-01',
     eveByVariant: { 'dark-chess': 600, xiangqi: 300 },
   },
 };
@@ -116,43 +128,57 @@ describe('metrics page', () => {
     document.body.className = '';
   });
 
-  it('public /stats shows games, variants and modes but no players or results', async () => {
+  it('public /stats is a translated rail page: games per week, totals, variants, modes', async () => {
     stubFetch();
     const root = mountRoot();
     await mountMetrics(root, { admin: false });
 
     expect(root.querySelector('.site-section-heading')?.textContent).toBe('Statistics');
+    // One of the /about family: the static rail with this page active.
+    expect(root.querySelector('.static-page-rail-link.active')?.textContent).toBe('Statistics');
     const cardLabels = [...root.querySelectorAll('.metrics-card-label')].map((n) => n.textContent);
-    expect(cardLabels).toContain('Games played');
-    expect(cardLabels).toContain('Public games');
-    expect(cardLabels).toContain('In play now');
-    // Admin-only cards must not leak onto the public page.
-    expect(cardLabels).not.toContain('Players');
+    expect(cardLabels).toEqual(['Games played', 'Registered players', 'In play now']);
+    const gamesCard = [...root.querySelectorAll('.metrics-card')].find(
+      (c) => c.querySelector('.metrics-card-label')?.textContent === 'Games played',
+    );
+    expect(gamesCard?.querySelector('.metrics-card-value')?.textContent).toBe('682');
+    expect(gamesCard?.querySelector('.metrics-card-note')?.textContent).toBe(
+      '+191 in the last 30 days',
+    );
+    // Nothing admin-only leaks: no accounts growth, no online count, no results.
     expect(cardLabels).not.toContain('Online now');
+    expect(cardLabels).not.toContain('Patrons');
 
     const sectionTitles = [...root.querySelectorAll('.metrics-section-heading')].map(
       (n) => n.textContent,
     );
-    expect(sectionTitles).toEqual(['Games over time', 'Games by variant', 'Games by mode']);
+    expect(sectionTitles).toEqual([
+      'Games per week',
+      'Games over time',
+      'Games by variant',
+      'Games by mode',
+    ]);
+    // Games per week is the weekly primitive with one series and a table.
+    const weekly = root.querySelector('.metrics-weekly-section');
+    expect(weekly?.querySelector('.weekly-chart-legend')).toBeNull();
+    const firstRow = weekly?.querySelector('.weekly-chart-table tr:nth-child(2)');
+    expect([...(firstRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
+      '2026-07-20',
+      '4',
+    ]);
 
     // Variant labels use the public-facing names (dark-xiangqi -> Fog Xiangqi).
     expect(root.textContent).toContain('Fog Xiangqi');
     expect(root.textContent).not.toContain('dark-xiangqi');
     // Bot-vs-bot (EvE) is hidden from the public page, even though the API
     // returns a non-zero eve count.
-    expect(root.textContent).toContain('Human vs human');
+    expect(root.textContent).toContain('Player vs player');
     expect(root.textContent).not.toContain('Bot vs bot');
-    // The dedicated /stats page uses the interactive, full-width chart.
     expect(root.querySelector('svg.stats-chart-svg')).not.toBeNull();
 
-    // Chart filter: "All games" plus one chip per curated live variant that has
-    // games; the retired mini-xiangqi id is excluded even though the API returns
-    // a series for it.
     const chipLabels = [...root.querySelectorAll('.stats-chart-chip')].map((n) => n.textContent);
     expect(chipLabels).toEqual(['All games', 'Xiangqi', 'Fog Xiangqi']);
-    expect(chipLabels).not.toContain('Mini Xiangqi');
 
-    // The "Games by variant" breakdown is likewise limited to the live shelf.
     const variantSection = [...root.querySelectorAll('.metrics-section')].find((s) =>
       s.querySelector('.metrics-section-heading')?.textContent?.includes('Games by variant'),
     );
@@ -160,9 +186,21 @@ describe('metrics page', () => {
       ...(variantSection?.querySelectorAll('.metrics-breakdown-label') ?? []),
     ].map((n) => n.textContent);
     expect(variantLabels).toEqual(['Xiangqi', 'Fog Xiangqi']);
-    expect(variantLabels).not.toContain('Mini Xiangqi');
 
     expect(vi.mocked(fetch)).not.toHaveBeenCalledWith('/api/stats/admin', expect.anything());
+  });
+
+  it('public /stats renders in Traditional Chinese', async () => {
+    window.history.replaceState(null, '', '/zh-hant/stats');
+    stubFetch();
+    const root = mountRoot();
+    await mountMetrics(root, { admin: false });
+    expect(root.querySelector('.site-section-heading')?.textContent).toBe('統計');
+    const cardLabels = [...root.querySelectorAll('.metrics-card-label')].map((n) => n.textContent);
+    expect(cardLabels).toEqual(['已完成對局', '註冊玩家', '正在進行']);
+    expect(root.textContent).toContain('每週對局數');
+    expect(root.textContent).toContain('玩家對玩家');
+    window.history.replaceState(null, '', '/stats');
   });
 
   it('admin /metrics adds player cards, weekly charts, the result split, and an engines block', async () => {
@@ -172,13 +210,13 @@ describe('metrics page', () => {
 
     expect(root.querySelector('.site-section-heading')?.textContent).toBe('Metrics');
     const cardLabels = [...root.querySelectorAll('.metrics-card-label')].map((n) => n.textContent);
-    expect(cardLabels).toContain('Active accounts');
+    expect(cardLabels).toContain('Active players');
     expect(cardLabels).toContain('Accounts');
     expect(cardLabels).toContain('Patrons');
     expect(cardLabels).toContain('Online now');
 
     const activeCard = [...root.querySelectorAll('.metrics-card')].find((c) =>
-      c.querySelector('.metrics-card-label')?.textContent?.includes('Active accounts'),
+      c.querySelector('.metrics-card-label')?.textContent?.includes('Active players'),
     );
     expect(activeCard?.querySelector('.metrics-card-value')?.textContent).toBe('12');
     expect(activeCard?.querySelector('.metrics-card-note')?.textContent).toBe(
@@ -200,8 +238,8 @@ describe('metrics page', () => {
       (n) => n.textContent,
     );
     expect(sectionTitles).toEqual([
-      'Signed-in players per week',
-      'Active accounts, rolling 28 days',
+      'Players per week',
+      'Active players, rolling 28 days',
       'Games per week',
       'Accounts per week',
       'Puzzles per week',
@@ -211,7 +249,7 @@ describe('metrics page', () => {
       'Games by variant',
       'Games by mode',
       'Games by result',
-      'Engines and corpus',
+      'Not counted above',
     ]);
     expect(root.textContent).toContain('Red win');
 
@@ -221,11 +259,12 @@ describe('metrics page', () => {
     const legend = [...(playersSection?.querySelectorAll('.weekly-chart-legend li') ?? [])].map(
       (n) => n.textContent,
     );
-    expect(legend).toEqual(['Players', 'New', 'Returning']);
+    expect(legend).toEqual(['Players', 'Signed in', 'New', 'Returning']);
     const firstRow = playersSection?.querySelector('.weekly-chart-table tr:nth-child(2)');
     expect([...(firstRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
       '2026-07-20',
       '8',
+      '2',
       '1',
       '4',
     ]);
@@ -241,6 +280,10 @@ describe('metrics page', () => {
     expect(engines?.textContent).toContain('Bot vs bot');
     expect(engines?.textContent).toContain('900');
     expect(engines?.textContent).toContain('Imported');
+    expect(engines?.textContent).toContain('Internal');
+    expect(engines?.textContent).toContain('512');
+    expect(engines?.textContent).toContain('Pre-launch');
+    expect(engines?.textContent).toContain('197');
     const engineVariants = [...(engines?.querySelectorAll('.metrics-breakdown-label') ?? [])].map(
       (n) => n.textContent,
     );

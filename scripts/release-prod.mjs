@@ -645,6 +645,11 @@ async function runSmoke({ deployRequired, headRevision }) {
       tag: 'fortress',
       command: npmCommand('prod:smoke:fortress', baseArgs()),
     },
+    {
+      label: 'prod Duck smoke',
+      tag: 'duck',
+      command: npmCommand('prod:smoke:duck', baseArgs()),
+    },
     { label: 'prod DMX smoke', tag: 'dmx', command: npmCommand('prod:smoke:dmx', baseArgs()) },
     { label: 'prod DXQ smoke', tag: 'dxq', command: npmCommand('prod:smoke:dxq', baseArgs()) },
     {

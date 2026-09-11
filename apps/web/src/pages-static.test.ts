@@ -66,6 +66,7 @@ describe('about page platform activity', () => {
       ),
     ).toEqual([
       'About Mistboard',
+      'Statistics',
       'Mistboard updates',
       'FAQ',
       'Contact',
@@ -94,9 +95,11 @@ describe('about page platform activity', () => {
       pageText.indexOf('Player game activity'),
     );
     expect(root.querySelectorAll('.platform-activity-metric')).toHaveLength(0);
-    expect(root.querySelector('.platform-activity-chart svg')).not.toBeNull();
-    expect(root.querySelectorAll('.platform-activity-y-axis text').length).toBeGreaterThan(1);
-    expect(root.querySelectorAll('.platform-activity-x-axis text').length).toBeGreaterThan(2);
+    // The chart lives on /stats; the about section links there instead.
+    expect(root.querySelector('.platform-activity-chart')).toBeNull();
+    const more = root.querySelector<HTMLAnchorElement>('.platform-activity-more');
+    expect(more?.textContent).toBe('Full statistics');
+    expect(more?.getAttribute('href')).toBe('/stats');
     const modeItems = root.querySelectorAll('.platform-activity-mode-item');
     expect(modeItems).toHaveLength(2);
     expect(modeItems[0]?.textContent).toBe('Player vs player 42');
@@ -159,9 +162,7 @@ describe('about page platform activity', () => {
     expect(root.querySelector('.platform-activity-mode-list')?.getAttribute('aria-label')).toBe(
       '模式分布',
     );
-    expect(root.querySelector('.platform-activity-chart svg')?.getAttribute('aria-label')).toBe(
-      '30 局完成對局隨時間變化',
-    );
+    expect(root.querySelector('.platform-activity-more')?.textContent).toBe('完整統計');
   });
 
   it('localizes Traditional Chinese source page chrome', () => {

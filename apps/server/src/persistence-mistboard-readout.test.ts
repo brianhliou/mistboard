@@ -80,6 +80,13 @@ definePersistenceTests('Mistboard readout', () => {
 
   test('product facts count people and periods, not just finished games', async () => {
     // periodStart 2026-07-13, periodEnd 2026-07-20, previous week from 07-06.
+    // A counted seat needs a users row behind it (the exclusion flag lives
+    // there), so the signed-in player exists as an account, created before the
+    // previous period so it does not count as a new account.
+    await getPool().query(
+      `INSERT INTO users (id, email, handle, display_name, created_at)
+       VALUES ('user-1', 'one@example.com', 'one', 'One', '2026-06-01T09:00:00Z')`,
+    );
     await insertGame({
       roomId: 'room-current-pvp',
       variant: 'xiangqi',
@@ -125,6 +132,22 @@ definePersistenceTests('Mistboard readout', () => {
       endedAt: '2026-07-18T12:00:00Z',
       participants: [],
     });
+    // An operator account excluded from statistics: neither the account nor
+    // its game reaches any product figure.
+    await getPool().query(
+      `INSERT INTO users (id, email, handle, display_name, created_at, stats_excluded_at)
+       VALUES ('user-op', 'op@example.com', 'op', 'Op', '2026-07-14T09:00:00Z', now())`,
+    );
+    await insertGame({
+      roomId: 'room-current-internal',
+      variant: 'jieqi',
+      mode: 'pvp',
+      endedAt: '2026-07-18T13:00:00Z',
+      participants: [
+        { color: 'white', subjectType: 'user', subjectId: 'user-op' },
+        { color: 'black', subjectType: 'guest', subjectId: 'guest-4' },
+      ],
+    });
 
     const { report } = await generateMistboardReadout({
       trigger: 'manual',
@@ -147,13 +170,21 @@ definePersistenceTests('Mistboard readout', () => {
     assert.equal(product.completedGames, 2);
     assert.equal(product.previousCompletedGames, 1);
     assert.equal(product.abortedGames, 1);
+    // Players are accounts plus guest browsers (a guest seat's subject id is
+    // the device id since migration 137): guest-1 and user-1 this week,
+    // guest-2 and user-1 the week before. The aborted guest-3 seat and the
+    // excluded user-op / guest-4 game count for nobody.
     assert.equal(product.humanPlayers, 2);
     assert.equal(product.previousHumanPlayers, 2);
     assert.equal(product.signedInPlayers, 1);
-    // user-1 played in the previous week, guest-1 is new this week.
+    // user-1 played in the previous week too; guest-1 is new.
     assert.equal(product.returningPlayers, 1);
+    // 28 days back from periodEnd (07-20) covers both weeks.
+    assert.equal(product.activeAccounts28d, 3);
+    assert.equal(product.previousActiveAccounts28d, 0);
     assert.deepEqual(product.completedGamesByMode, { eve: 1, pve: 1, pvp: 1 });
     assert.deepEqual(product.completedGamesByVariant, [{ variant: 'xiangqi', count: 2 }]);
+    assert.equal(product.accountsCreated, 0);
   });
 
   test('the weekly trend reads prior weekly snapshots and skips daily ones', async () => {
