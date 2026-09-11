@@ -92,3 +92,37 @@ describe('underboard Crosstable tab', () => {
     expect(loads).toBe(1);
   });
 });
+
+describe('underboard initialTabId', () => {
+  function panelWithTools(initialTabId?: string): HTMLElement {
+    const lesson = document.createElement('div');
+    return underboardPanel(document.createElement('div'), {
+      hasAnalysis: false,
+      shareMovesInput: document.createElement('textarea'),
+      gameUrl: 'https://mistboard.com/game/r1',
+      tools: [
+        { id: 'comment', label: 'Comment', body: document.createElement('div') },
+        { id: 'lesson', label: 'Lesson', body: lesson },
+      ],
+      ...(initialTabId ? { initialTabId } : {}),
+    });
+  }
+  function activeTab(panel: HTMLElement): string | null | undefined {
+    return panel.querySelector('.review-underboard-tab--active')?.textContent;
+  }
+
+  it('opens on the named tab, so a practice chapter lands on Lesson', () => {
+    const panel = panelWithTools('lesson');
+    expect(activeTab(panel)).toBe('Lesson');
+    const bodies = [...panel.querySelectorAll('.review-underboard-bodies > *')] as HTMLElement[];
+    const hidden = bodies.map((b) => b.hidden);
+    // Exactly one body is showing, and it is the second (Lesson) one.
+    expect(hidden.filter((h) => !h).length).toBe(1);
+    expect(hidden[1]).toBe(false);
+  });
+
+  it('falls back to the first tab when the id is absent or unknown', () => {
+    expect(activeTab(panelWithTools())).toBe('Comment');
+    expect(activeTab(panelWithTools('no-such-tab'))).toBe('Comment');
+  });
+});
