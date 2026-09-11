@@ -17,7 +17,7 @@ import { canonicalJson, diffRules, parseRuleArgs, resolveRules, rulesHash } from
 import { eloFromScore, tally, waldInterval } from './lab/stats.js';
 import type { RuleSchema } from './lab/types.js';
 import { duckXiangqiVariant } from './lab/variants/duck-xiangqi.js';
-import { LAB_VARIANTS } from './lab/variants/index.js';
+import { listLabVariants } from './lab/variants/index.js';
 import { STOCK_FSF, xiangqiVariant } from './lab/variants/xiangqi.js';
 
 const schema: RuleSchema = {
@@ -114,8 +114,13 @@ test('stats: interval, elo and tally behave at the edges', () => {
   assert.equal(t.lengths.median, 20);
 });
 
-test('every registered variant resolves its defaults and produces a playable start', () => {
-  for (const variant of LAB_VARIANTS) {
+test('every registered variant resolves its defaults and produces a playable start', async () => {
+  const variants = await listLabVariants();
+  assert.deepEqual(
+    variants.map((v) => v.id),
+    ['duck-xiangqi', 'xiangqi'],
+  );
+  for (const variant of variants) {
     const rules = resolveRules(variant.ruleSchema, {});
     const { kernel, engine } = variant.create(rules);
     const start = kernel.initial('t');
@@ -174,7 +179,7 @@ const stockBinary = (() => {
 test('engine: the control variant takes on stock FSF, and a wrong variant fails loud', {
   skip: stockBinary === null ? 'no Fairy-Stockfish binary (set MISTBOARD_FSF_PATH)' : false,
 }, async () => {
-  const ctx = buildContext({ variant: 'xiangqi', out: mkdtempSync(join(tmpdir(), 'lab-')) });
+  const ctx = await buildContext({ variant: 'xiangqi', out: mkdtempSync(join(tmpdir(), 'lab-')) });
   const engine = await ctx.openEngine();
   try {
     assert.equal(engine.identity?.variant, 'labxiangqi');

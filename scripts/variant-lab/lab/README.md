@@ -69,8 +69,13 @@ worktree when run from a task worktree); `LAB_OUT` or `--out` overrides.
 
 ## Adding a variant
 
-One file under `variants/` implementing `LabVariant` from `types.ts`, and a
-line in `variants/index.ts`. The adapter binds a rules record to:
+One file `variants/<id>.ts` exporting a `LabVariant` (from `types.ts`) whose
+`id` is the file name; the registry discovers it, so nothing shared is edited
+and two variants in two worktrees never touch the same file. A kernel that is
+not (yet) exported from `@mistboard/game` is imported by relative path into
+`packages/game/src/`; the Benedict pattern of an unregistered kernel is the
+default until a variant survives measurement. The adapter binds a rules
+record to:
 
 - a `LabKernel`: whole turns in and out, engine notation both ways, an
   engine-acceptable FEN both ways, and (for variants whose turn list is

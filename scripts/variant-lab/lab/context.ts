@@ -49,8 +49,8 @@ export type ContextInput = {
   plyCap?: number;
 };
 
-export function buildContext(input: ContextInput): LabContext {
-  const variant = findLabVariant(input.variant);
+export async function buildContext(input: ContextInput): Promise<LabContext> {
+  const variant = await findLabVariant(input.variant);
   const rules = resolveRules(variant.ruleSchema, parseRuleArgs(input.rules ?? []));
   const { kernel, engine: engineSpec } = variant.create(rules);
   const outDir = input.out ? resolve(input.out) : defaultOutDir();

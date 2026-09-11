@@ -25,7 +25,7 @@ import { perftGate } from './commands/perft-gate.js';
 import { randomplay } from './commands/randomplay.js';
 import { report } from './commands/report.js';
 import { buildContext } from './context.js';
-import { LAB_VARIANTS } from './variants/index.js';
+import { labVariantIds, listLabVariants } from './variants/index.js';
 
 const USAGE = `usage: lab <command> --variant <id> [--rules k=v[,k=v]] [--seed N] [--out DIR]
                 [--threads N] [--hash MB] [--timeout MS] [--ply-cap N] [command options]
@@ -39,7 +39,7 @@ commands: assert-variant | perft-gate | randomplay | match | ladder | bestplay |
   bestplay     --nodes 1000000[,2000000,...]
   report       [--write FILE.md]
 
-variants: ${LAB_VARIANTS.map((v) => v.id).join(', ')}`;
+variants: ${labVariantIds().join(', ')}`;
 
 function num(value: string | undefined, fallback: number): number {
   if (value === undefined) return fallback;
@@ -80,7 +80,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     return command ? 0 : 2;
   }
   if (command === 'variants') {
-    for (const v of LAB_VARIANTS) {
+    for (const v of await listLabVariants()) {
       const rules = Object.entries(v.ruleSchema)
         .map(([k, s]) => `${k}=${s.default} [${s.options.join('|')}] (${s.blast})`)
         .join(', ');
@@ -95,7 +95,7 @@ export async function main(argv: readonly string[]): Promise<number> {
     console.log(USAGE);
     return 2;
   }
-  const ctx = buildContext({
+  const ctx = await buildContext({
     variant: values.variant,
     rules: values.rules,
     out: values.out,
