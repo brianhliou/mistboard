@@ -4,6 +4,9 @@ import {
   countedHumanGame,
   excludedSeatExists,
   internalHumanGame,
+  preLaunchHumanGame,
+  STATS_COUNTED_FROM,
+  sinceLaunch,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { PATRON_ACTIVE_STATUSES } from './persistence-patron.js';
@@ -68,6 +71,10 @@ export interface AdminMetricsEngines {
   // operator's own). Left out of every count above this block.
   internalGames: number;
   internalGamesLast7d: number;
+  // Completed human games before STATS_COUNTED_FROM with no excluded seat:
+  // the operator's pre-launch guest-seat testing, unreachable by any flag.
+  preLaunchGames: number;
+  countedFrom: string;
   eveByVariant: Record<string, number>;
 }
 
@@ -102,6 +109,8 @@ const HUMAN_GAME = countedHumanGame('g');
 const SIGNED_IN_SEAT = countedAccountSeat('p');
 const INTERNAL_GAME = internalHumanGame('g');
 const EXCLUDED_SEAT = excludedSeatExists('g');
+const PRE_LAUNCH_GAME = preLaunchHumanGame('g');
+const SINCE_LAUNCH = sinceLaunch('g');
 // Start of the oldest week in the window; $1 is `now`, $2 the week count.
 const WINDOW_START = `date_trunc('week', $1::timestamptz) - ($2::int - 1) * INTERVAL '1 week'`;
 
@@ -265,6 +274,7 @@ async function collectEngines(db: Queryable, now: Date): Promise<AdminMetricsEng
       manual_games: number;
       internal_games: number;
       internal_games_last7d: number;
+      pre_launch_games: number;
     }>(
       `SELECT
          count(*) FILTER (WHERE g.mode = 'eve')::int AS eve_games,
@@ -274,7 +284,8 @@ async function collectEngines(db: Queryable, now: Date): Promise<AdminMetricsEng
          count(*) FILTER (WHERE g.mode = 'manual')::int AS manual_games,
          count(*) FILTER (WHERE ${INTERNAL_GAME})::int AS internal_games,
          count(*) FILTER (WHERE ${INTERNAL_GAME}
-           AND g.ended_at > $1::timestamptz - INTERVAL '7 days')::int AS internal_games_last7d
+           AND g.ended_at > $1::timestamptz - INTERVAL '7 days')::int AS internal_games_last7d,
+         count(*) FILTER (WHERE ${PRE_LAUNCH_GAME})::int AS pre_launch_games
        FROM games g
        WHERE g.status = 'completed'`,
       [now],
@@ -293,6 +304,8 @@ async function collectEngines(db: Queryable, now: Date): Promise<AdminMetricsEng
     manualGames: row?.manual_games ?? 0,
     internalGames: row?.internal_games ?? 0,
     internalGamesLast7d: row?.internal_games_last7d ?? 0,
+    preLaunchGames: row?.pre_launch_games ?? 0,
+    countedFrom: STATS_COUNTED_FROM,
     eveByVariant: Object.fromEntries(byVariant.rows.map((r) => [r.variant, r.n])),
   };
 }
@@ -314,8 +327,8 @@ async function collectGamesByWeek(
     internal: number;
   }>(
     `SELECT date_trunc('week', g.ended_at)::date::text AS week, g.mode,
-            count(*) FILTER (WHERE NOT ${EXCLUDED_SEAT})::int AS n,
-            count(*) FILTER (WHERE NOT ${EXCLUDED_SEAT} AND EXISTS (
+            count(*) FILTER (WHERE NOT ${EXCLUDED_SEAT} AND ${SINCE_LAUNCH})::int AS n,
+            count(*) FILTER (WHERE NOT ${EXCLUDED_SEAT} AND ${SINCE_LAUNCH} AND EXISTS (
               SELECT 1 FROM game_participants p
               WHERE p.game_id = g.room_id AND p.subject_type = 'guest'
             ))::int AS guest,
