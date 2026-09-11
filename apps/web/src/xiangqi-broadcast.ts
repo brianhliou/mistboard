@@ -9,7 +9,7 @@ import type {
   XiangqiGameStatus,
   XiangqiMove,
 } from '@mistboard/game';
-import { xiangqiMoveToFsfUci } from '@mistboard/game';
+import { broadcastRecordsCredit, xiangqiMoveToFsfUci } from '@mistboard/game';
 import './live-xiangqi.css';
 import './xiangqi-broadcast.css';
 import { t } from './i18n/catalog.js';
@@ -75,6 +75,8 @@ type BroadcastRoundStats = {
 type BroadcastRoundWithStats = XiangqiBroadcastRound & Partial<BroadcastRoundStats>;
 
 type BroadcastTourResponse = {
+  /** Who to credit for the records; derived server-side from the boards. */
+  recordsSource?: { host: string; href: string } | null;
   tour: XiangqiBroadcastTour;
   rounds: BroadcastRoundWithStats[];
 };
@@ -440,6 +442,11 @@ function renderTour(data: BroadcastTourResponse): HTMLElement {
   }
   section.append(heading, list);
   main.append(section);
+  // The tour page is the one an outside link points at, and it was the only
+  // broadcast page that credited nobody: the round pages derive the credit from
+  // their own boards, and a tour payload has none.
+  const credit = creditLineFrom(data.recordsSource);
+  if (credit) main.append(credit);
   return main;
 }
 
@@ -513,8 +520,9 @@ type BoardCardCache = Map<string, { signature: string; el: HTMLElement }>;
 // cannot see never arrives as a push, so a card the gate would not fire for is
 // a card that genuinely has not moved. If roundVersion ever grows a field,
 // grow this one with it.
-function boardCardSignature(board: BroadcastBoardSummary): string {
+function boardCardSignature(board: BroadcastBoardSummary, playedOn?: string | null): string {
   return JSON.stringify([
+    playedOn ?? null,
     board.updatedAt ?? null,
     board.plyCount ?? board.moves?.length ?? 0,
     board.status,
@@ -525,51 +533,31 @@ function boardCardSignature(board: BroadcastBoardSummary): string {
   ]);
 }
 
-function boardCardFor(board: BroadcastBoardSummary, cache?: BoardCardCache): HTMLElement {
-  if (!cache) return boardCard(board);
-  const signature = boardCardSignature(board);
+function boardCardFor(
+  board: BroadcastBoardSummary,
+  cache?: BoardCardCache,
+  playedOn?: string | null,
+): HTMLElement {
+  if (!cache) return boardCard(board, playedOn);
+  const signature = boardCardSignature(board, playedOn);
   const cached = cache.get(board.id);
   // Appending an element that is already in the DOM moves it, so a reused card
   // reorders (live boards lead the grid) without being rebuilt.
   if (cached && cached.signature === signature) return cached.el;
-  const el = boardCard(board);
+  const el = boardCard(board, playedOn);
   cache.set(board.id, { signature, el });
   return el;
 }
 
-// Where these games came from, taken from the provenance each board already
-// carries rather than from tour.sourceUrl.
-//
-// tour.sourceUrl is a POLL TARGET, not a credit. It has to be fetchable and
-// parseable, the poller re-anchors it on every run, and for a tour imported
-// from an archive there is no URL shape that expresses "all of this came from
-// there": the source interpreter only understands a dpxq page carrying move
-// data, so a tour index is rejected as malformed. A credit is editorial and
-// should not depend on any of that.
-export function broadcastRecordsCredit(
-  boards: readonly { sourceUrl?: string }[],
-): { host: string; href: string } | null {
-  const origins = new Map<string, string>();
-  for (const board of boards) {
-    if (!board.sourceUrl) continue;
-    try {
-      const url = new URL(board.sourceUrl);
-      if (url.protocol !== 'http:' && url.protocol !== 'https:') continue;
-      origins.set(url.host.replace(/^www\./, ''), url.origin);
-    } catch {
-      // A board with an unparseable source simply does not vote.
-    }
-  }
-  // Two origins would need a list, and no import path produces one today.
-  // Credit only what can be stated without qualification.
-  if (origins.size !== 1) return null;
-  const [entry] = [...origins.entries()];
-  const [host, href] = entry!;
-  return { host, href };
-}
+export { broadcastRecordsCredit };
 
 function recordsCreditLine(boards: readonly { sourceUrl?: string }[]): HTMLElement | null {
-  const credit = broadcastRecordsCredit(boards);
+  return creditLineFrom(broadcastRecordsCredit(boards));
+}
+
+function creditLineFrom(
+  credit: { host: string; href: string } | null | undefined,
+): HTMLElement | null {
   if (!credit) return null;
   const line = document.createElement('p');
   line.className = 'xqb-records-credit';
@@ -603,6 +591,13 @@ function renderRound(data: BroadcastRoundResponse, cards?: BoardCardCache): HTML
     }),
   );
 
+  // Only once the round is over: while it is running, freshness is the more
+  // useful thing in that slot and the round date is the same on every card.
+  const roundPlayedOn =
+    data.boards.length > 0 && data.boards.every((board) => board.status !== 'live')
+      ? formatDate(data.round.startsAt)
+      : null;
+
   const section = document.createElement('section');
   section.className = 'xqb-section';
   const heading = document.createElement('h2');
@@ -615,7 +610,7 @@ function renderRound(data: BroadcastRoundResponse, cards?: BoardCardCache): HTML
       Number(a.status !== 'live') - Number(b.status !== 'live') || a.boardNumber - b.boardNumber,
   );
   for (const board of boards) {
-    grid.append(boardCardFor(board, cards));
+    grid.append(boardCardFor(board, cards, roundPlayedOn));
   }
   // Boards that left the round entirely must not pin their cards in memory.
   if (cards) {
@@ -902,7 +897,7 @@ function liveBadge(): HTMLElement {
 // A scannable mini-board card: the current position rebuilt from the board's
 // move list (broadcasts are open truth, so the red-perspective truth view is
 // safe to render), plus pairing + result/status. Links to the full board page.
-function boardCard(board: BroadcastBoardSummary): HTMLElement {
+function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTMLElement {
   const card = document.createElement('a');
   card.className = `xqb-board-card xqb-board-card-${board.status}`;
   card.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
@@ -943,7 +938,13 @@ function boardCard(board: BroadcastBoardSummary): HTMLElement {
 
   const foot = document.createElement('div');
   foot.className = 'xqb-card-foot';
-  const fresh = board.status === 'live' ? 'live' : formatBroadcastFreshness(board.updatedAt);
+  // "2m ago" is a live signal and the right thing during a relay. Once a round
+  // is over it falls through to a bare date, which reads as the date the game
+  // was played and is in fact the date WE imported it: every board of a round
+  // played Aug 16-18 said "Aug 29". A finished round shows the round's own date
+  // instead, which is the fact a reader wanted from that slot.
+  const fresh =
+    board.status === 'live' ? 'live' : (playedOn ?? formatBroadcastFreshness(board.updatedAt));
   foot.textContent = [`${plyCount(board)} plies`, fresh].filter(Boolean).join(' / ');
 
   card.append(top, boardEl, players, foot);
@@ -957,10 +958,23 @@ function cardPlayer(
 ): HTMLElement {
   const row = document.createElement('span');
   row.className = `xqb-card-player xqb-card-player-${color}${won ? ' xqb-card-player-winner' : ''}`;
+  // Name and team as separate elements, not one concatenated string. As one
+  // string the ellipsis lands wherever the width runs out, which on a card this
+  // wide was inside the team: "Wang Jiarui (Zhejian...". Split, the team gives
+  // up its characters first and the player's name survives, which is the half a
+  // reader is scanning for.
   const name = document.createElement('span');
   name.className = 'xqb-card-player-name';
-  name.textContent = playerName(player);
+  name.textContent = `${player.title ? `${player.title} ` : ''}${primaryName(player)}`;
   row.append(name);
+  const federation = primaryFederation(player);
+  if (federation) {
+    const team = document.createElement('span');
+    team.className = 'xqb-card-player-team';
+    team.textContent = federation;
+    team.title = federation;
+    row.append(team);
+  }
   const zh = zhSubline(playerNameZh(player), 'xqb-name-zh xqb-name-zh-inline');
   if (zh) row.append(zh);
   return row;

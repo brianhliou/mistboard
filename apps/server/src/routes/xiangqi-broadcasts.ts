@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   applyStandardXiangqiMove,
+  broadcastRecordsCredit,
   createInitialXiangqiState,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
@@ -422,6 +423,12 @@ export async function xiangqiBroadcastTourForApi(
   );
   return {
     tour,
+    // Who to credit for the records, derived from the boards we already loaded
+    // for the counts. The tour payload carries no boards, so the client cannot
+    // work this out for itself -- which is why the tour PAGE credited nobody
+    // while every round page did, on a tour whose 61 games all came from one
+    // volunteer archive. It is also the page an outside link points at.
+    recordsSource: broadcastRecordsCredit(boardsByRound.flat()),
     rounds: rounds.map((round, index) => ({
       ...round,
       ...roundBoardStats(boardsByRound[index] ?? []),

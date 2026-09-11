@@ -363,3 +363,39 @@ export function replayXiangqiBroadcastBoard(
 export function xiangqiBroadcastVariant(): typeof XIANGQI_SPEC_ID {
   return XIANGQI_SPEC_ID;
 }
+
+/**
+ * Where a tour's or round's records came from, derived from the provenance each
+ * board already carries.
+ *
+ * NOT `tour.sourceUrl`, which is a POLL TARGET: the poller re-anchors it every
+ * run, it has to be a page carrying move data, and for a tour imported from an
+ * archive there is no URL shape that says "all of this came from there". A
+ * credit is editorial and must not depend on any of that.
+ *
+ * Shared because both surfaces need the same answer: the web client renders it
+ * under a round's boards, and the tour API derives it server-side because the
+ * tour payload carries no boards for the client to inspect. Two copies would
+ * drift and the failure mode is silent -- a page crediting nobody.
+ */
+export function broadcastRecordsCredit(
+  boards: readonly { sourceUrl?: string }[],
+): { host: string; href: string } | null {
+  const origins = new Map<string, string>();
+  for (const board of boards) {
+    if (!board.sourceUrl) continue;
+    try {
+      const url = new URL(board.sourceUrl);
+      if (url.protocol !== 'http:' && url.protocol !== 'https:') continue;
+      origins.set(url.host.replace(/^www\./, ''), url.origin);
+    } catch {
+      // A board with an unparseable source simply does not vote.
+    }
+  }
+  // Two origins would need a list, and no import path produces one today.
+  // Credit only what can be stated without qualification.
+  if (origins.size !== 1) return null;
+  const [entry] = [...origins.entries()];
+  const [host, href] = entry!;
+  return { host, href };
+}

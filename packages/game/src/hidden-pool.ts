@@ -29,10 +29,10 @@ import {
   STANDARD_JIEQI_DEAL,
 } from './variants-jieqi.js';
 import { JUNGLE_RANK, type JunglePieceRole } from './variants-jungle.js';
-import {
-  type JungleFlipCapture,
-  type JungleFlipColor,
-  type JungleFlipPlayerBoard,
+import type {
+  JungleFlipCapture,
+  JungleFlipColor,
+  JungleFlipPlayerBoard,
 } from './variants-jungle-flip.js';
 
 export type HiddenPoolEntry<Role extends string> = { role: Role; count: number };

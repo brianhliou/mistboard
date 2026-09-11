@@ -811,3 +811,19 @@
     max-height: 40vh;
   }
 }
+
+/* Name and team compete for one line: the team yields first. Without this the
+ * single concatenated string ellipsized inside the team name and truncated the
+ * player along with it. */
+.xqb-card-player-name {
+  flex: 0 1 auto;
+}
+.xqb-card-player-team {
+  flex: 1 1 0;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  color: var(--site-muted);
+  font-weight: 400;
+}

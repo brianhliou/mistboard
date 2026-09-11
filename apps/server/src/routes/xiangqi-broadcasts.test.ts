@@ -632,6 +632,33 @@ test('broadcast tour API returns tour detail with rounds', async () => {
   assert.equal(payload.rounds[0]?.id, 'men-r1');
 });
 
+test('broadcast tour API credits the records source, which the payload has no boards for', async () => {
+  // The tour payload carries rounds, not boards, so a client cannot derive this
+  // for itself. Without it the tour PAGE credited nobody while every round page
+  // did -- on a tour whose games all came from one volunteer archive, and on the
+  // page an outside link points at.
+  const sourced = await xiangqiBroadcastTourForApi(
+    tour.slug,
+    deps({
+      listXiangqiBroadcastBoards: async (roundId) =>
+        roundId === board.roundId
+          ? [
+              {
+                ...storedBoard,
+                sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_142519.html',
+              },
+            ]
+          : [],
+    }),
+  );
+  assert.ok(sourced);
+  assert.deepEqual(sourced.recordsSource, { host: 'dpxq.com', href: 'http://www.dpxq.com' });
+
+  // Boards with no provenance credit nobody, rather than crediting us.
+  const unsourced = await xiangqiBroadcastTourForApi(tour.slug, deps());
+  assert.equal(unsourced?.recordsSource, null);
+});
+
 test('broadcast tour API rounds carry board status counts for status icons', async () => {
   const payload = await xiangqiBroadcastTourForApi(tour.slug, deps());
 
