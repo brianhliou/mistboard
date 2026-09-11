@@ -6,6 +6,9 @@
 
 import '../app-base.css';
 import '../puzzles.css';
+import { variantDisplayLabel } from '../game-display.js';
+import { t } from '../i18n/catalog.js';
+import { colorLabel, type PuzzleColor } from '../puzzles/adapter.js';
 import { fetchPuzzleDetail } from '../puzzles/api.js';
 import type { EmbedPuzzleRoute } from './embed-route.js';
 import './embed.css';
@@ -32,21 +35,25 @@ async function dailyPuzzleId(): Promise<string | null> {
   return typeof body.puzzle?.id === 'string' ? body.puzzle.id : null;
 }
 
-function goalLine(sideToMove: string | null, variant: string): string {
-  const side = sideToMove === 'black' ? 'Black' : 'Red';
-  const name = variant
-    .split('-')
-    .filter(Boolean)
-    .map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`)
-    .join(' ');
-  return `${name} · ${side} to play`;
+// The embed's locale is whatever the reader's browser or stored preference
+// says (an embed URL carries no locale prefix), which is also what the
+// trainer inside the frame renders in; these lines follow the same t().
+function captionLine(
+  puzzle: { sideToMove: PuzzleColor | null; variant: string },
+  daily: boolean,
+): string {
+  const params = {
+    variant: variantDisplayLabel(puzzle.variant),
+    color: colorLabel(puzzle.sideToMove),
+  };
+  return daily ? t('puzzle.embedDaily', params) : t('puzzle.embedGoal', params);
 }
 
 export async function mountEmbedPuzzle(root: HTMLElement, route: EmbedPuzzleRoute): Promise<void> {
   document.body.classList.add('embed-body');
   document.documentElement.dataset.embed = 'puzzle';
   root.className = 'embed-root';
-  note(root, 'Loading…');
+  note(root, `${t('puzzle.loading')}…`);
 
   let id = route.puzzleId;
   try {
@@ -55,7 +62,7 @@ export async function mountEmbedPuzzle(root: HTMLElement, route: EmbedPuzzleRout
     id = null;
   }
   if (!id) {
-    note(root, 'No puzzle today.');
+    note(root, t('puzzle.embedNoDaily'));
     return;
   }
 
@@ -63,11 +70,11 @@ export async function mountEmbedPuzzle(root: HTMLElement, route: EmbedPuzzleRout
   try {
     puzzle = await fetchPuzzleDetail(id);
   } catch {
-    note(root, 'This puzzle could not be loaded.');
+    note(root, t('puzzle.embedLoadFailed'));
     return;
   }
   if (!puzzle) {
-    note(root, 'This puzzle is not available.');
+    note(root, t('puzzle.embedNotAvailable'));
     return;
   }
 
@@ -75,9 +82,7 @@ export async function mountEmbedPuzzle(root: HTMLElement, route: EmbedPuzzleRout
   frame.className = 'embed-frame';
   const caption = document.createElement('div');
   caption.className = 'embed-puzzle-caption';
-  caption.textContent = route.puzzleId
-    ? goalLine(puzzle.sideToMove, puzzle.variant)
-    : `Daily puzzle · ${goalLine(puzzle.sideToMove, puzzle.variant)}`;
+  caption.textContent = captionLine(puzzle, route.puzzleId === null);
   const host = document.createElement('div');
   host.className = 'puzzles-page embed-puzzle';
   const credit = document.createElement('a');
@@ -85,7 +90,7 @@ export async function mountEmbedPuzzle(root: HTMLElement, route: EmbedPuzzleRout
   credit.href = `/puzzles/${encodeURIComponent(puzzle.id)}`;
   credit.target = '_blank';
   credit.rel = 'noopener';
-  credit.textContent = 'Solve on mistboard.com';
+  credit.textContent = t('puzzle.embedSolveOn');
   frame.append(caption, host, credit);
   root.replaceChildren(frame);
 
