@@ -41,6 +41,7 @@ import {
   darkCrossroadsChessEnabled,
   darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
+  duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
@@ -80,6 +81,7 @@ const darkMiniEnabled = darkMiniXiangqiEnabled();
 // deep link; live client gate untouched). See project_xiangqi_pivot_track.
 const dropMiniXiangqiOn = false;
 const fortressXiangqiOn = fortressXiangqiEnabled();
+const duckXiangqiOn = duckXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
 const crossroadsEnabled = crossroadsChessEnabled();
 const jieqiOn = jieqiEnabled();
@@ -100,6 +102,7 @@ const draft960Spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
 const darkMiniXiangqiSpec = gameSpecForId(DARK_MINI_XIANGQI_SPEC_ID);
 const dropMiniXiangqiSpec = gameSpecForId(DROP_MINI_XIANGQI_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
+const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
 const crossroadsChessSpec = gameSpecForId(CROSSROADS_CHESS_SPEC_ID);
@@ -191,6 +194,19 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: fortressXiangqiOn,
     onProfile: fortressXiangqiOn,
+  },
+  // Duck: xiangqi plus Duck Chess's shared blocker. Launched casual and
+  // rating-ready on the same terms as Fortress; the lobby seek stays unrated
+  // (registration.ts) until the pool has games in it.
+  {
+    id: currentRatingVariantForSpec(DUCK_XIANGQI_SPEC_ID),
+    gameSpecId: duckXiangqiSpec.id,
+    apiParam: DUCK_XIANGQI_SPEC_ID,
+    label: duckXiangqiSpec.publicName,
+    miniId: 'duck-xiangqi',
+    enabled: false,
+    onLeaderboard: duckXiangqiOn,
+    onProfile: duckXiangqiOn,
   },
   // Full Fog Xiangqi (9x10): launched PvP-first (no bot, no open-seek lobby),
   // rating-ready like Jieqi/Banqi, and paired directly with Fog Chess.

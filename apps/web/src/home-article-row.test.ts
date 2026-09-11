@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOME_ARTICLE_SLUGS } from './articles.js';
+import { HOME_ARTICLE_RULES_ALLOWLIST, HOME_ARTICLE_SLUGS } from './articles.js';
 import { articles } from './articles-data.js';
 
 // The homepage row is CURATED, not date-driven: it renders the slugs listed in
@@ -15,7 +15,11 @@ import { articles } from './articles-data.js';
 const KEPT_OFF: Array<{ slug: string; why: string }> = [];
 
 const editorial = articles.filter(
-  (article) => article.status === 'published' && article.kind !== 'rules',
+  (article) =>
+    article.status === 'published' &&
+    // Rules pages are excluded from this row except for the named launch
+    // exceptions, which are editorial FOR THIS ROW's purposes.
+    (article.kind !== 'rules' || HOME_ARTICLE_RULES_ALLOWLIST.includes(article.slug)),
 );
 
 describe('the homepage article row', () => {

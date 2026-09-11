@@ -10,6 +10,7 @@ import {
   DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   gameSpecForId,
   JIEQI_SPEC_ID,
@@ -66,6 +67,7 @@ describe('web variant launch registry', () => {
     // filtered without changing their canonical shelf order.
     expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
       FORTRESS_XIANGQI_SPEC_ID,
+      DUCK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
@@ -84,6 +86,7 @@ describe('web variant launch registry', () => {
     const flagged = await import('./variants.js');
     const expected = [
       FORTRESS_XIANGQI_SPEC_ID,
+      DUCK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
@@ -161,6 +164,7 @@ describe('web variant launch registry', () => {
       BANQI_SPEC_ID,
       JIEQI_SPEC_ID,
       FORTRESS_XIANGQI_SPEC_ID,
+      DUCK_XIANGQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
@@ -171,6 +175,7 @@ describe('web variant launch registry', () => {
       BANQI_SPEC_ID,
       JIEQI_SPEC_ID,
       FORTRESS_XIANGQI_SPEC_ID,
+      DUCK_XIANGQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
@@ -207,6 +212,7 @@ describe('web variant launch registry', () => {
       [BANQI_SPEC_ID, 'banqi'],
       [JIEQI_SPEC_ID, 'jieqi'],
       [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],
+      [DUCK_XIANGQI_SPEC_ID, 'duck-xiangqi'],
       [DARK_XIANGQI_SPEC_ID, 'dark-xiangqi'],
       [DARK_CHESS_SPEC_ID, 'fog'],
       [JUNGLE_SPEC_ID, 'jungle'],

@@ -187,6 +187,7 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   jungle: 'variant.jungle.name',
   jungle_flip: 'variant.jungleFlip.name',
   fortress_xiangqi: 'variant.fortressXiangqi.name',
+  duck_xiangqi: 'variant.duckXiangqi.name',
   xiangqi: 'variant.xiangqi.name',
 };
 

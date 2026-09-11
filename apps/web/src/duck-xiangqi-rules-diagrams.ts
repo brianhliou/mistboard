@@ -135,7 +135,11 @@ export const DUCK_XIANGQI_THUMBNAIL = () =>
       y: 0,
       label: 'DUCK XIANGQI',
       perspective: 'red',
-      overlay: duckOverlay('e3', PAIR_GAP_X / 2, 0),
+      // x0 MUST match the board's own x above. It read PAIR_GAP_X / 2 while the
+      // board sat at 0, which is more than a full board width, so the duck was
+      // drawn past the right edge of a canvas one board wide and the thumbnail
+      // showed an empty starting position.
+      overlay: duckOverlay('e3', 0, 0),
     }),
   );
 

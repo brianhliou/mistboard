@@ -26,9 +26,9 @@ describe('profile ratings rail', () => {
     // Xiangqi pivot: Drop Mini is off the rating grids now.
     expect(section.textContent).not.toContain('Drop Mini Xiangqi');
     expect(section.textContent).not.toContain('Crossroads Chess');
-    // Fortress + Flip Jungle + Jungle + Dark Chess (always-on) + Dark Mini (render
-    // flag) = 5 profile rows.
-    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(5);
+    // Fortress + Duck + Flip Jungle + Jungle + Dark Chess (always-on) + Dark
+    // Mini (render flag) = 6 profile rows.
+    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(6);
   });
 
   it('localizes Traditional Chinese profile ratings rows', async () => {
@@ -550,8 +550,9 @@ describe('profile ratings rail', () => {
     expect(root.textContent).not.toContain('Drop Mini Xiangqi');
     expect(root.textContent).toContain('Fortress Xiangqi');
     expect(root.textContent).toContain('Human blitz ladders');
-    // 4 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Fortress).
-    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(4);
+    // 5 rated ladders (Dark Chess + always-on Jungle, Flip Jungle, Fortress,
+    // Duck).
+    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(5);
     expect(root.textContent).not.toContain('Active players');
     expect(fetchSpy).toHaveBeenCalledWith('/api/leaderboard/summary?limit=10&timeClass=blitz');
     expect(fetchSpy).toHaveBeenCalledWith('/api/players/online');
@@ -693,15 +694,28 @@ describe('profile ratings rail', () => {
     // Ladders absent from the summary render the no-rated-games state.
     expect(root.textContent).toContain('No rated games yet.');
 
-    // Canonical filtered order: Fortress, Fog Chess, Jungle, Flip Jungle.
+    // Canonical filtered order: Fortress, Duck, Fog Chess, Jungle, Flip Jungle.
     const titles = [...root.querySelectorAll('.leaderboard-panel-title')].map(
       (el) => el.textContent,
     );
-    expect(titles).toEqual(['Fortress Xiangqi', 'Fog Chess', 'Jungle Chess', 'Flip Jungle']);
+    expect(titles).toEqual([
+      'Fortress Xiangqi',
+      'Duck Xiangqi',
+      'Fog Chess',
+      'Jungle Chess',
+      'Flip Jungle',
+    ]);
     const panels = [...root.querySelectorAll('.leaderboard-panel')];
-    expect(panels[0]?.textContent).toContain('No rated games yet.');
-    expect(panels[1]?.textContent).toContain('1520');
-    expect(panels[panels.length - 1]?.textContent).toContain('No rated games yet.');
+    // Fog Chess is the one ladder the summary populates. Found BY NAME, not by
+    // index: this used to be panels[1], which silently became a different
+    // ladder the moment a variant was inserted ahead of it.
+    const fogPanel = panels.find((panel) =>
+      panel.querySelector('.leaderboard-panel-title')?.textContent?.includes('Fog Chess'),
+    );
+    expect(fogPanel?.textContent).toContain('1520');
+    for (const panel of panels.filter((panel) => panel !== fogPanel)) {
+      expect(panel.textContent).toContain('No rated games yet.');
+    }
   });
 
   it('localizes Traditional Chinese leaderboard chrome', async () => {
@@ -751,9 +765,9 @@ describe('profile ratings rail', () => {
     await mountLeaderboard(root);
 
     expect(root.textContent).toContain('Crossroads Chess');
-    // 5 rated ladders (Dark Chess + always-on Fortress, Jungle, Flip Jungle +
-    // Crossroads behind the flag).
-    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(5);
+    // 6 rated ladders (Dark Chess + always-on Fortress, Duck, Jungle, Flip
+    // Jungle + Crossroads behind the flag).
+    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(6);
   });
 
   it('collapses the ladder grid to one line when no ladder has a rated game', async () => {

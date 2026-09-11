@@ -658,10 +658,11 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // The duck is not a drop: it has no reserve and is neither player's piece.
     dropPolicy: 'none',
     ratingPoolBase: 'duck_xiangqi',
-    // Deliberately NOT `rated: true` the way fortress is. Fortress is
-    // rating-ready behind the global rated flag; duck has no user_ratings CHECK
-    // entry for the duck_xiangqi pool, so a rated game would fail at the point
-    // of writing the result. Casual-only until that migration lands.
+    // Rating-ready like fortress: the pool lights up the moment the global
+    // rated flag flips. Migration 142 added 'duck_xiangqi' to the user_ratings
+    // CHECK, which is what makes this honest -- before it, a rated game failed
+    // at the point of WRITING the result rather than of creating the game.
+    rated: true,
     publicSurface: 'casual',
     runtimeStatus: 'live',
   },
@@ -877,6 +878,7 @@ export type RatingVariant = Extract<
   // Standard Xiangqi pool. Owes a user_ratings CHECK migration adding 'xiangqi'
   // before the global rated flag + MISTBOARD_XIANGQI_ENABLED are both on.
   | 'xiangqi'
+  | 'duck_xiangqi'
 >;
 
 // The active rated-pool set, derived from the `rated` flag. This is the ONE

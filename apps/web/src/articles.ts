@@ -339,6 +339,14 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // index (and each variant's card marker), not in this homepage row, so this
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
+// The named exceptions to the rules-page exclusion above. A variant whose
+// launch is the news itself earns a row here, because the rules page IS the
+// destination for it: there is no separate editorial post to link (the Duck
+// Xiangqi launch post was cut for duplicating the rules page). Kept as an
+// allowlist rather than a relaxed guard so the exclusion still holds for every
+// other rules slug and a second exception is a deliberate edit.
+export const HOME_ARTICLE_RULES_ALLOWLIST: readonly string[] = ['duck-xiangqi'];
+
 export const HOME_ARTICLE_SLUGS = [
   // The jieqi pair, shipped together on 2026-09-03 and dated a day apart. The
   // platform page is the clearest case of a page that sends a reader straight
@@ -350,6 +358,12 @@ export const HOME_ARTICLE_SLUGS = [
   // The row orders by publish date, so this leads it until the next post. It
   // ends on a puzzle to solve, which is the row's own test for a lead.
   'puzzles-with-more-than-one-solution',
+  // Duck Xiangqi, launched 2026-09-11. A rules page in the row by exception;
+  // see HOME_ARTICLE_RULES_ALLOWLIST. Its card thumbnail is the shared duck
+  // variant marker, resolved by slug in VARIANT_MINI_BY_SLUG. Listed AFTER the
+  // puzzles post deliberately: they share a date, ties break on position here,
+  // and that post is the row's intended lead.
+  'duck-xiangqi',
   // Held the lead until the jieqi pair shipped, on the same reasoning: it sends
   // a reader into something they can do rather than something to read about,
   // and the method it documents is not published anywhere else for xiangqi.
@@ -418,8 +432,9 @@ export function buildHomeArticleCards(
   );
   const articleItems = HOME_ARTICLE_SLUGS.flatMap<HomeCardItem>((slug, index) => {
     const article = eligible.get(slug);
-    // Rules reference pages live on /rules, never this editorial row.
-    return article && article.kind !== 'rules'
+    // Rules reference pages live on /rules, never this editorial row, unless
+    // they are a named exception (a variant launch with no editorial post).
+    return article && (article.kind !== 'rules' || HOME_ARTICLE_RULES_ALLOWLIST.includes(slug))
       ? [{ kind: 'article', date: articleDateKey(article), order: index + 1, article }]
       : [];
   });

@@ -264,10 +264,12 @@ describe('article public listing gates', () => {
       ) ?? []),
     ].map((link) => link.getAttribute('href'));
 
-    // Rules reference pages are excluded from this row; only editorial
-    // (blog/concept) articles appear, newest first.
+    // Rules reference pages are excluded from this row, with one named
+    // exception (HOME_ARTICLE_RULES_ALLOWLIST): a variant launch whose rules
+    // page IS the destination. Everything else here is editorial, newest first.
     expect(hrefs).toEqual([
       '/blog/puzzles-with-more-than-one-solution',
+      '/rules/duck-xiangqi',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
       '/blog/how-puzzle-mining-works',
