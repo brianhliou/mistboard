@@ -1,57 +1,81 @@
-# 適情雅趣 composition pipeline (recovered)
+# 適情雅趣 composition pipeline
 
-What built the live Elegant Pastime Manual studies, recovered 2026-09-10 from a
-session transcript after the scratchpad that held it was deleted. Until this
-commit the only durable copy of any of it was the study rows in production.
+What builds the classical-manual studies from dpxq records. Recovered 2026-09-10
+from a session transcript after the scratchpad holding it was deleted, and made
+runnable the same day: until then the only durable copy of any of it was the
+study rows in production.
 
 | file | what it does |
 |---|---|
 | `mine_v2.py` | pulls composition records from dpxq `view_u_<id>.html` pages |
-| `merge_all.py` | reconciles the two movelist shapes dpxq serves, re-fetching only the ids neither pass covered |
 | `seed-v2.mjs` | writes one study per volume, one chapter per composition |
-| `run-seed-v2.sh` | the wrapper the Vol. 6 run actually used |
+| `run-seed-v2.sh` | supplies the Postgres credential from Railway without a human reading it |
+| `merge_all.py` | **superseded**, see below |
 | `../data/xiangqi-compositions/titles-en.json` | 817 hand-authored English renderings of the composition names |
 
-**These are recovered verbatim and are NOT runnable as they stand.** Every path
-is hardcoded to a scratchpad directory that no longer exists, and the mined data
-they consumed (`sqyq-full.json`, `sqyq/*.dhtmlxq`) went with it. Parameterize the
-paths and re-mine before trusting any of it. They are committed as the record of
-how the studies were made, not as a working tool.
+```
+python3 mine_v2.py --out /tmp/sqyq.json
+command railway run -s Postgres -- sh run-seed-v2.sh \
+  --app /path/to/checkout --data /tmp/sqyq.json \
+  --titles ../data/xiangqi-compositions/titles-en.json --dry-run
+```
+
+`--book` selects the manual (`shi-qing-ya-qu`, `ju-zhong-mi`). Volume count comes
+from the mined data, so a flat book seeds as one volume.
+
+`seed-v2.mjs` only CREATES. Re-pointing an existing chapter is a PATCH against
+the live study, never a re-seed: delete-and-recreate loses the chapter id, its
+permalink, and its place in the ordering.
 
 ## What dpxq actually serves
 
-Two movelist shapes, disjoint across the corpus, which is why two separate
-extraction passes each found roughly half and their union was still short:
+Two movelist shapes, disjoint across the corpus, which is why an earlier pass
+that understood only one found half the book and declared the rest empty:
 
 ```
 segmented   var DhtmlXQ_movelist = '[0_1_0]<mainline>[/0_1_0][0_4_1]<var>...'
 nested      var DhtmlXQ_movelist = '[DhtmlXQ_movelist]<digits>[/DhtmlXQ_movelist]'
 ```
 
-The `[DhtmlXQ_movelist]` **tag** in the page's hidden div ships empty on these
-pages; the real value is in the JS variable. 245 records are segmented, 305
-nested.
+`mine_v2.mainline()` reads both. `[0_1_0]` is dpxq's own label for the mainline,
+so preferring it is not a heuristic: **never** replace this with the
+"digit-richest occurrence" rule the `view_m_` fetcher uses, which can splice a
+variation onto a mainline (issue #377). The `[DhtmlXQ_movelist]` tag in the
+page's hidden div is a different thing and ships empty on most of these records.
 
-## The known gap: the prose solutions
+## The prose solutions
 
-Roughly 61 records carry a genuine one-move movelist, and for those dpxq keeps
-the solution as prose instead:
+Some compositions carry a genuine one-move movelist because the answer is not a
+forced line: a draw study's answer is a principle. dpxq keeps those in the
+comment tags, which `mine_v2.py` now captures:
 
 ```
-[DhtmlXQ_comment0] 红先和局
-[DhtmlXQ_comment1] 再三退四，四退三，退占相头，即成和棋。
+[DhtmlXQ_comment0]红先和局[/DhtmlXQ_comment0]
+[DhtmlXQ_comment1]再三退四，四退三，退占相头，即成和棋。[/DhtmlXQ_comment1]
 ```
 
-**Nothing in this pipeline or in `packages/game` reads those tags.** `mine_v2.py`
-does not extract them, `apps/server/src/scripts/fetch-dpxq-archive.ts` does not
-write them, and `XiangqiImportResult` has no field to carry them. So chapters
-built from those records show a diagram and one move, and their comment says the
-source recorded only the opening move, which is true of the movelist and false of
-the record. Closing it means a re-fetch of the `view_u_` pages: no copy on disk
-has ever held a comment tag. `merge_all.py` already has the fetch loop.
+Nothing read them before 2026-09-10, so 53 of 適情雅趣 卷六's 84 chapters shipped
+as a diagram plus a single move, under a comment claiming the source recorded
+only the opening move. That was false about the record. `seed-v2.mjs` now quotes
+the prose instead.
+
+This is a deliberate, narrow exception to the standing "moves only, never dpxq's
+annotations" rule: for a Ming manual these comments are the **book's own**
+solution text, not a modern annotator's layer. It does not license taking
+annotations off modern tournament records.
+
+## `merge_all.py` is superseded
+
+It existed to re-fetch the records whose shape the original miner could not read.
+`mine_v2.mainline()` now reads both shapes in the first pass, so that second
+network round is gone. The file is kept for its notes on how the two shapes were
+discovered; it still hardcodes the deleted scratchpad and does not run. Delete it
+once nothing needs its reasoning.
 
 ## Provenance
 
-Positions come from dpxq.com and are credited per chapter. The compositions
-themselves are Ming-dynasty and long out of copyright; the English titles are
-ours. See the FAQ's library answer for the standing posture.
+Positions come from dpxq.com and are credited per chapter. The compositions are
+Ming-dynasty and long out of copyright; the English titles are ours. Legality
+replay is a check on the record, not on the book: this text has a single source
+and a solution recorded short would still replay cleanly. See the FAQ's library
+answer for the standing posture.
