@@ -1142,3 +1142,56 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/study-chapter-spec.ts` | _needs a one-line description_ |
 | `apps/web/src/xiangqi-crossed-soldier.ts` | _needs a one-line description_ |
 | `apps/web/src/xiangqi-import-page.ts` | _needs a one-line description_ |
+| `apps/server/src/dark-chess-analysis-job.ts` | _needs a one-line description_ |
+| `apps/server/src/dark-chess-analysis.ts` | _needs a one-line description_ |
+| `apps/server/src/dark-chess-decisions.ts` | _needs a one-line description_ |
+| `apps/server/src/duck-xiangqi-fsf-engine.ts` | _needs a one-line description_ |
+| `apps/server/src/duck-xiangqi-registration.ts` | _needs a one-line description_ |
+| `apps/server/src/duck-xiangqi-tenant.ts` | _needs a one-line description_ |
+| `apps/server/src/engine-failure-abort.ts` | _needs a one-line description_ |
+| `apps/server/src/mahjong-registration.ts` | Mahjong registry entry: rooms map, PvE-only create (the server seats three bots), no watch channel or lobby while the scoring is unverified. |
+| `apps/server/src/mahjong-tenant.ts` | Mahjong VariantTenant: four wind seats, server-secret wall, claim windows, and the per-account allowlist gate. |
+| `apps/server/src/persistence-practice.ts` | _needs a one-line description_ |
+| `apps/server/src/persistence-variant-access.ts` | Per-account access to a gated variant (139). Fail-closed: an allowlisted spec is refused without a grant row. |
+| `apps/server/src/readout-email.ts` | _needs a one-line description_ |
+| `apps/server/src/routes/admin-game-artifacts.ts` | _needs a one-line description_ |
+| `apps/server/src/routes/duck-xiangqi-games.ts` | _needs a one-line description_ |
+| `apps/server/src/routes/duck-xiangqi-rooms.ts` | _needs a one-line description_ |
+| `apps/server/src/routes/mahjong-rooms.ts` | Mahjong room-create route. PvE only: a table needs four players, so every room is bot-seated. |
+| `apps/server/src/routes/practice.ts` | _needs a one-line description_ |
+| `apps/server/src/seed-duck-xiangqi-games-study.ts` | _needs a one-line description_ |
+| `apps/server/src/seed-xiangqi-practice-study.ts` | _needs a one-line description_ |
+| `apps/server/src/server-duck-xiangqi-engine.ts` | _needs a one-line description_ |
+| `apps/server/src/server-mahjong-bots.ts` | The three bot seats. In-process kernel functions on a think timer, not an engine service. |
+| `apps/server/src/variant-tenant/claim-window.ts` | _needs a one-line description_ |
+| `apps/server/src/variant-tenant/engine-decisions.ts` | _needs a one-line description_ |
+| `apps/server/src/xiangqi-judgment-comment-i18n.ts` | _needs a one-line description_ |
+| `apps/web/src/duck-xiangqi-board.ts` | _needs a one-line description_ |
+| `apps/web/src/duck-xiangqi-postgame.ts` | _needs a one-line description_ |
+| `apps/web/src/duck-xiangqi-replay.ts` | _needs a one-line description_ |
+| `apps/web/src/duck-xiangqi-rules-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/embed/embed-card.ts` | _needs a one-line description_ |
+| `apps/web/src/jungle-cues-lab.ts` | _needs a one-line description_ |
+| `apps/web/src/learn-xiangqi/learn-copy-zh.ts` | _needs a one-line description_ |
+| `apps/web/src/live-duck-xiangqi.ts` | _needs a one-line description_ |
+| `apps/web/src/live-mahjong.ts` | Live mahjong room client. The one tenant where several seats may act at once, so claims arrive out of turn. |
+| `apps/web/src/mahjong-table.ts` | The mahjong table as markup: four seats, opponent racks, melds, ponds, and the action bar. |
+| `apps/web/src/mahjong-tile.ts` | How one tile is drawn. Pips are drawn in the arrangements a real set uses, not spelled out. |
+| `apps/web/src/news-disc.ts` | _needs a one-line description_ |
+| `apps/web/src/postgame-invite.ts` | _needs a one-line description_ |
+| `apps/web/src/practice-index.ts` | _needs a one-line description_ |
+| `apps/web/src/profile-link.ts` | _needs a one-line description_ |
+| `apps/web/src/pve-memory.ts` | _needs a one-line description_ |
+| `apps/web/src/readouts-admin.ts` | _needs a one-line description_ |
+| `apps/web/src/relative-time.ts` | _needs a one-line description_ |
+| `apps/web/src/review/alternatives-pref.ts` | _needs a one-line description_ |
+| `apps/web/src/review/dark-chess-decisions.ts` | _needs a one-line description_ |
+| `apps/web/src/review/duck-xiangqi-review.ts` | _needs a one-line description_ |
+| `apps/web/src/review/duck-xiangqi-tree-adapter.ts` | _needs a one-line description_ |
+| `apps/web/src/review/practice-play.ts` | _needs a one-line description_ |
+| `apps/web/src/review/seat-strip-ink.ts` | _needs a one-line description_ |
+| `apps/web/src/review/study-practice.ts` | _needs a one-line description_ |
+| `apps/web/src/review/xiangqi-practice-player.ts` | _needs a one-line description_ |
+| `apps/web/src/review/xiangqi-practice.ts` | _needs a one-line description_ |
+| `apps/web/src/variant-tenant/clock-projection.ts` | _needs a one-line description_ |
+| `apps/web/src/watch-duck-xiangqi-replay.ts` | _needs a one-line description_ |
