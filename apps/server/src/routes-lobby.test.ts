@@ -1,19 +1,15 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import {
-  CROSSROADS_CHESS_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
-  type RoomTimeControl,
-} from '@mistboard/game';
-import { crossroadsChessEnabled, darkMiniXiangqiEnabled } from './feature-flags.js';
+import { JIEQI_SPEC_ID, JUNGLE_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
+import { jieqiEnabled, jungleEnabled } from './feature-flags.js';
 import { type HttpApiContext, isAllowedFullTimeControl } from './routes/lib.js';
 import { tryHandle } from './routes/lobby.js';
 import type { Room } from './server-types.js';
 import { registerVariantTenant } from './variant-tenant/registry.js';
 
-const darkMiniXiangqiFlag = 'MISTBOARD_DARK_MINI_XIANGQI_ENABLED';
-const crossroadsChessFlag = 'MISTBOARD_CROSSROADS_CHESS_ENABLED';
+const jieqiFlag = 'MISTBOARD_JIEQI_ENABLED';
+const jungleFlag = 'MISTBOARD_JUNGLE_ENABLED';
 
 type ResponseCapture = { body: string; headers: Record<string, string>; status: number | null };
 
@@ -56,10 +52,10 @@ type TenantLobbyCall = [RoomTimeControl | undefined, boolean];
 // Lobby tenant dispatch goes through the global VariantTenant registry, so the
 // test registers fakes under the real kinds/spec ids/flags. The lobby
 // createRoom recorders live at module scope and are reset per testContext().
-const dmxCalls: TenantLobbyCall[] = [];
-const crossroadsCalls: TenantLobbyCall[] = [];
-let dmxRoomSeq = 0;
-let crossroadsRoomSeq = 0;
+const jieqiCalls: TenantLobbyCall[] = [];
+const jungleCalls: TenantLobbyCall[] = [];
+let jieqiRoomSeq = 0;
+let jungleRoomSeq = 0;
 
 function registerFakeLobbyTenant(options: {
   kind: string;
@@ -106,45 +102,45 @@ function registerFakeLobbyTenant(options: {
 }
 
 registerFakeLobbyTenant({
-  kind: 'dark-mini-xiangqi',
-  gameSpecId: DARK_MINI_XIANGQI_SPEC_ID,
-  roomIdPrefix: 'dmxq_',
-  errorPrefix: 'dark_mini_xiangqi',
-  enabled: darkMiniXiangqiEnabled,
+  kind: 'jieqi',
+  gameSpecId: JIEQI_SPEC_ID,
+  roomIdPrefix: 'jq_',
+  errorPrefix: 'jieqi',
+  enabled: jieqiEnabled,
   supportsRated: true,
   allowsTimeControl: () => true,
   createRoom: async (timeControl, rated) => {
-    dmxCalls.push([timeControl, rated]);
-    dmxRoomSeq += 1;
-    return { id: `dmxq_lobby_${dmxRoomSeq}`, region: 'global' };
+    jieqiCalls.push([timeControl, rated]);
+    jieqiRoomSeq += 1;
+    return { id: `jq_lobby_${jieqiRoomSeq}`, region: 'global' };
   },
 });
 
 registerFakeLobbyTenant({
-  kind: 'crossroads-chess',
-  gameSpecId: CROSSROADS_CHESS_SPEC_ID,
-  roomIdPrefix: 'dchess_',
-  errorPrefix: 'crossroads_chess',
-  enabled: crossroadsChessEnabled,
+  kind: 'jungle',
+  gameSpecId: JUNGLE_SPEC_ID,
+  roomIdPrefix: 'jgl_',
+  errorPrefix: 'jungle',
+  enabled: jungleEnabled,
   supportsRated: false,
   allowsTimeControl: isAllowedFullTimeControl,
   createRoom: async (timeControl, rated) => {
-    crossroadsCalls.push([timeControl, rated]);
-    crossroadsRoomSeq += 1;
-    return { id: `dchess_lobby_${crossroadsRoomSeq}`, region: 'global' };
+    jungleCalls.push([timeControl, rated]);
+    jungleRoomSeq += 1;
+    return { id: `jgl_lobby_${jungleRoomSeq}`, region: 'global' };
   },
 });
 
 function testContext(overrides: Partial<HttpApiContext> = {}): {
   ctx: HttpApiContext;
   chessCalls: CreateRoomCall[];
-  crossroadsCalls: TenantLobbyCall[];
-  dmxCalls: TenantLobbyCall[];
+  jungleCalls: TenantLobbyCall[];
+  jieqiCalls: TenantLobbyCall[];
 } {
-  dmxCalls.length = 0;
-  crossroadsCalls.length = 0;
-  dmxRoomSeq = 0;
-  crossroadsRoomSeq = 0;
+  jieqiCalls.length = 0;
+  jungleCalls.length = 0;
+  jieqiRoomSeq = 0;
+  jungleRoomSeq = 0;
   const chessCalls: CreateRoomCall[] = [];
   let chessRoomSeq = 0;
   const ctx: HttpApiContext = {
@@ -170,7 +166,7 @@ function testContext(overrides: Partial<HttpApiContext> = {}): {
     rooms: new Map(),
     ...overrides,
   };
-  return { ctx, chessCalls, crossroadsCalls, dmxCalls };
+  return { ctx, chessCalls, jungleCalls, jieqiCalls };
 }
 
 const tc = { initialMs: 180000, incrementMs: 2000 };
@@ -254,115 +250,115 @@ test('lobby: rated chess request from a guest is rejected', async () => {
   });
 });
 
-// ── Dark Mini Xiangqi ──────────────────────────────────────────────────────
+// ── Jieqi ──────────────────────────────────────────────────────
 
-test('lobby: a single Dark Mini Xiangqi request waits (202)', async () => {
+test('lobby: a single Jieqi request waits (202)', async () => {
   await withFlag(true, async () => {
-    const { ctx, dmxCalls } = testContext();
-    const res = await post(ctx, { gameSpecId: DARK_MINI_XIANGQI_SPEC_ID, timeControl: tc });
+    const { ctx, jieqiCalls } = testContext();
+    const res = await post(ctx, { gameSpecId: JIEQI_SPEC_ID, timeControl: tc });
     assert.equal(res.status, 202);
-    assert.equal(responseJson(res).gameSpecId, DARK_MINI_XIANGQI_SPEC_ID);
-    assert.equal(dmxCalls.length, 0);
+    assert.equal(responseJson(res).gameSpecId, JIEQI_SPEC_ID);
+    assert.equal(jieqiCalls.length, 0);
   });
 });
 
-test('lobby: two Dark Mini Xiangqi requests match into a DMX room', async () => {
+test('lobby: two Jieqi requests match into a Jieqi room', async () => {
   await withFlag(true, async () => {
-    const { ctx, dmxCalls, chessCalls } = testContext();
-    const first = await post(ctx, { gameSpecId: DARK_MINI_XIANGQI_SPEC_ID, timeControl: tc });
+    const { ctx, jieqiCalls, chessCalls } = testContext();
+    const first = await post(ctx, { gameSpecId: JIEQI_SPEC_ID, timeControl: tc });
     assert.equal(first.status, 202);
-    const second = await post(ctx, { gameSpecId: DARK_MINI_XIANGQI_SPEC_ID, timeControl: tc });
+    const second = await post(ctx, { gameSpecId: JIEQI_SPEC_ID, timeControl: tc });
     assert.equal(second.status, 201);
     assert.equal(responseJson(second).status, 'matched');
-    assert.equal(responseJson(second).roomId, 'dmxq_lobby_1');
-    assert.equal(dmxCalls.length, 1);
-    assert.deepEqual(dmxCalls[0], [tc, false]);
+    assert.equal(responseJson(second).roomId, 'jq_lobby_1');
+    assert.equal(jieqiCalls.length, 1);
+    assert.deepEqual(jieqiCalls[0], [tc, false]);
     assert.equal(chessCalls.length, 0, 'chess factory must not be touched');
   });
 });
 
-test('lobby: guest Dark Mini Xiangqi rated request is rejected', async () => {
+test('lobby: guest Jieqi rated request is rejected', async () => {
   await withFlag(true, async () => {
     await withRatedFlag(true, async () => {
-      const { ctx, dmxCalls } = testContext();
+      const { ctx, jieqiCalls } = testContext();
       const res = await post(ctx, {
-        gameSpecId: DARK_MINI_XIANGQI_SPEC_ID,
+        gameSpecId: JIEQI_SPEC_ID,
         rated: true,
         timeControl: tc,
       });
       assert.equal(res.status, 401);
       assert.deepEqual(responseJson(res), { error: 'rated_requires_account' });
-      assert.equal(dmxCalls.length, 0);
+      assert.equal(jieqiCalls.length, 0);
     });
   });
 });
 
-test('lobby: Dark Mini Xiangqi requests are disabled when the launch flag is off', async () => {
+test('lobby: Jieqi requests are disabled when the launch flag is off', async () => {
   await withFlag(false, async () => {
     const { ctx } = testContext();
-    const res = await post(ctx, { gameSpecId: DARK_MINI_XIANGQI_SPEC_ID, timeControl: tc });
+    const res = await post(ctx, { gameSpecId: JIEQI_SPEC_ID, timeControl: tc });
     assert.equal(res.status, 404);
-    assert.deepEqual(responseJson(res), { error: 'dark_mini_xiangqi_disabled' });
+    assert.deepEqual(responseJson(res), { error: 'jieqi_disabled' });
     assert.equal(ctx.lobbyQueue.length, 0);
   });
 });
 
-test('lobby: chess and Dark Mini Xiangqi seekers never match each other', async () => {
+test('lobby: chess and Jieqi seekers never match each other', async () => {
   await withFlag(true, async () => {
-    const { ctx, chessCalls, dmxCalls } = testContext();
+    const { ctx, chessCalls, jieqiCalls } = testContext();
     const chess = await post(ctx, { timeControl: tc });
-    const dmx = await post(ctx, { gameSpecId: DARK_MINI_XIANGQI_SPEC_ID, timeControl: tc });
+    const jieqi = await post(ctx, { gameSpecId: JIEQI_SPEC_ID, timeControl: tc });
     assert.equal(chess.status, 202);
-    assert.equal(dmx.status, 202);
+    assert.equal(jieqi.status, 202);
     assert.equal(chessCalls.length, 0);
-    assert.equal(dmxCalls.length, 0);
+    assert.equal(jieqiCalls.length, 0);
     assert.equal(ctx.lobbyQueue.length, 2);
   });
 });
 
-// ── Crossroads Chess ───────────────────────────────────────────────────────
+// ── Jungle ───────────────────────────────────────────────────────
 
-test('lobby: a single Crossroads Chess request waits (202)', async () => {
-  await withCrossroadsFlag(true, async () => {
-    const { ctx, crossroadsCalls } = testContext();
-    const res = await post(ctx, { gameSpecId: CROSSROADS_CHESS_SPEC_ID, timeControl: tc });
+test('lobby: a single Jungle request waits (202)', async () => {
+  await withJungleFlag(true, async () => {
+    const { ctx, jungleCalls } = testContext();
+    const res = await post(ctx, { gameSpecId: JUNGLE_SPEC_ID, timeControl: tc });
     assert.equal(res.status, 202);
-    assert.equal(responseJson(res).gameSpecId, CROSSROADS_CHESS_SPEC_ID);
-    assert.equal(crossroadsCalls.length, 0);
+    assert.equal(responseJson(res).gameSpecId, JUNGLE_SPEC_ID);
+    assert.equal(jungleCalls.length, 0);
   });
 });
 
-test('lobby: two Crossroads Chess requests match into a Crossroads room', async () => {
-  await withCrossroadsFlag(true, async () => {
-    const { ctx, chessCalls, crossroadsCalls, dmxCalls } = testContext();
-    const first = await post(ctx, { gameSpecId: CROSSROADS_CHESS_SPEC_ID, timeControl: tc });
+test('lobby: two Jungle requests match into a Jungle room', async () => {
+  await withJungleFlag(true, async () => {
+    const { ctx, chessCalls, jungleCalls, jieqiCalls } = testContext();
+    const first = await post(ctx, { gameSpecId: JUNGLE_SPEC_ID, timeControl: tc });
     assert.equal(first.status, 202);
-    const second = await post(ctx, { gameSpecId: CROSSROADS_CHESS_SPEC_ID, timeControl: tc });
+    const second = await post(ctx, { gameSpecId: JUNGLE_SPEC_ID, timeControl: tc });
     assert.equal(second.status, 201);
     assert.equal(responseJson(second).status, 'matched');
-    assert.equal(responseJson(second).roomId, 'dchess_lobby_1');
-    assert.equal(crossroadsCalls.length, 1);
-    assert.deepEqual(crossroadsCalls[0], [tc, false]);
+    assert.equal(responseJson(second).roomId, 'jgl_lobby_1');
+    assert.equal(jungleCalls.length, 1);
+    assert.deepEqual(jungleCalls[0], [tc, false]);
     assert.equal(chessCalls.length, 0, 'chess factory must not be touched');
-    assert.equal(dmxCalls.length, 0, 'DMX factory must not be touched');
+    assert.equal(jieqiCalls.length, 0, 'Jieqi factory must not be touched');
   });
 });
 
-test('lobby: Crossroads Chess allows 5+5 and rejects off-menu time controls', async () => {
-  await withCrossroadsFlag(true, async () => {
-    const { ctx, crossroadsCalls } = testContext();
+test('lobby: Jungle allows 5+5 and rejects off-menu time controls', async () => {
+  await withJungleFlag(true, async () => {
+    const { ctx, jungleCalls } = testContext();
     const rapid = await post(ctx, {
-      gameSpecId: CROSSROADS_CHESS_SPEC_ID,
+      gameSpecId: JUNGLE_SPEC_ID,
       timeControl: { initialMs: 300000, incrementMs: 5000 },
     });
     assert.equal(rapid.status, 202);
     const offMenu = await post(ctx, {
-      gameSpecId: CROSSROADS_CHESS_SPEC_ID,
+      gameSpecId: JUNGLE_SPEC_ID,
       timeControl: { initialMs: 60000, incrementMs: 0 },
     });
     assert.equal(offMenu.status, 400);
     assert.deepEqual(responseJson(offMenu), { error: 'time_control_unsupported' });
-    assert.equal(crossroadsCalls.length, 0);
+    assert.equal(jungleCalls.length, 0);
   });
 });
 
@@ -373,55 +369,55 @@ test('lobby: the 10+5 rung clears the time-control allowlist', async () => {
   // _IDS would do exactly that. (10+5 is casual-only; the rated gate is a
   // separate flag, covered by the `rated` assertion in the @mistboard/game
   // time-controls test rather than here, where rated mode is switched off.)
-  await withCrossroadsFlag(true, async () => {
+  await withJungleFlag(true, async () => {
     const { ctx } = testContext();
     const casual = await post(ctx, {
-      gameSpecId: CROSSROADS_CHESS_SPEC_ID,
+      gameSpecId: JUNGLE_SPEC_ID,
       timeControl: { initialMs: 600000, incrementMs: 5000 },
     });
     assert.equal(casual.status, 202);
   });
 });
 
-test('lobby: Crossroads Chess requests are disabled when the launch flag is off', async () => {
-  await withCrossroadsFlag(false, async () => {
+test('lobby: Jungle requests are disabled when the launch flag is off', async () => {
+  await withJungleFlag(false, async () => {
     const { ctx } = testContext();
-    const res = await post(ctx, { gameSpecId: CROSSROADS_CHESS_SPEC_ID, timeControl: tc });
+    const res = await post(ctx, { gameSpecId: JUNGLE_SPEC_ID, timeControl: tc });
     assert.equal(res.status, 404);
-    assert.deepEqual(responseJson(res), { error: 'crossroads_chess_disabled' });
+    assert.deepEqual(responseJson(res), { error: 'jungle_disabled' });
     assert.equal(ctx.lobbyQueue.length, 0);
   });
 });
 
-test('lobby: chess, DMX, and Crossroads seekers never match each other', async () => {
+test('lobby: chess, Jieqi, and Jungle seekers never match each other', async () => {
   await withFlag(true, async () => {
-    await withCrossroadsFlag(true, async () => {
-      const { ctx, chessCalls, crossroadsCalls, dmxCalls } = testContext();
+    await withJungleFlag(true, async () => {
+      const { ctx, chessCalls, jungleCalls, jieqiCalls } = testContext();
       const chess = await post(ctx, { timeControl: tc });
-      const dmx = await post(ctx, { gameSpecId: DARK_MINI_XIANGQI_SPEC_ID, timeControl: tc });
-      const crossroads = await post(ctx, {
-        gameSpecId: CROSSROADS_CHESS_SPEC_ID,
+      const jieqi = await post(ctx, { gameSpecId: JIEQI_SPEC_ID, timeControl: tc });
+      const jungle = await post(ctx, {
+        gameSpecId: JUNGLE_SPEC_ID,
         timeControl: tc,
       });
       assert.equal(chess.status, 202);
-      assert.equal(dmx.status, 202);
-      assert.equal(crossroads.status, 202);
+      assert.equal(jieqi.status, 202);
+      assert.equal(jungle.status, 202);
       assert.equal(chessCalls.length, 0);
-      assert.equal(dmxCalls.length, 0);
-      assert.equal(crossroadsCalls.length, 0);
+      assert.equal(jieqiCalls.length, 0);
+      assert.equal(jungleCalls.length, 0);
       assert.equal(ctx.lobbyQueue.length, 3);
     });
   });
 });
 
-async function withCrossroadsFlag<T>(enabled: boolean, fn: () => Promise<T>): Promise<T> {
-  const previous = process.env[crossroadsChessFlag];
-  process.env[crossroadsChessFlag] = enabled ? 'true' : 'false';
+async function withJungleFlag<T>(enabled: boolean, fn: () => Promise<T>): Promise<T> {
+  const previous = process.env[jungleFlag];
+  process.env[jungleFlag] = enabled ? 'true' : 'false';
   try {
     return await fn();
   } finally {
-    if (previous === undefined) delete process.env[crossroadsChessFlag];
-    else process.env[crossroadsChessFlag] = previous;
+    if (previous === undefined) delete process.env[jungleFlag];
+    else process.env[jungleFlag] = previous;
   }
 }
 
@@ -436,12 +432,12 @@ function withRatedFlag(value: boolean, fn: () => Promise<void>): Promise<void> {
 }
 
 function withFlag(value: boolean, fn: () => Promise<void>): Promise<void> {
-  const before = process.env[darkMiniXiangqiFlag];
-  if (value) process.env[darkMiniXiangqiFlag] = 'true';
-  else delete process.env[darkMiniXiangqiFlag];
+  const before = process.env[jieqiFlag];
+  if (value) process.env[jieqiFlag] = 'true';
+  else delete process.env[jieqiFlag];
   return fn().finally(() => {
-    if (before === undefined) delete process.env[darkMiniXiangqiFlag];
-    else process.env[darkMiniXiangqiFlag] = before;
+    if (before === undefined) delete process.env[jieqiFlag];
+    else process.env[jieqiFlag] = before;
   });
 }
 

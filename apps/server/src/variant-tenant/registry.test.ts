@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
+import { isRetiredGameSpec } from '@mistboard/game';
 // Importing register-tenants registers every tenant (module-scope side effect
 // of each *-registration.ts module — the "one registry entry" of the tenant
 // contract).
@@ -14,31 +15,33 @@ import {
   variantTenantForSpecId,
 } from './registry.js';
 
-test('registry: DMX registration resolves by room id prefix and spec id', () => {
-  const byRoom = variantTenantForRoomId('dmxq_some-room');
-  assert.equal(byRoom?.kind, 'dark-mini-xiangqi');
-  const bySpec = variantTenantForSpecId('dark-mini-xiangqi');
-  assert.equal(bySpec?.roomIdPrefix, 'dmxq_');
-});
-
-test('registry: Drop Mini Xiangqi registration resolves by room id prefix and spec id', () => {
-  assert.equal(variantTenantForRoomId('dmxqd_some-room')?.kind, 'drop-mini-xiangqi');
-  assert.equal(variantTenantForSpecId('drop-mini-xiangqi')?.roomIdPrefix, 'dmxqd_');
-});
-
-test('registry: Mini Xiangqi registration resolves by room id prefix and spec id', () => {
-  assert.equal(variantTenantForRoomId('mxq_some-room')?.kind, 'mini-xiangqi');
-  assert.equal(variantTenantForSpecId('mini-xiangqi')?.roomIdPrefix, 'mxq_');
+test('registry: retired specs never register, by prefix or by id', () => {
+  // The registration modules for these still run at boot (their Stage 2
+  // commits remove them); registerVariantTenant drops a retired spec on the
+  // floor, so no route, prefix or watch channel exists for it.
+  for (const [prefix, specId] of [
+    ['dmxq_some-room', 'dark-mini-xiangqi'],
+    ['dmxqd_some-room', 'drop-mini-xiangqi'],
+    ['mxq_some-room', 'mini-xiangqi'],
+    ['dchess_some-room', 'crossroads-chess'],
+    ['ddchess_some-room', 'dark-crossroads-chess'],
+    ['dsg_some-room', 'dark-shogi'],
+    ['dczh_some-room', 'dark-crazyhouse'],
+    ['kr_some-room', 'kriegspiel'],
+    ['rc_some-room', 'reveal-chess'],
+    ['lzq_some-room', 'luzhanqi'],
+  ] as const) {
+    assert.equal(variantTenantForRoomId(prefix), null, prefix);
+    assert.equal(variantTenantForSpecId(specId), null, specId);
+  }
+  for (const entry of registeredVariantTenants()) {
+    assert.equal(isRetiredGameSpec(entry.gameSpecId), false, entry.kind);
+  }
 });
 
 test('registry: Dark Xiangqi registration resolves by room id prefix and spec id', () => {
   assert.equal(variantTenantForRoomId('dxq_some-room')?.kind, 'dark-xiangqi');
   assert.equal(variantTenantForSpecId('dark-xiangqi')?.roomIdPrefix, 'dxq_');
-});
-
-test('registry: Crossroads registration resolves by room id prefix and spec id', () => {
-  assert.equal(variantTenantForRoomId('dchess_some-room')?.kind, 'crossroads-chess');
-  assert.equal(variantTenantForSpecId('crossroads-chess')?.roomIdPrefix, 'dchess_');
 });
 
 test('registry: misses fall through to null (chess fallback stays untouched)', () => {
@@ -70,10 +73,10 @@ test('registry: every product-profile variant tenant exposes a lobby (Find oppon
 });
 
 test('registry: re-registration is idempotent for the same kind, throws across kinds', () => {
-  const dmx = registeredVariantTenants().find((entry) => entry.kind === 'dark-mini-xiangqi');
-  assert.ok(dmx);
+  const dxq = registeredVariantTenants().find((entry) => entry.kind === 'dark-xiangqi');
+  assert.ok(dxq);
   const before = registeredVariantTenants().length;
-  registerVariantTenant(dmx);
+  registerVariantTenant(dxq);
   assert.equal(registeredVariantTenants().length, before);
-  assert.throws(() => registerVariantTenant({ ...dmx, kind: 'other-variant' }), /prefix collision/);
+  assert.throws(() => registerVariantTenant({ ...dxq, kind: 'other-variant' }), /prefix collision/);
 });

@@ -615,6 +615,22 @@ export async function serveNotFoundShell(params: {
   params.response.end(html);
 }
 
+// 410 for a page that existed and is not coming back (a retired variant's
+// rules page): the shell boots and renders the not-found panel, and the
+// status tells crawlers to drop the URL instead of retrying a 404.
+export async function serveGoneShell(params: {
+  response: ServerResponse;
+  staticDir: string;
+}): Promise<void> {
+  const indexPath = resolve(params.staticDir, 'index.html');
+  let html = await fs.readFile(indexPath, 'utf-8');
+  html = html
+    .replace(/<title>[^<]*<\/title>/, '<title>Page retired · Mistboard</title>')
+    .replace('</head>', '<meta name="robots" content="noindex, nofollow"></head>');
+  params.response.writeHead(410, { 'content-type': 'text/html; charset=utf-8' });
+  params.response.end(html);
+}
+
 function gamePageParticipantName(game: persistence.GameRecord, color: Color): string {
   return (
     game.participants.find((participant) => participant.color === color)?.displayName ??

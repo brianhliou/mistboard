@@ -99,7 +99,13 @@ export type DropPolicyId =
   | 'seen-squares-only'
   | 'seirawan-gating';
 export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
-export type GameSpecRuntimeStatus = 'live' | 'dev-spike' | 'future';
+/**
+ * `live`: built and served (offered or hidden, per publicSurface). `future`: an
+ * id reserved ahead of any code. `retired`: was built, is not coming back; the
+ * gate refuses it, no tenant registers for it, `npm run variants` omits it, and
+ * its code is being removed under docs-private/variant-retirement-plan.md (#396).
+ */
+export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
 export type RatingPoolBaseId =
   | 'fog'
@@ -322,8 +328,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'fog_draft960',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
     legacyLiveRoom: { variant: 'dark-chess', hiddenDraft960: true },
   },
   {
@@ -339,8 +345,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'any-legal-square',
     ratingPoolBase: 'dark_crazyhouse',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     id: 'kriegspiel',
@@ -355,8 +361,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'kriegspiel',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     id: 'dark-antichess',
@@ -445,7 +451,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'mini_xiangqi',
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     id: DARK_MINI_XIANGQI_SPEC_ID,
@@ -461,7 +467,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'dark_mini_xiangqi',
     rated: true,
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     // Drop Mini Xiangqi: mini xiangqi plus crazyhouse-style reserves. Perfect
@@ -480,7 +486,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'drop_mini_xiangqi',
     rated: true,
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     // Fortress Xiangqi: "xiangqi with a pocket." 7x8 board, opposite-corner
@@ -630,7 +636,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'luzhanqi',
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     // Duck Xiangqi: W. D. Troyka's... no - Dr Tim Paulden's Duck Chess (2016),
@@ -720,8 +726,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'any-legal-square',
     ratingPoolBase: 'dark_shogi',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     id: 'dark-omega',
@@ -755,8 +761,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'crossroads_chess_open',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     id: DARK_CROSSROADS_CHESS_SPEC_ID,
@@ -771,8 +777,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'crossroads_chess',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     // Reveal Chess (chess-jieqi): standard chess with hidden piece identities.
@@ -791,8 +797,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'reveal_chess',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
 ] as const;
 
@@ -803,6 +809,22 @@ const gameSpecAliases = new Map<GameSpecAliasId, GameSpecId>([
   ['dual-chess', CROSSROADS_CHESS_SPEC_ID],
   ['dark-dual-chess', DARK_CROSSROADS_CHESS_SPEC_ID],
 ]);
+
+/** Specs that were built and are not coming back. Derived from GAME_SPECS so
+ *  there is one place that says it: the entry's runtimeStatus. */
+export const RETIRED_GAME_SPEC_IDS: readonly GameSpecId[] = GAME_SPECS.filter(
+  (spec) => spec.runtimeStatus === 'retired',
+).map((spec) => spec.id);
+
+const RETIRED_GAME_SPEC_ID_SET: ReadonlySet<string> = new Set(RETIRED_GAME_SPEC_IDS);
+
+/** True for a retired spec id (and for a legacy alias that resolves to one). */
+export function isRetiredGameSpec(value: string | null | undefined): boolean {
+  if (!value) return false;
+  if (RETIRED_GAME_SPEC_ID_SET.has(value)) return true;
+  const spec = maybeGameSpecForId(value);
+  return spec !== null && spec.runtimeStatus === 'retired';
+}
 
 export function isGameSpecId(value: string | null | undefined): value is GameSpecId {
   return typeof value === 'string' && gameSpecIds.has(value);

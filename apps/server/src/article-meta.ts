@@ -10,12 +10,13 @@ export type ArticleKind = 'rules' | 'article';
 
 const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
 
-// Rules pages for variants retired from public surfaces (the source of truth is
-// VARIANT_PUBLIC_SURFACE_ENABLED in apps/web/src/variant-public-surfaces.ts).
-// Their URLs stay live on purpose and the prerenderer already stamps them
-// `noindex, follow`; this set is what keeps the SITEMAP from advertising them
-// anyway, which had the site telling Google to index pages the pages
-// themselves declined.
+// Rules pages for retired variants (docs-private/variant-retirement-plan.md,
+// #396; the spec side is runtimeStatus 'retired' in packages/game, the web
+// side VARIANT_PUBLIC_SURFACE_ENABLED in apps/web/src/variant-public-surfaces.ts).
+// The server answers 410 Gone for these paths (server-http.ts): the id is
+// known and the page is not coming back, which is what a crawler should hear
+// rather than a 404 it will keep retrying. The set also keeps them out of the
+// sitemap. The content files go with their variants in Stage 2 of the plan.
 //
 // This is a second copy of a list the server cannot import, so it is only safe
 // because articles-meta-sync.test.ts fails when the two disagree. Do not edit
@@ -26,11 +27,19 @@ const RETIRED_RULES_SLUGS = new Set([
   'dark-crossroads-chess',
   'dark-draft960',
   'dark-mini-xiangqi',
+  'dark-shogi',
   'drop-mini-xiangqi',
   'kriegspiel',
   'mini-xiangqi',
   'reveal-chess',
+  'shogi',
+  'shogi4',
 ]);
+
+/** A rules page whose variant is retired: served as 410 Gone. */
+export function articleIsRetired(slug: string): boolean {
+  return RETIRED_RULES_SLUGS.has(slug);
+}
 
 // Slugs that exist in articles-data but are not published yet. A draft is
 // hidden in the production web build (the route 404s client-side), but the

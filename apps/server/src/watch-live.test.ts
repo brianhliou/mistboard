@@ -481,14 +481,14 @@ test('GET /api/watch/live serves the featured open game with its payload, omitte
 });
 
 test('an open tenant WITHOUT a live payload builder never yields candidates (capability gate)', () => {
-  // crossroads-chess is a real open spec whose channel has no registered
+  // fortress-xiangqi is a real open spec whose channel has no registered
   // builder in this test file — its playing room must not become a candidate,
   // mirroring prod (bespoke watch renderer, no live path yet).
   const rooms = new Map<string, TenantManagedRoom>();
   registerVariantTenant(
     fakeRegistration({
-      channelId: 'crossroads-chess',
-      gameSpecId: 'crossroads-chess',
+      channelId: 'fortress-xiangqi',
+      gameSpecId: 'fortress-xiangqi',
       kind: 'fake-open-unrenderable',
       roomIdPrefix: 'fku_',
       rooms,
@@ -503,16 +503,16 @@ test('GET /api/watch/live withholds the moment when the payload builder comes up
   const rooms = new Map<string, TenantManagedRoom>();
   registerVariantTenant(
     fakeRegistration({
-      channelId: 'mini-xiangqi',
-      gameSpecId: 'mini-xiangqi',
+      channelId: 'banqi',
+      gameSpecId: 'banqi',
       kind: 'fake-open-vanishing',
       roomIdPrefix: 'fkv_',
       rooms,
     }),
   );
-  registerLiveWatchPayloadBuilder('mini-xiangqi', async () => null);
+  registerLiveWatchPayloadBuilder('banqi', async () => null);
   rooms.set('fkv_1', tenantRoom({ id: 'fkv_1' }));
-  const { payload } = await getLive('?channel=mini-xiangqi');
+  const { payload } = await getLive('?channel=banqi');
   assert.equal(payload.featured, null);
   rooms.clear();
 });

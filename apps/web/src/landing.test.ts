@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   fetchPlayableEnginesOnce,
-  landingRoomClientKindForUrl,
   loadPlayableEnginesWithRetry,
   renderLandingShellForPrerender,
   shouldUseBundledShowcaseDemos,
@@ -81,15 +80,6 @@ describe('playable engines loading', () => {
     expect(await promise).toBeNull();
     // initial attempt + one per backoff delay (4 delays) = 5 fetches
     expect(fetchSpy).toHaveBeenCalledTimes(5);
-  });
-
-  it('routes Crossroads rooms to the isolated live client during landing transitions', () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    window.history.replaceState(null, '', '/');
-
-    expect(landingRoomClientKindForUrl('/room/dchess_created')).toBe('tenant');
-    expect(landingRoomClientKindForUrl('/room/mxq_created')).toBe('standard');
-    expect(landingRoomClientKindForUrl('/room/dark_created')).toBe('standard');
   });
 });
 

@@ -1,9 +1,7 @@
 import { createHash } from 'node:crypto';
 import {
-  DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiPuzzle,
-  MINI_XIANGQI_SPEC_ID,
   type MiniXiangqiPuzzle,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzle,
@@ -62,14 +60,14 @@ type Queryable = {
 const DAILY_PUZZLE_VARIANTS: readonly string[] = [XIANGQI_SPEC_ID];
 
 // Variants a persisted daily row may resolve against. Broader than the current
-// rotation on purpose: Mini/Drop rows predate the standard-xiangqi rotation
-// and stay resolvable even though they are no longer offered (Jungle was never
-// a daily variant, so it stays out — matching the pre-#183 resolution).
+// rotation on purpose (Jungle was never a daily variant, so it stays out,
+// matching the pre-#183 resolution). Mini and Drop Mini rows used to be here
+// for the days that predate the standard-xiangqi rotation; both variants are
+// retired and their puzzles withheld (migration 143), so such a row resolves
+// to nothing now, the same as any other withheld puzzle.
 const DAILY_RESOLVABLE_VARIANTS: ReadonlySet<string> = new Set([
   FORTRESS_XIANGQI_SPEC_ID,
   XIANGQI_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
 ]);
 
 function isCurrentDailyVariant(variant: string): boolean {
