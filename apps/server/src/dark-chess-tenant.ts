@@ -44,6 +44,7 @@ import {
 import { engineVersionDisplayName } from './engine-registry.js';
 import {
   filterEventForClient,
+  fullTruthView,
   getClientView,
   type SnapshotClient,
   type SnapshotRoom,
@@ -196,6 +197,14 @@ export const darkChessTenant: DarkChessTenant = {
     clientEventFor: darkChessClientEventFor,
     viewForClient: (state, client) =>
       getClientView(snapshotRoomSliceFor(state), snapshotClientFor(client)),
+    // The finished-game reveal, declared so the runtime opens the board AND
+    // the event log together. Without this the board half still opened
+    // (getClientView above reads the real status) while clientEventFor kept
+    // filtering against the shared slice, whose status is the initial
+    // 'playing', so a finished correspondence room served a truth board
+    // beside an own-moves-only log. Fixed perspective, as the other tenants'
+    // truth views: the client orients by seat.
+    truthView: (state) => fullTruthView(snapshotRoomSliceFor(state), 'white'),
   },
   engine: {
     terminalContext: 'fog-observation',

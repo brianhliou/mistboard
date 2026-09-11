@@ -376,7 +376,7 @@ function emptyFogView(room: SnapshotRoom, perspective: Color): PlayerView {
   };
 }
 
-function fullTruthView(room: SnapshotRoom, perspective: Color): PlayerView {
+export function fullTruthView(room: SnapshotRoom, perspective: Color): PlayerView {
   return {
     id: room.projection.state.id,
     variant: room.projection.state.variant,

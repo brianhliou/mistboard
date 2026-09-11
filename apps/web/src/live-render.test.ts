@@ -5,7 +5,7 @@ import type { DrawShape } from 'chessground/draw';
 import { defaults } from 'chessground/state';
 import { afterEach, describe, expect, it } from 'vitest';
 import { boardHighlightClasses, boardResultClass, legalDests } from './live-board.js';
-import { shouldAutoScrollMoveList } from './live-move-list.js';
+import { shouldAutoScrollMoveList, shouldMaskMoveList } from './live-move-list.js';
 import {
   drawShapeGameOf,
   shouldEnablePremoves,
@@ -370,5 +370,38 @@ describe('legalDests', () => {
     const dests = legalDests(view);
     // Both entries end up listed; castling alias check sees no king→rook moves, so no alias added
     expect(dests.get('e2')?.length).toBe(2);
+  });
+});
+
+// ── shouldMaskMoveList ───────────────────────────────────────────────────────
+
+describe('shouldMaskMoveList', () => {
+  afterEach(() => {
+    liveState.state = null;
+    liveState.seat = 'spectator';
+    liveState.roomMode = 'pvp';
+  });
+
+  it('masks a live fog game for a seated player', () => {
+    liveState.state = makeView();
+    liveState.seat = 'white';
+    expect(shouldMaskMoveList()).toBe(true);
+  });
+
+  it('stops masking once the game is finished, for a player and for a spectator', () => {
+    liveState.state = makeView({
+      status: { type: 'finished', winner: 'white', reason: 'resignation' },
+    });
+    liveState.seat = 'white';
+    expect(shouldMaskMoveList()).toBe(false);
+    liveState.seat = 'spectator';
+    expect(shouldMaskMoveList()).toBe(false);
+  });
+
+  it('never masks an engine-vs-engine room, which has no secret to keep', () => {
+    liveState.state = makeView();
+    liveState.roomMode = 'eve';
+    liveState.seat = 'spectator';
+    expect(shouldMaskMoveList()).toBe(false);
   });
 });

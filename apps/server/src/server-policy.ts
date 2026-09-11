@@ -207,6 +207,14 @@ export function roomViewPolicy(
       // The invariant: a live fog board never leaves the server for anyone but
       // the seat that owns it.
       return seat === 'player' ? 'own-view' : 'nothing';
+    case 'concealed-hands':
+      // Mahjong (added to the union after the matrix was signed). A live hand
+      // is the same class of secret as a fogged piece: the seat sees its own,
+      // a spectator sees nothing, matching liveObservePolicy's 'sealed'. The
+      // mahjong tenant declares no truthView, so the runtime fails closed
+      // before this row is consulted; the row exists so the switch stays
+      // total and a future truthView inherits the right live answer.
+      return seat === 'player' ? 'own-view' : 'nothing';
   }
 }
 

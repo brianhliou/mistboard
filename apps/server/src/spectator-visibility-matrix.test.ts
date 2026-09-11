@@ -47,6 +47,15 @@ const MATRIX: readonly Cell[] = [
   { visibility: 'dark', finished: false, seat: 'spectator', expected: 'nothing' },
   { visibility: 'dark', finished: true, seat: 'player', expected: 'truth' },
   { visibility: 'dark', finished: true, seat: 'spectator', expected: 'truth' },
+
+  // concealed-hands: mahjong, added to the union after the matrix was signed.
+  // A live hand is the same class of secret as a fogged piece. The tenant
+  // declares no truthView, so the runtime fails closed before these rows are
+  // consulted; they pin what a future truthView would inherit.
+  { visibility: 'concealed-hands', finished: false, seat: 'player', expected: 'own-view' },
+  { visibility: 'concealed-hands', finished: false, seat: 'spectator', expected: 'nothing' },
+  { visibility: 'concealed-hands', finished: true, seat: 'player', expected: 'truth' },
+  { visibility: 'concealed-hands', finished: true, seat: 'spectator', expected: 'truth' },
 ];
 
 test('roomViewPolicy matches the signed-off matrix, cell for cell', () => {
