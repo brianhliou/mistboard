@@ -28,32 +28,33 @@ export function proseFrom(rec) {
  * @param {string} p.bookZh      manual name, e.g. 適情雅趣
  * @param {number} p.moveCount   plies in the mainline we stored
  * @param {string[]} p.prose     the source's own comment tags, in tag order
- * @param {number} p.variations  printed variations the source records
  * @param {string} p.url         the dpxq page this came from
  */
 export function compositionComment(p) {
   let line;
   if (p.moveCount > 1) {
-    line = `The source's solution runs ${p.moveCount} moves and is played out as the mainline below.`;
+    // Deliberately nothing. The first version said "the solution runs 11 moves
+    // and is played out as the mainline below" to a reader looking at eleven
+    // moves, and added an apology for variations we had not imported, on four
+    // hundred chapters. A comment that restates the board is worse than no
+    // comment: it teaches the reader to skip the place where real notes go.
+    // The variations caveat now lives in the study description, said once.
+    line = '';
   } else if (p.prose?.length) {
     // dpxq keeps a draw study's answer as prose because the answer is a
     // principle, not a forced line. Saying "the source records only the opening
     // move" -- which is what shipped on 53 chapters in September 2026 -- is
     // false about the record: the answer is right there, in the comment tags.
     line =
-      `The source gives its answer in prose rather than as a line, which is what a draw ` +
-      `study usually needs. Its note reads: ${p.prose.map((t) => `「${t}」`).join(' ')} ` +
-      `The one move it does record is played below.`;
+      ` The source gives its answer in prose rather than as a line, which is what a draw ` +
+      `study usually needs: ${p.prose.map((t) => `「${t}」`).join(' ')}`;
   } else {
-    line = `The source records only the opening move of the solution, played below.`;
+    line = ` The source records only the opening move of the solution, played below.`;
   }
 
   return (
     `${p.zh}${p.en ? ` — "${p.en}"` : ''}\n\n` +
-    `Problem ${p.n} of ${p.bookZh}, volume ${p.vol} (${p.volZh}). ${line}` +
-    (p.variations
-      ? ` The source also records ${p.variations} printed variation${p.variations === 1 ? '' : 's'}, not yet included here.`
-      : '') +
+    `Problem ${p.n} of ${p.bookZh}, volume ${p.vol} (${p.volZh}).${line}` +
     (p.url ? `\n\nTranscribed from ${p.url}` : '')
   );
 }
