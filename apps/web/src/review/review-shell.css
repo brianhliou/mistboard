@@ -1165,8 +1165,36 @@
   font-size: 13px;
   line-height: 1.55;
 }
+/* An empty caption keeps its box rather than vanishing. `display: none` meant a
+   single step onto or off a commented move resized the page by the height of the
+   note -- measured at 316px on Secret in the Tangerine, whose chapters carry up
+   to 99 of them -- and everything below the board jumped under the cursor while
+   the reader was clicking through the game. Two lines are reserved, so a typical
+   note costs no reflow at all and a long one costs the overflow only. */
+.review-comment-panel {
+  /* A FIXED text area, not a floor: the box is exactly two lines tall whatever
+     the note says, so nothing below the board moves as the reader steps.
+     `min-height` was not enough -- it resolves against the border box, so two
+     line-heights of min-height bought about one line of text and a two-line note
+     still pushed by ~20px.
+     content-box is deliberate: the height is the TEXT area and the padding and
+     border sit outside it, which is the only way to state "two lines" without
+     re-deriving it from the padding every time that changes. Two lines because
+     the longest move annotation measured across every study on the site is 106
+     characters, which is two lines at this width; anything longer clamps. */
+  box-sizing: content-box;
+  height: calc(2 * 1.55em);
+  overflow: hidden;
+}
+.review-comment-panel:not(.review-comment-panel--empty) {
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  line-clamp: 2;
+  -webkit-box-orient: vertical;
+}
 .review-comment-panel--empty {
-  display: none;
+  border-color: transparent;
+  background: none;
 }
 
 /* Bubble marker on a commented move in the move list. */

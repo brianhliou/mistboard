@@ -388,6 +388,29 @@
   text-decoration: underline;
 }
 
+/* The inline form: one quiet line instead of a bordered card. The card was 120px
+ * of permanent furniture under every chapter for an invitation almost nobody
+ * accepts; the explanation lives in the link's title attribute, which is where a
+ * reader about to report something will look. */
+.study-errata--inline {
+  display: flex;
+  gap: 0.35rem;
+  align-items: baseline;
+  flex-wrap: wrap;
+  margin-top: 0;
+  padding: 0;
+  border: none;
+  background: none;
+  font-size: 0.78rem;
+}
+.study-errata--inline .study-errata__lead {
+  color: var(--site-muted);
+}
+.study-errata--inline .study-errata__link {
+  display: inline;
+  margin-top: 0;
+}
+
 /* ── Variation legibility, study surfaces only ────────────────────────────────
  *
  * A classical manual prints up to forty numbered variations against one game,
@@ -482,6 +505,42 @@
 .study-about__description.is-empty {
   color: var(--site-muted);
   font-style: italic;
+}
+/* The study description in the rail. Three text-lines exactly: the box must be a
+ * whole number of line boxes and take its spacing from margin, never padding,
+ * or overflow:hidden clips past the clamp and a wrapped fourth line bleeds
+ * through the bottom edge. Unclamps on hover/focus-within so the full text is
+ * one gesture away without a control to maintain. */
+.study-review .review-info-card__summary {
+  display: -webkit-box;
+  -webkit-line-clamp: 3;
+  line-clamp: 3;
+  -webkit-box-orient: vertical;
+  overflow: hidden;
+}
+/* Expanded by an explicit click, never by hover. Unclamping on hover moved the
+ * chapter list down whenever the cursor crossed the rail, which is the same
+ * content-shifts-under-you defect the caption's reserved height fixes -- doing
+ * it on mouseover is worse, because the reader never asked. */
+.study-review .review-info-card__summary.is-expanded {
+  -webkit-line-clamp: unset;
+  line-clamp: unset;
+  overflow: visible;
+}
+.study-page__summary-toggle {
+  align-self: flex-start;
+  margin-top: 2px;
+  padding: 0;
+  border: none;
+  background: none;
+  color: var(--site-accent-strong, var(--site-accent));
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+.study-page__summary-toggle:hover,
+.study-page__summary-toggle:focus-visible {
+  text-decoration: underline;
 }
 .study-about__row {
   display: flex;
@@ -737,4 +796,28 @@
   color: #4ea96a;
   font-weight: 700;
   opacity: 1;
+}
+
+/* The favourite and the errata invitation sit with the study, not the chapter.
+ * In the rail head the heart is one of the icon tools; at the rail foot the
+ * errata line is a quiet close. */
+.study-page__title-row > .study-actions__like {
+  flex: 0 0 auto;
+  align-self: flex-start;
+  padding: 0.15rem 0.45rem;
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.study-chapters > .study-errata--inline {
+  padding: 0.45rem 0.6rem;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+/* The chapter's introduction, in the chapter-level tab. */
+.study-about__intro {
+  margin: 0;
+  font-size: 0.9rem;
+  line-height: 1.55;
+  color: var(--site-text, inherit);
+  white-space: pre-wrap;
 }

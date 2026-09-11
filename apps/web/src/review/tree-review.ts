@@ -1731,7 +1731,19 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     annotationEditor?.setAnnotations(node.annotations);
     // Under-board comment panel: the current node's authored text (hidden when
     // the node carries none). The move list only marks commented moves.
-    const authoredComment = displayComment(node.annotations?.comments?.[0]) ?? '';
+    //
+    // A STUDY's root comment is excluded. It is the chapter's introduction --
+    // chapter-level prose, often several hundred characters -- while every other
+    // node here carries a note about one move, and the longest of those measured
+    // across the site is 106 characters. Sharing one slot between the two meant
+    // stepping off the start of a chapter resized the page by ~300px, and a
+    // reader clicking through an annotated game felt it on every chapter. The
+    // study surface renders that intro in the About tab instead, which is where
+    // the chapter's other chapter-level facts already are.
+    const authoredComment =
+      config.reviewSurface === 'study' && currentPath.length === 0
+        ? ''
+        : (displayComment(node.annotations?.comments?.[0]) ?? '');
     commentPanelEl.textContent = authoredComment;
     commentPanelEl.classList.toggle('review-comment-panel--empty', !authoredComment);
     moveTree.setCurrent(currentPath);

@@ -84,6 +84,8 @@ export const ZH_HANT_REVIEW = {
   'study.gameResult': '結果',
   'study.gameSource': '來源',
   'study.errataTitle': '發現錯誤？',
+  'study.showMore': '展開',
+  'study.showLess': '收起',
   'study.errataBody':
     '部分棋譜抄錄自歷史文獻，著法、名稱或註釋都可能有誤。若發現問題，請告訴我們，我們會對照原本核查。',
   'study.errataAction': '回報勘誤',
