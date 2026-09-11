@@ -287,6 +287,12 @@ export const ARTICLE_META: Record<
     description:
       'A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.',
   },
+  'puzzles-with-more-than-one-solution': {
+    title: 'Puzzles with more than one solution',
+    kind: 'article',
+    description:
+      'A solver found a real mate and was told to try again. It turned out 382 served puzzles could do that. Here is how the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.',
+  },
   'skill-vs-luck': {
     title: 'Separating Skill from Luck in Flip Games',
     kind: 'article',

@@ -44,6 +44,7 @@ import { spawn } from 'node:child_process';
 import { existsSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import { resolve } from 'node:path';
+import { parseStandardXiangqiFen, standardXiangqiEngineFen } from '../packages/game/dist/index.js';
 import { resolve as stubCss } from './lib/stub-css-hooks.mjs';
 
 const HOME = process.env.HOME ?? '';
@@ -100,6 +101,21 @@ const ARTICLE_SOURCES = 'apps/web/src/articles/content';
 function toEngineMove(token) {
   if (!/^[a-i]\d[a-i]\d$/.test(token)) throw new Error(`not an ICCS move: ${token}`);
   return token;
+}
+
+/** The article's start FEN as the engine wants it, with whose move it is. */
+function engineFen(startFen) {
+  const parsed = parseStandardXiangqiFen(startFen);
+  if (!parsed.ok) throw new Error(`start FEN does not parse: ${startFen}`);
+  return {
+    fen: standardXiangqiEngineFen(parsed.state),
+    redToMove: parsed.state.status.type === 'playing' ? parsed.state.status.turn === 'red' : true,
+  };
+}
+
+function positionCommand(fen, moves) {
+  const base = fen ? `position fen ${fen.fen}` : 'position startpos';
+  return moves.length ? `${base} moves ${moves.join(' ')}` : base;
 }
 
 /**
@@ -177,9 +193,12 @@ async function annotatedArticles() {
   }
   const found = [];
   for (const article of articles) {
-    const boards = (article.sections ?? [])
-      .flatMap((s) => s.blocks ?? [])
-      .filter((b) => b?.kind === 'xq-replay');
+    // Intro boards first, then sections, the order the page renders them in.
+    // A post can open on its worked position before any heading.
+    const boards = [
+      ...(article.intro ?? []),
+      ...(article.sections ?? []).flatMap((s) => s.blocks ?? []),
+    ].filter((b) => b?.kind === 'xq-replay');
     const lines = boards.reduce(
       (n, b) => n + Object.values(b.spec.annotations?.byPly ?? {}).filter((a) => a.line).length,
       0,
@@ -261,7 +280,16 @@ async function main() {
         const leaf = [...mainline.slice(0, ply - 1), ...a.line.trim().split(/\s+/)].map(
           toEngineMove,
         );
-        jobs.push({ key: `${slug}:${boardIndex}:${ply}`, moves: root, leaf });
+        // A chapter set from a FEN starts there, not at the opening, and the
+        // side to move comes from the FEN too: the parity below reads it.
+        const fen = block.spec.startFen ? engineFen(block.spec.startFen) : null;
+        jobs.push({
+          key: `${slug}:${boardIndex}:${ply}`,
+          moves: root,
+          leaf,
+          fen,
+          fenRedToMove: fen ? fen.redToMove : true,
+        });
       }
     });
   }
@@ -292,7 +320,7 @@ async function main() {
     send('ucinewgame');
     send('isready');
     await until((l) => l === 'readyok');
-    send(`position startpos moves ${job.moves.join(' ')}`);
+    send(positionCommand(job.fen, job.moves));
     let cp = null;
     let mate = null;
     send(`go nodes ${NODES}`);
@@ -311,7 +339,7 @@ async function main() {
       },
     );
     // Pikafish reports from the side to move; the articles speak Red POV.
-    const redToMove = job.moves.length % 2 === 0;
+    const redToMove = (job.moves.length % 2 === 0) === (job.fenRedToMove ?? true);
     const redCp = cp == null ? null : redToMove ? cp : -cp;
     // `mate 0` means the side to move is ALREADY mated, and it is the one mate
     // value that carries no sign of its own: negating zero loses which side lost.
@@ -326,7 +354,7 @@ async function main() {
       send('ucinewgame');
       send('isready');
       await until((l) => l === 'readyok');
-      send(`position startpos moves ${job.leaf.join(' ')}`);
+      send(positionCommand(job.fen, job.leaf));
       let lcp = null;
       let lmate = null;
       send(`go nodes ${NODES}`);
@@ -344,7 +372,7 @@ async function main() {
           }
         },
       );
-      const leafRed = job.leaf.length % 2 === 0;
+      const leafRed = (job.leaf.length % 2 === 0) === (job.fenRedToMove ?? true);
       const leafCp = lcp == null ? null : leafRed ? lcp : -lcp;
       const leafMate =
         lmate == null ? null : lmate === 0 ? (leafRed ? -1 : 1) : leafRed ? lmate : -lmate;
@@ -366,23 +394,24 @@ async function main() {
     }
   }
 
-  // A filtered run measures a SUBSET, so writing the file would delete every
-  // line it did not look at, and the bake step would then drop those symbols
-  // from the articles. Filtering is for checking a threshold or a single line;
-  // only a full run owns the file.
+  // A filtered run measures a SUBSET. It used to leave the file untouched, so
+  // adding one article meant re-measuring every line in every other article,
+  // and at four threads a re-measure moves a handful of symbols on lines nobody
+  // changed. A partial run now merges its keys into the file and bakes only the
+  // articles it measured; a full run still owns the file outright.
   const partial = selected.length !== jobs.length;
-  if (partial) {
-    console.log(`\npartial run (${selected.length} of ${jobs.length}): ${OUT} left untouched`);
-    return;
-  }
-  writeFileSync(OUT, `${JSON.stringify(out, null, 2)}\n`);
+  const merged =
+    partial && existsSync(OUT) ? { ...JSON.parse(readFileSync(OUT, 'utf8')), ...out } : out;
+  writeFileSync(OUT, `${JSON.stringify(merged, null, 2)}\n`);
   const tally = {};
-  for (const v of Object.values(out)) tally[v.symbol] = (tally[v.symbol] ?? 0) + 1;
-  console.log('wrote', OUT, tally);
+  for (const v of Object.values(merged)) tally[v.symbol] = (tally[v.symbol] ?? 0) + 1;
+  console.log(partial ? `merged ${selected.length} into` : 'wrote', OUT, tally);
 
   if (write) {
+    const measuredSlugs = new Set(selected.map((j) => j.key.split(':')[0]));
     for (const { slug, boards } of found) {
-      const r = bake(slug, boards, out);
+      if (partial && !measuredSlugs.has(slug)) continue;
+      const r = bake(slug, boards, merged);
       console.log(`  baked ${r.inserted} into ${r.path}${r.skipped ? ` (${r.skipped})` : ''}`);
     }
   } else {

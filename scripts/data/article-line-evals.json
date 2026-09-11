@@ -913,5 +913,15 @@
     "cp": 572,
     "mate": null,
     "symbol": "+−"
+  },
+  "puzzles-with-more-than-one-solution:0:1": {
+    "cp": null,
+    "mate": 2,
+    "symbol": "+−"
+  },
+  "puzzles-with-more-than-one-solution:1:1": {
+    "cp": null,
+    "mate": 1,
+    "symbol": "+−"
   }
 }
