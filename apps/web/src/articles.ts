@@ -40,6 +40,7 @@ import {
   type CrossroadsReplayBlock,
   type CtaBlock,
   type DropMiniXiangqiReplayBlock,
+  type DuckXiangqiReplayBlock,
   type FaqBlock,
   type FortressXiangqiReplayBlock,
   findArticle,
@@ -71,6 +72,7 @@ import {
   type DropMiniXiangqiReplayController,
   mountDropMiniXiangqiReplay,
 } from './drop-mini-xiangqi-replay.js';
+import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
 import {
   type FortressXiangqiReplayController,
   mountFortressXiangqiReplay,
@@ -1343,6 +1345,7 @@ type PendingBlock =
   | MiniXiangqiReplayBlock
   | DropMiniXiangqiReplayBlock
   | FortressXiangqiReplayBlock
+  | DuckXiangqiReplayBlock
   | ShogiReplayBlock
   | CrossroadsReplayBlock
   | JieqiReplayBlock
@@ -1378,6 +1381,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
     return renderDropMiniXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
+  if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
   if (block.kind === 'shogi-replay') return renderShogiReplayBlock(block, lang);
   if (block.kind === 'chess-replay') return renderChessReplayBlock(block, lang);
   if (block.kind === 'crossroads-replay') return renderCrossroadsReplayBlock(block, lang);
@@ -1577,6 +1581,30 @@ function renderDropMiniXiangqiReplayBlock(
     figure.append(cap);
   }
 
+  rememberPendingMount(figure, block, lang);
+  return figure;
+}
+
+function renderDuckXiangqiReplayBlock(
+  block: DuckXiangqiReplayBlock,
+  lang?: ArticleLang,
+): HTMLElement {
+  const figure = document.createElement('figure');
+  // No reserve rail on this board, so it takes the plain xiangqi figure classes
+  // rather than the drop-mini ones the fortress replay borrows.
+  figure.className = 'article-figure article-figure-interactive article-figure-xq';
+  figure.dataset.pendingWidget = 'duck-xiangqi-replay';
+
+  const mountTarget = document.createElement('div');
+  mountTarget.className = 'article-interactive-target';
+  figure.append(mountTarget);
+
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
   rememberPendingMount(figure, block, lang);
   return figure;
 }
@@ -2344,6 +2372,7 @@ export function mountPendingWidgets(
   | MiniXiangqiReplayController
   | DropMiniXiangqiReplayController
   | FortressXiangqiReplayController
+  | DuckXiangqiReplayController
   | ShogiReplayController
   | CrossroadsChessReplayController
   | JieqiReplayController
@@ -2384,6 +2413,8 @@ export function mountPendingWidgets(
       controllers.push(mountDropMiniXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'fortress-xiangqi-replay') {
       controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
+    } else if (block.kind === 'duck-xiangqi-replay') {
+      controllers.push(mountDuckXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'shogi-replay') {
       controllers.push(mountShogiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'chess-replay') {

@@ -130,6 +130,31 @@ export const duckXiangqiArticle: Article = {
       ],
     },
     {
+      heading: 'A sample game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'An engine game at full strength, eight seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in thirty of the hundred and twenty plies, and near the end Red is using it to hold a file its general cannot survive without.',
+        },
+        {
+          kind: 'duck-xiangqi-replay',
+          spec: {
+            red: 'Fairy-Stockfish',
+            black: 'Fairy-Stockfish',
+            event: 'Engine self-play \u00b7 8s per move',
+            moves:
+              'b3b5@d9 b8b6@a8 h3e3@b9 g7g6@e5 b5c5@g8 b6c6@e5 b1a3@c8 h10g8@g3 e3e7@f8 b10c8@e6 e7h7@b3 g8f6@e5 c5c7@c5 h8e8@e6 c1e3@c5 c6e6@e2 h1g3@e5 i10h10@c6 h7h6@h9 f6g4@f6 h6h3@h7 e6a6@b10 a1a2@h9 a6b6@b2 h3i3@h7 a10b10@b2 c4c5@c6 g4i3@i2 a2h2@h3 c10a8@h5 i1i3@h7 b6b3@h4 c7f7@h3 b3c3@h5 a3c2@h3 h10h7@h6 f7f2@h3 h7f7@g2 h2h10@f3 f7g7@d2 g3f5@g9 g7f7@f6 f2f3@d3 b10b3@f6 f5d4@f5 b3b2@d3 f3g3@f3 g10i8@d3 h10h8@g2 e8f8@d3 h8h7@g7 f7d7@e7 h7h8@d6 d10e9@d3 d4e6@e7 f8f3@h3 i3i2@e2 b2c2@g2 f1e2@f5 d7e7@f8 e6d4@d2 f3f8@d3 g3g2@f2 c2b2@d2 d4c2@f2 b2c2@d2 i4i5@f4 c2a2@d2 e2f1@c2 f8f2@e2 i2i4@f4 c3c4@d2 h8i8@g4 f2d2@e2 e4e5@c2 d2d4@e4 i4i2@h2 d4e4@e2 e3c1@b2 g6g5@e3 g2h2@h5 e7h7@e3 i8g8@b2 g5f5@e8 h2g2@b2 h7h1@g7 g2g3@h2 a2c2@g2 c1e3@e2 h1g1@f2 g3g2@e2 c2c3@d3 i2h2@e2 c3e3@a5 g2g7@e2 c8e7@d8 g8i8@e2 g1g7@g2 e5e6@e2 e7d9@f2 e6d6@e2 e3d3@e3 e1e2@d4 a8c10@e3 i8i7@h7 g7g1@f2 i7a7@e1 d3d1@g2 e2e3@e2 e4e5@f3 a7f7@d4 f5f4@f3 f7f5@e2 g1f1@e1 d6d7@e2 f4e4@d2 e3e2@e3 f1e1@f2 h2h1@a1 e1e2',
+            resultText:
+              'Black captures the general on move 60. Red had the better of the opening, but the engine eval was still within a pawn and a half of level as late as ply 63, and Black ground it out from there.',
+          },
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'This game was chosen from eight played the same way, for how much the duck does in it. All seven decisive games are in the [companion study](/study/UBeRb8Sp), one chapter each, with a note on how long each stayed competitive and what the duck was doing.',
+        },
+      ],
+    },
+    {
       heading: 'How games end',
       blocks: [
         {
