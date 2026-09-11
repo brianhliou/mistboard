@@ -67,9 +67,18 @@ export type TenantEventWriterContext<
    * turn ended. A claim window that settled on its own timer had the same
    * problem: the event that resumed play came from a timer, not a socket.
    *
-   * Safe to call this often because every scheduler debounces: each one clears
-   * its pending timer and re-derives whose move it is, so an extra call where
-   * nothing is owed is a no-op.
+   * Safe to call this often, and that safety is an invariant every scheduler
+   * owes rather than something this module can enforce. Each one must bail on
+   * an already-armed timer AND re-derive whose move it is, so an extra call
+   * where nothing is owed does nothing. Verified 2026-09-11 for all five:
+   * duck-xiangqi, jungle, banqi and jieqi all open with `if (room.engineTimer)
+   * return` followed by a `playing && turn === seat && bothSeatsFilled` check;
+   * mahjong clears and re-arms instead, because there a bot follows a bot and
+   * bailing on an armed timer would stop the hand.
+   *
+   * A new scheduler that fires unconditionally will now be called after every
+   * event rather than only after a human move, so it will move on the human's
+   * turn.
    */
   scheduleEngineMove?(room: TenantRuntimeRoom<Kind, C, M, State, Spec>): void;
 };
