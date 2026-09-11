@@ -58,6 +58,18 @@ export type WebVariantTenant<C extends string> = {
   // top-to-bottom reading for a colors[0] viewer.
   colors: readonly C[];
   isColor(value: unknown): value is C;
+  // Optional: may this seat act on this view, beyond "it is their turn"?
+  //
+  // The web mirror of the server's rules.seatMayAct, and it exists for the same
+  // reason. Every variant here is strictly alternating, so the default is
+  // status.turn === seat. Mahjong is not: a discard opens a window in which up
+  // to three other seats may claim, and without this the claim buttons stay
+  // dead for exactly the seats being asked to answer.
+  //
+  // The server decides what is actually legal; this only decides what the
+  // client offers. A tenant that widens one without the other gets a button
+  // that does nothing, or a legal action with no way to take it.
+  seatMayAct?(view: unknown, seat: C): boolean;
   oppositeColor(color: C): C;
   enabled(): boolean;
   reviewUrl(roomId: string): string;
