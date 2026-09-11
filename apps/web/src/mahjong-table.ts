@@ -165,10 +165,30 @@ function ownSeatHtml(seat: MahjongSeatView, view: MahjongPlayerView, canDiscard:
   return `
     <div class="mj-seat mj-seat-self${isTurn ? ' mj-seat-turn' : ''}" data-mj-seat="${seat.seat}">
       ${discardsHtml(seat, view.discardUnderClaim)}
-      ${meldsHtml(seat)}
       ${seatHeadHtml(seat, isTurn, view.awaiting.includes(seat.seat))}
       ${mahjongActionsHtml(view)}
-      <div class="mj-hand" role="group" aria-label="your hand">${tiles}</div>
+      <div class="mj-hand-row">
+        <div class="mj-hand" role="group" aria-label="your hand">${tiles}</div>
+        ${ownMeldsHtml(seat)}
+      </div>
+    </div>`;
+}
+
+/**
+ * Your own declared sets, beside your hand rather than off with your discards.
+ *
+ * They rendered up next to the pond, which reads as a second row of hand tiles
+ * that will not respond to a click: a claimed set LEAVES the concealed hand and
+ * can never be discarded, which is correct mahjong and looks exactly like a bug
+ * when the tiles sit where a hand is. At a table they sit face up beside you,
+ * so they sit there here, behind a divider and labelled.
+ */
+function ownMeldsHtml(seat: MahjongSeatView): string {
+  if (seat.melds.length === 0) return '';
+  return `
+    <div class="mj-own-melds">
+      <span class="mj-own-melds-label">declared</span>
+      ${meldsHtml(seat)}
     </div>`;
 }
 

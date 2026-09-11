@@ -473,3 +473,35 @@ button.mj-tile:focus-visible {
   color: #fff;
   font-weight: 600;
 }
+
+/* Your hand, and your declared sets beside it.
+   The sets used to render up by your discards, which made a claimed set look
+   like a row of hand tiles that would not respond: a melded set leaves the
+   concealed hand and can never be discarded, correct mahjong that reads as a
+   frozen UI when the tiles sit where a hand is. */
+.mj-hand-row {
+  display: flex;
+  align-items: flex-end;
+  gap: 14px;
+  flex-wrap: wrap;
+}
+
+.mj-own-melds {
+  display: flex;
+  align-items: flex-end;
+  gap: 8px;
+  padding-left: 14px;
+  border-left: 1px solid var(--mj-felt-edge);
+}
+
+.mj-own-melds-label {
+  font:
+    500 9.5px / 1 "IBM Plex Sans",
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+  color: var(--mj-on-felt-soft);
+  padding-bottom: 4px;
+}
