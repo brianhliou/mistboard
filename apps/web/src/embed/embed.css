@@ -422,7 +422,9 @@ body.embed-body {
 /* chessground is square and fills --cg-w; the base rule caps it at 380px, the
    review's column width. Here the column is the board's width (set in JS), so
    the board fills it, the same override /watch applies to its board box. */
-.embed-board .replay-pane-truth .replay-board.cg-wrap {
+.embed-board .replay-pane-truth .replay-board.cg-wrap,
+.embed-board .replay-layout-single-white .replay-pane-white .replay-board.cg-wrap,
+.embed-board .replay-layout-single-black .replay-pane-black .replay-board.cg-wrap {
   --cg-w: 100%;
   width: 100%;
   box-shadow: none;
@@ -494,18 +496,39 @@ body.embed-body {
   margin: 0;
 }
 
-.embed-board .replay-layout:not(.replay-layout-solo) .replay-pane-white,
-.embed-board .replay-layout:not(.replay-layout-solo) .replay-pane-black {
+.embed-board
+  .replay-layout:not(.replay-layout-solo, .replay-layout-single-white)
+  .replay-pane-white,
+.embed-board
+  .replay-layout:not(.replay-layout-solo, .replay-layout-single-black)
+  .replay-pane-black {
   display: none;
 }
 
-.embed-board .replay-pane-truth {
+/* `?pov=white|black` on a chess-stack game: the replay marks the layout with
+   the chosen side and that side's own (fogged) pane is the one shown; the
+   truth pane steps aside. Same shape the landing hero uses (landing.css). */
+.embed-board .replay-layout-single-white .replay-pane-truth,
+.embed-board .replay-layout-single-black .replay-pane-truth {
+  display: none;
+}
+
+.embed-board .replay-pane-truth,
+.embed-board .replay-layout-single-white .replay-pane-white,
+.embed-board .replay-layout-single-black .replay-pane-black {
   width: 100%;
   min-width: 0;
   min-height: 0;
   display: flex;
   flex-direction: column;
   align-items: center;
+}
+
+.embed-board .replay-layout-single-white .replay-pane-white .replay-pane-label,
+.embed-board .replay-layout-single-black .replay-pane-black .replay-pane-label,
+.embed-board .replay-layout-single-white .replay-pane-white .replay-pane-name,
+.embed-board .replay-layout-single-black .replay-pane-black .replay-pane-name {
+  display: none;
 }
 
 /* ── TV embed (/embed/tv) ───────────────────────────────────────────────────── */

@@ -102,14 +102,20 @@ async function mountBoard(
     });
   }
   const { mountReplay } = await import('../replay.js');
-  // The chess path takes the orientation up front and switches the view (a
-  // fogged side, or the truth board) through setPov once the game is loaded.
+  // The chess path draws three panes (white's view, truth, black's view) and
+  // embed.css shows one of them. A side's pov renders that side's own pane and
+  // keeps it fogged at game end (revealOnFinish false), which is the view the
+  // player actually had; anything else is the truth board, revealed. setPov is
+  // NOT the mechanism here: it flips a data attribute that only /watch's
+  // stylesheet reads, so it did nothing in a frame.
+  const side = options.pov === 'white' || options.pov === 'black' ? options.pov : null;
   return mountReplay(root, roomId, {
     autoplay: false,
     orientation: options.pov === 'black' ? 'black' : 'white',
+    ...(side ? { panes: { resolver: () => side } } : {}),
     showControls: false,
     keyboardNav: false,
-    revealOnFinish: true,
+    revealOnFinish: side === null,
     clampPace: true,
     metadataMode: 'compact',
     compactClockLayout: 'board-edges',
@@ -309,12 +315,6 @@ export async function mountEmbedGame(
   } catch {
     note(root, 'This game could not be loaded.');
     return;
-  }
-  // The tenant path honoured the pov at mount; the chess path only took the
-  // orientation, so ask it for the view here. A game without that view (a
-  // perfect-information one has only truth) simply keeps what it showed.
-  if (options.pov && handle.availablePovs?.().includes(options.pov)) {
-    handle.setPov?.(options.pov);
   }
 
   const entries = handle.moveEntries?.() ?? [];
