@@ -25,6 +25,7 @@ import {
   viewFor,
 } from '@mistboard/mahjong';
 import { mahjongTenant } from './mahjong-tenant.js';
+import { logger } from './obs.js';
 import type { TenantLifecycleContext } from './variant-tenant/lifecycle.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 
@@ -122,10 +123,18 @@ export function scheduleMahjongBotMove(
         const event = room.events[seq];
         if (event) ctx.broadcastEventAppended(room, event, seq);
       })
-      .catch(() => {
-        // A failed append is already recorded by the event writer; the room is
-        // left with no bot timer armed rather than retrying into a broken
-        // persistence layer.
+      .catch((err) => {
+        // Loud. This used to swallow the error on the theory that the event
+        // writer had already recorded it, which is not true of a synchronous
+        // throw on the way in: the first four-seat bug here showed up as a
+        // table that simply stopped, with nothing in the log to say why.
+        logger.error({
+          kind: 'mahjong_bot_move_failure',
+          room_id: room.id,
+          seat: ready,
+          error: (err as Error).message,
+          at: Date.now(),
+        });
       });
   }, BOT_THINK_MS);
   room.engineTimer.unref();

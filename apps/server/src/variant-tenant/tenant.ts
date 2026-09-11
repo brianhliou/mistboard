@@ -294,6 +294,11 @@ export type VariantTenant<
     // Terminal-state constructors: the generic runtime never builds variant
     // status objects itself, so variant status unions stay variant-owned.
     finish(state: State, winner: C, reason: TenantEndReason): State;
+    // How the game ends when a seat forfeits and NOBODY is awarded the win.
+    // Only reachable for tenants whose forfeitWinner returns null, which means
+    // tables of more than two: there is no "the other player" to hand it to.
+    // Omitting it on such a tenant makes the forfeit throw rather than guess.
+    finishNoWinner?(state: State, reason: TenantEndReason): State;
     abort(state: State, reason: AbortReason): State;
     isColor(value: unknown): value is C;
     isMove(value: unknown): value is M;

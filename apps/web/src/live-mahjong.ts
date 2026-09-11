@@ -124,6 +124,27 @@ function replayPositionKey(view: MahjongPlayerView): string {
   });
 }
 
+/**
+ * Draw for the player when the turn reaches them.
+ *
+ * At a table you pick the tile up yourself, but on a screen the draw is not a
+ * decision: there is exactly one tile you may take and no reason ever to
+ * decline it. Making somebody click it would add a step to every turn that only
+ * ever has one answer.
+ *
+ * Guarded on the move number so a re-render cannot send a second draw for the
+ * same state. The server would reject the duplicate, but a client that spams a
+ * rejected move looks broken from the outside.
+ */
+let autoDrawnAt = -1;
+function maybeAutoDraw(view: MahjongPlayerView | null): void {
+  if (!view || !core) return;
+  if (view.phase !== 'draw' || !core.canActNow()) return;
+  if (autoDrawnAt === view.moveNumber) return;
+  autoDrawnAt = view.moveNumber;
+  core.send({ type: 'move', action: 'draw' });
+}
+
 function renderTable(refs: LiveRefs, view: MahjongPlayerView | null): void {
   refs.board.className = 'board mahjong-live-board';
   if (!view) {
@@ -167,10 +188,14 @@ const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMov
     forfeitDeadline = typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
   },
   resetState: () => {
+    autoDrawnAt = -1;
     roomMode = 'pve';
     forfeitDeadline = null;
   },
-  renderBoard: (refs, view) => renderTable(refs, view),
+  renderBoard: (refs, view) => {
+    renderTable(refs, view);
+    maybeAutoDraw(view);
+  },
   renderExtras: (refs, view) => renderActions(refs, view),
   onDisabled: (refs) => renderActions(refs, null),
   setup: (ctx) => {

@@ -163,6 +163,7 @@ export function createTenantWsRuntime<
 
   const eventWriterCtx: TenantEventWriterContext<Kind, C, M, State, Spec> = {
     scheduleLifecycleTimers: (room) => scheduleLifecycleTimers(room as LiveRoom),
+    scheduleEngineMove: (room) => scheduleEngineMove(room as LiveRoom),
   };
 
   const lifecycleCtx: TenantLifecycleContext<C, M, State, Spec, LiveRoom> = {

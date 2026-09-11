@@ -48,6 +48,7 @@ import {
 } from '@mistboard/mahjong';
 import { mahjongEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
+import { isMahjongBotClientId } from './server-mahjong-bots.js';
 import { tenantForfeitDeadlineForClient, tenantPveEngineId } from './variant-tenant/runtime.js';
 import type {
   TenantClientEvent,
@@ -252,6 +253,13 @@ export const mahjongTenant: MahjongTenantType = {
       ...state,
       status: { type: 'finished', winner, reason },
     }),
+    // Somebody left. The hand is over and nobody won it: there is no seat to
+    // award it to, and awarding it to whoever happens to sit next would be an
+    // invented rule.
+    finishNoWinner: (state, reason) => ({
+      ...state,
+      status: { type: 'finished', winner: null, reason },
+    }),
     abort: (state, reason: AbortReason) => ({ ...state, status: { type: 'aborted', reason } }),
     isColor: isMahjongSeat,
     isMove: isMahjongMove,
@@ -264,6 +272,20 @@ export const mahjongTenant: MahjongTenantType = {
       if (!mahjongIsLegalMove(state, stamped)) return null;
       return stamped;
     },
+  },
+  // The bots are not an engine SERVICE, but the runtime's notion of "engine
+  // seat" is what marks a seat as present without a socket behind it. Without
+  // this block every bot seat reads as a disconnected player, the forfeit timer
+  // arms on all three, and the hand ends itself about thirty seconds in with an
+  // abandonment nobody committed. That is exactly what it did before this.
+  engine: {
+    // The bots are handed the whole state each move and hold nothing between
+    // moves, so there is no history for them to be missing.
+    terminalContext: 'full-history',
+    isEngineClientId: isMahjongBotClientId,
+    displayName: () => 'Mahjong bot',
+    // In-process: no reservation is ever taken, so nothing is released.
+    reservationReleaseTag: 'mahjong',
   },
   visibility: {
     clientEventFor: mahjongClientEventFor,

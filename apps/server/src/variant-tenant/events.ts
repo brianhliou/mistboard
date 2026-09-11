@@ -57,6 +57,21 @@ export type TenantEventWriterContext<
   logGameEndRecordFailure?(roomId: string, err: Error): void;
   persistence?: TenantEventWriterPersistence<C, M, Spec>;
   scheduleLifecycleTimers?(room: TenantRuntimeRoom<Kind, C, M, State, Spec>): void;
+  /**
+   * Give a PvE scheduler a chance to move, after EVERY appended event.
+   *
+   * It used to be called only after a client's move, which is enough when a PvE
+   * game alternates human, engine, human: the human's move is always the thing
+   * that wakes the engine. Mahjong breaks that. Three of the four seats are
+   * bots, so bot follows bot, and a hand stopped dead the moment the human's
+   * turn ended. A claim window that settled on its own timer had the same
+   * problem: the event that resumed play came from a timer, not a socket.
+   *
+   * Safe to call this often because every scheduler debounces: each one clears
+   * its pending timer and re-derives whose move it is, so an extra call where
+   * nothing is owed is a no-op.
+   */
+  scheduleEngineMove?(room: TenantRuntimeRoom<Kind, C, M, State, Spec>): void;
 };
 
 export async function appendTenantEvent<
@@ -96,6 +111,7 @@ export async function appendTenantEvent<
     room.projection = projected;
     const appendedSeq = room.events.length - 1;
     writer.scheduleLifecycleTimers(room);
+    writer.scheduleEngineMove(room);
     // PvE: free the engine seat reservation the moment the game ends, so a
     // finished/aborted game doesn't tie up a global engine seat until its TTL.
     // Idempotent via the null guard; harmless for PvP (no reservation).
@@ -341,6 +357,7 @@ function contextWithDefaults<
     logGameEndRecordFailure: (roomId, err) => logTenantGameEndRecordFailure(tenant, roomId, err),
     persistence,
     scheduleLifecycleTimers: () => {},
+    scheduleEngineMove: () => {},
     ...ctx,
   };
 }

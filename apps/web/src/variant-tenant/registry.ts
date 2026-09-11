@@ -32,6 +32,7 @@ import {
   JUNGLE_SPEC_ID,
   KRIEGSPIEL_SPEC_ID,
   LUZHANQI_SPEC_ID,
+  MAHJONG_SPEC_ID,
   MINI_XIANGQI_SPEC_ID,
   REVEAL_CHESS_SPEC_ID,
   type TimeControlId,
@@ -54,6 +55,7 @@ import {
   jungleFlipEnabled,
   kriegspielEnabled,
   luzhanqiEnabled,
+  mahjongEnabled,
   revealChessEnabled,
   xiangqiEnabled,
 } from '../feature-flags.js';
@@ -900,6 +902,52 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         kind: 'container',
       })),
       defaultEngineId: 'fairy-stockfish-duck-xiangqi-level-4',
+    },
+  },
+  {
+    // Hong Kong mahjong. Four seats, concealed hands, and the only variant here
+    // where a discard asks three other players a question at once.
+    //
+    // PvE only, and that is the point rather than a gap: a table needs four
+    // players, and this exists so one person can sit down against three bots and
+    // tell us whether the faan table is right. Gated twice, by this flag and by
+    // the server's per-account allowlist, because the hand mathematics is proven
+    // against an independent implementation and the SCORING is not proven at all.
+    gameSpecId: MAHJONG_SPEC_ID,
+    roomIdPrefix: 'mj_',
+    enabled: mahjongEnabled,
+    pageTitle: 'Mahjong',
+    loadLiveRoomClient: () =>
+      import('../live-mahjong.js').then(
+        ({ bootstrapMahjongLiveRoom }) =>
+          () =>
+            bootstrapMahjongLiveRoom(),
+      ),
+    landing: {
+      capabilities: {
+        // The picker's two-sided vocabulary does not fit a table of four. East
+        // and South stand in for "first" and "second" so the control renders;
+        // the seat a player actually gets is chosen on the create call.
+        firstColor: 'red',
+        firstGlyph: '東',
+        firstLabel: 'East',
+        secondColor: 'black',
+        secondGlyph: '南',
+        secondLabel: 'South',
+        neutralGlyphColor: true,
+        supportsRated: false,
+        supportsStartFormat: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['5m5', '10m5'],
+      // Both on the SAME predicate, deliberately. Gating the menu and the deep
+      // link on neighbouring flags has shipped broken twice, and the conformance
+      // test checks exactly this pair.
+      offerInMenu: mahjongEnabled,
+      acceptsDeepLink: mahjongEnabled,
+      // The three bots are seated by the server, not chosen here: there is no
+      // ladder to pick from and no seat for the player to give away.
+      hideColorPicker: true,
     },
   },
   {

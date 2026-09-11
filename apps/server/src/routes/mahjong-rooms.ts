@@ -38,7 +38,10 @@ const mahjongRoute = createTenantRoomsRoute<
   errorPrefix: 'mahjong',
   hasDisabledFlag: true,
   preferredColors: ['east', 'south', 'west', 'north', 'random'],
-  engine: { kind: 'none', rejectEngineId: true },
+  // The server seats three bots on every room, so 'pvp' and 'pve' name the same
+  // thing here and both are accepted. An engineId is refused: there is no
+  // ladder to pick from.
+  engine: { kind: 'always-seated' },
   // Unrated, and not close to being otherwise: the faan values have never been
   // checked by anybody who plays the game, so a rating built on them would be
   // measuring the wrong thing precisely.
