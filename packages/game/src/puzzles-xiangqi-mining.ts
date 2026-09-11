@@ -154,7 +154,7 @@ export function isXiangqiUniquelyWinning(
 // is that every alternative is actually wrong — it loses the win, or it wins a
 // whole piece less. This gate encodes that: best must keep a clear win, and the
 // runner-up must either drop out of "winning" or trail by a decisive material
-// margin. Mates bypass cp/win% (both saturate) and use strictly-fastest-mate.
+// margin. Mates bypass cp/win% (both saturate): unique only when nothing else mates.
 //
 // win% is a logistic map of cp; K is the eval scale (matches the audit tool's
 // mapping, so the miner and the audit agree on "unique"). The knobs are win%
@@ -182,7 +182,8 @@ export type XiangqiSolverUniquenessOptions = {
 
 export type XiangqiSolverUniquenessReason =
   | 'missing-best'
-  | 'fastest-mate'
+  | 'only-mate'
+  | 'mate-in-one'
   | 'mate-not-unique'
   | 'best-not-winning'
   | 'only-move'
@@ -199,8 +200,16 @@ export type XiangqiSolverUniquenessVerdict = {
 
 /** Per-ply gate for a solver move: is the best line uniquely correct? True when
  *  best keeps a clear win AND the runner-up is actually wrong (lost the win or
- *  trails by a whole piece). Mates: unique iff best is the strictly fastest
- *  forced mate. No runner-up => the only move => unique. */
+ *  trails by a whole piece). Mates: unique iff no other move mates at all,
+ *  whatever its length, except that a mate-in-one ply is always unique. This
+ *  is the lichess rule (adopted 2026-09-11): the grader accepts a stored line
+ *  plus any move that mates on the spot, nothing else, so a position with a
+ *  second, slower mate is a trap and not a puzzle, while a second mate-in-one
+ *  is simply another accepted answer. Before this
+ *  the branch admitted "strictly fastest of two mates", which put 237 puzzles
+ *  with a known second answer on the site. MultiPV 2 is sufficient: if the
+ *  runner-up does not mate, no lower line does. No runner-up => the only move
+ *  => unique. */
 export function classifyXiangqiSolverMoveUniqueness(
   best: XiangqiVerifyLine | undefined,
   second: XiangqiVerifyLine | undefined,
@@ -209,12 +218,14 @@ export function classifyXiangqiSolverMoveUniqueness(
   if (!best) return { unique: false, reason: 'missing-best' };
   const bestMates = best.mate !== null && best.mate > 0;
   if (bestMates) {
-    if (!second) return { unique: true, reason: 'fastest-mate' };
+    // The grader accepts any move that mates on the spot, so a mate-in-one ply
+    // is unique whatever else mates: every alternative the solver could pick is
+    // either accepted (mates now) or genuinely worse (mates later).
+    if (best.mate === 1) return { unique: true, reason: 'mate-in-one' };
+    if (!second) return { unique: true, reason: 'only-mate' };
     const secondMate = second.mate;
-    if (secondMate === null || secondMate <= 0) return { unique: true, reason: 'fastest-mate' };
-    return (best.mate as number) < secondMate
-      ? { unique: true, reason: 'fastest-mate' }
-      : { unique: false, reason: 'mate-not-unique' };
+    if (secondMate === null || secondMate <= 0) return { unique: true, reason: 'only-mate' };
+    return { unique: false, reason: 'mate-not-unique' };
   }
   if (xiangqiWinRate(best.scoreCp) < opts.winHi) {
     return { unique: false, reason: 'best-not-winning' };

@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-11',
+    kind: 'release',
+    headline: 'All six volumes of the Elegant Pastime Manual are online.',
+    body: "The Elegant Pastime Manual is a Ming collection of xiangqi endgame compositions. Five hundred and forty-nine of its problems are here now, each on its own board, with the book's solution played out as the mainline and the original four-character title kept beside the English one. Around sixty are draw studies where the source gives its answer in prose rather than as a line, and those notes are quoted as written rather than guessed at. Positions come from dpxq.com and are credited on every composition. One problem is absent: the line recorded for number 479 stops being legal partway through, and half a solution is worse than none.",
+    href: '/study/0Qi14WbN',
+    cta: 'Open volume one',
+  },
+  {
     date: '2026-09-06',
     kind: 'update',
     headline: 'Patron checkout is open.',

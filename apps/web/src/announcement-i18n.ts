@@ -35,6 +35,12 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-11 (Elegant Pastime Manual) ── 残局 follows the app catalogs and the
+  // study overlays; 古谱 is dpxq's own category word for these manuals.
+  'All six volumes of the Elegant Pastime Manual are online.': '《适情雅趣》六卷已全部上线。',
+  "The Elegant Pastime Manual is a Ming collection of xiangqi endgame compositions. Five hundred and forty-nine of its problems are here now, each on its own board, with the book's solution played out as the mainline and the original four-character title kept beside the English one. Around sixty are draw studies where the source gives its answer in prose rather than as a line, and those notes are quoted as written rather than guessed at. Positions come from dpxq.com and are credited on every composition. One problem is absent: the line recorded for number 479 stops being legal partway through, and half a solution is worse than none.":
+    '《适情雅趣》是明代的一部象棋排局集。其中五百四十九局现已上线，每局独立成章，以书中着法作为主变，英文局名旁保留原四字标题。约六十局是和局类的排局，原书以文字而非着法给出答案，这些注文按原样引用，不作揣测。棋谱来源为 dpxq.com，每局均注明出处。另有一局缺席：第479局所记着法走到中途即不合规，而残缺的答案比没有更糟。',
+
   // ── 2026-09-06 (patron checkout) ── 沿用 08-13 条目的说法：「支持 Mistboard」页面、
   // 赞助、个人资料上的徽章、不影响对局；订阅 / 管理你的订阅 取自 content.zh-hans.ts。
   'Patron checkout is open.': '赞助结账已开放。',
@@ -322,6 +328,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-11 (Elegant Pastime Manual) ──
+  'All six volumes of the Elegant Pastime Manual are online.': '《適情雅趣》六卷已全部上線。',
+  "The Elegant Pastime Manual is a Ming collection of xiangqi endgame compositions. Five hundred and forty-nine of its problems are here now, each on its own board, with the book's solution played out as the mainline and the original four-character title kept beside the English one. Around sixty are draw studies where the source gives its answer in prose rather than as a line, and those notes are quoted as written rather than guessed at. Positions come from dpxq.com and are credited on every composition. One problem is absent: the line recorded for number 479 stops being legal partway through, and half a solution is worse than none.":
+    '《適情雅趣》是明代的一部象棋排局集。其中五百四十九局現已上線，每局獨立成章，以書中著法作為主變，英文局名旁保留原四字標題。約六十局是和局類的排局，原書以文字而非著法給出答案，這些註文按原樣引用，不作揣測。棋譜來源為 dpxq.com，每局均註明出處。另有一局缺席：第479局所記著法走到中途即不合規，而殘缺的答案比沒有更糟。',
+
   // ── 2026-09-06 (patron checkout) ── 沿用 08-13 條目的說法：「支持 Mistboard」頁面、
   // 贊助、個人資料上的徽章、不影響對局；訂閱 / 管理你的訂閱 取自 content.zh-hant.ts。
   'Patron checkout is open.': '贊助結帳已開放。',

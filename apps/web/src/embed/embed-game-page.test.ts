@@ -2,6 +2,16 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import { fitBoardWidth, mountEmbedGame } from './embed-game-page.js';
 import { embedGameRouteFromPath, embedPlyFromSearch, embedRouteFromPath } from './embed-route.js';
 
+// The chess replay is the heavy path; the pov test only needs to see what it
+// was asked for, so it is replaced with a recorder that returns a bare handle.
+const replayMounts: Array<Record<string, unknown>> = [];
+vi.mock('../replay.js', () => ({
+  mountReplay: async (_root: HTMLElement, _id: string, options: Record<string, unknown>) => {
+    replayMounts.push(options);
+    return { destroy() {}, moveEntries: () => [], plyCount: () => 0, jumpToPly() {} };
+  },
+}));
+
 function stubFetch(status: number, body: unknown) {
   vi.stubGlobal('fetch', async () => ({
     ok: status >= 200 && status < 300,
@@ -103,5 +113,35 @@ describe('mountEmbedGame', () => {
     const root = document.createElement('div');
     await mountEmbedGame(root, { roomId: 'r' });
     expect(root.textContent).toContain('could not be loaded');
+  });
+});
+
+describe('mountEmbedGame pov on the chess stack', () => {
+  const summary = { game: { roomId: 'fog', variant: 'dark-chess', result: 'black-wins' } };
+
+  it("renders the named side's own pane and keeps it fogged at the end", async () => {
+    stubFetch(200, summary);
+    replayMounts.length = 0;
+    const root = document.createElement('div');
+    await mountEmbedGame(root, { roomId: 'fog' }, { pov: 'black' });
+    const options = replayMounts[0];
+    expect(options).toBeDefined();
+    expect(options?.orientation).toBe('black');
+    expect(options?.revealOnFinish).toBe(false);
+    const panes = options?.panes as { resolver: () => string } | undefined;
+    expect(panes?.resolver()).toBe('black');
+  });
+
+  it('shows the revealed truth board when no side is named, and for truth', async () => {
+    for (const pov of [undefined, 'truth'] as const) {
+      stubFetch(200, summary);
+      replayMounts.length = 0;
+      const root = document.createElement('div');
+      await mountEmbedGame(root, { roomId: 'fog' }, pov ? { pov } : {});
+      const options = replayMounts[0];
+      expect(options?.revealOnFinish, String(pov)).toBe(true);
+      expect(options?.panes, String(pov)).toBeUndefined();
+      expect(options?.orientation, String(pov)).toBe('white');
+    }
   });
 });
