@@ -113,7 +113,7 @@ export const puzzleTwoAnswersArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'The two halves fit. Everything the grader would have to search for, the generator already refused to publish, so the grader can be dumb. The miner now works this way, the three-move search is gone, and so is the "fastest mate" prompt. The one exception matches lichess\u2019s: a position where the stored move mates in one stays a puzzle even if other moves also mate in one, because the grader takes any of them.',
+          text: 'The two halves fit. Everything the grader would have to search for, the generator already refused to publish, so the grader can be dumb. The miner now works this way ([the gate](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi-mining.ts#L213) is one function), the three-move search is gone, and so is the "fastest mate" prompt; what the grader accepts instead is [a board check](https://github.com/brianhliou/mistboard/blob/610d8240/packages/game/src/puzzles-xiangqi.ts#L429). The one exception matches lichess\u2019s: a position where the stored move mates in one stays a puzzle even if other moves also mate in one, because the grader takes any of them.',
         },
         {
           kind: 'xq-replay',
@@ -165,6 +165,10 @@ export const puzzleTwoAnswersArticle: Article = {
         {
           kind: 'paragraph',
           text: 'That is 27% of the served xiangqi puzzles. The corpus went from 1,415 to 995, and every puzzle left has one answer, checked at every move. The strict rule costs mates: the pilot published about one puzzle for every three games, and the mate half of that will drop by something like 40%. I will know the real number after the next thousand-game batch. Fewer puzzles that are all puzzles is the right trade.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Three things follow from this. The next thousand games get mined under the strict rule, and the yield number goes in the mining explainer. The puzzles that stayed have started carrying the names of the patterns they show (马后炮, 铁门栓, 双车错), which gets its own post once there is a page per pattern. And the rule settles mates only: a position where two different moves both win a piece is still refused outright, and whether to accept a set of answers there is the open question.',
         },
       ],
     },
