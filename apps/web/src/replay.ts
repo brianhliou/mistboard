@@ -259,6 +259,9 @@ export type ReplayHandle = {
    *  the path cannot reconstruct a series, which callers must render as "no clock"
    *  rather than zero. */
   clockAtPly?: () => ReplayClockReadout | null;
+  /** Which move-order seat the board is drawn for (sits at the bottom). OPTIONAL;
+   *  the embed card reads it to put its own seat rows the right way up. */
+  bottomSeat?: () => 'first' | 'second';
 };
 
 /** A per-ply clock snapshot, keyed by move order rather than colour so it carries across
@@ -1477,6 +1480,7 @@ export async function mountReplay(
       root.dataset.watchPov = kind;
     },
     availablePovs: () => ['white', 'truth', 'black'],
+    bottomSeat: () => (boardOrientation === 'white' ? 'first' : 'second'),
     prefetchGame: (sampleId: string) => {
       if (
         abortController.signal.aborted ||
