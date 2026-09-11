@@ -1,15 +1,19 @@
 /**
- * Rewrite the root comment on already-published composition chapters, using the
- * source's prose answer where there is one.
+ * Rewrite the root comment on already-published composition chapters.
  *
- * 53 of 適情雅趣 卷六's 81 published chapters say "The source records only the
- * opening move of the solution". That is false about the record: dpxq keeps
- * those answers in [DhtmlXQ_comment0/1] because a draw study's answer is a
- * principle rather than a forced line, and nothing in the pipeline read those
- * tags until 2026-09-11.
+ * Two passes have needed this. The first: 53 of 卷六's chapters claimed "The
+ * source records only the opening move of the solution", which is false about
+ * the record -- dpxq keeps a draw study's answer in [DhtmlXQ_comment0/1],
+ * because the answer is a principle rather than a forced line.
+ *
+ * The second: the comment on every line-bearing chapter said the solution ran N
+ * moves and was played out below, to a reader looking at those N moves, and
+ * apologised for variations we had not imported. Four hundred chapters of text
+ * that restated the board. A comment that says nothing is worse than no comment,
+ * because it teaches a reader to skip the place real notes go.
  *
  *   command railway run -s Postgres -- sh -c \
- *     'DATABASE_URL="$DATABASE_PUBLIC_URL" node patch-vol6-prose.mjs --data <mined.json>'
+ *     'DATABASE_URL="$DATABASE_PUBLIC_URL" node patch-comments.mjs --data <mined.json> --slug <slug> --vol N'
  *   ... add --apply to write.
  *
  * PATCHES IN PLACE and never deletes. A delete-and-recreate would lose the
@@ -119,7 +123,6 @@ try {
       bookZh: values.book,
       moveCount: stored,
       prose: proseFrom(rec),
-      variations: rec.variations?.length ?? 0,
       url: rec.url,
     });
     if (next === comments[0].text) {
