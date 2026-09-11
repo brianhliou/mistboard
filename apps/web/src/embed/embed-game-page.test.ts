@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { fitBoardWidth, mountEmbedGame } from './embed-game-page.js';
+import { embedGameHeader, fitBoardWidth, mountEmbedGame, seatDiscInk } from './embed-game-page.js';
 import { embedGameRouteFromPath, embedPlyFromSearch, embedRouteFromPath } from './embed-route.js';
 
 // The chess replay is the heavy path; the pov test only needs to see what it
@@ -143,5 +143,30 @@ describe('mountEmbedGame pov on the chess stack', () => {
       expect(options?.panes, String(pov)).toBeUndefined();
       expect(options?.orientation, String(pov)).toBe('white');
     }
+  });
+});
+
+describe('the card chrome the game embed shares with the study embed', () => {
+  const game = (extra: Record<string, unknown>) =>
+    ({ roomId: 'r', variant: 'xiangqi', result: 'red-wins', mode: 'pve', ...extra }) as never;
+
+  it('names the variant and the clock above the card, or the variant alone', () => {
+    expect(embedGameHeader(game({ initialMs: 600_000, incrementMs: 5_000 }))).toBe(
+      'Xiangqi · 10 + 5',
+    );
+    expect(embedGameHeader(game({}))).toBe('Xiangqi');
+  });
+
+  it('paints each seat disc in the ink on the board, not the seat id', () => {
+    // Xiangqi seats are their inks.
+    expect(seatDiscInk(game({}), 'first')).toBe('red');
+    expect(seatDiscInk(game({}), 'second')).toBe('black');
+    // A flip variant's seats are move-order slots; the ink binds on the first
+    // flip, so the same seat paints either colour.
+    const flip = (firstColor: 'red' | 'black') =>
+      game({ variant: 'jungle-flip', firstColor, participants: [] });
+    expect(seatDiscInk(flip('black'), 'first')).toBe('black');
+    expect(seatDiscInk(flip('black'), 'second')).toBe('red');
+    expect(seatDiscInk(flip('red'), 'first')).toBe('red');
   });
 });

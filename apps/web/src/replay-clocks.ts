@@ -41,6 +41,10 @@ export function createClockPanel(): ClockPanelHandle {
 
   const whiteRow = createClockRow('White');
   const blackRow = createClockRow('Black');
+  // Move-order seat, the same tag the tenant seat rows carry, so one host rule
+  // finds either kind of row.
+  whiteRow.row.dataset.seat = 'first';
+  blackRow.row.dataset.seat = 'second';
   el.append(label);
 
   return {
