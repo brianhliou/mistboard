@@ -1,9 +1,12 @@
 // /stats (public) and /metrics (admin) share this module, the way coach.ts
 // serves both the directory and a detail view. Public shows aggregate games,
-// activity, mode + variant splits. Admin adds the player (account) count and its
-// recent growth, the result split, and the live in-play/online figures. Admin
-// data comes from /api/stats, which 401s for non-admins (open in local dev);
-// the page is otherwise unlinked, so it is direct-URL only like /database.
+// activity, mode + variant splits. Admin adds the Postgres-true weekly series
+// from /api/stats/admin (players, games, accounts, puzzles, study, community),
+// the result split, the live in-play/online figures, and an "Engines and
+// corpus" block at the bottom that is the ONLY place bot-vs-bot appears. The
+// admin endpoint 401s for non-admins (open in local dev); the page is otherwise
+// unlinked, so it is direct-URL only like /database.
+// Plan and status: docs-private/metrics-roadmap.md.
 
 import './metrics.css';
 import { type I18nKey, t } from './i18n/catalog.js';
@@ -16,11 +19,13 @@ import {
   type PublicSiteStats,
   type PublicStatsMode,
 } from './stats-charts.js';
+import { buildWeeklyChart, type WeeklySeries } from './weekly-chart.js';
 
 // The curated set of live variants shown on the public /stats surface, matching
 // game-specs.ts CANONICAL_VARIANT_ORDER. Retired experiments (mini/drop,
 // dark-shogi, luzhanqi) and hidden chess variants stay off the public breakdown
-// and chart filter. Admin /metrics still shows the full diagnostic list.
+// and chart filter. Admin /metrics applies the same shelf to the human split;
+// the engines block at the bottom lists every variant the bots played.
 const STATS_VARIANTS: readonly string[] = [
   'xiangqi',
   'banqi',
@@ -34,15 +39,53 @@ const STATS_VARIANTS: readonly string[] = [
 
 type LiveStats = { playing: number; online: number };
 
-type AdminSiteStats = {
+// Mirrors AdminMetrics in apps/server/src/persistence-admin-metrics.ts.
+export type AdminMetricsWeek = {
+  weekStart: string;
+  humanGames: number;
+  pvpGames: number;
+  pveGames: number;
+  players: number;
+  newPlayers: number;
+  returningPlayers: number;
+  activePlayers28d: number;
+  guestGames: number;
+  newAccounts: number;
+  puzzleSessions: number;
+  puzzleSolves: number;
+  puzzleAttempts: number;
+  studiesCreated: number;
+  studyChaptersCreated: number;
+  practiceSolves: number;
+  chatLines: number;
+  dmMessages: number;
+  correspondenceSeeks: number;
+  newPatrons: number;
+  eveGames: number;
+};
+
+export type AdminMetrics = {
+  generatedAt: string;
+  weekCount: number;
   accounts: number;
   accountsLast7d: number;
   accountsLast30d: number;
-  games: number;
-  publicGames: number;
-  last7dGames: number;
-  gamesByResult: Record<string, number>;
-  gamesByVariant: Record<string, number>;
+  humanGames: number;
+  humanGamesLast7d: number;
+  publicHumanGames: number;
+  activePlayers28d: number;
+  previousActivePlayers28d: number;
+  activePatrons: number;
+  humanGamesByResult: Record<string, number>;
+  humanGamesByVariant: Record<string, number>;
+  weekly: AdminMetricsWeek[];
+  engines: {
+    eveGames: number;
+    eveGamesLast7d: number;
+    importedGames: number;
+    manualGames: number;
+    eveByVariant: Record<string, number>;
+  };
 };
 
 export async function mountMetrics(root: HTMLElement, options: { admin: boolean }): Promise<void> {
@@ -68,7 +111,7 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
   const [publicStats, live, admin] = await Promise.all([
     fetchPublicStats(),
     fetchLiveStats(),
-    options.admin ? fetchAdminStats() : Promise.resolve(null),
+    options.admin ? fetchAdminMetrics() : Promise.resolve(null),
   ]);
 
   if (!publicStats && !admin) {
@@ -81,6 +124,15 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
   const parts: HTMLElement[] = [];
   parts.push(buildHeadlineCards(publicStats, live, admin));
 
+  if (admin) {
+    const lede = document.createElement('p');
+    lede.className = 'metrics-lede';
+    lede.textContent =
+      'Every number above the Engines block is human play only: games between people or against a bot, counted from the database at game end, so Do Not Track visitors are included. Player counts are signed-in accounts: a guest seat carries no identity, so guests appear only as games with a guest seat. Weeks start on Monday; the last week is in progress.';
+    parts.push(lede);
+    parts.push(...buildWeeklySections(admin, locale));
+  }
+
   if (publicStats && publicStats.dailyCompletedGames.length > 0) {
     parts.push(
       buildChartSection(
@@ -91,11 +143,11 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
   }
 
   // Variant split, narrowed to the curated live shelf (STATS_VARIANTS) on both
-  // views. Admin counts every game (all modes) from /api/stats; public has the
-  // completed pvp/pve breakdown from /api/stats/public.
+  // views. Admin counts completed human games from /api/stats/admin; public has
+  // the same scope from /api/stats/public.
   const variantEntries = (
     admin
-      ? sortedEntries(admin.gamesByVariant).map((e) => ({ variant: e.label, count: e.count }))
+      ? sortedEntries(admin.humanGamesByVariant).map((e) => ({ variant: e.label, count: e.count }))
       : (publicStats?.variantTotals ?? [])
   )
     .filter((v) => STATS_VARIANTS.includes(v.variant))
@@ -113,20 +165,20 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
   }
 
   if (publicStats) {
-    // Bot-vs-bot (EvE) is an admin-only figure: hide it from the public page.
-    parts.push(
-      buildBreakdownSection('Games by mode', modeEntries(publicStats.modeTotals, admin != null)),
-    );
+    // Bot-vs-bot is never a mode row here: the public page hides it and the
+    // admin page keeps it in the Engines block below.
+    parts.push(buildBreakdownSection('Games by mode', modeEntries(publicStats.modeTotals)));
   }
 
   if (admin) {
-    const resultEntries = sortedEntries(admin.gamesByResult).map((entry) => ({
+    const resultEntries = sortedEntries(admin.humanGamesByResult).map((entry) => ({
       label: prettyResult(entry.label),
       count: entry.count,
     }));
     if (resultEntries.length > 0) {
       parts.push(buildBreakdownSection('Games by result', resultEntries));
     }
+    parts.push(buildEnginesSection(admin, locale));
   }
 
   body.replaceChildren(...parts);
@@ -136,31 +188,60 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
 function buildHeadlineCards(
   publicStats: PublicSiteStats | null,
   live: LiveStats | null,
-  admin: AdminSiteStats | null,
+  admin: AdminMetrics | null,
 ): HTMLElement {
   const grid = document.createElement('div');
   grid.className = 'metrics-cards';
 
   if (admin) {
     grid.append(
-      statCard('Players', admin.accounts, `+${formatStatNumber(admin.accountsLast30d)} this month`),
+      statCard(
+        'Active accounts',
+        admin.activePlayers28d,
+        `played in the last 28 days, ${signedDelta(admin.activePlayers28d - admin.previousActivePlayers28d)} vs the 28 before`,
+      ),
     );
   }
-  if (publicStats) {
+  if (admin) {
+    grid.append(
+      statCard(
+        'Games played',
+        admin.humanGames,
+        `+${formatStatNumber(admin.humanGamesLast7d)} this week`,
+      ),
+    );
+  } else if (publicStats) {
     grid.append(
       statCard(
         'Games played',
         publicStats.totalCompletedGames,
         `+${formatStatNumber(publicStats.last30dCompletedGames)} this month`,
       ),
-      statCard('Public games', publicStats.publicGames),
     );
+  }
+  if (admin) {
+    grid.append(
+      statCard(
+        'Accounts',
+        admin.accounts,
+        `+${formatStatNumber(admin.accountsLast30d)} this month`,
+      ),
+      statCard('Patrons', admin.activePatrons),
+    );
+  } else if (publicStats) {
+    grid.append(statCard('Public games', publicStats.publicGames));
   }
   if (live) {
     grid.append(statCard('In play now', live.playing));
     if (admin) grid.append(statCard('Online now', live.online));
   }
   return grid;
+}
+
+function signedDelta(value: number): string {
+  if (value > 0) return `+${formatStatNumber(value)}`;
+  if (value < 0) return `-${formatStatNumber(-value)}`;
+  return '±0';
 }
 
 function statCard(label: string, value: number, note?: string): HTMLElement {
@@ -183,9 +264,9 @@ function statCard(label: string, value: number, note?: string): HTMLElement {
 }
 
 // ── sections ─────────────────────────────────────────────────────────────────
-function buildChartSection(title: string, chart: HTMLElement): HTMLElement {
+function buildChartSection(title: string, chart: HTMLElement, extraClass?: string): HTMLElement {
   const section = document.createElement('section');
-  section.className = 'metrics-section metrics-chart-section';
+  section.className = `metrics-section metrics-chart-section${extraClass ? ` ${extraClass}` : ''}`;
   section.append(sectionHeading(title));
   section.append(chart);
   return section;
@@ -214,13 +295,143 @@ function buildActivitySeries(publicStats: PublicSiteStats, locale: Locale): Acti
   return [all, ...variantSeries];
 }
 
+// ── weekly series (admin) ────────────────────────────────────────────────────
+type WeeklyPick = { key: keyof AdminMetricsWeek; label: string };
+
+function weeklySeries(admin: AdminMetrics, picks: WeeklyPick[]): WeeklySeries[] {
+  return picks.map((pick) => ({
+    key: String(pick.key),
+    label: pick.label,
+    values: admin.weekly.map((week) => Number(week[pick.key]) || 0),
+  }));
+}
+
+function buildWeeklySections(admin: AdminMetrics, locale: Locale): HTMLElement[] {
+  const weeks = admin.weekly.map((week) => week.weekStart);
+  const chart = (title: string, picks: WeeklyPick[], ariaLabel: string): HTMLElement =>
+    buildChartSection(
+      title,
+      buildWeeklyChart({ weeks, series: weeklySeries(admin, picks), ariaLabel, locale }),
+      'metrics-weekly-section',
+    );
+  return [
+    chart(
+      'Signed-in players per week',
+      [
+        { key: 'players', label: 'Players' },
+        { key: 'newPlayers', label: 'New' },
+        { key: 'returningPlayers', label: 'Returning' },
+      ],
+      'Distinct accounts that finished a game each week, split into first-timers and returning',
+    ),
+    chart(
+      'Active accounts, rolling 28 days',
+      [{ key: 'activePlayers28d', label: 'Active accounts' }],
+      'Distinct accounts that finished a game in the 28 days ending each week',
+    ),
+    chart(
+      'Games per week',
+      [
+        { key: 'humanGames', label: 'All' },
+        { key: 'pvpGames', label: 'vs human' },
+        { key: 'pveGames', label: 'vs bot' },
+        { key: 'guestGames', label: 'With a guest seat' },
+      ],
+      'Completed human games per week, split by opponent, plus games with at least one guest seat',
+    ),
+    chart(
+      'Accounts per week',
+      [
+        { key: 'newAccounts', label: 'New accounts' },
+        { key: 'newPatrons', label: 'New patrons' },
+      ],
+      'Accounts created and patrons started per week',
+    ),
+    chart(
+      'Puzzles per week',
+      [
+        { key: 'puzzleSessions', label: 'Sessions' },
+        { key: 'puzzleSolves', label: 'Solves' },
+        { key: 'puzzleAttempts', label: 'Signed-in attempts' },
+      ],
+      'Puzzle visits that started a puzzle, puzzles solved, and rated attempts per week',
+    ),
+    chart(
+      'Study and practice per week',
+      [
+        { key: 'studiesCreated', label: 'Studies created' },
+        { key: 'studyChaptersCreated', label: 'Chapters added' },
+        { key: 'practiceSolves', label: 'Practice solves' },
+      ],
+      'Studies created, chapters added, and practice positions solved per week',
+    ),
+    chart(
+      'Community per week',
+      [
+        { key: 'chatLines', label: 'Lobby chat' },
+        { key: 'dmMessages', label: 'Direct messages' },
+        { key: 'correspondenceSeeks', label: 'Correspondence seeks' },
+      ],
+      'Lobby chat lines, direct messages, and correspondence seeks per week',
+    ),
+  ];
+}
+
+// Bot-vs-bot and the corpus modes, kept out of every player number above.
+function buildEnginesSection(admin: AdminMetrics, locale: Locale): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'metrics-section metrics-engines-section';
+  section.append(sectionHeading('Engines and corpus'));
+  const note = document.createElement('p');
+  note.className = 'metrics-section-note';
+  note.textContent =
+    'Bot vs bot games are the engine ladder, and imported and manual games are corpus. None of them count as play anywhere above.';
+  section.append(note);
+
+  const grid = document.createElement('div');
+  grid.className = 'metrics-cards';
+  grid.append(
+    statCard(
+      'Bot vs bot',
+      admin.engines.eveGames,
+      `+${formatStatNumber(admin.engines.eveGamesLast7d)} this week`,
+    ),
+    statCard('Imported', admin.engines.importedGames),
+    statCard('Manual', admin.engines.manualGames),
+  );
+  section.append(grid);
+
+  const weeks = admin.weekly.map((week) => week.weekStart);
+  section.append(
+    buildWeeklyChart({
+      weeks,
+      series: weeklySeries(admin, [{ key: 'eveGames', label: 'Bot vs bot' }]),
+      ariaLabel: 'Bot vs bot games completed per week',
+      locale,
+    }),
+  );
+
+  const byVariant = sortedEntries(admin.engines.eveByVariant).map((entry) => ({
+    label: variantPublicName(entry.label, locale),
+    count: entry.count,
+  }));
+  if (byVariant.length > 0) {
+    section.append(buildBreakdownList(byVariant));
+  }
+  return section;
+}
+
 type BreakdownEntry = { label: string; count: number };
 
 function buildBreakdownSection(title: string, entries: BreakdownEntry[]): HTMLElement {
   const section = document.createElement('section');
   section.className = 'metrics-section';
   section.append(sectionHeading(title));
+  section.append(buildBreakdownList(entries));
+  return section;
+}
 
+function buildBreakdownList(entries: BreakdownEntry[]): HTMLElement {
   const max = Math.max(...entries.map((entry) => entry.count), 1);
   const list = document.createElement('ul');
   list.className = 'metrics-breakdown';
@@ -246,8 +457,7 @@ function buildBreakdownSection(title: string, entries: BreakdownEntry[]): HTMLEl
     item.append(label, bar, value);
     list.append(item);
   }
-  section.append(list);
-  return section;
+  return list;
 }
 
 function sectionHeading(text: string): HTMLElement {
@@ -258,17 +468,12 @@ function sectionHeading(text: string): HTMLElement {
 }
 
 // ── data ─────────────────────────────────────────────────────────────────────
-function modeEntries(
-  modeTotals: Record<PublicStatsMode, number>,
-  includeBotVsBot: boolean,
-): BreakdownEntry[] {
-  const labels: Record<PublicStatsMode, string> = {
+function modeEntries(modeTotals: Record<PublicStatsMode, number>): BreakdownEntry[] {
+  const labels: Record<'pvp' | 'pve', string> = {
     pvp: 'Human vs human',
     pve: 'Human vs bot',
-    eve: 'Bot vs bot',
   };
-  const modes: PublicStatsMode[] = includeBotVsBot ? ['pvp', 'pve', 'eve'] : ['pvp', 'pve'];
-  return modes
+  return (['pvp', 'pve'] as const)
     .map((mode) => ({ label: labels[mode], count: modeTotals[mode] ?? 0 }))
     .filter((entry) => entry.count > 0);
 }
@@ -351,11 +556,11 @@ async function fetchLiveStats(): Promise<LiveStats | null> {
   }
 }
 
-async function fetchAdminStats(): Promise<AdminSiteStats | null> {
+async function fetchAdminMetrics(): Promise<AdminMetrics | null> {
   try {
-    const resp = await fetch('/api/stats', { credentials: 'same-origin' });
+    const resp = await fetch('/api/stats/admin', { credentials: 'same-origin' });
     if (!resp.ok) return null;
-    return (await resp.json()) as AdminSiteStats;
+    return (await resp.json()) as AdminMetrics;
   } catch {
     return null;
   }

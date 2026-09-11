@@ -584,12 +584,12 @@ function renderPlayers(product: MistboardReadoutProduct): string | null {
     typeof product.previousHumanPlayers === 'number'
       ? ` (${signedDelta(product.humanPlayers - product.previousHumanPlayers)} week over week)`
       : '';
-  const parts = [`- Players: ${product.humanPlayers}${delta}`];
+  // "Signed-in" is the honest label: a guest seat has no subject id, so the
+  // count is accounts, and `signedInPlayers` always equals `humanPlayers`
+  // (kept in the payload for older snapshots).
+  const parts = [`- Signed-in players: ${product.humanPlayers}${delta}`];
   if (typeof product.returningPlayers === 'number') {
     parts.push(`${product.returningPlayers} returning`);
-  }
-  if (typeof product.signedInPlayers === 'number') {
-    parts.push(`${product.signedInPlayers} signed in`);
   }
   return parts.join(', ');
 }

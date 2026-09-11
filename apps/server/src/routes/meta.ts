@@ -171,6 +171,20 @@ export async function tryHandle(
     return true;
   }
 
+  if (pathname === '/api/stats/admin') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    // Same gate as /api/stats. The /metrics page's weekly series: human-only
+    // players and games, the engagement surfaces, and the engine/corpus modes
+    // kept in their own block (docs-private/metrics-roadmap.md).
+    if (!isHttpAdminAuthorized(request) && !(await isHttpAdminSession(request))) {
+      writeJson(response, 401, { error: 'unauthorized' });
+      return true;
+    }
+    if (!requirePersistence(response)) return true;
+    writeJson(response, 200, await persistence.getAdminMetrics(), { 'cache-control': 'no-store' });
+    return true;
+  }
+
   return false;
 }
 

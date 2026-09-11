@@ -308,9 +308,12 @@ async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadou
 // grinding the bot, and the game count cannot tell that apart from a week that
 // doubled because eight new people arrived.
 //
-// A guest subject id is per browser, not per person, so "returning" is a floor:
-// it counts subjects seen again, and misses anyone who came back on a new
-// device without signing in.
+// SIGNED-IN people only. A guest seat is persisted with subject_id NULL and
+// the client id is per room, so the `subject_id IS NOT NULL` filter below
+// drops every guest: `humanPlayers` is the account count, and a week of
+// guest-only play reads as zero players here. Guests are visible in the game
+// count and on /metrics as games with a guest seat, nowhere as people, until a
+// seat carries a device id (docs-private/metrics-roadmap.md, phase 7).
 async function collectPlayers(
   db: Queryable,
   period: { periodStart: Date; periodEnd: Date; previousPeriodStart: Date },
