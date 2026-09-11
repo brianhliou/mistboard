@@ -93,6 +93,7 @@ jobs:
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
+          npm run build --workspace @mistboard/mahjong
       - name: Typecheck
         run: npm run typecheck
 
@@ -116,6 +117,7 @@ jobs:
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
+          npm run build --workspace @mistboard/mahjong
       - name: Unit tests (web)
         run: npm run test:unit --workspace @mistboard/web
 
@@ -135,6 +137,7 @@ jobs:
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
+          npm run build --workspace @mistboard/mahjong
           npm run build --workspace @mistboard/server
       - name: Unit tests (server)
         run: npm run test:unit --workspace @mistboard/server
@@ -155,12 +158,15 @@ jobs:
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
+          npm run build --workspace @mistboard/mahjong
       - name: Tooling tests
         run: npm run test:tooling
       - name: Unit tests (game)
         run: npm run test:unit --workspace @mistboard/game
       - name: Unit tests (board-render)
         run: npm run test:unit --workspace @mistboard/board-render
+      - name: Unit tests (mahjong)
+        run: npm run test:unit --workspace @mistboard/mahjong
 
   puzzle-corpus:
     name: Puzzle corpus verification
@@ -208,6 +214,7 @@ jobs:
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
+          npm run build --workspace @mistboard/mahjong
       - name: Server integration
         run: MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --workspace @mistboard/server
 
@@ -250,6 +257,7 @@ jobs:
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
+          npm run build --workspace @mistboard/mahjong
       - name: Compile server
         run: npx tsc -p apps/server/tsconfig.json
       - name: Persistent tests (shard ${{ matrix.shard }} of 3)
@@ -288,6 +296,7 @@ jobs:
         run: |
           npm run build --workspace @mistboard/game
           npm run build --workspace @mistboard/board-render
+          npm run build --workspace @mistboard/mahjong
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
       # The learn-interface smoke that used to run here went with the dark-chess

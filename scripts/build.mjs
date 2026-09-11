@@ -12,8 +12,14 @@ if (!workerOnly && railwayProduction) {
 }
 
 const workspaces = workerOnly
-  ? ['@mistboard/game', '@mistboard/board-render', '@mistboard/server']
-  : ['@mistboard/game', '@mistboard/board-render', '@mistboard/server', '@mistboard/web'];
+  ? ['@mistboard/game', '@mistboard/board-render', '@mistboard/mahjong', '@mistboard/server']
+  : [
+      '@mistboard/game',
+      '@mistboard/board-render',
+      '@mistboard/mahjong',
+      '@mistboard/server',
+      '@mistboard/web',
+    ];
 
 for (const workspace of workspaces) {
   const result = spawnSync('npm', ['run', 'build', `--workspace=${workspace}`], {

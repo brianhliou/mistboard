@@ -74,6 +74,7 @@ function buildPlan(files, options) {
 
   const game = has(starts('packages/game/'));
   const boardRender = has(starts('packages/board-render/'));
+  const mahjong = has(starts('packages/mahjong/'));
   const serverTestTooling = has(
     (file) => file === 'apps/server/package.json' || file.startsWith('apps/server/scripts/'),
   );
@@ -133,6 +134,24 @@ function buildPlan(files, options) {
       'build',
       '--workspace',
       '@mistboard/board-render',
+    ]);
+  }
+
+  if (mahjong) {
+    areas.add('mahjong');
+    add('build-mahjong', 'refresh @mistboard/mahjong dist declarations', [
+      'npm',
+      'run',
+      'build',
+      '--workspace',
+      '@mistboard/mahjong',
+    ]);
+    add('mahjong-unit', 'mahjong unit tests', [
+      'npm',
+      'run',
+      'test:unit',
+      '--workspace',
+      '@mistboard/mahjong',
     ]);
   }
 

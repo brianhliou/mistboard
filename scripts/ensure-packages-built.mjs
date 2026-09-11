@@ -1,7 +1,7 @@
 #!/usr/bin/env node
 // Rebuild internal packages whose dist/ is stale relative to src/.
 //
-// @mistboard/game and @mistboard/board-render export ONLY dist/* (types and
+// @mistboard/game, @mistboard/board-render and @mistboard/mahjong export ONLY dist/* (types and
 // runtime), so after a pull or a cross-package edit, app typecheck/tests/dev
 // resolve stale compiled output and fail with phantom errors that a manual
 // `npm run build` clears. This guard runs as a pre-script for the app

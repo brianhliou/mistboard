@@ -14,6 +14,7 @@ const ZERO_SHA = /^0{40}$/;
 const DIST_DIRS = [
   'packages/board-render/dist',
   'packages/game/dist',
+  'packages/mahjong/dist',
   'apps/server/dist',
   'apps/web/dist',
 ];
@@ -169,6 +170,7 @@ function needsBroadColdGate(file) {
     file.startsWith('scripts/') ||
     file.startsWith('packages/game/') ||
     file.startsWith('packages/board-render/') ||
+    file.startsWith('packages/mahjong/') ||
     file === 'package.json' ||
     file === 'package-lock.json' ||
     file.endsWith('/package.json') ||
