@@ -1,13 +1,13 @@
 #!/usr/bin/env node
+import { readFile, writeFile } from 'node:fs/promises';
+import { dirname, join } from 'node:path';
+import { fileURLToPath } from 'node:url';
 // Bundle the kernel for the prototype page, and optionally inline it into a
 // single self-contained file (which is what gets published as an artifact).
 //
 //   node prototype/build.mjs            -> prototype/mahjong.bundle.js
 //   node prototype/build.mjs --inline   -> also prototype/table.standalone.html
 import { build } from 'esbuild';
-import { readFile, writeFile } from 'node:fs/promises';
-import { dirname, join } from 'node:path';
-import { fileURLToPath } from 'node:url';
 
 const here = dirname(fileURLToPath(import.meta.url));
 const out = join(here, 'mahjong.bundle.js');
