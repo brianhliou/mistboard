@@ -360,7 +360,8 @@ export const EN_COMMUNITY = {
   // is an element, so only the text after it can be a key. Every language here
   // happens to put the tool first too, which is what makes the split work; a
   // language that did not would need the sentence rebuilt, not re-keyed.
-  'forum.markdownAvailable': ' is available for formatting.',
+  'forum.formattingHint':
+    'Blank lines make paragraphs, a line starting with > is a quote, and links are clickable.',
   'forum.embedHint': 'A game, study, or puzzle link alone on its line shows as a board.',
   'forum.etiquetteLink': 'forum etiquette',
   'forum.postDeleted': ' · deleted {date}',
@@ -389,7 +390,6 @@ export const EN_COMMUNITY = {
   'forum.write': 'Write',
   'forum.preview': 'Preview',
   'forum.nothingToPreview': 'Nothing to preview.',
-  'forum.markdown': 'Markdown',
   'forum.topicCouldNotBePosted': 'Topic could not be posted.',
   'forum.replyCouldNotBePosted': 'Reply could not be posted.',
   'forum.moderation': 'Moderation',
@@ -443,6 +443,13 @@ export const EN_COMMUNITY = {
   'forum.etiquetteCategoryHeading': 'Post in the right category',
   'forum.etiquetteCategoryBody':
     'Put each topic in the category that fits it. Rules questions, strategy, and general discussion each have a home. Misplaced threads may be moved or closed by moderators.',
+  'forum.etiquetteBoardHeading': 'Showing a game',
+  'forum.etiquetteBoardBody':
+    'Paste the link to a game, a study chapter, or a puzzle on a line by itself and it appears in your post as a board readers can step through. A link inside a sentence stays a link. Games still in progress stay links until they finish, and a post holds up to ten boards.',
+  'forum.etiquetteBoardDo': 'https://mistboard.com/xiangqi/game/abc123 on its own line',
+  'forum.etiquetteBoardDont': 'Screenshots of the board, or the move list typed out by hand',
+  'forum.etiquetteBoardExtras':
+    "Add #30 to the end of a game link to open it at move 30, and /black before that to show the game from Black's side. In a fog game that is the view Black actually had.",
   'forum.etiquetteSpamHeading': 'Advertising and spam',
   'forum.etiquetteSpamBody':
     'Purely promotional posts are not welcome. Keep advertising off Mistboard, including recruiting for a team or event and plugging your channel.',

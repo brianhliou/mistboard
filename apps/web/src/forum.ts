@@ -477,6 +477,12 @@ export async function mountForumEtiquette(root: HTMLElement): Promise<void> {
     etiquetteSection(t('forum.etiquetteCategoryHeading'), [
       etiquettePara(t('forum.etiquetteCategoryBody')),
     ]),
+    etiquetteSection(t('forum.etiquetteBoardHeading'), [
+      etiquettePara(t('forum.etiquetteBoardBody')),
+      etiquetteExample('do', t('forum.etiquetteBoardDo')),
+      etiquetteExample('dont', t('forum.etiquetteBoardDont')),
+      etiquettePara(t('forum.etiquetteBoardExtras')),
+    ]),
     etiquetteSection(t('forum.etiquetteSpamHeading'), [
       etiquettePara(t('forum.etiquetteSpamBody')),
       etiquetteExample('do', t('forum.etiquetteSpamDo')),
@@ -1890,18 +1896,15 @@ function forumBodyComposer(options: {
   return { root, textarea: body };
 }
 
+// What the body renderer (postBodyNodes) actually does, and nothing more: it
+// used to promise Markdown and link a guide, and a reader who typed **bold**
+// or a - list got the asterisks and dashes back.
 function forumMarkdownNote(): HTMLElement {
   const note = document.createElement('p');
   note.className = 'forum-form-note';
-  const markdown = document.createElement('a');
-  markdown.href = 'https://www.markdownguide.org/basic-syntax/';
-  markdown.target = '_blank';
-  markdown.rel = 'nofollow noopener noreferrer';
-  markdown.textContent = t('forum.markdown');
   const formatting = document.createElement('span');
   formatting.append(
-    markdown,
-    document.createTextNode(t('forum.markdownAvailable')),
+    document.createTextNode(t('forum.formattingHint')),
     document.createTextNode(` ${t('forum.embedHint')}`),
   );
   const etiquette = document.createElement('a');
