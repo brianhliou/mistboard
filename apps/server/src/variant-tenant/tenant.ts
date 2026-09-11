@@ -267,6 +267,16 @@ export type VariantTenant<
   // all. Read positions through firstSeat/lastSeat/seatAfter rather than by
   // index, so a tenant with more than two seats cannot be silently mis-read.
   colors: readonly C[];
+  /**
+   * Start the clock on the very first move rather than after the first
+   * go-around.
+   *
+   * The default waits for every seat to have moved once, which chess wants so a
+   * player who has only just opened the tab is not already losing time. It is
+   * expressed as a move-number threshold, and that only means "everyone has had
+   * a go" where one move is one turn. Set this where it is not.
+   */
+  armsClockOnFirstMove?: boolean;
   enabled(): boolean;
   // Only meaningful where there are exactly two seats: it answers "who wins if
   // this seat forfeits". A four-seat tenant has no such answer and must supply

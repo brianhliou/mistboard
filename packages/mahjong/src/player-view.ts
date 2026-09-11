@@ -17,6 +17,7 @@
 
 import type { Claim } from './claims.js';
 import type { HandSet, SetKind } from './decompose.js';
+import { scoreHand } from './hk-detect.js';
 import type { MahjongSeat, MahjongStatus, MahjongTenantState } from './tenant-state.js';
 import { claimsFor, MAHJONG_SEATS, pendingClaimants, seatIndex, seatName } from './tenant-state.js';
 import type { TileIndex } from './tiles.js';
@@ -69,6 +70,16 @@ export interface MahjongPlayerView {
   readonly discardUnderClaim: TileIndex | null;
   /** Claims THIS viewer could make right now. Empty for everyone else. */
   readonly ownClaims: readonly Claim[];
+  /**
+   * The viewer is holding a complete hand they drew themselves, worth enough to
+   * declare (三番起糊).
+   *
+   * A self-drawn win is the one win the table cannot offer you: nobody
+   * discarded anything, so there is no claim window and no prompt. Without this
+   * the client has no way to know the button should exist, and a self-drawn win
+   * is simply unwinnable, which is what it was.
+   */
+  readonly ownSelfDraw: boolean;
   /** Seats the open window is still waiting on. Public: the table can see who is thinking. */
   readonly awaiting: readonly MahjongSeat[];
   /** When the open window settles itself, so a client can show a countdown. */
@@ -128,6 +139,7 @@ export function mahjongViewFor(
     roundWind: game.roundWind,
     discardUnderClaim: phase.type === 'claim-window' ? phase.discard : null,
     ownClaims: ownIndex === null ? [] : claimsFor(state, ownIndex),
+    ownSelfDraw: ownIndex === null ? false : canDeclareSelfDraw(state, ownIndex),
     awaiting: pendingClaimants(state),
     windowClosesAt: state.windowClosesAt,
   };
@@ -139,6 +151,25 @@ export function mahjongViewFor(
  * Only correct once the hand is over. Calling it mid-game would hand a seat the
  * other three hands, so it refuses rather than trusting its caller.
  */
+/**
+ * Whether this seat may declare a self-drawn win right now.
+ *
+ * Only during your own discard phase: that is the moment you hold the tile you
+ * just drew and have not yet thrown it away. `meetsMinimum` is part of the
+ * question rather than a detail, because under HK rules a hand below the
+ * minimum may not be declared at all.
+ */
+function canDeclareSelfDraw(state: MahjongTenantState, seat: number): boolean {
+  const { game } = state;
+  if (game.phase.type !== 'discard' || game.turn !== seat) return false;
+  const score = scoreHand(
+    (game.hands[seat] ?? []) as readonly number[],
+    (game.melds[seat] ?? []) as readonly HandSet[],
+    { selfDrawn: true, seatWind: 27 + seat, roundWind: game.roundWind },
+  );
+  return score !== null && score.meetsMinimum;
+}
+
 export function mahjongRevealedView(
   state: MahjongTenantState,
   perspective: MahjongSeat | 'spectator',

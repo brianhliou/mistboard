@@ -20,9 +20,10 @@ import {
   type MahjongSeat,
 } from '@mistboard/mahjong';
 import { mahjongEnabled } from './feature-flags.js';
+import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import './mahjong.css';
-import { mahjongActionsHtml, mahjongTableHtml } from './mahjong-table.js';
+import { mahjongTableHtml } from './mahjong-table.js';
 import { mahjongTileName } from './mahjong-tile.js';
 import {
   createTenantLiveClient,
@@ -145,6 +146,48 @@ function maybeAutoDraw(view: MahjongPlayerView | null): void {
   core.send({ type: 'move', action: 'draw' });
 }
 
+/**
+ * The table is a loud game, and the noise is information rather than decoration.
+ *
+ * Four things are worth distinguishing and nothing else is. A draw happens every
+ * single turn, so it is silent: a sound that frequent stops carrying meaning and
+ * starts being a reason to mute the tab. A discard is the signature tile-on-mat
+ * click, pitched differently for yours and somebody else's so you can follow the
+ * table without watching it. A claim is sharper, because a claim INTERRUPTS: it
+ * is the sound that should make you look up. A win is the only one allowed to
+ * last longer than a blip.
+ *
+ * Deliberately absent: anything on the claim window opening or counting down.
+ * The discard already carries that moment, and a second noise on top would make
+ * every discard a two-note event.
+ */
+function soundForEvent(event: unknown, seat: unknown): void {
+  const played = event as { type?: string; color?: string; move?: { action?: string } } | undefined;
+  if (played?.type !== 'move-played') return;
+  const action = played.move?.action;
+  const mine = played.color === seat;
+  if (action === 'draw' || action === 'pass' || action === 'timeout') return;
+  if (action === 'discard') {
+    // 'captured' is the wood set's quieter, lower cousin of a move: somebody
+    // else's tile landing rather than your own.
+    playSound(mine ? 'move' : 'captured');
+    return;
+  }
+  if (action === 'claim') playSound('capture');
+}
+
+let lastStatusType: string | null = null;
+function maybePlayTerminalSound(): void {
+  const status = core?.state.view?.status;
+  if (!status) return;
+  if (status.type === lastStatusType) return;
+  lastStatusType = status.type;
+  if (status.type !== 'finished') return;
+  const seat = core?.state.seat;
+  const result = status.winner === null ? 'draw' : status.winner === seat ? 'win' : 'lose';
+  playTerminalPlan(result, status.reason ?? null);
+}
+
 function renderTable(refs: LiveRefs, view: MahjongPlayerView | null): void {
   refs.board.className = 'board mahjong-live-board';
   if (!view) {
@@ -153,19 +196,6 @@ function renderTable(refs: LiveRefs, view: MahjongPlayerView | null): void {
   }
   const canDiscard = core?.canActNow() === true && view.phase === 'discard';
   refs.board.innerHTML = mahjongTableHtml(view, canDiscard);
-}
-
-function renderActions(refs: LiveRefs, view: MahjongPlayerView | null): void {
-  const host = refs.actionStatus;
-  // Only offer claims while this seat is actually being waited on. A stale
-  // button after the window settles would send a move the server rejects, and
-  // the player would read the silence as the site being broken.
-  const offer =
-    view &&
-    core?.canActNow() === true &&
-    view.ownClaims.length > 0 &&
-    view.discardUnderClaim !== null;
-  host.innerHTML = offer ? mahjongActionsHtml(view as MahjongPlayerView) : '';
 }
 
 const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMove>({
@@ -186,9 +216,12 @@ const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMov
   onFrame: (frame) => {
     if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
     forfeitDeadline = typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
+    soundForEvent(frame.event, frame.seat);
+    maybePlayTerminalSound();
   },
   resetState: () => {
     autoDrawnAt = -1;
+    lastStatusType = null;
     roomMode = 'pve';
     forfeitDeadline = null;
   },
@@ -196,8 +229,6 @@ const client = createTenantLiveClient<MahjongSeat, MahjongPlayerView, MahjongMov
     renderTable(refs, view);
     maybeAutoDraw(view);
   },
-  renderExtras: (refs, view) => renderActions(refs, view),
-  onDisabled: (refs) => renderActions(refs, null),
   setup: (ctx) => {
     core = ctx;
     installTableInteraction(ctx);
@@ -227,10 +258,14 @@ function installTableInteraction(
 ): void {
   const onClick = (event: Event) => {
     const target = (event.target as HTMLElement | null)?.closest<HTMLElement>(
-      '[data-mj-tile], [data-mj-claim], [data-mj-pass]',
+      '[data-mj-tile], [data-mj-claim], [data-mj-pass], [data-mj-selfdraw]',
     );
     if (!target || !ctx.canActNow()) return;
 
+    if (target.dataset.mjSelfdraw !== undefined) {
+      ctx.send({ type: 'move', action: 'self-draw' });
+      return;
+    }
     if (target.dataset.mjPass !== undefined) {
       ctx.send({ type: 'move', action: 'pass' });
       return;
@@ -254,7 +289,6 @@ function installTableInteraction(
     }
   };
   ctx.refs.board.addEventListener('click', onClick);
-  ctx.refs.actionStatus.addEventListener('click', onClick);
 }
 
 export function bootstrapMahjongLiveRoom(): void {

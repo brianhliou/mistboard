@@ -212,6 +212,10 @@ export const mahjongTenant: MahjongTenantType = {
   roomIdPrefix: MAHJONG_ROOM_ID_PREFIX,
   // Turn order, which is also the seating order: play passes to the right.
   colors: MAHJONG_SEATS,
+  // A move here is an action, not a turn: one go-around is a dozen of them, so
+  // the default "arms after move 1" never fires and the clock sits frozen for
+  // the whole hand. At a real table the clock runs from the opening discard.
+  armsClockOnFirstMove: true,
   enabled: mahjongEnabled,
   oppositeColor: () => {
     // Unreachable: assertForfeitPolicy refuses to build a room for a tenant with

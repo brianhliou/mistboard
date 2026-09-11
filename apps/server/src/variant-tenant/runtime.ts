@@ -77,7 +77,7 @@ export function createTenantClock<C extends string>(
 }
 
 export function nextTenantClockForMove<C extends string>(
-  tenant: { colors: readonly C[] },
+  tenant: { colors: readonly C[]; armsClockOnFirstMove?: boolean },
   clock: TenantClockState<C> | undefined,
   at: number,
   movedColor: C,
@@ -92,8 +92,17 @@ export function nextTenantClockForMove<C extends string>(
       [movedColor]: clock.remainingMs[movedColor] + clock.incrementMs,
     };
     // Arms once the LAST seat has completed the first go-around. For two seats
-    // that is the second mover, unchanged; index 1 would be wrong for more.
-    const armsNow = movedColor === lastSeat(tenant) && prevMoveNumber === 1;
+    // that is the second mover.
+    //
+    // `prevMoveNumber === 1` is a two-seat proxy for "everyone has had a go",
+    // and it is not one anywhere else. Mahjong counts a move per ACTION rather
+    // than per turn (draw, discard, claim, pass), so no move-number threshold
+    // marks the first go-around at all: the condition was never true and the
+    // clock never started. A tenant whose clock should run from the opening
+    // move says so instead.
+    const armsNow = tenant.armsClockOnFirstMove
+      ? prevMoveNumber === 0
+      : movedColor === lastSeat(tenant) && prevMoveNumber === 1;
     if (armsNow && nextStatus.type === 'playing') {
       return { ...clock, activeColor: nextStatus.turn, remainingMs, runningSince: at };
     }

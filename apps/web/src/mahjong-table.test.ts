@@ -8,7 +8,7 @@ import {
 import { describe, expect, it } from 'vitest';
 
 import { mahjongActionsHtml, mahjongSeatOrder, mahjongTableHtml } from './mahjong-table.js';
-import { mahjongTileFace } from './mahjong-tile.js';
+import { mahjongTileFace, mahjongTileName } from './mahjong-tile.js';
 
 // The rendering tests that matter here are the ones about what the MARKUP must
 // not contain. Three of the four hands are secret, and the failure is not a
@@ -22,11 +22,6 @@ function dealt() {
   return state;
 }
 
-/** Every tile face the markup actually draws, as their accessible labels. */
-function drawnLabels(html: string): string[] {
-  return [...html.matchAll(/aria-label="([^"]+)"/g)].map((m) => m[1] as string);
-}
-
 describe('the table', () => {
   it('draws the viewer hand and nobody else', () => {
     const view = mahjongViewFor(dealt(), 'south');
@@ -36,27 +31,41 @@ describe('the table', () => {
     expect(buttons).toBe(view.seats.find((s) => s.seat === 'south')?.hand?.length);
   });
 
-  it('renders other seats as backs, one per tile they hold', () => {
+  it('never prints a hidden hand tile as a face', () => {
+    // Every tile FACE the markup draws must be one the viewer is entitled to
+    // see: their own hand, plus everything face up on the mat. A concealed hand
+    // is a rack of slivers carrying no tile at all.
+    const view = mahjongViewFor(dealt(), 'south');
+    const html = mahjongTableHtml(view, true);
+    const own = new Set(
+      (view.seats.find((s) => s.seat === 'south')?.hand ?? []).map(mahjongTileName),
+    );
+    const shown = new Set<string>();
+    for (const seat of view.seats) {
+      for (const tile of seat.discards) shown.add(mahjongTileName(tile));
+      for (const meld of seat.melds) if (meld.tile !== null) shown.add(mahjongTileName(meld.tile));
+    }
+    const faces = [...html.matchAll(/role="img" aria-label="([^"]+)"/g)].map((m) => m[1] as string);
+    for (const face of faces) {
+      if (/concealed tiles$/.test(face)) continue;
+      expect(own.has(face) || shown.has(face), `${face} is drawn but nobody may see it`).toBe(true);
+    }
+  });
+
+  it('draws an opponent hand as a rack, not as tiles', () => {
+    // Thirty-nine full-size blanks around the table carry one bit of
+    // information between them and out-weigh the melds and the pond.
     const view = mahjongViewFor(dealt(), 'south');
     const html = mahjongTableHtml(view, true);
     for (const seat of view.seats) {
       if (seat.seat === 'south') continue;
       expect(html).toContain(`${seat.handSize} concealed tiles`);
     }
-  });
-
-  it('never prints a hidden hand tile as a face', () => {
-    // The strong version: collect every label the markup draws and check none
-    // of them names a tile only a hidden hand holds.
-    const state = dealt();
-    const view = mahjongViewFor(state, 'south');
-    const html = mahjongTableHtml(view, true);
-    const labels = drawnLabels(html);
-    const backs = labels.filter((label) => label === 'face-down tile').length;
+    const slivers = [...html.matchAll(/class="mj-sliver"/g)].length;
     const hidden = view.seats
-      .filter((seat) => seat.seat !== 'south')
-      .reduce((total, seat) => total + seat.handSize, 0);
-    expect(backs, 'every concealed tile renders as a back').toBeGreaterThanOrEqual(hidden);
+      .filter((s) => s.seat !== 'south')
+      .reduce((total, s) => total + s.handSize, 0);
+    expect(slivers).toBe(hidden);
   });
 
   it('a spectator gets no hand at all', () => {
