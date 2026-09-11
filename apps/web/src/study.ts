@@ -13,6 +13,7 @@ import { t } from './i18n/catalog.js';
 import { localizedHref } from './i18n/locale.js';
 import { appendLinkedText } from './link-text.js';
 import {
+  displayComment,
   localizedChapterTags,
   localizedStudyDescription,
   localizedStudyName,
@@ -681,6 +682,13 @@ function renderStudy(
         onToggleFeatured: toggleFeatured,
         onOpenStudySettings: openStudySettings,
         onOpenChapterSettings: openChapterSettings,
+        // A private draft has no audience, and an owner is the person who would
+        // fix the mistake rather than report it. A CURATED set is the other
+        // condition: the invitation says these are transcribed from historical
+        // sources, which is true of ours and not of a stranger's study, and it
+        // was showing on every public study on the site. `slug` is the catalogue
+        // marker (migration 132).
+        errata: study.visibility === 'public' && !study.isOwner && study.slug ? errataNote() : null,
       });
     // Practice and gamebook are alternative chapter modes, so an owner is offered
     // whichever one the chapter is already in, and practice's dock when it is in
@@ -777,7 +785,7 @@ function renderStudy(
           ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
         });
       });
-      attachStudyPageThumbnail(root, study.id);
+      attachStudyTitleRow(root, study.id, study.visibility === 'public' ? likeButton(study) : null);
       return;
     }
 
@@ -794,7 +802,7 @@ function renderStudy(
         summary: localizedStudyName(chapter.name, chapter.i18n),
         aside,
       });
-      attachStudyPageThumbnail(root, study.id);
+      attachStudyTitleRow(root, study.id, study.visibility === 'public' ? likeButton(study) : null);
       return;
     }
 
@@ -864,9 +872,13 @@ function renderStudy(
       // Empty eyebrow: the info card leads with the study name itself.
       eyebrow: '',
       title: localizedStudyName(study.name, study.i18n),
-      // The full description now lives in the underboard "About" tab, not the
-      // rail info card. The compact chapter rail carries save state.
-      summary: '',
+      // The description is STUDY-level and the rail is the study column, so it
+      // belongs here under the study's own name. It spent a while in the
+      // underboard "About" tab, which is per-chapter: that printed the same 745
+      // characters under all 92 chapters of a manual, above the moves, and left
+      // the tab permanently open to hold it. Clamped, because it is reference
+      // rather than reading.
+      summary: localizedStudyDescription(study.description, study.i18n),
       boardAriaLabel: `${studyVariantLabel(variant)} board`,
       // A chapter of a real game can now say who had which side. Without this
       // the only place identity could live was the chapter title, which cannot
@@ -893,6 +905,24 @@ function renderStudy(
       gamebookEditing: gamebookable && chapter.gamebook && study.isOwner,
       annotationLessonControls: lessonControls,
       annotationPracticeControls: practiceDock,
+      // A practice chapter's move tree is never read: the engine supplies the
+      // opposition. So the owner's board refuses moves and says so, rather than
+      // accepting them, autosaving them, and ignoring them -- which is how a
+      // stray move reached a published exercise on the day this shipped.
+      //
+      // The way to actually play it is Preview, so that is the action offered
+      // here AND the tab the panel opens on. Read-only without a visible way to
+      // test would just move the trap somewhere else.
+      ...(chapter.practice && study.isOwner && !previewMode
+        ? {
+            boardReadOnly: {
+              reason:
+                'Practice chapter: the board is played against the engine, not authored here.',
+              action: { label: 'Preview exercise', onClick: () => setPreview(true) },
+            },
+            initialUnderboardTab: 'lesson',
+          }
+        : {}),
       annotationEditing: study.isOwner,
       // A study is read forward. Landing on the final position of a 60-ply
       // annotated game means rewinding before you can start.
@@ -933,7 +963,11 @@ function renderStudy(
     })
       .then((mounted) => {
         if (mountToken !== mountSeq) return;
-        attachStudyPageThumbnail(root, study.id);
+        attachStudyTitleRow(
+          root,
+          study.id,
+          study.visibility === 'public' ? likeButton(study) : null,
+        );
         handle = mounted;
         activeHandle = mounted;
       })
@@ -943,11 +977,30 @@ function renderStudy(
   renderActive();
 }
 
-function attachStudyPageThumbnail(root: HTMLElement, studyId: string): void {
+/**
+ * Decorate the info card's title: the study thumbnail on the left, the favourite
+ * on the right.
+ *
+ * The shell builds the card as title + summary + the chapter rail, with no slot
+ * beside the heading, so both of these are attached after the mount. The heart
+ * belongs here rather than in the underboard because it favourites the STUDY,
+ * and the underboard is per-chapter -- it was rendering a study-wide control
+ * under all 92 chapters.
+ *
+ * The row is built whenever there is anything to put in it, not only when a
+ * thumbnail exists: only five studies have one.
+ */
+function attachStudyTitleRow(root: HTMLElement, studyId: string, like: HTMLElement | null): void {
   const title = root.querySelector<HTMLElement>('.review-info-card__title, .gamebook__title');
-  if (!title || title.closest('.study-page__title-row')) return;
+  if (!title) return;
+  const existing = title.closest('.study-page__title-row');
+  if (existing) {
+    // A rerender reuses the row; do not stack a second heart into it.
+    if (like && !existing.querySelector('.study-actions__like')) existing.append(like);
+    return;
+  }
   const thumbnail = buildStudyThumbnail(studyId, 'study-page__thumbnail', 'eager');
-  if (!thumbnail) return;
+  if (!thumbnail && !like) return;
 
   const summary = title.nextElementSibling;
   const hasSummary =
@@ -960,7 +1013,50 @@ function attachStudyPageThumbnail(root: HTMLElement, studyId: string): void {
   row.className = 'study-page__title-row';
   title.before(row);
   copy.append(title, ...(hasSummary ? [summary] : []));
-  row.append(thumbnail, copy);
+  row.append(...(thumbnail ? [thumbnail] : []), copy, ...(like ? [like] : []));
+  if (hasSummary) attachSummaryToggle(copy, summary);
+}
+
+/**
+ * A show-more control for the clamped study description, added only when the
+ * text is actually cut off.
+ *
+ * Explicitly a button rather than `:hover { line-clamp: unset }`: expanding on
+ * hover pushed the chapter list down whenever the cursor crossed the rail, which
+ * is the same content-moving-under-the-reader problem the caption's reserved
+ * height exists to prevent, and worse for being unrequested.
+ */
+function attachSummaryToggle(copy: HTMLElement, summary: HTMLElement): void {
+  // The overflow test has to run after layout: called straight from the mount,
+  // scrollHeight and clientHeight are both 0 and every description looks short.
+  // The rail's scroll restore guards the same way, for the same reason.
+  let attempts = 0;
+  const measure = (): void => {
+    if (!summary.isConnected || summary.clientHeight === 0) {
+      if (attempts++ < 20) requestAnimationFrame(measure);
+      return;
+    }
+    // scrollHeight only exceeds clientHeight once the clamp has actually bitten,
+    // so a short description gets no control at all.
+    if (summary.scrollHeight <= summary.clientHeight + 1) return;
+    if (copy.querySelector('.study-page__summary-toggle')) return;
+    copy.append(buildSummaryToggle(summary));
+  };
+  requestAnimationFrame(measure);
+}
+
+function buildSummaryToggle(summary: HTMLElement): HTMLElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'study-page__summary-toggle';
+  button.textContent = t('study.showMore');
+  button.addEventListener('click', () => {
+    const expanded = summary.classList.toggle('is-expanded');
+    button.textContent = expanded ? t('study.showLess') : t('study.showMore');
+    button.setAttribute('aria-expanded', String(expanded));
+  });
+  button.setAttribute('aria-expanded', 'false');
+  return button;
 }
 
 export function studyChapterPath(studyId: string, chapterId: string, pathname = '/'): string {
@@ -1005,29 +1101,41 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'study-about';
 
+  // The chapter's name alone. Prefixing the study name repeated it a third time
+  // on one screen -- it is already the chapter-list header and the page title --
+  // and on a manual whose study name runs to 57 characters that cost two lines
+  // above the fold on every chapter.
   const title = document.createElement('h3');
   title.className = 'study-about__title';
-  title.textContent = `${localizedStudyName(study.name, study.i18n)}: ${localizedStudyName(
-    chapter.name,
-    chapter.i18n,
-  )}`;
+  title.textContent = localizedStudyName(chapter.name, chapter.i18n);
   panel.append(title);
 
-  const desc = localizedStudyDescription(study.description, study.i18n);
-  const description = document.createElement('p');
-  description.className = 'study-about__description';
-  if (desc) {
-    // Author-written text, so it goes through the linkifier rather than
-    // innerHTML: a description that cites a source should be able to reach it.
-    appendLinkedText(description, desc);
-  } else {
-    description.textContent = study.isOwner ? t('study.addDescription') : t('study.noDescription');
-    description.classList.add('is-empty');
+  // The chapter's own introduction, which used to sit in the under-board caption
+  // and only at the start position. It is chapter-level prose sharing a slot
+  // with per-move notes an order of magnitude shorter, so stepping off the start
+  // resized the page by ~300px. Here it is chapter-level content in the
+  // chapter-level tab, and readable from any position in the game rather than
+  // only from the first.
+  // displayComment, not the raw `text`: these studies are Chinese-first, so the
+  // base column holds Chinese and English lives in the comment's locale overlay.
+  // Reading `text` directly put Chinese prose on the English page.
+  const intro = displayComment(chapter.root.root.annotations?.comments?.[0])?.trim();
+  if (intro) {
+    const prose = document.createElement('p');
+    prose.className = 'study-about__intro';
+    appendLinkedText(prose, intro);
+    panel.append(prose);
   }
-  panel.append(description);
 
+  // Event, date, result, source: the other genuinely per-chapter block.
   panel.append(gameDetails(chapter));
 
+  // The favourite and the errata invitation used to live here. Both are
+  // properties of the STUDY and the underboard is per-chapter, so they were
+  // repeating a study-wide control under all 92 chapters and pushing the moves
+  // down on every one. They now sit in the chapter rail, which is the
+  // study-level block. What stays is the visibility chip, which the owner wants
+  // while editing a chapter.
   const row = document.createElement('div');
   row.className = 'study-about__row';
   if (study.isOwner) {
@@ -1036,12 +1144,7 @@ function aboutPanel(study: StudyDto, chapter: ChapterDto): HTMLElement {
     visibility.textContent = study.visibility;
     row.append(visibility);
   }
-  if (study.visibility === 'public') row.append(likeButton(study));
   panel.append(row);
-
-  // Errata invitation, public studies only (a private draft has no audience, and
-  // the owner is the one who would fix it).
-  if (study.visibility === 'public' && !study.isOwner) panel.append(errataNote());
   return panel;
 }
 
@@ -1102,25 +1205,27 @@ export function gameDetails(chapter: ChapterDto): HTMLElement {
 /** Invite corrections. Several studies here are transcriptions of woodblock
  *  prints, where a misread glyph is a genuine possibility; claiming otherwise
  *  would be the untrustworthy move. Saying so plainly and routing readers to
- *  /contact costs a few lines and is the honest posture. */
+ *  /contact costs a few lines and is the honest posture.
+ *
+ *  A card with a heading and a paragraph was 120px of every chapter, which is a
+ *  lot of permanent furniture for an invitation almost nobody accepts. The
+ *  offer survives as one line; the explanation moves to the title attribute,
+ *  where a reader who is actually about to report something will find it. */
 function errataNote(): HTMLElement {
   const note = document.createElement('aside');
-  note.className = 'study-errata';
-
-  const title = document.createElement('p');
-  title.className = 'study-errata__title';
-  title.textContent = t('study.errataTitle');
-
-  const body = document.createElement('p');
-  body.className = 'study-errata__body';
-  body.textContent = t('study.errataBody');
+  note.className = 'study-errata study-errata--inline';
 
   const link = document.createElement('a');
   link.className = 'study-errata__link';
   link.href = localizedHref('/contact');
   link.textContent = t('study.errataAction');
+  link.title = t('study.errataBody');
 
-  note.append(title, body, link);
+  const lead = document.createElement('span');
+  lead.className = 'study-errata__lead';
+  lead.textContent = t('study.errataTitle');
+
+  note.append(lead, link);
   return note;
 }
 

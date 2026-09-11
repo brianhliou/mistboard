@@ -100,9 +100,66 @@ type DuckXiangqiEngineContext = TenantLifecycleContext<
   DuckXiangqiEngineRoom
 >;
 
+/** Why the engine loop declined to move. Every silent return names one.
+ *
+ *  This exists because a duck PvE game hung in production on 2026-09-11 and
+ *  the loop wrote NOTHING: six branches could each produce that exact symptom
+ *  and there was no way to tell them apart from outside. "Did nothing" is a
+ *  fallback, and a fallback needs an output gate. */
+type DuckXiangqiEngineSkipReason =
+  | 'already-scheduled'
+  | 'no-engine-seat'
+  | 'not-engine-turn'
+  | 'unknown-tier'
+  | 'clock-expired'
+  | 'aborted-mid-search';
+
+function logDuckXiangqiEngineSkip(
+  room: DuckXiangqiEngineRoom,
+  reason: DuckXiangqiEngineSkipReason,
+): void {
+  logger.info(
+    {
+      kind: 'duck_xiangqi_engine_move_skipped',
+      room_id: room.id,
+      reason,
+      seats: room.projection.seats,
+      status: room.projection.state.status.type,
+      turn:
+        room.projection.state.status.type === 'playing' ? room.projection.state.status.turn : null,
+      // `engineToMove` is a conjunction of three things and the first two are
+      // visible above; this is the third, and it is the one that reads as a
+      // hang rather than as a finished game: an unfilled human seat means the
+      // engine waits forever for an opponent who never arrived.
+      both_seats_filled: bothSeatsFilled(room),
+      ply: room.events.length,
+    },
+    'Duck Xiangqi engine declined to move',
+  );
+}
+
 export function duckXiangqiEngineSeatFor(room: DuckXiangqiEngineRoom): DuckXiangqiColor | null {
   for (const seat of ['red', 'black'] as const) {
     if (isDuckXiangqiEngineClientId(room.projection.seats[seat])) return seat;
+  }
+  // Nothing in this room's seats looked like a duck engine id. A seat holding
+  // an engine-SHAPED id we do not recognise is the interesting case: it means
+  // the seating half and the engine-registry half disagree about duck (the
+  // same class of split that left duck out of bot_profiles.supported_game_spec_ids
+  // until migration 138), and it is worth more than a null.
+  for (const seat of ['red', 'black'] as const) {
+    const clientId = room.projection.seats[seat];
+    if (typeof clientId === 'string' && /^fairy-stockfish/.test(clientId)) {
+      logger.error(
+        {
+          kind: 'duck_xiangqi_unrecognised_engine_seat',
+          room_id: room.id,
+          seat,
+          client_id: clientId,
+        },
+        'Duck Xiangqi seat holds an engine id the duck registry does not know',
+      );
+    }
   }
   return null;
 }
@@ -111,9 +168,22 @@ export function scheduleDuckXiangqiEngineMove(
   ctx: DuckXiangqiEngineContext,
   room: DuckXiangqiEngineRoom,
 ): void {
-  if (room.engineTimer) return;
+  if (room.engineTimer) {
+    logDuckXiangqiEngineSkip(room, 'already-scheduled');
+    return;
+  }
   const seat = duckXiangqiEngineSeatFor(room);
-  if (seat === null || !engineToMove(room, seat)) return;
+  if (seat === null) {
+    logDuckXiangqiEngineSkip(room, 'no-engine-seat');
+    return;
+  }
+  if (!engineToMove(room, seat)) {
+    // Ordinary and expected when the HUMAN has the first-mover seat: the loop
+    // is simply waiting for them. Logged anyway, because the alternative is
+    // that "waiting for the human" and "broken" look identical in the logs.
+    logDuckXiangqiEngineSkip(room, 'not-engine-turn');
+    return;
+  }
   room.engineTimer = setTimeout(() => {
     room.engineTimer = null;
     void playDuckXiangqiEngineMoveIfReady(ctx, room).catch((err) => {
@@ -146,16 +216,29 @@ export async function playDuckXiangqiEngineMoveIfReady(
   moveProvider: DuckXiangqiEngineMoveProvider = duckXiangqiLiveEngineMove,
 ): Promise<void> {
   const seat = duckXiangqiEngineSeatFor(room);
-  if (seat === null || !engineToMove(room, seat)) return;
+  if (seat === null) {
+    logDuckXiangqiEngineSkip(room, 'no-engine-seat');
+    return;
+  }
+  if (!engineToMove(room, seat)) {
+    logDuckXiangqiEngineSkip(room, 'not-engine-turn');
+    return;
+  }
   const engineId = room.projection.seats[seat]!;
   const tier = duckXiangqiEngineTierFor(engineId);
-  if (!tier) return;
+  if (!tier) {
+    logDuckXiangqiEngineSkip(room, 'unknown-tier');
+    return;
+  }
 
   const now = ctx.now?.() ?? Date.now();
   const clock = room.projection.clock;
   const remainingMs = clock ? tenantClockRemainingMs(clock, seat, now) : null;
   const incrementMs = clock?.incrementMs ?? 0;
-  if (remainingMs !== null && remainingMs <= 0) return;
+  if (remainingMs !== null && remainingMs <= 0) {
+    logDuckXiangqiEngineSkip(room, 'clock-expired');
+    return;
+  }
 
   const history = duckXiangqiUciHistory(room.events);
   // Clock-aware per-move budget (shared allocator). The tier's NODE budget is the
@@ -246,7 +329,10 @@ export async function playDuckXiangqiEngineMoveIfReady(
         'Duck Xiangqi engine output rejected by kernel; retrying',
       ),
   });
-  if (aborted || !engineToMove(room, seat)) return;
+  if (aborted || !engineToMove(room, seat)) {
+    logDuckXiangqiEngineSkip(room, 'aborted-mid-search');
+    return;
+  }
 
   if (validated === null) {
     const record = buildEngineDecisionRecord({

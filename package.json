@@ -23,6 +23,7 @@
     "db:seed:qa": "npm run db:migrate && npm run db:seed:profiles && npm run db:seed:variant-fixtures && npm run db:seed:watch && npm run db:seed:qa-fixtures",
     "generate:variant-fixtures": "npm run generate:variant-fixtures --workspace @mistboard/server",
     "variant:catalog": "tsx scripts/variant-catalog.ts",
+    "lab": "tsx scripts/variant-lab/lab/cli.ts",
     "videos:audit": "node scripts/videos-audit.mjs",
     "videos:mine": "node scripts/videos-mine.mjs",
     "db:seed:variant-corpus": "node scripts/seed-variant-corpus.mjs",

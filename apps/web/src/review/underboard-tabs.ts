@@ -53,6 +53,11 @@ export type UnderboardOptions = {
    *  its corpus while visible, instead of on every navigation for every reader
    *  who never opens it. */
   onTabChange?(id: string): void;
+  /** Tab to open on first render. Defaults to the first tab. A surface uses this
+   *  when the panel holds the only control that surface needs: a practice
+   *  chapter opens on Lesson, because its board is read-only and Preview is the
+   *  action the author actually came for. Ignored if the id is not present. */
+  initialTabId?: string;
 };
 
 type UnderboardTab = { id: string; label: string; body: HTMLElement };
@@ -178,7 +183,11 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
     bodies.append(def.body);
   }
   panel.append(tabs, bodies);
-  show(tabDefs[0]!.id);
+  const initial =
+    opts.initialTabId && tabDefs.some((def) => def.id === opts.initialTabId)
+      ? opts.initialTabId
+      : tabDefs[0]!.id;
+  show(initial);
   // After the panel is in the document, so the bodies have a width to wrap at.
   requestAnimationFrame(measureAll);
   return panel;

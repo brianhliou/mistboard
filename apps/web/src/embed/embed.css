@@ -142,6 +142,14 @@ body.embed-body {
      board was bounded by width rather than height. The sheet's height follows
      the column because its scroller is out of flow (below). */
   flex: 0 0 auto;
+  /* Centred, and no wider than the board plus a capped sheet (the width is
+     set in JS beside the board width, embed-card.ts fitBoard): the board is
+     sized by height, so in a frame wider than it is tall, or the page opened
+     bare in a browser window, the card would otherwise hand every spare pixel
+     to the move list, which at 1500px put the sheet across half the window.
+     Auto margins on a stretched item are what centre it once the cap binds. */
+  margin-inline: auto;
+  max-width: 100%;
   max-height: 100%;
   overflow: hidden;
   border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
