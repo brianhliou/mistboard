@@ -905,6 +905,24 @@ function renderStudy(
       gamebookEditing: gamebookable && chapter.gamebook && study.isOwner,
       annotationLessonControls: lessonControls,
       annotationPracticeControls: practiceDock,
+      // A practice chapter's move tree is never read: the engine supplies the
+      // opposition. So the owner's board refuses moves and says so, rather than
+      // accepting them, autosaving them, and ignoring them -- which is how a
+      // stray move reached a published exercise on the day this shipped.
+      //
+      // The way to actually play it is Preview, so that is the action offered
+      // here AND the tab the panel opens on. Read-only without a visible way to
+      // test would just move the trap somewhere else.
+      ...(chapter.practice && study.isOwner && !previewMode
+        ? {
+            boardReadOnly: {
+              reason:
+                'Practice chapter: the board is played against the engine, not authored here.',
+              action: { label: 'Preview exercise', onClick: () => setPreview(true) },
+            },
+            initialUnderboardTab: 'lesson',
+          }
+        : {}),
       annotationEditing: study.isOwner,
       // A study is read forward. Landing on the final position of a 60-ply
       // annotated game means rewinding before you can start.

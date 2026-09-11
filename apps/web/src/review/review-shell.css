@@ -1487,3 +1487,33 @@
 .review-rail-pocketbox > .review-material-row:last-child {
   border-end-start-radius: 0;
 }
+
+/* Read-only board notice: says why the board refuses input, beside the board
+   doing the refusing, with the way out next to it. A silently dead board reads
+   as a bug; a labelled one reads as a mode. */
+.review-board-readonly {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  flex-wrap: wrap;
+  gap: 0.6rem;
+  margin-top: 8px;
+  padding: 0.45rem 0.7rem;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm, 8px);
+  background: var(--site-surface);
+  color: var(--site-muted);
+  font-size: 0.85rem;
+  text-align: center;
+}
+
+.review-board-readonly__action {
+  padding: 0.3rem 0.7rem;
+  border: 1px solid var(--site-accent);
+  border-radius: var(--site-radius-sm, 6px);
+  background: var(--site-accent);
+  color: #fff;
+  font-size: 0.82rem;
+  font-weight: 600;
+  cursor: pointer;
+}

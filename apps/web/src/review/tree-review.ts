@@ -430,6 +430,17 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  page supplies the enable/preview controls; the annotation editor adds the
    *  current position's hint/deviation fields when gamebook mode is active. */
   annotationLessonControls?: HTMLElement;
+  /**
+   * Refuse moves on the board, and say why.
+   *
+   * A practice chapter's move tree is never read -- the engine supplies the
+   * opposition -- so a live board there invites input, autosaves it, and then
+   * ignores it. Three bad properties at once, and it put a stray move into a
+   * published exercise the day it shipped.
+   */
+  boardReadOnly?: { reason: string; action?: { label: string; onClick(): void } };
+  /** Tab the under-board panel opens on. */
+  initialUnderboardTab?: string;
   /** Practice-mode dock for the same under-board tab. */
   annotationPracticeControls?: HTMLElement;
   /** Show the study annotation controls (glyph picker + comment box + clear-shapes)
@@ -772,14 +783,37 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   } else {
     wrap.append(boardEl);
   }
+  // Say WHY the board refuses input, next to the board that is refusing it. A
+  // silently dead board reads as a bug; a labelled one reads as a mode, and the
+  // action beside it is the way out of that mode.
+  if (config.boardReadOnly) {
+    wrap.classList.add('review-board-wrap--read-only');
+    const notice = document.createElement('div');
+    notice.className = 'review-board-readonly';
+    const why = document.createElement('span');
+    why.textContent = config.boardReadOnly.reason;
+    notice.append(why);
+    if (config.boardReadOnly.action) {
+      const act = document.createElement('button');
+      act.type = 'button';
+      act.className = 'review-board-readonly__action';
+      act.textContent = config.boardReadOnly.action.label;
+      act.addEventListener('click', config.boardReadOnly.action.onClick);
+      notice.append(act);
+    }
+    wrap.append(notice);
+  }
   const interactive = presentation.createBoard({
     board: boardEl,
     getInteractionView: () => viewForKey(currentPov),
     getPerspective: orientation,
-    seatFor: presentation.seatFor,
+    // A read-only board offers no seat, so nothing is draggable in the first
+    // place rather than being draggable and silently refused.
+    seatFor: (view) => (config.boardReadOnly ? null : presentation.seatFor(view)),
     // Only the truth view plays moves; POV views are read-only (and fogged).
-    enabled: () => currentPov === truthKey,
+    enabled: () => !config.boardReadOnly && currentPov === truthKey,
     onMove: (move) => {
+      if (config.boardReadOnly) return;
       if (currentPov === truthKey) handleMove(move);
     },
     onDrawShape: (orig, dest, opts) => {
@@ -1474,6 +1508,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     about: config.aboutTab,
     tools: annotationEditor?.tabs,
     provenance: config.provenance,
+    ...(config.initialUnderboardTab ? { initialTabId: config.initialUnderboardTab } : {}),
     moveTimes: config.moveTimes,
     seatColors: config.seatColors,
     players: config.showCrosstable ? (config.players ?? {}) : undefined,
