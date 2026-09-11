@@ -81,6 +81,10 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'jungle',
   'jungle-flip',
   'fortress-xiangqi',
+  // Machine-drafted 2026-09-11, not native-reviewed, locked the day the English
+  // copy froze. The rules page only: the duck-xiangqi-build blog post was cut
+  // and stays a draft, so it is deliberately not listed here.
+  'duck-xiangqi',
   'misty',
   'server-enforced-fog',
 ] as const;
@@ -2154,6 +2158,71 @@ const ZH_HANS: Record<string, string> = {
   // was locked.
   'Black wins by checkmate · 73 moves': '黑方将死获胜 · 73 回合',
   'Red wins by checkmate · 36 moves': '红方将死获胜 · 36 回合',
+  // -- Duck Xiangqi --
+  'Duck Xiangqi Rules': '鸭子象棋规则',
+  'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
+    '把鸭子国际象棋搬到象棋盘上。每一回合都是先走一步棋，再放一次鸭子；鸭子像棋子一样挡路，也一样能当炮架；吃掉对方的将帅即获胜。',
+  'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.':
+    '鸭子象棋就是盘上多了一只鸭子的[象棋](/rules/xiangqi)。每一回合，你先走一步合法的象棋着法，然后把鸭子移到一个空点上。两半合起来才算一个回合，缺一不可。',
+  'One turn in. Red moved the horse, then placed the duck on c8, ringed. The duck is not on the board at the start.':
+    '第一回合走完。红方跳了马，然后把鸭子放在 c8，图中加了圈。开局时鸭子并不在盘上。',
+  'Brian H. Liou adapted Duck Xiangqi to the 9 by 10 board in 2026 as a Mistboard original. Dr Tim Paulden invented [Duck Chess](https://duckchess.com) in 2016, and Jim Aikin had already put movable neutral stones on a chessboard in [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999. Nobody had carried the idea across to xiangqi. The cannon is the piece that makes it strange: it captures only by jumping over something, and a duck placed anywhere is something, so every placement you make is a platform your opponent may fire over.':
+    'Brian H. Liou 于 2026 年把鸭子象棋移植到 9 路 10 线的棋盘上，作为 Mistboard 原创。Dr Tim Paulden 在 2016 年发明了[鸭子国际象棋](https://duckchess.com)，而 Jim Aikin 早在 1999 年就在[八石棋](https://www.chessvariants.com/page/EightStoneChess)里把可移动的中立石子放上了国际象棋盘。此前没有人把这个想法搬到象棋上。让它变得古怪的棋子是炮：炮吃子必须隔着一个子跳过去，而放在任何地方的鸭子都算一个子，所以你每放一次鸭子，都是给对手架起一座可以打过来的炮架。',
+  'The duck belongs to nobody. Nothing can capture it and nothing can land on it, it is never material, and it is not either side’s piece. Its whole job is to be in the way, and both players take turns deciding where.':
+    '鸭子不属于任何一方。没有子能吃它，也没有子能落在它上面；它不计入子力，也不是任何一方的棋子。它唯一的作用就是挡在路上，而挡在哪里由双方轮流决定。',
+  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has four. The sections below are where that difference lands.':
+    '国际象棋只有一种挡子的办法：站到它想去的点上。象棋有四种。下面几节讲的就是这个差别落在哪里。',
+  'One turn, two actions': '一个回合，两个动作',
+  'The board, the pieces, and the opening array are ordinary xiangqi. Red moves first.':
+    '棋盘、棋子和开局摆法都和普通象棋一样。红方先行。',
+  'The starting position. The duck is not on the board yet: it arrives as the second half of Red’s first turn.':
+    '初始局面。鸭子还没有上盘：它是红方第一个回合的后半步才出现的。',
+  'After that it moves every single turn. It may not stay where it is, and it may not land on an occupied point, so each turn ends with the duck somewhere new. Anywhere new: it is not a stepping piece, and any empty point on the board is a legal placement.':
+    '此后它每一回合都要动。它不能留在原地，也不能落到有子的点上，所以每一回合结束时鸭子都在一个新的位置。任何新位置都行：它不是一步一步走的棋子，全盘任何一个空点都是合法的落点。',
+  'The move alone is not a turn, and neither is the placement.':
+    '只走棋不算一个回合，只放鸭子也不算。',
+  'The one exception is the move that captures the enemy general. That ends the game on the spot, so the duck never gets its half of the turn.':
+    '唯一的例外是吃掉对方将帅的那一步。对局当场结束，鸭子也就轮不到它那半个回合了。',
+  'The duck blocks like a piece': '鸭子像棋子一样挡路',
+  'Wherever xiangqi asks whether a point is occupied, the duck counts as occupied. It stops a chariot. It stands on the horse’s leg and fills the elephant’s eye. It screens for a cannon. It stands between the two generals.':
+    '凡是象棋规则要问「这个点上有没有子」的地方，鸭子都算有子。它能拦住车。它能蹩马腿，也能塞象眼。它能给炮当炮架。它也能挡在两位将帅之间。',
+  'The horse on e5 reaches eight points. The duck on e6 stands on its leg, and the two steps through that point are gone.':
+    'e5 的马原本能到八个点。e6 的鸭子蹩住了马腿，经过那个点的两步走法就没了。',
+  'That is a deliberate difference from Duck Chess, where the duck does not block a knight. A chess knight has no path to block. Xiangqi’s horse has a leg, the leg is a real point, and anything standing on it stops the horse. So the duck is stronger here than in Duck Chess: it freezes a horse from a point the horse was never going to occupy.':
+    '这是与鸭子国际象棋有意不同的一处：在那边，鸭子挡不住马。国际象棋的马没有路径可挡。象棋的马有马腿，马腿是一个实实在在的点，站在上面的任何东西都能拦住马。所以鸭子在这里比在鸭子国际象棋里更强：它能从一个马根本不会走到的点上把马冻住。',
+  'The elephant on c1 reaches a3 and e3. The duck on d2 fills the eye of the second one.':
+    'c1 的象能走到 a3 和 e3。d2 的鸭子塞住了后一条路的象眼。',
+  'The cannon on e3 stops short of the duck going up the file, and shoots over it to take the chariot on e8. A screen is a screen, whoever it belongs to.':
+    'e3 的炮沿本路向上只能走到鸭子前面，却能隔着它打掉 e8 的车。炮架就是炮架，不管它属于谁。',
+  'The cannon is where the timing bites. You place the duck at the end of your turn, which means the screen you build is the screen your opponent fires over. Duck placement is never a cannon platform for yourself.':
+    '炮是次序最要命的地方。你在自己回合的最后放鸭子，也就是说，你架起来的炮架是给对手打的。放鸭子永远不会成为你自己的炮架。',
+  'This one was a choice, and it is the choice that most changes how the game feels. Chess has no cannon and no capture that needs a platform, so Duck Chess never had to rule on it. The duck could have been written as a blocker a cannon may not fire over, which would have made it a purely defensive piece and a much quieter game. It counts as a screen instead, exactly as any piece does, because a rule that asks whether a point is occupied should get the same answer whatever is standing there.':
+    '这一条是选出来的，而且是最能改变对局手感的一条。国际象棋没有炮，也没有需要炮架的吃法，所以鸭子国际象棋根本不必为它定规矩。本来也可以把鸭子写成「炮不能隔着它打」的挡子，那样它就是一个纯防守的棋子，整盘棋也会安静得多。最后它和任何棋子一样算作炮架，因为一条询问「这个点上有没有子」的规则，无论站在那里的是什么，都应该得到同一个答案。',
+  'There is no check': '没有将军',
+  'No check, no checkmate, no warning. That comes straight from Duck Chess. You may move a piece that leaves your general attacked, you may place the duck and still leave it attacked, and you may move the general onto an attacked point. Neither half of the turn is tested for it. Your opponent wins by actually capturing the general, so miss the threat and you lose the game, not a tempo.':
+    '没有将军，没有将死，也没有任何提示。这一条直接来自鸭子国际象棋。你可以走一步让自己的将帅处在被攻击之下，可以放完鸭子仍然让它被攻击，也可以把将帅走到被攻击的点上。回合的两半都不做这项检查。对手要真的吃掉将帅才算赢，所以看漏威胁丢的是整盘棋，不是一先。',
+  'The generals may face': '将帅可以照面',
+  'Xiangqi never lets the two generals sit on one file with nothing between them. Here they may, because a general may fly down that file and capture the other one. That ends the game, and it is the only time a general leaves its palace.':
+    '象棋从不允许两位将帅在同一路上中间无子地对着。这里允许，因为将帅可以沿那一路飞过去吃掉对方。这样对局就结束了，也是将帅唯一一次离开九宫。',
+  'Only the duck stands on file e. Every point off the file hands Black the general, and the duck has to move somewhere every turn.':
+    'e 路上只有鸭子挡着。鸭子落到这一路以外的任何一点，都等于把帅送给黑方，而它每一回合都必须挪个地方。',
+  'So the duck defends as well as blocks, and it is an uncomfortable defender: holding a file costs you the duck every single turn.':
+    '所以鸭子既能挡路也能防守，而且是个难受的防守者：守住一路，等于每一回合都要把鸭子押在那里。',
+  'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.':
+    '一盘引擎全力对局，每步 8 秒。看鸭子，别看棋子：全局 120 着里有 30 着是炮隔着它开火，接近尾声时红方正用它守住一路，少了这一路帅就活不成。',
+  'Engine self-play · 8s per move': '引擎自对弈 · 每步 8 秒',
+  'Black captures the general on move 60. Red had the better of the opening, but the engine eval was still within a pawn and a half of level as late as ply 63, and Black ground it out from there.':
+    '黑方在第 60 回合吃掉将帅。红方开局占优，但到第 63 着时引擎评估离均势仍不到一个半兵，黑方从那里一点点磨了下来。',
+  'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
+    '这盘棋是从同样条件下的 8 盘里挑出来的，因为鸭子在其中出力最多。8 盘里有 7 盘下完；这 7 盘都收在[配套研究](/study/uMbk76wd)里，一盘一章，并注明每盘僵持了多久、鸭子在做什么。',
+  'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
+    '吃掉对方将帅即获胜。无合法回合可走的一方判负，这就是象棋对困毙的处理，与鸭子国际象棋正好相反：在那边，无步可走的一方获胜。对局同样可以因超时、认输或弃局结束，和这里的其他棋一样。',
+  'Two rules draw. The third occurrence of the same position is a draw, and the duck’s point is part of the position, since where it stands changes what every piece can do. Sixty moves by each player without a capture is also a draw, which is xiangqi’s own no-progress limit. Duck Chess never defined draw rules, so this half of the ruleset had to come from the xiangqi side.':
+    '有两条和棋规则。同一局面第三次出现即为和棋，而鸭子所在的点也算局面的一部分，因为它站在哪里会改变每个棋子能做什么。双方各走六十回合而无吃子也判和，这是象棋自己的无进展上限。鸭子国际象棋从未定过和棋规则，所以这一半规则只能来自象棋这一边。',
+  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.':
+    '可以和八个强度的引擎对战，也可以和朋友下。上面那盘示例对局是配套研究里七盘中的一盘。',
+  'Play Duck Xiangqi': '下鸭子象棋',
+  'Seven engine games': '七盘引擎对局',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -4010,6 +4079,71 @@ const ZH_HANT: Record<string, string> = {
   // was locked.
   'Black wins by checkmate · 73 moves': '黑方將死獲勝 · 73 回合',
   'Red wins by checkmate · 36 moves': '紅方將死獲勝 · 36 回合',
+  // -- Duck Xiangqi --
+  'Duck Xiangqi Rules': '鴨子象棋規則',
+  'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
+    '把鴨子國際象棋搬到象棋盤上。每一回合都是先走一步棋，再放一次鴨子；鴨子像棋子一樣擋路，也一樣能當炮架；吃掉對方的將帥即獲勝。',
+  'Duck Xiangqi is [xiangqi](/rules/xiangqi) with a duck on the board. Every turn you make a legal xiangqi move, and then you move the duck to an empty point. Both halves are one turn, and neither of them is optional.':
+    '鴨子象棋就是盤上多了一隻鴨子的[象棋](/rules/xiangqi)。每一回合，你先走一步合法的象棋著法，然後把鴨子移到一個空點上。兩半合起來才算一個回合，缺一不可。',
+  'One turn in. Red moved the horse, then placed the duck on c8, ringed. The duck is not on the board at the start.':
+    '第一回合走完。紅方跳了馬，然後把鴨子放在 c8，圖中加了圈。開局時鴨子並不在盤上。',
+  'Brian H. Liou adapted Duck Xiangqi to the 9 by 10 board in 2026 as a Mistboard original. Dr Tim Paulden invented [Duck Chess](https://duckchess.com) in 2016, and Jim Aikin had already put movable neutral stones on a chessboard in [Eight-Stone Chess](https://www.chessvariants.com/page/EightStoneChess) in 1999. Nobody had carried the idea across to xiangqi. The cannon is the piece that makes it strange: it captures only by jumping over something, and a duck placed anywhere is something, so every placement you make is a platform your opponent may fire over.':
+    'Brian H. Liou 於 2026 年把鴨子象棋移植到 9 路 10 線的棋盤上，作為 Mistboard 原創。Dr Tim Paulden 在 2016 年發明了[鴨子國際象棋](https://duckchess.com)，而 Jim Aikin 早在 1999 年就在[八石棋](https://www.chessvariants.com/page/EightStoneChess)裡把可移動的中立石子放上了國際象棋盤。此前沒有人把這個想法搬到象棋上。讓它變得古怪的棋子是炮：炮吃子必須隔著一個子跳過去，而放在任何地方的鴨子都算一個子，所以你每放一次鴨子，都是給對手架起一座可以打過來的炮架。',
+  'The duck belongs to nobody. Nothing can capture it and nothing can land on it, it is never material, and it is not either side’s piece. Its whole job is to be in the way, and both players take turns deciding where.':
+    '鴨子不屬於任何一方。沒有子能吃它，也沒有子能落在它上面；它不計入子力，也不是任何一方的棋子。它唯一的作用就是擋在路上，而擋在哪裡由雙方輪流決定。',
+  'Chess has one way of blocking a piece: stand on the point it wants. Xiangqi has four. The sections below are where that difference lands.':
+    '國際象棋只有一種擋子的辦法：站到它想去的點上。象棋有四種。下面幾節講的就是這個差別落在哪裡。',
+  'One turn, two actions': '一個回合，兩個動作',
+  'The board, the pieces, and the opening array are ordinary xiangqi. Red moves first.':
+    '棋盤、棋子和開局擺法都和普通象棋一樣。紅方先行。',
+  'The starting position. The duck is not on the board yet: it arrives as the second half of Red’s first turn.':
+    '初始局面。鴨子還沒有上盤：它是紅方第一個回合的後半步才出現的。',
+  'After that it moves every single turn. It may not stay where it is, and it may not land on an occupied point, so each turn ends with the duck somewhere new. Anywhere new: it is not a stepping piece, and any empty point on the board is a legal placement.':
+    '此後它每一回合都要動。它不能留在原地，也不能落到有子的點上，所以每一回合結束時鴨子都在一個新的位置。任何新位置都行：它不是一步一步走的棋子，全盤任何一個空點都是合法的落點。',
+  'The move alone is not a turn, and neither is the placement.':
+    '只走棋不算一個回合，只放鴨子也不算。',
+  'The one exception is the move that captures the enemy general. That ends the game on the spot, so the duck never gets its half of the turn.':
+    '唯一的例外是吃掉對方將帥的那一步。對局當場結束，鴨子也就輪不到它那半個回合了。',
+  'The duck blocks like a piece': '鴨子像棋子一樣擋路',
+  'Wherever xiangqi asks whether a point is occupied, the duck counts as occupied. It stops a chariot. It stands on the horse’s leg and fills the elephant’s eye. It screens for a cannon. It stands between the two generals.':
+    '凡是象棋規則要問「這個點上有沒有子」的地方，鴨子都算有子。它能攔住車。它能蹩馬腿，也能塞象眼。它能給炮當炮架。它也能擋在兩位將帥之間。',
+  'The horse on e5 reaches eight points. The duck on e6 stands on its leg, and the two steps through that point are gone.':
+    'e5 的馬原本能到八個點。e6 的鴨子蹩住了馬腿，經過那個點的兩步走法就沒了。',
+  'That is a deliberate difference from Duck Chess, where the duck does not block a knight. A chess knight has no path to block. Xiangqi’s horse has a leg, the leg is a real point, and anything standing on it stops the horse. So the duck is stronger here than in Duck Chess: it freezes a horse from a point the horse was never going to occupy.':
+    '這是與鴨子國際象棋有意不同的一處：在那邊，鴨子擋不住馬。國際象棋的馬沒有路徑可擋。象棋的馬有馬腿，馬腿是一個實實在在的點，站在上面的任何東西都能攔住馬。所以鴨子在這裡比在鴨子國際象棋裡更強：它能從一個馬根本不會走到的點上把馬凍住。',
+  'The elephant on c1 reaches a3 and e3. The duck on d2 fills the eye of the second one.':
+    'c1 的象能走到 a3 和 e3。d2 的鴨子塞住了後一條路的象眼。',
+  'The cannon on e3 stops short of the duck going up the file, and shoots over it to take the chariot on e8. A screen is a screen, whoever it belongs to.':
+    'e3 的炮沿本路向上只能走到鴨子前面，卻能隔著它打掉 e8 的車。炮架就是炮架，不管它屬於誰。',
+  'The cannon is where the timing bites. You place the duck at the end of your turn, which means the screen you build is the screen your opponent fires over. Duck placement is never a cannon platform for yourself.':
+    '炮是次序最要命的地方。你在自己回合的最後放鴨子，也就是說，你架起來的炮架是給對手打的。放鴨子永遠不會成為你自己的炮架。',
+  'This one was a choice, and it is the choice that most changes how the game feels. Chess has no cannon and no capture that needs a platform, so Duck Chess never had to rule on it. The duck could have been written as a blocker a cannon may not fire over, which would have made it a purely defensive piece and a much quieter game. It counts as a screen instead, exactly as any piece does, because a rule that asks whether a point is occupied should get the same answer whatever is standing there.':
+    '這一條是選出來的，而且是最能改變對局手感的一條。國際象棋沒有炮，也沒有需要炮架的吃法，所以鴨子國際象棋根本不必為它定規矩。本來也可以把鴨子寫成「炮不能隔著它打」的擋子，那樣它就是一個純防守的棋子，整盤棋也會安靜得多。最後它和任何棋子一樣算作炮架，因為一條詢問「這個點上有沒有子」的規則，無論站在那裡的是什麼，都應該得到同一個答案。',
+  'There is no check': '沒有將軍',
+  'No check, no checkmate, no warning. That comes straight from Duck Chess. You may move a piece that leaves your general attacked, you may place the duck and still leave it attacked, and you may move the general onto an attacked point. Neither half of the turn is tested for it. Your opponent wins by actually capturing the general, so miss the threat and you lose the game, not a tempo.':
+    '沒有將軍，沒有將死，也沒有任何提示。這一條直接來自鴨子國際象棋。你可以走一步讓自己的將帥處在被攻擊之下，可以放完鴨子仍然讓它被攻擊，也可以把將帥走到被攻擊的點上。回合的兩半都不做這項檢查。對手要真的吃掉將帥才算贏，所以看漏威脅丟的是整盤棋，不是一先。',
+  'The generals may face': '將帥可以照面',
+  'Xiangqi never lets the two generals sit on one file with nothing between them. Here they may, because a general may fly down that file and capture the other one. That ends the game, and it is the only time a general leaves its palace.':
+    '象棋從不允許兩位將帥在同一路上中間無子地對著。這裡允許，因為將帥可以沿那一路飛過去吃掉對方。這樣對局就結束了，也是將帥唯一一次離開九宮。',
+  'Only the duck stands on file e. Every point off the file hands Black the general, and the duck has to move somewhere every turn.':
+    'e 路上只有鴨子擋著。鴨子落到這一路以外的任何一點，都等於把帥送給黑方，而它每一回合都必須挪個地方。',
+  'So the duck defends as well as blocks, and it is an uncomfortable defender: holding a file costs you the duck every single turn.':
+    '所以鴨子既能擋路也能防守，而且是個難受的防守者：守住一路，等於每一回合都要把鴨子押在那裡。',
+  'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.':
+    '一盤引擎全力對局，每步 8 秒。看鴨子，別看棋子：全局 120 著裡有 30 著是炮隔著它開火，接近尾聲時紅方正用它守住一路，少了這一路帥就活不成。',
+  'Engine self-play · 8s per move': '引擎自對弈 · 每步 8 秒',
+  'Black captures the general on move 60. Red had the better of the opening, but the engine eval was still within a pawn and a half of level as late as ply 63, and Black ground it out from there.':
+    '黑方在第 60 回合吃掉將帥。紅方開局占優，但到第 63 著時引擎評估離均勢仍不到一個半兵，黑方從那裡一點點磨了下來。',
+  'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
+    '這盤棋是從同樣條件下的 8 盤裡挑出來的，因為鴨子在其中出力最多。8 盤裡有 7 盤下完；這 7 盤都收在[配套研究](/study/uMbk76wd)裡，一盤一章，並註明每盤僵持了多久、鴨子在做什麼。',
+  'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
+    '吃掉對方將帥即獲勝。無合法回合可走的一方判負，這就是象棋對困斃的處理，與鴨子國際象棋正好相反：在那邊，無步可走的一方獲勝。對局同樣可以因超時、認輸或棄局結束，和這裡的其他棋一樣。',
+  'Two rules draw. The third occurrence of the same position is a draw, and the duck’s point is part of the position, since where it stands changes what every piece can do. Sixty moves by each player without a capture is also a draw, which is xiangqi’s own no-progress limit. Duck Chess never defined draw rules, so this half of the ruleset had to come from the xiangqi side.':
+    '有兩條和棋規則。同一局面第三次出現即為和棋，而鴨子所在的點也算局面的一部分，因為它站在哪裡會改變每個棋子能做什麼。雙方各走六十回合而無吃子也判和，這是象棋自己的無進展上限。鴨子國際象棋從未定過和棋規則，所以這一半規則只能來自象棋這一邊。',
+  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.':
+    '可以和八個強度的引擎對戰，也可以和朋友下。上面那盤示例對局是配套研究裡七盤中的一盤。',
+  'Play Duck Xiangqi': '下鴨子象棋',
+  'Seven engine games': '七盤引擎對局',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

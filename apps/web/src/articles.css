@@ -2925,3 +2925,24 @@ a.article-meta-author:hover .article-meta-author-name {
   font-variant-numeric: tabular-nums;
   white-space: nowrap;
 }
+
+/* Duck Xiangqi sample game: a showcase, like the xiangqi rules page's famous
+   game, so it gets the 480px board rather than the compact 292px other replays
+   use. Its own selector because this widget renders the LIVE board renderer
+   rather than an `xq-article-svg`, so the rules above cannot reach it. The
+   slider is widened to match, or a 292px control under a 480px board reads as a
+   different component. */
+.dkx-replay-board {
+  width: min(480px, 100%);
+  margin-inline: auto;
+}
+
+.dkx-replay-board svg {
+  width: 100%;
+  height: auto;
+  display: block;
+}
+
+.xq-replay-slider.dkx-replay-slider {
+  width: min(480px, 100%);
+}

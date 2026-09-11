@@ -124,17 +124,26 @@ describe('study board dispatch', () => {
 // variant stays eligible (so an existing study of it still opens) and stays OUT
 // of the create dialog until its public surface is switched on.
 describe('create-study variant picker', () => {
-  it('offers only launched variants', () => {
+  it('offers every launched variant', () => {
     const select = buildStudyVariantSelect('variant', DEFAULT_STUDY_VARIANT);
     const offered = [...select.options].map((option) => option.value);
-    expect(offered).not.toContain('duck-xiangqi');
     expect(offered).toContain('xiangqi');
+    expect(offered).toContain('duck-xiangqi');
     expect(STUDY_ELIGIBLE_SPEC_IDS).toContain('duck-xiangqi');
   });
 
-  it('keeps the current selection listed even when it is unlaunched', () => {
-    const select = buildStudyVariantSelect('variant', 'duck-xiangqi');
-    expect([...select.options].map((option) => option.value)).toContain('duck-xiangqi');
-    expect(select.value).toBe('duck-xiangqi');
+  // The "already selected but unlaunched" branch of the filter is real and
+  // still there, but it is currently UNREACHABLE from a test: every
+  // study-eligible variant has launched, and the filter reads
+  // variantPublicSurfaceEnabled directly rather than taking a predicate. This
+  // asserts the half that is reachable, across every variant, instead of
+  // naming one and quietly proving nothing. When the next eligible variant
+  // lands unlaunched, restore a case that pins it.
+  it('keeps the current selection listed, whichever variant it is', () => {
+    for (const { id } of STUDY_VARIANTS) {
+      const select = buildStudyVariantSelect('variant', id);
+      expect([...select.options].map((option) => option.value)).toContain(id);
+      expect(select.value).toBe(id);
+    }
   });
 });

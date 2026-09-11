@@ -41,6 +41,7 @@ import {
   type DuckXiangqiSquare,
   type DuckXiangqiTurn,
   duckXiangqiDuckDestinations,
+  duckXiangqiFen,
 } from '@mistboard/game';
 // ORDER IS LOAD-BEARING. live-xiangqi.css draws the board ground, the grid, the
 // palace diagonals and the river; duck-xiangqi.css only adds the duck token and
@@ -290,6 +291,11 @@ const duckXiangqiPresentation: TreePresentation<
 > = {
   adapter: duckXiangqiTreeAdapter,
   engine: null,
+  // No engine, but the position still has a FEN: the kernel's own codec, whose
+  // seventh field carries the duck ('-' while it is off the board). Without this
+  // the analysis board's FEN box stays empty and positions can only be pasted
+  // in, never copied out.
+  fen: (truth) => duckXiangqiFen(truth),
   boardHostClassName: 'dxq-postgame__board duck-xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
   defaultBoardAriaLabel: 'Duck Xiangqi board',

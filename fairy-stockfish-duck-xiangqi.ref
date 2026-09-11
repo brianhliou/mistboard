@@ -15,10 +15,23 @@
 #      Overflowing it is a stack smash inside MovePicker (its `moves` array is a
 #      stack member) that presents as a SIGSEGV with a corrupted backtrace.
 #   2. `wallingRule = duck` refuses a royal king, so the general is a non-royal
-#      wazir - and FSF's flying-general rule guards on `count<KING>()`, so it
-#      switches ITSELF off. The duck also moves each turn, so a duck that was the
-#      only thing blocking the general file can vacate it, which stock FSF never
-#      re-tests.
+#      wazir, and FSF has no way to say what the flying general BECOMES once the
+#      general is not royal. Upstream writes that rule as a prohibition in
+#      `legal()` - a move leaving the generals facing is illegal - which is only
+#      coherent while facing is self-check. With no check there is nothing for
+#      it to rest on, so the patch adds the other half in `generate_all()`: a
+#      general may fly down a clear file and CAPTURE the enemy general.
+#
+#      The prohibition itself is left exactly as upstream wrote it, still
+#      guarded on `count<KING>()`. That guard is what keeps the two readings
+#      from ever both applying: a royal-king variant (standard xiangqi, janggi)
+#      is untouched, and only a non-royal general reaches the capture.
+#
+#      Revised 2026-09-10. Before that the patch forced the prohibition ON for
+#      the non-royal case, and re-tested it after the duck's half of the turn.
+#      That kept a consequence without its cause, and the kernel has since made
+#      facing legal-and-losing to match Duck Chess, where kings may stand
+#      adjacent and a king captures a king.
 #
 # Why not just patch the xiangqi binary and share one. The patch drops MAX_PLY
 # from 246 to 100 to keep MovePicker (8192 * 8 = 64KB per ply) inside the 8MB
@@ -30,10 +43,22 @@
 # EITHER is a different engine, and DUCK_XIANGQI_FSF_ENGINE_REF carries a digest
 # of both so a rated identity cannot silently change how it plays.
 #
-# The build is gated on perft(1) = 2554, the kernel's own count for the opening
-# array. A binary generating only the 44 piece moves would not crash, it would
-# just play a different game, so the gate asserts agreement with the rules the
-# server enforces rather than merely that the binary runs.
+# The build is gated on THREE perft(1) counts, each the kernel's own answer for
+# the same position, because a binary that plays a different game does not
+# crash, it just plays a different game:
+#
+#   2554  the opening array. Catches a binary generating only the 44 piece
+#         moves, ie. one that did not get the duck at all.
+#    430  `9/4k4/9/9/9/4*4/P8/9/4K4/9 w - - 0 1` - generals on one file with the
+#         DUCK the only thing between them. The opening count cannot see the
+#         facing rule at all (it reads 2554 with `flyingGeneral` on or off), and
+#         this position is what discriminates: the pre-2026-09-10 binary, which
+#         confined the duck to the open segment, answers 187 here.
+#    431  `9/4k4/9/9/9/9/P8/9/4K4/*8 w - - 0 1` - the same file with NOTHING
+#         between. The extra move over a plain count is the flying capture
+#         itself, so this fails if the movegen hunk is dropped while the
+#         prohibition stays off, which is the silent third game: generals may
+#         face and neither can do anything about it.
 #
 # No NNUE. The pinned net is a standard-xiangqi net; this variant runs classical
 # eval, the same footing as xiangqi rungs 1-7.

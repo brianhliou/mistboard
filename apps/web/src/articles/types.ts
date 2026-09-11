@@ -16,6 +16,7 @@ import type { ChessReplaySpec } from '../chess-replay.js';
 import type { PlayerTitle } from '../player-titles.js';
 import type { CrossroadsReplaySpec } from '../crossroads-chess-replay.js';
 import type { DropMiniXiangqiReplaySpec } from '../drop-mini-xiangqi-replay.js';
+import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
 import type { JieqiReplaySpec } from '../jieqi-replay.js';
 import type { MiniXiangqiReplaySpec } from '../mini-xiangqi-replay.js';
@@ -194,6 +195,16 @@ export type FortressXiangqiReplayBlock = {
   caption?: string;
 };
 
+// Duck Xiangqi analogue: the 9x10 board plus the shared duck, stepped through a
+// turn list against the real kernel. A token carries BOTH halves of a turn
+// (`b1c3@c8`) because a turn is a piece move and a duck placement; the duck half
+// is absent only on the general capture that ends the game.
+export type DuckXiangqiReplayBlock = {
+  kind: 'duck-xiangqi-replay';
+  spec: DuckXiangqiReplaySpec;
+  caption?: string;
+};
+
 // Shogi analogue: a 9x9 board plus hands, stepped through a western shogi move
 // list and replayed through the real kernel.
 export type ShogiReplayBlock = {
@@ -335,6 +346,7 @@ export type ArticleBlock =
   | MiniXiangqiReplayBlock
   | DropMiniXiangqiReplayBlock
   | FortressXiangqiReplayBlock
+  | DuckXiangqiReplayBlock
   | ShogiReplayBlock
   | CrossroadsReplayBlock
   | JieqiReplayBlock

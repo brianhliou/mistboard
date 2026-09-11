@@ -21,6 +21,7 @@ import { captureServerEvent } from './../analytics-server.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
 import { authCounters } from './../obs.js';
 import * as persistence from './../persistence.js';
+import { isProductionLikeRuntime } from './../server-policy.js';
 import { readJsonBody, requireMethod, requirePersistence, writeJson } from './lib.js';
 
 // Per-IP rate limits, defense-in-depth alongside the per-challenge attempt cap.
@@ -30,7 +31,23 @@ import { readJsonBody, requireMethod, requirePersistence, writeJson } from './li
 const authConfirmRateWindowMs = 10 * 60 * 1000;
 const authConfirmRatePerWindow = 10;
 const authStartRateWindowMs = 10 * 60 * 1000;
-const authStartRatePerWindow = 5;
+// 5 per ten minutes in a real runtime. Raised OUTSIDE production only, where
+// this limiter is guarding nothing: dev returns the login code in the HTTP
+// response and sends no email, so there is neither a secret to brute force nor
+// an inbox to flood. What it does block locally is any script that signs in
+// twice inside the window, which is every seeder (seed-duck-xiangqi-games-study,
+// seed-fortress-xiangqi-games-study, the study-i18n scripts).
+//
+// Gated on isProductionLikeRuntime() rather than devAuthCodesEnabled: that flag
+// can be forced on in a production-like runtime with MISTBOARD_DEV_AUTH_CODES,
+// and an env var must not be able to relax a live rate limiter.
+//
+// NOT exemptible by account, and that is not an oversight. This check runs
+// before the request body is read, so the server does not yet know who is
+// asking - and even after reading it, the email is an unauthenticated CLAIM.
+// Keying an exemption off it would hand unlimited code-minting to anyone who
+// types an admin's address, which is the one address most worth attacking.
+const authStartRatePerWindow = isProductionLikeRuntime() ? 5 : 200;
 const authStartEmailRatePerWindow = 3;
 const authStartResendCooldownMs = 30 * 1000;
 const authRateBucketRetentionMs = 24 * 60 * 60 * 1000;

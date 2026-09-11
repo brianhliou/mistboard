@@ -2,6 +2,7 @@
   "gameSpecIds": [
     "xiangqi",
     "fortress-xiangqi",
+    "duck-xiangqi",
     "banqi",
     "jungle",
     "jungle-flip",
@@ -16,7 +17,8 @@
     "jungle": "MISTBOARD_JUNGLE_ENABLED",
     "jungle-flip": "MISTBOARD_JUNGLE_FLIP_ENABLED",
     "jieqi": "MISTBOARD_JIEQI_ENABLED",
-    "dark-xiangqi": "MISTBOARD_DARK_XIANGQI_ENABLED"
+    "dark-xiangqi": "MISTBOARD_DARK_XIANGQI_ENABLED",
+    "duck-xiangqi": "MISTBOARD_DUCK_XIANGQI_ENABLED"
   },
   "productAdditionalServerFlags": ["MISTBOARD_CORRESPONDENCE_ENABLED"],
   "labAdditionalServerFlags": [

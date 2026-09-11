@@ -48,11 +48,11 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'fog-openings',
   'fog-chess-concepts',
   'shogi',
-  // Duck Xiangqi is behind a server flag with no bot and no games, so a public
-  // rules page would advertise something nobody can start. Publishing is three
-  // one-line changes made together: status 'published' here and in
-  // articles-data, and the 'duck-xiangqi' switch in variant-public-surfaces.
-  'duck-xiangqi',
+  // The Duck Xiangqi launch post, cut before launch rather than shipped. It
+  // restated the rules page at lower resolution and would have competed with it
+  // for the same query on our own domain. Kept in the tree as a draft; the
+  // rules page is the one public surface for the variant.
+  'duck-xiangqi-build',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -178,6 +178,12 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.',
+  },
+  'duck-xiangqi-build': {
+    title: 'Duck Xiangqi Is Live',
+    kind: 'article',
+    description:
+      'Duck Chess on the 9 by 10 board. Chess.com made the original an official variant in 2022; nobody had carried it to xiangqi, where four different rules ask whether a point is occupied instead of one.',
   },
   'duck-xiangqi': {
     title: 'Duck Xiangqi Rules',

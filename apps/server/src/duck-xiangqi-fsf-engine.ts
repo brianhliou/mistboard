@@ -38,7 +38,12 @@ export const DUCK_XIANGQI_DEFAULT_ENGINE_ID = 'fairy-stockfish-duck-xiangqi-leve
 // (the .ini, the tier table, the pinned ref, or the patch).
 // 0.1.0: first live ladder — eight node-anchored classical rungs on the patched
 //        duck binary, warm sessions, no EvE entry and no published ratings.
-export const DUCK_XIANGQI_FSF_ENGINE_VERSION = '0.1.0';
+// 0.2.0: D5 changed. The generals may now face, and a general may fly down a
+//        clear file and capture the other one. Same ref, new patch: the
+//        prohibition went back to upstream's `count<KING>()` guard and the
+//        capture is generated in movegen instead. This plays a different game
+//        from 0.1.0, so any 0.1.0 result is not comparable.
+export const DUCK_XIANGQI_FSF_ENGINE_VERSION = '0.2.0';
 
 /**
  * Short form of the Fairy-Stockfish commit prod builds for this provider. MUST
@@ -55,13 +60,14 @@ export const DUCK_XIANGQI_FSF_ENGINE_REF = '1b5bdd40';
 /**
  * sha256 of fairy-stockfish-duck-xiangqi.patch, the second half of this engine's
  * build identity. The patch raises MAX_MOVES to 8192, lowers MAX_PLY to 100, and
- * teaches the flying-general rule about a non-royal general (walling forbids a
- * royal king, so unpatched FSF switches that rule off on itself). Editing it
- * without moving this digest would let a rated identity silently change how it
- * plays; the ref test is what catches that.
+ * generates the flying general as a CAPTURE when the general is non-royal
+ * (walling forbids a royal king, and upstream only knows the rule as a
+ * prohibition, which needs check to make sense). Editing it without moving this
+ * digest would let a rated identity silently change how it plays; the ref test
+ * is what catches that.
  */
 export const DUCK_XIANGQI_FSF_PATCH_SHA256 =
-  'ced7beef2270e36b8d6324fe96c23d121e7bd59985ad073aee60bfbca5d628a5';
+  'ae6ca490b17d452026c1b8ea5a0b0efa744c42eac91c2b5fd18c6205f2a11f4e';
 
 export type DuckXiangqiEngineTier = {
   id: string;

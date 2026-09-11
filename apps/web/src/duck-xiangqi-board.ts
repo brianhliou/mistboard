@@ -40,6 +40,7 @@ import {
   xiangqiSurfacePalaceBands,
   xiangqiSurfaceRiver,
 } from './xiangqi-board-surface.js';
+import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { duckPieceMarks, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
 // This board draws no coordinate labels, so it must not reserve their gutter -
@@ -139,7 +140,17 @@ function pieceLayer(
     const size = XIANGQI_LIVE_PIECE_SIZE;
     out.push(
       `<g class="xq-piece-slot" data-piece-square="${square}" transform="translate(${p.x - size / 2},${p.y - size / 2})">`,
-      renderXiangqiPiece(piece as never, { size, pieceSet } as never),
+      // A soldier past the river draws the veteran art. This is the standard
+      // 9x10 river, so the standard predicate applies (NOT the fortress one,
+      // whose board is 7x8 and disagrees on rank 5 for both colours).
+      renderXiangqiPiece(
+        piece as never,
+        {
+          size,
+          pieceSet,
+          crossed: drawsCrossedSoldier(piece, coordOf(square).rank),
+        } as never,
+      ),
       `</g>`,
     );
   }
@@ -151,7 +162,22 @@ function targetLayer(
   phase: DuckXiangqiBoardPhase,
   perspective: Color,
   layout: XiangqiBoardLayout,
+  duckAnywhere: boolean,
+  board: DuckXiangqiPlayerView['board'],
 ): string {
+  // Phase two, unconstrained: paint NOTHING. The duck may go to any empty point,
+  // so a dot on each is 58 marks that say "anywhere" - it buries the position
+  // under decoration and tells the player something they already know from the
+  // notice. The hover ghost answers "where exactly?" one point at a time.
+  //
+  // The dots used to survive for one case: generals facing down an open file,
+  // where the duck was the only thing keeping the position legal and had to
+  // land on the segment between them. D5 changed on 2026-09-10 and that case is
+  // gone, so `duckAnywhere` is now true for every duck phase and this always
+  // returns early. The guard stays because it is derived from the kernel's own
+  // answer rather than assumed: if a future rule constrains the duck again, the
+  // dots come back on their own instead of silently staying hidden.
+  if (phase.kind === 'duck' && duckAnywhere) return '';
   // Phase two is marked differently on purpose. A player who has just moved a
   // piece and now sees dots everywhere needs to know instantly that these are
   // duck squares, not more moves — otherwise the second click feels like the
@@ -163,11 +189,103 @@ function targetLayer(
   return targets
     .map((square) => {
       const p = point(square, perspective, layout);
-      return phase.kind === 'duck'
-        ? `<circle class="dkx-target--duck" cx="${p.x}" cy="${p.y}" r="10"/>`
+      if (phase.kind === 'duck') {
+        return `<circle class="dkx-target--duck" cx="${p.x}" cy="${p.y}" r="10"/>`;
+      }
+      // A CAPTURE is a ring around the piece, not a dot under it. The target
+      // layer draws below the pieces, so a dot on an occupied point is hidden by
+      // the piece standing there — which made capturing the general look
+      // impossible in a real game. Same two marks the standard board uses.
+      return board[square] !== undefined
+        ? `<circle class="xq-live-hint-capture" cx="${p.x}" cy="${p.y}" r="28"/>`
         : `<circle class="xq-live-hint-dot" cx="${p.x}" cy="${p.y}" r="7"/>`;
     })
     .join('');
+}
+
+/**
+ * The duck as it would look if placed here: the real token at half weight.
+ *
+ * A ghost rather than a dot because the duck is a large disc, and "may I put it
+ * here" is really "what will the board look like after I do" - a 10px dot does
+ * not answer that on a board where the duck blocks the horse's leg and screens
+ * cannons.
+ */
+export function duckXiangqiGhostSvg(
+  square: DuckXiangqiSquare,
+  perspective: Color,
+  layout: XiangqiBoardLayout,
+  pieceSet: XiangqiPieceSet | undefined,
+): string {
+  const p = point(square, perspective, layout);
+  const size = XIANGQI_LIVE_PIECE_SIZE;
+  const resolved = pieceSet ?? readStoredXiangqiPieceSet();
+  return [
+    `<g class="dkx-duck-ghost-token" transform="translate(${p.x - size / 2},${p.y - size / 2}) scale(${size / 100})">`,
+    duckPieceMarks(resolved),
+    `</g>`,
+  ].join('');
+}
+
+/**
+ * Paint the ghost under the cursor while a duck placement is pending.
+ *
+ * Writes straight into the ghost layer instead of re-rendering: a pointermove
+ * re-render would rebuild ninety hit areas and every piece on every mouse
+ * twitch. A full render clears the layer on its own, which is what should happen
+ * when the phase ends.
+ *
+ * Hover is an ENHANCEMENT, never the mechanism: the click still places the duck,
+ * so a touch device loses the preview and keeps the game. Returns a teardown.
+ */
+export function installDuckXiangqiGhost(opts: {
+  board: HTMLElement;
+  /** True only while a duck placement is pending and this seat may act. */
+  active: () => boolean;
+  isTarget: (square: DuckXiangqiSquare) => boolean;
+  perspective: () => Color;
+  layout: () => XiangqiBoardLayout;
+  pieceSet: () => XiangqiPieceSet | undefined;
+}): () => void {
+  let painted: DuckXiangqiSquare | null = null;
+
+  const layer = (): Element | null => opts.board.querySelector('.dkx-duck-ghost');
+
+  function clear(): void {
+    painted = null;
+    const host = layer();
+    if (host) host.innerHTML = '';
+  }
+
+  function onMove(event: PointerEvent): void {
+    if (!opts.active()) {
+      if (painted !== null) clear();
+      return;
+    }
+    const cell = (event.target as Element | null)?.closest?.('[data-square]');
+    const square = cell?.getAttribute('data-square') as DuckXiangqiSquare | undefined;
+    if (!square || !opts.isTarget(square)) {
+      if (painted !== null) clear();
+      return;
+    }
+    if (square === painted) return;
+    const host = layer();
+    if (!host) return;
+    painted = square;
+    host.innerHTML = duckXiangqiGhostSvg(
+      square,
+      opts.perspective(),
+      opts.layout(),
+      opts.pieceSet(),
+    );
+  }
+
+  opts.board.addEventListener('pointermove', onMove);
+  opts.board.addEventListener('pointerleave', clear);
+  return () => {
+    opts.board.removeEventListener('pointermove', onMove);
+    opts.board.removeEventListener('pointerleave', clear);
+  };
 }
 
 function lastMoveLayer(
@@ -247,6 +365,15 @@ export function duckXiangqiBoardSvg(
         }
       : view;
 
+  // "Anywhere empty" vs a real constraint. Derived rather than passed so it
+  // cannot drift from what the kernel actually returned: the duck's unconstrained
+  // set is every empty point of the post-move board except its own square, so an
+  // equal count means the target list carries no information.
+  const emptyAfterMove = SQUARES.filter(
+    (square) => shown.board[square] === undefined && square !== view.duck,
+  ).length;
+  const duckAnywhere = state.phase.kind === 'duck' && state.targets.length >= emptyAfterMove;
+
   return `
     <svg class="xq-live-svg xq-live-svg--${layout} dkx-live-svg xq-surface xq-surface--${layout}" data-xiangqi-layout="${layout}" viewBox="${viewBox}" xmlns="http://www.w3.org/2000/svg">
       <rect class="xq-live-bg" x="${vb.minX}" y="${vb.minY}" width="${vb.width}" height="${vb.height}"/>
@@ -256,9 +383,10 @@ export function duckXiangqiBoardSvg(
       <g class="xq-live-river" aria-hidden="true" pointer-events="none">${xiangqiSurfaceRiver(DUCK_SURFACE, perspective, layout)}</g>
       <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout)}</g>
       <g class="xq-live-selection">${selectionSvg}</g>
-      <g class="dkx-live-targets">${state.interactive ? targetLayer(state.targets, state.phase, perspective, layout) : ''}</g>
+      <g class="dkx-live-targets">${state.interactive ? targetLayer(state.targets, state.phase, perspective, layout, duckAnywhere, shown.board) : ''}</g>
       <g class="xq-live-pieces">${pieceLayer(shown, perspective, layout, state.pieceSet)}</g>
       <g class="dkx-live-duck">${duckLayer(view.duck, perspective, layout, state.pieceSet)}</g>
+      <g class="dkx-duck-ghost" aria-hidden="true" pointer-events="none"></g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerBand(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${(state.arrows ?? [])
         .map((arrow) => xiangqiArrowSvg(arrow, perspective, layout))

@@ -10,6 +10,21 @@
 // version suffix at all.
 
 export const VARIANT_SMOKE_CONFIGS = {
+  duck: {
+    name: 'duck',
+    label: 'Duck',
+    usage: 'npm run prod:smoke:duck -- [options]',
+    gameSpecId: 'duck-xiangqi',
+    // Higher than the fortress ceiling on purpose. This engine is its own
+    // patched Fairy-Stockfish build with no NNUE, searching a root roughly
+    // 2,554 turns wide against xiangqi's 44, so a healthy first move here is
+    // slower than a healthy first move anywhere else on the site.
+    defaultTimeoutMs: 60_000,
+    // Prefix-matched for the same reason as fortress: the rung the product
+    // hands a player is a knob (landing-bot-policy.ts), and pinning one level
+    // makes this smoke fail when that knob moves.
+    engineSeat: { prefix: 'fairy-stockfish-duck-xiangqi-' },
+  },
   fortress: {
     name: 'fortress',
     label: 'Fortress',

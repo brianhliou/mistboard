@@ -265,63 +265,83 @@ test('the elephant still cannot cross the river', () => {
   assert.ok(moves.includes('a3'));
 });
 
-// ── D5 / D5a: the facing rule ──────────────────────────────────────────────
+// ── D5: the flying general, as a capture ───────────────────────────────────
 
-test('(D5) a piece move may not leave the generals facing', () => {
-  const state: DuckXiangqiGameState = {
-    id: 'facing',
-    board: boardOf([
-      ['e1', 'Rk'],
-      ['e10', 'Bk'],
-      ['e5', 'Rs'],
-    ]),
-    duck: 'a1',
-    status: { type: 'playing', turn: 'red' },
-    moveNumber: 1,
-    positionCounts: {},
-    progressPlies: 0,
-  };
-  const turns = getDuckXiangqiLegalTurns(state);
-  // The soldier on e5 is the only thing blocking the file, so it may not step
-  // off it. e6 keeps it on the file and is fine.
-  assert.ok(turns.some((t) => t.from === 'e5' && t.to === 'e6'));
-  assert.ok(!turns.some((t) => t.from === 'e5' && t.to === 'd5'));
-  assert.ok(!turns.some((t) => t.from === 'e5' && t.to === 'f5'));
+test('(D5) the general flies down a clear file and takes the enemy general', () => {
+  const board = boardOf([
+    ['e1', 'Rk'],
+    ['e10', 'Bk'],
+  ]);
+  // The whole rule in one assertion: nothing on file e, so the move exists.
+  assert.ok(duckXiangqiMovesFrom(board, 'a1', 'e1').includes('e10'));
+  assert.ok(duckXiangqiMovesFrom(board, 'a1', 'e10').includes('e1'), 'and it is symmetric');
+
+  // It is the only way a general leaves its palace, so it must not be mistaken
+  // for a general that can now roam: e5 is on the file and is NOT a destination.
+  assert.ok(!duckXiangqiMovesFrom(board, 'a1', 'e1').includes('e5'));
 });
 
-test('(D5a) the duck may not open the general file either', () => {
-  // The duck is the ONLY thing between the generals, so it is pinned to the
-  // open segment. This is the motif that exists in neither parent game.
+test('(D5) anything on the file stops the flight, the duck included', () => {
+  const board = boardOf([
+    ['e1', 'Rk'],
+    ['e10', 'Bk'],
+  ]);
+  assert.ok(
+    !duckXiangqiMovesFrom(board, 'e5', 'e1').includes('e10'),
+    'the duck blocks it (D1), which is what makes the duck worth placing there',
+  );
+  const withPiece = boardOf([
+    ['e1', 'Rk'],
+    ['e10', 'Bk'],
+    ['e5', 'Bs'],
+  ]);
+  assert.ok(!duckXiangqiMovesFrom(withPiece, 'a1', 'e1').includes('e10'), 'so does a piece');
+});
+
+test('(D5) facing is now legal, and the duck is free to walk away from it', () => {
+  // REVISED 2026-09-10. This is the assertion that reversed: the duck used to be
+  // pinned to the open segment between the generals, and now it is not. Leaving
+  // the file open is a placement you are allowed to make and lose to.
   const board = boardOf([
     ['e1', 'Rk'],
     ['e10', 'Bk'],
     ['a1', 'Rr'],
   ]);
   const dests = duckXiangqiDuckDestinations(board, 'e5', 'a1', 'a2');
-  assert.ok(dests.length > 0);
-  for (const dest of dests) {
-    assert.ok(dest.startsWith('e'), `duck escaped the file to ${dest}`);
-  }
-  assert.ok(!dests.includes('e5'), 'and it still has to move');
+  assert.ok(dests.includes('i9'), 'the duck may abandon the file entirely');
+  assert.ok(dests.includes('e4'), 'or keep holding it');
+  assert.ok(!dests.includes('e5'), 'it still may never stand still (D7)');
+  // Every empty point, with no facing exception carved out of it: 90 points,
+  // less the three pieces, less the duck's own square.
+  assert.equal(dests.length, 86);
 });
 
-test('(D5a) the pinned duck is confined to the segment, NOT frozen', () => {
-  // Measured rather than assumed, because the design doc originally claimed the
-  // pin could leave a player with no legal turn at all. It cannot, and this is
-  // the test that says why: the generals are at most rank 3 and at least rank 8,
-  // so an open segment between them is ALWAYS at least four points long. The
-  // duck occupies one and can always slide to another.
-  //
-  // The corollary matters for D9: a pinned duck can never by itself cause
-  // stalemate, so stalemate here reduces to "the mover has no legal piece move",
-  // exactly as in xiangqi.
-  const board = boardOf([
-    ['e3', 'Rk'],
-    ['e8', 'Bk'],
-    ['a1', 'Rr'],
-  ]);
-  const dests = duckXiangqiDuckDestinations(board, 'e5', 'a1', 'a2');
-  assert.deepEqual(dests.sort(), ['e4', 'e6', 'e7']);
+test('(D5) walking the duck off the file hands the opponent the win', () => {
+  // The cost is real and immediate, which is the point of making it legal.
+  const state: DuckXiangqiGameState = {
+    id: 'facing-blunder',
+    board: boardOf([
+      ['e1', 'Rk'],
+      ['e10', 'Bk'],
+      ['a1', 'Rr'],
+    ]),
+    duck: 'e5',
+    status: { type: 'playing', turn: 'red' },
+    moveNumber: 1,
+    positionCounts: {},
+    progressPlies: 0,
+  };
+  const blunder = applyDuckXiangqiTurn(state, { from: 'a1', to: 'a2', duckTo: 'i9' });
+  assert.equal(blunder.status.type, 'playing', 'the game does not end on its own');
+
+  const reply = getDuckXiangqiLegalTurns(blunder).find((t) => t.from === 'e10' && t.to === 'e1');
+  assert.ok(reply, 'black may now fly the length of the board and take the general');
+  assert.equal(reply?.duckTo, null, 'a general capture ends the turn early (D4)');
+  assert.deepEqual(applyDuckXiangqiTurn(blunder, reply!).status, {
+    type: 'finished',
+    winner: 'black',
+    reason: 'general-captured',
+  });
 });
 
 test('every legal piece move leaves at least one legal duck destination', () => {
@@ -388,10 +408,17 @@ test('(D4) capturing the general wins immediately, and the duck does not move', 
   };
   const turns = getDuckXiangqiLegalTurns(state);
   const kill = turns.filter((t) => t.to === 'd10');
-  assert.equal(kill.length, 1, 'exactly one turn, with no duck placement');
-  assert.equal(kill[0].duckTo, null);
+  // TWO ways to take it since D5 changed, and that is the point: the chariot
+  // down the a-file and across, and the general itself flying up the d-file.
+  // Neither carries a duck placement.
+  assert.deepEqual(
+    kill.map((t) => t.from).sort(),
+    ['a10', 'd1'],
+    'the chariot and the flying general',
+  );
+  for (const turn of kill) assert.equal(turn.duckTo, null);
 
-  const next = applyDuckXiangqiTurn(state, kill[0]);
+  const next = applyDuckXiangqiTurn(state, kill.find((t) => t.from === 'a10')!);
   assert.equal(next.status.type, 'finished');
   assert.deepEqual(next.status, {
     type: 'finished',
@@ -401,46 +428,66 @@ test('(D4) capturing the general wins immediately, and the duck does not move', 
   assert.equal(next.duck, 'b3', 'the duck stays put on a winning turn');
 });
 
-test('(D5a) the duck may NOT rescue a piece move that opens the general file', () => {
-  // The strict reading, and the one the design intends: the xiangqi move has to
-  // be legal on its own. Red's general on d1 could capture the black soldier on
-  // d2, but that leaves the generals facing down the d-file, and no duck
-  // placement makes it legal - not even the seven points that would re-block
-  // the file after the fact.
-  //
-  // The looser reading (check facing only once, at the end of the turn) was
-  // implemented first and rejected. It permits the generals to be momentarily
-  // facing between the two halves of a turn, which makes "make a legal xiangqi
-  // move, then move the duck" untrue as a description of the rules.
+test('(D5) the duck can rescue a piece move that opens the general file', () => {
+  // REVISED 2026-09-10, and this test reversed with the rule. Red's general on
+  // d1 takes the black soldier on d2, which opens the d-file between the
+  // generals. That used to be illegal outright. Now it is a legal move that
+  // loses on the spot UNLESS the duck lands back on the file, which it may,
+  // because the two halves are judged on the position the whole turn produces.
   const board = boardOf([
     ['d1', 'Rk'],
     ['e1', 'Rs'],
     ['d2', 'Bs'],
     ['d10', 'Bk'],
   ]);
+  assert.ok(duckXiangqiMovesFrom(board, 'e2', 'd1').includes('d2'), 'the capture is legal now');
+
+  const dests = duckXiangqiDuckDestinations(board, 'e2', 'd1', 'd2');
+  assert.ok(dests.includes('d5'), 'and the duck may re-block the file it just opened');
+  assert.ok(dests.includes('a1'), 'or go anywhere else and lose the general');
+
+  // The rescue is a real choice, not an automatic one: proving it means showing
+  // the un-rescued line actually loses.
+  const state: DuckXiangqiGameState = {
+    id: 'rescue',
+    board,
+    duck: 'e2',
+    status: { type: 'playing', turn: 'red' },
+    moveNumber: 1,
+    positionCounts: {},
+    progressPlies: 0,
+  };
+  const rescued = applyDuckXiangqiTurn(state, { from: 'd1', to: 'd2', duckTo: 'd5' });
   assert.ok(
-    duckXiangqiPseudoMovesFrom(board, 'e2', 'd1').includes('d2'),
-    'the capture is geometrically available',
+    !getDuckXiangqiLegalTurns(rescued).some((t) => t.from === 'd10' && t.to === 'd2'),
+    'blocked: black cannot fly through the duck',
   );
+  const exposed = applyDuckXiangqiTurn(state, { from: 'd1', to: 'd2', duckTo: 'a1' });
   assert.ok(
-    !duckXiangqiMovesFrom(board, 'e2', 'd1').includes('d2'),
-    'and the facing rule removes it before the duck is ever consulted',
+    getDuckXiangqiLegalTurns(exposed).some((t) => t.from === 'd10' && t.to === 'd2'),
+    'unblocked: black flies down and takes the general',
   );
 });
 
 /**
- * A real stalemate, and the facing rule is what builds it.
+ * A real stalemate, rebuilt 2026-09-10.
  *
- *   - Red's general on d1 has exactly two palace neighbours, d2 and e1 (c1 is
- *     outside the palace).
- *   - d2 holds a black soldier the general could capture - there is no check
- *     here (D4) - except that capturing leaves the generals facing, which D5
- *     forbids outright.
- *   - e1 holds red's own soldier, whose only move is forward to e2.
- *   - e2 holds the DUCK (D1).
+ * The old one was made of the facing PROHIBITION: red's general was boxed in
+ * because the one capture available to it would have left the generals facing.
+ * That rule is gone, so the position had to be rebuilt out of rules that still
+ * exist. It is now made of blocking, which is the variant's actual subject.
  *
- * Red has no legal piece move, therefore no legal turn. All three of D1, D4 and
- * D5 are load-bearing.
+ *   - Red's general on d1 has exactly two palace neighbours, e1 and d2 (c1 is
+ *     outside the palace), and both hold red's own soldiers.
+ *   - The soldier on d2 also blocks the general's flight up the d-file, so the
+ *     move the new D5 grants it is unavailable too.
+ *   - The d2 soldier's only move is forward to d3, which is red's own advisor.
+ *   - The d3 advisor's diagonals are e2, which is the DUCK, and e4, which is
+ *     outside the palace.
+ *   - The e1 soldier's only move is forward to e2, the duck again.
+ *
+ * Red has no legal piece move, therefore no legal turn. Every piece is stopped
+ * by ordinary blocking, and the duck is the keystone: it stops two of them.
  */
 function stalematePosition(): DuckXiangqiGameState {
   return {
@@ -448,7 +495,8 @@ function stalematePosition(): DuckXiangqiGameState {
     board: boardOf([
       ['d1', 'Rk'],
       ['e1', 'Rs'],
-      ['d2', 'Bs'],
+      ['d2', 'Rs'],
+      ['d3', 'Ra'],
       ['d10', 'Bk'],
       ['a5', 'Br'],
     ]),
@@ -461,19 +509,18 @@ function stalematePosition(): DuckXiangqiGameState {
 }
 
 test('(D9) a position with no legal turn exists, and each rule is load-bearing', () => {
-  assert.equal(getDuckXiangqiLegalTurns(stalematePosition()).length, 0);
+  const stuck = stalematePosition();
+  assert.equal(getDuckXiangqiLegalTurns(stuck).length, 0);
+  // Named individually so a future rules change says WHICH piece came loose.
+  for (const square of ['d1', 'e1', 'd2', 'd3'] as DuckXiangqiSquare[]) {
+    assert.deepEqual(duckXiangqiMovesFrom(stuck.board, stuck.duck, square), [], `${square} moved`);
+  }
 
-  // D1: move the duck off e2 and red's soldier is free.
-  const duckAway = { ...stalematePosition(), duck: 'i5' as DuckXiangqiSquare };
-  assert.ok(getDuckXiangqiLegalTurns(duckAway).some((t) => t.from === 'e1' && t.to === 'e2'));
-
-  // D5: block the d-file further up and the general may capture on d2 after all.
-  const base = stalematePosition();
-  const fileBlocked: DuckXiangqiGameState = {
-    ...base,
-    board: { ...base.board, d6: { color: 'black', role: 'soldier' } },
-  };
-  assert.ok(getDuckXiangqiLegalTurns(fileBlocked).some((t) => t.from === 'd1' && t.to === 'd2'));
+  // D1 is the keystone: lift the duck off e2 and two pieces breathe again.
+  const duckAway = { ...stalematePosition(), duck: 'i9' as DuckXiangqiSquare };
+  assert.deepEqual(duckXiangqiMovesFrom(duckAway.board, duckAway.duck, 'e1'), ['e2']);
+  assert.deepEqual(duckXiangqiMovesFrom(duckAway.board, duckAway.duck, 'd3'), ['e2']);
+  assert.ok(getDuckXiangqiLegalTurns(duckAway).length > 0);
 });
 
 test('(D9) stalemate is a LOSS for the side to move, the opposite of Duck Chess', () => {
@@ -487,7 +534,7 @@ test('(D9) stalemate is a LOSS for the side to move, the opposite of Duck Chess'
   // Black moves anything and parks the duck on e2, which closes the box.
   const before: DuckXiangqiGameState = {
     ...stalematePosition(),
-    duck: 'i5',
+    duck: 'i9',
     status: { type: 'playing', turn: 'black' },
   };
   assert.ok(getDuckXiangqiLegalTurns(before).length > 0, 'red is not stuck yet');

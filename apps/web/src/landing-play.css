@@ -794,7 +794,18 @@
   grid-template-columns: repeat(4, minmax(0, 1fr));
   grid-auto-rows: minmax(102px, auto);
   align-items: stretch;
-  overflow: hidden;
+  /* Caps the picker at THREE rows and scrolls past that, instead of growing the
+     dialog a row at a time as the catalog does. The dialog is
+     max-height: min(720px, 100vh - 36px) and the picker is only its first
+     section: at four rows the time controls and the Play button start getting
+     pushed under the fold on a laptop, which is the one control that must never
+     move. Three rows is 12 variants; the fourth row scrolls into view.
+     `overflow-y` rather than `overflow` so the horizontal clip that squares off
+     the cell borders is unchanged. */
+  max-height: calc(3 * 102px);
+  overflow-x: hidden;
+  overflow-y: auto;
+  overscroll-behavior: contain;
   border: 1px solid var(--site-border);
   border-radius: 0;
   background: var(--site-panel-soft);

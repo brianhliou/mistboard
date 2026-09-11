@@ -1064,6 +1064,7 @@ export async function mountTenantWatchReplay<
       boardOrientation = target.orientation;
       sync();
     },
+    bottomSeat: () => (boardOrientation === 'red' ? 'first' : 'second'),
     availablePovs: () => {
       if (!activePostgame) return [];
       const kinds = new Set<'white' | 'truth' | 'black'>();

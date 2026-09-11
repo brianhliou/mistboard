@@ -47,17 +47,11 @@ export const ANALYSIS_VARIANTS: readonly AnalysisVariant[] = [
   entry('banqi'),
   entry('jieqi'),
   entry('fortress-xiangqi'),
+  entry('duck-xiangqi'),
   entry('dark-xiangqi'),
   entry('dark-chess'),
   entry('jungle'),
   entry('jungle-flip'),
-  // Unlisted in CANONICAL_VARIANT_ORDER, so it sorts last. ANALYSIS ONLY, with
-  // no board editor: the editor's model is a piece map keyed by square, and the
-  // duck is not a piece (it belongs to neither colour, has no role, and rides
-  // the seventh FEN field), so an EditorSpec would hand back every position
-  // with the duck silently dropped. EDITOR_VARIANT_IDS therefore omits it and
-  // /editor/duck-xiangqi 404s.
-  entry('duck-xiangqi'),
 ];
 
 export function analysisVariantLabel(id: AnalysisVariantId): string {

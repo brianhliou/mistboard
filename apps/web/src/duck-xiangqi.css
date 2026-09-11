@@ -40,3 +40,11 @@
   stroke: rgb(138 100 0 / 70%);
   stroke-width: 1;
 }
+
+/* The duck as it would land, under the cursor. Half weight so it reads as a
+   proposal and never as the real token: the duck already on the board is the
+   one that blocks, and the two must not be confusable at a glance. */
+.dkx-duck-ghost-token {
+  opacity: 0.45;
+  pointer-events: none;
+}

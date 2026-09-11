@@ -24,11 +24,11 @@ const STUDY_VARIANT_IDS = [
   'banqi',
   'jieqi',
   'fortress-xiangqi',
+  'duck-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',
-  'duck-xiangqi',
 ] as const satisfies readonly GameSpecId[];
 
 export type StudyVariantId = (typeof STUDY_VARIANT_IDS)[number];

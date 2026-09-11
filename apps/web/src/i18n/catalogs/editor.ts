@@ -10,6 +10,7 @@ export const EN_EDITOR = {
   'editor.brushDelete': 'Delete pieces',
   'editor.faceDownTile': 'Face-down tile',
   'editor.darkPiece': 'Dark piece',
+  'editor.duck': 'Duck',
   'editor.sideToMove': 'Side to move',
   'editor.opening': 'Opening (no ink bound)',
   'editor.colorRed': 'Red',
@@ -42,6 +43,8 @@ export const EN_EDITOR = {
   'editor.poolMismatchColor':
     'The {color} face-down pieces on the board ({tiles}) must match the {color} pool ({pieces}).',
   'editor.jieqiHomeOnly': 'A dark {color} piece can only stand on a {color} home square.',
+  'editor.duckOnPiece': 'The duck cannot share a point with a piece.',
+  'editor.pieceOnDuck': 'A piece cannot stand on the duck.',
   'editor.role.general': 'General',
   'editor.role.advisor': 'Advisor',
   'editor.role.elephant': 'Elephant',
