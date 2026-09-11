@@ -18,6 +18,12 @@ import {
   readoutSnapshotKey,
   SUPPORTED_MISTBOARD_READOUT_SCHEMA_VERSIONS,
 } from './mistboard-readout.js';
+import {
+  COUNTED_USER,
+  countedAbortedGame,
+  countedAccountSeat,
+  countedHumanGame,
+} from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
 import {
@@ -27,6 +33,13 @@ import {
 import { xiangqiEditorialCandidateSignals } from './xiangqi-puzzle-editorial-ranking.js';
 
 type Queryable = Pick<pg.Pool, 'query'>;
+
+// Shared counted-game filter (persistence-counted-games.ts): completed
+// pvp/pve, no seat held by a stats-excluded account. Fragments assume
+// `games g` and `game_participants p`.
+const COUNTED_GAME = countedHumanGame('g');
+const COUNTED_ABORTED = countedAbortedGame('g');
+const COUNTED_SEAT = countedAccountSeat('p');
 
 export async function generateMistboardReadout(input: {
   trigger: MistboardReadoutTrigger;
@@ -266,34 +279,35 @@ async function collectProduct(db: Queryable, now: Date): Promise<MistboardReadou
       aborted_games: number;
     }>(
       `SELECT
-         (SELECT count(*) FROM users WHERE created_at >= $1 AND created_at < $2)::int
-           AS accounts_created,
-         (SELECT count(*) FROM users WHERE created_at >= $3 AND created_at < $1)::int
-           AS previous_accounts_created,
-         (SELECT count(*) FROM games
-            WHERE status = 'completed' AND mode IN ('pvp', 'pve')
-              AND ended_at >= $1 AND ended_at < $2)::int AS completed_games,
-         (SELECT count(*) FROM games
-            WHERE status = 'completed' AND mode IN ('pvp', 'pve')
-              AND ended_at >= $3 AND ended_at < $1)::int AS previous_completed_games,
-         (SELECT count(*) FROM games
-            WHERE status = 'aborted' AND mode IN ('pvp', 'pve')
-              AND ended_at >= $1 AND ended_at < $2)::int AS aborted_games`,
+         (SELECT count(*) FROM users WHERE ${COUNTED_USER}
+            AND created_at >= $1 AND created_at < $2)::int AS accounts_created,
+         (SELECT count(*) FROM users WHERE ${COUNTED_USER}
+            AND created_at >= $3 AND created_at < $1)::int AS previous_accounts_created,
+         (SELECT count(*) FROM games g
+            WHERE ${COUNTED_GAME}
+              AND g.ended_at >= $1 AND g.ended_at < $2)::int AS completed_games,
+         (SELECT count(*) FROM games g
+            WHERE ${COUNTED_GAME}
+              AND g.ended_at >= $3 AND g.ended_at < $1)::int AS previous_completed_games,
+         (SELECT count(*) FROM games g
+            WHERE ${COUNTED_ABORTED}
+              AND g.ended_at >= $1 AND g.ended_at < $2)::int AS aborted_games`,
       [periodStart, periodEnd, previousPeriodStart],
     ),
     db.query<{ mode: string; count: number }>(
-      `SELECT mode, count(*)::int AS count
-       FROM games
-       WHERE status = 'completed' AND ended_at >= $1 AND ended_at < $2
-       GROUP BY mode ORDER BY mode`,
+      `SELECT g.mode, count(*)::int AS count
+       FROM games g
+       WHERE ((${COUNTED_GAME}) OR (g.status = 'completed' AND g.mode = 'eve'))
+         AND g.ended_at >= $1 AND g.ended_at < $2
+       GROUP BY g.mode ORDER BY g.mode`,
       [periodStart, periodEnd],
     ),
     db.query<{ variant: string; count: number }>(
-      `SELECT variant, count(*)::int AS count
-       FROM games
-       WHERE status = 'completed' AND mode IN ('pvp', 'pve')
-         AND ended_at >= $1 AND ended_at < $2
-       GROUP BY variant ORDER BY count DESC, variant`,
+      `SELECT g.variant, count(*)::int AS count
+       FROM games g
+       WHERE ${COUNTED_GAME}
+         AND g.ended_at >= $1 AND g.ended_at < $2
+       GROUP BY g.variant ORDER BY count DESC, g.variant`,
       [periodStart, periodEnd],
     ),
     collectPlayers(db, { periodStart, periodEnd, previousPeriodStart }),
@@ -346,15 +360,13 @@ async function collectPlayers(
        SELECT DISTINCT p.subject_type, p.subject_id
        FROM game_participants p
        JOIN games g ON g.room_id = p.game_id
-       WHERE p.subject_type = 'user' AND p.subject_id IS NOT NULL
-         AND g.status = 'completed' AND g.mode IN ('pvp', 'pve')
+       WHERE ${COUNTED_SEAT} AND ${COUNTED_GAME}
          AND g.ended_at >= $1 AND g.ended_at < $2
      ), previous_players AS (
        SELECT DISTINCT p.subject_type, p.subject_id
        FROM game_participants p
        JOIN games g ON g.room_id = p.game_id
-       WHERE p.subject_type = 'user' AND p.subject_id IS NOT NULL
-         AND g.status = 'completed' AND g.mode IN ('pvp', 'pve')
+       WHERE ${COUNTED_SEAT} AND ${COUNTED_GAME}
          AND g.ended_at >= $3 AND g.ended_at < $1
      )
      SELECT
@@ -366,20 +378,18 @@ async function collectPlayers(
           SELECT 1 FROM game_participants p
           JOIN games g ON g.room_id = p.game_id
           WHERE p.subject_type = c.subject_type AND p.subject_id = c.subject_id
-            AND g.status = 'completed' AND g.ended_at < $1
+            AND ${COUNTED_GAME} AND g.ended_at < $1
         ))::int AS returning_players,
        (SELECT count(DISTINCT (p.subject_type, p.subject_id))
           FROM game_participants p
           JOIN games g ON g.room_id = p.game_id
-          WHERE p.subject_type = 'user' AND p.subject_id IS NOT NULL
-            AND g.status = 'completed' AND g.mode IN ('pvp', 'pve')
+          WHERE ${COUNTED_SEAT} AND ${COUNTED_GAME}
             AND g.ended_at >= $2::timestamptz - INTERVAL '28 days'
             AND g.ended_at < $2)::int AS active_accounts_28d,
        (SELECT count(DISTINCT (p.subject_type, p.subject_id))
           FROM game_participants p
           JOIN games g ON g.room_id = p.game_id
-          WHERE p.subject_type = 'user' AND p.subject_id IS NOT NULL
-            AND g.status = 'completed' AND g.mode IN ('pvp', 'pve')
+          WHERE ${COUNTED_SEAT} AND ${COUNTED_GAME}
             AND g.ended_at >= $2::timestamptz - INTERVAL '56 days'
             AND g.ended_at < $2::timestamptz - INTERVAL '28 days')::int
          AS previous_active_accounts_28d`,

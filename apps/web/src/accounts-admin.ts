@@ -23,6 +23,7 @@ type AccountRow = {
   createdAt: string;
   lastSeenAt: string | null;
   closedAt: string | null;
+  statsExcluded?: boolean;
   gamesPlayed: number;
 };
 
@@ -422,6 +423,7 @@ function notesCell(account: AccountRow): HTMLTableCellElement {
   if (account.accountRole === 'admin') badges.push({ label: 'Admin' });
   if (account.title) badges.push({ label: account.title });
   if (account.patron) badges.push({ label: 'Patron' });
+  if (account.statsExcluded) badges.push({ label: 'Not counted in stats' });
   if (!account.emailVerified) badges.push({ label: 'Unverified', tone: 'warn' });
   if (account.profileVisibility !== 'public') {
     badges.push({ label: account.profileVisibility === 'private' ? 'Private' : 'Unlisted' });

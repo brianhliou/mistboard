@@ -127,6 +127,28 @@ definePersistenceTests('admin metrics', () => {
         { color: 'black', subjectType: 'engine-version', subjectId: 'engine-1' },
       ],
     });
+    // An operator account excluded from statistics: its week-3 game and the
+    // account itself leave every count, and the game shows up only as
+    // internal in the block that says what was left out.
+    await createUser({
+      id: 'user-op',
+      email: 'op@example.com',
+      emailVerifiedAt: now,
+      handle: 'op',
+      displayName: 'Op',
+      now: new Date('2026-07-21T09:30:00Z'),
+    });
+    await getPool().query(`UPDATE users SET stats_excluded_at = now() WHERE id = 'user-op'`);
+    await insertGame({
+      roomId: 'w3-internal',
+      variant: 'xiangqi',
+      mode: 'pvp',
+      endedAt: '2026-07-21T14:00:00Z',
+      participants: [
+        { color: 'white', subjectType: 'user', subjectId: 'user-op' },
+        { color: 'black', subjectType: 'guest', subjectId: 'guest-7' },
+      ],
+    });
     // A game after `now` is outside every window.
     await insertGame({
       roomId: 'future',
@@ -159,11 +181,18 @@ definePersistenceTests('admin metrics', () => {
     assert.ok(w1 && w2 && w3);
 
     assert.deepEqual(
-      [w1, w2, w3].map((w) => [w.humanGames, w.pvpGames, w.pveGames, w.guestGames, w.eveGames]),
+      [w1, w2, w3].map((w) => [
+        w.humanGames,
+        w.pvpGames,
+        w.pveGames,
+        w.guestGames,
+        w.eveGames,
+        w.internalGames,
+      ]),
       [
-        [1, 0, 1, 1, 0],
-        [1, 1, 0, 1, 1],
-        [2, 0, 2, 0, 0],
+        [1, 0, 1, 1, 0, 0],
+        [1, 1, 0, 1, 1, 0],
+        [2, 0, 2, 0, 0, 1],
       ],
     );
     // Guests have no subject id, so they are not people here: guest-1's
@@ -191,6 +220,7 @@ definePersistenceTests('admin metrics', () => {
       ],
     );
 
+    // user-op is not an account here, and its game is not a game.
     assert.equal(metrics.accounts, 2);
     assert.equal(metrics.humanGames, 5);
     assert.equal(metrics.activePlayers28d, 1);
@@ -202,6 +232,8 @@ definePersistenceTests('admin metrics', () => {
     assert.equal(metrics.engines.eveGames, 1);
     assert.equal(metrics.engines.importedGames, 1);
     assert.equal(metrics.engines.manualGames, 0);
+    assert.equal(metrics.engines.internalGames, 1);
+    assert.equal(metrics.engines.internalGamesLast7d, 1);
     assert.deepEqual(metrics.engines.eveByVariant, { 'dark-chess': 1 });
   });
 });

@@ -62,6 +62,7 @@ export type AdminMetricsWeek = {
   correspondenceSeeks: number;
   newPatrons: number;
   eveGames: number;
+  internalGames: number;
 };
 
 export type AdminMetrics = {
@@ -84,6 +85,8 @@ export type AdminMetrics = {
     eveGamesLast7d: number;
     importedGames: number;
     manualGames: number;
+    internalGames: number;
+    internalGamesLast7d: number;
     eveByVariant: Record<string, number>;
   };
 };
@@ -128,7 +131,7 @@ export async function mountMetrics(root: HTMLElement, options: { admin: boolean 
     const lede = document.createElement('p');
     lede.className = 'metrics-lede';
     lede.textContent =
-      'Every number above the Engines block is human play only: games between people or against a bot, counted from the database at game end, so Do Not Track visitors are included. Player counts are signed-in accounts: a guest seat carries no identity, so guests appear only as games with a guest seat. Weeks start on Monday; the last week is in progress.';
+      'Every number above the last block is visitor play only: games between people or against a bot, with no seat held by an account excluded from statistics, counted from the database at game end, so Do Not Track visitors are included. Player counts are signed-in accounts: a guest seat carries no identity, so guests appear only as games with a guest seat. Weeks start on Monday; the last week is in progress.';
     parts.push(lede);
     parts.push(...buildWeeklySections(admin, locale));
   }
@@ -377,15 +380,16 @@ function buildWeeklySections(admin: AdminMetrics, locale: Locale): HTMLElement[]
   ];
 }
 
-// Bot-vs-bot and the corpus modes, kept out of every player number above.
+// Bot-vs-bot, the corpus modes, and the operator's own games, kept out of
+// every number above.
 function buildEnginesSection(admin: AdminMetrics, locale: Locale): HTMLElement {
   const section = document.createElement('section');
   section.className = 'metrics-section metrics-engines-section';
-  section.append(sectionHeading('Engines and corpus'));
+  section.append(sectionHeading('Not counted above'));
   const note = document.createElement('p');
   note.className = 'metrics-section-note';
   note.textContent =
-    'Bot vs bot games are the engine ladder, and imported and manual games are corpus. None of them count as play anywhere above.';
+    "Bot vs bot games are the engine ladder, imported and manual games are corpus, and internal games have a seat held by an account excluded from statistics (the operator's own). None of them count as play anywhere above.";
   section.append(note);
 
   const grid = document.createElement('div');
@@ -396,6 +400,11 @@ function buildEnginesSection(admin: AdminMetrics, locale: Locale): HTMLElement {
       admin.engines.eveGames,
       `+${formatStatNumber(admin.engines.eveGamesLast7d)} this week`,
     ),
+    statCard(
+      'Internal',
+      admin.engines.internalGames,
+      `+${formatStatNumber(admin.engines.internalGamesLast7d)} this week`,
+    ),
     statCard('Imported', admin.engines.importedGames),
     statCard('Manual', admin.engines.manualGames),
   );
@@ -405,8 +414,11 @@ function buildEnginesSection(admin: AdminMetrics, locale: Locale): HTMLElement {
   section.append(
     buildWeeklyChart({
       weeks,
-      series: weeklySeries(admin, [{ key: 'eveGames', label: 'Bot vs bot' }]),
-      ariaLabel: 'Bot vs bot games completed per week',
+      series: weeklySeries(admin, [
+        { key: 'eveGames', label: 'Bot vs bot' },
+        { key: 'internalGames', label: 'Internal' },
+      ]),
+      ariaLabel: 'Bot vs bot and internal games completed per week',
       locale,
     }),
   );

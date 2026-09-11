@@ -67,6 +67,7 @@ const week = (weekStart: string, overrides: Record<string, number> = {}) => ({
   correspondenceSeeks: 0,
   newPatrons: 0,
   eveGames: 30,
+  internalGames: 4,
   ...overrides,
 });
 
@@ -91,6 +92,8 @@ const adminMetrics = {
     eveGamesLast7d: 90,
     importedGames: 12,
     manualGames: 1,
+    internalGames: 512,
+    internalGamesLast7d: 5,
     eveByVariant: { 'dark-chess': 600, xiangqi: 300 },
   },
 };
@@ -211,7 +214,7 @@ describe('metrics page', () => {
       'Games by variant',
       'Games by mode',
       'Games by result',
-      'Engines and corpus',
+      'Not counted above',
     ]);
     expect(root.textContent).toContain('Red win');
 
@@ -241,6 +244,8 @@ describe('metrics page', () => {
     expect(engines?.textContent).toContain('Bot vs bot');
     expect(engines?.textContent).toContain('900');
     expect(engines?.textContent).toContain('Imported');
+    expect(engines?.textContent).toContain('Internal');
+    expect(engines?.textContent).toContain('512');
     const engineVariants = [...(engines?.querySelectorAll('.metrics-breakdown-label') ?? [])].map(
       (n) => n.textContent,
     );

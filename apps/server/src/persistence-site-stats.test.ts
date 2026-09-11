@@ -36,8 +36,21 @@ definePersistenceTests('site stats', () => {
            ('stats-running', 'dark-chess', NULL, NULL, 0, $3, NULL,
             'white', 'black', NULL, NULL, 'pvp', 'running', 'public'),
            ('stats-aborted', 'dark-chess', NULL, 'abandoned', 0, $3, $3,
-            'white', 'black', NULL, NULL, 'pve', 'aborted', 'public')`,
+            'white', 'black', NULL, NULL, 'pve', 'aborted', 'public'),
+           ('stats-internal', 'xiangqi', 'red-wins', 'resignation', 44, $3, $3,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public')`,
         [weekOne, weekTwo, recent],
+      );
+      // An operator account excluded from statistics: its completed public
+      // game must leave every public figure, including the variant split and
+      // the daily series, while staying in the games table.
+      await client.query(
+        `INSERT INTO users (id, email, handle, display_name, stats_excluded_at)
+         VALUES ('stats-operator', 'op@example.com', 'op', 'Op', now())`,
+      );
+      await client.query(
+        `INSERT INTO game_participants (game_id, color, subject_type, subject_id, display_name)
+         VALUES ('stats-internal', 'white', 'user', 'stats-operator', 'Op')`,
       );
     } finally {
       await client.end();

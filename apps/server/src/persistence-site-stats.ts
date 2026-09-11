@@ -1,3 +1,4 @@
+import { countedHumanGame } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import type { GameMode } from './persistence-game-lifecycle.js';
 
@@ -89,6 +90,12 @@ export async function getSiteStats(): Promise<SiteStats> {
   };
 }
 
+// Every query below is over `games g` with the shared counted-game filter:
+// completed pvp/pve, no stats-excluded seat. The by-mode split keeps its eve
+// row (an admin-only figure the client hides on the public page) but applies
+// the same seat exclusion to the human rows.
+const COUNTED = countedHumanGame('g');
+
 export async function getPublicSiteStats(
   options: PublicSiteStatsOptions = {},
 ): Promise<PublicSiteStats> {
@@ -100,49 +107,41 @@ export async function getPublicSiteStats(
     public_games: number;
   }>(
     `SELECT
+       count(*) FILTER (WHERE ${COUNTED})::int AS total_completed_games,
        count(*) FILTER (
-         WHERE status = 'completed'
-           AND mode IN ('pvp', 'pve')
-       )::int AS total_completed_games,
-       count(*) FILTER (
-         WHERE status = 'completed'
-           AND mode IN ('pvp', 'pve')
-           AND ended_at > $1::timestamptz - INTERVAL '30 days'
+         WHERE ${COUNTED}
+           AND g.ended_at > $1::timestamptz - INTERVAL '30 days'
        )::int AS last30d_completed_games,
        count(*) FILTER (
-         WHERE status = 'completed'
-           AND mode IN ('pvp', 'pve')
-           AND visibility = 'public'
+         WHERE ${COUNTED}
+           AND g.visibility = 'public'
        )::int AS public_games
-     FROM games`,
+     FROM games g`,
     [now],
   );
 
   const byMode = await pool.query<{ mode: PublicStatsMode; n: number }>(
-    `SELECT mode, count(*)::int AS n
-     FROM games
-     WHERE status = 'completed'
-       AND mode IN ('pvp', 'pve', 'eve')
-     GROUP BY mode`,
+    `SELECT g.mode, count(*)::int AS n
+     FROM games g
+     WHERE (${COUNTED}) OR (g.status = 'completed' AND g.mode = 'eve')
+     GROUP BY g.mode`,
   );
 
   const byVariant = await pool.query<{ variant: string; n: number }>(
-    `SELECT variant, count(*)::int AS n
-     FROM games
-     WHERE status = 'completed'
-       AND mode IN ('pvp', 'pve')
-     GROUP BY variant
-     ORDER BY n DESC, variant ASC`,
+    `SELECT g.variant, count(*)::int AS n
+     FROM games g
+     WHERE ${COUNTED}
+     GROUP BY g.variant
+     ORDER BY n DESC, g.variant ASC`,
   );
 
   const daily = await pool.query<{ day: Date | string; n: number }>(
     `WITH bounds AS (
        SELECT
-         min(ended_at)::date AS first_day,
+         min(g.ended_at)::date AS first_day,
          $1::timestamptz::date AS today
-       FROM games
-       WHERE status = 'completed'
-         AND mode IN ('pvp', 'pve')
+       FROM games g
+       WHERE ${COUNTED}
      ),
      days AS (
        SELECT generate_series(bounds.first_day, bounds.today, INTERVAL '1 day')::date AS day
@@ -150,10 +149,9 @@ export async function getPublicSiteStats(
        WHERE bounds.first_day IS NOT NULL
      ),
      completed AS (
-       SELECT ended_at::date AS day, count(*)::int AS n
-       FROM games
-       WHERE status = 'completed'
-         AND mode IN ('pvp', 'pve')
+       SELECT g.ended_at::date AS day, count(*)::int AS n
+       FROM games g
+       WHERE ${COUNTED}
        GROUP BY day
      )
      SELECT days.day, COALESCE(completed.n, 0)::int AS n
@@ -176,11 +174,10 @@ export async function getPublicSiteStats(
   // Per-(day, variant) completed counts, projected onto the same date axis as
   // dailyCompletedGames so each variant series is directly comparable.
   const dailyByVariant = await pool.query<{ day: Date | string; variant: string; n: number }>(
-    `SELECT ended_at::date AS day, variant, count(*)::int AS n
-     FROM games
-     WHERE status = 'completed'
-       AND mode IN ('pvp', 'pve')
-     GROUP BY day, variant`,
+    `SELECT g.ended_at::date AS day, g.variant, count(*)::int AS n
+     FROM games g
+     WHERE ${COUNTED}
+     GROUP BY day, g.variant`,
   );
   const perVariantByDate = new Map<string, Map<string, number>>();
   for (const r of dailyByVariant.rows) {
