@@ -195,7 +195,7 @@ export function createTenantWsRuntime<
     const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
     // Allowlist-gated variants (139) ask the grant table before handing out a
     // seat. Non-gated specs short-circuit to true without a query.
-    const variantAccessGranted = await mayPlayVariant(accountUser?.id ?? null, tenant.gameSpecId);
+    const variantAccessGranted = await mayPlayVariant(accountUser, tenant.gameSpecId);
     const assignment = assignTenantSeat(
       tenant,
       room,

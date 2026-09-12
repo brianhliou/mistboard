@@ -505,13 +505,14 @@ export {
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';
-export type { VariantGrant } from './persistence-variant-access.js';
+export type { VariantGrant, VariantPlayer } from './persistence-variant-access.js';
 export {
   ALLOWLISTED_GAME_SPEC_IDS,
   grantVariantAccess,
   isAllowlistedGameSpec,
   listVariantGrants,
   mayPlayVariant,
+  playableAllowlistedSpecs,
   revokeVariantAccess,
 } from './persistence-variant-access.js';
 export type {

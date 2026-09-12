@@ -17,8 +17,10 @@ import {
   readSignedInHint,
   setResolvedAdmin,
   setResolvedSignedIn,
+  setResolvedVariantGrants,
   writeAdminHint,
   writeSignedInHint,
+  writeVariantGrantsHint,
 } from './signed-in-state.js';
 import {
   buildAppearanceMenu,
@@ -58,6 +60,9 @@ type AuthUser = {
   // cached payloads (pre-078) still parse.
   isPatron?: boolean;
   patronSince?: string | null;
+  // Allowlisted variants this account may sit down at (139), server-derived.
+  // Optional so cached payloads from before it existed still parse.
+  variantGrants?: readonly string[];
 };
 
 export type { AuthUser };
@@ -78,6 +83,7 @@ async function primeAccountNav(): Promise<void> {
   const user = await loadCurrentUser();
   writeSignedInHint(user !== null);
   writeAdminHint(user?.accountRole === 'admin');
+  writeVariantGrantsHint(user?.variantGrants ?? []);
   writeCachedUser(user);
   if (user) mountAccountNavs();
   else {
@@ -93,8 +99,10 @@ export function setAccountNavUser(user: AuthUser | null): void {
   userPromise = Promise.resolve(user);
   setResolvedSignedIn(user !== null);
   setResolvedAdmin(user?.accountRole === 'admin');
+  setResolvedVariantGrants(user?.variantGrants ?? []);
   writeSignedInHint(user !== null);
   writeAdminHint(user?.accountRole === 'admin');
+  writeVariantGrantsHint(user?.variantGrants ?? []);
   writeCachedUser(user);
 
   resetMountedAccountControls();
@@ -362,6 +370,7 @@ async function handleLogout(
   resetIdentity();
   writeSignedInHint(false);
   writeAdminHint(false);
+  writeVariantGrantsHint([]);
   writeCachedUser(null);
   if (isInboxRoute()) {
     window.location.href = loginHrefForCurrentPage(locale);
@@ -460,6 +469,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
       cachedUser = user;
       setResolvedSignedIn(user !== null);
       setResolvedAdmin(user?.accountRole === 'admin');
+      setResolvedVariantGrants(user?.variantGrants ?? []);
       // Canonical per-load auth resolution: identify so PostHog persons map to
       // DB accounts. Idempotent for returning users.
       if (user) {
@@ -475,6 +485,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
       cachedUser = null;
       setResolvedSignedIn(false);
       setResolvedAdmin(false);
+      setResolvedVariantGrants([]);
       return null;
     });
   return userPromise;
@@ -497,6 +508,7 @@ function invalidateAccountCache(): void {
   cachedUser = undefined;
   setResolvedSignedIn(undefined);
   setResolvedAdmin(undefined);
+  setResolvedVariantGrants(undefined);
   userPromise = null;
 }
 

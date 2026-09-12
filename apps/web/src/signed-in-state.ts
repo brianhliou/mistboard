@@ -76,3 +76,43 @@ export function isLikelyAdmin(): boolean {
   if (resolvedAdmin !== undefined) return resolvedAdmin;
   return readAdminHint();
 }
+
+// Variant grants, same shape again. /api/auth/me names the allowlisted
+// variants this account may take a seat at (every one for an admin, the
+// granted rows for a player), and the play menu offers a gated variant only
+// when the account can actually sit down at it. Cosmetic like the other two
+// hints: the seat check on the server is the gate, so a forged entry here
+// buys a menu item and still no seat.
+const VARIANT_GRANTS_HINT_KEY = 'mb_variant_grants';
+
+let resolvedVariantGrants: readonly string[] | undefined;
+
+export function readVariantGrantsHint(): readonly string[] {
+  try {
+    const raw = window.localStorage.getItem(VARIANT_GRANTS_HINT_KEY);
+    if (!raw) return [];
+    const parsed: unknown = JSON.parse(raw);
+    return Array.isArray(parsed) ? parsed.filter((v): v is string => typeof v === 'string') : [];
+  } catch {
+    return [];
+  }
+}
+
+export function writeVariantGrantsHint(grants: readonly string[]): void {
+  try {
+    if (grants.length > 0)
+      window.localStorage.setItem(VARIANT_GRANTS_HINT_KEY, JSON.stringify(grants));
+    else window.localStorage.removeItem(VARIANT_GRANTS_HINT_KEY);
+  } catch {
+    // localStorage unavailable (private mode etc.) — fall through.
+  }
+}
+
+export function setResolvedVariantGrants(grants: readonly string[] | undefined): void {
+  resolvedVariantGrants = grants;
+}
+
+export function hasLikelyVariantGrant(gameSpecId: string): boolean {
+  const grants = resolvedVariantGrants ?? readVariantGrantsHint();
+  return grants.includes(gameSpecId);
+}
