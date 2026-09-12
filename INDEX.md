@@ -20,7 +20,7 @@ Edit task → find file → open only that file.
 | `bughouse-engine-protocol.fixtures.ts` | JSON-stable partner-bot protocol fixtures for engine-side contract tests and Mistboard/server validation |
 | `bughouse.ts` | Pure Chess Bughouse aggregate: two-board match state, capture transfer, drops, clocks, timeouts, event replay, and partner-request projection |
 | `variants.ts` | Variants (`standardChessVariant`, `darkChessVariant`); fog kernel: `fogVisibleSquares`, `fogMovesFrom`, `fogPawnMoves`, `fogSlideMoves`, `fogCastlingMoves`, `applyFogMove` |
-| `variants-xiangqi.ts` | FoW Xiangqi variant (flagged/dev-only live room + `/xiangqi-spike`); cannon vision = field of fire |
+| `variants-xiangqi.ts` | FoW Xiangqi variant; cannon vision = field of fire |
 | `xiangqi-broadcast.ts` | Canonical xiangqi broadcast payload/tape types, runtime validators, fixture replay validation, and the Mistboard coordinate schema for tournament broadcasts |
 | `xiangqi-vision-kernel.ts` | Geometry-parameterized FoW vision walks shared by the xiangqi-family kernels (full Xiangqi and Fog Xiangqi): the cannon screen-walk, horse blocked-leg walk, and rook/slider ray walk + `VisionAccum`/`emptyVision`, driven by a per-variant `VisionProbe`. Per-piece rules that genuinely differ (general/advisor/elephant/soldier/pawn) stay in each variant kernel |
 | `events.ts` | `GameEvent` union type, `replayGameEvents` reducer, `GameProjection` |
@@ -603,12 +603,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `theme.ts` | Applied-theme bootstrap + appearance/sound settings facade: localStorage readers, change events, and the high-level preference setters. The settings-panel UI itself lives in `theme-settings-panel.ts`, dynamically imported at most once on first gear interaction. Loads `theme.css` for settings controls and dark-mode overrides |
 | `theme-settings-panel.ts` | The appearance/sound settings-panel UI (lichess-style drill-in menu shared by the signed-out nav gear and the signed-in account dropdown): board/piece/sound tile pickers + previews. Loaded LAZILY from `theme.ts` so the pickers stay out of the entry chunk; a dumb view over theme.ts's storage/preference API |
 | `theme.css` | Site appearance/settings control styles and dark-mode overrides loaded by `theme.ts` |
-| `pixel-lab.ts` | `/pixel-lab` AI piece-art/fog lab (DEV) |
-| `variant-marks-lab.ts` | DEV-only route for candidate variant marks |
 | `live-room-bootstrap.ts` | Room-id to game-spec bootstrap helper for live routes |
-| `xiangqi-spike.ts` | `/xiangqi-spike` FoW Xiangqi sandbox (DEV) |
-| `xiangqi-demo.ts` | Flagged Dark Xiangqi reviewer/demo route |
-| `xiangqi-bot.ts` | DEV-only bot for the xiangqi spike |
 | `xiangqi-pieces.ts` | Xiangqi piece SVG refs |
 | `web-utils.ts` | `escapeHtml`, `isColor`, `formatClock`, `oppositeColor`, file/rank helpers |
 | `captures.ts` | Captured-piece list derivation |
@@ -671,7 +666,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `live-dark-xiangqi-sound.ts` | Dark Xiangqi sound policy: fog-safe own-move classification (cannon-capture, general-capture) + visible-piece-count opponent diff over the redacted view, reusing the shared `SoundController` |
 | `live-xiangqi.css` | Shared xiangqi live-route board sizing/aspect styles loaded by `live.ts`, `live-dark-xiangqi.ts`, and `dark-xiangqi-postgame.ts` |
 | `dark-xiangqi-postgame.css` | Flagged Dark Xiangqi postgame route styles loaded by `dark-xiangqi-postgame.ts` |
-| `xiangqi-fog.ts` | Shared Fog of War SVG region for every xiangqi board (Dark Mini 7×7, full 9×10, dev spike): one masked region with flat tint + optional drift/mistveil texture mapped to the global fog assets |
+| `xiangqi-fog.ts` | Shared Fog of War SVG region for every xiangqi board (full 9×10): one masked region with flat tint + optional drift/mistveil texture mapped to the global fog assets |
 | `xiangqi-piece-sets.ts` | Selectable piece sets for the xiangqi family (all seven roles): traditional/simplified character scripts + western/symbol diagram sets; shared disc/ring, only the inner mark changes |
 | `xiangqi-appearance-storage.ts` | localStorage-backed xiangqi board-theme + piece-set preferences (read/write/normalize), shared by the xiangqi renderers |
 | `xiangqi-replay.ts` | Full xiangqi (9×10) article replay: one board stepped through a move list via the real kernel, rendered on demand (first used by the Xiangqi Rules article) |
@@ -725,8 +720,6 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `watch-jungle-replay.ts` | Mistboard TV (`/watch`) renderer for Jungle: thin adapter over `watch-tenant-replay.ts` with one perfect-information truth board |
 | `watch-jungle-flip-replay.ts` | Mistboard TV (`/watch`) renderer for Flip Jungle: thin adapter over `watch-tenant-replay.ts` with masked replay plus Reveal/Hide spoiler control |
 | `watch-tenant-replay.ts` | Generic Mistboard TV (`/watch`) renderer for the tenant SVG family (Jieqi, Banqi): shared "TV" chrome — header, board panes (single truth pane or per-color triptych), control bar + auto-play, ply nav, `ReplayHandle`. Each variant supplies a small `TenantWatchAdapter`; the per-variant module is then ~30 lines. Dark chess stays on the chessground path in `replay.ts` |
-| `deepdive.ts` | DEV-only (`/deepdive`) Fog-of-War game deep-dive reader: reuses the production replay board + fog triptych + move rail and hangs a prose annotation panel off its `onPlyChange` hook (no `replay.ts` edits); synthesizes moves→`GameEvent[]` (the seed of the chess.com-PGN importer) |
-| `engine-review.ts` | DEV-only (`/engine-review`) engine-output inspector: reuses the production replay board + fog view and hangs an engine-output panel off `onPlyChange` (per-ply eval + full move ranking with action-value + policy %); static fixture baked from the offline self-review spike |
 | `variant-mini-boards.ts` | Homepage variant mini-board widgets (small static SVG boards shown per variant); follow board-appearance settings via the shared appearance events. Loads `variant-mini-boards.css` |
 | `articles/diagrams.ts` | Article diagram + board constants and the helpers that build them (relocated verbatim from `articles-data.ts`); every declaration is exported so the per-article content modules + the `articles-data.ts` barrel import what they reference. Large (content, not logic) |
 | `articles/content/*.ts` | Per-article content modules (one per rules article: banqi, jieqi, chess, dark-chess, xiangqi, misty, ...); prose/data, not code. Built from `articles/diagrams.ts` constants, barrel-imported by `articles-data.ts`. Excluded from the INDEX coverage gate (content dir) |
@@ -884,7 +877,6 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `dark-chess-render.ts` | Fog-aware SVG board renderer for flagship Dark Chess (8x8): thin variant adapter over the shared `renderGridBoardSvg`, fog layer covering unseen squares. Exports render + interactive board builders and chess piece glyph/ghost helpers. Loads `dark-chess-render.css` |
 | `jungle-board.ts` | Interactive Jungle (Dou Shou Qi) board for review/analysis: factory `createJungleInteractiveBoard` over the same shared installBoardDrag + installSelectionClickAway as the live board. Streamed engine arrows patch in place and persist across re-renders; point markers remain deferred |
 | `fortress-xiangqi-board.ts` | Interactive Fortress Xiangqi board for review/analysis: factory `createFortressXiangqiInteractiveBoard` over the shared installBoardDrag + installSelectionClickAway. Board moves only (hand drops not yet a gesture); streamed engine arrows patch in place and persist across re-renders |
-| `dobutsu-chess-preview.ts` | DEV `/dobutsu-chess-preview` page: renders standard chess piece sets remapped to Dobutsu animal art on `@mistboard/board-render` boards. Exports `mountDobutsuChessPreview` |
 | `ui-icon.ts` | House UI icon set: `buildUiIcon(name)` renders a Lucide (MIT) line glyph as inline SVG inheriting `currentColor`, and `uiIconForAnnouncementKind`. Semantic-name→glyph map lives here. Loads `ui-icon.css` (base sizing via zero-specificity `:where(.ui-icon)`) |
 | `variant-markers.ts` | Variant marker-art registry (renamed from `variant-marks.ts`): `FINAL_VARIANT_MARKERS` (per-variant `/variant-markers/final/*.png`), `hasFinalVariantMarker`, and `renderVariantMarker` (falls back to a rendered mini-board). Loads `variant-markers.css` |
 | `analysis-catalog.ts` | Fail-closed `/analysis/<variant>` catalog and route parser; supplies canonical dropdown order and analysis-specific display labels (including the disambiguated "Fortress Xiangqi") |

@@ -97,7 +97,6 @@
     "test:e2e:smoke": "npm run visual:check",
     "test:auth:local": "node scripts/auth-nav-smoke.mjs",
     "test:study:persistent": "node scripts/study-creator-persistent-smoke.mjs",
-    "test:dark-xiangqi:persistent": "npm run test:dark-xiangqi:persistent --workspace @mistboard/web",
     "test:xiangqi-broadcast": "npm run test:xiangqi-broadcast --workspace @mistboard/game",
     "test:mobile:shots": "npm run mobile:loop",
     "engine:capture-beliefs": "node scripts/capture-belief-artifacts.mjs",

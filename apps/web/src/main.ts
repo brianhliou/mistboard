@@ -340,18 +340,8 @@ const studyId = studyBaseId ?? studyChapterRoute?.studyId ?? null;
 const studyChapterId = studyChapterRoute?.chapterId ?? null;
 const wantsStudyIndex = path === '/study';
 const wantsPractice = path === '/practice';
-// Hidden DEV-only spike: FoW Xiangqi Phase A. No nav entry, no landing link.
-const wantsXiangqiSpike = import.meta.env.DEV && path === '/xiangqi-spike';
-// Hidden DEV-only reviewer demo: no nav entry, direct-link only.
-const wantsXiangqiDemo = import.meta.env.DEV && path === '/xiangqi-demo';
-// Hidden DEV-only spike: pixel-art piece + fog style probes. No nav entry.
-const wantsPixelLab = import.meta.env.DEV && path === '/pixel-lab';
-// Hidden DEV-only identity lab for candidate variant marks. No nav entry.
-const wantsVariantMarksLab = import.meta.env.DEV && path === '/variant-marks';
 // Hidden DEV-only lab for Jungle river-movement cues (rat / tiger / lion). No nav entry.
 const wantsJungleCuesLab = import.meta.env.DEV && path === '/jungle-cues';
-// Hidden DEV-only board lab for mapping Dobutsu animal art onto chess pieces.
-const wantsDobutsuChessPreview = import.meta.env.DEV && path === '/dobutsu-chess-preview';
 // Hidden DEV-only audition lab for sound sets. No nav entry.
 const wantsSoundLab = import.meta.env.DEV && path === '/sound-lab';
 // Hidden DEV-only variant sheet: every variant's opening in the showcase widget.
@@ -360,12 +350,6 @@ const wantsShowcaseSheet = import.meta.env.DEV && path === '/showcase-sheet';
 // watch-feed sample (tuning sweep).
 const wantsGameSheet =
   import.meta.env.DEV && (path === '/game-sheet' || path === '/postgame-sheet');
-// Hidden DEV-only Fog-of-War game deep-dive reader (replay triptych + prose
-// annotation panel). No nav entry; pilot for the game-analysis article series.
-const wantsDeepDive = import.meta.env.DEV && path === '/deepdive';
-// Hidden DEV-only engine-output inspector (replay board + per-ply move ranking).
-// No nav entry; spike for admin-gated engine self-review.
-const wantsEngineReview = import.meta.env.DEV && path === '/engine-review';
 // Tenants with a self-contained live client are routed to it
 // *before* the shared live-room shell so they never touch the fog-critical
 // live.ts monolith; tenants riding the chess shell fall through to it.
@@ -664,39 +648,10 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./puzzles.js').then(({ mountPuzzles }) => mountPuzzles(appRoot, puzzleId)),
   );
-} else if (wantsXiangqiSpike) {
-  setTitle('Xiangqi spike');
-  void mountOrReport(() =>
-    import('./xiangqi-spike.js').then(({ mountXiangqiSpike }) => mountXiangqiSpike(appRoot)),
-  );
-} else if (wantsXiangqiDemo) {
-  setTitle('Fog Xiangqi demo');
-  void mountOrReport(() =>
-    import('./xiangqi-demo.js').then(({ mountXiangqiDemo }) => mountXiangqiDemo(appRoot)),
-  );
-} else if (wantsPixelLab) {
-  setTitle('Pixel lab');
-  void mountOrReport(() =>
-    import('./pixel-lab.js').then(({ mountPixelLab }) => mountPixelLab(appRoot)),
-  );
 } else if (wantsJungleCuesLab) {
   setTitle('Jungle movement cues');
   void mountOrReport(() =>
     import('./jungle-cues-lab.js').then(({ mountJungleCuesLab }) => mountJungleCuesLab(appRoot)),
-  );
-} else if (wantsVariantMarksLab) {
-  setTitle('Variant marks');
-  void mountOrReport(() =>
-    import('./variant-marks-lab.js').then(({ mountVariantMarksLab }) =>
-      mountVariantMarksLab(appRoot),
-    ),
-  );
-} else if (wantsDobutsuChessPreview) {
-  setTitle('Dobutsu chess preview');
-  void mountOrReport(() =>
-    import('./dobutsu-chess-preview.js').then(({ mountDobutsuChessPreview }) =>
-      mountDobutsuChessPreview(appRoot),
-    ),
   );
 } else if (wantsShowcaseSheet) {
   setTitle('Showcase sheet');
@@ -712,16 +667,6 @@ if (replaySample) {
   setTitle('Sound lab');
   void mountOrReport(() =>
     import('./sound-lab.js').then(({ mountSoundLab }) => mountSoundLab(appRoot)),
-  );
-} else if (wantsDeepDive) {
-  setTitle('Deep-dive');
-  void mountOrReport(() =>
-    import('./deepdive.js').then(({ mountDeepDive }) => mountDeepDive(appRoot)),
-  );
-} else if (wantsEngineReview) {
-  setTitle('Engine review');
-  void mountOrReport(() =>
-    import('./engine-review.js').then(({ mountEngineReview }) => mountEngineReview(appRoot)),
   );
 } else if (wantsLegacyPlay) {
   window.history.replaceState(null, '', '/');

@@ -1,5 +1,4 @@
 import { describe, expect, it } from 'vitest';
-import { mountVariantMarksLab } from './variant-marks-lab.js';
 import { renderVariantMiniBoard, VARIANT_MINIS } from './variant-mini-boards.js';
 
 describe('variant mini-board markers', () => {
@@ -31,29 +30,5 @@ describe('variant mini-board markers', () => {
     for (const def of VARIANT_MINIS) {
       expect(renderVariantMiniBoard(def.id, { size: 100 }), def.id).not.toContain('vm-frame-');
     }
-  });
-
-  it('focuses the marker lab sheet on active design-pass variants', () => {
-    const root = document.createElement('div');
-
-    mountVariantMarksLab(root);
-
-    expect(root.querySelector('svg[data-mini-id="xiangqi"]')).not.toBeNull();
-    expect(root.querySelector('svg[data-mini-id="fortress-xiangqi"]')).not.toBeNull();
-    expect(root.querySelector('svg[data-mini-id="jieqi"]')).not.toBeNull();
-    expect(root.querySelector('svg[data-mini-id="banqi"]')).not.toBeNull();
-    expect(root.querySelector('svg[data-mini-id="dark-xiangqi"]')).not.toBeNull();
-    expect(root.querySelector('svg[data-mini-id="dark-chess"]')).not.toBeNull();
-    expect(root.querySelector('svg[data-mini-id="jungle"]')).not.toBeNull();
-    expect(root.querySelector('svg[data-mini-id="jungle-flip"]')).not.toBeNull();
-    expect(root.querySelectorAll('.variant-generated-card')).toHaveLength(8);
-    expect(root.querySelectorAll('.variant-generated-scale-row')).toHaveLength(8);
-    expect(root.querySelectorAll('.variant-generated-scale-cell')).toHaveLength(48);
-    expect(root.querySelector('span[data-variant-marker-id="xiangqi"]')).not.toBeNull();
-    expect(root.querySelector('span[data-variant-marker-id="jungle-flip"]')).not.toBeNull();
-    expect(root.querySelectorAll('.variant-color-palette')).toHaveLength(2);
-    expect(root.querySelectorAll('.variant-color-state-row')).toHaveLength(6);
-    expect(root.querySelectorAll('.variant-color-state-card')).toHaveLength(48);
-    expect(root.querySelector('svg[data-mini-id="dark-crazyhouse"]')).toBeNull();
   });
 });

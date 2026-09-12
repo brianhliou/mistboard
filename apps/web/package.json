@@ -8,7 +8,6 @@
     "dev": "vite --host 0.0.0.0 --port ${PORT:-3000} --strictPort",
     "dev:agent": "vite --host 0.0.0.0 --port ${PORT:-3099} --strictPort",
     "build": "tsc -p tsconfig.json && vite build && node scripts/prerender-articles.mjs",
-    "test:dark-xiangqi:persistent": "node scripts/dark-xiangqi-persistent-smoke.mjs",
     "test:unit": "vitest run",
     "test:parked": "MISTBOARD_TEST_PARKED=1 vitest run",
     "video:frames": "tsx src/video/cli.ts",

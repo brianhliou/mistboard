@@ -339,18 +339,11 @@ test('websocket message rate window rejects over-limit bursts and recovers after
 // route is wired client-side but the server still 404s direct hits.
 // Intentionally-parked or DEV-only client routes that should NOT 200 in prod.
 const PARKED_CLIENT_ROUTES = new Set<string>([
-  '/xiangqi-spike', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/pixel-lab', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/variant-marks', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/sound-lab', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/jungle-cues', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/deepdive', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/engine-review', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/showcase-sheet', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/postgame-sheet', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/game-sheet', // DEV-only (renamed postgame-sheet); gated by import.meta.env.DEV in main.ts
-  '/dobutsu-chess-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/dobutsu-ui-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/learn/coordinates', // coordinate trainer; parked, gated off in prod (coordinateTrainerEnabled)
 ]);
 
