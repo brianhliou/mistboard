@@ -59,6 +59,7 @@ Conventions:
 - Deleted variants' rules pages answer 410 instead of falling through to the blog shell ([2ecf7cc6](https://github.com/brianhliou/mistboard/commit/2ecf7cc6), [f2b723d1](https://github.com/brianhliou/mistboard/commit/f2b723d1))
 - Duck Xiangqi counts full moves, so the pregame abort window still closes ([fdd1ed4b](https://github.com/brianhliou/mistboard/commit/fdd1ed4b))
 - The Fortress Xiangqi rules page no longer links Mini Xiangqi's rules, which are gone; the credit stays ([3a28b392](https://github.com/brianhliou/mistboard/commit/3a28b392))
+- A rated game from a deleted variant no longer shows up on the Fog Chess rating graph; the profile drew a June Dark Mini Xiangqi result as a fog rating drop ([de467d33](https://github.com/brianhliou/mistboard/commit/de467d33))
 - The Fog Chess, Fog Xiangqi and Fog Chess Concepts rules pages have a link preview again; they had shown the site card since the dark→fog rename. Jieqi, Banqi, Fortress, Duck, Jungle and Flip Jungle rules pages get one for the first time ([f5a24d9d](https://github.com/brianhliou/mistboard/commit/f5a24d9d))
 
 ### Technical
