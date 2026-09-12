@@ -101,6 +101,7 @@ import {
   isGameSpecId,
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
+  rulesSlugRetired,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
 import { DEFAULT_XIANGQI_PIECE_SET, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
@@ -729,6 +730,9 @@ export function buildArticlePage(slug: string, lang?: ArticleLang): HTMLElement 
   const locale = articleLocale(articleLang);
   if (!base) return buildArticleNotFound(locale);
   if (!isArticleVisibleInThisEnv(base)) return buildArticleNotFound(locale);
+  // The server serves 410 for a retired variant's rules page; a client-side
+  // navigation must not render what the server has declared gone.
+  if (base.kind === 'rules' && rulesSlugRetired(base.slug)) return buildArticleNotFound(locale);
   const article = articleLang ? translateArticle(base, articleLang) : base;
 
   const main = document.createElement('main');

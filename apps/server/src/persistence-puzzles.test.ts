@@ -1,8 +1,13 @@
+import { isRetiredGameSpec } from '@mistboard/game';
 import { loadAllSeedPuzzles, seedPuzzleContentHash } from '@mistboard/game/puzzle-seed';
 import { getPool } from './persistence-db.js';
 import { getOrCreateDailyPuzzleSelection } from './persistence-puzzles.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
-import { getPuzzleStore, resetPuzzleStoreForTests } from './puzzle-store.js';
+import {
+  getPuzzleStore,
+  RETIRED_VARIANT_HIDDEN_REASON,
+  resetPuzzleStoreForTests,
+} from './puzzle-store.js';
 
 definePersistenceTests('daily puzzles', () => {
   test('persists and reuses the homepage daily puzzle assignment', async () => {
@@ -37,16 +42,31 @@ definePersistenceTests('daily puzzles', () => {
     const store = await getPuzzleStore();
     assert.equal(store.source, 'database');
 
+    // Every seed row is in the table, but the store SERVES only the ones that
+    // are not withheld: a retired variant's puzzles (#396) are stored with
+    // hidden_reason set by the sync itself, so they never come back on a
+    // fresh database seeded after migration 143 ran.
     const seed = loadAllSeedPuzzles();
-    assert.equal(store.puzzles.length, seed.length);
-    assert.equal(JSON.stringify(store.puzzles), JSON.stringify(seed));
+    const served = seed.filter((puzzle) => !isRetiredGameSpec(puzzle.variant));
+    assert.ok(served.length < seed.length, 'the seed still carries retired-variant puzzles');
+    assert.equal(store.puzzles.length, served.length);
+    assert.equal(JSON.stringify(store.puzzles), JSON.stringify(served));
 
-    const { rows } = await getPool().query<{ seed_hash: string; count: string }>(
-      `SELECT s.seed_hash, (SELECT count(*)::text FROM puzzles WHERE source_kind = 'seed') AS count
+    const { rows } = await getPool().query<{
+      seed_hash: string;
+      count: string;
+      withheld: string;
+    }>(
+      `SELECT s.seed_hash,
+              (SELECT count(*)::text FROM puzzles WHERE source_kind = 'seed') AS count,
+              (SELECT count(*)::text FROM puzzles
+                 WHERE source_kind = 'seed' AND hidden_reason = $1) AS withheld
          FROM puzzle_seed_sync s WHERE s.slot = 'puzzles'`,
+      [RETIRED_VARIANT_HIDDEN_REASON],
     );
     assert.equal(rows[0]?.seed_hash, seedPuzzleContentHash());
     assert.equal(rows[0]?.count, String(seed.length));
+    assert.equal(rows[0]?.withheld, String(seed.length - served.length));
   });
 
   // Seed reconciliation must never touch miner-owned rows, and re-syncs are
@@ -67,7 +87,8 @@ definePersistenceTests('daily puzzles', () => {
     const store = await getPuzzleStore();
     // The mined row survives the (skipped) re-sync and is served after the
     // seed set, in seq order.
-    assert.equal(store.puzzles.length, loadAllSeedPuzzles().length + 1);
+    const servedSeed = loadAllSeedPuzzles().filter((puzzle) => !isRetiredGameSpec(puzzle.variant));
+    assert.equal(store.puzzles.length, servedSeed.length + 1);
     assert.equal(store.puzzles.at(-1)?.id, 'xq-mined-test-row-1');
 
     await getPool().query(`DELETE FROM puzzles WHERE id = 'xq-mined-test-row-1'`);

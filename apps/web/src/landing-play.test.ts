@@ -121,7 +121,7 @@ describe('landing play panel', () => {
   });
 
   it('puts opponent near the end and only shows Bot when there are multiple choices', () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -142,7 +142,7 @@ describe('landing play panel', () => {
         (button) => button.textContent === 'Ratedcoming soon',
       )?.disabled,
     ).toBe(true);
-    selectModalVariant('crossroads-chess');
+    selectModalVariant('xiangqi');
     expect(setupSectionOrder()).toEqual([
       'variant',
       'time',
@@ -514,121 +514,6 @@ describe('landing play panel', () => {
     expect(selectedModalColor()).toBe('Second');
   });
 
-  it('creates a timed Dark Mini Xiangqi room from a friend deep link', async () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxq_home' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    // DMX is hidden from the browse picker post-pivot; it is still fully playable
-    // via deep link, which renders it as the single soft-linked variant control.
-    window.history.replaceState(null, '', '/?play=friend&gameSpecId=dark-mini-xiangqi');
-    maybeOpenPlayDeepLink([]);
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    expect(document.body.textContent).toContain('Red');
-    // Mini is timed: the time-control section is shown like the other variants.
-    const timeSection = document
-      .querySelector('.landing-time-presets')
-      ?.closest('.landing-setup-section') as HTMLElement | null;
-    expect(timeSection?.hidden).toBe(false);
-    clickModalButton('1 + 1');
-    const createButton = [...document.querySelectorAll('button')].find(
-      (candidate) => candidate.textContent === 'Create room',
-    );
-    createButton?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushPromises();
-
-    const roomCall = fetchSpy.mock.calls.find(([input]) => String(input) === '/api/rooms');
-    expect(roomCall).toBeDefined();
-    expect(JSON.parse(String(roomCall?.[1]?.body))).toEqual({
-      mode: 'pvp',
-      gameSpecId: 'dark-mini-xiangqi',
-      timeControl: { initialMs: 60_000, incrementMs: 1_000 },
-      rated: false,
-      preferredColor: 'random',
-    });
-    expect(window.location.pathname).toBe('/room/dmxq_home');
-  });
-
-  it('creates a timed Crossroads Chess room from the flagged challenge variant', async () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dchess_home' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-
-    openPlaySetup(panel, 'Challenge a friend');
-    expect(variantPickerPresent()).toBe(true);
-    expect(variantPickerSpecs()).toContain('crossroads-chess');
-    selectModalVariant('crossroads-chess');
-    expect(modalColorOptions()).toEqual([
-      { label: 'White', glyph: '♚', classes: 'landing-color-glyph white' },
-      { label: 'Random', glyph: '♚♚', classes: 'landing-color-glyph random' },
-      { label: 'Black', glyph: '♚', classes: 'landing-color-glyph black' },
-    ]);
-    expect(document.body.textContent).toContain('Black');
-    expect(document.body.textContent).not.toContain('Red');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
-    clickModalButton('5 + 5');
-    clickModalColor('Black');
-    clickModalButton('Create room');
-    await flushPromises();
-
-    expect(roomPostBody(fetchSpy)).toEqual({
-      mode: 'pvp',
-      gameSpecId: 'crossroads-chess',
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
-      rated: false,
-      preferredColor: 'black',
-    });
-    expect(window.location.pathname).toBe('/room/dchess_home');
-  });
-
-  it('creates a Reveal Chess room (not dark chess) from the flagged challenge variant', async () => {
-    // Regression: roomCreationGameSpecId once lacked a reveal-chess case, so the
-    // create POST silently fell back to dark-chess despite the picker selection.
-    // Each menu-offered variant must round-trip its own gameSpecId into the body.
-    vi.stubEnv('VITE_REVEAL_CHESS_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/rc_home' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-
-    openPlaySetup(panel, 'Challenge a friend');
-    expect(variantPickerSpecs()).toContain('reveal-chess');
-    selectModalVariant('reveal-chess');
-    // White/black (standard chess colors), casual-only, no draft960 axis.
-    expect(modalColorOptions()).toEqual([
-      { label: 'White', glyph: '♚', classes: 'landing-color-glyph white' },
-      { label: 'Random', glyph: '♚♚', classes: 'landing-color-glyph random' },
-      { label: 'Black', glyph: '♚', classes: 'landing-color-glyph black' },
-    ]);
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
-    clickModalButton('5 + 5');
-    clickModalColor('White');
-    clickModalButton('Create room');
-    await flushPromises();
-
-    expect(roomPostBody(fetchSpy)).toEqual({
-      mode: 'pvp',
-      gameSpecId: 'reveal-chess',
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
-      rated: false,
-      preferredColor: 'white',
-    });
-    expect(window.location.pathname).toBe('/room/rc_home');
-  });
-
   it('shows Banqi first and second move-order choices in the setup modal', async () => {
     vi.stubEnv('VITE_BANQI_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
@@ -666,84 +551,8 @@ describe('landing play panel', () => {
     expect(window.location.pathname).toBe('/room/bq_home');
   });
 
-  it('creates a Crossroads Chess engine room with the selected Fairy-Stockfish tier', async () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dchess_engine' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    const panel = buildLandingPlayPanel([
-      { id: 'python-v2-v1.0', name: 'Misty', familyName: 'Misty', kind: 'fog-chess' },
-    ]);
-    document.body.append(panel);
-
-    openPlaySetup(panel, 'Play a bot');
-    selectModalVariant('crossroads-chess');
-    const engineSelect = document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]');
-    expect(engineSelect).not.toBeNull();
-    // Strongest-first ordering: toughest opponent sits at the top of the picker.
-    expect([...engineSelect!.options].map((option) => [option.value, option.textContent])).toEqual([
-      ['fairy-stockfish-crossroads-very-strong', 'Fairy Stockfish - Strongest'],
-      ['fairy-stockfish-crossroads-strong', 'Fairy Stockfish - Strong'],
-      ['fairy-stockfish-crossroads-amateur', 'Fairy Stockfish - Amateur'],
-    ]);
-    expect(engineSelect!.value).toBe('fairy-stockfish-crossroads-strong');
-    selectModalEngine('fairy-stockfish-crossroads-very-strong');
-    clickModalColor('Black');
-    clickModalButton('Start game');
-    await flushPromises();
-
-    expect(roomPostBody(fetchSpy)).toEqual({
-      mode: 'pve',
-      gameSpecId: 'crossroads-chess',
-      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
-      rated: false,
-      preferredColor: 'black',
-      engineId: 'fairy-stockfish-crossroads-very-strong',
-    });
-    expect(window.location.pathname).toBe('/room/dchess_engine');
-  });
-
-  it('creates a Drop Mini Xiangqi engine room from a deep link with the selected built-in tier', async () => {
-    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxqd_engine' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    // Drop Mini is hidden from the product picker; the lab profile keeps its
-    // deep-link engine flow and Fairy-Stockfish tiers available.
-    window.history.replaceState(null, '', '/?play=computer&gameSpecId=drop-mini-xiangqi');
-    maybeOpenPlayDeepLink([]);
-    expect(softLinkedVariantLabel()).toBe('Drop Mini Xiangqi');
-    const engineSelect = document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]');
-    expect(engineSelect).not.toBeNull();
-    expect([...engineSelect!.options].map((option) => [option.value, option.textContent])).toEqual([
-      ['fairy-stockfish-drop-mini-xiangqi-very-strong', 'Fairy Stockfish - Strongest'],
-      ['fairy-stockfish-drop-mini-xiangqi-strong', 'Fairy Stockfish - Strong'],
-      ['fairy-stockfish-drop-mini-xiangqi-amateur', 'Fairy Stockfish - Amateur'],
-    ]);
-    expect(engineSelect!.value).toBe('fairy-stockfish-drop-mini-xiangqi-strong');
-    selectModalEngine('fairy-stockfish-drop-mini-xiangqi-amateur');
-    clickModalColor('Black');
-    clickModalButton('Start game');
-    await flushPromises();
-
-    expect(roomPostBody(fetchSpy)).toEqual({
-      mode: 'pve',
-      gameSpecId: 'drop-mini-xiangqi',
-      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
-      preferredColor: 'black',
-      engineId: 'fairy-stockfish-drop-mini-xiangqi-amateur',
-    });
-    expect(window.location.pathname).toBe('/room/dmxqd_engine');
-  });
-
   it('remembers each variant engine pick independently (no cross-variant clobber)', () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
     vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
     vi.stubGlobal(
       'fetch',
@@ -753,28 +562,28 @@ describe('landing play panel', () => {
     document.body.append(panel);
 
     openPlaySetup(panel, 'Play a bot');
-    // Pick the strongest Crossroads engine (the default is the middle tier)...
-    selectModalVariant('crossroads-chess');
-    selectModalEngine('fairy-stockfish-crossroads-very-strong');
+    // Pick the strongest xiangqi engine (the default is level 4)...
+    selectModalVariant('xiangqi');
+    selectModalEngine('fairy-stockfish-xiangqi-level-8');
     // ...then visit Jieqi (one public bot since consolidation, so the bot row
     // disappears entirely)...
     selectModalVariant('jieqi');
     expect(document.querySelector<HTMLElement>('[data-setup-section="engine"]')?.hidden).toBe(true);
-    // ...and back to Crossroads: the earlier pick must survive the round-trip.
-    selectModalVariant('crossroads-chess');
+    // ...and back to xiangqi: the earlier pick must survive the round-trip.
+    selectModalVariant('xiangqi');
     expect(document.querySelector<HTMLElement>('[data-setup-section="engine"]')?.hidden).toBe(
       false,
     );
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!.value).toBe(
-      'fairy-stockfish-crossroads-very-strong',
+      'fairy-stockfish-xiangqi-level-8',
     );
   });
 
   it('makes the last-played engine sticky across reopening the setup dialog', async () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
+    vi.stubEnv('VITE_XIANGQI_ENABLED', 'true');
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dchess_engine' });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/xq_engine' });
       return jsonResponse({}, { status: 404 });
     });
     vi.stubGlobal('fetch', fetchSpy);
@@ -782,80 +591,18 @@ describe('landing play panel', () => {
     document.body.append(panel);
 
     openPlaySetup(panel, 'Play a bot');
-    selectModalVariant('crossroads-chess');
-    selectModalEngine('fairy-stockfish-crossroads-very-strong');
+    selectModalVariant('xiangqi');
+    selectModalEngine('fairy-stockfish-xiangqi-level-8');
     clickModalColor('Black');
     clickModalButton('Start game');
     await flushPromises();
 
-    // Reopen: the strongest tier (a non-default pick) should be preselected.
+    // Reopen: level 8 (a non-default pick) should be preselected.
     openPlaySetup(panel, 'Play a bot');
-    selectModalVariant('crossroads-chess');
+    selectModalVariant('xiangqi');
     expect(document.querySelector<HTMLSelectElement>('select[aria-label="Bot"]')!.value).toBe(
-      'fairy-stockfish-crossroads-very-strong',
+      'fairy-stockfish-xiangqi-level-8',
     );
-  });
-
-  it('shows a specific error when Crossroads room creation is disabled server-side', async () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') {
-        return jsonResponse({ error: 'crossroads_chess_disabled' }, { status: 404 });
-      }
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-
-    openPlaySetup(panel, 'Challenge a friend');
-    selectModalVariant('crossroads-chess');
-    clickModalButton('Create room');
-    await flushPromises();
-
-    expect(document.querySelector('.landing-setup-status')?.textContent).toBe(
-      'Crossroads Chess live rooms are not enabled on this server.',
-    );
-  });
-
-  it('keeps Crossroads Chess inside the friend-room variant picker, not as a hub link', () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-
-    expect(panel.querySelector<HTMLAnchorElement>('.landing-play-action-crossroads')).toBeNull();
-
-    openPlaySetup(panel, 'Challenge a friend');
-    expect(variantPickerSpecs()).toContain('crossroads-chess');
-  });
-
-  it('restores 5+5 for Fog Chess while keeping DMX scoped to its two controls', () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-
-    // Opens on the default variant (xiangqi), which carries the casual-only
-    // 10+5 rung; friend challenges are always casual, so it shows.
-    openPlaySetup(panel, 'Challenge a friend');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
-    document.querySelector('.landing-setup-overlay')?.remove();
-
-    // DMX is hidden from the picker; reach it by deep link and confirm it also
-    // hides 5+5 as a fog variant.
-    window.history.replaceState(null, '', '/?play=friend&gameSpecId=dark-mini-xiangqi');
-    maybeOpenPlayDeepLink([]);
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2']);
   });
 
   // The fog engines' per-move floor outruns a 1s or 2s increment and they lose
@@ -1033,23 +780,6 @@ describe('landing play panel', () => {
     expect(visibleModalTimeControls()).toEqual(['1 + 1', '3 + 2', '5 + 5', '10 + 5']);
   });
 
-  it('offers Crossroads Chess for engine and lobby play', () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-
-    openPlaySetup(panel, 'Play a bot');
-    expect(variantPickerSpecs()).toContain('crossroads-chess');
-    document.querySelector('.landing-setup-overlay')?.remove();
-
-    openPlaySetup(panel, 'Find opponent');
-    expect(variantPickerSpecs()).toContain('crossroads-chess');
-  });
-
   it('hides Dark Mini Xiangqi from the browse picker even with its flags on', () => {
     // Xiangqi pivot: DMX is de-listed from the browse picker (offerInMenu=false)
     // regardless of its enable flags; it stays reachable only by deep link.
@@ -1066,101 +796,6 @@ describe('landing play panel', () => {
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
 
     expect(variantPickerSpecs()).not.toContain('dark-mini-xiangqi');
-  });
-
-  it('uses gameSpecId, not variant, to deep-link the challenge variant projection', () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    window.history.replaceState(null, '', '/?play=friend&gameSpecId=dark-mini-xiangqi');
-
-    maybeOpenPlayDeepLink([]);
-
-    // DMX is hidden from the browse picker, so the deep link renders it as the
-    // soft-linked variant control rather than a selected grid card.
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    expect(window.location.search).toBe('');
-  });
-
-  it('uses gameSpecId to deep-link Dark Mini Xiangqi engine play', async () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxq_engine' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    setRoomNavigator(() => {});
-    window.history.replaceState(null, '', '/?play=computer&gameSpecId=dark-mini-xiangqi');
-
-    maybeOpenPlayDeepLink([
-      { id: 'python-v2-v1.0', name: 'Misty', familyName: 'Misty', kind: 'fog-chess' },
-    ]);
-    // Soft-linked (hidden-from-menu) variant: the first control is the variant.
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    document
-      .querySelector<HTMLButtonElement>('.landing-setup-start')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushPromises();
-
-    expect(roomPostBody(fetchSpy)).toMatchObject({
-      mode: 'pve',
-      gameSpecId: 'dark-mini-xiangqi',
-      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
-      // A PvE deep link names no side, so the dialog opens on the variant's
-      // first mover (red here) rather than coin-flipping the player into second.
-      preferredColor: 'red',
-    });
-    expect(window.location.search).toBe('');
-  });
-
-  it('sends selected Dark Mini Xiangqi engine colors from the setup modal', async () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxq_color' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    setRoomNavigator(() => {});
-    const panel = buildLandingPlayPanel([
-      { id: 'python-v2-v1.0', name: 'Misty', familyName: 'Misty', kind: 'fog-chess' },
-    ]);
-    document.body.append(panel);
-
-    // DMX is hidden from the picker post-pivot; reach the engine flow by deep link.
-    window.history.replaceState(null, '', '/?play=computer&gameSpecId=dark-mini-xiangqi');
-    maybeOpenPlayDeepLink([
-      { id: 'python-v2-v1.0', name: 'Misty', familyName: 'Misty', kind: 'fog-chess' },
-    ]);
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    expect(document.querySelector<HTMLElement>('[data-setup-section="engine"]')?.hidden).toBe(true);
-    clickModalColor('Black');
-    clickModalButton('Start game');
-    await flushPromises();
-    expect(roomPostBody(fetchSpy)).toMatchObject({
-      mode: 'pve',
-      gameSpecId: 'dark-mini-xiangqi',
-      preferredColor: 'black',
-    });
-
-    document.querySelector('.landing-setup-overlay')?.remove();
-    fetchSpy.mockClear();
-
-    window.history.replaceState(null, '', '/?play=computer&gameSpecId=dark-mini-xiangqi');
-    maybeOpenPlayDeepLink([
-      { id: 'python-v2-v1.0', name: 'Misty', familyName: 'Misty', kind: 'fog-chess' },
-    ]);
-    clickModalColor('Random');
-    clickModalButton('Start game');
-    await flushPromises();
-    expect(roomPostBody(fetchSpy)).toMatchObject({
-      mode: 'pve',
-      gameSpecId: 'dark-mini-xiangqi',
-      preferredColor: 'random',
-    });
   });
 
   it('creates a Dark Xiangqi engine room with server-defaulted bot and selected color', async () => {
@@ -1199,82 +834,6 @@ describe('landing play panel', () => {
     expect(window.location.search).toBe('');
   });
 
-  it('selects a Dark Mini Xiangqi deep link in the lab profile', async () => {
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
-    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dmxq_soft' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    window.history.replaceState(null, '', '/?play=friend&gameSpecId=dark-mini-xiangqi');
-
-    maybeOpenPlayDeepLink([]);
-    // DMX is hidden from the browse grid; the deep link renders the soft-linked
-    // variant control, and play still works end-to-end.
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    document
-      .querySelector<HTMLButtonElement>('.landing-setup-start')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushPromises();
-
-    const roomCall = fetchSpy.mock.calls.find(([input]) => String(input) === '/api/rooms');
-    expect(JSON.parse(String(roomCall?.[1]?.body))).toEqual({
-      mode: 'pvp',
-      gameSpecId: 'dark-mini-xiangqi',
-      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
-      rated: false,
-      preferredColor: 'random',
-    });
-  });
-
-  it('shows the Kriegspiel mini-board marker in the variant grid', () => {
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    window.history.replaceState(null, '', '/?play=friend&gameSpecId=kriegspiel');
-
-    maybeOpenPlayDeepLink([]);
-
-    const card = document.querySelector<HTMLElement>(
-      '.landing-variant-card[data-game-spec="kriegspiel"]',
-    );
-    expect(variantPickerPresent()).toBe(true);
-    expect(card?.textContent).toContain('Kriegspiel');
-    expect(card?.querySelector('svg[data-mini-id="kriegspiel"]')).not.toBeNull();
-  });
-
-  it('selects a rated Dark Mini Xiangqi lobby deep link in the lab profile', async () => {
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
-    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
-    setRatedModeEnabled(true);
-    setResolvedSignedIn(true);
-    const fetchSpy = lobbyFetchSpy();
-    vi.stubGlobal('fetch', fetchSpy);
-    window.history.replaceState(null, '', '/?play=lobby&gameSpecId=dark-mini-xiangqi');
-
-    maybeOpenPlayDeepLink([]);
-    // DMX is hidden from the browse grid; the deep link renders the soft-linked
-    // variant control, and the rated lobby seek still carries its spec id.
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    document
-      .querySelector<HTMLButtonElement>('.landing-setup-start')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushPromises();
-
-    expect(lobbyPostBody(fetchSpy)).toMatchObject({
-      gameSpecId: 'dark-mini-xiangqi',
-      rated: true,
-      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
-    });
-  });
-
   it('offers Dark Xiangqi (9x10) in the play menu', () => {
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubGlobal(
@@ -1300,98 +859,6 @@ describe('landing play panel', () => {
     openPlaySetup(panel, 'Challenge a friend');
 
     expect(variantPickerSpecs()).toContain('dark-xiangqi');
-  });
-
-  it('keeps Dark Xiangqi and DMX selectable in the Play-the-engine flow', () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-    vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-    openPlaySetup(panel, 'Play a bot');
-
-    // Dark Xiangqi stays a live browse-grid card and is selectable.
-    const dxq = document.querySelector<HTMLButtonElement>(
-      '.landing-variant-card[data-game-spec="dark-xiangqi"]',
-    );
-    expect(dxq?.disabled).toBe(false);
-    expect(dxq?.classList.contains('landing-variant-card-disabled')).toBe(false);
-    expect(dxq?.textContent).not.toContain('Soon');
-    // DMX is hidden from the browse grid post-pivot, but its engine flow stays
-    // reachable by deep link (Xiangqi fog engines default server-side).
-    expect(dxq).not.toBeNull();
-    document.querySelector('.landing-setup-overlay')?.remove();
-    window.history.replaceState(null, '', '/?play=computer&gameSpecId=dark-mini-xiangqi');
-    maybeOpenPlayDeepLink([]);
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    const dmxStart = document.querySelector<HTMLButtonElement>('.landing-setup-start');
-    expect(dmxStart?.disabled).toBe(false);
-  });
-
-  it('shows the Dark Crossroads marker even when the engine card is disabled', () => {
-    vi.stubEnv('VITE_DARK_CROSSROADS_CHESS_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-    openPlaySetup(panel, 'Play a bot');
-
-    const card = document.querySelector<HTMLButtonElement>(
-      '.landing-variant-card[data-game-spec="dark-crossroads-chess"]',
-    );
-    expect(card?.disabled).toBe(true);
-    expect(card?.textContent).toContain('Soon');
-    expect(card?.querySelector('svg[data-mini-id="dark-crossroads"]')).not.toBeNull();
-  });
-
-  it('renders the Dark Crazyhouse image on its soft-linked deep-link entry', () => {
-    // Dark Crazyhouse is hidden from the browse grid post-pivot (it has no live
-    // engine). It stays reachable via a friend deep link, which renders the
-    // soft-linked variant control carrying the shared Crazyhouse image marker.
-    vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'true');
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
-    );
-    window.history.replaceState(null, '', '/?play=friend&gameSpecId=dark-crazyhouse');
-    maybeOpenPlayDeepLink([]);
-
-    expect(softLinkedVariantLabel()).toBe('Dark Crazyhouse');
-    expect(document.querySelector('svg[data-mini-id="dark-crazyhouse"]')).not.toBeNull();
-  });
-
-  it('shows Dark Shogi sente and gote color choices in the setup modal', async () => {
-    vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'true');
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
-      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/dsg_color' });
-      return jsonResponse({}, { status: 404 });
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    setRoomNavigator(() => {});
-    window.history.replaceState(null, '', '/?play=friend&gameSpecId=dark-shogi');
-    maybeOpenPlayDeepLink([]);
-
-    expect(modalColorOptions()).toEqual([
-      { label: 'Sente', glyph: '☗', classes: 'landing-color-glyph black shogi' },
-      { label: 'Random', glyph: '☗☖', classes: 'landing-color-glyph random shogi' },
-      { label: 'Gote', glyph: '☖', classes: 'landing-color-glyph white shogi' },
-    ]);
-
-    clickModalColor('Gote');
-    clickModalButton('Create room');
-    await flushPromises();
-
-    expect(roomPostBody(fetchSpy)).toMatchObject({
-      mode: 'pvp',
-      gameSpecId: 'dark-shogi',
-      preferredColor: 'white',
-    });
   });
 
   it('orders the variant picker by the shared canonical variant order', () => {
@@ -1436,22 +903,6 @@ describe('landing play panel', () => {
     expect(lobbyPostBody(fetchSpy).gameSpecId).toBe('dark-chess');
   });
 
-  it('sends the Dark Mini Xiangqi game spec id from a lobby deep link', async () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-    const fetchSpy = lobbyFetchSpy();
-    vi.stubGlobal('fetch', fetchSpy);
-    // DMX is hidden from the browse grid post-pivot; reached by a lobby deep link.
-    window.history.replaceState(null, '', '/?play=lobby&gameSpecId=dark-mini-xiangqi');
-    maybeOpenPlayDeepLink([]);
-    expect(softLinkedVariantLabel()).toBe('Dark Mini Xiangqi');
-    document
-      .querySelector<HTMLButtonElement>('.landing-setup-start')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushPromises();
-
-    expect(lobbyPostBody(fetchSpy).gameSpecId).toBe('dark-mini-xiangqi');
-  });
-
   // RETIRED 2026-09-04 (Brian). Mini Xiangqi was hidden from the picker in the
   // 2026-07-03 pivot but kept an unconditional deep link, so a link was its only
   // door; that door is now closed. The three tests that pinned its friend /
@@ -1471,27 +922,6 @@ describe('landing play panel', () => {
       expect(softLinkedVariantLabel(), `play=${mode}`).toBeUndefined();
       expect(document.body.textContent, `play=${mode}`).not.toContain('Mini Xiangqi');
     }
-  });
-
-  it('sends the Crossroads Chess game spec id and rapid time control when finding an opponent', async () => {
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    const fetchSpy = lobbyFetchSpy();
-    vi.stubGlobal('fetch', fetchSpy);
-    const panel = buildLandingPlayPanel([]);
-    document.body.append(panel);
-    openLobbySetup(panel);
-    selectModalVariant('crossroads-chess');
-    clickModalTimeControl('5 + 5');
-    document
-      .querySelector<HTMLButtonElement>('.landing-setup-start')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    await flushPromises();
-
-    expect(lobbyPostBody(fetchSpy)).toMatchObject({
-      gameSpecId: 'crossroads-chess',
-      rated: false,
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
-    });
   });
 });
 

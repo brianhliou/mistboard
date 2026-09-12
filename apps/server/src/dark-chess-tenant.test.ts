@@ -292,11 +292,13 @@ function hydratedRoom(events: GameEvent[]) {
   return hydration.room;
 }
 
-test('fog events: each seat sees exactly its own moves, with global plies', () => {
+test('fog events, live: each seat sees exactly its own moves, with global plies', () => {
+  // terminal: null keeps the room PLAYING; a finished room reveals everything
+  // (spectator-visibility-matrix.md), which the next test pins.
   const events = buildScript('fog-events', {
     timeControl: TIME_CONTROL,
     moveCount: 6,
-    terminal: 'resign',
+    terminal: null,
   });
   const room = hydratedRoom(events);
   const expectedPlies: Record<Color, number[]> = { white: [1, 3, 5], black: [2, 4, 6] };
@@ -314,11 +316,34 @@ test('fog events: each seat sees exactly its own moves, with global plies', () =
   }
 });
 
-test('fog events: spectators get no moves but do keep room/seat events (live-stack parity)', () => {
+test('fog events, finished: every seat and the spectator get the whole log', () => {
+  // The event half of the finished-game reveal. Before the tenant declared a
+  // truthView, the board opened at finish (getClientView reads the real
+  // status) while the log stayed filtered against a slice whose status is the
+  // initial 'playing': a truth board beside an own-moves-only move list.
+  const events = buildScript('fog-events-finished', {
+    timeControl: TIME_CONTROL,
+    moveCount: 6,
+    terminal: 'resign',
+  });
+  const room = hydratedRoom(events);
+  for (const seat of ['white', 'black', 'spectator'] as const) {
+    const visible = tenantEventsForClient(darkChessTenant, room, { id: 'x', seat, solo: false });
+    const moves = visible.filter((event) => event.type === 'move-played');
+    assert.deepEqual(
+      moves.map((event) => event.ply),
+      [1, 2, 3, 4, 5, 6],
+      `${seat} sees every ply once the game is over`,
+    );
+    assert.ok(!visible.some((event) => event.type === 'room-created' && 'setup' in event));
+  }
+});
+
+test('fog events, live: spectators get no moves but do keep room/seat events (live-stack parity)', () => {
   const events = buildScript('fog-spectator', {
     timeControl: TIME_CONTROL,
     moveCount: 4,
-    terminal: 'resign',
+    terminal: null,
   });
   const room = hydratedRoom(events);
   const visible = tenantEventsForClient(darkChessTenant, room, {
@@ -328,20 +353,20 @@ test('fog events: spectators get no moves but do keep room/seat events (live-sta
   });
   assert.equal(visible.filter((event) => event.type === 'move-played').length, 0);
   assert.equal(visible.filter((event) => event.type === 'seat-assigned').length, 2);
-  assert.equal(visible.filter((event) => event.type === 'seat-resigned').length, 1);
 });
 
-test('fog views: hidden opponent pieces stay hidden at every status, spectator view is empty', () => {
+test('fog views: hidden opponent pieces stay hidden while the game is live', () => {
+  // terminal: null keeps the room PLAYING. This is the live fog invariant and
+  // it must never change; the finished counterpart is the next test.
   const events = buildScript('fog-views', {
     timeControl: TIME_CONTROL,
     moveCount: 4,
-    terminal: 'resign',
+    terminal: null,
   });
   const room = hydratedRoom(events);
   const canonicalBoard = room.projection.state.board;
   const canonicalSquares = Object.keys(canonicalBoard);
-  // Model A: the room never reveals, INCLUDING after the game finished.
-  assert.equal(room.projection.state.status.type, 'finished');
+  assert.notEqual(room.projection.state.status.type, 'finished');
   for (const seat of ['white', 'black'] as const) {
     const view = darkChessTenant.visibility.viewForClient(
       room.projection.state,
@@ -361,7 +386,7 @@ test('fog views: hidden opponent pieces stay hidden at every status, spectator v
     }
     assert.ok(
       Object.keys(view.board).length < canonicalSquares.length,
-      `${seat} view revealed the full board after finish (Model A violation)`,
+      `${seat} view revealed the full board mid-game (fog violation)`,
     );
   }
   const spectator = darkChessTenant.visibility.viewForClient(
@@ -372,6 +397,36 @@ test('fog views: hidden opponent pieces stay hidden at every status, spectator v
   assert.deepEqual(spectator.board, {});
   assert.deepEqual(spectator.visibleSquares, []);
   assert.deepEqual(spectator.legalMoves, []);
+});
+
+test('fog views: a finished room reveals the whole board to every seat', () => {
+  // The finished half of the same matrix row. /game/:id already serves this to
+  // any signed-out stranger; before this the room was the one surface refusing.
+  const events = buildScript('fog-views-finished', {
+    timeControl: TIME_CONTROL,
+    moveCount: 4,
+    terminal: 'resign',
+  });
+  const room = hydratedRoom(events);
+  const canonicalSquares = Object.keys(room.projection.state.board);
+  assert.equal(room.projection.state.status.type, 'finished');
+  for (const seat of ['white', 'black', 'spectator'] as const) {
+    const view = darkChessTenant.visibility.viewForClient(
+      room.projection.state,
+      { id: 'x', seat, solo: false },
+      room.events,
+    );
+    assert.equal(
+      Object.keys(view.board).length,
+      canonicalSquares.length,
+      `${seat} must see the whole board once the game is finished`,
+    );
+    assert.equal(
+      view.visibleSquares.length,
+      64,
+      `${seat} must see every square once the game is finished`,
+    );
+  }
 });
 
 // ── Inbound-move handling mirrors the live stack ────────────────────────────

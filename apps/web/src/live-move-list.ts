@@ -120,12 +120,16 @@ function syncMoveListScroll(refs: MoveListRefs, nextPlyCount: number): void {
   lastMoveListWasLive = nextIsLive;
 }
 
-function shouldMaskMoveList(): boolean {
+export function shouldMaskMoveList(): boolean {
   if (liveState.state?.variant !== 'dark-chess' || liveState.roomMode === 'eve') return false;
+  // A finished room reveals everything to everyone (the spectator visibility
+  // matrix, 2026-09-06): the game-end snapshot carries the whole log, so the
+  // list shows both sides' moves beside the opened board.
+  if (liveState.state.status.type === 'finished') return false;
   // PvE spectators already receive only the human player's fog view. Engine moves are filtered
   // server-side, so the human's moves are not secret and spectators can follow along.
   if (liveState.roomMode === 'pve' && liveState.seat === 'spectator') return false;
-  // Rooms never reveal, even after finish. Players who want the full board click Review game.
+  // Live: each seat lists its own moves and the opponent's plies as blanks.
   return true;
 }
 

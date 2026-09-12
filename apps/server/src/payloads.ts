@@ -3,13 +3,14 @@ import {
   type GameEvent,
   type GameProjection,
   type GameSpecId,
+  maybeGameSpecForId,
   type PlayerView,
   type Square,
   variantForId,
 } from '@mistboard/game';
 import { engineVersionDisplayName } from './engine-registry.js';
 import type { LiveSeatProfile } from './first-party-bots.js';
-import { type GameAccessMode, modeForProjection } from './server-policy.js';
+import { type GameAccessMode, modeForProjection, roomViewPolicy } from './server-policy.js';
 
 export type Seat = Color | 'spectator';
 
@@ -200,20 +201,39 @@ function isEventVisibleByMode(
   client: SnapshotClient,
   event: GameEvent,
 ): boolean {
-  // Model A: the room never reveals canonical truth, at ANY status including
-  // finished. A seated player sees only their own move-played events; this
-  // uniformly handles PvP (each player sees own moves) and PvE (human seat
-  // filters out engine moves automatically — engine doesn't connect as a WS
-  // client). The public reveal surface is the /game/:id replay endpoint
-  // (eventReplayResponse, finished-gated), NOT the room. Spectators are
-  // rejected at the connection layer for live games (canObserveLiveRoom); the
-  // spectator branch here is defense-in-depth — if a spectator SnapshotClient
-  // ever reaches this function, strip every move-played event.
+  // A FINISHED game reveals its whole event log to everyone, players and
+  // spectators alike. That is the same content /game/:id already serves to any
+  // signed-out stranger, so nothing new escapes here; what changes is that a
+  // shared room link now shows the game instead of a blank board.
+  //
+  // While the game is LIVE this is the fog stream: a seated player sees only
+  // their own move-played events, which uniformly handles PvP (each player sees
+  // own moves) and PvE (the human seat filters out engine moves automatically,
+  // since the engine never connects as a WS client). Spectators are refused at
+  // the connection layer for live fog (canObserveLiveRoom); the spectator
+  // branch here is defense-in-depth for a SnapshotClient that reaches this
+  // function anyway.
   if (room.projection.variant === 'dark-chess') {
+    if (roomRevealsTruth(room, client)) return true;
     if (client.seat === 'spectator') return event.type !== 'move-played';
     return event.type !== 'move-played' || event.color === client.seat;
   }
   return true;
+}
+
+// The matrix decision for this room and client. `finished` is read from
+// canonical projection state, never from anything client-supplied: that read is
+// the one line separating a completed-game reveal from a live fog leak.
+function roomRevealsTruth(room: SnapshotRoom, client: SnapshotClient): boolean {
+  const spec = maybeGameSpecForId(room.projection.variant);
+  if (!spec) return false;
+  return (
+    roomViewPolicy(
+      spec.visibility,
+      room.projection.state.status.type === 'finished',
+      client.seat === 'spectator' ? 'spectator' : 'player',
+    ) === 'truth'
+  );
 }
 
 function offerForClient(projection: GameProjection, client: SnapshotClient) {
@@ -320,15 +340,15 @@ function devViewsForClient(room: SnapshotRoom, client: SnapshotClient) {
 
 export function getClientView(room: SnapshotRoom, client: SnapshotClient): PlayerView {
   const perspective = client.seat === 'black' ? 'black' : 'white';
-  // Model A: the room never reveals canonical truth, even after the game
-  // finishes. Seated players always get their own fog projection; the public
-  // full-truth view lives only at /game/:id (eventReplayResponse). This keeps
-  // the live surface a single fog stream and gives players confidence that no
-  // hidden information ever leaks through the room they played in.
-  //
-  // Spectators on a fog game: defense-in-depth. Live spectators are rejected at
-  // the connection layer (canObserveLiveRoom); if any spectator SnapshotClient
-  // reaches here we return an empty view rather than leak board state.
+  // A finished game opens fully, to players and spectators alike, so a room
+  // link is worth sharing. /game/:id already serves this exact content to any
+  // signed-out stranger; the room was simply refusing to.
+  if (roomRevealsTruth(room, client)) return fullTruthView(room, perspective);
+
+  // Live fog: a seated player gets their own projection and nobody else gets a
+  // board. Live spectators are already refused at the connection layer
+  // (canObserveLiveRoom); the empty view here is defense-in-depth for a
+  // spectator SnapshotClient that reaches this function anyway.
   if (room.projection.variant === 'dark-chess' && client.seat === 'spectator') {
     return emptyFogView(room, perspective);
   }
@@ -356,7 +376,7 @@ function emptyFogView(room: SnapshotRoom, perspective: Color): PlayerView {
   };
 }
 
-function fullTruthView(room: SnapshotRoom, perspective: Color): PlayerView {
+export function fullTruthView(room: SnapshotRoom, perspective: Color): PlayerView {
   return {
     id: room.projection.state.id,
     variant: room.projection.state.variant,

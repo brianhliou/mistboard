@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import type { RoomTimeControl, VariantId } from '@mistboard/game';
 import serveHandler from 'serve-handler';
+import { articleIsRetired } from './article-meta.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
 import { serveArticleOgImage, serveGameOgImage, serveStudyOgImage } from './og-image.js';
 import { servePositionOgImage } from './og-position.js';
@@ -20,6 +21,7 @@ import {
   serveArticlePage,
   serveArticlesIndexPage,
   serveGamePage,
+  serveGoneShell,
   serveNotFoundShell,
   servePrerenderedPage,
   serveRulesIndexPage,
@@ -419,6 +421,13 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (rulesArticleRouteMatch) {
       const langPrefix = rulesArticleRouteMatch[1];
       const slug = decodeURIComponent(rulesArticleRouteMatch[2]!);
+      if (articleIsRetired(slug)) {
+        void serveGoneShell({ response, staticDir: options.staticDir }).catch(() => {
+          request.url = '/';
+          void serveHandler(request, response, { public: options.staticDir });
+        });
+        return;
+      }
       void serveArticlePage({
         slug,
         base: 'rules',

@@ -229,19 +229,11 @@ const ZH_HANS: Record<string, string> = {
     '两项规则改动。兵回到象棋本来的走法：在己方半场每次只向前走一点，过河之后才获得横走。过河是一次要付出代价的决断。宝从此留在家中，走子和打入都只限己方半场，被围攻的目标不能再空降到战场上。跨五套规则、上千局的引擎自战表明，真正让这个棋种变得锋利的是兵：和棋率从 34% 降到 9%，一局的长度增加约一半。',
   'Jungle Chess has launched.': '斗兽棋已上线。',
   'Flip Jungle has launched.': '翻翻棋已上线。',
-  'Drop Mini Xiangqi has launched.': '投放迷你象棋已上线。',
-  'Dark Crazyhouse has launched.': '迷雾疯狂屋已上线。',
-  'Dark Crossroads Chess has launched.': '迷雾十字路口国际象棋已上线。',
-  'Fog Shogi has launched.': '迷雾将棋已上线。',
-  'Kriegspiel is open for alpha play.': '裁判棋已开放内测对局。',
-  'Reveal Chess is open for alpha play.': '翻开国际象棋已开放内测对局。',
   'Fog Xiangqi is open for alpha play.': '迷雾象棋已开放内测对局。',
   'Banqi is open for alpha play.': '暗棋已开放内测对局。',
   'Jieqi is open for alpha play.': '揭棋已开放内测对局。',
-  'Crossroads Chess has launched.': '十字路口国际象棋已上线。',
   'Fog Chess is open for alpha play.': '迷雾国际象棋已开放内测对局。',
   'Mistboard is in alpha.': 'Mistboard 处于内测阶段。',
-  'Dark Mini Xiangqi is open for alpha play.': '迷雾迷你象棋已开放内测对局。',
   'Misty 1.0 has launched.': 'Misty 1.0 已上线。',
 
   // ── bodies ──
@@ -297,31 +289,15 @@ const ZH_HANS: Record<string, string> = {
     '按等级吃子的动物棋，7×9 棋盘，有河流、兽穴和陷阱，现已上线。可邀请好友，或挑战 Misty Jungle 引擎。',
   'Every animal starts face-down on a 4 by 4 board and flips as you play. Challenge a friend or the engine.':
     '4×4 棋盘上所有动物开局均背面朝上，边下边翻。可邀请好友或与引擎对弈。',
-  'The 7 by 7 reserve fight is live with no enemy-palace drops, a full rules page, and a 114-ply FSF sample game to study.':
-    '7×7 的手牌之争已上线：不可打入敌方九宫，附完整规则页，以及一局 114 着的 FSF 示例对局可供研究。',
-  'Crazyhouse under Fog of War is now live for invite games, with private hands, captured pieces entering reserve, and drops into the fog.':
-    '迷雾下的疯狂屋已开放邀请对局：手牌不公开，被吃的棋子进入手牌，并可打入迷雾之中。',
-  'Crossroads Chess under Fog of War is now live for invite games, with hidden enemy pieces, no check warnings, and the far-rank Try.':
-    '迷雾下的十字路口国际象棋已开放邀请对局：敌方棋子隐藏，没有将军提示，并保留冲到底线的「触阵」胜法。',
-  'Shogi under Fog of War is now live for invite games, with private hands, drops into the fog, and king capture wins.':
-    '迷雾下的将棋已开放邀请对局：手牌不公开，可打入迷雾，擒王即胜。',
-  'The original hidden-information chess: see only your own pieces, try moves through the umpire, and challenge a friend to a match.':
-    '最早的隐藏信息国际象棋：只看得见自己的棋子，通过裁判试着法，可邀请好友对局。',
-  'Standard chess with a hidden starting arrangement: every piece but the king begins face-down and reveals its true identity the moment it moves. Challenge a friend to a match.':
-    '开局摆法隐藏的国际象棋：除王以外的棋子开局均背面朝上，一走动就亮明真实身份。可邀请好友对局。',
   'Fog of War on the full 9 by 10 xiangqi board: each side sees only the points its pieces reach. Challenge a friend to a match.':
     '9×10 全盘象棋上的迷雾：每一方只看得见自己棋子能到达的点位。可邀请好友对局。',
   'Banqi on an 8 by 4 board: all 32 pieces start face-down and flip as you play. Challenge a friend to a match.':
     '8×4 棋盘上的暗棋：32 枚棋子开局均背面朝上，边下边翻。可邀请好友对局。',
   'Hidden-identity xiangqi: every non-general piece starts face-down and reveals as it moves. Take on PikaJieQi, our jieqi engine.':
     '隐藏身份的象棋：除将帅外的棋子开局均背面朝上，走动时翻开。可挑战我们的揭棋引擎 PikaJieQi。',
-  'A 6 by 8 chess-xiangqi variant with checkmate and king-race wins is now live on Mistboard.':
-    '融合国际象棋与象棋的 6×8 变体已在 Mistboard 上线，可将死取胜，也可比拼王的冲刺。',
   'Fog of War chess is live on Mistboard, with private vision, no check warnings, and king capture wins.':
     '迷雾国际象棋已在 Mistboard 上线：视野不公开，没有将军提示，擒王即胜。',
   'Casual dark chess is open. Rated beta is coming.': '休闲迷雾棋已开放，等级分公测即将推出。',
-  'A smaller Fog of War variant on a 7 by 7 xiangqi board, with Misty engine support.':
-    '7×7 象棋棋盘上的小型迷雾变体，支持 Misty 引擎。',
   'Our Fog of War dark chess engine is now live to play.': '我们的迷雾国际象棋引擎现已开放对弈。',
 
   // ── CTA labels ──
@@ -526,19 +502,11 @@ const ZH_HANT: Record<string, string> = {
     '兩項規則改動。兵回到象棋本來的走法：在己方半場每次只向前走一點，過河之後才獲得橫走。過河是一次要付出代價的決斷。寶從此留在家中，走子和打入都只限己方半場，被圍攻的目標不能再空降到戰場上。跨五套規則、上千局的引擎自戰表明，真正讓這個棋種變得鋒利的是兵：和棋率從 34% 降到 9%，一局的長度增加約一半。',
   'Jungle Chess has launched.': '鬥獸棋已上線。',
   'Flip Jungle has launched.': '翻翻棋已上線。',
-  'Drop Mini Xiangqi has launched.': '打入迷你象棋已上線。',
-  'Dark Crazyhouse has launched.': '迷霧瘋狂屋已上線。',
-  'Dark Crossroads Chess has launched.': '迷霧十字路口西洋棋已上線。',
-  'Fog Shogi has launched.': '迷霧將棋已上線。',
-  'Kriegspiel is open for alpha play.': '裁判棋已開放內測對局。',
-  'Reveal Chess is open for alpha play.': '翻開西洋棋已開放內測對局。',
   'Fog Xiangqi is open for alpha play.': '迷霧象棋已開放內測對局。',
   'Banqi is open for alpha play.': '暗棋已開放內測對局。',
   'Jieqi is open for alpha play.': '揭棋已開放內測對局。',
-  'Crossroads Chess has launched.': '十字路口西洋棋已上線。',
   'Fog Chess is open for alpha play.': '迷霧國際象棋已開放內測對局。',
   'Mistboard is in alpha.': 'Mistboard 處於內測階段。',
-  'Dark Mini Xiangqi is open for alpha play.': '迷霧迷你象棋已開放內測對局。',
   'Misty 1.0 has launched.': 'Misty 1.0 已上線。',
 
   // ── bodies ──
@@ -594,31 +562,15 @@ const ZH_HANT: Record<string, string> = {
     '按等級吃子的動物棋，7×9 棋盤，有河流、獸穴和陷阱，現已上線。可邀請好友，或挑戰 Misty Jungle 引擎。',
   'Every animal starts face-down on a 4 by 4 board and flips as you play. Challenge a friend or the engine.':
     '4×4 棋盤上所有動物開局均背面朝上，邊下邊翻。可邀請好友或與引擎對弈。',
-  'The 7 by 7 reserve fight is live with no enemy-palace drops, a full rules page, and a 114-ply FSF sample game to study.':
-    '7×7 的手牌之爭已上線：不可打入敵方九宮，附完整規則頁，以及一局 114 著的 FSF 範例對局可供研究。',
-  'Crazyhouse under Fog of War is now live for invite games, with private hands, captured pieces entering reserve, and drops into the fog.':
-    '迷霧下的瘋狂屋已開放邀請對局：手牌不公開，被吃的棋子進入手牌，並可打入迷霧之中。',
-  'Crossroads Chess under Fog of War is now live for invite games, with hidden enemy pieces, no check warnings, and the far-rank Try.':
-    '迷霧下的十字路口西洋棋已開放邀請對局：敵方棋子隱藏，沒有將軍提示，並保留衝到底線的「觸陣」勝法。',
-  'Shogi under Fog of War is now live for invite games, with private hands, drops into the fog, and king capture wins.':
-    '迷霧下的將棋已開放邀請對局：手牌不公開，可打入迷霧，擒王即勝。',
-  'The original hidden-information chess: see only your own pieces, try moves through the umpire, and challenge a friend to a match.':
-    '最早的隱藏資訊西洋棋：只看得見自己的棋子，透過裁判試著法，可邀請好友對局。',
-  'Standard chess with a hidden starting arrangement: every piece but the king begins face-down and reveals its true identity the moment it moves. Challenge a friend to a match.':
-    '開局擺法隱藏的西洋棋：除王以外的棋子開局均背面朝上，一走動就亮明真實身分。可邀請好友對局。',
   'Fog of War on the full 9 by 10 xiangqi board: each side sees only the points its pieces reach. Challenge a friend to a match.':
     '9×10 全盤象棋上的迷霧：每一方只看得見自己棋子能到達的點位。可邀請好友對局。',
   'Banqi on an 8 by 4 board: all 32 pieces start face-down and flip as you play. Challenge a friend to a match.':
     '8×4 棋盤上的暗棋：32 枚棋子開局均背面朝上，邊下邊翻。可邀請好友對局。',
   'Hidden-identity xiangqi: every non-general piece starts face-down and reveals as it moves. Take on PikaJieQi, our jieqi engine.':
     '隱藏身分的象棋：除將帥外的棋子開局均背面朝上，走動時翻開。可挑戰我們的揭棋引擎 PikaJieQi。',
-  'A 6 by 8 chess-xiangqi variant with checkmate and king-race wins is now live on Mistboard.':
-    '融合西洋棋與象棋的 6×8 變體已在 Mistboard 上線，可將死取勝，也可比拼王的衝刺。',
   'Fog of War chess is live on Mistboard, with private vision, no check warnings, and king capture wins.':
     '迷霧國際象棋已在 Mistboard 上線：視野不公開，沒有將軍提示，擒王即勝。',
   'Casual dark chess is open. Rated beta is coming.': '休閒迷霧棋已開放，等級分公測即將推出。',
-  'A smaller Fog of War variant on a 7 by 7 xiangqi board, with Misty engine support.':
-    '7×7 象棋棋盤上的小型迷霧變體，支援 Misty 引擎。',
   'Our Fog of War dark chess engine is now live to play.': '我們的迷霧國際象棋引擎現已開放對弈。',
 
   // ── CTA labels ──

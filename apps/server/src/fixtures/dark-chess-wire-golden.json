@@ -10307,47 +10307,144 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a4": {
+                    "color": "black",
                     "role": "pawn"
                   },
                   "a1": {
                     "color": "white",
                     "role": "rook"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "rook"
                   }
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -10356,7 +10453,11 @@
                   "reason": "resignation"
                 },
                 "perspective": "white",
-                "moveNumber": 4
+                "moveNumber": 4,
+                "lastMove": {
+                  "from": "a8",
+                  "to": "a5"
+                }
               },
               "rated": false,
               "paused": false,
@@ -10415,6 +10516,16 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
+                  }
+                },
+                {
+                  "type": "move-played",
                   "at": 20000,
                   "roomId": "golden-dark-a",
                   "color": "white",
@@ -10425,12 +10536,32 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 25000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a5",
+                    "to": "a4"
+                  }
+                },
+                {
+                  "type": "move-played",
                   "at": 30000,
                   "roomId": "golden-dark-a",
                   "color": "white",
                   "move": {
                     "from": "a2",
                     "to": "a1"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a8",
+                    "to": "a5"
                   }
                 },
                 {
@@ -10470,6 +10601,62 @@
                 "id": "golden-dark-a",
                 "variant": "dark-chess",
                 "board": {
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "b7": {
                     "color": "black",
                     "role": "pawn"
@@ -10526,9 +10713,17 @@
                     "color": "black",
                     "role": "rook"
                   },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "a4": {
                     "color": "black",
                     "role": "pawn"
+                  },
+                  "a1": {
+                    "color": "white",
+                    "role": "rook"
                   },
                   "a5": {
                     "color": "black",
@@ -10536,38 +10731,69 @@
                   }
                 },
                 "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
                   "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
                   "a5",
-                  "a6",
-                  "a7",
-                  "a8",
                   "b5",
-                  "b6",
-                  "b7",
-                  "b8",
                   "c5",
-                  "c6",
-                  "c7",
-                  "c8",
                   "d5",
-                  "d6",
-                  "d7",
-                  "d8",
                   "e5",
-                  "e6",
-                  "e7",
-                  "e8",
                   "f5",
-                  "f6",
-                  "f7",
-                  "f8",
                   "g5",
-                  "g6",
-                  "g7",
-                  "g8",
                   "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
                   "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
                   "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
                   "h8"
                 ],
                 "legalMoves": [],
@@ -10630,6 +10856,16 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 10000,
+                  "roomId": "golden-dark-a",
+                  "color": "white",
+                  "move": {
+                    "from": "a2",
+                    "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
                   "at": 15000,
                   "roomId": "golden-dark-a",
                   "color": "black",
@@ -10640,12 +10876,32 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 20000,
+                  "roomId": "golden-dark-a",
+                  "color": "white",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  }
+                },
+                {
+                  "type": "move-played",
                   "at": 25000,
                   "roomId": "golden-dark-a",
                   "color": "black",
                   "move": {
                     "from": "a5",
                     "to": "a4"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "golden-dark-a",
+                  "color": "white",
+                  "move": {
+                    "from": "a2",
+                    "to": "a1"
                   }
                 },
                 {
@@ -10694,8 +10950,202 @@
               "state": {
                 "id": "golden-dark-a",
                 "variant": "dark-chess",
-                "board": {},
-                "visibleSquares": [],
+                "board": {
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "a4": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "rook"
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
+                ],
                 "legalMoves": [],
                 "status": {
                   "type": "finished",
@@ -10703,7 +11153,11 @@
                   "reason": "resignation"
                 },
                 "perspective": "white",
-                "moveNumber": 4
+                "moveNumber": 4,
+                "lastMove": {
+                  "from": "a8",
+                  "to": "a5"
+                }
               },
               "rated": false,
               "paused": false,
@@ -10749,6 +11203,66 @@
                   "roomId": "golden-dark-a",
                   "clientId": "client-black",
                   "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "golden-dark-a",
+                  "color": "white",
+                  "move": {
+                    "from": "a2",
+                    "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "golden-dark-a",
+                  "color": "white",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a5",
+                    "to": "a4"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "golden-dark-a",
+                  "color": "white",
+                  "move": {
+                    "from": "a2",
+                    "to": "a1"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a8",
+                    "to": "a5"
+                  }
                 },
                 {
                   "type": "seat-resigned",
@@ -10845,47 +11359,144 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a4": {
+                    "color": "black",
                     "role": "pawn"
                   },
                   "a1": {
                     "color": "white",
                     "role": "rook"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "rook"
                   }
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -10894,7 +11505,11 @@
                   "reason": "resignation"
                 },
                 "perspective": "white",
-                "moveNumber": 4
+                "moveNumber": 4,
+                "lastMove": {
+                  "from": "a8",
+                  "to": "a5"
+                }
               },
               "rated": false,
               "paused": false,
@@ -10954,6 +11569,62 @@
                 "id": "golden-dark-a",
                 "variant": "dark-chess",
                 "board": {
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "b7": {
                     "color": "black",
                     "role": "pawn"
@@ -11010,9 +11681,17 @@
                     "color": "black",
                     "role": "rook"
                   },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "a4": {
                     "color": "black",
                     "role": "pawn"
+                  },
+                  "a1": {
+                    "color": "white",
+                    "role": "rook"
                   },
                   "a5": {
                     "color": "black",
@@ -11020,38 +11699,69 @@
                   }
                 },
                 "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
                   "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
                   "a5",
-                  "a6",
-                  "a7",
-                  "a8",
                   "b5",
-                  "b6",
-                  "b7",
-                  "b8",
                   "c5",
-                  "c6",
-                  "c7",
-                  "c8",
                   "d5",
-                  "d6",
-                  "d7",
-                  "d8",
                   "e5",
-                  "e6",
-                  "e7",
-                  "e8",
                   "f5",
-                  "f6",
-                  "f7",
-                  "f8",
                   "g5",
-                  "g6",
-                  "g7",
-                  "g8",
                   "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
                   "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
                   "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
                   "h8"
                 ],
                 "legalMoves": [],
@@ -11124,8 +11834,202 @@
               "state": {
                 "id": "golden-dark-a",
                 "variant": "dark-chess",
-                "board": {},
-                "visibleSquares": [],
+                "board": {
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "a4": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "rook"
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
+                ],
                 "legalMoves": [],
                 "status": {
                   "type": "finished",
@@ -11133,7 +12037,11 @@
                   "reason": "resignation"
                 },
                 "perspective": "white",
-                "moveNumber": 4
+                "moveNumber": 4,
+                "lastMove": {
+                  "from": "a8",
+                  "to": "a5"
+                }
               },
               "rated": false,
               "paused": false,
@@ -11892,47 +12800,144 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a4": {
+                    "color": "black",
                     "role": "pawn"
                   },
                   "a1": {
                     "color": "white",
                     "role": "rook"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "rook"
                   }
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -11941,7 +12946,11 @@
                   "reason": "resignation"
                 },
                 "perspective": "white",
-                "moveNumber": 4
+                "moveNumber": 4,
+                "lastMove": {
+                  "from": "a8",
+                  "to": "a5"
+                }
               },
               "rated": false,
               "paused": false,
@@ -12000,6 +13009,16 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
+                  }
+                },
+                {
+                  "type": "move-played",
                   "at": 20000,
                   "roomId": "golden-dark-a",
                   "color": "white",
@@ -12010,12 +13029,32 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 25000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a5",
+                    "to": "a4"
+                  }
+                },
+                {
+                  "type": "move-played",
                   "at": 30000,
                   "roomId": "golden-dark-a",
                   "color": "white",
                   "move": {
                     "from": "a2",
                     "to": "a1"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "golden-dark-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a8",
+                    "to": "a5"
                   }
                 },
                 {
@@ -31848,8 +32887,72 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
                     "role": "pawn"
                   },
                   "a2": {
@@ -31859,37 +32962,69 @@
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
-                  "a4",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -31967,6 +33102,16 @@
                   "move": {
                     "from": "a2",
                     "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-c",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
                   }
                 },
                 {
@@ -32048,6 +33193,62 @@
                 "id": "golden-dark-c",
                 "variant": "dark-chess",
                 "board": {
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "b7": {
                     "color": "black",
                     "role": "pawn"
@@ -32108,44 +33309,83 @@
                     "color": "black",
                     "role": "rook"
                   },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "a5": {
                     "color": "black",
                     "role": "pawn"
+                  },
+                  "a2": {
+                    "color": "white",
+                    "role": "rook"
                   }
                 },
                 "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
                   "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
                   "a5",
-                  "a6",
-                  "a7",
-                  "a8",
                   "b5",
-                  "b6",
-                  "b7",
-                  "b8",
                   "c5",
-                  "c6",
-                  "c7",
-                  "c8",
                   "d5",
-                  "d6",
-                  "d7",
-                  "d8",
                   "e5",
-                  "e6",
-                  "e7",
-                  "e8",
                   "f5",
-                  "f6",
-                  "f7",
-                  "f8",
                   "g5",
-                  "g6",
-                  "g7",
-                  "g8",
                   "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
                   "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
                   "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
                   "h8"
                 ],
                 "legalMoves": [],
@@ -32156,6 +33396,10 @@
                 },
                 "perspective": "black",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a1",
+                  "to": "a2"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -32214,6 +33458,16 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 10000,
+                  "roomId": "golden-dark-c",
+                  "color": "white",
+                  "move": {
+                    "from": "a2",
+                    "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
                   "at": 15000,
                   "roomId": "golden-dark-c",
                   "color": "black",
@@ -32255,6 +33509,16 @@
                   }
                 },
                 {
+                  "type": "move-played",
+                  "at": 31000,
+                  "roomId": "golden-dark-c",
+                  "color": "white",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  }
+                },
+                {
                   "type": "seat-forfeited",
                   "at": 40000,
                   "roomId": "golden-dark-c",
@@ -32290,8 +33554,202 @@
               "state": {
                 "id": "golden-dark-c",
                 "variant": "dark-chess",
-                "board": {},
-                "visibleSquares": [],
+                "board": {
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a2": {
+                    "color": "white",
+                    "role": "rook"
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
+                ],
                 "legalMoves": [],
                 "status": {
                   "type": "finished",
@@ -32300,6 +33758,10 @@
                 },
                 "perspective": "white",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a1",
+                  "to": "a2"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -32357,6 +33819,26 @@
                   "seat": "black"
                 },
                 {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "golden-dark-c",
+                  "color": "white",
+                  "move": {
+                    "from": "a2",
+                    "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-c",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
+                  }
+                },
+                {
                   "type": "pause",
                   "at": 20000,
                   "roomId": "golden-dark-c",
@@ -32386,6 +33868,16 @@
                       "black": 165000
                     },
                     "runningSince": 30000
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 31000,
+                  "roomId": "golden-dark-c",
+                  "color": "white",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
                   }
                 },
                 {
@@ -32483,8 +33975,72 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
                     "role": "pawn"
                   },
                   "a2": {
@@ -32494,37 +34050,69 @@
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
-                  "a4",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -32607,6 +34195,62 @@
                 "id": "golden-dark-c",
                 "variant": "dark-chess",
                 "board": {
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "b7": {
                     "color": "black",
                     "role": "pawn"
@@ -32667,44 +34311,83 @@
                     "color": "black",
                     "role": "rook"
                   },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "a5": {
                     "color": "black",
                     "role": "pawn"
+                  },
+                  "a2": {
+                    "color": "white",
+                    "role": "rook"
                   }
                 },
                 "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
                   "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
                   "a5",
-                  "a6",
-                  "a7",
-                  "a8",
                   "b5",
-                  "b6",
-                  "b7",
-                  "b8",
                   "c5",
-                  "c6",
-                  "c7",
-                  "c8",
                   "d5",
-                  "d6",
-                  "d7",
-                  "d8",
                   "e5",
-                  "e6",
-                  "e7",
-                  "e8",
                   "f5",
-                  "f6",
-                  "f7",
-                  "f8",
                   "g5",
-                  "g6",
-                  "g7",
-                  "g8",
                   "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
                   "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
                   "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
                   "h8"
                 ],
                 "legalMoves": [],
@@ -32715,6 +34398,10 @@
                 },
                 "perspective": "black",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a1",
+                  "to": "a2"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -32783,8 +34470,202 @@
               "state": {
                 "id": "golden-dark-c",
                 "variant": "dark-chess",
-                "board": {},
-                "visibleSquares": [],
+                "board": {
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a2": {
+                    "color": "white",
+                    "role": "rook"
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
+                ],
                 "legalMoves": [],
                 "status": {
                   "type": "finished",
@@ -32793,6 +34674,10 @@
                 },
                 "perspective": "white",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a1",
+                  "to": "a2"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -33591,8 +35476,72 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
                     "role": "pawn"
                   },
                   "a2": {
@@ -33602,37 +35551,69 @@
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
-                  "a4",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -33710,6 +35691,16 @@
                   "move": {
                     "from": "a2",
                     "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-c",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
                   }
                 },
                 {
@@ -36897,44 +38888,140 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
                     "role": "pawn"
                   }
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
-                  "a4",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -36944,6 +39031,10 @@
                 },
                 "perspective": "white",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a7",
+                  "to": "a5"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -37015,6 +39106,16 @@
                   }
                 },
                 {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-d",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
+                  }
+                },
+                {
                   "type": "clock-expired",
                   "at": 200000,
                   "roomId": "golden-dark-d",
@@ -37061,6 +39162,66 @@
                 "id": "golden-dark-d",
                 "variant": "dark-chess",
                 "board": {
+                  "a1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "b7": {
                     "color": "black",
                     "role": "pawn"
@@ -37121,44 +39282,79 @@
                     "color": "black",
                     "role": "rook"
                   },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "a5": {
                     "color": "black",
                     "role": "pawn"
                   }
                 },
                 "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
                   "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
                   "a5",
-                  "a6",
-                  "a7",
-                  "a8",
                   "b5",
-                  "b6",
-                  "b7",
-                  "b8",
                   "c5",
-                  "c6",
-                  "c7",
-                  "c8",
                   "d5",
-                  "d6",
-                  "d7",
-                  "d8",
                   "e5",
-                  "e6",
-                  "e7",
-                  "e8",
                   "f5",
-                  "f6",
-                  "f7",
-                  "f8",
                   "g5",
-                  "g6",
-                  "g7",
-                  "g8",
                   "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
                   "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
                   "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
                   "h8"
                 ],
                 "legalMoves": [],
@@ -37235,6 +39431,16 @@
                 },
                 {
                   "type": "move-played",
+                  "at": 10000,
+                  "roomId": "golden-dark-d",
+                  "color": "white",
+                  "move": {
+                    "from": "a2",
+                    "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
                   "at": 15000,
                   "roomId": "golden-dark-d",
                   "color": "black",
@@ -37289,8 +39495,202 @@
               "state": {
                 "id": "golden-dark-d",
                 "variant": "dark-chess",
-                "board": {},
-                "visibleSquares": [],
+                "board": {
+                  "a1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "pawn"
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
+                ],
                 "legalMoves": [],
                 "status": {
                   "type": "finished",
@@ -37299,6 +39699,10 @@
                 },
                 "perspective": "white",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a7",
+                  "to": "a5"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -37358,6 +39762,26 @@
                   "roomId": "golden-dark-d",
                   "clientId": "python-v2-v1.0",
                   "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "golden-dark-d",
+                  "color": "white",
+                  "move": {
+                    "from": "a2",
+                    "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-d",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
+                  }
                 },
                 {
                   "type": "clock-expired",
@@ -37468,44 +39892,140 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
                     "role": "pawn"
                   }
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
-                  "a4",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -37515,6 +40035,10 @@
                 },
                 "perspective": "white",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a7",
+                  "to": "a5"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -37594,6 +40118,66 @@
                 "id": "golden-dark-d",
                 "variant": "dark-chess",
                 "board": {
+                  "a1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "b7": {
                     "color": "black",
                     "role": "pawn"
@@ -37654,44 +40238,79 @@
                     "color": "black",
                     "role": "rook"
                   },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
                   "a5": {
                     "color": "black",
                     "role": "pawn"
                   }
                 },
                 "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
                   "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
                   "a5",
-                  "a6",
-                  "a7",
-                  "a8",
                   "b5",
-                  "b6",
-                  "b7",
-                  "b8",
                   "c5",
-                  "c6",
-                  "c7",
-                  "c8",
                   "d5",
-                  "d6",
-                  "d7",
-                  "d8",
                   "e5",
-                  "e6",
-                  "e7",
-                  "e8",
                   "f5",
-                  "f6",
-                  "f7",
-                  "f8",
                   "g5",
-                  "g6",
-                  "g7",
-                  "g8",
                   "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
                   "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
                   "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
                   "h8"
                 ],
                 "legalMoves": [],
@@ -37784,8 +40403,202 @@
               "state": {
                 "id": "golden-dark-d",
                 "variant": "dark-chess",
-                "board": {},
-                "visibleSquares": [],
+                "board": {
+                  "a1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "c1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "d1": {
+                    "color": "white",
+                    "role": "queen"
+                  },
+                  "e1": {
+                    "color": "white",
+                    "role": "king"
+                  },
+                  "f1": {
+                    "color": "white",
+                    "role": "bishop"
+                  },
+                  "g1": {
+                    "color": "white",
+                    "role": "knight"
+                  },
+                  "h1": {
+                    "color": "white",
+                    "role": "rook"
+                  },
+                  "b2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "c2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "d2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "e2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "f2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "g2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "h2": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "a3": {
+                    "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
+                    "role": "pawn"
+                  }
+                },
+                "visibleSquares": [
+                  "a1",
+                  "b1",
+                  "c1",
+                  "d1",
+                  "e1",
+                  "f1",
+                  "g1",
+                  "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
+                  "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
+                  "h3",
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
+                ],
                 "legalMoves": [],
                 "status": {
                   "type": "finished",
@@ -37794,6 +40607,10 @@
                 },
                 "perspective": "white",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a7",
+                  "to": "a5"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -38606,44 +41423,140 @@
                     "color": "white",
                     "role": "pawn"
                   },
+                  "b7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "c7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "d7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "e7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "f7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "g7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "h7": {
+                    "color": "black",
+                    "role": "pawn"
+                  },
+                  "a8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
+                  "b8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "c8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "d8": {
+                    "color": "black",
+                    "role": "queen"
+                  },
+                  "e8": {
+                    "color": "black",
+                    "role": "king"
+                  },
+                  "f8": {
+                    "color": "black",
+                    "role": "bishop"
+                  },
+                  "g8": {
+                    "color": "black",
+                    "role": "knight"
+                  },
+                  "h8": {
+                    "color": "black",
+                    "role": "rook"
+                  },
                   "a3": {
                     "color": "white",
+                    "role": "pawn"
+                  },
+                  "a5": {
+                    "color": "black",
                     "role": "pawn"
                   }
                 },
                 "visibleSquares": [
                   "a1",
-                  "a2",
-                  "a3",
-                  "a4",
                   "b1",
-                  "b2",
-                  "b3",
-                  "b4",
                   "c1",
-                  "c2",
-                  "c3",
-                  "c4",
                   "d1",
-                  "d2",
-                  "d3",
-                  "d4",
                   "e1",
-                  "e2",
-                  "e3",
-                  "e4",
                   "f1",
-                  "f2",
-                  "f3",
-                  "f4",
                   "g1",
-                  "g2",
-                  "g3",
-                  "g4",
                   "h1",
+                  "a2",
+                  "b2",
+                  "c2",
+                  "d2",
+                  "e2",
+                  "f2",
+                  "g2",
                   "h2",
+                  "a3",
+                  "b3",
+                  "c3",
+                  "d3",
+                  "e3",
+                  "f3",
+                  "g3",
                   "h3",
-                  "h4"
+                  "a4",
+                  "b4",
+                  "c4",
+                  "d4",
+                  "e4",
+                  "f4",
+                  "g4",
+                  "h4",
+                  "a5",
+                  "b5",
+                  "c5",
+                  "d5",
+                  "e5",
+                  "f5",
+                  "g5",
+                  "h5",
+                  "a6",
+                  "b6",
+                  "c6",
+                  "d6",
+                  "e6",
+                  "f6",
+                  "g6",
+                  "h6",
+                  "a7",
+                  "b7",
+                  "c7",
+                  "d7",
+                  "e7",
+                  "f7",
+                  "g7",
+                  "h7",
+                  "a8",
+                  "b8",
+                  "c8",
+                  "d8",
+                  "e8",
+                  "f8",
+                  "g8",
+                  "h8"
                 ],
                 "legalMoves": [],
                 "status": {
@@ -38653,6 +41566,10 @@
                 },
                 "perspective": "white",
                 "moveNumber": 2,
+                "lastMove": {
+                  "from": "a7",
+                  "to": "a5"
+                },
                 "clock": {
                   "activeColor": null,
                   "incrementMs": 2000,
@@ -38721,6 +41638,16 @@
                   "move": {
                     "from": "a2",
                     "to": "a3"
+                  }
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "golden-dark-d",
+                  "color": "black",
+                  "move": {
+                    "from": "a7",
+                    "to": "a5"
                   }
                 },
                 {

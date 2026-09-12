@@ -173,6 +173,39 @@ export function getDarkXiangqiClientView(
   return view;
 }
 
+// The unredacted board. Lives here beside the per-seat view builders rather
+// than in the postgame route, so the room and the API cannot drift about what
+// "truth" means for this variant.
+export function darkXiangqiTruthView(
+  state: XiangqiGameState,
+  captures: DarkXiangqiWirePlayerView['captures'],
+): DarkXiangqiWirePlayerView {
+  return {
+    id: state.id,
+    perspective: 'red',
+    board: Object.fromEntries(
+      Object.entries(state.board).map(([square, piece]) => [square, { piece, shrouded: false }]),
+    ) as DarkXiangqiWirePlayerView['board'],
+    visibleSquares: allXiangqiSquares(),
+    legalMoves: [],
+    status: state.status,
+    moveNumber: state.moveNumber,
+    lastMove: state.lastMove,
+    captures,
+  };
+}
+
+function allXiangqiSquares(): XiangqiSquare[] {
+  const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h', 'i'];
+  const squares: XiangqiSquare[] = [];
+  for (let rank = 1; rank <= 10; rank += 1) {
+    for (const file of files) {
+      squares.push(`${file}${rank}` as XiangqiSquare);
+    }
+  }
+  return squares;
+}
+
 function latestVisibleXiangqiMoveColor(
   events: readonly TenantRoomEvent<XiangqiColor, XiangqiMove, DarkXiangqiSpecId>[],
   client: TenantSnapshotClient<XiangqiColor>,
@@ -313,6 +346,11 @@ export const darkXiangqiTenant: DarkXiangqiTenant = {
         client,
         latestVisibleXiangqiMoveColor(events, client),
         darkXiangqiCaptureLedger(events),
+      ),
+    truthView: (state, events) =>
+      darkXiangqiTruthView(
+        state,
+        darkXiangqiObservedCaptures(darkXiangqiCaptureLedger(events), 'truth'),
       ),
   },
   engine: {

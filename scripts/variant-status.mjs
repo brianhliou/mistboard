@@ -174,6 +174,7 @@ function parseFlags() {
 }
 
 function classify({ runtimeStatus, publicSurface, gate, registered }) {
+  if (runtimeStatus === 'retired') return 'retired';
   if (runtimeStatus === 'future') return 'planned';
   if (!gate) return 'chess-stack'; // excluded from the gate union
   if (!gate.flagged) return 'not-integrated';
@@ -187,6 +188,8 @@ const LEGEND = {
   'flagged-no-tenant': 'has a launch flag but no tenant — would 501',
   'not-integrated': 'reserved in the gate, never built; every request 501s',
   planned: "runtimeStatus 'future' — an id only",
+  retired:
+    "runtimeStatus 'retired' — refused by the gate, no tenant, code being removed (#396). Hidden unless --all",
   'chess-stack': 'legacy chess path, outside the tenant registry',
 };
 
@@ -234,6 +237,9 @@ async function main() {
   const args = process.argv.slice(2);
   const wantProd = args.includes('--prod');
   const asJson = args.includes('--json');
+  // Retired specs are not variants to anyone; they are listed only on request
+  // so a session sizing the launched set never counts them.
+  const wantAll = args.includes('--all');
 
   const specs = parseSpecs();
   const gate = parseGate();
@@ -267,6 +273,7 @@ async function main() {
         prodPve: pve ? [...pve] : [],
       };
     })
+    .filter((row) => wantAll || row.status !== 'retired')
     .sort((a, b) => a.status.localeCompare(b.status) || a.id.localeCompare(b.id));
 
   if (asJson) {
@@ -300,7 +307,11 @@ async function main() {
     );
   }
 
-  console.log(`\n${rows.length} specs · ${flags.size} feature flags`);
+  const retiredCount = [...specs.values()].filter((s) => s.runtimeStatus === 'retired').length;
+  console.log(
+    `\n${rows.length} specs · ${flags.size} feature flags` +
+      (wantAll || retiredCount === 0 ? '' : ` · ${retiredCount} retired hidden (--all to list)`),
+  );
   console.log('Flags default to OFF and are set per environment, so "flag-gated" is not "live".');
   console.log(
     'The tenant-bot count reads apps/web/src/variant-tenant/registry.ts only. It cannot\n' +

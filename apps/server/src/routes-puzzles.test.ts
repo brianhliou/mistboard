@@ -86,22 +86,14 @@ test('puzzle list returns surfaced summaries without solutions', async () => {
 
   assert.equal(response.status, 200);
   // Fortress and Jungle are hidden from the discoverable pool while their
-  // puzzle surfaces are parked, so the unfiltered list excludes both.
-  assert.equal(body.puzzles.length, MINI_XIANGQI_PUZZLES.length + XIANGQI_PUZZLES.length);
-  assert.deepEqual(
-    body.puzzles.slice(0, 6).map((puzzle) => puzzle.variant),
-    [
-      'mini-xiangqi',
-      'mini-xiangqi',
-      'mini-xiangqi',
-      'mini-xiangqi',
-      'mini-xiangqi',
-      'mini-xiangqi',
-    ],
+  // puzzle surfaces are parked; Mini and Drop Mini are retired variants
+  // (docs-private/variant-retirement-plan.md, #396). The unfiltered list is
+  // standard xiangqi alone.
+  assert.equal(body.puzzles.length, XIANGQI_PUZZLES.length);
+  assert.equal(
+    body.puzzles.every((puzzle) => puzzle.variant === 'xiangqi'),
+    true,
   );
-  assert.equal(body.puzzles.filter((puzzle) => puzzle.variant === 'drop-mini-xiangqi').length, 30);
-  assert.equal(body.puzzles.filter((puzzle) => puzzle.variant === 'fortress-xiangqi').length, 0);
-  assert.equal(body.puzzles.filter((puzzle) => puzzle.variant === 'jungle').length, 0);
   assert.equal(
     body.puzzles.every((puzzle) => puzzle.solution === undefined),
     true,
@@ -114,50 +106,20 @@ test('puzzle list returns surfaced summaries without solutions', async () => {
     body.puzzles.every((puzzle) => puzzle.ratingProvisional),
     true,
   );
-  const mateInTwoIds = [
-    'mini-xiangqi-black-two-step-file-net-1',
-    'drop-mini-xiangqi-black-soldier-drop-net-1',
-  ];
-  const mateInThreeIds = [
-    'mini-xiangqi-red-cannon-switch-mate-1',
-    'mini-xiangqi-red-double-chariot-file-mate-1',
-    'mini-xiangqi-red-horse-return-mate-1',
-    'drop-mini-xiangqi-red-cannon-clearance-mate-1',
-    'drop-mini-xiangqi-red-twin-cannon-mate-1',
-    'drop-mini-xiangqi-black-cannon-ladder-mate-1',
-  ];
-  for (const id of mateInTwoIds) {
-    assert.equal(body.puzzles.find((puzzle) => puzzle.id === id)?.solutionPlyCount, 3, id);
-  }
-  for (const id of mateInThreeIds) {
-    assert.equal(body.puzzles.find((puzzle) => puzzle.id === id)?.solutionPlyCount, 5, id);
-  }
-  // Mate-depth convention applies to the hand-curated Mini and Drop Mini
-  // registries only; mined standard-xiangqi mates run 3 to 7 plies.
-  assert.equal(
-    body.puzzles
-      .filter(
-        (puzzle) =>
-          (puzzle.variant === 'mini-xiangqi' || puzzle.variant === 'drop-mini-xiangqi') &&
-          puzzle.goal.type === 'checkmate' &&
-          !mateInTwoIds.includes(puzzle.id) &&
-          !mateInThreeIds.includes(puzzle.id),
-      )
-      .every((puzzle) => puzzle.solutionPlyCount === 1),
-    true,
-  );
 });
 
-test('puzzle list filters by supported puzzle variant', async () => {
-  const response = await route('/api/puzzles?variant=drop-mini-xiangqi');
-  const body = JSON.parse(response.body) as { puzzles: Array<{ variant: string }> };
+test('puzzle list filters by variant, and a retired variant filters to nothing', async () => {
+  const xiangqi = await route('/api/puzzles?variant=xiangqi');
+  assert.equal(xiangqi.status, 200);
+  const xiangqiBody = JSON.parse(xiangqi.body) as { puzzles: Array<{ variant: string }> };
+  assert.equal(xiangqiBody.puzzles.length, XIANGQI_PUZZLES.length);
 
-  assert.equal(response.status, 200);
-  assert.equal(body.puzzles.length, 30);
-  assert.equal(
-    body.puzzles.every((puzzle) => puzzle.variant === 'drop-mini-xiangqi'),
-    true,
-  );
+  for (const variant of ['mini-xiangqi', 'drop-mini-xiangqi']) {
+    const response = await route(`/api/puzzles?variant=${variant}`);
+    assert.equal(response.status, 200, variant);
+    const body = JSON.parse(response.body) as { puzzles: unknown[] };
+    assert.equal(body.puzzles.length, 0, variant);
+  }
 });
 
 test('puzzle list hides Fortress Xiangqi puzzles while the variant is demoted', async () => {

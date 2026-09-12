@@ -75,10 +75,6 @@ const GATED_GAME_SPECS = {
     disabledError: 'mahjong_disabled',
     notIntegratedError: 'mahjong_not_integrated',
   },
-  'dark-antichess': { notIntegratedError: 'dark_antichess_not_integrated' },
-  'sun-tzu': { notIntegratedError: 'sun_tzu_not_integrated' },
-  'lao-tzu': { notIntegratedError: 'lao_tzu_not_integrated' },
-  'dark-seirawan': { notIntegratedError: 'dark_seirawan_not_integrated' },
   'mini-xiangqi': { notIntegratedError: 'mini_xiangqi_not_integrated' },
   'dark-mini-xiangqi': {
     enabled: darkMiniXiangqiEnabled,
@@ -100,7 +96,6 @@ const GATED_GAME_SPECS = {
     disabledError: 'dark_shogi_disabled',
     notIntegratedError: 'dark_shogi_not_integrated',
   },
-  'dark-omega': { notIntegratedError: 'dark_omega_not_integrated' },
   jieqi: {
     enabled: jieqiEnabled,
     disabledError: 'jieqi_disabled',
@@ -162,6 +157,7 @@ type GateEntryUnion = (typeof GATED_GAME_SPECS)[GatedGameSpecId];
 type GameSpecGateError =
   | Extract<GateEntryUnion, { disabledError: string }>['disabledError']
   | GateEntryUnion['notIntegratedError']
+  | 'retired_game_spec'
   | 'unknown_game_spec';
 
 export type GameSpecGateDecision =
@@ -169,25 +165,37 @@ export type GameSpecGateDecision =
   | {
       type: 'reject';
       error: GameSpecGateError;
-      httpStatus: 404 | 501;
+      httpStatus: 404 | 410 | 501;
       wsCloseReason: string;
     };
+
+// A retired spec (runtimeStatus 'retired' in packages/game) is refused before
+// anything else looks at it: before the chess-stack branch, because
+// dark-draft960 is a chess-stack id, and before the flag lookup, because a
+// flag cannot bring a retired spec back. 410 rather than 404: the id is
+// known and it is gone.
+const DRAFT960_VARIANT_SPELLINGS: ReadonlySet<string> = new Set([
+  'draft960',
+  'dark-draft960',
+  'fog-draft960',
+]);
+
+const REJECT_RETIRED: GameSpecGateDecision = {
+  type: 'reject',
+  error: 'retired_game_spec',
+  httpStatus: 410,
+  wsCloseReason: 'game spec retired',
+};
 
 export function gateGameSpecRequest(input: {
   gameSpecId?: unknown;
   variant?: unknown;
 }): GameSpecGateDecision {
   // Legacy special case, kept first so precedence matches the old gate: a
-  // canonical Mini Xiangqi variant string on the chess path answers
-  // not-integrated regardless of what gameSpecId says.
-  if (input.variant === MINI_XIANGQI_SPEC_ID) {
-    return {
-      type: 'reject',
-      error: 'mini_xiangqi_not_integrated',
-      httpStatus: 501,
-      wsCloseReason: 'game spec not integrated',
-    };
-  }
+  // canonical Mini Xiangqi variant string on the chess path is refused
+  // regardless of what gameSpecId says. Mini Xiangqi is retired, so the
+  // refusal is the retired one.
+  if (input.variant === MINI_XIANGQI_SPEC_ID) return REJECT_RETIRED;
   // `gameSpecId` is the canonical selector. Absent (undefined, or null from
   // URLSearchParams.get on the WS path) passes; anything else must resolve to
   // a chess-stack spec. maybeGameSpecForId also resolves the registry aliases
@@ -202,6 +210,7 @@ export function gateGameSpecRequest(input: {
         wsCloseReason: 'unknown game spec',
       };
     }
+    if (spec.runtimeStatus === 'retired') return REJECT_RETIRED;
     if (!isChessStackSpecId(spec.id)) return rejectGatedSpec(spec.id);
   }
   // The legacy `variant` field only rejects when it names a known non-chess
@@ -209,7 +218,13 @@ export function gateGameSpecRequest(input: {
   // collapse: legacy clients send spellings like 'fog-draft960' or arbitrary
   // values and rely on landing in dark chess.
   if (typeof input.variant === 'string') {
+    // parseVariantId (routes/lib.ts) collapses these three spellings to the
+    // draft960 setup, which is retired; refuse them here so the collapse is
+    // never reached. Mirrors that function's list on purpose (no import: lib
+    // imports this gate).
+    if (DRAFT960_VARIANT_SPELLINGS.has(input.variant)) return REJECT_RETIRED;
     const spec = maybeGameSpecForId(input.variant);
+    if (spec?.runtimeStatus === 'retired') return REJECT_RETIRED;
     if (spec && !isChessStackSpecId(spec.id)) return rejectGatedSpec(spec.id);
   }
   return { type: 'pass' };

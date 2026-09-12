@@ -19,7 +19,7 @@
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import type { RoomTimeControl } from '@mistboard/game';
+import { isRetiredGameSpec, type RoomTimeControl } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
   censusDeployGate,
@@ -269,6 +269,12 @@ const registrationsByPrefix = new Map<string, VariantTenantRegistration>();
 let fallbackRoomLookup: (roomId: string) => boolean = () => false;
 
 export function registerVariantTenant(registration: VariantTenantRegistration): void {
+  // A retired spec (runtimeStatus 'retired' in packages/game) never registers:
+  // no routes, no room-id prefix claim, no watch channel, no seat for a bot.
+  // The tenant module stays on disk until its Stage 2 commit removes it
+  // (docs-private/variant-retirement-plan.md, #396); this is what makes the
+  // retirement take effect the moment the status flips, with no list to keep.
+  if (isRetiredGameSpec(registration.gameSpecId)) return;
   const existing = registrationsByPrefix.get(registration.roomIdPrefix);
   if (existing && existing.kind !== registration.kind) {
     throw new Error(

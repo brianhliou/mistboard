@@ -79,10 +79,17 @@ type PublicPuzzleMove = MiniXiangqiPuzzleMove | FortressXiangqiMove | JungleMove
 // while those puzzle surfaces are parked. Their puzzles stay resolvable by
 // id/short-code below (puzzleById scans the whole store), so existing links do
 // not hard-404. Remove a variant from this filter to surface it again.
+// Mini and Drop Mini are retired: their rows are withheld at the store
+// (migration 143) and excluded here too, so the filter says what it serves.
+const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([
+  FORTRESS_XIANGQI_SPEC_ID,
+  JUNGLE_SPEC_ID,
+  MINI_XIANGQI_SPEC_ID,
+  DROP_MINI_XIANGQI_SPEC_ID,
+]);
+
 function discoverablePuzzles(store: PuzzleStoreSnapshot): PublicPuzzle[] {
-  return store.puzzles.filter(
-    (puzzle) => puzzle.variant !== FORTRESS_XIANGQI_SPEC_ID && puzzle.variant !== JUNGLE_SPEC_ID,
-  );
+  return store.puzzles.filter((puzzle) => !UNDISCOVERABLE_PUZZLE_VARIANTS.has(puzzle.variant));
 }
 
 type PuzzleSummary = {

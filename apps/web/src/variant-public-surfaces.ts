@@ -4,6 +4,7 @@ import {
   DARK_XIANGQI_SPEC_ID,
   GAME_SPECS,
   type GameSpecId,
+  isRetiredGameSpec,
 } from '@mistboard/game';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
@@ -17,10 +18,6 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // 2026-07-03 (project_xiangqi_pivot_track). Direct /rules + play URLs stay live.
   'dark-crazyhouse': false,
   kriegspiel: false,
-  'dark-antichess': false,
-  'sun-tzu': false,
-  'lao-tzu': false,
-  'dark-seirawan': false,
   'mini-xiangqi': false,
   'dark-mini-xiangqi': false,
   'drop-mini-xiangqi': false,
@@ -28,7 +25,6 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   xiangqi: true,
   'dark-xiangqi': true,
   'dark-shogi': false,
-  'dark-omega': false,
   jieqi: true,
   banqi: true,
   luzhanqi: false,
@@ -57,6 +53,19 @@ export function isGameSpecId(value: string): value is GameSpecId {
 
 export function variantPublicSurfaceEnabled(id: GameSpecId): boolean {
   return VARIANT_PUBLIC_SURFACE_ENABLED[id];
+}
+
+/**
+ * A rules page whose variant is retired (runtimeStatus 'retired' in
+ * packages/game), or one of the shogi concept pages that go with dark-shogi.
+ * The server answers 410 for these paths; the client renders not-found rather
+ * than the article, so a client-side navigation cannot show a page the server
+ * has declared gone. Derived from the spec's own status: no second list.
+ */
+export function rulesSlugRetired(slug: string): boolean {
+  if (HIDDEN_RULES_SLUGS.has(slug)) return true;
+  const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
+  return isRetiredGameSpec(gameSpecId);
 }
 
 export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {

@@ -105,7 +105,7 @@ describe('landing announcements', () => {
 
     expect(hrefs).toContain('/forum');
     expect(hrefs).toContain('/rules/banqi');
-    expect(hrefs).toContain('/rules/dark-mini-xiangqi');
+    expect(hrefs).toContain('/rules/jieqi');
     expect(hrefs).toContain('/?play=computer');
   });
 

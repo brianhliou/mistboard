@@ -23,6 +23,7 @@ import {
   detectXiangqiPuzzleMotifs,
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiPuzzle,
+  isRetiredGameSpec,
   JUNGLE_SPEC_ID,
   type JunglePuzzle,
   MINI_XIANGQI_SPEC_ID,
@@ -177,6 +178,9 @@ function buildSnapshot(
 // when they left the seed, miner-owned rows are never touched. Runs inside one
 // transaction under an advisory lock so concurrent first requests (or several
 // server processes) cannot interleave.
+/** The hidden_reason a retired variant's puzzles carry (matches migration 143). */
+export const RETIRED_VARIANT_HIDDEN_REASON = 'retired-variant';
+
 async function ensureSeedSynced(): Promise<void> {
   const seedHash = seedPuzzleContentHash();
   const current = await readSyncedHash(getPool());
@@ -189,9 +193,16 @@ async function ensureSeedSynced(): Promise<void> {
 
     const puzzles = loadAllSeedPuzzles();
     for (const [index, puzzle] of puzzles.entries()) {
+      // A seed puzzle of a retired variant (docs-private/variant-retirement-
+      // plan.md, #396) is stored withheld, whatever order the migration that
+      // withholds existing rows (143) and this sync run in: a fresh database
+      // seeds after migrating, and without this the retired puzzles came back.
+      // A reason already on the row is never cleared; the seed's rows go in
+      // Stage 2 of the plan.
+      const hiddenReason = isRetiredGameSpec(puzzle.variant) ? RETIRED_VARIANT_HIDDEN_REASON : null;
       await client.query(
-        `INSERT INTO puzzles (id, variant, title, seq, goal_type, themes, solution_plies, data, source_kind)
-         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'seed')
+        `INSERT INTO puzzles (id, variant, title, seq, goal_type, themes, solution_plies, data, source_kind, hidden_reason)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8, 'seed', $9)
          ON CONFLICT (id) DO UPDATE SET
            variant = EXCLUDED.variant,
            title = EXCLUDED.title,
@@ -200,7 +211,8 @@ async function ensureSeedSynced(): Promise<void> {
            themes = EXCLUDED.themes,
            solution_plies = EXCLUDED.solution_plies,
            data = EXCLUDED.data,
-           source_kind = 'seed'`,
+           source_kind = 'seed',
+           hidden_reason = COALESCE(puzzles.hidden_reason, EXCLUDED.hidden_reason)`,
         [
           puzzle.id,
           puzzle.variant,
@@ -210,6 +222,7 @@ async function ensureSeedSynced(): Promise<void> {
           [...puzzle.themes],
           puzzle.solution.length,
           JSON.stringify(puzzle),
+          hiddenReason,
         ],
       );
     }

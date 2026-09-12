@@ -27,6 +27,7 @@ import {
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
+  isRetiredGameSpec,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -187,7 +188,11 @@ const hiddenFromMenu = () => false;
 // hiddenFromMenu (still linkable) and from a flag (still reachable in the lab).
 const retiredDeepLink = () => false;
 
-const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
+// Every tenant block, retired ones included; the retired ones are filtered
+// out below rather than deleted here, so retirement is the spec's status and
+// this file's blocks go one variant per commit (docs-private/variant-
+// retirement-plan.md, #396).
+const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
   {
     // Dark-chess correspondence rooms (server registration: correspondence
     // create flow). Deliberately capability-free: no loadLiveRoomClient (rooms
@@ -1279,6 +1284,10 @@ const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
 ];
+
+const WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = ALL_WEB_VARIANT_TENANTS.filter(
+  (tenant) => !isRetiredGameSpec(tenant.gameSpecId),
+);
 
 export function webVariantTenants(): readonly WebVariantTenant[] {
   return WEB_VARIANT_TENANTS;

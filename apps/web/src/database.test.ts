@@ -55,8 +55,9 @@ describe('databaseReviewHref', () => {
     expect(databaseReviewHref('jgf_abc123')).toBe('/jungle-flip/game/jgf_abc123');
     expect(databaseReviewHref('xq_deadbeef')).toBe('/xiangqi/game/xq_deadbeef');
     expect(databaseReviewHref('dxq_dark01')).toBe('/dark-xiangqi/game/dxq_dark01');
-    expect(databaseReviewHref('dchess_cr1')).toBe('/crossroads-chess/game/dchess_cr1');
-    expect(databaseReviewHref('ddchess_x')).toBe('/dark-crossroads-chess/game/ddchess_x');
+    // Retired tenants no longer register, so their old prefixes fall through
+    // to the legacy /game/:id link (which 404s: those games are gone with them).
+    expect(databaseReviewHref('dchess_cr1')).toBe('/game/dchess_cr1');
   });
 
   it('keeps chess-family / prefix-less games on the legacy /game/:id shell', () => {

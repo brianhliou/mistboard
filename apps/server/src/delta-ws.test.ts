@@ -397,12 +397,13 @@ test('delta: mid-game snapshot:request stays fogged — recovered log never leak
   );
 });
 
-test('delta: game-end transition broadcasts a snapshot but stays fogged (model A)', async (t) => {
+test('delta: the game-end snapshot reveals the whole game to both seats', async (t) => {
   // Resignation transitions status to 'finished'. The game-end broadcast is a
   // full snapshot to every recipient (a clean final-frame resync at the
-  // boundary). Under model A the room NEVER reveals on finish, so that
-  // snapshot stays per-seat fogged: black still sees only its own moves, never
-  // white's previously-hidden move. The public reveal lives only at /game/:id.
+  // boundary), and it now carries the revealed game: black sees white's
+  // previously-hidden moves. Same content /game/:id already serves to any
+  // signed-out stranger. The LIVE fog invariant is covered by
+  // 'mid-game snapshot:request stays fogged', which must keep passing.
   const port = serverPort;
   const clients: TestClient[] = [];
   t.after(async () => closeClients(clients));
@@ -453,14 +454,11 @@ test('delta: game-end transition broadcasts a snapshot but stays fogged (model A
     'game-end broadcast must be a full-frame snapshot at the boundary',
   );
   assert.ok(Array.isArray(blackEnd.events));
-  // Model A: the room never reveals on finish. Black sees its OWN move-played
-  // events but white's must NOT leak into black's finished-game snapshot, even
-  // though the game is over.
+  // The room opens on finish, so white's move-played now appears in black's
+  // final snapshot. This assertion is the inverse of what it used to be: if it
+  // ever flips back, a shared finished-room link is showing a blank board again.
   const whiteMove = blackEnd.events?.find((e) => e.type === 'move-played' && e.color === 'white');
-  assert.ok(
-    !whiteMove,
-    "model A: white's hidden move-played must NOT appear in black's finished-game snapshot",
-  );
+  assert.ok(whiteMove, "a finished room must deliver white's moves in black's final snapshot");
 });
 
 test('delta: user abort pre-move-1 ends both clients in the aborted state', async (t) => {

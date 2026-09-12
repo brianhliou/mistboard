@@ -4,7 +4,6 @@ export type GameFamilyId =
   | 'chess'
   | 'xiangqi'
   | 'shogi'
-  | 'omega-chess'
   | 'crossroads-chess'
   | 'jungle'
   | 'military-chess'
@@ -14,7 +13,6 @@ export type BoardGeometryId =
   | 'xiangqi-7x7'
   | 'xiangqi-9x10'
   | 'shogi-9x9'
-  | 'omega-10x10-plus-corners'
   | 'crossroads-6x8'
   | 'banqi-8x4'
   | 'jungle-7x9'
@@ -32,8 +30,6 @@ export type MovementRulesId =
   | 'mini-xiangqi'
   | 'xiangqi'
   | 'shogi'
-  | 'omega'
-  | 'seirawan'
   | 'crossroads-chess'
   | 'banqi'
   | 'jungle'
@@ -55,7 +51,6 @@ export type ObjectiveRulesId =
   | 'king-capture'
   | 'general-capture'
   | 'checkmate'
-  | 'antichess'
   | 'royal-capture-or-race'
   | 'last-mover'
   | 'flag-capture'
@@ -87,7 +82,7 @@ export type SetupRulesId =
   | 'fortress-standard'
   | 'luzhanqi-formation'
   | 'mahjong-deal';
-export type ReserveRulesId = 'none' | 'crazyhouse' | 'shogi-hands' | 'seirawan-gating';
+export type ReserveRulesId = 'none' | 'crazyhouse' | 'shogi-hands';
 export type DropPolicyId =
   | 'none'
   | 'any-legal-square'
@@ -96,26 +91,26 @@ export type DropPolicyId =
   // parachute anywhere incl. the enemy half; defenders (advisor/elephant) drop
   // only where they may legally stand (palace / own half).
   | 'attacker-anywhere-defender-home'
-  | 'seen-squares-only'
-  | 'seirawan-gating';
+  | 'seen-squares-only';
 export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
-export type GameSpecRuntimeStatus = 'live' | 'dev-spike' | 'future';
+/**
+ * `live`: built and served (offered or hidden, per publicSurface). `future`: an
+ * id reserved ahead of any code. `retired`: was built, is not coming back; the
+ * gate refuses it, no tenant registers for it, `npm run variants` omits it, and
+ * its code is being removed under docs-private/variant-retirement-plan.md (#396).
+ */
+export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
 export type RatingPoolBaseId =
   | 'fog'
   | 'fog_draft960'
   | 'dark_crazyhouse'
   | 'kriegspiel'
-  | 'dark_antichess'
-  | 'sun_tzu'
-  | 'lao_tzu'
-  | 'dark_seirawan'
   | 'mini_xiangqi'
   | 'dark_mini_xiangqi'
   | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
   | 'dark_shogi'
-  | 'dark_omega'
   | 'jieqi'
   | 'banqi'
   | 'crossroads_chess'
@@ -135,16 +130,11 @@ export type GameSpecId =
   | 'dark-draft960'
   | 'dark-crazyhouse'
   | 'kriegspiel'
-  | 'dark-antichess'
-  | 'sun-tzu'
-  | 'lao-tzu'
-  | 'dark-seirawan'
   | 'mini-xiangqi'
   | 'dark-mini-xiangqi'
   | 'drop-mini-xiangqi'
   | 'dark-xiangqi'
   | 'dark-shogi'
-  | 'dark-omega'
   | 'jieqi'
   | 'banqi'
   | 'crossroads-chess'
@@ -322,8 +312,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'fog_draft960',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
     legacyLiveRoom: { variant: 'dark-chess', hiddenDraft960: true },
   },
   {
@@ -339,8 +329,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'any-legal-square',
     ratingPoolBase: 'dark_crazyhouse',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     id: 'kriegspiel',
@@ -355,68 +345,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'kriegspiel',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
-  },
-  {
-    id: 'dark-antichess',
-    publicName: 'Dark Antichess',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'antichess',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'dark_antichess',
     publicSurface: 'hidden',
-    runtimeStatus: 'future',
-  },
-  {
-    id: 'sun-tzu',
-    publicName: 'Sun Tzu chess',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'double-fischer-random',
-    reserves: 'crazyhouse',
-    dropPolicy: 'any-legal-square',
-    ratingPoolBase: 'sun_tzu',
-    publicSurface: 'hidden',
-    runtimeStatus: 'future',
-  },
-  {
-    id: 'lao-tzu',
-    publicName: 'Lao Tzu chess',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'double-fischer-random',
-    reserves: 'crazyhouse',
-    dropPolicy: 'seen-squares-only',
-    ratingPoolBase: 'lao_tzu',
-    publicSurface: 'hidden',
-    runtimeStatus: 'future',
-  },
-  {
-    id: 'dark-seirawan',
-    publicName: 'Dark Seirawan chess',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'seirawan',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'seirawan-gating',
-    dropPolicy: 'seirawan-gating',
-    ratingPoolBase: 'dark_seirawan',
-    publicSurface: 'hidden',
-    runtimeStatus: 'future',
+    runtimeStatus: 'retired',
   },
   // ── Mini Xiangqi cluster: PARKED as of 2026-07-24 ──────────────────────────
   // The mini-xiangqi sub-family was retired from the product shelf in the
@@ -445,7 +375,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'mini_xiangqi',
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     id: DARK_MINI_XIANGQI_SPEC_ID,
@@ -461,7 +391,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'dark_mini_xiangqi',
     rated: true,
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     // Drop Mini Xiangqi: mini xiangqi plus crazyhouse-style reserves. Perfect
@@ -480,7 +410,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'drop_mini_xiangqi',
     rated: true,
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     // Fortress Xiangqi: "xiangqi with a pocket." 7x8 board, opposite-corner
@@ -630,7 +560,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'luzhanqi',
     publicSurface: 'hidden',
-    runtimeStatus: 'live',
+    runtimeStatus: 'retired',
   },
   {
     // Duck Xiangqi: W. D. Troyka's... no - Dr Tim Paulden's Duck Chess (2016),
@@ -720,23 +650,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'any-legal-square',
     ratingPoolBase: 'dark_shogi',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
-  },
-  {
-    id: 'dark-omega',
-    publicName: 'Dark Omega chess',
-    family: 'omega-chess',
-    board: 'omega-10x10-plus-corners',
-    movement: 'omega',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'dark_omega',
     publicSurface: 'hidden',
-    runtimeStatus: 'future',
+    runtimeStatus: 'retired',
   },
   {
     // Crossroads Chess (中西象棋): a 6x8 chess x xiangqi fusion. Two modes share one
@@ -755,8 +670,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'crossroads_chess_open',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     id: DARK_CROSSROADS_CHESS_SPEC_ID,
@@ -771,8 +686,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'crossroads_chess',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
   {
     // Reveal Chess (chess-jieqi): standard chess with hidden piece identities.
@@ -791,8 +706,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     dropPolicy: 'none',
     ratingPoolBase: 'reveal_chess',
     rated: true,
-    publicSurface: 'casual',
-    runtimeStatus: 'live',
+    publicSurface: 'hidden',
+    runtimeStatus: 'retired',
   },
 ] as const;
 
@@ -803,6 +718,22 @@ const gameSpecAliases = new Map<GameSpecAliasId, GameSpecId>([
   ['dual-chess', CROSSROADS_CHESS_SPEC_ID],
   ['dark-dual-chess', DARK_CROSSROADS_CHESS_SPEC_ID],
 ]);
+
+/** Specs that were built and are not coming back. Derived from GAME_SPECS so
+ *  there is one place that says it: the entry's runtimeStatus. */
+export const RETIRED_GAME_SPEC_IDS: readonly GameSpecId[] = GAME_SPECS.filter(
+  (spec) => spec.runtimeStatus === 'retired',
+).map((spec) => spec.id);
+
+const RETIRED_GAME_SPEC_ID_SET: ReadonlySet<string> = new Set(RETIRED_GAME_SPEC_IDS);
+
+/** True for a retired spec id (and for a legacy alias that resolves to one). */
+export function isRetiredGameSpec(value: string | null | undefined): boolean {
+  if (!value) return false;
+  if (RETIRED_GAME_SPEC_ID_SET.has(value)) return true;
+  const spec = maybeGameSpecForId(value);
+  return spec !== null && spec.runtimeStatus === 'retired';
+}
 
 export function isGameSpecId(value: string | null | undefined): value is GameSpecId {
   return typeof value === 'string' && gameSpecIds.has(value);
