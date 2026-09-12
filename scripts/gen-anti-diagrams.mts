@@ -169,7 +169,7 @@ type Outcome = {
   proof?: { toMove: string; children: ProofTree[] };
 };
 const sweep = JSON.parse(
-  readFileSync(path.join(OUTDIR, 'exits-100k-stall-fewerPieces.json'), 'utf8'),
+  readFileSync(path.join(OUTDIR, 'exits-100k-stock.json'), 'utf8'),
 ) as { nodes: number; rows: Row[] };
 const proofs = JSON.parse(readFileSync(path.join(OUTDIR, 'proofs-100k-stock.json'), 'utf8')) as {
   outcomes: Outcome[];
@@ -1165,8 +1165,8 @@ if (process.argv.includes('--blog')) {
     'best-2000000': {
       1: 'Cannon takes the horse over Black’s cannon. Red’s only two legal moves are this and its mirror image.',
       2: 'Black declines the chariot recapture, a proven loss, and fires the other cannon down the b-file with Red’s b3 cannon as the screen. The only move that holds.',
-      3: 'The chariot takes the cannon. Continuing with 2. Cxd10 would also hold.',
-      4: 'Black’s only legal move. The forced part is over: fifteen pieces each, Red to move, no capture on the board.',
+      3: 'The chariot takes the cannon. Continuing with 2. Cxf10, the other cannon capture, would also hold.',
+      4: 'Black’s only legal move. The forced part is over: fourteen pieces each, Red to move, no capture on the board.',
       5: 'The first free move of the game. Red puts its last cannon on h3, where it screens Black’s h8 cannon onto the h1 horse: an offer Black cannot refuse.',
       6: 'Only legal move.',
       7: 'The same exchange on the other wing: chariot takes cannon, and Rxh3 will be forced in reply.',
@@ -1215,7 +1215,7 @@ if (process.argv.includes('--blog')) {
     });
   }
   const sweepGames = JSON.parse(
-    readFileSync(path.join(OUTDIR, 'exits-100k-stall-fewerPieces.json'), 'utf8'),
+    readFileSync(path.join(OUTDIR, 'exits-100k-stock.json'), 'utf8'),
   ) as { rows: Array<Row & { moves?: string[] }> };
   const withMoves = sweepGames.rows.filter((r) => r.moves && r.moves.length > 0);
   for (const r of [...withMoves].sort((a, b) => a.exitPly - b.exitPly || a.leaf - b.leaf)) {
@@ -1360,7 +1360,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 .anxq-control:hover { background: var(--anxq-hover); color: var(--anxq-heading); }
 .anxq-control:disabled { opacity: .35; cursor: default; background: none; }
 .anxq-status { display: flex; align-items: center; justify-content: center; min-width: 52px; padding: 0 10px; color: var(--anxq-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.anxq-caption { min-height: 3.2em; border-top: 1px solid var(--anxq-border); padding: 8px 14px 10px; font-size: 14px; line-height: 1.45; color: var(--anxq-heading); }
+.anxq-caption { box-sizing: border-box; height: 104px; overflow-y: auto; border-top: 1px solid var(--anxq-border); padding: 8px 14px 10px; font-size: 14px; line-height: 1.45; color: var(--anxq-heading); }
 .anxq-caption .san { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
 .anxq-caption .who { color: var(--anxq-muted); font-size: 13px; }
 .anxq-caption p { margin: 4px 0 0; }
@@ -1374,17 +1374,23 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 .anxq-moves button:hover { background: var(--anxq-hover); }
 .anxq-moves button.cur, .anxq-moves button.cur:hover { background: var(--anxq-accent); color: var(--anxq-on-accent); }
 .anxq-moves button.cur.forced::after { color: var(--anxq-on-accent); opacity: .8; }
-.anxq-result { flex: none; display: flex; align-items: center; justify-content: center; min-height: 39px; padding: 4px 8px; border-top: 1px solid var(--anxq-border); background: var(--anxq-panel); color: var(--anxq-muted); font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
+.anxq-result { flex: none; box-sizing: border-box; height: 74px; overflow-y: auto; display: flex; align-items: center; justify-content: center; padding: 4px 8px; border-top: 1px solid var(--anxq-border); background: var(--anxq-panel); color: var(--anxq-muted); font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
+.anxq-result > span { margin: auto 0; }
 .anxq-credit { margin-top: 6px; font-size: 12px; color: var(--anxq-muted); text-align: center; }
 @media (max-width: 640px) { .anxq-card { flex-direction: column; } .anxq-board-col { width: 100%; } .anxq-rail { border-left: 0; border-top: 1px solid var(--anxq-border); min-height: 220px; } }
 </style>`;
-  const WIDGET_JS = `<script>
-(() => {
+  // The board drawing shared by every widget on the page: a 9x10 grid on the
+  // house tan, pieces as the international set on a disc, and the last move in
+  // mistboard's own grammar (board-lastmove.ts: a pale wash with an amber
+  // outline where the piece left, a gold halo just outside the piece where it
+  // landed; canonical cell 60 / piece 54, scaled to this cell of 31).
+  const BOARD_JS = `
   const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
   const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
   const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
   const M = 18, C = 31, PIECE = 28;
   const xOf = (f) => M + f * C, yOf = (r) => M + (10 - r) * C;
+  const pt = (s) => ({ x: xOf(s.charCodeAt(0) - 97), y: yOf(Number(s.slice(1))) });
   function parsePlacement(p) {
     const board = {};
     p.split('/').forEach((row, i) => {
@@ -1398,14 +1404,8 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
     return board;
   }
   const sq = (u) => { const m = /^([a-i](?:10|[1-9]))([a-i](?:10|[1-9]))$/.exec(u); return { from: m[1], to: m[2] }; };
-  function boardsOf(game) {
-    const out = [parsePlacement(game.start)];
-    let b = out[0];
-    for (const mv of game.moves) { const { from, to } = sq(mv.u); b = { ...b }; b[to] = b[from]; delete b[from]; out.push(b); }
-    return out;
-  }
   const L = (x1, y1, x2, y2) => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#4b3c2a" stroke-width="1"/>';
-  function grid() {
+  const GRID = (() => {
     const g = ['<rect x="0" y="0" width="284" height="315" rx="8" fill="#d9bd82"/>'];
     for (let r = 0; r < 10; r++) g.push(L(M, M + r * C, M + 8 * C, M + r * C));
     for (let f = 0; f < 9; f++) {
@@ -1414,22 +1414,41 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
     }
     for (const y0 of [0, 7]) { g.push(L(M + 3 * C, M + y0 * C, M + 5 * C, M + (y0 + 2) * C)); g.push(L(M + 5 * C, M + y0 * C, M + 3 * C, M + (y0 + 2) * C)); }
     return g.join('');
-  }
-  const GRID = grid();
-  function render(svg, board, mv) {
+  })();
+  // mv: the last move (uci) or null; targets: [{u, col}] capture options to hint on the board.
+  function render(svg, board, mv, targets) {
     const parts = [GRID];
     if (mv) {
-      const { from, to } = sq(mv.u);
-      const fx = xOf(from.charCodeAt(0) - 97), fy = yOf(Number(from.slice(1))), tx = xOf(to.charCodeAt(0) - 97), ty = yOf(Number(to.slice(1)));
-      parts.push('<circle cx="' + fx + '" cy="' + fy + '" r="5" fill="#3a63c7" opacity=".9"/>');
-      parts.push('<circle cx="' + tx + '" cy="' + ty + '" r="16" fill="none" stroke="#3a63c7" stroke-width="2.5"/>');
+      const { from, to } = sq(mv), f = pt(from), t = pt(to);
+      parts.push('<circle cx="' + f.x + '" cy="' + f.y + '" r="13.4" fill="rgba(250,204,21,0.22)" stroke="rgba(180,83,9,0.55)" stroke-width="1.05"/>');
+      parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="14.5" fill="none" stroke="#d6af4e" stroke-width="2.05" style="filter:drop-shadow(0 0 1px rgba(70,45,8,0.5))"/>');
     }
     for (const s in board) {
-      const p = board[s], cx = xOf(s.charCodeAt(0) - 97), cy = yOf(Number(s.slice(1))), k = PIECE / 100, fr = FRAME[p.role], x = cx - PIECE / 2, y = cy - PIECE / 2;
-      parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
+      const p = board[s], c = pt(s), k = PIECE / 100, fr = FRAME[p.role], x = c.x - PIECE / 2, y = c.y - PIECE / 2;
+      parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
       parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
+    // Capture hints as arrows (the analysis-board grammar), stopping at the
+    // target's disc so the last-move halo underneath stays readable.
+    for (const tg of targets || []) {
+      const { from, to } = sq(tg.u), f = pt(from), t = pt(to);
+      const dx = t.x - f.x, dy = t.y - f.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
+      const ex = t.x - ux * 15, ey = t.y - uy * 15, sx = f.x + ux * 6, sy = f.y + uy * 6;
+      const hx = ex - ux * 9, hy = ey - uy * 9, px = -uy * 5.5, py = ux * 5.5;
+      parts.push('<line x1="' + sx + '" y1="' + sy + '" x2="' + hx + '" y2="' + hy + '" stroke="' + tg.col + '" stroke-width="4" opacity=".7" stroke-linecap="round"/>');
+      parts.push('<polygon points="' + ex + ',' + ey + ' ' + (hx + px) + ',' + (hy + py) + ' ' + (hx - px) + ',' + (hy - py) + '" fill="' + tg.col + '" opacity=".85"/>');
+    }
     svg.innerHTML = parts.join('');
+  }
+  function applyMove(b, u) { const { from, to } = sq(u); const n = { ...b }; n[to] = n[from]; delete n[from]; return n; }
+  function countPieces(board) { let red = 0, black = 0; for (const s in board) { if (board[s].color === 'red') red++; else black++; } return { red, black }; }
+`;
+  const WIDGET_JS = `<script>
+(() => {${BOARD_JS}
+  function boardsOf(game) {
+    const out = [parsePlacement(game.start)];
+    for (const mv of game.moves) out.push(applyMove(out[out.length - 1], mv.u));
+    return out;
   }
   function mount(root) {
     const id = root.id;
@@ -1439,9 +1458,8 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
     let gi = 0, at = 0, boards = [];
     function show() {
       const game = GAMES[gi], mv = at > 0 ? game.moves[at - 1] : null, board = boards[at];
-      render(svg, board, mv);
-      let red = 0, black = 0;
-      for (const s in board) { if (board[s].color === 'red') red++; else black++; }
+      render(svg, board, mv ? mv.u : null, []);
+      const { red, black } = countPieces(board);
       $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
       $('pos').textContent = at + ' / ' + game.moves.length;
       const cap = $('caption');
@@ -1466,7 +1484,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
         if (k % 2 === 0) { const n = document.createElement('span'); n.className = 'n'; n.textContent = String(k / 2 + 1); list.appendChild(n); }
         const b = document.createElement('button'); b.textContent = m.s; b.dataset.ply = k + 1; b.className = m.f ? 'forced' : ''; b.addEventListener('click', () => { at = k + 1; show(); }); list.appendChild(b);
       });
-      $('result').textContent = game.result;
+      $('result').innerHTML = '<span></span>'; $('result').firstChild.textContent = game.result;
       show();
     }
     const more = $('more');
@@ -1569,140 +1587,266 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
         'Two of the engine\u2019s own games, opened at ply 4, where the forced part ends. The notes are on the plies that matter.',
     },
   ];
-  // ── The opening explorer: walk the tree yourself ─────────────────────────
+  // ── The opening explorer: the cascade as a tablebase ─────────────────────
   // Every node of the cascade with its move, who wins from it under stock
   // scoring (backed up from the endings), how many endings lie below it and
-  // how many of those are proven. The page applies moves to draw the board.
-  const xdata = xnodes.map((n) => ({
-    i: n.i,
-    p: n.p,
-    u: n.u,
-    s: n.s,
-    m: n.m,
-    d: n.d,
-    l: n.leaf ? 1 : 0,
-    v: n.v,
-    n: n.n,
-    pv: n.pv,
-    pr: n.pr ? 1 : 0,
-    g: n.g,
-    mi: n.mirror ? 1 : 0,
-    c: n.children,
-  }));
+  // how many of those are proven. Each ending carries its evidence: the
+  // engine's verdict at 100k and at 1M nodes a move, and the proof where one
+  // closed. The page applies moves to draw the board, and past an ending it
+  // plays on through the proof's main line or the engine's game, both of
+  // which it reads from the games viewer's records already on the page.
+  const sweep1m = JSON.parse(
+    readFileSync(path.join(OUTDIR, 'exits-1m-stall-fewerPieces.json'), 'utf8'),
+  ) as { rows: Array<Row & { plies: number }> };
+  const verdictAt = (rows: Array<Row & { plies?: number }>, line: string[]) => {
+    const key = line.join(' ');
+    const r = rows.find((x) => x.opening === key) ?? rows.find((x) => x.opening === mirror(key));
+    if (!r) throw new Error(`no sweep row for ${key}`);
+    return { w: DECISIVE.has(r.reason) ? r.winner : null, r: r.reason, p: r.plies ?? 0 };
+  };
+  const proofAt = (line: string[]) => {
+    const key = line.join(' ');
+    const o =
+      proofs.outcomes.find((x) => x.opening === key) ??
+      proofs.outcomes.find((x) => x.opening === mirror(key));
+    if (!o) return null;
+    return {
+      result: o.result,
+      size: o.proofSize ?? 0,
+      line: o.line?.length ?? 0,
+      id: o.result === 'proven' && o.line && o.line.length > 0 ? `proof-${o.leaf}` : '',
+    };
+  };
+  const xdata = xnodes.map((n) => {
+    const base = {
+      i: n.i,
+      p: n.p,
+      u: n.u,
+      s: n.s,
+      m: n.m,
+      d: n.d,
+      l: n.leaf ? 1 : 0,
+      v: n.v,
+      n: n.n,
+      pv: n.pv,
+      pr: n.pr ? 1 : 0,
+      g: n.g,
+      mi: n.mirror ? 1 : 0,
+      c: n.children,
+    };
+    if (!n.leaf) return base;
+    const pf = proofAt(n.line);
+    return {
+      ...base,
+      e: { k: verdictAt(sweep.rows as Array<Row & { plies?: number }>, n.line), m: verdictAt(sweep1m.rows, n.line) },
+      ps: pf?.size ?? 0,
+      pl: pf?.line ?? 0,
+      pf: pf?.id ?? '',
+      pu: pf ? pf.result : 'none',
+    };
+  });
   const xjson = JSON.stringify({
     start: kernel.fen(kernel.initial('x')).split(' ')[0],
     nodes: xdata,
   }).replace(/</g, '\\u003c');
-  const explorerHtml = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
-     The opening cascade as a tree the reader can walk; values backed up from the 100k sweep and the proofs. -->
-<div id="anti-explorer" class="anxq anxq-explorer" tabindex="0">
-<style>
+  const EXPLORER_CSS = `<style>
 .anxq-explorer .anxq-card { align-items: stretch; }
-.anxq-explorer .anxq-x-rail { flex: 1 1 0; min-width: 220px; border-left: 1px solid var(--anxq-border); display: flex; flex-direction: column; }
-.anxq-explorer .anxq-x-path { padding: 10px 12px 6px; font-family: ui-monospace, Menlo, monospace; font-size: 14px; font-weight: 600; line-height: 1.7; border-bottom: 1px solid var(--anxq-border); }
-.anxq-explorer .anxq-x-path button { font: inherit; background: none; border: 0; padding: 0 4px; border-radius: 4px; color: var(--anxq-heading); cursor: pointer; }
+.anxq-explorer .anxq-x-rail { position: relative; flex: 1 1 0; min-width: 220px; border-left: 1px solid var(--anxq-border); }
+.anxq-explorer .anxq-x-inner { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
+.anxq-explorer .anxq-x-path { flex: none; padding: 10px 12px 6px; font-family: ui-monospace, Menlo, monospace; font-size: 13.5px; font-weight: 600; line-height: 1.7; border-bottom: 1px solid var(--anxq-border); }
+.anxq-explorer .anxq-x-path button { font: inherit; background: none; border: 0; padding: 0 3px; border-radius: 4px; color: var(--anxq-heading); cursor: pointer; }
 .anxq-explorer .anxq-x-path button:hover { background: var(--anxq-hover); }
+.anxq-explorer .anxq-x-path button.cur { background: var(--anxq-accent); color: var(--anxq-on-accent); }
+.anxq-explorer .anxq-x-path button.ext { color: var(--anxq-muted); font-weight: 500; }
 .anxq-explorer .anxq-x-path .num { color: var(--anxq-muted); font-weight: 400; }
-.anxq-explorer .anxq-x-state { padding: 8px 12px; font-size: 13px; color: var(--anxq-muted); border-bottom: 1px solid var(--anxq-border); }
-.anxq-explorer .anxq-x-moves { flex: 1; overflow: auto; padding: 4px 0; }
-.anxq-explorer .anxq-x-row { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 10px; align-items: center; width: 100%; padding: 7px 12px; border: 0; background: none; text-align: left; font: inherit; color: var(--anxq-heading); cursor: pointer; }
+.anxq-explorer .anxq-x-state { flex: none; padding: 8px 12px; font-size: 13px; line-height: 1.45; color: var(--anxq-muted); border-bottom: 1px solid var(--anxq-border); }
+.anxq-explorer .anxq-x-state b { color: var(--anxq-heading); }
+.anxq-explorer .anxq-x-body { flex: 1; min-height: 0; overflow: auto; }
+.anxq-explorer .anxq-x-head { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 8px 12px 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--anxq-muted); }
+.anxq-explorer .anxq-x-row { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "mv val" "sub sub"; gap: 2px 10px; align-items: center; width: 100%; padding: 7px 12px; border: 0; border-top: 1px solid var(--anxq-border); background: none; text-align: left; font: inherit; color: var(--anxq-heading); cursor: pointer; }
 .anxq-explorer .anxq-x-row:hover { background: var(--anxq-hover); }
-.anxq-explorer .anxq-x-row .mv { font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 15px; }
-.anxq-explorer .anxq-x-row .val { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; color: #fff; white-space: nowrap; }
-.anxq-explorer .val.r { background: #c0392b; } .anxq-explorer .val.b { background: #2b2b2b; } .anxq-explorer .val.d { background: #c9931f; }
-.anxq-explorer .anxq-x-row .sub { font-size: 12px; color: var(--anxq-muted); text-align: right; }
-.anxq-explorer .anxq-x-leaf { padding: 12px; font-size: 14px; line-height: 1.5; }
-.anxq-explorer .anxq-x-leaf a { color: var(--anxq-accent); font-weight: 600; cursor: pointer; text-decoration: underline; }
-.anxq-explorer .anxq-x-hint { padding: 8px 12px; border-top: 1px solid var(--anxq-border); font-size: 12px; color: var(--anxq-muted); }
-</style>
+.anxq-explorer .anxq-x-row .mv { grid-area: mv; font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 15px; }
+.anxq-explorer .anxq-x-row .mv .best { margin-left: 8px; font-family: inherit; font-size: 11px; font-weight: 600; color: var(--anxq-accent); letter-spacing: .04em; text-transform: uppercase; }
+.anxq-explorer .anxq-x-row .val { grid-area: val; justify-self: end; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; color: #fff; white-space: nowrap; }
+.anxq-explorer .val.r { background: #c0392b; } .anxq-explorer .val.b { background: #2b2b2b; } .anxq-explorer .val.d { background: #8b8b90; }
+.anxq-explorer .anxq-x-row .sub { grid-area: sub; font-size: 12px; line-height: 1.35; color: var(--anxq-muted); }
+.anxq-explorer .anxq-x-leaf { padding: 10px 12px 8px; font-size: 13.5px; line-height: 1.5; color: var(--anxq-heading); border-bottom: 1px solid var(--anxq-border); }
+.anxq-explorer .anxq-x-leaf p { margin: 6px 0 0; }
+.anxq-explorer .anxq-x-leaf .val { display: inline-block; vertical-align: 1px; font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; color: #fff; }
+.anxq-explorer .anxq-x-leaf .kicker { font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--anxq-muted); }
+.anxq-explorer .anxq-moves { padding: 6px 4px; }
+.anxq-explorer .anxq-x-hint { flex: none; padding: 8px 12px; border-top: 1px solid var(--anxq-border); font-size: 12px; line-height: 1.4; color: var(--anxq-muted); }
+.anxq-explorer .anxq-caption .kicker { display: block; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--anxq-muted); margin-bottom: 2px; }
+@media (max-width: 640px) { .anxq-explorer .anxq-x-rail { border-left: 0; border-top: 1px solid var(--anxq-border); min-height: 300px; } }
+</style>`;
+  // One instance: the markup only. The Liquid parameters name it and root it
+  // (\`start\` is a UCI line from the array; empty means the array itself).
+  const explorerInstanceHtml = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
+     One tablebase instance: include it with id="..." and start="..." (a UCI line from the array) after the lib include. -->
+<div id="{{ include.id }}" class="anxq anxq-explorer" tabindex="0" data-anxq-explorer data-start="{{ include.start }}">
+<div class="anxq-header" id="{{ include.id }}-header"></div>
 <div class="anxq-card">
   <div class="anxq-board-col">
-    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name">Black</span><span class="anxq-seat-clock" id="anti-explorer-count-black"></span></div>
-    <div class="anxq-mat"><svg id="anti-explorer-board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg></div>
-    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name">Red</span><span class="anxq-seat-clock" id="anti-explorer-count-red"></span></div>
-    <div class="anxq-controls"><button class="anxq-control" id="anti-explorer-up" aria-label="Back one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M11 4.3v7.4L4.9 8z"/></svg></button><button class="anxq-control" id="anti-explorer-root" aria-label="Back to the start"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/></svg></button><span class="anxq-status" id="anti-explorer-pos"></span><span></span><span></span></div>
-    <div class="anxq-caption" id="anti-explorer-caption"></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name">Black</span><span class="anxq-seat-clock" id="{{ include.id }}-count-black"></span></div>
+    <div class="anxq-mat"><svg id="{{ include.id }}-board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name">Red</span><span class="anxq-seat-clock" id="{{ include.id }}-count-red"></span></div>
+    <div class="anxq-controls">
+      <button class="anxq-control" id="{{ include.id }}-first" aria-label="Back to this position"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/></svg></button>
+      <button class="anxq-control" id="{{ include.id }}-prev" aria-label="Back one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M11 4.3v7.4L4.9 8z"/></svg></button>
+      <span class="anxq-status" id="{{ include.id }}-pos"></span>
+      <button class="anxq-control" id="{{ include.id }}-next" aria-label="Forward one ply, best play"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M5 4.3v7.4L11.1 8z"/></svg></button>
+      <button class="anxq-control" id="{{ include.id }}-last" aria-label="To the end of the line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/></svg></button>
+    </div>
+    <div class="anxq-caption" id="{{ include.id }}-caption"></div>
   </div>
-  <div class="anxq-x-rail">
-    <div class="anxq-x-path" id="anti-explorer-path"></div>
-    <div class="anxq-x-state" id="anti-explorer-state"></div>
-    <div class="anxq-x-moves" id="anti-explorer-moves"></div>
-    <div class="anxq-x-hint">Each row is a capture the side to move can choose. The chip says who wins from there if both sides then play the tree's best captures; the count is how many endings lie below it, and how many of those losses are proven.</div>
-  </div>
+  <div class="anxq-x-rail"><div class="anxq-x-inner">
+    <div class="anxq-x-path" id="{{ include.id }}-path"></div>
+    <div class="anxq-x-state" id="{{ include.id }}-state"></div>
+    <div class="anxq-x-body" id="{{ include.id }}-body"></div>
+    <div class="anxq-x-hint" id="{{ include.id }}-hint"></div>
+  </div></div>
 </div>
-<script type="application/json" id="anti-explorer-data">${xjson}</script>
-<script>
-(() => {
-  const root = document.getElementById('anti-explorer');
-  const DATA = JSON.parse(root.querySelector('#anti-explorer-data').textContent);
-  const N = DATA.nodes;
-  const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
-  const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
-  const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
-  const M = 18, C = 31, PIECE = 28;
-  const xOf = (f) => M + f * C, yOf = (r) => M + (10 - r) * C;
-  function parsePlacement(p) {
-    const board = {};
-    p.split('/').forEach((row, i) => { const rank = 10 - i; let file = 0; for (const ch of row) { if (ch >= '1' && ch <= '9') { file += Number(ch); continue; } board[String.fromCharCode(97 + file) + rank] = { color: ch === ch.toUpperCase() ? 'red' : 'black', role: ROLE[ch.toLowerCase()] }; file += 1; } });
-    return board;
-  }
-  const sq = (u) => { const m = /^([a-i](?:10|[1-9]))([a-i](?:10|[1-9]))$/.exec(u); return { from: m[1], to: m[2] }; };
-  const L = (x1, y1, x2, y2) => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#4b3c2a" stroke-width="1"/>';
-  const GRID = (() => { const g = ['<rect x="0" y="0" width="284" height="315" rx="8" fill="#d9bd82"/>']; for (let r = 0; r < 10; r++) g.push(L(M, M + r * C, M + 8 * C, M + r * C)); for (let f = 0; f < 9; f++) { if (f === 0 || f === 8) g.push(L(M + f * C, M, M + f * C, M + 9 * C)); else { g.push(L(M + f * C, M, M + f * C, M + 4 * C)); g.push(L(M + f * C, M + 5 * C, M + f * C, M + 9 * C)); } } for (const y0 of [0, 7]) { g.push(L(M + 3 * C, M + y0 * C, M + 5 * C, M + (y0 + 2) * C)); g.push(L(M + 5 * C, M + y0 * C, M + 3 * C, M + (y0 + 2) * C)); } return g.join(''); })();
-  const svg = root.querySelector('#anti-explorer-board');
-  function render(board, mv, targets) {
-    const parts = [GRID];
-    if (mv) { const { from, to } = sq(mv); const fx = xOf(from.charCodeAt(0) - 97), fy = yOf(Number(from.slice(1))), tx = xOf(to.charCodeAt(0) - 97), ty = yOf(Number(to.slice(1))); parts.push('<circle cx="' + fx + '" cy="' + fy + '" r="5" fill="#3a63c7" opacity=".9"/>'); parts.push('<circle cx="' + tx + '" cy="' + ty + '" r="16" fill="none" stroke="#3a63c7" stroke-width="2.5"/>'); }
-    for (const s in board) { const p = board[s], cx = xOf(s.charCodeAt(0) - 97), cy = yOf(Number(s.slice(1))), k = PIECE / 100, fr = FRAME[p.role], x = cx - PIECE / 2, y = cy - PIECE / 2; parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>'); parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>'); }
-    for (const t of targets) { const { from, to } = sq(t.u); const fx = xOf(from.charCodeAt(0) - 97), fy = yOf(Number(from.slice(1))), tx = xOf(to.charCodeAt(0) - 97), ty = yOf(Number(to.slice(1))); const col = t.v === 'r' ? '#c0392b' : t.v === 'b' ? '#2b2b2b' : '#c9931f'; parts.push('<line x1="' + fx + '" y1="' + fy + '" x2="' + tx + '" y2="' + ty + '" stroke="' + col + '" stroke-width="3" opacity=".55" stroke-linecap="round"/>'); parts.push('<circle cx="' + tx + '" cy="' + ty + '" r="17" fill="none" stroke="' + col + '" stroke-width="3" opacity=".9"/>'); }
-    svg.innerHTML = parts.join('');
-  }
-  function lineOf(i) { const out = []; let n = N[i]; while (n && n.p >= 0) { out.unshift(n); n = N[n.p]; } return out; }
-  function boardAt(i) { let b = parsePlacement(DATA.start); for (const n of lineOf(i)) { const { from, to } = sq(n.u); b = { ...b }; b[to] = b[from]; delete b[from]; } return b; }
-  const who = (v) => v === 'r' ? 'Red wins' : v === 'b' ? 'Black wins' : 'draw';
-  let cur = 0;
-  function show(i) {
-    cur = i;
-    const n = N[i];
-    const line = lineOf(i);
-    const board = boardAt(i);
-    const kids = n.c.map((c) => N[c]);
-    render(board, n.u || null, kids.map((k) => ({ u: k.u, v: k.v })));
-    let red = 0, black = 0; for (const s in board) { if (board[s].color === 'red') red++; else black++; }
-    root.querySelector('#anti-explorer-count-red').textContent = red + ' pieces';
-    root.querySelector('#anti-explorer-count-black').textContent = black + ' pieces';
-    root.querySelector('#anti-explorer-pos').textContent = 'ply ' + n.d;
-    const path = root.querySelector('#anti-explorer-path');
-    path.innerHTML = '';
-    const start = document.createElement('button'); start.textContent = 'start'; start.addEventListener('click', () => show(0)); path.appendChild(start);
-    line.forEach((m, k) => { if (k % 2 === 0) { const num = document.createElement('span'); num.className = 'num'; num.textContent = ' ' + (k / 2 + 1) + '. '; path.appendChild(num); } else path.appendChild(document.createTextNode(' ')); const b = document.createElement('button'); b.textContent = m.s; b.addEventListener('click', () => show(m.i)); path.appendChild(b); });
-    const toMove = n.d % 2 === 0 ? 'Red' : 'Black';
-    const state = root.querySelector('#anti-explorer-state');
-    const moves = root.querySelector('#anti-explorer-moves');
-    moves.innerHTML = '';
-    if (n.l) {
-      state.textContent = toMove + ' to move and no capture available: an ending of the chain.';
-      const leaf = document.createElement('div'); leaf.className = 'anxq-x-leaf';
-      leaf.innerHTML = 'From here <b>' + who(n.v) + '</b>' + (n.pr ? ', and that is proven.' : (n.v === 'd' ? ' by a stall, in the engine’s game from here.' : ' in the engine’s game from here (not proven).')) + (n.g ? ' <a data-game="' + n.g + '">Step through the engine game from this ending' + (n.mi ? ' (its mirror image)' : '') + '.</a>' : '');
-      moves.appendChild(leaf);
-      const a = leaf.querySelector('a'); if (a) a.addEventListener('click', () => { document.dispatchEvent(new CustomEvent('anti-games-select', { detail: a.dataset.game })); });
-    } else {
-      state.textContent = toMove + ' to move; ' + kids.length + ' capture' + (kids.length === 1 ? '' : 's') + ', and only captures are legal. ' + n.n + ' ending' + (n.n === 1 ? '' : 's') + ' below, ' + n.pv + ' proven.';
-      kids.forEach((k) => { const b = document.createElement('button'); b.className = 'anxq-x-row'; b.innerHTML = '<span class="mv">' + k.s + '</span><span class="val ' + k.v + '">' + who(k.v) + '</span><span class="sub">' + (k.l ? 'ending' + (k.pr ? ', proven' : '') : k.n + ' ending' + (k.n === 1 ? '' : 's') + ', ' + k.pv + ' proven') + '</span>'; b.addEventListener('click', () => show(k.i)); moves.appendChild(b); });
-    }
-    const cap = root.querySelector('#anti-explorer-caption');
-    cap.innerHTML = n.d === 0 ? '<span class="who">The array. Red’s two legal moves are both captures, and mirror images of each other.</span>' : '<span class="san">' + (Math.floor((n.d - 1) / 2) + 1) + (n.m === 'r' ? '. ' : '... ') + n.s + '</span> <span class="who">' + (n.v === 'd' ? 'This branch holds.' : 'From here ' + who(n.v) + ' with best play' + (n.l && n.pr ? ', proven.' : '.')) + '</span>';
-  }
-  root.querySelector('#anti-explorer-up').addEventListener('click', () => { if (N[cur].p >= 0) show(N[cur].p); });
-  root.querySelector('#anti-explorer-root').addEventListener('click', () => show(0));
-  root.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft' || e.key === 'Backspace') { if (N[cur].p >= 0) show(N[cur].p); e.preventDefault(); } });
-  show(0);
-})();
-</script>
 </div>
 `;
-  writeFileSync(path.join(INCLUDES, 'anti-xq-explorer.html'), explorerHtml);
-  console.log('  _includes/anti-xq-explorer.html');
+  const explorerLibHtml = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
+     The opening cascade as a tablebase: every node with its value backed up from the endings, every ending
+     with its evidence (engine verdicts at 100k and 1M, the proof where one closed). Include once, before the
+     first instance include. Past an ending the viewer plays on through
+     the proof's main line or the engine's game, read from the games viewer's records on the same page. -->
+${EXPLORER_CSS}
+<script type="application/json" id="anti-explorer-data">${xjson}</script>
+<script>
+(() => {${BOARD_JS}
+  const DATA = JSON.parse(document.getElementById('anti-explorer-data').textContent);
+  const N = DATA.nodes;
+  const MIRROR = { a: 'i', b: 'h', c: 'g', d: 'f', e: 'e', f: 'd', g: 'c', h: 'b', i: 'a' };
+  const mirrorText = (t) => t.replace(/[a-i]/g, (c) => MIRROR[c]);
+  let gamesCache = null;
+  function games() { if (gamesCache) return gamesCache; const el = document.getElementById('anti-games-data'); if (!el) return []; gamesCache = JSON.parse(el.textContent); return gamesCache; }
+  const who = (v) => v === 'r' ? 'Red wins' : v === 'b' ? 'Black wins' : 'Draw';
+  const side = (v) => v === 'r' ? 'Red' : 'Black';
+  const REASON = { extinction: 'extinction', stalemate: 'stalemate', 'progress-clock': 'the progress clock', repetition: 'repetition', 'dead-position': 'a dead board' };
+  const COL = { r: '#c0392b', b: '#2b2b2b', d: '#8b8b90' };
+  const fmt = (n) => String(n).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
+  function lineOf(i) { const out = []; let n = N[i]; while (n && n.p >= 0) { out.unshift(n); n = N[n.p]; } return out; }
+  function nodeAt(uciLine) { let i = 0; for (const u of uciLine) { const c = N[i].c.map((k) => N[k]).find((k) => k.u === u); if (!c) throw new Error('no node for ' + u); i = c.i; } return i; }
+  // The mover's preference: own win, then a draw, then the other side's win.
+  const pref = (v, mover) => v === mover ? 2 : v === 'd' ? 1 : 0;
+  function sortedKids(n) { const mover = n.d % 2 === 0 ? 'r' : 'b'; return n.c.map((c) => N[c]).sort((a, b) => pref(b.v, mover) - pref(a.v, mover) || a.n - b.n); }
+  // What comes after an ending: the proof's main line where the loss is proven, else the engine's 100k game.
+  function continuation(n) {
+    const rec = games().find((g) => g.id === (n.pf || n.g));
+    if (!rec) return { kind: n.pf ? 'proof' : 'engine', moves: [] };
+    const moves = rec.moves.slice(n.d).map((m) => n.mi ? { u: mirrorText(m.u), s: mirrorText(m.s), m: m.m, f: m.f } : m);
+    return { kind: n.pf ? 'proof' : 'engine', moves };
+  }
+  // The row's evidence line, and the ending's full account.
+  function evidence(k) {
+    if (!k.l) return fmt(k.n) + ' ending' + (k.n === 1 ? '' : 's') + ' below, ' + k.pv + ' proven';
+    if (k.v === 'd') return k.e.m.w ? 'engine: stalls at 100k; at 1M ' + side(k.e.m.w[0]) + ' wins at ply ' + k.e.m.p + '; not proven' : 'engine: stalls at 100k and at 1M';
+    if (k.pr) return 'proven: over at ply ' + (k.d + k.pl) + ', ' + fmt(k.ps) + ' positions';
+    return 'engine: over at ply ' + k.e.k.p + ' (100k), 1M agrees; not proven';
+  }
+  function account(n) {
+    const mover = n.d % 2 === 0 ? 'Red' : 'Black';
+    let s = '<span class="kicker">The chain ends here</span> ' + mover + ' to move with no capture on the board. ';
+    if (n.v === 'd') {
+      s += '<p><span class="val d">Draw</span> The engine\\u2019s game from here stalls by ' + REASON[n.e.k.r] + ' at ply ' + n.e.k.p + ' with 100,000 nodes a move' + (n.e.m.w ? ', but with a million ' + side(n.e.m.w[0]) + ' wins by ' + REASON[n.e.m.r] + ' at ply ' + n.e.m.p + ': a verdict the prover could not close, so this ending is scored as the 100k sweep found it' : ', and by ' + REASON[n.e.m.r] + ' at ply ' + n.e.m.p + ' with a million') + '. Under the rules as written a stall is a draw. Below is the 100k game.</p>';
+    } else if (n.pr) {
+      s += '<p><span class="val ' + n.v + '">' + who(n.v) + '</span> Proven. The certificate holds ' + fmt(n.ps) + ' positions and its main line ends the game at ply ' + (n.d + n.pl) + '; a checker that knows only the rules has replayed it. Below is that main line: at every ' + (n.v === 'r' ? 'Black' : 'Red') + ' move, either it was the only legal move or the certificate answers each alternative.</p>';
+    } else {
+      s += '<p><span class="val ' + n.v + '">' + who(n.v) + '</span> The engine\\u2019s verdict, not a proof: ' + side(n.v) + ' wins by ' + REASON[n.e.k.r] + ' at ply ' + n.e.k.p + ' with 100,000 nodes a move, and at ply ' + n.e.m.p + ' with a million. The prover ran out of budget here. Below is the 100k game.</p>';
+    }
+    return s;
+  }
+  function mount(root) {
+    const id = root.id;
+    const $ = (suffix) => root.querySelector('#' + id + '-' + suffix);
+    const startLine = (root.dataset.start || '').trim();
+    const home = startLine ? nodeAt(startLine.split(/\\s+/)) : 0;
+    const svg = $('board');
+    let cur = home, ext = 0, cont = null;
+    function show(i, extAt) {
+      cur = i; ext = extAt || 0;
+      const n = N[i];
+      cont = n.l ? continuation(n) : null;
+      if (cont && ext > cont.moves.length) ext = cont.moves.length;
+      const line = lineOf(i);
+      let board = parsePlacement(DATA.start);
+      for (const m of line) board = applyMove(board, m.u);
+      for (let k = 0; k < ext; k++) board = applyMove(board, cont.moves[k].u);
+      const kids = n.l ? [] : sortedKids(n);
+      const last = ext > 0 ? cont.moves[ext - 1].u : (n.u || null);
+      render(svg, board, last, ext > 0 ? [] : kids.map((k) => ({ u: k.u, col: COL[k.v] })));
+      const { red, black } = countPieces(board);
+      $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
+      $('pos').textContent = 'ply ' + (n.d + ext);
+      // The path from the array, then the continuation in a lighter weight.
+      const path = $('path'); path.innerHTML = '';
+      const startBtn = document.createElement('button'); startBtn.textContent = 'start'; startBtn.className = i === 0 ? 'cur' : ''; startBtn.addEventListener('click', () => show(0)); path.appendChild(startBtn);
+      const addMove = (k, label, cls, onClick) => { if (k % 2 === 0) { const num = document.createElement('span'); num.className = 'num'; num.textContent = ' ' + (k / 2 + 1) + '. '; path.appendChild(num); } else path.appendChild(document.createTextNode(' ')); const b = document.createElement('button'); b.textContent = label; b.className = cls; b.addEventListener('click', onClick); path.appendChild(b); };
+      line.forEach((m, k) => addMove(k, m.s, m.i === i && ext === 0 ? 'cur' : '', () => show(m.i)));
+      if (cont) cont.moves.slice(0, ext).forEach((m, k) => addMove(n.d + k, m.s, 'ext' + (k + 1 === ext ? ' cur' : ''), () => show(i, k + 1)));
+      const mover = n.d % 2 === 0 ? 'Red' : 'Black';
+      const state = $('state'), body = $('body'), hint = $('hint');
+      body.innerHTML = '';
+      if (!n.l) {
+        state.innerHTML = '<b>' + mover + ' to move.</b> ' + kids.length + ' capture' + (kids.length === 1 ? '' : 's') + ', and only captures are legal. Backing up every ending below: <b>' + who(n.v).toLowerCase() + '</b>.';
+        const head = document.createElement('div'); head.className = 'anxq-x-head'; head.innerHTML = '<span>' + mover + '\\u2019s captures, best first</span>'; body.appendChild(head);
+        const moverV = n.d % 2 === 0 ? 'r' : 'b';
+        const strictlyBest = kids.length > 1 && pref(kids[0].v, moverV) > pref(kids[1].v, moverV);
+        kids.forEach((k, idx) => {
+          const b = document.createElement('button'); b.className = 'anxq-x-row';
+          const num = Math.floor((k.d - 1) / 2) + 1;
+          b.innerHTML = '<span class="mv">' + num + (k.m === 'r' ? '. ' : '... ') + k.s + (idx === 0 && strictlyBest ? '<span class="best">best</span>' : '') + '</span><span class="val ' + k.v + '">' + who(k.v) + '</span><span class="sub">' + evidence(k) + '</span>';
+          b.addEventListener('click', () => show(k.i)); body.appendChild(b);
+        });
+        hint.textContent = 'Chip: the value from there with best play on both sides. Small print: the evidence for it. Forward steps into the top row.';
+      } else {
+        state.innerHTML = '<b>' + mover + ' to move.</b> No capture, so the chain of forced captures is over and the game is open.';
+        const leaf = document.createElement('div'); leaf.className = 'anxq-x-leaf'; leaf.innerHTML = account(n); body.appendChild(leaf);
+        if (cont.moves.length > 0) {
+          const list = document.createElement('div'); list.className = 'anxq-moves';
+          if (n.d % 2 === 1) { const num = document.createElement('span'); num.className = 'n'; num.textContent = String((n.d - 1) / 2 + 1); list.appendChild(num); list.appendChild(document.createElement('span')); }
+          cont.moves.forEach((m, k) => {
+            const ply = n.d + k;
+            if (ply % 2 === 0) { const num = document.createElement('span'); num.className = 'n'; num.textContent = String(ply / 2 + 1); list.appendChild(num); }
+            const b = document.createElement('button'); b.textContent = m.s; b.className = (m.f ? 'forced' : '') + (k + 1 === ext ? ' cur' : ''); b.addEventListener('click', () => show(i, k + 1)); list.appendChild(b);
+          });
+          body.appendChild(list);
+          const curBtn = list.querySelector('button.cur'); if (curBtn) curBtn.scrollIntoView({ block: 'nearest' });
+        }
+        hint.textContent = cont.kind === 'proof' ? 'The moves marked ! were the only legal move. Forward steps along the main line; the games viewer at the top holds the same line.' : 'Fairy-Stockfish against itself from this ending, 100,000 nodes a move, the kernel refereeing. Forward steps through it.';
+      }
+      const cap = $('caption');
+      if (ext > 0) { const m = cont.moves[ext - 1]; cap.innerHTML = '<span class="kicker">' + (cont.kind === 'proof' ? 'Proof main line' : 'Engine game') + '</span><span class="san">' + (Math.floor((n.d + ext - 1) / 2) + 1) + (m.m === 'r' ? '. ' : '... ') + m.s + '</span> <span class="who">' + (m.m === 'r' ? 'Red' : 'Black') + (m.f ? '. Only legal move.' : '.') + '</span>'; }
+      else if (n.d === 0) cap.innerHTML = '<span class="who">The array. Red\\u2019s two legal moves are both captures, and mirror images of each other.</span>';
+      else cap.innerHTML = '<span class="san">' + (Math.floor((n.d - 1) / 2) + 1) + (n.m === 'r' ? '. ' : '... ') + n.s + '</span> <span class="who">' + (n.m === 'r' ? 'Red' : 'Black') + '. ' + (n.v === 'd' ? 'Holds: a draw with best play.' : who(n.v) + ' with best play' + (n.l && n.pr ? ', proven.' : '.')) + '</span>';
+      $('first').disabled = i === home && ext === 0;
+      $('prev').disabled = i === 0 && ext === 0;
+      const atEnd = n.l && (!cont || ext === cont.moves.length);
+      $('next').disabled = atEnd; $('last').disabled = atEnd;
+      $('header').textContent = n.d === 0 ? 'The array' : 'After ' + line.map((m, k) => (k % 2 === 0 ? (k / 2 + 1) + '. ' : '') + m.s).join(' ');
+    }
+    function next() { const n = N[cur]; if (n.l) { if (cont && ext < cont.moves.length) show(cur, ext + 1); } else show(sortedKids(n)[0].i); }
+    function prev() { if (ext > 0) show(cur, ext - 1); else if (N[cur].p >= 0) show(N[cur].p); }
+    function last() { let i = cur; while (!N[i].l) i = sortedKids(N[i])[0].i; const c = continuation(N[i]); show(i, c.moves.length); }
+    $('first').addEventListener('click', () => show(home));
+    $('prev').addEventListener('click', prev);
+    $('next').addEventListener('click', next);
+    $('last').addEventListener('click', last);
+    root.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { next(); e.preventDefault(); } else if (e.key === 'ArrowLeft' || e.key === 'Backspace') { prev(); e.preventDefault(); } });
+    show(home);
+  }
+  const mountAll = () => document.querySelectorAll('[data-anxq-explorer]').forEach((root) => { if (root.dataset.mounted) return; root.dataset.mounted = '1'; mount(root); });
+  mountAll();
+  if (document.readyState === 'loading') document.addEventListener('DOMContentLoaded', mountAll);
+})();
+</script>
+`;
+  writeFileSync(path.join(INCLUDES, 'anti-xq-explorer-lib.html'), explorerLibHtml);
+  writeFileSync(path.join(INCLUDES, 'anti-xq-explorer.html'), explorerInstanceHtml);
+  console.log('  _includes/anti-xq-explorer-lib.html, anti-xq-explorer.html');
   for (const inst of instances) {
     const first = inst.id === 'anti-games';
     writeFileSync(
