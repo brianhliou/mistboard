@@ -227,7 +227,7 @@ export const banqiTenant: BanqiTenant = {
       return 'draw';
     },
     // The kernel spells the 40-ply no-progress draw 'no-progress'; the canonical
-    // GameTermination value (shared with xiangqi/mini-xiangqi, and the
+    // GameTermination value (shared with xiangqi, and the
     // only one the games_termination_check CHECK accepts) is 'progress-clock'.
     // Translate it — a blind cast launders the invalid string past TS and only
     // fails at the DB write, silently dropping every no-progress draw.

@@ -6,7 +6,7 @@
 // (variants-jungle-flip.ts) imports — the two surfaces share the rank order + the
 // rat-beats-elephant wrap, nothing else.
 //
-// Like variants-mini-xiangqi.ts and variants-banqi.ts, this stays a SELF-CONTAINED
+// Like variants-banqi.ts, this stays a SELF-CONTAINED
 // kernel with its own geometry and piece set rather than forcing Jungle through the
 // chess Variant interface (different board, different pieces, different mechanics).
 //

@@ -16,7 +16,7 @@
 // game-spec gate and the disjoint per-tenant matchers keep unknown ids out.
 //
 // NOT covered here (left as one-offs): live-engine-seat RESERVATION tenants
-// (dark-xiangqi, dark-mini-xiangqi — they reserve a seat before the persistence
+// (dark-xiangqi — it reserves a seat before the persistence
 // gate, a different step order) and
 // correspondence (days-per-move allowlist, account-required, mode-based
 // matcher). Those keep their bespoke handlers.

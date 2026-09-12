@@ -194,8 +194,8 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 
 // A variant's play deep link must be gated on its OWN feature flag. Two were
 // not: fog xiangqi's `acceptsDeepLink` pointed at darkMiniXiangqiEnabled and
-// jieqi's at the drop-mini flag, both flags for unrelated mini-xiangqi
-// variants that are off in production. Neither variant's own flag was even
+// jieqi's at the drop-mini flag, both flags for unrelated (since deleted)
+// variants that were off in production. Neither variant's own flag was even
 // imported here, so the entries fell back to whatever was already in scope and
 // typechecked cleanly. The effect was invisible: /?play=computer&gameSpecId=…
 // silently dropped the visitor on the homepage, so every shared play link for

@@ -210,7 +210,7 @@ export type EngineDefinition = {
   livePolicy?: EngineLivePolicy;
   notes?: string;
   /**
-   * Game variant this engine plays (e.g. 'dark-mini-xiangqi'). Absent ⇒ dark
+   * Game variant this engine plays (e.g. 'dark-xiangqi'). Absent ⇒ dark
    * chess (the default). Drives the worker `--game` flag and the request's
    * gameSpecId so the engine interprets the right board geometry + piece set.
    */

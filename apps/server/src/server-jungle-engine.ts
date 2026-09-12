@@ -5,7 +5,7 @@
  * the bot is a plain depth-limited alpha-beta search over the rules kernel — no
  * Python, no Fairy-Stockfish (FSF has no Dou Shou Qi variant). These tiers run
  * IN-PROCESS and inject moves through the same tenant append+broadcast path as a
- * human move (mirrors server-drop-mini-xiangqi-engine.ts).
+ * human move.
  */
 
 import {

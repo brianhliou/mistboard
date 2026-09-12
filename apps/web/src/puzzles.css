@@ -14,9 +14,6 @@
   --site-nav-bg: var(--site-bg);
   --site-nav-border: transparent;
   --site-shadow: rgba(0, 0, 0, 0.16);
-  /* The mini-xiangqi board palette (--mini-xq-board-bg/palace-band/grid) is left
-     to the theme-driven vars in app-base.css so the board tracks the user's
-     xiangqi board-theme setting, matching every other xiangqi surface. */
 
   background: var(--site-page-gradient);
 }
@@ -221,11 +218,6 @@
 
 .puzzle-board-surface {
   line-height: 0;
-}
-
-.puzzle-board-shell .mini-xq-board {
-  min-width: 0;
-  max-width: 100%;
 }
 
 .puzzle-board-reserve {
@@ -1183,7 +1175,6 @@
     padding-top: 22px;
   }
 
-  .puzzle-board .mini-xq-board,
   .puzzle-board .puzzle-xiangqi-board,
   .puzzle-board-shell {
     min-width: 0;

@@ -72,7 +72,7 @@ export type CurrentGame = {
   roomId: string;
   gameSpecId: string;
   // The Mistboard TV channel this game belongs to, or null when its variant has
-  // no watch channel (e.g. mini-xiangqi). Drives the rail filter.
+  // no watch channel. Drives the rail filter.
   channelId: string | null;
   composition: 'pvp' | 'pve';
   observe: CurrentGameObserve;

@@ -39,7 +39,7 @@ type GateSpecEntry<Id extends GatedGameSpecId> =
       disabledError: `${SnakeCase<Id>}_disabled`;
       notIntegratedError: `${SnakeCase<Id>}_not_integrated`;
     }
-  // No launch flag yet (mini-xiangqi and the runtimeStatus 'future' specs):
+  // No launch flag yet (the runtimeStatus 'future' specs):
   // every request answers 501 `_not_integrated`.
   | { notIntegratedError: `${SnakeCase<Id>}_not_integrated` };
 

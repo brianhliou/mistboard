@@ -45,7 +45,7 @@ function assert(condition, message) {
  * spec id -> { publicName, publicSurface, runtimeStatus }.
  *
  * GAME_SPECS mixes two id styles in one array — `id: DARK_CHESS_SPEC_ID` and
- * `id: 'dark-crazyhouse'`. Handle both. An earlier version of this parser read
+ * `id: 'mahjong'`. Handle both. An earlier version of this parser read
  * only the const form, dropped 7 of 24 specs, and passed its own completeness
  * assert because that assert counted const-form lines too. The check below
  * counts every `id:` in the array body instead, so the parser is measured
@@ -249,9 +249,8 @@ async function main() {
   const prodBots = wantProd ? await fetchProdBots() : null;
 
   // An explicit gameSpecId wins. Otherwise fall back to the LONGEST spec id the
-  // engine id contains: 'mini-xiangqi' must beat 'xiangqi' for
-  // `fairy-stockfish-mini-xiangqi-strong`, or xiangqi absorbs every other
-  // variant's engines.
+  // engine id contains: 'fortress-xiangqi' must beat 'xiangqi', or xiangqi
+  // absorbs every other variant's engines.
   const specIds = [...specs.keys()].sort((a, b) => b.length - a.length);
   const botCount = new Map();
   for (const bot of bots) {

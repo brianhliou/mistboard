@@ -296,8 +296,8 @@ const ZH_HANS: Record<string, string> = {
   'Ask me something first': '有问题先问我',
   // -- Fortress Xiangqi --
   'Fortress Xiangqi Rules': '堡垒象棋规则',
-  'Shigenobu Kusumoto, working in Osaka, invented [Mini Xiangqi](/rules/mini-xiangqi) in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
-    '楠本茂信在大阪发明了[小象棋](/rules/mini-xiangqi)，时间是 1973 年。一位日本设计者拿起一款中国棋，为它造了一张更小的棋盘，正如他为本国的将棋做过五五将棋。堡垒象棋把这趟交流反向跑了一遍。将棋有打入已有数百年，象棋从来没有，这就是象棋借来打入之后的样子。',
+  'Shigenobu Kusumoto, working in Osaka, invented Mini Xiangqi in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
+    '楠本茂信在大阪发明了小象棋，时间是 1973 年。一位日本设计者拿起一款中国棋，为它造了一张更小的棋盘，正如他为本国的将棋做过五五将棋。堡垒象棋把这趟交流反向跑了一遍。将棋有打入已有数百年，象棋从来没有，这就是象棋借来打入之后的样子。',
   'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.':
     '一种紧凑的象棋变体，带有持子、打入，以及一个新棋子「宝」。',
   'Fortress Xiangqi is a compact [Xiangqi](/rules/xiangqi) variant designed by Brian H. Liou in 2026 as a Mistboard original. It keeps the familiar pieces, adds one new piece called the Treasure, and gives each player an open reserve. Capture an enemy piece and you can later drop it back as your own.':
@@ -2432,8 +2432,8 @@ const ZH_HANT: Record<string, string> = {
   'Ask me something first': '有問題先問我',
   // -- Fortress Xiangqi --
   'Fortress Xiangqi Rules': '堡壘象棋規則',
-  'Shigenobu Kusumoto, working in Osaka, invented [Mini Xiangqi](/rules/mini-xiangqi) in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
-    '楠本茂信在大阪發明了[小象棋](/rules/mini-xiangqi)，時間是 1973 年。一位日本設計者拿起一款中國棋，為它造了一張更小的棋盤，正如他為本國的將棋做過五五將棋。堡壘象棋把這趟交流反向跑了一遍。將棋有打入已有數百年，象棋從來沒有，這就是象棋借來打入之後的樣子。',
+  'Shigenobu Kusumoto, working in Osaka, invented Mini Xiangqi in 1973. A Japanese designer took a Chinese game and built it a smaller board, the same move he made for his own country’s game with minishogi. Fortress Xiangqi runs that trade in the other direction. Shogi has had drops for centuries and xiangqi never has, so this is what xiangqi looks like when it borrows them.':
+    '楠本茂信在大阪發明了小象棋，時間是 1973 年。一位日本設計者拿起一款中國棋，為它造了一張更小的棋盤，正如他為本國的將棋做過五五將棋。堡壘象棋把這趟交流反向跑了一遍。將棋有打入已有數百年，象棋從來沒有，這就是象棋借來打入之後的樣子。',
   'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.':
     '一種緊湊的象棋變體，帶有持子、打入，以及一個新棋子「寶」。',
   'Fortress Xiangqi is a compact [Xiangqi](/rules/xiangqi) variant designed by Brian H. Liou in 2026 as a Mistboard original. It keeps the familiar pieces, adds one new piece called the Treasure, and gives each player an open reserve. Capture an enemy piece and you can later drop it back as your own.':

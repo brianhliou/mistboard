@@ -61,7 +61,7 @@ def offered_ids(registry_path: Path) -> set[str]:
 
 def served_ids(worker_path: Path) -> set[str]:
     # The private worker owns several dispatch tables (V2_LIVE_ENGINES for chess,
-    # mini-xiangqi profiles for DMX, xiangqi profiles for DXQ). A whole-file scan
+    # xiangqi profiles for DXQ). A whole-file scan
     # intentionally catches each registered id without coupling this public gate
     # to private table names.
     return set(PYTHON_ENGINE_ID.findall(worker_path.read_text()))

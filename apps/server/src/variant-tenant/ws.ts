@@ -477,8 +477,8 @@ export function createTenantWsRuntime<
         ? move
         : null;
     if (canonical === null) {
-      // A tenant may turn a rejection into a per-mover signal (the Crazyhouse
-      // parachute bounce). Sent only to this client, so it never leaks to others.
+      // A tenant may turn a rejection into a per-mover signal (a drop bounce).
+      // Sent only to this client, so it never leaks to others.
       const rejection = tenant.wire?.rejectionFor?.(room.projection.state, move, seat);
       if (rejection) sendPayload(client, rejection);
       return;

@@ -25,7 +25,7 @@ describe('Banqi watch replay', () => {
     expect(root.textContent).toContain('1 plies');
     expect(root.textContent).toContain('Casual');
     expect(root.textContent).toContain('Ply 0 / 1');
-    // Banqi is symmetric → a single Truth pane (not the jieqi/mini-xiangqi triptych).
+    // Banqi is symmetric → a single Truth pane (not the jieqi triptych).
     expect(root.querySelectorAll('.banqi-board')).toHaveLength(1);
 
     root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();

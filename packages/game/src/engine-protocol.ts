@@ -180,7 +180,7 @@ export type EngineTurnRequest = {
   engineId: string;
 
   /**
-   * Game variant this request is for (e.g. 'dark-chess', 'dark-mini-xiangqi').
+   * Game variant this request is for (e.g. 'dark-chess', 'dark-xiangqi').
    * Tells the engine how to interpret square geometry (board size: 8 vs 7) and
    * piece letters. OMITTED for dark chess (engines default to it) so the chess
    * wire payload is byte-unchanged; present for every other variant.

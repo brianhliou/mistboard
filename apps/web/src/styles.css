@@ -381,24 +381,6 @@
   pointer-events: none;
 }
 
-.captures-strip .mini-xq-capture-piece {
-  display: inline-block;
-  flex: 0 0 var(--capture-piece-size);
-  width: var(--capture-piece-size);
-  height: var(--capture-piece-size);
-}
-
-/* Anchor the count badge to the glyph when same-role captures are stacked. */
-.captures-strip .mini-xq-capture-piece.has-count {
-  position: relative;
-}
-
-.captures-strip .mini-xq-capture-piece svg {
-  display: block;
-  width: 100%;
-  height: 100%;
-}
-
 :root[data-effective-theme="dark"] .captures-strip .captures-piece > piece.black {
   border-radius: 50%;
   background-color: rgba(238, 243, 235, 0.88);
@@ -433,12 +415,10 @@
    per role (≤7), so they never need the horizontal clip the dense chess pool
    relies on — drop the clip on those rows so the full badge shows. Covers banqi /
    jieqi across live, postgame review, and watch surfaces. */
-.captures-row.mini-xq-captures-row,
 .captures-row.review-captures-row {
   overflow: visible;
 }
 
-.captures-strip:has(.mini-xq-captures-row),
 .captures-strip:has(.review-captures-row) {
   overflow: visible;
 }

@@ -77,8 +77,8 @@ export type TenantSocketClientOptions = {
   applyEvent(frame: TenantSocketFrame): void;
   onRematchState?(message: Record<string, unknown>): void;
   // Tenant-specific server messages the core does not recognize (hello / snapshot
-  // / event-appended / pong / rematch / restart). Dark Crazyhouse uses it for the
-  // 'drop-rejected' parachute bounce. Called before the trailing re-render.
+  // / event-appended / pong / rematch / restart), e.g. a drop-rejected bounce.
+  // Called before the trailing re-render.
   onServerMessage?(message: { type: string; [key: string]: unknown }): void;
   // Full re-render, called after every connection/frame state change.
   render(): void;

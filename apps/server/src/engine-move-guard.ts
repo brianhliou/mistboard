@@ -46,7 +46,7 @@ export type EngineDecisionRecord = {
   to_move: string;
   in_check: boolean;
   // FEN of the position, for engines fed a FEN (banqi/jieqi). null for engines
-  // replayed purely from move history (drop-mini, mini-xiangqi).
+  // replayed purely from move history.
   fen: string | null;
   /** The whole game, in engine UCI. */
   history: string;

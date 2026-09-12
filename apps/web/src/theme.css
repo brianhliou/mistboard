@@ -709,15 +709,6 @@
   display: none;
 }
 
-/* Crossroads is a hybrid surface: chess board themes color the cells; xiangqi
-   board styles color the coordinates and river accent. */
-:root,
-:root[data-xiangqi-board-theme="international"] {
-}
-
-:root[data-xiangqi-board-theme="traditional"] {
-}
-
 /* Xiangqi board swatches (presentation style, not an open-ended colour picker). */
 .theme-tile-preview-xqboard[data-id="cell"] {
   background-color: #f5dca8;

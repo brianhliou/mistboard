@@ -18,8 +18,9 @@
  *   - everything color-shaped is keyed by the tenant's `colors` tuple in move
  *     order; the clock arms after the second mover's first move.
  *
- * Reference implementation: dark-mini-xiangqi-tenant.ts (P0). Migration order
- * and gates: docs-private/variant-generalization-track.md.
+ * Reference implementations: dark-xiangqi-tenant.ts (fog) and jieqi-tenant.ts
+ * (hidden identity). Migration order and gates:
+ * docs-private/variant-generalization-track.md.
  */
 
 import type { AbortReason, RoomTimeControl } from '@mistboard/game';
@@ -424,7 +425,7 @@ export type VariantTenant<
     legacyGameSpecIds?: readonly string[];
     // When a client move is rejected (failed the legality / canonicalization
     // check), produce a payload to send ONLY back to the mover, or null to stay
-    // silent (the default for every existing tenant). Dark Crazyhouse uses it
+    // silent (the default for every existing tenant). Dark Crazyhouse used it
     // for the parachute drop BOUNCE: a drop onto a square that is occupied in
     // truth is rejected, and the mover is told the square is occupied (a probe).
     rejectionFor?(state: State, move: M, seat: TenantSeat<C>): Record<string, unknown> | null;
