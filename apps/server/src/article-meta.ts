@@ -48,11 +48,6 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   'fog-openings',
   'fog-chess-concepts',
   'shogi',
-  // The Duck Xiangqi launch post, cut before launch rather than shipped. It
-  // restated the rules page at lower resolution and would have competed with it
-  // for the same query on our own domain. Kept in the tree as a draft; the
-  // rules page is the one public surface for the variant.
-  'duck-xiangqi-build',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -180,10 +175,10 @@ export const ARTICLE_META: Record<
       'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.',
   },
   'duck-xiangqi-build': {
-    title: 'Duck Xiangqi Is Live',
+    title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',
     kind: 'article',
     description:
-      'Duck Chess on the 9 by 10 board. Chess.com made the original an official variant in 2022; nobody had carried it to xiangqi, where four different rules ask whether a point is occupied instead of one.',
+      'Chinese chess with one duck both players share. The screen you build is your opponent\u2019s, nothing warns you before your general is taken, and the bot places the duck at random.',
   },
   'duck-xiangqi': {
     title: 'Duck Xiangqi Rules',

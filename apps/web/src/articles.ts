@@ -339,14 +339,6 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // index (and each variant's card marker), not in this homepage row, so this
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
-// The named exceptions to the rules-page exclusion above. A variant whose
-// launch is the news itself earns a row here, because the rules page IS the
-// destination for it: there is no separate editorial post to link (the Duck
-// Xiangqi launch post was cut for duplicating the rules page). Kept as an
-// allowlist rather than a relaxed guard so the exclusion still holds for every
-// other rules slug and a second exception is a deliberate edit.
-export const HOME_ARTICLE_RULES_ALLOWLIST: readonly string[] = ['duck-xiangqi'];
-
 export const HOME_ARTICLE_SLUGS = [
   // The jieqi pair, shipped together on 2026-09-03 and dated a day apart. The
   // platform page is the clearest case of a page that sends a reader straight
@@ -355,15 +347,15 @@ export const HOME_ARTICLE_SLUGS = [
   // language but Chinese anywhere else.
   'jieqi-openings',
   'jieqi-platform',
-  // The row orders by publish date, so this leads it until the next post. It
-  // ends on a puzzle to solve, which is the row's own test for a lead.
+  // The Duck Xiangqi launch post LEADS the row: it shares 2026-09-11 with the
+  // puzzles post and ties break on position here, so listing it first is what
+  // promotes it. Deliberate, to put a new variant in front of people while it
+  // is new; the puzzles post keeps second. Its card art is the article's own
+  // thumbnail (the duck), because the slug carries no variant marker.
+  'duck-xiangqi-build',
+  // Second while the duck launch is new; it led the row before that, and
+  // takes the lead back when duck ages out.
   'puzzles-with-more-than-one-solution',
-  // Duck Xiangqi, launched 2026-09-11. A rules page in the row by exception;
-  // see HOME_ARTICLE_RULES_ALLOWLIST. Its card thumbnail is the shared duck
-  // variant marker, resolved by slug in VARIANT_MINI_BY_SLUG. Listed AFTER the
-  // puzzles post deliberately: they share a date, ties break on position here,
-  // and that post is the row's intended lead.
-  'duck-xiangqi',
   // Held the lead until the jieqi pair shipped, on the same reasoning: it sends
   // a reader into something they can do rather than something to read about,
   // and the method it documents is not published anywhere else for xiangqi.
@@ -432,9 +424,8 @@ export function buildHomeArticleCards(
   );
   const articleItems = HOME_ARTICLE_SLUGS.flatMap<HomeCardItem>((slug, index) => {
     const article = eligible.get(slug);
-    // Rules reference pages live on /rules, never this editorial row, unless
-    // they are a named exception (a variant launch with no editorial post).
-    return article && (article.kind !== 'rules' || HOME_ARTICLE_RULES_ALLOWLIST.includes(slug))
+    // Rules reference pages live on /rules, never this editorial row.
+    return article && article.kind !== 'rules'
       ? [{ kind: 'article', date: articleDateKey(article), order: index + 1, article }]
       : [];
   });
@@ -544,7 +535,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   thumb.className = 'landing-article-card-thumb';
   // Variant articles use their shared marker;
   // non-variant articles (e.g. concept pieces) keep their own diagram.
-  const mini = renderCardVariantThumb(article.slug);
+  const mini = renderVariantMiniThumb(article.slug);
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
@@ -2449,7 +2440,7 @@ function articleCard(
 
   const thumb = document.createElement('div');
   thumb.className = 'articles-index-card-media';
-  const mini = renderCardVariantThumb(article.slug);
+  const mini = renderVariantMiniThumb(article.slug);
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
@@ -2586,23 +2577,6 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
 };
-
-// Slugs whose OWN thumbnail beats the shared variant marker on card surfaces.
-//
-// The marker is a one-colour mask, which is the right call for the /rules
-// tiles and the rules rail: those are a uniform set where every variant reads
-// the same way, and duck's mono marker was cut to match them. A card is a
-// picture at ten times the size, and there the mask reads as a grey silhouette
-// of art that is actually coloured. Card call sites use
-// `renderCardVariantThumb`; the tile and rail call sites keep the marker.
-const CARD_THUMB_PREFERS_ARTICLE = new Set<string>(['duck-xiangqi']);
-
-/** The card-surface variant thumbnail: the marker, unless this slug's own
- *  thumbnail is the better picture. Returning null makes the caller fall
- *  through to `article.thumbnail`, which is the existing precedence. */
-function renderCardVariantThumb(slug: string): HTMLElement | null {
-  return CARD_THUMB_PREFERS_ARTICLE.has(slug) ? null : renderVariantMiniThumb(slug);
-}
 
 // A rail/landing thumbnail rendered as the variant's marker, or null if the
 // slug has no mini (caller falls back to the article's own thumbnail).

@@ -85,9 +85,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The Duck Xiangqi build post is a DRAFT and only appears because this
-      // case stubs DEV. It ships with the variant, for the same reason the
-      // rules page does: it argues from positions nobody can set up yet.
+      // Published with the variant on 2026-09-11, the same date as the
+      // puzzles post; ties break on HOME_ARTICLE_SLUGS position, and this
+      // index is ordered by date alone, so the newest pair leads.
       '/blog/duck-xiangqi-build',
       '/blog/puzzles-with-more-than-one-solution',
       // The jieqi pair shipped as one batch on 2026-09-03, because each of the
@@ -264,12 +264,11 @@ describe('article public listing gates', () => {
       ) ?? []),
     ].map((link) => link.getAttribute('href'));
 
-    // Rules reference pages are excluded from this row, with one named
-    // exception (HOME_ARTICLE_RULES_ALLOWLIST): a variant launch whose rules
-    // page IS the destination. Everything else here is editorial, newest first.
+    // Rules reference pages are excluded from this row; only editorial
+    // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/duck-xiangqi-build',
       '/blog/puzzles-with-more-than-one-solution',
-      '/rules/duck-xiangqi',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
       '/blog/how-puzzle-mining-works',
