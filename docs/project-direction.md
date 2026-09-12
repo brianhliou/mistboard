@@ -1,7 +1,7 @@
 # Project Direction
 
 Mistboard is an open-source platform for original strategy games, built for
-serious play: server-enforced board games across chess, xiangqi, shogi, Jungle,
+serious play: server-enforced board games across chess, xiangqi, Jungle,
 and related families, including hidden-information games such as dark chess (also
 called Fog of War chess).
 

@@ -60,8 +60,7 @@ Open `http://localhost:3000`.
 
 `npm run dev` is persistent by default: it starts a local Postgres in Docker,
 applies migrations, and runs the server + web pair with the live product
-variants. Use `npm run dev:lab` for parked variant work. No Docker? Run
-`npm run dev:memory` or `npm run dev:lab:memory` for the in-memory path
+variants. No Docker? Run `npm run dev:memory` for the in-memory path
 (DB-backed pages like `/watch` and profiles are dark).
 
 Useful checks:
