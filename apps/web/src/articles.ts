@@ -1443,8 +1443,7 @@ function renderFortressXiangqiReplayBlock(
   lang?: ArticleLang,
 ): HTMLElement {
   const figure = document.createElement('figure');
-  figure.className =
-    'article-figure article-figure-interactive article-figure-xq article-figure-drop-mini-xiangqi';
+  figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'fortress-xiangqi-replay';
 
   const mountTarget = document.createElement('div');

@@ -2,7 +2,7 @@
 
 ## One-line shape
 
-Full-stack board-game platform for xiangqi, chess, and related variant families: a Vite-bundled TypeScript browser client + a Node.js WebSocket server + Postgres. The Node server serves the built static client and the WebSocket on the same port; everything runs on one hosting provider. Variants range from open-information games (standard xiangqi, Jungle) to hidden-information games (Fog of War chess and xiangqi, Jieqi, Banqi, Kriegspiel), and the architecture is built so hidden information can never reach the wrong client.
+Full-stack board-game platform for xiangqi, chess, and related variant families: a Vite-bundled TypeScript browser client + a Node.js WebSocket server + Postgres. The Node server serves the built static client and the WebSocket on the same port; everything runs on one hosting provider. Variants range from open-information games (standard xiangqi, Jungle) to hidden-information games (Fog of War chess and xiangqi, Jieqi, Banqi, Flip Jungle), and the architecture is built so hidden information can never reach the wrong client.
 
 ## Package layout
 
