@@ -392,7 +392,7 @@ if (pieceCount(survivor, 'red') !== pieceCount(survivor, 'black'))
   throw new Error('the surviving exit should have equal material');
 figure(
   'survivor',
-  boards([{ id: 'survivor', board: board(survivor), label: `${sanLine(QUIET)}, RED TO MOVE` }]),
+  boards([{ id: 'survivor', board: board(survivor), label: `AFTER ${sanLine(QUIET)}` }]),
   `Four plies in. ${pieceCount(survivor, 'red')} pieces each, Red to move, no capture on the board. The cascade is over and nobody has lost yet. From here the engine, playing both sides at one, two and five million nodes a move, drew every game.`,
   true,
 );
@@ -472,7 +472,7 @@ figure(
     {
       id: 'dead',
       board: board(DEAD),
-      label: 'NOTHING HERE CAN EVER CAPTURE ANYTHING',
+      label: 'THE DEAD BOARD',
       zones: true,
     },
   ]),
