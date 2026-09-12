@@ -34,7 +34,11 @@ function note(root: HTMLElement, message: string): void {
   root.replaceChildren(box);
 }
 
-export async function mountEmbedStudy(root: HTMLElement, route: EmbedStudyRoute): Promise<void> {
+export async function mountEmbedStudy(
+  root: HTMLElement,
+  route: EmbedStudyRoute,
+  options: { startPly?: number | null } = {},
+): Promise<void> {
   document.body.classList.add('embed-body');
   // A hook on the ROOT, not just the body. :root in app-base.css paints the page
   // colour and a gradient, and it outranks a bare `html` selector, so the frame
@@ -93,7 +97,9 @@ export async function mountEmbedStudy(root: HTMLElement, route: EmbedStudyRoute)
     // chapter's own variant, and fail over to xiangqi for everything else
     // rather than guessing.
     aspect: boardAspectForSpec(isDuck ? 'duck-xiangqi' : 'xiangqi'),
-    startPly: 0,
+    // Clamped by the card against the real ply count, so an out-of-range
+    // deep link opens at the end rather than on nothing.
+    startPly: options.startPly ?? 0,
     mountBoard: async (host, hooks) =>
       isDuck
         ? mountDuckXiangqiReplayBoard(

@@ -789,9 +789,13 @@ if (replaySample) {
   );
 } else if (embedRoute?.kind === 'study') {
   const studyRoute = embedRoute.route;
+  // `?ply=N` was parsed but only ever reached the GAME embed, so a study
+  // embed silently ignored it and always opened on move one. A chapter
+  // linked to make a point about one move should be able to open on it.
+  const studyPly = embedPlyFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-study-page.js').then(({ mountEmbedStudy }) =>
-      mountEmbedStudy(appRoot, studyRoute),
+      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly }),
     ),
   );
 } else if (embedRoute?.kind === 'game') {

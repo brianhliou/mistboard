@@ -115,6 +115,22 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it('opens on the ply the link names, not always move one', async () => {
+    // ?ply=N was parsed but only ever reached the GAME embed, so a study
+    // chapter linked to make a point about one move always opened on move
+    // one and the reader had to go find it.
+    stubFetch(200, { study: { id: 's' }, chapters: [CHAPTER] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Ue0EgpS7' }, { startPly: 2 });
+
+    // The card writes the position it is showing as "ply / max".
+    expect(root.querySelector('.embed-frame')).not.toBeNull();
+    expect(root.textContent).toContain('2 / ');
+    root.remove();
+  });
+
   it('says a private or missing study is unavailable rather than looking broken', async () => {
     stubFetch(404, { error: 'not_found' });
     const root = document.createElement('div');
