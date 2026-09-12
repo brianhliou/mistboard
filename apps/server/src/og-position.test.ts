@@ -18,8 +18,8 @@ import {
   jungleStateToEngineFen,
   standardXiangqiFen,
 } from '@mistboard/game';
+import { CARD_BOARD_HEIGHT, intersectionLayout } from './og-card-board.js';
 import {
-  intersectionGeometry,
   POSITION_FEN_MAX_LENGTH,
   POSITION_OG_VARIANTS,
   type PositionOgVariant,
@@ -157,9 +157,12 @@ test('renders are rate-limited per client; cache hits and the default card are n
   assert.equal(other.status, 200);
 });
 
-test('the footer names the variant and the side to move', () => {
-  assert.match(svgFor('banqi', BANQI_PUBLIC), /Banqi<\/tspan>.*Red to move/);
-  assert.match(svgFor('dark-chess', START_FENS['dark-chess']), /Fog Chess<\/tspan>.*White to move/);
+test('the caption names the variant and the side to move', () => {
+  assert.match(svgFor('banqi', BANQI_PUBLIC), />Banqi<\/text>[\s\S]*>Red to move<\/text>/);
+  assert.match(
+    svgFor('dark-chess', START_FENS['dark-chess']),
+    />Fog Chess<\/text>[\s\S]*>White to move<\/text>/,
+  );
   assert.match(svgFor('fortress-xiangqi', START_FENS['fortress-xiangqi']), /Fortress Xiangqi/);
   // Before the first flip no ink is bound, so there is no side to move.
   assert.match(svgFor('banqi', START_FENS.banqi), /First flip/);
@@ -268,7 +271,7 @@ test('jungle-flip: no animal name appears for a face-down tile', () => {
 // exactly the point the copy computes for e1.
 test('the overlay geometry matches the shared intersection renderer', () => {
   const svg = svgFor('jieqi', START_FENS.jieqi);
-  const geom = intersectionGeometry(9, 10, 486);
+  const geom = intersectionLayout(9, 10, CARD_BOARD_HEIGHT);
   const s = geom.pieceSize;
   assert.ok(
     svg.includes(`translate(${geom.px(4) - s / 2} ${geom.py(1) - s / 2}) scale(${s / 100})`),
@@ -287,7 +290,7 @@ test("duck-xiangqi: the duck is drawn on its point, in neither seat's ink", () =
   assert.ok(!start.includes(DUCK_INK), 'no duck before it enters the board');
   const withDuck = svgFor('duck-xiangqi', DUCK_ON_BOARD);
   // On e5, on the same points the shared renderer uses for the pieces.
-  const geom = intersectionGeometry(9, 10, 486);
+  const geom = intersectionLayout(9, 10, CARD_BOARD_HEIGHT);
   const s = geom.pieceSize;
   assert.ok(
     withDuck.includes(`translate(${geom.px(4) - s / 2} ${geom.py(5) - s / 2}) scale(${s / 100})`),

@@ -24,6 +24,7 @@ import {
   analyzeXiangqiGame,
   type PlyEval,
   XIANGQI_ANALYSIS_ENGINE_ID,
+  XIANGQI_ANALYSIS_REQUEST_DEPTH,
 } from './../xiangqi-analysis.js';
 import { xiangqiRooms } from './../xiangqi-registration.js';
 import type { XiangqiEvent, XiangqiRuntimeRoom } from './../xiangqi-runtime.js';
@@ -153,12 +154,6 @@ export async function tryHandle(
   writeJson(response, 200, payload);
   return true;
 }
-
-// Nominal cache dimension for the (room, engine, depth) key. The sweep's real
-// strength dial is the NODE budget (XIANGQI_ANALYSIS_NODES, encoded in the
-// versioned engine id — the sibling-variant pattern); `depth` only has to be
-// STABLE, so it stays at the family default.
-export const XIANGQI_ANALYSIS_REQUEST_DEPTH = 12;
 
 export type XiangqiGameAnalysis = {
   engineId: string;

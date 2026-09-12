@@ -11,8 +11,14 @@ import type {
   FortressXiangqiMove,
   RoomTimeControl,
 } from '@mistboard/game';
+import { fortressXiangqiEngineFen } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
+import {
+  FORTRESS_XIANGQI_ANALYSIS_DEPTH,
+  FORTRESS_XIANGQI_ANALYSIS_ENGINE_ID,
+} from './fortress-xiangqi-fsf-engine.js';
 import { type FortressXiangqiEvent, fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
+import { tenantCardBinding } from './game-card-tenant.js';
 import { fortressXiangqiExportUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import {
@@ -159,6 +165,14 @@ registerVariantTenant({
   export: tenantExportBinding(fortressXiangqiTenant, {
     gameRouteBase: '/fortress-xiangqi/game',
     uci: fortressXiangqiExportUci,
+  }),
+  card: tenantCardBinding(fortressXiangqiTenant, {
+    variant: 'fortress-xiangqi',
+    analysis: {
+      engineId: FORTRESS_XIANGQI_ANALYSIS_ENGINE_ID,
+      depth: FORTRESS_XIANGQI_ANALYSIS_DEPTH,
+    },
+    fen: fortressXiangqiEngineFen,
   }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,

@@ -5,7 +5,12 @@
  * variant-tenant/register-tenants.ts.
  */
 
-import type { RoomTimeControl } from '@mistboard/game';
+import {
+  jungleFlipInkForSeat,
+  jungleFlipStateToEngineFen,
+  type RoomTimeControl,
+} from '@mistboard/game';
+import { tenantCardBinding } from './game-card-tenant.js';
 import { flipOrBoardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import type { JungleFlipCreatorPreference, JungleFlipRuntimeRoom } from './jungle-flip-runtime.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
@@ -111,6 +116,13 @@ registerVariantTenant({
     gameRouteBase: '/jungle-flip/game',
     uci: flipOrBoardMoveUci,
     firstMoverInk: (state) => state.firstColor,
+  }),
+  // Final position only: a flip swings the eval by luck (VariantTenantCard).
+  card: tenantCardBinding(jungleFlipTenant, {
+    variant: 'jungle-flip',
+    analysis: null,
+    fen: jungleFlipStateToEngineFen,
+    seatInk: jungleFlipInkForSeat,
   }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,

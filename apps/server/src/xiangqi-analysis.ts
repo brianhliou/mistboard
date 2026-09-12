@@ -60,6 +60,14 @@ export const XIANGQI_ANALYSIS_ENGINE_VERSION = 5;
 // onto this dedicated id (at @1; @2 recomputes on demand).
 export const XIANGQI_ANALYSIS_ENGINE_ID = `pikafish-xiangqi-analysis@${XIANGQI_ANALYSIS_ENGINE_VERSION}`;
 
+// Nominal cache dimension for the (room, engine, depth) key. The sweep's real
+// strength dial is the NODE budget (XIANGQI_ANALYSIS_NODES, encoded in the
+// versioned engine id — the sibling-variant pattern); `depth` only has to be
+// STABLE, so it stays at the family default. Lives beside the engine id (not
+// in routes/xiangqi-games.ts) so the registration's share card can name the
+// stored row without importing the route, which imports the registration.
+export const XIANGQI_ANALYSIS_REQUEST_DEPTH = 12;
+
 export type PlyEval = {
   /** Position AFTER this many plies (0 = start position). */
   ply: number;

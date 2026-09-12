@@ -4,7 +4,7 @@ import type { ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
-import { POSITION_OG_VARIANTS } from './og-position.js';
+import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import { isClientRoute } from './server-policy.js';
 import {
   injectPageMeta,
@@ -139,7 +139,7 @@ test('serveArticlePage falls back to index shell with rules metadata', async () 
   );
   assert.match(
     response.body,
-    /<meta property="og:image" content="https:\/\/mistboard.test\/og\/article\/fog-chess.png">/,
+    /<meta property="og:image" content="https:\/\/mistboard.test\/og\/article\/fog-chess.png\?v=\d+">/,
   );
 });
 
@@ -642,7 +642,7 @@ test('a variant analysis link with a FEN gets its own title, og:url, and a posit
   const image = /<meta property="og:image" content="([^"]*)">/.exec(response.body)?.[1] ?? '';
   assert.equal(
     image,
-    `https://mistboard.com/og/position/banqi.png?fen=${encodeURIComponent(BANQI_PUBLIC_FEN).replace(/&/g, '&amp;')}&amp;v=1`,
+    `https://mistboard.com/og/position/banqi.png?fen=${encodeURIComponent(BANQI_PUBLIC_FEN).replace(/&/g, '&amp;')}&amp;v=${POSITION_OG_IMAGE_VERSION}`,
   );
   assert.ok(!image.includes('AAEERHHCSSSaehc'), 'the image URL must not carry the deal');
   assert.match(
@@ -657,6 +657,58 @@ test('a variant analysis link with a FEN gets its own title, og:url, and a posit
     ),
   );
   assert.match(response.body, /<div id="app"><\/div>/);
+});
+
+// --- tenant game pages (/<tenant>/game/:id, /room/:id) ------------------------
+
+test('a finished tenant game page gets its pairing as title, the review URL as og:url, and its card', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const gameMeta = async (pathname: string) =>
+    pathname === '/room/jq_x' || pathname === '/jieqi/game/jq_x'
+      ? {
+          title: 'Guest vs Pikafish · Jieqi | Mistboard',
+          description: 'Pikafish won by resignation after 16 moves.',
+          urlPath: '/jieqi/game/jq_x',
+          imagePath: '/og/game/jq_x.png?v=1',
+        }
+      : null;
+
+  for (const pathname of ['/room/jq_x', '/jieqi/game/jq_x']) {
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      publicHost: 'https://mistboard.com',
+      gameMeta,
+    });
+    assert.equal(served, true, pathname);
+    assert.match(response.body, /<title>Guest vs Pikafish · Jieqi \| Mistboard<\/title>/);
+    // The room URL in a player's address bar canonicalises to the review URL.
+    assert.match(
+      response.body,
+      /<meta property="og:url" content="https:\/\/mistboard\.com\/jieqi\/game\/jq_x">/,
+    );
+    assert.match(
+      response.body,
+      /<meta property="og:image" content="https:\/\/mistboard\.com\/og\/game\/jq_x\.png\?v=1">/,
+    );
+    assert.match(response.body, /<div id="app"><\/div>/);
+  }
+
+  // A live room (no finished game) keeps the generic shell meta: the room's
+  // very existence is not announced.
+  const response = captureResponse();
+  await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/room/jq_live',
+    publicHost: 'https://mistboard.com',
+    gameMeta,
+  });
+  assert.doesNotMatch(response.body, /Pikafish/);
+  assert.doesNotMatch(response.body, /og\/game\//);
 });
 
 test('the bare analysis and editor routes keep the xiangqi wording and take a FEN too', async () => {

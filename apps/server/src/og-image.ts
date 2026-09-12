@@ -1,16 +1,13 @@
 import { promises as fs } from 'node:fs';
 import type { ServerResponse } from 'node:http';
-import { dirname, resolve } from 'node:path';
-import { fileURLToPath } from 'node:url';
+import { resolve } from 'node:path';
 import {
   ARTICLE_OG_POSITIONS,
   type ArticleOgPosition,
   BROWN_PALETTE,
   boardToPieces,
-  fogSquaresFromVisible,
   type PieceOnBoard,
   renderBoardComposition,
-  renderXiangqiOgBoardSvg,
   SERVER_FOG_TRIPTYCH,
   type XiangqiOgPiece,
   xiangqiChampionTimelineSvg,
@@ -23,16 +20,39 @@ import {
   getPlayerView as getXiangqiPlayerView,
   initialGameProjection,
   parseStandardXiangqiFen,
-  type Square,
-  variantForId,
 } from '@mistboard/game';
-import { Resvg } from '@resvg/resvg-js';
 import { SKILL_VS_LUCK_OG_SERIES } from './banqi-luck-og-data.js';
+import { type CardArt, loadCardArt, renderBoardCard } from './og-card-board.js';
+import {
+  type PositionOgBoard,
+  type PositionOgVariant,
+  resolvePositionOg,
+  startPositionFen,
+} from './og-position.js';
+import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
+import {
+  createPngCache,
+  type PngCache,
+  redirectToDefault,
+  svgToPng,
+  writePng,
+} from './og-raster.js';
 import * as persistence from './persistence.js';
 
-export const OG_WIDTH = 1200;
-export const OG_HEIGHT = 630;
-export const GAME_OG_IMAGE_VERSION = 4;
+export {
+  createPngCache,
+  escapeXml,
+  OG_FONT,
+  OG_HEIGHT,
+  OG_WIDTH,
+  type PngCache,
+  redirectToDefault,
+  svgToPng,
+  writePng,
+};
+// v5 (2026-09-12): the shared board card (one board, seats beside it) in place
+// of the two-fog-view frame.
+export const GAME_OG_IMAGE_VERSION = 5;
 
 // Bounded LRU of rendered per-game PNGs. Each card is rendered once on first
 // scraper fetch, then served from here (and from the scraper/CDN cache, via the
@@ -42,39 +62,6 @@ export const GAME_OG_IMAGE_VERSION = 4;
 // Eviction is simplest-possible LRU: a Map keeps insertion order, so reads
 // re-insert (mark as recent) and writes drop the oldest key when over cap.
 const MAX_CACHE_ENTRIES = 1000;
-
-export type PngCache = {
-  get(key: string): Buffer | undefined;
-  set(key: string, png: Buffer): void;
-  readonly size: number;
-};
-
-/** A bounded LRU of rendered PNGs (the cache described above). Shared by the
- *  card families so each gets the same eviction behaviour under its own cap. */
-export function createPngCache(maxEntries: number): PngCache {
-  const cache = new Map<string, Buffer>();
-  return {
-    get(key) {
-      const hit = cache.get(key);
-      if (hit) {
-        cache.delete(key);
-        cache.set(key, hit); // move to most-recently-used end
-      }
-      return hit;
-    },
-    set(key, png) {
-      cache.set(key, png);
-      while (cache.size > maxEntries) {
-        const oldest = cache.keys().next().value;
-        if (oldest === undefined) break;
-        cache.delete(oldest);
-      }
-    },
-    get size() {
-      return cache.size;
-    },
-  };
-}
 
 const cache = createPngCache(MAX_CACHE_ENTRIES);
 
@@ -86,6 +73,11 @@ function cacheSet(key: string, png: Buffer): void {
   cache.set(key, png);
 }
 
+/** The fog chess game card (chess-stack rooms, /game/:id): the final position
+ *  on the chess board with the two seats beside it, through the shared board
+ *  card like every other variant. A finished game reveals in full, so there is
+ *  no fog to draw. Falls back to a pairing-only card when the log will not
+ *  replay, so a shared link always resolves to some image. */
 export async function serveGameOgImage(roomId: string, response: ServerResponse): Promise<void> {
   const cacheKey = `game:v${GAME_OG_IMAGE_VERSION}:${roomId}`;
   const cached = cacheGet(cacheKey);
@@ -100,13 +92,10 @@ export async function serveGameOgImage(roomId: string, response: ServerResponse)
     return;
   }
 
-  // Prefer the game-record card built from the finished position. If the event
-  // log is missing or replay throws, fall back to a text card so a shared link
-  // always resolves to *some* image.
   let svg: string;
   try {
-    const position = await reconstructOgPosition(roomId);
-    svg = position ? renderGameOgSvg(game, position) : renderStubSvg(game);
+    const pieces = await reconstructFinalPieces(roomId);
+    svg = pieces ? renderChessGameCard(game, pieces) : renderStubSvg(game);
   } catch {
     svg = renderStubSvg(game);
   }
@@ -115,12 +104,10 @@ export async function serveGameOgImage(roomId: string, response: ServerResponse)
   writePng(response, png, 'MISS');
 }
 
-type OgPosition = { pieces: PieceOnBoard[]; whiteFog: Square[]; blackFog: Square[] };
-
-// Replay the completed event log to the final position, then compute each side's
-// fog there. Game OG images are only served for completed games, so this does
-// not expose live hidden information.
-async function reconstructOgPosition(roomId: string): Promise<OgPosition | null> {
+// Replay the completed event log to the final position. Game OG images are
+// only served for completed games, so this does not expose live hidden
+// information.
+async function reconstructFinalPieces(roomId: string): Promise<PieceOnBoard[] | null> {
   const events = await persistence.loadRoom(roomId);
   if (!events || events.length === 0) return null;
 
@@ -133,65 +120,34 @@ async function reconstructOgPosition(roomId: string): Promise<OgPosition | null>
     }
   }
   if (pliesApplied === 0) return null;
-
-  const variant = variantForId(projection.variant);
-  const state = projection.state;
-  const pieces = boardToPieces(state.board);
-  const whiteFog = fogSquaresFromVisible(variant.getPlayerView(state, 'white').visibleSquares);
-  const blackFog = fogSquaresFromVisible(variant.getPlayerView(state, 'black').visibleSquares);
-  return { pieces, whiteFog, blackFog };
+  return boardToPieces(projection.state.board);
 }
 
-// Clean game-record card: Mistboard branding, player pairing, and the same
-// finished position from both player views.
-function renderGameOgSvg(game: persistence.GameRecord, position: OgPosition): string {
-  const boardSize = 300;
-  const boardY = 262;
-  const white = truncateName(displayNameForColor(game, 'white'));
-  const black = truncateName(displayNameForColor(game, 'black'));
-  const parts: string[] = [];
-  parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-  );
-  parts.push(`<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`);
-  parts.push(`<rect x="84" y="64" width="1032" height="534" fill="none" stroke="#253023"/>`);
-  parts.push(
-    `<text x="${OG_WIDTH / 2}" y="125" text-anchor="middle" fill="#f4f6ef" font-family="${FONT}" font-size="52" font-weight="900" letter-spacing="8">MISTBOARD</text>`,
-  );
-  parts.push(
-    `<text x="${OG_WIDTH / 2}" y="164" text-anchor="middle" fill="#9ba39a" font-family="${FONT}" font-size="22" font-weight="700">Fog Chess replay</text>`,
-  );
-  parts.push(
-    renderBoardComposition({
-      layout: 'pair',
-      canvasWidth: OG_WIDTH,
-      boardY,
-      boardSize,
-      gap: 104,
-      labelY: 236,
-      labelFill: '#e1e6da',
-      labelFontSize: 24,
-      labelLetterSpacing: 0,
-      palette: BROWN_PALETTE,
-      fogStyle: 'solid',
-      boards: [
-        {
-          pieces: position.pieces,
-          fogSquares: position.whiteFog,
-          orientation: 'white',
-          label: white,
-        },
-        {
-          pieces: position.pieces,
-          fogSquares: position.blackFog,
-          orientation: 'black',
-          label: black,
-        },
-      ],
-    }),
-  );
-  parts.push(`</svg>`);
-  return parts.join('');
+function chessSeatScore(result: string, seat: 'white' | 'black'): string | undefined {
+  if (result === 'draw') return '½';
+  if (result === 'white-wins' || result === 'black-wins') {
+    return result.startsWith(seat) ? '1' : '0';
+  }
+  return undefined;
+}
+
+export function renderChessGameCard(game: persistence.GameRecord, pieces: PieceOnBoard[]): string {
+  const board: PositionOgBoard = { kind: 'chess', pieces };
+  return renderBoardCard(board, new Map(), {
+    players: {
+      top: {
+        name: displayNameForColor(game, 'black'),
+        ink: 'black',
+        score: chessSeatScore(game.result, 'black'),
+      },
+      bottom: {
+        name: displayNameForColor(game, 'white'),
+        ink: 'white',
+        score: chessSeatScore(game.result, 'white'),
+      },
+      variant: 'Fog Chess',
+    },
+  });
 }
 
 function truncateName(name: string): string {
@@ -204,20 +160,6 @@ function displayNameForColor(game: persistence.GameRecord, color: 'white' | 'bla
     (color === 'white' ? game.whiteName : game.blackName) ??
     (color === 'white' ? 'White' : 'Black')
   );
-}
-
-export function writePng(response: ServerResponse, png: Buffer, cacheStatus: 'HIT' | 'MISS'): void {
-  response.writeHead(200, {
-    'content-type': 'image/png',
-    'cache-control': 'public, max-age=31536000, immutable',
-    'x-og-cache': cacheStatus,
-  });
-  response.end(png);
-}
-
-export function redirectToDefault(response: ServerResponse): void {
-  response.writeHead(302, { location: '/og-image.png' });
-  response.end();
 }
 
 // Per-article share card: the article's thumbnail position (the same one the
@@ -237,12 +179,70 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'skill-vs-luck': renderSkillVsLuckOgSvg,
   shogi4: renderShogi4OgSvg,
   misty: renderMistyOgSvg,
-  xiangqi: (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, false),
-  'dark-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, true),
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
 };
+
+// Rules pages whose card is the variant's start position on the site board
+// (og-card-board.ts), keyed by the ARTICLE_META slug. The fog xiangqi card shows
+// Red's opening view: the kernel decides what Red can see, never a hand list.
+// These slugs used to be 'dark-*' and the cards silently vanished at the
+// dark->fog rename (2026-09-12 audit); the key here MUST be the live slug.
+const RULES_POSITION_CARDS: Record<string, { variant: PositionOgVariant; redFog?: boolean }> = {
+  xiangqi: { variant: 'xiangqi' },
+  'fog-xiangqi': { variant: 'dark-xiangqi', redFog: true },
+  jieqi: { variant: 'jieqi' },
+  banqi: { variant: 'banqi' },
+  'fortress-xiangqi': { variant: 'fortress-xiangqi' },
+  'duck-xiangqi': { variant: 'duck-xiangqi' },
+  jungle: { variant: 'jungle' },
+  'jungle-flip': { variant: 'jungle-flip' },
+};
+
+// ARTICLE_OG_POSITIONS (board-render) is keyed by the chess positions' original
+// names, which the web's article thumbnails still use; the page slugs moved to
+// 'fog-*' in the dark->fog rename and the cards went missing for two months.
+// The slug->key hop lives here so the shared map does not have to move.
+const ARTICLE_POSITION_KEY: Record<string, string> = {
+  'fog-chess': 'dark-chess',
+  'fog-chess-concepts': 'dark-chess-concepts',
+};
+
+/** Bumped when the article card's LOOK changes. Article image URLs carried no
+ *  version before v2, so scrapers hold the old cards under the bare URL; the
+ *  page meta now appends ?v= (server-static-pages.ts). */
+export const ARTICLE_OG_IMAGE_VERSION = 2;
+
+/** A rules page's start-position card, or null when the slug has none. */
+function rulesPositionCard(slug: string, title: string, art: CardArt): string | null {
+  const entry = RULES_POSITION_CARDS[slug];
+  if (!entry) return null;
+  const resolved = resolvePositionOg(entry.variant, startPositionFen(entry.variant));
+  if (!resolved) return null;
+  let board = resolved.board;
+  if (entry.redFog && board.kind === 'intersection') {
+    const state = createInitialXiangqiState('og-card');
+    const visible = new Set(
+      getXiangqiPlayerView(state, 'red').visibleSquares.map((square) => square as string),
+    );
+    const fog: Array<{ file: number; rank: number }> = [];
+    for (let file = 0; file < board.files; file += 1) {
+      for (let rank = 1; rank <= board.ranks; rank += 1) {
+        if (!visible.has(`${String.fromCharCode(97 + file)}${rank}`)) fog.push({ file, rank });
+      }
+    }
+    const shown = (at: { file: number; rank: number }) =>
+      visible.has(`${String.fromCharCode(97 + at.file)}${at.rank}`);
+    board = {
+      ...board,
+      pieces: board.pieces.filter(shown),
+      extras: board.extras.filter(shown),
+      fog,
+    };
+  }
+  return renderBoardCard(board, art, { title: [title] });
+}
 
 export async function serveArticleOgImage(params: {
   slug: string;
@@ -252,15 +252,16 @@ export async function serveArticleOgImage(params: {
   staticDir: string;
 }): Promise<void> {
   const { slug, kind, response, staticDir } = params;
-  const key = `article:${slug}`;
+  const key = `article:v${ARTICLE_OG_IMAGE_VERSION}:${slug}`;
   const cached = cacheGet(key);
   if (cached) {
     writePng(response, cached, 'HIT');
     return;
   }
   const custom = CUSTOM_ARTICLE_OG_SVGS[slug];
-  const position = ARTICLE_OG_POSITIONS[slug];
-  if (!custom && !position) {
+  const position = ARTICLE_OG_POSITIONS[ARTICLE_POSITION_KEY[slug] ?? slug];
+  const rules = RULES_POSITION_CARDS[slug];
+  if (!custom && !position && !rules) {
     redirectToDefault(response);
     return;
   }
@@ -268,7 +269,10 @@ export async function serveArticleOgImage(params: {
   // don't); cards say it uniformly so a shared rules link always reads as one.
   const title =
     kind === 'rules' && !/\bRules$/.test(params.title) ? `${params.title} Rules` : params.title;
-  const svg = custom ? await custom(title, { staticDir }) : renderArticleOgSvg(title, position!);
+  const art = await loadCardArt(staticDir);
+  const svg = custom
+    ? await custom(title, { staticDir })
+    : (rulesPositionCard(slug, title, art) ?? renderArticleOgSvg(title, position!));
   const png = svgToPng(svg);
   cacheSet(key, png);
   writePng(response, png, 'MISS');
@@ -282,7 +286,9 @@ export async function serveArticleOgImage(params: {
  *  are already at the CDN edge and in scraper caches under `?v=1` with a
  *  one-year immutable max-age, so without this bump every card that was fetched
  *  while v1 was live would keep showing the cut-off title indefinitely. */
-export const STUDY_OG_IMAGE_VERSION = 2;
+//  v3 (2026-09-12): the live board and the site's default piece set, board at
+//  full height with the title beside it (og-card-board.ts). */
+export const STUDY_OG_IMAGE_VERSION = 3;
 
 // Per-composition share card: the chapter's own starting diagram plus its name.
 // A 排局 IS its diagram, so a link to one composition should preview that
@@ -295,6 +301,8 @@ export async function serveStudyOgImage(params: {
   studyId: string;
   chapterId?: string;
   response: ServerResponse;
+  /** The web build, for the piece art. Absent (tests) = glyph fallback. */
+  staticDir?: string;
 }): Promise<void> {
   const { chapterId, response, studyId } = params;
   const key = `study:v${STUDY_OG_IMAGE_VERSION}:${studyId}:${chapterId ?? ''}`;
@@ -324,37 +332,26 @@ export async function serveStudyOgImage(params: {
     return;
   }
 
-  const lines = fitStudyTitleLines(chapter.name);
-  // A second title line needs room, so the board gives some back rather than the
-  // text running off the canvas.
-  const boardHeight = lines.length > 1 ? 452 : 486;
-  const boardY = 30;
-  const svg = [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
-    xiangqiOgBoardFromPieces({ pieces, centerX: OG_WIDTH / 2, y: boardY, height: boardHeight }),
-    studyFooter(lines, boardY + boardHeight + 52),
-    `</svg>`,
-  ].join('');
+  // The caption column beside a 9x10 board is ~530px: about 22 half-width
+  // characters a line at the card's title size, three lines at most.
+  const lines = fitStudyTitleLines(chapter.name, 22, 3);
+  const art = params.staticDir ? await loadCardArt(params.staticDir) : new Map<string, string>();
+  const board: PositionOgBoard = {
+    kind: 'intersection',
+    files: 9,
+    ranks: 10,
+    riverBetweenRanks: [5, 6],
+    palaces: [
+      { fileLo: 3, fileHi: 5, rankLo: 1, rankHi: 3 },
+      { fileLo: 3, fileHi: 5, rankLo: 8, rankHi: 10 },
+    ],
+    pieces,
+    extras: [],
+  };
+  const svg = renderBoardCard(board, art, { title: lines });
   const png = svgToPng(svg);
   cacheSet(key, png);
   writePng(response, png, 'MISS');
-}
-
-/** Footer for the study card: the brand sits with the first title line, and a
- *  wrapped title continues underneath. Font drops a step on two lines so the
- *  pair still reads as one block rather than crowding the board. */
-function studyFooter(lines: string[], firstBaseline: number): string {
-  const size = lines.length > 1 ? 30 : 34;
-  const parts = [
-    `<text x="${OG_WIDTH / 2}" y="${firstBaseline}" text-anchor="middle" font-family="${FONT}" font-size="${size}"><tspan fill="#9ca3af" font-weight="600" letter-spacing="1">MISTBOARD</tspan><tspan fill="#5b6470">  ·  </tspan><tspan fill="#f3f4f6" font-weight="700">${escapeXml(lines[0] ?? '')}</tspan></text>`,
-  ];
-  for (let i = 1; i < lines.length; i += 1) {
-    parts.push(
-      `<text x="${OG_WIDTH / 2}" y="${firstBaseline + i * (size + 8)}" text-anchor="middle" font-family="${FONT}" font-size="${size}" fill="#f3f4f6" font-weight="700">${escapeXml(lines[i]!)}</text>`,
-    );
-  }
-  return parts.join('');
 }
 
 // Composition titles are sentences, not names: "Small opposing cannons give up
@@ -450,30 +447,6 @@ export function studyChapterOgPieces(root: unknown): XiangqiOgPiece[] | null {
   );
 }
 
-/** The full 9x10 board over a caller-supplied piece set. `xiangqiOgBoard` builds
- *  its own start position for the article cards; a study card needs the same
- *  geometry over an arbitrary position. */
-function xiangqiOgBoardFromPieces(params: {
-  pieces: XiangqiOgPiece[];
-  centerX: number;
-  y: number;
-  height: number;
-}): string {
-  return renderXiangqiOgBoardSvg({
-    files: 9,
-    ranks: 10,
-    pieces: params.pieces,
-    riverBetweenRanks: [5, 6],
-    palaces: [
-      { fileLo: 3, fileHi: 5, rankLo: 1, rankHi: 3 },
-      { fileLo: 3, fileHi: 5, rankLo: 8, rankHi: 10 },
-    ],
-    centerX: params.centerX,
-    y: params.y,
-    height: params.height,
-  });
-}
-
 // One footer line carries both brand and title (muted brand, bright title),
 // so the hero gets the rest of the canvas.
 function ogFooterLine(title: string, y: number): string {
@@ -545,73 +518,8 @@ async function renderShogi4OgSvg(title: string, ctx: ArticleOgContext): Promise<
   ].join('');
 }
 
-// Xiangqi-family cards: the start position on a proper intersection board
-// (palaces, river on the full game), with the dark variants showing Red's
-// opening view — the same convention as the dark-chess cards. Positions and
-// fog come from the game kernel, never hand-authored.
 function xqOgCoord(square: string): { file: number; rank: number } {
   return { file: square.charCodeAt(0) - 97, rank: Number(square.slice(1)) };
-}
-
-function renderXiangqiFamilyOgSvg(title: string, _ctx: ArticleOgContext, dark: boolean): string {
-  const boardHeight = 504;
-  const boardY = 36;
-  const board = xiangqiOgBoard({
-    dark,
-    centerX: OG_WIDTH / 2,
-    y: boardY,
-    height: boardHeight,
-  });
-  return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
-    board,
-    ogFooterLine(title, boardY + boardHeight + 46),
-    `</svg>`,
-  ].join('');
-}
-
-function xiangqiOgBoard(params: {
-  dark: boolean;
-  centerX: number;
-  y: number;
-  height: number;
-}): string {
-  const { dark } = params;
-  const state = createInitialXiangqiState('og-card');
-  const pieces: XiangqiOgPiece[] = Object.entries(state.board).flatMap(([square, piece]) =>
-    piece ? [{ ...xqOgCoord(square), color: piece.color, role: piece.role }] : [],
-  );
-  const files = 9;
-  const ranks = 10;
-  let fogPoints: Array<{ file: number; rank: number }> | undefined;
-  if (dark) {
-    const visible = new Set(
-      getXiangqiPlayerView(state, 'red').visibleSquares.map((square) => square as string),
-    );
-    fogPoints = [];
-    for (let file = 0; file < files; file += 1) {
-      for (let rank = 1; rank <= ranks; rank += 1) {
-        if (!visible.has(`${String.fromCharCode(97 + file)}${rank}`)) {
-          fogPoints.push({ file, rank });
-        }
-      }
-    }
-  }
-  return renderXiangqiOgBoardSvg({
-    files,
-    ranks,
-    pieces,
-    fogPoints,
-    riverBetweenRanks: [5, 6],
-    palaces: [
-      { fileLo: 3, fileHi: 5, rankLo: 1, rankHi: 3 },
-      { fileLo: 3, fileHi: 5, rankLo: 8, rankHi: 10 },
-    ],
-    centerX: params.centerX,
-    y: params.y,
-    height: params.height,
-  });
 }
 
 // Misty's card is the article's art rather than a board: the image centered
@@ -873,33 +781,13 @@ function renderServerFogOgSvg(title: string): string {
 }
 
 function renderArticleOgSvg(title: string, position: ArticleOgPosition): string {
-  const boardSize = 500;
-  const boardY = 36;
-  const parts: string[] = [];
-  parts.push(
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-  );
-  parts.push(`<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`);
-  parts.push(
-    renderBoardComposition({
-      layout: 'single',
-      canvasWidth: OG_WIDTH,
-      boardY,
-      boardSize,
-      palette: BROWN_PALETTE,
-      fogStyle: 'solid',
-      boards: [
-        {
-          pieces: position.pieces,
-          fogSquares: position.fogSquares,
-          orientation: position.orientation ?? 'white',
-        },
-      ],
-    }),
-  );
-  parts.push(ogFooterLine(title, boardY + boardSize + 48));
-  parts.push(`</svg>`);
-  return parts.join('');
+  const board: PositionOgBoard = {
+    kind: 'chess',
+    pieces: position.pieces,
+    ...(position.fogSquares ? { fogSquares: position.fogSquares } : {}),
+    ...(position.orientation ? { orientation: position.orientation } : {}),
+  };
+  return renderBoardCard(board, new Map(), { title: [title] });
 }
 
 function renderStubSvg(game: persistence.GameRecord): string {
@@ -914,15 +802,6 @@ function renderStubSvg(game: persistence.GameRecord): string {
 </svg>`;
 }
 
-export function escapeXml(s: string): string {
-  return s
-    .replace(/&/g, '&amp;')
-    .replace(/</g, '&lt;')
-    .replace(/>/g, '&gt;')
-    .replace(/"/g, '&quot;')
-    .replace(/'/g, '&apos;');
-}
-
 // ── Default OG card: brand mark ───────────────────────────────────────────────
 //
 // Logo, wordmark, tagline. Brian picked this over board-collage variants
@@ -933,53 +812,41 @@ export function escapeXml(s: string): string {
 // `apps/web/public/og-image.png`, then bump the ?v= on the og:image meta in
 // apps/web/index.html so scrapers refetch.
 
-const FONT = "'Noto Sans', system-ui, -apple-system, Helvetica, Arial, sans-serif";
-export const OG_FONT = FONT;
+const FONT = OG_FONT;
 
-export function renderDefaultOgSvg(logoSvg: string): string {
-  const logoSize = 224;
+export function renderDefaultOgSvg(
+  logoSvg: string,
+  copy: { wordmark: string; lines: string[]; note?: string } = {
+    wordmark: 'MISTBOARD',
+    lines: ['Chinese chess and original strategy games.'],
+    note: 'Free and open source.',
+  },
+): string {
+  const logoSize = 200;
+  const logoY = 96;
   const logo = logoSvg.replace(
     /^<svg[^>]*>/,
-    `<svg x="${(OG_WIDTH - logoSize) / 2}" y="100" width="${logoSize}" height="${logoSize}" viewBox="0 0 1024 1024">`,
+    `<svg x="${(OG_WIDTH - logoSize) / 2}" y="${logoY}" width="${logoSize}" height="${logoSize}" viewBox="0 0 1024 1024">`,
   );
-  return [
+  const wordmarkY = logoY + logoSize + 84;
+  const parts = [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
     `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
     logo,
-    `<text x="${OG_WIDTH / 2}" y="396" text-anchor="middle" fill="#f3f4f6" font-family="${FONT}" font-size="64" font-weight="800" letter-spacing="8">MISTBOARD</text>`,
-    `<text x="${OG_WIDTH / 2}" y="452" text-anchor="middle" fill="#9ca3af" font-family="${FONT}" font-size="30" font-weight="500">Original games and hidden-information engines.</text>`,
-    `</svg>`,
-  ].join('');
-}
-
-// resvg renders <text> with whatever fonts it can load, and the prod
-// container has NONE — text silently vanishes (shipped textless cards until
-// 2026-06-10). Bundle Noto Sans with the server and load ONLY it, so a local
-// render is byte-identical to prod and a missing font can never ship quietly
-// again. OFL attribution: apps/web/public/fonts/CREDITS.md. CJK piece
-// characters are baked paths and never go through font resolution.
-const FONT_FILES = ['NotoSans-Regular.ttf', 'NotoSans-Bold.ttf'].map((file) =>
-  resolve(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'fonts', file),
-);
-
-// Render at 2x the SVG's nominal dimensions so the resulting PNG stays crisp
-// on retina displays and survives scraper recompression.
-/**
- * Rasterize an SVG. `zoom` multiplies the SVG's own dimensions: 2 is right for
- * OG cards (rendered at half their delivered size), 1 for a figure whose SVG is
- * already authored at twice its display width. Oversampling past ~2x the display
- * size is not free quality — it thins hairlines below a pixel on the way down.
- */
-export function svgToPng(svg: string, background = '#0f1115', zoom = 2): Buffer {
-  return new Resvg(svg, {
-    background,
-    fitTo: { mode: 'zoom', value: zoom },
-    font: {
-      loadSystemFonts: false,
-      fontFiles: FONT_FILES,
-      defaultFontFamily: 'Noto Sans',
-    },
-  })
-    .render()
-    .asPng();
+    `<text x="${OG_WIDTH / 2}" y="${wordmarkY}" text-anchor="middle" fill="#f3f4f6" font-family="${FONT}" font-size="64" font-weight="800" letter-spacing="8">${escapeXml(copy.wordmark)}</text>`,
+  ];
+  let y = wordmarkY + 66;
+  for (const line of copy.lines) {
+    parts.push(
+      `<text x="${OG_WIDTH / 2}" y="${y}" text-anchor="middle" fill="#e5e9df" font-family="${FONT}" font-size="38" font-weight="600">${escapeXml(line)}</text>`,
+    );
+    y += 50;
+  }
+  if (copy.note) {
+    parts.push(
+      `<text x="${OG_WIDTH / 2}" y="${y + 8}" text-anchor="middle" fill="#8b9289" font-family="${FONT}" font-size="30" font-weight="600">${escapeXml(copy.note)}</text>`,
+    );
+  }
+  parts.push(`</svg>`);
+  return parts.join('');
 }

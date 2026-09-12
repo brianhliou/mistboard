@@ -3,7 +3,12 @@ import type { ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import type { Color } from '@mistboard/game';
 import { ARTICLE_META, articleIsIndexable, canonicalArticleBase } from './article-meta.js';
-import { GAME_OG_IMAGE_VERSION, STUDY_OG_IMAGE_VERSION } from './og-image.js';
+import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
+import {
+  ARTICLE_OG_IMAGE_VERSION,
+  GAME_OG_IMAGE_VERSION,
+  STUDY_OG_IMAGE_VERSION,
+} from './og-image.js';
 import {
   isPositionOgVariant,
   POSITION_OG_IMAGE_VERSION,
@@ -396,6 +401,10 @@ function localeAlternateLinks(publicHost: string, basePath: string): string {
 // Returns false without touching the response when the route has no hints (or
 // the manifest is absent), so the caller can fall back to the plain static
 // shell exactly as before.
+async function liveGameMeta(pathname: string): Promise<TenantGamePageMeta | null> {
+  return persistence.isInitialized() ? tenantGamePageMeta(pathname) : null;
+}
+
 export async function serveSpaShellWithRoutePreloads(params: {
   response: ServerResponse;
   staticDir: string;
@@ -403,9 +412,17 @@ export async function serveSpaShellWithRoutePreloads(params: {
   /** The request's query string ('?…' or ''), read by the position routes. */
   search?: string;
   publicHost?: string;
+  /** Override the finished-game meta lookup (tests); the default reads persistence. */
+  gameMeta?: (pathname: string) => Promise<TenantGamePageMeta | null>;
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
-  const positionMeta = positionRouteMeta(params.pathname, params.search ?? '');
+  // A tenant game page (/<tenant>/game/:id, /room/:id) names a finished game:
+  // its own title, description, canonical review URL and card (#368). Needs
+  // persistence; without it (or for a live game) the route keeps its generic
+  // meta exactly as before.
+  const lookupGameMeta = params.gameMeta ?? liveGameMeta;
+  const gameMeta = await lookupGameMeta(params.pathname).catch(() => null);
+  const positionMeta = gameMeta ?? positionRouteMeta(params.pathname, params.search ?? '');
   // Read separately from routeMeta: that one is a union with the position-route
   // shape, which carries no locale of its own (a FEN is not a language).
   const spaMeta = SPA_ROUTE_META[params.pathname];
@@ -841,7 +858,7 @@ export async function serveArticlePage(params: {
       title: `${article.title} | Mistboard`,
       description: article.description,
       url,
-      imageUrl: `${params.publicHost}/og/article/${encodeURIComponent(params.slug)}.png`,
+      imageUrl: `${params.publicHost}/og/article/${encodeURIComponent(params.slug)}.png?v=${ARTICLE_OG_IMAGE_VERSION}`,
     });
     if (!articleIsIndexable(params.slug)) {
       html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');

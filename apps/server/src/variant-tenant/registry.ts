@@ -148,6 +148,29 @@ export type VariantTenantExport = {
   finishedGame(events: readonly unknown[], roomId: string): TenantExportGame | null;
 };
 
+// The per-game share card (og:image) for a tenant's finished games, bound by
+// game-card-tenant.ts. Same finished-only rule as export: an in-progress or
+// aborted log yields nothing, so a live fog game's position never reaches a
+// scraper. Absent = the tenant's game pages serve the generic site card.
+export type VariantTenantCard = {
+  // Position-card variant slug (og-position.ts POSITION_OG_VARIANTS): the
+  // board renderer and FEN parser the card draws with.
+  variant: string;
+  // The stored analysis this tenant's review writes (game_analysis key), read
+  // to pick the ply the card shows. Null = the card always shows the final
+  // position: the tenant has no analysis, or its eval swings are luck (a
+  // reveal or a flip) rather than decisions and would pick a chance ply.
+  analysis: { engineId: string; depth: number } | null;
+  // Public FEN of a FINISHED game after `ply` plies (0 = the start). Null for a
+  // log that is not this tenant's, does not end finished, or a ply past the end.
+  fenAtPly(events: readonly unknown[], roomId: string, ply: number): string | null;
+  // The ink each SEAT played in a FINISHED game, keyed by seat. A seat is not
+  // the ink it plays in the flip variants (banqi, flip jungle bind ink on the
+  // first flip); everywhere else seat and ink coincide. Null for a log that is
+  // not this tenant's or does not end finished.
+  seatInks(events: readonly unknown[], roomId: string): Record<string, 'red' | 'black'> | null;
+};
+
 export type VariantTenantRegistration = {
   kind: string;
   gameSpecId: string;
@@ -155,6 +178,8 @@ export type VariantTenantRegistration = {
   // PGN/JSON export of finished games, or null/absent when the tenant exports
   // nothing (see VariantTenantExport).
   export?: VariantTenantExport | null;
+  // Share card for finished games, or null/absent (see VariantTenantCard).
+  card?: VariantTenantCard | null;
   // Mistboard TV channel for this tenant, or null/absent when it has no watch
   // surface. Derived into WatchChannel by watch-channels.ts.
   watch?: VariantTenantWatchChannel | null;
