@@ -1,10 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  darkCrazyhouseEnabled,
-  darkXiangqiEnabled,
-  kriegspielEnabled,
-  luzhanqiEnabled,
-} from './feature-flags.js';
+import { darkXiangqiEnabled, kriegspielEnabled, luzhanqiEnabled } from './feature-flags.js';
 
 describe('client feature flags', () => {
   afterEach(() => {
@@ -13,7 +8,6 @@ describe('client feature flags', () => {
 
   it.each([
     ['Kriegspiel', 'VITE_KRIEGSPIEL_ENABLED', kriegspielEnabled],
-    ['Dark Crazyhouse', 'VITE_DARK_CRAZYHOUSE_ENABLED', darkCrazyhouseEnabled],
     ['Luzhanqi', 'VITE_LUZHANQI_ENABLED', luzhanqiEnabled],
   ])('keeps %s disabled in dev unless explicitly opted in', (_name, envName, enabled) => {
     expect(enabled()).toBe(false);
@@ -24,7 +18,6 @@ describe('client feature flags', () => {
 
   it('enables parked surfaces together in the lab profile', () => {
     vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
-    expect(darkCrazyhouseEnabled()).toBe(true);
     expect(luzhanqiEnabled()).toBe(true);
     expect(kriegspielEnabled()).toBe(true);
   });

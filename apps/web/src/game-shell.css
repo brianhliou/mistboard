@@ -179,10 +179,10 @@
   --move-gutter: 44px;
 }
 
-/* The hidden-info tenants (kriegspiel, dark crazyhouse) share a 2.4rem number
-   column and set no list class of their own, so they are reached through the
-   row class they DO set. */
-.round-table__box .move-list:has(.ksg-move-row, .dczh-move-row) {
+/* The hidden-info tenant (kriegspiel) shares the 2.4rem number column and
+   sets no list class of its own, so it is reached through the row class it
+   DOES set. */
+.round-table__box .move-list:has(.ksg-move-row) {
   --move-gutter: 2.4rem;
 }
 
@@ -208,7 +208,7 @@
    13px), which are right there and would re-space every tenant row.
 
    The 1px/6px padding mirrors what every tenant `__move` class already sets
-   (live-xiangqi, live-kriegspiel, live-dark-crazyhouse all agree on it); a tenant that
+   (live-xiangqi, live-kriegspiel all agree on it); a tenant that
    wants different cell padding has to change it here too. */
 .round-table__box .move-list button.move-jump {
   height: auto;
@@ -846,7 +846,7 @@
 
 /* The postgame button row (review / rematch / play-again), built by room-chrome
    for every tenant. One shared gap so all variants match; previously each route
-   redefined it (or, for crazyhouse, never did). */
+   redefined it. */
 .room-actions-row {
   display: grid;
   gap: 8px;

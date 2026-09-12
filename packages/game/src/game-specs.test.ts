@@ -4,7 +4,6 @@ import {
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
   DARK_CHESS_SPEC_ID,
-  DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -162,9 +161,9 @@ test('Luzhanqi is a hidden computer-refereed hidden-identity military-chess spec
 });
 
 test('composite specs are composed from rule modules', () => {
-  const darkCrazyhouse = gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID);
-  assert.equal(darkCrazyhouse.reserves, 'crazyhouse');
-  assert.equal(darkCrazyhouse.dropPolicy, 'any-legal-square');
+  const fortress = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
+  assert.equal(fortress.reserves, 'crazyhouse');
+  assert.notEqual(fortress.dropPolicy, 'none');
 });
 
 test('game spec ids are unique and discoverable', () => {
@@ -228,7 +227,6 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     fog: true,
     fog_draft960: true,
     dark_xiangqi: true,
-    dark_crazyhouse: true,
     jieqi: true,
     banqi: true,
     kriegspiel: true,
@@ -248,7 +246,6 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(ratingPoolForSpec(BANQI_SPEC_ID), 'banqi');
   assert.equal(ratingPoolForSpec(LUZHANQI_SPEC_ID), null);
   assert.equal(ratingPoolForSpec(DARK_XIANGQI_SPEC_ID), 'dark_xiangqi');
-  assert.equal(ratingPoolForSpec(DARK_CRAZYHOUSE_SPEC_ID), 'dark_crazyhouse');
   assert.equal(ratingPoolForSpec(KRIEGSPIEL_SPEC_ID), 'kriegspiel');
   assert.equal(ratingPoolForSpec(JUNGLE_SPEC_ID), 'jungle');
   assert.equal(ratingPoolForSpec(JUNGLE_FLIP_SPEC_ID), 'jungle_flip');
@@ -286,7 +283,7 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 test('the retired specs are exactly the ones the plan still names, all hidden', () => {
   assert.deepEqual(
     [...RETIRED_GAME_SPEC_IDS].sort(),
-    [DARK_CRAZYHOUSE_SPEC_ID, DARK_DRAFT960_SPEC_ID, KRIEGSPIEL_SPEC_ID, LUZHANQI_SPEC_ID].sort(),
+    [DARK_DRAFT960_SPEC_ID, KRIEGSPIEL_SPEC_ID, LUZHANQI_SPEC_ID].sort(),
   );
   for (const id of RETIRED_GAME_SPEC_IDS) {
     // A retired spec can never be offered: publicSurface is the other switch

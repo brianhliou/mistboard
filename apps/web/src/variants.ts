@@ -11,7 +11,6 @@
 import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
-  DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -29,7 +28,6 @@ import {
 } from '@mistboard/game';
 import {
   banqiEnabled,
-  darkCrazyhouseEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -70,7 +68,6 @@ const banqiOn = banqiEnabled();
 const jungleOn = jungleEnabled();
 const jungleFlipOn = jungleFlipEnabled();
 const darkXiangqiOn = darkXiangqiEnabled();
-const darkCrazyhouseOn = darkCrazyhouseEnabled();
 const kriegspielOn = kriegspielEnabled();
 const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
 const draft960Spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
@@ -78,7 +75,6 @@ const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
-const darkCrazyhouseSpec = gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID);
 const kriegspielSpec = gameSpecForId(KRIEGSPIEL_SPEC_ID);
 const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
 const banqiSpec = gameSpecForId(BANQI_SPEC_ID);
@@ -97,7 +93,6 @@ const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
-  [DARK_CRAZYHOUSE_SPEC_ID]: 'dark-crazyhouse',
   [KRIEGSPIEL_SPEC_ID]: 'kriegspiel',
   [JUNGLE_SPEC_ID]: 'jungle',
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
@@ -214,16 +209,6 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: jungleFlipOn,
     onProfile: jungleFlipOn,
-  },
-  {
-    id: currentRatingVariantForSpec(DARK_CRAZYHOUSE_SPEC_ID),
-    gameSpecId: darkCrazyhouseSpec.id,
-    apiParam: DARK_CRAZYHOUSE_SPEC_ID,
-    label: darkCrazyhouseSpec.publicName,
-    miniId: 'dark-crazyhouse',
-    enabled: false,
-    onLeaderboard: darkCrazyhouseOn,
-    onProfile: darkCrazyhouseOn,
   },
   {
     id: currentRatingVariantForSpec(KRIEGSPIEL_SPEC_ID),

@@ -19,7 +19,6 @@ describe('landing announcements', () => {
 
   it('shows current launch announcements without old variant env flags', () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'false');
     vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'false');
 
     const panel = buildLandingAnnouncements();
@@ -28,8 +27,7 @@ describe('landing announcements', () => {
     );
 
     // Xiangqi pivot: the News rail is gated by variantPublicSurfaceEnabled. The
-    // mini xiangqi family and dark-crazyhouse are retired from
-    // public surfaces; the elevated Chinese-chess-family launches (dark-xiangqi,
+    // retired variants are gone from public surfaces; the elevated Chinese-chess-family launches (dark-xiangqi,
     // banqi) now surface. The rail shows the newest MAX_FEED_ROWS entries.
     // Derived from the announcement data rather than pinned to specific posts:
     // this asserts the gating and ordering behaviour, and does not need editing

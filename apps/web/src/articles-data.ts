@@ -20,7 +20,6 @@ import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
-import { darkCrazyhouseArticle } from './articles/content/dark-crazyhouse.js';
 import { darkDraft960Article } from './articles/content/dark-draft960.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
 import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
@@ -65,7 +64,6 @@ export const articles: Article[] = [
   duckXiangqiBuildArticle,
   serverEnforcedFogArticle,
   shogi4Article,
-  darkCrazyhouseArticle,
   kriegspielArticle,
   jieqiArticle,
   jungleArticle,

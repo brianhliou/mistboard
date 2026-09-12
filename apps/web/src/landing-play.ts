@@ -4,7 +4,6 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
-  DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -86,7 +85,6 @@ type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
 type LandingGameSpecId =
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
-  | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
@@ -243,8 +241,6 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
   switch (gameSpecId) {
     case DARK_CHESS_SPEC_ID:
       return 'variant.darkChess.name';
-    case DARK_CRAZYHOUSE_SPEC_ID:
-      return 'variant.darkCrazyhouse.name';
     case KRIEGSPIEL_SPEC_ID:
       return 'variant.kriegspiel.name';
     case DARK_XIANGQI_SPEC_ID:
@@ -283,8 +279,8 @@ function parseLandingGameSpecId(value: string): LandingGameSpecId {
 // jieqi opened a Jieqi dialog from a Fog Chess link (measured 2026-09-04).
 //
 // The rest stays keyed on the tenant's own acceptsDeepLink, which is
-// DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (Dark
-// Crazyhouse) have no other door, and the soft-link
+// DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (kriegspiel)
+// have no other door, and the soft-link
 // branch in the dialog exists to seat them. Collapsing the two lists makes
 // `npm run dev:lab` unable to reach any of them.
 /** Whether a play deep link can name this spec, i.e. whether the dialog will
@@ -3265,20 +3261,6 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
-  if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) {
-    // Dark Crazyhouse is PvP-only and casual-only (no bot yet, rated not
-    // launched); standard chess white/black, passed straight through.
-    return {
-      mode: 'pvp',
-      gameSpecId,
-      timeControl: setup.timeControl,
-      rated: false,
-      preferredColor:
-        setup.preferredColor === 'white' || setup.preferredColor === 'black'
-          ? setup.preferredColor
-          : 'random',
-    };
-  }
   if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) {
     // Kriegspiel is PvP-only from setup (no bot yet; rated rooms are not exposed
     // here); standard chess white/black, passed straight through.
@@ -3325,7 +3307,6 @@ export function roomCreationGameSpecId(
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_DRAFT960_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
-  | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
@@ -3343,7 +3324,6 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
-  if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) return DARK_CRAZYHOUSE_SPEC_ID;
   if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) return KRIEGSPIEL_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;
   // NOTE: this fallback is why a variant missing from the ladder above does not

@@ -1,7 +1,6 @@
 import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import {
   banqiEnabled,
-  darkCrazyhouseEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -52,11 +51,6 @@ type GateSpecEntry<Id extends GatedGameSpecId> =
 
 // Entries ordered as in the GameSpecId union (packages/game/src/game-specs.ts).
 const GATED_GAME_SPECS = {
-  'dark-crazyhouse': {
-    enabled: darkCrazyhouseEnabled,
-    disabledError: 'dark_crazyhouse_disabled',
-    notIntegratedError: 'dark_crazyhouse_not_integrated',
-  },
   kriegspiel: {
     enabled: kriegspielEnabled,
     disabledError: 'kriegspiel_disabled',

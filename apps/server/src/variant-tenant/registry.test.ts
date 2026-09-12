@@ -20,7 +20,6 @@ test('registry: retired specs never register, by prefix or by id', () => {
   // commits remove them); registerVariantTenant drops a retired spec on the
   // floor, so no route, prefix or watch channel exists for it.
   for (const [prefix, specId] of [
-    ['dczh_some-room', 'dark-crazyhouse'],
     ['kr_some-room', 'kriegspiel'],
     ['lzq_some-room', 'luzhanqi'],
   ] as const) {

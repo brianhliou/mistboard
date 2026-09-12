@@ -13,9 +13,6 @@ import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'dark-chess': true,
   'dark-draft960': false,
-  // Dark Crazyhouse retired from public surfaces 2026-07-03
-  // (project_xiangqi_pivot_track). Direct /rules + play URLs stay live.
-  'dark-crazyhouse': false,
   kriegspiel: false,
   'fortress-xiangqi': true,
   xiangqi: true,

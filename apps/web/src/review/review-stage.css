@@ -52,12 +52,10 @@
 }
 /* Secondary boards are small reference views; their captured-material / hand
    pools are redundant with the primary board's and, on variants with lots of
-   material (crazyhouse), stack taller than the mini board itself —
+   material, stack taller than the mini board itself —
    cutting off, overflowing, and squeezing the primary. Show material on the
    primary only; the secondaries are just boards. */
-.review-stage__slot--secondary .captures-strip,
-.review-stage__slot--secondary .dsg-postgame__reserve,
-.review-stage__slot--secondary .dczh-postgame__reserve {
+.review-stage__slot--secondary .captures-strip {
   display: none;
 }
 
@@ -66,8 +64,6 @@
    redesigned; the replay state still retains them. Primary-only headings are also
    collapsed so the board top aligns with both rails, matching the Xiangqi review. */
 .review-stage--board-only .captures-strip,
-.review-stage--board-only .dsg-postgame__reserve,
-.review-stage--board-only .dczh-postgame__reserve,
 .review-stage--board-only .review-stage__slot--primary > .dxq-postgame__board-title,
 .review-stage--board-only .review-stage__slot--primary > .replay-pane-label,
 .review-stage--board-only .review-stage__slot--primary > .replay-pane-name,

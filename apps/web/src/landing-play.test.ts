@@ -12,8 +12,8 @@ import { setRatedModeEnabled } from './rated-flag.js';
 import { setResolvedSignedIn } from './signed-in-state.js';
 
 // The public shelf keeps the xiangqi family together, pairs Fog Xiangqi with
-// Fog Chess, then closes with Jungle + Flip Jungle. The mini xiangqi trio plus
-// dark-crazyhouse are hidden from menus (offerInMenu=false) — they
+// Fog Chess, then closes with Jungle + Flip Jungle. Kriegspiel is hidden from
+// menus (offerInMenu=false) — it
 // remain reachable only by deep link when their development flag is enabled.
 const BASELINE_PICKER_SPECS = [
   'banqi',
@@ -233,7 +233,6 @@ describe('landing play panel', () => {
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_JIEQI_ENABLED', 'false');
     vi.stubEnv('VITE_BANQI_ENABLED', 'false');
-    vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'false');
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -895,7 +894,7 @@ describe('landing play panel', () => {
   // 2026-07-03 pivot but kept an unconditional deep link, so a link was its only
   // door; that door is now closed. The three tests that pinned its friend /
   // engine / lobby deep links were replaced by this one. Menu-hidden LAB
-  // variants (DMX, Dark Crazyhouse) deliberately
+  // variants (kriegspiel) deliberately
   // keep theirs -- their deep link is likewise their only door, and dev:lab
   // depends on it.
   it('no longer soft-links Mini Xiangqi from a deep link, in any play mode', () => {
@@ -1002,7 +1001,7 @@ function variantPickerPresent(): boolean {
   return document.querySelector('.landing-variant-grid') !== null;
 }
 
-// Post-pivot, a hidden variant (mini/dark-mini xiangqi, dark-crazyhouse)
+// Post-pivot, a hidden variant (kriegspiel)
 // reached by deep link is not a browse-grid card — the picker collapses to a single
 // soft-linked variant control. In the engine flow the FIRST control is the variant
 // and the second is the bot, so read the first.

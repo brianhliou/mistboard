@@ -118,7 +118,6 @@ const GAME_VARIANT_LABEL_KEY: Record<string, I18nKey> = {
   'dark-xiangqi': 'variant.darkXiangqi.name',
   banqi: 'variant.banqi.name',
   jieqi: 'variant.jieqi.name',
-  'dark-crazyhouse': 'variant.darkCrazyhouse.name',
   kriegspiel: 'variant.kriegspiel.name',
 };
 

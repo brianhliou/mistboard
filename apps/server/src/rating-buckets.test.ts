@@ -3,11 +3,11 @@ import test from 'node:test';
 import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
-  DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   gameSpecForId,
   JIEQI_SPEC_ID,
+  KRIEGSPIEL_SPEC_ID,
 } from '@mistboard/game';
 import {
   bucketForGame,
@@ -60,15 +60,6 @@ test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => 
   );
 });
 
-test('bucketForGame maps the remaining live PvP variants through their own rating pools', () => {
-  for (const specId of [DARK_CRAZYHOUSE_SPEC_ID] as const) {
-    assert.deepEqual(bucketForGame({ variant: specId, initialMs: 180_000, incrementMs: 2_000 }), {
-      variant: gameSpecForId(specId).ratingPoolBase,
-      timeClass: PUBLIC_RATING_TIME_CLASS,
-    });
-  }
-});
-
 test('bucketForGame fails closed for specs with no active pool, never the fog pool', () => {
   // A spec with no active rating pool must yield no bucket (simply not rated)
   // rather than fall through to the dark-chess fallback and pollute the fog
@@ -83,11 +74,11 @@ test('bucketForGame buckets each rated live pace into its own time class', () =>
   });
   assert.deepEqual(
     bucketForGame({
-      variant: DARK_CRAZYHOUSE_SPEC_ID,
+      variant: KRIEGSPIEL_SPEC_ID,
       initialMs: 300_000,
       incrementMs: 5_000,
     }),
-    { variant: gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID).ratingPoolBase, timeClass: 'rapid' },
+    { variant: gameSpecForId(KRIEGSPIEL_SPEC_ID).ratingPoolBase, timeClass: 'rapid' },
   );
 });
 
@@ -110,7 +101,5 @@ test('parseRatingVariant keeps legacy leaderboard API params stable', () => {
   assert.equal(parseRatingVariant('banqi'), 'banqi');
   assert.equal(parseRatingVariant('dark-xiangqi'), 'dark_xiangqi');
   assert.equal(parseRatingVariant('dark_xiangqi'), 'dark_xiangqi');
-  assert.equal(parseRatingVariant('dark-crazyhouse'), 'dark_crazyhouse');
-  assert.equal(parseRatingVariant('dark_crazyhouse'), 'dark_crazyhouse');
   assert.equal(parseRatingVariant('kriegspiel'), 'kriegspiel');
 });

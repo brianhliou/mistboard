@@ -234,8 +234,8 @@
   height: auto;
 }
 
-/* Chess (chessground): the fog channels (dark-chess, kriegspiel,
-   dark-crazyhouse) render the review triptych compact; all three panes render,
+/* Chess (chessground): the fog channels (dark-chess, kriegspiel)
+   render the review triptych compact; all three panes render,
    but exactly ONE shows in the square box. Which one is driven by data-watch-pov
    on the replay root (set by the /watch perspective toggle via
    ReplayHandle.setPov); unset defaults to Truth. Watch only serves COMPLETED

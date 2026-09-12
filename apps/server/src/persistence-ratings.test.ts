@@ -805,14 +805,6 @@ definePersistenceTests('ratings', () => {
         result: 'red-wins',
       },
       {
-        roomId: 'profile-dark-crazyhouse',
-        variant: 'dark-crazyhouse',
-        bucket: 'dark_crazyhouse',
-        firstColor: 'white',
-        secondColor: 'black',
-        result: 'black-wins',
-      },
-      {
         roomId: 'profile-kriegspiel',
         variant: 'kriegspiel',
         bucket: 'kriegspiel',

@@ -2342,7 +2342,6 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   jieqi: 'jieqi',
   banqi: 'banqi',
   kriegspiel: 'kriegspiel',
-  'dark-crazyhouse': 'dark-crazyhouse',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
 };

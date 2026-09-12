@@ -29,6 +29,7 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4']);
 const RETIRED_RULES_SLUGS = new Set([
   // deleted (Stage 2)
   'crossroads-chess',
+  'dark-crazyhouse',
   'dark-crossroads-chess',
   'dark-mini-xiangqi',
   'dark-shogi',
@@ -37,7 +38,6 @@ const RETIRED_RULES_SLUGS = new Set([
   'reveal-chess',
   'shogi',
   // retired, code still present
-  'dark-crazyhouse',
   'dark-draft960',
   'kriegspiel',
 ]);
@@ -217,12 +217,6 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'The complete rules of Kriegspiel, the 1899 ancestor of Fog Chess: you see only your own pieces, an umpire rejects illegal tries and announces captures, checks, and pawn tries, and checkmate wins.',
-  },
-  'dark-crazyhouse': {
-    title: 'Dark Crazyhouse Rules',
-    kind: 'rules',
-    description:
-      'Crazyhouse under Fog of War: captured pieces flip color into your hand and drop back into play, hands are private, you can parachute a drop into the fog, and the king falls by capture.',
   },
   jieqi: {
     title: 'Jieqi Rules (Reveal Xiangqi)',

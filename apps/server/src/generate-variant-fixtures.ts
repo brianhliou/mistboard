@@ -27,14 +27,11 @@ import {
   getJungleFlipLegalMoves,
   getJungleLegalMoves,
   getKriegspielOfferedMoves,
-  getLegalCrazyhouseDrops,
-  getLegalCrazyhouseMoves,
   getStandardXiangqiLegalMoves,
   getLegalMoves as getXiangqiLegalMoves,
 } from '@mistboard/game';
 
 import { banqiTenant } from './banqi-tenant.js';
-import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
@@ -95,10 +92,6 @@ const VARIANTS: VariantSpec[] = [
   // picking the piece move first would bias the fixture toward tidy duck play.
   { tenant: duckXiangqiTenant, enumerate: (s) => getDuckXiangqiLegalTurns(s) },
   { tenant: xiangqiTenant, enumerate: (s) => getStandardXiangqiLegalMoves(s) },
-  {
-    tenant: darkCrazyhouseTenant,
-    enumerate: (s) => [...getLegalCrazyhouseMoves(s), ...getLegalCrazyhouseDrops(s, s.status.turn)],
-  },
   { tenant: kriegspielTenant, enumerate: (s) => getKriegspielOfferedMoves(s, s.status.turn) },
   { tenant: darkXiangqiTenant, enumerate: (s) => getXiangqiLegalMoves(s) },
 ];

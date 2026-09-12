@@ -84,7 +84,6 @@ export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 export type RatingPoolBaseId =
   | 'fog'
   | 'fog_draft960'
-  | 'dark_crazyhouse'
   | 'kriegspiel'
   | 'dark_xiangqi'
   | 'jieqi'
@@ -101,7 +100,6 @@ export type RatingPoolBaseId =
 export type GameSpecId =
   | 'dark-chess'
   | 'dark-draft960'
-  | 'dark-crazyhouse'
   | 'kriegspiel'
   | 'dark-xiangqi'
   | 'jieqi'
@@ -157,7 +155,6 @@ export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
-export const DARK_CRAZYHOUSE_SPEC_ID = 'dark-crazyhouse' satisfies GameSpecId;
 export const KRIEGSPIEL_SPEC_ID = 'kriegspiel' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
@@ -270,22 +267,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     publicSurface: 'hidden',
     runtimeStatus: 'retired',
     legacyLiveRoom: { variant: 'dark-chess', hiddenDraft960: true },
-  },
-  {
-    id: 'dark-crazyhouse',
-    publicName: 'Dark Crazyhouse',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'crazyhouse',
-    dropPolicy: 'any-legal-square',
-    ratingPoolBase: 'dark_crazyhouse',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
   },
   {
     id: 'kriegspiel',
@@ -609,7 +590,6 @@ export type RatingVariant = Extract<
   | 'fog'
   | 'fog_draft960'
   | 'dark_xiangqi'
-  | 'dark_crazyhouse'
   | 'jieqi'
   | 'banqi'
   | 'kriegspiel'

@@ -217,7 +217,6 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
   'dark-chess': 'variant.darkChess.name',
-  'dark-crazyhouse': 'variant.darkCrazyhouse.name',
   'dark-draft960': 'variant.darkDraft960.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',

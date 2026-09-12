@@ -7,7 +7,6 @@
 
 import '../banqi-registration.js';
 import '../dark-chess-registration.js';
-import '../dark-crazyhouse-registration.js';
 import '../dark-xiangqi-registration.js';
 import '../duck-xiangqi-registration.js';
 import '../fortress-xiangqi-registration.js';

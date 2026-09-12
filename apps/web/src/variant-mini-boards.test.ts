@@ -10,14 +10,6 @@ describe('variant mini-board markers', () => {
     expect(svg.match(/class="vm-chess-fog"/g)).toHaveLength(15);
   });
 
-  it('renders the Dark Crazyhouse marker with the shared Crazyhouse image', () => {
-    const svg = renderVariantMiniBoard('dark-crazyhouse', { size: 100 });
-
-    expect(svg).toContain('data-mini-id="dark-crazyhouse"');
-    expect(svg).toContain('vm-hand-tray');
-    expect(svg).not.toContain('vm-chess-fog');
-  });
-
   it('renders the Jungle marker as the bottom-center 3x3 (den + traps) of the real board', () => {
     const svg = renderVariantMiniBoard('jungle', { size: 100 });
     expect(svg).toContain('data-mini-id="jungle"');
@@ -70,6 +62,5 @@ describe('variant mini-board markers', () => {
     expect(root.querySelectorAll('.variant-color-state-row')).toHaveLength(6);
     expect(root.querySelectorAll('.variant-color-state-card')).toHaveLength(48);
     expect(root.querySelector('svg[data-mini-id="kriegspiel"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="dark-crazyhouse"]')).toBeNull();
   });
 });

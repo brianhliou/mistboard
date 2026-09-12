@@ -16,7 +16,6 @@
 import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
-  DARK_CRAZYHOUSE_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -34,7 +33,6 @@ import {
 } from '@mistboard/game';
 import {
   correspondenceEnabled,
-  darkCrazyhouseEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -797,53 +795,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       defaultEngineId: 'mahjong-efficiency',
       // No seat to give away: the server seats the other three itself.
       hideColorPicker: true,
-    },
-  },
-  {
-    // Dark Crazyhouse (fog 8x8 chess + drops): a fog tenant on the socket-client +
-    // chrome stack with the fog-safe replay-CAPTURE model (live-dark-crazyhouse.ts).
-    // Reuses the existing 8x8 chess board + chess fog; new surface is the reserve
-    // (hand) strips + drop UI + 4-way promotion + the PARACHUTE BOUNCE (a fog drop
-    // onto a hidden piece comes back as 'drop-rejected'). PRIVATE hands. PvP-only,
-    // no bot. Standard white-first, so it gets a real White/Black color picker.
-    gameSpecId: DARK_CRAZYHOUSE_SPEC_ID,
-    roomIdPrefix: 'dczh_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Dark Crazyhouse',
-    gameRouteBase: '/dark-crazyhouse/game',
-    mountPostgame: (root, roomId) =>
-      import('../dark-crazyhouse-postgame.js').then(({ mountDarkCrazyhousePostgame }) =>
-        mountDarkCrazyhousePostgame(root, roomId),
-      ),
-    reviewRouteBase: '/dark-crazyhouse/game',
-    loadLiveRoomClient: () =>
-      import('../live-dark-crazyhouse.js').then(
-        ({ bootstrapDarkCrazyhouseLiveRoom }) =>
-          () =>
-            bootstrapDarkCrazyhouseLiveRoom(),
-      ),
-    watch: {
-      family: 'chess',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-dark-crazyhouse-replay.js').then(({ mountDarkCrazyhouseWatchReplay }) =>
-          mountDarkCrazyhouseWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        firstColor: 'white',
-        firstGlyph: '♚',
-        firstLabel: 'White',
-        secondColor: 'black',
-        secondGlyph: '♚',
-        secondLabel: 'Black',
-        supportsRated: false,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: darkCrazyhouseEnabled,
     },
   },
   {

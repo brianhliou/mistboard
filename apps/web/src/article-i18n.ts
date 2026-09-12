@@ -513,7 +513,6 @@ const ZH_HANS: Record<string, string> = {
 
   // -- Shared rules-page actions --
   'Play Misty': '对战 Misty',
-  'Create invite': '创建邀请',
 
   // -- Shogi4 (4x4 Shogi) --
   'Shogi4 (4×4 Shogi) Rules': 'Shogi4（4×4 将棋）规则',
@@ -2666,7 +2665,6 @@ const ZH_HANT: Record<string, string> = {
 
   // -- Shared rules-page actions --
   'Play Misty': '對戰 Misty',
-  'Create invite': '建立邀請',
 
   // -- Shogi4 (4x4 Shogi) --
   'Shogi4 (4×4 Shogi) Rules': 'Shogi4（4×4 將棋）規則',

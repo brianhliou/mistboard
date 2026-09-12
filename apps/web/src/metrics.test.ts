@@ -91,8 +91,8 @@ const adminMetrics = {
   previousActivePlayers28d: 9,
   activePatrons: 3,
   humanGamesByResult: { 'red-win': 350, 'black-win': 300, draw: 32 },
-  // Includes a retired id (dark-crazyhouse) that the live-shelf filter drops.
-  humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, 'dark-crazyhouse': 60 },
+  // Includes a retired id (kriegspiel) that the live-shelf filter drops.
+  humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, kriegspiel: 60 },
   weekly: [week('2026-07-06'), week('2026-07-13'), week('2026-07-20', { players: 8 })],
   engines: {
     eveGames: 900,
@@ -298,7 +298,7 @@ describe('metrics page', () => {
       ...(variantSection?.querySelectorAll('.metrics-breakdown-label') ?? []),
     ].map((n) => n.textContent);
     expect(variantLabels).toEqual(['Xiangqi', 'Fog Xiangqi']);
-    expect(variantLabels).not.toContain('Dark Crazyhouse');
+    expect(variantLabels).not.toContain('Kriegspiel');
   });
 
   it('falls back to a notice when statistics are unavailable', async () => {

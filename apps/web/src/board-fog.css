@@ -242,7 +242,7 @@
   overflow: hidden;
 }
 
-/* The SVG grid boards (jungle, flip jungle, dark chess / crazyhouse /
+/* The SVG grid boards (jungle, flip jungle, dark chess /
    kriegspiel static renders) carry square corners at the renderer base,
    so round them here on the same token as chessground and the cards.
    overflow:hidden clips the tiled cells to the rounded box. Cropped

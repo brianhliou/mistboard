@@ -58,8 +58,6 @@ export type VariantMiniId =
   | 'jieqi'
   | 'banqi'
   | 'kriegspiel'
-  | 'crazyhouse'
-  | 'dark-crazyhouse'
   | 'jungle'
   | 'jungle-flip';
 
@@ -534,50 +532,6 @@ function banqiBody(ctx: MiniCtx): string {
   ].join('');
 }
 
-// Crazyhouse: a chess crop with the variant's signature reserve. Captured pieces
-// flip sides and wait "in hand" to be dropped back onto the board, so the marker
-// pairs a 4x3 checker over a hand tray of waiting pieces.
-function crazyhouseBody(ctx: MiniCtx): string {
-  const cols = 4;
-  const boardRows = 3;
-  const cell = SIZE / cols;
-  const boardH = boardRows * cell;
-  const center = (c: number, r: number) => ({
-    x: OX + (c + 0.5) * cell,
-    y: OY + (r + 0.5) * cell,
-  });
-  const cells: string[] = [];
-  for (let r = 0; r < boardRows; r += 1) {
-    for (let c = 0; c < cols; c += 1) {
-      const light = (r + c) % 2 === 0;
-      cells.push(
-        `<rect class="${light ? 'vm-sq-light' : 'vm-sq-dark'}" x="${OX + c * cell}" y="${OY + r * cell}" width="${cell}" height="${cell}"/>`,
-      );
-    }
-  }
-  const back = ['white:rook', 'white:knight', 'white:queen', 'white:king'];
-  const boardPieces = [
-    ...back.map((key, c) => chessPieceAt(key, center(c, 2).x, center(c, 2).y, cell, ctx.chessSet)),
-    ...[0, 1, 2, 3].map((c) =>
-      chessPieceAt('white:pawn', center(c, 1).x, center(c, 1).y, cell, ctx.chessSet),
-    ),
-  ];
-  const trayY = OY + boardH;
-  const trayH = SIZE - boardH;
-  const tray = [
-    `<rect class="vm-hand-tray" x="${OX}" y="${trayY}" width="${SIZE}" height="${trayH}"/>`,
-    `<line class="vm-hand-tray-edge" x1="${OX}" y1="${trayY}" x2="${OX + SIZE}" y2="${trayY}" stroke-width="1"/>`,
-  ];
-  const hand = ['white:knight', 'white:bishop', 'white:pawn'];
-  const handPieces = hand.map((key, i) =>
-    chessPieceAt(key, OX + (i + 0.5) * (SIZE / 3), trayY + trayH / 2, trayH, ctx.chessSet),
-  );
-  return [cells.join(''), ...boardPieces, ...tray, ...handPieces].join('');
-}
-
-// Blind chess: you only ever see your own army. Every square without one of your
-// own pieces or pawns is dark, so all three empty ranks in front are fogged —
-// the inverse of dark chess, where field-of-fire vision keeps them clear.
 function kriegspielBody(ctx: MiniCtx): string {
   return fiveWideChessBody(KINGSIDE_FIVE, [0, 1, 2], ctx);
 }
@@ -651,8 +605,6 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   jieqi: jieqiBody,
   banqi: banqiBody,
   kriegspiel: kriegspielBody,
-  crazyhouse: crazyhouseBody,
-  'dark-crazyhouse': crazyhouseBody,
   jungle: () => jungleBody(),
   'jungle-flip': () => jungleFlipBody(),
 };
@@ -737,22 +689,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'KS',
     accent: '#566273',
     blurb: 'Blind chess: only your own army, alone on the board.',
-    family: 'chess',
-  },
-  {
-    id: 'crazyhouse',
-    label: 'Crazyhouse',
-    shortLabel: 'ZH',
-    accent: '#b0533a',
-    blurb: 'Chess with drops: captured pieces wait in hand, ready to parachute back in.',
-    family: 'chess',
-  },
-  {
-    id: 'dark-crazyhouse',
-    label: 'Dark Crazyhouse',
-    shortLabel: 'DCZ',
-    accent: '#884230',
-    blurb: 'Dark Crazyhouse uses the Crazyhouse drop marker while the variant art settles.',
     family: 'chess',
   },
   {

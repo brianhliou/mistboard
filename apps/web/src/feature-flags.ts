@@ -88,13 +88,6 @@ export function correspondenceEnabled(): boolean {
   return import.meta.env.VITE_CORRESPONDENCE_ENABLED !== 'false';
 }
 
-// Dark Crazyhouse (the fog 8x8 chess + drops variant) play surface. Server-side
-// opt-in is MISTBOARD_DARK_CRAZYHOUSE_ENABLED; this gates the landing picker and
-// deep links. Available through the explicit lab profile or a build flag.
-export function darkCrazyhouseEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_DARK_CRAZYHOUSE_ENABLED === 'true';
-}
-
 // Kriegspiel (standard chess played blind) play surface. Server-side opt-in is
 // MISTBOARD_KRIEGSPIEL_ENABLED; this gates play entry, watch, profile, and
 // leaderboard surfaces.

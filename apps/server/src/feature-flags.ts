@@ -75,14 +75,6 @@ export function luzhanqiEnabled(): boolean {
   return process.env.MISTBOARD_LUZHANQI_ENABLED === 'true';
 }
 
-// Dark Crazyhouse (chess + drops, under fog) live rooms. Server-side opt-in,
-// default off — the tenant exists but is not launched. PvP-only (no bot: drops
-// explode the belief search). Rides the dark-chess fog kernel with private
-// hands and drops.
-export function darkCrazyhouseEnabled(): boolean {
-  return process.env.MISTBOARD_DARK_CRAZYHOUSE_ENABLED === 'true';
-}
-
 // Kriegspiel (standard chess played blind, ICC wild-16) live rooms. Server-side
 // opt-in, default off. PvP-only (no bot yet), with watch/profile/leaderboard
 // surfaces when the flag is enabled. Real check/checkmate; the umpire announces
