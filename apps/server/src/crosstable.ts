@@ -11,7 +11,7 @@
 // a's side, so the client never re-derives who won from a variant result
 // vocabulary it does not know.
 
-import { DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID } from '@mistboard/game';
+import { DARK_CHESS_SPEC_ID } from '@mistboard/game';
 import type {
   GameParticipant,
   GameParticipantColor,
@@ -82,18 +82,12 @@ const REGISTRY_LOOKUP: CrosstableTenantLookup = {
   forSpecId: variantTenantForSpecId,
 };
 
-// The legacy chess stack (fog chess + fog draft960) reviews at /game/:id. It has
+// The legacy chess stack (fog chess) reviews at /game/:id. It has
 // no tenant registration of its own (the dark-chess `dchx_` correspondence
 // registration exists but binds no export/route base), so its persisted variant
 // strings are listed here explicitly, legacy spellings included. Deliberately an
 // allowlist: an unknown variant gets NO review URL, never a guessed one.
-const CHESS_STACK_VARIANTS: ReadonlySet<string> = new Set([
-  DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
-  'fog',
-  'draft960',
-  'fog-draft960',
-]);
+const CHESS_STACK_VARIANTS: ReadonlySet<string> = new Set([DARK_CHESS_SPEC_ID, 'fog']);
 
 // The review URL for a finished game, or null when neither a tenant route base
 // nor the chess stack claims it. Room-id prefix first (the room's own tenant),

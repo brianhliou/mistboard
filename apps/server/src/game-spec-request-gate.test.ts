@@ -11,8 +11,6 @@ import { registeredVariantTenants } from './variant-tenant/registry.js';
 test('game spec gate passes current chess requests', () => {
   assert.deepEqual(gateGameSpecRequest({ variant: 'dark-chess' }), { type: 'pass' });
   assert.deepEqual(gateGameSpecRequest({ gameSpecId: 'dark-chess' }), { type: 'pass' });
-  // dark-draft960 (and its alias fog-draft960) is a chess-stack id but
-  // retired: covered by the retired tests below.
   assert.deepEqual(gateGameSpecRequest({}), { type: 'pass' });
   // The WS dispatch passes url.searchParams.get('gameSpecId'), so an absent
   // query param arrives as null: treat it like undefined.
@@ -20,15 +18,17 @@ test('game spec gate passes current chess requests', () => {
 });
 
 test('game spec gate leaves free-string variants to parseVariantId', () => {
-  // parseVariantId (routes/lib.ts) owns the legacy collapse: everything that
-  // is not a draft960 spelling maps to plain dark chess. Legacy clients rely
-  // on that, so the gate only rejects a variant string that names a known
-  // non-chess spec, a retired spec, or a draft960 spelling (retired setup).
+  // parseVariantId (routes/lib.ts) owns the legacy collapse: every free string
+  // maps to plain dark chess. Legacy clients rely on that, so the gate only
+  // rejects a variant string that names a known non-chess spec, a retired
+  // spec, or a deleted Draft960 spelling (a client that asked for the draft
+  // must not silently get a Fog Chess room without one).
   assert.deepEqual(gateGameSpecRequest({ variant: 'fog' }), { type: 'pass' });
   assert.deepEqual(gateGameSpecRequest({ variant: 'anything-else' }), { type: 'pass' });
   for (const variant of ['draft960', 'dark-draft960', 'fog-draft960']) {
     const decision = gateGameSpecRequest({ variant });
-    assert.equal(decision.type === 'reject' && decision.error, 'retired_game_spec', variant);
+    assert.equal(decision.type === 'reject' && decision.error, 'unknown_game_spec', variant);
+    assert.equal(decision.type === 'reject' && decision.httpStatus, 404, variant);
   }
 });
 
@@ -69,21 +69,22 @@ const RETIRED = {
 
 test('game spec gate refuses every retired spec, by id and by legacy variant, whatever the flag', () => {
   // Retirement is decided in packages/game (runtimeStatus 'retired'); the
-  // gate reads it and never consults a launch flag for a retired id.
-  assert.ok(RETIRED_GAME_SPEC_IDS.length >= 1);
+  // gate reads it and never consults a launch flag for a retired id. The set
+  // is empty since 2026-09-12 (every retired spec has been deleted); the loop
+  // stays so the next retirement is covered the moment it lands.
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.deepEqual(gateGameSpecRequest({ gameSpecId: id }), RETIRED, `gameSpecId ${id}`);
     assert.deepEqual(gateGameSpecRequest({ variant: id }), RETIRED, `variant ${id}`);
   }
 });
 
-test('game spec gate refuses retired specs through their registry aliases', () => {
-  // 'fog-draft960' is the pre-rename alias for dark-draft960; the gate answers
-  // the alias exactly like the canonical id. dark-draft960 is a CHESS-STACK
-  // id, so this also proves the retired check runs before the chess-stack pass.
-  assert.deepEqual(gateGameSpecRequest({ gameSpecId: 'fog-draft960' }), RETIRED);
-  assert.deepEqual(gateGameSpecRequest({ gameSpecId: 'dark-draft960' }), RETIRED);
-  assert.deepEqual(gateGameSpecRequest({ variant: 'fog-draft960' }), RETIRED);
+test('game spec gate answers the deleted Draft960 ids as unknown', () => {
+  // dark-draft960 and its pre-rename alias fog-draft960 were deleted with the
+  // draft phase (2026-09-12, #396): no spec, no alias, so 404 rather than 410.
+  for (const gameSpecId of ['fog-draft960', 'dark-draft960']) {
+    const decision = gateGameSpecRequest({ gameSpecId });
+    assert.equal(decision.type === 'reject' && decision.error, 'unknown_game_spec', gameSpecId);
+  }
 });
 
 test('game spec gate keeps rejecting legacy variant spellings for tenant specs', () => {

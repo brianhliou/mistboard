@@ -90,7 +90,6 @@ export async function runRandomLegalEngineGame(
       at: startedAt.getTime(),
       roomId: gameId,
       variant,
-      offer: [],
       ...(roomTimeControl ? { timeControl: roomTimeControl } : {}),
     },
     {
@@ -344,7 +343,6 @@ async function runPythonSubprocessEngineGame(
       at: startedAt.getTime(),
       roomId: gameId,
       variant,
-      offer: [],
       ...(roomTimeControl ? { timeControl: roomTimeControl } : {}),
     },
     {
@@ -694,7 +692,7 @@ async function abortGame(
 
 function variantFromTask(task: EngineGameTask): VariantId {
   const id = task.config.variant;
-  if (id === 'dark-chess' || id === 'draft960') return id;
+  if (id === 'dark-chess' || id === 'chess') return id;
   throw new Error(`unknown engine task variant: ${JSON.stringify(id)}`);
 }
 

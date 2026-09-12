@@ -210,21 +210,6 @@ describe('article public listing gates', () => {
     ).not.toBeNull();
   });
 
-  it('renders a retired variant rules page as not found, in every locale', () => {
-    // The server answers 410 for these; a client-side navigation must not
-    // show what the server has declared gone (docs-private/variant-
-    // retirement-plan.md, #396).
-    for (const slug of ['dark-draft960']) {
-      for (const lang of [undefined, 'zh-Hans'] as const) {
-        const page = buildArticlePage(slug, lang);
-        expect(page.querySelector('.article-title'), `${slug} ${lang}`).toBeNull();
-        expect(['Article not found', '未找到文章'], `${slug} ${lang}`).toContain(
-          page.querySelector('.site-section-heading')?.textContent,
-        );
-      }
-    }
-  });
-
   it('publishes the completed Fortress Xiangqi localization', () => {
     const simplified = buildArticlePage('fortress-xiangqi', 'zh-Hans');
     const traditional = buildArticlePage('fortress-xiangqi', 'zh-Hant');
@@ -527,8 +512,6 @@ describe('rules variant sidebar', () => {
     expect(nav?.querySelector('a[href="/rules/fog-chess"]')).not.toBeNull();
     // Xiangqi pivot: the chess reference article is de-listed from the rail.
     expect(nav?.querySelector('a[href="/rules/chess"]')).toBeNull();
-    // Draft960 is a pregame option that has not shipped as a playable mode.
-    expect(nav?.querySelector('a[href="/rules/dark-draft960"]')).toBeNull();
     expect(hrefs.indexOf('/rules/xiangqi')).toBeLessThan(hrefs.indexOf('/rules/banqi'));
     expect(hrefs.indexOf('/rules/banqi')).toBeLessThan(hrefs.indexOf('/rules/jieqi'));
     expect(hrefs.indexOf('/rules/jieqi')).toBeLessThan(hrefs.indexOf('/rules/fortress-xiangqi'));

@@ -17,7 +17,7 @@ import type {
 } from './types.js';
 
 // Navigation index — grep for section name to jump to the right block
-// SECTION: Draft960 variant         draft960Variant
+// SECTION: Standard chess variant   standardChessVariant
 // SECTION: Fog of War variant        darkChessVariant
 // SECTION: Fog visibility kernel     fogVisibleSquares, applyFogMove
 // SECTION: Fog move generation       fogMovesFrom, getFogMovesForPlayer
@@ -68,15 +68,18 @@ const promotionRoles = ['queen', 'rook', 'bishop', 'knight'] satisfies PieceRole
 const boardFiles = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const;
 const boardRanks = [1, 2, 3, 4, 5, 6, 7, 8] as const;
 
-// ── SECTION: Draft960 variant ──────────────────────────────────────────────
-export const draft960Variant: Variant = {
-  id: 'draft960',
+// ── SECTION: Standard chess variant ──────────────────────────────────────
+// Open-information orthodox chess. Not a spec of its own: the fog variant
+// below derives from it, bughouse rides it, and the event tests use it as the
+// plain kernel.
+export const standardChessVariant: Variant = {
+  id: 'chess',
   createInitialState(gameId: string): GameState {
     return {
       id: gameId,
-      variant: 'draft960',
+      variant: 'chess',
       board: initialBoard,
-      status: { type: 'pregame' },
+      status: { type: 'playing', turn: 'white' },
       moveNumber: 1,
       castlingRights: standardCastlingRights,
       halfmoveClock: 0,
@@ -136,11 +139,11 @@ export const draft960Variant: Variant = {
 
 // ── SECTION: Fog of War variant ────────────────────────────────────────────
 export const darkChessVariant: Variant = {
-  ...draft960Variant,
+  ...standardChessVariant,
   id: 'dark-chess',
   createInitialState(gameId: string): GameState {
     const state: GameState = {
-      ...draft960Variant.createInitialState(gameId),
+      ...standardChessVariant.createInitialState(gameId),
       variant: 'dark-chess',
       status: { type: 'playing', turn: 'white' },
     };
@@ -448,7 +451,7 @@ export function positionFromState(state: GameState, turnOverride?: Color): Chess
 
 // Standard-chess legality (respects check), shared by bughouse to resolve a
 // player's pseudo-legal try against the canonical truth. Mirrors the gate
-// inside draft960Variant.applyMove so the two never diverge.
+// inside standardChessVariant.applyMove so the two never diverge.
 export function isLegalStandardChessMove(state: GameState, move: Move): boolean {
   if (state.status.type !== 'playing') return false;
   const position = positionFromState(state);
@@ -815,7 +818,7 @@ export function capturedRoleFor(state: GameState, move: Move): PieceRole | undef
 
 export function variantForId(id: GameState['variant']): Variant {
   if (id === 'dark-chess') return darkChessVariant;
-  if (id === 'draft960') return draft960Variant;
+  if (id === 'chess') return standardChessVariant;
   // Fail loud on an unknown slug. After migrations 022/023 no persisted
   // 'fog-of-war' remains, so anything else is a real bug, not a legacy spelling —
   // surfacing it beats silently rendering the wrong variant.

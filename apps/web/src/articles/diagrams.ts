@@ -16,12 +16,8 @@ import {
   type BanqiMove,
   type BanqiPlayerView,
   type BanqiSquare,
-  type BackRankRole,
   type Board,
-  type Chess960Start,
   createInitialBanqiState,
-  createChess960CastlingRightsForSides,
-  createChess960InitialBoardForSides,
   createInitialXiangqiState,
   darkChessVariant,
   type GameState,
@@ -61,9 +57,7 @@ import type { ArticleSection, CtaBlock, CtaButton } from './types.js';
 export {
   ARTICLE_OG_POSITIONS,
   boardToPieces,
-  DRAFT960_OFFER_A,
   piecesToBoard,
-  startingPositionFromBackRank,
 } from '@mistboard/board-render';
 export {
   SHOGI4_CAPTURE,
@@ -149,20 +143,6 @@ export function playClosing(opts: {
     ],
   };
 }
-
-// Three distinct Chess960 back ranks per side for the Draft960 draft section.
-// Each is valid (bishops on opposite-colored squares, king between rooks) and
-// visually distinct. OFFER_A for both sides matches the actual D960 sample
-// game's starting position (NNRKBQRB / RNQKBBRN) so the offer the reader sees
-// in "The draft" is the same one that hits the board in "The starting
-// position".
-// DRAFT960_OFFER_A is shared with the article OG card (article-positions.ts).
-export const DRAFT960_OFFER_B: PieceRole[] = ['rook', 'knight', 'bishop', 'bishop', 'king', 'queen', 'knight', 'rook'];
-export const DRAFT960_OFFER_C: PieceRole[] = ['queen', 'rook', 'bishop', 'knight', 'knight', 'bishop', 'king', 'rook'];
-
-export const DRAFT960_BLACK_OFFER_A: PieceRole[] = ['rook', 'knight', 'queen', 'king', 'bishop', 'bishop', 'rook', 'knight'];
-export const DRAFT960_BLACK_OFFER_B: PieceRole[] = ['bishop', 'bishop', 'queen', 'knight', 'knight', 'rook', 'king', 'rook'];
-export const DRAFT960_BLACK_OFFER_C: PieceRole[] = ['knight', 'bishop', 'bishop', 'queen', 'rook', 'king', 'knight', 'rook'];
 
 // Starting-position triptych for the Fog of War rules article. Visibility is
 // derived from the canonical fog-of-war variant kernel so the diagram exactly
@@ -551,201 +531,6 @@ export const ENGINE_SAMPLE_POSITIONS = ENGINE_SAMPLE_STATES.map((state) => {
     ],
   };
 });
-
-// ── Draft960 full game: room db07069c ────────────────────────────────────────
-// White #700 nnrkbqrb: a1=N b1=N c1=R d1=K e1=B f1=Q g1=R h1=B
-// Black #626 rnqkbbrn: a8=R b8=N c8=Q d8=K e8=B f8=B g8=R h8=N
-export const D960_W: Chess960Start = {
-  id: 700,
-  backRank: ['knight', 'knight', 'rook', 'king', 'bishop', 'queen', 'rook', 'bishop'] as BackRankRole[],
-  fenPlacement: 'nnrkbqrb',
-};
-export const D960_B: Chess960Start = {
-  id: 626,
-  backRank: ['rook', 'knight', 'queen', 'king', 'bishop', 'bishop', 'rook', 'knight'] as BackRankRole[],
-  fenPlacement: 'rnqkbbrn',
-};
-export const D960_REVEAL_S0: GameState = {
-  id: 'draft960-reveal',
-  variant: 'dark-chess',
-  board: createChess960InitialBoardForSides(D960_W, D960_B),
-  status: { type: 'playing', turn: 'white' },
-  moveNumber: 1,
-  castlingRights: createChess960CastlingRightsForSides(D960_W, D960_B),
-  halfmoveClock: 0,
-};
-
-export const D960_FULL_STATES = replayMoves(D960_REVEAL_S0, [
-  { from: 'e2', to: 'e4' },                        // 1. e4
-  { from: 'h8', to: 'g6' },                        // 1...Nhg6 ← h8 KNIGHT reveal
-  { from: 'f2', to: 'f3' },                        // 2. f3
-  { from: 'a7', to: 'a5' },                        // 2...a5
-  { from: 'e1', to: 'f2' },                        // 3. Be1f2 ← e1 BISHOP reveal
-  { from: 'a5', to: 'a4' },                        // 3...a4
-  { from: 'b1', to: 'c3' },                        // 4. Nc3
-  { from: 'f7', to: 'f6' },                        // 4...f6
-  { from: 'd2', to: 'd4' },                        // 5. d4
-  { from: 'e8', to: 'f7' },                        // 5...Bef7 ← e8 BISHOP reveal
-  { from: 'd1', to: 'c1' },                        // 6. O-O-O ← d1 KING reveals via castling
-  { from: 'e7', to: 'e5' },                        // 6...e5
-  { from: 'd4', to: 'd5' },                        // 7. d5
-  { from: 'f8', to: 'd6' },                        // 7...Bfd6 ← f8 BISHOP reveal
-  { from: 'g2', to: 'g4' },                        // 8. g4
-  { from: 'd8', to: 'g8' },                        // 8...O-O ← d8 KING reveals via castling
-  { from: 'c3', to: 'e2' },                        // 9. Ne2
-  { from: 'c7', to: 'c6' },                        // 9...c6
-  { from: 'd5', to: 'c6' },                        // 10. dxc6
-  { from: 'd7', to: 'c6' },                        // 10...dxc6
-  { from: 'e2', to: 'g3' },                        // 11. Ng3
-  { from: 'd6', to: 'c7' },                        // 11...Bc7
-  { from: 'h2', to: 'h4' },                        // 12. h4
-  { from: 'g6', to: 'e7' },                        // 12...Ne7
-  { from: 'f3', to: 'f4' },                        // 13. f4
-  { from: 'e5', to: 'f4' },                        // 13...exf4
-  { from: 'g3', to: 'e2' },                        // 14. Ne2
-  { from: 'g7', to: 'g5' },                        // 14...g5
-  { from: 'h4', to: 'g5' },                        // 15. hxg5
-  { from: 'f6', to: 'g5' },                        // 15...fxg5
-  { from: 'h1', to: 'f3' },                        // 16. Bhf3 ← h1 BISHOP reveal
-  { from: 'f7', to: 'g6' },                        // 16...Bg6
-  { from: 'c2', to: 'c3' },                        // 17. c3
-  { from: 'b8', to: 'd7' },                        // 17...Nbd7 ← b8 KNIGHT reveal
-  { from: 'a1', to: 'c2' },                        // 18. Na1c2 ← a1 KNIGHT reveal
-  { from: 'd7', to: 'e5' },                        // 18...Ne5
-  { from: 'c1', to: 'b1' },                        // 19. Kb1
-  { from: 'e5', to: 'f3' },                        // 19...Nxf3
-  { from: 'g1', to: 'h1' },                        // 20. Rh1
-  { from: 'f3', to: 'e5' },                        // 20...Ne5
-  { from: 'f2', to: 'c5' },                        // 21. Bc5
-  { from: 'c8', to: 'e6' },                        // 21...Qe6 ← c8 QUEEN reveal
-  { from: 'c5', to: 'e7' },                        // 22. Bxe7
-  { from: 'e6', to: 'e7' },                        // 22...Qxe7
-  { from: 'e2', to: 'd4' },                        // 23. Nd4
-  { from: 'f4', to: 'f3' },                        // 23...f3
-  { from: 'c2', to: 'b4' },                        // 24. Nb4
-  { from: 'e7', to: 'b4' },                        // 24...Qxb4
-  { from: 'c3', to: 'b4' },                        // 25. cxb4
-  { from: 'f3', to: 'f2' },                        // 25...f2
-  { from: 'h1', to: 'h2' },                        // 26. Rh2
-  { from: 'e5', to: 'g4' },                        // 26...Ng4
-  { from: 'h2', to: 'g2' },                        // 27. Rg2
-  { from: 'g4', to: 'e3' },                        // 27...Ne3
-  { from: 'd1', to: 'd2' },                        // 28. Rd2
-  { from: 'e3', to: 'g2' },                        // 28...Nxg2
-  { from: 'f1', to: 'g2' },                        // 29. Qxg2
-  { from: 'f2', to: 'f1', promotion: 'queen' },    // 29...f1=Q ← PROMOTION
-  { from: 'g2', to: 'f1' },                        // 30. Qxf1
-  { from: 'f8', to: 'f1' },                        // 30...Rxf1 (castled rook)
-  { from: 'b1', to: 'c2' },                        // 31. Kc2
-  { from: 'a8', to: 'e8' },                        // 31...Re8
-  { from: 'd4', to: 'c6' },                        // 32. Nc6
-  { from: 'b7', to: 'c6' },                        // 32...bxc6
-  { from: 'd2', to: 'd8' },                        // 33. Rd8+
-  { from: 'e8', to: 'd8' },                        // 33...Rxd8
-  { from: 'c2', to: 'd3' },                        // 34. Kd3
-  { from: 'd8', to: 'd3' },                        // 34...Rxd3# ← KING CAPTURED
-]);
-
-// Narratives: empty strings use auto-label; notable moments get annotations.
-export const D960_NARRATIVES: string[] = [
-  "Both players have picked. White chose NNRKBQRB — knights on a1 and b1, king on d1, bishop on e1. Black chose RNQKBBRN — queen on c8, king on d8, knight on h8. Neither player can see the other's back rank.",
-  "1.e4. Standard-looking first move. Nothing unusual yet.",
-  "1...h8–g6. Something on h8 jumps to g6. Only a knight moves in an L-shape. In standard chess, h8 is a rook — rooks can't jump. Black's h8 has a knight.",
-  "2.f3. White's f-pawn advances, clearing f2.",
-  "2...a5. Black pushes the a-pawn.",
-  "3.Be1–f2. A piece slides from e1 to f2. In standard chess, e1 is the king — kings don't go to f2 on move 3. This is a bishop. White has a bishop on e1.",
-  "3...a4. Black's a-pawn keeps advancing.",
-  "4.Nc3. White's b1 knight develops — same square as standard chess.",
-  "4...f6. Black pushes the f-pawn.",
-  "5.d4. White plays d4.",
-  "5...Be8–f7. Black's e8 piece slides to f7 diagonally. Standard chess puts a king on e8 — Black has a bishop there.",
-  "6.O-O-O. White castles queenside. The king was on d1; it ends on c1, the rook moves to d1. Non-standard king square revealed through castling.",
-  "6...e5. Black's e-pawn advances.",
-  "7.d5. White pushes the d-pawn.",
-  "7...Bf8–d6. Black's f8 piece goes to d6 diagonally — a bishop. Standard chess also has a bishop on f8, so no surprise here.",
-  "8.g4. White's g-pawn advances.",
-  "8...O-O. Black castles kingside. The king was on d8; it ends on g8, the rook moves to f8. Non-standard king square revealed.",
-  "9.Ne2. White's knight retreats.",
-  "9...c6. Black challenges White's pawn chain.",
-  "10.dxc6. White captures.",
-  "10...dxc6. Black recaptures with the d-pawn.",
-  "11.Ng3. Knight moves to g3.",
-  "11...Bc7. Black's bishop retreats.",
-  "12.h4. White pushes the h-pawn.",
-  "12...Ne7. Black's knight repositions.",
-  "13.f4. White's f-pawn advances.",
-  "13...exf4. Black captures.",
-  "14.Ne2. Knight retreats.",
-  "14...g5. Black's g-pawn advances.",
-  "15.hxg5. White captures on g5.",
-  "15...fxg5. Black recaptures.",
-  "16.Bh1–f3. White's h1 piece goes to f3 diagonally. Standard chess also has a bishop on h1 in some openings — but White's h1 was definitely a bishop in this setup.",
-  "16...Bg6. Black's bishop moves.",
-  "17.c3. White's c-pawn advances.",
-  "17...Nb8–d7. Black's b8 piece jumps to d7 — a knight. Standard chess also has a knight on b8.",
-  "18.Na1–c2. White's a1 piece jumps to c2 — a knight. Standard chess has a rook on a1. White's a1 has a knight.",
-  "18...Ne5. Black's knight centralizes.",
-  "19.Kb1. White's king steps to b1.",
-  "19...Nxf3. Black's knight captures.",
-  "20.Rh1. White's rook moves.",
-  "20...Ne5. Black's knight returns.",
-  "21.Bc5. White's bishop moves to c5.",
-  "21...Qc8–e6. Black's c8 piece moves to e6 along a diagonal — a queen. Standard chess has a bishop on c8. Black has a queen there.",
-  "22.Bxe7. White captures.",
-  "22...Qxe7. Black recaptures with the queen.",
-  "23.Nd4. White's knight goes to d4.",
-  "23...f3. Black's pawn advances.",
-  "24.Nb4. White's knight jumps.",
-  "24...Qxb4. Black's queen captures.",
-  "25.cxb4. White's pawn recaptures.",
-  "25...f2. Black's pawn reaches f2.",
-  "26.Rh2. White's rook moves.",
-  "26...Ng4. Black's knight goes to g4.",
-  "27.Rg2. White's rook slides.",
-  "27...Ne3. Black's knight forks.",
-  "28.Rd2. White's rook moves.",
-  "28...Nxg2. Black's knight captures the rook.",
-  "29.Qxg2. White's queen recaptures.",
-  "29...f1=Q. Black's pawn promotes to queen.",
-  "30.Qxf1. White captures the new queen.",
-  "30...Rxf1. Black's rook recaptures.",
-  "31.Kc2. White's king steps forward.",
-  "31...Re8. Black's rook activates.",
-  "32.Nc6. White's knight attacks.",
-  "32...bxc6. Black's pawn captures.",
-  "33.Rd8+. White's rook checks.",
-  "33...Rxd8. Black's rook captures.",
-  "34.Kd3. White's king walks into the open.",
-  "34...Rxd3. Black's rook captures the king. Game over.",
-];
-
-export const D960_FULL_POSITIONS = D960_FULL_STATES.map((state, i) => {
-  const isLast = i === D960_FULL_STATES.length - 1;
-  return {
-    ...(isLast ? { outcome: { headline: 'Black wins', reason: 'king captured', tone: 'win' as const } } : {}),
-    boards: [
-      { board: state.board, fogSquares: fogFor(state, 'white'), orientation: 'white' as const, label: "WHITE'S VIEW" },
-      { board: state.board, orientation: 'white' as const, label: 'SERVER TRUTH' },
-      { board: state.board, fogSquares: fogFor(state, 'black'), orientation: 'white' as const, label: "BLACK'S VIEW" },
-    ],
-  };
-});
-
-// Fog for the draft-section offer boards. White's offers fog the top half;
-// black's offers fog the bottom half so each side's view mirrors the other.
-export const PICK_SCREEN_FOG: Square[] = [
-  'a5', 'b5', 'c5', 'd5', 'e5', 'f5', 'g5', 'h5',
-  'a6', 'b6', 'c6', 'd6', 'e6', 'f6', 'g6', 'h6',
-  'a7', 'b7', 'c7', 'd7', 'e7', 'f7', 'g7', 'h7',
-  'a8', 'b8', 'c8', 'd8', 'e8', 'f8', 'g8', 'h8',
-];
-
-export const BLACK_PICK_SCREEN_FOG: Square[] = [
-  'a1', 'b1', 'c1', 'd1', 'e1', 'f1', 'g1', 'h1',
-  'a2', 'b2', 'c2', 'd2', 'e2', 'f2', 'g2', 'h2',
-  'a3', 'b3', 'c3', 'd3', 'e3', 'f3', 'g3', 'h3',
-  'a4', 'b4', 'c4', 'd4', 'e4', 'f4', 'g4', 'h4',
-];
 
 // ── Win-condition demo: vs-brian-game-3 final plies ──────────────────────────
 // Brian (Black) vs production tier-1 engine (White), bakeoff PvE match. The

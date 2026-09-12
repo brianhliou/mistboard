@@ -33,7 +33,6 @@ type ResponseCapture = {
 
 type RoomCreateArgs = {
   engineId: string;
-  hiddenDraft960?: boolean;
   mode: 'pvp' | 'pve';
   options?: {
     creatorPreference?: 'white' | 'black';
@@ -54,8 +53,8 @@ definePersistenceTests('room bot play requests', () => {
     let reserved: { color: 'white' | 'black'; engineId: string } | null = null;
     let created: RoomCreateArgs | null = null;
     const ctx = createContext({
-      createRoom: async (mode, variant, engineId, hiddenDraft960, timeControl, rated, options) => {
-        created = { engineId, hiddenDraft960, mode, options, rated, timeControl, variant };
+      createRoom: async (mode, variant, engineId, timeControl, rated, options) => {
+        created = { engineId, mode, options, rated, timeControl, variant };
         return roomFixture({
           id: 'bot-room',
           mode,
@@ -85,7 +84,6 @@ definePersistenceTests('room bot play requests', () => {
     assert.deepEqual(reserved, { color: 'black', engineId: 'python-v2-v1.6' });
     assert.deepEqual(created, {
       engineId: 'python-v2-v1.6',
-      hiddenDraft960: false,
       mode: 'pve',
       options: { engineColor: 'black', engineReservationId: 'reservation-1', botId: 'play-bot' },
       rated: false,
@@ -105,7 +103,7 @@ definePersistenceTests('room bot play requests', () => {
     await insertBotProfile('sideless-bot', 'Sideless Bot', 'public');
     let reserved: { color: 'white' | 'black'; engineId: string } | null = null;
     const ctx = createContext({
-      createRoom: async (mode, variant, engineId, _hiddenDraft960, timeControl) =>
+      createRoom: async (mode, variant, engineId, timeControl) =>
         roomFixture({
           id: 'sideless-room',
           mode,
@@ -143,7 +141,7 @@ definePersistenceTests('room bot play requests', () => {
     await insertBotProfile('paced-bot', 'Paced Bot', 'public');
     const startedPaces: (RoomTimeControl | undefined)[] = [];
     const ctx = createContext({
-      createRoom: async (mode, _variant, _engineId, _hiddenDraft960, timeControl) => {
+      createRoom: async (mode, _variant, _engineId, timeControl) => {
         startedPaces.push(timeControl);
         return roomFixture({ id: 'paced-bot-room', mode, timeControl });
       },
@@ -334,7 +332,7 @@ async function insertMistyProfile(): Promise<void> {
          (id, display_name, bio, owner_type, active_engine_id, default_game_spec_id,
           supported_game_spec_ids, play_initial_ms, play_increment_ms, visibility)
        VALUES ('misty', 'Misty', '', 'system', 'python-v2-v1.6', 'dark-chess',
-               ARRAY['dark-chess', 'dark-draft960', 'dark-xiangqi', 'banqi', 'jungle', 'jungle-flip'],
+               ARRAY['dark-chess', 'dark-xiangqi', 'banqi', 'jungle', 'jungle-flip'],
                180000, 2000, 'public')`,
     );
   } finally {
@@ -392,7 +390,7 @@ test('a fog PvE create that names no pace starts at the pin, not the house defau
   // input, so an omitted pace RESOLVES to the pin here.
   const startedPaces: (RoomTimeControl | undefined)[] = [];
   const base = createContext({
-    createRoom: async (mode, _variant, _engineId, _hiddenDraft960, timeControl) => {
+    createRoom: async (mode, _variant, _engineId, timeControl) => {
       startedPaces.push(timeControl);
       return roomFixture({ id: 'defaulted-room', mode, timeControl });
     },
@@ -419,7 +417,7 @@ test('a fog PvE create that names no pace starts at the pin, not the house defau
 test('a fog PvE create that names no side seats the human as White', async () => {
   const engineSeats: ('white' | 'black' | undefined)[] = [];
   const base = createContext({
-    createRoom: async (mode, variant, _engineId, _hiddenDraft960, timeControl, _rated, options) => {
+    createRoom: async (mode, variant, _engineId, timeControl, _rated, options) => {
       engineSeats.push(options?.engineColor);
       return roomFixture({ id: 'sided-room', mode, timeControl, variant });
     },
@@ -462,31 +460,12 @@ test('room creation rejects a fog chess bot game at a pace the engine cannot hon
   }
 });
 
-test('the fog chess engine pin covers draft960, which is the same engine', async () => {
-  const response = captureResponse();
-  const handled = await tryHandle(
-    createContext(),
-    jsonPost({
-      mode: 'pve',
-      variant: 'dark-chess',
-      hiddenDraft960: true,
-      timeControl: { initialMs: 180_000, incrementMs: 2_000 },
-    }),
-    response,
-    '/api/rooms',
-  );
-
-  assert.equal(handled, true);
-  assert.equal(response.status, 400);
-  assert.deepEqual(JSON.parse(response.body), { error: 'engine_time_control_unsupported' });
-});
-
 test('the engine pin admits its own pace and leaves human games alone', async () => {
   // Collected rather than assigned to a `let`: a callback write does not narrow,
   // so reading a property off the captured value would type as `never`.
   const startedPaces: (RoomTimeControl | undefined)[] = [];
   const base = createContext({
-    createRoom: async (mode, _variant, _engineId, _hiddenDraft960, timeControl) => {
+    createRoom: async (mode, _variant, _engineId, timeControl) => {
       startedPaces.push(timeControl);
       return roomFixture({ id: 'paced-room', mode, timeControl });
     },

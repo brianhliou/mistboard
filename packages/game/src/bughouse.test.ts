@@ -314,7 +314,7 @@ function withBoard(matchId: string, board: BughouseBoardState): BughouseMatchSta
 function standardState(id: string, board: Board, turn: 'white' | 'black'): GameState {
   return {
     id,
-    variant: 'draft960',
+    variant: 'chess',
     board,
     status: { type: 'playing', turn },
     moveNumber: 1,

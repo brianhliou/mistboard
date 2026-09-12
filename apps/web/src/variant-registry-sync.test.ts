@@ -143,7 +143,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       const tenantLanding = webVariantTenants().find(
         (tenant) => tenant.gameSpecId === gameSpecId,
       )?.landing;
-      // Variants with no tenant landing config (fog chess, draft960) fall back
+      // Variants with no tenant landing config (fog chess) fall back
       // to all three official controls in the picker, so any pin is offered.
       if (!tenantLanding) continue;
       expect(

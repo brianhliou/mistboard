@@ -4,10 +4,8 @@ import {
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
-  FOG_DRAFT960_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   GAME_SPECS,
   gameSpecForId,
@@ -59,25 +57,7 @@ test('current dark chess maps to the flagship chess spec', () => {
   assert.equal(spec.ratingPoolBase, 'fog');
   assert.equal(spec.publicSurface, 'casual');
   assert.equal(spec.runtimeStatus, 'live');
-  assert.deepEqual(spec.legacyLiveRoom, { variant: 'dark-chess', hiddenDraft960: false });
-});
-
-test('Draft960 is modeled as a dark chess setup module, not a family', () => {
-  const spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
-
-  assert.equal(spec.id, 'dark-draft960');
-  assert.equal(spec.publicName, 'Dark Draft960');
-  assert.equal(spec.family, 'chess');
-  assert.equal(spec.board, 'chess-8x8');
-  assert.equal(spec.movement, 'orthodox-chess');
-  assert.equal(spec.objective, 'king-capture');
-  assert.equal(spec.visibility, 'dark');
-  assert.equal(spec.setup, 'draft960');
-  assert.equal(spec.reserves, 'none');
-  assert.equal(spec.dropPolicy, 'none');
-  assert.equal(spec.ratingPoolBase, 'fog_draft960');
-  assert.equal(spec.runtimeStatus, 'retired');
-  assert.deepEqual(spec.legacyLiveRoom, { variant: 'dark-chess', hiddenDraft960: true });
+  assert.deepEqual(spec.legacyLiveRoom, { variant: 'dark-chess' });
 });
 
 test('Dark Xiangqi is a live separate family without live-room mapping', () => {
@@ -150,46 +130,20 @@ test('game spec ids are unique and discoverable', () => {
   assert.equal(new Set(ids).size, ids.length);
 
   assert.equal(isGameSpecId('dark-chess'), true);
-  assert.equal(isGameSpecId('dark-draft960'), true);
-  assert.equal(isGameSpecId('fog-draft960'), false);
   assert.equal(isGameSpecId('dark-xiangqi'), true);
   assert.equal(isGameSpecId('banqi'), true);
   assert.equal(isGameSpecId('not-a-spec'), false);
-  assert.equal(maybeGameSpecForId('dark-draft960')?.id, DARK_DRAFT960_SPEC_ID);
-  assert.equal(maybeGameSpecForId('fog-draft960')?.id, DARK_DRAFT960_SPEC_ID);
   assert.equal(maybeGameSpecForId('not-a-spec'), null);
 });
 
-test('legacy Fog Draft960 spec constant aliases the canonical Dark Draft960 id', () => {
-  assert.equal(FOG_DRAFT960_SPEC_ID, DARK_DRAFT960_SPEC_ID);
-  assert.equal(gameSpecForId(FOG_DRAFT960_SPEC_ID).id, DARK_DRAFT960_SPEC_ID);
-});
-
-test('legacy live-room inputs map to current game specs', () => {
+test('legacy live-room inputs map to Fog Chess, the only chess-shell spec left', () => {
   assert.equal(gameSpecForLegacyLiveRoom({ variant: 'dark-chess' }).id, DARK_CHESS_SPEC_ID);
-  assert.equal(
-    gameSpecForLegacyLiveRoom({ variant: 'dark-chess', hiddenDraft960: true }).id,
-    DARK_DRAFT960_SPEC_ID,
-  );
-  assert.equal(
-    gameSpecForLegacyLiveRoom({ variant: 'dark-chess', hiddenDraft960: 'yes' }).id,
-    DARK_DRAFT960_SPEC_ID,
-  );
-  assert.equal(gameSpecForLegacyLiveRoom({ variant: 'draft960' }).id, DARK_DRAFT960_SPEC_ID);
-  assert.equal(gameSpecForLegacyLiveRoom({ variant: 'dark-draft960' }).id, DARK_DRAFT960_SPEC_ID);
-  assert.equal(gameSpecForLegacyLiveRoom({ variant: 'fog-draft960' }).id, DARK_DRAFT960_SPEC_ID);
+  assert.equal(gameSpecForLegacyLiveRoom({ variant: 'chess' }).id, DARK_CHESS_SPEC_ID);
   assert.equal(gameSpecForLegacyLiveRoom({ variant: 'unknown' }).id, DARK_CHESS_SPEC_ID);
 });
 
 test('current live specs can be converted back to the existing room wire shape', () => {
-  assert.deepEqual(legacyLiveRoomForGameSpec(DARK_CHESS_SPEC_ID), {
-    variant: 'dark-chess',
-    hiddenDraft960: false,
-  });
-  assert.deepEqual(legacyLiveRoomForGameSpec(DARK_DRAFT960_SPEC_ID), {
-    variant: 'dark-chess',
-    hiddenDraft960: true,
-  });
+  assert.deepEqual(legacyLiveRoomForGameSpec(DARK_CHESS_SPEC_ID), { variant: 'dark-chess' });
   assert.equal(legacyLiveRoomForGameSpec(DARK_XIANGQI_SPEC_ID), null);
 });
 
@@ -204,7 +158,6 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
   // type, the `rated` flags, and the user_ratings CHECK migration against drift.
   const unionMembers: Record<RatingVariant, true> = {
     fog: true,
-    fog_draft960: true,
     dark_xiangqi: true,
     jieqi: true,
     banqi: true,
@@ -219,7 +172,6 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
 
 test('ratingPoolForSpec is rated for launched pools and null for casual-only specs', () => {
   assert.equal(ratingPoolForSpec(DARK_CHESS_SPEC_ID), 'fog');
-  assert.equal(ratingPoolForSpec(DARK_DRAFT960_SPEC_ID), 'fog_draft960');
   assert.equal(ratingPoolForSpec(JIEQI_SPEC_ID), 'jieqi');
   assert.equal(ratingPoolForSpec(BANQI_SPEC_ID), 'banqi');
   assert.equal(ratingPoolForSpec(DARK_XIANGQI_SPEC_ID), 'dark_xiangqi');
@@ -255,18 +207,17 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
-test('the retired specs are exactly the ones the plan still names, all hidden', () => {
-  assert.deepEqual([...RETIRED_GAME_SPEC_IDS].sort(), [DARK_DRAFT960_SPEC_ID].sort());
+test('no spec is retired: every variant the plan named has been deleted', () => {
+  // The retired set is empty as of 2026-09-12; a future retirement lands here
+  // first (runtimeStatus 'retired', publicSurface 'hidden') and is deleted from
+  // its own commit later.
+  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], []);
   for (const id of RETIRED_GAME_SPEC_IDS) {
-    // A retired spec can never be offered: publicSurface is the other switch
-    // and it must already be off.
     assert.equal(gameSpecForId(id).publicSurface, 'hidden', id);
     assert.equal(isRetiredGameSpec(id), true, id);
   }
   for (const id of [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
     assert.equal(isRetiredGameSpec(id), false, id);
   }
-  // A legacy alias resolves to its spec and inherits its status.
-  assert.equal(isRetiredGameSpec('fog-draft960'), true);
   assert.equal(isRetiredGameSpec('no-such-spec'), false);
 });

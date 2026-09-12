@@ -8,7 +8,7 @@
 // board and its moves serialize in ICCS coordinates. Hidden-identity and flip
 // variants (jieqi, banqi, jungle-flip), drops (fortress), and jungle have no
 // notation standard; a "PGN" of coordinate pairs would be JSON wearing a hat, so
-// they get the JSON publication only. Draft960 waits on [SetUp]/[FEN] support.
+// they get the JSON publication only. A shuffled start would need [SetUp]/[FEN] support.
 //
 // Deliberately an explicit map with no fallback: a variant absent here exports
 // nothing, and adding one is a conscious decision about its notation.

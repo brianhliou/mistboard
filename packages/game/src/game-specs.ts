@@ -50,7 +50,6 @@ export type ObjectiveRulesId =
 export type VisibilityRulesId = 'dark' | 'open' | 'hidden-identity' | 'concealed-hands';
 export type SetupRulesId =
   | 'standard'
-  | 'draft960'
   | 'double-fischer-random'
   | 'jieqi-deal'
   | 'banqi-deal'
@@ -79,7 +78,6 @@ export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
 export type RatingPoolBaseId =
   | 'fog'
-  | 'fog_draft960'
   | 'dark_xiangqi'
   | 'jieqi'
   | 'banqi'
@@ -93,7 +91,6 @@ export type RatingPoolBaseId =
 
 export type GameSpecId =
   | 'dark-chess'
-  | 'dark-draft960'
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
@@ -111,8 +108,7 @@ export type GameSpecId =
   // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
   | 'mahjong';
-export type GameSpecAliasId = 'fog-draft960';
-export type GameSpecLookupId = GameSpecId | GameSpecAliasId;
+export type GameSpecLookupId = GameSpecId;
 
 export type GameSpec = {
   id: GameSpecId;
@@ -134,15 +130,10 @@ export type GameSpec = {
   rated?: boolean;
   legacyLiveRoom?: {
     variant: VariantId;
-    hiddenDraft960: boolean;
   };
 };
 
 export const DARK_CHESS_SPEC_ID = 'dark-chess' satisfies GameSpecId;
-export const DARK_DRAFT960_SPEC_ID = 'dark-draft960' satisfies GameSpecId;
-// Compatibility alias for pre-taxonomy code and URLs. New code should use
-// DARK_DRAFT960_SPEC_ID; "fog" remains only in legacy rating/API vocabulary.
-export const FOG_DRAFT960_SPEC_ID = DARK_DRAFT960_SPEC_ID;
 export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
@@ -239,24 +230,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     rated: true,
     publicSurface: 'casual',
     runtimeStatus: 'live',
-    legacyLiveRoom: { variant: 'dark-chess', hiddenDraft960: false },
-  },
-  {
-    id: DARK_DRAFT960_SPEC_ID,
-    publicName: 'Dark Draft960',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'draft960',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'fog_draft960',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-    legacyLiveRoom: { variant: 'dark-chess', hiddenDraft960: true },
+    legacyLiveRoom: { variant: 'dark-chess' },
   },
   {
     // Fortress Xiangqi: "xiangqi with a pocket." 7x8 board, opposite-corner
@@ -465,9 +439,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
 
 const gameSpecsById = new Map<GameSpecId, GameSpec>(GAME_SPECS.map((spec) => [spec.id, spec]));
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
-const gameSpecAliases = new Map<GameSpecAliasId, GameSpecId>([
-  ['fog-draft960', DARK_DRAFT960_SPEC_ID],
-]);
 
 /** Specs that were built and are not coming back. Derived from GAME_SPECS so
  *  there is one place that says it: the entry's runtimeStatus. */
@@ -503,34 +474,21 @@ export function maybeGameSpecForId(value: string | null | undefined): GameSpec |
 }
 
 function canonicalGameSpecId(value: string | null | undefined): GameSpecId | null {
-  if (isGameSpecId(value)) return value;
-  if (value === undefined || value === null) return null;
-  return gameSpecAliases.get(value as GameSpecAliasId) ?? null;
+  return isGameSpecId(value) ? value : null;
 }
 
 export type LegacyLiveRoomSpecInput = {
   variant?: VariantId | string | null;
-  hiddenDraft960?: boolean | string | null;
 };
 
-export function gameSpecForLegacyLiveRoom(input: LegacyLiveRoomSpecInput): GameSpec {
-  if (
-    input.variant === 'draft960' ||
-    input.variant === DARK_DRAFT960_SPEC_ID ||
-    input.variant === 'fog-draft960' ||
-    isTruthyLegacyFlag(input.hiddenDraft960)
-  ) {
-    return gameSpecForId(DARK_DRAFT960_SPEC_ID);
-  }
+// Every legacy (chess-shell) live room is Fog Chess: Draft960, the only other
+// resident, was deleted 2026-09-12 (#396) with no prod game to replay.
+export function gameSpecForLegacyLiveRoom(_input: LegacyLiveRoomSpecInput): GameSpec {
   return gameSpecForId(DARK_CHESS_SPEC_ID);
 }
 
 export function legacyLiveRoomForGameSpec(id: GameSpecId): GameSpec['legacyLiveRoom'] | null {
   return gameSpecForId(id).legacyLiveRoom ?? null;
-}
-
-function isTruthyLegacyFlag(value: boolean | string | null | undefined): boolean {
-  return value === true || value === '1' || value === 'true' || value === 'yes';
 }
 
 // --- Rating pools (single source of truth: the `rated` flag on each spec) ---
@@ -541,7 +499,6 @@ function isTruthyLegacyFlag(value: boolean | string | null | undefined): boolean
 export type RatingVariant = Extract<
   RatingPoolBaseId,
   | 'fog'
-  | 'fog_draft960'
   | 'dark_xiangqi'
   | 'jieqi'
   | 'banqi'

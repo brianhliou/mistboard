@@ -204,7 +204,6 @@ describe('landing play panel', () => {
           requests: [
             {
               gameSpecId: 'dark-chess',
-              hiddenDraft960: false,
               rated: false,
               timeControl: { initialMs: 180_000, incrementMs: 2_000 },
               waitingMs: 65_000,
@@ -336,7 +335,6 @@ describe('landing play panel', () => {
     expect(JSON.parse(String(roomCall?.[1]?.body))).toEqual({
       mode: 'pvp',
       gameSpecId: 'dark-chess',
-      hiddenDraft960: false,
       timeControl: { initialMs: 180_000, incrementMs: 2_000 },
       rated: false,
       preferredColor: 'random',
@@ -1104,7 +1102,6 @@ describe('roomCreationRequestBody — jungle PvE bots', () => {
   function setupFor(gameSpecId: LandingRoomSetup['gameSpecId']): LandingRoomSetup {
     return {
       gameSpecId,
-      startFormat: 'standard',
       rated: false,
       timeControl: { initialMs: 180_000, incrementMs: 2_000 },
       preferredColor: 'random',

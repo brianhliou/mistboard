@@ -115,7 +115,7 @@ describe('terminal sound sequencing', () => {
 describe('opening opponent sound policy', () => {
   it('infers the hidden PvE white opening from black-to-move first snapshot', () => {
     const events: GameEvent[] = [
-      { type: 'room-created', at: 1, roomId: 'sound-test', variant: 'dark-chess', offer: [] },
+      { type: 'room-created', at: 1, roomId: 'sound-test', variant: 'dark-chess' },
       {
         type: 'seat-assigned',
         at: 2,

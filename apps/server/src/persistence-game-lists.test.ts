@@ -143,7 +143,6 @@ definePersistenceTests('game lists', () => {
               at: now.getTime(),
               roomId,
               variant: roomId.startsWith('watch-dmx') ? 'dark-mini-xiangqi' : 'dark-chess',
-              offer: [],
             },
           ],
         );
@@ -271,7 +270,6 @@ definePersistenceTests('game lists', () => {
               at: now.getTime(),
               roomId,
               variant: 'dark-chess',
-              offer: [],
             },
           ],
         );
@@ -400,7 +398,6 @@ definePersistenceTests('game lists', () => {
             at: activeSealedAt,
             roomId: 'sealed-prestart',
             variant: 'dark-chess',
-            offer: [],
           },
         },
         {
@@ -494,7 +491,7 @@ definePersistenceTests('game lists', () => {
     const unlocked = await listWatchUnlockedGames({
       limit: 10,
       now,
-      variants: ['dark-chess', 'draft960'],
+      variants: ['dark-chess', 'fog'],
     });
     // Seal-until-finished, no per-mode ply floor: the short PvP/PvE/timeout games
     // unlock once completed, same as a long game (postgame review already showed
@@ -518,7 +515,7 @@ definePersistenceTests('game lists', () => {
       await countWatchSealedGames({
         activeWindowMs: 2 * 60 * 60_000,
         now,
-        variants: ['dark-chess', 'draft960'],
+        variants: ['dark-chess', 'fog'],
       }),
       3,
     );
@@ -530,7 +527,7 @@ definePersistenceTests('game lists', () => {
       limit: 10,
       modes: ['pvp', 'pve'],
       now,
-      variants: ['dark-chess', 'draft960'],
+      variants: ['dark-chess', 'fog'],
     });
     assert.deepEqual(
       humanOnly.map((game) => game.roomId),
@@ -554,7 +551,7 @@ definePersistenceTests('game lists', () => {
       limit: 10,
       modes: ['pvp', 'pve'],
       now,
-      variants: ['dark-chess', 'draft960'],
+      variants: ['dark-chess', 'fog'],
     });
     assert.deepEqual(
       curated.map((game) => game.roomId),
@@ -565,7 +562,7 @@ definePersistenceTests('game lists', () => {
         activeWindowMs: 2 * 60 * 60_000,
         modes: ['pvp', 'pve'],
         now,
-        variants: ['dark-chess', 'draft960'],
+        variants: ['dark-chess', 'fog'],
       }),
       2,
     );
@@ -575,7 +572,7 @@ definePersistenceTests('game lists', () => {
       limit: 10,
       modes: ['eve'],
       now,
-      variants: ['dark-chess', 'draft960'],
+      variants: ['dark-chess', 'fog'],
     });
     assert.deepEqual(
       enginesOnly.map((game) => game.roomId),
@@ -586,7 +583,7 @@ definePersistenceTests('game lists', () => {
         activeWindowMs: 2 * 60 * 60_000,
         modes: ['eve'],
         now,
-        variants: ['dark-chess', 'draft960'],
+        variants: ['dark-chess', 'fog'],
       }),
       1,
     );
@@ -648,7 +645,6 @@ definePersistenceTests('game lists', () => {
               at: endedAt.getTime(),
               roomId,
               variant: 'dark-chess',
-              offer: [],
             },
           ],
         );

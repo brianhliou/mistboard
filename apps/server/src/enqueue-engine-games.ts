@@ -174,16 +174,14 @@ function toCamel(key: string): keyof CliArgs {
   return key as keyof CliArgs;
 }
 
-type EngineTaskVariant = 'dark-chess' | 'draft960' | 'xiangqi';
+type EngineTaskVariant = 'dark-chess' | 'xiangqi';
 
 function variantFrom(value: string): EngineTaskVariant {
-  if (value === 'dark-chess' || value === 'draft960' || value === 'xiangqi') return value;
-  throw new Error(
-    `unsupported --variant ${JSON.stringify(value)} (expected dark-chess | draft960 | xiangqi)`,
-  );
+  if (value === 'dark-chess' || value === 'xiangqi') return value;
+  throw new Error(`unsupported --variant ${JSON.stringify(value)} (expected dark-chess | xiangqi)`);
 }
 
-// Default engine ids per variant. dark-chess/draft960 keep the latest builtin
+// Default engine ids per variant. dark-chess keeps the latest builtin
 // pairing; xiangqi has no builtin "latest" so default to a cross-tier FSF pair
 // (exercises the ladder and needs no Pikafish binary). Override with --white/--black.
 function defaultEnginesFor(

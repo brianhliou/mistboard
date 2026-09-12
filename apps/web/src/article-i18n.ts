@@ -73,7 +73,6 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'fog-xiangqi',
   'chess',
   'xiangqi',
-  'dark-draft960',
   'shogi4',
   'jieqi',
   'banqi',
@@ -565,18 +564,6 @@ const ZH_HANS: Record<string, string> = {
   "Shogi4 isn't playable on the site yet; for now this page is the rules reference. Browse the rest of the rules, or compare it with the chess and xiangqi primers.":
     'Shogi4 目前还不能在本站对弈；现阶段本页作为规则参考。你可以浏览其余规则，或将它与国际象棋和象棋入门相互对照。',
 
-  // -- Dark Draft960 --
-  'Dark Draft960': '迷雾选阵960',
-  'The draft': '选阵',
-  "The server deals each player three random Chess960 back ranks. You pick one. Your opponent independently picks one of theirs. The drafts are sealed. Neither side sees the other's offers or choice.":
-    '服务器为每位玩家发出三种随机的国际象棋960 底线阵型。你从中选一种，对手也各自从自己的三种中选一种。双方的选阵都是密封的：任何一方都看不到对方的候选阵型或最终选择。',
-  "Say both players picked offer A. Each side sees only its own back rank; the opponent's stays in fog. Only the server holds both.":
-    '假设双方都选了候选 A。每一方只能看到自己的底线阵型，对方的则隐藏在迷雾中。只有服务器同时掌握双方的阵型。',
-  '960 × 960 = **921,600** possible starts. Standard chess is one of them.':
-    '960 × 960 = **921,600** 种可能的开局。标准国际象棋只是其中之一。',
-  'Dark Draft960 is a future variant, not playable yet. There is no set release date.':
-    '迷雾选阵960 是一个未来的变体，目前尚不可对弈，也没有确定的发布日期。',
-
   // -- Xiangqi primer (rules) --
   'Xiangqi Rules': '象棋规则',
   // seoTitle: drives the localized <title>. Without an entry the zh pages would
@@ -735,10 +722,8 @@ const ZH_HANS: Record<string, string> = {
   'BLOCKED AHEAD': '前方受阻',
   'The board': '棋盘',
   'The pieces': '棋子',
-  'Back to all rules': '返回全部规则',
   // section headings
   'Win condition: general capture': '胜负条件：擒获将帅',
-  'Play status': '对弈状态',
   // sub-headings
   Cannons: '炮（砲）',
   'Facing generals': '将帅对脸',
@@ -918,8 +903,6 @@ const ZH_HANS: Record<string, string> = {
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '国际象棋是信息公开的底层游戏。为它加上战争迷雾，便得到迷雾国际象棋：你视野之外的敌方棋子会消失，而王由被吃而落败。',
   'Read Fog Chess': '阅读迷雾国际象棋',
-  "Fog Chess with a sealed opening draft: each player picks one of three Chess960 back ranks and never sees the other's.":
-    '带密封开局选择的迷雾国际象棋：每位玩家从三个 Chess960 底线阵型中选择一个，且永远看不到对手选择了哪个。',
   'Programming Fog Chess with Server-Side Truth': '用服务器端真实局面实现迷雾国际象棋',
   'Fog Chess adds one hidden-information rule to chess: each side sees only the squares its own pieces reach. The implementation question is where that rule runs. On Mistboard, it runs on the server, so the browser receives a `PlayerView`, not a full board with fog painted over it.':
     '迷雾国际象棋给国际象棋增加了一条隐藏信息规则：每一方只能看到己方棋子可及的格子。实现问题在于这条规则在哪里运行。在 Mistboard 上，它运行在服务器端，所以浏览器收到的是一个 `PlayerView`，而不是盖着迷雾图层的完整棋盘。',
@@ -2717,18 +2700,6 @@ const ZH_HANT: Record<string, string> = {
   "Shogi4 isn't playable on the site yet; for now this page is the rules reference. Browse the rest of the rules, or compare it with the chess and xiangqi primers.":
     'Shogi4 目前還不能在本站對弈；現階段本頁作為規則參考。你可以瀏覽其餘規則，或將它與國際象棋和象棋入門相互對照。',
 
-  // -- Dark Draft960 --
-  'Dark Draft960': '迷霧選陣960',
-  'The draft': '選陣',
-  "The server deals each player three random Chess960 back ranks. You pick one. Your opponent independently picks one of theirs. The drafts are sealed. Neither side sees the other's offers or choice.":
-    '伺服器為每位玩家發出三種隨機的國際象棋960 底線陣型。你從中選一種，對手也各自從自己的三種中選一種。雙方的選陣都是密封的：任何一方都看不到對方的候選陣型或最終選擇。',
-  "Say both players picked offer A. Each side sees only its own back rank; the opponent's stays in fog. Only the server holds both.":
-    '假設雙方都選了候選 A。每一方只能看到自己的底線陣型，對方的則隱藏在迷霧中。只有伺服器同時掌握雙方的陣型。',
-  '960 × 960 = **921,600** possible starts. Standard chess is one of them.':
-    '960 × 960 = **921,600** 種可能的開局。標準國際象棋只是其中之一。',
-  'Dark Draft960 is a future variant, not playable yet. There is no set release date.':
-    '迷霧選陣960 是一個未來的變體，目前尚不可對弈，也沒有確定的發布日期。',
-
   // -- Xiangqi primer (rules) --
   'Xiangqi Rules': '象棋規則',
   'Xiangqi Rules: How to Play Chinese Chess': '象棋規則：中國象棋怎麼下',
@@ -2882,10 +2853,8 @@ const ZH_HANT: Record<string, string> = {
   'BLOCKED AHEAD': '前方受阻',
   'The board': '棋盤',
   'The pieces': '棋子',
-  'Back to all rules': '返回全部規則',
   // section headings
   'Win condition: general capture': '勝負條件：擒獲將帥',
-  'Play status': '對弈狀態',
   // sub-headings
   Cannons: '炮（砲）',
   'Facing generals': '將帥對臉',
@@ -3046,8 +3015,6 @@ const ZH_HANT: Record<string, string> = {
   'Chess is the open-information base game. Add Fog of War for Fog Chess, where enemy pieces outside your vision disappear and the king falls by capture.':
     '國際象棋是資訊公開的底層遊戲。為它加上戰爭迷霧，便得到迷霧國際象棋：你視野之外的敵方棋子會消失，而王由被吃而落敗。',
   'Read Fog Chess': '閱讀迷霧國際象棋',
-  "Fog Chess with a sealed opening draft: each player picks one of three Chess960 back ranks and never sees the other's.":
-    '帶密封開局選擇的迷霧國際象棋：每位玩家從三個 Chess960 底線陣型中選擇一個，且永遠看不到對手選擇了哪個。',
   'Programming Fog Chess with Server-Side Truth': '用伺服器端真實局面實現迷霧國際象棋',
   'Fog Chess adds one hidden-information rule to chess: each side sees only the squares its own pieces reach. The implementation question is where that rule runs. On Mistboard, it runs on the server, so the browser receives a `PlayerView`, not a full board with fog painted over it.':
     '迷霧國際象棋給國際象棋增加了一條隱藏資訊規則：每一方只能看到己方棋子可及的格子。實作問題在於這條規則在哪裡執行。在 Mistboard 上，它執行在伺服器端，所以瀏覽器收到的是一個 `PlayerView`，而不是蓋著迷霧圖層的完整棋盤。',

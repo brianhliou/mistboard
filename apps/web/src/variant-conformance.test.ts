@@ -21,7 +21,6 @@ const pickerTenants = webVariantTenants().filter((tenant) => tenant.landing?.off
 function setupFor(gameSpecId: LandingRoomSetup['gameSpecId']): LandingRoomSetup {
   return {
     gameSpecId,
-    startFormat: 'standard',
     rated: false,
     timeControl: { initialMs: 180_000, incrementMs: 2_000 },
     preferredColor: 'random',

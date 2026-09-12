@@ -4,7 +4,6 @@ import {
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   engineTimeControlPin,
@@ -20,12 +19,7 @@ import {
   type TimeControlId,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
-import {
-  classifyTimeControl,
-  gameSpecAnalyticsProps,
-  gameSpecAnalyticsPropsForId,
-  track,
-} from './analytics.js';
+import { classifyTimeControl, gameSpecAnalyticsPropsForId, track } from './analytics.js';
 import { bindBotPlayControl } from './bot-play.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { type I18nKey, t } from './i18n/catalog.js';
@@ -48,7 +42,7 @@ import {
   webVariantTenantForSpecId,
   webVariantTenants,
 } from './variant-tenant/registry.js';
-import { isVariantEnabled, variantMiniIdForGameSpec } from './variants.js';
+import { variantMiniIdForGameSpec } from './variants.js';
 import { ENGINE_OFFER_AFTER_MS, shouldOfferEngine } from './web-utils.js';
 
 export type PlayableEngine = {
@@ -92,7 +86,6 @@ type LandingGameSpecId =
   | typeof XIANGQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID;
-type LandingStartFormat = 'standard' | 'draft960';
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
   id: LandingTimePresetId;
@@ -114,12 +107,10 @@ type LandingGameSpecCapabilities = {
   secondGlyph: string;
   secondLabel: string;
   supportsRated: boolean;
-  supportsStartFormat: boolean;
   supportsTimeControl: boolean;
 };
 export type LandingRoomSetup = {
   gameSpecId: LandingGameSpecId;
-  startFormat: LandingStartFormat;
   rated: boolean;
   timeControl: {
     initialMs: number;
@@ -137,7 +128,6 @@ type LandingSetupPreference = {
   gameSpecId?: LandingGameSpecId;
   preferredColor?: LandingColorPreference;
   rated?: boolean;
-  startFormat?: LandingStartFormat;
   timePresetId?: LandingTimePresetId;
 };
 type LobbyTicketResponse = {
@@ -148,7 +138,6 @@ type LobbyTicketResponse = {
 };
 type OpenLobbyRequest = {
   gameSpecId?: string;
-  hiddenDraft960: boolean;
   rated?: boolean;
   timeControl: {
     initialMs: number;
@@ -190,7 +179,7 @@ function allowedTimePresetIds(
   mode: LandingPlayMode,
 ): ReadonlySet<LandingTimePresetId> {
   const tenantLanding = webVariantTenantForSpecId(gameSpecId)?.landing;
-  // The no-tenant-config fallback is fog chess and draft960. Their PvE is
+  // The no-tenant-config fallback is fog chess. Its PvE is
   // pinned to 5+5 (#283) and the pin narrows this set below, so the 10+5 rung
   // here only ever reaches their human games.
   const offered = tenantLanding
@@ -302,7 +291,6 @@ const DARK_CHESS_LANDING_CAPABILITIES: LandingGameSpecCapabilities = {
   secondGlyph: '♚',
   secondLabel: 'Black',
   supportsRated: true,
-  supportsStartFormat: true,
   supportsTimeControl: true,
 };
 
@@ -853,7 +841,6 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
           chip,
           {
             gameSpecId,
-            startFormat: 'standard',
             rated: false,
             timeControl: { initialMs: column.initialMs, incrementMs: column.incrementMs },
             preferredColor: 'random',
@@ -934,10 +921,10 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
   const applyOpenSeeks = (requests: OpenLobbyRequest[]): void => {
     const counts = new Map<string, number>();
     for (const request of requests) {
-      // These chips post casual, standard-start seeks, so a rated hook or a
-      // draft960 one is a DIFFERENT pool even at the same variant and clock:
-      // counting it here would promise an instant pair that never comes.
-      if (request.rated || request.hiddenDraft960) continue;
+      // These chips post casual seeks, so a rated hook is a DIFFERENT pool even
+      // at the same variant and clock: counting it here would promise an instant
+      // pair that never comes.
+      if (request.rated) continue;
       const key = quickPairPoolKey(
         request.gameSpecId ?? DARK_CHESS_SPEC_ID,
         request.timeControl.initialMs,
@@ -1313,9 +1300,7 @@ function lobbyTableRow(request: OpenLobbyRequest, locale: Locale): HTMLElement {
   const specId = parseLandingGameSpecId(request.gameSpecId ?? DARK_CHESS_SPEC_ID);
   const gameLabel =
     specId === DARK_CHESS_SPEC_ID
-      ? request.hiddenDraft960
-        ? t('setup.darkDraft960', {}, locale)
-        : t('play.standard', {}, locale)
+      ? t('play.standard', {}, locale)
       : variantLabelForGameSpec(specId, locale);
   const thumb = document.createElement('span');
   thumb.className = 'landing-lobby-seed-thumb';
@@ -1363,7 +1348,6 @@ function lobbyTableRow(request: OpenLobbyRequest, locale: Locale): HTMLElement {
     const status = document.createElement('span');
     const setup: LandingRoomSetup = {
       gameSpecId: specId,
-      startFormat: request.hiddenDraft960 ? 'draft960' : 'standard',
       rated: request.rated ?? true,
       timeControl: request.timeControl,
       preferredColor: 'random',
@@ -1456,12 +1440,10 @@ function lobbyRequestRow(request: OpenLobbyRequest, locale: Locale = currentLoca
   const ratedLabel =
     request.rated === false ? t('play.casual', {}, locale) : t('play.rated', {}, locale);
   // Chess shows its start format; other variants show the game name (an open
-  // request isn't "Standard/Draft960").
+  // request isn't "Standard").
   const formatLabel =
     requestSpecId === DARK_CHESS_SPEC_ID
-      ? request.hiddenDraft960
-        ? t('setup.darkDraft960', {}, locale)
-        : t('play.standard', {}, locale)
+      ? t('play.standard', {}, locale)
       : variantLabelForGameSpec(requestSpecId, locale);
   // Time control + game on the bold line; the casual/rated tag drops to the
   // meta line with the wait age so a long variant name (Fortress Xiangqi)
@@ -1480,7 +1462,6 @@ function lobbyRequestRow(request: OpenLobbyRequest, locale: Locale = currentLoca
     const status = document.createElement('span');
     const setup: LandingRoomSetup = {
       gameSpecId: requestSpecId,
-      startFormat: request.hiddenDraft960 ? 'draft960' : 'standard',
       rated: request.rated ?? true,
       timeControl: request.timeControl,
       preferredColor: 'random',
@@ -1627,7 +1608,6 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
   const storedPreference = loadSetupPreference(choice.mode);
   const wantsCorrespondence = choice.initialTimeMode === 'correspondence';
-  let startFormat: LandingStartFormat = storedPreference.startFormat ?? 'standard';
   // Correspondence is casual-only, so opening on that segment implies casual.
   let rated =
     choice.mode === 'pve' || choice.ratedDisabled || wantsCorrespondence
@@ -1874,48 +1854,6 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
         )
       : null;
 
-  const draft960Enabled = isVariantEnabled('fog_draft960');
-  const draft960Selectable = draft960Enabled && choice.mode !== 'lobby';
-  let startGroup: HTMLDivElement | null = null;
-  const standardButton = startOptionButton(t('play.standard', {}, locale), true);
-  const draftButton = startOptionButton(
-    draft960Selectable
-      ? t('setup.darkDraft960', {}, locale)
-      : t('setup.darkDraft960ComingSoon', {}, locale),
-    false,
-  );
-  if (draft960Enabled) {
-    startGroup = document.createElement('div');
-    startGroup.className = 'landing-start-options';
-    startGroup.setAttribute('role', 'radiogroup');
-    startGroup.setAttribute('aria-label', t('setup.variant', {}, locale));
-    if (!draft960Selectable) {
-      draftButton.disabled = true;
-      draftButton.classList.add('disabled');
-      draftButton.title = t('setup.soon', {}, locale);
-    }
-    const syncOptions = () => {
-      standardButton.classList.toggle('selected', startFormat === 'standard');
-      standardButton.setAttribute('aria-checked', startFormat === 'standard' ? 'true' : 'false');
-      draftButton.classList.toggle('selected', startFormat === 'draft960');
-      draftButton.setAttribute('aria-checked', startFormat === 'draft960' ? 'true' : 'false');
-    };
-    standardButton.addEventListener('click', () => {
-      startFormat = 'standard';
-      syncOptions();
-      syncSetupAccordion();
-    });
-    if (draft960Selectable) {
-      draftButton.addEventListener('click', () => {
-        startFormat = 'draft960';
-        syncOptions();
-        syncSetupAccordion();
-      });
-    }
-    startGroup.append(standardButton, draftButton);
-    variantSection.append(startGroup);
-  }
-
   const timeSection = document.createElement('div');
   timeSection.className = 'landing-setup-section';
   timeSection.append(setupSectionLabel(t('setup.timeControl', {}, locale)));
@@ -2085,13 +2023,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
       }
       return;
     }
-    const setup = selectedRoomSetup(
-      selectedGameSpecId,
-      startFormat,
-      rated,
-      selectedPreset,
-      preferredColor,
-    );
+    const setup = selectedRoomSetup(selectedGameSpecId, rated, selectedPreset, preferredColor);
     storeSetupPreference(choice.mode, setup, selectedPreset, selectedEngineId, colorIsExplicit);
     if (choice.mode === 'lobby') {
       cancelLobbyWait?.();
@@ -2159,9 +2091,6 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
   syncGameSpecificSections = () => {
     const capabilities = landingGameSpecCapabilities(selectedGameSpecId);
-    if (!capabilities.supportsStartFormat || !draft960Selectable) {
-      startFormat = 'standard';
-    }
     if (!capabilities.supportsRated) {
       rated = false;
     }
@@ -2182,7 +2111,6 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
       colorSection.hidden = hideColorPicker;
       colorSection.style.display = hideColorPicker ? 'none' : '';
     }
-    if (startGroup) startGroup.hidden = !capabilities.supportsStartFormat;
     ratingSection.sync();
     if (engineSection) {
       engineSection.sync(
@@ -2215,10 +2143,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
       : choice.mode === 'pvp'
         ? t('play.opponentFriend', {}, locale)
         : t('play.opponentLobby', {}, locale);
-  const variantSummary = () =>
-    selectedGameSpecId === DARK_CHESS_SPEC_ID && startFormat === 'draft960'
-      ? t('setup.darkDraft960', {}, locale)
-      : variantLabelForGameSpec(selectedGameSpecId, locale);
+  const variantSummary = () => variantLabelForGameSpec(selectedGameSpecId, locale);
   const engineSummary = () => {
     const availableEngines =
       webVariantTenantForSpecId(selectedGameSpecId)?.landing?.engineOptions ??
@@ -2346,10 +2271,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   overlay.append(dialog);
   document.body.append(overlay);
   activeDialogClose = close;
-  (draft960Enabled && selectedGameSpecId === DARK_CHESS_SPEC_ID
-    ? standardButton
-    : startButton
-  ).focus();
+  startButton.focus();
 }
 
 // Close the open setup dialog and reopen it in another mode, keeping the
@@ -2701,7 +2623,6 @@ function loadSetupPreference(mode: LandingPlayMode): LandingSetupPreference {
       gameSpecId: normalizeStoredGameSpecId(parsed.gameSpecId),
       preferredColor: normalizeStoredColorPreference(parsed.preferredColor),
       rated: typeof parsed.rated === 'boolean' ? parsed.rated : undefined,
-      startFormat: normalizeStoredStartFormat(parsed.startFormat),
       timePresetId: normalizeStoredTimePresetId(parsed.timePresetId),
     };
   } catch {
@@ -2723,7 +2644,6 @@ function storeSetupPreference(
   const preference: LandingSetupPreference = {
     gameSpecId: setup.gameSpecId,
     rated: setup.rated,
-    startFormat: setup.startFormat,
     timePresetId,
   };
   if (Object.keys(engineIdByGameSpec).length > 0) {
@@ -2783,11 +2703,6 @@ function coerceColorPreferenceForCapabilities(
   if (preferredColor === 'white') return capabilities.firstColor;
   if (preferredColor === 'black') return capabilities.secondColor;
   return capabilities.firstColor === 'red' ? capabilities.firstColor : capabilities.secondColor;
-}
-
-function normalizeStoredStartFormat(value: unknown): LandingStartFormat | undefined {
-  if (value === 'standard' || value === 'draft960') return value;
-  return undefined;
 }
 
 function normalizeStoredTimePresetId(value: unknown): LandingTimePresetId | undefined {
@@ -3036,7 +2951,6 @@ function buildSetupAccordionSection(
 
 function selectedRoomSetup(
   gameSpecId: LandingGameSpecId,
-  startFormat: LandingStartFormat,
   rated: boolean,
   presetId: LandingTimePresetId,
   preferredColor: LandingColorPreference,
@@ -3045,7 +2959,6 @@ function selectedRoomSetup(
     LANDING_TIME_PRESETS.find((candidate) => candidate.id === presetId) ?? LANDING_TIME_PRESETS[1];
   return {
     gameSpecId,
-    startFormat,
     rated,
     timeControl: {
       initialMs: preset.initialMs,
@@ -3089,7 +3002,6 @@ async function createRoomFromPlay(
   engineId?: string,
   setup: LandingRoomSetup = {
     gameSpecId: DARK_CHESS_SPEC_ID,
-    startFormat: 'standard',
     rated: true,
     timeControl: { initialMs: 30_000, incrementMs: 2_000 },
     preferredColor: 'random',
@@ -3274,7 +3186,6 @@ export function roomCreationRequestBody(
   return {
     mode,
     gameSpecId,
-    hiddenDraft960: setup.startFormat === 'draft960',
     timeControl: setup.timeControl,
     rated: setup.rated,
     preferredColor: setup.preferredColor,
@@ -3286,7 +3197,6 @@ export function roomCreationGameSpecId(
   setup: LandingRoomSetup,
 ):
   | typeof DARK_CHESS_SPEC_ID
-  | typeof DARK_DRAFT960_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
@@ -3309,7 +3219,7 @@ export function roomCreationGameSpecId(
   // fail, it becomes DARK CHESS. Mahjong hit exactly that: the dialog selected
   // it, sent the right clock and the right engine, and asked the server for a
   // fog chess room. Every variant offered in the play menu needs a line here.
-  return setup.startFormat === 'draft960' ? DARK_DRAFT960_SPEC_ID : DARK_CHESS_SPEC_ID;
+  return DARK_CHESS_SPEC_ID;
 }
 
 async function readRoomCreationFailure(response: Response): Promise<RoomCreationFailure> {
@@ -3361,15 +3271,8 @@ function joinLobbyFromPlay(
   const originalText = button.textContent ?? '';
   const queueJoinedAt = Date.now();
   const bucketProps = {
-    variant: setup.startFormat,
-    // Chess keeps the legacy resolver (so draft960 stays tagged dark-draft960);
-    // other variants resolve straight from their spec id.
-    ...(setup.gameSpecId === DARK_CHESS_SPEC_ID
-      ? gameSpecAnalyticsProps({
-          variant: DARK_CHESS_SPEC_ID,
-          hiddenDraft960: setup.startFormat === 'draft960',
-        })
-      : gameSpecAnalyticsPropsForId(setup.gameSpecId)),
+    variant: 'standard',
+    ...gameSpecAnalyticsPropsForId(setup.gameSpecId),
     initialMs: setup.timeControl.initialMs,
     incrementMs: setup.timeControl.incrementMs,
     time_class: classifyTimeControl(setup.timeControl.initialMs, setup.timeControl.incrementMs),
@@ -3542,7 +3445,6 @@ function joinLobbyFromPlay(
       signal: controller.signal,
       body: JSON.stringify({
         gameSpecId: setup.gameSpecId,
-        hiddenDraft960: setup.startFormat === 'draft960',
         timeControl: setup.timeControl,
         rated: setup.rated,
       }),

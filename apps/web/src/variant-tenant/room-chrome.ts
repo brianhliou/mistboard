@@ -200,11 +200,8 @@ export function createTenantRoomChrome<C extends string>(
   // never shows stale host chrome.
   function resetHostPanels(): void {
     if (!refs) return;
-    refs.offerSection.hidden = true;
-    refs.selectionSection.hidden = true;
     refs.devViewsSection.hidden = true;
     refs.gameControlsSection.hidden = true;
-    refs.draftPicker.hidden = true;
     refs.promotion.hidden = true;
     refs.boardPaused.hidden = true;
     refs.capturesBottom.replaceChildren();

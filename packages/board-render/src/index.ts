@@ -3,7 +3,6 @@ export {
   ARTICLE_OG_POSITIONS,
   CONE_QUEEN_BOARD,
   DISCOVERY_BOARD,
-  DRAFT960_OFFER_A,
   SERVER_FOG_TRIPTYCH,
 } from './article-positions.js';
 export { BOARD_CORNER_RATIO, boardCornerRadius } from './board-metrics.js';
@@ -30,7 +29,6 @@ export {
   boardToPieces,
   fogSquaresFromVisible,
   piecesToBoard,
-  startingPositionFromBackRank,
 } from './positions.js';
 export type { BoardPalette, FogStyle } from './tokens.js';
 export {

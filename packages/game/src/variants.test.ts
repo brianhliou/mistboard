@@ -1,45 +1,45 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type { GameState, Move } from './types.js';
-import { darkChessVariant, draft960Variant, variantForId } from './variants.js';
+import { darkChessVariant, standardChessVariant, variantForId } from './variants.js';
 
 test('variantForId resolves known slugs and throws on anything else', () => {
   assert.equal(variantForId('dark-chess'), darkChessVariant);
-  assert.equal(variantForId('draft960'), draft960Variant);
+  assert.equal(variantForId('chess'), standardChessVariant);
   assert.throws(() => variantForId('fog-of-war' as never), /unknown variant id/);
 });
 
-test('Draft960 exposes legal moves once playing', () => {
+test('Standard chess exposes legal moves once playing', () => {
   const state: GameState = {
-    ...draft960Variant.createInitialState('legal-moves'),
+    ...standardChessVariant.createInitialState('legal-moves'),
     status: { type: 'playing', turn: 'white' } as const,
   };
 
-  const moves = draft960Variant.getLegalMoves(state, 'white');
+  const moves = standardChessVariant.getLegalMoves(state, 'white');
   assert.equal(moves.length, 20);
   assert.ok(moves.some((move) => move.from === 'e2' && move.to === 'e4'));
-  assert.equal(draft960Variant.getLegalMoves(state, 'black').length, 0);
+  assert.equal(standardChessVariant.getLegalMoves(state, 'black').length, 0);
 });
 
-test('Draft960 player views carry own candidate moves off-turn', () => {
+test('Standard chess player views carry own candidate moves off-turn', () => {
   const state: GameState = {
-    ...draft960Variant.createInitialState('view-legal-moves'),
+    ...standardChessVariant.createInitialState('view-legal-moves'),
     status: { type: 'playing', turn: 'white' } as const,
   };
 
-  const blackView = draft960Variant.getPlayerView(state, 'black');
+  const blackView = standardChessVariant.getPlayerView(state, 'black');
 
   assert.ok(blackView.legalMoves.some((move) => move.from === 'e7' && move.to === 'e5'));
-  assert.equal(draft960Variant.getLegalMoves(state, 'black').length, 0);
+  assert.equal(standardChessVariant.getLegalMoves(state, 'black').length, 0);
 });
 
-test('Draft960 applies legal moves through the rules adapter', () => {
+test('Standard chess applies legal moves through the rules adapter', () => {
   const state = {
-    ...draft960Variant.createInitialState('apply-move'),
+    ...standardChessVariant.createInitialState('apply-move'),
     status: { type: 'playing', turn: 'white' } as const,
   };
 
-  const next = draft960Variant.applyMove(state, { from: 'e2', to: 'e4' });
+  const next = standardChessVariant.applyMove(state, { from: 'e2', to: 'e4' });
 
   assert.equal(next.board.e2, undefined);
   assert.deepEqual(next.board.e4, { color: 'white', role: 'pawn' });
@@ -47,18 +47,18 @@ test('Draft960 applies legal moves through the rules adapter', () => {
   assert.deepEqual(next.lastMove, { from: 'e2', to: 'e4' });
 });
 
-test('Draft960 rejects illegal moves without changing state', () => {
+test('Standard chess rejects illegal moves without changing state', () => {
   const state = {
-    ...draft960Variant.createInitialState('illegal-move'),
+    ...standardChessVariant.createInitialState('illegal-move'),
     status: { type: 'playing', turn: 'white' } as const,
   };
 
-  assert.equal(draft960Variant.applyMove(state, { from: 'e2', to: 'e5' }), state);
+  assert.equal(standardChessVariant.applyMove(state, { from: 'e2', to: 'e5' }), state);
 });
 
-test('Draft960 exposes and applies explicit promotion choices', () => {
+test('Standard chess exposes and applies explicit promotion choices', () => {
   const state: GameState = {
-    ...draft960Variant.createInitialState('promotion'),
+    ...standardChessVariant.createInitialState('promotion'),
     board: {
       a7: { color: 'white', role: 'pawn' },
       e1: { color: 'white', role: 'king' },
@@ -68,7 +68,7 @@ test('Draft960 exposes and applies explicit promotion choices', () => {
     castlingRights: [],
   };
 
-  const promotions = draft960Variant
+  const promotions = standardChessVariant
     .getLegalMoves(state, 'white')
     .filter((move) => move.from === 'a7' && move.to === 'a8')
     .map((move) => move.promotion)
@@ -76,14 +76,14 @@ test('Draft960 exposes and applies explicit promotion choices', () => {
 
   assert.deepEqual(promotions, ['bishop', 'knight', 'queen', 'rook']);
 
-  const next = draft960Variant.applyMove(state, { from: 'a7', to: 'a8', promotion: 'knight' });
+  const next = standardChessVariant.applyMove(state, { from: 'a7', to: 'a8', promotion: 'knight' });
   assert.equal(next.board.a7, undefined);
   assert.deepEqual(next.board.a8, { color: 'white', role: 'knight' });
 });
 
-test('Draft960 applies castling moves represented as king to rook square', () => {
+test('Standard chess applies castling moves represented as king to rook square', () => {
   const state: GameState = {
-    ...draft960Variant.createInitialState('castle'),
+    ...standardChessVariant.createInitialState('castle'),
     board: {
       e1: { color: 'white', role: 'king' },
       h1: { color: 'white', role: 'rook' },
@@ -94,19 +94,19 @@ test('Draft960 applies castling moves represented as king to rook square', () =>
     castlingRights: ['h1', 'h8'],
   };
 
-  const moves = draft960Variant.getLegalMoves(state, 'white');
+  const moves = standardChessVariant.getLegalMoves(state, 'white');
   assert.ok(moves.some((move) => move.from === 'e1' && move.to === 'h1'));
 
-  const next = draft960Variant.applyMove(state, { from: 'e1', to: 'h1' });
+  const next = standardChessVariant.applyMove(state, { from: 'e1', to: 'h1' });
   assert.equal(next.board.e1, undefined);
   assert.equal(next.board.h1, undefined);
   assert.deepEqual(next.board.g1, { color: 'white', role: 'king' });
   assert.deepEqual(next.board.f1, { color: 'white', role: 'rook' });
 });
 
-test('Draft960 applies castling moves represented as king two squares', () => {
+test('Standard chess applies castling moves represented as king two squares', () => {
   const state: GameState = {
-    ...draft960Variant.createInitialState('castle-two-squares'),
+    ...standardChessVariant.createInitialState('castle-two-squares'),
     board: {
       e1: { color: 'white', role: 'king' },
       h1: { color: 'white', role: 'rook' },
@@ -117,10 +117,10 @@ test('Draft960 applies castling moves represented as king two squares', () => {
     castlingRights: ['h1', 'h8'],
   };
 
-  const moves = draft960Variant.getLegalMoves(state, 'white');
+  const moves = standardChessVariant.getLegalMoves(state, 'white');
   assert.ok(moves.some((move) => move.from === 'e1' && move.to === 'g1'));
 
-  const next = draft960Variant.applyMove(state, { from: 'e1', to: 'g1' });
+  const next = standardChessVariant.applyMove(state, { from: 'e1', to: 'g1' });
   assert.equal(next.board.e1, undefined);
   assert.equal(next.board.h1, undefined);
   assert.deepEqual(next.board.g1, { color: 'white', role: 'king' });

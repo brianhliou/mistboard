@@ -22,7 +22,6 @@ const roomCreated: GameEvent = {
   at: 1,
   roomId,
   variant: 'dark-chess',
-  offer: [],
 };
 
 const whiteFirstMove: GameEvent = {

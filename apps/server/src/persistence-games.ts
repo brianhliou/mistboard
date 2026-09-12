@@ -121,7 +121,6 @@ export type GameSummary = {
   participants?: GameParticipant[];
   initialMs?: number | null;
   incrementMs?: number | null;
-  hiddenDraft960?: boolean | null;
   // A terminal state the kernel finished but that must NOT be recorded as a
   // completed game with a winner. The only current case is an engine failure:
   // the kernel finishes the room as an abandonment so live clients see an end,
@@ -863,7 +862,7 @@ export async function countWatchSealedGames(options: WatchSealedGameOptions = {}
        ${variantClause}
        ${modeClause}
        AND games.visibility <> 'private'
-       AND last_events.type IN ('clock-started', 'draft-start-resolved', 'move-played', 'resume')
+       AND last_events.type IN ('clock-started', 'move-played', 'resume')
        AND (last_events.payload->>'at')::bigint >= $1
        AND (last_events.payload->>'at')::bigint <= $2`,
     values,
@@ -1354,8 +1353,8 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          (room_id, variant, result, termination, ply_count, started_at, ended_at,
           white_client, black_client, white_name, black_name, corpus_id,
           mode, status, review_status, visibility, rated,
-          initial_ms, increment_ms, hidden_draft960, region, aborted_reason)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $21, $14, $15, $16, $17, $18, $19, $20, $22)
+          initial_ms, increment_ms, region, aborted_reason)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $20, $14, $15, $16, $17, $18, $19, $21)
        ON CONFLICT (room_id) DO UPDATE SET
          variant = EXCLUDED.variant,
          result = EXCLUDED.result,
@@ -1369,15 +1368,14 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          black_name = EXCLUDED.black_name,
          corpus_id = EXCLUDED.corpus_id,
          mode = EXCLUDED.mode,
-         status = $21,
+         status = $20,
          review_status = EXCLUDED.review_status,
          visibility = EXCLUDED.visibility,
          rated = EXCLUDED.rated,
          initial_ms = EXCLUDED.initial_ms,
          increment_ms = EXCLUDED.increment_ms,
-         hidden_draft960 = EXCLUDED.hidden_draft960,
          region = EXCLUDED.region,
-         aborted_reason = $22
+         aborted_reason = $21
        WHERE games.status = 'running'`,
       [
         roomId,
@@ -1398,7 +1396,6 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         rated,
         summary.initialMs ?? null,
         summary.incrementMs ?? null,
-        summary.hiddenDraft960 ?? null,
         summary.region ?? 'global',
         summary.abortedAs ? 'aborted' : 'completed',
         summary.abortedAs?.abortedReason ?? null,
@@ -1436,7 +1433,6 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         variant: summary.variant,
         initialMs: summary.initialMs,
         incrementMs: summary.incrementMs,
-        hiddenDraft960: summary.hiddenDraft960,
       });
       const colors = ratedParticipantColorsForVariant(summary.variant);
       const whiteParticipant = participants.find((p) => p.color === colors.white);

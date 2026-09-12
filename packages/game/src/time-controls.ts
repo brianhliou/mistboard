@@ -6,7 +6,6 @@
 import type { RoomTimeControl } from './events.js';
 import {
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   type GameSpecId,
@@ -128,10 +127,7 @@ export const RATED_TIME_CONTROLS: readonly TimeControlSpec[] = TIME_CONTROLS.fil
 // empty set while the create route rejects everything, which strands the
 // surface. `variant-registry-sync.test.ts` holds that invariant.
 const ENGINE_TIME_CONTROL_PINS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
-  // Draft960 is the same engine on a shuffled back rank, so it carries the
-  // same pin; leaving it out would make the pregame option the way around this.
   [DARK_CHESS_SPEC_ID]: '5m5',
-  [DARK_DRAFT960_SPEC_ID]: '5m5',
   // Fog xiangqi (python-fdx) runs its own belief stack rather than the fog
   // chess time manager, so its floor is not separately measured; pinned on the
   // shared-mechanism argument while #283 is open, not on its own flag evidence.

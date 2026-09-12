@@ -339,7 +339,6 @@ export function resolveGameExport(args: {
   // the log is a finished chess-family game.
   const chessReplay = eventReplayResponse(events as unknown as GameEvent[]);
   if (chessReplay.status === 200) {
-    if (summary.variant === 'draft960') return notSupported(summary.variant);
     const chessEvents = chessReplay.body.events;
     if (format === 'pgn') {
       return {

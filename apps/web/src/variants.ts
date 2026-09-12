@@ -11,7 +11,6 @@
 import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -57,7 +56,6 @@ export interface VariantDef {
   miniId: VariantMiniId;
 }
 
-const draft960Enabled = import.meta.env.VITE_DRAFT960_ENABLED === 'true';
 const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
@@ -67,7 +65,6 @@ const jungleOn = jungleEnabled();
 const jungleFlipOn = jungleFlipEnabled();
 const darkXiangqiOn = darkXiangqiEnabled();
 const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
-const draft960Spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
@@ -82,7 +79,6 @@ const jungleFlipSpec = gameSpecForId(JUNGLE_FLIP_SPEC_ID);
 // that are not leaderboard rows.
 const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [DARK_CHESS_SPEC_ID]: 'dark-chess',
-  [DARK_DRAFT960_SPEC_ID]: 'draft960',
   [FORTRESS_XIANGQI_SPEC_ID]: 'fortress-xiangqi',
   [DUCK_XIANGQI_SPEC_ID]: 'duck-xiangqi',
   [XIANGQI_SPEC_ID]: 'xiangqi',
@@ -205,19 +201,6 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: jungleFlipOn,
     onProfile: jungleFlipOn,
   },
-  // Draft960: gated behind its flag, and temporarily hidden from the leaderboard
-  // until it launches (sequenced to M4). Flip `onLeaderboard` (and the flag) when
-  // expanding. Kept in the registry so re-enabling is one edit.
-  {
-    id: currentRatingVariantForSpec(DARK_DRAFT960_SPEC_ID),
-    gameSpecId: draft960Spec.id,
-    apiParam: 'dark-draft960',
-    label: draft960Spec.publicName,
-    miniId: 'draft960',
-    enabled: draft960Enabled,
-    onLeaderboard: false,
-    onProfile: false,
-  },
 ];
 
 /** Variants shown on public rating surfaces (leaderboard + profile grid). */
@@ -228,10 +211,6 @@ export const profileRatingVariants = VARIANTS.filter((v) => v.onProfile);
 
 /** Variants selectable in the lobby. */
 export const enabledVariants = VARIANTS.filter((v) => v.enabled);
-
-export function isVariantEnabled(id: RatingVariantId): boolean {
-  return VARIANTS.some((v) => v.id === id && v.enabled);
-}
 
 /** Mini-board id for a game spec (picker/landing), or null if none. */
 export function variantMiniIdForGameSpec(id: GameSpecId): VariantMiniId | null {
@@ -245,7 +224,7 @@ export function variantMiniIdForRating(id: RatingVariantId): VariantMiniId | nul
 
 /**
  * Mini-board id for a raw persisted variant string (e.g. a FeaturedGame.variant
- * off the wire), normalizing legacy aliases (fog, draft960) through
+ * off the wire), normalizing the legacy alias (fog) through
  * their canonical game spec first. Null if the string maps to no marker.
  */
 export function variantMiniIdForRawVariant(variant: string): VariantMiniId | null {

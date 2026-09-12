@@ -28,7 +28,7 @@ import { SITEMAP_STATIC_ROUTES } from './server-static-pages.js';
 
 test('live persisted events are not public replay data', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'live-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'live-room', variant: 'dark-chess' },
     {
       type: 'move-played',
       at: 2,
@@ -79,7 +79,7 @@ test('live replay API returns 403 for every mode (PvP, PvE, EvE)', () => {
   // Uniform rule: live games are private to the seated players regardless of
   // mode. The replay endpoint only exposes finished games.
   const pvp: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'pvp-live', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'pvp-live', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 1, roomId: 'pvp-live', clientId: 'human-white', seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId: 'pvp-live', clientId: 'human-black', seat: 'black' },
     {
@@ -91,7 +91,7 @@ test('live replay API returns 403 for every mode (PvP, PvE, EvE)', () => {
     },
   ];
   const pve: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'pve-live', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'pve-live', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 1, roomId: 'pve-live', clientId: 'human-white', seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId: 'pve-live', clientId: 'random-engine', seat: 'black' },
     {
@@ -110,7 +110,7 @@ test('live replay API returns 403 for every mode (PvP, PvE, EvE)', () => {
     },
   ];
   const eve: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'eve-live', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'eve-live', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 1, roomId: 'eve-live', clientId: 'engine:white', seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId: 'eve-live', clientId: 'engine:black', seat: 'black' },
     {
@@ -137,7 +137,6 @@ test('canObserveLiveRoom keeps a LIVE fog room closed for every mode, and opens 
     at: 1,
     roomId: 'policy-room',
     variant: 'dark-chess',
-    offer: [],
   };
 
   // Live PvP: no observation.
@@ -211,7 +210,7 @@ test('canObserveLiveRoom admits a live room iff the spec hides nothing', () => {
   const live = (gameSpecId: string): boolean =>
     canObserveLiveRoom(
       replayGameEvents([
-        { type: 'room-created', at: 1, roomId: 'policy-room', variant: 'dark-chess', offer: [] },
+        { type: 'room-created', at: 1, roomId: 'policy-room', variant: 'dark-chess' },
       ]),
       gameSpecId,
     );
@@ -241,7 +240,7 @@ test('finished persisted events are public replay data', () => {
   const clock = expireClock(createClock(1, 1, 0), 2, 'white');
   assert.ok(clock);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'finished-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'finished-room', variant: 'dark-chess' },
     { type: 'clock-expired', at: 2, roomId: 'finished-room', color: 'white', clock },
   ];
 
@@ -548,7 +547,7 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/zh-hans/blog/community'), true);
   assert.equal(isClientRoute('/zh-hant/blog'), true);
   assert.equal(isClientRoute('/rules/fog-chess'), true);
-  assert.equal(isClientRoute('/rules/dark-draft960'), true);
+  assert.equal(isClientRoute('/rules/xiangqi'), true);
   assert.equal(isClientRoute('/forum/general-discussion'), true);
   assert.equal(isClientRoute('/forum/t/topic_123/example-topic'), true);
   assert.equal(isClientRoute('/forum/redirect/post/post_123'), true);

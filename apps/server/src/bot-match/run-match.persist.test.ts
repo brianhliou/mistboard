@@ -14,7 +14,7 @@ import {
 
 function fakeResult(gameId: string): ArbiterResult {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 0, roomId: gameId, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 0, roomId: gameId, variant: 'dark-chess' },
     {
       type: 'move-played',
       at: 1,

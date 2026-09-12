@@ -57,7 +57,6 @@ import * as xiangqiGamesRoute from './routes/xiangqi-games.js';
 export {
   type HttpApiContext,
   isAllowedTimeControl,
-  parseHiddenDraft960,
   parseRoomTimeControl,
   parseVariantId,
   readJsonBody,

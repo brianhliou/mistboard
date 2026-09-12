@@ -55,7 +55,6 @@ type ServerHttpHandlerOptions = {
     mode: 'pvp' | 'pve',
     variant: VariantId,
     engineId: string,
-    hiddenDraft960?: boolean,
     timeControl?: RoomTimeControl,
     rated?: boolean,
     options?: {

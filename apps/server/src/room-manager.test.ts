@@ -5,7 +5,6 @@ import {
   createClock,
   freezeClock,
   type GameEvent,
-  generateChess960Starts,
   replayGameEvents,
 } from '@mistboard/game';
 import type { Seat } from './payloads.js';
@@ -25,7 +24,6 @@ import {
   pauseRoomOnShutdown,
   playMove,
   type RoomManagerContext,
-  resolveStartIfReady,
   resumeRoom,
   resumeRoomIfReady,
   scheduleAbortTimeout,
@@ -50,12 +48,10 @@ function armedClock(at: number, initialMs?: number, incrementMs?: number): Clock
 
 function makeRoom(
   id: string,
-  variant: 'dark-chess' | 'draft960' = 'dark-chess',
+  variant: 'dark-chess' | 'chess' = 'dark-chess',
   events?: GameEvent[],
 ): Room {
-  const roomEvents: GameEvent[] = events ?? [
-    { type: 'room-created', at: 1, roomId: id, variant, offer: [] },
-  ];
+  const roomEvents: GameEvent[] = events ?? [{ type: 'room-created', at: 1, roomId: id, variant }];
   return roomFixture({
     id,
     events: roomEvents,
@@ -185,7 +181,7 @@ test('playMove: clock arms (white ticking) after both first moves, via the live 
   // advanceClock() result, which never arms, so the clock stayed frozen for the
   // whole live game. Drive playMove directly (solo client moves both colors).
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'clk-arm', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'clk-arm', variant: 'dark-chess' },
     { type: 'clock-started', at: 4, roomId: 'clk-arm', clock: createClock(4, 180_000, 2_000) },
   ];
   const room = makeRoom('clk-arm', 'dark-chess', events);
@@ -273,76 +269,6 @@ test('broadcastSnapshot: calls ctx.send for every connected client', () => {
 
 // ── resolveStartIfReady ───────────────────────────────────────────────────────
 
-test('resolveStartIfReady: appends draft-start-resolved when both seats have selected', async () => {
-  const starts = generateChess960Starts();
-  const offer = [starts[0], starts[1], starts[2]];
-  const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-d', variant: 'draft960', offer },
-    { type: 'seat-assigned', at: 2, roomId: 'room-d', clientId: 'white-c', seat: 'white' },
-    { type: 'seat-assigned', at: 3, roomId: 'room-d', clientId: 'black-c', seat: 'black' },
-    {
-      type: 'draft-start-selected',
-      at: 4,
-      roomId: 'room-d',
-      color: 'white',
-      startId: starts[0].id,
-    },
-    {
-      type: 'draft-start-selected',
-      at: 5,
-      roomId: 'room-d',
-      color: 'black',
-      startId: starts[1].id,
-    },
-  ];
-  const room = makeRoom('room-d', 'draft960', events);
-  const ctx = makeCtx();
-  assert.equal(room.projection.state.status.type, 'pregame', 'precondition: still in pregame');
-  const before = room.events.length;
-
-  await resolveStartIfReady(ctx, room);
-
-  assert.equal(room.events.length, before + 1);
-  assert.equal(room.events[room.events.length - 1].type, 'draft-start-resolved');
-  assert.equal(room.projection.state.status.type, 'playing');
-
-  // Clean up timer set by scheduleClockTimeout inside appendEvent
-  if (room.clockTimer) {
-    clearTimeout(room.clockTimer);
-    room.clockTimer = null;
-  }
-});
-
-test('resolveStartIfReady: does not resolve when only one seat has selected', async () => {
-  const starts = generateChess960Starts();
-  const offer = [starts[0], starts[1], starts[2]];
-  const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-e', variant: 'draft960', offer },
-    { type: 'seat-assigned', at: 2, roomId: 'room-e', clientId: 'white-c', seat: 'white' },
-    { type: 'seat-assigned', at: 3, roomId: 'room-e', clientId: 'black-c', seat: 'black' },
-    {
-      type: 'draft-start-selected',
-      at: 4,
-      roomId: 'room-e',
-      color: 'white',
-      startId: starts[0].id,
-    },
-    // black has NOT selected
-  ];
-  const room = makeRoom('room-e', 'draft960', events);
-  const ctx = makeCtx();
-  const before = room.events.length;
-
-  await resolveStartIfReady(ctx, room);
-
-  assert.equal(
-    room.events.length,
-    before,
-    'no event should be appended while a selection is missing',
-  );
-  assert.equal(room.projection.state.status.type, 'pregame');
-});
-
 // ── expireActiveClock ─────────────────────────────────────────────────────────
 
 test('expireActiveClock: appends clock-expired event and sets correct winner', async () => {
@@ -374,7 +300,7 @@ test('forfeitEngineOnFailure: engine loses instead of freezing PvE indefinitely'
   const engineId = 'python-tier1-v0.9.5';
   const now = Date.now();
   const events: GameEvent[] = [
-    { type: 'room-created', at: now, roomId, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: now, roomId, variant: 'dark-chess' },
     { type: 'seat-assigned', at: now, roomId, clientId: 'human-white', seat: 'white' },
     { type: 'seat-assigned', at: now, roomId, clientId: engineId, seat: 'black' },
     { type: 'clock-started', at: now, roomId, clock: createClock(now, 180_000, 2_000) },
@@ -617,7 +543,7 @@ test('assignSeat: the play lock leaves a signed-out player alone', async () => {
 
 test('buildGameSummary: engine seat forces rated=false even when room.rated=true', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-pve', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-pve', variant: 'dark-chess' },
     {
       type: 'seat-assigned',
       at: 2,
@@ -642,7 +568,7 @@ test('buildGameSummary: engine seat forces rated=false even when room.rated=true
 
 test('buildGameSummary: a guest seat carries its browser device id, an anonymous one none', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-dev', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-dev', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'room-dev', clientId: 'client-w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'room-dev', clientId: 'client-b', seat: 'black' },
     { type: 'seat-resigned', at: 4, roomId: 'room-dev', color: 'white' },
@@ -685,7 +611,7 @@ test('buildGameSummary: a guest seat carries its browser device id, an anonymous
 
 test('buildGameSummary: current first-party engine seat records bot profile identity', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-bot-pve', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-bot-pve', variant: 'dark-chess' },
     {
       type: 'seat-assigned',
       at: 2,
@@ -726,7 +652,6 @@ test('buildGameSummary: explicit PvE bot id wins over engine-id inference', () =
       at: 1,
       roomId: 'room-explicit-bot-pve',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'seat-assigned',
@@ -765,7 +690,6 @@ test('buildGameSummary: historical first-party engine seat records bot profile i
       at: 1,
       roomId: 'room-bot-historical-pve',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'seat-assigned',
@@ -797,7 +721,7 @@ test('buildGameSummary: guest seats force rated=false even when room.rated=true'
   // Account-gate: rated requires durable identity on BOTH seats. Two anonymous
   // guests playing a rated-requested room are recorded casual.
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-pvp', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-pvp', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'room-pvp', clientId: 'human-w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'room-pvp', clientId: 'human-b', seat: 'black' },
     { type: 'seat-resigned', at: 4, roomId: 'room-pvp', color: 'white' },
@@ -815,7 +739,7 @@ test('buildGameSummary: guest seats force rated=false even when room.rated=true'
 
 test('buildGameSummary: two signed-in account seats preserve rated=true', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-acct', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-acct', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'room-acct', clientId: 'client-w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'room-acct', clientId: 'client-b', seat: 'black' },
     { type: 'seat-resigned', at: 4, roomId: 'room-acct', color: 'white' },
@@ -858,7 +782,7 @@ test('buildGameSummary: two signed-in account seats preserve rated=true', () => 
 
 test('buildGameSummary: one guest + one account seat forces rated=false', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-mixed', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-mixed', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'room-mixed', clientId: 'client-w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'room-mixed', clientId: 'guest-b', seat: 'black' },
     { type: 'seat-resigned', at: 4, roomId: 'room-mixed', color: 'white' },
@@ -891,7 +815,7 @@ test('buildGameSummary: one guest + one account seat forces rated=false', () => 
 test('pauseRoomOnShutdown: appends a pause event and freezes the active clock', async () => {
   const startedClock = armedClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-pause', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-pause', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'room-pause', clientId: 'w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'room-pause', clientId: 'b', seat: 'black' },
     { type: 'clock-started', at: 1000, roomId: 'room-pause', clock: startedClock },
@@ -914,7 +838,7 @@ test('pauseRoomOnShutdown: appends a pause event and freezes the active clock', 
 
 test('pauseRoomOnShutdown: no-op when game already finished', async () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-done', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-done', variant: 'dark-chess' },
     { type: 'seat-resigned', at: 2, roomId: 'room-done', color: 'white' },
   ];
   const room = makeRoom('room-done', 'dark-chess', events);
@@ -930,7 +854,7 @@ test('pauseRoomOnShutdown: no-op when game already finished', async () => {
 test('pauseRoomOnShutdown: no-op when already paused (idempotent)', async () => {
   const startedClock = createClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-twice', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-twice', variant: 'dark-chess' },
     { type: 'clock-started', at: 1000, roomId: 'room-twice', clock: startedClock },
   ];
   const room = makeRoom('room-twice', 'dark-chess', events);
@@ -988,7 +912,7 @@ test('scheduleRandomEngineMove: waits for the human seat before engine opens as 
   const roomId = 'room-engine-white-awaits-human';
   const engineId = 'builtin-random-legal';
   const room = makeRoom('room-engine-white-awaits-human', 'dark-chess', [
-    { type: 'room-created', at: 1, roomId, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId, variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId, clientId: engineId, seat: 'white' },
   ]);
   room.mode = 'pve';
@@ -1006,7 +930,7 @@ test('replay: hydrating a room from a pause event reconstructs the paused projec
   // replayGameEvents reconstructs the projection. Same code path as getOrCreateRoom uses.
   const startedClock = armedClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'room-hydrate', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'room-hydrate', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'room-hydrate', clientId: 'w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'room-hydrate', clientId: 'b', seat: 'black' },
     { type: 'clock-started', at: 1000, roomId: 'room-hydrate', clock: startedClock },
@@ -1032,7 +956,7 @@ function makePausedSeatedRoom(id: string): Room {
   // Both players complete their first move so the clock arms (white ticking from
   // t=2000); pause at t=4500 leaves white with 57_500ms. Resume can then rearm.
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: id, clientId: 'white-client', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: id, clientId: 'black-client', seat: 'black' },
     { type: 'clock-started', at: 4, roomId: id, clock: createClock(4, 60_000, 0) },
@@ -1200,7 +1124,7 @@ test('playMove: accepted after resume reactivates the room', async () => {
 
 test('applyOrphanRecoveryIfNeeded: synthesises a pause for a stale playing room', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'orphan-stale', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'orphan-stale', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'orphan-stale', clientId: 'w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'orphan-stale', clientId: 'b', seat: 'black' },
     { type: 'clock-started', at: 4, roomId: 'orphan-stale', clock: createClock(4, 60_000, 0) },
@@ -1244,7 +1168,7 @@ test('applyOrphanRecoveryIfNeeded: leaves a recent playing room alone', () => {
   const startedClock = createClock(1000, 60_000, 0);
   const recentMoveAt = 2000;
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'orphan-fresh', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'orphan-fresh', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'orphan-fresh', clientId: 'w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'orphan-fresh', clientId: 'b', seat: 'black' },
     { type: 'clock-started', at: 1000, roomId: 'orphan-fresh', clock: startedClock },
@@ -1267,7 +1191,7 @@ test('applyOrphanRecoveryIfNeeded: leaves a recent playing room alone', () => {
 test('applyOrphanRecoveryIfNeeded: leaves an already-paused room alone (no double-pause)', () => {
   const startedClock = createClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'orphan-paused', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'orphan-paused', variant: 'dark-chess' },
     { type: 'clock-started', at: 1000, roomId: 'orphan-paused', clock: startedClock },
     { type: 'pause', at: 2000, roomId: 'orphan-paused', reason: 'shutdown' },
   ];
@@ -1279,24 +1203,13 @@ test('applyOrphanRecoveryIfNeeded: leaves an already-paused room alone (no doubl
 
 test('applyOrphanRecoveryIfNeeded: leaves a finished room alone', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'orphan-finished', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'orphan-finished', variant: 'dark-chess' },
     { type: 'seat-resigned', at: 2, roomId: 'orphan-finished', color: 'white' },
   ];
   const now = 2 + 24 * 60 * 60_000; // a day later
   const out = applyOrphanRecoveryIfNeeded(events, now, 300_000);
 
   assert.equal(out, events, 'finished room must not be synth-paused');
-});
-
-test('applyOrphanRecoveryIfNeeded: leaves a pregame room alone', () => {
-  const offer = generateChess960Starts().slice(0, 3);
-  const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'orphan-pregame', variant: 'dark-chess', offer },
-  ];
-  const now = 1 + 60 * 60_000;
-  const out = applyOrphanRecoveryIfNeeded(events, now, 300_000);
-
-  assert.equal(out, events, 'pregame room must not be synth-paused — no clock to freeze');
 });
 
 test('applyOrphanRecoveryIfNeeded: empty events array is a no-op', () => {
@@ -1309,7 +1222,7 @@ test('applyOrphanRecoveryIfNeeded: empty events array is a no-op', () => {
 function makePausedPveRoom(id: string, engineClientId = 'builtin-random-legal'): Room {
   const startedClock = createClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: id, clientId: 'human-w', seat: 'white' },
     // Engine seat held by a server-engine client (recognised by prefix).
     { type: 'seat-assigned', at: 3, roomId: id, clientId: engineClientId, seat: 'black' },
@@ -1338,7 +1251,7 @@ function makePausedPveRoom(id: string, engineClientId = 'builtin-random-legal'):
 function makePausedEveRoom(id: string): Room {
   const startedClock = createClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: id, clientId: 'engine:white', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: id, clientId: 'engine:black', seat: 'black' },
     { type: 'clock-started', at: 1000, roomId: id, clock: startedClock },
@@ -1519,7 +1432,7 @@ test('live-engine-decision artifact records the budget with or without diagnosti
 
 function clockStartedEvents(id: string): GameEvent[] {
   return [
-    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: id, clientId: 'w', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: id, clientId: 'b', seat: 'black' },
     { type: 'clock-started', at: 4, roomId: id, clock: createClock(4, 60_000, 0) },
@@ -1593,7 +1506,7 @@ test('scheduleAbortTimeout: re-running within the same phase preserves the deadl
 
 function move2Events(id: string, whiteClient = 'wc', blackClient = 'bc'): GameEvent[] {
   return [
-    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: id, clientId: whiteClient, seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: id, clientId: blackClient, seat: 'black' },
     { type: 'clock-started', at: 4, roomId: id, clock: createClock(4, 60_000, 0) },

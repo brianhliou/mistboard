@@ -8,18 +8,16 @@
  * declined-vs-cancelled cue, and the per-variant sound dispatch.
  */
 
-import type { Chess960Start, Color, GameEvent, GameSpecId, PlayerView } from '@mistboard/game';
+import type { Color, GameEvent, GameSpecId, PlayerView } from '@mistboard/game';
 import type {
   ConnectedSeats,
   DevViews,
-  DraftOffers,
-  DraftResolvedStartIds,
   PauseReason,
   RoomMode,
   Seat,
   XiangqiFamilyClock,
 } from './live-state.js';
-import { isPlayableSeat, liveState, normalizedOffers, takeRematchCancel } from './live-state.js';
+import { isPlayableSeat, liveState, takeRematchCancel } from './live-state.js';
 import type { ProfileIdentity } from './profile-link.js';
 import {
   createTenantSocketClient,
@@ -45,12 +43,7 @@ type StateFrame = {
   serverAt?: number;
   seat: Seat;
   solo: boolean;
-  offer?: Chess960Start[];
-  offers?: DraftOffers;
-  selections?: Partial<Record<Color, number>>;
   devViews?: DevViews | null;
-  resolvedStartId?: number | null;
-  resolvedStartIds?: DraftResolvedStartIds;
   events?: GameEvent[];
   event?: GameEvent;
   state: PlayerView;
@@ -161,12 +154,7 @@ function applyFullFrame(message: StateFrame): void {
   liveState.lastServerAt = message.serverAt ?? null;
   liveState.seat = message.seat;
   liveState.solo = message.solo;
-  liveState.offer = message.offer ?? [];
-  liveState.offers = normalizedOffers(message.offer ?? [], message.offers);
-  liveState.selections = message.selections ?? {};
   liveState.devViews = message.devViews ?? null;
-  liveState.resolvedStartId = message.resolvedStartId ?? null;
-  liveState.resolvedStartIds = message.resolvedStartIds ?? {};
   liveState.rated = message.rated ?? true;
   liveState.paused = message.paused ?? false;
   liveState.pauseReason = message.pauseReason ?? null;

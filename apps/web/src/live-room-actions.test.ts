@@ -20,10 +20,9 @@ describe('buildPlayAgainRoomRequestBody', () => {
     liveState.pveEngineId = 'builtin-random-legal';
     liveState.state = makeView();
 
-    expect(buildPlayAgainRoomRequestBody({ shouldRequestHiddenDraft960: () => false })).toEqual({
+    expect(buildPlayAgainRoomRequestBody()).toEqual({
       mode: 'pve',
       variant: 'dark-chess',
-      hiddenDraft960: false,
       engineId: 'builtin-random-legal',
       preferredColor: 'black',
     });
@@ -34,10 +33,9 @@ describe('buildPlayAgainRoomRequestBody', () => {
     liveState.seat = 'black';
     liveState.state = makeView();
 
-    expect(buildPlayAgainRoomRequestBody({ shouldRequestHiddenDraft960: () => false })).toEqual({
+    expect(buildPlayAgainRoomRequestBody()).toEqual({
       mode: 'pve',
       variant: 'dark-chess',
-      hiddenDraft960: false,
       preferredColor: 'white',
     });
   });
@@ -47,10 +45,9 @@ describe('buildPlayAgainRoomRequestBody', () => {
     liveState.seat = 'spectator';
     liveState.state = makeView();
 
-    expect(buildPlayAgainRoomRequestBody({ shouldRequestHiddenDraft960: () => false })).toEqual({
+    expect(buildPlayAgainRoomRequestBody()).toEqual({
       mode: 'pve',
       variant: 'dark-chess',
-      hiddenDraft960: false,
     });
   });
 
@@ -61,10 +58,9 @@ describe('buildPlayAgainRoomRequestBody', () => {
     liveState.state = makeView();
     liveState.timeControl = { initialMs: 60_000, incrementMs: 1_000 };
 
-    expect(buildPlayAgainRoomRequestBody({ shouldRequestHiddenDraft960: () => false })).toEqual({
+    expect(buildPlayAgainRoomRequestBody()).toEqual({
       mode: 'pve',
       variant: 'dark-chess',
-      hiddenDraft960: false,
       engineId: 'python-v2-v1.0',
       preferredColor: 'black',
       timeControl: { initialMs: 60_000, incrementMs: 1_000 },

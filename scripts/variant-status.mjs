@@ -289,7 +289,7 @@ async function main() {
       last = row.status;
     }
     // This counts entries in the WEB TENANT registry only. It structurally cannot
-    // see the chess-stack path (dark-chess, dark-draft960) or a server-side route
+    // see the chess-stack path (dark-chess) or a server-side route
     // default like Misty DXQ on dark-xiangqi, so a blank here is 'none in the
     // tenant registry', never 'no bot'. --prod is the only honest answer.
     const tenantBots = row.bots > 0 ? `${row.bots} tenant bot${row.bots === 1 ? '' : 's'}` : '';

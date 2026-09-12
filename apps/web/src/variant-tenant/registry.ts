@@ -63,7 +63,6 @@ export type WebTenantLandingConfig = {
     secondGlyph: string;
     secondLabel: string;
     supportsRated: boolean;
-    supportsStartFormat: boolean;
     supportsTimeControl: boolean;
   };
   // Casual time-control presets the picker offers (rated is globally 3+2).
@@ -224,7 +223,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         // server's MISTBOARD_RATED_ENABLED mirror flips it on for signed-in
         // players; games are account-gated again at game end.
         supportsRated: true,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       // Deliberate ladder: guests flagged 36% of xiangqi games at 3+2 (n=22,
@@ -333,7 +331,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
         supportsRated: false,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       engineOptions: [
@@ -390,7 +387,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         // setup dialog excludes mode === 'pve' and friend links set ratedDisabled,
         // so this opens rated MATCHMAKING for signed-in players and nothing else.
         supportsRated: true,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       // Deliberate ladder: the worst surface measured. Guests flagged 32% of
@@ -458,7 +454,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondGlyph: '2',
         secondLabel: 'Second',
         supportsRated: false,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -518,7 +513,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondGlyph: '象',
         secondLabel: 'Blue',
         supportsRated: false,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -581,7 +575,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondGlyph: '2',
         secondLabel: 'Second',
         supportsRated: false,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -636,7 +629,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
         supportsRated: false,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -691,7 +683,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
         supportsRated: false,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       // 1+1 is omitted; every other xiangqi tenant offers all four.
@@ -758,7 +749,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondLabel: 'South',
         neutralGlyphColor: true,
         supportsRated: false,
-        supportsStartFormat: false,
         supportsTimeControl: true,
       },
       timePresetIds: ['5m5', '10m5'],

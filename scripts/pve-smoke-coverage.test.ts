@@ -21,9 +21,6 @@ import { VARIANT_SMOKE_CONFIGS } from './lib/variant-smoke-configs.mjs';
 const EXEMPT: Readonly<Record<string, string>> = {
   // Covered by prod:smoke:engines, which plays the fog-chess engine directly.
   'dark-chess': 'prod:smoke:engines',
-  // Same engine and same code path as dark-chess; Draft960 is a pregame option
-  // inside Fog of War, not a separate surface.
-  'dark-draft960': 'prod:smoke:engines (same engine and path as dark-chess)',
 };
 
 function pveGameSpecIds(): string[] {

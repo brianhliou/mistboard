@@ -1,4 +1,4 @@
-import { DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID, gameSpecForId } from '@mistboard/game';
+import { DARK_CHESS_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   classifyTimeControl,
@@ -49,27 +49,6 @@ describe('gameSpecAnalyticsProps', () => {
       visibility: spec.visibility,
       rating_pool: spec.ratingPoolBase,
     });
-  });
-
-  it('maps hidden Draft960 to structured analytics fields', () => {
-    const spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
-
-    expect(gameSpecAnalyticsProps({ variant: 'dark-chess', hiddenDraft960: true })).toEqual({
-      game_spec: spec.id,
-      family: spec.family,
-      setup: spec.setup,
-      visibility: spec.visibility,
-      rating_pool: spec.ratingPoolBase,
-    });
-  });
-
-  it('maps legacy and canonical Draft960 aliases to the canonical spec', () => {
-    expect(gameSpecAnalyticsProps({ variant: 'fog-draft960' }).game_spec).toBe(
-      DARK_DRAFT960_SPEC_ID,
-    );
-    expect(gameSpecAnalyticsProps({ variant: 'dark-draft960' }).game_spec).toBe(
-      DARK_DRAFT960_SPEC_ID,
-    );
   });
 });
 
@@ -170,14 +149,11 @@ describe('roomModeAnalyticsProps', () => {
 });
 
 describe('reviewOpenedProps', () => {
-  it('strips ids from the route but keeps variant slugs, including ones with digits', () => {
+  it('strips ids from the route but keeps variant slugs', () => {
     expect(reviewRouteForAnalytics('/xiangqi/games/hxq_fbd5991a8240047ccb2f9145')).toBe(
       '/xiangqi/games/:id',
     );
     expect(reviewRouteForAnalytics('/game/b8054d34')).toBe('/game/:id');
-    expect(reviewRouteForAnalytics(`/${DARK_DRAFT960_SPEC_ID}/game/abc123`)).toBe(
-      `/${DARK_DRAFT960_SPEC_ID}/game/:id`,
-    );
   });
 
   it('resolves the variant from the route and classifies the referrer', () => {

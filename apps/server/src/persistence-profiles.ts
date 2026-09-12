@@ -37,10 +37,8 @@ import {
 // LIST (the Games tab filter) are the same expression: if they disagreed, a rail
 // row would advertise "3 games" over a list that showed a different set.
 //
-// It has to be SQL rather than the TS ratingPoolForSpec because the mapping
-// depends on columns, not just the id: a dark-chess row with hidden_draft960 is
-// a fog_draft960 game. It also absorbs pre-rename variant strings ('fog',
-// 'draft960') that never became GameSpecAliasIds.
+// It has to be SQL rather than the TS ratingPoolForSpec because it also
+// absorbs the pre-rename variant string 'fog' that never became a spec id.
 const RATING_POOL_FROM_GAME_SQL = `CASE
          WHEN games.variant = 'dark-xiangqi' THEN 'dark_xiangqi'
          WHEN games.variant = 'jieqi' THEN 'jieqi'
@@ -50,15 +48,13 @@ const RATING_POOL_FROM_GAME_SQL = `CASE
          WHEN games.variant = 'xiangqi' THEN 'xiangqi'
          WHEN games.variant = 'fortress-xiangqi' THEN 'fortress_xiangqi'
          WHEN games.variant = 'duck-xiangqi' THEN 'duck_xiangqi'
-         WHEN games.variant IN ('draft960', 'dark-draft960', 'fog-draft960')
-              OR COALESCE(games.hidden_draft960, false) THEN 'fog_draft960'
          ELSE 'fog'
        END`;
 
 // The stored variant strings the pool mapping above is defined over. Anything
 // outside this set has no pool, so it is excluded rather than falling into the
 // CASE's 'fog' default.
-const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi')`;
+const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi')`;
 
 export type UpdateUserProfileResult =
   | { ok: true; user: UserAccount }
@@ -371,8 +367,8 @@ async function queryUserGames(
   offset: number,
   limit: number,
   // Rating pool to scope the history to, or null for every variant. Compared
-  // against the stored spec ids AND their legacy aliases, so a pool's older
-  // rows ('fog-draft960') are not silently dropped from its own history.
+  // against the stored spec ids AND their legacy spellings, so a pool's older
+  // rows ('fog') are not silently dropped from its own history.
   ratingVariant: RatingVariant | null = null,
 ): Promise<{ games: ProfileGameRecord[]; total: number }> {
   const { rows } = await getPool().query<{
@@ -634,14 +630,13 @@ export async function getUserRatingHistory(
   const { rows } = await getPool().query<{
     room_id: string;
     variant: string;
-    hidden_draft960: boolean | null;
     initial_ms: number | null;
     increment_ms: number | null;
     ended_at: Date;
     elo_before: number;
     elo_after: number;
   }>(
-    `SELECT games.room_id, games.variant, games.hidden_draft960,
+    `SELECT games.room_id, games.variant,
             games.initial_ms, games.increment_ms, games.ended_at,
             game_participants.elo_before, game_participants.elo_after
      FROM game_participants
@@ -664,7 +659,6 @@ export async function getUserRatingHistory(
         variant: row.variant,
         initialMs: row.initial_ms,
         incrementMs: row.increment_ms,
-        hiddenDraft960: row.hidden_draft960,
       });
       return bucket?.variant === variant && bucket.timeClass === timeClass;
     })

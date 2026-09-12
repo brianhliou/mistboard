@@ -172,7 +172,6 @@ export function roomFixture({
     forfeitTimer: null,
     gameEndRecorded: false,
     gameSpecId: roomProjection.gameSpecId,
-    hiddenDraft960: false,
     id: roomId,
     mode: 'pvp',
     pauseGraceTimer: null,

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID } from '@mistboard/game';
+import { DARK_CHESS_SPEC_ID } from '@mistboard/game';
 // Watch channels (other than the hardcoded dark-chess default) derive from the
 // variant-tenant registry, so the registrations must be populated for the
 // derived channels to appear. This side-effect import registers every tenant.
@@ -34,8 +34,8 @@ test('Fog Chess stays a launched variant channel, just not the default', () => {
   assert.ok(channel);
   assert.equal(channel.default, false);
   assert.equal(channel.label, 'Fog Chess');
-  assert.deepEqual(channel.gameSpecIds, [DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID]);
-  assert.deepEqual(channel.legacyVariants, ['dark-chess', 'draft960']);
+  assert.deepEqual(channel.gameSpecIds, [DARK_CHESS_SPEC_ID]);
+  assert.deepEqual(channel.legacyVariants, ['dark-chess']);
 });
 
 test('watch channel lookup defaults empty input and rejects unknown channels', () => {

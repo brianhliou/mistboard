@@ -36,10 +36,9 @@ const RETIRED_RULES_SLUGS = new Set([
   'drop-mini-xiangqi',
   'kriegspiel',
   'mini-xiangqi',
+  'dark-draft960',
   'reveal-chess',
   'shogi',
-  // retired, code still present
-  'dark-draft960',
 ]);
 
 /** A rules page whose variant is retired: served as 410 Gone. */
@@ -151,12 +150,6 @@ export const ARTICLE_META: Record<
     kind: 'article',
     description:
       'A complete Fog of War chess opening system built on 1.c4 and 2.Qa4, measured across 899 games. The queen doubles as a sensor and sometimes captures the king on move three. Which Black replies hold, which collapse, and where the system stops working.',
-  },
-  'dark-draft960': {
-    title: 'Dark Draft960',
-    kind: 'rules',
-    description:
-      "Fog Chess with a sealed opening draft: each player picks one of three Chess960 back ranks and never sees the other's.",
   },
   xiangqi: {
     title: 'Xiangqi Rules',

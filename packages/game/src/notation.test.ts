@@ -108,7 +108,7 @@ test('labels consecutive visible moves after redacted opponent moves', () => {
     { from: 'f1', to: 'e1' },
   ];
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId, variant: 'dark-chess' },
     ...moves.map((move, index) => ({
       type: 'move-played' as const,
       at: index + 2,

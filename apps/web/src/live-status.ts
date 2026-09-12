@@ -62,15 +62,6 @@ export function actionTitle(view: PlayerView | null): string {
   if (view.status.type === 'finished') return finishedTitle(view.status.winner);
   if (view.status.type === 'aborted') return t('live.statusGameAborted');
   if (liveState.seat === 'spectator') return t('live.statusWatching');
-  if (view.status.type === 'pregame') {
-    if (liveState.roomMode === 'pvp' && isColor(liveState.seat)) {
-      const theirSeat: Color = liveState.seat === 'white' ? 'black' : 'white';
-      if (liveState.connectedSeats[theirSeat]) return t('live.statusOpponentConnected');
-    }
-    return liveState.roomMode === 'pvp'
-      ? t('live.statusWaitingForOpponent')
-      : t('live.statusPreparingGame');
-  }
   if (view.status.type === 'playing' && view.status.turn === pveEngineSeat())
     return t('live.statusEngineThinking');
   if (view.status.type === 'playing' && view.status.turn === liveState.seat)
@@ -80,10 +71,7 @@ export function actionTitle(view: PlayerView | null): string {
   return t('live.statusOpponentMove');
 }
 
-export function actionBody(
-  view: PlayerView | null,
-  options: { hasVisibleDraftData: boolean },
-): string {
+export function actionBody(view: PlayerView | null): string {
   if (connectionNoticeMode() === 'banner') {
     if (liveState.connectionState === 'rejected') return rejectedBody();
     if (liveState.connectionState === 'displaced') return t('live.bodyDisplaced');
@@ -99,18 +87,6 @@ export function actionBody(
     return t('live.bodyAborted');
   }
   if (liveState.seat === 'spectator') return spectatorBody(view);
-  if (view.status.type === 'pregame') {
-    if (liveState.roomMode === 'pvp' && isColor(liveState.seat)) {
-      const theirSeat: Color = liveState.seat === 'white' ? 'black' : 'white';
-      if (liveState.connectedSeats[theirSeat]) {
-        return options.hasVisibleDraftData
-          ? t('live.bodyChooseStartingPosition')
-          : t('live.bodyBothConnected');
-      }
-      return t('live.bodyShareInvite');
-    }
-    return t('live.bodyShareRoomLink');
-  }
   if (view.status.type === 'playing' && view.status.turn === pveEngineSeat()) {
     return t('live.bodyEngineClock');
   }

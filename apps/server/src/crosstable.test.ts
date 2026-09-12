@@ -253,7 +253,6 @@ test('crosstable outcome: chess results map on the seat directly', () => {
 
 test('crosstable review url: chess stack, tenant room, legacy room id, unknown variant', () => {
   assert.equal(crosstableReviewUrl('room-1', 'dark-chess', LOOKUP), '/game/room-1');
-  assert.equal(crosstableReviewUrl('room-2', 'dark-draft960', LOOKUP), '/game/room-2');
   assert.equal(crosstableReviewUrl('room-3', 'fog', LOOKUP), '/game/room-3');
   // Dark-chess correspondence: a registered prefix with no route base still
   // reviews at the chess stack's /game/:id.

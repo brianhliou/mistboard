@@ -8,13 +8,10 @@ import { buildLiveRoomChat } from './review/spectator-chat.js';
 import { buildNav } from './site-shell.js';
 
 export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | null): void {
-  // The chess stack (fog chess / Draft960) has no tenant route class; give it
+  // The chess stack (fog chess) has no tenant route class; give it
   // one so it can carry uniboard tokens (aspect / capture-strip chrome) like
   // every other variant.
-  target.classList.toggle(
-    'live-route--chess',
-    gameSpecId === null || gameSpecId === 'dark-chess' || gameSpecId === 'dark-draft960',
-  );
+  target.classList.toggle('live-route--chess', gameSpecId === null || gameSpecId === 'dark-chess');
   target.classList.toggle(
     'live-route--xiangqi',
     gameSpecId === 'dark-xiangqi' || gameSpecId === 'xiangqi',
@@ -52,14 +49,6 @@ export function createLiveLayout(
             <section class="panel-section">
               <div data-game-info></div>
             </section>
-            <section data-offer-section class="panel-section">
-              <h2>Dark Draft960 Offer</h2>
-              <div data-starts class="starts"></div>
-            </section>
-            <section data-selection-section class="panel-section">
-              <h2>Selections</h2>
-              <div data-selections class="selection-list"></div>
-            </section>
             <div data-live-room-chat></div>
           </aside>
           <div class="review-shell__center">
@@ -78,7 +67,6 @@ export function createLiveLayout(
                   <span data-board-paused-body>Server is restarting — your game will resume shortly</span>
                 </div>
               </div>
-              <div data-draft-picker class="draft-picker" hidden></div>
               <div data-promotion class="promotion-picker" hidden></div>
             </div>
           </div>
@@ -142,12 +130,7 @@ export function createLiveLayout(
   } = gameTable.refs;
   const devViewsSection = target.querySelector<HTMLElement>('[data-dev-views-section]');
   const devViewsPanel = target.querySelector<HTMLDivElement>('[data-dev-views]');
-  const offerSection = target.querySelector<HTMLElement>('[data-offer-section]');
-  const draftPicker = target.querySelector<HTMLDivElement>('[data-draft-picker]');
   const promotion = target.querySelector<HTMLDivElement>('[data-promotion]');
-  const selectionSection = target.querySelector<HTMLElement>('[data-selection-section]');
-  const starts = target.querySelector<HTMLDivElement>('[data-starts]');
-  const selectionList = target.querySelector<HTMLDivElement>('[data-selections]');
   if (
     !roomMeta ||
     !gameInfo ||
@@ -156,12 +139,7 @@ export function createLiveLayout(
     !boardStatus ||
     !devViewsSection ||
     !devViewsPanel ||
-    !offerSection ||
-    !draftPicker ||
-    !promotion ||
-    !selectionSection ||
-    !starts ||
-    !selectionList
+    !promotion
   ) {
     throw new Error('missing app region');
   }
@@ -173,7 +151,6 @@ export function createLiveLayout(
     clockBottom,
     clockNote,
     clockTop,
-    draftPicker,
     actionSection,
     actionStatus,
     capturesBottom,
@@ -183,17 +160,13 @@ export function createLiveLayout(
     gameInfo,
     hiddenPool,
     moveList,
-    offerSection,
     playerBottom,
     playerTop,
     promotion,
     replayControls,
     replayMeta,
     roomActions,
-    selectionSection,
     roomMeta,
-    selectionList,
-    starts,
     gameControls,
     gameControlsSection,
   };

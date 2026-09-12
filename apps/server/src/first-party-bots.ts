@@ -74,7 +74,6 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     displayName: 'Misty',
     engines: {
       'dark-chess': MISTY_DARK_CHESS_ACTIVE_ENGINE_ID,
-      'dark-draft960': MISTY_DARK_CHESS_ACTIVE_ENGINE_ID,
       'dark-xiangqi': 'python-fdx-v1.2',
       banqi: 'misty-banqi',
       jungle: 'misty-jungle-level-2',

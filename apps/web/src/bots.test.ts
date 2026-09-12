@@ -25,7 +25,7 @@ function misty(overrides: Record<string, unknown> = {}): Record<string, unknown>
     ownerUserId: null,
     activeEngineId: 'python-v2-v1.5',
     defaultGameSpecId: 'dark-chess',
-    supportedGameSpecIds: ['dark-chess', 'dark-draft960', 'banqi'],
+    supportedGameSpecIds: ['dark-chess', 'banqi'],
     play: {
       mode: 'pve',
       gameSpecId: 'dark-chess',
@@ -35,7 +35,6 @@ function misty(overrides: Record<string, unknown> = {}): Record<string, unknown>
     },
     playOptions: [
       { gameSpecId: 'dark-chess', engineId: 'python-v2-v1.5', playable: true },
-      { gameSpecId: 'dark-draft960', engineId: 'python-v2-v1.5', playable: true },
       { gameSpecId: 'banqi', engineId: 'misty-banqi', playable: true },
     ],
     gamesTotal: 12,
@@ -175,9 +174,6 @@ describe('bot pages', () => {
       expect(card.querySelector('.profile-summary-card-actions')).not.toBeNull();
       expect(card.querySelector('.profile-summary-card-footer')).not.toBeNull();
     }
-
-    // dark-draft960 stays hidden as a separate chip.
-    expect(root.textContent).not.toContain('Draft960');
   });
 
   it('shows the xiangqi blitz rating per FSF card, dash and ?-suffix included', async () => {

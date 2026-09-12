@@ -18,9 +18,7 @@ function makeFinishedRoom(id: string): Room {
   // Forge a minimal finished projection. Easiest path: start a fog-of-war room
   // and synthesise the events for a fool's-mate-like resignation outcome via
   // status mutation after construction (room.projection is mutable in tests).
-  const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: id, variant: 'dark-chess', offer: [] },
-  ];
+  const events: GameEvent[] = [{ type: 'room-created', at: 1, roomId: id, variant: 'dark-chess' }];
   const projection = replayGameEvents(events);
   projection.state.status = { type: 'finished', winner: 'white', reason: 'resignation' };
   projection.seats = { white: 'white-client', black: 'black-client' };
@@ -50,7 +48,6 @@ function makeFinishedRoom(id: string): Room {
     pendingWrites: Promise.resolve(),
     gameEndRecorded: true,
     variant: 'dark-chess',
-    hiddenDraft960: false,
     timeControl: undefined,
     rematch: { offers: {} },
     pendingVacates: {},

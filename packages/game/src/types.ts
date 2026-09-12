@@ -1,6 +1,6 @@
 export type Color = 'white' | 'black';
 
-export type VariantId = 'dark-chess' | 'draft960';
+export type VariantId = 'dark-chess' | 'chess';
 
 export type Square =
   | 'a1'
@@ -127,7 +127,6 @@ export function isAbortReason(value: unknown): value is AbortReason {
 }
 
 export type GameStatus =
-  | { type: 'pregame' }
   | { type: 'playing'; turn: Color }
   | { type: 'finished'; winner: Color | null; reason: GameEndReason }
   | { type: 'aborted'; reason: AbortReason };

@@ -46,10 +46,7 @@ async function seed(games: SeedGame[]): Promise<void> {
       if (g.withEvent !== false) {
         await client.query(
           `INSERT INTO events (room_id, seq, type, payload) VALUES ($1, 0, 'room-created', $2)`,
-          [
-            g.roomId,
-            { type: 'room-created', at: g.endedAt.getTime(), roomId: g.roomId, variant, offer: [] },
-          ],
+          [g.roomId, { type: 'room-created', at: g.endedAt.getTime(), roomId: g.roomId, variant }],
         );
       }
     }
@@ -308,7 +305,7 @@ definePersistenceTests('showcase + browse queries', () => {
         termination: 'king-captured',
         plyCount: 44,
         endedAt: t(5),
-        variant: 'draft960',
+        variant: 'no-such-variant',
         withEvent: false,
       },
     ]);
@@ -322,7 +319,7 @@ definePersistenceTests('showcase + browse queries', () => {
     assert.equal(
       page.total,
       4,
-      '4 dark-chess; the draft960 game is excluded by the variant filter',
+      '4 dark-chess; the unknown-variant game is excluded by the variant filter',
     );
 
     const agg = await gameAggregates({ variant: 'dark-chess' });

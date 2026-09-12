@@ -115,11 +115,7 @@ function replayStartAt(events: GameEvent[]): number | null {
   let startedAt: number | null = null;
   for (const event of events) {
     if (event.type === 'move-played') break;
-    if (
-      event.type === 'clock-started' ||
-      event.type === 'draft-start-resolved' ||
-      event.type === 'room-created'
-    ) {
+    if (event.type === 'clock-started' || event.type === 'room-created') {
       startedAt = event.at;
     }
   }

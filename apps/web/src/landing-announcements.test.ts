@@ -41,21 +41,10 @@ describe('landing announcements', () => {
     expect(hrefs).toEqual(expected);
   });
 
-  it('keeps parked and gated variant launches out of the homepage News rail', () => {
-    vi.stubEnv('DEV', false);
-
-    const panel = buildLandingAnnouncements();
-    const hrefs = new Set(
-      [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')].map((row) =>
-        row.getAttribute('href'),
-      ),
-    );
-  });
-
   it('uses the same variant flag for the homepage News rail and /feed archive', () => {
     vi.stubEnv('DEV', false);
 
-    expect(variantPublicSurfaceEnabled('dark-draft960')).toBe(false);
+    expect(variantPublicSurfaceEnabled('mahjong')).toBe(false);
 
     const landing = buildLandingAnnouncements();
     const news = buildNewsPage();

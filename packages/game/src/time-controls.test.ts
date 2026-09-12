@@ -196,9 +196,6 @@ test('the live allowlist rejects correspondence time controls', () => {
 test('the engine pin scopes fog bot games to 5+5', () => {
   const pin = engineTimeControlPin('dark-chess');
   assert.equal(pin?.id, '5m5');
-  // Draft960 is the same engine on a shuffled back rank, so it shares the pin
-  // rather than becoming the way around it.
-  assert.equal(engineTimeControlPin('dark-draft960')?.id, '5m5');
   // Fog xiangqi runs its own belief stack, pinned on the shared-mechanism
   // argument rather than its own measured flag.
   assert.equal(engineTimeControlPin('dark-xiangqi')?.id, '5m5');
@@ -209,10 +206,6 @@ test('the engine pin scopes fog bot games to 5+5', () => {
   );
   assert.equal(
     isAllowedEngineTimeControl('dark-chess', { initialMs: 180_000, incrementMs: 2_000 }),
-    false,
-  );
-  assert.equal(
-    isAllowedEngineTimeControl('dark-draft960', { initialMs: 60_000, incrementMs: 1_000 }),
     false,
   );
   assert.equal(

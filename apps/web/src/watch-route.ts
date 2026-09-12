@@ -1769,7 +1769,7 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
 
 // The shared variant marker for each watch channel, so the TV rail reads in
 // the same icon language as the picker, rules rail, leaderboard, and profile.
-// Channel ids match VariantMiniId ids; the dark-chess channel (which also carries dark-draft960 games) shows the
+// Channel ids match VariantMiniId ids; the dark-chess channel shows the
 // dark-chess marker. An unmapped channel keeps its (empty) marker slot so the
 // rows stay grid-aligned.
 const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {

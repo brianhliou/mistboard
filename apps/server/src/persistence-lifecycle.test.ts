@@ -30,14 +30,12 @@ definePersistenceTests('lifecycle', () => {
       at: now.getTime(),
       roomId: 'active-room',
       variant: 'dark-chess',
-      offer: [],
     });
     await appendEvent('finished-room', 0, {
       type: 'room-created',
       at: now.getTime(),
       roomId: 'finished-room',
       variant: 'dark-chess',
-      offer: [],
     });
     await recordGameEnd('finished-room', {
       variant: 'dark-chess',
@@ -66,7 +64,6 @@ definePersistenceTests('lifecycle', () => {
       at: now.getTime(),
       roomId: 'running-room',
       variant: 'dark-chess',
-      offer: [],
     });
 
     const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
@@ -148,7 +145,6 @@ definePersistenceTests('lifecycle', () => {
       at: startedAt.getTime(),
       roomId: 'audit-room',
       variant: 'dark-chess',
-      offer: [],
     });
     await appendEvent('audit-room', 1, {
       type: 'pause',
@@ -240,28 +236,24 @@ definePersistenceTests('lifecycle', () => {
             at: stale.getTime(),
             roomId: 'stale-guest-prestart',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'room-created',
             at: fresh.getTime(),
             roomId: 'fresh-guest-prestart',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'room-created',
             at: stale.getTime(),
             roomId: 'stale-signed-in-prestart',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'room-created',
             at: stale.getTime(),
             roomId: 'stale-started-clock',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'clock-started',
@@ -280,7 +272,6 @@ definePersistenceTests('lifecycle', () => {
             at: stale.getTime(),
             roomId: 'stale-started-move',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'move-played',
@@ -294,7 +285,6 @@ definePersistenceTests('lifecycle', () => {
             at: stale.getTime(),
             roomId: 'stale-correspondence',
             variant: 'dark-chess',
-            offer: [],
           },
         ],
       );
@@ -409,7 +399,6 @@ definePersistenceTests('lifecycle', () => {
             at: startedAt.getTime(),
             roomId: 'stale-paused-pvp',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'move-played',
@@ -431,7 +420,6 @@ definePersistenceTests('lifecycle', () => {
             at: startedAt.getTime(),
             roomId: 'stale-paused-then-resumed',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'pause',
@@ -450,7 +438,6 @@ definePersistenceTests('lifecycle', () => {
             at: startedAt.getTime(),
             roomId: 'fresh-paused',
             variant: 'dark-chess',
-            offer: [],
           },
           { type: 'pause', at: freshPauseAt, roomId: 'fresh-paused', reason: 'shutdown' },
           {
@@ -458,7 +445,6 @@ definePersistenceTests('lifecycle', () => {
             at: startedAt.getTime(),
             roomId: 'running-no-pause',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'move-played',
@@ -472,7 +458,6 @@ definePersistenceTests('lifecycle', () => {
             at: startedAt.getTime(),
             roomId: 'stale-paused-already-completed',
             variant: 'dark-chess',
-            offer: [],
           },
           {
             type: 'pause',

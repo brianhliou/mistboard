@@ -56,7 +56,7 @@ function uciToMove(uci: string): Move {
 
 function buildEvents(): GameEvent[] {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 0, roomId: ROOM_ID, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 0, roomId: ROOM_ID, variant: 'dark-chess' },
   ];
   (DATA.uci as string[]).forEach((uci, i) => {
     events.push({

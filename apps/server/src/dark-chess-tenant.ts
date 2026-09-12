@@ -13,9 +13,6 @@
  *
  * Capability boundaries (per the P2 decision table in
  * docs-private/variant-generalization-track.md):
- * - Draft960 pregame is NOT lifted (Brian, 2026-06-11): draft logs fail closed
- *   here (their room-created gameSpecId is 'dark-draft960', which this tenant
- *   does not accept), and the live stack keeps the draft machinery unchanged.
  * - Pause/resume is NOT lifted: pause/resume events are rejected by the tenant
  *   event union, which is correct for tenant rooms (no live-clock fairness
  *   problem to solve) and keeps hydration of legacy paused rooms on the legacy
@@ -63,12 +60,10 @@ import type {
 // and never route here.
 export const DARK_CHESS_TENANT_ROOM_ID_PREFIX = 'dchx_';
 
-// GameState with the status union narrowed to the tenant slice. Sound because
-// the tenant event union cannot produce a draft pregame: a 'pregame' status
-// only ever arises from a room-created event carrying draft offers, and such
-// logs are rejected by this tenant's gameSpecId validation.
+// GameState as the tenant slice sees it. The status union used to be narrowed
+// away from the Draft960 pregame; that phase is gone (2026-09-12, #396).
 export type DarkChessTenantState = Omit<GameState, 'status'> & {
-  status: Exclude<GameStatus, { type: 'pregame' }>;
+  status: GameStatus;
 };
 
 export type DarkChessTenant = VariantTenant<

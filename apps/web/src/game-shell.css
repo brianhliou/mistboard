@@ -243,7 +243,6 @@
 
 .game-info,
 .action-status,
-.selection-list,
 .clocks {
   display: grid;
   gap: 6px;
@@ -348,7 +347,6 @@
 }
 
 .game-info div,
-.selection-list div,
 .clocks div {
   display: grid;
   grid-template-columns: minmax(72px, 0.8fr) minmax(0, 1fr);
@@ -359,13 +357,11 @@
 }
 
 .game-info span,
-.selection-list span,
 .clocks span {
   font-size: 13px;
 }
 
-.game-info strong,
-.selection-list strong {
+.game-info strong {
   overflow-wrap: anywhere;
   color: var(--site-heading);
   font-size: 14px;
@@ -373,7 +369,7 @@
 }
 
 /* Spec-sheet treatment: muted uppercase labels, right-aligned values.
-   Scoped to .game-info so .clocks and .selection-list keep their layout. */
+   Scoped to .game-info so .clocks keeps its layout. */
 .game-info div {
   grid-template-columns: auto 1fr;
   gap: 12px;
@@ -544,107 +540,6 @@
   50% {
     opacity: 0.4;
   }
-}
-
-/* ── Draft960 pick overlay ───────────────────────────────────────────────── */
-
-.draft-picker {
-  position: absolute;
-  inset: 0;
-  z-index: 2;
-  background: rgba(16, 22, 18, 0.93);
-  display: flex;
-  align-items: center;
-  justify-content: center;
-}
-
-.draft-picker[hidden] {
-  display: none;
-}
-
-.draft-picker-inner {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 24px;
-}
-
-.draft-picker-heading {
-  color: #c8d4cc;
-  font-size: 0.8rem;
-  letter-spacing: 0.1em;
-  text-transform: uppercase;
-  margin: 0;
-  font-weight: 500;
-}
-
-.draft-picker-boards {
-  display: flex;
-  gap: 14px;
-  align-items: flex-start;
-}
-
-.draft-pick-board {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 8px;
-  background: transparent;
-  border: 2px solid rgba(200, 212, 204, 0.12);
-  border-radius: var(--site-radius-sm);
-  padding: 8px 8px 10px;
-  cursor: pointer;
-  transition:
-    border-color 0.12s,
-    background 0.12s;
-}
-
-.draft-pick-board:hover {
-  border-color: rgba(200, 212, 204, 0.35);
-  background: rgba(200, 212, 204, 0.04);
-}
-
-.draft-pick-board.selected {
-  border-color: #2f9e6e;
-  background: rgba(47, 158, 110, 0.08);
-}
-
-.draft-pick-board svg {
-  display: block;
-  border-radius: 2px;
-}
-
-.draft-pick-label {
-  color: #7a8f83;
-  font-size: 0.72rem;
-  letter-spacing: 0.12em;
-  text-transform: uppercase;
-  font-weight: 600;
-}
-
-.draft-pick-board.selected .draft-pick-label {
-  color: #2f9e6e;
-}
-
-.draft-picker-waiting {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 20px;
-  padding: 24px;
-}
-
-.draft-picker-waiting-board svg {
-  display: block;
-  border-radius: 2px;
-  opacity: 0.75;
-}
-
-.draft-picker-waiting-label {
-  color: #7a8f83;
-  font-size: 0.85rem;
-  margin: 0;
 }
 
 /* In-game controls (Abort / Resign): one row of small centered buttons
@@ -825,11 +720,6 @@
 .clock-player-line.active .clock-to-move {
   visibility: visible;
   opacity: 1;
-}
-
-.starts {
-  display: grid;
-  gap: 10px;
 }
 
 .room-actions {
@@ -1076,118 +966,6 @@
   color: #ffffff;
 }
 
-.start-row {
-  display: grid;
-  gap: 8px;
-}
-
-.start-group {
-  display: grid;
-  gap: 8px;
-}
-
-.start-group h3 {
-  margin: 0;
-  color: var(--site-muted);
-  font-size: 12px;
-  font-weight: 700;
-  line-height: 1.2;
-  text-transform: uppercase;
-}
-
-.start-card,
-.solo-picks button {
-  display: grid;
-  gap: 4px;
-  width: 100%;
-  border: 1px solid var(--site-border);
-  border-radius: var(--site-radius-sm);
-  background: var(--site-panel);
-  color: var(--site-text);
-  padding: 12px;
-  text-align: left;
-  cursor: pointer;
-}
-
-.start-card {
-  min-height: 72px;
-}
-
-.start-card strong {
-  font-size: 17px;
-  line-height: 1.1;
-}
-
-.solo-picks {
-  display: grid;
-  grid-template-columns: 1fr 1fr;
-  gap: 8px;
-}
-
-.solo-picks button {
-  justify-items: center;
-  padding: 8px;
-  min-height: 40px;
-}
-
-.starts button:hover:not(:disabled) {
-  border-color: var(--site-accent);
-}
-
-.starts button:disabled {
-  cursor: default;
-  opacity: 0.68;
-}
-
-.starts button.selected {
-  border-color: var(--site-accent);
-  box-shadow: inset 4px 0 0 var(--site-accent);
-}
-
-.starts button.resolved {
-  border-color: #254d7a;
-  box-shadow: inset 4px 0 0 #254d7a;
-}
-
-.starts span {
-  color: var(--site-muted);
-  letter-spacing: 0.08em;
-}
-
-.bid-controls {
-  display: grid;
-  grid-template-columns: minmax(0, 1fr) auto;
-  gap: 8px;
-}
-
-.bid-controls input,
-.bid-controls button {
-  min-height: 38px;
-  border: 1px solid var(--site-border);
-  border-radius: var(--site-radius-sm);
-  background: var(--site-panel);
-  color: var(--site-text);
-}
-
-.bid-controls input {
-  min-width: 0;
-  padding: 8px 10px;
-}
-
-.bid-controls button {
-  padding: 8px 12px;
-  cursor: pointer;
-}
-
-.bid-controls button:hover:not(:disabled) {
-  border-color: var(--site-accent);
-}
-
-.bid-controls button:disabled {
-  cursor: default;
-  opacity: 0.6;
-}
-
 .info-notice {
   display: block;
   grid-template-columns: none;
@@ -1297,7 +1075,6 @@
   }
 
   .debug-shell .game-info div,
-  .debug-shell .selection-list div,
   .debug-shell .clocks div {
     min-height: 22px;
   }

@@ -1,5 +1,4 @@
 import type {
-  Chess960Start,
   Color,
   GameEvent,
   GameSpecId,
@@ -56,8 +55,6 @@ export type ConnectionState =
 // Driven by timers in live-socket; reset to 'none' on (re)connect.
 export type ConnectionNoticeTier = 'none' | 'dot' | 'banner';
 export type PlayAgainStatus = 'creating' | 'failed' | 'idle';
-export type DraftOffers = Partial<Record<Color, Chess960Start[]>>;
-export type DraftResolvedStartIds = Partial<Record<Color, number>>;
 export type PromotionRole = Exclude<PieceRole, 'king' | 'pawn'>;
 export type MovePlayedEvent = Extract<GameEvent, { type: 'move-played' }>;
 export type MoveListEntry = {
@@ -101,7 +98,6 @@ export type LiveRefs = {
   clockBottom: HTMLDivElement;
   clockNote: HTMLParagraphElement;
   clockTop: HTMLDivElement;
-  draftPicker: HTMLDivElement;
   actionStatus: HTMLDivElement;
   actionSection: HTMLElement;
   capturesBottom: HTMLDivElement;
@@ -111,17 +107,13 @@ export type LiveRefs = {
   gameInfo: HTMLDivElement;
   hiddenPool: HTMLDivElement;
   moveList: HTMLOListElement;
-  offerSection: HTMLElement;
   playerBottom: HTMLDivElement;
   playerTop: HTMLDivElement;
   promotion: HTMLDivElement;
   replayControls: NodeListOf<HTMLButtonElement>;
   replayMeta: HTMLParagraphElement;
   roomActions: HTMLDivElement;
-  selectionSection: HTMLElement;
   roomMeta: HTMLParagraphElement;
-  selectionList: HTMLDivElement;
-  starts: HTMLDivElement;
   gameControls: HTMLDivElement;
   gameControlsSection: HTMLElement;
 };
@@ -203,12 +195,7 @@ export const liveState = {
   seatProfiles: {} as Partial<Record<PlayableSeat, ProfileIdentity>>,
   seat: 'spectator' as Seat,
   solo: false,
-  offer: [] as Chess960Start[],
-  offers: {} as DraftOffers,
-  selections: {} as Partial<Record<Color, number>>,
   devViews: null as DevViews | null,
-  resolvedStartId: null as number | null,
-  resolvedStartIds: {} as DraftResolvedStartIds,
   state: null as PlayerView | null,
   // Top-level clock + time control for the xiangqi-family runtimes (null for
   // chess, which embeds its clock in the PlayerView, and for untimed games).
@@ -236,15 +223,6 @@ export function resolveWebSocketBaseUrl(): string {
   if (import.meta.env.DEV) return 'ws://localhost:3001';
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
   return `${protocol}//${window.location.host}`;
-}
-
-export function normalizedOffers(
-  primaryOffer: Chess960Start[],
-  nextOffers: DraftOffers | undefined,
-): DraftOffers {
-  if (nextOffers?.white || nextOffers?.black) return nextOffers;
-  if (primaryOffer.length === 0) return {};
-  return { white: primaryOffer, black: primaryOffer };
 }
 
 // The browser's durable id, one per localStorage, sent on every live connect

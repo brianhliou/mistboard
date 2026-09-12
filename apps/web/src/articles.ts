@@ -2334,7 +2334,6 @@ export function renderArticleThumbnail(thumb: ArticleThumbnail): HTMLElement {
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   chess: 'chess',
   'fog-chess': 'dark-chess',
-  'dark-draft960': 'draft960',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',

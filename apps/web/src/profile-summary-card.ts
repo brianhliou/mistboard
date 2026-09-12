@@ -83,7 +83,6 @@ export type BotSummaryProfile = {
 // How many rated variants the compact grid shows before it stops (a hover card
 // should not grow into a full ratings rail). Highest-rated first.
 const MAX_RATING_TILES = 6;
-const HIDDEN_BOT_GAME_SPEC_IDS = new Set(['dark-draft960']);
 const GAME_SPEC_LABEL_KEYS: Record<string, I18nKey> = {
   'dark-chess': 'variant.darkChess.name',
   jieqi: 'variant.jieqi.name',
@@ -632,17 +631,15 @@ function botPlayOptions(profile: BotSummaryProfile): BotSummaryPlayOption[] {
           engineId: profile.activeEngineId,
           playable: true,
         }));
-  return options.filter((option) => !HIDDEN_BOT_GAME_SPEC_IDS.has(option.gameSpecId));
+  return options;
 }
 
 function botRatings(profile: BotSummaryProfile): BotSummaryRating[] {
-  const ratings =
-    profile.ratings && profile.ratings.length > 0
-      ? profile.ratings
-      : profile.rating
-        ? [profile.rating]
-        : [];
-  return ratings.filter((rating) => !HIDDEN_BOT_GAME_SPEC_IDS.has(rating.gameSpecId));
+  return profile.ratings && profile.ratings.length > 0
+    ? profile.ratings
+    : profile.rating
+      ? [profile.rating]
+      : [];
 }
 
 function gameSpecLabel(gameSpecId: string): string {

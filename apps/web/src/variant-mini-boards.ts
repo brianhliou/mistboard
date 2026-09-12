@@ -50,7 +50,6 @@ import {
 export type VariantMiniId =
   | 'chess'
   | 'dark-chess'
-  | 'draft960'
   | 'xiangqi'
   | 'dark-xiangqi'
   | 'fortress-xiangqi'
@@ -287,17 +286,6 @@ function chessCornerBody(ctx: MiniCtx): string {
 // Field-of-fire vision: white sees ranks 1-4, so only the 5th rank (top row) fogs.
 function darkChessBody(ctx: MiniCtx): string {
   return fiveWideChessBody(KINGSIDE_FIVE, [0], ctx);
-}
-
-// A Chess960-style scramble — queen + king off their standard files so the
-// arrangement reads as shuffled vs. dark chess. Same opening vision (pawns still
-// on rank 2 → ranks 3-4 visible), so the fog still sits only on the top row.
-function draft960Body(ctx: MiniCtx): string {
-  return fiveWideChessBody(
-    ['white:king', 'white:rook', 'white:queen', 'white:knight', 'white:bishop'],
-    [0],
-    ctx,
-  );
 }
 
 // Red's accurate vision of the xiangqi opening: a square is visible iff a red
@@ -591,7 +579,6 @@ function jungleFlipBody(): string {
 const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   chess: chessCornerBody,
   'dark-chess': darkChessBody,
-  draft960: draft960Body,
   xiangqi: (ctx) => xiangqiCourtBody(false, ctx),
   'dark-xiangqi': (ctx) => xiangqiCourtBody(true, ctx),
   'fortress-xiangqi': fortressXiangqiBody,
@@ -617,14 +604,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'DC',
     accent: '#1f6f5b',
     blurb: 'Four pawns over a back rank; the enemy half all fog.',
-    family: 'chess',
-  },
-  {
-    id: 'draft960',
-    label: 'Dark Draft960',
-    shortLabel: '960',
-    accent: '#8a5a18',
-    blurb: "White's back rank shuffled, the enemy half all fog.",
     family: 'chess',
   },
   {

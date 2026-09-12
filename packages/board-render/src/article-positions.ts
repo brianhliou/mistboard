@@ -5,18 +5,13 @@
 // Owning the positions here (rather than in the web bundle, which the server
 // won't import) keeps the list thumbnail and the share card a single source of
 // truth — they can't drift apart. The board fixtures the article *bodies* also
-// use (CONE_QUEEN_BOARD, DISCOVERY_BOARD, DRAFT960_OFFER_A) are exported so the
+// use (CONE_QUEEN_BOARD, DISCOVERY_BOARD) are exported so the
 // web file imports them back instead of keeping its own copies.
 
 import type { Color, Square } from '@mistboard/game';
-import { type Board, darkChessVariant, type GameState, type PieceRole } from '@mistboard/game';
+import { type Board, darkChessVariant, type GameState } from '@mistboard/game';
 import type { PieceOnBoard } from './board-svg.js';
-import {
-  boardToPieces,
-  fogSquaresFromVisible,
-  piecesToBoard,
-  startingPositionFromBackRank,
-} from './positions.js';
+import { boardToPieces, fogSquaresFromVisible } from './positions.js';
 
 export type ArticleOgPosition = {
   pieces: PieceOnBoard[];
@@ -44,17 +39,6 @@ function demoState(id: string, board: Board): GameState {
 }
 
 // ── Shared board fixtures (also used in the article bodies) ───────────────────
-export const DRAFT960_OFFER_A: PieceRole[] = [
-  'knight',
-  'knight',
-  'rook',
-  'king',
-  'bishop',
-  'queen',
-  'rook',
-  'bishop',
-];
-
 export const CONE_QUEEN_BOARD: Board = {
   e4: { color: 'white', role: 'queen' },
 };
@@ -121,10 +105,6 @@ const SERVER_FOG_BOARD: Board = {
 const DARK_CHESS_START = darkChessVariant.createInitialState('dark-chess-rules-start');
 const CONE_QUEEN = demoState('cone-queen', CONE_QUEEN_BOARD);
 const DARK_CHESS_CONCEPTS = demoState('dark-chess-concepts-deduction', DARK_CHESS_CONCEPTS_BOARD);
-const DRAFT960_START = demoState(
-  'dark-draft960-start',
-  piecesToBoard(startingPositionFromBackRank(DRAFT960_OFFER_A)),
-);
 
 const SERVER_FOG = demoState('server-fog-og', SERVER_FOG_BOARD);
 
@@ -156,11 +136,6 @@ export const ARTICLE_OG_POSITIONS: Record<string, ArticleOgPosition> = {
   'dark-chess-concepts': {
     pieces: boardToPieces(DARK_CHESS_CONCEPTS.board),
     fogSquares: fogFor(DARK_CHESS_CONCEPTS, 'white'),
-    orientation: 'white',
-  },
-  'dark-draft960': {
-    pieces: startingPositionFromBackRank(DRAFT960_OFFER_A),
-    fogSquares: fogFor(DRAFT960_START, 'white'),
     orientation: 'white',
   },
   'server-enforced-fog': {

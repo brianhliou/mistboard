@@ -303,7 +303,7 @@ test('Dark Xiangqi runtime hydrates from canonical events', () => {
 test('Dark Xiangqi event logs reject wrong room families and mixed room ids', () => {
   assert.equal(
     isDarkXiangqiEventLog([
-      { type: 'room-created', at: 1, roomId: 'chess-room', variant: 'dark-chess', offer: [] },
+      { type: 'room-created', at: 1, roomId: 'chess-room', variant: 'dark-chess' },
     ]),
     false,
   );

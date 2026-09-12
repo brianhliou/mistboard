@@ -91,7 +91,7 @@ const adminMetrics = {
   previousActivePlayers28d: 9,
   activePatrons: 3,
   humanGamesByResult: { 'red-win': 350, 'black-win': 300, draw: 32 },
-  // Includes a retired id (dark-draft960) that the live-shelf filter drops.
+  // Includes a deleted id (dark-draft960) that the live-shelf filter drops.
   humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, 'dark-draft960': 60 },
   weekly: [week('2026-07-06'), week('2026-07-13'), week('2026-07-20', { players: 8 })],
   engines: {

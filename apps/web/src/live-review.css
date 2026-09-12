@@ -6,7 +6,7 @@
    files contribute only --uni-board-aspect / --uni-board-chrome-h /
    --uni-board-max on their live-route--<variant> class. */
 
-/* Fog chess / Draft960: square board. Captured material lives in the right
+/* Fog chess: square board. Captured material lives in the right
    rail (lichess round anatomy), so the board column carries no strip chrome. */
 .live-route--chess {
   --uni-board-aspect: 1;

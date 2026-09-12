@@ -310,7 +310,7 @@ test('an in-progress fog xiangqi game exports nothing: 403 on both formats, no p
 test('an in-progress fog chess log still answers 403 (legacy path unchanged)', () => {
   const roomId = 'chess-room';
   const events: unknown[] = [
-    { type: 'room-created', at: 0, roomId, variant: DARK_CHESS_SPEC_ID, offer: [] },
+    { type: 'room-created', at: 0, roomId, variant: DARK_CHESS_SPEC_ID },
     { type: 'seat-assigned', at: 1, roomId, clientId: 'w', seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId, clientId: 'b', seat: 'black' },
     { type: 'move-played', at: 2, roomId, color: 'white', move: { from: 'e2', to: 'e4' } },

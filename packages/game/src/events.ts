@@ -1,13 +1,5 @@
 import {
-  type Chess960Start,
-  createChess960CastlingRights,
-  createChess960CastlingRightsForSides,
-  createChess960InitialBoard,
-  createChess960InitialBoardForSides,
-} from './chess960.js';
-import {
   clockPolicyKindFor,
-  createClock,
   expireClock,
   freezeClock,
   nextClockForMove,
@@ -50,8 +42,6 @@ export type GameEvent =
       // At least one of variant/gameSpecId must be present.
       variant?: VariantId;
       gameSpecId?: GameSpecId;
-      offer?: Chess960Start[];
-      offers?: Partial<Record<Color, Chess960Start[]>>;
       timeControl?: RoomTimeControl;
       // Live-game placement region. Optional for old events; new live rooms set
       // it so future multi-region routing can remain replay-derived.
@@ -83,21 +73,6 @@ export type GameEvent =
       at: number;
       roomId: string;
       clock: ClockState;
-    }
-  | {
-      type: 'draft-start-selected';
-      at: number;
-      roomId: string;
-      color: Color;
-      startId: number;
-    }
-  | {
-      type: 'draft-start-resolved';
-      at: number;
-      roomId: string;
-      startId?: number;
-      startIds?: Record<Color, number>;
-      clock?: ClockState;
     }
   | {
       type: 'move-played';
@@ -156,13 +131,8 @@ export type GameProjection = {
   roomId: string;
   variant: VariantId;
   gameSpecId: GameSpecId;
-  offer: Chess960Start[];
-  offers: Partial<Record<Color, Chess960Start[]>>;
   state: GameState;
   seats: Partial<Record<Color, string>>;
-  selections: Partial<Record<Color, number>>;
-  resolvedStartId: number | null;
-  resolvedStartIds: Partial<Record<Color, number>>;
   timeControl?: RoomTimeControl;
   region?: string;
   paused: boolean;
@@ -172,19 +142,14 @@ export type GameProjection = {
 
 export function initialGameProjection(
   roomId: string,
-  variant: VariantId = 'draft960',
+  variant: VariantId = 'chess',
 ): GameProjection {
   return {
     roomId,
     variant,
     gameSpecId: gameSpecForLegacyLiveRoom({ variant }).id,
-    offer: [],
-    offers: {},
     state: variantForId(variant).createInitialState(roomId),
     seats: {},
-    selections: {},
-    resolvedStartId: null,
-    resolvedStartIds: {},
     paused: false,
     pausedAt: null,
     pauseReason: null,
@@ -211,20 +176,13 @@ export function applyGameEvent(projection: GameProjection, event: GameEvent): Ga
     if (!variant) {
       throw new Error(`room-created for ${gameSpecId} has no chess-family variant to replay`);
     }
-    const state = variantForId(variant).createInitialState(event.roomId);
-    const offer = event.offer ?? [];
     return {
       ...projection,
       variant,
       gameSpecId,
-      offer,
-      offers: event.offers ?? { white: offer, black: offer },
       timeControl: event.timeControl,
       region: event.region,
-      state:
-        variant === 'dark-chess' && hasDraftOffer(event)
-          ? { ...state, status: { type: 'pregame' } }
-          : state,
+      state: variantForId(variant).createInitialState(event.roomId),
     };
   }
 
@@ -241,22 +199,16 @@ export function applyGameEvent(projection: GameProjection, event: GameEvent): Ga
   if (event.type === 'seat-vacated') {
     const beforeFirstMove =
       projection.state.moveNumber === 1 && projection.state.lastMove === undefined;
-    if (
-      (projection.state.status.type !== 'pregame' && !beforeFirstMove) ||
-      projection.seats[event.seat] !== event.clientId
-    ) {
+    if (!beforeFirstMove || projection.seats[event.seat] !== event.clientId) {
       return projection;
     }
 
     const seats = { ...projection.seats };
-    const selections = { ...projection.selections };
     delete seats[event.seat];
-    delete selections[event.seat];
 
     return {
       ...projection,
       seats,
-      selections,
     };
   }
 
@@ -267,57 +219,6 @@ export function applyGameEvent(projection: GameProjection, event: GameEvent): Ga
       state: {
         ...projection.state,
         clock: event.clock,
-      },
-    };
-  }
-
-  if (event.type === 'draft-start-selected') {
-    if (projection.state.status.type !== 'pregame') return projection;
-    if (!offerForColor(projection, event.color).some((start) => start.id === event.startId))
-      return projection;
-    return {
-      ...projection,
-      selections: {
-        ...projection.selections,
-        [event.color]: event.startId,
-      },
-    };
-  }
-
-  if (event.type === 'draft-start-resolved') {
-    if (projection.state.status.type !== 'pregame') return projection;
-
-    const startIds =
-      event.startIds ??
-      (event.startId === undefined ? undefined : { white: event.startId, black: event.startId });
-    if (!startIds) return projection;
-
-    const whiteStart = offerForColor(projection, 'white').find(
-      (start) => start.id === startIds.white,
-    );
-    const blackStart = offerForColor(projection, 'black').find(
-      (start) => start.id === startIds.black,
-    );
-    if (!whiteStart || !blackStart) return projection;
-    const sharedStartId = startIds.white === startIds.black ? startIds.white : null;
-
-    return {
-      ...projection,
-      resolvedStartId: sharedStartId,
-      resolvedStartIds: startIds,
-      state: {
-        ...projection.state,
-        board: event.startIds
-          ? createChess960InitialBoardForSides(whiteStart, blackStart)
-          : createChess960InitialBoard(whiteStart),
-        status: { type: 'playing', turn: 'white' },
-        castlingRights: event.startIds
-          ? createChess960CastlingRightsForSides(whiteStart, blackStart)
-          : createChess960CastlingRights(whiteStart),
-        enPassantSquare: undefined,
-        halfmoveClock: 0,
-        lastMove: undefined,
-        clock: event.clock ?? createClock(event.at),
       },
     };
   }
@@ -458,10 +359,6 @@ export function applyGameEvent(projection: GameProjection, event: GameEvent): Ga
   return projection;
 }
 
-function offerForColor(projection: GameProjection, color: Color): Chess960Start[] {
-  return projection.offers[color] ?? projection.offer;
-}
-
 function gameSpecIdForRoomCreatedEvent(
   event: Extract<GameEvent, { type: 'room-created' }>,
 ): GameSpecId {
@@ -470,12 +367,5 @@ function gameSpecIdForRoomCreatedEvent(
   if (!event.variant) {
     throw new Error(`room-created event has neither a known gameSpecId nor a variant`);
   }
-  return gameSpecForLegacyLiveRoom({
-    variant: event.variant,
-    hiddenDraft960: hasDraftOffer(event),
-  }).id;
-}
-
-function hasDraftOffer(event: Extract<GameEvent, { type: 'room-created' }>): boolean {
-  return !!event.offer?.length || !!event.offers?.white?.length || !!event.offers?.black?.length;
+  return gameSpecForLegacyLiveRoom({ variant: event.variant }).id;
 }

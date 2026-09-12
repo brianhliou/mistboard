@@ -1,11 +1,8 @@
 import { randomUUID } from 'node:crypto';
 import {
-  type Chess960Start,
-  type Color,
   type GameEvent,
   type GameProjection,
   gameSpecForLegacyLiveRoom,
-  pickDraft960Offer,
   type RoomTimeControl,
   replayGameEvents,
   type VariantId,
@@ -19,7 +16,6 @@ import {
   PersistenceFailure,
   type RoomManagerContext,
   resumeRoom,
-  roomIdToSeed,
   scheduleAbortTimeout,
   scheduleClockTimeout,
   scheduleRandomEngineMove,
@@ -80,12 +76,11 @@ export type RoomLifecycle = {
     mode: 'pvp' | 'pve',
     variant: VariantId,
     engineId: string,
-    hiddenDraft960?: boolean,
     timeControl?: RoomTimeControl,
     rated?: boolean,
     options?: CreateRoomOptions,
   ) => Promise<Room>;
-  getOrCreateRoom: (roomId: string, variant: VariantId, hiddenDraft960?: boolean) => Promise<Room>;
+  getOrCreateRoom: (roomId: string, variant: VariantId) => Promise<Room>;
   isAbortedRoom: (roomId: string) => Promise<boolean>;
   resetRoom: (roomId: string, reason?: string) => void;
   scheduleSeatVacate: (room: Room, client: Client) => void;
@@ -116,7 +111,6 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
       // (b) no other client has taken this seat. If a different client has
       // displaced this seat, projection.seats[seat] no longer equals clientId.
       if (
-        room.projection.state.status.type !== 'pregame' &&
         !(room.projection.state.moveNumber === 1 && room.projection.state.lastMove === undefined)
       ) {
         return;
@@ -156,11 +150,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     delete room.pendingVacates[seat];
   }
 
-  async function getOrCreateRoom(
-    roomId: string,
-    variant: VariantId,
-    hiddenDraft960 = false,
-  ): Promise<Room> {
+  async function getOrCreateRoom(roomId: string, variant: VariantId): Promise<Room> {
     const existing = config.rooms.get(roomId);
     if (existing) return existing;
 
@@ -184,7 +174,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     }
 
     if (!events) {
-      const gameSpecId = gameSpecForLegacyLiveRoom({ variant, hiddenDraft960 }).id;
+      const gameSpecId = gameSpecForLegacyLiveRoom({ variant }).id;
       const created: GameEvent = {
         type: 'room-created',
         at: Date.now(),
@@ -192,7 +182,6 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         variant,
         gameSpecId,
         region: config.defaultRoomRegion,
-        ...roomCreatedDraftOfferFields(roomId, variant, hiddenDraft960),
       };
       if (persistence.isInitialized()) {
         try {
@@ -265,8 +254,6 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         region,
       );
     }
-    const detectedHiddenDraft960 =
-      projection.variant === 'dark-chess' && roomCreatedEvent?.offers !== undefined;
     const hydratedPveEngine = pveEngineSeatForProjection(projection);
     const hydratedPveEngineId = hydratedPveEngine
       ? canonicalLiveEngineVersionId(hydratedPveEngine.clientId)
@@ -300,7 +287,6 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
       pendingWrites: Promise.resolve(),
       gameEndRecorded: projection.state.status.type === 'finished',
       variant: projection.variant,
-      hiddenDraft960: detectedHiddenDraft960,
       timeControl: projection.timeControl,
       rematch: { offers: {} },
       pendingVacates: {},
@@ -340,7 +326,6 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
     mode: 'pvp' | 'pve',
     variant: VariantId,
     engineId: string,
-    hiddenDraft960 = false,
     timeControl?: RoomTimeControl,
     rated = false,
     options: CreateRoomOptions = {},
@@ -353,7 +338,7 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
       if (existing) continue;
 
       const at = Date.now();
-      const gameSpecId = gameSpecForLegacyLiveRoom({ variant, hiddenDraft960 }).id;
+      const gameSpecId = gameSpecForLegacyLiveRoom({ variant }).id;
       const region = normalizeRoomRegion(options.region ?? config.defaultRoomRegion);
       const roomCreated: Extract<GameEvent, { type: 'room-created' }> = {
         type: 'room-created',
@@ -362,7 +347,6 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         variant,
         gameSpecId,
         region,
-        ...roomCreatedDraftOfferFields(roomId, variant, hiddenDraft960),
         ...(mode === 'pve' && options.botId ? { pveBotId: options.botId } : {}),
         ...(timeControl ? { timeControl } : {}),
         ...(rated ? { rated: true } : {}),
@@ -377,8 +361,6 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
           clientId: engineId,
           seat: engineSeat,
         });
-        const engineSelection = engineDraftSelectionEvent(roomCreated, roomId, at);
-        if (engineSelection) events.push(engineSelection);
       }
 
       if (persistence.isInitialized()) {
@@ -424,7 +406,6 @@ export function createRoomLifecycle(config: RoomLifecycleConfig): RoomLifecycle 
         pendingWrites: Promise.resolve(),
         gameEndRecorded: false,
         variant,
-        hiddenDraft960,
         timeControl,
         rematch: { offers: {} },
         pendingVacates: {},
@@ -673,40 +654,4 @@ function pveBotIdForRoomCreatedEvent(event: unknown): string | null {
   if (typeof event !== 'object' || event === null) return null;
   const botId = (event as { pveBotId?: unknown }).pveBotId;
   return typeof botId === 'string' ? botId : null;
-}
-
-function roomCreatedDraftOfferFields(
-  roomId: string,
-  variant: VariantId,
-  hiddenDraft960 = false,
-): Pick<Extract<GameEvent, { type: 'room-created' }>, 'offer' | 'offers'> {
-  if (variant !== 'draft960' && !(variant === 'dark-chess' && hiddenDraft960)) return { offer: [] };
-
-  const seed = roomIdToSeed(roomId);
-  const offers: Record<Color, Chess960Start[]> = {
-    white: pickDraft960Offer(seed),
-    black: pickDraft960Offer(seed ^ 0x5f3759df),
-  };
-  return {
-    offer: offers.white,
-    offers,
-  };
-}
-
-function engineDraftSelectionEvent(
-  roomCreated: Extract<GameEvent, { type: 'room-created' }>,
-  roomId: string,
-  at: number,
-): Extract<GameEvent, { type: 'draft-start-selected' }> | null {
-  const offer = roomCreated.offers?.black ?? roomCreated.offer ?? [];
-  if (offer.length === 0) return null;
-  const start = offer[Math.abs(roomIdToSeed(`${roomId}:black-draft`)) % offer.length];
-  if (!start) return null;
-  return {
-    type: 'draft-start-selected',
-    at,
-    roomId,
-    color: 'black',
-    startId: start.id,
-  };
 }

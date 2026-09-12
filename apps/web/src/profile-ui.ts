@@ -110,9 +110,6 @@ export function buildProfileTabsShell(tabs: ProfileTab[]): HTMLElement {
 const GAME_VARIANT_LABEL_KEY: Record<string, I18nKey> = {
   fog: 'variant.darkChess.name',
   'dark-chess': 'variant.darkChess.name',
-  'dark-draft960': 'variant.darkDraft960.name',
-  'fog-draft960': 'variant.darkDraft960.name',
-  draft960: 'variant.darkDraft960.name',
   'mini-xiangqi': 'variant.miniXiangqi.name',
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',

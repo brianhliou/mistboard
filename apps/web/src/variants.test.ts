@@ -2,7 +2,6 @@ import {
   BANQI_SPEC_ID,
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -39,11 +38,6 @@ describe('web variant launch registry', () => {
           id: 'fog',
           gameSpecId: DARK_CHESS_SPEC_ID,
           label: gameSpecForId(DARK_CHESS_SPEC_ID).publicName,
-        }),
-        expect.objectContaining({
-          id: 'fog_draft960',
-          gameSpecId: DARK_DRAFT960_SPEC_ID,
-          label: gameSpecForId(DARK_DRAFT960_SPEC_ID).publicName,
         }),
       ]),
     );
@@ -146,7 +140,6 @@ describe('web variant launch registry', () => {
       [DARK_CHESS_SPEC_ID, 'fog'],
       [JUNGLE_SPEC_ID, 'jungle'],
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],
-      [DARK_DRAFT960_SPEC_ID, 'dark-draft960'],
     ]);
   });
 

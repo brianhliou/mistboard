@@ -23,7 +23,7 @@ test('fog chess variant gate accepts the persisted spellings only', () => {
     false,
     "'fog-of-war' is the kernel label, not a persisted variant",
   );
-  // draft960 starts from a shuffled setup the analyzer cannot thread through yet.
+  // The deleted Draft960 spellings are not fog chess.
   assert.equal(isFogChessPersistedVariant('dark-draft960'), false);
   assert.equal(isFogChessPersistedVariant('fog-draft960'), false);
   assert.equal(isFogChessPersistedVariant('dark-xiangqi'), false);

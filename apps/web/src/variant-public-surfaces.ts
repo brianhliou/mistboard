@@ -12,7 +12,6 @@ import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 // Direct URLs can stay reachable for review/backcompat; they are not listings.
 const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'dark-chess': true,
-  'dark-draft960': false,
   'fortress-xiangqi': true,
   xiangqi: true,
   'dark-xiangqi': true,

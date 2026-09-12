@@ -1,14 +1,5 @@
-import { fogPatternDefs, type PieceOnBoard, renderBoardSvg } from '@mistboard/board-render';
 import { boardFen, mountBoard } from '@mistboard/board-render/interactive';
-import type {
-  Color,
-  GameEvent,
-  GameProjection,
-  Move,
-  PieceRole,
-  PlayerView,
-  Square,
-} from '@mistboard/game';
+import type { Color, GameEvent, Move, PlayerView, Square } from '@mistboard/game';
 import type { Api } from 'chessground/api';
 import type { Config } from 'chessground/config';
 import type { DrawShape } from 'chessground/draw';
@@ -50,7 +41,6 @@ import {
 } from './live-room-actions.js';
 import { initLiveSound, playSound, resetLiveSoundState, soundForOwnMove } from './live-sound.js';
 import {
-  type InfoTone,
   isPlayableSeat,
   type LiveRefs,
   liveState,
@@ -69,7 +59,7 @@ import {
   rejectedSignInHref,
   seatLabel,
 } from './live-status.js';
-import { currentCaptures, currentProjection, currentView } from './live-view.js';
+import { currentCaptures, currentView } from './live-view.js';
 import { createGameMetaCard, seatResultScores } from './review/game-meta-card.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import { activeLiveShellTenant, liveShellTenants } from './variant-tenant/live-shell.js';
@@ -93,94 +83,6 @@ let pendingPromotion: PendingPromotion | null = null;
 let orientation: Color = 'white';
 let lifecycleEffects: LiveLifecycleEffects | null = null;
 
-// Fog squares for the Draft960 pick overlay — opponent's half is always hidden.
-const PICKER_FOG_WHITE: Square[] = [
-  'a5',
-  'b5',
-  'c5',
-  'd5',
-  'e5',
-  'f5',
-  'g5',
-  'h5',
-  'a6',
-  'b6',
-  'c6',
-  'd6',
-  'e6',
-  'f6',
-  'g6',
-  'h6',
-  'a7',
-  'b7',
-  'c7',
-  'd7',
-  'e7',
-  'f7',
-  'g7',
-  'h7',
-  'a8',
-  'b8',
-  'c8',
-  'd8',
-  'e8',
-  'f8',
-  'g8',
-  'h8',
-];
-const PICKER_FOG_BLACK: Square[] = [
-  'a1',
-  'b1',
-  'c1',
-  'd1',
-  'e1',
-  'f1',
-  'g1',
-  'h1',
-  'a2',
-  'b2',
-  'c2',
-  'd2',
-  'e2',
-  'f2',
-  'g2',
-  'h2',
-  'a3',
-  'b3',
-  'c3',
-  'd3',
-  'e3',
-  'f3',
-  'g3',
-  'h3',
-  'a4',
-  'b4',
-  'c4',
-  'd4',
-  'e4',
-  'f4',
-  'g4',
-  'h4',
-];
-const FEN_CHAR_TO_ROLE: Partial<Record<string, PieceRole>> = {
-  r: 'rook',
-  n: 'knight',
-  b: 'bishop',
-  q: 'queen',
-  k: 'king',
-};
-
-function fenToPickerPieces(fenPlacement: string, color: Color): PieceOnBoard[] {
-  const pieces: PieceOnBoard[] = [];
-  const backRank = color === 'white' ? 0 : 7;
-  const pawnRank = color === 'white' ? 1 : 6;
-  for (let i = 0; i < 8; i++) {
-    const role = FEN_CHAR_TO_ROLE[fenPlacement[i] ?? ''];
-    if (role) pieces.push({ file: i, rank: backRank, color, role });
-    pieces.push({ file: i, rank: pawnRank, color, role: 'pawn' });
-  }
-  return pieces;
-}
 const lifecycleTracker = createGameLifecycleTracker();
 
 // ── Init ──────────────────────────────────────────────────────────────────────
@@ -233,7 +135,6 @@ export function render(): void {
   }
   captureFogView();
   const view = currentView();
-  const projection = currentProjection();
   trackGameLifecycle(view);
   // For seated players, lock orientation to their own seat regardless of what
   // the view's perspective field says — fog history views can carry a stale or
@@ -241,31 +142,17 @@ export function render(): void {
   // confirmed. Spectators fall back to the view's perspective.
   const nextOrientation = isColor(liveState.seat) ? liveState.seat : (view?.perspective ?? 'white');
   orientation = nextOrientation;
-  const showDraft = shouldShowDraftControls(view, projection);
-  const showPickerOverlay =
-    !liveState.solo &&
-    isColor(liveState.seat) &&
-    view?.status.type === 'pregame' &&
-    draftOfferForColor(liveState.seat, projection).length > 0;
 
   if (liveState.debugRequested) refs.roomMeta.innerHTML = roomMetaHtml();
   renderBoardStatus(view);
-  refs.offerSection.hidden = !showDraft || showPickerOverlay;
-  refs.selectionSection.hidden = !showDraft;
 
   renderActionStatus(view);
   renderGameInfo(view);
   renderClockRows(refs, view);
   renderCaptureRows(refs, view);
-  renderRoomActionRows(refs, {
-    sendSocket,
-    shouldRequestHiddenDraft960ForPlayAgain,
-  });
+  renderRoomActionRows(refs, { sendSocket });
   renderGameControlRows(refs, view, sendSocket);
   renderDevViewRows(refs);
-  renderOffer(projection);
-  renderSelections(projection);
-  renderDraftPicker();
   renderReplay(refs);
   renderBoard(view);
   renderBoardResult(view);
@@ -304,10 +191,7 @@ function trackGameLifecycle(view: PlayerView | null): void {
   const baseProps = {
     gameId: view.id,
     variant: view.variant,
-    ...gameSpecAnalyticsProps({
-      variant: view.variant,
-      hiddenDraft960: isDraft960RoomForAnalytics(),
-    }),
+    ...gameSpecAnalyticsProps({ variant: view.variant }),
     rated: liveState.rated,
     ...roomModeAnalyticsProps(liveState.roomMode),
     initialMs: view.clock?.initialMs ?? null,
@@ -327,241 +211,6 @@ function trackGameLifecycle(view: PlayerView | null): void {
         })()
       : null;
   lifecycleTracker.update({ statusType, baseProps, outcome });
-}
-
-function isDraft960RoomForAnalytics(): boolean {
-  if (
-    liveState.variantRequested === 'draft960' ||
-    liveState.variantRequested === 'fog-draft960' ||
-    liveState.variantRequested === 'dark-draft960'
-  ) {
-    return true;
-  }
-  return hasVisibleDraftData(currentProjection());
-}
-
-// ── Offer / draft ─────────────────────────────────────────────────────────────
-
-function renderOffer(projection: GameProjection | null): void {
-  refs.starts.replaceChildren();
-  const view = currentView();
-
-  if (liveState.solo) {
-    refs.starts.append(
-      draftOfferGroup(
-        t('live.draftWhiteOffer'),
-        'white',
-        draftOfferForColor('white', projection),
-        projection,
-      ),
-      draftOfferGroup(
-        t('live.draftBlackOffer'),
-        'black',
-        draftOfferForColor('black', projection),
-        projection,
-      ),
-    );
-    return;
-  }
-
-  if (liveState.seat === 'spectator') {
-    refs.starts.append(infoNotice('pending', t('live.draftPrivate')));
-    return;
-  }
-
-  const color = pickColorForSeat();
-  const visibleOffer = draftOfferForColor(color, projection);
-  if (visibleOffer.length === 0) {
-    refs.starts.append(infoNotice('pending', t('live.draftWaitingOffer')));
-    return;
-  }
-
-  for (const start of visibleOffer) {
-    const row = document.createElement('div');
-    row.className = 'start-row';
-
-    const button = document.createElement('button');
-    const selected = selectedStartId(color, projection) === start.id;
-    const resolved =
-      resolvedStartIdForColor(color, projection) === start.id ||
-      sharedResolvedStartId(projection) === start.id;
-    button.type = 'button';
-    button.className = ['start-card', selected ? 'selected' : '', resolved ? 'resolved' : '']
-      .filter(Boolean)
-      .join(' ');
-    button.disabled = !isLive() || view?.status.type !== 'pregame';
-    button.dataset.start = String(start.id);
-    button.addEventListener('click', () => {
-      sendSocket({ type: 'select-start', startId: start.id });
-    });
-
-    const id = document.createElement('strong');
-    id.textContent = `#${start.id}`;
-    const placement = document.createElement('span');
-    placement.textContent = start.fenPlacement.toUpperCase();
-    button.append(id, placement);
-    row.append(button);
-
-    refs.starts.append(row);
-  }
-}
-
-function draftOfferGroup(
-  label: string,
-  color: Color,
-  starts: ReturnType<typeof draftOfferForColor>,
-  projection: GameProjection | null,
-): HTMLDivElement {
-  const group = document.createElement('div');
-  group.className = 'start-group';
-
-  const heading = document.createElement('h3');
-  heading.textContent = label;
-  group.append(heading);
-
-  if (starts.length === 0) {
-    group.append(infoNotice('pending', t('live.draftNoOffer')));
-    return group;
-  }
-
-  for (const start of starts) {
-    const button = draftPickButton(color, start, projection);
-    group.append(button);
-  }
-
-  return group;
-}
-
-function draftPickButton(
-  color: Color,
-  start: { id: number; fenPlacement: string },
-  projection: GameProjection | null,
-): HTMLButtonElement {
-  const button = document.createElement('button');
-  button.type = 'button';
-  button.className = [
-    'start-card',
-    selectedStartId(color, projection) === start.id ? 'selected' : '',
-    resolvedStartIdForColor(color, projection) === start.id ||
-    sharedResolvedStartId(projection) === start.id
-      ? 'resolved'
-      : '',
-  ]
-    .filter(Boolean)
-    .join(' ');
-  button.disabled = !isLive() || currentView()?.status.type !== 'pregame';
-  const id = document.createElement('strong');
-  id.textContent = `#${start.id}`;
-  const placement = document.createElement('span');
-  placement.textContent = start.fenPlacement.toUpperCase();
-  button.append(id, placement);
-  button.addEventListener('click', () => {
-    sendSocket({ type: 'select-start', color, startId: start.id });
-  });
-  return button;
-}
-
-function renderSelections(projection: GameProjection | null): void {
-  const view = currentView();
-  if (
-    !liveState.solo &&
-    liveState.seat !== 'spectator' &&
-    view?.variant === 'dark-chess' &&
-    hasVisibleDraftData(projection)
-  ) {
-    const color = pickColorForSeat();
-    refs.selectionList.replaceChildren(
-      selectionItem(t('live.draftYourPick'), selectedStartId(color, projection)),
-      selectionItem(t('live.draftYourStart'), resolvedStartIdForColor(color, projection)),
-    );
-    return;
-  }
-
-  const resolvedWhite = resolvedStartIdForColor('white', projection);
-  const resolvedBlack = resolvedStartIdForColor('black', projection);
-  refs.selectionList.replaceChildren(
-    selectionItem(t('setup.white'), selectedStartId('white', projection)),
-    selectionItem(t('setup.black'), selectedStartId('black', projection)),
-    resolvedWhite !== undefined || resolvedBlack !== undefined
-      ? selectionItem(t('live.draftResolvedWhite'), resolvedWhite)
-      : selectionItem(t('live.draftResolved'), sharedResolvedStartId(projection)),
-    resolvedWhite !== undefined || resolvedBlack !== undefined
-      ? selectionItem(t('live.draftResolvedBlack'), resolvedBlack)
-      : document.createDocumentFragment(),
-  );
-}
-
-// ── Action status / game info ─────────────────────────────────────────────────
-
-function renderDraftPicker(): void {
-  const view = currentView();
-  const projection = currentProjection();
-  if (liveState.solo || !isColor(liveState.seat) || view?.status.type !== 'pregame') {
-    refs.draftPicker.hidden = true;
-    return;
-  }
-  const color = liveState.seat;
-  const offers = draftOfferForColor(color, projection);
-  if (offers.length === 0) {
-    refs.draftPicker.hidden = true;
-    return;
-  }
-  refs.draftPicker.hidden = false;
-
-  const mySelection = selectedStartId(color, projection);
-  const fogSquares = color === 'white' ? PICKER_FOG_WHITE : PICKER_FOG_BLACK;
-
-  if (mySelection !== undefined) {
-    const selected = offers.find((o) => o.id === mySelection);
-    if (!selected) {
-      refs.draftPicker.hidden = true;
-      return;
-    }
-    const pieces = fenToPickerPieces(selected.fenPlacement, color);
-    const size = 200;
-    const svgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${fogPatternDefs(size)}${renderBoardSvg(pieces, fogSquares, 0, 0, size, color)}</svg>`;
-    refs.draftPicker.replaceChildren();
-    const waiting = document.createElement('div');
-    waiting.className = 'draft-picker-waiting';
-    waiting.innerHTML = `<div class="draft-picker-waiting-board">${svgHtml}</div>`;
-    const label = document.createElement('p');
-    label.className = 'draft-picker-waiting-label';
-    label.textContent = t('live.draftWaitingOpponent');
-    waiting.append(label);
-    refs.draftPicker.append(waiting);
-    return;
-  }
-
-  refs.draftPicker.replaceChildren();
-  const inner = document.createElement('div');
-  inner.className = 'draft-picker-inner';
-  const heading = document.createElement('p');
-  heading.className = 'draft-picker-heading';
-  heading.textContent = t('live.draftChoosePosition');
-  const boardsEl = document.createElement('div');
-  boardsEl.className = 'draft-picker-boards';
-  const size = 160;
-
-  ['A', 'B', 'C'].slice(0, offers.length).forEach((letter, i) => {
-    const offer = offers[i]!;
-    const btn = document.createElement('button');
-    btn.type = 'button';
-    btn.className = 'draft-pick-board';
-    const pieces = fenToPickerPieces(offer.fenPlacement, color);
-    const svgHtml = `<svg xmlns="http://www.w3.org/2000/svg" width="${size}" height="${size}" viewBox="0 0 ${size} ${size}">${fogPatternDefs(size)}${renderBoardSvg(pieces, fogSquares, 0, 0, size, color)}</svg>`;
-    btn.innerHTML = svgHtml;
-    const lbl = document.createElement('span');
-    lbl.className = 'draft-pick-label';
-    lbl.textContent = letter;
-    btn.append(lbl);
-    btn.addEventListener('click', () => {
-      sendSocket({ type: 'select-start', color, startId: offer.id });
-    });
-    boardsEl.append(btn);
-  });
-
-  inner.append(heading, boardsEl);
-  refs.draftPicker.append(inner);
 }
 
 function renderActionStatus(view: PlayerView | null): void {
@@ -584,9 +233,7 @@ function renderActionStatus(view: PlayerView | null): void {
   const title = document.createElement('strong');
   title.textContent = actionTitle(view);
   const body = document.createElement('span');
-  body.textContent = actionBody(view, {
-    hasVisibleDraftData: hasVisibleDraftData(currentProjection()),
-  });
+  body.textContent = actionBody(view);
   notice.append(title, body);
 
   if (
@@ -682,28 +329,15 @@ function renderGameInfo(view: PlayerView | null): void {
 }
 
 // Marker for the meta card's icon box. Mirrors formatLabel's variant resolution
-// (view → snapshot → requested), so a Draft960 room shows the Draft960 marker
-// even though its live variant string is plain dark chess.
+// (view → snapshot → requested).
 function metaMarkerId(view: PlayerView | null): VariantMiniId | null {
   const variant = view?.variant ?? liveState.state?.variant ?? liveState.variantRequested;
-  const requested = liveState.variantRequested;
-  if (requested === 'fog-draft960' || requested === 'dark-draft960') return 'draft960';
   return variantMiniIdForRawVariant(variant ?? 'dark-chess');
 }
 
 function formatLabel(view: PlayerView | null): string {
   const variant = view?.variant ?? liveState.state?.variant ?? liveState.variantRequested;
-  if (variant === 'draft960' || variant === 'fog-draft960' || variant === 'dark-draft960') {
-    return t('live.variantDarkDraft960');
-  }
-  const base =
-    variant === 'dark-chess' ? t('live.variantFogChess') : capitalize(variant ?? 'dark chess');
-  const isDraft960 =
-    liveState.variantRequested === 'fog-draft960' ||
-    liveState.variantRequested === 'dark-draft960' ||
-    Object.values(liveState.offers).some((arr) => arr && arr.length > 0) ||
-    Object.keys(liveState.resolvedStartIds).length > 0;
-  return isDraft960 ? t('live.variantWithDraft960', { variant: base }) : base;
+  return variant === 'dark-chess' ? t('live.variantFogChess') : capitalize(variant ?? 'dark chess');
 }
 
 function timeControlLabel(view: PlayerView | null): string | null {
@@ -1112,73 +746,6 @@ function activeMoveColor(): Color | null {
   return liveState.seat === status.turn ? liveState.seat : null;
 }
 
-// ── Draft data helpers ────────────────────────────────────────────────────────
-
-function draftOfferForColor(
-  color: Color,
-  projection: GameProjection | null,
-): { id: number; fenPlacement: string }[] {
-  return (
-    projection?.offers[color] ??
-    liveState.offers[color] ??
-    (projection?.offer.length ? projection.offer : liveState.offer)
-  );
-}
-
-function selectedStartId(color: Color, projection: GameProjection | null): number | undefined {
-  return projection?.selections[color] ?? liveState.selections[color];
-}
-
-function sharedResolvedStartId(projection: GameProjection | null): number | null {
-  return projection?.resolvedStartId ?? liveState.resolvedStartId;
-}
-
-function resolvedStartIdForColor(
-  color: Color,
-  projection: GameProjection | null,
-): number | undefined {
-  return projection?.resolvedStartIds[color] ?? liveState.resolvedStartIds[color];
-}
-
-function shouldShowDraftControls(
-  view: PlayerView | null,
-  projection: GameProjection | null,
-): boolean {
-  // Only show Draft960 UI for actual draft960 games — never for fog-of-war,
-  // regardless of what hasVisibleDraftData returns (avoids spurious "Draft960
-  // Offer" section on fog-of-war spectator views).
-  const variant = view?.variant ?? liveState.state?.variant;
-  if (variant && variant !== 'draft960') return false;
-  if (view?.variant === 'draft960') return true;
-  return hasVisibleDraftData(projection);
-}
-
-function hasVisibleDraftData(projection: GameProjection | null): boolean {
-  if (liveState.solo) {
-    return (
-      draftOfferForColor('white', projection).length > 0 ||
-      draftOfferForColor('black', projection).length > 0 ||
-      selectedStartId('white', projection) !== undefined ||
-      selectedStartId('black', projection) !== undefined ||
-      resolvedStartIdForColor('white', projection) !== undefined ||
-      resolvedStartIdForColor('black', projection) !== undefined ||
-      sharedResolvedStartId(projection) !== null
-    );
-  }
-  if (liveState.seat === 'spectator')
-    return liveState.offer.length > 0 || Object.keys(liveState.offers).length > 0;
-  return (
-    draftOfferForColor(pickColorForSeat(), projection).length > 0 ||
-    selectedStartId(pickColorForSeat(), projection) !== undefined ||
-    resolvedStartIdForColor(pickColorForSeat(), projection) !== undefined
-  );
-}
-
-function shouldRequestHiddenDraft960ForPlayAgain(): boolean {
-  const variant = currentView()?.variant ?? liveState.state?.variant ?? liveState.variantRequested;
-  return variant === 'dark-chess' && hasVisibleDraftData(currentProjection());
-}
-
 // ── Labels ────────────────────────────────────────────────────────────────────
 
 function roomMetaHtml(): string {
@@ -1207,21 +774,10 @@ function renderBoardStatus(view: PlayerView | null): void {
   }
 }
 
-function selectionLabel(startId: number | null | undefined): string {
-  return startId === null || startId === undefined ? 'none' : `#${startId}`;
-}
-
 // ── Small utilities ───────────────────────────────────────────────────────────
 
 function capitalize(value: string): string {
   return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
-}
-
-function infoNotice(tone: InfoTone, text: string): HTMLDivElement {
-  const notice = document.createElement('div');
-  notice.className = `info-notice ${tone}`;
-  notice.textContent = text;
-  return notice;
 }
 
 function infoItem(label: string, value: string): HTMLDivElement {
@@ -1232,20 +788,6 @@ function infoItem(label: string, value: string): HTMLDivElement {
   val.textContent = value;
   item.append(key, val);
   return item;
-}
-
-function selectionItem(label: string, value: number | string | null | undefined): HTMLDivElement {
-  const item = document.createElement('div');
-  const key = document.createElement('span');
-  const val = document.createElement('strong');
-  key.textContent = label;
-  val.textContent = typeof value === 'number' ? selectionLabel(value) : (value ?? 'none');
-  item.append(key, val);
-  return item;
-}
-
-function pickColorForSeat(): Color {
-  return liveState.seat === 'black' ? 'black' : 'white';
 }
 
 function destroyChessBoardForAlternateRenderer(): void {

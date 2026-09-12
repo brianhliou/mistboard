@@ -2,7 +2,6 @@ import { randomBytes } from 'node:crypto';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   defaultEngineTimeControl,
   engineTimeControlPin,
   type GameSpecId,
@@ -22,7 +21,6 @@ import {
   type HttpApiContext,
   isAllowedRatedTimeControl,
   isAllowedTimeControl,
-  parseHiddenDraft960,
   parseRoomTimeControl,
   parseVariantId,
   readJsonBody,
@@ -60,7 +58,6 @@ export async function tryHandle(
     }
     const mode = parseRoomMode(body);
     const variant = parseVariantId(typeof body.variant === 'string' ? body.variant : null);
-    const hiddenDraft960 = parseHiddenDraft960(body.hiddenDraft960);
     const engineId = mode === 'pve' ? parsePlayablePveEngineId(body.engineId) : null;
     // preferredColor: caller's requested side. Three explicit values
     // ('white' | 'black' | 'random') OR omitted entirely:
@@ -166,8 +163,7 @@ export async function tryHandle(
     // smokes, bot clients) would otherwise bypass the pin entirely. An EXPLICIT
     // off-pin pace is still refused, because the caller asked for something the
     // engine cannot play.
-    const createdGameSpecId: GameSpecId =
-      variant === 'draft960' || hiddenDraft960 ? DARK_DRAFT960_SPEC_ID : DARK_CHESS_SPEC_ID;
+    const createdGameSpecId: GameSpecId = DARK_CHESS_SPEC_ID;
     const enginePin = mode === 'pve' ? engineTimeControlPin(createdGameSpecId) : null;
     if (
       mode === 'pve' &&
@@ -202,7 +198,6 @@ export async function tryHandle(
         mode,
         variant,
         selectedEngineId,
-        hiddenDraft960,
         effectiveTimeControl ?? undefined,
         rated,
         {
@@ -367,7 +362,6 @@ export async function resolveBotRoomRequest(
     // used to coin-flip every one-click bot start.
     rated: body.rated ?? false,
     ...(gameSpecId === 'dark-chess' ? { variant: 'dark-chess' } : {}),
-    ...(gameSpecId === 'dark-draft960' ? { hiddenDraft960: true, variant: 'dark-chess' } : {}),
   };
 }
 

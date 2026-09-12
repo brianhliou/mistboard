@@ -3,7 +3,6 @@ import test from 'node:test';
 import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   gameSpecForId,
   JIEQI_SPEC_ID,
@@ -23,18 +22,11 @@ test('default rating bucket uses the Dark chess game spec rating pool', () => {
   });
 });
 
-test('bucketForGame maps standard and Draft960 through game specs', () => {
+test('bucketForGame maps an unnamed variant to the fog pool through game specs', () => {
   assert.deepEqual(bucketForGame({ initialMs: 180_000, incrementMs: 2_000 }), {
     variant: gameSpecForId(DARK_CHESS_SPEC_ID).ratingPoolBase,
     timeClass: 'blitz',
   });
-  assert.deepEqual(
-    bucketForGame({ initialMs: 180_000, incrementMs: 2_000, hiddenDraft960: true }),
-    {
-      variant: gameSpecForId(DARK_DRAFT960_SPEC_ID).ratingPoolBase,
-      timeClass: 'blitz',
-    },
-  );
 });
 
 test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => {
@@ -93,9 +85,10 @@ test('bucketForGame yields no bucket for an unofficial or correspondence pace', 
 test('parseRatingVariant keeps legacy leaderboard API params stable', () => {
   assert.equal(parseRatingVariant('fog'), 'fog');
   assert.equal(parseRatingVariant('dark-chess'), 'fog');
-  assert.equal(parseRatingVariant('fog_draft960'), 'fog_draft960');
-  assert.equal(parseRatingVariant('fog-draft960'), 'fog_draft960');
-  assert.equal(parseRatingVariant('dark-draft960'), 'fog_draft960');
+  // The deleted Draft960 pool is no longer a rating variant in any spelling.
+  assert.equal(parseRatingVariant('fog_draft960'), null);
+  assert.equal(parseRatingVariant('fog-draft960'), null);
+  assert.equal(parseRatingVariant('dark-draft960'), null);
   assert.equal(parseRatingVariant('jieqi'), 'jieqi');
   assert.equal(parseRatingVariant('banqi'), 'banqi');
   assert.equal(parseRatingVariant('dark-xiangqi'), 'dark_xiangqi');

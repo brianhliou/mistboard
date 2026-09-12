@@ -1,5 +1,4 @@
 import {
-  type Chess960Start,
   type Color,
   capturedRoleFor,
   clockRemainingMs,
@@ -7,7 +6,6 @@ import {
   expireClock,
   freezeClock,
   type GameEvent,
-  type GameProjection,
   isGameEndReason,
   type Move,
   nextClockForMove,
@@ -64,10 +62,6 @@ export class PersistenceFailure extends Error {
 }
 
 // ── Pure helpers ───────────────────────────────────────────────────────────
-
-export function offerForColor(projection: GameProjection, color: Color): Chess960Start[] {
-  return projection.offers[color] ?? projection.offer;
-}
 
 export function roomIdToSeed(roomId: string): number {
   let hash = 0;
@@ -405,7 +399,6 @@ export function buildGameSummary(ctx: RoomManagerContext, room: Room): GameSumma
     region: room.region ?? room.projection.region ?? 'global',
     initialMs: room.timeControl?.initialMs ?? null,
     incrementMs: room.timeControl?.incrementMs ?? null,
-    hiddenDraft960: room.hiddenDraft960,
     participants,
     // An engine cannot abandon: record the failure, not a win for the human.
     // This is the live fog-chess path (dark-chess rides the legacy shell).
@@ -481,9 +474,8 @@ export function broadcastSnapshot(ctx: RoomManagerContext, room: Room): void {
 // Broadcast a paired-with-appendEvent state change. Sends one event-
 // appended frame per newly-appended event in [fromSeq, room.events.length)
 // to every connected client. Callers record fromSeq before any appendEvent
-// calls; the range catches multi-event flows (selectStart →
-// draft-start-selected then optional draft-start-resolved) without
-// requiring helpers to thread seq through their signatures.
+// calls; the range catches multi-event flows without requiring helpers to
+// thread seq through their signatures.
 //
 // Game-end transition (status flips to 'finished') falls back to a full
 // snapshot for every recipient: a clean final-frame resync at the game
@@ -1054,61 +1046,6 @@ export async function startLiveClockIfReady(ctx: RoomManagerContext, room: Room)
   // there's otherwise no trigger to kick off the engine's first move — the
   // normal trigger fires after a human plays (line 699 of this file).
   scheduleRandomEngineMove(ctx, room);
-}
-
-export async function resolveStartIfReady(ctx: RoomManagerContext, room: Room): Promise<void> {
-  if (
-    room.projection.resolvedStartId !== null ||
-    (room.projection.resolvedStartIds.white !== undefined &&
-      room.projection.resolvedStartIds.black !== undefined)
-  )
-    return;
-
-  const whiteSelection = room.projection.selections.white;
-  const blackSelection = room.projection.selections.black;
-  if (whiteSelection === undefined || blackSelection === undefined) return;
-
-  const whiteStart = offerForColor(room.projection, 'white').find(
-    (start) => start.id === whiteSelection,
-  );
-  const blackStart = offerForColor(room.projection, 'black').find(
-    (start) => start.id === blackSelection,
-  );
-  if (!whiteStart || !blackStart) return;
-  const now = Date.now();
-
-  await appendEvent(ctx, room, {
-    type: 'draft-start-resolved',
-    at: now,
-    roomId: room.id,
-    clock: createClock(
-      now,
-      room.projection.timeControl?.initialMs,
-      room.projection.timeControl?.incrementMs,
-    ),
-    startIds: {
-      white: whiteStart.id,
-      black: blackStart.id,
-    },
-  });
-}
-
-export async function selectEngineDraftStart(ctx: RoomManagerContext, room: Room): Promise<void> {
-  if (room.projection.state.status.type !== 'pregame') return;
-  if (!isServerEngineClient(room.projection.seats.black)) return;
-  if (room.projection.selections.black !== undefined) return;
-  const offer = offerForColor(room.projection, 'black');
-  if (offer.length === 0) return;
-  const start = offer[Math.abs(roomIdToSeed(`${room.id}:black-draft`)) % offer.length];
-  if (!start) return;
-  await appendEvent(ctx, room, {
-    type: 'draft-start-selected',
-    at: Date.now(),
-    roomId: room.id,
-    color: 'black',
-    startId: start.id,
-  });
-  await resolveStartIfReady(ctx, room);
 }
 
 type ClientMoveMessage = {

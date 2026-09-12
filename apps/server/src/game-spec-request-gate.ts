@@ -11,14 +11,10 @@ import {
   xiangqiEnabled,
 } from './feature-flags.js';
 
-// The chess stack behind this gate serves exactly these two specs.
-// parseVariantId (routes/lib.ts) is the source of that truth: it collapses
-// draft960 spellings to 'draft960' and every other variant string to
-// 'dark-chess', so anything the gate passes lands on one of the two.
-const CHESS_STACK_SPEC_IDS = [
-  'dark-chess',
-  'dark-draft960',
-] as const satisfies readonly GameSpecId[];
+// The chess stack behind this gate serves exactly this spec. parseVariantId
+// (routes/lib.ts) is the source of that truth: it collapses every variant
+// string to 'dark-chess', so anything the gate passes lands there.
+const CHESS_STACK_SPEC_IDS = ['dark-chess'] as const satisfies readonly GameSpecId[];
 type ChessStackSpecId = (typeof CHESS_STACK_SPEC_IDS)[number];
 const CHESS_STACK_SPEC_ID_SET: ReadonlySet<GameSpecId> = new Set(CHESS_STACK_SPEC_IDS);
 
@@ -115,11 +111,14 @@ export type GameSpecGateDecision =
     };
 
 // A retired spec (runtimeStatus 'retired' in packages/game) is refused before
-// anything else looks at it: before the chess-stack branch, because
-// dark-draft960 is a chess-stack id, and before the flag lookup, because a
-// flag cannot bring a retired spec back. 410 rather than 404: the id is
-// known and it is gone.
-const DRAFT960_VARIANT_SPELLINGS: ReadonlySet<string> = new Set([
+// anything else looks at it: before the chess-stack branch and before the
+// flag lookup, because a flag cannot bring a retired spec back. 410 rather
+// than 404: the id is known and it is gone.
+//
+// The deleted Draft960 spellings are refused by name: parseVariantId would
+// otherwise collapse them into a Fog Chess room, and a client that asked for
+// the draft must not silently get a game without one.
+const DELETED_DRAFT960_SPELLINGS: ReadonlySet<string> = new Set([
   'draft960',
   'dark-draft960',
   'fog-draft960',
@@ -138,8 +137,7 @@ export function gateGameSpecRequest(input: {
 }): GameSpecGateDecision {
   // `gameSpecId` is the canonical selector. Absent (undefined, or null from
   // URLSearchParams.get on the WS path) passes; anything else must resolve to
-  // a chess-stack spec. maybeGameSpecForId also resolves the registry aliases
-  // ('fog-draft960'), mirroring tenant request matching.
+  // a chess-stack spec.
   if (input.gameSpecId !== undefined && input.gameSpecId !== null) {
     const spec = typeof input.gameSpecId === 'string' ? maybeGameSpecForId(input.gameSpecId) : null;
     if (!spec) {
@@ -154,15 +152,18 @@ export function gateGameSpecRequest(input: {
     if (!isChessStackSpecId(spec.id)) return rejectGatedSpec(spec.id);
   }
   // The legacy `variant` field only rejects when it names a known non-chess
-  // spec (or one of its aliases). Free strings stay with parseVariantId's
-  // collapse: legacy clients send spellings like 'fog-draft960' or arbitrary
-  // values and rely on landing in dark chess.
+  // spec or a deleted Draft960 spelling. Other free strings stay with
+  // parseVariantId's collapse: legacy clients send 'fog' or arbitrary values
+  // and rely on landing in dark chess.
   if (typeof input.variant === 'string') {
-    // parseVariantId (routes/lib.ts) collapses these three spellings to the
-    // draft960 setup, which is retired; refuse them here so the collapse is
-    // never reached. Mirrors that function's list on purpose (no import: lib
-    // imports this gate).
-    if (DRAFT960_VARIANT_SPELLINGS.has(input.variant)) return REJECT_RETIRED;
+    if (DELETED_DRAFT960_SPELLINGS.has(input.variant)) {
+      return {
+        type: 'reject',
+        error: 'unknown_game_spec',
+        httpStatus: 404,
+        wsCloseReason: 'unknown game spec',
+      };
+    }
     const spec = maybeGameSpecForId(input.variant);
     if (spec?.runtimeStatus === 'retired') return REJECT_RETIRED;
     if (spec && !isChessStackSpecId(spec.id)) return rejectGatedSpec(spec.id);

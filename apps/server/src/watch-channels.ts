@@ -1,7 +1,6 @@
 import {
   CANONICAL_VARIANT_ORDER,
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   type GameFamilyId,
   type GameSpecId,
 } from '@mistboard/game';
@@ -46,10 +45,10 @@ const DARK_CHESS_CHANNEL: WatchChannel = {
   curated: false,
   default: false,
   family: 'chess',
-  gameSpecIds: [DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID],
+  gameSpecIds: [DARK_CHESS_SPEC_ID],
   id: 'dark-chess',
   label: 'Fog Chess',
-  legacyVariants: ['dark-chess', 'draft960'],
+  legacyVariants: ['dark-chess'],
   modes: VARIANT_CHANNEL_MODES,
 };
 
@@ -103,8 +102,7 @@ const ENGINES_CHANNEL: WatchChannel = {
 
 // Rail order, derived from the shared CANONICAL_VARIANT_ORDER so the watch rail
 // matches the play menu / leaderboard / rules rail. Every watch channel id equals
-// its spec id, so the spec order IS the channel order (dark-draft960 has no
-// channel and is simply never matched). The registry's Map iteration order tracks
+// its spec id, so the spec order IS the channel order. The registry's Map iteration order tracks
 // tenant import order, not the rail's order, so channels are sorted by this list;
 // dark-chess sorts to its canonical position like any other id (ids absent here
 // sort to the end), and remains the default landing channel via its `default`.

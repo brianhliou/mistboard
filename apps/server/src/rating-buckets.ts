@@ -1,6 +1,5 @@
 import {
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   findTimeControl,
   type GameSpecId,
   isRatedPoolBase,
@@ -42,7 +41,6 @@ type BucketInput = {
   variant?: string | null;
   initialMs?: number | null;
   incrementMs?: number | null;
-  hiddenDraft960?: boolean | null;
 };
 
 export function bucketForGame(input: BucketInput): RatingBucket | null {
@@ -58,8 +56,8 @@ export function bucketForGame(input: BucketInput): RatingBucket | null {
   return { variant, timeClass: spec.timeClass };
 }
 
-// Accepts a canonical pool name ('fog'), a game spec id ('dark-chess'), or a
-// spec alias ('fog-draft960') and returns the rated pool, or null if casual.
+// Accepts a canonical pool name ('fog') or a game spec id ('dark-chess') and
+// returns the rated pool, or null if casual.
 export function parseRatingVariant(value: string | null | undefined): RatingVariant | null {
   if (isRatedPoolBase(value)) return value;
   const spec = maybeGameSpecForId(value);
@@ -74,16 +72,11 @@ export function parseRatingTimeClass(value: string | null | undefined): RatingTi
 }
 
 // Map a game's variant string to the spec whose rating pool it belongs to. Any
-// known spec maps to itself (each rated variant buckets into its own pool); the
-// dark-chess family splits on hiddenDraft960; unknown/legacy values fall back to
-// the dark-chess family. ratingPoolForSpec then fails closed for casual specs.
+// known spec maps to itself (each rated variant buckets into its own pool);
+// unknown/legacy values fall back to the dark-chess family. ratingPoolForSpec
+// then fails closed for casual specs.
 function ratingSpecForGame(input: BucketInput): GameSpecId {
-  const spec = maybeGameSpecForId(input.variant);
-  if (spec) {
-    if (spec.id === DARK_CHESS_SPEC_ID && input.hiddenDraft960) return DARK_DRAFT960_SPEC_ID;
-    return spec.id;
-  }
-  return input.hiddenDraft960 ? DARK_DRAFT960_SPEC_ID : DARK_CHESS_SPEC_ID;
+  return maybeGameSpecForId(input.variant)?.id ?? DARK_CHESS_SPEC_ID;
 }
 
 function currentRatingVariantForSpec(id: GameSpecId): RatingVariant {

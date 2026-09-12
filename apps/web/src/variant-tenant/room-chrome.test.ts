@@ -374,13 +374,11 @@ function refsFixture(): LiveRefs {
     clockTop: el('div'),
     devViews: el('div'),
     devViewsSection: el('section'),
-    draftPicker: el('div'),
     gameControls: el('div'),
     gameControlsSection: el('section'),
     gameInfo: el('div'),
     hiddenPool: el('div'),
     moveList: el('ol'),
-    offerSection: el('section'),
     playerBottom: el('div'),
     playerTop: el('div'),
     promotion: el('div'),
@@ -388,9 +386,6 @@ function refsFixture(): LiveRefs {
     replayMeta: el('p'),
     roomActions: el('div'),
     roomMeta: el('p'),
-    selectionList: el('div'),
-    selectionSection: el('section'),
-    starts: el('div'),
   };
 }
 

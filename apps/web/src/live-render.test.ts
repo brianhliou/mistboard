@@ -99,7 +99,7 @@ describe('boardFen', () => {
 
 describe('hiddenSquareClasses', () => {
   it('returns an empty map for a non-fog variant', () => {
-    const view = makeView({ variant: 'draft960', visibleSquares: [] });
+    const view = makeView({ variant: 'chess', visibleSquares: [] });
     expect(hiddenSquareClasses(view).size).toBe(0);
   });
 

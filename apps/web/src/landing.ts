@@ -445,7 +445,7 @@ export async function mountGame(root: HTMLElement, roomId: string): Promise<void
     return;
   }
 
-  const exportLinks = buildGameExportLinks(game.roomId, game.variant);
+  const exportLinks = buildGameExportLinks(game.roomId);
   if (exportLinks) shell.append(exportLinks);
   await mountReplay(replayRoot, game.roomId, {
     autoplay: false,
@@ -811,11 +811,7 @@ function appendLinkedTagline(target: HTMLElement, tagline: string, href: string)
   target.append(link);
 }
 
-function buildGameExportLinks(roomId: string, variant: string | undefined): HTMLElement | null {
-  // Draft960 export is deferred until the schema can encode post-draft starting
-  // positions. Hide the section entirely for now to avoid shipping broken PGN.
-  if (variant === 'draft960') return null;
-
+function buildGameExportLinks(roomId: string): HTMLElement | null {
   const section = document.createElement('section');
   section.className = 'game-export-links';
 

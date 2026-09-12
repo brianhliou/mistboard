@@ -8,9 +8,7 @@
  * Dark-chess wire behaviors this suite intentionally pins (the chess stack is
  * the richest tenant): Model A fog redaction (a seat sees only its own
  * move-played events at EVERY status including finished; spectators get the
- * empty fog view), hidden-Draft960 redaction (own offer/selection only;
- * draft-start-resolved never reaches clients pre-finish), the devViews admin
- * debug reveal, pause/resume payload fields, PvE mode derivation +
+ * empty fog view), the devViews admin debug reveal, pause/resume payload fields, PvE mode derivation +
  * pveEngineId/Name, and the rematch/deadline/seatDisplayNames pass-throughs.
  *
  * Regenerate ONLY for an intentional wire change:
@@ -28,7 +26,6 @@ import {
   type GameEvent,
   type GameProjection,
   type Move,
-  pickDraft960Offer,
   replayGameEvents,
   variantForId,
 } from '@mistboard/game';
@@ -179,7 +176,6 @@ function runScriptA(): GoldenScript {
         roomId,
         variant: 'dark-chess',
         gameSpecId: 'dark-chess',
-        offer: [],
         region: 'global',
       },
     ],
@@ -223,77 +219,6 @@ function runScriptA(): GoldenScript {
   return script;
 }
 
-// ── Script B: hidden Draft960 — per-seat offers, selections, resolution. ────
-function runScriptB(): GoldenScript {
-  const script: GoldenScript = { id: 'hidden-draft960', steps: [] };
-  const roomId = 'golden-dark-b';
-  // Seeded offers: deterministic, and DIFFERENT per color so cross-seat leaks
-  // would change the fixture.
-  const whiteOffer = pickDraft960Offer(7);
-  const blackOffer = pickDraft960Offer(11);
-  const room = goldenRoom([
-    {
-      type: 'room-created',
-      at: 1_000,
-      roomId,
-      variant: 'dark-chess',
-      gameSpecId: 'dark-draft960',
-      offer: whiteOffer,
-      offers: { white: whiteOffer, black: blackOffer },
-      region: 'global',
-    },
-  ]);
-  recordStep(script, room, 'hydrated');
-
-  append(script, room, 'seat-white', {
-    type: 'seat-assigned',
-    at: 2_000,
-    roomId,
-    clientId: 'client-white',
-    seat: 'white',
-  });
-  append(script, room, 'seat-black', {
-    type: 'seat-assigned',
-    at: 3_000,
-    roomId,
-    clientId: 'client-black',
-    seat: 'black',
-  });
-  append(script, room, 'white-selects', {
-    type: 'draft-start-selected',
-    at: 4_000,
-    roomId,
-    color: 'white',
-    startId: whiteOffer[0]!.id,
-  });
-  append(script, room, 'black-selects', {
-    type: 'draft-start-selected',
-    at: 5_000,
-    roomId,
-    color: 'black',
-    startId: blackOffer[1]!.id,
-  });
-  append(script, room, 'resolved', {
-    type: 'draft-start-resolved',
-    at: 6_000,
-    roomId,
-    startIds: { white: whiteOffer[0]!.id, black: blackOffer[1]!.id },
-  });
-
-  for (let i = 0; i < 2; i += 1) {
-    const color = playingTurn(room.projection);
-    append(script, room, `move-${i + 1}-${color}`, {
-      type: 'move-played',
-      at: 10_000 + i * 5_000,
-      roomId,
-      color,
-      move: firstLegalMove(room.projection),
-    });
-  }
-  recordAdminProbe(script, room);
-  return script;
-}
-
 // ── Script C: pause/resume cycle ending in a leaver forfeit. ────────────────
 function runScriptC(): GoldenScript {
   const script: GoldenScript = { id: 'pause-resume-forfeit', steps: [] };
@@ -306,7 +231,6 @@ function runScriptC(): GoldenScript {
         roomId,
         variant: 'dark-chess',
         gameSpecId: 'dark-chess',
-        offer: [],
         region: 'global',
       },
       { type: 'seat-assigned', at: 2_000, roomId, clientId: 'client-white', seat: 'white' },
@@ -370,7 +294,6 @@ function runScriptD(): GoldenScript {
         roomId,
         variant: 'dark-chess',
         gameSpecId: 'dark-chess',
-        offer: [],
         region: 'global',
         timeControl: { initialMs: 180_000, incrementMs: 2_000 },
       },
@@ -404,7 +327,7 @@ function runScriptD(): GoldenScript {
 }
 
 function runAllScripts(): GoldenScript[] {
-  return [runScriptA(), runScriptB(), runScriptC(), runScriptD()];
+  return [runScriptA(), runScriptC(), runScriptD()];
 }
 
 // Round-trip through JSON so undefined-valued keys drop out exactly as they do
@@ -432,11 +355,6 @@ test('dark chess golden wire: per-seat payloads match the recorded fixture', () 
 type WireSnapshot = {
   events: Array<{ type: string; color?: string }>;
   devViews: unknown;
-  offer: unknown[];
-  offers: Record<string, unknown[]>;
-  selections: Record<string, unknown>;
-  resolvedStartId: number | null;
-  resolvedStartIds: Record<string, unknown>;
   state: {
     board: Record<string, { color: string }>;
     lastMove?: unknown;
@@ -527,38 +445,6 @@ test('dark chess golden wire: seated fog views never show hidden opponent pieces
         }
       }
     }
-  }
-});
-
-test('dark chess golden wire: hidden-draft offers and selections stay per-seat', () => {
-  const script = runScriptB();
-  // Every pre-finish step: a seat sees only its own offer/selection, the
-  // spectator sees none, and draft-start-resolved never reaches anyone.
-  for (const step of script.steps) {
-    if (step.label === 'admin-probe') continue;
-    const snapshots = wireSnapshots(step);
-    for (const seat of ['white', 'black'] as const) {
-      const other = seat === 'white' ? 'black' : 'white';
-      const snapshot = snapshots[seat]!;
-      assert.equal(snapshot.offers[other], undefined, `${script.id}/${step.label}: foreign offer`);
-      assert.equal(
-        snapshot.selections[other],
-        undefined,
-        `${script.id}/${step.label}: foreign selection`,
-      );
-      assert.deepStrictEqual(snapshot.resolvedStartIds[other] ?? undefined, undefined);
-      assert.equal(snapshot.resolvedStartId, null);
-      for (const event of snapshot.events) {
-        assert.notEqual(event.type, 'draft-start-resolved');
-        if (event.type === 'draft-start-selected') {
-          assert.equal((event as { color?: string }).color, seat);
-        }
-      }
-    }
-    const spectator = snapshots.spectator!;
-    assert.deepStrictEqual(spectator.offer, []);
-    assert.deepStrictEqual(spectator.offers, {});
-    assert.deepStrictEqual(spectator.selections, {});
   }
 });
 
