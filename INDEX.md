@@ -962,6 +962,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/articles/banqi-luck-diagrams.ts` | _needs a one-line description_ |
 | `apps/web/src/articles/derived-translation.ts` | _needs a one-line description_ |
 | `apps/web/src/articles/puzzle-mining-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/articles/puzzles-with-more-than-one-solution-diagrams.ts` | Card art (16:10 SVG) for "Puzzles with more than one solution": two answers on one line; the article body is boards and tables, its diagrams were cut |
 | `apps/web/src/articles/riverbank-cannon-diagrams.ts` | _needs a one-line description_ |
 | `apps/web/src/assessment-glyphs.ts` | _needs a one-line description_ |
 | `apps/web/src/developers-page.ts` | /developers: one paste-able iframe snippet per frameable surface (study chapter, game, TV, puzzle, analysis board), sizing/theme/notation/oEmbed prose, link to /api-docs; every path and size imported from `@mistboard/game` embed-contract so prose cannot drift |
