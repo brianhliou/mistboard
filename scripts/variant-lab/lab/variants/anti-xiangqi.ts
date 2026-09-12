@@ -1,18 +1,19 @@
-// Anti xiangqi as a lab variant: compulsory capture and win by losing
-// everything, on the xiangqi array. The decision sheet is
+// Anti xiangqi as a lab variant: compulsory capture on the xiangqi array, in
+// the three flavours the antichess family has. The decision sheet is
 // docs-private/variant-lab/anti-xiangqi/decisions.md; the keys below are its
-// open decisions (D1 generalRoyal, D2 facing, D3 stalemate) plus the shared
-// vocabulary, and the settled ones (D4-D8) are fixed in the kernel config.
+// open decisions (D1/D4 flavour, D2 facing, D3 stalemate, D9 stall) plus the
+// shared vocabulary, and the settled ones (D5-D8) are fixed in the config.
 //
-// Stock Fairy-Stockfish expresses the default point exactly: a non-royal
-// general is `king = -` plus a wazir on the palace points (the piece type
-// FSF's KING can never be captured), compulsory capture is `mustCapture`,
-// and losing everything is `extinctionValue = win`. Two things it cannot
-// express throw rather than measure a different game: any facing rule for a
-// non-royal general (`flyingGeneral` is keyed on the KING type and becomes a
-// silent no-op without one), and the royal flavour, whose "bare general
-// wins" and "being checkmated wins" endings the shared kernel has no hook
-// for yet.
+// Stock Fairy-Stockfish expresses all three flavours: a non-royal general is
+// `king = -` plus a wazir on the palace points (the piece type FSF's KING can
+// never be captured), compulsory capture is `mustCapture`, losing everything
+// is `extinctionValue = win`, losing the general alone is
+// `extinctionPieceTypes = k` (codrus), and the royal flavour (losers) keeps
+// the KING with `checkmateValue = win` and `extinctionPieceCount = 1`. What
+// stock FSF cannot express throws rather than measure a different game: a
+// facing rule for a non-royal general (`flyingGeneral` is keyed on the KING
+// type and becomes a silent no-op without one), and the stall rule, which
+// the kernel referees with the engine unaware.
 
 import type { XiangqiMove } from '../../../../packages/game/src/variants-xiangqi.js';
 import {
@@ -30,12 +31,15 @@ import {
 import type { LabVariant, RulesRecord } from '../types.js';
 import { STOCK_FSF } from './xiangqi.js';
 
+export type AntiFlavour = 'antichess' | 'losers' | 'codrus';
+
 /** The kernel configuration the sheet's decisions imply; exported so the opening-tree test reads the same rules the lab measures. */
 export function antiXiangqiKernelConfig(rules: RulesRecord): XiangqiRuleConfig {
-  const royal = rules.generalRoyal === true;
+  const flavour = rules.flavour as AntiFlavour;
+  const royal = flavour === 'losers';
   if (royal && rules.facing !== 'file') {
     throw new Error(
-      'generalRoyal=true fixes facing=file (the sheet: the royal flavour keeps the prohibition; the adapter rejects any other pairing)',
+      'flavour=losers fixes facing=file (the sheet: the royal flavour keeps the prohibition; the adapter rejects any other pairing)',
     );
   }
   return {
@@ -43,7 +47,11 @@ export function antiXiangqiKernelConfig(rules: RulesRecord): XiangqiRuleConfig {
     royal: { red: royal, black: royal },
     check: royal ? 'standard' : 'none',
     mustCapture: true,
-    extinction: { red: 'wins', black: 'wins' },
+    extinction:
+      flavour === 'codrus' ? { red: 'none', black: 'none' } : { red: 'wins', black: 'wins' },
+    checkmate: royal ? 'win' : 'loss',
+    bareGeneral: royal ? 'wins' : 'none',
+    generalLost: flavour === 'codrus' ? 'wins' : 'none',
     stall: rules.stall === 'fewerPieces' ? 'fewerPieces' : 'draw',
     deadPosition: rules.stall === 'fewerPieces',
   };
@@ -54,16 +62,16 @@ export const antiXiangqiVariant: LabVariant<XiangqiRuleState, XiangqiMove> = {
   title: 'Anti Xiangqi (compulsory capture, win by losing everything)',
   ruleSchema: {
     ...SHARED_RULE_SCHEMA,
-    generalRoyal: {
-      options: [false, true],
-      default: false,
+    flavour: {
+      options: ['antichess', 'losers', 'codrus'],
+      default: 'antichess',
       blast: 'movegen',
-      note: 'D1. false: the general is an ordinary piece (antichess). true: losers flavour, check and checkmate exist and being checkmated or reduced to the bare general wins; needs two kernel hooks the shared kernel does not have yet and throws until they exist.',
+      note: 'D1 and D4 together. antichess: the general is an ordinary piece and you win by losing everything (the parent). losers: the general stays royal with check, and being mated or reduced to the bare general wins (ICC wild 17). codrus: the general is an ordinary piece and losing it is the win (1844). All three run on stock FSF.',
     },
     facing: {
       ...SHARED_RULE_SCHEMA.facing,
       default: 'off',
-      note: 'D2. off: the generals may face (stock FSF, the sheet’s default). file: the xiangqi prohibition kept as a bare rule; stock under generalRoyal=true, needs the flyingGeneral patch under false. capture: the folk gloss made literal; needs the patched binary.',
+      note: 'D2. off: the generals may face (stock FSF, the sheet’s default). file: the xiangqi prohibition kept as a bare rule; stock under flavour=losers, needs the flyingGeneral patch otherwise. capture: the folk gloss made literal; needs the patched binary.',
     },
     stalemate: {
       ...SHARED_RULE_SCHEMA.stalemate,
@@ -79,24 +87,30 @@ export const antiXiangqiVariant: LabVariant<XiangqiRuleState, XiangqiMove> = {
   },
   create(rules) {
     const config = antiXiangqiKernelConfig(rules);
-    if (rules.generalRoyal === true) {
-      throw new Error(
-        'generalRoyal=true is unmeasured: the kernel has no checkmate-wins or bare-general-wins hook (FSF checkmateValue / extinctionPieceCount); add them to xiangqi-rule-kernel.ts with a test if D1 lands on true',
-      );
-    }
-    if (rules.facing !== 'off') {
+    const flavour = rules.flavour as AntiFlavour;
+    if (flavour !== 'losers' && rules.facing !== 'off') {
       throw new Error(
         `facing=${String(rules.facing)} with a non-royal general needs the flyingGeneral patch: stock FSF keys flyingGeneral on the KING type and silently ignores it once the general is a wazir. Run at facing=off and label the rows.`,
       );
     }
     const kernel = createXiangqiRuleKernel(config);
-    const lines = [
-      ...nonRoyalGeneralLines(),
-      ...sharedStanzaLines(rules),
-      'mustCapture = true',
-      'extinctionValue = win',
-      'extinctionPieceTypes = *',
-    ];
+    const lines =
+      flavour === 'losers'
+        ? [
+            ...sharedStanzaLines(rules),
+            'mustCapture = true',
+            'checkmateValue = win',
+            'extinctionValue = win',
+            'extinctionPieceTypes = *',
+            'extinctionPieceCount = 1',
+          ]
+        : [
+            ...nonRoyalGeneralLines(),
+            ...sharedStanzaLines(rules),
+            'mustCapture = true',
+            'extinctionValue = win',
+            `extinctionPieceTypes = ${flavour === 'codrus' ? 'k' : '*'}`,
+          ];
     return {
       kernel,
       engine: {
@@ -119,18 +133,13 @@ export const antiXiangqiVariant: LabVariant<XiangqiRuleState, XiangqiMove> = {
     },
     {
       name: 'the general can be compelled',
-      why: 'D5. A black chariot stands beside the red general inside the palace and nothing else can capture: Ke1xd1 is the only legal move.',
-      fen: '4k4/9/9/9/9/9/9/9/9/3rK4 w - - 0 1',
-    },
-    {
-      name: 'the general can be captured',
-      why: 'D1. Red to move has exactly one capture and it takes the black general: Ra10xe10 is the only legal move, and Black, left with nothing, has won.',
-      fen: 'R3k4/9/9/9/9/9/9/9/9/4K4 w - - 0 1',
+      why: 'D5. A black chariot stands beside the red general inside the palace and nothing else can capture: Ke1xd1 is the only legal move (under losers it is the only evasion that captures, same answer). The far soldiers keep both sides off the bare-general ending FSF adjudicates at once.',
+      fen: '4k4/9/9/p8/9/9/8P/9/9/3rK4 w - - 0 1',
     },
     {
       name: 'facing generals are legal',
-      why: 'D2 at off: with nothing else on the e-file, Kd1-e1 is legal (the generals then face); under the prohibition Kd1-d2 would be the only move.',
-      fen: '4k4/9/9/9/9/9/9/9/9/3K5 w - - 0 1',
+      why: 'D2 at off: with nothing else on the e-file, Kd1-e1 is legal (the generals then face); under the prohibition Kd1-d2 and the soldier push are the only moves. The soldiers keep both sides off the bare-general ending.',
+      fen: '4k4/9/9/p8/9/9/8P/9/9/3K5 w - - 0 1',
     },
     {
       name: 'stalemate',

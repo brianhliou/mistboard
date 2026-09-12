@@ -24,7 +24,7 @@ import {
 } from '../../packages/game/src/xiangqi-rule-kernel.js';
 import { contextForVariant } from './lab/context.js';
 import { enginePolicy, playGame } from './lab/play.js';
-import { resolveRules } from './lab/rules.js';
+import { parseRuleArgs, resolveRules } from './lab/rules.js';
 import { antiXiangqiKernelConfig, antiXiangqiVariant } from './lab/variants/anti-xiangqi.js';
 
 type Move = { from: string; to: string };
@@ -43,12 +43,30 @@ type Row = {
 };
 type Sweep = { nodes: number; rules: string[]; rows: Row[] };
 
-const treeKernel = createXiangqiRuleKernel(
-  antiXiangqiKernelConfig(resolveRules(antiXiangqiVariant.ruleSchema, {})),
-);
+/** Endings the rules decide, as opposed to stalls the referee adjudicates. */
+const DECISIVE = new Set([
+  'extinction',
+  'stalemate',
+  'checkmate',
+  'bare-general',
+  'general-lost',
+  'general-captured',
+]);
+
+function classify(reason: string, winner: string | null, afterExit: number): string {
+  if (DECISIVE.has(reason)) return afterExit <= 40 ? 'forced dump' : 'fight to the end';
+  return winner ? 'stall, on count' : 'stall, equal';
+}
+
+/** The kernel the tree is walked with: the same rules the games are refereed under. */
+function kernelFor(rules: string[]) {
+  return createXiangqiRuleKernel(
+    antiXiangqiKernelConfig(resolveRules(antiXiangqiVariant.ruleSchema, parseRuleArgs(rules))),
+  );
+}
 
 /** Every exit of the cascade whose first move is Cb3xb10. */
-function exits(): Leaf[] {
+function exits(treeKernel: ReturnType<typeof kernelFor>): Leaf[] {
   const leaves: Leaf[] = [];
   const walk = (state: XiangqiRuleState, line: Move[]) => {
     const captures = treeKernel.legalMoves(state).filter((m) => state.board[m.to] !== undefined);
@@ -63,7 +81,7 @@ function exits(): Leaf[] {
 }
 
 async function sweep(nodes: number, out: string, rules: string[]) {
-  const leaves = exits();
+  const leaves = exits(kernelFor(rules));
   const done: Sweep = existsSync(out)
     ? (JSON.parse(readFileSync(out, 'utf8')) as Sweep)
     : { nodes, rules, rows: [] };
@@ -85,16 +103,7 @@ async function sweep(nodes: number, out: string, rules: string[]) {
       const red = (placement.match(/[A-Z]/g) ?? []).length;
       const black = (placement.match(/[a-z]/g) ?? []).length;
       const afterExit = played.plies - leaf.plies;
-      const cls =
-        played.reason === 'extinction' && afterExit <= 40
-          ? 'forced dump'
-          : played.reason === 'extinction'
-            ? 'fight to extinction'
-            : played.reason === 'stalemate'
-              ? 'stalemate'
-              : played.winner
-                ? 'stall, on count'
-                : 'stall, equal';
+      const cls = classify(played.reason, played.winner, afterExit);
       done.rows.push({
         leaf: i,
         exitPly: leaf.plies,
@@ -121,11 +130,12 @@ type V = 'red' | 'black' | 'draw';
 
 function minimax(file: string) {
   const data = JSON.parse(readFileSync(file, 'utf8')) as Sweep;
+  const treeKernel = kernelFor(data.rules ?? []);
   const score = (v: V, mover: 'red' | 'black') => (v === mover ? 2 : v === 'draw' ? 1 : 0);
   for (const scoring of ['stall is a draw', 'stall goes to fewer pieces'] as const) {
     const leafValue = new Map<string, V>();
     for (const r of data.rows) {
-      const decisive = r.reason === 'extinction' || r.reason === 'stalemate';
+      const decisive = DECISIVE.has(r.reason);
       const value: V = decisive
         ? (r.winner as V)
         : scoring === 'stall is a draw'
@@ -174,8 +184,13 @@ function minimax(file: string) {
     const first = treeKernel.legalMoves(start).find((m) => m.from === 'b3');
     if (!first) throw new Error('no Cb3xb10 at the start');
     const after = treeKernel.apply(start, first);
+    const classes: Record<string, number> = {};
+    for (const r of data.rows) {
+      const c = classify(r.reason, r.winner, r.afterExit);
+      classes[c] = (classes[c] ?? 0) + 1;
+    }
     console.log(
-      `\n== ${scoring} (leaves from the ${data.nodes}-node sweep, ${data.rows.length} rows)`,
+      `\n== ${scoring} (leaves from the ${data.nodes}-node sweep, ${data.rows.length} rows: ${JSON.stringify(classes)})`,
     );
     console.log(`   value of the cascade after 1. Cb3xb10: ${value(after, ['b3b10'])}`);
     optimal(after, ['b3b10']);

@@ -50,6 +50,8 @@ export type BlastShape = 'orthogonal' | 'eight';
 export type StalemateValue = 'loss' | 'win' | 'draw';
 export type ExtinctionValue = 'none' | 'loses' | 'wins';
 export type StallValue = 'draw' | 'fewerPieces';
+export type CheckmateValue = 'loss' | 'win';
+export type GeneralLostValue = 'none' | 'wins';
 
 export type XiangqiRuleConfig = {
   /** Start array; the standard one by default. */
@@ -99,6 +101,21 @@ export type XiangqiRuleConfig = {
     black: readonly XiangqiSquare[];
     timing: 'immediate' | 'blackReply';
   };
+  /**
+   * Who a checkmate goes to: the mated side loses (xiangqi) or wins
+   * (losers, where being mated is one way of getting rid of your pieces).
+   */
+  checkmate?: CheckmateValue;
+  /**
+   * A non-royal general that is captured: `none`, it was a piece like any
+   * other (antichess); `wins`, the side that lost it has won (Codrus). A
+   * royal general cannot be captured and is unaffected.
+   */
+  generalLost?: GeneralLostValue;
+  /**
+   * A royal side reduced to its bare general wins (losers). Off is xiangqi.
+   */
+  bareGeneral?: 'none' | 'wins';
   /** Result for the side to move with no legal move and not in check. `loss` is xiangqi. */
   stalemate?: StalemateValue;
   /** Plies without a capture before a draw. 60 is the site rule. */
@@ -140,6 +157,9 @@ export const STANDARD_XIANGQI_RULES: Required<
   repetition: 'draw',
   stall: 'draw',
   deadPosition: false,
+  checkmate: 'loss',
+  generalLost: 'none',
+  bareGeneral: 'none',
 };
 
 type Resolved = typeof STANDARD_XIANGQI_RULES;
@@ -158,7 +178,9 @@ export type XiangqiRuleEndReason =
   | 'flag'
   | 'repetition'
   | 'progress-clock'
-  | 'dead-position';
+  | 'dead-position'
+  | 'general-lost'
+  | 'bare-general';
 
 export type XiangqiRuleStatus =
   | { type: 'playing'; turn: XiangqiColor }
@@ -677,6 +699,16 @@ export function createXiangqiRuleKernel(config: XiangqiRuleConfig = {}): Xiangqi
     const board = state.board;
     if (rules.royal[next] && findGeneral(board, next) === null)
       return finish(state, mover, 'general-captured');
+    if (rules.generalLost === 'wins' && !rules.royal[next] && findGeneral(board, next) === null)
+      return finish(state, next, 'general-lost');
+    if (rules.bareGeneral === 'wins') {
+      for (const color of ['red', 'black'] as const) {
+        if (!rules.royal[color]) continue;
+        const pieces = ALL_SQUARES.filter((s) => board[s]?.color === color);
+        if (pieces.length === 1 && board[pieces[0]!]?.role === 'general')
+          return finish(state, color, 'bare-general');
+      }
+    }
     for (const color of ['red', 'black'] as const) {
       const value = rules.extinction[color];
       if (value === 'none') continue;
@@ -708,7 +740,7 @@ export function createXiangqiRuleKernel(config: XiangqiRuleConfig = {}): Xiangqi
     if (replies.length === 0) {
       const inCheck =
         rules.check === 'standard' && rules.royal[next] && generalAttacked(board, next, rules);
-      if (inCheck) return finish(state, mover, 'checkmate');
+      if (inCheck) return finish(state, rules.checkmate === 'win' ? next : mover, 'checkmate');
       if (rules.stalemate === 'loss') return finish(state, mover, 'stalemate');
       if (rules.stalemate === 'win') return finish(state, next, 'stalemate');
       return finish(state, null, 'stalemate');

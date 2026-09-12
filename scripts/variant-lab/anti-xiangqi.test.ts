@@ -24,7 +24,7 @@ const defaults = () => resolveRules(antiXiangqiVariant.ruleSchema, {});
 
 test('anti: the defaults are the sheet’s defaults and the stanza names every trap explicitly', () => {
   const rules = defaults();
-  assert.equal(rules.generalRoyal, false);
+  assert.equal(rules.flavour, 'antichess');
   assert.equal(rules.facing, 'off');
   assert.equal(rules.stalemate, 'win');
   assert.equal(rules.stall, 'off');
@@ -62,13 +62,22 @@ test('anti: what stock FSF or the kernel cannot express throws instead of measur
     /flyingGeneral patch/,
   );
   assert.throws(
-    () => antiXiangqiVariant.create(resolveRules(schema, { generalRoyal: true, facing: 'file' })),
-    /unmeasured/,
-  );
-  assert.throws(
-    () => antiXiangqiKernelConfig(resolveRules(schema, { generalRoyal: true, facing: 'off' })),
+    () => antiXiangqiKernelConfig(resolveRules(schema, { flavour: 'losers', facing: 'off' })),
     /fixes facing=file/,
   );
+  // The other two flavours are stock stanzas.
+  const losers = antiXiangqiVariant.create(
+    resolveRules(schema, { flavour: 'losers', facing: 'file' }),
+  );
+  assert.ok(losers.engine.ini?.includes('checkmateValue = win\n'));
+  assert.ok(losers.engine.ini?.includes('extinctionPieceCount = 1\n'));
+  assert.ok(!losers.engine.ini?.includes('king = -'));
+  assert.deepEqual(losers.kernel.rules.royal, { red: true, black: true });
+  assert.equal(losers.kernel.rules.checkmate, 'win');
+  const codrus = antiXiangqiVariant.create(resolveRules(schema, { flavour: 'codrus' }));
+  assert.ok(codrus.engine.ini?.includes('extinctionPieceTypes = k\n'));
+  assert.equal(codrus.kernel.rules.generalLost, 'wins');
+  assert.deepEqual(codrus.kernel.rules.extinction, { red: 'none', black: 'none' });
 });
 
 test('anti: the discriminating positions say what their notes say under the kernel', () => {
@@ -91,8 +100,7 @@ test('anti: the discriminating positions say what their notes say under the kern
   assert.deepEqual(moves('3k5/9/9/9/9/p8/9/P2p5/9/C1N1K4 w - - 0 1'), ['a1a5', 'c1d3']);
   assert.deepEqual(moves(byName['the general is not royal']), ['a1a5']);
   assert.deepEqual(moves(byName['the general can be compelled']), ['e1d1']);
-  assert.deepEqual(moves(byName['the general can be captured']), ['a10e10']);
-  assert.deepEqual(moves(byName['facing generals are legal']), ['d1d2', 'd1e1']);
+  assert.deepEqual(moves(byName['facing generals are legal']), ['d1d2', 'd1e1', 'i4i5']);
   assert.deepEqual(moves(byName.stalemate), []);
   // Stalemate is a win for the side that cannot move (D3 default).
   const stuck = kernel.parseFen(byName.stalemate, 's')!;
@@ -101,8 +109,13 @@ test('anti: the discriminating positions say what their notes say under the kern
   const after = kernel.apply(before, { from: 'd10', to: 'e10' });
   assert.equal(kernel.fen(after).split(' ')[0], kernel.fen(stuck).split(' ')[0]);
   assert.deepEqual(after.status, { type: 'finished', winner: 'red', reason: 'stalemate' });
-  // Losing everything wins: the forced general capture hands Black the game.
-  const capture = kernel.parseFen(byName['the general can be captured'], 'x')!;
+  // Losing everything wins, and the general is a piece: the forced capture of
+  // Black's last piece, its general, hands Black the game.
+  const capture = kernel.parseFen('R3k4/9/9/9/9/9/9/9/9/4K4 w - - 0 1', 'x')!;
+  assert.deepEqual(
+    kernel.legalMoves(capture).map((m) => kernel.toUci(m)),
+    ['a10e10'],
+  );
   const done = kernel.apply(capture, { from: 'a10', to: 'e10' });
   assert.deepEqual(done.status, { type: 'finished', winner: 'black', reason: 'extinction' });
 });
@@ -117,7 +130,7 @@ function openingTree(royal: boolean) {
     antiXiangqiKernelConfig(
       resolveRules(
         antiXiangqiVariant.ruleSchema,
-        royal ? { generalRoyal: true, facing: 'file' } : {},
+        royal ? { flavour: 'losers', facing: 'file' } : {},
       ),
     ),
   );

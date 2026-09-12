@@ -337,3 +337,37 @@ test('stall: fewer pieces wins a stalled game, and a dead position ends it at on
   state = equal.apply(state, { from: 'a10', to: 'a9' });
   assert.deepEqual(state.status, { type: 'finished', winner: null, reason: 'progress-clock' });
 });
+
+test('losers and codrus: a mated royal general wins, a bare general wins, a lost general wins', () => {
+  // Losers: royal general, check as xiangqi, being mated or reduced to the bare general wins.
+  const losers = createXiangqiRuleKernel({
+    mustCapture: true,
+    checkmate: 'win',
+    bareGeneral: 'wins',
+    extinction: { red: 'wins', black: 'wins' },
+    stalemate: 'win',
+  });
+  // Black to move captures Red's last non-general piece: Red is bare and has won.
+  let state = losers.parseFen('4k4/9/9/9/9/9/9/9/3r5/3RK4 b - - 0 1', 'b')!;
+  state = losers.apply(state, { from: 'd2', to: 'd1' });
+  assert.deepEqual(state.status, { type: 'finished', winner: 'red', reason: 'bare-general' });
+  // A mate, and the mated side wins: Ra1-a10 checks along the rank; d10 and
+  // f10 are attacked, e9 is the advisor, and every advisor move opens the
+  // file to a facing position, so Black has no legal move.
+  state = losers.parseFen('4k4/4a4/9/9/9/9/9/9/9/R3K4 w - - 0 1', 'm')!;
+  state = losers.apply(state, { from: 'a1', to: 'a10' });
+  assert.deepEqual(state.status, { type: 'finished', winner: 'black', reason: 'checkmate' });
+  // Codrus: non-royal general, losing it wins.
+  const codrus = createXiangqiRuleKernel({
+    mustCapture: true,
+    royal: { red: false, black: false },
+    check: 'none',
+    facing: 'off',
+    generalLost: 'wins',
+    extinction: { red: 'wins', black: 'wins' },
+    stalemate: 'win',
+  });
+  state = codrus.parseFen('R3k4/9/9/9/9/9/9/9/9/4K4 w - - 0 1', 'c')!;
+  state = codrus.apply(state, { from: 'a10', to: 'e10' });
+  assert.deepEqual(state.status, { type: 'finished', winner: 'black', reason: 'general-lost' });
+});
