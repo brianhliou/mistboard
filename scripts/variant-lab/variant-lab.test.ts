@@ -119,10 +119,12 @@ test('stats: interval, elo and tally behave at the edges', () => {
 
 test('every registered variant resolves its defaults and produces a playable start', async () => {
   const variants = await listLabVariants();
-  assert.deepEqual(
-    variants.map((v) => v.id),
-    ['duck-xiangqi', 'xiangqi'],
-  );
+  // The registry is discovered from the directory, so a new variant is a new
+  // file and not an edit here: check the control and the duck are present
+  // and the list is sorted, not the exact membership.
+  const ids = variants.map((v) => v.id);
+  assert.ok(ids.includes('xiangqi') && ids.includes('duck-xiangqi'), ids.join(', '));
+  assert.deepEqual(ids, [...ids].sort());
   for (const variant of variants) {
     const rules = resolveRules(variant.ruleSchema, {});
     const { kernel, engine } = variant.create(rules);

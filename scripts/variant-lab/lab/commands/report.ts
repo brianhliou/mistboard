@@ -41,7 +41,12 @@ function headline(artifact: Artifact<unknown>): string {
     case 'ladder': {
       const r = artifact.result as LadderResult;
       const elo = Number.isFinite(r.eloForBudget) ? `${Math.round(r.eloForBudget)}` : '>400';
-      return `${r.hi}/${r.lo}: stronger ${pct(r.hiScore)}, ~${elo} Elo`;
+      // A run whose pairs repeat an opening is the same games replayed and
+      // says so in the table (older artifacts lack the field; count the games).
+      const distinct = r.distinctOpenings ?? new Set(r.games.map((g) => g.opening.join(' '))).size;
+      const repeated =
+        distinct < r.pairs ? `, only ${distinct} distinct opening(s): REPLAYED PAIRS` : '';
+      return `${r.hi}/${r.lo}: stronger ${pct(r.hiScore)}, ~${elo} Elo${repeated}`;
     }
     case 'bestplay': {
       const r = artifact.result as BestplayResult;
