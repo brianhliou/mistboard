@@ -69,7 +69,6 @@ const { antiXiangqiKernelConfig, antiXiangqiVariant } = await import(
 type XiangqiBoard = import('@mistboard/game').XiangqiBoard;
 type XiangqiSquare = import('@mistboard/game').XiangqiSquare;
 type XiangqiPiece = import('@mistboard/game').XiangqiPiece;
-type XiangqiMove = import('@mistboard/game').XiangqiMove;
 type RuleState = import('../packages/game/src/xiangqi-rule-kernel.js').XiangqiRuleState;
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -142,22 +141,12 @@ function pieceCount(s: RuleState, color: 'red' | 'black'): number {
 function board(s: RuleState): XiangqiBoard {
   return s.board as XiangqiBoard;
 }
-function mv(uci: string): { from: XiangqiSquare; to: XiangqiSquare } {
-  return {
-    from: uci.slice(
-      0,
-      uci.length === 4 ? 2 : uci.indexOf('1') > 0 && uci.length === 5 && uci[2] === '0' ? 3 : 2,
-    ) as XiangqiSquare,
-    to: '' as XiangqiSquare,
-  } as never;
-}
 /** Split a UCI move into from/to (files a-i, ranks 1-10). */
 function squares(uci: string): { from: XiangqiSquare; to: XiangqiSquare } {
   const m = /^([a-i](?:10|[1-9]))([a-i](?:10|[1-9]))$/.exec(uci);
   if (!m) throw new Error(`bad uci ${uci}`);
   return { from: m[1] as XiangqiSquare, to: m[2] as XiangqiSquare };
 }
-void mv;
 
 // ── Data: the sweep and the proofs ─────────────────────────────────────────
 
@@ -812,27 +801,20 @@ if (process.argv.includes('--blog')) {
   renderPng(card(160, 100, 60), 'thumbnail.png', 640);
   renderPng(card(120, 63, 36), 'social-card.png', 1200);
 
-  // ── The games widget: the engine's own draws, stepped on the house board ──
-  // Every position is precomputed through the kernel; the page only draws.
+  // ── The games widget: the engine's games on the house board ───────────────
+  // Every record was played under the kernel as referee; the page only applies
+  // moves (from, to, captured) and draws. Notes are hand-written here.
   const { readdirSync } = await import('node:fs');
-  const bestplayFile = readdirSync(OUTDIR)
-    .filter((f) => f.startsWith('bestplay-f26924937b96-'))
-    .sort()[0];
-  if (!bestplayFile) throw new Error('no stock-point bestplay artifact');
-  const bestplay = JSON.parse(readFileSync(path.join(OUTDIR, bestplayFile), 'utf8')) as {
-    result: {
-      games: Array<{
-        nodes: number;
-        plies: number;
-        winner: string | null;
-        reason: string;
-        moves: string[];
-      }>;
-    };
+  const artifact = (prefix: string, pick: 'first' | 'last' = 'first') => {
+    const files = readdirSync(OUTDIR)
+      .filter((f) => f.startsWith(prefix))
+      .sort();
+    const f = pick === 'first' ? files[0] : files[files.length - 1];
+    if (!f) throw new Error(`no artifact ${prefix}`);
+    return JSON.parse(readFileSync(path.join(OUTDIR, f), 'utf8'));
   };
-  // Notes keyed by node budget, then 1-based ply. The 2M game carries the argument.
-  const NOTES: Record<number, Record<number, string>> = {
-    2000000: {
+  const NOTES: Record<string, Record<number, string>> = {
+    'best-2000000': {
       1: 'Cannon takes the horse over Black’s cannon. Red’s only two legal moves are this and its mirror image.',
       2: 'Black declines the chariot recapture, a proven loss, and fires the other cannon down the b-file with Red’s b3 cannon as the screen. The only move that holds.',
       3: 'The chariot takes the cannon. Continuing with 2. Cxd10 would also hold.',
@@ -848,58 +830,131 @@ if (process.argv.includes('--blog')) {
       35: 'Red: general and one advisor. Black: general, two advisors, an elephant. Nothing on the board can ever capture anything again.',
       44: 'Third occurrence of the position: draw by repetition. Red has fewer pieces and no way to lose them; Black has no way to make Red take anything.',
     },
-    5000000: {
+    'best-5000000': {
       4: 'The same four forced plies as every game.',
       11: 'The chariots take each other’s cannons and Red’s chariot is taken in turn: eleven pieces each, and the game becomes a soldier war.',
       17: 'A soldier offered, a soldier compelled to take, and the chariot compelled to take that: the shedding is symmetrical for the next hundred plies.',
       120: 'Red walks its general into the soldier’s path and Black must take it. Under these rules that is progress for Red.',
       131: 'Third occurrence of the position: draw by repetition, five pieces each, both sides shuffling an elephant and a chariot.',
     },
-    1000000: {
+    'best-1000000': {
       4: 'The same four forced plies as every game.',
       127: 'Third occurrence of the position: draw by repetition. Both sides kept a chariot and neither could make the other take it.',
     },
   };
-  const order = [2000000, 5000000, 1000000];
-  const games = order
-    .map((nodes) => bestplay.result.games.find((g) => g.nodes === nodes))
-    .filter((g): g is NonNullable<typeof g> => g !== undefined)
-    .map((g) => {
-      let s = kernel.initial(`w${g.nodes}`);
-      const start = kernel.fen(s).split(' ')[0]!;
-      const moves = g.moves.map((u, i) => {
-        const m = kernel.fromUci(s, u);
-        if (!m) throw new Error(`bad move ${u} in the ${g.nodes} game`);
-        const piece = s.board[m.from]!;
-        const captured = s.board[m.to]?.role ?? null;
-        const legal = kernel.legalMoves(s).length;
-        const label = san(s, u);
-        s = kernel.apply(s, m);
-        return {
-          uci: u,
-          san: label,
-          mover: piece.color,
-          from: m.from,
-          to: m.to,
-          captured,
-          forced: legal === 1,
-          placement: kernel.fen(s).split(' ')[0],
-          note: NOTES[g.nodes]?.[i + 1] ?? null,
-        };
-      });
-      return { nodes: g.nodes, plies: g.plies, reason: g.reason, winner: g.winner, start, moves };
+  type Rec = { id: string; group: string; label: string; moves: string[]; result: string };
+  const records: Rec[] = [];
+  const bestplay = artifact('bestplay-f26924937b96-') as {
+    result: {
+      games: Array<{
+        nodes: number;
+        plies: number;
+        winner: string | null;
+        reason: string;
+        moves: string[];
+      }>;
+    };
+  };
+  for (const nodes of [2000000, 5000000, 1000000]) {
+    const g = bestplay.result.games.find((x) => x.nodes === nodes);
+    if (!g) throw new Error(`no ${nodes} game`);
+    records.push({
+      id: `best-${nodes}`,
+      group: 'Best play, engine against itself',
+      label: `${nodes / 1e6}M nodes a move, ${g.plies} plies`,
+      moves: g.moves,
+      result: `${g.winner ? `${g.winner} wins` : 'Draw'} by ${g.reason} after ${g.plies} plies, ${nodes / 1e6} million nodes a move for both sides.`,
     });
-  const data = JSON.stringify(games).replace(/</g, '\\u003c');
+  }
+  const sweepGames = JSON.parse(
+    readFileSync(path.join(OUTDIR, 'exits-100k-stall-fewerPieces.json'), 'utf8'),
+  ) as { rows: Array<Row & { moves?: string[] }> };
+  const withMoves = sweepGames.rows.filter((r) => r.moves && r.moves.length > 0);
+  for (const r of [...withMoves].sort((a, b) => a.exitPly - b.exitPly || a.leaf - b.leaf)) {
+    const v = DECISIVE.has(r.reason)
+      ? `${r.winner} wins in ${r.moves!.length}`
+      : `stall, ${r.reason} at ${r.moves!.length}`;
+    const proven = provenSet.has(r.opening) ? ', proven' : '';
+    records.push({
+      id: `exit-${r.leaf}`,
+      group: `Every ending of the opening chain (${withMoves.length}), engine at 100k`,
+      label: `ending at ply ${r.exitPly} #${r.leaf}: ${v}${proven}`,
+      moves: r.moves!,
+      result: `${DECISIVE.has(r.reason) ? `${r.winner} wins by ${r.reason}` : `Draw by ${r.reason}`} after ${r.moves!.length} plies. The chain ended at ply ${r.exitPly}${proven ? '; the loss from there is proven' : ''}.`,
+    });
+  }
+  const ladder = artifact('ladder-f26924937b96-', 'last') as {
+    args: { openingPlies: number };
+    result: {
+      games: Array<{
+        hiSeat: string;
+        plies: number;
+        winner: string | null;
+        reason: string;
+        moves: string[];
+      }>;
+    };
+  };
+  if (ladder.args.openingPlies !== 8)
+    throw new Error('expected the eight-ply ladder to be the latest stock ladder artifact');
+  ladder.result.games.forEach((g, i) => {
+    const pair = Math.floor(i / 2) + 1;
+    records.push({
+      id: `ladder-${i}`,
+      group: 'Ladder: 100k against 10k nodes from eight random plies (20)',
+      label: `pair ${pair}, 100k as ${g.hiSeat}: ${g.winner ? `${g.winner} wins` : 'draw'} in ${g.plies}`,
+      moves: g.moves,
+      result: `${g.winner ? `${g.winner} wins` : 'Draw'} by ${g.reason} after ${g.plies} plies. The first eight plies were random; 100k nodes played ${g.hiSeat}, 10k the other side.`,
+    });
+  });
+  const proofLines = proofs.outcomes.filter(
+    (o) => o.result === 'proven' && o.line && o.line.length > 0,
+  );
+  for (const o of proofLines) {
+    const row = sweepGames.rows.find((r) => r.opening === o.opening);
+    records.push({
+      id: `proof-${o.leaf}`,
+      group: `Proof lines: the certificate’s main line (${proofLines.length})`,
+      label: `ending at ply ${row?.exitPly ?? '?'} #${o.leaf}: ${o.attacker} wins, ${o.proofSize} positions`,
+      moves: [...o.opening.split(' '), ...o.line!],
+      result: `${o.attacker} wins by force from the ending at ply ${row?.exitPly ?? '?'}: the certificate covers ${o.proofSize} positions, and this is its main line, every defender reply here being one the certificate answers.`,
+    });
+  }
+  // Replay every record through the kernel: san, forced flags, captured roles.
+  const encoded = records.map((r) => {
+    let st = kernel.initial(`w-${r.id}`);
+    const start = kernel.fen(st).split(' ')[0]!;
+    const moves = r.moves.map((u, i) => {
+      const m = kernel.fromUci(st, u);
+      if (!m) throw new Error(`bad move ${u} in ${r.id}`);
+      const piece = st.board[m.from]!;
+      const captured = st.board[m.to]?.role ?? null;
+      const forced = kernel.legalMoves(st).length === 1;
+      const label = san(st, u);
+      st = kernel.apply(st, m);
+      return {
+        u,
+        s: label,
+        m: piece.color === 'red' ? 'r' : 'b',
+        f: forced ? 1 : 0,
+        c: captured,
+        n: NOTES[r.id]?.[i + 1] ?? undefined,
+      };
+    });
+    return { id: r.id, group: r.group, label: r.label, result: r.result, start, moves };
+  });
+  const data = JSON.stringify(encoded).replace(/</g, '\\u003c');
   const widget = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
-     The engine's own games from the array, every position precomputed through the rule kernel. -->
+     Every record was played under the rule kernel as referee; the page applies moves and draws. -->
 <div id="anti-games" class="anxq" tabindex="0">
 <style>
 .anxq { --anxq-rule: var(--border, #d9d9d4); --anxq-muted: var(--text-2, #6a6a70); --anxq-ink: var(--text, #1c1c1e); --anxq-on: var(--text, #1c1c1e); --anxq-on-ink: var(--bg, #fff); margin: 1.5rem 0 2rem; outline: none; }
-.anxq .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.anxq .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 10px; align-items: center; }
 .anxq .tab { border: 1px solid var(--anxq-rule); background: transparent; color: var(--anxq-ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; font: inherit; font-size: 14px; }
 .anxq .tab small { color: var(--anxq-muted); font-size: 12px; margin-left: 4px; }
 .anxq .tab[aria-selected="true"] { background: var(--anxq-on); color: var(--anxq-on-ink); border-color: var(--anxq-on); }
 .anxq .tab[aria-selected="true"] small { color: inherit; opacity: .75; }
+.anxq select { font: inherit; font-size: 14px; color: var(--anxq-ink); background: transparent; border: 1px solid var(--anxq-rule); border-radius: 8px; padding: 4px 8px; max-width: 100%; }
 .anxq .stage { display: grid; grid-template-columns: minmax(240px, 340px) minmax(200px, 1fr); gap: 20px; align-items: start; }
 @media (max-width: 640px) { .anxq .stage { grid-template-columns: 1fr; } }
 .anxq svg { width: 100%; height: auto; display: block; }
@@ -922,6 +977,7 @@ if (process.argv.includes('--blog')) {
 .anxq .legend { font-size: 13px; color: var(--anxq-muted); margin-top: 12px; }
 </style>
 <div class="tabs" role="tablist" id="tabs"></div>
+<div class="tabs"><label for="anti-games-more" style="font-size:13px;color:var(--anxq-muted)">More games:</label> <select id="anti-games-more"></select></div>
 <div class="stage">
   <div>
     <svg id="board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg>
@@ -948,7 +1004,6 @@ if (process.argv.includes('--blog')) {
   const GAMES = JSON.parse(root.querySelector('#anti-games-data').textContent);
   const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
   const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
-  // The same disc and per-role art frames the site's piece renderer uses.
   const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
   const M = 18, C = 31, PIECE = 28;
   const xOf = (f) => M + f * C;
@@ -965,9 +1020,16 @@ if (process.argv.includes('--blog')) {
     });
     return board;
   }
+  const sq = (u) => { const m = /^([a-i](?:10|[1-9]))([a-i](?:10|[1-9]))$/.exec(u); return { from: m[1], to: m[2] }; };
+  // Boards per ply: apply the known-legal moves (a move is from, to, and whatever stood on to is gone).
+  function boardsOf(game) {
+    const out = [parsePlacement(game.start)];
+    let b = { ...out[0] };
+    for (const mv of game.moves) { const { from, to } = sq(mv.u); b = { ...b }; b[to] = b[from]; delete b[from]; out.push(b); }
+    return out;
+  }
   function grid() {
-    const g = [];
-    g.push('<rect x="0" y="0" width="284" height="315" rx="8" fill="#d9bd82"/>');
+    const g = ['<rect x="0" y="0" width="284" height="315" rx="8" fill="#d9bd82"/>'];
     for (let r = 0; r < 10; r++) g.push('<line x1="' + M + '" y1="' + (M + r * C) + '" x2="' + (M + 8 * C) + '" y2="' + (M + r * C) + '" stroke="#4b3c2a" stroke-width="1"/>');
     for (let f = 0; f < 9; f++) {
       if (f === 0 || f === 8) g.push('<line x1="' + (M + f * C) + '" y1="' + M + '" x2="' + (M + f * C) + '" y2="' + (M + 9 * C) + '" stroke="#4b3c2a" stroke-width="1"/>');
@@ -981,41 +1043,40 @@ if (process.argv.includes('--blog')) {
   }
   const GRID = grid();
   const svg = root.querySelector('#board');
-  function render(board, ply) {
+  function render(board, mv) {
     const parts = [GRID];
-    if (ply) {
-      const f = ply.from, t = ply.to;
-      const fx = xOf(f.charCodeAt(0) - 97), fy = yOf(Number(f.slice(1)));
-      const tx = xOf(t.charCodeAt(0) - 97), ty = yOf(Number(t.slice(1)));
+    if (mv) {
+      const { from, to } = sq(mv.u);
+      const fx = xOf(from.charCodeAt(0) - 97), fy = yOf(Number(from.slice(1)));
+      const tx = xOf(to.charCodeAt(0) - 97), ty = yOf(Number(to.slice(1)));
       parts.push('<circle cx="' + fx + '" cy="' + fy + '" r="5" fill="#3a63c7" opacity=".9"/>');
       parts.push('<circle cx="' + tx + '" cy="' + ty + '" r="16" fill="none" stroke="#3a63c7" stroke-width="2.5"/>');
     }
-    for (const sq in board) {
-      const p = board[sq];
-      const cx = xOf(sq.charCodeAt(0) - 97), cy = yOf(Number(sq.slice(1)));
+    for (const s in board) {
+      const p = board[s];
+      const cx = xOf(s.charCodeAt(0) - 97), cy = yOf(Number(s.slice(1)));
       const x = cx - PIECE / 2, y = cy - PIECE / 2, k = PIECE / 100, fr = FRAME[p.role];
       parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
       parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
     svg.innerHTML = parts.join('');
   }
-  let gi = 0, at = 0;
-  const NAME = { general: 'general', advisor: 'advisor', elephant: 'elephant', horse: 'horse', chariot: 'chariot', cannon: 'cannon', soldier: 'soldier' };
+  let gi = 0, at = 0, boards = [];
   function show() {
     const game = GAMES[gi];
-    const ply = at > 0 ? game.moves[at - 1] : null;
-    const board = parsePlacement(at > 0 ? ply.placement : game.start);
-    render(board, ply);
+    const mv = at > 0 ? game.moves[at - 1] : null;
+    const board = boards[at];
+    render(board, mv);
     let red = 0, black = 0;
-    for (const sq in board) { if (board[sq].color === 'red') red++; else black++; }
+    for (const s in board) { if (board[s].color === 'red') red++; else black++; }
     root.querySelector('#count').textContent = 'Red ' + red + ' pieces, Black ' + black;
     root.querySelector('#pos').textContent = 'ply ' + at + ' / ' + game.moves.length;
     const cap = root.querySelector('#caption');
-    if (!ply) cap.innerHTML = '<p>The start of the game. Red to move; every legal move is a capture.</p>';
+    if (!mv) cap.innerHTML = '<p>The start of the game. Red to move; every legal move is a capture.</p>';
     else {
-      const who = ply.mover === 'red' ? 'Red' : 'Black';
-      const took = ply.captured ? ', taking the ' + NAME[ply.captured] : '';
-      cap.innerHTML = '<span class="san">' + (Math.floor((at - 1) / 2) + 1) + (ply.mover === 'red' ? '. ' : '... ') + ply.san + '</span> <span class="who">' + who + took + (ply.forced ? '. Only legal move.' : '.') + '</span>' + (ply.note ? '<p>' + ply.note + '</p>' : '');
+      const who = mv.m === 'r' ? 'Red' : 'Black';
+      const took = mv.c ? ', taking the ' + mv.c : '';
+      cap.innerHTML = '<span class="san">' + (Math.floor((at - 1) / 2) + 1) + (mv.m === 'r' ? '. ' : '... ') + mv.s + '</span> <span class="who">' + who + took + (mv.f ? '. Only legal move.' : '.') + '</span>' + (mv.n ? '<p>' + mv.n + '</p>' : '');
     }
     root.querySelectorAll('.moves button').forEach((b) => b.classList.toggle('cur', Number(b.dataset.ply) === at));
     const cur = root.querySelector('.moves button.cur'); if (cur) cur.scrollIntoView({ block: 'nearest' });
@@ -1025,22 +1086,35 @@ if (process.argv.includes('--blog')) {
   function select(i) {
     gi = i; at = 0;
     const game = GAMES[gi];
-    root.querySelectorAll('.tab').forEach((t, j) => t.setAttribute('aria-selected', j === i ? 'true' : 'false'));
+    boards = boardsOf(game);
+    root.querySelectorAll('.tab').forEach((t) => t.setAttribute('aria-selected', Number(t.dataset.index) === i ? 'true' : 'false'));
+    root.querySelector('#anti-games-more').value = String(i);
     const list = root.querySelector('#moves'); list.innerHTML = '';
     game.moves.forEach((m, k) => {
       if (k % 2 === 0) { const n = document.createElement('span'); n.className = 'n'; n.textContent = (k / 2 + 1) + '.'; list.appendChild(n); }
-      const b = document.createElement('button'); b.textContent = m.san; b.dataset.ply = k + 1; b.className = (m.mover === 'red' ? 'red' : '') + (m.forced ? ' forced' : ''); b.addEventListener('click', () => { at = k + 1; show(); }); list.appendChild(b);
+      const b = document.createElement('button'); b.textContent = m.s; b.dataset.ply = k + 1; b.className = (m.m === 'r' ? 'red' : '') + (m.f ? ' forced' : ''); b.addEventListener('click', () => { at = k + 1; show(); }); list.appendChild(b);
     });
-    root.querySelector('#result').textContent = (game.winner ? game.winner + ' wins' : 'Draw') + ' by ' + game.reason + ' after ' + game.plies + ' plies, ' + (game.nodes / 1e6) + ' million nodes a move for both sides.';
+    root.querySelector('#result').textContent = game.result;
     show();
   }
   const tabs = root.querySelector('#tabs');
-  GAMES.forEach((g, i) => { const b = document.createElement('button'); b.className = 'tab'; b.setAttribute('role', 'tab'); b.innerHTML = (g.nodes / 1e6) + 'M nodes <small>' + g.plies + ' plies</small>'; b.addEventListener('click', () => select(i)); tabs.appendChild(b); });
+  GAMES.forEach((g, i) => {
+    if (!g.id.startsWith('best-')) return;
+    const b = document.createElement('button'); b.className = 'tab'; b.setAttribute('role', 'tab'); b.dataset.index = String(i); b.innerHTML = g.label.replace(/, (\\d+) plies/, ' <small>$1 plies</small>'); b.addEventListener('click', () => select(i)); tabs.appendChild(b);
+  });
+  const more = root.querySelector('#anti-games-more');
+  let og = null, group = null;
+  GAMES.forEach((g, i) => {
+    if (g.group !== group) { group = g.group; og = document.createElement('optgroup'); og.label = group; more.appendChild(og); }
+    const o = document.createElement('option'); o.value = String(i); o.textContent = g.label; og.appendChild(o);
+  });
+  more.addEventListener('change', (e) => select(Number(e.target.value)));
   root.querySelector('#first').addEventListener('click', () => { at = 0; show(); });
   root.querySelector('#prev').addEventListener('click', () => { if (at > 0) { at--; show(); } });
   root.querySelector('#next').addEventListener('click', () => { if (at < GAMES[gi].moves.length) { at++; show(); } });
   root.querySelector('#last').addEventListener('click', () => { at = GAMES[gi].moves.length; show(); });
   root.addEventListener('keydown', (e) => {
+    if (e.target.tagName === 'SELECT') return;
     if (e.key === 'ArrowRight') { if (at < GAMES[gi].moves.length) { at++; show(); } e.preventDefault(); }
     else if (e.key === 'ArrowLeft') { if (at > 0) { at--; show(); } e.preventDefault(); }
   });
@@ -1050,5 +1124,7 @@ if (process.argv.includes('--blog')) {
 </div>
 `;
   writeFileSync(path.join(INCLUDES, 'anti-xq-games.html'), widget);
-  console.log(`  _includes/anti-xq-games.html (${games.length} games)`);
+  console.log(
+    `  _includes/anti-xq-games.html (${encoded.length} games, ${(data.length / 1024).toFixed(0)} kB of data)`,
+  );
 }

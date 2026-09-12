@@ -41,6 +41,8 @@ type Row = {
   red: number;
   black: number;
   cls: string;
+  /** The game in engine notation, opening included, so the record can be shown. */
+  moves?: string[];
 };
 type Sweep = { nodes: number; rules: string[]; rows: Row[] };
 
@@ -117,6 +119,7 @@ async function sweep(nodes: number, out: string, rules: string[]) {
         red,
         black,
         cls,
+        moves: played.moves,
       });
       writeFileSync(out, JSON.stringify(done, null, 1));
       console.log(
