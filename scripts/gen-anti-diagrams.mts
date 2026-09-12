@@ -708,6 +708,354 @@ function text(
   console.log('  figures/exits-by-depth.svg');
 }
 
+// ── 7. The tree as data (for the explorer) and as a poster with mini boards ─
+
+type XNode = {
+  i: number;
+  p: number;
+  u: string;
+  s: string;
+  m: 'r' | 'b' | '';
+  d: number;
+  leaf: boolean;
+  v: 'r' | 'b' | 'd';
+  n: number;
+  pv: number;
+  pr: boolean;
+  g: string;
+  mirror: boolean;
+  line: string[];
+  x: number;
+  children: number[];
+  state: RuleState;
+};
+const xnodes: XNode[] = [];
+{
+  const leafIdByLine = new Map<string, number>();
+  for (const r of sweep.rows) leafIdByLine.set(r.opening, r.leaf);
+  const add = (
+    st: RuleState,
+    line: string[],
+    parent: number,
+    u: string,
+    sanLabel: string,
+    mover: 'r' | 'b' | '',
+  ): number => {
+    const captures = kernel.legalMoves(st).filter((mv) => st.board[mv.to] !== undefined);
+    const key = line.join(' ');
+    const mirrored = !leafIdByLine.has(key) && leafIdByLine.has(mirror(key));
+    const node: XNode = {
+      i: xnodes.length,
+      p: parent,
+      u,
+      s: sanLabel,
+      m: mover,
+      d: line.length,
+      leaf: captures.length === 0,
+      v: 'd',
+      n: 0,
+      pv: 0,
+      pr: false,
+      g: '',
+      mirror: mirrored,
+      line,
+      x: 0,
+      children: [],
+      state: st,
+    };
+    xnodes.push(node);
+    if (node.leaf) {
+      node.v = valueOfLine(line) === 'red' ? 'r' : valueOfLine(line) === 'black' ? 'b' : 'd';
+      node.pr = isProven(line);
+      const id = leafIdByLine.get(key) ?? leafIdByLine.get(mirror(key));
+      node.g = id === undefined ? '' : `exit-${id}`;
+      node.n = 1;
+      node.pv = node.pr ? 1 : 0;
+      return node.i;
+    }
+    for (const mv of captures) {
+      const child = add(
+        kernel.apply(st, mv),
+        [...line, `${mv.from}${mv.to}`],
+        node.i,
+        `${mv.from}${mv.to}`,
+        san(st, `${mv.from}${mv.to}`),
+        (st.status as { turn: 'red' | 'black' }).turn === 'red' ? 'r' : 'b',
+      );
+      node.children.push(child);
+    }
+    const toMove = (st.status as { turn: 'red' | 'black' }).turn;
+    const score = (v: 'r' | 'b' | 'd') =>
+      v === (toMove === 'red' ? 'r' : 'b') ? 2 : v === 'd' ? 1 : 0;
+    let best: 'r' | 'b' | 'd' = xnodes[node.children[0]!]!.v;
+    for (const c of node.children) {
+      const cv = xnodes[c]!.v;
+      if (score(cv) > score(best)) best = cv;
+      node.n += xnodes[c]!.n;
+      node.pv += xnodes[c]!.pv;
+    }
+    node.v = best;
+    return node.i;
+  };
+  add(kernel.initial('xtree'), [], -1, '', '', '');
+  if (xnodes.filter((n) => n.leaf).length !== 166)
+    throw new Error('explorer tree should have 166 leaves');
+  if (xnodes[0]!.v !== 'd')
+    throw new Error(`the root should be a draw under stock scoring, got ${xnodes[0]!.v}`);
+  // Leaf order for the poster.
+  let nextX = 0;
+  const place = (i: number) => {
+    const n = xnodes[i]!;
+    if (n.leaf) {
+      n.x = nextX;
+      nextX += 1;
+      return;
+    }
+    for (const c of n.children) place(c);
+    n.x = n.children.reduce((a, c) => a + xnodes[c]!.x, 0) / n.children.length;
+  };
+  place(0);
+}
+
+{
+  // The poster: the whole tree at a size where every ending is a dot you can
+  // point at, mini boards on eight key nodes, and the story in the margins.
+  const W = 2000;
+  const H = 1560;
+  const left = 110;
+  const right = 330;
+  const top = 120;
+  const treeBottom = 1010;
+  const sx = (W - left - right) / 165;
+  const sy = (treeBottom - top) / 18;
+  const px = (n: XNode) => left + n.x * sx;
+  const py = (n: XNode) => top + n.d * sy;
+  const roadKeys = new Set([
+    '',
+    'b3b10',
+    'b3b10 h8h1',
+    'b3b10 h8h1 i1h1',
+    'b3b10 h8h1 i1h1 a10b10',
+    'b3b10 h8h1 b10d10',
+    'b3b10 h8h1 b10d10 e10d10',
+    'b3b10 h8h1 b10d10 e10d10 i1h1',
+  ]);
+  const onRoad = (n: XNode) => {
+    const k = n.line.join(' ');
+    return roadKeys.has(k) || roadKeys.has(mirror(k));
+  };
+  const edges: string[] = [];
+  const dots: string[] = [];
+  for (const n of xnodes) {
+    if (n.p >= 0) {
+      const parent = xnodes[n.p]!;
+      const road = onRoad(n) && onRoad(parent);
+      edges.push(
+        `<line x1="${px(parent)}" y1="${py(parent)}" x2="${px(n)}" y2="${py(n)}" stroke="${road ? GOLD : '#d8ccb4'}" stroke-width="${road ? 4 : 1.2}"/>`,
+      );
+    }
+    if (n.leaf) {
+      const fill = n.v === 'r' ? RED : n.v === 'b' ? BLACK : GOLD;
+      dots.push(
+        `<circle cx="${px(n)}" cy="${py(n)}" r="${n.pr ? 6 : 4}" fill="${fill}"${n.pr ? '' : ' opacity="0.5"'}/>`,
+      );
+    } else if (n.d > 0) {
+      dots.push(`<circle cx="${px(n)}" cy="${py(n)}" r="2.4" fill="${MUTED}"/>`);
+    }
+  }
+  // Mini boards: a 9x10 dot map of the position, 12px cells.
+  const mini = (
+    st: RuleState,
+    x0: number,
+    y0: number,
+    title: string[],
+    verdict: string,
+    verdictColor: string,
+  ): string => {
+    const cell = 12;
+    const w = 8 * cell;
+    const h = 9 * cell;
+    const parts: string[] = [];
+    parts.push(
+      `<rect x="${x0 - 8}" y="${y0 - 8}" width="${w + 16}" height="${h + 16}" rx="6" fill="#e7cc9f" stroke="#b89a68"/>`,
+    );
+    for (let r = 0; r < 10; r += 1)
+      parts.push(
+        `<line x1="${x0}" y1="${y0 + r * cell}" x2="${x0 + w}" y2="${y0 + r * cell}" stroke="#a88a5c" stroke-width="0.6"/>`,
+      );
+    for (let f = 0; f < 9; f += 1)
+      parts.push(
+        `<line x1="${x0 + f * cell}" y1="${y0}" x2="${x0 + f * cell}" y2="${y0 + h}" stroke="#a88a5c" stroke-width="0.6"/>`,
+      );
+    parts.push(
+      `<rect x="${x0}" y="${y0 + 4 * cell}" width="${w}" height="${cell}" fill="#e7cc9f"/>`,
+    );
+    for (const [square, piece] of Object.entries(st.board)) {
+      if (!piece) continue;
+      const f = 'abcdefghi'.indexOf(square[0]!);
+      const r = Number(square.slice(1));
+      const cx = x0 + f * cell;
+      const cy = y0 + (10 - r) * cell;
+      parts.push(
+        `<circle cx="${cx}" cy="${cy}" r="4.6" fill="${piece.color === 'red' ? RED : BLACK}"/>`,
+      );
+      if (piece.role === 'general')
+        parts.push(`<circle cx="${cx}" cy="${cy}" r="1.6" fill="#fff"/>`);
+    }
+    title.forEach((t, i) => {
+      parts.push(
+        text(x0 + w / 2, y0 + h + 30 + i * 16, t, {
+          anchor: 'middle',
+          size: 12,
+          weight: i === 0 ? 600 : 400,
+          fill: i === 0 ? INK : MUTED,
+        }),
+      );
+    });
+    parts.push(
+      text(x0 + w / 2, y0 + h + 30 + title.length * 16 + 2, verdict, {
+        anchor: 'middle',
+        size: 12,
+        weight: 600,
+        fill: verdictColor,
+      }),
+    );
+    return parts.join('');
+  };
+  const byLine = (line: string[]) => {
+    const key = line.join(' ');
+    const n = xnodes.find((x) => x.line.join(' ') === key);
+    if (!n) throw new Error(`poster: no node for ${key}`);
+    return n;
+  };
+  const deepest = xnodes.filter((n) => n.leaf && n.d === 18)[0]!;
+  const ply14 = xnodes.filter((n) => n.leaf && n.d === 14 && n.line[0] === 'b3b10')[0]!;
+  const ply17 = xnodes.filter((n) => n.leaf && n.d === 17 && n.line[0] === 'b3b10')[0]!;
+  const keys: Array<{ node: XNode; title: string[]; verdict: string; color: string }> = [
+    {
+      node: xnodes[0]!,
+      title: ['The array', 'Red to move: two captures'],
+      verdict: 'the game',
+      color: MUTED,
+    },
+    {
+      node: byLine(['b3b10']),
+      title: ['1. Cxb10', 'Black: two captures'],
+      verdict: 'draw with best play',
+      color: GOLD,
+    },
+    {
+      node: byLine(['b3b10', 'a10b10', 'h3h10', 'i10h10']),
+      title: ['1...Rxb10 2. Cxh10 Rxh10', 'the natural recapture'],
+      verdict: 'Red wins in 34, proven',
+      color: RED,
+    },
+    {
+      node: byLine(['b3b10', 'h8h1', 'i1h1', 'a10b10']),
+      title: ['1...Cxh1 2. Rxh1 Rxb10', 'the exchange ends'],
+      verdict: 'holds: a draw',
+      color: GOLD,
+    },
+    {
+      node: byLine(['b3b10', 'h8h1', 'b10d10', 'e10d10', 'i1h1']),
+      title: ['2. Cxd10 Kxd10 3. Rxh1', 'the cousin line'],
+      verdict: 'holds: a draw',
+      color: GOLD,
+    },
+    {
+      node: ply14,
+      title: ['a ply-14 ending', `${sanLine(ply14.line).split(' ').slice(-3).join(' ')}`],
+      verdict: 'Red to move: Red wins',
+      color: RED,
+    },
+    {
+      node: ply17,
+      title: ['a ply-17 ending', `${sanLine(ply17.line).split(' ').slice(-3).join(' ')}`],
+      verdict: 'Black to move: Black wins',
+      color: BLACK,
+    },
+    {
+      node: deepest,
+      title: ['the deepest ending, ply 18', 'both generals gone'],
+      verdict:
+        deepest.v === 'd' ? 'a stall: a draw' : `${deepest.v === 'r' ? 'Red' : 'Black'} wins`,
+      color: deepest.v === 'r' ? RED : deepest.v === 'b' ? BLACK : GOLD,
+    },
+  ];
+  const boardsRow: string[] = [];
+  const leaders: string[] = [];
+  const slotW = (W - 160) / keys.length;
+  keys.forEach((k, i) => {
+    const bx = 80 + i * slotW + (slotW - 96) / 2;
+    const by = 1160;
+    boardsRow.push(mini(k.node.state, bx, by, k.title, k.verdict, k.color));
+    const nx = px(k.node);
+    const ny = py(k.node);
+    leaders.push(
+      `<path d="M ${bx + 48} ${by - 10} C ${bx + 48} ${by - 80}, ${nx} ${ny + 90}, ${nx} ${ny + 8}" fill="none" stroke="${k.color === MUTED ? '#b8a88c' : k.color}" stroke-width="1.6" stroke-dasharray="${k.color === GOLD ? '' : '5 4'}" opacity="0.85"/>`,
+    );
+    leaders.push(
+      `<circle cx="${nx}" cy="${ny}" r="9" fill="none" stroke="${k.color === MUTED ? '#b8a88c' : k.color}" stroke-width="2"/>`,
+    );
+  });
+  const rowNotes = [
+    [4, 'ply 4: the two exits at either edge are the game'],
+    [14, 'ply 14: 72 endings, Red to move, all Red wins'],
+    [17, 'ply 17: 12 endings, Black to move, all Black wins'],
+    [18, 'ply 18: 8 endings, the longest chains, mostly stalls'],
+  ] as const;
+  const rows = [4, 5, 6, 7, 8, 9, 10, 11, 12, 14, 15, 16, 17, 18].map((d) => {
+    const note = rowNotes.find((r) => r[0] === d);
+    return text(W - right + 14, top + d * sy + 5, note ? note[1] : `ply ${d}`, {
+      size: 12,
+      fill: note ? INK : MUTED,
+      weight: note ? 600 : 400,
+    });
+  });
+  const legend = [
+    `<circle cx="${left + 8}" cy="${H - 40}" r="6" fill="${RED}"/>`,
+    text(left + 20, H - 35, 'Red wins from this ending', { size: 14, fill: INK }),
+    `<circle cx="${left + 260}" cy="${H - 40}" r="6" fill="${BLACK}"/>`,
+    text(left + 272, H - 35, 'Black wins', { size: 14, fill: INK }),
+    `<circle cx="${left + 400}" cy="${H - 40}" r="6" fill="${GOLD}"/>`,
+    text(left + 412, H - 35, 'a stall: a draw as the rules stand', { size: 14, fill: INK }),
+    `<circle cx="${left + 720}" cy="${H - 40}" r="6" fill="${RED}"/><circle cx="${left + 740}" cy="${H - 40}" r="4" fill="${RED}" opacity="0.5"/>`,
+    text(left + 752, H - 35, 'large: proven; small: the engine’s verdict at 100k nodes', {
+      size: 14,
+      fill: INK,
+    }),
+    `<line x1="${left + 1180}" y1="${H - 40}" x2="${left + 1220}" y2="${H - 40}" stroke="${GOLD}" stroke-width="4"/>`,
+    text(left + 1230, H - 35, 'the lines that hold', { size: 14, fill: INK }),
+  ].join('');
+  const body = [
+    ...edges,
+    ...dots,
+    ...rows,
+    ...leaders,
+    ...boardsRow,
+    text(left, 44, 'Anti xiangqi: the whole opening', { size: 30, weight: 700 }),
+    text(
+      left,
+      76,
+      'One ply per row, every ply a capture. A line forks where the player to move chose between captures and stops, with a dot, where captures ran out and the game became free. 166 endings; the two halves are mirror images.',
+      { size: 15, fill: MUTED },
+    ),
+    text(px(xnodes[0]!), py(xnodes[0]!) - 16, 'start', { anchor: 'middle', size: 13, fill: MUTED }),
+    legend,
+  ].join('');
+  const svg = dataSvg(W, H, body);
+  writeFileSync(path.join(OUT, 'cascade-poster.svg'), `${svg}\n`);
+  figures.push({
+    slug: 'cascade-poster',
+    caption:
+      'The whole opening as a poster: every ending a dot, the lines that hold in gold, and eight positions drawn where they sit in the tree.',
+    svg,
+    single: false,
+    wide: true,
+  });
+  console.log('  figures/cascade-poster.svg');
+}
+
 // ── Preview page ───────────────────────────────────────────────────────────
 
 const html = [
@@ -1140,6 +1488,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
       else if (e.key === 'ArrowLeft') { if (at > 0) { at--; show(); } e.preventDefault(); }
     });
     select(0);
+    if (id === 'anti-games') document.addEventListener('anti-games-select', (e) => { const i = GAMES.findIndex((g) => g.id === e.detail); if (i >= 0) { select(i); root.scrollIntoView({ block: 'start', behavior: 'smooth' }); root.focus(); } });
   }
   document.querySelectorAll('[data-anxq]').forEach((root) => { if (root.dataset.mounted) return; root.dataset.mounted = '1'; mount(root); });
 })();
@@ -1220,6 +1569,140 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
         'Two of the engine\u2019s own games, opened at ply 4, where the forced part ends. The notes are on the plies that matter.',
     },
   ];
+  // ── The opening explorer: walk the tree yourself ─────────────────────────
+  // Every node of the cascade with its move, who wins from it under stock
+  // scoring (backed up from the endings), how many endings lie below it and
+  // how many of those are proven. The page applies moves to draw the board.
+  const xdata = xnodes.map((n) => ({
+    i: n.i,
+    p: n.p,
+    u: n.u,
+    s: n.s,
+    m: n.m,
+    d: n.d,
+    l: n.leaf ? 1 : 0,
+    v: n.v,
+    n: n.n,
+    pv: n.pv,
+    pr: n.pr ? 1 : 0,
+    g: n.g,
+    mi: n.mirror ? 1 : 0,
+    c: n.children,
+  }));
+  const xjson = JSON.stringify({
+    start: kernel.fen(kernel.initial('x')).split(' ')[0],
+    nodes: xdata,
+  }).replace(/</g, '\\u003c');
+  const explorerHtml = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
+     The opening cascade as a tree the reader can walk; values backed up from the 100k sweep and the proofs. -->
+<div id="anti-explorer" class="anxq anxq-explorer" tabindex="0">
+<style>
+.anxq-explorer .anxq-card { align-items: stretch; }
+.anxq-explorer .anxq-x-rail { flex: 1 1 0; min-width: 220px; border-left: 1px solid var(--anxq-border); display: flex; flex-direction: column; }
+.anxq-explorer .anxq-x-path { padding: 10px 12px 6px; font-family: ui-monospace, Menlo, monospace; font-size: 14px; font-weight: 600; line-height: 1.7; border-bottom: 1px solid var(--anxq-border); }
+.anxq-explorer .anxq-x-path button { font: inherit; background: none; border: 0; padding: 0 4px; border-radius: 4px; color: var(--anxq-heading); cursor: pointer; }
+.anxq-explorer .anxq-x-path button:hover { background: var(--anxq-hover); }
+.anxq-explorer .anxq-x-path .num { color: var(--anxq-muted); font-weight: 400; }
+.anxq-explorer .anxq-x-state { padding: 8px 12px; font-size: 13px; color: var(--anxq-muted); border-bottom: 1px solid var(--anxq-border); }
+.anxq-explorer .anxq-x-moves { flex: 1; overflow: auto; padding: 4px 0; }
+.anxq-explorer .anxq-x-row { display: grid; grid-template-columns: 1fr auto auto; gap: 6px 10px; align-items: center; width: 100%; padding: 7px 12px; border: 0; background: none; text-align: left; font: inherit; color: var(--anxq-heading); cursor: pointer; }
+.anxq-explorer .anxq-x-row:hover { background: var(--anxq-hover); }
+.anxq-explorer .anxq-x-row .mv { font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 15px; }
+.anxq-explorer .anxq-x-row .val { font-size: 12px; font-weight: 600; padding: 2px 8px; border-radius: 999px; color: #fff; white-space: nowrap; }
+.anxq-explorer .val.r { background: #c0392b; } .anxq-explorer .val.b { background: #2b2b2b; } .anxq-explorer .val.d { background: #c9931f; }
+.anxq-explorer .anxq-x-row .sub { font-size: 12px; color: var(--anxq-muted); text-align: right; }
+.anxq-explorer .anxq-x-leaf { padding: 12px; font-size: 14px; line-height: 1.5; }
+.anxq-explorer .anxq-x-leaf a { color: var(--anxq-accent); font-weight: 600; cursor: pointer; text-decoration: underline; }
+.anxq-explorer .anxq-x-hint { padding: 8px 12px; border-top: 1px solid var(--anxq-border); font-size: 12px; color: var(--anxq-muted); }
+</style>
+<div class="anxq-card">
+  <div class="anxq-board-col">
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name">Black</span><span class="anxq-seat-clock" id="anti-explorer-count-black"></span></div>
+    <div class="anxq-mat"><svg id="anti-explorer-board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name">Red</span><span class="anxq-seat-clock" id="anti-explorer-count-red"></span></div>
+    <div class="anxq-controls"><button class="anxq-control" id="anti-explorer-up" aria-label="Back one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M11 4.3v7.4L4.9 8z"/></svg></button><button class="anxq-control" id="anti-explorer-root" aria-label="Back to the start"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/></svg></button><span class="anxq-status" id="anti-explorer-pos"></span><span></span><span></span></div>
+    <div class="anxq-caption" id="anti-explorer-caption"></div>
+  </div>
+  <div class="anxq-x-rail">
+    <div class="anxq-x-path" id="anti-explorer-path"></div>
+    <div class="anxq-x-state" id="anti-explorer-state"></div>
+    <div class="anxq-x-moves" id="anti-explorer-moves"></div>
+    <div class="anxq-x-hint">Each row is a capture the side to move can choose. The chip says who wins from there if both sides then play the tree's best captures; the count is how many endings lie below it, and how many of those losses are proven.</div>
+  </div>
+</div>
+<script type="application/json" id="anti-explorer-data">${xjson}</script>
+<script>
+(() => {
+  const root = document.getElementById('anti-explorer');
+  const DATA = JSON.parse(root.querySelector('#anti-explorer-data').textContent);
+  const N = DATA.nodes;
+  const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
+  const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
+  const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
+  const M = 18, C = 31, PIECE = 28;
+  const xOf = (f) => M + f * C, yOf = (r) => M + (10 - r) * C;
+  function parsePlacement(p) {
+    const board = {};
+    p.split('/').forEach((row, i) => { const rank = 10 - i; let file = 0; for (const ch of row) { if (ch >= '1' && ch <= '9') { file += Number(ch); continue; } board[String.fromCharCode(97 + file) + rank] = { color: ch === ch.toUpperCase() ? 'red' : 'black', role: ROLE[ch.toLowerCase()] }; file += 1; } });
+    return board;
+  }
+  const sq = (u) => { const m = /^([a-i](?:10|[1-9]))([a-i](?:10|[1-9]))$/.exec(u); return { from: m[1], to: m[2] }; };
+  const L = (x1, y1, x2, y2) => '<line x1="' + x1 + '" y1="' + y1 + '" x2="' + x2 + '" y2="' + y2 + '" stroke="#4b3c2a" stroke-width="1"/>';
+  const GRID = (() => { const g = ['<rect x="0" y="0" width="284" height="315" rx="8" fill="#d9bd82"/>']; for (let r = 0; r < 10; r++) g.push(L(M, M + r * C, M + 8 * C, M + r * C)); for (let f = 0; f < 9; f++) { if (f === 0 || f === 8) g.push(L(M + f * C, M, M + f * C, M + 9 * C)); else { g.push(L(M + f * C, M, M + f * C, M + 4 * C)); g.push(L(M + f * C, M + 5 * C, M + f * C, M + 9 * C)); } } for (const y0 of [0, 7]) { g.push(L(M + 3 * C, M + y0 * C, M + 5 * C, M + (y0 + 2) * C)); g.push(L(M + 5 * C, M + y0 * C, M + 3 * C, M + (y0 + 2) * C)); } return g.join(''); })();
+  const svg = root.querySelector('#anti-explorer-board');
+  function render(board, mv, targets) {
+    const parts = [GRID];
+    if (mv) { const { from, to } = sq(mv); const fx = xOf(from.charCodeAt(0) - 97), fy = yOf(Number(from.slice(1))), tx = xOf(to.charCodeAt(0) - 97), ty = yOf(Number(to.slice(1))); parts.push('<circle cx="' + fx + '" cy="' + fy + '" r="5" fill="#3a63c7" opacity=".9"/>'); parts.push('<circle cx="' + tx + '" cy="' + ty + '" r="16" fill="none" stroke="#3a63c7" stroke-width="2.5"/>'); }
+    for (const s in board) { const p = board[s], cx = xOf(s.charCodeAt(0) - 97), cy = yOf(Number(s.slice(1))), k = PIECE / 100, fr = FRAME[p.role], x = cx - PIECE / 2, y = cy - PIECE / 2; parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>'); parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>'); }
+    for (const t of targets) { const { from, to } = sq(t.u); const fx = xOf(from.charCodeAt(0) - 97), fy = yOf(Number(from.slice(1))), tx = xOf(to.charCodeAt(0) - 97), ty = yOf(Number(to.slice(1))); const col = t.v === 'r' ? '#c0392b' : t.v === 'b' ? '#2b2b2b' : '#c9931f'; parts.push('<line x1="' + fx + '" y1="' + fy + '" x2="' + tx + '" y2="' + ty + '" stroke="' + col + '" stroke-width="3" opacity=".55" stroke-linecap="round"/>'); parts.push('<circle cx="' + tx + '" cy="' + ty + '" r="17" fill="none" stroke="' + col + '" stroke-width="3" opacity=".9"/>'); }
+    svg.innerHTML = parts.join('');
+  }
+  function lineOf(i) { const out = []; let n = N[i]; while (n && n.p >= 0) { out.unshift(n); n = N[n.p]; } return out; }
+  function boardAt(i) { let b = parsePlacement(DATA.start); for (const n of lineOf(i)) { const { from, to } = sq(n.u); b = { ...b }; b[to] = b[from]; delete b[from]; } return b; }
+  const who = (v) => v === 'r' ? 'Red wins' : v === 'b' ? 'Black wins' : 'draw';
+  let cur = 0;
+  function show(i) {
+    cur = i;
+    const n = N[i];
+    const line = lineOf(i);
+    const board = boardAt(i);
+    const kids = n.c.map((c) => N[c]);
+    render(board, n.u || null, kids.map((k) => ({ u: k.u, v: k.v })));
+    let red = 0, black = 0; for (const s in board) { if (board[s].color === 'red') red++; else black++; }
+    root.querySelector('#anti-explorer-count-red').textContent = red + ' pieces';
+    root.querySelector('#anti-explorer-count-black').textContent = black + ' pieces';
+    root.querySelector('#anti-explorer-pos').textContent = 'ply ' + n.d;
+    const path = root.querySelector('#anti-explorer-path');
+    path.innerHTML = '';
+    const start = document.createElement('button'); start.textContent = 'start'; start.addEventListener('click', () => show(0)); path.appendChild(start);
+    line.forEach((m, k) => { if (k % 2 === 0) { const num = document.createElement('span'); num.className = 'num'; num.textContent = ' ' + (k / 2 + 1) + '. '; path.appendChild(num); } else path.appendChild(document.createTextNode(' ')); const b = document.createElement('button'); b.textContent = m.s; b.addEventListener('click', () => show(m.i)); path.appendChild(b); });
+    const toMove = n.d % 2 === 0 ? 'Red' : 'Black';
+    const state = root.querySelector('#anti-explorer-state');
+    const moves = root.querySelector('#anti-explorer-moves');
+    moves.innerHTML = '';
+    if (n.l) {
+      state.textContent = toMove + ' to move and no capture available: an ending of the chain.';
+      const leaf = document.createElement('div'); leaf.className = 'anxq-x-leaf';
+      leaf.innerHTML = 'From here <b>' + who(n.v) + '</b>' + (n.pr ? ', and that is proven.' : (n.v === 'd' ? ' by a stall, in the engine’s game from here.' : ' in the engine’s game from here (not proven).')) + (n.g ? ' <a data-game="' + n.g + '">Step through the engine game from this ending' + (n.mi ? ' (its mirror image)' : '') + '.</a>' : '');
+      moves.appendChild(leaf);
+      const a = leaf.querySelector('a'); if (a) a.addEventListener('click', () => { document.dispatchEvent(new CustomEvent('anti-games-select', { detail: a.dataset.game })); });
+    } else {
+      state.textContent = toMove + ' to move; ' + kids.length + ' capture' + (kids.length === 1 ? '' : 's') + ', and only captures are legal. ' + n.n + ' ending' + (n.n === 1 ? '' : 's') + ' below, ' + n.pv + ' proven.';
+      kids.forEach((k) => { const b = document.createElement('button'); b.className = 'anxq-x-row'; b.innerHTML = '<span class="mv">' + k.s + '</span><span class="val ' + k.v + '">' + who(k.v) + '</span><span class="sub">' + (k.l ? 'ending' + (k.pr ? ', proven' : '') : k.n + ' ending' + (k.n === 1 ? '' : 's') + ', ' + k.pv + ' proven') + '</span>'; b.addEventListener('click', () => show(k.i)); moves.appendChild(b); });
+    }
+    const cap = root.querySelector('#anti-explorer-caption');
+    cap.innerHTML = n.d === 0 ? '<span class="who">The array. Red’s two legal moves are both captures, and mirror images of each other.</span>' : '<span class="san">' + (Math.floor((n.d - 1) / 2) + 1) + (n.m === 'r' ? '. ' : '... ') + n.s + '</span> <span class="who">' + (n.v === 'd' ? 'This branch holds.' : 'From here ' + who(n.v) + ' with best play' + (n.l && n.pr ? ', proven.' : '.')) + '</span>';
+  }
+  root.querySelector('#anti-explorer-up').addEventListener('click', () => { if (N[cur].p >= 0) show(N[cur].p); });
+  root.querySelector('#anti-explorer-root').addEventListener('click', () => show(0));
+  root.addEventListener('keydown', (e) => { if (e.key === 'ArrowLeft' || e.key === 'Backspace') { if (N[cur].p >= 0) show(N[cur].p); e.preventDefault(); } });
+  show(0);
+})();
+</script>
+</div>
+`;
+  writeFileSync(path.join(INCLUDES, 'anti-xq-explorer.html'), explorerHtml);
+  console.log('  _includes/anti-xq-explorer.html');
   for (const inst of instances) {
     const first = inst.id === 'anti-games';
     writeFileSync(
