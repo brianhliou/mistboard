@@ -214,7 +214,6 @@ test('variant configs: every entry is complete and self-consistent', () => {
   const expected = {
     fortress: 'fortress-xiangqi',
     duck: 'duck-xiangqi',
-    dmx: 'dark-mini-xiangqi',
     dxq: 'dark-xiangqi',
     banqi: 'banqi',
     jieqi: 'jieqi',
@@ -244,11 +243,6 @@ test('engine seat matching is version-agnostic for versioned engine ids', () => 
   assert.equal(matchesEngineSeat(dxq, 'python-fdx-v1.1'), true);
   assert.equal(matchesEngineSeat(dxq, 'python-fdx-v9.9'), true);
   assert.equal(matchesEngineSeat(dxq, 'python-dmx-v1.0'), false);
-
-  const dmx = VARIANT_SMOKE_CONFIGS.dmx.engineSeat;
-  assert.equal(matchesEngineSeat(dmx, 'python-dmx-v1.0'), true);
-  assert.equal(matchesEngineSeat(dmx, 'python-dmx-v2.0'), true);
-  assert.equal(matchesEngineSeat(dmx, 'python-fdx-v1.1'), false);
 
   // Jieqi accepts any rung, not just the 'strongest' one that fronts PvE today.
   const jieqi = VARIANT_SMOKE_CONFIGS.jieqi.engineSeat;

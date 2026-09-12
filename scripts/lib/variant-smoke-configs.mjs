@@ -39,16 +39,6 @@ export const VARIANT_SMOKE_CONFIGS = {
     // failure mode described above.
     engineSeat: { prefix: 'fairy-stockfish-fortress-xiangqi-' },
   },
-  dmx: {
-    name: 'dmx',
-    label: 'DMX',
-    usage: 'npm run prod:smoke:dmx -- [options]',
-    gameSpecId: 'dark-mini-xiangqi',
-    defaultTimeoutMs: 20_000,
-    // version-agnostic: any DMX engine id (python-dmx-*), per the bfb02b95
-    // lesson above.
-    engineSeat: { prefix: 'python-dmx-' },
-  },
   dxq: {
     name: 'dxq',
     label: 'DXQ',

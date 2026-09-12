@@ -120,7 +120,6 @@
     "prod:smoke:correspondence": "node scripts/prod-correspondence-smoke.mjs",
     "prod:smoke": "node scripts/prod-smoke.mjs",
     "prod:smoke:engines": "node scripts/prod-engine-smoke.mjs",
-    "prod:smoke:dmx": "node scripts/prod-dmx-smoke.mjs",
     "prod:smoke:dxq": "node scripts/prod-dxq-smoke.mjs",
     "prod:smoke:duck": "node scripts/prod-duck-smoke.mjs",
     "prod:smoke:fortress": "node scripts/prod-fortress-smoke.mjs",
