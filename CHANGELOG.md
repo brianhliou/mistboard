@@ -66,6 +66,7 @@ Conventions:
 
 ### Technical
 
+- `/api/auth/me` names the allowlisted variants an account may play (`variantGrants`); admins hold every one without a grant row, and the play menu offers a gated variant only to an account the server would seat ([349ed346](https://github.com/brianhliou/mistboard/commit/349ed346))
 - Migration 144 tightens the rating-pool constraint to the nine live pools, deletes the mini-family puzzle rows, and drops `games.hidden_draft960` ([f1011fdd](https://github.com/brianhliou/mistboard/commit/f1011fdd))
 - Migration 137 stores a browser device id on guest seats ([ea5d57a0](https://github.com/brianhliou/mistboard/commit/ea5d57a0))
 - Migration 143 withholds the retired variants' puzzles from every serving path ([2bf6490e](https://github.com/brianhliou/mistboard/commit/2bf6490e))
