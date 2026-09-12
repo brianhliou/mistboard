@@ -48,7 +48,7 @@ export const EN_SHELL = {
   'nav.register': 'Register',
   'nav.language': 'Language',
   'home.tagline':
-    'Strategy games including Xiangqi (Chinese chess), Banqi, Jieqi, Jungle Chess and more. Free in your browser. About Mistboard...',
+    'Chinese chess for chess players, and original strategy games. Free and open source. About Mistboard...',
   'home.supportTitle': 'Mistboard Patron',
   'home.supportSubtitle': 'Become a patron',
   'home.storeTitle': 'Store',

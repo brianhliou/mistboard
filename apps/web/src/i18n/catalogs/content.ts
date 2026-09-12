@@ -152,13 +152,13 @@ export const EN_CONTENT = {
   'contact.networkError': 'Network error. Try again.',
   'about.heading': 'About Mistboard',
   'about.lede':
-    'Mistboard is a free, open-source place to play xiangqi (Chinese chess) in English, built for serious play.',
+    'Mistboard is a free, open-source place for chess players to learn Chinese chess, and home to the original strategy games we build.',
   'about.whyHeading': 'Why this site exists',
   'about.whyBody':
-    'Xiangqi is among the most played board games in the world, and most places to play it online assume you already read Chinese. Mistboard is built for the people that assumption leaves out. Pieces render as icons you can identify before you can read 車 or 砲, the rules and articles are written in English rather than translated into it, and a beginner course teaches the game from the first move. Past the basics, the site aims at what serious play needs: precise rules, durable replays, fair hidden-information boundaries when a game calls for them, and tools that explain what happened.',
+    "Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi. Most places to play them online assume you already read Chinese. Mistboard is built for the chess player who doesn't: pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course starts from the first move and explains each piece against the chess piece it resembles. Past the basics the site carries what a strong player expects: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.",
   'about.darkChessHeading': 'What Mistboard builds',
   'about.darkChessBody':
-    'Standard xiangqi is the core: play against people or engines, tactics puzzles mined from real games, an analysis board, and tournament broadcasts. Around it sits a family of serious variants across xiangqi, chess, and Jungle. Some are open-information; others use fog, hidden identities, flipped pieces, or compact boards. Each one gets a clear rules page and server-enforced play.',
+    'Beside the traditional games sit the ones Mistboard invents. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Fortress plays on a smaller board where captured pieces return as drops, with one new piece, the Treasure. Each starts from a board people already know and changes one thing, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.',
   'about.playStudyHeading': 'Play and study',
   'about.playStudyBody':
     "Start a game over a link, join the lobby, or play an engine where one is available. Afterward, review the game from either player's perspective or with the full board revealed when the rules allow it. Rules and articles cover both how to play and why the variants work.",

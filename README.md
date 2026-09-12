@@ -3,19 +3,21 @@
 [![CI](https://github.com/brianhliou/mistboard/actions/workflows/ci.yml/badge.svg)](https://github.com/brianhliou/mistboard/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
-<img src="assets/readme-hero-xiangqi.png" alt="A xiangqi position from the Central Cannon vs Screen Horses opening, beside the same moves in WXF notation and an English key for the piece characters" title="Central Cannon vs Screen Horses, with the move list in WXF and the piece characters named in English." />
+<img src="assets/readme-hero.png" alt="The Mistboard homepage: a live xiangqi game, the lobby with engine opponents across nine games, and the Play a game button" title="Chinese chess for chess players, and original strategy games." />
 
-Mistboard is a free, open-source place to play xiangqi (Chinese chess) in
-English, built for serious play. Most sites that host it online assume you
-already read Chinese. Mistboard is built for the people that assumption leaves
-out: pieces render as icons you can identify before you can read 車 or 砲, the
-rules and articles are written in English rather than translated into it, and a
-beginner course starts from the first move.
+Mistboard is a free, open-source place for chess players to learn Chinese
+chess, and home to the original strategy games we build.
 
-Standard xiangqi is the core. Around it sits a family of serious variants across
-xiangqi, chess, and Jungle. Some are open-information; others use fog, hidden
-identities, or flipped pieces. Each one gets a rules page and server-enforced
-play.
+Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi.
+Most places to play them online assume you already read Chinese. Mistboard is
+built for the chess player who doesn't: pieces render as icons you can identify
+before you can read 車 or 砲, rules and articles are written in English rather
+than translated into it, and a beginner course starts from the first move.
+
+Beside the traditional games sit the ones Mistboard invents: Duck Xiangqi, Fog
+Xiangqi, and Fortress, with more in design. Each starts from a board people
+already know and changes one thing, and each gets a rules page and
+server-enforced play. Jungle Chess, Flip Jungle, and Fog Chess are live too.
 
 The goal is a trustworthy open-source place to play, study, rank, and build
 engines for xiangqi and its variants.
