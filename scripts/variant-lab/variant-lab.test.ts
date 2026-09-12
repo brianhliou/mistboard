@@ -119,10 +119,11 @@ test('stats: interval, elo and tally behave at the edges', () => {
 
 test('every registered variant resolves its defaults and produces a playable start', async () => {
   const variants = await listLabVariants();
-  assert.deepEqual(
-    variants.map((v) => v.id),
-    ['duck-xiangqi', 'xiangqi'],
-  );
+  // The two foundations must be there; variant sessions add their own files
+  // and this list must not be the one place three worktrees collide.
+  const ids = variants.map((v) => v.id);
+  for (const id of ['duck-xiangqi', 'xiangqi']) assert.ok(ids.includes(id), id);
+  assert.deepEqual(ids, [...new Set(ids)].sort());
   for (const variant of variants) {
     const rules = resolveRules(variant.ruleSchema, {});
     const { kernel, engine } = variant.create(rules);

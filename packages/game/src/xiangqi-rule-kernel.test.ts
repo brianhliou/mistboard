@@ -288,3 +288,19 @@ test('progress clock and repetition draw the game', () => {
   for (let i = 0; i < 2; i += 1) for (const move of shuffle) state = rep.apply(state, move);
   assert.deepEqual(state.status, { type: 'finished', winner: null, reason: 'repetition' });
 });
+
+test('veteran soldiers step sideways before the river, per side, and never backward', () => {
+  const fen = '4k4/9/9/4p4/9/9/9/9/4P4/4K4 w - - 0 1';
+  const soldier = (kernel: XiangqiRuleKernel, state: XiangqiRuleState, from: string) =>
+    keys(kernel, state).filter((k) => k.startsWith(from));
+  const standard = createXiangqiRuleKernel();
+  assert.deepEqual(soldier(standard, standard.parseFen(fen, 's')!, 'e2'), ['e2e3']);
+  const veterans = createXiangqiRuleKernel({ veteranSoldiers: { red: true, black: false } });
+  assert.deepEqual(soldier(veterans, veterans.parseFen(fen, 'v')!, 'e2'), ['e2d2', 'e2e3', 'e2f2']);
+  // The black soldier on e7 is still xiangqi's: forward only on its own side.
+  const black = veterans.parseFen('4k4/9/9/4p4/9/9/9/9/4P4/4K4 b - - 0 1', 'b')!;
+  assert.deepEqual(soldier(veterans, black, 'e7'), ['e7e6']);
+  // On the last rank a veteran still only slides sideways.
+  const last = veterans.parseFen('P2k5/9/9/9/9/9/9/9/9/4K4 w - - 0 1', 'l')!;
+  assert.deepEqual(soldier(veterans, last, 'a10'), ['a10b10']);
+});
