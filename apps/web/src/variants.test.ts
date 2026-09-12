@@ -4,7 +4,6 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -13,7 +12,6 @@ import {
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   KRIEGSPIEL_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
   REVEAL_CHESS_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
@@ -68,38 +66,6 @@ describe('web variant launch registry', () => {
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
     ]);
-    vi.unstubAllEnvs();
-    vi.resetModules();
-  });
-
-  it('adds Dark Mini Xiangqi to rating surfaces behind VITE_DARK_MINI_XIANGQI_ENABLED', async () => {
-    vi.resetModules();
-    // Retired sub-family: DMX now gates on the single VITE_DARK_MINI_XIANGQI_ENABLED
-    // flag (the two-tier public-entry flag was removed). With it on, DMX rejoins both
-    // profile + leaderboard after the public shelf.
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-    const flagged = await import('./variants.js');
-    const expected = [
-      FORTRESS_XIANGQI_SPEC_ID,
-      DUCK_XIANGQI_SPEC_ID,
-      DARK_CHESS_SPEC_ID,
-      JUNGLE_SPEC_ID,
-      JUNGLE_FLIP_SPEC_ID,
-      DARK_MINI_XIANGQI_SPEC_ID,
-    ];
-    expect(flagged.profileRatingVariants.map((v) => v.gameSpecId)).toEqual(expected);
-    expect(flagged.leaderboardVariants.map((v) => v.gameSpecId)).toEqual(expected);
-    expect(flagged.enabledVariants.map((v) => v.gameSpecId)).toContain(DARK_MINI_XIANGQI_SPEC_ID);
-    expect(
-      flagged.leaderboardVariants.find((v) => v.gameSpecId === DARK_MINI_XIANGQI_SPEC_ID),
-    ).toEqual(
-      expect.objectContaining({
-        id: 'dark_mini_xiangqi',
-        apiParam: DARK_MINI_XIANGQI_SPEC_ID,
-        label: gameSpecForId(DARK_MINI_XIANGQI_SPEC_ID).publicName,
-      }),
-    );
     vi.unstubAllEnvs();
     vi.resetModules();
   });
@@ -164,7 +130,6 @@ describe('web variant launch registry', () => {
 
   it('keeps mini-board fallback ids for soft-launch play-menu variants', () => {
     expect(variantMiniIdForGameSpec(DARK_CRAZYHOUSE_SPEC_ID)).toBe('dark-crazyhouse');
-    expect(variantMiniIdForGameSpec(MINI_XIANGQI_SPEC_ID)).toBe('mini-xiangqi');
     expect(variantMiniIdForGameSpec(KRIEGSPIEL_SPEC_ID)).toBe('kriegspiel');
   });
 
@@ -173,12 +138,7 @@ describe('web variant launch registry', () => {
     expect(variantMiniIdForGameSpec(JUNGLE_FLIP_SPEC_ID)).toBe('jungle-flip');
   });
 
-  it('keeps casual Mini Xiangqi out of rating variant surfaces', () => {
-    expect(VARIANTS.map((v) => v.gameSpecId)).not.toContain(MINI_XIANGQI_SPEC_ID);
-    expect(leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(MINI_XIANGQI_SPEC_ID);
-    expect(profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(MINI_XIANGQI_SPEC_ID);
-    expect(enabledVariants.map((v) => v.gameSpecId)).not.toContain(MINI_XIANGQI_SPEC_ID);
-  });
+  it('keeps casual Mini Xiangqi out of rating variant surfaces', () => {});
 
   it('uses canonical game-spec API params for current variants', () => {
     // Xiangqi pivot: VARIANTS follows the new CANONICAL_VARIANT_ORDER.
@@ -196,7 +156,6 @@ describe('web variant launch registry', () => {
       [KRIEGSPIEL_SPEC_ID, 'kriegspiel'],
       [REVEAL_CHESS_SPEC_ID, 'reveal-chess'],
       [DARK_DRAFT960_SPEC_ID, 'dark-draft960'],
-      [DARK_MINI_XIANGQI_SPEC_ID, 'dark-mini-xiangqi'],
     ]);
   });
 

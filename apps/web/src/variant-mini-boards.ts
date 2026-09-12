@@ -53,8 +53,6 @@ export type VariantMiniId =
   | 'draft960'
   | 'xiangqi'
   | 'dark-xiangqi'
-  | 'mini-xiangqi'
-  | 'dark-mini-xiangqi'
   | 'fortress-xiangqi'
   | 'duck-xiangqi'
   | 'jieqi'
@@ -163,7 +161,7 @@ function fogCell(c: number, r: number, cell: number): string {
 // every surface renders one identical glyph. Ink (cream disc, red/black) is
 // fixed inside that renderer by intent. `size` is the disc's bounding box.
 // `veteran` marks a board whose soldiers get the sideways step unconditionally
-// (the Mini Xiangqi family, Fortress Xiangqi), so their soldiers draw with the
+// (Fortress Xiangqi), so their soldiers draw with the
 // promoted art here the same way they do on the live board.
 function xiangqiDisc(
   cx: number,
@@ -388,56 +386,6 @@ function duckXiangqiBody(ctx: MiniCtx): string {
   // The same duck the live board draws, in whatever frame the reader's set uses.
   const duck = `<g transform="translate(${cx - disc / 2},${cy - disc / 2}) scale(${disc / 100})">${duckPieceMarks(ctx.xqSet)}</g>`;
   return [xiangqiCourtBody(false, ctx), duck].join('');
-}
-
-function miniXiangqiCutBody(showFog: boolean, ctx: MiniCtx): string {
-  // A 3x3-cell (4x4-point) cut of the real mini-xiangqi opening: files d..g,
-  // ranks 1..4 (one file + one rank tighter than the full court, so the pieces
-  // read larger). The general sits on the cropped left edge (file d), showing
-  // the right half of its palace; horse and cannon fill the back rank and a
-  // chariot anchors the right.
-  // Wider margin than the default: with only 4 points across, the cells (and so
-  // the discs) grow, and the outer-ring pieces would overflow the rounded frame
-  // unless the grid is inset further from the edge.
-  const g = xqGeom(4, 4, 13);
-  const disc = g.gx * 0.9;
-  // file d..g -> col 0..3 ; rank 1..4 -> row 3..0 (red on the near/bottom side)
-  const at = (file: number, rank: number) => ({ x: g.px(file - 3), y: g.py(4 - rank) });
-  const backRank: Array<[number, XiangqiPieceRole]> = [
-    [3, 'general'],
-    [4, 'horse'],
-    [5, 'cannon'],
-    [6, 'chariot'],
-  ];
-  const pieces = [
-    ...backRank.map(([file, role]) => {
-      const p = at(file, 1);
-      return xiangqiDisc(p.x, p.y, disc, 'red', role, ctx.xqSet);
-    }),
-    // soldiers sit in front of files d, e, g (the cannon file f stays open)
-    ...[3, 4, 6].map((file) => {
-      const p = at(file, 2);
-      return xiangqiDisc(p.x, p.y, disc, 'red', 'soldier', ctx.xqSet, true);
-    }),
-  ].join('');
-  // The visible (right) half of the general's palace: its centre (d2) sits on
-  // the cropped left edge, so draw the two diagonals fanning in toward file e.
-  const halfPalace = `<g class="vm-xq-line" stroke-width="1" stroke-linecap="round"><line x1="${g.px(0)}" y1="${g.py(2)}" x2="${g.px(1)}" y2="${g.py(1)}"/><line x1="${g.px(0)}" y1="${g.py(2)}" x2="${g.px(1)}" y2="${g.py(3)}"/></g>`;
-  // Dark variant: red sees ranks 1-3 in full; only the 4th rank (the top row) is
-  // fogged, and even there the cannon file (f, col 2) stays open — its sightline
-  // up the board is clear. Verified against getMiniXiangqiPlayerView. Standard
-  // mini-xiangqi shows the same approach as plain board.
-  let fog = '';
-  if (showFog) {
-    const fogYBottom = (g.py(0) + g.py(1)) / 2;
-    const leftX1 = (g.px(1) + g.px(2)) / 2;
-    const rightX0 = (g.px(2) + g.px(3)) / 2;
-    fog = [
-      `<rect class="vm-xq-fog" x="${OX}" y="${OY}" width="${leftX1 - OX}" height="${fogYBottom - OY}"/>`,
-      `<rect class="vm-xq-fog" x="${rightX0}" y="${OY}" width="${OX + SIZE - rightX0}" height="${fogYBottom - OY}"/>`,
-    ].join('');
-  }
-  return [xqBoard(g), halfPalace, pieces, fog].join('');
 }
 
 function fortressTreasureDisc(
@@ -733,8 +681,6 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   draft960: draft960Body,
   xiangqi: (ctx) => xiangqiCourtBody(false, ctx),
   'dark-xiangqi': (ctx) => xiangqiCourtBody(true, ctx),
-  'mini-xiangqi': (ctx) => miniXiangqiCutBody(false, ctx),
-  'dark-mini-xiangqi': (ctx) => miniXiangqiCutBody(true, ctx),
   'fortress-xiangqi': fortressXiangqiBody,
   'duck-xiangqi': duckXiangqiBody,
   jieqi: jieqiBody,
@@ -786,22 +732,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'DX',
     accent: '#9f342d',
     blurb: "Red's court and cannon; fog marks the squares no red piece can reach.",
-    family: 'xiangqi',
-  },
-  {
-    id: 'mini-xiangqi',
-    label: 'Mini Xiangqi',
-    shortLabel: 'MX',
-    accent: '#a16207',
-    blurb: 'The small-board opening: general by its palace, cannon, and chariot.',
-    family: 'xiangqi',
-  },
-  {
-    id: 'dark-mini-xiangqi',
-    label: 'Dark Mini Xiangqi',
-    shortLabel: 'DMX',
-    accent: '#c2410c',
-    blurb: 'A real-opening cut: general by its palace, cannon, and chariot.',
     family: 'xiangqi',
   },
   {

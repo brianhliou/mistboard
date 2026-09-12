@@ -25,8 +25,6 @@ import {
   isRetiredGameSpec,
   JUNGLE_SPEC_ID,
   type JunglePuzzle,
-  MINI_XIANGQI_SPEC_ID,
-  type MiniXiangqiPuzzle,
   XIANGQI_SPEC_ID,
   type XiangqiMotifId,
   type XiangqiPuzzle,
@@ -39,7 +37,7 @@ import {
 import type pg from 'pg';
 import { getPool, isInitialized, withTransaction } from './persistence-db.js';
 
-export type StoredPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
+export type StoredPuzzle = FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
 
 export type PuzzleStoreSnapshot = {
   // Every stored puzzle (including hidden-from-discovery variants), seq order.
@@ -66,7 +64,6 @@ export type PuzzleStoreSnapshot = {
 };
 
 const KNOWN_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([
-  MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   XIANGQI_SPEC_ID,

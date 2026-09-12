@@ -28,13 +28,6 @@ export function xiangqiEnabled(): boolean {
   return process.env.MISTBOARD_XIANGQI_ENABLED === 'true';
 }
 
-// Dark Mini Xiangqi is a separate 7x7 rules spike. Keep it independently
-// gateable from full Dark Xiangqi so runtime experiments cannot expose both
-// families at once by accident.
-export function darkMiniXiangqiEnabled(): boolean {
-  return process.env.MISTBOARD_DARK_MINI_XIANGQI_ENABLED === 'true';
-}
-
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket) live rooms. Server-side opt-in,
 // default off — the tenant exists but is not launched. Flip to `return true` at
 // launch (alongside the rated flag + user_ratings CHECK migration).

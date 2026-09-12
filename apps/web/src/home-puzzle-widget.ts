@@ -4,12 +4,9 @@ import {
   type FortressXiangqiGameState,
   type FortressXiangqiPlayerView,
   getFortressXiangqiPlayerView,
-  getMiniXiangqiOpenPlayerView,
   getStandardXiangqiPlayerView,
-  MINI_XIANGQI_SPEC_ID,
-  type MiniXiangqiColor,
-  type MiniXiangqiGameState,
   XIANGQI_SPEC_ID,
+  type XiangqiColor,
   type XiangqiGameState,
 } from '@mistboard/game';
 import './drop-reserve.css';
@@ -20,20 +17,13 @@ import {
 } from './fortress-xiangqi-render.js';
 import { fillFortressXiangqiReserve } from './fortress-xiangqi-view.js';
 import { t } from './i18n/catalog.js';
-import {
-  installMiniXiangqiBoardStyles,
-  renderMiniXiangqiBoardSvg,
-} from './live-mini-xiangqi-render.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { renderXiangqiBoardSvg } from './xiangqi-board.js';
-
-const HOME_PUZZLE_PIECE_SIZE = 64;
 
 // Daily variants this widget knows how to paint. The payload gate (fail-closed)
 // treats any other variant as a miss: no widget beats the wrong board. Extend
 // this list together with renderHomePuzzleBox when the daily rotation grows.
 const HOME_PUZZLE_VARIANTS: readonly string[] = [
-  MINI_XIANGQI_SPEC_ID,
   // Fortress omitted: the daily rotation no longer selects it (demoted, awaiting
   // a re-mine). Re-add when the Fortress daily provider is restored.
   XIANGQI_SPEC_ID,
@@ -49,11 +39,11 @@ type HomeDailyPuzzle = {
   };
   puzzle: {
     goal:
-      | { type: 'checkmate'; winner?: MiniXiangqiColor }
-      | { type: 'winning-advantage'; winner?: MiniXiangqiColor; centipawns?: number };
+      | { type: 'checkmate'; winner?: XiangqiColor }
+      | { type: 'winning-advantage'; winner?: XiangqiColor; centipawns?: number };
     id: string;
-    initial: MiniXiangqiGameState | FortressXiangqiGameState | XiangqiGameState;
-    sideToMove: MiniXiangqiColor | null;
+    initial: FortressXiangqiGameState | XiangqiGameState;
+    sideToMove: XiangqiColor | null;
     solutionPlyCount: number;
     themes: string[];
     title: string;
@@ -103,7 +93,6 @@ export async function loadHomeDailyPuzzle(): Promise<HomeDailyPuzzle | null> {
 }
 
 export function renderHomePuzzleWidget(daily: HomeDailyPuzzle): HTMLElement {
-  installMiniXiangqiBoardStyles();
   installFortressXiangqiBoardStyles();
   const { puzzle } = daily;
   const link = document.createElement('a');
@@ -165,19 +154,6 @@ function renderHomePuzzleBox(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement {
     return box;
   }
 
-  if (puzzle.variant === MINI_XIANGQI_SPEC_ID) {
-    box.append(
-      homePuzzleBoardSurface(
-        renderMiniXiangqiBoardSvg(
-          getMiniXiangqiOpenPlayerView(puzzle.initial as MiniXiangqiGameState, turn),
-          turn,
-          { interactive: false, pieceSize: HOME_PUZZLE_PIECE_SIZE, showFog: false },
-        ),
-      ),
-    );
-    return box;
-  }
-
   // Fail-closed: isHomeDailyPuzzle already filters unknown variants, so this is
   // unreachable from the fetch/cache paths. Never fall back to another board.
   throw new Error(`Unsupported daily puzzle variant: ${puzzle.variant}`);
@@ -231,7 +207,6 @@ function isHomeDailyPuzzle(value: Partial<HomeDailyPuzzle>): value is HomeDailyP
 
 function variantLabel(variant: string): string {
   if (variant === FORTRESS_XIANGQI_SPEC_ID) return 'Fortress Xiangqi';
-  if (variant === MINI_XIANGQI_SPEC_ID) return 'Mini Xiangqi';
   if (variant === XIANGQI_SPEC_ID) return 'Xiangqi';
   return variant
     .split('-')
@@ -240,6 +215,6 @@ function variantLabel(variant: string): string {
     .join(' ');
 }
 
-function colorLabel(color: MiniXiangqiColor | null): string {
+function colorLabel(color: XiangqiColor | null): string {
   return color === 'black' ? t('setup.black') : t('setup.red');
 }

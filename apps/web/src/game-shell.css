@@ -30,7 +30,7 @@
 
 .moves-panel {
   /* No center↔right divider: it was asymmetric (the left meta-panel has no
-     matching border). Removed for both chess and Dark Mini Xiangqi (parity). */
+     matching border). Removed for parity across the shell. */
   padding-left: clamp(12px, 1.5vw, 18px);
 }
 
@@ -897,7 +897,7 @@
 /* Rematch controls sit in one slot of the room-action stack (a label line above
    a button group) so the layout doesn't reshuffle as the offer state changes —
    Decline/Accept share the row the lone Rematch button held. Shared by chess and
-   Dark Mini Xiangqi; the buttons inherit the .room-actions button styling. */
+   the tenant shells; the buttons inherit the .room-actions button styling. */
 .room-rematch {
   display: grid;
   gap: 6px;

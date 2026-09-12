@@ -19,8 +19,6 @@ import {
   JUNGLE_PUZZLES,
   JUNGLE_SOURCE_GAMES,
   JUNGLE_SPEC_ID,
-  MINI_XIANGQI_PUZZLES,
-  MINI_XIANGQI_SPEC_ID,
   XIANGQI_PUZZLES,
   XIANGQI_SPEC_ID,
 } from './index.js';
@@ -40,10 +38,6 @@ function sha256(value: unknown): string {
 // pre-#183 unit suite pinned on the in-package JUNGLE_PUZZLES array: the seed
 // cut is byte-identical to what the server used to serve from TS modules.
 const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }> = {
-  'mini-xiangqi': {
-    count: 6,
-    hash: 'a1f646edbc01910429f3fec91835f6f2187db918f519f2b796fbd74d1d37c843',
-  },
   'fortress-xiangqi': {
     count: 0,
     hash: '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
@@ -59,7 +53,6 @@ const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }>
 };
 
 const REGISTRY_VARIANTS: Record<SeedPuzzleRegistry, ReadonlySet<string>> = {
-  'mini-xiangqi': new Set([MINI_XIANGQI_SPEC_ID]),
   'fortress-xiangqi': new Set([FORTRESS_XIANGQI_SPEC_ID]),
   jungle: new Set([JUNGLE_SPEC_ID]),
   xiangqi: new Set([XIANGQI_SPEC_ID]),
@@ -125,12 +118,7 @@ test('loadAllSeedPuzzles preserves the registry concatenation (serving) order', 
 // make kernel/unit tests pass against content the server no longer serves.
 test('every fixture puzzle is a verbatim subset of the seed', () => {
   const seedById = new Map(loadAllSeedPuzzles().map((puzzle) => [puzzle.id, puzzle]));
-  const fixtures = [
-    ...MINI_XIANGQI_PUZZLES,
-    ...FORTRESS_XIANGQI_PUZZLES,
-    ...JUNGLE_PUZZLES,
-    ...XIANGQI_PUZZLES,
-  ];
+  const fixtures = [...FORTRESS_XIANGQI_PUZZLES, ...JUNGLE_PUZZLES, ...XIANGQI_PUZZLES];
   assert.ok(fixtures.length > 0);
   for (const fixture of fixtures) {
     const seeded = seedById.get(fixture.id);

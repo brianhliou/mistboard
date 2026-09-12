@@ -24,7 +24,7 @@ function arg(name: string, dflt: string): string {
 
 const SPEC_IDS = GAME_SPECS.map((s) => s.id);
 // Longest id first so `dark-crossroads-chess` claims its files before `crossroads-chess`,
-// `jungle-flip` before `jungle`, `drop-mini-xiangqi` before `mini-xiangqi`, etc.
+// `jungle-flip` before `jungle`, etc.
 const IDS_BY_LEN = [...SPEC_IDS].sort((a, b) => b.length - a.length);
 function attribute(filename: string): string | null {
   return IDS_BY_LEN.find((id) => filename.includes(id)) ?? null;

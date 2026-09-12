@@ -173,7 +173,6 @@ const LEADERBOARD_BUCKETS: {
 const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   fog: 'variant.darkChess.name',
   fog_draft960: 'variant.darkDraft960.name',
-  dark_mini_xiangqi: 'variant.darkMiniXiangqi.name',
   dark_xiangqi: 'variant.darkXiangqi.name',
   dark_crazyhouse: 'variant.darkCrazyhouse.name',
   kriegspiel: 'variant.kriegspiel.name',

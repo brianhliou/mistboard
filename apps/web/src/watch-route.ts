@@ -79,7 +79,7 @@ type WatchFeed = {
 
 // Which replay renderer a game needs: a game spec id (the registry's unambiguous
 // tenant key) or 'chess' (the chessground fallback for the unregistered dark-chess
-// stack). It must NOT key on the coarse watch.family: jieqi and Dark Mini Xiangqi
+// stack). It must NOT key on the coarse watch.family: jieqi and banqi
 // both render in the 'xiangqi' family, so a family key would resolve both to the
 // same tenant. A switch across renderers must re-mount, not loadGame.
 type WatchRendererKind = string;
@@ -1777,8 +1777,6 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'dark-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'dark-xiangqi': 'dark-xiangqi',
-  'mini-xiangqi': 'mini-xiangqi',
-  'dark-mini-xiangqi': 'dark-mini-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',

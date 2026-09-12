@@ -22,7 +22,6 @@ import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkCrazyhouseArticle } from './articles/content/dark-crazyhouse.js';
 import { darkDraft960Article } from './articles/content/dark-draft960.js';
-import { darkMiniXiangqiArticle } from './articles/content/dark-mini-xiangqi.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
 import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
@@ -33,7 +32,6 @@ import { jungleFlipArticle } from './articles/content/jungle-flip.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
 import { puzzleTwoAnswersArticle } from './articles/content/puzzles-with-more-than-one-solution.js';
 import { kriegspielArticle } from './articles/content/kriegspiel.js';
-import { miniXiangqiArticle } from './articles/content/mini-xiangqi.js';
 import { mistyArticle } from './articles/content/misty.js';
 import { revealChessArticle } from './articles/content/reveal-chess.js';
 import { riverbankCannonArticle } from './articles/content/riverbank-cannon.js';
@@ -63,8 +61,6 @@ export const articles: Article[] = [
   xiangqiMatchFixingArticle,
   xiangqiWorldChampionshipArticle,
   darkXiangqiArticle,
-  miniXiangqiArticle,
-  darkMiniXiangqiArticle,
   fortressXiangqiArticle,
   duckXiangqiArticle,
   duckXiangqiBuildArticle,

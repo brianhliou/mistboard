@@ -18,11 +18,6 @@ export function xiangqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_XIANGQI_ENABLED === 'true';
 }
 
-// Dark Mini Xiangqi (7x7) is a parked lab surface.
-export function darkMiniXiangqiEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_DARK_MINI_XIANGQI_ENABLED === 'true';
-}
-
 // Global friends-online widget (bottom-corner pill → expandable list, lichess
 // parity). On in dev; in prod/staging it stays hidden until the build opts in.
 export function friendsOnlineEnabled(): boolean {
@@ -51,7 +46,7 @@ export function duckXiangqiEnabled(): boolean {
 }
 
 // Identity-hidden jieqi (揭棋) play surface. Always on in dev for convenience
-// (like DMX/correspondence); in prod/staging it is hidden unless the
+// (like correspondence); in prod/staging it is hidden unless the
 // build opts in.
 export function jieqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_JIEQI_ENABLED === 'true';

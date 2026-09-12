@@ -30,7 +30,6 @@ export type EngineId =
   | 'python-v2-v1.4'
   | 'python-v2-v1.5'
   | 'python-v2-v1.6'
-  | 'python-dmx-v1.0'
   | 'python-fdx-v1.0'
   | 'python-fdx-v1.1'
   | 'python-fdx-v1.2'
@@ -58,9 +57,6 @@ export type EngineId =
   | 'misty-banqi-strong'
   | 'misty-banqi-strongest'
   // Fairy-Stockfish (Mini Xiangqi)
-  | 'fairy-stockfish-mini-xiangqi-amateur'
-  | 'fairy-stockfish-mini-xiangqi-strong'
-  | 'fairy-stockfish-mini-xiangqi-very-strong'
   // MistyJungleFlip (Flip Jungle)
   | 'misty-jungle-flip';
 

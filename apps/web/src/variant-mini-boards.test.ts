@@ -88,9 +88,6 @@ describe('variant mini-board markers', () => {
     expect(root.querySelectorAll('.variant-color-state-card')).toHaveLength(48);
     expect(root.querySelector('svg[data-mini-id="kriegspiel"]')).toBeNull();
     expect(root.querySelector('svg[data-mini-id="dark-crazyhouse"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="mini-xiangqi"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="dark-mini-xiangqi"]')).toBeNull();
-    expect(root.querySelector('span[data-variant-marker-id="mini-xiangqi"]')).toBeNull();
     expect(root.querySelector('svg[data-mini-id="reveal-chess"]')).toBeNull();
   });
 });

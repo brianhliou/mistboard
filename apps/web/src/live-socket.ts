@@ -1,5 +1,5 @@
 /**
- * Chess/DMX liveState shell socket — since the P2 web convergence, a thin
+ * Chess liveState shell socket — since the P2 web convergence, a thin
  * frame-application adapter over the generic tenant socket client
  * (variant-tenant/socket-client.ts), which owns the connection state machine,
  * reconnect backoff + notice tiers, seq-gap resync, latency sampling, and the
@@ -85,7 +85,6 @@ let client: TenantSocketClient | null = null;
 let _render: () => void = () => {};
 let _reconcileInteractionState: () => void = () => {};
 let _maybePlaySnapshotSound: (events: GameEvent[], state: PlayerView | null) => void = () => {};
-let _maybePlayDarkMiniXiangqiSound: () => void = () => {};
 
 // ── Init ──────────────────────────────────────────────────────────────────────
 
@@ -93,12 +92,10 @@ export function initSocket(callbacks: {
   render: () => void;
   reconcileInteractionState: () => void;
   maybePlaySnapshotSound: (events: GameEvent[], state: PlayerView | null) => void;
-  maybePlayDarkMiniXiangqiSound: () => void;
 }): void {
   _render = callbacks.render;
   _reconcileInteractionState = callbacks.reconcileInteractionState;
   _maybePlaySnapshotSound = callbacks.maybePlaySnapshotSound;
-  _maybePlayDarkMiniXiangqiSound = callbacks.maybePlayDarkMiniXiangqiSound;
 }
 
 // ── Socket management ─────────────────────────────────────────────────────────
@@ -144,9 +141,7 @@ function applyStateFrame(generic: TenantSocketFrame): void {
     // filtered server-side for this seat.
     liveState.events = frame.events ?? [];
   }
-  if (liveState.gameSpecId === 'dark-mini-xiangqi' || liveState.gameSpecId === 'mini-xiangqi') {
-    _maybePlayDarkMiniXiangqiSound();
-  } else if (liveState.gameSpecId !== 'dark-xiangqi') {
+  if (liveState.gameSpecId !== 'dark-xiangqi') {
     _maybePlaySnapshotSound(liveState.events, liveState.state);
   }
   _reconcileInteractionState();

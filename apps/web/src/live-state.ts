@@ -19,7 +19,7 @@ export type PlayableSeat = Color | XiangqiColor;
 export type Seat = PlayableSeat | 'spectator';
 export type RoomMode = 'pvp' | 'pve' | 'eve' | 'imported' | 'manual' | 'correspondence';
 
-// Shared rematch state for chess (white/black) and Dark Mini Xiangqi (red/black).
+// Shared rematch state for chess (white/black), with room for red/black seats.
 // `declined` is a transient, client-only cue (the server doesn't send it); see the
 // rematch:state handling in live-socket.ts.
 export type RematchClientState = {
@@ -84,8 +84,7 @@ export type StoredSeatToken = {
 };
 export type ConnectedSeats = Partial<Record<PlayableSeat, boolean>>;
 
-// Top-level clock for the xiangqi-family runtimes (Dark Mini Xiangqi, Dark
-// Xiangqi). Standard chess carries its clock inside the PlayerView; these
+// Top-level clock for the xiangqi-family runtimes (Dark Xiangqi). Standard chess carries its clock inside the PlayerView; these
 // runtimes deliver it alongside the view in the snapshot, so it lives here.
 export type XiangqiFamilyClock = {
   activeColor: XiangqiColor | null;
@@ -196,8 +195,8 @@ export const liveState = {
   forfeitDeadline: null as number | null,
   pveEngineId: null as string | null,
   pveEngineName: null as string | null,
-  // Keyed by PlayableSeat (not just chess Color): the mini-xiangqi rooms ride
-  // this same shell and their seats are red/black.
+  // Keyed by PlayableSeat (not just chess Color): red/black tenants rode this
+  // same shell.
   seatDisplayNames: {} as Partial<Record<PlayableSeat, string>>,
   // Where each seat name links, parallel to seatDisplayNames. A seat with no
   // public page (a guest, an engine with no bot fronting it) is simply absent.
@@ -219,8 +218,8 @@ export const liveState = {
   timeControl: null as { initialMs: number; incrementMs: number; daysPerMove?: number } | null,
   events: [] as GameEvent[],
   reconnectAttempt: 0,
-  // Dark Mini Xiangqi reuses this shared rematch state over red/black, so the
-  // offers map carries an optional `red` alongside chess's white/black. `declined`
+  // The offers map carries an optional `red` alongside chess's white/black for
+  // red/black tenants on this shell. `declined`
   // is a transient client-only cue set when the opponent declines our offer.
   rematch: { offers: { white: false, black: false }, finalizedRoomId: null } as RematchClientState,
   connectedSeats: { white: false, black: false } as ConnectedSeats,

@@ -22,7 +22,6 @@ import * as correspondenceGamesRoute from './routes/correspondence-games.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
 import * as currentGamesRoute from './routes/current-games.js';
 import * as darkCrazyhouseGamesRoute from './routes/dark-crazyhouse-games.js';
-import * as darkMiniXiangqiGamesRoute from './routes/dark-mini-xiangqi-games.js';
 import * as darkXiangqiGamesRoute from './routes/dark-xiangqi-games.js';
 import * as duckXiangqiGamesRoute from './routes/duck-xiangqi-games.js';
 import * as enginesRoute from './routes/engines.js';
@@ -40,7 +39,6 @@ import * as leaderboardRoute from './routes/leaderboard.js';
 import type { HttpApiContext } from './routes/lib.js';
 import * as lobbyRoute from './routes/lobby.js';
 import * as metaRoute from './routes/meta.js';
-import * as miniXiangqiGamesRoute from './routes/mini-xiangqi-games.js';
 import * as notificationsRoute from './routes/notifications.js';
 import * as oembedRoute from './routes/oembed.js';
 import * as openapiRoute from './routes/openapi.js';
@@ -115,8 +113,6 @@ export const routes: RouteModule[] = [
   historicalXiangqiGamesRoute,
   xiangqiExplorerRoute,
   xiangqiGamesRoute,
-  miniXiangqiGamesRoute,
-  darkMiniXiangqiGamesRoute,
   fortressXiangqiGamesRoute,
   duckXiangqiGamesRoute,
   darkXiangqiGamesRoute,

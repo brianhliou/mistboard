@@ -1,7 +1,6 @@
 import {
   BANQI_SPEC_ID,
   type Color,
-  DARK_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   TIME_CONTROLS,
@@ -1467,7 +1466,6 @@ function ratedParticipantColorsForVariant(variant: string): {
   white: RatedParticipantColor;
   black: RatedParticipantColor;
 } {
-  if (variant === DARK_MINI_XIANGQI_SPEC_ID) return { white: 'red', black: 'black' };
   // Jieqi + Banqi are red/black (red = first mover = the white rating slot, like
   // DMX; banqi keys on the SEAT, not ink). The default result mapping
   // below then applies (red-wins -> white-wins, black-wins passthrough), so no result arm.

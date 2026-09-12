@@ -16,23 +16,17 @@ describe('profile ratings rail', () => {
   it('shows soft-launch profile rows before rated games', async () => {
     // Pin prod semantics so dev-on variants (jieqi/banqi) don't add extra rows.
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     const { buildProfileRatings } = await import('./profile.js');
 
     const section = buildProfileRatings([]);
 
     expect(section.textContent).toContain('Fog Chess');
-    expect(section.textContent).toContain('Dark Mini Xiangqi');
-    // Xiangqi pivot: Drop Mini is off the rating grids now.
-    expect(section.textContent).not.toContain('Drop Mini Xiangqi');
-    // Fortress + Duck + Flip Jungle + Jungle + Dark Chess (always-on) + Dark
-    // Mini (render flag) = 6 profile rows.
-    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(6);
+    // Fortress + Duck + Flip Jungle + Jungle + Dark Chess (always-on) = 5 rows.
+    expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(5);
   });
 
   it('localizes Traditional Chinese profile ratings rows', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     const { buildProfileRatings } = await import('./profile.js');
 
     // Xiangqi pivot: Drop Mini is off the rating grids; localize an on-grid row
@@ -104,7 +98,6 @@ describe('profile ratings rail', () => {
 
   it('mounts the profile dashboard with activity and games tabs', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     const fetchSpy = vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
       if (url.includes('/api/players/online')) {
@@ -368,9 +361,6 @@ describe('profile ratings rail', () => {
     );
     const flipRow = railRows.find((row) => row.dataset.variant === 'jungle_flip');
     expect(flipRow?.classList.contains('profile-rating-row-empty')).toBe(false);
-    expect(railRows[railRows.length - 1]?.classList.contains('profile-rating-row-empty')).toBe(
-      true,
-    );
 
     // Activity / Games are the primary tabs. Saved is private to the profile
     // owner and lives as a second-level choice inside Games.
@@ -420,7 +410,6 @@ describe('profile ratings rail', () => {
 
   it('keeps the ratings rail in canonical order with never-played variants dimmed', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     const { buildProfileRatings } = await import('./profile.js');
 
     const section = buildProfileRatings([

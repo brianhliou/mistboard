@@ -342,8 +342,6 @@ const wantsStudyIndex = path === '/study';
 const wantsPractice = path === '/practice';
 // Hidden DEV-only spike: FoW Xiangqi Phase A. No nav entry, no landing link.
 const wantsXiangqiSpike = import.meta.env.DEV && path === '/xiangqi-spike';
-// Hidden DEV-only spike for the candidate 7x7 Dark Mini Xiangqi ruleset.
-const wantsMiniXiangqiSpike = import.meta.env.DEV && path === '/mini-xiangqi-spike';
 // Hidden DEV-only reviewer demo: no nav entry, direct-link only.
 const wantsXiangqiDemo = import.meta.env.DEV && path === '/xiangqi-demo';
 // Hidden DEV-only spike: pixel-art piece + fog style probes. No nav entry.
@@ -673,13 +671,6 @@ if (replaySample) {
   setTitle('Xiangqi spike');
   void mountOrReport(() =>
     import('./xiangqi-spike.js').then(({ mountXiangqiSpike }) => mountXiangqiSpike(appRoot)),
-  );
-} else if (wantsMiniXiangqiSpike) {
-  setTitle('Mini Xiangqi spike');
-  void mountOrReport(() =>
-    import('./mini-xiangqi-spike.js').then(({ mountMiniXiangqiSpike }) =>
-      mountMiniXiangqiSpike(appRoot),
-    ),
   );
 } else if (wantsXiangqiDemo) {
   setTitle('Fog Xiangqi demo');

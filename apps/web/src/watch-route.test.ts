@@ -93,13 +93,13 @@ describe('watch replay load priority', () => {
 describe('watch route copy helpers', () => {
   it('scopes sealed watch copy to dark channels', () => {
     const darkFeed = {
-      activeChannel: 'dark-mini-xiangqi',
+      activeChannel: 'dark-xiangqi',
       channels: [
         {
           family: 'xiangqi',
-          gameSpecIds: ['dark-mini-xiangqi'],
-          id: 'dark-mini-xiangqi',
-          label: 'Dark Mini Xiangqi',
+          gameSpecIds: ['dark-xiangqi'],
+          id: 'dark-xiangqi',
+          label: 'Fog Xiangqi',
           sealedCount: 1,
           unlockedCount: 2,
         },
@@ -143,20 +143,20 @@ describe('watch route copy helpers', () => {
         {
           color: 'black',
           displayName: 'Misty',
-          subjectId: 'python-dmx-v1.0',
+          subjectId: 'python-fdx-v1.2',
           subjectType: 'engine-version',
           visibility: 'public',
         },
       ],
       plyCount: 12,
       result: 'red-wins',
-      roomId: 'dmxq_watch',
+      roomId: 'dxq_watch',
       termination: 'general-captured',
-      variant: 'dark-mini-xiangqi',
+      variant: 'dark-xiangqi',
       whiteName: null,
     };
 
-    // 'python-dmx-v1.0' resolves to the build "Misty DMX 1.0"; list rows show
+    // 'python-fdx-v1.2' resolves to the build "Misty DXQ 1.2"; list rows show
     // the brand.
     expect(watchQueueMatchupLabel(game)).toBe('Red Human vs Misty');
     expect(resultLabel(game.result)).toBe('Red wins');

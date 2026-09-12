@@ -1,8 +1,7 @@
-import { type GameSpecId, MINI_XIANGQI_SPEC_ID, maybeGameSpecForId } from '@mistboard/game';
+import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import {
   banqiEnabled,
   darkCrazyhouseEnabled,
-  darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -70,12 +69,6 @@ const GATED_GAME_SPECS = {
     enabled: mahjongEnabled,
     disabledError: 'mahjong_disabled',
     notIntegratedError: 'mahjong_not_integrated',
-  },
-  'mini-xiangqi': { notIntegratedError: 'mini_xiangqi_not_integrated' },
-  'dark-mini-xiangqi': {
-    enabled: darkMiniXiangqiEnabled,
-    disabledError: 'dark_mini_xiangqi_disabled',
-    notIntegratedError: 'dark_mini_xiangqi_not_integrated',
   },
   'dark-xiangqi': {
     enabled: darkXiangqiEnabled,
@@ -167,11 +160,6 @@ export function gateGameSpecRequest(input: {
   gameSpecId?: unknown;
   variant?: unknown;
 }): GameSpecGateDecision {
-  // Legacy special case, kept first so precedence matches the old gate: a
-  // canonical Mini Xiangqi variant string on the chess path is refused
-  // regardless of what gameSpecId says. Mini Xiangqi is retired, so the
-  // refusal is the retired one.
-  if (input.variant === MINI_XIANGQI_SPEC_ID) return REJECT_RETIRED;
   // `gameSpecId` is the canonical selector. Absent (undefined, or null from
   // URLSearchParams.get on the WS path) passes; anything else must resolve to
   // a chess-stack spec. maybeGameSpecForId also resolves the registry aliases

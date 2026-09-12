@@ -13,7 +13,6 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -23,7 +22,6 @@ import {
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   KRIEGSPIEL_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
   maybeGameSpecForId,
   type RatingVariant,
   REVEAL_CHESS_SPEC_ID,
@@ -33,7 +31,6 @@ import {
 import {
   banqiEnabled,
   darkCrazyhouseEnabled,
-  darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -67,10 +64,6 @@ export interface VariantDef {
 }
 
 const draft960Enabled = import.meta.env.VITE_DRAFT960_ENABLED === 'true';
-// Dark Mini Xiangqi retired 2026-07-03 (project_xiangqi_pivot_track): gated by the
-// single VITE_DARK_MINI_XIANGQI_ENABLED flag (now off in prod). The former
-// two-tier public-entry flag was removed as dead complexity.
-const darkMiniEnabled = darkMiniXiangqiEnabled();
 const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
@@ -84,7 +77,6 @@ const darkCrazyhouseOn = darkCrazyhouseEnabled();
 const kriegspielOn = kriegspielEnabled();
 const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
 const draft960Spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
-const darkMiniXiangqiSpec = gameSpecForId(DARK_MINI_XIANGQI_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
@@ -103,8 +95,6 @@ const jungleFlipSpec = gameSpecForId(JUNGLE_FLIP_SPEC_ID);
 const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [DARK_CHESS_SPEC_ID]: 'dark-chess',
   [DARK_DRAFT960_SPEC_ID]: 'draft960',
-  [MINI_XIANGQI_SPEC_ID]: 'mini-xiangqi',
-  [DARK_MINI_XIANGQI_SPEC_ID]: 'dark-mini-xiangqi',
   [FORTRESS_XIANGQI_SPEC_ID]: 'fortress-xiangqi',
   [DUCK_XIANGQI_SPEC_ID]: 'duck-xiangqi',
   [XIANGQI_SPEC_ID]: 'xiangqi',
@@ -272,16 +262,6 @@ export const VARIANTS: VariantDef[] = [
     enabled: draft960Enabled,
     onLeaderboard: false,
     onProfile: false,
-  },
-  {
-    id: currentRatingVariantForSpec(DARK_MINI_XIANGQI_SPEC_ID),
-    gameSpecId: darkMiniXiangqiSpec.id,
-    apiParam: DARK_MINI_XIANGQI_SPEC_ID,
-    label: darkMiniXiangqiSpec.publicName,
-    miniId: 'dark-mini-xiangqi',
-    enabled: darkMiniEnabled,
-    onLeaderboard: darkMiniEnabled,
-    onProfile: darkMiniEnabled,
   },
 ];
 

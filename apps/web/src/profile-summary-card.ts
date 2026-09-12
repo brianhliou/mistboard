@@ -86,7 +86,6 @@ const MAX_RATING_TILES = 6;
 const HIDDEN_BOT_GAME_SPEC_IDS = new Set(['dark-draft960']);
 const GAME_SPEC_LABEL_KEYS: Record<string, I18nKey> = {
   'dark-chess': 'variant.darkChess.name',
-  'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
   jieqi: 'variant.jieqi.name',
   banqi: 'variant.banqi.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',

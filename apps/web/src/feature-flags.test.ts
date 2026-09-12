@@ -1,7 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   darkCrazyhouseEnabled,
-  darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
   kriegspielEnabled,
   luzhanqiEnabled,
@@ -16,7 +15,6 @@ describe('client feature flags', () => {
   it.each([
     ['Reveal Chess', 'VITE_REVEAL_CHESS_ENABLED', revealChessEnabled],
     ['Kriegspiel', 'VITE_KRIEGSPIEL_ENABLED', kriegspielEnabled],
-    ['Dark Mini Xiangqi', 'VITE_DARK_MINI_XIANGQI_ENABLED', darkMiniXiangqiEnabled],
     ['Dark Crazyhouse', 'VITE_DARK_CRAZYHOUSE_ENABLED', darkCrazyhouseEnabled],
     ['Luzhanqi', 'VITE_LUZHANQI_ENABLED', luzhanqiEnabled],
   ])('keeps %s disabled in dev unless explicitly opted in', (_name, envName, enabled) => {
@@ -28,7 +26,6 @@ describe('client feature flags', () => {
 
   it('enables parked surfaces together in the lab profile', () => {
     vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
-    expect(darkMiniXiangqiEnabled()).toBe(true);
     expect(darkCrazyhouseEnabled()).toBe(true);
     expect(luzhanqiEnabled()).toBe(true);
     expect(revealChessEnabled()).toBe(true);

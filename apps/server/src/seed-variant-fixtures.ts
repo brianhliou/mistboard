@@ -19,7 +19,6 @@ import pg from 'pg';
 
 import { banqiTenant } from './banqi-tenant.js';
 import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
-import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
@@ -28,7 +27,6 @@ import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import { kriegspielTenant } from './kriegspiel-tenant.js';
 import { runMigrations } from './migrate.js';
-import { miniXiangqiTenant } from './mini-xiangqi-tenant.js';
 import { appendRoomEvent, close, init, recordGameEnd } from './persistence.js';
 import { revealChessTenant } from './reveal-chess-tenant.js';
 import { buildTenantGameSummary } from './variant-tenant/events.js';
@@ -41,8 +39,6 @@ const TENANTS: any[] = [
   jungleFlipTenant,
   jieqiTenant,
   banqiTenant,
-  miniXiangqiTenant,
-  darkMiniXiangqiTenant,
   fortressXiangqiTenant,
   duckXiangqiTenant,
   revealChessTenant,

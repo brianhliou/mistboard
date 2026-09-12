@@ -119,17 +119,6 @@ test('every public xiangqi, fortress and duck engine resolves to a first-party b
   }
 });
 
-test('dormant retired-family profiles keep their names for history', () => {
-  assert.equal(
-    firstPartyBotForId('fairy-stockfish-mini-xiangqi')?.displayName,
-    'Fairy Stockfish - Strong',
-  );
-  assert.equal(
-    firstPartyBotForEngine('fairy-stockfish-mini-xiangqi-very-strong')?.id,
-    'fairy-stockfish-mini-xiangqi-strongest',
-  );
-});
-
 test('no engine id is claimed by two profiles with different identities', () => {
   const owners = new Map<string, string>();
   for (const bot of FIRST_PARTY_BOT_PROFILES) {

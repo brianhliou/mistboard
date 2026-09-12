@@ -75,9 +75,6 @@ test('game spec gate refuses every retired spec, by id and by legacy variant, wh
     assert.deepEqual(gateGameSpecRequest({ gameSpecId: id }), RETIRED, `gameSpecId ${id}`);
     assert.deepEqual(gateGameSpecRequest({ variant: id }), RETIRED, `variant ${id}`);
   }
-  withFlag('MISTBOARD_DARK_MINI_XIANGQI_ENABLED', true, () => {
-    assert.deepEqual(gateGameSpecRequest({ variant: 'dark-mini-xiangqi' }), RETIRED);
-  });
 });
 
 test('game spec gate refuses retired specs through their registry aliases', () => {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID, MINI_XIANGQI_SPEC_ID } from '@mistboard/game';
+import { DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID } from '@mistboard/game';
 // Watch channels (other than the hardcoded dark-chess default) derive from the
 // variant-tenant registry, so the registrations must be populated for the
 // derived channels to appear. This side-effect import registers every tenant.
@@ -17,7 +17,7 @@ import { defaultWatchChannel, listWatchChannels, watchChannelForId } from './wat
 const BASELINE_WATCH_CHANNELS = ['top', 'dark-chess', 'engines'] as const;
 
 // Retired sub-family ids that must NOT resolve to a watch channel.
-const RETIRED_WATCH_CHANNEL_IDS = [MINI_XIANGQI_SPEC_ID, 'dark-mini-xiangqi'] as const;
+const RETIRED_WATCH_CHANNEL_IDS = ['mini-xiangqi', 'dark-mini-xiangqi'] as const;
 
 test('watch channels expose Featured as the default channel', () => {
   const channel = defaultWatchChannel();

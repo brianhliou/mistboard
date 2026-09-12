@@ -42,7 +42,6 @@ import {
 // a fog_draft960 game. It also absorbs pre-rename variant strings ('fog',
 // 'draft960') that never became GameSpecAliasIds.
 const RATING_POOL_FROM_GAME_SQL = `CASE
-         WHEN games.variant = 'dark-mini-xiangqi' THEN 'dark_mini_xiangqi'
          WHEN games.variant = 'dark-xiangqi' THEN 'dark_xiangqi'
          WHEN games.variant = 'jieqi' THEN 'jieqi'
          WHEN games.variant = 'banqi' THEN 'banqi'
@@ -62,7 +61,7 @@ const RATING_POOL_FROM_GAME_SQL = `CASE
 // The stored variant strings the pool mapping above is defined over. Anything
 // outside this set has no pool, so it is excluded rather than falling into the
 // CASE's 'fog' default.
-const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-mini-xiangqi', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'reveal-chess', 'dark-crazyhouse', 'kriegspiel', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi')`;
+const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'reveal-chess', 'dark-crazyhouse', 'kriegspiel', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi')`;
 
 export type UpdateUserProfileResult =
   | { ok: true; user: UserAccount }

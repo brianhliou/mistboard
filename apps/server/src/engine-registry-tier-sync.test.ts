@@ -31,7 +31,6 @@ import { BANQI_ENGINE_VERSION, BANQI_PLAYABLE_ENGINES } from './banqi-engine.js'
 import { type EngineConfig, knownEngineIds, loadEngine } from './engine-registry.js';
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { JUNGLE_FLIP_ENGINE_VERSION, JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
-import { MINI_XIANGQI_PLAYABLE_ENGINES } from './mini-xiangqi-engine.js';
 
 type TierSyncCase = {
   /** Which tier table this expectation was derived from, for the failure message. */
@@ -45,18 +44,6 @@ type TierSyncCase = {
 // list (see the exemptions below) a row here would only echo the generator, so
 // only the hand-written entries are covered.
 const TIER_SYNC_CASES: readonly TierSyncCase[] = [
-  ...MINI_XIANGQI_PLAYABLE_ENGINES.map(
-    (tier): TierSyncCase => ({
-      family: 'mini-xiangqi',
-      engineId: tier.id,
-      config: {
-        kind: 'fairy-stockfish',
-        skill: tier.skill,
-        nodes: tier.nodes,
-        movetime_ms: tier.movetimeMs,
-      },
-    }),
-  ),
   ...JIEQI_PLAYABLE_ENGINES.map(
     (tier): TierSyncCase => ({
       family: 'jieqi',

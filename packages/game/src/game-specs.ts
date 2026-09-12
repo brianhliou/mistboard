@@ -3,7 +3,6 @@ import type { VariantId } from './types.js';
 export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'military-chess' | 'mahjong';
 export type BoardGeometryId =
   | 'chess-8x8'
-  | 'xiangqi-7x7'
   | 'xiangqi-9x10'
   | 'banqi-8x4'
   | 'jungle-7x9'
@@ -18,7 +17,6 @@ export type MovementRulesId =
   // Draw, discard, and claim out of turn. Nothing moves on a board.
   | 'mahjong-hk'
   | 'orthodox-chess'
-  | 'mini-xiangqi'
   | 'xiangqi'
   | 'banqi'
   | 'jungle'
@@ -56,7 +54,6 @@ export type VisibilityRulesId = 'dark' | 'open' | 'hidden-identity' | 'concealed
 export type SetupRulesId =
   | 'standard'
   | 'draft960'
-  | 'mini-standard'
   | 'double-fischer-random'
   | 'jieqi-deal'
   | 'banqi-deal'
@@ -90,8 +87,6 @@ export type RatingPoolBaseId =
   | 'fog_draft960'
   | 'dark_crazyhouse'
   | 'kriegspiel'
-  | 'mini_xiangqi'
-  | 'dark_mini_xiangqi'
   | 'dark_xiangqi'
   | 'jieqi'
   | 'banqi'
@@ -110,8 +105,6 @@ export type GameSpecId =
   | 'dark-draft960'
   | 'dark-crazyhouse'
   | 'kriegspiel'
-  | 'mini-xiangqi'
-  | 'dark-mini-xiangqi'
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
@@ -163,8 +156,6 @@ export const DARK_DRAFT960_SPEC_ID = 'dark-draft960' satisfies GameSpecId;
 // Compatibility alias for pre-taxonomy code and URLs. New code should use
 // DARK_DRAFT960_SPEC_ID; "fog" remains only in legacy rating/API vocabulary.
 export const FOG_DRAFT960_SPEC_ID = DARK_DRAFT960_SPEC_ID;
-export const MINI_XIANGQI_SPEC_ID = 'mini-xiangqi' satisfies GameSpecId;
-export const DARK_MINI_XIANGQI_SPEC_ID = 'dark-mini-xiangqi' satisfies GameSpecId;
 export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
@@ -312,51 +303,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'kriegspiel',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  // ── Mini Xiangqi cluster: PARKED as of 2026-07-24 ──────────────────────────
-  // The mini-xiangqi sub-family was retired from the product shelf in the
-  // 2026-07-03 xiangqi pivot (memory: project_xiangqi_pivot_track) and is
-  // flag-gated OFF in prod: Mini has no launch flag (the request gate answers
-  // `mini_xiangqi_not_integrated`); Dark/Drop Mini gate on
-  // MISTBOARD_{DARK,DROP}_MINI_XIANGQI_ENABLED (off outside the lab). The code,
-  // tenants, and rules stay fully wired for revival, so `runtimeStatus` remains
-  // 'live'; `publicSurface: 'hidden'` keeps them off every discoverability rail
-  // (same shape as luzhanqi above). Their test suites are parked in
-  // *.parkedtest.ts (run: npm run test:parked) rather than the default suite.
-  // To revive: flip the flag, restore publicSurface, and rename the tests back.
-  {
-    // Mini Xiangqi: the open-information 7x7 base game for the mini-xiangqi
-    // cluster. It is the clean rules/puzzle/training substrate for Drop Mini
-    // Xiangqi and Dark Mini Xiangqi.
-    id: MINI_XIANGQI_SPEC_ID,
-    publicName: 'Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'checkmate',
-    visibility: 'open',
-    setup: 'mini-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'mini_xiangqi',
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    id: DARK_MINI_XIANGQI_SPEC_ID,
-    publicName: 'Dark Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'general-capture',
-    visibility: 'dark',
-    setup: 'mini-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'dark_mini_xiangqi',
     rated: true,
     publicSurface: 'hidden',
     runtimeStatus: 'retired',
@@ -686,7 +632,6 @@ export type RatingVariant = Extract<
   RatingPoolBaseId,
   | 'fog'
   | 'fog_draft960'
-  | 'dark_mini_xiangqi'
   | 'dark_xiangqi'
   | 'dark_crazyhouse'
   | 'jieqi'

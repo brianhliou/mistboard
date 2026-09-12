@@ -169,7 +169,7 @@ function displayParticipant(
 }
 
 // Player-facing brand for a Misty build. Every Misty ships one brand: the
-// variant tag and version ("Misty DXQ 1.1", "Misty 1.5", "Misty DMX 1.0") are
+// variant tag and version ("Misty DXQ 1.1", "Misty 1.5") are
 // engine identity, and asking a player to parse them mid-board buys nothing —
 // they are playing Misty. The exact build still shows wherever it decides
 // something: the admin engine registry, /engines, and the engine detail pages
@@ -219,7 +219,6 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   'dark-chess': 'variant.darkChess.name',
   'dark-crazyhouse': 'variant.darkCrazyhouse.name',
   'dark-draft960': 'variant.darkDraft960.name',
-  'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',
   jieqi: 'variant.jieqi.name',
@@ -227,7 +226,6 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   'jungle-flip': 'variant.jungleFlip.name',
   kriegspiel: 'variant.kriegspiel.name',
   luzhanqi: null,
-  'mini-xiangqi': 'variant.miniXiangqi.name',
   'reveal-chess': 'variant.revealChess.name',
   xiangqi: 'variant.xiangqi.name',
   'duck-xiangqi': 'variant.duckXiangqi.name',

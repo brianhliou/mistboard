@@ -265,7 +265,6 @@ describe('appearance family gating', () => {
   it('surfaces current xiangqi and chess settings', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
 
     await rebuildThemePanel();
 

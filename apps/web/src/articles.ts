@@ -48,7 +48,6 @@ import {
   type JungleFlipReplayBlock,
   type JungleReplayBlock,
   type LiveBoardsBlock,
-  type MiniXiangqiReplayBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
   type StaticBoardsBlock,
@@ -71,7 +70,6 @@ import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/l
 import { type JieqiReplayController, mountJieqiReplay } from './jieqi-replay.js';
 import { type JungleFlipReplayController, mountJungleFlipReplay } from './jungle-flip-replay.js';
 import { type JungleReplayController, mountJungleReplay } from './jungle-replay.js';
-import { type MiniXiangqiReplayController, mountMiniXiangqiReplay } from './mini-xiangqi-replay.js';
 import { prependTitleBadge } from './player-titles.js';
 import {
   readStoredXiangqiBoardLayout,
@@ -1251,7 +1249,6 @@ type PendingBlock =
   | LiveBoardsBlock
   | XiangqiReplayBlock
   | ChessReplayBlock
-  | MiniXiangqiReplayBlock
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | JieqiReplayBlock
@@ -1283,7 +1280,6 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'faq') return renderFaqBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
-  if (block.kind === 'mxq-replay') return renderMiniXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
   if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
@@ -1402,29 +1398,6 @@ function renderXiangqiReplayBlock(block: XiangqiReplayBlock, lang?: ArticleLang)
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'xq-replay';
-
-  const mountTarget = document.createElement('div');
-  mountTarget.className = 'article-interactive-target';
-  figure.append(mountTarget);
-
-  if (block.caption) {
-    const cap = document.createElement('figcaption');
-    cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
-    figure.append(cap);
-  }
-
-  rememberPendingMount(figure, block, lang);
-  return figure;
-}
-
-function renderMiniXiangqiReplayBlock(
-  block: MiniXiangqiReplayBlock,
-  lang?: ArticleLang,
-): HTMLElement {
-  const figure = document.createElement('figure');
-  figure.className = 'article-figure article-figure-interactive article-figure-xq';
-  figure.dataset.pendingWidget = 'mxq-replay';
 
   const mountTarget = document.createElement('div');
   mountTarget.className = 'article-interactive-target';
@@ -2143,7 +2116,6 @@ export function mountPendingWidgets(
   | LiveBoardsController
   | XiangqiReplayController
   | ChessReplayController
-  | MiniXiangqiReplayController
   | FortressXiangqiReplayController
   | DuckXiangqiReplayController
   | JieqiReplayController
@@ -2156,7 +2128,6 @@ export function mountPendingWidgets(
     | LiveBoardsController
     | XiangqiReplayController
     | ChessReplayController
-    | MiniXiangqiReplayController
     | JieqiReplayController
     | BanqiReplayController
     | JungleReplayController
@@ -2175,8 +2146,6 @@ export function mountPendingWidgets(
       controllers.push(mountLiveBoards(target, block.spec));
     } else if (block.kind === 'xq-replay') {
       controllers.push(mountXiangqiReplay(target, block.spec, { lang }));
-    } else if (block.kind === 'mxq-replay') {
-      controllers.push(mountMiniXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'fortress-xiangqi-replay') {
       controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'duck-xiangqi-replay') {
@@ -2368,8 +2337,6 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'dark-draft960': 'draft960',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',
-  'mini-xiangqi': 'mini-xiangqi',
-  'dark-mini-xiangqi': 'dark-mini-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',

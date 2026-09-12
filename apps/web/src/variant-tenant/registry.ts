@@ -17,7 +17,6 @@ import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -29,7 +28,6 @@ import {
   KRIEGSPIEL_SPEC_ID,
   LUZHANQI_SPEC_ID,
   MAHJONG_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
   REVEAL_CHESS_SPEC_ID,
   type TimeControlId,
   variantDefaultTimeControl,
@@ -38,7 +36,6 @@ import {
 import {
   correspondenceEnabled,
   darkCrazyhouseEnabled,
-  darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -625,102 +622,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         },
       ],
       defaultEngineId: 'misty-jungle-flip',
-    },
-  },
-  {
-    // Open-information 7x7 Mini Xiangqi. It deliberately rides the shared
-    // mini-xiangqi live shell with no fog mask, no reserve strips, no bot, and
-    // no ratings at launch.
-    gameSpecId: MINI_XIANGQI_SPEC_ID,
-    roomIdPrefix: 'mxq_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Mini Xiangqi',
-    gameRouteBase: '/mini-xiangqi/game',
-    mountPostgame: (root, roomId) =>
-      import('../mini-xiangqi-postgame.js').then(({ mountMiniXiangqiPostgame }) =>
-        mountMiniXiangqiPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/mini-xiangqi/game',
-    watch: {
-      family: 'xiangqi',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-mini-open-xiangqi-replay.js').then(({ mountMiniOpenXiangqiWatchReplay }) =>
-          mountMiniOpenXiangqiWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: false,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: hiddenFromMenu,
-      // RETIRED 2026-09-04 (Brian). Mini Xiangqi was hidden from the picker in
-      // the 2026-07-03 xiangqi pivot but kept an unconditional deep link, so a
-      // link was its only door. Closing that door is the decision; the variant
-      // itself stays enabled so existing rooms, postgames and replays survive.
-      acceptsDeepLink: retiredDeepLink,
-      engineOptions: [
-        {
-          id: 'fairy-stockfish-mini-xiangqi-very-strong',
-          name: 'Fairy Stockfish - Strongest',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-mini-xiangqi-strong',
-          name: 'Fairy Stockfish - Strong',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-mini-xiangqi-amateur',
-          name: 'Fairy Stockfish - Amateur',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'fairy-stockfish-mini-xiangqi-strong',
-    },
-  },
-  {
-    gameSpecId: DARK_MINI_XIANGQI_SPEC_ID,
-    roomIdPrefix: 'dmxq_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Dark Mini Xiangqi',
-    gameRouteBase: '/dark-mini-xiangqi/game',
-    mountPostgame: (root, roomId) =>
-      import('../dark-mini-xiangqi-postgame.js').then(({ mountDarkMiniXiangqiPostgame }) =>
-        mountDarkMiniXiangqiPostgame(root, roomId),
-      ),
-    watch: {
-      family: 'xiangqi',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-mini-xiangqi-replay.js').then(({ mountMiniXiangqiWatchReplay }) =>
-          mountMiniXiangqiWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: true,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2'],
-      offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: darkMiniXiangqiEnabled,
-      engineOptions: [
-        {
-          id: 'python-dmx-v1.0',
-          name: 'Misty DMX 1.0',
-          familyName: 'Misty DMX',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'python-dmx-v1.0',
     },
   },
   {

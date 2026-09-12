@@ -52,14 +52,6 @@ describe('article public listing gates', () => {
     ]);
   });
 
-  it('keeps the mini xiangqi trio de-listed from the rules index regardless of env flags', () => {
-    vi.stubEnv('DEV', false);
-
-    const rules = buildRulesIndex();
-    expect(rules.querySelector('a[href="/rules/dark-mini-xiangqi"]')).toBeNull();
-    expect(rules.querySelector('a[href="/rules/mini-xiangqi"]')).toBeNull();
-  });
-
   it('orders the articles page by publish date newest first', () => {
     vi.stubEnv('DEV', true);
 
@@ -222,13 +214,7 @@ describe('article public listing gates', () => {
     // The server answers 410 for these; a client-side navigation must not
     // show what the server has declared gone (docs-private/variant-
     // retirement-plan.md, #396).
-    for (const slug of [
-      'dark-crazyhouse',
-      'dark-mini-xiangqi',
-      'kriegspiel',
-      'mini-xiangqi',
-      'reveal-chess',
-    ]) {
+    for (const slug of ['dark-crazyhouse', 'kriegspiel', 'reveal-chess']) {
       for (const lang of [undefined, 'zh-Hans'] as const) {
         const page = buildArticlePage(slug, lang);
         expect(page.querySelector('.article-title'), `${slug} ${lang}`).toBeNull();
@@ -252,8 +238,6 @@ describe('article public listing gates', () => {
   });
 
   it('limits the homepage article widget to editorial article cards ordered by publish date', () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-
     const hrefs = [
       ...(buildHomeArticleCards(50, undefined, NO_AGE_CUT)?.querySelectorAll<HTMLAnchorElement>(
         '.landing-article-card[data-card-kind="article"]',
@@ -537,8 +521,6 @@ describe('rules variant sidebar', () => {
     const hrefs = [...(nav?.querySelectorAll('a') ?? [])].map((link) => link.getAttribute('href'));
     // The mini xiangqi trio is de-listed; the rail uses the eight-variant
     // public shelf order.
-    expect(nav?.querySelector('a[href="/rules/mini-xiangqi"]')).toBeNull();
-    expect(nav?.querySelector('a[href="/rules/dark-mini-xiangqi"]')).toBeNull();
     expect(nav?.querySelector('a[href="/rules/fog-xiangqi"]')).not.toBeNull();
     expect(nav?.querySelector('a[href="/rules/jieqi"]')).not.toBeNull();
     expect(nav?.querySelector('a[href="/rules/jungle"]')).not.toBeNull();

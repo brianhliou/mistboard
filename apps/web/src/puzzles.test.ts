@@ -1,11 +1,7 @@
 import {
-  attemptMiniXiangqiPuzzleLine,
   attemptStandardXiangqiPuzzleLine,
   detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
-  MINI_XIANGQI_PUZZLES,
-  MINI_XIANGQI_SPEC_ID,
-  type MiniXiangqiPuzzle,
   standardXiangqiPuzzleMoveEquals,
   XIANGQI_MOTIF_BY_ID,
   XIANGQI_PUZZLES,
@@ -22,7 +18,7 @@ import {
 } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 
-function publicSummary(puzzle: MiniXiangqiPuzzle | XiangqiPuzzle) {
+function publicSummary(puzzle: XiangqiPuzzle) {
   return {
     id: puzzle.id,
     variant: puzzle.variant,
@@ -37,7 +33,7 @@ function publicSummary(puzzle: MiniXiangqiPuzzle | XiangqiPuzzle) {
   };
 }
 
-function publicDetail(puzzle: MiniXiangqiPuzzle | XiangqiPuzzle) {
+function publicDetail(puzzle: XiangqiPuzzle) {
   return {
     ...publicSummary(puzzle),
     initial: puzzle.initial,
@@ -61,13 +57,42 @@ describe('puzzles route', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('renders a Mini Xiangqi puzzle board from the API', async () => {
-    const mini = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
+  // Two mined checkmate lines from the served corpus, one per side to move.
+  // The player is driven through the real kernel (attemptStandardXiangqiPuzzleLine)
+  // rather than fixed fixtures, so these tests read moves off the seed.
+  const minedMate = (turn: 'red' | 'black'): XiangqiPuzzle =>
+    XIANGQI_PUZZLES.find(
+      (puzzle) =>
+        puzzle.goal.type === 'checkmate' &&
+        puzzle.initial.status.type === 'playing' &&
+        puzzle.initial.status.turn === turn &&
+        puzzle.solution.length === 3,
     )!;
-    const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
+  const RED_MATE = minedMate('red');
+  const BLACK_MATE = minedMate('black');
+  const movesOf = (init?: RequestInit): XiangqiMove[] =>
+    (JSON.parse(String(init?.body)) as { moves: XiangqiMove[] }).moves;
+  const clickSquares = (root: HTMLElement, move: XiangqiMove): void => {
+    root
+      .querySelector<SVGGElement>(`[data-square="${move.from}"]`)
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    root
+      .querySelector<SVGGElement>(`[data-square="${move.to}"]`)
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+  };
+  // Every solver ply of the line, waiting for each attempt to land before the
+  // next click (a pending submit would swallow it).
+  const solveLine = async (root: HTMLElement, puzzle: XiangqiPuzzle): Promise<void> => {
+    for (const [ply, move] of puzzle.solution.entries()) {
+      if (ply % 2 !== 0) continue;
+      clickSquares(root, move);
+      await vi.waitFor(() => expect(root.textContent).toContain(`${move.from}-${move.to}`));
+    }
+  };
+
+  it('renders a puzzle board from the API', async () => {
+    const mini = BLACK_MATE;
+    const drop = RED_MATE;
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
       if (url === '/api/puzzles')
@@ -83,30 +108,31 @@ describe('puzzles route', () => {
     expect(root.querySelector('.site-section-heading')?.textContent).toBe('Puzzles');
     expect(root.querySelectorAll('.puzzle-list-item')).toHaveLength(0);
     // Only Xiangqi is surfaced, so there is no variant picker. A direct deep
-    // link into a Mini Xiangqi puzzle still resolves and renders.
+    // link into a puzzle still resolves and renders.
     expect(root.querySelector('[data-puzzle-variant]')).toBeNull();
     expect(root.querySelector('.puzzles-sidebar')?.textContent).toContain('0 solved of 2');
     expect(root.querySelector('.puzzles-sidebar')?.textContent).not.toContain('All puzzles');
     expect(root.querySelector('.puzzles-sidebar')?.textContent).not.toContain(' / ');
     // The feedback title is deliberately generic (the puzzle title would spoil the piece).
     expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Red to move');
-    expect(root.querySelector('.mini-xq-board')).not.toBeNull();
+    expect(root.querySelector('.puzzle-xiangqi-board')).not.toBeNull();
     // Open information, no reserves: the board paints straight onto its host.
     expect(root.querySelector('.puzzle-board-shell')).toBeNull();
-    expect(root.querySelector('[data-square="c4"]')).not.toBeNull();
+    expect(root.querySelectorAll('[data-square]').length).toBe(90);
     expect(root.querySelector('.puzzle-reserves')).toBeNull();
     // The goal (mate depth) is hidden while solving so it doesn't spoil the move.
     expect(root.textContent).not.toContain('Mate in 1');
     expect(root.querySelector('.puzzle-moves h3')).toBeNull();
-    expect(root.querySelector('.puzzle-move-black')?.textContent).toBe('...');
-    expect(root.textContent).not.toContain('d4');
+    expect(root.textContent).not.toContain(
+      `${RED_MATE.solution[0]!.from}-${RED_MATE.solution[0]!.to}`,
+    );
   });
 
   it('mounts the shared board resize grip on the board column', async () => {
-    const mini = MINI_XIANGQI_PUZZLES[0]!;
+    const mini = RED_MATE;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
         if (url === '/api/puzzles') return json({ puzzles: [publicSummary(mini)] });
         if (url === `/api/puzzles/${mini.id}`) return json({ puzzle: publicDetail(mini) });
@@ -128,10 +154,10 @@ describe('puzzles route', () => {
 
   it('merges the practice note into the puzzle rating card', async () => {
     stubWindowLocalStorage(memoryStorage({ 'mistboard:puzzles:rated': 'false' }));
-    const mini = MINI_XIANGQI_PUZZLES[0]!;
+    const mini = RED_MATE;
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
         if (url === '/api/puzzles') return json({ puzzles: [publicSummary(mini)] });
         if (url === `/api/puzzles/${mini.id}`) return json({ puzzle: publicDetail(mini) });
@@ -150,66 +176,10 @@ describe('puzzles route', () => {
     expect(ratingCard?.textContent).not.toContain('0 solved of 1');
   });
 
-  it('re-renders the board when the xiangqi piece set changes live', async () => {
-    stubWindowLocalStorage(memoryStorage({ 'mistboard.xiangqiPieceSet': 'international' }));
-    const mini = MINI_XIANGQI_PUZZLES[0]!;
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url === '/api/puzzles') return json({ puzzles: [publicSummary(mini)] });
-      if (url === `/api/puzzles/${mini.id}`) return json({ puzzle: publicDetail(mini) });
-      return json({ error: 'not_found' }, 404);
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    const root = document.createElement('div');
-
-    await mountPuzzles(root, mini.id);
-    // Default (international) renders image-based pieces.
-    expect(root.querySelector('.mini-xq-piece image')).not.toBeNull();
-
-    // Switch to a glyph-based set the way the appearance menu does, then notify.
-    window.localStorage.setItem('mistboard.xiangqiPieceSet', 'traditional');
-    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
-
-    await vi.waitFor(() => expect(root.querySelector('.mini-xq-piece image')).toBeNull());
-    expect(root.querySelector('.mini-xq-piece')).not.toBeNull();
-  });
-
   // Skipped while only Fortress Xiangqi is surfaced (the variant picker is
   // hidden). Restore when more than one variant is unhidden.
-  it.skip('filters the sequential queue with the variant picker', async () => {
-    const mini = MINI_XIANGQI_PUZZLES[0]!;
-    const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
-      const url = String(input);
-      if (url === '/api/puzzles')
-        return json({ puzzles: [publicSummary(mini), publicSummary(drop)] });
-      if (url === `/api/puzzles/${mini.id}`) return json({ puzzle: publicDetail(mini) });
-      if (url === `/api/puzzles/${drop.id}`) return json({ puzzle: publicDetail(drop) });
-      return json({ error: 'not_found' }, 404);
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    const root = document.createElement('div');
-
-    await mountPuzzles(root, null);
-    expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe(mini.title);
-
-    const select = root.querySelector<HTMLSelectElement>('[data-puzzle-variant]')!;
-    select.value = 'mini-xiangqi';
-    select.dispatchEvent(new Event('change', { bubbles: true }));
-
-    await vi.waitFor(() =>
-      expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe(drop.title),
-    );
-    expect(root.querySelector('.puzzles-sidebar')?.textContent).not.toContain(' / ');
-    expect(window.location.pathname).toBe(`/puzzles/${drop.id}`);
-  });
-
-  it('plays a Mini Xiangqi puzzle move and advances to the solved state', async () => {
-    const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
+  it('plays a puzzle line and advances to the solved state', async () => {
+    const drop = RED_MATE;
     const qualityEvents: Array<{ sessionId: string; event: string; vote?: string | null }> = [];
     let attemptQualitySessionId: string | null = null;
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
@@ -225,13 +195,13 @@ describe('puzzles route', () => {
         const body = JSON.parse(String(init?.body));
         expect(body).toEqual(
           expect.objectContaining({
-            moves: [{ from: 'c4', to: 'd4' }],
+            moves: expect.any(Array),
             rated: true,
           }),
         );
         attemptQualitySessionId = body.qualitySessionId;
         return json({
-          attempt: attemptMiniXiangqiPuzzleLine(drop, [{ from: 'c4', to: 'd4' }]),
+          attempt: attemptStandardXiangqiPuzzleLine(drop, movesOf(init)),
         });
       }
       return json({ error: 'not_found' }, 404);
@@ -240,12 +210,7 @@ describe('puzzles route', () => {
     const root = document.createElement('div');
 
     await mountPuzzles(root, drop.id);
-    root
-      .querySelector<SVGGElement>('[data-square="c4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    root
-      .querySelector<SVGGElement>('[data-square="d4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await solveLine(root, drop);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
     root.querySelector<HTMLButtonElement>('[aria-label="Puzzle was helpful"]')?.click();
@@ -264,83 +229,9 @@ describe('puzzles route', () => {
     );
   });
 
-  it('auto-plays opponent replies in multi-ply puzzles', async () => {
-    const multi = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-black-two-step-file-net-1',
-    )!;
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      if (url === '/api/puzzles') return json({ puzzles: [publicSummary(multi)] });
-      if (url === `/api/puzzles/${multi.id}`) return json({ puzzle: publicDetail(multi) });
-      if (url === `/api/puzzles/${multi.id}/attempt`) {
-        expect(init?.method).toBe('POST');
-        const body = JSON.parse(String(init?.body));
-        if (body.moves.length === 1) {
-          expect(body).toEqual(
-            expect.objectContaining({ moves: [{ from: 'c5', to: 'd5' }], rated: true }),
-          );
-          return json({
-            attempt: attemptMiniXiangqiPuzzleLine(multi, [{ from: 'c5', to: 'd5' }]),
-          });
-        }
-        expect(body).toEqual(
-          expect.objectContaining({
-            moves: [
-              { from: 'c5', to: 'd5' },
-              { from: 'f1', to: 'e1' },
-            ],
-            rated: true,
-          }),
-        );
-        return json({
-          attempt: attemptMiniXiangqiPuzzleLine(multi, [
-            { from: 'c5', to: 'd5' },
-            { from: 'f1', to: 'e1' },
-          ]),
-        });
-      }
-      return json({ error: 'not_found' }, 404);
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    const root = document.createElement('div');
-
-    await mountPuzzles(root, multi.id);
-    expect(root.textContent).not.toContain('Mate in 2');
-
-    root
-      .querySelector<SVGGElement>('[data-square="c5"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    root
-      .querySelector<SVGGElement>('[data-square="d5"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    await vi.waitFor(() => expect(root.textContent).toContain('Correct.'));
-    expect(root.textContent).toContain('c5-d5');
-    expect(root.textContent).toContain('e2-e3');
-    expect(root.textContent).not.toContain('f1-e1');
-
-    root
-      .querySelector<SVGGElement>('[data-square="f1"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    root
-      .querySelector<SVGGElement>('[data-square="e1"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
-    expect(root.textContent).toContain('f1-e1');
-    expect(fetchSpy).toHaveBeenCalledWith(
-      `/api/puzzles/${multi.id}/attempt`,
-      expect.objectContaining({ method: 'POST' }),
-    );
-  });
-
   it('marks solved puzzles and navigates to the next puzzle', async () => {
-    const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
-    const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
-    )!;
+    const redDrop = RED_MATE;
+    const blackDrop = BLACK_MATE;
     // Pin the queue order despite the rotation shuffle: mark the second puzzle
     // seen so the unseen (deep-linked) puzzle leads and "next" is deterministic.
     stubWindowLocalStorage(
@@ -355,12 +246,12 @@ describe('puzzles route', () => {
       if (url === `/api/puzzles/${redDrop.id}/attempt`) {
         expect(JSON.parse(String(init?.body))).toEqual(
           expect.objectContaining({
-            moves: [{ from: 'c4', to: 'd4' }],
+            moves: expect.any(Array),
             rated: true,
           }),
         );
         return json({
-          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'd4' }]),
+          attempt: attemptStandardXiangqiPuzzleLine(redDrop, movesOf(init)),
         });
       }
       return json({ error: 'not_found' }, 404);
@@ -371,12 +262,7 @@ describe('puzzles route', () => {
     await mountPuzzles(root, redDrop.id);
     expect(root.querySelector<HTMLButtonElement>('[data-puzzle-next]')).toBeNull();
     expect(root.querySelector<HTMLButtonElement>('[data-puzzle-replay-next]')?.disabled).toBe(true);
-    root
-      .querySelector<SVGGElement>('[data-square="c4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    root
-      .querySelector<SVGGElement>('[data-square="d4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await solveLine(root, redDrop);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
     expect(root.querySelector('.puzzle-current-card')?.textContent).toContain('Solved');
@@ -399,12 +285,8 @@ describe('puzzles route', () => {
   });
 
   it('shows a focused next-puzzle button when a winning-advantage line completes mid-game', async () => {
-    const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
-    const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
-    )!;
+    const redDrop = RED_MATE;
+    const blackDrop = BLACK_MATE;
     stubWindowLocalStorage(
       memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [blackDrop.id]: 1 }) }),
     );
@@ -412,7 +294,10 @@ describe('puzzles route', () => {
     // tactics) complete while the game is still in progress: the server reports
     // complete: true with a state whose status is still 'playing'. Reshape the
     // real attempt to that contract so the solved CTA is exercised against it.
-    const solvedAttempt = attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'd4' }]);
+    const solvedAttempt = attemptStandardXiangqiPuzzleLine(
+      redDrop,
+      redDrop.solution.filter((_, ply) => ply % 2 === 0),
+    );
     if (!solvedAttempt.ok) throw new Error('expected a solved attempt fixture');
     const midGameAttempt = {
       ...solvedAttempt,
@@ -422,7 +307,7 @@ describe('puzzles route', () => {
       ...publicSummary(redDrop),
       goal: { type: 'winning-advantage', winner: 'red' },
     };
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url === '/api/puzzles')
         return json({ puzzles: [winningAdvantageSummary, publicSummary(blackDrop)] });
@@ -437,12 +322,7 @@ describe('puzzles route', () => {
     document.body.append(root);
 
     await mountPuzzles(root, redDrop.id);
-    root
-      .querySelector<SVGGElement>('[data-square="c4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    root
-      .querySelector<SVGGElement>('[data-square="d4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    clickSquares(root, redDrop.solution[0]!);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
     const nextButton = root.querySelector<HTMLButtonElement>('[data-puzzle-next]');
@@ -461,18 +341,14 @@ describe('puzzles route', () => {
   });
 
   it('wraps to the start of the queue when solving the last puzzle', async () => {
-    const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
-    const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
-    )!;
+    const redDrop = RED_MATE;
+    const blackDrop = BLACK_MATE;
     // Mark the deep-linked puzzle seen so it sorts LAST in the rotated queue:
     // solving it exercises the end-of-queue wrap instead of a disabled button.
     stubWindowLocalStorage(
       memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [redDrop.id]: 1 }) }),
     );
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url === '/api/puzzles')
         return json({ puzzles: [publicSummary(redDrop), publicSummary(blackDrop)] });
@@ -480,7 +356,7 @@ describe('puzzles route', () => {
       if (url === `/api/puzzles/${blackDrop.id}`) return json({ puzzle: publicDetail(blackDrop) });
       if (url === `/api/puzzles/${redDrop.id}/attempt`)
         return json({
-          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'd4' }]),
+          attempt: attemptStandardXiangqiPuzzleLine(redDrop, movesOf(init)),
         });
       return json({ error: 'not_found' }, 404);
     });
@@ -488,12 +364,7 @@ describe('puzzles route', () => {
     const root = document.createElement('div');
 
     await mountPuzzles(root, redDrop.id);
-    root
-      .querySelector<SVGGElement>('[data-square="c4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    root
-      .querySelector<SVGGElement>('[data-square="d4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await solveLine(root, redDrop);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
     const nextButton = root.querySelector<HTMLButtonElement>('[data-puzzle-next]');
@@ -509,12 +380,8 @@ describe('puzzles route', () => {
   });
 
   it('offers a skip to the next puzzle after a failed attempt', async () => {
-    const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
-    const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
-    )!;
+    const redDrop = RED_MATE;
+    const blackDrop = BLACK_MATE;
     stubWindowLocalStorage(
       memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [blackDrop.id]: 1 }) }),
     );
@@ -531,8 +398,8 @@ describe('puzzles route', () => {
       }
       if (url === `/api/puzzles/${redDrop.id}/attempt`)
         return json({
-          // c5 is a legal chariot move but not the solution: incorrect-move.
-          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'c5' }]),
+          // A legal move that is not the solution: incorrect-move.
+          attempt: attemptStandardXiangqiPuzzleLine(redDrop, movesOf(init)),
         });
       return json({ error: 'not_found' }, 404);
     });
@@ -541,12 +408,11 @@ describe('puzzles route', () => {
 
     await mountPuzzles(root, redDrop.id);
     expect(root.querySelector('[data-puzzle-skip]')).toBeNull();
-    root
-      .querySelector<SVGGElement>('[data-square="c4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    root
-      .querySelector<SVGGElement>('[data-square="e4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    const solution = redDrop.solution[0]!;
+    const wrong = getStandardXiangqiLegalMoves(redDrop.initial).find(
+      (move) => !standardXiangqiPuzzleMoveEquals(move, solution),
+    )!;
+    clickSquares(root, wrong);
 
     await vi.waitFor(() => expect(root.textContent).toContain('Try again'));
     const skipButton = root.querySelector<HTMLButtonElement>('[data-puzzle-skip]');
@@ -564,12 +430,8 @@ describe('puzzles route', () => {
   });
 
   it('auto-advances after solving when the immediate next toggle is enabled', async () => {
-    const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
-    const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
-    )!;
+    const redDrop = RED_MATE;
+    const blackDrop = BLACK_MATE;
     // Pin the queue order (see the navigation test): the seen puzzle sorts after
     // the unseen deep-linked one, so auto-advance lands on it deterministically.
     const storage = memoryStorage({
@@ -585,12 +447,12 @@ describe('puzzles route', () => {
       if (url === `/api/puzzles/${redDrop.id}/attempt`) {
         expect(JSON.parse(String(init?.body))).toEqual(
           expect.objectContaining({
-            moves: [{ from: 'c4', to: 'd4' }],
+            moves: expect.any(Array),
             rated: true,
           }),
         );
         return json({
-          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'd4' }]),
+          attempt: attemptStandardXiangqiPuzzleLine(redDrop, movesOf(init)),
         });
       }
       return json({ error: 'not_found' }, 404);
@@ -605,12 +467,7 @@ describe('puzzles route', () => {
     autoNext.dispatchEvent(new Event('change', { bubbles: true }));
     expect(storage.getItem('mistboard:puzzles:auto-next')).toBe('true');
 
-    root
-      .querySelector<SVGGElement>('[data-square="c4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-    root
-      .querySelector<SVGGElement>('[data-square="d4"]')
-      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
+    await solveLine(root, redDrop);
 
     await vi.waitFor(() =>
       expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Black to move'),
@@ -619,19 +476,15 @@ describe('puzzles route', () => {
   });
 
   it('leads with an unseen puzzle over a recently seen one and records visits', async () => {
-    const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
-    const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
-    )!;
+    const redDrop = RED_MATE;
+    const blackDrop = BLACK_MATE;
     // The black puzzle was seen recently; the red one is unseen. Rotation must
     // lead with the unseen puzzle even though the server lists the seen one first.
     const storage = memoryStorage({
       'mistboard:puzzles:seen': JSON.stringify({ [blackDrop.id]: 1 }),
     });
     stubWindowLocalStorage(storage);
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       const url = String(input);
       if (url === '/api/puzzles')
         return json({ puzzles: [publicSummary(blackDrop), publicSummary(redDrop)] });
@@ -653,9 +506,7 @@ describe('puzzles route', () => {
   });
 
   it('restores solved markers from local storage', async () => {
-    const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
-    )!;
+    const drop = RED_MATE;
     vi.stubGlobal('localStorage', {
       getItem: vi.fn((key: string) =>
         key === 'mistboard:puzzles:solved' ? JSON.stringify([drop.id]) : null,
@@ -664,7 +515,7 @@ describe('puzzles route', () => {
     });
     vi.stubGlobal(
       'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
         const url = String(input);
         if (url === '/api/puzzles') return json({ puzzles: [publicSummary(drop)] });
         if (url === `/api/puzzles/${drop.id}`) return json({ puzzle: publicDetail(drop) });
@@ -1022,8 +873,8 @@ describe('sourceGameLines', () => {
   });
 
   it('falls back to "From set <variant>" without attribution', () => {
-    expect(sourceGameLines({ variant: MINI_XIANGQI_SPEC_ID }).map((l) => l.textContent)).toEqual([
-      'From set Mini Xiangqi',
+    expect(sourceGameLines({ variant: 'fortress-xiangqi' }).map((l) => l.textContent)).toEqual([
+      'From set Fortress Xiangqi',
     ]);
     // A xiangqi puzzle with only {gameId, ply} and no names/event is not enough.
     expect(

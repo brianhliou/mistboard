@@ -26,20 +26,19 @@ import type {
   FortressXiangqiSourceGame,
 } from './puzzles-fortress-xiangqi.js';
 import type { JunglePuzzle, JungleSourceGame } from './puzzles-jungle.js';
-import type { MiniXiangqiPuzzle } from './puzzles-mini-xiangqi.js';
 import type { XiangqiPuzzle } from './puzzles-xiangqi.js';
 
-export type SeedPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
+export type SeedPuzzle = FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
 
-export type SeedPuzzleRegistry = 'mini-xiangqi' | 'fortress-xiangqi' | 'jungle' | 'xiangqi';
+export type SeedPuzzleRegistry = 'fortress-xiangqi' | 'jungle' | 'xiangqi';
 
 // Registry concatenation order. This is load-bearing for the serving contract:
 // it reproduces the pre-#183 aggregation order of the server's id resolution
-// (Mini/Drop registry, then Fortress, then Jungle, then standard xiangqi), so
+// (Fortress, then Jungle, then standard xiangqi; the retired mini registry
+// led it), so
 // the DB `seq` column and the /api/puzzles list ordering match what the old
 // in-memory arrays served byte for byte.
 export const SEED_PUZZLE_REGISTRIES: readonly SeedPuzzleRegistry[] = [
-  'mini-xiangqi',
   'fortress-xiangqi',
   'jungle',
   'xiangqi',
