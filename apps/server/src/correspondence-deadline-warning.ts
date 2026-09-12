@@ -90,7 +90,10 @@ async function sendDeadlineWarningEmail(
   const text =
     `It's your move against ${opponent}, and your clock runs out in about ${left}.\n\n` +
     `Play your move: ${url}\n\n` +
-    'If the clock runs out, the game is forfeited.';
+    // Before the opening moves the sweeper aborts the room (lifecycle
+    // tenantAbortPhaseFor), so "forfeited" would be untrue for exactly the
+    // recipient most likely to read this: someone who never played a move.
+    'If the clock runs out, the game is forfeited, or cancelled if the opening moves were never played.';
   const result = await sendTransactionalEmail({
     from: fromAddress,
     to: [candidate.recipientEmail],
