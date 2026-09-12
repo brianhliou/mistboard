@@ -13,6 +13,5 @@ import '../fortress-xiangqi-registration.js';
 import '../jieqi-registration.js';
 import '../jungle-flip-registration.js';
 import '../jungle-registration.js';
-import '../luzhanqi-registration.js';
 import '../mahjong-registration.js';
 import '../xiangqi-registration.js';

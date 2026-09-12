@@ -69,12 +69,6 @@ export function banqiEnabled(): boolean {
   return process.env.MISTBOARD_BANQI_ENABLED === 'true';
 }
 
-// Luzhanqi / Junqi live rooms. Server-side opt-in, default off. PvP-only while
-// the formation editor and postgame reveal surfaces land.
-export function luzhanqiEnabled(): boolean {
-  return process.env.MISTBOARD_LUZHANQI_ENABLED === 'true';
-}
-
 // Jungle / Dou Shou Qi (斗兽棋, perfect-information 7×9 animal-rank game) live
 // rooms. Server-side opt-in, default off — the tenant exists but is not launched.
 // PvP-only at first (the in-process α-β bot + rated pool come later).

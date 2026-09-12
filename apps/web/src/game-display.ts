@@ -210,7 +210,7 @@ export function secondMoverColorName(_gameSpecId: string): string {
 // Catalog name key per spec. Exhaustive over GameSpecId on purpose: a new
 // union member fails the build until it decides, matching the fail-closed
 // registry rule. `null` means "no catalog name yet" (the runtimeStatus
-// 'future' specs and parked luzhanqi), and the caller falls back to the
+// 'future' specs), and the caller falls back to the
 // spec's English publicName rather than inventing a product name.
 export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   banqi: 'variant.banqi.name',
@@ -223,7 +223,6 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   jieqi: 'variant.jieqi.name',
   jungle: 'variant.jungle.name',
   'jungle-flip': 'variant.jungleFlip.name',
-  luzhanqi: null,
   xiangqi: 'variant.xiangqi.name',
   'duck-xiangqi': 'variant.duckXiangqi.name',
 };

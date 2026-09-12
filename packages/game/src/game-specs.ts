@@ -1,6 +1,6 @@
 import type { VariantId } from './types.js';
 
-export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'military-chess' | 'mahjong';
+export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'mahjong';
 export type BoardGeometryId =
   | 'chess-8x8'
   | 'xiangqi-9x10'
@@ -8,7 +8,6 @@ export type BoardGeometryId =
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
   | 'xiangqi-7x8'
-  | 'luzhanqi-65-graph'
   // Mahjong has no board. This dimension names the material instead: the 144
   // tiles, being the 136 core plus eight flowers. Forcing a geometry here would
   // be a fiction, and the honest alternative is to say what is actually shared.
@@ -22,7 +21,6 @@ export type MovementRulesId =
   | 'jungle'
   | 'jungle-flip'
   | 'fortress-xiangqi'
-  | 'luzhanqi'
   // Duck Xiangqi: standard xiangqi geometry plus a shared, uncapturable duck
   // that moves every turn. Its own movement id because the duck is an ordinary
   // blocking piece for every xiangqi geometry at once - it screens for cannons,
@@ -36,7 +34,6 @@ export type ObjectiveRulesId =
   | 'general-capture'
   | 'checkmate'
   | 'last-mover'
-  | 'flag-capture'
   // 'den-or-race': win by moving a piece into the opponent's den OR capturing all
   // their pieces (Jungle / Dou Shou Qi). No royal piece; perfect information.
   | 'den-or-race'
@@ -60,7 +57,6 @@ export type SetupRulesId =
   | 'jungle-standard'
   | 'jungle-flip-deal'
   | 'fortress-standard'
-  | 'luzhanqi-formation'
   | 'mahjong-deal';
 export type ReserveRulesId = 'none' | 'crazyhouse';
 export type DropPolicyId =
@@ -90,7 +86,6 @@ export type RatingPoolBaseId =
   | 'jungle'
   | 'jungle_flip'
   | 'fortress_xiangqi'
-  | 'luzhanqi'
   | 'mahjong_hk'
   | 'xiangqi'
   // Owes a user_ratings CHECK migration adding 'duck_xiangqi' before it is rated.
@@ -105,7 +100,6 @@ export type GameSpecId =
   | 'jungle'
   | 'jungle-flip'
   | 'fortress-xiangqi'
-  | 'luzhanqi'
   // Duck Xiangqi: Duck Chess's shared blocker on the xiangqi board. Rules engine:
   // packages/game/src/variants-duck-xiangqi.ts. Design notes and the balance
   // measurement: docs-private/duck-xiangqi/.
@@ -156,7 +150,6 @@ export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
-export const LUZHANQI_SPEC_ID = 'luzhanqi' satisfies GameSpecId;
 export const XIANGQI_SPEC_ID = 'xiangqi' satisfies GameSpecId;
 export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
 
@@ -392,27 +385,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // it is what greys the variant out in the play menu as "coming soon", which
     // is now the wrong statement about it.
     runtimeStatus: 'live',
-  },
-  {
-    // Luzhanqi / Junqi: computer-refereed two-player dark military chess on the
-    // 65-point road/rail graph. Players submit private formations; the server
-    // adjudicates battles without revealing enemy ranks until the postgame truth
-    // view. Live but hidden/flag-gated until the formation editor and review
-    // surfaces land.
-    // Rules engine: packages/game/src/variants-luzhanqi.ts.
-    id: LUZHANQI_SPEC_ID,
-    publicName: 'Luzhanqi',
-    family: 'military-chess',
-    board: 'luzhanqi-65-graph',
-    movement: 'luzhanqi',
-    objective: 'flag-capture',
-    visibility: 'hidden-identity',
-    setup: 'luzhanqi-formation',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'luzhanqi',
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
   },
   {
     // Duck Xiangqi: W. D. Troyka's... no - Dr Tim Paulden's Duck Chess (2016),

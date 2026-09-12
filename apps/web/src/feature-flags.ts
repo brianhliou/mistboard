@@ -2,10 +2,6 @@
 // stay on for local parity with launched variants; parked surfaces use explicit
 // opt-in only so they do not reappear in active product UI by accident.
 
-function labEnabled(): boolean {
-  return import.meta.env.VITE_MISTBOARD_LAB_ENABLED === 'true';
-}
-
 export function darkXiangqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_DARK_XIANGQI_ENABLED === 'true';
 }
@@ -57,11 +53,6 @@ export function jieqiEnabled(): boolean {
 // in; mirrors the jieqi gate.
 export function banqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_BANQI_ENABLED === 'true';
-}
-
-// Luzhanqi / Junqi remains available in the explicit lab profile.
-export function luzhanqiEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_LUZHANQI_ENABLED === 'true';
 }
 
 // Jungle / Dou Shou Qi (perfect-information 7×9 animal-rank game) play surface.

@@ -101,7 +101,7 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       at: number;
       roomId: string;
       color: C;
-      // Server-secret pregame setup payload (e.g. Luzhanqi private formation).
+      // Server-secret pregame setup payload (a player's private formation).
       // Tenants that opt into setup submissions MUST redact this in clientEventFor.
       setup: unknown;
     }

@@ -19,7 +19,6 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
-  LUZHANQI_SPEC_ID,
   legacyLiveRoomForGameSpec,
   maybeGameSpecForId,
   RATED_POOL_BASES,
@@ -140,25 +139,6 @@ test('Banqi is an xiangqi-family hidden-identity spec on the 8x4 board', () => {
   assert.equal(spec.legacyLiveRoom, undefined);
 });
 
-test('Luzhanqi is a hidden computer-refereed hidden-identity military-chess spec', () => {
-  const spec = gameSpecForId(LUZHANQI_SPEC_ID);
-
-  assert.equal(spec.publicName, 'Luzhanqi');
-  assert.equal(spec.family, 'military-chess');
-  assert.equal(spec.board, 'luzhanqi-65-graph');
-  assert.equal(spec.movement, 'luzhanqi');
-  assert.equal(spec.objective, 'flag-capture');
-  assert.equal(spec.visibility, 'hidden-identity');
-  assert.equal(spec.setup, 'luzhanqi-formation');
-  assert.equal(spec.reserves, 'none');
-  assert.equal(spec.dropPolicy, 'none');
-  assert.equal(spec.ratingPoolBase, 'luzhanqi');
-  assert.equal(spec.rated, undefined);
-  assert.equal(spec.publicSurface, 'hidden');
-  assert.equal(spec.runtimeStatus, 'retired');
-  assert.equal(spec.legacyLiveRoom, undefined);
-});
-
 test('composite specs are composed from rule modules', () => {
   const fortress = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
   assert.equal(fortress.reserves, 'crazyhouse');
@@ -242,7 +222,6 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(ratingPoolForSpec(DARK_DRAFT960_SPEC_ID), 'fog_draft960');
   assert.equal(ratingPoolForSpec(JIEQI_SPEC_ID), 'jieqi');
   assert.equal(ratingPoolForSpec(BANQI_SPEC_ID), 'banqi');
-  assert.equal(ratingPoolForSpec(LUZHANQI_SPEC_ID), null);
   assert.equal(ratingPoolForSpec(DARK_XIANGQI_SPEC_ID), 'dark_xiangqi');
   assert.equal(ratingPoolForSpec(JUNGLE_SPEC_ID), 'jungle');
   assert.equal(ratingPoolForSpec(JUNGLE_FLIP_SPEC_ID), 'jungle_flip');
@@ -277,10 +256,7 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
 test('the retired specs are exactly the ones the plan still names, all hidden', () => {
-  assert.deepEqual(
-    [...RETIRED_GAME_SPEC_IDS].sort(),
-    [DARK_DRAFT960_SPEC_ID, LUZHANQI_SPEC_ID].sort(),
-  );
+  assert.deepEqual([...RETIRED_GAME_SPEC_IDS].sort(), [DARK_DRAFT960_SPEC_ID].sort());
   for (const id of RETIRED_GAME_SPEC_IDS) {
     // A retired spec can never be offered: publicSurface is the other switch
     // and it must already be off.

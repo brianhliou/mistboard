@@ -55,12 +55,12 @@ describe('landing announcements', () => {
   it('uses the same variant flag for the homepage News rail and /feed archive', () => {
     vi.stubEnv('DEV', false);
 
-    expect(variantPublicSurfaceEnabled('luzhanqi')).toBe(false);
+    expect(variantPublicSurfaceEnabled('dark-draft960')).toBe(false);
 
     const landing = buildLandingAnnouncements();
     const news = buildNewsPage();
 
-    for (const hidden of ['Reveal Chess', 'Kriegspiel', 'Luzhanqi']) {
+    for (const hidden of ['Reveal Chess', 'Kriegspiel', 'Luzhanqi', 'Draft960']) {
       expect(landing.textContent).not.toContain(hidden);
       expect(news.textContent).not.toContain(hidden);
     }

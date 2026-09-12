@@ -350,7 +350,6 @@ const PARKED_CLIENT_ROUTES = new Set<string>([
   '/showcase-sheet', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/postgame-sheet', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/game-sheet', // DEV-only (renamed postgame-sheet); gated by import.meta.env.DEV in main.ts
-  '/luzhanqi-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/dobutsu-chess-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/dobutsu-ui-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/learn/coordinates', // coordinate trainer; parked, gated off in prod (coordinateTrainerEnabled)

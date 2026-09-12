@@ -21,10 +21,12 @@ test('product profile contains exactly the intended live game specs', () => {
   ]);
 });
 
-test('product flags are a strict subset of the lab profile', () => {
+test('product flags are a subset of the lab profile', () => {
   assert.deepEqual(serverFlagsForProfile('product'), PRODUCT_SERVER_FLAGS);
   assert.deepEqual(serverFlagsForProfile('lab'), LAB_SERVER_FLAGS);
   assert.ok(PRODUCT_SERVER_FLAGS.every((flag) => LAB_SERVER_FLAGS.includes(flag)));
-  assert.ok(LAB_SERVER_FLAGS.length > PRODUCT_SERVER_FLAGS.length);
+  // Luzhanqi was the last lab-only surface (deleted 2026-09-12, #396), so the
+  // two profiles are equal until something new parks behind a lab flag.
+  assert.ok(LAB_SERVER_FLAGS.length >= PRODUCT_SERVER_FLAGS.length);
   assert.throws(() => serverFlagsForProfile('unknown'), /unknown development profile/);
 });

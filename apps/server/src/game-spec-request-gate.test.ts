@@ -87,7 +87,7 @@ test('game spec gate refuses retired specs through their registry aliases', () =
 });
 
 test('game spec gate keeps rejecting legacy variant spellings for tenant specs', () => {
-  for (const variant of ['jieqi', 'luzhanqi']) {
+  for (const variant of ['jieqi']) {
     assert.equal(gateGameSpecRequest({ variant }).type, 'reject', `variant ${variant}`);
   }
 });

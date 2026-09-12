@@ -214,7 +214,7 @@ describe('article public listing gates', () => {
     // The server answers 410 for these; a client-side navigation must not
     // show what the server has declared gone (docs-private/variant-
     // retirement-plan.md, #396).
-    for (const slug of ['luzhanqi']) {
+    for (const slug of ['dark-draft960']) {
       for (const lang of [undefined, 'zh-Hans'] as const) {
         const page = buildArticlePage(slug, lang);
         expect(page.querySelector('.article-title'), `${slug} ${lang}`).toBeNull();

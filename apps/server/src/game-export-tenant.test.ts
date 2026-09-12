@@ -449,21 +449,21 @@ test('unknown variants and spec mismatches are 501, never another builder', () =
     [
       'no registration',
       resolveGameExport({
-        roomId: 'lz_export',
+        roomId: 'zz_export',
         format: 'json',
-        summary: gameRecord({ roomId: 'lz_export', variant: 'luzhanqi' }),
-        events: preamble('lz_export', 'luzhanqi'),
+        summary: gameRecord({ roomId: 'zz_export', variant: 'no-such-variant' }),
+        events: preamble('zz_export', 'no-such-variant'),
         tenantForRoomId: () => null,
       }),
     ],
     [
       'registration without export',
       resolveGameExport({
-        roomId: 'lz_export',
+        roomId: 'zz_export',
         format: 'json',
-        summary: gameRecord({ roomId: 'lz_export', variant: 'luzhanqi' }),
-        events: preamble('lz_export', 'luzhanqi'),
-        tenantForRoomId: () => registration('luzhanqi', null),
+        summary: gameRecord({ roomId: 'zz_export', variant: 'no-such-variant' }),
+        events: preamble('zz_export', 'no-such-variant'),
+        tenantForRoomId: () => registration('no-such-variant', null),
       }),
     ],
     [

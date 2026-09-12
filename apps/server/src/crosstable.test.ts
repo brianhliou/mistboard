@@ -205,7 +205,11 @@ test('crosstable pair: a private (redacted) account seat is reason private', () 
 
 test('crosstable pair: a variant with no review route is unsupported, before any seat check', () => {
   const resolution = resolveCrosstablePair(
-    { roomId: 'lz_1', variant: 'luzhanqi', participants: [guest('white'), user('black', 'bob')] },
+    {
+      roomId: 'zz_1',
+      variant: 'no-such-variant',
+      participants: [guest('white'), user('black', 'bob')],
+    },
     LOOKUP,
   );
   assert.deepEqual(resolution, { ok: false, reason: 'unsupported' });
@@ -259,7 +263,6 @@ test('crosstable review url: chess stack, tenant room, legacy room id, unknown v
   // A legacy room id with no tenant prefix resolves through the spec.
   assert.equal(crosstableReviewUrl('legacy-1', 'xiangqi', LOOKUP), '/xiangqi/game/legacy-1');
   // Unknown variants and un-registered tenants get no URL, never a guess.
-  assert.equal(crosstableReviewUrl('lz_1', 'luzhanqi', LOOKUP), null);
   assert.equal(crosstableReviewUrl('room-9', 'no-such-variant', LOOKUP), null);
   assert.equal(crosstableReviewUrl('a b', 'dark-chess', LOOKUP), '/game/a%20b');
 });

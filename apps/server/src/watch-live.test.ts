@@ -86,7 +86,7 @@ test('symmetric hidden-identity variants serve live; asymmetric ones do not', ()
   for (const id of ['banqi', 'jungle-flip']) {
     assert.equal(canServeLiveBoard(id), true, `${id} is symmetric and should serve live`);
   }
-  for (const id of ['jieqi', 'luzhanqi']) {
+  for (const id of ['jieqi']) {
     assert.equal(canServeLiveBoard(id), false, `${id} is asymmetric and must NOT serve live`);
   }
 });

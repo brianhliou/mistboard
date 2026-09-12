@@ -122,16 +122,15 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 //   masked view therefore shows exactly what both players already see, so it
 //   leaks nothing. These serve live.
 //
-//   ASYMMETRIC — each player knows something the other does not (luzhanqi: you
-//   see your own ranks; jieqi: a capturer learns the role of what it
-//   took). There is no single view that is honest to both seats, so a spectator
+//   ASYMMETRIC — each player knows something the other does not (jieqi: a
+//   capturer learns the role of what it took). There is no single view that is honest to both seats, so a spectator
 //   board would have to pick a side. These stay masked until that surface exists.
 //
 // Explicit and exhaustive over the hidden-identity specs: a new one fails
 // hiddenIdentityLiveObservePolicy's key check in watch-live.test.ts until it is
 // classified here, and an unclassified spec falls through to 'masked'.
 const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['banqi', 'jungle-flip'] as const;
-const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['jieqi', 'luzhanqi'] as const;
+const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['jieqi'] as const;
 
 export const HIDDEN_IDENTITY_LIVE_OBSERVE: Readonly<Record<string, LiveObservePolicy>> = {
   ...Object.fromEntries(SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS.map((id) => [id, 'open' as const])),

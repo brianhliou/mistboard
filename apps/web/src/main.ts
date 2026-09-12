@@ -356,9 +356,6 @@ const wantsDobutsuChessPreview = import.meta.env.DEV && path === '/dobutsu-chess
 const wantsSoundLab = import.meta.env.DEV && path === '/sound-lab';
 // Hidden DEV-only variant sheet: every variant's opening in the showcase widget.
 const wantsShowcaseSheet = import.meta.env.DEV && path === '/showcase-sheet';
-// Hidden DEV-only Luzhanqi board preview. No nav entry while the live client is
-// still under construction.
-const wantsLuzhanqiPreview = import.meta.env.DEV && path === '/luzhanqi-preview';
 // Hidden DEV-only game sheet: every live variant's room + review page with a
 // watch-feed sample (tuning sweep).
 const wantsGameSheet =
@@ -705,13 +702,6 @@ if (replaySample) {
   setTitle('Showcase sheet');
   void mountOrReport(() =>
     import('./showcase-sheet.js').then(({ mountShowcaseSheet }) => mountShowcaseSheet(appRoot)),
-  );
-} else if (wantsLuzhanqiPreview) {
-  setTitle('Luzhanqi preview');
-  void mountOrReport(() =>
-    import('./luzhanqi-preview.js').then(({ mountLuzhanqiPreview }) =>
-      mountLuzhanqiPreview(appRoot),
-    ),
   );
 } else if (wantsGameSheet) {
   setTitle('Game sheet');
