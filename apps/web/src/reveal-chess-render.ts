@@ -40,7 +40,7 @@ const RANKS = 8;
 const CELL = 50;
 
 // The 8x8 reveal-chess board, expressed as data for the shared core. Mirrors the
-// Crossroads descriptor's chess palette (lichess brown), minus the river strip.
+// Grid-board chess palette (lichess brown), minus the river strip.
 const REVEAL_CHESS_DESCRIPTOR: GridBoardDescriptor = {
   files: FILES,
   ranks: RANKS,

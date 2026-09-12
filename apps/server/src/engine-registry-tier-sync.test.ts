@@ -28,7 +28,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { BANQI_ENGINE_VERSION, BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
-import { CROSSROADS_CHESS_PLAYABLE_ENGINES } from './crossroads-chess-engine.js';
 import { type EngineConfig, knownEngineIds, loadEngine } from './engine-registry.js';
 import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
 import { JUNGLE_FLIP_ENGINE_VERSION, JUNGLE_FLIP_PLAYABLE_ENGINES } from './jungle-flip-engine.js';
@@ -46,13 +45,6 @@ type TierSyncCase = {
 // list (see the exemptions below) a row here would only echo the generator, so
 // only the hand-written entries are covered.
 const TIER_SYNC_CASES: readonly TierSyncCase[] = [
-  ...CROSSROADS_CHESS_PLAYABLE_ENGINES.map(
-    (tier): TierSyncCase => ({
-      family: 'crossroads-chess',
-      engineId: tier.id,
-      config: { kind: 'fairy-stockfish', skill: tier.skill, movetime_ms: tier.movetimeMs },
-    }),
-  ),
   ...MINI_XIANGQI_PLAYABLE_ENGINES.map(
     (tier): TierSyncCase => ({
       family: 'mini-xiangqi',

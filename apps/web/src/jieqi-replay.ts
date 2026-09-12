@@ -1,6 +1,6 @@
 // Jieqi game replay for the rules article.
 //
-// Sibling of crossroads-chess-replay.ts: the spec carries a hidden deal + a move
+// Sibling of chess-replay.ts: the spec carries a hidden deal + a move
 // list, not per-ply board images. Each position is produced by replaying the moves
 // through the real jieqi kernel (createInitialJieqiState(id, deal) + applyJieqiMove)
 // and rendered on demand by the live jieqi board renderer. Face-down pieces show as

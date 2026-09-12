@@ -28,8 +28,6 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   jieqi: true,
   banqi: true,
   luzhanqi: false,
-  'crossroads-chess': false,
-  'dark-crossroads-chess': false,
   'reveal-chess': false,
   jungle: true,
   'jungle-flip': true,

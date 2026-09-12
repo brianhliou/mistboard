@@ -3,10 +3,8 @@ import test from 'node:test';
 import {
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
-  CROSSROADS_CHESS_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_SHOGI_SPEC_ID,
@@ -249,31 +247,6 @@ test('composite specs are composed from rule modules', () => {
   assert.equal(darkCrazyhouse.dropPolicy, 'any-legal-square');
 });
 
-test('Crossroads Chess is two specs sharing one family/board, split on visibility', () => {
-  const open = gameSpecForId(CROSSROADS_CHESS_SPEC_ID);
-  const dark = gameSpecForId(DARK_CROSSROADS_CHESS_SPEC_ID);
-
-  for (const spec of [open, dark]) {
-    assert.equal(spec.family, 'crossroads-chess');
-    assert.equal(spec.board, 'crossroads-6x8');
-    assert.equal(spec.movement, 'crossroads-chess');
-    assert.equal(spec.objective, 'royal-capture-or-race');
-    assert.equal(spec.setup, 'crossroads-standard');
-    assert.equal(spec.publicSurface, 'hidden');
-  }
-  assert.equal(open.runtimeStatus, 'retired');
-  assert.equal(dark.runtimeStatus, 'retired');
-  // The split: perfect-info onboarding vs the real fog mode, on separate pools.
-  assert.equal(open.publicName, 'Crossroads Chess');
-  assert.equal(dark.publicName, 'Dark Crossroads Chess');
-  assert.equal(open.visibility, 'open');
-  assert.equal(dark.visibility, 'dark');
-  assert.equal(open.ratingPoolBase, 'crossroads_chess_open');
-  assert.equal(dark.ratingPoolBase, 'crossroads_chess');
-  assert.equal(open.rated, true);
-  assert.equal(dark.rated, true);
-});
-
 test('game spec ids are unique and discoverable', () => {
   const ids = GAME_SPECS.map((spec) => spec.id);
   assert.equal(new Set(ids).size, ids.length);
@@ -347,8 +320,6 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     dark_xiangqi: true,
     dark_crazyhouse: true,
     dark_shogi: true,
-    crossroads_chess: true,
-    crossroads_chess_open: true,
     jieqi: true,
     banqi: true,
     kriegspiel: true,
@@ -367,13 +338,11 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(ratingPoolForSpec(DARK_DRAFT960_SPEC_ID), 'fog_draft960');
   assert.equal(ratingPoolForSpec(MINI_XIANGQI_SPEC_ID), null);
   assert.equal(ratingPoolForSpec(DROP_MINI_XIANGQI_SPEC_ID), 'drop_mini_xiangqi');
-  assert.equal(ratingPoolForSpec(CROSSROADS_CHESS_SPEC_ID), 'crossroads_chess_open');
   assert.equal(ratingPoolForSpec(JIEQI_SPEC_ID), 'jieqi');
   assert.equal(ratingPoolForSpec(BANQI_SPEC_ID), 'banqi');
   assert.equal(ratingPoolForSpec(LUZHANQI_SPEC_ID), null);
   assert.equal(ratingPoolForSpec(REVEAL_CHESS_SPEC_ID), 'reveal_chess');
   assert.equal(ratingPoolForSpec(DARK_XIANGQI_SPEC_ID), 'dark_xiangqi');
-  assert.equal(ratingPoolForSpec(DARK_CROSSROADS_CHESS_SPEC_ID), 'crossroads_chess');
   assert.equal(ratingPoolForSpec(DARK_SHOGI_SPEC_ID), 'dark_shogi');
   assert.equal(ratingPoolForSpec(DARK_CRAZYHOUSE_SPEC_ID), 'dark_crazyhouse');
   assert.equal(ratingPoolForSpec(KRIEGSPIEL_SPEC_ID), 'kriegspiel');
@@ -413,13 +382,11 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
-test('the retired specs are exactly the eleven the plan names, all hidden', () => {
+test('the retired specs are exactly the ones the plan still names, all hidden', () => {
   assert.deepEqual(
     [...RETIRED_GAME_SPEC_IDS].sort(),
     [
-      CROSSROADS_CHESS_SPEC_ID,
       DARK_CRAZYHOUSE_SPEC_ID,
-      DARK_CROSSROADS_CHESS_SPEC_ID,
       DARK_DRAFT960_SPEC_ID,
       DARK_MINI_XIANGQI_SPEC_ID,
       DARK_SHOGI_SPEC_ID,
@@ -439,8 +406,7 @@ test('the retired specs are exactly the eleven the plan names, all hidden', () =
   for (const id of [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
     assert.equal(isRetiredGameSpec(id), false, id);
   }
-  // Legacy aliases resolve to their spec and inherit its status.
-  assert.equal(isRetiredGameSpec('dual-chess'), true);
+  // A legacy alias resolves to its spec and inherits its status.
   assert.equal(isRetiredGameSpec('fog-draft960'), true);
   assert.equal(isRetiredGameSpec('no-such-spec'), false);
 });

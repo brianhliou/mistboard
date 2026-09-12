@@ -96,21 +96,6 @@ export function revealChessEnabled(): boolean {
   return process.env.MISTBOARD_REVEAL_CHESS_ENABLED === 'true';
 }
 
-// Perfect-information Crossroads Chess live rooms. Server-side opt-in, separate
-// from the client VITE_CROSSROADS_CHESS_ENABLED page flag, so live PvP cannot be
-// exposed in production by accident while the local play surface is enabled.
-export function crossroadsChessEnabled(): boolean {
-  return process.env.MISTBOARD_CROSSROADS_CHESS_ENABLED === 'true';
-}
-
-// Dark Crossroads Chess (the fog 6x8 variant) live rooms. Server-side opt-in,
-// default off — the tenant exists but is not launched. PvP-only (Fairy-
-// Stockfish is perfect-info and cannot play fog crossroads, so there is no
-// engine/bot). Independently gateable from the perfect-info Crossroads flag.
-export function darkCrossroadsChessEnabled(): boolean {
-  return process.env.MISTBOARD_DARK_CROSSROADS_CHESS_ENABLED === 'true';
-}
-
 // Dark Shogi (the fog 9x9 variant, with drops + private hands) live rooms.
 // Server-side opt-in, default off — the tenant exists but is not launched.
 // PvP-only at first (no bot).

@@ -23,8 +23,6 @@ test('registry: retired specs never register, by prefix or by id', () => {
     ['dmxq_some-room', 'dark-mini-xiangqi'],
     ['dmxqd_some-room', 'drop-mini-xiangqi'],
     ['mxq_some-room', 'mini-xiangqi'],
-    ['dchess_some-room', 'crossroads-chess'],
-    ['ddchess_some-room', 'dark-crossroads-chess'],
     ['dsg_some-room', 'dark-shogi'],
     ['dczh_some-room', 'dark-crazyhouse'],
     ['kr_some-room', 'kriegspiel'],

@@ -2,7 +2,7 @@
  * VariantTenant — the Layer-3 live-room tenant contract.
  *
  * Extracted 2026-06-11 from the four sibling live stacks (dark chess, Dark
- * Mini Xiangqi, Dark Xiangqi, Crossroads Chess), whose runtime/events/
+ * Mini Xiangqi, Dark Xiangqi), whose runtime/events/
  * lifecycle/seat-session/ws files are 70-90% identical. The generic modules in
  * this directory hold that shared plumbing once, parameterized by a tenant:
  *
@@ -331,7 +331,7 @@ export type VariantTenant<
       duckTo?: string;
     }): M | null;
     // STATE-DEPENDENT canonicalization: resolve the parsed move to the exact
-    // legal-move object to append (e.g. Crossroads re-attaches promotion from
+    // legal-move object to append (e.g. a chess-family tenant re-attaches promotion from
     // the legal-move list). Null rejects. When omitted, the ws move path
     // appends the parsed move after an isLegalMove check instead.
     // `seat` is the mover. Every existing tenant ignores it, because in a
@@ -415,7 +415,7 @@ export type VariantTenant<
     reservationColor?(color: C): 'white' | 'black';
     // Engine BUILD version for this engine id (e.g. '0.2.0'), recorded per game so PvE games
     // are queryable by build. Optional: only the variant-tenant UCI engines whose subject_id
-    // is version-less (jieqi/banqi/crossroads) implement it; returns null for unknown ids.
+    // is version-less (jieqi/banqi) implement it; returns null for unknown ids.
     engineVersion?(clientId: string | undefined): string | null;
     // Observability tag on engine-seat reservation releases (`<tag>-finished`).
     reservationReleaseTag: string;
@@ -434,7 +434,7 @@ export type VariantTenant<
     // so tenants that never emit them keep rejecting them.
     acceptsSeatVacated?: boolean;
     // Additional gameSpecId values accepted in PERSISTED room-created events
-    // (pre-rename aliases, e.g. Crossroads' 'dual-chess'). Validation-only:
+    // (pre-rename aliases). Validation-only:
     // new rooms and projections always carry the canonical tenant.gameSpecId.
     legacyGameSpecIds?: readonly string[];
     // When a client move is rejected (failed the legality / canonicalization

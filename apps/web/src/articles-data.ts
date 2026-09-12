@@ -15,14 +15,12 @@ import { chessArticle } from './articles/content/chess.js';
 import { coUpArticle } from './articles/content/co-up.js';
 import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
-import { crossroadsChessArticle } from './articles/content/crossroads-chess.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkCrazyhouseArticle } from './articles/content/dark-crazyhouse.js';
-import { darkCrossroadsChessArticle } from './articles/content/dark-crossroads-chess.js';
 import { darkDraft960Article } from './articles/content/dark-draft960.js';
 import { darkMiniXiangqiArticle } from './articles/content/dark-mini-xiangqi.js';
 import { darkShogiArticle } from './articles/content/dark-shogi.js';
@@ -91,8 +89,6 @@ export const articles: Article[] = [
   riverbankCannonArticle,
   titledPlayersArticle,
   revealChessArticle,
-  darkCrossroadsChessArticle,
-  crossroadsChessArticle,
 ];
 
 const ARTICLE_SLUG_ALIASES: Record<string, string> = {

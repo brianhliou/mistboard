@@ -223,8 +223,6 @@ describe('article public listing gates', () => {
     // show what the server has declared gone (docs-private/variant-
     // retirement-plan.md, #396).
     for (const slug of [
-      'crossroads-chess',
-      'dark-crossroads-chess',
       'dark-crazyhouse',
       'dark-mini-xiangqi',
       'dark-shogi',

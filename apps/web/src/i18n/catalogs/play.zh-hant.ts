@@ -121,8 +121,6 @@ export const ZH_HANT_PLAY = {
   'variant.revealChess.name': '翻開西洋棋',
   'variant.jungle.name': '鬥獸棋',
   'variant.jungleFlip.name': '翻翻棋',
-  'variant.crossroadsChess.name': '十字路口西洋棋',
-  'variant.darkCrossroadsChess.name': '迷霧十字路口西洋棋',
   'variant.darkShogi.name': '迷霧將棋',
   'variant.jieqi.name': '揭棋',
   'live.abort': '中止',

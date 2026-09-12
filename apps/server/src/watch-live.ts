@@ -44,7 +44,7 @@ export const LIVE_TV_TOP_CHANNEL_ID = 'top';
 // payload for an IN-PROGRESS room (same per-ply views/timeline the finished
 // replay serves, built from the events so far), which is what the web watch
 // renderers replay. Doubles as the rendering-capability gate: a channel with no
-// builder never produces live candidates (e.g. Crossroads, whose bespoke watch
+// builder never produces live candidates (a tenant whose bespoke watch
 // renderer has no live path yet), so the client is never handed a live game it
 // cannot draw.
 export type LiveWatchPayloadBuilder = (roomId: string) => Promise<Record<string, unknown> | null>;

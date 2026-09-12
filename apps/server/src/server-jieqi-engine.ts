@@ -2,8 +2,8 @@
  * Server-side PikaJieQi loop for Jieqi (揭棋) PvE.
  *
  * Tier-B: jieqi is driven by a Pikafish-jieqi UCI subprocess (jieqi-engine.ts),
- * the same shape as Crossroads/Fairy-Stockfish — NOT the hidden-info Misty
- * engine-worker. Unlike crossroads (perfect info, replayed from move history),
+ * the same shape as the Fairy-Stockfish xiangqi ladder — NOT the hidden-info
+ * Misty engine-worker. Unlike xiangqi (perfect info, replayed from move history),
  * jieqi has hidden identities, so we hand the engine a redacted current-position
  * FEN built by jieqi-fen.ts from canonical state. Engine moves are injected
  * through the same append+broadcast path as human moves, so clocks, persistence,

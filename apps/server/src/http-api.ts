@@ -20,10 +20,8 @@ import * as chatRoute from './routes/chat.js';
 import * as coachesRoute from './routes/coaches.js';
 import * as correspondenceGamesRoute from './routes/correspondence-games.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
-import * as crossroadsChessRoute from './routes/crossroads-chess.js';
 import * as currentGamesRoute from './routes/current-games.js';
 import * as darkCrazyhouseGamesRoute from './routes/dark-crazyhouse-games.js';
-import * as darkCrossroadsChessGamesRoute from './routes/dark-crossroads-chess-games.js';
 import * as darkMiniXiangqiGamesRoute from './routes/dark-mini-xiangqi-games.js';
 import * as darkShogiGamesRoute from './routes/dark-shogi-games.js';
 import * as darkXiangqiGamesRoute from './routes/dark-xiangqi-games.js';
@@ -125,7 +123,6 @@ export const routes: RouteModule[] = [
   fortressXiangqiGamesRoute,
   duckXiangqiGamesRoute,
   darkXiangqiGamesRoute,
-  darkCrossroadsChessGamesRoute,
   darkShogiGamesRoute,
   kriegspielGamesRoute,
   darkCrazyhouseGamesRoute,
@@ -134,7 +131,6 @@ export const routes: RouteModule[] = [
   jungleFlipGamesRoute,
   banqiGamesRoute,
   revealChessGamesRoute,
-  crossroadsChessRoute,
   gamesRoute,
   relationsRoute,
   titlesRoute,

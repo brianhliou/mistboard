@@ -115,8 +115,7 @@ export function participantForColor(
 // reflect what's actually stored and are immune to legacy variant aliases);
 // otherwise the pair derives from the canonical spec family, so a new variant
 // resolves without editing here: the xiangqi and jungle families play red vs
-// black, the crossroads-chess family (open + dark) plays white vs red, and
-// everything else is orthodox white vs black.
+// black, and everything else is orthodox white vs black.
 export type MatchupSeatPair = readonly [GameParticipant['color'], GameParticipant['color']];
 
 export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
@@ -125,10 +124,8 @@ export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
     if (!colors.has('red')) return ['white', 'black'];
     return colors.has('white') ? ['white', 'red'] : ['red', 'black'];
   }
-  if (isCrossroadsChessVariant(game.variant)) return ['white', 'red'];
   const family = maybeGameSpecForId(game.variant)?.family;
   if (family === 'xiangqi' || family === 'jungle') return ['red', 'black'];
-  if (family === 'crossroads-chess') return ['white', 'red'];
   return ['white', 'black'];
 }
 
@@ -139,12 +136,6 @@ export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
 export function matchupLabel(game: FeaturedGame): string {
   const [first, second] = matchupSeats(game);
   return `${displayParticipantName(game, first)} vs ${displayParticipantName(game, second)}`;
-}
-
-// Crossroads kept its legacy 'dual-chess' id in old rows; the spec registry
-// only knows the canonical id, so alias-aware callers check here.
-export function isCrossroadsChessVariant(variant: string): boolean {
-  return variant === 'crossroads-chess' || variant === 'dual-chess';
 }
 
 function fallbackSeatName(
@@ -225,10 +216,8 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   banqi: 'variant.banqi.name',
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
-  'crossroads-chess': 'variant.crossroadsChess.name',
   'dark-chess': 'variant.darkChess.name',
   'dark-crazyhouse': 'variant.darkCrazyhouse.name',
-  'dark-crossroads-chess': 'variant.darkCrossroadsChess.name',
   'dark-draft960': 'variant.darkDraft960.name',
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
   'dark-shogi': 'variant.darkShogi.name',

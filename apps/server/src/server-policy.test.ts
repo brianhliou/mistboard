@@ -539,7 +539,6 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/mini-xiangqi/game/mxq_abc123'), true);
   assert.equal(isClientRoute('/dark-mini-xiangqi/game/dmxq_abc123'), true);
   assert.equal(isClientRoute('/dark-shogi/game/dsg_abc123'), true);
-  assert.equal(isClientRoute('/crossroads-chess/game/dchess_abc123'), true);
   assert.equal(isClientRoute('/jungle/game/jgl_abc123'), true);
   assert.equal(isClientRoute('/jungle-flip/game/jgf_abc123'), true);
   assert.equal(isClientRoute('/room/abc123'), true);
@@ -645,12 +644,6 @@ test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)'
   assert.equal(isReviewShellRoute('/historical-xiangqi/games'), false);
   assert.equal(isReviewShellRoute('/blog/dark-chess-concepts'), false);
   assert.equal(isReviewShellRoute('/a/b/game/c'), false); // too many segments
-});
-
-test('isClientRoute does not expose standalone Crossroads Chess play routes', () => {
-  assert.equal(isClientRoute('/crossroads-chess'), false);
-  assert.equal(isClientRoute('/crossroads-chess-play'), false);
-  assert.equal(isClientRoute('/dual-chess-play'), false);
 });
 
 test('isClientRoute rejects unknown paths', () => {

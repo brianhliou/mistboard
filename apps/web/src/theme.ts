@@ -121,9 +121,8 @@ export const pieceSets: Array<{ id: PieceSet; label: string }> = [
 const defaultBoardFamily: BoardFamily = 'xiangqi';
 
 // Xiangqi appearance (board themes + piece sets) is shared by full Dark Xiangqi,
-// Dark Mini Xiangqi, Mini Xiangqi, and Crossroads Chess's xiangqi-side disk
-// pieces. These variants are baseline surfaces, so the family controls are
-// always available.
+// Dark Mini Xiangqi and Mini Xiangqi. These variants are baseline surfaces, so
+// the family controls are always available.
 export function xiangqiAppearanceEnabled(): boolean {
   return true;
 }

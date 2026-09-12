@@ -264,7 +264,6 @@ describe('appearance family gating', () => {
 
   it('surfaces current xiangqi and chess settings without retired shogi controls', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'false');
@@ -303,25 +302,6 @@ describe('appearance family gating', () => {
     expect(window.localStorage.getItem('mistboard.xiangqiBoardTheme')).toBe('traditional');
     expect(window.localStorage.getItem('mistboard.xiangqiBoardLayout')).toBe('intersection');
     expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('intersection');
-  });
-
-  // Crossroads is a chess-family variant with xiangqi-side disks, so it used to
-  // be the case that pulled a chess option into the menu. With one chess board
-  // it must not bring back a chess tile or the Game selector.
-  it('adds no chess-family controls when Crossroads is enabled', async () => {
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
-
-    await rebuildThemePanel();
-
-    expect(document.querySelector('[data-board-family-select]')).toBeNull();
-    expect(document.querySelector('[data-theme-tile="board"]')).toBeNull();
-    expect(document.querySelector('[data-theme-tile="piece"]')).toBeNull();
-    expect(document.querySelector('[data-theme-tile="xqlayout"]')).toBeNull();
-    expect(document.querySelector('[data-theme-tile="xqboard"]')).not.toBeNull();
-    expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();
   });
 
   it('surfaces the xiangqi pickers, with no Game toggle, without xiangqi env flags', async () => {

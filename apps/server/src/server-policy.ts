@@ -371,7 +371,6 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/bots' ||
     normalized === '/mini-xiangqi-spike' ||
     normalized === '/xiangqi-demo' ||
-    normalized.startsWith('/crossroads-chess/game/') ||
     normalized === '/blog' ||
     normalized === '/zh-hans/blog' ||
     normalized === '/zh-hant/blog' ||
@@ -402,7 +401,6 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/jungle-flip/game/') ||
     normalized.startsWith('/jieqi/game/') ||
     normalized.startsWith('/reveal-chess/game/') ||
-    normalized.startsWith('/dark-crossroads-chess/game/') ||
     normalized.startsWith('/dark-crazyhouse/game/') ||
     normalized.startsWith('/kriegspiel/game/') ||
     normalized.startsWith('/fortress-xiangqi/game/') ||

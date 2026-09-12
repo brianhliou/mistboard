@@ -7,17 +7,11 @@
 //
 // Seats. `a` is the room's FIRST seat and `b` its second, reported to the client
 // as 'white' / 'black' whatever the variant calls them: the xiangqi family,
-// jungle and banqi persist the first seat as 'red', and the Crossroads pair
-// persists white first and red SECOND (see variantSeatsRedSecond). A game's
-// `outcome` is from a's side, so the client never re-derives who won from a
-// variant result vocabulary it does not know.
+// jungle and banqi persist the first seat as 'red'. A game's `outcome` is from
+// a's side, so the client never re-derives who won from a variant result
+// vocabulary it does not know.
 
-import {
-  CROSSROADS_CHESS_SPEC_ID,
-  DARK_CHESS_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
-} from '@mistboard/game';
+import { DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID } from '@mistboard/game';
 import type {
   GameParticipant,
   GameParticipantColor,
@@ -118,38 +112,25 @@ export function crosstableReviewUrl(
   return null;
 }
 
-// Both Crossroads tenants seat white first and red second (colors ['white','red']),
-// so their 'red-wins' is the SECOND seat's win; every other red/black variant
-// seats red first. Kept here, next to the seat mapping, rather than widening the
-// rating writer's own result mapper.
-const RED_SECOND_SEAT_VARIANTS: ReadonlySet<string> = new Set([
-  CROSSROADS_CHESS_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
-]);
-
-export function variantSeatsRedSecond(variant: string): boolean {
-  return RED_SECOND_SEAT_VARIANTS.has(variant);
-}
-
 type SeatResult = 'white-wins' | 'black-wins' | 'draw';
 
 // A variant's persisted result in SEAT terms: 'white-wins' = the first seat won.
-export function seatResultForVariant(result: GameResult, variant: string): SeatResult {
-  if (RED_SECOND_SEAT_VARIANTS.has(variant) && result === 'red-wins') return 'black-wins';
+export function seatResultForVariant(result: GameResult, _variant: string): SeatResult {
+  // Every red/black variant seats red first, so red's win is the first seat's win.
   if (result === 'red-wins') return 'white-wins';
   if (result === 'white-wins' || result === 'black-wins' || result === 'draw') return result;
   return 'draw';
 }
 
 // A persisted seat colour as a crosstable seat: first seat = 'white', second =
-// 'black'. Red is the first seat everywhere except the Crossroads pair.
+// 'black'. Red is the first seat everywhere.
 export function crosstableSeatForColor(
-  variant: string,
+  _variant: string,
   color: GameParticipantColor,
 ): CrosstableSeat | null {
   if (color === 'white') return 'white';
   if (color === 'black') return 'black';
-  if (color === 'red') return variantSeatsRedSecond(variant) ? 'black' : 'white';
+  if (color === 'red') return 'white';
   return null;
 }
 

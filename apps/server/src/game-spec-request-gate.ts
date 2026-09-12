@@ -1,9 +1,7 @@
 import { type GameSpecId, MINI_XIANGQI_SPEC_ID, maybeGameSpecForId } from '@mistboard/game';
 import {
   banqiEnabled,
-  crossroadsChessEnabled,
   darkCrazyhouseEnabled,
-  darkCrossroadsChessEnabled,
   darkMiniXiangqiEnabled,
   darkShogiEnabled,
   darkXiangqiEnabled,
@@ -106,16 +104,6 @@ const GATED_GAME_SPECS = {
     disabledError: 'banqi_disabled',
     notIntegratedError: 'banqi_not_integrated',
   },
-  'crossroads-chess': {
-    enabled: crossroadsChessEnabled,
-    disabledError: 'crossroads_chess_disabled',
-    notIntegratedError: 'crossroads_chess_not_integrated',
-  },
-  'dark-crossroads-chess': {
-    enabled: darkCrossroadsChessEnabled,
-    disabledError: 'dark_crossroads_chess_disabled',
-    notIntegratedError: 'dark_crossroads_chess_not_integrated',
-  },
   'reveal-chess': {
     enabled: revealChessEnabled,
     disabledError: 'reveal_chess_disabled',
@@ -199,7 +187,7 @@ export function gateGameSpecRequest(input: {
   // `gameSpecId` is the canonical selector. Absent (undefined, or null from
   // URLSearchParams.get on the WS path) passes; anything else must resolve to
   // a chess-stack spec. maybeGameSpecForId also resolves the registry aliases
-  // ('dual-chess', 'fog-draft960'), mirroring tenant request matching.
+  // ('fog-draft960'), mirroring tenant request matching.
   if (input.gameSpecId !== undefined && input.gameSpecId !== null) {
     const spec = typeof input.gameSpecId === 'string' ? maybeGameSpecForId(input.gameSpecId) : null;
     if (!spec) {

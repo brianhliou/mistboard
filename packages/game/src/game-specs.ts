@@ -1,19 +1,11 @@
 import type { VariantId } from './types.js';
 
-export type GameFamilyId =
-  | 'chess'
-  | 'xiangqi'
-  | 'shogi'
-  | 'crossroads-chess'
-  | 'jungle'
-  | 'military-chess'
-  | 'mahjong';
+export type GameFamilyId = 'chess' | 'xiangqi' | 'shogi' | 'jungle' | 'military-chess' | 'mahjong';
 export type BoardGeometryId =
   | 'chess-8x8'
   | 'xiangqi-7x7'
   | 'xiangqi-9x10'
   | 'shogi-9x9'
-  | 'crossroads-6x8'
   | 'banqi-8x4'
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
@@ -30,7 +22,6 @@ export type MovementRulesId =
   | 'mini-xiangqi'
   | 'xiangqi'
   | 'shogi'
-  | 'crossroads-chess'
   | 'banqi'
   | 'jungle'
   | 'jungle-flip'
@@ -41,9 +32,6 @@ export type MovementRulesId =
   // blocking piece for every xiangqi geometry at once - it screens for cannons,
   // blocks the horse's leg and the elephant's eye, and breaks a general file.
   | 'duck-xiangqi';
-// 'royal-capture-or-race': capture/checkmate the royal OR race it to the enemy
-// home rank (the Crossroads Chess "Try"). Open mode keeps checkmate, dark switches to
-// king-capture; the visibility axis + rules module resolve which.
 // 'last-mover': win by leaving the opponent with no legal move (banqi). The
 // general is NOT royal — capturing it does not end the game (the opponent flips
 // or plays on) — so this subsumes "all pieces captured" and stalemate alike.
@@ -51,7 +39,6 @@ export type ObjectiveRulesId =
   | 'king-capture'
   | 'general-capture'
   | 'checkmate'
-  | 'royal-capture-or-race'
   | 'last-mover'
   | 'flag-capture'
   // 'den-or-race': win by moving a piece into the opponent's den OR capturing all
@@ -60,7 +47,7 @@ export type ObjectiveRulesId =
   // Mahjong: assemble four sets and a pair from a concealed hand. No royal
   // piece, no capture, and no position to win on.
   | 'four-sets-and-a-pair';
-// 'open' = perfect-information (the Crossroads Chess onboarding mode); 'dark' is
+// 'open' = perfect-information; 'dark' is
 // fog of war (positions hidden); 'hidden-identity' is jieqi/banqi (positions
 // public, piece identities hidden until revealed).
 // 'concealed-hands' is mahjong: there are no positions to hide, so the
@@ -73,7 +60,6 @@ export type SetupRulesId =
   | 'draft960'
   | 'mini-standard'
   | 'double-fischer-random'
-  | 'crossroads-standard'
   | 'jieqi-deal'
   | 'banqi-deal'
   | 'reveal-chess-deal'
@@ -113,8 +99,6 @@ export type RatingPoolBaseId =
   | 'dark_shogi'
   | 'jieqi'
   | 'banqi'
-  | 'crossroads_chess'
-  | 'crossroads_chess_open'
   | 'reveal_chess'
   | 'jungle'
   | 'jungle_flip'
@@ -137,8 +121,6 @@ export type GameSpecId =
   | 'dark-shogi'
   | 'jieqi'
   | 'banqi'
-  | 'crossroads-chess'
-  | 'dark-crossroads-chess'
   | 'reveal-chess'
   | 'jungle'
   | 'jungle-flip'
@@ -155,7 +137,7 @@ export type GameSpecId =
   // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
   | 'mahjong';
-export type GameSpecAliasId = 'fog-draft960' | 'dual-chess' | 'dark-dual-chess';
+export type GameSpecAliasId = 'fog-draft960';
 export type GameSpecLookupId = GameSpecId | GameSpecAliasId;
 
 export type GameSpec = {
@@ -197,19 +179,13 @@ export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
 export const DARK_SHOGI_SPEC_ID = 'dark-shogi' satisfies GameSpecId;
 export const DARK_CRAZYHOUSE_SPEC_ID = 'dark-crazyhouse' satisfies GameSpecId;
 export const KRIEGSPIEL_SPEC_ID = 'kriegspiel' satisfies GameSpecId;
-export const CROSSROADS_CHESS_SPEC_ID = 'crossroads-chess' satisfies GameSpecId;
 export const REVEAL_CHESS_SPEC_ID = 'reveal-chess' satisfies GameSpecId;
-export const DARK_CROSSROADS_CHESS_SPEC_ID = 'dark-crossroads-chess' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
 export const LUZHANQI_SPEC_ID = 'luzhanqi' satisfies GameSpecId;
 export const XIANGQI_SPEC_ID = 'xiangqi' satisfies GameSpecId;
 export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
-// Compatibility aliases for records and links created before the Crossroads
-// rename. New code should use CROSSROADS_CHESS_SPEC_ID.
-export const DUAL_CHESS_SPEC_ID = 'dual-chess' satisfies GameSpecAliasId;
-export const DARK_DUAL_CHESS_SPEC_ID = 'dark-dual-chess' satisfies GameSpecAliasId;
 
 // Specs that may be played by correspondence (days-per-move), in display order. The
 // SINGLE source of truth shared by the server's fail-closed allowlist
@@ -654,42 +630,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'retired',
   },
   {
-    // Crossroads Chess (中西象棋): a 6x8 chess x xiangqi fusion. Two modes share one
-    // family/board/movement and split on the visibility axis. Perfect-info is the
-    // onboarding ladder (keeps checkmate); dark is the real mode (king-capture).
-    // Rules engine: packages/game/src/variants-crossroads-chess.ts.
-    id: CROSSROADS_CHESS_SPEC_ID,
-    publicName: 'Crossroads Chess',
-    family: 'crossroads-chess',
-    board: 'crossroads-6x8',
-    movement: 'crossroads-chess',
-    objective: 'royal-capture-or-race',
-    visibility: 'open',
-    setup: 'crossroads-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'crossroads_chess_open',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    id: DARK_CROSSROADS_CHESS_SPEC_ID,
-    publicName: 'Dark Crossroads Chess',
-    family: 'crossroads-chess',
-    board: 'crossroads-6x8',
-    movement: 'crossroads-chess',
-    objective: 'royal-capture-or-race',
-    visibility: 'dark',
-    setup: 'crossroads-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'crossroads_chess',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
     // Reveal Chess (chess-jieqi): standard chess with hidden piece identities.
     // Both kings start face-up; each side's other 15 pieces are dealt face-down
     // and reveal their true identity on first move (origin-role proxy until
@@ -715,8 +655,6 @@ const gameSpecsById = new Map<GameSpecId, GameSpec>(GAME_SPECS.map((spec) => [sp
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
 const gameSpecAliases = new Map<GameSpecAliasId, GameSpecId>([
   ['fog-draft960', DARK_DRAFT960_SPEC_ID],
-  ['dual-chess', CROSSROADS_CHESS_SPEC_ID],
-  ['dark-dual-chess', DARK_CROSSROADS_CHESS_SPEC_ID],
 ]);
 
 /** Specs that were built and are not coming back. Derived from GAME_SPECS so
@@ -797,8 +735,6 @@ export type RatingVariant = Extract<
   | 'dark_xiangqi'
   | 'dark_crazyhouse'
   | 'dark_shogi'
-  | 'crossroads_chess'
-  | 'crossroads_chess_open'
   | 'jieqi'
   | 'banqi'
   | 'kriegspiel'

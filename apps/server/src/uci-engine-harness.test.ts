@@ -126,17 +126,17 @@ test('UCI option parsing handles multi-word names and configured values', () => 
 
 // ── buildFairyStockfishCommands ───────────────────────────────────────────────
 
-test('buildFairyStockfishCommands: crossroads shape (ini, skill, movetime only)', () => {
+test('buildFairyStockfishCommands: custom-variant shape (ini, skill, movetime only)', () => {
   const commands = buildFairyStockfishCommands({
     moves: ['d2d3'],
     variant: 'dualchess',
-    iniPath: '/tmp/crossroads-chess.ini',
+    iniPath: '/tmp/custom-variant.ini',
     skill: 8,
     movetimeMs: 300,
   });
   assert.deepEqual(commands, [
     'uci',
-    'setoption name VariantPath value /tmp/crossroads-chess.ini',
+    'setoption name VariantPath value /tmp/custom-variant.ini',
     'setoption name UCI_Variant value dualchess',
     'setoption name Skill Level value 8',
     'ucinewgame',

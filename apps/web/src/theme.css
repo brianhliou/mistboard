@@ -715,14 +715,10 @@
 :root,
 :root[data-xiangqi-board-theme="international"] {
   --crossroads-coord: rgba(60, 45, 30, 0.55);
-  --crossroads-river: #5aa0d6;
-  --crossroads-river-highlight: rgba(255, 255, 255, 0.4);
 }
 
 :root[data-xiangqi-board-theme="traditional"] {
   --crossroads-coord: rgba(60, 45, 30, 0.55);
-  --crossroads-river: #5aa0d6;
-  --crossroads-river-highlight: rgba(255, 255, 255, 0.4);
 }
 
 /* Xiangqi board swatches (presentation style, not an open-ended colour picker). */

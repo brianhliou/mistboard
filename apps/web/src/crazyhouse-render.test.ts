@@ -11,7 +11,6 @@ describe('Dark Crazyhouse board renderer', () => {
     expect(svg).not.toContain('var(--board-frame)');
     expect(svg).toContain('var(--board-light)');
     expect(svg).toContain('var(--board-dark)');
-    expect(svg).not.toContain('var(--crossroads-');
   });
 
   it('emits light and dark fog squares for themed dark-chess fog styling', () => {

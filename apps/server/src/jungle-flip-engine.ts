@@ -2,7 +2,7 @@
 //
 // The engine is our own `jungle-flip-engine` binary ("MistyJungleFlip", in
 // ~/projects/mistboard-engine/jungle-flip-engine) — a standalone Rust αβ+Star1+TT
-// engine driven as a UCI subprocess, the same Tier-B pattern as banqi/jieqi/Crossroads
+// engine driven as a UCI subprocess, the same Tier-B pattern as banqi/jieqi/xiangqi
 // (NOT the fog engine-worker). Flip Jungle has hidden piece IDENTITIES the engine must
 // not learn, so we hand it a redacted CURRENT-position FEN built by jungle-flip-fen.ts.
 // One process per request (stateless, robust); promote to a persistent pool only under

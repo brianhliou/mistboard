@@ -1,8 +1,6 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
-  crossroadsChessEnabled,
   darkCrazyhouseEnabled,
-  darkCrossroadsChessEnabled,
   darkMiniXiangqiEnabled,
   darkShogiEnabled,
   darkXiangqiEnabled,
@@ -18,8 +16,6 @@ describe('client feature flags', () => {
   });
 
   it.each([
-    ['Crossroads Chess', 'VITE_CROSSROADS_CHESS_ENABLED', crossroadsChessEnabled],
-    ['Dark Crossroads Chess', 'VITE_DARK_CROSSROADS_CHESS_ENABLED', darkCrossroadsChessEnabled],
     ['Reveal Chess', 'VITE_REVEAL_CHESS_ENABLED', revealChessEnabled],
     ['Kriegspiel', 'VITE_KRIEGSPIEL_ENABLED', kriegspielEnabled],
     ['Dark Mini Xiangqi', 'VITE_DARK_MINI_XIANGQI_ENABLED', darkMiniXiangqiEnabled],
@@ -41,8 +37,6 @@ describe('client feature flags', () => {
     expect(darkShogiEnabled()).toBe(true);
     expect(darkCrazyhouseEnabled()).toBe(true);
     expect(luzhanqiEnabled()).toBe(true);
-    expect(crossroadsChessEnabled()).toBe(true);
-    expect(darkCrossroadsChessEnabled()).toBe(true);
     expect(revealChessEnabled()).toBe(true);
     expect(kriegspielEnabled()).toBe(true);
   });

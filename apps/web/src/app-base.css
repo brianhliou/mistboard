@@ -356,64 +356,6 @@
   display: inline;
 }
 
-/* Crossroads Chess is a square-cell chess-family board rendered as SVG, so its
-   fog pattern mirrors the Dark Chess chessground fog tiles inside SVG paint
-   servers: light/dark fog fills, Puff image layer, per-square Mistveil tiles,
-   and transparent None. */
-.crossroads-fog-fill {
-  fill: var(--board-fog-light-fill);
-}
-
-.crossroads-fog-tile--dark .crossroads-fog-fill {
-  fill: var(--board-fog-dark-fill);
-}
-
-.crossroads-fog-shadow {
-  stroke: var(--board-fog-shadow);
-  stroke-width: 1;
-  vector-effect: non-scaling-stroke;
-}
-
-.crossroads-fog-tex {
-  display: none;
-}
-
-:root[data-fog-theme="solid"] .crossroads-fog-tile--light .crossroads-fog-fill {
-  fill: var(--board-fog-light-background);
-}
-
-:root[data-fog-theme="solid"] .crossroads-fog-tile--dark .crossroads-fog-fill {
-  fill: var(--board-fog-dark-background);
-}
-
-:root[data-fog-theme="drift"] .crossroads-fog-tex-drift {
-  display: inline;
-}
-
-:root[data-fog-theme="mistveil"] .crossroads-fog-tex-mist {
-  display: inline;
-}
-
-:root[data-fog-theme="void"] .crossroads-fog-fill {
-  fill: #000;
-}
-
-:root[data-fog-theme="void"] .crossroads-fog-shadow {
-  stroke: #080808;
-}
-
-:root[data-fog-theme="invisible"] .crossroads-fog-fill {
-  fill: transparent;
-}
-
-:root[data-fog-theme="invisible"] .crossroads-fog-tex {
-  display: none;
-}
-
-:root[data-fog-theme="invisible"] .crossroads-fog-shadow {
-  stroke: none;
-}
-
 * {
   box-sizing: border-box;
 }

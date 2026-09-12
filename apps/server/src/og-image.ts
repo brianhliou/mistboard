@@ -7,28 +7,17 @@ import {
   type ArticleOgPosition,
   BROWN_PALETTE,
   boardToPieces,
-  CROSSROADS_CHESS_DESCRIPTOR,
-  CROSSROADS_DISK_GLYPHS,
-  CROSSROADS_INK_RED,
-  CROSSROADS_INK_WHITE,
-  CROSSROADS_IVORY_STOPS,
-  CROSSROADS_PIECE_RED,
-  CROSSROADS_RED_STOPS,
   fogSquaresFromVisible,
-  PIECE_SVGS,
   type PieceOnBoard,
   renderBoardComposition,
-  renderGridBoardSvg,
   renderXiangqiOgBoardSvg,
   SERVER_FOG_TRIPTYCH,
-  XIANGQI_GLYPH_PATHS,
   type XiangqiOgPiece,
   xiangqiChampionTimelineSvg,
   xiangqiWorldTitleTimelineSvg,
 } from '@mistboard/board-render';
 import {
   applyGameEvent,
-  createInitialCrossroadsChessBoard,
   createInitialMiniXiangqiState,
   createInitialXiangqiState,
   type GameEvent,
@@ -254,7 +243,6 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'dark-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'full', true),
   'mini-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'mini', false),
   'dark-mini-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'mini', true),
-  'crossroads-chess': renderCrossroadsChessOgSvg,
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
@@ -648,92 +636,6 @@ function xiangqiOgBoard(params: {
     y: params.y,
     height: params.height,
   });
-}
-
-// Crossroads Chess card: the start position on the shared 6x8 river board
-// (same descriptor the live renderer uses). Chess-side pieces come from
-// PIECE_SVGS; xiangqi-side discs draw their characters from the baked Noto
-// paths instead of <text>, because resvg has no fonts.
-const CROSSROADS_CHESS_ROLES = new Set(['king', 'queen', 'bishop', 'knight', 'pawn']);
-
-function renderCrossroadsChessOgSvg(title: string, _ctx: ArticleOgContext): string {
-  const boardHeight = 504;
-  const boardY = 36;
-  const placed = crossroadsOgBoard({ centerX: OG_WIDTH / 2, y: boardY, height: boardHeight });
-  return [
-    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
-    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
-    placed,
-    ogFooterLine(title, boardY + boardHeight + 46),
-    `</svg>`,
-  ].join('');
-}
-
-function crossroadsOgBoard(params: { centerX: number; y: number; height: number }): string {
-  const board = createInitialCrossroadsChessBoard();
-  const cell = CROSSROADS_CHESS_DESCRIPTOR.cell;
-  const id = 'og-crossroads';
-  const boardSvg = renderGridBoardSvg(CROSSROADS_CHESS_DESCRIPTOR, {
-    id,
-    flip: false,
-    extraDefs: [
-      `<radialGradient id="${id}-ivory" cx="0.38" cy="0.32" r="0.8"><stop offset="0" stop-color="${CROSSROADS_IVORY_STOPS[0]}"/><stop offset="1" stop-color="${CROSSROADS_IVORY_STOPS[1]}"/></radialGradient>`,
-      `<radialGradient id="${id}-red" cx="0.38" cy="0.3" r="0.85"><stop offset="0" stop-color="${CROSSROADS_RED_STOPS[0]}"/><stop offset="1" stop-color="${CROSSROADS_RED_STOPS[1]}"/></radialGradient>`,
-    ].join(''),
-    renderPieces: (geom) => {
-      const parts: string[] = [];
-      for (const [square, piece] of Object.entries(board)) {
-        if (!piece) continue;
-        const file = square.charCodeAt(0) - 97;
-        const rank = Number(square.slice(1));
-        const { x, y } = geom.topLeft(file, rank);
-        if (CROSSROADS_CHESS_ROLES.has(piece.role)) {
-          const size = cell * 0.86;
-          const inset = (cell - size) / 2;
-          let raw = PIECE_SVGS[`white:${piece.role}`];
-          if (!raw) continue;
-          if (piece.color === 'red') {
-            raw = raw
-              .replace(/#fff(?![0-9a-fA-F])/g, CROSSROADS_PIECE_RED)
-              .replace(/#ffffff\b/gi, CROSSROADS_PIECE_RED)
-              .replace(/#fbfbf9/gi, CROSSROADS_PIECE_RED);
-          }
-          parts.push(
-            raw.replace(
-              /^<svg[^>]*>/,
-              `<svg x="${x + inset}" y="${y + inset}" width="${size}" height="${size}" viewBox="0 0 45 45" xmlns="http://www.w3.org/2000/svg">`,
-            ),
-          );
-        } else {
-          const glyphs = CROSSROADS_DISK_GLYPHS[piece.role];
-          if (!glyphs) continue;
-          const glyph = glyphs[piece.color as 'white' | 'red'];
-          const path = XIANGQI_GLYPH_PATHS[glyph];
-          if (!path) continue;
-          const size = cell * 0.82;
-          const cx = x + cell / 2;
-          const cy = y + cell / 2;
-          const r = size / 2 - 1;
-          const ink = piece.color === 'white' ? CROSSROADS_INK_WHITE : CROSSROADS_INK_RED;
-          const grad = piece.color === 'white' ? `${id}-ivory` : `${id}-red`;
-          parts.push(
-            `<circle cx="${cx}" cy="${cy}" r="${r}" fill="url(#${grad})" stroke="${ink}" stroke-width="2.4"/>`,
-            `<circle cx="${cx}" cy="${cy}" r="${r - 4}" fill="none" stroke="${ink}" stroke-width="1" opacity="0.55"/>`,
-            `<g transform="translate(${cx - size / 2} ${cy - size / 2}) scale(${size / 100})"><path d="${path}" fill="${ink}"/></g>`,
-          );
-        }
-      }
-      return parts.join('');
-    },
-  });
-  // The shared core emits a viewBox-only root; size and place it on the card.
-  const viewBox = boardSvg.match(/viewBox="0 0 ([\d.]+) ([\d.]+)"/);
-  const aspect = viewBox ? Number(viewBox[1]) / Number(viewBox[2]) : 330 / 441;
-  const boardWidth = Math.round(params.height * aspect);
-  return boardSvg.replace(
-    /^<svg[^>]*viewBox="([^"]+)"[^>]*>/,
-    `<svg x="${params.centerX - boardWidth / 2}" y="${params.y}" width="${boardWidth}" height="${params.height}" viewBox="$1">`,
-  );
 }
 
 // Misty's card is the article's art rather than a board: the image centered

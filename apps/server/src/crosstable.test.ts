@@ -223,16 +223,13 @@ test('crosstable pair: the same subject on both seats is unsupported', () => {
   assert.deepEqual(resolution, { ok: false, reason: 'unsupported' });
 });
 
-test('crosstable seats: red is the first seat except for the Crossroads pair', () => {
+test('crosstable seats: red is the first seat everywhere', () => {
   assert.equal(crosstableSeatForColor('xiangqi', 'red'), 'white');
   assert.equal(crosstableSeatForColor('xiangqi', 'black'), 'black');
   assert.equal(crosstableSeatForColor('banqi', 'red'), 'white');
   assert.equal(crosstableSeatForColor('jungle', 'red'), 'white');
   assert.equal(crosstableSeatForColor('dark-chess', 'white'), 'white');
   assert.equal(crosstableSeatForColor('dark-chess', 'black'), 'black');
-  assert.equal(crosstableSeatForColor('crossroads-chess', 'white'), 'white');
-  assert.equal(crosstableSeatForColor('crossroads-chess', 'red'), 'black');
-  assert.equal(crosstableSeatForColor('dark-crossroads-chess', 'red'), 'black');
 });
 
 test('crosstable outcome: a xiangqi red-wins with a on black is a loss for a', () => {
@@ -241,13 +238,6 @@ test('crosstable outcome: a xiangqi red-wins with a on black is a loss for a', (
   assert.equal(crosstableOutcome('black-wins', 'xiangqi', 'black'), 'a');
   assert.equal(crosstableOutcome('black-wins', 'xiangqi', 'white'), 'b');
   assert.equal(crosstableOutcome('draw', 'xiangqi', 'white'), 'draw');
-});
-
-test('crosstable outcome: Crossroads red-wins is the second seat winning', () => {
-  assert.equal(crosstableOutcome('red-wins', 'crossroads-chess', 'white'), 'b');
-  assert.equal(crosstableOutcome('red-wins', 'crossroads-chess', 'black'), 'a');
-  assert.equal(crosstableOutcome('white-wins', 'crossroads-chess', 'white'), 'a');
-  assert.equal(crosstableOutcome('red-wins', 'dark-crossroads-chess', 'white'), 'b');
 });
 
 test('crosstable outcome: chess results map on the seat directly', () => {

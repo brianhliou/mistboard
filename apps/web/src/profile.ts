@@ -179,8 +179,6 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   dark_crazyhouse: 'variant.darkCrazyhouse.name',
   dark_shogi: 'variant.darkShogi.name',
   kriegspiel: 'variant.kriegspiel.name',
-  crossroads_chess: 'variant.darkCrossroadsChess.name',
-  crossroads_chess_open: 'variant.crossroadsChess.name',
   jieqi: 'variant.jieqi.name',
   banqi: 'variant.banqi.name',
   reveal_chess: 'variant.revealChess.name',

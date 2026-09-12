@@ -2,17 +2,14 @@ import { PIECE_SVGS } from '@mistboard/board-render';
 import {
   BANQI_SPEC_ID,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
-  CROSSROADS_CHESS_SPEC_ID,
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
-  DUAL_CHESS_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   engineTimeControlPin,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -37,7 +34,7 @@ import {
   track,
 } from './analytics.js';
 import { bindBotPlayControl } from './bot-play.js';
-import { correspondenceEnabled, crossroadsChessEnabled } from './feature-flags.js';
+import { correspondenceEnabled } from './feature-flags.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
@@ -97,8 +94,6 @@ type LandingGameSpecId =
   | typeof DARK_MINI_XIANGQI_SPEC_ID
   | typeof DROP_MINI_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
-  | typeof CROSSROADS_CHESS_SPEC_ID
-  | typeof DARK_CROSSROADS_CHESS_SPEC_ID
   | typeof DARK_SHOGI_SPEC_ID
   | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
@@ -276,10 +271,6 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
       return 'variant.jieqi.name';
     case BANQI_SPEC_ID:
       return 'variant.banqi.name';
-    case CROSSROADS_CHESS_SPEC_ID:
-      return 'variant.crossroadsChess.name';
-    case DARK_CROSSROADS_CHESS_SPEC_ID:
-      return 'variant.darkCrossroadsChess.name';
     case DARK_SHOGI_SPEC_ID:
       return 'variant.darkShogi.name';
     case JUNGLE_SPEC_ID:
@@ -2035,8 +2026,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // Re-scope the picker to the current variant/rated/mode. Hides the segmented
   // toggle (and forces real time) when correspondence isn't offered; shows exactly
   // one chip group for the active segment; keeps the allowed real-time presets in
-  // sync (5+5 is hidden for Crossroads casual, rated keeps only rated-eligible
-  // paces, and a pick that is no longer offered falls back to 3+2).
+  // sync (rated keeps only rated-eligible paces, and a pick that is no longer offered falls back to 3+2).
   const syncTimeControls = () => {
     const corrAvailable = correspondenceAvailable();
     if (!corrAvailable) {
@@ -2787,11 +2777,6 @@ function normalizeStoredGameSpecId(value: unknown): LandingGameSpecId | undefine
     const tenant = webVariantTenantForSpecId(value);
     if (tenant?.landing?.offerInMenu()) return tenant.gameSpecId as LandingGameSpecId;
   }
-  if (
-    (value === CROSSROADS_CHESS_SPEC_ID || value === DUAL_CHESS_SPEC_ID) &&
-    crossroadsChessEnabled()
-  )
-    return CROSSROADS_CHESS_SPEC_ID;
   return undefined;
 }
 
@@ -3196,16 +3181,6 @@ export function roomCreationRequestBody(
   engineId?: string,
 ): Record<string, unknown> {
   const gameSpecId = roomCreationGameSpecId(setup);
-  if (setup.gameSpecId === CROSSROADS_CHESS_SPEC_ID) {
-    return {
-      mode,
-      gameSpecId,
-      timeControl: setup.timeControl,
-      rated: false,
-      preferredColor: setup.preferredColor === 'red' ? 'black' : setup.preferredColor,
-      ...(mode === 'pve' && engineId ? { engineId } : {}),
-    };
-  }
   if (setup.gameSpecId === JUNGLE_SPEC_ID) {
     // Jungle is perfect-info red/black Dou Shou Qi; PvP + in-process PvE bot,
     // casual-only. PvE sends the picked Misty Jungle engine id.
@@ -3354,18 +3329,6 @@ export function roomCreationRequestBody(
       preferredColor: setup.preferredColor,
     };
   }
-  if (setup.gameSpecId === DARK_CROSSROADS_CHESS_SPEC_ID) {
-    // Dark Crossroads is PvP-only and casual-only (no engine — Fairy-Stockfish is
-    // perfect-info — and rated not launched); colors are the variant's own
-    // white/red, passed straight through (the picker normalizes 'black' -> 'red').
-    return {
-      mode: 'pvp',
-      gameSpecId,
-      timeControl: setup.timeControl,
-      rated: false,
-      preferredColor: setup.preferredColor === 'black' ? 'red' : setup.preferredColor,
-    };
-  }
   if (setup.gameSpecId === DARK_SHOGI_SPEC_ID) {
     // Dark Shogi is PvP-only and casual-only (no bot yet, rated not launched).
     // Shogi colors are black (sente) / white (gote), passed straight through.
@@ -3443,8 +3406,6 @@ export function roomCreationGameSpecId(
   | typeof DARK_MINI_XIANGQI_SPEC_ID
   | typeof DROP_MINI_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
-  | typeof CROSSROADS_CHESS_SPEC_ID
-  | typeof DARK_CROSSROADS_CHESS_SPEC_ID
   | typeof DARK_SHOGI_SPEC_ID
   | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
@@ -3468,8 +3429,6 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === MINI_XIANGQI_SPEC_ID) return MINI_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DROP_MINI_XIANGQI_SPEC_ID) return DROP_MINI_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === REVEAL_CHESS_SPEC_ID) return REVEAL_CHESS_SPEC_ID;
-  if (setup.gameSpecId === CROSSROADS_CHESS_SPEC_ID) return CROSSROADS_CHESS_SPEC_ID;
-  if (setup.gameSpecId === DARK_CROSSROADS_CHESS_SPEC_ID) return DARK_CROSSROADS_CHESS_SPEC_ID;
   if (setup.gameSpecId === DARK_SHOGI_SPEC_ID) return DARK_SHOGI_SPEC_ID;
   if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) return DARK_CRAZYHOUSE_SPEC_ID;
   if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) return KRIEGSPIEL_SPEC_ID;
@@ -3497,12 +3456,6 @@ function roomCreationError(status: number, failure: RoomCreationFailure): Error 
 }
 
 function roomCreationStatusText(err: unknown, mode: 'pvp' | 'pve'): string {
-  if (err instanceof Error && err.name === 'crossroads_chess_disabled') {
-    return 'Crossroads Chess live rooms are not enabled on this server.';
-  }
-  if (err instanceof Error && err.name === 'crossroads_chess_unsupported_surface') {
-    return 'Crossroads Chess rooms are only available for casual friend games.';
-  }
   if (err instanceof Error && err.name === 'drop_mini_xiangqi_unsupported_surface') {
     return 'Drop Mini Xiangqi engine games are casual only.';
   }

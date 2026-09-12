@@ -7,7 +7,7 @@
 // loader/helpers, board renderer, and captures fill); the per-variant module is
 // then ~30 lines. See watch-banqi-replay.ts / watch-jieqi-replay.ts.
 //
-// Crossroads/dark-chess stay on the chessground path in replay.ts; this generic
+// Dark chess stays on the chessground path in replay.ts; this generic
 // is for the xiangqi-style SVG tenants only.
 
 import { t } from './i18n/catalog.js';

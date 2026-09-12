@@ -21,7 +21,7 @@ import type {
 /** PvE: seat an engine in `seat` at creation (its clientId is the engine id),
  * holding the given engine-service seat reservation for the game. Omit
  * reservationId for tenants whose engines run in-process with no seat
- * reservation system (Crossroads' Fairy-Stockfish). */
+ * reservation system (an in-process Fairy-Stockfish). */
 export type TenantRoomEngineSeat<C extends string> = {
   engineId: string;
   seat: C;

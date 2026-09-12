@@ -1,8 +1,8 @@
 // Live, fog-aware board renderer for Dark Shogi (9x9).
 //
 // A thin variant adapter over the shared descriptor-driven cell-board core
-// (@mistboard/board-render renderGridBoardSvg), the same core the chess /
-// Crossroads boards ride. The core owns geometry (orientation flip), furniture
+// (@mistboard/board-render renderGridBoardSvg), the same core the chess
+// boards ride. The core owns geometry (orientation flip), furniture
 // (grid, coords, frame, clip) and the generic interaction layers (last-move,
 // selection, targets, fog, hit). This file supplies only what is shogi-specific:
 // the 9x9 descriptor, the themed wood palette, the pentagonal koma glyph (a piece

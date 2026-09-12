@@ -105,8 +105,8 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
   const metadataByRoomId: Record<string, GameMeta> = {};
   const povByRoomId: Record<string, 'white' | 'black'> = {};
   // First/second-mover participant names for the tenant compact seats, resolved
-  // through the shared seat model (red/black for xiangqi and jungle, white/red
-  // for crossroads, white/black otherwise).
+  // through the shared seat model (red/black for xiangqi and jungle,
+  // white/black otherwise).
   const namesByRoomId: Record<string, { first: string; second: string }> = {};
   // When each game finished, for the honest "recent · 2h ago" caption. Undefined
   // for the bundled cold-start demos (no real finish time) -> caption reads "demo".
@@ -371,7 +371,7 @@ async function transitionToRoom(
   liveModule.bootstrapLiveRoom();
 }
 
-// Tenants with a self-contained live client (Crossroads) transition through
+// Tenants with a self-contained live client transition through
 // their own chunk; everything else boots the shared chess live shell.
 export function landingRoomTenantForUrl(url: string): WebVariantTenant | null {
   const next = new URL(url, window.location.href);

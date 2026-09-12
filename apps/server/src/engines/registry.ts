@@ -676,47 +676,6 @@ const PYTHON_ENGINES: Record<string, EngineDefinition> = {
   },
 };
 
-const CROSSROADS_CHESS_ENGINES: Record<string, EngineDefinition> = {
-  'fairy-stockfish-crossroads-amateur': {
-    id: 'fairy-stockfish-crossroads-amateur',
-    engineId: 'fairy-stockfish-crossroads',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Amateur',
-    kind: 'container',
-    gameSpecId: 'crossroads-chess',
-    configHash: 'fsf-crossroads-amateur',
-    playSignature: 'fsf-crossroads-amateur',
-    config: { kind: 'fairy-stockfish', skill: 2, movetime_ms: 150 },
-    notes: 'Crossroads Chess Fairy-Stockfish tier capped for production-safe amateur play.',
-  },
-  'fairy-stockfish-crossroads-strong': {
-    id: 'fairy-stockfish-crossroads-strong',
-    engineId: 'fairy-stockfish-crossroads',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Strong',
-    kind: 'container',
-    gameSpecId: 'crossroads-chess',
-    configHash: 'fsf-crossroads-strong',
-    playSignature: 'fsf-crossroads-strong',
-    config: { kind: 'fairy-stockfish', skill: 8, movetime_ms: 300 },
-    notes:
-      'Default Crossroads Chess Fairy-Stockfish tier with lower-skill move selection plus the live immediate-loss guard.',
-  },
-  'fairy-stockfish-crossroads-very-strong': {
-    id: 'fairy-stockfish-crossroads-very-strong',
-    engineId: 'fairy-stockfish-crossroads',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Strongest',
-    kind: 'container',
-    gameSpecId: 'crossroads-chess',
-    configHash: 'fsf-crossroads-very-strong',
-    playSignature: 'fsf-crossroads-very-strong',
-    config: { kind: 'fairy-stockfish', skill: 20, movetime_ms: 2000 },
-    notes:
-      'Top Crossroads Chess Fairy-Stockfish tier at full skill with a longer think budget plus the live immediate-loss guard.',
-  },
-};
-
 // Uniformly-random legal-move xiangqi bot: the calibration floor / 0-Elo anchor.
 // EvE-only (the xiangqi runner's move provider plays it in-process), so it is NOT
 // in any *_PLAYABLE list and never appears in the live PvE picker.
@@ -776,7 +735,7 @@ function xiangqiFsfConfigHash(tier: XiangqiFsfEngineTier): string {
 
 // Jieqi (揭棋) PvE engines — the Pikafish jieqi branch driven as a UCI subprocess
 // (Tier-B, server-jieqi-engine.ts). LAUNCH uses the no-net `jieqi_old` classical
-// build (clean GPL-3, no net-licensing problem). Unlike crossroads/FSF, jieqi_old
+// build (clean GPL-3, no net-licensing problem). Unlike the FSF ladder, jieqi_old
 // has NO Skill Level / UCI_Elo knob (verified absent from its UCI options), so the
 // tiers vary by search DEPTH/time (like banqi-uci), not skill. The OPERATIVE search
 // params live in jieqi-engine.ts (JIEQI_ENGINE_TIERS); the `config` values here are
@@ -1004,7 +963,6 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
-  ...CROSSROADS_CHESS_ENGINES,
   ...XIANGQI_FSF_ENGINES,
   ...XIANGQI_RANDOM_ENGINES,
   ...JIEQI_ENGINES,

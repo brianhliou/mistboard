@@ -22,8 +22,6 @@ import {
   createJungleFlipDeal,
   createRevealChessDeal,
   getBanqiLegalMoves,
-  getCrossroadsChessLegalMoves,
-  getCrossroadsChessOpenLegalMoves,
   getDuckXiangqiLegalTurns,
   getFortressXiangqiLegalMoves,
   getJieqiLegalMoves,
@@ -44,9 +42,7 @@ import {
 } from '@mistboard/game';
 
 import { banqiTenant } from './banqi-tenant.js';
-import { crossroadsChessTenant } from './crossroads-chess-tenant.js';
 import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
-import { darkCrossroadsChessTenant } from './dark-crossroads-chess-tenant.js';
 import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
 import { darkShogiTenant } from './dark-shogi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
@@ -126,8 +122,6 @@ const VARIANTS: VariantSpec[] = [
     enumerate: (s) => getRevealChessLegalMoves(s),
     makeSetup: (rng) => createRevealChessDeal(rng),
   },
-  { tenant: crossroadsChessTenant, enumerate: (s) => getCrossroadsChessOpenLegalMoves(s) },
-  { tenant: darkCrossroadsChessTenant, enumerate: (s) => getCrossroadsChessLegalMoves(s) },
   {
     tenant: darkShogiTenant,
     enumerate: (s) => [...getLegalShogiMoves(s), ...getLegalShogiDrops(s)],

@@ -89,7 +89,6 @@ const GAME_SPEC_LABEL_KEYS: Record<string, I18nKey> = {
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
   jieqi: 'variant.jieqi.name',
   banqi: 'variant.banqi.name',
-  'crossroads-chess': 'variant.crossroadsChess.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',
 };
 

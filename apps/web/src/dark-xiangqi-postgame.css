@@ -125,8 +125,8 @@
   color: var(--site-text);
 }
 
-/* Jieqi and banqi reviews follow the site theme (light + dark), like the
-   crossroads review, rather than the hardcoded light the dark-xiangqi route uses. */
+/* Jieqi and banqi reviews follow the site theme (light + dark), rather than
+   the hardcoded light the dark-xiangqi route uses. */
 .jieqi-postgame-route,
 .banqi-postgame-route {
   min-height: 100vh;
@@ -293,7 +293,7 @@ button.dxq-postgame__link {
   align-items: start;
 }
 
-/* Board | side, side-by-side (crossroads-style): the board column is capped by
+/* Board | side, side-by-side: the board column is capped by
    viewport height so the page fits without scrolling, and the side panel collapses
    to a single column (Game above Moves) so it sits beside the board instead of a
    full-width Game|Moves grid below it. */

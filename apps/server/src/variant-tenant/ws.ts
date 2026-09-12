@@ -473,7 +473,7 @@ export function createTenantWsRuntime<
     }
     // State-dependent canonicalization (when the tenant defines it) resolves
     // the parsed move to the exact legal-move object to append — e.g.
-    // Crossroads re-attaches `promotion` from the legal-move list. It doubles
+    // a chess-family tenant re-attaches `promotion` from the legal-move list. It doubles
     // as the legality check: null rejects.
     const canonical = tenant.rules.canonicalMove
       ? tenant.rules.canonicalMove(room.projection.state, move, seat)

@@ -1,10 +1,8 @@
 import {
   BANQI_SPEC_ID,
-  CROSSROADS_CHESS_SPEC_ID,
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_SHOGI_SPEC_ID,
@@ -140,23 +138,6 @@ describe('web variant launch registry', () => {
     vi.resetModules();
   });
 
-  it('shows Crossroads on rating surfaces and enables it behind its play flag', async () => {
-    vi.resetModules();
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    const flagged = await import('./variants.js');
-
-    expect(flagged.enabledVariants.map((v) => v.gameSpecId)).toContain(CROSSROADS_CHESS_SPEC_ID);
-    expect(flagged.leaderboardVariants.map((v) => v.gameSpecId)).toContain(
-      CROSSROADS_CHESS_SPEC_ID,
-    );
-    expect(flagged.profileRatingVariants.map((v) => v.gameSpecId)).toContain(
-      CROSSROADS_CHESS_SPEC_ID,
-    );
-
-    vi.unstubAllEnvs();
-    vi.resetModules();
-  });
-
   it('shows only product-profile variants on default local rating surfaces', () => {
     // Public shelf order: xiangqi family, fog pair, then Jungle family.
     expect(leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
@@ -186,7 +167,6 @@ describe('web variant launch registry', () => {
   });
 
   it('keeps mini-board fallback ids for soft-launch play-menu variants', () => {
-    expect(variantMiniIdForGameSpec(DARK_CROSSROADS_CHESS_SPEC_ID)).toBe('dark-crossroads');
     expect(variantMiniIdForGameSpec(DARK_CRAZYHOUSE_SPEC_ID)).toBe('dark-crazyhouse');
     expect(variantMiniIdForGameSpec(MINI_XIANGQI_SPEC_ID)).toBe('mini-xiangqi');
     expect(variantMiniIdForGameSpec(DROP_MINI_XIANGQI_SPEC_ID)).toBe('drop-mini-xiangqi');
@@ -222,8 +202,6 @@ describe('web variant launch registry', () => {
       [KRIEGSPIEL_SPEC_ID, 'kriegspiel'],
       [REVEAL_CHESS_SPEC_ID, 'reveal-chess'],
       [DARK_DRAFT960_SPEC_ID, 'dark-draft960'],
-      [CROSSROADS_CHESS_SPEC_ID, 'crossroads-chess'],
-      [DARK_CROSSROADS_CHESS_SPEC_ID, 'dark-crossroads-chess'],
       [DARK_MINI_XIANGQI_SPEC_ID, 'dark-mini-xiangqi'],
       [DROP_MINI_XIANGQI_SPEC_ID, 'drop-mini-xiangqi'],
     ]);
@@ -264,17 +242,12 @@ describe('web variant launch registry', () => {
   it('keeps parked Fog Shogi off rating surfaces while other variants follow their flags', async () => {
     vi.resetModules();
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_CROSSROADS_CHESS_ENABLED', 'true');
     vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'true');
     vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'true');
     vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'true');
     const flagged = await import('./variants.js');
 
-    for (const specId of [
-      DARK_CROSSROADS_CHESS_SPEC_ID,
-      DARK_CRAZYHOUSE_SPEC_ID,
-      KRIEGSPIEL_SPEC_ID,
-    ]) {
+    for (const specId of [DARK_CRAZYHOUSE_SPEC_ID, KRIEGSPIEL_SPEC_ID]) {
       expect(flagged.leaderboardVariants.map((v) => v.gameSpecId)).toContain(specId);
       expect(flagged.profileRatingVariants.map((v) => v.gameSpecId)).toContain(specId);
       expect(flagged.enabledVariants.map((v) => v.gameSpecId)).not.toContain(specId);
@@ -288,16 +261,11 @@ describe('web variant launch registry', () => {
     vi.resetModules();
   });
 
-  it('keeps Dark Crossroads + Dark Shogi + Dark Crazyhouse + Kriegspiel off production rating surfaces when their flags are off', async () => {
+  it('keeps Dark Shogi + Dark Crazyhouse + Kriegspiel off production rating surfaces when their flags are off', async () => {
     vi.resetModules();
     vi.stubEnv('DEV', false);
     const prod = await import('./variants.js');
-    for (const specId of [
-      DARK_CROSSROADS_CHESS_SPEC_ID,
-      DARK_SHOGI_SPEC_ID,
-      DARK_CRAZYHOUSE_SPEC_ID,
-      KRIEGSPIEL_SPEC_ID,
-    ]) {
+    for (const specId of [DARK_SHOGI_SPEC_ID, DARK_CRAZYHOUSE_SPEC_ID, KRIEGSPIEL_SPEC_ID]) {
       expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(specId);
       expect(prod.profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(specId);
     }

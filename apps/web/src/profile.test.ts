@@ -25,7 +25,6 @@ describe('profile ratings rail', () => {
     expect(section.textContent).toContain('Dark Mini Xiangqi');
     // Xiangqi pivot: Drop Mini is off the rating grids now.
     expect(section.textContent).not.toContain('Drop Mini Xiangqi');
-    expect(section.textContent).not.toContain('Crossroads Chess');
     // Fortress + Duck + Flip Jungle + Jungle + Dark Chess (always-on) + Dark
     // Mini (render flag) = 6 profile rows.
     expect(section.querySelectorAll('.profile-rating-row-empty')).toHaveLength(6);
@@ -536,16 +535,14 @@ describe('profile ratings rail', () => {
     },
   ];
 
-  it('hides Crossroads rated leaderboard panels when play is not enabled', async () => {
+  it('keeps Drop Mini off the leaderboard panels', async () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'false');
     const fetchSpy = stubLeaderboardFetch({ ladders: ONE_POPULATED_LADDER });
     const root = document.createElement('div');
     const { mountLeaderboard } = await import('./profile.js');
 
     await mountLeaderboard(root);
 
-    expect(root.textContent).not.toContain('Crossroads Chess');
     // Xiangqi pivot: Drop Mini is off the grids; Fortress is an always-on ladder.
     expect(root.textContent).not.toContain('Drop Mini Xiangqi');
     expect(root.textContent).toContain('Fortress Xiangqi');
@@ -721,8 +718,6 @@ describe('profile ratings rail', () => {
   it('localizes Traditional Chinese leaderboard chrome', async () => {
     window.history.replaceState(null, '', '/zh-hant/player');
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'false');
-    // Xiangqi pivot: Drop Mini is off the grids; populate an on-grid ladder
     // (Fortress Xiangqi) instead.
     stubLeaderboardFetch({
       ladders: [
@@ -753,21 +748,6 @@ describe('profile ratings rail', () => {
     expect(root.textContent).not.toContain('活躍玩家');
     expect(root.querySelector('.leaderboard-online-heading')?.textContent).toBe('線上玩家');
     expect(root.textContent).toContain('目前沒有玩家在線上。');
-  });
-
-  it('shows Crossroads rated leaderboard panels behind the play flag', async () => {
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'true');
-    stubLeaderboardFetch({ ladders: ONE_POPULATED_LADDER });
-    const root = document.createElement('div');
-    const { mountLeaderboard } = await import('./profile.js');
-
-    await mountLeaderboard(root);
-
-    expect(root.textContent).toContain('Crossroads Chess');
-    // 6 rated ladders (Dark Chess + always-on Fortress, Duck, Jungle, Flip
-    // Jungle + Crossroads behind the flag).
-    expect(root.querySelectorAll('.leaderboard-panel')).toHaveLength(6);
   });
 
   it('collapses the ladder grid to one line when no ladder has a rated game', async () => {

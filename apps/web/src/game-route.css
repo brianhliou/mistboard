@@ -66,11 +66,6 @@
   min-height: 0;
 }
 
-.crossroads-postgame-shell {
-  padding-top: 8px;
-  padding-bottom: 8px;
-}
-
 /* In header mode the player names live in the header strip, so the per-pane
    name row is always empty. visibility:hidden still reserves ~18px above the
    top captures; collapse it instead. */
@@ -322,15 +317,6 @@
     max-width: none;
   }
 
-  .game-replay.replay-meta-header .replay-layout-crossroads {
-    grid-template-columns: minmax(0, min(100%, 560px));
-    justify-content: center;
-  }
-
-  .game-replay.replay-meta-header .replay-layout.replay-layout-crossroads {
-    padding: 4px;
-  }
-
   .game-replay.replay-meta-header .replay-pane {
     gap: 2px;
     min-width: 0;
@@ -489,7 +475,6 @@
 .drop-mini-xiangqi-review .replay-board,
 .fortress-xiangqi-review .replay-board,
 .jieqi-review .replay-board,
-.crossroads-chess-review .replay-board,
 .dark-mini-xiangqi-review .replay-board {
   width: 100%;
   max-width: none;
@@ -500,7 +485,6 @@
 .drop-mini-xiangqi-review .replay-board > svg,
 .fortress-xiangqi-review .replay-board > svg,
 .jieqi-review .replay-board > svg,
-.crossroads-chess-review .replay-board > svg,
 .dark-mini-xiangqi-review .replay-board > svg {
   display: block;
   width: 100%;

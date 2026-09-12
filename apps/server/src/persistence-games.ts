@@ -1,7 +1,6 @@
 import {
   BANQI_SPEC_ID,
   type Color,
-  CROSSROADS_CHESS_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -92,7 +91,7 @@ export type GameParticipant = {
   // private, so a client rule of "handle present => render a link" is fail-closed.
   handle?: string | null;
   // Engine build version for engine-version seats whose subject_id is version-less (the
-  // variant-tenant UCI engines — jieqi/banqi/crossroads, e.g. subject_id 'misty-banqi'),
+  // variant-tenant UCI engines — jieqi/banqi, e.g. subject_id 'misty-banqi'),
   // so games are queryable by build. Null for humans and for engines that already encode
   // the version in subject_id (Misty/DMX). Optional + omitted-when-null to keep the
   // participant shape unchanged for the many constructors that don't set it.
@@ -133,7 +132,7 @@ export type GameSummary = {
   // This rides recordGameEnd rather than abortRunningGame on purpose.
   // abortRunningGame is `UPDATE ... WHERE status = 'running'`, and most tenants
   // deliberately omit recordGameStart (fog xiangqi, xiangqi, jieqi, banqi,
-  // jungle, dark-crossroads), so there is no running row for it to touch: it
+  // jungle), so there is no running row for it to touch: it
   // returns false and changes nothing. recordGameEnd is also the only writer
   // that creates game_participants, so routing an engine failure away from it
   // would drop the game out of the database entirely instead of misfiling it.
@@ -1456,7 +1455,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
           roomId,
           whiteParticipant.subjectId,
           blackParticipant.subjectId,
-          ratedResultForGame(summary.result, summary.variant),
+          ratedResultForGame(summary.result),
           bucket,
           colors,
         );
@@ -1481,12 +1480,10 @@ function ratedParticipantColorsForVariant(variant: string): {
   // flip's first rated game recorded rated=true but moved nobody's rating.
   if (variant === XIANGQI_SPEC_ID || variant === FORTRESS_XIANGQI_SPEC_ID)
     return { white: 'red', black: 'black' };
-  if (variant === CROSSROADS_CHESS_SPEC_ID) return { white: 'white', black: 'red' };
   return { white: 'white', black: 'black' };
 }
 
-function ratedResultForGame(result: GameResult, variant: string): RatedResult {
-  if (variant === CROSSROADS_CHESS_SPEC_ID && result === 'red-wins') return 'black-wins';
+function ratedResultForGame(result: GameResult): RatedResult {
   if (result === 'red-wins') return 'white-wins';
   if (result === 'white-wins' || result === 'black-wins' || result === 'draw') return result;
   return 'draw';

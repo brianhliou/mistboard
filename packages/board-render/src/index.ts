@@ -11,15 +11,6 @@ export type { PieceOnBoard } from './board-svg.js';
 export { fogPatternDefs, renderBoardSvg } from './board-svg.js';
 export type { BoardSpec, CompositionOptions } from './composition.js';
 export { renderBoardComposition } from './composition.js';
-export {
-  CROSSROADS_CHESS_DESCRIPTOR,
-  CROSSROADS_DISK_GLYPHS,
-  CROSSROADS_INK_RED,
-  CROSSROADS_INK_WHITE,
-  CROSSROADS_IVORY_STOPS,
-  CROSSROADS_PIECE_RED,
-  CROSSROADS_RED_STOPS,
-} from './crossroads-chess-descriptor.js';
 export { XIANGQI_GLYPH_PATHS } from './generated/xiangqi-glyph-paths.js';
 export type {
   GridArrowRef,

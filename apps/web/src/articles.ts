@@ -37,7 +37,6 @@ import {
   type BanqiReplayBlock,
   type ChessReplayBlock,
   type CodeBlock,
-  type CrossroadsReplayBlock,
   type CtaBlock,
   type DropMiniXiangqiReplayBlock,
   type DuckXiangqiReplayBlock,
@@ -66,10 +65,6 @@ import {
 import { type BanqiReplayController, mountBanqiReplay } from './banqi-replay.js';
 import { type ChessReplayController, mountChessReplay } from './chess-replay.js';
 import {
-  type CrossroadsChessReplayController,
-  mountCrossroadsChessReplay,
-} from './crossroads-chess-replay.js';
-import {
   type DropMiniXiangqiReplayController,
   mountDropMiniXiangqiReplay,
 } from './drop-mini-xiangqi-replay.js';
@@ -87,7 +82,6 @@ import { type MiniXiangqiReplayController, mountMiniXiangqiReplay } from './mini
 import { prependTitleBadge } from './player-titles.js';
 import { mountShogiReplay, type ShogiReplayController } from './shogi-replay.js';
 import {
-  boardAppearanceChangedEvent,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
   shogiAppearanceChangedEvent,
@@ -1276,7 +1270,6 @@ type PendingBlock =
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | ShogiReplayBlock
-  | CrossroadsReplayBlock
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock
@@ -1314,7 +1307,6 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
   if (block.kind === 'shogi-replay') return renderShogiReplayBlock(block, lang);
   if (block.kind === 'chess-replay') return renderChessReplayBlock(block, lang);
-  if (block.kind === 'crossroads-replay') return renderCrossroadsReplayBlock(block, lang);
   if (block.kind === 'jieqi-replay') return renderJieqiReplayBlock(block, lang);
   if (block.kind === 'banqi-replay') return renderBanqiReplayBlock(block, lang);
   if (block.kind === 'jungle-replay') return renderJungleReplayBlock(block, lang);
@@ -1326,29 +1318,6 @@ function renderChessReplayBlock(block: ChessReplayBlock, lang?: ArticleLang): HT
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive';
   figure.dataset.pendingWidget = 'chess-replay';
-
-  const mountTarget = document.createElement('div');
-  mountTarget.className = 'article-interactive-target';
-  figure.append(mountTarget);
-
-  if (block.caption) {
-    const cap = document.createElement('figcaption');
-    cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
-    figure.append(cap);
-  }
-
-  rememberPendingMount(figure, block, lang);
-  return figure;
-}
-
-function renderCrossroadsReplayBlock(
-  block: CrossroadsReplayBlock,
-  lang?: ArticleLang,
-): HTMLElement {
-  const figure = document.createElement('figure');
-  figure.className = 'article-figure article-figure-interactive article-figure-crossroads';
-  figure.dataset.pendingWidget = 'crossroads-replay';
 
   const mountTarget = document.createElement('div');
   mountTarget.className = 'article-interactive-target';
@@ -1707,48 +1676,6 @@ function trackShogiDiagram(holder: HTMLElement, thunk: () => string): void {
   ensureShogiDiagramListener();
 }
 
-// Crossroads Chess is a hybrid: chess piece art and xiangqi disk art both come
-// from the live appearance settings, and xiangqi changes also dispatch the
-// board-appearance event. Re-run the thunk when either side of the hybrid piece
-// set changes.
-const crossroadsDiagramThunks = new WeakMap<HTMLElement, () => string>();
-let crossroadsDiagramListenerInstalled = false;
-
-function paintCrossroadsDiagram(holder: HTMLElement): void {
-  const thunk = crossroadsDiagramThunks.get(holder);
-  if (!thunk) return;
-  const caption =
-    Array.from(holder.children).find((child) =>
-      child.classList.contains('article-figure-caption'),
-    ) ?? null;
-  const scratch = document.createElement('div');
-  scratch.innerHTML = thunk();
-  holder.replaceChildren(...Array.from(scratch.childNodes), ...(caption ? [caption] : []));
-  markNoTranslate(holder);
-}
-
-const crossroadsThumbPainters = new WeakMap<HTMLElement, () => void>();
-
-function ensureCrossroadsDiagramListener(): void {
-  if (crossroadsDiagramListenerInstalled) return;
-  crossroadsDiagramListenerInstalled = true;
-  window.addEventListener(boardAppearanceChangedEvent, () => {
-    document
-      .querySelectorAll<HTMLElement>('[data-crossroads-diagram]')
-      .forEach(paintCrossroadsDiagram);
-    document.querySelectorAll<HTMLElement>('[data-crossroads-thumb]').forEach((wrap) => {
-      crossroadsThumbPainters.get(wrap)?.();
-    });
-  });
-}
-
-function trackCrossroadsDiagram(holder: HTMLElement, thunk: () => string): void {
-  holder.dataset.crossroadsDiagram = '';
-  crossroadsDiagramThunks.set(holder, thunk);
-  ensureCrossroadsDiagramListener();
-  markNoTranslate(holder);
-}
-
 function localizeSvgMarkup(raw: string, lang?: ArticleLang): string {
   if (!lang) return raw;
   const template = document.createElement('template');
@@ -1807,8 +1734,6 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
     figure.innerHTML = svgThunk();
     if (figure.querySelector('.shogi-board-svg')) {
       trackShogiDiagram(figure, svgThunk);
-    } else if (figure.querySelector('.crossroads-live-svg, .crossroads-article-svg')) {
-      trackCrossroadsDiagram(figure, svgThunk);
     } else {
       trackXqDiagram(figure, svgThunk);
       paintXqDiagram(figure, readStoredXiangqiPieceSet());
@@ -1836,7 +1761,7 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
 }
 
 // A row of raw-SVG figures. Each item goes through renderRawSvgBlock, so the
-// per-family tracking (shogi / crossroads / xiangqi appearance re-render),
+// per-family tracking (shogi / xiangqi appearance re-render),
 // localization and caption handling stay in ONE place; this only owns the
 // layout wrapper.
 function renderSvgRowBlock(block: SvgRowBlock, lang?: ArticleLang): HTMLElement {
@@ -2323,7 +2248,6 @@ export function mountPendingWidgets(
   | FortressXiangqiReplayController
   | DuckXiangqiReplayController
   | ShogiReplayController
-  | CrossroadsChessReplayController
   | JieqiReplayController
   | BanqiReplayController
   | JungleReplayController
@@ -2337,7 +2261,6 @@ export function mountPendingWidgets(
     | MiniXiangqiReplayController
     | DropMiniXiangqiReplayController
     | ShogiReplayController
-    | CrossroadsChessReplayController
     | JieqiReplayController
     | BanqiReplayController
     | JungleReplayController
@@ -2368,8 +2291,6 @@ export function mountPendingWidgets(
       controllers.push(mountShogiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'chess-replay') {
       controllers.push(mountChessReplay(target, block.spec, { lang }));
-    } else if (block.kind === 'crossroads-replay') {
-      controllers.push(mountCrossroadsChessReplay(target, block.spec, { lang }));
     } else if (block.kind === 'jieqi-replay') {
       controllers.push(mountJieqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'banqi-replay') {
@@ -2511,25 +2432,16 @@ export function renderArticleThumbnail(thumb: ArticleThumbnail): HTMLElement {
     };
     if (typeof thumb.svg === 'function') {
       const svgThunk = thumb.svg;
-      const first = svgThunk();
-      if (first.includes('crossroads-live-svg') || first.includes('crossroads-article-svg')) {
-        const paint = () => applySvg(svgThunk());
-        applySvg(first);
-        wrap.dataset.crossroadsThumb = '';
-        crossroadsThumbPainters.set(wrap, paint);
-        ensureCrossroadsDiagramListener();
-      } else {
-        const paint = () =>
-          applySvg(
-            withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
-              withXiangqiPieceSet(readStoredXiangqiPieceSet(), svgThunk),
-            ),
-          );
-        paint();
-        wrap.dataset.xqThumb = '';
-        xqThumbPainters.set(wrap, paint);
-        ensureXqDiagramListener();
-      }
+      const paint = () =>
+        applySvg(
+          withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
+            withXiangqiPieceSet(readStoredXiangqiPieceSet(), svgThunk),
+          ),
+        );
+      paint();
+      wrap.dataset.xqThumb = '';
+      xqThumbPainters.set(wrap, paint);
+      ensureXqDiagramListener();
     } else {
       applySvg(thumb.svg);
     }
@@ -2571,8 +2483,6 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
-  'crossroads-chess': 'crossroads',
-  'dark-crossroads-chess': 'dark-crossroads',
   kriegspiel: 'kriegspiel',
   'reveal-chess': 'reveal-chess',
   shogi: 'shogi',

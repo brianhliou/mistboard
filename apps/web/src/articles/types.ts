@@ -14,7 +14,6 @@ import type {
 } from '@mistboard/game';
 import type { ChessReplaySpec } from '../chess-replay.js';
 import type { PlayerTitle } from '../player-titles.js';
-import type { CrossroadsReplaySpec } from '../crossroads-chess-replay.js';
 import type { DropMiniXiangqiReplaySpec } from '../drop-mini-xiangqi-replay.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
@@ -78,14 +77,6 @@ export type XiangqiReplayBlock = {
 export type ChessReplayBlock = {
   kind: 'chess-replay';
   spec: ChessReplaySpec;
-  caption?: string;
-};
-
-// Crossroads Chess analogue: a 6x8 board stepped through a UCI move list, each
-// position replayed through the real kernel and rendered by the live renderer.
-export type CrossroadsReplayBlock = {
-  kind: 'crossroads-replay';
-  spec: CrossroadsReplaySpec;
   caption?: string;
 };
 
@@ -364,7 +355,6 @@ export type ArticleBlock =
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | ShogiReplayBlock
-  | CrossroadsReplayBlock
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock

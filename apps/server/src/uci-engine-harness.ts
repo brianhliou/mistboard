@@ -1,6 +1,6 @@
 // Shared UCI subprocess harness for the in-process PvE move providers.
 //
-// Every "Tier-B" engine (Fairy-Stockfish for the perfect-info xiangqi/crossroads
+// Every "Tier-B" engine (Fairy-Stockfish for the perfect-info xiangqi
 // variants, PikaJieQi for jieqi, the MistyBanqi / MistyJungle / MistyJungleFlip
 // Rust binaries) drives a UCI subprocess with the SAME process lifecycle: a small
 // per-process concurrency pool, a per-request `spawn` that writes a command block
@@ -1330,7 +1330,7 @@ export class UciWarmSessionCache {
   }
 }
 
-// ── Fairy-Stockfish layer (the perfect-info xiangqi + crossroads providers) ───
+// ── Fairy-Stockfish layer (the perfect-info xiangqi providers) ───────────────
 
 // Resolve the FSF binary: explicit env override, else the known dev location, else
 // the Railway/railpack + system install locations. Throws (never silently falls

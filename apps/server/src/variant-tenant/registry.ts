@@ -172,7 +172,7 @@ export type VariantTenantRegistration = {
   engineDisplayName?: (clientId: string) => string | null;
   // Whether this registration is the spec's PRIMARY routing surface
   // (variantTenantForSpecId — today that means the lobby). True for tenants
-  // that solely own their spec (DMX, Dark Xiangqi, Crossroads). False for
+  // that solely own their spec (DMX, Dark Xiangqi). False for
   // registrations owning only a prefixed slice of a spec whose primary
   // surface lives elsewhere — dark-chess correspondence (dchx_) must not
   // shadow the legacy chess stack's lobby, which is reached via registry

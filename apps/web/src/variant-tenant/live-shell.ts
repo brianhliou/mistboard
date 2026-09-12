@@ -7,7 +7,7 @@
  * Deliberately separate from ./registry.ts: these hooks statically import the
  * tenant live-room modules, and only the live-room chunk (live-render/live.ts,
  * which already bundled those modules) may pay for that. Self-contained
- * clients (Crossroads) never appear here. The chess shell itself is the
+ * clients never appear here. The chess shell itself is the
  * fallback when no hook claims the room; it converges at the P2 migration.
  */
 

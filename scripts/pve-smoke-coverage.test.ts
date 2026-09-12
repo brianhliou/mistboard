@@ -24,8 +24,6 @@ const EXEMPT: Readonly<Record<string, string>> = {
   // Same engine and same code path as dark-chess; Draft960 is a pregame option
   // inside Fog of War, not a separate surface.
   'dark-draft960': 'prod:smoke:engines (same engine and path as dark-chess)',
-  // Flag-gated and not live in production; /api/bots offers it no PvE.
-  'crossroads-chess': 'flag-gated, no PvE offered in production',
   // Retired under #306: puzzles are live, games 501.
   'drop-mini-xiangqi': 'retired (#306), games 501',
   'mini-xiangqi': 'reserved in the gate, never built; every request 501s (#306)',

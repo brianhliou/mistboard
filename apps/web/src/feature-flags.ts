@@ -57,7 +57,7 @@ export function duckXiangqiEnabled(): boolean {
 }
 
 // Identity-hidden jieqi (揭棋) play surface. Always on in dev for convenience
-// (like DMX/Crossroads/correspondence); in prod/staging it is hidden unless the
+// (like DMX/correspondence); in prod/staging it is hidden unless the
 // build opts in.
 export function jieqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_JIEQI_ENABLED === 'true';
@@ -103,20 +103,6 @@ export function jungleFlipEnabled(): boolean {
 // VITE_CORRESPONDENCE_ENABLED=false still hides the surface for a build.
 export function correspondenceEnabled(): boolean {
   return import.meta.env.VITE_CORRESPONDENCE_ENABLED !== 'false';
-}
-
-// Perfect-information Crossroads Chess play surface. Explicit build-time opt-in
-// only; keep it disabled by default even in dev so it does not keep reappearing
-// after being removed from the active product surface.
-export function crossroadsChessEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_CROSSROADS_CHESS_ENABLED === 'true';
-}
-
-// Dark Crossroads Chess (the fog 6x8 variant) play surface. Server-side opt-in
-// is MISTBOARD_DARK_CROSSROADS_CHESS_ENABLED; this gates the landing picker and
-// deep links. Explicit build-time opt-in only.
-export function darkCrossroadsChessEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_DARK_CROSSROADS_CHESS_ENABLED === 'true';
 }
 
 // Dark Shogi (the fog 9x9 variant) play surface. Server-side opt-in is

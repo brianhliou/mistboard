@@ -664,7 +664,7 @@
    white king's stroke keeps it legible on green. */
 
 /* Chips auto-balance to the number of *visible* options: 2 dark-chess presets
-   split the row 50/50, 3 Crossroads presets split 33/33/33 — no dead gap from a
+   split the row 50/50, 3 presets split 33/33/33 — no dead gap from a
    fixed 3-column grid. Hidden chips drop out of flex flow. */
 .landing-time-presets {
   display: flex;

@@ -3,7 +3,7 @@
  *
  * Consolidates the time-budget logic that was copy-pasted as a naive
  * `min(tierCap, remaining - safety)` clamp across the server engine loops
- * (banqi, crossroads, drop-mini, fortress, jieqi, jungle, jungle-flip,
+ * (banqi, drop-mini, fortress, jieqi, jungle, jungle-flip,
  * mini-xiangqi). Those clamps were NOT clock-aware — no increment, no
  * moves-to-go — so the bot always tried to burn the fixed tier cap regardless of
  * how much clock it had. This mirrors the moves-to-go + increment model the

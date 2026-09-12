@@ -2,8 +2,8 @@
 //
 // Reveal Chess is identity-hidden (a per-color triptych like Jieqi) but on an
 // 8x8 CHESS board with white/black colors, so it cannot use the red/black tenant
-// watch generic (watch-tenant-replay.ts). It mirrors the Crossroads watch shape
-// (chess colors, postgame-API driven, SVG board) and adds the per-color triptych
+// watch generic (watch-tenant-replay.ts). It is a chess-colored, postgame-API
+// driven SVG watch and adds the per-color triptych
 // + face-down-aware captured pools. There is NO fog: the truth pane reveals every
 // identity; the per-color panes render the opponent's face-down pieces as discs
 // (the renderer keys off the view entry's faceDown flag, not a render option).

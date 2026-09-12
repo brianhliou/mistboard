@@ -1,7 +1,7 @@
 /**
  * Generic live-room WebSocket client — the single connection state machine for
- * every live surface: the self-contained tenant clients (Crossroads, Dark
- * Xiangqi) and, since the P2 web convergence, the chess/DMX liveState shell
+ * every live surface: the self-contained tenant clients (Dark Xiangqi,
+ * jieqi, banqi) and, since the P2 web convergence, the chess/DMX liveState shell
  * (live-socket.ts is now a thin frame-application adapter over this client).
  *
  * Owns everything connection-shaped and tenant-agnostic: the connection state

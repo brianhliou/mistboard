@@ -2,7 +2,7 @@
 // tenant on the generic live-client core (variant-tenant/live-client.ts owns
 // bootstrap, frame application, the renderAll skeleton, replay capture, and the
 // two-column move list). Modeled on the jieqi/banqi rooms but on an 8x8 CHESS
-// board with cburnett pieces (the Crossroads geometry) and standard white/black
+// board with cburnett pieces (the grid-board geometry) and standard white/black
 // colors.
 //
 // Reveal Chess is IDENTITY-hidden, not POSITION-hidden: both players see every

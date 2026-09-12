@@ -43,10 +43,6 @@ const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
   kriegspiel: 1,
   'reveal-chess': 1,
   'dark-crazyhouse': 1,
-  'dual-chess': 1,
-  // Crossroads chess: 6 x 8 (crossroads-chess-descriptor.ts).
-  'crossroads-chess': 6 / 8,
-  'dark-crossroads-chess': 6 / 8,
   // Jungle: 7 x 9 (jungle-render.ts). Flip jungle: 4 x 4 (jungle-flip-render.ts).
   jungle: 7 / 9,
   'jungle-flip': 1,

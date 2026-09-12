@@ -79,14 +79,14 @@ export type WebVariantTenant<C extends string> = {
   rejectedBody: string;
   spectatorBody: string;
   selectInstruction: string;
-  // Optional: how to label a seat's player. Default (chess/xiangqi/jieqi/crossroads):
+  // Optional: how to label a seat's player. Default (chess/xiangqi/jieqi):
   // capitalize(seat), because the seat name IS the color. Banqi overrides — its seats are
   // first/second mover and the ink is bound by the opening flip, so the label is the bound
   // ink ("Red"/"Black") once flipped, else the move order ("First"/"Second"). The tenant
   // reads its own live view for this; the chrome passes only the seat.
   seatLabel?(seat: C): string;
   // Optional companion to seatLabel: the INK a seat renders as, for the meta card's
-  // player disc. Omit when the seat name IS the color (chess/xiangqi/jieqi/crossroads)
+  // player disc. Omit when the seat name IS the color (chess/xiangqi/jieqi)
   // and the chrome passes the seat straight through. Flip variants MUST implement it:
   // their seats are move-order slots and the ink binds on the opening flip, so a raw
   // seat paints the wrong disc for every game whose first flip turns up the opposite
@@ -129,7 +129,7 @@ export type TenantChromeContext<C extends string> = {
   // play-again. Tenant-owned because the shared control reads liveState.
   rematchControls(sendSocket: (payload: unknown) => boolean): HTMLElement | null;
   // Optional suffix on the meta panel's Variant row (e.g. a time-control
-  // label: "Crossroads Chess · 5+5").
+  // label: "Jieqi · 5+5").
   variantDetail?(): string | null;
 };
 

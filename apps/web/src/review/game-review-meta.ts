@@ -66,8 +66,8 @@ export type ReviewMetaGame = {
 };
 
 export type ReviewMetaConfig = {
-  /** Finalized variant marker id (usually === GameSpecId; the crossroads pair maps
-   *  spec → VariantMiniId, so translate before calling). */
+  /** Finalized variant marker id (usually === GameSpecId; translate spec →
+   *  VariantMiniId before calling where they differ). */
   markerId?: VariantMiniId;
   /** Glyph fallback for variants without a finalized marker. */
   glyph?: string;

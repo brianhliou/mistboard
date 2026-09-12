@@ -70,25 +70,20 @@ const RETIRED = {
 test('game spec gate refuses every retired spec, by id and by legacy variant, whatever the flag', () => {
   // Retirement is decided in packages/game (runtimeStatus 'retired'); the
   // gate reads it and never consults a launch flag for a retired id.
-  assert.ok(RETIRED_GAME_SPEC_IDS.length >= 11);
+  assert.ok(RETIRED_GAME_SPEC_IDS.length >= 1);
   for (const id of RETIRED_GAME_SPEC_IDS) {
     assert.deepEqual(gateGameSpecRequest({ gameSpecId: id }), RETIRED, `gameSpecId ${id}`);
     assert.deepEqual(gateGameSpecRequest({ variant: id }), RETIRED, `variant ${id}`);
   }
-  withFlag('MISTBOARD_CROSSROADS_CHESS_ENABLED', true, () => {
-    assert.deepEqual(gateGameSpecRequest({ gameSpecId: 'crossroads-chess' }), RETIRED);
-  });
   withFlag('MISTBOARD_DARK_MINI_XIANGQI_ENABLED', true, () => {
     assert.deepEqual(gateGameSpecRequest({ variant: 'dark-mini-xiangqi' }), RETIRED);
   });
 });
 
 test('game spec gate refuses retired specs through their registry aliases', () => {
-  // 'dual-chess' is the pre-rename alias for crossroads-chess and
-  // 'fog-draft960' for dark-draft960; the gate answers the alias exactly like
-  // the canonical id. dark-draft960 is a CHESS-STACK id, so this also proves
-  // the retired check runs before the chess-stack pass.
-  assert.deepEqual(gateGameSpecRequest({ gameSpecId: 'dual-chess' }), RETIRED);
+  // 'fog-draft960' is the pre-rename alias for dark-draft960; the gate answers
+  // the alias exactly like the canonical id. dark-draft960 is a CHESS-STACK
+  // id, so this also proves the retired check runs before the chess-stack pass.
   assert.deepEqual(gateGameSpecRequest({ gameSpecId: 'fog-draft960' }), RETIRED);
   assert.deepEqual(gateGameSpecRequest({ gameSpecId: 'dark-draft960' }), RETIRED);
   assert.deepEqual(gateGameSpecRequest({ variant: 'fog-draft960' }), RETIRED);

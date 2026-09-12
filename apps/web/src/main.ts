@@ -371,7 +371,7 @@ const wantsDeepDive = import.meta.env.DEV && path === '/deepdive';
 // Hidden DEV-only engine-output inspector (replay board + per-ply move ranking).
 // No nav entry; spike for admin-gated engine self-review.
 const wantsEngineReview = import.meta.env.DEV && path === '/engine-review';
-// Tenants with a self-contained live client (Crossroads) are routed to it
+// Tenants with a self-contained live client are routed to it
 // *before* the shared live-room shell so they never touch the fog-critical
 // live.ts monolith; tenants riding the chess shell fall through to it.
 const tenantLiveRoomCandidate = liveRoomId ?? (wantsLive ? params.get('room') : null);

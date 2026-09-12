@@ -7,7 +7,7 @@ export function gameSpecIdForRoomBootstrap(
   requested: string | null,
 ): GameSpecId | null {
   // Only tenants riding the chess live shell resolve here; tenants with their
-  // own client (Crossroads) are routed before the shell ever boots.
+  // own client are routed before the shell ever boots.
   const tenant = webVariantTenantForRoomId(roomId);
   if (tenant && !tenant.loadLiveRoomClient) return tenant.gameSpecId;
   return isGameSpecId(requested) ? requested : null;

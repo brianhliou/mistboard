@@ -1,8 +1,8 @@
 // Pikafish-jieqi move provider for Jieqi (揭棋) PvE.
 //
 // The engine is the Pikafish `jieqi` / `jieqi_old` branch (our "PikaJieQi" binary)
-// driven as a UCI subprocess — the same Tier-B pattern as Crossroads/Fairy-Stockfish,
-// NOT the redaction-shaped Obscuro engine-worker (the fog engine). Unlike crossroads
+// driven as a UCI subprocess — the same Tier-B pattern as xiangqi/Fairy-Stockfish,
+// NOT the redaction-shaped Obscuro engine-worker (the fog engine). Unlike xiangqi
 // (perfect information, replayed from `position startpos moves ...`), jieqi has hidden
 // identities that the engine must NOT learn, so we hand it a redacted CURRENT-position
 // FEN built by jieqi-fen.ts. Live moves run on WARM sessions (UciWarmSessionCache) since

@@ -1,7 +1,7 @@
 /**
  * Golden wire-parity suite for the dark-chess (flagship) live-room runtime —
  * recorded BEFORE its P2 VariantTenant migration, same harness as the DMX /
- * Dark Xiangqi / Crossroads suites. Pins the per-seat snapshot payloads and
+ * Dark Xiangqi suites. Pins the per-seat snapshot payloads and
  * per-seat event-appended deltas for scripted games, plus fixture-independent
  * hidden-info invariants.
  *

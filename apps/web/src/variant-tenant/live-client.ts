@@ -162,7 +162,7 @@ export type TenantMoveListConfig<C extends string, M> = {
   /** Optional banner row above the list (e.g. the parachute bounce note). */
   banner?(): { className: string; text: string } | null;
   /**
-   * OPTIONAL full replacement for the standard two-column list (Crossroads:
+   * OPTIONAL full replacement for the standard two-column list (e.g.
    * clickable ply-jump buttons). Owns everything inside refs.moveList; the
    * core still renders the replay shell (meta line + scrub buttons) and
    * applies listClass. Tenants without it keep the standard list unchanged.
@@ -226,20 +226,6 @@ export type TenantReplayCaptureConfig<V> = {
 export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>, M> = {
   tenant: WebVariantTenant<C>;
   gameSpecId: string;
-  /**
-   * Set only by a tenant that emits `game_started`/`game_finished` itself, to
-   * stop this client emitting them a second time. Crossroads Chess is the one
-   * such tenant: it kept its own tracker through the migration to this client,
-   * and its version reports a real `rated: false` where this one can only say
-   * null. Anything else leaves this alone and gets the shared funnel.
-   */
-  emitsOwnLifecycleAnalytics?: boolean;
-  /**
-   * Layout sizing spec override when a variant reuses another's board layout
-   * (Dark Crossroads renders the crossroads-chess 6x8 board). Defaults to
-   * gameSpecId.
-   */
-  layoutGameSpecId?: string;
   /** Dev fallback room id when the URL carries none (e.g. 'jgl_dev'). */
   defaultRoomId: string;
   /** Board host class (e.g. 'jungle-live-board'); '--disabled' is appended for the off state. */
@@ -501,7 +487,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const boardStage = refs.board.closest<HTMLElement>('.board-stage');
     if (!boardStage) throw new Error('missing board stage');
     lifecycleEffects = createLiveLifecycleEffects(boardStage);
-    setLiveLayoutGameSpec(app, config.layoutGameSpecId ?? config.gameSpecId);
+    setLiveLayoutGameSpec(app, config.gameSpecId);
     chrome.setRenderTarget(refs, {
       sendSocket: send,
       reconnectNow: () => socket?.connect(),
@@ -626,7 +612,6 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   }
 
   function trackGameLifecycle(view: V | null): void {
-    if (config.emitsOwnLifecycleAnalytics) return;
     // Scrubbing a replay is not playing, and re-entering a finished room must
     // not re-emit its finish.
     if (!view || !replay.isLive()) return;

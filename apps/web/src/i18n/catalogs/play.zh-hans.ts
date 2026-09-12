@@ -121,8 +121,6 @@ export const ZH_HANS_PLAY = {
   'variant.revealChess.name': '翻开国际象棋',
   'variant.jungle.name': '斗兽棋',
   'variant.jungleFlip.name': '翻翻棋',
-  'variant.crossroadsChess.name': '十字路口国际象棋',
-  'variant.darkCrossroadsChess.name': '迷雾十字路口国际象棋',
   'variant.darkShogi.name': '迷雾将棋',
   'variant.jieqi.name': '揭棋',
   'live.abort': '中止',

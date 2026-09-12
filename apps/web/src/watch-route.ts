@@ -549,7 +549,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   ): Promise<void> => {
     const kind = watchRendererKindForGame(feed, roomId);
     if (!replayHandle || replayHandleKind !== kind || replayHandleAutoplay !== autoplay) {
-      // Family change (e.g. switching the channel to Crossroads): the live
+      // Family change (e.g. switching the channel to Jieqi): the live
       // renderer can't load the new game, so it's torn down and a different
       // chunk + postgame are fetched — two round trips. Paint a skeleton in the
       // board slot up front so the area gives feedback instead of going blank
@@ -1197,8 +1197,8 @@ function mergeWatchMetadata(
   for (const game of feed.unlocked) {
     target[game.roomId] = gameMetaForGame(game);
     // First/second-mover names for the tenant compact seats, resolved through the
-    // shared seat model (red/black for xiangqi + jungle, white/red for crossroads,
-    // white/black otherwise). The chess path reads names from metadataByRoomId.
+    // shared seat model (red/black for xiangqi + jungle, white/black
+    // otherwise). The chess path reads names from metadataByRoomId.
     const [firstSeat, secondSeat] = matchupSeats(game);
     namesTarget[game.roomId] = {
       first: displayParticipantName(game, firstSeat),
@@ -1365,7 +1365,7 @@ export function watchPovToggleApplies(variant: string): boolean {
 
 // The color words for the two side-perspective buttons, from the variant's
 // family: the chess family reads White/Black; every other family (xiangqi,
-// jungle, shogi, crossroads, …) reads Red vs its second-seat word — "Blue" for
+// jungle, shogi, …) reads Red vs its second-seat word — "Blue" for
 // the Jungle family, "Black" elsewhere (see variant-seat-label.ts). paneKind
 // 'white' is the first/red/white seat, 'black' the second.
 function watchPovSideLabels(variant: string): { first: string; second: string } {
@@ -1770,8 +1770,7 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
 
 // The shared variant marker for each watch channel, so the TV rail reads in
 // the same icon language as the picker, rules rail, leaderboard, and profile.
-// Channel ids match VariantMiniId ids except crossroads-chess -> crossroads;
-// the dark-chess channel (which also carries dark-draft960 games) shows the
+// Channel ids match VariantMiniId ids; the dark-chess channel (which also carries dark-draft960 games) shows the
 // dark-chess marker. An unmapped channel keeps its (empty) marker slot so the
 // rows stay grid-aligned.
 const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
@@ -1785,8 +1784,6 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
-  'crossroads-chess': 'crossroads',
-  'dark-crossroads-chess': 'dark-crossroads',
   'dark-shogi': 'dark-shogi',
   'dark-crazyhouse': 'dark-crazyhouse',
   kriegspiel: 'kriegspiel',

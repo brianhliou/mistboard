@@ -235,8 +235,6 @@ describe('landing play panel', () => {
     vi.stubEnv('VITE_JIEQI_ENABLED', 'false');
     vi.stubEnv('VITE_BANQI_ENABLED', 'false');
     vi.stubEnv('VITE_REVEAL_CHESS_ENABLED', 'false');
-    vi.stubEnv('VITE_CROSSROADS_CHESS_ENABLED', 'false');
-    vi.stubEnv('VITE_DARK_CROSSROADS_CHESS_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'false');
     vi.stubGlobal(

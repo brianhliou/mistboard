@@ -2,11 +2,8 @@ import './variant-mini-boards.css';
 import { PIECE_SVGS } from '@mistboard/board-render';
 import {
   ALL_JUNGLE_FLIP_SQUARES,
-  createInitialCrossroadsChessState,
   createInitialJungleState,
   createInitialXiangqiState,
-  crossroadsChessSquareOf,
-  getCrossroadsChessVisibleSquares,
   getPlayerView as getXiangqiPlayerView,
   type ShogiPiece,
   type ShogiPieceRole,
@@ -66,14 +63,12 @@ export type VariantMiniId =
   | 'duck-xiangqi'
   | 'jieqi'
   | 'banqi'
-  | 'crossroads'
   | 'kriegspiel'
   | 'reveal-chess'
   | 'shogi'
   | 'dark-shogi'
   | 'crazyhouse'
   | 'dark-crazyhouse'
-  | 'dark-crossroads'
   | 'jungle'
   | 'jungle-flip';
 
@@ -653,76 +648,6 @@ function banqiBody(ctx: MiniCtx): string {
   ].join('');
 }
 
-function crossroadsBody(
-  ctx: MiniCtx,
-  fogCells: readonly (readonly [number, number])[] = [],
-): string {
-  // The crossroads: xiangqi pieces hold the left flank, chess pieces the right,
-  // on one chess checker. Bottom rank cannon-horse | knight-king; the rank in
-  // front two soldiers | two pawns. The river gets its own band along the top,
-  // so the checker sits fully below it (no clipped top row). Dark Crossroads
-  // fog cells are supplied by the actual opening vision crop below.
-  const riverH = 7;
-  const boardTop = OY + riverH;
-  const cw = SIZE / 4;
-  const ch = (SIZE - riverH) / 4;
-  const cx = (c: number) => OX + (c + 0.5) * cw;
-  const cy = (r: number) => boardTop + (r + 0.5) * ch;
-  const pieceCell = Math.min(cw, ch);
-  const disc = pieceCell * 0.86;
-  const cells: string[] = [];
-  for (let r = 0; r < 4; r += 1) {
-    for (let c = 0; c < 4; c += 1) {
-      const light = (r + c) % 2 === 0;
-      cells.push(
-        `<rect class="${light ? 'vm-sq-light' : 'vm-sq-dark'}" x="${OX + c * cw}" y="${boardTop + r * ch}" width="${cw}" height="${ch}"/>`,
-      );
-    }
-  }
-  const river = `<rect class="vm-river" x="${OX}" y="${OY}" width="${SIZE}" height="${riverH}"/>`;
-  const fog: string[] = [];
-  for (const [c, r] of fogCells) {
-    const x = OX + c * cw;
-    const y = boardTop + r * ch;
-    fog.push(`<rect class="vm-chess-fog" x="${x}" y="${y}" width="${cw}" height="${ch}"/>`);
-    fog.push(
-      `<rect class="vm-chess-fog-inset" x="${x + 0.5}" y="${y + 0.5}" width="${cw - 1}" height="${ch - 1}" fill="none" stroke-width="0.8"/>`,
-    );
-  }
-  const pieces = [
-    xiangqiDisc(cx(0), cy(3), disc, 'black', 'cannon', ctx.xqSet),
-    xiangqiDisc(cx(1), cy(3), disc, 'black', 'horse', ctx.xqSet),
-    xiangqiDisc(cx(0), cy(2), disc, 'black', 'soldier', ctx.xqSet),
-    xiangqiDisc(cx(1), cy(2), disc, 'black', 'soldier', ctx.xqSet),
-    chessPieceAt('white:knight', cx(2), cy(3), pieceCell, ctx.chessSet),
-    chessPieceAt('white:king', cx(3), cy(3), pieceCell, ctx.chessSet),
-    chessPieceAt('white:pawn', cx(2), cy(2), pieceCell, ctx.chessSet),
-    chessPieceAt('white:pawn', cx(3), cy(2), pieceCell, ctx.chessSet),
-  ];
-  return [cells.join(''), river, ...fog, ...pieces].join('');
-}
-
-const DARK_CROSSROADS_FOG_CELLS = darkCrossroadsMiniFogCells();
-
-function darkCrossroadsMiniFogCells(): readonly (readonly [number, number])[] {
-  const visible = new Set(
-    getCrossroadsChessVisibleSquares(
-      createInitialCrossroadsChessState('crossroads-mini-tile'),
-      'white',
-    ),
-  );
-  const cells: Array<readonly [number, number]> = [];
-  // The marker crop is files b..e and ranks 4..1. In the real opening, pawns on
-  // d/e see two empty ranks ahead, while soldiers on b/c see only one.
-  for (let r = 0; r < 4; r += 1) {
-    for (let c = 0; c < 4; c += 1) {
-      const square = crossroadsChessSquareOf(c + 1, 4 - r);
-      if (!visible.has(square)) cells.push([c, r]);
-    }
-  }
-  return cells;
-}
-
 // Crazyhouse: a chess crop with the variant's signature reserve. Captured pieces
 // flip sides and wait "in hand" to be dropped back onto the board, so the marker
 // pairs a 4x3 checker over a hand tray of waiting pieces.
@@ -928,14 +853,12 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   'duck-xiangqi': duckXiangqiBody,
   jieqi: jieqiBody,
   banqi: banqiBody,
-  crossroads: crossroadsBody,
   kriegspiel: kriegspielBody,
   'reveal-chess': revealChessBody,
   shogi: () => shogiBody(false),
   'dark-shogi': () => shogiBody(true),
   crazyhouse: crazyhouseBody,
   'dark-crazyhouse': crazyhouseBody,
-  'dark-crossroads': (ctx) => crossroadsBody(ctx, DARK_CROSSROADS_FOG_CELLS),
   jungle: () => jungleBody(),
   'jungle-flip': () => jungleFlipBody(),
 };
@@ -1039,14 +962,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     family: 'xiangqi',
   },
   {
-    id: 'crossroads',
-    label: 'Crossroads Chess',
-    shortLabel: 'CR',
-    accent: '#3f7d4e',
-    blurb: 'Xiangqi cannon and horse beside chess knight and king, river on top.',
-    family: 'chess',
-  },
-  {
     id: 'kriegspiel',
     label: 'Kriegspiel',
     shortLabel: 'KS',
@@ -1092,14 +1007,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'DCZ',
     accent: '#884230',
     blurb: 'Dark Crazyhouse uses the Crazyhouse drop marker while the variant art settles.',
-    family: 'chess',
-  },
-  {
-    id: 'dark-crossroads',
-    label: 'Dark Crossroads',
-    shortLabel: 'DCR',
-    accent: '#2f5e3a',
-    blurb: 'Crossroads opening vision: pawns see two ranks ahead, soldiers one.',
     family: 'chess',
   },
   {

@@ -18,9 +18,7 @@ import { parseArgs } from 'node:util';
 import pg from 'pg';
 
 import { banqiTenant } from './banqi-tenant.js';
-import { crossroadsChessTenant } from './crossroads-chess-tenant.js';
 import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
-import { darkCrossroadsChessTenant } from './dark-crossroads-chess-tenant.js';
 import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
 import { darkShogiTenant } from './dark-shogi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
@@ -51,8 +49,6 @@ const TENANTS: any[] = [
   fortressXiangqiTenant,
   duckXiangqiTenant,
   revealChessTenant,
-  crossroadsChessTenant,
-  darkCrossroadsChessTenant,
   darkShogiTenant,
   darkCrazyhouseTenant,
   kriegspielTenant,

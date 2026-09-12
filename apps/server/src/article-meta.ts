@@ -22,9 +22,7 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
 // because articles-meta-sync.test.ts fails when the two disagree. Do not edit
 // one end alone.
 const RETIRED_RULES_SLUGS = new Set([
-  'crossroads-chess',
   'dark-crazyhouse',
-  'dark-crossroads-chess',
   'dark-draft960',
   'dark-mini-xiangqi',
   'dark-shogi',
@@ -201,12 +199,6 @@ export const ARTICLE_META: Record<
     description:
       'Xiangqi with a pocket: faithful piece movement plus crazyhouse-style drops and the new Treasure piece.',
   },
-  'crossroads-chess': {
-    title: 'Crossroads Chess Rules',
-    kind: 'rules',
-    description:
-      'A modern variant that fuses chess and xiangqi on a 6 by 8 river board. The pieces you already know from both games, and two ways to win: checkmate, or race your king across.',
-  },
   shogi: {
     title: 'Shogi Rules',
     kind: 'rules',
@@ -254,12 +246,6 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Crazyhouse under Fog of War: captured pieces flip color into your hand and drop back into play, hands are private, you can parachute a drop into the fog, and the king falls by capture.',
-  },
-  'dark-crossroads-chess': {
-    title: 'Dark Crossroads Chess Rules',
-    kind: 'rules',
-    description:
-      'Crossroads Chess under Fog of War: each side sees only the squares its pieces reach, there are no check warnings, the king falls by capture, and the race to the far rank becomes a one-move gamble in the dark.',
   },
   jieqi: {
     title: 'Jieqi Rules (Reveal Xiangqi)',

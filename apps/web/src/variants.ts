@@ -10,10 +10,8 @@
 
 import {
   BANQI_SPEC_ID,
-  CROSSROADS_CHESS_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_SHOGI_SPEC_ID,
@@ -36,9 +34,7 @@ import {
 } from '@mistboard/game';
 import {
   banqiEnabled,
-  crossroadsChessEnabled,
   darkCrazyhouseEnabled,
-  darkCrossroadsChessEnabled,
   darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
@@ -83,14 +79,12 @@ const dropMiniXiangqiOn = false;
 const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
-const crossroadsEnabled = crossroadsChessEnabled();
 const jieqiOn = jieqiEnabled();
 const banqiOn = banqiEnabled();
 const jungleOn = jungleEnabled();
 const jungleFlipOn = jungleFlipEnabled();
 const revealChessOn = revealChessEnabled();
 const darkXiangqiOn = darkXiangqiEnabled();
-const darkCrossroadsChessOn = darkCrossroadsChessEnabled();
 // Fog Shogi is parked for the xiangqi-focused launch. Keep its marker and
 // history mappings, but do not expose a rating/profile surface when its
 // development flag is enabled.
@@ -105,8 +99,6 @@ const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
-const crossroadsChessSpec = gameSpecForId(CROSSROADS_CHESS_SPEC_ID);
-const darkCrossroadsChessSpec = gameSpecForId(DARK_CROSSROADS_CHESS_SPEC_ID);
 const darkShogiSpec = gameSpecForId(DARK_SHOGI_SPEC_ID);
 const darkCrazyhouseSpec = gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID);
 const kriegspielSpec = gameSpecForId(KRIEGSPIEL_SPEC_ID);
@@ -132,8 +124,6 @@ const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
   [REVEAL_CHESS_SPEC_ID]: 'reveal-chess',
-  [CROSSROADS_CHESS_SPEC_ID]: 'crossroads',
-  [DARK_CROSSROADS_CHESS_SPEC_ID]: 'dark-crossroads',
   [DARK_SHOGI_SPEC_ID]: 'dark-shogi',
   [DARK_CRAZYHOUSE_SPEC_ID]: 'dark-crazyhouse',
   [KRIEGSPIEL_SPEC_ID]: 'kriegspiel',
@@ -306,29 +296,6 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: false,
     onProfile: false,
   },
-  // Perfect-information Crossroads stays in the registry for old records and
-  // explicit local experiments, but is hidden from active product surfaces
-  // unless the play flag is deliberately enabled.
-  {
-    id: currentRatingVariantForSpec(CROSSROADS_CHESS_SPEC_ID),
-    gameSpecId: crossroadsChessSpec.id,
-    apiParam: CROSSROADS_CHESS_SPEC_ID,
-    label: crossroadsChessSpec.publicName,
-    miniId: 'crossroads',
-    enabled: crossroadsEnabled,
-    onLeaderboard: crossroadsEnabled,
-    onProfile: crossroadsEnabled,
-  },
-  {
-    id: currentRatingVariantForSpec(DARK_CROSSROADS_CHESS_SPEC_ID),
-    gameSpecId: darkCrossroadsChessSpec.id,
-    apiParam: DARK_CROSSROADS_CHESS_SPEC_ID,
-    label: darkCrossroadsChessSpec.publicName,
-    miniId: 'dark-crossroads',
-    enabled: false,
-    onLeaderboard: darkCrossroadsChessOn,
-    onProfile: darkCrossroadsChessOn,
-  },
   {
     id: currentRatingVariantForSpec(DARK_MINI_XIANGQI_SPEC_ID),
     gameSpecId: darkMiniXiangqiSpec.id,
@@ -376,7 +343,7 @@ export function variantMiniIdForRating(id: RatingVariantId): VariantMiniId | nul
 
 /**
  * Mini-board id for a raw persisted variant string (e.g. a FeaturedGame.variant
- * off the wire), normalizing legacy aliases (fog, draft960, dual-chess) through
+ * off the wire), normalizing legacy aliases (fog, draft960) through
  * their canonical game spec first. Null if the string maps to no marker.
  */
 export function variantMiniIdForRawVariant(variant: string): VariantMiniId | null {

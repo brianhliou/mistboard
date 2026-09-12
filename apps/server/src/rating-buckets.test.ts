@@ -2,10 +2,8 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   BANQI_SPEC_ID,
-  CROSSROADS_CHESS_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_SHOGI_SPEC_ID,
@@ -57,20 +55,6 @@ test('bucketForGame maps Dark Mini Xiangqi through its own rating pool', () => {
   );
 });
 
-test('bucketForGame maps Crossroads Chess through its own open rating pool', () => {
-  assert.deepEqual(
-    bucketForGame({
-      variant: CROSSROADS_CHESS_SPEC_ID,
-      initialMs: 180_000,
-      incrementMs: 2_000,
-    }),
-    {
-      variant: gameSpecForId(CROSSROADS_CHESS_SPEC_ID).ratingPoolBase,
-      timeClass: PUBLIC_RATING_TIME_CLASS,
-    },
-  );
-});
-
 test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => {
   assert.deepEqual(
     bucketForGame({ variant: JIEQI_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 }),
@@ -101,11 +85,7 @@ test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => 
 });
 
 test('bucketForGame maps the remaining live PvP variants through their own rating pools', () => {
-  for (const specId of [
-    DARK_CROSSROADS_CHESS_SPEC_ID,
-    DARK_SHOGI_SPEC_ID,
-    DARK_CRAZYHOUSE_SPEC_ID,
-  ] as const) {
+  for (const specId of [DARK_SHOGI_SPEC_ID, DARK_CRAZYHOUSE_SPEC_ID] as const) {
     assert.deepEqual(bucketForGame({ variant: specId, initialMs: 180_000, incrementMs: 2_000 }), {
       variant: gameSpecForId(specId).ratingPoolBase,
       timeClass: PUBLIC_RATING_TIME_CLASS,
@@ -127,11 +107,11 @@ test('bucketForGame buckets each rated live pace into its own time class', () =>
   });
   assert.deepEqual(
     bucketForGame({
-      variant: CROSSROADS_CHESS_SPEC_ID,
+      variant: DARK_SHOGI_SPEC_ID,
       initialMs: 300_000,
       incrementMs: 5_000,
     }),
-    { variant: gameSpecForId(CROSSROADS_CHESS_SPEC_ID).ratingPoolBase, timeClass: 'rapid' },
+    { variant: gameSpecForId(DARK_SHOGI_SPEC_ID).ratingPoolBase, timeClass: 'rapid' },
   );
 });
 
@@ -152,15 +132,11 @@ test('parseRatingVariant keeps legacy leaderboard API params stable', () => {
   assert.equal(parseRatingVariant('dark-draft960'), 'fog_draft960');
   assert.equal(parseRatingVariant('dark-mini-xiangqi'), 'dark_mini_xiangqi');
   assert.equal(parseRatingVariant('dark_mini_xiangqi'), 'dark_mini_xiangqi');
-  assert.equal(parseRatingVariant('crossroads-chess'), 'crossroads_chess_open');
-  assert.equal(parseRatingVariant('crossroads_chess_open'), 'crossroads_chess_open');
   assert.equal(parseRatingVariant('jieqi'), 'jieqi');
   assert.equal(parseRatingVariant('banqi'), 'banqi');
   assert.equal(parseRatingVariant('reveal-chess'), 'reveal_chess');
   assert.equal(parseRatingVariant('dark-xiangqi'), 'dark_xiangqi');
   assert.equal(parseRatingVariant('dark_xiangqi'), 'dark_xiangqi');
-  assert.equal(parseRatingVariant('dark-crossroads-chess'), 'crossroads_chess');
-  assert.equal(parseRatingVariant('crossroads_chess'), 'crossroads_chess');
   assert.equal(parseRatingVariant('dark-shogi'), 'dark_shogi');
   assert.equal(parseRatingVariant('dark_shogi'), 'dark_shogi');
   assert.equal(parseRatingVariant('dark-crazyhouse'), 'dark_crazyhouse');

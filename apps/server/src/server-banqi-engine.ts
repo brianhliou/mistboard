@@ -2,7 +2,7 @@
  * Server-side MistyBanqi loop for Banqi (半棋) PvE.
  *
  * Tier-B: banqi is driven by our `banqi-engine` UCI subprocess (banqi-engine.ts), the
- * same shape as jieqi/Crossroads — NOT the hidden-info Misty engine-worker. Banqi has
+ * same shape as jieqi/xiangqi — NOT the hidden-info Misty engine-worker. Banqi has
  * hidden piece IDENTITIES, so we hand the engine a redacted current-position FEN built
  * by banqi-fen.ts from canonical state. Engine moves are injected through the same
  * append+broadcast path as human moves, so clocks, persistence, reconnect, and review

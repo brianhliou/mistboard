@@ -1,19 +1,9 @@
-import { CROSSROADS_CHESS_SPEC_ID, XIANGQI_SPEC_ID } from '@mistboard/game';
+import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { databaseMatchupLabel, databaseReviewHref } from './database.js';
 import type { FeaturedGame } from './game-display.js';
 
 describe('database game rows', () => {
-  it('labels Crossroads rows as white vs red', () => {
-    expect(
-      databaseMatchupLabel({
-        ...baseGame(),
-        variant: CROSSROADS_CHESS_SPEC_ID,
-        participants: [participant('white', 'White Player'), participant('red', 'Red Player')],
-      }),
-    ).toBe('White Player vs Red Player');
-  });
-
   it('keeps dark chess rows as white vs black', () => {
     expect(
       databaseMatchupLabel({
@@ -50,7 +40,7 @@ describe('databaseReviewHref', () => {
   // Regression: variant-tenant games replay only under their own postgame route.
   // The legacy /game/:id review shell knows only the chess-shell event union and
   // 403s (game_not_public) on a variant event log, so linking a jungle-flip /
-  // xiangqi / crossroads row to /game/:id produced "failed to load events: 403".
+  // xiangqi row to /game/:id produced "failed to load events: 403".
   it('routes variant-tenant games to their own postgame route by room-id prefix', () => {
     expect(databaseReviewHref('jgf_abc123')).toBe('/jungle-flip/game/jgf_abc123');
     expect(databaseReviewHref('xq_deadbeef')).toBe('/xiangqi/game/xq_deadbeef');

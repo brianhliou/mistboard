@@ -15,15 +15,12 @@
 
 import {
   BANQI_SPEC_ID,
-  CROSSROADS_CHESS_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
-  DUAL_CHESS_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
@@ -42,9 +39,7 @@ import {
 } from '@mistboard/game';
 import {
   correspondenceEnabled,
-  crossroadsChessEnabled,
   darkCrazyhouseEnabled,
-  darkCrossroadsChessEnabled,
   darkMiniXiangqiEnabled,
   darkShogiEnabled,
   darkXiangqiEnabled,
@@ -126,7 +121,7 @@ export type WebVariantTenant = {
   // games are linked from shared surfaces set it; others keep the legacy
   // /game/:id link those surfaces always produced.
   reviewRouteBase?: string;
-  // Self-contained live-room client (Crossroads). Resolves to the bootstrap
+  // Self-contained live-room client. Resolves to the bootstrap
   // function so callers can preload the chunk before swapping the URL/DOM.
   // Tenants without one ride the chess live shell (live.ts) and register
   // hooks in ./live-shell.ts instead.
@@ -1017,127 +1012,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       acceptsDeepLink: revealChessEnabled,
     },
   },
-  // Perfect-information Crossroads is intentionally ranked last in the lobby
-  // play-menu: it is the platform's one perfect-info surface (everything else
-  // is hidden-info), kept playable but de-emphasized.
-  {
-    gameSpecId: CROSSROADS_CHESS_SPEC_ID,
-    legacyGameSpecIds: [DUAL_CHESS_SPEC_ID],
-    roomIdPrefix: 'dchess_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Crossroads Chess',
-    gameRouteBase: '/crossroads-chess/game',
-    mountPostgame: (root, roomId) =>
-      import('../crossroads-chess-postgame.js').then(({ mountCrossroadsChessPostgame }) =>
-        mountCrossroadsChessPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/crossroads-chess/game',
-    // Routed to its own isolated client before the shared live-room shell so
-    // it never touches the fog-critical live.ts monolith.
-    loadLiveRoomClient: () =>
-      import('../live-crossroads-chess.js').then(
-        ({ bootstrapCrossroadsChessLiveRoom }) =>
-          () =>
-            bootstrapCrossroadsChessLiveRoom(),
-      ),
-    watch: {
-      family: 'crossroads-chess',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-crossroads-chess-replay.js').then(({ mountCrossroadsChessWatchReplay }) =>
-          mountCrossroadsChessWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        firstColor: 'white',
-        firstGlyph: '♚',
-        firstLabel: 'White',
-        secondColor: 'black',
-        secondGlyph: '♚',
-        secondLabel: 'Black',
-        supportsRated: false,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: crossroadsChessEnabled,
-      acceptsDeepLink: crossroadsChessEnabled,
-      // Ordered strongest-first so the toughest opponent sits at the top of the picker.
-      engineOptions: [
-        {
-          id: 'fairy-stockfish-crossroads-very-strong',
-          name: 'Fairy Stockfish - Strongest',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-crossroads-strong',
-          name: 'Fairy Stockfish - Strong',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-crossroads-amateur',
-          name: 'Fairy Stockfish - Amateur',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'fairy-stockfish-crossroads-strong',
-    },
-  },
-  {
-    // Dark Crossroads Chess (fog 6x8): the FOG sibling of perfect-info
-    // Crossroads. A self-contained live client on the socket-client + chrome
-    // stack with the fog-safe replay-CAPTURE model (live-dark-crossroads-chess.ts,
-    // NOT the open client's reconstruct-from-state path, which would leak under
-    // fog); the board renderer is shared with the open variant (already
-    // fog-aware). PvP-only — Fairy-Stockfish is perfect-info and can't play fog
-    // crossroads, so there is no PvE. Postgame review and Mistboard TV share the
-    // white/truth/red fog triptych.
-    gameSpecId: DARK_CROSSROADS_CHESS_SPEC_ID,
-    roomIdPrefix: 'ddchess_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Dark Crossroads Chess',
-    gameRouteBase: '/dark-crossroads-chess/game',
-    mountPostgame: (root, roomId) =>
-      import('../dark-crossroads-chess-postgame.js').then(({ mountDarkCrossroadsChessPostgame }) =>
-        mountDarkCrossroadsChessPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/dark-crossroads-chess/game',
-    loadLiveRoomClient: () =>
-      import('../live-dark-crossroads-chess.js').then(
-        ({ bootstrapDarkCrossroadsChessLiveRoom }) =>
-          () =>
-            bootstrapDarkCrossroadsChessLiveRoom(),
-      ),
-    watch: {
-      family: 'crossroads-chess',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-dark-crossroads-chess-replay.js').then(
-          ({ mountDarkCrossroadsChessWatchReplay }) =>
-            mountDarkCrossroadsChessWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      // White vs Red (the variant's actual colors), so the picker's
-      // preferredColor maps straight onto the room route's parser.
-      capabilities: {
-        firstColor: 'white',
-        firstGlyph: '♚',
-        firstLabel: 'White',
-        secondColor: 'red',
-        secondGlyph: '♚',
-        secondLabel: 'Red',
-        supportsRated: false,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: darkCrossroadsChessEnabled,
-      acceptsDeepLink: darkCrossroadsChessEnabled,
-    },
-  },
   {
     // Dark Shogi (fog 9x9): a fog tenant on the socket-client + chrome stack with
     // the fog-safe replay-CAPTURE model (live-dark-shogi.ts). Net-new surface vs
@@ -1298,7 +1172,7 @@ export function webVariantTenantForRoomId(roomId: string): WebVariantTenant | nu
 }
 
 // Spec-id lookup, accepting legacy aliases (persisted records and deep links
-// can still carry 'dual-chess').
+// can still carry a pre-rename id).
 export function webVariantTenantForSpecId(value: string | null): WebVariantTenant | null {
   if (!value) return null;
   return (

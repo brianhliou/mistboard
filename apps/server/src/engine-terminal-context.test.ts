@@ -1,7 +1,6 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import { banqiTenant } from './banqi-tenant.js';
-import { crossroadsChessTenant } from './crossroads-chess-tenant.js';
 import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
@@ -17,7 +16,6 @@ test('every engine tenant declares its terminal-context transport', () => {
   assert.deepEqual(
     {
       banqi: banqiTenant.engine?.terminalContext,
-      crossroads: crossroadsChessTenant.engine?.terminalContext,
       darkChess: darkChessTenant.engine?.terminalContext,
       darkMiniXiangqi: darkMiniXiangqiTenant.engine?.terminalContext,
       darkXiangqi: darkXiangqiTenant.engine?.terminalContext,
@@ -31,7 +29,6 @@ test('every engine tenant declares its terminal-context transport', () => {
     },
     {
       banqi: 'repetition-window',
-      crossroads: 'full-history',
       darkChess: 'fog-observation',
       darkMiniXiangqi: 'fog-observation',
       darkXiangqi: 'fog-observation',

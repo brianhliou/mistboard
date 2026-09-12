@@ -122,7 +122,6 @@ const BLOCK_PROSE: {
   'duck-xiangqi-replay': replay,
   'shogi-replay': replay,
   'chess-replay': replay,
-  'crossroads-replay': replay,
   'jieqi-replay': replay,
   'banqi-replay': replay,
   'jungle-replay': replay,

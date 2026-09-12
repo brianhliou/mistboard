@@ -11,7 +11,7 @@
  *
  * Piece ART (which set) is swapped in JS instead: an inline-SVG <image> href or
  * baked glyph can't be driven by CSS. Piece INK (the xiangqi cream disc + red/
- * black marks, the chess-fog tint, the crossroads river accent) is fixed by
+ * black marks, the chess-fog tint) is fixed by
  * intent, so those classes carry literal colours. */
 
 .variant-mini .vm-sq-light {

@@ -761,23 +761,6 @@ describe('tenant game lifecycle analytics', () => {
     });
   });
 
-  it('stays silent for a tenant that emits its own', () => {
-    // Crossroads Chess kept its own tracker through the migration to this
-    // client. Without the opt-out it would report every game twice, and a
-    // doubled variant in a funnel is worse than a missing one: the missing one
-    // is visibly zero.
-    const h = createHarness({
-      gameSpecId: BANQI_SPEC_ID,
-      emitsOwnLifecycleAnalytics: true,
-    });
-    h.feedSnapshot({ state: view({ status: { type: 'playing', turn: 'red' } }) });
-    h.feedSnapshot({
-      state: view({ status: { type: 'finished', winner: 'red', reason: 'no-moves' } }),
-    });
-    expect(named('game_started')).toHaveLength(0);
-    expect(named('game_finished')).toHaveLength(0);
-  });
-
   it('survives a gameSpecId the registry does not know', () => {
     // Variant dispatch is fail-closed and throws on an unknown id. Measurement
     // must not: an analytics call that can take down a live room is worse than

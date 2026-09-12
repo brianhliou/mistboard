@@ -392,7 +392,7 @@ function buildResults(data: QueryResponse, onApply: (next: Filters) => void): HT
 }
 
 // Review-link target for a database row. Variant-tenant games (xiangqi / jungle
-// / crossroads / ... families) replay only under their own postgame route: the
+// / ... families) replay only under their own postgame route: the
 // legacy /game/:id review shell knows only the chess-shell event union and 403s
 // on their event log (`game_not_public`). Resolve the tenant by room-id prefix
 // and link to its postgame mount (gameRouteBase). Chess-family games and tenants

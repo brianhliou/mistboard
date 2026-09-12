@@ -10,23 +10,6 @@ describe('variant mini-board markers', () => {
     expect(svg.match(/class="vm-chess-fog"/g)).toHaveLength(15);
   });
 
-  it('renders the Dark Crossroads marker as a fogged river board', () => {
-    const svg = renderVariantMiniBoard('dark-crossroads', { size: 100 });
-    const host = document.createElement('div');
-    host.innerHTML = svg;
-    const fogCells = [...host.querySelectorAll<SVGRectElement>('rect.vm-chess-fog')].map((rect) => [
-      rect.getAttribute('x'),
-      rect.getAttribute('y'),
-    ]);
-
-    expect(svg).toContain('data-mini-id="dark-crossroads"');
-    expect(svg).toContain('vm-river');
-    expect(fogCells).toEqual([
-      ['2', '9'],
-      ['26', '9'],
-    ]);
-  });
-
   it('renders the Dark Crazyhouse marker with the shared Crazyhouse image', () => {
     const svg = renderVariantMiniBoard('dark-crazyhouse', { size: 100 });
 
@@ -113,8 +96,6 @@ describe('variant mini-board markers', () => {
     expect(root.querySelectorAll('.variant-color-state-row')).toHaveLength(6);
     expect(root.querySelectorAll('.variant-color-state-card')).toHaveLength(54);
     expect(root.querySelector('svg[data-mini-id="kriegspiel"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="crossroads"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="dark-crossroads"]')).toBeNull();
     expect(root.querySelector('svg[data-mini-id="dark-crazyhouse"]')).toBeNull();
     expect(root.querySelector('svg[data-mini-id="mini-xiangqi"]')).toBeNull();
     expect(root.querySelector('svg[data-mini-id="dark-mini-xiangqi"]')).toBeNull();

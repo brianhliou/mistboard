@@ -20,7 +20,6 @@ describe('landing announcements', () => {
   it('shows current launch announcements without old variant env flags', () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'false');
-    vi.stubEnv('VITE_DARK_CROSSROADS_CHESS_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'false');
     vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'false');
 
@@ -57,8 +56,6 @@ describe('landing announcements', () => {
     );
 
     expect(hrefs).not.toContain('/rules/reveal-chess');
-    expect(hrefs).not.toContain('/rules/crossroads-chess');
-    expect(hrefs).not.toContain('/rules/dark-crossroads-chess');
     expect(hrefs).not.toContain('/rules/kriegspiel');
   });
 
@@ -66,21 +63,13 @@ describe('landing announcements', () => {
     vi.stubEnv('DEV', false);
 
     expect(variantPublicSurfaceEnabled('reveal-chess')).toBe(false);
-    expect(variantPublicSurfaceEnabled('crossroads-chess')).toBe(false);
-    expect(variantPublicSurfaceEnabled('dark-crossroads-chess')).toBe(false);
     expect(variantPublicSurfaceEnabled('dark-shogi')).toBe(false);
     expect(variantPublicSurfaceEnabled('kriegspiel')).toBe(false);
 
     const landing = buildLandingAnnouncements();
     const news = buildNewsPage();
 
-    for (const hidden of [
-      'Reveal Chess',
-      'Crossroads Chess',
-      'Dark Crossroads Chess',
-      'Fog Shogi',
-      'Kriegspiel',
-    ]) {
+    for (const hidden of ['Reveal Chess', 'Fog Shogi', 'Kriegspiel']) {
       expect(landing.textContent).not.toContain(hidden);
       expect(news.textContent).not.toContain(hidden);
     }

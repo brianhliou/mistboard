@@ -6,7 +6,7 @@
 // bar with a ply line below (no move list). Rendering the server-computed fog
 // views (postgame `history`) rather than recomputing client-side keeps it
 // leak-safe. The shared viewer is a candidate to extract once a third variant
-// (Crossroads) needs watch; until then it stays a parallel tenant.
+// needs watch; until then it stays a parallel tenant.
 import type { MiniXiangqiColor } from '@mistboard/game';
 import {
   type DarkMiniXiangqiPostgameResponse,

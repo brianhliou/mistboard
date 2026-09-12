@@ -40,10 +40,8 @@ import {
 // It has to be SQL rather than the TS ratingPoolForSpec because the mapping
 // depends on columns, not just the id: a dark-chess row with hidden_draft960 is
 // a fog_draft960 game. It also absorbs pre-rename variant strings ('fog',
-// 'draft960', 'dual-chess') that never became GameSpecAliasIds.
+// 'draft960') that never became GameSpecAliasIds.
 const RATING_POOL_FROM_GAME_SQL = `CASE
-         WHEN games.variant IN ('crossroads-chess', 'dual-chess') THEN 'crossroads_chess_open'
-         WHEN games.variant IN ('dark-crossroads-chess', 'dark-dual-chess') THEN 'crossroads_chess'
          WHEN games.variant = 'dark-mini-xiangqi' THEN 'dark_mini_xiangqi'
          WHEN games.variant = 'drop-mini-xiangqi' THEN 'drop_mini_xiangqi'
          WHEN games.variant = 'dark-xiangqi' THEN 'dark_xiangqi'
@@ -66,7 +64,7 @@ const RATING_POOL_FROM_GAME_SQL = `CASE
 // The stored variant strings the pool mapping above is defined over. Anything
 // outside this set has no pool, so it is excluded rather than falling into the
 // CASE's 'fog' default.
-const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-mini-xiangqi', 'drop-mini-xiangqi', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'reveal-chess', 'crossroads-chess', 'dual-chess', 'dark-crossroads-chess', 'dark-dual-chess', 'dark-shogi', 'dark-crazyhouse', 'kriegspiel', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi')`;
+const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'draft960', 'dark-draft960', 'fog-draft960', 'dark-mini-xiangqi', 'drop-mini-xiangqi', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'reveal-chess', 'dark-shogi', 'dark-crazyhouse', 'kriegspiel', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi')`;
 
 export type UpdateUserProfileResult =
   | { ok: true; user: UserAccount }
@@ -380,7 +378,7 @@ async function queryUserGames(
   limit: number,
   // Rating pool to scope the history to, or null for every variant. Compared
   // against the stored spec ids AND their legacy aliases, so a pool's older
-  // rows ('dual-chess') are not silently dropped from its own history.
+  // rows ('fog-draft960') are not silently dropped from its own history.
   ratingVariant: RatingVariant | null = null,
 ): Promise<{ games: ProfileGameRecord[]; total: number }> {
   const { rows } = await getPool().query<{

@@ -2,7 +2,7 @@
 //
 // A thin variant adapter over the shared descriptor-driven cell-board core
 // (@mistboard/board-render renderGridBoardSvg) — the same 8x8 chess board Reveal
-// Chess uses, plus the fog overlay Dark Crossroads / Dark Shogi use. The core
+// Chess uses, plus the fog overlay Dark Shogi uses. The core
 // owns geometry (orientation flip), furniture (grid, coords, frame, clip) and the
 // generic interaction layers (last-move, selection, targets, fog, hit). This file
 // supplies the 8x8 chess descriptor, the cburnett glyphs, and the hand piece used

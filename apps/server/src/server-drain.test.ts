@@ -169,7 +169,7 @@ test('drain controller counts live variant-tenant games alongside chess rooms', 
 
   // 1 chess + 2 playing tenant rooms; the finished tenant room is excluded.
   // Without the tenant sum, a deploy gated on activeGames==0 can land over a
-  // live DMX/Crossroads game.
+  // live DMX game.
   assert.equal(drain.activeGameCount(), 3);
   drainTestTenantActiveGames = 0;
 });

@@ -1,6 +1,6 @@
 // MistyJungle move provider for Jungle (Dou Shou Qi / 斗兽棋) PvE — the Rust engine.
 //
-// Jungle is PERFECT-INFORMATION and deterministic, so — like banqi/jieqi/Crossroads
+// Jungle is PERFECT-INFORMATION and deterministic, so — like banqi/jieqi/xiangqi
 // (Tier-B) and unlike the fog engine-worker — we drive our own `jungle-engine` Rust
 // binary (~/projects/mistboard-engine/jungle-engine) as a UCI subprocess and hand it
 // a plain full-board FEN (jungle-fen.ts; no redaction). One process per request

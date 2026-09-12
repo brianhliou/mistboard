@@ -2,7 +2,7 @@
  * Server-side MistyJungleFlip loop for Flip Jungle (兽棋 / 翻翻棋) PvE.
  *
  * Tier-B: Flip Jungle is driven by our `jungle-flip-engine` UCI subprocess
- * (jungle-flip-engine.ts), the same shape as banqi/jieqi/Crossroads — NOT the
+ * (jungle-flip-engine.ts), the same shape as banqi/jieqi/xiangqi — NOT the
  * hidden-info Misty engine-worker. Flip Jungle has hidden piece IDENTITIES, so we hand
  * the engine a redacted current-position FEN built by jungle-flip-fen.ts from canonical
  * state. Engine moves are injected through the same append+broadcast path as human

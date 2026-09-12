@@ -76,12 +76,6 @@ export {
   startingPositionFromBackRank,
 } from '@mistboard/board-render';
 export {
-  CROSSROADS_CHESS_START_FEN,
-  renderCrossroadsChessBoard,
-  renderCrossroadsChessRow,
-} from '../crossroads-chess-diagram.js';
-export { CROSSROADS_CHESS_SAMPLE_GAME } from '../crossroads-chess-sample-game.js';
-export {
   SHOGI4_CAPTURE,
   SHOGI4_DROP,
   SHOGI4_JUMP_CASES,

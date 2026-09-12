@@ -68,7 +68,7 @@ export function createDrainController(options: DrainControllerOptions): DrainCon
   // Number of rooms a deploy would actually interrupt, across the chess map AND
   // every registered variant tenant. Used by safe deploys and
   // /api/server-status to gate deploys behind a drain window. Without the
-  // tenant sum, a live DMX/Crossroads game is invisible to the gate and a
+  // tenant sum, a live DMX game is invisible to the gate and a
   // deploy can land mid-game.
   //
   // The predicate lives in deploy-gate.ts, shared with the tenant side. This

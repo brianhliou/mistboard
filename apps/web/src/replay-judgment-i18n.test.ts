@@ -11,7 +11,7 @@ import { type ReplayStepperFamily, replayStepperCopy } from './replay-stepper-co
 // Same shape as the seoTitle gap that shipped an English <title> over Chinese
 // prose: a checker pointed at the wrong surface reports green. The countermeasure
 // is a test per generated surface, because there is no generic one.
-const FAMILIES: ReplayStepperFamily[] = ['xiangqi', 'chess', 'shogi', 'crossroads', 'jieqi'];
+const FAMILIES: ReplayStepperFamily[] = ['xiangqi', 'chess', 'shogi', 'jieqi'];
 const GLYPHS = ['??', '?', '?!', '!!', '!', '!?'] as const;
 
 describe('judged-move hover text is localized', () => {
