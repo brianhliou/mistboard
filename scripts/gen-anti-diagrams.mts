@@ -422,7 +422,7 @@ if (legalUci(replay([...RECAPTURE, ...pline.slice(0, 3)])).join() !== 'b8b1')
   throw new Error('after 4. Rb2 Black should have exactly one legal move, Cxb1');
 const dumpSan = (n: number) => san(replay([...RECAPTURE, ...pline.slice(0, n)]), pline[n]!);
 figure(
-  'dump-mechanism',
+  'dump-mechanism-1',
   boards([
     {
       id: 'dump-1',
@@ -437,6 +437,12 @@ figure(
       arrows: [squares(pline[2]!), squares('b8b1')],
       rings: [{ square: 'b1', color: '#e08a1e' }],
     },
+  ]),
+  `After ${sanLine(RECAPTURE)}. Each board shows the moves about to be played. Red\u2019s first move, 3. Ra2, is quiet, so Black may play anything: 42 legal replies, and the certificate answers every one. Along the main line, 4. Rb2 then leaves Black exactly one legal move, the cannon taking the horse on b1.`,
+);
+figure(
+  'dump-mechanism-2',
+  boards([
     {
       id: 'dump-3',
       board: board(s6),
@@ -451,7 +457,7 @@ figure(
       rings: [{ square: 'c1', color: '#e08a1e' }],
     },
   ]),
-  `After ${sanLine(RECAPTURE)} the proof runs 30 plies and covers ${P.proofSize} positions. Each board shows the moves about to be played. Red\u2019s first move, 3. Ra2, is quiet, so Black may play anything: 42 legal replies, and the certificate answers every one. Along the main line the door then shuts. 4. Rb2 leaves Black exactly one legal move, Cxb1; 5. Rxb1 Rxb1 are both compelled; 6. Ke2 leaves Black one legal move again, the chariot taking the elephant on c1. Red feeds its pieces to Black\u2019s chariot one at a time, on Red\u2019s schedule, until Red has none.`,
+  `5. Rxb1 Rxb1 are both compelled. Then 6. Ke2, another quiet move, leaves Black\u2019s chariot exactly one capture again, the elephant on c1. Red feeds its pieces to that chariot one at a time, on Red\u2019s schedule, until Red has none: 30 plies, ${P.proofSize} positions in the certificate.`,
 );
 
 // ── 5. The dead position ───────────────────────────────────────────────────
@@ -522,12 +528,12 @@ function text(
   place(root);
   if (next !== 166) throw new Error(`tree has ${next} exits`);
   const W = 1200;
-  const H = 560;
+  const H = 580;
   const left = 30;
-  const right = 80;
+  const right = 250;
   const top = 44;
   const sx = (W - left - right) / (next - 1);
-  const sy = (H - top - 60) / 18;
+  const sy = (H - top - 70) / 18;
   const px = (n: TNode) => left + n.x * sx;
   const py = (n: TNode) => top + n.depth * sy;
   const surviving = [QUIET.join(' '), [...CONTINUE, 'e10d10', 'i1h1'].join(' ')];
@@ -563,24 +569,65 @@ function text(
     }
   };
   walk(root);
+  // Labels along the road on the b3b10 half (the left edge).
+  const find = (line: string[]): TNode | null => {
+    let n: TNode | null = root;
+    for (const m of line) {
+      n = n?.children.find((c) => c.line[c.line.length - 1] === m) ?? null;
+      if (!n) return null;
+    }
+    return n;
+  };
+  const roadLabels: string[] = [];
+  const labelAt = (line: string[], label: string, dx: number) => {
+    const n = find(line);
+    if (!n) throw new Error(`no node for ${line.join(' ')}`);
+    roadLabels.push(text(px(n) + dx, py(n) + 4, label, { size: 11, weight: 600, fill: GOLD }));
+  };
+  labelAt(['b3b10'], '1. Cxb10', 8);
+  labelAt(['b3b10', 'h8h1'], '1...Cxh1', 8);
+  labelAt(['b3b10', 'h8h1', 'i1h1'], '2. Rxh1', 8);
+  labelAt(['b3b10', 'h8h1', 'i1h1', 'a10b10'], '2...Rxb10: holds', 8);
+  labelAt(['b3b10', 'a10b10', 'h3h10', 'i10h10'], '1...Rxb10: loses', 8);
+  const rootLabel = text(px(root), py(root) - 8, 'start', {
+    anchor: 'middle',
+    size: 11,
+    fill: MUTED,
+  });
+  const rowNote = text(
+    W - right + 6,
+    top + 14 * sy + 4,
+    'ply 14: 72 endings, Red to move, all Red wins',
+    { size: 10, fill: RED },
+  );
+  const legend = [
+    `<circle cx="${left + 6}" cy="${H - 34}" r="4.5" fill="${RED}"/>`,
+    text(left + 16, H - 30, 'Red wins from here', { size: 11, fill: MUTED }),
+    `<circle cx="${left + 156}" cy="${H - 34}" r="4.5" fill="${BLACK}"/>`,
+    text(left + 166, H - 30, 'Black wins', { size: 11, fill: MUTED }),
+    `<circle cx="${left + 256}" cy="${H - 34}" r="4.5" fill="${GOLD}"/>`,
+    text(left + 266, H - 30, 'stall (a draw)', { size: 11, fill: MUTED }),
+    `<circle cx="${left + 366}" cy="${H - 34}" r="4.5" fill="${RED}"/><circle cx="${left + 380}" cy="${H - 34}" r="3" fill="${RED}" opacity="0.5"/>`,
+    text(left + 390, H - 30, 'large: proven; small: engine verdict', { size: 11, fill: MUTED }),
+    `<line x1="${left + 600}" y1="${H - 34}" x2="${left + 630}" y2="${H - 34}" stroke="${GOLD}" stroke-width="3"/>`,
+    text(left + 638, H - 30, 'the two lines that hold', { size: 11, fill: MUTED }),
+  ].join('');
   const body = [
     ...edges,
     ...dots,
-    ...[4, 6, 8, 10, 12, 14, 16, 18].map((d) =>
-      text(W - 10, top + d * sy + 4, `ply ${d}`, { anchor: 'end', size: 11, fill: MUTED }),
+    ...[4, 6, 8, 10, 12, 16, 18].map((d) =>
+      text(W - right + 6, top + d * sy + 4, `ply ${d}`, { size: 10, fill: MUTED }),
     ),
+    rowNote,
+    rootLabel,
+    ...roadLabels,
     text(
       left,
       20,
-      'The opening cascade: one ply per row, every ply a capture. A line branches where the mover chose between captures and stops where captures ran out.',
+      'The opening chain. One ply per row, every ply a capture; a line branches where a player chose between captures and stops where captures ran out.',
       { size: 13, weight: 600 },
     ),
-    text(
-      left,
-      H - 14,
-      'Ending dots: red, Red wins from there; black, Black wins; gold, a stall. Large dots are proven. The gold paths at either edge are the two lines that hold.',
-      { size: 12, fill: MUTED },
-    ),
+    legend,
   ].join('');
   const svg = dataSvg(W, H, body);
   writeFileSync(path.join(OUT, 'cascade-tree.svg'), `${svg}\n`);
@@ -764,4 +811,240 @@ if (process.argv.includes('--blog')) {
   };
   renderPng(card(160, 100, 60), 'thumbnail.png', 640);
   renderPng(card(120, 63, 36), 'social-card.png', 1200);
+
+  // ── The games widget: the engine's own draws, stepped on the house board ──
+  // Every position is precomputed through the kernel; the page only draws.
+  const { readdirSync } = await import('node:fs');
+  const bestplayFile = readdirSync(OUTDIR)
+    .filter((f) => f.startsWith('bestplay-f26924937b96-'))
+    .sort()[0];
+  if (!bestplayFile) throw new Error('no stock-point bestplay artifact');
+  const bestplay = JSON.parse(readFileSync(path.join(OUTDIR, bestplayFile), 'utf8')) as {
+    result: {
+      games: Array<{
+        nodes: number;
+        plies: number;
+        winner: string | null;
+        reason: string;
+        moves: string[];
+      }>;
+    };
+  };
+  // Notes keyed by node budget, then 1-based ply. The 2M game carries the argument.
+  const NOTES: Record<number, Record<number, string>> = {
+    2000000: {
+      1: 'Cannon takes the horse over Black’s cannon. Red’s only two legal moves are this and its mirror image.',
+      2: 'Black declines the chariot recapture, a proven loss, and fires the other cannon down the b-file with Red’s b3 cannon as the screen. The only move that holds.',
+      3: 'The chariot takes the cannon. Continuing with 2. Cxd10 would also hold.',
+      4: 'Black’s only legal move. The forced part is over: fifteen pieces each, Red to move, no capture on the board.',
+      5: 'The first free move of the game. Red puts its last cannon on h3, where it screens Black’s h8 cannon onto the h1 horse: an offer Black cannot refuse.',
+      6: 'Only legal move.',
+      7: 'The same exchange on the other wing: chariot takes cannon, and Rxh3 will be forced in reply.',
+      9: 'Both chariots are now loose on the back ranks with nothing but captures available. For the next fourteen plies each chariot has only captures to make, and the two sides shed material in step.',
+      23: 'The last capture of the feast. Five pieces each: general, two advisors, an elephant, one chariot.',
+      27: 'Red pulls the lever. The elephant steps to a3, on Black’s chariot’s file, where Black has no other capture: Rxa3 is compelled.',
+      31: 'The chariot itself: Ra2, and Black must take it. Red now has nothing that can leave the palace.',
+      33: 'The advisor steps into the chariot’s path. Black must take, and Red’s other advisor must take back.',
+      35: 'Red: general and one advisor. Black: general, two advisors, an elephant. Nothing on the board can ever capture anything again.',
+      44: 'Third occurrence of the position: draw by repetition. Red has fewer pieces and no way to lose them; Black has no way to make Red take anything.',
+    },
+    5000000: {
+      4: 'The same four forced plies as every game.',
+      11: 'The chariots take each other’s cannons and Red’s chariot is taken in turn: eleven pieces each, and the game becomes a soldier war.',
+      17: 'A soldier offered, a soldier compelled to take, and the chariot compelled to take that: the shedding is symmetrical for the next hundred plies.',
+      120: 'Red walks its general into the soldier’s path and Black must take it. Under these rules that is progress for Red.',
+      131: 'Third occurrence of the position: draw by repetition, five pieces each, both sides shuffling an elephant and a chariot.',
+    },
+    1000000: {
+      4: 'The same four forced plies as every game.',
+      127: 'Third occurrence of the position: draw by repetition. Both sides kept a chariot and neither could make the other take it.',
+    },
+  };
+  const order = [2000000, 5000000, 1000000];
+  const games = order
+    .map((nodes) => bestplay.result.games.find((g) => g.nodes === nodes))
+    .filter((g): g is NonNullable<typeof g> => g !== undefined)
+    .map((g) => {
+      let s = kernel.initial(`w${g.nodes}`);
+      const start = kernel.fen(s).split(' ')[0]!;
+      const moves = g.moves.map((u, i) => {
+        const m = kernel.fromUci(s, u);
+        if (!m) throw new Error(`bad move ${u} in the ${g.nodes} game`);
+        const piece = s.board[m.from]!;
+        const captured = s.board[m.to]?.role ?? null;
+        const legal = kernel.legalMoves(s).length;
+        const label = san(s, u);
+        s = kernel.apply(s, m);
+        return {
+          uci: u,
+          san: label,
+          mover: piece.color,
+          from: m.from,
+          to: m.to,
+          captured,
+          forced: legal === 1,
+          placement: kernel.fen(s).split(' ')[0],
+          note: NOTES[g.nodes]?.[i + 1] ?? null,
+        };
+      });
+      return { nodes: g.nodes, plies: g.plies, reason: g.reason, winner: g.winner, start, moves };
+    });
+  const data = JSON.stringify(games).replace(/</g, '\\u003c');
+  const widget = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
+     The engine's own games from the array, every position precomputed through the rule kernel. -->
+<div id="anti-games" class="anxq" tabindex="0">
+<style>
+.anxq { --anxq-rule: var(--border, #d9d9d4); --anxq-muted: var(--text-2, #6a6a70); --anxq-ink: var(--text, #1c1c1e); --anxq-on: var(--text, #1c1c1e); --anxq-on-ink: var(--bg, #fff); margin: 1.5rem 0 2rem; outline: none; }
+.anxq .tabs { display: flex; flex-wrap: wrap; gap: 8px; margin-bottom: 12px; }
+.anxq .tab { border: 1px solid var(--anxq-rule); background: transparent; color: var(--anxq-ink); border-radius: 999px; padding: 4px 12px; cursor: pointer; font: inherit; font-size: 14px; }
+.anxq .tab small { color: var(--anxq-muted); font-size: 12px; margin-left: 4px; }
+.anxq .tab[aria-selected="true"] { background: var(--anxq-on); color: var(--anxq-on-ink); border-color: var(--anxq-on); }
+.anxq .tab[aria-selected="true"] small { color: inherit; opacity: .75; }
+.anxq .stage { display: grid; grid-template-columns: minmax(240px, 340px) minmax(200px, 1fr); gap: 20px; align-items: start; }
+@media (max-width: 640px) { .anxq .stage { grid-template-columns: 1fr; } }
+.anxq svg { width: 100%; height: auto; display: block; }
+.anxq .controls { display: flex; gap: 6px; align-items: center; margin-top: 8px; }
+.anxq .controls button { font: inherit; font-size: 14px; border: 1px solid var(--anxq-rule); background: transparent; color: var(--anxq-ink); border-radius: 6px; padding: 4px 10px; cursor: pointer; }
+.anxq .controls button:disabled { opacity: .4; cursor: default; }
+.anxq .controls .pos { margin-left: auto; font-size: 13px; color: var(--anxq-muted); font-variant-numeric: tabular-nums; }
+.anxq .caption { min-height: 3.5em; border-left: 3px solid #b3261e; padding: 2px 0 2px 12px; margin-top: 10px; font-size: 0.95rem; }
+.anxq .caption .san { font-family: ui-monospace, monospace; font-weight: 600; }
+.anxq .caption .who { color: var(--anxq-muted); font-size: 0.85em; }
+.anxq .caption p { margin: 4px 0 0; }
+.anxq .count { font-size: 13px; color: var(--anxq-muted); margin-top: 6px; font-variant-numeric: tabular-nums; }
+.anxq .moves { display: grid; grid-template-columns: 3ch 1fr 1fr; gap: 2px 8px; font-family: ui-monospace, monospace; font-size: 14px; font-variant-numeric: tabular-nums; max-height: 420px; overflow: auto; }
+.anxq .moves .n { color: var(--anxq-muted); text-align: right; }
+.anxq .moves button { font: inherit; text-align: left; background: none; border: 0; padding: 2px 6px; border-radius: 4px; color: var(--anxq-ink); cursor: pointer; }
+.anxq .moves button.red { color: #b3261e; }
+.anxq .moves button.forced::after { content: "!"; color: var(--anxq-muted); }
+.anxq .moves button.cur { background: var(--anxq-on); color: var(--anxq-on-ink); }
+.anxq .result { font-size: 13px; color: var(--anxq-muted); margin-top: 8px; }
+.anxq .legend { font-size: 13px; color: var(--anxq-muted); margin-top: 12px; }
+</style>
+<div class="tabs" role="tablist" id="tabs"></div>
+<div class="stage">
+  <div>
+    <svg id="board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg>
+    <div class="controls">
+      <button id="first" title="Start">|&lt;</button>
+      <button id="prev" title="Previous">&lt;</button>
+      <button id="next" title="Next">&gt;</button>
+      <button id="last" title="End">&gt;|</button>
+      <span class="pos" id="pos"></span>
+    </div>
+    <div class="count" id="count"></div>
+    <div class="caption" id="caption"></div>
+  </div>
+  <div>
+    <div class="moves" id="moves"></div>
+    <div class="result" id="result"></div>
+    <div class="legend">A move marked ! was the only legal move. Arrow keys step when the viewer has focus.</div>
+  </div>
+</div>
+<script id="anti-games-data" type="application/json">${data}</script>
+<script>
+(() => {
+  const root = document.getElementById('anti-games');
+  const GAMES = JSON.parse(root.querySelector('#anti-games-data').textContent);
+  const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
+  const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
+  const M = 18, C = 31, PIECE = 28;
+  const xOf = (f) => M + f * C;
+  const yOf = (r) => M + (10 - r) * C;
+  function parsePlacement(p) {
+    const board = {};
+    p.split('/').forEach((row, i) => {
+      const rank = 10 - i; let file = 0;
+      for (const ch of row) {
+        if (ch >= '1' && ch <= '9') { file += Number(ch); continue; }
+        board[String.fromCharCode(97 + file) + rank] = { color: ch === ch.toUpperCase() ? 'red' : 'black', role: ROLE[ch.toLowerCase()] };
+        file += 1;
+      }
+    });
+    return board;
+  }
+  function grid() {
+    const g = [];
+    g.push('<rect x="0" y="0" width="284" height="315" rx="8" fill="#d9bd82"/>');
+    for (let r = 0; r < 10; r++) g.push('<line x1="' + M + '" y1="' + (M + r * C) + '" x2="' + (M + 8 * C) + '" y2="' + (M + r * C) + '" stroke="#4b3c2a" stroke-width="1"/>');
+    for (let f = 0; f < 9; f++) {
+      if (f === 0 || f === 8) g.push('<line x1="' + (M + f * C) + '" y1="' + M + '" x2="' + (M + f * C) + '" y2="' + (M + 9 * C) + '" stroke="#4b3c2a" stroke-width="1"/>');
+      else { g.push('<line x1="' + (M + f * C) + '" y1="' + M + '" x2="' + (M + f * C) + '" y2="' + (M + 4 * C) + '" stroke="#4b3c2a" stroke-width="1"/>'); g.push('<line x1="' + (M + f * C) + '" y1="' + (M + 5 * C) + '" x2="' + (M + f * C) + '" y2="' + (M + 9 * C) + '" stroke="#4b3c2a" stroke-width="1"/>'); }
+    }
+    for (const y0 of [0, 7]) {
+      g.push('<line x1="' + (M + 3 * C) + '" y1="' + (M + y0 * C) + '" x2="' + (M + 5 * C) + '" y2="' + (M + (y0 + 2) * C) + '" stroke="#4b3c2a" stroke-width="1"/>');
+      g.push('<line x1="' + (M + 5 * C) + '" y1="' + (M + y0 * C) + '" x2="' + (M + 3 * C) + '" y2="' + (M + (y0 + 2) * C) + '" stroke="#4b3c2a" stroke-width="1"/>');
+    }
+    return g.join('');
+  }
+  const GRID = grid();
+  const svg = root.querySelector('#board');
+  function render(board, ply) {
+    const parts = [GRID];
+    if (ply) {
+      const f = ply.from, t = ply.to;
+      const fx = xOf(f.charCodeAt(0) - 97), fy = yOf(Number(f.slice(1)));
+      const tx = xOf(t.charCodeAt(0) - 97), ty = yOf(Number(t.slice(1)));
+      parts.push('<circle cx="' + fx + '" cy="' + fy + '" r="5" fill="#3a63c7" opacity=".9"/>');
+      parts.push('<circle cx="' + tx + '" cy="' + ty + '" r="16" fill="none" stroke="#3a63c7" stroke-width="2.5"/>');
+    }
+    for (const sq in board) {
+      const p = board[sq];
+      const x = xOf(sq.charCodeAt(0) - 97) - PIECE / 2, y = yOf(Number(sq.slice(1))) - PIECE / 2;
+      parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + x + '" y="' + y + '" width="' + PIECE + '" height="' + PIECE + '"/>');
+    }
+    svg.innerHTML = parts.join('');
+  }
+  let gi = 0, at = 0;
+  const NAME = { general: 'general', advisor: 'advisor', elephant: 'elephant', horse: 'horse', chariot: 'chariot', cannon: 'cannon', soldier: 'soldier' };
+  function show() {
+    const game = GAMES[gi];
+    const ply = at > 0 ? game.moves[at - 1] : null;
+    const board = parsePlacement(at > 0 ? ply.placement : game.start);
+    render(board, ply);
+    let red = 0, black = 0;
+    for (const sq in board) { if (board[sq].color === 'red') red++; else black++; }
+    root.querySelector('#count').textContent = 'Red ' + red + ' pieces, Black ' + black;
+    root.querySelector('#pos').textContent = 'ply ' + at + ' / ' + game.moves.length;
+    const cap = root.querySelector('#caption');
+    if (!ply) cap.innerHTML = '<p>The start of the game. Red to move; every legal move is a capture.</p>';
+    else {
+      const who = ply.mover === 'red' ? 'Red' : 'Black';
+      const took = ply.captured ? ', taking the ' + NAME[ply.captured] : '';
+      cap.innerHTML = '<span class="san">' + (Math.floor((at - 1) / 2) + 1) + (ply.mover === 'red' ? '. ' : '... ') + ply.san + '</span> <span class="who">' + who + took + (ply.forced ? '. Only legal move.' : '.') + '</span>' + (ply.note ? '<p>' + ply.note + '</p>' : '');
+    }
+    root.querySelectorAll('.moves button').forEach((b) => b.classList.toggle('cur', Number(b.dataset.ply) === at));
+    const cur = root.querySelector('.moves button.cur'); if (cur) cur.scrollIntoView({ block: 'nearest' });
+    root.querySelector('#prev').disabled = at === 0; root.querySelector('#first').disabled = at === 0;
+    root.querySelector('#next').disabled = at === game.moves.length; root.querySelector('#last').disabled = at === game.moves.length;
+  }
+  function select(i) {
+    gi = i; at = 0;
+    const game = GAMES[gi];
+    root.querySelectorAll('.tab').forEach((t, j) => t.setAttribute('aria-selected', j === i ? 'true' : 'false'));
+    const list = root.querySelector('#moves'); list.innerHTML = '';
+    game.moves.forEach((m, k) => {
+      if (k % 2 === 0) { const n = document.createElement('span'); n.className = 'n'; n.textContent = (k / 2 + 1) + '.'; list.appendChild(n); }
+      const b = document.createElement('button'); b.textContent = m.san; b.dataset.ply = k + 1; b.className = (m.mover === 'red' ? 'red' : '') + (m.forced ? ' forced' : ''); b.addEventListener('click', () => { at = k + 1; show(); }); list.appendChild(b);
+    });
+    root.querySelector('#result').textContent = (game.winner ? game.winner + ' wins' : 'Draw') + ' by ' + game.reason + ' after ' + game.plies + ' plies, ' + (game.nodes / 1e6) + ' million nodes a move for both sides.';
+    show();
+  }
+  const tabs = root.querySelector('#tabs');
+  GAMES.forEach((g, i) => { const b = document.createElement('button'); b.className = 'tab'; b.setAttribute('role', 'tab'); b.innerHTML = (g.nodes / 1e6) + 'M nodes <small>' + g.plies + ' plies</small>'; b.addEventListener('click', () => select(i)); tabs.appendChild(b); });
+  root.querySelector('#first').addEventListener('click', () => { at = 0; show(); });
+  root.querySelector('#prev').addEventListener('click', () => { if (at > 0) { at--; show(); } });
+  root.querySelector('#next').addEventListener('click', () => { if (at < GAMES[gi].moves.length) { at++; show(); } });
+  root.querySelector('#last').addEventListener('click', () => { at = GAMES[gi].moves.length; show(); });
+  root.addEventListener('keydown', (e) => {
+    if (e.key === 'ArrowRight') { if (at < GAMES[gi].moves.length) { at++; show(); } e.preventDefault(); }
+    else if (e.key === 'ArrowLeft') { if (at > 0) { at--; show(); } e.preventDefault(); }
+  });
+  select(0);
+})();
+</script>
+</div>
+`;
+  writeFileSync(path.join(INCLUDES, 'anti-xq-games.html'), widget);
+  console.log(`  _includes/anti-xq-games.html (${games.length} games)`);
 }
