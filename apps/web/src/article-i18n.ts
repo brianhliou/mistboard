@@ -85,8 +85,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'jungle-flip',
   'fortress-xiangqi',
   // Machine-drafted 2026-09-11, not native-reviewed, locked the day the English
-  // copy froze. The rules page only: the duck-xiangqi-build blog post was cut
-  // and stays a draft, so it is deliberately not listed here.
+  // copy froze. The rules page only so far: duck-xiangqi-build was published
+  // after this list was written and is not translated yet, so it is English
+  // until its own copy is frozen.
   'duck-xiangqi',
   'misty',
   'server-enforced-fog',

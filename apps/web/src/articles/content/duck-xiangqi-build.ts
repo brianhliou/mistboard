@@ -15,7 +15,7 @@ export const duckXiangqiBuildArticle: Article = {
   title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',
   seoTitle: 'Duck Xiangqi: How Not to Lose Your First Game',
   summary:
-    'Chinese chess with one duck both players share. The rules take a minute; the four things that actually decide your first game take longer, and three of them are the opposite of the instinct.',
+    'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-11',
@@ -29,7 +29,7 @@ export const duckXiangqiBuildArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is often the losing one. These come from the seven engine games behind this launch, and from measuring the engine itself.',
+      text: 'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is usually the one that arms your opponent’s cannon. These come from the seven engine games behind this launch, and from measuring the engine itself.',
     },
   ],
   sections: [
@@ -53,7 +53,7 @@ export const duckXiangqiBuildArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A cannon captures by jumping exactly one piece, and the duck counts as that piece. This is the most important thing on this page, and it follows from the order of a turn rather than from any subtlety: you place the duck at the END of your move, so the next person to play is your opponent. Any cannon line you just completed is theirs to fire down first.',
+          text: 'A cannon captures by jumping exactly one piece, and the duck counts as that piece. What follows from that is the order of a turn, not any subtlety: you place the duck at the END of your move, so the next person to play is your opponent. Any cannon line you just completed is theirs to fire down first.',
         },
         {
           kind: 'raw-svg',
@@ -104,7 +104,7 @@ export const duckXiangqiBuildArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The bot is a patched Fairy-Stockfish and it plays the piece half of its turn properly. The duck half it essentially guesses, and that is measurable rather than a suspicion.',
+          text: 'The bot is a patched Fairy-Stockfish, and it plays the piece half of its turn properly. The duck half it guesses. That is measured, not suspected.',
         },
         {
           kind: 'paragraph',
