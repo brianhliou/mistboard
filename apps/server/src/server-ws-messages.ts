@@ -33,8 +33,6 @@ const knownClientMessageTypes = new Set([
   'latency-sample',
   'admin-debug-auth',
   'snapshot:request',
-  'select-start',
-  'setup:submit',
   'move',
   'resign',
   'abort',

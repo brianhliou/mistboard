@@ -30,7 +30,6 @@ export type TenantSeat<C extends string> = C | 'spectator';
 // The structural slice of variant game status the generic runtime reads.
 // Every sibling stack's status union already has this exact shape.
 export type TenantGameStatus<C extends string> =
-  | { type: 'setup' }
   | { type: 'playing'; turn: C }
   | { type: 'finished'; winner: C | null; reason: string }
   | { type: 'aborted'; reason: AbortReason };
@@ -96,15 +95,6 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
   // Accepted in event logs only for tenants with wire.acceptsSeatVacated
   // (Dark Xiangqi); clears the seat when the vacating clientId still holds it.
   | { type: 'seat-vacated'; at: number; roomId: string; clientId: string; seat: C }
-  | {
-      type: 'setup-submitted';
-      at: number;
-      roomId: string;
-      color: C;
-      // Server-secret pregame setup payload (a player's private formation).
-      // Tenants that opt into setup submissions MUST redact this in clientEventFor.
-      setup: unknown;
-    }
   | { type: 'clock-started'; at: number; roomId: string; clock: TenantClockState<C> }
   | { type: 'clock-expired'; at: number; roomId: string; color: C; clock: TenantClockState<C> }
   | {
@@ -363,11 +353,6 @@ export type VariantTenant<
     // new state, so a hook that settles a four-seat window one seat at a time
     // costs four round trips through the event writer.
     pendingAction?(state: State): TenantPendingAction<C, M> | null;
-  };
-  setupSubmission?: {
-    applySetup(state: State, color: C, setup: unknown): State;
-    isSetup(value: unknown): boolean;
-    setupFromMessage(message: { setup?: unknown }): unknown | null;
   };
   visibility: {
     // Per-seat wire-event redaction. Fog tenants hide opponent moves and

@@ -28,7 +28,6 @@ import { capitalize, noticeBody, noticeTitle, presenceDot, roomLink } from './ch
 // Structural slice of a variant PlayerView the chrome reads (same status shape
 // as the server-side TenantGameStatus).
 export type TenantWebStatus<C extends string> =
-  | { type: 'setup' }
   | { type: 'playing'; turn: C }
   | { type: 'finished'; winner: C | null; reason: string }
   | { type: 'aborted'; reason: string };
@@ -641,7 +640,6 @@ export function createTenantRoomChrome<C extends string>(
     if (waitingForOpponent()) return 'Invite opponent';
     if (view.status.type === 'finished') return 'Game finished';
     if (view.status.type === 'aborted') return 'Game aborted';
-    if (view.status.type === 'setup') return 'Formation setup';
     if (ctx.seat() === view.status.turn) return 'Your move';
     return `${seatName(view.status.turn)} to move`;
   }
@@ -668,7 +666,6 @@ export function createTenantRoomChrome<C extends string>(
     if (view.status.type === 'aborted') {
       return 'This game ended before both sides completed their first move.';
     }
-    if (view.status.type === 'setup') return 'Waiting for both formations.';
     if (ctx.seat() === 'spectator') return tenant.spectatorBody;
     if (ctx.seat() === view.status.turn) return tenant.selectInstruction;
     return 'Waiting for the opponent.';

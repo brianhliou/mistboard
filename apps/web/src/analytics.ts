@@ -219,7 +219,7 @@ export function captureException(error: unknown, props?: Record<string, unknown>
   });
 }
 
-export type GameLifecycleStatusType = 'pregame' | 'playing' | 'finished' | 'aborted';
+export type GameLifecycleStatusType = 'playing' | 'finished' | 'aborted';
 
 export type GameFinishedOutcome = {
   winner: string | null;

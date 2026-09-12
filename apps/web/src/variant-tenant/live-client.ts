@@ -592,10 +592,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // life of a client.
   const lifecycleSpecProps = maybeGameSpecAnalyticsProps(config.gameSpecId);
 
-  // 'setup' is this stack's name for what the legacy stack calls 'pregame'.
-  // Mapped rather than passed through so one event schema describes both.
   function lifecycleStatusType(status: V['status']['type']): GameLifecycleStatusType {
-    return status === 'setup' ? 'pregame' : (status as GameLifecycleStatusType);
+    return status as GameLifecycleStatusType;
   }
 
   // The seat the viewer is not sitting in. In a bot room that is the engine,

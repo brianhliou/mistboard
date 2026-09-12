@@ -414,8 +414,8 @@ export function createTenantWsRuntime<
     // Read-only guard for debug spectators. Everything above (ping /
     // latency-sample / snapshot:request) is read-only; everything below appends
     // events or asserts a seat identity, so a spectator (no seat) stops here.
-    // This is a correctness invariant, not polish: handleResign / handleSetupSubmit
-    // stamp `color: seat` with no seat validation, so a spectator resign would
+    // This is a correctness invariant, not polish: handleResign stamps
+    // `color: seat` with no seat validation, so a spectator resign would
     // otherwise append `color:'spectator'` and corrupt the event log. After this
     // guard client.seat narrows to a real color; `seat` threads it downstream.
     if (client.seat === 'spectator') return;
@@ -440,10 +440,6 @@ export function createTenantWsRuntime<
     }
     if (message.type === 'rematch:decline') {
       if (ctx.rematch) declineTenantRematch(tenant, ctx.rematch, room, client);
-      return;
-    }
-    if (message.type === 'setup:submit') {
-      await handleSetupSubmit(room, client, seat, message);
       return;
     }
     if (message.type !== 'move') return;
@@ -504,37 +500,6 @@ export function createTenantWsRuntime<
     }
     broadcastEventAppended(room, event, seq);
     // PvE: it may now be the engine's turn (no-op for PvP / engine not to move).
-    scheduleEngineMove(room);
-  }
-
-  // `seat` is the caller's read-only-guarded color (never 'spectator'); see the
-  // spectator guard in handleMessage before the resign/setup/move dispatch.
-  async function handleSetupSubmit(
-    room: LiveRoom,
-    client: LiveClient,
-    seat: C,
-    message: { setup?: unknown },
-  ): Promise<void> {
-    if (!tenant.setupSubmission) return;
-    if (room.projection.state.status.type !== 'setup') return;
-    const setup = tenant.setupSubmission.setupFromMessage(message);
-    if (setup === null) return;
-    const event: TenantRoomEvent<C, M, Spec> = {
-      type: 'setup-submitted',
-      at: Date.now(),
-      roomId: room.id,
-      color: seat,
-      setup,
-    };
-    let seq: number;
-    try {
-      seq = await appendTenantEvent(tenant, room, event, eventWriterCtx);
-    } catch (err) {
-      recordTenantPersistenceError(tenant, room.id, room.events.length, event.type, err as Error);
-      client.socket.close(1011, 'persistence failure');
-      return;
-    }
-    broadcastEventAppended(room, event, seq);
     scheduleEngineMove(room);
   }
 

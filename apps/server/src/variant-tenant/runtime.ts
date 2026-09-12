@@ -285,7 +285,6 @@ export function createTenantRuntimeRoomFromEvents<
 // be silently dropped by an identity check it was never designed for.
 const REJECTABLE_EVENT_TYPES = new Set([
   'move-played',
-  'setup-submitted',
   'clock-started',
   'clock-expired',
   'seat-resigned',
@@ -440,14 +439,6 @@ export function applyTenantEvent<
     const seats = { ...projection.seats };
     delete seats[event.seat];
     return { ...projection, seats };
-  }
-  if (event.type === 'setup-submitted') {
-    if (status.type !== 'setup' || !tenant.setupSubmission) return projection;
-    if (!tenant.setupSubmission.isSetup(event.setup)) return projection;
-    return {
-      ...projection,
-      state: tenant.setupSubmission.applySetup(projection.state, event.color, event.setup),
-    };
   }
   if (event.type === 'clock-started') {
     if (status.type === 'finished' || status.type === 'aborted' || projection.clock)
@@ -852,13 +843,6 @@ export function isTenantEvent<
       tenant.wire?.acceptsSeatVacated === true &&
       typeof event.clientId === 'string' &&
       tenant.rules.isColor(event.seat)
-    );
-  }
-  if (event.type === 'setup-submitted') {
-    return (
-      tenant.setupSubmission !== undefined &&
-      tenant.rules.isColor(event.color) &&
-      tenant.setupSubmission.isSetup(event.setup)
     );
   }
   if (event.type === 'clock-started') {

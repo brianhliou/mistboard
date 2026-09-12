@@ -1,4 +1,4 @@
-export type LiveLifecycleStatus = 'setup' | 'pregame' | 'playing' | 'finished' | 'aborted';
+export type LiveLifecycleStatus = 'playing' | 'finished' | 'aborted';
 
 export type LiveLifecycleSnapshot = {
   gameId: string;

@@ -42,7 +42,6 @@ test('nobody may act on a state that is not playing, hook or no hook', () => {
   // game by accepting a late claim.
   const reckless: Stub = { rules: { seatMayAct: () => true } };
   for (const state of [
-    { status: { type: 'setup' }, moveNumber: 0 },
     { status: { type: 'finished', winner: 'e', reason: 'win' }, moveNumber: 9 },
     { status: { type: 'aborted', reason: 'user-abort' }, moveNumber: 0 },
   ] satisfies State[]) {
