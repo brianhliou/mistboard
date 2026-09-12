@@ -342,6 +342,75 @@ const FACING_BOARD: DuckXiangqiBoard = {
   e9: { color: 'black', role: 'general' },
 };
 
+/** One arbitrary position, drawn the way every figure in this file is drawn.
+ *
+ *  Exported because the brianhliou.com write-up steps through the end of a
+ *  real engine game frame by frame, and a sequence cannot be expressed as the
+ *  zero-argument thunks the rules page uses. Everything still goes through
+ *  xqBoardSvg, so a blog frame and a rules-page figure cannot diverge. */
+export function duckXiangqiPositionFigure(opts: {
+  id: string;
+  board: DuckXiangqiBoard;
+  duck?: DuckXiangqiSquare;
+  label: string;
+  captures?: readonly DuckXiangqiSquare[];
+}): string {
+  return xqSvg(
+    PAIR_W,
+    FIGURE_H,
+    xqBoardSvg({
+      state: state(opts.id, opts.board),
+      x: PAIR_GAP_X / 2,
+      y: 0,
+      label: opts.label,
+      perspective: 'red',
+      dots: (opts.captures ?? []).map((square) => ({
+        square: square as XiangqiSquare,
+        capture: true,
+      })),
+      ...(opts.duck ? { overlay: duckOverlay(opts.duck, PAIR_GAP_X / 2, 0) } : {}),
+    }),
+  );
+}
+
+// The finish of engine game 6 (the study's sixth chapter), at ply 228 of 229.
+// Red's general is on d1, Black's on d9, and the d file is empty between them,
+// so Red plays d1-d9 and takes the general. That move is ILLEGAL under the rule
+// this variant originally kept, which is the whole reason the figure is worth
+// drawing: two of the seven engine games end exactly this way.
+//
+// The position is the game's own, not composed: it is the FEN the kernel
+// produced after replaying the recorded move list to its penultimate turn.
+const FLYING_FINISH_BOARD: DuckXiangqiBoard = {
+  a10: { color: 'black', role: 'cannon' },
+  d9: { color: 'black', role: 'general' },
+  c7: { color: 'red', role: 'soldier' },
+  c5: { color: 'black', role: 'horse' },
+  d1: { color: 'red', role: 'general' },
+};
+
+export const DUCK_XIANGQI_FLYING_FINISH = () => {
+  // The capture the caption claims, taken from the kernel rather than asserted:
+  // if the rule ever moves again, this figure stops drawing the marker instead
+  // of drawing a lie.
+  const flights = duckXiangqiMovesFrom(FLYING_FINISH_BOARD, 'e1', 'd1').filter(
+    (square) => FLYING_FINISH_BOARD[square]?.role === 'general',
+  );
+  return xqSvg(
+    PAIR_W,
+    FIGURE_H,
+    xqBoardSvg({
+      state: state('duck-rules-flying', FLYING_FINISH_BOARD),
+      x: PAIR_GAP_X / 2,
+      y: 0,
+      label: 'RED FLIES THE GENERAL, AND WINS',
+      perspective: 'red',
+      dots: flights.map((square) => ({ square: square as XiangqiSquare, capture: true })),
+      overlay: duckOverlay('e1', PAIR_GAP_X / 2, 0),
+    }),
+  );
+};
+
 export const DUCK_XIANGQI_FACING_PIN = () =>
   xqSvg(
     PAIR_W,

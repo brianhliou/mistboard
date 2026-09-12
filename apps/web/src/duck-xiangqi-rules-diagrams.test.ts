@@ -3,6 +3,7 @@ import {
   DUCK_XIANGQI_CANNON_SCREEN,
   DUCK_XIANGQI_ELEPHANT_PAIR,
   DUCK_XIANGQI_FACING_PIN,
+  DUCK_XIANGQI_FLYING_FINISH,
   DUCK_XIANGQI_HORSE_PAIR,
   DUCK_XIANGQI_INTRO_BOARD,
   DUCK_XIANGQI_SHARED_SCREEN,
@@ -34,6 +35,7 @@ const DIAGRAMS: ReadonlyArray<readonly [string, () => string]> = [
   ['ELEPHANT_PAIR', DUCK_XIANGQI_ELEPHANT_PAIR],
   ['CANNON_SCREEN', DUCK_XIANGQI_CANNON_SCREEN],
   ['FACING_PIN', DUCK_XIANGQI_FACING_PIN],
+  ['FLYING_FINISH', DUCK_XIANGQI_FLYING_FINISH],
   ['SHARED_SCREEN', DUCK_XIANGQI_SHARED_SCREEN],
 ];
 
@@ -94,5 +96,17 @@ describe('duck xiangqi rules diagrams', () => {
     // own bug.
     expect(duckBoxes(DUCK_XIANGQI_THUMBNAIL())).toHaveLength(1);
     expect(duckBoxes(DUCK_XIANGQI_START_BOARD())).toHaveLength(0);
+  });
+
+  it('the flying finish marks the general it actually captures', () => {
+    // The figure reads its capture marker off the kernel. If the facing rule
+    // is ever reverted, `duckXiangqiMovesFrom` stops returning d9 and this
+    // figure would quietly render a board with no capture on it, so the
+    // marker is asserted rather than assumed.
+    const svg = DUCK_XIANGQI_FLYING_FINISH();
+    // A capture marker is a green ring, not a class: r=16, no fill, #15781B.
+    const captures = svg.match(/<circle[^>]*r="16"[^>]*stroke="#15781B"/g) ?? [];
+    expect(captures).toHaveLength(1);
+    expect(duckBoxes(svg)).toHaveLength(1);
   });
 });
