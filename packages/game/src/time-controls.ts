@@ -165,10 +165,15 @@ export const ENGINE_PINNED_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
 const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
   [XIANGQI_SPEC_ID]: '10m5',
   [JIEQI_SPEC_ID]: '10m5',
-  // Duck offers only 5+5 and 10+5 (registry.ts): games run ~177 plies at
-  // engine strength, so a 1+1 would be decided by the clock. Without an entry
-  // here the house 3+2 would be preselected and advertised on a variant that
-  // rejects it.
+  // Duck offers 3+2, 5+5 and 10+5 (registry.ts). This entry is a PREFERENCE,
+  // not a guard: a turn is a move plus a duck placement, so 3+2 buys 1.8s per
+  // decision at the long end and 5+5 buys 3.8s. Both are playable, so 3+2 is
+  // selectable, but the pace a first-time player is dropped into should be the
+  // one that lets them see the board.
+  //
+  // It was a guard until 2026-09-12, when 3+2 was added to the picker: before
+  // that, the house 3+2 would have been preselected and advertised on a
+  // variant whose picker did not render it.
   [DUCK_XIANGQI_SPEC_ID]: '5m5',
 };
 
