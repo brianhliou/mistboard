@@ -31,6 +31,7 @@ const RETIRED_RULES_SLUGS = new Set([
   'crossroads-chess',
   'dark-crossroads-chess',
   'dark-shogi',
+  'drop-mini-xiangqi',
   'shogi',
   // retired, code still present
   'dark-crazyhouse',
