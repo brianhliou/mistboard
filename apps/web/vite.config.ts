@@ -209,13 +209,7 @@ export default defineConfig(({ command }) => {
       // avoid importing per test, so the budget is the only lever for them.
       // Kept at 15s, not higher, so a genuinely hung test still fails fast.
       testTimeout: 15_000,
-      // Parked-variant suites live in *.parkedtest.ts so they stay out of the
-      // default run (see the parked block in packages/game/src/game-specs.ts);
-      // MISTBOARD_TEST_PARKED=1 (npm run test:parked) targets only those. Both
-      // sets keep typechecking so the parked code cannot silently rot.
-      include: process.env.MISTBOARD_TEST_PARKED
-        ? ['src/**/*.parkedtest.ts']
-        : ['src/**/*.test.ts'],
+      include: ['src/**/*.test.ts'],
     },
   };
 });

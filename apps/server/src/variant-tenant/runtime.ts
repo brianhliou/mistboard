@@ -10,7 +10,7 @@
  * Wire-parity contract: for a migrated tenant the snapshot payload and
  * per-seat client events must be deep-equal to its pre-migration stack —
  * pinned by that tenant's golden wire fixture (e.g.
- * dark-mini-xiangqi-golden-wire.parkedtest.ts).
+ * dark-xiangqi-golden-wire.test.ts).
  */
 
 import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';

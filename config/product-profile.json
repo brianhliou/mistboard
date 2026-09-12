@@ -20,6 +20,5 @@
     "dark-xiangqi": "MISTBOARD_DARK_XIANGQI_ENABLED",
     "duck-xiangqi": "MISTBOARD_DUCK_XIANGQI_ENABLED"
   },
-  "productAdditionalServerFlags": ["MISTBOARD_CORRESPONDENCE_ENABLED"],
-  "labAdditionalServerFlags": []
+  "productAdditionalServerFlags": ["MISTBOARD_CORRESPONDENCE_ENABLED"]
 }

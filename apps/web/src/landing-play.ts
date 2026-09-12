@@ -265,8 +265,7 @@ function parseLandingGameSpecId(value: string): LandingGameSpecId {
 //
 // The rest stays keyed on the tenant's own acceptsDeepLink, which is
 // DELIBERATELY wider than offerInMenu: a menu-hidden surface has no other
-// door, and the soft-link branch in the dialog exists to seat it. Collapsing the two lists makes
-// `npm run dev:lab` unable to reach any of them.
+// door, and the soft-link branch in the dialog exists to seat it.
 /** Whether a play deep link can name this spec, i.e. whether the dialog will
  *  actually open ON it rather than falling through to the player's stored
  *  preference. The post-game invite gates on this so the two cannot disagree. */

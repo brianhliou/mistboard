@@ -12,8 +12,6 @@
     "dev": "npm run db:up && npm run db:migrate && npm run dev:persistent",
     "dev:persistent": "node scripts/dev.mjs",
     "dev:memory": "node scripts/dev.mjs --memory",
-    "dev:lab": "npm run db:up && npm run db:migrate && node scripts/dev.mjs --lab",
-    "dev:lab:memory": "node scripts/dev.mjs --lab --memory",
     "dev:web:agent": "npm run dev:agent --workspace @mistboard/web",
     "db:up": "node scripts/ensure-postgres.mjs",
     "db:migrate": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run migrate --workspace @mistboard/server",
@@ -28,7 +26,6 @@
     "videos:mine": "node scripts/videos-mine.mjs",
     "db:seed:variant-corpus": "node scripts/seed-variant-corpus.mjs",
     "db:seed:variant-fixtures": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run seed:variant-fixtures --workspace @mistboard/server",
-    "db:seed:variant-fixtures:lab": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run seed:variant-fixtures --workspace @mistboard/server -- --profile lab",
     "db:import:xiangqi-broadcast": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run import:xiangqi-broadcast --workspace @mistboard/server --",
     "db:poll:xiangqi-broadcast": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run poll:xiangqi-broadcast --workspace @mistboard/server --",
     "db:simulate:xiangqi-broadcast": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run simulate:xiangqi-broadcast --workspace @mistboard/server --",
@@ -62,7 +59,6 @@
     "engine:budget-check": "node scripts/engine-budget-check.mjs",
     "test": "npm run test --workspaces --if-present",
     "test:unit": "npm run test:tooling && npm run test:unit --workspaces --if-present",
-    "test:parked": "npm run test:parked --workspaces --if-present",
     "test:tooling": "node --test scripts/*.test.mjs && tsx --test scripts/*.test.ts scripts/variant-lab/*.test.ts",
     "test:puzzles:corpus": "npm run test:puzzles:corpus --workspace @mistboard/game",
     "typecheck": "npm run typecheck --workspaces --if-present",
@@ -100,7 +96,6 @@
     "test:xiangqi-broadcast": "npm run test:xiangqi-broadcast --workspace @mistboard/game",
     "test:mobile:shots": "npm run mobile:loop",
     "engine:capture-beliefs": "node scripts/capture-belief-artifacts.mjs",
-    "puzzles:mine:mini-xiangqi": "tsx scripts/variant-lab/mini-xiangqi-puzzle-miner.ts",
     "mine:remainder": "node scripts/mine-remainder.mjs",
     "pilot:elephantchess-worker": "tsx scripts/variant-lab/elephantchess-pilot-worker.ts",
     "pilot:elephantchess-audit": "tsx scripts/variant-lab/elephantchess-pilot-audit-worker.ts",
@@ -131,9 +126,7 @@
     "prod:smoke:ceval": "node scripts/prod-ceval-smoke.mjs",
     "prod:smoke:practice": "node scripts/check-practice-catalog.mjs",
     "time:command": "node scripts/time-command.mjs",
-    "research:kqk-belief": "tsx scripts/fow-kqk-belief.ts",
-    "jieqi:play": "tsx scripts/jieqi-playthrough.ts",
-    "reveal-chess:play": "tsx scripts/reveal-chess-playthrough.ts"
+    "jieqi:play": "tsx scripts/jieqi-playthrough.ts"
   },
   "engines": {
     "node": ">=22"
