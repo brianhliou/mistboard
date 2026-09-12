@@ -297,17 +297,21 @@ function main() {
     node(730, 190, '1...Ch8xh1', 'the only move', 'draw');
     edge(500, 60, 250, 190, tone);
     edge(500, 60, 730, 190, 'draw');
-    node(540, 320, '2. Cb10xd10', 'Black gets the first free move', 'black');
-    node(860, 320, '2. Ri1xh1', 'the only move', 'draw');
-    edge(730, 190, 540, 320, 'black');
+    node(540, 320, '2. Cb10xd10', 'also fine for Red; Black must then find Ke10xd10', 'draw');
+    node(860, 320, '2. Ri1xh1', 'ends the exchange', 'draw');
+    edge(730, 190, 540, 320, 'draw');
     edge(730, 190, 860, 320, 'draw');
     node(860, 420, '2...Ra10xb10', 'forced; the cascade is over, material equal', 'draw');
     edge(860, 320, 860, 420, 'draw');
+    node(420, 420, '2...Ch1xf1', 'the greedy capture: Red wins (engine)', 'red');
+    node(660, 420, '2...Ke10xd10', 'holds; 3. Ri1xh1 and it is over', 'draw');
+    edge(540, 320, 420, 420, 'red');
+    edge(540, 320, 660, 420, 'draw');
     b.push(
       label(
         20,
         H - 10,
-        'Gold: the one line neither side can leave without losing. A red or black box is a loss for the side that chose it.',
+        'Gold: the moves that hold. A red box is a loss for Black, who has both of the decisions; Red cannot go wrong.',
         { size: 13, fill: C.muted },
       ),
     );
