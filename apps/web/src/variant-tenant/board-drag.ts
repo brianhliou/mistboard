@@ -1,6 +1,6 @@
 // Shared drag-to-move for the self-rendered SVG variant boards.
 //
-// Extracted from the Dark Mini Xiangqi client (the first SVG drag implementation)
+// Extracted from the first SVG tenant client (the first SVG drag implementation)
 // so every tenant gets the same lichess-style feel: pick a piece up, drag it, drop
 // it on the target. CLICK-TO-MOVE IS PRESERVED — a pointerdown that never crosses
 // the movement threshold falls through to the click handler, and a completed drag

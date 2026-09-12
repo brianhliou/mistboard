@@ -52,7 +52,7 @@
 }
 /* Secondary boards are small reference views; their captured-material / hand
    pools are redundant with the primary board's and, on variants with lots of
-   material (reveal chess, crazyhouse), stack taller than the mini board itself —
+   material (crazyhouse), stack taller than the mini board itself —
    cutting off, overflowing, and squeezing the primary. Show material on the
    primary only; the secondaries are just boards. */
 .review-stage__slot--secondary .captures-strip,

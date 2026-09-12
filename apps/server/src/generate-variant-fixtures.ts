@@ -20,7 +20,6 @@ import {
   createBanqiDeal,
   createJieqiDeal,
   createJungleFlipDeal,
-  createRevealChessDeal,
   getBanqiLegalMoves,
   getDuckXiangqiLegalTurns,
   getFortressXiangqiLegalMoves,
@@ -30,28 +29,19 @@ import {
   getKriegspielOfferedMoves,
   getLegalCrazyhouseDrops,
   getLegalCrazyhouseMoves,
-  getLegalDropMiniXiangqiDrops,
-  getLegalDropMiniXiangqiMoves,
-  getMiniXiangqiLegalMoves,
-  getMiniXiangqiOpenLegalMoves,
-  getRevealChessLegalMoves,
   getStandardXiangqiLegalMoves,
   getLegalMoves as getXiangqiLegalMoves,
 } from '@mistboard/game';
 
 import { banqiTenant } from './banqi-tenant.js';
 import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
-import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
-import { dropMiniXiangqiTenant } from './drop-mini-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import { kriegspielTenant } from './kriegspiel-tenant.js';
-import { miniXiangqiTenant } from './mini-xiangqi-tenant.js';
-import { revealChessTenant } from './reveal-chess-tenant.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
@@ -71,7 +61,7 @@ type VariantSpec = {
   enumerate: Enumerate;
   // Deterministic per-game setup from the harness's seeded RNG. Required for
   // tenants whose rules.createSetup mints a server-secret deal with a crypto RNG
-  // (jieqi/banqi/jungle-flip/reveal-chess): calling the deal builder with our
+  // (jieqi/banqi/jungle-flip): calling the deal builder with our
   // seeded RNG instead keeps the committed fixtures reproducible. Omit for
   // tenants with a fixed starting position.
   makeSetup?: (rng: () => number) => unknown;
@@ -98,15 +88,6 @@ const VARIANTS: VariantSpec[] = [
     enumerate: (s) => getBanqiLegalMoves(s),
     makeSetup: (rng) => createBanqiDeal(rng),
   },
-  { tenant: miniXiangqiTenant, enumerate: (s) => getMiniXiangqiOpenLegalMoves(s) },
-  { tenant: darkMiniXiangqiTenant, enumerate: (s) => getMiniXiangqiLegalMoves(s) },
-  {
-    tenant: dropMiniXiangqiTenant,
-    enumerate: (s) => [
-      ...getLegalDropMiniXiangqiMoves(s),
-      ...getLegalDropMiniXiangqiDrops(s, s.status.turn),
-    ],
-  },
   { tenant: fortressXiangqiTenant, enumerate: (s) => getFortressXiangqiLegalMoves(s) },
   // A duck turn is the cross product of ~44 piece moves and ~80 duck squares, so
   // the enumerator returns thousands of turns per ply. That is the shape the
@@ -114,11 +95,6 @@ const VARIANTS: VariantSpec[] = [
   // picking the piece move first would bias the fixture toward tidy duck play.
   { tenant: duckXiangqiTenant, enumerate: (s) => getDuckXiangqiLegalTurns(s) },
   { tenant: xiangqiTenant, enumerate: (s) => getStandardXiangqiLegalMoves(s) },
-  {
-    tenant: revealChessTenant,
-    enumerate: (s) => getRevealChessLegalMoves(s),
-    makeSetup: (rng) => createRevealChessDeal(rng),
-  },
   {
     tenant: darkCrazyhouseTenant,
     enumerate: (s) => [...getLegalCrazyhouseMoves(s), ...getLegalCrazyhouseDrops(s, s.status.turn)],

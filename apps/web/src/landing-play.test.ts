@@ -230,11 +230,9 @@ describe('landing play panel', () => {
 
   it('shows finalized one-color markers for the baseline picker variants', () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_JIEQI_ENABLED', 'false');
     vi.stubEnv('VITE_BANQI_ENABLED', 'false');
-    vi.stubEnv('VITE_REVEAL_CHESS_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'false');
     vi.stubGlobal(
       'fetch',
@@ -677,7 +675,6 @@ describe('landing play panel', () => {
 
   it('offers correspondence days for casual dark chess in both friend challenge and find opponent', () => {
     vi.stubEnv('VITE_CORRESPONDENCE_ENABLED', 'true');
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -780,7 +777,6 @@ describe('landing play panel', () => {
     // Xiangqi pivot: DMX is de-listed from the browse picker (offerInMenu=false)
     // regardless of its enable flags; it stays reachable only by deep link.
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -790,8 +786,6 @@ describe('landing play panel', () => {
     [...panel.querySelectorAll('button')]
       .find((candidate) => candidate.textContent === 'Challenge a friend')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
-
-    expect(variantPickerSpecs()).not.toContain('dark-mini-xiangqi');
   });
 
   it('creates a Dark Xiangqi engine room with server-defaulted bot and selected color', async () => {
@@ -858,7 +852,6 @@ describe('landing play panel', () => {
   });
 
   it('orders the variant picker by the shared canonical variant order', () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'true');
     vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
     vi.stubGlobal(
@@ -878,7 +871,6 @@ describe('landing play panel', () => {
     // The mini xiangqi trio is hidden; the two public fog games stay adjacent
     // ahead of the Jungle pair.
     expect(specs).toContain('dark-xiangqi');
-    expect(specs).not.toContain('mini-xiangqi');
     expect(specs.indexOf('dark-xiangqi')).toBeLessThan(specs.indexOf('dark-chess'));
     expect(specs.indexOf('dark-chess')).toBeLessThan(specs.indexOf('jungle'));
     expect(specs.indexOf('jungle')).toBeLessThan(specs.indexOf('jungle-flip'));
@@ -903,7 +895,7 @@ describe('landing play panel', () => {
   // 2026-07-03 pivot but kept an unconditional deep link, so a link was its only
   // door; that door is now closed. The three tests that pinned its friend /
   // engine / lobby deep links were replaced by this one. Menu-hidden LAB
-  // variants (DMX, Drop Mini Xiangqi, Dark Crazyhouse) deliberately
+  // variants (DMX, Dark Crazyhouse) deliberately
   // keep theirs -- their deep link is likewise their only door, and dev:lab
   // depends on it.
   it('no longer soft-links Mini Xiangqi from a deep link, in any play mode', () => {
@@ -1010,7 +1002,7 @@ function variantPickerPresent(): boolean {
   return document.querySelector('.landing-variant-grid') !== null;
 }
 
-// Post-pivot, a hidden variant (mini/dark-mini/drop-mini xiangqi, dark-crazyhouse)
+// Post-pivot, a hidden variant (mini/dark-mini xiangqi, dark-crazyhouse)
 // reached by deep link is not a browse-grid card — the picker collapses to a single
 // soft-linked variant control. In the engine flow the FIRST control is the variant
 // and the second is the bot, so read the first.

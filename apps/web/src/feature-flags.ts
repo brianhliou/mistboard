@@ -18,21 +18,10 @@ export function xiangqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_XIANGQI_ENABLED === 'true';
 }
 
-// Dark Mini Xiangqi (7x7) is a parked lab surface.
-export function darkMiniXiangqiEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_DARK_MINI_XIANGQI_ENABLED === 'true';
-}
-
 // Global friends-online widget (bottom-corner pill → expandable list, lichess
 // parity). On in dev; in prod/staging it stays hidden until the build opts in.
 export function friendsOnlineEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_FRIENDS_ONLINE_ENABLED === 'true';
-}
-
-// Drop Mini Xiangqi (7x7 mini xiangqi with crazyhouse-style reserves) is a
-// parked lab surface.
-export function dropMiniXiangqiEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_DROP_MINI_XIANGQI_ENABLED === 'true';
 }
 
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket). Launched: always on (the server
@@ -57,7 +46,7 @@ export function duckXiangqiEnabled(): boolean {
 }
 
 // Identity-hidden jieqi (揭棋) play surface. Always on in dev for convenience
-// (like DMX/correspondence); in prod/staging it is hidden unless the
+// (like correspondence); in prod/staging it is hidden unless the
 // build opts in.
 export function jieqiEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_JIEQI_ENABLED === 'true';
@@ -73,12 +62,6 @@ export function banqiEnabled(): boolean {
 // Luzhanqi / Junqi remains available in the explicit lab profile.
 export function luzhanqiEnabled(): boolean {
   return labEnabled() || import.meta.env.VITE_LUZHANQI_ENABLED === 'true';
-}
-
-// Reveal Chess (chess-jieqi, hidden identities on an 8x8 board) play surface.
-// Explicit build-time opt-in only.
-export function revealChessEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_REVEAL_CHESS_ENABLED === 'true';
 }
 
 // Jungle / Dou Shou Qi (perfect-information 7×9 animal-rank game) play surface.

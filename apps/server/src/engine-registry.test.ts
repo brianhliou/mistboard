@@ -1,9 +1,7 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
-  DARK_MINI_XIANGQI_DEFAULT_ENGINE_ID,
   DARK_XIANGQI_DEFAULT_ENGINE_ID,
-  isDarkMiniXiangqiEngineClientId,
   isDarkXiangqiEngineClientId,
   isPlayableLiveEngineClientId,
   loadEngine,
@@ -38,22 +36,12 @@ test('playable live engine client ids exclude hidden, retired, EvE aliases, and 
   assert.equal(isPlayableLiveEngineClientId(undefined), false);
 });
 
-test('Dark Mini Xiangqi has a dedicated engine that stays out of the chess PvE picker', () => {
-  const engine = loadEngine(DARK_MINI_XIANGQI_DEFAULT_ENGINE_ID);
-  assert.equal(engine.id, 'python-dmx-v1.0');
-  assert.equal(engine.name, 'Misty DMX 1.0');
-  assert.equal(engine.gameSpecId, 'dark-mini-xiangqi');
-  assert.equal(isDarkMiniXiangqiEngineClientId(engine.id), true);
-  assert.equal(isPlayableLiveEngineClientId(engine.id), false);
-});
-
 test('Dark Xiangqi has a dedicated local engine that stays out of the chess PvE picker', () => {
   const engine = loadEngine(DARK_XIANGQI_DEFAULT_ENGINE_ID);
   assert.equal(engine.id, 'python-fdx-v1.2');
   assert.equal(engine.name, 'Misty DXQ 1.2');
   assert.equal(engine.gameSpecId, 'dark-xiangqi');
   assert.equal(isDarkXiangqiEngineClientId(engine.id), true);
-  assert.equal(isDarkMiniXiangqiEngineClientId(engine.id), false);
   assert.equal(isPlayableLiveEngineClientId(engine.id), false);
 });
 

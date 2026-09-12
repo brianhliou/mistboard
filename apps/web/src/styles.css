@@ -432,7 +432,7 @@
    and shave the bottom off. The grouped xiangqi-family rows hold at most one tile
    per role (≤7), so they never need the horizontal clip the dense chess pool
    relies on — drop the clip on those rows so the full badge shows. Covers banqi /
-   jieqi / DMX across live, postgame review, and watch surfaces. */
+   jieqi across live, postgame review, and watch surfaces. */
 .captures-row.mini-xq-captures-row,
 .captures-row.review-captures-row {
   overflow: visible;

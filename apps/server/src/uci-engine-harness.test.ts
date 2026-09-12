@@ -165,19 +165,19 @@ test('buildFairyStockfishCommands: mini shape (built-in variant, no ini, node bu
   ]);
 });
 
-test('buildFairyStockfishCommands: drop-mini shape (ini + node budget)', () => {
+test('buildFairyStockfishCommands: custom-variant shape (ini + node budget)', () => {
   const commands = buildFairyStockfishCommands({
     moves: ['b1b3', 'C@d4'],
-    variant: 'dropminixiangqi',
-    iniPath: '/tmp/drop-mini-xiangqi.ini',
+    variant: 'customvariant',
+    iniPath: '/tmp/custom-variant.ini',
     skill: 20,
     nodes: 800_000,
     movetimeMs: 2_000,
   });
   assert.deepEqual(commands, [
     'uci',
-    'setoption name VariantPath value /tmp/drop-mini-xiangqi.ini',
-    'setoption name UCI_Variant value dropminixiangqi',
+    'setoption name VariantPath value /tmp/custom-variant.ini',
+    'setoption name UCI_Variant value customvariant',
     'setoption name Skill Level value 20',
     'ucinewgame',
     'isready',

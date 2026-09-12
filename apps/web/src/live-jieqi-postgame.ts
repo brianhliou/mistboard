@@ -276,7 +276,7 @@ function toDecisionOverlay(summary: JieqiDecisionSummary): DecisionOverlay {
 }
 
 // Exported for the watch-replay surface to reuse the per-ply view selection,
-// mirroring the Dark Mini Xiangqi postgame module's exported helpers.
+// mirroring the other tenant postgame modules' exported helpers.
 export function postgameViewEntries(
   postgame: JieqiPostgameResponse,
 ): Array<{ key: JieqiPostgameViewKey; label: string; view: JieqiPlayerView }> {

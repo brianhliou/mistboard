@@ -3,8 +3,8 @@
  * two-seat clocks (pregame + armed + turn flash + 100ms tick), abort/forfeit
  * countdowns, the action-status notice, game controls (abort/resign with
  * confirm), and the room-action row (review / rematch / play-again / invite /
- * home). Extracted from the Dark Mini Xiangqi room (the web reference tenant);
- * strings and DOM structure are behavior the DMX vitest suite pins.
+ * home). Extracted from the first web tenant room; strings and DOM structure
+ * are behavior the room-chrome vitest suite pins.
  *
  * A chrome instance is created once per tenant module
  * (createTenantRoomChrome) and reads live values lazily through the

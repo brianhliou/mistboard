@@ -1,6 +1,6 @@
 /**
  * Paint smoke for the adapter board paths that puzzles.test.ts does not cover
- * (its flows drive Mini/Drop Mini and standard Xiangqi): Jungle and Fortress
+ * (its flows drive Mini and standard Xiangqi): Jungle and Fortress
  * Xiangqi. Mounts the real page against a mocked API and asserts each
  * adapter's board (+ pockets, for Fortress) paints with interactive squares,
  * pinning the behavior across the puzzles.ts -> adapters split.

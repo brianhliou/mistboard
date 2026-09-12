@@ -19,18 +19,10 @@ export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | 
     'live-route--xiangqi',
     gameSpecId === 'dark-xiangqi' || gameSpecId === 'xiangqi',
   );
-  target.classList.toggle(
-    'live-route--mini-xiangqi',
-    gameSpecId === 'mini-xiangqi' ||
-      gameSpecId === 'dark-mini-xiangqi' ||
-      gameSpecId === 'drop-mini-xiangqi',
-  );
-  target.classList.toggle('live-route--drop-mini-xiangqi', gameSpecId === 'drop-mini-xiangqi');
   target.classList.toggle('live-route--duck-xiangqi', gameSpecId === 'duck-xiangqi');
   target.classList.toggle('live-route--fortress-xiangqi', gameSpecId === 'fortress-xiangqi');
   target.classList.toggle('live-route--jieqi', gameSpecId === 'jieqi');
   target.classList.toggle('live-route--banqi', gameSpecId === 'banqi');
-  target.classList.toggle('live-route--reveal-chess', gameSpecId === 'reveal-chess');
   target.classList.toggle('live-route--crazyhouse', gameSpecId === 'dark-crazyhouse');
   target.classList.toggle('live-route--kriegspiel', gameSpecId === 'kriegspiel');
   target.classList.toggle('live-route--jungle', gameSpecId === 'jungle');

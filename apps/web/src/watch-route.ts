@@ -79,7 +79,7 @@ type WatchFeed = {
 
 // Which replay renderer a game needs: a game spec id (the registry's unambiguous
 // tenant key) or 'chess' (the chessground fallback for the unregistered dark-chess
-// stack). It must NOT key on the coarse watch.family: jieqi and Dark Mini Xiangqi
+// stack). It must NOT key on the coarse watch.family: jieqi and banqi
 // both render in the 'xiangqi' family, so a family key would resolve both to the
 // same tenant. A switch across renderers must re-mount, not loadGame.
 type WatchRendererKind = string;
@@ -1070,7 +1070,7 @@ async function mountWatchReplay(
       ...(live ? { live: true, loadPostgameOverride: live.loadPostgameOverride } : {}),
     });
   }
-  // Chess (chessground): fog channels (dark-chess, reveal-chess, kriegspiel,
+  // Chess (chessground): fog channels (dark-chess, kriegspiel,
   // dark-crazyhouse). Watch only ever serves COMPLETED games, so the middle
   // "Truth" pane is the fully public final-and-throughout board — no hidden-info
   // leak. Render the triptych compact but let watch-route.css isolate the truth
@@ -1357,7 +1357,7 @@ function watchScrubButton(text: string, label: string): HTMLButtonElement {
 
 // Whether the fog-perspective toggle applies to a variant: only asymmetric fog
 // (`visibility: 'dark'`) games have distinct per-side views worth switching
-// between. Symmetric-mask hidden-identity (jieqi/banqi/jungle-flip/reveal-chess)
+// between. Symmetric-mask hidden-identity (jieqi/banqi/jungle-flip)
 // and open variants render a single board and get no toggle.
 export function watchPovToggleApplies(variant: string): boolean {
   return maybeGameSpecForId(variant)?.visibility === 'dark';
@@ -1777,16 +1777,12 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'dark-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'dark-xiangqi': 'dark-xiangqi',
-  'mini-xiangqi': 'mini-xiangqi',
-  'dark-mini-xiangqi': 'dark-mini-xiangqi',
-  'drop-mini-xiangqi': 'drop-mini-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
   'dark-crazyhouse': 'dark-crazyhouse',
   kriegspiel: 'kriegspiel',
-  'reveal-chess': 'reveal-chess',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
 };

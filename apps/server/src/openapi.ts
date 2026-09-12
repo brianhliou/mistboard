@@ -139,7 +139,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
       id: { type: 'string' },
       variant: {
         type: 'string',
-        enum: ['xiangqi', 'mini-xiangqi', 'drop-mini-xiangqi', 'fortress-xiangqi', 'jungle'],
+        enum: ['xiangqi', 'mini-xiangqi', 'fortress-xiangqi', 'jungle'],
       },
       title: { type: 'string' },
       sideToMove: { type: ['string', 'null'], enum: ['red', 'black', null] },
@@ -783,7 +783,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
             'variant',
             {
               type: 'string',
-              enum: ['xiangqi', 'mini-xiangqi', 'drop-mini-xiangqi', 'fortress-xiangqi', 'jungle'],
+              enum: ['xiangqi', 'mini-xiangqi', 'fortress-xiangqi', 'jungle'],
             },
             'Restrict to one variant; omit for all.',
           ),

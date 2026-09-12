@@ -17,9 +17,7 @@ import {
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
@@ -30,8 +28,6 @@ import {
   KRIEGSPIEL_SPEC_ID,
   LUZHANQI_SPEC_ID,
   MAHJONG_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
-  REVEAL_CHESS_SPEC_ID,
   type TimeControlId,
   variantDefaultTimeControl,
   XIANGQI_SPEC_ID,
@@ -39,9 +35,7 @@ import {
 import {
   correspondenceEnabled,
   darkCrazyhouseEnabled,
-  darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
-  dropMiniXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
@@ -50,7 +44,6 @@ import {
   kriegspielEnabled,
   luzhanqiEnabled,
   mahjongEnabled,
-  revealChessEnabled,
   xiangqiEnabled,
 } from '../feature-flags.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
@@ -630,163 +623,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     },
   },
   {
-    // Open-information 7x7 Mini Xiangqi. It deliberately rides the shared
-    // mini-xiangqi live shell with no fog mask, no reserve strips, no bot, and
-    // no ratings at launch.
-    gameSpecId: MINI_XIANGQI_SPEC_ID,
-    roomIdPrefix: 'mxq_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Mini Xiangqi',
-    gameRouteBase: '/mini-xiangqi/game',
-    mountPostgame: (root, roomId) =>
-      import('../mini-xiangqi-postgame.js').then(({ mountMiniXiangqiPostgame }) =>
-        mountMiniXiangqiPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/mini-xiangqi/game',
-    watch: {
-      family: 'xiangqi',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-mini-open-xiangqi-replay.js').then(({ mountMiniOpenXiangqiWatchReplay }) =>
-          mountMiniOpenXiangqiWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: false,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: hiddenFromMenu,
-      // RETIRED 2026-09-04 (Brian). Mini Xiangqi was hidden from the picker in
-      // the 2026-07-03 xiangqi pivot but kept an unconditional deep link, so a
-      // link was its only door. Closing that door is the decision; the variant
-      // itself stays enabled so existing rooms, postgames and replays survive.
-      acceptsDeepLink: retiredDeepLink,
-      engineOptions: [
-        {
-          id: 'fairy-stockfish-mini-xiangqi-very-strong',
-          name: 'Fairy Stockfish - Strongest',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-mini-xiangqi-strong',
-          name: 'Fairy Stockfish - Strong',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-mini-xiangqi-amateur',
-          name: 'Fairy Stockfish - Amateur',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'fairy-stockfish-mini-xiangqi-strong',
-    },
-  },
-  {
-    gameSpecId: DARK_MINI_XIANGQI_SPEC_ID,
-    roomIdPrefix: 'dmxq_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Dark Mini Xiangqi',
-    gameRouteBase: '/dark-mini-xiangqi/game',
-    mountPostgame: (root, roomId) =>
-      import('../dark-mini-xiangqi-postgame.js').then(({ mountDarkMiniXiangqiPostgame }) =>
-        mountDarkMiniXiangqiPostgame(root, roomId),
-      ),
-    watch: {
-      family: 'xiangqi',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-mini-xiangqi-replay.js').then(({ mountMiniXiangqiWatchReplay }) =>
-          mountMiniXiangqiWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: true,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2'],
-      offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: darkMiniXiangqiEnabled,
-      engineOptions: [
-        {
-          id: 'python-dmx-v1.0',
-          name: 'Misty DMX 1.0',
-          familyName: 'Misty DMX',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'python-dmx-v1.0',
-    },
-  },
-  {
-    // Drop Mini Xiangqi (open 7x7 mini xiangqi with crazyhouse-style reserves).
-    // Self-contained live client on the socket-client + chrome stack, using the
-    // mini-xiangqi SVG board and reserve strips. PvE uses in-process heuristic
-    // launch tiers; FSF remains a lab viewer until the variant adapter is real.
-    gameSpecId: DROP_MINI_XIANGQI_SPEC_ID,
-    roomIdPrefix: 'dmxqd_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Drop Mini Xiangqi',
-    gameRouteBase: '/drop-mini-xiangqi/game',
-    mountPostgame: (root, roomId) =>
-      import('../drop-mini-xiangqi-postgame.js').then(({ mountDropMiniXiangqiPostgame }) =>
-        mountDropMiniXiangqiPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/drop-mini-xiangqi/game',
-    loadLiveRoomClient: () =>
-      import('../live-drop-mini-xiangqi.js').then(
-        ({ bootstrapDropMiniXiangqiLiveRoom }) =>
-          () =>
-            bootstrapDropMiniXiangqiLiveRoom(),
-      ),
-    watch: {
-      family: 'xiangqi',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-drop-mini-xiangqi-replay.js').then(({ mountDropMiniXiangqiWatchReplay }) =>
-          mountDropMiniXiangqiWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: true,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: dropMiniXiangqiEnabled,
-      engineOptions: [
-        {
-          id: 'fairy-stockfish-drop-mini-xiangqi-very-strong',
-          name: 'Fairy Stockfish - Strongest',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-drop-mini-xiangqi-strong',
-          name: 'Fairy Stockfish - Strong',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-drop-mini-xiangqi-amateur',
-          name: 'Fairy Stockfish - Amateur',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'fairy-stockfish-drop-mini-xiangqi-strong',
-    },
-  },
-  {
     // Fortress Xiangqi (open 7x8 xiangqi-with-a-pocket): faithful movement + the
     // Treasure + crazyhouse drops + the chasing rule. Self-contained live client
     // on the socket-client + chrome stack with the 7x8 corner-palace SVG board.
@@ -961,53 +797,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       defaultEngineId: 'mahjong-efficiency',
       // No seat to give away: the server seats the other three itself.
       hideColorPicker: true,
-    },
-  },
-  {
-    // Reveal Chess (chess-jieqi): standard 8x8 chess with hidden piece
-    // IDENTITIES. Identity-hidden like jieqi (positions are public; only a
-    // face-down piece's role is hidden), but on a chess board with chess colors,
-    // so it renders in the 'chess' family with the cburnett pieces + a face-down
-    // disc token. A self-contained live client on the socket-client + chrome
-    // stack, with no fog. PvP-only at launch (no PvE engine).
-    gameSpecId: REVEAL_CHESS_SPEC_ID,
-    roomIdPrefix: 'rc_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Reveal Chess',
-    gameRouteBase: '/reveal-chess/game',
-    mountPostgame: (root, roomId) =>
-      import('../reveal-chess-postgame.js').then(({ mountRevealChessPostgame }) =>
-        mountRevealChessPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/reveal-chess/game',
-    loadLiveRoomClient: () =>
-      import('../live-reveal-chess.js').then(
-        ({ bootstrapRevealChessLiveRoom }) =>
-          () =>
-            bootstrapRevealChessLiveRoom(),
-      ),
-    watch: {
-      family: 'chess',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-reveal-chess-replay.js').then(({ mountRevealChessWatchReplay }) =>
-          mountRevealChessWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        firstColor: 'white',
-        firstGlyph: '♚',
-        firstLabel: 'White',
-        secondColor: 'black',
-        secondGlyph: '♚',
-        secondLabel: 'Black',
-        supportsRated: false,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: revealChessEnabled,
-      acceptsDeepLink: revealChessEnabled,
     },
   },
   {

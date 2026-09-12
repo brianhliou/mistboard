@@ -2,7 +2,7 @@
 //
 // A thin variant adapter over the shared descriptor-driven cell-board core
 // (@mistboard/board-render renderGridBoardSvg) — the same 8x8 chess board Dark
-// Crazyhouse / Reveal Chess use, with the fog overlay covering EVERY square the
+// Crazyhouse use, with the fog overlay covering EVERY square the
 // viewer does not own. Kriegspiel is stricter than fog: the view carries only
 // the viewer's own pieces, so the whole rest of the board is shrouded (the
 // player never learns whether an off-piece square is empty or holds an enemy).

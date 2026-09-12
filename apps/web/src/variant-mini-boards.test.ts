@@ -18,31 +18,6 @@ describe('variant mini-board markers', () => {
     expect(svg).not.toContain('vm-chess-fog');
   });
 
-  it('renders the Drop Mini Xiangqi marker with an open board and reserve tray', () => {
-    const svg = renderVariantMiniBoard('drop-mini-xiangqi', { size: 100 });
-
-    expect(svg).toContain('data-mini-id="drop-mini-xiangqi"');
-    expect(svg).toContain('vm-hand-tray');
-    expect(svg).not.toContain('vm-xq-fog');
-  });
-
-  it('renders the Reveal Chess marker backs as white Banqi-style outlined discs', () => {
-    const svg = renderVariantMiniBoard('reveal-chess', { size: 100 });
-    const host = document.createElement('div');
-    host.innerHTML = svg;
-    const backs = [...host.querySelectorAll<SVGCircleElement>('circle.vm-chess-back-token')];
-
-    expect(svg).toContain('data-mini-id="reveal-chess"');
-    expect(backs).toHaveLength(7);
-    for (const back of backs) {
-      expect(back.getAttribute('fill')).toBe('#f4efe4');
-      expect(back.getAttribute('stroke')).toBe('#3a342b');
-      expect(back.getAttribute('stroke-width')).toBe('0.5');
-    }
-    expect(svg).not.toContain('stroke-width="2"');
-    expect(svg).not.toContain('opacity="0.4"');
-  });
-
   it('renders the Jungle marker as the bottom-center 3x3 (den + traps) of the real board', () => {
     const svg = renderVariantMiniBoard('jungle', { size: 100 });
     expect(svg).toContain('data-mini-id="jungle"');
@@ -96,10 +71,5 @@ describe('variant mini-board markers', () => {
     expect(root.querySelectorAll('.variant-color-state-card')).toHaveLength(48);
     expect(root.querySelector('svg[data-mini-id="kriegspiel"]')).toBeNull();
     expect(root.querySelector('svg[data-mini-id="dark-crazyhouse"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="mini-xiangqi"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="dark-mini-xiangqi"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="drop-mini-xiangqi"]')).toBeNull();
-    expect(root.querySelector('span[data-variant-marker-id="mini-xiangqi"]')).toBeNull();
-    expect(root.querySelector('svg[data-mini-id="reveal-chess"]')).toBeNull();
   });
 });

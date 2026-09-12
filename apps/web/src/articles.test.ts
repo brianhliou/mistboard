@@ -52,14 +52,6 @@ describe('article public listing gates', () => {
     ]);
   });
 
-  it('keeps the mini xiangqi trio de-listed from the rules index regardless of env flags', () => {
-    vi.stubEnv('DEV', false);
-
-    const rules = buildRulesIndex();
-    expect(rules.querySelector('a[href="/rules/dark-mini-xiangqi"]')).toBeNull();
-    expect(rules.querySelector('a[href="/rules/mini-xiangqi"]')).toBeNull();
-  });
-
   it('orders the articles page by publish date newest first', () => {
     vi.stubEnv('DEV', true);
 
@@ -222,14 +214,7 @@ describe('article public listing gates', () => {
     // The server answers 410 for these; a client-side navigation must not
     // show what the server has declared gone (docs-private/variant-
     // retirement-plan.md, #396).
-    for (const slug of [
-      'dark-crazyhouse',
-      'dark-mini-xiangqi',
-      'drop-mini-xiangqi',
-      'kriegspiel',
-      'mini-xiangqi',
-      'reveal-chess',
-    ]) {
+    for (const slug of ['dark-crazyhouse', 'kriegspiel']) {
       for (const lang of [undefined, 'zh-Hans'] as const) {
         const page = buildArticlePage(slug, lang);
         expect(page.querySelector('.article-title'), `${slug} ${lang}`).toBeNull();
@@ -253,8 +238,6 @@ describe('article public listing gates', () => {
   });
 
   it('limits the homepage article widget to editorial article cards ordered by publish date', () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-
     const hrefs = [
       ...(buildHomeArticleCards(50, undefined, NO_AGE_CUT)?.querySelectorAll<HTMLAnchorElement>(
         '.landing-article-card[data-card-kind="article"]',
@@ -303,18 +286,6 @@ describe('article public listing gates', () => {
 
     expect(cards?.textContent).not.toContain('Secret in the Tangerine, both game volumes.');
     expect(cards?.querySelector('.landing-announcement-card[href="/study/Dfi3NpRE"]')).toBeNull();
-  });
-
-  it('does not show the Drop Mini Xiangqi launch announcement in the homepage article widget', () => {
-    vi.stubEnv('DEV', false);
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    const announcement = cards?.querySelector<HTMLAnchorElement>(
-      '.landing-announcement-card[href="/rules/drop-mini-xiangqi"]',
-    );
-
-    expect(announcement).toBeNull();
-    expect(cards?.textContent).not.toContain('Drop Mini Xiangqi has launched.');
   });
 
   it('does not show the Banqi alpha announcement in the homepage article widget', () => {
@@ -550,8 +521,6 @@ describe('rules variant sidebar', () => {
     const hrefs = [...(nav?.querySelectorAll('a') ?? [])].map((link) => link.getAttribute('href'));
     // The mini xiangqi trio is de-listed; the rail uses the eight-variant
     // public shelf order.
-    expect(nav?.querySelector('a[href="/rules/mini-xiangqi"]')).toBeNull();
-    expect(nav?.querySelector('a[href="/rules/dark-mini-xiangqi"]')).toBeNull();
     expect(nav?.querySelector('a[href="/rules/fog-xiangqi"]')).not.toBeNull();
     expect(nav?.querySelector('a[href="/rules/jieqi"]')).not.toBeNull();
     expect(nav?.querySelector('a[href="/rules/jungle"]')).not.toBeNull();
@@ -633,7 +602,7 @@ describe('rules variant sidebar', () => {
     }
     // Xiangqi pivot: the mini xiangqi trio and the chess reference article are
     // de-listed from the tile grid (still reachable by direct URL).
-    for (const href of ['/rules/drop-mini-xiangqi', '/rules/chess', '/rules/shogi4']) {
+    for (const href of ['/rules/chess', '/rules/shogi4']) {
       expect(grid?.querySelector(`a[href="${href}"]`), href).toBeNull();
     }
   });

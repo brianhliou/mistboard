@@ -8,7 +8,6 @@ import './styles.css';
 import './game-shell.css';
 import './site-shell.css';
 import type { GameEvent, PlayerView } from '@mistboard/game';
-import { maybePlayDarkMiniXiangqiSnapshotSound } from './live-mini-xiangqi-sound.js';
 import {
   initRender,
   reconcileInteractionState,
@@ -113,7 +112,6 @@ export function bootstrapLiveRoom(): void {
     render,
     reconcileInteractionState,
     maybePlaySnapshotSound,
-    maybePlayDarkMiniXiangqiSound: maybePlayDarkMiniXiangqiSnapshotSound,
   });
 
   // ── Dev-only: ?conn= override for static visual checks of connection states ──

@@ -12,7 +12,6 @@ import {
   stopWorkerRun,
 } from './engine-experiments.js';
 import {
-  DARK_MINI_XIANGQI_DEFAULT_ENGINE_ID,
   DARK_XIANGQI_DEFAULT_ENGINE_ID,
   loadEngine,
   playableLiveEngines,
@@ -215,11 +214,10 @@ async function warmupLiveEnginePools(): Promise<void> {
   }
   const warmupEngines = Array.from(
     new Map(
-      [
-        ...playableLiveEngines(),
-        loadEngine(DARK_MINI_XIANGQI_DEFAULT_ENGINE_ID),
-        loadEngine(DARK_XIANGQI_DEFAULT_ENGINE_ID),
-      ].map((engine) => [engine.id, engine]),
+      [...playableLiveEngines(), loadEngine(DARK_XIANGQI_DEFAULT_ENGINE_ID)].map((engine) => [
+        engine.id,
+        engine,
+      ]),
     ).values(),
   );
   const pythonEngines = warmupEngines.filter(

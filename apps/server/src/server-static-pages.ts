@@ -293,8 +293,6 @@ const RENAMED_ARTICLE_SLUGS: Record<string, string> = {
   'dark-chess-rules': 'fog-chess',
   'xiangqi-rules': 'xiangqi',
   'dark-xiangqi-rules': 'fog-xiangqi',
-  'mini-xiangqi-rules': 'mini-xiangqi',
-  'dark-mini-xiangqi-rules': 'dark-mini-xiangqi',
   draft960: 'dark-draft960',
   'flip-xiangqi': 'banqi',
   'dark-chess': 'fog-chess',

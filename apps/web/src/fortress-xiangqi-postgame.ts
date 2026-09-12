@@ -6,7 +6,7 @@ import {
 } from '@mistboard/game';
 import { reviewSeatProfiles } from './profile-link.js';
 import { analysisHref, editorHref } from './review/position-links.js';
-import './drop-mini-xiangqi.css';
+import './drop-reserve.css';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import './landing.css';

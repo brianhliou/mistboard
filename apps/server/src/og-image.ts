@@ -18,10 +18,8 @@ import {
 } from '@mistboard/board-render';
 import {
   applyGameEvent,
-  createInitialMiniXiangqiState,
   createInitialXiangqiState,
   type GameEvent,
-  getMiniXiangqiPlayerView,
   getPlayerView as getXiangqiPlayerView,
   initialGameProjection,
   parseStandardXiangqiFen,
@@ -239,10 +237,8 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'skill-vs-luck': renderSkillVsLuckOgSvg,
   shogi4: renderShogi4OgSvg,
   misty: renderMistyOgSvg,
-  xiangqi: (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'full', false),
-  'dark-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'full', true),
-  'mini-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'mini', false),
-  'dark-mini-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, 'mini', true),
+  xiangqi: (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, false),
+  'dark-xiangqi': (title, ctx) => renderXiangqiFamilyOgSvg(title, ctx, true),
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
@@ -557,16 +553,10 @@ function xqOgCoord(square: string): { file: number; rank: number } {
   return { file: square.charCodeAt(0) - 97, rank: Number(square.slice(1)) };
 }
 
-function renderXiangqiFamilyOgSvg(
-  title: string,
-  _ctx: ArticleOgContext,
-  size: 'full' | 'mini',
-  dark: boolean,
-): string {
-  const boardHeight = size === 'full' ? 504 : 500;
-  const boardY = size === 'full' ? 36 : 38;
+function renderXiangqiFamilyOgSvg(title: string, _ctx: ArticleOgContext, dark: boolean): string {
+  const boardHeight = 504;
+  const boardY = 36;
   const board = xiangqiOgBoard({
-    size,
     dark,
     centerX: OG_WIDTH / 2,
     y: boardY,
@@ -582,31 +572,23 @@ function renderXiangqiFamilyOgSvg(
 }
 
 function xiangqiOgBoard(params: {
-  size: 'full' | 'mini';
   dark: boolean;
   centerX: number;
   y: number;
   height: number;
 }): string {
-  const { size, dark } = params;
-  const state =
-    size === 'full'
-      ? createInitialXiangqiState('og-card')
-      : createInitialMiniXiangqiState('og-card');
+  const { dark } = params;
+  const state = createInitialXiangqiState('og-card');
   const pieces: XiangqiOgPiece[] = Object.entries(state.board).flatMap(([square, piece]) =>
     piece ? [{ ...xqOgCoord(square), color: piece.color, role: piece.role }] : [],
   );
-  const files = size === 'full' ? 9 : 7;
-  const ranks = size === 'full' ? 10 : 7;
+  const files = 9;
+  const ranks = 10;
   let fogPoints: Array<{ file: number; rank: number }> | undefined;
   if (dark) {
-    const visibleSquares =
-      size === 'full'
-        ? getXiangqiPlayerView(state as ReturnType<typeof createInitialXiangqiState>, 'red')
-            .visibleSquares
-        : getMiniXiangqiPlayerView(state as ReturnType<typeof createInitialMiniXiangqiState>, 'red')
-            .visibleSquares;
-    const visible = new Set(visibleSquares.map((square) => square as string));
+    const visible = new Set(
+      getXiangqiPlayerView(state, 'red').visibleSquares.map((square) => square as string),
+    );
     fogPoints = [];
     for (let file = 0; file < files; file += 1) {
       for (let rank = 1; rank <= ranks; rank += 1) {
@@ -621,17 +603,11 @@ function xiangqiOgBoard(params: {
     ranks,
     pieces,
     fogPoints,
-    riverBetweenRanks: size === 'full' ? [5, 6] : undefined,
-    palaces:
-      size === 'full'
-        ? [
-            { fileLo: 3, fileHi: 5, rankLo: 1, rankHi: 3 },
-            { fileLo: 3, fileHi: 5, rankLo: 8, rankHi: 10 },
-          ]
-        : [
-            { fileLo: 2, fileHi: 4, rankLo: 1, rankHi: 3 },
-            { fileLo: 2, fileHi: 4, rankLo: 5, rankHi: 7 },
-          ],
+    riverBetweenRanks: [5, 6],
+    palaces: [
+      { fileLo: 3, fileHi: 5, rankLo: 1, rankHi: 3 },
+      { fileLo: 3, fileHi: 5, rankLo: 8, rankHi: 10 },
+    ],
     centerX: params.centerX,
     y: params.y,
     height: params.height,

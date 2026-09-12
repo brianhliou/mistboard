@@ -123,7 +123,7 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 //   leaks nothing. These serve live.
 //
 //   ASYMMETRIC — each player knows something the other does not (luzhanqi: you
-//   see your own ranks; jieqi/reveal-chess: a capturer learns the role of what it
+//   see your own ranks; jieqi: a capturer learns the role of what it
 //   took). There is no single view that is honest to both seats, so a spectator
 //   board would have to pick a side. These stay masked until that surface exists.
 //
@@ -131,7 +131,7 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 // hiddenIdentityLiveObservePolicy's key check in watch-live.test.ts until it is
 // classified here, and an unclassified spec falls through to 'masked'.
 const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['banqi', 'jungle-flip'] as const;
-const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['jieqi', 'luzhanqi', 'reveal-chess'] as const;
+const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['jieqi', 'luzhanqi'] as const;
 
 export const HIDDEN_IDENTITY_LIVE_OBSERVE: Readonly<Record<string, LiveObservePolicy>> = {
   ...Object.fromEntries(SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS.map((id) => [id, 'open' as const])),
@@ -369,7 +369,6 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/accounts' ||
     normalized === '/readouts' ||
     normalized === '/bots' ||
-    normalized === '/mini-xiangqi-spike' ||
     normalized === '/xiangqi-demo' ||
     normalized === '/blog' ||
     normalized === '/zh-hans/blog' ||
@@ -392,14 +391,10 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/xiangqi/game/') ||
     normalized.startsWith('/historical-xiangqi/game/') ||
     normalized.startsWith('/dark-xiangqi/game/') ||
-    normalized.startsWith('/mini-xiangqi/game/') ||
-    normalized.startsWith('/dark-mini-xiangqi/game/') ||
-    normalized.startsWith('/drop-mini-xiangqi/game/') ||
     normalized.startsWith('/banqi/game/') ||
     normalized.startsWith('/jungle/game/') ||
     normalized.startsWith('/jungle-flip/game/') ||
     normalized.startsWith('/jieqi/game/') ||
-    normalized.startsWith('/reveal-chess/game/') ||
     normalized.startsWith('/dark-crazyhouse/game/') ||
     normalized.startsWith('/kriegspiel/game/') ||
     normalized.startsWith('/fortress-xiangqi/game/') ||

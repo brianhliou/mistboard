@@ -471,21 +471,15 @@
    each review page: the board fills its board-stage slot (the layout sizes the
    slot from boardAspect) and the SVG child follows the aspect via height:auto. */
 .banqi-review .replay-board,
-.mini-xiangqi-review .replay-board,
-.drop-mini-xiangqi-review .replay-board,
 .fortress-xiangqi-review .replay-board,
-.jieqi-review .replay-board,
-.dark-mini-xiangqi-review .replay-board {
+.jieqi-review .replay-board {
   width: 100%;
   max-width: none;
 }
 
 .banqi-review .replay-board > svg,
-.mini-xiangqi-review .replay-board > svg,
-.drop-mini-xiangqi-review .replay-board > svg,
 .fortress-xiangqi-review .replay-board > svg,
-.jieqi-review .replay-board > svg,
-.dark-mini-xiangqi-review .replay-board > svg {
+.jieqi-review .replay-board > svg {
   display: block;
   width: 100%;
   height: auto;

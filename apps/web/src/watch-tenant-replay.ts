@@ -1,5 +1,5 @@
-// Generic Mistboard TV renderer for the tenant SVG family (Jieqi, Banqi, Dark
-// Mini Xiangqi — red/black boards rendered as SVG, replayed from a FINISHED
+// Generic Mistboard TV renderer for the tenant SVG family (Jieqi, Banqi —
+// red/black boards rendered as SVG, replayed from a FINISHED
 // game's postgame endpoint, never live spectating). This holds ALL the shared
 // "TV" chrome — header strip, board panes (one truth pane, or a per-color
 // triptych), the control bar + auto-play, ply navigation, and the ReplayHandle
@@ -67,7 +67,7 @@ export type WatchPostgameMeta = {
   // the players' real clocks from the move timestamps (the generic tenant postgames
   // carry no dense clock series). Move events also carry the played `move` (from-to
   // coordinates), which the /watch move list reads variant-agnostically; drops
-  // (drop-mini-xiangqi) omit `from`.
+  // (fortress) omit `from`.
   timeline?: ReadonlyArray<{
     at: number;
     color?: string;
@@ -84,11 +84,11 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   loadPostgame(roomId: string): Promise<{ ok: true; postgame: Postgame } | { ok: false }>;
   maxPly(postgame: Postgame): number;
   // Boards to show: a triptych [red, truth, black] for per-color hidden info
-  // (jieqi/mini-xiangqi) or just [truth] for symmetric variants (banqi).
+  // (jieqi) or just [truth] for symmetric variants (banqi).
   viewEntries(postgame: Postgame): ReadonlyArray<{ key: ViewKey; label: string }>;
   viewAtPly(postgame: Postgame, key: ViewKey, ply: number): View | null;
   paneKind(key: ViewKey): 'white' | 'truth' | 'black';
-  // The adapter owns fog/perspective (e.g. mini-xiangqi passes showFog when the
+  // The adapter owns fog/perspective (e.g. a fog tenant passes showFog when the
   // pane is a per-color view rather than truth).
   renderBoard(view: View, orientation: 'red' | 'black', key: ViewKey): string;
   fillCaptures(host: HTMLElement, view: View, owner: 'red' | 'black'): void;
@@ -97,7 +97,7 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   // more than that (Duck Xiangqi: a piece move AND a duck placement) must pass
   // its own, or the TV list silently publishes half of each turn.
   moveLabel?(move: Record<string, unknown>): string;
-  // Drop/reserve variants (drop-mini-xiangqi, crazyhouse) where the hand IS
+  // Drop/reserve variants (fortress, crazyhouse) where the hand IS
   // the position: the compact showcase flanks the board with vertical reserve
   // strips (each side's hand) instead of top/bottom capture rows.
   sidedCaptures?: boolean;
@@ -108,7 +108,7 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   // Override the result string when the recorded result key (seat-based) is not
   // the player-facing color. Banqi needs this: its seats are first/second mover
   // and the ink binds on the opening flip, so "red-wins" may be a Black-ink win.
-  // Tenants where seat == ink (jieqi, mini-xiangqi) omit it and keep the default.
+  // Tenants where seat == ink (jieqi) omit it and keep the default.
   resultLabel?(result: string, postgame: Postgame): string;
   // Same problem one row down: the seat rail cells default to the literal color
   // words for the two seats, which a flip tenant must override with the bound ink

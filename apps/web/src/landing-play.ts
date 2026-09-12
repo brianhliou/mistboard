@@ -6,9 +6,7 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   engineTimeControlPin,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -18,9 +16,7 @@ import {
   JUNGLE_SPEC_ID,
   KRIEGSPIEL_SPEC_ID,
   MAHJONG_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
   RATED_TIME_CONTROLS,
-  REVEAL_CHESS_SPEC_ID,
   TIME_CONTROLS,
   type TimeClass,
   type TimeControlId,
@@ -89,15 +85,11 @@ type LandingPlayChoice = {
 type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
 type LandingGameSpecId =
   | typeof DARK_CHESS_SPEC_ID
-  | typeof MINI_XIANGQI_SPEC_ID
-  | typeof DARK_MINI_XIANGQI_SPEC_ID
-  | typeof DROP_MINI_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
-  | typeof REVEAL_CHESS_SPEC_ID
   | typeof JUNGLE_SPEC_ID
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
@@ -255,14 +247,6 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
       return 'variant.darkCrazyhouse.name';
     case KRIEGSPIEL_SPEC_ID:
       return 'variant.kriegspiel.name';
-    case REVEAL_CHESS_SPEC_ID:
-      return 'variant.revealChess.name';
-    case MINI_XIANGQI_SPEC_ID:
-      return 'variant.miniXiangqi.name';
-    case DARK_MINI_XIANGQI_SPEC_ID:
-      return 'variant.darkMiniXiangqi.name';
-    case DROP_MINI_XIANGQI_SPEC_ID:
-      return 'variant.dropMiniXiangqi.name';
     case DARK_XIANGQI_SPEC_ID:
       return 'variant.darkXiangqi.name';
     case JIEQI_SPEC_ID:
@@ -299,8 +283,8 @@ function parseLandingGameSpecId(value: string): LandingGameSpecId {
 // jieqi opened a Jieqi dialog from a Fog Chess link (measured 2026-09-04).
 //
 // The rest stays keyed on the tenant's own acceptsDeepLink, which is
-// DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (DMX, Drop Mini
-// Xiangqi, Dark Crazyhouse) have no other door, and the soft-link
+// DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (Dark
+// Crazyhouse) have no other door, and the soft-link
 // branch in the dialog exists to seat them. Collapsing the two lists makes
 // `npm run dev:lab` unable to reach any of them.
 /** Whether a play deep link can name this spec, i.e. whether the dialog will
@@ -1480,7 +1464,7 @@ function lobbyRequestRow(request: OpenLobbyRequest, locale: Locale = currentLoca
   const primary = document.createElement('span');
   const ratedLabel =
     request.rated === false ? t('play.casual', {}, locale) : t('play.rated', {}, locale);
-  // Chess shows its start format; other variants show the game name (a DMX open
+  // Chess shows its start format; other variants show the game name (an open
   // request isn't "Standard/Draft960").
   const formatLabel =
     requestSpecId === DARK_CHESS_SPEC_ID
@@ -1489,7 +1473,7 @@ function lobbyRequestRow(request: OpenLobbyRequest, locale: Locale = currentLoca
         : t('play.standard', {}, locale)
       : variantLabelForGameSpec(requestSpecId, locale);
   // Time control + game on the bold line; the casual/rated tag drops to the
-  // meta line with the wait age so a long variant name (Dark Mini Xiangqi)
+  // meta line with the wait age so a long variant name (Fortress Xiangqi)
   // doesn't orphan "· Casual" onto its own wrapped line.
   primary.textContent = `${formatTimeControl(request.timeControl)} ${formatLabel}`;
   const secondary = document.createElement('small');
@@ -1820,7 +1804,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
       card.className = 'landing-variant-card';
       card.setAttribute('role', 'radio');
       card.dataset.gameSpec = gameSpecId;
-      // No computer opponent yet (Dark Xiangqi, Reveal Chess): grey the card out
+      // No computer opponent yet (Dark Xiangqi): grey the card out
       // of the engine flow rather than letting it be picked and silently create
       // a PvP room.
       const pveDisabled = choice.mode === 'pve' && !landingVariantSupportsPve(gameSpecId);
@@ -2121,7 +2105,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
     if (choice.mode === 'lobby') {
       cancelLobbyWait?.();
       // The empty-lobby "play the engine" offer is chess-only (no engine plays
-      // the xiangqi family yet), so DMX seekers wait without it.
+      // the xiangqi family yet), so those seekers wait without it.
       const lobbyEngineId = setup.gameSpecId === DARK_CHESS_SPEC_ID ? selectedEngineId : undefined;
       cancelLobbyWait = joinLobbyFromPlay(startButton, setup, status, locale, lobbyEngineId);
       return;
@@ -3213,7 +3197,7 @@ export function roomCreationRequestBody(
     };
   }
   if (setup.gameSpecId === JIEQI_SPEC_ID) {
-    // Jieqi PvE sends the picked engine id (unlike DMX, which defaults it
+    // Jieqi PvE sends the picked engine id (unlike Dark Xiangqi, which defaults it
     // server-side); colors are xiangqi red/black, never rated.
     return {
       mode,
@@ -3235,22 +3219,6 @@ export function roomCreationRequestBody(
       mode,
       gameSpecId,
       timeControl: setup.timeControl,
-      preferredColor:
-        setup.preferredColor === 'white'
-          ? 'red'
-          : setup.preferredColor === 'red' || setup.preferredColor === 'black'
-            ? setup.preferredColor
-            : 'random',
-      ...(mode === 'pve' && engineId ? { engineId } : {}),
-    };
-  }
-  if (setup.gameSpecId === DROP_MINI_XIANGQI_SPEC_ID) {
-    // Drop Mini Xiangqi is open-info red/black mini xiangqi with reserves.
-    return {
-      mode,
-      gameSpecId,
-      timeControl: setup.timeControl,
-      ...(mode === 'pvp' ? { rated: setup.rated } : {}),
       preferredColor:
         setup.preferredColor === 'white'
           ? 'red'
@@ -3297,34 +3265,6 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
-  if (setup.gameSpecId === MINI_XIANGQI_SPEC_ID) {
-    // Mini Xiangqi is open-info red/black mini xiangqi without drops, casual-only
-    // for now. PvE plays via Fairy-Stockfish's native minixiangqi variant.
-    return {
-      mode,
-      gameSpecId,
-      timeControl: setup.timeControl,
-      rated: false,
-      preferredColor:
-        setup.preferredColor === 'white'
-          ? 'red'
-          : setup.preferredColor === 'red' || setup.preferredColor === 'black'
-            ? setup.preferredColor
-            : 'random',
-      ...(mode === 'pve' && engineId ? { engineId } : {}),
-    };
-  }
-  if (setup.gameSpecId === REVEAL_CHESS_SPEC_ID) {
-    // Reveal Chess is PvP-only and casual-only (rated not launched); colors are
-    // standard chess white/black, with no draft960 / start-format axis.
-    return {
-      mode,
-      gameSpecId,
-      timeControl: setup.timeControl,
-      rated: false,
-      preferredColor: setup.preferredColor,
-    };
-  }
   if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) {
     // Dark Crazyhouse is PvP-only and casual-only (no bot yet, rated not
     // launched); standard chess white/black, passed straight through.
@@ -3353,7 +3293,7 @@ export function roomCreationRequestBody(
           : 'random',
     };
   }
-  if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID || setup.gameSpecId === DARK_MINI_XIANGQI_SPEC_ID) {
+  if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) {
     return {
       // Xiangqi fog engines are defaulted server-side, so no engine id is sent.
       mode,
@@ -3384,15 +3324,11 @@ export function roomCreationGameSpecId(
 ):
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_DRAFT960_SPEC_ID
-  | typeof MINI_XIANGQI_SPEC_ID
-  | typeof DARK_MINI_XIANGQI_SPEC_ID
-  | typeof DROP_MINI_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
-  | typeof REVEAL_CHESS_SPEC_ID
   | typeof JUNGLE_SPEC_ID
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
@@ -3407,12 +3343,8 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
-  if (setup.gameSpecId === MINI_XIANGQI_SPEC_ID) return MINI_XIANGQI_SPEC_ID;
-  if (setup.gameSpecId === DROP_MINI_XIANGQI_SPEC_ID) return DROP_MINI_XIANGQI_SPEC_ID;
-  if (setup.gameSpecId === REVEAL_CHESS_SPEC_ID) return REVEAL_CHESS_SPEC_ID;
   if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) return DARK_CRAZYHOUSE_SPEC_ID;
   if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) return KRIEGSPIEL_SPEC_ID;
-  if (setup.gameSpecId === DARK_MINI_XIANGQI_SPEC_ID) return DARK_MINI_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;
   // NOTE: this fallback is why a variant missing from the ladder above does not
   // fail, it becomes DARK CHESS. Mahjong hit exactly that: the dialog selected
@@ -3436,9 +3368,6 @@ function roomCreationError(status: number, failure: RoomCreationFailure): Error 
 }
 
 function roomCreationStatusText(err: unknown, mode: 'pvp' | 'pve'): string {
-  if (err instanceof Error && err.name === 'drop_mini_xiangqi_unsupported_surface') {
-    return 'Drop Mini Xiangqi engine games are casual only.';
-  }
   if (err instanceof Error && err.name === 'invalid_time_control') {
     return 'That time control is not available. Try another one.';
   }

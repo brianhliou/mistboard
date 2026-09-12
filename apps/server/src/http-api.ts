@@ -22,9 +22,7 @@ import * as correspondenceGamesRoute from './routes/correspondence-games.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
 import * as currentGamesRoute from './routes/current-games.js';
 import * as darkCrazyhouseGamesRoute from './routes/dark-crazyhouse-games.js';
-import * as darkMiniXiangqiGamesRoute from './routes/dark-mini-xiangqi-games.js';
 import * as darkXiangqiGamesRoute from './routes/dark-xiangqi-games.js';
-import * as dropMiniXiangqiGamesRoute from './routes/drop-mini-xiangqi-games.js';
 import * as duckXiangqiGamesRoute from './routes/duck-xiangqi-games.js';
 import * as enginesRoute from './routes/engines.js';
 import * as feedbackRoute from './routes/feedback.js';
@@ -41,7 +39,6 @@ import * as leaderboardRoute from './routes/leaderboard.js';
 import type { HttpApiContext } from './routes/lib.js';
 import * as lobbyRoute from './routes/lobby.js';
 import * as metaRoute from './routes/meta.js';
-import * as miniXiangqiGamesRoute from './routes/mini-xiangqi-games.js';
 import * as notificationsRoute from './routes/notifications.js';
 import * as oembedRoute from './routes/oembed.js';
 import * as openapiRoute from './routes/openapi.js';
@@ -50,7 +47,6 @@ import * as practiceRoute from './routes/practice.js';
 import * as puzzlesRoute from './routes/puzzles.js';
 import * as readoutsRoute from './routes/readouts.js';
 import * as relationsRoute from './routes/relations.js';
-import * as revealChessGamesRoute from './routes/reveal-chess-games.js';
 import * as roomsRoute from './routes/rooms.js';
 import * as studiesRoute from './routes/studies.js';
 import * as titlesRoute from './routes/titles.js';
@@ -116,9 +112,6 @@ export const routes: RouteModule[] = [
   historicalXiangqiGamesRoute,
   xiangqiExplorerRoute,
   xiangqiGamesRoute,
-  miniXiangqiGamesRoute,
-  darkMiniXiangqiGamesRoute,
-  dropMiniXiangqiGamesRoute,
   fortressXiangqiGamesRoute,
   duckXiangqiGamesRoute,
   darkXiangqiGamesRoute,
@@ -128,7 +121,6 @@ export const routes: RouteModule[] = [
   jungleGamesRoute,
   jungleFlipGamesRoute,
   banqiGamesRoute,
-  revealChessGamesRoute,
   gamesRoute,
   relationsRoute,
   titlesRoute,

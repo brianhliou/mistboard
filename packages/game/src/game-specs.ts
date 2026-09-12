@@ -3,7 +3,6 @@ import type { VariantId } from './types.js';
 export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'military-chess' | 'mahjong';
 export type BoardGeometryId =
   | 'chess-8x8'
-  | 'xiangqi-7x7'
   | 'xiangqi-9x10'
   | 'banqi-8x4'
   | 'jungle-7x9'
@@ -18,7 +17,6 @@ export type MovementRulesId =
   // Draw, discard, and claim out of turn. Nothing moves on a board.
   | 'mahjong-hk'
   | 'orthodox-chess'
-  | 'mini-xiangqi'
   | 'xiangqi'
   | 'banqi'
   | 'jungle'
@@ -56,11 +54,9 @@ export type VisibilityRulesId = 'dark' | 'open' | 'hidden-identity' | 'concealed
 export type SetupRulesId =
   | 'standard'
   | 'draft960'
-  | 'mini-standard'
   | 'double-fischer-random'
   | 'jieqi-deal'
   | 'banqi-deal'
-  | 'reveal-chess-deal'
   | 'jungle-standard'
   | 'jungle-flip-deal'
   | 'fortress-standard'
@@ -90,13 +86,9 @@ export type RatingPoolBaseId =
   | 'fog_draft960'
   | 'dark_crazyhouse'
   | 'kriegspiel'
-  | 'mini_xiangqi'
-  | 'dark_mini_xiangqi'
-  | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
   | 'jieqi'
   | 'banqi'
-  | 'reveal_chess'
   | 'jungle'
   | 'jungle_flip'
   | 'fortress_xiangqi'
@@ -111,13 +103,9 @@ export type GameSpecId =
   | 'dark-draft960'
   | 'dark-crazyhouse'
   | 'kriegspiel'
-  | 'mini-xiangqi'
-  | 'dark-mini-xiangqi'
-  | 'drop-mini-xiangqi'
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
-  | 'reveal-chess'
   | 'jungle'
   | 'jungle-flip'
   | 'fortress-xiangqi'
@@ -165,16 +153,12 @@ export const DARK_DRAFT960_SPEC_ID = 'dark-draft960' satisfies GameSpecId;
 // Compatibility alias for pre-taxonomy code and URLs. New code should use
 // DARK_DRAFT960_SPEC_ID; "fog" remains only in legacy rating/API vocabulary.
 export const FOG_DRAFT960_SPEC_ID = DARK_DRAFT960_SPEC_ID;
-export const MINI_XIANGQI_SPEC_ID = 'mini-xiangqi' satisfies GameSpecId;
-export const DARK_MINI_XIANGQI_SPEC_ID = 'dark-mini-xiangqi' satisfies GameSpecId;
-export const DROP_MINI_XIANGQI_SPEC_ID = 'drop-mini-xiangqi' satisfies GameSpecId;
 export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
 export const DARK_CRAZYHOUSE_SPEC_ID = 'dark-crazyhouse' satisfies GameSpecId;
 export const KRIEGSPIEL_SPEC_ID = 'kriegspiel' satisfies GameSpecId;
-export const REVEAL_CHESS_SPEC_ID = 'reveal-chess' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
@@ -319,75 +303,10 @@ export const GAME_SPECS: readonly GameSpec[] = [
     publicSurface: 'hidden',
     runtimeStatus: 'retired',
   },
-  // ── Mini Xiangqi cluster: PARKED as of 2026-07-24 ──────────────────────────
-  // The mini-xiangqi sub-family was retired from the product shelf in the
-  // 2026-07-03 xiangqi pivot (memory: project_xiangqi_pivot_track) and is
-  // flag-gated OFF in prod: Mini has no launch flag (the request gate answers
-  // `mini_xiangqi_not_integrated`); Dark/Drop Mini gate on
-  // MISTBOARD_{DARK,DROP}_MINI_XIANGQI_ENABLED (off outside the lab). The code,
-  // tenants, and rules stay fully wired for revival, so `runtimeStatus` remains
-  // 'live'; `publicSurface: 'hidden'` keeps them off every discoverability rail
-  // (same shape as luzhanqi above). Their test suites are parked in
-  // *.parkedtest.ts (run: npm run test:parked) rather than the default suite.
-  // To revive: flip the flag, restore publicSurface, and rename the tests back.
-  {
-    // Mini Xiangqi: the open-information 7x7 base game for the mini-xiangqi
-    // cluster. It is the clean rules/puzzle/training substrate for Drop Mini
-    // Xiangqi and Dark Mini Xiangqi.
-    id: MINI_XIANGQI_SPEC_ID,
-    publicName: 'Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'checkmate',
-    visibility: 'open',
-    setup: 'mini-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'mini_xiangqi',
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    id: DARK_MINI_XIANGQI_SPEC_ID,
-    publicName: 'Dark Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'general-capture',
-    visibility: 'dark',
-    setup: 'mini-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'dark_mini_xiangqi',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    // Drop Mini Xiangqi: mini xiangqi plus crazyhouse-style reserves. Perfect
-    // information; red/black seats match the 7x7 Dark Mini Xiangqi board.
-    // Rules engine: packages/game/src/variants-drop-mini-xiangqi.ts.
-    id: DROP_MINI_XIANGQI_SPEC_ID,
-    publicName: 'Drop Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'checkmate',
-    visibility: 'open',
-    setup: 'mini-standard',
-    reserves: 'crazyhouse',
-    dropPolicy: 'not-enemy-palace',
-    ratingPoolBase: 'drop_mini_xiangqi',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
   {
     // Fortress Xiangqi: "xiangqi with a pocket." 7x8 board, opposite-corner
     // palaces, faithful xiangqi movement plus the one new Treasure piece, and
-    // crazyhouse drops (both-side attacker drops + the chasing rule). Ships
-    // alongside the 7x7 Drop Mini Xiangqi as a distinct variant + rating pool.
+    // crazyhouse drops (both-side attacker drops + the chasing rule).
     // Rules engine: packages/game/src/variants-fortress-xiangqi.ts.
     // Flagship of the 2026-07-03 xiangqi pivot (project_xiangqi_pivot_track):
     // promoted to a live public variant. Runtime kill-switch is the server flag
@@ -608,26 +527,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     publicSurface: 'casual',
     runtimeStatus: 'live',
   },
-  {
-    // Reveal Chess (chess-jieqi): standard chess with hidden piece identities.
-    // Both kings start face-up; each side's other 15 pieces are dealt face-down
-    // and reveal their true identity on first move (origin-role proxy until
-    // then). Real check/checkmate. Rules engine: variants-reveal-chess.ts.
-    id: REVEAL_CHESS_SPEC_ID,
-    publicName: 'Reveal Chess',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'checkmate',
-    visibility: 'hidden-identity',
-    setup: 'reveal-chess-deal',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'reveal_chess',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
 ] as const;
 
 const gameSpecsById = new Map<GameSpecId, GameSpec>(GAME_SPECS.map((spec) => [spec.id, spec]));
@@ -709,14 +608,11 @@ export type RatingVariant = Extract<
   RatingPoolBaseId,
   | 'fog'
   | 'fog_draft960'
-  | 'dark_mini_xiangqi'
-  | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
   | 'dark_crazyhouse'
   | 'jieqi'
   | 'banqi'
   | 'kriegspiel'
-  | 'reveal_chess'
   | 'jungle'
   | 'jungle_flip'
   | 'fortress_xiangqi'

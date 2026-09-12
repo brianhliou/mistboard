@@ -53,15 +53,11 @@ export type VariantMiniId =
   | 'draft960'
   | 'xiangqi'
   | 'dark-xiangqi'
-  | 'mini-xiangqi'
-  | 'dark-mini-xiangqi'
-  | 'drop-mini-xiangqi'
   | 'fortress-xiangqi'
   | 'duck-xiangqi'
   | 'jieqi'
   | 'banqi'
   | 'kriegspiel'
-  | 'reveal-chess'
   | 'crazyhouse'
   | 'dark-crazyhouse'
   | 'jungle'
@@ -126,14 +122,6 @@ function chessPieceAt(key: string, cx: number, cy: number, cell: number, set: Pi
   return `<image href="/pieces/${set}/${code}.svg" x="${x}" y="${y}" width="${s}" height="${s}"/>`;
 }
 
-// A face-down chess piece (Reveal Chess): a white hidden back, aligned with the
-// Banqi face-down mark (single solid fill + thin outline, no inner ring).
-// Identity-hiding only, so it does not vary with the chosen piece set.
-function chessBackToken(cx: number, cy: number, cell: number): string {
-  const r = cell * 0.4;
-  return `<circle class="vm-chess-back-token" cx="${cx}" cy="${cy}" r="${r}" fill="#f4efe4" stroke="#3a342b" stroke-width="0.5"/>`;
-}
-
 function checker(cols: number, rows: number, cell: number): string {
   const out: string[] = [];
   for (let r = 0; r < rows; r += 1) {
@@ -164,7 +152,7 @@ function fogCell(c: number, r: number, cell: number): string {
 // every surface renders one identical glyph. Ink (cream disc, red/black) is
 // fixed inside that renderer by intent. `size` is the disc's bounding box.
 // `veteran` marks a board whose soldiers get the sideways step unconditionally
-// (the Mini Xiangqi family, Fortress Xiangqi), so their soldiers draw with the
+// (Fortress Xiangqi), so their soldiers draw with the
 // promoted art here the same way they do on the live board.
 function xiangqiDisc(
   cx: number,
@@ -391,103 +379,6 @@ function duckXiangqiBody(ctx: MiniCtx): string {
   return [xiangqiCourtBody(false, ctx), duck].join('');
 }
 
-function miniXiangqiCutBody(showFog: boolean, ctx: MiniCtx): string {
-  // A 3x3-cell (4x4-point) cut of the real mini-xiangqi opening: files d..g,
-  // ranks 1..4 (one file + one rank tighter than the full court, so the pieces
-  // read larger). The general sits on the cropped left edge (file d), showing
-  // the right half of its palace; horse and cannon fill the back rank and a
-  // chariot anchors the right.
-  // Wider margin than the default: with only 4 points across, the cells (and so
-  // the discs) grow, and the outer-ring pieces would overflow the rounded frame
-  // unless the grid is inset further from the edge.
-  const g = xqGeom(4, 4, 13);
-  const disc = g.gx * 0.9;
-  // file d..g -> col 0..3 ; rank 1..4 -> row 3..0 (red on the near/bottom side)
-  const at = (file: number, rank: number) => ({ x: g.px(file - 3), y: g.py(4 - rank) });
-  const backRank: Array<[number, XiangqiPieceRole]> = [
-    [3, 'general'],
-    [4, 'horse'],
-    [5, 'cannon'],
-    [6, 'chariot'],
-  ];
-  const pieces = [
-    ...backRank.map(([file, role]) => {
-      const p = at(file, 1);
-      return xiangqiDisc(p.x, p.y, disc, 'red', role, ctx.xqSet);
-    }),
-    // soldiers sit in front of files d, e, g (the cannon file f stays open)
-    ...[3, 4, 6].map((file) => {
-      const p = at(file, 2);
-      return xiangqiDisc(p.x, p.y, disc, 'red', 'soldier', ctx.xqSet, true);
-    }),
-  ].join('');
-  // The visible (right) half of the general's palace: its centre (d2) sits on
-  // the cropped left edge, so draw the two diagonals fanning in toward file e.
-  const halfPalace = `<g class="vm-xq-line" stroke-width="1" stroke-linecap="round"><line x1="${g.px(0)}" y1="${g.py(2)}" x2="${g.px(1)}" y2="${g.py(1)}"/><line x1="${g.px(0)}" y1="${g.py(2)}" x2="${g.px(1)}" y2="${g.py(3)}"/></g>`;
-  // Dark variant: red sees ranks 1-3 in full; only the 4th rank (the top row) is
-  // fogged, and even there the cannon file (f, col 2) stays open — its sightline
-  // up the board is clear. Verified against getMiniXiangqiPlayerView. Standard
-  // mini-xiangqi shows the same approach as plain board.
-  let fog = '';
-  if (showFog) {
-    const fogYBottom = (g.py(0) + g.py(1)) / 2;
-    const leftX1 = (g.px(1) + g.px(2)) / 2;
-    const rightX0 = (g.px(2) + g.px(3)) / 2;
-    fog = [
-      `<rect class="vm-xq-fog" x="${OX}" y="${OY}" width="${leftX1 - OX}" height="${fogYBottom - OY}"/>`,
-      `<rect class="vm-xq-fog" x="${rightX0}" y="${OY}" width="${OX + SIZE - rightX0}" height="${fogYBottom - OY}"/>`,
-    ].join('');
-  }
-  return [xqBoard(g), halfPalace, pieces, fog].join('');
-}
-
-function dropMiniXiangqiBody(ctx: MiniCtx): string {
-  // Open mini-xiangqi plus a reserve tray: the board stays visible, while the
-  // bottom hand row signals the drop/crazyhouse axis without borrowing chess art.
-  const boardH = 72;
-  const trayY = OY + boardH;
-  const trayH = SIZE - boardH;
-  const marginX = 12;
-  const marginY = 9;
-  const left = OX + marginX;
-  const top = OY + marginY;
-  const gx = (SIZE - 2 * marginX) / 3;
-  const gy = (boardH - 2 * marginY) / 2;
-  const px = (c: number) => left + c * gx;
-  const py = (r: number) => top + r * gy;
-  const disc = Math.min(gx, gy) * 0.88;
-  const lines: string[] = [];
-  for (let r = 0; r < 3; r += 1) {
-    lines.push(`<line x1="${px(0)}" y1="${py(r)}" x2="${px(3)}" y2="${py(r)}"/>`);
-  }
-  for (let c = 0; c < 4; c += 1) {
-    lines.push(`<line x1="${px(c)}" y1="${py(0)}" x2="${px(c)}" y2="${py(2)}"/>`);
-  }
-  lines.push(`<line x1="${px(0)}" y1="${py(1)}" x2="${px(1)}" y2="${py(0)}"/>`);
-  lines.push(`<line x1="${px(0)}" y1="${py(1)}" x2="${px(1)}" y2="${py(2)}"/>`);
-  const boardPieces = [
-    xiangqiDisc(px(0), py(2), disc, 'red', 'general', ctx.xqSet),
-    xiangqiDisc(px(1), py(2), disc, 'red', 'horse', ctx.xqSet),
-    xiangqiDisc(px(2), py(2), disc, 'red', 'cannon', ctx.xqSet),
-    xiangqiDisc(px(1), py(1), disc, 'red', 'soldier', ctx.xqSet, true),
-    xiangqiDisc(px(3), py(0), disc, 'black', 'soldier', ctx.xqSet, true),
-  ];
-  const handDisc = trayH * 0.78;
-  const hand = [
-    xiangqiDisc(OX + SIZE * 0.24, trayY + trayH / 2, handDisc, 'red', 'chariot', ctx.xqSet),
-    xiangqiDisc(OX + SIZE * 0.5, trayY + trayH / 2, handDisc, 'red', 'horse', ctx.xqSet),
-    xiangqiDisc(OX + SIZE * 0.76, trayY + trayH / 2, handDisc, 'red', 'cannon', ctx.xqSet),
-  ];
-  return [
-    `<rect class="vm-xq-bg" x="${OX}" y="${OY}" width="${SIZE}" height="${boardH}"/>`,
-    `<g class="vm-xq-line" stroke-width="1" stroke-linecap="round">${lines.join('')}</g>`,
-    ...boardPieces,
-    `<rect class="vm-hand-tray" x="${OX}" y="${trayY}" width="${SIZE}" height="${trayH}"/>`,
-    `<line class="vm-hand-tray-edge" x1="${OX}" y1="${trayY}" x2="${OX + SIZE}" y2="${trayY}" stroke-width="1"/>`,
-    ...hand,
-  ].join('');
-}
-
 function fortressTreasureDisc(
   cx: number,
   cy: number,
@@ -691,32 +582,6 @@ function kriegspielBody(ctx: MiniCtx): string {
   return fiveWideChessBody(KINGSIDE_FIVE, [0, 1, 2], ctx);
 }
 
-function revealChessBody(ctx: MiniCtx): string {
-  // Hidden-identity chess (chess jieqi): every piece starts face-down except the
-  // king, which is face-up. No fog — only identities hide.
-  const cell = SIZE / 4;
-  const center = (c: number, r: number) => ({ x: OX + (c + 0.5) * cell, y: OY + (r + 0.5) * cell });
-  const kingCol = 1;
-  const pieces: string[] = [];
-  for (let c = 0; c < 4; c += 1) {
-    const pawn = center(c, 2);
-    const back = center(c, 3);
-    pieces.push(chessBackToken(pawn.x, pawn.y, cell));
-    if (c === kingCol) {
-      pieces.push(chessPieceAt('white:king', back.x, back.y, cell, ctx.chessSet));
-    } else {
-      pieces.push(chessBackToken(back.x, back.y, cell));
-    }
-  }
-  return [checker(4, 4, cell), ...pieces].join('');
-}
-
-// ---- jungle (Dou Shou Qi) animal-rank tiles -------------------------------
-
-// Jungle markers crop the REAL starting board (the shared dobutsu/terrain renderer), so
-// the tile always matches the live board exactly. Shadows are off (markers don't need
-// them, and it keeps filter ids out of the shared document); the marker frame's rounded
-// clip-path trims the square crop.
 function stripOuterSvg(svg: string): string {
   return svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
 }
@@ -781,15 +646,11 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   draft960: draft960Body,
   xiangqi: (ctx) => xiangqiCourtBody(false, ctx),
   'dark-xiangqi': (ctx) => xiangqiCourtBody(true, ctx),
-  'mini-xiangqi': (ctx) => miniXiangqiCutBody(false, ctx),
-  'dark-mini-xiangqi': (ctx) => miniXiangqiCutBody(true, ctx),
-  'drop-mini-xiangqi': dropMiniXiangqiBody,
   'fortress-xiangqi': fortressXiangqiBody,
   'duck-xiangqi': duckXiangqiBody,
   jieqi: jieqiBody,
   banqi: banqiBody,
   kriegspiel: kriegspielBody,
-  'reveal-chess': revealChessBody,
   crazyhouse: crazyhouseBody,
   'dark-crazyhouse': crazyhouseBody,
   jungle: () => jungleBody(),
@@ -838,30 +699,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     family: 'xiangqi',
   },
   {
-    id: 'mini-xiangqi',
-    label: 'Mini Xiangqi',
-    shortLabel: 'MX',
-    accent: '#a16207',
-    blurb: 'The small-board opening: general by its palace, cannon, and chariot.',
-    family: 'xiangqi',
-  },
-  {
-    id: 'dark-mini-xiangqi',
-    label: 'Dark Mini Xiangqi',
-    shortLabel: 'DMX',
-    accent: '#c2410c',
-    blurb: 'A real-opening cut: general by its palace, cannon, and chariot.',
-    family: 'xiangqi',
-  },
-  {
-    id: 'drop-mini-xiangqi',
-    label: 'Drop Mini Xiangqi',
-    shortLabel: 'DRP',
-    accent: '#0f766e',
-    blurb: 'Mini Xiangqi with captured pieces waiting in a reserve tray.',
-    family: 'xiangqi',
-  },
-  {
     id: 'fortress-xiangqi',
     label: 'Fortress Xiangqi',
     shortLabel: 'STF',
@@ -900,14 +737,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'KS',
     accent: '#566273',
     blurb: 'Blind chess: only your own army, alone on the board.',
-    family: 'chess',
-  },
-  {
-    id: 'reveal-chess',
-    label: 'Reveal Chess',
-    shortLabel: 'RV',
-    accent: '#9b3f74',
-    blurb: 'Chess with hidden identities: every piece face-down but the king.',
     family: 'chess',
   },
   {

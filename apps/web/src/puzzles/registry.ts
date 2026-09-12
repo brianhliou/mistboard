@@ -16,25 +16,20 @@
  */
 
 import {
-  DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   hasOwnKey,
   JUNGLE_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import type { PuzzleBoardAdapter } from './adapter.js';
 import { fortressXiangqiPuzzleAdapter } from './fortress-xiangqi-adapter.js';
 import { junglePuzzleAdapter } from './jungle-adapter.js';
-import { dropMiniXiangqiPuzzleAdapter, miniXiangqiPuzzleAdapter } from './mini-xiangqi-adapter.js';
 import type { PuzzleVariant } from './variant-ids.js';
 import { xiangqiPuzzleAdapter } from './xiangqi-adapter.js';
 
 export { PUZZLE_VARIANT_IDS, type PuzzleVariant } from './variant-ids.js';
 
 const PUZZLE_BOARD_ADAPTERS: Record<PuzzleVariant, PuzzleBoardAdapter> = {
-  [MINI_XIANGQI_SPEC_ID]: miniXiangqiPuzzleAdapter,
-  [DROP_MINI_XIANGQI_SPEC_ID]: dropMiniXiangqiPuzzleAdapter,
   [FORTRESS_XIANGQI_SPEC_ID]: fortressXiangqiPuzzleAdapter,
   [JUNGLE_SPEC_ID]: junglePuzzleAdapter,
   [XIANGQI_SPEC_ID]: xiangqiPuzzleAdapter,

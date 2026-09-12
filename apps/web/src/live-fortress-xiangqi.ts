@@ -18,7 +18,7 @@ import {
   type FortressXiangqiSquare,
   getFortressXiangqiPlayerView,
 } from '@mistboard/game';
-import './drop-mini-xiangqi.css';
+import './drop-reserve.css';
 import { fortressXiangqiEnabled } from './feature-flags.js';
 import {
   FORTRESS_XIANGQI_PIECE_PX,

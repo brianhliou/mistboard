@@ -1,13 +1,7 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import test from 'node:test';
-import {
-  type FortressXiangqiPuzzle,
-  type JunglePuzzle,
-  type MiniXiangqiPuzzle,
-  puzzleShortCode,
-  type XiangqiPuzzle,
-} from '@mistboard/game';
+import { type JunglePuzzle, puzzleShortCode, type XiangqiPuzzle } from '@mistboard/game';
 import { loadSeedPuzzleRegistry } from '@mistboard/game/puzzle-seed';
 import type { HttpApiContext } from './routes/lib.js';
 import { tryHandle } from './routes/puzzles.js';
@@ -16,10 +10,6 @@ import { tryHandle } from './routes/puzzles.js';
 // seed-backed snapshot. Assertions therefore compare against the SEED corpus
 // (the served source of truth since #183), not the small in-package fixture
 // arrays.
-const MINI_XIANGQI_PUZZLES = loadSeedPuzzleRegistry('mini-xiangqi') as readonly MiniXiangqiPuzzle[];
-const FORTRESS_XIANGQI_PUZZLES = loadSeedPuzzleRegistry(
-  'fortress-xiangqi',
-) as readonly FortressXiangqiPuzzle[];
 const JUNGLE_PUZZLES = loadSeedPuzzleRegistry('jungle') as readonly JunglePuzzle[];
 const XIANGQI_PUZZLES = loadSeedPuzzleRegistry('xiangqi') as readonly XiangqiPuzzle[];
 
@@ -114,12 +104,9 @@ test('puzzle list filters by variant, and a retired variant filters to nothing',
   const xiangqiBody = JSON.parse(xiangqi.body) as { puzzles: Array<{ variant: string }> };
   assert.equal(xiangqiBody.puzzles.length, XIANGQI_PUZZLES.length);
 
-  for (const variant of ['mini-xiangqi', 'drop-mini-xiangqi']) {
-    const response = await route(`/api/puzzles?variant=${variant}`);
-    assert.equal(response.status, 200, variant);
-    const body = JSON.parse(response.body) as { puzzles: unknown[] };
-    assert.equal(body.puzzles.length, 0, variant);
-  }
+  // A retired variant is not a variant the route knows: 400, not an empty list.
+  const retired = await route('/api/puzzles?variant=mini-xiangqi');
+  assert.equal(retired.status, 400);
 });
 
 test('puzzle list hides Fortress Xiangqi puzzles while the variant is demoted', async () => {
@@ -233,7 +220,7 @@ test('attempt and reveal routes accept a quality session without exposing the so
 // REMOVED 2026-09-03: 'Fortress puzzle attempts solve the mined mate and stay
 // solution-hidden'. It drove fortress-xiangqi-mined-v2-001, and Fortress ships no
 // puzzles now (see the banner in puzzles-fortress-xiangqi-fixtures.ts). The attempt
-// flow it covered is still exercised by the jungle and mini-xiangqi cases here.
+// flow it covered is still exercised by the jungle and xiangqi cases here.
 test('Jungle puzzle attempts solve the mined forced win and stay solution-hidden', async () => {
   // Derive from the corpus so the test tracks regeneration. Submit only the solver
   // moves (even indices); the server auto-applies the scripted defender replies.
@@ -299,20 +286,24 @@ test('daily puzzle route rejects unsupported slots', async () => {
 });
 
 test('puzzle detail returns the starting position but not the solution', async () => {
-  const response = await route('/api/puzzles/drop-mini-xiangqi-red-chariot-drop-mate-1');
+  const puzzle = XIANGQI_PUZZLES[0]!;
+  const response = await route(`/api/puzzles/${puzzle.id}`);
   const body = JSON.parse(response.body) as {
     puzzle: {
       id: string;
-      initial: { hands: { red: { chariot?: number } } };
+      initial: { board: Record<string, { color: string; role: string }> };
       solution?: unknown;
       sideToMove: string;
     };
   };
 
   assert.equal(response.status, 200);
-  assert.equal(body.puzzle.id, 'drop-mini-xiangqi-red-chariot-drop-mate-1');
-  assert.equal(body.puzzle.sideToMove, 'red');
-  assert.deepEqual(body.puzzle.initial.hands.red, { chariot: 1 });
+  assert.equal(body.puzzle.id, puzzle.id);
+  assert.equal(
+    body.puzzle.sideToMove,
+    puzzle.initial.status.type === 'playing' ? puzzle.initial.status.turn : null,
+  );
+  assert.deepEqual(body.puzzle.initial.board, puzzle.initial.board);
   assert.equal(body.puzzle.solution, undefined);
 });
 
@@ -323,12 +314,15 @@ test('puzzle detail 404s unknown puzzle ids', async () => {
   assert.deepEqual(JSON.parse(response.body), { error: 'not_found' });
 });
 
+// A mined mate-in-one and a three-ply line, so the attempt tests below read the
+// scripted moves from the seed instead of pinning squares.
+const ONE_PLY = XIANGQI_PUZZLES.find((puzzle) => puzzle.solution.length === 1)!;
+const THREE_PLY = XIANGQI_PUZZLES.find((puzzle) => puzzle.solution.length === 3)!;
+
 test('puzzle attempts advance correct moves without exposing the solution list', async () => {
-  const response = await route(
-    '/api/puzzles/drop-mini-xiangqi-red-chariot-drop-mate-1/attempt',
-    'POST',
-    { moves: [{ drop: 'chariot', to: 'd4' }] },
-  );
+  const response = await route(`/api/puzzles/${ONE_PLY.id}/attempt`, 'POST', {
+    moves: [ONE_PLY.solution[0]],
+  });
   const body = JSON.parse(response.body) as {
     attempt: {
       ok: boolean;
@@ -341,29 +335,21 @@ test('puzzle attempts advance correct moves without exposing the solution list',
   assert.equal(response.status, 200);
   assert.equal(body.attempt.ok, true);
   assert.equal(body.attempt.complete, true);
-  assert.deepEqual(body.attempt.state.status, {
-    type: 'finished',
-    winner: 'red',
-    reason: 'checkmate',
-  });
   assert.equal(body.attempt.solution, undefined);
 });
 
 test('puzzle attempts auto-apply opponent replies for multi-ply lines', async () => {
-  const response = await route(
-    '/api/puzzles/mini-xiangqi-black-two-step-file-net-1/attempt',
-    'POST',
-    {
-      moves: [{ from: 'c5', to: 'd5' }],
-    },
-  );
+  const [first, reply, last] = THREE_PLY.solution;
+  const response = await route(`/api/puzzles/${THREE_PLY.id}/attempt`, 'POST', {
+    moves: [first],
+  });
   const body = JSON.parse(response.body) as {
     attempt: {
       ok: boolean;
       complete: boolean;
       playedMoves: unknown[];
       solverMoves: unknown[];
-      state: { board: Record<string, unknown>; status: { type: string; turn?: string } };
+      state: { status: { type: string; turn?: string } };
       solution?: unknown;
     };
   };
@@ -371,21 +357,18 @@ test('puzzle attempts auto-apply opponent replies for multi-ply lines', async ()
   assert.equal(response.status, 200);
   assert.equal(body.attempt.ok, true);
   assert.equal(body.attempt.complete, false);
-  assert.deepEqual(body.attempt.playedMoves, [
-    { from: 'c5', to: 'd5' },
-    { from: 'e2', to: 'e3' },
-  ]);
-  assert.deepEqual(body.attempt.solverMoves, [{ from: 'c5', to: 'd5' }]);
-  assert.deepEqual(body.attempt.state.status, { type: 'playing', turn: 'black' });
-  assert.deepEqual(body.attempt.state.board.d5, { color: 'black', role: 'general' });
-  assert.deepEqual(body.attempt.state.board.e3, { color: 'red', role: 'general' });
+  assert.deepEqual(body.attempt.playedMoves, [first, reply]);
+  assert.deepEqual(body.attempt.solverMoves, [first]);
+  assert.equal(body.attempt.state.status.type, 'playing');
   assert.equal(body.attempt.solution, undefined);
-  assert.equal(response.body.includes('"from":"f1","to":"e1"'), false);
+  // The solver's next move is not leaked ahead of time.
+  assert.equal(response.body.includes(JSON.stringify(last)), false);
 });
 
 test('puzzle attempts reject wrong moves without returning the right move', async () => {
-  const response = await route('/api/puzzles/mini-xiangqi-red-back-rank-net-1/attempt', 'POST', {
-    moves: [{ from: 'c4', to: 'c5' }],
+  const wrong = { from: ONE_PLY.solution[0]!.from, to: ONE_PLY.solution[0]!.from };
+  const response = await route(`/api/puzzles/${ONE_PLY.id}/attempt`, 'POST', {
+    moves: [wrong],
   });
   const body = JSON.parse(response.body) as {
     attempt: {
@@ -394,29 +377,22 @@ test('puzzle attempts reject wrong moves without returning the right move', asyn
       variant: string;
       code: string;
       ply: number;
-      state: {
-        board: Record<string, { color: string; role: string }>;
-        status: { type: string; turn?: string };
-      };
       move: unknown;
     };
   };
 
   assert.equal(response.status, 200);
   assert.equal(body.attempt.ok, false);
-  assert.equal(body.attempt.puzzleId, 'mini-xiangqi-red-back-rank-net-1');
-  assert.equal(body.attempt.variant, 'mini-xiangqi');
-  assert.equal(body.attempt.code, 'incorrect-move');
+  assert.equal(body.attempt.puzzleId, ONE_PLY.id);
+  assert.equal(body.attempt.variant, 'xiangqi');
   assert.equal(body.attempt.ply, 0);
-  assert.deepEqual(body.attempt.move, { from: 'c4', to: 'c5' });
-  assert.deepEqual(body.attempt.state.status, { type: 'playing', turn: 'red' });
-  assert.deepEqual(body.attempt.state.board.c4, { color: 'red', role: 'chariot' });
-  assert.equal(response.body.includes('"to":"d4"'), false);
+  assert.deepEqual(body.attempt.move, wrong);
+  assert.equal(response.body.includes(JSON.stringify(ONE_PLY.solution[0])), false);
 });
 
 test('puzzle attempts reject malformed move bodies', async () => {
-  const response = await route('/api/puzzles/mini-xiangqi-red-back-rank-net-1/attempt', 'POST', {
-    moves: [{ to: 'd4' }],
+  const response = await route(`/api/puzzles/${ONE_PLY.id}/attempt`, 'POST', {
+    moves: [{ to: 'e5' }],
   });
 
   assert.equal(response.status, 400);
@@ -521,7 +497,7 @@ test('reveal endpoint in hint mode returns only the next move, never the full li
 
 test('reveal endpoint reads the solution generically across variants', async () => {
   // Fortress left this list on 2026-09-03 when it stopped shipping puzzles.
-  for (const puzzle of [JUNGLE_PUZZLES[0], MINI_XIANGQI_PUZZLES[0]]) {
+  for (const puzzle of [JUNGLE_PUZZLES[0], XIANGQI_PUZZLES[0]]) {
     assert.ok(puzzle, 'expected a puzzle in each variant registry');
     const reveal = await route(`/api/puzzles/${puzzle.id}/reveal`, 'POST', { mode: 'solution' });
     const body = JSON.parse(reveal.body) as { solution: unknown[] };

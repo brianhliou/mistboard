@@ -37,7 +37,6 @@ import {
   type ChessReplayBlock,
   type CodeBlock,
   type CtaBlock,
-  type DropMiniXiangqiReplayBlock,
   type DuckXiangqiReplayBlock,
   type EmbedBlock,
   type FaqBlock,
@@ -49,7 +48,6 @@ import {
   type JungleFlipReplayBlock,
   type JungleReplayBlock,
   type LiveBoardsBlock,
-  type MiniXiangqiReplayBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
   type StaticBoardsBlock,
@@ -62,10 +60,6 @@ import {
 } from './articles-data.js';
 import { type BanqiReplayController, mountBanqiReplay } from './banqi-replay.js';
 import { type ChessReplayController, mountChessReplay } from './chess-replay.js';
-import {
-  type DropMiniXiangqiReplayController,
-  mountDropMiniXiangqiReplay,
-} from './drop-mini-xiangqi-replay.js';
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
 import {
   type FortressXiangqiReplayController,
@@ -76,7 +70,6 @@ import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/l
 import { type JieqiReplayController, mountJieqiReplay } from './jieqi-replay.js';
 import { type JungleFlipReplayController, mountJungleFlipReplay } from './jungle-flip-replay.js';
 import { type JungleReplayController, mountJungleReplay } from './jungle-replay.js';
-import { type MiniXiangqiReplayController, mountMiniXiangqiReplay } from './mini-xiangqi-replay.js';
 import { prependTitleBadge } from './player-titles.js';
 import {
   readStoredXiangqiBoardLayout,
@@ -1256,8 +1249,6 @@ type PendingBlock =
   | LiveBoardsBlock
   | XiangqiReplayBlock
   | ChessReplayBlock
-  | MiniXiangqiReplayBlock
-  | DropMiniXiangqiReplayBlock
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | JieqiReplayBlock
@@ -1289,9 +1280,6 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'faq') return renderFaqBlock(block);
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
-  if (block.kind === 'mxq-replay') return renderMiniXiangqiReplayBlock(block, lang);
-  if (block.kind === 'drop-mini-xiangqi-replay')
-    return renderDropMiniXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
   if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
@@ -1426,60 +1414,13 @@ function renderXiangqiReplayBlock(block: XiangqiReplayBlock, lang?: ArticleLang)
   return figure;
 }
 
-function renderMiniXiangqiReplayBlock(
-  block: MiniXiangqiReplayBlock,
-  lang?: ArticleLang,
-): HTMLElement {
-  const figure = document.createElement('figure');
-  figure.className = 'article-figure article-figure-interactive article-figure-xq';
-  figure.dataset.pendingWidget = 'mxq-replay';
-
-  const mountTarget = document.createElement('div');
-  mountTarget.className = 'article-interactive-target';
-  figure.append(mountTarget);
-
-  if (block.caption) {
-    const cap = document.createElement('figcaption');
-    cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
-    figure.append(cap);
-  }
-
-  rememberPendingMount(figure, block, lang);
-  return figure;
-}
-
-function renderDropMiniXiangqiReplayBlock(
-  block: DropMiniXiangqiReplayBlock,
-  lang?: ArticleLang,
-): HTMLElement {
-  const figure = document.createElement('figure');
-  figure.className =
-    'article-figure article-figure-interactive article-figure-xq article-figure-drop-mini-xiangqi';
-  figure.dataset.pendingWidget = 'drop-mini-xiangqi-replay';
-
-  const mountTarget = document.createElement('div');
-  mountTarget.className = 'article-interactive-target';
-  figure.append(mountTarget);
-
-  if (block.caption) {
-    const cap = document.createElement('figcaption');
-    cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
-    figure.append(cap);
-  }
-
-  rememberPendingMount(figure, block, lang);
-  return figure;
-}
-
 function renderDuckXiangqiReplayBlock(
   block: DuckXiangqiReplayBlock,
   lang?: ArticleLang,
 ): HTMLElement {
   const figure = document.createElement('figure');
   // No reserve rail on this board, so it takes the plain xiangqi figure classes
-  // rather than the drop-mini ones the fortress replay borrows.
+  // rather than the shared reserve ones the fortress replay borrows.
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'duck-xiangqi-replay';
 
@@ -2175,8 +2116,6 @@ export function mountPendingWidgets(
   | LiveBoardsController
   | XiangqiReplayController
   | ChessReplayController
-  | MiniXiangqiReplayController
-  | DropMiniXiangqiReplayController
   | FortressXiangqiReplayController
   | DuckXiangqiReplayController
   | JieqiReplayController
@@ -2189,8 +2128,6 @@ export function mountPendingWidgets(
     | LiveBoardsController
     | XiangqiReplayController
     | ChessReplayController
-    | MiniXiangqiReplayController
-    | DropMiniXiangqiReplayController
     | JieqiReplayController
     | BanqiReplayController
     | JungleReplayController
@@ -2209,10 +2146,6 @@ export function mountPendingWidgets(
       controllers.push(mountLiveBoards(target, block.spec));
     } else if (block.kind === 'xq-replay') {
       controllers.push(mountXiangqiReplay(target, block.spec, { lang }));
-    } else if (block.kind === 'mxq-replay') {
-      controllers.push(mountMiniXiangqiReplay(target, block.spec, { lang }));
-    } else if (block.kind === 'drop-mini-xiangqi-replay') {
-      controllers.push(mountDropMiniXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'fortress-xiangqi-replay') {
       controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'duck-xiangqi-replay') {
@@ -2404,15 +2337,11 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'dark-draft960': 'draft960',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',
-  'mini-xiangqi': 'mini-xiangqi',
-  'dark-mini-xiangqi': 'dark-mini-xiangqi',
-  'drop-mini-xiangqi': 'drop-mini-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
   kriegspiel: 'kriegspiel',
-  'reveal-chess': 'reveal-chess',
   'dark-crazyhouse': 'dark-crazyhouse',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',

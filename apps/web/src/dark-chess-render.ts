@@ -3,7 +3,7 @@
 //
 // A thin variant adapter over the shared descriptor-driven cell-board core
 // (@mistboard/board-render renderGridBoardSvg) — the same 8x8 chess board Dark
-// Crazyhouse / Reveal Chess / Kriegspiel use, with the fog overlay covering
+// Crazyhouse / Kriegspiel use, with the fog overlay covering
 // every square the viewer cannot see. This is the SVG twin of the chessground
 // board the live room and legacy replay render: it lets the postgame review ride
 // the shared review-layout shell (SVG scales with its container, so no

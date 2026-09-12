@@ -30,16 +30,16 @@ const RETIRED_RULES_SLUGS = new Set([
   // deleted (Stage 2)
   'crossroads-chess',
   'dark-crossroads-chess',
+  'dark-mini-xiangqi',
   'dark-shogi',
+  'drop-mini-xiangqi',
+  'mini-xiangqi',
+  'reveal-chess',
   'shogi',
   // retired, code still present
   'dark-crazyhouse',
   'dark-draft960',
-  'dark-mini-xiangqi',
-  'drop-mini-xiangqi',
   'kriegspiel',
-  'mini-xiangqi',
-  'reveal-chess',
 ]);
 
 /** A rules page whose variant is retired: served as 410 Gone. */
@@ -170,24 +170,6 @@ export const ARTICLE_META: Record<
     description:
       'Xiangqi under Fog of War: each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.',
   },
-  'mini-xiangqi': {
-    title: 'Mini Xiangqi',
-    kind: 'rules',
-    description:
-      'Mini Xiangqi rules, the 7×7 primer behind Dark Mini Xiangqi: no advisors or elephants, no river, sideways soldiers, and checkmate to win.',
-  },
-  'dark-mini-xiangqi': {
-    title: 'Dark Mini Xiangqi',
-    kind: 'rules',
-    description:
-      'Mini Xiangqi under Fog of War: each side sees only the points its pieces reach on the 7×7 board, and the general falls by capture.',
-  },
-  'drop-mini-xiangqi': {
-    title: 'Drop Mini Xiangqi Rules',
-    kind: 'rules',
-    description:
-      'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.',
-  },
   'duck-xiangqi-build': {
     title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',
     kind: 'article',
@@ -295,12 +277,6 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'The complete rules of Flip Jungle, the 4×4 flip version of Jungle Chess: animals start face-down, you flip or move each turn, capture by rank, equal ranks destroy each other. Play it free in your browser.',
-  },
-  'reveal-chess': {
-    title: 'Reveal Chess Rules',
-    kind: 'rules',
-    description:
-      'The complete rules of Reveal Chess, standard chess with a hidden starting arrangement: every piece except the king starts face-down, moves by the square it occupies, and reveals its true identity the moment it moves. Checkmate to win.',
   },
 };
 

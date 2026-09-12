@@ -1,3 +1,7 @@
+/* Shared reserve (hand) strip styling: the pocket every drop variant renders
+   beneath or beside its board. Class names keep their historical drop-mini-
+   prefix; fortress xiangqi, the review pocket and the puzzle boards all
+   select on them. */
 .drop-mini-reserve-row {
   display: flex;
   align-items: center;

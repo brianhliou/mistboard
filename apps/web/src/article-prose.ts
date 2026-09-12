@@ -116,8 +116,6 @@ const BLOCK_PROSE: {
     }),
   ],
   'xq-replay': replay,
-  'mxq-replay': replay,
-  'drop-mini-xiangqi-replay': replay,
   'fortress-xiangqi-replay': replay,
   'duck-xiangqi-replay': replay,
   'chess-replay': replay,
