@@ -5,7 +5,8 @@
 //   npx tsx scripts/variant-lab/anti-xiangqi-exits.ts minimax <file.json>
 //
 // `sweep` enumerates the cascade from the array (a leaf is the first position
-// where the mover has no capture), keeps the half that starts 1. Cb3xb10
+// where the mover has no capture, or a position where the cascade itself
+// ended the game, as codrus's does when a general falls), keeps the half that starts 1. Cb3xb10
 // (the other half is its mirror image), and plays one engine-v-engine game
 // from each leaf with the kernel refereeing. Results are written after every
 // game, so a killed run resumes where it stopped. `minimax` scores each leaf
@@ -54,6 +55,7 @@ const DECISIVE = new Set([
 ]);
 
 function classify(reason: string, winner: string | null, afterExit: number): string {
+  if (DECISIVE.has(reason) && afterExit === 0) return 'decided inside the cascade';
   if (DECISIVE.has(reason)) return afterExit <= 40 ? 'forced dump' : 'fight to the end';
   return winner ? 'stall, on count' : 'stall, equal';
 }

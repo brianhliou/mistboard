@@ -96,6 +96,12 @@ function prove(
 } {
   const rootNode: Node = { move: null, pn: 1, dn: 1, children: null, cutoff: false };
   let nodes = 0;
+  // A cascade can end the game by itself (codrus: a general falls inside it).
+  if (root.status.type === 'finished') {
+    return root.status.winner === attacker
+      ? { result: 'proven', why: 'decided inside the cascade', nodes: 0, proofSize: 0, line: [] }
+      : { result: 'refuted', why: 'already lost at the exit', nodes: 0, proofSize: 0, line: [] };
+  }
 
   const terminalValue = (
     state: XiangqiRuleState,
