@@ -22,11 +22,24 @@ test('default rating bucket uses the Dark chess game spec rating pool', () => {
   });
 });
 
-test('bucketForGame maps an unnamed variant to the fog pool through game specs', () => {
-  assert.deepEqual(bucketForGame({ initialMs: 180_000, incrementMs: 2_000 }), {
-    variant: gameSpecForId(DARK_CHESS_SPEC_ID).ratingPoolBase,
-    timeClass: 'blitz',
-  });
+test('bucketForGame maps the dark-chess spec to the fog pool', () => {
+  assert.deepEqual(
+    bucketForGame({ variant: DARK_CHESS_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 }),
+    { variant: gameSpecForId(DARK_CHESS_SPEC_ID).ratingPoolBase, timeClass: 'blitz' },
+  );
+});
+
+test('bucketForGame fails closed for a retired or unknown variant, never the fog pool', () => {
+  // games.variant outlives the registry: rated rows for variants deleted in
+  // #396 are still in prod. They must drop out of every pool rather than be
+  // re-credited to fog (the old dark-chess fallback drew a Dark Mini Xiangqi
+  // result on a fog-chess rating graph).
+  assert.equal(
+    bucketForGame({ variant: 'dark-mini-xiangqi', initialMs: 180_000, incrementMs: 2_000 }),
+    null,
+  );
+  assert.equal(bucketForGame({ initialMs: 180_000, incrementMs: 2_000 }), null);
+  assert.equal(bucketForGame({ variant: null, initialMs: 60_000, incrementMs: 1_000 }), null);
 });
 
 test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => {
@@ -59,10 +72,10 @@ test('bucketForGame fails closed for specs with no active pool, never the fog po
 });
 
 test('bucketForGame buckets each rated live pace into its own time class', () => {
-  assert.deepEqual(bucketForGame({ initialMs: 60_000, incrementMs: 1_000 }), {
-    variant: 'fog',
-    timeClass: 'bullet',
-  });
+  assert.deepEqual(
+    bucketForGame({ variant: DARK_CHESS_SPEC_ID, initialMs: 60_000, incrementMs: 1_000 }),
+    { variant: 'fog', timeClass: 'bullet' },
+  );
   assert.deepEqual(
     bucketForGame({
       variant: JIEQI_SPEC_ID,
