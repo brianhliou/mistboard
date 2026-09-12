@@ -67,14 +67,16 @@ type Outcome = {
   /** The proof's principal line, attacker moves and one defender reply each. */
   line?: string[];
   /**
-   * The whole proof as a certificate: at an attacker node the one proving
-   * move, at a defender node every legal reply, each with its subtree. A
-   * reader can replay it with any rules implementation.
+   * The whole proof as a certificate, rooted at the exit position: `toMove`
+   * says who moves there; `children` holds the one proving move when it is
+   * the attacker, or every legal reply when it is the defender, each with
+   * its subtree. A reader can replay it with any rules implementation.
    */
-  proof?: ProofTree;
+  proof?: Certificate;
 };
 
 type ProofTree = { move: string; replies?: ProofTree[] };
+type Certificate = { toMove: 'attacker' | 'defender'; children: ProofTree[] };
 
 function uci(m: XiangqiMove): string {
   return `${m.from}${m.to}`;
@@ -92,7 +94,7 @@ function prove(
   nodes: number;
   proofSize: number;
   line: string[];
-  proof?: ProofTree;
+  proof?: Certificate;
 } {
   const rootNode: Node = { move: null, pn: 1, dn: 1, children: null, cutoff: false };
   let nodes = 0;
@@ -207,7 +209,10 @@ function prove(
       return n.children.map((c) => ({ move: uci(c.move!), replies: certificate(c, true) }));
     };
     const rootAttacker = (root.status as { turn: Color }).turn === attacker;
-    const proof = certificate(rootNode, rootAttacker)[0];
+    const proof: Certificate = {
+      toMove: rootAttacker ? 'attacker' : 'defender',
+      children: certificate(rootNode, rootAttacker),
+    };
     return {
       result: 'proven',
       why: `proof tree of ${proofSize} nodes`,
