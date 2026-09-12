@@ -26,7 +26,7 @@ import {
   type DevViews,
   deviceIdForBrowser,
   liveState,
-  resolveWebSocketBaseUrl,
+  resolveWebSocketBaseUrls,
 } from './live-state.js';
 import { currentView } from './live-view.js';
 import { roomIdFromPath } from './room-url.js';
@@ -97,7 +97,8 @@ export function bootstrapLiveRoom(): void {
   // ── Populate shared state ───────────────────────────────────────────────────
 
   liveState.room = room;
-  liveState.socketUrl = `${resolveWebSocketBaseUrl()}?${socketParams}`;
+  liveState.socketUrls = resolveWebSocketBaseUrls().map((base) => `${base}?${socketParams}`);
+  liveState.socketUrl = liveState.socketUrls[0];
   liveState.engineRequested = engineRequested;
   liveState.debugRequested = debugRequested;
   liveState.variantRequested = variantRequested;

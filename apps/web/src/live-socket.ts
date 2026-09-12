@@ -99,7 +99,7 @@ export function connectSocket(): void {
   client?.close();
   client = createTenantSocketClient({
     room: liveState.room,
-    socketUrl: liveState.socketUrl,
+    socketUrls: liveState.socketUrls.length > 0 ? liveState.socketUrls : [liveState.socketUrl],
     applyHello: applyStateFrame,
     applySnapshot: applyStateFrame,
     applyEvent: applyStateFrame,

@@ -1,12 +1,16 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { track } from '../analytics.js';
 import { setRestartBanner } from '../restart-banner.js';
 import {
   createTenantSocketClient,
+  SOCKET_FALLBACK_AFTER_FAILED_OPENS,
+  SOCKET_OPEN_TIMEOUT_MS,
   type TenantSocketClientOptions,
   tenantReconnectDelayMs,
 } from './socket-client.js';
 
 vi.mock('../restart-banner.js', () => ({ setRestartBanner: vi.fn() }));
+vi.mock('../analytics.js', () => ({ track: vi.fn() }));
 
 class FakeWebSocket {
   static instances: FakeWebSocket[] = [];
@@ -112,7 +116,12 @@ describe('tenant socket client', () => {
       toFake: ['setTimeout', 'clearTimeout', 'setInterval', 'clearInterval', 'Date'],
     });
     vi.mocked(setRestartBanner).mockClear();
+    vi.mocked(track).mockClear();
     Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: memoryStorage(),
+    });
+    Object.defineProperty(window, 'sessionStorage', {
       configurable: true,
       value: memoryStorage(),
     });
@@ -330,5 +339,106 @@ describe('tenant socket client', () => {
     client.close();
     vi.advanceTimersByTime(60_000);
     expect(FakeWebSocket.instances).toHaveLength(1);
+  });
+
+  // The socket host fallback. Prod dials socket.mistboard.com (a DNS-only
+  // Railway hostname) first and the page origin second; the two paths do not
+  // fail together, and on 2026-09-12 a matched correspondence pair in China
+  // reached the board and never got a socket. Before this the only trace of
+  // that was an unmoved seat row.
+  const HOSTS = ['wss://socket.example.test/?room=r', 'wss://www.example.test/?room=r'];
+
+  function hostsDialed(): string[] {
+    return FakeWebSocket.instances.map((socket) => new URL(socket.url).host);
+  }
+
+  function drainBackoff(): void {
+    vi.advanceTimersByTime(tenantReconnectDelayMs(1));
+  }
+
+  it('reports a socket that never opens and moves to the fallback host after two', () => {
+    const { client } = makeClient({ socketUrls: HOSTS });
+    client.connect();
+    expect(hostsDialed()).toEqual(['socket.example.test']);
+
+    // First open black-holes: the open timeout counts it and redials the primary.
+    vi.advanceTimersByTime(SOCKET_OPEN_TIMEOUT_MS);
+    expect(client.connection()).toBe('reconnecting');
+    expect(track).toHaveBeenCalledWith(
+      'socket_connect_failed',
+      expect.objectContaining({ host: 'socket.example.test', failedOpens: 1, timedOut: true }),
+    );
+    drainBackoff();
+    expect(hostsDialed()).toEqual(['socket.example.test', 'socket.example.test']);
+
+    // Second one closes without opening: that is the threshold.
+    lastSocket().closeWith(1006, '');
+    expect(track).toHaveBeenCalledWith(
+      'socket_connect_failed',
+      expect.objectContaining({ host: 'socket.example.test', failedOpens: 2, code: 1006 }),
+    );
+    expect(track).toHaveBeenCalledWith('socket_host_fallback', {
+      from: 'socket.example.test',
+      to: 'www.example.test',
+    });
+    drainBackoff();
+    expect(hostsDialed().at(-1)).toBe('www.example.test');
+    expect(SOCKET_FALLBACK_AFTER_FAILED_OPENS).toBe(2);
+
+    lastSocket().open();
+    expect(client.connection()).toBe('connected');
+    expect(window.sessionStorage.getItem('mistboard.socket.host')).toBe('fallback');
+  });
+
+  it('an open then a drop is not a failed open: a deploy restart stays on the primary', () => {
+    const { client } = makeClient({ socketUrls: HOSTS });
+    client.connect();
+    lastSocket().open();
+    lastSocket().closeWith(1006, '');
+    drainBackoff();
+    lastSocket().open();
+    lastSocket().closeWith(1006, '');
+    drainBackoff();
+    lastSocket().open();
+    expect(new Set(hostsDialed())).toEqual(new Set(['socket.example.test']));
+    expect(track).not.toHaveBeenCalled();
+  });
+
+  it('a single failed open redials the primary, not the fallback', () => {
+    const { client } = makeClient({ socketUrls: HOSTS });
+    client.connect();
+    lastSocket().closeWith(1006, '');
+    drainBackoff();
+    lastSocket().open();
+    expect(hostsDialed()).toEqual(['socket.example.test', 'socket.example.test']);
+    expect(track).toHaveBeenCalledTimes(1);
+  });
+
+  it('a later room in the same tab starts on the fallback host', () => {
+    window.sessionStorage.setItem('mistboard.socket.host', 'fallback');
+    const { client } = makeClient({ socketUrls: HOSTS });
+    client.connect();
+    expect(hostsDialed()).toEqual(['www.example.test']);
+  });
+
+  it('with one host there is nowhere to fall back to, and the client keeps redialing it', () => {
+    const { client } = makeClient({ socketUrl: HOSTS[0] });
+    client.connect();
+    lastSocket().closeWith(1006, '');
+    drainBackoff();
+    lastSocket().closeWith(1006, '');
+    vi.advanceTimersByTime(tenantReconnectDelayMs(2));
+    expect(hostsDialed()).toEqual(Array(3).fill('socket.example.test'));
+    expect(track).not.toHaveBeenCalledWith('socket_host_fallback', expect.anything());
+  });
+
+  it('the open timeout is disarmed by a successful open', () => {
+    const { client } = makeClient({ socketUrls: HOSTS });
+    client.connect();
+    lastSocket().open();
+    vi.advanceTimersByTime(SOCKET_OPEN_TIMEOUT_MS * 2);
+    expect(client.connection()).toBe('connected');
+    expect(FakeWebSocket.instances).toHaveLength(1);
+    expect(track).not.toHaveBeenCalled();
   });
 });

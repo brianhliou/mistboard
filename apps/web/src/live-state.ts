@@ -158,6 +158,9 @@ export const liveState = {
   // Setup fields — set once by live.ts before first socket/render call
   room: '',
   socketUrl: '',
+  // Every socket URL for this room, primary first (resolveWebSocketBaseUrls);
+  // socketUrl mirrors the first one for the older single-URL readers.
+  socketUrls: [] as string[],
   engineRequested: false,
   debugRequested: false,
   variantRequested: null as string | null,
@@ -218,11 +221,32 @@ export const liveState = {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 export function resolveWebSocketBaseUrl(): string {
+  return resolveWebSocketBaseUrls()[0];
+}
+
+// Socket hosts in the order a client tries them. The configured host
+// (VITE_MISTBOARD_WS_URL; in prod socket.mistboard.com, a DNS-only Railway
+// hostname kept off the Cloudflare path on purpose so latency can be split
+// between the two) comes first. The page's own origin is the fallback: it is
+// the one host this browser has just proven it can reach. The two paths do
+// not fail together. Measured 2026-09-12 in PostHog: of Chinese visitors who
+// loaded a /room/ page in the prior 30 days, 4 of 11 never got a game state
+// (a signed-in acceptor reloaded a correspondence board twice and left),
+// against 30 of 27 elsewhere. Dev has no fallback: the Vite origin does not
+// proxy the socket. Same-origin is deduped when it is already primary.
+export function resolveWebSocketBaseUrls(): string[] {
   const configured = import.meta.env.VITE_MISTBOARD_WS_URL;
-  if (configured) return (configured as string).replace(/\?$/, '');
-  if (import.meta.env.DEV) return 'ws://localhost:3001';
+  if (import.meta.env.DEV)
+    return [configured ? stripQuery(configured as string) : 'ws://localhost:3001'];
   const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}`;
+  const sameOrigin = `${protocol}//${window.location.host}`;
+  if (!configured) return [sameOrigin];
+  const primary = stripQuery(configured as string);
+  return primary === sameOrigin ? [primary] : [primary, sameOrigin];
+}
+
+function stripQuery(url: string): string {
+  return url.replace(/\?$/, '');
 }
 
 // The browser's durable id, one per localStorage, sent on every live connect

@@ -16,11 +16,12 @@
  * state change exactly where the pre-extraction clients re-rendered.
  */
 
+import { track } from '../analytics.js';
 import {
   clientIdForRoom,
   deviceIdForBrowser,
   isPlayableSeat,
-  resolveWebSocketBaseUrl,
+  resolveWebSocketBaseUrls,
   seatTokenForRoom,
   writeSeatTokenForRoom,
 } from '../live-state.js';
@@ -70,6 +71,10 @@ export type TenantSocketClientOptions = {
   // Full socket URL override for shells that carry extra query params (dev
   // flags, variant, gameSpecId). Default: base URL + room + stored client id.
   socketUrl?: string;
+  // The same, as an ordered host list (primary first, then the fallback
+  // origin); takes precedence over socketUrl. Default: every base URL from
+  // resolveWebSocketBaseUrls with the same query.
+  socketUrls?: string[];
   // Tenant frame application. The client has already handled clientId capture,
   // seat-token persistence, sequence bookkeeping, and the connected flip.
   applyHello(frame: TenantSocketFrame): void;
@@ -106,17 +111,39 @@ const RECONNECT_NOTICE_GRACE_MS = 1_500;
 const RECONNECT_NOTICE_ESCALATE_MS = 5_000;
 const LATENCY_SAMPLE_INTERVAL_MS = 60_000;
 
+// A socket that has not opened by this point is treated as a failed open and
+// closed. A healthy path opens in well under a second; a browser left to its
+// own devices takes 20 s or more to give up on a black-holed host, which is
+// longer than a player waits before reloading (measured 2026-09-12: 97 s,
+// once, then gone).
+export const SOCKET_OPEN_TIMEOUT_MS = 6_000;
+// Failed opens on the current host before the client moves to the next one.
+// Two, not one: a deploy restart closes every socket at once and the primary
+// is back within a second, which one failed open cannot tell apart from a
+// host this browser will never reach.
+export const SOCKET_FALLBACK_AFTER_FAILED_OPENS = 2;
+// Once a tab has moved to the fallback host it stays there for the tab's
+// life, including across a rematch redirect, so the next room does not spend
+// another two failed opens rediscovering the same dead path.
+const SOCKET_HOST_SESSION_KEY = 'mistboard.socket.host';
+
 export function createTenantSocketClient(options: TenantSocketClientOptions): TenantSocketClient {
-  let socketUrl = options.socketUrl ?? '';
-  if (!socketUrl) {
+  let socketUrls = options.socketUrls ?? (options.socketUrl ? [options.socketUrl] : []);
+  if (socketUrls.length === 0) {
     const socketParams = new URLSearchParams({ room: options.room });
     socketParams.set('client', clientIdForRoom(options.room));
     const deviceId = deviceIdForBrowser();
     if (deviceId) socketParams.set('device', deviceId);
-    socketUrl = `${resolveWebSocketBaseUrl()}?${socketParams}`;
+    socketUrls = resolveWebSocketBaseUrls().map((base) => `${base}?${socketParams}`);
   }
+  // Which entry of socketUrls this client dials. Starts on the fallback when
+  // an earlier room in this tab already had to move there.
+  let hostIndex =
+    socketUrls.length > 1 && readSessionHost() === 'fallback' ? socketUrls.length - 1 : 0;
+  let failedOpens = 0;
 
   let socket: WebSocket | null = null;
+  let openTimer: number | null = null;
   let reconnectTimer: number | null = null;
   let reconnectAttempt = 0;
   let lastSeq: number | null = null;
@@ -142,14 +169,35 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     connectionState = clientId ? 'reconnecting' : 'connecting';
     options.render();
 
+    const socketUrl = socketUrls[hostIndex];
     const token = seatTokenForRoom(options.room);
     const next = token
       ? new WebSocket(socketUrl, [`mistboard-seat.${token}`])
       : new WebSocket(socketUrl);
     socket = next;
+    let opened = false;
+    const dialedAt = Date.now();
+    clearOpenTimer();
+    openTimer = window.setTimeout(() => {
+      openTimer = null;
+      if (socket !== next || opened) return;
+      // Detach before closing so the close event below does not count the
+      // same failure twice.
+      socket = null;
+      next.removeEventListener('message', onMessage);
+      next.close();
+      connectionState = 'disconnected';
+      startNoticeTiers();
+      options.render();
+      recordFailedOpen(socketUrl, dialedAt, { timedOut: true });
+      scheduleReconnect();
+    }, SOCKET_OPEN_TIMEOUT_MS);
     next.addEventListener('message', onMessage);
     next.addEventListener('open', () => {
       if (socket !== next) return;
+      opened = true;
+      failedOpens = 0;
+      clearOpenTimer();
       // A send during CONNECTING may have armed a reconnect; an open socket
       // needs no pending teardown.
       if (reconnectTimer) {
@@ -163,6 +211,7 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     });
     next.addEventListener('close', (event) => {
       if (socket !== next) return;
+      clearOpenTimer();
       closeReason = event.reason;
       if (event.code === 4000 && event.reason === 'duplicate session') {
         connectionState = 'displaced';
@@ -181,6 +230,9 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
       connectionState = 'disconnected';
       startNoticeTiers();
       options.render();
+      if (!opened) {
+        recordFailedOpen(socketUrl, dialedAt, { code: event.code, reason: event.reason });
+      }
       scheduleReconnect();
     });
     next.addEventListener('error', () => {
@@ -191,7 +243,46 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
     });
   }
 
+  function clearOpenTimer(): void {
+    if (openTimer !== null) {
+      window.clearTimeout(openTimer);
+      openTimer = null;
+    }
+  }
+
+  // A socket that closed or timed out without ever opening. Every one is
+  // reported (host, how long it took, how it ended), because before 2026-09-12
+  // the only trace of a player who could not reach the socket host was an
+  // unmoved seat row. After enough of them on one host the client moves to
+  // the next on the shortest backoff rather than the escalated one: the
+  // player has already sat through the failures.
+  function recordFailedOpen(
+    url: string,
+    dialedAt: number,
+    how: { timedOut?: boolean; code?: number; reason?: string },
+  ): void {
+    failedOpens += 1;
+    const host = hostOf(url);
+    track('socket_connect_failed', {
+      host,
+      hostIndex,
+      failedOpens,
+      elapsedMs: Date.now() - dialedAt,
+      timedOut: how.timedOut ?? false,
+      code: how.code ?? null,
+      reason: how.reason ?? '',
+    });
+    if (failedOpens < SOCKET_FALLBACK_AFTER_FAILED_OPENS) return;
+    if (hostIndex >= socketUrls.length - 1) return;
+    hostIndex += 1;
+    failedOpens = 0;
+    writeSessionHost(hostIndex === socketUrls.length - 1 ? 'fallback' : null);
+    track('socket_host_fallback', { from: host, to: hostOf(socketUrls[hostIndex]) });
+    reconnectAttempt = 0;
+  }
+
   function close(): void {
+    clearOpenTimer();
     if (reconnectTimer) {
       window.clearTimeout(reconnectTimer);
       reconnectTimer = null;
@@ -352,4 +443,29 @@ export function createTenantSocketClient(options: TenantSocketClientOptions): Te
 // Exponential backoff capped at 10s: 750ms, 1.5s, 3s, 6s, 10s, 10s, ...
 export function tenantReconnectDelayMs(attempt: number): number {
   return Math.min(10_000, 750 * 2 ** Math.min(attempt - 1, 4));
+}
+
+function hostOf(url: string): string {
+  try {
+    return new URL(url).host;
+  } catch {
+    return url;
+  }
+}
+
+function readSessionHost(): string | null {
+  try {
+    return window.sessionStorage.getItem(SOCKET_HOST_SESSION_KEY);
+  } catch {
+    return null;
+  }
+}
+
+function writeSessionHost(value: string | null): void {
+  try {
+    if (value === null) window.sessionStorage.removeItem(SOCKET_HOST_SESSION_KEY);
+    else window.sessionStorage.setItem(SOCKET_HOST_SESSION_KEY, value);
+  } catch {
+    // Storage unavailable: the fallback still holds for this client.
+  }
 }
