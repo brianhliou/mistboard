@@ -112,6 +112,15 @@ describe('mountEmbedStudy', () => {
     // is not on the board until the second half of Red's first turn, so a duck
     // token would be a false negative here.
     expect(root.innerHTML).toContain('dkx-');
+
+    // And writes the turn in the grammar every other duck surface uses. The
+    // replay module had its own spelling, `b3-b5, duck d9`, which is wider than
+    // a cell in the sheet beside the board: every duck turn in an embedded
+    // study rendered as `b3-b5, d…`.
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toEqual(['b3-b5@d9', 'b8-b6@a8']);
     root.remove();
   });
 

@@ -32,7 +32,7 @@ import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from '../showca
 import { seatInkFamily } from '../variant-seat-label.js';
 import { webVariantTenantForSpecId } from '../variant-tenant/registry.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
-import { mountEmbedCard } from './embed-card.js';
+import { embedRailWidthPx, mountEmbedCard } from './embed-card.js';
 import type { EmbedGameRoute } from './embed-route.js';
 import './embed.css';
 
@@ -195,6 +195,7 @@ export async function mountEmbedGame(
         text: `${names.first} vs ${names.second} · mistboard.com`,
       },
       aspect: boardAspectForSpec(specId),
+      railWidthPx: embedRailWidthPx(specId),
       startPly: options.startPly ?? null,
       inkFamily: seatInkFamily(game.variant),
       mountBoard: (host, hooks) =>

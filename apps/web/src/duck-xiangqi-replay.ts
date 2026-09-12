@@ -99,10 +99,24 @@ export function replayDuckXiangqiNotation(moves: string): {
   return { turns, states };
 }
 
+/**
+ * The one grammar every duck surface writes a turn in: `e2-e5@c7`, and `x…#`
+ * for the general capture, which ends the game before the duck would have moved
+ * and is the one turn with no `@` half. Duplicated rather than imported for the
+ * same bundle reason the other copies duplicate each other (`duckTurnLabel` in
+ * live-duck-xiangqi.ts, `duckXiangqiTurnLabel` in review/duck-xiangqi-tree-
+ * adapter.ts and duck-xiangqi-postgame.ts): this module is what the articles and
+ * the embed load, and must not drag the live or review surfaces in with it.
+ *
+ * This copy read `e2-e5, duck c7` until 2026-09-12, which is the divergence a
+ * duplicated grammar is supposed to be watched for. It cost about fourteen
+ * characters against a move cell in the sheet beside the board that fits about
+ * ten, so every duck turn in an embedded study truncated to `e2-e5, d…`.
+ */
 function turnLabel(turn: DuckXiangqiTurn): string {
   return turn.duckTo === null
-    ? `${turn.from}x${turn.to}`
-    : `${turn.from}-${turn.to}, duck ${turn.duckTo}`;
+    ? `${turn.from}x${turn.to}#`
+    : `${turn.from}-${turn.to}@${turn.duckTo}`;
 }
 
 export function mountDuckXiangqiReplay(

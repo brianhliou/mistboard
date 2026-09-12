@@ -23,6 +23,7 @@
 //   assets/posts/duck-xiangqi/thumbnail.png  the duck beside the red general
 //   assets/posts/duck-xiangqi/social-card.png
 
+import { spawnSync } from 'node:child_process';
 import { copyFileSync, mkdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import path from 'node:path';
@@ -198,6 +199,25 @@ function pairCard(width: number, height: number, size: number): string {
   ].join('');
 }
 
+// pngquant, when it is on PATH. The art is flat colour: 5,526 colours collapse
+// to 38 with a worst-case per-pixel delta of 29 on anti-aliased edges and no
+// visible change, which is what makes the 2x raster below cheaper than the 1x
+// one was. Optional on purpose: a missing pngquant should cost file size, not
+// fail the generator, and the PNG it writes is correct either way.
+function quantize(file: string): void {
+  const target = path.join(OUT, file);
+  const result = spawnSync('pngquant', [
+    '--force',
+    '--skip-if-larger',
+    '--quality',
+    '70-95',
+    '--output',
+    target,
+    target,
+  ]);
+  if (result.error) console.log(`  (pngquant not found; ${file} left unquantized)`);
+}
+
 function renderPng(svg: string, file: string, width: number): void {
   // resvg cannot fetch, so the art is inlined as data URIs for the raster.
   const inlined = svg.replace(/href="\/piece-sets\/([^"?]+)\.png[^"]*"/g, (_, rel: string) => {
@@ -209,11 +229,24 @@ function renderPng(svg: string, file: string, width: number): void {
   console.log(`  assets/posts/duck-xiangqi/${file} (${(png.length / 1024).toFixed(0)} kB)`);
 }
 
-// The card that hosts this crops to fill (object-fit: cover), so the art needs
-// side margin it can afford to lose. At size 72 the pair spanned 158 of 160
-// and a ~10px crop cut both discs; 60 leaves 17 units of air each side.
-renderPng(pairCard(160, 100, 68), 'thumbnail.png', 640);
+// The feed thumbnail is 3:2, the ratio every other card on that site is drawn
+// to (_private/tools/render_thumbnails.py). This one was 8:5 at 640x400 until
+// 2026-09-12 and it showed twice over: the card box is a true 3:2, so
+// object-fit: cover shaved the sides off a 1.6 drawing, and 640px of source in
+// a 271px box is soft on any 2x display while every neighbour in the grid had
+// 960. The discs sit at 64 of 100 so the pair keeps nine units of air each side.
+//
+// 1920 DELIBERATELY EXCEEDS the 960 cap in optimize_thumbnails.sh, and that
+// script will resize this back down if it is ever run over the repo. The cap is
+// right about the display context (a 271px card wants 960 at most) and the
+// reason to break it is that quantized 2x is CHEAPER than unquantized 1x here:
+// 55 kB against 67 kB. So the cap buys nothing on this file and costs the only
+// context where the art gets looked at closely, which is opening it directly.
+// If that script grows a per-file exception list, this belongs on it.
+renderPng(pairCard(150, 100, 64), 'thumbnail.png', 1920);
+quantize('thumbnail.png');
 renderPng(pairCard(120, 63, 40), 'social-card.png', 1200);
+quantize('social-card.png');
 
 for (const rel of ART_FILES) {
   copyFileSync(

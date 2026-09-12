@@ -18,7 +18,7 @@ import { replayStepperCopy } from '../replay-stepper-copy.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
 import { mountXiangqiReplayBoard, xiangqiResultLabel } from '../xiangqi-replay.js';
-import { mountEmbedCard } from './embed-card.js';
+import { embedRailWidthPx, mountEmbedCard } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import './embed.css';
 
@@ -97,6 +97,7 @@ export async function mountEmbedStudy(
     // chapter's own variant, and fail over to xiangqi for everything else
     // rather than guessing.
     aspect: boardAspectForSpec(isDuck ? 'duck-xiangqi' : 'xiangqi'),
+    railWidthPx: embedRailWidthPx(isDuck ? 'duck-xiangqi' : 'xiangqi'),
     // Clamped by the card against the real ply count, so an out-of-range
     // deep link opens at the end rather than on nothing.
     startPly: options.startPly ?? 0,
