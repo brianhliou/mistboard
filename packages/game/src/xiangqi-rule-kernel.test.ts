@@ -288,3 +288,52 @@ test('progress clock and repetition draw the game', () => {
   for (let i = 0; i < 2; i += 1) for (const move of shuffle) state = rep.apply(state, move);
   assert.deepEqual(state.status, { type: 'finished', winner: null, reason: 'repetition' });
 });
+
+test('stall: fewer pieces wins a stalled game, and a dead position ends it at once', () => {
+  // Red general and advisor against black general, two advisors, elephant: no
+  // chariot, horse, cannon or soldier, so nothing can ever capture again.
+  const dead = '4ka3/4a4/4b4/9/9/9/9/9/4A4/4K4 b - - 0 1';
+  const off = createXiangqiRuleKernel({
+    mustCapture: true,
+    royal: { red: false, black: false },
+    check: 'none',
+    facing: 'off',
+  });
+  let state = off.parseFen(dead, 'o')!;
+  state = off.apply(state, { from: 'e10', to: 'e9' });
+  assert.equal(state.status.type, 'playing', 'off: the dead position plays on');
+
+  const count = createXiangqiRuleKernel({
+    mustCapture: true,
+    royal: { red: false, black: false },
+    check: 'none',
+    facing: 'off',
+    stall: 'fewerPieces',
+    deadPosition: true,
+  });
+  state = count.parseFen(dead, 'c')!;
+  state = count.apply(state, { from: 'e10', to: 'e9' });
+  assert.deepEqual(state.status, { type: 'finished', winner: 'red', reason: 'dead-position' });
+
+  // A chariot keeps the position alive; the progress clock then goes on count.
+  const clock = createXiangqiRuleKernel({
+    stall: 'fewerPieces',
+    deadPosition: true,
+    progressClock: 2,
+  });
+  state = clock.parseFen('4k4/9/9/9/9/9/9/9/9/R3KA3 w - - 0 1', 'p')!;
+  state = clock.apply(state, { from: 'a1', to: 'a2' });
+  state = clock.apply(state, { from: 'e10', to: 'e9' });
+  assert.deepEqual(state.status, { type: 'finished', winner: 'black', reason: 'progress-clock' });
+
+  // Equal counts stay a draw.
+  const equal = createXiangqiRuleKernel({
+    stall: 'fewerPieces',
+    deadPosition: true,
+    progressClock: 2,
+  });
+  state = equal.parseFen('r3k4/9/9/9/9/9/9/9/9/R3K4 w - - 0 1', 'q')!;
+  state = equal.apply(state, { from: 'a1', to: 'a2' });
+  state = equal.apply(state, { from: 'a10', to: 'a9' });
+  assert.deepEqual(state.status, { type: 'finished', winner: null, reason: 'progress-clock' });
+});

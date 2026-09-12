@@ -49,6 +49,7 @@ export type CheckRule = 'standard' | 'none' | 'forbidden';
 export type BlastShape = 'orthogonal' | 'eight';
 export type StalemateValue = 'loss' | 'win' | 'draw';
 export type ExtinctionValue = 'none' | 'loses' | 'wins';
+export type StallValue = 'draw' | 'fewerPieces';
 
 export type XiangqiRuleConfig = {
   /** Start array; the standard one by default. */
@@ -104,6 +105,22 @@ export type XiangqiRuleConfig = {
   progressClock?: number;
   /** Three-fold repetition is a draw, or not adjudicated. */
   repetition?: 'draw' | 'off';
+  /**
+   * What a stalled game is worth: the progress clock, a repetition, and (when
+   * `deadPosition` is on) a board with no piece that can ever cross the
+   * river. `draw` is xiangqi. `fewerPieces` awards it to the side with fewer
+   * pieces, equal a draw (FICS's antichess stalemate rule, applied wherever
+   * the game stalls); it is what makes bailing out of a losing anti game
+   * cost something.
+   */
+  stall?: StallValue;
+  /**
+   * End the game at once when neither side has a chariot, horse, cannon or
+   * soldier: nothing left can ever reach the other side, so under a
+   * lose-everything objective no capture can ever happen again. Off is
+   * xiangqi (such a position is drawn by the progress clock in time).
+   */
+  deadPosition?: boolean;
 };
 
 export const STANDARD_XIANGQI_RULES: Required<
@@ -121,6 +138,8 @@ export const STANDARD_XIANGQI_RULES: Required<
   stalemate: 'loss',
   progressClock: 60,
   repetition: 'draw',
+  stall: 'draw',
+  deadPosition: false,
 };
 
 type Resolved = typeof STANDARD_XIANGQI_RULES;
@@ -138,7 +157,8 @@ export type XiangqiRuleEndReason =
   | 'extinction'
   | 'flag'
   | 'repetition'
-  | 'progress-clock';
+  | 'progress-clock'
+  | 'dead-position';
 
 export type XiangqiRuleStatus =
   | { type: 'playing'; turn: XiangqiColor }
@@ -211,6 +231,9 @@ const ALL_SQUARES: readonly XiangqiSquare[] = (() => {
     for (let file = 0; file < 9; file += 1) out.push(squareOf(file, rank));
   return out;
 })();
+
+/** The roles that can cross the river; a board without them can never see another capture. */
+const MOBILE: ReadonlySet<XiangqiPieceRole> = new Set(['chariot', 'horse', 'cannon', 'soldier']);
 
 export function allXiangqiSquares(): readonly XiangqiSquare[] {
   return ALL_SQUARES;
@@ -690,12 +713,28 @@ export function createXiangqiRuleKernel(config: XiangqiRuleConfig = {}): Xiangqi
       if (rules.stalemate === 'win') return finish(state, next, 'stalemate');
       return finish(state, null, 'stalemate');
     }
+    if (rules.deadPosition && !ALL_SQUARES.some((s) => board[s] && MOBILE.has(board[s]!.role)))
+      return finish(state, stallWinner(board), 'dead-position');
     if (!captured && state.progressClock >= rules.progressClock)
-      return finish(state, null, 'progress-clock');
+      return finish(state, stallWinner(board), 'progress-clock');
     if (rules.repetition === 'draw' && (state.positionCounts[positionKey(board, next)] ?? 0) >= 3) {
-      return finish(state, null, 'repetition');
+      return finish(state, stallWinner(board), 'repetition');
     }
     return state;
+  };
+
+  /** Who a stalled game goes to: nobody, or the side with fewer pieces. */
+  const stallWinner = (board: XiangqiBoard): XiangqiColor | null => {
+    if (rules.stall !== 'fewerPieces') return null;
+    let red = 0;
+    let black = 0;
+    for (const s of ALL_SQUARES) {
+      const piece = board[s];
+      if (!piece) continue;
+      if (piece.color === 'red') red += 1;
+      else black += 1;
+    }
+    return red < black ? 'red' : black < red ? 'black' : null;
   };
 
   return {
