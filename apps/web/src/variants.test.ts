@@ -10,7 +10,6 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
-  KRIEGSPIEL_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it, vi } from 'vitest';
@@ -126,9 +125,7 @@ describe('web variant launch registry', () => {
     ]);
   });
 
-  it('keeps mini-board fallback ids for soft-launch play-menu variants', () => {
-    expect(variantMiniIdForGameSpec(KRIEGSPIEL_SPEC_ID)).toBe('kriegspiel');
-  });
+  it('keeps mini-board fallback ids for soft-launch play-menu variants', () => {});
 
   it('maps the Jungle surfaces to their animal-rank markers', () => {
     expect(variantMiniIdForGameSpec(JUNGLE_SPEC_ID)).toBe('jungle');
@@ -149,7 +146,6 @@ describe('web variant launch registry', () => {
       [DARK_CHESS_SPEC_ID, 'fog'],
       [JUNGLE_SPEC_ID, 'jungle'],
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],
-      [KRIEGSPIEL_SPEC_ID, 'kriegspiel'],
       [DARK_DRAFT960_SPEC_ID, 'dark-draft960'],
     ]);
   });
@@ -178,18 +174,6 @@ describe('web variant launch registry', () => {
     vi.stubEnv('DEV', false);
     const prod = await import('./variants.js');
     for (const specId of [JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
-      expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(specId);
-      expect(prod.profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(specId);
-    }
-    vi.unstubAllEnvs();
-    vi.resetModules();
-  });
-
-  it('keeps Kriegspiel off production rating surfaces when its flag is off', async () => {
-    vi.resetModules();
-    vi.stubEnv('DEV', false);
-    const prod = await import('./variants.js');
-    for (const specId of [KRIEGSPIEL_SPEC_ID]) {
       expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(specId);
       expect(prod.profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(specId);
     }

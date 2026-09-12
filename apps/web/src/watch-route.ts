@@ -1070,7 +1070,7 @@ async function mountWatchReplay(
       ...(live ? { live: true, loadPostgameOverride: live.loadPostgameOverride } : {}),
     });
   }
-  // Chess (chessground): fog channels (dark-chess, kriegspiel). Watch only ever serves COMPLETED games, so the middle
+  // Chess (chessground): the fog channel (dark-chess). Watch only ever serves COMPLETED games, so the middle
   // "Truth" pane is the fully public final-and-throughout board — no hidden-info
   // leak. Render the triptych compact but let watch-route.css isolate the truth
   // pane into the board slot (the panes resolver can only pick a fogged white/
@@ -1780,7 +1780,6 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
-  kriegspiel: 'kriegspiel',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
 };

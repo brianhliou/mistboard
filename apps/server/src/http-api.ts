@@ -33,7 +33,6 @@ import * as inboxRoute from './routes/inbox.js';
 import * as jieqiGamesRoute from './routes/jieqi-games.js';
 import * as jungleFlipGamesRoute from './routes/jungle-flip-games.js';
 import * as jungleGamesRoute from './routes/jungle-games.js';
-import * as kriegspielGamesRoute from './routes/kriegspiel-games.js';
 import * as leaderboardRoute from './routes/leaderboard.js';
 import type { HttpApiContext } from './routes/lib.js';
 import * as lobbyRoute from './routes/lobby.js';
@@ -114,7 +113,6 @@ export const routes: RouteModule[] = [
   fortressXiangqiGamesRoute,
   duckXiangqiGamesRoute,
   darkXiangqiGamesRoute,
-  kriegspielGamesRoute,
   jieqiGamesRoute,
   jungleGamesRoute,
   jungleFlipGamesRoute,

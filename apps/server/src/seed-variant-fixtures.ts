@@ -24,7 +24,6 @@ import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
-import { kriegspielTenant } from './kriegspiel-tenant.js';
 import { runMigrations } from './migrate.js';
 import { appendRoomEvent, close, init, recordGameEnd } from './persistence.js';
 import { buildTenantGameSummary } from './variant-tenant/events.js';
@@ -39,7 +38,6 @@ const TENANTS: any[] = [
   banqiTenant,
   fortressXiangqiTenant,
   duckXiangqiTenant,
-  kriegspielTenant,
   darkXiangqiTenant,
   xiangqiTenant,
 ];

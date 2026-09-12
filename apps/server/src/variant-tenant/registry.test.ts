@@ -19,10 +19,7 @@ test('registry: retired specs never register, by prefix or by id', () => {
   // The registration modules for these still run at boot (their Stage 2
   // commits remove them); registerVariantTenant drops a retired spec on the
   // floor, so no route, prefix or watch channel exists for it.
-  for (const [prefix, specId] of [
-    ['kr_some-room', 'kriegspiel'],
-    ['lzq_some-room', 'luzhanqi'],
-  ] as const) {
+  for (const [prefix, specId] of [['lzq_some-room', 'luzhanqi']] as const) {
     assert.equal(variantTenantForRoomId(prefix), null, prefix);
     assert.equal(variantTenantForSpecId(specId), null, specId);
   }

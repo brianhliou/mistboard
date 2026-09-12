@@ -7,7 +7,6 @@ import {
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
-  kriegspielEnabled,
   luzhanqiEnabled,
   mahjongEnabled,
   xiangqiEnabled,
@@ -51,11 +50,6 @@ type GateSpecEntry<Id extends GatedGameSpecId> =
 
 // Entries ordered as in the GameSpecId union (packages/game/src/game-specs.ts).
 const GATED_GAME_SPECS = {
-  kriegspiel: {
-    enabled: kriegspielEnabled,
-    disabledError: 'kriegspiel_disabled',
-    notIntegratedError: 'kriegspiel_not_integrated',
-  },
   // Registered, not built: no tenant, no route, no client. The gate rejects
   // every request for it, which is what 'gated' means at this stage.
   mahjong: {

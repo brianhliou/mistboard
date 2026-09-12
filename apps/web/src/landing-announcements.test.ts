@@ -19,7 +19,6 @@ describe('landing announcements', () => {
 
   it('shows current launch announcements without old variant env flags', () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'false');
 
     const panel = buildLandingAnnouncements();
     const hrefs = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')].map((row) =>
@@ -51,19 +50,17 @@ describe('landing announcements', () => {
         row.getAttribute('href'),
       ),
     );
-
-    expect(hrefs).not.toContain('/rules/kriegspiel');
   });
 
   it('uses the same variant flag for the homepage News rail and /feed archive', () => {
     vi.stubEnv('DEV', false);
 
-    expect(variantPublicSurfaceEnabled('kriegspiel')).toBe(false);
+    expect(variantPublicSurfaceEnabled('luzhanqi')).toBe(false);
 
     const landing = buildLandingAnnouncements();
     const news = buildNewsPage();
 
-    for (const hidden of ['Reveal Chess', 'Kriegspiel']) {
+    for (const hidden of ['Reveal Chess', 'Kriegspiel', 'Luzhanqi']) {
       expect(landing.textContent).not.toContain(hidden);
       expect(news.textContent).not.toContain(hidden);
     }

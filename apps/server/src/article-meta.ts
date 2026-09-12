@@ -34,12 +34,12 @@ const RETIRED_RULES_SLUGS = new Set([
   'dark-mini-xiangqi',
   'dark-shogi',
   'drop-mini-xiangqi',
+  'kriegspiel',
   'mini-xiangqi',
   'reveal-chess',
   'shogi',
   // retired, code still present
   'dark-draft960',
-  'kriegspiel',
 ]);
 
 /** A rules page whose variant is retired: served as 410 Gone. */
@@ -211,12 +211,6 @@ export const ARTICLE_META: Record<
     kind: 'article',
     description:
       'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.',
-  },
-  kriegspiel: {
-    title: 'Kriegspiel Rules',
-    kind: 'rules',
-    description:
-      'The complete rules of Kriegspiel, the 1899 ancestor of Fog Chess: you see only your own pieces, an umpire rejects illegal tries and announces captures, checks, and pawn tries, and checkmate wins.',
   },
   jieqi: {
     title: 'Jieqi Rules (Reveal Xiangqi)',

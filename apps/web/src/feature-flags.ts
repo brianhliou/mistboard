@@ -88,13 +88,6 @@ export function correspondenceEnabled(): boolean {
   return import.meta.env.VITE_CORRESPONDENCE_ENABLED !== 'false';
 }
 
-// Kriegspiel (standard chess played blind) play surface. Server-side opt-in is
-// MISTBOARD_KRIEGSPIEL_ENABLED; this gates play entry, watch, profile, and
-// leaderboard surfaces.
-export function kriegspielEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_KRIEGSPIEL_ENABLED === 'true';
-}
-
 // The coordinate + notation trainer (/learn/coordinates). Built and tested, but
 // PARKED: it is not linked from the nav, not in the sitemap, and the server
 // drops it from isClientRoute so a prod direct hit lands on the branded 404

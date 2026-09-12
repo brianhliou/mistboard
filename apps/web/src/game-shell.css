@@ -179,13 +179,6 @@
   --move-gutter: 44px;
 }
 
-/* The hidden-info tenant (kriegspiel) shares the 2.4rem number column and
-   sets no list class of its own, so it is reached through the row class it
-   DOES set. */
-.round-table__box .move-list:has(.ksg-move-row) {
-  --move-gutter: 2.4rem;
-}
-
 /* No zebra inside the box: the gutter column is what orders the rows now, and
    the two stripe systems fought each other — the zebra ran across the gutter
    and broke it into rungs. */
@@ -208,7 +201,7 @@
    13px), which are right there and would re-space every tenant row.
 
    The 1px/6px padding mirrors what every tenant `__move` class already sets
-   (live-xiangqi, live-kriegspiel all agree on it); a tenant that
+   (live-xiangqi and the other tenant shells agree on it); a tenant that
    wants different cell padding has to change it here too. */
 .round-table__box .move-list button.move-jump {
   height: auto;

@@ -1,5 +1,5 @@
 // Annotation overlay layers for the cell-grid SVG boards (chess family,
-// kriegspiel, jungle).
+// jungle).
 //
 // The grid core draws pieces, highlights and targets; user-drawn arrows and
 // circles ride ABOVE all of that, so they are appended inside each variant's

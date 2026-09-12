@@ -288,19 +288,6 @@ function applyFogMove(state: GameState, move: Move): GameState {
   };
 }
 
-// The standard-chess auto-draws that chessops' outcome() does NOT cover:
-// fifty-move and threefold repetition. Reused by Kriegspiel, whose apply rides
-// the chessops engine and would otherwise never claim them.
-export function standardChessRepetitionDraw(
-  previousState: GameState,
-  nextState: GameState,
-): { positionCounts: Record<string, number>; isDraw: boolean } {
-  const positionCounts = nextPositionCounts(previousState, nextState);
-  const isDraw =
-    nextState.halfmoveClock >= 100 || (positionCounts[positionRepetitionKey(nextState)] ?? 0) >= 3;
-  return { positionCounts, isDraw };
-}
-
 function nextPositionCounts(
   previousState: GameState,
   nextState: GameState,
@@ -459,9 +446,9 @@ export function positionFromState(state: GameState, turnOverride?: Color): Chess
   return Chess.fromSetup(setupFromState(state, turnOverride)).unwrap();
 }
 
-// Standard-chess legality (respects check), shared by Kriegspiel's umpire to
-// resolve a player's pseudo-legal try against the canonical truth. Mirrors the
-// gate inside draft960Variant.applyMove so the two never diverge.
+// Standard-chess legality (respects check), shared by bughouse to resolve a
+// player's pseudo-legal try against the canonical truth. Mirrors the gate
+// inside draft960Variant.applyMove so the two never diverge.
 export function isLegalStandardChessMove(state: GameState, move: Move): boolean {
   if (state.status.type !== 'playing') return false;
   const position = positionFromState(state);

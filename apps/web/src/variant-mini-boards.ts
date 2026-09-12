@@ -57,7 +57,6 @@ export type VariantMiniId =
   | 'duck-xiangqi'
   | 'jieqi'
   | 'banqi'
-  | 'kriegspiel'
   | 'jungle'
   | 'jungle-flip';
 
@@ -255,8 +254,7 @@ function xqBoard(
 // 0-2, counted from the top — are shrouded: none for plain chess; just the top
 // (rank 5) for the field-of-fire dark variants, since white sees ranks 1-4 in
 // full (own pieces, every pawn's one/two-square advance and capture squares, and
-// the knight jumps — verified against darkChessVariant.getPlayerView); all three
-// for kriegspiel, where only your own army is ever visible.
+// the knight jumps — verified against darkChessVariant.getPlayerView).
 function fiveWideChessBody(
   backRank: readonly string[],
   fogRows: readonly number[],
@@ -532,10 +530,6 @@ function banqiBody(ctx: MiniCtx): string {
   ].join('');
 }
 
-function kriegspielBody(ctx: MiniCtx): string {
-  return fiveWideChessBody(KINGSIDE_FIVE, [0, 1, 2], ctx);
-}
-
 function stripOuterSvg(svg: string): string {
   return svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
 }
@@ -604,7 +598,6 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   'duck-xiangqi': duckXiangqiBody,
   jieqi: jieqiBody,
   banqi: banqiBody,
-  kriegspiel: kriegspielBody,
   jungle: () => jungleBody(),
   'jungle-flip': () => jungleFlipBody(),
 };
@@ -682,14 +675,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     accent: '#2563a6',
     blurb: 'Face-down pieces in cells; both generals flipped up.',
     family: 'xiangqi',
-  },
-  {
-    id: 'kriegspiel',
-    label: 'Kriegspiel',
-    shortLabel: 'KS',
-    accent: '#566273',
-    blurb: 'Blind chess: only your own army, alone on the board.',
-    family: 'chess',
   },
   {
     id: 'jungle',

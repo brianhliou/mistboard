@@ -39,7 +39,7 @@ export type GridPalette = {
   fog: string;
   // Colour for annotation arrows. Optional; defaults to a muted green.
   arrow?: string;
-  // Fill for "threat" squares (e.g. Kriegspiel checker candidates), drawn OVER
+  // Fill for "threat" squares (candidate checking squares), drawn OVER
   // the fog so it reads on hidden squares. Optional; defaults to a muted red.
   threat?: string;
 };
@@ -92,8 +92,8 @@ export type GridBoardLayers = {
   // Squares to fog (hidden). Omit / null to draw no fog overlay.
   fogHidden?: readonly GridCellRef[] | null;
   // Squares to mark as a threat, drawn OVER the fog (so it shows on hidden
-  // squares). Kriegspiel uses this for the squares a checking piece could
-  // occupy, derived purely from the umpire's call. Omit / null for none.
+  // squares), e.g. the squares a checking piece could occupy. Omit / null for
+  // none.
   threats?: readonly GridCellRef[] | null;
   // Names the hit-layer rects (data-square="…") so a host can delegate clicks.
   squareName?: (file: number, rank: number) => string;

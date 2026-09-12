@@ -7,7 +7,6 @@ import {
   DARK_XIANGQI_SPEC_ID,
   gameSpecForId,
   JIEQI_SPEC_ID,
-  KRIEGSPIEL_SPEC_ID,
 } from '@mistboard/game';
 import {
   bucketForGame,
@@ -74,11 +73,11 @@ test('bucketForGame buckets each rated live pace into its own time class', () =>
   });
   assert.deepEqual(
     bucketForGame({
-      variant: KRIEGSPIEL_SPEC_ID,
+      variant: JIEQI_SPEC_ID,
       initialMs: 300_000,
       incrementMs: 5_000,
     }),
-    { variant: gameSpecForId(KRIEGSPIEL_SPEC_ID).ratingPoolBase, timeClass: 'rapid' },
+    { variant: gameSpecForId(JIEQI_SPEC_ID).ratingPoolBase, timeClass: 'rapid' },
   );
 });
 
@@ -101,5 +100,4 @@ test('parseRatingVariant keeps legacy leaderboard API params stable', () => {
   assert.equal(parseRatingVariant('banqi'), 'banqi');
   assert.equal(parseRatingVariant('dark-xiangqi'), 'dark_xiangqi');
   assert.equal(parseRatingVariant('dark_xiangqi'), 'dark_xiangqi');
-  assert.equal(parseRatingVariant('kriegspiel'), 'kriegspiel');
 });

@@ -174,7 +174,6 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   fog: 'variant.darkChess.name',
   fog_draft960: 'variant.darkDraft960.name',
   dark_xiangqi: 'variant.darkXiangqi.name',
-  kriegspiel: 'variant.kriegspiel.name',
   jieqi: 'variant.jieqi.name',
   banqi: 'variant.banqi.name',
   jungle: 'variant.jungle.name',

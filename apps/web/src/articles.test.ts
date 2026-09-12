@@ -214,7 +214,7 @@ describe('article public listing gates', () => {
     // The server answers 410 for these; a client-side navigation must not
     // show what the server has declared gone (docs-private/variant-
     // retirement-plan.md, #396).
-    for (const slug of ['kriegspiel']) {
+    for (const slug of ['luzhanqi']) {
       for (const lang of [undefined, 'zh-Hans'] as const) {
         const page = buildArticlePage(slug, lang);
         expect(page.querySelector('.article-title'), `${slug} ${lang}`).toBeNull();
@@ -266,12 +266,10 @@ describe('article public listing gates', () => {
 
   it('keeps still-gated release announcements out of the homepage article widget by default', () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'true');
 
     const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
 
     expect(cards?.textContent).not.toContain('Reveal Chess is open for alpha play.');
-    expect(cards?.textContent).not.toContain('Kriegspiel is open for alpha play.');
   });
 
   it('keeps the rated xiangqi announcement out of the homepage article row', () => {

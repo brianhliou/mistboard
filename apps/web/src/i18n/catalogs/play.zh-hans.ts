@@ -114,7 +114,6 @@ export const ZH_HANS_PLAY = {
   'variant.duckXiangqi.name': '鸭子象棋',
   'variant.darkChess.name': '迷雾国际象棋',
   'variant.darkDraft960.name': '迷雾 Chess960',
-  'variant.kriegspiel.name': '裁判棋',
   'variant.jungle.name': '斗兽棋',
   'variant.jungleFlip.name': '翻翻棋',
   'variant.jieqi.name': '揭棋',

@@ -75,14 +75,6 @@ export function luzhanqiEnabled(): boolean {
   return process.env.MISTBOARD_LUZHANQI_ENABLED === 'true';
 }
 
-// Kriegspiel (standard chess played blind, ICC wild-16) live rooms. Server-side
-// opt-in, default off. PvP-only (no bot yet), with watch/profile/leaderboard
-// surfaces when the flag is enabled. Real check/checkmate; the umpire announces
-// captures + check categories.
-export function kriegspielEnabled(): boolean {
-  return process.env.MISTBOARD_KRIEGSPIEL_ENABLED === 'true';
-}
-
 // Jungle / Dou Shou Qi (斗兽棋, perfect-information 7×9 animal-rank game) live
 // rooms. Server-side opt-in, default off — the tenant exists but is not launched.
 // PvP-only at first (the in-process α-β bot + rated pool come later).

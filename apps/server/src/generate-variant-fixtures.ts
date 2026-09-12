@@ -26,7 +26,6 @@ import {
   getJieqiLegalMoves,
   getJungleFlipLegalMoves,
   getJungleLegalMoves,
-  getKriegspielOfferedMoves,
   getStandardXiangqiLegalMoves,
   getLegalMoves as getXiangqiLegalMoves,
 } from '@mistboard/game';
@@ -38,7 +37,6 @@ import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
-import { kriegspielTenant } from './kriegspiel-tenant.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
@@ -92,7 +90,6 @@ const VARIANTS: VariantSpec[] = [
   // picking the piece move first would bias the fixture toward tidy duck play.
   { tenant: duckXiangqiTenant, enumerate: (s) => getDuckXiangqiLegalTurns(s) },
   { tenant: xiangqiTenant, enumerate: (s) => getStandardXiangqiLegalMoves(s) },
-  { tenant: kriegspielTenant, enumerate: (s) => getKriegspielOfferedMoves(s, s.status.turn) },
   { tenant: darkXiangqiTenant, enumerate: (s) => getXiangqiLegalMoves(s) },
 ];
 

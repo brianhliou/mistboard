@@ -115,7 +115,7 @@ function parseGate() {
   const body = text.slice(start, end === -1 ? text.length : end);
 
   const out = new Map();
-  // Entries are `'dark-crazyhouse': { … }` or bare `kriegspiel: { … }`.
+  // Entries are `'dark-xiangqi': { … }` or bare `jieqi: { … }`.
   const entry = /(?:'([a-z0-9-]+)'|\b([a-z][a-zA-Z0-9]*)):\s*\{([^}]*)\}/g;
   let match;
   // biome-ignore lint/suspicious/noAssignInExpressions: standard /g regex iteration; exec() advances lastIndex so the assignment is the loop step.

@@ -84,7 +84,6 @@ export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 export type RatingPoolBaseId =
   | 'fog'
   | 'fog_draft960'
-  | 'kriegspiel'
   | 'dark_xiangqi'
   | 'jieqi'
   | 'banqi'
@@ -100,7 +99,6 @@ export type RatingPoolBaseId =
 export type GameSpecId =
   | 'dark-chess'
   | 'dark-draft960'
-  | 'kriegspiel'
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
@@ -155,7 +153,6 @@ export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
-export const KRIEGSPIEL_SPEC_ID = 'kriegspiel' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
@@ -267,22 +264,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     publicSurface: 'hidden',
     runtimeStatus: 'retired',
     legacyLiveRoom: { variant: 'dark-chess', hiddenDraft960: true },
-  },
-  {
-    id: 'kriegspiel',
-    publicName: 'Kriegspiel',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'checkmate',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'kriegspiel',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
   },
   {
     // Fortress Xiangqi: "xiangqi with a pocket." 7x8 board, opposite-corner
@@ -592,7 +573,6 @@ export type RatingVariant = Extract<
   | 'dark_xiangqi'
   | 'jieqi'
   | 'banqi'
-  | 'kriegspiel'
   | 'jungle'
   | 'jungle_flip'
   | 'fortress_xiangqi'

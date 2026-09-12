@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
 // variant that misses either surface fails here instead of shipping 404s on
 // postgame refreshes or create requests that silently fall through to the
 // chess stack. When this test landed it caught five tenants whose game routes
-// were missing from isClientRoute (reveal-chess, dark-crazyhouse, kriegspiel,
-// fortress-xiangqi and one since-deleted tenant).
+// were missing from isClientRoute (fortress-xiangqi and four since-deleted
+// tenants).
 import { isClientRoute } from '../../server/src/server-policy.js';
 // Side-effect import: populates the server tenant registry exactly like
 // apps/server/src/index.ts (and registry.test.ts) do.

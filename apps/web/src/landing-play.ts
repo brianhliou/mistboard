@@ -13,7 +13,6 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
-  KRIEGSPIEL_SPEC_ID,
   MAHJONG_SPEC_ID,
   RATED_TIME_CONTROLS,
   TIME_CONTROLS,
@@ -85,7 +84,6 @@ type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
 type LandingGameSpecId =
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
-  | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
   | typeof JUNGLE_SPEC_ID
@@ -241,8 +239,6 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
   switch (gameSpecId) {
     case DARK_CHESS_SPEC_ID:
       return 'variant.darkChess.name';
-    case KRIEGSPIEL_SPEC_ID:
-      return 'variant.kriegspiel.name';
     case DARK_XIANGQI_SPEC_ID:
       return 'variant.darkXiangqi.name';
     case JIEQI_SPEC_ID:
@@ -279,9 +275,8 @@ function parseLandingGameSpecId(value: string): LandingGameSpecId {
 // jieqi opened a Jieqi dialog from a Fog Chess link (measured 2026-09-04).
 //
 // The rest stays keyed on the tenant's own acceptsDeepLink, which is
-// DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (kriegspiel)
-// have no other door, and the soft-link
-// branch in the dialog exists to seat them. Collapsing the two lists makes
+// DELIBERATELY wider than offerInMenu: a menu-hidden surface has no other
+// door, and the soft-link branch in the dialog exists to seat it. Collapsing the two lists makes
 // `npm run dev:lab` unable to reach any of them.
 /** Whether a play deep link can name this spec, i.e. whether the dialog will
  *  actually open ON it rather than falling through to the player's stored
@@ -3261,20 +3256,6 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
-  if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) {
-    // Kriegspiel is PvP-only from setup (no bot yet; rated rooms are not exposed
-    // here); standard chess white/black, passed straight through.
-    return {
-      mode: 'pvp',
-      gameSpecId,
-      timeControl: setup.timeControl,
-      rated: false,
-      preferredColor:
-        setup.preferredColor === 'white' || setup.preferredColor === 'black'
-          ? setup.preferredColor
-          : 'random',
-    };
-  }
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) {
     return {
       // Xiangqi fog engines are defaulted server-side, so no engine id is sent.
@@ -3307,7 +3288,6 @@ export function roomCreationGameSpecId(
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_DRAFT960_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
-  | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
   | typeof JUNGLE_SPEC_ID
@@ -3324,7 +3304,6 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
-  if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) return KRIEGSPIEL_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;
   // NOTE: this fallback is why a variant missing from the ladder above does not
   // fail, it becomes DARK CHESS. Mahjong hit exactly that: the dialog selected

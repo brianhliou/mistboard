@@ -3,13 +3,6 @@ import { mountVariantMarksLab } from './variant-marks-lab.js';
 import { renderVariantMiniBoard, VARIANT_MINIS } from './variant-mini-boards.js';
 
 describe('variant mini-board markers', () => {
-  it('renders the Kriegspiel marker as a fogged own-army board', () => {
-    const svg = renderVariantMiniBoard('kriegspiel', { size: 100 });
-
-    expect(svg).toContain('data-mini-id="kriegspiel"');
-    expect(svg.match(/class="vm-chess-fog"/g)).toHaveLength(15);
-  });
-
   it('renders the Jungle marker as the bottom-center 3x3 (den + traps) of the real board', () => {
     const svg = renderVariantMiniBoard('jungle', { size: 100 });
     expect(svg).toContain('data-mini-id="jungle"');
@@ -61,6 +54,6 @@ describe('variant mini-board markers', () => {
     expect(root.querySelectorAll('.variant-color-palette')).toHaveLength(2);
     expect(root.querySelectorAll('.variant-color-state-row')).toHaveLength(6);
     expect(root.querySelectorAll('.variant-color-state-card')).toHaveLength(48);
-    expect(root.querySelector('svg[data-mini-id="kriegspiel"]')).toBeNull();
+    expect(root.querySelector('svg[data-mini-id="dark-crazyhouse"]')).toBeNull();
   });
 });

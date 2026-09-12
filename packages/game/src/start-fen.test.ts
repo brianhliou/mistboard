@@ -67,7 +67,7 @@ test('every start-fen spec round-trips its own standard start', () => {
 });
 
 test('normalizeStartFen is fail-closed off the list', () => {
-  for (const spec of ['chess', 'kriegspiel', 'not-a-variant', '']) {
+  for (const spec of ['chess', 'mahjong', 'not-a-variant', '']) {
     assert.equal(hasStartFen(spec), false, `${spec} should not claim a start FEN`);
     const result = normalizeStartFen(spec, 'anything');
     assert.equal(result.ok, false);

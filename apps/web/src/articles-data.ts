@@ -30,7 +30,6 @@ import { jungleArticle } from './articles/content/jungle.js';
 import { jungleFlipArticle } from './articles/content/jungle-flip.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
 import { puzzleTwoAnswersArticle } from './articles/content/puzzles-with-more-than-one-solution.js';
-import { kriegspielArticle } from './articles/content/kriegspiel.js';
 import { mistyArticle } from './articles/content/misty.js';
 import { riverbankCannonArticle } from './articles/content/riverbank-cannon.js';
 import { titledPlayersArticle } from './articles/content/titled-players.js';
@@ -64,7 +63,6 @@ export const articles: Article[] = [
   duckXiangqiBuildArticle,
   serverEnforcedFogArticle,
   shogi4Article,
-  kriegspielArticle,
   jieqiArticle,
   jungleArticle,
   jungleFlipArticle,

@@ -20,7 +20,6 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
-  KRIEGSPIEL_SPEC_ID,
   maybeGameSpecForId,
   type RatingVariant,
   ratingPoolForSpec,
@@ -34,7 +33,6 @@ import {
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
-  kriegspielEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
@@ -68,14 +66,12 @@ const banqiOn = banqiEnabled();
 const jungleOn = jungleEnabled();
 const jungleFlipOn = jungleFlipEnabled();
 const darkXiangqiOn = darkXiangqiEnabled();
-const kriegspielOn = kriegspielEnabled();
 const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
 const draft960Spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
-const kriegspielSpec = gameSpecForId(KRIEGSPIEL_SPEC_ID);
 const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
 const banqiSpec = gameSpecForId(BANQI_SPEC_ID);
 const jungleSpec = gameSpecForId(JUNGLE_SPEC_ID);
@@ -93,7 +89,6 @@ const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
-  [KRIEGSPIEL_SPEC_ID]: 'kriegspiel',
   [JUNGLE_SPEC_ID]: 'jungle',
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
 };
@@ -209,16 +204,6 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: jungleFlipOn,
     onProfile: jungleFlipOn,
-  },
-  {
-    id: currentRatingVariantForSpec(KRIEGSPIEL_SPEC_ID),
-    gameSpecId: kriegspielSpec.id,
-    apiParam: KRIEGSPIEL_SPEC_ID,
-    label: kriegspielSpec.publicName,
-    miniId: 'kriegspiel',
-    enabled: false,
-    onLeaderboard: kriegspielOn,
-    onProfile: kriegspielOn,
   },
   // Draft960: gated behind its flag, and temporarily hidden from the leaderboard
   // until it launches (sequenced to M4). Flip `onLeaderboard` (and the flag) when
