@@ -489,7 +489,7 @@ const GOLD = '#c9931f';
 const MUTED = '#8a7a63';
 const FONT = 'system-ui, sans-serif';
 function dataSvg(width: number, height: number, body: string): string {
-  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" role="img" font-family="${FONT}"><rect width="${width}" height="${height}" fill="#faf6ee"/>${body}</svg>`;
+  return `<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 ${width} ${height}" width="${width}" height="${height}" role="img" font-family="${FONT}"><rect width="${width}" height="${height}" fill="#faf6ee"/>${body}</svg>`;
 }
 function text(
   x: number,
@@ -948,6 +948,8 @@ if (process.argv.includes('--blog')) {
   const GAMES = JSON.parse(root.querySelector('#anti-games-data').textContent);
   const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
   const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
+  // The same disc and per-role art frames the site's piece renderer uses.
+  const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
   const M = 18, C = 31, PIECE = 28;
   const xOf = (f) => M + f * C;
   const yOf = (r) => M + (10 - r) * C;
@@ -990,8 +992,10 @@ if (process.argv.includes('--blog')) {
     }
     for (const sq in board) {
       const p = board[sq];
-      const x = xOf(sq.charCodeAt(0) - 97) - PIECE / 2, y = yOf(Number(sq.slice(1))) - PIECE / 2;
-      parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + x + '" y="' + y + '" width="' + PIECE + '" height="' + PIECE + '"/>');
+      const cx = xOf(sq.charCodeAt(0) - 97), cy = yOf(Number(sq.slice(1)));
+      const x = cx - PIECE / 2, y = cy - PIECE / 2, k = PIECE / 100, fr = FRAME[p.role];
+      parts.push('<circle cx="' + cx + '" cy="' + cy + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
+      parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
     svg.innerHTML = parts.join('');
   }
