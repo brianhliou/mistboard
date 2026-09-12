@@ -27,7 +27,6 @@ import {
   RATED_POOL_BASES,
   type RatingVariant,
   RETIRED_GAME_SPEC_IDS,
-  REVEAL_CHESS_SPEC_ID,
   ratingPoolForSpec,
   STUDY_ELIGIBLE_SPEC_IDS,
   XIANGQI_SPEC_ID,
@@ -233,7 +232,6 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     jieqi: true,
     banqi: true,
     kriegspiel: true,
-    reveal_chess: true,
     jungle: true,
     jungle_flip: true,
     fortress_xiangqi: true,
@@ -249,7 +247,6 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(ratingPoolForSpec(JIEQI_SPEC_ID), 'jieqi');
   assert.equal(ratingPoolForSpec(BANQI_SPEC_ID), 'banqi');
   assert.equal(ratingPoolForSpec(LUZHANQI_SPEC_ID), null);
-  assert.equal(ratingPoolForSpec(REVEAL_CHESS_SPEC_ID), 'reveal_chess');
   assert.equal(ratingPoolForSpec(DARK_XIANGQI_SPEC_ID), 'dark_xiangqi');
   assert.equal(ratingPoolForSpec(DARK_CRAZYHOUSE_SPEC_ID), 'dark_crazyhouse');
   assert.equal(ratingPoolForSpec(KRIEGSPIEL_SPEC_ID), 'kriegspiel');
@@ -289,13 +286,7 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 test('the retired specs are exactly the ones the plan still names, all hidden', () => {
   assert.deepEqual(
     [...RETIRED_GAME_SPEC_IDS].sort(),
-    [
-      DARK_CRAZYHOUSE_SPEC_ID,
-      DARK_DRAFT960_SPEC_ID,
-      KRIEGSPIEL_SPEC_ID,
-      LUZHANQI_SPEC_ID,
-      REVEAL_CHESS_SPEC_ID,
-    ].sort(),
+    [DARK_CRAZYHOUSE_SPEC_ID, DARK_DRAFT960_SPEC_ID, KRIEGSPIEL_SPEC_ID, LUZHANQI_SPEC_ID].sort(),
   );
   for (const id of RETIRED_GAME_SPEC_IDS) {
     // A retired spec can never be offered: publicSurface is the other switch

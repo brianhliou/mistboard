@@ -24,7 +24,6 @@ import {
   KRIEGSPIEL_SPEC_ID,
   maybeGameSpecForId,
   type RatingVariant,
-  REVEAL_CHESS_SPEC_ID,
   ratingPoolForSpec,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
@@ -38,7 +37,6 @@ import {
   jungleEnabled,
   jungleFlipEnabled,
   kriegspielEnabled,
-  revealChessEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
@@ -71,7 +69,6 @@ const jieqiOn = jieqiEnabled();
 const banqiOn = banqiEnabled();
 const jungleOn = jungleEnabled();
 const jungleFlipOn = jungleFlipEnabled();
-const revealChessOn = revealChessEnabled();
 const darkXiangqiOn = darkXiangqiEnabled();
 const darkCrazyhouseOn = darkCrazyhouseEnabled();
 const kriegspielOn = kriegspielEnabled();
@@ -85,7 +82,6 @@ const darkCrazyhouseSpec = gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID);
 const kriegspielSpec = gameSpecForId(KRIEGSPIEL_SPEC_ID);
 const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
 const banqiSpec = gameSpecForId(BANQI_SPEC_ID);
-const revealChessSpec = gameSpecForId(REVEAL_CHESS_SPEC_ID);
 const jungleSpec = gameSpecForId(JUNGLE_SPEC_ID);
 const jungleFlipSpec = gameSpecForId(JUNGLE_FLIP_SPEC_ID);
 
@@ -101,7 +97,6 @@ const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
-  [REVEAL_CHESS_SPEC_ID]: 'reveal-chess',
   [DARK_CRAZYHOUSE_SPEC_ID]: 'dark-crazyhouse',
   [KRIEGSPIEL_SPEC_ID]: 'kriegspiel',
   [JUNGLE_SPEC_ID]: 'jungle',
@@ -239,16 +234,6 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: kriegspielOn,
     onProfile: kriegspielOn,
-  },
-  {
-    id: currentRatingVariantForSpec(REVEAL_CHESS_SPEC_ID),
-    gameSpecId: revealChessSpec.id,
-    apiParam: REVEAL_CHESS_SPEC_ID,
-    label: revealChessSpec.publicName,
-    miniId: 'reveal-chess',
-    enabled: false,
-    onLeaderboard: revealChessOn,
-    onProfile: revealChessOn,
   },
   // Draft960: gated behind its flag, and temporarily hidden from the leaderboard
   // until it launches (sequenced to M4). Flip `onLeaderboard` (and the flag) when

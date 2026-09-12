@@ -80,51 +80,6 @@
   max-width: none;
 }
 
-/* Reveal Chess review follows the site theme (light + dark). It has no dedicated
-   postgame CSS file and, on the shared review layout, no longer inherits the old
-   shell's .postgame-review-shell theming — so it themes the .dxq-postgame__*
-   scaffold to the site palette here, like the dark-xiangqi route above. */
-.reveal-chess-postgame-route .dxq-postgame__panel,
-.reveal-chess-postgame-route .dxq-postgame__link {
-  background: var(--site-panel);
-  color: var(--site-text);
-  border-color: var(--site-border);
-}
-
-.reveal-chess-postgame-route .dxq-postgame__title,
-.reveal-chess-postgame-route .dxq-postgame__board-title,
-.reveal-chess-postgame-route .dxq-postgame__panel h2 {
-  color: var(--site-heading);
-}
-
-.dark-chess-postgame-route .dxq-postgame__title,
-.dark-chess-postgame-route .dxq-postgame__board-title,
-.dark-chess-postgame-route .dxq-postgame__panel h2 {
-  color: var(--site-heading);
-}
-
-.xiangqi-postgame-route .dxq-postgame__title,
-.xiangqi-postgame-route .dxq-postgame__board-title,
-.xiangqi-postgame-route .dxq-postgame__panel h2 {
-  color: var(--site-heading);
-}
-
-.reveal-chess-postgame-route .dxq-postgame__eyebrow,
-.reveal-chess-postgame-route .dxq-postgame__summary,
-.reveal-chess-postgame-route .dxq-postgame__details dt,
-.reveal-chess-postgame-route .dxq-postgame__move-number {
-  color: var(--site-muted);
-}
-
-.reveal-chess-postgame-route .dxq-postgame__details dd {
-  color: var(--site-text);
-}
-
-.reveal-chess-postgame-route .dxq-postgame__move {
-  background: var(--site-panel-soft, var(--site-bg));
-  color: var(--site-text);
-}
-
 /* Jieqi and banqi reviews follow the site theme (light + dark), rather than
    the hardcoded light the dark-xiangqi route uses. */
 .jieqi-postgame-route,

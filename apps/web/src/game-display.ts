@@ -226,7 +226,6 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   'jungle-flip': 'variant.jungleFlip.name',
   kriegspiel: 'variant.kriegspiel.name',
   luzhanqi: null,
-  'reveal-chess': 'variant.revealChess.name',
   xiangqi: 'variant.xiangqi.name',
   'duck-xiangqi': 'variant.duckXiangqi.name',
 };

@@ -8,7 +8,6 @@ import {
   DARK_XIANGQI_SPEC_ID,
   gameSpecForId,
   JIEQI_SPEC_ID,
-  REVEAL_CHESS_SPEC_ID,
 } from '@mistboard/game';
 import {
   bucketForGame,
@@ -50,13 +49,6 @@ test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => 
   assert.deepEqual(
     bucketForGame({ variant: BANQI_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 }),
     { variant: gameSpecForId(BANQI_SPEC_ID).ratingPoolBase, timeClass: PUBLIC_RATING_TIME_CLASS },
-  );
-  assert.deepEqual(
-    bucketForGame({ variant: REVEAL_CHESS_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 }),
-    {
-      variant: gameSpecForId(REVEAL_CHESS_SPEC_ID).ratingPoolBase,
-      timeClass: PUBLIC_RATING_TIME_CLASS,
-    },
   );
   // Full Dark Xiangqi buckets into its OWN pool, never the fog fallback.
   assert.deepEqual(
@@ -116,7 +108,6 @@ test('parseRatingVariant keeps legacy leaderboard API params stable', () => {
   assert.equal(parseRatingVariant('dark-draft960'), 'fog_draft960');
   assert.equal(parseRatingVariant('jieqi'), 'jieqi');
   assert.equal(parseRatingVariant('banqi'), 'banqi');
-  assert.equal(parseRatingVariant('reveal-chess'), 'reveal_chess');
   assert.equal(parseRatingVariant('dark-xiangqi'), 'dark_xiangqi');
   assert.equal(parseRatingVariant('dark_xiangqi'), 'dark_xiangqi');
   assert.equal(parseRatingVariant('dark-crazyhouse'), 'dark_crazyhouse');

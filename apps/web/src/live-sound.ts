@@ -561,7 +561,7 @@ export function tonesForSound(kind: SoundKind, set: SoundSetId = DEFAULT_SOUND_S
   }
   if (kind === 'flip') {
     // A face-down tile turned over: a crisp click into a short woody body, the
-    // banqi / jieqi / reveal-chess signature.
+    // banqi / jieqi signature.
     return [
       { delay: 0, duration: 0.04, frequency: 560, gain: 0.05, type: 'square' },
       { delay: 0.018, duration: 0.085, frequency: 320, gain: 0.05, type: 'triangle' },

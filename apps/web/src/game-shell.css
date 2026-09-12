@@ -179,10 +179,6 @@
   --move-gutter: 44px;
 }
 
-.round-table__box .reveal-chess-move-list {
-  --move-gutter: 2.2em;
-}
-
 /* The hidden-info tenants (kriegspiel, dark crazyhouse) share a 2.4rem number
    column and set no list class of their own, so they are reached through the
    row class they DO set. */
@@ -212,8 +208,7 @@
    13px), which are right there and would re-space every tenant row.
 
    The 1px/6px padding mirrors what every tenant `__move` class already sets
-   (live-xiangqi, live-kriegspiel, live-dark-crazyhouse,
-   live-reveal-chess all agree on it); a tenant that
+   (live-xiangqi, live-kriegspiel, live-dark-crazyhouse all agree on it); a tenant that
    wants different cell padding has to change it here too. */
 .round-table__box .move-list button.move-jump {
   height: auto;

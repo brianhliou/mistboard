@@ -39,7 +39,6 @@ export * from './variants-jungle.js';
 export * from './variants-jungle-flip.js';
 export * from './variants-kriegspiel.js';
 export * from './variants-luzhanqi.js';
-export * from './variants-reveal-chess.js';
 export * from './variants-xiangqi.js';
 export * from './variants-xiangqi-standard.js';
 export * from './xiangqi-broadcast.js';

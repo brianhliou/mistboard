@@ -713,11 +713,9 @@
    board styles color the coordinates and river accent. */
 :root,
 :root[data-xiangqi-board-theme="international"] {
-  --crossroads-coord: rgba(60, 45, 30, 0.55);
 }
 
 :root[data-xiangqi-board-theme="traditional"] {
-  --crossroads-coord: rgba(60, 45, 30, 0.55);
 }
 
 /* Xiangqi board swatches (presentation style, not an open-ended colour picker). */

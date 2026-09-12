@@ -64,12 +64,6 @@ export function luzhanqiEnabled(): boolean {
   return labEnabled() || import.meta.env.VITE_LUZHANQI_ENABLED === 'true';
 }
 
-// Reveal Chess (chess-jieqi, hidden identities on an 8x8 board) play surface.
-// Explicit build-time opt-in only.
-export function revealChessEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_REVEAL_CHESS_ENABLED === 'true';
-}
-
 // Jungle / Dou Shou Qi (perfect-information 7×9 animal-rank game) play surface.
 // Launched: always on (the server MISTBOARD_JUNGLE_ENABLED flag remains the runtime
 // kill-switch for room creation).

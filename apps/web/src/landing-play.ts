@@ -17,7 +17,6 @@ import {
   KRIEGSPIEL_SPEC_ID,
   MAHJONG_SPEC_ID,
   RATED_TIME_CONTROLS,
-  REVEAL_CHESS_SPEC_ID,
   TIME_CONTROLS,
   type TimeClass,
   type TimeControlId,
@@ -91,7 +90,6 @@ type LandingGameSpecId =
   | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
-  | typeof REVEAL_CHESS_SPEC_ID
   | typeof JUNGLE_SPEC_ID
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
@@ -249,8 +247,6 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
       return 'variant.darkCrazyhouse.name';
     case KRIEGSPIEL_SPEC_ID:
       return 'variant.kriegspiel.name';
-    case REVEAL_CHESS_SPEC_ID:
-      return 'variant.revealChess.name';
     case DARK_XIANGQI_SPEC_ID:
       return 'variant.darkXiangqi.name';
     case JIEQI_SPEC_ID:
@@ -1808,7 +1804,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
       card.className = 'landing-variant-card';
       card.setAttribute('role', 'radio');
       card.dataset.gameSpec = gameSpecId;
-      // No computer opponent yet (Dark Xiangqi, Reveal Chess): grey the card out
+      // No computer opponent yet (Dark Xiangqi): grey the card out
       // of the engine flow rather than letting it be picked and silently create
       // a PvP room.
       const pveDisabled = choice.mode === 'pve' && !landingVariantSupportsPve(gameSpecId);
@@ -3269,17 +3265,6 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
-  if (setup.gameSpecId === REVEAL_CHESS_SPEC_ID) {
-    // Reveal Chess is PvP-only and casual-only (rated not launched); colors are
-    // standard chess white/black, with no draft960 / start-format axis.
-    return {
-      mode,
-      gameSpecId,
-      timeControl: setup.timeControl,
-      rated: false,
-      preferredColor: setup.preferredColor,
-    };
-  }
   if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) {
     // Dark Crazyhouse is PvP-only and casual-only (no bot yet, rated not
     // launched); standard chess white/black, passed straight through.
@@ -3344,7 +3329,6 @@ export function roomCreationGameSpecId(
   | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
   | typeof BANQI_SPEC_ID
-  | typeof REVEAL_CHESS_SPEC_ID
   | typeof JUNGLE_SPEC_ID
   | typeof JUNGLE_FLIP_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
@@ -3359,7 +3343,6 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
-  if (setup.gameSpecId === REVEAL_CHESS_SPEC_ID) return REVEAL_CHESS_SPEC_ID;
   if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) return DARK_CRAZYHOUSE_SPEC_ID;
   if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) return KRIEGSPIEL_SPEC_ID;
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) return DARK_XIANGQI_SPEC_ID;

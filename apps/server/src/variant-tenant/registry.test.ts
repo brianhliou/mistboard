@@ -22,7 +22,6 @@ test('registry: retired specs never register, by prefix or by id', () => {
   for (const [prefix, specId] of [
     ['dczh_some-room', 'dark-crazyhouse'],
     ['kr_some-room', 'kriegspiel'],
-    ['rc_some-room', 'reveal-chess'],
     ['lzq_some-room', 'luzhanqi'],
   ] as const) {
     assert.equal(variantTenantForRoomId(prefix), null, prefix);

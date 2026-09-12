@@ -37,7 +37,6 @@ const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
   'dark-chess': 1,
   'dark-draft960': 1,
   kriegspiel: 1,
-  'reveal-chess': 1,
   'dark-crazyhouse': 1,
   // Jungle: 7 x 9 (jungle-render.ts). Flip jungle: 4 x 4 (jungle-flip-render.ts).
   jungle: 7 / 9,

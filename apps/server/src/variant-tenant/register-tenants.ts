@@ -17,5 +17,4 @@ import '../jungle-registration.js';
 import '../kriegspiel-registration.js';
 import '../luzhanqi-registration.js';
 import '../mahjong-registration.js';
-import '../reveal-chess-registration.js';
 import '../xiangqi-registration.js';

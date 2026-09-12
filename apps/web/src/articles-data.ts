@@ -33,7 +33,6 @@ import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
 import { puzzleTwoAnswersArticle } from './articles/content/puzzles-with-more-than-one-solution.js';
 import { kriegspielArticle } from './articles/content/kriegspiel.js';
 import { mistyArticle } from './articles/content/misty.js';
-import { revealChessArticle } from './articles/content/reveal-chess.js';
 import { riverbankCannonArticle } from './articles/content/riverbank-cannon.js';
 import { titledPlayersArticle } from './articles/content/titled-players.js';
 import { serverEnforcedFogArticle } from './articles/content/server-enforced-fog.js';
@@ -78,7 +77,6 @@ export const articles: Article[] = [
   puzzleTwoAnswersArticle,
   riverbankCannonArticle,
   titledPlayersArticle,
-  revealChessArticle,
 ];
 
 const ARTICLE_SLUG_ALIASES: Record<string, string> = {

@@ -118,7 +118,6 @@ const GAME_VARIANT_LABEL_KEY: Record<string, I18nKey> = {
   'dark-xiangqi': 'variant.darkXiangqi.name',
   banqi: 'variant.banqi.name',
   jieqi: 'variant.jieqi.name',
-  'reveal-chess': 'variant.revealChess.name',
   'dark-crazyhouse': 'variant.darkCrazyhouse.name',
   kriegspiel: 'variant.kriegspiel.name',
 };
@@ -359,7 +358,7 @@ export function profileGameSpecLabel(game: FeaturedGame, locale: Locale): string
   // Legacy/alias variant strings the canonical spec map doesn't resolve, plus the
   // 'Dark Chess' casing this pill uses (the dark-chess spec publicName is the
   // lowercase 'Fog Chess'). Everything else derives from the canonical spec so a
-  // new variant (banqi, jieqi, reveal-chess, ...) is labelled without editing here.
+  // new variant (banqi, jieqi, ...) is labelled without editing here.
   const key = GAME_VARIANT_LABEL_KEY[game.variant];
   if (key) return t(key, {}, locale);
   return maybeGameSpecForId(game.variant)?.publicName ?? t('variant.darkChess.name', {}, locale);

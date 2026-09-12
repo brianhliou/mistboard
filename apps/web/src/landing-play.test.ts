@@ -233,7 +233,6 @@ describe('landing play panel', () => {
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_JIEQI_ENABLED', 'false');
     vi.stubEnv('VITE_BANQI_ENABLED', 'false');
-    vi.stubEnv('VITE_REVEAL_CHESS_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'false');
     vi.stubGlobal(
       'fetch',

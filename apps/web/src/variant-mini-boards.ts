@@ -58,7 +58,6 @@ export type VariantMiniId =
   | 'jieqi'
   | 'banqi'
   | 'kriegspiel'
-  | 'reveal-chess'
   | 'crazyhouse'
   | 'dark-crazyhouse'
   | 'jungle'
@@ -121,14 +120,6 @@ function chessPieceAt(key: string, cx: number, cy: number, cell: number, set: Pi
   const code = CHESS_CODE[key];
   if (!code) return '';
   return `<image href="/pieces/${set}/${code}.svg" x="${x}" y="${y}" width="${s}" height="${s}"/>`;
-}
-
-// A face-down chess piece (Reveal Chess): a white hidden back, aligned with the
-// Banqi face-down mark (single solid fill + thin outline, no inner ring).
-// Identity-hiding only, so it does not vary with the chosen piece set.
-function chessBackToken(cx: number, cy: number, cell: number): string {
-  const r = cell * 0.4;
-  return `<circle class="vm-chess-back-token" cx="${cx}" cy="${cy}" r="${r}" fill="#f4efe4" stroke="#3a342b" stroke-width="0.5"/>`;
 }
 
 function checker(cols: number, rows: number, cell: number): string {
@@ -591,32 +582,6 @@ function kriegspielBody(ctx: MiniCtx): string {
   return fiveWideChessBody(KINGSIDE_FIVE, [0, 1, 2], ctx);
 }
 
-function revealChessBody(ctx: MiniCtx): string {
-  // Hidden-identity chess (chess jieqi): every piece starts face-down except the
-  // king, which is face-up. No fog — only identities hide.
-  const cell = SIZE / 4;
-  const center = (c: number, r: number) => ({ x: OX + (c + 0.5) * cell, y: OY + (r + 0.5) * cell });
-  const kingCol = 1;
-  const pieces: string[] = [];
-  for (let c = 0; c < 4; c += 1) {
-    const pawn = center(c, 2);
-    const back = center(c, 3);
-    pieces.push(chessBackToken(pawn.x, pawn.y, cell));
-    if (c === kingCol) {
-      pieces.push(chessPieceAt('white:king', back.x, back.y, cell, ctx.chessSet));
-    } else {
-      pieces.push(chessBackToken(back.x, back.y, cell));
-    }
-  }
-  return [checker(4, 4, cell), ...pieces].join('');
-}
-
-// ---- jungle (Dou Shou Qi) animal-rank tiles -------------------------------
-
-// Jungle markers crop the REAL starting board (the shared dobutsu/terrain renderer), so
-// the tile always matches the live board exactly. Shadows are off (markers don't need
-// them, and it keeps filter ids out of the shared document); the marker frame's rounded
-// clip-path trims the square crop.
 function stripOuterSvg(svg: string): string {
   return svg.replace(/^<svg[^>]*>/, '').replace(/<\/svg>\s*$/, '');
 }
@@ -686,7 +651,6 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   jieqi: jieqiBody,
   banqi: banqiBody,
   kriegspiel: kriegspielBody,
-  'reveal-chess': revealChessBody,
   crazyhouse: crazyhouseBody,
   'dark-crazyhouse': crazyhouseBody,
   jungle: () => jungleBody(),
@@ -773,14 +737,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'KS',
     accent: '#566273',
     blurb: 'Blind chess: only your own army, alone on the board.',
-    family: 'chess',
-  },
-  {
-    id: 'reveal-chess',
-    label: 'Reveal Chess',
-    shortLabel: 'RV',
-    accent: '#9b3f74',
-    blurb: 'Chess with hidden identities: every piece face-down but the king.',
     family: 'chess',
   },
   {

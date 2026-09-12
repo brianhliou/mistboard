@@ -23,7 +23,6 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   jieqi: true,
   banqi: true,
   luzhanqi: false,
-  'reveal-chess': false,
   jungle: true,
   'jungle-flip': true,
   // Hidden until a player has checked the faan table: the hand mathematics is

@@ -116,7 +116,6 @@ export const ZH_HANT_PLAY = {
   'variant.darkDraft960.name': '迷霧 Chess960',
   'variant.darkCrazyhouse.name': '迷霧瘋狂屋',
   'variant.kriegspiel.name': '裁判棋',
-  'variant.revealChess.name': '翻開西洋棋',
   'variant.jungle.name': '鬥獸棋',
   'variant.jungleFlip.name': '翻翻棋',
   'variant.jieqi.name': '揭棋',

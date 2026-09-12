@@ -34,12 +34,12 @@ const RETIRED_RULES_SLUGS = new Set([
   'dark-shogi',
   'drop-mini-xiangqi',
   'mini-xiangqi',
+  'reveal-chess',
   'shogi',
   // retired, code still present
   'dark-crazyhouse',
   'dark-draft960',
   'kriegspiel',
-  'reveal-chess',
 ]);
 
 /** A rules page whose variant is retired: served as 410 Gone. */
@@ -277,12 +277,6 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'The complete rules of Flip Jungle, the 4×4 flip version of Jungle Chess: animals start face-down, you flip or move each turn, capture by rank, equal ranks destroy each other. Play it free in your browser.',
-  },
-  'reveal-chess': {
-    title: 'Reveal Chess Rules',
-    kind: 'rules',
-    description:
-      'The complete rules of Reveal Chess, standard chess with a hidden starting arrangement: every piece except the king starts face-down, moves by the square it occupies, and reveals its true identity the moment it moves. Checkmate to win.',
   },
 };
 

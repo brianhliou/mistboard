@@ -12,7 +12,6 @@ import {
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   KRIEGSPIEL_SPEC_ID,
-  REVEAL_CHESS_SPEC_ID,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import { describe, expect, it, vi } from 'vitest';
@@ -154,7 +153,6 @@ describe('web variant launch registry', () => {
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],
       [DARK_CRAZYHOUSE_SPEC_ID, 'dark-crazyhouse'],
       [KRIEGSPIEL_SPEC_ID, 'kriegspiel'],
-      [REVEAL_CHESS_SPEC_ID, 'reveal-chess'],
       [DARK_DRAFT960_SPEC_ID, 'dark-draft960'],
     ]);
   });
@@ -166,10 +164,9 @@ describe('web variant launch registry', () => {
     vi.resetModules();
     vi.stubEnv('VITE_JIEQI_ENABLED', 'true');
     vi.stubEnv('VITE_BANQI_ENABLED', 'true');
-    vi.stubEnv('VITE_REVEAL_CHESS_ENABLED', 'true');
     const flagged = await import('./variants.js');
 
-    for (const specId of [JIEQI_SPEC_ID, BANQI_SPEC_ID, REVEAL_CHESS_SPEC_ID]) {
+    for (const specId of [JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
       expect(flagged.leaderboardVariants.map((v) => v.gameSpecId)).toContain(specId);
       expect(flagged.profileRatingVariants.map((v) => v.gameSpecId)).toContain(specId);
       expect(flagged.enabledVariants.map((v) => v.gameSpecId)).not.toContain(specId);
@@ -179,11 +176,11 @@ describe('web variant launch registry', () => {
     vi.resetModules();
   });
 
-  it('keeps Jieqi + Banqi + Reveal Chess off the rating surfaces when their flags are off', async () => {
+  it('keeps Jieqi + Banqi off the rating surfaces when their flags are off', async () => {
     vi.resetModules();
     vi.stubEnv('DEV', false);
     const prod = await import('./variants.js');
-    for (const specId of [JIEQI_SPEC_ID, BANQI_SPEC_ID, REVEAL_CHESS_SPEC_ID]) {
+    for (const specId of [JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
       expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(specId);
       expect(prod.profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(specId);
     }

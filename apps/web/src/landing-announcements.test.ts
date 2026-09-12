@@ -54,14 +54,12 @@ describe('landing announcements', () => {
       ),
     );
 
-    expect(hrefs).not.toContain('/rules/reveal-chess');
     expect(hrefs).not.toContain('/rules/kriegspiel');
   });
 
   it('uses the same variant flag for the homepage News rail and /feed archive', () => {
     vi.stubEnv('DEV', false);
 
-    expect(variantPublicSurfaceEnabled('reveal-chess')).toBe(false);
     expect(variantPublicSurfaceEnabled('kriegspiel')).toBe(false);
 
     const landing = buildLandingAnnouncements();

@@ -28,7 +28,6 @@ import {
   KRIEGSPIEL_SPEC_ID,
   LUZHANQI_SPEC_ID,
   MAHJONG_SPEC_ID,
-  REVEAL_CHESS_SPEC_ID,
   type TimeControlId,
   variantDefaultTimeControl,
   XIANGQI_SPEC_ID,
@@ -45,7 +44,6 @@ import {
   kriegspielEnabled,
   luzhanqiEnabled,
   mahjongEnabled,
-  revealChessEnabled,
   xiangqiEnabled,
 } from '../feature-flags.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
@@ -799,53 +797,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       defaultEngineId: 'mahjong-efficiency',
       // No seat to give away: the server seats the other three itself.
       hideColorPicker: true,
-    },
-  },
-  {
-    // Reveal Chess (chess-jieqi): standard 8x8 chess with hidden piece
-    // IDENTITIES. Identity-hidden like jieqi (positions are public; only a
-    // face-down piece's role is hidden), but on a chess board with chess colors,
-    // so it renders in the 'chess' family with the cburnett pieces + a face-down
-    // disc token. A self-contained live client on the socket-client + chrome
-    // stack, with no fog. PvP-only at launch (no PvE engine).
-    gameSpecId: REVEAL_CHESS_SPEC_ID,
-    roomIdPrefix: 'rc_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Reveal Chess',
-    gameRouteBase: '/reveal-chess/game',
-    mountPostgame: (root, roomId) =>
-      import('../reveal-chess-postgame.js').then(({ mountRevealChessPostgame }) =>
-        mountRevealChessPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/reveal-chess/game',
-    loadLiveRoomClient: () =>
-      import('../live-reveal-chess.js').then(
-        ({ bootstrapRevealChessLiveRoom }) =>
-          () =>
-            bootstrapRevealChessLiveRoom(),
-      ),
-    watch: {
-      family: 'chess',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-reveal-chess-replay.js').then(({ mountRevealChessWatchReplay }) =>
-          mountRevealChessWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        firstColor: 'white',
-        firstGlyph: '♚',
-        firstLabel: 'White',
-        secondColor: 'black',
-        secondGlyph: '♚',
-        secondLabel: 'Black',
-        supportsRated: false,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: revealChessEnabled,
-      acceptsDeepLink: revealChessEnabled,
     },
   },
   {

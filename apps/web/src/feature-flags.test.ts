@@ -4,7 +4,6 @@ import {
   darkXiangqiEnabled,
   kriegspielEnabled,
   luzhanqiEnabled,
-  revealChessEnabled,
 } from './feature-flags.js';
 
 describe('client feature flags', () => {
@@ -13,7 +12,6 @@ describe('client feature flags', () => {
   });
 
   it.each([
-    ['Reveal Chess', 'VITE_REVEAL_CHESS_ENABLED', revealChessEnabled],
     ['Kriegspiel', 'VITE_KRIEGSPIEL_ENABLED', kriegspielEnabled],
     ['Dark Crazyhouse', 'VITE_DARK_CRAZYHOUSE_ENABLED', darkCrazyhouseEnabled],
     ['Luzhanqi', 'VITE_LUZHANQI_ENABLED', luzhanqiEnabled],
@@ -28,7 +26,6 @@ describe('client feature flags', () => {
     vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
     expect(darkCrazyhouseEnabled()).toBe(true);
     expect(luzhanqiEnabled()).toBe(true);
-    expect(revealChessEnabled()).toBe(true);
     expect(kriegspielEnabled()).toBe(true);
   });
 

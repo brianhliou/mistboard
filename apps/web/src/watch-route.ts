@@ -1070,7 +1070,7 @@ async function mountWatchReplay(
       ...(live ? { live: true, loadPostgameOverride: live.loadPostgameOverride } : {}),
     });
   }
-  // Chess (chessground): fog channels (dark-chess, reveal-chess, kriegspiel,
+  // Chess (chessground): fog channels (dark-chess, kriegspiel,
   // dark-crazyhouse). Watch only ever serves COMPLETED games, so the middle
   // "Truth" pane is the fully public final-and-throughout board — no hidden-info
   // leak. Render the triptych compact but let watch-route.css isolate the truth
@@ -1357,7 +1357,7 @@ function watchScrubButton(text: string, label: string): HTMLButtonElement {
 
 // Whether the fog-perspective toggle applies to a variant: only asymmetric fog
 // (`visibility: 'dark'`) games have distinct per-side views worth switching
-// between. Symmetric-mask hidden-identity (jieqi/banqi/jungle-flip/reveal-chess)
+// between. Symmetric-mask hidden-identity (jieqi/banqi/jungle-flip)
 // and open variants render a single board and get no toggle.
 export function watchPovToggleApplies(variant: string): boolean {
   return maybeGameSpecForId(variant)?.visibility === 'dark';
@@ -1783,7 +1783,6 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   banqi: 'banqi',
   'dark-crazyhouse': 'dark-crazyhouse',
   kriegspiel: 'kriegspiel',
-  'reveal-chess': 'reveal-chess',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
 };

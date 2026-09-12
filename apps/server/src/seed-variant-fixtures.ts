@@ -28,7 +28,6 @@ import { jungleTenant } from './jungle-tenant.js';
 import { kriegspielTenant } from './kriegspiel-tenant.js';
 import { runMigrations } from './migrate.js';
 import { appendRoomEvent, close, init, recordGameEnd } from './persistence.js';
-import { revealChessTenant } from './reveal-chess-tenant.js';
 import { buildTenantGameSummary } from './variant-tenant/events.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
@@ -41,7 +40,6 @@ const TENANTS: any[] = [
   banqiTenant,
   fortressXiangqiTenant,
   duckXiangqiTenant,
-  revealChessTenant,
   darkCrazyhouseTenant,
   kriegspielTenant,
   darkXiangqiTenant,

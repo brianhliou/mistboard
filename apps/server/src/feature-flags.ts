@@ -75,13 +75,6 @@ export function luzhanqiEnabled(): boolean {
   return process.env.MISTBOARD_LUZHANQI_ENABLED === 'true';
 }
 
-// Reveal Chess (standard 8x8 chess with hidden piece identities) live rooms.
-// Server-side opt-in, default off — the tenant exists but is not launched.
-// PvP-only (no engine/bot at first).
-export function revealChessEnabled(): boolean {
-  return process.env.MISTBOARD_REVEAL_CHESS_ENABLED === 'true';
-}
-
 // Dark Crazyhouse (chess + drops, under fog) live rooms. Server-side opt-in,
 // default off — the tenant exists but is not launched. PvP-only (no bot: drops
 // explode the belief search). Rides the dark-chess fog kernel with private

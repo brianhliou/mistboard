@@ -11,7 +11,6 @@ import {
   kriegspielEnabled,
   luzhanqiEnabled,
   mahjongEnabled,
-  revealChessEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
 
@@ -84,11 +83,6 @@ const GATED_GAME_SPECS = {
     enabled: banqiEnabled,
     disabledError: 'banqi_disabled',
     notIntegratedError: 'banqi_not_integrated',
-  },
-  'reveal-chess': {
-    enabled: revealChessEnabled,
-    disabledError: 'reveal_chess_disabled',
-    notIntegratedError: 'reveal_chess_not_integrated',
   },
   jungle: {
     enabled: jungleEnabled,

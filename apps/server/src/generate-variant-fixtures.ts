@@ -20,7 +20,6 @@ import {
   createBanqiDeal,
   createJieqiDeal,
   createJungleFlipDeal,
-  createRevealChessDeal,
   getBanqiLegalMoves,
   getDuckXiangqiLegalTurns,
   getFortressXiangqiLegalMoves,
@@ -30,7 +29,6 @@ import {
   getKriegspielOfferedMoves,
   getLegalCrazyhouseDrops,
   getLegalCrazyhouseMoves,
-  getRevealChessLegalMoves,
   getStandardXiangqiLegalMoves,
   getLegalMoves as getXiangqiLegalMoves,
 } from '@mistboard/game';
@@ -44,7 +42,6 @@ import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
 import { kriegspielTenant } from './kriegspiel-tenant.js';
-import { revealChessTenant } from './reveal-chess-tenant.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
@@ -64,7 +61,7 @@ type VariantSpec = {
   enumerate: Enumerate;
   // Deterministic per-game setup from the harness's seeded RNG. Required for
   // tenants whose rules.createSetup mints a server-secret deal with a crypto RNG
-  // (jieqi/banqi/jungle-flip/reveal-chess): calling the deal builder with our
+  // (jieqi/banqi/jungle-flip): calling the deal builder with our
   // seeded RNG instead keeps the committed fixtures reproducible. Omit for
   // tenants with a fixed starting position.
   makeSetup?: (rng: () => number) => unknown;
@@ -98,11 +95,6 @@ const VARIANTS: VariantSpec[] = [
   // picking the piece move first would bias the fixture toward tidy duck play.
   { tenant: duckXiangqiTenant, enumerate: (s) => getDuckXiangqiLegalTurns(s) },
   { tenant: xiangqiTenant, enumerate: (s) => getStandardXiangqiLegalMoves(s) },
-  {
-    tenant: revealChessTenant,
-    enumerate: (s) => getRevealChessLegalMoves(s),
-    makeSetup: (rng) => createRevealChessDeal(rng),
-  },
   {
     tenant: darkCrazyhouseTenant,
     enumerate: (s) => [...getLegalCrazyhouseMoves(s), ...getLegalCrazyhouseDrops(s, s.status.turn)],

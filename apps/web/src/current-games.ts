@@ -103,7 +103,6 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   banqi: 'banqi',
   'dark-crazyhouse': 'dark-crazyhouse',
   kriegspiel: 'kriegspiel',
-  'reveal-chess': 'reveal-chess',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
   // Duck Xiangqi. Present in watch-route.ts's copy of this map since the

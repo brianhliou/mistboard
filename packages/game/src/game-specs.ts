@@ -57,7 +57,6 @@ export type SetupRulesId =
   | 'double-fischer-random'
   | 'jieqi-deal'
   | 'banqi-deal'
-  | 'reveal-chess-deal'
   | 'jungle-standard'
   | 'jungle-flip-deal'
   | 'fortress-standard'
@@ -90,7 +89,6 @@ export type RatingPoolBaseId =
   | 'dark_xiangqi'
   | 'jieqi'
   | 'banqi'
-  | 'reveal_chess'
   | 'jungle'
   | 'jungle_flip'
   | 'fortress_xiangqi'
@@ -108,7 +106,6 @@ export type GameSpecId =
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
-  | 'reveal-chess'
   | 'jungle'
   | 'jungle-flip'
   | 'fortress-xiangqi'
@@ -162,7 +159,6 @@ export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
 export const DARK_CRAZYHOUSE_SPEC_ID = 'dark-crazyhouse' satisfies GameSpecId;
 export const KRIEGSPIEL_SPEC_ID = 'kriegspiel' satisfies GameSpecId;
-export const REVEAL_CHESS_SPEC_ID = 'reveal-chess' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
@@ -531,26 +527,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     publicSurface: 'casual',
     runtimeStatus: 'live',
   },
-  {
-    // Reveal Chess (chess-jieqi): standard chess with hidden piece identities.
-    // Both kings start face-up; each side's other 15 pieces are dealt face-down
-    // and reveal their true identity on first move (origin-role proxy until
-    // then). Real check/checkmate. Rules engine: variants-reveal-chess.ts.
-    id: REVEAL_CHESS_SPEC_ID,
-    publicName: 'Reveal Chess',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'checkmate',
-    visibility: 'hidden-identity',
-    setup: 'reveal-chess-deal',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'reveal_chess',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
 ] as const;
 
 const gameSpecsById = new Map<GameSpecId, GameSpec>(GAME_SPECS.map((spec) => [spec.id, spec]));
@@ -637,7 +613,6 @@ export type RatingVariant = Extract<
   | 'jieqi'
   | 'banqi'
   | 'kriegspiel'
-  | 'reveal_chess'
   | 'jungle'
   | 'jungle_flip'
   | 'fortress_xiangqi'
