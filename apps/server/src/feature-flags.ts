@@ -96,17 +96,10 @@ export function revealChessEnabled(): boolean {
   return process.env.MISTBOARD_REVEAL_CHESS_ENABLED === 'true';
 }
 
-// Dark Shogi (the fog 9x9 variant, with drops + private hands) live rooms.
-// Server-side opt-in, default off — the tenant exists but is not launched.
-// PvP-only at first (no bot).
-export function darkShogiEnabled(): boolean {
-  return process.env.MISTBOARD_DARK_SHOGI_ENABLED === 'true';
-}
-
 // Dark Crazyhouse (chess + drops, under fog) live rooms. Server-side opt-in,
 // default off — the tenant exists but is not launched. PvP-only (no bot: drops
-// explode the belief search). Rides the dark-chess fog kernel + the Dark Shogi
-// hands/drops pattern.
+// explode the belief search). Rides the dark-chess fog kernel with private
+// hands and drops.
 export function darkCrazyhouseEnabled(): boolean {
   return process.env.MISTBOARD_DARK_CRAZYHOUSE_ENABLED === 'true';
 }

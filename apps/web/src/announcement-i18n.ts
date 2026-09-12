@@ -182,7 +182,7 @@ const ZH_HANS: Record<string, string> = {
     '八种变体都有了棋盘编辑器：手动摆子、指定轮谁走，再把局面直接交给分析棋盘。分析棋盘也可以直接读入 FEN，你摆出的每个局面都有自己的链接。',
   'The review page gains a Crosstable with your record against that opponent in that variant, engines included, and Share and export hands you the game as PGN or JSON.':
     '复盘页新增对阵表，显示你在该变体中与这位对手的交手记录，引擎也算在内；分享与导出可以把整局导出为 PGN 或 JSON。',
-  'One switch in Display settings reaches the xiangqi family, the chess boards, jungle, and shogi. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
+  'One switch in Display settings reaches the xiangqi family, the chess boards, and jungle. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
     '显示设置里的一个开关，现在管得到象棋系列、国际象棋类棋盘、斗兽棋和将棋。象棋的纵线从各自的右手边数起，所以标注会跟随你的着法记谱设置，并在翻转棋盘时换边。',
   'Watch a topic and the bell counts its unread replies. Quoting someone now tells them, and every source the bell reports has its own switch.':
     '关注一个主题，铃铛就会统计它的未读回复。引用他人现在也会通知对方，铃铛报告的每一类消息都有各自的开关。',
@@ -455,7 +455,7 @@ const ZH_HANT: Record<string, string> = {
     '八種變體都有了棋盤編輯器：手動擺子、指定輪誰走，再把局面直接交給分析棋盤。分析棋盤也可以直接讀入 FEN，你擺出的每個局面都有自己的連結。',
   'The review page gains a Crosstable with your record against that opponent in that variant, engines included, and Share and export hands you the game as PGN or JSON.':
     '復盤頁新增對陣表，顯示你在該變體中與這位對手的交手記錄，引擎也算在內；分享與匯出可以把整局匯出為 PGN 或 JSON。',
-  'One switch in Display settings reaches the xiangqi family, the chess boards, jungle, and shogi. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
+  'One switch in Display settings reaches the xiangqi family, the chess boards, and jungle. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.':
     '顯示設定裡的一個開關，現在管得到象棋系列、國際象棋類棋盤、鬥獸棋和將棋。象棋的縱線從各自的右手邊數起，所以標註會跟隨你的著法記譜設定，並在翻轉棋盤時換邊。',
   'Watch a topic and the bell counts its unread replies. Quoting someone now tells them, and every source the bell reports has its own switch.':
     '關注一個主題，鈴鐺就會統計它的未讀回覆。引用他人現在也會通知對方，鈴鐺報告的每一類訊息都有各自的開關。',

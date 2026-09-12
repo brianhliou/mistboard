@@ -23,7 +23,6 @@ import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkCrazyhouseArticle } from './articles/content/dark-crazyhouse.js';
 import { darkDraft960Article } from './articles/content/dark-draft960.js';
 import { darkMiniXiangqiArticle } from './articles/content/dark-mini-xiangqi.js';
-import { darkShogiArticle } from './articles/content/dark-shogi.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
 import { dropMiniXiangqiArticle } from './articles/content/drop-mini-xiangqi.js';
 import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
@@ -41,7 +40,6 @@ import { revealChessArticle } from './articles/content/reveal-chess.js';
 import { riverbankCannonArticle } from './articles/content/riverbank-cannon.js';
 import { titledPlayersArticle } from './articles/content/titled-players.js';
 import { serverEnforcedFogArticle } from './articles/content/server-enforced-fog.js';
-import { shogiArticle } from './articles/content/shogi.js';
 import { shogi4Article } from './articles/content/shogi4.js';
 import { xiangqiChampionsArticle } from './articles/content/xiangqi-champions.js';
 import { xiangqiMatchFixingArticle } from './articles/content/xiangqi-match-fixing.js';
@@ -73,9 +71,7 @@ export const articles: Article[] = [
   duckXiangqiArticle,
   duckXiangqiBuildArticle,
   serverEnforcedFogArticle,
-  shogiArticle,
   shogi4Article,
-  darkShogiArticle,
   darkCrazyhouseArticle,
   kriegspielArticle,
   jieqiArticle,

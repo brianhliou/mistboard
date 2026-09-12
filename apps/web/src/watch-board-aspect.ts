@@ -46,8 +46,7 @@ const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
   // Jungle: 7 x 9 (jungle-render.ts). Flip jungle: 4 x 4 (jungle-flip-render.ts).
   jungle: 7 / 9,
   'jungle-flip': 1,
-  // Shogi + luzhanqi ride their own renderers; both are 9x9 / 5x12 respectively.
-  'dark-shogi': 1,
+  // Luzhanqi rides its own renderer (5x12).
   luzhanqi: 5 / 12,
 };
 

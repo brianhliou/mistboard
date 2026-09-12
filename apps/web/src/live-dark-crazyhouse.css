@@ -212,7 +212,7 @@
   list-style: none;
 }
 
-/* ── Fog-masked move list (Dark Shogi convention) ─────────────────────────── */
+/* ── Fog-masked move list ────────────────────────────────────────────────── */
 
 .dczh-move-row {
   display: grid;

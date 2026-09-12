@@ -1030,63 +1030,6 @@
   margin-inline: auto;
 }
 
-/* Shogi rules diagrams. raw-svg boards otherwise stretch to the full article
-   column; cap the full board and shrink the per-piece move diagrams to a compact
-   size (lishogi-style) so a 9x9 showing one piece doesn't dominate. Sizing
-   classes ride on the <figure> (RawSvgBlock.className). */
-.article-figure.shogi-figure-board > svg {
-  width: min(384px, 100%);
-  margin-inline: auto;
-}
-.article-figure.shogi-figure-pair > svg,
-.article-figure.shogi-figure-triptych > svg {
-  width: min(760px, 100%);
-  margin-inline: auto;
-}
-.article-figure.shogi-figure-move {
-  margin: 18px 0;
-}
-.article-figure.shogi-figure-move > svg {
-  width: min(330px, 82%);
-  margin-inline: auto;
-}
-.article-figure.shogi-figure-hand > svg {
-  width: min(760px, 100%);
-  margin-inline: auto;
-}
-.shogi-article-pair-label {
-  fill: var(--site-heading);
-  font: 600 18px / 1 var(--font-sans, system-ui, sans-serif);
-}
-.shogi-article-panel-bg {
-  fill: var(--site-panel);
-  stroke: var(--site-border-soft);
-}
-.shogi-hand-row-label {
-  fill: var(--site-muted);
-  font: 600 13px / 1 var(--font-sans, system-ui, sans-serif);
-}
-.shogi-hand-row {
-  fill: var(--site-panel-soft);
-  stroke: var(--site-border-soft);
-  stroke-width: 1.5;
-}
-.shogi-hand-fog-slot,
-.shogi-hand-fog-band {
-  stroke: #3a523f;
-  stroke-width: 1.2;
-}
-@media (max-width: 560px) {
-  .article-figure.shogi-figure-move > svg {
-    width: min(330px, 92%);
-  }
-  .article-figure.shogi-figure-pair > svg,
-  .article-figure.shogi-figure-triptych > svg,
-  .article-figure.shogi-figure-hand > svg {
-    width: 100%;
-  }
-}
-
 /* Xiangqi diagram theming. The diagrams draw their own board (chessground can't
    render a xiangqi grid), so their colors come from the shared --xq-diagram-*
    tokens (defined in app-base.css, driven by data-xiangqi-board-theme /
@@ -1906,110 +1849,6 @@
   }
 }
 
-/* Shogi game replay widget: same stepper grammar as chess and xiangqi, with
-   compact hands above and below the board because drops are central to shogi. */
-.shogi-replay {
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  gap: 10px;
-  width: 100%;
-}
-
-.shogi-replay-header {
-  font-size: 14px;
-  font-weight: 600;
-  color: var(--site-muted);
-  text-align: center;
-}
-
-.shogi-replay-board-stack {
-  display: flex;
-  flex-direction: column;
-  align-items: stretch;
-  gap: 6px;
-  width: min(432px, 100%);
-}
-
-.shogi-replay-frame {
-  width: 100%;
-}
-
-.shogi-replay-frame > .shogi-board-svg {
-  width: 100%;
-  height: auto;
-  margin-inline: auto;
-}
-
-.shogi-replay-hand {
-  display: flex;
-  align-items: center;
-  justify-content: space-between;
-  gap: 8px;
-  min-height: 38px;
-  padding: 3px 6px;
-  border: 1px solid var(--site-border-soft);
-  border-radius: 6px;
-  background: var(--site-panel-soft);
-}
-
-.shogi-replay-hand-label {
-  flex: 0 0 auto;
-  color: var(--site-muted);
-  font-size: 12px;
-  font-weight: 600;
-}
-
-.shogi-replay-hand-pieces {
-  display: flex;
-  flex: 1 1 auto;
-  flex-wrap: wrap;
-  justify-content: flex-end;
-  gap: 3px;
-  min-width: 0;
-}
-
-.shogi-replay-hand-empty {
-  color: var(--site-muted);
-  font-size: 12px;
-  font-style: italic;
-}
-
-.shogi-replay-hand-koma {
-  position: relative;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  width: 31px;
-  height: 31px;
-}
-
-.shogi-replay-hand-koma .shogi-hand-koma__svg {
-  width: 29px;
-  height: 29px;
-}
-
-.shogi-replay-hand-count {
-  position: absolute;
-  right: -2px;
-  bottom: -2px;
-  min-width: 14px;
-  padding: 0 3px;
-  border-radius: 7px;
-  background: var(--site-heading, #333);
-  color: var(--site-panel, #fff);
-  font-size: 10px;
-  font-weight: 700;
-  line-height: 14px;
-  text-align: center;
-}
-
-.shogi-replay-slider {
-  width: min(432px, 100%);
-  accent-color: var(--site-accent);
-  cursor: pointer;
-}
-
 /* Chess game replay widget: chessground board + the shared stepper controls.
    Mirrors the xiangqi replay layout. */
 .chess-replay {
@@ -2534,7 +2373,7 @@
   overflow: hidden;
 }
 
-/* Crazyhouse/shogi reserve shown beneath a board: the pieces in hand. */
+/* Crazyhouse reserve shown beneath a board: the pieces in hand. */
 .live-boards-pocket {
   display: flex;
   align-items: center;

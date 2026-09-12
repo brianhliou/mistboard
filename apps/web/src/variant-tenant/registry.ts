@@ -18,7 +18,6 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_CRAZYHOUSE_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
-  DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -41,7 +40,6 @@ import {
   correspondenceEnabled,
   darkCrazyhouseEnabled,
   darkMiniXiangqiEnabled,
-  darkShogiEnabled,
   darkXiangqiEnabled,
   dropMiniXiangqiEnabled,
   duckXiangqiEnabled,
@@ -1010,56 +1008,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: revealChessEnabled,
       acceptsDeepLink: revealChessEnabled,
-    },
-  },
-  {
-    // Dark Shogi (fog 9x9): a fog tenant on the socket-client + chrome stack with
-    // the fog-safe replay-CAPTURE model (live-dark-shogi.ts). Net-new surface vs
-    // the other fog tenants — a koma board (shogi-render.ts), reserve (hand)
-    // strips, drop + promotion interaction — and PRIVATE hands (the view carries
-    // only your own reserve). PvP-only (no bot yet). Postgame review is the
-    // black/truth/white fog triptych. Shogi declares black (sente) as the first
-    // side and white (gote) as the second, so future shogi-family tenants can
-    // reuse the same picker model.
-    gameSpecId: DARK_SHOGI_SPEC_ID,
-    roomIdPrefix: 'dsg_',
-    enabled: darkShogiEnabled,
-    pageTitle: 'Fog Shogi',
-    gameRouteBase: '/dark-shogi/game',
-    mountPostgame: (root, roomId) =>
-      import('../dark-shogi-postgame.js').then(({ mountDarkShogiPostgame }) =>
-        mountDarkShogiPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/dark-shogi/game',
-    loadLiveRoomClient: () =>
-      import('../live-dark-shogi.js').then(
-        ({ bootstrapDarkShogiLiveRoom }) =>
-          () =>
-            bootstrapDarkShogiLiveRoom(),
-      ),
-    watch: {
-      family: 'shogi',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-dark-shogi-replay.js').then(({ mountDarkShogiWatchReplay }) =>
-          mountDarkShogiWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        firstColor: 'black',
-        firstGlyph: '☗',
-        firstLabel: 'Sente',
-        glyphClass: 'shogi',
-        secondColor: 'white',
-        secondGlyph: '☖',
-        secondLabel: 'Gote',
-        supportsRated: false,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: darkShogiEnabled,
     },
   },
   {

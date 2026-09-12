@@ -8,7 +8,9 @@
 // of shipping a wrong-direction 301 or a generic share card.
 export type ArticleKind = 'rules' | 'article';
 
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
+// Reachable by URL, deliberately unlisted and unindexed: /rules/shogi4 is
+// linked from outside the site and stays up, but is not a Mistboard variant.
+const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4']);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web
@@ -25,13 +27,10 @@ const RETIRED_RULES_SLUGS = new Set([
   'dark-crazyhouse',
   'dark-draft960',
   'dark-mini-xiangqi',
-  'dark-shogi',
   'drop-mini-xiangqi',
   'kriegspiel',
   'mini-xiangqi',
   'reveal-chess',
-  'shogi',
-  'shogi4',
 ]);
 
 /** A rules page whose variant is retired: served as 410 Gone. */
@@ -54,7 +53,6 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   // a dead link that the CTA-only link guard does not catch.
   'fog-openings',
   'fog-chess-concepts',
-  'shogi',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -198,18 +196,6 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Xiangqi with a pocket: faithful piece movement plus crazyhouse-style drops and the new Treasure piece.',
-  },
-  shogi: {
-    title: 'Shogi Rules',
-    kind: 'rules',
-    description:
-      'Standard shogi rules, the primer behind Fog Shogi: how the eight pieces move, promotion in the far ranks, the drop rule that puts captured pieces back in play, and how a game is won.',
-  },
-  'dark-shogi': {
-    title: 'Fog Shogi Rules',
-    kind: 'rules',
-    description:
-      'Fog Shogi rules: shogi under Fog of War, with private hands, drop bounces, and king capture.',
   },
   shogi4: {
     title: 'Shogi4 (4×4 Shogi) Rules',

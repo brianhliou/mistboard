@@ -97,7 +97,7 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   // more than that (Duck Xiangqi: a piece move AND a duck placement) must pass
   // its own, or the TV list silently publishes half of each turn.
   moveLabel?(move: Record<string, unknown>): string;
-  // Drop/reserve variants (drop-mini-xiangqi, crazyhouse, shogi) where the hand IS
+  // Drop/reserve variants (drop-mini-xiangqi, crazyhouse) where the hand IS
   // the position: the compact showcase flanks the board with vertical reserve
   // strips (each side's hand) instead of top/bottom capture rows.
   sidedCaptures?: boolean;

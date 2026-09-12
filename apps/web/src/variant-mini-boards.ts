@@ -5,8 +5,6 @@ import {
   createInitialJungleState,
   createInitialXiangqiState,
   getPlayerView as getXiangqiPlayerView,
-  type ShogiPiece,
-  type ShogiPieceRole,
   type XiangqiColor,
   type XiangqiPieceRole,
 } from '@mistboard/game';
@@ -16,7 +14,6 @@ import {
   renderJungleFlipBoardSvg,
 } from './jungle-flip-render.js';
 import { JUNGLE_BOARD_VIEW, renderJungleBoardSvg } from './jungle-render.js';
-import { shogiKomaSvg } from './shogi-render.js';
 import {
   boardAppearanceChangedEvent,
   type PieceSet,
@@ -65,14 +62,12 @@ export type VariantMiniId =
   | 'banqi'
   | 'kriegspiel'
   | 'reveal-chess'
-  | 'shogi'
-  | 'dark-shogi'
   | 'crazyhouse'
   | 'dark-crazyhouse'
   | 'jungle'
   | 'jungle-flip';
 
-export type VariantMiniFamily = 'chess' | 'xiangqi' | 'shogi' | 'jungle';
+export type VariantMiniFamily = 'chess' | 'xiangqi' | 'jungle';
 
 export interface VariantMiniDef {
   id: VariantMiniId;
@@ -716,66 +711,6 @@ function revealChessBody(ctx: MiniCtx): string {
   return [checker(4, 4, cell), ...pieces].join('');
 }
 
-// ---- shogi (wood grid + kanji koma) ---------------------------------------
-
-// A koma (shogi piece) placed at an absolute top-left. Reuses the live koma art — a
-// wedge tile + kanji, colours inlined — re-wrapped at the marker scale the way
-// chessPieceAt re-wraps the cburnett glyphs.
-function shogiKomaAt(
-  piece: ShogiPiece,
-  x: number,
-  y: number,
-  size: number,
-  pointsUp = true,
-): string {
-  const inner = shogiKomaSvg(piece, pointsUp)
-    .replace(/^<svg[^>]*>/, '')
-    .replace(/<\/svg>\s*$/, '');
-  return `<svg x="${x}" y="${y}" width="${size}" height="${size}" viewBox="0 0 40 40">${inner}</svg>`;
-}
-
-// Shogi: a 5x5 crop of one camp's bottom-right corner (sente), pentagon komas
-// pointing up-screen toward the enemy. Columns left->right are files 5..1, rows
-// top->bottom ranks 5..1, so the back rank (king, gold, silver, knight, lance)
-// sits at the bottom, the lone rook on file 2 holds the gap rank, and the pawns
-// run across the rank ahead; the far edge beyond the camp's sight is fogged in
-// Dark Shogi.
-function shogiBody(showFog: boolean): string {
-  const n = 5;
-  const cw = SIZE / n;
-  const koma = cw * 0.86;
-  const inset = (cw - koma) / 2;
-  const place = (role: ShogiPieceRole, c: number, r: number): string =>
-    shogiKomaAt(
-      { color: 'black', role, promoted: false },
-      OX + (n - 1 - c) * cw + inset,
-      OY + r * cw + inset,
-      koma,
-      true,
-    );
-  const lines: string[] = [];
-  for (let i = 1; i < n; i += 1) {
-    lines.push(`<line x1="${OX}" y1="${OY + i * cw}" x2="${OX + SIZE}" y2="${OY + i * cw}"/>`);
-    lines.push(`<line x1="${OX + i * cw}" y1="${OY}" x2="${OX + i * cw}" y2="${OY + SIZE}"/>`);
-  }
-  const fog: string[] = [];
-  if (showFog) {
-    fog.push(`<rect class="vm-shogi-fog" x="${OX}" y="${OY}" width="${SIZE}" height="${cw}"/>`);
-  }
-  const backRank: ShogiPieceRole[] = ['K', 'G', 'S', 'N', 'L'];
-  const pieces = [
-    ...backRank.map((role, c) => place(role, c, 4)),
-    place('R', 3, 3),
-    ...[0, 1, 2, 3, 4].map((c) => place('P', c, 2)),
-  ];
-  return [
-    `<rect class="vm-shogi-bg" x="${OX}" y="${OY}" width="${SIZE}" height="${SIZE}"/>`,
-    `<g class="vm-shogi-line" stroke-width="1" stroke-linecap="round">${lines.join('')}</g>`,
-    fog.join(''),
-    ...pieces,
-  ].join('');
-}
-
 // ---- jungle (Dou Shou Qi) animal-rank tiles -------------------------------
 
 // Jungle markers crop the REAL starting board (the shared dobutsu/terrain renderer), so
@@ -855,8 +790,6 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   banqi: banqiBody,
   kriegspiel: kriegspielBody,
   'reveal-chess': revealChessBody,
-  shogi: () => shogiBody(false),
-  'dark-shogi': () => shogiBody(true),
   crazyhouse: crazyhouseBody,
   'dark-crazyhouse': crazyhouseBody,
   jungle: () => jungleBody(),
@@ -976,22 +909,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     accent: '#9b3f74',
     blurb: 'Chess with hidden identities: every piece face-down but the king.',
     family: 'chess',
-  },
-  {
-    id: 'shogi',
-    label: 'Shogi',
-    shortLabel: 'SG',
-    accent: '#a06a2c',
-    blurb: 'Japanese chess: wedge koma, drops from hand, promotion in the far zone.',
-    family: 'shogi',
-  },
-  {
-    id: 'dark-shogi',
-    label: 'Fog Shogi',
-    shortLabel: 'DS',
-    accent: '#7d5320',
-    blurb: 'Shogi played blind: your own koma and their reach, the rest in fog.',
-    family: 'shogi',
   },
   {
     id: 'crazyhouse',

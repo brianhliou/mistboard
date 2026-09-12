@@ -10,7 +10,6 @@ import {
 import {
   type Color,
   canonicalVariantOrderIndex,
-  DARK_SHOGI_SPEC_ID,
   EMBED_DEFAULT_HEIGHT,
   EMBED_DEFAULT_WIDTH,
   type Square,
@@ -53,7 +52,6 @@ import {
   type MiniXiangqiReplayBlock,
   type RawSvgBlock,
   type RawSvgStepperBlock,
-  type ShogiReplayBlock,
   type StaticBoardsBlock,
   type SubHeadingBlock,
   type SvgRowBlock,
@@ -80,11 +78,9 @@ import { type JungleFlipReplayController, mountJungleFlipReplay } from './jungle
 import { type JungleReplayController, mountJungleReplay } from './jungle-replay.js';
 import { type MiniXiangqiReplayController, mountMiniXiangqiReplay } from './mini-xiangqi-replay.js';
 import { prependTitleBadge } from './player-titles.js';
-import { mountShogiReplay, type ShogiReplayController } from './shogi-replay.js';
 import {
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
-  shogiAppearanceChangedEvent,
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
 import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
@@ -139,8 +135,6 @@ function isArticleListedInThisEnv(article: Article): boolean {
   }
   return true;
 }
-
-const RULES_ARTICLE_RAIL_HIDDEN_SLUGS = new Set(['shogi']);
 
 const ARTICLE_STATUS_KEYS: Record<'draft' | 'outline', I18nKey> = {
   draft: 'articles.status.draft',
@@ -974,7 +968,6 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
   const entries = articles.filter(
     (article) =>
       article.kind === 'rules' &&
-      !RULES_ARTICLE_RAIL_HIDDEN_SLUGS.has(article.slug) &&
       (isArticleListedInThisEnv(article) ||
         (article.slug === currentSlug &&
           article.showInIndex !== false &&
@@ -1045,8 +1038,6 @@ function compareRulesArticleRailEntries(a: Article, b: Article): number {
 }
 
 function rulesArticleRailSortIndex(article: Article): number {
-  if (article.slug === 'shogi') return canonicalVariantOrderIndex(DARK_SHOGI_SPEC_ID) - 0.5;
-  if (article.slug === 'shogi4') return canonicalVariantOrderIndex(DARK_SHOGI_SPEC_ID) + 0.5;
   const gameSpecId = article.gameSpecId ?? article.slug;
   if (isGameSpecId(gameSpecId)) return canonicalVariantOrderIndex(gameSpecId);
   return Number.MAX_SAFE_INTEGER;
@@ -1269,7 +1260,6 @@ type PendingBlock =
   | DropMiniXiangqiReplayBlock
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
-  | ShogiReplayBlock
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock
@@ -1305,7 +1295,6 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
   if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
-  if (block.kind === 'shogi-replay') return renderShogiReplayBlock(block, lang);
   if (block.kind === 'chess-replay') return renderChessReplayBlock(block, lang);
   if (block.kind === 'jieqi-replay') return renderJieqiReplayBlock(block, lang);
   if (block.kind === 'banqi-replay') return renderBanqiReplayBlock(block, lang);
@@ -1532,26 +1521,6 @@ function renderFortressXiangqiReplayBlock(
   return figure;
 }
 
-function renderShogiReplayBlock(block: ShogiReplayBlock, lang?: ArticleLang): HTMLElement {
-  const figure = document.createElement('figure');
-  figure.className = 'article-figure article-figure-interactive article-figure-shogi';
-  figure.dataset.pendingWidget = 'shogi-replay';
-
-  const mountTarget = document.createElement('div');
-  mountTarget.className = 'article-interactive-target';
-  figure.append(mountTarget);
-
-  if (block.caption) {
-    const cap = document.createElement('figcaption');
-    cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
-    figure.append(cap);
-  }
-
-  rememberPendingMount(figure, block, lang);
-  return figure;
-}
-
 function renderLiveBoardsBlock(block: LiveBoardsBlock): HTMLElement {
   const figure = document.createElement('figure');
   figure.className = 'article-figure article-figure-interactive';
@@ -1643,39 +1612,6 @@ function trackXqDiagram(holder: HTMLElement, thunk: () => string): void {
   ensureXqDiagramListener();
 }
 
-// Shogi diagram repaint, the shogi twin of the xiangqi machinery above. Unlike
-// xiangqi (board theme rides on CSS vars), the shogi board bakes its palette into
-// the SVG, so BOTH the piece set and the board theme need a JS re-render — the
-// thunk already reads both from storage, so the painter just re-runs it.
-const shogiDiagramThunks = new WeakMap<HTMLElement, () => string>();
-let shogiDiagramListenerInstalled = false;
-
-function paintShogiDiagram(holder: HTMLElement): void {
-  const thunk = shogiDiagramThunks.get(holder);
-  if (!thunk) return;
-  const caption =
-    Array.from(holder.children).find((child) =>
-      child.classList.contains('article-figure-caption'),
-    ) ?? null;
-  const scratch = document.createElement('div');
-  scratch.innerHTML = thunk();
-  holder.replaceChildren(...Array.from(scratch.childNodes), ...(caption ? [caption] : []));
-}
-
-function ensureShogiDiagramListener(): void {
-  if (shogiDiagramListenerInstalled) return;
-  shogiDiagramListenerInstalled = true;
-  window.addEventListener(shogiAppearanceChangedEvent, () => {
-    document.querySelectorAll<HTMLElement>('[data-shogi-diagram]').forEach(paintShogiDiagram);
-  });
-}
-
-function trackShogiDiagram(holder: HTMLElement, thunk: () => string): void {
-  holder.dataset.shogiDiagram = '';
-  shogiDiagramThunks.set(holder, thunk);
-  ensureShogiDiagramListener();
-}
-
 function localizeSvgMarkup(raw: string, lang?: ArticleLang): string {
   if (!lang) return raw;
   const template = document.createElement('template');
@@ -1732,14 +1668,10 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
     // Render once to detect the family (and seed the figure), then track for
     // re-render on that family's appearance event.
     figure.innerHTML = svgThunk();
-    if (figure.querySelector('.shogi-board-svg')) {
-      trackShogiDiagram(figure, svgThunk);
-    } else {
-      trackXqDiagram(figure, svgThunk);
-      paintXqDiagram(figure, readStoredXiangqiPieceSet());
-      if (figure.querySelector('.xq-article-svg')) {
-        figure.classList.add('article-figure-xq');
-      }
+    trackXqDiagram(figure, svgThunk);
+    paintXqDiagram(figure, readStoredXiangqiPieceSet());
+    if (figure.querySelector('.xq-article-svg')) {
+      figure.classList.add('article-figure-xq');
     }
   } else {
     figure.innerHTML = localizeSvgMarkup(block.svg, lang);
@@ -1761,7 +1693,7 @@ function renderRawSvgBlock(block: RawSvgBlock, lang?: ArticleLang): HTMLElement 
 }
 
 // A row of raw-SVG figures. Each item goes through renderRawSvgBlock, so the
-// per-family tracking (shogi / xiangqi appearance re-render),
+// per-family tracking (xiangqi appearance re-render),
 // localization and caption handling stay in ONE place; this only owns the
 // layout wrapper.
 function renderSvgRowBlock(block: SvgRowBlock, lang?: ArticleLang): HTMLElement {
@@ -2247,7 +2179,6 @@ export function mountPendingWidgets(
   | DropMiniXiangqiReplayController
   | FortressXiangqiReplayController
   | DuckXiangqiReplayController
-  | ShogiReplayController
   | JieqiReplayController
   | BanqiReplayController
   | JungleReplayController
@@ -2260,7 +2191,6 @@ export function mountPendingWidgets(
     | ChessReplayController
     | MiniXiangqiReplayController
     | DropMiniXiangqiReplayController
-    | ShogiReplayController
     | JieqiReplayController
     | BanqiReplayController
     | JungleReplayController
@@ -2287,8 +2217,6 @@ export function mountPendingWidgets(
       controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'duck-xiangqi-replay') {
       controllers.push(mountDuckXiangqiReplay(target, block.spec, { lang }));
-    } else if (block.kind === 'shogi-replay') {
-      controllers.push(mountShogiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'chess-replay') {
       controllers.push(mountChessReplay(target, block.spec, { lang }));
     } else if (block.kind === 'jieqi-replay') {
@@ -2485,8 +2413,6 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   banqi: 'banqi',
   kriegspiel: 'kriegspiel',
   'reveal-chess': 'reveal-chess',
-  shogi: 'shogi',
-  'dark-shogi': 'dark-shogi',
   'dark-crazyhouse': 'dark-crazyhouse',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',

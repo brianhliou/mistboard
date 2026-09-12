@@ -51,7 +51,7 @@ export type WebVariantTenant<C extends string> = {
   // matters most, and a family glyph reads as "some xiangqi" where the marker
   // reads as the exact variant.
   metaMarkerId?: VariantMiniId;
-  // Fallback icon glyph, family-canonical (象 xiangqi, 虎 jungle, ☗ shogi,
+  // Fallback icon glyph, family-canonical (象 xiangqi, 虎 jungle,
   // ♔ chess), for tenants with no marker. Omitting both renders no icon box.
   metaGlyph?: string;
   // Move order: [first mover, second mover]; also the board's default

@@ -105,13 +105,6 @@ export function correspondenceEnabled(): boolean {
   return import.meta.env.VITE_CORRESPONDENCE_ENABLED !== 'false';
 }
 
-// Dark Shogi (the fog 9x9 variant) play surface. Server-side opt-in is
-// MISTBOARD_DARK_SHOGI_ENABLED; this gates the landing picker and deep links.
-// Available through the explicit lab profile or a build flag.
-export function darkShogiEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_DARK_SHOGI_ENABLED === 'true';
-}
-
 // Dark Crazyhouse (the fog 8x8 chess + drops variant) play surface. Server-side
 // opt-in is MISTBOARD_DARK_CRAZYHOUSE_ENABLED; this gates the landing picker and
 // deep links. Available through the explicit lab profile or a build flag.

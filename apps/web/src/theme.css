@@ -688,8 +688,7 @@
 }
 
 .theme-tile[data-theme-tile="piece"],
-.theme-tile[data-theme-tile="xqpiece"],
-.theme-tile[data-theme-tile="shogipiece"] {
+.theme-tile[data-theme-tile="xqpiece"] {
   aspect-ratio: 1;
 }
 
@@ -701,12 +700,12 @@
 }
 
 /* Family-scoped appearance fields: each family's board/piece pickers show only in
-   that family's context (chess, xiangqi, or shogi). The fog field is untagged and
+   that family's context (chess or xiangqi). The fog field is untagged and
    always shows. A field is hidden whenever its family tag differs from the active
    board family. */
 :root[data-board-family="chess"] [data-appearance-family]:not([data-appearance-family="chess"]),
-:root[data-board-family="xiangqi"] [data-appearance-family]:not([data-appearance-family="xiangqi"]),
-:root[data-board-family="shogi"] [data-appearance-family]:not([data-appearance-family="shogi"]) {
+:root[data-board-family="xiangqi"]
+  [data-appearance-family]:not([data-appearance-family="xiangqi"]) {
   display: none;
 }
 
@@ -761,42 +760,6 @@
 .theme-tile-preview-xqpiece[data-id="simplified"],
 .theme-tile-preview-xqpiece[data-id="western"],
 .theme-tile-preview-xqpiece[data-id="symbols"] {
-  font-size: 34px;
-}
-
-/* Shogi board swatches (solid wood tone per scheme; values track the light cell
-   of each palette in shogi-render.ts). */
-.theme-tile-preview-shogiboard[data-id="wood"] {
-  background: #f4ddb0;
-}
-.theme-tile-preview-shogiboard[data-id="kaya"] {
-  background: #f7e7c2;
-}
-.theme-tile-preview-shogiboard[data-id="plain"] {
-  background: #ece4d4;
-}
-
-/* Shogi piece tiles show a representative koma (飛 / R for text sets, the sente
-   king art for image sets) on a wood tone. */
-.theme-tile-preview-shogipiece {
-  display: flex;
-  align-items: center;
-  justify-content: center;
-  background: #e9cf9b;
-  color: #3a2c14;
-  font-size: 15px;
-  font-weight: 600;
-  line-height: 1;
-}
-.theme-tile-preview-shogipiece img {
-  width: 100%;
-  height: 100%;
-  object-fit: contain;
-}
-
-.theme-tile-preview-shogipiece[data-id="kanji"],
-.theme-tile-preview-shogipiece[data-id="kanji-light"],
-.theme-tile-preview-shogipiece[data-id="western"] {
   font-size: 34px;
 }
 

@@ -569,7 +569,7 @@ export function tonesForSound(kind: SoundKind, set: SoundSetId = DEFAULT_SOUND_S
   }
   if (kind === 'drop') {
     // A piece placed from hand: a soft tick into a low thud, distinct from the
-    // slide of a board move (crazyhouse / shogi).
+    // slide of a board move (crazyhouse).
     return [
       { delay: 0, duration: 0.028, frequency: 300, gain: 0.035, type: 'triangle' },
       { delay: 0.01, duration: 0.13, frequency: 125, gain: 0.07, type: 'sine' },
@@ -687,7 +687,7 @@ export function tonesForSound(kind: SoundKind, set: SoundSetId = DEFAULT_SOUND_S
   return [{ delay: 0, duration: 0.09, frequency: 320, gain: 0.055, type: 'sine' }];
 }
 
-// The 'wood' set: wooden pieces clacked on a wooden board (xiangqi/shogi feel).
+// The 'wood' set: wooden pieces clacked on a wooden board (xiangqi feel).
 // Each tactile kind is a sharp bandpass-noise "clack" transient over a short
 // low triangle "body" (the board's resonance). Terminal cues use their own
 // rising, falling, or balanced knock patterns instead of borrowing Mist.

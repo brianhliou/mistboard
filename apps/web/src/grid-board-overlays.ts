@@ -1,4 +1,4 @@
-// Annotation overlay layers for the cell-grid SVG boards (chess family, shogi,
+// Annotation overlay layers for the cell-grid SVG boards (chess family,
 // kriegspiel, jungle).
 //
 // The grid core draws pieces, highlights and targets; user-drawn arrows and

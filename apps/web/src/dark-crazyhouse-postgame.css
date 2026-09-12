@@ -1,7 +1,7 @@
 /* Dark Crazyhouse review. Reuses the shared .dxq-postgame__* scaffold
    (dark-xiangqi-postgame.css); this block re-themes it to the site palette
    (light + dark) and lays out the white/truth/black triptych so the page fits
-   without vertical scrolling — the same approach as the dark-shogi route. Adds
+   without vertical scrolling. Adds
    the reserve (hand) strips above/below each board. */
 
 .dark-crazyhouse-postgame-route {

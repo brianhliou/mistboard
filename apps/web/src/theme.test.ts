@@ -262,11 +262,10 @@ describe('appearance family gating', () => {
     ).toEqual(['Device theme', 'Light', 'Dark']);
   });
 
-  it('surfaces current xiangqi and chess settings without retired shogi controls', async () => {
+  it('surfaces current xiangqi and chess settings', async () => {
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_XIANGQI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'false');
-    vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'false');
 
     await rebuildThemePanel();
 
@@ -282,8 +281,6 @@ describe('appearance family gating', () => {
     expect(document.querySelector('[data-theme-tile="xqlayout"]')).toBeNull();
     expect(document.querySelector('[data-theme-tile="xqboard"]')).not.toBeNull();
     expect(document.querySelector('[data-theme-tile="xqpiece"]')).not.toBeNull();
-    expect(document.querySelector('[data-theme-tile="shogiboard"]')).toBeNull();
-    expect(document.querySelector('[data-theme-tile="shogipiece"]')).toBeNull();
     expect(
       [...document.querySelectorAll<HTMLButtonElement>('[data-theme-tile="xqboard"]')].map((tile) =>
         tile.getAttribute('aria-label'),

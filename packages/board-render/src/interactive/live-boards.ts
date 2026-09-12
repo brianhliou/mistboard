@@ -10,7 +10,7 @@ export type LiveBoardArrow = {
   brush?: 'green' | 'red' | 'blue' | 'yellow';
 };
 
-// A crazyhouse/shogi-style reserve shown beneath the board: the pieces a player
+// A crazyhouse-style reserve shown beneath the board: the pieces a player
 // holds in hand, each with a count. Rendered as cburnett glyphs to match the
 // board's default piece set and the live game-room reserve strip.
 export type LiveBoardPocket = {

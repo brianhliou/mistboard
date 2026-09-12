@@ -25,7 +25,7 @@ import { buildWeeklyChart, type WeeklySeries } from './weekly-chart.js';
 
 // The curated set of live variants shown on the public /stats surface, matching
 // game-specs.ts CANONICAL_VARIANT_ORDER. Retired experiments (mini/drop,
-// dark-shogi, luzhanqi) and hidden chess variants stay off the public breakdown
+// luzhanqi) and hidden chess variants stay off the public breakdown
 // and chart filter. Admin /metrics applies the same shelf to the human split;
 // the engines block at the bottom lists every variant the bots played.
 const STATS_VARIANTS: readonly string[] = [

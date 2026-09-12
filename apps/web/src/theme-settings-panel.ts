@@ -17,12 +17,6 @@ import {
   SUPPORTED_LOCALES,
   setStoredLocale,
 } from './i18n/locale.js';
-import {
-  readStoredShogiBoardTheme,
-  readStoredShogiPieceSet,
-  SHOGI_BOARD_THEMES,
-} from './shogi-appearance-storage.js';
-import { SHOGI_PIECE_SETS, type ShogiPieceSet, shogiPieceTilePreview } from './shogi-piece-sets.js';
 import { readStoredSoundSet, SOUND_SETS, type SoundSetId } from './sound-sets.js';
 import {
   type AppearanceMenuOptions,
@@ -33,15 +27,12 @@ import {
   readStoredSoundMuted,
   readXiangqiBoardChoice,
   type SiteTheme,
-  setShogiBoardThemePreference,
-  setShogiPieceSetPreference,
   setSiteThemePreference,
   setSoundSetPreference,
   setSoundVolumePreference,
   setXiangqiBoardChoicePreference,
   setXiangqiNotationPreference,
   setXiangqiPieceSetPreference,
-  shogiAppearanceEnabled,
   showAppearanceView,
   siteThemeOptions,
   type TileKind,
@@ -160,20 +151,6 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
       ),
     );
   }
-  if (shogiAppearanceEnabled()) {
-    boardBody.push(
-      createTileField(
-        'shogiboard',
-        t('prefs.boardColors', {}, locale),
-        t('prefs.shogiBoardColorScheme', {}, locale),
-        SHOGI_BOARD_THEMES,
-        readStoredShogiBoardTheme(),
-        setShogiBoardThemePreference,
-        'shogi',
-        false,
-      ),
-    );
-  }
   addCategory('board', t('prefs.board', {}, locale), boardBody);
 
   // Pieces carries XIANGQI ONLY (2026-07-26). Chess ships one set, so there is no
@@ -193,20 +170,6 @@ export function buildAppearanceMenu(options: AppearanceMenuOptions = {}): HTMLEl
         readStoredXiangqiPieceSet(),
         setXiangqiPieceSetPreference,
         undefined,
-        false,
-      ),
-    );
-  }
-  if (shogiAppearanceEnabled()) {
-    pieceBody.push(
-      createTileField(
-        'shogipiece',
-        t('prefs.pieces', {}, locale),
-        t('prefs.shogiPieceSet', {}, locale),
-        SHOGI_PIECE_SETS,
-        readStoredShogiPieceSet(),
-        setShogiPieceSetPreference,
-        'shogi',
         false,
       ),
     );
@@ -382,7 +345,7 @@ function createTileField<T extends string>(
     const preview = document.createElement('span');
     preview.className = `theme-tile-preview theme-tile-preview-${kind}`;
     preview.dataset.id = option.id;
-    // Xiangqi / shogi piece tiles show a representative mark; the board tiles use
+    // Xiangqi piece tiles show a representative mark; the board tiles use
     // a CSS color swatch like the chess board tiles.
     if (kind === 'xqpiece') {
       const xiangqiPreview = xiangqiPieceTilePreview(option.id as XiangqiPieceSet);
@@ -390,17 +353,6 @@ function createTileField<T extends string>(
         preview.innerHTML = xiangqiPreview.markup;
       } else {
         preview.textContent = xiangqiPreview.text;
-      }
-    } else if (kind === 'shogipiece') {
-      const shogiPreview = shogiPieceTilePreview(option.id as ShogiPieceSet);
-      if (shogiPreview.kind === 'image') {
-        const img = document.createElement('img');
-        img.src = shogiPreview.href;
-        img.alt = '';
-        img.loading = 'lazy';
-        preview.append(img);
-      } else {
-        preview.textContent = shogiPreview.text;
       }
     }
     tile.append(preview);

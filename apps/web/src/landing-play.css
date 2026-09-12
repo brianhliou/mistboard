@@ -575,10 +575,6 @@
   letter-spacing: 0;
 }
 
-.landing-color-option .landing-color-glyph.shogi {
-  font-size: 30px;
-}
-
 .landing-color-option .landing-color-glyph.jungle,
 .landing-color-option .landing-color-glyph:has(.landing-color-piece) {
   gap: 4px;

@@ -1,11 +1,10 @@
 import type { VariantId } from './types.js';
 
-export type GameFamilyId = 'chess' | 'xiangqi' | 'shogi' | 'jungle' | 'military-chess' | 'mahjong';
+export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'military-chess' | 'mahjong';
 export type BoardGeometryId =
   | 'chess-8x8'
   | 'xiangqi-7x7'
   | 'xiangqi-9x10'
-  | 'shogi-9x9'
   | 'banqi-8x4'
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
@@ -21,7 +20,6 @@ export type MovementRulesId =
   | 'orthodox-chess'
   | 'mini-xiangqi'
   | 'xiangqi'
-  | 'shogi'
   | 'banqi'
   | 'jungle'
   | 'jungle-flip'
@@ -68,7 +66,7 @@ export type SetupRulesId =
   | 'fortress-standard'
   | 'luzhanqi-formation'
   | 'mahjong-deal';
-export type ReserveRulesId = 'none' | 'crazyhouse' | 'shogi-hands';
+export type ReserveRulesId = 'none' | 'crazyhouse';
 export type DropPolicyId =
   | 'none'
   | 'any-legal-square'
@@ -96,7 +94,6 @@ export type RatingPoolBaseId =
   | 'dark_mini_xiangqi'
   | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
-  | 'dark_shogi'
   | 'jieqi'
   | 'banqi'
   | 'reveal_chess'
@@ -118,7 +115,6 @@ export type GameSpecId =
   | 'dark-mini-xiangqi'
   | 'drop-mini-xiangqi'
   | 'dark-xiangqi'
-  | 'dark-shogi'
   | 'jieqi'
   | 'banqi'
   | 'reveal-chess'
@@ -176,7 +172,6 @@ export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
-export const DARK_SHOGI_SPEC_ID = 'dark-shogi' satisfies GameSpecId;
 export const DARK_CRAZYHOUSE_SPEC_ID = 'dark-crazyhouse' satisfies GameSpecId;
 export const KRIEGSPIEL_SPEC_ID = 'kriegspiel' satisfies GameSpecId;
 export const REVEAL_CHESS_SPEC_ID = 'reveal-chess' satisfies GameSpecId;
@@ -614,22 +609,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    id: DARK_SHOGI_SPEC_ID,
-    publicName: 'Fog Shogi',
-    family: 'shogi',
-    board: 'shogi-9x9',
-    movement: 'shogi',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'shogi-hands',
-    dropPolicy: 'any-legal-square',
-    ratingPoolBase: 'dark_shogi',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
     // Reveal Chess (chess-jieqi): standard chess with hidden piece identities.
     // Both kings start face-up; each side's other 15 pieces are dealt face-down
     // and reveal their true identity on first move (origin-role proxy until
@@ -734,7 +713,6 @@ export type RatingVariant = Extract<
   | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
   | 'dark_crazyhouse'
-  | 'dark_shogi'
   | 'jieqi'
   | 'banqi'
   | 'kriegspiel'

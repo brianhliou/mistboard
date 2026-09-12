@@ -4,7 +4,7 @@
 // first and the mover labels match that family's sides.
 import type { ArticleLang } from './article-i18n.js';
 
-export type ReplayStepperFamily = 'xiangqi' | 'chess' | 'shogi' | 'jieqi';
+export type ReplayStepperFamily = 'xiangqi' | 'chess' | 'jieqi';
 
 export type ReplayStepperCopy = {
   firstRole: string;
@@ -173,29 +173,6 @@ const FAMILIES: Record<ReplayStepperFamily, Record<ArticleLang | 'en', FamilyStr
       introSecond: '逐步回放這盤棋。黑方先走。',
       first: '白方',
       second: '黑方',
-      pocket: '手牌',
-    },
-  },
-  shogi: {
-    en: {
-      intro: 'Step through the moves. Sente moves first.',
-      introSecond: 'Step through the moves. Gote moves first.',
-      first: 'Sente',
-      second: 'Gote',
-      pocket: ' hand',
-    },
-    'zh-Hans': {
-      intro: '逐步回放这盘棋。先手先走。',
-      introSecond: '逐步回放这盘棋。后手先走。',
-      first: '先手',
-      second: '后手',
-      pocket: '手牌',
-    },
-    'zh-Hant': {
-      intro: '逐步回放這盤棋。先手先走。',
-      introSecond: '逐步回放這盤棋。後手先走。',
-      first: '先手',
-      second: '後手',
       pocket: '手牌',
     },
   },

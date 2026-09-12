@@ -120,7 +120,6 @@ const BLOCK_PROSE: {
   'drop-mini-xiangqi-replay': replay,
   'fortress-xiangqi-replay': replay,
   'duck-xiangqi-replay': replay,
-  'shogi-replay': replay,
   'chess-replay': replay,
   'jieqi-replay': replay,
   'banqi-replay': replay,

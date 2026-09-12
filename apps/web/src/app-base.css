@@ -336,26 +336,6 @@
   display: block;
 }
 
-/* Shogi uses the same global fog skins as xiangqi, but clipped per cell through
-   an inline SVG pattern. The tint tracks --xq-fog-fill; Drift and Mistveil show
-   the same image assets used by the other fog boards. */
-.shogi-fog-tint,
-.shogi-hand-fog-slot {
-  fill: var(--xq-fog-fill, rgba(46, 43, 37, 0.82));
-}
-
-.shogi-fog-tex {
-  display: none;
-}
-
-:root[data-fog-theme="drift"] .shogi-fog-tex-drift {
-  display: inline;
-}
-
-:root[data-fog-theme="mistveil"] .shogi-fog-tex-mist {
-  display: inline;
-}
-
 * {
   box-sizing: border-box;
 }

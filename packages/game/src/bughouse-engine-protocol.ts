@@ -15,7 +15,7 @@
  *   - bot may choose to wait on its own clock as an engine policy decision
  *   - captures/promotions/en passant/drop legality are enforced by the server
  *
- * Future xiangqi/shogi bughouse variants should add sibling spec IDs and board
+ * Future xiangqi bughouse variants should add sibling spec IDs and board
  * geometry fields after the chess contract has benchmark evidence.
  */
 

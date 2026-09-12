@@ -24,7 +24,6 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   'fortress-xiangqi': true,
   xiangqi: true,
   'dark-xiangqi': true,
-  'dark-shogi': false,
   jieqi: true,
   banqi: true,
   luzhanqi: false,
@@ -39,7 +38,9 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
 } satisfies Record<GameSpecId, boolean>;
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
-const HIDDEN_RULES_SLUGS = new Set(['shogi', 'shogi4']);
+// Reachable by URL, unlisted and unindexed: /rules/shogi4 is linked from
+// outside the site and stays up, but is not a Mistboard variant.
+const HIDDEN_RULES_SLUGS = new Set(['shogi4']);
 const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
   'fog-chess': 'dark-chess',
   'fog-xiangqi': 'dark-xiangqi',
@@ -55,13 +56,12 @@ export function variantPublicSurfaceEnabled(id: GameSpecId): boolean {
 
 /**
  * A rules page whose variant is retired (runtimeStatus 'retired' in
- * packages/game), or one of the shogi concept pages that go with dark-shogi.
+ * packages/game).
  * The server answers 410 for these paths; the client renders not-found rather
  * than the article, so a client-side navigation cannot show a page the server
  * has declared gone. Derived from the spec's own status: no second list.
  */
 export function rulesSlugRetired(slug: string): boolean {
-  if (HIDDEN_RULES_SLUGS.has(slug)) return true;
   const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
   return isRetiredGameSpec(gameSpecId);
 }

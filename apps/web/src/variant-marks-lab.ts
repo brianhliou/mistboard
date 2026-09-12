@@ -18,7 +18,6 @@ const FOCUSED_MARKER_IDS: readonly VariantMiniId[] = [
   'jungle',
   'dark-xiangqi',
   'dark-chess',
-  'dark-shogi',
 ];
 
 const FOCUSED_VARIANT_MINIS: readonly VariantMiniDef[] = FOCUSED_MARKER_IDS.map((id) =>
@@ -48,9 +47,6 @@ const FINALIZED_GENERATED_MARKER_SOURCES = {
   },
   'dark-chess': {
     source: 'v2 single regen, compact king with higher fog',
-  },
-  'dark-shogi': {
-    source: 'single regen from ig_0d9007, row 4 col 3, enlarged',
   },
 } as const satisfies Partial<Record<VariantMiniId, { source: string }>>;
 const COLOR_STATE_ROWS = [

@@ -1,6 +1,6 @@
 /**
  * Dark Crazyhouse (chess + drops, under fog) VariantTenant — a fog tenant on the
- * generic Layer-3 contract, built on the Dark Shogi hands/drops pattern but over
+ * generic Layer-3 contract, with private hands and drops over
  * the dark-chess fog kernel (8x8 chess board, chess vision).
  *
  * Crazyhouse-specific policy that lives here: the fog player view carries hands

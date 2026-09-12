@@ -177,7 +177,6 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   drop_mini_xiangqi: 'variant.dropMiniXiangqi.name',
   dark_xiangqi: 'variant.darkXiangqi.name',
   dark_crazyhouse: 'variant.darkCrazyhouse.name',
-  dark_shogi: 'variant.darkShogi.name',
   kriegspiel: 'variant.kriegspiel.name',
   jieqi: 'variant.jieqi.name',
   banqi: 'variant.banqi.name',

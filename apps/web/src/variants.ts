@@ -14,7 +14,6 @@ import {
   DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
-  DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -85,10 +84,6 @@ const jungleOn = jungleEnabled();
 const jungleFlipOn = jungleFlipEnabled();
 const revealChessOn = revealChessEnabled();
 const darkXiangqiOn = darkXiangqiEnabled();
-// Fog Shogi is parked for the xiangqi-focused launch. Keep its marker and
-// history mappings, but do not expose a rating/profile surface when its
-// development flag is enabled.
-const darkShogiOn = false;
 const darkCrazyhouseOn = darkCrazyhouseEnabled();
 const kriegspielOn = kriegspielEnabled();
 const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
@@ -99,7 +94,6 @@ const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
-const darkShogiSpec = gameSpecForId(DARK_SHOGI_SPEC_ID);
 const darkCrazyhouseSpec = gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID);
 const kriegspielSpec = gameSpecForId(KRIEGSPIEL_SPEC_ID);
 const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
@@ -124,7 +118,6 @@ const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
   [REVEAL_CHESS_SPEC_ID]: 'reveal-chess',
-  [DARK_SHOGI_SPEC_ID]: 'dark-shogi',
   [DARK_CRAZYHOUSE_SPEC_ID]: 'dark-crazyhouse',
   [KRIEGSPIEL_SPEC_ID]: 'kriegspiel',
   [JUNGLE_SPEC_ID]: 'jungle',
@@ -242,16 +235,6 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: jungleFlipOn,
     onProfile: jungleFlipOn,
-  },
-  {
-    id: currentRatingVariantForSpec(DARK_SHOGI_SPEC_ID),
-    gameSpecId: darkShogiSpec.id,
-    apiParam: DARK_SHOGI_SPEC_ID,
-    label: darkShogiSpec.publicName,
-    miniId: 'dark-shogi',
-    enabled: false,
-    onLeaderboard: darkShogiOn,
-    onProfile: darkShogiOn,
   },
   {
     id: currentRatingVariantForSpec(DARK_CRAZYHOUSE_SPEC_ID),

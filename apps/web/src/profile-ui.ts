@@ -120,7 +120,6 @@ const GAME_VARIANT_LABEL_KEY: Record<string, I18nKey> = {
   banqi: 'variant.banqi.name',
   jieqi: 'variant.jieqi.name',
   'reveal-chess': 'variant.revealChess.name',
-  'dark-shogi': 'variant.darkShogi.name',
   'dark-crazyhouse': 'variant.darkCrazyhouse.name',
   kriegspiel: 'variant.kriegspiel.name',
 };

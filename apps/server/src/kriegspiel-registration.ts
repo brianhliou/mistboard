@@ -1,7 +1,7 @@
 /**
  * Kriegspiel registry entry. Owns the tenant's live-room map, the room-factory
  * binding, hydration, and watch channel metadata. No rematch/lobby yet
- * (deep-link PvP only, like the Dark Xiangqi / Dark Crossroads / Dark Shogi
+ * (deep-link PvP only, like the Dark Xiangqi
  * launches) — the lobby route answers kriegspiel_not_integrated while the flag
  * is on. Imported for side effects by variant-tenant/register-tenants.ts.
  */

@@ -1365,7 +1365,7 @@ export function watchPovToggleApplies(variant: string): boolean {
 
 // The color words for the two side-perspective buttons, from the variant's
 // family: the chess family reads White/Black; every other family (xiangqi,
-// jungle, shogi, …) reads Red vs its second-seat word — "Blue" for
+// jungle, …) reads Red vs its second-seat word — "Blue" for
 // the Jungle family, "Black" elsewhere (see variant-seat-label.ts). paneKind
 // 'white' is the first/red/white seat, 'black' the second.
 function watchPovSideLabels(variant: string): { first: string; second: string } {
@@ -1784,7 +1784,6 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
-  'dark-shogi': 'dark-shogi',
   'dark-crazyhouse': 'dark-crazyhouse',
   kriegspiel: 'kriegspiel',
   'reveal-chess': 'reveal-chess',

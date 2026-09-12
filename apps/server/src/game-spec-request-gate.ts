@@ -3,7 +3,6 @@ import {
   banqiEnabled,
   darkCrazyhouseEnabled,
   darkMiniXiangqiEnabled,
-  darkShogiEnabled,
   darkXiangqiEnabled,
   dropMiniXiangqiEnabled,
   duckXiangqiEnabled,
@@ -88,11 +87,6 @@ const GATED_GAME_SPECS = {
     enabled: darkXiangqiEnabled,
     disabledError: 'dark_xiangqi_disabled',
     notIntegratedError: 'dark_xiangqi_not_integrated',
-  },
-  'dark-shogi': {
-    enabled: darkShogiEnabled,
-    disabledError: 'dark_shogi_disabled',
-    notIntegratedError: 'dark_shogi_not_integrated',
   },
   jieqi: {
     enabled: jieqiEnabled,

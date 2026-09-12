@@ -3,7 +3,7 @@
 // centers (banqi, jungle). Unified 2026-07-02 from a per-renderer spread of
 // 75-90%; the placement convention only moves the anchor point, never the
 // proportion. Out of scope: chess-family sprite boards (inset is baked into
-// the sprite assets and chessground CSS) and shogi koma (traditional near-fill
+// the sprite assets and chessground CSS) and koma-style tiles (traditional near-fill
 // at 90%).
 // 2026-07-04: bumped 0.83 -> 0.90. The discs read too small with too much dead
 // space between them on the xiangqi + jungle boards; 0.90 tightens the gaps

@@ -225,12 +225,10 @@ describe('article public listing gates', () => {
     for (const slug of [
       'dark-crazyhouse',
       'dark-mini-xiangqi',
-      'dark-shogi',
       'drop-mini-xiangqi',
       'kriegspiel',
       'mini-xiangqi',
       'reveal-chess',
-      'shogi',
     ]) {
       for (const lang of [undefined, 'zh-Hans'] as const) {
         const page = buildArticlePage(slug, lang);
@@ -564,8 +562,6 @@ describe('rules variant sidebar', () => {
     expect(nav?.querySelector('a[href="/rules/chess"]')).toBeNull();
     // Draft960 is a pregame option that has not shipped as a playable mode.
     expect(nav?.querySelector('a[href="/rules/dark-draft960"]')).toBeNull();
-    expect(nav?.querySelector('a[href="/rules/shogi"]')).toBeNull();
-    expect(nav?.querySelector('a[href="/rules/dark-shogi"]')).toBeNull();
     expect(hrefs.indexOf('/rules/xiangqi')).toBeLessThan(hrefs.indexOf('/rules/banqi'));
     expect(hrefs.indexOf('/rules/banqi')).toBeLessThan(hrefs.indexOf('/rules/jieqi'));
     expect(hrefs.indexOf('/rules/jieqi')).toBeLessThan(hrefs.indexOf('/rules/fortress-xiangqi'));
@@ -616,32 +612,6 @@ describe('rules variant sidebar', () => {
     expect(tile?.querySelector('.rules-landing-tile-label')?.textContent).toBe('Fog Chess');
   });
 
-  it('does not expose Shogi markers on listed rule article surfaces', () => {
-    const landing = buildRulesIndex();
-    expect(
-      landing.querySelector('.rules-landing-tile[href="/rules/shogi"] svg[data-mini-id="shogi"]'),
-    ).toBeNull();
-    expect(
-      landing.querySelector(
-        '.rules-landing-tile[href="/rules/dark-shogi"] span[data-variant-marker-id="dark-shogi"]',
-      ),
-    ).toBeNull();
-
-    const shogi = buildArticlePage('shogi');
-    expect(
-      shogi.querySelector(
-        '.article-variant-sidebar a[href="/rules/shogi"] svg[data-mini-id="shogi"]',
-      ),
-    ).toBeNull();
-
-    const darkShogi = buildArticlePage('dark-shogi');
-    expect(
-      darkShogi.querySelector(
-        '.article-variant-sidebar a[aria-current="page"] span[data-variant-marker-id="dark-shogi"]',
-      ),
-    ).toBeNull();
-  });
-
   // One flat grid, mirroring the rail. The de-listing assertions are the point
   // of this test and outlive the layout: parked and de-listed slugs stay out of
   // the picker while remaining reachable by direct URL.
@@ -663,7 +633,7 @@ describe('rules variant sidebar', () => {
     }
     // Xiangqi pivot: the mini xiangqi trio and the chess reference article are
     // de-listed from the tile grid (still reachable by direct URL).
-    for (const href of ['/rules/drop-mini-xiangqi', '/rules/chess', '/rules/shogi']) {
+    for (const href of ['/rules/drop-mini-xiangqi', '/rules/chess', '/rules/shogi4']) {
       expect(grid?.querySelector(`a[href="${href}"]`), href).toBeNull();
     }
   });

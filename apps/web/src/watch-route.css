@@ -938,7 +938,7 @@
    move-list widget into the shared table's slot rather than the room's `.move-list`, so the
    room's rule never reaches it and the height is restated here. Scoped to
    .watch-game-table: the unscoped .review-move-list__rows height belongs to the review
-   pages and the shogi postgame. */
+   pages. */
 .watch-game-table .review-move-list__rows {
   max-height: 142px;
   overflow-y: auto;

@@ -6,8 +6,8 @@
 //
 //  - reveal tenants (hidden identities, e.g. jieqi): the AS-PLAYED masked board
 //    (reveal.hiddenKey), never the revealed-truth board;
-//  - per-color hidden info (fog, e.g. dark-xiangqi / dark-mini-xiangqi /
-//    dark-shogi): one side's own POV, chosen at random but STABLE per room and
+//  - per-color hidden info (fog, e.g. dark-xiangqi / dark-mini-xiangqi):
+//    one side's own POV, chosen at random but STABLE per room and
 //    oriented to that side;
 //  - perfect-info / symmetric (banqi, jungle, mini-open xiangqi): the truth board.
 //

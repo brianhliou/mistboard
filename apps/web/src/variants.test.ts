@@ -5,7 +5,6 @@ import {
   DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
-  DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -162,8 +161,6 @@ describe('web variant launch registry', () => {
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
     ]);
-    expect(enabledVariants.map((v) => v.gameSpecId)).not.toContain(DARK_SHOGI_SPEC_ID);
-    expect(variantMiniIdForGameSpec(DARK_SHOGI_SPEC_ID)).toBe('dark-shogi');
   });
 
   it('keeps mini-board fallback ids for soft-launch play-menu variants', () => {
@@ -197,7 +194,6 @@ describe('web variant launch registry', () => {
       [DARK_CHESS_SPEC_ID, 'fog'],
       [JUNGLE_SPEC_ID, 'jungle'],
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],
-      [DARK_SHOGI_SPEC_ID, 'dark-shogi'],
       [DARK_CRAZYHOUSE_SPEC_ID, 'dark-crazyhouse'],
       [KRIEGSPIEL_SPEC_ID, 'kriegspiel'],
       [REVEAL_CHESS_SPEC_ID, 'reveal-chess'],
@@ -239,33 +235,11 @@ describe('web variant launch registry', () => {
     vi.resetModules();
   });
 
-  it('keeps parked Fog Shogi off rating surfaces while other variants follow their flags', async () => {
-    vi.resetModules();
-    vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'true');
-    vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'true');
-    vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'true');
-    const flagged = await import('./variants.js');
-
-    for (const specId of [DARK_CRAZYHOUSE_SPEC_ID, KRIEGSPIEL_SPEC_ID]) {
-      expect(flagged.leaderboardVariants.map((v) => v.gameSpecId)).toContain(specId);
-      expect(flagged.profileRatingVariants.map((v) => v.gameSpecId)).toContain(specId);
-      expect(flagged.enabledVariants.map((v) => v.gameSpecId)).not.toContain(specId);
-    }
-    expect(flagged.leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(DARK_SHOGI_SPEC_ID);
-    expect(flagged.profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(
-      DARK_SHOGI_SPEC_ID,
-    );
-
-    vi.unstubAllEnvs();
-    vi.resetModules();
-  });
-
-  it('keeps Dark Shogi + Dark Crazyhouse + Kriegspiel off production rating surfaces when their flags are off', async () => {
+  it('keeps Dark Crazyhouse + Kriegspiel off production rating surfaces when their flags are off', async () => {
     vi.resetModules();
     vi.stubEnv('DEV', false);
     const prod = await import('./variants.js');
-    for (const specId of [DARK_SHOGI_SPEC_ID, DARK_CRAZYHOUSE_SPEC_ID, KRIEGSPIEL_SPEC_ID]) {
+    for (const specId of [DARK_CRAZYHOUSE_SPEC_ID, KRIEGSPIEL_SPEC_ID]) {
       expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).not.toContain(specId);
       expect(prod.profileRatingVariants.map((v) => v.gameSpecId)).not.toContain(specId);
     }

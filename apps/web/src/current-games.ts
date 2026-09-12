@@ -104,7 +104,6 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'fortress-xiangqi': 'fortress-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
-  'dark-shogi': 'dark-shogi',
   'dark-crazyhouse': 'dark-crazyhouse',
   kriegspiel: 'kriegspiel',
   'reveal-chess': 'reveal-chess',

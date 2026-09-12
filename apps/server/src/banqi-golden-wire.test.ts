@@ -1,6 +1,6 @@
 /**
  * Golden wire-parity suite for the Banqi (半棋, 8×4 Chinese Dark Chess) live-room
- * runtime — same harness as the DMX/Dark Shogi suites. Banqi is
+ * runtime — same harness as the DMX suite. Banqi is
  * SYMMETRIC-information: every occupied square is public (face-down or revealed),
  * a face-down tile carries NO ink/identity to either seat, and the ONE hidden
  * thing is the DEAL. So the masked board is identical for both seats and moves

@@ -3,10 +3,14 @@ import {
   type Color,
   KRIEGSPIEL_SPEC_ID,
   type KriegspielGameState,
-  opponentOf,
   type Square,
 } from '@mistboard/game';
 import { kriegspielEnabled } from './../feature-flags.js';
+
+function opponentOf(color: Color): Color {
+  return color === 'white' ? 'black' : 'white';
+}
+
 import { kriegspielRooms } from './../kriegspiel-registration.js';
 import type {
   KriegspielEvent,

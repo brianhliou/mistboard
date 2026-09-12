@@ -260,7 +260,7 @@ export const EN_CONTENT = {
   'faq.heading': 'FAQ',
   'faq.darkChessQuestion': 'What games are on Mistboard?',
   'faq.darkChessPrefix':
-    'Mistboard hosts original strategy games and serious variants across chess, xiangqi, shogi, Jungle, and related families. Some are open-information; some use fog or hidden identities. The ',
+    'Mistboard hosts original strategy games and serious variants across chess, xiangqi, Jungle, and related families. Some are open-information; some use fog or hidden identities. The ',
   'faq.rulesReference': 'rules reference',
   'faq.darkChessSuffix': ' lists the current games.',
   'faq.accountQuestion': 'Do I need an account?',

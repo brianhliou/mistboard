@@ -19,7 +19,6 @@ import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
 import type { JieqiReplaySpec } from '../jieqi-replay.js';
 import type { MiniXiangqiReplaySpec } from '../mini-xiangqi-replay.js';
-import type { ShogiReplaySpec } from '../shogi-replay.js';
 import type { XiangqiReplaySpec } from '../xiangqi-replay.js';
 
 export type ParagraphBlock = { kind: 'paragraph'; text: string };
@@ -196,14 +195,6 @@ export type DuckXiangqiReplayBlock = {
   caption?: string;
 };
 
-// Shogi analogue: a 9x9 board plus hands, stepped through a western shogi move
-// list and replayed through the real kernel.
-export type ShogiReplayBlock = {
-  kind: 'shogi-replay';
-  spec: ShogiReplaySpec;
-  caption?: string;
-};
-
 export type CtaButton = {
   label: string;
   href: string;
@@ -354,7 +345,6 @@ export type ArticleBlock =
   | DropMiniXiangqiReplayBlock
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
-  | ShogiReplayBlock
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock
@@ -474,7 +464,7 @@ type ArticleBase = {
   // Which appearance family this article's diagrams belong to. Drives the
   // Settings board/piece pickers while the article is open (xiangqi diagrams
   // react to the xiangqi pickers). Defaults to chess when unset.
-  boardFamily?: 'chess' | 'xiangqi' | 'shogi';
+  boardFamily?: 'chess' | 'xiangqi';
   sections: ArticleSection[];
 };
 

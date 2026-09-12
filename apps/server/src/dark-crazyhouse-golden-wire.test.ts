@@ -1,6 +1,6 @@
 /**
  * Golden wire-parity suite for the Dark Crazyhouse live-room runtime — same
- * harness as dark-shogi-golden-wire.test.ts. Pins the per-seat snapshot payloads
+ * harness as the other fog-tenant golden-wire suites. Pins the per-seat snapshot payloads
  * and redacted event-appended events for scripted games, plus fixture-independent
  * hidden-info invariants — including the crazyhouse one: a seat's view carries
  * only ITS OWN hand (reserves are private under fog).

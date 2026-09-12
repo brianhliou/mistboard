@@ -32,8 +32,6 @@ import {
   getLegalCrazyhouseMoves,
   getLegalDropMiniXiangqiDrops,
   getLegalDropMiniXiangqiMoves,
-  getLegalShogiDrops,
-  getLegalShogiMoves,
   getMiniXiangqiLegalMoves,
   getMiniXiangqiOpenLegalMoves,
   getRevealChessLegalMoves,
@@ -44,7 +42,6 @@ import {
 import { banqiTenant } from './banqi-tenant.js';
 import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
 import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
-import { darkShogiTenant } from './dark-shogi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { dropMiniXiangqiTenant } from './drop-mini-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
@@ -121,10 +118,6 @@ const VARIANTS: VariantSpec[] = [
     tenant: revealChessTenant,
     enumerate: (s) => getRevealChessLegalMoves(s),
     makeSetup: (rng) => createRevealChessDeal(rng),
-  },
-  {
-    tenant: darkShogiTenant,
-    enumerate: (s) => [...getLegalShogiMoves(s), ...getLegalShogiDrops(s)],
   },
   {
     tenant: darkCrazyhouseTenant,

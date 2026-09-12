@@ -1,8 +1,7 @@
 /**
  * Dark Crazyhouse (chess + drops under fog, hidden/dev-only) registry entry.
  * Owns the tenant's live-room map, the room-factory binding, hydration, and
- * watch channel metadata. No rematch/lobby yet (deep-link PvP only, like Dark
- * Shogi) — the lobby route answers dark_crazyhouse_not_integrated while the flag
+ * watch channel metadata. No rematch/lobby yet (deep-link PvP only) — the lobby route answers dark_crazyhouse_not_integrated while the flag
  * is on. Imported for side effects by variant-tenant/register-tenants.ts.
  */
 

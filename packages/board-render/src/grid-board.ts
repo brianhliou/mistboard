@@ -99,7 +99,7 @@ export type GridBoardLayers = {
   squareName?: (file: number, rank: number) => string;
   interactive?: boolean;
   // Draw the file/rank coordinate labels. Defaults to true; set false for clean
-  // teaching diagrams (e.g. the shogi rules page).
+  // teaching diagrams (rules pages).
   coords?: boolean;
 };
 

@@ -19,7 +19,6 @@ describe('landing announcements', () => {
 
   it('shows current launch announcements without old variant env flags', () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'false');
     vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'false');
     vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'false');
 
@@ -63,13 +62,12 @@ describe('landing announcements', () => {
     vi.stubEnv('DEV', false);
 
     expect(variantPublicSurfaceEnabled('reveal-chess')).toBe(false);
-    expect(variantPublicSurfaceEnabled('dark-shogi')).toBe(false);
     expect(variantPublicSurfaceEnabled('kriegspiel')).toBe(false);
 
     const landing = buildLandingAnnouncements();
     const news = buildNewsPage();
 
-    for (const hidden of ['Reveal Chess', 'Fog Shogi', 'Kriegspiel']) {
+    for (const hidden of ['Reveal Chess', 'Kriegspiel']) {
       expect(landing.textContent).not.toContain(hidden);
       expect(news.textContent).not.toContain(hidden);
     }

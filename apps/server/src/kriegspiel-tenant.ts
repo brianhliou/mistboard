@@ -1,6 +1,6 @@
 /**
  * Kriegspiel (ICC wild-16) VariantTenant — a hidden-information tenant on the
- * generic Layer-3 contract, built on the Dark Shogi / Dark Crossroads pattern.
+ * generic Layer-3 contract, on the fog-tenant pattern.
  *
  * Kriegspiel is stricter than fog: a player sees ONLY their own pieces and
  * never the opponent's move. What the opponent receives instead is the UMPIRE

@@ -1,7 +1,7 @@
 /**
  * Hidden-info / wire-safety suite for the Kriegspiel live-room runtime — the
  * leak-safety guard the architecture requires for any payload/replay/observer
- * change to a hidden tenant. Built on the Dark Shogi golden harness, but written
+ * change to a hidden tenant. Built on the fog-tenant golden harness, but written
  * as explicit property assertions (no byte-exact fixture): Kriegspiel's redaction
  * is the UMPIRE-ANNOUNCEMENT model, so the invariants — not a recorded blob —
  * are what matter.

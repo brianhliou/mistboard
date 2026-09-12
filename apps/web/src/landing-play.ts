@@ -7,7 +7,6 @@ import {
   DARK_CRAZYHOUSE_SPEC_ID,
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
-  DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -94,7 +93,6 @@ type LandingGameSpecId =
   | typeof DARK_MINI_XIANGQI_SPEC_ID
   | typeof DROP_MINI_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
-  | typeof DARK_SHOGI_SPEC_ID
   | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -271,8 +269,6 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
       return 'variant.jieqi.name';
     case BANQI_SPEC_ID:
       return 'variant.banqi.name';
-    case DARK_SHOGI_SPEC_ID:
-      return 'variant.darkShogi.name';
     case JUNGLE_SPEC_ID:
       return 'variant.jungle.name';
     case JUNGLE_FLIP_SPEC_ID:
@@ -304,7 +300,7 @@ function parseLandingGameSpecId(value: string): LandingGameSpecId {
 //
 // The rest stays keyed on the tenant's own acceptsDeepLink, which is
 // DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (DMX, Drop Mini
-// Xiangqi, Dark Shogi, Dark Crazyhouse) have no other door, and the soft-link
+// Xiangqi, Dark Crazyhouse) have no other door, and the soft-link
 // branch in the dialog exists to seat them. Collapsing the two lists makes
 // `npm run dev:lab` unable to reach any of them.
 /** Whether a play deep link can name this spec, i.e. whether the dialog will
@@ -1736,8 +1732,8 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // Same shape as presetIsExplicit above, for the same reason. An untouched side
   // follows the selected variant's declared first mover; without the flag the
   // default would persist as if it were a pick and then leak sideways, because
-  // the colors are variant-declared: xiangqi storing 'red' would coerce to Gote
-  // (SECOND) in Dark Shogi, whose first mover is black. A stored preference or
+  // the colors are variant-declared: xiangqi storing 'red' would coerce to the
+  // SECOND seat in a variant whose first mover is black. A stored preference or
   // the legacy global key counts as a past explicit choice.
   const storedColor = storedPreference.preferredColor ?? loadStoredColorPreference();
   let colorIsExplicit = storedColor !== undefined;
@@ -3329,20 +3325,6 @@ export function roomCreationRequestBody(
       preferredColor: setup.preferredColor,
     };
   }
-  if (setup.gameSpecId === DARK_SHOGI_SPEC_ID) {
-    // Dark Shogi is PvP-only and casual-only (no bot yet, rated not launched).
-    // Shogi colors are black (sente) / white (gote), passed straight through.
-    return {
-      mode: 'pvp',
-      gameSpecId,
-      timeControl: setup.timeControl,
-      rated: false,
-      preferredColor:
-        setup.preferredColor === 'black' || setup.preferredColor === 'white'
-          ? setup.preferredColor
-          : 'random',
-    };
-  }
   if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) {
     // Dark Crazyhouse is PvP-only and casual-only (no bot yet, rated not
     // launched); standard chess white/black, passed straight through.
@@ -3406,7 +3388,6 @@ export function roomCreationGameSpecId(
   | typeof DARK_MINI_XIANGQI_SPEC_ID
   | typeof DROP_MINI_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
-  | typeof DARK_SHOGI_SPEC_ID
   | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -3429,7 +3410,6 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === MINI_XIANGQI_SPEC_ID) return MINI_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DROP_MINI_XIANGQI_SPEC_ID) return DROP_MINI_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === REVEAL_CHESS_SPEC_ID) return REVEAL_CHESS_SPEC_ID;
-  if (setup.gameSpecId === DARK_SHOGI_SPEC_ID) return DARK_SHOGI_SPEC_ID;
   if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) return DARK_CRAZYHOUSE_SPEC_ID;
   if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) return KRIEGSPIEL_SPEC_ID;
   if (setup.gameSpecId === DARK_MINI_XIANGQI_SPEC_ID) return DARK_MINI_XIANGQI_SPEC_ID;

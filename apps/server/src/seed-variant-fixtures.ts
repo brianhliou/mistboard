@@ -20,7 +20,6 @@ import pg from 'pg';
 import { banqiTenant } from './banqi-tenant.js';
 import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
 import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
-import { darkShogiTenant } from './dark-shogi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { dropMiniXiangqiTenant } from './drop-mini-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
@@ -49,7 +48,6 @@ const TENANTS: any[] = [
   fortressXiangqiTenant,
   duckXiangqiTenant,
   revealChessTenant,
-  darkShogiTenant,
   darkCrazyhouseTenant,
   kriegspielTenant,
   darkXiangqiTenant,
