@@ -14,14 +14,15 @@ async function insertGame(input: {
   variant: string;
   mode: 'pvp' | 'pve' | 'eve' | 'imported';
   endedAt: string;
+  plyCount?: number;
   participants: ParticipantFixture[];
 }): Promise<void> {
   await getPool().query(
     `INSERT INTO games
        (room_id, variant, mode, status, result, termination, ply_count, started_at, ended_at)
-     VALUES ($1, $2, $3, 'completed', 'white-wins', 'checkmate', 20,
+     VALUES ($1, $2, $3, 'completed', 'white-wins', 'checkmate', $5,
              $4::timestamptz - interval '10 minutes', $4)`,
-    [input.roomId, input.variant, input.mode, input.endedAt],
+    [input.roomId, input.variant, input.mode, input.endedAt, input.plyCount ?? 20],
   );
   for (const participant of input.participants) {
     await getPool().query(
@@ -163,6 +164,19 @@ definePersistenceTests('admin metrics', () => {
         { color: 'black', subjectType: 'guest', subjectId: 'guest-7' },
       ],
     });
+    // A bot game the human left after the engine's opening move: completed
+    // by forfeit at ply 1, so neither a game nor a player anywhere.
+    await insertGame({
+      roomId: 'w3-short',
+      variant: 'jieqi',
+      mode: 'pve',
+      endedAt: '2026-07-21T16:00:00Z',
+      plyCount: 1,
+      participants: [
+        { color: 'white', subjectType: 'engine-version', subjectId: 'engine-1' },
+        { color: 'black', subjectType: 'guest', subjectId: 'guest-3' },
+      ],
+    });
     // A game after `now` is outside every window.
     await insertGame({
       roomId: 'future',
@@ -248,6 +262,8 @@ definePersistenceTests('admin metrics', () => {
     assert.equal(metrics.engines.manualGames, 0);
     assert.equal(metrics.engines.internalGames, 2);
     assert.equal(metrics.engines.internalGamesLast7d, 2);
+    assert.equal(metrics.engines.shortGames, 1);
+    assert.equal(metrics.engines.minCountedPlies, 2);
     assert.deepEqual(metrics.engines.eveByVariant, { 'dark-chess': 1 });
   });
 });

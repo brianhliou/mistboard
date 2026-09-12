@@ -10,7 +10,9 @@ import {
 definePersistenceTests('site stats', () => {
   test('getPublicSiteStats returns public-safe completed game aggregates', async () => {
     // Every date sits after STATS_COUNTED_FROM (2026-06-01); one game before
-    // it proves the launch date filter.
+    // it proves the launch date filter. Two completed games under
+    // MIN_COUNTED_PLIES (a bot's opening move then a forfeit; a resignation
+    // before anyone moved) prove the ply floor: neither is play.
     const now = new Date('2026-07-29T12:00:00.000Z');
     const weekOne = new Date('2026-06-08T12:00:00.000Z');
     const weekTwo = new Date('2026-07-14T12:00:00.000Z');
@@ -43,7 +45,11 @@ definePersistenceTests('site stats', () => {
            ('stats-internal', 'xiangqi', 'red-wins', 'resignation', 44, $3, $3,
             'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
            ('stats-pre-launch', 'dark-chess', 'white-wins', 'resignation', 12, $4, $4,
-            'white', 'black', NULL, NULL, 'pve', 'completed', 'public')`,
+            'white', 'black', NULL, NULL, 'pve', 'completed', 'public'),
+           ('stats-short-forfeit', 'duck-xiangqi', 'red-wins', 'abandonment', 1, $3, $3,
+            'engine', 'human', NULL, NULL, 'pve', 'completed', 'public'),
+           ('stats-short-resign', 'xiangqi', 'red-wins', 'resignation', 0, $3, $3,
+            'engine', 'human', NULL, NULL, 'pve', 'completed', 'public')`,
         [weekOne, weekTwo, recent, preLaunch],
       );
       // An operator account excluded from statistics: its completed public

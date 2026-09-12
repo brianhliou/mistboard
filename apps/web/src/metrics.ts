@@ -92,7 +92,9 @@ export type AdminMetrics = {
     internalGames: number;
     internalGamesLast7d: number;
     preLaunchGames?: number;
+    shortGames?: number;
     countedFrom?: string;
+    minCountedPlies?: number;
     eveByVariant: Record<string, number>;
   };
 };
@@ -487,7 +489,7 @@ function buildEnginesSection(admin: AdminMetrics, locale: Locale): HTMLElement {
   section.append(sectionHeading('Not counted above'));
   const note = document.createElement('p');
   note.className = 'metrics-section-note';
-  note.textContent = `Bot vs bot games are the engine ladder, imported and manual games are corpus, internal games have a seat held by an account excluded from statistics (the operator's own), and pre-launch games finished before ${admin.engines.countedFrom ?? 'the launch date'}, when the site had no visitors yet. None of them count as play anywhere above.`;
+  note.textContent = `Bot vs bot games are the engine ladder, imported and manual games are corpus, internal games have a seat held by an account excluded from statistics (the operator's own), pre-launch games finished before ${admin.engines.countedFrom ?? 'the launch date'}, when the site had no visitors yet, and short games ended before both sides had moved (fewer than ${admin.engines.minCountedPlies ?? 2} plies: opened a bot game and resigned or left). None of them count as play anywhere above.`;
   section.append(note);
 
   const grid = document.createElement('div');
@@ -504,6 +506,7 @@ function buildEnginesSection(admin: AdminMetrics, locale: Locale): HTMLElement {
       `+${formatStatNumber(admin.engines.internalGamesLast7d)} this week`,
     ),
     statCard('Pre-launch', admin.engines.preLaunchGames ?? 0),
+    statCard('Short', admin.engines.shortGames ?? 0),
     statCard('Imported', admin.engines.importedGames),
     statCard('Manual', admin.engines.manualGames),
   );

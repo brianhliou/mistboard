@@ -102,7 +102,9 @@ const adminMetrics = {
     internalGames: 512,
     internalGamesLast7d: 5,
     preLaunchGames: 197,
+    shortGames: 25,
     countedFrom: '2026-06-01',
+    minCountedPlies: 2,
     eveByVariant: { 'dark-chess': 600, xiangqi: 300 },
   },
 };
@@ -284,6 +286,9 @@ describe('metrics page', () => {
     expect(engines?.textContent).toContain('512');
     expect(engines?.textContent).toContain('Pre-launch');
     expect(engines?.textContent).toContain('197');
+    expect(engines?.textContent).toContain('Short');
+    expect(engines?.textContent).toContain('25');
+    expect(engines?.textContent).toContain('fewer than 2 plies');
     const engineVariants = [...(engines?.querySelectorAll('.metrics-breakdown-label') ?? [])].map(
       (n) => n.textContent,
     );
