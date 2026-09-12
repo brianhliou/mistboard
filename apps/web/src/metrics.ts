@@ -615,7 +615,6 @@ const VARIANT_NAME_KEYS: Record<string, I18nKey> = {
   'jungle-flip': 'variant.jungleFlip.name',
   'mini-xiangqi': 'variant.miniXiangqi.name',
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
-  'drop-mini-xiangqi': 'variant.dropMiniXiangqi.name',
 };
 
 function variantPublicName(variant: string, locale: Locale): string {

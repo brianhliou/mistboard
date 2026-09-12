@@ -4,7 +4,6 @@ import { banqiTenant } from './banqi-tenant.js';
 import { darkChessTenant } from './dark-chess-tenant.js';
 import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
-import { dropMiniXiangqiTenant } from './drop-mini-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
@@ -19,7 +18,6 @@ test('every engine tenant declares its terminal-context transport', () => {
       darkChess: darkChessTenant.engine?.terminalContext,
       darkMiniXiangqi: darkMiniXiangqiTenant.engine?.terminalContext,
       darkXiangqi: darkXiangqiTenant.engine?.terminalContext,
-      dropMiniXiangqi: dropMiniXiangqiTenant.engine?.terminalContext,
       fortressXiangqi: fortressXiangqiTenant.engine?.terminalContext,
       jieqi: jieqiTenant.engine?.terminalContext,
       jungleFlip: jungleFlipTenant.engine?.terminalContext,
@@ -32,7 +30,6 @@ test('every engine tenant declares its terminal-context transport', () => {
       darkChess: 'fog-observation',
       darkMiniXiangqi: 'fog-observation',
       darkXiangqi: 'fog-observation',
-      dropMiniXiangqi: 'full-history',
       fortressXiangqi: 'full-history',
       jieqi: 'repetition-window',
       jungleFlip: 'repetition-seed',

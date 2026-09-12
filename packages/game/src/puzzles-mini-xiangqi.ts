@@ -1,16 +1,4 @@
-import { DROP_MINI_XIANGQI_SPEC_ID, type GameSpecId, MINI_XIANGQI_SPEC_ID } from './game-specs.js';
-import {
-  applyDropMiniXiangqiMove,
-  DEFAULT_DROP_MINI_XIANGQI_RULES,
-  type DropMiniXiangqiGameState,
-  type DropMiniXiangqiHands,
-  type DropMiniXiangqiMove,
-  dropMiniXiangqiPositionRepetitionKey,
-  getLegalDropMiniXiangqiMoves,
-  isDropMiniXiangqiDropMove,
-  isDropMiniXiangqiGeneralInCheck,
-  isLegalDropMiniXiangqiMove,
-} from './variants-drop-mini-xiangqi.js';
+import { type GameSpecId, MINI_XIANGQI_SPEC_ID } from './game-specs.js';
 import {
   applyMiniXiangqiOpenMove,
   getMiniXiangqiLegalMoves,
@@ -27,11 +15,9 @@ import {
   oppositeMiniXiangqiColor,
 } from './variants-mini-xiangqi.js';
 
-export type MiniXiangqiPuzzleVariant =
-  | typeof MINI_XIANGQI_SPEC_ID
-  | typeof DROP_MINI_XIANGQI_SPEC_ID;
+export type MiniXiangqiPuzzleVariant = typeof MINI_XIANGQI_SPEC_ID;
 
-export type MiniXiangqiPuzzleTheme = 'back-rank' | 'checkmate' | 'chariot' | 'drop' | 'palace-net';
+export type MiniXiangqiPuzzleTheme = 'back-rank' | 'checkmate' | 'chariot' | 'palace-net';
 
 export type MiniXiangqiPuzzleGoal = {
   type: 'checkmate';
@@ -54,15 +40,9 @@ export type OpenMiniXiangqiPuzzle = MiniXiangqiPuzzleBase<
   MiniXiangqiMove
 >;
 
-export type DropMiniXiangqiPuzzle = MiniXiangqiPuzzleBase<
-  typeof DROP_MINI_XIANGQI_SPEC_ID,
-  DropMiniXiangqiGameState,
-  DropMiniXiangqiMove
->;
-
-export type MiniXiangqiPuzzle = OpenMiniXiangqiPuzzle | DropMiniXiangqiPuzzle;
-export type MiniXiangqiPuzzleMove = MiniXiangqiMove | DropMiniXiangqiMove;
-export type MiniXiangqiPuzzleState = MiniXiangqiGameState | DropMiniXiangqiGameState;
+export type MiniXiangqiPuzzle = OpenMiniXiangqiPuzzle;
+export type MiniXiangqiPuzzleMove = MiniXiangqiMove;
+export type MiniXiangqiPuzzleState = MiniXiangqiGameState;
 
 export type MiniXiangqiPuzzleValidationIssueCode =
   | 'ambiguous-immediate-general-capture'
@@ -308,221 +288,6 @@ function buildMiniXiangqiPuzzles(): readonly MiniXiangqiPuzzle[] {
       goal: { type: 'checkmate', winner: 'red' },
       themes: ['checkmate', 'palace-net'],
     },
-    {
-      id: 'drop-mini-xiangqi-red-chariot-drop-mate-1',
-      variant: DROP_MINI_XIANGQI_SPEC_ID,
-      title: 'Red chariot drop mate',
-      initial: dropMiniPuzzleState(
-        'drop-mini-xiangqi-red-chariot-drop-mate-1',
-        {
-          c1: { color: 'red', role: 'chariot' },
-          d1: { color: 'red', role: 'general' },
-          d3: { color: 'red', role: 'soldier' },
-          e1: { color: 'red', role: 'chariot' },
-          d7: { color: 'black', role: 'general' },
-        },
-        'red',
-        { red: { chariot: 1 }, black: {} },
-      ),
-      solution: [{ drop: 'chariot', to: 'd4' }],
-      goal: { type: 'checkmate', winner: 'red' },
-      themes: ['checkmate', 'chariot', 'drop', 'palace-net'],
-    },
-    {
-      id: 'drop-mini-xiangqi-black-soldier-drop-net-1',
-      variant: DROP_MINI_XIANGQI_SPEC_ID,
-      title: 'Black soldier drop net',
-      initial: dropMiniPuzzleState(
-        'drop-mini-xiangqi-black-soldier-drop-net-1',
-        {
-          a4: { color: 'black', role: 'cannon' },
-          b2: { color: 'red', role: 'soldier' },
-          b4: { color: 'black', role: 'soldier' },
-          b7: { color: 'black', role: 'chariot' },
-          c1: { color: 'black', role: 'chariot' },
-          c2: { color: 'red', role: 'soldier' },
-          c6: { color: 'black', role: 'soldier' },
-          c7: { color: 'black', role: 'horse' },
-          d2: { color: 'red', role: 'general' },
-          d5: { color: 'black', role: 'cannon' },
-          d7: { color: 'black', role: 'general' },
-          e1: { color: 'red', role: 'horse' },
-          e2: { color: 'red', role: 'soldier' },
-          e3: { color: 'red', role: 'soldier' },
-          e6: { color: 'red', role: 'cannon' },
-          e7: { color: 'black', role: 'horse' },
-          f4: { color: 'black', role: 'horse' },
-          f6: { color: 'black', role: 'cannon' },
-          g1: { color: 'red', role: 'chariot' },
-          g2: { color: 'red', role: 'soldier' },
-          g3: { color: 'black', role: 'chariot' },
-          g5: { color: 'red', role: 'soldier' },
-        },
-        'black',
-        { red: { soldier: 1 }, black: { soldier: 1 } },
-      ),
-      solution: [
-        { drop: 'soldier', to: 'd4' },
-        { from: 'e3', to: 'd3' },
-        { from: 'g3', to: 'd3' },
-      ],
-      goal: { type: 'checkmate', winner: 'black' },
-      themes: ['checkmate', 'drop', 'palace-net'],
-    },
-    {
-      id: 'drop-mini-xiangqi-red-cannon-clearance-mate-1',
-      variant: DROP_MINI_XIANGQI_SPEC_ID,
-      title: 'Red cannon clearance mate',
-      initial: dropMiniPuzzleState(
-        'drop-mini-xiangqi-red-cannon-clearance-mate-1',
-        {
-          a1: { color: 'red', role: 'chariot' },
-          a3: { color: 'red', role: 'soldier' },
-          a6: { color: 'black', role: 'soldier' },
-          a7: { color: 'black', role: 'chariot' },
-          b1: { color: 'red', role: 'cannon' },
-          b6: { color: 'black', role: 'soldier' },
-          c1: { color: 'red', role: 'horse' },
-          c2: { color: 'red', role: 'soldier' },
-          c6: { color: 'black', role: 'soldier' },
-          c7: { color: 'black', role: 'horse' },
-          d1: { color: 'red', role: 'general' },
-          d2: { color: 'red', role: 'soldier' },
-          d6: { color: 'black', role: 'soldier' },
-          d7: { color: 'black', role: 'general' },
-          e1: { color: 'red', role: 'horse' },
-          e6: { color: 'black', role: 'soldier' },
-          e7: { color: 'black', role: 'horse' },
-          f5: { color: 'red', role: 'cannon' },
-          f6: { color: 'black', role: 'soldier' },
-          f7: { color: 'black', role: 'cannon' },
-          g1: { color: 'red', role: 'chariot' },
-          g2: { color: 'red', role: 'soldier' },
-          g7: { color: 'black', role: 'chariot' },
-        },
-        'red',
-        { red: {}, black: { cannon: 1 } },
-      ),
-      solution: [
-        { from: 'f5', to: 'f7' },
-        { from: 'g7', to: 'f7' },
-        { drop: 'cannon', to: 'b7' },
-        { from: 'a7', to: 'b7' },
-        { from: 'b1', to: 'b7' },
-      ],
-      goal: { type: 'checkmate', winner: 'red' },
-      themes: ['checkmate', 'drop', 'palace-net'],
-    },
-    {
-      id: 'drop-mini-xiangqi-red-twin-cannon-mate-1',
-      variant: DROP_MINI_XIANGQI_SPEC_ID,
-      title: 'Red twin cannon mate',
-      initial: dropMiniPuzzleState(
-        'drop-mini-xiangqi-red-twin-cannon-mate-1',
-        {
-          a1: { color: 'red', role: 'chariot' },
-          a6: { color: 'black', role: 'soldier' },
-          a7: { color: 'black', role: 'chariot' },
-          b1: { color: 'red', role: 'cannon' },
-          b2: { color: 'red', role: 'soldier' },
-          b7: { color: 'black', role: 'cannon' },
-          c1: { color: 'red', role: 'horse' },
-          c2: { color: 'red', role: 'soldier' },
-          c6: { color: 'black', role: 'soldier' },
-          c7: { color: 'black', role: 'horse' },
-          d1: { color: 'red', role: 'general' },
-          d2: { color: 'red', role: 'soldier' },
-          d6: { color: 'black', role: 'soldier' },
-          d7: { color: 'black', role: 'general' },
-          e1: { color: 'red', role: 'horse' },
-          e2: { color: 'red', role: 'soldier' },
-          e6: { color: 'black', role: 'soldier' },
-          e7: { color: 'black', role: 'horse' },
-          f1: { color: 'red', role: 'cannon' },
-          f2: { color: 'black', role: 'cannon' },
-          g1: { color: 'red', role: 'chariot' },
-          g2: { color: 'red', role: 'soldier' },
-          g6: { color: 'black', role: 'soldier' },
-          g7: { color: 'black', role: 'chariot' },
-        },
-        'red',
-        { red: {}, black: {} },
-      ),
-      solution: [
-        { from: 'b1', to: 'b7' },
-        { from: 'a7', to: 'b7' },
-        { drop: 'cannon', to: 'f7' },
-        { from: 'g7', to: 'f7' },
-        { from: 'f1', to: 'f7' },
-      ],
-      goal: { type: 'checkmate', winner: 'red' },
-      themes: ['checkmate', 'drop', 'palace-net'],
-    },
-    {
-      id: 'drop-mini-xiangqi-black-cannon-ladder-mate-1',
-      variant: DROP_MINI_XIANGQI_SPEC_ID,
-      title: 'Black cannon ladder mate',
-      initial: dropMiniPuzzleState(
-        'drop-mini-xiangqi-black-cannon-ladder-mate-1',
-        {
-          a1: { color: 'red', role: 'chariot' },
-          a2: { color: 'black', role: 'cannon' },
-          a3: { color: 'red', role: 'soldier' },
-          a7: { color: 'black', role: 'chariot' },
-          b6: { color: 'black', role: 'soldier' },
-          b7: { color: 'black', role: 'cannon' },
-          c1: { color: 'red', role: 'horse' },
-          c2: { color: 'red', role: 'soldier' },
-          c6: { color: 'black', role: 'soldier' },
-          c7: { color: 'black', role: 'horse' },
-          d1: { color: 'red', role: 'general' },
-          d2: { color: 'red', role: 'soldier' },
-          d6: { color: 'black', role: 'soldier' },
-          d7: { color: 'black', role: 'general' },
-          e1: { color: 'red', role: 'horse' },
-          e2: { color: 'red', role: 'soldier' },
-          e6: { color: 'black', role: 'soldier' },
-          e7: { color: 'black', role: 'horse' },
-          f1: { color: 'red', role: 'cannon' },
-          f5: { color: 'black', role: 'soldier' },
-          f7: { color: 'black', role: 'cannon' },
-          g1: { color: 'red', role: 'chariot' },
-          g2: { color: 'red', role: 'soldier' },
-          g7: { color: 'black', role: 'chariot' },
-        },
-        'black',
-        { red: {}, black: {} },
-      ),
-      solution: [
-        { from: 'f7', to: 'f1' },
-        { from: 'g1', to: 'f1' },
-        { drop: 'cannon', to: 'b1' },
-        { from: 'a1', to: 'b1' },
-        { from: 'b7', to: 'b1' },
-      ],
-      goal: { type: 'checkmate', winner: 'black' },
-      themes: ['checkmate', 'drop', 'palace-net'],
-    },
-    {
-      id: 'drop-mini-xiangqi-black-chariot-drop-mate-1',
-      variant: DROP_MINI_XIANGQI_SPEC_ID,
-      title: 'Black chariot drop mate',
-      initial: dropMiniPuzzleState(
-        'drop-mini-xiangqi-black-chariot-drop-mate-1',
-        {
-          c7: { color: 'black', role: 'chariot' },
-          d7: { color: 'black', role: 'general' },
-          d5: { color: 'black', role: 'soldier' },
-          e7: { color: 'black', role: 'chariot' },
-          d1: { color: 'red', role: 'general' },
-        },
-        'black',
-        { red: {}, black: { chariot: 1 } },
-      ),
-      solution: [{ drop: 'chariot', to: 'd4' }],
-      goal: { type: 'checkmate', winner: 'black' },
-      themes: ['checkmate', 'chariot', 'drop', 'palace-net'],
-    },
   ];
 }
 
@@ -665,19 +430,10 @@ export function miniXiangqiPuzzleMoveEquals(
   left: MiniXiangqiPuzzleMove,
   right: MiniXiangqiPuzzleMove,
 ): boolean {
-  if (isDropMiniXiangqiDropMove(left) || isDropMiniXiangqiDropMove(right)) {
-    return (
-      isDropMiniXiangqiDropMove(left) &&
-      isDropMiniXiangqiDropMove(right) &&
-      left.drop === right.drop &&
-      left.to === right.to
-    );
-  }
   return left.from === right.from && left.to === right.to;
 }
 
 export function miniXiangqiPuzzleMoveLabel(move: MiniXiangqiPuzzleMove): string {
-  if (isDropMiniXiangqiDropMove(move)) return `${dropRoleLetter(move.drop)}@${move.to}`;
   return `${move.from}-${move.to}`;
 }
 
@@ -747,29 +503,17 @@ function applyPuzzleMove(
   state: MiniXiangqiPuzzleState,
   move: MiniXiangqiPuzzleMove,
 ): MiniXiangqiPuzzleState | null {
-  if (variant === MINI_XIANGQI_SPEC_ID) {
-    const miniState = state as MiniXiangqiGameState;
-    if (isDropMiniXiangqiDropMove(move) || !isMiniXiangqiOpenLegalMove(miniState, move)) {
-      return null;
-    }
-    return applyMiniXiangqiOpenMove(miniState, move);
-  }
-  if (variant === DROP_MINI_XIANGQI_SPEC_ID) {
-    const dropState = state as DropMiniXiangqiGameState;
-    if (!isLegalDropMiniXiangqiMove(dropState, move)) return null;
-    return applyDropMiniXiangqiMove(dropState, move);
-  }
-  return null;
+  if (variant !== MINI_XIANGQI_SPEC_ID) return null;
+  if (!isMiniXiangqiOpenLegalMove(state, move)) return null;
+  return applyMiniXiangqiOpenMove(state, move);
 }
 
 function legalPuzzleMoves(
   variant: MiniXiangqiPuzzleVariant,
   state: MiniXiangqiPuzzleState,
 ): MiniXiangqiPuzzleMove[] {
-  if (variant === MINI_XIANGQI_SPEC_ID) {
-    return getMiniXiangqiOpenLegalMoves(state as MiniXiangqiGameState);
-  }
-  return getLegalDropMiniXiangqiMoves(state as DropMiniXiangqiGameState);
+  if (variant !== MINI_XIANGQI_SPEC_ID) return [];
+  return getMiniXiangqiOpenLegalMoves(state);
 }
 
 function immediateGeneralCaptureMoves(state: MiniXiangqiPuzzleState): MiniXiangqiMove[] {
@@ -793,10 +537,8 @@ function isDefenderAlreadyInCheck(
   attacker: MiniXiangqiColor,
 ): boolean {
   const defender = attacker === 'red' ? 'black' : 'red';
-  if (variant === MINI_XIANGQI_SPEC_ID) {
-    return isMiniXiangqiGeneralInCheckOnBoard((state as MiniXiangqiGameState).board, defender);
-  }
-  return isDropMiniXiangqiGeneralInCheck(state as DropMiniXiangqiGameState, defender);
+  if (variant !== MINI_XIANGQI_SPEC_ID) return false;
+  return isMiniXiangqiGeneralInCheckOnBoard(state.board, defender);
 }
 
 function findGeneralSquare(
@@ -813,9 +555,7 @@ function moveShapeIssueCode(
   variant: MiniXiangqiPuzzleVariant,
   move: MiniXiangqiPuzzleMove,
 ): MiniXiangqiPuzzleValidationIssueCode {
-  return variant === MINI_XIANGQI_SPEC_ID && isDropMiniXiangqiDropMove(move)
-    ? 'wrong-move-shape'
-    : 'illegal-move';
+  return variant === MINI_XIANGQI_SPEC_ID && 'drop' in move ? 'wrong-move-shape' : 'illegal-move';
 }
 
 function validationError(
@@ -873,47 +613,4 @@ function miniPuzzleState(
     ...state,
     positionCounts: { [miniXiangqiPositionRepetitionKey(state)]: 1 },
   };
-}
-
-function dropMiniPuzzleState(
-  id: string,
-  board: MiniXiangqiBoard,
-  turn: MiniXiangqiColor,
-  hands: DropMiniXiangqiHands,
-): DropMiniXiangqiGameState {
-  const state: DropMiniXiangqiGameState = {
-    id,
-    board,
-    status: { type: 'playing', turn },
-    moveNumber: 1,
-    progressClock: 0,
-    rules: DEFAULT_DROP_MINI_XIANGQI_RULES,
-    hands: cloneHands(hands),
-    cooldownHands: { red: {}, black: {} },
-    positionCounts: {},
-  };
-  return {
-    ...state,
-    positionCounts: { [dropMiniXiangqiPositionRepetitionKey(state)]: 1 },
-  };
-}
-
-function cloneHands(hands: DropMiniXiangqiHands): DropMiniXiangqiHands {
-  return {
-    red: { ...hands.red },
-    black: { ...hands.black },
-  };
-}
-
-function dropRoleLetter(role: Exclude<DropMiniXiangqiMove, MiniXiangqiMove>['drop']): string {
-  switch (role) {
-    case 'chariot':
-      return 'R';
-    case 'horse':
-      return 'H';
-    case 'cannon':
-      return 'C';
-    case 'soldier':
-      return 'S';
-  }
 }

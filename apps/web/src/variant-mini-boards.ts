@@ -55,7 +55,6 @@ export type VariantMiniId =
   | 'dark-xiangqi'
   | 'mini-xiangqi'
   | 'dark-mini-xiangqi'
-  | 'drop-mini-xiangqi'
   | 'fortress-xiangqi'
   | 'duck-xiangqi'
   | 'jieqi'
@@ -441,53 +440,6 @@ function miniXiangqiCutBody(showFog: boolean, ctx: MiniCtx): string {
   return [xqBoard(g), halfPalace, pieces, fog].join('');
 }
 
-function dropMiniXiangqiBody(ctx: MiniCtx): string {
-  // Open mini-xiangqi plus a reserve tray: the board stays visible, while the
-  // bottom hand row signals the drop/crazyhouse axis without borrowing chess art.
-  const boardH = 72;
-  const trayY = OY + boardH;
-  const trayH = SIZE - boardH;
-  const marginX = 12;
-  const marginY = 9;
-  const left = OX + marginX;
-  const top = OY + marginY;
-  const gx = (SIZE - 2 * marginX) / 3;
-  const gy = (boardH - 2 * marginY) / 2;
-  const px = (c: number) => left + c * gx;
-  const py = (r: number) => top + r * gy;
-  const disc = Math.min(gx, gy) * 0.88;
-  const lines: string[] = [];
-  for (let r = 0; r < 3; r += 1) {
-    lines.push(`<line x1="${px(0)}" y1="${py(r)}" x2="${px(3)}" y2="${py(r)}"/>`);
-  }
-  for (let c = 0; c < 4; c += 1) {
-    lines.push(`<line x1="${px(c)}" y1="${py(0)}" x2="${px(c)}" y2="${py(2)}"/>`);
-  }
-  lines.push(`<line x1="${px(0)}" y1="${py(1)}" x2="${px(1)}" y2="${py(0)}"/>`);
-  lines.push(`<line x1="${px(0)}" y1="${py(1)}" x2="${px(1)}" y2="${py(2)}"/>`);
-  const boardPieces = [
-    xiangqiDisc(px(0), py(2), disc, 'red', 'general', ctx.xqSet),
-    xiangqiDisc(px(1), py(2), disc, 'red', 'horse', ctx.xqSet),
-    xiangqiDisc(px(2), py(2), disc, 'red', 'cannon', ctx.xqSet),
-    xiangqiDisc(px(1), py(1), disc, 'red', 'soldier', ctx.xqSet, true),
-    xiangqiDisc(px(3), py(0), disc, 'black', 'soldier', ctx.xqSet, true),
-  ];
-  const handDisc = trayH * 0.78;
-  const hand = [
-    xiangqiDisc(OX + SIZE * 0.24, trayY + trayH / 2, handDisc, 'red', 'chariot', ctx.xqSet),
-    xiangqiDisc(OX + SIZE * 0.5, trayY + trayH / 2, handDisc, 'red', 'horse', ctx.xqSet),
-    xiangqiDisc(OX + SIZE * 0.76, trayY + trayH / 2, handDisc, 'red', 'cannon', ctx.xqSet),
-  ];
-  return [
-    `<rect class="vm-xq-bg" x="${OX}" y="${OY}" width="${SIZE}" height="${boardH}"/>`,
-    `<g class="vm-xq-line" stroke-width="1" stroke-linecap="round">${lines.join('')}</g>`,
-    ...boardPieces,
-    `<rect class="vm-hand-tray" x="${OX}" y="${trayY}" width="${SIZE}" height="${trayH}"/>`,
-    `<line class="vm-hand-tray-edge" x1="${OX}" y1="${trayY}" x2="${OX + SIZE}" y2="${trayY}" stroke-width="1"/>`,
-    ...hand,
-  ].join('');
-}
-
 function fortressTreasureDisc(
   cx: number,
   cy: number,
@@ -783,7 +735,6 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   'dark-xiangqi': (ctx) => xiangqiCourtBody(true, ctx),
   'mini-xiangqi': (ctx) => miniXiangqiCutBody(false, ctx),
   'dark-mini-xiangqi': (ctx) => miniXiangqiCutBody(true, ctx),
-  'drop-mini-xiangqi': dropMiniXiangqiBody,
   'fortress-xiangqi': fortressXiangqiBody,
   'duck-xiangqi': duckXiangqiBody,
   jieqi: jieqiBody,
@@ -851,14 +802,6 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     shortLabel: 'DMX',
     accent: '#c2410c',
     blurb: 'A real-opening cut: general by its palace, cannon, and chariot.',
-    family: 'xiangqi',
-  },
-  {
-    id: 'drop-mini-xiangqi',
-    label: 'Drop Mini Xiangqi',
-    shortLabel: 'DRP',
-    accent: '#0f766e',
-    blurb: 'Mini Xiangqi with captured pieces waiting in a reserve tray.',
     family: 'xiangqi',
   },
   {

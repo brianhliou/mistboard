@@ -14,7 +14,6 @@ import type {
 } from '@mistboard/game';
 import type { ChessReplaySpec } from '../chess-replay.js';
 import type { PlayerTitle } from '../player-titles.js';
-import type { DropMiniXiangqiReplaySpec } from '../drop-mini-xiangqi-replay.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
 import type { JieqiReplaySpec } from '../jieqi-replay.js';
@@ -170,13 +169,6 @@ export type MiniXiangqiReplayBlock = {
 };
 
 // Drop Mini Xiangqi analogue: a 7x7 board plus both reserves, stepped through
-// board moves and drops against the real kernel.
-export type DropMiniXiangqiReplayBlock = {
-  kind: 'drop-mini-xiangqi-replay';
-  spec: DropMiniXiangqiReplaySpec;
-  caption?: string;
-};
-
 // Fortress Xiangqi analogue: the 7x8 corner-palace board plus both reserves,
 // stepped through board moves and drops against the real kernel.
 export type FortressXiangqiReplayBlock = {
@@ -342,7 +334,6 @@ export type ArticleBlock =
   | XiangqiReplayBlock
   | ChessReplayBlock
   | MiniXiangqiReplayBlock
-  | DropMiniXiangqiReplayBlock
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | JieqiReplayBlock

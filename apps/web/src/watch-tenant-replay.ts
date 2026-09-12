@@ -67,7 +67,7 @@ export type WatchPostgameMeta = {
   // the players' real clocks from the move timestamps (the generic tenant postgames
   // carry no dense clock series). Move events also carry the played `move` (from-to
   // coordinates), which the /watch move list reads variant-agnostically; drops
-  // (drop-mini-xiangqi) omit `from`.
+  // (fortress) omit `from`.
   timeline?: ReadonlyArray<{
     at: number;
     color?: string;
@@ -97,7 +97,7 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   // more than that (Duck Xiangqi: a piece move AND a duck placement) must pass
   // its own, or the TV list silently publishes half of each turn.
   moveLabel?(move: Record<string, unknown>): string;
-  // Drop/reserve variants (drop-mini-xiangqi, crazyhouse) where the hand IS
+  // Drop/reserve variants (fortress, crazyhouse) where the hand IS
   // the position: the compact showcase flanks the board with vertical reserve
   // strips (each side's hand) instead of top/bottom capture rows.
   sidedCaptures?: boolean;

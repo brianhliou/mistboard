@@ -4,7 +4,6 @@ import {
   darkCrazyhouseEnabled,
   darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
-  dropMiniXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
@@ -77,11 +76,6 @@ const GATED_GAME_SPECS = {
     enabled: darkMiniXiangqiEnabled,
     disabledError: 'dark_mini_xiangqi_disabled',
     notIntegratedError: 'dark_mini_xiangqi_not_integrated',
-  },
-  'drop-mini-xiangqi': {
-    enabled: dropMiniXiangqiEnabled,
-    disabledError: 'drop_mini_xiangqi_disabled',
-    notIntegratedError: 'drop_mini_xiangqi_not_integrated',
   },
   'dark-xiangqi': {
     enabled: darkXiangqiEnabled,

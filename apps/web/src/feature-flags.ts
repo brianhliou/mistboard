@@ -29,12 +29,6 @@ export function friendsOnlineEnabled(): boolean {
   return import.meta.env.DEV || import.meta.env.VITE_FRIENDS_ONLINE_ENABLED === 'true';
 }
 
-// Drop Mini Xiangqi (7x7 mini xiangqi with crazyhouse-style reserves) is a
-// parked lab surface.
-export function dropMiniXiangqiEnabled(): boolean {
-  return labEnabled() || import.meta.env.VITE_DROP_MINI_XIANGQI_ENABLED === 'true';
-}
-
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket). Launched: always on (the server
 // MISTBOARD_FORTRESS_XIANGQI_ENABLED flag remains the runtime kill-switch for
 // room creation).

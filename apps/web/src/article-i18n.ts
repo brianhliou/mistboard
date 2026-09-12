@@ -77,7 +77,6 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'shogi4',
   'mini-xiangqi',
   'dark-mini-xiangqi',
-  'drop-mini-xiangqi',
   'jieqi',
   'banqi',
   'mistybanqi',
@@ -515,43 +514,6 @@ const ZH_HANS: Record<string, string> = {
   'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.':
     'Mistboard 如何把隐藏信息留在服务器端：规范真实局面、按座位投影视野、私密实时房间，以及公开的赛后复盘。',
 
-  // -- Drop Mini Xiangqi (rules) --
-  'Drop Mini Xiangqi Rules': '投放迷你象棋规则',
-  'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.':
-    '带持子的迷你象棋：被吃的棋子进入你的手牌，然后可以打回棋盘，但不能打入对方九宫。',
-  'Drop Mini Xiangqi is [Mini Xiangqi](/rules/mini-xiangqi) with a reserve. The board is still 7 by 7, Red still moves first, and the general is protected by check and checkmate. The new rule is simple: captured pieces become yours, wait in your hand, and can return to the board as drops.':
-    '投放迷你象棋是在[迷你象棋](/rules/mini-xiangqi)里加入持子。棋盘仍是 7×7，红方仍先走，将帅仍受将军与将死规则保护。新规则很简单：你吃掉的棋子会变成你的棋子，进入手牌，并可以通过打入回到棋盘。',
-  'That reserve turns captures into future initiative. A quiet exchange can become a cannon drop, a soldier screen, or a new chariot lane several moves later.':
-    '持子会把吃子变成之后的主动权。一次安静的交换，几步之后可能变成一次炮的打入、一个兵的炮架，或一条新的车路。',
-  'Board and pieces': '棋盘与棋子',
-  'The starting position, board, and movement are Mini Xiangqi. There are no advisors or elephants, no river, and each general remains inside its 3 by 3 palace.':
-    '初始局面、棋盘与走法都沿用迷你象棋。没有士象、没有河界，每一方的将帅仍留在自己的 3×3 九宫内。',
-  'This is open information. Both players see the whole board and both reserves. Unlike Dark Mini Xiangqi, there is no fog and no hidden move record.':
-    '这是信息公开的游戏。双方都能看到整个棋盘和双方持子。不同于迷雾迷你象棋，这里没有迷雾，也没有隐藏的走子记录。',
-  'Captures and reserves': '吃子与持子',
-  'When you capture a non-general piece, it leaves the board, changes to your color, and enters your reserve. Generals are never captured and never enter a reserve: attacks on the general are checks, and a player in check must answer the threat.':
-    '当你吃掉一枚非将帅棋子时，它离开棋盘，改为你的颜色，并进入你的持子。将帅永远不会被吃进持子：攻击将帅是将军，被将军的一方必须应对威胁。',
-  'Instead of moving a board piece, you may drop one piece from your reserve onto an empty point outside the enemy palace. A dropped piece is live immediately: it can give check on the drop turn and moves normally on later turns.':
-    '你可以不移动棋盘上的棋子，而是从持子中选择一枚，打入到对方九宫以外的空交叉点。打入的棋子立即生效：它可以在打入当手将军，之后也按正常走法移动。',
-  'Drop restrictions': '打入限制',
-  "Drops must land on empty points, and they cannot land inside the opponent's 3 by 3 palace. The current Mistboard rules allow chariots, horses, cannons, and soldiers in reserve. Generals never enter reserve.":
-    '打入必须落在空交叉点，且不能落入对方的 3×3 九宫。目前 Mistboard 规则允许车、马、炮、兵进入持子。将帅永不进入持子。',
-  'A dropped soldier follows Mini Xiangqi soldier movement after it lands: one point forward or sideways, never backward. Drops may give check immediately, and a drop is illegal if it leaves your own general in check.':
-    '打入的兵落子后按迷你象棋的兵法移动：向前或横向走一个交叉点，永不后退。打入可以立即将军；如果一次打入会让自己的将帅仍处于被将军状态，则该打入不合法。',
-  'Check and endings': '将军与终局',
-  'Win by checkmate. As in Mini Xiangqi, a player with no legal move loses rather than drawing by stalemate. Games can also end by repetition, the no-capture rule, timeout, resignation, or abandonment.':
-    '以将死获胜。与迷你象棋一样，没有合法着法的一方判负，而不是因困毙作和。对局也可能因重复局面、无吃子规则、超时、认输或弃局而结束。',
-  'Step through this longer engine-lab game. It uses the current no-enemy-palace drop rule, shows both sides using reserves to defend and counterattack, and ends only after Black converts a late chariot attack.':
-    '逐步重演这盘较长的引擎实验对局。它采用当前的不得打入对方九宫规则，展示双方如何用持子防守和反击，最终由黑方在后期车攻中转化胜势。',
-  'FSF Red': 'FSF 红方',
-  'FSF Black': 'FSF 黑方',
-  'Fairy-Stockfish lab, no-enemy-palace drops': 'Fairy-Stockfish 实验局，不得打入对方九宫',
-  "Black checkmates with 57...g1-f1. The final chariot capture beats Red's last defensive drop on f1.":
-    '黑方以 57...g1-f1 将死。最后的车吃子击破了红方在 f1 的最后一次防守打入。',
-  'Drop Mini Xiangqi is open for alpha play on Mistboard. You can play the Fairy Stockfish bot, create an invite for a friend, or find an open game from the homepage play panel by choosing Drop Mini Xiangqi in the Variant row.':
-    '投放迷你象棋已在 Mistboard 开放 Alpha 对弈。你可以在首页对弈面板的“Variant”一行选择投放迷你象棋，对战 Fairy Stockfish 机器人、创建好友邀请，或寻找一局公开对局。',
-  'Play the bot': '对战机器人',
-  'Find opponent': '寻找对手',
   // -- Mini Xiangqi (rules) --
   'Mini Xiangqi rules, the 7×7 primer behind Dark Mini Xiangqi: no advisors or elephants, no river, sideways soldiers, and checkmate to win.':
     '迷你象棋规则，迷雾迷你象棋的 7×7 入门基础：没有士象、没有河界、兵可横走，以将死取胜。',
@@ -2770,43 +2732,6 @@ const ZH_HANT: Record<string, string> = {
   'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.':
     'Mistboard 如何把隱藏資訊留在伺服器端：標準真實局面、按座位投影視野、私密即時房間，以及公開的賽後複盤。',
 
-  // -- Drop Mini Xiangqi (rules) --
-  'Drop Mini Xiangqi Rules': '投放迷你象棋規則',
-  'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.':
-    '帶持子的迷你象棋：被吃的棋子進入你的手牌，之後可以打回棋盤，但不能打入對方九宮。',
-  'Drop Mini Xiangqi is [Mini Xiangqi](/rules/mini-xiangqi) with a reserve. The board is still 7 by 7, Red still moves first, and the general is protected by check and checkmate. The new rule is simple: captured pieces become yours, wait in your hand, and can return to the board as drops.':
-    '投放迷你象棋是在[迷你象棋](/rules/mini-xiangqi)裡加入持子。棋盤仍是 7×7，紅方仍先走，將帥仍受將軍與將死規則保護。新規則很簡單：你吃掉的棋子會變成你的棋子，進入手牌，並可以透過打入回到棋盤。',
-  'That reserve turns captures into future initiative. A quiet exchange can become a cannon drop, a soldier screen, or a new chariot lane several moves later.':
-    '持子會把吃子變成之後的主動權。一次安靜的交換，幾步之後可能變成一次炮的打入、一個兵的炮架，或一條新的車路。',
-  'Board and pieces': '棋盤與棋子',
-  'The starting position, board, and movement are Mini Xiangqi. There are no advisors or elephants, no river, and each general remains inside its 3 by 3 palace.':
-    '初始局面、棋盤與走法都沿用迷你象棋。沒有士象、沒有河界，每一方的將帥仍留在自己的 3×3 九宮內。',
-  'This is open information. Both players see the whole board and both reserves. Unlike Dark Mini Xiangqi, there is no fog and no hidden move record.':
-    '這是資訊公開的遊戲。雙方都能看到整個棋盤和雙方持子。不同於迷霧迷你象棋，這裡沒有迷霧，也沒有隱藏的走子紀錄。',
-  'Captures and reserves': '吃子與持子',
-  'When you capture a non-general piece, it leaves the board, changes to your color, and enters your reserve. Generals are never captured and never enter a reserve: attacks on the general are checks, and a player in check must answer the threat.':
-    '當你吃掉一枚非將帥棋子時，它離開棋盤，改為你的顏色，並進入你的持子。將帥永遠不會被吃進持子：攻擊將帥是將軍，被將軍的一方必須應對威脅。',
-  'Instead of moving a board piece, you may drop one piece from your reserve onto an empty point outside the enemy palace. A dropped piece is live immediately: it can give check on the drop turn and moves normally on later turns.':
-    '你可以不移動棋盤上的棋子，而是從持子中選一枚，打入到對方九宮以外的空交叉點。打入的棋子立即生效：它可以在打入當手將軍，之後也按正常走法移動。',
-  'Drop restrictions': '打入限制',
-  "Drops must land on empty points, and they cannot land inside the opponent's 3 by 3 palace. The current Mistboard rules allow chariots, horses, cannons, and soldiers in reserve. Generals never enter reserve.":
-    '打入必須落在空交叉點，且不能落入對方的 3×3 九宮。目前 Mistboard 規則允許車、馬、炮、兵進入持子。將帥永不進入持子。',
-  'A dropped soldier follows Mini Xiangqi soldier movement after it lands: one point forward or sideways, never backward. Drops may give check immediately, and a drop is illegal if it leaves your own general in check.':
-    '打入的兵落子後按迷你象棋的兵法移動：向前或橫向走一個交叉點，永不後退。打入可以立即將軍；如果一次打入會讓自己的將帥仍處於被將軍狀態，則該打入不合法。',
-  'Check and endings': '將軍與終局',
-  'Win by checkmate. As in Mini Xiangqi, a player with no legal move loses rather than drawing by stalemate. Games can also end by repetition, the no-capture rule, timeout, resignation, or abandonment.':
-    '以將死獲勝。與迷你象棋一樣，沒有合法著法的一方判負，而不是因困斃作和。對局也可能因重複局面、無吃子規則、超時、認輸或棄局而結束。',
-  'Step through this longer engine-lab game. It uses the current no-enemy-palace drop rule, shows both sides using reserves to defend and counterattack, and ends only after Black converts a late chariot attack.':
-    '逐步重演這盤較長的引擎實驗對局。它採用目前不得打入對方九宮的規則，展示雙方如何用持子防守和反擊，最終由黑方在後期車攻中轉化勝勢。',
-  'FSF Red': 'FSF 紅方',
-  'FSF Black': 'FSF 黑方',
-  'Fairy-Stockfish lab, no-enemy-palace drops': 'Fairy-Stockfish 實驗局，不得打入對方九宮',
-  "Black checkmates with 57...g1-f1. The final chariot capture beats Red's last defensive drop on f1.":
-    '黑方以 57...g1-f1 將死。最後的車吃子擊破了紅方在 f1 的最後一次防守打入。',
-  'Drop Mini Xiangqi is open for alpha play on Mistboard. You can play the Fairy Stockfish bot, create an invite for a friend, or find an open game from the homepage play panel by choosing Drop Mini Xiangqi in the Variant row.':
-    '投放迷你象棋已在 Mistboard 開放 Alpha 對弈。你可以在首頁對弈面板的「Variant」一行選擇投放迷你象棋，對戰 Fairy Stockfish 機器人、建立好友邀請，或尋找一局公開對局。',
-  'Play the bot': '對戰機器人',
-  'Find opponent': '尋找對手',
   // -- Mini Xiangqi (rules) --
   'Mini Xiangqi rules, the 7×7 primer behind Dark Mini Xiangqi: no advisors or elephants, no river, sideways soldiers, and checkmate to win.':
     '迷你象棋規則，迷霧迷你象棋的 7×7 入門基礎：沒有士象、沒有河界、兵可橫走，以將死取勝。',

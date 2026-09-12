@@ -1,12 +1,8 @@
 import {
-  DROP_MINI_XIANGQI_SPEC_ID,
-  type DropMiniXiangqiGameState,
-  type DropMiniXiangqiPlayerView,
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiColor,
   type FortressXiangqiGameState,
   type FortressXiangqiPlayerView,
-  getDropMiniXiangqiPlayerView,
   getFortressXiangqiPlayerView,
   getMiniXiangqiOpenPlayerView,
   getStandardXiangqiPlayerView,
@@ -16,9 +12,8 @@ import {
   XIANGQI_SPEC_ID,
   type XiangqiGameState,
 } from '@mistboard/game';
-import './drop-mini-xiangqi.css';
+import './drop-reserve.css';
 import './live-xiangqi.css';
-import { dropMiniXiangqiBoardView, fillDropMiniXiangqiReserve } from './drop-mini-xiangqi-view.js';
 import {
   installFortressXiangqiBoardStyles,
   renderFortressXiangqiBoardSvg,
@@ -39,7 +34,6 @@ const HOME_PUZZLE_PIECE_SIZE = 64;
 // this list together with renderHomePuzzleBox when the daily rotation grows.
 const HOME_PUZZLE_VARIANTS: readonly string[] = [
   MINI_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   // Fortress omitted: the daily rotation no longer selects it (demoted, awaiting
   // a re-mine). Re-add when the Fortress daily provider is restored.
   XIANGQI_SPEC_ID,
@@ -58,11 +52,7 @@ type HomeDailyPuzzle = {
       | { type: 'checkmate'; winner?: MiniXiangqiColor }
       | { type: 'winning-advantage'; winner?: MiniXiangqiColor; centipawns?: number };
     id: string;
-    initial:
-      | MiniXiangqiGameState
-      | DropMiniXiangqiGameState
-      | FortressXiangqiGameState
-      | XiangqiGameState;
+    initial: MiniXiangqiGameState | FortressXiangqiGameState | XiangqiGameState;
     sideToMove: MiniXiangqiColor | null;
     solutionPlyCount: number;
     themes: string[];
@@ -158,21 +148,6 @@ function renderHomePuzzleBox(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement {
     return box;
   }
 
-  if (puzzle.variant === DROP_MINI_XIANGQI_SPEC_ID) {
-    const dropView = getDropMiniXiangqiPlayerView(puzzle.initial as DropMiniXiangqiGameState, turn);
-    box.append(
-      homePuzzleBoardSurface(
-        renderMiniXiangqiBoardSvg(dropMiniXiangqiBoardView(dropView), turn, {
-          interactive: false,
-          pieceSize: HOME_PUZZLE_PIECE_SIZE,
-          showFog: false,
-        }),
-      ),
-      dropReserveColumn(dropView, turn),
-    );
-    return box;
-  }
-
   if (puzzle.variant === XIANGQI_SPEC_ID) {
     // The standard 9x10 board renders from the solver's perspective; no reserve.
     box.append(
@@ -227,23 +202,6 @@ function fortressReserveColumn(
   return col;
 }
 
-function dropReserveColumn(
-  dropView: DropMiniXiangqiPlayerView,
-  perspective: MiniXiangqiColor,
-): HTMLElement {
-  const col = document.createElement('div');
-  col.className = 'home-puzzle-reserve';
-  const opponent: MiniXiangqiColor = perspective === 'red' ? 'black' : 'red';
-  for (const owner of [opponent, perspective] as const) {
-    const hand = document.createElement('div');
-    hand.className = 'home-puzzle-hand';
-    hand.setAttribute('aria-label', t('homePuzzle.reserve', { color: colorLabel(owner) }));
-    fillDropMiniXiangqiReserve(hand, dropView, owner);
-    col.append(hand);
-  }
-  return col;
-}
-
 function homePuzzleBoardSurface(svg: string): HTMLElement {
   const board = document.createElement('div');
   board.className = 'home-puzzle-widget-board';
@@ -273,7 +231,6 @@ function isHomeDailyPuzzle(value: Partial<HomeDailyPuzzle>): value is HomeDailyP
 
 function variantLabel(variant: string): string {
   if (variant === FORTRESS_XIANGQI_SPEC_ID) return 'Fortress Xiangqi';
-  if (variant === DROP_MINI_XIANGQI_SPEC_ID) return 'Drop Mini Xiangqi';
   if (variant === MINI_XIANGQI_SPEC_ID) return 'Mini Xiangqi';
   if (variant === XIANGQI_SPEC_ID) return 'Xiangqi';
   return variant

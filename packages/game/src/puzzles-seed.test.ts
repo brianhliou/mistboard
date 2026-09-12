@@ -13,7 +13,6 @@ import assert from 'node:assert/strict';
 import { createHash } from 'node:crypto';
 import test from 'node:test';
 import {
-  DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_PUZZLES,
   FORTRESS_XIANGQI_SOURCE_GAMES,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -42,8 +41,8 @@ function sha256(value: unknown): string {
 // cut is byte-identical to what the server used to serve from TS modules.
 const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }> = {
   'mini-xiangqi': {
-    count: 36,
-    hash: 'bdde546680983360109b733b2d209887ac6304aad89332e0954d1e8fbf40be50',
+    count: 6,
+    hash: 'a1f646edbc01910429f3fec91835f6f2187db918f519f2b796fbd74d1d37c843',
   },
   'fortress-xiangqi': {
     count: 0,
@@ -60,7 +59,7 @@ const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }>
 };
 
 const REGISTRY_VARIANTS: Record<SeedPuzzleRegistry, ReadonlySet<string>> = {
-  'mini-xiangqi': new Set([MINI_XIANGQI_SPEC_ID, DROP_MINI_XIANGQI_SPEC_ID]),
+  'mini-xiangqi': new Set([MINI_XIANGQI_SPEC_ID]),
   'fortress-xiangqi': new Set([FORTRESS_XIANGQI_SPEC_ID]),
   jungle: new Set([JUNGLE_SPEC_ID]),
   xiangqi: new Set([XIANGQI_SPEC_ID]),

@@ -85,7 +85,7 @@ const REVEAL_STEP_MS = 650;
 // first is the default view). Standard Xiangqi (the mined real-game corpus,
 // the bet variant) is the only surfaced trainer. Fortress and Jungle stay in
 // the corpus + API for direct links, but are hidden from discovery for now.
-// Mini / Drop Mini follow the same deep-link-only policy. Add a spec id here
+// Mini Xiangqi follows the same deep-link-only policy. Add a spec id here
 // to unhide it.
 const PUZZLE_VARIANT_FILTERS: readonly PuzzleVariantFilter[] = [XIANGQI_SPEC_ID];
 

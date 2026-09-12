@@ -18,7 +18,7 @@ import {
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
-import './drop-mini-xiangqi.css';
+import './drop-reserve.css';
 import {
   installFortressXiangqiBoardStyles,
   renderFortressXiangqiBoardSvg,

@@ -36,7 +36,6 @@ const RETIRED_RULES_SLUGS = new Set([
   'dark-crazyhouse',
   'dark-draft960',
   'dark-mini-xiangqi',
-  'drop-mini-xiangqi',
   'kriegspiel',
   'mini-xiangqi',
   'reveal-chess',
@@ -181,12 +180,6 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Mini Xiangqi under Fog of War: each side sees only the points its pieces reach on the 7×7 board, and the general falls by capture.',
-  },
-  'drop-mini-xiangqi': {
-    title: 'Drop Mini Xiangqi Rules',
-    kind: 'rules',
-    description:
-      'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.',
   },
   'duck-xiangqi-build': {
     title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',

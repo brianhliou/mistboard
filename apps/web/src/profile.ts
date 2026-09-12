@@ -174,7 +174,6 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   fog: 'variant.darkChess.name',
   fog_draft960: 'variant.darkDraft960.name',
   dark_mini_xiangqi: 'variant.darkMiniXiangqi.name',
-  drop_mini_xiangqi: 'variant.dropMiniXiangqi.name',
   dark_xiangqi: 'variant.darkXiangqi.name',
   dark_crazyhouse: 'variant.darkCrazyhouse.name',
   kriegspiel: 'variant.kriegspiel.name',
@@ -2146,7 +2145,6 @@ const PUZZLE_VARIANT_LABELS: Record<string, string> = {
   'fortress-xiangqi': 'Fortress Xiangqi',
   jungle: 'Jungle',
   'mini-xiangqi': 'Mini Xiangqi',
-  'drop-mini-xiangqi': 'Drop Mini Xiangqi',
 };
 
 const HIDDEN_PROFILE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([

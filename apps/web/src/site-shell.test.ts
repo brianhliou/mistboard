@@ -8,7 +8,7 @@ describe('site shell nav', () => {
   });
 
   it('links to Puzzles from the primary nav and marks puzzle detail routes active', () => {
-    window.history.replaceState(null, '', '/puzzles/drop-mini-xiangqi-red-chariot-drop-mate-1');
+    window.history.replaceState(null, '', '/puzzles/mini-xiangqi-red-back-rank-net-1');
 
     const nav = buildNav();
     document.body.append(nav);

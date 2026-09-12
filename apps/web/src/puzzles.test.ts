@@ -1,7 +1,6 @@
 import {
   attemptMiniXiangqiPuzzleLine,
   attemptStandardXiangqiPuzzleLine,
-  DROP_MINI_XIANGQI_SPEC_ID,
   detectXiangqiPuzzleMotifs,
   getStandardXiangqiLegalMoves,
   MINI_XIANGQI_PUZZLES,
@@ -62,10 +61,12 @@ describe('puzzles route', () => {
     window.history.replaceState(null, '', '/');
   });
 
-  it('renders the Drop Mini puzzle board and public reserves from the API', async () => {
-    const mini = MINI_XIANGQI_PUZZLES[0]!;
+  it('renders a Mini Xiangqi puzzle board from the API', async () => {
+    const mini = MINI_XIANGQI_PUZZLES.find(
+      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
+    )!;
     const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -82,19 +83,17 @@ describe('puzzles route', () => {
     expect(root.querySelector('.site-section-heading')?.textContent).toBe('Puzzles');
     expect(root.querySelectorAll('.puzzle-list-item')).toHaveLength(0);
     // Only Xiangqi is surfaced, so there is no variant picker. A direct deep
-    // link into a Drop Mini puzzle still resolves and renders.
+    // link into a Mini Xiangqi puzzle still resolves and renders.
     expect(root.querySelector('[data-puzzle-variant]')).toBeNull();
-    expect(root.querySelector('.puzzles-sidebar')?.textContent).toContain('0 solved of 1');
+    expect(root.querySelector('.puzzles-sidebar')?.textContent).toContain('0 solved of 2');
     expect(root.querySelector('.puzzles-sidebar')?.textContent).not.toContain('All puzzles');
     expect(root.querySelector('.puzzles-sidebar')?.textContent).not.toContain(' / ');
     // The feedback title is deliberately generic (the puzzle title would spoil the piece).
     expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe('Red to move');
     expect(root.querySelector('.mini-xq-board')).not.toBeNull();
-    const boardShell = root.querySelector('.puzzle-board-shell');
-    expect(boardShell).not.toBeNull();
-    expect(boardShell?.querySelector('[aria-label="Top reserve"]')).not.toBeNull();
-    expect(boardShell?.querySelector('[aria-label="Bottom reserve"]')).not.toBeNull();
-    expect(boardShell?.querySelector('[data-drop="chariot"]')).not.toBeNull();
+    // Open information, no reserves: the board paints straight onto its host.
+    expect(root.querySelector('.puzzle-board-shell')).toBeNull();
+    expect(root.querySelector('[data-square="c4"]')).not.toBeNull();
     expect(root.querySelector('.puzzle-reserves')).toBeNull();
     // The goal (mate depth) is hidden while solving so it doesn't spoil the move.
     expect(root.textContent).not.toContain('Mate in 1');
@@ -180,7 +179,7 @@ describe('puzzles route', () => {
   it.skip('filters the sequential queue with the variant picker', async () => {
     const mini = MINI_XIANGQI_PUZZLES[0]!;
     const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const fetchSpy = vi.fn(async (input: RequestInfo | URL) => {
       const url = String(input);
@@ -197,7 +196,7 @@ describe('puzzles route', () => {
     expect(root.querySelector('.puzzle-detail h2')?.textContent).toBe(mini.title);
 
     const select = root.querySelector<HTMLSelectElement>('[data-puzzle-variant]')!;
-    select.value = DROP_MINI_XIANGQI_SPEC_ID;
+    select.value = 'mini-xiangqi';
     select.dispatchEvent(new Event('change', { bubbles: true }));
 
     await vi.waitFor(() =>
@@ -207,9 +206,9 @@ describe('puzzles route', () => {
     expect(window.location.pathname).toBe(`/puzzles/${drop.id}`);
   });
 
-  it('plays a Drop Mini puzzle move and advances to the solved state', async () => {
+  it('plays a Mini Xiangqi puzzle move and advances to the solved state', async () => {
     const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const qualityEvents: Array<{ sessionId: string; event: string; vote?: string | null }> = [];
     let attemptQualitySessionId: string | null = null;
@@ -226,13 +225,13 @@ describe('puzzles route', () => {
         const body = JSON.parse(String(init?.body));
         expect(body).toEqual(
           expect.objectContaining({
-            moves: [{ drop: 'chariot', to: 'd4' }],
+            moves: [{ from: 'c4', to: 'd4' }],
             rated: true,
           }),
         );
         attemptQualitySessionId = body.qualitySessionId;
         return json({
-          attempt: attemptMiniXiangqiPuzzleLine(drop, [{ drop: 'chariot', to: 'd4' }]),
+          attempt: attemptMiniXiangqiPuzzleLine(drop, [{ from: 'c4', to: 'd4' }]),
         });
       }
       return json({ error: 'not_found' }, 404);
@@ -241,7 +240,9 @@ describe('puzzles route', () => {
     const root = document.createElement('div');
 
     await mountPuzzles(root, drop.id);
-    root.querySelector<HTMLButtonElement>('[data-drop="chariot"]')?.click();
+    root
+      .querySelector<SVGGElement>('[data-square="c4"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     root
       .querySelector<SVGGElement>('[data-square="d4"]')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -335,10 +336,10 @@ describe('puzzles route', () => {
 
   it('marks solved puzzles and navigates to the next puzzle', async () => {
     const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-black-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
     )!;
     // Pin the queue order despite the rotation shuffle: mark the second puzzle
     // seen so the unseen (deep-linked) puzzle leads and "next" is deterministic.
@@ -354,12 +355,12 @@ describe('puzzles route', () => {
       if (url === `/api/puzzles/${redDrop.id}/attempt`) {
         expect(JSON.parse(String(init?.body))).toEqual(
           expect.objectContaining({
-            moves: [{ drop: 'chariot', to: 'd4' }],
+            moves: [{ from: 'c4', to: 'd4' }],
             rated: true,
           }),
         );
         return json({
-          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ drop: 'chariot', to: 'd4' }]),
+          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'd4' }]),
         });
       }
       return json({ error: 'not_found' }, 404);
@@ -370,7 +371,9 @@ describe('puzzles route', () => {
     await mountPuzzles(root, redDrop.id);
     expect(root.querySelector<HTMLButtonElement>('[data-puzzle-next]')).toBeNull();
     expect(root.querySelector<HTMLButtonElement>('[data-puzzle-replay-next]')?.disabled).toBe(true);
-    root.querySelector<HTMLButtonElement>('[data-drop="chariot"]')?.click();
+    root
+      .querySelector<SVGGElement>('[data-square="c4"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     root
       .querySelector<SVGGElement>('[data-square="d4"]')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -397,10 +400,10 @@ describe('puzzles route', () => {
 
   it('shows a focused next-puzzle button when a winning-advantage line completes mid-game', async () => {
     const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-black-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
     )!;
     stubWindowLocalStorage(
       memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [blackDrop.id]: 1 }) }),
@@ -409,7 +412,7 @@ describe('puzzles route', () => {
     // tactics) complete while the game is still in progress: the server reports
     // complete: true with a state whose status is still 'playing'. Reshape the
     // real attempt to that contract so the solved CTA is exercised against it.
-    const solvedAttempt = attemptMiniXiangqiPuzzleLine(redDrop, [{ drop: 'chariot', to: 'd4' }]);
+    const solvedAttempt = attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'd4' }]);
     if (!solvedAttempt.ok) throw new Error('expected a solved attempt fixture');
     const midGameAttempt = {
       ...solvedAttempt,
@@ -434,7 +437,9 @@ describe('puzzles route', () => {
     document.body.append(root);
 
     await mountPuzzles(root, redDrop.id);
-    root.querySelector<HTMLButtonElement>('[data-drop="chariot"]')?.click();
+    root
+      .querySelector<SVGGElement>('[data-square="c4"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     root
       .querySelector<SVGGElement>('[data-square="d4"]')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -457,10 +462,10 @@ describe('puzzles route', () => {
 
   it('wraps to the start of the queue when solving the last puzzle', async () => {
     const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-black-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
     )!;
     // Mark the deep-linked puzzle seen so it sorts LAST in the rotated queue:
     // solving it exercises the end-of-queue wrap instead of a disabled button.
@@ -475,7 +480,7 @@ describe('puzzles route', () => {
       if (url === `/api/puzzles/${blackDrop.id}`) return json({ puzzle: publicDetail(blackDrop) });
       if (url === `/api/puzzles/${redDrop.id}/attempt`)
         return json({
-          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ drop: 'chariot', to: 'd4' }]),
+          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'd4' }]),
         });
       return json({ error: 'not_found' }, 404);
     });
@@ -483,7 +488,9 @@ describe('puzzles route', () => {
     const root = document.createElement('div');
 
     await mountPuzzles(root, redDrop.id);
-    root.querySelector<HTMLButtonElement>('[data-drop="chariot"]')?.click();
+    root
+      .querySelector<SVGGElement>('[data-square="c4"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     root
       .querySelector<SVGGElement>('[data-square="d4"]')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -503,10 +510,10 @@ describe('puzzles route', () => {
 
   it('offers a skip to the next puzzle after a failed attempt', async () => {
     const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-black-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
     )!;
     stubWindowLocalStorage(
       memoryStorage({ 'mistboard:puzzles:seen': JSON.stringify({ [blackDrop.id]: 1 }) }),
@@ -524,8 +531,8 @@ describe('puzzles route', () => {
       }
       if (url === `/api/puzzles/${redDrop.id}/attempt`)
         return json({
-          // e4 is a legal drop square but not the solution: incorrect-move.
-          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ drop: 'chariot', to: 'e4' }]),
+          // c5 is a legal chariot move but not the solution: incorrect-move.
+          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'c5' }]),
         });
       return json({ error: 'not_found' }, 404);
     });
@@ -534,7 +541,9 @@ describe('puzzles route', () => {
 
     await mountPuzzles(root, redDrop.id);
     expect(root.querySelector('[data-puzzle-skip]')).toBeNull();
-    root.querySelector<HTMLButtonElement>('[data-drop="chariot"]')?.click();
+    root
+      .querySelector<SVGGElement>('[data-square="c4"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     root
       .querySelector<SVGGElement>('[data-square="e4"]')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -556,10 +565,10 @@ describe('puzzles route', () => {
 
   it('auto-advances after solving when the immediate next toggle is enabled', async () => {
     const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-black-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
     )!;
     // Pin the queue order (see the navigation test): the seen puzzle sorts after
     // the unseen deep-linked one, so auto-advance lands on it deterministically.
@@ -576,12 +585,12 @@ describe('puzzles route', () => {
       if (url === `/api/puzzles/${redDrop.id}/attempt`) {
         expect(JSON.parse(String(init?.body))).toEqual(
           expect.objectContaining({
-            moves: [{ drop: 'chariot', to: 'd4' }],
+            moves: [{ from: 'c4', to: 'd4' }],
             rated: true,
           }),
         );
         return json({
-          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ drop: 'chariot', to: 'd4' }]),
+          attempt: attemptMiniXiangqiPuzzleLine(redDrop, [{ from: 'c4', to: 'd4' }]),
         });
       }
       return json({ error: 'not_found' }, 404);
@@ -596,7 +605,9 @@ describe('puzzles route', () => {
     autoNext.dispatchEvent(new Event('change', { bubbles: true }));
     expect(storage.getItem('mistboard:puzzles:auto-next')).toBe('true');
 
-    root.querySelector<HTMLButtonElement>('[data-drop="chariot"]')?.click();
+    root
+      .querySelector<SVGGElement>('[data-square="c4"]')
+      ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
     root
       .querySelector<SVGGElement>('[data-square="d4"]')
       ?.dispatchEvent(new MouseEvent('click', { bubbles: true }));
@@ -609,10 +620,10 @@ describe('puzzles route', () => {
 
   it('leads with an unseen puzzle over a recently seen one and records visits', async () => {
     const redDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     const blackDrop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-black-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-black-back-rank-net-1',
     )!;
     // The black puzzle was seen recently; the red one is unseen. Rotation must
     // lead with the unseen puzzle even though the server lists the seen one first.
@@ -643,7 +654,7 @@ describe('puzzles route', () => {
 
   it('restores solved markers from local storage', async () => {
     const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
+      (puzzle) => puzzle.id === 'mini-xiangqi-red-back-rank-net-1',
     )!;
     vi.stubGlobal('localStorage', {
       getItem: vi.fn((key: string) =>
@@ -666,48 +677,6 @@ describe('puzzles route', () => {
 
     expect(root.querySelector('.puzzle-current-card')?.textContent).toContain('Solved');
     expect(root.querySelector('.puzzles-sidebar')?.textContent).not.toContain(' / ');
-  });
-
-  it('drags a Drop Mini reserve piece onto the board to solve', async () => {
-    const drop = MINI_XIANGQI_PUZZLES.find(
-      (puzzle) => puzzle.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
-    )!;
-    const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
-      const url = String(input);
-      if (url === '/api/puzzles') return json({ puzzles: [publicSummary(drop)] });
-      if (url === `/api/puzzles/${drop.id}`) return json({ puzzle: publicDetail(drop) });
-      if (url === `/api/puzzles/${drop.id}/attempt`) {
-        expect(JSON.parse(String(init?.body))).toEqual(
-          expect.objectContaining({
-            moves: [{ drop: 'chariot', to: 'd4' }],
-            rated: true,
-          }),
-        );
-        return json({
-          attempt: attemptMiniXiangqiPuzzleLine(drop, [{ drop: 'chariot', to: 'd4' }]),
-        });
-      }
-      return json({ error: 'not_found' }, 404);
-    });
-    vi.stubGlobal('fetch', fetchSpy);
-    const root = document.createElement('div');
-    document.body.append(root);
-
-    await mountPuzzles(root, drop.id);
-    vi.spyOn(document, 'elementFromPoint').mockImplementation(
-      () => root.querySelector('[data-square="d4"]') as Element,
-    );
-    root
-      .querySelector<HTMLButtonElement>('[data-drop="chariot"]')
-      ?.dispatchEvent(pointerEvent('pointerdown', 10, 10));
-    document.dispatchEvent(pointerEvent('pointermove', 24, 24));
-    document.dispatchEvent(pointerEvent('pointerup', 24, 24));
-
-    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
-    expect(fetchSpy).toHaveBeenCalledWith(
-      `/api/puzzles/${drop.id}/attempt`,
-      expect.objectContaining({ method: 'POST' }),
-    );
   });
 });
 

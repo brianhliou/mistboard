@@ -114,7 +114,7 @@ test('puzzle list filters by variant, and a retired variant filters to nothing',
   const xiangqiBody = JSON.parse(xiangqi.body) as { puzzles: Array<{ variant: string }> };
   assert.equal(xiangqiBody.puzzles.length, XIANGQI_PUZZLES.length);
 
-  for (const variant of ['mini-xiangqi', 'drop-mini-xiangqi']) {
+  for (const variant of ['mini-xiangqi']) {
     const response = await route(`/api/puzzles?variant=${variant}`);
     assert.equal(response.status, 200, variant);
     const body = JSON.parse(response.body) as { puzzles: unknown[] };
@@ -299,20 +299,20 @@ test('daily puzzle route rejects unsupported slots', async () => {
 });
 
 test('puzzle detail returns the starting position but not the solution', async () => {
-  const response = await route('/api/puzzles/drop-mini-xiangqi-red-chariot-drop-mate-1');
+  const response = await route('/api/puzzles/mini-xiangqi-red-back-rank-net-1');
   const body = JSON.parse(response.body) as {
     puzzle: {
       id: string;
-      initial: { hands: { red: { chariot?: number } } };
+      initial: { board: Record<string, { color: string; role: string }> };
       solution?: unknown;
       sideToMove: string;
     };
   };
 
   assert.equal(response.status, 200);
-  assert.equal(body.puzzle.id, 'drop-mini-xiangqi-red-chariot-drop-mate-1');
+  assert.equal(body.puzzle.id, 'mini-xiangqi-red-back-rank-net-1');
   assert.equal(body.puzzle.sideToMove, 'red');
-  assert.deepEqual(body.puzzle.initial.hands.red, { chariot: 1 });
+  assert.deepEqual(body.puzzle.initial.board.c4, { color: 'red', role: 'chariot' });
   assert.equal(body.puzzle.solution, undefined);
 });
 
@@ -324,11 +324,9 @@ test('puzzle detail 404s unknown puzzle ids', async () => {
 });
 
 test('puzzle attempts advance correct moves without exposing the solution list', async () => {
-  const response = await route(
-    '/api/puzzles/drop-mini-xiangqi-red-chariot-drop-mate-1/attempt',
-    'POST',
-    { moves: [{ drop: 'chariot', to: 'd4' }] },
-  );
+  const response = await route('/api/puzzles/mini-xiangqi-red-back-rank-net-1/attempt', 'POST', {
+    moves: [{ from: 'c4', to: 'd4' }],
+  });
   const body = JSON.parse(response.body) as {
     attempt: {
       ok: boolean;

@@ -19,7 +19,6 @@ import {
   DARK_CRAZYHOUSE_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
@@ -41,7 +40,6 @@ import {
   darkCrazyhouseEnabled,
   darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
-  dropMiniXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
@@ -723,67 +721,6 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         },
       ],
       defaultEngineId: 'python-dmx-v1.0',
-    },
-  },
-  {
-    // Drop Mini Xiangqi (open 7x7 mini xiangqi with crazyhouse-style reserves).
-    // Self-contained live client on the socket-client + chrome stack, using the
-    // mini-xiangqi SVG board and reserve strips. PvE uses in-process heuristic
-    // launch tiers; FSF remains a lab viewer until the variant adapter is real.
-    gameSpecId: DROP_MINI_XIANGQI_SPEC_ID,
-    roomIdPrefix: 'dmxqd_',
-    enabled: alwaysEnabled,
-    pageTitle: 'Drop Mini Xiangqi',
-    gameRouteBase: '/drop-mini-xiangqi/game',
-    mountPostgame: (root, roomId) =>
-      import('../drop-mini-xiangqi-postgame.js').then(({ mountDropMiniXiangqiPostgame }) =>
-        mountDropMiniXiangqiPostgame(root, roomId),
-      ),
-    reviewRouteBase: '/drop-mini-xiangqi/game',
-    loadLiveRoomClient: () =>
-      import('../live-drop-mini-xiangqi.js').then(
-        ({ bootstrapDropMiniXiangqiLiveRoom }) =>
-          () =>
-            bootstrapDropMiniXiangqiLiveRoom(),
-      ),
-    watch: {
-      family: 'xiangqi',
-      mountReplay: (root, roomId, options) =>
-        import('../watch-drop-mini-xiangqi-replay.js').then(({ mountDropMiniXiangqiWatchReplay }) =>
-          mountDropMiniXiangqiWatchReplay(root, roomId, options),
-        ),
-    },
-    landing: {
-      capabilities: {
-        ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: true,
-        supportsStartFormat: false,
-        supportsTimeControl: true,
-      },
-      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
-      offerInMenu: hiddenFromMenu,
-      acceptsDeepLink: dropMiniXiangqiEnabled,
-      engineOptions: [
-        {
-          id: 'fairy-stockfish-drop-mini-xiangqi-very-strong',
-          name: 'Fairy Stockfish - Strongest',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-drop-mini-xiangqi-strong',
-          name: 'Fairy Stockfish - Strong',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-        {
-          id: 'fairy-stockfish-drop-mini-xiangqi-amateur',
-          name: 'Fairy Stockfish - Amateur',
-          familyName: 'Fairy Stockfish',
-          kind: 'container',
-        },
-      ],
-      defaultEngineId: 'fairy-stockfish-drop-mini-xiangqi-strong',
     },
   },
   {

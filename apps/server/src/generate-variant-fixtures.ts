@@ -30,8 +30,6 @@ import {
   getKriegspielOfferedMoves,
   getLegalCrazyhouseDrops,
   getLegalCrazyhouseMoves,
-  getLegalDropMiniXiangqiDrops,
-  getLegalDropMiniXiangqiMoves,
   getMiniXiangqiLegalMoves,
   getMiniXiangqiOpenLegalMoves,
   getRevealChessLegalMoves,
@@ -43,7 +41,6 @@ import { banqiTenant } from './banqi-tenant.js';
 import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
 import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
-import { dropMiniXiangqiTenant } from './drop-mini-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
@@ -100,13 +97,6 @@ const VARIANTS: VariantSpec[] = [
   },
   { tenant: miniXiangqiTenant, enumerate: (s) => getMiniXiangqiOpenLegalMoves(s) },
   { tenant: darkMiniXiangqiTenant, enumerate: (s) => getMiniXiangqiLegalMoves(s) },
-  {
-    tenant: dropMiniXiangqiTenant,
-    enumerate: (s) => [
-      ...getLegalDropMiniXiangqiMoves(s),
-      ...getLegalDropMiniXiangqiDrops(s, s.status.turn),
-    ],
-  },
   { tenant: fortressXiangqiTenant, enumerate: (s) => getFortressXiangqiLegalMoves(s) },
   // A duck turn is the cross product of ~44 piece moves and ~80 duck squares, so
   // the enumerator returns thousands of turns per ply. That is the shape the

@@ -21,11 +21,8 @@ export function setLiveLayoutGameSpec(target: HTMLElement, gameSpecId: string | 
   );
   target.classList.toggle(
     'live-route--mini-xiangqi',
-    gameSpecId === 'mini-xiangqi' ||
-      gameSpecId === 'dark-mini-xiangqi' ||
-      gameSpecId === 'drop-mini-xiangqi',
+    gameSpecId === 'mini-xiangqi' || gameSpecId === 'dark-mini-xiangqi',
   );
-  target.classList.toggle('live-route--drop-mini-xiangqi', gameSpecId === 'drop-mini-xiangqi');
   target.classList.toggle('live-route--duck-xiangqi', gameSpecId === 'duck-xiangqi');
   target.classList.toggle('live-route--fortress-xiangqi', gameSpecId === 'fortress-xiangqi');
   target.classList.toggle('live-route--jieqi', gameSpecId === 'jieqi');

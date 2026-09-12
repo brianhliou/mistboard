@@ -21,7 +21,6 @@ test('registry: retired specs never register, by prefix or by id', () => {
   // floor, so no route, prefix or watch channel exists for it.
   for (const [prefix, specId] of [
     ['dmxq_some-room', 'dark-mini-xiangqi'],
-    ['dmxqd_some-room', 'drop-mini-xiangqi'],
     ['mxq_some-room', 'mini-xiangqi'],
     ['dczh_some-room', 'dark-crazyhouse'],
     ['kr_some-room', 'kriegspiel'],

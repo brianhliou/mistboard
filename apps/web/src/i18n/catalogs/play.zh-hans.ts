@@ -107,7 +107,6 @@ export const ZH_HANS_PLAY = {
   'setup.engineSeatsActive': '所有机器人都在忙。正在等待下一个。',
   'variant.banqi.name': '暗棋',
   'variant.miniXiangqi.name': '迷你象棋',
-  'variant.dropMiniXiangqi.name': '投放迷你象棋',
   'variant.darkMiniXiangqi.name': '迷雾迷你象棋',
   'variant.xiangqi.name': '象棋',
   'variant.darkXiangqi.name': '迷雾象棋',

@@ -80,7 +80,6 @@
 .jieqi-review .review-eval-bar,
 .banqi-review .review-eval-bar,
 .mini-xiangqi-review .review-eval-bar,
-.drop-mini-xiangqi-review .review-eval-bar,
 .dark-mini-xiangqi-review .review-eval-bar {
   background: color-mix(in srgb, #34302e 85%, var(--site-panel, #fff));
 }
@@ -90,7 +89,6 @@
 .jieqi-review .review-eval-bar__fill,
 .banqi-review .review-eval-bar__fill,
 .mini-xiangqi-review .review-eval-bar__fill,
-.drop-mini-xiangqi-review .review-eval-bar__fill,
 .dark-mini-xiangqi-review .review-eval-bar__fill {
   background: color-mix(in srgb, #c0563f 72%, var(--site-panel, #fff));
 }

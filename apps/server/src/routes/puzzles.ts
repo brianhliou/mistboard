@@ -4,7 +4,6 @@ import {
   attemptJunglePuzzleLine,
   attemptMiniXiangqiPuzzleLine,
   attemptStandardXiangqiPuzzleLine,
-  DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiMove,
   type FortressXiangqiPuzzle,
@@ -85,7 +84,6 @@ const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([
   FORTRESS_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   MINI_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
 ]);
 
 function discoverablePuzzles(store: PuzzleStoreSnapshot): PublicPuzzle[] {
@@ -496,7 +494,6 @@ function parsePuzzleVariant(value: string | null): PublicPuzzleVariant | null | 
   if (value === null || value === '') return null;
   if (
     value === MINI_XIANGQI_SPEC_ID ||
-    value === DROP_MINI_XIANGQI_SPEC_ID ||
     value === FORTRESS_XIANGQI_SPEC_ID ||
     value === JUNGLE_SPEC_ID ||
     value === XIANGQI_SPEC_ID

@@ -133,7 +133,7 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
   };
   const params = new URLSearchParams(window.location.search);
   // Dev aid: ?only=<specId> pins the showcase to a single variant (e.g.
-  // ?only=drop-mini-xiangqi) instead of the normal all-variants cycle. No param =
+  // ?only=fortress-xiangqi) instead of the normal all-variants cycle. No param =
   // normal behavior; handy for eyeballing one variant's board/hand.
   const onlySpec = params.get('only');
   // ?demo=<sampleId> forces a specific bundled game to open first.

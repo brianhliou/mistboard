@@ -24,7 +24,6 @@ import { darkCrazyhouseArticle } from './articles/content/dark-crazyhouse.js';
 import { darkDraft960Article } from './articles/content/dark-draft960.js';
 import { darkMiniXiangqiArticle } from './articles/content/dark-mini-xiangqi.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
-import { dropMiniXiangqiArticle } from './articles/content/drop-mini-xiangqi.js';
 import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
@@ -66,7 +65,6 @@ export const articles: Article[] = [
   darkXiangqiArticle,
   miniXiangqiArticle,
   darkMiniXiangqiArticle,
-  dropMiniXiangqiArticle,
   fortressXiangqiArticle,
   duckXiangqiArticle,
   duckXiangqiBuildArticle,

@@ -8,7 +8,6 @@ import {
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   engineTimeControlPin,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -91,7 +90,6 @@ type LandingGameSpecId =
   | typeof DARK_CHESS_SPEC_ID
   | typeof MINI_XIANGQI_SPEC_ID
   | typeof DARK_MINI_XIANGQI_SPEC_ID
-  | typeof DROP_MINI_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
@@ -261,8 +259,6 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
       return 'variant.miniXiangqi.name';
     case DARK_MINI_XIANGQI_SPEC_ID:
       return 'variant.darkMiniXiangqi.name';
-    case DROP_MINI_XIANGQI_SPEC_ID:
-      return 'variant.dropMiniXiangqi.name';
     case DARK_XIANGQI_SPEC_ID:
       return 'variant.darkXiangqi.name';
     case JIEQI_SPEC_ID:
@@ -299,8 +295,8 @@ function parseLandingGameSpecId(value: string): LandingGameSpecId {
 // jieqi opened a Jieqi dialog from a Fog Chess link (measured 2026-09-04).
 //
 // The rest stays keyed on the tenant's own acceptsDeepLink, which is
-// DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (DMX, Drop Mini
-// Xiangqi, Dark Crazyhouse) have no other door, and the soft-link
+// DELIBERATELY wider than offerInMenu: menu-hidden lab surfaces (DMX,
+// Dark Crazyhouse) have no other door, and the soft-link
 // branch in the dialog exists to seat them. Collapsing the two lists makes
 // `npm run dev:lab` unable to reach any of them.
 /** Whether a play deep link can name this spec, i.e. whether the dialog will
@@ -3244,22 +3240,6 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
-  if (setup.gameSpecId === DROP_MINI_XIANGQI_SPEC_ID) {
-    // Drop Mini Xiangqi is open-info red/black mini xiangqi with reserves.
-    return {
-      mode,
-      gameSpecId,
-      timeControl: setup.timeControl,
-      ...(mode === 'pvp' ? { rated: setup.rated } : {}),
-      preferredColor:
-        setup.preferredColor === 'white'
-          ? 'red'
-          : setup.preferredColor === 'red' || setup.preferredColor === 'black'
-            ? setup.preferredColor
-            : 'random',
-      ...(mode === 'pve' && engineId ? { engineId } : {}),
-    };
-  }
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) {
     // Fortress Xiangqi is open-info red/black 7x8 xiangqi with reserves + the
     // Treasure. Rating-ready (rated flag off until launch); PvE sends the picked
@@ -3386,7 +3366,6 @@ export function roomCreationGameSpecId(
   | typeof DARK_DRAFT960_SPEC_ID
   | typeof MINI_XIANGQI_SPEC_ID
   | typeof DARK_MINI_XIANGQI_SPEC_ID
-  | typeof DROP_MINI_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof DARK_CRAZYHOUSE_SPEC_ID
   | typeof KRIEGSPIEL_SPEC_ID
@@ -3408,7 +3387,6 @@ export function roomCreationGameSpecId(
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;
   if (setup.gameSpecId === BANQI_SPEC_ID) return BANQI_SPEC_ID;
   if (setup.gameSpecId === MINI_XIANGQI_SPEC_ID) return MINI_XIANGQI_SPEC_ID;
-  if (setup.gameSpecId === DROP_MINI_XIANGQI_SPEC_ID) return DROP_MINI_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === REVEAL_CHESS_SPEC_ID) return REVEAL_CHESS_SPEC_ID;
   if (setup.gameSpecId === DARK_CRAZYHOUSE_SPEC_ID) return DARK_CRAZYHOUSE_SPEC_ID;
   if (setup.gameSpecId === KRIEGSPIEL_SPEC_ID) return KRIEGSPIEL_SPEC_ID;
@@ -3436,9 +3414,6 @@ function roomCreationError(status: number, failure: RoomCreationFailure): Error 
 }
 
 function roomCreationStatusText(err: unknown, mode: 'pvp' | 'pve'): string {
-  if (err instanceof Error && err.name === 'drop_mini_xiangqi_unsupported_surface') {
-    return 'Drop Mini Xiangqi engine games are casual only.';
-  }
   if (err instanceof Error && err.name === 'invalid_time_control') {
     return 'That time control is not available. Try another one.';
   }

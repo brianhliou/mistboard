@@ -20,7 +20,6 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   kriegspiel: false,
   'mini-xiangqi': false,
   'dark-mini-xiangqi': false,
-  'drop-mini-xiangqi': false,
   'fortress-xiangqi': true,
   xiangqi: true,
   'dark-xiangqi': true,

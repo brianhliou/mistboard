@@ -6,7 +6,6 @@ import {
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   gameSpecForId,
@@ -77,7 +76,7 @@ describe('web variant launch registry', () => {
     vi.resetModules();
     // Retired sub-family: DMX now gates on the single VITE_DARK_MINI_XIANGQI_ENABLED
     // flag (the two-tier public-entry flag was removed). With it on, DMX rejoins both
-    // profile + leaderboard after the public shelf; drop-mini stays off the grids.
+    // profile + leaderboard after the public shelf.
     vi.stubEnv('DEV', false);
     vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
     const flagged = await import('./variants.js');
@@ -166,7 +165,6 @@ describe('web variant launch registry', () => {
   it('keeps mini-board fallback ids for soft-launch play-menu variants', () => {
     expect(variantMiniIdForGameSpec(DARK_CRAZYHOUSE_SPEC_ID)).toBe('dark-crazyhouse');
     expect(variantMiniIdForGameSpec(MINI_XIANGQI_SPEC_ID)).toBe('mini-xiangqi');
-    expect(variantMiniIdForGameSpec(DROP_MINI_XIANGQI_SPEC_ID)).toBe('drop-mini-xiangqi');
     expect(variantMiniIdForGameSpec(KRIEGSPIEL_SPEC_ID)).toBe('kriegspiel');
   });
 
@@ -199,7 +197,6 @@ describe('web variant launch registry', () => {
       [REVEAL_CHESS_SPEC_ID, 'reveal-chess'],
       [DARK_DRAFT960_SPEC_ID, 'dark-draft960'],
       [DARK_MINI_XIANGQI_SPEC_ID, 'dark-mini-xiangqi'],
-      [DROP_MINI_XIANGQI_SPEC_ID, 'drop-mini-xiangqi'],
     ]);
   });
 

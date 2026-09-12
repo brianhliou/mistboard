@@ -225,7 +225,6 @@ describe('article public listing gates', () => {
     for (const slug of [
       'dark-crazyhouse',
       'dark-mini-xiangqi',
-      'drop-mini-xiangqi',
       'kriegspiel',
       'mini-xiangqi',
       'reveal-chess',
@@ -303,18 +302,6 @@ describe('article public listing gates', () => {
 
     expect(cards?.textContent).not.toContain('Secret in the Tangerine, both game volumes.');
     expect(cards?.querySelector('.landing-announcement-card[href="/study/Dfi3NpRE"]')).toBeNull();
-  });
-
-  it('does not show the Drop Mini Xiangqi launch announcement in the homepage article widget', () => {
-    vi.stubEnv('DEV', false);
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    const announcement = cards?.querySelector<HTMLAnchorElement>(
-      '.landing-announcement-card[href="/rules/drop-mini-xiangqi"]',
-    );
-
-    expect(announcement).toBeNull();
-    expect(cards?.textContent).not.toContain('Drop Mini Xiangqi has launched.');
   });
 
   it('does not show the Banqi alpha announcement in the homepage article widget', () => {
@@ -633,7 +620,7 @@ describe('rules variant sidebar', () => {
     }
     // Xiangqi pivot: the mini xiangqi trio and the chess reference article are
     // de-listed from the tile grid (still reachable by direct URL).
-    for (const href of ['/rules/drop-mini-xiangqi', '/rules/chess', '/rules/shogi4']) {
+    for (const href of ['/rules/chess', '/rules/shogi4']) {
       expect(grid?.querySelector(`a[href="${href}"]`), href).toBeNull();
     }
   });

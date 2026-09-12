@@ -8,7 +8,6 @@ import {
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FOG_DRAFT960_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -143,25 +142,6 @@ test('Mini Xiangqi is a parked (hidden) open-info xiangqi-family spec', () => {
   assert.equal(spec.legacyLiveRoom, undefined);
 });
 
-test('Drop Mini Xiangqi is a live open-info xiangqi reserve spec', () => {
-  const spec = gameSpecForId(DROP_MINI_XIANGQI_SPEC_ID);
-
-  assert.equal(spec.publicName, 'Drop Mini Xiangqi');
-  assert.equal(spec.family, 'xiangqi');
-  assert.equal(spec.board, 'xiangqi-7x7');
-  assert.equal(spec.movement, 'mini-xiangqi');
-  assert.equal(spec.objective, 'checkmate');
-  assert.equal(spec.visibility, 'open');
-  assert.equal(spec.setup, 'mini-standard');
-  assert.equal(spec.reserves, 'crazyhouse');
-  assert.equal(spec.dropPolicy, 'not-enemy-palace');
-  assert.equal(spec.ratingPoolBase, 'drop_mini_xiangqi');
-  assert.equal(spec.rated, true);
-  assert.equal(spec.publicSurface, 'hidden');
-  assert.equal(spec.runtimeStatus, 'retired');
-  assert.equal(spec.legacyLiveRoom, undefined);
-});
-
 test('Jieqi is an xiangqi-family spec on its own hidden-identity axis', () => {
   const spec = gameSpecForId(JIEQI_SPEC_ID);
 
@@ -236,7 +216,6 @@ test('game spec ids are unique and discoverable', () => {
   assert.equal(isGameSpecId('fog-draft960'), false);
   assert.equal(isGameSpecId('mini-xiangqi'), true);
   assert.equal(isGameSpecId('dark-mini-xiangqi'), true);
-  assert.equal(isGameSpecId('drop-mini-xiangqi'), true);
   assert.equal(isGameSpecId('dark-xiangqi'), true);
   assert.equal(isGameSpecId('banqi'), true);
   assert.equal(isGameSpecId('not-a-spec'), false);
@@ -277,7 +256,6 @@ test('current live specs can be converted back to the existing room wire shape',
   });
   assert.equal(legacyLiveRoomForGameSpec(MINI_XIANGQI_SPEC_ID), null);
   assert.equal(legacyLiveRoomForGameSpec(DARK_MINI_XIANGQI_SPEC_ID), null);
-  assert.equal(legacyLiveRoomForGameSpec(DROP_MINI_XIANGQI_SPEC_ID), null);
   assert.equal(legacyLiveRoomForGameSpec(DARK_XIANGQI_SPEC_ID), null);
 });
 
@@ -294,7 +272,6 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     fog: true,
     fog_draft960: true,
     dark_mini_xiangqi: true,
-    drop_mini_xiangqi: true,
     dark_xiangqi: true,
     dark_crazyhouse: true,
     jieqi: true,
@@ -314,7 +291,6 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(ratingPoolForSpec(DARK_CHESS_SPEC_ID), 'fog');
   assert.equal(ratingPoolForSpec(DARK_DRAFT960_SPEC_ID), 'fog_draft960');
   assert.equal(ratingPoolForSpec(MINI_XIANGQI_SPEC_ID), null);
-  assert.equal(ratingPoolForSpec(DROP_MINI_XIANGQI_SPEC_ID), 'drop_mini_xiangqi');
   assert.equal(ratingPoolForSpec(JIEQI_SPEC_ID), 'jieqi');
   assert.equal(ratingPoolForSpec(BANQI_SPEC_ID), 'banqi');
   assert.equal(ratingPoolForSpec(LUZHANQI_SPEC_ID), null);
@@ -328,7 +304,6 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(isRatedPoolBase('jungle'), true);
   assert.equal(isRatedPoolBase('jungle_flip'), true);
   assert.equal(isRatedPoolBase('mini_xiangqi'), false);
-  assert.equal(isRatedPoolBase('drop_mini_xiangqi'), true);
   assert.equal(isRatedPoolBase('dark_xiangqi'), true);
   assert.equal(isRatedPoolBase('kriegspiel'), true);
   assert.equal(isRatedPoolBase('not-a-pool'), false);
@@ -364,7 +339,6 @@ test('the retired specs are exactly the ones the plan still names, all hidden', 
       DARK_CRAZYHOUSE_SPEC_ID,
       DARK_DRAFT960_SPEC_ID,
       DARK_MINI_XIANGQI_SPEC_ID,
-      DROP_MINI_XIANGQI_SPEC_ID,
       KRIEGSPIEL_SPEC_ID,
       LUZHANQI_SPEC_ID,
       MINI_XIANGQI_SPEC_ID,

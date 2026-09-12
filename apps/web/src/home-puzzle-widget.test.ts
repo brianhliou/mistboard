@@ -44,26 +44,6 @@ describe('home puzzle widget', () => {
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('renders both public hands for a Drop Mini daily puzzle', async () => {
-    const puzzle = MINI_XIANGQI_PUZZLES.find(
-      (candidate) => candidate.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
-    )!;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse(dailyBody(puzzle))),
-    );
-
-    const widget = await buildHomePuzzleWidget();
-
-    expect(widget?.querySelector('.home-puzzle-reserve')).not.toBeNull();
-    expect(widget?.querySelectorAll('.home-puzzle-hand')).toHaveLength(2);
-    expect(widget?.querySelector('[aria-label="Black reserve"]')).not.toBeNull();
-    const redReserve = widget?.querySelector('[aria-label="Red reserve"]');
-    expect(redReserve).not.toBeNull();
-    expect(redReserve?.querySelector('.drop-mini-reserve-piece')).not.toBeNull();
-    expect(widget?.querySelector('.mini-xq-board')).not.toBeNull();
-  });
-
   it('repaints its inline pieces when the Xiangqi appearance picker changes', async () => {
     const puzzle = MINI_XIANGQI_PUZZLES[0]!;
     installMemoryLocalStorage();

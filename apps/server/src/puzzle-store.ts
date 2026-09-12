@@ -18,7 +18,6 @@
 // warning (fail-closed: unknown variants never reach dispatch).
 
 import {
-  DROP_MINI_XIANGQI_SPEC_ID,
   deriveXiangqiPuzzleDifficulty,
   detectXiangqiPuzzleMotifs,
   FORTRESS_XIANGQI_SPEC_ID,
@@ -68,7 +67,6 @@ export type PuzzleStoreSnapshot = {
 
 const KNOWN_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([
   MINI_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   XIANGQI_SPEC_ID,

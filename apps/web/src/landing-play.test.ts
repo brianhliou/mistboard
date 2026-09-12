@@ -903,7 +903,7 @@ describe('landing play panel', () => {
   // 2026-07-03 pivot but kept an unconditional deep link, so a link was its only
   // door; that door is now closed. The three tests that pinned its friend /
   // engine / lobby deep links were replaced by this one. Menu-hidden LAB
-  // variants (DMX, Drop Mini Xiangqi, Dark Crazyhouse) deliberately
+  // variants (DMX, Dark Crazyhouse) deliberately
   // keep theirs -- their deep link is likewise their only door, and dev:lab
   // depends on it.
   it('no longer soft-links Mini Xiangqi from a deep link, in any play mode', () => {
@@ -1010,7 +1010,7 @@ function variantPickerPresent(): boolean {
   return document.querySelector('.landing-variant-grid') !== null;
 }
 
-// Post-pivot, a hidden variant (mini/dark-mini/drop-mini xiangqi, dark-crazyhouse)
+// Post-pivot, a hidden variant (mini/dark-mini xiangqi, dark-crazyhouse)
 // reached by deep link is not a browse-grid card — the picker collapses to a single
 // soft-linked variant control. In the engine flow the FIRST control is the variant
 // and the second is the bot, so read the first.

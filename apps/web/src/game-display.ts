@@ -221,7 +221,6 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   'dark-draft960': 'variant.darkDraft960.name',
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',
-  'drop-mini-xiangqi': 'variant.dropMiniXiangqi.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',
   jieqi: 'variant.jieqi.name',
   jungle: 'variant.jungle.name',

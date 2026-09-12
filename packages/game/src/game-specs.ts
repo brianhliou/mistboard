@@ -92,7 +92,6 @@ export type RatingPoolBaseId =
   | 'kriegspiel'
   | 'mini_xiangqi'
   | 'dark_mini_xiangqi'
-  | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
   | 'jieqi'
   | 'banqi'
@@ -113,7 +112,6 @@ export type GameSpecId =
   | 'kriegspiel'
   | 'mini-xiangqi'
   | 'dark-mini-xiangqi'
-  | 'drop-mini-xiangqi'
   | 'dark-xiangqi'
   | 'jieqi'
   | 'banqi'
@@ -167,7 +165,6 @@ export const DARK_DRAFT960_SPEC_ID = 'dark-draft960' satisfies GameSpecId;
 export const FOG_DRAFT960_SPEC_ID = DARK_DRAFT960_SPEC_ID;
 export const MINI_XIANGQI_SPEC_ID = 'mini-xiangqi' satisfies GameSpecId;
 export const DARK_MINI_XIANGQI_SPEC_ID = 'dark-mini-xiangqi' satisfies GameSpecId;
-export const DROP_MINI_XIANGQI_SPEC_ID = 'drop-mini-xiangqi' satisfies GameSpecId;
 export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
@@ -365,29 +362,9 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'retired',
   },
   {
-    // Drop Mini Xiangqi: mini xiangqi plus crazyhouse-style reserves. Perfect
-    // information; red/black seats match the 7x7 Dark Mini Xiangqi board.
-    // Rules engine: packages/game/src/variants-drop-mini-xiangqi.ts.
-    id: DROP_MINI_XIANGQI_SPEC_ID,
-    publicName: 'Drop Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'checkmate',
-    visibility: 'open',
-    setup: 'mini-standard',
-    reserves: 'crazyhouse',
-    dropPolicy: 'not-enemy-palace',
-    ratingPoolBase: 'drop_mini_xiangqi',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
     // Fortress Xiangqi: "xiangqi with a pocket." 7x8 board, opposite-corner
     // palaces, faithful xiangqi movement plus the one new Treasure piece, and
-    // crazyhouse drops (both-side attacker drops + the chasing rule). Ships
-    // alongside the 7x7 Drop Mini Xiangqi as a distinct variant + rating pool.
+    // crazyhouse drops (both-side attacker drops + the chasing rule).
     // Rules engine: packages/game/src/variants-fortress-xiangqi.ts.
     // Flagship of the 2026-07-03 xiangqi pivot (project_xiangqi_pivot_track):
     // promoted to a live public variant. Runtime kill-switch is the server flag
@@ -710,7 +687,6 @@ export type RatingVariant = Extract<
   | 'fog'
   | 'fog_draft960'
   | 'dark_mini_xiangqi'
-  | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
   | 'dark_crazyhouse'
   | 'jieqi'

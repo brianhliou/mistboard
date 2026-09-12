@@ -121,12 +121,12 @@ test('every public xiangqi, fortress and duck engine resolves to a first-party b
 
 test('dormant retired-family profiles keep their names for history', () => {
   assert.equal(
-    firstPartyBotForId('fairy-stockfish-drop-mini-xiangqi')?.displayName,
+    firstPartyBotForId('fairy-stockfish-mini-xiangqi')?.displayName,
     'Fairy Stockfish - Strong',
   );
   assert.equal(
-    firstPartyBotForEngine('fairy-stockfish-drop-mini-xiangqi-very-strong')?.id,
-    'fairy-stockfish-drop-mini-xiangqi-strongest',
+    firstPartyBotForEngine('fairy-stockfish-mini-xiangqi-very-strong')?.id,
+    'fairy-stockfish-mini-xiangqi-strongest',
   );
 });
 

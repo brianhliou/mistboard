@@ -37,7 +37,6 @@ import {
   type ChessReplayBlock,
   type CodeBlock,
   type CtaBlock,
-  type DropMiniXiangqiReplayBlock,
   type DuckXiangqiReplayBlock,
   type EmbedBlock,
   type FaqBlock,
@@ -62,10 +61,6 @@ import {
 } from './articles-data.js';
 import { type BanqiReplayController, mountBanqiReplay } from './banqi-replay.js';
 import { type ChessReplayController, mountChessReplay } from './chess-replay.js';
-import {
-  type DropMiniXiangqiReplayController,
-  mountDropMiniXiangqiReplay,
-} from './drop-mini-xiangqi-replay.js';
 import { type DuckXiangqiReplayController, mountDuckXiangqiReplay } from './duck-xiangqi-replay.js';
 import {
   type FortressXiangqiReplayController,
@@ -1257,7 +1252,6 @@ type PendingBlock =
   | XiangqiReplayBlock
   | ChessReplayBlock
   | MiniXiangqiReplayBlock
-  | DropMiniXiangqiReplayBlock
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | JieqiReplayBlock
@@ -1290,8 +1284,6 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'live-boards') return renderLiveBoardsBlock(block);
   if (block.kind === 'xq-replay') return renderXiangqiReplayBlock(block, lang);
   if (block.kind === 'mxq-replay') return renderMiniXiangqiReplayBlock(block, lang);
-  if (block.kind === 'drop-mini-xiangqi-replay')
-    return renderDropMiniXiangqiReplayBlock(block, lang);
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
   if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
@@ -1449,37 +1441,13 @@ function renderMiniXiangqiReplayBlock(
   return figure;
 }
 
-function renderDropMiniXiangqiReplayBlock(
-  block: DropMiniXiangqiReplayBlock,
-  lang?: ArticleLang,
-): HTMLElement {
-  const figure = document.createElement('figure');
-  figure.className =
-    'article-figure article-figure-interactive article-figure-xq article-figure-drop-mini-xiangqi';
-  figure.dataset.pendingWidget = 'drop-mini-xiangqi-replay';
-
-  const mountTarget = document.createElement('div');
-  mountTarget.className = 'article-interactive-target';
-  figure.append(mountTarget);
-
-  if (block.caption) {
-    const cap = document.createElement('figcaption');
-    cap.className = 'article-figure-caption';
-    cap.textContent = block.caption;
-    figure.append(cap);
-  }
-
-  rememberPendingMount(figure, block, lang);
-  return figure;
-}
-
 function renderDuckXiangqiReplayBlock(
   block: DuckXiangqiReplayBlock,
   lang?: ArticleLang,
 ): HTMLElement {
   const figure = document.createElement('figure');
   // No reserve rail on this board, so it takes the plain xiangqi figure classes
-  // rather than the drop-mini ones the fortress replay borrows.
+  // rather than the shared reserve ones the fortress replay borrows.
   figure.className = 'article-figure article-figure-interactive article-figure-xq';
   figure.dataset.pendingWidget = 'duck-xiangqi-replay';
 
@@ -2176,7 +2144,6 @@ export function mountPendingWidgets(
   | XiangqiReplayController
   | ChessReplayController
   | MiniXiangqiReplayController
-  | DropMiniXiangqiReplayController
   | FortressXiangqiReplayController
   | DuckXiangqiReplayController
   | JieqiReplayController
@@ -2190,7 +2157,6 @@ export function mountPendingWidgets(
     | XiangqiReplayController
     | ChessReplayController
     | MiniXiangqiReplayController
-    | DropMiniXiangqiReplayController
     | JieqiReplayController
     | BanqiReplayController
     | JungleReplayController
@@ -2211,8 +2177,6 @@ export function mountPendingWidgets(
       controllers.push(mountXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'mxq-replay') {
       controllers.push(mountMiniXiangqiReplay(target, block.spec, { lang }));
-    } else if (block.kind === 'drop-mini-xiangqi-replay') {
-      controllers.push(mountDropMiniXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'fortress-xiangqi-replay') {
       controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'duck-xiangqi-replay') {
@@ -2406,7 +2370,6 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'fog-xiangqi': 'dark-xiangqi',
   'mini-xiangqi': 'mini-xiangqi',
   'dark-mini-xiangqi': 'dark-mini-xiangqi',
-  'drop-mini-xiangqi': 'drop-mini-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',

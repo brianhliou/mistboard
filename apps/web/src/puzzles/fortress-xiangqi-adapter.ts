@@ -1,7 +1,7 @@
 /**
  * Puzzle-board adapter for Fortress Xiangqi: its own 7x8 corner-palace board
  * with crazyhouse-style pockets flanking it (opponent's above, the solver's
- * own below). Parallels the Mini/Drop-Mini click/drag/drop handlers, but over
+ * own below). Parallels the Mini click/drag handlers, but over
  * the Fortress player view; moves are submitted through the same
  * variant-agnostic ctx.submitMove path.
  */
@@ -18,7 +18,7 @@ import {
   type FortressXiangqiSquare,
   getFortressXiangqiPlayerView,
 } from '@mistboard/game';
-import '../drop-mini-xiangqi.css';
+import '../drop-reserve.css';
 import {
   animateFortressXiangqiBoardMove,
   FORTRESS_XIANGQI_PIECE_PX,

@@ -115,7 +115,6 @@ const GAME_VARIANT_LABEL_KEY: Record<string, I18nKey> = {
   draft960: 'variant.darkDraft960.name',
   'mini-xiangqi': 'variant.miniXiangqi.name',
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
-  'drop-mini-xiangqi': 'variant.dropMiniXiangqi.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',
   banqi: 'variant.banqi.name',
   jieqi: 'variant.jieqi.name',

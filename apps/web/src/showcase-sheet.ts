@@ -20,7 +20,6 @@ const SHEET_VARIANTS: ReadonlyArray<{ labelKey: I18nKey; channel: string }> = [
   { labelKey: 'variant.jieqi.name', channel: 'jieqi' },
   { labelKey: 'variant.miniXiangqi.name', channel: 'mini-xiangqi' },
   { labelKey: 'variant.darkMiniXiangqi.name', channel: 'dark-mini-xiangqi' },
-  { labelKey: 'variant.dropMiniXiangqi.name', channel: 'drop-mini-xiangqi' },
   { labelKey: 'variant.fortressXiangqi.name', channel: 'fortress-xiangqi' },
   { labelKey: 'variant.duckXiangqi.name', channel: 'duck-xiangqi' },
 ];

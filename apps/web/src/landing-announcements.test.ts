@@ -28,7 +28,7 @@ describe('landing announcements', () => {
     );
 
     // Xiangqi pivot: the News rail is gated by variantPublicSurfaceEnabled. The
-    // mini xiangqi trio (incl. drop-mini) and dark-crazyhouse are retired from
+    // mini xiangqi family and dark-crazyhouse are retired from
     // public surfaces; the elevated Chinese-chess-family launches (dark-xiangqi,
     // banqi) now surface. The rail shows the newest MAX_FEED_ROWS entries.
     // Derived from the announcement data rather than pinned to specific posts:

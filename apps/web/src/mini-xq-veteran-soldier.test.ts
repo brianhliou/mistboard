@@ -52,7 +52,7 @@ describe('mini xiangqi veteran soldier art', () => {
     expect(ghost).not.toMatch(PLAIN_SOLDIER);
   });
 
-  it.each(['mini-xiangqi', 'dark-mini-xiangqi', 'drop-mini-xiangqi'] as const)(
+  it.each(['mini-xiangqi', 'dark-mini-xiangqi'] as const)(
     'promotes soldiers on the %s variant card',
     (id) => {
       const svg = renderVariantMiniBoard(id, { xqSet: 'international' });

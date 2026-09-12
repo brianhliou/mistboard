@@ -25,7 +25,6 @@ const EXEMPT: Readonly<Record<string, string>> = {
   // inside Fog of War, not a separate surface.
   'dark-draft960': 'prod:smoke:engines (same engine and path as dark-chess)',
   // Retired under #306: puzzles are live, games 501.
-  'drop-mini-xiangqi': 'retired (#306), games 501',
   'mini-xiangqi': 'reserved in the gate, never built; every request 501s (#306)',
 };
 

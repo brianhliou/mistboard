@@ -62,7 +62,7 @@ describe('profile ratings rail', () => {
     const row = buildProfileGameRow(
       {
         roomId: 'room-1',
-        variant: 'drop-mini-xiangqi',
+        variant: 'dark-mini-xiangqi',
         mode: 'pvp',
         rated: true,
         result: 'red-wins',
@@ -95,7 +95,7 @@ describe('profile ratings rail', () => {
 
     expect(row.textContent).toContain('勝');
     expect(row.textContent).toContain('對 Opponent');
-    expect(row.textContent).toContain('打入迷你象棋');
+    expect(row.textContent).toContain('迷霧迷你象棋');
     expect(row.textContent).toContain('紅方');
     expect(row.textContent).toContain('計分');
     expect(row.textContent).toContain('人類對人類');

@@ -15,7 +15,6 @@ import {
   DARK_DRAFT960_SPEC_ID,
   DARK_MINI_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
@@ -72,9 +71,6 @@ const draft960Enabled = import.meta.env.VITE_DRAFT960_ENABLED === 'true';
 // single VITE_DARK_MINI_XIANGQI_ENABLED flag (now off in prod). The former
 // two-tier public-entry flag was removed as dead complexity.
 const darkMiniEnabled = darkMiniXiangqiEnabled();
-// Drop Mini Xiangqi retired from public rating grids 2026-07-03 (kept playable by
-// deep link; live client gate untouched). See project_xiangqi_pivot_track.
-const dropMiniXiangqiOn = false;
 const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
@@ -89,7 +85,6 @@ const kriegspielOn = kriegspielEnabled();
 const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
 const draft960Spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
 const darkMiniXiangqiSpec = gameSpecForId(DARK_MINI_XIANGQI_SPEC_ID);
-const dropMiniXiangqiSpec = gameSpecForId(DROP_MINI_XIANGQI_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
@@ -110,7 +105,6 @@ const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [DARK_DRAFT960_SPEC_ID]: 'draft960',
   [MINI_XIANGQI_SPEC_ID]: 'mini-xiangqi',
   [DARK_MINI_XIANGQI_SPEC_ID]: 'dark-mini-xiangqi',
-  [DROP_MINI_XIANGQI_SPEC_ID]: 'drop-mini-xiangqi',
   [FORTRESS_XIANGQI_SPEC_ID]: 'fortress-xiangqi',
   [DUCK_XIANGQI_SPEC_ID]: 'duck-xiangqi',
   [XIANGQI_SPEC_ID]: 'xiangqi',
@@ -288,16 +282,6 @@ export const VARIANTS: VariantDef[] = [
     enabled: darkMiniEnabled,
     onLeaderboard: darkMiniEnabled,
     onProfile: darkMiniEnabled,
-  },
-  {
-    id: currentRatingVariantForSpec(DROP_MINI_XIANGQI_SPEC_ID),
-    gameSpecId: dropMiniXiangqiSpec.id,
-    apiParam: DROP_MINI_XIANGQI_SPEC_ID,
-    label: dropMiniXiangqiSpec.publicName,
-    miniId: 'drop-mini-xiangqi',
-    enabled: false,
-    onLeaderboard: dropMiniXiangqiOn,
-    onProfile: dropMiniXiangqiOn,
   },
 ];
 
