@@ -244,26 +244,9 @@ test('Luzhanqi is a hidden computer-refereed hidden-identity military-chess spec
 });
 
 test('composite specs are composed from rule modules', () => {
-  const sunTzu = gameSpecForId('sun-tzu');
-  const laoTzu = gameSpecForId('lao-tzu');
   const darkCrazyhouse = gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID);
-  const darkAntichess = gameSpecForId('dark-antichess');
-  const darkSeirawan = gameSpecForId('dark-seirawan');
-  const darkOmega = gameSpecForId('dark-omega');
-
   assert.equal(darkCrazyhouse.reserves, 'crazyhouse');
   assert.equal(darkCrazyhouse.dropPolicy, 'any-legal-square');
-  assert.equal(darkAntichess.objective, 'antichess');
-  assert.equal(sunTzu.setup, 'double-fischer-random');
-  assert.equal(sunTzu.reserves, 'crazyhouse');
-  assert.equal(sunTzu.dropPolicy, 'any-legal-square');
-  assert.equal(laoTzu.setup, 'double-fischer-random');
-  assert.equal(laoTzu.reserves, 'crazyhouse');
-  assert.equal(laoTzu.dropPolicy, 'seen-squares-only');
-  assert.equal(darkSeirawan.movement, 'seirawan');
-  assert.equal(darkSeirawan.reserves, 'seirawan-gating');
-  assert.equal(darkOmega.family, 'omega-chess');
-  assert.equal(darkOmega.board, 'omega-10x10-plus-corners');
 });
 
 test('Crossroads Chess is two specs sharing one family/board, split on visibility', () => {

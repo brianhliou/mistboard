@@ -75,10 +75,6 @@ const GATED_GAME_SPECS = {
     disabledError: 'mahjong_disabled',
     notIntegratedError: 'mahjong_not_integrated',
   },
-  'dark-antichess': { notIntegratedError: 'dark_antichess_not_integrated' },
-  'sun-tzu': { notIntegratedError: 'sun_tzu_not_integrated' },
-  'lao-tzu': { notIntegratedError: 'lao_tzu_not_integrated' },
-  'dark-seirawan': { notIntegratedError: 'dark_seirawan_not_integrated' },
   'mini-xiangqi': { notIntegratedError: 'mini_xiangqi_not_integrated' },
   'dark-mini-xiangqi': {
     enabled: darkMiniXiangqiEnabled,
@@ -100,7 +96,6 @@ const GATED_GAME_SPECS = {
     disabledError: 'dark_shogi_disabled',
     notIntegratedError: 'dark_shogi_not_integrated',
   },
-  'dark-omega': { notIntegratedError: 'dark_omega_not_integrated' },
   jieqi: {
     enabled: jieqiEnabled,
     disabledError: 'jieqi_disabled',

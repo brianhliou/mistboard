@@ -18,10 +18,6 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // 2026-07-03 (project_xiangqi_pivot_track). Direct /rules + play URLs stay live.
   'dark-crazyhouse': false,
   kriegspiel: false,
-  'dark-antichess': false,
-  'sun-tzu': false,
-  'lao-tzu': false,
-  'dark-seirawan': false,
   'mini-xiangqi': false,
   'dark-mini-xiangqi': false,
   'drop-mini-xiangqi': false,
@@ -29,7 +25,6 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   xiangqi: true,
   'dark-xiangqi': true,
   'dark-shogi': false,
-  'dark-omega': false,
   jieqi: true,
   banqi: true,
   luzhanqi: false,

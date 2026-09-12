@@ -100,15 +100,15 @@ test('game spec gate keeps rejecting legacy variant spellings for tenant specs',
   }
 });
 
-test('game spec gate rejects every runtimeStatus future spec', () => {
-  const futureSpecs = GAME_SPECS.filter((spec) => spec.runtimeStatus === 'future');
-  assert.ok(futureSpecs.length > 0, 'expected future specs in the registry');
-  for (const spec of futureSpecs) {
+test('game spec gate rejects every runtimeStatus future spec, of which there are none today', () => {
+  // The five reserved ids (dark-antichess, sun-tzu, lao-tzu, dark-seirawan,
+  // dark-omega) left with the retirement sweep (#396). Should one come back,
+  // known-but-unrouted must stay distinguishable from unknown_game_spec.
+  for (const spec of GAME_SPECS.filter((s) => s.runtimeStatus === 'future')) {
     assert.deepEqual(
       gateGameSpecRequest({ gameSpecId: spec.id }),
       {
         type: 'reject',
-        // Known-but-unrouted stays distinguishable from unknown_game_spec.
         error: `${spec.id.replaceAll('-', '_')}_not_integrated`,
         httpStatus: 501,
         wsCloseReason: 'game spec not integrated',

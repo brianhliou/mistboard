@@ -113,13 +113,11 @@ test('bucketForGame maps the remaining live PvP variants through their own ratin
   }
 });
 
-test('bucketForGame fails closed for future casual-only specs, never the fog pool', () => {
+test('bucketForGame fails closed for specs with no active pool, never the fog pool', () => {
   // A spec with no active rating pool must yield no bucket (simply not rated)
-  // rather than fall through to the dark-chess fallback and pollute the fog pool.
-  assert.equal(
-    bucketForGame({ variant: 'dark-antichess', initialMs: 180_000, incrementMs: 2_000 }),
-    null,
-  );
+  // rather than fall through to the dark-chess fallback and pollute the fog
+  // pool. Mahjong's pool base is not a rated pool, so it is exactly that.
+  assert.equal(bucketForGame({ variant: 'mahjong', initialMs: 180_000, incrementMs: 2_000 }), null);
 });
 
 test('bucketForGame buckets each rated live pace into its own time class', () => {
