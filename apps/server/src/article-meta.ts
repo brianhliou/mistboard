@@ -18,12 +18,21 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4']);
 // The server answers 410 Gone for these paths (server-http.ts): the id is
 // known and the page is not coming back, which is what a crawler should hear
 // rather than a 404 it will keep retrying. The set also keeps them out of the
-// sitemap. The content files go with their variants in Stage 2 of the plan.
+// sitemap. The content files go with their variants in Stage 2 of the plan;
+// a slug whose variant has been DELETED stays here for good, because without
+// it an unknown /rules/<slug> 301s to /blog/<slug> and serves the app shell
+// as a soft 404.
 //
 // This is a second copy of a list the server cannot import, so it is only safe
 // because articles-meta-sync.test.ts fails when the two disagree. Do not edit
 // one end alone.
 const RETIRED_RULES_SLUGS = new Set([
+  // deleted (Stage 2)
+  'crossroads-chess',
+  'dark-crossroads-chess',
+  'dark-shogi',
+  'shogi',
+  // retired, code still present
   'dark-crazyhouse',
   'dark-draft960',
   'dark-mini-xiangqi',
