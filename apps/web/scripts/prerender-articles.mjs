@@ -16,6 +16,12 @@ import { createServer } from 'vite';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
 const distDir = resolve(__dirname, '..', 'dist');
+// Mirrors ARTICLE_OG_IMAGE_VERSION in apps/server/src/og-image.ts (the server
+// cannot be imported from the web build). Scrapers hold a card under its URL
+// with a year-long immutable max-age, so the LOOK of the card can only change
+// behind a new ?v=; og-image.test.ts pins the two numbers to each other.
+const ARTICLE_OG_IMAGE_VERSION = 2;
+
 const host = process.env.MISTBOARD_HOST ?? 'https://mistboard.com';
 
 // --- happy-dom globals (Node 26: some globals are read-only getters) ---------
@@ -433,7 +439,7 @@ try {
     // CJK font; baking zh titles would render tofu). Localized variants and
     // hreflang alternates exist only after the article crosses the explicit
     // translation publication boundary.
-    const imageUrl = `${host}/og/article/${slug}.png`;
+    const imageUrl = `${host}/og/article/${slug}.png?v=${ARTICLE_OG_IMAGE_VERSION}`;
     const translationPublished = isArticleTranslationPublished(article.slug);
     const selfHreflang = article.sourceLang ?? 'en';
     const hreflang = [
