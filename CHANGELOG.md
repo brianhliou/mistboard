@@ -44,6 +44,7 @@ Conventions:
 
 - `/stats` is a real page on the about rail, leading with games per week; every count excludes the operator's own accounts and browsers, guests count as players by browser, and a game counts only once both sides have moved ([87ba6d14](https://github.com/brianhliou/mistboard/commit/87ba6d14), [cd4f58b3](https://github.com/brianhliou/mistboard/commit/cd4f58b3), [ea5d57a0](https://github.com/brianhliou/mistboard/commit/ea5d57a0), [b916a663](https://github.com/brianhliou/mistboard/commit/b916a663))
 - One identity line across the tagline, About, README and the repository ([2952b177](https://github.com/brianhliou/mistboard/commit/2952b177))
+- A shared link to any finished game, in every variant, previews the game: the board at full height in the site's own piece set, the two seats level with their back ranks behind their king, and the score; rules pages, position links and studies draw through the same card, and the site card is the logo, wordmark and identity line ([f5a24d9d](https://github.com/brianhliou/mistboard/commit/f5a24d9d))
 
 ### Removed
 
@@ -58,6 +59,7 @@ Conventions:
 - Deleted variants' rules pages answer 410 instead of falling through to the blog shell ([2ecf7cc6](https://github.com/brianhliou/mistboard/commit/2ecf7cc6), [f2b723d1](https://github.com/brianhliou/mistboard/commit/f2b723d1))
 - Duck Xiangqi counts full moves, so the pregame abort window still closes ([fdd1ed4b](https://github.com/brianhliou/mistboard/commit/fdd1ed4b))
 - The Fortress Xiangqi rules page no longer links Mini Xiangqi's rules, which are gone; the credit stays ([3a28b392](https://github.com/brianhliou/mistboard/commit/3a28b392))
+- The Fog Chess, Fog Xiangqi and Fog Chess Concepts rules pages have a link preview again; they had shown the site card since the dark→fog rename. Jieqi, Banqi, Fortress, Duck, Jungle and Flip Jungle rules pages get one for the first time ([f5a24d9d](https://github.com/brianhliou/mistboard/commit/f5a24d9d))
 
 ### Technical
 
