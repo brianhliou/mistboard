@@ -270,6 +270,19 @@ export type VariantTenant<
    * a go" where one move is one turn. Set this where it is not.
    */
   armsClockOnFirstMove?: boolean;
+  /**
+   * Whose clock runs in this state, or null for nobody's.
+   *
+   * The default charges the seat whose turn it is and only advances when THAT
+   * seat moves, which is right wherever a move is a turn. Mahjong is not that:
+   * a claim is played by a seat whose turn it is not, and during a claim window
+   * the seat on the clock (the discarder) has nothing left to decide. Without
+   * this hook the discarder's clock ran through every window and every claim
+   * left the wrong seat highlighted until that seat moved again. A tenant that
+   * defines it gets owner-driven accounting: every move charges the seat that
+   * was running, then the clock follows the answer here, pausing on null.
+   */
+  clockOwner?(state: State): C | null;
   enabled(): boolean;
   // Only meaningful where there are exactly two seats: it answers "who wins if
   // this seat forfeits". A four-seat tenant has no such answer and must supply

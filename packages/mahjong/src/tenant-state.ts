@@ -36,6 +36,7 @@ import {
   type MahjongGame,
   type WallTile,
 } from './game.js';
+import { handContextFor } from './hand-context.js';
 import type { TileIndex } from './tiles.js';
 
 /** Seat names on the wire. Index matches the kernel's 0-3. */
@@ -148,6 +149,10 @@ export function claimsFor(state: MahjongTenantState, seat: Seat): Claim[] {
     phase.discard,
     seat,
     phase.discarder,
+    // Winds and flowers decide whether a win on this discard clears the
+    // minimum. Without them a seat holding the faan on the table, not in the
+    // hand, was told it had nothing to claim.
+    handContextFor(state.game, seat),
   );
 }
 // The kernel's meld type, referenced structurally so this module does not
@@ -217,11 +222,28 @@ export function applyMahjongMove(state: MahjongTenantState, move: MahjongMove): 
   switch (move.action) {
     case 'draw':
       return advanced(applyDraw(state.game));
-    case 'discard':
-      return advanced(applyDiscard(state.game, move.tile), {
+    case 'discard': {
+      const discarded = advanced(applyDiscard(state.game, move.tile), {
         answers: {},
         windowClosesAt: move.at + CLAIM_WINDOW_MS,
       });
+      // A window nobody can answer is not a window. Left open it would sit for
+      // the full six seconds until the runtime's timeout, on every discard,
+      // and a hand where that was most of them spent most of its nine minutes
+      // waiting for nobody. Settle it here, as the pass it can only ever be.
+      if (
+        discarded.game.phase.type === 'claim-window' &&
+        pendingClaimants(discarded).length === 0
+      ) {
+        return finalize({
+          ...discarded,
+          game: applyPass(discarded.game),
+          answers: {},
+          windowClosesAt: null,
+        });
+      }
+      return discarded;
+    }
     case 'self-draw':
       return advanced(applySelfDraw(state.game));
     case 'claim': {

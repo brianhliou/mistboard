@@ -85,8 +85,23 @@ export function nextTenantClockForMove<C extends string>(
   prevMoveNumber: number,
   nextStatus: TenantGameStatus<C>,
   policy: ClockPolicyKind = 'live',
+  // The tenant's clockOwner answer for the state after the move; undefined
+  // for a tenant without the hook, which keeps the turn-driven path below.
+  nextOwner?: C | null,
 ): TenantClockState<C> | undefined {
   if (!clock) return clock;
+  if (nextOwner !== undefined) {
+    return nextOwnerDrivenClock(
+      tenant,
+      clock,
+      at,
+      movedColor,
+      prevMoveNumber,
+      nextStatus,
+      policy,
+      nextOwner,
+    );
+  }
   if (clock.activeColor === null && clock.runningSince === null) {
     const remainingMs = {
       ...clock.remainingMs,
@@ -128,6 +143,61 @@ export function nextTenantClockForMove<C extends string>(
       [movedColor]: moverNextMs,
     },
     runningSince: nextActiveColor ? at : null,
+  };
+}
+
+/**
+ * Owner-driven clock: the seat on the clock is whoever the tenant says, and any
+ * move settles the running seat's time.
+ *
+ * Paused is `activeColor: null` with `runningSince` set: nobody is charged
+ * (remaining-time reads key on activeColor) and the clock still reads as
+ * armed, so the chrome does not fall back to its pre-game shape mid-hand. The
+ * increment lands when the running seat's own move hands the clock on, so a
+ * turn made of several actions (draw, then discard) earns it once.
+ */
+function nextOwnerDrivenClock<C extends string>(
+  tenant: { colors: readonly C[]; armsClockOnFirstMove?: boolean },
+  clock: TenantClockState<C>,
+  at: number,
+  movedColor: C,
+  prevMoveNumber: number,
+  nextStatus: TenantGameStatus<C>,
+  policy: ClockPolicyKind,
+  nextOwner: C | null,
+): TenantClockState<C> {
+  const playing = nextStatus.type === 'playing';
+  const owner = playing ? nextOwner : null;
+  if (clock.activeColor === null && clock.runningSince === null) {
+    const remainingMs = {
+      ...clock.remainingMs,
+      [movedColor]: clock.remainingMs[movedColor] + clock.incrementMs,
+    };
+    const armsNow = tenant.armsClockOnFirstMove
+      ? prevMoveNumber === 0
+      : movedColor === lastSeat(tenant) && prevMoveNumber === 1;
+    if (armsNow && playing) {
+      return { ...clock, activeColor: owner, remainingMs, runningSince: at };
+    }
+    return { ...clock, remainingMs };
+  }
+  const remainingMs = { ...clock.remainingMs };
+  const running = clock.activeColor;
+  if (running !== null && clock.runningSince !== null) {
+    const spent = Math.max(0, tenantClockRemainingMs(clock, running, at));
+    const handsOn = running === movedColor && owner !== running;
+    remainingMs[running] =
+      handsOn && playing
+        ? policy === 'days-per-move'
+          ? clock.initialMs
+          : spent + clock.incrementMs
+        : spent;
+  }
+  return {
+    ...clock,
+    activeColor: owner,
+    remainingMs,
+    runningSince: playing ? at : null,
   };
 }
 
@@ -464,6 +534,7 @@ export function applyTenantEvent<
           prevMoveNumber,
           nextState.status,
           clockPolicyKindFor(projection.timeControl),
+          tenant.clockOwner ? tenant.clockOwner(nextState) : undefined,
         ),
       state: nextState,
     };
