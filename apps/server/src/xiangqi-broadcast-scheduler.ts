@@ -28,7 +28,11 @@ export function clampXiangqiBroadcastScheduleIntervalMs(value: unknown): number 
 
 export type XiangqiBroadcastSchedulerDeps = {
   listScheduledTours(): Promise<persistence.XiangqiBroadcastTourSchedule[]>;
-  poll(input: { sourceUrl: string; timeoutMs: number }): Promise<XiangqiBroadcastPollResult>;
+  poll(input: {
+    sourceUrl: string;
+    tourSlug: string;
+    timeoutMs: number;
+  }): Promise<XiangqiBroadcastPollResult>;
   recordSyncLog(
     input: Parameters<typeof persistence.recordXiangqiBroadcastSyncLog>[0],
   ): Promise<void>;
@@ -85,7 +89,11 @@ export function createXiangqiBroadcastScheduler(
         if (now < (nextPollAt.get(tour.slug) ?? 0)) continue;
 
         const intervalMs = clampXiangqiBroadcastScheduleIntervalMs(tour.pollIntervalMs);
-        const result = await deps.poll({ sourceUrl: tour.sourceUrl, timeoutMs: 10_000 });
+        const result = await deps.poll({
+          sourceUrl: tour.sourceUrl,
+          tourSlug: tour.slug,
+          timeoutMs: 10_000,
+        });
         // The poller records its own failure sync logs; the scheduler only
         // records successful polls that changed something, so a healthy idle
         // source does not grow the log table on every interval.

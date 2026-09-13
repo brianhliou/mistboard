@@ -9,8 +9,16 @@
 //
 // THIS IS A POLL TARGET, NOT A CREDIT, and confusing the two has already cost a
 // prod write. `tour.sourceUrl` is what the poller re-anchors on every run, so it
-// has to be a dpxq page carrying move data; a tour-index URL is rejected as
-// malformed. The visible credit is separate and automatic: broadcastRecordsCredit
+// has to be something the poller can read: a dpxq page carrying move data, a
+// manifest, or a discovery source. A dpxq TOUR INDEX page is none of those and
+// is rejected as malformed on every poll; the 2026 Shanghai Cup was seeded with
+// one (movelist_12524.html) and imported nothing for five days. For a dpxq tour
+// the target is the discovery form, which reads that same index and files each
+// game under the round its row states:
+//
+//   mistboard-discover://dpxq-tour?tour=12524&tourSlug=2026-shanghai-cup
+//
+// The visible credit is separate and automatic: broadcastRecordsCredit
 // (apps/web/src/xiangqi-broadcast.ts) derives "Game records from <host>" from the
 // per-board sourceUrls, and renders it on the round page. An archive-imported
 // tour that never polls should leave this EMPTY and is credited regardless.
@@ -21,7 +29,7 @@
 //
 //   railway run -s Postgres -- sh -c \
 //     'DATABASE_URL="$DATABASE_PUBLIC_URL" node scripts/broadcast-source-url.mjs \
-//        2026-league-qualifier --set http://www.dpxq.com/hldcg/movelist_12656.html'
+//        2026-shanghai-cup --set "mistboard-discover://dpxq-tour?tour=12524&tourSlug=2026-shanghai-cup"'
 //
 // WHY BOTH COLUMNS. `tourFromRow` builds the tour by spreading `payload`, so the
 // `source_url` column is not what the hero's "Source" link reads -- writing only
@@ -56,8 +64,18 @@ if (!slug) {
 if (values.set && values.clear) {
   fail('Pass one of --set or --clear, not both.');
 }
-if (values.set && !/^https?:\/\//.test(values.set)) {
-  fail(`--set needs an absolute http(s) URL, got: ${values.set}`);
+if (values.set && !/^(https?:\/\/|mistboard-discover:)/i.test(values.set)) {
+  fail(`--set needs an absolute http(s) URL or a mistboard-discover: source, got: ${values.set}`);
+}
+if (values.set && /^https?:\/\/(www\.)?dpxq\.com\/hldcg\/movelist_(\d+)\.html/i.test(values.set)) {
+  const tour = values.set.match(/movelist_(\d+)/)[1];
+  fail(
+    `${values.set} is a dpxq tour index, which the poller cannot read (it rejects it as
+` +
+      `malformed on every poll and imports nothing). Poll the tour through discovery instead:
+` +
+      `  --set "mistboard-discover://dpxq-tour?tour=${tour}&tourSlug=${slug}"`,
+  );
 }
 if (!process.env.DATABASE_URL) {
   fail(
