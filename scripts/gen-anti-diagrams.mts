@@ -1114,6 +1114,10 @@ if (process.argv.includes('--blog')) {
     writeFileSync(path.join(INCLUDES, `anti-xq-${f.slug}.html`), `${include}\n`);
     console.log(`  _includes/anti-xq-${f.slug}.html`);
   }
+  // The widgets draw a soldier past the river with the promoted art; the
+  // diagrams never show one, so add it to the art set by hand.
+  blogArt.add('xiangqi/international/red-crossed-soldier.png');
+  blogArt.add('xiangqi/international/black-crossed-soldier.png');
   for (const rel of blogArt) {
     writeFileSync(
       path.join(BLOG_ASSETS, 'pieces', rel.replace(/\//g, '-')),
@@ -1338,7 +1342,6 @@ ${picker}<div class="anxq-header" id="${inst.id}-header"></div>
       <button class="anxq-control" id="${inst.id}-next" aria-label="Forward one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M5 4.3v7.4L11.1 8z"/></svg></button>
       <button class="anxq-control" id="${inst.id}-last" aria-label="End"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/></svg></button>
     </div>
-    <div class="anxq-caption" id="${inst.id}-caption"></div>
   </div>
   <div class="anxq-rail">
     <div class="anxq-rail-inner">
@@ -1347,6 +1350,7 @@ ${picker}<div class="anxq-header" id="${inst.id}-header"></div>
     </div>
   </div>
 </div>
+<div class="anxq-caption" id="${inst.id}-caption"></div>
 ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 <script type="application/json" id="${inst.id}-data">${data}</script>
 </div>
@@ -1358,8 +1362,8 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 .anxq-more { flex: none; font-size: 13px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--anxq-muted); }
 .anxq-select { flex: 1 1 auto; min-width: 0; font: inherit; font-size: 15px; font-weight: 600; color: var(--anxq-heading); background: var(--anxq-panel); border: 1px solid var(--anxq-border); border-radius: 8px; padding: 8px 10px; }
 .anxq-header { font-size: 14px; font-weight: 600; color: var(--anxq-muted); text-align: center; margin-bottom: 6px; }
-.anxq-card { display: flex; border: 1px solid var(--anxq-border); border-radius: 10px; background: var(--anxq-panel); overflow: hidden; }
-.anxq-board-col { display: flex; flex: 0 0 auto; flex-direction: column; width: min(100%, 430px); min-width: 0; }
+.anxq-card { display: flex; border: 1px solid var(--anxq-border); border-radius: 10px 10px 0 0; background: var(--anxq-panel); overflow: hidden; }
+.anxq-board-col { display: flex; flex: 0 0 auto; flex-direction: column; width: min(100%, 470px); min-width: 0; }
 .anxq-seat { display: flex; align-items: center; gap: 9px; min-height: 39px; padding: 9px 14px; box-sizing: border-box; font-size: 15px; font-weight: 600; line-height: 21px; color: var(--anxq-heading); }
 .anxq-seat-name { flex: 1 1 auto; min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
 .anxq-seat-clock { flex: none; font-weight: 500; color: var(--anxq-muted); font-variant-numeric: tabular-nums; }
@@ -1373,11 +1377,11 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 .anxq-control:hover { background: var(--anxq-hover); color: var(--anxq-heading); }
 .anxq-control:disabled { opacity: .35; cursor: default; background: none; }
 .anxq-status { display: flex; align-items: center; justify-content: center; min-width: 52px; padding: 0 10px; color: var(--anxq-muted); font-size: 11px; font-variant-numeric: tabular-nums; }
-.anxq-caption { box-sizing: border-box; height: 104px; overflow-y: auto; border-top: 1px solid var(--anxq-border); padding: 8px 14px 10px; font-size: 14px; line-height: 1.45; color: var(--anxq-heading); }
+.anxq-caption { box-sizing: border-box; min-height: 3.1em; border: 1px solid var(--anxq-border); border-top: 0; border-radius: 0 0 10px 10px; background: var(--anxq-panel); padding: 8px 14px 10px; font-size: 14px; line-height: 1.45; color: var(--anxq-heading); }
 .anxq-caption .san { font-family: ui-monospace, Menlo, monospace; font-weight: 600; }
 .anxq-caption .who { color: var(--anxq-muted); font-size: 13px; }
 .anxq-caption p { margin: 4px 0 0; }
-.anxq-rail { position: relative; flex: 1 1 0; min-width: 190px; border-left: 1px solid var(--anxq-border); }
+.anxq-rail { position: relative; flex: 1 1 0; min-width: 160px; max-width: 230px; border-left: 1px solid var(--anxq-border); }
 .anxq-rail-inner { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .anxq-moves { flex: 1; min-height: 0; overflow: auto; padding: 6px 4px; display: grid; grid-template-columns: 22px minmax(0, 1fr) minmax(0, 1fr); gap: 1px 2px; align-content: start; align-items: baseline; }
 .anxq-moves .n { padding-left: 0; font-size: 13.5px; color: var(--anxq-muted); font-variant-numeric: tabular-nums; }
@@ -1387,10 +1391,9 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 .anxq-moves button:hover { background: var(--anxq-hover); }
 .anxq-moves button.cur, .anxq-moves button.cur:hover { background: var(--anxq-accent); color: var(--anxq-on-accent); }
 .anxq-moves button.cur.forced::after { color: var(--anxq-on-accent); opacity: .8; }
-.anxq-result { flex: none; box-sizing: border-box; height: 74px; overflow-y: auto; display: flex; align-items: center; justify-content: center; padding: 4px 8px; border-top: 1px solid var(--anxq-border); background: var(--anxq-panel); color: var(--anxq-muted); font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
-.anxq-result > span { margin: auto 0; }
+.anxq-result { flex: none; box-sizing: border-box; min-height: 39px; padding: 6px 8px; border-top: 1px solid var(--anxq-border); background: var(--anxq-panel); color: var(--anxq-muted); font-size: 12px; font-weight: 600; text-align: center; line-height: 1.3; }
 .anxq-credit { margin-top: 6px; font-size: 12px; color: var(--anxq-muted); text-align: center; }
-@media (max-width: 640px) { .anxq-card { flex-direction: column; } .anxq-board-col { width: 100%; } .anxq-rail { border-left: 0; border-top: 1px solid var(--anxq-border); min-height: 220px; } }
+@media (max-width: 640px) { .anxq-card { flex-direction: column; } .anxq-board-col { width: 100%; } .anxq-rail { border-left: 0; border-top: 1px solid var(--anxq-border); min-height: 220px; max-width: none; } }
 </style>`;
   // The board drawing shared by every widget on the page: a 9x10 grid on the
   // house tan, pieces as the international set on a disc, and the last move in
@@ -1438,8 +1441,9 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
     }
     for (const s in board) {
       const p = board[s], c = pt(s), k = PIECE / 100, fr = FRAME[p.role], x = c.x - PIECE / 2, y = c.y - PIECE / 2;
+      const rank = Number(s.slice(1)), crossed = p.role === 'soldier' && (p.color === 'red' ? rank >= 6 : rank <= 5);
       parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
-      parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
+      parts.push('<image href="' + ART + p.color + '-' + (crossed ? 'crossed-soldier' : p.role) + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
     // Capture hints: at rest a dot on each piece that can be taken; on hover
     // an arrow (the analysis-board grammar) from the capturing piece,
@@ -1499,7 +1503,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
         if (k % 2 === 0) { const n = document.createElement('span'); n.className = 'n'; n.textContent = String(k / 2 + 1); list.appendChild(n); }
         const b = document.createElement('button'); b.textContent = m.s; b.dataset.ply = k + 1; b.className = m.f ? 'forced' : ''; b.addEventListener('click', () => { at = k + 1; show(); }); list.appendChild(b);
       });
-      $('result').innerHTML = '<span></span>'; $('result').firstChild.textContent = game.result;
+      $('result').textContent = game.result;
       show();
     }
     const more = $('more');
@@ -1647,7 +1651,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
   }).replace(/</g, '\\u003c');
   const EXPLORER_CSS = `<style>
 .anxq-explorer .anxq-card { align-items: stretch; }
-.anxq-explorer .anxq-x-rail { position: relative; flex: 1 1 0; min-width: 220px; border-left: 1px solid var(--anxq-border); }
+.anxq-explorer .anxq-x-rail { position: relative; flex: 1 1 0; min-width: 200px; border-left: 1px solid var(--anxq-border); }
 .anxq-explorer .anxq-x-inner { position: absolute; inset: 0; display: flex; flex-direction: column; min-height: 0; overflow: hidden; }
 .anxq-explorer .anxq-x-path { flex: none; padding: 10px 12px 6px; font-family: ui-monospace, Menlo, monospace; font-size: 13.5px; font-weight: 600; line-height: 1.7; border-bottom: 1px solid var(--anxq-border); }
 .anxq-explorer .anxq-x-path button { font: inherit; background: none; border: 0; padding: 0 3px; border-radius: 4px; color: var(--anxq-heading); cursor: pointer; }
@@ -1694,7 +1698,6 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
       <button class="anxq-control" id="{{ include.id }}-next" aria-label="Forward one ply, best play"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M5 4.3v7.4L11.1 8z"/></svg></button>
       <button class="anxq-control" id="{{ include.id }}-last" aria-label="To the end of the line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/></svg></button>
     </div>
-    <div class="anxq-caption" id="{{ include.id }}-caption"></div>
   </div>
   <div class="anxq-x-rail"><div class="anxq-x-inner">
     <div class="anxq-x-path" id="{{ include.id }}-path"></div>
@@ -1703,6 +1706,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
     <div class="anxq-x-hint" id="{{ include.id }}-hint"></div>
   </div></div>
 </div>
+<div class="anxq-caption" id="{{ include.id }}-caption"></div>
 </div>
 `;
   const explorerLibHtml = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
@@ -1968,7 +1972,6 @@ ${EXPLORER_CSS}
       <button class="anxq-control" id="anti-proof-next" aria-label="Forward one ply along the main line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M5 4.3v7.4L11.1 8z"/></svg></button>
       <button class="anxq-control" id="anti-proof-last" aria-label="To the end of the main line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/></svg></button>
     </div>
-    <div class="anxq-caption" id="anti-proof-caption"></div>
   </div>
   <div class="anxq-x-rail"><div class="anxq-x-inner">
     <div class="anxq-x-path" id="anti-proof-path"></div>
@@ -1977,6 +1980,7 @@ ${EXPLORER_CSS}
     <div class="anxq-x-hint" id="anti-proof-hint"></div>
   </div></div>
 </div>
+<div class="anxq-caption" id="anti-proof-caption"></div>
 <script type="application/json" id="anti-proof-data">${pjson}</script>
 <script>
 (() => {${BOARD_JS}
