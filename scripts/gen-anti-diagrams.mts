@@ -1161,16 +1161,16 @@ if (process.argv.includes('--blog')) {
   const NOTES: Record<string, Record<number, string>> = {
     'best-2000000': {
       1: 'Cannon takes the horse over Black’s cannon. Red’s only two legal moves are this and its mirror image.',
-      2: 'Black declines the chariot recapture, a proven loss, and fires the other cannon down the b-file with Red’s b3 cannon as the screen. The only move that holds.',
-      3: 'The chariot takes the cannon. Continuing with 2. Cxf10, the other cannon capture, would also hold.',
+      2: 'Black declines the chariot recapture, a proven loss, and fires the other cannon down the h-file with Red’s h3 cannon as the screen. The only move that holds.',
+      3: 'The chariot takes the cannon. Continuing with 2. Cxd10, the other cannon capture, would also hold.',
       4: 'Black’s only legal move. The forced part is over: fourteen pieces each, Red to move, no capture on the board.',
-      5: 'The first free move of the game. Red puts its last cannon on h3, where it screens Black’s h8 cannon onto the h1 horse: an offer Black cannot refuse.',
+      5: 'The first free move of the game. Red puts its last cannon on b3, where it screens Black’s b8 cannon onto the b1 horse: an offer Black cannot refuse.',
       6: 'Only legal move.',
-      7: 'The same exchange on the other wing: chariot takes cannon, and Rxh3 will be forced in reply.',
+      7: 'The same exchange on the other wing: chariot takes cannon, and Rxb3 will be forced in reply.',
       9: 'Both chariots are now loose on the back ranks with nothing but captures available. For the next fourteen plies each chariot has only captures to make, and the two sides shed material in step.',
       23: 'The last capture of the feast. Five pieces each: general, two advisors, an elephant, one chariot.',
-      27: 'Red pulls the lever. The elephant steps to a3, on Black’s chariot’s file, where Black has no other capture: Rxa3 is compelled.',
-      31: 'The chariot itself: Ra2, and Black must take it. Red now has nothing that can leave the palace.',
+      27: 'Red pulls the lever. The elephant steps to i3, on Black’s chariot’s file, where Black has no other capture: Rxi3 is compelled.',
+      31: 'The chariot itself: Ri2, and Black must take it. Red now has nothing that can leave the palace.',
       33: 'The advisor steps into the chariot’s path. Black must take, and Red’s other advisor must take back.',
       35: 'Red: general and one advisor. Black: general, two advisors, an elephant. Nothing on the board can ever capture anything again.',
       44: 'Third occurrence of the position: draw by repetition. Red has fewer pieces and no way to lose them; Black has no way to make Red take anything.',
@@ -1203,12 +1203,16 @@ if (process.argv.includes('--blog')) {
   for (const nodes of [2000000, 5000000, 1000000]) {
     const g = bestplay.result.games.find((x) => x.nodes === nodes);
     if (!g) throw new Error(`no ${nodes} game`);
+    // The engine opens on the h-side (1. Cxh10) at every budget; the post's
+    // boards are all in the 1. Cxb10 frame, so these are shown mirrored (a
+    // mirror image is the same game) and say so.
+    const mirrored = g.moves[0] === 'h3h10';
     records.push({
       id: `best-${nodes}`,
       group: 'Best play, engine against itself',
       label: `${nodes / 1e6}M nodes a move, ${g.plies} plies`,
-      moves: g.moves,
-      result: `${g.winner ? `${g.winner} wins` : 'Draw'} by ${g.reason} after ${g.plies} plies, ${nodes / 1e6} million nodes a move for both sides.`,
+      moves: mirrored ? g.moves.map((m) => mirror(m)) : g.moves,
+      result: `${g.winner ? `${g.winner} wins` : 'Draw'} by ${g.reason} after ${g.plies} plies, ${nodes / 1e6} million nodes a move for both sides.${mirrored ? ' The engine opened 1. Cxh10; shown as its mirror image so the files match the boards in the post.' : ''}`,
     });
   }
   const sweepGames = JSON.parse(
