@@ -60,6 +60,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The anti-xiangqi write-up is dated 2026-09-13 and this index is
+      // ordered by date alone.
+      '/blog/anti-xiangqi',
       // Published with the variant on 2026-09-11, the same date as the
       // puzzles post; ties break on HOME_ARTICLE_SLUGS position, and this
       // index is ordered by date alone, so the newest pair leads.
@@ -232,6 +235,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/anti-xiangqi',
       '/blog/duck-xiangqi-build',
       '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
