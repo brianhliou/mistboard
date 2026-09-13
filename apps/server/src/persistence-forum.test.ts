@@ -16,6 +16,7 @@ import {
   listLatestForumPosts,
   moderateForumTopic,
   moveForumTopic,
+  putForumTranslation,
   resolveForumReport,
   searchForumPosts,
   searchForumTopics,
@@ -23,7 +24,7 @@ import {
   updateForumTopic,
 } from './persistence.js';
 import { getPool } from './persistence-db.js';
-import { assert, definePersistenceTests, test } from './persistence-test-support.js';
+import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
 import { tryHandle as tryHandleForumRoute } from './routes/forum.js';
 
 type ResponseCapture = {
@@ -575,6 +576,146 @@ definePersistenceTests('forum', () => {
       remainingOpenReports.map((report) => report.id),
       ['forum_report_post'],
     );
+  });
+
+  test('forum reads carry cached translations for ?locale= and never ask the model', async () => {
+    const now = new Date('2026-09-12T10:00:00Z');
+    await createUser({
+      id: 'forum_overlay_user',
+      email: 'overlay@example.com',
+      emailVerifiedAt: now,
+      handle: 'overlay',
+      displayName: 'Overlay',
+      now,
+    });
+    const created = await createForumTopic({
+      id: 'topic_overlay',
+      postId: 'post_overlay_1',
+      categorySlug: 'game-analysis',
+      authorAccountId: 'forum_overlay_user',
+      authorRole: 'player',
+      title: 'Paste a game link and it shows as a board',
+      slug: 'paste-a-game-link',
+      bodyText: 'You can now show a game inside a forum post. Paste the link on its own line.',
+      now,
+    });
+    assert.equal(created.ok, true);
+    const reply = await addForumPost({
+      id: 'post_overlay_2',
+      topicId: 'topic_overlay',
+      authorAccountId: 'forum_overlay_user',
+      bodyText: 'Nobody has translated this reply.',
+      now: new Date(now.getTime() + 60_000),
+    });
+    assert.equal(reply.ok, true);
+    // Two rows a Translate click would have written: the title and the
+    // opening post, both into zh-Hans, from an older model than today's.
+    for (const [text, translatedText, kind, id] of [
+      [
+        'Paste a game link and it shows as a board',
+        '粘贴对局链接即可显示为棋盘',
+        'topic',
+        'topic_overlay',
+      ],
+      [
+        'You can now show a game inside a forum post. Paste the link on its own line.',
+        '现在可以在论坛帖子中显示对局。把链接单独放在一行。',
+        'post',
+        'post_overlay_1',
+      ],
+    ] as const) {
+      await putForumTranslation({
+        contentHash: sha256(text),
+        targetLocale: 'zh-Hans',
+        model: 'an-older-model',
+        translatedText,
+        source: { kind, id },
+        inputTokens: 1,
+        outputTokens: 1,
+      });
+    }
+
+    // The overlay is behind the same flag as the Translate route. The key's
+    // presence is all the flag reads; this value is not a credential.
+    const env = {
+      flag: process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED,
+      key: process.env.ANTHROPIC_API_KEY,
+    };
+    process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED = 'true';
+    process.env.ANTHROPIC_API_KEY = 'present-for-the-flag-check';
+    try {
+      const get = async (path: string) => {
+        const response = captureResponse();
+        const handled = await tryHandleForumRoute(
+          {},
+          { method: 'GET', headers: {} } as unknown as IncomingMessage,
+          response,
+          new URL(`http://localhost${path}`).pathname,
+          new URL(`http://localhost${path}`),
+        );
+        assert.equal(handled, true);
+        assert.equal(response.status, 200);
+        return JSON.parse(response.body);
+      };
+      type TopicJson = {
+        id: string;
+        translated?: { title?: string; excerpt?: string };
+        posts?: { id: string; translated?: string }[];
+      };
+
+      // Lists: the latest post is the reply, which has no translation, so only
+      // the title overlays; a zh-Hant or en reader gets nothing; no locale,
+      // nothing.
+      const zhHans = (await get('/api/forum/topics?locale=zh-Hans')) as { topics: TopicJson[] };
+      const overlaid = zhHans.topics.find((topic) => topic.id === 'topic_overlay');
+      assert.deepEqual(overlaid?.translated, { title: '粘贴对局链接即可显示为棋盘' });
+      const zhHant = (await get('/api/forum/topics?locale=zh-Hant')) as { topics: TopicJson[] };
+      assert.equal(
+        zhHant.topics.find((topic) => topic.id === 'topic_overlay')?.translated,
+        undefined,
+      );
+      const bare = (await get('/api/forum/topics')) as { topics: TopicJson[] };
+      assert.equal(
+        bare.topics.find((topic) => topic.id === 'topic_overlay')?.translated,
+        undefined,
+      );
+
+      // The topic page: title and opening post overlaid, the reply untouched.
+      const detail = (await get('/api/forum/topics/topic_overlay?locale=zh-Hans')) as {
+        topic: TopicJson;
+      };
+      assert.equal(detail.topic.translated?.title, '粘贴对局链接即可显示为棋盘');
+      assert.deepEqual(
+        detail.topic.posts?.map((post) => [post.id, post.translated]),
+        [
+          ['post_overlay_1', '现在可以在论坛帖子中显示对局。把链接单独放在一行。'],
+          ['post_overlay_2', undefined],
+        ],
+      );
+
+      // The category index's latest-topic title.
+      const categories = (await get('/api/forum/categories?locale=zh-Hans')) as {
+        categories: { slug: string; latestPost: { topic: { translatedTitle?: string } } | null }[];
+      };
+      assert.equal(
+        categories.categories.find((category) => category.slug === 'game-analysis')?.latestPost
+          ?.topic.translatedTitle,
+        '粘贴对局链接即可显示为棋盘',
+      );
+
+      // Flag off: reads answer exactly as before the overlay existed.
+      process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED = 'false';
+      const off = (await get('/api/forum/topics/topic_overlay?locale=zh-Hans')) as {
+        topic: TopicJson;
+      };
+      assert.equal(off.topic.translated, undefined);
+      assert.equal(off.topic.posts?.[0]?.translated, undefined);
+    } finally {
+      if (env.flag === undefined) delete process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED;
+      else process.env.MISTBOARD_FORUM_TRANSLATION_ENABLED = env.flag;
+      if (env.key === undefined) delete process.env.ANTHROPIC_API_KEY;
+      else process.env.ANTHROPIC_API_KEY = env.key;
+    }
   });
 
   test('forum write routes require an account session', async () => {
