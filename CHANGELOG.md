@@ -60,7 +60,7 @@ Conventions:
 
 ### Fixed
 
-- A broadcast polled from a dpxq tour list files each game under the round its row states, whenever the record is uploaded, instead of only inside a twelve-hour window after the round started; the 2026 Shanghai Cup was polled all week and imported nothing. A tour's own page also now shows the poller's errors, which used to be written without the tour's name and so never reached it (HASH)
+- A broadcast polled from a dpxq tour list files each game under the round its row states, whenever the record is uploaded, instead of only inside a twelve-hour window after the round started; the 2026 Shanghai Cup was polled all week and imported nothing. A tour's own page also now shows the poller's errors, which used to be written without the tour's name and so never reached it ([ad09c5ff](https://github.com/brianhliou/mistboard/commit/ad09c5ff))
 - The study list shows the newest studies first; it used to sort by likes, which with four likes on the site kept the July studies pinned over everything since ([c93c2096](https://github.com/brianhliou/mistboard/commit/c93c2096))
 - The variant marker on a study thumbnail scales to its frame, so the homepage rail no longer clips it off-centre ([6a467506](https://github.com/brianhliou/mistboard/commit/6a467506))
 - The homepage forum box names each topic's category in the site language instead of English ([80e3f8e5](https://github.com/brianhliou/mistboard/commit/80e3f8e5))
