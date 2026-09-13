@@ -1127,24 +1127,21 @@ if (process.argv.includes('--blog')) {
   console.log(`  assets/posts/anti-xiangqi/pieces/ (${blogArt.size} files)`);
   const { renderXiangqiPieceGlyphed } = await import('../apps/web/src/xiangqi-piece-sets.js');
   // The cards: a black chariot beside a red general it must take.
+  // The cards: the two generals, in their discs, upside down. Same grammar as
+  // the Duck tile (a tight pair of discs on the site's cream field, 3:2), the
+  // rotation being the whole joke: in this game the generals are ordinary
+  // pieces and everyone is trying to lose.
   const card = (width: number, height: number, size: number) => {
-    const gap = Math.round(size * 0.18);
+    const gap = Math.round(size * 0.06);
     const x0 = (width - (size * 2 + gap)) / 2;
     const y = (height - size) / 2;
+    const disc = (color: 'red' | 'black', x: number) =>
+      `<g transform="rotate(180 ${x + size / 2} ${y + size / 2})">${renderXiangqiPieceGlyphed({ role: 'general', color }, 'international', { x, y, size })}</g>`;
     return [
       `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Anti Xiangqi">`,
-      `<rect width="${width}" height="${height}" fill="#d9bd82"/>`,
-      renderXiangqiPieceGlyphed({ role: 'chariot', color: 'black' }, 'international', {
-        x: x0,
-        y,
-        size,
-      }),
-      `<circle cx="${x0 + size + gap + size / 2}" cy="${y + size / 2}" r="${size * 0.62}" fill="none" stroke="#e08a1e" stroke-width="${Math.max(3, size * 0.07)}"/>`,
-      renderXiangqiPieceGlyphed({ role: 'general', color: 'red' }, 'international', {
-        x: x0 + size + gap,
-        y,
-        size,
-      }),
+      `<rect width="${width}" height="${height}" fill="#f2ede3"/>`,
+      disc('red', x0),
+      disc('black', x0 + size + gap),
       '</svg>',
     ].join('');
   };
@@ -1152,11 +1149,24 @@ if (process.argv.includes('--blog')) {
     const png = new Resvg(localArt(svg), { fitTo: { mode: 'width', value: width } })
       .render()
       .asPng();
-    writeFileSync(path.join(BLOG_ASSETS, file), png);
-    console.log(`  assets/posts/anti-xiangqi/${file} (${(png.length / 1024).toFixed(0)} kB)`);
+    const target = path.join(BLOG_ASSETS, file);
+    writeFileSync(target, png);
+    // Flat colour quantizes to nothing visible and halves the file; optional.
+    try {
+      execSync(`pngquant --force --skip-if-larger --quality 70-95 --output "${target}" "${target}"`, {
+        stdio: 'ignore',
+      });
+    } catch {
+      /* pngquant missing or declined: the unquantized PNG stands */
+    }
+    console.log(
+      `  assets/posts/anti-xiangqi/${file} (${(readFileSync(target).length / 1024).toFixed(0)} kB)`,
+    );
   };
-  renderPng(card(160, 100, 60), 'thumbnail.png', 640);
-  renderPng(card(120, 63, 36), 'social-card.png', 1200);
+  // 3:2 like every tile on the site; 1920 wide because quantized 2x is cheaper
+  // than unquantized 1x on flat art (the Duck tile's note has the numbers).
+  renderPng(card(150, 100, 64), 'thumbnail.png', 1920);
+  renderPng(card(120, 63, 40), 'social-card.png', 1200);
 
   // ── The games widget: the engine's games on the house board ───────────────
   // Every record was played under the kernel as referee; the page only applies
