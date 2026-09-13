@@ -1429,10 +1429,12 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
       parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
       parts.push('<image href="' + ART + p.color + '-' + p.role + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
-    // Capture hints as arrows (the analysis-board grammar), stopping at the
-    // target's disc so the last-move halo underneath stays readable.
+    // Capture hints: at rest a dot on each piece that can be taken; on hover
+    // an arrow (the analysis-board grammar) from the capturing piece,
+    // stopping at the target's disc so the last-move halo stays readable.
     for (const tg of targets || []) {
       const { from, to } = sq(tg.u), f = pt(from), t = pt(to);
+      if (tg.kind === 'dot') { parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="4.2" fill="' + tg.col + '" stroke="#fef0d7" stroke-width="1.2" opacity=".95"/>'); continue; }
       const dx = t.x - f.x, dy = t.y - f.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
       const ex = t.x - ux * 15, ey = t.y - uy * 15, sx = f.x + ux * 6, sy = f.y + uy * 6;
       const hx = ex - ux * 9, hy = ey - uy * 9, px = -uy * 5.5, py = ux * 5.5;
@@ -1549,18 +1551,6 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
     14: 'The elephant steps to i3, into the chariot’s reach; two replies, both covered.',
     34: 'Red has no pieces left and has won. Black could not decline a single capture along the way.',
   };
-  const recaptureRec = withSeats.find((g) => g.id === 'proof-82');
-  if (!recaptureRec) throw new Error('no proof line for the chariot recapture (leaf 82)');
-  const recaptureInstance = {
-    ...recaptureRec,
-    label: '1...Rxb10: the proven loss, main line',
-    red: 'Red (the proof)',
-    black: 'Black (any reply)',
-    result:
-      'Red wins by extinction after 34 plies. Every Black move here is one the certificate answers; the moves marked ! were the only legal ones.',
-    moves: recaptureRec.moves.map((m, i) => ({ ...m, n: recaptureNotes[i + 1] ?? undefined })),
-    tab: undefined,
-  };
   const middlegame = withSeats
     .filter((g) => g.id === 'best-2000000' || g.id === 'best-5000000')
     .map((g) => ({
@@ -1572,13 +1562,6 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
     }));
   const instances: Instance[] = [
     { id: 'anti-games', records: withSeats, picker: 'select' },
-    {
-      id: 'anti-line-recapture',
-      records: [recaptureInstance],
-      picker: 'none',
-      caption:
-        'The main line of the certificate for 1...Rxb10. Step through it: at every Black move, either it was the only legal move or the certificate holds a reply to each alternative.',
-    },
     {
       id: 'anti-line-middlegame',
       records: middlegame,
@@ -1671,6 +1654,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 .anxq-explorer .anxq-x-row .val { grid-area: val; justify-self: end; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; color: #fff; white-space: nowrap; }
 .anxq-explorer .val.r { background: #c0392b; } .anxq-explorer .val.b { background: #2b2b2b; } .anxq-explorer .val.d { background: #8b8b90; }
 .anxq-explorer .anxq-x-row .sub { grid-area: sub; font-size: 12px; line-height: 1.35; color: var(--anxq-muted); }
+.anxq-explorer .anxq-x-row .dur { grid-area: val; justify-self: end; font-size: 12px; font-weight: 600; color: var(--anxq-muted); white-space: nowrap; font-variant-numeric: tabular-nums; }
 .anxq-explorer .anxq-x-leaf { padding: 10px 12px 8px; font-size: 13.5px; line-height: 1.5; color: var(--anxq-heading); border-bottom: 1px solid var(--anxq-border); }
 .anxq-explorer .anxq-x-leaf p { margin: 6px 0 0; }
 .anxq-explorer .anxq-x-leaf .val { display: inline-block; vertical-align: 1px; font-size: 12px; font-weight: 600; padding: 1px 9px; border-radius: 999px; color: #fff; }
@@ -1778,7 +1762,8 @@ ${EXPLORER_CSS}
       for (let k = 0; k < ext; k++) board = applyMove(board, cont.moves[k].u);
       const kids = n.l ? [] : sortedKids(n);
       const last = ext > 0 ? cont.moves[ext - 1].u : (n.u || null);
-      render(svg, board, last, ext > 0 ? [] : kids.map((k) => ({ u: k.u, col: COL[k.v] })));
+      const rest = ext > 0 ? [] : kids.map((k) => ({ u: k.u, col: COL[k.v], kind: 'dot' }));
+      render(svg, board, last, rest);
       const { red, black } = countPieces(board);
       $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
       $('pos').textContent = 'ply ' + (n.d + ext);
@@ -1800,7 +1785,12 @@ ${EXPLORER_CSS}
           const b = document.createElement('button'); b.className = 'anxq-x-row';
           const num = Math.floor((k.d - 1) / 2) + 1;
           b.innerHTML = '<span class="mv">' + num + (k.m === 'r' ? '. ' : '... ') + k.s + (idx === 0 && strictlyBest ? '<span class="best">best</span>' : '') + '</span><span class="val ' + k.v + '">' + who(k.v) + '</span><span class="sub">' + evidence(k) + '</span>';
-          b.addEventListener('click', () => show(k.i)); body.appendChild(b);
+          b.addEventListener('click', () => show(k.i));
+          const lift = () => render(svg, board, last, [{ u: k.u, col: COL[k.v] }]);
+          const drop = () => render(svg, board, last, rest);
+          b.addEventListener('mouseenter', lift); b.addEventListener('focus', lift);
+          b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
+          body.appendChild(b);
         });
         hint.textContent = 'Chip: the value from there with best play on both sides. Small print: the evidence for it. Forward steps into the top row.';
       } else {
@@ -1858,6 +1848,210 @@ ${EXPLORER_CSS}
       `  _includes/anti-xq-${inst.id.replace(/^anti-/, '')}.html (${inst.records.length} games)`,
     );
   }
+  // ── Play against the proof: the whole certificate for 1...Rxb10 ──────────
+  // The stepper above shows one line; this holds every line. At each Black
+  // move the reader picks any legal reply and the certificate answers with
+  // Red's proving move, down to a position where Red has no pieces. The
+  // certificate is flattened with the four opening plies as a linear prefix
+  // so the path reads from the array. Rows carry how long the reply resists
+  // and how many positions sit below it.
+  const recaptureProof = proofs.outcomes.find((o) => o.leaf === 82);
+  if (!recaptureProof?.proof || !recaptureProof.line)
+    throw new Error('no certificate for the chariot recapture (leaf 82)');
+  type PNode = {
+    p: number;
+    u: string;
+    s: string;
+    d: number;
+    c: number[];
+    n: number;
+    dl: number;
+    main: boolean;
+    note?: string;
+  };
+  const pnodes: PNode[] = [];
+  {
+    const opening = recaptureProof.opening.split(' ');
+    const mainLine = new Set<string>();
+    {
+      // Main-line nodes are keyed by the full line from the array.
+      const acc: string[] = [];
+      for (const m of [...opening, ...recaptureProof.line]) {
+        acc.push(m);
+        mainLine.add(acc.join(' '));
+      }
+    }
+    let st = kernel.initial('pf');
+    const add = (
+      parent: number,
+      line: string[],
+      s: RuleState,
+      children: ProofTree[],
+    ): number => {
+      const i = pnodes.length;
+      const u = line[line.length - 1] ?? '';
+      const node: PNode = {
+        p: parent,
+        u,
+        s: u ? san(parentState(parent), u) : '',
+        d: line.length,
+        c: [],
+        n: 0,
+        dl: 0,
+        main: line.length === 0 || mainLine.has(line.join(' ')),
+        note: recaptureNotes[line.length],
+      };
+      pnodes.push(node);
+      states.push(s);
+      if (children.length === 0) {
+        if (s.status.type !== 'finished' || s.status.winner !== 'red')
+          throw new Error(`certificate leaf after ${line.join(' ')} is not a Red win`);
+        return i;
+      }
+      for (const ch of children) {
+        const mv = kernel.fromUci(s, ch.move);
+        if (!mv) throw new Error(`bad certificate move ${ch.move} after ${line.join(' ')}`);
+        const ci = add(i, [...line, ch.move], kernel.apply(s, mv), ch.replies ?? []);
+        node.c.push(ci);
+        node.n += pnodes[ci]!.n + 1;
+        node.dl = Math.max(node.dl, pnodes[ci]!.dl + 1);
+      }
+      return i;
+    };
+    const states: RuleState[] = [];
+    const parentState = (p: number) => states[p]!;
+    // The opening as a linear prefix, then the certificate from the ending.
+    const prefixTree = (k: number): ProofTree[] =>
+      k >= opening.length
+        ? recaptureProof.proof!.children
+        : [{ move: opening[k]!, replies: prefixTree(k + 1) }];
+    add(-1, [], st, prefixTree(0));
+    void st;
+    if (pnodes.length !== 1 + opening.length + (recaptureProof.proofSize ?? 0) - 1)
+      throw new Error(
+        `certificate flattened to ${pnodes.length} nodes; expected ${opening.length + (recaptureProof.proofSize ?? 0)}`,
+      );
+  }
+  const pjson = JSON.stringify({
+    start: kernel.fen(kernel.initial('x')).split(' ')[0],
+    open: 4,
+    nodes: pnodes.map((n) => [n.p, n.u, n.s, n.c, n.n, n.dl, n.main ? 1 : 0, n.note ?? '']),
+  }).replace(/</g, '\\u003c');
+  const proofHtml = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
+     The whole certificate for 1...Rxb10 as a widget: pick any Black reply, the proof answers.
+     Uses the explorer's CSS; include after anti-xq-explorer-lib.html. -->
+<div id="anti-proof" class="anxq anxq-explorer" tabindex="0">
+<div class="anxq-header" id="anti-proof-header">1...Rxb10: the whole proof</div>
+<div class="anxq-card">
+  <div class="anxq-board-col">
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name">Black, any reply</span><span class="anxq-seat-clock" id="anti-proof-count-black"></span></div>
+    <div class="anxq-mat"><svg id="anti-proof-board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name">Red, the certificate</span><span class="anxq-seat-clock" id="anti-proof-count-red"></span></div>
+    <div class="anxq-controls">
+      <button class="anxq-control" id="anti-proof-first" aria-label="Back to the array"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/></svg></button>
+      <button class="anxq-control" id="anti-proof-prev" aria-label="Back one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M11 4.3v7.4L4.9 8z"/></svg></button>
+      <span class="anxq-status" id="anti-proof-pos"></span>
+      <button class="anxq-control" id="anti-proof-next" aria-label="Forward one ply along the main line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M5 4.3v7.4L11.1 8z"/></svg></button>
+      <button class="anxq-control" id="anti-proof-last" aria-label="To the end of the main line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/></svg></button>
+    </div>
+    <div class="anxq-caption" id="anti-proof-caption"></div>
+  </div>
+  <div class="anxq-x-rail"><div class="anxq-x-inner">
+    <div class="anxq-x-path" id="anti-proof-path"></div>
+    <div class="anxq-x-state" id="anti-proof-state"></div>
+    <div class="anxq-x-body" id="anti-proof-body"></div>
+    <div class="anxq-x-hint" id="anti-proof-hint"></div>
+  </div></div>
+</div>
+<script type="application/json" id="anti-proof-data">${pjson}</script>
+<script>
+(() => {${BOARD_JS}
+  const root = document.getElementById('anti-proof');
+  const DATA = JSON.parse(root.querySelector('#anti-proof-data').textContent);
+  const N = DATA.nodes.map((a, i) => ({ i, p: a[0], u: a[1], s: a[2], c: a[3], n: a[4], dl: a[5], main: !!a[6], note: a[7], d: 0 }));
+  for (const n of N) n.d = n.p < 0 ? 0 : N[n.p].d + 1;
+  const $ = (suffix) => root.querySelector('#anti-proof-' + suffix);
+  const svg = $('board');
+  const fmt = (x) => String(x).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
+  const RED = '#c0392b';
+  function lineOf(i) { const out = []; let n = N[i]; while (n && n.p >= 0) { out.unshift(n); n = N[n.p]; } return out; }
+  function mainChild(n) { return n.c.map((c) => N[c]).find((k) => k.main) || N[n.c[0]]; }
+  let cur = 0;
+  function show(i) {
+    cur = i;
+    const n = N[i];
+    const line = lineOf(i);
+    let board = parsePlacement(DATA.start);
+    for (const m of line) board = applyMove(board, m.u);
+    const redToMove = n.d % 2 === 0;
+    const kids = n.c.map((c) => N[c]).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0) || b.dl - a.dl);
+    const rest = redToMove ? [] : kids.map((k) => ({ u: k.u, col: RED, kind: 'dot' }));
+    render(svg, board, n.u || null, rest);
+    const { red, black } = countPieces(board);
+    $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
+    $('pos').textContent = 'ply ' + n.d;
+    const path = $('path'); path.innerHTML = '';
+    const startBtn = document.createElement('button'); startBtn.textContent = 'start'; startBtn.className = i === 0 ? 'cur' : ''; startBtn.addEventListener('click', () => show(0)); path.appendChild(startBtn);
+    line.forEach((m, k) => { if (k % 2 === 0) { const num = document.createElement('span'); num.className = 'num'; num.textContent = ' ' + (k / 2 + 1) + '. '; path.appendChild(num); } else path.appendChild(document.createTextNode(' ')); const b = document.createElement('button'); b.textContent = m.s; b.className = (m.i === i ? 'cur' : '') + (m.main ? '' : ' ext'); b.addEventListener('click', () => show(m.i)); path.appendChild(b); });
+    const state = $('state'), body = $('body'), hint = $('hint');
+    body.innerHTML = '';
+    if (n.c.length === 0) {
+      state.innerHTML = '<b>Red has no pieces left.</b> Extinction: Red wins. ' + (n.main ? 'This is the end of the main line.' : 'A line of the certificate, ' + n.d + ' plies from the array.');
+      hint.textContent = 'Every line of the certificate ends like this. Back steps up; the first button returns to the array.';
+    } else if (n.d < DATA.open) {
+      const k = N[n.c[0]];
+      state.innerHTML = '<b>' + (redToMove ? 'Red' : 'Black') + ' to move.</b> The opening: ' + (n.d === 1 ? 'Black takes back with the chariot, the move the certificate refutes.' : 'the only capture.');
+      const b = document.createElement('button'); b.className = 'anxq-x-row';
+      const sub = k.d === 1 ? 'one of two mirror-image first moves' : k.d === 2 ? 'the certificate refutes it: ' + fmt(k.n + 1) + ' positions' : 'the only legal capture';
+      b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + (k.d % 2 === 1 ? '. ' : '... ') + k.s + '</span><span class="val ' + (k.d === 1 ? 'd' : 'r') + '">' + (k.d === 1 ? 'Draw' : 'Red wins') + '</span><span class="sub">' + sub + '</span>';
+      b.addEventListener('click', () => show(k.i)); body.appendChild(b);
+      hint.textContent = 'Forward steps through the four opening plies to the position the proof starts from.';
+    } else if (redToMove) {
+      const k = N[n.c[0]];
+      state.innerHTML = '<b>Red to move.</b> The certificate holds one move here, and it wins against every reply.';
+      const b = document.createElement('button'); b.className = 'anxq-x-row';
+      b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + '. ' + k.s + '</span><span class="dur">over in \u2264' + k.dl + ' more pl' + (k.dl === 1 ? 'y' : 'ies') + '</span><span class="sub">' + (k.main ? 'main line · ' : '') + 'whatever Black does · ' + fmt(k.n + 1) + ' positions</span>';
+      b.addEventListener('click', () => show(k.i));
+      const lift = () => render(svg, board, n.u || null, [{ u: k.u, col: RED }]);
+      const drop = () => render(svg, board, n.u || null, rest);
+      b.addEventListener('mouseenter', lift); b.addEventListener('focus', lift); b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
+      body.appendChild(b);
+      hint.textContent = 'Forward plays it.';
+    } else {
+      state.innerHTML = '<b>Black to move.</b> ' + kids.length + ' legal ' + (kids.length === 1 ? 'move' : 'moves') + ', and the certificate answers each one. Pick any.';
+      const head = document.createElement('div'); head.className = 'anxq-x-head'; head.innerHTML = '<span>Black\\u2019s replies, longest resistance first</span>'; body.appendChild(head);
+      kids.forEach((k) => {
+        const b = document.createElement('button'); b.className = 'anxq-x-row';
+        b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + '... ' + k.s + '</span><span class="dur">over in \u2264' + k.dl + ' more pl' + (k.dl === 1 ? 'y' : 'ies') + '</span><span class="sub">' + (k.main ? 'main line · ' : '') + fmt(k.n + 1) + ' position' + (k.n === 0 ? '' : 's') + '</span>';
+        b.addEventListener('click', () => show(k.i));
+        const lift = () => render(svg, board, n.u || null, [{ u: k.u, col: RED }]);
+        const drop = () => render(svg, board, n.u || null, rest);
+        b.addEventListener('mouseenter', lift); b.addEventListener('focus', lift); b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
+        body.appendChild(b);
+      });
+      hint.textContent = kids.length === 1 ? 'Only one legal move: Black must capture. Forward plays it.' : 'Every row is a legal Black move; there are no others. Forward follows the main line.';
+    }
+    const cap = $('caption');
+    if (n.d === 0) cap.innerHTML = '<span class="who">The array. The proof refutes 1...Rxb10; step forward to reach it.</span>';
+    else cap.innerHTML = '<span class="san">' + (Math.floor((n.d - 1) / 2) + 1) + (n.d % 2 === 1 ? '. ' : '... ') + n.s + '</span> <span class="who">' + (n.d % 2 === 1 ? 'Red' : 'Black') + (n.main ? '' : ', off the main line') + '.</span>' + (n.note ? '<p>' + n.note + '</p>' : '');
+    $('first').disabled = i === 0; $('prev').disabled = i === 0;
+    $('next').disabled = n.c.length === 0; $('last').disabled = n.c.length === 0;
+    $('header').textContent = n.d === 0 ? '1...Rxb10: the whole proof' : 'After ' + line.map((m, k) => (k % 2 === 0 ? (k / 2 + 1) + '. ' : '') + m.s).join(' ');
+  }
+  const next = () => { const n = N[cur]; if (n.c.length) show(mainChild(n).i); };
+  const prev = () => { if (N[cur].p >= 0) show(N[cur].p); };
+  $('first').addEventListener('click', () => show(0));
+  $('prev').addEventListener('click', prev);
+  $('next').addEventListener('click', next);
+  $('last').addEventListener('click', () => { let n = N[cur]; while (n.c.length) n = mainChild(n); show(n.i); });
+  root.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { next(); e.preventDefault(); } else if (e.key === 'ArrowLeft' || e.key === 'Backspace') { prev(); e.preventDefault(); } });
+  show(DATA.open);
+})();
+</script>
+</div>
+`;
+  writeFileSync(path.join(INCLUDES, 'anti-xq-proof-recapture.html'), proofHtml);
+  console.log(`  _includes/anti-xq-proof-recapture.html (${pnodes.length} positions)`);
   // ── The public repository's viewer: the same widgets on one page ─────────
   // `--repo` writes games/index.html into the anti-xiangqi evidence
   // repository: every game in the viewer and the whole opening table, with
