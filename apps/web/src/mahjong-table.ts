@@ -329,6 +329,7 @@ function centreHtml(view: MahjongPlayerView): string {
       <div class="mj-centre-wind" aria-label="round wind">${SEAT_WINDS[MAHJONG_SEATS[view.roundWind - 27] ?? 'east']}</div>
       <div class="mj-centre-wall">${view.wallRemaining}<span class="mj-centre-wall-label">tiles left</span></div>
       ${claimed}
+      <a class="mj-centre-rules" href="/rules/mahjong" target="_blank" rel="noopener">how to play</a>
     </div>`;
 }
 

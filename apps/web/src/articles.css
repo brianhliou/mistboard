@@ -2743,3 +2743,24 @@ a.article-meta-author:hover .article-meta-author-name {
 .xq-replay-slider.dkx-replay-slider {
   width: min(480px, 100%);
 }
+
+/* The mahjong rules tables are prose in every third column (what a claim
+   needs, what a pattern is), so they wrap like the champions table does. The
+   pattern name (CJK plus English) and the faan number keep their line. */
+[data-article-slug="mahjong"] .article-table {
+  white-space: normal;
+}
+
+[data-article-slug="mahjong"] .article-table td:nth-child(1),
+[data-article-slug="mahjong"] .article-table th:nth-child(1) {
+  width: 1%;
+  white-space: nowrap;
+  padding-right: 18px;
+}
+
+[data-article-slug="mahjong"] .article-table td:nth-child(2),
+[data-article-slug="mahjong"] .article-table th:nth-child(2) {
+  white-space: nowrap;
+  padding-right: 18px;
+  font-variant-numeric: tabular-nums;
+}

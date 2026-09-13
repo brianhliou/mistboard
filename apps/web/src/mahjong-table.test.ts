@@ -162,7 +162,8 @@ describe('the bar', () => {
     const view = mahjongViewFor(dealt(), 'south');
     expect(view.turn).toBe('east');
     const html = mahjongTableHtml(view, false);
-    expect(html).not.toContain('to play');
+    expect(html).not.toContain('mj-seat-turn-label');
+    expect(html).not.toContain('mj-turn-dot');
   });
 });
 

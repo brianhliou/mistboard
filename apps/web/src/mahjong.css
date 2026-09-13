@@ -367,6 +367,26 @@
   gap: 4px;
 }
 
+/* The rules page, from the one spot every player looks at. Opens beside the
+   table rather than over it: a claim window does not wait for reading. */
+.mj-centre-rules {
+  font:
+    400 10px / 1.2 "IBM Plex Sans",
+    ui-sans-serif,
+    system-ui,
+    sans-serif;
+  letter-spacing: 0.1em;
+  text-transform: uppercase;
+  color: var(--mj-on-felt-soft);
+  text-decoration: none;
+  border-bottom: 1px solid currentColor;
+  padding-bottom: 1px;
+}
+
+.mj-centre-rules:hover {
+  color: var(--mj-on-felt);
+}
+
 /* ── Tiles ────────────────────────────────────────────────────────────────── */
 
 .mj-tile {
