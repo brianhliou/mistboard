@@ -79,7 +79,7 @@ function finishedEvents(): GameEvent[] {
   const clock = expireClock(createClock(1, 1, 0), 2, 'white');
   assert.ok(clock);
   return [
-    { type: 'room-created', at: 1, roomId: ROOM_ID, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: ROOM_ID, variant: 'dark-chess' },
     { type: 'clock-expired', at: 2, roomId: ROOM_ID, color: 'white', clock },
   ];
 }

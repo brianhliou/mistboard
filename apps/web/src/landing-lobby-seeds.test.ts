@@ -416,14 +416,12 @@ describe('landing lobby bot seeks', () => {
             {
               gameSpecId: 'xiangqi',
               rated: false,
-              hiddenDraft960: false,
               timeControl: { initialMs: 180_000, incrementMs: 2_000 },
               waitingMs: 4_000,
             },
             {
               gameSpecId: 'xiangqi',
               rated: false,
-              hiddenDraft960: false,
               timeControl: { initialMs: 180_000, incrementMs: 2_000 },
               waitingMs: 9_000,
             },
@@ -432,7 +430,6 @@ describe('landing lobby bot seeks', () => {
             {
               gameSpecId: 'xiangqi',
               rated: true,
-              hiddenDraft960: false,
               timeControl: { initialMs: 180_000, incrementMs: 2_000 },
               waitingMs: 2_000,
             },

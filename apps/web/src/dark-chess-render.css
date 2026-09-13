@@ -1,5 +1,5 @@
-/* Fog styling for the Dark Chess SVG board (dark-chess-render.ts). Mirrors the
-   Dark Crazyhouse fog block: the shrouded squares read from the shared
+/* Fog styling for the Dark Chess SVG board (dark-chess-render.ts): the
+   shrouded squares read from the shared
    --board-fog-* tokens and respect the global data-fog-theme switch, so Dark
    Chess matches its chess-family siblings under every fog appearance. */
 

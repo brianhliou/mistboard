@@ -204,7 +204,6 @@ test('lobby: two matching chess requests create one dark-chess room with the exa
     'pvp',
     'dark-chess',
     'engine',
-    false,
     tc,
     false,
     { randomSeating: true },

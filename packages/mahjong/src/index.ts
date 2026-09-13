@@ -3,6 +3,7 @@ export * from './bots.js';
 export * from './claims.js';
 export * from './decompose.js';
 export * from './game.js';
+export * from './hand-context.js';
 export * from './hk-detect.js';
 export * from './hk-faan.js';
 export * from './hk-patterns.js';

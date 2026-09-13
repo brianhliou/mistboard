@@ -20,17 +20,8 @@ export const PRODUCT_SERVER_FLAGS = Object.freeze([
     ...(rawProfile.productAdditionalServerFlags ?? []),
   ]),
 ]);
-export const LAB_SERVER_FLAGS = Object.freeze([
-  ...new Set([...PRODUCT_SERVER_FLAGS, ...rawProfile.labAdditionalServerFlags]),
-]);
 
 validateProfile(rawProfile);
-
-export function serverFlagsForProfile(profile) {
-  if (profile === 'product') return PRODUCT_SERVER_FLAGS;
-  if (profile === 'lab') return LAB_SERVER_FLAGS;
-  throw new Error(`unknown development profile: ${profile}`);
-}
 
 function validateProfile(profile) {
   if (!Array.isArray(profile.gameSpecIds) || profile.gameSpecIds.length === 0) {
@@ -42,7 +33,6 @@ function validateProfile(profile) {
   if (
     !profile.serverFlagByGameSpecId ||
     typeof profile.serverFlagByGameSpecId !== 'object' ||
-    !Array.isArray(profile.labAdditionalServerFlags) ||
     (profile.productAdditionalServerFlags !== undefined &&
       !Array.isArray(profile.productAdditionalServerFlags))
   ) {

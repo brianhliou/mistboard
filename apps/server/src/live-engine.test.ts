@@ -306,9 +306,7 @@ function context(legalMoves: Move[]): EngineMoveContext {
 
 function remoteEngineContext(legalMoves: Move[]): EngineMoveContext {
   const roomId = 'remote-engine-room';
-  const gameEvents: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId, variant: 'dark-chess', offer: [] },
-  ];
+  const gameEvents: GameEvent[] = [{ type: 'room-created', at: 1, roomId, variant: 'dark-chess' }];
   return {
     ...context(legalMoves),
     events: gameEvents,

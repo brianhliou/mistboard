@@ -45,7 +45,7 @@ function assert(condition, message) {
  * spec id -> { publicName, publicSurface, runtimeStatus }.
  *
  * GAME_SPECS mixes two id styles in one array — `id: DARK_CHESS_SPEC_ID` and
- * `id: 'dark-crazyhouse'`. Handle both. An earlier version of this parser read
+ * `id: 'mahjong'`. Handle both. An earlier version of this parser read
  * only the const form, dropped 7 of 24 specs, and passed its own completeness
  * assert because that assert counted const-form lines too. The check below
  * counts every `id:` in the array body instead, so the parser is measured
@@ -115,7 +115,7 @@ function parseGate() {
   const body = text.slice(start, end === -1 ? text.length : end);
 
   const out = new Map();
-  // Entries are `'dark-crazyhouse': { … }` or bare `kriegspiel: { … }`.
+  // Entries are `'dark-xiangqi': { … }` or bare `jieqi: { … }`.
   const entry = /(?:'([a-z0-9-]+)'|\b([a-z][a-zA-Z0-9]*)):\s*\{([^}]*)\}/g;
   let match;
   // biome-ignore lint/suspicious/noAssignInExpressions: standard /g regex iteration; exec() advances lastIndex so the assignment is the loop step.
@@ -249,9 +249,8 @@ async function main() {
   const prodBots = wantProd ? await fetchProdBots() : null;
 
   // An explicit gameSpecId wins. Otherwise fall back to the LONGEST spec id the
-  // engine id contains: 'mini-xiangqi' must beat 'xiangqi' for
-  // `fairy-stockfish-mini-xiangqi-strong`, or xiangqi absorbs every other
-  // variant's engines.
+  // engine id contains: 'fortress-xiangqi' must beat 'xiangqi', or xiangqi
+  // absorbs every other variant's engines.
   const specIds = [...specs.keys()].sort((a, b) => b.length - a.length);
   const botCount = new Map();
   for (const bot of bots) {
@@ -289,7 +288,7 @@ async function main() {
       last = row.status;
     }
     // This counts entries in the WEB TENANT registry only. It structurally cannot
-    // see the chess-stack path (dark-chess, dark-draft960) or a server-side route
+    // see the chess-stack path (dark-chess) or a server-side route
     // default like Misty DXQ on dark-xiangqi, so a blank here is 'none in the
     // tenant registry', never 'no bot'. --prod is the only honest answer.
     const tenantBots = row.bots > 0 ? `${row.bots} tenant bot${row.bots === 1 ? '' : 's'}` : '';

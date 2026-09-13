@@ -2,17 +2,10 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   BANQI_SPEC_ID,
-  CROSSROADS_CHESS_SPEC_ID,
   DARK_CHESS_SPEC_ID,
-  DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
-  DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   gameSpecForId,
   JIEQI_SPEC_ID,
-  REVEAL_CHESS_SPEC_ID,
 } from '@mistboard/game';
 import {
   bucketForGame,
@@ -29,46 +22,24 @@ test('default rating bucket uses the Dark chess game spec rating pool', () => {
   });
 });
 
-test('bucketForGame maps standard and Draft960 through game specs', () => {
-  assert.deepEqual(bucketForGame({ initialMs: 180_000, incrementMs: 2_000 }), {
-    variant: gameSpecForId(DARK_CHESS_SPEC_ID).ratingPoolBase,
-    timeClass: 'blitz',
-  });
+test('bucketForGame maps the dark-chess spec to the fog pool', () => {
   assert.deepEqual(
-    bucketForGame({ initialMs: 180_000, incrementMs: 2_000, hiddenDraft960: true }),
-    {
-      variant: gameSpecForId(DARK_DRAFT960_SPEC_ID).ratingPoolBase,
-      timeClass: 'blitz',
-    },
+    bucketForGame({ variant: DARK_CHESS_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 }),
+    { variant: gameSpecForId(DARK_CHESS_SPEC_ID).ratingPoolBase, timeClass: 'blitz' },
   );
 });
 
-test('bucketForGame maps Dark Mini Xiangqi through its own rating pool', () => {
-  assert.deepEqual(
-    bucketForGame({
-      variant: DARK_MINI_XIANGQI_SPEC_ID,
-      initialMs: 180_000,
-      incrementMs: 2_000,
-    }),
-    {
-      variant: gameSpecForId(DARK_MINI_XIANGQI_SPEC_ID).ratingPoolBase,
-      timeClass: 'blitz',
-    },
+test('bucketForGame fails closed for a retired or unknown variant, never the fog pool', () => {
+  // games.variant outlives the registry: rated rows for variants deleted in
+  // #396 are still in prod. They must drop out of every pool rather than be
+  // re-credited to fog (the old dark-chess fallback drew a Dark Mini Xiangqi
+  // result on a fog-chess rating graph).
+  assert.equal(
+    bucketForGame({ variant: 'dark-mini-xiangqi', initialMs: 180_000, incrementMs: 2_000 }),
+    null,
   );
-});
-
-test('bucketForGame maps Crossroads Chess through its own open rating pool', () => {
-  assert.deepEqual(
-    bucketForGame({
-      variant: CROSSROADS_CHESS_SPEC_ID,
-      initialMs: 180_000,
-      incrementMs: 2_000,
-    }),
-    {
-      variant: gameSpecForId(CROSSROADS_CHESS_SPEC_ID).ratingPoolBase,
-      timeClass: PUBLIC_RATING_TIME_CLASS,
-    },
-  );
+  assert.equal(bucketForGame({ initialMs: 180_000, incrementMs: 2_000 }), null);
+  assert.equal(bucketForGame({ variant: null, initialMs: 60_000, incrementMs: 1_000 }), null);
 });
 
 test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => {
@@ -83,13 +54,6 @@ test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => 
     bucketForGame({ variant: BANQI_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 }),
     { variant: gameSpecForId(BANQI_SPEC_ID).ratingPoolBase, timeClass: PUBLIC_RATING_TIME_CLASS },
   );
-  assert.deepEqual(
-    bucketForGame({ variant: REVEAL_CHESS_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 }),
-    {
-      variant: gameSpecForId(REVEAL_CHESS_SPEC_ID).ratingPoolBase,
-      timeClass: PUBLIC_RATING_TIME_CLASS,
-    },
-  );
   // Full Dark Xiangqi buckets into its OWN pool, never the fog fallback.
   assert.deepEqual(
     bucketForGame({ variant: DARK_XIANGQI_SPEC_ID, initialMs: 180_000, incrementMs: 2_000 }),
@@ -100,19 +64,6 @@ test('bucketForGame maps Jieqi and Banqi through their own rating pools', () => 
   );
 });
 
-test('bucketForGame maps the remaining live PvP variants through their own rating pools', () => {
-  for (const specId of [
-    DARK_CROSSROADS_CHESS_SPEC_ID,
-    DARK_SHOGI_SPEC_ID,
-    DARK_CRAZYHOUSE_SPEC_ID,
-  ] as const) {
-    assert.deepEqual(bucketForGame({ variant: specId, initialMs: 180_000, incrementMs: 2_000 }), {
-      variant: gameSpecForId(specId).ratingPoolBase,
-      timeClass: PUBLIC_RATING_TIME_CLASS,
-    });
-  }
-});
-
 test('bucketForGame fails closed for specs with no active pool, never the fog pool', () => {
   // A spec with no active rating pool must yield no bucket (simply not rated)
   // rather than fall through to the dark-chess fallback and pollute the fog
@@ -121,17 +72,17 @@ test('bucketForGame fails closed for specs with no active pool, never the fog po
 });
 
 test('bucketForGame buckets each rated live pace into its own time class', () => {
-  assert.deepEqual(bucketForGame({ initialMs: 60_000, incrementMs: 1_000 }), {
-    variant: 'fog',
-    timeClass: 'bullet',
-  });
+  assert.deepEqual(
+    bucketForGame({ variant: DARK_CHESS_SPEC_ID, initialMs: 60_000, incrementMs: 1_000 }),
+    { variant: 'fog', timeClass: 'bullet' },
+  );
   assert.deepEqual(
     bucketForGame({
-      variant: CROSSROADS_CHESS_SPEC_ID,
+      variant: JIEQI_SPEC_ID,
       initialMs: 300_000,
       incrementMs: 5_000,
     }),
-    { variant: gameSpecForId(CROSSROADS_CHESS_SPEC_ID).ratingPoolBase, timeClass: 'rapid' },
+    { variant: gameSpecForId(JIEQI_SPEC_ID).ratingPoolBase, timeClass: 'rapid' },
   );
 });
 
@@ -147,23 +98,12 @@ test('bucketForGame yields no bucket for an unofficial or correspondence pace', 
 test('parseRatingVariant keeps legacy leaderboard API params stable', () => {
   assert.equal(parseRatingVariant('fog'), 'fog');
   assert.equal(parseRatingVariant('dark-chess'), 'fog');
-  assert.equal(parseRatingVariant('fog_draft960'), 'fog_draft960');
-  assert.equal(parseRatingVariant('fog-draft960'), 'fog_draft960');
-  assert.equal(parseRatingVariant('dark-draft960'), 'fog_draft960');
-  assert.equal(parseRatingVariant('dark-mini-xiangqi'), 'dark_mini_xiangqi');
-  assert.equal(parseRatingVariant('dark_mini_xiangqi'), 'dark_mini_xiangqi');
-  assert.equal(parseRatingVariant('crossroads-chess'), 'crossroads_chess_open');
-  assert.equal(parseRatingVariant('crossroads_chess_open'), 'crossroads_chess_open');
+  // The deleted Draft960 pool is no longer a rating variant in any spelling.
+  assert.equal(parseRatingVariant('fog_draft960'), null);
+  assert.equal(parseRatingVariant('fog-draft960'), null);
+  assert.equal(parseRatingVariant('dark-draft960'), null);
   assert.equal(parseRatingVariant('jieqi'), 'jieqi');
   assert.equal(parseRatingVariant('banqi'), 'banqi');
-  assert.equal(parseRatingVariant('reveal-chess'), 'reveal_chess');
   assert.equal(parseRatingVariant('dark-xiangqi'), 'dark_xiangqi');
   assert.equal(parseRatingVariant('dark_xiangqi'), 'dark_xiangqi');
-  assert.equal(parseRatingVariant('dark-crossroads-chess'), 'crossroads_chess');
-  assert.equal(parseRatingVariant('crossroads_chess'), 'crossroads_chess');
-  assert.equal(parseRatingVariant('dark-shogi'), 'dark_shogi');
-  assert.equal(parseRatingVariant('dark_shogi'), 'dark_shogi');
-  assert.equal(parseRatingVariant('dark-crazyhouse'), 'dark_crazyhouse');
-  assert.equal(parseRatingVariant('dark_crazyhouse'), 'dark_crazyhouse');
-  assert.equal(parseRatingVariant('kriegspiel'), 'kriegspiel');
 });

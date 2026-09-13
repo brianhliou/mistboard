@@ -55,6 +55,9 @@ export const ZH_HANT_ACCOUNT = {
   'account.premovesHelp': '輪到你時執行預先準備的著法，前提是該著法仍然合法。',
   'account.confirmGameActions': '確認認輸和中止',
   'account.confirmGameActionsHelp': '透過對局操作結束對局前先詢問確認。',
+  'account.forumAutoTranslate': '論壇貼文顯示為譯文',
+  'account.forumAutoTranslateHelp':
+    '以其他語言撰寫的論壇話題和貼文，在已有譯文時直接以譯文開啟。任何貼文都可以切換回原文。',
   'account.optionYes': '是',
   'account.optionNo': '否',
   'account.settingsPrivacy': '隱私',

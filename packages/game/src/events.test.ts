@@ -1,9 +1,8 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { generateChess960Starts, pickDraft960Offer } from './chess960.js';
 import { advanceClock, createClock, expireClock } from './clocks.js';
 import { type GameEvent, replayGameEvents } from './events.js';
-import { DARK_CHESS_SPEC_ID, DARK_DRAFT960_SPEC_ID } from './game-specs.js';
+import { DARK_CHESS_SPEC_ID } from './game-specs.js';
 import { correspondenceTimeControl, DAY_MS } from './time-controls.js';
 import type { ClockState } from './types.js';
 
@@ -15,200 +14,13 @@ function armedClock(at: number, initialMs?: number, incrementMs?: number): Clock
   return { ...createClock(at, initialMs, incrementMs), activeColor: 'white', runningSince: at };
 }
 
-test('replays Draft960 pregame events into a resolved starting position', () => {
-  const offer = pickDraft960Offer(42);
-  const resolvedStart = offer[0];
-  const events: GameEvent[] = [
-    {
-      type: 'room-created',
-      at: 1,
-      roomId: 'replay-room',
-      variant: 'draft960',
-      offer,
-    },
-    {
-      type: 'seat-assigned',
-      at: 2,
-      roomId: 'replay-room',
-      clientId: 'white-client',
-      seat: 'white',
-    },
-    {
-      type: 'seat-assigned',
-      at: 3,
-      roomId: 'replay-room',
-      clientId: 'black-client',
-      seat: 'black',
-    },
-    {
-      type: 'draft-start-selected',
-      at: 4,
-      roomId: 'replay-room',
-      color: 'white',
-      startId: resolvedStart.id,
-    },
-    {
-      type: 'draft-start-selected',
-      at: 5,
-      roomId: 'replay-room',
-      color: 'black',
-      startId: resolvedStart.id,
-    },
-    {
-      type: 'draft-start-resolved',
-      at: 6,
-      roomId: 'replay-room',
-      startId: resolvedStart.id,
-    },
-  ];
-
-  const projection = replayGameEvents(events);
-
-  assert.deepEqual(projection.seats, {
-    white: 'white-client',
-    black: 'black-client',
-  });
-  assert.deepEqual(projection.selections, {
-    white: resolvedStart.id,
-    black: resolvedStart.id,
-  });
-  assert.equal(projection.resolvedStartId, resolvedStart.id);
-  assert.deepEqual(projection.state.status, { type: 'playing', turn: 'white' });
-  assert.deepEqual(
-    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(
-      (file) => projection.state.board[`${file}1` as keyof typeof projection.state.board]?.role,
-    ),
-    resolvedStart.backRank,
-  );
-});
-
-test('replays independent per-side Draft960 offers into independent starting positions', () => {
-  const starts = generateChess960Starts();
-  const whiteOffer = [
-    starts.find((start) => start.fenPlacement === 'bbqnnrkr')!,
-    starts.find((start) => start.fenPlacement === 'bqnbnrkr')!,
-    starts.find((start) => start.fenPlacement === 'bqnnrbkr')!,
-  ];
-  const blackOffer = [
-    starts.find((start) => start.fenPlacement === 'qbbnnrkr')!,
-    starts.find((start) => start.fenPlacement === 'qbnnbkrr')!,
-    starts.find((start) => start.fenPlacement === 'qnbbnrkr')!,
-  ];
-  const whiteStart = whiteOffer[0];
-  const blackStart = blackOffer[0];
-  const events: GameEvent[] = [
-    {
-      type: 'room-created',
-      at: 1,
-      roomId: 'independent-draft-room',
-      variant: 'dark-chess',
-      offer: [],
-      offers: {
-        white: whiteOffer,
-        black: blackOffer,
-      },
-    },
-    {
-      type: 'draft-start-selected',
-      at: 2,
-      roomId: 'independent-draft-room',
-      color: 'white',
-      startId: whiteStart.id,
-    },
-    {
-      type: 'draft-start-selected',
-      at: 3,
-      roomId: 'independent-draft-room',
-      color: 'black',
-      startId: blackStart.id,
-    },
-    {
-      type: 'draft-start-resolved',
-      at: 4,
-      roomId: 'independent-draft-room',
-      startIds: {
-        white: whiteStart.id,
-        black: blackStart.id,
-      },
-    },
-  ];
-
-  const projection = replayGameEvents(events);
-
-  assert.equal(projection.resolvedStartId, null);
-  assert.deepEqual(projection.resolvedStartIds, {
-    white: whiteStart.id,
-    black: blackStart.id,
-  });
-  assert.deepEqual(projection.selections, {
-    white: whiteStart.id,
-    black: blackStart.id,
-  });
-  assert.deepEqual(
-    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(
-      (file) => projection.state.board[`${file}1` as keyof typeof projection.state.board]?.role,
-    ),
-    whiteStart.backRank,
-  );
-  assert.deepEqual(
-    ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'].map(
-      (file) => projection.state.board[`${file}8` as keyof typeof projection.state.board]?.role,
-    ),
-    blackStart.backRank,
-  );
-  assert.deepEqual(projection.state.castlingRights, ['f1', 'h1', 'f8', 'h8']);
-  assert.deepEqual(projection.state.status, { type: 'playing', turn: 'white' });
-});
-
-test('replays a redacted Fog Draft960 offer as pregame', () => {
-  const offer = pickDraft960Offer(11);
-  const projection = replayGameEvents([
-    {
-      type: 'room-created',
-      at: 1,
-      roomId: 'redacted-fog-draft-room',
-      variant: 'dark-chess',
-      offer,
-      offers: {
-        white: offer,
-      },
-    },
-  ]);
-
-  assert.deepEqual(projection.state.status, { type: 'pregame' });
-  assert.deepEqual(projection.offers.white, offer);
-});
-
-test('replays move events through the Draft960 rules adapter', () => {
-  const offer = pickDraft960Offer(7);
-  const start = offer[0];
+test('replays move events through the standard chess rules adapter', () => {
   const events: GameEvent[] = [
     {
       type: 'room-created',
       at: 1,
       roomId: 'move-room',
-      variant: 'draft960',
-      offer,
-    },
-    {
-      type: 'draft-start-selected',
-      at: 2,
-      roomId: 'move-room',
-      color: 'white',
-      startId: start.id,
-    },
-    {
-      type: 'draft-start-selected',
-      at: 3,
-      roomId: 'move-room',
-      color: 'black',
-      startId: start.id,
-    },
-    {
-      type: 'draft-start-resolved',
-      at: 4,
-      roomId: 'move-room',
-      startId: start.id,
+      variant: 'chess',
     },
     {
       type: 'move-played',
@@ -234,7 +46,6 @@ test('vacates Fog of War seats before the first move', () => {
       at: 1,
       roomId: 'fresh-fog-room',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'seat-assigned',
@@ -264,7 +75,6 @@ test('keeps Fog of War seats after play starts', () => {
       at: 1,
       roomId: 'active-fog-room',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'seat-assigned',
@@ -302,7 +112,6 @@ test('starts a frozen Fog of War clock after seats are ready (arms after both fi
       at: 1,
       roomId: 'clocked-fog-room',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'seat-assigned',
@@ -380,7 +189,6 @@ test('replays room-created time control metadata', () => {
       at: 1,
       roomId: 'custom-clock-room',
       variant: 'dark-chess',
-      offer: [],
       timeControl: {
         initialMs: 180_000,
         incrementMs: 2_000,
@@ -404,7 +212,6 @@ test('replays room-created game spec metadata', () => {
       roomId: 'spec-room',
       variant: 'dark-chess',
       gameSpecId: DARK_CHESS_SPEC_ID,
-      offer: [],
     },
   ]);
 
@@ -418,7 +225,6 @@ test('replays room-created region metadata', () => {
       at: 1,
       roomId: 'regional-room',
       variant: 'dark-chess',
-      offer: [],
       region: 'asia',
     },
   ]);
@@ -426,39 +232,7 @@ test('replays room-created region metadata', () => {
   assert.equal(projection.region, 'asia');
 });
 
-test('derives game spec metadata for legacy Draft960 room-created events', () => {
-  const offer = pickDraft960Offer(960);
-
-  assert.equal(
-    replayGameEvents([
-      {
-        type: 'room-created',
-        at: 1,
-        roomId: 'legacy-draft960-room',
-        variant: 'draft960',
-        offer,
-      },
-    ]).gameSpecId,
-    DARK_DRAFT960_SPEC_ID,
-  );
-  assert.equal(
-    replayGameEvents([
-      {
-        type: 'room-created',
-        at: 1,
-        roomId: 'legacy-hidden-draft960-room',
-        variant: 'dark-chess',
-        offer,
-        offers: { white: offer, black: offer },
-      },
-    ]).gameSpecId,
-    DARK_DRAFT960_SPEC_ID,
-  );
-});
-
 test('replays clock snapshots on start and move events', () => {
-  const offer = pickDraft960Offer(8);
-  const start = offer[0];
   const startedClock = armedClock(4);
   const movedClock = advanceClock(startedClock, 1504, 'white', { type: 'playing', turn: 'black' });
   const events: GameEvent[] = [
@@ -466,15 +240,13 @@ test('replays clock snapshots on start and move events', () => {
       type: 'room-created',
       at: 1,
       roomId: 'clock-room',
-      variant: 'draft960',
-      offer,
+      variant: 'chess',
     },
     {
-      type: 'draft-start-resolved',
+      type: 'clock-started',
       at: 4,
       roomId: 'clock-room',
       clock: startedClock,
-      startId: start.id,
     },
     {
       type: 'move-played',
@@ -495,8 +267,6 @@ test('replays clock snapshots on start and move events', () => {
 });
 
 test('replays timeout events into a finished game', () => {
-  const offer = pickDraft960Offer(9);
-  const start = offer[0];
   const startedClock = armedClock(4, 1000, 0);
   const expiredClock = expireClock(startedClock, 1004, 'white');
   assert.ok(expiredClock);
@@ -505,15 +275,13 @@ test('replays timeout events into a finished game', () => {
       type: 'room-created',
       at: 1,
       roomId: 'timeout-room',
-      variant: 'draft960',
-      offer,
+      variant: 'chess',
     },
     {
-      type: 'draft-start-resolved',
+      type: 'clock-started',
       at: 4,
       roomId: 'timeout-room',
       clock: startedClock,
-      startId: start.id,
     },
     {
       type: 'clock-expired',
@@ -542,7 +310,6 @@ test('replays Fog of War room and move events through the Fog rules adapter', ()
       at: 1,
       roomId: 'fog-event-room',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'move-played',
@@ -561,35 +328,12 @@ test('replays Fog of War room and move events through the Fog rules adapter', ()
 });
 
 test('replays bounded event slices for timeline traversal', () => {
-  const offer = pickDraft960Offer(99);
-  const start = offer[0];
   const events: GameEvent[] = [
     {
       type: 'room-created',
       at: 1,
       roomId: 'timeline-room',
-      variant: 'draft960',
-      offer,
-    },
-    {
-      type: 'draft-start-selected',
-      at: 2,
-      roomId: 'timeline-room',
-      color: 'white',
-      startId: start.id,
-    },
-    {
-      type: 'draft-start-selected',
-      at: 3,
-      roomId: 'timeline-room',
-      color: 'black',
-      startId: start.id,
-    },
-    {
-      type: 'draft-start-resolved',
-      at: 4,
-      roomId: 'timeline-room',
-      startId: start.id,
+      variant: 'chess',
     },
     {
       type: 'move-played',
@@ -608,18 +352,10 @@ test('replays bounded event slices for timeline traversal', () => {
   ];
 
   const created = replayGameEvents(events.slice(0, 1));
-  assert.equal(created.offer.length, 3);
-  assert.deepEqual(created.state.status, { type: 'pregame' });
+  assert.deepEqual(created.state.status, { type: 'playing', turn: 'white' });
+  assert.equal(created.state.lastMove, undefined);
 
-  const selected = replayGameEvents(events.slice(0, 3));
-  assert.deepEqual(selected.selections, { white: start.id, black: start.id });
-  assert.equal(selected.resolvedStartId, null);
-
-  const resolved = replayGameEvents(events.slice(0, 4));
-  assert.equal(resolved.resolvedStartId, start.id);
-  assert.deepEqual(resolved.state.status, { type: 'playing', turn: 'white' });
-
-  const afterWhiteMove = replayGameEvents(events.slice(0, 5));
+  const afterWhiteMove = replayGameEvents(events.slice(0, 2));
   assert.deepEqual(afterWhiteMove.state.status, { type: 'playing', turn: 'black' });
   assert.deepEqual(afterWhiteMove.state.lastMove, { from: 'e2', to: 'e4' });
 
@@ -630,7 +366,7 @@ test('replays bounded event slices for timeline traversal', () => {
 
 test('seat-resigned ends the game with opposite color winning', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'resign-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'resign-room', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'resign-room', clientId: 'wc', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'resign-room', clientId: 'bc', seat: 'black' },
     {
@@ -652,7 +388,7 @@ test('seat-resigned ends the game with opposite color winning', () => {
 
 test('seat-forfeited ends the game for the opponent with reason abandonment', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'forfeit-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'forfeit-room', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'forfeit-room', clientId: 'wc', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'forfeit-room', clientId: 'bc', seat: 'black' },
     {
@@ -682,7 +418,7 @@ test('seat-forfeited ends the game for the opponent with reason abandonment', ()
 
 test('seat-forfeited after the game has finished is a no-op', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'forfeit-done', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'forfeit-done', variant: 'dark-chess' },
     { type: 'seat-resigned', at: 2, roomId: 'forfeit-done', color: 'black' },
     { type: 'seat-forfeited', at: 3, roomId: 'forfeit-done', color: 'white' },
   ];
@@ -698,7 +434,7 @@ test('seat-forfeited after the game has finished is a no-op', () => {
 test('seat-resigned freezes the clock at the resign timestamp', () => {
   const startedClock = armedClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'resign-clock-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'resign-clock-room', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 2, roomId: 'resign-clock-room', clientId: 'wc', seat: 'white' },
     { type: 'seat-assigned', at: 3, roomId: 'resign-clock-room', clientId: 'bc', seat: 'black' },
     { type: 'clock-started', at: 1000, roomId: 'resign-clock-room', clock: startedClock },
@@ -720,7 +456,7 @@ test('seat-resigned freezes the clock at the resign timestamp', () => {
 
 test('game-aborted before any move ends the game in the aborted state', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'abort-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'abort-room', variant: 'dark-chess' },
     { type: 'clock-started', at: 4, roomId: 'abort-room', clock: createClock(4, 60_000, 0) },
     { type: 'game-aborted', at: 5, roomId: 'abort-room', reason: 'pregame-timeout' },
   ];
@@ -733,7 +469,7 @@ test('game-aborted before any move ends the game in the aborted state', () => {
 
 test('game-aborted after only white has moved is still valid (before both first moves)', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'abort-w-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'abort-w-room', variant: 'dark-chess' },
     { type: 'clock-started', at: 4, roomId: 'abort-w-room', clock: createClock(4, 60_000, 0) },
     {
       type: 'move-played',
@@ -750,7 +486,7 @@ test('game-aborted after only white has moved is still valid (before both first 
 
 test('game-aborted after both players have moved is a no-op (abort window closed)', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'abort-closed-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'abort-closed-room', variant: 'dark-chess' },
     { type: 'clock-started', at: 4, roomId: 'abort-closed-room', clock: createClock(4, 60_000, 0) },
     {
       type: 'move-played',
@@ -775,7 +511,7 @@ test('game-aborted after both players have moved is a no-op (abort window closed
 
 test('seat-resigned after game already finished is a no-op (only first resignation counts)', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'r', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'r', variant: 'dark-chess' },
     { type: 'seat-resigned', at: 2, roomId: 'r', color: 'white' },
     { type: 'seat-resigned', at: 3, roomId: 'r', color: 'black' },
   ];
@@ -788,17 +524,14 @@ test('seat-resigned after game already finished is a no-op (only first resignati
 });
 
 test('pause freezes the clock at the pause timestamp and marks the projection paused', () => {
-  const offer = pickDraft960Offer(50);
-  const start = offer[0];
   const startedClock = armedClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'pause-room', variant: 'draft960', offer },
+    { type: 'room-created', at: 1, roomId: 'pause-room', variant: 'chess' },
     {
-      type: 'draft-start-resolved',
+      type: 'clock-started',
       at: 1000,
       roomId: 'pause-room',
       clock: startedClock,
-      startId: start.id,
     },
     { type: 'pause', at: 3500, roomId: 'pause-room', reason: 'shutdown' },
   ];
@@ -820,7 +553,7 @@ test('resume rearms the clock for the current turn without altering remaining ti
   // Both players complete their first move so the clock arms (white ticking from
   // t=2000), then a server outage pauses and resumes 10 minutes later.
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'resume-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'resume-room', variant: 'dark-chess' },
     { type: 'clock-started', at: 4, roomId: 'resume-room', clock: createClock(4, 60_000, 0) },
     {
       type: 'move-played',
@@ -852,19 +585,6 @@ test('resume rearms the clock for the current turn without altering remaining ti
   assert.equal(projection.state.clock?.remainingMs.black, 60_000);
 });
 
-test('pause is a no-op in pregame', () => {
-  const offer = pickDraft960Offer(52);
-  const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'pregame-pause-room', variant: 'dark-chess', offer },
-    { type: 'pause', at: 2, roomId: 'pregame-pause-room', reason: 'shutdown' },
-  ];
-  const projection = replayGameEvents(events);
-
-  assert.equal(projection.paused, false);
-  assert.equal(projection.pausedAt, null);
-  assert.deepEqual(projection.state.status, { type: 'pregame' });
-});
-
 test('pause is a no-op after the game has finished', () => {
   const events: GameEvent[] = [
     {
@@ -872,7 +592,6 @@ test('pause is a no-op after the game has finished', () => {
       at: 1,
       roomId: 'post-finish-pause-room',
       variant: 'dark-chess',
-      offer: [],
     },
     { type: 'seat-resigned', at: 2, roomId: 'post-finish-pause-room', color: 'white' },
     { type: 'pause', at: 3, roomId: 'post-finish-pause-room', reason: 'shutdown' },
@@ -888,17 +607,14 @@ test('pause is a no-op after the game has finished', () => {
 });
 
 test('a second pause while already paused is a no-op (preserves first pause snapshot)', () => {
-  const offer = pickDraft960Offer(53);
-  const start = offer[0];
   const startedClock = armedClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'double-pause-room', variant: 'draft960', offer },
+    { type: 'room-created', at: 1, roomId: 'double-pause-room', variant: 'chess' },
     {
-      type: 'draft-start-resolved',
+      type: 'clock-started',
       at: 1000,
       roomId: 'double-pause-room',
       clock: startedClock,
-      startId: start.id,
     },
     { type: 'pause', at: 3500, roomId: 'double-pause-room', reason: 'shutdown' },
     { type: 'pause', at: 4000, roomId: 'double-pause-room', reason: 'admin' },
@@ -912,17 +628,14 @@ test('a second pause while already paused is a no-op (preserves first pause snap
 });
 
 test('resume while not paused is a no-op', () => {
-  const offer = pickDraft960Offer(54);
-  const start = offer[0];
   const startedClock = armedClock(1000, 60_000, 0);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'stray-resume-room', variant: 'draft960', offer },
+    { type: 'room-created', at: 1, roomId: 'stray-resume-room', variant: 'chess' },
     {
-      type: 'draft-start-resolved',
+      type: 'clock-started',
       at: 1000,
       roomId: 'stray-resume-room',
       clock: startedClock,
-      startId: start.id,
     },
     { type: 'resume', at: 2000, roomId: 'stray-resume-room', reason: 'admin' },
   ];
@@ -937,7 +650,7 @@ test('move after resume continues the game with the unchanged clock', () => {
   // Arm via both first moves (white ticks from t=2000), pause/resume across an
   // outage, then white's second move spends real time.
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'resume-move-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'resume-move-room', variant: 'dark-chess' },
     { type: 'clock-started', at: 4, roomId: 'resume-move-room', clock: createClock(4, 60_000, 0) },
     {
       type: 'move-played',
@@ -977,7 +690,7 @@ test('move after resume continues the game with the unchanged clock', () => {
 test('multiple pause/resume cycles do not leak wall-clock time into player clocks', () => {
   // Arm via both first moves (white ticks from t=200), then two long outages.
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'cycle-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'cycle-room', variant: 'dark-chess' },
     { type: 'clock-started', at: 4, roomId: 'cycle-room', clock: createClock(4, 60_000, 0) },
     {
       type: 'move-played',
@@ -1017,7 +730,6 @@ test('replays a correspondence log with the days-per-move reset transition', () 
       at: 1,
       roomId: 'corr-room',
       variant: 'dark-chess',
-      offer: [],
       timeControl: correspondenceTimeControl(1),
     },
     { type: 'seat-assigned', at: 2, roomId: 'corr-room', clientId: 'white-client', seat: 'white' },
@@ -1085,7 +797,6 @@ test('replays a spec-first room-created event (variant-tenant logs omit variant/
   const projection = replayGameEvents(events);
   assert.equal(projection.variant, 'dark-chess');
   assert.equal(projection.gameSpecId, 'dark-chess');
-  assert.deepEqual(projection.offer, []);
   assert.equal(projection.state.status.type, 'playing');
   assert.equal(projection.state.board.e4?.role, 'pawn');
   assert.equal(projection.timeControl?.daysPerMove, 1);

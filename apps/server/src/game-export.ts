@@ -127,7 +127,6 @@ export function buildGamePublicationJson(
 
 function pgnVariantName(variant: string): string {
   if (variant === 'dark-chess') return 'Fog Chess';
-  if (variant === 'draft960') return 'Draft960 (Fog Chess + Chess960)';
   return variant;
 }
 

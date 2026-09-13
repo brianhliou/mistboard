@@ -8,7 +8,13 @@
 // of shipping a wrong-direction 301 or a generic share card.
 export type ArticleKind = 'rules' | 'article';
 
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
+// Reachable by URL, deliberately unlisted and unindexed: /rules/shogi4 is
+// linked from outside the site and stays up, but is not a Mistboard variant.
+// /rules/mahjong is the page for a table that is admin-only and allowlisted
+// (apps/web/src/variant-public-surfaces.ts has `mahjong: false`); it leaves
+// this set the day the variant goes public, and articles-meta-sync.test.ts
+// fails if the two disagree.
+const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong']);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web
@@ -16,24 +22,27 @@ const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi', 'shogi4', 'dark-shogi']);
 // The server answers 410 Gone for these paths (server-http.ts): the id is
 // known and the page is not coming back, which is what a crawler should hear
 // rather than a 404 it will keep retrying. The set also keeps them out of the
-// sitemap. The content files go with their variants in Stage 2 of the plan.
+// sitemap. The content files go with their variants in Stage 2 of the plan;
+// a slug whose variant has been DELETED stays here for good, because without
+// it an unknown /rules/<slug> 301s to /blog/<slug> and serves the app shell
+// as a soft 404.
 //
 // This is a second copy of a list the server cannot import, so it is only safe
 // because articles-meta-sync.test.ts fails when the two disagree. Do not edit
 // one end alone.
 const RETIRED_RULES_SLUGS = new Set([
+  // deleted (Stage 2)
   'crossroads-chess',
   'dark-crazyhouse',
   'dark-crossroads-chess',
-  'dark-draft960',
   'dark-mini-xiangqi',
   'dark-shogi',
   'drop-mini-xiangqi',
   'kriegspiel',
   'mini-xiangqi',
+  'dark-draft960',
   'reveal-chess',
   'shogi',
-  'shogi4',
 ]);
 
 /** A rules page whose variant is retired: served as 410 Gone. */
@@ -56,12 +65,6 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   // a dead link that the CTA-only link guard does not catch.
   'fog-openings',
   'fog-chess-concepts',
-  'shogi',
-  // The Duck Xiangqi launch post, cut before launch rather than shipped. It
-  // restated the rules page at lower resolution and would have competed with it
-  // for the same query on our own domain. Kept in the tree as a draft; the
-  // rules page is the one public surface for the variant.
-  'duck-xiangqi-build',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -152,12 +155,6 @@ export const ARTICLE_META: Record<
     description:
       'A complete Fog of War chess opening system built on 1.c4 and 2.Qa4, measured across 899 games. The queen doubles as a sensor and sometimes captures the king on move three. Which Black replies hold, which collapse, and where the system stops working.',
   },
-  'dark-draft960': {
-    title: 'Dark Draft960',
-    kind: 'rules',
-    description:
-      "Fog Chess with a sealed opening draft: each player picks one of three Chess960 back ranks and never sees the other's.",
-  },
   xiangqi: {
     title: 'Xiangqi Rules',
     kind: 'rules',
@@ -170,29 +167,11 @@ export const ARTICLE_META: Record<
     description:
       'Xiangqi under Fog of War: each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.',
   },
-  'mini-xiangqi': {
-    title: 'Mini Xiangqi',
-    kind: 'rules',
-    description:
-      'Mini Xiangqi rules, the 7×7 primer behind Dark Mini Xiangqi: no advisors or elephants, no river, sideways soldiers, and checkmate to win.',
-  },
-  'dark-mini-xiangqi': {
-    title: 'Dark Mini Xiangqi',
-    kind: 'rules',
-    description:
-      'Mini Xiangqi under Fog of War: each side sees only the points its pieces reach on the 7×7 board, and the general falls by capture.',
-  },
-  'drop-mini-xiangqi': {
-    title: 'Drop Mini Xiangqi Rules',
-    kind: 'rules',
-    description:
-      'Mini Xiangqi with reserves: captured pieces enter your hand, then drop back outside the enemy palace.',
-  },
   'duck-xiangqi-build': {
-    title: 'Duck Xiangqi Is Live',
+    title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',
     kind: 'article',
     description:
-      'Duck Chess on the 9 by 10 board. Chess.com made the original an official variant in 2022; nobody had carried it to xiangqi, where four different rules ask whether a point is occupied instead of one.',
+      'Chinese chess with one duck both players share. The screen you build is your opponent\u2019s, nothing warns you before your general is taken, and the bot places the duck at random.',
   },
   'duck-xiangqi': {
     title: 'Duck Xiangqi Rules',
@@ -205,24 +184,6 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Xiangqi with a pocket: faithful piece movement plus crazyhouse-style drops and the new Treasure piece.',
-  },
-  'crossroads-chess': {
-    title: 'Crossroads Chess Rules',
-    kind: 'rules',
-    description:
-      'A modern variant that fuses chess and xiangqi on a 6 by 8 river board. The pieces you already know from both games, and two ways to win: checkmate, or race your king across.',
-  },
-  shogi: {
-    title: 'Shogi Rules',
-    kind: 'rules',
-    description:
-      'Standard shogi rules, the primer behind Fog Shogi: how the eight pieces move, promotion in the far ranks, the drop rule that puts captured pieces back in play, and how a game is won.',
-  },
-  'dark-shogi': {
-    title: 'Fog Shogi Rules',
-    kind: 'rules',
-    description:
-      'Fog Shogi rules: shogi under Fog of War, with private hands, drop bounces, and king capture.',
   },
   shogi4: {
     title: 'Shogi4 (4×4 Shogi) Rules',
@@ -247,24 +208,6 @@ export const ARTICLE_META: Record<
     kind: 'article',
     description:
       'How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.',
-  },
-  kriegspiel: {
-    title: 'Kriegspiel Rules',
-    kind: 'rules',
-    description:
-      'The complete rules of Kriegspiel, the 1899 ancestor of Fog Chess: you see only your own pieces, an umpire rejects illegal tries and announces captures, checks, and pawn tries, and checkmate wins.',
-  },
-  'dark-crazyhouse': {
-    title: 'Dark Crazyhouse Rules',
-    kind: 'rules',
-    description:
-      'Crazyhouse under Fog of War: captured pieces flip color into your hand and drop back into play, hands are private, you can parachute a drop into the fog, and the king falls by capture.',
-  },
-  'dark-crossroads-chess': {
-    title: 'Dark Crossroads Chess Rules',
-    kind: 'rules',
-    description:
-      'Crossroads Chess under Fog of War: each side sees only the squares its pieces reach, there are no check warnings, the king falls by capture, and the race to the far rank becomes a one-move gamble in the dark.',
   },
   jieqi: {
     title: 'Jieqi Rules (Reveal Xiangqi)',
@@ -314,17 +257,17 @@ export const ARTICLE_META: Record<
     description:
       'The complete rules of Jungle Chess, also called Dou Shou Qi or Animal Chess: eight ranked animals on a 7×9 board, the rat beats the elephant, only the rat swims, the lion and tiger leap the rivers. Play rated games and analyse them free in your browser.',
   },
+  mahjong: {
+    title: 'Hong Kong Mahjong Rules',
+    kind: 'rules',
+    description:
+      'How a hand of Hong Kong mahjong is played on Mistboard: the deal, claiming discards, why a complete hand is not always a win, and the faan table the site scores with.',
+  },
   'jungle-flip': {
     title: 'Flip Jungle Rules (Flip Dou Shou Qi)',
     kind: 'rules',
     description:
       'The complete rules of Flip Jungle, the 4×4 flip version of Jungle Chess: animals start face-down, you flip or move each turn, capture by rank, equal ranks destroy each other. Play it free in your browser.',
-  },
-  'reveal-chess': {
-    title: 'Reveal Chess Rules',
-    kind: 'rules',
-    description:
-      'The complete rules of Reveal Chess, standard chess with a hidden starting arrangement: every piece except the king starts face-down, moves by the square it occupies, and reveals its true identity the moment it moves. Checkmate to win.',
   },
 };
 

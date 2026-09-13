@@ -234,8 +234,8 @@
   height: auto;
 }
 
-/* Chess (chessground): the fog channels (dark-chess, reveal-chess, kriegspiel,
-   dark-crazyhouse) render the review triptych compact; all three panes render,
+/* Chess (chessground): the fog channel (dark-chess)
+   renders the review triptych compact; all three panes render,
    but exactly ONE shows in the square box. Which one is driven by data-watch-pov
    on the replay root (set by the /watch perspective toggle via
    ReplayHandle.setPov); unset defaults to Truth. Watch only serves COMPLETED
@@ -938,7 +938,7 @@
    move-list widget into the shared table's slot rather than the room's `.move-list`, so the
    room's rule never reaches it and the height is restated here. Scoped to
    .watch-game-table: the unscoped .review-move-list__rows height belongs to the review
-   pages and the shogi postgame. */
+   pages. */
 .watch-game-table .review-move-list__rows {
   max-height: 142px;
   overflow-y: auto;

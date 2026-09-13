@@ -11,7 +11,6 @@ describe('seatColorWord', () => {
     // Non-jungle variants keep "Black".
     expect(seatColorWord('xiangqi', 'black')).toBe('Black');
     expect(seatColorWord('dark-chess', 'black')).toBe('Black');
-    expect(seatColorWord('crossroads-chess', 'white')).toBe('White');
   });
 
   it('is safe on a missing/unknown variant and unknown color ids', () => {

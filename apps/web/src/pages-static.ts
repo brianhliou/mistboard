@@ -148,20 +148,12 @@ export async function mountArticle(
   } = await import('./articles.js');
   const { findArticle } = await import('./articles-data.js');
   const { translateArticle } = await import('./article-i18n.js');
-  const { setBoardFamily, shogiAppearanceEnabled, xiangqiAppearanceEnabled } = await import(
-    './theme.js'
-  );
+  const { setBoardFamily, xiangqiAppearanceEnabled } = await import('./theme.js');
   const base = findArticle(slug);
   // Show the family's board/piece pickers while the article is open so the
   // diagrams react to the right controls (each family only when its flag is on).
   const family = base?.boardFamily;
-  setBoardFamily(
-    family === 'xiangqi' && xiangqiAppearanceEnabled()
-      ? 'xiangqi'
-      : family === 'shogi' && shogiAppearanceEnabled()
-        ? 'shogi'
-        : 'chess',
-  );
+  setBoardFamily(family === 'xiangqi' && xiangqiAppearanceEnabled() ? 'xiangqi' : 'chess');
   const article = base && lang ? translateArticle(base, lang) : base;
   if (article) document.title = `${article.title} · Mistboard`;
   const articlePage = buildArticlePage(slug, lang ?? undefined);
@@ -407,9 +399,6 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     textLine(t('source.identityForksBrand', {}, locale)),
   ]);
 
-  // NOTE: the shogi image piece-set "Piece art" attribution block is hidden for
-  // now (SHOGI_IMAGE_SET_CREDITS still holds the CC BY / CC BY-SA credits when we
-  // reinstate it). See buildSource history before re-adding.
   section.append(heading, intro, source, thirdParty, identity);
   return section;
 }

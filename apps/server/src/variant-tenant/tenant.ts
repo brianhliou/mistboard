@@ -2,7 +2,7 @@
  * VariantTenant — the Layer-3 live-room tenant contract.
  *
  * Extracted 2026-06-11 from the four sibling live stacks (dark chess, Dark
- * Mini Xiangqi, Dark Xiangqi, Crossroads Chess), whose runtime/events/
+ * Mini Xiangqi, Dark Xiangqi), whose runtime/events/
  * lifecycle/seat-session/ws files are 70-90% identical. The generic modules in
  * this directory hold that shared plumbing once, parameterized by a tenant:
  *
@@ -18,8 +18,9 @@
  *   - everything color-shaped is keyed by the tenant's `colors` tuple in move
  *     order; the clock arms after the second mover's first move.
  *
- * Reference implementation: dark-mini-xiangqi-tenant.ts (P0). Migration order
- * and gates: docs-private/variant-generalization-track.md.
+ * Reference implementations: dark-xiangqi-tenant.ts (fog) and jieqi-tenant.ts
+ * (hidden identity). Migration order and gates:
+ * docs-private/variant-generalization-track.md.
  */
 
 import type { AbortReason, RoomTimeControl } from '@mistboard/game';
@@ -30,7 +31,6 @@ export type TenantSeat<C extends string> = C | 'spectator';
 // The structural slice of variant game status the generic runtime reads.
 // Every sibling stack's status union already has this exact shape.
 export type TenantGameStatus<C extends string> =
-  | { type: 'setup' }
   | { type: 'playing'; turn: C }
   | { type: 'finished'; winner: C | null; reason: string }
   | { type: 'aborted'; reason: AbortReason };
@@ -96,15 +96,6 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
   // Accepted in event logs only for tenants with wire.acceptsSeatVacated
   // (Dark Xiangqi); clears the seat when the vacating clientId still holds it.
   | { type: 'seat-vacated'; at: number; roomId: string; clientId: string; seat: C }
-  | {
-      type: 'setup-submitted';
-      at: number;
-      roomId: string;
-      color: C;
-      // Server-secret pregame setup payload (e.g. Luzhanqi private formation).
-      // Tenants that opt into setup submissions MUST redact this in clientEventFor.
-      setup: unknown;
-    }
   | { type: 'clock-started'; at: number; roomId: string; clock: TenantClockState<C> }
   | { type: 'clock-expired'; at: number; roomId: string; color: C; clock: TenantClockState<C> }
   | {
@@ -279,6 +270,19 @@ export type VariantTenant<
    * a go" where one move is one turn. Set this where it is not.
    */
   armsClockOnFirstMove?: boolean;
+  /**
+   * Whose clock runs in this state, or null for nobody's.
+   *
+   * The default charges the seat whose turn it is and only advances when THAT
+   * seat moves, which is right wherever a move is a turn. Mahjong is not that:
+   * a claim is played by a seat whose turn it is not, and during a claim window
+   * the seat on the clock (the discarder) has nothing left to decide. Without
+   * this hook the discarder's clock ran through every window and every claim
+   * left the wrong seat highlighted until that seat moved again. A tenant that
+   * defines it gets owner-driven accounting: every move charges the seat that
+   * was running, then the clock follows the answer here, pausing on null.
+   */
+  clockOwner?(state: State): C | null;
   enabled(): boolean;
   // Only meaningful where there are exactly two seats: it answers "who wins if
   // this seat forfeits". A four-seat tenant has no such answer and must supply
@@ -331,7 +335,7 @@ export type VariantTenant<
       duckTo?: string;
     }): M | null;
     // STATE-DEPENDENT canonicalization: resolve the parsed move to the exact
-    // legal-move object to append (e.g. Crossroads re-attaches promotion from
+    // legal-move object to append (e.g. a chess-family tenant re-attaches promotion from
     // the legal-move list). Null rejects. When omitted, the ws move path
     // appends the parsed move after an isLegalMove check instead.
     // `seat` is the mover. Every existing tenant ignores it, because in a
@@ -363,11 +367,6 @@ export type VariantTenant<
     // new state, so a hook that settles a four-seat window one seat at a time
     // costs four round trips through the event writer.
     pendingAction?(state: State): TenantPendingAction<C, M> | null;
-  };
-  setupSubmission?: {
-    applySetup(state: State, color: C, setup: unknown): State;
-    isSetup(value: unknown): boolean;
-    setupFromMessage(message: { setup?: unknown }): unknown | null;
   };
   visibility: {
     // Per-seat wire-event redaction. Fog tenants hide opponent moves and
@@ -415,7 +414,7 @@ export type VariantTenant<
     reservationColor?(color: C): 'white' | 'black';
     // Engine BUILD version for this engine id (e.g. '0.2.0'), recorded per game so PvE games
     // are queryable by build. Optional: only the variant-tenant UCI engines whose subject_id
-    // is version-less (jieqi/banqi/crossroads) implement it; returns null for unknown ids.
+    // is version-less (jieqi/banqi) implement it; returns null for unknown ids.
     engineVersion?(clientId: string | undefined): string | null;
     // Observability tag on engine-seat reservation releases (`<tag>-finished`).
     reservationReleaseTag: string;
@@ -434,12 +433,12 @@ export type VariantTenant<
     // so tenants that never emit them keep rejecting them.
     acceptsSeatVacated?: boolean;
     // Additional gameSpecId values accepted in PERSISTED room-created events
-    // (pre-rename aliases, e.g. Crossroads' 'dual-chess'). Validation-only:
+    // (pre-rename aliases). Validation-only:
     // new rooms and projections always carry the canonical tenant.gameSpecId.
     legacyGameSpecIds?: readonly string[];
     // When a client move is rejected (failed the legality / canonicalization
     // check), produce a payload to send ONLY back to the mover, or null to stay
-    // silent (the default for every existing tenant). Dark Crazyhouse uses it
+    // silent (the default for every existing tenant). Dark Crazyhouse used it
     // for the parachute drop BOUNCE: a drop onto a square that is occupied in
     // truth is rejected, and the mover is told the square is occupied (a probe).
     rejectionFor?(state: State, move: M, seat: TenantSeat<C>): Record<string, unknown> | null;

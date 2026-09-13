@@ -101,3 +101,21 @@ test('an empty or whitespace title degrades to one empty line', () => {
   assert.deepEqual(fitStudyTitleLines(''), ['']);
   assert.deepEqual(fitStudyTitleLines('   '), ['']);
 });
+
+// The article prerender writes the og:image URL itself and cannot import this
+// module, so its copy of the version is pinned here: a bump on one side that
+// misses the other ships a card scrapers never refetch.
+test('the article prerender carries the same article card version', async () => {
+  const { readFile } = await import('node:fs/promises');
+  const { resolve } = await import('node:path');
+  const { ARTICLE_OG_IMAGE_VERSION } = await import('./og-image.js');
+  const source = await readFile(
+    resolve(import.meta.dirname, '../../web/scripts/prerender-articles.mjs'),
+    'utf-8',
+  );
+  assert.ok(
+    source.includes(`const ARTICLE_OG_IMAGE_VERSION = ${ARTICLE_OG_IMAGE_VERSION};`),
+    `prerender-articles.mjs must declare ARTICLE_OG_IMAGE_VERSION = ${ARTICLE_OG_IMAGE_VERSION}`,
+  );
+  assert.ok(source.includes('.png?v=${ARTICLE_OG_IMAGE_VERSION}`'), 'the og:image URL carries ?v=');
+});

@@ -1,6 +1,5 @@
 import {
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   findTimeControl,
   type GameSpecId,
   isRatedPoolBase,
@@ -42,7 +41,6 @@ type BucketInput = {
   variant?: string | null;
   initialMs?: number | null;
   incrementMs?: number | null;
-  hiddenDraft960?: boolean | null;
 };
 
 export function bucketForGame(input: BucketInput): RatingBucket | null {
@@ -51,15 +49,21 @@ export function bucketForGame(input: BucketInput): RatingBucket | null {
   // rated both yield no bucket, so the game is simply not rated.
   const spec = findTimeControl(input.initialMs, input.incrementMs);
   if (!spec || !spec.rated) return null;
-  // Same for a casual-only game spec (no active rating pool): no bucket rather
-  // than mis-crediting the game to fog.
-  const variant = ratingPoolForSpec(ratingSpecForGame(input));
+  // Same for a casual-only game spec (no active rating pool) and for a variant
+  // string the registry no longer knows: no bucket rather than mis-crediting
+  // the game to fog. Until 2026-09-12 an unknown variant fell back to the
+  // dark-chess spec, which was inert while every persisted variant was still
+  // registered; the #396 deletions turned it live, and a rated Dark Mini
+  // Xiangqi game from June showed up on a fog-chess rating graph.
+  const gameSpec = maybeGameSpecForId(input.variant);
+  if (!gameSpec) return null;
+  const variant = ratingPoolForSpec(gameSpec.id);
   if (!variant) return null;
   return { variant, timeClass: spec.timeClass };
 }
 
-// Accepts a canonical pool name ('fog'), a game spec id ('dark-chess'), or a
-// spec alias ('fog-draft960') and returns the rated pool, or null if casual.
+// Accepts a canonical pool name ('fog') or a game spec id ('dark-chess') and
+// returns the rated pool, or null if casual.
 export function parseRatingVariant(value: string | null | undefined): RatingVariant | null {
   if (isRatedPoolBase(value)) return value;
   const spec = maybeGameSpecForId(value);
@@ -71,19 +75,6 @@ export function parseRatingTimeClass(value: string | null | undefined): RatingTi
   if (value === 'blitz') return 'blitz';
   if (value === 'rapid') return 'rapid';
   return null;
-}
-
-// Map a game's variant string to the spec whose rating pool it belongs to. Any
-// known spec maps to itself (each rated variant buckets into its own pool); the
-// dark-chess family splits on hiddenDraft960; unknown/legacy values fall back to
-// the dark-chess family. ratingPoolForSpec then fails closed for casual specs.
-function ratingSpecForGame(input: BucketInput): GameSpecId {
-  const spec = maybeGameSpecForId(input.variant);
-  if (spec) {
-    if (spec.id === DARK_CHESS_SPEC_ID && input.hiddenDraft960) return DARK_DRAFT960_SPEC_ID;
-    return spec.id;
-  }
-  return input.hiddenDraft960 ? DARK_DRAFT960_SPEC_ID : DARK_CHESS_SPEC_ID;
 }
 
 function currentRatingVariantForSpec(id: GameSpecId): RatingVariant {

@@ -21,8 +21,10 @@ import type {
   DuckXiangqiTurn,
   RoomTimeControl,
 } from '@mistboard/game';
+import { duckXiangqiFen } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
 import { type DuckXiangqiEvent, duckXiangqiTenant } from './duck-xiangqi-tenant.js';
+import { tenantCardBinding } from './game-card-tenant.js';
 import { duckXiangqiExportUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleDuckXiangqiCreate, requestsDuckXiangqi } from './routes/duck-xiangqi-rooms.js';
@@ -169,6 +171,12 @@ registerVariantTenant({
   export: tenantExportBinding(duckXiangqiTenant, {
     gameRouteBase: '/duck-xiangqi/game',
     uci: duckXiangqiExportUci,
+  }),
+  // No analysis engine for Duck Xiangqi yet (see the header): final position.
+  card: tenantCardBinding(duckXiangqiTenant, {
+    variant: 'duck-xiangqi',
+    analysis: null,
+    fen: duckXiangqiFen,
   }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,

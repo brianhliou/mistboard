@@ -78,8 +78,6 @@ type BotProfile = {
 
 class BotNotFound extends Error {}
 
-const HIDDEN_BOT_GAME_SPEC_IDS = new Set(['dark-draft960']);
-
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 
 export async function mountBots(root: HTMLElement): Promise<void> {
@@ -657,19 +655,15 @@ function playOptionsFor(bot: BotProfile): BotPlayOption[] {
           engineId: bot.activeEngineId,
           playable: true,
         }));
-  return options.filter((option) => !HIDDEN_BOT_GAME_SPEC_IDS.has(option.gameSpecId));
+  return options;
 }
 
 function supportedGameSpecIds(bot: BotProfile): string[] {
-  const gameSpecIds =
-    bot.supportedGameSpecIds.length > 0 ? bot.supportedGameSpecIds : [bot.defaultGameSpecId];
-  return gameSpecIds.filter((gameSpecId) => !HIDDEN_BOT_GAME_SPEC_IDS.has(gameSpecId));
+  return bot.supportedGameSpecIds.length > 0 ? bot.supportedGameSpecIds : [bot.defaultGameSpecId];
 }
 
 function botRatings(bot: BotProfile): BotRatingSnapshot[] {
-  const ratings =
-    bot.ratings && bot.ratings.length > 0 ? bot.ratings : bot.rating ? [bot.rating] : [];
-  return ratings.filter((rating) => !HIDDEN_BOT_GAME_SPEC_IDS.has(rating.gameSpecId));
+  return bot.ratings && bot.ratings.length > 0 ? bot.ratings : bot.rating ? [bot.rating] : [];
 }
 
 function primaryRating(bot: BotProfile): BotRatingSnapshot | null {

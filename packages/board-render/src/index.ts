@@ -3,7 +3,6 @@ export {
   ARTICLE_OG_POSITIONS,
   CONE_QUEEN_BOARD,
   DISCOVERY_BOARD,
-  DRAFT960_OFFER_A,
   SERVER_FOG_TRIPTYCH,
 } from './article-positions.js';
 export { BOARD_CORNER_RATIO, boardCornerRadius } from './board-metrics.js';
@@ -11,15 +10,6 @@ export type { PieceOnBoard } from './board-svg.js';
 export { fogPatternDefs, renderBoardSvg } from './board-svg.js';
 export type { BoardSpec, CompositionOptions } from './composition.js';
 export { renderBoardComposition } from './composition.js';
-export {
-  CROSSROADS_CHESS_DESCRIPTOR,
-  CROSSROADS_DISK_GLYPHS,
-  CROSSROADS_INK_RED,
-  CROSSROADS_INK_WHITE,
-  CROSSROADS_IVORY_STOPS,
-  CROSSROADS_PIECE_RED,
-  CROSSROADS_RED_STOPS,
-} from './crossroads-chess-descriptor.js';
 export { XIANGQI_GLYPH_PATHS } from './generated/xiangqi-glyph-paths.js';
 export type {
   GridArrowRef,
@@ -39,7 +29,6 @@ export {
   boardToPieces,
   fogSquaresFromVisible,
   piecesToBoard,
-  startingPositionFromBackRank,
 } from './positions.js';
 export type { BoardPalette, FogStyle } from './tokens.js';
 export {

@@ -1,6 +1,6 @@
 /**
  * Golden wire-parity suite for the Jieqi (揭棋, full-board xiangqi with hidden
- * piece identities) live-room runtime — same harness as the DMX/Dark Shogi
+ * piece identities) live-room runtime — same harness as the DMX
  * suites, but Jieqi is an IDENTITY-hidden tenant, not a fog tenant. Every
  * occupied square is public, so a move reaches BOTH seats unchanged; what is
  * hidden is identity, and this suite pins the three places the tenant guards it:

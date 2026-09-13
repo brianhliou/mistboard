@@ -82,7 +82,7 @@ type EngineTurnRequest = {
 | `protocolVersion` | Schema version | Reject unknown major versions |
 | `gameId` | Opaque game identifier | Correlate logs/diagnostics |
 | `engineId` | Which engine is being asked | Engines that serve multiple identities |
-| `gameSpecId` | Game variant, e.g. `'dark-mini-xiangqi'` | Board geometry (8x8 vs 7x7 vs 9x10) and piece-letter interpretation |
+| `gameSpecId` | Game variant, e.g. `'dark-xiangqi'` | Board geometry (8x8 vs 9x10) and piece-letter interpretation |
 | `sessionId` | Stable across all turns of one game | Key for stateful per-game state |
 | `color` | The engine's side | Move generation, eval sign |
 | `ply` | 0-indexed ply count | Bookkeeping, clock decisions |

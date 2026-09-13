@@ -2,7 +2,7 @@
 //
 // Mutual-confirm rematch for finished PvP games. Each seat can offer; when both
 // seats have an active offer, a new room is created with colors swapped and the
-// same variant / hiddenDraft960 / timeControl / rated settings. Each client
+// same variant / timeControl / rated settings. Each client
 // receives a pre-issued seat token for the new room and a redirect URL.
 //
 // Identity rule: only the original players (whose seat tokens are still the
@@ -16,7 +16,6 @@ import type { Client, Room, SeatTokenState } from './server-types.js';
 export type RematchCreateRoom = (spec: {
   variant: Room['variant'];
   gameSpecId: Room['gameSpecId'];
-  hiddenDraft960: boolean;
   timeControl: Room['timeControl'];
   rated: boolean;
   region?: string;
@@ -149,7 +148,6 @@ export async function finalizeRematchIfReady(
   const newRoom = await orch.createRoom({
     variant: room.variant,
     gameSpecId: room.gameSpecId,
-    hiddenDraft960: room.hiddenDraft960,
     timeControl: room.timeControl,
     rated: room.rated,
     region: room.region,

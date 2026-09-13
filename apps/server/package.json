@@ -12,7 +12,6 @@
     "test": "tsc -p tsconfig.json && node --test --test-concurrency=8 dist/*.test.js dist/variant-tenant/*.test.js dist/routes/*.test.js dist/bot-match/*.test.js",
     "test:persistent": "tsc -p tsconfig.json && node --test --test-concurrency=1 dist/*.test.js dist/variant-tenant/*.test.js dist/routes/*.test.js dist/bot-match/*.test.js",
     "test:unit": "tsx --test --test-concurrency=4 src/*.test.ts src/variant-tenant/*.test.ts src/routes/*.test.ts src/bot-match/*.test.ts --test-name-pattern='^(?!persistence)'",
-    "test:parked": "tsx --test --test-concurrency=4 'src/**/*.parkedtest.ts'",
     "test:integration": "node scripts/integration-tests.mjs",
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p integration/tsconfig.json && tsc -p loadtest/tsconfig.json",
     "loadtest": "tsx loadtest/cli.ts",

@@ -21,7 +21,6 @@
     "build": "tsc -p tsconfig.json",
     "test": "tsc -p tsconfig.json && node --test dist/**/*.test.js",
     "test:unit": "tsx --test --test-concurrency=4 src/**/*.test.ts",
-    "test:parked": "tsx --test --test-concurrency=4 'src/**/*.parkedtest.ts'",
     "test:puzzles:corpus": "tsx --test src/**/*.slowtest.ts",
     "test:xiangqi-broadcast": "tsx --test src/xiangqi-broadcast.test.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit"

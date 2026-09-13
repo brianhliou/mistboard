@@ -78,7 +78,7 @@ function walk(dir: string, root: string, out: { path: string; text: string }[]):
     }
     if (!entry.name.endsWith('.ts') || EXEMPT.has(entry.name)) continue;
     // Tests run in Node, never a browser, so they may use whatever they like.
-    if (entry.name.endsWith('.test.ts') || entry.name.endsWith('.parkedtest.ts')) continue;
+    if (entry.name.endsWith('.test.ts')) continue;
     out.push({ path: full.slice(root.length), text: readFileSync(full, 'utf8') });
   }
 }

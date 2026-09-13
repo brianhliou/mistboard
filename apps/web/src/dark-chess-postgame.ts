@@ -158,8 +158,6 @@ export function mountDarkChessPostgame(
     playerProfiles: reviewSeatProfiles(game.players, 'white'),
     result: { score: resultScore(game.result), label: status },
     ...crosstableConfig(game.roomId, game.players),
-    // Draft960 is absent from the export table (its PGN needs [SetUp]/[FEN]), so
-    // the row is omitted there rather than offering a broken file.
     ...gameExportShareExtra(game.variant, game.roomId),
     // Server whole-game analysis by the misty engine, DB-cached: an
     // already-analysed game loads from cache on open (a GET that never
@@ -197,8 +195,7 @@ export function mountDarkChessPostgame(
  *
  * Replays once to recover the position before each ply, since SAN is only defined
  * against a position. Every step degrades to the coordinate label rather than
- * throwing: a variant starting from a shuffled setup (draft960) will not replay
- * from the standard initial state, and Misty writes castling in standard UCI
+ * throwing: Misty writes castling in standard UCI
  * ("e1g1") where this kernel offers king-onto-rook ("e1h1"), so a candidate can
  * legitimately fail to match.
  */

@@ -19,7 +19,7 @@ import { allSquares, oppositeColor } from './web-utils.js';
 // Non-chess game specs render their own PlayerView and event stream; the chess
 // projection/capture/replay machinery below must not run on their state.
 function usesAlternateRenderer(): boolean {
-  return liveState.gameSpecId === 'dark-xiangqi' || liveState.gameSpecId === 'dark-mini-xiangqi';
+  return liveState.gameSpecId === 'dark-xiangqi';
 }
 
 export function currentProjection(): GameProjection | null {

@@ -1,33 +1,20 @@
-import { type GameSpecId, MINI_XIANGQI_SPEC_ID, maybeGameSpecForId } from '@mistboard/game';
+import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import {
   banqiEnabled,
-  crossroadsChessEnabled,
-  darkCrazyhouseEnabled,
-  darkCrossroadsChessEnabled,
-  darkMiniXiangqiEnabled,
-  darkShogiEnabled,
   darkXiangqiEnabled,
-  dropMiniXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
-  kriegspielEnabled,
-  luzhanqiEnabled,
   mahjongEnabled,
-  revealChessEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
 
-// The chess stack behind this gate serves exactly these two specs.
-// parseVariantId (routes/lib.ts) is the source of that truth: it collapses
-// draft960 spellings to 'draft960' and every other variant string to
-// 'dark-chess', so anything the gate passes lands on one of the two.
-const CHESS_STACK_SPEC_IDS = [
-  'dark-chess',
-  'dark-draft960',
-] as const satisfies readonly GameSpecId[];
+// The chess stack behind this gate serves exactly this spec. parseVariantId
+// (routes/lib.ts) is the source of that truth: it collapses every variant
+// string to 'dark-chess', so anything the gate passes lands there.
+const CHESS_STACK_SPEC_IDS = ['dark-chess'] as const satisfies readonly GameSpecId[];
 type ChessStackSpecId = (typeof CHESS_STACK_SPEC_IDS)[number];
 const CHESS_STACK_SPEC_ID_SET: ReadonlySet<GameSpecId> = new Set(CHESS_STACK_SPEC_IDS);
 
@@ -52,22 +39,12 @@ type GateSpecEntry<Id extends GatedGameSpecId> =
       disabledError: `${SnakeCase<Id>}_disabled`;
       notIntegratedError: `${SnakeCase<Id>}_not_integrated`;
     }
-  // No launch flag yet (mini-xiangqi and the runtimeStatus 'future' specs):
+  // No launch flag yet (the runtimeStatus 'future' specs):
   // every request answers 501 `_not_integrated`.
   | { notIntegratedError: `${SnakeCase<Id>}_not_integrated` };
 
 // Entries ordered as in the GameSpecId union (packages/game/src/game-specs.ts).
 const GATED_GAME_SPECS = {
-  'dark-crazyhouse': {
-    enabled: darkCrazyhouseEnabled,
-    disabledError: 'dark_crazyhouse_disabled',
-    notIntegratedError: 'dark_crazyhouse_not_integrated',
-  },
-  kriegspiel: {
-    enabled: kriegspielEnabled,
-    disabledError: 'kriegspiel_disabled',
-    notIntegratedError: 'kriegspiel_not_integrated',
-  },
   // Registered, not built: no tenant, no route, no client. The gate rejects
   // every request for it, which is what 'gated' means at this stage.
   mahjong: {
@@ -75,26 +52,10 @@ const GATED_GAME_SPECS = {
     disabledError: 'mahjong_disabled',
     notIntegratedError: 'mahjong_not_integrated',
   },
-  'mini-xiangqi': { notIntegratedError: 'mini_xiangqi_not_integrated' },
-  'dark-mini-xiangqi': {
-    enabled: darkMiniXiangqiEnabled,
-    disabledError: 'dark_mini_xiangqi_disabled',
-    notIntegratedError: 'dark_mini_xiangqi_not_integrated',
-  },
-  'drop-mini-xiangqi': {
-    enabled: dropMiniXiangqiEnabled,
-    disabledError: 'drop_mini_xiangqi_disabled',
-    notIntegratedError: 'drop_mini_xiangqi_not_integrated',
-  },
   'dark-xiangqi': {
     enabled: darkXiangqiEnabled,
     disabledError: 'dark_xiangqi_disabled',
     notIntegratedError: 'dark_xiangqi_not_integrated',
-  },
-  'dark-shogi': {
-    enabled: darkShogiEnabled,
-    disabledError: 'dark_shogi_disabled',
-    notIntegratedError: 'dark_shogi_not_integrated',
   },
   jieqi: {
     enabled: jieqiEnabled,
@@ -105,21 +66,6 @@ const GATED_GAME_SPECS = {
     enabled: banqiEnabled,
     disabledError: 'banqi_disabled',
     notIntegratedError: 'banqi_not_integrated',
-  },
-  'crossroads-chess': {
-    enabled: crossroadsChessEnabled,
-    disabledError: 'crossroads_chess_disabled',
-    notIntegratedError: 'crossroads_chess_not_integrated',
-  },
-  'dark-crossroads-chess': {
-    enabled: darkCrossroadsChessEnabled,
-    disabledError: 'dark_crossroads_chess_disabled',
-    notIntegratedError: 'dark_crossroads_chess_not_integrated',
-  },
-  'reveal-chess': {
-    enabled: revealChessEnabled,
-    disabledError: 'reveal_chess_disabled',
-    notIntegratedError: 'reveal_chess_not_integrated',
   },
   jungle: {
     enabled: jungleEnabled,
@@ -135,11 +81,6 @@ const GATED_GAME_SPECS = {
     enabled: fortressXiangqiEnabled,
     disabledError: 'fortress_xiangqi_disabled',
     notIntegratedError: 'fortress_xiangqi_not_integrated',
-  },
-  luzhanqi: {
-    enabled: luzhanqiEnabled,
-    disabledError: 'luzhanqi_disabled',
-    notIntegratedError: 'luzhanqi_not_integrated',
   },
   xiangqi: {
     enabled: xiangqiEnabled,
@@ -170,11 +111,14 @@ export type GameSpecGateDecision =
     };
 
 // A retired spec (runtimeStatus 'retired' in packages/game) is refused before
-// anything else looks at it: before the chess-stack branch, because
-// dark-draft960 is a chess-stack id, and before the flag lookup, because a
-// flag cannot bring a retired spec back. 410 rather than 404: the id is
-// known and it is gone.
-const DRAFT960_VARIANT_SPELLINGS: ReadonlySet<string> = new Set([
+// anything else looks at it: before the chess-stack branch and before the
+// flag lookup, because a flag cannot bring a retired spec back. 410 rather
+// than 404: the id is known and it is gone.
+//
+// The deleted Draft960 spellings are refused by name: parseVariantId would
+// otherwise collapse them into a Fog Chess room, and a client that asked for
+// the draft must not silently get a game without one.
+const DELETED_DRAFT960_SPELLINGS: ReadonlySet<string> = new Set([
   'draft960',
   'dark-draft960',
   'fog-draft960',
@@ -191,15 +135,9 @@ export function gateGameSpecRequest(input: {
   gameSpecId?: unknown;
   variant?: unknown;
 }): GameSpecGateDecision {
-  // Legacy special case, kept first so precedence matches the old gate: a
-  // canonical Mini Xiangqi variant string on the chess path is refused
-  // regardless of what gameSpecId says. Mini Xiangqi is retired, so the
-  // refusal is the retired one.
-  if (input.variant === MINI_XIANGQI_SPEC_ID) return REJECT_RETIRED;
   // `gameSpecId` is the canonical selector. Absent (undefined, or null from
   // URLSearchParams.get on the WS path) passes; anything else must resolve to
-  // a chess-stack spec. maybeGameSpecForId also resolves the registry aliases
-  // ('dual-chess', 'fog-draft960'), mirroring tenant request matching.
+  // a chess-stack spec.
   if (input.gameSpecId !== undefined && input.gameSpecId !== null) {
     const spec = typeof input.gameSpecId === 'string' ? maybeGameSpecForId(input.gameSpecId) : null;
     if (!spec) {
@@ -214,15 +152,18 @@ export function gateGameSpecRequest(input: {
     if (!isChessStackSpecId(spec.id)) return rejectGatedSpec(spec.id);
   }
   // The legacy `variant` field only rejects when it names a known non-chess
-  // spec (or one of its aliases). Free strings stay with parseVariantId's
-  // collapse: legacy clients send spellings like 'fog-draft960' or arbitrary
-  // values and rely on landing in dark chess.
+  // spec or a deleted Draft960 spelling. Other free strings stay with
+  // parseVariantId's collapse: legacy clients send 'fog' or arbitrary values
+  // and rely on landing in dark chess.
   if (typeof input.variant === 'string') {
-    // parseVariantId (routes/lib.ts) collapses these three spellings to the
-    // draft960 setup, which is retired; refuse them here so the collapse is
-    // never reached. Mirrors that function's list on purpose (no import: lib
-    // imports this gate).
-    if (DRAFT960_VARIANT_SPELLINGS.has(input.variant)) return REJECT_RETIRED;
+    if (DELETED_DRAFT960_SPELLINGS.has(input.variant)) {
+      return {
+        type: 'reject',
+        error: 'unknown_game_spec',
+        httpStatus: 404,
+        wsCloseReason: 'unknown game spec',
+      };
+    }
     const spec = maybeGameSpecForId(input.variant);
     if (spec?.runtimeStatus === 'retired') return REJECT_RETIRED;
     if (spec && !isChessStackSpecId(spec.id)) return rejectGatedSpec(spec.id);

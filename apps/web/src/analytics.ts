@@ -40,13 +40,12 @@ function analyticsPropsFromSpec(spec: GameSpec): GameSpecAnalyticsProps {
 
 export function gameSpecAnalyticsProps(input: {
   variant?: VariantId | string | null;
-  hiddenDraft960?: boolean | string | null;
 }): GameSpecAnalyticsProps {
   return analyticsPropsFromSpec(gameSpecForLegacyLiveRoom(input));
 }
 
-// The legacy resolver only covers chess/draft960; this resolves any canonical
-// game spec (e.g. Dark Mini Xiangqi) so lobby analytics aren't mislabeled chess.
+// The legacy resolver only covers chess; this resolves any canonical
+// game spec (e.g. Dark Xiangqi) so lobby analytics aren't mislabeled chess.
 export function gameSpecAnalyticsPropsForId(gameSpecId: GameSpecId): GameSpecAnalyticsProps {
   return analyticsPropsFromSpec(gameSpecForId(gameSpecId));
 }
@@ -84,8 +83,8 @@ export function roomModeAnalyticsProps(
 }
 
 // A path segment that carries a digit or an underscore is an id (room ids,
-// game ids, short ids) unless it is a registered game spec, which is how
-// `dark-draft960` survives. Everything else is a route word and stays.
+// game ids, short ids) unless it is a registered game spec (a spec id may
+// carry a digit). Everything else is a route word and stays.
 const ID_SEGMENT = /[\d_]/;
 
 export function reviewRouteForAnalytics(pathname: string): string {
@@ -220,7 +219,7 @@ export function captureException(error: unknown, props?: Record<string, unknown>
   });
 }
 
-export type GameLifecycleStatusType = 'pregame' | 'playing' | 'finished' | 'aborted';
+export type GameLifecycleStatusType = 'playing' | 'finished' | 'aborted';
 
 export type GameFinishedOutcome = {
   winner: string | null;
@@ -245,7 +244,7 @@ export type GameLifecycleTracker = {
 };
 
 // One implementation of the start/finish funnel, shared by every live runtime
-// (chess + Dark Mini Xiangqi) so the event schema can't drift between parallel
+// (chess + the tenant clients) so the event schema can't drift between parallel
 // stacks. Each caller holds its own instance — state is per-tracker, never
 // global, so two runtimes can't bleed transitions into each other.
 export function createGameLifecycleTracker(): GameLifecycleTracker {

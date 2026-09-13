@@ -1,7 +1,7 @@
 /**
  * Golden wire-parity suite for the Dark Xiangqi (9x10) live-room runtime —
- * recorded BEFORE its VariantTenant migration, same harness as
- * dark-mini-xiangqi-golden-wire.parkedtest.ts. Pins the per-seat snapshot payloads
+ * recorded BEFORE its VariantTenant migration, same harness as the
+ * dark-chess suite. Pins the per-seat snapshot payloads
  * and redacted event-appended events for scripted games, plus
  * fixture-independent hidden-info invariants.
  *

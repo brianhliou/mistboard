@@ -5,9 +5,10 @@
  * for side effects by variant-tenant/register-tenants.ts.
  */
 
-import type { RoomTimeControl } from '@mistboard/game';
+import { banqiInkForSeat, banqiStateToEngineFen, type RoomTimeControl } from '@mistboard/game';
 import type { BanqiCreatorPreference, BanqiRuntimeRoom } from './banqi-runtime.js';
 import { banqiTenant } from './banqi-tenant.js';
+import { tenantCardBinding } from './game-card-tenant.js';
 import { flipOrBoardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleBanqiCreate, requestsBanqi } from './routes/banqi-rooms.js';
@@ -111,6 +112,13 @@ registerVariantTenant({
     gameRouteBase: '/banqi/game',
     uci: flipOrBoardMoveUci,
     firstMoverInk: (state) => state.firstColor,
+  }),
+  // Final position only: a flip swings the eval by luck (VariantTenantCard).
+  card: tenantCardBinding(banqiTenant, {
+    variant: 'banqi',
+    analysis: null,
+    fen: banqiStateToEngineFen,
+    seatInk: banqiInkForSeat,
   }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,

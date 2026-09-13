@@ -1,9 +1,4 @@
-import {
-  MINI_XIANGQI_PUZZLES,
-  type MiniXiangqiPuzzle,
-  XIANGQI_PUZZLES,
-  type XiangqiPuzzle,
-} from '@mistboard/game';
+import { XIANGQI_PUZZLES, type XiangqiPuzzle } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   buildHomePuzzleWidget,
@@ -21,7 +16,7 @@ describe('home puzzle widget', () => {
   });
 
   it('fetches and renders the daily puzzle as a homepage teaser', async () => {
-    const puzzle = MINI_XIANGQI_PUZZLES[0]!;
+    const puzzle = XIANGQI_PUZZLES[0]!;
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
       expect(String(input)).toBe('/api/puzzles/daily?slot=homepage');
       expect(init).toEqual({ credentials: 'same-origin' });
@@ -35,37 +30,15 @@ describe('home puzzle widget', () => {
     expect(widget?.className).toBe('home-puzzle-widget');
     expect((widget as HTMLAnchorElement).getAttribute('href')).toBe(`/puzzles/${puzzle.id}`);
     expect(widget?.querySelector('.home-puzzle-widget-title')?.textContent).toBe(
-      'Puzzle of the day - Mini Xiangqi',
+      'Puzzle of the day - Xiangqi',
     );
     expect(widget?.getAttribute('aria-label')).toBe(`Puzzle of the day: ${puzzle.title}`);
-    expect(widget?.textContent).toContain('Red to play');
-    expect(widget?.querySelector('.mini-xq-board')).not.toBeNull();
-    expect(widget?.querySelector('.mini-xq-piece')?.getAttribute('width')).toBe('64');
+    expect(widget?.querySelector('.xq-live-svg')).not.toBeNull();
     expect(fetchSpy).toHaveBeenCalledTimes(1);
   });
 
-  it('renders both public hands for a Drop Mini daily puzzle', async () => {
-    const puzzle = MINI_XIANGQI_PUZZLES.find(
-      (candidate) => candidate.id === 'drop-mini-xiangqi-red-chariot-drop-mate-1',
-    )!;
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async () => jsonResponse(dailyBody(puzzle))),
-    );
-
-    const widget = await buildHomePuzzleWidget();
-
-    expect(widget?.querySelector('.home-puzzle-reserve')).not.toBeNull();
-    expect(widget?.querySelectorAll('.home-puzzle-hand')).toHaveLength(2);
-    expect(widget?.querySelector('[aria-label="Black reserve"]')).not.toBeNull();
-    const redReserve = widget?.querySelector('[aria-label="Red reserve"]');
-    expect(redReserve).not.toBeNull();
-    expect(redReserve?.querySelector('.drop-mini-reserve-piece')).not.toBeNull();
-    expect(widget?.querySelector('.mini-xq-board')).not.toBeNull();
-  });
-
   it('repaints its inline pieces when the Xiangqi appearance picker changes', async () => {
-    const puzzle = MINI_XIANGQI_PUZZLES[0]!;
+    const puzzle = XIANGQI_PUZZLES[0]!;
     installMemoryLocalStorage();
     setStoredXiangqiPieceSet('traditional');
     vi.stubGlobal(
@@ -93,7 +66,7 @@ describe('home puzzle widget', () => {
   });
 
   it('caches a loaded daily puzzle for synchronous first-paint reuse', async () => {
-    const puzzle = MINI_XIANGQI_PUZZLES[0]!;
+    const puzzle = XIANGQI_PUZZLES[0]!;
     installMemoryLocalStorage();
     vi.stubGlobal(
       'fetch',
@@ -130,7 +103,6 @@ describe('home puzzle widget', () => {
     expect((widget as HTMLAnchorElement).getAttribute('href')).toBe(`/puzzles/${puzzle.id}`);
     // The canonical intersection board, no reserve column.
     expect(widget?.querySelector('.xq-live-svg')).not.toBeNull();
-    expect(widget?.querySelector('.mini-xq-board')).toBeNull();
     expect(widget?.querySelector('.home-puzzle-reserve')).toBeNull();
     // Portrait board pillarboxes symmetrically inside the square box.
     expect(widget?.querySelector('svg')?.getAttribute('preserveAspectRatio')).toBe('xMidYMid meet');
@@ -139,7 +111,7 @@ describe('home puzzle widget', () => {
   it('fails closed on a daily variant the widget cannot paint', async () => {
     // A rotation addition the widget does not know yet must yield NO widget,
     // never the position painted on another variant's board.
-    const puzzle = MINI_XIANGQI_PUZZLES[0]!;
+    const puzzle = XIANGQI_PUZZLES[0]!;
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse(dailyBody(puzzle, 'jungle'))),
@@ -152,7 +124,7 @@ describe('home puzzle widget', () => {
   });
 });
 
-function dailyBody(puzzle: MiniXiangqiPuzzle | XiangqiPuzzle, variant?: string): unknown {
+function dailyBody(puzzle: XiangqiPuzzle, variant?: string): unknown {
   return {
     daily: {
       day: '2026-07-01',

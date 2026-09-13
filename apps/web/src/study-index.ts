@@ -21,7 +21,7 @@ import {
   selectedStudyVariant,
   studyVariantSupportsComposition,
 } from './study-catalog.js';
-import { buildStudyThumbnail } from './study-thumbnails.js';
+import { buildStudyThumbnail, type StudyPreviewBoard } from './study-thumbnails.js';
 
 // A fresh study starts with one blank chapter at the standard start position.
 const EMPTY_TREE = { version: 1, root: { children: [] } };
@@ -42,6 +42,7 @@ type StudySummary = {
   // overrides. Older servers send only `chapterNames`, so both are optional and
   // `chapterPreview` wins when present.
   chapterPreview?: { name: string; i18n?: unknown }[];
+  previewBoard?: StudyPreviewBoard | null;
   // Preview slice of the first few chapter names (older servers may omit it).
   chapterNames?: string[];
   updatedAt: string;
@@ -458,7 +459,12 @@ function studyCard(study: StudySummary): HTMLElement {
 function cardHead(study: StudySummary): HTMLElement {
   const head = document.createElement('div');
   head.className = 'study-index__card-head';
-  const thumbnail = buildStudyThumbnail(study.id, 'study-index__thumbnail');
+  const thumbnail = buildStudyThumbnail(
+    study.id,
+    'study-index__thumbnail',
+    'lazy',
+    study.previewBoard ?? null,
+  );
 
   const heading = document.createElement('div');
   heading.className = 'study-index__heading';

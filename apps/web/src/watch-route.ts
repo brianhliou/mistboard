@@ -79,7 +79,7 @@ type WatchFeed = {
 
 // Which replay renderer a game needs: a game spec id (the registry's unambiguous
 // tenant key) or 'chess' (the chessground fallback for the unregistered dark-chess
-// stack). It must NOT key on the coarse watch.family: jieqi and Dark Mini Xiangqi
+// stack). It must NOT key on the coarse watch.family: jieqi and banqi
 // both render in the 'xiangqi' family, so a family key would resolve both to the
 // same tenant. A switch across renderers must re-mount, not loadGame.
 type WatchRendererKind = string;
@@ -549,7 +549,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   ): Promise<void> => {
     const kind = watchRendererKindForGame(feed, roomId);
     if (!replayHandle || replayHandleKind !== kind || replayHandleAutoplay !== autoplay) {
-      // Family change (e.g. switching the channel to Crossroads): the live
+      // Family change (e.g. switching the channel to Jieqi): the live
       // renderer can't load the new game, so it's torn down and a different
       // chunk + postgame are fetched — two round trips. Paint a skeleton in the
       // board slot up front so the area gives feedback instead of going blank
@@ -1070,8 +1070,7 @@ async function mountWatchReplay(
       ...(live ? { live: true, loadPostgameOverride: live.loadPostgameOverride } : {}),
     });
   }
-  // Chess (chessground): fog channels (dark-chess, reveal-chess, kriegspiel,
-  // dark-crazyhouse). Watch only ever serves COMPLETED games, so the middle
+  // Chess (chessground): the fog channel (dark-chess). Watch only ever serves COMPLETED games, so the middle
   // "Truth" pane is the fully public final-and-throughout board — no hidden-info
   // leak. Render the triptych compact but let watch-route.css isolate the truth
   // pane into the board slot (the panes resolver can only pick a fogged white/
@@ -1197,8 +1196,8 @@ function mergeWatchMetadata(
   for (const game of feed.unlocked) {
     target[game.roomId] = gameMetaForGame(game);
     // First/second-mover names for the tenant compact seats, resolved through the
-    // shared seat model (red/black for xiangqi + jungle, white/red for crossroads,
-    // white/black otherwise). The chess path reads names from metadataByRoomId.
+    // shared seat model (red/black for xiangqi + jungle, white/black
+    // otherwise). The chess path reads names from metadataByRoomId.
     const [firstSeat, secondSeat] = matchupSeats(game);
     namesTarget[game.roomId] = {
       first: displayParticipantName(game, firstSeat),
@@ -1357,7 +1356,7 @@ function watchScrubButton(text: string, label: string): HTMLButtonElement {
 
 // Whether the fog-perspective toggle applies to a variant: only asymmetric fog
 // (`visibility: 'dark'`) games have distinct per-side views worth switching
-// between. Symmetric-mask hidden-identity (jieqi/banqi/jungle-flip/reveal-chess)
+// between. Symmetric-mask hidden-identity (jieqi/banqi/jungle-flip)
 // and open variants render a single board and get no toggle.
 export function watchPovToggleApplies(variant: string): boolean {
   return maybeGameSpecForId(variant)?.visibility === 'dark';
@@ -1365,7 +1364,7 @@ export function watchPovToggleApplies(variant: string): boolean {
 
 // The color words for the two side-perspective buttons, from the variant's
 // family: the chess family reads White/Black; every other family (xiangqi,
-// jungle, shogi, crossroads, …) reads Red vs its second-seat word — "Blue" for
+// jungle, …) reads Red vs its second-seat word — "Blue" for
 // the Jungle family, "Black" elsewhere (see variant-seat-label.ts). paneKind
 // 'white' is the first/red/white seat, 'black' the second.
 function watchPovSideLabels(variant: string): { first: string; second: string } {
@@ -1770,27 +1769,17 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
 
 // The shared variant marker for each watch channel, so the TV rail reads in
 // the same icon language as the picker, rules rail, leaderboard, and profile.
-// Channel ids match VariantMiniId ids except crossroads-chess -> crossroads;
-// the dark-chess channel (which also carries dark-draft960 games) shows the
+// Channel ids match VariantMiniId ids; the dark-chess channel shows the
 // dark-chess marker. An unmapped channel keeps its (empty) marker slot so the
 // rows stay grid-aligned.
 const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'dark-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'dark-xiangqi': 'dark-xiangqi',
-  'mini-xiangqi': 'mini-xiangqi',
-  'dark-mini-xiangqi': 'dark-mini-xiangqi',
-  'drop-mini-xiangqi': 'drop-mini-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
-  'crossroads-chess': 'crossroads',
-  'dark-crossroads-chess': 'dark-crossroads',
-  'dark-shogi': 'dark-shogi',
-  'dark-crazyhouse': 'dark-crazyhouse',
-  kriegspiel: 'kriegspiel',
-  'reveal-chess': 'reveal-chess',
   jungle: 'jungle',
   'jungle-flip': 'jungle-flip',
 };

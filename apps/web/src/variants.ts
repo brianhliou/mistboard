@@ -10,15 +10,8 @@
 
 import {
   BANQI_SPEC_ID,
-  CROSSROADS_CHESS_SPEC_ID,
   DARK_CHESS_SPEC_ID,
-  DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
-  DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type GameSpecId,
@@ -26,28 +19,19 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
-  KRIEGSPIEL_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
   maybeGameSpecForId,
   type RatingVariant,
-  REVEAL_CHESS_SPEC_ID,
   ratingPoolForSpec,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
   banqiEnabled,
-  crossroadsChessEnabled,
-  darkCrazyhouseEnabled,
-  darkCrossroadsChessEnabled,
-  darkMiniXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
   jungleEnabled,
   jungleFlipEnabled,
-  kriegspielEnabled,
-  revealChessEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
@@ -72,47 +56,21 @@ export interface VariantDef {
   miniId: VariantMiniId;
 }
 
-const draft960Enabled = import.meta.env.VITE_DRAFT960_ENABLED === 'true';
-// Dark Mini Xiangqi retired 2026-07-03 (project_xiangqi_pivot_track): gated by the
-// single VITE_DARK_MINI_XIANGQI_ENABLED flag (now off in prod). The former
-// two-tier public-entry flag was removed as dead complexity.
-const darkMiniEnabled = darkMiniXiangqiEnabled();
-// Drop Mini Xiangqi retired from public rating grids 2026-07-03 (kept playable by
-// deep link; live client gate untouched). See project_xiangqi_pivot_track.
-const dropMiniXiangqiOn = false;
 const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
-const crossroadsEnabled = crossroadsChessEnabled();
 const jieqiOn = jieqiEnabled();
 const banqiOn = banqiEnabled();
 const jungleOn = jungleEnabled();
 const jungleFlipOn = jungleFlipEnabled();
-const revealChessOn = revealChessEnabled();
 const darkXiangqiOn = darkXiangqiEnabled();
-const darkCrossroadsChessOn = darkCrossroadsChessEnabled();
-// Fog Shogi is parked for the xiangqi-focused launch. Keep its marker and
-// history mappings, but do not expose a rating/profile surface when its
-// development flag is enabled.
-const darkShogiOn = false;
-const darkCrazyhouseOn = darkCrazyhouseEnabled();
-const kriegspielOn = kriegspielEnabled();
 const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
-const draft960Spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
-const darkMiniXiangqiSpec = gameSpecForId(DARK_MINI_XIANGQI_SPEC_ID);
-const dropMiniXiangqiSpec = gameSpecForId(DROP_MINI_XIANGQI_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
-const crossroadsChessSpec = gameSpecForId(CROSSROADS_CHESS_SPEC_ID);
-const darkCrossroadsChessSpec = gameSpecForId(DARK_CROSSROADS_CHESS_SPEC_ID);
-const darkShogiSpec = gameSpecForId(DARK_SHOGI_SPEC_ID);
-const darkCrazyhouseSpec = gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID);
-const kriegspielSpec = gameSpecForId(KRIEGSPIEL_SPEC_ID);
 const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
 const banqiSpec = gameSpecForId(BANQI_SPEC_ID);
-const revealChessSpec = gameSpecForId(REVEAL_CHESS_SPEC_ID);
 const jungleSpec = gameSpecForId(JUNGLE_SPEC_ID);
 const jungleFlipSpec = gameSpecForId(JUNGLE_FLIP_SPEC_ID);
 
@@ -121,22 +79,12 @@ const jungleFlipSpec = gameSpecForId(JUNGLE_FLIP_SPEC_ID);
 // that are not leaderboard rows.
 const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [DARK_CHESS_SPEC_ID]: 'dark-chess',
-  [DARK_DRAFT960_SPEC_ID]: 'draft960',
-  [MINI_XIANGQI_SPEC_ID]: 'mini-xiangqi',
-  [DARK_MINI_XIANGQI_SPEC_ID]: 'dark-mini-xiangqi',
-  [DROP_MINI_XIANGQI_SPEC_ID]: 'drop-mini-xiangqi',
   [FORTRESS_XIANGQI_SPEC_ID]: 'fortress-xiangqi',
   [DUCK_XIANGQI_SPEC_ID]: 'duck-xiangqi',
   [XIANGQI_SPEC_ID]: 'xiangqi',
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
-  [REVEAL_CHESS_SPEC_ID]: 'reveal-chess',
-  [CROSSROADS_CHESS_SPEC_ID]: 'crossroads',
-  [DARK_CROSSROADS_CHESS_SPEC_ID]: 'dark-crossroads',
-  [DARK_SHOGI_SPEC_ID]: 'dark-shogi',
-  [DARK_CRAZYHOUSE_SPEC_ID]: 'dark-crazyhouse',
-  [KRIEGSPIEL_SPEC_ID]: 'kriegspiel',
   [JUNGLE_SPEC_ID]: 'jungle',
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
 };
@@ -253,102 +201,6 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: jungleFlipOn,
     onProfile: jungleFlipOn,
   },
-  {
-    id: currentRatingVariantForSpec(DARK_SHOGI_SPEC_ID),
-    gameSpecId: darkShogiSpec.id,
-    apiParam: DARK_SHOGI_SPEC_ID,
-    label: darkShogiSpec.publicName,
-    miniId: 'dark-shogi',
-    enabled: false,
-    onLeaderboard: darkShogiOn,
-    onProfile: darkShogiOn,
-  },
-  {
-    id: currentRatingVariantForSpec(DARK_CRAZYHOUSE_SPEC_ID),
-    gameSpecId: darkCrazyhouseSpec.id,
-    apiParam: DARK_CRAZYHOUSE_SPEC_ID,
-    label: darkCrazyhouseSpec.publicName,
-    miniId: 'dark-crazyhouse',
-    enabled: false,
-    onLeaderboard: darkCrazyhouseOn,
-    onProfile: darkCrazyhouseOn,
-  },
-  {
-    id: currentRatingVariantForSpec(KRIEGSPIEL_SPEC_ID),
-    gameSpecId: kriegspielSpec.id,
-    apiParam: KRIEGSPIEL_SPEC_ID,
-    label: kriegspielSpec.publicName,
-    miniId: 'kriegspiel',
-    enabled: false,
-    onLeaderboard: kriegspielOn,
-    onProfile: kriegspielOn,
-  },
-  {
-    id: currentRatingVariantForSpec(REVEAL_CHESS_SPEC_ID),
-    gameSpecId: revealChessSpec.id,
-    apiParam: REVEAL_CHESS_SPEC_ID,
-    label: revealChessSpec.publicName,
-    miniId: 'reveal-chess',
-    enabled: false,
-    onLeaderboard: revealChessOn,
-    onProfile: revealChessOn,
-  },
-  // Draft960: gated behind its flag, and temporarily hidden from the leaderboard
-  // until it launches (sequenced to M4). Flip `onLeaderboard` (and the flag) when
-  // expanding. Kept in the registry so re-enabling is one edit.
-  {
-    id: currentRatingVariantForSpec(DARK_DRAFT960_SPEC_ID),
-    gameSpecId: draft960Spec.id,
-    apiParam: 'dark-draft960',
-    label: draft960Spec.publicName,
-    miniId: 'draft960',
-    enabled: draft960Enabled,
-    onLeaderboard: false,
-    onProfile: false,
-  },
-  // Perfect-information Crossroads stays in the registry for old records and
-  // explicit local experiments, but is hidden from active product surfaces
-  // unless the play flag is deliberately enabled.
-  {
-    id: currentRatingVariantForSpec(CROSSROADS_CHESS_SPEC_ID),
-    gameSpecId: crossroadsChessSpec.id,
-    apiParam: CROSSROADS_CHESS_SPEC_ID,
-    label: crossroadsChessSpec.publicName,
-    miniId: 'crossroads',
-    enabled: crossroadsEnabled,
-    onLeaderboard: crossroadsEnabled,
-    onProfile: crossroadsEnabled,
-  },
-  {
-    id: currentRatingVariantForSpec(DARK_CROSSROADS_CHESS_SPEC_ID),
-    gameSpecId: darkCrossroadsChessSpec.id,
-    apiParam: DARK_CROSSROADS_CHESS_SPEC_ID,
-    label: darkCrossroadsChessSpec.publicName,
-    miniId: 'dark-crossroads',
-    enabled: false,
-    onLeaderboard: darkCrossroadsChessOn,
-    onProfile: darkCrossroadsChessOn,
-  },
-  {
-    id: currentRatingVariantForSpec(DARK_MINI_XIANGQI_SPEC_ID),
-    gameSpecId: darkMiniXiangqiSpec.id,
-    apiParam: DARK_MINI_XIANGQI_SPEC_ID,
-    label: darkMiniXiangqiSpec.publicName,
-    miniId: 'dark-mini-xiangqi',
-    enabled: darkMiniEnabled,
-    onLeaderboard: darkMiniEnabled,
-    onProfile: darkMiniEnabled,
-  },
-  {
-    id: currentRatingVariantForSpec(DROP_MINI_XIANGQI_SPEC_ID),
-    gameSpecId: dropMiniXiangqiSpec.id,
-    apiParam: DROP_MINI_XIANGQI_SPEC_ID,
-    label: dropMiniXiangqiSpec.publicName,
-    miniId: 'drop-mini-xiangqi',
-    enabled: false,
-    onLeaderboard: dropMiniXiangqiOn,
-    onProfile: dropMiniXiangqiOn,
-  },
 ];
 
 /** Variants shown on public rating surfaces (leaderboard + profile grid). */
@@ -359,10 +211,6 @@ export const profileRatingVariants = VARIANTS.filter((v) => v.onProfile);
 
 /** Variants selectable in the lobby. */
 export const enabledVariants = VARIANTS.filter((v) => v.enabled);
-
-export function isVariantEnabled(id: RatingVariantId): boolean {
-  return VARIANTS.some((v) => v.id === id && v.enabled);
-}
 
 /** Mini-board id for a game spec (picker/landing), or null if none. */
 export function variantMiniIdForGameSpec(id: GameSpecId): VariantMiniId | null {
@@ -376,7 +224,7 @@ export function variantMiniIdForRating(id: RatingVariantId): VariantMiniId | nul
 
 /**
  * Mini-board id for a raw persisted variant string (e.g. a FeaturedGame.variant
- * off the wire), normalizing legacy aliases (fog, draft960, dual-chess) through
+ * off the wire), normalizing the legacy alias (fog) through
  * their canonical game spec first. Null if the string maps to no marker.
  */
 export function variantMiniIdForRawVariant(variant: string): VariantMiniId | null {

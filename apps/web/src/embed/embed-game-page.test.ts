@@ -1,4 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { embedRailWidthPx } from './embed-card.js';
 import { embedGameHeader, fitBoardWidth, mountEmbedGame, seatDiscInk } from './embed-game-page.js';
 import { embedGameRouteFromPath, embedPlyFromSearch, embedRouteFromPath } from './embed-route.js';
 
@@ -87,6 +88,18 @@ describe('fitBoardWidth', () => {
 
   it('never collapses to nothing', () => {
     expect(fitBoardWidth({ width: 100, height: 100 }, 1, false)).toBe(120);
+  });
+
+  it('gives Duck Xiangqi the wider sheet its notation needs', () => {
+    // A duck turn is a move and a placement in one cell (`h10-f10@e10`). At the
+    // 226 floor cut for a coordinate move, most of a duck game ellipsised. The
+    // board yields the difference: 760 wide leaves 482 rather than 532.
+    expect(embedRailWidthPx('duck-xiangqi')).toBe(276);
+    expect(embedRailWidthPx('xiangqi')).toBe(226);
+    expect(embedRailWidthPx(null)).toBe(226);
+    expect(fitBoardWidth({ width: 760, height: 900 }, 0.9, false, 276)).toBe(482);
+    // Stacked, the sheet is under the board and the floor does not apply.
+    expect(fitBoardWidth({ width: 400, height: 700 }, 1, true, 276)).toBe(398);
   });
 });
 

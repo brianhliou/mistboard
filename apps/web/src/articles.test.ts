@@ -52,14 +52,6 @@ describe('article public listing gates', () => {
     ]);
   });
 
-  it('keeps the mini xiangqi trio de-listed from the rules index regardless of env flags', () => {
-    vi.stubEnv('DEV', false);
-
-    const rules = buildRulesIndex();
-    expect(rules.querySelector('a[href="/rules/dark-mini-xiangqi"]')).toBeNull();
-    expect(rules.querySelector('a[href="/rules/mini-xiangqi"]')).toBeNull();
-  });
-
   it('orders the articles page by publish date newest first', () => {
     vi.stubEnv('DEV', true);
 
@@ -68,9 +60,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The Duck Xiangqi build post is a DRAFT and only appears because this
-      // case stubs DEV. It ships with the variant, for the same reason the
-      // rules page does: it argues from positions nobody can set up yet.
+      // Published with the variant on 2026-09-11, the same date as the
+      // puzzles post; ties break on HOME_ARTICLE_SLUGS position, and this
+      // index is ordered by date alone, so the newest pair leads.
       '/blog/duck-xiangqi-build',
       '/blog/puzzles-with-more-than-one-solution',
       // The jieqi pair shipped as one batch on 2026-09-03, because each of the
@@ -218,32 +210,6 @@ describe('article public listing gates', () => {
     ).not.toBeNull();
   });
 
-  it('renders a retired variant rules page as not found, in every locale', () => {
-    // The server answers 410 for these; a client-side navigation must not
-    // show what the server has declared gone (docs-private/variant-
-    // retirement-plan.md, #396).
-    for (const slug of [
-      'crossroads-chess',
-      'dark-crossroads-chess',
-      'dark-crazyhouse',
-      'dark-mini-xiangqi',
-      'dark-shogi',
-      'drop-mini-xiangqi',
-      'kriegspiel',
-      'mini-xiangqi',
-      'reveal-chess',
-      'shogi',
-    ]) {
-      for (const lang of [undefined, 'zh-Hans'] as const) {
-        const page = buildArticlePage(slug, lang);
-        expect(page.querySelector('.article-title'), `${slug} ${lang}`).toBeNull();
-        expect(['Article not found', '未找到文章'], `${slug} ${lang}`).toContain(
-          page.querySelector('.site-section-heading')?.textContent,
-        );
-      }
-    }
-  });
-
   it('publishes the completed Fortress Xiangqi localization', () => {
     const simplified = buildArticlePage('fortress-xiangqi', 'zh-Hans');
     const traditional = buildArticlePage('fortress-xiangqi', 'zh-Hant');
@@ -257,20 +223,17 @@ describe('article public listing gates', () => {
   });
 
   it('limits the homepage article widget to editorial article cards ordered by publish date', () => {
-    vi.stubEnv('VITE_DARK_MINI_XIANGQI_ENABLED', 'true');
-
     const hrefs = [
       ...(buildHomeArticleCards(50, undefined, NO_AGE_CUT)?.querySelectorAll<HTMLAnchorElement>(
         '.landing-article-card[data-card-kind="article"]',
       ) ?? []),
     ].map((link) => link.getAttribute('href'));
 
-    // Rules reference pages are excluded from this row, with one named
-    // exception (HOME_ARTICLE_RULES_ALLOWLIST): a variant launch whose rules
-    // page IS the destination. Everything else here is editorial, newest first.
+    // Rules reference pages are excluded from this row; only editorial
+    // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/duck-xiangqi-build',
       '/blog/puzzles-with-more-than-one-solution',
-      '/rules/duck-xiangqi',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
       '/blog/how-puzzle-mining-works',
@@ -288,12 +251,10 @@ describe('article public listing gates', () => {
 
   it('keeps still-gated release announcements out of the homepage article widget by default', () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'true');
 
     const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
 
     expect(cards?.textContent).not.toContain('Reveal Chess is open for alpha play.');
-    expect(cards?.textContent).not.toContain('Kriegspiel is open for alpha play.');
   });
 
   it('keeps the rated xiangqi announcement out of the homepage article row', () => {
@@ -308,18 +269,6 @@ describe('article public listing gates', () => {
 
     expect(cards?.textContent).not.toContain('Secret in the Tangerine, both game volumes.');
     expect(cards?.querySelector('.landing-announcement-card[href="/study/Dfi3NpRE"]')).toBeNull();
-  });
-
-  it('does not show the Drop Mini Xiangqi launch announcement in the homepage article widget', () => {
-    vi.stubEnv('DEV', false);
-
-    const cards = buildHomeArticleCards(50, undefined, NO_AGE_CUT);
-    const announcement = cards?.querySelector<HTMLAnchorElement>(
-      '.landing-announcement-card[href="/rules/drop-mini-xiangqi"]',
-    );
-
-    expect(announcement).toBeNull();
-    expect(cards?.textContent).not.toContain('Drop Mini Xiangqi has launched.');
   });
 
   it('does not show the Banqi alpha announcement in the homepage article widget', () => {
@@ -555,8 +504,6 @@ describe('rules variant sidebar', () => {
     const hrefs = [...(nav?.querySelectorAll('a') ?? [])].map((link) => link.getAttribute('href'));
     // The mini xiangqi trio is de-listed; the rail uses the eight-variant
     // public shelf order.
-    expect(nav?.querySelector('a[href="/rules/mini-xiangqi"]')).toBeNull();
-    expect(nav?.querySelector('a[href="/rules/dark-mini-xiangqi"]')).toBeNull();
     expect(nav?.querySelector('a[href="/rules/fog-xiangqi"]')).not.toBeNull();
     expect(nav?.querySelector('a[href="/rules/jieqi"]')).not.toBeNull();
     expect(nav?.querySelector('a[href="/rules/jungle"]')).not.toBeNull();
@@ -565,10 +512,6 @@ describe('rules variant sidebar', () => {
     expect(nav?.querySelector('a[href="/rules/fog-chess"]')).not.toBeNull();
     // Xiangqi pivot: the chess reference article is de-listed from the rail.
     expect(nav?.querySelector('a[href="/rules/chess"]')).toBeNull();
-    // Draft960 is a pregame option that has not shipped as a playable mode.
-    expect(nav?.querySelector('a[href="/rules/dark-draft960"]')).toBeNull();
-    expect(nav?.querySelector('a[href="/rules/shogi"]')).toBeNull();
-    expect(nav?.querySelector('a[href="/rules/dark-shogi"]')).toBeNull();
     expect(hrefs.indexOf('/rules/xiangqi')).toBeLessThan(hrefs.indexOf('/rules/banqi'));
     expect(hrefs.indexOf('/rules/banqi')).toBeLessThan(hrefs.indexOf('/rules/jieqi'));
     expect(hrefs.indexOf('/rules/jieqi')).toBeLessThan(hrefs.indexOf('/rules/fortress-xiangqi'));
@@ -619,32 +562,6 @@ describe('rules variant sidebar', () => {
     expect(tile?.querySelector('.rules-landing-tile-label')?.textContent).toBe('Fog Chess');
   });
 
-  it('does not expose Shogi markers on listed rule article surfaces', () => {
-    const landing = buildRulesIndex();
-    expect(
-      landing.querySelector('.rules-landing-tile[href="/rules/shogi"] svg[data-mini-id="shogi"]'),
-    ).toBeNull();
-    expect(
-      landing.querySelector(
-        '.rules-landing-tile[href="/rules/dark-shogi"] span[data-variant-marker-id="dark-shogi"]',
-      ),
-    ).toBeNull();
-
-    const shogi = buildArticlePage('shogi');
-    expect(
-      shogi.querySelector(
-        '.article-variant-sidebar a[href="/rules/shogi"] svg[data-mini-id="shogi"]',
-      ),
-    ).toBeNull();
-
-    const darkShogi = buildArticlePage('dark-shogi');
-    expect(
-      darkShogi.querySelector(
-        '.article-variant-sidebar a[aria-current="page"] span[data-variant-marker-id="dark-shogi"]',
-      ),
-    ).toBeNull();
-  });
-
   // One flat grid, mirroring the rail. The de-listing assertions are the point
   // of this test and outlive the layout: parked and de-listed slugs stay out of
   // the picker while remaining reachable by direct URL.
@@ -666,7 +583,7 @@ describe('rules variant sidebar', () => {
     }
     // Xiangqi pivot: the mini xiangqi trio and the chess reference article are
     // de-listed from the tile grid (still reachable by direct URL).
-    for (const href of ['/rules/drop-mini-xiangqi', '/rules/chess', '/rules/shogi']) {
+    for (const href of ['/rules/chess', '/rules/shogi4']) {
       expect(grid?.querySelector(`a[href="${href}"]`), href).toBeNull();
     }
   });

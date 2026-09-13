@@ -29,8 +29,6 @@ afterEach(() => {
   liveState.seat = 'spectator';
 });
 
-const noDraft = { hasVisibleDraftData: false };
-
 describe('connectionNoticeMode — staged reconnect', () => {
   it('is silent (none) when connected', () => {
     liveState.connectionState = 'connected';
@@ -91,7 +89,7 @@ describe('action notice text follows the tier, not the raw socket state', () => 
     const view = playingView();
     expect(actionTitle(view)).toBe('Reconnecting');
     expect(actionTone(view)).toBe('pending');
-    expect(actionBody(view, noDraft)).toBe('Trying to restore your room state and seat.');
+    expect(actionBody(view)).toBe('Trying to restore your room state and seat.');
   });
 
   it('uses the danger tone for a disconnected banner', () => {
@@ -137,7 +135,7 @@ describe('correspondence waiting-for-opponent states', () => {
     liveState.seatDisplayNames = { black: 'Creator' };
     const view = playingView(); // turn: white
     expect(actionTitle(view)).toBe('Waiting for opponent');
-    expect(actionBody(view, noDraft)).toBe('Share the invite link below to invite your opponent.');
+    expect(actionBody(view)).toBe('Share the invite link below to invite your opponent.');
   });
 
   it('keeps Your move when the creator can move first, with invite-forward body', () => {
@@ -147,7 +145,7 @@ describe('correspondence waiting-for-opponent states', () => {
     liveState.seatDisplayNames = { white: 'Creator' };
     const view = playingView();
     expect(actionTitle(view)).toBe('Your move');
-    expect(actionBody(view, noDraft)).toBe(
+    expect(actionBody(view)).toBe(
       'Share the invite link below, then make your first move whenever you like.',
     );
   });
@@ -156,7 +154,7 @@ describe('correspondence waiting-for-opponent states', () => {
     liveState.connectionState = 'rejected';
     liveState.closeReason = 'correspondence requires account';
     expect(actionTitle(null)).toBe('Access rejected');
-    expect(actionBody(null, noDraft)).toContain('Both players need an account');
+    expect(actionBody(null)).toContain('Both players need an account');
   });
 });
 

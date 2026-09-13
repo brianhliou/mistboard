@@ -2,7 +2,7 @@
 
 ## One-line shape
 
-Full-stack board-game platform for xiangqi, chess, and related variant families: a Vite-bundled TypeScript browser client + a Node.js WebSocket server + Postgres. The Node server serves the built static client and the WebSocket on the same port; everything runs on one hosting provider. Variants range from open-information games (standard xiangqi, Jungle) to hidden-information games (Fog of War chess and xiangqi, Jieqi, Banqi, Kriegspiel), and the architecture is built so hidden information can never reach the wrong client.
+Full-stack board-game platform for xiangqi, chess, and related variant families: a Vite-bundled TypeScript browser client + a Node.js WebSocket server + Postgres. The Node server serves the built static client and the WebSocket on the same port; everything runs on one hosting provider. Variants range from open-information games (standard xiangqi, Jungle) to hidden-information games (Fog of War chess and xiangqi, Jieqi, Banqi, Flip Jungle), and the architecture is built so hidden information can never reach the wrong client.
 
 ## Package layout
 
@@ -108,4 +108,4 @@ Provider choice is not load-bearing; the server is plain Node and the client is 
 - **Server-authoritative is non-negotiable.** Hidden-information correctness depends on it. The client never holds canonical state. A correct hidden-information implementation must never send hidden truth to the wrong consumer.
 - **Event log as source of truth.** Game state is always reconstructable by replaying the event log. Replay, reconnect, and postgame review all share the same projection path.
 - **The per-player view is the security boundary.** All outbound WebSocket messages and non-admin API responses go through a view projection before leaving the server. Sending raw canonical state to a client is a security bug.
-- **Variants are pluggable, and dispatch fails closed.** The tenant runtime makes adding a variant a matter of writing a kernel, a tenant policy, and a registration; the conformance tests and the exhaustive request gate make it impossible to add one silently or route an unknown id to the wrong rules. `draft960` remains a pregame configuration inside Fog of War chess, not a separate surface.
+- **Variants are pluggable, and dispatch fails closed.** The tenant runtime makes adding a variant a matter of writing a kernel, a tenant policy, and a registration; the conformance tests and the exhaustive request gate make it impossible to add one silently or route an unknown id to the wrong rules.

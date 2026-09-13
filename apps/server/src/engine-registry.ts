@@ -1,6 +1,5 @@
 export {
   builtinEngineIds,
-  DARK_MINI_XIANGQI_DEFAULT_ENGINE_ID,
   DARK_XIANGQI_DEFAULT_ENGINE_ID,
   defaultEngineId,
   type EngineClientId,
@@ -11,7 +10,6 @@ export {
   type EngineMoveDecision,
   type EngineMoveScore,
   engineVersionDisplayName,
-  isDarkMiniXiangqiEngineClientId,
   isDarkXiangqiEngineClientId,
   isKnownEngineClientId,
   isPlayableLiveEngineClientId,

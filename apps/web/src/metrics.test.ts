@@ -91,8 +91,8 @@ const adminMetrics = {
   previousActivePlayers28d: 9,
   activePatrons: 3,
   humanGamesByResult: { 'red-win': 350, 'black-win': 300, draw: 32 },
-  // Includes a retired id (dark-crazyhouse) that the live-shelf filter drops.
-  humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, 'dark-crazyhouse': 60 },
+  // Includes a deleted id (dark-draft960) that the live-shelf filter drops.
+  humanGamesByVariant: { xiangqi: 402, 'dark-xiangqi': 180, 'dark-draft960': 60 },
   weekly: [week('2026-07-06'), week('2026-07-13'), week('2026-07-20', { players: 8 })],
   engines: {
     eveGames: 900,
@@ -102,7 +102,9 @@ const adminMetrics = {
     internalGames: 512,
     internalGamesLast7d: 5,
     preLaunchGames: 197,
+    shortGames: 25,
     countedFrom: '2026-06-01',
+    minCountedPlies: 2,
     eveByVariant: { 'dark-chess': 600, xiangqi: 300 },
   },
 };
@@ -284,6 +286,9 @@ describe('metrics page', () => {
     expect(engines?.textContent).toContain('512');
     expect(engines?.textContent).toContain('Pre-launch');
     expect(engines?.textContent).toContain('197');
+    expect(engines?.textContent).toContain('Short');
+    expect(engines?.textContent).toContain('25');
+    expect(engines?.textContent).toContain('fewer than 2 plies');
     const engineVariants = [...(engines?.querySelectorAll('.metrics-breakdown-label') ?? [])].map(
       (n) => n.textContent,
     );
@@ -298,7 +303,7 @@ describe('metrics page', () => {
       ...(variantSection?.querySelectorAll('.metrics-breakdown-label') ?? []),
     ].map((n) => n.textContent);
     expect(variantLabels).toEqual(['Xiangqi', 'Fog Xiangqi']);
-    expect(variantLabels).not.toContain('Dark Crazyhouse');
+    expect(variantLabels).not.toContain('Dark Draft960');
   });
 
   it('falls back to a notice when statistics are unavailable', async () => {

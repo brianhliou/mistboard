@@ -1,9 +1,6 @@
 import {
   BANQI_SPEC_ID,
   type Color,
-  CROSSROADS_CHESS_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   TIME_CONTROLS,
@@ -92,7 +89,7 @@ export type GameParticipant = {
   // private, so a client rule of "handle present => render a link" is fail-closed.
   handle?: string | null;
   // Engine build version for engine-version seats whose subject_id is version-less (the
-  // variant-tenant UCI engines — jieqi/banqi/crossroads, e.g. subject_id 'misty-banqi'),
+  // variant-tenant UCI engines — jieqi/banqi, e.g. subject_id 'misty-banqi'),
   // so games are queryable by build. Null for humans and for engines that already encode
   // the version in subject_id (Misty/DMX). Optional + omitted-when-null to keep the
   // participant shape unchanged for the many constructors that don't set it.
@@ -124,7 +121,6 @@ export type GameSummary = {
   participants?: GameParticipant[];
   initialMs?: number | null;
   incrementMs?: number | null;
-  hiddenDraft960?: boolean | null;
   // A terminal state the kernel finished but that must NOT be recorded as a
   // completed game with a winner. The only current case is an engine failure:
   // the kernel finishes the room as an abandonment so live clients see an end,
@@ -133,7 +129,7 @@ export type GameSummary = {
   // This rides recordGameEnd rather than abortRunningGame on purpose.
   // abortRunningGame is `UPDATE ... WHERE status = 'running'`, and most tenants
   // deliberately omit recordGameStart (fog xiangqi, xiangqi, jieqi, banqi,
-  // jungle, dark-crossroads), so there is no running row for it to touch: it
+  // jungle), so there is no running row for it to touch: it
   // returns false and changes nothing. recordGameEnd is also the only writer
   // that creates game_participants, so routing an engine failure away from it
   // would drop the game out of the database entirely instead of misfiling it.
@@ -866,7 +862,7 @@ export async function countWatchSealedGames(options: WatchSealedGameOptions = {}
        ${variantClause}
        ${modeClause}
        AND games.visibility <> 'private'
-       AND last_events.type IN ('clock-started', 'draft-start-resolved', 'move-played', 'resume')
+       AND last_events.type IN ('clock-started', 'move-played', 'resume')
        AND (last_events.payload->>'at')::bigint >= $1
        AND (last_events.payload->>'at')::bigint <= $2`,
     values,
@@ -1357,8 +1353,8 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          (room_id, variant, result, termination, ply_count, started_at, ended_at,
           white_client, black_client, white_name, black_name, corpus_id,
           mode, status, review_status, visibility, rated,
-          initial_ms, increment_ms, hidden_draft960, region, aborted_reason)
-       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $21, $14, $15, $16, $17, $18, $19, $20, $22)
+          initial_ms, increment_ms, region, aborted_reason)
+       VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9, $10, $11, $12, $13, $20, $14, $15, $16, $17, $18, $19, $21)
        ON CONFLICT (room_id) DO UPDATE SET
          variant = EXCLUDED.variant,
          result = EXCLUDED.result,
@@ -1372,15 +1368,14 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
          black_name = EXCLUDED.black_name,
          corpus_id = EXCLUDED.corpus_id,
          mode = EXCLUDED.mode,
-         status = $21,
+         status = $20,
          review_status = EXCLUDED.review_status,
          visibility = EXCLUDED.visibility,
          rated = EXCLUDED.rated,
          initial_ms = EXCLUDED.initial_ms,
          increment_ms = EXCLUDED.increment_ms,
-         hidden_draft960 = EXCLUDED.hidden_draft960,
          region = EXCLUDED.region,
-         aborted_reason = $22
+         aborted_reason = $21
        WHERE games.status = 'running'`,
       [
         roomId,
@@ -1401,7 +1396,6 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         rated,
         summary.initialMs ?? null,
         summary.incrementMs ?? null,
-        summary.hiddenDraft960 ?? null,
         summary.region ?? 'global',
         summary.abortedAs ? 'aborted' : 'completed',
         summary.abortedAs?.abortedReason ?? null,
@@ -1439,7 +1433,6 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         variant: summary.variant,
         initialMs: summary.initialMs,
         incrementMs: summary.incrementMs,
-        hiddenDraft960: summary.hiddenDraft960,
       });
       const colors = ratedParticipantColorsForVariant(summary.variant);
       const whiteParticipant = participants.find((p) => p.color === colors.white);
@@ -1456,7 +1449,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
           roomId,
           whiteParticipant.subjectId,
           blackParticipant.subjectId,
-          ratedResultForGame(summary.result, summary.variant),
+          ratedResultForGame(summary.result),
           bucket,
           colors,
         );
@@ -1469,10 +1462,8 @@ function ratedParticipantColorsForVariant(variant: string): {
   white: RatedParticipantColor;
   black: RatedParticipantColor;
 } {
-  if (variant === DARK_MINI_XIANGQI_SPEC_ID || variant === DROP_MINI_XIANGQI_SPEC_ID)
-    return { white: 'red', black: 'black' };
   // Jieqi + Banqi are red/black (red = first mover = the white rating slot, like
-  // DMX/Drop Mini; banqi keys on the SEAT, not ink). The default result mapping
+  // DMX; banqi keys on the SEAT, not ink). The default result mapping
   // below then applies (red-wins -> white-wins, black-wins passthrough), so no result arm.
   if (variant === JIEQI_SPEC_ID || variant === BANQI_SPEC_ID)
     return { white: 'red', black: 'black' };
@@ -1481,12 +1472,10 @@ function ratedParticipantColorsForVariant(variant: string): {
   // flip's first rated game recorded rated=true but moved nobody's rating.
   if (variant === XIANGQI_SPEC_ID || variant === FORTRESS_XIANGQI_SPEC_ID)
     return { white: 'red', black: 'black' };
-  if (variant === CROSSROADS_CHESS_SPEC_ID) return { white: 'white', black: 'red' };
   return { white: 'white', black: 'black' };
 }
 
-function ratedResultForGame(result: GameResult, variant: string): RatedResult {
-  if (variant === CROSSROADS_CHESS_SPEC_ID && result === 'red-wins') return 'black-wins';
+function ratedResultForGame(result: GameResult): RatedResult {
   if (result === 'red-wins') return 'white-wins';
   if (result === 'white-wins' || result === 'black-wins' || result === 'draw') return result;
   return 'draw';

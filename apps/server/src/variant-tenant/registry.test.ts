@@ -15,25 +15,10 @@ import {
   variantTenantForSpecId,
 } from './registry.js';
 
-test('registry: retired specs never register, by prefix or by id', () => {
-  // The registration modules for these still run at boot (their Stage 2
-  // commits remove them); registerVariantTenant drops a retired spec on the
-  // floor, so no route, prefix or watch channel exists for it.
-  for (const [prefix, specId] of [
-    ['dmxq_some-room', 'dark-mini-xiangqi'],
-    ['dmxqd_some-room', 'drop-mini-xiangqi'],
-    ['mxq_some-room', 'mini-xiangqi'],
-    ['dchess_some-room', 'crossroads-chess'],
-    ['ddchess_some-room', 'dark-crossroads-chess'],
-    ['dsg_some-room', 'dark-shogi'],
-    ['dczh_some-room', 'dark-crazyhouse'],
-    ['kr_some-room', 'kriegspiel'],
-    ['rc_some-room', 'reveal-chess'],
-    ['lzq_some-room', 'luzhanqi'],
-  ] as const) {
-    assert.equal(variantTenantForRoomId(prefix), null, prefix);
-    assert.equal(variantTenantForSpecId(specId), null, specId);
-  }
+test('registry: retired specs never register', () => {
+  // registerVariantTenant drops a retired spec on the floor, so no route,
+  // prefix or watch channel exists for one even if a registration module
+  // still runs at boot.
   for (const entry of registeredVariantTenants()) {
     assert.equal(isRetiredGameSpec(entry.gameSpecId), false, entry.kind);
   }

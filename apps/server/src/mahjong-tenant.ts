@@ -223,6 +223,13 @@ export const mahjongTenant: MahjongTenantType = {
   // the default "arms after move 1" never fires and the clock sits frozen for
   // the whole hand. At a real table the clock runs from the opening discard.
   armsClockOnFirstMove: true,
+  // The seat to move is on the clock; during a claim window nobody is. The
+  // discarder has nothing left to decide there, and the seats deciding have a
+  // six-second window of their own.
+  clockOwner: (state) =>
+    state.status.type === 'playing' && state.game.phase.type !== 'claim-window'
+      ? state.status.turn
+      : null,
   enabled: mahjongEnabled,
   oppositeColor: () => {
     // Unreachable: assertForfeitPolicy refuses to build a room for a tenant with

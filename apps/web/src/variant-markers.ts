@@ -33,9 +33,6 @@ export const FINAL_VARIANT_MARKERS = {
   'dark-chess': {
     path: '/variant-markers/final/fog-chess.png',
   },
-  'dark-shogi': {
-    path: '/variant-markers/final/fog-shogi.png',
-  },
 } as const satisfies Partial<Record<VariantMiniId, { path: string }>>;
 
 export function hasFinalVariantMarker(id: VariantMiniId): boolean {

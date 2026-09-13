@@ -633,11 +633,11 @@
    the live room's rail already uses (live-review.css): where drops are a real
    mechanic the pocket is POSITION, not a capture ledger, so its row is reserved
    space that holds its band while empty. The generic :empty collapse above would
-   otherwise undo the band defined in drop-mini-xiangqi.css — and that reflow is
+   otherwise undo the band defined in drop-reserve.css — and that reflow is
    exactly what got the material rows pulled from this surface (#166). Plain
    captured-material strips still collapse when empty.
 
-   The piece size is pinned rather than inherited: drop-mini-xiangqi.css sizes
+   The piece size is pinned rather than inherited: drop-reserve.css sizes
    tiles from 100cqw against a .drop-mini-reserve-container ancestor, and the
    rail has none, so cqw would fall back to the viewport and size the pocket off
    the window width instead of the rail. */

@@ -195,7 +195,7 @@ export function createTenantWsRuntime<
     const seatToken = seatTokenFromProtocolHeader(request.headers['sec-websocket-protocol']);
     // Allowlist-gated variants (139) ask the grant table before handing out a
     // seat. Non-gated specs short-circuit to true without a query.
-    const variantAccessGranted = await mayPlayVariant(accountUser?.id ?? null, tenant.gameSpecId);
+    const variantAccessGranted = await mayPlayVariant(accountUser, tenant.gameSpecId);
     const assignment = assignTenantSeat(
       tenant,
       room,
@@ -414,8 +414,8 @@ export function createTenantWsRuntime<
     // Read-only guard for debug spectators. Everything above (ping /
     // latency-sample / snapshot:request) is read-only; everything below appends
     // events or asserts a seat identity, so a spectator (no seat) stops here.
-    // This is a correctness invariant, not polish: handleResign / handleSetupSubmit
-    // stamp `color: seat` with no seat validation, so a spectator resign would
+    // This is a correctness invariant, not polish: handleResign stamps
+    // `color: seat` with no seat validation, so a spectator resign would
     // otherwise append `color:'spectator'` and corrupt the event log. After this
     // guard client.seat narrows to a real color; `seat` threads it downstream.
     if (client.seat === 'spectator') return;
@@ -440,10 +440,6 @@ export function createTenantWsRuntime<
     }
     if (message.type === 'rematch:decline') {
       if (ctx.rematch) declineTenantRematch(tenant, ctx.rematch, room, client);
-      return;
-    }
-    if (message.type === 'setup:submit') {
-      await handleSetupSubmit(room, client, seat, message);
       return;
     }
     if (message.type !== 'move') return;
@@ -473,7 +469,7 @@ export function createTenantWsRuntime<
     }
     // State-dependent canonicalization (when the tenant defines it) resolves
     // the parsed move to the exact legal-move object to append — e.g.
-    // Crossroads re-attaches `promotion` from the legal-move list. It doubles
+    // a chess-family tenant re-attaches `promotion` from the legal-move list. It doubles
     // as the legality check: null rejects.
     const canonical = tenant.rules.canonicalMove
       ? tenant.rules.canonicalMove(room.projection.state, move, seat)
@@ -481,8 +477,8 @@ export function createTenantWsRuntime<
         ? move
         : null;
     if (canonical === null) {
-      // A tenant may turn a rejection into a per-mover signal (the Crazyhouse
-      // parachute bounce). Sent only to this client, so it never leaks to others.
+      // A tenant may turn a rejection into a per-mover signal (a drop bounce).
+      // Sent only to this client, so it never leaks to others.
       const rejection = tenant.wire?.rejectionFor?.(room.projection.state, move, seat);
       if (rejection) sendPayload(client, rejection);
       return;
@@ -504,37 +500,6 @@ export function createTenantWsRuntime<
     }
     broadcastEventAppended(room, event, seq);
     // PvE: it may now be the engine's turn (no-op for PvP / engine not to move).
-    scheduleEngineMove(room);
-  }
-
-  // `seat` is the caller's read-only-guarded color (never 'spectator'); see the
-  // spectator guard in handleMessage before the resign/setup/move dispatch.
-  async function handleSetupSubmit(
-    room: LiveRoom,
-    client: LiveClient,
-    seat: C,
-    message: { setup?: unknown },
-  ): Promise<void> {
-    if (!tenant.setupSubmission) return;
-    if (room.projection.state.status.type !== 'setup') return;
-    const setup = tenant.setupSubmission.setupFromMessage(message);
-    if (setup === null) return;
-    const event: TenantRoomEvent<C, M, Spec> = {
-      type: 'setup-submitted',
-      at: Date.now(),
-      roomId: room.id,
-      color: seat,
-      setup,
-    };
-    let seq: number;
-    try {
-      seq = await appendTenantEvent(tenant, room, event, eventWriterCtx);
-    } catch (err) {
-      recordTenantPersistenceError(tenant, room.id, room.events.length, event.type, err as Error);
-      client.socket.close(1011, 'persistence failure');
-      return;
-    }
-    broadcastEventAppended(room, event, seq);
     scheduleEngineMove(room);
   }
 

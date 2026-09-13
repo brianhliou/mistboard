@@ -64,7 +64,7 @@ export function fillFortressXiangqiReserve(
     allRoles?: boolean;
   } = {},
 ): void {
-  // Reuse the shared drop-mini reserve styling for a consistent pocket look.
+  // Reuse the shared reserve styling (drop-reserve.css) for a consistent pocket look.
   host.classList.add('drop-mini-reserve-strip');
   host
     .closest<HTMLElement>('.board-shell, .replay-pane')

@@ -105,25 +105,12 @@ export function isKnownEngineClientId(clientId: string | undefined): clientId is
   return engineId in KNOWN_ENGINES;
 }
 
-// True iff `clientId` is a registered engine that plays Dark Mini Xiangqi. Used
-// to (a) validate a PvE create request's engineId and (b) identify the engine
-// seat in a DMX room (its seat holds this id, set by a seat-assigned event).
-export function isDarkMiniXiangqiEngineClientId(
-  clientId: string | undefined,
-): clientId is EngineId {
-  if (!clientId) return false;
-  return KNOWN_ENGINES[clientId]?.gameSpecId === 'dark-mini-xiangqi';
-}
-
 // True iff `clientId` is a registered engine that plays full Dark Xiangqi.
 export function isDarkXiangqiEngineClientId(clientId: string | undefined): clientId is EngineId {
   if (!clientId) return false;
   return KNOWN_ENGINES[clientId]?.gameSpecId === 'dark-xiangqi';
 }
 
-// The default Dark Mini Xiangqi PvE engine (the single player-facing DMX engine,
-// mirroring Misty for chess).
-export const DARK_MINI_XIANGQI_DEFAULT_ENGINE_ID: EngineId = 'python-dmx-v1.0';
 export const DARK_XIANGQI_DEFAULT_ENGINE_ID: EngineId = 'python-fdx-v1.2';
 
 const PYTHON_ENGINES: Record<string, EngineDefinition> = {
@@ -486,30 +473,6 @@ const PYTHON_ENGINES: Record<string, EngineDefinition> = {
       'Misty 1.6 — v1.5 + the catastrophe prune net-hang floor (300cp net on ' +
       'high-value pieces). Fixes the Qxe8/Qxf2 hang class. Shipped 2026-08-23.',
   },
-  // Dark Mini Xiangqi engine. Not in the chess PvE picker; the Dark Mini
-  // Xiangqi route selects it through the variant-aware worker protocol.
-  'python-dmx-v1.0': {
-    id: 'python-dmx-v1.0',
-    engineId: 'v2',
-    engineName: 'Misty DMX',
-    name: 'Misty DMX 1.0',
-    kind: 'container',
-    gameSpecId: 'dark-mini-xiangqi',
-    configHash: 'dmx-v1.0-3ae331c',
-    playSignature: '3ae331c',
-    config: {
-      kind: 'python-subprocess',
-      strategy: 'v2-mini',
-      version: '1.0',
-      config: 'dmx-misty-dmx',
-      config_hash: '3ae331c',
-      engine_pin: 'dmx-v1.0@3ae331c',
-    },
-    livePolicy: { timeoutMs: 30_000 },
-    notes:
-      'Misty DMX 1.0 — Dark Mini Xiangqi engine served through the variant-aware worker adapter. ' +
-      'Pinned to engine 3ae331c (guarded recommended profile + bounded mini belief cap + live-build guard fix).',
-  },
   // Full Dark Xiangqi engine. Local/dev-only: not in the chess PvE picker and
   // not in PROD_PLAYABLE_ENGINE_IDS. The Dark Xiangqi route defaults to it for
   // PvE when the variant flag is enabled.
@@ -676,47 +639,6 @@ const PYTHON_ENGINES: Record<string, EngineDefinition> = {
   },
 };
 
-const CROSSROADS_CHESS_ENGINES: Record<string, EngineDefinition> = {
-  'fairy-stockfish-crossroads-amateur': {
-    id: 'fairy-stockfish-crossroads-amateur',
-    engineId: 'fairy-stockfish-crossroads',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Amateur',
-    kind: 'container',
-    gameSpecId: 'crossroads-chess',
-    configHash: 'fsf-crossroads-amateur',
-    playSignature: 'fsf-crossroads-amateur',
-    config: { kind: 'fairy-stockfish', skill: 2, movetime_ms: 150 },
-    notes: 'Crossroads Chess Fairy-Stockfish tier capped for production-safe amateur play.',
-  },
-  'fairy-stockfish-crossroads-strong': {
-    id: 'fairy-stockfish-crossroads-strong',
-    engineId: 'fairy-stockfish-crossroads',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Strong',
-    kind: 'container',
-    gameSpecId: 'crossroads-chess',
-    configHash: 'fsf-crossroads-strong',
-    playSignature: 'fsf-crossroads-strong',
-    config: { kind: 'fairy-stockfish', skill: 8, movetime_ms: 300 },
-    notes:
-      'Default Crossroads Chess Fairy-Stockfish tier with lower-skill move selection plus the live immediate-loss guard.',
-  },
-  'fairy-stockfish-crossroads-very-strong': {
-    id: 'fairy-stockfish-crossroads-very-strong',
-    engineId: 'fairy-stockfish-crossroads',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Strongest',
-    kind: 'container',
-    gameSpecId: 'crossroads-chess',
-    configHash: 'fsf-crossroads-very-strong',
-    playSignature: 'fsf-crossroads-very-strong',
-    config: { kind: 'fairy-stockfish', skill: 20, movetime_ms: 2000 },
-    notes:
-      'Top Crossroads Chess Fairy-Stockfish tier at full skill with a longer think budget plus the live immediate-loss guard.',
-  },
-};
-
 // Uniformly-random legal-move xiangqi bot: the calibration floor / 0-Elo anchor.
 // EvE-only (the xiangqi runner's move provider plays it in-process), so it is NOT
 // in any *_PLAYABLE list and never appears in the live PvE picker.
@@ -776,7 +698,7 @@ function xiangqiFsfConfigHash(tier: XiangqiFsfEngineTier): string {
 
 // Jieqi (揭棋) PvE engines — the Pikafish jieqi branch driven as a UCI subprocess
 // (Tier-B, server-jieqi-engine.ts). LAUNCH uses the no-net `jieqi_old` classical
-// build (clean GPL-3, no net-licensing problem). Unlike crossroads/FSF, jieqi_old
+// build (clean GPL-3, no net-licensing problem). Unlike the FSF ladder, jieqi_old
 // has NO Skill Level / UCI_Elo knob (verified absent from its UCI options), so the
 // tiers vary by search DEPTH/time (like banqi-uci), not skill. The OPERATIVE search
 // params live in jieqi-engine.ts (JIEQI_ENGINE_TIERS); the `config` values here are
@@ -931,47 +853,6 @@ const BANQI_ENGINES: Record<string, EngineDefinition> = {
 // (amateur ≪ strong ≪ strongest, each step ~90-97%). Weakening is Skill Level
 // (CPU-independent); the budget is a node count (reproducible across the slow
 // prod vCPU) capped by movetime as a wall-clock guard.
-const MINI_XIANGQI_ENGINES: Record<string, EngineDefinition> = {
-  'fairy-stockfish-mini-xiangqi-amateur': {
-    id: 'fairy-stockfish-mini-xiangqi-amateur',
-    engineId: 'fairy-stockfish-mini-xiangqi',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Amateur',
-    kind: 'container',
-    gameSpecId: 'mini-xiangqi',
-    configHash: 'fsf-mini-xiangqi-amateur',
-    playSignature: 'fsf-mini-xiangqi-amateur',
-    config: { kind: 'fairy-stockfish', skill: 1, nodes: 6_000, movetime_ms: 300 },
-    notes: 'Mini Xiangqi Fairy-Stockfish tier capped for production-safe amateur play.',
-  },
-  'fairy-stockfish-mini-xiangqi-strong': {
-    id: 'fairy-stockfish-mini-xiangqi-strong',
-    engineId: 'fairy-stockfish-mini-xiangqi',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Strong',
-    kind: 'container',
-    gameSpecId: 'mini-xiangqi',
-    configHash: 'fsf-mini-xiangqi-strong',
-    playSignature: 'fsf-mini-xiangqi-strong',
-    config: { kind: 'fairy-stockfish', skill: 8, nodes: 60_000, movetime_ms: 800 },
-    notes:
-      'Default Mini Xiangqi Fairy-Stockfish tier with mid-skill move selection plus the live immediate-loss guard.',
-  },
-  'fairy-stockfish-mini-xiangqi-very-strong': {
-    id: 'fairy-stockfish-mini-xiangqi-very-strong',
-    engineId: 'fairy-stockfish-mini-xiangqi',
-    engineName: 'Fairy Stockfish',
-    name: 'Fairy Stockfish - Strongest',
-    kind: 'container',
-    gameSpecId: 'mini-xiangqi',
-    configHash: 'fsf-mini-xiangqi-very-strong',
-    playSignature: 'fsf-mini-xiangqi-very-strong',
-    config: { kind: 'fairy-stockfish', skill: 20, nodes: 800_000, movetime_ms: 2_000 },
-    notes:
-      'Top Mini Xiangqi Fairy-Stockfish tier at full skill with a larger node budget plus the live immediate-loss guard.',
-  },
-};
-
 // Flip Jungle (兽棋 / 翻翻棋, 4x4 hidden-identity flip animal chess) plays via our own
 // `jungle-flip-engine` standalone Rust αβ+Star1+TT UCI engine (banqi pattern; NOT the
 // fog engine-worker). One versioned full-strength bot; strength is a node budget capped
@@ -1004,13 +885,11 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
-  ...CROSSROADS_CHESS_ENGINES,
   ...XIANGQI_FSF_ENGINES,
   ...XIANGQI_RANDOM_ENGINES,
   ...JIEQI_ENGINES,
   ...XIANGQI_ENGINES,
   ...BANQI_ENGINES,
-  ...MINI_XIANGQI_ENGINES,
   ...JUNGLE_FLIP_ENGINES,
 };
 

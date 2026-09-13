@@ -32,7 +32,7 @@ import './live-xiangqi.css';
 import './landing.css';
 import './game-route.css';
 import './dark-xiangqi-postgame.css';
-import './drop-mini-xiangqi.css';
+import './drop-reserve.css';
 import { normalizeStartFen } from '@mistboard/game';
 import { type AnalysisVariantId, analysisVariantLabel } from './analysis-catalog.js';
 import { t } from './i18n/catalog.js';

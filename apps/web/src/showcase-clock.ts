@@ -1,7 +1,7 @@
 // Reconstruct the per-ply remaining-clock series for a finished tenant game from
 // its postgame `timeline` (each move carries a wall-clock `at` ms) plus the game's
 // Fischer time control. The generic tenant postgames carry no dense `clocks`
-// array (unlike Dark Mini Xiangqi), but they DO carry move timestamps, so the
+// array, but they DO carry move timestamps, so the
 // showcase can show the real clocks the players actually had — not just a static
 // time-control label.
 //

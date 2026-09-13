@@ -7,7 +7,7 @@
  * checked per event-log PREFIX so a divergence pinpoints the first event that
  * disagrees, across clock arithmetic (arming on the second mover's first move,
  * increment application, freeze-on-terminal), seat assignment/vacation, and
- * every terminal transition. Chess-only event types (draft, pause) must fail
+ * every terminal transition. Chess-only event types (pause) must fail
  * CLOSED: the tenant rejects those logs rather than replaying them wrong.
  */
 
@@ -20,7 +20,6 @@ import {
   type GameEvent,
   type GameState,
   type Move,
-  pickDraft960Offer,
   type RoomTimeControl,
   replayGameEvents,
   variantForId,
@@ -58,7 +57,6 @@ function roomCreated(roomId: string, options: RoomCreatedOptions = {}): GameEven
     variant: 'dark-chess',
     gameSpecId: 'dark-chess',
     region: 'global',
-    offer: [],
     ...(options.timeControl ? { timeControl: options.timeControl } : {}),
     ...(options.rated ? { rated: true } : {}),
   };
@@ -247,39 +245,9 @@ test('rated flag flows from room-created into the tenant projection', () => {
 
 // ── Fail-closed: chess-only event families never replay through the tenant ──
 
-test('draft logs fail closed (dark-draft960 spec id is not accepted)', () => {
-  const roomId = 'reject-draft';
-  const offers = { white: pickDraft960Offer(7), black: pickDraft960Offer(11) };
-  const events: GameEvent[] = [
-    {
-      type: 'room-created',
-      at: at(0),
-      roomId,
-      variant: 'dark-chess',
-      gameSpecId: 'dark-draft960',
-      region: 'global',
-      offer: offers.white,
-      offers,
-    },
-  ];
-  assert.equal(isTenantEventLog(darkChessTenant, events), false);
-});
-
 test('pause/resume logs fail closed', () => {
   const events = buildScript('reject-pause', { timeControl: TIME_CONTROL, moveCount: 2 });
   events.push({ type: 'pause', at: at(20), roomId: 'reject-pause', reason: 'shutdown' });
-  assert.equal(isTenantEventLog(darkChessTenant, events), false);
-});
-
-test('draft-start-selected events fail closed', () => {
-  const events = buildScript('reject-draft-pick', { timeControl: TIME_CONTROL, moveCount: 0 });
-  events.push({
-    type: 'draft-start-selected',
-    at: at(20),
-    roomId: 'reject-draft-pick',
-    color: 'white',
-    startId: 1,
-  });
   assert.equal(isTenantEventLog(darkChessTenant, events), false);
 });
 

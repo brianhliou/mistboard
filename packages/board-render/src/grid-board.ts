@@ -1,7 +1,7 @@
 import { boardCornerRadius } from './board-metrics.js';
 // Generic descriptor-driven renderer for cell-based ("checkered square") boards.
 //
-// This is the Layer-2 platform down-payment: chess (8x8) and Crossroads Chess (6x8 +
+// This is the Layer-2 platform down-payment: chess (8x8) and a river board (6x8 +
 // river) are the same board MODEL — pieces sit on squares, squares alternate
 // light/dark — differing only in data (dimensions, an optional river strip,
 // palette, and how a piece glyph is drawn). This core owns the model: geometry
@@ -39,7 +39,7 @@ export type GridPalette = {
   fog: string;
   // Colour for annotation arrows. Optional; defaults to a muted green.
   arrow?: string;
-  // Fill for "threat" squares (e.g. Kriegspiel checker candidates), drawn OVER
+  // Fill for "threat" squares (candidate checking squares), drawn OVER
   // the fog so it reads on hidden squares. Optional; defaults to a muted red.
   threat?: string;
 };
@@ -92,14 +92,14 @@ export type GridBoardLayers = {
   // Squares to fog (hidden). Omit / null to draw no fog overlay.
   fogHidden?: readonly GridCellRef[] | null;
   // Squares to mark as a threat, drawn OVER the fog (so it shows on hidden
-  // squares). Kriegspiel uses this for the squares a checking piece could
-  // occupy, derived purely from the umpire's call. Omit / null for none.
+  // squares), e.g. the squares a checking piece could occupy. Omit / null for
+  // none.
   threats?: readonly GridCellRef[] | null;
   // Names the hit-layer rects (data-square="…") so a host can delegate clicks.
   squareName?: (file: number, rank: number) => string;
   interactive?: boolean;
   // Draw the file/rank coordinate labels. Defaults to true; set false for clean
-  // teaching diagrams (e.g. the shogi rules page).
+  // teaching diagrams (rules pages).
   coords?: boolean;
 };
 
@@ -161,7 +161,7 @@ export function renderGridBoardSvg(
   // rounds like every other board at its own width.
   const boardRadius = descriptor.boardRadius ?? boardCornerRadius(boardW);
 
-  // ── Furniture + interaction layers (in crossroads-chess draw order) ──────────────
+  // ── Furniture + interaction layers ──────────────
 
   const gridLayer = (): string => {
     const parts: string[] = [];
@@ -301,7 +301,7 @@ export function renderGridBoardSvg(
 
   return [
     // data-board="grid" (kept at the tag's end so callers that regex on the
-    // leading `class="…" viewBox="…"` — e.g. crossroads-chess-diagram — still
+    // leading `class="…" viewBox="…"` — still
     // match) lets one CSS rule round every grid board to the shared corner token.
     `<svg${descriptor.svgClass ? ` class="${descriptor.svgClass}"` : ''} viewBox="0 0 ${boardW + pad * 2} ${boardH + pad * 2}" role="img" xmlns="http://www.w3.org/2000/svg" data-board="grid">`,
     `<defs>${clipDef}${arrowMarkerDef}${layers.extraDefs ?? ''}</defs>`,

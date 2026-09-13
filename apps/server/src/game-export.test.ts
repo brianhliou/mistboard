@@ -15,7 +15,6 @@ function fixtureGame(): { summary: RecentEveGameRecord; events: GameEvent[] } {
       at: 0,
       roomId: 'fixture-room',
       variant: 'dark-chess',
-      offer: [],
       timeControl: { initialMs: 60000, incrementMs: 1000 },
     },
     {

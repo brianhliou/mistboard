@@ -1,6 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 import { createServer } from 'node:http';
-import type { Color, GameEvent } from '@mistboard/game';
+import type { GameEvent } from '@mistboard/game';
 import pg from 'pg';
 import { WebSocketServer } from 'ws';
 // Populates the VariantTenant registry (one registration module per variant).
@@ -18,11 +18,8 @@ import {
   broadcastEventAppended,
   buildGameSummary,
   canClientAct,
-  offerForColor,
   persistSeatToken,
   type RoomManagerContext,
-  resolveStartIfReady,
-  selectEngineDraftStart,
 } from './room-manager.js';
 import { loadServerRuntimeConfig, serverConfig } from './server-config.js';
 import { createDrainController } from './server-drain.js';
@@ -79,7 +76,7 @@ import {
 // SECTION: Room lifecycle              (~line 230)   room lifecycle factory and timer grace config
 // SECTION: Game flow                    (~line 700)   enableRandomEngine, selectStart
 // SECTION: Room event infrastructure    (~line 760)   inMemoryGameSummary, recordPersistenceError
-// SECTION: Helpers and shutdown         (~line 810)   send, isColor, shutdown
+// SECTION: Helpers and shutdown         (~line 810)   send, shutdown
 
 // ── SECTION: Types and constants ───────────────────────────────────────────
 // Core server types live in ./server-types.ts — Client, Room, SeatTokenState, SeatAssignment, LobbyTicket
@@ -161,7 +158,6 @@ const rematchOrch: RematchOrchestrator = {
       spec.mode,
       spec.variant,
       spec.pveEngineId ?? pveBuiltinEngineClientId,
-      spec.hiddenDraft960,
       spec.timeControl,
       spec.rated,
       { region: spec.region },
@@ -203,7 +199,6 @@ const wsConnectionCtx: WebSocketConnectionContext = {
   isAbortedRoom: roomLifecycle.isAbortedRoom,
   resetRoom: roomLifecycle.resetRoom,
   scheduleSeatVacate: roomLifecycle.scheduleSeatVacate,
-  selectStart,
   send,
 };
 
@@ -423,32 +418,6 @@ async function enableRandomEngine(room: Room): Promise<void> {
       seat: 'black',
     });
   }
-  await selectEngineDraftStart(roomMgrCtx, room);
-}
-
-async function selectStart(
-  room: Room,
-  client: Client,
-  startId: number | undefined,
-  color: string | undefined,
-): Promise<void> {
-  if (!canClientAct(room, client)) return;
-  const selectionColor = client.solo && isColor(color) ? color : client.seat;
-  if (selectionColor === 'spectator') return;
-  if (room.projection.state.status.type !== 'pregame') return;
-  if (!offerForColor(room.projection, selectionColor).some((start) => start.id === startId)) return;
-  if (startId === undefined) return;
-
-  const fromSeq = room.events.length;
-  await appendEvent(roomMgrCtx, room, {
-    type: 'draft-start-selected',
-    at: Date.now(),
-    roomId: room.id,
-    color: selectionColor,
-    startId,
-  });
-  await resolveStartIfReady(roomMgrCtx, room);
-  broadcastEventAppended(roomMgrCtx, room, fromSeq);
 }
 
 async function handleResign(room: Room, client: Client): Promise<void> {
@@ -543,10 +512,6 @@ function recordPersistenceError(roomId: string, seq: number, event: GameEvent, e
 // ── SECTION: Helpers and shutdown ──────────────────────────────────────────
 function send(client: Client, payload: unknown): void {
   client.socket.send(JSON.stringify(payload));
-}
-
-function isColor(value: string | undefined): value is Color {
-  return value === 'white' || value === 'black';
 }
 
 async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {

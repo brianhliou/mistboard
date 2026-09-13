@@ -42,7 +42,8 @@ export type AccountPreferenceKey =
   | 'forumBell'
   | 'followersBell'
   | 'correspondenceDeadlineEmail'
-  | 'correspondenceStartEmail';
+  | 'correspondenceStartEmail'
+  | 'forumAutoTranslate';
 export type AccountPreferences = {
   clockTenths: ClockTenthsPreference;
   lowTimeSound: boolean;
@@ -59,6 +60,10 @@ export type AccountPreferences = {
   // Sent once, when somebody accepts a seek you posted and walked away from.
   // Distinct from the deadline warning: that one fires late, near forfeit.
   correspondenceStartEmail: boolean;
+  // Forum lists and topics open in the reader's locale when the translation
+  // cache already has the text; off means the author's words with a Translate
+  // button, as before the cache was read on page loads.
+  forumAutoTranslate: boolean;
 };
 
 export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
@@ -73,6 +78,7 @@ export const DEFAULT_ACCOUNT_PREFERENCES: AccountPreferences = {
   followersBell: true,
   correspondenceDeadlineEmail: true,
   correspondenceStartEmail: true,
+  forumAutoTranslate: true,
 };
 
 export function isClockTenthsPreference(value: unknown): value is ClockTenthsPreference {
@@ -369,6 +375,10 @@ function accountPreferencesFromJson(value: unknown): AccountPreferences {
     correspondenceDeadlineEmail: booleanOrDefault(
       parsed.correspondenceDeadlineEmail,
       DEFAULT_ACCOUNT_PREFERENCES.correspondenceDeadlineEmail,
+    ),
+    forumAutoTranslate: booleanOrDefault(
+      parsed.forumAutoTranslate,
+      DEFAULT_ACCOUNT_PREFERENCES.forumAutoTranslate,
     ),
   };
 }

@@ -93,13 +93,13 @@ describe('watch replay load priority', () => {
 describe('watch route copy helpers', () => {
   it('scopes sealed watch copy to dark channels', () => {
     const darkFeed = {
-      activeChannel: 'dark-mini-xiangqi',
+      activeChannel: 'dark-xiangqi',
       channels: [
         {
           family: 'xiangqi',
-          gameSpecIds: ['dark-mini-xiangqi'],
-          id: 'dark-mini-xiangqi',
-          label: 'Dark Mini Xiangqi',
+          gameSpecIds: ['dark-xiangqi'],
+          id: 'dark-xiangqi',
+          label: 'Fog Xiangqi',
           sealedCount: 1,
           unlockedCount: 2,
         },
@@ -143,55 +143,22 @@ describe('watch route copy helpers', () => {
         {
           color: 'black',
           displayName: 'Misty',
-          subjectId: 'python-dmx-v1.0',
+          subjectId: 'python-fdx-v1.2',
           subjectType: 'engine-version',
           visibility: 'public',
         },
       ],
       plyCount: 12,
       result: 'red-wins',
-      roomId: 'dmxq_watch',
+      roomId: 'dxq_watch',
       termination: 'general-captured',
-      variant: 'dark-mini-xiangqi',
+      variant: 'dark-xiangqi',
       whiteName: null,
     };
 
-    // 'python-dmx-v1.0' resolves to the build "Misty DMX 1.0"; list rows show
+    // 'python-fdx-v1.2' resolves to the build "Misty DXQ 1.2"; list rows show
     // the brand.
     expect(watchQueueMatchupLabel(game)).toBe('Red Human vs Misty');
-    expect(resultLabel(game.result)).toBe('Red wins');
-  });
-
-  it('renders white/red Crossroads Chess queue labels', () => {
-    const game: FeaturedGame = {
-      blackName: null,
-      corpusId: null,
-      mode: 'pve',
-      participants: [
-        {
-          color: 'white',
-          displayName: 'White Human',
-          subjectId: null,
-          subjectType: 'guest',
-          visibility: 'public',
-        },
-        {
-          color: 'red',
-          displayName: 'Misty',
-          subjectId: 'fairy-stockfish-crossroads-strong',
-          subjectType: 'engine-version',
-          visibility: 'public',
-        },
-      ],
-      plyCount: 16,
-      result: 'red-wins',
-      roomId: 'dchess_watch',
-      termination: 'resignation',
-      variant: 'crossroads-chess',
-      whiteName: null,
-    };
-
-    expect(watchQueueMatchupLabel(game)).toBe('White Human vs Misty');
     expect(resultLabel(game.result)).toBe('Red wins');
   });
 
@@ -215,7 +182,7 @@ describe('watch route copy helpers', () => {
     // No firstColor (unreplayable/legacy) falls back to move order, never a wrong ink.
     expect(watchQueueResultLabel(base)).toBe('First wins');
     // Non-banqi variants are untouched by the ink translation.
-    expect(watchQueueResultLabel({ ...base, variant: 'crossroads-chess' })).toBe('Red wins');
+    expect(watchQueueResultLabel({ ...base, variant: 'xiangqi' })).toBe('Red wins');
   });
 
   it('labels a Flip Jungle queue result by bound ink, in the family colour words', () => {
@@ -313,13 +280,11 @@ describe('watchPovToggleApplies', () => {
     // Asymmetric fog: distinct per-side views, so the toggle is meaningful.
     expect(watchPovToggleApplies('dark-chess')).toBe(true);
     expect(watchPovToggleApplies('dark-xiangqi')).toBe(true);
-    expect(watchPovToggleApplies('dark-crossroads-chess')).toBe(true);
     // Symmetric-mask hidden identity (one view) — no toggle.
     expect(watchPovToggleApplies('jieqi')).toBe(false);
     expect(watchPovToggleApplies('banqi')).toBe(false);
     // Open information (one shared board) — no toggle.
     expect(watchPovToggleApplies('xiangqi')).toBe(false);
-    expect(watchPovToggleApplies('crossroads-chess')).toBe(false);
     // Unknown variant resolves to no spec — no toggle, never throws.
     expect(watchPovToggleApplies('not-a-variant')).toBe(false);
   });

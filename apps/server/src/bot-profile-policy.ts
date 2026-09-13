@@ -11,8 +11,6 @@ export function parsePublicBotId(value: unknown): string | null {
 /** Whether PvE rooms can currently be created for a game spec: the chess stack
  *  is always live; everything else follows its tenant launch flag. */
 export function isBotSpecPlayable(gameSpecId: string): boolean {
-  if (gameSpecId === 'dark-chess' || gameSpecId === 'dark-draft960') {
-    return true;
-  }
+  if (gameSpecId === 'dark-chess') return true;
   return variantTenantForSpecId(gameSpecId)?.enabled() === true;
 }

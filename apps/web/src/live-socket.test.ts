@@ -61,7 +61,6 @@ const calls = {
   renders: 0,
   reconciles: 0,
   snapshotSounds: 0,
-  dmxSounds: 0,
 };
 
 function bootChessSocket(): void {
@@ -74,9 +73,6 @@ function bootChessSocket(): void {
     },
     maybePlaySnapshotSound: () => {
       calls.snapshotSounds += 1;
-    },
-    maybePlayDarkMiniXiangqiSound: () => {
-      calls.dmxSounds += 1;
     },
   });
   connectSocket();
@@ -104,7 +100,6 @@ describe('chess liveState socket adapter', () => {
     calls.renders = 0;
     calls.reconciles = 0;
     calls.snapshotSounds = 0;
-    calls.dmxSounds = 0;
     liveState.room = 'adapter-test';
     liveState.socketUrl = 'ws://test.local/?room=adapter-test';
     liveState.clientId = '';
@@ -158,17 +153,12 @@ describe('chess liveState socket adapter', () => {
     expect(liveState.state).toEqual({ moveNumber: 1 });
   });
 
-  it('routes sounds by game spec: chess plays snapshot, DMX its own, dark xiangqi neither', () => {
+  it('routes sounds by game spec: chess plays snapshot, dark xiangqi does not', () => {
     bootChessSocket();
     lastSocket().message(helloFrame());
     expect(calls.snapshotSounds).toBe(1);
-    expect(calls.dmxSounds).toBe(0);
-    lastSocket().message(helloFrame({ gameSpecId: 'dark-mini-xiangqi' }));
-    expect(calls.snapshotSounds).toBe(1);
-    expect(calls.dmxSounds).toBe(1);
     lastSocket().message(helloFrame({ gameSpecId: 'dark-xiangqi' }));
     expect(calls.snapshotSounds).toBe(1);
-    expect(calls.dmxSounds).toBe(1);
   });
 
   it('marks a vanished own offer as declined unless the player cancelled', () => {

@@ -15,35 +15,25 @@ import { chessArticle } from './articles/content/chess.js';
 import { coUpArticle } from './articles/content/co-up.js';
 import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
-import { crossroadsChessArticle } from './articles/content/crossroads-chess.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
-import { darkCrazyhouseArticle } from './articles/content/dark-crazyhouse.js';
-import { darkCrossroadsChessArticle } from './articles/content/dark-crossroads-chess.js';
-import { darkDraft960Article } from './articles/content/dark-draft960.js';
-import { darkMiniXiangqiArticle } from './articles/content/dark-mini-xiangqi.js';
-import { darkShogiArticle } from './articles/content/dark-shogi.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
-import { dropMiniXiangqiArticle } from './articles/content/drop-mini-xiangqi.js';
 import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
 import { jieqiArticle } from './articles/content/jieqi.js';
 import { jungleArticle } from './articles/content/jungle.js';
 import { jungleFlipArticle } from './articles/content/jungle-flip.js';
+import { mahjongArticle } from './articles/content/mahjong.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
 import { puzzleTwoAnswersArticle } from './articles/content/puzzles-with-more-than-one-solution.js';
-import { kriegspielArticle } from './articles/content/kriegspiel.js';
-import { miniXiangqiArticle } from './articles/content/mini-xiangqi.js';
 import { mistyArticle } from './articles/content/misty.js';
-import { revealChessArticle } from './articles/content/reveal-chess.js';
 import { riverbankCannonArticle } from './articles/content/riverbank-cannon.js';
 import { titledPlayersArticle } from './articles/content/titled-players.js';
 import { serverEnforcedFogArticle } from './articles/content/server-enforced-fog.js';
-import { shogiArticle } from './articles/content/shogi.js';
 import { shogi4Article } from './articles/content/shogi4.js';
 import { xiangqiChampionsArticle } from './articles/content/xiangqi-champions.js';
 import { xiangqiMatchFixingArticle } from './articles/content/xiangqi-match-fixing.js';
@@ -62,27 +52,20 @@ export const articles: Article[] = [
   fogOpeningsArticle,
   jieqiOpeningsArticle,
   khaiCuocCoUpArticle,
-  darkDraft960Article,
   xiangqiArticle,
   xiangqiChampionsArticle,
   xiangqiMatchFixingArticle,
   xiangqiWorldChampionshipArticle,
   darkXiangqiArticle,
-  miniXiangqiArticle,
-  darkMiniXiangqiArticle,
-  dropMiniXiangqiArticle,
   fortressXiangqiArticle,
   duckXiangqiArticle,
   duckXiangqiBuildArticle,
   serverEnforcedFogArticle,
-  shogiArticle,
   shogi4Article,
-  darkShogiArticle,
-  darkCrazyhouseArticle,
-  kriegspielArticle,
   jieqiArticle,
   jungleArticle,
   jungleFlipArticle,
+  mahjongArticle,
   banqiArticle,
   banqiEngineArticle,
   banqiLuckArticle,
@@ -90,9 +73,6 @@ export const articles: Article[] = [
   puzzleTwoAnswersArticle,
   riverbankCannonArticle,
   titledPlayersArticle,
-  revealChessArticle,
-  darkCrossroadsChessArticle,
-  crossroadsChessArticle,
 ];
 
 const ARTICLE_SLUG_ALIASES: Record<string, string> = {

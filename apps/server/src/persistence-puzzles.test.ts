@@ -42,13 +42,14 @@ definePersistenceTests('daily puzzles', () => {
     const store = await getPuzzleStore();
     assert.equal(store.source, 'database');
 
-    // Every seed row is in the table, but the store SERVES only the ones that
-    // are not withheld: a retired variant's puzzles (#396) are stored with
-    // hidden_reason set by the sync itself, so they never come back on a
-    // fresh database seeded after migration 143 ran.
+    // Every seed row is in the table, and the store SERVES the ones that are
+    // not withheld. The sync stamps a retired variant's puzzles (#396) with
+    // hidden_reason itself, so they would never come back on a fresh database;
+    // since the mini family left the seed there is nothing left to withhold,
+    // and the served set IS the seed.
     const seed = loadAllSeedPuzzles();
     const served = seed.filter((puzzle) => !isRetiredGameSpec(puzzle.variant));
-    assert.ok(served.length < seed.length, 'the seed still carries retired-variant puzzles');
+    assert.equal(served.length, seed.length, 'the seed carries no retired-variant puzzles');
     assert.equal(store.puzzles.length, served.length);
     assert.equal(JSON.stringify(store.puzzles), JSON.stringify(served));
 

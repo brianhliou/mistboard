@@ -25,7 +25,7 @@ const DEFAULT_TARGET_BRANCH = 'main';
 // release while the deploy was still queued.
 const DEFAULT_TIMEOUT_MS = 2_100_000;
 const GITHUB_POLL_MS = 10_000;
-// Prefixes whose changes never need the engine/DMX/DXQ smoke tier. Declared
+// Prefixes whose changes never need the engine/DXQ smoke tier. Declared
 // with the other top constants: resolveSmokeTier runs mid-release-flow, so a
 // declaration after the top-level call site sits in the temporal dead zone
 // (function hoisting masks it until the first web-safe release).
@@ -749,7 +749,7 @@ function prefixLines(output, tag) {
     .join('\n')}\n`;
 }
 
-// Diff-aware default: the engine/DMX/DXQ smokes exist for server-behavior
+// Diff-aware default: the engine/DXQ smokes exist for server-behavior
 // changes. When the whole prod diff stays inside web-safe prefixes (web app,
 // docs, release tooling), the default 'full' tier drops to 'web'. An explicit
 // --smoke always wins, and any doubt (no prod revision to diff against, files

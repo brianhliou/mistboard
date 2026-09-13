@@ -14,7 +14,6 @@ import {
   type HttpApiContext,
   isAllowedRatedTimeControl,
   isAllowedTimeControl,
-  parseHiddenDraft960,
   parseRoomTimeControl,
   readJsonBody,
   requireMethod,
@@ -66,7 +65,6 @@ export async function tryHandle(
       }
     }
     const tenantLobby = registration?.lobby ?? null;
-    const hiddenDraft960 = registration ? false : parseHiddenDraft960(body.hiddenDraft960);
     const timeControl =
       body.timeControl === undefined ? undefined : parseRoomTimeControl(body.timeControl);
     // Rated requires the flag on AND a signed-in requester. Reject explicit
@@ -122,12 +120,11 @@ export async function tryHandle(
     // it erased to string.
     const gameSpecId = registration
       ? (registration.gameSpecId as LobbyTicket['gameSpecId'])
-      : gameSpecForLegacyLiveRoom({ variant: 'dark-chess', hiddenDraft960 }).id;
+      : gameSpecForLegacyLiveRoom({ variant: 'dark-chess' }).id;
     const ticket = await joinLobby(
       ctx,
       gameSpecId,
       registration ?? null,
-      hiddenDraft960,
       timeControl ?? undefined,
       lobbyRated,
     );
@@ -165,7 +162,6 @@ async function joinLobby(
   ctx: HttpApiContext,
   gameSpecId: LobbyTicket['gameSpecId'],
   registration: VariantTenantRegistration | null,
-  hiddenDraft960: boolean,
   timeControl: RoomTimeControl | undefined,
   rated = false,
 ): Promise<LobbyTicket> {
@@ -177,7 +173,6 @@ async function joinLobby(
     (ticket) =>
       ticket.roomId === null &&
       ticket.gameSpecId === gameSpecId &&
-      ticket.hiddenDraft960 === hiddenDraft960 &&
       ticket.rated === rated &&
       timeControlKey(ticket.timeControl) === timeKey,
   );
@@ -185,7 +180,6 @@ async function joinLobby(
     id: randomUUID(),
     createdAt: Date.now(),
     gameSpecId,
-    hiddenDraft960,
     rated,
     region: null,
     matchedAt: null,
@@ -201,7 +195,7 @@ async function joinLobby(
 
   let room: { id: string; region: string };
   try {
-    room = await createLobbyRoom(ctx, registration, hiddenDraft960, timeControl, rated);
+    room = await createLobbyRoom(ctx, registration, timeControl, rated);
   } catch (err) {
     ctx.lobbyTickets.delete(ticket.id);
     throw err;
@@ -225,7 +219,6 @@ async function joinLobby(
 async function createLobbyRoom(
   ctx: HttpApiContext,
   registration: VariantTenantRegistration | null,
-  hiddenDraft960: boolean,
   timeControl: RoomTimeControl | undefined,
   rated: boolean,
 ): Promise<{ id: string; region: string }> {
@@ -236,7 +229,6 @@ async function createLobbyRoom(
     'pvp',
     'dark-chess',
     ctx.pveBuiltinEngineClientId,
-    hiddenDraft960,
     timeControl,
     rated,
     { randomSeating: true },
@@ -288,7 +280,6 @@ function lobbyOpenRequests(ctx: HttpApiContext): Array<Record<string, unknown>> 
     .filter((ticket) => ticket.roomId === null)
     .slice(0, 20)
     .map((ticket) => ({
-      hiddenDraft960: ticket.hiddenDraft960,
       gameSpecId: ticket.gameSpecId,
       rated: ticket.rated,
       timeControl: ticket.timeControl ?? {

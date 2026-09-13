@@ -10,7 +10,7 @@
 //   - Pikafish         — the boss: full-strength Pikafish for xiangqi + jieqi.
 //   - Fairy-Stockfish Level 1..8 — the ladder, one bot per level, each playing
 //                        xiangqi, fortress xiangqi, and duck xiangqi.
-// Retired rosters (crossroads / drop-mini / mini families, pre-merge Misty and
+// Retired rosters (pre-merge Misty and
 // Pikafish tiers) stay resolvable through `legacyBotIds` and
 // `attributionEngineIds` so old rooms, replays, and game attribution keep their
 // names; migration 111 remaps persisted attribution to the merged ids.
@@ -74,7 +74,6 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     displayName: 'Misty',
     engines: {
       'dark-chess': MISTY_DARK_CHESS_ACTIVE_ENGINE_ID,
-      'dark-draft960': MISTY_DARK_CHESS_ACTIVE_ENGINE_ID,
       'dark-xiangqi': 'python-fdx-v1.2',
       banqi: 'misty-banqi',
       jungle: 'misty-jungle-level-2',
@@ -135,62 +134,6 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     ],
   },
   ...FAIRY_STOCKFISH_LEVELS.map(fairyStockfishLevelProfile),
-  // Retired rosters below: their variants are flag-gated off; the profiles stay
-  // so historical games and old rooms keep their display names.
-  {
-    id: 'fairy-stockfish-crossroads-amateur',
-    displayName: 'Fairy Stockfish - Amateur',
-    engines: { 'crossroads-chess': 'fairy-stockfish-crossroads-amateur' },
-    defaultGameSpecId: 'crossroads-chess',
-  },
-  {
-    id: 'fairy-stockfish-crossroads',
-    displayName: 'Fairy Stockfish - Strong',
-    engines: { 'crossroads-chess': 'fairy-stockfish-crossroads-strong' },
-    defaultGameSpecId: 'crossroads-chess',
-  },
-  {
-    id: 'fairy-stockfish-crossroads-strongest',
-    displayName: 'Fairy Stockfish - Strongest',
-    engines: { 'crossroads-chess': 'fairy-stockfish-crossroads-very-strong' },
-    defaultGameSpecId: 'crossroads-chess',
-  },
-  {
-    id: 'fairy-stockfish-drop-mini-xiangqi-amateur',
-    displayName: 'Fairy Stockfish - Amateur',
-    engines: { 'drop-mini-xiangqi': 'fairy-stockfish-drop-mini-xiangqi-amateur' },
-    defaultGameSpecId: 'drop-mini-xiangqi',
-  },
-  {
-    id: 'fairy-stockfish-drop-mini-xiangqi',
-    displayName: 'Fairy Stockfish - Strong',
-    engines: { 'drop-mini-xiangqi': 'fairy-stockfish-drop-mini-xiangqi-strong' },
-    defaultGameSpecId: 'drop-mini-xiangqi',
-  },
-  {
-    id: 'fairy-stockfish-drop-mini-xiangqi-strongest',
-    displayName: 'Fairy Stockfish - Strongest',
-    engines: { 'drop-mini-xiangqi': 'fairy-stockfish-drop-mini-xiangqi-very-strong' },
-    defaultGameSpecId: 'drop-mini-xiangqi',
-  },
-  {
-    id: 'fairy-stockfish-mini-xiangqi-amateur',
-    displayName: 'Fairy Stockfish - Amateur',
-    engines: { 'mini-xiangqi': 'fairy-stockfish-mini-xiangqi-amateur' },
-    defaultGameSpecId: 'mini-xiangqi',
-  },
-  {
-    id: 'fairy-stockfish-mini-xiangqi',
-    displayName: 'Fairy Stockfish - Strong',
-    engines: { 'mini-xiangqi': 'fairy-stockfish-mini-xiangqi-strong' },
-    defaultGameSpecId: 'mini-xiangqi',
-  },
-  {
-    id: 'fairy-stockfish-mini-xiangqi-strongest',
-    displayName: 'Fairy Stockfish - Strongest',
-    engines: { 'mini-xiangqi': 'fairy-stockfish-mini-xiangqi-very-strong' },
-    defaultGameSpecId: 'mini-xiangqi',
-  },
 ];
 
 const botByEngineId = new Map<string, FirstPartyBotProfile>();

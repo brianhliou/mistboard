@@ -1,17 +1,17 @@
-// Shared Fog-of-War vision walks for the xiangqi-family boards: full Xiangqi,
-// Dark Mini Xiangqi, and Crossroads Chess. The cannon screen-walk, the horse
-// blocked-leg walk, and the rook/slider ray walk were byte-identical across all
-// three variant kernels except for the board geometry — so a fog-leak fix in
-// one copy had to be hand-replicated into the other two, three times over. This
-// is the single geometry-parameterized source for those three walks.
+// Shared Fog-of-War vision walks for the xiangqi-family boards: full Xiangqi
+// and Dark Mini Xiangqi. The cannon screen-walk, the horse blocked-leg walk,
+// and the rook/slider ray walk were byte-identical across the variant kernels
+// except for the board geometry — so a fog-leak fix in one copy had to be
+// hand-replicated into the others. This is the single geometry-parameterized
+// source for those three walks.
 //
 // Pieces whose vision rules genuinely differ per variant (general/advisor/
 // elephant/soldier/pawn — palace, river, facing-general, two-square-pawn) stay
 // in their own variant kernel. Only the shared walks live here.
 
 // What the dispatch layer accumulates while computing one color's vision.
-// `Sq` is the variant's square-string type (XiangqiSquare, MiniXiangqiSquare,
-// CrossroadsChessSquare), so the sets stay strongly typed per variant.
+// `Sq` is the variant's square-string type (XiangqiSquare, MiniXiangqiSquare),
+// so the sets stay strongly typed per variant.
 export type VisionAccum<Sq extends string> = {
   directlyVisible: Set<Sq>;
   shroudedBlockers: Set<Sq>;

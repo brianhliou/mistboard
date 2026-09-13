@@ -19,8 +19,20 @@
 // site. A guest seat carries no identity, so no account flag can reach them;
 // the date can. June 2026 had 16 guest games across six variants, which is
 // what visitors look like. Set 2026-09-11.
+//
+// The ply floor exists because a room can reach status='completed' without
+// anyone having played: a human who opens a bot game and resigns at ply 0,
+// or leaves after the bot's opening move and forfeits 30 s later
+// (termination 'abandonment', ply_count 1). Eleven duck xiangqi rows of the
+// second shape landed on 2026-09-11 while the variant's move counter closed
+// the pregame abort a ply early (fdd1ed4b). Both sides having moved is the
+// boundary the room lifecycle itself uses for "a game is underway" (the
+// abort window closes at moveNumber 2, the forfeit window opens there), so
+// the count uses the same line: 25 of 324 counted games sat under it on
+// 2026-09-12. Set 2026-09-12.
 
 export const STATS_COUNTED_FROM = '2026-06-01';
+export const MIN_COUNTED_PLIES = 2;
 
 // An excluded seat is a signed-in seat of a stats-excluded account, or a
 // guest seat whose device id belongs to a browser such an account has used
@@ -47,10 +59,16 @@ export function sinceLaunch(gamesAlias: string): string {
   return `${gamesAlias}.ended_at >= '${STATS_COUNTED_FROM}'::timestamptz`;
 }
 
-// Completed pvp/pve game since launch with no excluded seat.
+// Both sides have moved.
+export function bothSidesMoved(gamesAlias: string): string {
+  return `${gamesAlias}.ply_count >= ${MIN_COUNTED_PLIES}`;
+}
+
+// Completed pvp/pve game since launch, both sides moved, no excluded seat.
 export function countedHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${sinceLaunch(gamesAlias)}
+    AND ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedSeatExists(gamesAlias)}`;
 }
 
@@ -71,10 +89,20 @@ export function internalHumanGame(gamesAlias = 'g'): string {
 }
 
 // Completed pvp/pve game before the launch date with no excluded seat: the
-// other thing the counts leave out, reported the same way.
+// second thing the counts leave out, reported the same way.
 export function preLaunchHumanGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND NOT ${sinceLaunch(gamesAlias)}
+    AND NOT ${excludedSeatExists(gamesAlias)}`;
+}
+
+// Completed pvp/pve game since launch with no excluded seat that ended before
+// both sides had moved: the third thing the counts leave out. The three
+// not-counted rows and the counted row partition completed human games.
+export function shortHumanGame(gamesAlias = 'g'): string {
+  return `${gamesAlias}.status = 'completed' AND ${gamesAlias}.mode IN ('pvp', 'pve')
+    AND ${sinceLaunch(gamesAlias)}
+    AND NOT ${bothSidesMoved(gamesAlias)}
     AND NOT ${excludedSeatExists(gamesAlias)}`;
 }
 

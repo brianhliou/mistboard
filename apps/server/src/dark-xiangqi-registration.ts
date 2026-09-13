@@ -6,12 +6,13 @@
  * for side effects by variant-tenant/register-tenants.ts.
  */
 
-import type { RoomTimeControl } from '@mistboard/game';
+import { type RoomTimeControl, standardXiangqiFen } from '@mistboard/game';
 import type {
   DarkXiangqiCreatorPreference,
   DarkXiangqiRuntimeRoom,
 } from './dark-xiangqi-runtime.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
+import { tenantCardBinding } from './game-card-tenant.js';
 import { tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleDarkXiangqiCreate, requestsDarkXiangqi } from './routes/dark-xiangqi-rooms.js';
@@ -122,6 +123,13 @@ registerVariantTenant({
     gameRouteBase: '/dark-xiangqi/game',
     uci: xiangqiExportUci,
     writePgn: (moves) => xiangqiPgnWriter(moves, 'iccs'),
+  }),
+  // A finished fog game reveals in full (the finished-room rule), so the card
+  // draws the whole board. No analysis exists for fog xiangqi: final position.
+  card: tenantCardBinding(darkXiangqiTenant, {
+    variant: 'dark-xiangqi',
+    analysis: null,
+    fen: standardXiangqiFen,
   }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,

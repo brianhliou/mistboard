@@ -17,7 +17,7 @@
 // removes corpus rows for RETIRED VARIANTS, not for other seeds — so games from
 // earlier runs survive rather than being replaced.
 //
-//   node scripts/seed-variant-corpus.mjs [--games 8] [--profile product|lab]
+//   node scripts/seed-variant-corpus.mjs [--games 8]
 import { spawnSync } from 'node:child_process';
 import { mkdtempSync, rmSync } from 'node:fs';
 import { tmpdir } from 'node:os';
@@ -33,9 +33,7 @@ const arg = (name, fallback) => {
 };
 
 const games = Number.parseInt(arg('games', '8'), 10);
-const profile = arg('profile', 'product');
 if (!Number.isFinite(games) || games < 1) throw new Error('--games must be a positive integer');
-if (profile !== 'product' && profile !== 'lab') throw new Error('--profile must be product or lab');
 
 const databaseUrl =
   process.env.DATABASE_URL ?? 'postgres://mistboard:mistboard@localhost:5435/mistboard';
@@ -73,12 +71,9 @@ try {
       '--out',
       outDir,
     ]);
-    const out = run(
-      'seed',
-      'npx',
-      ['tsx', 'src/seed-variant-fixtures.ts', '--dir', outDir, '--profile', profile],
-      { DATABASE_URL: databaseUrl },
-    );
+    const out = run('seed', 'npx', ['tsx', 'src/seed-variant-fixtures.ts', '--dir', outDir], {
+      DATABASE_URL: databaseUrl,
+    });
     const ok = (out.match(/^ {2}ok /gm) ?? []).length;
     seeded += ok;
     console.log(`seed ${seed}: ${ok} variant game(s)`);
@@ -87,4 +82,4 @@ try {
   rmSync(scratch, { recursive: true, force: true });
 }
 
-console.log(`\ndone. ${seeded} game(s) seeded across ${games} generation(s) (${profile} profile).`);
+console.log(`\ndone. ${seeded} game(s) seeded across ${games} generation(s).`);

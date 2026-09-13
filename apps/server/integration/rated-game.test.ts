@@ -75,7 +75,7 @@ if (!testDbUrl) {
     const resp = await fetch(`${httpBase()}/api/lobby`, {
       method: 'POST',
       headers: { 'content-type': 'application/json', Cookie: cookie },
-      body: JSON.stringify({ rated: true, timeControl, hiddenDraft960: false }),
+      body: JSON.stringify({ rated: true, timeControl }),
     });
     return (await resp.json()) as { status: string; roomId?: string };
   }

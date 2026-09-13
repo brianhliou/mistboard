@@ -39,7 +39,7 @@ import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import { renderXiangqiPieceGlyphed, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
 // Bespoke SVG renderer for the 9x10 jieqi board. Pieces sit on intersections
-// (xiangqi convention). Unlike the Dark Xiangqi / DMX renderers there is NO fog:
+// (xiangqi convention). Unlike the Dark Xiangqi renderer there is NO fog:
 // jieqi positions are fully public. The hidden axis is IDENTITY — a face-down
 // piece renders as a color-known "back" (shroudedStyle 'back'); a revealed piece
 // renders with its glyph. The captured-pool UI is the caller's concern.

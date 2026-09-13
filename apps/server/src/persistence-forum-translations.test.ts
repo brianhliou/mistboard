@@ -4,6 +4,7 @@ import {
   getForumTranslation,
   getForumTranslationSource,
   hideForumPost,
+  listForumTranslations,
   putForumTranslation,
 } from './persistence.js';
 import { assert, definePersistenceTests, sha256, test } from './persistence-test-support.js';
@@ -64,6 +65,28 @@ definePersistenceTests('forum translations', () => {
     // Another locale and another model are distinct keys.
     assert.equal(await getForumTranslation({ ...key, targetLocale: 'zh-Hant' }), null);
     assert.equal(await getForumTranslation({ ...key, model: 'other-model' }), null);
+
+    // The batch read behind list surfaces: any model counts, the newest row
+    // wins, unknown hashes and other locales are simply absent.
+    await putForumTranslation({
+      ...key,
+      model: 'newer-model',
+      translatedText: '炮打中路（新）',
+      source: { kind: 'topic', id: 'topic_tr_1' },
+      inputTokens: 12,
+      outputTokens: 6,
+    });
+    const listed = await listForumTranslations({
+      contentHashes: [key.contentHash, sha256('never translated')],
+      targetLocale: 'zh-Hans',
+    });
+    assert.deepEqual([...listed], [[key.contentHash, '炮打中路（新）']]);
+    assert.equal(
+      (await listForumTranslations({ contentHashes: [key.contentHash], targetLocale: 'zh-Hant' }))
+        .size,
+      0,
+    );
+    assert.equal((await listForumTranslations({ contentHashes: [], targetLocale: 'en' })).size, 0);
 
     // Hiding the post hides it from the translate source too (no way to read
     // moderated text back out through translation). The topic's first post

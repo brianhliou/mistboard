@@ -82,10 +82,18 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
   let node = chapter.root?.root;
   let ply = 0;
 
+  // A duck chapter's moves are stored as duck TURN tokens (`from+to@duckTo`,
+  // the tree adapter's own spelling), not as chess-style UCI, so uciToIccs
+  // rejects every one of them and the mainline comes out empty. That is how a
+  // duck chapter used to reach the embed as "no moves to show". Pass those
+  // tokens through untouched; the duck board reads them directly.
+  const toToken = (uci: string): string | null =>
+    chapter.variant === 'duck-xiangqi' ? uci : uciToIccs(uci);
+
   while (node?.children?.length) {
     const played = node.children[0];
     if (!played) break;
-    const iccs = played.uci ? uciToIccs(played.uci) : null;
+    const iccs = played.uci ? toToken(played.uci) : null;
     if (!iccs) break;
     ply += 1;
     mainline.push(iccs);
@@ -105,7 +113,7 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
       // every code outside the 1-6 the GLYPH map above covers.
       let lineEval: string | undefined;
       while (variation?.uci) {
-        const step = uciToIccs(variation.uci);
+        const step = toToken(variation.uci);
         if (!step) break;
         line.push(step);
         const assessed = (variation.annotations?.glyphs ?? []).find(

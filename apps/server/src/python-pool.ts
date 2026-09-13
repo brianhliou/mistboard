@@ -29,7 +29,7 @@ export interface PythonPoolOptions {
   /**
    * Game variant for the worker (`--game`). Absent / 'dark-chess' ⇒ omitted, so
    * the chess worker spawn is byte-identical; a non-chess variant (e.g.
-   * 'dark-mini-xiangqi') routes the worker to its variant engine.
+   * 'dark-xiangqi') routes the worker to its variant engine.
    */
   gameSpecId?: string;
   /** Seconds to wait for a worker's `ready` line. */

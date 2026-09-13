@@ -7,8 +7,8 @@
 //
 //   env DATABASE_URL=... tsx src/seed-variant-fixtures.ts [--dir <dir>]
 //
-// Product profile is the default; --profile lab seeds every committed fixture.
-// Product runs also remove retired rows owned by this seeder's corpus id.
+// Seeds the fixtures of the product profile's specs and removes retired rows
+// owned by this seeder's corpus id.
 
 import { readdir, readFile } from 'node:fs/promises';
 import { dirname, join, resolve } from 'node:path';
@@ -18,23 +18,14 @@ import { parseArgs } from 'node:util';
 import pg from 'pg';
 
 import { banqiTenant } from './banqi-tenant.js';
-import { crossroadsChessTenant } from './crossroads-chess-tenant.js';
-import { darkCrazyhouseTenant } from './dark-crazyhouse-tenant.js';
-import { darkCrossroadsChessTenant } from './dark-crossroads-chess-tenant.js';
-import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
-import { darkShogiTenant } from './dark-shogi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
-import { dropMiniXiangqiTenant } from './drop-mini-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from './fortress-xiangqi-tenant.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { jungleFlipTenant } from './jungle-flip-tenant.js';
 import { jungleTenant } from './jungle-tenant.js';
-import { kriegspielTenant } from './kriegspiel-tenant.js';
 import { runMigrations } from './migrate.js';
-import { miniXiangqiTenant } from './mini-xiangqi-tenant.js';
 import { appendRoomEvent, close, init, recordGameEnd } from './persistence.js';
-import { revealChessTenant } from './reveal-chess-tenant.js';
 import { buildTenantGameSummary } from './variant-tenant/events.js';
 import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
@@ -45,17 +36,8 @@ const TENANTS: any[] = [
   jungleFlipTenant,
   jieqiTenant,
   banqiTenant,
-  miniXiangqiTenant,
-  darkMiniXiangqiTenant,
-  dropMiniXiangqiTenant,
   fortressXiangqiTenant,
   duckXiangqiTenant,
-  revealChessTenant,
-  crossroadsChessTenant,
-  darkCrossroadsChessTenant,
-  darkShogiTenant,
-  darkCrazyhouseTenant,
-  kriegspielTenant,
   darkXiangqiTenant,
   xiangqiTenant,
 ];
@@ -126,12 +108,8 @@ async function main(): Promise<void> {
   const { values } = parseArgs({
     options: {
       dir: { type: 'string', default: 'fixtures/variant-postgame' },
-      profile: { type: 'string', default: 'product' },
     },
   });
-  if (values.profile !== 'product' && values.profile !== 'lab') {
-    throw new Error('--profile must be product or lab');
-  }
   const databaseUrl = process.env.DATABASE_URL;
   if (!databaseUrl) {
     console.error('DATABASE_URL is required');
@@ -154,15 +132,12 @@ async function main(): Promise<void> {
   init(databaseUrl);
 
   const allFiles = (await readdir(dir)).filter((f) => f.endsWith('.jsonl')).sort();
-  const files =
-    values.profile === 'lab'
-      ? allFiles
-      : allFiles.filter((file) => productSpecIds.has(file.replace(/\.jsonl$/, '')));
+  const files = allFiles.filter((file) => productSpecIds.has(file.replace(/\.jsonl$/, '')));
   if (files.length === 0) {
     console.error(`no .jsonl fixtures in ${dir}`);
     process.exit(1);
   }
-  console.log(`seeding ${files.length} ${values.profile} variant fixture(s) from ${values.dir}`);
+  console.log(`seeding ${files.length} variant fixture(s) from ${values.dir}`);
   let failures = 0;
   for (const file of files) {
     try {
@@ -173,7 +148,7 @@ async function main(): Promise<void> {
       console.error(`  FAIL ${file.padEnd(28)} ${(err as Error).message}`);
     }
   }
-  if (failures === 0 && values.profile === 'product') {
+  if (failures === 0) {
     const pruned = await pruneRetiredProductFixtures(databaseUrl, productSpecIds);
     console.log(`  prune retired seed-owned fixtures: ${pruned}`);
   }

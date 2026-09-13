@@ -223,7 +223,7 @@ describe('forum pages', () => {
     await mountForum(root);
 
     expect(fetchedUrls).toContain(
-      '/api/forum/topics?category=general-discussion&limit=26&offset=0',
+      '/api/forum/topics?category=general-discussion&limit=26&offset=0&locale=en',
     );
     expect(root.querySelector('.forum-panel-header-category')?.textContent).toContain(
       'General Games Discussion',
@@ -319,7 +319,7 @@ describe('forum pages', () => {
     await mountForum(root);
 
     expect(fetchedUrls).toContain(
-      '/api/forum/topics?category=general-discussion&limit=26&offset=25',
+      '/api/forum/topics?category=general-discussion&limit=26&offset=25&locale=en',
     );
     expect(root.querySelector('.forum-topic-list-header')?.textContent).toContain('Replies');
     expect(root.querySelector('.forum-topic-list-header')?.textContent).toContain('Last post');
@@ -399,7 +399,7 @@ describe('forum pages', () => {
       intersect?.();
       await vi.waitFor(() => {
         expect(fetchedUrls).toContain(
-          '/api/forum/topics?category=general-discussion&limit=26&offset=25',
+          '/api/forum/topics?category=general-discussion&limit=26&offset=25&locale=en',
         );
       });
       await vi.waitFor(() => {
@@ -1106,6 +1106,92 @@ describe('forum pages', () => {
     expect(root.querySelector('.forum-post-author .forum-online-dot')).not.toBeNull();
   });
 
+  it('opens a topic translated when the page load carried cached translations', async () => {
+    // A zh-Hans reader (stored preference; happy-dom has no localStorage of
+    // its own) with the auto-translate preference at its default (on).
+    const store = new Map<string, string>([['mistboard.locale', 'zh-Hans']]);
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (key: string) => store.get(key) ?? null,
+        setItem: (key: string, value: string) => void store.set(key, value),
+        removeItem: (key: string) => void store.delete(key),
+      },
+    });
+    const fetchedUrls: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      fetchedUrls.push(url);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/forum/topics/topic_strategy')) {
+        return json({
+          topic: {
+            ...topic,
+            translation: { available: true },
+            translated: { title: '侦察中路' },
+            posts: [
+              {
+                id: 'post_1',
+                author: { handle: 'alice', displayName: 'Alice' },
+                bodyText: 'Opening post about the center.',
+                createdAt: '2026-06-01T00:00:00.000Z',
+                updatedAt: '2026-06-01T00:00:00.000Z',
+                translated: '关于中路的开帖。',
+              },
+              {
+                id: 'post_2',
+                author: { handle: 'bob', displayName: 'Bob' },
+                bodyText: 'Nobody has translated this reply yet.',
+                createdAt: '2026-06-01T00:05:00.000Z',
+                updatedAt: '2026-06-01T00:05:00.000Z',
+              },
+            ],
+          },
+        });
+      }
+      if (url.startsWith('/api/auth/me')) return json({ user: null });
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    const { mountForumTopic } = await import('./forum.js');
+    try {
+      await mountForumTopic(root, 'topic_strategy');
+
+      // The read asked for the reader's locale, so the server could overlay.
+      expect(fetchedUrls.some((url) => url.startsWith('/api/forum/topics/topic_strategy?'))).toBe(
+        true,
+      );
+      expect(
+        fetchedUrls.find((url) => url.startsWith('/api/forum/topics/topic_strategy')),
+      ).toContain('locale=zh-Hans');
+      // Title and the cached post open translated, marked as machine text, with
+      // the button already offering the way back to the original.
+      const heading = root.querySelector<HTMLElement>('h1.site-section-heading');
+      expect(heading?.textContent).toBe('侦察中路');
+      expect(heading?.title).toBe('Scouting the center');
+      expect(heading?.classList.contains('forum-translated')).toBe(true);
+      const bodies = root.querySelectorAll<HTMLElement>('.forum-post-body');
+      expect(bodies[0]?.textContent).toContain('关于中路的开帖。');
+      expect(bodies[0]?.classList.contains('forum-translated')).toBe(true);
+      const buttons = root.querySelectorAll<HTMLButtonElement>('.forum-post-translate');
+      expect(buttons[0]?.getAttribute('aria-pressed')).toBe('true');
+      // The uncached reply stays in the author's words with a plain Translate
+      // button: opening a page never asks the model.
+      expect(bodies[1]?.textContent).toContain('Nobody has translated this reply yet.');
+      expect(bodies[1]?.classList.contains('forum-translated')).toBe(false);
+      expect(buttons[1]?.getAttribute('aria-pressed')).toBe('false');
+      expect(fetchedUrls.filter((url) => url === '/api/forum/translate')).toHaveLength(0);
+
+      // One click restores the original without a request.
+      buttons[0]?.click();
+      expect(bodies[0]?.textContent).toContain('Opening post about the center.');
+      expect(bodies[0]?.classList.contains('forum-translated')).toBe(false);
+      expect(fetchedUrls.filter((url) => url === '/api/forum/translate')).toHaveLength(0);
+    } finally {
+      Reflect.deleteProperty(window, 'localStorage');
+    }
+  });
+
   it('quotes a post into the reply form', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
@@ -1330,7 +1416,7 @@ describe('forum pages', () => {
 
     await mountForumTopic(root, 'topic_strategy');
 
-    expect(fetchedUrls).toContain('/api/forum/topics/topic_strategy?limit=26&offset=25');
+    expect(fetchedUrls).toContain('/api/forum/topics/topic_strategy?limit=26&offset=25&locale=en');
     expect(root.querySelectorAll('.forum-post')).toHaveLength(25);
     expect(root.querySelector<HTMLElement>('.forum-post')?.id).toBe('post_post_page_0');
     expect(

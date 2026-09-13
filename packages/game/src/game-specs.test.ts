@@ -3,17 +3,9 @@ import test from 'node:test';
 import {
   BANQI_SPEC_ID,
   CANONICAL_VARIANT_ORDER,
-  CROSSROADS_CHESS_SPEC_ID,
   DARK_CHESS_SPEC_ID,
-  DARK_CRAZYHOUSE_SPEC_ID,
-  DARK_CROSSROADS_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
-  DARK_MINI_XIANGQI_SPEC_ID,
-  DARK_SHOGI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
-  FOG_DRAFT960_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   GAME_SPECS,
   gameSpecForId,
@@ -25,15 +17,11 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
-  KRIEGSPIEL_SPEC_ID,
-  LUZHANQI_SPEC_ID,
   legacyLiveRoomForGameSpec,
-  MINI_XIANGQI_SPEC_ID,
   maybeGameSpecForId,
   RATED_POOL_BASES,
   type RatingVariant,
   RETIRED_GAME_SPEC_IDS,
-  REVEAL_CHESS_SPEC_ID,
   ratingPoolForSpec,
   STUDY_ELIGIBLE_SPEC_IDS,
   XIANGQI_SPEC_ID,
@@ -69,25 +57,7 @@ test('current dark chess maps to the flagship chess spec', () => {
   assert.equal(spec.ratingPoolBase, 'fog');
   assert.equal(spec.publicSurface, 'casual');
   assert.equal(spec.runtimeStatus, 'live');
-  assert.deepEqual(spec.legacyLiveRoom, { variant: 'dark-chess', hiddenDraft960: false });
-});
-
-test('Draft960 is modeled as a dark chess setup module, not a family', () => {
-  const spec = gameSpecForId(DARK_DRAFT960_SPEC_ID);
-
-  assert.equal(spec.id, 'dark-draft960');
-  assert.equal(spec.publicName, 'Dark Draft960');
-  assert.equal(spec.family, 'chess');
-  assert.equal(spec.board, 'chess-8x8');
-  assert.equal(spec.movement, 'orthodox-chess');
-  assert.equal(spec.objective, 'king-capture');
-  assert.equal(spec.visibility, 'dark');
-  assert.equal(spec.setup, 'draft960');
-  assert.equal(spec.reserves, 'none');
-  assert.equal(spec.dropPolicy, 'none');
-  assert.equal(spec.ratingPoolBase, 'fog_draft960');
-  assert.equal(spec.runtimeStatus, 'retired');
-  assert.deepEqual(spec.legacyLiveRoom, { variant: 'dark-chess', hiddenDraft960: true });
+  assert.deepEqual(spec.legacyLiveRoom, { variant: 'dark-chess' });
 });
 
 test('Dark Xiangqi is a live separate family without live-room mapping', () => {
@@ -106,81 +76,6 @@ test('Dark Xiangqi is a live separate family without live-room mapping', () => {
   assert.equal(spec.rated, true);
   assert.equal(spec.publicSurface, 'casual');
   assert.equal(spec.runtimeStatus, 'live');
-  assert.equal(spec.legacyLiveRoom, undefined);
-});
-
-test('Dark Mini Xiangqi is a live xiangqi-family spec', () => {
-  const spec = gameSpecForId(DARK_MINI_XIANGQI_SPEC_ID);
-
-  assert.equal(spec.publicName, 'Dark Mini Xiangqi');
-  assert.equal(spec.family, 'xiangqi');
-  assert.equal(spec.board, 'xiangqi-7x7');
-  assert.equal(spec.movement, 'mini-xiangqi');
-  assert.equal(spec.objective, 'general-capture');
-  assert.equal(spec.visibility, 'dark');
-  assert.equal(spec.setup, 'mini-standard');
-  assert.equal(spec.reserves, 'none');
-  assert.equal(spec.dropPolicy, 'none');
-  assert.equal(spec.ratingPoolBase, 'dark_mini_xiangqi');
-  assert.equal(spec.publicSurface, 'hidden');
-  assert.equal(spec.runtimeStatus, 'retired');
-  assert.equal(spec.legacyLiveRoom, undefined);
-});
-
-test('Mini Xiangqi is a parked (hidden) open-info xiangqi-family spec', () => {
-  const spec = gameSpecForId(MINI_XIANGQI_SPEC_ID);
-
-  assert.equal(spec.publicName, 'Mini Xiangqi');
-  assert.equal(spec.family, 'xiangqi');
-  assert.equal(spec.board, 'xiangqi-7x7');
-  assert.equal(spec.movement, 'mini-xiangqi');
-  assert.equal(spec.objective, 'checkmate');
-  assert.equal(spec.visibility, 'open');
-  assert.equal(spec.setup, 'mini-standard');
-  assert.equal(spec.reserves, 'none');
-  assert.equal(spec.dropPolicy, 'none');
-  assert.equal(spec.ratingPoolBase, 'mini_xiangqi');
-  assert.equal(spec.rated, undefined);
-  assert.equal(spec.publicSurface, 'hidden');
-  assert.equal(spec.runtimeStatus, 'retired');
-  assert.equal(spec.legacyLiveRoom, undefined);
-});
-
-test('Drop Mini Xiangqi is a live open-info xiangqi reserve spec', () => {
-  const spec = gameSpecForId(DROP_MINI_XIANGQI_SPEC_ID);
-
-  assert.equal(spec.publicName, 'Drop Mini Xiangqi');
-  assert.equal(spec.family, 'xiangqi');
-  assert.equal(spec.board, 'xiangqi-7x7');
-  assert.equal(spec.movement, 'mini-xiangqi');
-  assert.equal(spec.objective, 'checkmate');
-  assert.equal(spec.visibility, 'open');
-  assert.equal(spec.setup, 'mini-standard');
-  assert.equal(spec.reserves, 'crazyhouse');
-  assert.equal(spec.dropPolicy, 'not-enemy-palace');
-  assert.equal(spec.ratingPoolBase, 'drop_mini_xiangqi');
-  assert.equal(spec.rated, true);
-  assert.equal(spec.publicSurface, 'hidden');
-  assert.equal(spec.runtimeStatus, 'retired');
-  assert.equal(spec.legacyLiveRoom, undefined);
-});
-
-test('Dark Shogi is a live shogi family spec', () => {
-  const spec = gameSpecForId(DARK_SHOGI_SPEC_ID);
-
-  assert.equal(spec.publicName, 'Fog Shogi');
-  assert.equal(spec.family, 'shogi');
-  assert.equal(spec.board, 'shogi-9x9');
-  assert.equal(spec.movement, 'shogi');
-  assert.equal(spec.objective, 'king-capture');
-  assert.equal(spec.visibility, 'dark');
-  assert.equal(spec.setup, 'standard');
-  assert.equal(spec.reserves, 'shogi-hands');
-  assert.equal(spec.dropPolicy, 'any-legal-square');
-  assert.equal(spec.ratingPoolBase, 'dark_shogi');
-  assert.equal(spec.rated, true);
-  assert.equal(spec.publicSurface, 'hidden');
-  assert.equal(spec.runtimeStatus, 'retired');
   assert.equal(spec.legacyLiveRoom, undefined);
 });
 
@@ -224,54 +119,10 @@ test('Banqi is an xiangqi-family hidden-identity spec on the 8x4 board', () => {
   assert.equal(spec.legacyLiveRoom, undefined);
 });
 
-test('Luzhanqi is a hidden computer-refereed hidden-identity military-chess spec', () => {
-  const spec = gameSpecForId(LUZHANQI_SPEC_ID);
-
-  assert.equal(spec.publicName, 'Luzhanqi');
-  assert.equal(spec.family, 'military-chess');
-  assert.equal(spec.board, 'luzhanqi-65-graph');
-  assert.equal(spec.movement, 'luzhanqi');
-  assert.equal(spec.objective, 'flag-capture');
-  assert.equal(spec.visibility, 'hidden-identity');
-  assert.equal(spec.setup, 'luzhanqi-formation');
-  assert.equal(spec.reserves, 'none');
-  assert.equal(spec.dropPolicy, 'none');
-  assert.equal(spec.ratingPoolBase, 'luzhanqi');
-  assert.equal(spec.rated, undefined);
-  assert.equal(spec.publicSurface, 'hidden');
-  assert.equal(spec.runtimeStatus, 'retired');
-  assert.equal(spec.legacyLiveRoom, undefined);
-});
-
 test('composite specs are composed from rule modules', () => {
-  const darkCrazyhouse = gameSpecForId(DARK_CRAZYHOUSE_SPEC_ID);
-  assert.equal(darkCrazyhouse.reserves, 'crazyhouse');
-  assert.equal(darkCrazyhouse.dropPolicy, 'any-legal-square');
-});
-
-test('Crossroads Chess is two specs sharing one family/board, split on visibility', () => {
-  const open = gameSpecForId(CROSSROADS_CHESS_SPEC_ID);
-  const dark = gameSpecForId(DARK_CROSSROADS_CHESS_SPEC_ID);
-
-  for (const spec of [open, dark]) {
-    assert.equal(spec.family, 'crossroads-chess');
-    assert.equal(spec.board, 'crossroads-6x8');
-    assert.equal(spec.movement, 'crossroads-chess');
-    assert.equal(spec.objective, 'royal-capture-or-race');
-    assert.equal(spec.setup, 'crossroads-standard');
-    assert.equal(spec.publicSurface, 'hidden');
-  }
-  assert.equal(open.runtimeStatus, 'retired');
-  assert.equal(dark.runtimeStatus, 'retired');
-  // The split: perfect-info onboarding vs the real fog mode, on separate pools.
-  assert.equal(open.publicName, 'Crossroads Chess');
-  assert.equal(dark.publicName, 'Dark Crossroads Chess');
-  assert.equal(open.visibility, 'open');
-  assert.equal(dark.visibility, 'dark');
-  assert.equal(open.ratingPoolBase, 'crossroads_chess_open');
-  assert.equal(dark.ratingPoolBase, 'crossroads_chess');
-  assert.equal(open.rated, true);
-  assert.equal(dark.rated, true);
+  const fortress = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
+  assert.equal(fortress.reserves, 'crazyhouse');
+  assert.notEqual(fortress.dropPolicy, 'none');
 });
 
 test('game spec ids are unique and discoverable', () => {
@@ -279,55 +130,21 @@ test('game spec ids are unique and discoverable', () => {
   assert.equal(new Set(ids).size, ids.length);
 
   assert.equal(isGameSpecId('dark-chess'), true);
-  assert.equal(isGameSpecId('dark-draft960'), true);
-  assert.equal(isGameSpecId('fog-draft960'), false);
-  assert.equal(isGameSpecId('mini-xiangqi'), true);
-  assert.equal(isGameSpecId('dark-mini-xiangqi'), true);
-  assert.equal(isGameSpecId('drop-mini-xiangqi'), true);
   assert.equal(isGameSpecId('dark-xiangqi'), true);
-  assert.equal(isGameSpecId('dark-shogi'), true);
   assert.equal(isGameSpecId('banqi'), true);
   assert.equal(isGameSpecId('not-a-spec'), false);
-  assert.equal(maybeGameSpecForId('dark-draft960')?.id, DARK_DRAFT960_SPEC_ID);
-  assert.equal(maybeGameSpecForId('fog-draft960')?.id, DARK_DRAFT960_SPEC_ID);
   assert.equal(maybeGameSpecForId('not-a-spec'), null);
 });
 
-test('legacy Fog Draft960 spec constant aliases the canonical Dark Draft960 id', () => {
-  assert.equal(FOG_DRAFT960_SPEC_ID, DARK_DRAFT960_SPEC_ID);
-  assert.equal(gameSpecForId(FOG_DRAFT960_SPEC_ID).id, DARK_DRAFT960_SPEC_ID);
-});
-
-test('legacy live-room inputs map to current game specs', () => {
+test('legacy live-room inputs map to Fog Chess, the only chess-shell spec left', () => {
   assert.equal(gameSpecForLegacyLiveRoom({ variant: 'dark-chess' }).id, DARK_CHESS_SPEC_ID);
-  assert.equal(
-    gameSpecForLegacyLiveRoom({ variant: 'dark-chess', hiddenDraft960: true }).id,
-    DARK_DRAFT960_SPEC_ID,
-  );
-  assert.equal(
-    gameSpecForLegacyLiveRoom({ variant: 'dark-chess', hiddenDraft960: 'yes' }).id,
-    DARK_DRAFT960_SPEC_ID,
-  );
-  assert.equal(gameSpecForLegacyLiveRoom({ variant: 'draft960' }).id, DARK_DRAFT960_SPEC_ID);
-  assert.equal(gameSpecForLegacyLiveRoom({ variant: 'dark-draft960' }).id, DARK_DRAFT960_SPEC_ID);
-  assert.equal(gameSpecForLegacyLiveRoom({ variant: 'fog-draft960' }).id, DARK_DRAFT960_SPEC_ID);
+  assert.equal(gameSpecForLegacyLiveRoom({ variant: 'chess' }).id, DARK_CHESS_SPEC_ID);
   assert.equal(gameSpecForLegacyLiveRoom({ variant: 'unknown' }).id, DARK_CHESS_SPEC_ID);
 });
 
 test('current live specs can be converted back to the existing room wire shape', () => {
-  assert.deepEqual(legacyLiveRoomForGameSpec(DARK_CHESS_SPEC_ID), {
-    variant: 'dark-chess',
-    hiddenDraft960: false,
-  });
-  assert.deepEqual(legacyLiveRoomForGameSpec(DARK_DRAFT960_SPEC_ID), {
-    variant: 'dark-chess',
-    hiddenDraft960: true,
-  });
-  assert.equal(legacyLiveRoomForGameSpec(MINI_XIANGQI_SPEC_ID), null);
-  assert.equal(legacyLiveRoomForGameSpec(DARK_MINI_XIANGQI_SPEC_ID), null);
-  assert.equal(legacyLiveRoomForGameSpec(DROP_MINI_XIANGQI_SPEC_ID), null);
+  assert.deepEqual(legacyLiveRoomForGameSpec(DARK_CHESS_SPEC_ID), { variant: 'dark-chess' });
   assert.equal(legacyLiveRoomForGameSpec(DARK_XIANGQI_SPEC_ID), null);
-  assert.equal(legacyLiveRoomForGameSpec(DARK_SHOGI_SPEC_ID), null);
 });
 
 test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant union', () => {
@@ -341,18 +158,9 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
   // type, the `rated` flags, and the user_ratings CHECK migration against drift.
   const unionMembers: Record<RatingVariant, true> = {
     fog: true,
-    fog_draft960: true,
-    dark_mini_xiangqi: true,
-    drop_mini_xiangqi: true,
     dark_xiangqi: true,
-    dark_crazyhouse: true,
-    dark_shogi: true,
-    crossroads_chess: true,
-    crossroads_chess_open: true,
     jieqi: true,
     banqi: true,
-    kriegspiel: true,
-    reveal_chess: true,
     jungle: true,
     jungle_flip: true,
     fortress_xiangqi: true,
@@ -364,29 +172,15 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
 
 test('ratingPoolForSpec is rated for launched pools and null for casual-only specs', () => {
   assert.equal(ratingPoolForSpec(DARK_CHESS_SPEC_ID), 'fog');
-  assert.equal(ratingPoolForSpec(DARK_DRAFT960_SPEC_ID), 'fog_draft960');
-  assert.equal(ratingPoolForSpec(MINI_XIANGQI_SPEC_ID), null);
-  assert.equal(ratingPoolForSpec(DROP_MINI_XIANGQI_SPEC_ID), 'drop_mini_xiangqi');
-  assert.equal(ratingPoolForSpec(CROSSROADS_CHESS_SPEC_ID), 'crossroads_chess_open');
   assert.equal(ratingPoolForSpec(JIEQI_SPEC_ID), 'jieqi');
   assert.equal(ratingPoolForSpec(BANQI_SPEC_ID), 'banqi');
-  assert.equal(ratingPoolForSpec(LUZHANQI_SPEC_ID), null);
-  assert.equal(ratingPoolForSpec(REVEAL_CHESS_SPEC_ID), 'reveal_chess');
   assert.equal(ratingPoolForSpec(DARK_XIANGQI_SPEC_ID), 'dark_xiangqi');
-  assert.equal(ratingPoolForSpec(DARK_CROSSROADS_CHESS_SPEC_ID), 'crossroads_chess');
-  assert.equal(ratingPoolForSpec(DARK_SHOGI_SPEC_ID), 'dark_shogi');
-  assert.equal(ratingPoolForSpec(DARK_CRAZYHOUSE_SPEC_ID), 'dark_crazyhouse');
-  assert.equal(ratingPoolForSpec(KRIEGSPIEL_SPEC_ID), 'kriegspiel');
   assert.equal(ratingPoolForSpec(JUNGLE_SPEC_ID), 'jungle');
   assert.equal(ratingPoolForSpec(JUNGLE_FLIP_SPEC_ID), 'jungle_flip');
   assert.equal(isRatedPoolBase('jieqi'), true);
   assert.equal(isRatedPoolBase('jungle'), true);
   assert.equal(isRatedPoolBase('jungle_flip'), true);
-  assert.equal(isRatedPoolBase('mini_xiangqi'), false);
-  assert.equal(isRatedPoolBase('drop_mini_xiangqi'), true);
   assert.equal(isRatedPoolBase('dark_xiangqi'), true);
-  assert.equal(isRatedPoolBase('dark_shogi'), true);
-  assert.equal(isRatedPoolBase('kriegspiel'), true);
   assert.equal(isRatedPoolBase('not-a-pool'), false);
 });
 
@@ -413,34 +207,17 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
 
 // The retired set is derived from the entries' own runtimeStatus, so this is
 // the one list of what is going (docs-private/variant-retirement-plan.md, #396).
-test('the retired specs are exactly the eleven the plan names, all hidden', () => {
-  assert.deepEqual(
-    [...RETIRED_GAME_SPEC_IDS].sort(),
-    [
-      CROSSROADS_CHESS_SPEC_ID,
-      DARK_CRAZYHOUSE_SPEC_ID,
-      DARK_CROSSROADS_CHESS_SPEC_ID,
-      DARK_DRAFT960_SPEC_ID,
-      DARK_MINI_XIANGQI_SPEC_ID,
-      DARK_SHOGI_SPEC_ID,
-      DROP_MINI_XIANGQI_SPEC_ID,
-      KRIEGSPIEL_SPEC_ID,
-      LUZHANQI_SPEC_ID,
-      MINI_XIANGQI_SPEC_ID,
-      REVEAL_CHESS_SPEC_ID,
-    ].sort(),
-  );
+test('no spec is retired: every variant the plan named has been deleted', () => {
+  // The retired set is empty as of 2026-09-12; a future retirement lands here
+  // first (runtimeStatus 'retired', publicSurface 'hidden') and is deleted from
+  // its own commit later.
+  assert.deepEqual([...RETIRED_GAME_SPEC_IDS], []);
   for (const id of RETIRED_GAME_SPEC_IDS) {
-    // A retired spec can never be offered: publicSurface is the other switch
-    // and it must already be off.
     assert.equal(gameSpecForId(id).publicSurface, 'hidden', id);
     assert.equal(isRetiredGameSpec(id), true, id);
   }
   for (const id of [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
     assert.equal(isRetiredGameSpec(id), false, id);
   }
-  // Legacy aliases resolve to their spec and inherit its status.
-  assert.equal(isRetiredGameSpec('dual-chess'), true);
-  assert.equal(isRetiredGameSpec('fog-draft960'), true);
   assert.equal(isRetiredGameSpec('no-such-spec'), false);
 });

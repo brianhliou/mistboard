@@ -1708,7 +1708,7 @@
 
 /* Homepage showcase: tenant (SVG) variants render a single compact board here via
    .replay-layout-solo (chess uses .replay-layout-single-*). Center it and cap the
-   footprint so the differing aspect ratios (7x9 jungle, 8x4 banqi, 9x9 shogi) fit
+   footprint so the differing aspect ratios (7x9 jungle, 8x4 banqi) fit
    the slot without blowing out or jumping the page. Baseline sizing; per-variant
    visual tuning is a follow-up once non-chess games are seeded locally. */
 .showcase-widget .replay-layout-solo {

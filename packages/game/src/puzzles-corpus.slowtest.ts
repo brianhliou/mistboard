@@ -19,12 +19,10 @@ import { test } from 'node:test';
 import {
   type FortressXiangqiPuzzle,
   type JunglePuzzle,
-  type MiniXiangqiPuzzle,
   replayFortressXiangqiSourceGameToPly,
   replayJungleSourceGameToPly,
   validateFortressXiangqiPuzzle,
   validateJunglePuzzle,
-  validateMiniXiangqiPuzzle,
   validateStandardXiangqiPuzzle,
   type XiangqiPuzzle,
 } from './index.js';
@@ -47,15 +45,6 @@ test('every seeded Fortress Xiangqi puzzle validates (full corpus)', () => {
   const puzzles = loadSeedPuzzleRegistry('fortress-xiangqi') as readonly FortressXiangqiPuzzle[];
   for (const puzzle of puzzles) {
     const result = validateFortressXiangqiPuzzle(puzzle);
-    assert.ok(result.ok, `${puzzle.id} invalid: ${result.ok ? '' : result.issue.message}`);
-  }
-});
-
-test('every seeded Mini/Drop Mini puzzle validates (full corpus)', () => {
-  const puzzles = loadSeedPuzzleRegistry('mini-xiangqi') as readonly MiniXiangqiPuzzle[];
-  assert.ok(puzzles.length > 0, 'corpus is non-empty');
-  for (const puzzle of puzzles) {
-    const result = validateMiniXiangqiPuzzle(puzzle);
     assert.ok(result.ok, `${puzzle.id} invalid: ${result.ok ? '' : result.issue.message}`);
   }
 });

@@ -30,7 +30,6 @@ export type EngineId =
   | 'python-v2-v1.4'
   | 'python-v2-v1.5'
   | 'python-v2-v1.6'
-  | 'python-dmx-v1.0'
   | 'python-fdx-v1.0'
   | 'python-fdx-v1.1'
   | 'python-fdx-v1.2'
@@ -39,10 +38,6 @@ export type EngineId =
   | 'python-tier1-v0.7.22'
   | 'python-tier1-v0.7.0'
   | 'python-random-legal'
-  // Fairy-Stockfish (Crossroads Chess)
-  | 'fairy-stockfish-crossroads-amateur'
-  | 'fairy-stockfish-crossroads-strong'
-  | 'fairy-stockfish-crossroads-very-strong'
   // Fairy-Stockfish (standard Xiangqi human-strength profiles)
   | `fairy-stockfish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   // Uniformly-random legal-move xiangqi bot (calibration floor / 0-Elo anchor)
@@ -62,9 +57,6 @@ export type EngineId =
   | 'misty-banqi-strong'
   | 'misty-banqi-strongest'
   // Fairy-Stockfish (Mini Xiangqi)
-  | 'fairy-stockfish-mini-xiangqi-amateur'
-  | 'fairy-stockfish-mini-xiangqi-strong'
-  | 'fairy-stockfish-mini-xiangqi-very-strong'
   // MistyJungleFlip (Flip Jungle)
   | 'misty-jungle-flip';
 
@@ -149,7 +141,7 @@ export type PythonSubprocessEngineConfig = {
   engine_pin?: string;
 };
 
-/** Fairy-Stockfish UCI engines (Crossroads Chess, Mini Xiangqi, Xiangqi ladder). */
+/** Fairy-Stockfish UCI engines (Mini Xiangqi, Xiangqi ladder). */
 export type FairyStockfishEngineConfig = {
   kind: 'fairy-stockfish';
   skill: number;
@@ -218,7 +210,7 @@ export type EngineDefinition = {
   livePolicy?: EngineLivePolicy;
   notes?: string;
   /**
-   * Game variant this engine plays (e.g. 'dark-mini-xiangqi'). Absent ⇒ dark
+   * Game variant this engine plays (e.g. 'dark-xiangqi'). Absent ⇒ dark
    * chess (the default). Drives the worker `--game` flag and the request's
    * gameSpecId so the engine interprets the right board geometry + piece set.
    */

@@ -28,20 +28,6 @@ export function xiangqiEnabled(): boolean {
   return process.env.MISTBOARD_XIANGQI_ENABLED === 'true';
 }
 
-// Dark Mini Xiangqi is a separate 7x7 rules spike. Keep it independently
-// gateable from full Dark Xiangqi so runtime experiments cannot expose both
-// families at once by accident.
-export function darkMiniXiangqiEnabled(): boolean {
-  return process.env.MISTBOARD_DARK_MINI_XIANGQI_ENABLED === 'true';
-}
-
-// Drop Mini Xiangqi (7x7 mini xiangqi with crazyhouse-style reserves) is a
-// parked lab surface. Existing postgames remain readable, while new rooms need
-// an explicit lab/runtime opt-in.
-export function dropMiniXiangqiEnabled(): boolean {
-  return process.env.MISTBOARD_DROP_MINI_XIANGQI_ENABLED === 'true';
-}
-
 // Fortress Xiangqi (7x8 xiangqi-with-a-pocket) live rooms. Server-side opt-in,
 // default off — the tenant exists but is not launched. Flip to `return true` at
 // launch (alongside the rated flag + user_ratings CHECK migration).
@@ -81,57 +67,6 @@ export function jieqiEnabled(): boolean {
 // only at first (PvE is gated on an engine, like jieqi).
 export function banqiEnabled(): boolean {
   return process.env.MISTBOARD_BANQI_ENABLED === 'true';
-}
-
-// Luzhanqi / Junqi live rooms. Server-side opt-in, default off. PvP-only while
-// the formation editor and postgame reveal surfaces land.
-export function luzhanqiEnabled(): boolean {
-  return process.env.MISTBOARD_LUZHANQI_ENABLED === 'true';
-}
-
-// Reveal Chess (standard 8x8 chess with hidden piece identities) live rooms.
-// Server-side opt-in, default off — the tenant exists but is not launched.
-// PvP-only (no engine/bot at first).
-export function revealChessEnabled(): boolean {
-  return process.env.MISTBOARD_REVEAL_CHESS_ENABLED === 'true';
-}
-
-// Perfect-information Crossroads Chess live rooms. Server-side opt-in, separate
-// from the client VITE_CROSSROADS_CHESS_ENABLED page flag, so live PvP cannot be
-// exposed in production by accident while the local play surface is enabled.
-export function crossroadsChessEnabled(): boolean {
-  return process.env.MISTBOARD_CROSSROADS_CHESS_ENABLED === 'true';
-}
-
-// Dark Crossroads Chess (the fog 6x8 variant) live rooms. Server-side opt-in,
-// default off — the tenant exists but is not launched. PvP-only (Fairy-
-// Stockfish is perfect-info and cannot play fog crossroads, so there is no
-// engine/bot). Independently gateable from the perfect-info Crossroads flag.
-export function darkCrossroadsChessEnabled(): boolean {
-  return process.env.MISTBOARD_DARK_CROSSROADS_CHESS_ENABLED === 'true';
-}
-
-// Dark Shogi (the fog 9x9 variant, with drops + private hands) live rooms.
-// Server-side opt-in, default off — the tenant exists but is not launched.
-// PvP-only at first (no bot).
-export function darkShogiEnabled(): boolean {
-  return process.env.MISTBOARD_DARK_SHOGI_ENABLED === 'true';
-}
-
-// Dark Crazyhouse (chess + drops, under fog) live rooms. Server-side opt-in,
-// default off — the tenant exists but is not launched. PvP-only (no bot: drops
-// explode the belief search). Rides the dark-chess fog kernel + the Dark Shogi
-// hands/drops pattern.
-export function darkCrazyhouseEnabled(): boolean {
-  return process.env.MISTBOARD_DARK_CRAZYHOUSE_ENABLED === 'true';
-}
-
-// Kriegspiel (standard chess played blind, ICC wild-16) live rooms. Server-side
-// opt-in, default off. PvP-only (no bot yet), with watch/profile/leaderboard
-// surfaces when the flag is enabled. Real check/checkmate; the umpire announces
-// captures + check categories.
-export function kriegspielEnabled(): boolean {
-  return process.env.MISTBOARD_KRIEGSPIEL_ENABLED === 'true';
 }
 
 // Jungle / Dou Shou Qi (斗兽棋, perfect-information 7×9 animal-rank game) live

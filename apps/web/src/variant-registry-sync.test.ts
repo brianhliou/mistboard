@@ -7,8 +7,8 @@ import { describe, expect, it } from 'vitest';
 // variant that misses either surface fails here instead of shipping 404s on
 // postgame refreshes or create requests that silently fall through to the
 // chess stack. When this test landed it caught five tenants whose game routes
-// were missing from isClientRoute (reveal-chess, dark-crossroads-chess,
-// dark-crazyhouse, kriegspiel, fortress-xiangqi).
+// were missing from isClientRoute (fortress-xiangqi and four since-deleted
+// tenants).
 import { isClientRoute } from '../../server/src/server-policy.js';
 // Side-effect import: populates the server tenant registry exactly like
 // apps/server/src/index.ts (and registry.test.ts) do.
@@ -143,7 +143,7 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       const tenantLanding = webVariantTenants().find(
         (tenant) => tenant.gameSpecId === gameSpecId,
       )?.landing;
-      // Variants with no tenant landing config (fog chess, draft960) fall back
+      // Variants with no tenant landing config (fog chess) fall back
       // to all three official controls in the picker, so any pin is offered.
       if (!tenantLanding) continue;
       expect(
@@ -194,8 +194,8 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 
 // A variant's play deep link must be gated on its OWN feature flag. Two were
 // not: fog xiangqi's `acceptsDeepLink` pointed at darkMiniXiangqiEnabled and
-// jieqi's at dropMiniXiangqiEnabled, both flags for unrelated mini-xiangqi
-// variants that are off in production. Neither variant's own flag was even
+// jieqi's at the drop-mini flag, both flags for unrelated (since deleted)
+// variants that were off in production. Neither variant's own flag was even
 // imported here, so the entries fell back to whatever was already in scope and
 // typechecked cleanly. The effect was invisible: /?play=computer&gameSpecId=…
 // silently dropped the visitor on the homepage, so every shared play link for

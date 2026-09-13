@@ -4,7 +4,7 @@ import type { VariantId } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import { currentAccountUser } from './account-session.js';
 import { gateGameSpecRequest } from './game-spec-request-gate.js';
-import { parseHiddenDraft960, parseVariantId } from './http-api.js';
+import { parseVariantId } from './http-api.js';
 import { logger, wsCounters } from './obs.js';
 import { snapshotPayload } from './payloads.js';
 import {
@@ -55,18 +55,12 @@ export type WebSocketConnectionContext = {
   wsMessageWindowMs: number;
   clearPendingVacate: (room: Room, seat: Client['seat']) => void;
   enableRandomEngine: (room: Room) => Promise<void>;
-  getOrCreateRoom: (roomId: string, variant: VariantId, hiddenDraft960?: boolean) => Promise<Room>;
+  getOrCreateRoom: (roomId: string, variant: VariantId) => Promise<Room>;
   handleAbort: (room: Room, client: Client) => Promise<void>;
   handleResign: (room: Room, client: Client) => Promise<void>;
   isAbortedRoom: (roomId: string) => Promise<boolean>;
   resetRoom: (roomId: string, reason?: string) => void;
   scheduleSeatVacate: (room: Room, client: Client) => void;
-  selectStart: (
-    room: Room,
-    client: Client,
-    startId: number | undefined,
-    color: string | undefined,
-  ) => Promise<void>;
   send: (client: Client, payload: unknown) => void;
 };
 
@@ -142,11 +136,7 @@ export async function handleWebSocketConnection(
   }
   const { solo, randomEngine, debugRequested, devViews } = dev;
   const accountUser = await currentAccountUser(request);
-  const room = await ctx.getOrCreateRoom(
-    roomId,
-    parseVariantId(url.searchParams.get('variant')),
-    parseHiddenDraft960(url.searchParams.get('hiddenDraft960') ?? url.searchParams.get('draft960')),
-  );
+  const room = await ctx.getOrCreateRoom(roomId, parseVariantId(url.searchParams.get('variant')));
   if (randomEngine) await ctx.enableRandomEngine(room);
   const clientId = parseClientId(url.searchParams.get('client')) ?? randomUUID();
   // The browser's durable id (same alphabet as the per-room client id); a
@@ -247,7 +237,6 @@ export async function handleWebSocketConnection(
     ...snapshot,
     type: 'hello',
     clientId: client.id,
-    offer: snapshot.offer,
     ...(assignment.seatToken ? { seatToken: assignment.seatToken } : {}),
   });
   broadcastSnapshot(ctx.roomMgrCtx, room);
@@ -333,9 +322,6 @@ async function handleMessage(
       );
       return;
     }
-    if (message.type === 'select-start') {
-      await ctx.selectStart(room, client, message.startId, message.color);
-    }
     if (
       message.type === 'move' &&
       typeof message.from === 'string' &&
@@ -387,7 +373,7 @@ async function handleClose(
     room.projection.state.moveNumber === 1 && room.projection.state.lastMove === undefined;
   const clockStarted = room.projection.state.clock !== undefined;
   if (
-    (room.projection.state.status.type === 'pregame' || beforeFirstMove) &&
+    beforeFirstMove &&
     !clockStarted &&
     client.seat !== 'spectator' &&
     room.projection.seats[client.seat] === client.id
@@ -454,8 +440,8 @@ export type DevSwitches = {
  * caller: outside a production-like runtime everyone is, inside one only the
  * admin debug token is. That is the rule `views=all` always had. `dev=solo`,
  * `dev=engine` and `reset=1` were not behind it, so in production anyone
- * holding a live fog room's id could open it as a solo client, read a
- * dark-draft960 game's picks, move for either side, or evict the room
+ * holding a live fog room's id could open it as a solo client, move for
+ * either side, or evict the room
  * (found 2026-09-11). An unauthorized switch is dropped, not refused: the
  * connection proceeds as an ordinary join, which the seat and private-room
  * checks then judge on their own.

@@ -1,5 +1,4 @@
 import type {
-  Chess960Start,
   Color,
   GameEvent,
   GameSpecId,
@@ -19,7 +18,7 @@ export type PlayableSeat = Color | XiangqiColor;
 export type Seat = PlayableSeat | 'spectator';
 export type RoomMode = 'pvp' | 'pve' | 'eve' | 'imported' | 'manual' | 'correspondence';
 
-// Shared rematch state for chess (white/black) and Dark Mini Xiangqi (red/black).
+// Shared rematch state for chess (white/black), with room for red/black seats.
 // `declined` is a transient, client-only cue (the server doesn't send it); see the
 // rematch:state handling in live-socket.ts.
 export type RematchClientState = {
@@ -56,8 +55,6 @@ export type ConnectionState =
 // Driven by timers in live-socket; reset to 'none' on (re)connect.
 export type ConnectionNoticeTier = 'none' | 'dot' | 'banner';
 export type PlayAgainStatus = 'creating' | 'failed' | 'idle';
-export type DraftOffers = Partial<Record<Color, Chess960Start[]>>;
-export type DraftResolvedStartIds = Partial<Record<Color, number>>;
 export type PromotionRole = Exclude<PieceRole, 'king' | 'pawn'>;
 export type MovePlayedEvent = Extract<GameEvent, { type: 'move-played' }>;
 export type MoveListEntry = {
@@ -84,8 +81,7 @@ export type StoredSeatToken = {
 };
 export type ConnectedSeats = Partial<Record<PlayableSeat, boolean>>;
 
-// Top-level clock for the xiangqi-family runtimes (Dark Mini Xiangqi, Dark
-// Xiangqi). Standard chess carries its clock inside the PlayerView; these
+// Top-level clock for the xiangqi-family runtimes (Dark Xiangqi). Standard chess carries its clock inside the PlayerView; these
 // runtimes deliver it alongside the view in the snapshot, so it lives here.
 export type XiangqiFamilyClock = {
   activeColor: XiangqiColor | null;
@@ -102,7 +98,6 @@ export type LiveRefs = {
   clockBottom: HTMLDivElement;
   clockNote: HTMLParagraphElement;
   clockTop: HTMLDivElement;
-  draftPicker: HTMLDivElement;
   actionStatus: HTMLDivElement;
   actionSection: HTMLElement;
   capturesBottom: HTMLDivElement;
@@ -112,17 +107,13 @@ export type LiveRefs = {
   gameInfo: HTMLDivElement;
   hiddenPool: HTMLDivElement;
   moveList: HTMLOListElement;
-  offerSection: HTMLElement;
   playerBottom: HTMLDivElement;
   playerTop: HTMLDivElement;
   promotion: HTMLDivElement;
   replayControls: NodeListOf<HTMLButtonElement>;
   replayMeta: HTMLParagraphElement;
   roomActions: HTMLDivElement;
-  selectionSection: HTMLElement;
   roomMeta: HTMLParagraphElement;
-  selectionList: HTMLDivElement;
-  starts: HTMLDivElement;
   gameControls: HTMLDivElement;
   gameControlsSection: HTMLElement;
 };
@@ -167,6 +158,9 @@ export const liveState = {
   // Setup fields — set once by live.ts before first socket/render call
   room: '',
   socketUrl: '',
+  // Every socket URL for this room, primary first (resolveWebSocketBaseUrls);
+  // socketUrl mirrors the first one for the older single-URL readers.
+  socketUrls: [] as string[],
   engineRequested: false,
   debugRequested: false,
   variantRequested: null as string | null,
@@ -196,20 +190,15 @@ export const liveState = {
   forfeitDeadline: null as number | null,
   pveEngineId: null as string | null,
   pveEngineName: null as string | null,
-  // Keyed by PlayableSeat (not just chess Color): the mini-xiangqi rooms ride
-  // this same shell and their seats are red/black.
+  // Keyed by PlayableSeat (not just chess Color): red/black tenants rode this
+  // same shell.
   seatDisplayNames: {} as Partial<Record<PlayableSeat, string>>,
   // Where each seat name links, parallel to seatDisplayNames. A seat with no
   // public page (a guest, an engine with no bot fronting it) is simply absent.
   seatProfiles: {} as Partial<Record<PlayableSeat, ProfileIdentity>>,
   seat: 'spectator' as Seat,
   solo: false,
-  offer: [] as Chess960Start[],
-  offers: {} as DraftOffers,
-  selections: {} as Partial<Record<Color, number>>,
   devViews: null as DevViews | null,
-  resolvedStartId: null as number | null,
-  resolvedStartIds: {} as DraftResolvedStartIds,
   state: null as PlayerView | null,
   // Top-level clock + time control for the xiangqi-family runtimes (null for
   // chess, which embeds its clock in the PlayerView, and for untimed games).
@@ -219,8 +208,8 @@ export const liveState = {
   timeControl: null as { initialMs: number; incrementMs: number; daysPerMove?: number } | null,
   events: [] as GameEvent[],
   reconnectAttempt: 0,
-  // Dark Mini Xiangqi reuses this shared rematch state over red/black, so the
-  // offers map carries an optional `red` alongside chess's white/black. `declined`
+  // The offers map carries an optional `red` alongside chess's white/black for
+  // red/black tenants on this shell. `declined`
   // is a transient client-only cue set when the opponent declines our offer.
   rematch: { offers: { white: false, black: false }, finalizedRoomId: null } as RematchClientState,
   connectedSeats: { white: false, black: false } as ConnectedSeats,
@@ -232,20 +221,32 @@ export const liveState = {
 // ── Helpers ────────────────────────────────────────────────────────────────────
 
 export function resolveWebSocketBaseUrl(): string {
-  const configured = import.meta.env.VITE_MISTBOARD_WS_URL;
-  if (configured) return (configured as string).replace(/\?$/, '');
-  if (import.meta.env.DEV) return 'ws://localhost:3001';
-  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
-  return `${protocol}//${window.location.host}`;
+  return resolveWebSocketBaseUrls()[0];
 }
 
-export function normalizedOffers(
-  primaryOffer: Chess960Start[],
-  nextOffers: DraftOffers | undefined,
-): DraftOffers {
-  if (nextOffers?.white || nextOffers?.black) return nextOffers;
-  if (primaryOffer.length === 0) return {};
-  return { white: primaryOffer, black: primaryOffer };
+// Socket hosts in the order a client tries them. The configured host
+// (VITE_MISTBOARD_WS_URL; in prod socket.mistboard.com, a DNS-only Railway
+// hostname kept off the Cloudflare path on purpose so latency can be split
+// between the two) comes first. The page's own origin is the fallback: it is
+// the one host this browser has just proven it can reach. The two paths do
+// not fail together. Measured 2026-09-12 in PostHog: of Chinese visitors who
+// loaded a /room/ page in the prior 30 days, 4 of 11 never got a game state
+// (a signed-in acceptor reloaded a correspondence board twice and left),
+// against 30 of 27 elsewhere. Dev has no fallback: the Vite origin does not
+// proxy the socket. Same-origin is deduped when it is already primary.
+export function resolveWebSocketBaseUrls(): string[] {
+  const configured = import.meta.env.VITE_MISTBOARD_WS_URL;
+  if (import.meta.env.DEV)
+    return [configured ? stripQuery(configured as string) : 'ws://localhost:3001'];
+  const protocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+  const sameOrigin = `${protocol}//${window.location.host}`;
+  if (!configured) return [sameOrigin];
+  const primary = stripQuery(configured as string);
+  return primary === sameOrigin ? [primary] : [primary, sameOrigin];
+}
+
+function stripQuery(url: string): string {
+  return url.replace(/\?$/, '');
 }
 
 // The browser's durable id, one per localStorage, sent on every live connect

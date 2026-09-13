@@ -115,8 +115,7 @@ export function participantForColor(
 // reflect what's actually stored and are immune to legacy variant aliases);
 // otherwise the pair derives from the canonical spec family, so a new variant
 // resolves without editing here: the xiangqi and jungle families play red vs
-// black, the crossroads-chess family (open + dark) plays white vs red, and
-// everything else is orthodox white vs black.
+// black, and everything else is orthodox white vs black.
 export type MatchupSeatPair = readonly [GameParticipant['color'], GameParticipant['color']];
 
 export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
@@ -125,10 +124,8 @@ export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
     if (!colors.has('red')) return ['white', 'black'];
     return colors.has('white') ? ['white', 'red'] : ['red', 'black'];
   }
-  if (isCrossroadsChessVariant(game.variant)) return ['white', 'red'];
   const family = maybeGameSpecForId(game.variant)?.family;
   if (family === 'xiangqi' || family === 'jungle') return ['red', 'black'];
-  if (family === 'crossroads-chess') return ['white', 'red'];
   return ['white', 'black'];
 }
 
@@ -139,12 +136,6 @@ export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
 export function matchupLabel(game: FeaturedGame): string {
   const [first, second] = matchupSeats(game);
   return `${displayParticipantName(game, first)} vs ${displayParticipantName(game, second)}`;
-}
-
-// Crossroads kept its legacy 'dual-chess' id in old rows; the spec registry
-// only knows the canonical id, so alias-aware callers check here.
-export function isCrossroadsChessVariant(variant: string): boolean {
-  return variant === 'crossroads-chess' || variant === 'dual-chess';
 }
 
 function fallbackSeatName(
@@ -178,7 +169,7 @@ function displayParticipant(
 }
 
 // Player-facing brand for a Misty build. Every Misty ships one brand: the
-// variant tag and version ("Misty DXQ 1.1", "Misty 1.5", "Misty DMX 1.0") are
+// variant tag and version ("Misty DXQ 1.1", "Misty 1.5") are
 // engine identity, and asking a player to parse them mid-board buys nothing —
 // they are playing Misty. The exact build still shows wherever it decides
 // something: the admin engine registry, /engines, and the engine detail pages
@@ -219,29 +210,18 @@ export function secondMoverColorName(_gameSpecId: string): string {
 // Catalog name key per spec. Exhaustive over GameSpecId on purpose: a new
 // union member fails the build until it decides, matching the fail-closed
 // registry rule. `null` means "no catalog name yet" (the runtimeStatus
-// 'future' specs and parked luzhanqi), and the caller falls back to the
+// 'future' specs), and the caller falls back to the
 // spec's English publicName rather than inventing a product name.
 export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   banqi: 'variant.banqi.name',
   // runtimeStatus 'future': falls back to the spec's English publicName.
   mahjong: null,
-  'crossroads-chess': 'variant.crossroadsChess.name',
   'dark-chess': 'variant.darkChess.name',
-  'dark-crazyhouse': 'variant.darkCrazyhouse.name',
-  'dark-crossroads-chess': 'variant.darkCrossroadsChess.name',
-  'dark-draft960': 'variant.darkDraft960.name',
-  'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
-  'dark-shogi': 'variant.darkShogi.name',
   'dark-xiangqi': 'variant.darkXiangqi.name',
-  'drop-mini-xiangqi': 'variant.dropMiniXiangqi.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',
   jieqi: 'variant.jieqi.name',
   jungle: 'variant.jungle.name',
   'jungle-flip': 'variant.jungleFlip.name',
-  kriegspiel: 'variant.kriegspiel.name',
-  luzhanqi: null,
-  'mini-xiangqi': 'variant.miniXiangqi.name',
-  'reveal-chess': 'variant.revealChess.name',
   xiangqi: 'variant.xiangqi.name',
   'duck-xiangqi': 'variant.duckXiangqi.name',
 };

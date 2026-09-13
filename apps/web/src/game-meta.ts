@@ -13,7 +13,7 @@ import { webVariantTenantForRoomId, webVariantTenantForSpecId } from './variant-
 
 export function gameMetaForGame(game: FeaturedGame): GameMeta {
   // GameMeta's whiteName/blackName are first/second-seat keys, not literal
-  // colors: xiangqi/jungle games seat red/black, crossroads white/red.
+  // colors: xiangqi/jungle games seat red/black.
   const [firstSeat, secondSeat] = matchupSeats(game);
   return {
     whiteName: withRatingDelta(

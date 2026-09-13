@@ -18,7 +18,7 @@ import { fileURLToPath } from 'node:url';
 import opentype from 'opentype.js';
 
 // Union of the traditional + simplified piece tables in
-// apps/web/src/xiangqi-piece-sets.ts (crossroads-chess uses a subset), plus the
+// apps/web/src/xiangqi-piece-sets.ts, plus the
 // Fortress Xiangqi Treasure (寶 traditional / 宝 simplified).
 const CHARS = [...new Set('帥仕相傌俥炮兵將士象馬車砲卒帅马车将寶宝')];
 

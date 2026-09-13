@@ -1,6 +1,6 @@
 // Constants and helpers shared by every game exporter (the chess builders in
-// game-export.ts, the tenant builders in game-export-tenant.ts, and the parked
-// dark-mini-xiangqi one). Nothing here knows a variant's colors or moves: it is
+// game-export.ts and the tenant builders in game-export-tenant.ts). Nothing here
+// knows a variant's colors or moves: it is
 // the summary-row vocabulary (result, termination, time control, mode) mapped
 // onto the publication schema and the PGN tag set.
 

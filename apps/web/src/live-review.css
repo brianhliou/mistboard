@@ -6,7 +6,7 @@
    files contribute only --uni-board-aspect / --uni-board-chrome-h /
    --uni-board-max on their live-route--<variant> class. */
 
-/* Fog chess / Draft960: square board. Captured material lives in the right
+/* Fog chess: square board. Captured material lives in the right
    rail (lichess round anatomy), so the board column carries no strip chrome. */
 .live-route--chess {
   --uni-board-aspect: 1;
@@ -43,7 +43,7 @@
 
 /* Drop-reserve strips (fortress hands) hold a FIXED band whether or not the
    pocket has pieces, so captures flowing in and out never shift the console
-   under them. The band itself is defined in drop-mini-xiangqi.css; the generic
+   under them. The band itself is defined in drop-reserve.css; the generic
    .rail-material reset above (height:auto / min-height:0) and the :empty
    collapse would otherwise undo it, which is exactly what made the right column
    jump mid-game. Plain captured-material strips still collapse when empty — a

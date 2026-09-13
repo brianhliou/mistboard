@@ -188,7 +188,6 @@ export async function runArbiterGame(cfg: ArbiterConfig): Promise<ArbiterResult>
       at: startedAt,
       roomId: gameId,
       variant,
-      offer: [],
       ...(roomTimeControl ? { timeControl: roomTimeControl } : {}),
     },
     {

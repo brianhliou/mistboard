@@ -5,8 +5,9 @@
  * side effects by variant-tenant/register-tenants.ts.
  */
 
-import type { RoomTimeControl } from '@mistboard/game';
+import { type RoomTimeControl, standardXiangqiFen } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
+import { tenantCardBinding } from './game-card-tenant.js';
 import { tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { isAllowedFullTimeControl } from './routes/lib.js';
@@ -32,6 +33,7 @@ import {
 } from './variant-tenant/registry.js';
 import { createTenantCorrespondenceGameForSeek } from './variant-tenant/room-factory.js';
 import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from './xiangqi-analysis.js';
 import {
   xiangqiExportUci,
   xiangqiPgnStyle,
@@ -180,6 +182,11 @@ registerVariantTenant({
     uci: xiangqiExportUci,
     san: xiangqiWxfLabels,
     writePgn: (moves) => xiangqiPgnWriter(moves, xiangqiPgnStyle(moves)),
+  }),
+  card: tenantCardBinding(xiangqiTenant, {
+    variant: 'xiangqi',
+    analysis: { engineId: XIANGQI_ANALYSIS_ENGINE_ID, depth: XIANGQI_ANALYSIS_REQUEST_DEPTH },
+    fen: standardXiangqiFen,
   }),
   sweepDueDeadline: sweepXiangqiDueDeadline,
   createCorrespondenceGameForSeek: createXiangqiCorrespondenceGameForSeek,

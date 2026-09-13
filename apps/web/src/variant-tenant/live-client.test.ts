@@ -716,13 +716,15 @@ describe('tenant game lifecycle analytics', () => {
       gameSpecId: BANQI_SPEC_ID,
       chrome: { roomMode: () => 'pve' },
     });
+    // Tenant rooms are 'playing' from creation, so the hello itself is the
+    // transition into play; a later snapshot in the same status is not.
     h.feedHello({
-      state: view({ status: { type: 'setup' } }),
+      state: view({ status: { type: 'playing', turn: 'red' } }),
       timeControl: { initialMs: 5 * 60_000, incrementMs: 5_000 },
     });
-    expect(named('game_started')).toHaveLength(0);
+    expect(named('game_started')).toHaveLength(1);
 
-    h.feedSnapshot({ state: view({ status: { type: 'playing', turn: 'red' } }) });
+    h.feedSnapshot({ state: view({ status: { type: 'playing', turn: 'blue' } }) });
     expect(named('game_started')).toHaveLength(1);
     expect(named('game_started')[0][1]).toMatchObject({
       gameId: 'room1',
@@ -759,23 +761,6 @@ describe('tenant game lifecycle analytics', () => {
       reason: 'no-moves',
       moveNumber: 21,
     });
-  });
-
-  it('stays silent for a tenant that emits its own', () => {
-    // Crossroads Chess kept its own tracker through the migration to this
-    // client. Without the opt-out it would report every game twice, and a
-    // doubled variant in a funnel is worse than a missing one: the missing one
-    // is visibly zero.
-    const h = createHarness({
-      gameSpecId: BANQI_SPEC_ID,
-      emitsOwnLifecycleAnalytics: true,
-    });
-    h.feedSnapshot({ state: view({ status: { type: 'playing', turn: 'red' } }) });
-    h.feedSnapshot({
-      state: view({ status: { type: 'finished', winner: 'red', reason: 'no-moves' } }),
-    });
-    expect(named('game_started')).toHaveLength(0);
-    expect(named('game_finished')).toHaveLength(0);
   });
 
   it('survives a gameSpecId the registry does not know', () => {

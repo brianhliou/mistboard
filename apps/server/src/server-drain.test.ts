@@ -74,7 +74,6 @@ function playingRoom(id: string, options: { paused?: boolean; lastEventAt?: numb
         at: options.lastEventAt ?? Date.now(),
         roomId: id,
         variant: 'dark-chess',
-        offer: [],
       },
     ],
     projection: gameProjectionFixture({
@@ -88,17 +87,17 @@ function playingRoom(id: string, options: { paused?: boolean; lastEventAt?: numb
 test('drain controller counts only unpaused playing rooms', () => {
   const playing = playingRoom('playing');
   const paused = playingRoom('paused', { paused: true });
-  const pregame = roomFixture({
-    id: 'pregame',
+  const finished = roomFixture({
+    id: 'finished',
     projection: gameProjectionFixture({
-      roomId: 'pregame',
-      state: { status: { type: 'pregame' } },
+      roomId: 'finished',
+      state: { status: { type: 'finished', winner: 'white', reason: 'checkmate' } },
     }),
   });
   const rooms = new Map([
     [playing.id, playing],
     [paused.id, paused],
-    [pregame.id, pregame],
+    [finished.id, finished],
   ]);
 
   const drain = createDrainController({
@@ -169,7 +168,7 @@ test('drain controller counts live variant-tenant games alongside chess rooms', 
 
   // 1 chess + 2 playing tenant rooms; the finished tenant room is excluded.
   // Without the tenant sum, a deploy gated on activeGames==0 can land over a
-  // live DMX/Crossroads game.
+  // live DMX game.
   assert.equal(drain.activeGameCount(), 3);
   drainTestTenantActiveGames = 0;
 });

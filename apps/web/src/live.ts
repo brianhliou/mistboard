@@ -8,7 +8,6 @@ import './styles.css';
 import './game-shell.css';
 import './site-shell.css';
 import type { GameEvent, PlayerView } from '@mistboard/game';
-import { maybePlayDarkMiniXiangqiSnapshotSound } from './live-mini-xiangqi-sound.js';
 import {
   initRender,
   reconcileInteractionState,
@@ -27,7 +26,7 @@ import {
   type DevViews,
   deviceIdForBrowser,
   liveState,
-  resolveWebSocketBaseUrl,
+  resolveWebSocketBaseUrls,
 } from './live-state.js';
 import { currentView } from './live-view.js';
 import { roomIdFromPath } from './room-url.js';
@@ -98,7 +97,8 @@ export function bootstrapLiveRoom(): void {
   // ── Populate shared state ───────────────────────────────────────────────────
 
   liveState.room = room;
-  liveState.socketUrl = `${resolveWebSocketBaseUrl()}?${socketParams}`;
+  liveState.socketUrls = resolveWebSocketBaseUrls().map((base) => `${base}?${socketParams}`);
+  liveState.socketUrl = liveState.socketUrls[0];
   liveState.engineRequested = engineRequested;
   liveState.debugRequested = debugRequested;
   liveState.variantRequested = variantRequested;
@@ -113,7 +113,6 @@ export function bootstrapLiveRoom(): void {
     render,
     reconcileInteractionState,
     maybePlaySnapshotSound,
-    maybePlayDarkMiniXiangqiSound: maybePlayDarkMiniXiangqiSnapshotSound,
   });
 
   // ── Dev-only: ?conn= override for static visual checks of connection states ──

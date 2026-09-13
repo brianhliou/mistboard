@@ -140,3 +140,23 @@ export function mahjongTileFace(tile: TileIndex | null): MahjongTileFace {
     label: mahjongTileName(tile),
   };
 }
+
+/** 梅蘭菊竹 then 春夏秋冬, in flower-index order (0-7), each numbered 1-4. */
+const FLOWER_GLYPHS = ['梅', '蘭', '菊', '竹', '春', '夏', '秋', '冬'] as const;
+
+/**
+ * The face of one flower or season (0-7).
+ *
+ * Drawn as its glyph over a small numeral, the way a printed set marks them:
+ * the number is what says whose flower it is (1 east, 2 south, 3 west,
+ * 4 north), and the seat match is what scores.
+ */
+export function mahjongFlowerFace(flower: number): MahjongTileFace {
+  const glyph = FLOWER_GLYPHS[flower] ?? '花';
+  const number = (flower % 4) + 1;
+  return {
+    classes: ['mj-tile-flower'],
+    inner: `<span class="mj-tile-glyph mj-tile-flower-glyph">${glyph}</span><span class="mj-tile-flower-number">${number}</span>`,
+    label: `${glyph} ${number}`,
+  };
+}

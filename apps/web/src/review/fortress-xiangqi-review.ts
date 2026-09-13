@@ -24,7 +24,7 @@ import {
 // The reserve rows below reuse the shared drop pocket styling; the review family
 // does not otherwise pull it in, so the study path rendered zero-height rows
 // until this import existed.
-import '../drop-mini-xiangqi.css';
+import '../drop-reserve.css';
 import { createFortressXiangqiInteractiveBoard } from '../fortress-xiangqi-board.js';
 import {
   animateFortressXiangqiBoardMove,

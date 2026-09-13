@@ -3,14 +3,6 @@ import type { GameFamilyId } from '@mistboard/game';
 import type { ConnectionStatus } from './connection-status.js';
 import { readDisplayPreferences, writeDisplayPreference } from './display-preferences.js';
 import type { Locale } from './i18n/locale.js';
-import {
-  readStoredShogiBoardTheme,
-  readStoredShogiPieceSet,
-  type ShogiBoardTheme,
-  writeStoredShogiBoardTheme,
-  writeStoredShogiPieceSet,
-} from './shogi-appearance-storage.js';
-import type { ShogiPieceSet } from './shogi-piece-sets.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { readStoredSoundSet, type SoundSetId, storeSoundSet } from './sound-sets.js';
 import {
@@ -29,7 +21,6 @@ import {
 import { xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
-export { readStoredShogiPieceSet } from './shogi-appearance-storage.js';
 export {
   readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
@@ -72,10 +63,6 @@ export const boardAppearanceChangedEvent = 'mistboard:board-appearance-changed';
 // changes. The xiangqi board renders pieces as inline SVG, so unlike the
 // CSS-driven chess board it must re-render to pick up a new piece set.
 export const xiangqiAppearanceChangedEvent = 'mistboard:xiangqi-appearance-changed';
-// Fired when a shogi appearance setting (board theme or piece set) changes. Like
-// xiangqi, the shogi board renders pieces as inline SVG, so it re-renders to pick
-// up a new set rather than restyling through CSS.
-export const shogiAppearanceChangedEvent = 'mistboard:shogi-appearance-changed';
 const defaultSiteTheme: SiteTheme = 'system';
 const defaultTheme: BoardTheme = 'standard';
 const defaultFogTheme: FogTheme = 'solid';
@@ -120,26 +107,17 @@ export const pieceSets: Array<{ id: PieceSet; label: string }> = [
 ];
 const defaultBoardFamily: BoardFamily = 'xiangqi';
 
-// Xiangqi appearance (board themes + piece sets) is shared by full Dark Xiangqi,
-// Dark Mini Xiangqi, Mini Xiangqi, and Crossroads Chess's xiangqi-side disk
-// pieces. These variants are baseline surfaces, so the family controls are
-// always available.
+// Xiangqi appearance (board themes + piece sets) is shared by every xiangqi
+// surface. These are baseline surfaces, so the family controls are always
+// available.
 export function xiangqiAppearanceEnabled(): boolean {
   return true;
-}
-
-// Shogi is no longer a player-facing game family. Keep its render/storage
-// support available to historical surfaces, but do not advertise controls for
-// a game that cannot be selected from the product.
-export function shogiAppearanceEnabled(): boolean {
-  return false;
 }
 
 export function enabledAppearanceFamilies(): Array<{ id: BoardFamily; label: string }> {
   return [
     ...(xiangqiAppearanceEnabled() ? [{ id: 'xiangqi' as BoardFamily, label: 'Xiangqi' }] : []),
     { id: 'chess', label: 'Chess' },
-    ...(shogiAppearanceEnabled() ? [{ id: 'shogi' as BoardFamily, label: 'Shogi' }] : []),
   ];
 }
 let navObserver: MutationObserver | null = null;
@@ -166,8 +144,6 @@ export function initializeThemeSettings(): void {
   applyBoardCoordinates(readDisplayPreferences().boardCoordinates);
   applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
   applyXiangqiPieceSet(readStoredXiangqiPieceSet());
-  applyShogiBoardTheme(readStoredShogiBoardTheme());
-  applyShogiPieceSet(readStoredShogiPieceSet());
   if (!document.documentElement.dataset.boardFamily) {
     document.documentElement.dataset.boardFamily = defaultBoardFamily;
   }
@@ -246,14 +222,6 @@ function applyXiangqiPieceSet(pieceSet: XiangqiPieceSet): void {
   document.documentElement.dataset.xiangqiPieceSet = pieceSet;
 }
 
-function applyShogiBoardTheme(theme: ShogiBoardTheme): void {
-  document.documentElement.dataset.shogiBoardTheme = theme;
-}
-
-function applyShogiPieceSet(pieceSet: ShogiPieceSet): void {
-  document.documentElement.dataset.shogiPieceSet = pieceSet;
-}
-
 // --- high-level preference setters ---------------------------------------------
 // Called by the lazily loaded settings panel (theme-settings-panel.ts). Each one
 // applies the value, persists it, re-syncs every mounted control, and fires the
@@ -297,20 +265,6 @@ export function setXiangqiPieceSetPreference(pieceSet: XiangqiPieceSet): void {
   writeStoredXiangqiPieceSet(pieceSet);
   syncThemeControls();
   dispatchXiangqiAppearanceChanged();
-}
-
-export function setShogiBoardThemePreference(theme: ShogiBoardTheme): void {
-  applyShogiBoardTheme(theme);
-  writeStoredShogiBoardTheme(theme);
-  syncThemeControls();
-  dispatchShogiAppearanceChanged();
-}
-
-export function setShogiPieceSetPreference(pieceSet: ShogiPieceSet): void {
-  applyShogiPieceSet(pieceSet);
-  writeStoredShogiPieceSet(pieceSet);
-  syncThemeControls();
-  dispatchShogiAppearanceChanged();
 }
 
 export function setXiangqiNotationPreference(value: XiangqiNotationPreference): void {
@@ -523,14 +477,7 @@ export function syncBoardFamilyControls(): void {
   });
 }
 
-export type TileKind =
-  | 'board'
-  | 'fog'
-  | 'piece'
-  | 'xqboard'
-  | 'xqpiece'
-  | 'shogiboard'
-  | 'shogipiece';
+export type TileKind = 'board' | 'fog' | 'piece' | 'xqboard' | 'xqpiece';
 
 function openThemeMenu(control: HTMLElement): void {
   resetAppearanceMenus(control);
@@ -573,11 +520,9 @@ function syncThemeControls(): void {
   syncBoardFamilyControls();
   syncTileRow('board', boardTheme);
   syncTileRow('xqboard', readXiangqiBoardChoice());
-  syncTileRow('shogiboard', readStoredShogiBoardTheme());
   syncTileRow('fog', fogTheme);
   syncTileRow('piece', pieceSet);
   syncTileRow('xqpiece', readStoredXiangqiPieceSet());
-  syncTileRow('shogipiece', readStoredShogiPieceSet());
   document.querySelectorAll<HTMLInputElement>('input[data-sound-volume]').forEach((input) => {
     input.value = String(Math.round(effectiveVolume * 100));
   });
@@ -704,14 +649,6 @@ function writeStoredPieceSet(pieceSet: PieceSet): void {
 function dispatchXiangqiAppearanceChanged(): void {
   window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
   dispatchBoardAppearanceChanged();
-}
-
-function dispatchShogiAppearanceChanged(): void {
-  // Only the shogi-specific event — NOT the chess-wide boardAppearanceChangedEvent
-  // — so a shogi set/theme change re-renders only the shogi surfaces (live board,
-  // postgame, rules diagrams) and never refreshes the chess variant rail (which
-  // would re-floor and visibly shrink its thumbnails).
-  window.dispatchEvent(new Event(shogiAppearanceChangedEvent));
 }
 
 function dispatchBoardAppearanceChanged(): void {

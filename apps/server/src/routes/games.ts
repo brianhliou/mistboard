@@ -127,9 +127,7 @@ const PROMOTION_LETTER: Record<string, string> = {
 // spelling, which is NOT the event log's kernel label ('fog-of-war') — matching
 // on that returns null for every game, so the route 404s everywhere. 'fog' is
 // the legacy value carried by rooms recorded before the rename; both are the
-// same variant and both analyse. draft960 persists as its own variant value and
-// stays excluded: it starts from a shuffled setup the analyzer does not yet
-// thread through (start-FEN support is a follow-up).
+// same variant and both analyse.
 const FOG_CHESS_PERSISTED_VARIANTS = new Set(['dark-chess', 'fog']);
 
 /** Exported for tests: the DB-spelling gate that decides whether a finished game is a

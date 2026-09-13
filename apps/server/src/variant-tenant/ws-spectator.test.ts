@@ -248,13 +248,12 @@ test('spectator is read-only: resign / move append nothing; snapshot:request ans
     socket.receive({ type: 'resign' });
     socket.receive({ type: 'move', from: 'a0', to: 'a1' });
     socket.receive({ type: 'abort' });
-    socket.receive({ type: 'setup:submit', setup: {} });
     await Promise.resolve();
 
     assert.equal(
       room.events.length,
       eventsBefore,
-      'a spectator resign/move/abort/setup must not append to the event log',
+      'a spectator resign/move/abort must not append to the event log',
     );
 
     // snapshot:request is a permitted read-only message and is still answered.

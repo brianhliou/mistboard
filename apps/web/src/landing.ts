@@ -105,8 +105,8 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
   const metadataByRoomId: Record<string, GameMeta> = {};
   const povByRoomId: Record<string, 'white' | 'black'> = {};
   // First/second-mover participant names for the tenant compact seats, resolved
-  // through the shared seat model (red/black for xiangqi and jungle, white/red
-  // for crossroads, white/black otherwise).
+  // through the shared seat model (red/black for xiangqi and jungle,
+  // white/black otherwise).
   const namesByRoomId: Record<string, { first: string; second: string }> = {};
   // When each game finished, for the honest "recent · 2h ago" caption. Undefined
   // for the bundled cold-start demos (no real finish time) -> caption reads "demo".
@@ -133,7 +133,7 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
   };
   const params = new URLSearchParams(window.location.search);
   // Dev aid: ?only=<specId> pins the showcase to a single variant (e.g.
-  // ?only=drop-mini-xiangqi) instead of the normal all-variants cycle. No param =
+  // ?only=fortress-xiangqi) instead of the normal all-variants cycle. No param =
   // normal behavior; handy for eyeballing one variant's board/hand.
   const onlySpec = params.get('only');
   // ?demo=<sampleId> forces a specific bundled game to open first.
@@ -371,7 +371,7 @@ async function transitionToRoom(
   liveModule.bootstrapLiveRoom();
 }
 
-// Tenants with a self-contained live client (Crossroads) transition through
+// Tenants with a self-contained live client transition through
 // their own chunk; everything else boots the shared chess live shell.
 export function landingRoomTenantForUrl(url: string): WebVariantTenant | null {
   const next = new URL(url, window.location.href);
@@ -445,7 +445,7 @@ export async function mountGame(root: HTMLElement, roomId: string): Promise<void
     return;
   }
 
-  const exportLinks = buildGameExportLinks(game.roomId, game.variant);
+  const exportLinks = buildGameExportLinks(game.roomId);
   if (exportLinks) shell.append(exportLinks);
   await mountReplay(replayRoot, game.roomId, {
     autoplay: false,
@@ -811,11 +811,7 @@ function appendLinkedTagline(target: HTMLElement, tagline: string, href: string)
   target.append(link);
 }
 
-function buildGameExportLinks(roomId: string, variant: string | undefined): HTMLElement | null {
-  // Draft960 export is deferred until the schema can encode post-draft starting
-  // positions. Hide the section entirely for now to avoid shipping broken PGN.
-  if (variant === 'draft960') return null;
-
+function buildGameExportLinks(roomId: string): HTMLElement | null {
   const section = document.createElement('section');
   section.className = 'game-export-links';
 

@@ -1,6 +1,5 @@
 import {
   BANQI_SPEC_ID,
-  CROSSROADS_CHESS_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
   XIANGQI_SPEC_ID,
@@ -26,11 +25,6 @@ describe('matchupSeats', () => {
 
   it('resolves the jungle family to red vs black', () => {
     expect(matchupSeats(game(JUNGLE_SPEC_ID))).toEqual(['red', 'black']);
-  });
-
-  it('resolves crossroads (and its legacy dual-chess alias) to white vs red', () => {
-    expect(matchupSeats(game(CROSSROADS_CHESS_SPEC_ID))).toEqual(['white', 'red']);
-    expect(matchupSeats(game('dual-chess'))).toEqual(['white', 'red']);
   });
 
   it('defaults chess-family variants to white vs black', () => {

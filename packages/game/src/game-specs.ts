@@ -1,24 +1,13 @@
 import type { VariantId } from './types.js';
 
-export type GameFamilyId =
-  | 'chess'
-  | 'xiangqi'
-  | 'shogi'
-  | 'crossroads-chess'
-  | 'jungle'
-  | 'military-chess'
-  | 'mahjong';
+export type GameFamilyId = 'chess' | 'xiangqi' | 'jungle' | 'mahjong';
 export type BoardGeometryId =
   | 'chess-8x8'
-  | 'xiangqi-7x7'
   | 'xiangqi-9x10'
-  | 'shogi-9x9'
-  | 'crossroads-6x8'
   | 'banqi-8x4'
   | 'jungle-7x9'
   | 'jungle-flip-4x4'
   | 'xiangqi-7x8'
-  | 'luzhanqi-65-graph'
   // Mahjong has no board. This dimension names the material instead: the 144
   // tiles, being the 136 core plus eight flowers. Forcing a geometry here would
   // be a fiction, and the honest alternative is to say what is actually shared.
@@ -27,23 +16,16 @@ export type MovementRulesId =
   // Draw, discard, and claim out of turn. Nothing moves on a board.
   | 'mahjong-hk'
   | 'orthodox-chess'
-  | 'mini-xiangqi'
   | 'xiangqi'
-  | 'shogi'
-  | 'crossroads-chess'
   | 'banqi'
   | 'jungle'
   | 'jungle-flip'
   | 'fortress-xiangqi'
-  | 'luzhanqi'
   // Duck Xiangqi: standard xiangqi geometry plus a shared, uncapturable duck
   // that moves every turn. Its own movement id because the duck is an ordinary
   // blocking piece for every xiangqi geometry at once - it screens for cannons,
   // blocks the horse's leg and the elephant's eye, and breaks a general file.
   | 'duck-xiangqi';
-// 'royal-capture-or-race': capture/checkmate the royal OR race it to the enemy
-// home rank (the Crossroads Chess "Try"). Open mode keeps checkmate, dark switches to
-// king-capture; the visibility axis + rules module resolve which.
 // 'last-mover': win by leaving the opponent with no legal move (banqi). The
 // general is NOT royal — capturing it does not end the game (the opponent flips
 // or plays on) — so this subsumes "all pieces captured" and stalemate alike.
@@ -51,16 +33,14 @@ export type ObjectiveRulesId =
   | 'king-capture'
   | 'general-capture'
   | 'checkmate'
-  | 'royal-capture-or-race'
   | 'last-mover'
-  | 'flag-capture'
   // 'den-or-race': win by moving a piece into the opponent's den OR capturing all
   // their pieces (Jungle / Dou Shou Qi). No royal piece; perfect information.
   | 'den-or-race'
   // Mahjong: assemble four sets and a pair from a concealed hand. No royal
   // piece, no capture, and no position to win on.
   | 'four-sets-and-a-pair';
-// 'open' = perfect-information (the Crossroads Chess onboarding mode); 'dark' is
+// 'open' = perfect-information; 'dark' is
 // fog of war (positions hidden); 'hidden-identity' is jieqi/banqi (positions
 // public, piece identities hidden until revealed).
 // 'concealed-hands' is mahjong: there are no positions to hide, so the
@@ -70,19 +50,14 @@ export type ObjectiveRulesId =
 export type VisibilityRulesId = 'dark' | 'open' | 'hidden-identity' | 'concealed-hands';
 export type SetupRulesId =
   | 'standard'
-  | 'draft960'
-  | 'mini-standard'
   | 'double-fischer-random'
-  | 'crossroads-standard'
   | 'jieqi-deal'
   | 'banqi-deal'
-  | 'reveal-chess-deal'
   | 'jungle-standard'
   | 'jungle-flip-deal'
   | 'fortress-standard'
-  | 'luzhanqi-formation'
   | 'mahjong-deal';
-export type ReserveRulesId = 'none' | 'crazyhouse' | 'shogi-hands';
+export type ReserveRulesId = 'none' | 'crazyhouse';
 export type DropPolicyId =
   | 'none'
   | 'any-legal-square'
@@ -103,23 +78,12 @@ export type GameSpecRuntimeStatus = 'live' | 'future' | 'retired';
 
 export type RatingPoolBaseId =
   | 'fog'
-  | 'fog_draft960'
-  | 'dark_crazyhouse'
-  | 'kriegspiel'
-  | 'mini_xiangqi'
-  | 'dark_mini_xiangqi'
-  | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
-  | 'dark_shogi'
   | 'jieqi'
   | 'banqi'
-  | 'crossroads_chess'
-  | 'crossroads_chess_open'
-  | 'reveal_chess'
   | 'jungle'
   | 'jungle_flip'
   | 'fortress_xiangqi'
-  | 'luzhanqi'
   | 'mahjong_hk'
   | 'xiangqi'
   // Owes a user_ratings CHECK migration adding 'duck_xiangqi' before it is rated.
@@ -127,23 +91,12 @@ export type RatingPoolBaseId =
 
 export type GameSpecId =
   | 'dark-chess'
-  | 'dark-draft960'
-  | 'dark-crazyhouse'
-  | 'kriegspiel'
-  | 'mini-xiangqi'
-  | 'dark-mini-xiangqi'
-  | 'drop-mini-xiangqi'
   | 'dark-xiangqi'
-  | 'dark-shogi'
   | 'jieqi'
   | 'banqi'
-  | 'crossroads-chess'
-  | 'dark-crossroads-chess'
-  | 'reveal-chess'
   | 'jungle'
   | 'jungle-flip'
   | 'fortress-xiangqi'
-  | 'luzhanqi'
   // Duck Xiangqi: Duck Chess's shared blocker on the xiangqi board. Rules engine:
   // packages/game/src/variants-duck-xiangqi.ts. Design notes and the balance
   // measurement: docs-private/duck-xiangqi/.
@@ -155,8 +108,7 @@ export type GameSpecId =
   // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
   | 'mahjong';
-export type GameSpecAliasId = 'fog-draft960' | 'dual-chess' | 'dark-dual-chess';
-export type GameSpecLookupId = GameSpecId | GameSpecAliasId;
+export type GameSpecLookupId = GameSpecId;
 
 export type GameSpec = {
   id: GameSpecId;
@@ -178,38 +130,19 @@ export type GameSpec = {
   rated?: boolean;
   legacyLiveRoom?: {
     variant: VariantId;
-    hiddenDraft960: boolean;
   };
 };
 
 export const DARK_CHESS_SPEC_ID = 'dark-chess' satisfies GameSpecId;
-export const DARK_DRAFT960_SPEC_ID = 'dark-draft960' satisfies GameSpecId;
-// Compatibility alias for pre-taxonomy code and URLs. New code should use
-// DARK_DRAFT960_SPEC_ID; "fog" remains only in legacy rating/API vocabulary.
-export const FOG_DRAFT960_SPEC_ID = DARK_DRAFT960_SPEC_ID;
-export const MINI_XIANGQI_SPEC_ID = 'mini-xiangqi' satisfies GameSpecId;
-export const DARK_MINI_XIANGQI_SPEC_ID = 'dark-mini-xiangqi' satisfies GameSpecId;
-export const DROP_MINI_XIANGQI_SPEC_ID = 'drop-mini-xiangqi' satisfies GameSpecId;
 export const DARK_XIANGQI_SPEC_ID = 'dark-xiangqi' satisfies GameSpecId;
 export const JIEQI_SPEC_ID = 'jieqi' satisfies GameSpecId;
 export const BANQI_SPEC_ID = 'banqi' satisfies GameSpecId;
 export const MAHJONG_SPEC_ID = 'mahjong' satisfies GameSpecId;
-export const DARK_SHOGI_SPEC_ID = 'dark-shogi' satisfies GameSpecId;
-export const DARK_CRAZYHOUSE_SPEC_ID = 'dark-crazyhouse' satisfies GameSpecId;
-export const KRIEGSPIEL_SPEC_ID = 'kriegspiel' satisfies GameSpecId;
-export const CROSSROADS_CHESS_SPEC_ID = 'crossroads-chess' satisfies GameSpecId;
-export const REVEAL_CHESS_SPEC_ID = 'reveal-chess' satisfies GameSpecId;
-export const DARK_CROSSROADS_CHESS_SPEC_ID = 'dark-crossroads-chess' satisfies GameSpecId;
 export const JUNGLE_SPEC_ID = 'jungle' satisfies GameSpecId;
 export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
-export const LUZHANQI_SPEC_ID = 'luzhanqi' satisfies GameSpecId;
 export const XIANGQI_SPEC_ID = 'xiangqi' satisfies GameSpecId;
 export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
-// Compatibility aliases for records and links created before the Crossroads
-// rename. New code should use CROSSROADS_CHESS_SPEC_ID.
-export const DUAL_CHESS_SPEC_ID = 'dual-chess' satisfies GameSpecAliasId;
-export const DARK_DUAL_CHESS_SPEC_ID = 'dark-dual-chess' satisfies GameSpecAliasId;
 
 // Specs that may be played by correspondence (days-per-move), in display order. The
 // SINGLE source of truth shared by the server's fail-closed allowlist
@@ -297,126 +230,12 @@ export const GAME_SPECS: readonly GameSpec[] = [
     rated: true,
     publicSurface: 'casual',
     runtimeStatus: 'live',
-    legacyLiveRoom: { variant: 'dark-chess', hiddenDraft960: false },
-  },
-  {
-    id: DARK_DRAFT960_SPEC_ID,
-    publicName: 'Dark Draft960',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'draft960',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'fog_draft960',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-    legacyLiveRoom: { variant: 'dark-chess', hiddenDraft960: true },
-  },
-  {
-    id: 'dark-crazyhouse',
-    publicName: 'Dark Crazyhouse',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'crazyhouse',
-    dropPolicy: 'any-legal-square',
-    ratingPoolBase: 'dark_crazyhouse',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    id: 'kriegspiel',
-    publicName: 'Kriegspiel',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'checkmate',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'kriegspiel',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  // ── Mini Xiangqi cluster: PARKED as of 2026-07-24 ──────────────────────────
-  // The mini-xiangqi sub-family was retired from the product shelf in the
-  // 2026-07-03 xiangqi pivot (memory: project_xiangqi_pivot_track) and is
-  // flag-gated OFF in prod: Mini has no launch flag (the request gate answers
-  // `mini_xiangqi_not_integrated`); Dark/Drop Mini gate on
-  // MISTBOARD_{DARK,DROP}_MINI_XIANGQI_ENABLED (off outside the lab). The code,
-  // tenants, and rules stay fully wired for revival, so `runtimeStatus` remains
-  // 'live'; `publicSurface: 'hidden'` keeps them off every discoverability rail
-  // (same shape as luzhanqi above). Their test suites are parked in
-  // *.parkedtest.ts (run: npm run test:parked) rather than the default suite.
-  // To revive: flip the flag, restore publicSurface, and rename the tests back.
-  {
-    // Mini Xiangqi: the open-information 7x7 base game for the mini-xiangqi
-    // cluster. It is the clean rules/puzzle/training substrate for Drop Mini
-    // Xiangqi and Dark Mini Xiangqi.
-    id: MINI_XIANGQI_SPEC_ID,
-    publicName: 'Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'checkmate',
-    visibility: 'open',
-    setup: 'mini-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'mini_xiangqi',
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    id: DARK_MINI_XIANGQI_SPEC_ID,
-    publicName: 'Dark Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'general-capture',
-    visibility: 'dark',
-    setup: 'mini-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'dark_mini_xiangqi',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    // Drop Mini Xiangqi: mini xiangqi plus crazyhouse-style reserves. Perfect
-    // information; red/black seats match the 7x7 Dark Mini Xiangqi board.
-    // Rules engine: packages/game/src/variants-drop-mini-xiangqi.ts.
-    id: DROP_MINI_XIANGQI_SPEC_ID,
-    publicName: 'Drop Mini Xiangqi',
-    family: 'xiangqi',
-    board: 'xiangqi-7x7',
-    movement: 'mini-xiangqi',
-    objective: 'checkmate',
-    visibility: 'open',
-    setup: 'mini-standard',
-    reserves: 'crazyhouse',
-    dropPolicy: 'not-enemy-palace',
-    ratingPoolBase: 'drop_mini_xiangqi',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
+    legacyLiveRoom: { variant: 'dark-chess' },
   },
   {
     // Fortress Xiangqi: "xiangqi with a pocket." 7x8 board, opposite-corner
     // palaces, faithful xiangqi movement plus the one new Treasure piece, and
-    // crazyhouse drops (both-side attacker drops + the chasing rule). Ships
-    // alongside the 7x7 Drop Mini Xiangqi as a distinct variant + rating pool.
+    // crazyhouse drops (both-side attacker drops + the chasing rule).
     // Rules engine: packages/game/src/variants-fortress-xiangqi.ts.
     // Flagship of the 2026-07-03 xiangqi pivot (project_xiangqi_pivot_track):
     // promoted to a live public variant. Runtime kill-switch is the server flag
@@ -542,27 +361,6 @@ export const GAME_SPECS: readonly GameSpec[] = [
     runtimeStatus: 'live',
   },
   {
-    // Luzhanqi / Junqi: computer-refereed two-player dark military chess on the
-    // 65-point road/rail graph. Players submit private formations; the server
-    // adjudicates battles without revealing enemy ranks until the postgame truth
-    // view. Live but hidden/flag-gated until the formation editor and review
-    // surfaces land.
-    // Rules engine: packages/game/src/variants-luzhanqi.ts.
-    id: LUZHANQI_SPEC_ID,
-    publicName: 'Luzhanqi',
-    family: 'military-chess',
-    board: 'luzhanqi-65-graph',
-    movement: 'luzhanqi',
-    objective: 'flag-capture',
-    visibility: 'hidden-identity',
-    setup: 'luzhanqi-formation',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'luzhanqi',
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
     // Duck Xiangqi: W. D. Troyka's... no - Dr Tim Paulden's Duck Chess (2016),
     // applied to the 9x10 xiangqi board. A turn is a legal xiangqi move, then the
     // shared duck moves to any other empty point. The duck can never be captured
@@ -637,87 +435,10 @@ export const GAME_SPECS: readonly GameSpec[] = [
     publicSurface: 'casual',
     runtimeStatus: 'live',
   },
-  {
-    id: DARK_SHOGI_SPEC_ID,
-    publicName: 'Fog Shogi',
-    family: 'shogi',
-    board: 'shogi-9x9',
-    movement: 'shogi',
-    objective: 'king-capture',
-    visibility: 'dark',
-    setup: 'standard',
-    reserves: 'shogi-hands',
-    dropPolicy: 'any-legal-square',
-    ratingPoolBase: 'dark_shogi',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    // Crossroads Chess (中西象棋): a 6x8 chess x xiangqi fusion. Two modes share one
-    // family/board/movement and split on the visibility axis. Perfect-info is the
-    // onboarding ladder (keeps checkmate); dark is the real mode (king-capture).
-    // Rules engine: packages/game/src/variants-crossroads-chess.ts.
-    id: CROSSROADS_CHESS_SPEC_ID,
-    publicName: 'Crossroads Chess',
-    family: 'crossroads-chess',
-    board: 'crossroads-6x8',
-    movement: 'crossroads-chess',
-    objective: 'royal-capture-or-race',
-    visibility: 'open',
-    setup: 'crossroads-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'crossroads_chess_open',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    id: DARK_CROSSROADS_CHESS_SPEC_ID,
-    publicName: 'Dark Crossroads Chess',
-    family: 'crossroads-chess',
-    board: 'crossroads-6x8',
-    movement: 'crossroads-chess',
-    objective: 'royal-capture-or-race',
-    visibility: 'dark',
-    setup: 'crossroads-standard',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'crossroads_chess',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
-  {
-    // Reveal Chess (chess-jieqi): standard chess with hidden piece identities.
-    // Both kings start face-up; each side's other 15 pieces are dealt face-down
-    // and reveal their true identity on first move (origin-role proxy until
-    // then). Real check/checkmate. Rules engine: variants-reveal-chess.ts.
-    id: REVEAL_CHESS_SPEC_ID,
-    publicName: 'Reveal Chess',
-    family: 'chess',
-    board: 'chess-8x8',
-    movement: 'orthodox-chess',
-    objective: 'checkmate',
-    visibility: 'hidden-identity',
-    setup: 'reveal-chess-deal',
-    reserves: 'none',
-    dropPolicy: 'none',
-    ratingPoolBase: 'reveal_chess',
-    rated: true,
-    publicSurface: 'hidden',
-    runtimeStatus: 'retired',
-  },
 ] as const;
 
 const gameSpecsById = new Map<GameSpecId, GameSpec>(GAME_SPECS.map((spec) => [spec.id, spec]));
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
-const gameSpecAliases = new Map<GameSpecAliasId, GameSpecId>([
-  ['fog-draft960', DARK_DRAFT960_SPEC_ID],
-  ['dual-chess', CROSSROADS_CHESS_SPEC_ID],
-  ['dark-dual-chess', DARK_CROSSROADS_CHESS_SPEC_ID],
-]);
 
 /** Specs that were built and are not coming back. Derived from GAME_SPECS so
  *  there is one place that says it: the entry's runtimeStatus. */
@@ -753,34 +474,21 @@ export function maybeGameSpecForId(value: string | null | undefined): GameSpec |
 }
 
 function canonicalGameSpecId(value: string | null | undefined): GameSpecId | null {
-  if (isGameSpecId(value)) return value;
-  if (value === undefined || value === null) return null;
-  return gameSpecAliases.get(value as GameSpecAliasId) ?? null;
+  return isGameSpecId(value) ? value : null;
 }
 
 export type LegacyLiveRoomSpecInput = {
   variant?: VariantId | string | null;
-  hiddenDraft960?: boolean | string | null;
 };
 
-export function gameSpecForLegacyLiveRoom(input: LegacyLiveRoomSpecInput): GameSpec {
-  if (
-    input.variant === 'draft960' ||
-    input.variant === DARK_DRAFT960_SPEC_ID ||
-    input.variant === 'fog-draft960' ||
-    isTruthyLegacyFlag(input.hiddenDraft960)
-  ) {
-    return gameSpecForId(DARK_DRAFT960_SPEC_ID);
-  }
+// Every legacy (chess-shell) live room is Fog Chess: Draft960, the only other
+// resident, was deleted 2026-09-12 (#396) with no prod game to replay.
+export function gameSpecForLegacyLiveRoom(_input: LegacyLiveRoomSpecInput): GameSpec {
   return gameSpecForId(DARK_CHESS_SPEC_ID);
 }
 
 export function legacyLiveRoomForGameSpec(id: GameSpecId): GameSpec['legacyLiveRoom'] | null {
   return gameSpecForId(id).legacyLiveRoom ?? null;
-}
-
-function isTruthyLegacyFlag(value: boolean | string | null | undefined): boolean {
-  return value === true || value === '1' || value === 'true' || value === 'yes';
 }
 
 // --- Rating pools (single source of truth: the `rated` flag on each spec) ---
@@ -791,18 +499,9 @@ function isTruthyLegacyFlag(value: boolean | string | null | undefined): boolean
 export type RatingVariant = Extract<
   RatingPoolBaseId,
   | 'fog'
-  | 'fog_draft960'
-  | 'dark_mini_xiangqi'
-  | 'drop_mini_xiangqi'
   | 'dark_xiangqi'
-  | 'dark_crazyhouse'
-  | 'dark_shogi'
-  | 'crossroads_chess'
-  | 'crossroads_chess_open'
   | 'jieqi'
   | 'banqi'
-  | 'kriegspiel'
-  | 'reveal_chess'
   | 'jungle'
   | 'jungle_flip'
   | 'fortress_xiangqi'

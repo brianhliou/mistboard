@@ -1,6 +1,6 @@
 // Fortress Xiangqi mate-puzzle model + solver.
 //
-// Parallels puzzles-mini-xiangqi.ts, but for the single Fortress Xiangqi
+// Puzzle kernel for the single Fortress Xiangqi
 // variant (7x8, opposite-corner palaces, crazyhouse drops, Treasure). A puzzle
 // is a legal position with the solver to move and a forced-checkmate solution
 // line; solver plies are the even indices (0, 2, 4, ...), defender replies the

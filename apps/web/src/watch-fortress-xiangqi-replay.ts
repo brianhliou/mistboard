@@ -1,5 +1,5 @@
 import type { FortressXiangqiPlayerView } from '@mistboard/game';
-import './drop-mini-xiangqi.css';
+import './drop-reserve.css';
 import {
   type FortressXiangqiPostgameResponse,
   loadFortressXiangqiPostgame,

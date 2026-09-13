@@ -310,7 +310,7 @@ test('an in-progress fog xiangqi game exports nothing: 403 on both formats, no p
 test('an in-progress fog chess log still answers 403 (legacy path unchanged)', () => {
   const roomId = 'chess-room';
   const events: unknown[] = [
-    { type: 'room-created', at: 0, roomId, variant: DARK_CHESS_SPEC_ID, offer: [] },
+    { type: 'room-created', at: 0, roomId, variant: DARK_CHESS_SPEC_ID },
     { type: 'seat-assigned', at: 1, roomId, clientId: 'w', seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId, clientId: 'b', seat: 'black' },
     { type: 'move-played', at: 2, roomId, color: 'white', move: { from: 'e2', to: 'e4' } },
@@ -449,21 +449,21 @@ test('unknown variants and spec mismatches are 501, never another builder', () =
     [
       'no registration',
       resolveGameExport({
-        roomId: 'lz_export',
+        roomId: 'zz_export',
         format: 'json',
-        summary: gameRecord({ roomId: 'lz_export', variant: 'luzhanqi' }),
-        events: preamble('lz_export', 'luzhanqi'),
+        summary: gameRecord({ roomId: 'zz_export', variant: 'no-such-variant' }),
+        events: preamble('zz_export', 'no-such-variant'),
         tenantForRoomId: () => null,
       }),
     ],
     [
       'registration without export',
       resolveGameExport({
-        roomId: 'lz_export',
+        roomId: 'zz_export',
         format: 'json',
-        summary: gameRecord({ roomId: 'lz_export', variant: 'luzhanqi' }),
-        events: preamble('lz_export', 'luzhanqi'),
-        tenantForRoomId: () => registration('luzhanqi', null),
+        summary: gameRecord({ roomId: 'zz_export', variant: 'no-such-variant' }),
+        events: preamble('zz_export', 'no-such-variant'),
+        tenantForRoomId: () => registration('no-such-variant', null),
       }),
     ],
     [

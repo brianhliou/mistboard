@@ -15,3 +15,67 @@
   height: 100%;
   object-fit: contain;
 }
+
+/* A derived board or variant tile fills the frame the same way a cover does;
+   the SVG carries its own aspect and letterboxes inside the panel colour. */
+.study-thumbnail svg {
+  display: block;
+  width: 100%;
+  height: 100%;
+}
+
+/* Derived board: near-square, so it keeps the consumer's width and takes its
+   height from the board's aspect instead of the cover's portrait box (the
+   compound selector outranks the consumer's single size class). The frame's
+   border and panel fill come off so the SVG, whose viewBox has this exact
+   aspect, fills edge to edge instead of letterboxing inside a bordered box;
+   the SVG draws its own edge. The aspect ratio itself is set inline by the
+   builder from the viewBox constants. */
+.study-thumbnail.study-thumbnail--board {
+  display: block;
+  height: auto;
+  align-self: flex-start;
+  border: 0;
+  background: none;
+}
+
+/* Board ink follows the site's xiangqi diagram palette (articles.css
+   --xq-diagram-*), with the disc colours from the live piece set. */
+.study-thumbnail__wood {
+  fill: var(--xq-diagram-bg, #d9bd82);
+  stroke: var(--site-border-soft, rgb(0 0 0 / 15%));
+  stroke-width: 1;
+}
+
+.study-thumbnail__grid {
+  stroke: var(--xq-diagram-line, #4b3c2a);
+  opacity: 0.55;
+}
+
+.study-thumbnail__red {
+  fill: #b91c1c;
+}
+
+.study-thumbnail__black {
+  fill: #1f2937;
+}
+
+/* Variant marker: the one-colour silhouette centred in a panel of the board's
+   shape, so a study with no derivable board still gets a tile of the same
+   weight. */
+.study-thumbnail.study-thumbnail--variant {
+  display: grid;
+  place-items: center;
+  height: auto;
+  aspect-ratio: 92 / 102;
+  align-self: flex-start;
+}
+
+/* The marker scales with its frame rather than the fixed pixel size the
+   renderer writes: on the homepage rail the frame is 28 px wide, and a 40 px
+   marker overflowed it and clipped off-centre. */
+.study-thumbnail--variant .variant-marker {
+  width: 72%;
+  height: auto;
+  aspect-ratio: 1;
+}

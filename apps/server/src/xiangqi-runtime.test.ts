@@ -295,7 +295,7 @@ test('Xiangqi runtime hydrates from canonical events', () => {
 test('Xiangqi event logs reject wrong room families and mixed room ids', () => {
   assert.equal(
     isXiangqiEventLog([
-      { type: 'room-created', at: 1, roomId: 'chess-room', variant: 'dark-chess', offer: [] },
+      { type: 'room-created', at: 1, roomId: 'chess-room', variant: 'dark-chess' },
     ]),
     false,
   );

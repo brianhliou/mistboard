@@ -205,7 +205,11 @@ test('crosstable pair: a private (redacted) account seat is reason private', () 
 
 test('crosstable pair: a variant with no review route is unsupported, before any seat check', () => {
   const resolution = resolveCrosstablePair(
-    { roomId: 'kg_1', variant: 'kriegspiel', participants: [guest('white'), user('black', 'bob')] },
+    {
+      roomId: 'zz_1',
+      variant: 'no-such-variant',
+      participants: [guest('white'), user('black', 'bob')],
+    },
     LOOKUP,
   );
   assert.deepEqual(resolution, { ok: false, reason: 'unsupported' });
@@ -223,16 +227,13 @@ test('crosstable pair: the same subject on both seats is unsupported', () => {
   assert.deepEqual(resolution, { ok: false, reason: 'unsupported' });
 });
 
-test('crosstable seats: red is the first seat except for the Crossroads pair', () => {
+test('crosstable seats: red is the first seat everywhere', () => {
   assert.equal(crosstableSeatForColor('xiangqi', 'red'), 'white');
   assert.equal(crosstableSeatForColor('xiangqi', 'black'), 'black');
   assert.equal(crosstableSeatForColor('banqi', 'red'), 'white');
   assert.equal(crosstableSeatForColor('jungle', 'red'), 'white');
   assert.equal(crosstableSeatForColor('dark-chess', 'white'), 'white');
   assert.equal(crosstableSeatForColor('dark-chess', 'black'), 'black');
-  assert.equal(crosstableSeatForColor('crossroads-chess', 'white'), 'white');
-  assert.equal(crosstableSeatForColor('crossroads-chess', 'red'), 'black');
-  assert.equal(crosstableSeatForColor('dark-crossroads-chess', 'red'), 'black');
 });
 
 test('crosstable outcome: a xiangqi red-wins with a on black is a loss for a', () => {
@@ -241,13 +242,6 @@ test('crosstable outcome: a xiangqi red-wins with a on black is a loss for a', (
   assert.equal(crosstableOutcome('black-wins', 'xiangqi', 'black'), 'a');
   assert.equal(crosstableOutcome('black-wins', 'xiangqi', 'white'), 'b');
   assert.equal(crosstableOutcome('draw', 'xiangqi', 'white'), 'draw');
-});
-
-test('crosstable outcome: Crossroads red-wins is the second seat winning', () => {
-  assert.equal(crosstableOutcome('red-wins', 'crossroads-chess', 'white'), 'b');
-  assert.equal(crosstableOutcome('red-wins', 'crossroads-chess', 'black'), 'a');
-  assert.equal(crosstableOutcome('white-wins', 'crossroads-chess', 'white'), 'a');
-  assert.equal(crosstableOutcome('red-wins', 'dark-crossroads-chess', 'white'), 'b');
 });
 
 test('crosstable outcome: chess results map on the seat directly', () => {
@@ -259,7 +253,6 @@ test('crosstable outcome: chess results map on the seat directly', () => {
 
 test('crosstable review url: chess stack, tenant room, legacy room id, unknown variant', () => {
   assert.equal(crosstableReviewUrl('room-1', 'dark-chess', LOOKUP), '/game/room-1');
-  assert.equal(crosstableReviewUrl('room-2', 'dark-draft960', LOOKUP), '/game/room-2');
   assert.equal(crosstableReviewUrl('room-3', 'fog', LOOKUP), '/game/room-3');
   // Dark-chess correspondence: a registered prefix with no route base still
   // reviews at the chess stack's /game/:id.
@@ -269,7 +262,6 @@ test('crosstable review url: chess stack, tenant room, legacy room id, unknown v
   // A legacy room id with no tenant prefix resolves through the spec.
   assert.equal(crosstableReviewUrl('legacy-1', 'xiangqi', LOOKUP), '/xiangqi/game/legacy-1');
   // Unknown variants and un-registered tenants get no URL, never a guess.
-  assert.equal(crosstableReviewUrl('kg_1', 'kriegspiel', LOOKUP), null);
   assert.equal(crosstableReviewUrl('room-9', 'no-such-variant', LOOKUP), null);
   assert.equal(crosstableReviewUrl('a b', 'dark-chess', LOOKUP), '/game/a%20b');
 });

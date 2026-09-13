@@ -124,92 +124,6 @@ definePersistenceTests('ratings', () => {
     assert.ok((wp?.ratingAfter ?? 0) > 1500, 'summary exposes ratingAfter');
   });
 
-  test('rated Dark Mini Xiangqi PvP game rates red and black users in the DMX bucket', async () => {
-    const now = new Date();
-    await createUser({
-      id: 'user_dmx_red',
-      email: 'dmx-red@example.com',
-      emailVerifiedAt: now,
-      handle: 'dmxred',
-      displayName: 'DMX Red',
-      now,
-    });
-    await createUser({
-      id: 'user_dmx_black',
-      email: 'dmx-black@example.com',
-      emailVerifiedAt: now,
-      handle: 'dmxblack',
-      displayName: 'DMX Black',
-      now,
-    });
-
-    await recordGameEnd('rated-dmx-1', {
-      variant: 'dark-mini-xiangqi',
-      mode: 'pvp',
-      rated: true,
-      result: 'red-wins',
-      termination: 'general-captured',
-      plyCount: 17,
-      startedAt: now,
-      endedAt: now,
-      initialMs: 180000,
-      incrementMs: 2000,
-      whiteClient: null,
-      blackClient: null,
-      whiteName: null,
-      blackName: null,
-      corpusId: null,
-      participants: [
-        {
-          color: 'red',
-          displayName: 'DMX Red',
-          subjectType: 'user',
-          subjectId: 'user_dmx_red',
-          visibility: 'public',
-        },
-        {
-          color: 'black',
-          displayName: 'DMX Black',
-          subjectType: 'user',
-          subjectId: 'user_dmx_black',
-          visibility: 'public',
-        },
-      ],
-      visibility: 'public',
-    });
-
-    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
-    await client.connect();
-    try {
-      const { rows } = await client.query<{
-        user_id: string;
-        elo_rating: number;
-        games_played: number;
-      }>(
-        `SELECT user_id, elo_rating, games_played
-         FROM user_ratings WHERE variant = 'dark_mini_xiangqi' AND time_class = 'blitz'`,
-      );
-      assert.equal(rows.length, 2, 'both DMX players got a rating row');
-      const red = rows.find((r) => r.user_id === 'user_dmx_red')!;
-      const black = rows.find((r) => r.user_id === 'user_dmx_black')!;
-      assert.ok(red.elo_rating > 1500, `red rating ${red.elo_rating}`);
-      assert.ok(black.elo_rating < 1500, `black rating ${black.elo_rating}`);
-      assert.equal(red.games_played, 1);
-
-      const { rows: parts } = await client.query<{
-        elo_before: number;
-        elo_after: number;
-      }>(
-        `SELECT elo_before, elo_after FROM game_participants
-         WHERE game_id = 'rated-dmx-1' AND color = 'red'`,
-      );
-      assert.equal(parts[0]!.elo_before, 1500);
-      assert.ok(parts[0]!.elo_after > 1500);
-    } finally {
-      await client.end();
-    }
-  });
-
   test('rated standard Xiangqi PvP game rates red and black users in the xiangqi bucket', async () => {
     // Regression for the #151 flip: xiangqi seats are red/black, and until the
     // ratedParticipantColorsForVariant entry existed the rating block searched
@@ -285,92 +199,6 @@ definePersistenceTests('ratings', () => {
       assert.ok(black.elo_rating > 1500, `black rating ${black.elo_rating}`);
       assert.ok(red.elo_rating < 1500, `red rating ${red.elo_rating}`);
       assert.equal(black.games_played, 1);
-    } finally {
-      await client.end();
-    }
-  });
-
-  test('rated Crossroads Chess PvP game rates white and red users in the Crossroads bucket', async () => {
-    const now = new Date();
-    await createUser({
-      id: 'user_crossroads_white',
-      email: 'crossroads-white@example.com',
-      emailVerifiedAt: now,
-      handle: 'crossroads-white',
-      displayName: 'Crossroads White',
-      now,
-    });
-    await createUser({
-      id: 'user_crossroads_red',
-      email: 'crossroads-red@example.com',
-      emailVerifiedAt: now,
-      handle: 'crossroads-red',
-      displayName: 'Crossroads Red',
-      now,
-    });
-
-    await recordGameEnd('rated-crossroads-1', {
-      variant: 'crossroads-chess',
-      mode: 'pvp',
-      rated: true,
-      result: 'red-wins',
-      termination: 'king-captured',
-      plyCount: 17,
-      startedAt: now,
-      endedAt: now,
-      initialMs: 180_000,
-      incrementMs: 2_000,
-      whiteClient: null,
-      blackClient: null,
-      whiteName: null,
-      blackName: null,
-      corpusId: null,
-      participants: [
-        {
-          color: 'white',
-          displayName: 'Crossroads White',
-          subjectType: 'user',
-          subjectId: 'user_crossroads_white',
-          visibility: 'public',
-        },
-        {
-          color: 'red',
-          displayName: 'Crossroads Red',
-          subjectType: 'user',
-          subjectId: 'user_crossroads_red',
-          visibility: 'public',
-        },
-      ],
-      visibility: 'public',
-    });
-
-    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
-    await client.connect();
-    try {
-      const { rows } = await client.query<{
-        user_id: string;
-        elo_rating: number;
-        games_played: number;
-      }>(
-        `SELECT user_id, elo_rating, games_played
-         FROM user_ratings WHERE variant = 'crossroads_chess_open' AND time_class = 'blitz'`,
-      );
-      assert.equal(rows.length, 2, 'both Crossroads players got a rating row');
-      const white = rows.find((r) => r.user_id === 'user_crossroads_white')!;
-      const red = rows.find((r) => r.user_id === 'user_crossroads_red')!;
-      assert.ok(red.elo_rating > 1500, `red rating ${red.elo_rating}`);
-      assert.ok(white.elo_rating < 1500, `white rating ${white.elo_rating}`);
-      assert.equal(red.games_played, 1);
-
-      const { rows: parts } = await client.query<{
-        elo_before: number;
-        elo_after: number;
-      }>(
-        `SELECT elo_before, elo_after FROM game_participants
-         WHERE game_id = 'rated-crossroads-1' AND color = 'red'`,
-      );
-      assert.equal(parts[0]!.elo_before, 1500);
-      assert.ok(parts[0]!.elo_after > 1500);
     } finally {
       await client.end();
     }
@@ -763,8 +591,8 @@ definePersistenceTests('ratings', () => {
         },
       ],
     });
-    await recordGameEnd('profile-dmx-game', {
-      variant: 'dark-mini-xiangqi',
+    await recordGameEnd('profile-dxq-game', {
+      variant: 'dark-xiangqi',
       mode: 'pve',
       result: 'red-wins',
       termination: 'resignation',
@@ -790,9 +618,9 @@ definePersistenceTests('ratings', () => {
         },
         {
           color: 'black',
-          displayName: 'Misty DMX 1.0',
+          displayName: 'Misty DXQ 1.2',
           subjectType: 'engine-version',
-          subjectId: 'python-dmx-v1.0',
+          subjectId: 'python-fdx-v1.2',
           visibility: 'public',
         },
       ],
@@ -802,14 +630,14 @@ definePersistenceTests('ratings', () => {
     assert.equal(profile?.user.handle, 'profile-player');
     assert.equal(profile?.games.length, 2);
     assert.equal(profile?.gamesTotal, 2);
-    assert.equal(profile?.games[0]?.roomId, 'profile-dmx-game');
+    assert.equal(profile?.games[0]?.roomId, 'profile-dxq-game');
     assert.equal(profile?.games[0]?.playerColor, 'red');
     assert.equal(profile?.games[0]?.participants[0]?.subjectType, 'user');
-    const dmxRating = profile?.ratings.find((rating) => rating.variant === 'dark_mini_xiangqi');
-    assert.equal(dmxRating?.timeClass, 'blitz');
-    assert.equal(dmxRating?.eloRating, null);
-    assert.equal(dmxRating?.ratedGamesPlayed, 0);
-    assert.equal(dmxRating?.totalGamesPlayed, 1);
+    const dxqRating = profile?.ratings.find((rating) => rating.variant === 'dark_xiangqi');
+    assert.equal(dxqRating?.timeClass, 'blitz');
+    assert.equal(dxqRating?.eloRating, null);
+    assert.equal(dxqRating?.ratedGamesPlayed, 0);
+    assert.equal(dxqRating?.totalGamesPlayed, 1);
     const fogRating = profile?.ratings.find((rating) => rating.variant === 'fog');
     assert.equal(fogRating?.timeClass, 'blitz');
     assert.equal(fogRating?.eloRating, null);
@@ -927,73 +755,9 @@ definePersistenceTests('ratings', () => {
       'owner sees private history points, but bullet stays outside the public bucket',
     );
 
-    const emptyBucket = await getUserRatingHistory('history-player', null, 'dark_mini_xiangqi');
+    const emptyBucket = await getUserRatingHistory('history-player', null, 'dark_xiangqi');
     assert.deepEqual(emptyBucket?.points, []);
     assert.equal(await getUserRatingHistory('missing-history-player', null, 'fog'), null);
-  });
-
-  test('getUserProfileByHandle shows viewer-owned private Crossroads Chess activity bucket', async () => {
-    const now = new Date('2026-05-08T11:00:00.000Z');
-    await createUser({
-      id: 'user_crossroads_profile',
-      email: 'crossroads-profile@example.com',
-      emailVerifiedAt: now,
-      handle: 'crossroads-profile',
-      displayName: 'Crossroads Profile',
-      profileVisibility: 'public',
-      now,
-    });
-    await recordGameEnd('profile-crossroads-game', {
-      variant: 'crossroads-chess',
-      mode: 'pvp',
-      result: 'white-wins',
-      termination: 'king-captured',
-      plyCount: 12,
-      startedAt: now,
-      endedAt: new Date(now.getTime() + 60_000),
-      whiteClient: null,
-      blackClient: null,
-      whiteName: null,
-      blackName: null,
-      corpusId: null,
-      rated: false,
-      visibility: 'private',
-      initialMs: 300_000,
-      incrementMs: 5_000,
-      participants: [
-        {
-          color: 'white',
-          displayName: 'Crossroads Profile',
-          subjectType: 'user',
-          subjectId: 'user_crossroads_profile',
-          visibility: 'private',
-        },
-        {
-          color: 'red',
-          displayName: 'Guest',
-          subjectType: 'guest',
-          subjectId: null,
-          visibility: 'private',
-        },
-      ],
-    });
-
-    const publicProfile = await getUserProfileByHandle('crossroads-profile', null);
-    assert.equal(publicProfile?.gamesTotal, 0, 'private Crossroads game is hidden publicly');
-
-    const viewerProfile = await getUserProfileByHandle(
-      'crossroads-profile',
-      'user_crossroads_profile',
-    );
-    assert.equal(viewerProfile?.gamesTotal, 1);
-    assert.equal(viewerProfile?.games[0]?.roomId, 'profile-crossroads-game');
-    const crossroadsRating = viewerProfile?.ratings.find(
-      (rating) => rating.variant === 'crossroads_chess_open',
-    );
-    assert.equal(crossroadsRating?.timeClass, 'blitz');
-    assert.equal(crossroadsRating?.eloRating, null);
-    assert.equal(crossroadsRating?.ratedGamesPlayed, 0);
-    assert.equal(crossroadsRating?.totalGamesPlayed, 1);
   });
 
   test('getUserProfileByHandle counts launched variant activity buckets', async () => {
@@ -1039,46 +803,6 @@ definePersistenceTests('ratings', () => {
         firstColor: 'red',
         secondColor: 'black',
         result: 'red-wins',
-      },
-      {
-        roomId: 'profile-reveal',
-        variant: 'reveal-chess',
-        bucket: 'reveal_chess',
-        firstColor: 'white',
-        secondColor: 'black',
-        result: 'white-wins',
-      },
-      {
-        roomId: 'profile-dark-crossroads',
-        variant: 'dark-crossroads-chess',
-        bucket: 'crossroads_chess',
-        firstColor: 'white',
-        secondColor: 'red',
-        result: 'red-wins',
-      },
-      {
-        roomId: 'profile-dark-shogi',
-        variant: 'dark-shogi',
-        bucket: 'dark_shogi',
-        firstColor: 'black',
-        secondColor: 'white',
-        result: 'black-wins',
-      },
-      {
-        roomId: 'profile-dark-crazyhouse',
-        variant: 'dark-crazyhouse',
-        bucket: 'dark_crazyhouse',
-        firstColor: 'white',
-        secondColor: 'black',
-        result: 'black-wins',
-      },
-      {
-        roomId: 'profile-kriegspiel',
-        variant: 'kriegspiel',
-        bucket: 'kriegspiel',
-        firstColor: 'white',
-        secondColor: 'black',
-        result: 'white-wins',
       },
     ];
 
@@ -1179,9 +903,9 @@ definePersistenceTests('ratings', () => {
     await play('pool-xq-1', 'xiangqi', 1);
     await play('pool-jq-1', 'jieqi', 2);
     await play('pool-xq-2', 'xiangqi', 3);
-    // Pre-rename string for the crossroads pool. A filter built from the spec
-    // id alone would drop this row while the rating rail still counted it.
-    await play('pool-legacy-1', 'dual-chess', 4);
+    // Pre-rename string for the fog pool. A filter built from the spec id
+    // alone would drop this row while the rating rail still counted it.
+    await play('pool-legacy-1', 'fog', 4);
 
     const all = await getUserGamesPage('pool-player', null, 0, 20);
     assert.equal(all?.total, 4);
@@ -1198,9 +922,9 @@ definePersistenceTests('ratings', () => {
     assert.equal(jieqi?.games[0]?.roomId, 'pool-jq-1');
 
     // The legacy row answers to its pool, not to its literal variant string.
-    const crossroads = await getUserGamesPage('pool-player', null, 0, 20, 'crossroads_chess_open');
-    assert.equal(crossroads?.total, 1);
-    assert.equal(crossroads?.games[0]?.roomId, 'pool-legacy-1');
+    const fog = await getUserGamesPage('pool-player', null, 0, 20, 'fog');
+    assert.equal(fog?.total, 1);
+    assert.equal(fog?.games[0]?.roomId, 'pool-legacy-1');
 
     // total is the FILTERED total, so "Load more" stops at the right place.
     const firstPage = await getUserGamesPage('pool-player', null, 0, 1, 'xiangqi');

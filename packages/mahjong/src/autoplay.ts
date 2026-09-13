@@ -20,7 +20,7 @@ import {
   isFinished,
   type MahjongGame,
 } from './game.js';
-import type { HkHandContext } from './hk-detect.js';
+import { handContextFor } from './hand-context.js';
 import { scoreHand } from './hk-detect.js';
 
 export interface PlayOptions extends ClaimOptions {
@@ -28,11 +28,7 @@ export interface PlayOptions extends ClaimOptions {
   readonly maxSteps?: number;
 }
 
-const handContext = (game: MahjongGame, seat: Seat): HkHandContext => ({
-  seatWind: (27 + ((seat - game.dealer + 4) % 4)) as number,
-  roundWind: game.roundWind,
-  seatFlowers: Math.min(2, (game.flowers[seat] as readonly number[]).length),
-});
+const handContext = handContextFor;
 
 /** Would this seat's current tiles be a legal, declarable win? */
 function canDeclareSelfDraw(game: MahjongGame, seat: Seat, options: PlayOptions): boolean {

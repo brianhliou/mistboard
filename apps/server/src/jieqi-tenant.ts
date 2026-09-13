@@ -204,7 +204,7 @@ export const jieqiTenant: JieqiTenant = {
   },
   // Emit the room mode + engine id so the client knows a finished PvE game was
   // PvE and "Play again" re-creates a PvE game vs the same engine (not a PvP
-  // invite). Mirrors crossroads/DMX; Jieqi's core snapshot carries no extras.
+  // invite). Mirrors DMX; Jieqi's core snapshot carries no extras.
   wire: {
     snapshotExtras: (room) => {
       const pveEngineId = tenantPveEngineId(jieqiTenant, room);

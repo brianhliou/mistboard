@@ -1,8 +1,7 @@
 // Selectable piece sets for the xiangqi family.
 //
 // Covers all seven xiangqi roles (general/advisor/elephant/horse/chariot/cannon/
-// soldier) so the same sets serve both Dark Mini Xiangqi (which uses five of them)
-// and full Dark Xiangqi. Image sets are the international default and the
+// soldier) so the same sets serve every xiangqi-family surface. Image sets are the international default and the
 // Dobutsu animal set. The Chess-style prototype reuses the international art
 // without its surrounding disc; glyph sets cover traditional/simplified Hanzi,
 // Western Latin initials, and stroked line-art symbols.

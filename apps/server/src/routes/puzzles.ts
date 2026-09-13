@@ -2,9 +2,7 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
   attemptFortressXiangqiPuzzleLine,
   attemptJunglePuzzleLine,
-  attemptMiniXiangqiPuzzleLine,
   attemptStandardXiangqiPuzzleLine,
-  DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiMove,
   type FortressXiangqiPuzzle,
@@ -15,12 +13,6 @@ import {
   type JunglePuzzle,
   junglePuzzleNextMove,
   junglePuzzleSideToMove,
-  MINI_XIANGQI_SPEC_ID,
-  type MiniXiangqiPuzzle,
-  type MiniXiangqiPuzzleMove,
-  type MiniXiangqiPuzzleVariant,
-  miniXiangqiPuzzleNextMove,
-  miniXiangqiPuzzleSideToMove,
   resolvePuzzleShortCode,
   standardXiangqiPuzzleNextMove,
   standardXiangqiPuzzleSideToMove,
@@ -59,33 +51,28 @@ import { type HttpApiContext, readJsonBody, requireMethod, writeJson } from './l
 // insertion. The IP key stays only in process memory and is never persisted.
 const puzzleQualityRateLimiter = createAuthRateLimiter(300, 60_000);
 
-// The public puzzle surface spans the Mini/Drop-Mini registry, the Fortress
-// Xiangqi registry, the Jungle registry, and the standard-xiangqi registry.
+// The public puzzle surface spans the Fortress Xiangqi registry, the Jungle
+// registry, and the standard-xiangqi registry.
 // Content comes from the puzzle store (#183: the `puzzles` table, backed by
 // the committed seed; the seed alone when persistence is off). Ids are
 // prefix-disjoint across registries, so resolution scans one map, but every
 // behavioural branch dispatches on `variant` (fail-closed: a new registry
 // needs an explicit branch, not a fallthrough — the store already withholds
 // unknown variants from serving).
-export type PublicPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
+export type PublicPuzzle = FortressXiangqiPuzzle | JunglePuzzle | XiangqiPuzzle;
 type PublicPuzzleVariant =
-  | MiniXiangqiPuzzleVariant
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof JUNGLE_SPEC_ID
   | typeof XIANGQI_SPEC_ID;
-type PublicPuzzleMove = MiniXiangqiPuzzleMove | FortressXiangqiMove | JungleMove | XiangqiMove;
+type PublicPuzzleMove = FortressXiangqiMove | JungleMove | XiangqiMove;
 
 // Fortress and Jungle are omitted from the discoverable pool (list + random)
 // while those puzzle surfaces are parked. Their puzzles stay resolvable by
 // id/short-code below (puzzleById scans the whole store), so existing links do
 // not hard-404. Remove a variant from this filter to surface it again.
-// Mini and Drop Mini are retired: their rows are withheld at the store
-// (migration 143) and excluded here too, so the filter says what it serves.
 const UNDISCOVERABLE_PUZZLE_VARIANTS: ReadonlySet<string> = new Set([
   FORTRESS_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
 ]);
 
 function discoverablePuzzles(store: PuzzleStoreSnapshot): PublicPuzzle[] {
@@ -96,7 +83,7 @@ type PuzzleSummary = {
   id: string;
   variant: PublicPuzzleVariant;
   title: string;
-  sideToMove: ReturnType<typeof miniXiangqiPuzzleSideToMove>;
+  sideToMove: ReturnType<typeof standardXiangqiPuzzleSideToMove>;
   goal: PublicPuzzle['goal'];
   themes: readonly string[];
   /** Named kill patterns (杀法) by id; empty outside standard-xiangqi mates. */
@@ -365,11 +352,12 @@ export async function puzzleById(id: string): Promise<PublicPuzzle | null> {
   return fullId ? (store.byId.get(fullId) ?? null) : null;
 }
 
-function puzzleSideToMove(puzzle: PublicPuzzle): ReturnType<typeof miniXiangqiPuzzleSideToMove> {
+function puzzleSideToMove(
+  puzzle: PublicPuzzle,
+): ReturnType<typeof standardXiangqiPuzzleSideToMove> {
   if (puzzle.variant === FORTRESS_XIANGQI_SPEC_ID) return fortressXiangqiPuzzleSideToMove(puzzle);
   if (puzzle.variant === JUNGLE_SPEC_ID) return junglePuzzleSideToMove(puzzle);
-  if (puzzle.variant === XIANGQI_SPEC_ID) return standardXiangqiPuzzleSideToMove(puzzle);
-  return miniXiangqiPuzzleSideToMove(puzzle);
+  return standardXiangqiPuzzleSideToMove(puzzle);
 }
 
 function attemptPuzzle(puzzle: PublicPuzzle, moves: PublicPuzzleMove[]) {
@@ -379,10 +367,7 @@ function attemptPuzzle(puzzle: PublicPuzzle, moves: PublicPuzzleMove[]) {
   if (puzzle.variant === JUNGLE_SPEC_ID) {
     return attemptJunglePuzzleLine(puzzle, moves as JungleMove[]);
   }
-  if (puzzle.variant === XIANGQI_SPEC_ID) {
-    return attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]);
-  }
-  return attemptMiniXiangqiPuzzleLine(puzzle, moves as MiniXiangqiPuzzleMove[]);
+  return attemptStandardXiangqiPuzzleLine(puzzle, moves as XiangqiMove[]);
 }
 
 // The next scripted move for a played-ply count (solver move on even plies,
@@ -395,10 +380,7 @@ function puzzleNextMove(puzzle: PublicPuzzle, playedPlyCount: number): PublicPuz
   if (puzzle.variant === JUNGLE_SPEC_ID) {
     return junglePuzzleNextMove(puzzle, playedPlyCount);
   }
-  if (puzzle.variant === XIANGQI_SPEC_ID) {
-    return standardXiangqiPuzzleNextMove(puzzle, playedPlyCount);
-  }
-  return miniXiangqiPuzzleNextMove(puzzle, playedPlyCount);
+  return standardXiangqiPuzzleNextMove(puzzle, playedPlyCount);
 }
 
 // Non-negative ply count the client has already played (used to pick the hint's
@@ -494,13 +476,7 @@ async function recordOutcomeRating(
 
 function parsePuzzleVariant(value: string | null): PublicPuzzleVariant | null | 'invalid' {
   if (value === null || value === '') return null;
-  if (
-    value === MINI_XIANGQI_SPEC_ID ||
-    value === DROP_MINI_XIANGQI_SPEC_ID ||
-    value === FORTRESS_XIANGQI_SPEC_ID ||
-    value === JUNGLE_SPEC_ID ||
-    value === XIANGQI_SPEC_ID
-  ) {
+  if (value === FORTRESS_XIANGQI_SPEC_ID || value === JUNGLE_SPEC_ID || value === XIANGQI_SPEC_ID) {
     return value;
   }
   return 'invalid';

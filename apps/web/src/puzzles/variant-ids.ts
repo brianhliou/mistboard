@@ -9,17 +9,9 @@
  * compile until the matching adapter entry exists.
  */
 
-import {
-  DROP_MINI_XIANGQI_SPEC_ID,
-  FORTRESS_XIANGQI_SPEC_ID,
-  JUNGLE_SPEC_ID,
-  MINI_XIANGQI_SPEC_ID,
-  XIANGQI_SPEC_ID,
-} from '@mistboard/game';
+import { FORTRESS_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, XIANGQI_SPEC_ID } from '@mistboard/game';
 
 export const PUZZLE_VARIANT_IDS = [
-  MINI_XIANGQI_SPEC_ID,
-  DROP_MINI_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   JUNGLE_SPEC_ID,
   XIANGQI_SPEC_ID,

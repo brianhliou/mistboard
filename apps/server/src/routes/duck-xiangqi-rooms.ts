@@ -48,7 +48,7 @@ const duckXiangqiRoute = createTenantRoomsRoute<
   // PvE stays UNRATED here, and the policy is unchanged by the bot shipping:
   // the `duck_xiangqi` pool does not exist in the user_ratings CHECK and the
   // ladder has no EvE calibration behind it. `reject-as-surface` is what the
-  // other unrated tenants use (banqi, jungle, dark-shogi): a rated request is
+  // other unrated tenants use (banqi, jungle): a rated request is
   // turned away as unsupported by the surface rather than as a
   // rating-eligibility failure, which is the honest reason here.
   rated: { kind: 'reject-as-surface' },

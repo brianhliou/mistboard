@@ -10,7 +10,7 @@
  * Wire-parity contract: for a migrated tenant the snapshot payload and
  * per-seat client events must be deep-equal to its pre-migration stack —
  * pinned by that tenant's golden wire fixture (e.g.
- * dark-mini-xiangqi-golden-wire.parkedtest.ts).
+ * dark-xiangqi-golden-wire.test.ts).
  */
 
 import type { ClockPolicyKind, RoomTimeControl } from '@mistboard/game';
@@ -85,8 +85,23 @@ export function nextTenantClockForMove<C extends string>(
   prevMoveNumber: number,
   nextStatus: TenantGameStatus<C>,
   policy: ClockPolicyKind = 'live',
+  // The tenant's clockOwner answer for the state after the move; undefined
+  // for a tenant without the hook, which keeps the turn-driven path below.
+  nextOwner?: C | null,
 ): TenantClockState<C> | undefined {
   if (!clock) return clock;
+  if (nextOwner !== undefined) {
+    return nextOwnerDrivenClock(
+      tenant,
+      clock,
+      at,
+      movedColor,
+      prevMoveNumber,
+      nextStatus,
+      policy,
+      nextOwner,
+    );
+  }
   if (clock.activeColor === null && clock.runningSince === null) {
     const remainingMs = {
       ...clock.remainingMs,
@@ -128,6 +143,61 @@ export function nextTenantClockForMove<C extends string>(
       [movedColor]: moverNextMs,
     },
     runningSince: nextActiveColor ? at : null,
+  };
+}
+
+/**
+ * Owner-driven clock: the seat on the clock is whoever the tenant says, and any
+ * move settles the running seat's time.
+ *
+ * Paused is `activeColor: null` with `runningSince` set: nobody is charged
+ * (remaining-time reads key on activeColor) and the clock still reads as
+ * armed, so the chrome does not fall back to its pre-game shape mid-hand. The
+ * increment lands when the running seat's own move hands the clock on, so a
+ * turn made of several actions (draw, then discard) earns it once.
+ */
+function nextOwnerDrivenClock<C extends string>(
+  tenant: { colors: readonly C[]; armsClockOnFirstMove?: boolean },
+  clock: TenantClockState<C>,
+  at: number,
+  movedColor: C,
+  prevMoveNumber: number,
+  nextStatus: TenantGameStatus<C>,
+  policy: ClockPolicyKind,
+  nextOwner: C | null,
+): TenantClockState<C> {
+  const playing = nextStatus.type === 'playing';
+  const owner = playing ? nextOwner : null;
+  if (clock.activeColor === null && clock.runningSince === null) {
+    const remainingMs = {
+      ...clock.remainingMs,
+      [movedColor]: clock.remainingMs[movedColor] + clock.incrementMs,
+    };
+    const armsNow = tenant.armsClockOnFirstMove
+      ? prevMoveNumber === 0
+      : movedColor === lastSeat(tenant) && prevMoveNumber === 1;
+    if (armsNow && playing) {
+      return { ...clock, activeColor: owner, remainingMs, runningSince: at };
+    }
+    return { ...clock, remainingMs };
+  }
+  const remainingMs = { ...clock.remainingMs };
+  const running = clock.activeColor;
+  if (running !== null && clock.runningSince !== null) {
+    const spent = Math.max(0, tenantClockRemainingMs(clock, running, at));
+    const handsOn = running === movedColor && owner !== running;
+    remainingMs[running] =
+      handsOn && playing
+        ? policy === 'days-per-move'
+          ? clock.initialMs
+          : spent + clock.incrementMs
+        : spent;
+  }
+  return {
+    ...clock,
+    activeColor: owner,
+    remainingMs,
+    runningSince: playing ? at : null,
   };
 }
 
@@ -285,7 +355,6 @@ export function createTenantRuntimeRoomFromEvents<
 // be silently dropped by an identity check it was never designed for.
 const REJECTABLE_EVENT_TYPES = new Set([
   'move-played',
-  'setup-submitted',
   'clock-started',
   'clock-expired',
   'seat-resigned',
@@ -441,14 +510,6 @@ export function applyTenantEvent<
     delete seats[event.seat];
     return { ...projection, seats };
   }
-  if (event.type === 'setup-submitted') {
-    if (status.type !== 'setup' || !tenant.setupSubmission) return projection;
-    if (!tenant.setupSubmission.isSetup(event.setup)) return projection;
-    return {
-      ...projection,
-      state: tenant.setupSubmission.applySetup(projection.state, event.color, event.setup),
-    };
-  }
   if (event.type === 'clock-started') {
     if (status.type === 'finished' || status.type === 'aborted' || projection.clock)
       return projection;
@@ -473,6 +534,7 @@ export function applyTenantEvent<
           prevMoveNumber,
           nextState.status,
           clockPolicyKindFor(projection.timeControl),
+          tenant.clockOwner ? tenant.clockOwner(nextState) : undefined,
         ),
       state: nextState,
     };
@@ -852,13 +914,6 @@ export function isTenantEvent<
       tenant.wire?.acceptsSeatVacated === true &&
       typeof event.clientId === 'string' &&
       tenant.rules.isColor(event.seat)
-    );
-  }
-  if (event.type === 'setup-submitted') {
-    return (
-      tenant.setupSubmission !== undefined &&
-      tenant.rules.isColor(event.color) &&
-      tenant.setupSubmission.isSetup(event.setup)
     );
   }
   if (event.type === 'clock-started') {

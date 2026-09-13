@@ -31,6 +31,13 @@ export const STACK_BELOW_PX = 480;
 // same column (articles.css): a move pair at 15px, number included, fits on one
 // line. At 168px the shared list truncated every coordinate move to "g3-…".
 const RAIL_WIDTH_PX = 226;
+// Duck Xiangqi writes a whole turn in one cell (`h10-f10@e10`), which is three
+// characters and a separator wider than the coordinate move this floor was cut
+// for, so at 226 the sheet ellipsised most of a duck game. Measured against the
+// longest turn the board can produce: two 2-digit ranks in the move and a third
+// in the duck half, 94px of text plus the cell's 12px of padding, twice, plus
+// the 34px number column and the list's own 26px of padding and border.
+const DUCK_RAIL_WIDTH_PX = 276;
 // The card's own border, left and right (or top and bottom when stacked).
 const CARD_BORDER_PX = 2;
 // Two seat rows (39px each) frame the board, and the step-control row sits
@@ -46,6 +53,13 @@ const STACKED_MOVES_MIN_PX = 112;
 const RAIL_MAX_WIDTH_PX = 380;
 // Gap between the card and the credit line (.embed-frame in embed.css).
 const FRAME_GAP_PX = 6;
+
+/** The sheet's floor for a variant, by the width of the notation it writes.
+ *  Same shape as boardAspectForSpec: cosmetic sizing, so an unknown id takes
+ *  the default rather than throwing. */
+export function embedRailWidthPx(specId: string | null | undefined): number {
+  return specId === 'duck-xiangqi' ? DUCK_RAIL_WIDTH_PX : RAIL_WIDTH_PX;
+}
 
 export type EmbedSeat = {
   name: string;
@@ -70,6 +84,8 @@ export type EmbedCardOptions = {
   credit: { href: string; text: string };
   /** Board width over height, for fitting the board to the frame. */
   aspect: number;
+  /** The move sheet's floor beside the board; embedRailWidthPx of the spec. */
+  railWidthPx?: number;
   /** Open on this ply; null means the final position. */
   startPly: number | null;
   /** Stamped on the card so seat-disc-ink.css can colour the family's discs. */
@@ -92,8 +108,9 @@ export function fitBoardWidth(
   frame: { width: number; height: number },
   aspect: number,
   stacked: boolean,
+  railWidthPx: number = RAIL_WIDTH_PX,
 ): number {
-  const availableWidth = frame.width - CARD_BORDER_PX - (stacked ? 0 : RAIL_WIDTH_PX);
+  const availableWidth = frame.width - CARD_BORDER_PX - (stacked ? 0 : railWidthPx);
   const reservedHeight =
     SEAT_ROWS_PX + CONTROLS_PX + CARD_BORDER_PX + (stacked ? STACKED_MOVES_MIN_PX : 0);
   const availableHeight = frame.height - reservedHeight;
@@ -236,7 +253,7 @@ export async function mountEmbedCard(
     };
     if (box.width <= 0 || box.height <= 0) return;
     const stacked = box.width < STACK_BELOW_PX;
-    const boardWidth = fitBoardWidth(box, options.aspect, stacked);
+    const boardWidth = fitBoardWidth(box, options.aspect, stacked, options.railWidthPx);
     boardCol.style.width = `${boardWidth}px`;
     // Beside the board the card asks for the board plus the capped sheet and
     // the stylesheet's max-width: 100% clamps it to the frame (the sheet then

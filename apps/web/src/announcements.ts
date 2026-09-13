@@ -228,7 +228,7 @@ const baseAnnouncements: Announcement[] = [
     date: '2026-08-27',
     kind: 'update',
     headline: 'Board coordinates, on every board that has them.',
-    body: 'One switch in Display settings reaches the xiangqi family, the chess boards, jungle, and shogi. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.',
+    body: 'One switch in Display settings reaches the xiangqi family, the chess boards, and jungle. Xiangqi counts its files from each player’s own right, so the labels follow your move-notation setting and change sides when you flip the board.',
     href: '/account/settings/display',
     cta: 'Open settings',
   },

@@ -17,14 +17,14 @@ import {
   type JieqiMove,
   STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
-import { darkMiniXiangqiTenant } from './dark-mini-xiangqi-tenant.js';
+import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { JIEQI_DEFAULT_ENGINE_ID } from './jieqi-engine.js';
 import { getJieqiClientView, jieqiClientEventFor, jieqiTenant } from './jieqi-tenant.js';
 import { createTenantRuntimeRoom, replayTenantEvents } from './variant-tenant/runtime.js';
 import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
 process.env.MISTBOARD_JIEQI_ENABLED = 'true';
-process.env.MISTBOARD_DARK_MINI_XIANGQI_ENABLED = 'true';
+process.env.MISTBOARD_DARK_XIANGQI_ENABLED = 'true';
 
 test('jieqi room creation mints and persists a server-secret deal', () => {
   const created = createTenantRuntimeRoom(jieqiTenant, 'jq_deal', { now: 1 });
@@ -109,7 +109,7 @@ test('a full jieqi game replays through the runtime identically to the kernel', 
 });
 
 test('tenants without createSetup still emit a setup-free room-created', () => {
-  const created = createTenantRuntimeRoom(darkMiniXiangqiTenant, 'dmxq_x', { now: 1 });
+  const created = createTenantRuntimeRoom(darkXiangqiTenant, 'dxq_x', { now: 1 });
   if (!created.ok) throw new Error(created.error);
   const event = created.room.events[0];
   if (event.type !== 'room-created') throw new Error('expected room-created first');

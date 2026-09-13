@@ -63,12 +63,7 @@ describe('puzzle board adapter registry', () => {
     // this list on 2026-09-03 when Fortress stopped shipping puzzles; the scan
     // skips empty arrays, so an empty registry is invisible to it by design.
     expect(names).toEqual(
-      expect.arrayContaining([
-        'MINI_XIANGQI_PUZZLES',
-        'JUNGLE_PUZZLES',
-        'XIANGQI_PUZZLES',
-        'SEED_PUZZLES',
-      ]),
+      expect.arrayContaining(['JUNGLE_PUZZLES', 'XIANGQI_PUZZLES', 'SEED_PUZZLES']),
     );
   });
 

@@ -94,13 +94,6 @@ for (const viewport of viewports) {
     );
   }
   if (
-    metrics.roomLinks.some(
-      (link) => link.label === 'Draft960' || link.href.includes('variant=draft960'),
-    )
-  ) {
-    failures.push(`${viewport.name}: Draft960 should be hidden from primary create-room links`);
-  }
-  if (
     !metrics.roomLinks.some(
       (link) =>
         (link.label === 'Back home' || link.label.startsWith('Back to ')) &&

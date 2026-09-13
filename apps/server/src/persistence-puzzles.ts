@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 import {
   FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiPuzzle,
-  type MiniXiangqiPuzzle,
   XIANGQI_SPEC_ID,
   type XiangqiPuzzle,
 } from '@mistboard/game';
@@ -17,7 +16,7 @@ export const DAILY_PUZZLE_HOMEPAGE_SLOT = 'homepage';
 // committed seed, or the seed alone when persistence is off). Ids are
 // prefix-disjoint across the registries, so resolution dispatches on the
 // stored variant.
-type DailyPuzzle = MiniXiangqiPuzzle | FortressXiangqiPuzzle | XiangqiPuzzle;
+type DailyPuzzle = FortressXiangqiPuzzle | XiangqiPuzzle;
 
 export type DailyPuzzleSlot = typeof DAILY_PUZZLE_HOMEPAGE_SLOT;
 

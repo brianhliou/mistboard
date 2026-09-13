@@ -12,9 +12,9 @@ describe('live room bootstrap', () => {
   it('routes chess-shell tenant prefixes and leaves self-contained clients alone', () => {
     // Retired tenants (Mini Xiangqi, DMX) are no longer registered, so their
     // old room-id prefixes resolve to nothing rather than to a spec.
-    expect(gameSpecIdForRoomBootstrap('mxq_abc', null)).toBeNull();
+    expect(gameSpecIdForRoomBootstrap('unknown_abc', null)).toBeNull();
     // With no tenant claiming the prefix, the legacy variant string decides.
-    expect(gameSpecIdForRoomBootstrap('dmxq_abc', 'dark-chess')).toBe('dark-chess');
+    expect(gameSpecIdForRoomBootstrap('unknown_abc', 'dark-chess')).toBe('dark-chess');
     // Dark-chess correspondence rooms ride the chess shell too.
     expect(gameSpecIdForRoomBootstrap('dchx_abc', null)).toBe('dark-chess');
     // Dark Xiangqi has its own client (routed before the shell boots), so

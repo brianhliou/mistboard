@@ -58,7 +58,6 @@ export interface HttpApiContext {
     mode: 'pvp' | 'pve',
     variant: VariantId,
     engineId: string,
-    hiddenDraft960?: boolean,
     timeControl?: RoomTimeControl,
     rated?: boolean,
     options?: {
@@ -265,14 +264,10 @@ export async function readJsonBody(
 }
 
 // ── Parse helpers (also used by WebSocket handler in index.ts) ─────────────
-export function parseVariantId(value: string | null): VariantId {
-  if (value === 'draft960' || value === 'dark-draft960' || value === 'fog-draft960')
-    return 'draft960';
+// Every chess-stack room is Fog Chess; the gate has already refused the
+// deleted Draft960 spellings, so the collapse here is total.
+export function parseVariantId(_value: string | null): VariantId {
   return 'dark-chess';
-}
-
-export function parseHiddenDraft960(value: unknown): boolean {
-  return value === true || value === '1' || value === 'true' || value === 'yes';
 }
 
 export function isAllowedTimeControl(tc: RoomTimeControl): boolean {

@@ -28,7 +28,7 @@ export function drawsCrossedSoldier(
 /**
  * The same question for variants whose soldiers get the sideways step
  * unconditionally, so every soldier is a veteran and there is no rank to test:
- * the Mini Xiangqi family (7x7, no river at all) and Fortress Xiangqi (which
+ * Fortress Xiangqi (which
  * has a river but grants the step from move one anyway, see the 2026-07-03
  * VETERAN SOLDIERS note in variants-fortress-xiangqi.ts).
  *

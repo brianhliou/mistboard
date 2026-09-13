@@ -16,7 +16,6 @@ describe('game sheet', () => {
         (variant) => variant.label === 'Jungle Chess' && variant.routeBase === '/jungle/game',
       ),
     ).toBe(true);
-    expect(variants.some((variant) => variant.label === 'Fog Shogi')).toBe(false);
     expect(variants.every((variant) => variant.channel.length > 0)).toBe(true);
   });
 });

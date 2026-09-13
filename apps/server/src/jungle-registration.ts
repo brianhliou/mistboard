@@ -5,8 +5,10 @@
  * effects by variant-tenant/register-tenants.ts.
  */
 
-import type { RoomTimeControl } from '@mistboard/game';
+import { jungleStateToEngineFen, type RoomTimeControl } from '@mistboard/game';
+import { tenantCardBinding } from './game-card-tenant.js';
 import { boardMoveUci, tenantExportBinding } from './game-export-tenant.js';
+import { JUNGLE_ANALYSIS_DEPTH, JUNGLE_ANALYSIS_ENGINE_ID } from './jungle-analysis.js';
 import type { JungleCreatorPreference, JungleRuntimeRoom } from './jungle-runtime.js';
 import { jungleTenant } from './jungle-tenant.js';
 import * as persistence from './persistence.js';
@@ -111,6 +113,11 @@ registerVariantTenant({
   export: tenantExportBinding(jungleTenant, {
     gameRouteBase: '/jungle/game',
     uci: boardMoveUci,
+  }),
+  card: tenantCardBinding(jungleTenant, {
+    variant: 'jungle',
+    analysis: { engineId: JUNGLE_ANALYSIS_ENGINE_ID, depth: JUNGLE_ANALYSIS_DEPTH },
+    fen: jungleStateToEngineFen,
   }),
   sweepDueDeadline: null,
   createCorrespondenceGameForSeek: null,

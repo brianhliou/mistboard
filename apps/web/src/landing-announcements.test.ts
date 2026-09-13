@@ -19,10 +19,6 @@ describe('landing announcements', () => {
 
   it('shows current launch announcements without old variant env flags', () => {
     vi.stubEnv('DEV', false);
-    vi.stubEnv('VITE_DARK_SHOGI_ENABLED', 'false');
-    vi.stubEnv('VITE_DARK_CROSSROADS_CHESS_ENABLED', 'false');
-    vi.stubEnv('VITE_DARK_CRAZYHOUSE_ENABLED', 'false');
-    vi.stubEnv('VITE_KRIEGSPIEL_ENABLED', 'false');
 
     const panel = buildLandingAnnouncements();
     const hrefs = [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')].map((row) =>
@@ -30,8 +26,7 @@ describe('landing announcements', () => {
     );
 
     // Xiangqi pivot: the News rail is gated by variantPublicSurfaceEnabled. The
-    // mini xiangqi trio (incl. drop-mini) and dark-crazyhouse are retired from
-    // public surfaces; the elevated Chinese-chess-family launches (dark-xiangqi,
+    // retired variants are gone from public surfaces; the elevated Chinese-chess-family launches (dark-xiangqi,
     // banqi) now surface. The rail shows the newest MAX_FEED_ROWS entries.
     // Derived from the announcement data rather than pinned to specific posts:
     // this asserts the gating and ordering behaviour, and does not need editing
@@ -46,41 +41,15 @@ describe('landing announcements', () => {
     expect(hrefs).toEqual(expected);
   });
 
-  it('keeps parked and gated variant launches out of the homepage News rail', () => {
-    vi.stubEnv('DEV', false);
-
-    const panel = buildLandingAnnouncements();
-    const hrefs = new Set(
-      [...panel.querySelectorAll<HTMLAnchorElement>('a.landing-news-link')].map((row) =>
-        row.getAttribute('href'),
-      ),
-    );
-
-    expect(hrefs).not.toContain('/rules/reveal-chess');
-    expect(hrefs).not.toContain('/rules/crossroads-chess');
-    expect(hrefs).not.toContain('/rules/dark-crossroads-chess');
-    expect(hrefs).not.toContain('/rules/kriegspiel');
-  });
-
   it('uses the same variant flag for the homepage News rail and /feed archive', () => {
     vi.stubEnv('DEV', false);
 
-    expect(variantPublicSurfaceEnabled('reveal-chess')).toBe(false);
-    expect(variantPublicSurfaceEnabled('crossroads-chess')).toBe(false);
-    expect(variantPublicSurfaceEnabled('dark-crossroads-chess')).toBe(false);
-    expect(variantPublicSurfaceEnabled('dark-shogi')).toBe(false);
-    expect(variantPublicSurfaceEnabled('kriegspiel')).toBe(false);
+    expect(variantPublicSurfaceEnabled('mahjong')).toBe(false);
 
     const landing = buildLandingAnnouncements();
     const news = buildNewsPage();
 
-    for (const hidden of [
-      'Reveal Chess',
-      'Crossroads Chess',
-      'Dark Crossroads Chess',
-      'Fog Shogi',
-      'Kriegspiel',
-    ]) {
+    for (const hidden of ['Reveal Chess', 'Kriegspiel', 'Luzhanqi', 'Draft960']) {
       expect(landing.textContent).not.toContain(hidden);
       expect(news.textContent).not.toContain(hidden);
     }

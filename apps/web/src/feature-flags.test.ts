@@ -1,50 +1,9 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import {
-  crossroadsChessEnabled,
-  darkCrazyhouseEnabled,
-  darkCrossroadsChessEnabled,
-  darkMiniXiangqiEnabled,
-  darkShogiEnabled,
-  darkXiangqiEnabled,
-  dropMiniXiangqiEnabled,
-  kriegspielEnabled,
-  luzhanqiEnabled,
-  revealChessEnabled,
-} from './feature-flags.js';
+import { darkXiangqiEnabled } from './feature-flags.js';
 
 describe('client feature flags', () => {
   afterEach(() => {
     vi.unstubAllEnvs();
-  });
-
-  it.each([
-    ['Crossroads Chess', 'VITE_CROSSROADS_CHESS_ENABLED', crossroadsChessEnabled],
-    ['Dark Crossroads Chess', 'VITE_DARK_CROSSROADS_CHESS_ENABLED', darkCrossroadsChessEnabled],
-    ['Reveal Chess', 'VITE_REVEAL_CHESS_ENABLED', revealChessEnabled],
-    ['Kriegspiel', 'VITE_KRIEGSPIEL_ENABLED', kriegspielEnabled],
-    ['Dark Mini Xiangqi', 'VITE_DARK_MINI_XIANGQI_ENABLED', darkMiniXiangqiEnabled],
-    ['Drop Mini Xiangqi', 'VITE_DROP_MINI_XIANGQI_ENABLED', dropMiniXiangqiEnabled],
-    ['Dark Shogi', 'VITE_DARK_SHOGI_ENABLED', darkShogiEnabled],
-    ['Dark Crazyhouse', 'VITE_DARK_CRAZYHOUSE_ENABLED', darkCrazyhouseEnabled],
-    ['Luzhanqi', 'VITE_LUZHANQI_ENABLED', luzhanqiEnabled],
-  ])('keeps %s disabled in dev unless explicitly opted in', (_name, envName, enabled) => {
-    expect(enabled()).toBe(false);
-
-    vi.stubEnv(envName, 'true');
-    expect(enabled()).toBe(true);
-  });
-
-  it('enables parked surfaces together in the lab profile', () => {
-    vi.stubEnv('VITE_MISTBOARD_LAB_ENABLED', 'true');
-    expect(darkMiniXiangqiEnabled()).toBe(true);
-    expect(dropMiniXiangqiEnabled()).toBe(true);
-    expect(darkShogiEnabled()).toBe(true);
-    expect(darkCrazyhouseEnabled()).toBe(true);
-    expect(luzhanqiEnabled()).toBe(true);
-    expect(crossroadsChessEnabled()).toBe(true);
-    expect(darkCrossroadsChessEnabled()).toBe(true);
-    expect(revealChessEnabled()).toBe(true);
-    expect(kriegspielEnabled()).toBe(true);
   });
 
   it.each([['Dark Xiangqi', 'VITE_DARK_XIANGQI_ENABLED', darkXiangqiEnabled]])(

@@ -3,8 +3,8 @@
  * two-seat clocks (pregame + armed + turn flash + 100ms tick), abort/forfeit
  * countdowns, the action-status notice, game controls (abort/resign with
  * confirm), and the room-action row (review / rematch / play-again / invite /
- * home). Extracted from the Dark Mini Xiangqi room (the web reference tenant);
- * strings and DOM structure are behavior the DMX vitest suite pins.
+ * home). Extracted from the first web tenant room; strings and DOM structure
+ * are behavior the room-chrome vitest suite pins.
  *
  * A chrome instance is created once per tenant module
  * (createTenantRoomChrome) and reads live values lazily through the
@@ -28,7 +28,6 @@ import { capitalize, noticeBody, noticeTitle, presenceDot, roomLink } from './ch
 // Structural slice of a variant PlayerView the chrome reads (same status shape
 // as the server-side TenantGameStatus).
 export type TenantWebStatus<C extends string> =
-  | { type: 'setup' }
   | { type: 'playing'; turn: C }
   | { type: 'finished'; winner: C | null; reason: string }
   | { type: 'aborted'; reason: string };
@@ -51,7 +50,7 @@ export type WebVariantTenant<C extends string> = {
   // matters most, and a family glyph reads as "some xiangqi" where the marker
   // reads as the exact variant.
   metaMarkerId?: VariantMiniId;
-  // Fallback icon glyph, family-canonical (象 xiangqi, 虎 jungle, ☗ shogi,
+  // Fallback icon glyph, family-canonical (象 xiangqi, 虎 jungle,
   // ♔ chess), for tenants with no marker. Omitting both renders no icon box.
   metaGlyph?: string;
   // Move order: [first mover, second mover]; also the board's default
@@ -79,14 +78,14 @@ export type WebVariantTenant<C extends string> = {
   rejectedBody: string;
   spectatorBody: string;
   selectInstruction: string;
-  // Optional: how to label a seat's player. Default (chess/xiangqi/jieqi/crossroads):
+  // Optional: how to label a seat's player. Default (chess/xiangqi/jieqi):
   // capitalize(seat), because the seat name IS the color. Banqi overrides — its seats are
   // first/second mover and the ink is bound by the opening flip, so the label is the bound
   // ink ("Red"/"Black") once flipped, else the move order ("First"/"Second"). The tenant
   // reads its own live view for this; the chrome passes only the seat.
   seatLabel?(seat: C): string;
   // Optional companion to seatLabel: the INK a seat renders as, for the meta card's
-  // player disc. Omit when the seat name IS the color (chess/xiangqi/jieqi/crossroads)
+  // player disc. Omit when the seat name IS the color (chess/xiangqi/jieqi)
   // and the chrome passes the seat straight through. Flip variants MUST implement it:
   // their seats are move-order slots and the ink binds on the opening flip, so a raw
   // seat paints the wrong disc for every game whose first flip turns up the opposite
@@ -129,7 +128,7 @@ export type TenantChromeContext<C extends string> = {
   // play-again. Tenant-owned because the shared control reads liveState.
   rematchControls(sendSocket: (payload: unknown) => boolean): HTMLElement | null;
   // Optional suffix on the meta panel's Variant row (e.g. a time-control
-  // label: "Crossroads Chess · 5+5").
+  // label: "Jieqi · 5+5").
   variantDetail?(): string | null;
 };
 
@@ -200,11 +199,8 @@ export function createTenantRoomChrome<C extends string>(
   // never shows stale host chrome.
   function resetHostPanels(): void {
     if (!refs) return;
-    refs.offerSection.hidden = true;
-    refs.selectionSection.hidden = true;
     refs.devViewsSection.hidden = true;
     refs.gameControlsSection.hidden = true;
-    refs.draftPicker.hidden = true;
     refs.promotion.hidden = true;
     refs.boardPaused.hidden = true;
     refs.capturesBottom.replaceChildren();
@@ -644,7 +640,6 @@ export function createTenantRoomChrome<C extends string>(
     if (waitingForOpponent()) return 'Invite opponent';
     if (view.status.type === 'finished') return 'Game finished';
     if (view.status.type === 'aborted') return 'Game aborted';
-    if (view.status.type === 'setup') return 'Formation setup';
     if (ctx.seat() === view.status.turn) return 'Your move';
     return `${seatName(view.status.turn)} to move`;
   }
@@ -671,7 +666,6 @@ export function createTenantRoomChrome<C extends string>(
     if (view.status.type === 'aborted') {
       return 'This game ended before both sides completed their first move.';
     }
-    if (view.status.type === 'setup') return 'Waiting for both formations.';
     if (ctx.seat() === 'spectator') return tenant.spectatorBody;
     if (ctx.seat() === view.status.turn) return tenant.selectInstruction;
     return 'Waiting for the opponent.';

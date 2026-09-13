@@ -11,7 +11,7 @@ definePersistenceTests('events', () => {
   test('appendEvent + loadRoom round-trips events in seq order', async () => {
     const roomId = 'test-round-trip';
     const events: GameEvent[] = [
-      { type: 'room-created', at: 1000, roomId, variant: 'dark-chess', offer: [] },
+      { type: 'room-created', at: 1000, roomId, variant: 'dark-chess' },
       {
         type: 'seat-assigned',
         at: 1001,
@@ -57,7 +57,6 @@ definePersistenceTests('events', () => {
       at: 1,
       roomId,
       variant: 'dark-chess',
-      offer: [],
     };
     await appendEvent(roomId, 0, event);
     await assert.rejects(() => appendEvent(roomId, 0, event), /duplicate key|unique constraint/i);
@@ -69,14 +68,12 @@ definePersistenceTests('events', () => {
       at: 1,
       roomId: 'room-a',
       variant: 'dark-chess',
-      offer: [],
     };
     const eventB: GameEvent = {
       type: 'room-created',
       at: 2,
       roomId: 'room-b',
       variant: 'dark-chess',
-      offer: [],
     };
     await appendEvent('room-a', 0, eventA);
     await appendEvent('room-b', 0, eventB);

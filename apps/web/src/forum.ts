@@ -5,7 +5,7 @@ import {
   embedTargetFromUrl,
   OEMBED_ENDPOINT,
 } from '@mistboard/game';
-import { translationNeeded } from './forum-language.js';
+import { appendForumLocale, translationNeeded } from './forum-language.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { prependTitleBadge } from './player-titles.js';
@@ -51,6 +51,8 @@ type ForumCategory = {
       slug: string;
       title: string;
       postCount: number;
+      /** Cached machine translation into the requested locale (see `translated`). */
+      translatedTitle?: string;
     };
     author: ForumAuthor;
     createdAt: string;
@@ -87,6 +89,11 @@ type ForumTopicSummary = {
   createdAt: string;
   updatedAt: string;
   lastPostAt: string;
+  /** Cached machine translations into the `?locale=` the read asked for
+   *  (130). Present only when the cache already had the text; a read never
+   *  triggers a translation. Sent only when the reader's auto-translate
+   *  preference is on, so presence means "show it". */
+  translated?: { title?: string; excerpt?: string };
 };
 
 type ForumPost = {
@@ -97,6 +104,8 @@ type ForumPost = {
   updatedAt: string;
   hidden?: boolean;
   hiddenAt?: string | null;
+  /** Cached machine translation of the body; same contract as the topic's. */
+  translated?: string;
 };
 
 type ForumTopicDetail = ForumTopicSummary & {
@@ -730,18 +739,23 @@ function topicHeader(topic: ForumTopicDetail, user: AuthUser | null): HTMLElemen
   if (user) titleRow.append(topicWatchButton(topic));
   if (topicTranslatable(topic, topic.title)) {
     titleRow.append(
-      forumTranslateControl({ kind: 'topic', id: topic.id }, 'forum-topic-translate', {
-        showOriginal: () => {
-          heading.textContent = topic.title;
-          heading.removeAttribute('title');
-          heading.classList.remove('forum-translated');
+      forumTranslateControl(
+        { kind: 'topic', id: topic.id },
+        'forum-topic-translate',
+        {
+          showOriginal: () => {
+            heading.textContent = topic.title;
+            heading.removeAttribute('title');
+            heading.classList.remove('forum-translated');
+          },
+          showTranslation: (text) => {
+            heading.textContent = text;
+            heading.title = topic.title;
+            heading.classList.add('forum-translated');
+          },
         },
-        showTranslation: (text) => {
-          heading.textContent = text;
-          heading.title = topic.title;
-          heading.classList.add('forum-translated');
-        },
-      }),
+        topic.translated?.title,
+      ),
     );
   }
   if (canReportForumContent(topic.author, user)) titleRow.append(topicReportButton(topic));
@@ -811,7 +825,8 @@ function latestPostCell(category: ForumCategory): HTMLElement {
     category.latestPost.post.id,
     pageForPostCount(category.latestPost.topic.postCount),
   );
-  title.textContent = category.latestPost.topic.title;
+  title.textContent = category.latestPost.topic.translatedTitle ?? category.latestPost.topic.title;
+  if (category.latestPost.topic.translatedTitle) title.title = category.latestPost.topic.title;
   const meta = document.createElement('span');
   meta.className = 'forum-category-latest-meta';
   appendLatestPostMeta(meta, category.latestPost.author, category.latestPost.createdAt, {
@@ -1082,7 +1097,8 @@ function topicRow(topic: ForumTopicSummary, options: { showCategory?: boolean } 
   const title = document.createElement('a');
   title.className = 'forum-topic-title';
   title.href = topicHref(topic);
-  title.textContent = topic.title;
+  title.textContent = topic.translated?.title ?? topic.title;
+  if (topic.translated?.title) title.title = topic.title;
   const titleLine = document.createElement('div');
   titleLine.className = 'forum-topic-title-line';
   titleLine.append(title);
@@ -1239,16 +1255,21 @@ function postList(
     // the post has to be able to see the way out without hunting for it.
     if (topicTranslatable(topic, post.bodyText)) {
       header.append(
-        forumTranslateControl({ kind: 'post', id: post.id }, 'forum-post-translate', {
-          showOriginal: () => {
-            renderPostBodyInto(body, post.bodyText);
-            body.classList.remove('forum-translated');
+        forumTranslateControl(
+          { kind: 'post', id: post.id },
+          'forum-post-translate',
+          {
+            showOriginal: () => {
+              renderPostBodyInto(body, post.bodyText);
+              body.classList.remove('forum-translated');
+            },
+            showTranslation: (text) => {
+              renderPostBodyInto(body, text);
+              body.classList.add('forum-translated');
+            },
           },
-          showTranslation: (text) => {
-            renderPostBodyInto(body, text);
-            body.classList.add('forum-translated');
-          },
-        }),
+          post.translated,
+        ),
       );
     }
     if (actions.childElementCount > 0) header.append(actions);
@@ -1349,10 +1370,15 @@ function topicTranslatable(topic: ForumTopicDetail, text: string): boolean {
 // long as the translation is showing, so machine text is never mistaken for
 // the author's own words. The badge and the tinted body rule are the same
 // signal twice: one in the header, one on the text itself.
+//
+// With `initial` (a translation the page load already carried, because the
+// cache had it and the reader's preference is on) the control starts in the
+// translated state and the button reads "Show original".
 function forumTranslateControl(
   target: ForumTranslationTarget,
   className: string,
   view: { showOriginal: () => void; showTranslation: (text: string) => void },
+  initial?: string,
 ): HTMLElement {
   const control = document.createElement('span');
   control.className = 'forum-translate-control';
@@ -1369,6 +1395,17 @@ function forumTranslateControl(
   let translated: string | null = null;
   let showing = false;
   let busy = false;
+  const present = (text: string): void => {
+    view.showTranslation(text);
+    showing = true;
+    badge.hidden = false;
+    button.textContent = t('forum.showOriginal');
+    button.setAttribute('aria-pressed', 'true');
+  };
+  if (initial) {
+    translated = initial;
+    present(initial);
+  }
   button.addEventListener('click', async () => {
     if (busy) return;
     if (showing) {
@@ -1394,11 +1431,7 @@ function forumTranslateControl(
       }
       translated = result.text;
     }
-    view.showTranslation(translated);
-    showing = true;
-    badge.hidden = false;
-    button.textContent = t('forum.showOriginal');
-    button.setAttribute('aria-pressed', 'true');
+    present(translated);
   });
   return control;
 }
@@ -2685,7 +2718,11 @@ async function fetchForumTranslation(
 }
 
 async function fetchForumCategories(): Promise<ForumCategory[]> {
-  const resp = await fetch('/api/forum/categories', { headers: { accept: 'application/json' } });
+  const params = new URLSearchParams();
+  appendForumLocale(params);
+  const resp = await fetch(`/api/forum/categories${params.size ? `?${params}` : ''}`, {
+    headers: { accept: 'application/json' },
+  });
   if (!resp.ok) throw new Error(`forum_categories_failed_${resp.status}`);
   const data = (await resp.json()) as { categories: ForumCategory[] };
   return data.categories;
@@ -2698,6 +2735,7 @@ async function fetchForumTopics(
   if (options.categorySlug) params.set('category', options.categorySlug);
   if (options.limit) params.set('limit', String(options.limit));
   if (options.offset !== undefined) params.set('offset', String(options.offset));
+  appendForumLocale(params);
   const resp = await fetch(`/api/forum/topics${params.size ? `?${params}` : ''}`, {
     headers: { accept: 'application/json' },
   });
@@ -2730,6 +2768,7 @@ async function fetchForumTopic(
   const params = new URLSearchParams();
   if (options.limit) params.set('limit', String(options.limit));
   if (options.offset !== undefined) params.set('offset', String(options.offset));
+  appendForumLocale(params);
   const resp = await fetch(
     `/api/forum/topics/${encodeURIComponent(topicId)}${params.size ? `?${params}` : ''}`,
     {

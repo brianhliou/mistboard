@@ -1,4 +1,4 @@
-// Shared runner for the variant PvE smokes (Fortress / DMX / DXQ).
+// Shared runner for the variant PvE smokes (Fortress / DXQ).
 //
 // The flow is identical for every variant: create a PvE room as the black
 // human (which puts the engine on red), connect over WebSocket, wait for the

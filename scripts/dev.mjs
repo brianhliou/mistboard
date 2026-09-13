@@ -19,22 +19,18 @@
 import { spawn } from 'node:child_process';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { serverFlagsForProfile } from './product-profile.mjs';
+import { PRODUCT_SERVER_FLAGS } from './product-profile.mjs';
 import { currentWorktreeRole } from './worktree-role.mjs';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const concurrentlyBin = resolve(repoRoot, 'node_modules', '.bin', 'concurrently');
 
 const memory = process.argv.includes('--memory');
-const profile = process.argv.includes('--lab') ? 'lab' : 'product';
 const serverScript = memory ? 'dev' : 'dev:persistent';
 
 const childEnv = { ...process.env };
-for (const flag of serverFlagsForProfile(profile)) {
+for (const flag of PRODUCT_SERVER_FLAGS) {
   if (childEnv[flag] === undefined) childEnv[flag] = 'true';
-}
-if (profile === 'lab' && childEnv.VITE_MISTBOARD_LAB_ENABLED === undefined) {
-  childEnv.VITE_MISTBOARD_LAB_ENABLED = 'true';
 }
 
 if (currentWorktreeRole(repoRoot) === 'control') {
@@ -52,7 +48,7 @@ const serverCommand = `env PORT=${serverPort} npm run ${serverScript} --workspac
 const webCommand = `env PORT=${webPort} MISTBOARD_DEV_API_URL=${devApiUrl} npm run dev --workspace @mistboard/web`;
 
 console.log(
-  `dev: web=${webPort} server=${serverPort} (${memory ? 'in-memory' : 'persistent'}, ${profile}); ` +
+  `dev: web=${webPort} server=${serverPort} (${memory ? 'in-memory' : 'persistent'}); ` +
     `set MISTBOARD_DEV_PORT_BASE to run a second session on other ports.`,
 );
 

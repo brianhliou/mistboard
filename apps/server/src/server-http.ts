@@ -3,7 +3,8 @@ import type { RoomTimeControl, VariantId } from '@mistboard/game';
 import serveHandler from 'serve-handler';
 import { articleIsRetired } from './article-meta.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
-import { serveArticleOgImage, serveGameOgImage, serveStudyOgImage } from './og-image.js';
+import { serveAnyGameOgImage } from './og-game-tenant.js';
+import { serveArticleOgImage, serveStudyOgImage } from './og-image.js';
 import { servePositionOgImage } from './og-position.js';
 import * as persistence from './persistence.js';
 import { RequestBodyTooLargeError } from './routes/lib.js';
@@ -55,7 +56,6 @@ type ServerHttpHandlerOptions = {
     mode: 'pvp' | 'pve',
     variant: VariantId,
     engineId: string,
-    hiddenDraft960?: boolean,
     timeControl?: RoomTimeControl,
     rated?: boolean,
     options?: {
@@ -220,6 +220,7 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
         fen,
         response,
         renderKey: clientIpForRateLimit(request),
+        staticDir: options.staticDir,
       }).catch((err: Error) => {
         console.warn('position og render failed', err.message);
         if (!response.headersSent) {
@@ -230,10 +231,12 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // /og/game/:id.png — the per-game card. A tenant room id (jq_, xq_, …)
+    // draws the variant's position card; anything else is the fog chess card.
     const ogImageMatch = pathname.match(/^\/og\/game\/([^/]+)\.png$/);
     if (ogImageMatch && persistence.isInitialized()) {
       const roomId = decodeURIComponent(ogImageMatch[1]!);
-      void serveGameOgImage(roomId, response).catch((err) => {
+      void serveAnyGameOgImage(roomId, response, options.staticDir).catch((err) => {
         console.warn('og image render failed', (err as Error).message);
         if (!response.headersSent) {
           response.writeHead(302, { location: '/og-image.png' });
@@ -252,6 +255,7 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
         studyId: decodeURIComponent(studyOgMatch[1]!),
         chapterId: studyOgMatch[2] ? decodeURIComponent(studyOgMatch[2]) : undefined,
         response,
+        staticDir: options.staticDir,
       }).catch((err: Error) => {
         console.warn('study og render failed', err.message);
         if (!response.headersSent) {

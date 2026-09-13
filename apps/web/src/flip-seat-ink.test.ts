@@ -36,7 +36,6 @@ describe('seatInkForVariant', () => {
     // seat == ink everywhere else, including the seats a flip variant never uses.
     expect(seatInkForVariant('xiangqi', 'red', null)).toBe('red');
     expect(seatInkForVariant('dark-chess', 'white', null)).toBe('white');
-    expect(seatInkForVariant('crossroads-chess', 'white', 'black')).toBe('white');
   });
 
   it('is unbound for a flip variant with no firstColor, and never invents one', () => {

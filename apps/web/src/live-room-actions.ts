@@ -13,7 +13,6 @@ type SendSocket = (payload: unknown) => boolean;
 
 type RoomActionDeps = {
   sendSocket: SendSocket;
-  shouldRequestHiddenDraft960ForPlayAgain: () => boolean;
 };
 
 let playAgainStatus: 'idle' | 'creating' | 'failed' = 'idle';
@@ -21,7 +20,6 @@ let playAgainStatus: 'idle' | 'creating' | 'failed' = 'idle';
 export type PlayAgainRoomRequestBody = {
   mode: 'pvp' | 'pve';
   variant: string;
-  hiddenDraft960: boolean;
   engineId?: string;
   preferredColor?: Color;
   timeControl?: { initialMs: number; incrementMs: number };
@@ -48,11 +46,10 @@ export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): v
     refs.roomActions.replaceChildren(...actions);
     return;
   }
-  // Friend challenges share the link during pregame; correspondence rooms are
-  // 'playing' from creation, so their invite window is "second seat unclaimed".
-  const inviteOpen =
-    (liveState.roomMode === 'pvp' && view?.status.type === 'pregame') ||
-    (view?.status.type === 'playing' && correspondenceAwaitingOpponent());
+  // Rooms are 'playing' from creation, so the invite window is "second seat
+  // unclaimed" (the correspondence rule; live friend rooms share the link from
+  // the setup dialog instead).
+  const inviteOpen = view?.status.type === 'playing' && correspondenceAwaitingOpponent();
   if (inviteOpen && isColor(liveState.seat)) {
     actions.unshift(copyLinkButton());
   }
@@ -114,9 +111,7 @@ function playAgainButton(refs: RoomActionRefs, deps: RoomActionDeps): HTMLButton
 }
 
 async function createPlayAgainRoom(refs: RoomActionRefs, deps: RoomActionDeps): Promise<void> {
-  const body = buildPlayAgainRoomRequestBody({
-    shouldRequestHiddenDraft960: deps.shouldRequestHiddenDraft960ForPlayAgain,
-  });
+  const body = buildPlayAgainRoomRequestBody();
   if (!body) return;
   playAgainStatus = 'creating';
   renderRoomActions(refs, deps);
@@ -137,9 +132,7 @@ async function createPlayAgainRoom(refs: RoomActionRefs, deps: RoomActionDeps): 
   }
 }
 
-export function buildPlayAgainRoomRequestBody(opts: {
-  shouldRequestHiddenDraft960: () => boolean;
-}): PlayAgainRoomRequestBody | null {
+export function buildPlayAgainRoomRequestBody(): PlayAgainRoomRequestBody | null {
   if (liveState.roomMode !== 'pvp' && liveState.roomMode !== 'pve') return null;
   const preferredColor =
     liveState.roomMode === 'pve' && isColor(liveState.seat)
@@ -152,7 +145,6 @@ export function buildPlayAgainRoomRequestBody(opts: {
       liveState.state?.variant ??
       liveState.variantRequested ??
       'dark-chess',
-    hiddenDraft960: opts.shouldRequestHiddenDraft960(),
     ...(liveState.roomMode === 'pve' && liveState.pveEngineId
       ? { engineId: liveState.pveEngineId }
       : {}),

@@ -28,7 +28,7 @@ import { SITEMAP_STATIC_ROUTES } from './server-static-pages.js';
 
 test('live persisted events are not public replay data', () => {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'live-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'live-room', variant: 'dark-chess' },
     {
       type: 'move-played',
       at: 2,
@@ -79,7 +79,7 @@ test('live replay API returns 403 for every mode (PvP, PvE, EvE)', () => {
   // Uniform rule: live games are private to the seated players regardless of
   // mode. The replay endpoint only exposes finished games.
   const pvp: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'pvp-live', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'pvp-live', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 1, roomId: 'pvp-live', clientId: 'human-white', seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId: 'pvp-live', clientId: 'human-black', seat: 'black' },
     {
@@ -91,7 +91,7 @@ test('live replay API returns 403 for every mode (PvP, PvE, EvE)', () => {
     },
   ];
   const pve: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'pve-live', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'pve-live', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 1, roomId: 'pve-live', clientId: 'human-white', seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId: 'pve-live', clientId: 'random-engine', seat: 'black' },
     {
@@ -110,7 +110,7 @@ test('live replay API returns 403 for every mode (PvP, PvE, EvE)', () => {
     },
   ];
   const eve: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'eve-live', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'eve-live', variant: 'dark-chess' },
     { type: 'seat-assigned', at: 1, roomId: 'eve-live', clientId: 'engine:white', seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId: 'eve-live', clientId: 'engine:black', seat: 'black' },
     {
@@ -137,7 +137,6 @@ test('canObserveLiveRoom keeps a LIVE fog room closed for every mode, and opens 
     at: 1,
     roomId: 'policy-room',
     variant: 'dark-chess',
-    offer: [],
   };
 
   // Live PvP: no observation.
@@ -211,7 +210,7 @@ test('canObserveLiveRoom admits a live room iff the spec hides nothing', () => {
   const live = (gameSpecId: string): boolean =>
     canObserveLiveRoom(
       replayGameEvents([
-        { type: 'room-created', at: 1, roomId: 'policy-room', variant: 'dark-chess', offer: [] },
+        { type: 'room-created', at: 1, roomId: 'policy-room', variant: 'dark-chess' },
       ]),
       gameSpecId,
     );
@@ -241,7 +240,7 @@ test('finished persisted events are public replay data', () => {
   const clock = expireClock(createClock(1, 1, 0), 2, 'white');
   assert.ok(clock);
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId: 'finished-room', variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId: 'finished-room', variant: 'dark-chess' },
     { type: 'clock-expired', at: 2, roomId: 'finished-room', color: 'white', clock },
   ];
 
@@ -340,19 +339,11 @@ test('websocket message rate window rejects over-limit bursts and recovers after
 // route is wired client-side but the server still 404s direct hits.
 // Intentionally-parked or DEV-only client routes that should NOT 200 in prod.
 const PARKED_CLIENT_ROUTES = new Set<string>([
-  '/xiangqi-spike', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/pixel-lab', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/variant-marks', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/sound-lab', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/jungle-cues', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/deepdive', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/engine-review', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/showcase-sheet', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/postgame-sheet', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/game-sheet', // DEV-only (renamed postgame-sheet); gated by import.meta.env.DEV in main.ts
-  '/luzhanqi-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/dobutsu-chess-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
-  '/dobutsu-ui-preview', // DEV-only; gated by import.meta.env.DEV in main.ts
   '/learn/coordinates', // coordinate trainer; parked, gated off in prod (coordinateTrainerEnabled)
 ]);
 
@@ -536,10 +527,6 @@ test('sitemap static routes are live client routes, never parked ones', () => {
 test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/game/abc123'), true);
   assert.equal(isClientRoute('/dark-xiangqi/game/dxq_abc123'), true);
-  assert.equal(isClientRoute('/mini-xiangqi/game/mxq_abc123'), true);
-  assert.equal(isClientRoute('/dark-mini-xiangqi/game/dmxq_abc123'), true);
-  assert.equal(isClientRoute('/dark-shogi/game/dsg_abc123'), true);
-  assert.equal(isClientRoute('/crossroads-chess/game/dchess_abc123'), true);
   assert.equal(isClientRoute('/jungle/game/jgl_abc123'), true);
   assert.equal(isClientRoute('/jungle-flip/game/jgf_abc123'), true);
   assert.equal(isClientRoute('/room/abc123'), true);
@@ -553,7 +540,7 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/zh-hans/blog/community'), true);
   assert.equal(isClientRoute('/zh-hant/blog'), true);
   assert.equal(isClientRoute('/rules/fog-chess'), true);
-  assert.equal(isClientRoute('/rules/dark-draft960'), true);
+  assert.equal(isClientRoute('/rules/xiangqi'), true);
   assert.equal(isClientRoute('/forum/general-discussion'), true);
   assert.equal(isClientRoute('/forum/t/topic_123/example-topic'), true);
   assert.equal(isClientRoute('/forum/redirect/post/post_123'), true);
@@ -645,12 +632,6 @@ test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)'
   assert.equal(isReviewShellRoute('/historical-xiangqi/games'), false);
   assert.equal(isReviewShellRoute('/blog/dark-chess-concepts'), false);
   assert.equal(isReviewShellRoute('/a/b/game/c'), false); // too many segments
-});
-
-test('isClientRoute does not expose standalone Crossroads Chess play routes', () => {
-  assert.equal(isClientRoute('/crossroads-chess'), false);
-  assert.equal(isClientRoute('/crossroads-chess-play'), false);
-  assert.equal(isClientRoute('/dual-chess-play'), false);
 });
 
 test('isClientRoute rejects unknown paths', () => {

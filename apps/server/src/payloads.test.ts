@@ -1,11 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import {
-  darkChessVariant,
-  type GameEvent,
-  generateChess960Starts,
-  replayGameEvents,
-} from '@mistboard/game';
+import { darkChessVariant, type GameEvent, replayGameEvents } from '@mistboard/game';
 import { type SnapshotClient, type SnapshotRoom, snapshotPayload } from './payloads.js';
 import { eventReplayResponse } from './server-policy.js';
 import {
@@ -33,7 +28,6 @@ test('Fog of War snapshot payload does not include hidden opponent pieces or mov
       at: 1,
       roomId: 'fog-payload',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'move-played',
@@ -130,108 +124,6 @@ test('live Fog of War seated payload does not expose opponent last-move coordina
     payload.events.some((event) => event.type === 'move-played'),
     false,
   );
-});
-
-test('live Fog Draft960 payload hides opponent offer and selection', () => {
-  const starts = generateChess960Starts();
-  const whiteOffer = starts.slice(0, 3);
-  const blackOffer = starts.slice(3, 6);
-  const events: GameEvent[] = [
-    {
-      type: 'room-created',
-      at: 1,
-      roomId: 'fog-draft-payload',
-      variant: 'dark-chess',
-      offer: whiteOffer,
-      offers: {
-        white: whiteOffer,
-        black: blackOffer,
-      },
-    },
-    {
-      type: 'seat-assigned',
-      at: 2,
-      roomId: 'fog-draft-payload',
-      clientId: 'white-client',
-      seat: 'white',
-    },
-    {
-      type: 'seat-assigned',
-      at: 3,
-      roomId: 'fog-draft-payload',
-      clientId: 'black-client',
-      seat: 'black',
-    },
-    {
-      type: 'draft-start-selected',
-      at: 4,
-      roomId: 'fog-draft-payload',
-      color: 'white',
-      startId: whiteOffer[1]!.id,
-    },
-    {
-      type: 'draft-start-selected',
-      at: 5,
-      roomId: 'fog-draft-payload',
-      color: 'black',
-      startId: blackOffer[1]!.id,
-    },
-    {
-      type: 'draft-start-resolved',
-      at: 6,
-      roomId: 'fog-draft-payload',
-      startIds: {
-        white: whiteOffer[1]!.id,
-        black: blackOffer[1]!.id,
-      },
-    },
-  ];
-  const room: SnapshotRoom = {
-    id: 'fog-draft-payload',
-    clients: new Set([
-      { seat: 'white', displaced: false },
-      { seat: 'black', displaced: false },
-    ]),
-    events,
-    projection: replayGameEvents(events),
-  };
-
-  const payload = snapshotPayload(room, {
-    devViews: false,
-    id: 'white-client',
-    seat: 'white',
-    solo: false,
-  });
-  const visibleEventTypes = payload.events.map((event) => event.type);
-  const roomCreated = payload.events.find((event) => event.type === 'room-created');
-
-  assert.deepEqual(
-    payload.offer.map((start) => start.id),
-    whiteOffer.map((start) => start.id),
-  );
-  assert.deepEqual(payload.offers, { white: whiteOffer });
-  assert.deepEqual(payload.selections, { white: whiteOffer[1]!.id });
-  assert.equal(payload.resolvedStartId, null);
-  assert.deepEqual(payload.resolvedStartIds, { white: whiteOffer[1]!.id });
-  assert.deepEqual(visibleEventTypes, [
-    'room-created',
-    'seat-assigned',
-    'seat-assigned',
-    'draft-start-selected',
-  ]);
-  assert.equal(roomCreated?.type, 'room-created');
-  if (roomCreated?.type === 'room-created') {
-    assert.deepEqual(
-      roomCreated.offer?.map((start) => start.id),
-      whiteOffer.map((start) => start.id),
-    );
-    assert.deepEqual(roomCreated.offers, { white: whiteOffer });
-  }
-
-  const json = JSON.stringify(payload);
-  assert.doesNotMatch(json, new RegExp(`"id":${blackOffer[1]!.id}\\b`));
-  assert.doesNotMatch(json, new RegExp(`"fenPlacement":"${blackOffer[1]!.fenPlacement}"`));
-  assert.doesNotMatch(json, /draft-start-resolved/);
 });
 
 test('live fog spectator payload is empty regardless of mode (PvP, PvE, EvE)', () => {
@@ -413,7 +305,6 @@ function fogRoomFixture({
       at: 1,
       roomId: 'fog-payload',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'move-played',
@@ -459,7 +350,6 @@ function lastMoveRoomFixture(): SnapshotRoom {
       at: 1,
       roomId: 'fog-last-move-payload',
       variant: 'dark-chess',
-      offer: [],
     },
     {
       type: 'move-played',
@@ -497,7 +387,7 @@ function replayRoomFixture({
   seats: { white: string; black: string };
 }): SnapshotRoom {
   const events: GameEvent[] = [
-    { type: 'room-created', at: 1, roomId, variant: 'dark-chess', offer: [] },
+    { type: 'room-created', at: 1, roomId, variant: 'dark-chess' },
     { type: 'seat-assigned', at: 1, roomId, clientId: seats.white, seat: 'white' },
     { type: 'seat-assigned', at: 1, roomId, clientId: seats.black, seat: 'black' },
     { type: 'move-played', at: 2, roomId, color: 'white', move: { from: 'e2', to: 'e4' } },

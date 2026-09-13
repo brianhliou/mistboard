@@ -125,23 +125,38 @@ export const DUCK_XIANGQI_START_BOARD = () =>
     }),
   );
 
-export const DUCK_XIANGQI_THUMBNAIL = () =>
-  xqSvg(
-    XQ_BOARD_W,
-    FIGURE_H,
-    xqBoardSvg({
-      state: state('duck-rules-thumb', START_BOARD),
-      x: 0,
-      y: 0,
-      label: 'DUCK XIANGQI',
-      perspective: 'red',
-      // x0 MUST match the board's own x above. It read PAIR_GAP_X / 2 while the
-      // board sat at 0, which is more than a full board width, so the duck was
-      // drawn past the right edge of a canvas one board wide and the thumbnail
-      // showed an empty starting position.
-      overlay: duckOverlay('e3', 0, 0),
-    }),
-  );
+// The card thumbnail is the DUCK, not a board.
+//
+// A 9x10 board shrunk into a 16:10 card is a grid of specks with a duck
+// somewhere in it, and the card surfaces preferred the shared variant marker
+// over this anyway -- a one-colour mask painted with currentColor, which is
+// where the grey came from.
+//
+// `duckPieceMarks` is the same function the live board and every figure in
+// this file call, so the card cannot drift from the piece a player actually
+// meets: change the art or the piece set and this follows.
+//
+// 16:10 to match the card media box (.articles-index-card-media, 16/10;
+// .landing-article-card-thumb, 8/5), so it fills the frame rather than
+// letterboxing inside it.
+const DUCK_THUMB_W = 160;
+const DUCK_THUMB_H = 100;
+// Nearly the full height. The disc is the subject; the margin only keeps its
+// gold ring off the card's edge, which at this scale is about four pixels.
+const DUCK_THUMB_SIZE = 92;
+
+export const DUCK_XIANGQI_THUMBNAIL = () => {
+  const x = (DUCK_THUMB_W - DUCK_THUMB_SIZE) / 2;
+  const y = (DUCK_THUMB_H - DUCK_THUMB_SIZE) / 2;
+  return [
+    `<svg class="xq-article-svg" viewBox="0 0 ${DUCK_THUMB_W} ${DUCK_THUMB_H}"`,
+    ` role="img" aria-label="Duck Xiangqi" xmlns="http://www.w3.org/2000/svg">`,
+    `<g aria-label="duck">`,
+    `<g transform="translate(${x},${y}) scale(${DUCK_THUMB_SIZE / 100})">`,
+    duckPieceMarks(activeXiangqiPieceSet),
+    `</g></g></svg>`,
+  ].join('');
+};
 
 // ── One turn, two actions ───────────────────────────────────────────────────
 
@@ -325,6 +340,75 @@ export const DUCK_XIANGQI_CANNON_SCREEN = () => {
 const FACING_BOARD: DuckXiangqiBoard = {
   e2: { color: 'red', role: 'general' },
   e9: { color: 'black', role: 'general' },
+};
+
+/** One arbitrary position, drawn the way every figure in this file is drawn.
+ *
+ *  Exported because the brianhliou.com write-up steps through the end of a
+ *  real engine game frame by frame, and a sequence cannot be expressed as the
+ *  zero-argument thunks the rules page uses. Everything still goes through
+ *  xqBoardSvg, so a blog frame and a rules-page figure cannot diverge. */
+export function duckXiangqiPositionFigure(opts: {
+  id: string;
+  board: DuckXiangqiBoard;
+  duck?: DuckXiangqiSquare;
+  label: string;
+  captures?: readonly DuckXiangqiSquare[];
+}): string {
+  return xqSvg(
+    PAIR_W,
+    FIGURE_H,
+    xqBoardSvg({
+      state: state(opts.id, opts.board),
+      x: PAIR_GAP_X / 2,
+      y: 0,
+      label: opts.label,
+      perspective: 'red',
+      dots: (opts.captures ?? []).map((square) => ({
+        square: square as XiangqiSquare,
+        capture: true,
+      })),
+      ...(opts.duck ? { overlay: duckOverlay(opts.duck, PAIR_GAP_X / 2, 0) } : {}),
+    }),
+  );
+}
+
+// The finish of engine game 6 (the study's sixth chapter), at ply 228 of 229.
+// Red's general is on d1, Black's on d9, and the d file is empty between them,
+// so Red plays d1-d9 and takes the general. That move is ILLEGAL under the rule
+// this variant originally kept, which is the whole reason the figure is worth
+// drawing: two of the seven engine games end exactly this way.
+//
+// The position is the game's own, not composed: it is the FEN the kernel
+// produced after replaying the recorded move list to its penultimate turn.
+const FLYING_FINISH_BOARD: DuckXiangqiBoard = {
+  a10: { color: 'black', role: 'cannon' },
+  d9: { color: 'black', role: 'general' },
+  c7: { color: 'red', role: 'soldier' },
+  c5: { color: 'black', role: 'horse' },
+  d1: { color: 'red', role: 'general' },
+};
+
+export const DUCK_XIANGQI_FLYING_FINISH = () => {
+  // The capture the caption claims, taken from the kernel rather than asserted:
+  // if the rule ever moves again, this figure stops drawing the marker instead
+  // of drawing a lie.
+  const flights = duckXiangqiMovesFrom(FLYING_FINISH_BOARD, 'e1', 'd1').filter(
+    (square) => FLYING_FINISH_BOARD[square]?.role === 'general',
+  );
+  return xqSvg(
+    PAIR_W,
+    FIGURE_H,
+    xqBoardSvg({
+      state: state('duck-rules-flying', FLYING_FINISH_BOARD),
+      x: PAIR_GAP_X / 2,
+      y: 0,
+      label: 'RED FLIES THE GENERAL, AND WINS',
+      perspective: 'red',
+      dots: flights.map((square) => ({ square: square as XiangqiSquare, capture: true })),
+      overlay: duckOverlay('e1', PAIR_GAP_X / 2, 0),
+    }),
+  );
 };
 
 export const DUCK_XIANGQI_FACING_PIN = () =>

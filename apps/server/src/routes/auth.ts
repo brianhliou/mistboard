@@ -63,7 +63,19 @@ export async function tryHandle(
   if (pathname === '/api/auth/me') {
     if (!requireMethod(request, response, 'GET')) return true;
     const user = await currentAccountUser(request);
-    writeJson(response, 200, { user: user ? publicUser(user) : null });
+    if (!user) {
+      writeJson(response, 200, { user: null });
+      return true;
+    }
+    // The allowlisted variants (139) this account can take a seat at. The
+    // client paints its play menu from this, so an account is offered exactly
+    // the tables the seat check would let it sit at. Admins need no store; a
+    // player's grants do, and an in-memory server simply has none to report.
+    const variantGrants =
+      user.accountRole === 'admin' || persistence.isInitialized()
+        ? await persistence.playableAllowlistedSpecs(user)
+        : [];
+    writeJson(response, 200, { user: { ...publicUser(user), variantGrants } });
     return true;
   }
 

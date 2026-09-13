@@ -6,7 +6,6 @@
 import type { RoomTimeControl } from './events.js';
 import {
   DARK_CHESS_SPEC_ID,
-  DARK_DRAFT960_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   type GameSpecId,
@@ -128,10 +127,7 @@ export const RATED_TIME_CONTROLS: readonly TimeControlSpec[] = TIME_CONTROLS.fil
 // empty set while the create route rejects everything, which strands the
 // surface. `variant-registry-sync.test.ts` holds that invariant.
 const ENGINE_TIME_CONTROL_PINS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
-  // Draft960 is the same engine on a shuffled back rank, so it carries the
-  // same pin; leaving it out would make the pregame option the way around this.
   [DARK_CHESS_SPEC_ID]: '5m5',
-  [DARK_DRAFT960_SPEC_ID]: '5m5',
   // Fog xiangqi (python-fdx) runs its own belief stack rather than the fog
   // chess time manager, so its floor is not separately measured; pinned on the
   // shared-mechanism argument while #283 is open, not on its own flag evidence.
@@ -165,10 +161,15 @@ export const ENGINE_PINNED_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
 const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
   [XIANGQI_SPEC_ID]: '10m5',
   [JIEQI_SPEC_ID]: '10m5',
-  // Duck offers only 5+5 and 10+5 (registry.ts): games run ~177 plies at
-  // engine strength, so a 1+1 would be decided by the clock. Without an entry
-  // here the house 3+2 would be preselected and advertised on a variant that
-  // rejects it.
+  // Duck offers 3+2, 5+5 and 10+5 (registry.ts). This entry is a PREFERENCE,
+  // not a guard: a turn is a move plus a duck placement, so 3+2 buys 1.8s per
+  // decision at the long end and 5+5 buys 3.8s. Both are playable, so 3+2 is
+  // selectable, but the pace a first-time player is dropped into should be the
+  // one that lets them see the board.
+  //
+  // It was a guard until 2026-09-12, when 3+2 was added to the picker: before
+  // that, the house 3+2 would have been preselected and advertised on a
+  // variant whose picker did not render it.
   [DUCK_XIANGQI_SPEC_ID]: '5m5',
 };
 

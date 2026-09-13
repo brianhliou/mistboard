@@ -7,6 +7,7 @@
 // game-flow / rematch / reconnect contract. Persistence-on coverage is a
 // later, separate variant.
 
+import type { VariantId } from '@mistboard/game';
 import { WebSocket } from 'ws';
 import { type StartedServer, startServer, stopServer } from '../src/index.js';
 import type { Room } from '../src/server-types.js';
@@ -82,9 +83,8 @@ export async function startTestServer(
 export interface ConnectOptions {
   url: string;
   room: string;
-  variant?: 'dark-chess' | 'draft960';
+  variant?: VariantId;
   gameSpecId?: 'dark-xiangqi' | 'jungle';
-  hiddenDraft960?: boolean;
   clientId?: string;
   seatToken?: string;
   /**
@@ -101,10 +101,9 @@ export interface ConnectOptions {
 
 export async function connectClient(opts: ConnectOptions): Promise<TestClient> {
   const variant = opts.variant ?? 'dark-chess';
-  const hidden = opts.hiddenDraft960 ? '&hiddenDraft960=true' : '';
   const spec = opts.gameSpecId ? `&gameSpecId=${encodeURIComponent(opts.gameSpecId)}` : '';
   const clientParam = opts.clientId ? `&client=${encodeURIComponent(opts.clientId)}` : '';
-  const target = `${opts.url}/?room=${encodeURIComponent(opts.room)}&variant=${variant}${hidden}${spec}${clientParam}`;
+  const target = `${opts.url}/?room=${encodeURIComponent(opts.room)}&variant=${variant}${spec}${clientParam}`;
 
   const protocols = opts.seatToken ? [`mistboard-seat.${opts.seatToken}`] : undefined;
   // Production WS handshake requires an Origin header matching the host

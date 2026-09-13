@@ -118,7 +118,6 @@ export type Room = {
   pendingWrites: Promise<void>;
   gameEndRecorded: boolean;
   variant: VariantId;
-  hiddenDraft960: boolean;
   timeControl: RoomTimeControl | undefined;
   rematch: RematchState;
   // Pending seat-vacated timers keyed by color. If a seated player disconnects
@@ -135,7 +134,6 @@ export type LobbyTicket = {
   id: string;
   createdAt: number;
   gameSpecId: GameSpecId;
-  hiddenDraft960: boolean;
   rated: boolean;
   region: string | null;
   matchedAt: number | null;

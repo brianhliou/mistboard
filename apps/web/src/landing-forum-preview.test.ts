@@ -1,5 +1,18 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
+// The locale is read from window.localStorage (i18n/locale.ts resolveLocale);
+// happy-dom does not provide one here, so the smallest thing that behaves like
+// it stands in (same shim as forum-i18n.test.ts).
+const store = new Map<string, string>();
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+  },
+});
+
 describe('landing forum preview', () => {
   afterEach(() => {
     vi.restoreAllMocks();
@@ -53,7 +66,9 @@ describe('landing forum preview', () => {
     const box = buildLandingForumPreview();
     await new Promise((resolve) => setTimeout(resolve, 0));
 
-    expect(fetchSpy).toHaveBeenCalledWith('/api/forum/topics?limit=8', {
+    // The reader's locale rides along so the server can overlay cached
+    // translations (the auto-translate preference defaults on).
+    expect(fetchSpy).toHaveBeenCalledWith('/api/forum/topics?limit=8&locale=en', {
       headers: { accept: 'application/json' },
     });
     expect(box.querySelector('.site-box-title')?.textContent).toBe('Active forum topics');
@@ -73,6 +88,80 @@ describe('landing forum preview', () => {
     expect(rows[0]?.querySelectorAll('a').length).toBe(0);
     expect(rows[1]?.getAttribute('href')).toBe('/forum/t/topic_2/second-topic');
     expect(rows[1]?.classList.contains('is-pinned')).toBe(true);
+  });
+
+  it('shows cached translations and the localized category name for a Chinese reader', async () => {
+    window.localStorage.setItem('mistboard.locale', 'zh-Hans');
+    const fetchSpy = vi.spyOn(globalThis, 'fetch').mockResolvedValue(
+      new Response(
+        JSON.stringify({
+          topics: [
+            {
+              id: 'topic_1',
+              slug: 'first-topic',
+              title: 'Paste a game link and it shows as a board',
+              category: {
+                slug: 'general-discussion',
+                name: 'General Games Discussion',
+                i18n: { 'zh-Hans': { name: '综合游戏讨论' } },
+              },
+              latestPost: {
+                post: { id: 'post_2' },
+                author: { handle: 'alice', displayName: 'Alice' },
+                createdAt: '2026-06-01T00:05:00.000Z',
+                excerpt: 'You can now show a game inside a forum post.',
+              },
+              postCount: 1,
+              pinned: false,
+              locked: false,
+              lastPostAt: '2026-06-01T00:05:00.000Z',
+              translated: {
+                title: '粘贴对局链接即可显示为棋盘',
+                excerpt: '现在可以在论坛帖子中显示对局。',
+              },
+            },
+            {
+              id: 'topic_2',
+              slug: 'second-topic',
+              title: 'Not yet translated',
+              category: { slug: 'feedback', name: 'Mistboard Feedback' },
+              latestPost: null,
+              postCount: 1,
+              pinned: false,
+              locked: false,
+              lastPostAt: '2026-06-01T00:00:00.000Z',
+            },
+          ],
+        }),
+        { status: 200, headers: { 'content-type': 'application/json' } },
+      ),
+    );
+    try {
+      const { buildLandingForumPreview } = await import('./landing-forum-preview.js');
+      const box = buildLandingForumPreview();
+      await new Promise((resolve) => setTimeout(resolve, 0));
+
+      expect(fetchSpy).toHaveBeenCalledWith('/api/forum/topics?limit=8&locale=zh-Hans', {
+        headers: { accept: 'application/json' },
+      });
+      const rows = box.querySelectorAll<HTMLAnchorElement>('a.landing-forum-topic');
+      const title = rows[0]?.querySelector<HTMLElement>('.landing-forum-topic-title');
+      expect(title?.textContent).toBe('粘贴对局链接即可显示为棋盘');
+      // The original stays one hover away.
+      expect(title?.title).toBe('Paste a game link and it shows as a board');
+      expect(rows[0]?.querySelector('.landing-forum-topic-excerpt')?.textContent).toBe(
+        '现在可以在论坛帖子中显示对局。',
+      );
+      expect(rows[0]?.querySelector('.landing-forum-topic-meta')?.textContent).toContain(
+        '综合游戏讨论',
+      );
+      // Nothing cached: the source text, untouched, and no hover original.
+      const plain = rows[1]?.querySelector<HTMLElement>('.landing-forum-topic-title');
+      expect(plain?.textContent).toBe('Not yet translated');
+      expect(plain?.title).toBe('');
+    } finally {
+      window.localStorage.removeItem('mistboard.locale');
+    }
   });
 
   it('trims to whole rows against the body height and fills small slack', async () => {

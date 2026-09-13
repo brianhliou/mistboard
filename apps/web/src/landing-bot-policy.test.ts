@@ -109,6 +109,5 @@ describe('landing bot policy', () => {
         timeControlId: '5m5',
       });
     }
-    expect(landingBotOffer('dark-shogi')).toBeNull();
   });
 });

@@ -99,10 +99,24 @@ export function replayDuckXiangqiNotation(moves: string): {
   return { turns, states };
 }
 
+/**
+ * The one grammar every duck surface writes a turn in: `e2-e5@c7`, and `x…#`
+ * for the general capture, which ends the game before the duck would have moved
+ * and is the one turn with no `@` half. Duplicated rather than imported for the
+ * same bundle reason the other copies duplicate each other (`duckTurnLabel` in
+ * live-duck-xiangqi.ts, `duckXiangqiTurnLabel` in review/duck-xiangqi-tree-
+ * adapter.ts and duck-xiangqi-postgame.ts): this module is what the articles and
+ * the embed load, and must not drag the live or review surfaces in with it.
+ *
+ * This copy read `e2-e5, duck c7` until 2026-09-12, which is the divergence a
+ * duplicated grammar is supposed to be watched for. It cost about fourteen
+ * characters against a move cell in the sheet beside the board that fits about
+ * ten, so every duck turn in an embedded study truncated to `e2-e5, d…`.
+ */
 function turnLabel(turn: DuckXiangqiTurn): string {
   return turn.duckTo === null
-    ? `${turn.from}x${turn.to}`
-    : `${turn.from}-${turn.to}, duck ${turn.duckTo}`;
+    ? `${turn.from}x${turn.to}#`
+    : `${turn.from}-${turn.to}@${turn.duckTo}`;
 }
 
 export function mountDuckXiangqiReplay(
@@ -250,4 +264,65 @@ export type DuckXiangqiReplayRecord = ReturnType<typeof replayDuckXiangqiNotatio
 
 export function oppositeReplayColor(color: DuckXiangqiColor): DuckXiangqiColor {
   return oppositeDuckXiangqiColor(color);
+}
+
+/** The BOARD half of a duck replay, driven by whatever chrome hosts it.
+ *
+ *  `mountDuckXiangqiReplay` above is the article widget: it owns its header,
+ *  its stepper and its slider. The embed card (embed/embed-card.ts) supplies
+ *  all of that itself and wants only a board plus a handle, which is the
+ *  contract `XiangqiReplayBoardHandle` describes. Without this, the study
+ *  embed had no way to draw a duck game and fell back to the xiangqi board,
+ *  which cannot render the duck at all.
+ *
+ *  Deliberately the same shape as `mountXiangqiReplayBoard`, so one card can
+ *  drive either without knowing which variant it is holding.
+ */
+export function mountDuckXiangqiReplayBoard(
+  host: HTMLElement,
+  spec: DuckXiangqiReplaySpec,
+  hooks: { onPlyChange?: (ply: number, maxPly: number) => void } = {},
+): {
+  destroy: () => void;
+  jumpToPly: (ply: number) => void;
+  plyCount: () => number;
+  moveEntries: () => Array<{ ply: number; label: string }>;
+  bottomSeat: () => 'first' | 'second';
+} {
+  const perspective = spec.perspective ?? 'red';
+  const { turns, states } = replayDuckXiangqiNotation(spec.moves);
+  const total = turns.length;
+
+  const frame = document.createElement('div');
+  frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
+  host.replaceChildren(frame);
+
+  let index = 0;
+  const render = (): void => {
+    const state = states[index]!;
+    frame.innerHTML = duckXiangqiBoardSvg(
+      getDuckXiangqiPlayerView(state, perspective),
+      perspective,
+      {
+        interactive: false,
+        phase: { kind: 'piece', selected: null },
+        targets: [],
+      },
+    );
+    hooks.onPlyChange?.(index, total);
+  };
+  render();
+
+  return {
+    destroy: () => host.replaceChildren(),
+    jumpToPly: (ply: number) => {
+      index = Math.max(0, Math.min(total, Math.trunc(ply)));
+      render();
+    },
+    plyCount: () => total,
+    moveEntries: () => turns.map((turn, i) => ({ ply: i + 1, label: turnLabel(turn) })),
+    // Red is the first mover in xiangqi, so a red-perspective board puts the
+    // first mover at the bottom.
+    bottomSeat: () => (perspective === 'red' ? 'first' : 'second'),
+  };
 }

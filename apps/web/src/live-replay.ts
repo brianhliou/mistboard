@@ -122,11 +122,7 @@ function isReplayHistoryEvent(event: GameEvent): boolean {
   // clock-expired is excluded: it ends the game but doesn't move pieces, so navigating to it
   // always shows the same board as the last move-played. Stepping backward would burn a key press
   // with no visible board change.
-  return (
-    event.type === 'room-created' ||
-    event.type === 'draft-start-resolved' ||
-    event.type === 'move-played'
-  );
+  return event.type === 'room-created' || event.type === 'move-played';
 }
 
 function firstMoveHistoryIndex(): number | null {

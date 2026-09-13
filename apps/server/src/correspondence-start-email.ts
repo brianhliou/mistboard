@@ -93,10 +93,10 @@ async function sendEmail(to: string, notice: CorrespondenceStartNotice): Promise
   const body = notice.creatorOnMove
     ? `${opponent} accepted your correspondence seek, and you have the first move.\n\n` +
       `Play it here: ${url}\n\n` +
-      `The pace is ${pace}. If your clock runs out, the game is forfeited.`
+      `The pace is ${pace}. If your clock runs out before you play, the game is cancelled.`
     : `${opponent} accepted your correspondence seek and has the first move.\n\n` +
       `Your game: ${url}\n\n` +
-      `The pace is ${pace}. If your clock runs out, the game is forfeited.`;
+      `The pace is ${pace}. If the first move is not played in time, the game is cancelled.`;
   const result = await sendTransactionalEmail({ from: fromAddress, to: [to], subject, text: body });
   if (!result.ok) {
     logger.error(

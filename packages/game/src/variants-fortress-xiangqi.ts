@@ -5,9 +5,8 @@
 // crazyhouse-style drops. The blessed flagship config is both-side attacker
 // drops + the chasing rule (perpetual check/chase = loss for the aggressor).
 //
-// This kernel is intentionally self-contained: unlike mini-xiangqi (shared by
-// Dark Mini Xiangqi, Drop Mini Xiangqi, and puzzles) Fortress has its own
-// geometry and piece set, so it does not extend an existing kernel.
+// This kernel is intentionally self-contained: Fortress has its own geometry
+// and piece set, so it does not extend an existing kernel.
 //
 // CHASING RULE BOUNDARY: this pure kernel adjudicates a three-fold repetition as
 // a DRAW. The faithful "perpetual check/chase = loss for the aggressor" verdict

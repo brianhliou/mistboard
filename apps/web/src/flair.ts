@@ -45,7 +45,6 @@ const VARIANT_FLAIR: Record<string, { specId: string; path: string }> = {
     path: '/variant-markers/final/fog-elephant-chess.png',
   },
   'variant-dark-chess': { specId: 'dark-chess', path: '/variant-markers/final/fog-chess.png' },
-  'variant-dark-shogi': { specId: 'dark-shogi', path: '/variant-markers/final/fog-shogi.png' },
 };
 
 // Red and black take different characters for the same role, which is the

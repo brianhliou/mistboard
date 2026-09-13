@@ -18,7 +18,7 @@ import {
 } from './bughouse-engine-protocol.js';
 import { defaultClockIncrementMs, defaultClockInitialMs } from './clocks.js';
 import type { Board, Color, GameState, Move, PieceRole, Square } from './types.js';
-import { draft960Variant, isLegalStandardChessMove, positionFromState } from './variants.js';
+import { isLegalStandardChessMove, positionFromState, standardChessVariant } from './variants.js';
 
 export type BughouseBoardClockState = {
   activeSeat: BughouseSeatId | null;
@@ -350,7 +350,7 @@ export function bughouseLegalActions(
     return [];
   }
 
-  const moves = draft960Variant
+  const moves = standardChessVariant
     .getLegalMoves(board.state, assignment.color)
     .map((move) => moveAction(assignment.board, seat, move));
   const drops = legalBughouseDrops(board, assignment.color, match.reserves[seat]).map((drop) =>
@@ -376,7 +376,7 @@ export function applyBughouseMove(
   const movingPiece = board.state.board[move.from];
   if (!movingPiece) return match;
   const capture = capturedPieceForBughouse(board, move, movingPiece.color);
-  const nextStateRaw = draft960Variant.applyMove(board.state, move);
+  const nextStateRaw = standardChessVariant.applyMove(board.state, move);
   if (nextStateRaw === board.state) return match;
 
   const nextTurn = oppositeColor(assignment.color);
@@ -486,7 +486,7 @@ export function isLegalBughouseDrop(
 }
 
 function createInitialBughouseBoard(id: string, board: BughouseBoardId): BughouseBoardState {
-  const state = draft960Variant.createInitialState(id);
+  const state = standardChessVariant.createInitialState(id);
   return {
     board,
     state: {
@@ -548,7 +548,7 @@ function applyBoardTerminal(
   if (board.state.status.type !== 'playing') return match;
   const defender = board.state.status.turn;
   const defenderSeat = seatFor(boardId, defender);
-  const hasBoardMove = draft960Variant.getLegalMoves(board.state, defender).length > 0;
+  const hasBoardMove = standardChessVariant.getLegalMoves(board.state, defender).length > 0;
   const hasDrop = legalBughouseDrops(board, defender, match.reserves[defenderSeat]).length > 0;
   if (hasBoardMove || hasDrop) return match;
 
@@ -680,8 +680,7 @@ function castlingRightsByColor(state: GameState): { white: Square[]; black: Squa
 }
 
 function boardStatusFor(state: GameState): BughouseBoardStatus {
-  if (state.status.type === 'playing' || state.status.type === 'pregame')
-    return { type: 'playing' };
+  if (state.status.type === 'playing') return { type: 'playing' };
   if (state.status.type === 'aborted') {
     return { type: 'finished', winner: null, reason: 'abandonment' };
   }
