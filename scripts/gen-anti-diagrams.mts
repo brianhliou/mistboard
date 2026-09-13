@@ -392,7 +392,7 @@ figure(
     { id: 'survivor', board: board(survivor), label: `AFTER ${sanLine(QUIET)}` },
     { id: 'cousin', board: board(cousin), label: `AFTER ${sanLine(COUSIN)}` },
   ]),
-  `The two endings that survive the chain. Left: four plies in, Red to move. Right: five plies in, Black to move, the general having taken a cannon on d10 instead of the chariot taking it on h1. ${pieceCount(survivor, 'red')} pieces each in both, no capture on the board, nobody has lost yet. From the left one the engine, playing both sides at one, two and five million nodes a move, drew every game.`,
+  `The two endings that survive: left, four plies in, Red to move; right, five plies in, Black to move, the general having taken the cannon on d10. ${pieceCount(survivor, 'red')} pieces each, no capture on the board; the engine drew every game from here at three budgets.`,
 );
 
 // ── 4. How a forced loss works ─────────────────────────────────────────────
@@ -474,7 +474,7 @@ figure(
       zones: true,
     },
   ]),
-  'Reached by the engine at ply 35 of a game from the array. Generals and advisors never leave the palace; elephants never cross the river. No piece on this board can ever reach another, so under the rules as written the game runs to a repetition draw.',
+  'Ply 35 of the engine’s 2M game. Generals and advisors never leave the palace and elephants never cross the river, so no piece here can ever reach another; under the rules as written the game runs on to a repetition draw.',
   true,
 );
 
@@ -1099,6 +1099,27 @@ if (process.argv.includes('--blog')) {
       /viewBox="0 0 [\d.]+ ([\d.]+)"/,
       (_, h: string) => `viewBox="0 0 ${XQ_BOARD_W + XQ_VIEWBOX_PAD * 2} ${h}"`,
     );
+  // ── Writing the includes: generated copies under xq/en, dispatchers on top ─
+  // The blog localises generated includes by deriving _includes/xq/<lang>/
+  // from _includes/xq/en/ (localize_includes.py), and a post includes the
+  // dispatcher, which picks the copy for the active language. The explorer
+  // instance dispatcher forwards its two parameters.
+  const XQ_EN = path.join(INCLUDES, 'xq', 'en');
+  mkdirSync(XQ_EN, { recursive: true });
+  const dispatcher = (name: string, params = '') => `{%- comment -%}
+  Dispatcher. The generated widget lives in _includes/xq/en/${name}
+  (from mistboard's gen-anti-diagrams.mts --blog; drop regenerated output there).
+  Localized copies under _includes/xq/<lang>/ are derived by
+  _i18n/tools/localize_includes.py from _i18n/includes/strings.<lang>.yml.
+{%- endcomment -%}
+{%- assign xq_path = "xq/" | append: site.active_lang | append: "/${name}" -%}
+{%- include {{ xq_path }}${params} -%}
+`;
+  const emit = (name: string, html: string, params = '') => {
+    writeFileSync(path.join(XQ_EN, name), html);
+    writeFileSync(path.join(INCLUDES, name), dispatcher(name, params));
+    console.log(`  _includes/xq/en/${name} (+ dispatcher)`);
+  };
   // Only the figures the post still uses become includes. The decision boards
   // gave way to the explorer, the dump-mechanism pair to the proof widget and
   // the data figures (tree, depth chart, poster) to the table; all stay in
@@ -1115,8 +1136,7 @@ if (process.argv.includes('--blog')) {
       `  <figcaption>${f.caption}</figcaption>`,
       '</figure>',
     ].join('\n');
-    writeFileSync(path.join(INCLUDES, `anti-xq-${f.slug}.html`), `${include}\n`);
-    console.log(`  _includes/anti-xq-${f.slug}.html`);
+    emit(`anti-xq-${f.slug}.html`, `${include}\n`);
   }
   // The widgets draw a soldier past the river with the promoted art; the
   // diagrams never show one, so add it to the art set by hand.
@@ -1201,6 +1221,165 @@ if (process.argv.includes('--blog')) {
     if (!f) throw new Error(`no artifact ${prefix}`);
     return JSON.parse(readFileSync(path.join(OUTDIR, f), 'utf8'));
   };
+  // ── Every string a reader sees in a widget, in one table ─────────────────
+  // The blog translates its generated includes by extracting text nodes
+  // (_i18n/tools/localize_includes.py) and it masks <script> bodies, so the
+  // widgets keep their copy out of the JavaScript: each include carries a
+  // hidden block of <span data-k="…">English</span> and the scripts read
+  // strings from it at run time (T(key, …args), %1 %2 placeholders). Records
+  // carry keys and arguments, never sentences. Rules the extractor imposes:
+  // a string is skipped when it is over 240 characters, or when it is one
+  // bare lowercase word (it reads as a JS object key), so reasons are
+  // phrases ("by extinction") and buttons are capitalised.
+  const STR: Record<string, string> = {
+    red: 'Red',
+    black: 'Black',
+    'red-wins': 'Red wins',
+    'black-wins': 'Black wins',
+    draw: 'Draw',
+    pieces: '%1 pieces',
+    ply: 'ply %1',
+    game: 'Game',
+    board: 'Xiangqi board',
+    'ctl-start': 'Start',
+    'ctl-back': 'Back one ply',
+    'ctl-fwd': 'Forward one ply',
+    'ctl-end': 'End',
+    'ctl-home': 'Back to this position',
+    'ctl-fwd-best': 'Forward one ply, best play',
+    'ctl-end-line': 'To the end of the line',
+    'ctl-array': 'Back to the array',
+    'ctl-fwd-main': 'Forward one ply along the main line',
+    'ctl-end-main': 'To the end of the main line',
+    'by-extinction': 'by extinction',
+    'by-stalemate': 'by stalemate',
+    'by-progress-clock': 'by the progress clock',
+    'by-repetition': 'by repetition',
+    'by-dead-position': 'by a dead board',
+    'taking-general': ', taking the general',
+    'taking-advisor': ', taking the advisor',
+    'taking-elephant': ', taking the elephant',
+    'taking-horse': ', taking the horse',
+    'taking-chariot': ', taking the chariot',
+    'taking-cannon': ', taking the cannon',
+    'taking-soldier': ', taking the soldier',
+    'only-move': '. Only legal move.',
+    // the games viewer
+    'cap-start': 'The start. Red to move; every legal move is a capture.',
+    'grp-best': 'Best play, engine against itself',
+    'grp-exit': 'Every ending of the opening chain (%1), engine at 100k',
+    'grp-ladder': 'Ladder: 100k against 10k nodes from eight random plies (20)',
+    'grp-proof': 'Proof lines: the certificate’s main line (%1)',
+    'lab-best': '%1M nodes a move, %2 plies',
+    'lab-exit-win': 'ending at ply %1 #%2: %3 in %4',
+    'lab-exit-stall': 'ending at ply %1 #%2: stall, %3 at %4',
+    'lab-exit-win-proven': 'ending at ply %1 #%2: %3 in %4, proven',
+    'lab-ladder': 'pair %1, 100k as %2: %3 in %4',
+    'lab-proof': 'ending at ply %1 #%2: %3, %4 positions',
+    'lab-2m': 'The 2M game: the feast, then the lever, then a dead board (44 plies)',
+    'lab-5m': 'The 5M game: a soldier war that goes nowhere (131 plies)',
+    'res-best': '%1 %2 after %3 plies, %4 million nodes a move for both sides.',
+    'res-mirrored':
+      'The engine opened 1. Cxh10; shown as its mirror image so the files match the boards in the post.',
+    'res-exit': '%1 %2 after %3 plies. The chain ended at ply %4.',
+    'res-exit-proven':
+      '%1 %2 after %3 plies. The chain ended at ply %4; the loss from there is proven.',
+    'res-ladder':
+      '%1 %2 after %3 plies. The first eight plies were random; 100k nodes played %4, 10k the other side.',
+    'res-proof':
+      '%1 by force from the ending at ply %2: the certificate covers %3 positions, and this is its main line, every defender reply here being one the certificate answers.',
+    'seat-fsf-m': 'Fairy-Stockfish, %1M nodes',
+    'seat-fsf-100k': 'Fairy-Stockfish, 100k nodes',
+    'seat-fsf-10k': 'Fairy-Stockfish, 10k nodes',
+    'seat-proof': 'the proof',
+    'credit-middlegame':
+      'Two of the engine’s own games, opened at ply 4, where the forced part ends. The notes are on the plies that matter.',
+    // the opening table
+    'x-start': 'Start',
+    'x-array': 'The array',
+    'x-after': 'After %1',
+    'x-state-fork-1':
+      '%1 to move. One capture, and only captures are legal. Backing up every ending below: %2.',
+    'x-state-fork':
+      '%1 to move. %2 captures, and only captures are legal. Backing up every ending below: %3.',
+    'x-state-leaf':
+      '%1 to move. No capture, so the chain of forced captures is over and the game is open.',
+    'x-head': '%1’s captures, best first',
+    'x-best': 'Best',
+    'x-ev-below-1': '1 ending below, %1 proven',
+    'x-ev-below': '%1 endings below, %2 proven',
+    'x-ev-stall-1m': 'engine: stalls at 100k; at 1M %1 at ply %2; not proven',
+    'x-ev-stall': 'engine: stalls at 100k and at 1M',
+    'x-ev-proven': 'proven: over at ply %1, %2 positions',
+    'x-ev-engine': 'engine: over at ply %1 (100k), 1M agrees; not proven',
+    'x-acc-kicker': 'The chain ends here',
+    'x-acc-lead': '%1 to move with no capture on the board.',
+    'x-acc-draw':
+      'The engine’s game from here stalls %1 at ply %2 with 100,000 nodes a move, and %3 at ply %4 with a million. Under the rules as written a stall is a draw. Below is the 100k game.',
+    'x-acc-draw-1m':
+      'The engine’s game from here stalls %1 at ply %2 with 100,000 nodes a move, but with a million %3 wins %4 at ply %5: a verdict the prover could not close, so this ending is scored as the 100k sweep found it.',
+    'x-acc-draw-1m-tail': 'Under the rules as written a stall is a draw. Below is the 100k game.',
+    'x-acc-proven':
+      'Proven. The certificate holds %1 positions and its main line ends the game at ply %2; a checker that knows only the rules has replayed it.',
+    'x-acc-proven-tail':
+      'Below is that main line: at every %1 move, either it was the only legal move or the certificate answers each alternative.',
+    'x-acc-engine':
+      'The engine’s verdict, not a proof: %1 wins %2 at ply %3 with 100,000 nodes a move, and at ply %4 with a million. The prover ran out of budget here. Below is the 100k game.',
+    'x-hint-fork':
+      'Chip: the value from there with best play on both sides. Small print: the evidence for it. Forward steps into the top row.',
+    'x-hint-proof':
+      'The moves marked ! were the only legal move. Forward steps along the main line; the games viewer at the top holds the same line.',
+    'x-hint-engine':
+      'Fairy-Stockfish against itself from this ending, 100,000 nodes a move, the kernel refereeing. Forward steps through it.',
+    'x-cap-array':
+      'The array. Red’s two legal moves are both captures, and mirror images of each other.',
+    'x-cap-holds': 'Holds: a draw with best play.',
+    'x-cap-wins': '%1 with best play.',
+    'x-cap-wins-proven': '%1 with best play, proven.',
+    'x-kicker-proof': 'Proof main line',
+    'x-kicker-engine': 'Engine game',
+    // the proof widget
+    'p-header': '1...Rxb10: the whole proof',
+    'p-seat-black': 'Black, any reply',
+    'p-seat-red': 'Red, the certificate',
+    'p-end': 'Red has no pieces left. Extinction: Red wins.',
+    'p-end-main': 'This is the end of the main line.',
+    'p-end-line': 'A line of the certificate, %1 plies from the array.',
+    'p-hint-end':
+      'Every line of the certificate ends like this. Back steps up; the first button returns to the array.',
+    'p-open-black':
+      '%1 to move. The opening: Black takes back with the chariot, the move the certificate refutes.',
+    'p-open-only': '%1 to move. The opening: the only capture.',
+    'p-sub-mirror': 'one of two mirror-image first moves',
+    'p-sub-refutes': 'the certificate refutes it: %1 positions',
+    'p-sub-only': 'the only legal capture',
+    'p-hint-open':
+      'Forward steps through the four opening plies to the position the proof starts from.',
+    'p-red-state':
+      'Red to move. The certificate holds one move here, and it wins against every reply.',
+    'p-dur': '≤%1 plies',
+    'p-main': 'main line · ',
+    'p-every': 'wins against every reply · ',
+    'p-positions-1': '1 position',
+    'p-positions': '%1 positions',
+    'p-hint-red': 'Forward plays it.',
+    'p-black-state-1': 'Black to move. One legal move, and the certificate answers it.',
+    'p-black-state':
+      'Black to move. %1 legal moves, and the certificate answers each one. Pick any.',
+    'p-head': 'Black’s replies, longest first',
+    'p-head-dur': 'over within',
+    'p-hint-one': 'Only one legal move: Black must capture. Forward plays it.',
+    'p-hint-many':
+      'Every row is a legal Black move; there are no others. Forward follows the main line.',
+    'p-cap-array': 'The array. The proof refutes 1...Rxb10; step forward to reach it.',
+    'p-off-main': ', off the main line',
+  };
+  for (const [k, v] of Object.entries(STR)) {
+    if (v.length > 240)
+      throw new Error(`string ${k} is ${v.length} chars; the extractor skips over 240`);
+    if (/^[a-z-]+$/.test(v))
+      throw new Error(`string ${k} ("${v}") is one bare lowercase word; the extractor skips it`);
+  }
   const NOTES: Record<string, Record<number, string>> = {
     'best-2000000': {
       1: 'Cannon takes the horse over Black’s cannon. Red’s only two legal moves are this and its mirror image.',
@@ -1233,8 +1412,69 @@ if (process.argv.includes('--blog')) {
       4: 'The same four forced plies as every game.',
       127: 'Third occurrence of the position: draw by repetition. Both sides kept a chariot and neither could make the other take it.',
     },
+    proof: {
+      2: 'The natural recapture. From here Red wins by force; the certificate covers 1,864 positions.',
+      5: 'Red’s first free move is quiet: the chariot steps to a2. Black has 42 legal replies and the certificate answers each one. This is the main line.',
+      7: 'The chariot to b2, with the b8 cannon now screened onto the b1 horse. Black has exactly one legal move.',
+      9: 'Red must take the cannon.',
+      10: 'Black must take the chariot: the whole b-file is open.',
+      11: 'A quiet move that leaves Black’s chariot exactly one capture, the elephant on c1.',
+      14: 'The elephant steps to i3, into the chariot’s reach; two replies, both covered.',
+      34: 'Red has no pieces left and has won. Black could not decline a single capture along the way.',
+    },
   };
-  type Rec = { id: string; group: string; label: string; moves: string[]; result: string };
+  // A note over the extractor's limit is split at sentence ends into chunks
+  // the scripts join back with a space.
+  const chunks = (text: string): string[] => {
+    const out: string[] = [];
+    let cur = '';
+    for (const sentence of text.match(/[^.!?]+[.!?]+(\s|$)|[^.!?]+$/g) ?? [text]) {
+      if ((cur + sentence).trim().length > 200 && cur) {
+        out.push(cur.trim());
+        cur = '';
+      }
+      cur += sentence;
+    }
+    if (cur.trim()) out.push(cur.trim());
+    return out;
+  };
+  const esc = (s: string) => s.replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;');
+  const i18nBlock = (keys: readonly string[], noteGames: readonly string[]) => {
+    const spans: string[] = [];
+    for (const k of keys) spans.push(`<span data-k="${k}">${esc(STR[k]!)}</span>`);
+    for (const g of noteGames)
+      for (const [ply, text] of Object.entries(NOTES[g]!))
+        chunks(text).forEach((c, i) => {
+          spans.push(`<span data-k="n:${g}:${ply}:${i}">${esc(c)}</span>`);
+        });
+    return `<div class="anxq-i18n" hidden>${spans.join('')}</div>`;
+  };
+  const SHARED_KEYS = Object.keys(STR).filter((k) =>
+    /^(red|black|red-wins|black-wins|draw|pieces|ply|game|board|ctl-|by-|taking-|only-move)/.test(
+      k,
+    ),
+  );
+  const keysWith = (prefix: RegExp) => [
+    ...SHARED_KEYS,
+    ...Object.keys(STR).filter((k) => prefix.test(k)),
+  ];
+
+  // ── The game records, as keys and arguments ──────────────────────────────
+  type Arg = number | string | ['k', string];
+  type Spec = { k: string; a: Arg[] };
+  type Rec = {
+    id: string;
+    group: Spec;
+    label: Spec;
+    result: Spec;
+    extra?: string;
+    red: Spec;
+    black: Spec;
+    moves: string[];
+  };
+  const wins = (side: string): ['k', string] => ['k', side === 'red' ? 'red-wins' : 'black-wins'];
+  const by = (reason: string): ['k', string] => ['k', `by-${reason}`];
+  const side = (s: string): ['k', string] => ['k', s];
   const records: Rec[] = [];
   const bestplay = artifact('bestplay-f26924937b96-') as {
     result: {
@@ -1254,29 +1494,47 @@ if (process.argv.includes('--blog')) {
     // boards are all in the 1. Cxb10 frame, so these are shown mirrored (a
     // mirror image is the same game) and say so.
     const mirrored = g.moves[0] === 'h3h10';
+    const m = nodes / 1e6;
     records.push({
       id: `best-${nodes}`,
-      group: 'Best play, engine against itself',
-      label: `${nodes / 1e6}M nodes a move, ${g.plies} plies`,
-      moves: mirrored ? g.moves.map((m) => mirror(m)) : g.moves,
-      result: `${g.winner ? `${g.winner} wins` : 'Draw'} by ${g.reason} after ${g.plies} plies, ${nodes / 1e6} million nodes a move for both sides.${mirrored ? ' The engine opened 1. Cxh10; shown as its mirror image so the files match the boards in the post.' : ''}`,
+      group: { k: 'grp-best', a: [] },
+      label: { k: 'lab-best', a: [m, g.plies] },
+      result: {
+        k: 'res-best',
+        a: [g.winner ? wins(g.winner) : ['k', 'draw'], by(g.reason), g.plies, m],
+      },
+      extra: mirrored ? 'res-mirrored' : undefined,
+      red: { k: 'seat-fsf-m', a: [m] },
+      black: { k: 'seat-fsf-m', a: [m] },
+      moves: mirrored ? g.moves.map((mv) => mirror(mv)) : g.moves,
     });
   }
   const sweepGames = JSON.parse(
     readFileSync(path.join(OUTDIR, 'exits-100k-stock.json'), 'utf8'),
-  ) as { rows: Array<Row & { moves?: string[] }> };
+  ) as {
+    rows: Array<Row & { moves?: string[] }>;
+  };
   const withMoves = sweepGames.rows.filter((r) => r.moves && r.moves.length > 0);
   for (const r of [...withMoves].sort((a, b) => a.exitPly - b.exitPly || a.leaf - b.leaf)) {
-    const v = DECISIVE.has(r.reason)
-      ? `${r.winner} wins in ${r.moves!.length}`
-      : `stall, ${r.reason} at ${r.moves!.length}`;
-    const proven = provenSet.has(r.opening) ? ', proven' : '';
+    const decisive = DECISIVE.has(r.reason);
+    const proven = provenSet.has(r.opening);
+    const n = r.moves!.length;
     records.push({
       id: `exit-${r.leaf}`,
-      group: `Every ending of the opening chain (${withMoves.length}), engine at 100k`,
-      label: `ending at ply ${r.exitPly} #${r.leaf}: ${v}${proven}`,
+      group: { k: 'grp-exit', a: [withMoves.length] },
+      label: decisive
+        ? {
+            k: proven ? 'lab-exit-win-proven' : 'lab-exit-win',
+            a: [r.exitPly, r.leaf, wins(r.winner!), n],
+          }
+        : { k: 'lab-exit-stall', a: [r.exitPly, r.leaf, by(r.reason), n] },
+      result: {
+        k: proven ? 'res-exit-proven' : 'res-exit',
+        a: [decisive ? wins(r.winner!) : ['k', 'draw'], by(r.reason), n, r.exitPly],
+      },
+      red: { k: 'seat-fsf-100k', a: [] },
+      black: { k: 'seat-fsf-100k', a: [] },
       moves: r.moves!,
-      result: `${DECISIVE.has(r.reason) ? `${r.winner} wins by ${r.reason}` : `Draw by ${r.reason}`} after ${r.moves!.length} plies. The chain ended at ply ${r.exitPly}${proven ? '; the loss from there is proven' : ''}.`,
     });
   }
   const ladder = artifact('ladder-f26924937b96-', 'last') as {
@@ -1295,12 +1553,15 @@ if (process.argv.includes('--blog')) {
     throw new Error('expected the eight-ply ladder to be the latest stock ladder artifact');
   ladder.result.games.forEach((g, i) => {
     const pair = Math.floor(i / 2) + 1;
+    const verdict: Arg = g.winner ? wins(g.winner) : ['k', 'draw'];
     records.push({
       id: `ladder-${i}`,
-      group: 'Ladder: 100k against 10k nodes from eight random plies (20)',
-      label: `pair ${pair}, 100k as ${g.hiSeat}: ${g.winner ? `${g.winner} wins` : 'draw'} in ${g.plies}`,
+      group: { k: 'grp-ladder', a: [] },
+      label: { k: 'lab-ladder', a: [pair, side(g.hiSeat), verdict, g.plies] },
+      result: { k: 'res-ladder', a: [verdict, by(g.reason), g.plies, side(g.hiSeat)] },
+      red: { k: g.hiSeat === 'red' ? 'seat-fsf-100k' : 'seat-fsf-10k', a: [] },
+      black: { k: g.hiSeat === 'black' ? 'seat-fsf-100k' : 'seat-fsf-10k', a: [] },
       moves: g.moves,
-      result: `${g.winner ? `${g.winner} wins` : 'Draw'} by ${g.reason} after ${g.plies} plies. The first eight plies were random; 100k nodes played ${g.hiSeat}, 10k the other side.`,
     });
   });
   const proofLines = proofs.outcomes.filter(
@@ -1310,17 +1571,19 @@ if (process.argv.includes('--blog')) {
     const row = sweepGames.rows.find((r) => r.opening === o.opening);
     records.push({
       id: `proof-${o.leaf}`,
-      group: `Proof lines: the certificate’s main line (${proofLines.length})`,
-      label: `ending at ply ${row?.exitPly ?? '?'} #${o.leaf}: ${o.attacker} wins, ${o.proofSize} positions`,
+      group: { k: 'grp-proof', a: [proofLines.length] },
+      label: { k: 'lab-proof', a: [row?.exitPly ?? 0, o.leaf, wins(o.attacker), o.proofSize ?? 0] },
+      result: { k: 'res-proof', a: [wins(o.attacker), row?.exitPly ?? 0, o.proofSize ?? 0] },
+      red: { k: 'seat-proof', a: [] },
+      black: { k: 'seat-proof', a: [] },
       moves: [...o.opening.split(' '), ...o.line!],
-      result: `${o.attacker} wins by force from the ending at ply ${row?.exitPly ?? '?'}: the certificate covers ${o.proofSize} positions, and this is its main line, every defender reply here being one the certificate answers.`,
     });
   }
   // Replay every record through the kernel: san, forced flags, captured roles.
   const encoded = records.map((r) => {
     let st = kernel.initial(`w-${r.id}`);
     const start = kernel.fen(st).split(' ')[0]!;
-    const moves = r.moves.map((u, i) => {
+    const moves = r.moves.map((u) => {
       const m = kernel.fromUci(st, u);
       if (!m) throw new Error(`bad move ${u} in ${r.id}`);
       const piece = st.board[m.from]!;
@@ -1328,50 +1591,54 @@ if (process.argv.includes('--blog')) {
       const forced = kernel.legalMoves(st).length === 1;
       const label = san(st, u);
       st = kernel.apply(st, m);
-      return {
-        u,
-        s: label,
-        m: piece.color === 'red' ? 'r' : 'b',
-        f: forced ? 1 : 0,
-        c: captured,
-        n: NOTES[r.id]?.[i + 1] ?? undefined,
-      };
+      return { u, s: label, m: piece.color === 'red' ? 'r' : 'b', f: forced ? 1 : 0, c: captured };
     });
-    return { id: r.id, group: r.group, label: r.label, result: r.result, start, moves };
+    const { moves: _m, ...rest } = r;
+    return { ...rest, start, moves };
   });
   // ── The widget, in the grammar of mistboard's embed card (embed.css) ─────
   // A bordered card: seat rows above and below the board, the board on an
   // inset mat, a control bar under it, a move sheet in a rail on the right
-  // with the result at its foot. Instances differ only in which records they
-  // hold and which opens first; the notes ride on the records.
+  // with the result at its foot, the per-ply caption under the whole card.
+  // Instances differ only in which records they hold and which opens first.
   type Instance = {
     id: string;
     records: typeof encoded;
     picker: 'select' | 'none';
-    caption?: string;
+    credit?: string;
     startAt?: number;
+    noteGames: string[];
+  };
+  const CTL = (id: string, suffix: string, key: string, icon: string) =>
+    `<button class="anxq-control" id="${id}-${suffix}" aria-label="${STR[key]}"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true">${icon}</svg></button>`;
+  const ICON = {
+    first: '<rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/>',
+    prev: '<path d="M11 4.3v7.4L4.9 8z"/>',
+    next: '<path d="M5 4.3v7.4L11.1 8z"/>',
+    last: '<rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/>',
   };
   const widgetHtml = (inst: Instance) => {
     const data = JSON.stringify(inst.records).replace(/</g, '\\u003c');
     const picker =
       inst.picker === 'select'
-        ? `<div class="anxq-pick"><label class="anxq-more" for="${inst.id}-more">Game</label><select id="${inst.id}-more" class="anxq-select"></select></div>`
+        ? `<div class="anxq-pick"><label class="anxq-more" for="${inst.id}-more">${STR.game}</label><select id="${inst.id}-more" class="anxq-select"></select></div>`
         : '';
     return `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
      Every record was played under the rule kernel as referee; the page applies moves and draws. -->
+${i18nBlock(keysWith(/^(cap-|grp-|lab-|res-|seat-|credit-)/), inst.noteGames)}
 <div id="${inst.id}" class="anxq" tabindex="0" data-anxq data-start="${inst.startAt ?? 0}">
 ${picker}<div class="anxq-header" id="${inst.id}-header"></div>
 <div class="anxq-card">
   <div class="anxq-board-col">
-    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name" id="${inst.id}-seat-black">Black</span><span class="anxq-seat-clock" id="${inst.id}-count-black"></span></div>
-    <div class="anxq-mat"><svg id="${inst.id}-board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg></div>
-    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name" id="${inst.id}-seat-red">Red</span><span class="anxq-seat-clock" id="${inst.id}-count-red"></span></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name" id="${inst.id}-seat-black">${STR.black}</span><span class="anxq-seat-clock" id="${inst.id}-count-black"></span></div>
+    <div class="anxq-mat"><svg id="${inst.id}-board" viewBox="0 0 284 315" aria-label="${STR.board}"></svg></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name" id="${inst.id}-seat-red">${STR.red}</span><span class="anxq-seat-clock" id="${inst.id}-count-red"></span></div>
     <div class="anxq-controls">
-      <button class="anxq-control" id="${inst.id}-first" aria-label="Start"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/></svg></button>
-      <button class="anxq-control" id="${inst.id}-prev" aria-label="Back one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M11 4.3v7.4L4.9 8z"/></svg></button>
+      ${CTL(inst.id, 'first', 'ctl-start', ICON.first)}
+      ${CTL(inst.id, 'prev', 'ctl-back', ICON.prev)}
       <span class="anxq-status" id="${inst.id}-pos"></span>
-      <button class="anxq-control" id="${inst.id}-next" aria-label="Forward one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M5 4.3v7.4L11.1 8z"/></svg></button>
-      <button class="anxq-control" id="${inst.id}-last" aria-label="End"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/></svg></button>
+      ${CTL(inst.id, 'next', 'ctl-fwd', ICON.next)}
+      ${CTL(inst.id, 'last', 'ctl-end', ICON.last)}
     </div>
   </div>
   <div class="anxq-rail">
@@ -1382,7 +1649,7 @@ ${picker}<div class="anxq-header" id="${inst.id}-header"></div>
   </div>
 </div>
 <div class="anxq-caption" id="${inst.id}-caption"></div>
-${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
+${inst.credit ? `<div class="anxq-credit">${STR[inst.credit]}</div>` : ''}
 <script type="application/json" id="${inst.id}-data">${data}</script>
 </div>
 `;
@@ -1430,12 +1697,27 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
   // house tan, pieces as the international set on a disc, and the last move in
   // mistboard's own grammar (board-lastmove.ts: a pale wash with an amber
   // outline where the piece left, a gold halo just outside the piece where it
-  // landed; canonical cell 60 / piece 54, scaled to this cell of 31).
+  // landed; canonical cell 60 / piece 54, scaled to this cell of 31). Plus the
+  // string lookups: T reads a key from the hidden i18n block (first match on
+  // the page, so a later include may reuse an earlier one's strings) and
+  // fills %1 %2 placeholders; an argument of the form ['k', key] is itself
+  // looked up. N joins the chunks of a note.
   const BOARD_JS = `
   const ROLE = { k: 'general', a: 'advisor', b: 'elephant', n: 'horse', r: 'chariot', c: 'cannon', p: 'soldier' };
   const ART = '/assets/posts/anti-xiangqi/pieces/xiangqi-international-';
   const FRAME = { general: { x: -7, y: -7, w: 114 }, advisor: { x: -7, y: -7, w: 114 }, elephant: { x: -5, y: -5, w: 110 }, horse: { x: -7, y: -7, w: 114 }, chariot: { x: -5.5, y: -7, w: 111 }, cannon: { x: -11, y: -11, w: 122 }, soldier: { x: 0, y: 0, w: 100 } };
   const M = 18, C = 31, PIECE = 28;
+  const STRS = {};
+  const T = (k, ...a) => {
+    let s = STRS[k];
+    if (s === undefined) { const e = document.querySelector('.anxq-i18n [data-k="' + k + '"]'); s = e ? e.textContent : k; STRS[k] = s; }
+    a.forEach((v, i) => { s = s.split('%' + (i + 1)).join(Array.isArray(v) ? T(v[1]) : String(v)); });
+    return s;
+  };
+  const F = (spec) => T(spec.k, ...spec.a);
+  const DOT = () => T('only-move').charAt(0);
+  // Two widgets on one page may carry the same note; keep the first copy of each chunk.
+  const N = (game, ply) => { const seen = new Set(), out = []; for (const e of document.querySelectorAll('.anxq-i18n [data-k^="n:' + game + ':' + ply + ':"]')) { if (seen.has(e.dataset.k)) continue; seen.add(e.dataset.k); out.push(e.textContent); } return out.join(' '); };
   const xOf = (f) => M + f * C, yOf = (r) => M + (10 - r) * C;
   const pt = (s) => ({ x: xOf(s.charCodeAt(0) - 97), y: yOf(Number(s.slice(1))) });
   function parsePlacement(p) {
@@ -1462,7 +1744,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
     for (const y0 of [0, 7]) { g.push(L(M + 3 * C, M + y0 * C, M + 5 * C, M + (y0 + 2) * C)); g.push(L(M + 5 * C, M + y0 * C, M + 3 * C, M + (y0 + 2) * C)); }
     return g.join('');
   })();
-  // mv: the last move (uci) or null; targets: [{u, col}] capture options to hint on the board.
+  // mv: the last move (uci) or null; targets: [{u, col}] capture hints, arrows.
   function render(svg, board, mv, targets) {
     const parts = [GRID];
     if (mv) {
@@ -1476,12 +1758,10 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
       parts.push('<circle cx="' + c.x + '" cy="' + c.y + '" r="' + (46 * k) + '" fill="#fef0d7" stroke="' + (p.color === 'red' ? '#c30d0d' : '#202427') + '" stroke-width="' + (2.8 * k) + '"/>');
       parts.push('<image href="' + ART + p.color + '-' + (crossed ? 'crossed-soldier' : p.role) + '.png" x="' + (x + fr.x * k) + '" y="' + (y + fr.y * k) + '" width="' + (fr.w * k) + '" height="' + (fr.w * k) + '" preserveAspectRatio="xMidYMid meet"/>');
     }
-    // Capture hints: at rest a dot on each piece that can be taken; on hover
-    // an arrow (the analysis-board grammar) from the capturing piece,
-    // stopping at the target's disc so the last-move halo stays readable.
+    // Capture hints as arrows (the analysis-board grammar), stopping at the
+    // target's disc so the last-move halo underneath stays readable.
     for (const tg of targets || []) {
       const { from, to } = sq(tg.u), f = pt(from), t = pt(to);
-      if (tg.kind === 'dot') { parts.push('<circle cx="' + t.x + '" cy="' + t.y + '" r="4.2" fill="' + tg.col + '" stroke="#fef0d7" stroke-width="1.2" opacity=".95"/>'); continue; }
       const dx = t.x - f.x, dy = t.y - f.y, len = Math.hypot(dx, dy), ux = dx / len, uy = dy / len;
       const ex = t.x - ux * 15, ey = t.y - uy * 15, sx = f.x + ux * 6, sy = f.y + uy * 6;
       const hx = ex - ux * 9, hy = ey - uy * 9, px = -uy * 5.5, py = ux * 5.5;
@@ -1492,6 +1772,7 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
   }
   function applyMove(b, u) { const { from, to } = sq(u); const n = { ...b }; n[to] = n[from]; delete n[from]; return n; }
   function countPieces(board) { let red = 0, black = 0; for (const s in board) { if (board[s].color === 'red') red++; else black++; } return { red, black }; }
+  const numbered = (ply, s) => (Math.floor((ply - 1) / 2) + 1) + (ply % 2 === 1 ? '. ' : '... ') + s;
 `;
   const WIDGET_JS = `<script>
 (() => {${BOARD_JS}
@@ -1510,11 +1791,14 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
       const game = GAMES[gi], mv = at > 0 ? game.moves[at - 1] : null, board = boards[at];
       render(svg, board, mv ? mv.u : null, []);
       const { red, black } = countPieces(board);
-      $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
+      $('count-red').textContent = T('pieces', red); $('count-black').textContent = T('pieces', black);
       $('pos').textContent = at + ' / ' + game.moves.length;
       const cap = $('caption');
-      if (!mv) cap.innerHTML = '<span class="who">The start. Red to move; every legal move is a capture.</span>';
-      else cap.innerHTML = '<span class="san">' + (Math.floor((at - 1) / 2) + 1) + (mv.m === 'r' ? '. ' : '... ') + mv.s + '</span> <span class="who">' + (mv.m === 'r' ? 'Red' : 'Black') + (mv.c ? ', taking the ' + mv.c : '') + (mv.f ? '. Only legal move.' : '.') + '</span>' + (mv.n ? '<p>' + mv.n + '</p>' : '');
+      if (!mv) cap.innerHTML = '<span class="who">' + T('cap-start') + '</span>';
+      else {
+        const note = N(game.id, at);
+        cap.innerHTML = '<span class="san">' + numbered(at, mv.s) + '</span> <span class="who">' + T(mv.m === 'r' ? 'red' : 'black') + (mv.c ? T('taking-' + mv.c) : '') + (mv.f ? T('only-move') : DOT()) + '</span>' + (note ? '<p>' + note + '</p>' : '');
+      }
       root.querySelectorAll('.anxq-moves button').forEach((b) => b.classList.toggle('cur', Number(b.dataset.ply) === at));
       const cur = root.querySelector('.anxq-moves button.cur'); if (cur) cur.scrollIntoView({ block: 'nearest' });
       $('prev').disabled = at === 0; $('first').disabled = at === 0;
@@ -1527,22 +1811,23 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
       boards = boardsOf(game);
       at = Math.min(startAt, game.moves.length);
       const more = $('more'); if (more) more.value = String(i);
-      $('header').textContent = game.label;
-      $('seat-red').textContent = game.red; $('seat-black').textContent = game.black;
+      $('header').textContent = F(game.label);
+      $('seat-red').textContent = F(game.red); $('seat-black').textContent = F(game.black);
       const list = $('moves'); list.innerHTML = '';
       game.moves.forEach((m, k) => {
         if (k % 2 === 0) { const n = document.createElement('span'); n.className = 'n'; n.textContent = String(k / 2 + 1); list.appendChild(n); }
         const b = document.createElement('button'); b.textContent = m.s; b.dataset.ply = k + 1; b.className = m.f ? 'forced' : ''; b.addEventListener('click', () => { at = k + 1; show(); }); list.appendChild(b);
       });
-      $('result').textContent = game.result;
+      $('result').textContent = F(game.result) + (game.extra ? ' ' + T(game.extra) : '');
       show();
     }
     const more = $('more');
     if (more) {
       let og = null, group = null;
       GAMES.forEach((g, i) => {
-        if (g.group !== group) { group = g.group; og = document.createElement('optgroup'); og.label = group; more.appendChild(og); }
-        const o = document.createElement('option'); o.value = String(i); o.textContent = g.label; og.appendChild(o);
+        const gk = F(g.group);
+        if (gk !== group) { group = gk; og = document.createElement('optgroup'); og.label = group; more.appendChild(og); }
+        const o = document.createElement('option'); o.value = String(i); o.textContent = F(g.label); og.appendChild(o);
       });
       more.addEventListener('change', (e) => select(Number(e.target.value)));
     }
@@ -1561,61 +1846,23 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
   document.querySelectorAll('[data-anxq]').forEach((root) => { if (root.dataset.mounted) return; root.dataset.mounted = '1'; mount(root); });
 })();
 </script>`;
-  // Seat names and tab labels per record.
-  const seats = (r: { id: string; red?: string; black?: string }) => r;
-  void seats;
-  const withSeats = encoded.map((g) => {
-    const rec = records.find((r) => r.id === g.id)!;
-    let red = 'Fairy-Stockfish';
-    let black = 'Fairy-Stockfish';
-    let tab: string | undefined;
-    if (g.id.startsWith('best-')) {
-      const n = Number(g.id.slice(5)) / 1e6;
-      red = `Fairy-Stockfish, ${n}M nodes`;
-      black = `Fairy-Stockfish, ${n}M nodes`;
-      tab = `${n}M nodes <small>${g.moves.length} plies</small>`;
-    } else if (g.id.startsWith('exit-')) {
-      red = 'Fairy-Stockfish, 100k nodes';
-      black = 'Fairy-Stockfish, 100k nodes';
-    } else if (g.id.startsWith('ladder-')) {
-      const hi = /100k as (red|black)/.exec(rec.label)?.[1];
-      red = hi === 'red' ? 'Fairy-Stockfish, 100k nodes' : 'Fairy-Stockfish, 10k nodes';
-      black = hi === 'black' ? 'Fairy-Stockfish, 100k nodes' : 'Fairy-Stockfish, 10k nodes';
-    } else if (g.id.startsWith('proof-')) {
-      red = 'the proof';
-      black = 'the proof';
-    }
-    return { ...g, red, black, tab };
-  });
-  // The recapture proof as a stepper of its own, annotated along the main line.
-  const recaptureNotes: Record<number, string> = {
-    2: 'The natural recapture. From here Red wins by force; the certificate covers 1,864 positions.',
-    5: 'Red’s first free move is quiet: the chariot steps to a2. Black has 42 legal replies and the certificate answers each one. This is the main line.',
-    7: 'The chariot to b2, with the b8 cannon now screened onto the b1 horse. Black has exactly one legal move.',
-    9: 'Red must take the cannon.',
-    10: 'Black must take the chariot: the whole b-file is open.',
-    11: 'A quiet move that leaves Black’s chariot exactly one capture, the elephant on c1.',
-    14: 'The elephant steps to i3, into the chariot’s reach; two replies, both covered.',
-    34: 'Red has no pieces left and has won. Black could not decline a single capture along the way.',
-  };
-  const middlegame = withSeats
+  const middlegame = encoded
     .filter((g) => g.id === 'best-2000000' || g.id === 'best-5000000')
-    .map((g) => ({
-      ...g,
-      label:
-        g.id === 'best-2000000'
-          ? 'The 2M game: the feast, then the lever, then a dead board (44 plies)'
-          : 'The 5M game: a soldier war that goes nowhere (131 plies)',
-    }));
+    .map((g) => ({ ...g, label: { k: g.id === 'best-2000000' ? 'lab-2m' : 'lab-5m', a: [] } }));
   const instances: Instance[] = [
-    { id: 'anti-games', records: withSeats, picker: 'select' },
+    {
+      id: 'anti-games',
+      records: encoded,
+      picker: 'select',
+      noteGames: ['best-2000000', 'best-5000000', 'best-1000000'],
+    },
     {
       id: 'anti-line-middlegame',
       records: middlegame,
       picker: 'select',
       startAt: 4,
-      caption:
-        'Two of the engine\u2019s own games, opened at ply 4, where the forced part ends. The notes are on the plies that matter.',
+      credit: 'credit-middlegame',
+      noteGames: ['best-2000000', 'best-5000000'],
     },
   ];
   // ── The opening explorer: the cascade as a tablebase ─────────────────────
@@ -1715,22 +1962,22 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 @media (max-width: 640px) { .anxq-explorer .anxq-x-rail { border-left: 0; border-top: 1px solid var(--anxq-border); min-height: 300px; } }
 </style>`;
   // One instance: the markup only. The Liquid parameters name it and root it
-  // (\`start\` is a UCI line from the array; empty means the array itself).
+  // (start is a UCI line from the array; empty means the array itself).
   const explorerInstanceHtml = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
      One tablebase instance: include it with id="..." and start="..." (a UCI line from the array) after the lib include. -->
 <div id="{{ include.id }}" class="anxq anxq-explorer" tabindex="0" data-anxq-explorer data-start="{{ include.start }}">
 <div class="anxq-header" id="{{ include.id }}-header"></div>
 <div class="anxq-card">
   <div class="anxq-board-col">
-    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name">Black</span><span class="anxq-seat-clock" id="{{ include.id }}-count-black"></span></div>
-    <div class="anxq-mat"><svg id="{{ include.id }}-board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg></div>
-    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name">Red</span><span class="anxq-seat-clock" id="{{ include.id }}-count-red"></span></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name">${STR.black}</span><span class="anxq-seat-clock" id="{{ include.id }}-count-black"></span></div>
+    <div class="anxq-mat"><svg id="{{ include.id }}-board" viewBox="0 0 284 315" aria-label="${STR.board}"></svg></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name">${STR.red}</span><span class="anxq-seat-clock" id="{{ include.id }}-count-red"></span></div>
     <div class="anxq-controls">
-      <button class="anxq-control" id="{{ include.id }}-first" aria-label="Back to this position"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/></svg></button>
-      <button class="anxq-control" id="{{ include.id }}-prev" aria-label="Back one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M11 4.3v7.4L4.9 8z"/></svg></button>
+      ${CTL('{{ include.id }}', 'first', 'ctl-home', ICON.first)}
+      ${CTL('{{ include.id }}', 'prev', 'ctl-back', ICON.prev)}
       <span class="anxq-status" id="{{ include.id }}-pos"></span>
-      <button class="anxq-control" id="{{ include.id }}-next" aria-label="Forward one ply, best play"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M5 4.3v7.4L11.1 8z"/></svg></button>
-      <button class="anxq-control" id="{{ include.id }}-last" aria-label="To the end of the line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/></svg></button>
+      ${CTL('{{ include.id }}', 'next', 'ctl-fwd-best', ICON.next)}
+      ${CTL('{{ include.id }}', 'last', 'ctl-end-line', ICON.last)}
     </div>
   </div>
   <div class="anxq-x-rail"><div class="anxq-x-inner">
@@ -1749,25 +1996,26 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
      first instance include. Past an ending the viewer plays on through
      the proof's main line or the engine's game, read from the games viewer's records on the same page. -->
 ${EXPLORER_CSS}
+${i18nBlock(keysWith(/^x-/), [])}
 <script type="application/json" id="anti-explorer-data">${xjson}</script>
 <script>
 (() => {${BOARD_JS}
   const DATA = JSON.parse(document.getElementById('anti-explorer-data').textContent);
-  const N = DATA.nodes;
+  const N_ = DATA.nodes;
   const MIRROR = { a: 'i', b: 'h', c: 'g', d: 'f', e: 'e', f: 'd', g: 'c', h: 'b', i: 'a' };
   const mirrorText = (t) => t.replace(/[a-i]/g, (c) => MIRROR[c]);
   let gamesCache = null;
   function games() { if (gamesCache) return gamesCache; const el = document.getElementById('anti-games-data'); if (!el) return []; gamesCache = JSON.parse(el.textContent); return gamesCache; }
-  const who = (v) => v === 'r' ? 'Red wins' : v === 'b' ? 'Black wins' : 'Draw';
-  const side = (v) => v === 'r' ? 'Red' : 'Black';
-  const REASON = { extinction: 'extinction', stalemate: 'stalemate', 'progress-clock': 'the progress clock', repetition: 'repetition', 'dead-position': 'a dead board' };
+  const who = (v) => T(v === 'r' ? 'red-wins' : v === 'b' ? 'black-wins' : 'draw');
+  const sideOf = (v) => T(v === 'r' ? 'red' : 'black');
+  const winsOf = (w) => T(w === 'red' ? 'red-wins' : 'black-wins');
   const COL = { r: '#c0392b', b: '#2b2b2b', d: '#8b8b90' };
   const fmt = (n) => String(n).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
-  function lineOf(i) { const out = []; let n = N[i]; while (n && n.p >= 0) { out.unshift(n); n = N[n.p]; } return out; }
-  function nodeAt(uciLine) { let i = 0; for (const u of uciLine) { const c = N[i].c.map((k) => N[k]).find((k) => k.u === u); if (!c) throw new Error('no node for ' + u); i = c.i; } return i; }
+  function lineOf(i) { const out = []; let n = N_[i]; while (n && n.p >= 0) { out.unshift(n); n = N_[n.p]; } return out; }
+  function nodeAt(uciLine) { let i = 0; for (const u of uciLine) { const c = N_[i].c.map((k) => N_[k]).find((k) => k.u === u); if (!c) throw new Error('no node for ' + u); i = c.i; } return i; }
   // The mover's preference: own win, then a draw, then the other side's win.
   const pref = (v, mover) => v === mover ? 2 : v === 'd' ? 1 : 0;
-  function sortedKids(n) { const mover = n.d % 2 === 0 ? 'r' : 'b'; return n.c.map((c) => N[c]).sort((a, b) => pref(b.v, mover) - pref(a.v, mover) || a.n - b.n); }
+  function sortedKids(n) { const mover = n.d % 2 === 0 ? 'r' : 'b'; return n.c.map((c) => N_[c]).sort((a, b) => pref(b.v, mover) - pref(a.v, mover) || a.n - b.n); }
   // What comes after an ending: the proof's main line where the loss is proven, else the engine's 100k game.
   function continuation(n) {
     const rec = games().find((g) => g.id === (n.pf || n.g));
@@ -1777,20 +2025,22 @@ ${EXPLORER_CSS}
   }
   // The row's evidence line, and the ending's full account.
   function evidence(k) {
-    if (!k.l) return fmt(k.n) + ' ending' + (k.n === 1 ? '' : 's') + ' below, ' + k.pv + ' proven';
-    if (k.v === 'd') return k.e.m.w ? 'engine: stalls at 100k; at 1M ' + side(k.e.m.w[0]) + ' wins at ply ' + k.e.m.p + '; not proven' : 'engine: stalls at 100k and at 1M';
-    if (k.pr) return 'proven: over at ply ' + (k.d + k.pl) + ', ' + fmt(k.ps) + ' positions';
-    return 'engine: over at ply ' + k.e.k.p + ' (100k), 1M agrees; not proven';
+    if (!k.l) return k.n === 1 ? T('x-ev-below-1', k.pv) : T('x-ev-below', fmt(k.n), k.pv);
+    if (k.v === 'd') return k.e.m.w ? T('x-ev-stall-1m', winsOf(k.e.m.w), k.e.m.p) : T('x-ev-stall');
+    if (k.pr) return T('x-ev-proven', k.d + k.pl, fmt(k.ps));
+    return T('x-ev-engine', k.e.k.p);
   }
   function account(n) {
-    const mover = n.d % 2 === 0 ? 'Red' : 'Black';
-    let s = '<span class="kicker">The chain ends here</span> ' + mover + ' to move with no capture on the board. ';
+    const mover = sideOf(n.d % 2 === 0 ? 'r' : 'b');
+    let s = '<span class="kicker">' + T('x-acc-kicker') + '</span> ' + T('x-acc-lead', mover) + ' ';
     if (n.v === 'd') {
-      s += '<p><span class="val d">Draw</span> The engine\\u2019s game from here stalls by ' + REASON[n.e.k.r] + ' at ply ' + n.e.k.p + ' with 100,000 nodes a move' + (n.e.m.w ? ', but with a million ' + side(n.e.m.w[0]) + ' wins by ' + REASON[n.e.m.r] + ' at ply ' + n.e.m.p + ': a verdict the prover could not close, so this ending is scored as the 100k sweep found it' : ', and by ' + REASON[n.e.m.r] + ' at ply ' + n.e.m.p + ' with a million') + '. Under the rules as written a stall is a draw. Below is the 100k game.</p>';
+      s += '<p><span class="val d">' + T('draw') + '</span> ' + (n.e.m.w
+        ? T('x-acc-draw-1m', T('by-' + n.e.k.r), n.e.k.p, sideOf(n.e.m.w[0]), T('by-' + n.e.m.r), n.e.m.p) + ' ' + T('x-acc-draw-1m-tail')
+        : T('x-acc-draw', T('by-' + n.e.k.r), n.e.k.p, T('by-' + n.e.m.r), n.e.m.p)) + '</p>';
     } else if (n.pr) {
-      s += '<p><span class="val ' + n.v + '">' + who(n.v) + '</span> Proven. The certificate holds ' + fmt(n.ps) + ' positions and its main line ends the game at ply ' + (n.d + n.pl) + '; a checker that knows only the rules has replayed it. Below is that main line: at every ' + (n.v === 'r' ? 'Black' : 'Red') + ' move, either it was the only legal move or the certificate answers each alternative.</p>';
+      s += '<p><span class="val ' + n.v + '">' + who(n.v) + '</span> ' + T('x-acc-proven', fmt(n.ps), n.d + n.pl) + ' ' + T('x-acc-proven-tail', sideOf(n.v === 'r' ? 'b' : 'r')) + '</p>';
     } else {
-      s += '<p><span class="val ' + n.v + '">' + who(n.v) + '</span> The engine\\u2019s verdict, not a proof: ' + side(n.v) + ' wins by ' + REASON[n.e.k.r] + ' at ply ' + n.e.k.p + ' with 100,000 nodes a move, and at ply ' + n.e.m.p + ' with a million. The prover ran out of budget here. Below is the 100k game.</p>';
+      s += '<p><span class="val ' + n.v + '">' + who(n.v) + '</span> ' + T('x-acc-engine', sideOf(n.v), T('by-' + n.e.k.r), n.e.k.p, n.e.m.p) + '</p>';
     }
     return s;
   }
@@ -1803,7 +2053,7 @@ ${EXPLORER_CSS}
     let cur = home, ext = 0, cont = null, view = { board: null, last: null };
     function show(i, extAt) {
       cur = i; ext = extAt || 0;
-      const n = N[i];
+      const n = N_[i];
       cont = n.l ? continuation(n) : null;
       if (cont && ext > cont.moves.length) ext = cont.moves.length;
       const line = lineOf(i);
@@ -1815,26 +2065,25 @@ ${EXPLORER_CSS}
       view = { board, last };
       render(svg, board, last, []);
       const { red, black } = countPieces(board);
-      $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
-      $('pos').textContent = 'ply ' + (n.d + ext);
+      $('count-red').textContent = T('pieces', red); $('count-black').textContent = T('pieces', black);
+      $('pos').textContent = T('ply', n.d + ext);
       // The path from the array, then the continuation in a lighter weight.
       const path = $('path'); path.innerHTML = '';
-      const startBtn = document.createElement('button'); startBtn.textContent = 'start'; startBtn.className = i === 0 ? 'cur' : ''; startBtn.addEventListener('click', () => show(0)); path.appendChild(startBtn);
+      const startBtn = document.createElement('button'); startBtn.textContent = T('x-start'); startBtn.className = i === 0 ? 'cur' : ''; startBtn.addEventListener('click', () => show(0)); path.appendChild(startBtn);
       const addMove = (k, label, cls, onClick) => { if (k % 2 === 0) { const num = document.createElement('span'); num.className = 'num'; num.textContent = ' ' + (k / 2 + 1) + '. '; path.appendChild(num); } else path.appendChild(document.createTextNode(' ')); const b = document.createElement('button'); b.textContent = label; b.className = cls; b.addEventListener('click', onClick); path.appendChild(b); };
       line.forEach((m, k) => addMove(k, m.s, m.i === i && ext === 0 ? 'cur' : '', () => show(m.i)));
       if (cont) cont.moves.slice(0, ext).forEach((m, k) => addMove(n.d + k, m.s, 'ext' + (k + 1 === ext ? ' cur' : ''), () => show(i, k + 1)));
-      const mover = n.d % 2 === 0 ? 'Red' : 'Black';
+      const mover = sideOf(n.d % 2 === 0 ? 'r' : 'b');
       const state = $('state'), body = $('body'), hint = $('hint');
       body.innerHTML = '';
       if (!n.l) {
-        state.innerHTML = '<b>' + mover + ' to move.</b> ' + kids.length + ' capture' + (kids.length === 1 ? '' : 's') + ', and only captures are legal. Backing up every ending below: <b>' + who(n.v).toLowerCase() + '</b>.';
-        const head = document.createElement('div'); head.className = 'anxq-x-head'; head.innerHTML = '<span>' + mover + '\\u2019s captures, best first</span>'; body.appendChild(head);
+        state.innerHTML = kids.length === 1 ? T('x-state-fork-1', '<b>' + mover + '</b>', '<b>' + who(n.v).toLowerCase() + '</b>') : T('x-state-fork', '<b>' + mover + '</b>', kids.length, '<b>' + who(n.v).toLowerCase() + '</b>');
+        const head = document.createElement('div'); head.className = 'anxq-x-head'; head.innerHTML = '<span>' + T('x-head', mover) + '</span>'; body.appendChild(head);
         const moverV = n.d % 2 === 0 ? 'r' : 'b';
         const strictlyBest = kids.length > 1 && pref(kids[0].v, moverV) > pref(kids[1].v, moverV);
         kids.forEach((k, idx) => {
           const b = document.createElement('button'); b.className = 'anxq-x-row';
-          const num = Math.floor((k.d - 1) / 2) + 1;
-          b.innerHTML = '<span class="mv">' + num + (k.m === 'r' ? '. ' : '... ') + k.s + (idx === 0 && strictlyBest ? '<span class="best">best</span>' : '') + '</span><span class="val ' + k.v + '">' + who(k.v) + '</span><span class="sub">' + evidence(k) + '</span>';
+          b.innerHTML = '<span class="mv">' + numbered(k.d, k.s) + (idx === 0 && strictlyBest ? '<span class="best">' + T('x-best') + '</span>' : '') + '</span><span class="val ' + k.v + '">' + who(k.v) + '</span><span class="sub">' + evidence(k) + '</span>';
           b.addEventListener('click', () => show(k.i));
           // Through view, so a leave event that lands after a click repaints
           // the position the click moved to, not the one the row belonged to.
@@ -1844,9 +2093,9 @@ ${EXPLORER_CSS}
           b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
           body.appendChild(b);
         });
-        hint.textContent = 'Chip: the value from there with best play on both sides. Small print: the evidence for it. Forward steps into the top row.';
+        hint.textContent = T('x-hint-fork');
       } else {
-        state.innerHTML = '<b>' + mover + ' to move.</b> No capture, so the chain of forced captures is over and the game is open.';
+        state.innerHTML = T('x-state-leaf', '<b>' + mover + '</b>');
         const leaf = document.createElement('div'); leaf.className = 'anxq-x-leaf'; leaf.innerHTML = account(n); body.appendChild(leaf);
         if (cont.moves.length > 0) {
           const list = document.createElement('div'); list.className = 'anxq-moves';
@@ -1859,21 +2108,21 @@ ${EXPLORER_CSS}
           body.appendChild(list);
           const curBtn = list.querySelector('button.cur'); if (curBtn) curBtn.scrollIntoView({ block: 'nearest' });
         }
-        hint.textContent = cont.kind === 'proof' ? 'The moves marked ! were the only legal move. Forward steps along the main line; the games viewer at the top holds the same line.' : 'Fairy-Stockfish against itself from this ending, 100,000 nodes a move, the kernel refereeing. Forward steps through it.';
+        hint.textContent = T(cont.kind === 'proof' ? 'x-hint-proof' : 'x-hint-engine');
       }
       const cap = $('caption');
-      if (ext > 0) { const m = cont.moves[ext - 1]; cap.innerHTML = '<span class="kicker">' + (cont.kind === 'proof' ? 'Proof main line' : 'Engine game') + '</span><span class="san">' + (Math.floor((n.d + ext - 1) / 2) + 1) + (m.m === 'r' ? '. ' : '... ') + m.s + '</span> <span class="who">' + (m.m === 'r' ? 'Red' : 'Black') + (m.f ? '. Only legal move.' : '.') + '</span>'; }
-      else if (n.d === 0) cap.innerHTML = '<span class="who">The array. Red\\u2019s two legal moves are both captures, and mirror images of each other.</span>';
-      else cap.innerHTML = '<span class="san">' + (Math.floor((n.d - 1) / 2) + 1) + (n.m === 'r' ? '. ' : '... ') + n.s + '</span> <span class="who">' + (n.m === 'r' ? 'Red' : 'Black') + '. ' + (n.v === 'd' ? 'Holds: a draw with best play.' : who(n.v) + ' with best play' + (n.l && n.pr ? ', proven.' : '.')) + '</span>';
+      if (ext > 0) { const m = cont.moves[ext - 1]; cap.innerHTML = '<span class="kicker">' + T(cont.kind === 'proof' ? 'x-kicker-proof' : 'x-kicker-engine') + '</span><span class="san">' + numbered(n.d + ext, m.s) + '</span> <span class="who">' + T(m.m === 'r' ? 'red' : 'black') + (m.f ? T('only-move') : DOT()) + '</span>'; }
+      else if (n.d === 0) cap.innerHTML = '<span class="who">' + T('x-cap-array') + '</span>';
+      else cap.innerHTML = '<span class="san">' + numbered(n.d, n.s) + '</span> <span class="who">' + T(n.m === 'r' ? 'red' : 'black') + DOT() + ' ' + (n.v === 'd' ? T('x-cap-holds') : T(n.l && n.pr ? 'x-cap-wins-proven' : 'x-cap-wins', who(n.v))) + '</span>';
       $('first').disabled = i === home && ext === 0;
       $('prev').disabled = i === 0 && ext === 0;
       const atEnd = n.l && (!cont || ext === cont.moves.length);
       $('next').disabled = atEnd; $('last').disabled = atEnd;
-      $('header').textContent = n.d === 0 ? 'The array' : 'After ' + line.map((m, k) => (k % 2 === 0 ? (k / 2 + 1) + '. ' : '') + m.s).join(' ');
+      $('header').textContent = n.d === 0 ? T('x-array') : T('x-after', line.map((m, k) => (k % 2 === 0 ? (k / 2 + 1) + '. ' : '') + m.s).join(' '));
     }
-    function next() { const n = N[cur]; if (n.l) { if (cont && ext < cont.moves.length) show(cur, ext + 1); } else show(sortedKids(n)[0].i); }
-    function prev() { if (ext > 0) show(cur, ext - 1); else if (N[cur].p >= 0) show(N[cur].p); }
-    function last() { let i = cur; while (!N[i].l) i = sortedKids(N[i])[0].i; const c = continuation(N[i]); show(i, c.moves.length); }
+    function next() { const n = N_[cur]; if (n.l) { if (cont && ext < cont.moves.length) show(cur, ext + 1); } else show(sortedKids(n)[0].i); }
+    function prev() { if (ext > 0) show(cur, ext - 1); else if (N_[cur].p >= 0) show(N_[cur].p); }
+    function last() { let i = cur; while (!N_[i].l) i = sortedKids(N_[i])[0].i; const c = continuation(N_[i]); show(i, c.moves.length); }
     $('first').addEventListener('click', () => show(home));
     $('prev').addEventListener('click', prev);
     $('next').addEventListener('click', next);
@@ -1887,19 +2136,6 @@ ${EXPLORER_CSS}
 })();
 </script>
 `;
-  writeFileSync(path.join(INCLUDES, 'anti-xq-explorer-lib.html'), explorerLibHtml);
-  writeFileSync(path.join(INCLUDES, 'anti-xq-explorer.html'), explorerInstanceHtml);
-  console.log('  _includes/anti-xq-explorer-lib.html, anti-xq-explorer.html');
-  for (const inst of instances) {
-    const first = inst.id === 'anti-games';
-    writeFileSync(
-      path.join(INCLUDES, `anti-xq-${inst.id.replace(/^anti-/, '')}.html`),
-      `${first ? WIDGET_CSS : ''}${widgetHtml(inst)}${first ? '' : ''}${WIDGET_JS}`,
-    );
-    console.log(
-      `  _includes/anti-xq-${inst.id.replace(/^anti-/, '')}.html (${inst.records.length} games)`,
-    );
-  }
   // ── Play against the proof: the whole certificate for 1...Rxb10 ──────────
   // The stepper above shows one line; this holds every line. At each Black
   // move the reader picks any legal reply and the certificate answers with
@@ -1919,7 +2155,6 @@ ${EXPLORER_CSS}
     n: number;
     dl: number;
     main: boolean;
-    note?: string;
   };
   const pnodes: PNode[] = [];
   {
@@ -1933,7 +2168,8 @@ ${EXPLORER_CSS}
         mainLine.add(acc.join(' '));
       }
     }
-    const st = kernel.initial('pf');
+    const states: RuleState[] = [];
+    const parentState = (p: number) => states[p]!;
     const add = (parent: number, line: string[], s: RuleState, children: ProofTree[]): number => {
       const i = pnodes.length;
       const u = line[line.length - 1] ?? '';
@@ -1946,7 +2182,6 @@ ${EXPLORER_CSS}
         n: 0,
         dl: 0,
         main: line.length === 0 || mainLine.has(line.join(' ')),
-        note: recaptureNotes[line.length],
       };
       pnodes.push(node);
       states.push(s);
@@ -1965,15 +2200,12 @@ ${EXPLORER_CSS}
       }
       return i;
     };
-    const states: RuleState[] = [];
-    const parentState = (p: number) => states[p]!;
     // The opening as a linear prefix, then the certificate from the ending.
     const prefixTree = (k: number): ProofTree[] =>
       k >= opening.length
         ? recaptureProof.proof!.children
         : [{ move: opening[k]!, replies: prefixTree(k + 1) }];
-    add(-1, [], st, prefixTree(0));
-    void st;
+    add(-1, [], kernel.initial('pf'), prefixTree(0));
     if (pnodes.length !== 1 + opening.length + (recaptureProof.proofSize ?? 0) - 1)
       throw new Error(
         `certificate flattened to ${pnodes.length} nodes; expected ${opening.length + (recaptureProof.proofSize ?? 0)}`,
@@ -1982,24 +2214,25 @@ ${EXPLORER_CSS}
   const pjson = JSON.stringify({
     start: kernel.fen(kernel.initial('x')).split(' ')[0],
     open: 4,
-    nodes: pnodes.map((n) => [n.p, n.u, n.s, n.c, n.n, n.dl, n.main ? 1 : 0, n.note ?? '']),
+    nodes: pnodes.map((n) => [n.p, n.u, n.s, n.c, n.n, n.dl, n.main ? 1 : 0]),
   }).replace(/</g, '\\u003c');
   const proofHtml = `<!-- Generated by scripts/gen-anti-diagrams.mts in the mistboard repo (--blog). Do not hand-edit.
      The whole certificate for 1...Rxb10 as a widget: pick any Black reply, the proof answers.
      Uses the explorer's CSS; include after anti-xq-explorer-lib.html. -->
+${i18nBlock(keysWith(/^p-/), ['proof'])}
 <div id="anti-proof" class="anxq anxq-explorer" tabindex="0">
-<div class="anxq-header" id="anti-proof-header">1...Rxb10: the whole proof</div>
+<div class="anxq-header" id="anti-proof-header">${STR['p-header']}</div>
 <div class="anxq-card">
   <div class="anxq-board-col">
-    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name">Black, any reply</span><span class="anxq-seat-clock" id="anti-proof-count-black"></span></div>
-    <div class="anxq-mat"><svg id="anti-proof-board" viewBox="0 0 284 315" aria-label="Xiangqi board"></svg></div>
-    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name">Red, the certificate</span><span class="anxq-seat-clock" id="anti-proof-count-red"></span></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--black"></span><span class="anxq-seat-name">${STR['p-seat-black']}</span><span class="anxq-seat-clock" id="anti-proof-count-black"></span></div>
+    <div class="anxq-mat"><svg id="anti-proof-board" viewBox="0 0 284 315" aria-label="${STR.board}"></svg></div>
+    <div class="anxq-seat"><span class="anxq-disc anxq-disc--red"></span><span class="anxq-seat-name">${STR['p-seat-red']}</span><span class="anxq-seat-clock" id="anti-proof-count-red"></span></div>
     <div class="anxq-controls">
-      <button class="anxq-control" id="anti-proof-first" aria-label="Back to the array"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="3.4" y="4" width="1.7" height="8" rx="0.7"/><path d="M12.6 4.3v7.4L6.5 8z"/></svg></button>
-      <button class="anxq-control" id="anti-proof-prev" aria-label="Back one ply"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M11 4.3v7.4L4.9 8z"/></svg></button>
+      ${CTL('anti-proof', 'first', 'ctl-array', ICON.first)}
+      ${CTL('anti-proof', 'prev', 'ctl-back', ICON.prev)}
       <span class="anxq-status" id="anti-proof-pos"></span>
-      <button class="anxq-control" id="anti-proof-next" aria-label="Forward one ply along the main line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M5 4.3v7.4L11.1 8z"/></svg></button>
-      <button class="anxq-control" id="anti-proof-last" aria-label="To the end of the main line"><svg viewBox="0 0 16 16" width="16" height="16" fill="currentColor" aria-hidden="true"><rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/></svg></button>
+      ${CTL('anti-proof', 'next', 'ctl-fwd-main', ICON.next)}
+      ${CTL('anti-proof', 'last', 'ctl-end-main', ICON.last)}
     </div>
   </div>
   <div class="anxq-x-rail"><div class="anxq-x-inner">
@@ -2015,90 +2248,98 @@ ${EXPLORER_CSS}
 (() => {${BOARD_JS}
   const root = document.getElementById('anti-proof');
   const DATA = JSON.parse(root.querySelector('#anti-proof-data').textContent);
-  const N = DATA.nodes.map((a, i) => ({ i, p: a[0], u: a[1], s: a[2], c: a[3], n: a[4], dl: a[5], main: !!a[6], note: a[7], d: 0 }));
-  for (const n of N) n.d = n.p < 0 ? 0 : N[n.p].d + 1;
+  const N_ = DATA.nodes.map((a, i) => ({ i, p: a[0], u: a[1], s: a[2], c: a[3], n: a[4], dl: a[5], main: !!a[6], d: 0 }));
+  for (const n of N_) n.d = n.p < 0 ? 0 : N_[n.p].d + 1;
   const $ = (suffix) => root.querySelector('#anti-proof-' + suffix);
   const svg = $('board');
   const fmt = (x) => String(x).replace(/\\B(?=(\\d{3})+(?!\\d))/g, ',');
   const RED = '#c0392b';
-  function lineOf(i) { const out = []; let n = N[i]; while (n && n.p >= 0) { out.unshift(n); n = N[n.p]; } return out; }
-  function mainChild(n) { return n.c.map((c) => N[c]).find((k) => k.main) || N[n.c[0]]; }
+  function lineOf(i) { const out = []; let n = N_[i]; while (n && n.p >= 0) { out.unshift(n); n = N_[n.p]; } return out; }
+  function mainChild(n) { return n.c.map((c) => N_[c]).find((k) => k.main) || N_[n.c[0]]; }
+  const positions = (n) => n === 0 ? T('p-positions-1') : T('p-positions', fmt(n + 1));
   let cur = 0, view = { board: null, last: null };
   function show(i) {
     cur = i;
-    const n = N[i];
+    const n = N_[i];
     const line = lineOf(i);
     let board = parsePlacement(DATA.start);
     for (const m of line) board = applyMove(board, m.u);
     const redToMove = n.d % 2 === 0;
-    const kids = n.c.map((c) => N[c]).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0) || b.dl - a.dl);
+    const kids = n.c.map((c) => N_[c]).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0) || b.dl - a.dl);
     view = { board, last: n.u || null };
     render(svg, board, n.u || null, []);
     const { red, black } = countPieces(board);
-    $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
-    $('pos').textContent = 'ply ' + n.d;
+    $('count-red').textContent = T('pieces', red); $('count-black').textContent = T('pieces', black);
+    $('pos').textContent = T('ply', n.d);
     const path = $('path'); path.innerHTML = '';
-    const startBtn = document.createElement('button'); startBtn.textContent = 'start'; startBtn.className = i === 0 ? 'cur' : ''; startBtn.addEventListener('click', () => show(0)); path.appendChild(startBtn);
+    const startBtn = document.createElement('button'); startBtn.textContent = T('x-start'); startBtn.className = i === 0 ? 'cur' : ''; startBtn.addEventListener('click', () => show(0)); path.appendChild(startBtn);
     line.forEach((m, k) => { if (k % 2 === 0) { const num = document.createElement('span'); num.className = 'num'; num.textContent = ' ' + (k / 2 + 1) + '. '; path.appendChild(num); } else path.appendChild(document.createTextNode(' ')); const b = document.createElement('button'); b.textContent = m.s; b.className = (m.i === i ? 'cur' : '') + (m.main ? '' : ' ext'); b.addEventListener('click', () => show(m.i)); path.appendChild(b); });
     const state = $('state'), body = $('body'), hint = $('hint');
     body.innerHTML = '';
-    if (n.c.length === 0) {
-      state.innerHTML = '<b>Red has no pieces left.</b> Extinction: Red wins. ' + (n.main ? 'This is the end of the main line.' : 'A line of the certificate, ' + n.d + ' plies from the array.');
-      hint.textContent = 'Every line of the certificate ends like this. Back steps up; the first button returns to the array.';
-    } else if (n.d < DATA.open) {
-      const k = N[n.c[0]];
-      state.innerHTML = '<b>' + (redToMove ? 'Red' : 'Black') + ' to move.</b> The opening: ' + (n.d === 1 ? 'Black takes back with the chariot, the move the certificate refutes.' : 'the only capture.');
-      const b = document.createElement('button'); b.className = 'anxq-x-row';
-      const sub = k.d === 1 ? 'one of two mirror-image first moves' : k.d === 2 ? 'the certificate refutes it: ' + fmt(k.n + 1) + ' positions' : 'the only legal capture';
-      b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + (k.d % 2 === 1 ? '. ' : '... ') + k.s + '</span><span class="val ' + (k.d === 1 ? 'd' : 'r') + '">' + (k.d === 1 ? 'Draw' : 'Red wins') + '</span><span class="sub">' + sub + '</span>';
-      b.addEventListener('click', () => show(k.i)); body.appendChild(b);
-      hint.textContent = 'Forward steps through the four opening plies to the position the proof starts from.';
-    } else if (redToMove) {
-      const k = N[n.c[0]];
-      state.innerHTML = '<b>Red to move.</b> The certificate holds one move here, and it wins against every reply.';
-      const b = document.createElement('button'); b.className = 'anxq-x-row';
-      b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + '. ' + k.s + '</span><span class="dur">\u2264' + k.dl + ' plies</span><span class="sub">' + (k.main ? 'main line · ' : '') + 'wins against every reply · ' + fmt(k.n + 1) + ' positions</span>';
-      b.addEventListener('click', () => show(k.i));
+    const hover = (b, k) => {
       const lift = () => render(svg, view.board, view.last, [{ u: k.u, col: RED }]);
       const drop = () => render(svg, view.board, view.last, []);
       b.addEventListener('mouseenter', lift); b.addEventListener('focus', lift); b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
-      body.appendChild(b);
-      hint.textContent = 'Forward plays it.';
+    };
+    if (n.c.length === 0) {
+      state.innerHTML = '<b>' + T('p-end') + '</b> ' + (n.main ? T('p-end-main') : T('p-end-line', n.d));
+      hint.textContent = T('p-hint-end');
+    } else if (n.d < DATA.open) {
+      const k = N_[n.c[0]];
+      const mover = T(redToMove ? 'red' : 'black');
+      state.innerHTML = T(n.d === 1 ? 'p-open-black' : 'p-open-only', '<b>' + mover + '</b>');
+      const b = document.createElement('button'); b.className = 'anxq-x-row';
+      const sub = k.d === 1 ? T('p-sub-mirror') : k.d === 2 ? T('p-sub-refutes', fmt(k.n + 1)) : T('p-sub-only');
+      b.innerHTML = '<span class="mv">' + numbered(k.d, k.s) + '</span><span class="val ' + (k.d === 1 ? 'd' : 'r') + '">' + T(k.d === 1 ? 'draw' : 'red-wins') + '</span><span class="sub">' + sub + '</span>';
+      b.addEventListener('click', () => show(k.i)); hover(b, k); body.appendChild(b);
+      hint.textContent = T('p-hint-open');
+    } else if (redToMove) {
+      const k = N_[n.c[0]];
+      state.innerHTML = T('p-red-state');
+      const b = document.createElement('button'); b.className = 'anxq-x-row';
+      b.innerHTML = '<span class="mv">' + numbered(k.d, k.s) + '</span><span class="dur">' + T('p-dur', k.dl) + '</span><span class="sub">' + (k.main ? T('p-main') : '') + T('p-every') + positions(k.n) + '</span>';
+      b.addEventListener('click', () => show(k.i)); hover(b, k); body.appendChild(b);
+      hint.textContent = T('p-hint-red');
     } else {
-      state.innerHTML = '<b>Black to move.</b> ' + kids.length + ' legal ' + (kids.length === 1 ? 'move' : 'moves') + ', and the certificate answers each one. Pick any.';
-      const head = document.createElement('div'); head.className = 'anxq-x-head'; head.innerHTML = '<span>Black\\u2019s replies, longest first</span><span>over within</span>'; body.appendChild(head);
+      state.innerHTML = kids.length === 1 ? T('p-black-state-1') : T('p-black-state', kids.length);
+      const head = document.createElement('div'); head.className = 'anxq-x-head'; head.innerHTML = '<span>' + T('p-head') + '</span><span>' + T('p-head-dur') + '</span>'; body.appendChild(head);
       kids.forEach((k) => {
         const b = document.createElement('button'); b.className = 'anxq-x-row';
-        b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + '... ' + k.s + '</span><span class="dur">\u2264' + k.dl + ' plies</span><span class="sub">' + (k.main ? 'main line · ' : '') + fmt(k.n + 1) + ' position' + (k.n === 0 ? '' : 's') + '</span>';
-        b.addEventListener('click', () => show(k.i));
-        const lift = () => render(svg, view.board, view.last, [{ u: k.u, col: RED }]);
-        const drop = () => render(svg, view.board, view.last, []);
-        b.addEventListener('mouseenter', lift); b.addEventListener('focus', lift); b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
-        body.appendChild(b);
+        b.innerHTML = '<span class="mv">' + numbered(k.d, k.s) + '</span><span class="dur">' + T('p-dur', k.dl) + '</span><span class="sub">' + (k.main ? T('p-main') : '') + positions(k.n) + '</span>';
+        b.addEventListener('click', () => show(k.i)); hover(b, k); body.appendChild(b);
       });
-      hint.textContent = kids.length === 1 ? 'Only one legal move: Black must capture. Forward plays it.' : 'Every row is a legal Black move; there are no others. Forward follows the main line.';
+      hint.textContent = T(kids.length === 1 ? 'p-hint-one' : 'p-hint-many');
     }
     const cap = $('caption');
-    if (n.d === 0) cap.innerHTML = '<span class="who">The array. The proof refutes 1...Rxb10; step forward to reach it.</span>';
-    else cap.innerHTML = '<span class="san">' + (Math.floor((n.d - 1) / 2) + 1) + (n.d % 2 === 1 ? '. ' : '... ') + n.s + '</span> <span class="who">' + (n.d % 2 === 1 ? 'Red' : 'Black') + (n.main ? '' : ', off the main line') + '.</span>' + (n.note ? '<p>' + n.note + '</p>' : '');
+    const note = n.main ? N('proof', n.d) : '';
+    if (n.d === 0) cap.innerHTML = '<span class="who">' + T('p-cap-array') + '</span>';
+    else cap.innerHTML = '<span class="san">' + numbered(n.d, n.s) + '</span> <span class="who">' + T(n.d % 2 === 1 ? 'red' : 'black') + (n.main ? '' : T('p-off-main')) + DOT() + '</span>' + (note ? '<p>' + note + '</p>' : '');
     $('first').disabled = i === 0; $('prev').disabled = i === 0;
     $('next').disabled = n.c.length === 0; $('last').disabled = n.c.length === 0;
-    $('header').textContent = n.d === 0 ? '1...Rxb10: the whole proof' : 'After ' + line.map((m, k) => (k % 2 === 0 ? (k / 2 + 1) + '. ' : '') + m.s).join(' ');
+    $('header').textContent = n.d === 0 ? T('p-header') : T('x-after', line.map((m, k) => (k % 2 === 0 ? (k / 2 + 1) + '. ' : '') + m.s).join(' '));
   }
-  const next = () => { const n = N[cur]; if (n.c.length) show(mainChild(n).i); };
-  const prev = () => { if (N[cur].p >= 0) show(N[cur].p); };
+  const next = () => { const n = N_[cur]; if (n.c.length) show(mainChild(n).i); };
+  const prev = () => { if (N_[cur].p >= 0) show(N_[cur].p); };
   $('first').addEventListener('click', () => show(0));
   $('prev').addEventListener('click', prev);
   $('next').addEventListener('click', next);
-  $('last').addEventListener('click', () => { let n = N[cur]; while (n.c.length) n = mainChild(n); show(n.i); });
+  $('last').addEventListener('click', () => { let n = N_[cur]; while (n.c.length) n = mainChild(n); show(n.i); });
   root.addEventListener('keydown', (e) => { if (e.key === 'ArrowRight') { next(); e.preventDefault(); } else if (e.key === 'ArrowLeft' || e.key === 'Backspace') { prev(); e.preventDefault(); } });
   show(DATA.open);
 })();
 </script>
 </div>
 `;
-  writeFileSync(path.join(INCLUDES, 'anti-xq-proof-recapture.html'), proofHtml);
-  console.log(`  _includes/anti-xq-proof-recapture.html (${pnodes.length} positions)`);
+  emit('anti-xq-explorer-lib.html', explorerLibHtml);
+  emit('anti-xq-explorer.html', explorerInstanceHtml, ' id=include.id start=include.start');
+  emit('anti-xq-proof-recapture.html', proofHtml);
+  for (const inst of instances) {
+    const first = inst.id === 'anti-games';
+    emit(
+      `anti-xq-${inst.id.replace(/^anti-/, '')}.html`,
+      `${first ? WIDGET_CSS : ''}${widgetHtml(inst)}${WIDGET_JS}`,
+    );
+  }
   // ── The mistboard article's diagrams, as a generated module ─────────────
   // The site renders diagrams at runtime so they follow the reader's piece
   // set, and the rule kernel is not a web dependency, so the positions are
@@ -2121,7 +2362,7 @@ ${EXPLORER_CSS}
     if (black1.join() !== ['a10b10', 'h8h1'].join())
       throw new Error(`site module: Black's replies to 1. Cxb10 are ${black1.join(',')}`);
     const dead2m = (() => {
-      const g = withSeats.find((x) => x.id === 'best-2000000')!;
+      const g = encoded.find((x) => x.id === 'best-2000000')!;
       let st = kernel.initial('dead-2m');
       for (const m of g.moves.slice(0, 35)) st = kernel.apply(st, kernel.fromUci(st, m.u)!);
       const mobile = new Set(['chariot', 'horse', 'cannon', 'soldier']);
