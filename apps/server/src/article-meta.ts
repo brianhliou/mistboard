@@ -167,6 +167,12 @@ export const ARTICLE_META: Record<
     description:
       'Xiangqi under Fog of War: each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.',
   },
+  'anti-xiangqi': {
+    title: 'Antichess on the Xiangqi Board Is a Draw',
+    kind: 'article',
+    description:
+      'We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. We are publishing the measurement, not the variant.',
+  },
   'duck-xiangqi-build': {
     title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',
     kind: 'article',
