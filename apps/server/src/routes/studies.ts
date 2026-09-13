@@ -98,6 +98,8 @@ function publicStudyView(study: persistence.PublicStudySummary) {
     // slice as bare strings, kept for clients cached before the overlay shipped.
     chapterPreview: study.chapterPreview,
     chapterNames: study.chapterNames,
+    // Chapter 1's board for the card thumbnail; null when there is none to draw.
+    previewBoard: study.previewBoard,
     owner: { handle: study.ownerHandle, displayName: study.ownerDisplayName },
     likeCount: study.likeCount,
   };
@@ -291,6 +293,7 @@ export async function tryHandle(
           chapterCount: s.chapterCount,
           chapterPreview: s.chapterPreview,
           chapterNames: s.chapterNames,
+          previewBoard: s.previewBoard,
         })),
       });
       return true;

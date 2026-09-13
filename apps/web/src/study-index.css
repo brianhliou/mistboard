@@ -212,6 +212,14 @@ a.study-index__rail-tab.is-active:hover {
   height: 68px;
 }
 
+/* A derived board or variant tile is squarer than a cover, so it gets a little
+   more width to land at about the same visual weight. */
+.study-index__thumbnail.study-thumbnail--board,
+.study-index__thumbnail.study-thumbnail--variant {
+  flex-basis: 56px;
+  width: 56px;
+}
+
 .study-index__heading {
   display: flex;
   flex-direction: column;

@@ -7,6 +7,11 @@
 
 import { randomBytes } from 'node:crypto';
 import { getPool, isInitialized } from './persistence-db.js';
+import {
+  STUDY_PREVIEW_PLIES,
+  type StudyPreviewBoard,
+  studyPreviewBoard,
+} from './study-preview-board.js';
 
 export type StudyVisibility = 'private' | 'unlisted' | 'public';
 
@@ -80,6 +85,9 @@ export type StudySummary = StudyRecord & {
   chapterCount: number;
   chapterPreview: StudyChapterPreview[];
   chapterNames: string[];
+  /** Chapter 1's board for the card thumbnail (study-preview-board.ts); null
+   *  when the variant has no derivation yet or the chapter is unreadable. */
+  previewBoard: StudyPreviewBoard | null;
 };
 
 export type PublicStudySummary = StudySummary & {
@@ -231,6 +239,25 @@ const CHAPTER_PREVIEW = `(SELECT jsonb_agg(jsonb_build_object('name', name, 'i18
          FROM (SELECT name, i18n, ordinal, created_at FROM study_chapters
                 WHERE study_id = s.id ORDER BY ordinal, created_at LIMIT 4) preview) AS chapter_preview`;
 
+/** Chapter 1's thumbnail source, for a study aliased `s`: its variant, its
+ *  hand-set `rootFen` (null for a game from the standard start) and the first
+ *  STUDY_PREVIEW_PLIES mainline plies, walked down the first-child chain of the
+ *  serialized tree. Derivation into a board happens in study-preview-board.ts;
+ *  the query only lifts the few fields it needs so the list never ships or
+ *  even reads a whole annotated game blob per row. */
+const PREVIEW_BOARD = `(SELECT jsonb_build_object(
+            'variant', c.variant,
+            'rootFen', c.root->>'rootFen',
+            'mainline', (WITH RECURSIVE walk(node, depth) AS (
+                           SELECT c.root->'root'->'children'->0, 1
+                            UNION ALL
+                           SELECT node->'children'->0, depth + 1 FROM walk
+                            WHERE node IS NOT NULL AND depth < ${STUDY_PREVIEW_PLIES})
+                         SELECT coalesce(jsonb_agg(node->>'uci' ORDER BY depth), '[]'::jsonb)
+                           FROM walk WHERE node IS NOT NULL))
+           FROM study_chapters c WHERE c.study_id = s.id
+          ORDER BY c.ordinal, c.created_at LIMIT 1) AS preview_board`;
+
 /** Normalize the `chapter_preview` jsonb into the summary's two projections.
  *  Defensive about row shape: a malformed element degrades to "no preview row"
  *  rather than putting `undefined` through a card renderer. */
@@ -268,6 +295,7 @@ function nameFilter(q: string | undefined, paramIndex: number): { clause: string
 type PublicStudyRow = StudyRow & {
   chapter_count: string;
   chapter_preview: unknown;
+  preview_board: unknown;
   owner_handle: string;
   owner_display_name: string;
   like_count: string;
@@ -278,6 +306,7 @@ function mapPublicStudy(row: PublicStudyRow): PublicStudySummary {
     ...mapStudy(row),
     chapterCount: Number(row.chapter_count),
     ...mapChapterPreview(row.chapter_preview),
+    previewBoard: studyPreviewBoard(row.preview_board),
     ownerHandle: row.owner_handle,
     ownerDisplayName: row.owner_display_name,
     likeCount: Number(row.like_count),
@@ -412,13 +441,14 @@ export async function listStudiesForOwner(ownerId: string, q?: string): Promise<
   const params: unknown[] = [ownerId];
   if (filter.value !== undefined) params.push(filter.value);
   const { rows } = await getPool().query<
-    StudyRow & { chapter_count: string; chapter_preview: unknown }
+    StudyRow & { chapter_count: string; chapter_preview: unknown; preview_board: unknown }
   >(
     `SELECT ${STUDY_COLS.split(', ')
       .map((c) => `s.${c}`)
       .join(', ')},
        (SELECT count(*) FROM study_chapters c WHERE c.study_id = s.id) AS chapter_count,
-       ${CHAPTER_PREVIEW}
+       ${CHAPTER_PREVIEW},
+       ${PREVIEW_BOARD}
        FROM studies s WHERE s.owner_id = $1${filter.clause} ORDER BY s.updated_at DESC`,
     params,
   );
@@ -426,6 +456,7 @@ export async function listStudiesForOwner(ownerId: string, q?: string): Promise<
     ...mapStudy(row),
     chapterCount: Number(row.chapter_count),
     ...mapChapterPreview(row.chapter_preview),
+    previewBoard: studyPreviewBoard(row.preview_board),
   }));
 }
 
@@ -445,7 +476,8 @@ export async function listTopPublicStudies(limit = 5, q?: string): Promise<Publi
             u.display_name AS owner_display_name,
             count(DISTINCT c.id) AS chapter_count,
             count(DISTINCT l.user_id) AS like_count,
-            ${CHAPTER_PREVIEW}
+            ${CHAPTER_PREVIEW},
+            ${PREVIEW_BOARD}
        FROM studies s
        JOIN users u ON u.id = s.owner_id
        LEFT JOIN study_chapters c ON c.study_id = s.id
@@ -476,7 +508,8 @@ export async function listFeaturedStudies(limit = 30, q?: string): Promise<Publi
             u.display_name AS owner_display_name,
             count(DISTINCT c.id) AS chapter_count,
             count(DISTINCT l.user_id) AS like_count,
-            ${CHAPTER_PREVIEW}
+            ${CHAPTER_PREVIEW},
+            ${PREVIEW_BOARD}
        FROM studies s
        JOIN users u ON u.id = s.owner_id
        LEFT JOIN study_chapters c ON c.study_id = s.id
@@ -573,7 +606,8 @@ export async function listFavoriteStudies(
             u.display_name AS owner_display_name,
             count(DISTINCT c.id) AS chapter_count,
             count(DISTINCT l.user_id) AS like_count,
-            ${CHAPTER_PREVIEW}
+            ${CHAPTER_PREVIEW},
+            ${PREVIEW_BOARD}
        FROM study_likes fav
        JOIN studies s ON s.id = fav.study_id
        JOIN users u ON u.id = s.owner_id
