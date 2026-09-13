@@ -379,11 +379,19 @@ figure(
 const survivor = replay(QUIET);
 if (pieceCount(survivor, 'red') !== pieceCount(survivor, 'black'))
   throw new Error('the surviving exit should have equal material');
+const COUSIN = [...CONTINUE, 'e10d10', 'i1h1'];
+const cousin = replay(COUSIN);
+if (kernel.legalMoves(cousin).some((m) => cousin.board[m.to] !== undefined))
+  throw new Error('the cousin ending should have no capture available');
+if ((cousin.status as { turn: string }).turn !== 'black')
+  throw new Error('the cousin ending should have Black to move');
 figure(
   'survivor',
-  boards([{ id: 'survivor', board: board(survivor), label: `AFTER ${sanLine(QUIET)}` }]),
-  `Four plies in. ${pieceCount(survivor, 'red')} pieces each, Red to move, no capture on the board. The cascade is over and nobody has lost yet. From here the engine, playing both sides at one, two and five million nodes a move, drew every game.`,
-  true,
+  boards([
+    { id: 'survivor', board: board(survivor), label: `AFTER ${sanLine(QUIET)}` },
+    { id: 'cousin', board: board(cousin), label: `AFTER ${sanLine(COUSIN)}` },
+  ]),
+  `The two endings that survive the chain. Left: four plies in, Red to move. Right: five plies in, Black to move, the general having taken a cannon on d10 instead of the chariot taking it on h1. ${pieceCount(survivor, 'red')} pieces each in both, no capture on the board, nobody has lost yet. From the left one the engine, playing both sides at one, two and five million nodes a move, drew every game.`,
 );
 
 // ── 4. How a forced loss works ─────────────────────────────────────────────
@@ -1178,8 +1186,12 @@ if (process.argv.includes('--blog')) {
     'best-5000000': {
       4: 'The same four forced plies as every game.',
       11: 'The chariots take each other’s cannons and Red’s chariot is taken in turn: eleven pieces each, and the game becomes a soldier war.',
-      17: 'A soldier offered, a soldier compelled to take, and the chariot compelled to take that: the shedding is symmetrical for the next hundred plies.',
-      120: 'Red walks its general into the soldier’s path and Black must take it. Under these rules that is progress for Red.',
+      15: 'Red offers a soldier on i5. Black answers with a soldier on i6: now Red’s soldier must take it, and Black’s chariot must take back.',
+      18: 'Two soldiers off in two compelled captures. This is the trade the rest of the game is made of: a soldier steps into another’s path, the capture is compelled, and the capturer is taken in turn.',
+      38: 'A soldier taken by a soldier, then a soldier taken by an elephant. Material keeps coming off in pairs, and every capture is one the taker could not refuse.',
+      89: 'Black stepped an elephant into the path of Red’s last soldier, giving it up so the soldier lands on e8, where the chariot must take it. Red has no soldiers left.',
+      120: 'Red walks its general into the soldier’s path and Black must take it. Under these rules that is progress for Red; the elephant takes the soldier back, and no soldiers remain.',
+      122: 'From here nothing can be forced. Black’s chariot sits on the c-file behind its own elephant, on lines none of Red’s remaining pieces can reach; Red’s advisors and elephants cannot leave their half; and either chariot could be thrown away at will. Five pieces each, and the board is as dead as the palace-only one.',
       131: 'Third occurrence of the position: draw by repetition, five pieces each, both sides shuffling an elephant and a chariot.',
     },
     'best-1000000': {
@@ -1647,9 +1659,9 @@ ${inst.caption ? `<div class="anxq-credit">${inst.caption}</div>` : ''}
 .anxq-explorer .anxq-x-state b { color: var(--anxq-heading); }
 .anxq-explorer .anxq-x-body { flex: 1; min-height: 0; overflow: auto; }
 .anxq-explorer .anxq-x-head { display: grid; grid-template-columns: 1fr auto; gap: 10px; padding: 8px 12px 2px; font-size: 11px; font-weight: 600; letter-spacing: .04em; text-transform: uppercase; color: var(--anxq-muted); }
-.anxq-explorer .anxq-x-row { display: grid; grid-template-columns: 1fr auto; grid-template-areas: "mv val" "sub sub"; gap: 2px 10px; align-items: center; width: 100%; padding: 7px 12px; border: 0; border-top: 1px solid var(--anxq-border); background: none; text-align: left; font: inherit; color: var(--anxq-heading); cursor: pointer; }
+.anxq-explorer .anxq-x-row { display: grid; grid-template-columns: minmax(0, 1fr) auto; grid-template-areas: "mv val" "sub sub"; gap: 1px 8px; align-items: center; width: 100%; padding: 6px 12px; border: 0; border-top: 1px solid var(--anxq-border); background: none; text-align: left; font: inherit; color: var(--anxq-heading); cursor: pointer; }
 .anxq-explorer .anxq-x-row:hover { background: var(--anxq-hover); }
-.anxq-explorer .anxq-x-row .mv { grid-area: mv; font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 15px; }
+.anxq-explorer .anxq-x-row .mv { grid-area: mv; font-family: ui-monospace, Menlo, monospace; font-weight: 600; font-size: 15px; white-space: nowrap; }
 .anxq-explorer .anxq-x-row .mv .best { margin-left: 8px; font-family: inherit; font-size: 11px; font-weight: 600; color: var(--anxq-accent); letter-spacing: .04em; text-transform: uppercase; }
 .anxq-explorer .anxq-x-row .val { grid-area: val; justify-self: end; font-size: 12px; font-weight: 600; padding: 2px 9px; border-radius: 999px; color: #fff; white-space: nowrap; }
 .anxq-explorer .val.r { background: #c0392b; } .anxq-explorer .val.b { background: #2b2b2b; } .anxq-explorer .val.d { background: #8b8b90; }
@@ -1750,7 +1762,7 @@ ${EXPLORER_CSS}
     const startLine = (root.dataset.start || '').trim();
     const home = startLine ? nodeAt(startLine.split(/\\s+/)) : 0;
     const svg = $('board');
-    let cur = home, ext = 0, cont = null;
+    let cur = home, ext = 0, cont = null, view = { board: null, last: null };
     function show(i, extAt) {
       cur = i; ext = extAt || 0;
       const n = N[i];
@@ -1762,8 +1774,8 @@ ${EXPLORER_CSS}
       for (let k = 0; k < ext; k++) board = applyMove(board, cont.moves[k].u);
       const kids = n.l ? [] : sortedKids(n);
       const last = ext > 0 ? cont.moves[ext - 1].u : (n.u || null);
-      const rest = ext > 0 ? [] : kids.map((k) => ({ u: k.u, col: COL[k.v], kind: 'dot' }));
-      render(svg, board, last, rest);
+      view = { board, last };
+      render(svg, board, last, []);
       const { red, black } = countPieces(board);
       $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
       $('pos').textContent = 'ply ' + (n.d + ext);
@@ -1786,8 +1798,10 @@ ${EXPLORER_CSS}
           const num = Math.floor((k.d - 1) / 2) + 1;
           b.innerHTML = '<span class="mv">' + num + (k.m === 'r' ? '. ' : '... ') + k.s + (idx === 0 && strictlyBest ? '<span class="best">best</span>' : '') + '</span><span class="val ' + k.v + '">' + who(k.v) + '</span><span class="sub">' + evidence(k) + '</span>';
           b.addEventListener('click', () => show(k.i));
-          const lift = () => render(svg, board, last, [{ u: k.u, col: COL[k.v] }]);
-          const drop = () => render(svg, board, last, rest);
+          // Through view, so a leave event that lands after a click repaints
+          // the position the click moved to, not the one the row belonged to.
+          const lift = () => render(svg, view.board, view.last, [{ u: k.u, col: COL[k.v] }]);
+          const drop = () => render(svg, view.board, view.last, []);
           b.addEventListener('mouseenter', lift); b.addEventListener('focus', lift);
           b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
           body.appendChild(b);
@@ -1976,7 +1990,7 @@ ${EXPLORER_CSS}
   const RED = '#c0392b';
   function lineOf(i) { const out = []; let n = N[i]; while (n && n.p >= 0) { out.unshift(n); n = N[n.p]; } return out; }
   function mainChild(n) { return n.c.map((c) => N[c]).find((k) => k.main) || N[n.c[0]]; }
-  let cur = 0;
+  let cur = 0, view = { board: null, last: null };
   function show(i) {
     cur = i;
     const n = N[i];
@@ -1985,8 +1999,8 @@ ${EXPLORER_CSS}
     for (const m of line) board = applyMove(board, m.u);
     const redToMove = n.d % 2 === 0;
     const kids = n.c.map((c) => N[c]).sort((a, b) => (b.main ? 1 : 0) - (a.main ? 1 : 0) || b.dl - a.dl);
-    const rest = redToMove ? [] : kids.map((k) => ({ u: k.u, col: RED, kind: 'dot' }));
-    render(svg, board, n.u || null, rest);
+    view = { board, last: n.u || null };
+    render(svg, board, n.u || null, []);
     const { red, black } = countPieces(board);
     $('count-red').textContent = red + ' pieces'; $('count-black').textContent = black + ' pieces';
     $('pos').textContent = 'ply ' + n.d;
@@ -2010,22 +2024,22 @@ ${EXPLORER_CSS}
       const k = N[n.c[0]];
       state.innerHTML = '<b>Red to move.</b> The certificate holds one move here, and it wins against every reply.';
       const b = document.createElement('button'); b.className = 'anxq-x-row';
-      b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + '. ' + k.s + '</span><span class="dur">over in \u2264' + k.dl + ' more pl' + (k.dl === 1 ? 'y' : 'ies') + '</span><span class="sub">' + (k.main ? 'main line · ' : '') + 'whatever Black does · ' + fmt(k.n + 1) + ' positions</span>';
+      b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + '. ' + k.s + '</span><span class="dur">\u2264' + k.dl + ' plies</span><span class="sub">' + (k.main ? 'main line · ' : '') + 'wins against every reply · ' + fmt(k.n + 1) + ' positions</span>';
       b.addEventListener('click', () => show(k.i));
-      const lift = () => render(svg, board, n.u || null, [{ u: k.u, col: RED }]);
-      const drop = () => render(svg, board, n.u || null, rest);
+      const lift = () => render(svg, view.board, view.last, [{ u: k.u, col: RED }]);
+      const drop = () => render(svg, view.board, view.last, []);
       b.addEventListener('mouseenter', lift); b.addEventListener('focus', lift); b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
       body.appendChild(b);
       hint.textContent = 'Forward plays it.';
     } else {
       state.innerHTML = '<b>Black to move.</b> ' + kids.length + ' legal ' + (kids.length === 1 ? 'move' : 'moves') + ', and the certificate answers each one. Pick any.';
-      const head = document.createElement('div'); head.className = 'anxq-x-head'; head.innerHTML = '<span>Black\\u2019s replies, longest resistance first</span>'; body.appendChild(head);
+      const head = document.createElement('div'); head.className = 'anxq-x-head'; head.innerHTML = '<span>Black\\u2019s replies, longest first</span><span>over within</span>'; body.appendChild(head);
       kids.forEach((k) => {
         const b = document.createElement('button'); b.className = 'anxq-x-row';
-        b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + '... ' + k.s + '</span><span class="dur">over in \u2264' + k.dl + ' more pl' + (k.dl === 1 ? 'y' : 'ies') + '</span><span class="sub">' + (k.main ? 'main line · ' : '') + fmt(k.n + 1) + ' position' + (k.n === 0 ? '' : 's') + '</span>';
+        b.innerHTML = '<span class="mv">' + (Math.floor((k.d - 1) / 2) + 1) + '... ' + k.s + '</span><span class="dur">\u2264' + k.dl + ' plies</span><span class="sub">' + (k.main ? 'main line · ' : '') + fmt(k.n + 1) + ' position' + (k.n === 0 ? '' : 's') + '</span>';
         b.addEventListener('click', () => show(k.i));
-        const lift = () => render(svg, board, n.u || null, [{ u: k.u, col: RED }]);
-        const drop = () => render(svg, board, n.u || null, rest);
+        const lift = () => render(svg, view.board, view.last, [{ u: k.u, col: RED }]);
+        const drop = () => render(svg, view.board, view.last, []);
         b.addEventListener('mouseenter', lift); b.addEventListener('focus', lift); b.addEventListener('mouseleave', drop); b.addEventListener('blur', drop);
         body.appendChild(b);
       });
