@@ -70,3 +70,12 @@
   aspect-ratio: 92 / 102;
   align-self: flex-start;
 }
+
+/* The marker scales with its frame rather than the fixed pixel size the
+   renderer writes: on the homepage rail the frame is 28 px wide, and a 40 px
+   marker overflowed it and clipped off-centre. */
+.study-thumbnail--variant .variant-marker {
+  width: 72%;
+  height: auto;
+  aspect-ratio: 1;
+}

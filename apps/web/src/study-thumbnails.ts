@@ -82,6 +82,7 @@ export function buildStudyThumbnail(
     return frame(
       className,
       'study-thumbnail--variant',
+      // Nominal; the CSS scales the marker to its frame.
       renderVariantMarker(previewBoard.variant, { size: 40 }),
     );
   }
