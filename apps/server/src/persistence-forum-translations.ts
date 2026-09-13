@@ -58,6 +58,28 @@ export async function getForumTranslation(key: {
   return { translatedText: row.translated_text, createdAt: row.created_at };
 }
 
+// Batch read for list surfaces: every stored translation of any of `contentHashes`
+// into `targetLocale`, newest row per hash, whatever model wrote it. Reads
+// deliberately ignore the model: a model bump changes what the NEXT miss
+// writes, it should not make every list fall back to the source language until
+// each post is asked for again. Rows the table has none for are simply absent.
+export async function listForumTranslations(input: {
+  contentHashes: readonly string[];
+  targetLocale: ForumTranslationLocale;
+}): Promise<Map<string, string>> {
+  const found = new Map<string, string>();
+  if (input.contentHashes.length === 0) return found;
+  const { rows } = await getPool().query<{ content_hash: string; translated_text: string }>(
+    `SELECT DISTINCT ON (content_hash) content_hash, translated_text
+     FROM forum_translations
+     WHERE content_hash = ANY($1::text[]) AND target_locale = $2
+     ORDER BY content_hash, created_at DESC`,
+    [Array.from(new Set(input.contentHashes)), input.targetLocale],
+  );
+  for (const row of rows) found.set(row.content_hash, row.translated_text);
+  return found;
+}
+
 // Two concurrent misses for the same key may both reach here; the first write
 // wins and the second is a no-op, which is fine because both translated the
 // same text with the same model.

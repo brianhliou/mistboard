@@ -202,6 +202,7 @@ export type {
 export {
   getForumTranslation,
   getForumTranslationSource,
+  listForumTranslations,
   putForumTranslation,
 } from './persistence-forum-translations.js';
 export type { WatchForumTopicResult } from './persistence-forum-watches.js';

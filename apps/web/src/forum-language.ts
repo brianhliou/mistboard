@@ -1,4 +1,5 @@
-import type { Locale } from './i18n/locale.js';
+import { readAccountPreferences } from './account-preferences.js';
+import { currentLocale, type Locale } from './i18n/locale.js';
 
 // Client-side twin of apps/server/src/forum-translation.ts detectScriptLanguage.
 // Decides whether a Translate button is worth showing for a piece of forum
@@ -33,4 +34,18 @@ export function translationNeeded(text: string, target: Locale): boolean {
   if (script === 'unknown') return false;
   if (script === 'zh') return target === 'en';
   return target !== 'en';
+}
+
+// Whether forum reads should open in the viewer's locale when the server's
+// translation cache already holds the text. An account preference, mirrored
+// to localStorage by account-preferences.ts; a guest gets the default (on).
+export function forumAutoTranslateEnabled(): boolean {
+  return readAccountPreferences().forumAutoTranslate;
+}
+
+// `?locale=` for the forum read endpoints. The server overlays cached
+// translations only when asked, so the parameter is sent only when the reader
+// wants them; a reader who turned the preference off costs no cache lookup.
+export function appendForumLocale(params: URLSearchParams): void {
+  if (forumAutoTranslateEnabled()) params.set('locale', currentLocale());
 }

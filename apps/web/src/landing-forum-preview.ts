@@ -1,6 +1,8 @@
+import { appendForumLocale } from './forum-language.js';
 import { t } from './i18n/catalog.js';
 import { buildSiteBox } from './site-box.js';
 import { fitRowsToBody } from './site-box-fit.js';
+import { localizedStudyName } from './study-i18n.js';
 import './landing-forum-preview.css';
 
 type ForumAuthor = {
@@ -15,6 +17,8 @@ type ForumTopicSummary = {
   category: {
     slug: string;
     name: string;
+    /** Per-locale name (migration 135); resolved here the way /forum does it. */
+    i18n?: unknown;
   };
   latestPost: {
     post: {
@@ -29,6 +33,8 @@ type ForumTopicSummary = {
   pinned: boolean;
   locked: boolean;
   lastPostAt: string;
+  /** Cached machine translations into the locale the request asked for. */
+  translated?: { title?: string; excerpt?: string };
 };
 
 const postPageSize = 25;
@@ -75,13 +81,15 @@ function topicRow(topic: ForumTopicSummary): HTMLElement {
 
   const main = document.createElement('span');
   main.className = 'landing-forum-topic-main';
-  main.append(span('landing-forum-topic-title', topic.title));
-  const excerpt = topic.latestPost?.excerpt?.trim() ?? '';
+  const title = span('landing-forum-topic-title', topic.translated?.title ?? topic.title);
+  if (topic.translated?.title) title.title = topic.title;
+  main.append(title);
+  const excerpt = (topic.translated?.excerpt ?? topic.latestPost?.excerpt)?.trim() ?? '';
   if (excerpt) main.append(span('landing-forum-topic-excerpt', excerpt));
   main.append(
     span(
       'landing-forum-topic-meta',
-      `${topic.category.name} · ${latestAuthorLabel(topic.latestPost?.author ?? null)}`,
+      `${localizedStudyName(topic.category.name, topic.category.i18n)} · ${latestAuthorLabel(topic.latestPost?.author ?? null)}`,
     ),
   );
 
@@ -157,7 +165,9 @@ function formatDateTime(iso: string): string {
 }
 
 async function fetchActiveTopics(): Promise<ForumTopicSummary[]> {
-  const resp = await fetch(`/api/forum/topics?limit=${landingForumFetchLimit}`, {
+  const params = new URLSearchParams({ limit: String(landingForumFetchLimit) });
+  appendForumLocale(params);
+  const resp = await fetch(`/api/forum/topics?${params}`, {
     headers: { accept: 'application/json' },
   });
   if (!resp.ok) throw new Error(`forum_preview_failed_${resp.status}`);

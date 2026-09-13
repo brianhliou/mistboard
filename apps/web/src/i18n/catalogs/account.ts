@@ -69,6 +69,9 @@ export const EN_ACCOUNT = {
   'account.premovesHelp': 'Play a prepared move when your turn begins, if it is still legal.',
   'account.confirmGameActions': 'Confirm resignation and abort',
   'account.confirmGameActionsHelp': 'Ask before ending a game from the action controls.',
+  'account.forumAutoTranslate': 'Show forum posts translated',
+  'account.forumAutoTranslateHelp':
+    'Forum topics and posts written in another language open translated when a translation already exists. You can switch back to the original on any post.',
   'account.optionYes': 'Yes',
   'account.optionNo': 'No',
   'account.settingsPrivacy': 'Privacy',

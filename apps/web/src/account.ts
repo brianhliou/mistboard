@@ -675,6 +675,15 @@ function buildDisplaySettings(user: AuthUser, locale: Locale = currentLocale()):
       ),
     );
   }
+  list.append(
+    buildBooleanAccountPreference(
+      user,
+      'forumAutoTranslate',
+      t('account.forumAutoTranslate', {}, locale),
+      t('account.forumAutoTranslateHelp', {}, locale),
+      locale,
+    ),
+  );
   panel.append(list);
   return panel;
 }
@@ -734,7 +743,10 @@ function buildGameBehaviorSettings(user: AuthUser, locale: Locale = currentLocal
 
 function buildBooleanAccountPreference(
   user: AuthUser,
-  id: Extract<AccountPreferenceId, 'lowTimeSound' | 'premoves' | 'confirmGameActions'>,
+  id: Extract<
+    AccountPreferenceId,
+    'lowTimeSound' | 'premoves' | 'confirmGameActions' | 'forumAutoTranslate'
+  >,
   title: string,
   help: string,
   locale: Locale,
