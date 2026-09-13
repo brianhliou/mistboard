@@ -36,6 +36,7 @@ Conventions:
 - A rules page for Hong Kong mahjong at /rules/mahjong, unlisted while the table is invitation-only: the claims, why a complete hand is not always a win, and the faan table as the site scores it ([bcb70396](https://github.com/brianhliou/mistboard/commit/bcb70396))
 - Every mate puzzle that fits one of the 23 named kill patterns (杀法) says which ([e2ce0d45](https://github.com/brianhliou/mistboard/commit/e2ce0d45))
 - "Puzzles with more than one solution" is published, with the two boards playable in place ([a6d82d8b](https://github.com/brianhliou/mistboard/commit/a6d82d8b))
+- Every study card carries a thumbnail drawn from its first chapter: a composition shows its diagram, a game collection its opening a few moves in, and the four archive covers stay where they were ([c12e3019](https://github.com/brianhliou/mistboard/commit/c12e3019))
 
 ### Community
 
@@ -57,6 +58,7 @@ Conventions:
 
 ### Fixed
 
+- The study list shows the newest studies first; it used to sort by likes, which with four likes on the site kept the July studies pinned over everything since ([c93c2096](https://github.com/brianhliou/mistboard/commit/c93c2096))
 - The homepage forum box names each topic's category in the site language instead of English ([80e3f8e5](https://github.com/brianhliou/mistboard/commit/80e3f8e5))
 - Mahjong: a discard nobody can claim no longer waits out a six-second window; flowers are drawn and counted toward the three-faan floor; the clock pauses during a claim window and follows a claim to the seat that made it; the table says why a fitting tile cannot be chowed; and the felt is laid out as a ring with one fixed bar for status and claim buttons ([9698ccd7](https://github.com/brianhliou/mistboard/commit/9698ccd7))
 - The WebSocket dev switches (`dev=solo`, `dev=engine`, `reset=1`) are gated on the admin authorization `views=all` already required, so a production room id alone no longer opens a live fog room as a solo client ([7c7521f6](https://github.com/brianhliou/mistboard/commit/7c7521f6))
