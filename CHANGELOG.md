@@ -55,6 +55,7 @@ Conventions:
 
 ### Fixed
 
+- Mahjong: a discard nobody can claim no longer waits out a six-second window; flowers are drawn and counted toward the three-faan floor; the clock pauses during a claim window and follows a claim to the seat that made it; the table says why a fitting tile cannot be chowed; and the felt is laid out as a ring with one fixed bar for status and claim buttons ([9698ccd7](https://github.com/brianhliou/mistboard/commit/9698ccd7))
 - The WebSocket dev switches (`dev=solo`, `dev=engine`, `reset=1`) are gated on the admin authorization `views=all` already required, so a production room id alone no longer opens a live fog room as a solo client ([7c7521f6](https://github.com/brianhliou/mistboard/commit/7c7521f6))
 - Deleted variants' rules pages answer 410 instead of falling through to the blog shell ([2ecf7cc6](https://github.com/brianhliou/mistboard/commit/2ecf7cc6), [f2b723d1](https://github.com/brianhliou/mistboard/commit/f2b723d1))
 - Duck Xiangqi counts full moves, so the pregame abort window still closes ([fdd1ed4b](https://github.com/brianhliou/mistboard/commit/fdd1ed4b))
