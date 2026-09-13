@@ -59,7 +59,7 @@ export function buildTopStudiesWidget(options: { hydrate?: boolean } = {}): HTML
 }
 
 function buildStudyWidget(options: { hydrate?: boolean }): HTMLElement {
-  const { box, body } = buildSiteBox({ title: 'Top studies', href: '/study' });
+  const { box, body } = buildSiteBox({ title: 'Latest studies', href: '/study' });
   box.classList.add('landing-study-widget', 'landing-community-widget');
   body.append(statusRow(t('home.loadingStudies')));
   if (options.hydrate !== false) void hydrateStudies(body);

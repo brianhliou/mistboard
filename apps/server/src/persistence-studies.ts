@@ -460,8 +460,11 @@ export async function listStudiesForOwner(ownerId: string, q?: string): Promise<
   }));
 }
 
-/** Most-liked public studies, with recency as the deterministic tie-breaker.
- *  `q` filters by study name (case-insensitive substring). */
+/** Public studies, most recently updated first. Likes used to lead the order,
+ *  but with a handful of likes on the whole site that key pinned the first
+ *  studies ever liked above everything published since; recency is the honest
+ *  order until there are enough likes for a decayed "hot" score to mean
+ *  something. `q` filters by study name (case-insensitive substring). */
 export async function listTopPublicStudies(limit = 5, q?: string): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, 50));
@@ -485,7 +488,7 @@ export async function listTopPublicStudies(limit = 5, q?: string): Promise<Publi
       WHERE s.visibility = 'public'
         AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
       GROUP BY s.id, u.handle, u.display_name
-      ORDER BY count(DISTINCT l.user_id) DESC, s.updated_at DESC, s.id
+      ORDER BY s.updated_at DESC, s.id
       LIMIT $1`,
     params,
   );
