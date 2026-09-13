@@ -33,6 +33,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The Duck Xiangqi launch post and the anti-xiangqi article read in Simplified and Traditional Chinese ([0f2894e9](https://github.com/brianhliou/mistboard/commit/0f2894e9))
 - "Antichess on the Xiangqi Board Is a Draw" is published: the measurement behind a variant that was not built, with kernel-checked boards and links to the full analysis and the evidence ([334789ba](https://github.com/brianhliou/mistboard/commit/334789ba))
 - A rules page for Hong Kong mahjong at /rules/mahjong, unlisted while the table is invitation-only: the claims, why a complete hand is not always a win, and the faan table as the site scores it ([bcb70396](https://github.com/brianhliou/mistboard/commit/bcb70396))
 - Every mate puzzle that fits one of the 23 named kill patterns (杀法) says which ([e2ce0d45](https://github.com/brianhliou/mistboard/commit/e2ce0d45))
