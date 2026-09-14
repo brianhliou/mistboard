@@ -1249,6 +1249,9 @@ function postList(
     const actions = document.createElement('span');
     actions.className = 'forum-post-actions';
     if (user && !topic.locked) actions.append(postQuoteButton(post));
+    if (canEditPost(post, user) && !topic.locked) {
+      actions.append(postEditButton(post, body, edited));
+    }
     if (canReportForumContent(post.author, user)) actions.append(postReportButton(post));
     header.append(postAuthorRail(post.author), time, edited);
     // Translate sits outside the hover-only actions: a reader who cannot read
@@ -1351,6 +1354,103 @@ function postQuoteButton(post: ForumPost): HTMLButtonElement {
     insertPostQuote(post);
   });
   return button;
+}
+
+// ── Edit ────────────────────────────────────────────────────────────────────
+//
+// The author (or an admin) edits a post in place, the way lichess does: the
+// body swaps for the same Write/Preview composer the reply box uses, Save
+// PATCHes, and the post re-renders with an "edited" mark. The client only
+// offers the affordance; the server decides who may edit (persistence-forum
+// updateForumPost), so a forged click gets a 403, not a change.
+
+function canEditPost(post: ForumPost, user: AuthUser | null): boolean {
+  return Boolean(user && (user.accountRole === 'admin' || post.author?.handle === user.handle));
+}
+
+function postEditButton(
+  post: ForumPost,
+  body: HTMLElement,
+  edited: HTMLElement,
+): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'forum-post-edit';
+  button.textContent = t('forum.edit');
+  button.setAttribute('aria-label', t('forum.editPost'));
+  button.addEventListener('click', () => {
+    showPostEditForm(post, body, edited);
+  });
+  return button;
+}
+
+function showPostEditForm(post: ForumPost, body: HTMLElement, edited: HTMLElement): void {
+  const article = body.closest<HTMLElement>('.forum-post');
+  if (!article || article.querySelector('.forum-post-edit-form')) return;
+  const form = document.createElement('form');
+  form.className = 'forum-post-edit-form';
+  const composer = forumBodyComposer({
+    ariaLabel: t('forum.editPost'),
+    initialValue: post.bodyText,
+  });
+  const error = errorLine();
+  const save = submitButton(t('forum.save'), { check: true });
+  const cancel = forumCancelLink(() => {
+    form.remove();
+    body.hidden = false;
+  });
+  const footer = document.createElement('div');
+  footer.className = 'forum-reply-footer';
+  footer.append(cancel, error, save);
+  form.append(composer.root, footer);
+  form.addEventListener('submit', (event) => {
+    event.preventDefault();
+    void submitPostEdit(post, form, save, error, () => {
+      form.remove();
+      body.hidden = false;
+      renderPostBodyInto(body, post.bodyText);
+      updatePostEditedLabel(edited, post);
+    });
+  });
+  body.hidden = true;
+  body.after(form);
+  composer.textarea.focus();
+}
+
+async function submitPostEdit(
+  post: ForumPost,
+  form: HTMLFormElement,
+  save: HTMLButtonElement,
+  error: HTMLElement,
+  onSaved: () => void,
+): Promise<void> {
+  save.disabled = true;
+  error.textContent = '';
+  const bodyText = String(new FormData(form).get('body') ?? '');
+  try {
+    const resp = await fetch(`/api/forum/posts/${encodeURIComponent(post.id)}`, {
+      method: 'PATCH',
+      headers: { 'content-type': 'application/json', accept: 'application/json' },
+      body: JSON.stringify({ body: bodyText }),
+    });
+    if (!resp.ok) throw new Error(errorMessageForEditStatus(resp.status));
+    const payload = (await resp.json()) as { post: ForumPost };
+    post.bodyText = payload.post.bodyText;
+    post.updatedAt = payload.post.updatedAt;
+    onSaved();
+  } catch (err) {
+    error.textContent = err instanceof Error ? err.message : t('forum.postCouldNotBeEdited');
+  } finally {
+    save.disabled = false;
+  }
+}
+
+function errorMessageForEditStatus(status: number): string {
+  if (status === 401) return t('forum.errSignInToPost');
+  if (status === 403) return t('forum.errNotYourPost');
+  if (status === 404) return t('forum.errContentNotAvailable');
+  if (status >= 500) return t('forum.errUnavailable');
+  return t('forum.errCheckFields');
 }
 
 // ── Translate (130) ─────────────────────────────────────────────────────────

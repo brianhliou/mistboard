@@ -375,6 +375,15 @@ definePersistenceTests('forum', () => {
     assert.equal(locked.ok, true);
     assert.equal(locked.ok ? locked.topic?.lockedAt instanceof Date : false, true);
 
+    const lockedEdit = await updateForumPost({
+      postId: 'post_moderated_open',
+      editorAccountId: 'forum_user_mod_author',
+      editorRole: 'player',
+      bodyText: 'The author cannot rewrite a locked thread.',
+      now: new Date('2026-06-01T00:07:15Z'),
+    });
+    assert.deepEqual(lockedEdit, { ok: false, error: 'topic_locked' });
+
     const adminEdit = await updateForumPost({
       postId: 'post_moderated_open',
       editorAccountId: 'forum_user_moderator',

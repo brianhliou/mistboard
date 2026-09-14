@@ -9,6 +9,7 @@ import {
   type VariantId,
 } from '@mistboard/game';
 import type { Locale, LocaleResolution } from './i18n/locale.js';
+import { inferredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
 export type GameSpecAnalyticsProps = {
   game_spec: GameSpec['id'];
@@ -310,6 +311,10 @@ export function trackLocaleResolved(resolution: LocaleResolution): void {
     locale: resolution.locale,
     locale_source: resolution.source,
     browser_tag: resolution.browserTag,
+    // The piece set this visitor is defaulted to (locale, then country), so
+    // games started can be sliced by first-impression board without a
+    // per-browser storage read.
+    piece_set_default: inferredXiangqiPieceSet(resolution.locale),
   });
 }
 

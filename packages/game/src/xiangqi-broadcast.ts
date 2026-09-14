@@ -378,6 +378,35 @@ export function xiangqiBroadcastVariant(): typeof XIANGQI_SPEC_ID {
  * tour payload carries no boards for the client to inspect. Two copies would
  * drift and the failure mode is silent -- a page crediting nobody.
  */
+/**
+ * The page a reader can open for a tour's source, from the URL the poller uses.
+ *
+ * `tour.sourceUrl` is the POLL TARGET, and since 2026-09-13 a tour polled from
+ * dpxq's game list carries a discovery URL there
+ * (`mistboard-discover://dpxq-tour?tour=12524&...`), which is not a page at
+ * all: rendered as an href it is a dead link on the tour hero. Map it back to
+ * the human page the provider reads; pass an http(s) target through; give
+ * nothing for anything else, so an unknown scheme is a missing button rather
+ * than a broken one.
+ */
+export function broadcastSourcePageHref(sourceUrl: string | undefined): string | undefined {
+  if (!sourceUrl) return undefined;
+  let url: URL;
+  try {
+    url = new URL(sourceUrl);
+  } catch {
+    return undefined;
+  }
+  if (url.protocol === 'http:' || url.protocol === 'https:') return sourceUrl;
+  if (url.protocol !== 'mistboard-discover:') return undefined;
+  const provider = (url.host || url.pathname.replace(/^\/+/, '')).toLowerCase();
+  const tour = url.searchParams.get('tour')?.trim();
+  if (provider === 'dpxq-tour' && tour && /^\d+$/.test(tour)) {
+    return `http://www.dpxq.com/hldcg/movelist_${tour}.html`;
+  }
+  return undefined;
+}
+
 export function broadcastRecordsCredit(
   boards: readonly { sourceUrl?: string }[],
 ): { host: string; href: string } | null {

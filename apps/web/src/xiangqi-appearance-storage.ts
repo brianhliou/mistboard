@@ -1,3 +1,5 @@
+import { currentLocale, type Locale } from './i18n/locale.js';
+import { viewerCountry } from './viewer-geo.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
   XIANGQI_PIECE_SETS,
@@ -17,8 +19,21 @@ const defaultXiangqiBoardTheme: XiangqiBoardTheme = 'international';
 const defaultXiangqiBoardLayout: XiangqiBoardLayout = 'intersection';
 const xiangqiBoardStorageVersion = '4';
 const xiangqiBoardLayoutStorageVersion = '1';
-const xiangqiPieceSetStorageVersion = '3';
+const xiangqiPieceSetStorageVersion = '4';
 const defaultXiangqiPieceSet: XiangqiPieceSet = DEFAULT_XIANGQI_PIECE_SET;
+// Countries where a player expects hanzi on the pieces even when the browser
+// reports English. Physical sets sold in mainland China print the traditional
+// forms (車 馬 將 帥) too, so every Chinese-reading region gets the same set;
+// 'simplified' stays an opt-in. Vietnam plays with the same pieces (cờ tướng).
+const HANZI_PIECE_COUNTRIES: ReadonlySet<string> = new Set([
+  'CN',
+  'TW',
+  'HK',
+  'MO',
+  'SG',
+  'MY',
+  'VN',
+]);
 const xiangqiBoardThemes: ReadonlyArray<{ id: XiangqiBoardTheme; label: string }> = [
   { id: 'international', label: 'International' },
   { id: 'traditional', label: 'Traditional' },
@@ -88,6 +103,26 @@ export function writeStoredXiangqiBoardLayout(layout: XiangqiBoardLayout): void 
   }
 }
 
+// The piece set a browser gets before anyone picks one. Locale first (the
+// zh interface implies Chinese-reading pieces), then Cloudflare's country
+// cookie as the tiebreak for an English browser in a Chinese-reading region:
+// a lot of that traffic runs an en-US work laptop. Anything else keeps the
+// international art.
+export function inferredXiangqiPieceSet(
+  locale: Locale = currentLocale(),
+  country: string | null = viewerCountry(),
+): XiangqiPieceSet {
+  if (locale === 'zh-Hans' || locale === 'zh-Hant') return 'traditional';
+  if (country && HANZI_PIECE_COUNTRIES.has(country)) return 'traditional';
+  return defaultXiangqiPieceSet;
+}
+
+// An explicit pick is stored; no stored value means "follow the inference",
+// the same NULL semantics as the account locale column. The storage version
+// exists so a rollout can re-default browsers: v3 (the international rollout)
+// wrote 'international' into every browser whether or not anyone chose it, so
+// v4 clears exactly that value and keeps any other pick, which is the only
+// stored value that must have come from the settings panel.
 export function readStoredXiangqiPieceSet(): XiangqiPieceSet {
   try {
     // QA/share hook: preview a piece set without changing the browser's saved
@@ -99,12 +134,14 @@ export function readStoredXiangqiPieceSet(): XiangqiPieceSet {
     const version = window.localStorage.getItem(xiangqiPieceSetStorageVersionKey);
     if (version !== xiangqiPieceSetStorageVersion) {
       window.localStorage.setItem(xiangqiPieceSetStorageVersionKey, xiangqiPieceSetStorageVersion);
-      window.localStorage.setItem(xiangqiPieceSetStorageKey, defaultXiangqiPieceSet);
-      return defaultXiangqiPieceSet;
+      if (window.localStorage.getItem(xiangqiPieceSetStorageKey) === defaultXiangqiPieceSet) {
+        window.localStorage.removeItem(xiangqiPieceSetStorageKey);
+      }
     }
-    return normalizeXiangqiPieceSet(window.localStorage.getItem(xiangqiPieceSetStorageKey));
+    const stored = storedXiangqiPieceSet(window.localStorage.getItem(xiangqiPieceSetStorageKey));
+    return stored ?? inferredXiangqiPieceSet();
   } catch {
-    return defaultXiangqiPieceSet;
+    return inferredXiangqiPieceSet();
   }
 }
 
@@ -129,13 +166,17 @@ export function normalizeXiangqiBoardLayout(value: string | null): XiangqiBoardL
     : defaultXiangqiBoardLayout;
 }
 
-export function normalizeXiangqiPieceSet(value: string | null): XiangqiPieceSet {
+// A stored value that names a set (after the legacy animal ids), or null when
+// nothing usable is stored.
+function storedXiangqiPieceSet(value: string | null): XiangqiPieceSet | null {
   if (value === 'animal' || value === 'animal-seal' || value === 'animal-origami') {
     return 'animal-dobutsu';
   }
-  return XIANGQI_PIECE_SETS.some((set) => set.id === value)
-    ? (value as XiangqiPieceSet)
-    : defaultXiangqiPieceSet;
+  return XIANGQI_PIECE_SETS.some((set) => set.id === value) ? (value as XiangqiPieceSet) : null;
+}
+
+export function normalizeXiangqiPieceSet(value: string | null): XiangqiPieceSet {
+  return storedXiangqiPieceSet(value) ?? defaultXiangqiPieceSet;
 }
 
 // ── Move-notation display preference ────────────────────────────────────────

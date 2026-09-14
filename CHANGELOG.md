@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- A Chinese-language interface, or an English one in a Chinese-reading region (CN, TW, HK, MO, SG, MY, VN), starts on the traditional hanzi piece set; everyone else keeps the international art, and a set picked in Pieces wins either way ([81303048](https://github.com/brianhliou/mistboard/commit/81303048))
 - Duck Xiangqi launches on every public surface: rules page, homepage card, lobby seek, a rated ladder, and a bot that plays it ([dd12f1fd](https://github.com/brianhliou/mistboard/commit/dd12f1fd), [2488aea2](https://github.com/brianhliou/mistboard/commit/2488aea2), [aa91538e](https://github.com/brianhliou/mistboard/commit/aa91538e), [8e5704af](https://github.com/brianhliou/mistboard/commit/8e5704af))
 - Duck Xiangqi offers 3+2 alongside its other paces ([7bc64a41](https://github.com/brianhliou/mistboard/commit/7bc64a41))
 - Hong Kong Mahjong is registered and playable behind its flag; the table reads left to right and a complete hand says what it is worth ([5b2769f7](https://github.com/brianhliou/mistboard/commit/5b2769f7), [828b344f](https://github.com/brianhliou/mistboard/commit/828b344f), [5bb370ea](https://github.com/brianhliou/mistboard/commit/5bb370ea))
@@ -43,6 +44,7 @@ Conventions:
 
 ### Community
 
+- Edit your own forum post in place from the post's Edit action; edited posts carry an "edited" mark, and a locked topic no longer takes edits ([0b5e4c7c](https://github.com/brianhliou/mistboard/commit/0b5e4c7c))
 - Forum topics and posts written in another language open translated when a translation already exists, on the homepage box, the forum lists and the topic page, with one click back to the original; new posts are translated as they arrive, and "Show forum posts translated" in Display settings turns it off ([80e3f8e5](https://github.com/brianhliou/mistboard/commit/80e3f8e5))
 - A Mistboard game, study or puzzle link alone on its line in a forum post shows as the board it points at; game links can name a side and a ply ([e901ca07](https://github.com/brianhliou/mistboard/commit/e901ca07), [f4758e4d](https://github.com/brianhliou/mistboard/commit/f4758e4d), [4a0a82f4](https://github.com/brianhliou/mistboard/commit/4a0a82f4))
 
@@ -62,6 +64,7 @@ Conventions:
 
 ### Fixed
 
+- The Source button on a broadcast polled from dpxq's game list opens the dpxq tour page; it linked the poller's own discovery address, which no browser can open ([4be51a37](https://github.com/brianhliou/mistboard/commit/4be51a37))
 - A broadcast polled from a dpxq tour list files each game under the round its row states, whenever the record is uploaded, instead of only inside a twelve-hour window after the round started; the 2026 Shanghai Cup was polled all week and imported nothing. A tour's own page also now shows the poller's errors, which used to be written without the tour's name and so never reached it ([ad09c5ff](https://github.com/brianhliou/mistboard/commit/ad09c5ff))
 - The study list shows the newest studies first; it used to sort by likes, which with four likes on the site kept the July studies pinned over everything since ([c93c2096](https://github.com/brianhliou/mistboard/commit/c93c2096))
 - The variant marker on a study thumbnail scales to its frame, so the homepage rail no longer clips it off-centre ([6a467506](https://github.com/brianhliou/mistboard/commit/6a467506))
