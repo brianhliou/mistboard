@@ -44,8 +44,8 @@ Conventions:
 
 ### Watching and review
 
-- A broadcast is one event page, lichess-style: the tour header with a round selector, then Boards (default, opening on the live round or the latest with games), Overview (dates in the event's own clock, venue, source, the schedule, share links) and Players (standings computed from the broadcast games); a round with no records yet says so and points at the source (HASH)
-- A finished broadcast game opens on the site's review board, with the engine, whole-game analysis, the reader's notation, Game info and Share & export, and the round's pairings in the left rail; a live game keeps its streaming replay, now in the reader's notation too (HASH)
+- A broadcast is one event page, lichess-style: the tour header with a round selector, then Boards (default, opening on the live round or the latest with games), Overview (dates in the event's own clock, venue, source, the schedule, share links) and Players (standings computed from the broadcast games); a round with no records yet says so and points at the source ([d44bca22](https://github.com/brianhliou/mistboard/commit/d44bca22))
+- A finished broadcast game opens on the site's review board, with the engine, whole-game analysis, the reader's notation, Game info and Share & export, and the round's pairings in the left rail; a live game keeps its streaming replay, now in the reader's notation too ([d44bca22](https://github.com/brianhliou/mistboard/commit/d44bca22))
 
 ### Community
 
