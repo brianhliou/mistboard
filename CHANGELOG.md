@@ -42,6 +42,7 @@ Conventions:
 
 ### Community
 
+- Edit your own forum post in place from the post's Edit action; edited posts carry an "edited" mark, and a locked topic no longer takes edits ([0b5e4c7c](https://github.com/brianhliou/mistboard/commit/0b5e4c7c))
 - Forum topics and posts written in another language open translated when a translation already exists, on the homepage box, the forum lists and the topic page, with one click back to the original; new posts are translated as they arrive, and "Show forum posts translated" in Display settings turns it off ([80e3f8e5](https://github.com/brianhliou/mistboard/commit/80e3f8e5))
 - A Mistboard game, study or puzzle link alone on its line in a forum post shows as the board it points at; game links can name a side and a ply ([e901ca07](https://github.com/brianhliou/mistboard/commit/e901ca07), [f4758e4d](https://github.com/brianhliou/mistboard/commit/f4758e4d), [4a0a82f4](https://github.com/brianhliou/mistboard/commit/4a0a82f4))
 
