@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- A Chinese-language interface, or an English one in a Chinese-reading region (CN, TW, HK, MO, SG, MY, VN), starts on the traditional hanzi piece set; everyone else keeps the international art, and a set picked in Pieces wins either way ([808e45ba](https://github.com/brianhliou/mistboard/commit/808e45ba))
 - Duck Xiangqi launches on every public surface: rules page, homepage card, lobby seek, a rated ladder, and a bot that plays it ([dd12f1fd](https://github.com/brianhliou/mistboard/commit/dd12f1fd), [2488aea2](https://github.com/brianhliou/mistboard/commit/2488aea2), [aa91538e](https://github.com/brianhliou/mistboard/commit/aa91538e), [8e5704af](https://github.com/brianhliou/mistboard/commit/8e5704af))
 - Duck Xiangqi offers 3+2 alongside its other paces ([7bc64a41](https://github.com/brianhliou/mistboard/commit/7bc64a41))
 - Hong Kong Mahjong is registered and playable behind its flag; the table reads left to right and a complete hand says what it is worth ([5b2769f7](https://github.com/brianhliou/mistboard/commit/5b2769f7), [828b344f](https://github.com/brianhliou/mistboard/commit/828b344f), [5bb370ea](https://github.com/brianhliou/mistboard/commit/5bb370ea))
