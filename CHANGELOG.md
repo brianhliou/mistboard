@@ -58,7 +58,7 @@ Conventions:
 - `/stats` is a real page on the about rail, leading with games per week; every count excludes the operator's own accounts and browsers, guests count as players by browser, and a game counts only once both sides have moved ([87ba6d14](https://github.com/brianhliou/mistboard/commit/87ba6d14), [cd4f58b3](https://github.com/brianhliou/mistboard/commit/cd4f58b3), [ea5d57a0](https://github.com/brianhliou/mistboard/commit/ea5d57a0), [b916a663](https://github.com/brianhliou/mistboard/commit/b916a663))
 - One identity line across the tagline, About, README and the repository ([2952b177](https://github.com/brianhliou/mistboard/commit/2952b177))
 - A shared link to any finished game, in every variant, previews the game: the board at full height in the site's own piece set, the two seats level with their back ranks behind their king, and the score; rules pages, position links and studies draw through the same card, and the site card is the logo, wordmark and identity line ([f5a24d9d](https://github.com/brianhliou/mistboard/commit/f5a24d9d))
-- The homepage "games in play" line shows only while a game is actually in play; at zero it is gone rather than announcing an empty site, and the games-played total carries the recency
+- The homepage "games in play" line shows only while a game is actually in play; at zero it is gone rather than announcing an empty site, and the games-played total carries the recency ([1fb35ef0](https://github.com/brianhliou/mistboard/commit/1fb35ef0))
 
 ### Removed
 
