@@ -15,8 +15,9 @@
  * a future field cannot accidentally carry it.
  */
 
-import type { Claim } from './claims.js';
+import type { Claim, Seat } from './claims.js';
 import type { HandSet, SetKind } from './decompose.js';
+import { handContextFor } from './hand-context.js';
 import { scoreHand } from './hk-detect.js';
 import { shanten } from './shanten.js';
 import type { MahjongSeat, MahjongStatus, MahjongTenantState } from './tenant-state.js';
@@ -195,9 +196,8 @@ function handStatusFor(state: MahjongTenantState, seat: number | null): MahjongH
   const melds = (game.melds[seat] ?? []) as readonly HandSet[];
   const distance = shanten(counts, { meldCount: melds.length }).shanten;
   const score = scoreHand(counts, melds, {
+    ...handContextFor(game, seat as Seat),
     selfDrawn: game.phase.type === 'discard' && game.turn === seat,
-    seatWind: 27 + seat,
-    roundWind: game.roundWind,
   });
   return {
     complete: distance < 0,
@@ -222,7 +222,7 @@ function canDeclareSelfDraw(state: MahjongTenantState, seat: number): boolean {
   const score = scoreHand(
     (game.hands[seat] ?? []) as readonly number[],
     (game.melds[seat] ?? []) as readonly HandSet[],
-    { selfDrawn: true, seatWind: 27 + seat, roundWind: game.roundWind },
+    { ...handContextFor(game, seat as Seat), selfDrawn: true },
   );
   return score !== null && score.meetsMinimum;
 }

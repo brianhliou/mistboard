@@ -41,6 +41,7 @@ import {
   xiangqiEnabled,
 } from '../feature-flags.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
+import { hasLikelyVariantGrant } from '../signed-in-state.js';
 
 export type WebTenantEngineOption = {
   id: string;
@@ -157,6 +158,13 @@ const XIANGQI_CAPABILITIES_BASE = {
 } as const;
 
 const alwaysEnabled = () => true;
+
+// Offered only to an account the server would actually seat: the build flag
+// plus a grant named on /api/auth/me (admins hold every one). Turning the flag
+// on alone would put a door in every visitor's play menu that their account
+// cannot open, and they would land as a spectator at an empty table with
+// nothing explaining why.
+const mahjongOffered = (): boolean => mahjongEnabled() && hasLikelyVariantGrant(MAHJONG_SPEC_ID);
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -755,8 +763,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       // Both on the SAME predicate, deliberately. Gating the menu and the deep
       // link on neighbouring flags has shipped broken twice, and the conformance
       // test checks exactly this pair.
-      offerInMenu: mahjongEnabled,
-      acceptsDeepLink: mahjongEnabled,
+      offerInMenu: mahjongOffered,
+      acceptsDeepLink: mahjongOffered,
       // Exactly one option, and it must exist: the dialog carries a single
       // global engine id and sends it for whichever variant is selected, so a
       // variant with no options of its own inherits the CHESS default and asks

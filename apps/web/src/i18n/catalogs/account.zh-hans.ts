@@ -55,6 +55,9 @@ export const ZH_HANS_ACCOUNT = {
   'account.premovesHelp': '轮到你时执行预先准备的着法，前提是该着法仍然合法。',
   'account.confirmGameActions': '确认认输和中止',
   'account.confirmGameActionsHelp': '通过对局操作结束对局前先询问确认。',
+  'account.forumAutoTranslate': '论坛帖子显示为译文',
+  'account.forumAutoTranslateHelp':
+    '用其他语言撰写的论坛话题和帖子，在已有译文时直接以译文打开。任何帖子都可以切换回原文。',
   'account.optionYes': '是',
   'account.optionNo': '否',
   'account.settingsPrivacy': '隐私',

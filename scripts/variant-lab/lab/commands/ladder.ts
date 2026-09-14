@@ -27,6 +27,14 @@ export type LadderResult = {
   hiScore: Interval;
   eloForBudget: number;
   lengths: ReturnType<typeof summarizeLengths>;
+  /**
+   * How many of the pairs started from different openings. The engine is
+   * deterministic at a fixed node budget, so pairs that share an opening are
+   * the same two games replayed and the interval overstates n. Anti xiangqi
+   * has two mirror-image first plies, so one opening ply gave ten copies of
+   * one pair and a 100% score at "n=10".
+   */
+  distinctOpenings: number;
   games: (GameRecord & { hiSeat: LabColor; opening: string[] })[];
 };
 
@@ -95,6 +103,7 @@ export async function ladder(ctx: LabContext, args: LadderArgs): Promise<LadderR
       hiScore,
       eloForBudget: eloFromScore(hiScore.p),
       lengths: summarizeLengths(games.map((g) => g.plies)),
+      distinctOpenings: new Set(games.map((g) => g.opening.join(' '))).size,
       games,
     };
     const file = ctx.finish('ladder', { ...args }, engine.identity, result, startedAt);
@@ -108,6 +117,11 @@ export async function ladder(ctx: LabContext, args: LadderArgs): Promise<LadderR
     console.log(
       `  plies min ${result.lengths.min} median ${result.lengths.median} max ${result.lengths.max}`,
     );
+    if (result.distinctOpenings < args.pairs) {
+      console.log(
+        `  WARNING: only ${result.distinctOpenings} distinct opening(s) across ${args.pairs} pairs; the engine is deterministic per budget, so repeated openings are replayed games and n is really ${result.distinctOpenings * 2}. Raise --opening-plies.`,
+      );
+    }
     console.log(`  artifact ${file}`);
     return result;
   } finally {

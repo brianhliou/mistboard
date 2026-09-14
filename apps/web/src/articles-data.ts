@@ -21,12 +21,14 @@ import { fogOpeningsArticle } from './articles/content/fog-openings.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
+import { antiXiangqiArticle } from './articles/content/anti-xiangqi.js';
 import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
 import { jieqiArticle } from './articles/content/jieqi.js';
 import { jungleArticle } from './articles/content/jungle.js';
 import { jungleFlipArticle } from './articles/content/jungle-flip.js';
+import { mahjongArticle } from './articles/content/mahjong.js';
 import { puzzleMiningArticle } from './articles/content/puzzle-mining.js';
 import { puzzleTwoAnswersArticle } from './articles/content/puzzles-with-more-than-one-solution.js';
 import { mistyArticle } from './articles/content/misty.js';
@@ -59,11 +61,13 @@ export const articles: Article[] = [
   fortressXiangqiArticle,
   duckXiangqiArticle,
   duckXiangqiBuildArticle,
+  antiXiangqiArticle,
   serverEnforcedFogArticle,
   shogi4Article,
   jieqiArticle,
   jungleArticle,
   jungleFlipArticle,
+  mahjongArticle,
   banqiArticle,
   banqiEngineArticle,
   banqiLuckArticle,

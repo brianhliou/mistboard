@@ -335,6 +335,10 @@ export const HOME_ARTICLE_SLUGS = [
   // is new; the puzzles post keeps second. Its card art is the article's own
   // thumbnail (the duck), because the slug carries no variant marker.
   'duck-xiangqi-build',
+  // The anti-xiangqi measurement, dated two days after the duck launch. It
+  // is a write-up with no play page, so it sits behind the launch post
+  // rather than displacing it; the date alone would put it first.
+  'anti-xiangqi',
   // Second while the duck launch is new; it led the row before that, and
   // takes the lead back when duck ages out.
   'puzzles-with-more-than-one-solution',

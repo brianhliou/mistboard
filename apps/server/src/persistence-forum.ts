@@ -78,6 +78,9 @@ export type ForumTopicLatestPost = {
   createdAt: Date;
   /** Opening words of the post, plain text, for list surfaces (see forum-excerpt.ts). */
   excerpt: string;
+  /** The whole post, server-side only: the translation cache is keyed by the
+   *  hash of the full text, so an excerpt cannot be looked up. Never serialized. */
+  bodyText: string;
 };
 
 export type ForumPost = {
@@ -1004,8 +1007,7 @@ const FORUM_TOPIC_SELECT = `SELECT t.id, t.slug, t.title, t.post_count, t.pinned
    JOIN forum_categories c ON c.id = t.category_id
    LEFT JOIN users u ON u.id = t.author_account_id
    LEFT JOIN LATERAL (
-     SELECT p.id, p.author_account_id, p.created_at,
-            LEFT(p.body_text, 600) AS body_text
+     SELECT p.id, p.author_account_id, p.created_at, p.body_text
      FROM forum_posts p
      WHERE p.topic_id = t.id AND p.hidden_at IS NULL
      ORDER BY p.created_at DESC, p.id DESC
@@ -1249,6 +1251,7 @@ function topicFromRow(row: ForumTopicRow): ForumTopicSummary {
             ),
             createdAt: row.latest_post_created_at,
             excerpt: forumExcerpt(row.latest_post_body_text ?? ''),
+            bodyText: row.latest_post_body_text ?? '',
           }
         : null,
     postCount: row.post_count,

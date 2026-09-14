@@ -85,6 +85,10 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // after this list was written and is not translated yet, so it is English
   // until its own copy is frozen.
   'duck-xiangqi',
+  // Machine-drafted 2026-09-13, not native-reviewed, locked the day the English
+  // copy published (the anti article) and two days after (the duck build post).
+  'duck-xiangqi-build',
+  'anti-xiangqi',
   'misty',
   'server-enforced-fog',
 ] as const;
@@ -2158,6 +2162,98 @@ const ZH_HANS: Record<string, string> = {
     '今日题目，来自留下的题库。如果你找到一个网站不接受的将死，那现在就是一个 bug，我想听你说说。',
   'Today’s xiangqi puzzle': '今日象棋题目',
   'How the miner works': '挖掘器是怎么工作的',
+  // anti-xiangqi and duck-xiangqi-build. Machine-drafted 2026-09-13, not
+  // native-reviewed; the anti terms match the brianhliou.com post's
+  // vocabulary (反棋, 反象棋, 证明凭证, 僵局, 死局).
+  'Antichess on the Xiangqi Board Is a Draw': '象棋棋盘上的反棋是和棋',
+  'Anti Xiangqi: Antichess on the Xiangqi Board Is a Draw': '反象棋：象棋棋盘上的反棋是和棋',
+  'We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find in the opening, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. Every other opening loses, 63 of them provably. We are publishing the measurement, not the variant.':
+    '我们把反棋放到象棋棋盘上，先测量再设计。黑方在开局有两步棋必须找到，红方不会走错，之后九宫让每方五个棋子无法被触及。其余每一种开局都会输，其中 63 种已被证明。我们发布的是这份测量，而不是这个变体。',
+  'Antichess is chess with two rules changed: if you can capture you must, and you win by losing every piece you have. The king is an ordinary piece. Lichess plays it, and it was solved in 2016. We put the same two rules on the xiangqi board, with the general an ordinary piece and no facing rule, and measured what came out before designing anything.':
+    '反棋（自杀棋）是改了两条规则的国际象棋：能吃子就必须吃，把自己所有棋子都送掉的一方获胜。王只是普通棋子。Lichess 上可以下它，它在 2016 年已被解决。我们把同样的两条规则搬到象棋棋盘上，将帅作为普通棋子，不设白脸将规则，先测量结果再谈设计。',
+  'It is a draw. Black has two moves to find in the opening and Red cannot go wrong; after that, the pieces you must lose sit in the palace where nothing can reach them. Every other opening loses, and 63 of those losses are proven. The full analysis, with every engine game, every proof and a viewer for all of it, is on brianhliou.com; this page is the short account and the reason there is no play button.':
+    '结论是和棋。黑方在开局有两步棋必须找到，红方不会走错；之后你必须送掉的那些棋子都待在九宫里，什么都够不到它们。其余每一种开局都会输，其中 63 种负局已被证明。完整分析连同每一盘引擎对局、每一份证明和一个浏览器都在 brianhliou.com；本页是简短的说明，也解释了为什么这里没有“开始对局”按钮。',
+  'The opening has one safe path': '开局只有一条安全路线',
+  'Red’s first move is a cannon taking a horse through the enemy cannon; the two choices are mirror images, so call it 1. Cxb10. Black must capture and has two ways. Taking the cannon back with the chariot loses by force: Red gives its pieces away one at a time, the chariot has to take every one, and Red is out of pieces in 34 plies. That is proven, a certificate of 1,864 positions replayed by a checker that knows only the rules. Firing the other cannon into Red’s back rank, 1...Cxh1, holds.':
+    '红方第一着是炮隔着对方的炮吃马；两种选择互为镜像，就称之为 1. Cxb10。黑方必须吃子，有两种方式。用车吃回那门炮会被强制击败：红方把棋子一个个送出去，车不得不逐一吃掉，34 步之后红方无子。这一点已被证明，一份 1,864 个局面的证明凭证已由一个只懂规则的校验器重放。用另一门炮轰向红方底线，1...Cxh1，则站得住。',
+  'Black’s two captures after 1. Cxb10. The chariot recapture on b10 is a proven loss; the cannon shot to h1, over Red’s own h3 cannon, is the only move.':
+    '1. Cxb10 之后黑方的两种吃法。车在 b10 吃回是已被证明的负着；炮隔着红方自己的 h3 炮打到 h1，是唯一的着法。',
+  'Red then has two replies and both hold: take the cannon quietly, 2. Rxh1, and the exchange is over; or keep firing with 2. Cxd10, which sets Black a second trap, since only 2...Kxd10, the general taking the cannon, holds. The chain of forced captures has 166 possible endings and we played a game from every distinct one. Two survive. Every other branch loses for the side that took it.':
+    '接着红方有两种应法，都站得住：安静地用车吃炮，2. Rxh1，交换就此结束；或者继续开炮，2. Cxd10，给黑方设下第二个陷阱，因为只有用将吃炮的 2...Kxd10 站得住。这条连锁强制吃子有 166 个可能的终点，我们从每一个不同的终点各下了一盘。两个存活下来。其余每一条分支都会让走进去的一方输。',
+  'The two endings that survive the chain. Fourteen pieces each, no capture on the board, and the game is open.':
+    '连锁中存活下来的两个终点。双方各十四子，棋盘上无子可吃，棋局就此展开。',
+  'Then the palace makes it a draw': '然后九宫让它成为和棋',
+  'To win you must lose your general, both advisors and both elephants, and none of them can leave home. Each can only be taken by an enemy piece that comes to it, and both players are trying to get rid of exactly those pieces. Once neither side has a chariot, horse, cannon or soldier left, no capture is possible ever again, and the rules score that a draw.':
+    '要取胜，你必须送掉将、两个士和两个象，而它们谁都离不开家。每一个都只能被走到它跟前的敌方棋子吃掉，而双方都在设法摆脱恰恰是那些棋子。一旦双方都没有了车、马、炮、兵，就再也不可能发生吃子，规则把这判为和棋。',
+  'The engine’s own game at two million nodes a move, ply 35. Nothing on the board can ever capture anything again.':
+    '引擎每着两百万节点自战的对局，第 35 步。棋盘上再没有任何棋子能吃掉任何东西。',
+  'In every engine game, the side that wanted the game to stop could feed its mobile pieces to the opponent, who had to take them, or park a lone chariot on lines nothing of the opponent’s could ever enter. At one and five million nodes the chariots stayed on and the game became a hundred plies of soldiers traded in pairs, ending the same way. That is evidence for a draw rather than a proof of one: no search we ran found a win from either surviving position, and the reason it could not is a property of the board.':
+    '在每一盘引擎对局里，想让棋局停下来的一方都可以把可出击的子力送给对手，对手不得不吃；或者把一辆孤车停在对方任何棋子都永远进不来的线路上。在一百万和五百万节点下，车留在了棋盘上，棋局变成一百步成对交换的兵战，结局相同。这是和棋的证据，而不是证明：我们跑过的搜索都没有从任何一个存活局面找到胜法，而找不到的原因是棋盘本身的性质。',
+  'Four repairs and two siblings, none a game': '四种修补和两个同族变体，没有一个成为像样的棋',
+  'Scoring every stall for the side with fewer pieces removes the free draw but cannot be tested without an engine that plays for the count. Codrus, the 1844 ancestor where you win by losing the general, draws through the same opening lines, faster. Losers, where the general stays royal, is decisive the wrong way: a forced win for Black at every strength we tried, because a check suspends the obligation to capture and that tempo lands with the second player. Letting the palace pieces out is a different board.':
+    '把每一个僵局判给子少的一方能去掉免费的和棋，但没有一个为子数而战的引擎就无法测试。Codrus 是 1844 年的祖先，输掉将即获胜，它经由同样的开局路线成和，而且更快。Losers 保留将的王者身份，有胜负，但方向错了：在我们试过的每一种强度下都是黑方必胜，因为一次将军会暂停吃子义务，而这个先手落在后手一方。放九宫里的棋子出来则已经是另一张棋盘了。',
+  'What we are publishing instead of a play page': '我们发布的是什么，而不是一个对局页面',
+  'The rule kernel with the three rule sets written out, the Fairy-Stockfish stanzas, all 166 endings of the opening chain, one engine game from each at two search depths, every proof certificate, a checker that replays them against the rules in a few seconds, and every game in a viewer. If you can show a third surviving opening, a defence in any certificate, or a win for either side from the positions above, open an issue there; the write-up will say so.':
+    '完整写出三套规则的规则内核、Fairy-Stockfish 的变体配置、开局连锁的全部 166 个终点、每个终点在两种搜索深度下各一盘引擎对局、每一份证明凭证、一个几秒钟内就能对照规则重放它们的校验器，以及放在浏览器里的每一盘棋。如果你能给出第三条存活的开局、任何一份凭证里的防守，或者从上面的局面出发任何一方的胜法，请去那里提一个 issue；文章会如实写明。',
+  'Read the full analysis': '阅读完整分析',
+  'Check the proofs yourself': '亲自检验这些证明',
+  'Learn xiangqi': '学习象棋',
+  'AFTER 1. Cxb10: BLACK MUST CAPTURE': '1. Cxb10 之后：黑方必须吃子',
+  '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：轮到红方',
+  '2. Cxd10 Kxd10 3. Rxh1: BLACK TO MOVE': '2. Cxd10 Kxd10 3. Rxh1：轮到黑方',
+  'PLY 35 OF THE 2M GAME: A DEAD BOARD': '2M 对局第 35 步：死局',
+  'Duck Xiangqi Is Live: How Not to Lose Your First Game': '鸭子象棋上线了：怎样不输掉你的第一盘',
+  'Duck Xiangqi: How Not to Lose Your First Game': '鸭子象棋：怎样不输掉你的第一盘',
+  'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.':
+    '双方共用一只鸭子的象棋。规则一分钟就能读完。决定你第一盘胜负的东西要花更久，首先是这一条：你放下的鸭子是对手的炮架，永远不是你的。',
+  'Duck Xiangqi is live today. It is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
+    '鸭子象棋今天上线。它是双方共用一只鸭子的象棋：你走一着普通的象棋着法，然后把鸭子放到任意一个空点上。它挡住一切，不属于任何一方，也不能被吃掉。规则大约一分钟就能读完。',
+  'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is usually the one that arms your opponent’s cannon. These come from the seven engine games behind this launch, and from measuring the engine itself.':
+    '下面写的不是规则，而是决定你第一盘胜负的东西，先从人人都会中招的那一条说起：看起来最碍事的鸭子落点，往往正是给对手的炮装上炮架的那个点。这些心得来自这次上线背后的七盘引擎对局，以及对引擎本身的测量。',
+  'A turn is a move plus a duck placement': '一回合是一着棋加一次放鸭',
+  'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.':
+    '每一回合你先走一个棋子，再放鸭子。走子就是象棋，你已经知道该怎么想。放鸭才是新的部分，第一盘棋往往就输在这里。',
+  'One turn, both halves. The move on the left is ordinary xiangqi; the duck on the right is the part with no precedent.':
+    '一个回合的两半。左边的走子是普通象棋；右边的鸭子是没有先例的部分。',
+  'The duck is a cannon screen for whoever moves next': '鸭子是下一个走棋者的炮架',
+  'A cannon captures by jumping exactly one piece, and the duck counts as that piece. What follows from that is the order of a turn, not any subtlety: you place the duck at the END of your move, so the next person to play is your opponent. Any cannon line you just completed is theirs to fire down first.':
+    '炮吃子要恰好跳过一个棋子，而鸭子算作那个棋子。由此得出的只是回合的顺序，没有什么玄妙：你在自己这一着的最后放鸭，所以下一个走棋的是对手。你刚刚架好的任何一条炮线，都是对方先开火。',
+  'The duck as a cannon platform. Nothing marks it as either side’s: whoever is to move gets to use it.':
+    '鸭子作为炮架。没有任何标记说明它属于哪一方：轮到谁走，谁就能用它。',
+  'The practical habit: before you place the duck, look along the ranks and files it will sit on and check whether an enemy cannon has just been handed a target. The square that most obstructs your opponent is usually a square next to their pieces, which is exactly where it is most likely to arm one of their cannons.':
+    '实用的习惯：放鸭之前，沿着它将要落在的横线和纵线看一遍，检查是否刚好给了敌方的炮一个目标。最能阻碍对手的点通常紧挨着对方的棋子，而那恰恰是最容易给对方的炮装上炮架的地方。',
+  'From a real engine game. Both cannons are ringed because the duck on e2 serves each of them, but only the side to move collects: here that is Red, taking on d2. Neither capture exists without the duck, and whoever moves has to move it again.':
+    '来自一盘真实的引擎对局。两门炮都画了圈，因为 e2 上的鸭子对两门炮都有用，但只有轮到走棋的一方能兑现：这里是红方，在 d2 吃子。没有鸭子这两种吃法都不存在，而轮到走棋的一方还必须再把它挪走。',
+  'There is no check and no checkmate': '没有将军，也没有将死',
+  'You may leave your general attacked, move it onto an attacked point, and nothing on the board or in the interface says a word. Your opponent wins by actually taking it, and the game ends there.':
+    '你可以让将帅处于被攻击状态，也可以把它走到被攻击的点上，棋盘和界面都不会说一个字。对手通过真的吃掉它来获胜，棋局到此结束。',
+  'This is not a theoretical risk. All seven of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
+    '这不是理论上的风险。我们发布的七盘引擎对局全部以将帅被直接吃掉告终。没有一盘走到认输、重复局面或困毙：每一盘的结束都是因为有人能吃将帅，而且吃了。每一回合都自己数一遍威胁，包括鸭子刚刚打开的那些。',
+  'The duck must move every turn': '鸭子每回合都必须移动',
+  'A duck jamming a horse’s leg, filling an elephant’s eye or holding a file is doing that job for exactly one turn. Then it is your problem again: on your next turn you have to pick it up and put it somewhere else.':
+    '蹩住马腿、塞住象眼或守住一条纵线的鸭子，只能干这件事恰好一个回合。然后它又成了你的问题：下一回合你必须把它拿起来放到别处。',
+  'So a block is never a structure, only a delay, and it is worth one turn of inconvenience rather than a wall. It also means you can be forced to open a line against yourself, because standing still is not among your options.':
+    '所以封锁从来不是一道结构，只是一次拖延，它的价值是让对手不便一个回合，而不是一堵墙。这也意味着你可能被迫打开一条对自己不利的线路，因为原地不动不在你的选项之内。',
+  'The bot places the duck at random': '机器人随机放鸭',
+  'The bot is a patched Fairy-Stockfish, and it plays the piece half of its turn properly. The duck half it guesses. That is measured, not suspected.':
+    '机器人是打过补丁的 Fairy-Stockfish，回合里走子的那一半它走得很正经。放鸭的那一半它是在猜。这是测量出来的，不是猜测。',
+  'We scored every legal duck placement after the engine’s own opening move, 58 of them, and the engine returned an identical evaluation for all 58. Raising the search from 300,000 nodes to four million changed the number but not the verdict: still identical across every placement. Fairy-Stockfish has no evaluation term for a duck or a wall, so nothing in its scoring can prefer one point to another, and the placement it reports is whatever its move ordering happened to surface.':
+    '我们对引擎自己开局着法之后的每一种合法放鸭位置打分，共 58 种，引擎对这 58 种给出了完全相同的评估值。把搜索从 300,000 节点提高到四百万，数值变了，结论没变：每一种落点依然完全相同。Fairy-Stockfish 的评估里没有关于鸭子或墙的项，所以它的打分不可能偏好任何一个点，它报出的落点只是着法排序碰巧先冒出来的那一个。',
+  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all seven.':
+    '这让它在象棋的那一半是个真正的对手，在鸭子的那一半却是个糟糕的老师。如果你觉得它的落点很随意，那是因为确实如此。这些对局的走子部分仍然值得一读，下面的研习里有全部七盘。',
+  'The generals may face each other': '将帅可以对面',
+  'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.':
+    '在普通象棋里这是禁止的。这里一旦没有了将军，这条禁令就失去了意义，所以飞将只是一次结束棋局的吃子。它是又一个没有任何警告的威胁，也是鸭子可以打开或关闭的又一条线路。',
+  'Games run 120 to 229 plies': '对局长度在 120 到 229 步之间',
+  'That is the range across the seven engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
+    '这是七盘引擎对局的范围。请把它当成一盘完整的棋而不是小玩意，并据此选择用时：这里提供 5+5 和 10+5 两种节奏，正是出于这个原因。',
+  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all seven engine games if you want to watch it played first.':
+    '八个引擎强度，或者找个朋友。规则页有带图解的完整规则，如果想先看看别人怎么下，研习里有全部七盘引擎对局。',
+  Rules: '规则',
+  'FIRST: A LEGAL XIANGQI MOVE': '第一步：一着合法的象棋着法',
+  'THEN: THE DUCK': '第二步：放鸭子',
+  'THE DUCK IS A SCREEN': '鸭子就是炮架',
+  'ONE PLATFORM, TWO ARMIES': '一座炮架，两支军队',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -4014,6 +4110,97 @@ const ZH_HANT: Record<string, string> = {
     '今日題目，來自留下的題庫。如果你找到一個網站不接受的將死，那現在就是一個 bug，我想聽你說說。',
   'Today’s xiangqi puzzle': '今日象棋題目',
   'How the miner works': '挖掘器是怎麼工作的',
+  // anti-xiangqi and duck-xiangqi-build, derived from the Simplified entries
+  // by script conversion plus the Taiwan lexical forks (2026-09-13).
+  'Antichess on the Xiangqi Board Is a Draw': '象棋棋盤上的反棋是和棋',
+  'Anti Xiangqi: Antichess on the Xiangqi Board Is a Draw': '反象棋：象棋棋盤上的反棋是和棋',
+  'We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find in the opening, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. Every other opening loses, 63 of them provably. We are publishing the measurement, not the variant.':
+    '我們把反棋放到象棋棋盤上，先測量再設計。黑方在開局有兩步棋必須找到，紅方不會走錯，之後九宮讓每方五個棋子無法被觸及。其餘每一種開局都會輸，其中 63 種已被證明。我們發佈的是這份測量，而不是這個變體。',
+  'Antichess is chess with two rules changed: if you can capture you must, and you win by losing every piece you have. The king is an ordinary piece. Lichess plays it, and it was solved in 2016. We put the same two rules on the xiangqi board, with the general an ordinary piece and no facing rule, and measured what came out before designing anything.':
+    '反棋（自殺棋）是改了兩條規則的國際象棋：能吃子就必須吃，把自己所有棋子都送掉的一方獲勝。王只是普通棋子。Lichess 上可以下它，它在 2016 年已被解決。我們把同樣的兩條規則搬到象棋棋盤上，將帥作為普通棋子，不設白臉將規則，先測量結果再談設計。',
+  'It is a draw. Black has two moves to find in the opening and Red cannot go wrong; after that, the pieces you must lose sit in the palace where nothing can reach them. Every other opening loses, and 63 of those losses are proven. The full analysis, with every engine game, every proof and a viewer for all of it, is on brianhliou.com; this page is the short account and the reason there is no play button.':
+    '結論是和棋。黑方在開局有兩步棋必須找到，紅方不會走錯；之後你必須送掉的那些棋子都待在九宮裡，什麼都夠不到它們。其餘每一種開局都會輸，其中 63 種負局已被證明。完整分析連同每一盤引擎對局、每一份證明和一個瀏覽器都在 brianhliou.com；本頁是簡短的說明，也解釋了為什麼這裡沒有“開始對局”按鈕。',
+  'The opening has one safe path': '開局只有一條安全路線',
+  'Red’s first move is a cannon taking a horse through the enemy cannon; the two choices are mirror images, so call it 1. Cxb10. Black must capture and has two ways. Taking the cannon back with the chariot loses by force: Red gives its pieces away one at a time, the chariot has to take every one, and Red is out of pieces in 34 plies. That is proven, a certificate of 1,864 positions replayed by a checker that knows only the rules. Firing the other cannon into Red’s back rank, 1...Cxh1, holds.':
+    '紅方第一著是炮隔著對方的炮吃馬；兩種選擇互為鏡像，就稱之為 1. Cxb10。黑方必須吃子，有兩種方式。用車吃回那門炮會被強制擊敗：紅方把棋子一個個送出去，車不得不逐一吃掉，34 步之後紅方無子。這一點已被證明，一份 1,864 個局面的證明憑證已由一個只懂規則的檢驗器重播。用另一門炮轟向紅方底線，1...Cxh1，則站得住。',
+  'Black’s two captures after 1. Cxb10. The chariot recapture on b10 is a proven loss; the cannon shot to h1, over Red’s own h3 cannon, is the only move.':
+    '1. Cxb10 之後黑方的兩種吃法。車在 b10 吃回是已被證明的負著；炮隔著紅方自己的 h3 炮打到 h1，是唯一的著法。',
+  'Red then has two replies and both hold: take the cannon quietly, 2. Rxh1, and the exchange is over; or keep firing with 2. Cxd10, which sets Black a second trap, since only 2...Kxd10, the general taking the cannon, holds. The chain of forced captures has 166 possible endings and we played a game from every distinct one. Two survive. Every other branch loses for the side that took it.':
+    '接著紅方有兩種應法，都站得住：安靜地用車吃炮，2. Rxh1，交換就此結束；或者繼續開炮，2. Cxd10，給黑方設下第二個陷阱，因為只有用將吃炮的 2...Kxd10 站得住。這條連鎖強制吃子有 166 個可能的終點，我們從每一個不同的終點各下了一盤。兩個存活下來。其餘每一條分支都會讓走進去的一方輸。',
+  'The two endings that survive the chain. Fourteen pieces each, no capture on the board, and the game is open.':
+    '連鎖中存活下來的兩個終點。雙方各十四子，棋盤上無子可吃，棋局就此展開。',
+  'Then the palace makes it a draw': '然後九宮讓它成為和棋',
+  'To win you must lose your general, both advisors and both elephants, and none of them can leave home. Each can only be taken by an enemy piece that comes to it, and both players are trying to get rid of exactly those pieces. Once neither side has a chariot, horse, cannon or soldier left, no capture is possible ever again, and the rules score that a draw.':
+    '要取勝，你必須送掉將、兩個士和兩個象，而它們誰都離不開家。每一個都只能被走到它跟前的敵方棋子吃掉，而雙方都在設法擺脫恰恰是那些棋子。一旦雙方都沒有了車、馬、炮、兵，就再也不可能發生吃子，規則把這判為和棋。',
+  'The engine’s own game at two million nodes a move, ply 35. Nothing on the board can ever capture anything again.':
+    '引擎每著兩百萬節點自戰的對局，第 35 步。棋盤上再沒有任何棋子能吃掉任何東西。',
+  'In every engine game, the side that wanted the game to stop could feed its mobile pieces to the opponent, who had to take them, or park a lone chariot on lines nothing of the opponent’s could ever enter. At one and five million nodes the chariots stayed on and the game became a hundred plies of soldiers traded in pairs, ending the same way. That is evidence for a draw rather than a proof of one: no search we ran found a win from either surviving position, and the reason it could not is a property of the board.':
+    '在每一盤引擎對局裡，想讓棋局停下來的一方都可以把可出擊的子力送給對手，對手不得不吃；或者把一輛孤車停在對方任何棋子都永遠進不來的線路上。在一百萬和五百萬節點下，車留在了棋盤上，棋局變成一百步成對交換的兵戰，結局相同。這是和棋的證據，而不是證明：我們跑過的搜尋都沒有從任何一個存活局面找到勝法，而找不到的原因是棋盤本身的性質。',
+  'Four repairs and two siblings, none a game': '四種修補和兩個同族變體，沒有一個成為像樣的棋',
+  'Scoring every stall for the side with fewer pieces removes the free draw but cannot be tested without an engine that plays for the count. Codrus, the 1844 ancestor where you win by losing the general, draws through the same opening lines, faster. Losers, where the general stays royal, is decisive the wrong way: a forced win for Black at every strength we tried, because a check suspends the obligation to capture and that tempo lands with the second player. Letting the palace pieces out is a different board.':
+    '把每一個僵局判給子少的一方能去掉免費的和棋，但沒有一個為子數而戰的引擎就無法測試。Codrus 是 1844 年的祖先，輸掉將即獲勝，它經由同樣的開局路線成和，而且更快。Losers 保留將的王者身份，有勝負，但方向錯了：在我們試過的每一種強度下都是黑方必勝，因為一次將軍會暫停吃子義務，而這個先手落在後手一方。放九宮裡的棋子出來則已經是另一張棋盤了。',
+  'What we are publishing instead of a play page': '我們發佈的是什麼，而不是一個對局頁面',
+  'The rule kernel with the three rule sets written out, the Fairy-Stockfish stanzas, all 166 endings of the opening chain, one engine game from each at two search depths, every proof certificate, a checker that replays them against the rules in a few seconds, and every game in a viewer. If you can show a third surviving opening, a defence in any certificate, or a win for either side from the positions above, open an issue there; the write-up will say so.':
+    '完整寫出三套規則的規則核心、Fairy-Stockfish 的變體配置、開局連鎖的全部 166 個終點、每個終點在兩種搜尋深度下各一盤引擎對局、每一份證明憑證、一個幾秒鐘內就能對照規則重播它們的檢驗器，以及放在瀏覽器裡的每一盤棋。如果你能給出第三條存活的開局、任何一份憑證裡的防守，或者從上面的局面出發任何一方的勝法，請去那裡提一個 issue；文章會如實寫明。',
+  'Read the full analysis': '閱讀完整分析',
+  'Check the proofs yourself': '親自檢驗這些證明',
+  'Learn xiangqi': '學習象棋',
+  'AFTER 1. Cxb10: BLACK MUST CAPTURE': '1. Cxb10 之後：黑方必須吃子',
+  '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：輪到紅方',
+  '2. Cxd10 Kxd10 3. Rxh1: BLACK TO MOVE': '2. Cxd10 Kxd10 3. Rxh1：輪到黑方',
+  'PLY 35 OF THE 2M GAME: A DEAD BOARD': '2M 對局第 35 步：死局',
+  'Duck Xiangqi Is Live: How Not to Lose Your First Game': '鴨子象棋上線了：怎樣不輸掉你的第一盤',
+  'Duck Xiangqi: How Not to Lose Your First Game': '鴨子象棋：怎樣不輸掉你的第一盤',
+  'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.':
+    '雙方共用一隻鴨子的象棋。規則一分鐘就能讀完。決定你第一盤勝負的東西要花更久，首先是這一條：你放下的鴨子是對手的炮架，永遠不是你的。',
+  'Duck Xiangqi is live today. It is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
+    '鴨子象棋今天上線。它是雙方共用一隻鴨子的象棋：你走一著普通的象棋著法，然後把鴨子放到任意一個空點上。它擋住一切，不屬於任何一方，也不能被吃掉。規則大約一分鐘就能讀完。',
+  'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is usually the one that arms your opponent’s cannon. These come from the seven engine games behind this launch, and from measuring the engine itself.':
+    '下面寫的不是規則，而是決定你第一盤勝負的東西，先從人人都會中招的那一條說起：看起來最礙事的鴨子落點，往往正是給對手的炮裝上炮架的那個點。這些心得來自這次上線背後的七盤引擎對局，以及對引擎本身的測量。',
+  'A turn is a move plus a duck placement': '一回合是一著棋加一次放鴨',
+  'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.':
+    '每一回合你先走一個棋子，再放鴨子。走子就是象棋，你已經知道該怎麼想。放鴨才是新的部分，第一盤棋往往就輸在這裡。',
+  'One turn, both halves. The move on the left is ordinary xiangqi; the duck on the right is the part with no precedent.':
+    '一個回合的兩半。左邊的走子是普通象棋；右邊的鴨子是沒有先例的部分。',
+  'The duck is a cannon screen for whoever moves next': '鴨子是下一個走棋者的炮架',
+  'A cannon captures by jumping exactly one piece, and the duck counts as that piece. What follows from that is the order of a turn, not any subtlety: you place the duck at the END of your move, so the next person to play is your opponent. Any cannon line you just completed is theirs to fire down first.':
+    '炮吃子要恰好跳過一個棋子，而鴨子算作那個棋子。由此得出的只是回合的順序，沒有什麼玄妙：你在自己這一著的最後放鴨，所以下一個走棋的是對手。你剛剛架好的任何一條炮線，都是對方先開火。',
+  'The duck as a cannon platform. Nothing marks it as either side’s: whoever is to move gets to use it.':
+    '鴨子作為炮架。沒有任何標記說明它屬於哪一方：輪到誰走，誰就能用它。',
+  'The practical habit: before you place the duck, look along the ranks and files it will sit on and check whether an enemy cannon has just been handed a target. The square that most obstructs your opponent is usually a square next to their pieces, which is exactly where it is most likely to arm one of their cannons.':
+    '實用的習慣：放鴨之前，沿著它將要落在的橫線和縱線看一遍，檢查是否剛好給了敵方的炮一個目標。最能阻礙對手的點通常緊挨著對方的棋子，而那恰恰是最容易給對方的炮裝上炮架的地方。',
+  'From a real engine game. Both cannons are ringed because the duck on e2 serves each of them, but only the side to move collects: here that is Red, taking on d2. Neither capture exists without the duck, and whoever moves has to move it again.':
+    '來自一盤真實的引擎對局。兩門炮都畫了圈，因為 e2 上的鴨子對兩門炮都有用，但只有輪到走棋的一方能兌現：這裡是紅方，在 d2 吃子。沒有鴨子這兩種吃法都不存在，而輪到走棋的一方還必須再把它挪走。',
+  'There is no check and no checkmate': '沒有將軍，也沒有將死',
+  'You may leave your general attacked, move it onto an attacked point, and nothing on the board or in the interface says a word. Your opponent wins by actually taking it, and the game ends there.':
+    '你可以讓將帥處於被攻擊狀態，也可以把它走到被攻擊的點上，棋盤和介面都不會說一個字。對手通過真的吃掉它來獲勝，棋局到此結束。',
+  'This is not a theoretical risk. All seven of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
+    '這不是理論上的風險。我們發佈的七盤引擎對局全部以將帥被直接吃掉告終。沒有一盤走到認輸、重複局面或困斃：每一盤的結束都是因為有人能吃將帥，而且吃了。每一回合都自己數一遍威脅，包括鴨子剛剛打開的那些。',
+  'The duck must move every turn': '鴨子每回合都必須移動',
+  'A duck jamming a horse’s leg, filling an elephant’s eye or holding a file is doing that job for exactly one turn. Then it is your problem again: on your next turn you have to pick it up and put it somewhere else.':
+    '蹩住馬腿、塞住象眼或守住一條縱線的鴨子，只能幹這件事恰好一個回合。然後它又成了你的問題：下一回合你必須把它拿起來放到別處。',
+  'So a block is never a structure, only a delay, and it is worth one turn of inconvenience rather than a wall. It also means you can be forced to open a line against yourself, because standing still is not among your options.':
+    '所以封鎖從來不是一道結構，只是一次拖延，它的價值是讓對手不便一個回合，而不是一堵牆。這也意味著你可能被迫打開一條對自己不利的線路，因為原地不動不在你的選項之內。',
+  'The bot places the duck at random': '機器人隨機放鴨',
+  'The bot is a patched Fairy-Stockfish, and it plays the piece half of its turn properly. The duck half it guesses. That is measured, not suspected.':
+    '機器人是打過修補程式的 Fairy-Stockfish，回合裡走子的那一半它走得很正經。放鴨的那一半它是在猜。這是測量出來的，不是猜測。',
+  'We scored every legal duck placement after the engine’s own opening move, 58 of them, and the engine returned an identical evaluation for all 58. Raising the search from 300,000 nodes to four million changed the number but not the verdict: still identical across every placement. Fairy-Stockfish has no evaluation term for a duck or a wall, so nothing in its scoring can prefer one point to another, and the placement it reports is whatever its move ordering happened to surface.':
+    '我們對引擎自己開局著法之後的每一種合法放鴨位置評分，共 58 種，引擎對這 58 種給出了完全相同的評估值。把搜尋從 300,000 節點提高到四百萬，數值變了，結論沒變：每一種落點依然完全相同。Fairy-Stockfish 的評估裡沒有關於鴨子或牆的項，所以它的評分不可能偏好任何一個點，它報出的落點只是著法排序碰巧先冒出來的那一個。',
+  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all seven.':
+    '這讓它在象棋的那一半是個真正的對手，在鴨子的那一半卻是個糟糕的老師。如果你覺得它的落點很隨意，那是因為確實如此。這些對局的走子部分仍然值得一讀，下面的研習裡有全部七盤。',
+  'The generals may face each other': '將帥可以對面',
+  'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.':
+    '在普通象棋裡這是禁止的。這裡一旦沒有了將軍，這條禁令就失去了意義，所以飛將只是一次結束棋局的吃子。它是又一個沒有任何警告的威脅，也是鴨子可以打開或關閉的又一條線路。',
+  'Games run 120 to 229 plies': '對局長度在 120 到 229 步之間',
+  'That is the range across the seven engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
+    '這是七盤引擎對局的範圍。請把它當成一盤完整的棋而不是小玩意，並據此選擇用時：這裡提供 5+5 和 10+5 兩種節奏，正是出於這個原因。',
+  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all seven engine games if you want to watch it played first.':
+    '八個引擎強度，或者找個朋友。規則頁有帶圖解的完整規則，如果想先看看別人怎麼下，研習裡有全部七盤引擎對局。',
+  Rules: '規則',
+  'FIRST: A LEGAL XIANGQI MOVE': '第一步：一著合法的象棋著法',
+  'THEN: THE DUCK': '第二步：放鴨子',
+  'THE DUCK IS A SCREEN': '鴨子就是炮架',
+  'ONE PLATFORM, TWO ARMIES': '一座炮架，兩支軍隊',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

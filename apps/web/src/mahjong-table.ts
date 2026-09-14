@@ -9,11 +9,18 @@
  * The viewer always sits at the bottom. A mahjong player reads the table from
  * their own seat and the winds go anticlockwise from there, so the other three
  * are placed right, top, left in turn order rather than by fixed compass point.
+ *
+ * Geometry (2026-09-12): a ring. The three opponents sit left, across and right
+ * of a centre badge, their ponds flowing toward it in rows of six the way tiles
+ * are actually laid out; the viewer's own pond sits under the centre and the
+ * hand under that. The first layout stacked the across seat full-width above
+ * a three-column row, which left the top right of the table empty and put the
+ * across seat's pond nowhere near the middle it was thrown into.
  */
 
 import type { MahjongPlayerView, MahjongSeat, MahjongSeatView } from '@mistboard/mahjong';
-import { MAHJONG_SEATS } from '@mistboard/mahjong';
-import { mahjongTileFace, mahjongTileName } from './mahjong-tile.js';
+import { isHonour, MAHJONG_SEATS, suitOf } from '@mistboard/mahjong';
+import { mahjongFlowerFace, mahjongTileFace, mahjongTileName } from './mahjong-tile.js';
 
 const SEAT_WINDS: Record<MahjongSeat, string> = {
   east: '東',
@@ -57,6 +64,25 @@ export function mahjongTileHtml(
     return `<span class="${classes.join(' ')}" role="img" aria-label="${label}">${face.inner}</span>`;
   }
   return `<button type="button" class="${classes.join(' ')}" data-mj-tile="${options.index ?? tile}" title="${label}" aria-label="Discard ${label}">${face.inner}</button>`;
+}
+
+/**
+ * A seat's flowers, in the head row beside its name.
+ *
+ * They were drawn nowhere at all in the first build: the kernel set them aside
+ * and the view carried them, and the table never looked. In Hong Kong they
+ * SCORE, and count toward the three-faan floor, so a player could be holding
+ * the faan that makes a hand declarable and see nothing on screen that said so.
+ */
+function flowersHtml(seat: MahjongSeatView): string {
+  if (seat.flowers.length === 0) return '';
+  const tiles = seat.flowers
+    .map((flower) => {
+      const face = mahjongFlowerFace(flower);
+      return `<span class="mj-tile mj-tile-sm mj-tile-flower" role="img" aria-label="${escapeHtml(face.label)}">${face.inner}</span>`;
+    })
+    .join('');
+  return `<span class="mj-flowers" aria-label="flowers">${tiles}</span>`;
 }
 
 function meldsHtml(seat: MahjongSeatView): string {
@@ -109,9 +135,9 @@ function discardsHtml(seat: MahjongSeatView, underClaim: number | null): string 
 function opponentHtml(
   seat: MahjongSeatView,
   view: MahjongPlayerView,
-  position: 'right' | 'top' | 'left',
+  position: 'right' | 'top' | 'left' | 'self',
 ): string {
-  const isTurn = view.turn === seat.seat && view.status.type === 'playing';
+  const isTurn = seatIsToPlay(view, seat.seat);
   const thinking = view.awaiting.includes(seat.seat);
   const classes = ['mj-seat', `mj-seat-${position}`];
   if (isTurn) classes.push('mj-seat-turn');
@@ -126,6 +152,19 @@ function opponentHtml(
       ${meldsHtml(seat)}
       ${discardsHtml(seat, view.discardUnderClaim)}
     </div>`;
+}
+
+/**
+ * Whose move it is, as the table should say it.
+ *
+ * `view.turn` stays with the discarder while their tile is under claim, which
+ * is right for the rules (the window is theirs to time out) and wrong for the
+ * marker: they have nothing left to decide, and lighting them up through the
+ * window is how the turn dot came to sit on the wrong player. During a window
+ * nobody is "to play"; the seats deciding are marked separately.
+ */
+function seatIsToPlay(view: MahjongPlayerView, seat: MahjongSeat): boolean {
+  return view.status.type === 'playing' && view.discardUnderClaim === null && view.turn === seat;
 }
 
 /**
@@ -144,6 +183,7 @@ function seatHeadHtml(seat: MahjongSeatView, isTurn: boolean, thinking: boolean)
       <span class="mj-seat-name">${SEAT_LABELS[seat.seat]}</span>
       ${isTurn ? '<span class="mj-seat-turn-label">to play</span>' : ''}
       ${thinking ? '<span class="mj-seat-status">deciding</span>' : ''}
+      ${flowersHtml(seat)}
       <span class="mj-seat-count" title="tiles in hand">${seat.handSize}</span>
     </div>`;
 }
@@ -151,28 +191,91 @@ function seatHeadHtml(seat: MahjongSeatView, isTurn: boolean, thinking: boolean)
 /**
  * The viewer's own seat: the one hand whose faces are drawn.
  *
- * The action bar lives HERE, immediately above the hand, rather than in the
- * room's side column. That column is laid out as two player boxes because every
- * variant before this had two seats, and a claim prompt put there is both
- * cramped and nowhere near the tiles it is about. A claim window is six seconds
- * long: the buttons have to be where the eyes already are.
+ * The bar between the pond and the hand is where everything the viewer is told
+ * or asked lives, and it is ALWAYS there. In the first build the claim buttons
+ * appeared out of nowhere for six seconds and shoved the hand down as they
+ * came, so the eye had to find them and then find the hand again. A fixed slot
+ * means the buttons land where the eye already is, and the hand does not move.
  */
 function ownSeatHtml(seat: MahjongSeatView, view: MahjongPlayerView, canDiscard: boolean): string {
   const tiles = (seat.hand ?? [])
     .map((tile, index) => mahjongTileHtml(tile, { interactive: canDiscard, index }))
     .join('');
-  const isTurn = view.turn === seat.seat && view.status.type === 'playing';
+  const isTurn = seatIsToPlay(view, seat.seat);
+  const thinking = view.awaiting.includes(seat.seat);
+  const classes = ['mj-seat', 'mj-seat-self'];
+  if (isTurn) classes.push('mj-seat-turn');
+  if (thinking) classes.push('mj-seat-thinking');
   return `
-    <div class="mj-seat mj-seat-self${isTurn ? ' mj-seat-turn' : ''}" data-mj-seat="${seat.seat}">
+    <div class="${classes.join(' ')}" data-mj-seat="${seat.seat}">
       ${discardsHtml(seat, view.discardUnderClaim)}
-      ${seatHeadHtml(seat, isTurn, view.awaiting.includes(seat.seat))}
-      ${mahjongActionsHtml(view)}
-      ${handStatusHtml(view)}
+      ${seatHeadHtml(seat, isTurn, thinking)}
+      ${mahjongBarHtml(view)}
       <div class="mj-hand-row">
         <div class="mj-hand" role="group" aria-label="your hand">${tiles}</div>
         ${ownMeldsHtml(seat)}
       </div>
     </div>`;
+}
+
+/**
+ * The bar: one slot, three states.
+ *
+ * A window the viewer can answer shows the claim buttons and a strip draining
+ * toward the deadline. A window the viewer cannot answer says what was thrown
+ * and, where it matters, why there is no button: the commonest confusion at the
+ * first table was a tile that plainly fit the hand and could not be taken,
+ * because a chow only takes the discard of the seat before you. Otherwise it
+ * says where the hand stands.
+ */
+export function mahjongBarHtml(view: MahjongPlayerView, now: number = Date.now()): string {
+  if (view.perspective === 'spectator') return '';
+  const actions = mahjongActionsHtml(view);
+  if (actions) {
+    const timer =
+      view.windowClosesAt === null || view.ownClaims.length === 0
+        ? ''
+        : `<span class="mj-bar-timer" aria-hidden="true" style="--mj-window-ms:${Math.max(0, view.windowClosesAt - now)}ms"></span>`;
+    return `<div class="mj-bar mj-bar-asking">${actions}${timer}</div>`;
+  }
+  if (view.discardUnderClaim !== null) {
+    const tile = escapeHtml(mahjongTileName(view.discardUnderClaim));
+    const hint = chowHint(view);
+    const waiting =
+      view.awaiting.length > 0
+        ? ` Waiting on ${view.awaiting.map((seat) => SEAT_LABELS[seat]).join(' and ')}.`
+        : '';
+    // `view.turn` is the discarder for as long as the window is open.
+    return `<div class="mj-bar mj-bar-note"><span class="mj-bar-text">${SEAT_LABELS[view.turn]} threw ${tile}.${hint ? ` ${hint}` : waiting}</span></div>`;
+  }
+  return `<div class="mj-bar">${handStatusHtml(view)}</div>`;
+}
+
+/**
+ * Why a tile that fits is not on offer.
+ *
+ * Only the chow case, because it is the one a newcomer cannot see: a pung
+ * needs a pair and that is visible in the hand, but the chow rule is about
+ * WHO threw the tile, and nothing on the table says it. Returns nothing when a
+ * chow was actually offered, or when the tile would not complete a run.
+ */
+export function chowHint(view: MahjongPlayerView): string {
+  if (view.perspective === 'spectator' || view.discardUnderClaim === null) return '';
+  if (view.ownClaims.some((claim) => claim.kind === 'chow')) return '';
+  const discard = view.discardUnderClaim;
+  if (isHonour(discard)) return '';
+  const hand = view.seats.find((seat) => seat.seat === view.perspective)?.hand ?? [];
+  const held = new Set(hand);
+  const suit = suitOf(discard);
+  const holds = (tile: number) => tile >= 0 && tile < 27 && suitOf(tile) === suit && held.has(tile);
+  const fits =
+    (holds(discard - 2) && holds(discard - 1)) ||
+    (holds(discard - 1) && holds(discard + 1)) ||
+    (holds(discard + 1) && holds(discard + 2));
+  if (!fits) return '';
+  const me = MAHJONG_SEATS.indexOf(view.perspective);
+  const left = MAHJONG_SEATS[(me + 3) % 4] as MahjongSeat;
+  return `It fits your hand, but 上 chow only takes ${SEAT_LABELS[left]}'s discard.`;
 }
 
 /**
@@ -226,6 +329,7 @@ function centreHtml(view: MahjongPlayerView): string {
       <div class="mj-centre-wind" aria-label="round wind">${SEAT_WINDS[MAHJONG_SEATS[view.roundWind - 27] ?? 'east']}</div>
       <div class="mj-centre-wall">${view.wallRemaining}<span class="mj-centre-wall-label">tiles left</span></div>
       ${claimed}
+      <a class="mj-centre-rules" href="/rules/mahjong" target="_blank" rel="noopener">how to play</a>
     </div>`;
 }
 
@@ -250,16 +354,14 @@ export function mahjongTableHtml(view: MahjongPlayerView, canDiscard: boolean): 
   // A spectator has no hand to draw, so the bottom seat renders as an opponent.
   const bottom =
     view.perspective === 'spectator'
-      ? opponentHtml(selfSeat, view, 'top')
+      ? opponentHtml(selfSeat, view, 'self')
       : ownSeatHtml(selfSeat, view, canDiscard);
   return `
     <div class="mj-table" data-mj-perspective="${view.perspective}">
+      ${opponentHtml(seatOf(left as MahjongSeat), view, 'left')}
       ${opponentHtml(seatOf(top as MahjongSeat), view, 'top')}
-      <div class="mj-table-middle">
-        ${opponentHtml(seatOf(left as MahjongSeat), view, 'left')}
-        ${centreHtml(view)}
-        ${opponentHtml(seatOf(right as MahjongSeat), view, 'right')}
-      </div>
+      ${opponentHtml(seatOf(right as MahjongSeat), view, 'right')}
+      ${centreHtml(view)}
       ${bottom}
     </div>`;
 }
@@ -278,7 +380,7 @@ export function mahjongActionsHtml(view: MahjongPlayerView): string {
 
   if (view.ownSelfDraw) {
     buttons.push(
-      '<button type="button" class="mj-action mj-action-win mj-action-selfdraw" data-mj-selfdraw="1">\u81ea\u6478 declare win</button>',
+      '<button type="button" class="mj-action mj-action-win mj-action-selfdraw" data-mj-selfdraw="1">自摸 declare win</button>',
     );
   }
 
@@ -288,14 +390,14 @@ export function mahjongActionsHtml(view: MahjongPlayerView): string {
       const key = `${claim.kind}:${claim.fromHand.join(',')}`;
       if (seen.has(key)) continue;
       seen.add(key);
-      // A discard of 4 completes 2\u00b73\u00b74, 3\u00b74\u00b75 or 4\u00b75\u00b76.
+      // A discard of 4 completes 2·3·4, 3·4·5 or 4·5·6.
       // Three buttons all reading "chow" is a coin toss, so each says its run.
       const run =
         claim.kind === 'chow' && view.discardUnderClaim !== null
           ? [...claim.fromHand, view.discardUnderClaim]
               .sort((a, b) => a - b)
               .map((tile) => mahjongTileName(tile).replace(/[^0-9]/g, ''))
-              .join('\u00b7')
+              .join('·')
           : '';
       const label = `${CLAIM_LABELS[claim.kind] ?? claim.kind}${run ? ` ${run}` : ''}`;
       buttons.push(
@@ -315,8 +417,8 @@ export function mahjongActionsHtml(view: MahjongPlayerView): string {
 
 /** The Cantonese name first, since that is what a player at a table says. */
 const CLAIM_LABELS: Record<string, string> = {
-  win: '\u98df\u7cca win',
-  kong: '\u69d3 kong',
-  pung: '\u78b0 pung',
-  chow: '\u4e0a chow',
+  win: '食糊 win',
+  kong: '槓 kong',
+  pung: '碰 pung',
+  chow: '上 chow',
 };

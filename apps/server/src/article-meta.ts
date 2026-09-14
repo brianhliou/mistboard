@@ -10,7 +10,11 @@ export type ArticleKind = 'rules' | 'article';
 
 // Reachable by URL, deliberately unlisted and unindexed: /rules/shogi4 is
 // linked from outside the site and stays up, but is not a Mistboard variant.
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4']);
+// /rules/mahjong is the page for a table that is admin-only and allowlisted
+// (apps/web/src/variant-public-surfaces.ts has `mahjong: false`); it leaves
+// this set the day the variant goes public, and articles-meta-sync.test.ts
+// fails if the two disagree.
+const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong']);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web
@@ -163,6 +167,12 @@ export const ARTICLE_META: Record<
     description:
       'Xiangqi under Fog of War: each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.',
   },
+  'anti-xiangqi': {
+    title: 'Antichess on the Xiangqi Board Is a Draw',
+    kind: 'article',
+    description:
+      'We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. We are publishing the measurement, not the variant.',
+  },
   'duck-xiangqi-build': {
     title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',
     kind: 'article',
@@ -252,6 +262,12 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'The complete rules of Jungle Chess, also called Dou Shou Qi or Animal Chess: eight ranked animals on a 7×9 board, the rat beats the elephant, only the rat swims, the lion and tiger leap the rivers. Play rated games and analyse them free in your browser.',
+  },
+  mahjong: {
+    title: 'Hong Kong Mahjong Rules',
+    kind: 'rules',
+    description:
+      'How a hand of Hong Kong mahjong is played on Mistboard: the deal, claiming discards, why a complete hand is not always a win, and the faan table the site scores with.',
   },
   'jungle-flip': {
     title: 'Flip Jungle Rules (Flip Dou Shou Qi)',

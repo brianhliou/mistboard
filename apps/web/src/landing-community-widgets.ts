@@ -3,7 +3,7 @@ import { prependTitleBadge } from './player-titles.js';
 import { buildSiteBox } from './site-box.js';
 import { fitRowsToBody } from './site-box-fit.js';
 import { localizedStudyName } from './study-i18n.js';
-import { buildStudyThumbnail } from './study-thumbnails.js';
+import { buildStudyThumbnail, type StudyPreviewBoard } from './study-thumbnails.js';
 import { leaderboardVariants } from './variants.js';
 import './landing-community-widgets.css';
 
@@ -15,6 +15,7 @@ type PublicStudy = {
   owner: { handle: string; displayName: string };
   chapterCount: number;
   likeCount: number;
+  previewBoard?: StudyPreviewBoard | null;
 };
 
 type LeaderboardEntry = {
@@ -58,7 +59,7 @@ export function buildTopStudiesWidget(options: { hydrate?: boolean } = {}): HTML
 }
 
 function buildStudyWidget(options: { hydrate?: boolean }): HTMLElement {
-  const { box, body } = buildSiteBox({ title: 'Top studies', href: '/study' });
+  const { box, body } = buildSiteBox({ title: 'Latest studies', href: '/study' });
   box.classList.add('landing-study-widget', 'landing-community-widget');
   body.append(statusRow(t('home.loadingStudies')));
   if (options.hydrate !== false) void hydrateStudies(body);
@@ -86,7 +87,12 @@ function studyRow(study: PublicStudy): HTMLElement {
   const row = document.createElement('a');
   row.className = 'site-box-row landing-study-row';
   row.href = `/study/${encodeURIComponent(study.id)}`;
-  const thumbnail = buildStudyThumbnail(study.id, 'landing-study-thumbnail');
+  const thumbnail = buildStudyThumbnail(
+    study.id,
+    'landing-study-thumbnail',
+    'lazy',
+    study.previewBoard ?? null,
+  );
 
   const main = document.createElement('span');
   main.className = 'landing-community-main';

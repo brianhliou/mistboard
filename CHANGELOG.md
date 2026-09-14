@@ -33,11 +33,16 @@ Conventions:
 
 ### Learning and puzzles
 
+- The Duck Xiangqi launch post and the anti-xiangqi article read in Simplified and Traditional Chinese ([0f2894e9](https://github.com/brianhliou/mistboard/commit/0f2894e9))
+- "Antichess on the Xiangqi Board Is a Draw" is published: the measurement behind a variant that was not built, with kernel-checked boards and links to the full analysis and the evidence ([334789ba](https://github.com/brianhliou/mistboard/commit/334789ba))
+- A rules page for Hong Kong mahjong at /rules/mahjong, unlisted while the table is invitation-only: the claims, why a complete hand is not always a win, and the faan table as the site scores it ([bcb70396](https://github.com/brianhliou/mistboard/commit/bcb70396))
 - Every mate puzzle that fits one of the 23 named kill patterns (杀法) says which ([e2ce0d45](https://github.com/brianhliou/mistboard/commit/e2ce0d45))
 - "Puzzles with more than one solution" is published, with the two boards playable in place ([a6d82d8b](https://github.com/brianhliou/mistboard/commit/a6d82d8b))
+- Every study card carries a thumbnail drawn from its first chapter: a composition shows its diagram, a game collection its opening a few moves in, and the four archive covers stay where they were ([c12e3019](https://github.com/brianhliou/mistboard/commit/c12e3019))
 
 ### Community
 
+- Forum topics and posts written in another language open translated when a translation already exists, on the homepage box, the forum lists and the topic page, with one click back to the original; new posts are translated as they arrive, and "Show forum posts translated" in Display settings turns it off ([80e3f8e5](https://github.com/brianhliou/mistboard/commit/80e3f8e5))
 - A Mistboard game, study or puzzle link alone on its line in a forum post shows as the board it points at; game links can name a side and a ply ([e901ca07](https://github.com/brianhliou/mistboard/commit/e901ca07), [f4758e4d](https://github.com/brianhliou/mistboard/commit/f4758e4d), [4a0a82f4](https://github.com/brianhliou/mistboard/commit/4a0a82f4))
 
 ### Site
@@ -55,6 +60,11 @@ Conventions:
 
 ### Fixed
 
+- A broadcast polled from a dpxq tour list files each game under the round its row states, whenever the record is uploaded, instead of only inside a twelve-hour window after the round started; the 2026 Shanghai Cup was polled all week and imported nothing. A tour's own page also now shows the poller's errors, which used to be written without the tour's name and so never reached it ([ad09c5ff](https://github.com/brianhliou/mistboard/commit/ad09c5ff))
+- The study list shows the newest studies first; it used to sort by likes, which with four likes on the site kept the July studies pinned over everything since ([c93c2096](https://github.com/brianhliou/mistboard/commit/c93c2096))
+- The variant marker on a study thumbnail scales to its frame, so the homepage rail no longer clips it off-centre ([6a467506](https://github.com/brianhliou/mistboard/commit/6a467506))
+- The homepage forum box names each topic's category in the site language instead of English ([80e3f8e5](https://github.com/brianhliou/mistboard/commit/80e3f8e5))
+- Mahjong: a discard nobody can claim no longer waits out a six-second window; flowers are drawn and counted toward the three-faan floor; the clock pauses during a claim window and follows a claim to the seat that made it; the table says why a fitting tile cannot be chowed; and the felt is laid out as a ring with one fixed bar for status and claim buttons ([9698ccd7](https://github.com/brianhliou/mistboard/commit/9698ccd7))
 - The WebSocket dev switches (`dev=solo`, `dev=engine`, `reset=1`) are gated on the admin authorization `views=all` already required, so a production room id alone no longer opens a live fog room as a solo client ([7c7521f6](https://github.com/brianhliou/mistboard/commit/7c7521f6))
 - Deleted variants' rules pages answer 410 instead of falling through to the blog shell ([2ecf7cc6](https://github.com/brianhliou/mistboard/commit/2ecf7cc6), [f2b723d1](https://github.com/brianhliou/mistboard/commit/f2b723d1))
 - Duck Xiangqi counts full moves, so the pregame abort window still closes ([fdd1ed4b](https://github.com/brianhliou/mistboard/commit/fdd1ed4b))
@@ -66,6 +76,7 @@ Conventions:
 
 ### Technical
 
+- `/api/auth/me` names the allowlisted variants an account may play (`variantGrants`); admins hold every one without a grant row, and the play menu offers a gated variant only to an account the server would seat ([349ed346](https://github.com/brianhliou/mistboard/commit/349ed346))
 - Migration 144 tightens the rating-pool constraint to the nine live pools, deletes the mini-family puzzle rows, and drops `games.hidden_draft960` ([f1011fdd](https://github.com/brianhliou/mistboard/commit/f1011fdd))
 - Migration 137 stores a browser device id on guest seats ([ea5d57a0](https://github.com/brianhliou/mistboard/commit/ea5d57a0))
 - Migration 143 withholds the retired variants' puzzles from every serving path ([2bf6490e](https://github.com/brianhliou/mistboard/commit/2bf6490e))

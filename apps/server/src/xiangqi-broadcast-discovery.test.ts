@@ -219,3 +219,129 @@ test('the between-rounds message is the one the poller stays quiet on', () => {
   if (resolved.ok) return;
   assert.equal(resolved.message, NO_ACTIVE_ROUND_MESSAGE);
 });
+
+import {
+  buildStatedRoundManifestSources,
+  NOTHING_NEW_MESSAGE,
+} from './xiangqi-broadcast-discovery.js';
+
+const SEEDED = [
+  { id: 'cup-r01', name: 'Round 1' },
+  { id: 'cup-r02', name: 'Round 2' },
+];
+
+function stated(id: string, roundNumber: number): DiscoveredBoard {
+  return { url: `http://www.dpxq.com/hldcg/search/view_m_${id}.html`, roundNumber };
+}
+
+test('stated rounds file each board under the seeded round with that number', () => {
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup&tourName=Cup'),
+    boards: [stated('1', 1), stated('2', 2), stated('3', 1)],
+    rounds: SEEDED,
+    completeUrls: new Set(),
+  });
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.deepEqual(
+    built.sources.map((s) => [s.roundId, s.roundName, s.boardNumber]),
+    [
+      ['cup-r01', 'Round 1', 1],
+      ['cup-r02', 'Round 2', 1],
+      ['cup-r01', 'Round 1', 2],
+    ],
+  );
+  assert.equal(built.sources[0]?.tourName, 'Cup');
+  assert.equal(built.skippedComplete, 0);
+  assert.equal(built.droppedUnscheduled, 0);
+});
+
+// Records arrive on dpxq days after the round, so a schedule window would have
+// closed already; the stated round is what files them, never the clock.
+test('stated rounds are never time-gated', () => {
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
+    boards: [stated('1', 1)],
+    rounds: SEEDED,
+    completeUrls: new Set(),
+  });
+  assert.equal(built.ok, true);
+});
+
+test('boards already stored complete leave the manifest but keep their rank', () => {
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
+    boards: [stated('1', 1), stated('2', 1), stated('3', 1)],
+    rounds: SEEDED,
+    completeUrls: new Set([stated('1', 1).url, stated('2', 1).url]),
+  });
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.deepEqual(
+    built.sources.map((s) => s.boardNumber),
+    [3],
+  );
+  assert.equal(built.skippedComplete, 2);
+});
+
+test('a list with nothing new is quiet, not an error', () => {
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
+    boards: [stated('1', 1)],
+    rounds: SEEDED,
+    completeUrls: new Set([stated('1', 1).url]),
+  });
+  assert.equal(built.ok, false);
+  if (built.ok) return;
+  assert.equal(built.message, NOTHING_NEW_MESSAGE);
+  assert.equal(built.quiet, true);
+});
+
+test('boards for rounds the schedule never seeded are dropped and counted, not guessed', () => {
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
+    boards: [stated('1', 1), stated('9', 9)],
+    rounds: SEEDED,
+    completeUrls: new Set(),
+  });
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.deepEqual(
+    built.sources.map((s) => s.roundId),
+    ['cup-r01'],
+  );
+  assert.equal(built.droppedUnscheduled, 1);
+
+  const onlyUnseeded = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
+    boards: [stated('9', 9)],
+    rounds: SEEDED,
+    completeUrls: new Set(),
+  });
+  assert.equal(onlyUnseeded.ok, false);
+  if (onlyUnseeded.ok) return;
+  assert.equal(onlyUnseeded.quiet, undefined);
+});
+
+test('a board that states no round fails the whole build closed', () => {
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
+    boards: [stated('1', 1), board('x', 'e')],
+    rounds: SEEDED,
+    completeUrls: new Set(),
+  });
+  assert.equal(built.ok, false);
+});
+
+test('the cap defers new boards to the next poll and counts them', () => {
+  const built = buildStatedRoundManifestSources({
+    source: parsed('mistboard-discover://fake-live?tourSlug=cup&maxBoards=2'),
+    boards: [stated('1', 1), stated('2', 1), stated('3', 1)],
+    rounds: SEEDED,
+    completeUrls: new Set(),
+  });
+  assert.equal(built.ok, true);
+  if (!built.ok) return;
+  assert.equal(built.sources.length, 2);
+  assert.equal(built.droppedForCap, 1);
+});

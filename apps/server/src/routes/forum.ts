@@ -3,13 +3,18 @@ import type { IncomingMessage, ServerResponse } from 'node:http';
 import { currentAccountUser } from './../account-session.js';
 import { clientIpForRateLimit, createAuthRateLimiter } from './../auth-rate-limit.js';
 import { forumTranslationEnabled } from './../feature-flags.js';
+import { forumExcerpt } from './../forum-excerpt.js';
 import {
   createAnthropicTranslationClient,
   createForumTranslationService,
   DEFAULT_BREAKER,
   DEFAULT_DAILY_MISS_CAP,
   type ForumTranslationService,
+  forumContentHash,
   isTranslationLocale,
+  TRANSLATION_LOCALES,
+  type TranslationLocale,
+  translationNeeded,
 } from './../forum-translation.js';
 import { logger } from './../obs.js';
 import * as persistence from './../persistence.js';
@@ -74,6 +79,61 @@ function translationService(): ForumTranslationService {
   return forumTranslationService;
 }
 
+// ── Cached translations on read surfaces ────────────────────────────────────
+//
+// A list or topic read carries whatever the translation cache ALREADY holds
+// for the reader's locale (`?locale=`), keyed here by source text. Nothing on
+// this path asks the model: a read never spends, never meters, and shows the
+// source language for anything not yet cached. The cache is filled by the
+// Translate button and by the warm below.
+
+type TranslationOverlay = ReadonlyMap<string, string>;
+const NO_OVERLAY: TranslationOverlay = new Map();
+
+function requestedLocale(parsedUrl: URL): TranslationLocale | null {
+  const raw = parsedUrl.searchParams.get('locale');
+  return isTranslationLocale(raw) ? raw : null;
+}
+
+async function translationOverlay(
+  locale: TranslationLocale | null,
+  texts: Iterable<string>,
+): Promise<TranslationOverlay> {
+  if (!locale || !forumTranslationEnabled()) return NO_OVERLAY;
+  const textByHash = new Map<string, string>();
+  for (const text of texts) {
+    if (!text || !translationNeeded(text, locale)) continue;
+    textByHash.set(forumContentHash(text), text);
+  }
+  if (textByHash.size === 0) return NO_OVERLAY;
+  const found = await persistence.listForumTranslations({
+    contentHashes: [...textByHash.keys()],
+    targetLocale: locale,
+  });
+  const overlay = new Map<string, string>();
+  for (const [hash, translated] of found) {
+    const text = textByHash.get(hash);
+    if (text) overlay.set(text, translated);
+  }
+  return overlay;
+}
+
+// Fill the cache for a new or edited text so the lists can show it translated
+// before any reader has asked. Fire-and-forget after the response. Bypasses
+// the author's per-caller meter (writing is already rate limited) but not the
+// daily cap or the breaker, and the feature flag turns it off with the rest.
+function warmForumTranslation(kind: 'topic' | 'post', id: string, text: string): void {
+  if (!forumTranslationEnabled()) return;
+  for (const target of TRANSLATION_LOCALES) {
+    if (!translationNeeded(text, target)) continue;
+    translationService()
+      .translate({ kind, id, target, meter: () => true })
+      .catch((error: unknown) => {
+        logger.warn({ kind: 'forum_translation_warm_failed', source: kind, id, target, error });
+      });
+  }
+}
+
 type ForumTopicJson = {
   id: string;
   slug: string;
@@ -96,6 +156,9 @@ type ForumTopicJson = {
   createdAt: string;
   updatedAt: string;
   lastPostAt: string;
+  /** Cached machine translations into the requested `?locale=`, when the
+   *  cache has them (absent otherwise, and absent without a locale). */
+  translated?: { title?: string; excerpt?: string };
 };
 
 type ForumCategoryJson = {
@@ -120,6 +183,7 @@ type ForumCategoryJson = {
       slug: string;
       title: string;
       postCount: number;
+      translatedTitle?: string;
     };
     author: persistence.ForumAuthor;
     createdAt: string;
@@ -138,6 +202,8 @@ type ForumPostJson = {
   updatedAt: string;
   hidden: boolean;
   hiddenAt: string | null;
+  /** Cached machine translation of the body into the requested locale. */
+  translated?: string;
 };
 
 type ForumPostSearchJson = {
@@ -194,7 +260,13 @@ export async function tryHandle(
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
     const categories = await persistence.listForumCategories();
-    writeJson(response, 200, { categories: categories.map(serializeCategory) });
+    const overlay = await translationOverlay(
+      requestedLocale(parsedUrl),
+      categories.map((category) => category.latestPost?.topic.title ?? ''),
+    );
+    writeJson(response, 200, {
+      categories: categories.map((category) => serializeCategory(category, overlay)),
+    });
     return true;
   }
 
@@ -260,7 +332,13 @@ export async function tryHandle(
         limit: clampInt(parsedUrl.searchParams.get('limit'), 20, 1, 50),
         offset: clampInt(parsedUrl.searchParams.get('offset'), 0, 0, 10_000),
       });
-      writeJson(response, 200, { topics: topics.map(serializeTopicSummary) });
+      const overlay = await translationOverlay(
+        requestedLocale(parsedUrl),
+        topics.flatMap((topic) => [topic.title, topic.latestPost?.bodyText ?? '']),
+      );
+      writeJson(response, 200, {
+        topics: topics.map((topic) => serializeTopicSummary(topic, overlay)),
+      });
       return true;
     }
     if (method === 'POST') return createTopic(request, response);
@@ -373,7 +451,11 @@ export async function tryHandle(
         writeJson(response, 404, { error: 'not_found' });
         return true;
       }
-      writeJson(response, 200, { topic: serializeTopicDetail(topic) });
+      const overlay = await translationOverlay(requestedLocale(parsedUrl), [
+        topic.title,
+        ...topic.posts.map((post) => post.bodyText),
+      ]);
+      writeJson(response, 200, { topic: serializeTopicDetail(topic, overlay) });
       return true;
     }
     if (method === 'PATCH') return updateTopic(request, response, topicId);
@@ -485,6 +567,9 @@ async function createTopic(request: IncomingMessage, response: ServerResponse): 
     return true;
   }
   writeJson(response, 201, { topic: serializeTopicDetail(result.topic) });
+  warmForumTranslation('topic', result.topic.id, title);
+  const opening = result.topic.posts[0];
+  if (opening) warmForumTranslation('post', opening.id, opening.bodyText);
   return true;
 }
 
@@ -523,6 +608,7 @@ async function createPost(
     return true;
   }
   writeJson(response, 201, { post: serializePost(result.post) });
+  warmForumTranslation('post', result.post.id, bodyText);
   return true;
 }
 
@@ -676,6 +762,7 @@ async function updateTopic(
     return true;
   }
   writeJson(response, 200, { topic: serializeTopicDetail(result.topic) });
+  warmForumTranslation('topic', result.topic.id, title);
   return true;
 }
 
@@ -734,6 +821,7 @@ async function updatePost(
     return true;
   }
   writeJson(response, 200, { post: serializePost(result.post) });
+  warmForumTranslation('post', result.post.id, bodyText);
   return true;
 }
 
@@ -839,7 +927,10 @@ async function resolveReport(
   return true;
 }
 
-function serializeCategory(category: persistence.ForumCategory): ForumCategoryJson {
+function serializeCategory(
+  category: persistence.ForumCategory,
+  overlay: TranslationOverlay = NO_OVERLAY,
+): ForumCategoryJson {
   return {
     id: category.id,
     slug: category.slug,
@@ -853,7 +944,10 @@ function serializeCategory(category: persistence.ForumCategory): ForumCategoryJs
     latestPost: category.latestPost
       ? {
           post: category.latestPost.post,
-          topic: category.latestPost.topic,
+          topic: {
+            ...category.latestPost.topic,
+            translatedTitle: overlay.get(category.latestPost.topic.title),
+          },
           author: category.latestPost.author,
           createdAt: category.latestPost.createdAt.toISOString(),
         }
@@ -861,7 +955,10 @@ function serializeCategory(category: persistence.ForumCategory): ForumCategoryJs
   };
 }
 
-function serializeTopicDetail(topic: persistence.ForumTopicDetail): ForumTopicJson & {
+function serializeTopicDetail(
+  topic: persistence.ForumTopicDetail,
+  overlay: TranslationOverlay = NO_OVERLAY,
+): ForumTopicJson & {
   posts: ForumPostJson[];
   viewer: { watching: boolean } | null;
   // Whether the page should offer Translate buttons (130); the route itself
@@ -870,8 +967,8 @@ function serializeTopicDetail(topic: persistence.ForumTopicDetail): ForumTopicJs
 } {
   const online = onlineHandleSet();
   return {
-    ...serializeTopicSummary(topic),
-    posts: topic.posts.map((post) => serializePost(post, online)),
+    ...serializeTopicSummary(topic, overlay),
+    posts: topic.posts.map((post) => serializePost(post, online, overlay)),
     viewer: topic.viewer,
     translation: { available: forumTranslationEnabled() },
   };
@@ -897,7 +994,12 @@ function authorWithPresence(
   return { ...author, online: online?.has(author.handle.toLowerCase()) ?? false };
 }
 
-function serializeTopicSummary(topic: persistence.ForumTopicSummary): ForumTopicJson {
+function serializeTopicSummary(
+  topic: persistence.ForumTopicSummary,
+  overlay: TranslationOverlay = NO_OVERLAY,
+): ForumTopicJson {
+  const translatedTitle = overlay.get(topic.title);
+  const translatedBody = topic.latestPost ? overlay.get(topic.latestPost.bodyText) : undefined;
   return {
     id: topic.id,
     slug: topic.slug,
@@ -920,10 +1022,23 @@ function serializeTopicSummary(topic: persistence.ForumTopicSummary): ForumTopic
     createdAt: topic.createdAt.toISOString(),
     updatedAt: topic.updatedAt.toISOString(),
     lastPostAt: topic.lastPostAt.toISOString(),
+    translated:
+      translatedTitle || translatedBody
+        ? {
+            title: translatedTitle,
+            // The cached translation is of the whole post; the excerpt is cut
+            // from it the same way the source excerpt is.
+            excerpt: translatedBody ? forumExcerpt(translatedBody) : undefined,
+          }
+        : undefined,
   };
 }
 
-function serializePost(post: persistence.ForumPost, online?: Set<string>): ForumPostJson {
+function serializePost(
+  post: persistence.ForumPost,
+  online?: Set<string>,
+  overlay: TranslationOverlay = NO_OVERLAY,
+): ForumPostJson {
   return {
     id: post.id,
     author: authorWithPresence(post.author, online),
@@ -932,6 +1047,7 @@ function serializePost(post: persistence.ForumPost, online?: Set<string>): Forum
     updatedAt: post.updatedAt.toISOString(),
     hidden: post.hiddenAt !== null,
     hiddenAt: post.hiddenAt?.toISOString() ?? null,
+    translated: overlay.get(post.bodyText),
   };
 }
 

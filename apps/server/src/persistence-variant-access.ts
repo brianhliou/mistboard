@@ -11,6 +11,7 @@
 
 import type { GameSpecId } from '@mistboard/game';
 import type pg from 'pg';
+import type { AccountRole } from './persistence-accounts.js';
 import { getPool } from './persistence-db.js';
 
 type VariantAccessDatabase = pg.Pool | pg.PoolClient;
@@ -32,16 +33,22 @@ export function isAllowlistedGameSpec(gameSpecId: string): boolean {
   return ALLOWLISTED.has(gameSpecId as GameSpecId);
 }
 
+/** The two facts about an account that the grant decision reads. */
+export type VariantPlayer = { id: string; accountRole: AccountRole };
+
 /**
  * May this account take a seat in this variant?
  *
  * Signed-out callers are refused for an allowlisted spec, because a grant is
- * per account and an anonymous visitor has none. Every non-allowlisted spec is
- * allowed here and gated by its feature flag as before, so this is safe to call
- * unconditionally on the seat path.
+ * per account and an anonymous visitor has none. Admins are let in without a
+ * row: the role is manual-grant only and already means "operates the site",
+ * and making every operator also hold a per-variant row was the thing that
+ * kept the variant invisible even to the people meant to test it. Every
+ * non-allowlisted spec is allowed here and gated by its feature flag as
+ * before, so this is safe to call unconditionally on the seat path.
  */
 export async function mayPlayVariant(
-  userId: string | null,
+  user: VariantPlayer | null,
   gameSpecId: string,
   // Resolved lazily, NOT as a default argument. A default is evaluated before
   // the body runs, so `database = getPool()` would demand an initialized pool
@@ -51,12 +58,36 @@ export async function mayPlayVariant(
   database?: VariantAccessDatabase,
 ): Promise<boolean> {
   if (!isAllowlistedGameSpec(gameSpecId)) return true;
-  if (!userId) return false;
+  if (!user) return false;
+  if (user.accountRole === 'admin') return true;
   const result = await (database ?? getPool()).query(
     `SELECT 1 FROM variant_access_grants WHERE user_id = $1 AND game_spec_id = $2`,
-    [userId, gameSpecId],
+    [user.id, gameSpecId],
   );
   return result.rowCount !== null && result.rowCount > 0;
+}
+
+/**
+ * The allowlisted specs this account may actually sit down at, for
+ * /api/auth/me. The client offers a gated variant only when the answer names
+ * it, so the play menu and the seat check agree by construction instead of by
+ * two flags kept in step by hand. A grant row for a spec that has since left
+ * the allowlist is dropped: that spec is open to everyone now, and advertising
+ * a stale row would suggest a distinction the server no longer draws.
+ */
+export async function playableAllowlistedSpecs(
+  user: VariantPlayer | null,
+  database?: VariantAccessDatabase,
+): Promise<GameSpecId[]> {
+  if (!user || ALLOWLISTED.size === 0) return [];
+  if (user.accountRole === 'admin') return [...ALLOWLISTED_GAME_SPEC_IDS];
+  const result = await (database ?? getPool()).query<{ game_spec_id: string }>(
+    `SELECT game_spec_id FROM variant_access_grants WHERE user_id = $1 ORDER BY game_spec_id`,
+    [user.id],
+  );
+  return result.rows
+    .map((row) => row.game_spec_id)
+    .filter((specId): specId is GameSpecId => isAllowlistedGameSpec(specId));
 }
 
 export type VariantGrant = {
