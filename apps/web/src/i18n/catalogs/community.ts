@@ -392,6 +392,10 @@ export const EN_COMMUNITY = {
   'forum.nothingToPreview': 'Nothing to preview.',
   'forum.topicCouldNotBePosted': 'Topic could not be posted.',
   'forum.replyCouldNotBePosted': 'Reply could not be posted.',
+  'forum.edit': 'Edit',
+  'forum.editPost': 'Edit post',
+  'forum.save': 'Save',
+  'forum.postCouldNotBeEdited': 'Post could not be edited.',
   'forum.moderation': 'Moderation',
   'forum.adminOnly': 'Admin only',
   'forum.pin': 'Pin',
@@ -429,6 +433,7 @@ export const EN_COMMUNITY = {
   'forum.errCheckFields': 'Check the fields and try again.',
   'forum.errSignInToReport': 'Sign in to report.',
   'forum.errContentNotAvailable': 'This forum content is not available.',
+  'forum.errNotYourPost': 'Only the author can edit this post.',
   'forum.errAlreadyReported': 'You already reported this.',
   // Etiquette page copy.
   'forum.etiquettePageTitle': 'Forum etiquette · Mistboard',

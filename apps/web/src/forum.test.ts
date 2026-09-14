@@ -1230,6 +1230,70 @@ describe('forum pages', () => {
     expect(document.activeElement).toBe(body);
   });
 
+  it('lets the author edit their own post in place and marks it edited', async () => {
+    const posts = [
+      {
+        id: 'post_1',
+        author: { handle: 'alice', displayName: 'Alice' },
+        bodyText: 'Opening post.',
+        createdAt: '2026-06-01T00:00:00.000Z',
+        updatedAt: '2026-06-01T00:00:00.000Z',
+      },
+      {
+        id: 'post_2',
+        author: { handle: 'charlie', displayName: 'Charlie' },
+        bodyText: 'First draft with a typo.',
+        createdAt: '2026-06-01T00:05:00.000Z',
+        updatedAt: '2026-06-01T00:05:00.000Z',
+      },
+    ];
+    const patches: Array<{ url: string; body: unknown }> = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input, init) => {
+      const url = String(input);
+      if (url.startsWith('/api/forum/categories')) return json({ categories });
+      if (url.startsWith('/api/forum/topics/topic_strategy'))
+        return json({ topic: { ...topic, posts } });
+      if (url.startsWith('/api/auth/me')) return json({ user: playerUser });
+      if (url === '/api/forum/posts/post_2' && init?.method === 'PATCH') {
+        patches.push({ url, body: JSON.parse(String(init.body)) });
+        return json({
+          post: { ...posts[1], bodyText: 'Second draft.', updatedAt: '2026-06-02T00:00:00.000Z' },
+        });
+      }
+      throw new Error(`unexpected fetch ${url}`);
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    const { mountForumTopic } = await import('./forum.js');
+
+    await mountForumTopic(root, 'topic_strategy');
+    const articles = root.querySelectorAll<HTMLElement>('.forum-post');
+    expect(articles).toHaveLength(2);
+    // Charlie is not Alice: no Edit on her post, one on his own.
+    expect(articles[0]?.querySelector('.forum-post-edit')).toBeNull();
+    const edit = articles[1]?.querySelector<HTMLButtonElement>('.forum-post-edit');
+    if (!edit) throw new Error('missing edit button on own post');
+    expect(articles[1]?.querySelector<HTMLElement>('.forum-post-edited')?.hidden).toBe(true);
+
+    edit.click();
+    const form = articles[1]?.querySelector<HTMLFormElement>('.forum-post-edit-form');
+    const textarea = form?.querySelector<HTMLTextAreaElement>('textarea[name="body"]');
+    if (!form || !textarea) throw new Error('missing edit form');
+    expect(textarea.value).toBe('First draft with a typo.');
+    expect(document.activeElement).toBe(textarea);
+    textarea.value = 'Second draft.';
+    form.requestSubmit();
+    await vi.waitFor(() => {
+      expect(articles[1]?.querySelector('.forum-post-edit-form')).toBeNull();
+    });
+
+    expect(patches).toEqual([{ url: '/api/forum/posts/post_2', body: { body: 'Second draft.' } }]);
+    expect(articles[1]?.querySelector('.forum-post-body')?.textContent).toBe('Second draft.');
+    const edited = articles[1]?.querySelector<HTMLElement>('.forum-post-edited');
+    expect(edited?.hidden).toBe(false);
+    expect(edited?.textContent).toMatch(/^edited /);
+  });
+
   it('renders plaintext quote markers as safe blockquotes', async () => {
     vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
       const url = String(input);
