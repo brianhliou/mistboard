@@ -9,7 +9,11 @@ import type {
   XiangqiGameStatus,
   XiangqiMove,
 } from '@mistboard/game';
-import { broadcastRecordsCredit, xiangqiMoveToFsfUci } from '@mistboard/game';
+import {
+  broadcastRecordsCredit,
+  broadcastSourcePageHref,
+  xiangqiMoveToFsfUci,
+} from '@mistboard/game';
 import './live-xiangqi.css';
 import './xiangqi-broadcast.css';
 import { t } from './i18n/catalog.js';
@@ -398,7 +402,7 @@ function renderTour(data: BroadcastTourResponse): HTMLElement {
       eyebrow: t('broadcast.eyebrow'),
       title: primaryName(data.tour),
       subtitle: secondaryName(data.tour),
-      href: data.tour.sourceUrl,
+      href: broadcastSourcePageHref(data.tour.sourceUrl),
       meta: [
         data.tour.location,
         dateRange(data.tour.startsAt, data.tour.endsAt),
@@ -579,7 +583,7 @@ function renderRound(data: BroadcastRoundResponse, cards?: BoardCardCache): HTML
       eyebrow: primaryName(data.tour),
       title: primaryName(data.round),
       subtitle: secondaryName(data.round),
-      href: data.round.sourceUrl ?? data.tour.sourceUrl,
+      href: broadcastSourcePageHref(data.round.sourceUrl ?? data.tour.sourceUrl),
       meta: [
         formatDate(data.round.startsAt),
         countLabel(data.boards.length, 'board', 'boards'),
