@@ -9,6 +9,7 @@ import {
   mountXiangqiBroadcastBoard,
   mountXiangqiBroadcastIndex,
   mountXiangqiBroadcastRound,
+  mountXiangqiBroadcastTour,
   serializeBroadcastMovesForAnalysis,
 } from './xiangqi-broadcast.js';
 
@@ -344,9 +345,11 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 't', 'r');
 
-    // Round hero: English title primary, Chinese as the subtitle line.
-    expect(root.querySelector('.xqb-hero h1')?.textContent).toBe('Round 1');
-    expect(root.querySelector('.xqb-hero-zh')?.textContent).toBe('第1轮');
+    // The hero is the tour's (one event page, lichess-style); the round heads
+    // the Boards panel, English primary with the Chinese as its secondary line.
+    expect(root.querySelector('.xqb-hero h1')?.textContent).toBe('Test Cup');
+    expect(root.querySelector('.xqb-round-heading')?.textContent).toBe('Round 1');
+    expect(root.querySelector('.xqb-tab-panel > .xqb-name-zh')?.textContent).toBe('第1轮');
 
     // Player names: English primary, Chinese secondary span alongside.
     const names = [...root.querySelectorAll('.xqb-card-player-name')].map(
@@ -665,5 +668,197 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     // The board page itself still renders.
     expect(root.querySelector('.xqb-board-frame')).not.toBeNull();
     expect(root.querySelector('.xqb-hero h1')?.textContent).toContain('Wang Tianyi');
+  });
+});
+
+describe('event page (tabs, default round, standings)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState({}, '', '/');
+  });
+
+  const TOUR = {
+    tour: { schema: XIANGQI_BROADCAST_SCHEMA, slug: 't', name: 'Test Cup' },
+    rounds: ROUND.rounds,
+    recordsSource: null,
+  };
+
+  it('opens the tour URL on the live round, with Boards as the default tab and the pairings rail', async () => {
+    const urls: string[] = [];
+    stubFetchJson((url) => {
+      urls.push(url);
+      return url.includes('/rounds/') ? ROUND : TOUR;
+    });
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+
+    expect(urls).toEqual(['/api/xiangqi/broadcasts/t', '/api/xiangqi/broadcasts/t/rounds/r']);
+    const tabs = [...root.querySelectorAll('.xqb-tab')];
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Boards', 'Overview', 'Players']);
+    expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Boards');
+    expect(root.querySelectorAll('.xqb-board-card')).toHaveLength(2);
+    // The round's pairings sit in the rail with nothing highlighted.
+    expect(root.querySelectorAll('.xqb-rail-row')).toHaveLength(2);
+    expect(root.querySelector('.xqb-rail-row-current')).toBeNull();
+  });
+
+  it('opens the tour URL on the latest round with games when nothing is live', async () => {
+    const urls: string[] = [];
+    stubFetchJson((url) => {
+      urls.push(url);
+      if (url.includes('/rounds/')) return { ...ROUND, round: ROUND.rounds[1] };
+      return {
+        ...TOUR,
+        rounds: [
+          { ...ROUND.rounds[0], liveBoardCount: 0, completeBoardCount: 2 },
+          { ...ROUND.rounds[1], boardCount: 3, completeBoardCount: 3 },
+          { ...ROUND.rounds[1], id: 'r3', name: '第3轮', nameEn: 'Round 3', boardCount: 0 },
+        ],
+      };
+    });
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(urls[1]).toBe('/api/xiangqi/broadcasts/t/rounds/r2');
+  });
+
+  it('switches tabs in place: Overview lists the schedule, Players computes standings from every round', async () => {
+    const finished = {
+      ...ROUND,
+      boards: [
+        { ...ROUND.boards[0], status: 'complete', result: '1-0' },
+        { ...ROUND.boards[1], status: 'complete', result: '1/2-1/2' },
+      ],
+    };
+    stubFetchJson((url) =>
+      url.includes('/rounds/r2') ? { ...finished, round: ROUND.rounds[1] } : finished,
+    );
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    (root.querySelectorAll('.xqb-tab')[1] as HTMLButtonElement).click();
+    expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Overview');
+    expect(window.location.search).toBe('?tab=overview');
+    expect(
+      [...root.querySelectorAll('.xqb-round-row')].map((row) => row.getAttribute('href')),
+    ).toEqual(['/broadcast/xiangqi/t/round/r', '/broadcast/xiangqi/t/round/r2']);
+    expect(root.querySelectorAll('.xqb-share-url')).toHaveLength(2);
+
+    (root.querySelectorAll('.xqb-tab')[2] as HTMLButtonElement).click();
+    // The other rounds are fetched once the tab opens; then the table paints.
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    await new Promise((resolve) => setTimeout(resolve, 0));
+    const rows = [...root.querySelectorAll('.xqb-standings tbody tr')].map((row) =>
+      [...row.querySelectorAll('td')].map((cell) => cell.textContent),
+    );
+    // Round 1 + round 2 are the same two games twice: two wins for Wang, two draws each for the others.
+    expect(rows[0]?.slice(0, 1).map((cell) => cell?.replace(/王天一.*$/, ''))).toEqual(['1']);
+    expect(rows.map((row) => row[4])).toEqual(['2', '1', '1', '0']);
+  });
+
+  it('says why a round has no games instead of showing a bare zero', async () => {
+    stubFetchJson(() => ({
+      ...ROUND,
+      boards: [],
+      round: { ...ROUND.round, startsAt: '2020-01-01T09:00:00+08:00' },
+      tour: { ...ROUND.tour, sourceUrl: 'mistboard-discover://dpxq-tour?tour=12524&tourSlug=t' },
+    }));
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    const empty = root.querySelector('.xqb-empty');
+    expect(empty?.textContent).toContain('No game records yet');
+    expect(empty?.querySelector('a')?.getAttribute('href')).toBe(
+      'http://www.dpxq.com/hldcg/movelist_12524.html',
+    );
+    expect(root.querySelector('.xqb-side-rail')).toBeNull();
+  });
+
+  it('renders round times in the event clock, not the viewer clock', async () => {
+    stubFetchJson(() => ({
+      ...ROUND,
+      round: { ...ROUND.round, startsAt: '2026-09-13T14:30:00+08:00' },
+    }));
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    expect(root.querySelector('.xqb-round-meta')?.textContent).toContain('2:30 PM');
+  });
+});
+
+describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const MOVES: XiangqiMove[] = [
+    { from: 'b3', to: 'e3' },
+    { from: 'h10', to: 'g8' },
+  ];
+  const replay = buildXiangqiReplayFromMoves(MOVES);
+  const COMPLETE = {
+    board: {
+      id: 't-r-b1',
+      tourSlug: 't',
+      roundId: 'r',
+      sourceBoardId: 'b1',
+      boardNumber: 1,
+      red: { name: '程宇东', nameEn: 'Cheng Yudong', federation: '广东' },
+      black: { name: '顾博文', nameEn: 'Gu Bowen', federation: '上海' },
+      status: 'complete',
+      result: '0-1',
+      plyCount: MOVES.length,
+      moves: MOVES,
+      sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_143066.html',
+    },
+    state: { status: { type: 'finished', winner: 'black', reason: 'resignation' }, moveNumber: 2 },
+    timeline: timelineFrom(MOVES),
+    view: replay.views[replay.maxPly]!,
+    views: { truth: replay.views[replay.maxPly]! },
+    history: { truth: replay.views.map((view, ply) => ({ ply, view })) },
+  };
+
+  it('mounts the shared review (engine, provenance, pairings rail) for a finished game', async () => {
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/')
+        ? COMPLETE
+        : { ...ROUND, round: { ...ROUND.round, startsAt: '2026-09-09T14:30:00+08:00' } },
+    );
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b1');
+
+    expect(root.querySelector('.xiangqi-live-board')).not.toBeNull();
+    expect(root.querySelector('.engine-panel')).not.toBeNull();
+    expect(root.textContent).toContain('Computer analysis');
+    // Meta card: the event, then round / board / date in the event clock.
+    expect(root.textContent).toContain('Test Cup');
+    expect(root.textContent).toContain('Round 1 · Board 1 · Sep 9, 2026, 2:30 PM');
+    expect(root.textContent).toContain('Cheng Yudong');
+    expect(root.textContent).toContain('Black wins');
+    // Provenance: the dpxq page, by host.
+    const provenance = root.querySelector('.review-provenance');
+    expect(provenance?.querySelector('a')?.getAttribute('href')).toBe(
+      'http://www.dpxq.com/hldcg/search/view_m_143066.html',
+    );
+    expect(provenance?.querySelector('a')?.textContent).toBe('dpxq.com');
+    // The round's pairings ride the left rail, current board marked, with the
+    // round switcher in the rail's header.
+    const rail = root.querySelector('.xqb-side-rail');
+    expect(rail).not.toBeNull();
+    expect(rail?.querySelector('.xqb-rail-row-current')?.getAttribute('href')).toBe(
+      '/broadcast/xiangqi/board/t-r-b1',
+    );
+    expect(rail?.querySelector('h2 .xqb-round-select')).not.toBeNull();
+    // The live-replay chrome is gone.
+    expect(root.querySelector('.xqb-controls')).toBeNull();
   });
 });

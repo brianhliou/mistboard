@@ -42,6 +42,11 @@ Conventions:
 - "Puzzles with more than one solution" is published, with the two boards playable in place ([a6d82d8b](https://github.com/brianhliou/mistboard/commit/a6d82d8b))
 - Every study card carries a thumbnail drawn from its first chapter: a composition shows its diagram, a game collection its opening a few moves in, and the four archive covers stay where they were ([c12e3019](https://github.com/brianhliou/mistboard/commit/c12e3019))
 
+### Watching and review
+
+- A broadcast is one event page, lichess-style: the tour header with a round selector, then Boards (default, opening on the live round or the latest with games), Overview (dates in the event's own clock, venue, source, the schedule, share links) and Players (standings computed from the broadcast games); a round with no records yet says so and points at the source (HASH)
+- A finished broadcast game opens on the site's review board, with the engine, whole-game analysis, the reader's notation, Game info and Share & export, and the round's pairings in the left rail; a live game keeps its streaming replay, now in the reader's notation too (HASH)
+
 ### Community
 
 - Edit your own forum post in place from the post's Edit action; edited posts carry an "edited" mark, and a locked topic no longer takes edits ([0b5e4c7c](https://github.com/brianhliou/mistboard/commit/0b5e4c7c))
