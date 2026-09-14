@@ -18,6 +18,7 @@ if (!options.noInstall && !existsSync('node_modules/.bin/tsc')) {
       ? ['npm', 'ci', '--ignore-scripts']
       : ['npm', 'ci', '--ignore-scripts', '--offline'];
   run(install, {
+    env: installEnv(process.env),
     failureNote:
       options.installMode === 'offline'
         ? 'offline install failed; retry with npm run worktree:prepare -- --install=online if network is available'
@@ -81,9 +82,22 @@ function parseArgs(args) {
   return parsed;
 }
 
-function run(command, { failureNote = null } = {}) {
+// npm 12 exports every config value, including a user-level `allow-scripts`
+// from ~/.npmrc, as `npm_config_*` into the environment of anything `npm run`
+// spawns. The nested `npm ci` then reads `npm_config_allow_scripts` as a
+// CLI-layer policy and refuses with EALLOWSCRIPTS ("--allow-scripts is not
+// allowed in project-scoped installs"), even though nobody passed the flag.
+// Drop it so the install resolves policy from package.json/.npmrc like a
+// top-level `npm ci` would. The same install run outside `npm run` never sees
+// the variable, which is why the bare command works and the script did not.
+function installEnv(env) {
+  const { npm_config_allow_scripts: _dropped, ...rest } = env;
+  return rest;
+}
+
+function run(command, { env = process.env, failureNote = null } = {}) {
   console.log(`\n$ ${command.join(' ')}`);
-  const result = spawnSync(command[0], command.slice(1), { stdio: 'inherit' });
+  const result = spawnSync(command[0], command.slice(1), { stdio: 'inherit', env });
   if (result.error) {
     console.error(result.error.message);
     process.exit(1);
