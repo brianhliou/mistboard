@@ -190,6 +190,16 @@ export type PuzzleBoardAdapter = {
   applyMove(state: PuzzleState, move: PuzzleMove): PuzzleState;
   /** Move-list label for one ply. */
   moveLabel(move: PuzzleMove): string;
+  /**
+   * OPTIONAL position-aware labels for the whole list: the setup move (the
+   * mined blunder, whose pre-move board the client never holds) and the
+   * played line from `puzzle.initial`. Variants with a piece-naming notation
+   * supply this; the list falls back to `moveLabel` per ply without it.
+   */
+  moveLabels?(
+    puzzle: PuzzleDetail,
+    played: readonly PuzzleMove[],
+  ): { setup: string | null; played: string[] };
   /** Side icon SVG for the feedback panel (the variant's "general"). */
   sideIconSvg(puzzle: PuzzleDetail): string;
   /** Post-completion engine analysis; omit when the variant has no client engine. */

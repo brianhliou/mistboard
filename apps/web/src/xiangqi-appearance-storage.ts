@@ -139,41 +139,72 @@ export function normalizeXiangqiPieceSet(value: string | null): XiangqiPieceSet 
 }
 
 // ── Move-notation display preference ────────────────────────────────────────
-// How xiangqi review/analysis move lists render moves. Display-only: nothing
-// stored or transmitted changes with it. 'chinese' resolves its script from
-// the locale at format time (zh-hant → traditional glyphs, else simplified).
+// How xiangqi move lists render moves, on every surface (live room, review,
+// analysis, study, puzzles, TV). Display-only: nothing stored or transmitted
+// changes with it. 'chinese' resolves its script from the locale at format
+// time (zh-hant → traditional glyphs, else simplified).
+//
+// The default follows the interface locale and is NOT written to storage: a
+// Chinese reader expects 炮二平五, everyone else gets chess-style algebraic
+// (Che3, Cxe7), the one form a chess player reads without a manual. WXF is
+// the tournament standard and what the export PGN carries, so it stays on
+// offer. Coordinates (h3-e3) and ICCS (h2e2) exist as formatter styles for
+// exports, fog xiangqi and embed links, but are not offered in the gear
+// (2026-09-13): coordinates are algebraic minus the piece, and ICCS is engine
+// plumbing nobody wants in a move list. A stored choice of either reads as
+// unset.
 
-export type XiangqiNotationPreference = 'coordinate' | 'chinese' | 'wxf' | 'iccs';
+export type XiangqiNotationPreference = 'algebraic' | 'chinese' | 'wxf';
 
 const xiangqiNotationStorageKey = 'mistboard.xiangqiNotation';
 const xiangqiNotationStorageVersionKey = 'mistboard.xiangqiNotationVersion';
-const xiangqiNotationStorageVersion = '1';
-const defaultXiangqiNotation: XiangqiNotationPreference = 'coordinate';
+// Version 1 wrote the 'coordinate' default into storage on first read, so a
+// stored 'coordinate' is what the site chose, not the reader. Under version 2
+// only an offered style counts as a choice; anything else reads as unset.
+const xiangqiNotationStorageVersion = '2';
 
 export const xiangqiNotationOptions: ReadonlyArray<{
   id: XiangqiNotationPreference;
   label: string;
   preview: string;
 }> = [
-  { id: 'coordinate', label: 'Coordinates', preview: 'h3-e3' },
+  { id: 'algebraic', label: 'Algebraic', preview: 'Cxe7' },
   { id: 'chinese', label: 'Chinese', preview: '炮二平五' },
   { id: 'wxf', label: 'WXF', preview: 'C2.5' },
-  { id: 'iccs', label: 'ICCS', preview: 'h2e2' },
 ];
 
-export function readStoredXiangqiNotation(): XiangqiNotationPreference {
+/** The notation a reader with no stored choice sees, by interface locale. */
+export function defaultXiangqiNotationForLocale(locale: string): XiangqiNotationPreference {
+  return locale.toLowerCase().startsWith('zh') ? 'chinese' : 'algebraic';
+}
+
+/**
+ * The stored choice, or the locale default when the reader has never picked
+ * one. `locale` is a parameter rather than an import so this module stays
+ * free of the i18n chunk; callers pass the current interface locale.
+ */
+export function readStoredXiangqiNotation(locale = 'en'): XiangqiNotationPreference {
+  const fallback = defaultXiangqiNotationForLocale(locale);
   try {
     const stored = window.localStorage.getItem(xiangqiNotationStorageKey);
     const version = window.localStorage.getItem(xiangqiNotationStorageVersionKey);
-    const normalized = normalizeXiangqiNotation(stored);
-    if (version !== xiangqiNotationStorageVersion || normalized !== stored) {
+    if (version !== xiangqiNotationStorageVersion) {
+      // The one migration: clear whatever an older version stored unless it
+      // is a style still on offer (see the version note above).
       window.localStorage.setItem(xiangqiNotationStorageVersionKey, xiangqiNotationStorageVersion);
-      window.localStorage.setItem(xiangqiNotationStorageKey, normalized);
+      if (!isXiangqiNotationPreference(stored))
+        window.localStorage.removeItem(xiangqiNotationStorageKey);
     }
-    return normalized;
+    return isXiangqiNotationPreference(stored) ? stored : fallback;
   } catch {
-    return defaultXiangqiNotation;
+    return fallback;
   }
+}
+
+export function isXiangqiNotationPreference(
+  value: string | null,
+): value is XiangqiNotationPreference {
+  return xiangqiNotationOptions.some((option) => option.id === value);
 }
 
 export function writeStoredXiangqiNotation(notation: XiangqiNotationPreference): void {
@@ -185,8 +216,9 @@ export function writeStoredXiangqiNotation(notation: XiangqiNotationPreference):
   }
 }
 
-export function normalizeXiangqiNotation(value: string | null): XiangqiNotationPreference {
-  return xiangqiNotationOptions.some((option) => option.id === value)
-    ? (value as XiangqiNotationPreference)
-    : defaultXiangqiNotation;
+export function normalizeXiangqiNotation(
+  value: string | null,
+  locale = 'en',
+): XiangqiNotationPreference {
+  return isXiangqiNotationPreference(value) ? value : defaultXiangqiNotationForLocale(locale);
 }

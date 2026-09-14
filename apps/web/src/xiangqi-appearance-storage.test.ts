@@ -5,9 +5,11 @@ import {
   normalizeXiangqiPieceSet,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
+  readStoredXiangqiNotation,
   readStoredXiangqiPieceSet,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiBoardTheme,
+  writeStoredXiangqiNotation,
   writeStoredXiangqiPieceSet,
 } from './xiangqi-appearance-storage.js';
 
@@ -112,5 +114,42 @@ describe('xiangqi appearance storage normalization', () => {
     expect(readStoredXiangqiPieceSet()).toBe('international-flat');
     expect(storage.getItem('mistboard.xiangqiPieceSet')).toBe('traditional');
     window.history.replaceState({}, '', '/');
+  });
+});
+
+describe('xiangqi move notation preference', () => {
+  it('defaults by locale and writes nothing until the reader chooses', () => {
+    const storage = installLocalStorage();
+    expect(readStoredXiangqiNotation('en')).toBe('algebraic');
+    expect(readStoredXiangqiNotation('zh-Hans')).toBe('chinese');
+    expect(readStoredXiangqiNotation('zh-Hant')).toBe('chinese');
+    expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
+  });
+
+  it('keeps an explicit choice across locales', () => {
+    installLocalStorage();
+    writeStoredXiangqiNotation('wxf');
+    expect(readStoredXiangqiNotation('en')).toBe('wxf');
+    expect(readStoredXiangqiNotation('zh-Hans')).toBe('wxf');
+  });
+
+  it('drops the version-1 site-written coordinate default but keeps a real choice', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiNotationVersion', '1');
+    storage.setItem('mistboard.xiangqiNotation', 'coordinate');
+    expect(readStoredXiangqiNotation('en')).toBe('algebraic');
+    expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
+    expect(storage.getItem('mistboard.xiangqiNotationVersion')).toBe('2');
+
+    // ICCS left the gear the same day; a stored choice of it reads as unset.
+    storage.setItem('mistboard.xiangqiNotationVersion', '1');
+    storage.setItem('mistboard.xiangqiNotation', 'iccs');
+    expect(readStoredXiangqiNotation('zh-Hans')).toBe('chinese');
+    expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
+
+    storage.setItem('mistboard.xiangqiNotationVersion', '1');
+    storage.setItem('mistboard.xiangqiNotation', 'chinese');
+    expect(readStoredXiangqiNotation('en')).toBe('chinese');
+    expect(storage.getItem('mistboard.xiangqiNotationVersion')).toBe('2');
   });
 });

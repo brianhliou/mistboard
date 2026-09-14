@@ -321,3 +321,11 @@ export function trackLocaleResolved(resolution: LocaleResolution): void {
 export function trackLocaleChanged(from: Locale, to: Locale): void {
   track('locale_changed', { from_locale: from, to_locale: to });
 }
+
+// The xiangqi move-notation default (algebraic outside zh, Chinese inside) is
+// an opinion, not a measurement; this is the one signal that can correct it.
+// `from` is what the reader saw before clicking, default included, so a switch
+// away from the default is countable.
+export function trackNotationChanged(from: string, to: string, path: string): void {
+  track('notation_changed', { from_notation: from, to_notation: to, path });
+}

@@ -30,6 +30,7 @@ Conventions:
 - Duck Xiangqi offers 3+2 alongside its other paces ([7bc64a41](https://github.com/brianhliou/mistboard/commit/7bc64a41))
 - Hong Kong Mahjong is registered and playable behind its flag; the table reads left to right and a complete hand says what it is worth ([5b2769f7](https://github.com/brianhliou/mistboard/commit/5b2769f7), [828b344f](https://github.com/brianhliou/mistboard/commit/828b344f), [5bb370ea](https://github.com/brianhliou/mistboard/commit/5bb370ea))
 - A finished room reveals the whole game to everyone who opens it, players and spectators alike; a live fog room still shows each seat its own view and spectators nothing ([869b29b4](https://github.com/brianhliou/mistboard/commit/869b29b4), [02e3c043](https://github.com/brianhliou/mistboard/commit/02e3c043))
+- Xiangqi moves read chess-style by default: piece letter, `x` on capture, destination square, `+` and `#` (`Che3`, `Cxe7+`), Chinese notation by default for zh readers; the choice in the theme gear now reaches the live room, Mistboard TV, and puzzles, not just review and analysis, and a pasted or linked game in that notation imports
 
 ### Learning and puzzles
 
@@ -57,6 +58,7 @@ Conventions:
 - `/rules/shogi4` stays, unlisted, because it is linked from outside the site ([638bee89](https://github.com/brianhliou/mistboard/commit/638bee89))
 - The dev-only lab pages (`/xiangqi-spike`, `/xiangqi-demo`, `/pixel-lab`, `/variant-marks`, `/dobutsu-chess-preview`, `/deepdive`, `/engine-review`), the `dev:lab` profile, `test:parked`, and the orphan one-off scripts ([29a00041](https://github.com/brianhliou/mistboard/commit/29a00041), [7a0cf35a](https://github.com/brianhliou/mistboard/commit/7a0cf35a))
 - The tenant runtime's unused setup-submission phase; every room on every stack is playing from creation ([c77489c4](https://github.com/brianhliou/mistboard/commit/c77489c4))
+- The "Move notation" row in account display settings, a lichess-shaped switch nothing ever read; the theme gear's xiangqi notation is the one setting, and it offers Algebraic, Chinese and WXF only: Coordinates and ICCS leave the list (exports, fog xiangqi and `?notation=` embed links still use them)
 
 ### Fixed
 

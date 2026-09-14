@@ -6,9 +6,9 @@
 // a board labelled one way while the move list reads the other teaches nothing.
 // It also settles ranks without a second toggle: WXF and Chinese never name a
 // rank (a move is a piece, a file, a direction, and either a destination file or
-// a count of ranks travelled), so those styles get file labels only. Coordinate
-// and ICCS are absolute square names, where a rank genuinely is part of the
-// address, so they get both.
+// a count of ranks travelled), so those styles get file labels only. Coordinate,
+// ICCS and algebraic are absolute square names, where a rank genuinely is part
+// of the address, so they get both.
 
 import type { XiangqiNotationStyle } from '@mistboard/game';
 import type { XiangqiCoordLabels } from './xiangqi-board-surface.js';
@@ -23,7 +23,7 @@ export function xiangqiCoordLabels(
   fileCount: number,
   rankCount: number,
 ): XiangqiCoordLabels {
-  if (style === 'coordinate' || style === 'iccs') {
+  if (style === 'coordinate' || style === 'iccs' || style === 'algebraic') {
     // Absolute square names: one label per file and per rank, the same for both
     // players, because the name of a square does not depend on who is looking.
     const files = ALGEBRAIC_FILES.slice(0, fileCount);

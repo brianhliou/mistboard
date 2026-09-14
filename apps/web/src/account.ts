@@ -1671,7 +1671,6 @@ function displayPreferenceLabel(id: DisplayPreferenceId, locale: Locale): string
     pieceDestinations: 'account.displayPieceDestinations',
     boardCoordinates: 'account.displayBoardCoordinates',
     moveListWhilePlaying: 'account.displayMoveListWhilePlaying',
-    moveNotation: 'account.displayMoveNotation',
     zenMode: 'account.displayZenMode',
     boardResizeHandle: 'account.displayBoardResizeHandle',
     playerRatings: 'account.displayPlayerRatings',
@@ -1697,13 +1696,8 @@ function displayPreferenceOptionLabel(
       normal: 'account.displayOption.pieceAnimation.normal',
       slow: 'account.displayOption.pieceAnimation.slow',
     },
-    moveNotation: {
-      symbols: 'account.displayOption.moveNotation.symbols',
-      letters: 'account.displayOption.moveNotation.letters',
-      coordinates: 'account.displayOption.moveNotation.coordinates',
-    },
   } as const;
-  if (id !== 'pieceAnimation' && id !== 'moveNotation') {
+  if (id !== 'pieceAnimation') {
     return value;
   }
   const key = keys[id][value as keyof (typeof keys)[typeof id]];

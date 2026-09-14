@@ -5,12 +5,17 @@
 // live room uses; a watch chunk extracted from the live shell must import them
 // itself or the SVG renders black-on-black.
 import './live-xiangqi.css';
-import type { StandardXiangqiPlayerView } from '@mistboard/game';
+import {
+  formatXiangqiMoves,
+  type StandardXiangqiPlayerView,
+  type XiangqiMove,
+} from '@mistboard/game';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
+import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
   loadXiangqiPostgame,
   postgameReplayMaxPly,
@@ -49,6 +54,15 @@ export function mountXiangqiWatchReplay(
     // Standard Xiangqi's wire view carries no captured-pool, so there is nothing
     // to render in the per-pane capture strips.
     fillCaptures: () => {},
+    // The reader's notation, replayed from the opening (a live game always
+    // starts there); an unreplayable line degrades to coordinates inside.
+    moveLabels: (postgame) =>
+      formatXiangqiMoves(
+        postgame.timeline.flatMap((event) =>
+          event.type === 'move-played' && event.move ? [event.move as XiangqiMove] : [],
+        ),
+        currentXiangqiNotationStyle(),
+      ),
     // One-ply steps glide (pieceAnimation pref): forward animates the newly
     // rendered view's lastMove; a back step reverse-animates the move the
     // previous ply carried. Moves come from the postgame payload's views only.

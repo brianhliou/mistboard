@@ -6,7 +6,7 @@
 // tile previews stay out of the entry chunk. theme.ts keeps the applied-theme
 // bootstrap, the storage readers, the change events, and the high-level
 // preference setters this panel calls — the panel is a dumb view over that API.
-import { trackLocaleChanged } from './analytics.js';
+import { trackLocaleChanged, trackNotationChanged } from './analytics.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
 import { t } from './i18n/catalog.js';
 import {
@@ -41,11 +41,11 @@ import {
 } from './theme.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import {
-  readStoredXiangqiNotation,
   readStoredXiangqiPieceSet,
   type XiangqiBoardTheme,
   xiangqiNotationOptions,
 } from './xiangqi-appearance-storage.js';
+import { currentXiangqiNotationPreference } from './xiangqi-notation.js';
 import {
   XIANGQI_PIECE_SETS,
   type XiangqiPieceSet,
@@ -375,7 +375,7 @@ function createXiangqiNotationList(): HTMLDivElement {
   list.className = 'appearance-choice-list appearance-notation-list';
   list.setAttribute('role', 'radiogroup');
   list.setAttribute('aria-label', t('prefs.notation'));
-  const current = readStoredXiangqiNotation();
+  const current = currentXiangqiNotationPreference();
   for (const option of xiangqiNotationOptions) {
     const button = document.createElement('button');
     button.type = 'button';
@@ -391,7 +391,12 @@ function createXiangqiNotationList(): HTMLDivElement {
     preview.className = 'appearance-notation-preview';
     preview.textContent = option.preview;
     button.append(label, preview);
-    button.addEventListener('click', () => setXiangqiNotationPreference(option.id));
+    button.addEventListener('click', () => {
+      const from = currentXiangqiNotationPreference();
+      if (from === option.id) return;
+      setXiangqiNotationPreference(option.id);
+      trackNotationChanged(from, option.id, window.location.pathname);
+    });
     list.append(button);
   }
   return list;

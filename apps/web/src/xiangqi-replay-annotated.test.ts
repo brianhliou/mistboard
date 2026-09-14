@@ -46,10 +46,10 @@ test('annotations lay the board and the move tree out in two columns', () => {
   expect(grid).not.toBeNull();
   expect(grid?.querySelector('.xq-replay-board-col .raw-svg-stepper-frame-xq')).not.toBeNull();
   expect(grid?.querySelector('.xq-replay-move-col .xq-replay-moves')).not.toBeNull();
-  // Every mainline ply is listed, in the reader's notation setting. The stored
-  // default is coordinates; `notationTest` below covers the other styles.
+  // Every mainline ply is listed, in the reader's notation setting. With
+  // nothing stored that is algebraic; the notation test below covers the rest.
   expect(mainButtons(el)).toHaveLength(4);
-  expect(mainButtons(el)[0]?.textContent).toContain('h3-e3');
+  expect(mainButtons(el)[0]?.textContent).toContain('Che3');
   c.destroy();
 });
 
@@ -153,19 +153,25 @@ test('move labels follow the notation preference and relabel when it changes', (
   });
   const setNotation = (value: string) => {
     store.set('mistboard.xiangqiNotation', value);
-    store.set('mistboard.xiangqiNotationVersion', '1');
+    store.set('mistboard.xiangqiNotationVersion', '2');
   };
-  setNotation('wxf');
+  // Nothing stored: the locale default, chess-style algebraic outside zh.
   const c = mountXiangqiReplay(el, { ...base, annotations: { byPly: {} } });
+  expect(mainButtons(el)[0]?.textContent).toContain('Che3');
+
+  setNotation('wxf');
+  window.dispatchEvent(new CustomEvent('mistboard:xiangqi-notation-changed'));
   expect(mainButtons(el)[0]?.textContent).toContain('C2.5');
 
+  setNotation('chinese');
+  window.dispatchEvent(new CustomEvent('mistboard:xiangqi-notation-changed'));
+  expect(mainButtons(el)[0]?.textContent).toContain('炮二平五');
+
+  // ICCS and coordinates left the gear; a stored choice of either reads as
+  // unset and the default comes back.
   setNotation('iccs');
   window.dispatchEvent(new CustomEvent('mistboard:xiangqi-notation-changed'));
-  expect(mainButtons(el)[0]?.textContent).toContain('h2e2');
-
-  setNotation('coordinate');
-  window.dispatchEvent(new CustomEvent('mistboard:xiangqi-notation-changed'));
-  expect(mainButtons(el)[0]?.textContent).toContain('h3-e3');
+  expect(mainButtons(el)[0]?.textContent).toContain('Che3');
 
   c.destroy();
   if (original) Object.defineProperty(window, 'localStorage', original);

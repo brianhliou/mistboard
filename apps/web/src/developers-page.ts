@@ -458,7 +458,7 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
         'uses.',
     ]),
     proseParagraph([
-      'Add notation=wxf, notation=chinese, notation=iccs or notation=coordinate to ' +
+      'Add notation=wxf, notation=chinese, notation=algebraic, notation=iccs or notation=coordinate to ' +
         'pin it for your readers. It applies to that frame alone and never writes to ' +
         "their settings, so a reader's own choice on Mistboard is untouched.",
     ]),

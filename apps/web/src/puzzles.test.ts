@@ -9,7 +9,7 @@ import {
   type XiangqiMove,
   type XiangqiPuzzle,
 } from '@mistboard/game';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   mountPuzzles,
   puzzleMoveRowNumber,
@@ -17,6 +17,7 @@ import {
   sourceGameLines,
 } from './puzzles.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
+import { pinXiangqiNotation } from './xiangqi-notation.js';
 
 function publicSummary(puzzle: XiangqiPuzzle) {
   return {
@@ -46,6 +47,11 @@ function json(body: unknown, status = 200): Response {
     headers: { 'content-type': 'application/json' },
   });
 }
+
+// These tests locate cells by from-to text; pin coordinate labels so the
+// reader's notation default (algebraic) does not become the subject.
+beforeEach(() => pinXiangqiNotation('coordinate'));
+afterEach(() => pinXiangqiNotation(null));
 
 describe('puzzles route', () => {
   afterEach(() => {

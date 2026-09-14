@@ -16,6 +16,7 @@ import {
   applyStandardXiangqiMove,
   coordOf,
   createInitialXiangqiState,
+  formatXiangqiMoves,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
   XIANGQI_SPEC_ID,
@@ -55,6 +56,7 @@ import {
   xiangqiClickResult,
   xiangqiPieceGhostSvg,
 } from './xiangqi-board.js';
+import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 
 // Board SVG + click decision are canonical in xiangqi-board.ts; re-exported here
 // for the existing importers of this module.
@@ -181,6 +183,8 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
         if (core) renderBoard(core.refs, core.displayedView());
       },
     });
+    // The theme gear changes the notation mid-game; relabel the list in place.
+    window.addEventListener(xiangqiNotationChangedEvent, () => ctx.renderAll());
   },
   moveList: {
     rowClass: 'move-row xiangqi-move-row',
@@ -188,6 +192,9 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
     listClass: 'xiangqi-move-list',
     masked: false,
     notate: (move) => `${move.from}-${move.to}`,
+    // The reader's notation (algebraic by default) needs the pre-move board;
+    // the live room always starts from the opening, so replay the line.
+    notateLine: (moves) => formatXiangqiMoves(moves, currentXiangqiNotationStyle()),
     isMoveEvent: isXiangqiMoveEvent,
   },
   replayCapture: {

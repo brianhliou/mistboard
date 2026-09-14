@@ -1,6 +1,7 @@
-import { beforeEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import { mountXiangqiAnalysis } from './xiangqi-analysis.js';
 import { mountXiangqiAnalysisPage } from './xiangqi-analysis-page.js';
+import { pinXiangqiNotation } from './xiangqi-notation.js';
 
 // DOM coverage for the imported-game analysis surface (everything except the WASM
 // engine, which happy-dom can't run — cevalSupported() is false here, so the
@@ -17,6 +18,11 @@ function freshRoot(): HTMLElement {
   document.body.append(root);
   return root;
 }
+
+// These tests locate cells by from-to text; pin coordinate labels so the
+// reader's notation default (algebraic) does not become the subject.
+beforeEach(() => pinXiangqiNotation('coordinate'));
+afterEach(() => pinXiangqiNotation(null));
 
 describe('mountXiangqiAnalysis', () => {
   it('renders the board, engine panel, move tree, and navigation from a move list', () => {

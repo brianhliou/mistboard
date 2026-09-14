@@ -17,12 +17,9 @@ export const DISPLAY_PREFERENCE_DEFINITIONS = [
   // board in the same space.
   { id: 'boardCoordinates', kind: 'boolean', defaultValue: false },
   { id: 'moveListWhilePlaying', kind: 'boolean', defaultValue: true },
-  {
-    id: 'moveNotation',
-    kind: 'select',
-    defaultValue: 'symbols',
-    options: ['symbols', 'letters', 'coordinates'],
-  },
+  // No move-notation row here: lichess's symbols/letters/coordinates switch
+  // was declared and rendered but nothing ever read it. Xiangqi notation is
+  // the theme gear's setting (xiangqi-appearance-storage.ts) and chess is SAN.
   { id: 'zenMode', kind: 'boolean', defaultValue: false },
   { id: 'boardResizeHandle', kind: 'boolean', defaultValue: true },
   { id: 'playerRatings', kind: 'boolean', defaultValue: true },
