@@ -371,3 +371,65 @@ test('losers and codrus: a mated royal general wins, a bare general wins, a lost
   state = codrus.apply(state, { from: 'a10', to: 'e10' });
   assert.deepEqual(state.status, { type: 'finished', winner: 'black', reason: 'general-lost' });
 });
+
+test('blast: the lines shape follows the drawn lines, so the palace diagonals count and nothing else does', () => {
+  const lines = createXiangqiRuleKernel({ blast: { shape: 'lines', immune: [] } });
+  // Rxd2 beside the general on e1: d2-e1 is not a drawn line, so the general survives...
+  const edge = lines.parseFen('3k5/9/9/9/9/3r5/9/9/3N5/4K4 b - - 0 1', 'edge')!;
+  const afterEdge = lines.apply(edge, { from: 'd5', to: 'd2' });
+  assert.deepEqual(afterEdge.board.e1, { color: 'red', role: 'general' });
+  assert.equal(afterEdge.status.type, 'playing');
+  // ...while Rxd1 with the general on the palace centre e2 kills it along the drawn diagonal.
+  const centre = lines.parseFen('5k3/9/9/3r5/9/9/9/9/4K4/3A5 b - - 0 1', 'centre')!;
+  assert.equal(lines.apply(centre, { from: 'd7', to: 'd1' }).status.type, 'finished');
+  // Outside the palace no diagonal is drawn: a capture on d4 spares c5 and e5 but takes d5.
+  const open = lines.parseFen('4k4/9/9/9/9/2ppp4/3P5/9/9/4K4 b - - 0 1', 'open')!;
+  const afterOpen = lines.apply(open, { from: 'd5', to: 'd4' });
+  assert.equal(afterOpen.board.d5, undefined);
+  assert.deepEqual(afterOpen.board.c5, { color: 'black', role: 'soldier' });
+  assert.deepEqual(afterOpen.board.e5, { color: 'black', role: 'soldier' });
+  // The same capture under eight takes all three.
+  const eight = createXiangqiRuleKernel({ blast: { shape: 'eight', immune: [] } });
+  const afterEight = eight.apply(eight.parseFen('4k4/9/9/9/9/2ppp4/3P5/9/9/4K4 b - - 0 1', 'e8')!, {
+    from: 'd5',
+    to: 'd4',
+  });
+  assert.equal(afterEight.board.c5, undefined);
+  assert.equal(afterEight.board.e5, undefined);
+});
+
+test('repetition: perpetual check loses for the checker, a plain cycle still draws', () => {
+  // 1. Ra10+ Ke9 2. Ra9+ Ke10 3. Ra10+ Ke9 4. Ra9+ Ke10 5. Ra10+ is the third occurrence.
+  const perpetual = [
+    { from: 'a1', to: 'a10' },
+    { from: 'e10', to: 'e9' },
+    { from: 'a10', to: 'a9' },
+    { from: 'e9', to: 'e10' },
+    { from: 'a9', to: 'a10' },
+    { from: 'e10', to: 'e9' },
+    { from: 'a10', to: 'a9' },
+    { from: 'e9', to: 'e10' },
+    { from: 'a9', to: 'a10' },
+  ] as const;
+  const fen = '4k4/9/9/9/9/9/9/9/9/R2K5 w - - 0 1';
+  const law = createXiangqiRuleKernel({ repetition: 'perpetualCheckLoses' });
+  let state = law.parseFen(fen, 'law')!;
+  for (const move of perpetual) state = law.apply(state, move);
+  assert.deepEqual(state.status, { type: 'finished', winner: 'black', reason: 'repetition' });
+
+  const plain = createXiangqiRuleKernel({ repetition: 'draw' });
+  state = plain.parseFen(fen, 'plain')!;
+  for (const move of perpetual) state = plain.apply(state, move);
+  assert.deepEqual(state.status, { type: 'finished', winner: null, reason: 'repetition' });
+
+  // A cycle with no checks in it draws under the law too.
+  const shuffle = [
+    { from: 'a1', to: 'a2' },
+    { from: 'e10', to: 'e9' },
+    { from: 'a2', to: 'a1' },
+    { from: 'e9', to: 'e10' },
+  ] as const;
+  state = law.parseFen('4k4/9/9/9/9/9/9/9/9/R3K4 w - - 0 1', 'quiet')!;
+  for (let i = 0; i < 2; i += 1) for (const move of shuffle) state = law.apply(state, move);
+  assert.deepEqual(state.status, { type: 'finished', winner: null, reason: 'repetition' });
+});

@@ -46,7 +46,13 @@ import { createInitialXiangqiBoard } from './variants-xiangqi.js';
 export type XiangqiRegion = 'palace' | 'ownHalf' | 'board';
 export type FacingRule = 'off' | 'file' | 'rookline' | 'capture';
 export type CheckRule = 'standard' | 'none' | 'forbidden';
-export type BlastShape = 'orthogonal' | 'eight';
+/**
+ * `eight`: the eight neighbours (chess adjacency, atomic's rule). `orthogonal`:
+ * the four. `lines`: the points joined to the capture point by a drawn line,
+ * the four orthogonal neighbours everywhere plus the palace diagonals inside
+ * the palaces (xiangqi adjacency).
+ */
+export type BlastShape = 'orthogonal' | 'eight' | 'lines';
 export type StalemateValue = 'loss' | 'win' | 'draw';
 export type ExtinctionValue = 'none' | 'loses' | 'wins';
 export type StallValue = 'draw' | 'fewerPieces';
@@ -120,8 +126,13 @@ export type XiangqiRuleConfig = {
   stalemate?: StalemateValue;
   /** Plies without a capture before a draw. 60 is the site rule. */
   progressClock?: number;
-  /** Three-fold repetition is a draw, or not adjudicated. */
-  repetition?: 'draw' | 'off';
+  /**
+   * Three-fold repetition: a draw, not adjudicated, or xiangqi's check law:
+   * `perpetualCheckLoses` is a draw unless one side gave check with every move
+   * of the repeated cycle, in which case that side loses. The chase law is
+   * not modelled.
+   */
+  repetition?: 'draw' | 'off' | 'perpetualCheckLoses';
   /**
    * What a stalled game is worth: the progress clock, a repetition, and (when
    * `deadPosition` is on) a board with no piece that can ever cross the
@@ -198,6 +209,11 @@ export type XiangqiRuleState = {
   progressClock: number;
   lastMove?: XiangqiMove;
   positionCounts: Record<string, number>;
+  /**
+   * Positions since the last capture, oldest first, each with whether the move
+   * that produced it gave check. The repetition rule reads the cycle from here.
+   */
+  history: { key: string; check: boolean }[];
   /** Racing: red reached its flag; black has this reply to equalise. */
   flagPending?: XiangqiColor;
 };
@@ -476,12 +492,15 @@ function blastSquares(center: XiangqiSquare, rules: Resolved): XiangqiSquare[] {
   const blast = rules.blast;
   if (!blast) return [];
   const c = coordOf(center);
-  const deltas = blast.shape === 'eight' ? [...ORTHO, ...DIAG] : ORTHO;
+  const deltas = blast.shape === 'orthogonal' ? ORTHO : [...ORTHO, ...DIAG];
   const out: XiangqiSquare[] = [];
   for (const [df, dr] of deltas) {
     const file = c.file + df;
     const rank = c.rank + dr;
     if (!inBounds(file, rank)) continue;
+    // A drawn diagonal joins a palace corner to its centre and nothing else.
+    if (blast.shape === 'lines' && df !== 0 && dr !== 0 && !onDrawnDiagonal(c, { file, rank }))
+      continue;
     if (blast.palaceContained) {
       // The blast never crosses a palace boundary, in either direction.
       const centerIn = inAnyPalace(c.file, c.rank);
@@ -493,6 +512,17 @@ function blastSquares(center: XiangqiSquare, rules: Resolved): XiangqiSquare[] {
     out.push(squareOf(file, rank));
   }
   return out;
+}
+
+/** Both points in one palace, one of them its centre: the only drawn diagonals. */
+function onDrawnDiagonal(a: Coord, b: Coord): boolean {
+  for (const color of ['red', 'black'] as const) {
+    if (!inPalace(color, a.file, a.rank) || !inPalace(color, b.file, b.rank)) continue;
+    const centreRank = color === 'red' ? 2 : 9;
+    const isCentre = (c: Coord) => c.file === 4 && c.rank === centreRank;
+    return isCentre(a) || isCentre(b);
+  }
+  return false;
 }
 
 /** The board after `move`, blast included. Does not check legality. */
@@ -675,6 +705,7 @@ export function createXiangqiRuleKernel(config: XiangqiRuleConfig = {}): Xiangqi
     ply: (moveNumber - 1) * 2 + (turn === 'black' ? 1 : 0),
     progressClock,
     positionCounts: { [positionKey(board, turn)]: 1 },
+    history: [{ key: positionKey(board, turn), check: false }],
   });
 
   const legalMoves = (state: XiangqiRuleState): XiangqiMove[] =>
@@ -749,7 +780,22 @@ export function createXiangqiRuleKernel(config: XiangqiRuleConfig = {}): Xiangqi
       return finish(state, stallWinner(board), 'dead-position');
     if (!captured && state.progressClock >= rules.progressClock)
       return finish(state, stallWinner(board), 'progress-clock');
-    if (rules.repetition === 'draw' && (state.positionCounts[positionKey(board, next)] ?? 0) >= 3) {
+    const key = positionKey(board, next);
+    if (rules.repetition !== 'off' && (state.positionCounts[key] ?? 0) >= 3) {
+      if (rules.repetition === 'perpetualCheckLoses') {
+        // The cycle runs from the first occurrence of this position to now. A
+        // side that checked on every one of its moves in it loses; both, or
+        // neither, falls through to the stall value. The mover made the last
+        // move of the cycle.
+        const first = state.history.findIndex((h) => h.key === key);
+        const cycle = state.history.slice(first + 1);
+        const bySide = (color: XiangqiColor) =>
+          cycle.filter((_, i) => (cycle.length - 1 - i) % 2 === (color === mover ? 0 : 1));
+        const moverAll = bySide(mover).every((h) => h.check);
+        const nextAll = bySide(next).every((h) => h.check);
+        if (moverAll && !nextAll) return finish(state, next, 'repetition');
+        if (nextAll && !moverAll) return finish(state, mover, 'repetition');
+      }
       return finish(state, stallWinner(board), 'repetition');
     }
     return state;
@@ -796,6 +842,10 @@ export function createXiangqiRuleKernel(config: XiangqiRuleConfig = {}): Xiangqi
       const counts = captured
         ? { [key]: 1 }
         : { ...state.positionCounts, [key]: (state.positionCounts[key] ?? 0) + 1 };
+      const check =
+        rules.check === 'standard' && rules.royal[next] && generalAttacked(board, next, rules);
+      const entry = { key, check };
+      const history = captured ? [entry] : [...state.history, entry];
       const moved: XiangqiRuleState = {
         ...state,
         board,
@@ -805,6 +855,7 @@ export function createXiangqiRuleKernel(config: XiangqiRuleConfig = {}): Xiangqi
         progressClock: captured ? 0 : state.progressClock + 1,
         lastMove: move,
         positionCounts: counts,
+        history,
       };
       return adjudicate(moved, mover, captured);
     },

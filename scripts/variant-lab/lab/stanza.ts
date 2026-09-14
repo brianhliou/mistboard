@@ -37,7 +37,7 @@ export const SHARED_RULE_SCHEMA: RuleSchema = {
     options: ['draw', 'loss'],
     default: 'draw',
     blast: 'terminal',
-    note: 'The lab kernel adjudicates repetition as a draw only; loss (xiangqi’s perpetual-check law) is not implemented on the kernel side yet and the engine is set to match.',
+    note: 'What a threefold repetition means. draw: the parent’s rule. loss: xiangqi’s check law, the side that gave check on every move of the cycle loses (the chase law is not modelled). The engine is told perpetualCheckIllegal to match; on a non-royal general that option is a no-op without the patch, so the engine plays for a draw the kernel may score against it.',
   },
 };
 
@@ -49,7 +49,7 @@ export function sharedKernelConfig(
     facing: rules.facing as XiangqiRuleConfig['facing'],
     stalemate: rules.stalemate as XiangqiRuleConfig['stalemate'],
     progressClock: Number(rules.progressClock),
-    repetition: 'draw',
+    repetition: rules.perpetualCheck === 'loss' ? 'perpetualCheckLoses' : 'draw',
   };
 }
 
@@ -91,10 +91,11 @@ export function sharedStanzaLines(
   lines.push(`stalemateValue = ${String(rules.stalemate)}`);
   // nMoveRule counts full moves; the kernel counts plies.
   lines.push(`nMoveRule = ${Math.round(Number(rules.progressClock) / 2)}`);
-  // The kernel adjudicates repetition as a plain draw and knows no chase law,
-  // so the engine must not think perpetual check is illegal, or it will play
-  // for (or against) a rule the referee never applies.
-  lines.push('perpetualCheckIllegal = false');
+  // The kernel knows no chase law, so the engine must not either; perpetual
+  // check follows the record, so the engine plays for (or against) the same
+  // rule the referee applies. NOTE: keyed on KING in FSF, a no-op for a
+  // pseudo-royal general without the patch.
+  lines.push(`perpetualCheckIllegal = ${rules.perpetualCheck === 'loss' ? 'true' : 'false'}`);
   lines.push('chasingRule = none');
   lines.push('nFoldValue = draw');
   return lines;
