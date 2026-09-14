@@ -8,7 +8,7 @@
 
 import type { LabContext } from '../context.js';
 import { enginePolicy, playGame } from '../play.js';
-import type { GameRecord } from '../types.js';
+import type { EngineTelemetry, GameRecord } from '../types.js';
 
 export type BestplayArgs = { nodes: number[] };
 
@@ -28,12 +28,15 @@ export async function bestplay(ctx: LabContext, args: BestplayArgs): Promise<Bes
     const games: BestplayResult['games'] = [];
     for (const nodes of args.nodes) {
       engine.newGame();
-      const policy = enginePolicy(ctx.kernel, engine, nodes, rootFen);
+      const telemetry: EngineTelemetry = { depth: [], scoreCp: [] };
+      const policy = enginePolicy(ctx.kernel, engine, nodes, rootFen, { telemetry });
       const played = await playGame(
         ctx.kernel,
         { red: policy, black: policy },
         { plyCap: ctx.plyCap, gameId: `best-${nodes}` },
       );
+      const depths = telemetry.depth.filter((d): d is number => d !== null).sort((a, b) => a - b);
+      const medianDepth = depths.length ? depths[Math.floor(depths.length / 2)] : null;
       games.push({
         moves: played.moves,
         plies: played.plies,
@@ -42,9 +45,11 @@ export async function bestplay(ctx: LabContext, args: BestplayArgs): Promise<Bes
         engineSeat: 'both',
         nodes,
         opening: played.moves[0] ?? null,
+        engineDepth: Array.from(telemetry.depth, (d) => d ?? null),
+        engineScoreCp: Array.from(telemetry.scoreCp, (c) => c ?? null),
       });
       console.log(
-        `  ${String(nodes).padStart(9)} nodes: ${describe(played)} in ${played.plies} plies, opening ${played.moves[0] ?? '-'}`,
+        `  ${String(nodes).padStart(9)} nodes: ${describe(played)} in ${played.plies} plies, opening ${played.moves[0] ?? '-'}${medianDepth !== null ? `, median depth ${medianDepth}` : ''}`,
       );
     }
     const result: BestplayResult = { games };

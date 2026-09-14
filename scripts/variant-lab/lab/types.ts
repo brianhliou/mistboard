@@ -128,7 +128,19 @@ export type GameRecord = {
   readonly reason: string;
   /** Which seat(s) the engine held, for match-mode records. */
   readonly engineSeat?: LabColor | 'both' | 'none';
+  /**
+   * What the engine's search reached on each ply it played, from its last
+   * info line: depth, and the score in centipawns from the mover's side
+   * (null for a mate score or when no info line arrived). Indexed by ply;
+   * a ply the other policy played holds null. A node budget says what was
+   * spent; this says what it bought.
+   */
+  readonly engineDepth?: readonly (number | null)[];
+  readonly engineScoreCp?: readonly (number | null)[];
 };
+
+/** Per-ply search telemetry an engine policy fills in as it plays. */
+export type EngineTelemetry = { depth: (number | null)[]; scoreCp: (number | null)[] };
 
 export type EngineIdentity = {
   readonly idName: string;

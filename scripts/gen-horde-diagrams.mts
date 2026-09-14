@@ -50,13 +50,8 @@ const store = new Map<string, string>();
 const { XQ_BOARD_H, XQ_BOARD_W, xqBoardSvg, xqCoord, xqPoint, xqSvg, xqVisionDemoState } =
   await import('../apps/web/src/articles/diagrams.js');
 const { renderBoardSvg } = await import('../packages/board-render/src/board-svg.js');
-const {
-  createXiangqiRuleKernel,
-  generalAttacked,
-  isAttacked,
-  legalMovesOn,
-  parsePlacement,
-} = await import('../packages/game/src/xiangqi-rule-kernel.js');
+const { createXiangqiRuleKernel, generalAttacked, isAttacked, legalMovesOn, parsePlacement } =
+  await import('../packages/game/src/xiangqi-rule-kernel.js');
 const { HORDE_FORMATIONS, hordeXiangqiVariant } = await import(
   './variant-lab/lab/variants/horde-xiangqi.js'
 );
@@ -516,6 +511,119 @@ figure(
   1,
 );
 
+// ── 6, 7. The design grids: every array with its 1M result under it ─────────
+
+type GridCell = { id: string; formation: keyof typeof HORDE_FORMATIONS; name: string };
+// The games that open with a story and notes on the blog page (build-blog-games.mjs owns the text).
+const ANNOTATED = new Set([
+  'standard/solid36/1000000/60',
+  'standard/across36/1000000/60',
+  'veteran/forward36/1000000/120',
+  'veteran/solid36/1000000/120',
+  'veteran/lichess40/1000000/120',
+]);
+// Games that hit the harness's 1,000-ply cap were played on from the cap
+// position with the 120-ply clock in force (docs-private extra rows); the
+// grid prints where they actually ended.
+const CONTINUED: Record<string, { plies: number; reason: string }> = {
+  'veteran/solid36/1000000/120': { plies: 1058, reason: 'CLOCK' },
+  'veteran/solid45/1000000/120': { plies: 1102, reason: 'CLOCK' },
+  'veteran/lichess40/1000000/120': { plies: 1016, reason: 'CLOCK' },
+};
+// The result line under each board. A horde win is red ink; everything else
+// takes the page's heading or body colour through the site's diagram classes,
+// so the labels survive a dark theme (a literal dark fill would vanish).
+function resultLine(g: ReturnType<typeof labGame>, key = ''): { text: string; attr: string } {
+  const plies = g.moves.length;
+  const cont = CONTINUED[key];
+  if (cont && g.reason === 'ply-cap')
+    return {
+      text: `DRAW BY ${cont.reason}, ${cont.plies.toLocaleString('en-US')}*`,
+      attr: 'class="xq-diagram-outside-text"',
+    };
+  if (g.winner === 'red')
+    return {
+      text: `HORDE WINS BY ${g.reason === 'stalemate' ? 'SMOTHER' : 'MATE'}, ${plies}`,
+      attr: 'fill="#c30d0d"',
+    };
+  if (g.winner === 'black')
+    return { text: `ARMY WINS BY EXTINCTION, ${plies}`, attr: 'class="xq-diagram-title"' };
+  if (g.reason === 'ply-cap')
+    return {
+      text: `UNFINISHED AT ${plies.toLocaleString('en-US')} PLIES`,
+      attr: 'class="xq-diagram-outside-text"',
+    };
+  return {
+    text: `DRAW BY ${g.reason === 'progress-clock' ? 'CLOCK' : 'REPETITION'}, ${plies}`,
+    attr: 'class="xq-diagram-outside-text"',
+  };
+}
+function grid(
+  cells: GridCell[],
+  soldiersRule: 'standard' | 'veteran',
+  clock: number,
+  perRow: number,
+): string {
+  const rowH = FIGURE_H + 52;
+  const rows = Math.ceil(cells.length / perRow);
+  const width = XQ_BOARD_W * perRow + GAP * (perRow - 1);
+  const body = cells
+    .map((c, i) => {
+      const x = (i % perRow) * (XQ_BOARD_W + GAP);
+      const y = Math.floor(i / perRow) * rowH;
+      const g = labGame(c.formation, soldiersRule, clock, 1_000_000);
+      const key = `${soldiersRule}/${c.formation}/1000000/${clock}`;
+      const r = resultLine(g, key);
+      const tag = ANNOTATED.has(key)
+        ? `<text x="${x + XQ_BOARD_W / 2}" y="${y + FIGURE_H + 26}" font-family="system-ui, sans-serif" font-size="11" font-weight="600" class="xq-diagram-outside-text" text-anchor="middle">▶ ANNOTATED</text>`
+        : '';
+      // A "watch" pill on the river band, the one empty strip of every array,
+      // so the board reads as something that opens rather than a picture.
+      const riverY = y + 28 + XQ_BOARD_H / 2 - 4;
+      const pill = `<g class="xq-play-hint" pointer-events="none"><rect x="${x + XQ_BOARD_W / 2 - 58}" y="${riverY - 11}" width="116" height="22" rx="11" fill="rgba(28, 22, 12, 0.72)"/><text x="${x + XQ_BOARD_W / 2}" y="${riverY + 4}" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" letter-spacing="0.06em">▶ WATCH THE GAME</text></g>`;
+      const board = xqBoardSvg({
+        state: state(`${soldiersRule}-${c.id}`, fen(HORDE_FORMATIONS[c.formation])),
+        x,
+        y,
+        label: c.name,
+        perspective: 'red',
+        overlay: `${pill}<text x="${x + XQ_BOARD_W / 2}" y="${y + FIGURE_H + 10}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" ${r.attr} text-anchor="middle">${r.text}</text>${tag}`,
+      });
+      // Each board is a link: on the blog page a click opens the replay of the
+      // exact game whose result is printed under it (build-blog-games.mjs).
+      const linked = `<a href="#horde-games" class="xq-grid-link" data-game="${key}">${board}</a>`;
+      return soldiersRule === 'veteran' ? veteranArt(linked) : linked;
+    })
+    .join('');
+  return xqSvg(width, rowH * rows - 52 + 34, body);
+}
+const ROW_CELLS: GridCell[] = [
+  { id: 'solid18', formation: 'solid18', name: '18, RANKS 1-2' },
+  { id: 'forward18', formation: 'forward18', name: '18, RANKS 3-4' },
+  { id: 'solid27', formation: 'solid27', name: '27, RANKS 1-3' },
+  { id: 'forward27', formation: 'forward27', name: '27, RANKS 2-4' },
+  { id: 'across27', formation: 'across27', name: '27, RANKS 4-6' },
+  { id: 'solid36', formation: 'solid36', name: '36, RANKS 1-4' },
+  { id: 'forward36', formation: 'forward36', name: '36, RANKS 2-5' },
+  { id: 'across36', formation: 'across36', name: '36, RANKS 3-6' },
+  { id: 'solid45', formation: 'solid45', name: '45, RANKS 1-5' },
+  { id: 'array32', formation: 'array32', name: '32, XIANGQI’S FIVE POINTS' },
+  { id: 'lichess31', formation: 'lichess31', name: '31, PARENT SHAPE' },
+  { id: 'lichess40', formation: 'lichess40', name: '40, PARENT SHAPE' },
+];
+figure(
+  'grid-standard',
+  grid(ROW_CELLS, 'standard', 60, 2),
+  'Every array with standard soldiers, and how the engine’s game against itself at one million nodes a move ended. Eleven of twelve are army wins by extinction. The one horde win starts with its front rank already across the river, in contact with the army’s soldiers; at 200,000 and at 5 million nodes the same array draws.',
+  4,
+);
+figure(
+  'grid-veteran',
+  grid(ROW_CELLS, 'veteran', 120, 2),
+  'The same twelve arrays with veteran soldiers (the crossed soldier’s move from the first step), one million nodes a move, 120-ply no-capture clock. Below 27 soldiers the army finishes; from 27 up the game reaches the two-chariot ending and stops, and the one horde win needed both chariots to fall. *Three games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; the ply shown is where the clock ended them.',
+  4,
+);
+
 // ── Blog output (--blog): brianhliou.com includes, art, thumbnail, card ────
 
 if (process.argv.includes('--blog')) {
@@ -531,7 +639,8 @@ if (process.argv.includes('--blog')) {
       blogArt.add(`${rel}.png`);
       return `href="${BLOG_ART}/${rel.replace(/\//g, '-')}.png"`;
     });
-  const layout = (n: number) => (n === 1 ? 'single' : n === 2 ? 'pair' : 'triple');
+  const layout = (n: number) =>
+    n === 1 ? 'single' : n === 2 ? 'pair' : n === 3 ? 'triple' : 'grid';
   for (const f of figures) {
     const include = [
       '<!-- Generated by scripts/gen-horde-diagrams.mts in the mistboard repo.',
@@ -543,6 +652,22 @@ if (process.argv.includes('--blog')) {
     ].join('\n');
     writeFileSync(path.join(INCLUDES, `horde-xq-${f.slug}.html`), `${include}\n`);
     console.log(`  _includes/horde-xq-${f.slug}.html`);
+  }
+  // The replay on the page draws any piece a game can reach (a black soldier
+  // across the river, say), not only what the figures show: copy the whole set.
+  for (const color of ['red', 'black']) {
+    for (const role of [
+      'general',
+      'advisor',
+      'elephant',
+      'horse',
+      'chariot',
+      'cannon',
+      'soldier',
+      'crossed-soldier',
+    ]) {
+      blogArt.add(`xiangqi/international/${color}-${role}.png`);
+    }
   }
   for (const rel of blogArt) {
     writeFileSync(
