@@ -1,4 +1,19 @@
 import type pg from 'pg';
+import {
+  DUCK_XIANGQI_FSF_ENGINE_REF,
+  DUCK_XIANGQI_FSF_ENGINE_VERSION,
+  DUCK_XIANGQI_PLAYABLE_ENGINES,
+  DUCK_XIANGQI_RANDOM_ENGINE_ID,
+  DUCK_XIANGQI_RANDOM_ENGINE_VERSION,
+  type DuckXiangqiEngineTier,
+} from '../duck-xiangqi-fsf-engine.js';
+import {
+  FORTRESS_XIANGQI_ENGINE_VERSION,
+  FORTRESS_XIANGQI_PLAYABLE_ENGINES,
+  FORTRESS_XIANGQI_RANDOM_ENGINE_ID,
+  FORTRESS_XIANGQI_RANDOM_ENGINE_VERSION,
+  type FortressXiangqiEngineTier,
+} from '../fortress-xiangqi-fsf-engine.js';
 import { JIEQI_ENGINE_VERSION } from '../jieqi-engine.js';
 import {
   XIANGQI_FSF_ENGINE_REF,
@@ -639,6 +654,101 @@ const PYTHON_ENGINES: Record<string, EngineDefinition> = {
   },
 };
 
+// Fortress Xiangqi FSF ladder (fortress-xiangqi-fsf-engine.ts). Registered so
+// the EvE runner can rate it: eve_games snapshots configHash per game, so the
+// hash names everything that decides the rung's play (build version, which
+// bumps on any engine or variants.ini change, skill, node budget). Classical
+// eval on the stock FSF largeboard binary; no net exists for the variant.
+const FORTRESS_XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  FORTRESS_XIANGQI_PLAYABLE_ENGINES.map((tier) => [
+    tier.id,
+    {
+      id: tier.id as EngineId,
+      engineId: 'fairy-stockfish-fortress-xiangqi',
+      engineName: 'Fairy-Stockfish',
+      name: tier.name,
+      kind: 'container',
+      gameSpecId: 'fortress-xiangqi',
+      configHash: fortressXiangqiFsfConfigHash(tier),
+      playSignature: fortressXiangqiFsfConfigHash(tier),
+      config: {
+        kind: 'fairy-stockfish',
+        skill: tier.skill,
+        movetime_ms: tier.movetimeMs,
+        nodes: tier.nodes,
+      },
+      notes:
+        'Fairy-Stockfish Fortress Xiangqi rung: stochastic Skill Level ladder anchored by a node budget, classical eval on the custom variants.ini.',
+    } satisfies EngineDefinition,
+  ]),
+);
+
+function fortressXiangqiFsfConfigHash(tier: FortressXiangqiEngineTier): string {
+  return `fsf-fortress-xiangqi-${FORTRESS_XIANGQI_ENGINE_VERSION}-skill-${tier.skill}-nodes-${tier.nodes}`;
+}
+
+// Duck Xiangqi FSF ladder (duck-xiangqi-fsf-engine.ts). The binary is a pinned
+// commit PLUS a patch, so the build version (which the patch digest test pins)
+// and the ref both go in the hash.
+const DUCK_XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  DUCK_XIANGQI_PLAYABLE_ENGINES.map((tier) => [
+    tier.id,
+    {
+      id: tier.id as EngineId,
+      engineId: 'fairy-stockfish-duck-xiangqi',
+      engineName: 'Fairy-Stockfish',
+      name: tier.name,
+      kind: 'container',
+      gameSpecId: 'duck-xiangqi',
+      configHash: duckXiangqiFsfConfigHash(tier),
+      playSignature: duckXiangqiFsfConfigHash(tier),
+      config: {
+        kind: 'fairy-stockfish',
+        skill: tier.skill,
+        movetime_ms: tier.movetimeMs,
+        nodes: tier.nodes,
+      },
+      notes:
+        'Fairy-Stockfish Duck Xiangqi rung: stochastic Skill Level ladder anchored by a node budget, classical eval on the patched duck build.',
+    } satisfies EngineDefinition,
+  ]),
+);
+
+function duckXiangqiFsfConfigHash(tier: DuckXiangqiEngineTier): string {
+  return `fsf-duck-xiangqi-${DUCK_XIANGQI_FSF_ENGINE_VERSION}-${DUCK_XIANGQI_FSF_ENGINE_REF}-skill-${tier.skill}-nodes-${tier.nodes}`;
+}
+
+// Random-mover floors for the other xiangqi-family ladders, same role as the
+// standard one below: 0-Elo anchor, EvE-only, never player-facing.
+const VARIANT_RANDOM_ENGINES: Record<string, EngineDefinition> = {
+  [FORTRESS_XIANGQI_RANDOM_ENGINE_ID]: {
+    id: FORTRESS_XIANGQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-fortress-xiangqi',
+    engineName: 'Random Mover',
+    name: 'Random Mover',
+    kind: 'builtin',
+    gameSpecId: 'fortress-xiangqi',
+    configHash: `random-legal-fortress-xiangqi-${FORTRESS_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    playSignature: `random-legal-fortress-xiangqi-${FORTRESS_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes:
+      'Uniformly-random legal-move Fortress Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
+  } satisfies EngineDefinition,
+  [DUCK_XIANGQI_RANDOM_ENGINE_ID]: {
+    id: DUCK_XIANGQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-duck-xiangqi',
+    engineName: 'Random Mover',
+    name: 'Random Mover',
+    kind: 'builtin',
+    gameSpecId: 'duck-xiangqi',
+    configHash: `random-legal-duck-xiangqi-${DUCK_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    playSignature: `random-legal-duck-xiangqi-${DUCK_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes:
+      'Uniformly-random legal-move Duck Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
+  } satisfies EngineDefinition,
+};
+
 // Uniformly-random legal-move xiangqi bot: the calibration floor / 0-Elo anchor.
 // EvE-only (the xiangqi runner's move provider plays it in-process), so it is NOT
 // in any *_PLAYABLE list and never appears in the live PvE picker.
@@ -887,6 +997,9 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...PYTHON_ENGINES,
   ...XIANGQI_FSF_ENGINES,
   ...XIANGQI_RANDOM_ENGINES,
+  ...FORTRESS_XIANGQI_FSF_ENGINES,
+  ...DUCK_XIANGQI_FSF_ENGINES,
+  ...VARIANT_RANDOM_ENGINES,
   ...JIEQI_ENGINES,
   ...XIANGQI_ENGINES,
   ...BANQI_ENGINES,

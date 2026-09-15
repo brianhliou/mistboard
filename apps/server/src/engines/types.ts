@@ -42,6 +42,12 @@ export type EngineId =
   | `fairy-stockfish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   // Uniformly-random legal-move xiangqi bot (calibration floor / 0-Elo anchor)
   | 'random-legal-xiangqi'
+  // Fairy-Stockfish (Fortress Xiangqi ladder) + its random floor
+  | `fairy-stockfish-fortress-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  | 'random-legal-fortress-xiangqi'
+  // Fairy-Stockfish (Duck Xiangqi ladder) + its random floor
+  | `fairy-stockfish-duck-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  | 'random-legal-duck-xiangqi'
   // Pikafish (Jieqi)
   | 'pikafish-jieqi-amateur'
   | 'pikafish-jieqi-strong'

@@ -4,6 +4,7 @@ import {
   timeControlBucket,
   timeControlLabel,
 } from './engine-time-policy.js';
+import { EVE_VARIANT_IDS } from './variant-eve-registry.js';
 
 export type TournamentPairing = {
   blackEngineId: string;
@@ -20,7 +21,9 @@ export type TournamentPlanInput = {
   gamesPerPair: number;
 };
 
-export type TournamentVariant = 'dark-chess' | 'xiangqi';
+// 'dark-chess' runs the python-worker / in-process runners; everything else is
+// a tenant variant with an EvE adapter (variant-eve-registry.ts).
+export type TournamentVariant = 'dark-chess' | (string & {});
 
 export type TournamentCliConfig = {
   artifactPolicy: Record<string, unknown>;
@@ -90,13 +93,16 @@ export function parseTournamentArgs(
     2,
   );
   const variant = tournamentVariant(args.variant ?? env.ENGINE_TOURNAMENT_VARIANT);
+  // Tenant-variant ladders (xiangqi, fortress, duck, ...) are rated clockless:
+  // every rung is node-anchored, so pace is not part of its strength.
+  const clockless = isTenantEveVariant(variant);
   const maxPlies = positiveInteger(args.maxPlies ?? env.ENGINE_MAX_PLIES, 160);
   const providers = csv(args.providers ?? env.ENGINE_PROVIDERS ?? 'local,railway');
   const timeControl = parseEngineTimeControl(
-    args.timeControl ?? env.ENGINE_TIME_CONTROL ?? (variant === 'xiangqi' ? 'none' : 'standard'),
+    args.timeControl ?? env.ENGINE_TIME_CONTROL ?? (clockless ? 'none' : 'standard'),
   );
-  if (variant === 'xiangqi' && timeControl.kind !== 'none') {
-    throw new Error('xiangqi calibration currently requires --time-control none');
+  if (clockless && timeControl.kind !== 'none') {
+    throw new Error(`${variant} calibration currently requires --time-control none`);
   }
   const openingPolicy = openingPolicyFrom(args.opening ?? env.ENGINE_OPENING_POLICY);
   if (openingPolicy.kind !== 'standard' && gamesPerPair % 2 !== 0) {
@@ -106,7 +112,7 @@ export function parseTournamentArgs(
   const ratingAnchorEngineId =
     args.ratingAnchor ??
     env.ENGINE_RATING_ANCHOR ??
-    (variant === 'xiangqi' ? engines[0]! : 'python-random-legal');
+    (clockless ? engines[0]! : 'python-random-legal');
   const ratingMinAnchorGames = positiveInteger(
     args.ratingMinAnchorGames ?? env.ENGINE_RATING_MIN_ANCHOR_GAMES,
     8,
@@ -325,8 +331,14 @@ function booleanFlag(value: string | undefined, fallback: boolean): boolean {
 
 function tournamentVariant(value: string | undefined): TournamentVariant {
   const variant = value ?? 'dark-chess';
-  if (variant === 'dark-chess' || variant === 'xiangqi') return variant;
-  throw new Error(`invalid tournament variant ${variant}; expected dark-chess or xiangqi`);
+  if (variant === 'dark-chess' || isTenantEveVariant(variant)) return variant;
+  throw new Error(
+    `invalid tournament variant ${variant}; expected dark-chess or one of ${EVE_VARIANT_IDS.join(', ')}`,
+  );
+}
+
+function isTenantEveVariant(variant: string): boolean {
+  return EVE_VARIANT_IDS.includes(variant);
 }
 
 function slugEngineId(engineId: string): string {
