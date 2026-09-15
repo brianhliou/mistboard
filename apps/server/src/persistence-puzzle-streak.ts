@@ -1,6 +1,6 @@
 // Puzzle streak: consecutive player-calendar days with a puzzle solved, for a
-// signed-in account. Same fold as the play streak (play-streak.ts); the day
-// source is puzzle_attempts, which holds one row per (user, puzzle) for the
+// signed-in account. The fold is play-streak.ts; the day source is
+// puzzle_attempts, which holds one row per (user, puzzle) for the
 // FIRST terminal outcome (073), so a day counts when the account solved a
 // puzzle it had not attempted before. Guests record no attempts and have no
 // streak here.

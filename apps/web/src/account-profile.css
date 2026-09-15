@@ -1650,12 +1650,25 @@
 }
 
 .profile-puzzle-ratings h2 {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
   margin: 0;
-  padding: 13px 16px;
-  border-bottom: 1px solid var(--site-border-soft);
+  /* No rule under the heading: the first row's own rule below it is enough,
+     and the block already opens on the border-top above. */
+  padding: 13px 16px 4px;
   color: var(--site-heading);
   font-size: 17px;
   font-weight: 500;
+}
+
+/* The puzzle streak sits on the heading line, right-aligned and quiet. */
+.profile-puzzle-streak {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 500;
+  text-align: right;
 }
 
 .profile-puzzle-rail {

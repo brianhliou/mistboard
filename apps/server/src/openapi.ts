@@ -620,7 +620,6 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                   user: { type: 'object' },
                   ratings: { type: 'array', items: { type: 'object' } },
                   puzzleRatings: { type: 'array', items: { type: 'object' } },
-                  playStreak: ref('PlayStreak'),
                   puzzleStreak: ref('PlayStreak'),
                   games: { type: 'array', items: { type: 'object' } },
                   gamesTotal: { type: 'integer' },

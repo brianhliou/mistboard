@@ -1,11 +1,12 @@
-// Play streak: consecutive calendar days with at least one counted game
-// (persistence-counted-games.ts decides what counts). Days are the PLAYER'S
+// Day-streak math: consecutive calendar days on which something happened (the
+// puzzle streak, persistence-puzzle-streak.ts, is the caller; a play streak
+// used it too until it was retired on 2026-09-15). Days are the PLAYER'S
 // calendar, so the caller buckets timestamps in the browser's time zone before
-// they get here; a US evening game must not land on "tomorrow".
+// they get here; a US evening solve must not land on "tomorrow".
 //
-// A streak is alive through the whole of the next day: playing yesterday and
+// A streak is alive through the whole of the next day: solving yesterday and
 // not yet today still reads as the current run (chess.com's rule). Two days
-// without a game, and it is 0 while the best stays.
+// without one, and it is 0 while the best stays.
 
 export type PlayStreak = {
   current: number;

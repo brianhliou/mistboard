@@ -381,8 +381,6 @@ export {
   processStripeEvent,
   setStripeCustomerId,
 } from './persistence-patron.js';
-export type { PlayStreakOptions, PlayStreakSubject } from './persistence-play-streak.js';
-export { getPlayStreak } from './persistence-play-streak.js';
 export {
   recordPracticeSolved,
   solvedChapterIds,
