@@ -37,6 +37,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- "Horde on the Xiangqi Board: The River Is a Cliff" is published: the measurement behind a second variant that was not built, with kernel-checked boards and links to the full map and the evidence repository ([b21eb9ed](https://github.com/brianhliou/mistboard/commit/b21eb9ed))
 - A puzzle streak: the days in a row you solved a puzzle, on your own calendar and still alive the day after; it shows under Success when a puzzle is solved and on your profile with your best run, for signed-in solvers ([2191f43d](https://github.com/brianhliou/mistboard/commit/2191f43d))
 - The Duck Xiangqi launch post and the anti-xiangqi article read in Simplified and Traditional Chinese ([0f2894e9](https://github.com/brianhliou/mistboard/commit/0f2894e9))
 - "Antichess on the Xiangqi Board Is a Draw" is published: the measurement behind a variant that was not built, with kernel-checked boards and links to the full analysis and the evidence ([334789ba](https://github.com/brianhliou/mistboard/commit/334789ba))
