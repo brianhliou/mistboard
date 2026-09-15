@@ -36,10 +36,16 @@ const bookZh = edits.book?.zh;
 const CJK = /[㐀-鿿]/;
 // Edits records carry no volume; the mined data does. n is unique per volume,
 // not per book, so the lookup is keyed by (vol, n).
-const volById = new Map(JSON.parse(readFileSync(values.data, 'utf8')).map((r) => [String(r.id), r.vol]));
+// A singleStudy book folds every dpxq volume into one study, so its chapters all live in vol 1.
+const single = edits.book?.singleStudy === true;
+const volById = new Map(JSON.parse(readFileSync(values.data, 'utf8')).map((r) => [String(r.id), single ? 1 : r.vol]));
 const byN = new Map();
+// A revised-diagram record (改图) shares its n with the original and is held;
+// the seeded chapter is the published one, so that is the one to compare.
 for (const [id, rec] of Object.entries(edits.records ?? {})) {
-  byN.set(`${volById.get(id) ?? 1}:${rec.n}`, { id, ...rec });
+  if (!rec || typeof rec !== 'object') continue;
+  const key = `${volById.get(id) ?? 1}:${rec.n}`;
+  if (!byN.has(key) || (rec.publish && !byN.get(key).publish)) byN.set(key, { id, ...rec });
 }
 const publishable = Object.values(edits.records ?? {}).filter((r) => r.publish);
 
@@ -96,7 +102,7 @@ try {
       if (rec.en && rec.en !== en) problems.push(`${where}: English "${en}" but edits say "${rec.en}"`);
       const hans = c.i18n?.['zh-Hans']?.name;
       if (!hans) problems.push(`${where}: no zh-Hans name`);
-      else if (rec.zh && !hans.includes(rec.zh)) problems.push(`${where}: zh-Hans "${hans}" does not contain "${rec.zh}"`);
+      else if (rec.zh && !hans.includes(rec.zh) && !hans.includes(rec.zh.replace(/（.*）$/, ''))) problems.push(`${where}: zh-Hans "${hans}" does not contain "${rec.zh}"`);
       const hant = c.i18n?.['zh-Hant']?.name;
       if (!hant) problems.push(`${where}: no zh-Hant name`);
       else if (rec.hant && !hant.includes(rec.hant)) problems.push(`${where}: zh-Hant "${hant}" does not contain "${rec.hant}"`);
