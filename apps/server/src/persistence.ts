@@ -100,6 +100,15 @@ export {
   resolveChatReport,
 } from './persistence-chat.js';
 export type {
+  CorrespondenceDigestCandidate,
+  CorrespondenceDigestGame,
+  CorrespondenceDigestQuery,
+} from './persistence-correspondence-digest.js';
+export {
+  listCorrespondenceDigestCandidates,
+  markCorrespondenceDigestSent,
+} from './persistence-correspondence-digest.js';
+export type {
   CorrespondenceSeekListing,
   CorrespondenceSeekRecord,
   SeekColorPreference,
@@ -372,6 +381,8 @@ export {
   processStripeEvent,
   setStripeCustomerId,
 } from './persistence-patron.js';
+export type { PlayStreakOptions, PlayStreakSubject } from './persistence-play-streak.js';
+export { getPlayStreak } from './persistence-play-streak.js';
 export {
   recordPracticeSolved,
   solvedChapterIds,
@@ -398,6 +409,8 @@ export {
   updateUserProfileVisibility,
   updateUserPublicProfileDetails,
 } from './persistence-profiles.js';
+export type { PuzzleStreakOptions } from './persistence-puzzle-streak.js';
+export { getPuzzleStreak } from './persistence-puzzle-streak.js';
 export type {
   FollowResult,
   RelationListEntry,
@@ -600,6 +613,7 @@ export {
   xiangqiPuzzleMiningCandidateId,
   xiangqiPuzzleMiningRunId,
 } from './persistence-xiangqi-puzzle-mining.js';
+export type { PlayStreak } from './play-streak.js';
 export type {
   XiangqiPuzzleAuditWorkResult,
   XiangqiPuzzleAuditWorkVerdict,

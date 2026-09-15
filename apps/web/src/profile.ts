@@ -2,6 +2,7 @@
 
 import { FORTRESS_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, type RatingVariant } from '@mistboard/game';
 import './account-profile.css';
+import { browserTimeZone } from './browser-time-zone.js';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { correspondenceEnabled } from './feature-flags.js';
@@ -97,6 +98,10 @@ type UserProfile = {
   ratings: ProfileBucketRating[];
   // Per-variant puzzle ratings; absent/empty when the user has solved no puzzles.
   puzzleRatings?: ProfilePuzzleRating[];
+  // Consecutive days with a completed game, on the viewer's calendar; absent
+  // from older payloads.
+  playStreak?: { current: number; best: number };
+  puzzleStreak?: { current: number; best: number };
   games: FeaturedGame[];
   gamesTotal: number;
 };
@@ -265,6 +270,14 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
     },
   });
   appendProfilePuzzleRatings(ratings, profile.puzzleRatings ?? [], locale);
+  appendProfilePlayStreak(ratings, profile.playStreak ?? null, locale);
+  appendProfileStreak(
+    ratings,
+    'profile-puzzle-streak',
+    t('profile.puzzleStreak', {}, locale),
+    profile.puzzleStreak ?? null,
+    locale,
+  );
 
   shell.append(buildProfileDashboard(ratings, overview, tabs.el));
 }
@@ -838,7 +851,9 @@ function renderLeaderboardTable(
 }
 
 async function fetchUserProfile(handle: string): Promise<UserProfile> {
-  const resp = await fetch(`/api/users/${encodeURIComponent(handle)}/profile`);
+  // The play streak counts days on the viewer's calendar (play-streak.ts).
+  const query = new URLSearchParams({ tz: browserTimeZone() });
+  const resp = await fetch(`/api/users/${encodeURIComponent(handle)}/profile?${query}`);
   if (resp.status === 404) throw new ProfileNotFound();
   if (!resp.ok) throw new Error(`failed to load profile: ${resp.status}`);
   const data = (await resp.json()) as { profile: UserProfile };
@@ -2209,6 +2224,66 @@ function appendProfilePuzzleRatings(
 
   block.append(rail);
   section.append(block);
+}
+
+// Append a "Play streak" block under the puzzle ratings: current and best
+// consecutive days with a completed game. No-op until the user has played on
+// at least one counted day, so a fresh profile stays as it was.
+function appendProfilePlayStreak(
+  section: HTMLElement,
+  playStreak: { current: number; best: number } | null,
+  locale: Locale,
+): void {
+  appendProfileStreak(
+    section,
+    'profile-play-streak',
+    t('profile.playStreak', {}, locale),
+    playStreak,
+    locale,
+  );
+}
+
+// One streak block (play or puzzle): current and best consecutive days.
+function appendProfileStreak(
+  section: HTMLElement,
+  className: string,
+  heading: string,
+  streak: { current: number; best: number } | null,
+  locale: Locale,
+): void {
+  if (!streak || streak.best < 1) return;
+
+  const block = document.createElement('div');
+  block.className = `profile-puzzle-ratings ${className}`;
+
+  const title = document.createElement('h2');
+  title.textContent = heading;
+  block.append(title);
+
+  const rail = document.createElement('div');
+  rail.className = 'profile-puzzle-rail';
+  rail.append(
+    playStreakRow(t('profile.playStreakCurrent', {}, locale), streak.current, locale),
+    playStreakRow(t('profile.playStreakBest', {}, locale), streak.best, locale),
+  );
+  block.append(rail);
+  section.append(block);
+}
+
+function playStreakRow(label: string, days: number, locale: Locale): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'profile-puzzle-row';
+  const name = document.createElement('span');
+  name.className = 'profile-puzzle-name';
+  name.textContent = label;
+  const value = document.createElement('span');
+  value.className = 'profile-puzzle-value';
+  value.textContent =
+    days === 1
+      ? t('profile.playStreakDaysOne', {}, locale)
+      : t('profile.playStreakDays', { count: days }, locale);
+  row.append(name, value);
+  return row;
 }
 
 // One variant row in the ratings rail: compact mini-board beside its name,

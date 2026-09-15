@@ -1,6 +1,7 @@
 // Display formatting for standard-xiangqi moves: render the canonical
-// {from,to} move history as coordinate, ICCS (0-indexed UCI), WXF, or Chinese
-// relative notation. Pure views — nothing here is stored or transmitted.
+// {from,to} move history as coordinate, ICCS (0-indexed UCI), chess-style
+// algebraic, WXF, or Chinese relative notation. Pure views — nothing here is
+// stored or transmitted.
 //
 // The relative styles derive a RelativeMoveSpec from the pre-move board and
 // verify it round-trips through the importer's own resolver before
@@ -26,6 +27,8 @@ import {
 } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  getStandardXiangqiLegalMoves,
+  isStandardXiangqiGeneralInCheck,
   isStandardXiangqiLegalMove,
 } from './variants-xiangqi-standard.js';
 import {
@@ -40,6 +43,7 @@ import { xiangqiMoveToPikafishUci } from './xiangqi-uci.js';
 export type XiangqiNotationStyle =
   | 'coordinate' // native squares: h3-e3 (files a-i, ranks 1-10)
   | 'iccs' // 0-indexed UCI as used by Pikafish/UCCI: h2e2
+  | 'algebraic' // chess-style SAN: Ce3, Hc3, Cxe7, Rhe1 (piece letter + destination)
   | 'wxf' // WXF relative: C2.5, H2+3, +C.5
   | 'chinese-simplified' // 炮二平五 / 马8进7
   | 'chinese-traditional'; // 炮二平五 / 馬8進7
@@ -230,10 +234,95 @@ function serializeChinese(
   return `${prefix}${CN_OP_GLYPHS[script][spec.op]}${chineseNumeral(spec.arg, color)}`;
 }
 
+// --- algebraic (chess-style SAN) --------------------------------------------
+// Piece letter, chess-style disambiguation, `x` on capture, destination square,
+// `+`/`#` after. The letters are the WXF set (K A E H R C P) so a reader who
+// switches between WXF and algebraic meets one alphabet. Soldiers keep their
+// letter: chess drops the pawn's because a pawn's file names it, but a xiangqi
+// soldier that has crossed the river moves sideways, so `e5` alone would not
+// say what moved. Absolute squares, red's a1 bottom-left for both sides, which
+// is exactly the address a chess player already reads.
+
+const ALGEBRAIC_CHECK = '+';
+const ALGEBRAIC_MATE = '#';
+
+/**
+ * Format one move in chess-style algebraic against its pre-move state, or null
+ * when the move is not a legal standard move (the label needs the legal move
+ * set to disambiguate and the post-move board to mark check).
+ */
+export function formatXiangqiAlgebraicMove(
+  state: XiangqiGameState,
+  move: XiangqiMove,
+): string | null {
+  if (state.status.type !== 'playing') return null;
+  const color = state.status.turn;
+  const piece = state.board[move.from];
+  if (!piece || piece.color !== color) return null;
+  if (!isStandardXiangqiLegalMove(state, move)) return null;
+
+  const letter = WXF_ROLE_TO_LETTER[piece.role];
+  const capture = state.board[move.to] ? 'x' : '';
+
+  // Chess disambiguation: another piece of the same role can reach the square,
+  // so name the origin file if that settles it, else the rank, else the square.
+  const rivals = getStandardXiangqiLegalMoves(state).filter(
+    (other) =>
+      other.to === move.to &&
+      other.from !== move.from &&
+      state.board[other.from]?.role === piece.role,
+  );
+  let origin = '';
+  if (rivals.length > 0) {
+    const from = coordOf(move.from);
+    const sharesFile = rivals.some((other) => coordOf(other.from).file === from.file);
+    const sharesRank = rivals.some((other) => coordOf(other.from).rank === from.rank);
+    if (!sharesFile) origin = move.from[0]!;
+    else if (!sharesRank) origin = String(from.rank);
+    else origin = move.from;
+  }
+
+  const after = applyStandardXiangqiMove(state, move);
+  const opponent: XiangqiColor = color === 'red' ? 'black' : 'red';
+  let suffix = '';
+  if (after.status.type === 'finished' && after.status.reason === 'checkmate') {
+    suffix = ALGEBRAIC_MATE;
+  } else if (isStandardXiangqiGeneralInCheck(after, opponent)) {
+    suffix = ALGEBRAIC_CHECK;
+  }
+
+  return `${letter}${origin}${capture}${move.to}${suffix}`;
+}
+
 // --- public API --------------------------------------------------------------
 
 export function coordinateXiangqiLabel(move: XiangqiMove): string {
   return `${move.from}-${move.to}`;
+}
+
+/** The WXF/algebraic letter for a role: K A E H R C P. */
+export function xiangqiPieceLetter(role: XiangqiPieceRole): string {
+  return WXF_ROLE_TO_LETTER[role];
+}
+
+/**
+ * Label a move whose PRE-move board is gone but whose post-move board is at
+ * hand (a puzzle's mined setup move: the server ships the position after it).
+ * Algebraic gets the long form, piece letter plus both squares (`Ch3-e3`),
+ * since without the earlier board a capture cannot be told from a quiet move
+ * and the short form would claim one or the other. Relative styles need the
+ * earlier board outright, so every other style is the coordinate label.
+ */
+export function formatXiangqiMoveFromAfter(
+  after: XiangqiGameState,
+  move: XiangqiMove,
+  style: XiangqiNotationStyle,
+): string {
+  if (style === 'iccs') return xiangqiMoveToPikafishUci(move);
+  const piece = style === 'algebraic' ? after.board[move.to] : undefined;
+  return piece
+    ? `${xiangqiPieceLetter(piece.role)}${move.from}-${move.to}`
+    : coordinateXiangqiLabel(move);
 }
 
 /**
@@ -257,7 +346,8 @@ export function formatXiangqiRelativeMove(
   );
 }
 
-/** Format one move in any style; relative styles fall back to coordinate. */
+/** Format one move in any style; relative and algebraic styles fall back to
+ *  coordinate when the position cannot name the move. */
 export function formatXiangqiMove(
   state: XiangqiGameState,
   move: XiangqiMove,
@@ -268,6 +358,8 @@ export function formatXiangqiMove(
       return coordinateXiangqiLabel(move);
     case 'iccs':
       return xiangqiMoveToPikafishUci(move);
+    case 'algebraic':
+      return formatXiangqiAlgebraicMove(state, move) ?? coordinateXiangqiLabel(move);
     default:
       return formatXiangqiRelativeMove(state, move, style) ?? coordinateXiangqiLabel(move);
   }

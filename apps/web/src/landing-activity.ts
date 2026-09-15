@@ -1,9 +1,12 @@
 // Homepage activity stats: durable game totals from /api/stats/public are the
 // primary read because early live counts can legitimately sit at zero. Live
-// presence still hydrates as a smaller now-line below the archive links.
+// presence still hydrates as a smaller now-line below the archive links, but
+// only when it is nonzero: at Mistboard's liquidity "0 games in play" is true
+// most hours of the day and reads as "nobody is here" to a visitor deciding
+// whether to play. Absence is neutral; the 30-day count carries recency.
 // Either source can be missing (stats/public needs persistence; live-stats
 // needs the API up): rows render only for data we actually have, and the block
-// removes itself only in the rare case both fetches fail.
+// removes itself when nothing is left to show.
 
 import { t } from './i18n/catalog.js';
 
@@ -22,10 +25,9 @@ export function buildLandingActivity(options: { hydrate?: boolean } = {}): HTMLE
   box.setAttribute('aria-label', t('home.activityAria'));
   const body = document.createElement('div');
   body.className = 'landing-activity-body';
-  body.append(
-    activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]),
-    activityLiveLine([activityInlineStat('–', t('home.gamesInPlay'), CURRENT_GAMES_HREF)]),
-  );
+  // No live-line placeholder: it would flash before hydrate on the (common)
+  // zero case and then vanish.
+  body.append(activityPrimary([activityMetric('–', t('home.gamesPlayed'), '/stats')]));
   box.append(body);
   if (options.hydrate !== false) void hydrateLandingActivity(box, body);
   return box;
@@ -41,10 +43,6 @@ function gamesPlayedLabel(monthCount: number): string {
 
 async function hydrateLandingActivity(box: HTMLElement, body: HTMLElement): Promise<void> {
   const [live, totals] = await Promise.all([fetchLiveStats(), fetchPublicStats()]);
-  if (!live && !totals) {
-    box.remove();
-    return;
-  }
 
   const parts: HTMLElement[] = [];
   if (totals) {
@@ -59,7 +57,7 @@ async function hydrateLandingActivity(box: HTMLElement, body: HTMLElement): Prom
       ]),
     );
   }
-  if (live) {
+  if (live && live.playing > 0) {
     parts.push(
       activityLiveLine([
         activityInlineStat(
@@ -69,6 +67,10 @@ async function hydrateLandingActivity(box: HTMLElement, body: HTMLElement): Prom
         ),
       ]),
     );
+  }
+  if (parts.length === 0) {
+    box.remove();
+    return;
   }
   body.replaceChildren(...parts);
 }

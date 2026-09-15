@@ -1,9 +1,15 @@
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
   historicalXiangqiGameApiUrl,
   loadHistoricalXiangqiGame,
   mountHistoricalXiangqiPostgame,
 } from './historical-xiangqi-postgame.js';
+import { pinXiangqiNotation } from './xiangqi-notation.js';
+
+// These tests locate cells by from-to text; pin coordinate labels so the
+// reader's notation default (algebraic) does not become the subject.
+beforeEach(() => pinXiangqiNotation('coordinate'));
+afterEach(() => pinXiangqiNotation(null));
 
 describe('historical xiangqi review page', () => {
   afterEach(() => {

@@ -97,6 +97,11 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   // more than that (Duck Xiangqi: a piece move AND a duck placement) must pass
   // its own, or the TV list silently publishes half of each turn.
   moveLabel?(move: Record<string, unknown>): string;
+  // Position-aware labels for the whole timeline, one per move event in order,
+  // for a notation that names the piece (algebraic, WXF, Chinese) and so needs
+  // the board each move was played on. Wins over moveLabel for every ply it
+  // covers; the per-move label fills any it does not.
+  moveLabels?(postgame: Postgame): string[];
   // Drop/reserve variants (fortress) where the hand IS
   // the position: the compact showcase flanks the board with vertical reserve
   // strips (each side's hand) instead of top/bottom capture rows.
@@ -304,6 +309,7 @@ function seatCell(name: string): SeatCell {
 function buildTenantMoveEntries(
   postgame: WatchPostgameMeta,
   moveLabel?: (move: Record<string, unknown>) => string,
+  lineLabels: readonly string[] = [],
 ): MoveListEntry[] {
   const entries: MoveListEntry[] = [];
   for (const event of postgame.timeline ?? []) {
@@ -314,7 +320,9 @@ function buildTenantMoveEntries(
     if (!from && !to) continue;
     entries.push({
       ply: typeof event.ply === 'number' ? event.ply : entries.length + 1,
-      label: moveLabel ? moveLabel(move) : from && to ? `${from}-${to}` : to || from,
+      label:
+        lineLabels[entries.length] ??
+        (moveLabel ? moveLabel(move) : from && to ? `${from}-${to}` : to || from),
     });
   }
   return entries;
@@ -1038,7 +1046,13 @@ export async function mountTenantWatchReplay<
     // onPlyChange). The /watch move list + scrubber drive the board through it.
     jumpToPly: (ply: number) => manualJump(ply),
     moveEntries: () =>
-      activePostgame ? buildTenantMoveEntries(activePostgame, adapter.moveLabel) : [],
+      activePostgame
+        ? buildTenantMoveEntries(
+            activePostgame,
+            adapter.moveLabel,
+            adapter.moveLabels?.(activePostgame),
+          )
+        : [],
     // The clocks the players actually had, reconstructed from the move timestamps. A live
     // game projects the server clock to now (so polling this ticks it down at real speed);
     // a replay reports the ply's recorded value and does not move between plies. Null (no

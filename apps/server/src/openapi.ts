@@ -602,7 +602,14 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         summary: 'A player’s public profile',
         description:
           'Private profiles are 404. Signed-in viewers also get a `relation` field; anonymous callers get null.',
-        parameters: [pathParam('handle', 'The player’s handle.')],
+        parameters: [
+          pathParam('handle', 'The player’s handle.'),
+          query(
+            'tz',
+            { type: 'string' },
+            'IANA time zone the streak days are counted on (default UTC).',
+          ),
+        ],
         responses: {
           '200': OK({
             type: 'object',
@@ -613,6 +620,8 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                   user: { type: 'object' },
                   ratings: { type: 'array', items: { type: 'object' } },
                   puzzleRatings: { type: 'array', items: { type: 'object' } },
+                  playStreak: ref('PlayStreak'),
+                  puzzleStreak: ref('PlayStreak'),
                   games: { type: 'array', items: { type: 'object' } },
                   gamesTotal: { type: 'integer' },
                 },
@@ -625,6 +634,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         },
       },
     },
+
     '/api/users/{handle}/games': {
       get: {
         tags: ['Players'],
@@ -1190,6 +1200,19 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         Chapter: chapter,
         ExplorerMove: explorerMove,
         OEmbed: oembed,
+        PlayStreak: {
+          type: 'object',
+          properties: {
+            current: { type: 'integer', description: 'Days in the run that is still alive.' },
+            best: { type: 'integer', description: 'Longest run ever.' },
+            lastPlayedDay: {
+              type: 'string',
+              nullable: true,
+              description: 'YYYY-MM-DD of the last counted game on the requested calendar.',
+            },
+            today: { type: 'string', description: 'YYYY-MM-DD the streak was computed for.' },
+          },
+        },
       },
     },
   };

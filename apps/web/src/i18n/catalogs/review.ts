@@ -223,6 +223,33 @@ export const EN_REVIEW = {
   'broadcast.blackWins': 'Black wins',
   'broadcast.draw': 'Draw',
   'broadcast.colorWins': '{color} wins',
+  'broadcast.eventSections': 'Broadcast sections',
+  'broadcast.overview': 'Overview',
+  'broadcast.players': 'Players',
+  'broadcast.noRoundsYet': 'No rounds have been scheduled yet.',
+  'broadcast.roundNotStarted': 'This round has not started.',
+  'broadcast.noGamesYet':
+    'No game records yet. Records for this round arrive once the source publishes them, usually after play.',
+  'broadcast.checkSource': 'Check the source',
+  'broadcast.dates': 'Dates',
+  'broadcast.location': 'Location',
+  'broadcast.gameRecords': 'Game records',
+  'broadcast.schedule': 'Schedule',
+  'broadcast.shareByUrl': 'Share this broadcast by URL',
+  'broadcast.copy': 'Copy',
+  'broadcast.copied': 'Copied',
+  'broadcast.standingsNote':
+    'Standings are calculated from the broadcast games and may differ from the official results.',
+  'broadcast.loadingStandings': 'Loading standings',
+  'broadcast.player': 'Player',
+  'broadcast.games': 'Games',
+  'broadcast.winsDrawsLosses': 'W-D-L',
+  'broadcast.score': 'Score',
+  'broadcast.board': 'Board',
+  'broadcast.event': 'Event',
+  'broadcast.round': 'Round',
+  'broadcast.date': 'Date',
+  'broadcast.awaitingRecords': 'Awaiting records',
   // /practice, the shelf of engine-adjudicated exercise sets. The card titles
   // are NOT here: a card names a study, and a study carries its own per-locale
   // text (study-i18n.ts). These are the chrome around them, plus the section

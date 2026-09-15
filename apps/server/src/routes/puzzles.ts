@@ -23,7 +23,7 @@ import {
 } from '@mistboard/game';
 import { currentAccountUser } from '../account-session.js';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
-import { isPlayDisabled } from '../persistence.js';
+import { isPlayDisabled, isInitialized as persistenceInitialized } from '../persistence.js';
 import {
   isPuzzleQualitySessionId,
   type PuzzleQualityVote,
@@ -37,6 +37,7 @@ import {
   listPuzzleRatingSummaries,
   recordPuzzleAttempt,
 } from '../persistence-puzzle-ratings.js';
+import { getPuzzleStreak } from '../persistence-puzzle-streak.js';
 import {
   currentDailyPuzzleDay,
   getOrCreateDailyPuzzleSelection,
@@ -268,7 +269,16 @@ export async function tryHandle(
       }
     }
     const rating = await recordAttemptRating(request, puzzle, attempt, body.rated !== false);
-    writeJson(response, 200, { attempt, ...(rating ? { rating } : {}) });
+    // A completed solve answers with the solver's puzzle streak, read after the
+    // attempt row landed so today counts. Days follow the browser's calendar
+    // (`timeZone` in the body, play-streak.ts); anonymous solvers get none.
+    const streak =
+      attempt.ok && attempt.complete ? await solverPuzzleStreak(request, body.timeZone) : null;
+    writeJson(response, 200, {
+      attempt,
+      ...(rating ? { rating } : {}),
+      ...(streak ? { streak } : {}),
+    });
     return true;
   }
 
@@ -421,6 +431,21 @@ async function refusedForPlayLock(
   if (!isPlayDisabled(await currentAccountUser(request))) return false;
   writeJson(response, 403, { error: 'play_disabled' });
   return true;
+}
+
+// The signed-in solver's puzzle streak (current and best days), or null for a
+// guest. Read from puzzle_attempts, so it reflects the row the attempt route
+// just wrote.
+async function solverPuzzleStreak(
+  request: IncomingMessage,
+  timeZone: unknown,
+): Promise<{ current: number; best: number } | null> {
+  const user = await currentAccountUser(request);
+  if (!user || !persistenceInitialized()) return null;
+  const streak = await getPuzzleStreak(user.id, {
+    timeZone: typeof timeZone === 'string' ? timeZone : null,
+  });
+  return { current: streak.current, best: streak.best };
 }
 
 // Record + rate the outcome for a signed-in user, once per (user, puzzle). Anon

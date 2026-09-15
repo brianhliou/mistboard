@@ -9,6 +9,7 @@ import {
   type VariantId,
 } from '@mistboard/game';
 import type { Locale, LocaleResolution } from './i18n/locale.js';
+import { inferredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
 export type GameSpecAnalyticsProps = {
   game_spec: GameSpec['id'];
@@ -310,6 +311,10 @@ export function trackLocaleResolved(resolution: LocaleResolution): void {
     locale: resolution.locale,
     locale_source: resolution.source,
     browser_tag: resolution.browserTag,
+    // The piece set this visitor is defaulted to (locale, then country), so
+    // games started can be sliced by first-impression board without a
+    // per-browser storage read.
+    piece_set_default: inferredXiangqiPieceSet(resolution.locale),
   });
 }
 
@@ -320,4 +325,12 @@ export function trackLocaleResolved(resolution: LocaleResolution): void {
 // locale_resolved as the source of truth.
 export function trackLocaleChanged(from: Locale, to: Locale): void {
   track('locale_changed', { from_locale: from, to_locale: to });
+}
+
+// The xiangqi move-notation default (algebraic outside zh, Chinese inside) is
+// an opinion, not a measurement; this is the one signal that can correct it.
+// `from` is what the reader saw before clicking, default included, so a switch
+// away from the default is countable.
+export function trackNotationChanged(from: string, to: string, path: string): void {
+  track('notation_changed', { from_notation: from, to_notation: to, path });
 }

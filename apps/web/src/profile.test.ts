@@ -296,7 +296,10 @@ describe('profile ratings rail', () => {
 
     await mountProfile(root, 'dev-testing');
 
-    expect(fetchSpy).toHaveBeenCalledWith('/api/users/dev-testing/profile');
+    // The profile request carries the viewer's calendar for the play streak.
+    expect(fetchSpy).toHaveBeenCalledWith(
+      expect.stringMatching(/^\/api\/users\/dev-testing\/profile\?tz=[^&]+$/),
+    );
     expect(fetchSpy).toHaveBeenCalledWith(
       '/api/users/dev-testing/rating-history?variant=jungle_flip&timeClass=blitz',
     );

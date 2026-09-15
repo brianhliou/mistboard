@@ -1,3 +1,5 @@
+import { currentLocale, type Locale } from './i18n/locale.js';
+import { viewerCountry } from './viewer-geo.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
   XIANGQI_PIECE_SETS,
@@ -17,8 +19,21 @@ const defaultXiangqiBoardTheme: XiangqiBoardTheme = 'international';
 const defaultXiangqiBoardLayout: XiangqiBoardLayout = 'intersection';
 const xiangqiBoardStorageVersion = '4';
 const xiangqiBoardLayoutStorageVersion = '1';
-const xiangqiPieceSetStorageVersion = '3';
+const xiangqiPieceSetStorageVersion = '4';
 const defaultXiangqiPieceSet: XiangqiPieceSet = DEFAULT_XIANGQI_PIECE_SET;
+// Countries where a player expects hanzi on the pieces even when the browser
+// reports English. Physical sets sold in mainland China print the traditional
+// forms (車 馬 將 帥) too, so every Chinese-reading region gets the same set;
+// 'simplified' stays an opt-in. Vietnam plays with the same pieces (cờ tướng).
+const HANZI_PIECE_COUNTRIES: ReadonlySet<string> = new Set([
+  'CN',
+  'TW',
+  'HK',
+  'MO',
+  'SG',
+  'MY',
+  'VN',
+]);
 const xiangqiBoardThemes: ReadonlyArray<{ id: XiangqiBoardTheme; label: string }> = [
   { id: 'international', label: 'International' },
   { id: 'traditional', label: 'Traditional' },
@@ -88,6 +103,26 @@ export function writeStoredXiangqiBoardLayout(layout: XiangqiBoardLayout): void 
   }
 }
 
+// The piece set a browser gets before anyone picks one. Locale first (the
+// zh interface implies Chinese-reading pieces), then Cloudflare's country
+// cookie as the tiebreak for an English browser in a Chinese-reading region:
+// a lot of that traffic runs an en-US work laptop. Anything else keeps the
+// international art.
+export function inferredXiangqiPieceSet(
+  locale: Locale = currentLocale(),
+  country: string | null = viewerCountry(),
+): XiangqiPieceSet {
+  if (locale === 'zh-Hans' || locale === 'zh-Hant') return 'traditional';
+  if (country && HANZI_PIECE_COUNTRIES.has(country)) return 'traditional';
+  return defaultXiangqiPieceSet;
+}
+
+// An explicit pick is stored; no stored value means "follow the inference",
+// the same NULL semantics as the account locale column. The storage version
+// exists so a rollout can re-default browsers: v3 (the international rollout)
+// wrote 'international' into every browser whether or not anyone chose it, so
+// v4 clears exactly that value and keeps any other pick, which is the only
+// stored value that must have come from the settings panel.
 export function readStoredXiangqiPieceSet(): XiangqiPieceSet {
   try {
     // QA/share hook: preview a piece set without changing the browser's saved
@@ -99,12 +134,14 @@ export function readStoredXiangqiPieceSet(): XiangqiPieceSet {
     const version = window.localStorage.getItem(xiangqiPieceSetStorageVersionKey);
     if (version !== xiangqiPieceSetStorageVersion) {
       window.localStorage.setItem(xiangqiPieceSetStorageVersionKey, xiangqiPieceSetStorageVersion);
-      window.localStorage.setItem(xiangqiPieceSetStorageKey, defaultXiangqiPieceSet);
-      return defaultXiangqiPieceSet;
+      if (window.localStorage.getItem(xiangqiPieceSetStorageKey) === defaultXiangqiPieceSet) {
+        window.localStorage.removeItem(xiangqiPieceSetStorageKey);
+      }
     }
-    return normalizeXiangqiPieceSet(window.localStorage.getItem(xiangqiPieceSetStorageKey));
+    const stored = storedXiangqiPieceSet(window.localStorage.getItem(xiangqiPieceSetStorageKey));
+    return stored ?? inferredXiangqiPieceSet();
   } catch {
-    return defaultXiangqiPieceSet;
+    return inferredXiangqiPieceSet();
   }
 }
 
@@ -129,51 +166,86 @@ export function normalizeXiangqiBoardLayout(value: string | null): XiangqiBoardL
     : defaultXiangqiBoardLayout;
 }
 
-export function normalizeXiangqiPieceSet(value: string | null): XiangqiPieceSet {
+// A stored value that names a set (after the legacy animal ids), or null when
+// nothing usable is stored.
+function storedXiangqiPieceSet(value: string | null): XiangqiPieceSet | null {
   if (value === 'animal' || value === 'animal-seal' || value === 'animal-origami') {
     return 'animal-dobutsu';
   }
-  return XIANGQI_PIECE_SETS.some((set) => set.id === value)
-    ? (value as XiangqiPieceSet)
-    : defaultXiangqiPieceSet;
+  return XIANGQI_PIECE_SETS.some((set) => set.id === value) ? (value as XiangqiPieceSet) : null;
+}
+
+export function normalizeXiangqiPieceSet(value: string | null): XiangqiPieceSet {
+  return storedXiangqiPieceSet(value) ?? defaultXiangqiPieceSet;
 }
 
 // ── Move-notation display preference ────────────────────────────────────────
-// How xiangqi review/analysis move lists render moves. Display-only: nothing
-// stored or transmitted changes with it. 'chinese' resolves its script from
-// the locale at format time (zh-hant → traditional glyphs, else simplified).
+// How xiangqi move lists render moves, on every surface (live room, review,
+// analysis, study, puzzles, TV). Display-only: nothing stored or transmitted
+// changes with it. 'chinese' resolves its script from the locale at format
+// time (zh-hant → traditional glyphs, else simplified).
+//
+// The default follows the interface locale and is NOT written to storage: a
+// Chinese reader expects 炮二平五, everyone else gets chess-style algebraic
+// (Che3, Cxe7), the one form a chess player reads without a manual. WXF is
+// the tournament standard and what the export PGN carries, so it stays on
+// offer. Coordinates (h3-e3) and ICCS (h2e2) exist as formatter styles for
+// exports, fog xiangqi and embed links, but are not offered in the gear
+// (2026-09-13): coordinates are algebraic minus the piece, and ICCS is engine
+// plumbing nobody wants in a move list. A stored choice of either reads as
+// unset.
 
-export type XiangqiNotationPreference = 'coordinate' | 'chinese' | 'wxf' | 'iccs';
+export type XiangqiNotationPreference = 'algebraic' | 'chinese' | 'wxf';
 
 const xiangqiNotationStorageKey = 'mistboard.xiangqiNotation';
 const xiangqiNotationStorageVersionKey = 'mistboard.xiangqiNotationVersion';
-const xiangqiNotationStorageVersion = '1';
-const defaultXiangqiNotation: XiangqiNotationPreference = 'coordinate';
+// Version 1 wrote the 'coordinate' default into storage on first read, so a
+// stored 'coordinate' is what the site chose, not the reader. Under version 2
+// only an offered style counts as a choice; anything else reads as unset.
+const xiangqiNotationStorageVersion = '2';
 
 export const xiangqiNotationOptions: ReadonlyArray<{
   id: XiangqiNotationPreference;
   label: string;
   preview: string;
 }> = [
-  { id: 'coordinate', label: 'Coordinates', preview: 'h3-e3' },
+  { id: 'algebraic', label: 'Algebraic', preview: 'Cxe7' },
   { id: 'chinese', label: 'Chinese', preview: '炮二平五' },
   { id: 'wxf', label: 'WXF', preview: 'C2.5' },
-  { id: 'iccs', label: 'ICCS', preview: 'h2e2' },
 ];
 
-export function readStoredXiangqiNotation(): XiangqiNotationPreference {
+/** The notation a reader with no stored choice sees, by interface locale. */
+export function defaultXiangqiNotationForLocale(locale: string): XiangqiNotationPreference {
+  return locale.toLowerCase().startsWith('zh') ? 'chinese' : 'algebraic';
+}
+
+/**
+ * The stored choice, or the locale default when the reader has never picked
+ * one. `locale` is a parameter rather than an import so this module stays
+ * free of the i18n chunk; callers pass the current interface locale.
+ */
+export function readStoredXiangqiNotation(locale = 'en'): XiangqiNotationPreference {
+  const fallback = defaultXiangqiNotationForLocale(locale);
   try {
     const stored = window.localStorage.getItem(xiangqiNotationStorageKey);
     const version = window.localStorage.getItem(xiangqiNotationStorageVersionKey);
-    const normalized = normalizeXiangqiNotation(stored);
-    if (version !== xiangqiNotationStorageVersion || normalized !== stored) {
+    if (version !== xiangqiNotationStorageVersion) {
+      // The one migration: clear whatever an older version stored unless it
+      // is a style still on offer (see the version note above).
       window.localStorage.setItem(xiangqiNotationStorageVersionKey, xiangqiNotationStorageVersion);
-      window.localStorage.setItem(xiangqiNotationStorageKey, normalized);
+      if (!isXiangqiNotationPreference(stored))
+        window.localStorage.removeItem(xiangqiNotationStorageKey);
     }
-    return normalized;
+    return isXiangqiNotationPreference(stored) ? stored : fallback;
   } catch {
-    return defaultXiangqiNotation;
+    return fallback;
   }
+}
+
+export function isXiangqiNotationPreference(
+  value: string | null,
+): value is XiangqiNotationPreference {
+  return xiangqiNotationOptions.some((option) => option.id === value);
 }
 
 export function writeStoredXiangqiNotation(notation: XiangqiNotationPreference): void {
@@ -185,8 +257,9 @@ export function writeStoredXiangqiNotation(notation: XiangqiNotationPreference):
   }
 }
 
-export function normalizeXiangqiNotation(value: string | null): XiangqiNotationPreference {
-  return xiangqiNotationOptions.some((option) => option.id === value)
-    ? (value as XiangqiNotationPreference)
-    : defaultXiangqiNotation;
+export function normalizeXiangqiNotation(
+  value: string | null,
+  locale = 'en',
+): XiangqiNotationPreference {
+  return isXiangqiNotationPreference(value) ? value : defaultXiangqiNotationForLocale(locale);
 }

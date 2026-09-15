@@ -9,7 +9,12 @@ import type {
   XiangqiGameStatus,
   XiangqiMove,
 } from '@mistboard/game';
-import { broadcastRecordsCredit, xiangqiMoveToFsfUci } from '@mistboard/game';
+import {
+  broadcastRecordsCredit,
+  broadcastSourcePageHref,
+  formatXiangqiMoves,
+  xiangqiMoveToFsfUci,
+} from '@mistboard/game';
 import './live-xiangqi.css';
 import './xiangqi-broadcast.css';
 import { t } from './i18n/catalog.js';
@@ -18,6 +23,15 @@ import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
+import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
+import { broadcastStandings, formatStandingsScore } from './xiangqi-broadcast-standings.js';
+import {
+  formatEventDateRange,
+  formatEventDateTime,
+  formatEventDay,
+  formatEventOffset,
+} from './xiangqi-broadcast-time.js';
+import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
 
 type BroadcastMoveTimelineEntry = {
   type: 'move-played';
@@ -143,6 +157,10 @@ export async function mountXiangqiBroadcastIndex(root: HTMLElement): Promise<voi
   }
 }
 
+// The tour URL and a round URL are the same page (lichess: one event page with
+// a round selector and Boards / Overview / Players tabs). The tour URL is the
+// one an outside link points at, so it opens on the round a visitor most wants:
+// the live one, else the latest with games, else the first.
 export async function mountXiangqiBroadcastTour(
   root: HTMLElement,
   tourSlug: string,
@@ -152,9 +170,18 @@ export async function mountXiangqiBroadcastTour(
     const data = await fetchJson<BroadcastTourResponse>(
       `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}`,
     );
-    const paint = (): void => root.replaceChildren(buildNav(), renderTour(data));
-    paint();
-    installBroadcastAppearanceRefresh(paint);
+    const round = defaultRound(data.rounds);
+    if (!round) {
+      const paint = (): void =>
+        root.replaceChildren(
+          buildNav(),
+          renderEvent(eventWithoutRounds(data), undefined, { tab: 'overview' }),
+        );
+      paint();
+      installBroadcastAppearanceRefresh(paint);
+      return;
+    }
+    await mountRoundPage(root, tourSlug, round.id);
   } catch (err) {
     renderError(root, err);
   }
@@ -167,32 +194,100 @@ export async function mountXiangqiBroadcastRound(
 ): Promise<void> {
   setBroadcastRoot(root, t('broadcast.loadingRound'));
   try {
-    let data = await fetchJson<BroadcastRoundResponse>(
-      `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}/rounds/${encodeURIComponent(
-        roundId,
-      )}`,
-    );
-    // Every stream push repaints the whole round, and a card is expensive:
-    // boardCard replays its game from move one and builds a board SVG. Twenty
-    // boards is ~1,700 plies, so rebuilding all of them per push blocks the
-    // main thread for hundreds of milliseconds on exactly the rounds that push
-    // most. Cards survive across paints and only the changed ones are rebuilt.
-    const cards: BoardCardCache = new Map();
-    const paint = (): void => root.replaceChildren(buildNav(), renderRound(data, cards));
-    paint();
-    // A skin or layout change rewrites every board SVG, so no cached card
-    // survives it.
-    installBroadcastAppearanceRefresh(() => {
-      cards.clear();
-      paint();
-    });
-    connectRoundStream(tourSlug, roundId, roundVersion(data), (next) => {
-      data = next;
-      paint();
-    });
+    await mountRoundPage(root, tourSlug, roundId);
   } catch (err) {
     renderError(root, err);
   }
+}
+
+function defaultRound(rounds: BroadcastRoundWithStats[]): BroadcastRoundWithStats | null {
+  const live = rounds.find((round) => (round.liveBoardCount ?? 0) > 0);
+  if (live) return live;
+  const withBoards = rounds.filter((round) => (round.boardCount ?? 0) > 0);
+  return withBoards[withBoards.length - 1] ?? rounds[0] ?? null;
+}
+
+// A tour seeded with no rounds still gets the event page; the round-shaped
+// payload it renders from simply has nothing in it.
+function eventWithoutRounds(data: BroadcastTourResponse): BroadcastRoundResponse {
+  return {
+    tour: data.tour,
+    round: { schema: data.tour.schema, id: '', tourSlug: data.tour.slug, name: '' },
+    boards: [],
+    rounds: data.rounds,
+  };
+}
+
+type EventTab = 'boards' | 'overview' | 'players';
+
+function eventTabFromUrl(): EventTab {
+  const raw = new URLSearchParams(window.location.search).get('tab');
+  return raw === 'overview' || raw === 'players' ? raw : 'boards';
+}
+
+type EventPageState = {
+  tab: EventTab;
+  setTab?: (tab: EventTab) => void;
+  /** Every round's boards, for the standings; fetched once when the tab opens. */
+  standingsBoards?: BroadcastBoardSummary[] | null;
+  loadStandings?: () => void;
+};
+
+async function mountRoundPage(root: HTMLElement, tourSlug: string, roundId: string): Promise<void> {
+  let data = await fetchJson<BroadcastRoundResponse>(
+    `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}/rounds/${encodeURIComponent(roundId)}`,
+  );
+  // Every stream push repaints the whole round, and a card is expensive:
+  // boardCard replays its game from move one and builds a board SVG. Twenty
+  // boards is ~1,700 plies, so rebuilding all of them per push blocks the
+  // main thread for hundreds of milliseconds on exactly the rounds that push
+  // most. Cards survive across paints and only the changed ones are rebuilt.
+  const cards: BoardCardCache = new Map();
+  const state: EventPageState = { tab: eventTabFromUrl() };
+  state.setTab = (tab) => {
+    state.tab = tab;
+    const url = new URL(window.location.href);
+    if (tab === 'boards') url.searchParams.delete('tab');
+    else url.searchParams.set('tab', tab);
+    window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
+    if (tab === 'players') state.loadStandings?.();
+    paint();
+  };
+  // The standings need every round's games, and the round payload carries only
+  // its own, so the other rounds are fetched the first time the tab opens.
+  // `null` while loading; the current round's boards are always live data.
+  state.loadStandings = () => {
+    if (state.standingsBoards !== undefined) return;
+    state.standingsBoards = null;
+    const others = (data.rounds ?? []).filter((round) => round.id !== data.round.id);
+    Promise.all(
+      others.map((round) =>
+        fetchJson<BroadcastRoundResponse>(
+          `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}/rounds/${encodeURIComponent(
+            round.id,
+          )}`,
+        )
+          .then((response) => response.boards)
+          .catch(() => [] as BroadcastBoardSummary[]),
+      ),
+    ).then((rounds) => {
+      state.standingsBoards = rounds.flat();
+      paint();
+    });
+  };
+  const paint = (): void => root.replaceChildren(buildNav(), renderEvent(data, cards, state));
+  if (state.tab === 'players') state.loadStandings();
+  paint();
+  // A skin or layout change rewrites every board SVG, so no cached card
+  // survives it.
+  installBroadcastAppearanceRefresh(() => {
+    cards.clear();
+    paint();
+  });
+  connectRoundStream(tourSlug, roundId, roundVersion(data), (next) => {
+    data = next;
+    paint();
+  });
 }
 
 export async function mountXiangqiBroadcastBoard(
@@ -205,7 +300,17 @@ export async function mountXiangqiBroadcastBoard(
       `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}`,
     );
     const context = await fetchBoardRoundContext(data.board.tourSlug, data.board.roundId);
+    // A finished game is a game to study, so it gets the same review surface as
+    // an archive game (engine, chart, notation, share); a live one keeps the
+    // streaming replay, which follows the head as moves arrive.
     const paint = (animateHeadAdvance = false): void => {
+      if (data.board.status === 'complete') {
+        mountBroadcastBoardReview(root, data, {
+          rail: context ? sideRail(context, data.board.id, roundSwitcherFor(data, context)) : null,
+          context,
+        });
+        return;
+      }
       root.replaceChildren(buildNav(), renderBoardReplay(data, context, { animateHeadAdvance }));
     };
     paint();
@@ -317,6 +422,7 @@ function closeStreamOnPageExit(source: EventSource): void {
 }
 
 function installBroadcastAppearanceRefresh(paint: () => void): void {
+  window.addEventListener(xiangqiNotationChangedEvent, () => paint());
   window.addEventListener(xiangqiAppearanceChangedEvent, paint);
   window.addEventListener(
     'pagehide',
@@ -390,64 +496,394 @@ function tourZone(title: string, entries: BroadcastIndexEntry[], liveZone: boole
   return section;
 }
 
-function renderTour(data: BroadcastTourResponse): HTMLElement {
-  document.title = `${primaryName(data.tour)} · Mistboard`;
+// The event page: one hero for the tour, a round selector, and the three tabs
+// lichess gives a broadcast (Boards, Overview, Players). Boards is the default
+// because a visitor who lands here from a link wants to see games, and the old
+// tour page made them click into a round before it showed one.
+function renderEvent(
+  data: BroadcastRoundResponse,
+  cards: BoardCardCache | undefined,
+  state: EventPageState,
+): HTMLElement {
+  const hasRound = data.round.id !== '';
+  document.title = hasRound
+    ? `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`
+    : `${primaryName(data.tour)} · Mistboard`;
   const main = broadcastShell();
+  main.classList.add('xqb-event');
+  const rounds = data.rounds ?? [];
+  const liveCount = data.boards.filter((board) => board.status === 'live').length;
   main.append(
     heroSection({
       eyebrow: t('broadcast.eyebrow'),
       title: primaryName(data.tour),
       subtitle: secondaryName(data.tour),
-      href: data.tour.sourceUrl,
+      href: broadcastSourcePageHref(data.tour.sourceUrl),
       meta: [
         data.tour.location,
-        dateRange(data.tour.startsAt, data.tour.endsAt),
-        countLabel(data.rounds.length, 'round', 'rounds'),
+        formatEventDateRange(data.tour.startsAt, data.tour.endsAt),
+        countLabel(rounds.length, 'round', 'rounds'),
+        liveCount > 0 ? `${liveCount} live` : null,
       ].filter(Boolean) as string[],
+      switcher: hasRound ? roundSwitcher(data.tour.slug, rounds, data.round.id) : null,
     }),
   );
 
-  const section = document.createElement('section');
-  section.className = 'xqb-section';
-  const heading = document.createElement('h2');
-  heading.textContent = t('broadcast.rounds');
-  const list = document.createElement('div');
-  list.className = 'xqb-list';
-  for (const round of data.rounds) {
-    const row = document.createElement('a');
-    row.className = 'xqb-row xqb-round-row';
-    row.href = `/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}/round/${encodeURIComponent(
-      round.id,
-    )}`;
-
-    const phase = roundPhase(round);
-    const copy = document.createElement('span');
-    copy.className = 'xqb-row-copy';
-    const name = document.createElement('strong');
-    name.textContent = primaryName(round);
-    const meta = document.createElement('span');
-    meta.textContent = [
-      formatDate(round.startsAt),
-      round.boardCount !== undefined ? countLabel(round.boardCount, 'board', 'boards') : null,
-      roundPhaseLabel(phase),
-    ]
-      .filter(Boolean)
-      .join(' / ');
-    copy.append(name);
-    const roundZh = zhSubline(secondaryName(round));
-    if (roundZh) copy.append(roundZh);
-    copy.append(meta);
-    row.append(roundIcon(phase), copy, chevron());
-    list.append(row);
+  const tab = state.tab ?? 'boards';
+  const tabs = document.createElement('nav');
+  tabs.className = 'xqb-tabs';
+  tabs.setAttribute('aria-label', t('broadcast.eventSections'));
+  const tabDefs: Array<{ id: EventTab; label: string }> = [
+    { id: 'boards', label: t('broadcast.boards') },
+    { id: 'overview', label: t('broadcast.overview') },
+    { id: 'players', label: t('broadcast.players') },
+  ];
+  for (const def of tabDefs) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = def.id === tab ? 'xqb-tab xqb-tab-active' : 'xqb-tab';
+    button.textContent = def.label;
+    button.setAttribute('aria-selected', def.id === tab ? 'true' : 'false');
+    button.addEventListener('click', () => state.setTab?.(def.id));
+    tabs.append(button);
   }
-  section.append(heading, list);
-  main.append(section);
-  // The tour page is the one an outside link points at, and it was the only
-  // broadcast page that credited nobody: the round pages derive the credit from
-  // their own boards, and a tour payload has none.
-  const credit = creditLineFrom(data.recordsSource);
-  if (credit) main.append(credit);
+
+  const layout = document.createElement('div');
+  layout.className = 'xqb-event-layout';
+  const content = document.createElement('section');
+  content.className = 'xqb-section xqb-event-content';
+  content.append(tabs);
+  if (tab === 'overview') content.append(renderOverviewTab(data));
+  else if (tab === 'players') content.append(renderPlayersTab(data, state));
+  else content.append(renderBoardsTab(data, cards));
+  layout.append(content);
+  // The round's pairings, lichess's left column: scan the round without the
+  // thumbnails, and jump straight to a board from any tab.
+  const rail = hasRound ? sideRail(data, '') : null;
+  if (rail) {
+    layout.classList.add('xqb-event-layout-with-rail');
+    layout.append(rail);
+  }
+  main.append(layout);
   return main;
+}
+
+function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'xqb-tab-panel';
+  if (data.round.id === '') {
+    wrap.append(emptyState(t('broadcast.noRoundsYet')));
+    return wrap;
+  }
+  const liveCount = data.boards.filter((board) => board.status === 'live').length;
+  const heading = document.createElement('h2');
+  heading.className = 'xqb-round-heading';
+  heading.textContent = primaryName(data.round);
+  const roundZh = zhSubline(secondaryName(data.round));
+  const meta = document.createElement('p');
+  meta.className = 'xqb-round-meta';
+  meta.textContent = [
+    formatEventDateTime(data.round.startsAt),
+    countLabel(data.boards.length, 'board', 'boards'),
+    liveCount > 0 ? `${liveCount} live` : null,
+  ]
+    .filter(Boolean)
+    .join(' / ');
+  wrap.append(heading);
+  if (roundZh) wrap.append(roundZh);
+  wrap.append(meta);
+
+  if (data.boards.length === 0) {
+    // Records for a dpxq-relayed round arrive when the operator uploads them,
+    // which is after the round and on no fixed delay; say so rather than show
+    // a bare zero, and point at where they will come from.
+    const empty = emptyState(
+      roundPhase(roundStatsFor(data)) === 'upcoming' && !roundHasStarted(data.round)
+        ? t('broadcast.roundNotStarted')
+        : t('broadcast.noGamesYet'),
+    );
+    const source = broadcastSourcePageHref(data.round.sourceUrl ?? data.tour.sourceUrl);
+    if (source) {
+      const link = document.createElement('a');
+      link.className = 'xqb-link';
+      link.href = source;
+      link.rel = 'noreferrer';
+      link.textContent = t('broadcast.checkSource');
+      empty.append(link);
+    }
+    wrap.append(empty);
+    return wrap;
+  }
+
+  // Only once the round is over: while it is running, freshness is the more
+  // useful thing in that slot and the round date is the same on every card.
+  const roundPlayedOn = data.boards.every((board) => board.status !== 'live')
+    ? formatEventDay(data.round.startsAt)
+    : null;
+  const grid = document.createElement('div');
+  grid.className = 'xqb-board-grid';
+  // Live boards lead the grid; within a status band the pairing order holds.
+  const boards = [...data.boards].sort(
+    (a, b) =>
+      Number(a.status !== 'live') - Number(b.status !== 'live') || a.boardNumber - b.boardNumber,
+  );
+  for (const board of boards) {
+    grid.append(boardCardFor(board, cards, roundPlayedOn));
+  }
+  // Boards that left the round entirely must not pin their cards in memory.
+  if (cards) {
+    const live = new Set(boards.map((board) => board.id));
+    for (const id of [...cards.keys()]) if (!live.has(id)) cards.delete(id);
+  }
+  wrap.append(grid);
+  const credit = recordsCreditLine(data.boards);
+  if (credit) wrap.append(credit);
+  return wrap;
+}
+
+function roundStatsFor(data: BroadcastRoundResponse): Partial<BroadcastRoundStats> {
+  return {
+    boardCount: data.boards.length,
+    liveBoardCount: data.boards.filter((board) => board.status === 'live').length,
+    completeBoardCount: data.boards.filter((board) => board.status === 'complete').length,
+    scheduledBoardCount: data.boards.filter((board) => board.status === 'scheduled').length,
+  };
+}
+
+function roundHasStarted(round: XiangqiBroadcastRound): boolean {
+  if (!round.startsAt) return false;
+  const at = new Date(round.startsAt).getTime();
+  return Number.isFinite(at) && at <= Date.now();
+}
+
+function emptyState(text: string): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'xqb-empty';
+  const copy = document.createElement('p');
+  copy.textContent = text;
+  box.append(copy);
+  return box;
+}
+
+// Overview: the facts lichess puts in its header strip (dates, venue, format,
+// source) plus the schedule, which is where the old tour page's round list
+// went. The share block is the tour URL and the round URL, copyable.
+function renderOverviewTab(data: BroadcastRoundResponse): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'xqb-tab-panel';
+  const facts = document.createElement('dl');
+  facts.className = 'xqb-facts';
+  const clock = formatEventOffset(data.round.startsAt ?? data.tour.startsAt);
+  addFact(
+    facts,
+    t('broadcast.dates'),
+    [formatEventDateRange(data.tour.startsAt, data.tour.endsAt), clock ? `(${clock})` : null]
+      .filter(Boolean)
+      .join(' '),
+  );
+  addFact(facts, t('broadcast.location'), data.tour.location ?? null);
+  const rounds = data.rounds ?? [];
+  addFact(facts, t('broadcast.rounds'), rounds.length > 0 ? String(rounds.length) : null);
+  const source = broadcastSourcePageHref(data.tour.sourceUrl);
+  if (source) {
+    const link = document.createElement('a');
+    link.href = source;
+    link.rel = 'noreferrer';
+    link.textContent = sourceHost(source) ?? source;
+    addFact(facts, t('broadcast.source'), link);
+  }
+  const credit = broadcastRecordsCredit(data.boards);
+  if (credit) {
+    const link = document.createElement('a');
+    link.href = credit.href;
+    link.rel = 'noreferrer';
+    link.textContent = credit.host;
+    addFact(facts, t('broadcast.gameRecords'), link);
+  }
+  wrap.append(facts);
+
+  if (rounds.length > 0) {
+    const heading = document.createElement('h2');
+    heading.textContent = t('broadcast.schedule');
+    const list = document.createElement('div');
+    list.className = 'xqb-list';
+    for (const round of rounds) {
+      const row = document.createElement('a');
+      row.className =
+        round.id === data.round.id
+          ? 'xqb-row xqb-round-row xqb-row-current'
+          : 'xqb-row xqb-round-row';
+      row.href = `/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}/round/${encodeURIComponent(
+        round.id,
+      )}`;
+      const phase = roundPhase(round);
+      const copy = document.createElement('span');
+      copy.className = 'xqb-row-copy';
+      const name = document.createElement('strong');
+      name.textContent = primaryName(round);
+      const meta = document.createElement('span');
+      meta.textContent = [
+        formatEventDateTime(round.startsAt),
+        round.boardCount !== undefined ? countLabel(round.boardCount, 'board', 'boards') : null,
+        // A past round with no boards is not upcoming; its records have not
+        // been published yet, which is the normal state of a dpxq relay.
+        phase === 'upcoming' && roundHasStarted(round)
+          ? t('broadcast.awaitingRecords')
+          : roundPhaseLabel(phase),
+      ]
+        .filter(Boolean)
+        .join(' / ');
+      copy.append(name);
+      const roundZh = zhSubline(secondaryName(round));
+      if (roundZh) copy.append(roundZh);
+      copy.append(meta);
+      row.append(roundIcon(phase), copy, chevron());
+      list.append(row);
+    }
+    wrap.append(heading, list);
+  }
+
+  const share = document.createElement('div');
+  share.className = 'xqb-share';
+  const shareHeading = document.createElement('h2');
+  shareHeading.textContent = t('broadcast.shareByUrl');
+  share.append(shareHeading);
+  const origin = window.location.origin;
+  share.append(
+    shareRow(
+      primaryName(data.tour),
+      `${origin}/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`,
+    ),
+  );
+  if (data.round.id !== '') {
+    share.append(
+      shareRow(
+        `${primaryName(data.tour)} | ${primaryName(data.round)}`,
+        `${origin}/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}/round/${encodeURIComponent(
+          data.round.id,
+        )}`,
+      ),
+    );
+  }
+  wrap.append(share);
+  return wrap;
+}
+
+function addFact(list: HTMLElement, label: string, value: string | HTMLElement | null): void {
+  if (!value) return;
+  const dt = document.createElement('dt');
+  dt.textContent = label;
+  const dd = document.createElement('dd');
+  if (typeof value === 'string') dd.textContent = value;
+  else dd.append(value);
+  list.append(dt, dd);
+}
+
+function sourceHost(href: string): string | null {
+  try {
+    return new URL(href).host.replace(/^www\./, '');
+  } catch {
+    return null;
+  }
+}
+
+function shareRow(label: string, url: string): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'xqb-share-row';
+  const name = document.createElement('span');
+  name.className = 'xqb-share-label';
+  name.textContent = label;
+  const field = document.createElement('input');
+  field.type = 'text';
+  field.readOnly = true;
+  field.value = url;
+  field.className = 'xqb-share-url';
+  field.setAttribute('aria-label', label);
+  field.addEventListener('focus', () => field.select());
+  const copy = document.createElement('button');
+  copy.type = 'button';
+  copy.className = 'xqb-share-copy';
+  copy.textContent = t('broadcast.copy');
+  copy.addEventListener('click', () => {
+    void navigator.clipboard?.writeText(url).then(() => {
+      copy.textContent = t('broadcast.copied');
+      window.setTimeout(() => {
+        copy.textContent = t('broadcast.copy');
+      }, 1500);
+    });
+  });
+  row.append(name, field, copy);
+  return row;
+}
+
+// Players: standings from the broadcast games, the way lichess computes its
+// Players tab, with the same caveat that they may differ from the official
+// table. The current round's boards are live data; the rest were fetched once.
+function renderPlayersTab(data: BroadcastRoundResponse, state: EventPageState): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'xqb-tab-panel';
+  const note = document.createElement('p');
+  note.className = 'xqb-note';
+  note.textContent = t('broadcast.standingsNote');
+  wrap.append(note);
+  if (state.standingsBoards === null) {
+    wrap.append(emptyState(t('broadcast.loadingStandings')));
+    return wrap;
+  }
+  const rows = broadcastStandings([...(state.standingsBoards ?? []), ...data.boards]);
+  if (rows.length === 0) {
+    wrap.append(emptyState(t('broadcast.noGamesYet')));
+    return wrap;
+  }
+  const table = document.createElement('table');
+  table.className = 'xqb-standings';
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (const label of [
+    '#',
+    t('broadcast.player'),
+    t('broadcast.games'),
+    t('broadcast.winsDrawsLosses'),
+    t('broadcast.score'),
+  ]) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.append(th);
+  }
+  head.append(headRow);
+  const body = document.createElement('tbody');
+  rows.forEach((row, index) => {
+    const tr = document.createElement('tr');
+    const rank = document.createElement('td');
+    rank.className = 'xqb-standings-rank';
+    rank.textContent = String(index + 1);
+    const player = document.createElement('td');
+    player.className = 'xqb-standings-player';
+    const name = document.createElement('strong');
+    name.textContent = `${row.player.title ? `${row.player.title} ` : ''}${primaryName(row.player)}`;
+    player.append(name);
+    const zh = playerNameZh(row.player);
+    const team = primaryFederation(row.player);
+    const sub = [zh, team].filter(Boolean).join(' · ');
+    if (sub) {
+      const subline = document.createElement('span');
+      subline.className = 'xqb-standings-sub';
+      subline.textContent = sub;
+      player.append(subline);
+    }
+    const games = document.createElement('td');
+    games.textContent = String(row.games);
+    const wdl = document.createElement('td');
+    wdl.textContent = `${row.wins}-${row.draws}-${row.losses}`;
+    const score = document.createElement('td');
+    score.className = 'xqb-standings-score';
+    score.textContent = formatStandingsScore(row.score);
+    tr.append(rank, player, games, wdl, score);
+    body.append(tr);
+  });
+  table.append(head, body);
+  wrap.append(table);
+  return wrap;
 }
 
 type RoundPhase = 'live' | 'finished' | 'upcoming';
@@ -568,60 +1004,6 @@ function creditLineFrom(
   const [before, after] = t('broadcast.recordsFrom').split('{source}');
   line.append(document.createTextNode(before ?? ''), link, document.createTextNode(after ?? ''));
   return line;
-}
-
-function renderRound(data: BroadcastRoundResponse, cards?: BoardCardCache): HTMLElement {
-  document.title = `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`;
-  const main = broadcastShell();
-  const liveCount = data.boards.filter((board) => board.status === 'live').length;
-  main.append(
-    heroSection({
-      eyebrow: primaryName(data.tour),
-      title: primaryName(data.round),
-      subtitle: secondaryName(data.round),
-      href: data.round.sourceUrl ?? data.tour.sourceUrl,
-      meta: [
-        formatDate(data.round.startsAt),
-        countLabel(data.boards.length, 'board', 'boards'),
-        liveCount > 0 ? `${liveCount} live` : null,
-      ].filter(Boolean) as string[],
-      backHref: `/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}`,
-      backLabel: t('broadcast.backToTournament'),
-      switcher: roundSwitcher(data.tour.slug, data.rounds ?? [], data.round.id),
-    }),
-  );
-
-  // Only once the round is over: while it is running, freshness is the more
-  // useful thing in that slot and the round date is the same on every card.
-  const roundPlayedOn =
-    data.boards.length > 0 && data.boards.every((board) => board.status !== 'live')
-      ? formatCardDate(data.round.startsAt)
-      : null;
-
-  const section = document.createElement('section');
-  section.className = 'xqb-section';
-  const heading = document.createElement('h2');
-  heading.textContent = t('broadcast.boards');
-  const grid = document.createElement('div');
-  grid.className = 'xqb-board-grid';
-  // Live boards lead the grid; within a status band the pairing order holds.
-  const boards = [...data.boards].sort(
-    (a, b) =>
-      Number(a.status !== 'live') - Number(b.status !== 'live') || a.boardNumber - b.boardNumber,
-  );
-  for (const board of boards) {
-    grid.append(boardCardFor(board, cards, roundPlayedOn));
-  }
-  // Boards that left the round entirely must not pin their cards in memory.
-  if (cards) {
-    const live = new Set(boards.map((board) => board.id));
-    for (const id of [...cards.keys()]) if (!live.has(id)) cards.delete(id);
-  }
-  section.append(heading, grid);
-  const credit = recordsCreditLine(data.boards);
-  if (credit) section.append(credit);
-  main.append(section);
-  return main;
 }
 
 function renderBoardReplay(
@@ -854,7 +1236,7 @@ function tourCard(entry: BroadcastIndexEntry): HTMLElement {
   copy.append(name);
   const tourZh = zhSubline(secondaryName(entry.tour));
   if (tourZh) copy.append(tourZh);
-  const place = [entry.tour.location, dateRange(entry.tour.startsAt, entry.tour.endsAt)]
+  const place = [entry.tour.location, formatEventDateRange(entry.tour.startsAt, entry.tour.endsAt)]
     .filter(Boolean)
     .join(' / ');
   if (place) {
@@ -984,13 +1366,30 @@ function cardPlayer(
 // highlighted, so users hop between games without going back to the round
 // page. Rebuilt from the mount-time round context on each render, so it is
 // idempotent across SSE re-renders.
-function sideRail(context: BroadcastRoundResponse, currentBoardId: string): HTMLElement | null {
+// The round's pairings as a list: the board page's left column, and the event
+// page's. An empty currentBoardId highlights nothing. The optional header slot
+// takes the round switcher on the board page, where the review shell owns the
+// rest of the chrome and the rail is the only way back to the round.
+function sideRail(
+  context: BroadcastRoundResponse,
+  currentBoardId: string,
+  header?: HTMLElement | null,
+): HTMLElement | null {
   const boards = [...context.boards].sort((a, b) => a.boardNumber - b.boardNumber);
   if (boards.length === 0) return null;
   const rail = document.createElement('aside');
   rail.className = 'xqb-side-rail';
   const heading = document.createElement('h2');
-  heading.textContent = primaryName(context.round);
+  if (header) {
+    heading.append(header);
+  } else {
+    const back = document.createElement('a');
+    back.href = `/broadcast/xiangqi/${encodeURIComponent(
+      context.tour.slug,
+    )}/round/${encodeURIComponent(context.round.id)}`;
+    back.textContent = primaryName(context.round);
+    heading.append(back);
+  }
   const list = document.createElement('div');
   list.className = 'xqb-rail-list';
   let currentRow: HTMLElement | null = null;
@@ -1016,6 +1415,13 @@ function sideRail(context: BroadcastRoundResponse, currentBoardId: string): HTML
   rail.append(heading, list);
   scheduleRailScroll(list, currentRow);
   return rail;
+}
+
+function roundSwitcherFor(
+  data: BroadcastBoardResponse,
+  context: BroadcastRoundResponse,
+): HTMLElement | null {
+  return roundSwitcher(data.board.tourSlug, context.rounds ?? [], data.board.roundId);
 }
 
 function railMarker(board: Pick<BroadcastBoardSummary, 'status' | 'result'>): string {
@@ -1060,6 +1466,17 @@ function renderMoveButtons(
   onSelect: (ply: number) => void,
 ): HTMLButtonElement[] {
   const byPly = new Map(timeline.map((entry) => [entry.ply, entry]));
+  // The reader's notation preference (coordinate / WXF / Chinese), the same
+  // one the review and study boards honour; raw `c4-c5` was the only spelling
+  // this list knew. Formatted by replaying the line, so an entry whose move is
+  // illegal at its turn falls back to coordinates from there on.
+  const ordered = [...timeline].sort((a, b) => a.ply - b.ply);
+  const labels = new Map(
+    formatXiangqiMoves(
+      ordered.map((entry) => entry.move),
+      currentXiangqiNotationStyle(),
+    ).map((label, index) => [ordered[index]!.ply, label]),
+  );
   const buttons: HTMLButtonElement[] = [];
   const moveCount = Math.ceil(timeline.length / 2);
   for (let moveNumber = 1; moveNumber <= moveCount; moveNumber++) {
@@ -1079,7 +1496,7 @@ function renderMoveButtons(
       button.type = 'button';
       button.className = `xqb-move xqb-move-${entry.color}`;
       button.dataset.ply = String(entry.ply);
-      button.textContent = moveLabel(entry.move);
+      button.textContent = labels.get(entry.ply) ?? moveLabel(entry.move);
       button.addEventListener('click', () => onSelect(entry.ply));
       buttons.push(button);
       container.append(button);
@@ -1264,41 +1681,6 @@ function plyCount(board: BroadcastBoardSummary): number {
 
 function moveLabel(move: XiangqiMove): string {
   return `${move.from}-${move.to}`;
-}
-
-function dateRange(startsAt: string | undefined, endsAt: string | undefined): string | null {
-  const start = formatDate(startsAt);
-  const end = formatDate(endsAt);
-  if (start && end && start !== end) return `${start} to ${end}`;
-  return start ?? end;
-}
-
-/** A card footer wants "Aug 16", not "Aug 16, 2026, 6:00 PM". The hero uses the
- *  full form because it is stating the schedule; a card is stamping twenty
- *  boards with the same day, so the time carries nothing and the year only
- *  earns its place outside the current one. */
-function formatCardDate(value: string | undefined): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return null;
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    ...(date.getFullYear() === new Date().getFullYear() ? {} : { year: 'numeric' }),
-  }).format(date);
-}
-
-function formatDate(value: string | undefined): string | null {
-  if (!value) return null;
-  const date = new Date(value);
-  if (Number.isNaN(date.getTime())) return value;
-  return new Intl.DateTimeFormat(undefined, {
-    month: 'short',
-    day: 'numeric',
-    year: 'numeric',
-    hour: value.includes('T') ? 'numeric' : undefined,
-    minute: value.includes('T') ? '2-digit' : undefined,
-  }).format(date);
 }
 
 function initialPlyFromUrl(): number {

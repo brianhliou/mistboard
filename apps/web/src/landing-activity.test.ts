@@ -8,17 +8,10 @@ describe('landing activity', () => {
   });
 
   it('condenses durable totals into one line with the month count in parentheses', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-        if (url === '/api/stats/public') {
-          return jsonResponse({ totalCompletedGames: 575, last30dCompletedGames: 261 });
-        }
-        return jsonResponse({}, { status: 404 });
-      }),
-    );
+    stubFetch({
+      '/api/live-stats': { playing: 3, online: 5 },
+      '/api/stats/public': { totalCompletedGames: 575, last30dCompletedGames: 261 },
+    });
 
     const activity = buildLandingActivity();
     document.body.append(activity);
@@ -36,7 +29,7 @@ describe('landing activity', () => {
     );
     // Players-online is dropped; only games-in-play remains on the live line,
     // and it links to the current-games page (the set it counts).
-    expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('0 games in play');
+    expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('3 games in play');
     expect(
       activity
         .querySelector<HTMLAnchorElement>('.landing-activity-live a.landing-activity-inline-stat')
@@ -44,28 +37,91 @@ describe('landing activity', () => {
     ).toBe('/games');
   });
 
-  it('keeps live-only zeros in the secondary line when durable totals are unavailable', async () => {
-    vi.stubGlobal(
-      'fetch',
-      vi.fn(async (input: RequestInfo | URL) => {
-        const url = String(input);
-        if (url === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-        if (url === '/api/stats/public') return jsonResponse({}, { status: 503 });
-        return jsonResponse({}, { status: 404 });
-      }),
-    );
+  it('singularises one game in play', async () => {
+    stubFetch({
+      '/api/live-stats': { playing: 1, online: 2 },
+      '/api/stats/public': { totalCompletedGames: 575, last30dCompletedGames: 261 },
+    });
 
     const activity = buildLandingActivity();
     document.body.append(activity);
 
     await vi.waitFor(() => {
-      expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('0 games in play');
+      expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('1 game in play');
+    });
+  });
+
+  it('omits the live line entirely at zero games in play', async () => {
+    stubFetch({
+      '/api/live-stats': { playing: 0, online: 1 },
+      '/api/stats/public': { totalCompletedGames: 575, last30dCompletedGames: 261 },
+    });
+
+    const activity = buildLandingActivity();
+    document.body.append(activity);
+
+    await vi.waitFor(() => {
+      expect(activity.querySelector('.landing-activity-value')?.textContent).toBe('575');
+    });
+
+    // A zero reads as "nobody is here"; absence is neutral. The durable
+    // totals still render and the block stays.
+    expect(activity.querySelector('.landing-activity-live')).toBeNull();
+    expect(activity.isConnected).toBe(true);
+  });
+
+  it('never shows a live-line placeholder before hydrate', () => {
+    const activity = buildLandingActivity({ hydrate: false });
+    expect(activity.querySelector('.landing-activity-live')).toBeNull();
+    expect(activity.querySelector('.landing-activity-value')?.textContent).toBe('–');
+  });
+
+  it('keeps a nonzero live line when durable totals are unavailable', async () => {
+    stubFetch({
+      '/api/live-stats': { playing: 2, online: 4 },
+      '/api/stats/public': { status: 503 },
+    });
+
+    const activity = buildLandingActivity();
+    document.body.append(activity);
+
+    await vi.waitFor(() => {
+      expect(activity.querySelector('.landing-activity-live')?.textContent).toBe('2 games in play');
     });
 
     expect(activity.querySelector('.landing-activity-primary')).toBeNull();
     expect(activity.querySelector('.landing-activity-value')).toBeNull();
   });
+
+  it('removes the block when totals are unavailable and nothing is in play', async () => {
+    stubFetch({
+      '/api/live-stats': { playing: 0, online: 0 },
+      '/api/stats/public': { status: 503 },
+    });
+
+    const activity = buildLandingActivity();
+    document.body.append(activity);
+
+    await vi.waitFor(() => {
+      expect(activity.isConnected).toBe(false);
+    });
+  });
 });
+
+// A route value of `{ status: N }` answers with that status and an empty body;
+// anything else is served as JSON. Responses are built per call because a body
+// can only be read once.
+function stubFetch(routes: Record<string, Record<string, unknown>>): void {
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async (input: RequestInfo | URL) => {
+      const route = routes[String(input)];
+      if (!route) return jsonResponse({}, { status: 404 });
+      if (typeof route.status === 'number') return jsonResponse({}, { status: route.status });
+      return jsonResponse(route);
+    }),
+  );
+}
 
 function jsonResponse(body: unknown, init: ResponseInit = {}): Response {
   return new Response(JSON.stringify(body), {

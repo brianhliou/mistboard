@@ -74,6 +74,7 @@ export const ZH_HANT_ACCOUNT = {
   'account.notificationFollowers': '新粉絲',
   'account.notificationCorrespondenceDeadline': '通信棋截止時間提醒',
   'account.notificationCorrespondenceStart': '通信棋對局開始',
+  'account.notificationCorrespondenceDigest': '每日彙總：等你走棋的對局',
   'account.preferenceSaved': '偏好已儲存。',
   'account.settingsUsername': '變更使用者名稱',
   'account.settingsUsernameCopy': '使用者名稱會公開顯示，並用來識別你的個人資料。',
@@ -201,7 +202,6 @@ export const ZH_HANT_ACCOUNT = {
   'account.displayPieceDestinations': '落子提示（合法著法與預走）',
   'account.displayBoardCoordinates': '棋盤座標（A-H，1-8）',
   'account.displayMoveListWhilePlaying': '對局中顯示著法列表',
-  'account.displayMoveNotation': '著法記譜',
   'account.displayZenMode': '禪模式',
   'account.displayBoardResizeHandle': '顯示棋盤縮放控點',
   'account.displayPlayerRatings': '顯示玩家評分',
@@ -212,7 +212,4 @@ export const ZH_HANT_ACCOUNT = {
   'account.displayOption.pieceAnimation.fast': '快',
   'account.displayOption.pieceAnimation.normal': '正常',
   'account.displayOption.pieceAnimation.slow': '慢',
-  'account.displayOption.moveNotation.symbols': '符號',
-  'account.displayOption.moveNotation.letters': '字母',
-  'account.displayOption.moveNotation.coordinates': '座標',
 } satisfies Partial<Record<AccountI18nKey, string>>;

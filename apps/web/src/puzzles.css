@@ -869,6 +869,15 @@
   line-height: 1.1;
 }
 
+/* Streak line under the Success heading; the grid's implicit auto row. */
+.puzzle-solved-streak {
+  margin: -6px 0 0;
+  padding: 0 24px 12px;
+  color: var(--site-muted);
+  font-size: 13px;
+  line-height: 1.3;
+}
+
 /* Prominent primary CTA in Mistboard's own accent (lichess-style bar). */
 .puzzle-continue-button {
   display: flex;

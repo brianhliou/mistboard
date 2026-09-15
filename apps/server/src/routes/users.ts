@@ -30,7 +30,10 @@ export async function tryHandle(
       return true;
     }
     const viewer = await currentAccountUser(request);
-    const profile = await persistence.getUserProfileByHandle(handle, viewer?.id ?? null);
+    const profile = await persistence.getUserProfileByHandle(handle, viewer?.id ?? null, {
+      // Play-streak days are bucketed on the viewer's calendar (play-streak.ts).
+      timeZone: parsedUrl.searchParams.get('tz'),
+    });
     if (!profile) {
       writeJson(response, 404, { error: 'not_found' });
       return true;

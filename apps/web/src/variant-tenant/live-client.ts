@@ -158,6 +158,15 @@ export type TenantMoveListConfig<C extends string, M> = {
    */
   plyWindow?: 'visible' | 'all';
   notate(move: M): string;
+  /**
+   * OPTIONAL position-aware labels for a whole line, in ply order from the
+   * opening. A notation that names the piece (algebraic, WXF, Chinese) needs
+   * the board the move was played on, which `notate` never sees; a tenant
+   * that replays its own kernel supplies this and the core uses it for every
+   * ply it covers, falling back to `notate` for any it does not. Perfect
+   * information tenants only: a fog client holds no true line to replay.
+   */
+  notateLine?(moves: readonly M[]): string[];
   isMoveEvent(event: TenantLiveEvent): event is TenantMovePlayed<C, M>;
   /** Optional banner row above the list (e.g. the parachute bounce note). */
   banner?(): { className: string; text: string } | null;
@@ -761,12 +770,15 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     for (let fullMove = 1; fullMove <= Math.ceil(plyCount / 2); fullMove += 1) {
       rows.set(fullMove, { fullMove } as MoveRow);
     }
+    // Line labels are indexed by ply; the events arrive in ply order on a
+    // perfect-information tenant, which is the only kind that supplies them.
+    const lineLabels = moveList.notateLine?.(moves.map((event) => event.move)) ?? [];
     moves.forEach((event, index) => {
       const ply = eventPly(event, index);
       if (ply > plyCount) return;
       const fullMove = Math.floor((ply - 1) / 2) + 1;
       const row = rows.get(fullMove) ?? ({ fullMove } as MoveRow);
-      row[event.color] = moveList.notate(event.move) as MoveRow[C];
+      row[event.color] = (lineLabels[index] ?? moveList.notate(event.move)) as MoveRow[C];
       rows.set(fullMove, row);
     });
     return [...rows.values()].sort((a, b) => a.fullMove - b.fullMove);
