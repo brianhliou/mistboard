@@ -2280,8 +2280,6 @@ const ZH_HANS: Record<string, string> = {
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵团守得住，围城是和棋',
   'Give every horde soldier the crossed soldier’s move from the start and the road closes: a veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side. Between equals the game becomes a siege: the horde marches to the palace, finds a general and two chariots waiting, and stops, because the block guards itself where it stands but can only advance a whole rank at a time while the army waits. Forty-eight games: 37 draws, six horde wins, five army wins, all five against 18 soldiers.':
     '让兵团的每个兵从开局起就有过河兵的走法，路就堵上了：一列老兵攻击身边的点，车不能白白停在它旁边。兵团成了一方棋。势均力敌之间，棋局成了围城：兵团推进到九宫前，发现一个将带着双车在等，然后停住，因为兵阵站在原地时能互相保护，却只能整行一起推进，而全军在一旁等着。四十八局：37 和，兵团 6 胜，全军 5 胜，五胜全是对 18 兵。',
-  'The horde’s finish from its best array, 36 veterans on ranks 2 to 5, which it wins four times in five. Both chariots fell late, the general is bare, and every point it could step to is covered by a soldier that does not check it. Xiangqi scores the side with no move as the loser.':
-    '兵团在它最好的阵形（第 2 到 5 行的 36 个老兵，五局四胜）里的收官。双车在后期先后被吃，将已成光将，它能走到的每个点都被一个并未将军的兵控制着。象棋判无子可动的一方负。',
   'The one array the horde is favoured in is the same siege with a better score, not a different game: four hundred to a thousand plies in which the army’s best plan is to wait in the palace and the horde’s is to shuffle a block one point at a time.':
     '兵团占优的唯一阵形是同一场围城加一个更好的比分，不是另一盘棋：四百到一千步里，全军的最佳计划是待在九宫里等，兵团的最佳计划是把兵阵一格一格地挪。',
   'What a different soldier would need': '换一种兵需要什么',
@@ -2295,6 +2293,34 @@ const ZH_HANS: Record<string, string> = {
   'MOVE 25: THE f-FILE IS OPEN': '第 25 回合：f 线已空',
   '15 MOVES LATER: 11 SOLDIERS GONE': '15 回合后：11 个兵没了',
   'PLY 435: NO MOVE, NO CHECK, RED WINS': '第 435 步：无子可动，未被将军，红方胜',
+  // horde-xiangqi playthrough frames (2026-09-15).
+  'Horde (36 veterans, ranks 2 to 5) vs the army': '兵团（36 个老兵，第 2 到 5 行）对全军',
+  'Fairy-Stockfish against itself, a million nodes a move': 'Fairy-Stockfish 自战，每着 100 万节点',
+  'Eight frames of the horde’s win from its best array, the one it wins four times in five: the march, the siege, both chariots falling, and the smother at ply 435. Every game in this array is in the viewer on brianhliou.com.':
+    '兵团在它最好的阵形（五局四胜的那一种）里的胜局，八个画面：行军、围城、双车先后被吃，以及第 435 步的困毙。这种阵形的每一盘棋都在 brianhliou.com 的浏览器里。',
+  'The start: 36 veterans on ranks 2 to 5, no general, Red to move. Black is the whole army.':
+    '开局：36 个老兵在第 2 到 5 行，没有将，红方先走。黑方是完整的全军。',
+  'Move 20. The block edges forward a rank at a time; the army has given up two soldiers and a horse and has not touched the block.':
+    '第 20 回合。兵阵一行一行地向前挪；全军已经丢了两个兵和一个马，还没碰到兵阵。',
+  'Move 45. Seven soldiers are across the river and the army is down to eight pieces: both elephants and all five soldiers gone. The chariots cannot sit beside a veteran column.':
+    '第 45 回合。七个兵过了河，全军只剩八个子：两个象和五个兵全没了。车没法停在老兵纵列的旁边。',
+  'Move 80. Ten across. From here the two chariots and the general hold the palace and the block shuffles: this is the siege every veteran game above 27 soldiers reaches.':
+    '第 80 回合。十个兵过河。从这里起双车和将守住九宫，兵阵来回挪动：这就是 27 兵以上的每一局老兵对局都会走到的围城。',
+  'Move 134. The first chariot falls, traded for soldiers the horde could afford to lose; nineteen are left.':
+    '第 134 回合。第一个车被吃，换掉的是兵团损失得起的几个兵；还剩十九个。',
+  'Move 175. Sixteen soldiers, nine across, against advisor, chariot and general. Most games stop here on the clock or by repetition.':
+    '第 175 回合。十六个兵，九个过了河，对士、车、将。大多数对局在这里因无吃子限制或重复局面停下。',
+  'Move 216. The second chariot falls. The general is bare.':
+    '第 216 回合。第二个车被吃。将已成光将。',
+  'Move 218. Every point the general could step to is covered by a soldier that does not check it: no move, no check. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.':
+    '第 218 回合。将能走到的每个点都被一个并未将军的兵控制着：无子可动，也未被将军。象棋判无子可动的一方负；Lichess 的部落棋会判和。',
+  'PLY 0': '第 0 步',
+  'PLY 40': '第 40 步',
+  'PLY 89': '第 89 步',
+  'PLY 160': '第 160 步',
+  'PLY 267': '第 267 步',
+  'PLY 350': '第 350 步',
+  'PLY 431': '第 431 步',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -4266,8 +4292,6 @@ const ZH_HANT: Record<string, string> = {
   'Veteran soldiers: the horde holds, and the siege is a draw': '老兵：兵團守得住，圍城是和棋',
   'Give every horde soldier the crossed soldier’s move from the start and the road closes: a veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side. Between equals the game becomes a siege: the horde marches to the palace, finds a general and two chariots waiting, and stops, because the block guards itself where it stands but can only advance a whole rank at a time while the army waits. Forty-eight games: 37 draws, six horde wins, five army wins, all five against 18 soldiers.':
     '讓兵團的每個兵從開局起就有過河兵的走法，路就堵上了：一列老兵攻擊身邊的點，車不能白白停在它旁邊。兵團成了一方棋。勢均力敵之間，棋局成了圍城：兵團推進到九宮前，發現一個將帶著雙車在等，然後停住，因為兵陣站在原地時能互相保護，卻只能整行一起推進，而全軍在一旁等著。四十八局：37 和，兵團 6 勝，全軍 5 勝，五勝全是對 18 兵。',
-  'The horde’s finish from its best array, 36 veterans on ranks 2 to 5, which it wins four times in five. Both chariots fell late, the general is bare, and every point it could step to is covered by a soldier that does not check it. Xiangqi scores the side with no move as the loser.':
-    '兵團在它最好的陣形（第 2 到 5 行的 36 個老兵，五局四勝）裡的收官。雙車在後期先後被吃，將已成光將，它能走到的每個點都被一個並未將軍的兵控制著。象棋判無子可動的一方負。',
   'The one array the horde is favoured in is the same siege with a better score, not a different game: four hundred to a thousand plies in which the army’s best plan is to wait in the palace and the horde’s is to shuffle a block one point at a time.':
     '兵團佔優的唯一陣形是同一場圍城加一個更好的比分，不是另一盤棋：四百到一千步裡，全軍的最佳計劃是待在九宮裡等，兵團的最佳計劃是把兵陣一格一格地挪。',
   'What a different soldier would need': '換一種兵需要什麼',
@@ -4281,6 +4305,34 @@ const ZH_HANT: Record<string, string> = {
   'MOVE 25: THE f-FILE IS OPEN': '第 25 回合：f 線已空',
   '15 MOVES LATER: 11 SOLDIERS GONE': '15 回合後：11 個兵沒了',
   'PLY 435: NO MOVE, NO CHECK, RED WINS': '第 435 步：無子可動，未被將軍，紅方勝',
+  // horde-xiangqi playthrough frames, derived (2026-09-15).
+  'Horde (36 veterans, ranks 2 to 5) vs the army': '兵團（36 個老兵，第 2 到 5 行）對全軍',
+  'Fairy-Stockfish against itself, a million nodes a move': 'Fairy-Stockfish 自戰，每著 100 萬節點',
+  'Eight frames of the horde’s win from its best array, the one it wins four times in five: the march, the siege, both chariots falling, and the smother at ply 435. Every game in this array is in the viewer on brianhliou.com.':
+    '兵團在它最好的陣形（五局四勝的那一種）裡的勝局，八個畫面：行軍、圍城、雙車先後被吃，以及第 435 步的困斃。這種陣形的每一盤棋都在 brianhliou.com 的瀏覽器裡。',
+  'The start: 36 veterans on ranks 2 to 5, no general, Red to move. Black is the whole army.':
+    '開局：36 個老兵在第 2 到 5 行，沒有將，紅方先走。黑方是完整的全軍。',
+  'Move 20. The block edges forward a rank at a time; the army has given up two soldiers and a horse and has not touched the block.':
+    '第 20 回合。兵陣一行一行地向前挪；全軍已經丟了兩個兵和一個馬，還沒碰到兵陣。',
+  'Move 45. Seven soldiers are across the river and the army is down to eight pieces: both elephants and all five soldiers gone. The chariots cannot sit beside a veteran column.':
+    '第 45 回合。七個兵過了河，全軍只剩八個子：兩個象和五個兵全沒了。車沒法停在老兵縱列的旁邊。',
+  'Move 80. Ten across. From here the two chariots and the general hold the palace and the block shuffles: this is the siege every veteran game above 27 soldiers reaches.':
+    '第 80 回合。十個兵過河。從這裡起雙車和將守住九宮，兵陣來回挪動：這就是 27 兵以上的每一局老兵對局都會走到的圍城。',
+  'Move 134. The first chariot falls, traded for soldiers the horde could afford to lose; nineteen are left.':
+    '第 134 回合。第一個車被吃，換掉的是兵團損失得起的幾個兵；還剩十九個。',
+  'Move 175. Sixteen soldiers, nine across, against advisor, chariot and general. Most games stop here on the clock or by repetition.':
+    '第 175 回合。十六個兵，九個過了河，對士、車、將。大多數對局在這裡因無吃子限制或重複局面停下。',
+  'Move 216. The second chariot falls. The general is bare.':
+    '第 216 回合。第二個車被吃。將已成光將。',
+  'Move 218. Every point the general could step to is covered by a soldier that does not check it: no move, no check. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.':
+    '第 218 回合。將能走到的每個點都被一個並未將軍的兵控制著：無子可動，也未被將軍。象棋判無子可動的一方負；Lichess 的部落棋會判和。',
+  'PLY 0': '第 0 步',
+  'PLY 40': '第 40 步',
+  'PLY 89': '第 89 步',
+  'PLY 160': '第 160 步',
+  'PLY 267': '第 267 步',
+  'PLY 350': '第 350 步',
+  'PLY 431': '第 431 步',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

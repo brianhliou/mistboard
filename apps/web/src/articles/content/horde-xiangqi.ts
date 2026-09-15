@@ -1,6 +1,6 @@
 import {
   HORDE_XIANGQI_CHARIOT,
-  HORDE_XIANGQI_SMOTHER,
+  HORDE_XIANGQI_GAME,
   HORDE_XIANGQI_START,
   HORDE_XIANGQI_THUMBNAIL,
 } from '../../horde-xiangqi-article-diagrams.js';
@@ -79,10 +79,14 @@ export const hordeXiangqiArticle: Article = {
           text: 'Give every horde soldier the crossed soldier’s move from the start and the road closes: a veteran column attacks the points beside it, so the chariot cannot sit next to it for free. The horde becomes a side. Between equals the game becomes a siege: the horde marches to the palace, finds a general and two chariots waiting, and stops, because the block guards itself where it stands but can only advance a whole rank at a time while the army waits. Forty-eight games: 37 draws, six horde wins, five army wins, all five against 18 soldiers.',
         },
         {
-          kind: 'raw-svg',
-          svg: HORDE_XIANGQI_SMOTHER,
+          kind: 'raw-svg-stepper',
+          header: {
+            players: 'Horde (36 veterans, ranks 2 to 5) vs the army',
+            event: 'Fairy-Stockfish against itself, a million nodes a move',
+          },
+          steps: HORDE_XIANGQI_GAME,
           caption:
-            'The horde’s finish from its best array, 36 veterans on ranks 2 to 5, which it wins four times in five. Both chariots fell late, the general is bare, and every point it could step to is covered by a soldier that does not check it. Xiangqi scores the side with no move as the loser.',
+            'Eight frames of the horde’s win from its best array, the one it wins four times in five: the march, the siege, both chariots falling, and the smother at ply 435. Every game in this array is in the viewer on brianhliou.com.',
         } as ArticleBlock,
         {
           kind: 'paragraph',

@@ -8,14 +8,14 @@
 
 import type { XiangqiPiece, XiangqiSquare } from '@mistboard/game';
 import {
-  activeXiangqiPieceSet,
   XQ_BOARD_H,
   XQ_BOARD_W,
+  XQ_CELL,
   xqBoardSvg,
+  xqPoint,
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
-import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 
 type Board = Partial<Record<XiangqiSquare, XiangqiPiece>>;
 
@@ -292,38 +292,424 @@ export const HORDE_XIANGQI_SMOTHER = () =>
     }),
   );
 
-// The card: a block of veteran soldiers and the one piece that beats it.
-const THUMB_W = 160;
-const THUMB_H = 100;
-const SOLDIER = 40;
-const CHARIOT = 74;
+/** The playthrough: eight frames of the million-node forward36 game, drawn on demand. */
+export const HORDE_XIANGQI_GAME: Array<{ svg: () => string; narrative: string }> = [
+  {
+    svg: () =>
+      xqSvg(
+        PAIR_W,
+        FIGURE_H,
+        xqBoardSvg({
+          state: xqVisionDemoState('horde-game-0', {
+            a10: { color: 'black', role: 'chariot' },
+            a2: { color: 'red', role: 'soldier' },
+            a3: { color: 'red', role: 'soldier' },
+            a4: { color: 'red', role: 'soldier' },
+            a5: { color: 'red', role: 'soldier' },
+            a7: { color: 'black', role: 'soldier' },
+            b10: { color: 'black', role: 'horse' },
+            b2: { color: 'red', role: 'soldier' },
+            b3: { color: 'red', role: 'soldier' },
+            b4: { color: 'red', role: 'soldier' },
+            b5: { color: 'red', role: 'soldier' },
+            b8: { color: 'black', role: 'cannon' },
+            c10: { color: 'black', role: 'elephant' },
+            c2: { color: 'red', role: 'soldier' },
+            c3: { color: 'red', role: 'soldier' },
+            c4: { color: 'red', role: 'soldier' },
+            c5: { color: 'red', role: 'soldier' },
+            c7: { color: 'black', role: 'soldier' },
+            d10: { color: 'black', role: 'advisor' },
+            d2: { color: 'red', role: 'soldier' },
+            d3: { color: 'red', role: 'soldier' },
+            d4: { color: 'red', role: 'soldier' },
+            d5: { color: 'red', role: 'soldier' },
+            e10: { color: 'black', role: 'general' },
+            e2: { color: 'red', role: 'soldier' },
+            e3: { color: 'red', role: 'soldier' },
+            e4: { color: 'red', role: 'soldier' },
+            e5: { color: 'red', role: 'soldier' },
+            e7: { color: 'black', role: 'soldier' },
+            f10: { color: 'black', role: 'advisor' },
+            f2: { color: 'red', role: 'soldier' },
+            f3: { color: 'red', role: 'soldier' },
+            f4: { color: 'red', role: 'soldier' },
+            f5: { color: 'red', role: 'soldier' },
+            g10: { color: 'black', role: 'elephant' },
+            g2: { color: 'red', role: 'soldier' },
+            g3: { color: 'red', role: 'soldier' },
+            g4: { color: 'red', role: 'soldier' },
+            g5: { color: 'red', role: 'soldier' },
+            g7: { color: 'black', role: 'soldier' },
+            h10: { color: 'black', role: 'horse' },
+            h2: { color: 'red', role: 'soldier' },
+            h3: { color: 'red', role: 'soldier' },
+            h4: { color: 'red', role: 'soldier' },
+            h5: { color: 'red', role: 'soldier' },
+            h8: { color: 'black', role: 'cannon' },
+            i10: { color: 'black', role: 'chariot' },
+            i2: { color: 'red', role: 'soldier' },
+            i3: { color: 'red', role: 'soldier' },
+            i4: { color: 'red', role: 'soldier' },
+            i5: { color: 'red', role: 'soldier' },
+            i7: { color: 'black', role: 'soldier' },
+          }),
+          x: PAIR_GAP_X / 2,
+          y: 0,
+          label: 'PLY 0',
+          perspective: 'red',
+
+          veteranSoldiers: true,
+        }),
+      ),
+    narrative:
+      'The start: 36 veterans on ranks 2 to 5, no general, Red to move. Black is the whole army.',
+  },
+  {
+    svg: () =>
+      xqSvg(
+        PAIR_W,
+        FIGURE_H,
+        xqBoardSvg({
+          state: xqVisionDemoState('horde-game-40', {
+            a2: { color: 'red', role: 'soldier' },
+            a8: { color: 'black', role: 'chariot' },
+            a9: { color: 'black', role: 'cannon' },
+            b2: { color: 'red', role: 'soldier' },
+            b3: { color: 'red', role: 'soldier' },
+            b4: { color: 'red', role: 'soldier' },
+            b6: { color: 'red', role: 'soldier' },
+            b7: { color: 'red', role: 'soldier' },
+            c2: { color: 'red', role: 'soldier' },
+            c3: { color: 'red', role: 'soldier' },
+            c5: { color: 'red', role: 'soldier' },
+            c7: { color: 'black', role: 'soldier' },
+            c8: { color: 'black', role: 'horse' },
+            d2: { color: 'red', role: 'soldier' },
+            d3: { color: 'red', role: 'soldier' },
+            d4: { color: 'red', role: 'soldier' },
+            d7: { color: 'red', role: 'soldier' },
+            e10: { color: 'black', role: 'general' },
+            e2: { color: 'red', role: 'soldier' },
+            e3: { color: 'red', role: 'soldier' },
+            e4: { color: 'red', role: 'soldier' },
+            e5: { color: 'red', role: 'soldier' },
+            e7: { color: 'black', role: 'soldier' },
+            e8: { color: 'black', role: 'elephant' },
+            e9: { color: 'black', role: 'advisor' },
+            f10: { color: 'black', role: 'advisor' },
+            f2: { color: 'red', role: 'soldier' },
+            f3: { color: 'red', role: 'soldier' },
+            f4: { color: 'red', role: 'soldier' },
+            f5: { color: 'red', role: 'soldier' },
+            g10: { color: 'black', role: 'elephant' },
+            g2: { color: 'red', role: 'soldier' },
+            g3: { color: 'red', role: 'soldier' },
+            g4: { color: 'red', role: 'soldier' },
+            h2: { color: 'red', role: 'soldier' },
+            h3: { color: 'red', role: 'soldier' },
+            h4: { color: 'red', role: 'soldier' },
+            h5: { color: 'red', role: 'soldier' },
+            h6: { color: 'red', role: 'soldier' },
+            h8: { color: 'black', role: 'cannon' },
+            i2: { color: 'red', role: 'soldier' },
+            i3: { color: 'red', role: 'soldier' },
+            i4: { color: 'red', role: 'soldier' },
+            i6: { color: 'black', role: 'soldier' },
+            i7: { color: 'black', role: 'chariot' },
+          }),
+          x: PAIR_GAP_X / 2,
+          y: 0,
+          label: 'PLY 40',
+          perspective: 'red',
+          arrows: [{ from: 'a4' as XiangqiSquare, to: 'a8' as XiangqiSquare }],
+          veteranSoldiers: true,
+        }),
+      ),
+    narrative:
+      'Move 20. The block edges forward a rank at a time; the army has given up two soldiers and a horse and has not touched the block.',
+  },
+  {
+    svg: () =>
+      xqSvg(
+        PAIR_W,
+        FIGURE_H,
+        xqBoardSvg({
+          state: xqVisionDemoState('horde-game-89', {
+            a2: { color: 'red', role: 'soldier' },
+            b10: { color: 'black', role: 'cannon' },
+            b2: { color: 'red', role: 'soldier' },
+            b3: { color: 'red', role: 'soldier' },
+            b4: { color: 'red', role: 'soldier' },
+            b7: { color: 'red', role: 'soldier' },
+            c2: { color: 'red', role: 'soldier' },
+            c3: { color: 'red', role: 'soldier' },
+            c6: { color: 'red', role: 'soldier' },
+            c7: { color: 'red', role: 'soldier' },
+            d2: { color: 'red', role: 'soldier' },
+            d3: { color: 'red', role: 'soldier' },
+            d4: { color: 'red', role: 'soldier' },
+            d6: { color: 'red', role: 'soldier' },
+            d7: { color: 'red', role: 'soldier' },
+            d9: { color: 'black', role: 'horse' },
+            e10: { color: 'black', role: 'general' },
+            e2: { color: 'red', role: 'soldier' },
+            e3: { color: 'red', role: 'soldier' },
+            e5: { color: 'red', role: 'soldier' },
+            e8: { color: 'black', role: 'chariot' },
+            e9: { color: 'black', role: 'advisor' },
+            f10: { color: 'black', role: 'advisor' },
+            f2: { color: 'red', role: 'soldier' },
+            f4: { color: 'red', role: 'soldier' },
+            f5: { color: 'red', role: 'soldier' },
+            f6: { color: 'red', role: 'soldier' },
+            f7: { color: 'red', role: 'soldier' },
+            f9: { color: 'black', role: 'cannon' },
+            g2: { color: 'red', role: 'soldier' },
+            g4: { color: 'red', role: 'soldier' },
+            g5: { color: 'red', role: 'soldier' },
+            h2: { color: 'red', role: 'soldier' },
+            i2: { color: 'red', role: 'soldier' },
+            i3: { color: 'red', role: 'soldier' },
+            i4: { color: 'red', role: 'soldier' },
+            i7: { color: 'black', role: 'chariot' },
+          }),
+          x: PAIR_GAP_X / 2,
+          y: 0,
+          label: 'PLY 89',
+          perspective: 'red',
+          arrows: [{ from: 'e4' as XiangqiSquare, to: 'e5' as XiangqiSquare }],
+          veteranSoldiers: true,
+        }),
+      ),
+    narrative:
+      'Move 45. Seven soldiers are across the river and the army is down to eight pieces: both elephants and all five soldiers gone. The chariots cannot sit beside a veteran column.',
+  },
+  {
+    svg: () =>
+      xqSvg(
+        PAIR_W,
+        FIGURE_H,
+        xqBoardSvg({
+          state: xqVisionDemoState('horde-game-160', {
+            a10: { color: 'black', role: 'cannon' },
+            a7: { color: 'red', role: 'soldier' },
+            b2: { color: 'red', role: 'soldier' },
+            b3: { color: 'red', role: 'soldier' },
+            b7: { color: 'red', role: 'soldier' },
+            c2: { color: 'red', role: 'soldier' },
+            c3: { color: 'red', role: 'soldier' },
+            c7: { color: 'red', role: 'soldier' },
+            d2: { color: 'red', role: 'soldier' },
+            d3: { color: 'red', role: 'soldier' },
+            d4: { color: 'red', role: 'soldier' },
+            d5: { color: 'red', role: 'soldier' },
+            d6: { color: 'red', role: 'soldier' },
+            d7: { color: 'red', role: 'soldier' },
+            d9: { color: 'black', role: 'horse' },
+            e10: { color: 'black', role: 'general' },
+            e3: { color: 'red', role: 'soldier' },
+            e5: { color: 'red', role: 'soldier' },
+            e6: { color: 'red', role: 'soldier' },
+            e7: { color: 'red', role: 'soldier' },
+            e9: { color: 'black', role: 'advisor' },
+            f10: { color: 'black', role: 'advisor' },
+            f2: { color: 'red', role: 'soldier' },
+            f3: { color: 'red', role: 'soldier' },
+            f4: { color: 'red', role: 'soldier' },
+            f5: { color: 'red', role: 'soldier' },
+            f6: { color: 'red', role: 'soldier' },
+            f7: { color: 'red', role: 'soldier' },
+            g3: { color: 'red', role: 'soldier' },
+            g4: { color: 'red', role: 'soldier' },
+            h2: { color: 'red', role: 'soldier' },
+            h7: { color: 'red', role: 'soldier' },
+            i2: { color: 'red', role: 'soldier' },
+            i5: { color: 'black', role: 'chariot' },
+            i8: { color: 'black', role: 'chariot' },
+            i9: { color: 'black', role: 'cannon' },
+          }),
+          x: PAIR_GAP_X / 2,
+          y: 0,
+          label: 'PLY 160',
+          perspective: 'red',
+          arrows: [{ from: 'b10' as XiangqiSquare, to: 'a10' as XiangqiSquare }],
+          veteranSoldiers: true,
+        }),
+      ),
+    narrative:
+      'Move 80. Ten across. From here the two chariots and the general hold the palace and the block shuffles: this is the siege every veteran game above 27 soldiers reaches.',
+  },
+  {
+    svg: () =>
+      xqSvg(
+        PAIR_W,
+        FIGURE_H,
+        xqBoardSvg({
+          state: xqVisionDemoState('horde-game-267', {
+            b3: { color: 'red', role: 'soldier' },
+            c2: { color: 'red', role: 'soldier' },
+            c3: { color: 'red', role: 'soldier' },
+            c8: { color: 'red', role: 'soldier' },
+            d3: { color: 'red', role: 'soldier' },
+            d4: { color: 'red', role: 'soldier' },
+            d7: { color: 'red', role: 'soldier' },
+            d8: { color: 'red', role: 'soldier' },
+            e10: { color: 'black', role: 'general' },
+            e2: { color: 'red', role: 'soldier' },
+            e3: { color: 'red', role: 'soldier' },
+            e8: { color: 'red', role: 'soldier' },
+            f10: { color: 'black', role: 'advisor' },
+            f2: { color: 'red', role: 'soldier' },
+            f5: { color: 'red', role: 'soldier' },
+            f7: { color: 'red', role: 'soldier' },
+            f9: { color: 'red', role: 'soldier' },
+            g3: { color: 'red', role: 'soldier' },
+            g4: { color: 'red', role: 'soldier' },
+            g8: { color: 'red', role: 'soldier' },
+            h3: { color: 'red', role: 'soldier' },
+            i9: { color: 'black', role: 'chariot' },
+          }),
+          x: PAIR_GAP_X / 2,
+          y: 0,
+          label: 'PLY 267',
+          perspective: 'red',
+          arrows: [{ from: 'f8' as XiangqiSquare, to: 'f9' as XiangqiSquare }],
+          veteranSoldiers: true,
+        }),
+      ),
+    narrative:
+      'Move 134. The first chariot falls, traded for soldiers the horde could afford to lose; nineteen are left.',
+  },
+  {
+    svg: () =>
+      xqSvg(
+        PAIR_W,
+        FIGURE_H,
+        xqBoardSvg({
+          state: xqVisionDemoState('horde-game-350', {
+            a9: { color: 'black', role: 'chariot' },
+            c7: { color: 'red', role: 'soldier' },
+            c8: { color: 'red', role: 'soldier' },
+            d10: { color: 'black', role: 'general' },
+            d2: { color: 'red', role: 'soldier' },
+            d3: { color: 'red', role: 'soldier' },
+            d7: { color: 'red', role: 'soldier' },
+            d8: { color: 'red', role: 'soldier' },
+            e2: { color: 'red', role: 'soldier' },
+            e4: { color: 'red', role: 'soldier' },
+            e5: { color: 'red', role: 'soldier' },
+            e7: { color: 'red', role: 'soldier' },
+            e8: { color: 'red', role: 'soldier' },
+            f10: { color: 'black', role: 'advisor' },
+            f5: { color: 'red', role: 'soldier' },
+            f7: { color: 'red', role: 'soldier' },
+            f8: { color: 'red', role: 'soldier' },
+            g8: { color: 'red', role: 'soldier' },
+            h3: { color: 'red', role: 'soldier' },
+          }),
+          x: PAIR_GAP_X / 2,
+          y: 0,
+          label: 'PLY 350',
+          perspective: 'red',
+          arrows: [{ from: 'i9' as XiangqiSquare, to: 'a9' as XiangqiSquare }],
+          veteranSoldiers: true,
+        }),
+      ),
+    narrative:
+      'Move 175. Sixteen soldiers, nine across, against advisor, chariot and general. Most games stop here on the clock or by repetition.',
+  },
+  {
+    svg: () =>
+      xqSvg(
+        PAIR_W,
+        FIGURE_H,
+        xqBoardSvg({
+          state: xqVisionDemoState('horde-game-431', {
+            a8: { color: 'red', role: 'soldier' },
+            b8: { color: 'red', role: 'soldier' },
+            c9: { color: 'red', role: 'soldier' },
+            d10: { color: 'black', role: 'general' },
+            d6: { color: 'red', role: 'soldier' },
+            d7: { color: 'red', role: 'soldier' },
+            d8: { color: 'red', role: 'soldier' },
+            e2: { color: 'red', role: 'soldier' },
+            e4: { color: 'red', role: 'soldier' },
+            e5: { color: 'red', role: 'soldier' },
+            e8: { color: 'red', role: 'soldier' },
+            f8: { color: 'red', role: 'soldier' },
+            g8: { color: 'red', role: 'soldier' },
+            h8: { color: 'red', role: 'soldier' },
+            i8: { color: 'red', role: 'soldier' },
+          }),
+          x: PAIR_GAP_X / 2,
+          y: 0,
+          label: 'PLY 431',
+          perspective: 'red',
+          arrows: [{ from: 'c8' as XiangqiSquare, to: 'c9' as XiangqiSquare }],
+          veteranSoldiers: true,
+        }),
+      ),
+    narrative: 'Move 216. The second chariot falls. The general is bare.',
+  },
+  {
+    svg: () =>
+      xqSvg(
+        PAIR_W,
+        FIGURE_H,
+        xqBoardSvg({
+          state: xqVisionDemoState('horde-game-435', {
+            a8: { color: 'red', role: 'soldier' },
+            b8: { color: 'red', role: 'soldier' },
+            c9: { color: 'red', role: 'soldier' },
+            d6: { color: 'red', role: 'soldier' },
+            d7: { color: 'red', role: 'soldier' },
+            d9: { color: 'red', role: 'soldier' },
+            e2: { color: 'red', role: 'soldier' },
+            e4: { color: 'red', role: 'soldier' },
+            e5: { color: 'red', role: 'soldier' },
+            e9: { color: 'red', role: 'soldier' },
+            f10: { color: 'black', role: 'general' },
+            f8: { color: 'red', role: 'soldier' },
+            g8: { color: 'red', role: 'soldier' },
+            h8: { color: 'red', role: 'soldier' },
+            i8: { color: 'red', role: 'soldier' },
+          }),
+          x: PAIR_GAP_X / 2,
+          y: 0,
+          label: 'PLY 435: NO MOVE, NO CHECK, RED WINS',
+          perspective: 'red',
+          arrows: [{ from: 'e8' as XiangqiSquare, to: 'e9' as XiangqiSquare }],
+          veteranSoldiers: true,
+        }),
+      ),
+    narrative:
+      'Move 218. Every point the general could step to is covered by a soldier that does not check it: no move, no check. Xiangqi scores the side with no legal move as the loser; Lichess Horde would call it a draw.',
+  },
+];
+
+// The card: the forward36 array itself, cropped to the block and the army's
+// front row, so the tile reads as a board at card size in any piece set (the
+// blog's tile is the same array on its cream field).
+const THUMB_ASPECT = 16 / 10;
 
 export const HORDE_XIANGQI_THUMBNAIL = () => {
-  const gap = Math.round(SOLDIER * 0.1);
-  const blockW = SOLDIER * 2 + gap;
-  const between = Math.round(CHARIOT * 0.22);
-  const x0 = (THUMB_W - (blockW + between + CHARIOT)) / 2;
-  const y0 = (THUMB_H - blockW) / 2;
-  const parts = [
-    `<svg class="xq-article-svg" viewBox="0 0 ${THUMB_W} ${THUMB_H}" role="img" aria-label="Horde Xiangqi" xmlns="http://www.w3.org/2000/svg">`,
-  ];
-  for (let r = 0; r < 2; r += 1)
-    for (let c = 0; c < 2; c += 1)
-      parts.push(
-        renderXiangqiPieceGlyphed({ role: 'soldier', color: 'red' }, activeXiangqiPieceSet, {
-          x: x0 + c * (SOLDIER + gap),
-          y: y0 + r * (SOLDIER + gap),
-          size: SOLDIER,
-          crossed: true,
-        }),
-      );
-  parts.push(
-    renderXiangqiPieceGlyphed({ role: 'chariot', color: 'black' }, activeXiangqiPieceSet, {
-      x: x0 + blockW + between,
-      y: (THUMB_H - CHARIOT) / 2,
-      size: CHARIOT,
-    }),
-    '</svg>',
-  );
-  return parts.join('');
+  const boardY = 28;
+  const left = xqPoint(0, 1, 'red', 0, boardY).x - XQ_CELL * 0.6;
+  const right = xqPoint(8, 1, 'red', 0, boardY).x + XQ_CELL * 0.6;
+  const w = right - left;
+  const h = w / THUMB_ASPECT;
+  // Red's half only: from below rank 1 (the empty back rank and its palace
+  // lines) up to the river's edge, so the block fills the card.
+  const bottom = xqPoint(0, 1, 'red', 0, boardY).y + XQ_CELL * 0.7;
+  const top = bottom - h;
+  const board = xqBoardSvg({
+    state: xqVisionDemoState('horde-card', HORDE_FORWARD36),
+    x: 0,
+    y: 0,
+    label: '',
+    perspective: 'red',
+    veteranSoldiers: true,
+  });
+  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Horde Xiangqi" xmlns="http://www.w3.org/2000/svg">${board}</svg>`;
 };
