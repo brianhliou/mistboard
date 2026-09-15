@@ -206,7 +206,7 @@ function ringOverlay(rings: BoardSpec['rings'], x0: number, y0: number): string 
     .map((r) => {
       const { file, rank } = xqCoord(r.square);
       const { x, y } = xqPoint(file, rank, 'red', x0, y0 + 28);
-      return `<circle cx="${x}" cy="${y}" r="${r.heavy ? 20 : 16}" fill="none" stroke="${r.color}" stroke-width="${r.heavy ? 4 : 3}" opacity="0.95"/>`;
+      return `<circle cx="${x}" cy="${y}" r="${r.heavy ? 12.5 : 11}" fill="none" stroke="${r.color}" stroke-width="${r.heavy ? 3 : 2.5}" opacity="0.95"/>`;
     })
     .join('');
 }
@@ -465,6 +465,39 @@ figure(
   'The ending every veteran game above 27 soldiers reaches, here from the 40-soldier array at a million nodes a move. Twelve soldiers against a general, an advisor and two chariots. The soldiers cannot force a way past the chariots, and the chariots take a soldier only when one steps out of the block: two in the next 246 plies, at 822 and 896. Played on from the left position at five million nodes a side for 200 more plies: one capture. At that rate the army needs another thousand plies to finish.',
 );
 
+// ── 4b. The two start positions, side by side ──────────────────────────────
+
+// Lichess Horde: white pawns fill ranks 1-4 and stand on b5 c5 f5 g5; Black
+// is the standard army. Beside it, the design this post would hand a player:
+// 36 veterans on ranks 2 to 5, the one array where the horde is the favourite.
+type ChessPiece = Parameters<typeof renderBoardSvg>[0][number];
+const HORDE_CHESS_PIECES: ChessPiece[] = [];
+for (let rank = 0; rank < 4; rank += 1)
+  for (let file = 0; file < 8; file += 1) HORDE_CHESS_PIECES.push({ file, rank, color: 'white', role: 'pawn' });
+for (const file of [1, 2, 5, 6]) HORDE_CHESS_PIECES.push({ file, rank: 4, color: 'white', role: 'pawn' });
+for (let file = 0; file < 8; file += 1) HORDE_CHESS_PIECES.push({ file, rank: 6, color: 'black', role: 'pawn' });
+(['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'] as const).forEach((role, file) =>
+  HORDE_CHESS_PIECES.push({ file, rank: 7, color: 'black', role }),
+);
+if (HORDE_CHESS_PIECES.filter((p) => p.color === 'white').length !== 36) throw new Error('horde chess is 36 pawns');
+const startChess = renderBoardSvg(HORDE_CHESS_PIECES, [], 0, 28, CHESS_SIZE, 'white');
+const startChessTitle = `<text x="${CHESS_SIZE / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">HORDE CHESS: 36 PAWNS, NO KING</text>`;
+const startXq = veteranArt(
+  xqBoardSvg({
+    state: state('start-xq', fen(HORDE_FORMATIONS.forward36)),
+    x: CHESS_SIZE + GAP,
+    y: 0,
+    label: 'HORDE XIANGQI: 36 VETERANS, NO GENERAL',
+    perspective: 'red',
+  }),
+);
+figure(
+  'start',
+  xqSvg(CHESS_SIZE + GAP + XQ_BOARD_W, FIGURE_H, [startChessTitle, startChess, startXq].join('')),
+  'Left, the parent as Lichess plays it: 36 pawns against the full army. Right, the closest thing to a game we found: 36 veteran soldiers on ranks 2 to 5 (the crossed soldier’s move from the first step, shown with the promoted-soldier piece), against the full xiangqi army. The horde wins by checkmate, the army by taking the last soldier.',
+  2,
+);
+
 // ── 5. The smother ─────────────────────────────────────────────────────────
 
 // The one equal-strength horde win: 36 soldiers on ranks 2-5, veterans, 120-ply clock.
@@ -655,10 +688,9 @@ figure(
   4,
 );
 
-// ── Blog output (--blog): brianhliou.com includes, art, thumbnail, card ────
+// ── Blog output (--blog): brianhliou.com includes and piece art ───────────
 
 if (process.argv.includes('--blog')) {
-  const { Resvg } = await import('@resvg/resvg-js');
   const BLOG = '/Users/brianliou/projects/brianhliou.github.io';
   const BLOG_ASSETS = path.join(BLOG, 'assets/posts/horde-xiangqi');
   const BLOG_ART = '/assets/posts/horde-xiangqi/pieces';
@@ -708,55 +740,9 @@ if (process.argv.includes('--blog')) {
   }
   console.log(`  assets/posts/horde-xiangqi/pieces/ (${blogArt.size} files)`);
 
-  // The cards: a block of soldiers against one chariot, which is the variant
-  // in one picture (the mass on one side, the piece that beats it on the other).
-  const { renderXiangqiPieceGlyphed } = await import('../apps/web/src/xiangqi-piece-sets.js');
-  const card = (width: number, height: number, soldier: number, chariot: number) => {
-    const gap = Math.round(soldier * 0.12);
-    const cols = 3;
-    const rows = 3;
-    const blockW = cols * soldier + (cols - 1) * gap;
-    const blockH = rows * soldier + (rows - 1) * gap;
-    const between = Math.round(chariot * 0.2);
-    const x0 = (width - (blockW + between + chariot)) / 2;
-    const y0 = (height - blockH) / 2;
-    const parts = [
-      `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Horde Xiangqi">`,
-      `<rect width="${width}" height="${height}" fill="#d9bd82"/>`,
-    ];
-    for (let r = 0; r < rows; r += 1) {
-      for (let c = 0; c < cols; c += 1) {
-        // The front row has crossed the river: promoted art, the horde on the move.
-        parts.push(
-          renderXiangqiPieceGlyphed({ role: 'soldier', color: 'red' }, 'international', {
-            x: x0 + c * (soldier + gap),
-            y: y0 + r * (soldier + gap),
-            size: soldier,
-            crossed: r === 0,
-          }),
-        );
-      }
-    }
-    parts.push(
-      renderXiangqiPieceGlyphed({ role: 'chariot', color: 'black' }, 'international', {
-        x: x0 + blockW + between,
-        y: (height - chariot) / 2,
-        size: chariot,
-      }),
-      '</svg>',
-    );
-    return parts.join('');
-  };
-  const renderPng = (svg: string, file: string, width: number) => {
-    const png = new Resvg(localArt(svg), { fitTo: { mode: 'width', value: width } })
-      .render()
-      .asPng();
-    writeFileSync(path.join(BLOG_ASSETS, file), png);
-    console.log(`  assets/posts/horde-xiangqi/${file} (${(png.length / 1024).toFixed(0)} kB)`);
-  };
-  // The feed crops thumbnails to 3:2 with object-fit: cover, so the card is drawn at 3:2 with a margin.
-  renderPng(card(150, 100, 24, 50), 'thumbnail.png', 640);
-  renderPng(card(120, 63, 17, 36), 'social-card.png', 1200);
+  // The feed thumbnail and the social card are built by the blog's own tool
+  // (_private/tools/render_thumbnails.py, builders `horde` and `horde-card`):
+  // the start array on the site's cream field, like every other board tile.
 }
 
 // ── Preview ────────────────────────────────────────────────────────────────
