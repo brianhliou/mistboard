@@ -7,11 +7,23 @@ study rows in production.
 
 | file | what it does |
 |---|---|
-| `mine_v2.py` | pulls composition records from dpxq `view_u_<id>.html` pages |
-| `seed-v2.mjs` | writes one study per volume, one chapter per composition |
+| `books.json` | the plan: every classical manual on dpxq's 古谱 shelves, counted live 2026-09-13, with a mine/done/skip status and the rights note behind each skip |
+| `mine_books.py` | walks the plan serially at 1.2 s a request; skips complete books; resumable inside a book through the miner's partial file |
+| `mine_v2.py` | pulls composition records from dpxq `view_u_<id>.html` pages; follows listing pagination; appends each record to `<out>.partial.jsonl` as it lands and writes `<out>.summary.json` (listed vs mined) |
+| `verify-records.mjs` | first oracle: kernel replay per record with the 黑先 retry, root FEN, where the line ends; writes `<slug>.verify.json` |
+| `soundness-sweep.mjs` | third oracle: Pikafish at the root and at the end of the printed line, last complete iteration only; appends `<slug>.soundness.jsonl`, resumable |
+| `make-shards.mjs` | joins records + verify + soundness into agent-sized shard files under `shards/` |
+| `wave_args.py` | builds a mining wave's workflow args from every book that is fetched, replayed and swept |
+| `seed-v2.mjs` | writes one study per volume, one chapter per composition; `--edits` takes the reviewed edits file as the whole book configuration |
 | `run-seed-v2.sh` | supplies the Postgres credential from Railway without a human reading it |
 | `merge_all.py` | **superseded**, see below |
 | `../data/xiangqi-compositions/titles-en.json` | 817 hand-authored English renderings of the composition names |
+
+The 2026-09-14 run (every PD manual on the shelf, ~2,400 records) goes fetch ->
+verify -> sweep -> shards -> agent workflow (two witnesses per shard, reconcile,
+book editor, adversarial audit) -> `edits/<slug>.edits.json` -> `seed-v2 --edits`
+unlisted -> operator shown the READMEs -> public. The agent brief with every rule
+and the edits-file shape is `docs-private/manual-mining-2026-09-14/BRIEF.md`.
 
 ```
 python3 mine_v2.py --out /tmp/sqyq.json
