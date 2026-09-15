@@ -176,6 +176,7 @@ Edit task → find file → open only that file.
 | `persistence-feedback.ts` | Feedback persistence |
 | `persistence-site-stats.ts` | Site statistics query |
 | `play-streak.ts` | Play streak math: consecutive player-calendar days with a counted game (`computePlayStreak`: current, best, last day; alive through the day after the last game), `resolveTimeZone` (browser IANA zone or UTC), `calendarDay` |
+| `persistence-puzzle-streak.ts` | `getPuzzleStreak(userId, {timeZone})`: consecutive player-calendar days with a puzzle solved, from `puzzle_attempts` (first terminal outcome per puzzle, so a day counts on a fresh puzzle), folded by `play-streak.ts`; rides on the attempt response and the profile |
 | `persistence-play-streak.ts` | `getPlayStreak(subject, {timeZone})` for an account or a guest device: distinct `ended_at AT TIME ZONE` days under the counted-game filter, folded by `play-streak.ts` |
 | `persistence-stats-excluded-devices.ts` | Records a browser device id as stats-excluded when a `stats_excluded_at` account connects from it (migration 137); read by `persistence-counted-games.ts` |
 | `stats-excluded-device.ts` | `rememberExcludedDevice`: fire-and-forget hook both live connection handlers call; its own module so the tenant runtime never imports the chess-stack connection module (esbuild cycle) |

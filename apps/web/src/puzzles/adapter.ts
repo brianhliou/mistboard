@@ -114,6 +114,9 @@ export type PuzzleSession = {
   // (the solved panel is rebuilt from scratch on every render). Voting shows
   // feedback in place and does NOT advance to the next puzzle.
   vote: 'up' | 'down' | null;
+  // The solver's puzzle streak as the server reported it with the solve; null
+  // for guests and until a solve lands. Shown under the Success heading.
+  streak: { current: number; best: number } | null;
   // Post-completion engine analysis (adapters that expose createAnalysis).
   // Created lazily the first time a completed puzzle renders, then persists
   // across renderSession() rebuilds so the engine toggle + eval + arrows

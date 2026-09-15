@@ -101,6 +101,7 @@ type UserProfile = {
   // Consecutive days with a completed game, on the viewer's calendar; absent
   // from older payloads.
   playStreak?: { current: number; best: number };
+  puzzleStreak?: { current: number; best: number };
   games: FeaturedGame[];
   gamesTotal: number;
 };
@@ -270,6 +271,13 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   });
   appendProfilePuzzleRatings(ratings, profile.puzzleRatings ?? [], locale);
   appendProfilePlayStreak(ratings, profile.playStreak ?? null, locale);
+  appendProfileStreak(
+    ratings,
+    'profile-puzzle-streak',
+    t('profile.puzzleStreak', {}, locale),
+    profile.puzzleStreak ?? null,
+    locale,
+  );
 
   shell.append(buildProfileDashboard(ratings, overview, tabs.el));
 }
@@ -2226,20 +2234,37 @@ function appendProfilePlayStreak(
   playStreak: { current: number; best: number } | null,
   locale: Locale,
 ): void {
-  if (!playStreak || playStreak.best < 1) return;
+  appendProfileStreak(
+    section,
+    'profile-play-streak',
+    t('profile.playStreak', {}, locale),
+    playStreak,
+    locale,
+  );
+}
+
+// One streak block (play or puzzle): current and best consecutive days.
+function appendProfileStreak(
+  section: HTMLElement,
+  className: string,
+  heading: string,
+  streak: { current: number; best: number } | null,
+  locale: Locale,
+): void {
+  if (!streak || streak.best < 1) return;
 
   const block = document.createElement('div');
-  block.className = 'profile-puzzle-ratings profile-play-streak';
+  block.className = `profile-puzzle-ratings ${className}`;
 
-  const heading = document.createElement('h2');
-  heading.textContent = t('profile.playStreak', {}, locale);
-  block.append(heading);
+  const title = document.createElement('h2');
+  title.textContent = heading;
+  block.append(title);
 
   const rail = document.createElement('div');
   rail.className = 'profile-puzzle-rail';
   rail.append(
-    playStreakRow(t('profile.playStreakCurrent', {}, locale), playStreak.current, locale),
-    playStreakRow(t('profile.playStreakBest', {}, locale), playStreak.best, locale),
+    playStreakRow(t('profile.playStreakCurrent', {}, locale), streak.current, locale),
+    playStreakRow(t('profile.playStreakBest', {}, locale), streak.best, locale),
   );
   block.append(rail);
   section.append(block);

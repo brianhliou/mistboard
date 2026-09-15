@@ -212,6 +212,7 @@ export const ZH_HANT_COMMUNITY = {
   'profile.unrated': '未計分',
   'profile.puzzleSolved': '已解 {count} 題',
   'profile.playStreak': '連續對局',
+  'profile.puzzleStreak': '連續解題',
   'profile.playStreakCurrent': '目前',
   'profile.playStreakBest': '最長',
   'profile.playStreakDays': '{count} 天',

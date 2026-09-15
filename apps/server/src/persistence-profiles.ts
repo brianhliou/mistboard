@@ -24,6 +24,7 @@ import type { GameMode, GameTermination, GameVisibility } from './persistence-ga
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
 import { attachGameParticipants } from './persistence-games.js';
 import { getPlayStreak } from './persistence-play-streak.js';
+import { getPuzzleStreak } from './persistence-puzzle-streak.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import {
   bucketForGame,
@@ -118,6 +119,8 @@ export type UserProfile = {
   // caller passed (the viewer's browser; exact for your own profile, a close
   // read for anyone else's).
   playStreak: { current: number; best: number };
+  // Consecutive days with a puzzle solved, same calendar as playStreak.
+  puzzleStreak: { current: number; best: number };
   // First page of games (newest first). Older pages load via getUserGamesPage.
   games: ProfileGameRecord[];
   // Total completed games visible to the viewer, so the client can show an
@@ -586,6 +589,7 @@ export async function getUserProfileByHandle(
     { type: 'user', id: user.id },
     { timeZone: options.timeZone },
   );
+  const puzzleStreak = await getPuzzleStreak(user.id, { timeZone: options.timeZone });
 
   return {
     user: {
@@ -604,6 +608,7 @@ export async function getUserProfileByHandle(
     ratings,
     puzzleRatings,
     playStreak: { current: playStreak.current, best: playStreak.best },
+    puzzleStreak: { current: puzzleStreak.current, best: puzzleStreak.best },
     games,
     gamesTotal,
   };

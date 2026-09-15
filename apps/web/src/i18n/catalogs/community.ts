@@ -225,6 +225,7 @@ export const EN_COMMUNITY = {
   'profile.unrated': 'Unrated',
   'profile.puzzleSolved': '{count} solved',
   'profile.playStreak': 'Play streak',
+  'profile.puzzleStreak': 'Puzzle streak',
   'profile.playStreakCurrent': 'Current',
   'profile.playStreakBest': 'Best',
   'profile.playStreakDays': '{count} days',

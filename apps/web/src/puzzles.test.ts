@@ -233,6 +233,43 @@ describe('puzzles route', () => {
       `/api/puzzles/${drop.id}/attempt`,
       expect.objectContaining({ method: 'POST' }),
     );
+    // No streak in the response (a guest): no streak line either.
+    expect(root.querySelector('.puzzle-solved-streak')).toBeNull();
+  });
+
+  it('shows the puzzle streak the server sends back with a solve', async () => {
+    const drop = RED_MATE;
+    let timeZone: unknown = null;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url === '/api/puzzles') return json({ puzzles: [publicSummary(drop)] });
+        if (url === `/api/puzzles/${drop.id}`) return json({ puzzle: publicDetail(drop) });
+        if (url === `/api/puzzles/${drop.id}/quality`) return new Response(null, { status: 204 });
+        if (url === `/api/puzzles/${drop.id}/attempt`) {
+          timeZone = JSON.parse(String(init?.body)).timeZone;
+          const attempt = attemptStandardXiangqiPuzzleLine(drop, movesOf(init));
+          return json({
+            attempt,
+            ...(attempt.ok && attempt.complete ? { streak: { current: 3, best: 7 } } : {}),
+          });
+        }
+        return json({ error: 'not_found' }, 404);
+      }),
+    );
+    const root = document.createElement('div');
+
+    await mountPuzzles(root, drop.id);
+    await solveLine(root, drop);
+
+    await vi.waitFor(() => expect(root.textContent).toContain('Success!'));
+    expect(root.querySelector('.puzzle-solved-streak')?.textContent).toBe(
+      'Puzzle streak: 3 days (best 7 days)',
+    );
+    // The attempt carries the browser's calendar so the server counts days
+    // the way the solver does.
+    expect(timeZone).toBe(Intl.DateTimeFormat().resolvedOptions().timeZone || 'UTC');
   });
 
   it('marks solved puzzles and navigates to the next puzzle', async () => {
