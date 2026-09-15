@@ -342,7 +342,8 @@ function pinManifest(manifest) {
     return n;
   };
   const scanContainers = positive('containers');
-  const auditContainers = positive('audit-containers') ?? (scanContainers === undefined ? undefined : 4);
+  const auditContainers =
+    positive('audit-containers') ?? (scanContainers === undefined ? undefined : 4);
   for (const [fn, containers] of [
     ['scan_shard', scanContainers],
     ['audit_candidate', auditContainers],
@@ -359,7 +360,9 @@ function pinManifest(manifest) {
 // ends at `def <fn>(`, with no other decorator in between. A global replace here
 // set scan and audit together, which is how audit ran at 32 on 2026-08-23.
 function pinContainers(source, fn, containers) {
-  const pattern = new RegExp(`(max_containers=)\\d+((?:(?!@app\\.function)[\\s\\S])*?\\ndef ${fn}\\()`);
+  const pattern = new RegExp(
+    `(max_containers=)\\d+((?:(?!@app\\.function)[\\s\\S])*?\\ndef ${fn}\\()`,
+  );
   if (!pattern.test(source)) fail(`Could not find max_containers for ${fn} in ${MODAL_SCRIPT}`);
   return source.replace(pattern, `$1${containers}$2`);
 }
@@ -532,11 +535,14 @@ async function main() {
       progressDone(progress) === progressDone(before)
     ) {
       const minutes = 5;
-      log(`  nothing claimable yet; ${progress.shards.running} lease(s) still live, waiting ${minutes} min`);
+      log(
+        `  nothing claimable yet; ${progress.shards.running} lease(s) still live, waiting ${minutes} min`,
+      );
       await sleep(minutes * 60_000);
       pass -= 1;
       waited += minutes;
-      if (waited > 45) fail('Waited 45 minutes on live leases with no progress; a worker is stuck holding one.');
+      if (waited > 45)
+        fail('Waited 45 minutes on live leases with no progress; a worker is stuck holding one.');
       progress = queryProduction(progressSnippet(state.runId));
     }
   }
