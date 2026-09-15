@@ -12,10 +12,20 @@ import { parseArgs } from 'node:util';
 import pg from 'pg';
 
 const { values } = parseArgs({
-  options: { slugs: { type: 'string' }, visibility: { type: 'string' }, apply: { type: 'boolean', default: false } },
+  options: {
+    slugs: { type: 'string' },
+    visibility: { type: 'string' },
+    apply: { type: 'boolean', default: false },
+  },
 });
-if (!values.slugs || !['public', 'unlisted', 'private'].includes(values.visibility ?? '') || !process.env.DATABASE_URL) {
-  console.error('usage: DATABASE_URL=... set-study-visibility.mjs --slugs a,b --visibility public|unlisted [--apply]');
+if (
+  !values.slugs ||
+  !['public', 'unlisted', 'private'].includes(values.visibility ?? '') ||
+  !process.env.DATABASE_URL
+) {
+  console.error(
+    'usage: DATABASE_URL=... set-study-visibility.mjs --slugs a,b --visibility public|unlisted [--apply]',
+  );
   process.exit(2);
 }
 const client = new pg.Client({ connectionString: process.env.DATABASE_URL });
@@ -23,7 +33,10 @@ await client.connect();
 let changed = 0;
 try {
   for (const slug of values.slugs.split(',').filter(Boolean)) {
-    const { rows } = await client.query('SELECT id, name, visibility FROM studies WHERE slug = $1', [slug]);
+    const { rows } = await client.query(
+      'SELECT id, name, visibility FROM studies WHERE slug = $1',
+      [slug],
+    );
     if (rows.length !== 1) {
       console.log(`${slug}: not found`);
       continue;
@@ -35,7 +48,11 @@ try {
     }
     console.log(`${slug}: ${s.visibility} -> ${values.visibility}  (${s.name})`);
     changed += 1;
-    if (values.apply) await client.query('UPDATE studies SET visibility = $2, updated_at = now() WHERE id = $1', [s.id, values.visibility]);
+    if (values.apply)
+      await client.query('UPDATE studies SET visibility = $2, updated_at = now() WHERE id = $1', [
+        s.id,
+        values.visibility,
+      ]);
   }
 } finally {
   await client.end();

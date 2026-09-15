@@ -14,7 +14,11 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const { values } = parseArgs({
-  options: { dir: { type: 'string' }, slug: { type: 'string' }, size: { type: 'string', default: '40' } },
+  options: {
+    dir: { type: 'string' },
+    slug: { type: 'string' },
+    size: { type: 'string', default: '40' },
+  },
 });
 if (!values.dir || !values.slug) {
   console.error('usage: make-shards.mjs --dir <corpus dir> --slug <book> [--size N]');
@@ -40,15 +44,20 @@ if (existsSync(soundPath)) {
   }
 }
 
-const missingSound = records.filter((r) => verifyById.get(r.id)?.engineFen && !soundById.has(r.id)).length;
+const missingSound = records.filter(
+  (r) => verifyById.get(r.id)?.engineFen && !soundById.has(r.id),
+).length;
 if (missingSound > 0) {
-  console.error(`${slug}: ${missingSound} replayed record(s) have no soundness row yet; run the sweep first`);
+  console.error(
+    `${slug}: ${missingSound} replayed record(s) have no soundness row yet; run the sweep first`,
+  );
   process.exit(1);
 }
 
 function slimSound(row) {
   if (!row) return null;
-  const strip = (search) => (search ? { score: search.score, depth: search.depth, bestmove: search.bestmove } : null);
+  const strip = (search) =>
+    search ? { score: search.score, depth: search.depth, bestmove: search.bestmove } : null;
   return {
     pov: row.pov,
     lineMates: row.lineMates,
@@ -83,7 +92,11 @@ for (let a = 0, i = 0; a < records.length; a += SIZE, i += 1) {
     };
   });
   const path = join(dir, 'shards', `${slug}.${i}.json`);
-  writeFileSync(path, `${JSON.stringify({ slug, shard: i, range: [a, z], records: rows }, null, 1)}\n`, 'utf8');
+  writeFileSync(
+    path,
+    `${JSON.stringify({ slug, shard: i, range: [a, z], records: rows }, null, 1)}\n`,
+    'utf8',
+  );
   shards.push({ shard: i, range: [a, z], path, records: z - a });
 }
 console.log(JSON.stringify({ slug, total: records.length, shards }));

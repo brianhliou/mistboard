@@ -45,7 +45,11 @@ function replay(rec) {
   const raw = rawRecord(rec);
   const asRed = game.importXiangqiGame(raw);
   if (!asRed.error && asRed.moves.length > 0) {
-    return { ...asRed, turn: 'red', initialState: asRed.initialState ?? game.createInitialXiangqiState('import') };
+    return {
+      ...asRed,
+      turn: 'red',
+      initialState: asRed.initialState ?? game.createInitialXiangqiState('import'),
+    };
   }
   if (!rec.binit) return { error: asRed.error ?? 'no legal replay', turn: null };
   const board = game.xiangqiBoardFromDhtmlxqBinit(rec.binit);
@@ -62,20 +66,36 @@ function replay(rec) {
   if (!asBlack.error && asBlack.moves.length > 0) {
     return { ...asBlack, turn: 'black', initialState: blackStart };
   }
-  return { error: asRed.error ?? asBlack.error ?? 'no legal replay', turn: null, redError: asRed.error, blackError: asBlack.error };
+  return {
+    error: asRed.error ?? asBlack.error ?? 'no legal replay',
+    turn: null,
+    redError: asRed.error,
+    blackError: asBlack.error,
+  };
 }
 
 /** Where the mainline ends: playing, checkmate, stalemate, or a draw rule. */
 function terminal(initialState, moves) {
   let state = initialState;
   for (const mv of moves) state = game.applyStandardXiangqiMove(state, mv);
-  const legal = state.status.type === 'playing' ? game.getStandardXiangqiLegalMoves(state).length : 0;
-  return { status: state.status, legalRepliesAtEnd: legal, sideToMoveAtEnd: state.status.turn ?? null };
+  const legal =
+    state.status.type === 'playing' ? game.getStandardXiangqiLegalMoves(state).length : 0;
+  return {
+    status: state.status,
+    legalRepliesAtEnd: legal,
+    sideToMoveAtEnd: state.status.turn ?? null,
+  };
 }
 
 const only = new Set(values.only.split(',').filter(Boolean));
 const books = readdirSync(values.dir)
-  .filter((f) => f.endsWith('.json') && !f.includes('.verify.') && !f.includes('.summary.') && !f.includes('.partial.'))
+  .filter(
+    (f) =>
+      f.endsWith('.json') &&
+      !f.includes('.verify.') &&
+      !f.includes('.summary.') &&
+      !f.includes('.partial.'),
+  )
   .map((f) => f.replace(/\.json$/, ''))
   .filter((slug) => only.size === 0 || only.has(slug))
   .sort();
@@ -83,9 +103,20 @@ const books = readdirSync(values.dir)
 for (const slug of books) {
   const records = JSON.parse(readFileSync(join(values.dir, `${slug}.json`), 'utf8'));
   const summaryPath = join(values.dir, `${slug}.json.summary.json`);
-  const complete = existsSync(summaryPath) ? JSON.parse(readFileSync(summaryPath, 'utf8')).complete : null;
+  const complete = existsSync(summaryPath)
+    ? JSON.parse(readFileSync(summaryPath, 'utf8')).complete
+    : null;
   const out = [];
-  const counts = { total: records.length, red: 0, black: 0, error: 0, noMainline: 0, standardStart: 0, mate: 0, oneMove: 0 };
+  const counts = {
+    total: records.length,
+    red: 0,
+    black: 0,
+    error: 0,
+    noMainline: 0,
+    standardStart: 0,
+    mate: 0,
+    oneMove: 0,
+  };
   for (const rec of records) {
     const row = { id: rec.id, vol: rec.vol, volName: rec.volName, title: rec.title, url: rec.url };
     if (!rec.mainline) {
@@ -105,13 +136,24 @@ for (const slug of books) {
     }
     if (r.error) {
       counts.error += 1;
-      out.push({ ...row, turn: null, plies: 0, error: r.error, redError: r.redError, blackError: r.blackError });
+      out.push({
+        ...row,
+        turn: null,
+        plies: 0,
+        error: r.error,
+        redError: r.redError,
+        blackError: r.blackError,
+      });
       continue;
     }
     counts[r.turn] += 1;
     if (r.moves.length <= 1) counts.oneMove += 1;
     const end = terminal(r.initialState, r.moves);
-    if (end.status.type === 'checkmate' || (end.status.type === 'finished' && end.status.reason === 'checkmate')) counts.mate += 1;
+    if (
+      end.status.type === 'checkmate' ||
+      (end.status.type === 'finished' && end.status.reason === 'checkmate')
+    )
+      counts.mate += 1;
     out.push({
       ...row,
       turn: r.turn,

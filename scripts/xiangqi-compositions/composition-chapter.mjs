@@ -54,7 +54,8 @@ export function importEitherSide(rec, deps) {
     const initialState = asRed.initialState ?? deps.createInitialXiangqiState?.('import');
     if (initialState) return { ...asRed, initialState, turn: 'red' };
   }
-  if (!rec.binit) return { error: asRed.error ?? 'no legal replay from the standard start', turn: null };
+  if (!rec.binit)
+    return { error: asRed.error ?? 'no legal replay from the standard start', turn: null };
 
   const board = deps.xiangqiBoardFromDhtmlxqBinit(rec.binit);
   if (!board) return { error: asRed.error ?? 'binit did not decode', turn: null };
@@ -89,10 +90,12 @@ export function buildChapter(rec, deps, opts) {
   const edit = opts.edit ?? null;
   const zh = edit?.zh || bareTitle(rec.title);
   const n = edit?.n ?? numberOf(rec.title);
-  if (edit && edit.publish === false) return { skip: `held back: ${edit.soundNote || edit.notes || edit.sound || 'publish=false'}` };
+  if (edit && edit.publish === false)
+    return { skip: `held back: ${edit.soundNote || edit.notes || edit.sound || 'publish=false'}` };
   if (!rec.binit && opts.kind !== 'games') return { skip: 'no start position on the page' };
   if (!rec.mainline) return { skip: 'no mainline' };
-  if (n === Number.MAX_SAFE_INTEGER) return { skip: 'no chapter number: the title carries none and no edit supplies one' };
+  if (n === Number.MAX_SAFE_INTEGER)
+    return { skip: 'no chapter number: the title carries none and no edit supplies one' };
 
   const r = importEitherSide(rec, deps);
   // Drop, never truncate: a composition is a puzzle with one answer, so a line
@@ -128,7 +131,8 @@ export function buildChapter(rec, deps, opts) {
   if (edit?.hant) {
     // The Traditional title keeps whatever number prefix dpxq's title carries.
     const bareZh = bareTitle(rec.title);
-    const hantTitle = bareZh && rec.title.includes(bareZh) ? rec.title.replace(bareZh, edit.hant) : edit.hant;
+    const hantTitle =
+      bareZh && rec.title.includes(bareZh) ? rec.title.replace(bareZh, edit.hant) : edit.hant;
     i18n['zh-Hant'] = { name: hantTitle };
   }
 

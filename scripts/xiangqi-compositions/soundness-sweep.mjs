@@ -37,13 +37,21 @@ const { values } = parseArgs({
     movetime: { type: 'string', default: '4000' },
     engine: {
       type: 'string',
-      default: join(homedir(), 'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon'),
+      default: join(
+        homedir(),
+        'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon',
+      ),
     },
-    nnue: { type: 'string', default: join(homedir(), 'projects/tools/pikafish-official-2026-01-02/pikafish.nnue') },
+    nnue: {
+      type: 'string',
+      default: join(homedir(), 'projects/tools/pikafish-official-2026-01-02/pikafish.nnue'),
+    },
   },
 });
 if (!values.dir) {
-  console.error('usage: soundness-sweep.mjs --dir <corpus dir> [--only slug,slug] [--workers N] [--movetime ms]');
+  console.error(
+    'usage: soundness-sweep.mjs --dir <corpus dir> [--only slug,slug] [--workers N] [--movetime ms]',
+  );
   process.exit(2);
 }
 if (!existsSync(values.engine)) {
@@ -75,7 +83,8 @@ function openEngine() {
     }
   });
   const send = (cmd) => proc.stdin.write(`${cmd}\n`);
-  const until = (match, onLine) => new Promise((res) => waiters.push({ match, resolve: res, onLine }));
+  const until = (match, onLine) =>
+    new Promise((res) => waiters.push({ match, resolve: res, onLine }));
   const ready = async () => {
     send('isready');
     await until((l) => l === 'readyok');

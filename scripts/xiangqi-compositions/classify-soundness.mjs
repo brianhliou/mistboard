@@ -38,15 +38,20 @@ const { dir, slug } = values;
 const verify = JSON.parse(readFileSync(join(dir, `${slug}.verify.json`), 'utf8'));
 const raw = JSON.parse(readFileSync(join(dir, `${slug}.json`), 'utf8'));
 const commentsById = new Map(raw.map((r) => [r.id, r.comments ?? {}]));
+
 // Whether a record is a full game (result line, no puzzle claim) comes from the
 // plan's kind, not from the absence of a diagram: handicap games (饶双先, 饶左马)
 // start from a custom binit and are still games. A 'mixed' book is games in its
 // 全局 volume and compositions elsewhere.
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-const plan = JSON.parse(readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'books.json'), 'utf8'));
+
+const plan = JSON.parse(
+  readFileSync(resolve(dirname(fileURLToPath(import.meta.url)), 'books.json'), 'utf8'),
+);
 const kind = plan.books.find((b) => b.slug === slug)?.kind ?? 'compositions';
-const isGame = (r) => (kind === 'games' ? true : kind === 'mixed' ? /全局/.test(r.volName ?? '') : !r.binit);
+const isGame = (r) =>
+  kind === 'games' ? true : kind === 'mixed' ? /全局/.test(r.volName ?? '') : !r.binit;
 const gameById = new Map(raw.map((r) => [r.id, isGame(r)]));
 const rows = new Map();
 const sp = join(dir, `${slug}.soundness.jsonl`);
@@ -75,11 +80,20 @@ function claimOf(verdict) {
 function view(search, sideToMove) {
   if (!search?.score) return null;
   const s = search.score;
-  if (s.mate !== undefined) return { side: s.mate > 0 ? sideToMove : other(sideToMove), strength: 'win', text: `mate ${s.mate}` };
+  if (s.mate !== undefined)
+    return {
+      side: s.mate > 0 ? sideToMove : other(sideToMove),
+      strength: 'win',
+      text: `mate ${s.mate}`,
+    };
   const cp = s.cp;
   const side = cp > 0 ? sideToMove : other(sideToMove);
   const a = Math.abs(cp);
-  return { side: a < 150 ? 'draw' : side, strength: a >= 300 ? 'win' : a >= 150 ? 'better' : 'even', text: `cp ${cp}` };
+  return {
+    side: a < 150 ? 'draw' : side,
+    strength: a >= 300 ? 'win' : a >= 150 ? 'better' : 'even',
+    text: `cp ${cp}`,
+  };
 }
 
 const out = {};
@@ -89,7 +103,9 @@ for (const rec of verify.records) {
   let sound;
   let note;
   const cm = commentsById.get(id) ?? {};
-  const keys = Object.keys(cm).map(Number).sort((a, b) => a - b);
+  const keys = Object.keys(cm)
+    .map(Number)
+    .sort((a, b) => a - b);
   const last = keys.length ? cm[String(keys.at(-1))] : null;
   // 烂柯神机 prints the verdict as a title suffix (一击惊人 正和); read that too.
   const titleTail = /\s(正和|和局|和|红胜|黑胜|红先胜|黑先胜)(\(\d\))?$/.exec(rec.title ?? '');
@@ -109,7 +125,11 @@ for (const rec of verify.records) {
     const root = row ? view(row.root, pov) : null;
     const end = row && !mated ? view(row.end, endSide) : null;
     const rootTxt = root ? `root ${root.text} (${row.root.depth}) for ${pov}` : 'no root search';
-    const endTxt = mated ? `line mates (${lastMover} wins)` : end ? `end ${end.text} (${row.end.depth}) for ${endSide}` : 'no end search';
+    const endTxt = mated
+      ? `line mates (${lastMover} wins)`
+      : end
+        ? `end ${end.text} (${row.end.depth}) for ${endSide}`
+        : 'no end search';
     note = `${rootTxt}; ${endTxt}`;
     if (!row) {
       sound = 'unclear';

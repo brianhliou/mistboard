@@ -22,7 +22,9 @@ const { values } = parseArgs({
   options: { edits: { type: 'string' }, slugs: { type: 'string' }, data: { type: 'string' } },
 });
 if (!values.edits || !values.slugs || !values.data) {
-  console.error('usage: validate-edits-studies.mjs --edits <file> --data <slug>.json --slugs <slug,slug>');
+  console.error(
+    'usage: validate-edits-studies.mjs --edits <file> --data <slug>.json --slugs <slug,slug>',
+  );
   process.exit(2);
 }
 if (!process.env.DATABASE_URL) {
@@ -38,7 +40,9 @@ const CJK = /[㐀-鿿]/;
 // not per book, so the lookup is keyed by (vol, n).
 // A singleStudy book folds every dpxq volume into one study, so its chapters all live in vol 1.
 const single = edits.book?.singleStudy === true;
-const volById = new Map(JSON.parse(readFileSync(values.data, 'utf8')).map((r) => [String(r.id), single ? 1 : r.vol]));
+const volById = new Map(
+  JSON.parse(readFileSync(values.data, 'utf8')).map((r) => [String(r.id), single ? 1 : r.vol]),
+);
 const byN = new Map();
 // A revised-diagram record (改图) shares its n with the original and is held;
 // the seeded chapter is the published one, so that is the one to compare.
@@ -75,9 +79,11 @@ try {
       problems.push(`${slug}: name says ${stated[1]} but ${chapters.rows.length} chapters exist`);
     }
     for (const locale of ['zh-Hans', 'zh-Hant']) {
-      if (!s.i18n?.[locale]?.name || !s.i18n?.[locale]?.description) problems.push(`${slug}: study i18n ${locale} incomplete`);
+      if (!s.i18n?.[locale]?.name || !s.i18n?.[locale]?.description)
+        problems.push(`${slug}: study i18n ${locale} incomplete`);
     }
-    if (/—/.test(`${s.name}${s.description}`)) problems.push(`${slug}: em dash in study name or description`);
+    if (/—/.test(`${s.name}${s.description}`))
+      problems.push(`${slug}: em dash in study name or description`);
     console.log(`${slug}  [${s.visibility}]  ${chapters.rows.length} chapters  ${s.name}`);
 
     const nums = [];
@@ -98,31 +104,42 @@ try {
         problems.push(`${where}: no edits record with n=${n}`);
         continue;
       }
-      if (!rec.publish) problems.push(`${where}: record ${rec.id} is publish=false in the edits file`);
-      if (rec.en && rec.en !== en) problems.push(`${where}: English "${en}" but edits say "${rec.en}"`);
+      if (!rec.publish)
+        problems.push(`${where}: record ${rec.id} is publish=false in the edits file`);
+      if (rec.en && rec.en !== en)
+        problems.push(`${where}: English "${en}" but edits say "${rec.en}"`);
       const hans = c.i18n?.['zh-Hans']?.name;
       if (!hans) problems.push(`${where}: no zh-Hans name`);
-      else if (rec.zh && !hans.includes(rec.zh) && !hans.includes(rec.zh.replace(/（.*）$/, ''))) problems.push(`${where}: zh-Hans "${hans}" does not contain "${rec.zh}"`);
+      else if (rec.zh && !hans.includes(rec.zh) && !hans.includes(rec.zh.replace(/（.*）$/, '')))
+        problems.push(`${where}: zh-Hans "${hans}" does not contain "${rec.zh}"`);
       const hant = c.i18n?.['zh-Hant']?.name;
       if (!hant) problems.push(`${where}: no zh-Hant name`);
-      else if (rec.hant && !hant.includes(rec.hant)) problems.push(`${where}: zh-Hant "${hant}" does not contain "${rec.hant}"`);
+      else if (rec.hant && !hant.includes(rec.hant))
+        problems.push(`${where}: zh-Hant "${hant}" does not contain "${rec.hant}"`);
       const text = c.root?.root?.annotations?.comments?.[0]?.text ?? '';
       if (!text) problems.push(`${where}: no root comment`);
       else {
         if (!text.includes(en)) problems.push(`${where}: comment does not quote its English title`);
-        if (bookZh && !new RegExp(`(Problem|Game) ${n} of ${bookZh}`).test(text)) problems.push(`${where}: comment lacks "Problem/Game ${n} of ${bookZh}"`);
+        if (bookZh && !new RegExp(`(Problem|Game) ${n} of ${bookZh}`).test(text))
+          problems.push(`${where}: comment lacks "Problem/Game ${n} of ${bookZh}"`);
         if (!text.includes('dpxq.com')) problems.push(`${where}: comment carries no dpxq credit`);
-        if (/https:\/\/www\.dpxq/.test(text)) problems.push(`${where}: dpxq link is https (operator asked for http)`);
+        if (/https:\/\/www\.dpxq/.test(text))
+          problems.push(`${where}: dpxq link is https (operator asked for http)`);
         for (const kept of Object.values(rec.prose ?? {})) {
-          if (!text.includes(kept)) problems.push(`${where}: kept prose missing from comment: ${kept.slice(0, 20)}`);
+          if (!text.includes(kept))
+            problems.push(`${where}: kept prose missing from comment: ${kept.slice(0, 20)}`);
         }
         for (const [key, cls] of Object.entries(rec.dropped ?? {})) {
           void key;
-          if (cls && /19\d\d年|诠订|内容提要/.test(text)) problems.push(`${where}: comment carries modern editorial text`);
+          if (cls && /19\d\d年|诠订|内容提要/.test(text))
+            problems.push(`${where}: comment carries modern editorial text`);
         }
       }
       const prev = enSeen.get(en);
-      if (prev && prev.zh !== rec.zh) problems.push(`${where}: English title also used by ${prev.where} (${prev.zh} vs ${rec.zh})`);
+      if (prev && prev.zh !== rec.zh)
+        problems.push(
+          `${where}: English title also used by ${prev.where} (${prev.zh} vs ${rec.zh})`,
+        );
       enSeen.set(en, { where, zh: rec.zh });
     }
     const sorted = [...nums].sort((a, b) => a - b);
@@ -131,7 +148,9 @@ try {
     if (!contiguous) console.log('  (gaps are expected where records were held back)');
   }
   if (seeded !== publishable.length) {
-    problems.push(`seeded ${seeded} chapters but the edits file has ${publishable.length} publish=true records`);
+    problems.push(
+      `seeded ${seeded} chapters but the edits file has ${publishable.length} publish=true records`,
+    );
   }
 } finally {
   await client.end();

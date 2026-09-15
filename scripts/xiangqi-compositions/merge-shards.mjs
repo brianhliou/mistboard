@@ -46,7 +46,9 @@ const { values } = parseArgs({
   },
 });
 if (!values.dir || !values.slug) {
-  console.error('usage: merge-shards.mjs --dir <corpus dir> --slug <book> [--book book.json] [--witness a|b]');
+  console.error(
+    'usage: merge-shards.mjs --dir <corpus dir> --slug <book> [--book book.json] [--witness a|b]',
+  );
   process.exit(2);
 }
 const { dir, slug } = values;
@@ -56,6 +58,7 @@ const read = (p) => JSON.parse(readFileSync(p, 'utf8'));
 // The shard list is the shard files themselves, not a plan file: wave_args.py
 // wrote plans only for the first wave, and the files are what the agents read.
 import { readdirSync } from 'node:fs';
+
 // Slim shards (lean pass) win over the first wave's full shards when both exist.
 const listShards = (re) =>
   readdirSync(join(dir, 'shards'))
@@ -124,7 +127,8 @@ for (const s of plan.shards) {
       merged.sound = ruleSound[id].sound;
       merged.soundNote = ruleSound[id].soundNote;
       merged.publish = ruleSound[id].publish && !merged.hold;
-      if (merged.hold) merged.notes = `${merged.notes ? `${merged.notes} ` : ''}held by reader: ${merged.hold}`;
+      if (merged.hold)
+        merged.notes = `${merged.notes ? `${merged.notes} ` : ''}held by reader: ${merged.hold}`;
     } else if (merged.sound === undefined) {
       hard.push(`${id}: no sound field and no rule classification`);
     }
@@ -143,7 +147,8 @@ if (values['renumber-positional']) {
 }
 
 const EM = /—/g;
-const EDITORIAL = /(19\d\d年|20\d\d年|诠订|詮訂|内容提要|內容提要|编者|編者|注[：:]|http|www\.|本局即|杨官璘|楊官璘|屠景明|裘望禹)/;
+const EDITORIAL =
+  /(19\d\d年|20\d\d年|诠订|詮訂|内容提要|內容提要|编者|編者|注[：:]|http|www\.|本局即|杨官璘|楊官璘|屠景明|裘望禹)/;
 const dash = (s) => (typeof s === 'string' ? s.replace(EM, ', ') : s);
 let publish = 0;
 let suspect = 0;
@@ -167,17 +172,22 @@ for (const [id, rec] of Object.entries(records)) {
     rec.publish = false;
   }
   for (const [k, text] of Object.entries(rec.prose ?? {})) {
-    if (EDITORIAL.test(text)) hard.push(`${id} ${rec.zh}: kept prose[${k}] carries an editorial marker: ${text.slice(0, 40)}`);
+    if (EDITORIAL.test(text))
+      hard.push(
+        `${id} ${rec.zh}: kept prose[${k}] carries an editorial marker: ${text.slice(0, 40)}`,
+      );
   }
   if (rec.publish) {
     publish += 1;
     const vol = volById.get(id) ?? 1;
     const key = `${vol}:${rec.n}`;
-    if (nByVol.has(key)) hard.push(`${id} ${rec.zh}: n=${rec.n} in vol ${vol} also used by ${nByVol.get(key)}`);
+    if (nByVol.has(key))
+      hard.push(`${id} ${rec.zh}: n=${rec.n} in vol ${vol} also used by ${nByVol.get(key)}`);
     nByVol.set(key, id);
     if (rec.en) {
       const prev = enByZh.get(rec.en);
-      if (prev && prev.zh !== rec.zh) hard.push(`${id} ${rec.zh} and ${prev.id} ${prev.zh} share English "${rec.en}"`);
+      if (prev && prev.zh !== rec.zh)
+        hard.push(`${id} ${rec.zh} and ${prev.id} ${prev.zh} share English "${rec.en}"`);
       enByZh.set(rec.en, { id, zh: rec.zh });
     }
   } else if (err || rec.sound === 'replay') replayError += 1;
@@ -185,14 +195,24 @@ for (const [id, rec] of Object.entries(records)) {
   else heldOther += 1;
 }
 
-const existing = existsSync(join(E, `${slug}.edits.json`)) ? read(join(E, `${slug}.edits.json`)) : null;
+const existing = existsSync(join(E, `${slug}.edits.json`))
+  ? read(join(E, `${slug}.edits.json`))
+  : null;
 // A book file is the bare block, but an agent may wrap it as {slug, book}; unwrap.
 const bookFile = values.book ? read(values.book) : null;
-const book = bookFile ? (bookFile.book && !bookFile.zh ? bookFile.book : bookFile) : (existing?.book ?? null);
+const book = bookFile
+  ? bookFile.book && !bookFile.zh
+    ? bookFile.book
+    : bookFile
+  : (existing?.book ?? null);
 if (!book) hard.push('no book block: pass --book <book.json> or have an existing edits file');
 
-console.log(`${slug}: ${Object.keys(records).length} records from ${sources.length} shards (${sources.map((s) => `${s.shard}:${s.witness}`).join(' ')})`);
-console.log(`  publish ${publish}  suspect ${suspect}  replayError ${replayError}  heldOther ${heldOther}`);
+console.log(
+  `${slug}: ${Object.keys(records).length} records from ${sources.length} shards (${sources.map((s) => `${s.shard}:${s.witness}`).join(' ')})`,
+);
+console.log(
+  `  publish ${publish}  suspect ${suspect}  replayError ${replayError}  heldOther ${heldOther}`,
+);
 for (const line of soft) console.log(`  fixed: ${line}`);
 for (const line of hard) console.log(`  HARD: ${line}`);
 if (hard.length) {
@@ -224,7 +244,8 @@ const fixNames = (study, n, where) => {
   if (!study) return;
   if (study.en?.name) {
     const next = study.en.name.replace(/\b\d+(\s+(?:classical|endgame|full))/, `${n}$1`);
-    if (next !== study.en.name) console.log(`  study name ${where}: "${study.en.name}" -> "${next}"`);
+    if (next !== study.en.name)
+      console.log(`  study name ${where}: "${study.en.name}" -> "${next}"`);
     study.en.name = next;
   }
   for (const loc of ['zh-Hans', 'zh-Hant']) {
@@ -235,14 +256,24 @@ const fixNames = (study, n, where) => {
     study[loc].name = next;
   }
 };
-if (book?.singleStudy || !(book?.volumes?.length > 1)) fixNames(book?.volumes?.[0]?.study ?? book?.study, perVol[1] ?? 0, 'vol 1');
-else for (const [v, n] of Object.entries(perVol)) fixNames(book.volumes[Number(v) - 1]?.study, n, `vol ${v}`);
+if (book?.singleStudy || !(book?.volumes?.length > 1))
+  fixNames(book?.volumes?.[0]?.study ?? book?.study, perVol[1] ?? 0, 'vol 1');
+else
+  for (const [v, n] of Object.entries(perVol))
+    fixNames(book.volumes[Number(v) - 1]?.study, n, `vol ${v}`);
 
 const out = {
   slug,
   book,
   records,
-  counts: { total: Object.keys(records).length, publish, suspect, replayError, heldOther, perVolume: perVol },
+  counts: {
+    total: Object.keys(records).length,
+    publish,
+    suspect,
+    replayError,
+    heldOther,
+    perVolume: perVol,
+  },
   mergedBy: 'merge-shards.mjs',
   sources,
 };

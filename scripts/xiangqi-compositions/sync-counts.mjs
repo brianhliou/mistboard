@@ -13,7 +13,9 @@ import { readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
-const { values } = parseArgs({ options: { dir: { type: 'string' }, only: { type: 'string', default: '' } } });
+const { values } = parseArgs({
+  options: { dir: { type: 'string' }, only: { type: 'string', default: '' } },
+});
 if (!values.dir) {
   console.error('usage: sync-counts.mjs --dir <corpus dir> [--only slug,slug]');
   process.exit(2);
@@ -31,14 +33,20 @@ const cn = (n) => {
   return `${CN[h]}百${r === 0 ? '' : r < 10 ? `零${CN[r]}` : cn(r)}`;
 };
 
-for (const f of readdirSync(join(dir, 'edits')).filter((x) => x.endsWith('.edits.json')).sort()) {
+for (const f of readdirSync(join(dir, 'edits'))
+  .filter((x) => x.endsWith('.edits.json'))
+  .sort()) {
   const slug = f.replace(/\.edits\.json$/, '');
   if (only.size && !only.has(slug)) continue;
   const path = join(dir, 'edits', f);
   const d = read(path);
   const b = d.book ?? {};
-  const err = new Map(read(join(dir, `${slug}.verify.json`)).records.map((r) => [String(r.id), r.error ?? null]));
-  const volOf = new Map(read(join(dir, `${slug}.json`)).map((r) => [String(r.id), b.singleStudy ? 1 : r.vol]));
+  const err = new Map(
+    read(join(dir, `${slug}.verify.json`)).records.map((r) => [String(r.id), r.error ?? null]),
+  );
+  const volOf = new Map(
+    read(join(dir, `${slug}.json`)).map((r) => [String(r.id), b.singleStudy ? 1 : r.vol]),
+  );
   const per = {};
   let fixedPublish = 0;
   for (const [id, r] of Object.entries(d.records ?? {})) {
@@ -62,10 +70,18 @@ for (const f of readdirSync(join(dir, 'edits')).filter((x) => x.endsWith('.edits
       st.en.name = next;
     }
     for (const loc of ['zh-Hans', 'zh-Hant']) {
-      if (st[loc]?.name) st[loc].name = st[loc].name.replace(/[零一二三四五六七八九十百]+局/, `${cn(n)}局`);
+      if (st[loc]?.name)
+        st[loc].name = st[loc].name.replace(/[零一二三四五六七八九十百]+局/, `${cn(n)}局`);
     }
   }
-  d.counts = { ...(d.counts ?? {}), publish: Object.values(per).reduce((a, x) => a + x, 0), perVolume: Object.fromEntries(Object.entries(per).map(([k, v]) => [String(k), v])) };
+  d.counts = {
+    ...(d.counts ?? {}),
+    publish: Object.values(per).reduce((a, x) => a + x, 0),
+    perVolume: Object.fromEntries(Object.entries(per).map(([k, v]) => [String(k), v])),
+  };
   writeFileSync(path, `${JSON.stringify(d, null, 1)}\n`, 'utf8');
-  if (changes.length || fixedPublish) console.log(`${slug}: ${fixedPublish} publish reverted; ${changes.join('; ') || 'names unchanged'}`);
+  if (changes.length || fixedPublish)
+    console.log(
+      `${slug}: ${fixedPublish} publish reverted; ${changes.join('; ') || 'names unchanged'}`,
+    );
 }

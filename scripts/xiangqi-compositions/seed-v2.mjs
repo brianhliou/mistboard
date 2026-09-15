@@ -93,7 +93,10 @@ const kebab = (text) =>
 /** The book block of an edits file as the same shape BOOKS entries have. */
 function bookFromEdits(edits) {
   const book = edits.book ?? {};
-  const volumes = Array.isArray(book.volumes) && book.volumes.length > 0 ? book.volumes : [{ vol: 1, zh: book.zh }];
+  const volumes =
+    Array.isArray(book.volumes) && book.volumes.length > 0
+      ? book.volumes
+      : [{ vol: 1, zh: book.zh }];
   const studyFor = (v) => volumes[v - 1]?.study ?? (volumes.length === 1 ? book.study : null);
   const need = (v, what) => {
     throw new Error(`edits book volume ${v} has no ${what}; the book editor must supply it`);
@@ -133,21 +136,17 @@ const VOL_ZH = BOOK.volZh;
 const OLD_NAME_PREFIX = BOOK.oldNamePrefix;
 const nameFor = BOOK.nameFor;
 const slugFor = BOOK.slugFor;
-const descFor = BOOK.descFor ?? ((v, n) =>
-  `Volume ${v} (${VOL_ZH[v - 1]}) of ${BOOK.zh}, a ${BOOK.era} manual of xiangqi endgame ` +
-  `compositions. All ${n} problems of the volume, each rooted at its own diagram with the ` +
-  `book's solution as the mainline. Titles are English renderings of the original ` +
-  `four-character names, which are kept alongside. Records come from dpxq.com and are ` +
-  `credited on each composition. Every line replays legally through the Mistboard rules ` +
-  `kernel, which is a check on the record and not on the book: this text has a single ` +
-  `source, and a solution recorded short would still replay cleanly. The compositions are ` +
-  `several centuries old and long out of copyright.`);
-
-const num = (t) => {
-  const m = /第\s*(\d+)\s*局/.exec(t || '');
-  return m ? Number(m[1]) : Number.MAX_SAFE_INTEGER;
-};
-const bare = (t) => (t || '').replace(/第\s*\d+\s*局\s*/, '').trim();
+const descFor =
+  BOOK.descFor ??
+  ((v, n) =>
+    `Volume ${v} (${VOL_ZH[v - 1]}) of ${BOOK.zh}, a ${BOOK.era} manual of xiangqi endgame ` +
+    `compositions. All ${n} problems of the volume, each rooted at its own diagram with the ` +
+    `book's solution as the mainline. Titles are English renderings of the original ` +
+    `four-character names, which are kept alongside. Records come from dpxq.com and are ` +
+    `credited on each composition. Every line replays legally through the Mistboard rules ` +
+    `kernel, which is a check on the record and not on the book: this text has a single ` +
+    `source, and a solution recorded short would still replay cleanly. The compositions are ` +
+    `several centuries old and long out of copyright.`);
 
 // The committed titles file carries two maps that do not overlap: byTitle (537
 // entries, keyed by the four-character Chinese name) and byNumber (280, keyed by
@@ -182,7 +181,9 @@ const DEPS = {
   ensureDealtRoot,
 };
 const singleVolume = VOL_ZH.length === 1;
-const GLOSS = JSON.parse(readFileSync(new URL('../data/xiangqi-compositions/verdict-gloss.json', import.meta.url), 'utf8'));
+const GLOSS = JSON.parse(
+  readFileSync(new URL('../data/xiangqi-compositions/verdict-gloss.json', import.meta.url), 'utf8'),
+);
 const chapterFor = (rec) => {
   const edit = EDITS ? EDITS.records?.[String(rec.id)] : undefined;
   if (EDITS && !edit) return { skip: 'not in the edits file' };
@@ -267,7 +268,9 @@ for (const v of volumes) {
   if (has('dry-run')) {
     console.log(`  would create slug=${slugFor(v)}`);
     console.log(`  name: ${nameFor(v, chapters.length)}`);
-    if (BOOK.i18nFor) for (const [loc, f] of Object.entries(BOOK.i18nFor(v))) console.log(`  ${loc}: ${f.name ?? ''}`);
+    if (BOOK.i18nFor)
+      for (const [loc, f] of Object.entries(BOOK.i18nFor(v)))
+        console.log(`  ${loc}: ${f.name ?? ''}`);
     for (const b of built.slice(0, 3)) console.log(`  ${b.chapter.name}  [${b.turn} to move]`);
   }
   if (has('dry-run') || chapters.length === 0) continue;

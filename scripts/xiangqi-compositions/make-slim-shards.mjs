@@ -18,7 +18,11 @@ import { join } from 'node:path';
 import { parseArgs } from 'node:util';
 
 const { values } = parseArgs({
-  options: { dir: { type: 'string' }, slug: { type: 'string' }, size: { type: 'string', default: '60' } },
+  options: {
+    dir: { type: 'string' },
+    slug: { type: 'string' },
+    size: { type: 'string', default: '60' },
+  },
 });
 if (!values.dir || !values.slug) {
   console.error('usage: make-slim-shards.mjs --dir <corpus dir> --slug <book> [--size N]');
@@ -27,7 +31,9 @@ if (!values.dir || !values.slug) {
 const { dir, slug } = values;
 const SIZE = Number(values.size);
 const records = JSON.parse(readFileSync(join(dir, `${slug}.json`), 'utf8'));
-const verify = new Map(JSON.parse(readFileSync(join(dir, `${slug}.verify.json`), 'utf8')).records.map((r) => [r.id, r]));
+const verify = new Map(
+  JSON.parse(readFileSync(join(dir, `${slug}.verify.json`), 'utf8')).records.map((r) => [r.id, r]),
+);
 const soundPath = join(dir, `${slug}.sound.json`);
 if (!existsSync(soundPath)) {
   console.error(`${slug}: no sound.json; run classify-soundness.mjs first`);
@@ -36,8 +42,19 @@ if (!existsSync(soundPath)) {
 const sound = JSON.parse(readFileSync(soundPath, 'utf8'));
 // Existing English renderings, looked up here so the agent never opens the
 // 817-entry file (and never needs a Grep tool it may not have).
-const titlesPath = join(dir, '..', '..', 'mistboard', 'scripts', 'data', 'xiangqi-compositions', 'titles-en.json');
-const byTitle = existsSync(titlesPath) ? (JSON.parse(readFileSync(titlesPath, 'utf8')).byTitle ?? {}) : {};
+const titlesPath = join(
+  dir,
+  '..',
+  '..',
+  'mistboard',
+  'scripts',
+  'data',
+  'xiangqi-compositions',
+  'titles-en.json',
+);
+const byTitle = existsSync(titlesPath)
+  ? (JSON.parse(readFileSync(titlesPath, 'utf8')).byTitle ?? {})
+  : {};
 const bare = (t) => (t ?? '').replace(/^(第\s*\d+\s*局\s*|N?\d+\s*)/, '').trim();
 
 mkdirSync(join(dir, 'shards'), { recursive: true });
@@ -68,7 +85,11 @@ for (let a = 0, i = 0; a < records.length; a += SIZE, i += 1) {
     };
   });
   const path = join(dir, 'shards', `${slug}.slim.${i}.json`);
-  writeFileSync(path, `${JSON.stringify({ slug, shard: i, range: [a, z], records: rows }, null, 1)}\n`, 'utf8');
+  writeFileSync(
+    path,
+    `${JSON.stringify({ slug, shard: i, range: [a, z], records: rows }, null, 1)}\n`,
+    'utf8',
+  );
   shards.push({ shard: i, range: [a, z], path, records: z - a });
 }
 console.log(JSON.stringify({ slug, total: records.length, shards }));
