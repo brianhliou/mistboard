@@ -372,6 +372,8 @@ export {
   processStripeEvent,
   setStripeCustomerId,
 } from './persistence-patron.js';
+export type { PlayStreakOptions, PlayStreakSubject } from './persistence-play-streak.js';
+export { getPlayStreak } from './persistence-play-streak.js';
 export {
   recordPracticeSolved,
   solvedChapterIds,
@@ -600,6 +602,7 @@ export {
   xiangqiPuzzleMiningCandidateId,
   xiangqiPuzzleMiningRunId,
 } from './persistence-xiangqi-puzzle-mining.js';
+export type { PlayStreak } from './play-streak.js';
 export type {
   XiangqiPuzzleAuditWorkResult,
   XiangqiPuzzleAuditWorkVerdict,

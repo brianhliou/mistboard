@@ -18,6 +18,7 @@ import { readAccountPreferences, shouldShowClockTenths } from '../account-prefer
 import { openConfirmDialog } from '../confirm-dialog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
+import { postGamePlayStreakNote } from '../play-streak.js';
 import { postGameInviteButton } from '../postgame-invite.js';
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
@@ -507,6 +508,10 @@ export function createTenantRoomChrome<C extends string>(
       // host empty so the wrapper row collapses instead of appending an empty
       // button row.
       if (row.childElementCount > 0) refs.roomActions.append(row);
+      // The player's own play streak, once the finished game has been counted.
+      if (view.status.type === 'finished' && ctx.seat() !== null) {
+        refs.roomActions.append(postGamePlayStreakNote(ctx.room()));
+      }
       return;
     }
 

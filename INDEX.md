@@ -118,7 +118,8 @@ Edit task → find file → open only that file.
 | `routes/lib.ts` | Shared HTTP utilities: `HttpApiContext` interface, `writeJson`, `requireMethod`, `requirePersistence`, `readJsonBody`, the parse helpers, `hashIp`, `isHttpAdminAuthorized`. Imported by every route module |
 | `routes/auth.ts` | `/api/auth/{me,logout,email/start,email/confirm}` |
 | `routes/account.ts` | `/api/account/profile` (PATCH) |
-| `routes/users.ts` | `/api/users/:handle/profile` |
+| `routes/users.ts` | `/api/users/:handle/profile` (`?tz=` buckets the profile's play streak on the viewer's calendar) |
+| `routes/play-streak.ts` | `/api/play-streak?tz=&device=`: the caller's own play streak (session account, else the guest device id the browser sends on live connects) |
 | `routes/rooms.ts` | POST `/api/rooms`, `/api/rooms/:id/abandon`, plus `parseRoomMode` / `parsePlayablePveEngineId` |
 | `routes/dark-xiangqi-rooms.ts` | Hidden Dark Xiangqi direct room creation branch for `POST /api/rooms`: request claiming, flag behavior, supported-surface gate, and room factory result mapping |
 | `routes/dark-xiangqi-games.ts` | Hidden Dark Xiangqi postgame/review API branch; keeps non-chess finished-game records out of generic chess replay APIs |
@@ -174,6 +175,8 @@ Edit task → find file → open only that file.
 | `forum-translation.ts` | Forum translate service (130): script heuristic (`detectScriptLanguage`, Han vs Latin after stripping URLs/handles) that decides whether a translation would change anything, content hash, the Anthropic SDK client (one byte-stable system prompt per target locale, effort low), and `createForumTranslationService`: cache lookup → in-flight coalescing per key → circuit breaker (consecutive upstream failures pause calls) → global daily miss cap → caller meter → model call → store, with one `forum_translation_miss` log line per model call (tokens, ms, outcome). Only misses are metered; knobs `MISTBOARD_FORUM_TRANSLATION_{DAILY_CAP,BREAKER_THRESHOLD,BREAKER_COOLDOWN_MS}` |
 | `persistence-feedback.ts` | Feedback persistence |
 | `persistence-site-stats.ts` | Site statistics query |
+| `play-streak.ts` | Play streak math: consecutive player-calendar days with a counted game (`computePlayStreak`: current, best, last day; alive through the day after the last game), `resolveTimeZone` (browser IANA zone or UTC), `calendarDay` |
+| `persistence-play-streak.ts` | `getPlayStreak(subject, {timeZone})` for an account or a guest device: distinct `ended_at AT TIME ZONE` days under the counted-game filter, folded by `play-streak.ts` |
 | `persistence-stats-excluded-devices.ts` | Records a browser device id as stats-excluded when a `stats_excluded_at` account connects from it (migration 137); read by `persistence-counted-games.ts` |
 | `stats-excluded-device.ts` | `rememberExcludedDevice`: fire-and-forget hook both live connection handlers call; its own module so the tenant runtime never imports the chess-stack connection module (esbuild cycle) |
 | `persistence-counted-games.ts` | The one definition of a game that counts for every aggregate (public `/stats`, homepage number, `/metrics`, readout): completed pvp/pve with no seat held by a `users.stats_excluded_at` account, plus the account-seat and user-row filters. Import the fragments; never respell the filter |
@@ -475,6 +478,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `live-layout.ts` | Live-game static DOM shell and `LiveRefs` wiring for `/room/:id`; mounts the shared `game-table.ts` right column |
 | `live-move-list.ts` | Live-game replay controls and move-list rendering: masked/revealed move rows, active ply tracking, and auto-scroll state |
 | `live-room-actions.ts` | Live-game invite/review/rematch/play-again action row, debug-room link generation, and post-game action visibility |
+| `play-streak.ts` | Post-game "Play streak: N days" note under the room actions (both the chess shell and the tenant chrome): one `/api/play-streak` fetch per room on the browser's calendar, one retry if the finished game is not counted yet, hidden at zero; `browserTimeZone` also feeds the profile request |
 | `live-status.ts` | Live-game status copy and tone decisions: action banners, board status, room mode label, and seat label |
 | `live-view.ts` | Derived live-game views: current replay projection, fog-history view selection, capture tally, and dev-view reconstruction |
 | `live-sound.ts` | SoundController + `maybePlaySnapshotSound` + per-move sound policy. Owns the audio context, volume tracking, win/lose/capture/castle tone generation. Wired by live-render's render flow + live.ts's snapshot handler |

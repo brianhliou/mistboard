@@ -41,6 +41,7 @@ import * as notificationsRoute from './routes/notifications.js';
 import * as oembedRoute from './routes/oembed.js';
 import * as openapiRoute from './routes/openapi.js';
 import * as patronRoute from './routes/patron.js';
+import * as playStreakRoute from './routes/play-streak.js';
 import * as practiceRoute from './routes/practice.js';
 import * as puzzlesRoute from './routes/puzzles.js';
 import * as readoutsRoute from './routes/readouts.js';
@@ -122,6 +123,7 @@ export const routes: RouteModule[] = [
   adminAccountsRoute,
   coachesRoute,
   usersRoute,
+  playStreakRoute,
   leaderboardRoute,
   studiesRoute,
   practiceRoute,

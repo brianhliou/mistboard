@@ -602,7 +602,14 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         summary: 'A player’s public profile',
         description:
           'Private profiles are 404. Signed-in viewers also get a `relation` field; anonymous callers get null.',
-        parameters: [pathParam('handle', 'The player’s handle.')],
+        parameters: [
+          pathParam('handle', 'The player’s handle.'),
+          query(
+            'tz',
+            { type: 'string' },
+            'IANA time zone the play-streak days are counted on (default UTC).',
+          ),
+        ],
         responses: {
           '200': OK({
             type: 'object',
@@ -613,6 +620,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
                   user: { type: 'object' },
                   ratings: { type: 'array', items: { type: 'object' } },
                   puzzleRatings: { type: 'array', items: { type: 'object' } },
+                  playStreak: ref('PlayStreak'),
                   games: { type: 'array', items: { type: 'object' } },
                   gamesTotal: { type: 'integer' },
                 },
@@ -621,6 +629,31 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
           }),
           '400': ERROR_RESPONSE('`invalid_handle`'),
           '404': NOT_FOUND,
+          '503': PERSISTENCE,
+        },
+      },
+    },
+
+    '/api/play-streak': {
+      get: {
+        tags: ['Players'],
+        summary: 'Your own play streak',
+        description:
+          'Consecutive days with a completed game, for the signed-in account or, without a session, the guest browser device given by `device`. A streak is still current on the day after its last game.',
+        parameters: [
+          query('tz', { type: 'string' }, 'IANA time zone the days are counted on (default UTC).'),
+          query(
+            'device',
+            { type: 'string' },
+            'The browser device id a guest sends on live connects; ignored when signed in.',
+          ),
+        ],
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: { streak: ref('PlayStreak') },
+          }),
+          '400': ERROR_RESPONSE('`no_subject`: no session and no device id.'),
           '503': PERSISTENCE,
         },
       },
@@ -1190,6 +1223,19 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         Chapter: chapter,
         ExplorerMove: explorerMove,
         OEmbed: oembed,
+        PlayStreak: {
+          type: 'object',
+          properties: {
+            current: { type: 'integer', description: 'Days in the run that is still alive.' },
+            best: { type: 'integer', description: 'Longest run ever.' },
+            lastPlayedDay: {
+              type: 'string',
+              nullable: true,
+              description: 'YYYY-MM-DD of the last counted game on the requested calendar.',
+            },
+            today: { type: 'string', description: 'YYYY-MM-DD the streak was computed for.' },
+          },
+        },
       },
     },
   };
