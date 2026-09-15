@@ -554,7 +554,7 @@ figure(
       rings: smotherRings.map((square) => ({ square, color: '#e08a1e', heavy: true })),
     },
   ]),
-  'The horde’s finish, from its one win at equal strength (36 veterans on ranks 2 to 5). Both chariots fell late, the general is bare, and every point it could step to is covered by a soldier that does not check it. Xiangqi scores the side with no legal move as the loser; under the parent’s rule this is a draw, and about half of the horde’s wins against weak play go the same way.',
+  'The horde’s finish, from the million-node game on the array it wins four times in five (36 veterans on ranks 2 to 5). Both chariots fell late, the general is bare, and every point it could step to is covered by a soldier that does not check it. Xiangqi scores the side with no legal move as the loser; under the parent’s rule this is a draw, and about half of the horde’s wins against weak play go the same way.',
   1,
 );
 
@@ -666,7 +666,7 @@ function grid(
       // A "watch" pill on the river band, the one empty strip of every array,
       // so the board reads as something that opens rather than a picture.
       const riverY = y + 28 + XQ_BOARD_H / 2 - 4;
-      const pill = `<g class="xq-play-hint" pointer-events="none"><rect x="${x + XQ_BOARD_W / 2 - 74}" y="${riverY - 11}" width="148" height="22" rx="11" fill="rgba(28, 22, 12, 0.82)" stroke="rgba(255,255,255,0.35)" stroke-width="1"/><text x="${x + XQ_BOARD_W / 2}" y="${riverY + 4}" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" textLength="124" lengthAdjust="spacingAndGlyphs">▶ WATCH THE GAME</text></g>`;
+      const pill = `<g class="xq-play-hint" pointer-events="none"><rect x="${x + XQ_BOARD_W / 2 - 80}" y="${riverY - 11}" width="160" height="22" rx="11" fill="rgba(28, 22, 12, 0.82)" stroke="rgba(255,255,255,0.35)" stroke-width="1"/><text x="${x + XQ_BOARD_W / 2}" y="${riverY + 4}" font-family="system-ui, sans-serif" font-size="10.5" font-weight="700" fill="#fff" text-anchor="middle">▶ WATCH THE GAME</text></g>`;
       const board = xqBoardSvg({
         state: state(`${soldiersRule}-${c.id}`, fen(HORDE_FORMATIONS[c.formation])),
         x,
@@ -717,6 +717,20 @@ if (process.argv.includes('--blog')) {
   const BLOG_ASSETS = path.join(BLOG, 'assets/posts/horde-xiangqi');
   const BLOG_ART = '/assets/posts/horde-xiangqi/pieces';
   const INCLUDES = path.join(BLOG, '_includes');
+  // The blog localises generated includes by deriving _includes/xq/<lang>/
+  // from _includes/xq/en/ (localize_includes.py); a post includes the
+  // dispatcher, which picks the copy for the active language.
+  const XQ_EN = path.join(INCLUDES, 'xq', 'en');
+  mkdirSync(XQ_EN, { recursive: true });
+  const dispatcher = (name: string) => `{%- comment -%}
+  Dispatcher. The generated figure lives in _includes/xq/en/${name}
+  (from mistboard's gen-horde-diagrams.mts --blog; drop regenerated output there).
+  Localized copies under _includes/xq/<lang>/ are derived by
+  _i18n/tools/localize_includes.py from _i18n/includes/strings.<lang>.yml.
+{%- endcomment -%}
+{%- assign xq_path = "xq/" | append: site.active_lang | append: "/${name}" -%}
+{%- include {{ xq_path }} -%}
+`;
   mkdirSync(path.join(BLOG_ASSETS, 'pieces'), { recursive: true });
   const blogArt = new Set<string>();
   const blogArtHref = (svg: string) =>
@@ -735,8 +749,10 @@ if (process.argv.includes('--blog')) {
       `  <figcaption>${f.caption}</figcaption>`,
       '</figure>',
     ].join('\n');
-    writeFileSync(path.join(INCLUDES, `horde-xq-${f.slug}.html`), `${include}\n`);
-    console.log(`  _includes/horde-xq-${f.slug}.html`);
+    const name = `horde-xq-${f.slug}.html`;
+    writeFileSync(path.join(XQ_EN, name), `${include}\n`);
+    writeFileSync(path.join(INCLUDES, name), dispatcher(name));
+    console.log(`  _includes/xq/en/${name} (+ dispatcher)`);
   }
   // The replay on the page draws any piece a game can reach (a black soldier
   // across the river, say), not only what the figures show: copy the whole set.
