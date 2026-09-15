@@ -1345,6 +1345,7 @@ export function xqPiecesLayer(
   y0: number,
   perspective: XiangqiColor,
   shroudedStyle?: XiangqiShroudedStyle,
+  veteranSoldiers = false,
 ): string {
   const entries = view
     ? Object.entries(view.board).map(([sq, entry]) => [sq, entry?.piece, entry?.shrouded] as const)
@@ -1361,7 +1362,12 @@ export function xqPiecesLayer(
         size,
         shrouded,
         shroudedStyle,
-        crossed: !shrouded && drawsCrossedSoldier(piece as XiangqiPiece, rank),
+        // Horde Xiangqi's veteran soldier has the crossed soldier's move from
+        // its first step, so it wears the crossed art from rank 1.
+        crossed:
+          !shrouded &&
+          (drawsCrossedSoldier(piece as XiangqiPiece, rank) ||
+            (veteranSoldiers && piece.role === 'soldier' && piece.color === 'red')),
       });
     })
     .join('');
@@ -1436,6 +1442,8 @@ export function xqBoardSvg(opts: {
   // Raw SVG drawn on top of the pieces (a confrontation line, etc.). The
   // caller positions it with xqPoint using the same x and boardY (y + 28).
   overlay?: string;
+  /** Draw every red soldier with the crossed art (Horde Xiangqi's veterans). */
+  veteranSoldiers?: boolean;
 }): string {
   const perspective = opts.perspective ?? opts.view?.perspective ?? 'red';
   const view = opts.view ?? null;
@@ -1447,7 +1455,15 @@ export function xqBoardSvg(opts: {
     opts.zones ? xqZoneHighlights(opts.x, boardY, perspective) : '',
     xqFogLayer(view, opts.x, boardY, perspective, clipId),
     xqMoveDots(opts.dots, opts.x, boardY, perspective),
-    xqPiecesLayer(opts.state, view, opts.x, boardY, perspective, opts.shroudedStyle),
+    xqPiecesLayer(
+      opts.state,
+      view,
+      opts.x,
+      boardY,
+      perspective,
+      opts.shroudedStyle,
+      opts.veteranSoldiers,
+    ),
     xqArrowLayer(opts.arrows, opts.x, boardY, perspective),
     opts.overlay ?? '',
   ].join('');
