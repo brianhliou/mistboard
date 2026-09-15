@@ -473,13 +473,27 @@ figure(
 type ChessPiece = Parameters<typeof renderBoardSvg>[0][number];
 const HORDE_CHESS_PIECES: ChessPiece[] = [];
 for (let rank = 0; rank < 4; rank += 1)
-  for (let file = 0; file < 8; file += 1) HORDE_CHESS_PIECES.push({ file, rank, color: 'white', role: 'pawn' });
-for (const file of [1, 2, 5, 6]) HORDE_CHESS_PIECES.push({ file, rank: 4, color: 'white', role: 'pawn' });
-for (let file = 0; file < 8; file += 1) HORDE_CHESS_PIECES.push({ file, rank: 6, color: 'black', role: 'pawn' });
-(['rook', 'knight', 'bishop', 'queen', 'king', 'bishop', 'knight', 'rook'] as const).forEach((role, file) =>
-  HORDE_CHESS_PIECES.push({ file, rank: 7, color: 'black', role }),
-);
-if (HORDE_CHESS_PIECES.filter((p) => p.color === 'white').length !== 36) throw new Error('horde chess is 36 pawns');
+  for (let file = 0; file < 8; file += 1)
+    HORDE_CHESS_PIECES.push({ file, rank, color: 'white', role: 'pawn' });
+for (const file of [1, 2, 5, 6])
+  HORDE_CHESS_PIECES.push({ file, rank: 4, color: 'white', role: 'pawn' });
+for (let file = 0; file < 8; file += 1)
+  HORDE_CHESS_PIECES.push({ file, rank: 6, color: 'black', role: 'pawn' });
+const BACK_RANK = [
+  'rook',
+  'knight',
+  'bishop',
+  'queen',
+  'king',
+  'bishop',
+  'knight',
+  'rook',
+] as const;
+BACK_RANK.forEach((role, file) => {
+  HORDE_CHESS_PIECES.push({ file, rank: 7, color: 'black', role });
+});
+if (HORDE_CHESS_PIECES.filter((p) => p.color === 'white').length !== 36)
+  throw new Error('horde chess is 36 pawns');
 const startChess = renderBoardSvg(HORDE_CHESS_PIECES, [], 0, 28, CHESS_SIZE, 'white');
 const startChessTitle = `<text x="${CHESS_SIZE / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">HORDE CHESS: 36 PAWNS, NO KING</text>`;
 const startXq = veteranArt(
@@ -573,9 +587,14 @@ function sampleTally(formation: string, soldiersRule: string): { text: string; a
     return { text: '4 GAMES PENDING', attr: 'class="xq-diagram-outside-text"' };
   }
   const t = JSON.parse(readFileSync(f, 'utf8')).tally as {
-    horde: number; army: number; draw: number; unfinished: number; distinct: number;
+    horde: number;
+    army: number;
+    draw: number;
+    unfinished: number;
+    distinct: number;
   };
-  if (t.distinct !== 4) throw new Error(`${soldiersRule}/${formation}: ${t.distinct} distinct games of 4`);
+  if (t.distinct !== 4)
+    throw new Error(`${soldiersRule}/${formation}: ${t.distinct} distinct games of 4`);
   const n = t.horde + t.army + t.draw + t.unfinished;
   if (t.army === n) return { text: `ARMY ${n}-0`, attr: 'class="xq-diagram-title"' };
   if (t.horde === n) return { text: `HORDE ${n}-0`, attr: 'fill="#c30d0d"' };
@@ -591,7 +610,10 @@ function sampleTally(formation: string, soldiersRule: string): { text: string; a
     .filter(([n]) => n > 0)
     .sort((a, b) => b[0] - a[0])
     .map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
-  return { text: parts.join(', '), attr: t.horde ? 'fill="#c30d0d"' : 'class="xq-diagram-outside-text"' };
+  return {
+    text: parts.join(', '),
+    attr: t.horde ? 'fill="#c30d0d"' : 'class="xq-diagram-outside-text"',
+  };
 }
 // The result line under each board. A horde win is red ink; everything else
 // takes the page's heading or body colour through the site's diagram classes,
