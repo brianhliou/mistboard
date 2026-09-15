@@ -26,7 +26,7 @@ Conventions:
 
 ### Playing
 
-- A play streak: the days in a row you finished a game, counted on your own calendar and still alive the day after; it shows under the buttons when a game ends and on your profile with your best run, for accounts and guests alike
+- A play streak: the days in a row you finished a game, counted on your own calendar and still alive the day after; it shows under the buttons when a game ends and on your profile with your best run, for accounts and guests alike ([f772d19c](https://github.com/brianhliou/mistboard/commit/f772d19c))
 - A Chinese-language interface, or an English one in a Chinese-reading region (CN, TW, HK, MO, SG, MY, VN), starts on the traditional hanzi piece set; everyone else keeps the international art, and a set picked in Pieces wins either way ([81303048](https://github.com/brianhliou/mistboard/commit/81303048))
 - Duck Xiangqi launches on every public surface: rules page, homepage card, lobby seek, a rated ladder, and a bot that plays it ([dd12f1fd](https://github.com/brianhliou/mistboard/commit/dd12f1fd), [2488aea2](https://github.com/brianhliou/mistboard/commit/2488aea2), [aa91538e](https://github.com/brianhliou/mistboard/commit/aa91538e), [8e5704af](https://github.com/brianhliou/mistboard/commit/8e5704af))
 - Duck Xiangqi offers 3+2 alongside its other paces ([7bc64a41](https://github.com/brianhliou/mistboard/commit/7bc64a41))
