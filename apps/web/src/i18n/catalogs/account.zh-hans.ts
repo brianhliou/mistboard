@@ -74,6 +74,7 @@ export const ZH_HANS_ACCOUNT = {
   'account.notificationFollowers': '新粉丝',
   'account.notificationCorrespondenceDeadline': '通信棋截止时间提醒',
   'account.notificationCorrespondenceStart': '通信棋对局开始',
+  'account.notificationCorrespondenceDigest': '每日汇总：等你走棋的对局',
   'account.preferenceSaved': '偏好已保存。',
   'account.settingsUsername': '更改用户名',
   'account.settingsUsernameCopy': '用户名会公开显示，并用于标识你的资料。',

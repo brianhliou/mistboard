@@ -36,6 +36,7 @@ const booleanAccountPreferenceKeys = new Set<persistence.AccountPreferenceKey>([
   'followersBell',
   'correspondenceDeadlineEmail',
   'correspondenceStartEmail',
+  'correspondenceTurnDigest',
   'forumAutoTranslate',
 ]);
 

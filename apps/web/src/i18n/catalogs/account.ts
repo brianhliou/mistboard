@@ -84,6 +84,7 @@ export const EN_ACCOUNT = {
   'account.notificationFollowers': 'New followers',
   'account.notificationCorrespondenceDeadline': 'Correspondence deadline warning',
   'account.notificationCorrespondenceStart': 'A correspondence game starts',
+  'account.notificationCorrespondenceDigest': 'Daily digest of games waiting on your move',
   'account.preferenceSaved': 'Preference saved.',
   'account.settingsUsername': 'Change username',
   'account.settingsUsernameCopy': 'Your username is public and identifies your profile.',

@@ -100,6 +100,15 @@ export {
   resolveChatReport,
 } from './persistence-chat.js';
 export type {
+  CorrespondenceDigestCandidate,
+  CorrespondenceDigestGame,
+  CorrespondenceDigestQuery,
+} from './persistence-correspondence-digest.js';
+export {
+  listCorrespondenceDigestCandidates,
+  markCorrespondenceDigestSent,
+} from './persistence-correspondence-digest.js';
+export type {
   CorrespondenceSeekListing,
   CorrespondenceSeekRecord,
   SeekColorPreference,

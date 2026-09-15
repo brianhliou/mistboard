@@ -74,6 +74,7 @@ export const ZH_HANT_ACCOUNT = {
   'account.notificationFollowers': '新粉絲',
   'account.notificationCorrespondenceDeadline': '通信棋截止時間提醒',
   'account.notificationCorrespondenceStart': '通信棋對局開始',
+  'account.notificationCorrespondenceDigest': '每日彙總：等你走棋的對局',
   'account.preferenceSaved': '偏好已儲存。',
   'account.settingsUsername': '變更使用者名稱',
   'account.settingsUsernameCopy': '使用者名稱會公開顯示，並用來識別你的個人資料。',

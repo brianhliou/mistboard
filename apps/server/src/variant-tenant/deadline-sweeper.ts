@@ -8,6 +8,7 @@
  */
 
 import { sweepDeadlineWarnings } from '../correspondence-deadline-warning.js';
+import { sweepCorrespondenceTurnDigests } from '../correspondence-turn-digest.js';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import { variantTenantForRoomId } from './registry.js';
@@ -24,6 +25,9 @@ export type TenantDeadlineSweeperOptions = {
   // tests can assert it fires without sending real email; defaults to the real
   // correspondence warning sweep.
   warnDeadlines?: (now: Date) => Promise<void>;
+  // Daily "your move" digest pass (correspondence-turn-digest.ts): runs every
+  // tick, sends at most once per account per digest day. Injectable for tests.
+  digestTurns?: (now: Date) => Promise<void>;
   // Expired-challenge reclaim pass: drops lapsed correspondence challenges
   // (private seeks past their TTL). Injectable for tests; defaults to the real
   // delete. Returns the count removed.
@@ -45,6 +49,7 @@ export function startTenantDeadlineSweeper(
   const now = options.now ?? Date.now;
   const registrationFor = options.registrationFor ?? variantTenantForRoomId;
   const warnDeadlines = options.warnDeadlines ?? ((at: Date) => sweepDeadlineWarnings(at));
+  const digestTurns = options.digestTurns ?? ((at: Date) => sweepCorrespondenceTurnDigests(at));
   const sweepExpiredSeeks =
     options.sweepExpiredSeeks ?? ((at: Date) => persistence.deleteExpiredCorrespondenceSeeks(at));
 
@@ -102,6 +107,16 @@ export function startTenantDeadlineSweeper(
       logger.error(
         { kind: 'deadline_warning_sweep_failure', error: (err as Error).message, at: now() },
         'deadline warning sweep failure',
+      );
+    }
+    // Daily digest: after the warning pass so a game warned this tick is seen
+    // as warned and not digested on top of it. Guarded like the rest.
+    try {
+      await digestTurns(new Date(now()));
+    } catch (err) {
+      logger.error(
+        { kind: 'turn_digest_sweep_failure', error: (err as Error).message, at: now() },
+        'turn digest sweep failure',
       );
     }
     // Expired-challenge reclaim: independent of deadline enforcement, guarded so

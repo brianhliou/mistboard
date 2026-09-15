@@ -855,6 +855,13 @@ function buildNotificationSettings(user: AuthUser, locale: Locale = currentLocal
       'correspondenceDeadlineEmail',
       locale,
     ),
+    buildNotificationPreferenceRow(
+      user,
+      t('account.notificationCorrespondenceDigest', {}, locale),
+      null,
+      'correspondenceTurnDigest',
+      locale,
+    ),
   );
   table.append(head, body);
   panel.append(table);
@@ -874,7 +881,10 @@ type BellPreferenceId =
   | 'challengesBell'
   | 'forumBell'
   | 'followersBell';
-type EmailPreferenceId = 'correspondenceDeadlineEmail' | 'correspondenceStartEmail';
+type EmailPreferenceId =
+  | 'correspondenceDeadlineEmail'
+  | 'correspondenceStartEmail'
+  | 'correspondenceTurnDigest';
 const BELL_PREFERENCE_IDS = new Set<string>([
   'inboxBell',
   'correspondenceBell',
