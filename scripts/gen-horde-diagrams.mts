@@ -14,7 +14,7 @@
 //   index.html        every figure with its caption, for reading the draft
 
 import { execSync } from 'node:child_process';
-import { mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
+import { existsSync, mkdirSync, readdirSync, readFileSync, writeFileSync } from 'node:fs';
 import { registerHooks } from 'node:module';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -530,6 +530,36 @@ const CONTINUED: Record<string, { plies: number; reason: string }> = {
   'veteran/solid45/1000000/120': { plies: 1102, reason: 'CLOCK' },
   'veteran/lichess40/1000000/120': { plies: 1016, reason: 'CLOCK' },
 };
+// The four-game tally under each board: the same array played at four search
+// budgets (150k, 200k, 300k, 500k nodes a move), every move the engine's
+// first choice, one 120-ply clock. Written by docs-private sample.mts.
+function sampleTally(formation: string, soldiersRule: string): { text: string; attr: string } {
+  const f = path.join(ARTIFACTS, `sample-${soldiersRule}-${formation}.json`);
+  if (!existsSync(f)) {
+    console.warn(`no sample tally for ${soldiersRule}/${formation}`);
+    return { text: '4 GAMES PENDING', attr: 'class="xq-diagram-outside-text"' };
+  }
+  const t = JSON.parse(readFileSync(f, 'utf8')).tally as {
+    horde: number; army: number; draw: number; unfinished: number; distinct: number;
+  };
+  if (t.distinct !== 4) throw new Error(`${soldiersRule}/${formation}: ${t.distinct} distinct games of 4`);
+  const n = t.horde + t.army + t.draw + t.unfinished;
+  if (t.army === n) return { text: `ARMY ${n}-0`, attr: 'class="xq-diagram-title"' };
+  if (t.horde === n) return { text: `HORDE ${n}-0`, attr: 'fill="#c30d0d"' };
+  // Largest count first, so the line reads as a score.
+  const parts = (
+    [
+      [t.horde, 'HORDE WIN', 'HORDE WINS'],
+      [t.army, 'ARMY WIN', 'ARMY WINS'],
+      [t.draw, 'DRAW', 'DRAWS'],
+      [t.unfinished, 'UNFINISHED', 'UNFINISHED'],
+    ] as const
+  )
+    .filter(([n]) => n > 0)
+    .sort((a, b) => b[0] - a[0])
+    .map(([n, one, many]) => `${n} ${n === 1 ? one : many}`);
+  return { text: parts.join(', '), attr: t.horde ? 'fill="#c30d0d"' : 'class="xq-diagram-outside-text"' };
+}
 // The result line under each board. A horde win is red ink; everything else
 // takes the page's heading or body colour through the site's diagram classes,
 // so the labels survive a dark theme (a literal dark fill would vanish).
@@ -564,7 +594,7 @@ function grid(
   clock: number,
   perRow: number,
 ): string {
-  const rowH = FIGURE_H + 52;
+  const rowH = FIGURE_H + 66;
   const rows = Math.ceil(cells.length / perRow);
   const width = XQ_BOARD_W * perRow + GAP * (perRow - 1);
   const body = cells
@@ -574,20 +604,21 @@ function grid(
       const g = labGame(c.formation, soldiersRule, clock, 1_000_000);
       const key = `${soldiersRule}/${c.formation}/1000000/${clock}`;
       const r = resultLine(g, key);
+      const t = sampleTally(c.formation, soldiersRule);
       const tag = ANNOTATED.has(key)
-        ? `<text x="${x + XQ_BOARD_W / 2}" y="${y + FIGURE_H + 26}" font-family="system-ui, sans-serif" font-size="11" font-weight="600" class="xq-diagram-outside-text" text-anchor="middle">▶ ANNOTATED</text>`
+        ? `<text x="${x + XQ_BOARD_W / 2}" y="${y + FIGURE_H + 42}" font-family="system-ui, sans-serif" font-size="11" font-weight="600" class="xq-diagram-outside-text" text-anchor="middle">▶ ANNOTATED</text>`
         : '';
       // A "watch" pill on the river band, the one empty strip of every array,
       // so the board reads as something that opens rather than a picture.
       const riverY = y + 28 + XQ_BOARD_H / 2 - 4;
-      const pill = `<g class="xq-play-hint" pointer-events="none"><rect x="${x + XQ_BOARD_W / 2 - 58}" y="${riverY - 11}" width="116" height="22" rx="11" fill="rgba(28, 22, 12, 0.72)"/><text x="${x + XQ_BOARD_W / 2}" y="${riverY + 4}" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" letter-spacing="0.06em">▶ WATCH THE GAME</text></g>`;
+      const pill = `<g class="xq-play-hint" pointer-events="none"><rect x="${x + XQ_BOARD_W / 2 - 74}" y="${riverY - 11}" width="148" height="22" rx="11" fill="rgba(28, 22, 12, 0.82)" stroke="rgba(255,255,255,0.35)" stroke-width="1"/><text x="${x + XQ_BOARD_W / 2}" y="${riverY + 4}" font-family="system-ui, sans-serif" font-size="11" font-weight="700" fill="#fff" text-anchor="middle" textLength="124" lengthAdjust="spacingAndGlyphs">▶ WATCH THE GAME</text></g>`;
       const board = xqBoardSvg({
         state: state(`${soldiersRule}-${c.id}`, fen(HORDE_FORMATIONS[c.formation])),
         x,
         y,
         label: c.name,
         perspective: 'red',
-        overlay: `${pill}<text x="${x + XQ_BOARD_W / 2}" y="${y + FIGURE_H + 10}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" ${r.attr} text-anchor="middle">${r.text}</text>${tag}`,
+        overlay: `${pill}<text x="${x + XQ_BOARD_W / 2}" y="${y + FIGURE_H + 10}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" ${t.attr} text-anchor="middle">${t.text}</text><text x="${x + XQ_BOARD_W / 2}" y="${y + FIGURE_H + 27}" font-family="system-ui, sans-serif" font-size="11" font-weight="600" ${r.attr} text-anchor="middle">1M GAME: ${r.text}</text>${tag}`,
       });
       // Each board is a link: on the blog page a click opens the replay of the
       // exact game whose result is printed under it (build-blog-games.mjs).
@@ -595,7 +626,7 @@ function grid(
       return soldiersRule === 'veteran' ? veteranArt(linked) : linked;
     })
     .join('');
-  return xqSvg(width, rowH * rows - 52 + 34, body);
+  return xqSvg(width, rowH * rows - 66 + 50, body);
 }
 const ROW_CELLS: GridCell[] = [
   { id: 'solid18', formation: 'solid18', name: '18, RANKS 1-2' },
@@ -614,13 +645,13 @@ const ROW_CELLS: GridCell[] = [
 figure(
   'grid-standard',
   grid(ROW_CELLS, 'standard', 60, 2),
-  'Every array with standard soldiers, and how the engine’s game against itself at one million nodes a move ended. Eleven of twelve are army wins by extinction. The one horde win starts with its front rank already across the river, in contact with the army’s soldiers; at 200,000 and at 5 million nodes the same array draws.',
+  'Every array with standard soldiers, played four times at four search budgets (150,000 to 500,000 nodes a move), with the engine’s million-node game under the tally. Nine arrays are army wins by extinction four times out of four. The two that start across the river begin in contact with the army’s soldiers, and the five-deep block of 45 sometimes crosses before the chariot is finished; those three cells split.',
   4,
 );
 figure(
   'grid-veteran',
   grid(ROW_CELLS, 'veteran', 120, 2),
-  'The same twelve arrays with veteran soldiers (the crossed soldier’s move from the first step), one million nodes a move, 120-ply no-capture clock. Below 27 soldiers the army finishes; from 27 up the game reaches the two-chariot ending and stops, and the one horde win needed both chariots to fall. *Three games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; the ply shown is where the clock ended them.',
+  'The same twelve arrays with veteran soldiers (the crossed soldier’s move from the first step), four games at four budgets and the million-node game, 120-ply no-capture clock. 48 games: 37 draws, six horde wins, five army wins. The army wins only against 18 soldiers; from 27 up the game reaches the two-chariot ending and stops, and every horde win needed both chariots to fall. *Three million-node games ran into the harness’s 1,000-ply cap and were played on from that position with the clock in force; the ply shown is where the clock ended them.',
   4,
 );
 
@@ -677,28 +708,44 @@ if (process.argv.includes('--blog')) {
   }
   console.log(`  assets/posts/horde-xiangqi/pieces/ (${blogArt.size} files)`);
 
-  // The cards: a red crossed soldier beside a black chariot, the two pieces the post is about.
+  // The cards: a block of soldiers against one chariot, which is the variant
+  // in one picture (the mass on one side, the piece that beats it on the other).
   const { renderXiangqiPieceGlyphed } = await import('../apps/web/src/xiangqi-piece-sets.js');
-  const card = (width: number, height: number, size: number) => {
-    const gap = Math.round(size * 0.18);
-    const x0 = (width - (size * 2 + gap)) / 2;
-    const y = (height - size) / 2;
-    return [
+  const card = (width: number, height: number, soldier: number, chariot: number) => {
+    const gap = Math.round(soldier * 0.12);
+    const cols = 3;
+    const rows = 3;
+    const blockW = cols * soldier + (cols - 1) * gap;
+    const blockH = rows * soldier + (rows - 1) * gap;
+    const between = Math.round(chariot * 0.2);
+    const x0 = (width - (blockW + between + chariot)) / 2;
+    const y0 = (height - blockH) / 2;
+    const parts = [
       `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg" role="img" aria-label="Horde Xiangqi">`,
       `<rect width="${width}" height="${height}" fill="#d9bd82"/>`,
-      renderXiangqiPieceGlyphed({ role: 'soldier', color: 'red' }, 'international', {
-        x: x0,
-        y,
-        size,
-        crossed: true,
-      }),
+    ];
+    for (let r = 0; r < rows; r += 1) {
+      for (let c = 0; c < cols; c += 1) {
+        // The front row has crossed the river: promoted art, the horde on the move.
+        parts.push(
+          renderXiangqiPieceGlyphed({ role: 'soldier', color: 'red' }, 'international', {
+            x: x0 + c * (soldier + gap),
+            y: y0 + r * (soldier + gap),
+            size: soldier,
+            crossed: r === 0,
+          }),
+        );
+      }
+    }
+    parts.push(
       renderXiangqiPieceGlyphed({ role: 'chariot', color: 'black' }, 'international', {
-        x: x0 + size + gap,
-        y,
-        size,
+        x: x0 + blockW + between,
+        y: (height - chariot) / 2,
+        size: chariot,
       }),
       '</svg>',
-    ].join('');
+    );
+    return parts.join('');
   };
   const renderPng = (svg: string, file: string, width: number) => {
     const png = new Resvg(localArt(svg), { fitTo: { mode: 'width', value: width } })
@@ -707,8 +754,9 @@ if (process.argv.includes('--blog')) {
     writeFileSync(path.join(BLOG_ASSETS, file), png);
     console.log(`  assets/posts/horde-xiangqi/${file} (${(png.length / 1024).toFixed(0)} kB)`);
   };
-  renderPng(card(160, 100, 60), 'thumbnail.png', 640);
-  renderPng(card(120, 63, 36), 'social-card.png', 1200);
+  // The feed crops thumbnails to 3:2 with object-fit: cover, so the card is drawn at 3:2 with a margin.
+  renderPng(card(150, 100, 24, 50), 'thumbnail.png', 640);
+  renderPng(card(120, 63, 17, 36), 'social-card.png', 1200);
 }
 
 // ── Preview ────────────────────────────────────────────────────────────────
