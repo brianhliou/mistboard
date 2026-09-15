@@ -607,7 +607,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
           query(
             'tz',
             { type: 'string' },
-            'IANA time zone the play-streak days are counted on (default UTC).',
+            'IANA time zone the streak days are counted on (default UTC).',
           ),
         ],
         responses: {
@@ -635,30 +635,6 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
       },
     },
 
-    '/api/play-streak': {
-      get: {
-        tags: ['Players'],
-        summary: 'Your own play streak',
-        description:
-          'Consecutive days with a completed game, for the signed-in account or, without a session, the guest browser device given by `device`. A streak is still current on the day after its last game.',
-        parameters: [
-          query('tz', { type: 'string' }, 'IANA time zone the days are counted on (default UTC).'),
-          query(
-            'device',
-            { type: 'string' },
-            'The browser device id a guest sends on live connects; ignored when signed in.',
-          ),
-        ],
-        responses: {
-          '200': OK({
-            type: 'object',
-            properties: { streak: ref('PlayStreak') },
-          }),
-          '400': ERROR_RESPONSE('`no_subject`: no session and no device id.'),
-          '503': PERSISTENCE,
-        },
-      },
-    },
     '/api/users/{handle}/games': {
       get: {
         tags: ['Players'],

@@ -4,7 +4,6 @@ import type { LiveRefs } from './live-state.js';
 import { liveState } from './live-state.js';
 import { correspondenceAwaitingOpponent } from './live-status.js';
 import { currentView } from './live-view.js';
-import { postGamePlayStreakNote } from './play-streak.js';
 import { postGameInviteButton } from './postgame-invite.js';
 import { rematchControls } from './rematch-controls.js';
 import { isColor, oppositeColor } from './web-utils.js';
@@ -44,8 +43,6 @@ export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): v
     // the only post-game action that produces a new human one.
     const invite = postGameInviteButton(postGameVariant());
     if (invite) actions.push(invite);
-    // The player's own play streak, once the finished game has been counted.
-    if (isColor(seat)) actions.push(postGamePlayStreakNote(liveState.room));
     refs.roomActions.replaceChildren(...actions);
     return;
   }

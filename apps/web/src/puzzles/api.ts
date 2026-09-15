@@ -6,7 +6,7 @@
  * threading them through every call.
  */
 
-import { browserTimeZone } from '../play-streak.js';
+import { browserTimeZone } from '../browser-time-zone.js';
 import type { PuzzleDetail, PuzzleMove, PuzzleState, PuzzleSummary } from './adapter.js';
 
 export type PuzzleAttempt =

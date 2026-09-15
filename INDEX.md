@@ -118,8 +118,7 @@ Edit task → find file → open only that file.
 | `routes/lib.ts` | Shared HTTP utilities: `HttpApiContext` interface, `writeJson`, `requireMethod`, `requirePersistence`, `readJsonBody`, the parse helpers, `hashIp`, `isHttpAdminAuthorized`. Imported by every route module |
 | `routes/auth.ts` | `/api/auth/{me,logout,email/start,email/confirm}` |
 | `routes/account.ts` | `/api/account/profile` (PATCH) |
-| `routes/users.ts` | `/api/users/:handle/profile` (`?tz=` buckets the profile's play streak on the viewer's calendar) |
-| `routes/play-streak.ts` | `/api/play-streak?tz=&device=`: the caller's own play streak (session account, else the guest device id the browser sends on live connects) |
+| `routes/users.ts` | `/api/users/:handle/profile` (`?tz=` buckets the profile's play and puzzle streaks on the viewer's calendar) |
 | `routes/rooms.ts` | POST `/api/rooms`, `/api/rooms/:id/abandon`, plus `parseRoomMode` / `parsePlayablePveEngineId` |
 | `routes/dark-xiangqi-rooms.ts` | Hidden Dark Xiangqi direct room creation branch for `POST /api/rooms`: request claiming, flag behavior, supported-surface gate, and room factory result mapping |
 | `routes/dark-xiangqi-games.ts` | Hidden Dark Xiangqi postgame/review API branch; keeps non-chess finished-game records out of generic chess replay APIs |
@@ -481,7 +480,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `live-layout.ts` | Live-game static DOM shell and `LiveRefs` wiring for `/room/:id`; mounts the shared `game-table.ts` right column |
 | `live-move-list.ts` | Live-game replay controls and move-list rendering: masked/revealed move rows, active ply tracking, and auto-scroll state |
 | `live-room-actions.ts` | Live-game invite/review/rematch/play-again action row, debug-room link generation, and post-game action visibility |
-| `play-streak.ts` | Post-game "Play streak: N days" note under the room actions (both the chess shell and the tenant chrome): one `/api/play-streak` fetch per room on the browser's calendar, one retry if the finished game is not counted yet, hidden at zero; `browserTimeZone` also feeds the profile request |
+| `browser-time-zone.ts` | `browserTimeZone()`: the viewer's IANA zone, sent with the profile request and puzzle attempts so streak days follow the viewer's calendar |
 | `live-status.ts` | Live-game status copy and tone decisions: action banners, board status, room mode label, and seat label |
 | `live-view.ts` | Derived live-game views: current replay projection, fog-history view selection, capture tally, and dev-view reconstruction |
 | `live-sound.ts` | SoundController + `maybePlaySnapshotSound` + per-move sound policy. Owns the audio context, volume tracking, win/lose/capture/castle tone generation. Wired by live-render's render flow + live.ts's snapshot handler |

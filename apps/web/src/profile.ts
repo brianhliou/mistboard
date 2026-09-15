@@ -2,6 +2,7 @@
 
 import { FORTRESS_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, type RatingVariant } from '@mistboard/game';
 import './account-profile.css';
+import { browserTimeZone } from './browser-time-zone.js';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { correspondenceEnabled } from './feature-flags.js';
@@ -9,7 +10,6 @@ import { buildFlairIconIfSet } from './flair.js';
 import type { FeaturedGame } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
-import { browserTimeZone } from './play-streak.js';
 import {
   buildTitleBadge,
   isPlayerTitle,

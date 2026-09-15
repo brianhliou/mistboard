@@ -367,13 +367,6 @@ export const EN_PLAY = {
   'live.rematchAccept': 'Accept',
   'live.rematchDeclined': 'Your opponent declined the rematch.',
   'live.reviewGame': 'Review game',
-  // Post-game play streak line (play-streak.ts). Days are the player's own
-  // calendar; counts ride inside the string so each language writes its own
-  // plural.
-  'live.playStreak': 'Play streak: {days}',
-  'live.playStreakBest': 'Play streak: {days} (best {best})',
-  'live.playStreakDays': '{count} days',
-  'live.playStreakDaysOne': '1 day',
   'live.newDebugRoom': 'New Debug Room',
   'live.copyInviteLink': 'Copy invite link',
   'live.linkCopied': 'Link copied!',
