@@ -32,6 +32,11 @@ import {
 const VARIANT = 'duckxiangqi';
 const VARIANT_INI = 'duck-xiangqi.ini';
 
+// Uniformly-random legal mover: the calibration floor / 0-Elo anchor for the
+// duck ladder. EvE-only, never in DUCK_XIANGQI_PLAYABLE_ENGINES.
+export const DUCK_XIANGQI_RANDOM_ENGINE_ID = 'random-legal-duck-xiangqi';
+export const DUCK_XIANGQI_RANDOM_ENGINE_VERSION = 'random-legal-v1';
+
 export const DUCK_XIANGQI_DEFAULT_ENGINE_ID = 'fairy-stockfish-duck-xiangqi-level-4';
 
 // Engine BUILD version recorded per PvE game. Bump on any engine/config change

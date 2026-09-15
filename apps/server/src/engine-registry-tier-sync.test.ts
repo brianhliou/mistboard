@@ -136,6 +136,8 @@ const TIER_BACKED_CONFIG_KINDS: ReadonlySet<EngineConfig['kind']> = new Set([
 // rather than check it.
 const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
   'fairy-stockfish-xiangqi',
+  'fairy-stockfish-fortress-xiangqi',
+  'fairy-stockfish-duck-xiangqi',
   'pikafish-xiangqi',
 ]);
 

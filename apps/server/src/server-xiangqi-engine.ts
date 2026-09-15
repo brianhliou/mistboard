@@ -399,7 +399,7 @@ export function legalMoveForUci(
  * Replace a move that lets the opponent win on the immediate reply with any legal
  * move that does not — a cheap king-safety backstop matching the Fortress loop.
  */
-function guardXiangqiEngineMove(
+export function guardXiangqiEngineMove(
   state: XiangqiGameState,
   chosen: XiangqiMove,
   legalMoves: readonly XiangqiMove[],

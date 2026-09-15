@@ -90,6 +90,7 @@ Conventions:
 
 ### Technical
 
+- The engine-vs-engine runner plays any variant with a `VariantEveAdapter` (xiangqi, Fortress Xiangqi, Duck Xiangqi), with each ladder's random-mover floor registered, so `engine:enqueue-tournament --variant fortress-xiangqi` rates a ladder that was hand-set until now; a bot variant without an adapter fails the build ([33516d71](https://github.com/brianhliou/mistboard/commit/33516d71))
 - `worktree:prepare` installs again under npm 12: the nested `npm ci` no longer inherits a user-level `allow-scripts` as `npm_config_allow_scripts`, which npm 12 rejects in a project install ([99b4b3c2](https://github.com/brianhliou/mistboard/commit/99b4b3c2))
 - `/api/auth/me` names the allowlisted variants an account may play (`variantGrants`); admins hold every one without a grant row, and the play menu offers a gated variant only to an account the server would seat ([349ed346](https://github.com/brianhliou/mistboard/commit/349ed346))
 - Migration 144 tightens the rating-pool constraint to the nine live pools, deletes the mini-family puzzle rows, and drops `games.hidden_draft960` ([f1011fdd](https://github.com/brianhliou/mistboard/commit/f1011fdd))
