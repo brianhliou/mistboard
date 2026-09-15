@@ -50,7 +50,10 @@ describe('play streak', () => {
     stubStreak([streak(0, 4, '2026-09-13')]);
     const zero = postGamePlayStreakNote('room-zero');
 
-    vi.stubGlobal('fetch', vi.fn(async () => new Response('', { status: 503 })));
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => new Response('', { status: 503 })),
+    );
     const failed = postGamePlayStreakNote('room-down');
 
     await new Promise((resolve) => setTimeout(resolve, 0));

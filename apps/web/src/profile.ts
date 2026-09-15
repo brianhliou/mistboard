@@ -7,9 +7,9 @@ import { buildCommunityLayout } from './community-rail.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { buildFlairIconIfSet } from './flair.js';
 import type { FeaturedGame } from './game-display.js';
-import { browserTimeZone } from './play-streak.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
+import { browserTimeZone } from './play-streak.js';
 import {
   buildTitleBadge,
   isPlayerTitle,
