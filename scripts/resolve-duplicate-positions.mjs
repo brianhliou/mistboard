@@ -4,6 +4,11 @@
 //   node scripts/resolve-duplicate-positions.mjs --run-id RUN            # dry run
 //   node scripts/resolve-duplicate-positions.mjs --run-id RUN --apply
 //
+// Also rejects a candidate whose position an EARLIER run already published
+// (the published puzzle wins); publication refuses those the same way, and the
+// September batches hit it because they mine the same corpus the July and
+// August runs did and the same games reach the same positions.
+//
 // The miner dedups positions in-process, per worker. With 40-100 shards spread
 // across separate containers, two shards can each reach the same position and
 // neither can see the other, so cross-shard duplicates are expected at scale
@@ -68,9 +73,24 @@ const APPLY = ${values.apply ? 'true' : 'false'};
      WHERE rank > 1
      ORDER BY position_key, selection_index\`, [RUN]);
 
-  console.log(JSON.stringify({ runId: RUN, apply: APPLY, wouldReject: losers.length }));
+  // Cross-RUN repeats: a position this run reached that an earlier run already
+  // published. Publication refuses these too (it checks every published
+  // position, not just this run's), and the published puzzle always wins.
+  const published = await q(\`
+    SELECT c.id AS candidate_id, c.position_key, puzzle.id AS puzzle_id
+      FROM xiangqi_puzzle_mining_candidates c
+      JOIN xiangqi_puzzle_mining_candidates prior
+        ON prior.position_key = c.position_key AND prior.run_id <> c.run_id
+      JOIN puzzles puzzle ON puzzle.mining_candidate_id = prior.id
+     WHERE c.run_id = $1 AND c.status IN ('review','approved')
+     ORDER BY c.position_key\`, [RUN]);
+  for (const row of published) {
+    losers.push({ candidate_id: row.candidate_id, position_key: row.position_key, selection_index: null, note: \`Position already published as puzzle \${row.puzzle_id} by an earlier run.\` });
+  }
+
+  console.log(JSON.stringify({ runId: RUN, apply: APPLY, wouldReject: losers.length, withinRun: losers.length - published.length, alreadyPublished: published.length }));
   for (const row of losers) {
-    console.log(\`  reject \${row.candidate_id}  position \${row.position_key}  selection \${row.selection_index}\`);
+    console.log(\`  reject \${row.candidate_id}  position \${row.position_key}  \${row.note ?? \`selection \${row.selection_index}\`}\`);
   }
   if (!APPLY || losers.length === 0) {
     console.log(APPLY ? 'nothing to do' : 'dry run: nothing was changed');
@@ -90,7 +110,7 @@ const APPLY = ${values.apply ? 'true' : 'false'};
       INSERT INTO xiangqi_puzzle_editorial_reviews
         (candidate_id, reviewer_user_id, verdict, reason, notes)
       VALUES ($1, NULL, 'reject', 'duplicate', $2)\`,
-      [row.candidate_id, 'Repeated position within the run; kept the lowest selection_index.']);
+      [row.candidate_id, row.note ?? 'Repeated position within the run; kept the lowest selection_index.']);
     rejected += 1;
   }
   console.log(JSON.stringify({ rejected }));
