@@ -4,12 +4,23 @@
 //   node scripts/mine-remainder.mjs            # run / resume
 //   node scripts/mine-remainder.mjs --status   # show state, change nothing
 //   node scripts/mine-remainder.mjs --dry-run  # preflight + plan only
-//   node scripts/mine-remainder.mjs --containers 16
+//   node scripts/mine-remainder.mjs --containers 32 --audit-containers 4
 //
 // Every phase is idempotent and recorded in a state file, so a disconnect,
 // Ctrl-C, or laptop sleep costs at most the work in flight. Re-running picks up
 // where it stopped. It never publishes: mining fills the durable queue, and
 // promoting puzzles into the served corpus stays a separate authorized step.
+//
+// A batch that reached `review` is finished; running again archives its state
+// file beside itself and starts the next batch, which excludes every game any
+// earlier run mined (the manifest is built with --exclude-mined against the
+// database, not against a local list).
+//
+// Scan and audit want different concurrency (measured 2026-08-23): scan scaled
+// 3.8x from 4 to 32 containers, while audit at depth 22 has no node cap and the
+// thinner CPU share at 32 pushed 2 of 902 searches past the 240 s engine
+// timeout (0 of 392 at 4). --containers sets scan; --audit-containers sets audit
+// and defaults to 4 whenever --containers is given.
 //
 // Secrets are never read into this process. Database work is handed to
 // `railway run`, which injects the connection string into a child process, and
@@ -44,6 +55,7 @@ const { values } = parseArgs({
     status: { type: 'boolean', default: false },
     'dry-run': { type: 'boolean', default: false },
     containers: { type: 'string' },
+    'audit-containers': { type: 'string' },
     batch: { type: 'string' },
     all: { type: 'boolean', default: false },
     seed: { type: 'string' },
@@ -323,16 +335,33 @@ function pinManifest(manifest) {
     source = source.replace(pattern, `${name} = "${value}"`);
     log(`  ${name.padEnd(25)}${value}`);
   }
-  if (values.containers !== undefined) {
-    const containers = Number(values.containers);
-    if (!Number.isSafeInteger(containers) || containers < 1) {
-      fail('--containers must be a positive integer');
-    }
-    source = source.replace(/max_containers=\d+/g, `max_containers=${containers}`);
-    log(`  max_containers           ${containers}`);
+  const positive = (flag) => {
+    if (values[flag] === undefined) return undefined;
+    const n = Number(values[flag]);
+    if (!Number.isSafeInteger(n) || n < 1) fail(`--${flag} must be a positive integer`);
+    return n;
+  };
+  const scanContainers = positive('containers');
+  const auditContainers = positive('audit-containers') ?? (scanContainers === undefined ? undefined : 4);
+  for (const [fn, containers] of [
+    ['scan_shard', scanContainers],
+    ['audit_candidate', auditContainers],
+  ]) {
+    if (containers === undefined) continue;
+    source = pinContainers(source, fn, containers);
+    log(`  max_containers ${fn.padEnd(16)}${containers}`);
   }
   writeFileSync(MODAL_SCRIPT, source, 'utf8');
   log('  review it with: git diff scripts/modal/elephantchess_pilot.py');
+}
+
+// Rewrites the max_containers of ONE @app.function: the decorator block that
+// ends at `def <fn>(`, with no other decorator in between. A global replace here
+// set scan and audit together, which is how audit ran at 32 on 2026-08-23.
+function pinContainers(source, fn, containers) {
+  const pattern = new RegExp(`(max_containers=)\\d+((?:(?!@app\\.function)[\\s\\S])*?\\ndef ${fn}\\()`);
+  if (!pattern.test(source)) fail(`Could not find max_containers for ${fn} in ${MODAL_SCRIPT}`);
+  return source.replace(pattern, `$1${containers}$2`);
 }
 
 function modalRun(entrypoint, extra, manifestPath) {
@@ -367,6 +396,23 @@ async function main() {
       log(JSON.stringify(queryProduction(progressSnippet(state.runId)), null, 2));
     }
     return;
+  }
+
+  if (state.phase === 'review') {
+    // The previous batch is finished and its state is only history now. Keep
+    // it beside the live file so the run id and hashes stay findable, then
+    // start the next batch clean; --exclude-mined keeps the batches disjoint.
+    const archive = join(STATE_DIR, `remainder-state.${state.runId ?? 'unknown'}.json`);
+    step(`Previous batch ${state.runId} finished at ${state.finishedAt}; starting the next one`);
+    if (values['dry-run']) {
+      log(`  would archive state  ${archive}`);
+    } else {
+      writeFileSync(archive, `${JSON.stringify(state, null, 2)}\n`, 'utf8');
+      log(`  archived state       ${archive}`);
+      for (const key of Object.keys(state)) delete state[key];
+      state.phase = 'preflight';
+      saveState(state);
+    }
   }
 
   preflight();
@@ -446,6 +492,10 @@ async function main() {
   const unfinishedShards = (shards) =>
     (shards.pending ?? 0) + (shards.running ?? 0) + (shards.failed ?? 0);
 
+  let waited = 0;
+  const sleep = (ms) => new Promise((resolve) => setTimeout(resolve, ms));
+  // Games processed so far, the number a live worker moves and a dead lease does not.
+  const progressDone = (p) => p.gamesScanned ?? p.done ?? 0;
   for (let pass = 0; ; pass += 1) {
     const remaining = unfinishedShards(progress.shards);
     if (remaining === 0) break;
@@ -468,7 +518,27 @@ async function main() {
       ['--run-id', state.runId, '--tasks', String(Math.min(remaining, TASK_CAP))],
       state.manifestPath,
     );
+    const before = progress;
     progress = queryProduction(progressSnippet(state.runId));
+    // A reclaim pass whose workers all claimed nothing did not fail: the stalled
+    // shards' leases (30 min) have not expired yet, so there was nothing to
+    // claim. Re-passing immediately burns the six-pass allowance in two minutes
+    // and calls a live lease "not converging" (2026-09-13). Wait the lease out
+    // instead, and do not count the waiting pass.
+    if (
+      pass > 0 &&
+      (progress.shards.running ?? 0) > 0 &&
+      unfinishedShards(progress.shards) === unfinishedShards(before.shards) &&
+      progressDone(progress) === progressDone(before)
+    ) {
+      const minutes = 5;
+      log(`  nothing claimable yet; ${progress.shards.running} lease(s) still live, waiting ${minutes} min`);
+      await sleep(minutes * 60_000);
+      pass -= 1;
+      waited += minutes;
+      if (waited > 45) fail('Waited 45 minutes on live leases with no progress; a worker is stuck holding one.');
+      progress = queryProduction(progressSnippet(state.runId));
+    }
   }
   log(`\n  shards               ${JSON.stringify(progress.shards)}`);
   log(`  candidates           ${JSON.stringify(progress.candidates)}`);

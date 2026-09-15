@@ -22,6 +22,16 @@
  *     --email <owner> [--book shi-qing-ya-qu] [--visibility unlisted] \
  *     [--dry-run] [--replace]
  *
+ * EDITS MODE (2026-09-14). `--edits <slug>.edits.json` makes the reviewed edits
+ * file the book configuration: study names, descriptions and i18n per volume,
+ * chapter numbers, English and Traditional titles, and the comments that
+ * survived prose triage all come from it, and a record it marks publish=false
+ * is held back. `--book` and `--titles` are then unused. The file's shape is in
+ * docs-private/manual-mining-2026-09-14/BRIEF.md.
+ *
+ *   node seed-v2.mjs --app <repo> --data <mined.json> --edits <slug>.edits.json \
+ *     --email <owner> [--visibility unlisted] [--dry-run]
+ *
  * It CREATES. There is no update path here: re-pointing an existing chapter is a
  * PATCH against the live study, not a re-seed, because a delete-and-recreate
  * loses the chapter id, its permalink, and its place in the ordering.
@@ -42,6 +52,7 @@ const {
   standardXiangqiFen,
   isStudyEligibleSpecId,
   xiangqiBoardFromDhtmlxqBinit,
+  createInitialXiangqiState,
 } = await import(`${APP}/node_modules/@mistboard/game/dist/index.js`);
 const persistence = await import(`${APP}/apps/server/dist/persistence-studies.js`);
 const { findUserByEmail } = await import(`${APP}/apps/server/dist/persistence-accounts.js`);
@@ -71,15 +82,58 @@ const BOOKS = {
   },
 };
 
-const BOOK_KEY = arg('book', 'shi-qing-ya-qu');
-const BOOK = BOOKS[BOOK_KEY];
+const EDITS = has('edits') ? JSON.parse(readFileSync(arg('edits'), 'utf8')) : null;
+const kebab = (text) =>
+  String(text ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '')
+    .slice(0, 60);
+
+/** The book block of an edits file as the same shape BOOKS entries have. */
+function bookFromEdits(edits) {
+  const book = edits.book ?? {};
+  const volumes = Array.isArray(book.volumes) && book.volumes.length > 0 ? book.volumes : [{ vol: 1, zh: book.zh }];
+  const studyFor = (v) => volumes[v - 1]?.study ?? (volumes.length === 1 ? book.study : null);
+  const need = (v, what) => {
+    throw new Error(`edits book volume ${v} has no ${what}; the book editor must supply it`);
+  };
+  return {
+    zh: book.zh,
+    era: book.dynasty ? `${book.dynasty}-dynasty` : 'classical',
+    kind: book.kind ?? arg('kind', 'compositions'),
+    volumes,
+    volZh: volumes.map((x) => x.zh ?? book.zh),
+    oldNamePrefix: null,
+    nameFor: (v) => studyFor(v)?.en?.name ?? need(v, 'study.en.name'),
+    descFor: (v) => studyFor(v)?.en?.description ?? need(v, 'study.en.description'),
+    i18nFor: (v) => {
+      const st = studyFor(v) ?? need(v, 'study');
+      const out = {};
+      for (const locale of ['zh-Hans', 'zh-Hant']) {
+        if (st[locale]?.name || st[locale]?.description) out[locale] = { ...st[locale] };
+      }
+      return out;
+    },
+    kindFor: (v) => volumes[v - 1]?.kind ?? book.kind ?? arg('kind', 'compositions'),
+    slugFor: (v) => {
+      const explicit = volumes[v - 1]?.slug ?? (volumes.length === 1 ? book.slug : null);
+      if (explicit) return explicit;
+      const base = kebab((studyFor(v)?.en?.name ?? book.en ?? edits.slug).split(':')[0]);
+      return volumes.length === 1 ? base : `${base}-vol-${v}`;
+    },
+  };
+}
+
+const BOOK_KEY = EDITS ? EDITS.slug : arg('book', 'shi-qing-ya-qu');
+const BOOK = EDITS ? bookFromEdits(EDITS) : BOOKS[BOOK_KEY];
 if (!BOOK) throw new Error(`unknown --book ${BOOK_KEY}; known: ${Object.keys(BOOKS).join(', ')}`);
 
 const VOL_ZH = BOOK.volZh;
 const OLD_NAME_PREFIX = BOOK.oldNamePrefix;
 const nameFor = BOOK.nameFor;
 const slugFor = BOOK.slugFor;
-const descFor = (v, n) =>
+const descFor = BOOK.descFor ?? ((v, n) =>
   `Volume ${v} (${VOL_ZH[v - 1]}) of ${BOOK.zh}, a ${BOOK.era} manual of xiangqi endgame ` +
   `compositions. All ${n} problems of the volume, each rooted at its own diagram with the ` +
   `book's solution as the mainline. Titles are English renderings of the original ` +
@@ -87,7 +141,7 @@ const descFor = (v, n) =>
   `credited on each composition. Every line replays legally through the Mistboard rules ` +
   `kernel, which is a check on the record and not on the book: this text has a single ` +
   `source, and a solution recorded short would still replay cleanly. The compositions are ` +
-  `several centuries old and long out of copyright.`;
+  `several centuries old and long out of copyright.`);
 
 const num = (t) => {
   const m = /第\s*(\d+)\s*局/.exec(t || '');
@@ -99,11 +153,21 @@ const bare = (t) => (t || '').replace(/第\s*\d+\s*局\s*/, '').trim();
 // entries, keyed by the four-character Chinese name) and byNumber (280, keyed by
 // the composition's number in the manual). A flat {zh: en} object is also
 // accepted, which is the shape the original run used.
-const TITLES_RAW = JSON.parse(readFileSync(arg('titles'), 'utf8'));
+const TITLES_RAW = has('titles') ? JSON.parse(readFileSync(arg('titles'), 'utf8')) : {};
+if (!EDITS && !has('titles')) throw new Error('--titles <en.json> is required without --edits');
 const EN = TITLES_RAW.byTitle ?? TITLES_RAW;
 const EN_BY_NUMBER = TITLES_RAW.byNumber ?? {};
 const englishTitle = (zh, n) => EN[zh] ?? EN_BY_NUMBER[String(n)];
 const records = JSON.parse(readFileSync(arg('data'), 'utf8'));
+if (EDITS) {
+  // Every record must have been reviewed; a record the edits file does not know
+  // is a record no witness looked at, and it does not seed.
+  const unknown = records.filter((r) => !EDITS.records?.[String(r.id)]);
+  if (unknown.length > 0) {
+    console.log(`edits file does not cover ${unknown.length} record(s); they will be skipped:`);
+    for (const r of unknown.slice(0, 10)) console.log(`  ${r.id} ${r.title}`);
+  }
+}
 const visibility = arg('visibility', 'unlisted');
 if (!persistence.isStudyVisibility(visibility)) throw new Error(`bad visibility ${visibility}`);
 const email = arg('email');
@@ -114,10 +178,24 @@ const DEPS = {
   standardXiangqiFen,
   isStudyEligibleSpecId,
   xiangqiBoardFromDhtmlxqBinit,
+  createInitialXiangqiState,
   ensureDealtRoot,
 };
-const OPTS = { englishTitle, volZh: VOL_ZH, bookZh: BOOK.zh };
-const chapterFor = (rec) => buildChapter(rec, DEPS, OPTS);
+const singleVolume = VOL_ZH.length === 1;
+const GLOSS = JSON.parse(readFileSync(new URL('../data/xiangqi-compositions/verdict-gloss.json', import.meta.url), 'utf8'));
+const chapterFor = (rec) => {
+  const edit = EDITS ? EDITS.records?.[String(rec.id)] : undefined;
+  if (EDITS && !edit) return { skip: 'not in the edits file' };
+  return buildChapter(rec, DEPS, {
+    englishTitle,
+    volZh: VOL_ZH,
+    bookZh: BOOK.zh,
+    edit,
+    kind: BOOK.kindFor ? BOOK.kindFor(rec.vol) : 'compositions',
+    singleVolume,
+    gloss: GLOSS,
+  });
+};
 
 const connectionString = process.env.DATABASE_URL;
 if (!connectionString) throw new Error('DATABASE_URL is not set');
@@ -154,6 +232,10 @@ let total = 0;
 const allSkips = [];
 // Volume count comes from the mined data, not from a constant: 橘中秘's endgame
 // half is one flat listing where 適情雅趣 is six volumes.
+// A game manual whose dpxq "volumes" are opening families (梅花谱's six) is one
+// study, not six of five games: `book.singleStudy` folds every record into
+// volume 1 and the family label lives in the chapter's English name.
+if (EDITS?.book?.singleStudy) for (const r of records) r.vol = 1;
 const volumes = [...new Set(records.map((r) => r.vol))].sort((a, b) => a - b);
 if (volumes.length > VOL_ZH.length) {
   throw new Error(`data has ${volumes.length} volumes, --book ${BOOK_KEY} names ${VOL_ZH.length}`);
@@ -172,6 +254,22 @@ for (const v of volumes) {
   const chapters = built.map((b) => b.chapter);
   const listed = records.filter((r) => r.vol === v).length;
   console.log(`vol ${v}: ${chapters.length}/${listed} chapters ready`);
+  // The study name carries the chapter count ("Vol. 6: 83 classical compositions",
+  // 九十二局). In edits mode the editor wrote it from their publish count; if the
+  // seeder holds back anything else the name lies on the study card, so stop.
+  const stated = /\b(\d+)\s+(?:classical|endgame|full)/.exec(nameFor(v, chapters.length));
+  if (EDITS && stated && Number(stated[1]) !== chapters.length && !has('allow-count-mismatch')) {
+    throw new Error(
+      `vol ${v}: study name says ${stated[1]} but ${chapters.length} chapters will seed; ` +
+        'fix the edits file (name in all three locales) or pass --allow-count-mismatch',
+    );
+  }
+  if (has('dry-run')) {
+    console.log(`  would create slug=${slugFor(v)}`);
+    console.log(`  name: ${nameFor(v, chapters.length)}`);
+    if (BOOK.i18nFor) for (const [loc, f] of Object.entries(BOOK.i18nFor(v))) console.log(`  ${loc}: ${f.name ?? ''}`);
+    for (const b of built.slice(0, 3)) console.log(`  ${b.chapter.name}  [${b.turn} to move]`);
+  }
   if (has('dry-run') || chapters.length === 0) continue;
 
   const [first, ...rest] = chapters;
@@ -180,6 +278,7 @@ for (const v of volumes) {
     slug: slugFor(v),
     name: nameFor(v, chapters.length),
     description: descFor(v, chapters.length),
+    i18n: BOOK.i18nFor ? BOOK.i18nFor(v) : {},
     visibility,
     chapter: first,
   });
