@@ -7,7 +7,6 @@
 // the reader's board and piece pickers like every other xiangqi figure.
 
 import type { XiangqiPiece, XiangqiSquare } from '@mistboard/game';
-import type { HordeXiangqiReplaySpec } from './horde-xiangqi-replay.js';
 import {
   XQ_BOARD_H,
   XQ_BOARD_W,
@@ -17,6 +16,7 @@ import {
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
+import type { HordeXiangqiReplaySpec } from './horde-xiangqi-replay.js';
 
 type Board = Partial<Record<XiangqiSquare, XiangqiPiece>>;
 

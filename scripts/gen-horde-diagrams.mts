@@ -795,7 +795,6 @@ if (process.argv.includes('--blog')) {
 // the reader's board and piece pickers like every other xiangqi figure.
 
 import type { XiangqiPiece, XiangqiSquare } from '@mistboard/game';
-import type { HordeXiangqiReplaySpec } from './horde-xiangqi-replay.js';
 import {
   XQ_BOARD_H,
   XQ_BOARD_W,
@@ -805,6 +804,7 @@ import {
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
+import type { HordeXiangqiReplaySpec } from './horde-xiangqi-replay.js';
 
 type Board = Partial<Record<XiangqiSquare, XiangqiPiece>>;
 
@@ -927,7 +927,7 @@ export const HORDE_XIANGQI_THUMBNAIL = () => {
     writeFileSync(SITE_MODULE, module);
     // The board literals come out on one line each; hand them to the repo's
     // formatter so the generated file passes the same gate as a written one.
-    execSync(`npx biome format --write "${SITE_MODULE}"`, {
+    execSync(`npx biome check --write "${SITE_MODULE}"`, {
       cwd: path.join(HERE, '..'),
       stdio: 'ignore',
     });
