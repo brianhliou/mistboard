@@ -2329,8 +2329,7 @@ const ZH_HANS: Record<string, string> = {
   'ONE CAPTURE WINS, THE OTHER IS NOT A MOVE': '一个吃法获胜，另一个不是合法着法',
   'BLACK IS IN CHECK': '黑方被将军',
   'THE CORK: A CANNON IN FRONT OF THE CHARIOT': '塞子：车前面的炮',
-  'Atomic Xiangqi Rules':
-    '原子象棋规则',
+  'Atomic Xiangqi Rules': '原子象棋规则',
   'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.':
     '每次吃子都会爆炸的象棋。吃子的棋子、被吃的棋子和相邻四个点上的棋子一起消失；兵卒能在爆炸中幸存；炮的一击只带走目标；对将帅的爆炸威胁算作将军。',
   'Atomic Xiangqi is [xiangqi](/rules/xiangqi) with one change: a capture is an explosion. The piece that captures, the piece it takes, and every piece on the four points next to the capture are removed from the board. Soldiers survive an explosion. A general does not.':
@@ -2343,8 +2342,7 @@ const ZH_HANS: Record<string, string> = {
     'Brian H. Liou 于 2026 年把原子象棋移植到 9 路 10 线的棋盘上，作为 Mistboard 原创；此前没有人把爆炸规则放到象棋盘上。爆炸波及四个点而不是八个，因为象棋棋子的“邻点”是沿线的下一个交叉点；炮则单独有一条规则。',
   '[Atomic Chess](https://en.wikipedia.org/wiki/Atomic_chess) began on the German Internet Chess Server in 1995, from rules Klaus Knopper collected from friends who played it over the board. It is now one of the most played chess variants: Lichess added it in 2015 and hosted 4.9 million games of it in 2021, and grandmasters Andrew Tang and Jeffery Xiong reached the quarter- and semi-finals of its 2017 championship.':
     '[原子国际象棋](https://en.wikipedia.org/wiki/Atomic_chess)1995 年起源于德国网络象棋服务器（GICS），规则由 Klaus Knopper 从桌面对弈的朋友那里收集而来。它如今是下得最多的国际象棋变体之一：Lichess 于 2015 年加入了它，2021 年在该平台上下了 490 万盘，特级大师 Andrew Tang 和 Jeffery Xiong 分别打进了其 2017 年锦标赛的八强和四强。',
-  'The explosion':
-    '爆炸',
+  'The explosion': '爆炸',
   '**What goes.** The capturing piece, the captured piece, and every piece on the four points orthogonally next to the capture point, whichever side they belong to.':
     '**消失的。**吃子的棋子、被吃的棋子，以及吃子点上下左右四个相邻点上的所有棋子，不分红黑。',
   '**What stays.** Diagonal neighbours. Soldiers: an explosion never removes a soldier, so a soldier leaves the board only by being captured itself, though a soldier that captures explodes like anything else.':
@@ -2355,16 +2353,14 @@ const ZH_HANS: Record<string, string> = {
     '**对方的将帅。**在对方将帅相邻点上吃子，立刻获胜。将帅两侧的士所在的点，正是整盘棋的关键。',
   'The chariot on d9 may take the advisor, and that ends the game: the blast reaches the general on e10. The chariot on f2 may not take the horse, because the blast would reach Red’s own general on e1.':
     'd9 的车可以吃士，棋局就此结束：爆炸波及 e10 的将。f2 的车不能吃马，因为爆炸会波及红方自己 e1 的帅。',
-  'The cannon shot is the one exception':
-    '炮的一击是唯一的例外',
+  'The cannon shot is the one exception': '炮的一击是唯一的例外',
   'A cannon’s capture does not explode. It removes only the cannon and its target: nothing beside the target is touched, and neither is the screen the cannon fired over. The shot is at range; the explosion is on contact.':
     '炮吃子不爆炸。只移除炮和它的目标：目标旁边的棋子不受影响，炮跳过的炮架也不受影响。炮击是远程的；爆炸只发生在接触时。',
   'Red’s cannon fires over its soldier and takes the horse. The cannon and the horse go; the chariot and cannon beside the horse stay, and so does the soldier that screened the shot.':
     '红炮隔着己方的兵打马。炮和马消失；马旁边的车和炮留下，充当炮架的兵也留下。',
   'This is the one change from a straight port, and it is there because the straight port has a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent. A quiet shot leaves the block standing but harmless, and the check rule below makes the hop that remains a loss for the side making it. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
     '这是相对于直接移植的唯一改动，原因是直接移植的版本存在一种最早第三回合就能出现、防守方永远无法拒绝的重复局面和棋。一辆车站在士所在的线上，威胁把将帅炸掉。唯一的防守是用炮垫挡；而如果炮也会爆炸，这一垫挡同时就是隔着车反打进攻方自己的士，于是车只好换到另一条士线上，炮跟过去，局面重复。在引擎对局中，少了一辆车的一方靠这一招就能顶住比自己强得多的对手。炮击不爆炸，垫挡仍然成立却不构成威胁，下面的将军规则又让剩下的那种来回跳成为跳的一方的输棋。炮由此变成一枚用来兑换和垫挡的棋子，而不再是扫清一条横线的棋子；爆炸的其余部分全部不变。',
-  'A threat to blow up the general is check':
-    '炸掉将帅的威胁算作将军',
+  'A threat to blow up the general is check': '炸掉将帅的威胁算作将军',
   'Xiangqi’s rules about the general stand. A move may not leave your general where a piece attacks it, and the two generals may not face each other down an open file. Checkmate wins. A player with no legal move loses.':
     '象棋关于将帅的规则照旧。走棋不能让自己的将帅留在被攻击的位置，双方将帅不能在无子相隔的同一条线上照面。将死获胜。无子可动的一方负。',
   'One thing is wider than in xiangqi. Your general is in check whenever the opponent could remove it with their next move, and under these rules that includes taking the piece beside it. A chariot bearing on your advisor is bearing on your general. The board shows this as check, and it matters for the repetition rule below: a player who gives this kind of check on every move of a repeated cycle loses, as a player giving ordinary perpetual check does under xiangqi’s tournament rules.':
@@ -2381,14 +2377,10 @@ const ZH_HANS: Record<string, string> = {
     '原子象棋：一盘由九宫内自炸决定的引擎对局',
   'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
     '和八个强度档位的引擎对弈，或者用邀请链接约朋友。[发布说明](/blog/atomic-xiangqi-build)讲的是第一盘棋的胜负由什么决定；设计文章有炮规则背后的测量数据；研究里有全部十二盘引擎对局，每次爆炸都有标记，每盘的决定性一步都有注解。',
-  'Play Atomic Xiangqi':
-    '下原子象棋',
-  'The design post':
-    '设计文章',
-  'The twelve engine games':
-    '十二盘引擎对局',
-  'Atomic Xiangqi: What Decides Your First Game':
-    '原子象棋：第一盘棋的胜负由什么决定',
+  'Play Atomic Xiangqi': '下原子象棋',
+  'The design post': '设计文章',
+  'The twelve engine games': '十二盘引擎对局',
+  'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盘棋的胜负由什么决定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上线了：第一盘棋的胜负由什么决定',
   'Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.':
@@ -2397,16 +2389,14 @@ const ZH_HANS: Record<string, string> = {
     '原子象棋今天上线，可以和八个强度档位的电脑对弈，也可以用邀请链接约朋友。它是每次吃子都会爆炸的中国象棋：吃子的棋子、被吃的棋子以及相邻四个点上的一切都被移除，兵卒幸存，将帅不能。同样的棋子，同样的开局摆法，三行规则。',
   'What follows is not the rules. It is what decides a first game, taken from the twelve engine games behind this launch and the few hundred it took to find rules that hold.':
     '下面写的不是规则，而是第一盘棋的胜负由什么决定，取自这次发布背后的十二盘引擎对局，以及为找到站得住的规则而下的几百盘。',
-  'Three points kill your general from move one':
-    '从第一步起，三个点就能要了你将帅的命',
+  'Three points kill your general from move one': '从第一步起，三个点就能要了你将帅的命',
   'A capture on any point next to a general removes it. Red’s general on e1 has three neighbours, d1, f1 and e2, and two of them hold advisors from the first move. So every advisor is a target that carries the general with it, and every piece that can reach d1 or f1 is a threat to the game, not to a piece.':
     '在将帅相邻的任何一点上吃子，都会把它移除。红帅在 e1，有三个相邻点：d1、f1 和 e2，其中两个从第一步起就站着士。所以每一枚士都是会连带将帅一起消失的目标，每一枚能到达 d1 或 f1 的棋子威胁的都是整盘棋，而不是一枚棋子。',
   'The chariot on d9 takes the advisor and the game ends. The chariot on f2 may not take the horse on f1: the blast would reach its own general, and the board does not offer the move.':
     'd9 的车吃士，棋局结束。f2 的车不能吃 f1 的马：爆炸会波及自己的帅，棋盘不会提供这步棋。',
   'The mirror of that is the rule you will feel first: you cannot capture anything next to your own general. A piece that steps beside your general is safe from every one of your pieces, and it stays safe until the general moves.':
     '它的镜像就是你最先会感受到的那条规则：你不能吃自己将帅旁边的任何棋子。一枚走到你将帅旁边的棋子，你的所有棋子都动不了它，直到将帅挪开为止。',
-  'A cannon shot takes one piece':
-    '炮的一击只带走一子',
+  'A cannon shot takes one piece': '炮的一击只带走一子',
   'Every capture explodes except the cannon’s. A cannon that fires over a screen removes its target and itself, and nothing beside the target. The screen survives too.':
     '除了炮，每一次吃子都会爆炸。炮隔着炮架开火，移除目标和它自己，目标旁边的棋子不动。炮架也留下。',
   'The cannon takes the horse and dies doing it. The chariot and cannon beside the horse stay, and so does the soldier the shot went over.':
@@ -2415,8 +2405,7 @@ const ZH_HANS: Record<string, string> = {
     '这改变了炮的用途。在象棋里它是扫清一条线的棋子；在这里它是一对一兑换的棋子，更多时候是用来垫挡的棋子。一门炮直接站在对方车的前面，挡住了它，自己却不构成任何威胁，于是车的一方必须另找计划，而不是等垫挡的炮挪开。引擎在两百万节点下的最佳应对和棋正是这样收尾的：一门炮在一辆车前面来回滑动。',
   'Black’s general is on f10 and Red’s chariot wants the f-file. Black’s cannon on f4 corks it: a quiet block, because its own shot would take one piece and the chariot is not on the far side of a screen.':
     '黑将在 f10，红车想要 f 线。黑炮在 f4 把它塞住：这是一次安静的垫挡，因为炮自己开火只能带走一子，而车也不在炮架的另一侧。',
-  'A chariot on your advisor file is check':
-    '站在你士线上的车就是将军',
+  'A chariot on your advisor file is check': '站在你士线上的车就是将军',
   'Nothing attacks the general in the position below, and the board says check. The rule: you are in check whenever your opponent could remove your general next move by any means, and taking the advisor beside it is one of the means.':
     '下面的局面里没有棋子攻击将帅，棋盘却显示将军。规则是：只要对方下一步能用任何方式移除你的将帅，你就处于被将军状态，而吃掉旁边的士就是方式之一。',
   'Black is in check. The chariot is not attacking the general; it is attacking the advisor, and the blast would do the rest.':
@@ -2433,14 +2422,12 @@ const ZH_HANS: Record<string, string> = {
     '这次发布背后的十盘分出胜负的引擎对局里，六盘以将帅被炸结束，四盘以将死结束；最短 23 回合，最长 73 回合。要做好下完一整盘的准备，并按此选择用时：这里默认是 10+5。',
   'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
     '开局看起来和象棋一样。早期版本规则下那记一炮同时带走对方的炮和马的炮击已经没有了，所以没人会在第一回合兑炮；引擎的开局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出现在中局。',
-  'The bot takes a general on offer without thinking':
-    '送到嘴边的将帅，电脑想都不想就吃',
+  'The bot takes a general on offer without thinking': '送到嘴边的将帅，电脑想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '电脑是加了这套规则补丁的 Fairy-Stockfish，八个以节点数锚定的等级，和其他象棋变体用的是同一套阶梯。较弱的等级是通过不走自己找到的最佳着法来削弱的，在鸭子象棋的棋盘上，这曾让一个 1 级电脑放弃了一次它看得见的吃将。这里的循环在向引擎提问之前会先检查有没有能移除将帅的着法，所以留在可吃棋子旁边的将帅，在每一个等级都会被吃掉。电脑的弱点在于它如何构筑局面，而不在于它会不会收官。',
   'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
     '八个引擎强度档位，或者用邀请链接约朋友。规则页面配有图解，讲得完整。',
-  'Invite a friend':
-    '邀请朋友',
+  'Invite a friend': '邀请朋友',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -4457,8 +4444,7 @@ const ZH_HANT: Record<string, string> = {
   'ONE CAPTURE WINS, THE OTHER IS NOT A MOVE': '一個吃法獲勝，另一個不是合法著法',
   'BLACK IS IN CHECK': '黑方被將軍',
   'THE CORK: A CANNON IN FRONT OF THE CHARIOT': '塞子：車前面的炮',
-  'Atomic Xiangqi Rules':
-    '原子象棋規則',
+  'Atomic Xiangqi Rules': '原子象棋規則',
   'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.':
     '每次吃子都會爆炸的象棋。吃子的棋子、被吃的棋子和相鄰四個點上的棋子一起消失；兵卒能在爆炸中倖存；炮的一擊只帶走目標；對將帥的爆炸威脅算作將軍。',
   'Atomic Xiangqi is [xiangqi](/rules/xiangqi) with one change: a capture is an explosion. The piece that captures, the piece it takes, and every piece on the four points next to the capture are removed from the board. Soldiers survive an explosion. A general does not.':
@@ -4471,8 +4457,7 @@ const ZH_HANT: Record<string, string> = {
     'Brian H. Liou 於 2026 年把原子象棋移植到 9 路 10 線的棋盤上，作為 Mistboard 原創；此前沒有人把爆炸規則放到象棋盤上。爆炸波及四個點而不是八個，因為象棋棋子的“鄰點”是沿線的下一個交叉點；炮則單獨有一條規則。',
   '[Atomic Chess](https://en.wikipedia.org/wiki/Atomic_chess) began on the German Internet Chess Server in 1995, from rules Klaus Knopper collected from friends who played it over the board. It is now one of the most played chess variants: Lichess added it in 2015 and hosted 4.9 million games of it in 2021, and grandmasters Andrew Tang and Jeffery Xiong reached the quarter- and semi-finals of its 2017 championship.':
     '[原子國際象棋](https://en.wikipedia.org/wiki/Atomic_chess)1995 年起源於德國網路象棋伺服器（GICS），規則由 Klaus Knopper 從桌面對弈的朋友那裡收集而來。它如今是下得最多的國際象棋變體之一：Lichess 於 2015 年加入了它，2021 年在該平臺上下了 490 萬盤，特級大師 Andrew Tang 和 Jeffery Xiong 分別打進了其 2017 年錦標賽的八強和四強。',
-  'The explosion':
-    '爆炸',
+  'The explosion': '爆炸',
   '**What goes.** The capturing piece, the captured piece, and every piece on the four points orthogonally next to the capture point, whichever side they belong to.':
     '**消失的。**吃子的棋子、被吃的棋子，以及吃子點上下左右四個相鄰點上的所有棋子，不分紅黑。',
   '**What stays.** Diagonal neighbours. Soldiers: an explosion never removes a soldier, so a soldier leaves the board only by being captured itself, though a soldier that captures explodes like anything else.':
@@ -4480,23 +4465,21 @@ const ZH_HANT: Record<string, string> = {
   '**Your general.** You cannot capture next to your own general; the blast would take it. So a general never captures.':
     '**你的將帥。**你不能在自己將帥的相鄰點上吃子，因為爆炸會連它一起帶走。所以將帥永遠不吃子。',
   '**Their general.** A capture next to the enemy general wins on the spot. The advisors beside each general are the points the game turns on.':
-    '**對方的將帥。**在對方將帥相鄰點上吃子，立刻獲勝。將帥兩側計程車所在的點，正是整盤棋的關鍵。',
+    '**對方的將帥。**在對方將帥相鄰點上吃子，立刻獲勝。將帥兩側的士所在的點，正是整盤棋的關鍵。',
   'The chariot on d9 may take the advisor, and that ends the game: the blast reaches the general on e10. The chariot on f2 may not take the horse, because the blast would reach Red’s own general on e1.':
     'd9 的車可以吃士，棋局就此結束：爆炸波及 e10 的將。f2 的車不能吃馬，因為爆炸會波及紅方自己 e1 的帥。',
-  'The cannon shot is the one exception':
-    '炮的一擊是唯一的例外',
+  'The cannon shot is the one exception': '炮的一擊是唯一的例外',
   'A cannon’s capture does not explode. It removes only the cannon and its target: nothing beside the target is touched, and neither is the screen the cannon fired over. The shot is at range; the explosion is on contact.':
     '炮吃子不爆炸。只移除炮和它的目標：目標旁邊的棋子不受影響，炮跳過的炮架也不受影響。炮擊是遠端的；爆炸只發生在接觸時。',
   'Red’s cannon fires over its soldier and takes the horse. The cannon and the horse go; the chariot and cannon beside the horse stay, and so does the soldier that screened the shot.':
     '紅炮隔著己方的兵打馬。炮和馬消失；馬旁邊的車和炮留下，充當炮架的兵也留下。',
   'This is the one change from a straight port, and it is there because the straight port has a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent. A quiet shot leaves the block standing but harmless, and the check rule below makes the hop that remains a loss for the side making it. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.':
-    '這是相對於直接移植的唯一改動，原因是直接移植的版本存在一種最早第三回合就能出現、防守方永遠無法拒絕的重複局面和棋。一輛車站在士所在的線上，威脅把將帥炸掉。唯一的防守是用炮墊擋；而如果炮也會爆炸，這一墊擋同時就是隔著車反打進攻方自己計程車，於是車只好換到另一條士線上，炮跟過去，局面重複。在引擎對局中，少了一輛車的一方靠這一招就能頂住比自己強得多的對手。炮擊不爆炸，墊擋仍然成立卻不構成威脅，下面的將軍規則又讓剩下的那種來回跳成為跳的一方的輸棋。炮由此變成一枚用來兌換和墊擋的棋子，而不再是掃清一條橫線的棋子；爆炸的其餘部分全部不變。',
-  'A threat to blow up the general is check':
-    '炸掉將帥的威脅算作將軍',
+    '這是相對於直接移植的唯一改動，原因是直接移植的版本存在一種最早第三回合就能出現、防守方永遠無法拒絕的重複局面和棋。一輛車站在士所在的線上，威脅把將帥炸掉。唯一的防守是用炮墊擋；而如果炮也會爆炸，這一墊擋同時就是隔著車反打進攻方自己的士，於是車只好換到另一條士線上，炮跟過去，局面重複。在引擎對局中，少了一輛車的一方靠這一招就能頂住比自己強得多的對手。炮擊不爆炸，墊擋仍然成立卻不構成威脅，下面的將軍規則又讓剩下的那種來回跳成為跳的一方的輸棋。炮由此變成一枚用來兌換和墊擋的棋子，而不再是掃清一條橫線的棋子；爆炸的其餘部分全部不變。',
+  'A threat to blow up the general is check': '炸掉將帥的威脅算作將軍',
   'Xiangqi’s rules about the general stand. A move may not leave your general where a piece attacks it, and the two generals may not face each other down an open file. Checkmate wins. A player with no legal move loses.':
     '象棋關於將帥的規則照舊。走棋不能讓自己的將帥留在被攻擊的位置，雙方將帥不能在無子相隔的同一條線上照面。將死獲勝。無子可動的一方負。',
   'One thing is wider than in xiangqi. Your general is in check whenever the opponent could remove it with their next move, and under these rules that includes taking the piece beside it. A chariot bearing on your advisor is bearing on your general. The board shows this as check, and it matters for the repetition rule below: a player who gives this kind of check on every move of a repeated cycle loses, as a player giving ordinary perpetual check does under xiangqi’s tournament rules.':
-    '有一點比象棋更寬。只要對方下一步能移除你的將帥，你就處於被將軍狀態，而在這套規則下，吃掉將帥旁邊的棋子也是一種方式。一輛車瞄著你計程車，就是瞄著你的將帥。棋盤會把這種情況顯示為將軍，它關係到下面的重複局面規則：在重複的循環裡每一步都給出這種將軍的一方判負，和象棋比賽規則里長將判負一樣。',
+    '有一點比象棋更寬。只要對方下一步能移除你的將帥，你就處於被將軍狀態，而在這套規則下，吃掉將帥旁邊的棋子也是一種方式。一輛車瞄著你的士，就是瞄著你的將帥。棋盤會把這種情況顯示為將軍，它關係到下面的重複局面規則：在重複的循環裡每一步都給出這種將軍的一方判負，和象棋比賽規則里長將判負一樣。',
   'Nothing attacks the black general. Black is in check all the same: the chariot can take the advisor and blow the general up. Black is not obliged to answer it, but repeating a position under this threat is the checking side’s loss, not a draw.':
     '沒有棋子攻擊黑將。黑方仍然處於被將軍狀態：車可以吃士，把將炸掉。黑方並不被迫應將，但在這種威脅下重複局面判將軍一方負，而不是和棋。',
   'You win by blowing up the enemy general, by checkmate, by leaving the opponent with no legal move, or when the opponent gives perpetual check in the wide sense above. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
@@ -4504,19 +4487,15 @@ const ZH_HANT: Record<string, string> = {
   'Two rules draw. Sixty consecutive plies without a capture is a draw, the same limit as xiangqi here. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.':
     '兩條和棋規則。連續六十步無吃子判和，與這裡的象棋相同。同一局面第三次出現判和，除非一方在重複的循環裡每一步都在將軍：那一方判負，而 Mistboard 上的普通象棋會判和。如果雙方都在將軍，判和。',
   'One of the engine games behind this page: Fairy-Stockfish at ten million nodes as Red against itself at one million. Red is a pawn and a half up by move 6 and the game stays close until Black’s 21…Hxf9, a horse taking a cannon on f9 with Black’s own advisor on f10 beside it. The blast takes the advisor, the palace is a piece lighter for nothing, and it never recovers: 30…Cb9 leaves the general without cover, and on move 38 Red’s chariot takes the cannon on d8, next to the general on d9. The blast takes the general, and the elephant on e8 with it.':
-    '本頁背後的引擎對局之一：一千萬節點的 Fairy-Stockfish 執紅，對陣一百萬節點的自己。第 6 回合紅方已多出一個半兵，之後局面一直接近，直到黑方第 21 回合的 Hxf9：馬吃 f9 的炮，而黑方自己計程車就在旁邊的 f10。爆炸帶走了士，九宮白白少了一子，從此再沒恢復：第 30 回合的 Cb9 讓將失去了掩護，第 38 回合紅車吃掉 d8 的炮，緊挨著 d9 的將。爆炸帶走了將，連同 e8 的象。',
+    '本頁背後的引擎對局之一：一千萬節點的 Fairy-Stockfish 執紅，對陣一百萬節點的自己。第 6 回合紅方已多出一個半兵，之後局面一直接近，直到黑方第 21 回合的 Hxf9：馬吃 f9 的炮，而黑方自己的士就在旁邊的 f10。爆炸帶走了士，九宮白白少了一子，從此再沒恢復：第 30 回合的 Cb9 讓將失去了掩護，第 38 回合紅車吃掉 d8 的炮，緊挨著 d9 的將。爆炸帶走了將，連同 e8 的象。',
   'Atomic Xiangqi: an engine game decided by a self-blast in the palace':
     '原子象棋：一盤由九宮內自炸決定的引擎對局',
   'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.':
     '和八個強度檔位的引擎對弈，或者用邀請連結約朋友。[釋出說明](/blog/atomic-xiangqi-build)講的是第一盤棋的勝負由什麼決定；設計文章有炮規則背後的測量資料；研究裡有全部十二盤引擎對局，每次爆炸都有標記，每盤的決定性一步都有註解。',
-  'Play Atomic Xiangqi':
-    '下原子象棋',
-  'The design post':
-    '設計文章',
-  'The twelve engine games':
-    '十二盤引擎對局',
-  'Atomic Xiangqi: What Decides Your First Game':
-    '原子象棋：第一盤棋的勝負由什麼決定',
+  'Play Atomic Xiangqi': '下原子象棋',
+  'The design post': '設計文章',
+  'The twelve engine games': '十二盤引擎對局',
+  'Atomic Xiangqi: What Decides Your First Game': '原子象棋：第一盤棋的勝負由什麼決定',
   'Atomic Xiangqi Is Live: What Decides Your First Game':
     '原子象棋上線了：第一盤棋的勝負由什麼決定',
   'Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.':
@@ -4525,16 +4504,14 @@ const ZH_HANT: Record<string, string> = {
     '原子象棋今天上線，可以和八個強度檔位的電腦對弈，也可以用邀請連結約朋友。它是每次吃子都會爆炸的中國象棋：吃子的棋子、被吃的棋子以及相鄰四個點上的一切都被移除，兵卒倖存，將帥不能。同樣的棋子，同樣的開局擺法，三行規則。',
   'What follows is not the rules. It is what decides a first game, taken from the twelve engine games behind this launch and the few hundred it took to find rules that hold.':
     '下面寫的不是規則，而是第一盤棋的勝負由什麼決定，取自這次釋出背後的十二盤引擎對局，以及為找到站得住的規則而下的幾百盤。',
-  'Three points kill your general from move one':
-    '從第一步起，三個點就能要了你將帥的命',
+  'Three points kill your general from move one': '從第一步起，三個點就能要了你將帥的命',
   'A capture on any point next to a general removes it. Red’s general on e1 has three neighbours, d1, f1 and e2, and two of them hold advisors from the first move. So every advisor is a target that carries the general with it, and every piece that can reach d1 or f1 is a threat to the game, not to a piece.':
     '在將帥相鄰的任何一點上吃子，都會把它移除。紅帥在 e1，有三個相鄰點：d1、f1 和 e2，其中兩個從第一步起就站著士。所以每一枚士都是會連帶將帥一起消失的目標，每一枚能到達 d1 或 f1 的棋子威脅的都是整盤棋，而不是一枚棋子。',
   'The chariot on d9 takes the advisor and the game ends. The chariot on f2 may not take the horse on f1: the blast would reach its own general, and the board does not offer the move.':
     'd9 的車吃士，棋局結束。f2 的車不能吃 f1 的馬：爆炸會波及自己的帥，棋盤不會提供這步棋。',
   'The mirror of that is the rule you will feel first: you cannot capture anything next to your own general. A piece that steps beside your general is safe from every one of your pieces, and it stays safe until the general moves.':
     '它的映象就是你最先會感受到的那條規則：你不能吃自己將帥旁邊的任何棋子。一枚走到你將帥旁邊的棋子，你的所有棋子都動不了它，直到將帥挪開為止。',
-  'A cannon shot takes one piece':
-    '炮的一擊只帶走一子',
+  'A cannon shot takes one piece': '炮的一擊只帶走一子',
   'Every capture explodes except the cannon’s. A cannon that fires over a screen removes its target and itself, and nothing beside the target. The screen survives too.':
     '除了炮，每一次吃子都會爆炸。炮隔著炮架開火，移除目標和它自己，目標旁邊的棋子不動。炮架也留下。',
   'The cannon takes the horse and dies doing it. The chariot and cannon beside the horse stay, and so does the soldier the shot went over.':
@@ -4543,10 +4520,9 @@ const ZH_HANT: Record<string, string> = {
     '這改變了炮的用途。在象棋裡它是掃清一條線的棋子；在這裡它是一對一兌換的棋子，更多時候是用來墊擋的棋子。一門炮直接站在對方車的前面，擋住了它，自己卻不構成任何威脅，於是車的一方必須另找計劃，而不是等墊擋的炮挪開。引擎在兩百萬節點下的最佳應對和棋正是這樣收尾的：一門炮在一輛車前面來回滑動。',
   'Black’s general is on f10 and Red’s chariot wants the f-file. Black’s cannon on f4 corks it: a quiet block, because its own shot would take one piece and the chariot is not on the far side of a screen.':
     '黑將在 f10，紅車想要 f 線。黑炮在 f4 把它塞住：這是一次安靜的墊擋，因為炮自己開火只能帶走一子，而車也不在炮架的另一側。',
-  'A chariot on your advisor file is check':
-    '站在你士線上的車就是將軍',
+  'A chariot on your advisor file is check': '站在你士線上的車就是將軍',
   'Nothing attacks the general in the position below, and the board says check. The rule: you are in check whenever your opponent could remove your general next move by any means, and taking the advisor beside it is one of the means.':
-    '下面的局面裡沒有棋子攻擊將帥，棋盤卻顯示將軍。規則是：只要對方下一步能用任何方式移除你的將帥，你就處於被將軍狀態，而吃掉旁邊計程車就是方式之一。',
+    '下面的局面裡沒有棋子攻擊將帥，棋盤卻顯示將軍。規則是：只要對方下一步能用任何方式移除你的將帥，你就處於被將軍狀態，而吃掉旁邊的士就是方式之一。',
   'Black is in check. The chariot is not attacking the general; it is attacking the advisor, and the blast would do the rest.':
     '黑方被將軍。車並沒有攻擊將，它攻擊的是士，剩下的交給爆炸。',
   'You are not obliged to answer it, and the game does not end for ignoring it. It matters for one rule: xiangqi’s perpetual-check law. A player who gives check, in this wide sense, on every move of a repeated cycle loses. So a chariot hopping between the two advisor files to force a repetition is a losing plan, and because the board shows the check on every move, the loss on the third repetition is not a surprise.':
@@ -4561,14 +4537,12 @@ const ZH_HANT: Record<string, string> = {
     '這次釋出背後的十盤分出勝負的引擎對局裡，六盤以將帥被炸結束，四盤以將死結束；最短 23 回合，最長 73 回合。要做好下完一整盤的準備，並按此選擇用時：這裡預設是 10+5。',
   'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
     '開局看起來和象棋一樣。早期版本規則下那記一炮同時帶走對方的炮和馬的炮擊已經沒有了，所以沒人會在第一回合兌炮；引擎的開局是 Cb5、Ri3、Ra3 或 Hg3，第一次爆炸通常出現在中局。',
-  'The bot takes a general on offer without thinking':
-    '送到嘴邊的將帥，電腦想都不想就吃',
+  'The bot takes a general on offer without thinking': '送到嘴邊的將帥，電腦想都不想就吃',
   'The bot is Fairy-Stockfish with a patch for these rules, eight node-anchored levels, the same ladder the other xiangqi variants use. Its weaker levels are weakened by choosing a move other than the best one they found, and on the duck board that made a level-1 bot decline a general capture it could see. Here the loop checks for a move that removes the general before it asks the engine anything, so a general left next to a capturable piece is taken at every level. Weakness is in how the bot builds a position, not in whether it finishes one.':
     '電腦是加了這套規則補丁的 Fairy-Stockfish，八個以節點數錨定的等級，和其他象棋變體用的是同一套階梯。較弱的等級是透過不走自己找到的最佳著法來削弱的，在鴨子象棋的棋盤上，這曾讓一個 1 級電腦放棄了一次它看得見的吃將。這裡的循環在向引擎提問之前會先檢查有沒有能移除將帥的著法，所以留在可吃棋子旁邊的將帥，在每一個等級都會被吃掉。電腦的弱點在於它如何構築局面，而不在於它會不會收官。',
   'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
     '八個引擎強度檔位，或者用邀請連結約朋友。規則頁面配有圖解，講得完整。',
-  'Invite a friend':
-    '邀請朋友',
+  'Invite a friend': '邀請朋友',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
