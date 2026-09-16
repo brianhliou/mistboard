@@ -1,5 +1,6 @@
 import { PIECE_SVGS } from '@mistboard/board-render';
 import {
+  ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
   canonicalVariantOrderIndex,
@@ -85,6 +86,7 @@ type LandingGameSpecId =
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
+  | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID;
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
@@ -242,6 +244,8 @@ function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | nul
       return 'variant.fortressXiangqi.name';
     case DUCK_XIANGQI_SPEC_ID:
       return 'variant.duckXiangqi.name';
+    case ATOMIC_XIANGQI_SPEC_ID:
+      return 'variant.atomicXiangqi.name';
     case XIANGQI_SPEC_ID:
       return 'variant.xiangqi.name';
     default:
@@ -3167,6 +3171,23 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
+  if (setup.gameSpecId === ATOMIC_XIANGQI_SPEC_ID) {
+    // Atomic Xiangqi: red/black 9x10 xiangqi, casual only (no rating pool), so
+    // `rated` is pinned false like duck. PvP only until the bot ships; an
+    // engine id is not sent because the server would turn it away.
+    return {
+      mode,
+      gameSpecId,
+      timeControl: setup.timeControl,
+      rated: false,
+      preferredColor:
+        setup.preferredColor === 'white'
+          ? 'red'
+          : setup.preferredColor === 'red' || setup.preferredColor === 'black'
+            ? setup.preferredColor
+            : 'random',
+    };
+  }
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) {
     return {
       // Xiangqi fog engines are defaulted server-side, so no engine id is sent.
@@ -3204,11 +3225,13 @@ export function roomCreationGameSpecId(
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
+  | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
   if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return FORTRESS_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) return DUCK_XIANGQI_SPEC_ID;
+  if (setup.gameSpecId === ATOMIC_XIANGQI_SPEC_ID) return ATOMIC_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;

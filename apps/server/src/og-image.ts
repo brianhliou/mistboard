@@ -196,6 +196,9 @@ const RULES_POSITION_CARDS: Record<string, { variant: PositionOgVariant; redFog?
   banqi: { variant: 'banqi' },
   'fortress-xiangqi': { variant: 'fortress-xiangqi' },
   'duck-xiangqi': { variant: 'duck-xiangqi' },
+  // Unlisted, but a rules link is still shared: the card is the standard
+  // array on the standard board, which is the array atomic starts from.
+  'atomic-xiangqi': { variant: 'atomic-xiangqi' },
   jungle: { variant: 'jungle' },
   'jungle-flip': { variant: 'jungle-flip' },
 };

@@ -84,6 +84,10 @@ export const POSITION_OG_VARIANTS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  // Unlisted variant; here so its finished games get a share card. Same
+  // board and FEN as standard xiangqi: the explosion is a rule about captures,
+  // not positions, so any xiangqi-legal position is an atomic one.
+  'atomic-xiangqi',
 ] as const;
 
 export type PositionOgVariant = (typeof POSITION_OG_VARIANTS)[number];
@@ -261,6 +265,7 @@ export function resolvePositionOg(
   if (trimmed.length === 0 || trimmed.length > POSITION_FEN_MAX_LENGTH) return null;
   switch (variant) {
     case 'xiangqi':
+    case 'atomic-xiangqi':
     case 'dark-xiangqi': {
       // Same board and writer; only the legality bar moves, because under fog a
       // general may stand en prise.
@@ -455,6 +460,7 @@ export function resolvePositionOg(
 export function startPositionFen(variant: PositionOgVariant): string {
   switch (variant) {
     case 'xiangqi':
+    case 'atomic-xiangqi':
     case 'dark-xiangqi':
       return standardXiangqiFen(createInitialXiangqiState('og-card'));
     case 'jieqi':

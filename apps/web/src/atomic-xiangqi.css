@@ -1,0 +1,11 @@
+/* Atomic Xiangqi adds one mark to the xiangqi board (live-xiangqi.css draws
+   the ground, grid, palace and river; this file must load AFTER it): the
+   aftermath, an amber ring on each point the last explosion cleared. Drawn in
+   the point-marker band on points that are now empty, so it never covers a
+   piece, and amber on either theme. */
+.xq-marker--blast {
+  stroke: #d99a1e;
+  stroke-opacity: 0.85;
+  stroke-dasharray: 8 6;
+  fill: rgba(217, 154, 30, 0.16);
+}

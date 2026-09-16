@@ -13,6 +13,7 @@ import * as accountRoute from './routes/account.js';
 import * as adminAccountsRoute from './routes/admin-accounts.js';
 import * as adminGameArtifactsRoute from './routes/admin-game-artifacts.js';
 import * as annotationsRoute from './routes/annotations.js';
+import * as atomicXiangqiGamesRoute from './routes/atomic-xiangqi-games.js';
 import * as authRoute from './routes/auth.js';
 import * as banqiGamesRoute from './routes/banqi-games.js';
 import * as botsRoute from './routes/bots.js';
@@ -111,6 +112,7 @@ export const routes: RouteModule[] = [
   xiangqiGamesRoute,
   fortressXiangqiGamesRoute,
   duckXiangqiGamesRoute,
+  atomicXiangqiGamesRoute,
   darkXiangqiGamesRoute,
   jieqiGamesRoute,
   jungleGamesRoute,

@@ -34,6 +34,8 @@ import {
 const START_FENS: Record<PositionOgVariant, string> = {
   xiangqi: standardXiangqiFen(createInitialXiangqiState('t')),
   'dark-xiangqi': standardXiangqiFen(createInitialXiangqiState('t')),
+  // Same board and writer as standard xiangqi; the explosion is a capture rule.
+  'atomic-xiangqi': standardXiangqiFen(createInitialXiangqiState('t')),
   jieqi: jieqiStateToPikafishFen(createInitialJieqiState('t')),
   'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),
   banqi: banqiStateToEngineFen(createInitialBanqiState('t')),

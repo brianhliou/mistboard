@@ -41,6 +41,13 @@ export function duckXiangqiEnabled(): boolean {
   return true;
 }
 
+// Atomic Xiangqi renderer. Same split as duck: the SERVER flag gates room
+// creation, this only gates the client build, and the variant is hidden by its
+// registry surface (no menu entry) plus the server flag.
+export function atomicXiangqiEnabled(): boolean {
+  return true;
+}
+
 // Identity-hidden jieqi (揭棋) play surface. Always on in dev for convenience
 // (like correspondence); in prod/staging it is hidden unless the
 // build opts in.

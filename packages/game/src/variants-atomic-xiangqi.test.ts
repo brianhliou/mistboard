@@ -113,7 +113,7 @@ test('a one-sided shuffle on the advisor file is perpetual check and loses', () 
   // D13, threatens nothing back. Black checked on every move of the cycle.
   const state = fromFen('4k4/3r5/9/9/9/9/4P4/5C3/9/3AKA3 w - - 0 1');
   const end = play(state, 'f3d3', 'd9f9', 'd3f3', 'f9d9', 'f3d3', 'd9f9', 'd3f3', 'f9d9');
-  assert.deepEqual(end.status, { type: 'finished', winner: 'red', reason: 'perpetual-check' });
+  assert.deepEqual(end.status, { type: 'finished', winner: 'red', reason: 'chasing' });
 });
 
 test('a quiet repetition is a draw, and the aftermath is empty after a quiet move', () => {

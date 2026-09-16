@@ -116,9 +116,11 @@ export type AtomicXiangqiGameEndReason =
   | 'repetition'
   // Three-fold repetition where one side gave (lethal) check on every move of
   // the cycle. Its own reason, not a 'repetition' with a winner: the postgame
-  // has to say WHY a repetition was a loss, and persistence maps it to the
-  // 'chasing' termination fortress already uses.
-  | 'perpetual-check'
+  // has to say WHY a repetition was a loss. Spelled as standard xiangqi
+  // spells it, which is also the persistence termination, so the xiangqi
+  // board, postgame and replay read an atomic game as they read a xiangqi
+  // game. This union is a subset of XiangqiGameEndReason on purpose.
+  | 'chasing'
   // Sixty plies without a capture. Named as persistence names it, so the
   // tenant's termination map has nothing to translate.
   | 'progress-clock'
@@ -203,7 +205,7 @@ function endReasonFor(
     case 'stalemate':
       return status.reason;
     case 'repetition':
-      return status.winner === null ? 'repetition' : 'perpetual-check';
+      return status.winner === null ? 'repetition' : 'chasing';
     case 'progress-clock':
       return 'progress-clock';
     default:
@@ -248,7 +250,7 @@ function ruleStateOf(state: AtomicXiangqiGameState): XiangqiRuleState {
       status: {
         type: 'finished',
         winner: state.status.winner,
-        reason: reason === 'perpetual-check' ? 'repetition' : reason,
+        reason: reason === 'chasing' ? 'repetition' : reason,
       },
     };
   }

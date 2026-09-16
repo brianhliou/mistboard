@@ -14,6 +14,7 @@
  */
 
 import {
+  ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -30,6 +31,7 @@ import {
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
+  atomicXiangqiEnabled,
   correspondenceEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
@@ -723,6 +725,45 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         kind: 'container',
       })),
       defaultEngineId: 'fairy-stockfish-duck-xiangqi-level-4',
+    },
+  },
+  {
+    // Atomic Xiangqi: standard 9x10 xiangqi, and a capture is an explosion (the
+    // capturer, the target and the four orthogonal neighbours; soldiers survive;
+    // a cannon's shot takes only its target; a blast threat on the general is
+    // check for the repetition law). Rules engine:
+    // packages/game/src/variants-atomic-xiangqi.ts.
+    //
+    // UNLISTED: never in the play menu, reachable by deep link and from its
+    // rules page only, PvP until the bot ships. The two gates differ on purpose
+    // here, unlike every other tenant: the menu is closed by design and the
+    // deep link is the front door.
+    gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
+    roomIdPrefix: 'axq_',
+    enabled: atomicXiangqiEnabled,
+    pageTitle: 'Atomic Xiangqi',
+    loadLiveRoomClient: () =>
+      import('../live-atomic-xiangqi.js').then(
+        ({ bootstrapAtomicXiangqiLiveRoom }) =>
+          () =>
+            bootstrapAtomicXiangqiLiveRoom(),
+      ),
+    gameRouteBase: '/atomic-xiangqi/game',
+    reviewRouteBase: '/atomic-xiangqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../atomic-xiangqi-postgame.js').then(({ mountAtomicXiangqiPostgame }) =>
+        mountAtomicXiangqiPostgame(root, roomId),
+      ),
+    // No TV channel: a channel is a listing.
+    landing: {
+      capabilities: {
+        ...XIANGQI_CAPABILITIES_BASE,
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      offerInMenu: hiddenFromMenu,
+      acceptsDeepLink: atomicXiangqiEnabled,
     },
   },
   {

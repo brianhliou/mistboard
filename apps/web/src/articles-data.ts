@@ -23,6 +23,7 @@ import { khaiCuocCoUpArticle } from './articles/content/khai-cuoc-co-up.js';
 import { darkXiangqiArticle } from './articles/content/dark-xiangqi.js';
 import { antiXiangqiArticle } from './articles/content/anti-xiangqi.js';
 import { hordeXiangqiArticle } from './articles/content/horde-xiangqi.js';
+import { atomicXiangqiArticle } from './articles/content/atomic-xiangqi.js';
 import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
@@ -62,6 +63,7 @@ export const articles: Article[] = [
   fortressXiangqiArticle,
   duckXiangqiArticle,
   duckXiangqiBuildArticle,
+  atomicXiangqiArticle,
   antiXiangqiArticle,
   hordeXiangqiArticle,
   serverEnforcedFogArticle,

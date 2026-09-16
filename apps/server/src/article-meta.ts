@@ -14,7 +14,10 @@ export type ArticleKind = 'rules' | 'article';
 // (apps/web/src/variant-public-surfaces.ts has `mahjong: false`); it leaves
 // this set the day the variant goes public, and articles-meta-sync.test.ts
 // fails if the two disagree.
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong']);
+// 'atomic-xiangqi' is the front door of an unlisted variant (board-plan.md):
+// reachable, shareable, and out of the sitemap and the rails until the first
+// twenty human games say whether it is listed.
+const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong', 'atomic-xiangqi']);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web
@@ -190,6 +193,12 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Duck Chess on the xiangqi board: a turn is a legal move plus a duck placement, the duck screens for cannons and blocks the horse, and the general falls by capture.',
+  },
+  'atomic-xiangqi': {
+    title: 'Atomic Xiangqi Rules',
+    kind: 'rules',
+    description:
+      'Xiangqi where a capture is an explosion: the capturer, the captured piece and the four neighbours go, soldiers survive, a cannon shot takes only its target, and a blast threat on the general is check.',
   },
   'fortress-xiangqi': {
     title: 'Fortress Xiangqi Rules',
