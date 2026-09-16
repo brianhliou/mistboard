@@ -212,6 +212,7 @@ test('parseJsonResponse: empty -> null, JSON -> value, garbage -> error naming u
 
 test('variant configs: every entry is complete and self-consistent', () => {
   const expected = {
+    atomic: 'atomic-xiangqi',
     fortress: 'fortress-xiangqi',
     duck: 'duck-xiangqi',
     dxq: 'dark-xiangqi',
