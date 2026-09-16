@@ -1,4 +1,4 @@
-dfa6d88
+d05df13
 # ^ The mistboard-engine commit the prod build checks out (railpack build step).
 # analyze_job vendor path (2026-09-05): dfa6d88 puts /vendor on sys.path in
 # scripts/analyze_job.py, the way live_move_worker.py and the other
