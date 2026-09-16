@@ -12,6 +12,7 @@ import type {
   JungleFlipDeal,
   Square,
 } from '@mistboard/game';
+import type { AtomicXiangqiReplaySpec } from '../atomic-xiangqi-replay.js';
 import type { ChessReplaySpec } from '../chess-replay.js';
 import type { PlayerTitle } from '../player-titles.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
@@ -180,6 +181,16 @@ export type DuckXiangqiReplayBlock = {
   caption?: string;
 };
 
+// Atomic Xiangqi analogue: a UCI move list stepped through the atomic kernel,
+// so every explosion is the kernel's, drawn with the live board's aftermath
+// discs and detonation. The standard xq-replay would leave the blown-up pieces
+// on the board.
+export type AtomicXiangqiReplayBlock = {
+  kind: 'atomic-xiangqi-replay';
+  spec: AtomicXiangqiReplaySpec;
+  caption?: string;
+};
+
 // Horde Xiangqi analogue: a general-less red side of soldiers (standard or
 // veteran) against the army, stepped through a game record against the rule
 // kernel with the horde configuration. The standard xq-replay rejects the
@@ -339,6 +350,7 @@ export type ArticleBlock =
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
   | HordeXiangqiReplayBlock
+  | AtomicXiangqiReplayBlock
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock

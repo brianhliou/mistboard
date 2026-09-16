@@ -105,6 +105,31 @@ export const atomicXiangqiArticle: Article = {
       ],
     },
     {
+      heading: 'A sample game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'The shortest of the engine games behind this page: Fairy-Stockfish at ten million nodes as Black against itself at one million. Watch the palace. Red’s general steps to d1 on move 6 and never gets back to the middle; on move 8 a horse takes a horse on h1 and the cannon beside it goes in the blast; and the last move is a chariot taking the advisor next to the general, which is how most games here end.',
+        },
+        {
+          kind: 'atomic-xiangqi-replay',
+          spec: {
+            red: 'Fairy-Stockfish, 1M nodes',
+            black: 'Fairy-Stockfish, 10M nodes',
+            event: 'Engine game · cannon-shot rules',
+            moves:
+              'g1e3 b10c8 h3h5 c7c6 b3b7 c8d6 d1e2 a10a9 i1i3 d6f5 e1d1 i7i6 h5h2 f5g3 i3h3 g3h1 a4a5 h10i8 i4i5 i6i5 h3h7 i8h6 e4e5 a9d9 b7d7 d9f9 d7d8 f9f4 a1a3 b8b3 d8d4 i10i2 a5a6 h8d8 d4e4 b3b9 h7h8 h6g8 h8h9 f4f9 e2f3 b9d9 d1e1 i2f2 e4f4 f2f1',
+            resultText:
+              'Black takes the advisor on f1 and the general on e1 goes with it. Red’s 18.Ce4 was the losing move; every line after it loses.',
+          },
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'All twelve engine games, with every explosion marked and a note on the move that decided each, are in the [companion study](/study/dPKhvJKb).',
+        },
+      ],
+    },
+    {
       heading: 'How games end',
       blocks: [
         {

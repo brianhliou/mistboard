@@ -86,9 +86,12 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
   // the tree adapter's own spelling), not as chess-style UCI, so uciToIccs
   // rejects every one of them and the mainline comes out empty. That is how a
   // duck chapter used to reach the embed as "no moves to show". Pass those
-  // tokens through untouched; the duck board reads them directly.
+  // tokens through untouched; the duck board reads them directly. An atomic
+  // chapter stores a1-i10 UCI, which is what its board replays.
   const toToken = (uci: string): string | null =>
-    chapter.variant === 'duck-xiangqi' ? uci : uciToIccs(uci);
+    chapter.variant === 'duck-xiangqi' || chapter.variant === 'atomic-xiangqi'
+      ? uci
+      : uciToIccs(uci);
 
   while (node?.children?.length) {
     const played = node.children[0];

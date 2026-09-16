@@ -13,6 +13,7 @@
 
 import '../app-base.css';
 import '../articles.css';
+import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
@@ -79,6 +80,7 @@ export async function mountEmbedStudy(
   // page's; the credit link is the way there. A chapter has no clocks, so the
   // seat rows' clock slots stay empty.
   const isDuck = chapter.variant === 'duck-xiangqi';
+  const isAtomic = chapter.variant === 'atomic-xiangqi';
   const copy = replayStepperCopy(undefined, 'xiangqi');
   await mountEmbedCard(root, {
     header: spec.title ? `${spec.title} · ${spec.event}` : spec.event,
@@ -93,9 +95,10 @@ export async function mountEmbedStudy(
     },
     // Duck games need the duck renderer: the xiangqi board has no way to draw
     // the duck, which lives in the seventh FEN field, so a duck chapter used
-    // to render as a xiangqi position with a piece missing. Dispatch on the
-    // chapter's own variant, and fail over to xiangqi for everything else
-    // rather than guessing.
+    // to render as a xiangqi position with a piece missing. Atomic games need
+    // the atomic kernel, or every explosion's victims stay on the board.
+    // Dispatch on the chapter's own variant, and fail over to xiangqi for
+    // everything else rather than guessing.
     aspect: boardAspectForSpec(isDuck ? 'duck-xiangqi' : 'xiangqi'),
     railWidthPx: embedRailWidthPx(isDuck ? 'duck-xiangqi' : 'xiangqi'),
     // Clamped by the card against the real ply count, so an out-of-range
@@ -117,7 +120,19 @@ export async function mountEmbedStudy(
             },
             hooks,
           )
-        : mountXiangqiReplayBoard(host, spec, hooks),
+        : isAtomic
+          ? mountAtomicXiangqiReplayBoard(
+              host,
+              {
+                moves: spec.iccs,
+                red: spec.red,
+                black: spec.black,
+                event: spec.event,
+                resultText: spec.resultText,
+              },
+              hooks,
+            )
+          : mountXiangqiReplayBoard(host, spec, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }
