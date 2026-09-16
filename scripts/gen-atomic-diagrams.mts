@@ -547,7 +547,7 @@ if (process.argv.includes('--blog')) {
     'lab-grind': '%1 in %2 plies, %3',
     'res-grind-equal':
       '%1 %2 after %3 plies. The first two plies were random; 200k nodes a move for both sides. Cannon-shot rules.',
-    'grp-notes': 'Annotated: the drawing resource, and four wins',
+    'grp-notes': 'Annotated, four-point rules: the drawing resource, and four wins',
     'lab-note-escape': 'The escape: a chariot down and holding, 13 plies',
     'lab-note-dance': 'The dance at the top rung, 17 plies',
     'lab-note-squeeze': 'Win 1: the slow squeeze, 127 plies',

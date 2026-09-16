@@ -12,7 +12,12 @@ import { articles } from './articles-data.js';
 // So absence has to be a recorded decision rather than an oversight. An
 // editorial article newer than the newest thing on the homepage either joins
 // the row or gets a line here saying why it did not.
-const KEPT_OFF: Array<{ slug: string; why: string }> = [];
+const KEPT_OFF: Array<{ slug: string; why: string }> = [
+  {
+    slug: 'atomic-xiangqi-build',
+    why: 'the variant is unlisted until its first twenty human games; the article is reached from its rules page and the brianhliou.com post only',
+  },
+];
 
 const editorial = articles.filter(
   (article) => article.status === 'published' && article.kind !== 'rules',

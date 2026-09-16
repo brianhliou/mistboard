@@ -109,6 +109,7 @@ describe('study board dispatch', () => {
       jieqi: './jieqi-review.js',
       'jungle-flip': './jungle-flip-review.js',
       'duck-xiangqi': './duck-xiangqi-review.js',
+      'atomic-xiangqi': './atomic-xiangqi-review.js',
     };
     for (const variant of STUDY_VARIANTS) {
       const module = expected[variant.id];

@@ -197,6 +197,13 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Atomic Xiangqi: a tree-review stack (review/atomic-xiangqi-tree-adapter.ts
+  // + -review.ts) over the standard board, and the standard start. Last, not
+  // slotted: the spec is unlisted and canonicalVariantOrderIndex sorts it after
+  // the shelf, which is the order this list must follow. The create-study
+  // dialog offers only public-surface variants, so this membership is a
+  // capability (an unlisted companion study can exist), not a listing.
+  ATOMIC_XIANGQI_SPEC_ID,
 ];
 
 /** Fail-closed membership test for {@link STUDY_ELIGIBLE_SPEC_IDS} — narrows an

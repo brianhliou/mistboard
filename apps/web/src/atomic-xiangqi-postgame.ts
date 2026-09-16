@@ -10,7 +10,13 @@ import './live-xiangqi.css';
 import './atomic-xiangqi.css';
 import './landing.css';
 import './game-route.css';
-import { atomicXiangqiBlastMarkers } from './atomic-xiangqi-board.js';
+import {
+  animateAtomicXiangqiCapture,
+  atomicXiangqiBlastKey,
+  atomicXiangqiBlastMarkers,
+  atomicXiangqiCaptureAnimates,
+  markAtomicXiangqiBlastHost,
+} from './atomic-xiangqi-board.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -145,6 +151,9 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
   boardHost.style.aspectRatio = `${BOARD_VIEWBOX.width} / ${BOARD_VIEWBOX.height}`;
 
   const moveList = createMoveList(moveEntries(postgame), { title: 'Moves' });
+  // The ply whose explosion has played; stepping onto a ply detonates it once.
+  let detonatedKey: string | null = null;
+  let cancelCapture: (() => void) | null = null;
 
   const status = reviewOutcomeLine(
     reviewResultLabel(postgame.game.result),
@@ -173,13 +182,24 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
     renderBoards({ ply, flipped }) {
       const perspective: AtomicXiangqiColor = flipped ? 'black' : 'red';
       const view = postgameViewAtPly(postgame, 'truth', ply) ?? postgame.view;
+      const key = atomicXiangqiBlastKey(view);
+      const fresh = key !== detonatedKey;
+      detonatedKey = key;
+      if (fresh) {
+        cancelCapture?.();
+        cancelCapture = null;
+      }
+      markAtomicXiangqiBlastHost(boardHost, view);
       boardHost.innerHTML = xiangqiBoardSvg(view, perspective, {
         interactive: false,
         selectedSquare: null,
         draggingFrom: null,
         coordinates: false,
-        markers: atomicXiangqiBlastMarkers(view),
+        markers: atomicXiangqiBlastMarkers(view, { fresh }),
       });
+      if (fresh && atomicXiangqiCaptureAnimates(view)) {
+        cancelCapture = animateAtomicXiangqiCapture(boardHost, view, perspective);
+      }
     },
     renderMoves({ ply }, jump) {
       moveList.update(ply, jump);

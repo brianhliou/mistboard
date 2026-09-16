@@ -1,11 +1,99 @@
-/* Atomic Xiangqi adds one mark to the xiangqi board (live-xiangqi.css draws
-   the ground, grid, palace and river; this file must load AFTER it): the
-   aftermath, an amber ring on each point the last explosion cleared. Drawn in
-   the point-marker band on points that are now empty, so it never covers a
-   piece, and amber on either theme. */
+/* Atomic Xiangqi's one mark on the xiangqi board (live-xiangqi.css draws the
+   board; this file must load AFTER it): the aftermath, a soft amber disc on
+   each point the last explosion cleared, the general's point included. Drawn
+   in the point-marker band on points that are now empty, so it never covers a
+   piece. Amber on either theme. */
 .xq-marker--blast {
   stroke: #d99a1e;
-  stroke-opacity: 0.85;
-  stroke-dasharray: 8 6;
-  fill: rgba(217, 154, 30, 0.16);
+  stroke-opacity: 0.55;
+  stroke-width: 3;
+  fill: rgba(217, 154, 30, 0.28);
+  transform-box: fill-box;
+  transform-origin: center;
+}
+
+/* The board's own last-move ring would sit on the capture point on top of the
+   aftermath disc and read as a second mark; under a blast the destination
+   holds no piece, so the ring says nothing the disc does not. */
+.xq-has-blast .xq-live-lastmove-ring {
+  display: none;
+}
+
+/* The first time a ply is on screen the discs scale in ... */
+.xq-marker--blast-fresh {
+  animation: xq-blast-in 180ms cubic-bezier(0.2, 0.9, 0.3, 1) both;
+}
+
+@keyframes xq-blast-in {
+  0% {
+    transform: scale(0.35);
+    opacity: 0;
+  }
+  55% {
+    opacity: 1;
+  }
+  100% {
+    transform: scale(1);
+    opacity: 1;
+  }
+}
+
+/* ... and a shockwave in the same amber expands from the capture point and
+   is gone. */
+.xq-marker--shock {
+  fill: rgba(217, 154, 30, 0.3);
+  stroke: #d99a1e;
+  stroke-width: 5;
+  stroke-opacity: 0.8;
+  pointer-events: none;
+  transform-box: fill-box;
+  transform-origin: center;
+  animation: xq-shock 320ms ease-out forwards;
+}
+
+@keyframes xq-shock {
+  0% {
+    transform: scale(0.3);
+    opacity: 0.95;
+  }
+  100% {
+    transform: scale(2.4);
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xq-marker--blast-fresh,
+  .xq-marker--shock {
+    animation: none;
+  }
+  .xq-marker--shock {
+    opacity: 0;
+  }
+}
+
+/* The ghosts that ride one piece glide (animateAtomicXiangqiCapture): the
+   pieces the blast removed fade out where they stood, and the capturer fades
+   on its way in, all on the same clock. `--xq-ghost-ms` is set per ghost. */
+.xq-piece-slot--victim,
+.xq-piece-slot--capturer {
+  pointer-events: none;
+  animation: xq-ghost-out var(--xq-ghost-ms, 250ms) ease-in forwards;
+}
+
+@keyframes xq-ghost-out {
+  0% {
+    opacity: 1;
+  }
+  100% {
+    opacity: 0;
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .xq-piece-slot--victim,
+  .xq-piece-slot--capturer {
+    animation: none;
+    opacity: 0;
+  }
 }

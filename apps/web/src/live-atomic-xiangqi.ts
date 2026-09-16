@@ -20,9 +20,13 @@ import {
 import './live-xiangqi.css';
 import './atomic-xiangqi.css';
 import {
+  animateAtomicXiangqiCapture,
+  atomicXiangqiBlastKey,
   atomicXiangqiBlastMarkers,
+  atomicXiangqiCaptureAnimates,
   atomicXiangqiCheckBody,
   atomicXiangqiReasonPhrase,
+  markAtomicXiangqiBlastHost,
 } from './atomic-xiangqi-board.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
 import { playSound } from './live-sound.js';
@@ -63,6 +67,12 @@ let core: TenantLiveClientContext<AtomicXiangqiColor, AtomicXiangqiPlayerView> |
 let selectedSquare: AtomicXiangqiSquare | null = null;
 let draggingFrom: AtomicXiangqiSquare | null = null;
 let annotations: BoardAnnotations | null = null;
+// The position whose explosion has already played. A repaint of the same
+// position (selection, drag, click-away) draws the aftermath without
+// detonating it again.
+let detonatedKey: string | null = null;
+// Cancels an in-flight capture glide when a newer position arrives.
+let cancelCapture: (() => void) | null = null;
 
 const atomicXiangqiWebTenant: WebVariantTenant<AtomicXiangqiColor> = {
   displayName: 'Atomic Xiangqi',
@@ -106,6 +116,7 @@ const client = createTenantLiveClient<
   resetState: () => {
     selectedSquare = null;
     draggingFrom = null;
+    detonatedKey = null;
   },
   renderBoard,
   renderExtras: renderCheckStatus,
@@ -195,19 +206,30 @@ export function bootstrapAtomicXiangqiLiveRoom(): void {
 function renderBoard(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | null): void {
   liveRefs.board.className = 'board xiangqi-live-board';
   liveRefs.board.setAttribute('aria-label', 'Atomic Xiangqi board');
+  markAtomicXiangqiBlastHost(liveRefs.board, view);
   if (!view) {
     liveRefs.board.replaceChildren();
     return;
   }
   const perspective = core?.orientation() ?? view.perspective;
   const drawn = drawnBoardOverlays<AtomicXiangqiSquare>(annotations?.shapes() ?? []);
+  const key = atomicXiangqiBlastKey(view);
+  const fresh = key !== detonatedKey;
+  detonatedKey = key;
+  if (fresh) {
+    cancelCapture?.();
+    cancelCapture = null;
+  }
   liveRefs.board.innerHTML = xiangqiBoardSvg(view, perspective, {
     interactive: true,
     selectedSquare,
     draggingFrom,
     arrows: drawn.arrows,
-    markers: [...atomicXiangqiBlastMarkers(view), ...drawn.markers],
+    markers: [...atomicXiangqiBlastMarkers(view, { fresh }), ...drawn.markers],
   });
+  if (fresh && atomicXiangqiCaptureAnimates(view)) {
+    cancelCapture = animateAtomicXiangqiCapture(liveRefs.board, view, perspective);
+  }
 }
 
 // The fortress notice, with this game's meaning of check: the perspective's

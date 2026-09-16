@@ -17,7 +17,12 @@ export type ArticleKind = 'rules' | 'article';
 // 'atomic-xiangqi' is the front door of an unlisted variant (board-plan.md):
 // reachable, shareable, and out of the sitemap and the rails until the first
 // twenty human games say whether it is listed.
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong', 'atomic-xiangqi']);
+const NON_INDEXED_ARTICLE_SLUGS = new Set([
+  'shogi4',
+  'mahjong',
+  'atomic-xiangqi',
+  'atomic-xiangqi-build',
+]);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web
@@ -193,6 +198,12 @@ export const ARTICLE_META: Record<
     kind: 'rules',
     description:
       'Duck Chess on the xiangqi board: a turn is a legal move plus a duck placement, the duck screens for cannons and blocks the horse, and the general falls by capture.',
+  },
+  'atomic-xiangqi-build': {
+    title: 'Atomic Xiangqi Is Live: What Decides Your First Game',
+    kind: 'article',
+    description:
+      'Chinese chess where a capture is an explosion. The rules take a minute; what decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.',
   },
   'atomic-xiangqi': {
     title: 'Atomic Xiangqi Rules',

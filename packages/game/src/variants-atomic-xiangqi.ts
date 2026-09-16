@@ -146,6 +146,12 @@ export type AtomicXiangqiGameState = Omit<XiangqiRuleState, 'status'> & {
    * vanish.
    */
   lastBlast: readonly AtomicXiangqiBlastVictim[];
+  /**
+   * The piece that made the last capture, which the explosion removed with
+   * its target. It stood on `lastMove.from` and is on the board nowhere now;
+   * the client draws it arriving before the blast. Absent after a quiet move.
+   */
+  lastCapturer?: XiangqiPiece;
 };
 
 /**
@@ -169,6 +175,7 @@ export type AtomicXiangqiPlayerView = {
   moveNumber: number;
   lastMove?: AtomicXiangqiMove;
   lastBlast: readonly AtomicXiangqiBlastVictim[];
+  lastCapturer?: XiangqiPiece;
 };
 
 export function oppositeAtomicXiangqiColor(color: AtomicXiangqiColor): AtomicXiangqiColor {
@@ -180,13 +187,16 @@ export function oppositeAtomicXiangqiColor(color: AtomicXiangqiColor): AtomicXia
 function fromRuleState(
   state: XiangqiRuleState,
   lastBlast: readonly AtomicXiangqiBlastVictim[],
+  lastCapturer?: XiangqiPiece,
 ): AtomicXiangqiGameState {
   const status = state.status;
-  if (status.type === 'playing') return { ...state, status, lastBlast };
+  const capturer = lastCapturer ? { lastCapturer } : {};
+  if (status.type === 'playing') return { ...state, status, lastBlast, ...capturer };
   return {
     ...state,
     status: { type: 'finished', winner: status.winner, reason: endReasonFor(status) },
     lastBlast,
+    ...capturer,
   };
 }
 
@@ -235,7 +245,7 @@ export function atomicXiangqiFen(state: AtomicXiangqiGameState): string {
  * finished or aborted game is never handed back to the kernel.
  */
 function ruleStateOf(state: AtomicXiangqiGameState): XiangqiRuleState {
-  const { lastBlast: _lastBlast, ...rest } = state;
+  const { lastBlast: _lastBlast, lastCapturer: _lastCapturer, ...rest } = state;
   if (state.status.type === 'aborted') {
     throw new Error('atomic-xiangqi: an aborted game has no rule state');
   }
@@ -312,7 +322,8 @@ export function applyAtomicXiangqiMove(
     throw new Error(`illegal move: ${move.from}${move.to}`);
   }
   const { blast } = atomicXiangqiBoardAfterMove(state.board, move);
-  return fromRuleState(atomicXiangqiKernel.apply(rule, move), blast);
+  const capturer = blast.length > 0 ? state.board[move.from] : undefined;
+  return fromRuleState(atomicXiangqiKernel.apply(rule, move), blast, capturer);
 }
 
 export function finishAtomicXiangqiGame(
@@ -364,5 +375,6 @@ export function getAtomicXiangqiPlayerView(
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
     lastBlast: state.lastBlast,
+    ...(state.lastCapturer ? { lastCapturer: state.lastCapturer } : {}),
   };
 }

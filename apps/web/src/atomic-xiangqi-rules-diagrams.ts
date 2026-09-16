@@ -56,7 +56,7 @@ function blastRings(squares: readonly AtomicXiangqiSquare[], x0: number, y0: num
     .map((square) => {
       const { file, rank } = xqCoord(square as XiangqiSquare);
       const { x, y } = xqPoint(file, rank, 'red', x0, y0 + BOARD_Y_OFFSET);
-      return `<circle class="xq-marker--blast" cx="${x}" cy="${y}" r="${size / 2 + 2}" fill="rgba(217, 154, 30, 0.16)" stroke="#d99a1e" stroke-width="3" stroke-dasharray="6 4" opacity="0.9"/>`;
+      return `<circle class="xq-marker--blast" cx="${x}" cy="${y}" r="${size / 2 + 2}" fill="rgba(217, 154, 30, 0.28)" stroke="#d99a1e" stroke-width="3" stroke-opacity="0.55"/>`;
     })
     .join('');
 }
@@ -219,3 +219,28 @@ export const ATOMIC_XIANGQI_THUMBNAIL = () => {
   });
   return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Atomic Xiangqi" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}</svg>`;
 };
+
+// ── The cork ────────────────────────────────────────────────────────────────
+
+// From the two-million-node best-play game, ply 32. Black's general is on f10
+// and Red's chariot on f3 wants the file; Black's cannon on f4 stands directly
+// in front of it. Under the cannon-shot rule the cannon threatens nothing back
+// (its shot would take one piece, and the chariot is not on the far side of a
+// screen), so the block is quiet: the new chariot-against-cannon idea.
+const CORK_FEN = 'r1ba1kbn1/2R1a4/2r6/p3p1p1p/9/3N2P2/Pc2Pc2P/BC3R3/4A4/4KABN1 w - - 10 17';
+const CORK_BOARD = boardFromFen('atomic-rules-cork', CORK_FEN);
+
+export const ATOMIC_XIANGQI_CORK = () =>
+  xqSvg(
+    PAIR_W,
+    FIGURE_H,
+    xqBoardSvg({
+      state: state('atomic-rules-cork', CORK_BOARD),
+      x: PAIR_GAP_X / 2,
+      y: 0,
+      label: 'THE CORK: A CANNON IN FRONT OF THE CHARIOT',
+      perspective: 'red',
+      arrows: [{ from: 'f3' as XiangqiSquare, to: 'f10' as XiangqiSquare }],
+      dots: [{ square: 'f4' as XiangqiSquare, blocked: true }],
+    }),
+  );

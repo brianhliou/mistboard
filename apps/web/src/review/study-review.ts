@@ -140,6 +140,16 @@ export async function mountStudyReview(
         root: parsed?.ok ? { truth: parsed.state, fen: duckXiangqiFen(parsed.state) } : undefined,
       });
     }
+    case 'atomic-xiangqi': {
+      const [{ mountAtomicXiangqiReview }, { atomicXiangqiFen, atomicXiangqiStateFromFen }] =
+        await Promise.all([import('./atomic-xiangqi-review.js'), import('@mistboard/game')]);
+      // Standard board and spelling: a xiangqi FEN is an atomic position.
+      const parsed = rootFen ? atomicXiangqiStateFromFen(rootFen, STUDY_GAME_ID) : null;
+      return mountAtomicXiangqiReview(root, {
+        ...base,
+        root: parsed ? { truth: parsed, fen: atomicXiangqiFen(parsed) } : undefined,
+      });
+    }
     case 'dark-chess': {
       const [{ mountDarkChessReview }, { parseDarkChessFen, darkChessFen }] = await Promise.all([
         import('./dark-chess-review.js'),
