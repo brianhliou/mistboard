@@ -1,3 +1,4 @@
+import { execFileSync } from 'node:child_process';
 import { describe, expect, it } from 'vitest';
 import { changelogMonths, parseChangelog, parseInline } from './changelog-data.js';
 
@@ -100,4 +101,75 @@ describe('the committed CHANGELOG.md', () => {
       }
     }
   });
+
+  // The page renders whatever the file says and the parser is strict, so a
+  // heading outside the set silently drops its entries from the page, and a
+  // month out of order breaks "newest first". Both are the kind of slip a
+  // human appending one line never notices. Lint them here rather than in a
+  // pre-push nudge: this runs on every ci:quick already.
+  it('keeps months newest first and headings from the fixed set, in order', () => {
+    const months = changelogMonths();
+    const ids = months.map((month) => month.id);
+    expect(ids, 'months must be newest first').toEqual([...ids].sort().reverse());
+    expect(new Set(ids).size, 'a month appears twice').toBe(ids.length);
+    for (const month of months) {
+      const headings = month.sections.map((section) => section.heading);
+      for (const heading of headings) {
+        expect(
+          CHANGELOG_HEADINGS.includes(heading),
+          `${month.id}: "${heading}" is not one of ${CHANGELOG_HEADINGS.join(', ')}`,
+        ).toBe(true);
+      }
+      expect(new Set(headings).size, `${month.id}: a heading appears twice`).toBe(headings.length);
+      const order = headings.map((heading) => CHANGELOG_HEADINGS.indexOf(heading));
+      expect(order, `${month.id}: headings are out of order`).toEqual(
+        [...order].sort((a, b) => a - b),
+      );
+    }
+  });
+
+  // A dead commit link on a public page is the other slip nobody sees. The
+  // check needs history, so it is skipped in a shallow clone (hosted CI's
+  // default checkout); locally and in the pre-push ci:quick the tree is full.
+  it('links commits that exist in this repository', () => {
+    const shallow = git('rev-parse', '--is-shallow-repository') === 'true';
+    if (shallow) return;
+    const hashes = new Set<string>();
+    for (const month of changelogMonths()) {
+      for (const section of month.sections) {
+        for (const entry of section.entries) {
+          for (const part of entry.parts) {
+            if (part.kind !== 'link') continue;
+            const hash = /\/commit\/([0-9a-f]{7,40})$/.exec(part.href)?.[1];
+            if (hash) hashes.add(hash);
+          }
+        }
+      }
+    }
+    const missing = [...hashes].filter((hash) => {
+      try {
+        execFileSync('git', ['cat-file', '-e', `${hash}^{commit}`], { stdio: 'ignore' });
+        return false;
+      } catch {
+        return true;
+      }
+    });
+    expect(missing, 'changelog links commits that do not exist').toEqual([]);
+  });
 });
+
+// The heading set and order from the file's own conventions block.
+const CHANGELOG_HEADINGS = [
+  'Playing',
+  'Learning and puzzles',
+  'Watching and review',
+  'Community',
+  'Site',
+  'Removed',
+  'Fixed',
+  'Technical',
+];
+
+function git(...args: string[]): string {
+  return execFileSync('git', args, { encoding: 'utf-8' }).trim();
+}
