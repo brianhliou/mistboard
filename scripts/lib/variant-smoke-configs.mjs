@@ -10,6 +10,19 @@
 // version suffix at all.
 
 export const VARIANT_SMOKE_CONFIGS = {
+  atomic: {
+    name: 'atomic',
+    label: 'Atomic Xiangqi',
+    usage: 'npm run prod:smoke:atomic -- [options]',
+    gameSpecId: 'atomic-xiangqi',
+    // Its own patched Fairy-Stockfish build (blast rules, no NNUE) on a warm
+    // session; a healthy first move is a few hundred ms, the ceiling covers a
+    // cold spawn on a fragmented host.
+    defaultTimeoutMs: 40_000,
+    // Prefix-matched like the others: the rung the room hands a player is a
+    // knob, not part of the contract.
+    engineSeat: { prefix: 'fairy-stockfish-atomic-xiangqi-' },
+  },
   duck: {
     name: 'duck',
     label: 'Duck',

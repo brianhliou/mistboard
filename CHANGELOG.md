@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Atomic Xiangqi, unlisted: every capture explodes the four points around it, soldiers survive a blast, a cannon shot takes only its target, and a general in a kill zone is in check; play the computer at eight levels or a friend by link at /rules/atomic-xiangqi, with the explosion drawn on the board and twelve annotated engine games in a study ([ce70fed9](https://github.com/brianhliou/mistboard/commit/ce70fed9), [4707901f](https://github.com/brianhliou/mistboard/commit/4707901f))
 - Correspondence players get one email a day, at most, listing the games that have been waiting on their move for half a day or more; never one per move, off under Notifications on the account page ([5b5f188f](https://github.com/brianhliou/mistboard/commit/5b5f188f))
 - A play streak on your profile: the days in a row you finished a game, counted on your own calendar and still alive the day after, with your best run ([f772d19c](https://github.com/brianhliou/mistboard/commit/f772d19c), [1e3eef02](https://github.com/brianhliou/mistboard/commit/1e3eef02))
 - A Chinese-language interface, or an English one in a Chinese-reading region (CN, TW, HK, MO, SG, MY, VN), starts on the traditional hanzi piece set; everyone else keeps the international art, and a set picked in Pieces wins either way ([81303048](https://github.com/brianhliou/mistboard/commit/81303048))

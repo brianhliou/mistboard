@@ -148,6 +148,7 @@ export const atomicXiangqiBuildArticle: Article = {
           href: '/?play=friend&gameSpecId=atomic-xiangqi',
           emphasis: 'secondary',
         },
+        { label: 'The twelve engine games', href: '/study/dPKhvJKb', emphasis: 'secondary' },
       ],
     }),
   ],
