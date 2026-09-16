@@ -10,7 +10,7 @@
       "black": "Fairy-Stockfish, 1M nodes",
       "result": "1-0",
       "orientation": "red",
-      "intro": "Red (10 million nodes) against Black (1 million). The longest win on file. Level for six moves, then Black’s cannon swap at 6…Cf6 hands Red a pawn, and by move 30 Red is winning. What follows is the hunt: twenty-two moves in this game are check in the wide sense, the black general walks e10, f9, f10, e9, and the chariot finally reaches e9 beside it on move 73.",
+      "intro": "Red (10 million nodes) against Black (1 million). The longest win on file. Level for six moves, then Black’s cannon swap at 3…Cf6 hands Red a pawn, and by move 15 Red is winning. What follows is the hunt: twenty-two moves in this game are check in the wide sense, the black general walks e10, f9, f10, e9, and the chariot finally reaches e9 beside it on move 73.",
       "moves": [
         "h1g3",
         "b8b6",
@@ -185,7 +185,7 @@
       "black": "Fairy-Stockfish, 10M nodes",
       "result": "0-1",
       "orientation": "red",
-      "intro": "Black (10 million nodes) against Red (1 million). Red holds until 49.Cd5; then 56…Rxc5 takes a chariot and a cannon with one capture, 73.Rxf2 costs Red its own advisor to the blast, and from move 83 Red is lost. The finish is the unusual part: Black blows up both of its own advisors (88…Exe8) to clear the file, and 92…Pdxd3 empties Red’s palace before the horse mates.",
+      "intro": "Black (10 million nodes) against Red (1 million). Red holds until 25.Cd5; then 28…Rxc5 takes a chariot and a cannon with one capture, 37.Rxf2 costs Red its own advisor to the blast, and from move 43 Red is lost. The finish is the unusual part: Black blows up both of its own advisors (44…Exe8) to clear the file, and 46…Pdxd3 empties Red’s palace before the horse mates.",
       "moves": [
         "h1g3",
         "b8b6",
@@ -317,7 +317,7 @@
       "black": "Fairy-Stockfish, 1M nodes",
       "result": "1-0",
       "orientation": "red",
-      "intro": "Red (10 million nodes) against Black (1 million). Level until 36…Cd2 leaves the back ranks; then 42…Hxf9 takes a cannon and blows up Black’s own advisor on f10 with it, and the palace never recovers. Red wins by explosion on move 38, the chariot taking the cannon on d8 beside the general.",
+      "intro": "Red (10 million nodes) against Black (1 million). Level until 18…Cd2 leaves the back ranks; then 21…Hxf9 takes a cannon and blows up Black’s own advisor on f10 with it, and the palace never recovers. Red wins by explosion on move 38, the chariot taking the cannon on d8 beside the general.",
       "moves": [
         "b1a3",
         "b8b6",
@@ -420,7 +420,7 @@
       "black": "Fairy-Stockfish, 10M nodes",
       "result": "0-1",
       "orientation": "red",
-      "intro": "Black (10 million nodes) against Red (1 million). Red’s 13.Cxh10 wins a chariot for a cannon and Red is lost eight moves later anyway: 21.Pc5 walks into a corner collapse, and 36…Hxb1 takes the horse with the chariot on a1 and the elephant on c1 beside it. The general is chased to d2 and blown up from e2.",
+      "intro": "Black (10 million nodes) against Red (1 million). Red’s 7.Cxh10 wins a chariot for a cannon and Red is lost eight moves later anyway: 11.Pc5 walks into a corner collapse, and 18…Hxb1 takes the horse with the chariot on a1 and the elephant on c1 beside it. The general is chased to d2 and blown up from e2.",
       "moves": [
         "b1a3",
         "h10g8",
@@ -517,7 +517,7 @@
       "black": "Fairy-Stockfish, 1M nodes",
       "result": "1-0",
       "orientation": "red",
-      "intro": "Red (10 million nodes) against Black (1 million). 17.Cxf8 wins a chariot for a cannon; 43.Pxf9 takes a horse with a soldier and the blast removes the advisor on e9 beside it, which is the move that opens the palace. Black’s checks on moves 28 and 29 change nothing, and the horse finishes: 75.Hxc10 takes the elephant next to the general on d10.",
+      "intro": "Red (10 million nodes) against Black (1 million). 9.Cxf8 wins a chariot for a cannon; 22.Pxf9 takes a horse with a soldier and the blast removes the advisor on e9 beside it, which is the move that opens the palace. Black’s checks on moves 28 and 29 change nothing, and the horse finishes: 38.Hxc10 takes the elephant next to the general on d10.",
       "moves": [
         "b3g3",
         "b8b6",
@@ -620,7 +620,7 @@
       "black": "Fairy-Stockfish, 10M nodes",
       "result": "0-1",
       "orientation": "red",
-      "intro": "Black (10 million nodes) against Red (1 million). 31.Hg3 is the losing move (-10.7), 39.He4 and 41.Hxd6 make it worse, and Black lets one mate slip (44…Rh7) before finding the finish: 62…Rxe2+ takes the advisor beside the general on e1.",
+      "intro": "Black (10 million nodes) against Red (1 million). 16.Hg3 is the losing move (-10.7), 20.He4 and 21.Hxd6 make it worse, and Black lets one mate slip (22…Rh7) before finding the finish: 31…Rxe2+ takes the advisor beside the general on e1.",
       "moves": [
         "b3g3",
         "b8b6",
@@ -713,7 +713,7 @@
       "black": "Fairy-Stockfish, 10M nodes",
       "result": "0-1",
       "orientation": "red",
-      "intro": "Black (10 million nodes) against Red (1 million). Both sides blow up their own pieces: 20…Hxf9 costs Black an advisor, 37.Hxb1 costs Red an elephant, and the second matters more (-11.8). 46…Hxe2 takes the advisor and clears the elephant and the horse beside it, and the mate comes on the first rank.",
+      "intro": "Black (10 million nodes) against Red (1 million). Both sides blow up their own pieces: 10…Hxf9 costs Black an advisor, 19.Hxb1 costs Red an elephant, and the second matters more (-11.8). 23…Hxe2 takes the advisor and clears the elephant and the horse beside it, and the mate comes on the first rank.",
       "moves": [
         "b3f3",
         "a10a8",
@@ -805,7 +805,7 @@
       "black": "Fairy-Stockfish, 10M nodes",
       "result": "0-1",
       "orientation": "red",
-      "intro": "Black (10 million nodes) against Red (1 million). 11.Kd1 steps the general into the corner of the palace early (-2.0), 16…Hxh1 takes a horse and a cannon with one capture, and 35.Ce4 is the losing move. 46…Rxf1+ takes the advisor beside the general on e1.",
+      "intro": "Black (10 million nodes) against Red (1 million). 6.Kd1 steps the general into the corner of the palace early (-2.0), 8…Hxh1 takes a horse and a cannon with one capture, and 18.Ce4 is the losing move. 23…Rxf1+ takes the advisor beside the general on e1.",
       "moves": [
         "g1e3",
         "b10c8",
@@ -880,7 +880,7 @@
       "black": "Fairy-Stockfish, 1M nodes",
       "result": "1-0",
       "orientation": "red",
-      "intro": "Red (10 million nodes) against Black (1 million). 24…Pg6 is the mistake (+5.2), and 29.Pxc9 is the game: a soldier takes the chariot on c9 and the blast removes the elephant on c10 and the horse on c8 as well. Red converts by explosion on move 35.",
+      "intro": "Red (10 million nodes) against Black (1 million). 12…Pg6 is the mistake (+5.2), and 15.Pxc9 is the game: a soldier takes the chariot on c9 and the blast removes the elephant on c10 and the horse on c8 as well. Red converts by explosion on move 35.",
       "moves": [
         "b3e3",
         "b8f8",
@@ -975,7 +975,7 @@
       "black": "Fairy-Stockfish, 10M nodes",
       "result": "0-1",
       "orientation": "red",
-      "intro": "Black (10 million nodes) against Red (1 million). One explosion decides it: 48…Rxd3 takes the advisor on d3 and removes the elephant on e3 and the cannon on d2 with it, and Red’s palace is bare. The mate is a soldier’s: 60…Pe1+.",
+      "intro": "Black (10 million nodes) against Red (1 million). One explosion decides it: 24…Rxd3 takes the advisor on d3 and removes the elephant on e3 and the cannon on d2 with it, and Red’s palace is bare. The mate is a soldier’s: 30…Pe1+.",
       "moves": [
         "b3e3",
         "a10a8",
@@ -1121,7 +1121,7 @@
       "black": "Fairy-Stockfish, 20M nodes",
       "result": "½-½",
       "orientation": "red",
-      "intro": "Twenty million nodes a move for both sides, the deepest game on file. 3.Pc5 is the only swing (-0.3), then a game of trades: 14…Rxb9, 17.Rxb10 taking the elephant beside the chariot, the cannon shots 29.Cxh4 and 31.Cxf7, five soldier captures, and a level ending that repeats after 88 plies. This is what the engine thinks the game is with nobody making a mistake.",
+      "intro": "Twenty million nodes a move for both sides, the deepest game on file. 2.Pc5 is the only swing (-0.3), then a game of trades: 7…Rxb9, 9.Rxb10 taking the elephant beside the chariot, the cannon shots 15.Cxh4 and 16.Cxf7, five soldier captures, and a level ending that repeats after 88 plies. This is what the engine thinks the game is with nobody making a mistake.",
       "moves": [
         "i1i2",
         "i10i9",

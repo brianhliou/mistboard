@@ -101,18 +101,28 @@ const kernel = createXiangqiRuleKernel({
   blast: { shape: 'orthogonal', immune: ['soldier'], palaceContained: false },
 });
 const rules = kernel.rules;
+// The shipped rules (variants-atomic-xiangqi.ts), for the figures that show
+// what the four-point design lacks: the cannon shot that takes only its
+// target. Everything the two kernels agree on is drawn with the design kernel.
+const { ATOMIC_XIANGQI_RULES } = await import('../packages/game/src/variants-atomic-xiangqi.js');
+const shipped = createXiangqiRuleKernel(ATOMIC_XIANGQI_RULES).rules;
 
 function fen(placement: string): XiangqiBoard {
   const board = parsePlacement(placement.split(/\s+/)[0] ?? '');
   if (!board) throw new Error(`bad placement ${placement}`);
   return board;
 }
-function after(board: XiangqiBoard, from: XiangqiSquare, to: XiangqiSquare) {
-  return boardAfter(board, { from, to }, rules).board;
+function after(board: XiangqiBoard, from: XiangqiSquare, to: XiangqiSquare, under = rules) {
+  return boardAfter(board, { from, to }, under).board;
 }
 /** Squares a move empties besides its origin: the blast, as the kernel applies it. */
-function removedBy(board: XiangqiBoard, from: XiangqiSquare, to: XiangqiSquare): XiangqiSquare[] {
-  const next = after(board, from, to);
+function removedBy(
+  board: XiangqiBoard,
+  from: XiangqiSquare,
+  to: XiangqiSquare,
+  under = rules,
+): XiangqiSquare[] {
+  const next = after(board, from, to, under);
   return (Object.keys(board) as XiangqiSquare[]).filter(
     (sq) => sq !== from && next[sq] === undefined,
   );
@@ -122,8 +132,9 @@ function legal(
   mover: 'red' | 'black',
   from: XiangqiSquare,
   to: XiangqiSquare,
+  under = rules,
 ): boolean {
-  return legalMovesOn(board, mover, rules).some((m) => m.from === from && m.to === to);
+  return legalMovesOn(board, mover, under).some((m) => m.from === from && m.to === to);
 }
 
 // ── SVG plumbing ───────────────────────────────────────────────────────────
@@ -248,6 +259,32 @@ figure(
     { id: 'blast-after', board: after(B1, 'i5', 'e5'), label: 'AFTER THE BLAST' },
   ]),
   'Every capture explodes onto the four adjacent points. The cannon on e5 and the chariot that took it go, and so do the horse on d5 and the cannon on e6. The soldier on e4 is adjacent too and stays, because soldiers survive a blast. The chariot on d6 and the elephant on f4 are diagonal to e5 and are not touched.',
+);
+
+// ── 1b. The cannon shot ────────────────────────────────────────────────────
+
+// Same position as the rules page's shot figure: the cannon on e2 jumps the
+// soldier on e4 and takes the horse on e7. Only the two of them go; the chariot
+// on d7 and the cannon on f7 beside the target stay, and so does the screen.
+const SHOT = fen('4k4/9/9/3rnc3/9/9/4P4/9/4C4/4K4 w - - 0 1');
+const SHOT_GONE = removedBy(SHOT, 'e2', 'e7', shipped);
+if (!legal(SHOT, 'red', 'e2', 'e7', shipped)) throw new Error('Cxe7 should be legal');
+if (SHOT_GONE.join() !== 'e7')
+  throw new Error(`the shot removed ${SHOT_GONE.join(',')}; it should take e7 only`);
+if (after(SHOT, 'e2', 'e7', shipped).e2 !== undefined) throw new Error('the cannon should go too');
+figure(
+  'shot',
+  boards([
+    {
+      id: 'shot-before',
+      board: SHOT,
+      label: 'CANNON TAKES THE HORSE ON e7',
+      arrows: [{ from: 'e2', to: 'e7' }],
+      blast: { squares: SHOT_GONE, capture: 'e7' },
+    },
+    { id: 'shot-after', board: after(SHOT, 'e2', 'e7', shipped), label: 'ONLY THE TWO OF THEM' },
+  ]),
+  'A cannon’s capture is the one that does not explode. The cannon on e2 jumps the soldier on e4 and takes the horse on e7; the chariot on d7 and the cannon on f7 beside the target are untouched, and so is the soldier it jumped.',
 );
 
 // ── 2. The kill zone ───────────────────────────────────────────────────────

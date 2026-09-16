@@ -181,7 +181,7 @@ export function atomicXiangqiReasonPhrase(reason: string): string {
     case 'chasing':
       return 'perpetual check';
     case 'progress-clock':
-      return 'sixty moves without a capture';
+      return 'sixty plies without a capture';
     default:
       return 'the game rules';
   }

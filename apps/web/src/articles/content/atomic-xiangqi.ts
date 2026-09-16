@@ -39,7 +39,11 @@ export const atomicXiangqiArticle: Article = {
     } as ArticleBlock,
     {
       kind: 'paragraph',
-      text: 'Atomic Chess dates from 1995 on the German Chess Server, where a capture removes the capturer, the captured piece and every non-pawn on the eight neighbouring squares. This is that rule on the xiangqi board, played with a standard set from the standard array, and it needed two answers of its own before it worked as a game. They are the rest of this page.',
+      text: 'Brian H. Liou adapted Atomic Xiangqi to the 9 by 10 board in 2026 as a Mistboard original; nobody had put the explosion on a xiangqi board before. The blast is four points rather than eight because a xiangqi piece’s neighbour is the next point along a line, and the cannon gets one rule of its own.',
+    },
+    {
+      kind: 'paragraph',
+      text: '[Atomic Chess](https://en.wikipedia.org/wiki/Atomic_chess) began on the German Internet Chess Server in 1995, from rules Klaus Knopper collected from friends who played it over the board. It is now one of the most played chess variants: Lichess added it in 2015 and hosted 4.9 million games of it in 2021, and grandmasters Andrew Tang and Jeffery Xiong reached the quarter- and semi-finals of its 2017 championship.',
     },
   ],
   sections: [
@@ -48,15 +52,19 @@ export const atomicXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The board, the pieces and the opening array are ordinary xiangqi, and every piece moves as it always has. The difference starts the moment one piece takes another.',
+          text: '**What goes.** The capturing piece, the captured piece, and every piece on the four points orthogonally next to the capture point, whichever side they belong to.',
         },
         {
           kind: 'paragraph',
-          text: 'A capture removes three things: the capturing piece, the captured piece, and every piece standing on the four points orthogonally next to the capture point. Diagonal neighbours are not touched. Soldiers are never removed by an explosion, only by being captured themselves. Both sides’ pieces are removed alike; the blast does not know whose piece it is clearing.',
+          text: '**What stays.** Diagonal neighbours. Soldiers: an explosion never removes a soldier, so a soldier leaves the board only by being captured itself, though a soldier that captures explodes like anything else.',
         },
         {
           kind: 'paragraph',
-          text: 'Two consequences follow. Taking a piece next to your own general is not a move, because the blast would remove your general; the board will not offer it. And taking a piece next to the enemy general wins on the spot, whatever else is on the board, because the blast removes theirs.',
+          text: '**Your general.** You cannot capture next to your own general; the blast would take it. So a general never captures.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Their general.** A capture next to the enemy general wins on the spot. The advisors beside each general are the points the game turns on.',
         },
         {
           kind: 'raw-svg',
@@ -67,11 +75,11 @@ export const atomicXiangqiArticle: Article = {
       ],
     },
     {
-      heading: 'The cannon shot',
+      heading: 'The cannon shot is the one exception',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A cannon’s capture removes only the cannon and its target. Nothing beside the target is touched, and the screen the cannon fired over is not touched. The shot is at range; the explosion is on contact.',
+          text: 'A cannon’s capture does not explode. It removes only the cannon and its target: nothing beside the target is touched, and neither is the screen the cannon fired over. The shot is at range; the explosion is on contact.',
         },
         {
           kind: 'raw-svg',
@@ -81,12 +89,12 @@ export const atomicXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'This is the rule that makes the game hold. Without it, a chariot standing on the file of an advisor forces a draw: the only defence is to block with a cannon, the cannon’s own shot back over the chariot forces the chariot to move, the cannon follows, and neither side can do anything else. With it, the block still stops the chariot but threatens nothing back, and the attacker has to find something better than shuffling. The cannon becomes a piece you trade and block with; it is no longer the piece that clears a rank.',
+          text: 'This is the one change from a straight port, and it is there because the straight port has a draw by repetition that can start on move three and that the defender can never refuse. A chariot on the file of an advisor threatens to blow up the general. The only defence is to block with a cannon, and with cannons exploding, the block is also a shot back over the chariot at the attacker’s own advisor, so the chariot has to move to the other advisor file, the cannon follows, and the position repeats. In engine games a side that had lost a chariot could hold the draw this way against a far stronger opponent. A quiet shot leaves the block standing but harmless, and the check rule below makes the hop that remains a loss for the side making it. The cannon becomes a piece you trade and block with rather than the piece that clears a rank, and everything else about the explosion stays as it is.',
         },
       ],
     },
     {
-      heading: 'Check, here',
+      heading: 'A threat to blow up the general is check',
       blocks: [
         {
           kind: 'paragraph',
@@ -94,7 +102,7 @@ export const atomicXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'One thing is wider than in xiangqi. Your general is in check whenever the opponent could remove it with their next move, and under these rules that includes taking the piece beside it. A chariot bearing on your advisor is bearing on your general. The board shows this as check, and it matters for the repetition rule below: a player who gives this kind of check on every move of a repeated cycle loses, exactly as a player giving ordinary perpetual check loses in xiangqi.',
+          text: 'One thing is wider than in xiangqi. Your general is in check whenever the opponent could remove it with their next move, and under these rules that includes taking the piece beside it. A chariot bearing on your advisor is bearing on your general. The board shows this as check, and it matters for the repetition rule below: a player who gives this kind of check on every move of a repeated cycle loses, as a player giving ordinary perpetual check does under xiangqi’s tournament rules.',
         },
         {
           kind: 'raw-svg',
@@ -105,63 +113,51 @@ export const atomicXiangqiArticle: Article = {
       ],
     },
     {
-      heading: 'A sample game',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: 'The shortest of the engine games behind this page: Fairy-Stockfish at ten million nodes as Black against itself at one million. Watch the palace. Red’s general steps to d1 on move 6 and never gets back to the middle; on move 8 a horse takes a horse on h1 and the cannon beside it goes in the blast; and the last move is a chariot taking the advisor next to the general, which is how most games here end.',
-        },
-        {
-          kind: 'atomic-xiangqi-replay',
-          spec: {
-            red: 'Fairy-Stockfish, 1M nodes',
-            black: 'Fairy-Stockfish, 10M nodes',
-            event: 'Engine game · cannon-shot rules',
-            moves:
-              'g1e3 b10c8 h3h5 c7c6 b3b7 c8d6 d1e2 a10a9 i1i3 d6f5 e1d1 i7i6 h5h2 f5g3 i3h3 g3h1 a4a5 h10i8 i4i5 i6i5 h3h7 i8h6 e4e5 a9d9 b7d7 d9f9 d7d8 f9f4 a1a3 b8b3 d8d4 i10i2 a5a6 h8d8 d4e4 b3b9 h7h8 h6g8 h8h9 f4f9 e2f3 b9d9 d1e1 i2f2 e4f4 f2f1',
-            resultText:
-              'Black takes the advisor on f1 and the general on e1 goes with it. Red’s 18.Ce4 was the losing move; every line after it loses.',
-          },
-        } as ArticleBlock,
-        {
-          kind: 'paragraph',
-          text: 'All twelve engine games, with every explosion marked and a note on the move that decided each, are in the [companion study](/study/dPKhvJKb).',
-        },
-      ],
-    },
-    {
       heading: 'How games end',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'You win by blowing up the enemy general, by checkmate, or by leaving the opponent with no legal move. Games also end by timeout, resignation, or abandonment, the same as any other game here.',
+          text: 'You win by blowing up the enemy general, by checkmate, by leaving the opponent with no legal move, or when the opponent gives perpetual check in the wide sense above. Games also end by timeout, resignation, or abandonment, the same as any other game here.',
         },
         {
           kind: 'paragraph',
-          text: 'Two rules draw. Sixty moves by each player without a capture is a draw, which is xiangqi’s own no-progress limit. The third occurrence of the same position is a draw, unless one side gave check (in the wide sense above) on every move of the repeated cycle: then that side loses. If both sides did, it is a draw.',
+          text: 'Two rules draw. Sixty consecutive plies without a capture is a draw, the same limit as xiangqi here. The third occurrence of the same position is a draw, unless one side gave check on every move of the repeated cycle: then that side loses, where plain xiangqi on Mistboard would call it a draw. If both sides did, it is a draw.',
         },
       ],
     },
     {
-      heading: 'Why these rules',
+      heading: 'A sample game',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The plain port, every capture exploding, was tested first and played engine games that ended in the same forced draw on the advisor files within twenty moves. The two additions above were measured against it: with them, a stronger engine beats a weaker one 19 games to 0, equal engines reach decisive games from two random opening plies half the time, and forty-one of forty-four first moves stay level, with no forced line. What the game is like between people is the thing the measurements cannot say, which is why the board is here.',
+          text: 'One of the engine games behind this page: Fairy-Stockfish at ten million nodes as Red against itself at one million. Red is a pawn and a half up by move 6 and the game stays close until Black’s 21…Hxf9, a horse taking a cannon on f9 with Black’s own advisor on f10 beside it. The blast takes the advisor, the palace is a piece lighter for nothing, and it never recovers: 30…Cb9 leaves the general without cover, and on move 38 Red’s chariot takes the cannon on d8, next to the general on d9. The blast takes the general, and the elephant on e8 with it.',
         },
+        {
+          kind: 'embed',
+          path: '/embed/study/dPKhvJKb/Zwlt0Ch5',
+          title: 'Atomic Xiangqi: an engine game decided by a self-blast in the palace',
+          // Sized so the card is width-bound at the article's 702px column:
+          // the board gets the column minus the 226px move sheet (474px, so
+          // 527px tall at 9:10), plus the seat rows and controls (117px) and
+          // the header and credit lines (~52px). Shorter, and the card sizes
+          // the board to the height instead and hands the spare width to the
+          // sheet, which then reads as an empty column.
+          aspect: [702, 700],
+        } as ArticleBlock,
       ],
     },
     playClosing({
       heading: 'Where to next',
-      lead: 'Play it against the engine at any of eight strengths, or against a friend with an invite link.',
+      lead: 'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.',
       playLabel: 'Play Atomic Xiangqi',
       playHref: '/?play=computer&gameSpecId=atomic-xiangqi',
       secondary: [
         {
-          label: 'Invite a friend',
-          href: '/?play=friend&gameSpecId=atomic-xiangqi',
+          label: 'The design post',
+          href: 'https://brianhliou.com/posts/atomic-xiangqi/',
           emphasis: 'secondary',
         },
+        { label: 'The twelve engine games', href: '/study/dPKhvJKb', emphasis: 'secondary' },
       ],
     }),
   ],
