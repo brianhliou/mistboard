@@ -1,5 +1,6 @@
 import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import {
+  atomicXiangqiEnabled,
   banqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
@@ -91,6 +92,11 @@ const GATED_GAME_SPECS = {
     enabled: duckXiangqiEnabled,
     disabledError: 'duck_xiangqi_disabled',
     notIntegratedError: 'duck_xiangqi_not_integrated',
+  },
+  'atomic-xiangqi': {
+    enabled: atomicXiangqiEnabled,
+    disabledError: 'atomic_xiangqi_disabled',
+    notIntegratedError: 'atomic_xiangqi_not_integrated',
   },
 } satisfies { readonly [Id in GatedGameSpecId]: GateSpecEntry<Id> };
 

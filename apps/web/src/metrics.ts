@@ -612,6 +612,7 @@ const VARIANT_NAME_KEYS: Record<string, I18nKey> = {
   'dark-chess': 'variant.darkChess.name',
   'fortress-xiangqi': 'variant.fortressXiangqi.name',
   'duck-xiangqi': 'variant.duckXiangqi.name',
+  'atomic-xiangqi': 'variant.atomicXiangqi.name',
   jieqi: 'variant.jieqi.name',
   banqi: 'variant.banqi.name',
   jungle: 'variant.jungle.name',

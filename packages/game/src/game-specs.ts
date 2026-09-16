@@ -25,7 +25,13 @@ export type MovementRulesId =
   // that moves every turn. Its own movement id because the duck is an ordinary
   // blocking piece for every xiangqi geometry at once - it screens for cannons,
   // blocks the horse's leg and the elephant's eye, and breaks a general file.
-  | 'duck-xiangqi';
+  | 'duck-xiangqi'
+  // Atomic Xiangqi: standard xiangqi geometry, and a capture is an explosion
+  // that takes the capturer, the target and the four orthogonal neighbours
+  // (soldiers survive; a cannon's shot takes only its target). Its own
+  // movement id because the capture rule changes what every piece can legally
+  // do: a capture beside your own general is not a move.
+  | 'atomic-xiangqi';
 // 'last-mover': win by leaving the opponent with no legal move (banqi). The
 // general is NOT royal — capturing it does not end the game (the opponent flips
 // or plays on) — so this subsumes "all pieces captured" and stalemate alike.
@@ -87,7 +93,10 @@ export type RatingPoolBaseId =
   | 'mahjong_hk'
   | 'xiangqi'
   // Owes a user_ratings CHECK migration adding 'duck_xiangqi' before it is rated.
-  | 'duck_xiangqi';
+  | 'duck_xiangqi'
+  // Unrated, and not in the user_ratings CHECK: the pool exists because every
+  // spec names one, not because anything writes to it.
+  | 'atomic_xiangqi';
 
 export type GameSpecId =
   | 'dark-chess'
@@ -101,6 +110,12 @@ export type GameSpecId =
   // packages/game/src/variants-duck-xiangqi.ts. Design notes and the balance
   // measurement: docs-private/duck-xiangqi/.
   | 'duck-xiangqi'
+  // Atomic Xiangqi: Atomic Chess's explosion on the xiangqi board, with the
+  // cannon-shot rules the variant lab arrived at. Rules engine:
+  // packages/game/src/variants-atomic-xiangqi.ts. Design decisions and the
+  // engine measurements: docs-private/variant-lab/atomic-xiangqi/. Unlisted:
+  // reachable by URL and from its rules page only.
+  | 'atomic-xiangqi'
   // Standard (open-information) Xiangqi — ordinary 9x10 Chinese chess. The
   // open-info sibling of Dark Xiangqi; check-aware legality + checkmate via the
   // elephantops CHECKED path (packages/game/src/variants-xiangqi-standard.ts).
@@ -143,6 +158,7 @@ export const JUNGLE_FLIP_SPEC_ID = 'jungle-flip' satisfies GameSpecId;
 export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
 export const XIANGQI_SPEC_ID = 'xiangqi' satisfies GameSpecId;
 export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
+export const ATOMIC_XIANGQI_SPEC_ID = 'atomic-xiangqi' satisfies GameSpecId;
 
 // Specs that may be played by correspondence (days-per-move), in display order. The
 // SINGLE source of truth shared by the server's fail-closed allowlist
@@ -392,6 +408,33 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // at the point of WRITING the result rather than of creating the game.
     rated: true,
     publicSurface: 'casual',
+    runtimeStatus: 'live',
+  },
+  {
+    // Atomic Xiangqi: a capture removes the capturer, the captured piece and
+    // every piece on the four orthogonally adjacent points; soldiers survive a
+    // blast; a cannon's capture removes only the cannon and its target. Check,
+    // facing, stalemate and the sixty-ply clock are xiangqi's; perpetual check
+    // loses, and for that law a blast threat on the general is check.
+    //
+    // Rules engine: packages/game/src/variants-atomic-xiangqi.ts. Why these
+    // rules and not the plain port: docs-private/variant-lab/atomic-xiangqi/.
+    //
+    // Hidden: no nav, picker, index or news; the rules page and deep links are
+    // the only ways in. The first twenty human games decide whether it is
+    // offered. Casual only: no rated flag, no pool in the user_ratings CHECK.
+    id: ATOMIC_XIANGQI_SPEC_ID,
+    publicName: 'Atomic Xiangqi',
+    family: 'xiangqi',
+    board: 'xiangqi-9x10',
+    movement: 'atomic-xiangqi',
+    objective: 'checkmate',
+    visibility: 'open',
+    setup: 'standard',
+    reserves: 'none',
+    dropPolicy: 'none',
+    ratingPoolBase: 'atomic_xiangqi',
+    publicSurface: 'hidden',
     runtimeStatus: 'live',
   },
   {

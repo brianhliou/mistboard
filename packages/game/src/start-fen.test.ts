@@ -42,6 +42,9 @@ test('every start-fen spec round-trips its own standard start', () => {
   const starts: Record<string, string> = {
     xiangqi: standardXiangqiFen(createInitialXiangqiState('t')),
     'dark-xiangqi': standardXiangqiFen(createInitialXiangqiState('t')),
+    // Atomic Xiangqi: the standard board and spelling; the explosion is a rule
+    // about captures, not positions.
+    'atomic-xiangqi': standardXiangqiFen(createInitialXiangqiState('t')),
     jungle: jungleStateToEngineFen(createInitialJungleState('t')),
     'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),
     'dark-chess': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',

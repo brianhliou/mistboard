@@ -23,10 +23,12 @@
  * this module inherits that gate; a variant that adds a hook should add its
  * own with the hook disabled.
  *
- * NOT A SHIPPED KERNEL. No GameSpecId, no tenant, not re-exported from the
- * package index. It exists for the lab and for the write-ups' diagrams.
- * Perpetual-check and chase adjudication (the AXF chasing law) are out of
- * scope: repetition is a draw or off. The FEN codec is deliberately lenient
+ * Not re-exported from the package index. The lab and the write-ups' diagrams
+ * use it directly; production reaches it through one adapter per shipped
+ * configuration (variants-atomic-xiangqi.ts is the first), which owns the
+ * abortable status, the end-reason vocabulary and the player view. The chase
+ * law (AXF chasing) is out of scope: repetition is a draw, off, or xiangqi's
+ * perpetual-check law. The FEN codec is deliberately lenient
  * (a horde has soldiers on rank 1, a freed general stands outside the
  * palace) and validates bounds only.
  */

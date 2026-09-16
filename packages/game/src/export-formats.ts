@@ -29,6 +29,10 @@ export const GAME_EXPORT_FORMATS = {
   // second half. Publishing the xiangqi half as PGN would emit a movetext that
   // does not reconstruct the game.
   'duck-xiangqi': ['json'],
+  // JSON only. The moves are ordinary ICCS pairs, but the PGN writer replays
+  // the game through the standard xiangqi kernel to spell WXF, and a replay
+  // that does not explode diverges at the first capture.
+  'atomic-xiangqi': ['json'],
   jungle: ['json'],
   'jungle-flip': ['json'],
 } as const satisfies Readonly<Record<string, readonly GameExportFormat[]>>;

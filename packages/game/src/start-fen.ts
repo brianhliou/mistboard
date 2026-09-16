@@ -25,6 +25,7 @@
 import { banqiStateToDealtFen, parseBanqiFen } from './banqi-fen.js';
 import { duckXiangqiFen, parseDuckXiangqiFen } from './duck-xiangqi-fen.js';
 import {
+  ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -57,6 +58,7 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  ATOMIC_XIANGQI_SPEC_ID,
 ];
 
 export function hasStartFen(spec: string): boolean {
@@ -111,6 +113,14 @@ export function normalizeStartFen(spec: string, fen: string): NormalizeStartFenR
       // Same board and same writer as standard xiangqi; only the legality bar
       // moves, because under fog a general may stand en prise.
       const parsed = parseStandardXiangqiFen(fen, 'fen-import', { allowExposedGeneral: true });
+      return parsed.ok ? { ok: true, fen: standardXiangqiFen(parsed.state) } : parsed;
+    }
+    case ATOMIC_XIANGQI_SPEC_ID: {
+      // Standard board, standard array, standard spelling: the explosion is a
+      // rule about captures, not about positions, so a xiangqi-legal position
+      // is an atomic-legal one. The standard parser's bar (no exposed general,
+      // no facing) is the right one.
+      const parsed = parseStandardXiangqiFen(fen);
       return parsed.ok ? { ok: true, fen: standardXiangqiFen(parsed.state) } : parsed;
     }
     case JUNGLE_SPEC_ID: {

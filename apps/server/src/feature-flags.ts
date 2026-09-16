@@ -43,6 +43,14 @@ export function duckXiangqiEnabled(): boolean {
   return process.env.MISTBOARD_DUCK_XIANGQI_ENABLED === 'true';
 }
 
+// Atomic Xiangqi (9x10 xiangqi, a capture is an explosion) live rooms.
+// Server-side opt-in, default off. Unlisted even when on: the spec is
+// publicSurface 'hidden', so this flag opens room creation for deep links and
+// the rules page and nothing else. Casual only; there is no pool to rate.
+export function atomicXiangqiEnabled(): boolean {
+  return process.env.MISTBOARD_ATOMIC_XIANGQI_ENABLED === 'true';
+}
+
 // Hong Kong mahjong live rooms. Server-side opt-in, default off.
 //
 // This flag is not the only gate and is not meant to be. Mahjong is also on the

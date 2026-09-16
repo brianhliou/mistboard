@@ -5,6 +5,7 @@
 
 import type { RoomTimeControl } from './events.js';
 import {
+  ATOMIC_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -171,6 +172,9 @@ const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeCon
   // that, the house 3+2 would have been preselected and advertised on a
   // variant whose picker did not render it.
   [DUCK_XIANGQI_SPEC_ID]: '5m5',
+  // Xiangqi's pace: same board, same array, and one more thing to see before
+  // every capture.
+  [ATOMIC_XIANGQI_SPEC_ID]: '10m5',
 };
 
 /** The house pace, for every variant that does not name its own. */
