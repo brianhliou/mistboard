@@ -8,9 +8,9 @@ import {
 import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-// The rules page is the front door of an unlisted variant: no rail, no tile,
-// no card links here. The play links in the closing block are authored by
-// hand because the setup dialog's play CTA is null for hidden surfaces.
+// The rules page is the front door: the variant is listed in the rails and
+// tiles (2026-09-17) but not in the play menu, so the play links in the
+// closing block are authored by hand rather than taken from the setup dialog.
 export const atomicXiangqiArticle: Article = {
   slug: 'atomic-xiangqi',
   gameSpecId: 'atomic-xiangqi',

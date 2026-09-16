@@ -8,10 +8,10 @@ import {
 import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-// The launch piece for an unlisted variant: what decides a first game, in the
-// shape of the duck launch article. Linked from the rules page and the
-// brianhliou.com post; kept off the homepage cards and the feed by the spec's
-// public surface, and non-indexed until the first twenty human games are in.
+// The launch piece: what decides a first game, in the shape of the duck
+// launch article. On the /blog index and in the sitemap since the variant was
+// listed (2026-09-17); linked from the rules page and the brianhliou.com post;
+// off the homepage row until the play menu opens (home-article-row.test.ts).
 export const atomicXiangqiBuildArticle: Article = {
   slug: 'atomic-xiangqi-build',
   kind: 'article',
