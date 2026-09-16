@@ -81,6 +81,15 @@ export const ZH_HANS_CONTENT = {
   'news.subscribe': '订阅 RSS',
   'news.empty': '暂无内容。',
   'news.readMore': '阅读更多',
+  'changelog.heading': '更新日志',
+  'changelog.intro':
+    'mistboard.com 的每一项变更，按月排列，最新在前，每一行都链接到对应的提交。重点内容见',
+  'changelog.feedLink': '更新',
+  'changelog.sourcePrefix': '记录本身是',
+  'changelog.sourceLink': '仓库中的 CHANGELOG.md',
+  'changelog.monthsLabel': '月份',
+  'changelog.sentenceEnd': '。',
+  'changelog.feedFooter': '每一项变更按月记录在',
   'contact.heading': '联系',
   'contact.introAnon':
     '这是直接联系 Mistboard 运营者的私人渠道。Bug、坏掉的对局、账号或付费问题，以及任何不想公开发布的内容。想收到回复的话，可以留下邮箱。',

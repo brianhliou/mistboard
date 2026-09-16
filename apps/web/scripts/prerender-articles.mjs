@@ -203,6 +203,7 @@ const ROUTE_PRELOADS = [
     pattern: '^/(?:about|source|contact|patron|faq|terms|privacy|feed|news)$',
     module: 'src/pages-static.ts',
   },
+  { pattern: '^/changelog$', module: 'src/changelog-page.ts' },
 ];
 
 async function writeRoutePreloadManifest(manifest, shellHtml) {
@@ -659,6 +660,29 @@ try {
   );
   await fs.writeFile(resolve(distDir, 'feed.html'), newsHtml, 'utf-8');
   console.log('prerendered /feed (feed.html)');
+
+  // /changelog: CHANGELOG.md inlined at build time and rendered through the
+  // same page module the client mounts, so the baked DOM is the page. Same
+  // copy as SPA_ROUTE_META['/changelog'] for the fallback shell.
+  const { renderChangelogShellForPrerender } = await server.ssrLoadModule('/src/changelog-page.ts');
+  const changelogAssetLinks = routeAssetLinks(manifest, 'src/changelog-page.ts', shell);
+  const changelogInner = renderChangelogShellForPrerender();
+  let changelogHtml = shell.replace(
+    '<div id="app"></div>',
+    `<div id="app" class="landing-page changelog-route">${changelogInner}</div>`,
+  );
+  changelogHtml = injectPageMeta(changelogHtml, {
+    title: 'Changelog | Mistboard',
+    description:
+      'Every change to mistboard.com, month by month, newest first: playing, learning, watching, community, the site, removals and fixes, each linking its commit.',
+    url: `${host}/changelog`,
+  });
+  changelogHtml = changelogHtml.replace(
+    '</head>',
+    `<link rel="canonical" href="${host}/changelog" />${changelogAssetLinks}</head>`,
+  );
+  await fs.writeFile(resolve(distDir, 'changelog.html'), changelogHtml, 'utf-8');
+  console.log('prerendered /changelog (changelog.html)');
 
   // feed.xml: the same archive as RSS 2.0, so the announcements are followable
   // without opening the site. Gated by the same public-surface filter as the

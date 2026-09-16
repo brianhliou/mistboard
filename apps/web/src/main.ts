@@ -190,6 +190,7 @@ const wantsFaq = path === '/faq' || page === 'faq';
 const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
 const wantsContribute = path === '/contribute' || page === 'contribute';
+const wantsChangelog = path === '/changelog' || page === 'changelog';
 const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';
@@ -814,6 +815,11 @@ if (replaySample) {
   setTitleKey('contribute.heading');
   void mountOrReport(() =>
     import('./contribute-page.js').then(({ mountContribute }) => mountContribute(appRoot)),
+  );
+} else if (wantsChangelog) {
+  setTitleKey('changelog.heading');
+  void mountOrReport(() =>
+    import('./changelog-page.js').then(({ mountChangelog }) => mountChangelog(appRoot)),
   );
 } else if (wantsDevelopers) {
   setTitleKey('developers.heading');

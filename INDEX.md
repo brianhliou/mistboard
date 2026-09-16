@@ -630,6 +630,9 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `landing-activity.ts` | Homepage activity box: live presence (`/api/live-stats`) + durable totals (`/api/stats/public`) in the shared `site-box` shell; omitted entirely when both fetches fail |
 | `news-page.ts` | `/news` route: full announcement history as a dated reverse-chronological feed; the landing News box "More" target. Loads `news-page.css` |
 | `news-page.css` | `/news` dated-feed styles loaded by `news-page.ts` |
+| `changelog-data.ts` | Root `CHANGELOG.md` inlined at build time (`?raw`) and parsed to months → headings → entries with inline links/code/bold; `changelogMonths()`. Covers the file's own conventions only, not markdown in general |
+| `changelog-page.ts` | `/changelog` route, lichess.org/changelog-shaped: months newest first with anchors (`#2026-09`), one heading per part of the site, one line per change ending in its commit link; `/feed` is the curated megaphone, this is the complete record. Prerendered to `dist/changelog.html`; `renderChangelogShellForPrerender`. Loads `changelog-page.css` |
+| `changelog-page.css` | `/changelog` month/heading/entry styles loaded by `changelog-page.ts` |
 | `replay-skeleton.ts` | Neutral loading and terminal-failure placeholders for watch/showcase replay slots while renderer kinds swap or mount asynchronously |
 | `showcase-board.ts` | Homepage showcase single-board mount: dispatches between chessground replay and tenant watch renderers, owns compact chess replay options and game-end handoff |
 | `showcase-sheet.ts` | Dev-only variant showcase sheet: renders one showcase board per channel (latest finished game) for quick cross-variant visual review |
