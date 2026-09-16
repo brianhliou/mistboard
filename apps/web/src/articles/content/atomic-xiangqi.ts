@@ -3,6 +3,7 @@ import {
   ATOMIC_XIANGQI_CHECK,
   ATOMIC_XIANGQI_GENERALS,
   ATOMIC_XIANGQI_SHOT_PAIR,
+  ATOMIC_XIANGQI_SOLDIER_PAIR,
   ATOMIC_XIANGQI_THUMBNAIL,
 } from '../../atomic-xiangqi-rules-diagrams.js';
 import { playClosing } from '../diagrams.js';
@@ -35,7 +36,7 @@ export const atomicXiangqiArticle: Article = {
       kind: 'raw-svg',
       svg: ATOMIC_XIANGQI_BLAST_PAIR,
       caption:
-        'Red’s chariot takes the horse. The chariot, the horse, the chariot beside it and the cannon beside it all go. The soldier above the horse stays.',
+        'Red’s chariot takes the horse on e6. The chariot, the horse, and the chariot and cannon on the two points beside it all go.',
     } as ArticleBlock,
     {
       kind: 'paragraph',
@@ -58,6 +59,12 @@ export const atomicXiangqiArticle: Article = {
           kind: 'paragraph',
           text: '**What stays.** Diagonal neighbours. Soldiers: an explosion never removes a soldier, so a soldier leaves the board only by being captured itself, though a soldier that captures explodes like anything else.',
         },
+        {
+          kind: 'raw-svg',
+          svg: ATOMIC_XIANGQI_SOLDIER_PAIR,
+          caption:
+            'Red’s chariot takes the horse on e5. The cannon on f5 goes; the soldiers on d5 and e6 are on the lines too and stay.',
+        } as ArticleBlock,
         {
           kind: 'paragraph',
           text: '**Your general.** You cannot capture next to your own general; the blast would take it. So a general never captures.',

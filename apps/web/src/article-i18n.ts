@@ -2323,6 +2323,7 @@ const ZH_HANS: Record<string, string> = {
   // Diagram labels (localizeSvgMarkup swaps <text> nodes through this dictionary).
   'CHARIOT TAKES THE HORSE': '车吃马',
   'AFTER THE EXPLOSION': '爆炸之后',
+  'THE SOLDIERS STAY': '卒留下',
   'CANNON TAKES THE HORSE': '炮打马',
   'ONLY THE TWO OF THEM': '只有它们两个',
   'ONE CAPTURE WINS, THE OTHER IS NOT A MOVE': '一个吃法获胜，另一个不是合法着法',
@@ -2334,8 +2335,10 @@ const ZH_HANS: Record<string, string> = {
     '每次吃子都会爆炸的象棋。吃子的棋子、被吃的棋子和相邻四个点上的棋子一起消失；兵卒能在爆炸中幸存；炮的一击只带走目标；对将帅的爆炸威胁算作将军。',
   'Atomic Xiangqi is [xiangqi](/rules/xiangqi) with one change: a capture is an explosion. The piece that captures, the piece it takes, and every piece on the four points next to the capture are removed from the board. Soldiers survive an explosion. A general does not.':
     '原子象棋就是只改了一条规则的[象棋](/rules/xiangqi)：吃子即爆炸。吃子的棋子、被吃的棋子，以及吃子点相邻四个点上的所有棋子，全部从盘上移除。兵卒能在爆炸中幸存，将帅不能。',
-  'Red’s chariot takes the horse. The chariot, the horse, the chariot beside it and the cannon beside it all go. The soldier above the horse stays.':
-    '红车吃马。车、马、旁边的车和旁边的炮全部消失。马上方的卒留下。',
+  'Red’s chariot takes the horse on e6. The chariot, the horse, and the chariot and cannon on the two points beside it all go.':
+    '红车吃 e6 的马。车、马，以及旁边两个点上的车和炮，全部消失。',
+  'Red’s chariot takes the horse on e5. The cannon on f5 goes; the soldiers on d5 and e6 are on the lines too and stay.':
+    '红车吃 e5 的马。f5 的炮消失；d5 和 e6 的卒同样在线上，却留了下来。',
   'Brian H. Liou adapted Atomic Xiangqi to the 9 by 10 board in 2026 as a Mistboard original; nobody had put the explosion on a xiangqi board before. The blast is four points rather than eight because a xiangqi piece’s neighbour is the next point along a line, and the cannon gets one rule of its own.':
     'Brian H. Liou 于 2026 年把原子象棋移植到 9 路 10 线的棋盘上，作为 Mistboard 原创；此前没有人把爆炸规则放到象棋盘上。爆炸波及四个点而不是八个，因为象棋棋子的“邻点”是沿线的下一个交叉点；炮则单独有一条规则。',
   '[Atomic Chess](https://en.wikipedia.org/wiki/Atomic_chess) began on the German Internet Chess Server in 1995, from rules Klaus Knopper collected from friends who played it over the board. It is now one of the most played chess variants: Lichess added it in 2015 and hosted 4.9 million games of it in 2021, and grandmasters Andrew Tang and Jeffery Xiong reached the quarter- and semi-finals of its 2017 championship.':
@@ -4448,19 +4451,22 @@ const ZH_HANT: Record<string, string> = {
   // Diagram labels.
   'CHARIOT TAKES THE HORSE': '車吃馬',
   'AFTER THE EXPLOSION': '爆炸之後',
-  'CANNON TAKES THE HORSE': '砲打馬',
+  'THE SOLDIERS STAY': '卒留下',
+  'CANNON TAKES THE HORSE': '炮打馬',
   'ONLY THE TWO OF THEM': '只有它們兩個',
   'ONE CAPTURE WINS, THE OTHER IS NOT A MOVE': '一個吃法獲勝，另一個不是合法著法',
   'BLACK IS IN CHECK': '黑方被將軍',
-  'THE CORK: A CANNON IN FRONT OF THE CHARIOT': '塞子：車前面的砲',
+  'THE CORK: A CANNON IN FRONT OF THE CHARIOT': '塞子：車前面的炮',
   'Atomic Xiangqi Rules':
     '原子象棋規則',
   'Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.':
     '每次吃子都會爆炸的象棋。吃子的棋子、被吃的棋子和相鄰四個點上的棋子一起消失；兵卒能在爆炸中倖存；炮的一擊只帶走目標；對將帥的爆炸威脅算作將軍。',
   'Atomic Xiangqi is [xiangqi](/rules/xiangqi) with one change: a capture is an explosion. The piece that captures, the piece it takes, and every piece on the four points next to the capture are removed from the board. Soldiers survive an explosion. A general does not.':
     '原子象棋就是隻改了一條規則的[象棋](/rules/xiangqi)：吃子即爆炸。吃子的棋子、被吃的棋子，以及吃子點相鄰四個點上的所有棋子，全部從盤上移除。兵卒能在爆炸中倖存，將帥不能。',
-  'Red’s chariot takes the horse. The chariot, the horse, the chariot beside it and the cannon beside it all go. The soldier above the horse stays.':
-    '紅車吃馬。車、馬、旁邊的車和旁邊的炮全部消失。馬上方的卒留下。',
+  'Red’s chariot takes the horse on e6. The chariot, the horse, and the chariot and cannon on the two points beside it all go.':
+    '紅車吃 e6 的馬。車、馬，以及旁邊兩個點上的車和炮，全部消失。',
+  'Red’s chariot takes the horse on e5. The cannon on f5 goes; the soldiers on d5 and e6 are on the lines too and stay.':
+    '紅車吃 e5 的馬。f5 的炮消失；d5 和 e6 的卒同樣在線上，卻留了下來。',
   'Brian H. Liou adapted Atomic Xiangqi to the 9 by 10 board in 2026 as a Mistboard original; nobody had put the explosion on a xiangqi board before. The blast is four points rather than eight because a xiangqi piece’s neighbour is the next point along a line, and the cannon gets one rule of its own.':
     'Brian H. Liou 於 2026 年把原子象棋移植到 9 路 10 線的棋盤上，作為 Mistboard 原創；此前沒有人把爆炸規則放到象棋盤上。爆炸波及四個點而不是八個，因為象棋棋子的“鄰點”是沿線的下一個交叉點；炮則單獨有一條規則。',
   '[Atomic Chess](https://en.wikipedia.org/wiki/Atomic_chess) began on the German Internet Chess Server in 1995, from rules Klaus Knopper collected from friends who played it over the board. It is now one of the most played chess variants: Lichess added it in 2015 and hosted 4.9 million games of it in 2021, and grandmasters Andrew Tang and Jeffery Xiong reached the quarter- and semi-finals of its 2017 championship.':

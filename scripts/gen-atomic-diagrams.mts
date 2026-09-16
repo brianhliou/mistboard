@@ -234,31 +234,84 @@ function figure(slug: string, svg: string, caption: string, single = false): voi
 
 mkdirSync(OUT, { recursive: true });
 
-// ── 1. The blast ───────────────────────────────────────────────────────────
+// ── 1. The blast, the plain case ───────────────────────────────────────────
 
-// Chariot on i5 takes the cannon on e5. The blast reaches the four orthogonal
-// neighbours: the horse on d5 and the cannon on e6 go, the soldier on e4 is on
-// a line too but survives by immunity. The chariot on d6 and the elephant on
-// f4 are diagonal and untouched.
-const B1 = fen('4k4/9/9/9/3rc4/3nc3R/4pb3/9/9/4K4 w - - 0 1');
-const B1_GONE = removedBy(B1, 'i5', 'e5');
-if (!legal(B1, 'red', 'i5', 'e5')) throw new Error('Rxe5 should be legal');
-if (B1_GONE.sort().join() !== ['d5', 'e5', 'e6'].sort().join())
+// Red's chariot on e3 takes the black horse on e6, with a black chariot on d6
+// and a black cannon on f6 beside it: all four go. Red's general stands on d1
+// so the emptied e-file is not a facing-generals illegality.
+const B1 = fen('4k4/9/9/9/3rnc3/9/9/4R4/9/3K5 w - - 0 1');
+const B1_GONE = removedBy(B1, 'e3', 'e6');
+if (!legal(B1, 'red', 'e3', 'e6')) throw new Error('Rxe6 should be legal');
+if (B1_GONE.sort().join() !== ['d6', 'e6', 'f6'].join())
   throw new Error(`blast removed ${B1_GONE.join(',')}`);
-if (after(B1, 'i5', 'e5').e4 === undefined) throw new Error('the soldier on e4 should survive');
 figure(
   'blast',
   boards([
     {
       id: 'blast-before',
       board: B1,
-      label: 'CHARIOT TAKES THE CANNON ON e5',
-      arrows: [{ from: 'i5', to: 'e5' }],
-      blast: { squares: B1_GONE, capture: 'e5' },
+      label: 'CHARIOT TAKES THE HORSE',
+      arrows: [{ from: 'e3', to: 'e6' }],
+      blast: { squares: B1_GONE, capture: 'e6' },
     },
-    { id: 'blast-after', board: after(B1, 'i5', 'e5'), label: 'AFTER THE BLAST' },
+    { id: 'blast-after', board: after(B1, 'e3', 'e6'), label: 'AFTER THE EXPLOSION' },
   ]),
-  'Every capture explodes onto the four adjacent points. The cannon on e5 and the chariot that took it go, and so do the horse on d5 and the cannon on e6. The soldier on e4 is adjacent too and stays, because soldiers survive a blast. The chariot on d6 and the elephant on f4 are diagonal to e5 and are not touched.',
+  'Red’s chariot takes the horse on e6. The chariot, the horse, and the chariot and cannon on the two points beside it all go.',
+);
+
+// ── 1a. Soldiers survive ───────────────────────────────────────────────────
+
+// Red's chariot on e2 takes the black horse on e5: the cannon on f5 goes, the
+// black soldiers on d5 and e6 are on the lines too and stay.
+const SOL = fen('4k4/9/9/9/4p4/3pnc3/9/9/4R4/3K5 w - - 0 1');
+const SOL_GONE = removedBy(SOL, 'e2', 'e5');
+if (!legal(SOL, 'red', 'e2', 'e5')) throw new Error('Rxe5 should be legal');
+if (SOL_GONE.sort().join() !== ['e5', 'f5'].join())
+  throw new Error(`soldier blast removed ${SOL_GONE.join(',')}`);
+figure(
+  'soldiers',
+  boards([
+    {
+      id: 'soldiers-before',
+      board: SOL,
+      label: 'CHARIOT TAKES THE HORSE',
+      arrows: [{ from: 'e2', to: 'e5' }],
+      blast: { squares: SOL_GONE, capture: 'e5' },
+    },
+    { id: 'soldiers-after', board: after(SOL, 'e2', 'e5'), label: 'THE SOLDIERS STAY' },
+  ]),
+  'Red’s chariot takes the horse on e5. The cannon on f5 goes; the soldiers on d5 and e6 are on the lines too and stay. A soldier that captures explodes like anything else.',
+);
+
+// ── 1c. Your general, and theirs ───────────────────────────────────────────
+
+// Red's chariot on d9 may take the black advisor on d10: the blast reaches the
+// general on e10 and the game ends. Red's chariot on f2 may NOT take the black
+// horse on f1: that blast would reach Red's own general on e1.
+const GEN = fen('3ak4/3R5/9/9/9/9/9/9/5R3/4Kn3 w - - 0 1');
+if (!legal(GEN, 'red', 'd9', 'd10')) throw new Error('Rxd10 should be legal');
+if (legal(GEN, 'red', 'f2', 'f1')) throw new Error('Rxf1 must be illegal');
+const GEN_GONE = removedBy(GEN, 'd9', 'd10');
+if (!GEN_GONE.includes('e10')) throw new Error('Rxd10 should remove the general');
+figure(
+  'generals',
+  boards([
+    {
+      id: 'generals-win',
+      board: GEN,
+      label: 'THE CHARIOT TAKES THE ADVISOR: RED WINS',
+      arrows: [{ from: 'd9', to: 'd10' }],
+      blast: { squares: GEN_GONE, capture: 'd10' },
+    },
+    {
+      id: 'generals-illegal',
+      board: GEN,
+      label: 'THIS CAPTURE IS NOT A MOVE',
+      arrows: [{ from: 'f2', to: 'f1' }],
+      dots: [{ square: 'f1', blocked: true }],
+    },
+  ]),
+  'The chariot on d9 may take the advisor, and that ends the game: the blast reaches the general on e10. The chariot on f2 may not take the horse, because the blast would reach Red’s own general on e1.',
 );
 
 // ── 1b. The cannon shot ────────────────────────────────────────────────────
@@ -385,7 +438,7 @@ figure(
       blast: { squares: openGone2, capture: 'h1' },
     },
   ]),
-  'How every game opens. Each cannon jumps the enemy cannon, lands on the horse and explodes it with the chariot and elephant beside it; the cannon dies too. Three pieces for one on each wing, and the position is level.',
+  'How every engine game opened when the cannon exploded like everything else. Each cannon jumps the enemy cannon, lands on the horse and explodes it with the chariot and elephant beside it; the cannon dies too. Three pieces for one on each wing, before either side has made a plan.',
 );
 
 // ── 5. The first pass: the only-move standoff of the eight-point blast ─────

@@ -98,10 +98,11 @@ function pair(
 
 // ── A capture is an explosion ───────────────────────────────────────────────
 
-// Red's chariot on e3 takes the black horse on e6. Beside the horse: a black
-// chariot on d6, a black cannon on f6, and a black soldier on e7. The chariot,
-// the horse, the chariot and the cannon go; the soldier stays.
-const BLAST_FEN = '4k4/9/9/4p4/3rnc3/9/9/4R4/9/4K4 w - - 0 1';
+// The plain case. Red's chariot on e3 takes the black horse on e6, with a
+// black chariot on d6 and a black cannon on f6 beside it: all four go. Red's
+// general stands on d1 so the emptied e-file does not make the capture a
+// facing-generals illegality.
+const BLAST_FEN = '4k4/9/9/9/3rnc3/9/9/4R4/9/3K5 w - - 0 1';
 const BLAST_BOARD = boardFromFen('atomic-rules-blast', BLAST_FEN);
 const BLAST_MOVE: AtomicXiangqiMove = { from: 'e3', to: 'e6' };
 
@@ -110,6 +111,20 @@ export const ATOMIC_XIANGQI_BLAST_PAIR = () =>
     'atomic-rules-blast',
     { board: BLAST_BOARD, label: 'CHARIOT TAKES THE HORSE', move: BLAST_MOVE },
     'AFTER THE EXPLOSION',
+  );
+
+// Soldiers survive. Red's chariot on e2 takes the black horse on e5. Beside
+// it: black soldiers on d5 and e6, and a black cannon on f5. The cannon goes,
+// the soldiers stay.
+const SOLDIER_FEN = '4k4/9/9/9/4p4/3pnc3/9/9/4R4/3K5 w - - 0 1';
+const SOLDIER_BOARD = boardFromFen('atomic-rules-soldier', SOLDIER_FEN);
+const SOLDIER_MOVE: AtomicXiangqiMove = { from: 'e2', to: 'e5' };
+
+export const ATOMIC_XIANGQI_SOLDIER_PAIR = () =>
+  pair(
+    'atomic-rules-soldier',
+    { board: SOLDIER_BOARD, label: 'CHARIOT TAKES THE HORSE', move: SOLDIER_MOVE },
+    'THE SOLDIERS STAY',
   );
 
 // ── The cannon shot ─────────────────────────────────────────────────────────

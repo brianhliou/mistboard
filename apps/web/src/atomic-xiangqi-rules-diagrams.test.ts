@@ -5,6 +5,7 @@ import {
   ATOMIC_XIANGQI_CORK,
   ATOMIC_XIANGQI_GENERALS,
   ATOMIC_XIANGQI_SHOT_PAIR,
+  ATOMIC_XIANGQI_SOLDIER_PAIR,
   ATOMIC_XIANGQI_THUMBNAIL,
 } from './atomic-xiangqi-rules-diagrams.js';
 
@@ -35,6 +36,12 @@ describe('atomic xiangqi rules diagrams', () => {
     const svg = ATOMIC_XIANGQI_BLAST_PAIR();
     // Two boards, each with rings on e6 (the horse), d6 and f6: six rings.
     expect(svg.match(/xq-marker--blast/g)?.length).toBe(6);
+  });
+
+  it('the soldier pair rings the cannon and the horse, never a soldier', () => {
+    const svg = ATOMIC_XIANGQI_SOLDIER_PAIR();
+    // Two boards, each with rings on e5 (the horse) and f5 (the cannon): four.
+    expect(svg.match(/xq-marker--blast/g)?.length).toBe(4);
   });
 
   it('the cannon shot rings the target alone', () => {
