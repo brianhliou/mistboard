@@ -100,7 +100,29 @@ test('atomic: the stock point speaks stock FSF; every other point speaks the pat
     shape: 'orthogonal',
     immune: ['soldier'],
     palaceContained: false,
+    shelter: 'none',
+    cannonShotBlasts: true,
   });
+  assert.equal(design.kernel.rules.cannonUnloaded, false);
+  assert.equal(design.kernel.rules.repetitionCheck, 'direct');
+  // D13/D14: the cannon-shot candidate with the lethal check law.
+  const shot = atomic.create(
+    resolveRules(atomic.ruleSchema, { cannonShotBlasts: false, lethalCheck: true }),
+  );
+  assert.equal(shot.engine.binary, ATOMIC_FSF);
+  assert.match(shot.engine.ini, /cannonShotBlasts = false/);
+  assert.match(shot.engine.ini, /lethalCheck = true/);
+  assert.equal(shot.kernel.rules.blast?.cannonShotBlasts, false);
+  assert.equal(shot.kernel.rules.repetitionCheck, 'lethal');
+  // The D11/D12 candidates route to the patched binary with their own option lines.
+  const shelter = atomic.create(
+    resolveRules(atomic.ruleSchema, { palaceShelter: true, cannonUnloaded: true }),
+  );
+  assert.equal(shelter.engine.binary, ATOMIC_FSF);
+  assert.match(shelter.engine.ini, /blastShelter = true/);
+  assert.match(shelter.engine.ini, /cannonUnloaded = true/);
+  assert.equal(shelter.kernel.rules.blast?.shelter, 'palace');
+  assert.equal(shelter.kernel.legalMoves(shelter.kernel.initial('s')).length, 42);
   // One rule still has no engine: the palace wall. Kernel-only.
   const walled = atomic.create(resolveRules(atomic.ruleSchema, { palaceWall: true }));
   assert.ok(walled.kernel.legalMoves(walled.kernel.initial('k')).length === 44);

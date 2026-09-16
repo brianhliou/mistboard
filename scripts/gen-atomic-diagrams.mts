@@ -535,23 +535,117 @@ if (process.argv.includes('--blog')) {
     'blast-none': '; nothing else in the blast',
     check: ', check',
     'cap-start': 'The start. Red to move.',
-    'grp-best': 'Best play, engine against itself',
+    'grp-best-shot':
+      'Best play, cannon-shot rules: a cannon\u2019s shot removes only what it hits; a threat to blow up the general counts as check',
+    'grp-top-shot': 'Cannon-shot rules, 10M against 1M nodes from one random ply (12)',
+    'res-best-shot':
+      '%1 %2 after %3 plies, %4 million nodes a move for both sides. Cannon-shot rules: four adjacent points explode and soldiers survive, a cannon\u2019s capture removes only the cannon and its target, and perpetual check loses with a threat to blow up the general counting as check.',
+    'res-top-shot':
+      '%1 %2 after %3 plies. The first ply was random; 10M nodes played %4, 1M the other side. Cannon-shot rules.',
+    'grp-grind-shot':
+      'Cannon-shot rules: the draws that were ground out (equal 200k from two random plies, and the two clock draws at 10M against 1M)',
+    'lab-grind': '%1 in %2 plies, %3',
+    'res-grind-equal':
+      '%1 %2 after %3 plies. The first two plies were random; 200k nodes a move for both sides. Cannon-shot rules.',
+    'grp-notes': 'Annotated: the drawing resource, and four wins',
+    'lab-note-escape': 'The escape: a chariot down and holding, 13 plies',
+    'lab-note-dance': 'The dance at the top rung, 17 plies',
+    'lab-note-squeeze': 'Win 1: the slow squeeze, 127 plies',
+    'lab-note-blast': 'Win 2: soldier march and an explosion, 77 plies',
+    'lab-note-invade': 'Win 3: a cannon on the second rank, 102 plies',
+    'lab-note-blunder': 'Win 4: level for 70 plies, one capture too many, 84 plies',
+    'res-note-escape':
+      'Draw by repetition after 13 plies. 100k nodes played Black, 10k Red. Black is a chariot down from move 2 and holds.',
+    'res-note-dance':
+      'Draw by repetition after 17 plies. 10M nodes played Black, 1M Red. Level material; the stronger engine took the draw.',
+    'res-note-squeeze': 'Red wins by checkmate after 127 plies. 10M nodes played Red, 1M Black.',
+    'res-note-blast': 'Red wins by explosion after 77 plies. 10M nodes played Red, 1M Black.',
+    'res-note-invade': 'Black wins by checkmate after 102 plies. 10M nodes played Black, 1M Red.',
+    'res-note-blunder': 'Black wins by checkmate after 84 plies. 10M nodes played Black, 1M Red.',
+    'grp-best': 'Best play, engine against itself (four-point rules)',
+    'grp-best-shelter':
+      'Best play under the shelter: palace immune to blasts, cannons unloaded at the start',
+    'res-best-shelter':
+      '%1 %2 after %3 plies, %4 million nodes a move for both sides. Shelter rules: a blast never removes a piece on a palace point, and a cannon may not capture from its starting point.',
     'grp-equal': 'Equal strength: 200k nodes a side from two random plies (15)',
+    'grp-top': 'Strongest games: 10M against 1M nodes from one random ply (12)',
+    'grp-mid': 'Ladder: 1M against 100k nodes from one random ply (20)',
     'grp-ladder': 'Ladder: 100k against 10k nodes from one random ply (20)',
+    'grp-decline-equal': 'Declined draws, equal strength: 2M a side (8)',
+    'grp-decline-gap': 'Declined draws against a weaker side: 2M against 200k (8)',
+    'lab-decline': '%1-ply draw, %2 declines at %3: %4 in %5',
+    'res-decline':
+      '%1 %2 after %3 plies. A %4-ply engine draw replayed from its last cycle: at ply %5 %6 refused the repetition (%7 for its best other move) and kept refusing while the cost stayed under a pawn; %8 nodes a move for the decliner, %9 for the other side.',
+    'seat-fsf-2m': 'Fairy-Stockfish, 2M nodes',
     'lab-best': '%1M nodes a move, %2 plies',
     'lab-equal': 'pair %1: %2 in %3',
     'lab-ladder': 'pair %1, 100k as %2: %3 in %4',
+    'lab-top': 'pair %1, 10M as %2: %3 in %4',
+    'lab-mid': 'pair %1, 1M as %2: %3 in %4',
     'res-best': '%1 %2 after %3 plies, %4 million nodes a move for both sides.',
     'res-equal':
       '%1 %2 after %3 plies. The first two plies were random; 200k nodes a move for both sides.',
     'res-ladder':
       '%1 %2 after %3 plies. The first ply was random; 100k nodes played %4, 10k the other side.',
+    'res-top':
+      '%1 %2 after %3 plies. The first ply was random; 10M nodes played %4, 1M the other side.',
+    'res-mid':
+      '%1 %2 after %3 plies. The first ply was random; 1M nodes played %4, 100k the other side.',
     'seat-fsf-m': 'Fairy-Stockfish, %1M nodes',
     'seat-fsf-200k': 'Fairy-Stockfish, 200k nodes',
     'seat-fsf-100k': 'Fairy-Stockfish, 100k nodes',
     'seat-fsf-10k': 'Fairy-Stockfish, 10k nodes',
+    'seat-fsf-1m': 'Fairy-Stockfish, 1M nodes',
+    'seat-fsf-10m': 'Fairy-Stockfish, 10M nodes',
   };
   const NOTES: Record<string, Record<number, string>> = {
+    'note-escape': {
+      3: 'Red’s cannon jumps the h8 cannon and takes the h10 horse; the blast takes the i10 chariot and the g10 elephant. Black played Ra9 instead of the mirror shot, so there is no exchange back: Black is a chariot, a horse and an elephant down for a cannon.',
+      4: 'The escape. The chariot lands on f9 and threatens Rxf1: take the advisor, and the blast reaches the general on e1. Nothing else Black has matters.',
+      5: 'The only parry. The cannon blocks the f-file. Every other Red move is mate in one (probed at 3M nodes: Ae2, Ra2, Ra3, Ri2 all lose to Rxf1; Ke2 is mated a few moves later). But the cannon now has its own shot: with the chariot on f9 as its screen, Cxf10 would blast e10.',
+      6: 'So the chariot steps to d9, same threat on the other advisor. Its alternatives, every one of them off the palace file (h9, g9, c9, a9), score -3.2 to -4.0: leave the file and Red’s extra chariot starts to count.',
+      7: 'And the cannon follows. Again every other move is mate in one.',
+      13: 'Third occurrence. A chariot down, Black holds, and neither side ever had a second choice.',
+    },
+    'note-dance': {
+      3: 'The double exchange, one wing each: level material, twelve pieces a side.',
+      8: 'Black’s remaining chariot walks a10-a8-a9-f9 and lands on the advisor file: Rxf1 and the blast reaches e1.',
+      9: 'The parry from behind: the cannon comes to f8, directly under the chariot. It blocks the file, and over the chariot as screen it threatens Cxf10, blasting e10.',
+      10: 'The chariot hops to d9. This is the move a human would think about: at 3M nodes the alternatives score -0.6 to -0.7 (c9, b9, g9, e9, a9), all playable, none better than repeating. The 10M engine took the repetition. Played on at 2M against 2M this game ran 142 plies at 0.00 to the progress clock; against 200k it ran 145 plies to the same draw.',
+      11: 'Red follows with the cannon. Alternatives: Ke2 scores -12; Ae2, Ca8, Ri1 are mate in one.',
+      17: 'Third occurrence. Level material, best play on both sides, and the stronger engine could find nothing it preferred.',
+    },
+    'note-squeeze': {
+      8: 'The 1M engine’s first slip: the cannon leaves its file for h4, and Red is +1.4.',
+      25: 'Red gives the cannon for Black’s chariot on d9; the blast takes the advisor on e9 with it.',
+      29: 'Chariot for chariot. From here Red is about +2 and spends seventy plies improving every piece while Black shuffles.',
+      104: 'Black takes on c5 and Red’s horse takes the horse on a9: the last piece that could defend the palace. +7.9.',
+      106: 'Cd6 walks into a mate in eleven. Red’s chariot and cannon enter the palace together.',
+      127: 'The chariot steps beside the general. The general cannot take it (a capturer dies in its own blast) and has no square. Checkmate, no explosion needed.',
+    },
+    'note-blast': {
+      26: 'Hi8 gives Red +2.1: the horse retreats to the edge and the h-file opens.',
+      27: 'The soldier starts walking: h6, h7, h8. Soldiers are immune to blasts, so nothing Black captures nearby can shake it, and every step is a tempo Black must answer.',
+      46: 'Ph4 costs Black a pawn and a half of eval; Red is +5.',
+      63: 'The chariot lands on h8 behind the soldier: mate in seven.',
+      69: 'The soldier takes the advisor on e9; the blast takes the elephant on e8. The general’s cover is gone.',
+      77: 'Rxd8: the chariot takes the advisor, and the four-point blast reaches the general on d9. The explosion win.',
+    },
+    'note-invade': {
+      2: 'The double exchange, with Black shooting first this time.',
+      27: 'Ec1 retreats the elephant and lets the cannon in: -2.6.',
+      28: 'Cb2. The cannon sits on Red’s second rank, aimed along the palace floor; every Red piece that steps between it and the general becomes a screen. -4.6.',
+      59: 'Red’s elephant takes on e3 and the blast removes both of Red’s own advisors: the palace is empty.',
+      81: 'Hd10, and the 1M engine is lost: Black has a forced mate and the soldiers start walking.',
+      102: 'Rd1. The chariot beside the general on d2, no square, no capture. Checkmate.',
+    },
+    'note-blunder': {
+      3: 'The double exchange.',
+      22: 'Level for seventy plies: the evaluation never leaves -1.7 to 0.0.',
+      61: 'Red’s chariot takes the cannon on d9 and the blast takes the advisors on d10 and e9 with it: Black’s palace is open, and still the position is level.',
+      73: 'Exc5: the elephant takes a soldier. The capturer dies, so it is an elephant for a soldier, and it was the last piece covering the palace. Mate in six.',
+      84: 'Re2, beside the general on e1. Checkmate.',
+    },
     'best-1000000': {
       1: 'Red’s cannon jumps the black cannon on b8 and takes the b10 horse. The blast takes the a10 chariot and the c10 elephant with it, and the cannon itself.',
       2: 'The same exchange back on the other wing. Three pieces for one on each side, and the position is level.',
@@ -603,6 +697,8 @@ if (process.argv.includes('--blog')) {
   type Spec = { k: string; a: Arg[] };
   type Rec = {
     id: string;
+    /** Which rules the record was played under; the widget replays it with that kernel. */
+    ruleset?: 'shelter' | 'shot';
     group: Spec;
     label: Spec;
     result: Spec;
@@ -617,6 +713,90 @@ if (process.argv.includes('--blog')) {
   const by = (reason: string): Arg => ['k', `by-${reason}`];
   const side = (c: string): Arg => ['k', c];
   const records: Rec[] = [];
+  const SHOT = '045a5cf08c06';
+  for (const g of artifact(`bestplay-${SHOT}-`).result.games) {
+    const m = g.nodes / 1_000_000;
+    records.push({
+      id: `best-shot-${g.nodes}`,
+      ruleset: 'shot',
+      group: { k: 'grp-best-shot', a: [] },
+      label: { k: 'lab-best', a: [m, g.plies] },
+      result: { k: 'res-best-shot', a: [verdictOf(g), by(g.reason), g.plies, m] },
+      red: { k: 'seat-fsf-m', a: [m] },
+      black: { k: 'seat-fsf-m', a: [m] },
+      moves: g.moves,
+    });
+  }
+  // The grinds: every draw from the two-ply equal run (deduplicated) and the top rung's draws.
+  const grindSeen = new Set<string>();
+  let grind = 0;
+  for (const g of artifact(`ladder-${SHOT}-4-`).result.games) {
+    if (g.winner) continue;
+    const key = g.moves.join(' ');
+    if (grindSeen.has(key)) continue;
+    grindSeen.add(key);
+    grind += 1;
+    records.push({
+      id: `grind-shot-${grind}`,
+      ruleset: 'shot',
+      group: { k: 'grp-grind-shot', a: [] },
+      label: { k: 'lab-grind', a: [['k', 'draw'], g.plies, ['k', 'seat-fsf-200k']] },
+      result: { k: 'res-grind-equal', a: [verdictOf(g), by(g.reason), g.plies] },
+      red: { k: 'seat-fsf-200k', a: [] },
+      black: { k: 'seat-fsf-200k', a: [] },
+      moves: g.moves,
+    });
+  }
+  for (const seed of ['12', '14', '15']) {
+    for (const g of artifact(`ladder-${SHOT}-${seed}-`).result.games) {
+      if (g.winner) continue;
+      grind += 1;
+      records.push({
+        id: `grind-shot-${grind}`,
+        ruleset: 'shot',
+        group: { k: 'grp-grind-shot', a: [] },
+        label: { k: 'lab-grind', a: [['k', 'draw'], g.plies, ['k', 'seat-fsf-10m']] },
+        result: { k: 'res-top-shot', a: [verdictOf(g), by(g.reason), g.plies, side(g.hiSeat)] },
+        red: { k: g.hiSeat === 'red' ? 'seat-fsf-10m' : 'seat-fsf-1m', a: [] },
+        black: { k: g.hiSeat === 'black' ? 'seat-fsf-10m' : 'seat-fsf-1m', a: [] },
+        moves: g.moves,
+      });
+    }
+  }
+  let shotTop = 0;
+  for (const seed of ['12', '14', '15']) {
+    for (const g of artifact(`ladder-${SHOT}-${seed}-`).result.games) {
+      shotTop += 1;
+      records.push({
+        id: `top-shot-${shotTop}`,
+        ruleset: 'shot',
+        group: { k: 'grp-top-shot', a: [] },
+        label: { k: 'lab-top', a: [Math.ceil(shotTop / 2), side(g.hiSeat), verdictOf(g), g.plies] },
+        result: { k: 'res-top-shot', a: [verdictOf(g), by(g.reason), g.plies, side(g.hiSeat)] },
+        red: { k: g.hiSeat === 'red' ? 'seat-fsf-10m' : 'seat-fsf-1m', a: [] },
+        black: { k: g.hiSeat === 'black' ? 'seat-fsf-10m' : 'seat-fsf-1m', a: [] },
+        moves: g.moves,
+      });
+    }
+  }
+  const noteGame = (id: string, art: string, index: number, hi: string, lo: string) => {
+    const g = artifact(art).result.games[index - 1];
+    records.push({
+      id,
+      group: { k: 'grp-notes', a: [] },
+      label: { k: `lab-${id}`, a: [] },
+      result: { k: `res-${id}`, a: [] },
+      red: { k: g.hiSeat === 'red' ? hi : lo, a: [] },
+      black: { k: g.hiSeat === 'black' ? hi : lo, a: [] },
+      moves: g.moves,
+    });
+  };
+  noteGame('note-escape', `ladder-${FP}-1-`, 10, 'seat-fsf-100k', 'seat-fsf-10k');
+  noteGame('note-dance', `ladder-${FP}-12-`, 2, 'seat-fsf-10m', 'seat-fsf-1m');
+  noteGame('note-squeeze', `ladder-${FP}-12-`, 1, 'seat-fsf-10m', 'seat-fsf-1m');
+  noteGame('note-blast', `ladder-${FP}-12-`, 7, 'seat-fsf-10m', 'seat-fsf-1m');
+  noteGame('note-invade', `ladder-${FP}-12-`, 10, 'seat-fsf-10m', 'seat-fsf-1m');
+  noteGame('note-blunder', `ladder-${FP}-12-`, 4, 'seat-fsf-10m', 'seat-fsf-1m');
   const best = artifact(`bestplay-${FP}-`);
   for (const g of best.result.games) {
     const m = g.nodes / 1_000_000;
@@ -630,6 +810,58 @@ if (process.argv.includes('--blog')) {
       moves: g.moves,
     });
   }
+  // Two artifacts share the sequence number (the run was split 1M-5M / 10M-20M): read both.
+  const bestShelter = readdirSync(OUTDIR)
+    .filter((f) => f.startsWith('bestplay-033287920bd5-'))
+    .sort()
+    .flatMap((f) => JSON.parse(readFileSync(path.join(OUTDIR, f), 'utf8')).result.games);
+  for (const g of bestShelter) {
+    const m = g.nodes / 1_000_000;
+    records.push({
+      id: `best-shelter-${g.nodes}`,
+      ruleset: 'shelter',
+      group: { k: 'grp-best-shelter', a: [] },
+      label: { k: 'lab-best', a: [m, g.plies] },
+      result: { k: 'res-best-shelter', a: [verdictOf(g), by(g.reason), g.plies, m] },
+      red: { k: 'seat-fsf-m', a: [m] },
+      black: { k: 'seat-fsf-m', a: [m] },
+      moves: g.moves,
+    });
+  }
+  const rung = (
+    seedTag: string,
+    group: string,
+    lab: string,
+    res: string,
+    hiSeat: string,
+    loSeat: string,
+  ) => {
+    const art = artifact(`ladder-${FP}-${seedTag}-`);
+    art.result.games.forEach(
+      (
+        g: {
+          hiSeat: string;
+          winner: string | null;
+          reason: string;
+          plies: number;
+          moves: string[];
+        },
+        i: number,
+      ) => {
+        records.push({
+          id: `${group}-${i + 1}`,
+          group: { k: `grp-${group}`, a: [] },
+          label: { k: lab, a: [Math.floor(i / 2) + 1, side(g.hiSeat), verdictOf(g), g.plies] },
+          result: { k: res, a: [verdictOf(g), by(g.reason), g.plies, side(g.hiSeat)] },
+          red: { k: g.hiSeat === 'red' ? hiSeat : loSeat, a: [] },
+          black: { k: g.hiSeat === 'black' ? hiSeat : loSeat, a: [] },
+          moves: g.moves,
+        });
+      },
+    );
+  };
+  rung('12', 'top', 'lab-top', 'res-top', 'seat-fsf-10m', 'seat-fsf-1m');
+  rung('11', 'mid', 'lab-mid', 'res-mid', 'seat-fsf-1m', 'seat-fsf-100k');
   const equal = artifact(`ladder-${FP}-3-`);
   const seenEqual = new Set<string>();
   let pair = 0;
@@ -668,6 +900,53 @@ if (process.argv.includes('--blog')) {
       });
     },
   );
+  const decline = artifact(`decline-${FP}-`);
+  decline.result.games.forEach(
+    (
+      g: {
+        decliner: string;
+        declineAtPly: number;
+        declineScore: string;
+        otherNodes: number;
+        sourcePlies: number;
+        winner: string | null;
+        reason: string;
+        plies: number;
+        moves: string[];
+        repeatsAvoided: number;
+      },
+      i: number,
+    ) => {
+      if (g.repeatsAvoided === 0) return; // looked at the alternative and took the draw: the game is the source game
+      const gap = g.otherNodes !== 2_000_000;
+      const otherSeat = gap ? 'seat-fsf-200k' : 'seat-fsf-2m';
+      records.push({
+        id: `decline-${gap ? 'gap' : 'equal'}-${(i % 12) + 1}`,
+        group: { k: gap ? 'grp-decline-gap' : 'grp-decline-equal', a: [] },
+        label: {
+          k: 'lab-decline',
+          a: [g.sourcePlies, side(g.decliner), g.declineScore, verdictOf(g), g.plies],
+        },
+        result: {
+          k: 'res-decline',
+          a: [
+            verdictOf(g),
+            by(g.reason),
+            g.plies,
+            g.sourcePlies,
+            g.declineAtPly,
+            side(g.decliner),
+            g.declineScore,
+            '2M',
+            gap ? '200k' : '2M',
+          ],
+        },
+        red: { k: g.decliner === 'red' ? 'seat-fsf-2m' : otherSeat, a: [] },
+        black: { k: g.decliner === 'black' ? 'seat-fsf-2m' : otherSeat, a: [] },
+        moves: g.moves,
+      });
+    },
+  );
   // Replay every record through the kernel: san, the placement after each
   // ply, what the blast removed, whether the move gave check.
   const LETTER: Record<string, string> = {
@@ -679,7 +958,21 @@ if (process.argv.includes('--blog')) {
     cannon: 'C',
     soldier: 'P',
   };
+  const baseKernel = kernel;
+  const shotKernel = createXiangqiRuleKernel({
+    ...kernel.rules,
+    repetitionCheck: 'lethal',
+    blast: { ...kernel.rules.blast!, cannonShotBlasts: false },
+  });
+  const shelterKernel = createXiangqiRuleKernel({
+    ...kernel.rules,
+    cannonUnloaded: true,
+    blast: { ...kernel.rules.blast!, shelter: 'palace' },
+  });
   const encoded = records.map((r) => {
+    const kernel =
+      r.ruleset === 'shelter' ? shelterKernel : r.ruleset === 'shot' ? shotKernel : baseKernel;
+    const rules = kernel.rules;
     let st = kernel.initial(`w-${r.id}`);
     const start = placementOf(st.board);
     const moves = r.moves.map((u) => {

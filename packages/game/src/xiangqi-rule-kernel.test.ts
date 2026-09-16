@@ -398,6 +398,102 @@ test('blast: the lines shape follows the drawn lines, so the palace diagonals co
   assert.equal(afterEight.board.e5, undefined);
 });
 
+test('blast: the palace shelter spares every piece on a palace point, so a general is mated and never blown up', () => {
+  const shelter = createXiangqiRuleKernel({
+    blast: { shape: 'orthogonal', immune: ['soldier'], shelter: 'palace' },
+  });
+  // Rxd1 beside the general: the chariot and the advisor go, the general on e1 stays,
+  // the elephant on c1 (outside the palace) still dies.
+  const s = shelter.parseFen('3k5/9/9/9/9/3r5/9/9/9/2BAK4 b - - 0 1', 'shelter')!;
+  const after = shelter.apply(s, { from: 'd5', to: 'd1' });
+  assert.equal(after.status.type, 'playing');
+  assert.deepEqual(after.board.e1, { color: 'red', role: 'general' });
+  assert.equal(after.board.d1, undefined);
+  assert.equal(after.board.c1, undefined);
+  // The threat is therefore not lethal, so a chariot on the advisor file is no check.
+  assert.equal(
+    shelter.legalMoves(s).some((m) => m.to === 'd1'),
+    true,
+  );
+  // Without the shelter the same capture ends the game.
+  const plain = createXiangqiRuleKernel({ blast: { shape: 'orthogonal', immune: ['soldier'] } });
+  assert.equal(
+    plain.apply(plain.parseFen('3k5/9/9/9/9/3r5/9/9/9/2BAK4 b - - 0 1', 'p')!, {
+      from: 'd5',
+      to: 'd1',
+    }).status.type,
+    'finished',
+  );
+});
+
+test('blast: a cannon shot spares the neighbours when cannonShotBlasts is off, and the hopping chariot then loses the perpetual', () => {
+  const k = createXiangqiRuleKernel({
+    repetition: 'perpetualCheckLoses',
+    repetitionCheck: 'lethal',
+    blast: { shape: 'orthogonal', immune: ['soldier'], cannonShotBlasts: false },
+  });
+  // Cxd10 over the chariot: advisor and cannon go, the general on e10 stays.
+  const shot = k.parseFen('3ak4/3r5/9/9/9/9/9/3C5/9/4K4 w - - 0 1', 'shot')!;
+  const after = k.apply(shot, { from: 'd3', to: 'd10' });
+  assert.equal(after.status.type, 'playing');
+  assert.deepEqual(after.board.e10, { color: 'black', role: 'general' });
+  assert.equal(after.board.d3, undefined);
+  // A chariot's capture still blasts the general.
+  const chariot = createXiangqiRuleKernel({
+    blast: { shape: 'orthogonal', immune: ['soldier'], cannonShotBlasts: false },
+  });
+  assert.equal(
+    chariot.apply(chariot.parseFen('3ak4/9/9/9/9/9/9/3R5/9/4K4 w - - 0 1', 'r')!, {
+      from: 'd3',
+      to: 'd10',
+    }).status.type,
+    'finished',
+  );
+  // The dance: the chariot on d9 threatens Rxd1 (lethal, so check); the cannon blocks on d3
+  // and, with cannon shots not blasting, threatens nothing. The chariot hops, the cannon
+  // follows. Third occurrence: one side checked every move, the chariot side loses.
+  let s = k.parseFen('4k4/3r5/9/9/9/9/4P4/5C3/9/3AKA3 w - - 0 1', 'dance')!;
+  const moves = ['f3d3', 'd9f9', 'd3f3', 'f9d9', 'f3d3', 'd9f9', 'd3f3', 'f9d9'];
+  for (const u of moves) {
+    const m = k.fromUci(s, u)!;
+    assert.ok(k.isLegal(s, m), `${u} legal`);
+    s = k.apply(s, m);
+    if (s.status.type === 'finished') break;
+  }
+  assert.equal(s.status.type, 'finished');
+  assert.equal(s.status.reason, 'repetition');
+  assert.equal(s.status.winner, 'red');
+});
+
+test('cannonUnloaded: a cannon on a starting point cannot capture until it has moved', () => {
+  const k = createXiangqiRuleKernel({ cannonUnloaded: true });
+  const start = k.initial('u');
+  // No day-one shot: Cxb10 over the b8 cannon is not offered from b3.
+  assert.equal(
+    k.legalMoves(start).some((m) => m.from === 'b3' && m.to === 'b10'),
+    false,
+  );
+  // Quiet cannon moves are unchanged.
+  assert.equal(
+    k.legalMoves(start).some((m) => m.from === 'b3' && m.to === 'b5'),
+    true,
+  );
+  // Once moved, the cannon captures as usual.
+  const s1 = k.apply(start, { from: 'b3', to: 'b4' });
+  const s2 = k.apply(s1, { from: 'a7', to: 'a6' });
+  assert.equal(
+    k.legalMoves(s2).some((m) => m.from === 'b4' && m.to === 'b10'),
+    true,
+  );
+  // The rule is off by default.
+  assert.equal(
+    createXiangqiRuleKernel()
+      .legalMoves(start)
+      .some((m) => m.from === 'b3' && m.to === 'b10'),
+    true,
+  );
+});
+
 test('repetition: perpetual check loses for the checker, a plain cycle still draws', () => {
   // 1. Ra10+ Ke9 2. Ra9+ Ke10 3. Ra10+ Ke9 4. Ra9+ Ke10 5. Ra10+ is the third occurrence.
   const perpetual = [

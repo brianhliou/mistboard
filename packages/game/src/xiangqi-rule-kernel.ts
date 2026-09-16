@@ -92,9 +92,29 @@ export type XiangqiRuleConfig = {
   /**
    * On a capture, remove the capturing piece too and every non-immune piece
    * on the neighbouring points of the capture square. `palaceContained`: the
-   * blast never crosses a palace boundary.
+   * blast never crosses a palace boundary. `shelter: 'palace'`: a blast never
+   * removes a piece standing on a palace point (the capturer and the captured
+   * piece still go), so a general can only be mated, never blown up.
    */
-  blast?: { shape: BlastShape; immune: readonly XiangqiPieceRole[]; palaceContained?: boolean };
+  blast?: {
+    shape: BlastShape;
+    immune: readonly XiangqiPieceRole[];
+    palaceContained?: boolean;
+    shelter?: 'none' | 'palace';
+    /**
+     * `false`: a cannon's capture removes the cannon and its target and nothing
+     * beside the target; the shot is at range, the explosion is on contact.
+     * Every other piece's capture blasts as usual. Default `true`.
+     */
+    cannonShotBlasts?: boolean;
+  };
+  /**
+   * A cannon standing on one of its own side's two cannon starting points may
+   * not capture: it is not loaded until it has moved. Stateless on purpose (a
+   * cannon that returns to a starting point is unloaded again); keyed on the
+   * side, so a cannon that reaches the enemy's starting points is unaffected.
+   */
+  cannonUnloaded?: boolean;
   /** What happens to a side with no pieces left. */
   extinction?: { red: ExtinctionValue; black: ExtinctionValue };
   /**
@@ -134,6 +154,13 @@ export type XiangqiRuleConfig = {
    */
   repetition?: 'draw' | 'off' | 'perpetualCheckLoses';
   /**
+   * What "check" means to the repetition law. `direct` is xiangqi: a piece
+   * attacks the general. `lethal` also counts a move after which the mover
+   * could remove the enemy general next move by any means, which under a
+   * blast rule includes taking the piece beside it. Legality is unaffected.
+   */
+  repetitionCheck?: 'direct' | 'lethal';
+  /**
    * What a stalled game is worth: the progress clock, a repetition, and (when
    * `deadPosition` is on) a board with no piece that can ever cross the
    * river. `draw` is xiangqi. `fewerPieces` awards it to the side with fewer
@@ -162,10 +189,12 @@ export const STANDARD_XIANGQI_RULES: Required<
   facing: 'file',
   check: 'standard',
   mustCapture: false,
+  cannonUnloaded: false,
   extinction: { red: 'none', black: 'none' },
   stalemate: 'loss',
   progressClock: 60,
   repetition: 'draw',
+  repetitionCheck: 'direct',
   stall: 'draw',
   deadPosition: false,
   checkmate: 'loss',
@@ -351,6 +380,11 @@ export function generalsFace(board: XiangqiBoard, rookline = false): boolean {
   return clearLineBetween(board, red, black, rookline);
 }
 
+const CANNON_START_POINTS: Record<XiangqiColor, ReadonlySet<XiangqiSquare>> = {
+  red: new Set(['b3', 'h3']),
+  black: new Set(['b8', 'h8']),
+};
+
 /**
  * Where the piece on `square` could move before any legality rule: geometry,
  * regions and blockers only. `facing: capture` adds the flying capture.
@@ -426,6 +460,7 @@ export function pseudoMovesFrom(
       break;
     }
     case 'cannon': {
+      const unloaded = rules.cannonUnloaded && CANNON_START_POINTS[color].has(square);
       for (const [df, dr] of ORTHO) {
         let screened = false;
         for (const target of ray(from, df, dr)) {
@@ -439,7 +474,7 @@ export function pseudoMovesFrom(
             continue;
           }
           if (!blocked) continue;
-          if (landable(target)) out.push(target);
+          if (!unloaded && landable(target)) out.push(target);
           break;
         }
       }
@@ -501,6 +536,7 @@ function blastSquares(center: XiangqiSquare, rules: Resolved): XiangqiSquare[] {
     // A drawn diagonal joins a palace corner to its centre and nothing else.
     if (blast.shape === 'lines' && df !== 0 && dr !== 0 && !onDrawnDiagonal(c, { file, rank }))
       continue;
+    if (blast.shelter === 'palace' && inAnyPalace(file, rank)) continue;
     if (blast.palaceContained) {
       // The blast never crosses a palace boundary, in either direction.
       const centerIn = inAnyPalace(c.file, c.rank);
@@ -525,6 +561,23 @@ function onDrawnDiagonal(a: Coord, b: Coord): boolean {
   return false;
 }
 
+/**
+ * Could `mover`, to move on `board`, remove `victim`'s general with one legal
+ * move (a direct capture, or a blast that reaches it)? The repetition law's
+ * `lethal` check.
+ */
+export function canRemoveGeneral(
+  board: XiangqiBoard,
+  mover: XiangqiColor,
+  victim: XiangqiColor,
+  rules: Resolved,
+): boolean {
+  if (!findGeneral(board, victim)) return false;
+  return legalMovesOn(board, mover, rules).some(
+    (m) => !findGeneral(boardAfter(board, m, rules).board, victim),
+  );
+}
+
 /** The board after `move`, blast included. Does not check legality. */
 export function boardAfter(
   board: XiangqiBoard,
@@ -539,7 +592,8 @@ export function boardAfter(
   next[move.to] = piece;
   if (captured && rules.blast) {
     delete next[move.to];
-    for (const square of blastSquares(move.to, rules)) {
+    const spreads = !(piece.role === 'cannon' && rules.blast.cannonShotBlasts === false);
+    for (const square of spreads ? blastSquares(move.to, rules) : []) {
       const victim = next[square];
       if (victim && !rules.blast.immune.includes(victim.role)) delete next[square];
     }
@@ -843,7 +897,10 @@ export function createXiangqiRuleKernel(config: XiangqiRuleConfig = {}): Xiangqi
         ? { [key]: 1 }
         : { ...state.positionCounts, [key]: (state.positionCounts[key] ?? 0) + 1 };
       const check =
-        rules.check === 'standard' && rules.royal[next] && generalAttacked(board, next, rules);
+        rules.check === 'standard' &&
+        rules.royal[next] &&
+        (generalAttacked(board, next, rules) ||
+          (rules.repetitionCheck === 'lethal' && canRemoveGeneral(board, mover, next, rules)));
       const entry = { key, check };
       const history = captured ? [entry] : [...state.history, entry];
       const moved: XiangqiRuleState = {

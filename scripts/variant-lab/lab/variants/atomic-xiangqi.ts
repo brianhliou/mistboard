@@ -66,7 +66,11 @@ function isStockPoint(rules: RulesRecord): boolean {
     rules.soldiersImmune === false &&
     rules.blastShape === 'king' &&
     rules.palaceWall === false &&
-    rules.perpetualCheck === 'draw'
+    rules.perpetualCheck === 'draw' &&
+    rules.palaceShelter === false &&
+    rules.cannonUnloaded === false &&
+    rules.cannonShotBlasts === true &&
+    rules.lethalCheck === false
   );
 }
 
@@ -119,6 +123,10 @@ function patchedStanzaLines(rules: RulesRecord): string[] {
     'blastOnCapture = true',
     `blastShape = ${shape}`,
     ...(rules.soldiersImmune === true ? ['blastImmuneTypes = p'] : []),
+    ...(rules.palaceShelter === true ? ['blastShelter = true'] : []),
+    ...(rules.cannonUnloaded === true ? ['cannonUnloaded = true'] : []),
+    ...(rules.cannonShotBlasts === false ? ['cannonShotBlasts = false'] : []),
+    ...(rules.lethalCheck === true ? ['lethalCheck = true'] : []),
   ];
 }
 
@@ -159,6 +167,29 @@ export const atomicXiangqiVariant: LabVariant<XiangqiRuleState, XiangqiMove> = {
       blast: 'movegen',
       note: 'D3. true: a soldier dies only as the captured or the capturing piece (the parent’s pawn rule). false: soldiers explode like everything else; what stock FSF plays.',
     },
+    palaceShelter: {
+      options: [false, true],
+      default: false,
+      blast: 'movegen',
+      note: 'D11. true: a blast never removes a piece standing on a palace point (the capturer and the captured piece still go), so a general is mated, never blown up. Answers the advisor-file parry measured 2026-09-14.',
+    },
+    cannonShotBlasts: {
+      options: [true, false],
+      default: true,
+      blast: 'movegen',
+      note: 'D13. false: a cannon\u2019s capture removes the cannon and its target and nothing beside the target (the shot is at range, the explosion is on contact). Removes the shot back over a blocking chariot that drives the advisor-file dance, and makes the day-one exchange a cannon for a horse.',
+    },
+    lethalCheck: {
+      options: [false, true],
+      default: false,
+      note: 'D14. true: for the repetition law, a move is check if the mover could remove the general next move by any means, blast included (xiangqi\u2019s perpetual-check rule read on what actually kills). Legality is unchanged.',
+    },
+    cannonUnloaded: {
+      options: [false, true],
+      default: false,
+      blast: 'movegen',
+      note: 'D12. true: a cannon on one of its own side\u2019s two cannon starting points may not capture until it has moved, so the day-one exchange is a choice rather than a ritual. Stateless: a cannon back on its starting point is unloaded again; the enemy\u2019s starting points do not count (a rule keyed on the square alone disagreed with the engine\u2019s check detection, 2026-09-15).',
+    },
   },
   create(rules) {
     const config: XiangqiRuleConfig = {
@@ -172,7 +203,11 @@ export const atomicXiangqiVariant: LabVariant<XiangqiRuleState, XiangqiMove> = {
               : 'eight',
         immune: rules.soldiersImmune === true ? ['soldier'] : [],
         palaceContained: rules.palaceWall === true,
+        shelter: rules.palaceShelter === true ? 'palace' : 'none',
+        cannonShotBlasts: rules.cannonShotBlasts !== false,
       },
+      cannonUnloaded: rules.cannonUnloaded === true,
+      repetitionCheck: rules.lethalCheck === true ? 'lethal' : 'direct',
     };
     const kernel = createXiangqiRuleKernel(config);
     const engine: LabEngineSpec = {
@@ -231,6 +266,41 @@ export const atomicXiangqiVariant: LabVariant<XiangqiRuleState, XiangqiMove> = {
       name: 'D3 a capturing soldier still dies',
       why: 'e4xe3: the capturer is removed even when soldiers are immune. Invisible to a move-set comparison from FEN (the engine\u2019s internal state after the move is what differs), so the gate needs perft(2) here; upstream FSF let an immune-type capturer survive.',
       fen: '5k3/9/9/9/9/9/4p4/4C4/9/3K5 b - - 0 1',
+    },
+    {
+      name: 'D11 shelter: Rxd1 beside the general',
+      why: 'The advisor and the chariot go; the general on e1 lives only under palaceShelter (its move set differs next ply), while the elephant on c1, outside the palace, dies either way. Needs perft(2): the move set from the FEN is the same.',
+      fen: '3k5/9/9/9/9/3r5/9/9/9/2BAK4 b - - 0 1',
+    },
+    {
+      name: 'D11 shelter: a chariot on the advisor file is not check',
+      why: 'With the shelter Red may ignore the chariot on d9 (Rxd1 kills nothing royal), so quiet moves like a1a2 are legal; without it every non-parry loses the general and is illegal only where the kernel enforces post-blast legality.',
+      fen: '4k4/3r5/9/9/9/9/9/9/9/R2AK4 w - - 0 1',
+    },
+    {
+      name: 'D12 unloaded cannon on its start point',
+      why: 'Cxb10 over the b8 cannon from b3 exists only when cannonUnloaded is false; the quiet cannon moves are unchanged.',
+      fen: 'rheakaehr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RHEAKAEHR w - - 0 1',
+    },
+    {
+      name: 'D12 a cannon on the enemy\u2019s starting point is loaded',
+      why: 'A red cannon on h8 checks the general on e8 over g8 and may capture from there: the starting points are per side. This position mated in the engine and had seven legal moves in a square-keyed kernel.',
+      fen: '5a3/3Pa4/4k1CCb/9/9/2B6/9/B8/4AK3/4p4 b - - 0 1',
+    },
+    {
+      name: 'D12 a moved cannon is loaded',
+      why: 'The same shot from b4 is legal under both settings.',
+      fen: 'rheakaehr/9/1c5c1/p1p1p1p1p/9/1C7/P1P1P1P1P/7C1/9/RHEAKAEHR w - - 0 1',
+    },
+    {
+      name: 'D13 a cannon shot spares the neighbours',
+      why: 'Cxd10 over the chariot on d9: the advisor and the cannon go; the general on e10 dies only when cannon shots blast. Needs perft(2).',
+      fen: '3ak4/3r5/9/9/9/9/9/3C5/9/4K4 w - - 0 1',
+    },
+    {
+      name: 'D13 a chariot shot still blasts',
+      why: 'The same capture by a chariot on d3 kills the general under both settings: only the cannon is exempt.',
+      fen: '3ak4/9/9/9/9/9/9/3R5/9/4K4 w - - 0 1',
     },
     {
       name: 'D4 cannon parry',
