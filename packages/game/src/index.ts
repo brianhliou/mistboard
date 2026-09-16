@@ -46,6 +46,7 @@ export * from './xiangqi-move-classification.js';
 export * from './xiangqi-notation-format.js';
 export * from './xiangqi-pgn.js';
 export * from './xiangqi-position.js';
+export * from './xiangqi-relative-notation.js';
 // The rules-as-data xiangqi kernel, named exports only: its helpers share
 // names with variants-xiangqi (parsePlacement, isAttacked) and a web caller
 // wants the factory and the config, not the geometry.
@@ -56,5 +57,4 @@ export {
   type XiangqiRuleKernel,
   type XiangqiRuleState,
 } from './xiangqi-rule-kernel.js';
-export * from './xiangqi-relative-notation.js';
 export * from './xiangqi-uci.js';
