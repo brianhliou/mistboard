@@ -9,9 +9,8 @@ import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
 // The rules page is the front door of an unlisted variant: no rail, no tile,
-// no card links here. The play link in the closing block is a PvP invite,
-// because the setup dialog's play CTA is null for hidden surfaces and there is
-// no bot yet.
+// no card links here. The play links in the closing block are authored by
+// hand because the setup dialog's play CTA is null for hidden surfaces.
 export const atomicXiangqiArticle: Article = {
   slug: 'atomic-xiangqi',
   gameSpecId: 'atomic-xiangqi',
@@ -129,9 +128,16 @@ export const atomicXiangqiArticle: Article = {
     },
     playClosing({
       heading: 'Where to next',
-      lead: 'Play it against a friend with an invite link. A computer opponent is coming.',
+      lead: 'Play it against the engine at any of eight strengths, or against a friend with an invite link.',
       playLabel: 'Play Atomic Xiangqi',
-      playHref: '/?play=friend&gameSpecId=atomic-xiangqi',
+      playHref: '/?play=computer&gameSpecId=atomic-xiangqi',
+      secondary: [
+        {
+          label: 'Invite a friend',
+          href: '/?play=friend&gameSpecId=atomic-xiangqi',
+          emphasis: 'secondary',
+        },
+      ],
     }),
   ],
 };

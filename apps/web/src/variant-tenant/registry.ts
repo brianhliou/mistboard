@@ -764,6 +764,15 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: hiddenFromMenu,
       acceptsDeepLink: atomicXiangqiEnabled,
+      // Eight-level Fairy-Stockfish ladder on the patched atomic binary, ordered
+      // strongest-first like the other xiangqi pickers.
+      engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
+        id: `fairy-stockfish-atomic-xiangqi-level-${level}`,
+        name: `Fairy-Stockfish Level ${level}`,
+        familyName: 'Fairy-Stockfish',
+        kind: 'container',
+      })),
+      defaultEngineId: 'fairy-stockfish-atomic-xiangqi-level-4',
     },
   },
   {

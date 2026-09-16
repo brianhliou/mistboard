@@ -9,10 +9,12 @@
 // loudly (error log + engine alert email) for any that is intended-but-missing. It is
 // read-only: it never changes serving behavior, only observes and reports.
 
+import { atomicXiangqiFsfPath } from './atomic-xiangqi-fsf-engine.js';
 import { banqiEnginePath } from './banqi-engine.js';
 import { duckXiangqiFsfPath } from './duck-xiangqi-fsf-engine.js';
 import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
+  atomicXiangqiEnabled,
   banqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -65,6 +67,14 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     binary: 'fairy-stockfish-duck-xiangqi',
     enabled: duckXiangqiEnabled,
     resolvePath: duckXiangqiFsfPath,
+  },
+  {
+    // Its own binary too: stock FSF would play a different game (chess-shaped
+    // blasts, cannon shots that clear a rank), so the resolver has no fallback.
+    variant: 'atomic-xiangqi',
+    binary: 'fairy-stockfish-atomic-xiangqi',
+    enabled: atomicXiangqiEnabled,
+    resolvePath: atomicXiangqiFsfPath,
   },
   { variant: 'jieqi', binary: 'pikafish-jieqi', enabled: jieqiEnabled, resolvePath: pikaJieqiPath },
   { variant: 'banqi', binary: 'banqi-engine', enabled: banqiEnabled, resolvePath: banqiEnginePath },

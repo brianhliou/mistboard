@@ -8,9 +8,8 @@
  * it (the standard tenant re-scores repetitions itself; this one does not need
  * to).
  *
- * No engine block yet: stage 3 of docs-private/variant-lab/atomic-xiangqi/
- * board-plan.md wires the patched Fairy-Stockfish ladder. Until then every
- * room is PvP and the rooms route turns an engine request away.
+ * The bot is the patched Fairy-Stockfish ladder (atomic-xiangqi-fsf-engine.ts,
+ * loop in server-atomic-xiangqi-engine.ts), seated by the rooms route.
  */
 
 import {
@@ -29,6 +28,11 @@ import {
   isAtomicXiangqiLegalMove,
   oppositeAtomicXiangqiColor,
 } from '@mistboard/game';
+import {
+  atomicXiangqiEngineDisplayName,
+  atomicXiangqiEngineVersion,
+  isAtomicXiangqiEngineClientId,
+} from './atomic-xiangqi-fsf-engine.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
 import type * as persistence from './persistence.js';
 import { tenantForfeitDeadlineForClient, tenantPveEngineId } from './variant-tenant/runtime.js';
@@ -140,6 +144,16 @@ export const atomicXiangqiTenant: AtomicXiangqiTenantType = {
   visibility: {
     clientEventFor: atomicXiangqiClientEventFor,
     viewForClient: (state, client) => getAtomicXiangqiClientView(state, client),
+  },
+  engine: {
+    // The engine is replayed from the whole move list every ply
+    // (`position startpos moves …`), so it sees repetition and the no-capture
+    // count exactly as the kernel does.
+    terminalContext: 'full-history',
+    isEngineClientId: isAtomicXiangqiEngineClientId,
+    displayName: atomicXiangqiEngineDisplayName,
+    engineVersion: atomicXiangqiEngineVersion,
+    reservationReleaseTag: 'atomic-xiangqi',
   },
   wire: {
     snapshotExtras: (room, client) => {

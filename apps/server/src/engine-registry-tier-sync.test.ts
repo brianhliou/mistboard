@@ -138,6 +138,7 @@ const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
   'fairy-stockfish-xiangqi',
   'fairy-stockfish-fortress-xiangqi',
   'fairy-stockfish-duck-xiangqi',
+  'fairy-stockfish-atomic-xiangqi',
   'pikafish-xiangqi',
 ]);
 

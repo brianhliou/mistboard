@@ -48,6 +48,9 @@ export type EngineId =
   // Fairy-Stockfish (Duck Xiangqi ladder) + its random floor
   | `fairy-stockfish-duck-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   | 'random-legal-duck-xiangqi'
+  // Fairy-Stockfish (Atomic Xiangqi ladder) + its random floor
+  | `fairy-stockfish-atomic-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
+  | 'random-legal-atomic-xiangqi'
   // Pikafish (Jieqi)
   | 'pikafish-jieqi-amateur'
   | 'pikafish-jieqi-strong'

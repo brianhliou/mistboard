@@ -1,5 +1,13 @@
 import type pg from 'pg';
 import {
+  ATOMIC_XIANGQI_FSF_ENGINE_REF,
+  ATOMIC_XIANGQI_FSF_ENGINE_VERSION,
+  ATOMIC_XIANGQI_PLAYABLE_ENGINES,
+  ATOMIC_XIANGQI_RANDOM_ENGINE_ID,
+  ATOMIC_XIANGQI_RANDOM_ENGINE_VERSION,
+  type AtomicXiangqiEngineTier,
+} from '../atomic-xiangqi-fsf-engine.js';
+import {
   DUCK_XIANGQI_FSF_ENGINE_REF,
   DUCK_XIANGQI_FSF_ENGINE_VERSION,
   DUCK_XIANGQI_PLAYABLE_ENGINES,
@@ -718,6 +726,37 @@ function duckXiangqiFsfConfigHash(tier: DuckXiangqiEngineTier): string {
   return `fsf-duck-xiangqi-${DUCK_XIANGQI_FSF_ENGINE_VERSION}-${DUCK_XIANGQI_FSF_ENGINE_REF}-skill-${tier.skill}-nodes-${tier.nodes}`;
 }
 
+// Atomic Xiangqi FSF ladder (atomic-xiangqi-fsf-engine.ts). Pinned commit PLUS
+// a patch, so the build version (pinned by the patch digest test) and the ref
+// both go in the hash, as for duck.
+const ATOMIC_XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  ATOMIC_XIANGQI_PLAYABLE_ENGINES.map((tier) => [
+    tier.id,
+    {
+      id: tier.id as EngineId,
+      engineId: 'fairy-stockfish-atomic-xiangqi',
+      engineName: 'Fairy-Stockfish',
+      name: tier.name,
+      kind: 'container',
+      gameSpecId: 'atomic-xiangqi',
+      configHash: atomicXiangqiFsfConfigHash(tier),
+      playSignature: atomicXiangqiFsfConfigHash(tier),
+      config: {
+        kind: 'fairy-stockfish',
+        skill: tier.skill,
+        movetime_ms: tier.movetimeMs,
+        nodes: tier.nodes,
+      },
+      notes:
+        'Fairy-Stockfish Atomic Xiangqi rung: stochastic Skill Level ladder anchored by a node budget, classical eval on the patched atomic build (cannon-shot rules).',
+    } satisfies EngineDefinition,
+  ]),
+);
+
+function atomicXiangqiFsfConfigHash(tier: AtomicXiangqiEngineTier): string {
+  return `fsf-atomic-xiangqi-${ATOMIC_XIANGQI_FSF_ENGINE_VERSION}-${ATOMIC_XIANGQI_FSF_ENGINE_REF}-skill-${tier.skill}-nodes-${tier.nodes}`;
+}
+
 // Random-mover floors for the other xiangqi-family ladders, same role as the
 // standard one below: 0-Elo anchor, EvE-only, never player-facing.
 const VARIANT_RANDOM_ENGINES: Record<string, EngineDefinition> = {
@@ -733,6 +772,19 @@ const VARIANT_RANDOM_ENGINES: Record<string, EngineDefinition> = {
     config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
     notes:
       'Uniformly-random legal-move Fortress Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
+  } satisfies EngineDefinition,
+  [ATOMIC_XIANGQI_RANDOM_ENGINE_ID]: {
+    id: ATOMIC_XIANGQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-atomic-xiangqi',
+    engineName: 'Random Mover',
+    name: 'Random Mover',
+    kind: 'builtin',
+    gameSpecId: 'atomic-xiangqi',
+    configHash: `random-legal-atomic-xiangqi-${ATOMIC_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    playSignature: `random-legal-atomic-xiangqi-${ATOMIC_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes:
+      'Uniformly-random legal-move Atomic Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
   } satisfies EngineDefinition,
   [DUCK_XIANGQI_RANDOM_ENGINE_ID]: {
     id: DUCK_XIANGQI_RANDOM_ENGINE_ID,
@@ -999,6 +1051,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...XIANGQI_RANDOM_ENGINES,
   ...FORTRESS_XIANGQI_FSF_ENGINES,
   ...DUCK_XIANGQI_FSF_ENGINES,
+  ...ATOMIC_XIANGQI_FSF_ENGINES,
   ...VARIANT_RANDOM_ENGINES,
   ...JIEQI_ENGINES,
   ...XIANGQI_ENGINES,

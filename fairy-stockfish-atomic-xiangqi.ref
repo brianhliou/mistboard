@@ -1,0 +1,55 @@
+1b5bdd40499bd5c7417bdc532d52fef8847bdf3f
+# ^ The Fairy-Stockfish commit the prod image builds for the Atomic Xiangqi bot
+# (railpack reads the first line; this comment is ignored). Deliberately the
+# SAME upstream commit as fairy-stockfish-xiangqi.ref and the duck build: one
+# upstream pin to move, and no fork to maintain.
+#
+# Why a FOURTH FSF binary exists. Stock Fairy-Stockfish has atomic's explosion
+# (blastOnCapture) but only in chess's shape, and none of the answers the
+# variant lab arrived at (docs-private/variant-lab/atomic-xiangqi/decisions.md)
+# is reachable from variants.ini:
+#
+#   1. blastShape = wazir. The blast clears the four orthogonally adjacent
+#      points, not chess's eight: on a board of drawn lines a diagonal
+#      neighbour is not a neighbour.
+#   2. blastImmuneTypes = p. Soldiers survive a blast, atomic chess's pawn rule
+#      by piece type rather than by the hard-coded PAWN.
+#   3. cannonShotBlasts = false. A cannon's capture removes the cannon and its
+#      target and nothing beside the target. Without this the plain port has a
+#      forced draw on the advisor files (a chariot bearing on an advisor is
+#      parried only by a cannon block, whose shot back over the chariot forces
+#      it to hop, and the cannon follows). With it the block threatens nothing
+#      back and the attacker has to find something better than shuffling.
+#   4. lethalCheck = true. For the perpetual-check law a move is check if the
+#      mover could remove the general next move by any means, blast included,
+#      so a one-sided shuffle on the advisor file is perpetual check and loses
+#      (perpetualCheckIllegal) instead of forcing a repetition draw.
+#
+# The patch also carries two lab options this variant does not use
+# (blastShelter, cannonUnloaded, both off by default): they were measured and
+# rejected, and the patch is the lab's patch verbatim so the perft gate that
+# tied the engine to the kernel at every rule point is the one that ships.
+#
+# The patch is fairy-stockfish-atomic-xiangqi.patch, applied by railpack after
+# checkout. It is part of this bot's identity as much as the ref is: a change to
+# EITHER is a different engine, and ATOMIC_XIANGQI_FSF_ENGINE_REF carries a
+# digest of both so a rated identity cannot silently change how it plays.
+#
+# The build is gated on THREE perft(1) counts, each the kernel's own answer for
+# the same position, because a binary that plays a different game does not
+# crash, it just plays a different game:
+#
+#    44  the opening array. Catches an .ini that did not load (chess answers 20).
+#     3  `3ak4/3r5/9/9/9/9/9/3C5/9/4K4 w - - 0 1` - a red cannon on d3 under a
+#        black chariot on d9. The cannon's shot up the file takes the chariot
+#        and, with cannonShotBlasts off, nothing else; the count differs from a
+#        binary that lets the shot blast.
+#     4  `3ak4/9/9/9/9/9/9/3R5/9/4K4 w - - 0 1` - a red chariot on d3 on the
+#        advisor file: every chariot move up the file is legal, and taking the
+#        advisor on d10 blows up the general, which is legal from check too.
+#
+# No NNUE. The pinned net is a standard-xiangqi net; this variant runs classical
+# eval, the same footing as xiangqi rungs 1-7.
+#
+# Bumping: change the SHA here, re-check the patch still applies, and re-run the
+# EvE calibration so the bot ratings are measured on the new binary.

@@ -3173,8 +3173,8 @@ export function roomCreationRequestBody(
   }
   if (setup.gameSpecId === ATOMIC_XIANGQI_SPEC_ID) {
     // Atomic Xiangqi: red/black 9x10 xiangqi, casual only (no rating pool), so
-    // `rated` is pinned false like duck. PvP only until the bot ships; an
-    // engine id is not sent because the server would turn it away.
+    // `rated` is pinned false like duck. PvE sends the picked Fairy-Stockfish
+    // engine id.
     return {
       mode,
       gameSpecId,
@@ -3186,6 +3186,7 @@ export function roomCreationRequestBody(
           : setup.preferredColor === 'red' || setup.preferredColor === 'black'
             ? setup.preferredColor
             : 'random',
+      ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
   if (setup.gameSpecId === DARK_XIANGQI_SPEC_ID) {

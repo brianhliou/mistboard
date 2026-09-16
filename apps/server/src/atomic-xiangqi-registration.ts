@@ -3,11 +3,11 @@
  * generic tenant room factory, hydration, WebSocket runtime and HTTP create
  * route.
  *
- * Scope: PvP, unrated, unlisted. No lobby seek (the Find-opponent picker
- * offers the product shelf, and this is not on it), no TV channel (a channel
- * is a listing), no correspondence. Deep links and the rules page are the
- * whole front door, which is what "unlisted" means in board-plan.md. The bot
- * arrives in stage 3 and is the only thing that changes this file.
+ * Scope: PvP and PvE against the patched Fairy-Stockfish ladder, unrated,
+ * unlisted. No lobby seek (the Find-opponent picker offers the product
+ * shelf, and this is not on it), no TV channel (a channel is a listing), no
+ * correspondence. Deep links and the rules page are the whole front door,
+ * which is what "unlisted" means in board-plan.md.
  */
 
 import type {
@@ -24,6 +24,7 @@ import { tenantCardBinding } from './game-card-tenant.js';
 import { boardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleAtomicXiangqiCreate, requestsAtomicXiangqi } from './routes/atomic-xiangqi-rooms.js';
+import { scheduleAtomicXiangqiEngineMove } from './server-atomic-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
 import {
@@ -31,6 +32,7 @@ import {
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
+import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
 import { countActiveTenantGames } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
@@ -65,12 +67,15 @@ export type AtomicXiangqiLiveRoomCreation =
 
 export const atomicXiangqiRooms = new Map<string, AtomicXiangqiRuntimeRoom>();
 
-const atomicXiangqiWs = createTenantWsRuntime(atomicXiangqiTenant);
+const atomicXiangqiWs = createTenantWsRuntime(atomicXiangqiTenant, {
+  scheduleEngineMove: (ctx, room) => scheduleAtomicXiangqiEngineMove(ctx, room),
+});
 
 export async function createAtomicXiangqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: AtomicXiangqiColor | 'random',
   rated = false,
+  engine?: TenantRoomEngineSeat<AtomicXiangqiColor>,
 ): Promise<AtomicXiangqiLiveRoomCreation> {
   const created = await createTenantLiveRoom(
     atomicXiangqiTenant,
@@ -84,7 +89,7 @@ export async function createAtomicXiangqiRoom(
       recordPersistenceError: (roomId, seq, eventType, err) =>
         recordTenantPersistenceError(atomicXiangqiTenant, roomId, seq, eventType, err),
     },
-    { timeControl, creatorPreference, rated },
+    { timeControl, creatorPreference, rated, engine },
   );
   if (!created.ok) {
     return created.error === 'disabled'
@@ -104,6 +109,8 @@ registerVariantTenant({
   kind: atomicXiangqiTenant.kind,
   gameSpecId: atomicXiangqiTenant.gameSpecId,
   roomIdPrefix: atomicXiangqiTenant.roomIdPrefix,
+  isEngineClientId: atomicXiangqiTenant.engine?.isEngineClientId,
+  engineDisplayName: (clientId) => atomicXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
   errorPrefix: 'atomic_xiangqi',
   enabled: atomicXiangqiTenant.enabled,

@@ -3,6 +3,7 @@
 // playable engines without an adapter, so a new variant cannot ship a ladder
 // that nothing can rate.
 
+import { atomicXiangqiEveAdapter } from './atomic-xiangqi-eve-adapter.js';
 import { duckXiangqiEveAdapter } from './duck-xiangqi-eve-adapter.js';
 import { fortressXiangqiEveAdapter } from './fortress-xiangqi-eve-adapter.js';
 import type { AnyVariantEveAdapter } from './variant-eve.js';
@@ -12,6 +13,7 @@ const VARIANT_EVE_ADAPTERS: readonly AnyVariantEveAdapter[] = [
   xiangqiEveAdapter,
   fortressXiangqiEveAdapter,
   duckXiangqiEveAdapter,
+  atomicXiangqiEveAdapter,
 ];
 
 const BY_VARIANT: ReadonlyMap<string, AnyVariantEveAdapter> = new Map(
