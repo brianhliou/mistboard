@@ -844,6 +844,14 @@ function runTimed(label, command) {
 // and the smokes read production), only the repo's scripts and the network,
 // so the rest of the release runs from the control worktree, which holds the
 // shared .git directory and cannot be swept.
+//
+// "The repo's scripts" means the RELEASE's scripts: the smokes are read from
+// the checkout they run in, so a release that adds one (a new variant's PvE
+// smoke, 2026-09-16) fails its own gate if the control worktree is behind.
+// The control worktree is fast-forwarded to the pushed revision first; when it
+// cannot be (another session's dirty tree, a different branch checked out),
+// the release stays in its own checkout and says so, trading the rarer sweep
+// hazard for a gate that tests what was shipped.
 function enterPostPushWorkdir() {
   let primary;
   try {
@@ -853,10 +861,46 @@ function enterPostPushWorkdir() {
     return;
   }
   if (path.resolve(primary) === path.resolve(releaseRoot)) return;
+  const reason = bringControlWorktreeTo(primary, release.headRevision);
+  if (reason) {
+    console.log(
+      `warn: control worktree ${primary} is not at the release revision (${reason}); post-push steps stay in ${releaseRoot}, do not sweep it until the release ends`,
+    );
+    return;
+  }
   workdir = primary;
   console.log(
     `post-push steps run from ${primary}: this task worktree reads as merged now and may be swept`,
   );
+}
+
+/**
+ * Fast-forward the control worktree to `revision`. Returns null when it is
+ * there (already, or after the merge), otherwise a short reason it was left
+ * alone. Never touches a tree with tracked modifications or one that is not
+ * on the target branch: those belong to another session.
+ */
+function bringControlWorktreeTo(primary, revision) {
+  const gitAt = (args) =>
+    spawnSync('git', ['-C', primary, ...args], {
+      encoding: 'utf8',
+      stdio: ['ignore', 'pipe', 'pipe'],
+    });
+  const head = gitAt(['rev-parse', '--verify', 'HEAD']);
+  if (head.status !== 0) return 'HEAD unreadable';
+  if (head.stdout.trim() === revision) return null;
+  const branch = gitAt(['rev-parse', '--abbrev-ref', 'HEAD']);
+  if (branch.status !== 0 || branch.stdout.trim() !== options.targetBranch) {
+    return `on ${branch.stdout.trim() || '?'}, not ${options.targetBranch}`;
+  }
+  const dirty = gitAt(['status', '--porcelain', '--untracked-files=no']);
+  if (dirty.status !== 0) return 'status unreadable';
+  if (dirty.stdout.trim() !== '') return 'tracked files modified';
+  const merge = gitAt(['merge', '--ff-only', revision]);
+  if (merge.status !== 0)
+    return `fast-forward refused: ${(merge.stderr || '').trim().split('\n')[0]}`;
+  console.log(`control worktree ${primary} fast-forwarded to ${revision.slice(0, 8)}`);
+  return null;
 }
 
 function run(command) {
