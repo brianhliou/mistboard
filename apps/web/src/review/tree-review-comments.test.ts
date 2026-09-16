@@ -2,7 +2,8 @@
 // the current node's text renders in the under-board comment panel, commented
 // moves carry a bubble marker in the move list, and right-arrow at a branch
 // point opens the variation picker (up/down select, right descends).
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { pinXiangqiNotation } from '../xiangqi-notation.js';
 import type { SerializedTree } from './tree-serialize.js';
 import { mountXiangqiReview } from './xiangqi-review.js';
 
@@ -44,6 +45,11 @@ function key(name: string): void {
     new KeyboardEvent('keydown', { key: name, bubbles: true, cancelable: true }),
   );
 }
+
+// These tests locate cells by from-to text; pin coordinate labels so the
+// reader's notation default (algebraic) does not become the subject.
+beforeEach(() => pinXiangqiNotation('coordinate'));
+afterEach(() => pinXiangqiNotation(null));
 
 describe('viewer-visible study comments', () => {
   it('marks commented moves and shows the current node text under the board', () => {

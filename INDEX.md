@@ -118,7 +118,7 @@ Edit task → find file → open only that file.
 | `routes/lib.ts` | Shared HTTP utilities: `HttpApiContext` interface, `writeJson`, `requireMethod`, `requirePersistence`, `readJsonBody`, the parse helpers, `hashIp`, `isHttpAdminAuthorized`. Imported by every route module |
 | `routes/auth.ts` | `/api/auth/{me,logout,email/start,email/confirm}` |
 | `routes/account.ts` | `/api/account/profile` (PATCH) |
-| `routes/users.ts` | `/api/users/:handle/profile` |
+| `routes/users.ts` | `/api/users/:handle/profile` (`?tz=` buckets the profile's puzzle streak on the viewer's calendar) |
 | `routes/rooms.ts` | POST `/api/rooms`, `/api/rooms/:id/abandon`, plus `parseRoomMode` / `parsePlayablePveEngineId` |
 | `routes/dark-xiangqi-rooms.ts` | Hidden Dark Xiangqi direct room creation branch for `POST /api/rooms`: request claiming, flag behavior, supported-surface gate, and room factory result mapping |
 | `routes/dark-xiangqi-games.ts` | Hidden Dark Xiangqi postgame/review API branch; keeps non-chess finished-game records out of generic chess replay APIs |
@@ -174,6 +174,8 @@ Edit task → find file → open only that file.
 | `forum-translation.ts` | Forum translate service (130): script heuristic (`detectScriptLanguage`, Han vs Latin after stripping URLs/handles) that decides whether a translation would change anything, content hash, the Anthropic SDK client (one byte-stable system prompt per target locale, effort low), and `createForumTranslationService`: cache lookup → in-flight coalescing per key → circuit breaker (consecutive upstream failures pause calls) → global daily miss cap → caller meter → model call → store, with one `forum_translation_miss` log line per model call (tokens, ms, outcome). Only misses are metered; knobs `MISTBOARD_FORUM_TRANSLATION_{DAILY_CAP,BREAKER_THRESHOLD,BREAKER_COOLDOWN_MS}` |
 | `persistence-feedback.ts` | Feedback persistence |
 | `persistence-site-stats.ts` | Site statistics query |
+| `play-streak.ts` | Day-streak math: consecutive player-calendar days (`computePlayStreak`: current, best, last day; alive through the day after the last one), `resolveTimeZone` (browser IANA zone or UTC), `calendarDay`. The puzzle streak is its only caller since the play streak was retired |
+| `persistence-puzzle-streak.ts` | `getPuzzleStreak(userId, {timeZone})`: consecutive player-calendar days with a puzzle solved, from `puzzle_attempts` (first terminal outcome per puzzle, so a day counts on a fresh puzzle), folded by `play-streak.ts`; rides on the attempt response and the profile |
 | `persistence-stats-excluded-devices.ts` | Records a browser device id as stats-excluded when a `stats_excluded_at` account connects from it (migration 137); read by `persistence-counted-games.ts` |
 | `stats-excluded-device.ts` | `rememberExcludedDevice`: fire-and-forget hook both live connection handlers call; its own module so the tenant runtime never imports the chess-stack connection module (esbuild cycle) |
 | `persistence-counted-games.ts` | The one definition of a game that counts for every aggregate (public `/stats`, homepage number, `/metrics`, readout): completed pvp/pve with no seat held by a `users.stats_excluded_at` account, plus the account-seat and user-row filters. Import the fragments; never respell the filter |
@@ -270,6 +272,8 @@ Edit task → find file → open only that file.
 | `variant-tenant/deadline-sweeper.ts` | Interval sweeper for durable correspondence deadlines: lists due `room_deadlines` rows, routes each to its tenant's `sweepDueDeadline`, which re-derives the deadline from the hydrated room before acting |
 | `correspondence-start-email.ts` | "Your seek was accepted" email: the only signal a seek creator who walked away gets that their game exists. Once per game, to the creator only; opt-out via `correspondenceStartEmail` |
 | `correspondence-deadline-warning.ts` | Correspondence deadline-warning email: decides whether a game's warning lead is reached, sends via the shared Resend helper, marks the row to send once per deadline |
+| `correspondence-turn-digest.ts` | Daily correspondence "your move" digest (#370): one email per account per UTC digest day (14:00 mark) listing the games stalled on their move 12h+, skipped while the account was seen recently or every waiting game already carried a deadline warning; keyed on `users.correspondence_digest_sent_at` (145), marked only after a successful send. Never per ply; pass runs in the tenant deadline sweeper after the warning pass |
+| `persistence-correspondence-digest.ts` | Digest reads/write: `listCorrespondenceDigestCandidates` (waiting `room_deadlines` rows grouped by seated account, with the `correspondenceTurnDigest` opt-out, last-sent and last-seen filters in the query) and `markCorrespondenceDigestSent` |
 | `send-email.ts` | Shared Resend transactional-email sender — the single wire call to the email provider (auth codes, feedback, engine alerts, correspondence nudges). Never logs (API key must not leak); policy stays caller-owned |
 | `persistence-room-deadlines.ts` | `room_deadlines` persistence: durable index for correspondence deadline enforcement (upsert per event, delete on terminal); the event log stays source of truth |
 | `persistence-correspondence-seeks.ts` | `correspondence_seeks` persistence: the open async-seek board; per-user cap via `countOpenSeeksForUser` |
@@ -357,7 +361,12 @@ Edit task → find file → open only that file.
 | `xiangqi-fsf-engine.ts` | Fairy-Stockfish provider for the human-facing Standard Xiangqi ladder (`fairy-stockfish-xiangqi-level-1..8`): levels 1-7 are Lichess-style skill/depth/movetime tiers on classical eval; level 8 is node-anchored (1M) with the official xiangqi NNUE net (`XIANGQI_FSF_NNUE_NET`) on a dedicated binary built from `fairy-stockfish-xiangqi.ref` (`XIANGQI_FSF_ENGINE_REF`, pinned by `xiangqi-fsf-engine-ref.test.ts`); `xiangqiFsfLiveEngineMove` returns the full search summary, plus FSF-to-Pikafish UCI coord conversion |
 | `xiangqi-pikafish-engine.ts` | Mainline-Pikafish move provider and analysis eval for Standard Xiangqi (`pikafish-xiangqi-level-1..8`): drives the stock binary as a UCI subprocess (absolute EvalFile NNUE), `xiangqiLiveEngineMove` / `evaluateXiangqiPosition`, rank-shift coord converters |
 | `xiangqi-random-engine.ts` | Uniformly-random legal-move xiangqi bot (`random-legal-xiangqi`), the calibration floor / 0-Elo anchor: `xiangqiRandomMoveUci` picks a random legal move (rng injectable), EvE-only and kept out of public/playable engine lists; spawns no UCI subprocess |
-| `xiangqi-engine-game.ts` | Engine-vs-engine game runner (`playXiangqiEngineGame`): replays events, drives both seats through the catalog move providers (random-legal handled inline, others via UCI), returns events/result/termination/think-time for EvE persistence |
+| `xiangqi-engine-game.ts` | Standard-xiangqi EvE game (`playXiangqiEngineGame`): a red/black-named wrapper over `variant-eve.ts` with the xiangqi adapter |
+| `variant-eve.ts` | Tenant-variant EvE game loop (`playVariantEngineGame`) driven by a `VariantEveAdapter` (tenant, legal moves, UCI round-trip, search, live-path guard / pre-search): random opening prefix, random-mover floor, kernel validation, events/result/termination/think-time for EvE persistence |
+| `variant-eve-registry.ts` | The adapters the EvE runner can play (`eveAdapterFor`, `EVE_VARIANT_IDS`, `eveRoomId`); a tenant with a bot ladder and no adapter fails `variant-eve-registry.test.ts` |
+| `xiangqi-eve-adapter.ts` | EvE adapter for standard xiangqi (FSF + Pikafish tiers, random floor, immediate-loss guard) |
+| `fortress-xiangqi-eve-adapter.ts` | EvE adapter for Fortress Xiangqi (FSF ladder, random floor, immediate-loss guard) |
+| `duck-xiangqi-eve-adapter.ts` | EvE adapter for Duck Xiangqi (FSF ladder, random floor, take-the-win pre-search, no guard) |
 | `xiangqi-bot-vs-bot-pairing.ts` | Pure pairing policy for automated xiangqi EvE generation over the rung ladder: `pickPairing` across two lanes (content: top-heavy, mirrors allowed; calibration: adjacent cross-tier, never mirror), rng-injected for determinism |
 | `xiangqi-bot-vs-bot-scheduler.ts` | In-server scheduler (`createBotVsBotScheduler` / `startBotVsBotScheduler`) that tops up a backlog of xiangqi EvE tasks per tick; enqueues only (engine-worker runs/persists as `mode='eve'`), `botVsBotEnabled` gated at tick time, pairing delegated to `xiangqi-bot-vs-bot-pairing.ts` |
 | `xiangqi-broadcast-discovery.ts` | Discovery sources: a broadcast source that is a query, not a list (`mistboard-discover://<provider>?...`). Parses/registers providers, resolves the active round from the seeded schedule (`resolveScheduledRound`), and builds the in-memory manifest (`buildDiscoveryManifestSources`), filtering to the scheduled round when boards state their own |
@@ -475,6 +484,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `live-layout.ts` | Live-game static DOM shell and `LiveRefs` wiring for `/room/:id`; mounts the shared `game-table.ts` right column |
 | `live-move-list.ts` | Live-game replay controls and move-list rendering: masked/revealed move rows, active ply tracking, and auto-scroll state |
 | `live-room-actions.ts` | Live-game invite/review/rematch/play-again action row, debug-room link generation, and post-game action visibility |
+| `browser-time-zone.ts` | `browserTimeZone()`: the viewer's IANA zone, sent with the profile request and puzzle attempts so streak days follow the viewer's calendar |
 | `live-status.ts` | Live-game status copy and tone decisions: action banners, board status, room mode label, and seat label |
 | `live-view.ts` | Derived live-game views: current replay projection, fog-history view selection, capture tally, and dev-view reconstruction |
 | `live-sound.ts` | SoundController + `maybePlaySnapshotSound` + per-move sound policy. Owns the audio context, volume tracking, win/lose/capture/castle tone generation. Wired by live-render's render flow + live.ts's snapshot handler |
@@ -620,6 +630,9 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `landing-activity.ts` | Homepage activity box: live presence (`/api/live-stats`) + durable totals (`/api/stats/public`) in the shared `site-box` shell; omitted entirely when both fetches fail |
 | `news-page.ts` | `/news` route: full announcement history as a dated reverse-chronological feed; the landing News box "More" target. Loads `news-page.css` |
 | `news-page.css` | `/news` dated-feed styles loaded by `news-page.ts` |
+| `changelog-data.ts` | Root `CHANGELOG.md` inlined at build time (`?raw`) and parsed to months → headings → entries with inline links/code/bold; `changelogMonths()`. Covers the file's own conventions only, not markdown in general |
+| `changelog-page.ts` | `/changelog` route, lichess.org/changelog-shaped: months newest first with anchors (`#2026-09`), one heading per part of the site, one line per change ending in its commit link; `/feed` is the curated megaphone, this is the complete record. Prerendered to `dist/changelog.html`; `renderChangelogShellForPrerender`. Loads `changelog-page.css` |
+| `changelog-page.css` | `/changelog` month/heading/entry styles loaded by `changelog-page.ts` |
 | `replay-skeleton.ts` | Neutral loading and terminal-failure placeholders for watch/showcase replay slots while renderer kinds swap or mount asynchronously |
 | `showcase-board.ts` | Homepage showcase single-board mount: dispatches between chessground replay and tenant watch renderers, owns compact chess replay options and game-end handoff |
 | `showcase-sheet.ts` | Dev-only variant showcase sheet: renders one showcase board per channel (latest finished game) for quick cross-variant visual review |

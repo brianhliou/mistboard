@@ -424,8 +424,8 @@ describe('account page auth flow', () => {
         (heading) => heading.textContent,
       ),
     ).toEqual(['', 'Bell', 'Email']);
-    // Seven rows, one channel each: five bell-only rows and two email-only rows.
-    expect(document.querySelectorAll('.account-notification-unavailable')).toHaveLength(7);
+    // Eight rows, one channel each: five bell-only rows and three email-only rows.
+    expect(document.querySelectorAll('.account-notification-unavailable')).toHaveLength(8);
     expect(
       [...document.querySelectorAll<HTMLInputElement>('.account-notification-settings input')].map(
         (input) => input.name,
@@ -438,6 +438,7 @@ describe('account page auth flow', () => {
       'followersBell',
       'correspondenceStartEmail',
       'correspondenceDeadlineEmail',
+      'correspondenceTurnDigest',
     ]);
 
     const deadlineEmail = document.querySelector<HTMLInputElement>(

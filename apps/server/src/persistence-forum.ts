@@ -172,7 +172,7 @@ export type AddForumPostResult =
 
 export type UpdateForumPostResult =
   | { ok: true; post: ForumPost }
-  | { ok: false; error: 'post_not_found' | 'forbidden' };
+  | { ok: false; error: 'post_not_found' | 'forbidden' | 'topic_locked' };
 
 export type UpdateForumTopicResult =
   | { ok: true; topic: ForumTopicDetail }
@@ -621,8 +621,9 @@ export async function updateForumPost(input: {
     const { rows: targets } = await client.query<{
       author_account_id: string;
       topic_id: string;
+      locked_at: Date | null;
     }>(
-      `SELECT p.author_account_id, p.topic_id
+      `SELECT p.author_account_id, p.topic_id, t.locked_at
        FROM forum_posts p
        JOIN forum_topics t ON t.id = p.topic_id
        WHERE p.id = $1
@@ -635,6 +636,12 @@ export async function updateForumPost(input: {
     if (!target) return { ok: false, error: 'post_not_found' };
     if (target.author_account_id !== input.editorAccountId && input.editorRole !== 'admin') {
       return { ok: false, error: 'forbidden' };
+    }
+    // A lock freezes the thread as it stands: an author rewriting an old post
+    // under it would be the one edit nobody can answer. Admins still can, the
+    // same way they can still hide.
+    if (target.locked_at && input.editorRole !== 'admin') {
+      return { ok: false, error: 'topic_locked' };
     }
 
     const { rows } = await client.query<ForumPostRow>(

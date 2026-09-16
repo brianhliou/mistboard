@@ -74,6 +74,7 @@ export const ZH_HANS_ACCOUNT = {
   'account.notificationFollowers': '新粉丝',
   'account.notificationCorrespondenceDeadline': '通信棋截止时间提醒',
   'account.notificationCorrespondenceStart': '通信棋对局开始',
+  'account.notificationCorrespondenceDigest': '每日汇总：等你走棋的对局',
   'account.preferenceSaved': '偏好已保存。',
   'account.settingsUsername': '更改用户名',
   'account.settingsUsernameCopy': '用户名会公开显示，并用于标识你的资料。',
@@ -201,7 +202,6 @@ export const ZH_HANS_ACCOUNT = {
   'account.displayPieceDestinations': '落子提示（合法着法与预走）',
   'account.displayBoardCoordinates': '棋盘坐标（A-H，1-8）',
   'account.displayMoveListWhilePlaying': '对局中显示着法列表',
-  'account.displayMoveNotation': '着法记谱',
   'account.displayZenMode': '禅模式',
   'account.displayBoardResizeHandle': '显示棋盘缩放手柄',
   'account.displayPlayerRatings': '显示玩家评分',
@@ -212,7 +212,4 @@ export const ZH_HANS_ACCOUNT = {
   'account.displayOption.pieceAnimation.fast': '快',
   'account.displayOption.pieceAnimation.normal': '正常',
   'account.displayOption.pieceAnimation.slow': '慢',
-  'account.displayOption.moveNotation.symbols': '符号',
-  'account.displayOption.moveNotation.letters': '字母',
-  'account.displayOption.moveNotation.coordinates': '坐标',
 } satisfies Partial<Record<AccountI18nKey, string>>;

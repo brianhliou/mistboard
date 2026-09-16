@@ -5,9 +5,10 @@ import {
   applyStandardXiangqiMove,
   getStandardXiangqiLegalMoves,
 } from './variants-xiangqi-standard.js';
-import { importXiangqiGame } from './xiangqi-import.js';
+import { importXiangqiGame, resolveXiangqiMoveInFormat } from './xiangqi-import.js';
 import {
   describeXiangqiRelativeMove,
+  formatXiangqiAlgebraicMove,
   formatXiangqiMove,
   formatXiangqiMoves,
   formatXiangqiRelativeMove,
@@ -34,11 +35,14 @@ test('formats the classic opening moves in every style', () => {
 
   assert.equal(formatXiangqiMove(initial, cannon, 'coordinate'), 'h3-e3');
   assert.equal(formatXiangqiMove(initial, cannon, 'iccs'), 'h2e2');
+  // Both cannons can reach e3 from the opening, so chess-style origin file.
+  assert.equal(formatXiangqiMove(initial, cannon, 'algebraic'), 'Che3');
   assert.equal(formatXiangqiMove(initial, cannon, 'wxf'), 'C2.5');
   assert.equal(formatXiangqiMove(initial, cannon, 'chinese-simplified'), '炮二平五');
   assert.equal(formatXiangqiMove(initial, cannon, 'chinese-traditional'), '炮二平五');
 
   const horse: XiangqiMove = { from: 'h1', to: 'g3' };
+  assert.equal(formatXiangqiMove(initial, horse, 'algebraic'), 'Hg3');
   assert.equal(formatXiangqiMove(initial, horse, 'wxf'), 'H2+3');
   assert.equal(formatXiangqiMove(initial, horse, 'chinese-simplified'), '马二进三');
   assert.equal(formatXiangqiMove(initial, horse, 'chinese-traditional'), '馬二進三');
@@ -181,6 +185,61 @@ test('random games round-trip through the importer in every relative style', () 
   }
   // The fallback escape hatch above must stay the exception, not the rule.
   assert.ok(roundTripped >= 40, `only ${roundTripped} of 45 game/style records round-tripped`);
+});
+
+// Algebraic is the chess reader's notation: piece letter + destination, `x` on
+// capture, origin only when two pieces of the role can reach the square.
+test('algebraic marks captures, checks and mate', () => {
+  const initial = createInitialXiangqiState('t');
+  // 1. Che3 Hc8 2. Cxe7: the central cannon jumps its own e4 soldier to take
+  // the black centre soldier. No check: nothing screens e7 from e10 afterward.
+  let state = applyStandardXiangqiMove(initial, { from: 'h3', to: 'e3' });
+  state = applyStandardXiangqiMove(state, { from: 'b10', to: 'c8' });
+  assert.ok(state.board.e7, 'black centre soldier stands on e7');
+  assert.equal(formatXiangqiMove(state, { from: 'e3', to: 'e7' }, 'algebraic'), 'Cxe7');
+
+  // Chariot to the back rank: check, with e9 still open to the general.
+  const checkState = stateFromFen('4k4/9/9/9/9/9/9/9/9/R4K3 r');
+  assert.equal(formatXiangqiAlgebraicMove(checkState, { from: 'a1', to: 'a10' }), 'Ra10+');
+  // The same with a second chariot holding rank 9: mate.
+  const mateState = stateFromFen('4k4/7R1/9/9/9/9/9/9/9/R4K3 r');
+  assert.equal(formatXiangqiAlgebraicMove(mateState, { from: 'a1', to: 'a10' }), 'Ra10#');
+});
+
+test('algebraic disambiguates by file, then rank, then square, and parses back', () => {
+  // Two red chariots on the second rank can both reach d2: name the file.
+  const twoChariotsRank = stateFromFen('4k4/9/9/9/9/9/9/9/R7R/5K3 r');
+  assert.equal(formatXiangqiAlgebraicMove(twoChariotsRank, { from: 'a2', to: 'd2' }), 'Rad2');
+  // Two red chariots on one file: the rank settles it.
+  const twoChariotsFile = stateFromFen('4k4/9/9/9/9/9/9/R8/9/R4K3 r');
+  assert.equal(formatXiangqiAlgebraicMove(twoChariotsFile, { from: 'a1', to: 'a2' }), 'R1a2');
+  // Every formatted token resolves back to its own move.
+  for (const [state, move] of [
+    [twoChariotsRank, { from: 'a2', to: 'd2' }],
+    [twoChariotsFile, { from: 'a1', to: 'a2' }],
+    [twoChariotsFile, { from: 'a3', to: 'a2' }],
+  ] as const) {
+    const token = formatXiangqiAlgebraicMove(state, move);
+    assert.ok(token, 'formatted');
+    assert.deepEqual(resolveXiangqiMoveInFormat(token!, state, 'algebraic'), move, token!);
+  }
+  // A token that names two moves is refused, never guessed.
+  assert.equal(resolveXiangqiMoveInFormat('Rd2', twoChariotsRank, 'algebraic'), null);
+});
+
+test('random games round-trip through the importer in algebraic', () => {
+  for (let seed = 1; seed <= 8; seed += 1) {
+    const moves = randomPlayout(seed * 7919 + 13, 100);
+    const labels = formatXiangqiMoves(moves, 'algebraic');
+    assert.ok(
+      labels.every((label) => !COORDINATE_LABEL.test(label)),
+      `seed ${seed}: algebraic fell back to coordinate`,
+    );
+    const imported = importXiangqiGame(labels.join(' '));
+    assert.equal(imported.error, undefined, `seed ${seed}: ${imported.error}`);
+    assert.equal(imported.format, 'algebraic');
+    assert.deepEqual(imported.moves, moves, `seed ${seed}`);
+  }
 });
 
 test('random games round-trip through the importer in coordinate and ICCS', () => {

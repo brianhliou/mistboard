@@ -267,6 +267,7 @@ export async function manualXiangqiBroadcastPollForApi(
 
   const result = await pollSource({
     sourceUrl: tour.sourceUrl,
+    tourSlug: tour.slug,
     allowCorrection: options.allowCorrection,
     dryRun: options.dryRun,
     timeoutMs: options.timeoutMs,

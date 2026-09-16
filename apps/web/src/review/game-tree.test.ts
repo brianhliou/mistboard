@@ -9,7 +9,8 @@ import {
   getStandardXiangqiLegalMoves,
   type XiangqiMove,
 } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { pinXiangqiNotation } from '../xiangqi-notation.js';
 import { createGameTree, ROOT_PATH } from './game-tree.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 
@@ -28,6 +29,11 @@ function realMoves(): { mainline: XiangqiMove[]; altFirst: XiangqiMove; illegal:
   const illegal: XiangqiMove = { from: m1.from, to: m1.from };
   return { mainline: [m1, m2, m3], altFirst, illegal };
 }
+
+// These tests locate cells by from-to text; pin coordinate labels so the
+// reader's notation default (algebraic) does not become the subject.
+beforeEach(() => pinXiangqiNotation('coordinate'));
+afterEach(() => pinXiangqiNotation(null));
 
 describe('createGameTree (xiangqi adapter)', () => {
   it('starts empty at the root', () => {

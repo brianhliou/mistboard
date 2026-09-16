@@ -8,7 +8,6 @@ import { readStoredSoundSet, type SoundSetId, storeSoundSet } from './sound-sets
 import {
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
-  readStoredXiangqiNotation,
   readStoredXiangqiPieceSet,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiBoardTheme,
@@ -18,7 +17,10 @@ import {
   type XiangqiBoardTheme,
   type XiangqiNotationPreference,
 } from './xiangqi-appearance-storage.js';
-import { xiangqiNotationChangedEvent } from './xiangqi-notation.js';
+import {
+  currentXiangqiNotationPreference,
+  xiangqiNotationChangedEvent,
+} from './xiangqi-notation.js';
 import type { XiangqiPieceSet } from './xiangqi-piece-sets.js';
 
 export {
@@ -532,7 +534,7 @@ function syncThemeControls(): void {
     button.setAttribute('aria-checked', String(isActive));
     button.classList.toggle('selected', isActive);
   });
-  const notation = readStoredXiangqiNotation();
+  const notation = currentXiangqiNotationPreference();
   document
     .querySelectorAll<HTMLButtonElement>('button[data-xq-notation-option]')
     .forEach((button) => {

@@ -355,7 +355,7 @@ export function legalMoveForUci(
  * Replace a move that lets the opponent win on the immediate reply with any legal
  * move that does not — a cheap king-safety backstop matching the Drop Mini loop.
  */
-function guardFortressXiangqiEngineMove(
+export function guardFortressXiangqiEngineMove(
   state: FortressXiangqiGameState,
   chosen: FortressXiangqiMove,
   legalMoves: readonly FortressXiangqiMove[],

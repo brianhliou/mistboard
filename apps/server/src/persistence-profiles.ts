@@ -23,6 +23,7 @@ import { getPool, withTransaction } from './persistence-db.js';
 import type { GameMode, GameTermination, GameVisibility } from './persistence-game-lifecycle.js';
 import type { GameParticipantColor, GameResult, ProfileGameRecord } from './persistence-games.js';
 import { attachGameParticipants } from './persistence-games.js';
+import { getPuzzleStreak } from './persistence-puzzle-streak.js';
 import type { PlayerTitle } from './persistence-titles.js';
 import {
   bucketForGame,
@@ -113,6 +114,10 @@ export type UserProfile = {
   ratings: ProfileBucketRating[];
   // Per-variant puzzle ratings (empty when the user has attempted no puzzles).
   puzzleRatings: ProfilePuzzleRating[];
+  // Consecutive days with a puzzle solved, on the calendar of the time zone the
+  // caller passed (the viewer's browser; exact for your own profile, a close
+  // read for anyone else's).
+  puzzleStreak: { current: number; best: number };
   // First page of games (newest first). Older pages load via getUserGamesPage.
   games: ProfileGameRecord[];
   // Total completed games visible to the viewer, so the client can show an
@@ -441,6 +446,7 @@ async function queryUserGames(
 export async function getUserProfileByHandle(
   handle: string,
   viewerUserId: string | null,
+  options: { timeZone?: string | null } = {},
 ): Promise<UserProfile | null> {
   const user = await loadProfileUser(handle);
   if (!user) return null;
@@ -576,6 +582,8 @@ export async function getUserProfileByHandle(
     attempts: row.attempts,
   }));
 
+  const puzzleStreak = await getPuzzleStreak(user.id, { timeZone: options.timeZone });
+
   return {
     user: {
       handle: user.handle,
@@ -592,6 +600,7 @@ export async function getUserProfileByHandle(
     },
     ratings,
     puzzleRatings,
+    puzzleStreak: { current: puzzleStreak.current, best: puzzleStreak.best },
     games,
     gamesTotal,
   };

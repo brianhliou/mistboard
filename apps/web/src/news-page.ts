@@ -106,10 +106,25 @@ export function buildNewsPage(locale: Locale = currentLocale()): HTMLElement {
     item.append(date, body);
     list.append(item);
   }
-  section.append(list);
+  section.append(list, buildChangelogFooter(locale));
   highlightHashEntry(section);
 
   return section;
+}
+
+// This page is the curated megaphone; the complete record, removals and fixes
+// included, is /changelog. One line at the foot so a reader who scrolled the
+// whole archive knows the rest exists.
+function buildChangelogFooter(locale: Locale): HTMLElement {
+  const footer = document.createElement('p');
+  footer.className = 'news-page-footer';
+  footer.append(`${t('changelog.feedFooter', {}, locale)} `);
+  const link = document.createElement('a');
+  link.className = 'news-page-subscribe';
+  link.href = localizedHref('/changelog', locale);
+  link.textContent = t('changelog.heading', {}, locale);
+  footer.append(link, t('changelog.sentenceEnd', {}, locale));
+  return footer;
 }
 
 /** Bring the linked entry into view and mark it, so arriving from the News rail

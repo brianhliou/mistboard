@@ -2,6 +2,7 @@
 
 import { FORTRESS_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, type RatingVariant } from '@mistboard/game';
 import './account-profile.css';
+import { browserTimeZone } from './browser-time-zone.js';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { correspondenceEnabled } from './feature-flags.js';
@@ -97,6 +98,11 @@ type UserProfile = {
   ratings: ProfileBucketRating[];
   // Per-variant puzzle ratings; absent/empty when the user has solved no puzzles.
   puzzleRatings?: ProfilePuzzleRating[];
+  // Consecutive days with a completed game, on the viewer's calendar; absent
+  // from older payloads.
+  // Consecutive days with a puzzle solved, on the viewer's calendar; absent
+  // from older payloads.
+  puzzleStreak?: { current: number; best: number };
   games: FeaturedGame[];
   gamesTotal: number;
 };
@@ -264,7 +270,12 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
       tabs.setGamesVariant(variant);
     },
   });
-  appendProfilePuzzleRatings(ratings, profile.puzzleRatings ?? [], locale);
+  appendProfilePuzzleRatings(
+    ratings,
+    profile.puzzleRatings ?? [],
+    profile.puzzleStreak ?? null,
+    locale,
+  );
 
   shell.append(buildProfileDashboard(ratings, overview, tabs.el));
 }
@@ -838,7 +849,9 @@ function renderLeaderboardTable(
 }
 
 async function fetchUserProfile(handle: string): Promise<UserProfile> {
-  const resp = await fetch(`/api/users/${encodeURIComponent(handle)}/profile`);
+  // The play streak counts days on the viewer's calendar (play-streak.ts).
+  const query = new URLSearchParams({ tz: browserTimeZone() });
+  const resp = await fetch(`/api/users/${encodeURIComponent(handle)}/profile?${query}`);
   if (resp.status === 404) throw new ProfileNotFound();
   if (!resp.ok) throw new Error(`failed to load profile: ${resp.status}`);
   const data = (await resp.json()) as { profile: UserProfile };
@@ -2159,23 +2172,43 @@ function puzzleVariantLabel(variant: string): string {
 
 // Append a "Puzzles" block to the ratings column: one row per variant the user
 // has attempted, showing the Glicko rating (with a "?" while provisional) and
-// the solved count. No-op when the user has no puzzle history, so the block only
-// appears once there is something to show.
+// the solved count, then a streak row (consecutive days with a solve) once one
+// has ever started. No-op when the user has no puzzle history, so the block
+// only appears once there is something to show.
 function appendProfilePuzzleRatings(
   section: HTMLElement,
   puzzleRatings: ProfilePuzzleRating[],
+  puzzleStreak: ProfileStreak | null,
   locale: Locale,
 ): void {
   const visibleRatings = puzzleRatings.filter(
     (entry) => !HIDDEN_PROFILE_PUZZLE_VARIANTS.has(entry.variant),
   );
-  if (visibleRatings.length === 0) return;
+  const streak = puzzleStreak && puzzleStreak.best >= 1 ? puzzleStreak : null;
+  if (visibleRatings.length === 0 && !streak) return;
 
   const block = document.createElement('div');
   block.className = 'profile-puzzle-ratings';
 
   const heading = document.createElement('h2');
-  heading.textContent = t('nav.puzzles', {}, locale);
+  const title = document.createElement('span');
+  title.textContent = t('nav.puzzles', {}, locale);
+  heading.append(title);
+  // The streak rides on the heading line rather than as a row of its own: one
+  // fact about the whole surface, not a rating, and no extra rule in the rail.
+  if (streak) {
+    const line = document.createElement('span');
+    line.className = 'profile-puzzle-streak';
+    line.textContent =
+      streak.current > 0
+        ? t(
+            'profile.streakCurrent',
+            { days: streakDays(streak.current, locale), best: streakDays(streak.best, locale) },
+            locale,
+          )
+        : t('profile.streakLapsed', { best: streakDays(streak.best, locale) }, locale);
+    heading.append(line);
+  }
   block.append(heading);
 
   const rail = document.createElement('div');
@@ -2209,6 +2242,14 @@ function appendProfilePuzzleRatings(
 
   block.append(rail);
   section.append(block);
+}
+
+type ProfileStreak = { current: number; best: number };
+
+function streakDays(days: number, locale: Locale): string {
+  return days === 1
+    ? t('profile.streakDaysOne', {}, locale)
+    : t('profile.streakDays', { count: days }, locale);
 }
 
 // One variant row in the ratings rail: compact mini-board beside its name,

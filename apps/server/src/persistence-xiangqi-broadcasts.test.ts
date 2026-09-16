@@ -492,6 +492,24 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(Object.hasOwn(malformedLog?.payload ?? {}, 'body'), false);
   });
 
+  test('source poller stamps its failure logs with the tour it was polling for', async () => {
+    const malformed = await pollXiangqiBroadcastSourceOnce({
+      sourceUrl: 'https://fixture.invalid/source.json',
+      tourSlug: '2026-shanghai-cup',
+      sourcePolicy: FIXTURE_SOURCE_POLICY,
+      fetchImpl: sourceFetch({ malformed: true, boards: { bad: true } }),
+    });
+    assert.equal(malformed.ok, false);
+    // The tour endpoint reads health as the newest log WITH its slug, so an
+    // unstamped error is invisible there: five days of source_malformed on the
+    // 2026 Shanghai Cup read as "no sync log" while the source was misconfigured.
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: '2026-shanghai-cup' });
+    assert.deepEqual(
+      logs.map((log) => log.kind),
+      ['source_malformed'],
+    );
+  });
+
   test('source poller rejects disallowed URLs before fetch', async () => {
     const result = await pollXiangqiBroadcastSourceOnce({
       sourceUrl: 'https://unapproved.example/source.json',

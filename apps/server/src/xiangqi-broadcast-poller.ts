@@ -8,9 +8,14 @@ import { defaultXiangqiBroadcastFetch } from './xiangqi-broadcast-fetch.js';
 
 export type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 
-import { listXiangqiBroadcastRounds } from './persistence-xiangqi-broadcasts.js';
+import {
+  listXiangqiBroadcastBoards,
+  listXiangqiBroadcastRounds,
+} from './persistence-xiangqi-broadcasts.js';
 import {
   buildDiscoveryManifestSources,
+  buildStatedRoundManifestSources,
+  type DiscoverySource,
   isXiangqiBroadcastDiscoveryUrl,
   NO_ACTIVE_ROUND_MESSAGE,
   parseXiangqiBroadcastDiscoverySource,
@@ -282,10 +287,19 @@ type PollContext = {
   dryRun: boolean;
   fetchImpl: XiangqiBroadcastSourceFetch;
   sourcePolicy: XiangqiBroadcastSourceUrlPolicy;
+  /**
+   * The tour this poll is for, when the caller knows it (the scheduler always
+   * does; a discovery URL pins it). Every sync log the poll writes carries it,
+   * because the tour endpoint reads its health as "the newest log with my
+   * slug": an error written without one is invisible there, and that is how
+   * the Shanghai Cup tour reported no sync log at all through five days of
+   * source_malformed on every poll.
+   */
+  tourSlug?: string;
 };
 
 async function recordSourceError(
-  context: Pick<PollContext, 'dryRun'>,
+  context: Pick<PollContext, 'dryRun' | 'tourSlug'>,
   input: {
     sourceUrl: string;
     kind: XiangqiBroadcastPollErrorKind;
@@ -295,6 +309,7 @@ async function recordSourceError(
 ): Promise<void> {
   if (context.dryRun) return;
   await persistence.recordXiangqiBroadcastSyncLog({
+    ...(context.tourSlug ? { tourSlug: context.tourSlug } : {}),
     severity: 'error',
     kind: input.kind,
     message: input.message,
@@ -306,7 +321,7 @@ async function recordSourceError(
 }
 
 async function recordSkippedFrames(
-  context: Pick<PollContext, 'dryRun'>,
+  context: Pick<PollContext, 'dryRun' | 'tourSlug'>,
   sourceUrl: string,
   issues: WxfDhtmlXqIssue[],
 ): Promise<void> {
@@ -536,8 +551,13 @@ async function discoverManifest(
     XIANGQI_BROADCAST_MANIFEST_MAX_SOURCES,
   );
   if (!parsed.ok) return { ok: false, kind: 'source_malformed', message: parsed.message };
+  context.tourSlug ??= parsed.source.tourSlug;
 
   const rounds = await listXiangqiBroadcastRounds(parsed.source.tourSlug);
+  if (parsed.source.provider.statesRounds) {
+    return discoverStatedRounds(context, parsed.source, rounds);
+  }
+
   const round = resolveScheduledRound(
     rounds.flatMap((row) =>
       row.startsAt ? [{ id: row.id, name: row.name, startsAt: new Date(row.startsAt) }] : [],
@@ -583,6 +603,64 @@ async function discoverManifest(
     );
   }
 
+  return {
+    ok: true,
+    manifest: { schema: XIANGQI_BROADCAST_MANIFEST_SCHEMA, sources: built.sources },
+  };
+}
+
+// A provider that states each board's round is filed by those rounds and is
+// never time-gated: see buildStatedRoundManifestSources for why. Boards the
+// store already holds complete are left out of the manifest, so an idle tour
+// costs one list fetch per poll and a finished league costs nothing more.
+async function discoverStatedRounds(
+  context: PollContext,
+  source: DiscoverySource,
+  rounds: Awaited<ReturnType<typeof listXiangqiBroadcastRounds>>,
+): Promise<
+  | { ok: true; manifest: XiangqiBroadcastSourceManifest }
+  | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string; quiet?: true }
+> {
+  const discovered = await source.provider.discover({
+    config: source.config,
+    fetchImpl: context.fetchImpl,
+    timeoutMs: context.timeoutMs,
+  });
+  if (!discovered.ok) {
+    return { ok: false, kind: 'source_fetch_error', message: discovered.message };
+  }
+
+  const completeUrls = new Set<string>();
+  for (const round of rounds) {
+    for (const board of await listXiangqiBroadcastBoards(round.id)) {
+      if (board.status === 'complete' && board.sourceUrl) completeUrls.add(board.sourceUrl);
+    }
+  }
+
+  const built = buildStatedRoundManifestSources({
+    source,
+    boards: discovered.boards,
+    rounds: rounds.map((row) => ({ id: row.id, ...(row.name ? { name: row.name } : {}) })),
+    completeUrls,
+  });
+  if (!built.ok) {
+    return {
+      ok: false,
+      kind: 'source_malformed',
+      message: built.message,
+      ...(built.quiet ? { quiet: true as const } : {}),
+    };
+  }
+  if (built.droppedForCap > 0 || built.droppedUnscheduled > 0) {
+    // The cap is not a loss here (the rest come on the next poll, since the
+    // imported ones drop out), but an unseeded round is: those boards never
+    // land until someone seeds it, so say so where an operator will look.
+    console.warn(
+      `[xiangqi-broadcast] ${source.provider.name} kept ${built.sources.length} board(s), ` +
+        `deferred ${built.droppedForCap} over the manifest cap, ` +
+        `dropped ${built.droppedUnscheduled} for rounds the schedule has not seeded`,
+    );
+  }
   return {
     ok: true,
     manifest: { schema: XIANGQI_BROADCAST_MANIFEST_SCHEMA, sources: built.sources },
@@ -724,6 +802,8 @@ async function pollSourceOutcomes(
 
 export async function pollXiangqiBroadcastSourceOnce(input: {
   sourceUrl: string;
+  /** Tour the poll belongs to, stamped on every sync log it writes. */
+  tourSlug?: string;
   allowCorrection?: boolean;
   dryRun?: boolean;
   timeoutMs?: number;
@@ -736,6 +816,7 @@ export async function pollXiangqiBroadcastSourceOnce(input: {
     dryRun: input.dryRun ?? false,
     fetchImpl: input.fetchImpl ?? defaultXiangqiBroadcastFetch,
     sourcePolicy: input.sourcePolicy ?? xiangqiBroadcastSourceUrlPolicyFromEnv(),
+    ...(input.tourSlug ? { tourSlug: input.tourSlug } : {}),
   };
 
   const polled = await pollSourceOutcomes(context, input.sourceUrl);

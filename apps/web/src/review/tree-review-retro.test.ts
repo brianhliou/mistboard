@@ -3,7 +3,8 @@
 // hidden, stepping into the played move fails, the solution is viewable, and
 // closing puts the advice back. The engine-graded path is covered in retro.test.ts.
 import type { XiangqiMove } from '@mistboard/game';
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { pinXiangqiNotation } from '../xiangqi-notation.js';
 import type { GameAnalysis } from './game-analysis.js';
 import { mountXiangqiReview } from './xiangqi-review.js';
 
@@ -58,6 +59,11 @@ const currentMove = (root: HTMLElement): string =>
 const box = (root: HTMLElement): HTMLElement | null => root.querySelector('.retro-box');
 const feedback = (root: HTMLElement): string =>
   root.querySelector('.retro-box__feedback')?.className.replace(/.*--/, '') ?? '';
+
+// These tests locate cells by from-to text; pin coordinate labels so the
+// reader's notation default (algebraic) does not become the subject.
+beforeEach(() => pinXiangqiNotation('coordinate'));
+afterEach(() => pinXiangqiNotation(null));
 
 describe('learn from your mistakes (mounted)', () => {
   afterEach(() => {

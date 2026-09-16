@@ -15,6 +15,7 @@ export type AccountPreferences = {
   challengesBell: boolean;
   correspondenceDeadlineEmail: boolean;
   correspondenceStartEmail: boolean;
+  correspondenceTurnDigest: boolean;
   forumAutoTranslate: boolean;
 };
 
@@ -30,6 +31,7 @@ export const defaultAccountPreferences: AccountPreferences = {
   challengesBell: true,
   correspondenceDeadlineEmail: true,
   correspondenceStartEmail: true,
+  correspondenceTurnDigest: true,
   forumAutoTranslate: true,
 };
 
@@ -104,6 +106,10 @@ export function normalizeAccountPreferences(value: unknown): AccountPreferences 
     correspondenceDeadlineEmail: booleanOrDefault(
       parsed.correspondenceDeadlineEmail,
       defaultAccountPreferences.correspondenceDeadlineEmail,
+    ),
+    correspondenceTurnDigest: booleanOrDefault(
+      parsed.correspondenceTurnDigest,
+      defaultAccountPreferences.correspondenceTurnDigest,
     ),
     forumAutoTranslate: booleanOrDefault(
       parsed.forumAutoTranslate,

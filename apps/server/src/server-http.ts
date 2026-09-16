@@ -523,6 +523,19 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // The changelog, prerendered: the committed CHANGELOG.md is the whole page.
+    if (pathname === '/changelog') {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: 'changelog.html',
+      }).catch(() => {
+        request.url = '/';
+        void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
     // Default-locale learn page gets its prerendered stage map; localized
     // paths stay on the client-rendered shell below.
     if (pathname === '/learn/xiangqi') {

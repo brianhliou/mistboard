@@ -68,6 +68,7 @@ describe('about page platform activity', () => {
       'About Mistboard',
       'Statistics',
       'Mistboard updates',
+      'Changelog',
       'FAQ',
       'Contact',
       'Mistboard Patron',

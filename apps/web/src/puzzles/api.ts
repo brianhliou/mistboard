@@ -6,6 +6,7 @@
  * threading them through every call.
  */
 
+import { browserTimeZone } from '../browser-time-zone.js';
 import type { PuzzleDetail, PuzzleMove, PuzzleState, PuzzleSummary } from './adapter.js';
 
 export type PuzzleAttempt =
@@ -111,24 +112,42 @@ async function throwIfPlayDisabled(response: Response): Promise<void> {
   if (body.error === 'play_disabled') throw new PuzzlePlayDisabledError('play disabled');
 }
 
+// Consecutive days with a puzzle solved, on the solver's own calendar; comes
+// back with a completed solve for signed-in users, absent for guests.
+export type PuzzleStreak = { current: number; best: number };
+
 export async function submitPuzzleAttempt(
   id: string,
   moves: readonly PuzzleMove[],
   qualitySessionId?: string,
-): Promise<{ attempt: PuzzleAttempt; rating: PuzzleAttemptRating | null }> {
+): Promise<{
+  attempt: PuzzleAttempt;
+  rating: PuzzleAttemptRating | null;
+  streak: PuzzleStreak | null;
+}> {
   const response = await fetch(`/api/puzzles/${encodeURIComponent(id)}/attempt`, {
     method: 'POST',
     headers: { 'content-type': 'application/json' },
-    body: JSON.stringify({ moves, rated: puzzleRatedPref, qualitySessionId }),
+    body: JSON.stringify({
+      moves,
+      rated: puzzleRatedPref,
+      qualitySessionId,
+      timeZone: browserTimeZone(),
+    }),
   });
   await throwIfPlayDisabled(response);
   if (!response.ok) throw new Error(`Puzzle attempt failed: ${response.status}`);
   const body = (await response.json()) as {
     attempt?: PuzzleAttempt;
     rating?: PuzzleAttemptRating;
+    streak?: Partial<PuzzleStreak>;
   };
   if (!body.attempt) throw new Error('Puzzle attempt response missing attempt.');
-  return { attempt: body.attempt, rating: body.rating ?? null };
+  const streak =
+    body.streak && typeof body.streak.current === 'number' && typeof body.streak.best === 'number'
+      ? { current: body.streak.current, best: body.streak.best }
+      : null;
+  return { attempt: body.attempt, rating: body.rating ?? null, streak };
 }
 
 // Fetch the full solution line (the reveal endpoint is the only route that

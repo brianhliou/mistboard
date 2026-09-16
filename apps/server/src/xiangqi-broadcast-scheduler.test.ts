@@ -37,6 +37,7 @@ function failedResult(): XiangqiBroadcastPollResult {
 type Harness = {
   deps: XiangqiBroadcastSchedulerDeps;
   polls: string[];
+  pollSlugs: string[];
   logs: unknown[];
   advance(ms: number): void;
   setTours(tours: Array<{ slug: string; sourceUrl: string | null; pollIntervalMs: number }>): void;
@@ -48,6 +49,7 @@ function harness(): Harness {
   let tours: Array<{ slug: string; sourceUrl: string | null; pollIntervalMs: number }> = [];
   let pollResult: XiangqiBroadcastPollResult = okResult();
   const polls: string[] = [];
+  const pollSlugs: string[] = [];
   const logs: unknown[] = [];
   return {
     polls,
@@ -61,10 +63,12 @@ function harness(): Harness {
     setPollResult(result) {
       pollResult = result;
     },
+    pollSlugs,
     deps: {
       listScheduledTours: async () => tours.map((tour) => ({ ...tour, pollEnabled: true })),
       poll: async (input) => {
         polls.push(input.sourceUrl);
+        pollSlugs.push(input.tourSlug);
         return pollResult;
       },
       recordSyncLog: async (input) => {
@@ -175,4 +179,17 @@ test('scheduler skips tours without a source and drops disabled tours', async ()
   h.advance(10_001);
   await scheduler.tick();
   assert.equal(h.polls.length, 1, 'disabled tour is no longer polled');
+});
+
+// The poller stamps every sync log it writes with this slug; without it the
+// tour endpoint, which reads health as "newest log with my slug", showed no log
+// at all through five days of failed polls on the 2026 Shanghai Cup.
+test('scheduler hands each poll the tour it is polling for', async () => {
+  const h = harness();
+  h.setTours([
+    { slug: 'wxc', sourceUrl: 'https://fixture.invalid/source.json', pollIntervalMs: 10_000 },
+  ]);
+  const scheduler = createXiangqiBroadcastScheduler(h.deps);
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs, ['wxc']);
 });

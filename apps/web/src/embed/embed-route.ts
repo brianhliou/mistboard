@@ -35,7 +35,7 @@ export function embedThemeFromSearch(search: string): 'light' | 'dark' | null {
 }
 
 /**
- * `?notation=wxf` (or `chinese`, `iccs`, `coordinate`) on an embed URL, pinning
+ * `?notation=wxf` (or `algebraic`, `chinese`, `iccs`, `coordinate`) on an embed URL, pinning
  * the move labels instead of following the reader's own setting.
  *
  * Same shape of problem as `theme`, for the same reason: the reader of an embed
@@ -50,11 +50,15 @@ export function embedThemeFromSearch(search: string): 'light' | 'dark' | null {
  * mistboard.com's origin, so a write would change the reader's setting for the
  * whole site from inside someone else's page.
  */
-export function embedNotationFromSearch(
-  search: string,
-): 'coordinate' | 'chinese' | 'wxf' | 'iccs' | null {
+export type EmbedNotation = 'algebraic' | 'coordinate' | 'chinese' | 'wxf' | 'iccs';
+
+export function embedNotationFromSearch(search: string): EmbedNotation | null {
   const value = new URLSearchParams(search).get('notation');
-  return value === 'coordinate' || value === 'chinese' || value === 'wxf' || value === 'iccs'
+  return value === 'algebraic' ||
+    value === 'coordinate' ||
+    value === 'chinese' ||
+    value === 'wxf' ||
+    value === 'iccs'
     ? value
     : null;
 }

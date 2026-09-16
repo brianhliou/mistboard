@@ -127,6 +127,11 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Contribute | Mistboard',
     description: 'Mistboard is free and open source. Ways to help, whether or not you write code.',
   },
+  '/changelog': {
+    title: 'Changelog | Mistboard',
+    description:
+      'Every change to mistboard.com, month by month, newest first: playing, learning, watching, community, the site, removals and fixes, each linking its commit.',
+  },
   '/learn/xiangqi': {
     title: 'Learn Chinese Chess (Xiangqi) | Mistboard',
     description:
@@ -668,6 +673,7 @@ export async function servePrerenderedPage(params: {
     | 'player.html'
     | 'learn-xiangqi.html'
     | 'feed.html'
+    | 'changelog.html'
     | 'puzzles.html'
     | 'patron.html';
 }): Promise<void> {
@@ -712,6 +718,7 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/faq',
   '/patron',
   '/contribute',
+  '/changelog',
   '/developers',
   '/api-docs',
 ];

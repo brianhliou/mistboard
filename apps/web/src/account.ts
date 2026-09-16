@@ -855,6 +855,13 @@ function buildNotificationSettings(user: AuthUser, locale: Locale = currentLocal
       'correspondenceDeadlineEmail',
       locale,
     ),
+    buildNotificationPreferenceRow(
+      user,
+      t('account.notificationCorrespondenceDigest', {}, locale),
+      null,
+      'correspondenceTurnDigest',
+      locale,
+    ),
   );
   table.append(head, body);
   panel.append(table);
@@ -874,7 +881,10 @@ type BellPreferenceId =
   | 'challengesBell'
   | 'forumBell'
   | 'followersBell';
-type EmailPreferenceId = 'correspondenceDeadlineEmail' | 'correspondenceStartEmail';
+type EmailPreferenceId =
+  | 'correspondenceDeadlineEmail'
+  | 'correspondenceStartEmail'
+  | 'correspondenceTurnDigest';
 const BELL_PREFERENCE_IDS = new Set<string>([
   'inboxBell',
   'correspondenceBell',
@@ -1671,7 +1681,6 @@ function displayPreferenceLabel(id: DisplayPreferenceId, locale: Locale): string
     pieceDestinations: 'account.displayPieceDestinations',
     boardCoordinates: 'account.displayBoardCoordinates',
     moveListWhilePlaying: 'account.displayMoveListWhilePlaying',
-    moveNotation: 'account.displayMoveNotation',
     zenMode: 'account.displayZenMode',
     boardResizeHandle: 'account.displayBoardResizeHandle',
     playerRatings: 'account.displayPlayerRatings',
@@ -1697,13 +1706,8 @@ function displayPreferenceOptionLabel(
       normal: 'account.displayOption.pieceAnimation.normal',
       slow: 'account.displayOption.pieceAnimation.slow',
     },
-    moveNotation: {
-      symbols: 'account.displayOption.moveNotation.symbols',
-      letters: 'account.displayOption.moveNotation.letters',
-      coordinates: 'account.displayOption.moveNotation.coordinates',
-    },
   } as const;
-  if (id !== 'pieceAnimation' && id !== 'moveNotation') {
+  if (id !== 'pieceAnimation') {
     return value;
   }
   const key = keys[id][value as keyof (typeof keys)[typeof id]];

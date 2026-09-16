@@ -397,6 +397,7 @@ function createPuzzleSession(puzzle: PuzzleDetail): PuzzleSession {
     revealed: false,
     focusNext: false,
     vote: null,
+    streak: null,
   };
 }
 
@@ -653,7 +654,7 @@ async function submitMove(
     session.qualitySessionId,
   ).catch(playLockRefusal);
   if (submitted === PLAY_LOCKED) return showPlayLocked(session, renderSession);
-  const { attempt, rating } = submitted;
+  const { attempt, rating, streak } = submitted;
   session.submitting = false;
   session.selectedSquare = null;
   session.selectedDrop = null;
@@ -665,6 +666,7 @@ async function submitMove(
     if (attempt.complete) {
       session.solved = true;
       session.focusNext = true;
+      session.streak = streak;
       trackPuzzleAttempted(session, 'solved');
       onSolved?.(session.puzzle.id);
     }

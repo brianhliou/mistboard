@@ -16,6 +16,7 @@ import type { ChessReplaySpec } from '../chess-replay.js';
 import type { PlayerTitle } from '../player-titles.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
+import type { HordeXiangqiReplaySpec } from '../horde-xiangqi-replay.js';
 import type { JieqiReplaySpec } from '../jieqi-replay.js';
 import type { XiangqiReplaySpec } from '../xiangqi-replay.js';
 
@@ -179,6 +180,16 @@ export type DuckXiangqiReplayBlock = {
   caption?: string;
 };
 
+// Horde Xiangqi analogue: a general-less red side of soldiers (standard or
+// veteran) against the army, stepped through a game record against the rule
+// kernel with the horde configuration. The standard xq-replay rejects the
+// position and the veteran's move.
+export type HordeXiangqiReplayBlock = {
+  kind: 'horde-xiangqi-replay';
+  spec: HordeXiangqiReplaySpec;
+  caption?: string;
+};
+
 export type CtaButton = {
   label: string;
   href: string;
@@ -327,6 +338,7 @@ export type ArticleBlock =
   | ChessReplayBlock
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
+  | HordeXiangqiReplayBlock
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock

@@ -295,10 +295,7 @@ export async function playDuckXiangqiEngineMoveIfReady(
   // far cheaper than they are: the legal turns are already materialised, and a
   // capture is a property of the destination square, so it costs a scan and no
   // search at all.
-  const winning = legalTurns.find((turn) => {
-    const target = room.projection.state.board[turn.to];
-    return target?.role === 'general' && target.color !== seat;
-  });
+  const winning = duckXiangqiWinningTurn(room.projection.state, legalTurns, seat);
   if (winning) {
     logger.info(
       {
@@ -502,6 +499,24 @@ function duckXiangqiPieceHalfUci(turn: DuckXiangqiTurn): string {
  * never has to round-trip: the game ends on the capture, so the turn is never
  * replayed into a `position startpos moves …` line.
  */
+/**
+ * The general-capture turn on offer, if any. A capture is a property of the
+ * destination square, so this is a scan and no search. Shared with the EvE
+ * adapter so the rated bot takes the same wins the live one does.
+ */
+export function duckXiangqiWinningTurn(
+  state: DuckXiangqiGameState,
+  legalTurns: readonly DuckXiangqiTurn[],
+  color: DuckXiangqiColor,
+): DuckXiangqiTurn | null {
+  return (
+    legalTurns.find((turn) => {
+      const target = state.board[turn.to];
+      return target?.role === 'general' && target.color !== color;
+    }) ?? null
+  );
+}
+
 export function duckXiangqiTurnToFsfUci(turn: DuckXiangqiTurn): string {
   const piece = duckXiangqiPieceHalfUci(turn);
   return turn.duckTo === null ? piece : `${piece},${turn.to}${turn.duckTo}`;

@@ -148,6 +148,7 @@ definePersistenceTests('account routes', () => {
       followersBell: true,
       correspondenceStartEmail: false,
       correspondenceDeadlineEmail: false,
+      correspondenceTurnDigest: true,
       forumAutoTranslate: true,
     });
   });

@@ -81,6 +81,15 @@ export const ZH_HANT_CONTENT = {
   'news.subscribe': '訂閱 RSS',
   'news.empty': '目前沒有內容。',
   'news.readMore': '閱讀更多',
+  'changelog.heading': '更新日誌',
+  'changelog.intro':
+    'mistboard.com 的每一項變更，按月排列，最新在前，每一行都連結到對應的提交。重點內容見',
+  'changelog.feedLink': '更新',
+  'changelog.sourcePrefix': '記錄本身是',
+  'changelog.sourceLink': '儲存庫中的 CHANGELOG.md',
+  'changelog.monthsLabel': '月份',
+  'changelog.sentenceEnd': '。',
+  'changelog.feedFooter': '每一項變更按月記錄在',
   'contact.heading': '聯絡',
   'contact.introAnon':
     '這是直接聯絡 Mistboard 營運者的私人管道。Bug、壞掉的對局、帳號或付費問題，以及任何不想公開發布的內容。想收到回覆的話，可以留下信箱。',

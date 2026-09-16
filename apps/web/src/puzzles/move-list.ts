@@ -1,7 +1,7 @@
 /**
  * The trainer's two-column move list: [setup?, ...solution] rows with the
  * active (scrubbed-to) ply highlighted. Move notation dispatches through the
- * variant adapter's moveLabel.
+ * variant adapter's moveLabels (position-aware) or moveLabel per ply.
  */
 
 import {
@@ -32,7 +32,7 @@ function puzzleSetupMove(session: PuzzleSession): PuzzleMove | null {
   return session.puzzle.initial.lastMove ?? null;
 }
 
-type PuzzleMoveCell = { move: PuzzleMove; active: boolean };
+type PuzzleMoveCell = { label: string; active: boolean };
 
 function puzzleMoveRows(session: PuzzleSession): HTMLElement[] {
   const solverColor = session.puzzle.sideToMove ?? 'red';
@@ -41,10 +41,16 @@ function puzzleMoveRows(session: PuzzleSession): HTMLElement[] {
   // Combined list: [setup?, ...solution]. The setup was played by the opponent,
   // so the whole sequence alternates starting from the opponent's color when a
   // setup exists, and from the solver's color otherwise.
-  const combined: { move: PuzzleMove; solutionIndex: number | null }[] = [];
-  if (setup) combined.push({ move: setup, solutionIndex: null });
+  const adapter = puzzleBoardAdapter(session.puzzle.variant);
+  const labels = adapter.moveLabels?.(session.puzzle, session.playedMoves);
+  const combined: { label: string; solutionIndex: number | null }[] = [];
+  if (setup)
+    combined.push({ label: labels?.setup ?? adapter.moveLabel(setup), solutionIndex: null });
   for (const [index, move] of session.playedMoves.entries()) {
-    combined.push({ move, solutionIndex: index });
+    combined.push({
+      label: labels?.played[index] ?? adapter.moveLabel(move),
+      solutionIndex: index,
+    });
   }
   if (combined.length === 0) return [puzzleMoveContextRow(session)];
 
@@ -59,7 +65,7 @@ function puzzleMoveRows(session: PuzzleSession): HTMLElement[] {
     const number = puzzleMoveRowNumber(firstColor, combinedIndex);
     const row = rows.get(number) ?? {};
     row[color] = {
-      move: entry.move,
+      label: entry.label,
       active:
         entry.solutionIndex === null
           ? session.viewPly === 0
@@ -68,9 +74,7 @@ function puzzleMoveRows(session: PuzzleSession): HTMLElement[] {
     rows.set(number, row);
   }
 
-  return Array.from(rows.entries()).map(([number, row]) =>
-    puzzleMoveRow(number, row, firstColor, session),
-  );
+  return Array.from(rows.entries()).map(([number, row]) => puzzleMoveRow(number, row, firstColor));
 }
 
 function puzzleMoveContextRow(session: PuzzleSession): HTMLElement {
@@ -88,9 +92,7 @@ function puzzleMoveRow(
   number: number,
   rowMoves: { black?: PuzzleMoveCell; red?: PuzzleMoveCell },
   firstColor: PuzzleColor,
-  session: PuzzleSession,
 ): HTMLElement {
-  const moveLabel = puzzleBoardAdapter(session.puzzle.variant).moveLabel;
   const row = document.createElement('li');
   row.className = 'puzzle-move-item';
   const numberCell = puzzleMoveCell('puzzle-move-number', String(number));
@@ -100,13 +102,10 @@ function puzzleMoveRow(
   const blackLeads = firstColor === 'black';
   const redCell = puzzleMoveCell(
     'puzzle-move-red',
-    rowMoves.red ? moveLabel(rowMoves.red.move) : number === 1 && blackLeads ? '...' : '',
+    rowMoves.red ? rowMoves.red.label : number === 1 && blackLeads ? '...' : '',
   );
   if (rowMoves.red?.active) redCell.classList.add('puzzle-move-cell--active');
-  const blackCell = puzzleMoveCell(
-    'puzzle-move-black',
-    rowMoves.black ? moveLabel(rowMoves.black.move) : '',
-  );
+  const blackCell = puzzleMoveCell('puzzle-move-black', rowMoves.black ? rowMoves.black.label : '');
   if (rowMoves.black?.active) blackCell.classList.add('puzzle-move-cell--active');
   row.append(numberCell, redCell, blackCell);
   return row;

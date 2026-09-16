@@ -66,7 +66,7 @@ test('the sweeper routes due rows to their registration and survives failures', 
   assert.deepEqual(swept, ['sweeptest_a', 'sweeptest_b']);
 });
 
-test('the sweeper reaps expired challenges after the warning pass', async () => {
+test('the sweeper digests turns and reaps expired challenges after the warning pass', async () => {
   const calls: string[] = [];
   const sweeper = startTenantDeadlineSweeper({
     intervalMs: 3_600_000,
@@ -75,6 +75,9 @@ test('the sweeper reaps expired challenges after the warning pass', async () => 
     registrationFor: () => null,
     warnDeadlines: async () => {
       calls.push('warn');
+    },
+    digestTurns: async () => {
+      calls.push('digest');
     },
     sweepExpiredSeeks: async () => {
       calls.push('sweep');
@@ -87,8 +90,8 @@ test('the sweeper reaps expired challenges after the warning pass', async () => 
     sweeper.stop();
   }
 
-  // Reclaim runs, and only after the deadline-warning pass.
-  assert.deepEqual(calls, ['warn', 'sweep']);
+  // The digest sees this tick's warnings; reclaim runs last.
+  assert.deepEqual(calls, ['warn', 'digest', 'sweep']);
 });
 
 test('a failing expired-seek sweep is swallowed, not propagated', async () => {

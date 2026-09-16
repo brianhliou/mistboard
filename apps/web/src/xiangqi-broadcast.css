@@ -827,3 +827,284 @@
   color: var(--site-muted);
   font-weight: 400;
 }
+
+/* ── Event page: tabs, rail, overview facts, standings ───────────────────── */
+
+.xqb-event-layout {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  gap: 16px;
+  align-items: start;
+}
+
+.xqb-event-layout-with-rail {
+  grid-template-columns: minmax(190px, 250px) minmax(0, 1fr);
+  grid-template-areas: "rail content";
+}
+
+.xqb-event-layout-with-rail .xqb-side-rail {
+  grid-area: rail;
+  position: sticky;
+  top: 12px;
+}
+
+.xqb-event-layout-with-rail .xqb-event-content {
+  grid-area: content;
+  min-width: 0;
+}
+
+.xqb-side-rail h2 a {
+  color: inherit;
+  text-decoration: none;
+}
+
+.xqb-side-rail h2 a:hover,
+.xqb-side-rail h2 a:focus-visible {
+  color: var(--site-accent-strong);
+}
+
+.xqb-side-rail h2 .xqb-round-select {
+  width: 100%;
+}
+
+.xqb-tabs {
+  display: flex;
+  gap: 4px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.xqb-tab {
+  appearance: none;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: transparent;
+  color: var(--site-muted);
+  padding: 8px 12px 10px;
+  margin-bottom: -1px;
+  font: inherit;
+  font-size: 14px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.xqb-tab:hover,
+.xqb-tab:focus-visible {
+  color: var(--site-text);
+}
+
+.xqb-tab-active {
+  color: var(--site-accent-strong);
+  border-bottom-color: var(--site-accent);
+}
+
+.xqb-tab-panel {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.xqb-round-heading {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 18px;
+  line-height: 1.2;
+}
+
+.xqb-round-meta,
+.xqb-note {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.xqb-empty {
+  border: 1px dashed var(--site-border-soft);
+  border-radius: var(--site-radius);
+  padding: 22px 16px;
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  align-items: flex-start;
+  color: var(--site-muted);
+}
+
+.xqb-empty p {
+  margin: 0;
+  max-width: 52ch;
+}
+
+.xqb-facts {
+  margin: 0;
+  display: grid;
+  grid-template-columns: max-content minmax(0, 1fr);
+  gap: 6px 18px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  padding: 12px 14px;
+  font-size: 14px;
+}
+
+.xqb-facts dt {
+  color: var(--site-muted);
+  font-weight: 700;
+}
+
+.xqb-facts dd {
+  margin: 0;
+  color: var(--site-text);
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.xqb-facts a {
+  color: var(--site-accent-strong);
+}
+
+.xqb-row-current {
+  border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border-soft));
+}
+
+.xqb-share {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+  margin-top: 6px;
+}
+
+.xqb-share-row {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  grid-template-areas: "label label" "url copy";
+  gap: 4px 8px;
+  align-items: center;
+}
+
+.xqb-share-label {
+  grid-area: label;
+  font-size: 13px;
+  font-weight: 700;
+  color: var(--site-text);
+}
+
+.xqb-share-url {
+  grid-area: url;
+  min-width: 0;
+  min-height: 34px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+  color: var(--site-muted);
+  padding: 6px 10px;
+  font: inherit;
+  font-size: 13px;
+}
+
+.xqb-share-copy {
+  grid-area: copy;
+  min-height: 34px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+  color: var(--site-text);
+  padding: 6px 12px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 700;
+  cursor: pointer;
+}
+
+.xqb-share-copy:hover,
+.xqb-share-copy:focus-visible {
+  border-color: color-mix(in srgb, var(--site-accent) 42%, var(--site-border-soft));
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+}
+
+.xqb-standings {
+  width: 100%;
+  border-collapse: collapse;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  font-size: 14px;
+  overflow: hidden;
+}
+
+.xqb-standings th,
+.xqb-standings td {
+  padding: 8px 10px;
+  text-align: left;
+  border-bottom: 1px solid var(--site-border-soft);
+  vertical-align: middle;
+}
+
+.xqb-standings th {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}
+
+.xqb-standings tbody tr:last-child td {
+  border-bottom: 0;
+}
+
+.xqb-standings-rank,
+.xqb-standings td:nth-child(n + 3),
+.xqb-standings th:nth-child(n + 3) {
+  text-align: right;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.xqb-standings-rank {
+  color: var(--site-muted);
+  width: 2.5em;
+}
+
+.xqb-standings-player {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.xqb-standings-player strong {
+  color: var(--site-heading);
+}
+
+.xqb-standings-sub {
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.xqb-standings-score {
+  color: var(--site-accent-strong);
+  font-weight: 900;
+}
+
+/* The review shell owns the finished board page; the rail sits in its left
+ * column as the details panel and drops the card chrome it wears elsewhere. */
+.xqb-review-route .xqb-side-rail {
+  border: 0;
+  padding: 0;
+  background: transparent;
+}
+
+@media (max-width: 900px) {
+  .xqb-event-layout-with-rail {
+    grid-template-columns: 1fr;
+    grid-template-areas: "content" "rail";
+  }
+
+  .xqb-event-layout-with-rail .xqb-side-rail {
+    position: static;
+  }
+
+  .xqb-standings {
+    display: block;
+    overflow-x: auto;
+  }
+}

@@ -12,7 +12,7 @@ import {
 } from './xiangqi-piece-sets.js';
 
 describe('default piece set', () => {
-  it('defaults the xiangqi family to the international image art', () => {
+  it('falls back to the international image art outside Chinese-reading regions', () => {
     expect(DEFAULT_XIANGQI_PIECE_SET).toBe('international');
   });
 });

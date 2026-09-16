@@ -1,0 +1,316 @@
+{
+  "_": [
+    "The dpxq classical-manual plan mine_books.py walks. Counted live 2026-09-13 from",
+    "dpxq's 古谱残局 and 古谱全局 directories, pagination followed. `expected` is that",
+    "count; the summary the miner writes is the truth after a run.",
+    "status: mine | done | skip. skip is a rights or duplication call, noted per book;",
+    "everything mined here is USE on Yellow and publishes only after the operator has",
+    "seen it (memory dpxq_operator_outreach). vols: `auto` = first-level subdirectories",
+    "sorted, or an explicit ordered list where the book's own order is not sortable."
+  ],
+  "root": "http://www.dpxq.com/hldcg/share/chess_象棋谱大全/",
+  "books": [
+    {
+      "slug": "shi-qing-ya-qu",
+      "name": "适情雅趣",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": ["卷一", "卷二", "卷三", "卷四", "卷五", "卷六"],
+      "expected": 550,
+      "status": "done",
+      "note": "mined 2026-09-11; 549 published as 6 studies"
+    },
+    {
+      "slug": "bai-ju-xiangqi-pu",
+      "name": "百局象棋谱",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 105,
+      "status": "mine",
+      "note": "1801; 七星聚会 (composition 1) is already a study from Kliene 1916"
+    },
+    {
+      "slug": "jiao-chuang-yi-pin",
+      "name": "蕉窗逸品",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 10,
+      "status": "mine"
+    },
+    {
+      "slug": "yin-xiu-zhai",
+      "name": "隐秀斋象戏谱",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 27,
+      "status": "mine"
+    },
+    {
+      "slug": "hu-ya-ji",
+      "name": "湖涯集",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 61,
+      "status": "mine"
+    },
+    {
+      "slug": "jiao-zhu-zhai",
+      "name": "蕉竹斋",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 91,
+      "status": "mine"
+    },
+    {
+      "slug": "ju-zhong-mi-canju",
+      "name": "桔中秘残局谱",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "dir": "桔中秘",
+      "vols": "auto",
+      "expected": 137,
+      "status": "mine",
+      "note": "supersedes the two unlisted NAJ-woodblock 橘中秘 volumes (卷三 EarRoCib, 卷四 RJwHnrAP)"
+    },
+    {
+      "slug": "xin-wu-can-bian",
+      "name": "心武残编",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 155,
+      "status": "mine"
+    },
+    {
+      "slug": "meng-ru-shen-ji",
+      "name": "梦入神机",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 152,
+      "status": "mine"
+    },
+    {
+      "slug": "lan-ke-shen-ji",
+      "name": "烂柯神机",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 258,
+      "status": "mine"
+    },
+    {
+      "slug": "zhu-xiang-zhai",
+      "name": "竹香斋象戏谱",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": ["初集", "二集", "三集"],
+      "expected": 208,
+      "status": "mine"
+    },
+    {
+      "slug": "bai-bian-shen-miao",
+      "name": "百变神妙象棋谱",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": ["百变象棋谱（全70局）", "神妙变化象棋谱（全55局）", "神妙变化象棋谱（独立19局）"],
+      "expected": 183,
+      "status": "mine",
+      "note": "the Z内容提要、前言等等 subdirectory is prose, not compositions; left out"
+    },
+    {
+      "slug": "tao-lue-yuan-ji",
+      "name": "韬略元机",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "mixed",
+      "vols": ["韬略元机全局谱", "韬略元机残局谱"],
+      "expected": 341,
+      "status": "mine",
+      "note": "vol 1 is 159 full games, vol 2 is 182 compositions; seed as two studies"
+    },
+    {
+      "slug": "yuan-shen-hai-kuo",
+      "name": "渊深海阔",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "vols": "auto",
+      "expected": 374,
+      "status": "mine",
+      "note": "17 volumes, 卷01..卷17（新增）诠改部分; sorted order is the book's order"
+    },
+    {
+      "slug": "jiang-hu-bai-ju-mi-pu",
+      "name": "江湖百局秘谱",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "expected": 100,
+      "status": "skip",
+      "note": "modern compilation; not public domain"
+    },
+    {
+      "slug": "bai-ju-xiangqi-pu-jing-bian",
+      "name": "百局象棋谱精编",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "expected": 150,
+      "status": "skip",
+      "note": "modern re-edit (精编); the 1801 original is bai-ju-xiangqi-pu"
+    },
+    {
+      "slug": "jiang-hu-ba-da-pai-ju",
+      "name": "江湖八大排局",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "expected": 44,
+      "status": "skip",
+      "note": "modern analyses of traditional street compositions"
+    },
+    {
+      "slug": "ni-ma-du-kang-wang",
+      "name": "泥马渡康王",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "expected": 54,
+      "status": "skip",
+      "note": "modern variation trees on one traditional composition"
+    },
+    {
+      "slug": "gu-pu-pai-ju-si-da-ming-ju",
+      "name": "古谱排局四大名局",
+      "section": "象棋谱大全-古谱残局",
+      "kind": "compositions",
+      "expected": 6,
+      "status": "skip",
+      "note": "modern selection; the four live in 百局象棋谱 and 竹香斋"
+    },
+    {
+      "slug": "shi-lin-guang-ji",
+      "name": "事林广记",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": "auto",
+      "expected": 2,
+      "status": "mine",
+      "note": "Song/Yuan; the oldest recorded games"
+    },
+    {
+      "slug": "zi-chu-dong-lai",
+      "name": "自出洞来无敌手",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": "auto",
+      "expected": 35,
+      "status": "mine",
+      "note": "seven chapters numbered 1-7 in the directory names; sorted order is the book's"
+    },
+    {
+      "slug": "jin-peng-shi-ba-bian",
+      "name": "金鹏十八变",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": ["得先", "让先", "让左马", "让双马"],
+      "expected": 51,
+      "status": "mine",
+      "note": "full-game variations; distinct from the 18 金鵬秘訣 compositions already published"
+    },
+    {
+      "slug": "ju-zhong-mi-quanju",
+      "name": "桔中秘",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": ["得先", "让先", "让左马", "让双马"],
+      "expected": 51,
+      "status": "mine",
+      "note": "得先 20 and 让先 13 are already published from the NAJ woodblock (Vol. 1, Vol. 2): mine them as a second witness, publish only 让左马 and 让双马"
+    },
+    {
+      "slug": "mei-hua-pu",
+      "name": "梅花谱",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": "auto",
+      "expected": 31,
+      "status": "mine",
+      "note": "王再越, c.1690"
+    },
+    {
+      "slug": "mei-hua-quan",
+      "name": "梅花泉",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": ["上卷", "中卷", "下卷"],
+      "expected": 50,
+      "status": "mine"
+    },
+    {
+      "slug": "chong-ben-tang-mei-hua-pu",
+      "name": "崇本堂梅花谱",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": ["得先", "让先"],
+      "expected": 20,
+      "status": "mine"
+    },
+    {
+      "slug": "shan-qing-tang-mei-hua-bian",
+      "name": "善庆堂重订梅花变",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": ["得先", "让先", "杂局"],
+      "expected": 17,
+      "status": "mine",
+      "note": "late Qing / early Republic; check the edition date before publishing"
+    },
+    {
+      "slug": "mei-hua-bian-fa-pu",
+      "name": "梅花变法谱",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": "auto",
+      "expected": 12,
+      "status": "mine"
+    },
+    {
+      "slug": "fan-mei-hua-pu",
+      "name": "反梅花谱",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": "auto",
+      "expected": 8,
+      "status": "mine",
+      "note": "巴吉人, 1917; Republican-era, check before publishing"
+    },
+    {
+      "slug": "wu-shi-mei-hua-pu",
+      "name": "吴氏梅花谱",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": "auto",
+      "expected": 5,
+      "status": "mine"
+    },
+    {
+      "slug": "wu-shuang-pin-mei-hua-pu",
+      "name": "无双品梅花谱",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "vols": "auto",
+      "expected": 4,
+      "status": "mine"
+    },
+    {
+      "slug": "yi-cheng",
+      "name": "奕乘",
+      "section": "象棋谱大全-古谱全局",
+      "kind": "games",
+      "expected": 138,
+      "status": "skip",
+      "note": "谢侠逊 (d. 1987) compilation; not public domain"
+    }
+  ]
+}

@@ -8,7 +8,7 @@
 
 import type { LabEngine } from './engine.js';
 import { pick, type Rng } from './rng.js';
-import type { GameRecord, LabColor, LabKernel } from './types.js';
+import type { EngineTelemetry, GameRecord, LabColor, LabKernel } from './types.js';
 
 export type Policy<S, M> = (state: S, history: readonly string[]) => Promise<M | null>;
 
@@ -35,10 +35,16 @@ export function enginePolicy<S, M>(
   engine: LabEngine,
   nodes: number,
   rootFen: string,
-  options: { fresh?: boolean } = {},
+  options: { fresh?: boolean; telemetry?: EngineTelemetry } = {},
 ): Policy<S, M> {
   return async (state, history) => {
-    const { move } = await engine.bestMove(rootFen, history, nodes, options);
+    const { move, lastInfo } = await engine.bestMove(rootFen, history, nodes, options);
+    if (options.telemetry) {
+      const depth = /\bdepth (\d+)/.exec(lastInfo ?? '');
+      const cp = /\bscore cp (-?\d+)/.exec(lastInfo ?? '');
+      options.telemetry.depth[history.length] = depth ? Number(depth[1]) : null;
+      options.telemetry.scoreCp[history.length] = cp ? Number(cp[1]) : null;
+    }
     if (move === '(none)') return null;
     const parsed = kernel.fromUci(state, move);
     if (!parsed) {

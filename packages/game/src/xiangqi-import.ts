@@ -12,6 +12,7 @@
 // resolveMove is board-aware for that reason; coordinate codecs ignore the state.
 
 import {
+  coordOf,
   createInitialXiangqiState,
   positionRepetitionKey,
   squareOf,
@@ -23,12 +24,14 @@ import {
 } from './variants-xiangqi.js';
 import {
   applyStandardXiangqiMove,
+  getStandardXiangqiLegalMoves,
   isStandardXiangqiLegalMove,
 } from './variants-xiangqi-standard.js';
 import {
   parseChineseToken,
   parseWxfToken,
   resolveRelativeMove,
+  WXF_LETTER_TO_ROLE,
   WXF_TOKEN,
 } from './xiangqi-relative-notation.js';
 import { fsfUciToXiangqiSquares, pikafishUciToXiangqiSquares } from './xiangqi-uci.js';
@@ -36,6 +39,7 @@ import { fsfUciToXiangqiSquares, pikafishUciToXiangqiSquares } from './xiangqi-u
 export type XiangqiMoveFormat =
   | 'coordinate' // our square notation = Fairy-Stockfish UCI: files a-i, ranks 1-10
   | 'uci-0indexed' // Pikafish / UCCI / ICCS style: files a-i, ranks 0-9
+  | 'algebraic' // chess-style SAN: Ce3, Hc3, Cxe7, Rhe1
   | 'wxf' // WXF / human relative notation: C2.5, H2+3, +C.5
   | 'chinese' // Chinese relative notation: 炮二平五, 马8进7, 前炮平五
   | 'dhtmlxq'; // dpxq.com / dhtmlxq packed record: 4 digits per move
@@ -98,6 +102,39 @@ const coordinate0Codec: XiangqiNotationCodec = {
   resolveMove: (token) => {
     const squares = pikafishUciToXiangqiSquares(token.replace(/-/g, ''));
     return squares ? { from: squares.from, to: squares.to } : null;
+  },
+};
+
+// --- algebraic (chess-style SAN) ---------------------------------------------
+// The display formatter's grammar (xiangqi-notation-format.ts): piece letter,
+// optional origin file / rank / square, optional `x`, destination square,
+// optional `+`/`#`. Resolved against the legal move set, so a token that names
+// more than one move (a missing disambiguator) is rejected rather than guessed.
+
+const ALGEBRAIC_MOVE = /^([KAEBHNRCP])([a-i])?(10|[1-9])?(x)?([a-i](?:10|[1-9]))[+#]?$/;
+
+const algebraicCodec: XiangqiNotationCodec = {
+  format: 'algebraic',
+  detect: (input) => {
+    const tokens = splitTokens(input);
+    return tokens.length > 0 && tokens.every((token) => ALGEBRAIC_MOVE.test(token));
+  },
+  tokenize: splitTokens,
+  resolveMove: (token, state) => {
+    const match = ALGEBRAIC_MOVE.exec(token);
+    if (!match || state.status.type !== 'playing') return null;
+    const role = WXF_LETTER_TO_ROLE[match[1]!];
+    const originFile = match[2];
+    const originRank = match[3] ? Number(match[3]) : undefined;
+    const to = match[5] as XiangqiSquare;
+    const candidates = getStandardXiangqiLegalMoves(state).filter((move) => {
+      if (move.to !== to || state.board[move.from]?.role !== role) return false;
+      const from = coordOf(move.from);
+      if (originFile && move.from[0] !== originFile) return false;
+      if (originRank !== undefined && from.rank !== originRank) return false;
+      return true;
+    });
+    return candidates.length === 1 ? candidates[0]! : null;
   },
 };
 
@@ -278,6 +315,7 @@ const dhtmlxqCodec: XiangqiNotationCodec = {
 const CODECS: XiangqiNotationCodec[] = [
   chineseCodec,
   wxfCodec,
+  algebraicCodec,
   dhtmlxqCodec,
   coordinate1Codec,
   coordinate0Codec,

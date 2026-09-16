@@ -15,6 +15,8 @@
 import {
   applyStandardXiangqiMove,
   coordOf,
+  formatXiangqiMoveFromAfter,
+  formatXiangqiMoves,
   fsfUciToXiangqiSquares,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
@@ -40,6 +42,7 @@ import {
   xiangqiPieceGhostSvg,
 } from '../xiangqi-board.js';
 import { drawsCrossedSoldier } from '../xiangqi-crossed-soldier.js';
+import { currentXiangqiNotationStyle } from '../xiangqi-notation.js';
 import {
   activeTurn,
   isReplayLive,
@@ -317,6 +320,17 @@ export const xiangqiPuzzleAdapter: PuzzleBoardAdapter = {
   applyMove: (state, move) =>
     applyStandardXiangqiMove(state as XiangqiGameState, move as XiangqiMove),
   moveLabel: (move: PuzzleMove) => ('drop' in move ? `@${move.to}` : `${move.from}-${move.to}`),
+  // The reader's notation, replayed from the puzzle position. The setup move
+  // is labeled from the board after it, the only board the client has for it.
+  moveLabels: (puzzle: PuzzleDetail, played: readonly PuzzleMove[]) => {
+    const style = currentXiangqiNotationStyle();
+    const initial = puzzle.initial as XiangqiGameState;
+    const setup = initial.lastMove as XiangqiMove | undefined;
+    return {
+      setup: setup ? formatXiangqiMoveFromAfter(initial, setup, style) : null,
+      played: formatXiangqiMoves(played as XiangqiMove[], style, initial),
+    };
+  },
   sideIconSvg: (puzzle: PuzzleDetail) =>
     xiangqiPieceGhostSvg({ color: puzzle.sideToMove ?? 'red', role: 'general' }),
   createAnalysis: createPuzzleAnalysis,

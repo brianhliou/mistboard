@@ -14,6 +14,7 @@ export type StaticPageKey =
   | 'about'
   | 'stats'
   | 'news'
+  | 'changelog'
   | 'faq'
   | 'contact'
   | 'patron'
@@ -43,6 +44,7 @@ const STATIC_RAIL_GROUPS: ReadonlyArray<ReadonlyArray<StaticRailLink>> = [
     { key: 'about', href: '/about', labelKey: 'about.heading' },
     { key: 'stats', href: '/stats', labelKey: 'stats.heading' },
     { key: 'news', href: '/feed', labelKey: 'news.feedHeading' },
+    { key: 'changelog', href: '/changelog', labelKey: 'changelog.heading' },
     { key: 'faq', href: '/faq', labelKey: 'faq.heading' },
     { key: 'contact', href: '/contact', labelKey: 'contact.heading' },
     { key: 'patron', href: '/patron', labelKey: 'patron.heading' },

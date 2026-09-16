@@ -51,6 +51,12 @@ const ZH_HANS: Record<string, string> = {
   'Duck Xiangqi has launched.': '鸭子象棋已上线。',
   "Chinese chess with one duck that both players share. Make your move, then put the duck on any empty point. It blocks a horse's leg, an elephant's eye and the file between the generals, and it works as a cannon screen for whoever moves next, so the screen you build is never yours. There is no check: you win by capturing the general outright, and the two generals may now face each other down an open file, where flying the general is a capture. Play the eight-level bot or a friend.":
     '双方共用一只鸭子的象棋。先走一步棋，再把鸭子放到任意空点上。它能蹩马腿、塞象眼、挡住将帅之间的一路，也能给下一个走子的人当炮架，所以你搭的炮架永远不是给自己用的。这里没有将军：吃掉将帅才算赢；两位将帅也可以照面，此时飞将就是一步吃子。可挑战八级引擎或好友。',
+  // ── 2026-09-15 (Qing composition manuals, batch 1) ── 排局谱 / 四大排局谱 follow dpxq's
+  // 古谱介绍; book titles as dpxq spells them.
+  'Two of the four great Qing composition manuals are online.': '清代四大排局谱中的两部已上线。',
+  "Fragments of a Martial Mind (1800) and Deep Abyss, Wide Sea (1808) join the Elegant Pastime Manual: four hundred and seventy problems, each on its own board, with the book's line played out as the mainline and the original four-character title kept beside the English one. Positions come from dpxq.com and are credited on every composition. A problem whose recorded line does not survive replay, or whose diagram the engine reads differently from the book, is held back rather than published wrong. The other manuals on the same shelf follow over the coming weeks.":
+    '《心武残编》（1800 年）与《渊深海阔》（1808 年）继《适情雅趣》之后上线：共四百七十局，每局独立成章，以书中着法作为主变，英文局名旁保留原四字标题。棋谱来源为 dpxq.com，每局均注明出处。凡所记着法无法完整复盘，或引擎对棋图的判断与原书不符的局，宁可暂不发布，也不发布错误的内容。同一书架上的其他古谱将在接下来几周陆续上线。',
+  'Open the studies': '打开棋谱',
   // ── 2026-09-11 (Elegant Pastime Manual) ── 残局 follows the app catalogs and the
   // study overlays; 古谱 is dpxq's own category word for these manuals.
   'All six volumes of the Elegant Pastime Manual are online.': '《适情雅趣》六卷已全部上线。',
@@ -335,6 +341,11 @@ const ZH_HANT: Record<string, string> = {
   'Duck Xiangqi has launched.': '鴨子象棋已上線。',
   "Chinese chess with one duck that both players share. Make your move, then put the duck on any empty point. It blocks a horse's leg, an elephant's eye and the file between the generals, and it works as a cannon screen for whoever moves next, so the screen you build is never yours. There is no check: you win by capturing the general outright, and the two generals may now face each other down an open file, where flying the general is a capture. Play the eight-level bot or a friend.":
     '雙方共用一隻鴨子的象棋。先走一步棋，再把鴨子放到任意空點上。它能蹩馬腿、塞象眼、擋住將帥之間的一路，也能給下一個走子的人當炮架，所以你搭的炮架永遠不是給自己用的。這裡沒有將軍：吃掉將帥才算贏；兩位將帥也可以照面，此時飛將就是一步吃子。可挑戰八級引擎或好友。',
+  // ── 2026-09-15 (Qing composition manuals, batch 1) ──
+  'Two of the four great Qing composition manuals are online.': '清代四大排局譜中的兩部已上線。',
+  "Fragments of a Martial Mind (1800) and Deep Abyss, Wide Sea (1808) join the Elegant Pastime Manual: four hundred and seventy problems, each on its own board, with the book's line played out as the mainline and the original four-character title kept beside the English one. Positions come from dpxq.com and are credited on every composition. A problem whose recorded line does not survive replay, or whose diagram the engine reads differently from the book, is held back rather than published wrong. The other manuals on the same shelf follow over the coming weeks.":
+    '《心武殘編》（1800 年）與《淵深海闊》（1808 年）繼《適情雅趣》之後上線：共四百七十局，每局獨立成章，以書中著法作為主變，英文局名旁保留原四字標題。棋譜來源為 dpxq.com，每局均註明出處。凡所記著法無法完整復盤，或引擎對棋圖的判斷與原書不符的局，寧可暫不發布，也不發布錯誤的內容。同一書架上的其他古譜將在接下來幾週陸續上線。',
+  'Open the studies': '打開棋譜',
   // ── 2026-09-11 (Elegant Pastime Manual) ──
   'All six volumes of the Elegant Pastime Manual are online.': '《適情雅趣》六卷已全部上線。',
   "The Elegant Pastime Manual is a Ming collection of xiangqi endgame compositions. Five hundred and forty-nine of its problems are here now, each on its own board, with the book's solution played out as the mainline and the original four-character title kept beside the English one. Around sixty are draw studies where the source gives its answer in prose rather than as a line, and those notes are quoted as written rather than guessed at. Positions come from dpxq.com and are credited on every composition. One problem is absent: the line recorded for number 479 stops being legal partway through, and half a solution is worse than none.":

@@ -12,9 +12,12 @@
 // provider whenever the tour has a 棋谱 link on /hldcg/; fall back to dpxq-live
 // for an event being relayed live before any records are uploaded.
 //
-// Open question this cannot answer on its own: whether a round's ids appear
-// while it is being played or only when someone uploads them afterwards. If
-// uploads lag, this feed is same-day recap rather than live relay.
+// Answered by the 2026 Shanghai Cup (tour 12524, 09-09 to 09-13): ids appear
+// only when the operator uploads them afterwards, on no fixed delay (his own
+// words: 赛后, 不固定), and one game was listed by the event's last day. So this
+// feed is a recap, not a relay, and the provider declares `statesRounds` so the
+// poller files boards by the round each row states instead of by the clock:
+// a schedule window would have closed long before any record arrived.
 
 import type {
   DiscoveredBoard,
@@ -83,6 +86,7 @@ async function fetchText(
 
 export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
   name: 'dpxq-tour',
+  statesRounds: true,
   async discover(input) {
     const origin = input.config.get('origin')?.trim() || DPXQ_ORIGIN;
     const tour = input.config.get('tour')?.trim();

@@ -38,6 +38,12 @@ export type DiscoveryProviderInput = {
 
 export type DiscoveryProvider = {
   readonly name: string;
+  /**
+   * True when every board this provider yields carries `roundNumber`. Such a
+   * source is filed by its stated rounds and never by the schedule's clock;
+   * see buildStatedRoundManifestSources.
+   */
+  readonly statesRounds?: boolean;
   discover(
     input: DiscoveryProviderInput,
   ): Promise<{ ok: true; boards: DiscoveredBoard[] } | { ok: false; message: string }>;
@@ -289,5 +295,114 @@ export function buildDiscoveryManifestSources(input: {
       ...(input.source.tourName ? { tourName: input.source.tourName } : {}),
       ...(input.round.roundName ? { roundName: input.round.roundName } : {}),
     })),
+  };
+}
+
+export type SeededRound = { id: string; name?: string };
+
+export type StatedRoundManifestBuild =
+  | {
+      ok: true;
+      sources: DiscoveryManifestSource[];
+      droppedForCap: number;
+      /** Boards already stored complete; nothing on the source can change them. */
+      skippedComplete: number;
+      /** Boards whose stated round has no seeded round to land in. */
+      droppedUnscheduled: number;
+    }
+  | { ok: false; message: string; quiet?: true };
+
+/** The poller keys its quiet path off this exact message, like NO_ACTIVE_ROUND_MESSAGE. */
+export const NOTHING_NEW_MESSAGE = 'every listed board is already imported';
+
+/**
+ * Manifest for a source whose boards each state their own round.
+ *
+ * The time-gated path above exists for sources that cannot say which round a
+ * board belongs to, so the seeded schedule has to. A source that states the
+ * round (dpxq's tour game list labels every row 第NN轮) does not need the
+ * clock, and gating it on one is exactly wrong for how such lists are filled:
+ * dpxq uploads records 赛后 on no fixed delay, and the 2026 Shanghai Cup had
+ * one game listed by the last day of the event. A twelve-hour window after
+ * each round's start was closed long before any record arrived, so a tour
+ * polled all week imported nothing.
+ *
+ * So: file every board under the seeded round with its number, skip the ones
+ * already stored complete (a finished record cannot change, and re-fetching
+ * every game of a league on every poll is the load the cap exists to bound),
+ * keep re-fetching the ones stored live, and drop boards for rounds the
+ * schedule never seeded rather than guess. Board numbers are the row's rank
+ * among its round's rows in the source's own order.
+ */
+export function buildStatedRoundManifestSources(input: {
+  source: DiscoverySource;
+  boards: readonly DiscoveredBoard[];
+  rounds: readonly SeededRound[];
+  completeUrls: ReadonlySet<string>;
+}): StatedRoundManifestBuild {
+  const byEvent = input.source.event
+    ? input.boards.filter((board) => (board.event ?? '').includes(input.source.event as string))
+    : [...input.boards];
+  if (byEvent.length === 0) {
+    return {
+      ok: false,
+      message: input.source.event
+        ? `no listed boards matched event "${input.source.event}"`
+        : 'no boards listed',
+    };
+  }
+
+  const roundsByNumber = new Map<number, SeededRound>();
+  for (const round of input.rounds) {
+    const number = roundNumberFromRoundId(round.id);
+    if (number !== undefined && !roundsByNumber.has(number)) roundsByNumber.set(number, round);
+  }
+
+  const rankInRound = new Map<number, number>();
+  const candidates: DiscoveryManifestSource[] = [];
+  let skippedComplete = 0;
+  let droppedUnscheduled = 0;
+  for (const board of byEvent) {
+    if (board.roundNumber === undefined) {
+      return { ok: false, message: `listed board ${board.url} states no round` };
+    }
+    const rank = (rankInRound.get(board.roundNumber) ?? 0) + 1;
+    rankInRound.set(board.roundNumber, rank);
+    const round = roundsByNumber.get(board.roundNumber);
+    if (!round) {
+      droppedUnscheduled += 1;
+      continue;
+    }
+    if (input.completeUrls.has(board.url)) {
+      skippedComplete += 1;
+      continue;
+    }
+    candidates.push({
+      url: board.url,
+      tourSlug: input.source.tourSlug,
+      roundId: round.id,
+      boardNumber: rank,
+      ...(input.source.tourName ? { tourName: input.source.tourName } : {}),
+      ...(round.name ? { roundName: round.name } : {}),
+    });
+  }
+
+  if (candidates.length === 0) {
+    if (skippedComplete > 0) {
+      return { ok: false, message: NOTHING_NEW_MESSAGE, quiet: true };
+    }
+    return {
+      ok: false,
+      message: `${droppedUnscheduled} listed board(s) state rounds the schedule has not seeded`,
+    };
+  }
+
+  const kept = candidates.slice(0, input.source.maxBoards);
+  return {
+    ok: true,
+    sources: kept,
+    droppedForCap: candidates.length - kept.length,
+    skippedComplete,
+    droppedUnscheduled,
   };
 }

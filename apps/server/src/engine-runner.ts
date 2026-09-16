@@ -30,9 +30,9 @@ import {
   roomTimeControlFromEngine,
   timeoutResult,
 } from './engine-time-policy.js';
-import { xiangqiEngineTierFor } from './xiangqi-engine-catalog.js';
-import { playXiangqiEngineGame } from './xiangqi-engine-game.js';
-import type { XiangqiEvent } from './xiangqi-runtime.js';
+import { type AnyVariantEveAdapter, playVariantEngineGame } from './variant-eve.js';
+import { eveAdapterFor, eveRoomId } from './variant-eve-registry.js';
+import type { TenantRoomEvent } from './variant-tenant/tenant.js';
 
 const HEARTBEAT_EVERY_PLIES = 8;
 
@@ -43,8 +43,10 @@ export async function runRandomLegalEngineGame(
   if (!task.claimToken) throw new Error(`task ${task.id} has no claim token`);
 
   const runnerStartedAt = Date.now();
-  const isXiangqi = task.config.variant === 'xiangqi';
-  const gameId = task.gameId ?? (isXiangqi ? `xq_eve_${task.id}` : `eve_${task.id}`);
+  const adapter = eveAdapterFor(
+    typeof task.config.variant === 'string' ? task.config.variant : undefined,
+  );
+  const gameId = task.gameId ?? (adapter ? eveRoomId(adapter, task.id) : `eve_${task.id}`);
   const startedAt = new Date();
   const whiteEngine = loadEngine(
     task.whiteEngineId ?? engineIdFromConfig(task.config, 'white_engine_id'),
@@ -54,9 +56,10 @@ export async function runRandomLegalEngineGame(
   );
   await upsertBuiltinEngineVersions(pool, [whiteEngine.id, blackEngine.id]);
 
-  if (isXiangqi) {
-    return runXiangqiEngineGame(
+  if (adapter) {
+    return runVariantEngineGame(
       pool,
+      adapter,
       task,
       gameId,
       startedAt,
@@ -266,30 +269,35 @@ export async function runRandomLegalEngineGame(
   return { gameId, plyCount, status: 'completed' };
 }
 
-async function runXiangqiEngineGame(
+// Tenant-variant EvE (xiangqi, fortress, duck, ...): the adapter plays the
+// game, this function owns the rows. The first-mover engine lands in the
+// white_* columns; eve_games predates red/black families.
+async function runVariantEngineGame(
   pool: pg.Pool,
+  adapter: AnyVariantEveAdapter,
   task: EngineGameTask,
   gameId: string,
   startedAt: Date,
-  redEngine: EngineDefinition,
-  blackEngine: EngineDefinition,
+  firstEngine: EngineDefinition,
+  secondEngine: EngineDefinition,
   runnerStartedAt: number,
 ): Promise<{ gameId: string; plyCount: number; status: 'completed' | 'aborted' }> {
-  if (
-    xiangqiEngineTierFor(redEngine.id) === null ||
-    xiangqiEngineTierFor(blackEngine.id) === null
-  ) {
-    throw new Error('xiangqi Eve tasks require two registered standard-Xiangqi profiles');
+  for (const engine of [firstEngine, secondEngine]) {
+    if (engine.id !== adapter.randomEngineId && adapter.tierFor(engine.id) === null) {
+      throw new Error(
+        `${adapter.gameSpecId} Eve tasks require registered ${adapter.gameSpecId} engine profiles; got ${engine.id}`,
+      );
+    }
   }
-  await createRunningXiangqiGame(pool, task, gameId, startedAt, redEngine, blackEngine);
-  const result = await playXiangqiEngineGame({
+  await createRunningVariantGame(pool, adapter, task, gameId, startedAt, firstEngine, secondEngine);
+  const result = await playVariantEngineGame(adapter, {
     roomId: gameId,
-    redEngineId: redEngine.id,
-    blackEngineId: blackEngine.id,
+    firstEngineId: firstEngine.id,
+    secondEngineId: secondEngine.id,
     maxPlies: maxPliesFromTask(task),
     openingPolicy: task.openingPolicy,
     startedAt: startedAt.getTime(),
-    onEvent: async (event, seq) => {
+    onEvent: async (event: TenantRoomEvent<string, unknown>, seq: number) => {
       await appendEvent(pool, gameId, seq, event);
       if (event.type === 'move-played' && (seq - 2) % HEARTBEAT_EVERY_PLIES === 0) {
         await heartbeatEngineGameTask(pool, task.id, task.claimToken!);
@@ -311,14 +319,14 @@ async function runXiangqiEngineGame(
     await reconcileExperimentJob(pool, task.jobId);
   }
   await recordRuntimeSummary(pool, task, gameId, {
-    runner: 'xiangqi-uci',
+    runner: 'variant-uci',
     status: result.status,
     termination: result.termination,
     plyCount: result.plyCount,
     wallMs: Date.now() - runnerStartedAt,
     totalThinkTimeMs: result.totalThinkTimeMs,
-    whiteEngineId: redEngine.id,
-    blackEngineId: blackEngine.id,
+    whiteEngineId: firstEngine.id,
+    blackEngineId: secondEngine.id,
   });
   return { gameId, plyCount: result.plyCount, status: result.status };
 }
@@ -520,13 +528,14 @@ async function createRunningGame(
   );
 }
 
-async function createRunningXiangqiGame(
+async function createRunningVariantGame(
   pool: pg.Pool,
+  adapter: AnyVariantEveAdapter,
   task: EngineGameTask,
   gameId: string,
   startedAt: Date,
-  redEngine: EngineDefinition,
-  blackEngine: EngineDefinition,
+  firstEngine: EngineDefinition,
+  secondEngine: EngineDefinition,
 ): Promise<void> {
   const roomTimeControl = roomTimeControlFromEngine(normalizeEngineTimeControl(task.timeControl));
   await pool.query(
@@ -534,21 +543,22 @@ async function createRunningXiangqiGame(
        (room_id, variant, result, termination, ply_count, started_at, ended_at,
         white_client, black_client, white_name, black_name, corpus_id,
         mode, status, review_status, initial_ms, increment_ms)
-     VALUES ($1, 'xiangqi', NULL, NULL, 0, $2, NULL,
-        $3, $4, $5, $6, NULL, 'eve', 'running', 'unreviewed', $7, $8)
+     VALUES ($1, $2, NULL, NULL, 0, $3, NULL,
+        $4, $5, $6, $7, NULL, 'eve', 'running', 'unreviewed', $8, $9)
      ON CONFLICT (room_id) DO NOTHING`,
     [
       gameId,
+      adapter.gameSpecId,
       startedAt,
-      redEngine.id,
-      blackEngine.id,
-      redEngine.name,
-      blackEngine.name,
+      firstEngine.id,
+      secondEngine.id,
+      firstEngine.name,
+      secondEngine.name,
       roomTimeControl?.initialMs ?? null,
       roomTimeControl?.incrementMs ?? null,
     ],
   );
-  await upsertEngineGameParticipants(pool, gameId, redEngine, blackEngine, ['red', 'black']);
+  await upsertEngineGameParticipants(pool, gameId, firstEngine, secondEngine, adapter.colors);
   await pool.query(`UPDATE engine_game_tasks SET game_id = $2 WHERE id = $1 AND game_id IS NULL`, [
     task.id,
     gameId,
@@ -568,12 +578,12 @@ async function createRunningXiangqiGame(
       task.id,
       task.gameIndex,
       task.workerId,
-      redEngine.id,
-      blackEngine.id,
-      redEngine.configHash,
-      blackEngine.configHash,
-      redEngine.playSignature,
-      blackEngine.playSignature,
+      firstEngine.id,
+      secondEngine.id,
+      firstEngine.configHash,
+      secondEngine.configHash,
+      firstEngine.playSignature,
+      secondEngine.playSignature,
       task.timeControl,
       task.openingPolicy,
       task.seed,
@@ -616,7 +626,7 @@ async function appendEvent(
   pool: pg.Pool,
   gameId: string,
   seq: number,
-  event: GameEvent | XiangqiEvent,
+  event: GameEvent | TenantRoomEvent<string, unknown>,
 ): Promise<void> {
   await pool.query(
     `INSERT INTO events (room_id, seq, type, payload)
@@ -854,7 +864,7 @@ async function recordPythonGameSummary(
 type RuntimeSummaryInput = {
   blackEngineId: string;
   plyCount: number;
-  runner: 'typescript-in-process' | 'python-subprocess' | 'xiangqi-uci';
+  runner: 'typescript-in-process' | 'python-subprocess' | 'variant-uci';
   status: 'completed' | 'aborted';
   termination: string;
   totalThinkTimeMs: number;

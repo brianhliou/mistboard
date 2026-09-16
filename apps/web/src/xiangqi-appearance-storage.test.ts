@@ -1,13 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
+  inferredXiangqiPieceSet,
   normalizeXiangqiBoardLayout,
   normalizeXiangqiBoardTheme,
   normalizeXiangqiPieceSet,
   readStoredXiangqiBoardLayout,
   readStoredXiangqiBoardTheme,
+  readStoredXiangqiNotation,
   readStoredXiangqiPieceSet,
   writeStoredXiangqiBoardLayout,
   writeStoredXiangqiBoardTheme,
+  writeStoredXiangqiNotation,
   writeStoredXiangqiPieceSet,
 } from './xiangqi-appearance-storage.js';
 
@@ -84,15 +87,55 @@ describe('xiangqi appearance storage normalization', () => {
     expect(normalizeXiangqiPieceSet('animal-origami')).toBe('animal-dobutsu');
   });
 
-  it('resets existing browser piece-set storage to International on this rollout', () => {
-    const storage = installLocalStorage();
-    storage.setItem('mistboard.xiangqiPieceSet', 'traditional');
-    expect(readStoredXiangqiPieceSet()).toBe('international');
-    expect(storage.getItem('mistboard.xiangqiPieceSet')).toBe('international');
-    expect(storage.getItem('mistboard.xiangqiPieceSetVersion')).toBe('3');
+  it('infers hanzi pieces for zh interfaces and Chinese-reading regions', () => {
+    expect(inferredXiangqiPieceSet('en', null)).toBe('international');
+    expect(inferredXiangqiPieceSet('en', 'US')).toBe('international');
+    expect(inferredXiangqiPieceSet('zh-Hans', null)).toBe('traditional');
+    expect(inferredXiangqiPieceSet('zh-Hant', null)).toBe('traditional');
+    for (const country of ['CN', 'TW', 'HK', 'MO', 'SG', 'MY', 'VN']) {
+      expect(inferredXiangqiPieceSet('en', country)).toBe('traditional');
+    }
   });
 
-  it('keeps user changes after the International rollout version is written', () => {
+  it('follows the inference when nothing is stored', () => {
+    const storage = installLocalStorage();
+    expect(readStoredXiangqiPieceSet()).toBe('international');
+    expect(storage.getItem('mistboard.xiangqiPieceSet')).toBeNull();
+    expect(storage.getItem('mistboard.xiangqiPieceSetVersion')).toBe('4');
+    document.cookie = 'mb_cc=CN';
+    expect(readStoredXiangqiPieceSet()).toBe('traditional');
+    expect(storage.getItem('mistboard.xiangqiPieceSet')).toBeNull();
+    document.cookie = 'mb_cc=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  });
+
+  it('clears the v3 rollout write so those browsers follow the inference', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiPieceSet', 'international');
+    storage.setItem('mistboard.xiangqiPieceSetVersion', '3');
+    document.cookie = 'mb_cc=TW';
+    expect(readStoredXiangqiPieceSet()).toBe('traditional');
+    expect(storage.getItem('mistboard.xiangqiPieceSet')).toBeNull();
+    expect(storage.getItem('mistboard.xiangqiPieceSetVersion')).toBe('4');
+    document.cookie = 'mb_cc=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  });
+
+  it('keeps a non-default pick across the v4 rollout', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiPieceSet', 'symbols');
+    storage.setItem('mistboard.xiangqiPieceSetVersion', '3');
+    expect(readStoredXiangqiPieceSet()).toBe('symbols');
+    expect(storage.getItem('mistboard.xiangqiPieceSetVersion')).toBe('4');
+  });
+
+  it('keeps an explicit International pick over the inference once v4 is written', () => {
+    installLocalStorage();
+    document.cookie = 'mb_cc=CN';
+    writeStoredXiangqiPieceSet('international');
+    expect(readStoredXiangqiPieceSet()).toBe('international');
+    document.cookie = 'mb_cc=; expires=Thu, 01 Jan 1970 00:00:00 GMT';
+  });
+
+  it('keeps user changes after the rollout version is written', () => {
     installLocalStorage();
     writeStoredXiangqiPieceSet('traditional');
     expect(readStoredXiangqiPieceSet()).toBe('traditional');
@@ -112,5 +155,42 @@ describe('xiangqi appearance storage normalization', () => {
     expect(readStoredXiangqiPieceSet()).toBe('international-flat');
     expect(storage.getItem('mistboard.xiangqiPieceSet')).toBe('traditional');
     window.history.replaceState({}, '', '/');
+  });
+});
+
+describe('xiangqi move notation preference', () => {
+  it('defaults by locale and writes nothing until the reader chooses', () => {
+    const storage = installLocalStorage();
+    expect(readStoredXiangqiNotation('en')).toBe('algebraic');
+    expect(readStoredXiangqiNotation('zh-Hans')).toBe('chinese');
+    expect(readStoredXiangqiNotation('zh-Hant')).toBe('chinese');
+    expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
+  });
+
+  it('keeps an explicit choice across locales', () => {
+    installLocalStorage();
+    writeStoredXiangqiNotation('wxf');
+    expect(readStoredXiangqiNotation('en')).toBe('wxf');
+    expect(readStoredXiangqiNotation('zh-Hans')).toBe('wxf');
+  });
+
+  it('drops the version-1 site-written coordinate default but keeps a real choice', () => {
+    const storage = installLocalStorage();
+    storage.setItem('mistboard.xiangqiNotationVersion', '1');
+    storage.setItem('mistboard.xiangqiNotation', 'coordinate');
+    expect(readStoredXiangqiNotation('en')).toBe('algebraic');
+    expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
+    expect(storage.getItem('mistboard.xiangqiNotationVersion')).toBe('2');
+
+    // ICCS left the gear the same day; a stored choice of it reads as unset.
+    storage.setItem('mistboard.xiangqiNotationVersion', '1');
+    storage.setItem('mistboard.xiangqiNotation', 'iccs');
+    expect(readStoredXiangqiNotation('zh-Hans')).toBe('chinese');
+    expect(storage.getItem('mistboard.xiangqiNotation')).toBeNull();
+
+    storage.setItem('mistboard.xiangqiNotationVersion', '1');
+    storage.setItem('mistboard.xiangqiNotation', 'chinese');
+    expect(readStoredXiangqiNotation('en')).toBe('chinese');
+    expect(storage.getItem('mistboard.xiangqiNotationVersion')).toBe('2');
   });
 });

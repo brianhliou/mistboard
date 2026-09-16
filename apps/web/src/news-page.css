@@ -79,6 +79,13 @@
   }
 }
 
+.news-page-footer {
+  margin: 24px 0 0;
+  color: var(--site-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
 .news-page-subscribe {
   color: var(--site-link);
   text-decoration: none;

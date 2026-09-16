@@ -194,3 +194,20 @@ test('a clean game records no adjudications', () => {
   assert.equal(replay.ok, true);
   assert.deepEqual(replay.ok ? replay.adjudications : null, []);
 });
+
+import { broadcastSourcePageHref } from './xiangqi-broadcast.js';
+
+test('a tour polled through dpxq-tour discovery links to the dpxq tour page, not the poll target', () => {
+  assert.equal(
+    broadcastSourcePageHref('mistboard-discover://dpxq-tour?tour=12524&tourSlug=2026-shanghai-cup'),
+    'http://www.dpxq.com/hldcg/movelist_12524.html',
+  );
+  assert.equal(
+    broadcastSourcePageHref('http://www.dpxq.com/hldcg/search/view_m_1.html'),
+    'http://www.dpxq.com/hldcg/search/view_m_1.html',
+  );
+  assert.equal(broadcastSourcePageHref('mistboard-discover://dpxq-live?tourSlug=x'), undefined);
+  assert.equal(broadcastSourcePageHref('mistboard-discover://dpxq-tour?tour=abc'), undefined);
+  assert.equal(broadcastSourcePageHref('not a url'), undefined);
+  assert.equal(broadcastSourcePageHref(undefined), undefined);
+});

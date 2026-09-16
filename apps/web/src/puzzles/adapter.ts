@@ -114,6 +114,9 @@ export type PuzzleSession = {
   // (the solved panel is rebuilt from scratch on every render). Voting shows
   // feedback in place and does NOT advance to the next puzzle.
   vote: 'up' | 'down' | null;
+  // The solver's puzzle streak as the server reported it with the solve; null
+  // for guests and until a solve lands. Shown under the Success heading.
+  streak: { current: number; best: number } | null;
   // Post-completion engine analysis (adapters that expose createAnalysis).
   // Created lazily the first time a completed puzzle renders, then persists
   // across renderSession() rebuilds so the engine toggle + eval + arrows
@@ -190,6 +193,16 @@ export type PuzzleBoardAdapter = {
   applyMove(state: PuzzleState, move: PuzzleMove): PuzzleState;
   /** Move-list label for one ply. */
   moveLabel(move: PuzzleMove): string;
+  /**
+   * OPTIONAL position-aware labels for the whole list: the setup move (the
+   * mined blunder, whose pre-move board the client never holds) and the
+   * played line from `puzzle.initial`. Variants with a piece-naming notation
+   * supply this; the list falls back to `moveLabel` per ply without it.
+   */
+  moveLabels?(
+    puzzle: PuzzleDetail,
+    played: readonly PuzzleMove[],
+  ): { setup: string | null; played: string[] };
   /** Side icon SVG for the feedback panel (the variant's "general"). */
   sideIconSvg(puzzle: PuzzleDetail): string;
   /** Post-completion engine analysis; omit when the variant has no client engine. */

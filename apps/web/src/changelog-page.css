@@ -1,0 +1,100 @@
+/* /changelog: CHANGELOG.md rendered inside the /about panel. Months are the
+   page's sections, each with a jump link at the top; entries are a plain
+   bulleted list with the commit hash small and monospace at the end, the way
+   lichess sets its PR numbers. */
+
+.changelog-months {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 14px;
+  margin: 0 0 8px;
+  padding: 0 0 14px;
+  border-bottom: 1px solid var(--site-border-soft);
+  font-size: 14px;
+}
+
+.static-prose .changelog-months-link {
+  color: var(--site-muted);
+  text-decoration: none;
+}
+
+.static-prose .changelog-months-link:hover {
+  color: var(--site-accent);
+  text-decoration: underline;
+}
+
+.changelog-month + .changelog-month {
+  margin-top: 8px;
+  padding-top: 8px;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+/* Month heading: lichess's page-level h2 is large and light; ours sits between
+   that and the 18px/700 subheading the rest of the family uses. */
+.static-prose .changelog-month-heading {
+  margin: 28px 0 6px;
+  font-size: 24px;
+  font-weight: 600;
+}
+
+.static-prose .changelog-month-anchor {
+  color: var(--site-heading);
+  text-decoration: none;
+}
+
+.static-prose .changelog-month-anchor:hover {
+  text-decoration: underline;
+}
+
+.changelog-section-heading {
+  margin: 18px 0 6px;
+  color: var(--site-heading);
+  font-size: 16px;
+  font-weight: 700;
+}
+
+.changelog-entries {
+  margin: 0;
+  padding: 0 0 0 20px;
+}
+
+.changelog-entry {
+  margin: 0 0 6px;
+  color: var(--site-text);
+  font-size: 15px;
+  line-height: 1.55;
+}
+
+.changelog-entry code {
+  padding: 0 4px;
+  border-radius: 3px;
+  background: var(--site-zebra);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.9em;
+}
+
+.static-prose .changelog-commit {
+  color: var(--site-muted);
+  font-family: ui-monospace, SFMono-Regular, Menlo, monospace;
+  font-size: 0.85em;
+  text-decoration: none;
+}
+
+.static-prose .changelog-commit:hover {
+  color: var(--site-accent);
+  text-decoration: underline;
+}
+
+.changelog-empty {
+  color: var(--site-muted);
+}
+
+@media (max-width: 720px) {
+  .static-prose .changelog-month-heading {
+    font-size: 21px;
+  }
+
+  .changelog-entries {
+    padding-left: 18px;
+  }
+}

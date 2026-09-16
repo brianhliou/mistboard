@@ -7,7 +7,8 @@ import {
   createInitialXiangqiState,
   getStandardXiangqiLegalMoves,
 } from '@mistboard/game';
-import { describe, expect, it } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { pinXiangqiNotation } from '../xiangqi-notation.js';
 import { createGameTree, ROOT_PATH, type TreePath } from './game-tree.js';
 import { createMoveTree, pathKey } from './move-tree.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
@@ -24,6 +25,11 @@ function seededTree() {
   tree.addMove(ROOT_PATH, altFirst);
   return { tree, m1, m2, altFirst };
 }
+
+// These tests locate cells by from-to text; pin coordinate labels so the
+// reader's notation default (algebraic) does not become the subject.
+beforeEach(() => pinXiangqiNotation('coordinate'));
+afterEach(() => pinXiangqiNotation(null));
 
 describe('createMoveTree', () => {
   it('renders mainline cells and an inlined variation', () => {

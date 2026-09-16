@@ -118,6 +118,12 @@ export type XiangqiRuleConfig = {
   /** What happens to a side with no pieces left. */
   extinction?: { red: ExtinctionValue; black: ExtinctionValue };
   /**
+   * A veteran soldier has the crossed soldier's move everywhere: one step
+   * forward or sideways, never backward, from its first move. Per side, so a
+   * horde can be veterans while the army keeps xiangqi's soldier.
+   */
+  veteranSoldiers?: { red: boolean; black: boolean };
+  /**
    * A side whose general stands on one of its flag points after its move
    * wins. `blackReply`: if red reaches first, black has one reply to reach
    * too, in which case the game is drawn (racing kings).
@@ -191,6 +197,7 @@ export const STANDARD_XIANGQI_RULES: Required<
   mustCapture: false,
   cannonUnloaded: false,
   extinction: { red: 'none', black: 'none' },
+  veteranSoldiers: { red: false, black: false },
   stalemate: 'loss',
   progressClock: 60,
   repetition: 'draw',
@@ -483,7 +490,8 @@ export function pseudoMovesFrom(
     case 'soldier': {
       const forward = color === 'red' ? 1 : -1;
       const steps: (readonly [number, number])[] = [[0, forward]];
-      if (hasCrossedRiver(color, from.rank)) steps.push([1, 0], [-1, 0]);
+      if (rules.veteranSoldiers[color] || hasCrossedRiver(color, from.rank))
+        steps.push([1, 0], [-1, 0]);
       for (const [df, dr] of steps) {
         const file = from.file + df;
         const rank = from.rank + dr;

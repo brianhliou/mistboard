@@ -9,7 +9,7 @@ import {
   tournamentJobConfig,
 } from './engine-tournament.js';
 import { runMigrations } from './migrate.js';
-import { xiangqiEngineTierFor } from './xiangqi-engine-catalog.js';
+import { eveAdapterFor } from './variant-eve-registry.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -18,11 +18,17 @@ if (!databaseUrl) {
 }
 
 const config = parseTournamentArgs(process.argv.slice(2));
-if (
-  config.variant === 'xiangqi' &&
-  config.engines.some((engineId) => xiangqiEngineTierFor(loadEngine(engineId).id) === null)
-) {
-  throw new Error('xiangqi tournaments require registered standard-Xiangqi engine profiles');
+const adapter = eveAdapterFor(config.variant);
+if (adapter) {
+  const foreign = config.engines.filter((engineId) => {
+    const id = loadEngine(engineId).id;
+    return id !== adapter.randomEngineId && adapter.tierFor(id) === null;
+  });
+  if (foreign.length > 0) {
+    throw new Error(
+      `${config.variant} tournaments require registered ${config.variant} engine profiles; got ${foreign.join(', ')}`,
+    );
+  }
 }
 const pairings = createRoundRobinPairings({
   engines: config.engines,

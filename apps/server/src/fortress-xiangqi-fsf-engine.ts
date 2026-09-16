@@ -31,6 +31,11 @@ import {
 const VARIANT = 'fortressxiangqi';
 const VARIANT_INI = 'fortress-xiangqi.ini';
 
+// Uniformly-random legal mover: the calibration floor / 0-Elo anchor for the
+// fortress ladder. EvE-only, never in FORTRESS_XIANGQI_PLAYABLE_ENGINES.
+export const FORTRESS_XIANGQI_RANDOM_ENGINE_ID = 'random-legal-fortress-xiangqi';
+export const FORTRESS_XIANGQI_RANDOM_ENGINE_VERSION = 'random-legal-v1';
+
 export const FORTRESS_XIANGQI_DEFAULT_ENGINE_ID = 'fairy-stockfish-fortress-xiangqi-level-4';
 // Engine BUILD version recorded per PvE game. Bump on any engine/config change
 // (including edits to fortress-xiangqi.ini).

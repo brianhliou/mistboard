@@ -817,7 +817,9 @@ async function updatePost(
     now: new Date(),
   });
   if (!result.ok) {
-    writeJson(response, result.error === 'post_not_found' ? 404 : 403, { error: result.error });
+    const status =
+      result.error === 'post_not_found' ? 404 : result.error === 'topic_locked' ? 423 : 403;
+    writeJson(response, status, { error: result.error });
     return true;
   }
   writeJson(response, 200, { post: serializePost(result.post) });
