@@ -37,6 +37,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- 心武残编 and 渊深海阔, two of the four great Qing composition manuals, are public studies (470 problems, credited to dpxq.com, held back where the record and the engine disagree); the rest of dpxq's classical shelf is seeded unlisted and follows in batches ([HASH](https://github.com/brianhliou/mistboard/commit/HASH))
 - "Horde on the Xiangqi Board: The River Is a Cliff" is published: the measurement behind a second variant that was not built, with kernel-checked boards and links to the full map and the evidence repository ([b21eb9ed](https://github.com/brianhliou/mistboard/commit/b21eb9ed))
 - A puzzle streak: the days in a row you solved a puzzle, on your own calendar and still alive the day after; it shows under Success when a puzzle is solved and on your profile with your best run, for signed-in solvers ([2191f43d](https://github.com/brianhliou/mistboard/commit/2191f43d))
 - The Duck Xiangqi launch post and the anti-xiangqi article read in Simplified and Traditional Chinese ([0f2894e9](https://github.com/brianhliou/mistboard/commit/0f2894e9))

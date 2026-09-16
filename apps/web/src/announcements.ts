@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-15',
+    kind: 'release',
+    headline: 'Two of the four great Qing composition manuals are online.',
+    body: "Fragments of a Martial Mind (1800) and Deep Abyss, Wide Sea (1808) join the Elegant Pastime Manual: four hundred and seventy problems, each on its own board, with the book's line played out as the mainline and the original four-character title kept beside the English one. Positions come from dpxq.com and are credited on every composition. A problem whose recorded line does not survive replay, or whose diagram the engine reads differently from the book, is held back rather than published wrong. The other manuals on the same shelf follow over the coming weeks.",
+    href: '/study',
+    cta: 'Open the studies',
+  },
+  {
     date: '2026-09-11',
     kind: 'article',
     headline: 'Puzzles with more than one solution.',
