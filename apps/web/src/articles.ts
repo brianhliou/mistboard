@@ -42,6 +42,7 @@ import {
   type FaqBlock,
   type FortressXiangqiReplayBlock,
   findArticle,
+  type HordeXiangqiReplayBlock,
   type ImageFigureBlock,
   type InteractiveBlock,
   type JieqiReplayBlock,
@@ -65,6 +66,10 @@ import {
   type FortressXiangqiReplayController,
   mountFortressXiangqiReplay,
 } from './fortress-xiangqi-replay.js';
+import {
+  type HordeXiangqiReplayController,
+  mountHordeXiangqiReplay,
+} from './horde-xiangqi-replay.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale, localizedHref } from './i18n/locale.js';
 import { type JieqiReplayController, mountJieqiReplay } from './jieqi-replay.js';
@@ -1257,6 +1262,7 @@ type PendingBlock =
   | ChessReplayBlock
   | FortressXiangqiReplayBlock
   | DuckXiangqiReplayBlock
+  | HordeXiangqiReplayBlock
   | JieqiReplayBlock
   | BanqiReplayBlock
   | JungleReplayBlock
@@ -1289,6 +1295,7 @@ function renderBlock(block: ArticleBlock, lang?: ArticleLang): HTMLElement {
   if (block.kind === 'fortress-xiangqi-replay')
     return renderFortressXiangqiReplayBlock(block, lang);
   if (block.kind === 'duck-xiangqi-replay') return renderDuckXiangqiReplayBlock(block, lang);
+  if (block.kind === 'horde-xiangqi-replay') return renderHordeXiangqiReplayBlock(block, lang);
   if (block.kind === 'chess-replay') return renderChessReplayBlock(block, lang);
   if (block.kind === 'jieqi-replay') return renderJieqiReplayBlock(block, lang);
   if (block.kind === 'banqi-replay') return renderBanqiReplayBlock(block, lang);
@@ -1416,6 +1423,28 @@ function renderXiangqiReplayBlock(block: XiangqiReplayBlock, lang?: ArticleLang)
     figure.append(cap);
   }
 
+  rememberPendingMount(figure, block, lang);
+  return figure;
+}
+
+function renderHordeXiangqiReplayBlock(
+  block: HordeXiangqiReplayBlock,
+  lang?: ArticleLang,
+): HTMLElement {
+  const figure = document.createElement('figure');
+  figure.className = 'article-figure article-figure-interactive article-figure-xq';
+  figure.dataset.pendingWidget = 'horde-xiangqi-replay';
+
+  const mountTarget = document.createElement('div');
+  mountTarget.className = 'article-interactive-target';
+  figure.append(mountTarget);
+
+  if (block.caption) {
+    const cap = document.createElement('figcaption');
+    cap.className = 'article-figure-caption';
+    cap.textContent = block.caption;
+    figure.append(cap);
+  }
   rememberPendingMount(figure, block, lang);
   return figure;
 }
@@ -2123,6 +2152,7 @@ export function mountPendingWidgets(
   | ChessReplayController
   | FortressXiangqiReplayController
   | DuckXiangqiReplayController
+  | HordeXiangqiReplayController
   | JieqiReplayController
   | BanqiReplayController
   | JungleReplayController
@@ -2155,6 +2185,8 @@ export function mountPendingWidgets(
       controllers.push(mountFortressXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'duck-xiangqi-replay') {
       controllers.push(mountDuckXiangqiReplay(target, block.spec, { lang }));
+    } else if (block.kind === 'horde-xiangqi-replay') {
+      controllers.push(mountHordeXiangqiReplay(target, block.spec, { lang }));
     } else if (block.kind === 'chess-replay') {
       controllers.push(mountChessReplay(target, block.spec, { lang }));
     } else if (block.kind === 'jieqi-replay') {

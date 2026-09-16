@@ -118,6 +118,7 @@ const BLOCK_PROSE: {
   'xq-replay': replay,
   'fortress-xiangqi-replay': replay,
   'duck-xiangqi-replay': replay,
+  'horde-xiangqi-replay': replay,
   'chess-replay': replay,
   'jieqi-replay': replay,
   'banqi-replay': replay,
