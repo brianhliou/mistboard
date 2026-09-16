@@ -2407,6 +2407,7 @@ const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
   'fog-xiangqi': 'dark-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
+  'atomic-xiangqi': 'atomic-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
   jungle: 'jungle',

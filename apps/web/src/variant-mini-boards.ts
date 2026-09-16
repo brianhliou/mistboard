@@ -54,6 +54,7 @@ export type VariantMiniId =
   | 'dark-xiangqi'
   | 'fortress-xiangqi'
   | 'duck-xiangqi'
+  | 'atomic-xiangqi'
   | 'jieqi'
   | 'banqi'
   | 'jungle'
@@ -583,6 +584,9 @@ const BODIES: Record<VariantMiniId, (ctx: MiniCtx) => string> = {
   'dark-xiangqi': (ctx) => xiangqiCourtBody(true, ctx),
   'fortress-xiangqi': fortressXiangqiBody,
   'duck-xiangqi': duckXiangqiBody,
+  // The standard court: the atomic marker is the final art, and the mini
+  // board only stands in where a marker has not been drawn.
+  'atomic-xiangqi': (ctx) => xiangqiCourtBody(false, ctx),
   jieqi: jieqiBody,
   banqi: banqiBody,
   jungle: () => jungleBody(),
@@ -637,6 +641,14 @@ export const VARIANT_MINIS: readonly VariantMiniDef[] = [
     accent: '#b8860b',
     blurb:
       'Xiangqi with a shared duck that both players move, blocking and screening for either side.',
+    family: 'xiangqi',
+  },
+  {
+    id: 'atomic-xiangqi',
+    label: 'Atomic Xiangqi',
+    shortLabel: 'ATX',
+    accent: '#d99a1e',
+    blurb: 'Xiangqi where every capture explodes onto the four points beside it.',
     family: 'xiangqi',
   },
   {

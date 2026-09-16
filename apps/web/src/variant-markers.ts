@@ -30,6 +30,9 @@ export const FINAL_VARIANT_MARKERS = {
   'duck-xiangqi': {
     path: '/variant-markers/final/duck-elephant-chess.png',
   },
+  'atomic-xiangqi': {
+    path: '/variant-markers/final/atomic.png',
+  },
   'dark-chess': {
     path: '/variant-markers/final/fog-chess.png',
   },

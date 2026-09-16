@@ -23,9 +23,6 @@ export const atomicXiangqiBuildArticle: Article = {
   summary:
     'Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.',
   showSummaryOnPage: false,
-  // Off the /blog index: the variant is unlisted, and this page is reached
-  // from its rules page and the brianhliou.com post.
-  showInIndex: false,
   status: 'published',
   publishedAt: '2026-09-16',
   audience:

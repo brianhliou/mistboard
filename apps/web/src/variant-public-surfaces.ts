@@ -24,10 +24,10 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // all, and a listing would invite people to trust numbers nobody has read.
   mahjong: false,
   'duck-xiangqi': true,
-  // Unlisted by design (docs-private/variant-lab/atomic-xiangqi/board-plan.md):
-  // reachable by URL and from its rules page, never from a rail, tile, card or
-  // feed. The first twenty human games decide whether it is listed.
-  'atomic-xiangqi': false,
+  // Listed 2026-09-17: the rules page sits in the rails and tiles with the
+  // other xiangqi variants. The play menu is a separate switch (the tenant
+  // registry's offerInMenu), still hidden.
+  'atomic-xiangqi': true,
 } satisfies Record<GameSpecId, boolean>;
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));

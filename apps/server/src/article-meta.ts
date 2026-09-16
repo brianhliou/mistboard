@@ -14,15 +14,7 @@ export type ArticleKind = 'rules' | 'article';
 // (apps/web/src/variant-public-surfaces.ts has `mahjong: false`); it leaves
 // this set the day the variant goes public, and articles-meta-sync.test.ts
 // fails if the two disagree.
-// 'atomic-xiangqi' is the front door of an unlisted variant (board-plan.md):
-// reachable, shareable, and out of the sitemap and the rails until the first
-// twenty human games say whether it is listed.
-const NON_INDEXED_ARTICLE_SLUGS = new Set([
-  'shogi4',
-  'mahjong',
-  'atomic-xiangqi',
-  'atomic-xiangqi-build',
-]);
+const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong']);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web

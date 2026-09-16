@@ -9,6 +9,7 @@
 // client registry doesn't substitute for that, it just centralizes the UI surface.
 
 import {
+  ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -81,6 +82,7 @@ const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
   [DARK_CHESS_SPEC_ID]: 'dark-chess',
   [FORTRESS_XIANGQI_SPEC_ID]: 'fortress-xiangqi',
   [DUCK_XIANGQI_SPEC_ID]: 'duck-xiangqi',
+  [ATOMIC_XIANGQI_SPEC_ID]: 'atomic-xiangqi',
   [XIANGQI_SPEC_ID]: 'xiangqi',
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',

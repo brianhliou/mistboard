@@ -15,7 +15,7 @@ import { articles } from './articles-data.js';
 const KEPT_OFF: Array<{ slug: string; why: string }> = [
   {
     slug: 'atomic-xiangqi-build',
-    why: 'the variant is unlisted until its first twenty human games; the article is reached from its rules page and the brianhliou.com post only',
+    why: 'a launch note for a variant that is listed but not yet in the play menu; it is on /blog and linked from the rules page, and the homepage row waits for the play menu',
   },
 ];
 

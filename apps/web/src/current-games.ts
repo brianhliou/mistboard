@@ -108,10 +108,7 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   // slot for duck rows the moment the server flag turned on. The two maps are
   // duplicated deliberately (see above) and so drift exactly like this.
   'duck-xiangqi': 'duck-xiangqi',
-  // Atomic Xiangqi has no marker of its own (it is the xiangqi set on the
-  // xiangqi board); a player's own atomic rows wear the xiangqi marker rather
-  // than an empty slot.
-  'atomic-xiangqi': 'xiangqi',
+  'atomic-xiangqi': 'atomic-xiangqi',
 };
 
 type CardState = {

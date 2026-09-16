@@ -60,8 +60,10 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The horde-xiangqi and anti-xiangqi write-ups are dated 2026-09-15 and
-      // 2026-09-13 and this index is ordered by date alone.
+      // The atomic-xiangqi launch note is dated 2026-09-16, the horde-xiangqi
+      // and anti-xiangqi write-ups 2026-09-15 and 2026-09-13, and this index
+      // is ordered by date alone.
+      '/blog/atomic-xiangqi-build',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
       // Published with the variant on 2026-09-11, the same date as the
