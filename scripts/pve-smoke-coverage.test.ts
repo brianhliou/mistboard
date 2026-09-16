@@ -21,6 +21,12 @@ import { VARIANT_SMOKE_CONFIGS } from './lib/variant-smoke-configs.mjs';
 const EXEMPT: Readonly<Record<string, string>> = {
   // Covered by prod:smoke:engines, which plays the fog-chess engine directly.
   'dark-chess': 'prod:smoke:engines',
+  // Ships unlisted behind MISTBOARD_ATOMIC_XIANGQI_ENABLED, which is off during
+  // the release that carries the code and its binary, so a release smoke would
+  // fail on the disabled gate. The smoke (a copy of the duck one) lands in the
+  // follow-up release once the flag is on; until then the PvE game on the
+  // local pair and the engine-worker probe are the evidence.
+  'atomic-xiangqi': 'flag off at first release; smoke follows once enabled',
 };
 
 function pveGameSpecIds(): string[] {
