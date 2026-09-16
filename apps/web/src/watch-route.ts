@@ -1778,6 +1778,7 @@ const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
   'dark-xiangqi': 'dark-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
+  'atomic-xiangqi': 'atomic-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
   jungle: 'jungle',

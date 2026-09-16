@@ -20,6 +20,7 @@ import {
   createBanqiDeal,
   createJieqiDeal,
   createJungleFlipDeal,
+  getAtomicXiangqiLegalMoves,
   getBanqiLegalMoves,
   getDuckXiangqiLegalTurns,
   getFortressXiangqiLegalMoves,
@@ -29,7 +30,7 @@ import {
   getStandardXiangqiLegalMoves,
   getLegalMoves as getXiangqiLegalMoves,
 } from '@mistboard/game';
-
+import { atomicXiangqiTenant } from './atomic-xiangqi-tenant.js';
 import { banqiTenant } from './banqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
@@ -89,6 +90,7 @@ const VARIANTS: VariantSpec[] = [
   // harness's uniform pick wants: a duck placement is half the decision, and
   // picking the piece move first would bias the fixture toward tidy duck play.
   { tenant: duckXiangqiTenant, enumerate: (s) => getDuckXiangqiLegalTurns(s) },
+  { tenant: atomicXiangqiTenant, enumerate: (s) => getAtomicXiangqiLegalMoves(s) },
   { tenant: xiangqiTenant, enumerate: (s) => getStandardXiangqiLegalMoves(s) },
   { tenant: darkXiangqiTenant, enumerate: (s) => getXiangqiLegalMoves(s) },
 ];

@@ -734,10 +734,10 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // check for the repetition law). Rules engine:
     // packages/game/src/variants-atomic-xiangqi.ts.
     //
-    // UNLISTED: never in the play menu, reachable by deep link and from its
-    // rules page only, PvP until the bot ships. The two gates differ on purpose
-    // here, unlike every other tenant: the menu is closed by design and the
-    // deep link is the front door.
+    // Not in the play menu: reached by deep link, from its rules page (listed
+    // 2026-09-17) and the TV channel. The two gates differ on purpose here,
+    // unlike every other tenant: the menu is closed by design and the deep
+    // link is the front door.
     gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
     roomIdPrefix: 'axq_',
     enabled: atomicXiangqiEnabled,
@@ -754,7 +754,15 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       import('../atomic-xiangqi-postgame.js').then(({ mountAtomicXiangqiPostgame }) =>
         mountAtomicXiangqiPostgame(root, roomId),
       ),
-    // No TV channel: a channel is a listing.
+    // Mistboard TV channel; renders in the 'xiangqi' family (intersection
+    // board), with the explosion on each capture.
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-atomic-xiangqi-replay.js').then(({ mountAtomicXiangqiWatchReplay }) =>
+          mountAtomicXiangqiWatchReplay(root, roomId, options),
+        ),
+    },
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,

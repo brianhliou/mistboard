@@ -36,6 +36,10 @@ const VARIANT_FLAIR: Record<string, { specId: string; path: string }> = {
     specId: 'duck-xiangqi',
     path: '/variant-markers/final/duck-elephant-chess.png',
   },
+  'variant-atomic-xiangqi': {
+    specId: 'atomic-xiangqi',
+    path: '/variant-markers/final/atomic.png',
+  },
   'variant-jieqi': { specId: 'jieqi', path: '/variant-markers/final/flip-elephant-chess.png' },
   'variant-banqi': { specId: 'banqi', path: '/variant-markers/final/half-flip-chess.png' },
   'variant-jungle': { specId: 'jungle', path: '/variant-markers/final/jungle-chess.png' },

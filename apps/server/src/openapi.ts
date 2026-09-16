@@ -52,6 +52,7 @@ export const WATCH_CHANNEL_IDS = [
   'fortress-xiangqi',
   'dark-xiangqi',
   'duck-xiangqi',
+  'atomic-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',

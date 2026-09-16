@@ -3,6 +3,7 @@
     "xiangqi",
     "fortress-xiangqi",
     "duck-xiangqi",
+    "atomic-xiangqi",
     "banqi",
     "jungle",
     "jungle-flip",
@@ -18,7 +19,8 @@
     "jungle-flip": "MISTBOARD_JUNGLE_FLIP_ENABLED",
     "jieqi": "MISTBOARD_JIEQI_ENABLED",
     "dark-xiangqi": "MISTBOARD_DARK_XIANGQI_ENABLED",
-    "duck-xiangqi": "MISTBOARD_DUCK_XIANGQI_ENABLED"
+    "duck-xiangqi": "MISTBOARD_DUCK_XIANGQI_ENABLED",
+    "atomic-xiangqi": "MISTBOARD_ATOMIC_XIANGQI_ENABLED"
   },
   "productAdditionalServerFlags": ["MISTBOARD_CORRESPONDENCE_ENABLED"]
 }

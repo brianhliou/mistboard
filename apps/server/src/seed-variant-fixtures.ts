@@ -16,7 +16,7 @@ import { fileURLToPath } from 'node:url';
 import { parseArgs } from 'node:util';
 
 import pg from 'pg';
-
+import { atomicXiangqiTenant } from './atomic-xiangqi-tenant.js';
 import { banqiTenant } from './banqi-tenant.js';
 import { darkXiangqiTenant } from './dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from './duck-xiangqi-tenant.js';
@@ -38,6 +38,7 @@ const TENANTS: any[] = [
   banqiTenant,
   fortressXiangqiTenant,
   duckXiangqiTenant,
+  atomicXiangqiTenant,
   darkXiangqiTenant,
   xiangqiTenant,
 ];

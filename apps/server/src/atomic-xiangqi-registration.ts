@@ -3,11 +3,10 @@
  * generic tenant room factory, hydration, WebSocket runtime and HTTP create
  * route.
  *
- * Scope: PvP and PvE against the patched Fairy-Stockfish ladder, unrated,
- * unlisted. No lobby seek (the Find-opponent picker offers the product
- * shelf, and this is not on it), no TV channel (a channel is a listing), no
- * correspondence. Deep links and the rules page are the whole front door,
- * which is what "unlisted" means in board-plan.md.
+ * Scope: PvP, PvE against the patched Fairy-Stockfish ladder, a lobby seek
+ * and a TV channel, all unrated; no correspondence. Listed 2026-09-17 with the
+ * rules page (rails, tiles, the product profile); the play menu is the one
+ * switch still closed, on the web side.
  */
 
 import type {
@@ -24,6 +23,7 @@ import { tenantCardBinding } from './game-card-tenant.js';
 import { boardMoveUci, tenantExportBinding } from './game-export-tenant.js';
 import * as persistence from './persistence.js';
 import { handleAtomicXiangqiCreate, requestsAtomicXiangqi } from './routes/atomic-xiangqi-rooms.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleAtomicXiangqiEngineMove } from './server-atomic-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
@@ -114,7 +114,15 @@ registerVariantTenant({
   ownsSpecRouting: true,
   errorPrefix: 'atomic_xiangqi',
   enabled: atomicXiangqiTenant.enabled,
-  // No `watch` block: a TV channel is a listing, and this variant is unlisted.
+  // Mistboard TV channel, listed with the rules page (2026-09-17). Like the
+  // others it inherits this tenant's `enabled`, so it stays dark behind the
+  // flag.
+  watch: {
+    channelId: 'atomic-xiangqi',
+    family: 'xiangqi',
+    label: 'Atomic Xiangqi',
+    legacyVariants: ['atomic-xiangqi'],
+  },
   rooms: atomicXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
   activeGameCount: () => countActiveTenantGames(atomicXiangqiRooms.values()),
   getOrLoadRoom: (roomId) =>
@@ -144,10 +152,17 @@ registerVariantTenant({
       );
     },
   },
-  // No lobby: a seek is a listing too. Two people who want a game share an
-  // invite link, which is how a variant nobody has played yet should meet its
-  // first twenty games.
-  lobby: null,
+  // Find-opponent seek, unrated: there is no rating pool for it, so a rated
+  // seek would fail at the point of writing the result.
+  lobby: {
+    supportsRated: false,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl) => {
+      const created = await createAtomicXiangqiRoom(timeControl, 'random', false);
+      if (!created.ok) throw new Error(`atomic_xiangqi_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   // The moves are ordinary board moves; the explosion is implied by the rules
   // the replayer runs. JSON only (export-formats.ts): the WXF writer would
   // replay a game that does not explode.
