@@ -19,6 +19,10 @@ import type {
 import { atomicXiangqiFen } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
 import {
+  ATOMIC_XIANGQI_ANALYSIS_DEPTH,
+  ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID,
+} from './atomic-xiangqi-fsf-engine.js';
+import {
   atomicXiangqiPgnStyle,
   atomicXiangqiPgnWriter,
   atomicXiangqiWxfLabels,
@@ -179,11 +183,16 @@ registerVariantTenant({
     writePgn: (moves) => atomicXiangqiPgnWriter(moves, atomicXiangqiPgnStyle(moves)),
   }),
   // Share card: the standard xiangqi board and FEN spelling (og-position.ts
-  // draws the atomic slug with the xiangqi renderer), final position, no
-  // analysis engine.
+  // draws the atomic slug with the xiangqi renderer). The card reads the
+  // stored whole-game analysis to show the turning point rather than the
+  // final position, the fortress terms: an atomic eval swing is a decision,
+  // not a reveal.
   card: tenantCardBinding(atomicXiangqiTenant, {
     variant: 'atomic-xiangqi',
-    analysis: null,
+    analysis: {
+      engineId: ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID,
+      depth: ATOMIC_XIANGQI_ANALYSIS_DEPTH,
+    },
     fen: atomicXiangqiFen,
   }),
   sweepDueDeadline: null,
