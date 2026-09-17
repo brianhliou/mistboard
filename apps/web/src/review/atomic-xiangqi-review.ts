@@ -8,10 +8,12 @@
 // the standard board so those rings are part of every render and survive the
 // controller's own marker updates (annotation circles, judgment glyphs).
 //
-// No client engine (`engine: null`): the patched Fairy-Stockfish runs on the
-// server for PvE and is not built for the browser. The eval gauge and engine
-// panel are omitted; the branching board, move tree, annotations and replay
-// all work, the posture dark-xiangqi-review.ts and duck-xiangqi-review.ts take.
+// The client engine is the shared Fairy-Stockfish core (review/engine/ceval.ts),
+// which since 2026-09-17 is built from upstream plus the same patch the PvE bot
+// runs (fairy-stockfish-atomic-xiangqi.patch), with atomic-xiangqi.ini written
+// into it at load. Positions are fed as UCI from the start array (positionMode
+// 'moves'), the way standard xiangqi feeds it; the FEN is the kernel's own
+// spelling, which is the standard one.
 
 import {
   type AtomicXiangqiColor,
@@ -20,6 +22,7 @@ import {
   type AtomicXiangqiPlayerView,
   type AtomicXiangqiSquare,
   atomicXiangqiFen,
+  fsfUciToXiangqiSquares,
 } from '@mistboard/game';
 // ORDER MATTERS: live-xiangqi.css draws the board; atomic-xiangqi.css only adds
 // the aftermath ring.
@@ -43,6 +46,7 @@ import {
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import { atomicXiangqiTreeAdapter } from './atomic-xiangqi-tree-adapter.js';
+import { bestMoveArrow, engineArrowsFromLines } from './engine/engine-arrows.js';
 import type { NodeShape } from './game-tree.js';
 import {
   mountTreeReview,
@@ -130,9 +134,16 @@ const atomicXiangqiPresentation: TreePresentation<
   XiangqiBoardMarker
 > = {
   adapter: atomicXiangqiTreeAdapter,
-  engine: null,
-  // No engine, but the position still has a FEN (the standard spelling), so
-  // the analysis board's FEN box can copy a position out.
+  engine: {
+    panelVariant: 'atomicxiangqi',
+    fen: atomicXiangqiFen,
+    // A finished atomic game usually ends with a general blown off the board;
+    // the engine has nothing to search there and would sit on "thinking".
+    canEvaluatePosition: (truth) => truth.status.type === 'playing',
+    formatPvMove: formatAtomicEngineMove,
+    engineArrowsFromLines,
+    bestMoveArrow,
+  },
   fen: (truth) => atomicXiangqiFen(truth),
   boardHostClassName: 'dxq-postgame__board xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',
@@ -162,6 +173,13 @@ const atomicXiangqiPresentation: TreePresentation<
     className: `xq-marker--${glyph.tone}`,
   }),
 };
+
+// Fairy-Stockfish UCI back to our `from-to` notation for readable PV lines.
+// FSF is 1-indexed like us, so this is a plain square split.
+function formatAtomicEngineMove(uci: string): string {
+  const squares = fsfUciToXiangqiSquares(uci);
+  return squares ? `${squares.from}-${squares.to}` : uci;
+}
 
 export function mountAtomicXiangqiReview(
   root: HTMLElement,

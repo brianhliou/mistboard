@@ -446,6 +446,31 @@ export async function mountVariantAnalysisPage(
       });
       return;
     }
+    case 'atomic-xiangqi': {
+      // The standard xiangqi FEN grammar (the kernel writes and reads the same
+      // spelling), so the editor hand-off is the ordinary one.
+      const [
+        { mountAtomicXiangqiReview },
+        { atomicXiangqiTreeAdapter },
+        { atomicXiangqiFen, atomicXiangqiStateFromFen },
+      ] = await Promise.all([
+        import('./review/atomic-xiangqi-review.js'),
+        import('./review/atomic-xiangqi-tree-adapter.js'),
+        import('@mistboard/game'),
+      ]);
+      const parsed = fenParam ? atomicXiangqiStateFromFen(fenParam, ANALYSIS_GAME_ID) : null;
+      const rootTruth = parsed ?? atomicXiangqiTreeAdapter.initialTruth();
+      mountAtomicXiangqiReview(root, {
+        ...base,
+        summary: summaryFor(parsed !== null),
+        root: parsed ? { truth: parsed, fen: atomicXiangqiFen(parsed) } : undefined,
+        moves: movesFromParam(movesParam, atomicXiangqiTreeAdapter, rootTruth),
+        importPanel: makeImportPanel(id, atomicXiangqiTreeAdapter, rootTruth),
+        onLineChange: syncLineToUrl(atomicXiangqiTreeAdapter),
+        boardEditorHref: (node) => editorHref(id, atomicXiangqiFen(node)),
+      });
+      return;
+    }
     default: {
       // Fail-closed: a new catalog member must get its own case, never another
       // variant's board.

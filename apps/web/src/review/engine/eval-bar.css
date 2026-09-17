@@ -76,6 +76,8 @@
    pieces are red and black reading as white and black is a straight mismatch. */
 .xiangqi-review .review-eval-bar,
 .fortress-xiangqi-review .review-eval-bar,
+.atomic-xiangqi-review .review-eval-bar,
+.duck-xiangqi-review .review-eval-bar,
 .dark-xiangqi-review .review-eval-bar,
 .jieqi-review .review-eval-bar,
 .banqi-review .review-eval-bar {
@@ -83,6 +85,8 @@
 }
 .xiangqi-review .review-eval-bar__fill,
 .fortress-xiangqi-review .review-eval-bar__fill,
+.atomic-xiangqi-review .review-eval-bar__fill,
+.duck-xiangqi-review .review-eval-bar__fill,
 .dark-xiangqi-review .review-eval-bar__fill,
 .jieqi-review .review-eval-bar__fill,
 .banqi-review .review-eval-bar__fill {

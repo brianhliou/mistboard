@@ -41,6 +41,7 @@ export const EDITOR_VARIANT_IDS = [
   'xiangqi',
   'jieqi',
   'banqi',
+  'atomic-xiangqi',
   'dark-xiangqi',
   'duck-xiangqi',
   'fortress-xiangqi',

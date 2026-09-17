@@ -5,9 +5,12 @@
 // exercised a real search).
 //
 // Backends (see apps/web/src/review/engine/):
-//   fsf   - Fairy-Stockfish pthread wasm on /analysis/xiangqi and
-//           /analysis/fortress-xiangqi (needs COOP/COEP cross-origin isolation
-//           + SharedArrayBuffer). ceval.ts.
+//   fsf   - Fairy-Stockfish pthread wasm on /analysis/xiangqi,
+//           /analysis/fortress-xiangqi and /analysis/atomic-xiangqi (needs
+//           COOP/COEP cross-origin isolation + SharedArrayBuffer). ceval.ts.
+//           The atomic board is gated on BEHAVIOUR: the vendored build is
+//           patched for atomic's rules, and a stock build loads the same .ini
+//           without complaint and plays a different game.
 //   misty - Misty single-threaded wasm on /analysis/jungle,
 //           /analysis/jungle-flip, plus MistyBanqi on a finished banqi game's
 //           review page. The game id is DISCOVERED at runtime from the public
@@ -85,8 +88,51 @@ async function checkFsf(browser) {
     slug: 'fortress-xiangqi',
     boardSelector: '.fortress-xiangqi-live-board svg',
   });
+  const atomicXiangqi = await checkAtomicXiangqiPatched(browser);
   const nnue = await checkXiangqiNnueLoaded(browser);
-  return { surfaces: { xiangqi, fortressXiangqi }, nnue };
+  return { surfaces: { xiangqi, fortressXiangqi, atomicXiangqi }, nnue };
+}
+
+/**
+ * Assert the browser engine plays ATOMIC xiangqi, not xiangqi with an .ini it
+ * half-understood.
+ *
+ * The vendored Fairy-Stockfish is built with fairy-stockfish-atomic-xiangqi.patch
+ * (the bot's patch); stock Fairy-Stockfish ignores the four options it adds and
+ * loads the variant anyway, so an asset-level check cannot tell the two apart.
+ * The probe is the blast gate railpack runs on the native binary: a red chariot
+ * on the advisor file with nothing between it and the black advisor. Under the
+ * patch, taking the advisor blows up the general beside it, mate in one; a
+ * build that half-loaded the stanza reads it as a quiet position.
+ */
+async function checkAtomicXiangqiPatched(browser) {
+  const probeFen = '3ak4/9/9/9/9/9/9/3R5/9/4K4 w - - 0 1';
+  const url = `${baseUrl}/analysis/atomic-xiangqi?fen=${encodeURIComponent(probeFen)}`;
+  const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
+  try {
+    const errors = collectErrors(page);
+    const response = await page.goto(url, { waitUntil: 'domcontentloaded', timeout: timeoutMs });
+    if (!response?.ok())
+      throw new Error(`${url} returned HTTP ${response?.status() ?? 'no response'}`);
+    await page
+      .locator('.xiangqi-live-board svg')
+      .first()
+      .waitFor({ state: 'attached', timeout: timeoutMs });
+    await toggleEngineOn(page);
+    await waitForEvalAndLines(page);
+    const panel = await readPanel(page);
+    if (panel.eval !== '#1') {
+      throw new Error(
+        `atomic xiangqi analysis reads ${JSON.stringify(panel.eval)} where the chariot takes the advisor and ` +
+          'blows up the general (#1): the browser engine is not the patched build, or atomic-xiangqi.ini ' +
+          'did not load (apps/web/public/engine/fairy-stockfish/README.md).',
+      );
+    }
+    assertNoFatalErrors(errors);
+    return { url, eval: panel.eval, lines: panel.lines };
+  } finally {
+    await page.close();
+  }
 }
 
 /**

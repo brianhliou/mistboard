@@ -1,42 +1,35 @@
-import type {
-  AtomicXiangqiColor,
-  AtomicXiangqiGameStatus,
-  AtomicXiangqiMove,
-  AtomicXiangqiPlayerView,
+import {
+  type AtomicXiangqiColor,
+  type AtomicXiangqiGameStatus,
+  type AtomicXiangqiMove,
+  type AtomicXiangqiPlayerView,
+  atomicXiangqiFen,
 } from '@mistboard/game';
-// The xiangqi surface stylesheet first (ground, grid, palace, river), then the
-// atomic marks. Without the first, the board is drawn and invisible.
-import './live-xiangqi.css';
-import './atomic-xiangqi.css';
 import './landing.css';
 import './game-route.css';
-import {
-  animateAtomicXiangqiCapture,
-  atomicXiangqiBlastKey,
-  atomicXiangqiBlastMarkers,
-  atomicXiangqiCaptureAnimates,
-  markAtomicXiangqiBlastHost,
-} from './atomic-xiangqi-board.js';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
 import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { reviewSeatProfiles } from './profile-link.js';
+import { mountAtomicXiangqiReview } from './review/atomic-xiangqi-review.js';
+import { crosstableConfig } from './review/crosstable.js';
+import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import {
   buildReviewMeta,
   reviewOutcomeLine,
   reviewResultLabel,
 } from './review/game-review-meta.js';
-import { createMoveList, type MoveListEntry } from './review/move-list.js';
-import { mountReviewLayout } from './review/review-layout.js';
+import { analysisHref, editorHref } from './review/position-links.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
-import { LIVE_BOARD_SURFACE, xiangqiBoardSvg } from './xiangqi-board.js';
-import { xiangqiBoardViewBox } from './xiangqi-board-geometry.js';
 
-// Postgame review for Atomic Xiangqi. Perfect information, one board, no
-// per-seat POV split. It replays the server's per-ply snapshots rather than
-// reconstructing positions client-side: every snapshot carries its move's
-// aftermath (`lastBlast`), so the board rings what each explosion took without
-// re-deriving the blast here.
+// Postgame review for Atomic Xiangqi: the atomic tree review (branching board,
+// local engine, annotations, share and export) over the game's move list, the
+// surface Fortress Xiangqi has. Perfect information, one board, no per-seat
+// POV split.
 
 type AtomicXiangqiViewKey = 'truth';
 
@@ -136,24 +129,33 @@ export function atomicXiangqiPostgameApiUrl(roomId: string): string {
   return url.pathname;
 }
 
-// No coordinate labels on the review board, so no gutter: read the viewBox the
-// renderer will use rather than hardcoding it (the host clips on a mismatch).
-const BOARD_VIEWBOX = xiangqiBoardViewBox('intersection', {
-  ...LIVE_BOARD_SURFACE.geo,
-  coordGutter: 0,
-});
-
 function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameResponse): void {
-  const boardHost = document.createElement('div');
-  boardHost.className = 'atomic-xiangqi-postgame__board review-board-host';
-  boardHost.setAttribute('aria-label', 'Atomic Xiangqi board');
-  boardHost.style.width = '100%';
-  boardHost.style.aspectRatio = `${BOARD_VIEWBOX.width} / ${BOARD_VIEWBOX.height}`;
+  // Perfect information: the tree reconstructs every position from the move
+  // list client-side through the atomic kernel, aftermath included (the review
+  // board rings what each explosion took, atomic-xiangqi-review.ts). The
+  // server per-ply snapshots are used only by the watch adapter
+  // (postgameViewAtPly below).
+  const moveEvents = postgame.timeline.filter(
+    (entry) => entry.type === 'move-played' && entry.move,
+  );
+  const moves = moveEvents.map((entry) => entry.move as AtomicXiangqiMove);
 
-  const moveList = createMoveList(moveEntries(postgame), { title: 'Moves' });
-  // The ply whose explosion has played; stepping onto a ply detonates it once.
-  let detonatedKey: string | null = null;
-  let cancelCapture: (() => void) | null = null;
+  // Per-ply elapsed time from consecutive event timestamps (the server persists
+  // no per-move clock, so the first ply's delta is measured from the earliest
+  // event).
+  let prevAt = postgame.timeline[0]?.at ?? moveEvents[0]?.at ?? 0;
+  const moveTimes = moveEvents.map((entry) => {
+    const delta = Math.max(0, entry.at - prevAt);
+    prevAt = entry.at;
+    return delta;
+  });
+  const hasMoveTimes = moveTimes.some((ms) => ms > 0);
+
+  const gamePlayers = postgame.game.players ?? [];
+  const playerNames = {
+    red: gamePlayers.find((p) => p.color === 'red')?.name,
+    black: gamePlayers.find((p) => p.color === 'black')?.name,
+  };
 
   const status = reviewOutcomeLine(
     reviewResultLabel(postgame.game.result),
@@ -167,53 +169,40 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
   });
 
   root.replaceChildren(buildNav());
-  mountReviewLayout(root, {
+  mountAtomicXiangqiReview(root, {
     pageClassName: 'atomic-xiangqi-review',
     ariaLabel: 'Atomic Xiangqi postgame',
     title: 'Atomic Xiangqi',
     summary: `${status} · ${postgame.game.plyCount} plies`,
     metaCard,
     details,
-    moves: moveList.el,
-    boards: [{ key: 'truth', el: boardHost, tier: 'primary' }],
-    boardAspect: BOARD_VIEWBOX.width / BOARD_VIEWBOX.height,
-    boardCols: 9,
-    maxPly: postgameReplayMaxPly(postgame),
-    renderBoards({ ply, flipped }) {
-      const perspective: AtomicXiangqiColor = flipped ? 'black' : 'red';
-      const view = postgameViewAtPly(postgame, 'truth', ply) ?? postgame.view;
-      const key = atomicXiangqiBlastKey(view);
-      const fresh = key !== detonatedKey;
-      detonatedKey = key;
-      if (fresh) {
-        cancelCapture?.();
-        cancelCapture = null;
-      }
-      markAtomicXiangqiBlastHost(boardHost, view);
-      boardHost.innerHTML = xiangqiBoardSvg(view, perspective, {
-        interactive: false,
-        selectedSquare: null,
-        draggingFrom: null,
-        coordinates: false,
-        markers: atomicXiangqiBlastMarkers(view, { fresh }),
-      });
-      if (fresh && atomicXiangqiCaptureAnimates(view)) {
-        cancelCapture = animateAtomicXiangqiCapture(boardHost, view, perspective);
-      }
-    },
-    renderMoves({ ply }, jump) {
-      moveList.update(ply, jump);
+    moves,
+    moveTimes: hasMoveTimes ? moveTimes : undefined,
+    // Name the seats at the board. The meta card carries the pairing too, but
+    // it sits below the fold on a normal viewport, so without these a reader
+    // sees a board and has to scroll past it to learn who is playing.
+    seatLabels: true,
+    players: playerNames,
+    playerProfiles: reviewSeatProfiles(gamePlayers),
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
+    // Position hand-offs: continue this node on /analysis, or open it in the editor.
+    analyseFromHere: (truth) => analysisHref('atomic-xiangqi', atomicXiangqiFen(truth)),
+    boardEditorHref: (truth) => editorHref('atomic-xiangqi', atomicXiangqiFen(truth)),
+    ...gameExportShareExtra('atomic-xiangqi', postgame.game.roomId),
+    // Server whole-game analysis on the patched Fairy-Stockfish, DB-cached: an
+    // already-analysed game loads from cache on open (a GET that never
+    // computes). Requesting a fresh compute is account-gated (the server
+    // rejects anon POSTs), so a signed-out visitor gets a sign-in CTA instead
+    // of a request that would 401.
+    analysis: {
+      requestLabel: isLikelySignedIn()
+        ? t('replay.requestComputerAnalysis')
+        : t('replay.signInToRequestAnalysis'),
+      requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
+      fetchCached: () => fetchCachedGameAnalysis('atomic-xiangqi', postgame.game.roomId),
+      run: () => requestGameAnalysis('atomic-xiangqi', postgame.game.roomId),
     },
   });
-}
-
-function moveEntries(postgame: AtomicXiangqiPostgameResponse): MoveListEntry[] {
-  return postgame.timeline
-    .filter(
-      (entry): entry is typeof entry & { move: AtomicXiangqiMove; ply: number } =>
-        entry.type === 'move-played' && !!entry.move && typeof entry.ply === 'number',
-    )
-    .map((entry) => ({ ply: entry.ply, label: `${entry.move.from}-${entry.move.to}` }));
 }
 
 export function postgameReplayMaxPly(postgame: AtomicXiangqiPostgameResponse): number {

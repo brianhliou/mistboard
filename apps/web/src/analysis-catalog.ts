@@ -26,7 +26,8 @@ export type AnalysisVariantId =
   | 'jieqi'
   | 'dark-xiangqi'
   | 'dark-chess'
-  | 'duck-xiangqi';
+  | 'duck-xiangqi'
+  | 'atomic-xiangqi';
 
 export type AnalysisVariant = {
   id: AnalysisVariantId;
@@ -46,6 +47,7 @@ export const ANALYSIS_VARIANTS: readonly AnalysisVariant[] = [
   entry('xiangqi'),
   entry('jieqi'),
   entry('banqi'),
+  entry('atomic-xiangqi'),
   entry('dark-xiangqi'),
   entry('duck-xiangqi'),
   entry('fortress-xiangqi'),

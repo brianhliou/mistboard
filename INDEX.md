@@ -1048,3 +1048,30 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/review/xiangqi-practice.ts` | _needs a one-line description_ |
 | `apps/web/src/variant-tenant/clock-projection.ts` | _needs a one-line description_ |
 | `apps/web/src/watch-duck-xiangqi-replay.ts` | _needs a one-line description_ |
+| `apps/server/src/atomic-xiangqi-eve-adapter.ts` | Atomic Xiangqi EvE adapter: the rated-ladder runner plays the variant through the patched FSF tiers |
+| `apps/server/src/atomic-xiangqi-fsf-engine.ts` | Atomic Xiangqi Fairy-Stockfish provider: eight node-anchored tiers on the patched binary, warm sessions, the fixed-depth analysis session |
+| `apps/server/src/atomic-xiangqi-registration.ts` | Atomic Xiangqi tenant registration: rooms, lobby seek (rated), TV channel, PGN/JSON export binding, share card |
+| `apps/server/src/atomic-xiangqi-tenant.ts` | Atomic Xiangqi variant tenant: event log shape, persistence mapping, engine seat |
+| `apps/server/src/game-card-tenant.ts` | _needs a one-line description_ |
+| `apps/server/src/og-card-board.ts` | _needs a one-line description_ |
+| `apps/server/src/og-game-tenant.ts` | _needs a one-line description_ |
+| `apps/server/src/og-primitives.ts` | _needs a one-line description_ |
+| `apps/server/src/og-raster.ts` | _needs a one-line description_ |
+| `apps/server/src/routes/atomic-xiangqi-games.ts` | Atomic Xiangqi postgame API plus the cached whole-game analysis routes on the patched FSF |
+| `apps/server/src/routes/atomic-xiangqi-rooms.ts` | Atomic Xiangqi room creation route (PvP, PvE tiers; rated only via the lobby seek) |
+| `apps/server/src/server-atomic-xiangqi-engine.ts` | Atomic Xiangqi live bot move scheduling and the per-move decision artifact |
+| `apps/server/src/study-preview-board.ts` | _needs a one-line description_ |
+| `apps/web/src/anti-xiangqi-article-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/atomic-xiangqi-board.ts` | Atomic Xiangqi board marks: aftermath rings, shockwave, capture detonation animation |
+| `apps/web/src/atomic-xiangqi-postgame.ts` | Atomic Xiangqi postgame: the atomic tree review over the game (engine, share/export, computer analysis) |
+| `apps/web/src/atomic-xiangqi-replay.ts` | Atomic Xiangqi article/study replay: notation through the atomic kernel, stepper boards with detonations |
+| `apps/web/src/atomic-xiangqi-rules-diagrams.ts` | Atomic Xiangqi rules-page figures (blast, soldiers, generals, shot) and the article card thumbnail |
+| `apps/web/src/horde-xiangqi-article-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/horde-xiangqi-replay.ts` | _needs a one-line description_ |
+| `apps/web/src/live-atomic-xiangqi.ts` | Atomic Xiangqi live room: standard xiangqi board with the blast aftermath, atomic sound policy |
+| `apps/web/src/review/atomic-xiangqi-review.ts` | Atomic Xiangqi tree-review presentation: aftermath-aware board, Fairy-Stockfish ceval on the patched browser build |
+| `apps/web/src/review/atomic-xiangqi-tree-adapter.ts` | Atomic Xiangqi VariantTreeAdapter (kernel replay, FSF UCI in and out) |
+| `apps/web/src/watch-atomic-xiangqi-replay.ts` | Atomic Xiangqi TV/watch replay adapter with detonations on forward steps |
+| `apps/web/src/xiangqi-broadcast-review.ts` | _needs a one-line description_ |
+| `apps/web/src/xiangqi-broadcast-standings.ts` | _needs a one-line description_ |
+| `apps/web/src/xiangqi-broadcast-time.ts` | _needs a one-line description_ |

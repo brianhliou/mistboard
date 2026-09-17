@@ -518,7 +518,7 @@ function xiangqiTurn(model: EditorModel): XiangqiColor {
   return model.turn === 'black' ? 'black' : 'red';
 }
 
-function xiangqiSpec(id: 'xiangqi' | 'dark-xiangqi'): EditorSpec {
+function xiangqiSpec(id: 'xiangqi' | 'dark-xiangqi' | 'atomic-xiangqi'): EditorSpec {
   const spec: EditorSpec = {
     id,
     colors: ['red', 'black'],
@@ -1252,6 +1252,9 @@ export const EDITOR_SPECS: Record<EditorVariantId, EditorSpec> = {
   'fortress-xiangqi': FORTRESS_SPEC,
   jieqi: JIEQI_SPEC,
   'dark-xiangqi': xiangqiSpec('dark-xiangqi'),
+  // Same pieces, same board, same FEN grammar; the explosion is a rule of
+  // play, not of position, so the editor has nothing to add for it.
+  'atomic-xiangqi': xiangqiSpec('atomic-xiangqi'),
   'dark-chess': DARK_CHESS_SPEC,
   'duck-xiangqi': DUCK_XIANGQI_SPEC,
 };

@@ -1,12 +1,13 @@
 /**
- * Atomic Xiangqi postgame route — `GET /api/atomic-xiangqi/games/:id`.
+ * Atomic Xiangqi postgame route — `GET /api/atomic-xiangqi/games/:id`, plus
+ * the whole-game analysis routes under it (`…/analysis`, the shared factory).
  *
- * Shape-for-shape the Duck Xiangqi route minus the TV builder: there is no
- * watch channel for an unlisted variant. Open information, so the payload
- * carries one view (`truth`) built from Red's perspective and both seats plus
- * spectators get it. The per-ply history is the server's own snapshots, each
- * carrying the aftermath of its move (`lastBlast`), so the postgame board can
- * draw what every explosion took without re-deriving it.
+ * Shape-for-shape the Duck Xiangqi route (the TV builder lives in the
+ * registration's `watch:` block). Open information, so the payload carries one
+ * view (`truth`) built from Red's perspective and both seats plus spectators
+ * get it. The per-ply history is the server's own snapshots, each carrying the
+ * aftermath of its move (`lastBlast`), so the watch board can draw what every
+ * explosion took without re-deriving it.
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -18,10 +19,27 @@ import {
   type AtomicXiangqiPlayerView,
   getAtomicXiangqiPlayerView,
   oppositeAtomicXiangqiColor,
+  xiangqiMoveToFsfUci,
 } from '@mistboard/game';
+import {
+  ATOMIC_XIANGQI_ANALYSIS_DEPTH,
+  ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID,
+  withAtomicXiangqiAnalysisSession,
+} from './../atomic-xiangqi-fsf-engine.js';
 import { atomicXiangqiRooms } from './../atomic-xiangqi-registration.js';
 import { type AtomicXiangqiEvent, atomicXiangqiTenant } from './../atomic-xiangqi-tenant.js';
 import { atomicXiangqiEnabled } from './../feature-flags.js';
+import {
+  type AnalysisProgressStore,
+  liveAnalysisProgressStore,
+  resolveCachedComputation,
+} from './../game-analysis-kernel.js';
+import {
+  isVacuousAnalysis,
+  type SweepPlyEval,
+  sweepPlyEvals,
+  VacuousAnalysisError,
+} from './../game-analysis-sweep.js';
 import * as persistence from './../persistence.js';
 import { buildTenantGameSummary } from './../variant-tenant/events.js';
 import {
@@ -31,6 +49,7 @@ import {
   tenantPveEngineId,
 } from './../variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './../variant-tenant/tenant.js';
+import { createGameAnalysisRoutes } from './game-analysis-route.js';
 import { type HttpApiContext, postgamePlayers, requireMethod, writeJson } from './lib.js';
 
 type AtomicXiangqiPostgameSnapshot = {
@@ -74,6 +93,24 @@ const defaultPersistence: AtomicXiangqiPostgamePersistence = {
   loadRoomEvents: (roomId) => persistence.loadRoomEvents<AtomicXiangqiEvent>(roomId),
 };
 
+// Computer analysis: full-strength fixed-depth eval of every ply on the PATCHED
+// Fairy-Stockfish (the bot's binary), cached and coalesced. Mirrors the fortress
+// analysis route; the engine's `best` is already our `<from><to>` spelling, so
+// there is no rewrite step. Gates/envelopes: the shared factory. No engineBinary
+// gate: binary resolution happens lazily inside the eval itself and a missing
+// patched binary surfaces as a scoreless sweep (503 analysis_engine_unavailable).
+const handleAnalysisRoutes = createGameAnalysisRoutes({
+  routeId: 'atomic-xiangqi',
+  logPrefix: 'atomic_xiangqi',
+  variantLabel: 'Atomic Xiangqi',
+  enabled: atomicXiangqiEnabled,
+  requiresPersistence: false,
+  loadInputs: (roomId) => atomicXiangqiPostgameForApi(roomId),
+  countPlies: (payload) => payload.timeline.filter((entry) => entry.type === 'move-played').length,
+  resolveAnalysis: (roomId, payload, computeIfMissing) =>
+    resolveAtomicXiangqiAnalysis(roomId, payload, liveAnalysisCache, undefined, computeIfMissing),
+});
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -81,6 +118,8 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await handleAnalysisRoutes(request, response, pathname)) return true;
+
   const postgameMatch = pathname.match(/^\/api\/atomic-xiangqi\/games\/([^/]+)$/);
   if (!postgameMatch) return false;
 
@@ -98,6 +137,111 @@ export async function tryHandle(
   }
   writeJson(response, 200, payload);
   return true;
+}
+
+export type AtomicXiangqiGameAnalysis = {
+  engineId: string;
+  depth: number;
+  plies: SweepPlyEval[];
+};
+
+type AtomicXiangqiAnalysisPayload = {
+  timeline: ReadonlyArray<{ type: string; move?: AtomicXiangqiMove }>;
+};
+
+// The whole-game sweep: the shared prefix walker bound to ONE persistent
+// patched-FSF session (spawn + variant setup once, then incremental
+// position/go per ply). With a `progress` store the sweep checkpoints after
+// every evaluated ply and resumes from the last checkpoint.
+function atomicXiangqiAnalysisSweep(
+  movesUci: string[],
+  progress?: AnalysisProgressStore<SweepPlyEval>,
+): Promise<SweepPlyEval[]> {
+  return withAtomicXiangqiAnalysisSession((evaluate) =>
+    // The session evaluator carries the fixed analysis depth internally; the
+    // sweep's depth argument is the nominal cache dimension, not a search limit.
+    sweepPlyEvals(movesUci, (moves) => evaluate(moves), ATOMIC_XIANGQI_ANALYSIS_DEPTH, progress),
+  );
+}
+
+/**
+ * Build the Red-POV eval series for a finished atomic game from its postgame
+ * payload. `analyze` is injectable for tests; it defaults to the real sweep
+ * (one persistent engine process per sweep). No `best`-coordinate rewrite:
+ * the engine's UCI is our notation.
+ */
+export async function analyzeAtomicXiangqiPostgame(
+  payload: AtomicXiangqiAnalysisPayload,
+  analyze: (movesUci: string[]) => Promise<SweepPlyEval[]> = (movesUci) =>
+    atomicXiangqiAnalysisSweep(movesUci),
+): Promise<AtomicXiangqiGameAnalysis> {
+  const movesUci = payload.timeline
+    .filter((entry): entry is { type: 'move-played'; move: AtomicXiangqiMove } =>
+      Boolean(entry.type === 'move-played' && entry.move),
+    )
+    .map((entry) => xiangqiMoveToFsfUci(entry.move));
+  const plies = await analyze(movesUci);
+  return {
+    engineId: ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID,
+    depth: ATOMIC_XIANGQI_ANALYSIS_DEPTH,
+    plies,
+  };
+}
+
+// Cache read/write, injectable for tests. Live impl reads/writes the
+// variant-agnostic game_analysis table (no-ops when persistence is disabled).
+export type AtomicXiangqiAnalysisCache = {
+  get(roomId: string, engineId: string, depth: number): Promise<SweepPlyEval[] | null>;
+  save(roomId: string, engineId: string, depth: number, plies: SweepPlyEval[]): Promise<void>;
+};
+
+const liveAnalysisCache: AtomicXiangqiAnalysisCache = {
+  get: (roomId, engineId, depth) => persistence.getGameAnalysis(roomId, engineId, depth),
+  save: (roomId, engineId, depth, plies) =>
+    persistence.saveGameAnalysis(roomId, engineId, depth, plies),
+};
+
+/**
+ * Cache-first, coalesced whole-game analysis (shared skeleton:
+ * game-analysis-kernel). A finished game's eval series is immutable given
+ * (room, engine, depth): serve a stored result immediately, else compute once
+ * (sharing one in-flight promise), persist it, and return. A scoreless
+ * (all-null) sweep throws VacuousAnalysisError and is never cached, so a fixed
+ * engine can recompute later; the route maps it to 503.
+ */
+export async function resolveAtomicXiangqiAnalysis(
+  roomId: string,
+  payload: AtomicXiangqiAnalysisPayload,
+  cache: AtomicXiangqiAnalysisCache = liveAnalysisCache,
+  analyze?: (movesUci: string[]) => Promise<SweepPlyEval[]>,
+  computeIfMissing = true,
+): Promise<AtomicXiangqiGameAnalysis | null> {
+  const engineId = ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID;
+  const depth = ATOMIC_XIANGQI_ANALYSIS_DEPTH;
+  // Incremental checkpoints only on the real (default-analyzer) path; injected
+  // analyzers (tests) keep the plain contract.
+  const progress = analyze
+    ? null
+    : liveAnalysisProgressStore<SweepPlyEval>(roomId, engineId, depth);
+  const plies = await resolveCachedComputation<SweepPlyEval[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: async () =>
+      (
+        await analyzeAtomicXiangqiPostgame(
+          payload,
+          analyze ?? ((movesUci) => atomicXiangqiAnalysisSweep(movesUci, progress ?? undefined)),
+        )
+      ).plies,
+    validate: (series) => {
+      if (isVacuousAnalysis(series)) throw new VacuousAnalysisError('atomic-xiangqi');
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return plies ? { engineId, depth, plies } : null;
 }
 
 export async function atomicXiangqiPostgameForApi(

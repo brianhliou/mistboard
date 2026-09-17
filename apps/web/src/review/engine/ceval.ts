@@ -53,11 +53,16 @@ const ENGINE_BASE = '/engine/fairy-stockfish/';
 // that key was poisoned. Bump the suffix to mint a fresh, never-cached key that
 // fills from origin (which now always sends COEP) whenever the required response
 // headers change.
-const ENGINE_ASSET_VERSION = '1.1.12-nnue1';
+const ENGINE_ASSET_VERSION = '1.1.12-atomic1';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 
 /** Human label for the engine, shown in the analysis panel. */
 export const CEVAL_ENGINE_NAME = 'Fairy-Stockfish';
+
+/** The custom-variant definitions written into the engine at load. Atomic's
+ *  four patch-only options (blastShape, blastImmuneTypes, cannonShotBlasts,
+ *  lethalCheck) parse only on the patched build vendored here; see the README. */
+const CUSTOM_VARIANT_INIS = ['fortress-xiangqi.ini', 'atomic-xiangqi.ini'] as const;
 
 /** Whether the client engine for `variant` can run in this page. Fairy-Stockfish
  *  and PikaJieQi need SharedArrayBuffer (cross-origin isolation); the
@@ -168,14 +173,19 @@ async function loadEngineCore(): Promise<EngineCore> {
   core.send(`setoption name Threads value ${threads}`);
   core.send('setoption name Hash value 64');
 
-  // Load our custom Fortress variant into the engine's in-memory FS. Standard
-  // xiangqi is a Fairy-Stockfish built-in and needs no .ini.
+  // Load our custom variants into the engine's in-memory FS. Standard xiangqi
+  // is a Fairy-Stockfish built-in and needs no .ini. VariantPath names ONE
+  // file, so the two stanzas are concatenated into it; each .ini is kept as a
+  // separate file on disk because each is a mirror of a server-side original
+  // (apps/server/src/*.ini) that is diffed against it.
   try {
-    const ini = await fetch(`${ENGINE_BASE}fortress-xiangqi.ini`).then((r) => r.text());
-    core.writeFile('fortress-xiangqi.ini', ini);
-    core.send('setoption name VariantPath value fortress-xiangqi.ini');
+    const inis = await Promise.all(
+      CUSTOM_VARIANT_INIS.map((file) => fetch(`${ENGINE_BASE}${file}`).then((r) => r.text())),
+    );
+    core.writeFile('variants.ini', inis.join('\n\n'));
+    core.send('setoption name VariantPath value variants.ini');
   } catch {
-    // Fortress analysis will be unavailable, but xiangqi still works.
+    // Custom-variant analysis will be unavailable, but xiangqi still works.
   }
 
   const ready = core.waitFor((line) => line === 'readyok');
@@ -269,8 +279,8 @@ class Ceval implements CevalHandle {
     core.send('stop');
     core.send(`setoption name UCI_Variant value ${this.variant}`);
     // Standard xiangqi runs on the NNUE net; every other variant on this core
-    // (Fortress) has no net and must be told so explicitly, because EvalFile
-    // persists on the shared engine once any xiangqi board has set it.
+    // (Fortress, Atomic) has no net and must be told so explicitly, because
+    // EvalFile persists on the shared engine once any xiangqi board has set it.
     if (this.variant === 'xiangqi') {
       const loaded = await loadXiangqiNet(core);
       core.send(`setoption name Use NNUE value ${loaded ? 'true' : 'false'}`);

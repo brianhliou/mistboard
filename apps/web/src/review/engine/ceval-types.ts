@@ -4,12 +4,14 @@
 // misty-ceval.ts would otherwise type-import back from ceval.ts). ceval.ts re-exports
 // everything here, so existing `from './ceval.js'` importers are unaffected.
 
-/** Variants a client engine can evaluate. `xiangqi`/`fortressxiangqi` use
- *  Fairy-Stockfish, `jieqi` uses PikaJieQi, and the remaining variants use Misty.
- *  createCeval() dispatches to the appropriate backend. */
+/** Variants a client engine can evaluate. `xiangqi`/`fortressxiangqi`/
+ *  `atomicxiangqi` use Fairy-Stockfish, `jieqi` uses PikaJieQi, and the
+ *  remaining variants use Misty. createCeval() dispatches to the appropriate
+ *  backend. */
 export type CevalVariant =
   | 'xiangqi'
   | 'fortressxiangqi'
+  | 'atomicxiangqi'
   | 'jieqi'
   | 'banqi'
   | 'jungleflip'

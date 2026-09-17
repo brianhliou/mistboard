@@ -21,6 +21,7 @@ import {
   resolveFsfVariantIniPath,
   splitFairyStockfishCommands,
   UciEnginePool,
+  UciEngineSession,
   type UciEval,
   UciWarmSessionCache,
 } from './uci-engine-harness.js';
@@ -151,6 +152,21 @@ const fsfPool = new UciEnginePool({
 
 const warmSessions = new UciWarmSessionCache({ name: 'atomic-xiangqi-fsf' });
 
+// Dedicated ANALYSIS pool (the xiangqi #168 pattern): a whole-game sweep holds
+// one persistent engine process for its full duration. On the live pool that
+// would pin a live-move slot for minutes and queue live bot moves into the
+// queue timeout; a separate pool makes the isolation structural. One slot by
+// default (analysis is a batch workload) and a generous queue timeout so queued
+// sweep jobs wait instead of shedding.
+const analysisPool = new UciEnginePool({
+  name: 'atomic-xiangqi-fsf-analysis',
+  maxProcessesEnvVar: 'MISTBOARD_ATOMIC_XIANGQI_FSF_ANALYSIS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_ATOMIC_XIANGQI_FSF_ANALYSIS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 1,
+  defaultQueueTimeoutMs: 30_000,
+  queueTimeoutMessage: 'atomic-xiangqi analysis queue timed out',
+});
+
 export function atomicXiangqiFsfWarmSessionStats() {
   return warmSessions.stats();
 }
@@ -252,6 +268,93 @@ export async function atomicXiangqiLiveEngineMove(
         }),
     );
   } finally {
+    release();
+  }
+}
+
+// ── Whole-game analysis (fixed-depth eval, NOT the playable tier) ─────────────
+
+/** Fixed-depth analysis eval, Red POV. Distinct from the playable move provider:
+ *  full strength (no Skill Level / node cap), `go depth N`, and read the score.
+ *  Classical eval, forced: the only net in the image describes a game where
+ *  captures do not explode. */
+export const ATOMIC_XIANGQI_ANALYSIS_DEPTH = 12;
+
+// The cache engine_id for the analysis sweep. Deliberately NOT a playable tier
+// id (those key on strength, which is irrelevant to a fixed-depth eval);
+// version-suffixed so an engine/.ini/patch change invalidates the cached evals.
+export const ATOMIC_XIANGQI_ANALYSIS_ENGINE_ID = `fairy-stockfish-atomic-xiangqi-analysis@${ATOMIC_XIANGQI_FSF_ENGINE_VERSION}`;
+
+export type AtomicXiangqiPositionEval = {
+  /** Centipawns from RED's POV (positive = Red better); null when mate is set. */
+  cp: number | null;
+  /** Signed moves-to-mate from RED's POV; null otherwise. */
+  mate: number | null;
+  /** Best move in FSF UCI, which is our own `<from><to>` spelling. */
+  best: string | null;
+  depth: number;
+};
+
+// Normalize a side-to-move UCI eval to RED's POV. Red moves first, so Black is
+// to move after an odd number of plies; flip the sign then. `mate 0` (side-to-
+// move already mated, or here: its general already blown up) cannot carry a
+// sign, so encode it as a decisive cp for the other side.
+function redPovEval(evaluation: UciEval, plyCount: number): AtomicXiangqiPositionEval {
+  const sign = plyCount % 2 === 0 ? 1 : -1;
+  if (evaluation.mate === 0) {
+    return { cp: sign * -30000, mate: null, best: evaluation.best, depth: evaluation.depth };
+  }
+  return {
+    cp: evaluation.cp == null ? null : evaluation.cp * sign,
+    mate: evaluation.mate == null ? null : evaluation.mate * sign,
+    best: evaluation.best,
+    depth: evaluation.depth,
+  };
+}
+
+function positionCommand(moves: readonly string[]): string {
+  return moves.length > 0 ? `position startpos moves ${moves.join(' ')}` : 'position startpos';
+}
+
+/**
+ * Run `fn` with a position evaluator backed by ONE persistent patched
+ * Fairy-Stockfish process: binary spawn + variant setup happen once for the
+ * whole sweep, then each position is an incremental `position startpos moves
+ * …` + `go depth N` round-trip. The evaluator normalises to RED's POV. Holds
+ * one DEDICATED analysis-pool slot for the duration, so a sweep never competes
+ * with live PvE moves; the session is always killed on the way out.
+ */
+export async function withAtomicXiangqiAnalysisSession<T>(
+  fn: (evaluate: (moves: string[]) => Promise<AtomicXiangqiPositionEval>) => Promise<T>,
+  opts: { depth?: number } = {},
+): Promise<T> {
+  const depth = Math.max(1, Math.floor(opts.depth ?? ATOMIC_XIANGQI_ANALYSIS_DEPTH));
+  const release = await analysisPool.acquire();
+  const session = new UciEngineSession({
+    bin: atomicXiangqiFsfPath(),
+    name: 'atomic-xiangqi-fsf-analysis',
+    initCommands: [
+      'uci',
+      `setoption name VariantPath value ${atomicXiangqiVariantIniPath()}`,
+      `setoption name UCI_Variant value ${VARIANT}`,
+      'setoption name Use NNUE value false',
+      'ucinewgame',
+      'isready',
+    ],
+  });
+  try {
+    await session.ready();
+    return await fn(async (moves) => {
+      const evaluation = await session.evalPosition({
+        positionCommand: positionCommand(moves),
+        goCommand: `go depth ${depth}`,
+        timeoutMs: 20_000,
+        timeoutMessage: 'atomic-xiangqi analysis eval timed out',
+      });
+      return redPovEval(evaluation, moves.length);
+    });
+  } finally {
+    session.close();
     release();
   }
 }
