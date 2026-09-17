@@ -82,6 +82,7 @@ Conventions:
 
 ### Fixed
 
+- Share-card images (the picture a link to a game, study chapter or article shows in chat) are drawn off the server's main thread; a crawler fetching hundreds of them used to stall every live game on the site for a second per picture ([20c1a4dd](https://github.com/brianhliou/mistboard/commit/20c1a4dd))
 - The homepage board shows 1-0, 0-1 or ½-½ as soon as the game it was following ends, instead of holding the final clocks until a refresh; and changing the piece set repaints it at once on Jieqi, Banqi, Fortress and Fog Xiangqi games, as it already did on Xiangqi, Atomic and Duck ([7bda2d4d](https://github.com/brianhliou/mistboard/commit/7bda2d4d))
 - The Source button on a broadcast polled from dpxq's game list opens the dpxq tour page; it linked the poller's own discovery address, which no browser can open ([4be51a37](https://github.com/brianhliou/mistboard/commit/4be51a37))
 - A broadcast polled from a dpxq tour list files each game under the round its row states, whenever the record is uploaded, instead of only inside a twelve-hour window after the round started; the 2026 Shanghai Cup was polled all week and imported nothing. A tour's own page also now shows the poller's errors, which used to be written without the tour's name and so never reached it ([ad09c5ff](https://github.com/brianhliou/mistboard/commit/ad09c5ff))
