@@ -406,11 +406,18 @@ export async function mountTenantWatchReplay<
   // untimed rooms.
   let liveClock: TenantWebClock<'red' | 'black'> | null = null;
 
+  // Whether the LOADED game is over. Keyed on the payload's result, never on the
+  // `live` mount flag: the homepage handoff reuses the live handle to load the
+  // finished record, so a mount-time flag would keep an ended game reading as
+  // "caught up" (clocks and a side to move instead of 1/0) until a refresh.
+  const gameEnded = (): boolean =>
+    activePostgame !== null && activePostgame.game.result !== 'in-progress';
+
   // Red moves first, so an even ply leaves Red (first) to move; nobody is on the clock
-  // once the game has ended. In live mode the final known ply is "caught up",
-  // not "game over", so the side to move keeps its turn there.
+  // once the game has ended. On an in-progress frame the final known ply is
+  // "caught up", not "game over", so the side to move keeps its turn there.
   const toMoveAtPly = (): 'first' | 'second' | null =>
-    currentPly >= maxPly && !live ? null : currentPly % 2 === 0 ? 'first' : 'second';
+    currentPly >= maxPly && gameEnded() ? null : currentPly % 2 === 0 ? 'first' : 'second';
 
   // A CLOCK ONLY EVER TICKS AT ONE SECOND PER SECOND. That leaves exactly two states, and
   // there is deliberately no third:
@@ -538,9 +545,9 @@ export async function mountTenantWatchReplay<
     if (compactSeats) {
       // At the final ply the clocks give way to the result (1 / 0 / ½) for the
       // hold; earlier plies show the reconstructed clocks (toggles also clear the
-      // result state when a loop restarts the same game at ply 0). Live games
-      // have no result yet, so the final known ply keeps showing clocks.
-      const atGameEnd = !live && maxPly > 0 && currentPly >= maxPly;
+      // result state when a loop restarts the same game at ply 0). An in-progress
+      // frame has no result yet, so its final known ply keeps showing clocks.
+      const atGameEnd = gameEnded() && maxPly > 0 && currentPly >= maxPly;
       const marks = atGameEnd ? showcaseResultMarks(activePostgame.game.result) : null;
       const winner =
         marks === null || marks.first === marks.second

@@ -23,6 +23,7 @@ import {
   renderJieqiBoardSvg,
 } from './live-jieqi-render.js';
 import type { ReplayHandle } from './replay.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type JieqiWatchReplayOptions = TenantWatchReplayOptions;
@@ -63,6 +64,9 @@ export function mountJieqiWatchReplay(
     options,
     {
       installStyles: installJieqiBoardStyles,
+      // Piece-set / board-theme changes repaint the board in place (the homepage
+      // TV sits frozen on one ply, so nothing else would re-render it).
+      appearanceEvent: xiangqiAppearanceChangedEvent,
       loadPostgame: loadJieqiWatchPostgame,
       maxPly: postgameReplayMaxPly,
       // One pane; the reveal toggle below chooses which track fills it.

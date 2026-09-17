@@ -19,6 +19,7 @@ import {
 } from './live-banqi-render.js';
 import type { ReplayHandle } from './replay.js';
 import { fillCapturedPoolWith } from './review/captured-pool.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -42,6 +43,9 @@ export function mountBanqiWatchReplay(
     options,
     {
       installStyles: installBanqiBoardStyles,
+      // Piece-set / board-theme changes repaint the board in place (the homepage
+      // TV sits frozen on one ply, so nothing else would re-render it).
+      appearanceEvent: xiangqiAppearanceChangedEvent,
       loadPostgame: loadBanqiPostgame,
       maxPly: postgameReplayMaxPly,
       viewEntries: (postgame) =>

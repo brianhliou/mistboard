@@ -12,6 +12,7 @@ import {
 } from './fortress-xiangqi-render.js';
 import { fillFortressXiangqiReserve } from './fortress-xiangqi-view.js';
 import type { ReplayHandle } from './replay.js';
+import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type FortressXiangqiWatchReplayOptions = TenantWatchReplayOptions;
@@ -30,6 +31,9 @@ export function mountFortressXiangqiWatchReplay(
     'truth'
   >(root, roomId, options, {
     installStyles: installFortressXiangqiBoardStyles,
+    // Piece-set / board-theme changes repaint the board in place (the homepage
+    // TV sits frozen on one ply, so nothing else would re-render it).
+    appearanceEvent: xiangqiAppearanceChangedEvent,
     loadPostgame: loadFortressXiangqiPostgame,
     maxPly: postgameReplayMaxPly,
     viewEntries: () => [{ key: 'truth', label: 'Server truth' }],
