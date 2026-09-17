@@ -51,8 +51,8 @@ describe('web variant launch registry', () => {
     // Only always-on rating surfaces remain in this flag-off production view,
     // filtered without changing their canonical shelf order.
     expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
-      FORTRESS_XIANGQI_SPEC_ID,
       DUCK_XIANGQI_SPEC_ID,
+      FORTRESS_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
@@ -97,22 +97,22 @@ describe('web variant launch registry', () => {
     // Public shelf order: xiangqi family, fog pair, then Jungle family.
     expect(leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
       XIANGQI_SPEC_ID,
-      BANQI_SPEC_ID,
       JIEQI_SPEC_ID,
-      FORTRESS_XIANGQI_SPEC_ID,
-      DUCK_XIANGQI_SPEC_ID,
+      BANQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
+      DUCK_XIANGQI_SPEC_ID,
+      FORTRESS_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
     ]);
     expect(profileRatingVariants.map((v) => v.gameSpecId)).toEqual([
       XIANGQI_SPEC_ID,
-      BANQI_SPEC_ID,
       JIEQI_SPEC_ID,
-      FORTRESS_XIANGQI_SPEC_ID,
-      DUCK_XIANGQI_SPEC_ID,
+      BANQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
+      DUCK_XIANGQI_SPEC_ID,
+      FORTRESS_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
       JUNGLE_SPEC_ID,
       JUNGLE_FLIP_SPEC_ID,
@@ -132,11 +132,11 @@ describe('web variant launch registry', () => {
     // Xiangqi pivot: VARIANTS follows the new CANONICAL_VARIANT_ORDER.
     expect(VARIANTS.map((v) => [v.gameSpecId, v.apiParam])).toEqual([
       [XIANGQI_SPEC_ID, 'xiangqi'],
-      [BANQI_SPEC_ID, 'banqi'],
       [JIEQI_SPEC_ID, 'jieqi'],
-      [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],
-      [DUCK_XIANGQI_SPEC_ID, 'duck-xiangqi'],
+      [BANQI_SPEC_ID, 'banqi'],
       [DARK_XIANGQI_SPEC_ID, 'dark-xiangqi'],
+      [DUCK_XIANGQI_SPEC_ID, 'duck-xiangqi'],
+      [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],
       [DARK_CHESS_SPEC_ID, 'fog'],
       [JUNGLE_SPEC_ID, 'jungle'],
       [JUNGLE_FLIP_SPEC_ID, 'jungle-flip'],

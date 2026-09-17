@@ -32,12 +32,12 @@ import { hasStartFen } from './start-fen.js';
 test('canonical display order contains exactly the current public variant shelf', () => {
   assert.deepEqual(CANONICAL_VARIANT_ORDER, [
     XIANGQI_SPEC_ID,
-    BANQI_SPEC_ID,
     JIEQI_SPEC_ID,
-    FORTRESS_XIANGQI_SPEC_ID,
-    DUCK_XIANGQI_SPEC_ID,
+    BANQI_SPEC_ID,
     ATOMIC_XIANGQI_SPEC_ID,
     DARK_XIANGQI_SPEC_ID,
+    DUCK_XIANGQI_SPEC_ID,
+    FORTRESS_XIANGQI_SPEC_ID,
     DARK_CHESS_SPEC_ID,
     JUNGLE_SPEC_ID,
     JUNGLE_FLIP_SPEC_ID,

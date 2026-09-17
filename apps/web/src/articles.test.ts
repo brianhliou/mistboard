@@ -521,13 +521,19 @@ describe('rules variant sidebar', () => {
     expect(nav?.querySelector('a[href="/rules/fog-chess"]')).not.toBeNull();
     // Xiangqi pivot: the chess reference article is de-listed from the rail.
     expect(nav?.querySelector('a[href="/rules/chess"]')).toBeNull();
-    expect(hrefs.indexOf('/rules/xiangqi')).toBeLessThan(hrefs.indexOf('/rules/banqi'));
-    expect(hrefs.indexOf('/rules/banqi')).toBeLessThan(hrefs.indexOf('/rules/jieqi'));
-    expect(hrefs.indexOf('/rules/jieqi')).toBeLessThan(hrefs.indexOf('/rules/fortress-xiangqi'));
-    expect(hrefs.indexOf('/rules/fortress-xiangqi')).toBeLessThan(
+    expect(hrefs.indexOf('/rules/xiangqi')).toBeLessThan(hrefs.indexOf('/rules/jieqi'));
+    expect(hrefs.indexOf('/rules/jieqi')).toBeLessThan(hrefs.indexOf('/rules/banqi'));
+    expect(hrefs.indexOf('/rules/banqi')).toBeLessThan(hrefs.indexOf('/rules/atomic-xiangqi'));
+    expect(hrefs.indexOf('/rules/atomic-xiangqi')).toBeLessThan(
       hrefs.indexOf('/rules/fog-xiangqi'),
     );
-    expect(hrefs.indexOf('/rules/fog-xiangqi')).toBeLessThan(hrefs.indexOf('/rules/fog-chess'));
+    expect(hrefs.indexOf('/rules/fog-xiangqi')).toBeLessThan(hrefs.indexOf('/rules/duck-xiangqi'));
+    expect(hrefs.indexOf('/rules/duck-xiangqi')).toBeLessThan(
+      hrefs.indexOf('/rules/fortress-xiangqi'),
+    );
+    expect(hrefs.indexOf('/rules/fortress-xiangqi')).toBeLessThan(
+      hrefs.indexOf('/rules/fog-chess'),
+    );
     expect(hrefs.indexOf('/rules/fog-chess')).toBeLessThan(hrefs.indexOf('/rules/jungle'));
     expect(hrefs.indexOf('/rules/jungle')).toBeLessThan(hrefs.indexOf('/rules/jungle-flip'));
   });

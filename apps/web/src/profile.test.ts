@@ -688,8 +688,8 @@ describe('profile ratings rail', () => {
       (el) => el.textContent,
     );
     expect(titles).toEqual([
-      'Fortress Xiangqi',
       'Duck Xiangqi',
+      'Fortress Xiangqi',
       'Fog Chess',
       'Jungle Chess',
       'Flip Jungle',

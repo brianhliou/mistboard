@@ -45,11 +45,11 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-2|xiangqi',
       'fairy-stockfish-level-5|xiangqi',
       'fairy-stockfish-level-8|xiangqi',
-      'misty|banqi',
       'pikafish|jieqi',
-      'fairy-stockfish-level-4|fortress-xiangqi',
-      'fairy-stockfish-level-4|duck-xiangqi',
+      'misty|banqi',
       'fairy-stockfish-level-4|atomic-xiangqi',
+      'fairy-stockfish-level-4|duck-xiangqi',
+      'fairy-stockfish-level-4|fortress-xiangqi',
       'misty|dark-chess',
     ]);
     expect(new Set(signature).size).toBe(9);
@@ -66,7 +66,7 @@ describe('landing lobby bot seeks', () => {
     //     and fortress, 10+5 for jieqi's full-board game).
     expect(
       seeds.map((seed) => seed.querySelector('.landing-lobby-seed-time')?.textContent),
-    ).toEqual(['10+5', '10+5', '10+5', '3+2', '10+5', '3+2', '5+5', '10+5', '5+5']);
+    ).toEqual(['10+5', '10+5', '10+5', '10+5', '3+2', '10+5', '5+5', '3+2', '5+5']);
   });
 
   it('labels each seed as an engine game rather than a human seek', () => {
@@ -307,12 +307,12 @@ describe('landing lobby bot seeks', () => {
 
     expect(specs).toEqual([
       'xiangqi',
-      'banqi',
       'jieqi',
-      'fortress-xiangqi',
-      'duck-xiangqi',
+      'banqi',
       'atomic-xiangqi',
       'dark-xiangqi',
+      'duck-xiangqi',
+      'fortress-xiangqi',
       'dark-chess',
       'jungle',
       'jungle-flip',

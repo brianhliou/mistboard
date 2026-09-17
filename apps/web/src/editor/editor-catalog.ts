@@ -39,11 +39,11 @@ import {
 /** Variants with a position editor, in analysis-catalog order. */
 export const EDITOR_VARIANT_IDS = [
   'xiangqi',
-  'banqi',
   'jieqi',
-  'fortress-xiangqi',
-  'duck-xiangqi',
+  'banqi',
   'dark-xiangqi',
+  'duck-xiangqi',
+  'fortress-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',

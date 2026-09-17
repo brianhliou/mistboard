@@ -44,11 +44,11 @@ function entry(id: AnalysisVariantId): AnalysisVariant {
 /** Dropdown order follows CANONICAL_VARIANT_ORDER (game-specs.ts). */
 export const ANALYSIS_VARIANTS: readonly AnalysisVariant[] = [
   entry('xiangqi'),
-  entry('banqi'),
   entry('jieqi'),
-  entry('fortress-xiangqi'),
-  entry('duck-xiangqi'),
+  entry('banqi'),
   entry('dark-xiangqi'),
+  entry('duck-xiangqi'),
+  entry('fortress-xiangqi'),
   entry('dark-chess'),
   entry('jungle'),
   entry('jungle-flip'),

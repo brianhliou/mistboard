@@ -110,17 +110,6 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: xiangqiOn,
     onProfile: xiangqiOn,
   },
-  // Banqi is the established half-board flip member of the xiangqi family.
-  {
-    id: currentRatingVariantForSpec(BANQI_SPEC_ID),
-    gameSpecId: banqiSpec.id,
-    apiParam: BANQI_SPEC_ID,
-    label: banqiSpec.publicName,
-    miniId: 'banqi',
-    enabled: false,
-    onLeaderboard: banqiOn,
-    onProfile: banqiOn,
-  },
   // Jieqi is the established full-board reveal member of the xiangqi family.
   // It is launched casual and rating-ready (gated globally by
   // MISTBOARD_RATED_ENABLED), with no open-seek matchmaking.
@@ -134,16 +123,28 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: jieqiOn,
     onProfile: jieqiOn,
   },
-  // Fortress: the authored open-information xiangqi product variant.
+  // Banqi is the established half-board flip member of the xiangqi family.
   {
-    id: currentRatingVariantForSpec(FORTRESS_XIANGQI_SPEC_ID),
-    gameSpecId: fortressXiangqiSpec.id,
-    apiParam: FORTRESS_XIANGQI_SPEC_ID,
-    label: fortressXiangqiSpec.publicName,
-    miniId: 'fortress-xiangqi',
+    id: currentRatingVariantForSpec(BANQI_SPEC_ID),
+    gameSpecId: banqiSpec.id,
+    apiParam: BANQI_SPEC_ID,
+    label: banqiSpec.publicName,
+    miniId: 'banqi',
     enabled: false,
-    onLeaderboard: fortressXiangqiOn,
-    onProfile: fortressXiangqiOn,
+    onLeaderboard: banqiOn,
+    onProfile: banqiOn,
+  },
+  // Full Fog Xiangqi (9x10): launched PvP-first (no bot, no open-seek lobby),
+  // rating-ready like Jieqi/Banqi, and paired directly with Fog Chess.
+  {
+    id: currentRatingVariantForSpec(DARK_XIANGQI_SPEC_ID),
+    gameSpecId: darkXiangqiSpec.id,
+    apiParam: DARK_XIANGQI_SPEC_ID,
+    label: darkXiangqiSpec.publicName,
+    miniId: 'dark-xiangqi',
+    enabled: false,
+    onLeaderboard: darkXiangqiOn,
+    onProfile: darkXiangqiOn,
   },
   // Duck: xiangqi plus Duck Chess's shared blocker. Launched casual and
   // rating-ready on the same terms as Fortress; the lobby seek stays unrated
@@ -158,17 +159,16 @@ export const VARIANTS: VariantDef[] = [
     onLeaderboard: duckXiangqiOn,
     onProfile: duckXiangqiOn,
   },
-  // Full Fog Xiangqi (9x10): launched PvP-first (no bot, no open-seek lobby),
-  // rating-ready like Jieqi/Banqi, and paired directly with Fog Chess.
+  // Fortress: the authored open-information xiangqi product variant.
   {
-    id: currentRatingVariantForSpec(DARK_XIANGQI_SPEC_ID),
-    gameSpecId: darkXiangqiSpec.id,
-    apiParam: DARK_XIANGQI_SPEC_ID,
-    label: darkXiangqiSpec.publicName,
-    miniId: 'dark-xiangqi',
+    id: currentRatingVariantForSpec(FORTRESS_XIANGQI_SPEC_ID),
+    gameSpecId: fortressXiangqiSpec.id,
+    apiParam: FORTRESS_XIANGQI_SPEC_ID,
+    label: fortressXiangqiSpec.publicName,
+    miniId: 'fortress-xiangqi',
     enabled: false,
-    onLeaderboard: darkXiangqiOn,
-    onProfile: darkXiangqiOn,
+    onLeaderboard: fortressXiangqiOn,
+    onProfile: fortressXiangqiOn,
   },
   {
     id: currentRatingVariantForSpec(DARK_CHESS_SPEC_ID),

@@ -21,12 +21,12 @@ import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
 // shared list fails the test until it also gets a board.
 const STUDY_VARIANT_IDS = [
   'xiangqi',
-  'banqi',
   'jieqi',
-  'fortress-xiangqi',
-  'duck-xiangqi',
+  'banqi',
   'atomic-xiangqi',
   'dark-xiangqi',
+  'duck-xiangqi',
+  'fortress-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',

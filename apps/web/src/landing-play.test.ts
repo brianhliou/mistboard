@@ -14,12 +14,12 @@ import { setResolvedSignedIn } from './signed-in-state.js';
 // The public shelf keeps the xiangqi family together, pairs Fog Xiangqi with
 // Fog Chess, then closes with Jungle + Flip Jungle.
 const BASELINE_PICKER_SPECS = [
-  'banqi',
   'jieqi',
-  'fortress-xiangqi',
-  'duck-xiangqi',
+  'banqi',
   'atomic-xiangqi',
   'dark-xiangqi',
+  'duck-xiangqi',
+  'fortress-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',
