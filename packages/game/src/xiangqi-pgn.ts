@@ -418,6 +418,16 @@ export interface XiangqiPgnWriteOptions {
   /** Notation for the movetext. Defaults to coordinate, which is the only style
    *  guaranteed to round-trip through our own reader without a legality replay. */
   style?: XiangqiNotationStyle;
+  /** The rules the writer replays while spelling a position-relative style
+   *  (WXF reads the board before each move): the start position and the step.
+   *  Defaults to the standard rules; a variant on the same board with different
+   *  capture rules (atomic) hands in its own kernel so every label is written
+   *  against the board that variant actually had. `game.initialState` still
+   *  wins for the start when a custom position is given. */
+  replay?: {
+    start: XiangqiGameState;
+    apply: (state: XiangqiGameState, move: XiangqiMove) => XiangqiGameState;
+  };
 }
 
 /** Render one game as PGN text. */
@@ -426,7 +436,11 @@ export function writeXiangqiPgn(
   options: XiangqiPgnWriteOptions = {},
 ): string {
   const style = options.style ?? 'coordinate';
-  const start = game.initialState ?? createInitialXiangqiState('pgn-export');
+  const replay = options.replay ?? {
+    start: createInitialXiangqiState('pgn-export'),
+    apply: applyStandardXiangqiMove,
+  };
+  const start = game.initialState ?? replay.start;
   const custom = game.initialState !== undefined;
   const result = game.result ?? '*';
 
@@ -447,7 +461,7 @@ export function writeXiangqiPgn(
 
   const body: string[] = [];
   if (game.comment) body.push(`{${game.comment}}`);
-  writeNodes(game.children, start, style, plyNumber(start), body, true);
+  writeNodes(game.children, start, style, plyNumber(start), body, true, replay.apply);
   body.push(result);
 
   return `${lines.join('\n')}\n\n${wrap(body.join(' '))}\n`;
@@ -476,6 +490,7 @@ function writeNodes(
   ply: number,
   out: string[],
   needsNumber: boolean,
+  apply: (state: XiangqiGameState, move: XiangqiMove) => XiangqiGameState,
 ): void {
   const [mainline, ...variations] = nodes;
   if (!mainline) return;
@@ -491,15 +506,15 @@ function writeNodes(
   // and are written before the mainline continues.
   for (const variation of variations) {
     const inner: string[] = [];
-    writeNodes([variation], state, style, ply, inner, true);
+    writeNodes([variation], state, style, ply, inner, true, apply);
     out.push(`(${inner.join(' ')})`);
   }
 
-  const next = applyStandardXiangqiMove(state, mainline.move);
+  const next = apply(state, mainline.move);
   // A variation or a comment breaks the reader's implicit numbering, so the
   // black move that follows one has to restate its number.
   const interrupted = variations.length > 0 || mainline.comment !== undefined;
-  writeNodes(mainline.children, next, style, ply + 1, out, interrupted);
+  writeNodes(mainline.children, next, style, ply + 1, out, interrupted, apply);
 }
 
 /** Soft-wrap at the PGN export limit so the file reads in a plain editor. */

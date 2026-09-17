@@ -262,6 +262,7 @@ export function buildTenantGamePublicationJson(
 function pgnVariantName(variant: string): string {
   if (variant === 'xiangqi') return 'Xiangqi';
   if (variant === 'dark-xiangqi') return 'Fog Xiangqi';
+  if (variant === 'atomic-xiangqi') return 'Atomic Xiangqi';
   return variant;
 }
 

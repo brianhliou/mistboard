@@ -18,6 +18,11 @@ import type {
 } from '@mistboard/game';
 import { atomicXiangqiFen } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
+import {
+  atomicXiangqiPgnStyle,
+  atomicXiangqiPgnWriter,
+  atomicXiangqiWxfLabels,
+} from './atomic-xiangqi-game-export.js';
 import { type AtomicXiangqiEvent, atomicXiangqiTenant } from './atomic-xiangqi-tenant.js';
 import { tenantCardBinding } from './game-card-tenant.js';
 import { boardMoveUci, tenantExportBinding } from './game-export-tenant.js';
@@ -152,23 +157,26 @@ registerVariantTenant({
       );
     },
   },
-  // Find-opponent seek, unrated: there is no rating pool for it, so a rated
-  // seek would fail at the point of writing the result.
+  // Find-opponent seek, rated on request: the atomic_xiangqi pool is in the
+  // user_ratings CHECK since migration 147.
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createAtomicXiangqiRoom(timeControl, 'random', false);
+    createRoom: async (timeControl, rated) => {
+      const created = await createAtomicXiangqiRoom(timeControl, 'random', rated);
       if (!created.ok) throw new Error(`atomic_xiangqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },
   },
   // The moves are ordinary board moves; the explosion is implied by the rules
-  // the replayer runs. JSON only (export-formats.ts): the WXF writer would
-  // replay a game that does not explode.
+  // the replayer runs. WXF movetext + `san` when the line replays under the
+  // ATOMIC kernel (it always should for this tenant); ICCS coordinates
+  // otherwise. See atomic-xiangqi-game-export.ts.
   export: tenantExportBinding(atomicXiangqiTenant, {
     gameRouteBase: '/atomic-xiangqi/game',
     uci: boardMoveUci,
+    san: atomicXiangqiWxfLabels,
+    writePgn: (moves) => atomicXiangqiPgnWriter(moves, atomicXiangqiPgnStyle(moves)),
   }),
   // Share card: the standard xiangqi board and FEN spelling (og-position.ts
   // draws the atomic slug with the xiangqi renderer), final position, no
