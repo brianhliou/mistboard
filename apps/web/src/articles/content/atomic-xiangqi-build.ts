@@ -3,6 +3,7 @@ import {
   ATOMIC_XIANGQI_CORK,
   ATOMIC_XIANGQI_GENERALS,
   ATOMIC_XIANGQI_SHOT_PAIR,
+  ATOMIC_XIANGQI_SOLDIER_PAIR,
   ATOMIC_XIANGQI_THUMBNAIL,
 } from '../../atomic-xiangqi-rules-diagrams.js';
 import { playClosing } from '../diagrams.js';
@@ -40,11 +41,11 @@ export const atomicXiangqiBuildArticle: Article = {
   ],
   sections: [
     {
-      heading: 'Three points kill your general from move one',
+      heading: 'Nothing next to a general is safe to take',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A capture on any point next to a general removes it. Red’s general on e1 has three neighbours, d1, f1 and e2, and two of them hold advisors from the first move. So every advisor is a target that carries the general with it, and every piece that can reach d1 or f1 is a threat to the game, not to a piece.',
+          text: 'A capture on any point beside a general removes it, so the kill zone is wherever the general stands: three points for a general on the back rank, four for one in the middle of the palace, and it moves with him. At the start Red’s general on e1 has d1, f1 and e2 beside it, and two of those hold advisors. Every advisor is a target that carries the general with it, and every piece that can reach d1 or f1 is threatening the game, not a piece.',
         },
         {
           kind: 'raw-svg',
@@ -109,10 +110,16 @@ export const atomicXiangqiBuildArticle: Article = {
           kind: 'paragraph',
           text: 'A soldier next to an explosion is untouched, which makes a soldier the one piece that can stand in a kill zone and stay. But a soldier that captures explodes with its target. In one of the engine games a soldier takes a chariot on c9 and removes the elephant on c10 and the horse on c8 with it, three pieces for a soldier, and another game is won by a soldier’s checkmate on e1.',
         },
+        {
+          kind: 'raw-svg',
+          svg: ATOMIC_XIANGQI_SOLDIER_PAIR,
+          caption:
+            'Red’s chariot takes the horse on e5. The cannon on f5 goes; the soldiers on d5 and e6 are on the lines too and stay.',
+        } as ArticleBlock,
       ],
     },
     {
-      heading: 'Games end by explosion or by mate, in 46 to 145 plies',
+      heading: 'Games end by explosion or by mate, in 23 to 73 moves',
       blocks: [
         {
           kind: 'paragraph',

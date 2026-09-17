@@ -2389,9 +2389,9 @@ const ZH_HANS: Record<string, string> = {
     '原子象棋今天上线，可以和八个强度档位的电脑对弈，也可以用邀请链接约朋友。它是每次吃子都会爆炸的中国象棋：吃子的棋子、被吃的棋子以及相邻四个点上的一切都被移除，兵卒幸存，将帅不能。同样的棋子，同样的开局摆法，三行规则。',
   'What follows is not the rules. It is what decides a first game, taken from the twelve engine games behind this launch and the few hundred it took to find rules that hold.':
     '下面写的不是规则，而是第一盘棋的胜负由什么决定，取自这次发布背后的十二盘引擎对局，以及为找到站得住的规则而下的几百盘。',
-  'Three points kill your general from move one': '从第一步起，三个点就能要了你将帅的命',
-  'A capture on any point next to a general removes it. Red’s general on e1 has three neighbours, d1, f1 and e2, and two of them hold advisors from the first move. So every advisor is a target that carries the general with it, and every piece that can reach d1 or f1 is a threat to the game, not to a piece.':
-    '在将帅相邻的任何一点上吃子，都会把它移除。红帅在 e1，有三个相邻点：d1、f1 和 e2，其中两个从第一步起就站着士。所以每一枚士都是会连带将帅一起消失的目标，每一枚能到达 d1 或 f1 的棋子威胁的都是整盘棋，而不是一枚棋子。',
+  'Nothing next to a general is safe to take': '将帅旁边的任何棋子都吃不得',
+  'A capture on any point beside a general removes it, so the kill zone is wherever the general stands: three points for a general on the back rank, four for one in the middle of the palace, and it moves with him. At the start Red’s general on e1 has d1, f1 and e2 beside it, and two of those hold advisors. Every advisor is a target that carries the general with it, and every piece that can reach d1 or f1 is threatening the game, not a piece.':
+    '在将帅相邻的任何一点上吃子，都会把它移除，所以杀伤区就在将帅站的地方：将帅在底线时是三个点，在九宫中央时是四个点，而且它随将帅一起移动。开局时红帅在 e1，旁边是 d1、f1 和 e2，其中两个站着士。每一枚士都是会连带将帅一起消失的目标，每一枚能到达 d1 或 f1 的棋子威胁的都是整盘棋，而不是一枚棋子。',
   'The chariot on d9 takes the advisor and the game ends. The chariot on f2 may not take the horse on f1: the blast would reach its own general, and the board does not offer the move.':
     'd9 的车吃士，棋局结束。f2 的车不能吃 f1 的马：爆炸会波及自己的帅，棋盘不会提供这步棋。',
   'The mirror of that is the rule you will feel first: you cannot capture anything next to your own general. A piece that steps beside your general is safe from every one of your pieces, and it stays safe until the general moves.':
@@ -2416,8 +2416,8 @@ const ZH_HANS: Record<string, string> = {
     '兵卒能在爆炸中幸存，而兵卒吃子和别的棋子一样会爆炸',
   'A soldier next to an explosion is untouched, which makes a soldier the one piece that can stand in a kill zone and stay. But a soldier that captures explodes with its target. In one of the engine games a soldier takes a chariot on c9 and removes the elephant on c10 and the horse on c8 with it, three pieces for a soldier, and another game is won by a soldier’s checkmate on e1.':
     '爆炸旁边的兵卒毫发无损，这让兵卒成为唯一能站进杀伤区而留下来的棋子。但兵卒吃子时会和目标一起爆炸。在一盘引擎对局里，一枚兵吃掉 c9 的车，连带移除了 c10 的象和 c8 的马，一兵换三子；另一盘则以卒在 e1 将死收场。',
-  'Games end by explosion or by mate, in 46 to 145 plies':
-    '对局以爆炸或将死结束，在 46 到 145 步之间',
+  'Games end by explosion or by mate, in 23 to 73 moves':
+    '对局以爆炸或将死结束，在 23 到 73 回合之间',
   'Of the ten decisive engine games behind this launch, six end with a general blown up and four with checkmate; the shortest is 23 moves and the longest 73. Expect a full game, and pick a clock for one: 10+5 is the default here.':
     '这次发布背后的十盘分出胜负的引擎对局里，六盘以将帅被炸结束，四盘以将死结束；最短 23 回合，最长 73 回合。要做好下完一整盘的准备，并按此选择用时：这里默认是 10+5。',
   'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':
@@ -4504,9 +4504,9 @@ const ZH_HANT: Record<string, string> = {
     '原子象棋今天上線，可以和八個強度檔位的電腦對弈，也可以用邀請連結約朋友。它是每次吃子都會爆炸的中國象棋：吃子的棋子、被吃的棋子以及相鄰四個點上的一切都被移除，兵卒倖存，將帥不能。同樣的棋子，同樣的開局擺法，三行規則。',
   'What follows is not the rules. It is what decides a first game, taken from the twelve engine games behind this launch and the few hundred it took to find rules that hold.':
     '下面寫的不是規則，而是第一盤棋的勝負由什麼決定，取自這次釋出背後的十二盤引擎對局，以及為找到站得住的規則而下的幾百盤。',
-  'Three points kill your general from move one': '從第一步起，三個點就能要了你將帥的命',
-  'A capture on any point next to a general removes it. Red’s general on e1 has three neighbours, d1, f1 and e2, and two of them hold advisors from the first move. So every advisor is a target that carries the general with it, and every piece that can reach d1 or f1 is a threat to the game, not to a piece.':
-    '在將帥相鄰的任何一點上吃子，都會把它移除。紅帥在 e1，有三個相鄰點：d1、f1 和 e2，其中兩個從第一步起就站著士。所以每一枚士都是會連帶將帥一起消失的目標，每一枚能到達 d1 或 f1 的棋子威脅的都是整盤棋，而不是一枚棋子。',
+  'Nothing next to a general is safe to take': '將帥旁邊的任何棋子都吃不得',
+  'A capture on any point beside a general removes it, so the kill zone is wherever the general stands: three points for a general on the back rank, four for one in the middle of the palace, and it moves with him. At the start Red’s general on e1 has d1, f1 and e2 beside it, and two of those hold advisors. Every advisor is a target that carries the general with it, and every piece that can reach d1 or f1 is threatening the game, not a piece.':
+    '在將帥相鄰的任何一點上吃子，都會把它移除，所以殺傷區就在將帥站的地方：將帥在底線時是三個點，在九宮中央時是四個點，而且它隨將帥一起移動。開局時紅帥在 e1，旁邊是 d1、f1 和 e2，其中兩個站著士。每一枚士都是會連帶將帥一起消失的目標，每一枚能到達 d1 或 f1 的棋子威脅的都是整盤棋，而不是一枚棋子。',
   'The chariot on d9 takes the advisor and the game ends. The chariot on f2 may not take the horse on f1: the blast would reach its own general, and the board does not offer the move.':
     'd9 的車吃士，棋局結束。f2 的車不能吃 f1 的馬：爆炸會波及自己的帥，棋盤不會提供這步棋。',
   'The mirror of that is the rule you will feel first: you cannot capture anything next to your own general. A piece that steps beside your general is safe from every one of your pieces, and it stays safe until the general moves.':
@@ -4531,8 +4531,8 @@ const ZH_HANT: Record<string, string> = {
     '兵卒能在爆炸中倖存，而兵卒吃子和別的棋子一樣會爆炸',
   'A soldier next to an explosion is untouched, which makes a soldier the one piece that can stand in a kill zone and stay. But a soldier that captures explodes with its target. In one of the engine games a soldier takes a chariot on c9 and removes the elephant on c10 and the horse on c8 with it, three pieces for a soldier, and another game is won by a soldier’s checkmate on e1.':
     '爆炸旁邊的兵卒毫髮無損，這讓兵卒成為唯一能站進殺傷區而留下來的棋子。但兵卒吃子時會和目標一起爆炸。在一盤引擎對局裡，一枚兵吃掉 c9 的車，連帶移除了 c10 的象和 c8 的馬，一兵換三子；另一盤則以卒在 e1 將死收場。',
-  'Games end by explosion or by mate, in 46 to 145 plies':
-    '對局以爆炸或將死結束，在 46 到 145 步之間',
+  'Games end by explosion or by mate, in 23 to 73 moves':
+    '對局以爆炸或將死結束，在 23 到 73 回合之間',
   'Of the ten decisive engine games behind this launch, six end with a general blown up and four with checkmate; the shortest is 23 moves and the longest 73. Expect a full game, and pick a clock for one: 10+5 is the default here.':
     '這次釋出背後的十盤分出勝負的引擎對局裡，六盤以將帥被炸結束，四盤以將死結束；最短 23 回合，最長 73 回合。要做好下完一整盤的準備，並按此選擇用時：這裡預設是 10+5。',
   'Openings look like xiangqi’s. The cannon shot that took a cannon and a horse together under an earlier version of the rules is gone, so nobody trades cannons on move one; the engine opens Cb5, Ri3, Ra3 or Hg3, and the first explosion usually comes in the middlegame.':

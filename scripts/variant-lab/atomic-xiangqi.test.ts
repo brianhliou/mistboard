@@ -130,7 +130,14 @@ test('atomic: the stock point speaks stock FSF; every other point speaks the pat
 });
 
 test('atomic: the stock point passes the perft gate against stock Fairy-Stockfish', {
-  skip: stockBinary === null ? 'no Fairy-Stockfish binary (set MISTBOARD_FSF_PATH)' : false,
+  // contextForVariant opens the variant's own engine even at the stock point,
+  // so the patched binary is needed here as well as the stock one.
+  skip:
+    stockBinary === null
+      ? 'no Fairy-Stockfish binary (set MISTBOARD_FSF_PATH)'
+      : atomicBinary === null
+        ? 'no patched binary (see scripts/variant-lab/patches/README.md)'
+        : false,
 }, async () => {
   const out = mkdtempSync(join(tmpdir(), 'lab-atomic-'));
   try {

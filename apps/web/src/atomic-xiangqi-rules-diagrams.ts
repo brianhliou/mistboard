@@ -207,25 +207,36 @@ export const ATOMIC_XIANGQI_CHECK = () => {
 
 // ── Card thumbnail ──────────────────────────────────────────────────────────
 
-// A window onto the aftermath of the first figure: the cleared points and the
-// soldier that survived, cropped to the middle of the board so the card shows
-// an explosion rather than a grid of specks. 16:10 to match the card media box.
-const THUMB_ASPECT = 16 / 10;
+// The board at the moment of the blast, cropped to three points by three around
+// the capture so the pieces are large: Red's chariot on e5 about to take the
+// horse on e6, with the chariot and cannon beside it ringed in the aftermath
+// amber. A wider crop was a grid of specks; a burst or a glyph was a symbol of
+// an explosion rather than the game (both were tried on the card, 2026-09-17).
+// 16:10 to match the card media box (.articles-index-card-media, 16/10;
+// .landing-article-card-thumb, 8/5).
+const THUMB_W = 160;
+const THUMB_H = 100;
+const THUMB_FEN = '4k4/9/9/9/3rnc3/4R4/9/9/9/3K5 w - - 0 1';
+const THUMB_BOARD = boardFromFen('atomic-thumb', THUMB_FEN);
+const THUMB_MOVE: AtomicXiangqiMove = { from: 'e5', to: 'e6' };
 
 export const ATOMIC_XIANGQI_THUMBNAIL = () => {
-  const { board: after, blast } = atomicXiangqiBoardAfterMove(BLAST_BOARD, BLAST_MOVE);
+  const { blast } = atomicXiangqiBoardAfterMove(THUMB_BOARD, THUMB_MOVE);
   const boardY = BOARD_Y_OFFSET;
-  const centre = xqPoint(4, 6, 'red', 0, boardY);
-  const w = XQ_CELL * 5.2;
-  const h = w / THUMB_ASPECT;
-  const left = centre.x - w / 2;
-  const top = centre.y - h / 2;
+  // Centre the window between the capture point and the chariot below it.
+  const target = xqPoint(4, 6, 'red', 0, boardY);
+  const from = xqPoint(4, 5, 'red', 0, boardY);
+  const w = XQ_CELL * 3.6;
+  const h = w / (THUMB_W / THUMB_H);
+  const left = target.x - w / 2;
+  const top = (target.y + from.y) / 2 - h / 2;
   const board = xqBoardSvg({
-    state: state('atomic-card', after),
+    state: state('atomic-thumb', THUMB_BOARD),
     x: 0,
     y: 0,
     label: '',
     perspective: 'red',
+    arrows: [{ from: 'e5', to: 'e6' }],
     overlay: blastRings(
       blast.map((victim) => victim.square),
       0,
