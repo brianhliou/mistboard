@@ -26,6 +26,8 @@ Conventions:
 
 ### Playing
 
+- Atomic Xiangqi is rated: a rating pool of its own, a row on the profile rail with a game count and Games-tab filter, a leaderboard ladder, and rated matchmaking through Find opponent for signed-in players (friend links and bot games stay casual) ([ac497feb](https://github.com/brianhliou/mistboard/commit/ac497feb))
+- Atomic Xiangqi captures sound like what they are: an explosion for the mover and for the side it was done to, the cannon's shot keeping its slam as the one capture that does not explode ([714beb2d](https://github.com/brianhliou/mistboard/commit/714beb2d))
 - The variant order everywhere (play menu, quick pairing, the study and analysis pickers, the TV and rules rails, the rating grids) is now Xiangqi, Jieqi, Banqi, Atomic, Fog Xiangqi, Duck, Fortress, Fog Chess, Jungle, Flip Jungle: the Chinese-chess games in play order, then the originals ([9a2ce1f6](https://github.com/brianhliou/mistboard/commit/9a2ce1f6))
 - Atomic Xiangqi is launched: in the play menu, on the homepage lobby rotation and quick-pair table, in the News box, and its launch note leads the homepage article row ([10f45e56](https://github.com/brianhliou/mistboard/commit/10f45e56))
 - Atomic Xiangqi is listed: the rules page joins the rules rail and tiles, the launch note the /blog index, and the variant has a Mistboard TV channel, a Find-opponent seek, a profile flair and a marker of its own; the rules page shows one board per rule with a sample game embedded from the study, and the eight bot levels carry ratings from a 144-game calibration ([96981921](https://github.com/brianhliou/mistboard/commit/96981921), [e1576d09](https://github.com/brianhliou/mistboard/commit/e1576d09))
@@ -53,6 +55,8 @@ Conventions:
 
 ### Watching and review
 
+- Atomic Xiangqi has an analysis board (/analysis/atomic-xiangqi), a board editor, and a postgame with the local engine, annotations and Share & export; the browser Fairy-Stockfish is now built with the same patch the atomic bot runs, so it plays atomic's rules rather than a half-read definition, and a finished atomic game can request computer analysis for the advantage chart ([0374aaae](https://github.com/brianhliou/mistboard/commit/0374aaae))
+- Atomic Xiangqi games export as PGN with move text spelled against the board the game actually had (the explosion replayed), alongside JSON ([401bd59b](https://github.com/brianhliou/mistboard/commit/401bd59b))
 - A broadcast is one event page, lichess-style: the tour header with a round selector, then Boards (default, opening on the live round or the latest with games), Overview (dates in the event's own clock, venue, source, the schedule, share links) and Players (standings computed from the broadcast games); a round with no records yet says so and points at the source ([d44bca22](https://github.com/brianhliou/mistboard/commit/d44bca22))
 - A finished broadcast game opens on the site's review board, with the engine, whole-game analysis, the reader's notation, Game info and Share & export, and the round's pairings in the left rail; a live game keeps its streaming replay, now in the reader's notation too ([d44bca22](https://github.com/brianhliou/mistboard/commit/d44bca22))
 
