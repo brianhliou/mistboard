@@ -35,6 +35,7 @@ import {
 } from './landing-play.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
 import { type LandingTvMode, mountLandingTv } from './landing-tv.js';
+import { buildHomeLearnRow } from './learn-row.js';
 import { type GameMeta, mountReplay } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { enginePanelsForReview, loadGameForReview } from './review.js';
@@ -43,7 +44,6 @@ import type { ShowcaseEntry } from './showcase-cycler.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildHomeFooter, buildNav, buildNotice } from './site-shell.js';
 import { type WebVariantTenant, webVariantTenantForRoomId } from './variant-tenant/registry.js';
-import { buildHomeVideoCards } from './videos.js';
 
 // Adaptive hero-pool refresh. Poll faster while games are being played (they
 // unlock on completion, soon), slower when idle. Pool is capped. These three are
@@ -679,19 +679,18 @@ function buildLandingStage(
   const articleCards = buildHomeArticleCards(6, locale);
   articleCards?.classList.add('landing-articles-row');
 
-  // ── Band 4 (grid-area: videos): a parallel video strip beneath the blog row —
-  // the same carousel, filled with curated English-first xiangqi videos (YouTube
-  // for now; Mistboard/partner only in the future). Photographic thumbnails plus
-  // a play glyph read as "video" beside the blog strip's board diagrams. The
-  // default limit leaves room for the fresh slots on top of the curated arc, so
-  // a mining run reaches the homepage without an edit here (see videos.ts). ──
-  const videoCards = buildHomeVideoCards(undefined, locale);
-  videoCards?.classList.add('landing-videos-row');
+  // ── Band 4 (grid-area: learn): the learn row beneath the blog row — the same
+  // carousel, filled with first-party cards that walk a new player from the
+  // rules to the bot to the classical manuals (see learn-row.ts). It replaced
+  // the curated YouTube strip on 2026-09-16; unlike that strip it is never
+  // omitted, so the band and the rails beside it have one height everywhere. ──
+  const learnRow = buildHomeLearnRow({ locale });
+  learnRow.classList.add('landing-learn-row');
 
   // ── Bands 3-4 side rails: the News feed returns to the homepage on the left
   // (its full history stays at /feed) and Top studies takes the right. Both
-  // span the blog AND video rows, so each box top-aligns with the blog row and
-  // bottom-aligns with the video row. ──
+  // span the blog AND learn rows, so each box top-aligns with the blog row and
+  // bottom-aligns with the learn row. ──
   const newsColumn = document.createElement('div');
   newsColumn.className = 'landing-news-column';
   newsColumn.append(buildLandingAnnouncements(locale));
@@ -732,7 +731,7 @@ function buildLandingStage(
 
   // Grid placement (see landing.css): band 1 = [banners+viewer · lobby panel ·
   // play button+activity], band 2 = [puzzle · forum · chat], bands 3-4 = [news ·
-  // blog row then video row · top studies], with the two side rails spanning both
+  // blog row then learn row · top studies], with the two side rails spanning both
   // rows. Append order is irrelevant (grid-area governs).
   section.append(
     leftColumn,
@@ -745,7 +744,7 @@ function buildLandingStage(
     studiesColumn,
   );
   if (articleCards) section.append(articleCards);
-  if (videoCards) section.append(videoCards);
+  section.append(learnRow);
 
   // Center tenant (SVG) showcase boards within the square box so a non-square
   // (portrait xiangqi) board pillarboxes symmetrically rather than jamming against

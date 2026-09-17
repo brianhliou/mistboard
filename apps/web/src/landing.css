@@ -39,7 +39,7 @@
      initial screen): event banners + the game viewer (left), the tall tabbed
      lobby panel (center, the focal element), the single Play button + activity
      stats (right). Band 2: daily puzzle (left), forum topics (center), top
-     players (right). Bands 3-4: the blog row then the video row in the center,
+     players (right). Bands 3-4: the blog row then the learn row in the center,
      flanked by the News feed (left) and Top studies (right), each spanning both
      rows. */
   /* lila proportions: the lobby is the dominant element (lila's app is 66% of a
@@ -53,7 +53,7 @@
     "left   panel  play"
     "puzzle forum  chat"
     "news   blogs  studies"
-    "news   videos studies";
+    "news   learn  studies";
   --landing-col-gap: clamp(10px, 0.9vw, 15px);
   --landing-row-gap: clamp(14px, 1.8vw, 24px);
   column-gap: var(--landing-col-gap);
@@ -66,29 +66,6 @@
      central lobby). */
   max-width: 1360px;
   margin: 0 auto;
-}
-
-/* No video row: span the rails over what is actually there.
- *
- * The rails are tuned for TWO centre rows -- news and studies each top-align
- * with the blog row and bottom-align with the video row. Drop the video row and
- * that tuning inverts: row four collapses toward zero, the rails stand taller
- * than the one remaining blog row, and a row-gap of dead space is stranded
- * under the centre column.
- *
- * This is NOT only the mainland case. buildHomeVideoCards has always returned
- * null when no curated key resolves, and landing.ts has always guarded on it, so
- * this state has been reachable since the row shipped and the grid never
- * handled it. The CN gate (#378) is simply the first thing to trigger it.
- *
- * Keyed on :has() rather than a class from JS on purpose: the rule reacts to
- * whether the row is in the DOM, so it cannot drift out of sync with the
- * condition that omitted it. :has() is already used elsewhere in this file. */
-.landing-demo:not(:has(.landing-videos-row)) {
-  grid-template-areas:
-    "left   panel  play"
-    "puzzle forum  chat"
-    "news   blogs  studies";
 }
 
 /* The homepage's single h1. Sized as a headline rather than a footnote: it is
@@ -336,8 +313,8 @@
 }
 
 /* Bands 3-4 side rails: News (left) and Top studies (right) each span the blog
-   and video rows on desktop, so their boxes stretch from the blog row's top edge
-   to the video row's bottom edge (the stretch itself lives in the desktop block;
+   and learn rows on desktop, so their boxes stretch from the blog row's top edge
+   to the learn row's bottom edge (the stretch itself lives in the desktop block;
    stacked, the boxes keep their own fixed height). News scrolls inside its box;
    Top studies fits whole rows to it (site-box-fit.ts). */
 .landing-news-column {
@@ -1138,28 +1115,75 @@
   line-height: 1.35;
 }
 
-/* Band 4: the video strip mirrors the blog row (same centered center-column
+/* Band 4: the learn row mirrors the blog row (same centered center-column
    area, three compact cards per view), so the two strips read as a matched pair.
-   Only the thumbnail and its overlays differ. */
-.landing-videos-row {
-  grid-area: videos;
-  /* The video strip pairs with the blog strip above it, so it sits tighter than
+   Only the thumbnail contents and the one-line blurb differ. */
+.landing-learn-row {
+  grid-area: learn;
+  /* The learn row pairs with the blog strip above it, so it sits tighter than
      the band-to-band row-gap: pull it up by (row-gap - col-gap) so the gap to the
      blog row matches the inter-column gap. */
   margin-top: calc(var(--landing-col-gap) - var(--landing-row-gap));
 }
 
-.landing-videos-row .landing-video-card {
+.landing-learn-row .landing-learn-card {
   flex-basis: calc((100% - 2 * var(--landing-carousel-gap)) / 3);
 }
 
-/* Photographic still. The thumb keeps the base card's 8:5 frame so a video card
-   is dimensionally identical to a blog card above it (matched pair); the YouTube
-   hqdefault (4:3 with baked letterbox) is object-fit: cover, cropping the bars to
-   fill. Dark fill shows only while the still loads or if it 404s — a video-frame
-   placeholder, not the blog row's light panel. Scoped past the base thumb rule so
-   it wins regardless of source order. */
-.landing-videos-row .landing-video-card-thumb {
+/* A portrait board inside a landscape frame: the frame takes the board's own
+   wood colour, so the diagram reads as one tile edge to edge instead of a small
+   board floating on the panel grey. The board's rounded corners disappear into
+   the same fill. The video card and the manual card's empty state override
+   this below and via .is-empty. */
+.landing-learn-row .landing-learn-card-thumb {
+  background: var(--xq-diagram-bg, #d9bd82);
+}
+
+.landing-learn-card-thumb .articles-index-card-thumb {
+  display: grid;
+  place-items: center;
+  width: 100%;
+  height: 100%;
+  /* The index wrapper paints its own panel grey and inset ring; both would
+     frame the board inside the wood field. */
+  border-radius: 0;
+  background: transparent;
+  box-shadow: none;
+}
+
+.landing-learn-card-thumb .articles-index-card-thumb svg {
+  max-width: 100%;
+  max-height: 100%;
+}
+
+.landing-learn-row .landing-learn-card-title {
+  margin: 7px 0 2px;
+  padding: 0 9px;
+  font-size: 12.5px;
+  line-height: 1.35;
+}
+
+/* One-line blurb under the title: what the card leads to. Ellipsized. */
+.landing-learn-card-blurb {
+  display: block;
+  margin: 0 0 9px;
+  padding: 0 9px;
+  overflow: hidden;
+  color: var(--site-muted);
+  font-size: 11px;
+  line-height: 1.3;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+
+/* The one video card (our episode) keeps the video grammar inside the learn
+   card frame: photographic still, play glyph, duration pill, Mistboard badge.
+   The thumb keeps the base card's 8:5 frame so it is dimensionally identical to
+   the board cards beside it; the still is object-fit: cover. Dark fill shows
+   only while the still loads or if it 404s — a video-frame placeholder, not the
+   blog row's light panel. Scoped past the base thumb rule so it wins regardless
+   of source order. */
+.landing-learn-row .landing-video-card-thumb {
   background: #0e120f;
 }
 
@@ -1226,27 +1250,6 @@
   font-size: 10px;
   font-weight: 600;
   line-height: 1.1;
-}
-
-.landing-videos-row .landing-video-card-title {
-  margin: 7px 0 2px;
-  padding: 0 9px;
-  font-size: 12.5px;
-  line-height: 1.35;
-}
-
-/* Channel line under the title (blog cards carry no meta; the video strip keeps
-   attribution). Single line, ellipsized. */
-.landing-video-card-meta {
-  display: block;
-  margin: 0 0 9px;
-  padding: 0 9px;
-  overflow: hidden;
-  color: var(--site-muted);
-  font-size: 11px;
-  line-height: 1.3;
-  white-space: nowrap;
-  text-overflow: ellipsis;
 }
 
 .landing-carousel {
@@ -2178,13 +2181,13 @@
   }
 
   /* ── Bands 3-4 side rails ────────────────────────────────────────────────────
-     News and Top studies span the blog + video rows and fill the spanned area:
-     top-aligned with the blog row, bottom-aligned with the video row, the News
+     News and Top studies span the blog + learn rows and fill the spanned area:
+     top-aligned with the blog row, bottom-aligned with the learn row, the News
      body scrolling inside and Top studies fitting whole rows to the box. The
      boxes are taken out of flow (absolute in the stretched
      rail) so their long timelines contribute NOTHING to the auto row heights —
      in flow they would inflate rows 3-4 and tear the blog row away from the
-     video row. */
+     learn row. */
   .landing-news-column,
   .landing-studies-column {
     position: relative;
@@ -2343,7 +2346,7 @@
 @media (max-width: 1240px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
      viewer, then the band-2 widgets (puzzle, forum, chat), the blog row, the
-     video row, and the two side-rail boxes (studies, news). */
+     learn row, and the two side-rail boxes (studies, news). */
   .landing-demo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -2354,7 +2357,7 @@
       "forum"
       "chat"
       "blogs"
-      "videos"
+      "learn"
       "studies"
       "news";
     max-width: 640px;
@@ -2443,7 +2446,7 @@
     flex-basis: calc((100% - var(--landing-carousel-gap)) / 2);
   }
 
-  .landing-videos-row .landing-video-card {
+  .landing-learn-row .landing-learn-card {
     flex-basis: calc((100% - var(--landing-carousel-gap)) / 2);
   }
 }

@@ -113,7 +113,7 @@ describe('landing shell', () => {
 
   it('keeps the grid-area hooks the homepage band CSS keys on', () => {
     // landing.css places the bands via these class names (grid-areas
-    // left/panel/play, puzzle/forum/chat, news/blogs+videos/studies); renaming
+    // left/panel/play, puzzle/forum/chat, news/blogs+learn/studies); renaming
     // them in the DOM without updating landing.css would silently break the
     // layout.
     const wrap = document.createElement('div');
@@ -131,10 +131,10 @@ describe('landing shell', () => {
     // Bands 3-4 side rails: News (left) and Top studies (right) span both rows.
     expect(demo?.querySelector(':scope > .landing-news-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-studies-column')).not.toBeNull();
-    // Band 4: the video strip sits in its own grid-area beneath the blog row.
-    const videoRow = demo?.querySelector(':scope > .landing-videos-row');
-    expect(videoRow).not.toBeNull();
-    expect(videoRow?.querySelectorAll('.landing-video-card').length).toBeGreaterThan(0);
+    // Band 4: the learn row sits in its own grid-area beneath the blog row.
+    const learnRow = demo?.querySelector(':scope > .landing-learn-row');
+    expect(learnRow).not.toBeNull();
+    expect(learnRow?.querySelectorAll('.landing-learn-card').length).toBeGreaterThan(0);
     expect(demo?.querySelector('.landing-left-column .landing-board-column')).not.toBeNull();
     // The support/store pair left the homepage (patronage stays in the nav).
     expect(demo?.querySelector('.landing-support-row')).toBeNull();

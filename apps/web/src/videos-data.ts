@@ -150,6 +150,36 @@ export function videoKey(video: VideoEntry): string {
   return video.source === 'youtube' ? `yt:${video.id}` : `mb:${video.slug}`;
 }
 
+// Kept here rather than in videos.ts so a surface that only needs a card's URL
+// (the homepage learn row) does not pull the whole /videos page and its CSS
+// into its chunk graph; videos.ts stays a clean dynamic route entry.
+//
+// The card links out (YouTube) or in (first-party). Both URL and thumbnail are
+// derived per source; the exhaustive switch has no default, so adding a source
+// to the union is a compile error here until it is handled (fail-closed).
+export function videoWatchUrl(video: VideoEntry): string {
+  switch (video.source) {
+    case 'youtube':
+      return `https://www.youtube.com/watch?v=${encodeURIComponent(video.id)}`;
+    case 'mistboard':
+      return video.url;
+  }
+}
+
+export function videoThumbUrl(video: VideoEntry): string {
+  // An explicit thumbnail always wins: it is how our own episodes avoid a
+  // third-party image request that a blocker can drop.
+  if (video.thumbnailUrl) return video.thumbnailUrl;
+  switch (video.source) {
+    case 'youtube':
+      // no-cors image load: fine under dev's COEP credentialless and in prod
+      // (where /videos carries no COEP at all). hqdefault ships 4:3 letterboxed.
+      return `https://img.youtube.com/vi/${encodeURIComponent(video.id)}/hqdefault.jpg`;
+    case 'mistboard':
+      return video.thumbnailUrl;
+  }
+}
+
 const YOUTUBE_VIDEOS: readonly YoutubeVideo[] = [
   {
     source: 'youtube',
