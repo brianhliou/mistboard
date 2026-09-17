@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The variant order everywhere (play menu, quick pairing, the study and analysis pickers, the TV and rules rails, the rating grids) is now Xiangqi, Jieqi, Banqi, Atomic, Fog Xiangqi, Duck, Fortress, Fog Chess, Jungle, Flip Jungle: the Chinese-chess games in play order, then the originals ([9a2ce1f6](https://github.com/brianhliou/mistboard/commit/9a2ce1f6))
 - Atomic Xiangqi is launched: in the play menu, on the homepage lobby rotation and quick-pair table, in the News box, and its launch note leads the homepage article row ([10f45e56](https://github.com/brianhliou/mistboard/commit/10f45e56))
 - Atomic Xiangqi is listed: the rules page joins the rules rail and tiles, the launch note the /blog index, and the variant has a Mistboard TV channel, a Find-opponent seek, a profile flair and a marker of its own; the rules page shows one board per rule with a sample game embedded from the study, and the eight bot levels carry ratings from a 144-game calibration ([96981921](https://github.com/brianhliou/mistboard/commit/96981921), [e1576d09](https://github.com/brianhliou/mistboard/commit/e1576d09))
 - Atomic Xiangqi, unlisted: every capture explodes the four points around it, soldiers survive a blast, a cannon shot takes only its target, and a general in a kill zone is in check; play the computer at eight levels or a friend by link at /rules/atomic-xiangqi, with the explosion drawn on the board and twelve annotated engine games in a study ([ce70fed9](https://github.com/brianhliou/mistboard/commit/ce70fed9), [4707901f](https://github.com/brianhliou/mistboard/commit/4707901f))
@@ -63,6 +64,7 @@ Conventions:
 
 ### Site
 
+- The Atomic Xiangqi launch note's card shows the moment of a blast on the board, and its atom marker is bolder ([70b8c4b2](https://github.com/brianhliou/mistboard/commit/70b8c4b2))
 - This changelog is a page, /changelog on the about rail: months newest first with anchors, one line per change linking its commit; Updates keeps the highlights and links here from its foot ([c4ca3740](https://github.com/brianhliou/mistboard/commit/c4ca3740))
 - `/stats` is a real page on the about rail, leading with games per week; every count excludes the operator's own accounts and browsers, guests count as players by browser, and a game counts only once both sides have moved ([87ba6d14](https://github.com/brianhliou/mistboard/commit/87ba6d14), [cd4f58b3](https://github.com/brianhliou/mistboard/commit/cd4f58b3), [ea5d57a0](https://github.com/brianhliou/mistboard/commit/ea5d57a0), [b916a663](https://github.com/brianhliou/mistboard/commit/b916a663))
 - One identity line across the tagline, About, README and the repository ([2952b177](https://github.com/brianhliou/mistboard/commit/2952b177))
