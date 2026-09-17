@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-17',
+    kind: 'release',
+    headline: 'Atomic Xiangqi has launched.',
+    body: 'Chinese chess where every capture is an explosion: the piece that captures, the piece it takes and everything on the four points beside it are removed. Soldiers survive a blast; a general does not, so a capture next to the enemy general wins on the spot and you can never capture next to your own. The cannon is the one exception, its shot takes only its target. A threat to blow up the general counts as check for the repetition rule. Same set, same array, eight bot levels or a friend.',
+    href: '/rules/atomic-xiangqi',
+    cta: 'Study the rules',
+  },
+  {
     date: '2026-09-15',
     kind: 'release',
     headline: 'Two of the four great Qing composition manuals are online.',

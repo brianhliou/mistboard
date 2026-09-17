@@ -701,7 +701,7 @@ const QUICK_PAIR_COLUMN_IDS: TimeControlId[] = ['1m1', '3m2', '5m5'];
 // variant gets a pool row and the grid fills the card instead of trailing off
 // into dead space; the cap only bites in the lab profile, where the parked
 // variants would otherwise stretch the panel well past the tabs beside it.
-const QUICK_PAIR_ROW_COUNT = 9;
+const QUICK_PAIR_ROW_COUNT = 10;
 
 // One pool = one variant at one clock, the granularity a chip pairs at. Shared
 // by the chip index and the open-seek counter so the two can only agree.

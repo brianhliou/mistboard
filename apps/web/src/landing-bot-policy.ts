@@ -1,4 +1,5 @@
 import {
+  ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -22,6 +23,7 @@ export type LandingBotGameSpecId =
   | typeof JIEQI_SPEC_ID
   | typeof FORTRESS_XIANGQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
+  | typeof ATOMIC_XIANGQI_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof DARK_CHESS_SPEC_ID
   | typeof JUNGLE_SPEC_ID
@@ -42,6 +44,7 @@ export const LANDING_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
   JIEQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -52,22 +55,22 @@ export const LANDING_BOT_GAME_SPEC_IDS: readonly LandingBotGameSpecId[] = [
 // any two CONSECUTIVE buckets must cover the whole shelf, which is what stops a
 // variant from disappearing for a whole day.
 //
-// These are five long rather than four because duck made the rotating pool
-// seven, and seven cannot be covered by consecutive pairs of four-lineups: each
-// cyclic pair would have to intersect in exactly one, forcing sum(C(k,2)) == 3
-// while sum(k) == 12 over seven variants, which no assignment satisfies. An
-// exhaustive search over 3- and 4-lineup cycles at both widths confirmed it:
-// five is the narrowest that works, so the panel shows seven tiles, not six.
+// Five wide (seven tiles with the two heads). Atomic made the rotating pool
+// eight, and eight splits into two five-lineups that share two variants and
+// together cover everything, so the cycle is two long: every pair of
+// consecutive buckets is the whole shelf, and each variant is on the panel at
+// least every other bucket. Three lineups of five cannot do it for eight (every
+// variant would need two of the three, 16 slots in 15), and a wider panel is a
+// layout change; an exhaustive search found this two-cycle.
 const ROTATING_LINEUPS: readonly (readonly LandingBotGameSpecId[])[] = [
   [
     BANQI_SPEC_ID,
     JIEQI_SPEC_ID,
     FORTRESS_XIANGQI_SPEC_ID,
     DUCK_XIANGQI_SPEC_ID,
-    DARK_XIANGQI_SPEC_ID,
+    ATOMIC_XIANGQI_SPEC_ID,
   ],
-  [BANQI_SPEC_ID, JIEQI_SPEC_ID, FORTRESS_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, JUNGLE_FLIP_SPEC_ID],
-  [BANQI_SPEC_ID, DUCK_XIANGQI_SPEC_ID, DARK_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, JUNGLE_FLIP_SPEC_ID],
+  [BANQI_SPEC_ID, JIEQI_SPEC_ID, DARK_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, JUNGLE_FLIP_SPEC_ID],
 ];
 
 // Xiangqi's Lobby block is a fixed difficulty ladder, not a rotation: the rungs
@@ -90,6 +93,7 @@ export const XIANGQI_FIRST_GAME_LEVEL = 2;
 const XIANGQI_RETURNING_LEVEL = 5;
 const FORTRESS_XIANGQI_LEVEL = 4;
 const DUCK_XIANGQI_LEVEL = 4;
+const ATOMIC_XIANGQI_LEVEL = 4;
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 
 export type LandingBotOfferContext = {
@@ -131,6 +135,7 @@ export function landingBotOffer(
   }
   if (gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, FORTRESS_XIANGQI_LEVEL);
   if (gameSpecId === DUCK_XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, DUCK_XIANGQI_LEVEL);
+  if (gameSpecId === ATOMIC_XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, ATOMIC_XIANGQI_LEVEL);
   if (gameSpecId === JIEQI_SPEC_ID) {
     return {
       botId: 'pikafish',

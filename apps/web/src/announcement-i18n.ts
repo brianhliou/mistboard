@@ -46,6 +46,11 @@ const ZH_HANS: Record<string, string> = {
   'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.':
     '首页和统计页上的已完成对局数，现在只计入自六月网站上线以来访客之间、或访客与引擎之间已完成的对局。引擎对引擎的比赛、我们自己的测试对局，以及在还没有其他人发现这个网站之前我们自己下的棋，都不计入。这样一来，数字降到了原来所显示的三分之一左右；另外三分之二是我们自己。',
   'See the statistics': '查看统计',
+  // ── 2026-09-17 (Atomic Xiangqi launch) ── terms follow the rules page's
+  // entries in article-i18n.ts; 原子象棋 follows variant.atomicXiangqi.name.
+  'Atomic Xiangqi has launched.': '原子象棋已上线。',
+  'Chinese chess where every capture is an explosion: the piece that captures, the piece it takes and everything on the four points beside it are removed. Soldiers survive a blast; a general does not, so a capture next to the enemy general wins on the spot and you can never capture next to your own. The cannon is the one exception, its shot takes only its target. A threat to blow up the general counts as check for the repetition rule. Same set, same array, eight bot levels or a friend.':
+    '每次吃子都会爆炸的象棋：吃子的棋子、被吃的棋子以及相邻四个点上的一切都被移除。兵卒能在爆炸中幸存，将帅不能，所以在对方将帅旁边吃子立刻获胜，而你永远不能在自己将帅旁边吃子。炮是唯一的例外，它的一击只带走目标。炸掉将帅的威胁在重复局面规则中算作将军。同样的棋子，同样的开局摆法，八级电脑或好友。',
   // ── 2026-09-11 (Duck Xiangqi launch) ── 蹩马腿 / 塞象眼 / 炮架 / 将帅照面 all
   // follow article-i18n.ts, and 鸭子象棋 follows variant.duckXiangqi.name.
   'Duck Xiangqi has launched.': '鸭子象棋已上线。',
@@ -337,6 +342,10 @@ const ZH_HANT: Record<string, string> = {
   'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.':
     '首頁和統計頁上的已完成對局數，現在只計入自六月網站上線以來訪客之間、或訪客與引擎之間已完成的對局。引擎對引擎的比賽、我們自己的測試對局，以及在還沒有其他人發現這個網站之前我們自己下的棋，都不計入。這樣一來，數字降到了原來所顯示的三分之一左右；另外三分之二是我們自己。',
   'See the statistics': '查看統計',
+  // ── 2026-09-17 (Atomic Xiangqi launch) ──
+  'Atomic Xiangqi has launched.': '原子象棋已上線。',
+  'Chinese chess where every capture is an explosion: the piece that captures, the piece it takes and everything on the four points beside it are removed. Soldiers survive a blast; a general does not, so a capture next to the enemy general wins on the spot and you can never capture next to your own. The cannon is the one exception, its shot takes only its target. A threat to blow up the general counts as check for the repetition rule. Same set, same array, eight bot levels or a friend.':
+    '每次吃子都會爆炸的象棋：吃子的棋子、被吃的棋子以及相鄰四個點上的一切都被移除。兵卒能在爆炸中倖存，將帥不能，所以在對方將帥旁邊吃子立刻獲勝，而你永遠不能在自己將帥旁邊吃子。炮是唯一的例外，它的一擊只帶走目標。炸掉將帥的威脅在重複局面規則中算作將軍。同樣的棋子，同樣的開局擺法，八級電腦或好友。',
   // ── 2026-09-11 (Duck Xiangqi launch) ── see the ZH_HANS note above.
   'Duck Xiangqi has launched.': '鴨子象棋已上線。',
   "Chinese chess with one duck that both players share. Make your move, then put the duck on any empty point. It blocks a horse's leg, an elephant's eye and the file between the generals, and it works as a cannon screen for whoever moves next, so the screen you build is never yours. There is no check: you win by capturing the general outright, and the two generals may now face each other down an open file, where flying the general is a capture. Play the eight-level bot or a friend.":

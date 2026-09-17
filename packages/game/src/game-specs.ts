@@ -193,17 +193,13 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   // appended: study-catalog.test.ts asserts the picker built from this list is
   // sorted by canonicalVariantOrderIndex.
   DUCK_XIANGQI_SPEC_ID,
+  // Atomic Xiangqi: a tree-review stack (review/atomic-xiangqi-tree-adapter.ts
+  // + -review.ts) over the standard board, and the standard start.
+  ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
-  // Atomic Xiangqi: a tree-review stack (review/atomic-xiangqi-tree-adapter.ts
-  // + -review.ts) over the standard board, and the standard start. Last, not
-  // slotted: the spec is unlisted and canonicalVariantOrderIndex sorts it after
-  // the shelf, which is the order this list must follow. The create-study
-  // dialog offers only public-surface variants, so this membership is a
-  // capability (an unlisted companion study can exist), not a listing.
-  ATOMIC_XIANGQI_SPEC_ID,
 ];
 
 /** Fail-closed membership test for {@link STUDY_ELIGIBLE_SPEC_IDS} — narrows an
@@ -225,6 +221,7 @@ export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
   JIEQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
+  ATOMIC_XIANGQI_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -441,7 +438,7 @@ export const GAME_SPECS: readonly GameSpec[] = [
     reserves: 'none',
     dropPolicy: 'none',
     ratingPoolBase: 'atomic_xiangqi',
-    publicSurface: 'hidden',
+    publicSurface: 'casual',
     runtimeStatus: 'live',
   },
   {

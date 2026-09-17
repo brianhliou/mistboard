@@ -8,7 +8,7 @@ import { buildLobbyPanel } from './landing-play.js';
 // invariants worth pinning are honesty (labeled engine), separation from the
 // human seek table, and the bucket-stable rotation.
 
-// Six-hour bucket 82622: lineup C. The bucket still picks WHICH variants show;
+// Six-hour bucket 82622: lineup A (even bucket). The bucket still picks WHICH variants show;
 // the Xiangqi ladder itself is fixed (Levels 2/5/8) and no longer rotates.
 const FIXED_DATE = new Date('2026-07-21T12:00:00Z');
 
@@ -46,11 +46,11 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-5|xiangqi',
       'fairy-stockfish-level-8|xiangqi',
       'misty|banqi',
+      'pikafish|jieqi',
+      'fairy-stockfish-level-4|fortress-xiangqi',
       'fairy-stockfish-level-4|duck-xiangqi',
-      'misty|dark-xiangqi',
+      'fairy-stockfish-level-4|atomic-xiangqi',
       'misty|dark-chess',
-      'misty|jungle',
-      'misty|jungle-flip',
     ]);
     expect(new Set(signature).size).toBe(9);
     expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(7);
@@ -59,14 +59,14 @@ describe('landing lobby bot seeks', () => {
     //   xiangqi x3 at 10+5 — a deliberate variant, whose own default is slower
     //     because guests could not finish a full-board game at 3+2;
     //   duck at 5+5 — its own default too, for the same reason (~177 plies);
-    //   fog xiangqi and fog chess at 5+5 — an engine PIN, not a preference:
-    //     Misty's per-move floor outruns a 2s increment and it loses on time
-    //     (#283);
-    //   banqi, jungle, jungle-flip at 3+2 — the house pace, and their guests
-    //     essentially never flag at it.
+    //   atomic at 10+5 — its own default, a full game like xiangqi's;
+    //   fog chess at 5+5 — an engine PIN, not a preference: Misty's per-move
+    //     floor outruns a 2s increment and it loses on time (#283);
+    //   banqi, jieqi, fortress at their own defaults (3+2 house pace for banqi
+    //     and fortress, 10+5 for jieqi's full-board game).
     expect(
       seeds.map((seed) => seed.querySelector('.landing-lobby-seed-time')?.textContent),
-    ).toEqual(['10+5', '10+5', '10+5', '3+2', '5+5', '5+5', '5+5', '3+2', '3+2']);
+    ).toEqual(['10+5', '10+5', '10+5', '3+2', '10+5', '3+2', '5+5', '10+5', '5+5']);
   });
 
   it('labels each seed as an engine game rather than a human seek', () => {
@@ -311,6 +311,7 @@ describe('landing lobby bot seeks', () => {
       'jieqi',
       'fortress-xiangqi',
       'duck-xiangqi',
+      'atomic-xiangqi',
       'dark-xiangqi',
       'dark-chess',
       'jungle',

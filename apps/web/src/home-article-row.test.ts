@@ -12,12 +12,7 @@ import { articles } from './articles-data.js';
 // So absence has to be a recorded decision rather than an oversight. An
 // editorial article newer than the newest thing on the homepage either joins
 // the row or gets a line here saying why it did not.
-const KEPT_OFF: Array<{ slug: string; why: string }> = [
-  {
-    slug: 'atomic-xiangqi-build',
-    why: 'a launch note for a variant that is listed but not yet in the play menu; it is on /blog and linked from the rules page, and the homepage row waits for the play menu',
-  },
-];
+const KEPT_OFF: Array<{ slug: string; why: string }> = [];
 
 const editorial = articles.filter(
   (article) => article.status === 'published' && article.kind !== 'rules',
