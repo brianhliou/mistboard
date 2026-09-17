@@ -26,6 +26,7 @@ import {
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import {
+  atomicXiangqiEnabled,
   banqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
@@ -59,6 +60,7 @@ export interface VariantDef {
 
 const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
+const atomicXiangqiOn = atomicXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
 const jieqiOn = jieqiEnabled();
 const banqiOn = banqiEnabled();
@@ -68,6 +70,7 @@ const darkXiangqiOn = darkXiangqiEnabled();
 const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
+const atomicXiangqiSpec = gameSpecForId(ATOMIC_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
 const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
@@ -133,6 +136,18 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: banqiOn,
     onProfile: banqiOn,
+  },
+  // Atomic: xiangqi where a capture explodes. Launched casual and rating-ready
+  // on the same terms as duck (migration 147); the lobby seek can be rated.
+  {
+    id: currentRatingVariantForSpec(ATOMIC_XIANGQI_SPEC_ID),
+    gameSpecId: atomicXiangqiSpec.id,
+    apiParam: ATOMIC_XIANGQI_SPEC_ID,
+    label: atomicXiangqiSpec.publicName,
+    miniId: 'atomic-xiangqi',
+    enabled: false,
+    onLeaderboard: atomicXiangqiOn,
+    onProfile: atomicXiangqiOn,
   },
   // Full Fog Xiangqi (9x10): launched PvP-first (no bot, no open-seek lobby),
   // rating-ready like Jieqi/Banqi, and paired directly with Fog Chess.

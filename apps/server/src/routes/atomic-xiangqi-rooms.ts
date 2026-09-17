@@ -45,9 +45,10 @@ const atomicXiangqiRoute = createTenantRoomsRoute<
     isEngineClientId: isAtomicXiangqiEngineClientId,
     seats: ATOMIC_XIANGQI_SEATS,
   },
-  // Casual only. There is no `atomic_xiangqi` pool in the user_ratings CHECK,
-  // so a rated request is turned away as unsupported by the surface, the way
-  // the other unrated tenants do it.
+  // Rated only through Find opponent (the lobby seek, registration.ts), the
+  // jieqi shape: a friend link or a PvE request asking for rated is turned
+  // away as unsupported by this surface. The atomic_xiangqi pool itself is in
+  // the user_ratings CHECK since migration 147.
   rated: { kind: 'reject-as-surface' },
   createRoom: (ctx, { timeControl, preferredColor, rated, engine }) =>
     ctx.createAtomicXiangqiRoom(timeControl, preferredColor, rated, engine),

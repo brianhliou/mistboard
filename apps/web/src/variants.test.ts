@@ -1,4 +1,5 @@
 import {
+  ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
@@ -51,6 +52,7 @@ describe('web variant launch registry', () => {
     // Only always-on rating surfaces remain in this flag-off production view,
     // filtered without changing their canonical shelf order.
     expect(prod.leaderboardVariants.map((v) => v.gameSpecId)).toEqual([
+      ATOMIC_XIANGQI_SPEC_ID,
       DUCK_XIANGQI_SPEC_ID,
       FORTRESS_XIANGQI_SPEC_ID,
       DARK_CHESS_SPEC_ID,
@@ -99,6 +101,7 @@ describe('web variant launch registry', () => {
       XIANGQI_SPEC_ID,
       JIEQI_SPEC_ID,
       BANQI_SPEC_ID,
+      ATOMIC_XIANGQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DUCK_XIANGQI_SPEC_ID,
       FORTRESS_XIANGQI_SPEC_ID,
@@ -110,6 +113,7 @@ describe('web variant launch registry', () => {
       XIANGQI_SPEC_ID,
       JIEQI_SPEC_ID,
       BANQI_SPEC_ID,
+      ATOMIC_XIANGQI_SPEC_ID,
       DARK_XIANGQI_SPEC_ID,
       DUCK_XIANGQI_SPEC_ID,
       FORTRESS_XIANGQI_SPEC_ID,
@@ -134,6 +138,7 @@ describe('web variant launch registry', () => {
       [XIANGQI_SPEC_ID, 'xiangqi'],
       [JIEQI_SPEC_ID, 'jieqi'],
       [BANQI_SPEC_ID, 'banqi'],
+      [ATOMIC_XIANGQI_SPEC_ID, 'atomic-xiangqi'],
       [DARK_XIANGQI_SPEC_ID, 'dark-xiangqi'],
       [DUCK_XIANGQI_SPEC_ID, 'duck-xiangqi'],
       [FORTRESS_XIANGQI_SPEC_ID, 'fortress-xiangqi'],

@@ -763,7 +763,12 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: false,
+        // Rated matchmaking for signed-in players, the jieqi terms: the
+        // atomic_xiangqi pool is in the user_ratings CHECK (migration 147) and
+        // the lobby seek forwards the flag. PvE and friend links stay unrated
+        // regardless (the setup dialog excludes mode === 'pve' and friend links
+        // set ratedDisabled).
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],

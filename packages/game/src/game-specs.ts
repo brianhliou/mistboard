@@ -94,8 +94,7 @@ export type RatingPoolBaseId =
   | 'xiangqi'
   // Owes a user_ratings CHECK migration adding 'duck_xiangqi' before it is rated.
   | 'duck_xiangqi'
-  // Unrated, and not in the user_ratings CHECK: the pool exists because every
-  // spec names one, not because anything writes to it.
+  // Migration 147 added it to the user_ratings CHECK.
   | 'atomic_xiangqi';
 
 export type GameSpecId =
@@ -444,6 +443,11 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'atomic_xiangqi',
     publicSurface: 'casual',
     runtimeStatus: 'live',
+    // Rating-ready like duck and fortress: the pool lights up under the global
+    // rated flag. Migration 147 added 'atomic_xiangqi' to the user_ratings
+    // CHECK, which is what makes this honest; before it, a rated game failed
+    // at the point of WRITING the result rather than of creating the game.
+    rated: true,
   },
   {
     // Jungle / Dou Shou Qi (斗兽棋): perfect-information 7×9 animal-rank game. Eight
@@ -560,6 +564,7 @@ export type RatingVariant = Extract<
   // before the global rated flag + MISTBOARD_XIANGQI_ENABLED are both on.
   | 'xiangqi'
   | 'duck_xiangqi'
+  | 'atomic_xiangqi'
 >;
 
 // The active rated-pool set, derived from the `rated` flag. This is the ONE

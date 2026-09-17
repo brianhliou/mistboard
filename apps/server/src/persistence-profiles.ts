@@ -49,13 +49,14 @@ const RATING_POOL_FROM_GAME_SQL = `CASE
          WHEN games.variant = 'xiangqi' THEN 'xiangqi'
          WHEN games.variant = 'fortress-xiangqi' THEN 'fortress_xiangqi'
          WHEN games.variant = 'duck-xiangqi' THEN 'duck_xiangqi'
+         WHEN games.variant = 'atomic-xiangqi' THEN 'atomic_xiangqi'
          ELSE 'fog'
        END`;
 
 // The stored variant strings the pool mapping above is defined over. Anything
 // outside this set has no pool, so it is excluded rather than falling into the
 // CASE's 'fog' default.
-const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi')`;
+const RATED_POOL_VARIANTS_SQL = `games.variant IN ('dark-chess', 'fog', 'dark-xiangqi', 'xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip', 'fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi')`;
 
 export type UpdateUserProfileResult =
   | { ok: true; user: UserAccount }
