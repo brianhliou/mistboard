@@ -195,7 +195,7 @@ const BOARD_Y = 78;
 const GRID_LINE = 2.4;
 const FIGURE_ZOOM = Number(process.env.MISTBOARD_FIGURE_ZOOM ?? 2);
 
-function pair(panels: [Panel, Panel], out: string): void {
+async function pair(panels: [Panel, Panel], out: string): Promise<void> {
   const BOARD_H = 700;
   const boardW = BOARD_H * ASPECT;
   const gap = 56;
@@ -217,14 +217,14 @@ function pair(panels: [Panel, Panel], out: string): void {
     );
   });
   parts.push(`</svg>`);
-  writeFileSync(out, svgToPng(parts.join(''), '#0f1115', FIGURE_ZOOM));
+  writeFileSync(out, await svgToPng(parts.join(''), '#0f1115', FIGURE_ZOOM));
   console.log(`wrote ${out} (${W}x${H}, board ${Math.round(boardW)}x${BOARD_H})`);
 }
 
 // A single board gets the same 2x treatment as a pair, but a pair fills the
 // column and a lone board should not: the post displays these at 380px via an
 // explicit width, so the file is authored at ~760 and halves on the page.
-function single(panel: Panel, out: string): void {
+async function single(panel: Panel, out: string): Promise<void> {
   const BOARD_H = 750;
   const boardW = BOARD_H * ASPECT;
   const pad = 40;
@@ -239,7 +239,7 @@ function single(panel: Panel, out: string): void {
     `<text x="${W / 2}" y="${verdictY}" text-anchor="middle" font-family="${FONT}" font-size="31" font-weight="700" fill="#9ca3af">${panel.verdict}</text>`,
     `</svg>`,
   ];
-  writeFileSync(out, svgToPng(parts.join(''), '#0f1115', FIGURE_ZOOM));
+  writeFileSync(out, await svgToPng(parts.join(''), '#0f1115', FIGURE_ZOOM));
   console.log(`wrote ${out} (${W}x${H}, board ${Math.round(boardW)}x${BOARD_H})`);
 }
 
@@ -253,7 +253,7 @@ const DEFENCE = ['ke10', 'ae9', 'af10', 'be8', 'bc10'];
 // sizes, and pointing all three at one file meant whichever pipeline ran last
 // decided how the other two looked. Those two are produced by the site's own
 // image pass, in the blog repo.
-pair(
+await pair(
   [
     {
       pieces: fromCorpus('chariot-vs-full-defence'),
@@ -271,7 +271,7 @@ pair(
   `${dir}/chariot-vs-soldiers.png`,
 );
 
-pair(
+await pair(
   [
     {
       pieces: fromCorpus('chariot-vs-horse-two-elephants-fortress'),
@@ -289,7 +289,7 @@ pair(
   `${dir}/fortress-pair.png`,
 );
 
-pair(
+await pair(
   [
     {
       pieces: fromCorpus('three-soldiers-vs-full-defence'),
@@ -309,7 +309,7 @@ pair(
   `${dir}/soldier-rank-pair.png`,
 );
 
-pair(
+await pair(
   [
     {
       pieces: piecesOf(stateFromTokens(['Ke1', 'Ra5', 'kf9', 'cf10', 'nd7'])),
@@ -327,7 +327,7 @@ pair(
   `${dir}/cannon-behind-general.png`,
 );
 
-pair(
+await pair(
   [
     {
       pieces: piecesOf(stateFromTokens(['Kd1', 'Ra5', 'Cc5', 'kf10', 're5'])),
@@ -345,7 +345,7 @@ pair(
   `${dir}/middle-file-pair.png`,
 );
 
-single(
+await single(
   {
     pieces: fromCorpus('soldiers-five-on-last-rank'),
     title: 'Five soldiers against a bare general',

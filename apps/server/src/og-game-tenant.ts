@@ -276,7 +276,7 @@ export async function serveTenantGameOgImage(
   }
   const art = staticDir ? await loadCardArt(staticDir) : new Map<string, string>();
   const svg = await renderTenantGameCard(entry, store, art);
-  const png = svgToPng(svg);
+  const png = await svgToPng(svg);
   cache.set(key, png);
   writePng(response, png, 'MISS');
 }

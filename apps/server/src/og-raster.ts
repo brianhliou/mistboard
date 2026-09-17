@@ -6,7 +6,7 @@
 import type { ServerResponse } from 'node:http';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
-import { Resvg } from '@resvg/resvg-js';
+import { renderAsync } from '@resvg/resvg-js';
 
 export type PngCache = {
   get(key: string): Buffer | undefined;
@@ -72,9 +72,17 @@ const FONT_FILES = ['NotoSans-Regular.ttf', 'NotoSans-Bold.ttf'].map((file) =>
  * OG cards (rendered at half their delivered size), 1 for a figure whose SVG is
  * already authored at twice its display width. Oversampling past ~2x the display
  * size is not free quality — it thins hairlines below a pixel on the way down.
+ *
+ * The raster runs on a libuv worker thread (`renderAsync`), never on the event
+ * loop. A full-board card is ~750 KB of SVG with 32 inlined piece images and
+ * takes ~1 s of CPU in the prod container; the synchronous `Resvg#render` this
+ * used until 2026-09-16 stalled every WebSocket frame and every request for
+ * that long, and a crawler walking the 470 chapter cards of the classical
+ * manuals (each its own cache key) paged loop-lag warnings for a minute at a
+ * time. Only the PNG encode (`asPng`, ~30 ms) still runs on the loop.
  */
-export function svgToPng(svg: string, background = '#0f1115', zoom = 2): Buffer {
-  return new Resvg(svg, {
+export async function svgToPng(svg: string, background = '#0f1115', zoom = 2): Promise<Buffer> {
+  const image = await renderAsync(svg, {
     background,
     fitTo: { mode: 'zoom', value: zoom },
     font: {
@@ -82,7 +90,6 @@ export function svgToPng(svg: string, background = '#0f1115', zoom = 2): Buffer 
       fontFiles: FONT_FILES,
       defaultFontFamily: 'Noto Sans',
     },
-  })
-    .render()
-    .asPng();
+  });
+  return image.asPng();
 }

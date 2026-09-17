@@ -540,7 +540,7 @@ export async function servePositionOgImage(params: {
     return;
   }
   const art = params.staticDir ? await loadCardArt(params.staticDir) : new Map<string, string>();
-  const png = svgToPng(renderPositionOgSvg(resolved, art));
+  const png = await svgToPng(renderPositionOgSvg(resolved, art));
   cache.set(key, png);
   writePng(response, png, 'MISS');
 }

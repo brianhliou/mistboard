@@ -200,5 +200,5 @@ const svg = `<svg xmlns="http://www.w3.org/2000/svg" width="${CANVAS_W}" height=
 // The README renders this around 850 CSS pixels wide. Zoom 2 would put the PNG
 // at 3.6x its display size, which costs bytes without adding detail and thins
 // the board's hairlines on the way back down; 1.5 lands at a retina-safe 2.7x.
-await fs.writeFile(outPath, svgToPng(svg, CANVAS_BG, 1.5));
+await fs.writeFile(outPath, await svgToPng(svg, CANVAS_BG, 1.5));
 console.log(`wrote ${outPath} (${wxf.length} plies, ${imported.format})`);

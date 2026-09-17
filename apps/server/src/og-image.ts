@@ -99,7 +99,7 @@ export async function serveGameOgImage(roomId: string, response: ServerResponse)
   } catch {
     svg = renderStubSvg(game);
   }
-  const png = svgToPng(svg);
+  const png = await svgToPng(svg);
   cacheSet(cacheKey, png);
   writePng(response, png, 'MISS');
 }
@@ -276,7 +276,7 @@ export async function serveArticleOgImage(params: {
   const svg = custom
     ? await custom(title, { staticDir })
     : (rulesPositionCard(slug, title, art) ?? renderArticleOgSvg(title, position!));
-  const png = svgToPng(svg);
+  const png = await svgToPng(svg);
   cacheSet(key, png);
   writePng(response, png, 'MISS');
 }
@@ -352,7 +352,7 @@ export async function serveStudyOgImage(params: {
     extras: [],
   };
   const svg = renderBoardCard(board, art, { title: lines });
-  const png = svgToPng(svg);
+  const png = await svgToPng(svg);
   cacheSet(key, png);
   writePng(response, png, 'MISS');
 }

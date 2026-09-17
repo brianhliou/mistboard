@@ -19,6 +19,6 @@ const outPath = resolve(webPublic, 'og-image.png');
 
 const logoSvg = await fs.readFile(resolve(webPublic, 'logo.svg'), 'utf-8');
 const svg = renderDefaultOgSvg(logoSvg);
-const png = svgToPng(svg);
+const png = await svgToPng(svg);
 await fs.writeFile(outPath, png);
 console.log(`wrote ${outPath} (${png.byteLength} bytes)`);
