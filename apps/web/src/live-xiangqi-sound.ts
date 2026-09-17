@@ -18,14 +18,14 @@ import type { SoundKind } from './live-state.js';
 
 // Mirrors the client's open-information wire view without coupling to it: every
 // occupied square carries a plain piece.
-type XiangqiSoundView = {
+export type XiangqiSoundView = {
   board: Partial<Record<XiangqiSquare, XiangqiPiece>>;
   perspective: XiangqiColor;
   status: XiangqiGameStatus;
   moveNumber: number;
 };
 
-type XiangqiSeatOrSpectator = XiangqiColor | 'spectator' | null;
+export type XiangqiSeatOrSpectator = XiangqiColor | 'spectator' | null;
 
 let lastView: XiangqiSoundView | null = null;
 let lastTerminalKey: string | null = null;
@@ -53,6 +53,13 @@ export function soundForOwnXiangqiMove(
 export function maybePlayXiangqiSnapshotSound(
   view: XiangqiSoundView | null,
   seat: XiangqiSeatOrSpectator,
+  // A variant's own reading of the opponent's move (atomic: the blast). Runs
+  // in place of classifyXiangqiOpponentSound with the same prev/next pair.
+  classifyOpponent: (
+    prev: XiangqiSoundView | null,
+    next: XiangqiSoundView | null,
+    seat: XiangqiSeatOrSpectator,
+  ) => SoundKind | null = classifyXiangqiOpponentSound,
 ): void {
   if (lastView === null) {
     lastView = view;
@@ -74,7 +81,7 @@ export function maybePlayXiangqiSnapshotSound(
     return;
   }
 
-  const kind = classifyXiangqiOpponentSound(lastView, view, seat);
+  const kind = classifyOpponent(lastView, view, seat);
   if (kind) playSound(kind);
   lastView = view;
 }

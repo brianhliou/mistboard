@@ -519,6 +519,15 @@ export function tonesForSound(kind: SoundKind, set: SoundSetId = DEFAULT_SOUND_S
       { delay: 0.02, duration: 0.24, frequency: 68, gain: 0.1, type: 'sine' },
     ];
   }
+  if (kind === 'blast') {
+    // The atomic explosion: the cannon's crack, then a longer, deeper boom
+    // that keeps rolling while the pieces beside the target fade out.
+    return [
+      { delay: 0, duration: 0.06, frequency: 190, gain: 0.08, type: 'square' },
+      { delay: 0.02, duration: 0.42, frequency: 52, gain: 0.12, type: 'sine' },
+      { delay: 0.1, duration: 0.3, frequency: 78, gain: 0.05, type: 'triangle' },
+    ];
+  }
   if (kind === 'draw') {
     return [
       {
@@ -750,6 +759,22 @@ function woodTonesForSound(kind: SoundKind): SoundTone[] | null {
           attack: 0.001,
         },
         { delay: 0, duration: 0.22, frequency: 72, gain: 0.09, type: 'sine', attack: 0.002 },
+      ];
+    case 'blast':
+      // The atomic explosion on wood: the cannon's crack, then a boom that
+      // lasts as long as the pieces beside the target take to fade.
+      return [
+        {
+          delay: 0,
+          duration: 0.05,
+          frequency: 2000,
+          gain: 0.13,
+          type: 'sine',
+          noise: true,
+          q: 0.5,
+          attack: 0.001,
+        },
+        { delay: 0, duration: 0.4, frequency: 56, gain: 0.11, type: 'sine', attack: 0.002 },
       ];
     case 'castle':
       // Two clacks: the king, then the rook settling beside it.

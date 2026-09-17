@@ -58,6 +58,10 @@ const FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
   // The loser's side of a king capture: same source, dragged down so it
   // lands as a blow rather than a blast.
   'king-fall': { file: 'Explosion.mp3', rate: 0.62, gain: 0.9 },
+  // Atomic's ordinary capture, heard by both sides: the same source as the
+  // general's fall, a little lower than the king capture so the terminal one
+  // still stands out above the game's dozen blasts.
+  blast: { file: 'Explosion.mp3', rate: 0.84, gain: 0.95 },
   win: { file: 'Victory.mp3' },
   lose: { file: 'Defeat.mp3' },
   draw: { file: 'Draw.mp3' },
@@ -82,6 +86,9 @@ const WOOD_FILE_BY_KIND: Partial<Record<SoundKind, SoundFileSpec>> = {
   flip: { file: 'move.mp3' },
   // The cannon slam: the capture, pitched down for extra weight.
   'cannon-capture': { file: 'capture.mp3', rate: 0.85, gain: 1.1 },
+  // No explosion was ever recorded on a wooden board: the capture dragged
+  // down further still, the heaviest thing the set can say.
+  blast: { file: 'capture.mp3', rate: 0.62, gain: 1.2 },
   'game-start': { file: 'start.mp3' },
   win: { file: 'win.ogg' },
   lose: { file: 'loss.ogg' },

@@ -128,6 +128,8 @@ export type SoundController = {
 };
 
 export type SoundKind =
+  // An atomic capture: the taker, the taken and the pieces beside them go.
+  | 'blast'
   | 'cannon-capture'
   | 'capture'
   | 'captured'

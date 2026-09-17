@@ -30,6 +30,7 @@ const KINDS: SoundKind[] = [
   'capture',
   'captured',
   'cannon-capture',
+  'blast',
   'castle',
   'king-capture',
   'king-fall',

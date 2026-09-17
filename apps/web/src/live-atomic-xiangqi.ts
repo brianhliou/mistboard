@@ -29,13 +29,13 @@ import {
   markAtomicXiangqiBlastHost,
 } from './atomic-xiangqi-board.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
+import {
+  maybePlayAtomicXiangqiSnapshotSound,
+  soundForOwnAtomicXiangqiMove,
+} from './live-atomic-xiangqi-sound.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
-import {
-  maybePlayXiangqiSnapshotSound,
-  resetXiangqiSoundState,
-  soundForOwnXiangqiMove,
-} from './live-xiangqi-sound.js';
+import { resetXiangqiSoundState } from './live-xiangqi-sound.js';
 import {
   annotationOwner,
   type BoardAnnotations,
@@ -107,10 +107,10 @@ const client = createTenantLiveClient<
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
   onSnapshotApplied: () => {
-    if (core) maybePlayXiangqiSnapshotSound(core.state.view, core.state.seat);
+    if (core) maybePlayAtomicXiangqiSnapshotSound(core.state.view, core.state.seat);
   },
   onEventApplied: () => {
-    if (core) maybePlayXiangqiSnapshotSound(core.state.view, core.state.seat);
+    if (core) maybePlayAtomicXiangqiSnapshotSound(core.state.view, core.state.seat);
   },
   resetSounds: resetXiangqiSoundState,
   resetState: () => {
@@ -267,7 +267,7 @@ function handleSquareClick(view: AtomicXiangqiPlayerView, square: AtomicXiangqiS
   }
   selectedSquare = null;
   if (core.send({ type: 'move', from: result.move.from, to: result.move.to })) {
-    playSound(soundForOwnXiangqiMove(view, result.move));
+    playSound(soundForOwnAtomicXiangqiMove(view, result.move));
   }
 }
 
@@ -327,7 +327,7 @@ function dropPiece(
   const move = to && view ? view.legalMoves.find((m) => m.from === from && m.to === to) : undefined;
   selectedSquare = null;
   if (move && view && core?.send({ type: 'move', from: move.from, to: move.to })) {
-    playSound(soundForOwnXiangqiMove(view, move));
+    playSound(soundForOwnAtomicXiangqiMove(view, move));
   }
   if (core?.state.view) renderBoard(liveRefs, core.state.view);
 }
