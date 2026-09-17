@@ -68,6 +68,7 @@ Conventions:
 
 ### Site
 
+- An Atomic Xiangqi game's link preview shows the game's turning point once it has been analysed, not only the final position ([d6ea0745](https://github.com/brianhliou/mistboard/commit/d6ea0745))
 - The homepage's fourth band is a learn row: how to play, the piece lessons, puzzles, the openings explorer, play the computer, the 心武残编 manual and every champion, one card each and all on this site, with our own episode leading; it renders everywhere, including where YouTube is blocked ([ac73fcf7](https://github.com/brianhliou/mistboard/commit/ac73fcf7))
 - The Atomic Xiangqi launch note's card shows the moment of a blast on the board, and its atom marker is bolder ([70b8c4b2](https://github.com/brianhliou/mistboard/commit/70b8c4b2))
 - This changelog is a page, /changelog on the about rail: months newest first with anchors, one line per change linking its commit; Updates keeps the highlights and links here from its foot ([c4ca3740](https://github.com/brianhliou/mistboard/commit/c4ca3740))
