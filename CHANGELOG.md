@@ -64,6 +64,7 @@ Conventions:
 
 ### Site
 
+- The homepage's fourth band is a learn row: how to play, the piece lessons, puzzles, the openings explorer, play the computer, the 心武残编 manual and every champion, one card each and all on this site, with our own episode leading; it renders everywhere, including where YouTube is blocked ([ac73fcf7](https://github.com/brianhliou/mistboard/commit/ac73fcf7))
 - The Atomic Xiangqi launch note's card shows the moment of a blast on the board, and its atom marker is bolder ([70b8c4b2](https://github.com/brianhliou/mistboard/commit/70b8c4b2))
 - This changelog is a page, /changelog on the about rail: months newest first with anchors, one line per change linking its commit; Updates keeps the highlights and links here from its foot ([c4ca3740](https://github.com/brianhliou/mistboard/commit/c4ca3740))
 - `/stats` is a real page on the about rail, leading with games per week; every count excludes the operator's own accounts and browsers, guests count as players by browser, and a game counts only once both sides have moved ([87ba6d14](https://github.com/brianhliou/mistboard/commit/87ba6d14), [cd4f58b3](https://github.com/brianhliou/mistboard/commit/cd4f58b3), [ea5d57a0](https://github.com/brianhliou/mistboard/commit/ea5d57a0), [b916a663](https://github.com/brianhliou/mistboard/commit/b916a663))
@@ -73,6 +74,7 @@ Conventions:
 
 ### Removed
 
+- The homepage YouTube video strip is gone; the video library stays at /videos ([ac73fcf7](https://github.com/brianhliou/mistboard/commit/ac73fcf7))
 - The play streak, a day after it shipped: with nothing showing in the room it was a number on the profile that mostly read zero; the puzzle streak stays and now sits on the Puzzles heading line instead of in its own block ([b1ec937d](https://github.com/brianhliou/mistboard/commit/b1ec937d))
 - Eleven unlaunched variants are gone from the code, one commit each: Crossroads Chess and Dark Crossroads Chess, Fog Shogi, Drop Mini Xiangqi, Dark Mini Xiangqi and Mini Xiangqi with their puzzles, Reveal Chess, Dark Crazyhouse, Kriegspiel, Luzhanqi, and Dark Draft960 together with the whole pregame draft phase of Fog Chess. Their rules pages answer 410; finished games of theirs still replay. Five reserved-but-unbuilt spec ids went with them. Measured on the commit before and after: 551,242 → 477,016 source lines (−13.5%), 24 → 10 registered variants, 18 → 9 rating pools, 54 dead lazy chunks out of the web build; CI time unchanged ([2bf6490e](https://github.com/brianhliou/mistboard/commit/2bf6490e) through [ef6d463e](https://github.com/brianhliou/mistboard/commit/ef6d463e), #396)
 - `/rules/shogi4` stays, unlisted, because it is linked from outside the site ([638bee89](https://github.com/brianhliou/mistboard/commit/638bee89))
