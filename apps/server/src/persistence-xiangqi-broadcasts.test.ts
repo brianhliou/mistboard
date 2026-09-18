@@ -301,6 +301,50 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal((await getXiangqiBroadcastBoard(fullBoard.id))?.moves.length, 2);
   });
 
+  // #416 follow-through: the derived board key changed to include the source
+  // page's game id, so the first poll after the change files a polling tour's
+  // derived boards under new ids. The record under the old id is the same game
+  // and must go, while a second game from a different page keeps its own row.
+  test('creating a re-keyed derived board retires the same game under the old key', async () => {
+    const pack = await fixturePack();
+    const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
+
+    const pageA = 'http://www.dpxq.com/hldcg/search/view_m_143679.html';
+    const derived = (id: string, sourceUrl: string, plies: number): XiangqiBroadcastBoard => ({
+      ...fullBoard,
+      id: `${fullBoard.tourSlug}-${fullBoard.roundId}-${id}`,
+      sourceBoardId: id,
+      sourceUrl,
+      status: 'live',
+      result: '*',
+      moves: fullBoard.moves.slice(0, plies),
+    });
+
+    const legacy = derived('b1legacy', pageA, 2);
+    const rekeyed = derived('b1rekeyed', pageA, 4);
+    const otherGame = derived('b2other', 'http://www.dpxq.com/hldcg/search/view_m_143681.html', 3);
+    const titled = derived('mr1t02', pageA, 3);
+
+    for (const board of [legacy, otherGame, titled]) {
+      const created = await applyXiangqiBroadcastBoardUpdate(board);
+      assert.equal(created.ok ? created.status : created.kind, 'created');
+    }
+
+    const created = await applyXiangqiBroadcastBoardUpdate(rekeyed);
+    assert.equal(created.ok ? created.status : created.kind, 'created');
+
+    const remaining = (await listXiangqiBroadcastBoards(fullBoard.roundId)).map((b) => b.id);
+    assert.equal(remaining.includes(legacy.id), false, 'old key retired');
+    assert.equal(remaining.includes(rekeyed.id), true);
+    assert.equal(remaining.includes(otherGame.id), true, 'a different page is a different game');
+    assert.equal(remaining.includes(titled.id), true, 'title-named boards are never retired');
+
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: fullBoard.tourSlug });
+    const rekeyLog = logs.find((log) => log.kind === 'rekeyed');
+    assert.equal(rekeyLog?.payload.retiredBoardId, legacy.id);
+  });
+
   test('explicit correction can replace a non-prefix legal board update', async () => {
     const pack = await fixturePack();
     const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;

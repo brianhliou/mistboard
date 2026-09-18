@@ -164,6 +164,14 @@ function sourceBoardIdFromTitle(title: string | undefined, index: number): strin
   return slugPart(token ?? `board-${index + 1}`) || `board-${index + 1}`;
 }
 
+// The game id a single-record page URL carries, if it carries one. dpxq files
+// every record as /hldcg/search/view_m_<id>.html, so the id is the page's own
+// name for the game and survives anything the players or round tags might share
+// with another record.
+export function sourceGameId(sourceUrl: string | undefined): string | undefined {
+  return sourceUrl?.match(/view_m_(\d+)\.html/i)?.[1];
+}
+
 function boardNumberFromSourceId(
   sourceBoardId: string,
   index: number,
@@ -330,8 +338,19 @@ export function convertWxfDhtmlXqPageToSnapshot(
     // so independent single-game pages would all collide on board-1. Derive a
     // stable per-game id from the pairing + round instead. Stable across live
     // re-polls of the same game (red/black/round don't change as moves grow).
+    //
+    // The pairing is not the game. A tiebreak replays the same two players with
+    // the same colours in the same round -- the 2026 Shanghai Cup semi
+    // 陈绍博–杨世哲 went eight games, four per colour ordering -- and a key of
+    // pairing + round filed one board per colour ordering and rejected the
+    // other six as incompatible updates (#416). When the page URL names the
+    // game (dpxq's view_m_<id>.html is one record), that id is the identity and
+    // goes into the hash; a page that names no game keeps the pairing key.
     if (/^board-\d+$/.test(sourceBoardId)) {
-      sourceBoardId = `b${hashToken(`${red.value}|${black.value}|${pageRoundTag ?? ''}`)}`;
+      const gameId = sourceGameId(options.sourceUrl);
+      sourceBoardId = `b${hashToken(
+        `${red.value}|${black.value}|${pageRoundTag ?? ''}${gameId ? `|${gameId}` : ''}`,
+      )}`;
     }
 
     const moves = movesFromDhtmlMovelist(sourceBoardId, movelist.value);

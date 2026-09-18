@@ -405,6 +405,39 @@ async function upsertBoard(
   );
 }
 
+// A derived board id (`b<hash>`, the converter's fallback for pages whose frame
+// title names no board) changed shape on 2026-09-18 to include the source
+// page's game id (#416). The first poll after that change files every derived
+// board of a polling tour under a new id, and its record under the old id
+// would otherwise stay behind as a duplicate. Before creating a derived board,
+// retire the one record that is the same game under the old key: same tour,
+// round, source page and pairing, itself derived, different id. Boards named
+// by a frame title (`mr1t02`) are never touched -- two such boards can share a
+// page and a pairing legitimately (a replay listed on the same round page).
+async function retireRekeyedTwin(client: Queryable, board: XiangqiBroadcastBoard): Promise<void> {
+  if (!board.sourceUrl || !/^b[0-9a-z]+$/.test(board.sourceBoardId)) return;
+  const { rows } = await client.query<{ id: string }>(
+    `DELETE FROM xiangqi_broadcast_boards
+      WHERE tour_slug = $1 AND round_id = $2 AND source_url = $3
+        AND red->>'name' = $4 AND black->>'name' = $5
+        AND id <> $6 AND source_board_id ~ '^b[0-9a-z]+$'
+      RETURNING id`,
+    [board.tourSlug, board.roundId, board.sourceUrl, board.red.name, board.black.name, board.id],
+  );
+  for (const row of rows) {
+    await appendSyncLog(client, {
+      tourSlug: board.tourSlug,
+      roundId: board.roundId,
+      boardId: board.id,
+      sourceBoardId: board.sourceBoardId,
+      severity: 'info',
+      kind: 'rekeyed',
+      message: `retired ${row.id}: same game as ${board.id} under the pre-#416 board key`,
+      payload: { retiredBoardId: row.id, sourceUrl: board.sourceUrl },
+    });
+  }
+}
+
 async function appendSyncLog(
   client: Queryable,
   input: {
@@ -580,6 +613,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
 
     const existing = await getBoardById(client, board.id);
     if (!existing) {
+      await retireRekeyedTwin(client, board);
       await upsertBoard(client, board, replay.plies, replay.finalStatus);
       return { ok: true, boardId: board.id, status: 'created', plyCount: replay.plies };
     }

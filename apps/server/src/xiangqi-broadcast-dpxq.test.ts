@@ -89,6 +89,35 @@ test('independent same-event games compose into distinct boards grouped by round
   );
 });
 
+// #416: the 2026 Shanghai Cup semi 陈绍博–杨世哲 went eight games in one round,
+// four with each colour ordering; keyed on pairing + round, Mistboard kept one
+// per ordering and rejected the other six. The page URL names the game.
+test('a tiebreak with the same pairing and colours in one round is its own board', () => {
+  const EVENT = '2026年第六届“上海杯”象棋大师公开赛';
+  const semi = { red: '陈绍博', black: '杨世哲', event: EVENT, round: '第04轮' };
+  const convert = (sourceUrl: string | undefined) => {
+    const normalized = normalizeDpxqPageToFrameHtml(liveBoardPage({ ...semi, plies: 8 }));
+    const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '', {
+      ...(sourceUrl ? { sourceUrl } : {}),
+    });
+    if (!converted.ok) throw new Error('dpxq conversion failed');
+    return converted.snapshot.boards[0]!;
+  };
+
+  const classical = convert('http://www.dpxq.com/hldcg/search/view_m_143679.html');
+  const tiebreak = convert('http://www.dpxq.com/hldcg/search/view_m_143681.html');
+  assert.notEqual(classical.id, tiebreak.id);
+  assert.equal(classical.roundId, tiebreak.roundId);
+  assert.match(classical.sourceBoardId, /^b[0-9a-z]+$/);
+
+  // Re-polling the same record keeps its id.
+  assert.equal(convert('http://www.dpxq.com/hldcg/search/view_m_143679.html').id, classical.id);
+
+  // A page that names no game still keys on the pairing, as before.
+  assert.equal(convert(undefined).id, convert(undefined).id);
+  assert.notEqual(convert(undefined).id, classical.id);
+});
+
 test('looksLikeDpxqPage flags raw dpxq pages, not framed WXF or JSON', () => {
   assert.equal(looksLikeDpxqPage(ARCHIVE_HTML), true);
   assert.equal(looksLikeDpxqPage(liveBoardPage({ red: 'A', black: 'B', plies: 4 })), true);
