@@ -30,6 +30,7 @@ import {
   landingBotLineup,
   landingBotOffer,
   landingBotRotationBucket,
+  landingLobbyBotOffer,
   landingXiangqiBotOffers,
 } from './landing-bot-policy.js';
 import { rememberedPveEngine } from './pve-memory.js';
@@ -479,8 +480,11 @@ export function buildLobbyRequestsWindow(
 // surface is never an empty table at zero human liquidity. These are NOT server
 // seeks: the pool is derived client-side from one six-hour UTC bucket, so every
 // visitor agrees on the lineup and an open page never changes rows underneath
-// them. One click creates and joins the PvE room directly (no setup dialog);
-// the server resolves the concrete engine from the bot identity.
+// them. The bucket picks which variants show, and for each row which rung of
+// its ladder and which clock (landingLobbyBotOffer); the xiangqi ladder block
+// is the one fixed thing, so it can be climbed. One click creates and joins
+// the PvE room directly (no setup dialog); the server resolves the concrete
+// engine from the bot identity.
 type LandingEngineSeed = {
   botId: string;
   botName: string;
@@ -512,7 +516,12 @@ function landingEngineSeeds(locale: Locale, rotationBucket: number): LandingEngi
   return (
     picked
       .sort((a, b) => canonicalVariantOrderIndex(a) - canonicalVariantOrderIndex(b))
-      .map((gameSpecId) => landingBotOffer(gameSpecId))
+      .map((gameSpecId) =>
+        landingLobbyBotOffer(gameSpecId, {
+          bucket: rotationBucket,
+          allowedPaces: [...allowedTimePresetIds(gameSpecId, false, 'pve')],
+        }),
+      )
       .filter((offer): offer is NonNullable<typeof offer> => offer !== null)
       // Xiangqi expands into its whole ladder. The expansion runs after the
       // variant sort, so the ladder has to carry its own order (ascending by

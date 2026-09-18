@@ -9,6 +9,7 @@ import {
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
+  TIME_CONTROLS,
   type TimeControlId,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
@@ -96,6 +97,18 @@ const DUCK_XIANGQI_LEVEL = 4;
 const ATOMIC_XIANGQI_LEVEL = 4;
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 
+// The Lobby rows rotate their rung and clock by bucket; Quick Pairing's chip
+// does not (landingBotOffer), because the chip shows neither a name nor, for
+// xiangqi, a level, so a rotating chip would move a player without telling them
+// (#365). A row says both, so it can vary.
+//
+// Rungs stay within one step of the calibrated tier. Every rated ladder puts
+// Level 4 at random+400 (fortress, duck, atomic 2026-09-15), so a bucket that
+// showed Level 7 would be a worse first game than a stable Level 4; the band
+// is variety for a returning player, not a re-tuning. The cycle is three so it
+// never locks to the two-cycle variant lineup.
+const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
+
 export type LandingBotOfferContext = {
   /** The xiangqi engine this device last started a bot game against, if any. */
   rememberedXiangqiBotId?: string | null;
@@ -123,8 +136,9 @@ export function landingBotLineup(bucket: number): readonly LandingBotGameSpecId[
   return [XIANGQI_SPEC_ID, DARK_CHESS_SPEC_ID, ...rotating];
 }
 
-// Which variants appear still rotates by bucket; WHICH OPPONENT a variant
-// offers does not.
+// The canonical offer for a variant: which opponent the Quick Pairing chip
+// starts. It does not rotate; the Lobby row's variation is layered on top of it
+// by landingLobbyBotOffer.
 export function landingBotOffer(
   gameSpecId: string,
   context: LandingBotOfferContext = {},
@@ -157,6 +171,71 @@ export function landingBotOffer(
 //   3. the house pace, 3+2.
 function offerPace(gameSpecId: LandingBotGameSpecId): TimeControlId {
   return engineTimeControlPin(gameSpecId)?.id ?? defaultTimePresetForSpec(gameSpecId);
+}
+
+export type LandingLobbyBotOfferContext = {
+  bucket: number;
+  /** The paces this variant's PvE picker offers, in ladder order. The row must
+   *  never advertise a clock the picker (and so the create route) would not
+   *  start; the caller owns that set. */
+  allowedPaces: readonly TimeControlId[];
+};
+
+// The Lobby row for a variant in one bucket. Same opponent family as the
+// canonical offer, with the rung and the clock rotated:
+//   - a Fairy-Stockfish rung moves within LOBBY_LEVEL_OFFSETS of its tier;
+//     Misty and Pikafish have no rungs and stay put;
+//   - the clock walks the variant's allowed paces AT OR SLOWER THAN its
+//     default. Never faster: the default is the pace a first game is dropped
+//     into (xiangqi and jieqi moved to 10+5 on 2026-09-01 because guests
+//     flagged a third of their games at 3+2), so a rotation below it would
+//     re-introduce the flagging the default was set to stop. A pinned engine
+//     (the fog variants) has exactly one pace and never rotates.
+// Rung and clock advance on different strides, so a variant with three of
+// each shows every pairing over nine buckets instead of the same three.
+export function landingLobbyBotOffer(
+  gameSpecId: string,
+  context: LandingLobbyBotOfferContext,
+): LandingBotOffer | null {
+  const base = landingBotOffer(gameSpecId);
+  if (!base) return null;
+  // Phase by shelf position so the rows sharing a bucket do not all sit on the
+  // same offset and the same clock.
+  const phase = LANDING_BOT_GAME_SPEC_IDS.indexOf(base.gameSpecId);
+  const level = fairyStockfishLevel(base.botId);
+  const rung =
+    level === null
+      ? null
+      : clampLevel(
+          level +
+            LOBBY_LEVEL_OFFSETS[
+              positiveModulo(context.bucket + phase, LOBBY_LEVEL_OFFSETS.length)
+            ]!,
+        );
+  const paces = lobbyPaces(base.gameSpecId, context.allowedPaces);
+  const paceStride = Math.floor(context.bucket / LOBBY_LEVEL_OFFSETS.length);
+  const timeControlId =
+    paces[positiveModulo(paceStride + phase, paces.length)] ?? base.timeControlId;
+  return rung === null
+    ? { ...base, timeControlId }
+    : { ...fsfOffer(base.gameSpecId, rung), timeControlId };
+}
+
+function lobbyPaces(
+  gameSpecId: LandingBotGameSpecId,
+  allowedPaces: readonly TimeControlId[],
+): readonly TimeControlId[] {
+  const pin = engineTimeControlPin(gameSpecId)?.id;
+  if (pin) return [pin];
+  const floor = TIME_CONTROLS.findIndex((tc) => tc.id === defaultTimePresetForSpec(gameSpecId));
+  const slowEnough = TIME_CONTROLS.filter(
+    (tc, index) => index >= floor && allowedPaces.includes(tc.id),
+  ).map((tc) => tc.id);
+  return slowEnough.length > 0 ? slowEnough : [defaultTimePresetForSpec(gameSpecId)];
+}
+
+function clampLevel(level: number): number {
+  return Math.min(8, Math.max(1, level));
 }
 
 // The Lobby carries the whole Xiangqi ladder at once, weakest rung first. Quick

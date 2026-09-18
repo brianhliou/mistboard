@@ -5,6 +5,7 @@ import {
   landingBotLineup,
   landingBotOffer,
   landingBotRotationBucket,
+  landingLobbyBotOffer,
   landingXiangqiBotOffers,
   xiangqiPrimaryLevel,
 } from './landing-bot-policy.js';
@@ -89,6 +90,86 @@ describe('landing bot policy', () => {
     expect(
       landingBotOffer('fortress-xiangqi', { rememberedXiangqiBotId: 'fairy-stockfish-level-8' }),
     ).toMatchObject({ botId: 'fairy-stockfish-level-4' });
+  });
+
+  describe('lobby rows rotate rung and clock by bucket', () => {
+    const ALL_PACES = ['1m1', '3m2', '5m5', '10m5'] as const;
+    const buckets = Array.from({ length: 12 }, (_, index) => 82_620 + index);
+    const rowsFor = (
+      gameSpecId: string,
+      allowedPaces: readonly (typeof ALL_PACES)[number][] = ALL_PACES,
+    ) => buckets.map((bucket) => landingLobbyBotOffer(gameSpecId, { bucket, allowedPaces })!);
+
+    it('keeps a Fairy-Stockfish rung within one step of its tier and visits all three', () => {
+      for (const gameSpecId of ['fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi']) {
+        const levels = rowsFor(gameSpecId).map((offer) => fairyStockfishLevel(offer.botId));
+        expect(new Set(levels)).toEqual(new Set([3, 4, 5]));
+        // Three consecutive buckets show three different rungs: a returning
+        // player sees the band, never the same rung twice in a row.
+        expect(new Set(levels.slice(0, 3)).size).toBe(3);
+      }
+    });
+
+    it('never moves an opponent that has no ladder', () => {
+      for (const gameSpecId of ['banqi', 'jungle', 'jungle-flip', 'dark-chess', 'dark-xiangqi']) {
+        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.botId))).toEqual(
+          new Set(['misty']),
+        );
+      }
+      expect(new Set(rowsFor('jieqi').map((offer) => offer.botId))).toEqual(new Set(['pikafish']));
+    });
+
+    it('rotates the clock through the allowed paces at or slower than the default', () => {
+      // House-pace variants have three slower-or-equal paces and visit them all.
+      for (const gameSpecId of ['banqi', 'fortress-xiangqi', 'jungle', 'jungle-flip']) {
+        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
+          new Set(['3m2', '5m5', '10m5']),
+        );
+      }
+      expect(
+        new Set(rowsFor('duck-xiangqi', ['3m2', '5m5', '10m5']).map((o) => o.timeControlId)),
+      ).toEqual(new Set(['5m5', '10m5']));
+      // The deliberate variants default to the slowest pace (the 2026-09-01
+      // guest-pace fix), so there is nothing slower to rotate to and they
+      // never drop back to the 3+2 that flagged a third of guest games.
+      for (const gameSpecId of ['xiangqi', 'jieqi', 'atomic-xiangqi']) {
+        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
+          new Set(['10m5']),
+        );
+      }
+    });
+
+    it('holds a pinned engine to its pin whatever the picker offers', () => {
+      for (const gameSpecId of ['dark-chess', 'dark-xiangqi']) {
+        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
+          new Set(['5m5']),
+        );
+      }
+    });
+
+    it('never advertises a pace the picker would not start', () => {
+      // A narrowed picker (only 5+5 offered) narrows the rotation with it.
+      expect(new Set(rowsFor('banqi', ['5m5']).map((offer) => offer.timeControlId))).toEqual(
+        new Set(['5m5']),
+      );
+      // An empty set falls back to the variant default rather than a dead row.
+      expect(new Set(rowsFor('banqi', []).map((offer) => offer.timeControlId))).toEqual(
+        new Set(['3m2']),
+      );
+    });
+
+    it('leaves the Quick Pairing offer untouched', () => {
+      // The chip shows no name, so it cannot rotate (#365); only the row does.
+      for (const bucket of buckets) {
+        expect(landingBotOffer('fortress-xiangqi')).toMatchObject({
+          botId: 'fairy-stockfish-level-4',
+          timeControlId: '3m2',
+        });
+        expect(
+          landingLobbyBotOffer('fortress-xiangqi', { bucket, allowedPaces: ALL_PACES }),
+        ).not.toBeNull();
+      }
+    });
   });
 
   it('uses the established house bot for every other supported variant', () => {
