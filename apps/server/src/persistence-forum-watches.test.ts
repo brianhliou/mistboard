@@ -112,15 +112,10 @@ definePersistenceTests('forum-watches', () => {
   });
 
   test('the badge counts topics, rows deep-link to the oldest unread reply, and old threads age out', async () => {
-    const t0 = new Date('2026-08-01T00:00:00Z');
-    await makeUser('fw_watcher', 'fwwatcher', t0);
-    await makeUser('fw_poster', 'fwposter', t0);
-    // 121 seeds the bell watermark with now(); push it back so dated fixtures
-    // sit in front of it and only the per-topic rules decide what counts.
-    await runSql(`UPDATE users SET forum_replies_seen_at = $2 WHERE id = $1`, [
-      'fw_watcher',
-      daysAgo(90),
-    ]);
+    // Accounts older than every fixture post, so the 30-day window (not the
+    // bell watermark makeUser pins to this date) is what excludes the stale ones.
+    await makeUser('fw_watcher', 'fwwatcher', daysAgo(90));
+    await makeUser('fw_poster', 'fwposter', daysAgo(90));
 
     // Topic 1: one reply outside the window, two inside.
     const topicOld = await makeTopic('fw_watcher', 'fw_topic_old', 'An old thread', daysAgo(60));
@@ -317,9 +312,13 @@ definePersistenceTests('forum-watches', () => {
   });
 });
 
-// Fixture clock: seconds after a moment safely ahead of every account's
-// now()-seeded bell watermark, so ordering is explicit and never a same-ms tie.
-const BASE_MS = Date.now() + 5_000;
+// Fixture clock: seconds after module load, so ordering is explicit and never a
+// same-ms tie. Nothing here may depend on how long after load a test runs:
+// makeUser pins each account's bell watermark to its fixture `now`, so a post
+// dated at(n) is in front of it however slow the runner. (Until 2026-09-17 the
+// base sat 5 s ahead of load and the watermark stayed at the DB's now(); a CI
+// shard whose migrations plus first tests took longer than that read 0.)
+const BASE_MS = Date.now();
 function at(seconds: number): Date {
   return new Date(BASE_MS + seconds * 1000);
 }
@@ -337,6 +336,10 @@ async function makeUser(id: string, handle: string, now: Date): Promise<void> {
     displayName: handle,
     now,
   });
+  // 121 seeds the bell watermark with the DB's now(), and createUser leaves it
+  // there; pin it to the fixture clock so only the per-topic rules decide what
+  // counts, whatever the wall clock reads when this test finally runs.
+  await runSql(`UPDATE users SET forum_replies_seen_at = $2 WHERE id = $1`, [id, now]);
 }
 
 async function makeTopic(
