@@ -44,6 +44,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The Banqi, Flip Jungle, Fog Xiangqi and Fog Chess rules pages each answer whether the bot can see your hidden pieces (it cannot: face-down tiles reach it as unknown, fog bots get only their own vision), in English and both Chinese scripts, matching what the Jieqi page and the Misty post already said ([ae40e3f7](https://github.com/brianhliou/mistboard/commit/ae40e3f7))
 - The Banqi, Jungle, Xiangqi and Jieqi rules pages answer the questions people actually search: a capture-order table and a rule-variants section on Banqi (which of the three regional rulesets Mistboard plays, and why), a piece table on Xiangqi, and a common-questions block on all four, in English and both Chinese scripts ([8e2e720e](https://github.com/brianhliou/mistboard/commit/8e2e720e))
 - 心武残编 and 渊深海阔, two of the four great Qing composition manuals, are public studies (470 problems, credited to dpxq.com, held back where the record and the engine disagree); the rest of dpxq's classical shelf is seeded unlisted and follows in batches ([840ccd46](https://github.com/brianhliou/mistboard/commit/840ccd46))
 - "Horde on the Xiangqi Board: The River Is a Cliff" is published: the measurement behind a second variant that was not built, with kernel-checked boards and links to the full map and the evidence repository ([b21eb9ed](https://github.com/brianhliou/mistboard/commit/b21eb9ed))
