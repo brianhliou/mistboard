@@ -211,6 +211,11 @@ export const banqiArticle: Article = {
                 answer:
                   'Choose Challenge a friend on this page. It creates an invite link; your friend opens it and the game starts. No account is needed for either player.',
               },
+              {
+                question: 'Can the bot see the face-down tiles?',
+                answer:
+                  'No. MistyBanqi gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do. A test fails the build if an identity ever leaks into what it is sent.',
+              },
             ],
           },
         ],

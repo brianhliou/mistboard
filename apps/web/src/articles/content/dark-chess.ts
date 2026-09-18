@@ -271,6 +271,21 @@ export const darkChessArticle: Article = {
           } as ArticleBlock,
         ],
       },
+      {
+        heading: 'Common questions',
+        blocks: [
+          {
+            kind: 'faq',
+            items: [
+              {
+                question: 'Can the bot see through the fog?',
+                answer:
+                  'No. Misty never sees the whole board. Each move it receives only what its own pieces can see, the same fog you play under, and it treats the rest as a set of boards that could all be true. The server that enforces this is open source, and tests fail the build if a hidden square ever leaks into what the engine is sent.',
+              },
+            ],
+          },
+        ],
+      },
       playClosing({
         heading: 'Play on Mistboard',
         lead: 'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.',

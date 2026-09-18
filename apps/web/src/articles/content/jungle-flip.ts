@@ -139,6 +139,21 @@ export const jungleFlipArticle: Article = {
         },
       ],
     },
+    {
+      heading: 'Common questions',
+      blocks: [
+        {
+          kind: 'faq',
+          items: [
+            {
+              question: 'Can the bot see the face-down tiles?',
+              answer:
+                'No. The engine gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do.',
+            },
+          ],
+        },
+      ],
+    },
     playClosing({
       heading: 'Play on Mistboard',
       lead: 'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.',

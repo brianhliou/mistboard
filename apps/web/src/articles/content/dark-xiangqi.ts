@@ -168,6 +168,21 @@ export const darkXiangqiArticle: Article = {
           },
         ],
       },
+      {
+        heading: 'Common questions',
+        blocks: [
+          {
+            kind: 'faq',
+            items: [
+              {
+                question: 'Can the bot see through the fog?',
+                answer:
+                  'No. Misty DXQ never sees the whole board. Each move it receives only the squares its own pieces can see, the same vision rule you play under, and it has to reason about everything else from what it has observed. The full position stays on the server, and the server is open source, so anyone can check what the engine is sent.',
+              },
+            ],
+          },
+        ],
+      },
       playClosing({
         heading: 'Play on Mistboard',
         lead: 'Fog Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',

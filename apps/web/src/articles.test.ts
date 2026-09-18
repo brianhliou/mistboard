@@ -899,6 +899,7 @@ describe('rules variant sidebar', () => {
       'Captures and trades',
       'Winning and draws',
       'A sample game',
+      'Common questions',
       'Play on Mistboard',
     ]);
     expect(page.textContent).toContain('Face-down tiles block movement and cannot be captured');

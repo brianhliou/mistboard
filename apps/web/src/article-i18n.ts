@@ -715,6 +715,9 @@ const ZH_HANS: Record<string, string> = {
     '现在在 h3 添一枚白象。它的斜线让 e6 始终处在视野内。同样走 1...exd5 之后，白方失去 d5，而那枚象看到 e6 变空了。于是可知：是 e 路的兵吃的。',
   "Here is a complete game between Mistboard's engine and a human, shown from both player views and the server's full position.":
     '下面是一盘 Mistboard 引擎对阵真人的完整对局，同时展示双方视野和服务器上的完整局面。',
+  'Can the bot see through the fog?': '电脑能看穿迷雾吗？',
+  'No. Misty never sees the whole board. Each move it receives only what its own pieces can see, the same fog you play under, and it treats the rest as a set of boards that could all be true. The server that enforces this is open source, and tests fail the build if a hidden square ever leaks into what the engine is sent.':
+    '不能。Misty 从来看不到整个棋盘。每一步它只收到自己棋子能看见的内容，和你处在同一片迷雾之下，其余部分被它当作一组都可能为真的棋盘来处理。执行这一规则的服务器是开源的，一旦有隐藏的格子泄露到发给引擎的内容里，测试会让构建失败。',
   'Read the rules': '阅读规则',
   // board labels
   "WHITE'S VIEW": '白方视野',
@@ -756,6 +759,8 @@ const ZH_HANS: Record<string, string> = {
     '象（相）沿斜线走两个交叉点，且不能过河。如果有一枚隐藏的棋子塞在中点的象眼上，斜线落点就会消失，而象眼位置则显示为一个「?」标记。',
   'This public production game ends with the rule that most clearly separates Fog Xiangqi from ordinary xiangqi. Red sends a chariot to d10, Black’s general captures it, and the open file lets Red’s general fly from d1 to d10 for the win.':
     '这盘公开的生产环境对局，以一条最能区分迷雾象棋与普通象棋的规则收尾。红方把车杀到 d10，黑将吃掉它，随后开放的纵线让红帅从 d1 飞到 d10 取胜。',
+  'No. Misty DXQ never sees the whole board. Each move it receives only the squares its own pieces can see, the same vision rule you play under, and it has to reason about everything else from what it has observed. The full position stays on the server, and the server is open source, so anyone can check what the engine is sent.':
+    '不能。Misty DXQ 从来看不到整个棋盘。每一步它只收到自己棋子能看见的位置，和你遵守的是同一条视野规则，其余部分只能根据已观察到的信息推理。完整局面留在服务器上，而服务器是开源的，任何人都可以核查引擎收到了什么。',
   'Red has the lower army. Step through Red’s view, the server truth, and Black’s view.':
     '红方棋子位于下方。逐步查看红方视野、服务器真相和黑方视野。',
   'Black’s cannon jumps a screen and captures the horse on b1.': '黑炮越过炮架，吃掉 b1 的红马。',
@@ -869,6 +874,9 @@ const ZH_HANS: Record<string, string> = {
     '当棋子全部翻开、双方各剩一只动物且谁也无法强制获胜时，Mistboard 也会结束对局。同级棋子必为死局，因为相遇会双双离场；某些不同等级的追逐也无法取胜。这些局面立即判和。',
   'This engine game shows two equal-rank trades: first the Lions, then the Elephants. Blue wins after Red’s last animal leaves the board.':
     '这盘引擎对局展示两次同级兑子：先是双方的狮子，再是双方的大象。红方最后一只动物离场后，蓝方获胜。',
+  'Can the bot see the face-down tiles?': '电脑能看到背面朝上的棋子吗？',
+  'No. The engine gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do.':
+    '不能。引擎拿到的棋盘和你一样：每个背面朝上的棋子都以未知的形式发给它，只附带尚未翻开的棋子数量；它和你在同一时刻，也就是翻开的那一刻，才知道那是什么棋子。',
   'Engine vs engine': '引擎对引擎',
   'Red wins by reaching the den · 69 plies': '红方进入兽穴获胜 · 69 个半回合',
   'Red’s rat has already taken Blue’s elephant in the open, and with the strongest piece off the board Red walks a piece straight into Blue’s undefended den. Reaching the enemy den ends the game at once, no matter what material is left.':
@@ -2471,6 +2479,8 @@ const ZH_HANS: Record<string, string> = {
   'Chinese dark chess, blind chess, and half-board xiangqi in English. The Chinese name is an qi, the everyday word for it in Taiwan and Hong Kong; fan qi and ban pan xiangqi are also used.':
     '英文叫 Banqi，也叫 Chinese dark chess、blind chess 或 half-board xiangqi。中文在台湾和香港通常叫暗棋，也有人叫翻棋或半盘象棋。',
   'How do I play banqi online with a friend?': '暗棋在线双人怎么玩？',
+  'No. MistyBanqi gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do. A test fails the build if an identity ever leaks into what it is sent.':
+    '不能。MistyBanqi 拿到的棋盘和你一样：每个背面朝上的棋子都以未知的形式发给它，只附带尚未翻开的棋子数量；它和你在同一时刻，也就是翻开的那一刻，才知道那是什么棋子。如果有任何身份泄露到发给它的内容里，测试会让构建失败。',
   'Choose Challenge a friend on this page. It creates an invite link; your friend opens it and the game starts. No account is needed for either player.':
     '点本页的“挑战好友”会生成一个邀请链接，朋友打开就开始对局。双方都不需要注册账号。',
   'What is the rank order in Jungle Chess?': '斗兽棋的大小顺序是什么？',
@@ -3246,6 +3256,9 @@ const ZH_HANT: Record<string, string> = {
     '現在在 h3 添一枚白象。它的斜線讓 e6 始終處在視野內。同樣走 1...exd5 之後，白方失去 d5，而那枚象看到 e6 變空了。於是可知：是 e 路的兵吃的。',
   "Here is a complete game between Mistboard's engine and a human, shown from both player views and the server's full position.":
     '下面是一盤 Mistboard 引擎對陣真人的完整對局，同時展示雙方視野和伺服器上的完整局面。',
+  'Can the bot see through the fog?': '電腦能看穿迷霧嗎？',
+  'No. Misty never sees the whole board. Each move it receives only what its own pieces can see, the same fog you play under, and it treats the rest as a set of boards that could all be true. The server that enforces this is open source, and tests fail the build if a hidden square ever leaks into what the engine is sent.':
+    '不能。Misty 從來看不到整個棋盤。每一步它只收到自己棋子能看見的內容，和你處在同一片迷霧之下，其餘部分被它當作一組都可能為真的棋盤來處理。執行這一規則的伺服器是開源的，一旦有隱藏的格子洩露到發給引擎的內容裡，測試會讓建置失敗。',
   'Read the rules': '閱讀規則',
   "WHITE'S VIEW": '白方視野',
   'SERVER TRUTH': '伺服器真相',
@@ -3286,6 +3299,8 @@ const ZH_HANT: Record<string, string> = {
     '象（相）沿斜線走兩個交叉點，且不能過河。如果有一枚隱藏的棋子塞在中點的象眼上，斜線落點就會消失，而象眼位置則顯示為一個「?」標記。',
   'This public production game ends with the rule that most clearly separates Fog Xiangqi from ordinary xiangqi. Red sends a chariot to d10, Black’s general captures it, and the open file lets Red’s general fly from d1 to d10 for the win.':
     '這盤公開的正式環境對局，以一條最能區分迷霧象棋與普通象棋的規則收尾。紅方把車殺到 d10，黑將吃掉它，隨後開放的縱線讓紅帥從 d1 飛到 d10 取勝。',
+  'No. Misty DXQ never sees the whole board. Each move it receives only the squares its own pieces can see, the same vision rule you play under, and it has to reason about everything else from what it has observed. The full position stays on the server, and the server is open source, so anyone can check what the engine is sent.':
+    '不能。Misty DXQ 從來看不到整個棋盤。每一步它只收到自己棋子能看見的位置，和你遵守的是同一條視野規則，其餘部分只能根據已觀察到的資訊推理。完整局面留在伺服器上，而伺服器是開源的，任何人都可以核查引擎收到了什麼。',
   'Red has the lower army. Step through Red’s view, the server truth, and Black’s view.':
     '紅方棋子位於下方。逐步查看紅方視野、伺服器真相和黑方視野。',
   'Black’s cannon jumps a screen and captures the horse on b1.': '黑砲越過砲架，吃掉 b1 的紅馬。',
@@ -3380,6 +3395,9 @@ const ZH_HANT: Record<string, string> = {
     '當棋子全部翻開、雙方各剩一隻動物且誰也無法強制獲勝時，Mistboard 也會結束對局。同級棋子必為死局，因為相遇會雙雙離場；某些不同等級的追逐也無法取勝。這些局面立即判和。',
   'This engine game shows two equal-rank trades: first the Lions, then the Elephants. Blue wins after Red’s last animal leaves the board.':
     '這盤引擎對局展示兩次同級兌子：先是雙方的獅子，再是雙方的大象。紅方最後一隻動物離場後，藍方獲勝。',
+  'Can the bot see the face-down tiles?': '電腦能看到背面朝上的棋子嗎？',
+  'No. The engine gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do.':
+    '不能。引擎拿到的棋盤和你一樣：每個背面朝上的棋子都以未知的形式發給它，只附帶尚未翻開的棋子數量；它和你在同一時刻，也就是翻開的那一刻，才知道那是什麼棋子。',
   'Engine vs engine': '引擎對引擎',
   'Red wins by reaching the den · 69 plies': '紅方進入獸穴獲勝 · 69 個半回合',
   'Red’s rat has already taken Blue’s elephant in the open, and with the strongest piece off the board Red walks a piece straight into Blue’s undefended den. Reaching the enemy den ends the game at once, no matter what material is left.':
@@ -4725,6 +4743,8 @@ const ZH_HANT: Record<string, string> = {
   'Chinese dark chess, blind chess, and half-board xiangqi in English. The Chinese name is an qi, the everyday word for it in Taiwan and Hong Kong; fan qi and ban pan xiangqi are also used.':
     '英文叫 Banqi，也叫 Chinese dark chess、blind chess 或 half-board xiangqi。中文在台灣和香港通常叫暗棋，也有人叫翻棋或半盤象棋。',
   'How do I play banqi online with a friend?': '暗棋線上雙人怎麼玩？',
+  'No. MistyBanqi gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do. A test fails the build if an identity ever leaks into what it is sent.':
+    '不能。MistyBanqi 拿到的棋盤和你一樣：每個背面朝上的棋子都以未知的形式發給它，只附帶尚未翻開的棋子數量；它和你在同一時刻，也就是翻開的那一刻，才知道那是什麼棋子。如果有任何身份洩露到發給它的內容裡，測試會讓建置失敗。',
   'Choose Challenge a friend on this page. It creates an invite link; your friend opens it and the game starts. No account is needed for either player.':
     '按本頁的「挑戰好友」會產生一個邀請連結，朋友點開就開始對局。雙方都不需要註冊帳號。',
   'What is the rank order in Jungle Chess?': '鬥獸棋的大小順序是什麼？',
