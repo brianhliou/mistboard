@@ -2428,6 +2428,145 @@ const ZH_HANS: Record<string, string> = {
   'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
     '八个引擎强度档位，或者用邀请链接约朋友。规则页面配有图解，讲得完整。',
   'Invite a friend': '邀请朋友',
+  // banqi capture table + FAQ, jungle FAQ (2026-09-17)
+  Rank: '等级',
+  'Piece (red / black)': '棋子（红 / 黑）',
+  'Can capture': '可以吃',
+  Exception: '例外',
+  'General 帥 / 將': '将帅：帅 / 将',
+  'Advisor 仕 / 士': '士：仕 / 士',
+  'Elephant 相 / 象': '象：相 / 象',
+  'Chariot 俥 / 車': '车：俥 / 车',
+  'Horse 傌 / 馬': '马：傌 / 马',
+  'Soldier 兵 / 卒': '兵卒：兵 / 卒',
+  'Cannon 炮 / 砲': '炮：炮 / 炮',
+  'general, advisor, elephant, chariot, horse, cannon': '将、士、象、车、马、炮',
+  'advisor, elephant, chariot, horse, cannon, soldier': '士、象、车、马、炮、卒',
+  'elephant, chariot, horse, cannon, soldier': '象、车、马、炮、卒',
+  'chariot, horse, cannon, soldier': '车、马、炮、卒',
+  'horse, cannon, soldier': '马、炮、卒',
+  'soldier, general': '卒、将',
+  'any revealed enemy, by jumping one screen': '隔一子跳吃任何已翻开的敌子',
+  'cannot capture a soldier': '不能吃卒',
+  'the only piece that captures the general': '唯一能吃将的棋子',
+  'as a target it ranks between horse and soldier': '被吃时算在马与卒之间',
+  'Capture order on Mistboard. A piece may also capture its own rank.':
+    'Mistboard 的吃子顺序。同等级也可以互吃。',
+  'What is the capture order in banqi?': '暗棋的大小顺序是什么？',
+  'General > Advisor > Elephant > Chariot > Horse > Soldier. A piece captures its own rank or anything below it. Two exceptions: the soldier can capture the general, and the general cannot capture a soldier. The cannon captures by jumping and sits outside the ladder.':
+    '将 > 士 > 象 > 车 > 马 > 卒。棋子可以吃同等级或更低等级的棋子。两个例外：卒可以吃将，将不能吃卒。炮靠跳吃，不在这个等级序列里。',
+  'How does the cannon capture in banqi?': '暗棋的炮怎么吃？',
+  'It moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else.':
+    '炮沿直线或横线走，隔着恰好一枚棋子（明子或暗子、哪一方的都可以）跳过去，吃掉后面第一枚已翻开的敌子，不论等级。因为一定要隔一子，炮不能吃相邻的棋子。不吃子时，炮和其他棋子一样只走一格。',
+  'Can a soldier capture a cannon?': '暗棋的兵可以吃炮吗？',
+  'No. A soldier captures only soldiers and the general. As a target, the cannon ranks between the horse and the soldier, so the horse and everything above it can take a cannon, and a soldier cannot.':
+    '不行。卒只能吃卒和将。炮被吃时算在马与卒之间，所以马以上的棋子都能吃炮，卒不能。',
+  'Can a horse capture a chariot?': '暗棋的马可以吃车吗？',
+  'No. The chariot outranks the horse. A horse captures horses, cannons, and soldiers.':
+    '不行，车比马高一级。马能吃马、炮、卒。',
+  'Can you capture more than once in a turn?': '暗棋可以连吃吗？',
+  'No. A turn is exactly one action: flip one face-down tile, or move one revealed piece one square, capturing or not. There are no chain captures on Mistboard.':
+    '不行。一回合只做一件事：翻开一枚暗子，或把一枚已翻开的棋子走一格（吃子或不吃子）。Mistboard 上没有连吃。',
+  'What other names does banqi have?': '暗棋的英文怎么说？还有哪些名字？',
+  'Chinese dark chess, blind chess, and half-board xiangqi in English. The Chinese name is an qi, the everyday word for it in Taiwan and Hong Kong; fan qi and ban pan xiangqi are also used.':
+    '英文叫 Banqi，也叫 Chinese dark chess、blind chess 或 half-board xiangqi。中文在台湾和香港通常叫暗棋，也有人叫翻棋或半盘象棋。',
+  'How do I play banqi online with a friend?': '暗棋在线双人怎么玩？',
+  'Choose Challenge a friend on this page. It creates an invite link; your friend opens it and the game starts. No account is needed for either player.':
+    '点本页的“挑战好友”会生成一个邀请链接，朋友打开就开始对局。双方都不需要注册账号。',
+  'What is the rank order in Jungle Chess?': '斗兽棋的大小顺序是什么？',
+  'Elephant > lion > tiger > leopard > wolf > dog > cat > rat. An animal captures an adjacent enemy of equal or lower rank. The one exception: a rat on land can capture the elephant, and the elephant can never capture a rat.':
+    '象 > 狮 > 虎 > 豹 > 狼 > 狗 > 猫 > 鼠。动物可以吃相邻的同等级或更低等级的敌方动物。唯一的例外：在陆地上的鼠可以吃象，而象永远不能吃鼠。',
+  'Can the elephant capture the rat?': '斗兽棋的象可以吃鼠吗？',
+  'No, never. The rat is the only piece that can capture the elephant, and only from a land square. A rat in the river cannot capture onto land.':
+    '不行，永远不行。鼠是唯一能吃象的棋子，而且只能从陆地格吃。河里的鼠不能吃岸上的棋子。',
+  'Which animals can jump the river?': '斗兽棋哪些动物可以跳河？',
+  'The lion jumps a river sideways or lengthwise. On Mistboard the tiger jumps lengthwise only. Both land on the first square past the water and may capture there. A rat of either color on any water square in the path blocks the jump.':
+    '狮可以横跳或直跳过河。在 Mistboard 上，虎只能直跳。两者都落在河对岸的第一格，落点若有敌子且等级允许就可以吃。跳跃路线上的任一水格若有任何一方的鼠，就不能跳。',
+  'How do the traps work?': '斗兽棋的陷阱怎么用？',
+  'An animal standing on one of the three trap squares around the enemy den loses all rank, so any defender can capture it, even a rat taking an elephant. Your own traps do nothing to your own animals.':
+    '动物站在敌方兽穴旁的三个陷阱格上时会失去所有等级，任何防守的棋子都能吃它，连鼠都能吃掉陷阱里的象。自己的陷阱对自己的动物没有影响。',
+  'How do you win Jungle Chess?': '斗兽棋怎么算赢？',
+  'Move any animal into the enemy den, capture all eight enemy animals, or leave your opponent with no legal move. You cannot enter your own den. The game draws on threefold repetition or 100 half-moves without a capture.':
+    '任何一只动物走进敌方兽穴、吃光敌方八只动物，或让对手无棋可走，都立刻获胜。不能走进自己的兽穴。三次重复局面，或 100 个半回合没有吃子，判和。',
+  'Is there a winning strategy for Jungle Chess?': '斗兽棋有必胜法吗？',
+  'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
+    '目前没有已知的必胜法。斗兽棋只被完全解到盘面剩七枚棋子，完整的十六枚棋子开局仍未解开。实战上有用的想法是：留住鼠当作对付象的答案，让狮和虎待在河边发挥跳河的威胁，并且不要让自己兽穴周围的格子无人防守。',
+  'What other names does Jungle Chess have?': '斗兽棋的英文怎么说？',
+  'Dou Shou Qi, Animal Chess, Jungle, and Animal Checkers in English. Dou shou qi is the Chinese name, literally fighting-animal chess, and it is the same name in Taiwan, Hong Kong, and the mainland.':
+    '英文叫 Jungle Chess、Dou Shou Qi、Animal Chess，也有人叫 Jungle 或 Animal Checkers。中文在中国大陆写作斗兽棋，台湾和香港写作鬥獸棋。',
+  // xiangqi piece table + FAQ, jieqi FAQ (2026-09-17)
+  Moves: '走法',
+  Limits: '限制',
+  'One point along a line': '沿线走一点',
+  'The same way': '与走法相同',
+  'Never leaves the palace; may not face the other general on an open file':
+    '不能离开九宫；两将不能在无子的同一直线上照面',
+  'One point diagonally': '斜走一点',
+  'Never leaves the palace': '不能离开九宫',
+  'Two points diagonally': '斜走两点（田字）',
+  'Cannot cross the river; blocked by a piece on the midpoint': '不能过河；田字中心有子则塞象眼',
+  'One point along a line, then one diagonally outward': '先直走一点再斜走一点（日字）',
+  'Blocked by a piece on the first point': '直走的第一点有子则蹩马腿',
+  'Any distance along a line': '沿直线任意距离',
+  'Cannot jump': '不能跳过棋子',
+  'Jumps exactly one piece and takes the enemy beyond it': '隔一子跳吃后面的敌子',
+  'Needs a screen to capture': '吃子必须隔一子（炮架）',
+  'One point forward; one point sideways too after crossing the river':
+    '向前一点；过河后也可横走一点',
+  'Never backward; never promotes': '永远不能后退；没有升变',
+  'The seven pieces. Every piece captures the way it moves, except the cannon.':
+    '七种棋子。除炮以外，每种棋子怎么走就怎么吃。',
+  'How does each piece move in xiangqi?': '象棋每种棋子怎么走？',
+  'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is occupied. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.':
+    '将：在九宫内沿线走一点。士：在九宫内斜走一点。象：斜走两点（田字），不能过河。马：先直走一点再斜走一点（日字），第一点有子则蹩马腿。车：沿直线任意距离。炮：走法同车，吃子时隔一子跳吃。兵：向前一点，过河后也可横走一点。口诀：马走日、象走田、车走直路炮翻山、士走斜线护将边、小卒一去不回还。',
+  'What can a soldier capture?': '象棋兵可以吃什么？',
+  'Any enemy piece on a point it could move to: the point straight ahead, and after crossing the river the points to its left and right as well. It never captures backward or diagonally, and it never promotes.':
+    '任何位于它能走到的点上的敌子：正前方一点，过河后还包括左右各一点。兵永远不能向后或斜吃，也没有升变。',
+  'Can the general capture a soldier?': '象棋将可以吃兵吗？',
+  'Yes. The general captures any enemy piece on an adjacent point along a line, including a soldier, as long as it stays inside the palace and the move does not leave the two generals facing each other on an open file.':
+    '可以。将能吃掉沿线相邻一点上的任何敌子，包括兵，只要它不离开九宫，而且吃完之后两将不会在无子的同一直线上照面。',
+  'Which xiangqi pieces are worth the most?': '象棋棋子大小怎么算？',
+  'The usual rule of thumb: chariot 9, cannon 4.5, horse 4, advisor 2, elephant 2, soldier 1 before crossing the river and 2 after. The chariot is worth about two of any other piece, so a trade of a horse or cannon for a chariot is nearly always good.':
+    '常用的估值：车 9、炮 4.5、马 4、士 2、象 2、兵过河前 1、过河后 2。一个车大约值两个其他子，所以用马或炮换车几乎总是划算的。',
+  'How do you win at xiangqi?': '象棋怎么玩才会赢？',
+  'Checkmate the general, or leave your opponent with no legal move: unlike Western chess, stalemate is a loss for the player who cannot move. In practice games are decided by getting the chariots onto open files early, keeping cannons behind a screen, and using soldiers that have crossed the river as attacking pieces. The eight engine levels on this page start well below club strength, and the post-game review shows where a game turned.':
+    '将死对方的将，或让对方无子可走：和国际象棋不同，困毙算输。实战中胜负常取决于尽早出车占据开放线、炮后面留有炮架、以及把过河兵当作进攻棋子使用。本页的八个引擎等级从远低于棋社水平起步，赛后复盘会指出一盘棋在哪里转折。',
+  'When was xiangqi invented?': '象棋是什么时候发明的？',
+  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier, and it shares a root with chess, shogi, and janggi in the older Indian game chaturanga.':
+    '带炮的现代象棋在中国宋代（960 至 1279 年）定型。它的前身可以再往前追溯几百年，并与国际象棋、将棋、朝鲜将棋同源于更古老的印度游戏恰图兰卡。',
+  'What is the difference between xiangqi and chess?': '象棋和国际象棋有什么不同？',
+  'Pieces sit on the intersections of a 9 by 10 grid, not inside squares. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse can be blocked, elephants cannot cross the river, and soldiers never promote. Stalemate loses instead of drawing.':
+    '棋子放在 9×10 的交叉点上，而不是格子里。楚河汉界把棋盘分成两半，九宫限制将和士的活动。炮隔子吃，马会被蹩腿，象不能过河，兵没有升变。困毙算输而不是和棋。',
+  'Where can I play jieqi online?': '揭棋在线哪里可以玩？',
+  'Here. Play vs computer starts a game against the engine at the level you choose; Challenge a friend makes an invite link. No account is needed, and finished games get a move-by-move review.':
+    '就在这里。“对战电脑”按你选的等级开始一盘对引擎的棋；“挑战好友”生成一个邀请链接。不需要账号，结束的对局有逐步复盘。',
+  'Is there a jieqi app?': '揭棋有 app 吗？',
+  'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
+    '不需要安装任何东西。Mistboard 在手机、平板或电脑的浏览器里直接运行。',
+  'Can I play jieqi against an AI?': '揭棋可以和 AI 对弈吗？',
+  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because no neural network has been trained for jieqi, and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.':
+    '可以，有八个等级。引擎是按揭棋规则打了补丁的皮卡鱼（Pikafish）。它很强，但高手能赢它，主要因为还没有人为揭棋训练过神经网络；而且它看不到你的暗子：它拿到的是和你一样的背面朝上的棋盘，从不被告知底牌。',
+  'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
+    '同样的棋盘、同样的棋子、同样的将死目标。除将帅外的棋子开局全部洗匀背面朝上，第一步按所在起始位置的棋子走法走一次，然后翻开按真实身份行棋。翻开的士可以出九宫，翻开的象可以过河。',
+  'Can a revealed advisor leave the palace, and can an elephant cross the river?':
+    '揭棋翻开的士可以出九宫吗？象可以过河吗？',
+  'Both, yes. After revealing, a piece plays by its identity from wherever it stands, so an advisor that revealed on a chariot point is an advisor anywhere on the board. The movement shapes do not change: advisors still step one point diagonally and elephants still move two, still blocked at the eye.':
+    '都可以。翻开之后，棋子在它所在的任何位置都按真实身份行棋，所以在车位翻开的士在全盘任何地方都是士。走法形状不变：士仍然斜走一点，象仍然走田字，仍然会被塞象眼。',
+  'What happens when a dark piece is captured?': '暗子被吃掉会怎样？',
+  'On Mistboard only the capturer learns what it was. The owner sees a dark piece leave the board and nothing else, so the capturer can rule that identity out elsewhere and the owner cannot.':
+    '在 Mistboard 上只有吃子的一方知道它是什么。棋子的主人只看到一枚暗子离开棋盘，别的什么都不知道，所以吃子方可以在别处排除这个身份，而主人不能。',
+  'Any tips for jieqi?': '揭棋有什么技巧？',
+  'A dark piece is a one-shot option: on a chariot point it is a chariot for exactly one move, then whatever it really is. Do not spend that move on a cheap job. Strong players push a soldier before flipping the cannon, race to reveal a real chariot, and stop flipping once three major pieces are out. None of it has been measured; the openings article on this site lays out the argument with sources.':
+    '暗子是一次性的选择权：在车位上它只在这一步是车，之后就是它真正的身份。不要把这一步花在便宜的活上。高手会先挺兵再翻炮，抢着翻出真车，翻出三个大子之后就不再翻。这些都还没有被测量过；本站的开局文章把这场争论连同出处写了下来。',
+  // banqi rule variants (2026-09-17)
+  'Rule variants': '规则版本',
+  'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
+    '暗棋是民间棋戏，各地规则不同，常见的有三种。台湾规则用本页的大小顺序，炮隔一子跳吃。香港规则的大小是将、车、马、炮、士、象、卒，炮在等级序列里面。中国大陆的规则通常没有跳吃的炮：炮和其他棋子一样按等级吃相邻的棋子。',
+  'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the table on this page is the one the engine and every game on the site follow.':
+    'Mistboard 采用台湾规则，加上台湾电脑对局协会的比赛和棋规则（Chen、Shen 与 Hsu，ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。两条有文献记载的变体规则刻意不采用：炮不能吃暗子，将永远不能吃卒，就算是它的第一步也一样。如果你学的是另一套大小顺序，本页的表格才是引擎和站上每一盘棋遵守的那一套。',
+  'Are there different banqi rules?': '暗棋规则有几种？Mistboard 用哪一种？',
+  'Yes, three regional families: Taiwanese, Hong Kong, and mainland, differing on the capture ladder and on whether the cannon jumps. Mistboard uses the Taiwanese rules (general > advisor > elephant > chariot > horse > soldier, cannon captures by jumping one screen) with the Taiwan Computer Game Association draw rules. A cannon cannot capture a face-down tile and the general cannot capture a soldier.':
+    '常见的有三种：台湾、香港和中国大陆，差别在大小顺序和炮能不能跳吃。Mistboard 用台湾规则（将 > 士 > 象 > 车 > 马 > 卒，炮隔一子跳吃），加上台湾电脑对局协会的比赛和棋规则。炮不能吃暗子，将不能吃卒。',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -4543,6 +4682,218 @@ const ZH_HANT: Record<string, string> = {
   'Eight engine strengths, or a friend by invite link. The rules page has the whole thing with diagrams.':
     '八個引擎強度檔位，或者用邀請連結約朋友。規則頁面配有圖解，講得完整。',
   'Invite a friend': '邀請朋友',
+  // banqi capture table + FAQ, jungle FAQ (2026-09-17)
+  Rank: '等級',
+  'Piece (red / black)': '棋子（紅 / 黑）',
+  'Can capture': '可以吃',
+  Exception: '例外',
+  'General 帥 / 將': '將帥：帥 / 將',
+  'Advisor 仕 / 士': '士：仕 / 士',
+  'Elephant 相 / 象': '象：相 / 象',
+  'Chariot 俥 / 車': '車：俥 / 車',
+  'Horse 傌 / 馬': '馬：傌 / 馬',
+  'Soldier 兵 / 卒': '兵卒：兵 / 卒',
+  'Cannon 炮 / 砲': '砲：炮 / 砲',
+  'general, advisor, elephant, chariot, horse, cannon': '將、士、象、車、馬、砲',
+  'advisor, elephant, chariot, horse, cannon, soldier': '士、象、車、馬、砲、卒',
+  'elephant, chariot, horse, cannon, soldier': '象、車、馬、砲、卒',
+  'chariot, horse, cannon, soldier': '車、馬、砲、卒',
+  'horse, cannon, soldier': '馬、砲、卒',
+  'soldier, general': '卒、將',
+  'any revealed enemy, by jumping one screen': '隔一子跳吃任何已翻開的敵子',
+  'cannot capture a soldier': '不能吃卒',
+  'the only piece that captures the general': '唯一能吃將的棋子',
+  'as a target it ranks between horse and soldier': '被吃時算在馬與卒之間',
+  'Capture order on Mistboard. A piece may also capture its own rank.':
+    'Mistboard 的吃子順序。同等級也可以互吃。',
+  'What is the capture order in banqi?': '暗棋的大小順序是什麼？',
+  'General > Advisor > Elephant > Chariot > Horse > Soldier. A piece captures its own rank or anything below it. Two exceptions: the soldier can capture the general, and the general cannot capture a soldier. The cannon captures by jumping and sits outside the ladder.':
+    '將 > 士 > 象 > 車 > 馬 > 卒。棋子可以吃同等級或更低等級的棋子。兩個例外：卒可以吃將，將不能吃卒。砲靠跳吃，不在這個等級序列裡。',
+  'How does the cannon capture in banqi?': '暗棋的砲怎麼吃？',
+  'It moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else.':
+    '砲沿直線或橫線走，隔著恰好一枚棋子（明子或暗子、哪一方的都可以）跳過去，吃掉後面第一枚已翻開的敵子，不論等級。因為一定要隔一子，砲不能吃相鄰的棋子。不吃子時，砲和其他棋子一樣只走一格。',
+  'Can a soldier capture a cannon?': '暗棋的兵可以吃砲嗎？',
+  'No. A soldier captures only soldiers and the general. As a target, the cannon ranks between the horse and the soldier, so the horse and everything above it can take a cannon, and a soldier cannot.':
+    '不行。卒只能吃卒和將。砲被吃時算在馬與卒之間，所以馬以上的棋子都能吃砲，卒不能。',
+  'Can a horse capture a chariot?': '暗棋的馬可以吃車嗎？',
+  'No. The chariot outranks the horse. A horse captures horses, cannons, and soldiers.':
+    '不行，車比馬高一級。馬能吃馬、砲、卒。',
+  'Can you capture more than once in a turn?': '暗棋可以連吃嗎？',
+  'No. A turn is exactly one action: flip one face-down tile, or move one revealed piece one square, capturing or not. There are no chain captures on Mistboard.':
+    '不行。一回合只做一件事：翻開一枚暗子，或把一枚已翻開的棋子走一格（吃子或不吃子）。Mistboard 上沒有連吃。',
+  'What other names does banqi have?': '暗棋的英文怎麼說？還有哪些名字？',
+  'Chinese dark chess, blind chess, and half-board xiangqi in English. The Chinese name is an qi, the everyday word for it in Taiwan and Hong Kong; fan qi and ban pan xiangqi are also used.':
+    '英文叫 Banqi，也叫 Chinese dark chess、blind chess 或 half-board xiangqi。中文在台灣和香港通常叫暗棋，也有人叫翻棋或半盤象棋。',
+  'How do I play banqi online with a friend?': '暗棋線上雙人怎麼玩？',
+  'Choose Challenge a friend on this page. It creates an invite link; your friend opens it and the game starts. No account is needed for either player.':
+    '按本頁的「挑戰好友」會產生一個邀請連結，朋友點開就開始對局。雙方都不需要註冊帳號。',
+  'What is the rank order in Jungle Chess?': '鬥獸棋的大小順序是什麼？',
+  'Elephant > lion > tiger > leopard > wolf > dog > cat > rat. An animal captures an adjacent enemy of equal or lower rank. The one exception: a rat on land can capture the elephant, and the elephant can never capture a rat.':
+    '象 > 獅 > 虎 > 豹 > 狼 > 狗 > 貓 > 鼠。動物可以吃相鄰的同等級或更低等級的敵方動物。唯一的例外：在陸地上的鼠可以吃象，而象永遠不能吃鼠。',
+  'Can the elephant capture the rat?': '鬥獸棋的象可以吃鼠嗎？',
+  'No, never. The rat is the only piece that can capture the elephant, and only from a land square. A rat in the river cannot capture onto land.':
+    '不行，永遠不行。鼠是唯一能吃象的棋子，而且只能從陸地格吃。河裡的鼠不能吃岸上的棋子。',
+  'Which animals can jump the river?': '鬥獸棋哪些動物可以跳河？',
+  'The lion jumps a river sideways or lengthwise. On Mistboard the tiger jumps lengthwise only. Both land on the first square past the water and may capture there. A rat of either color on any water square in the path blocks the jump.':
+    '獅可以橫跳或直跳過河。在 Mistboard 上，虎只能直跳。兩者都落在河對岸的第一格，落點若有敵子且等級允許就可以吃。跳躍路線上的任一水格若有任何一方的鼠，就不能跳。',
+  'How do the traps work?': '鬥獸棋的陷阱怎麼用？',
+  'An animal standing on one of the three trap squares around the enemy den loses all rank, so any defender can capture it, even a rat taking an elephant. Your own traps do nothing to your own animals.':
+    '動物站在敵方獸穴旁的三個陷阱格上時會失去所有等級，任何防守的棋子都能吃它，連鼠都能吃掉陷阱裡的象。自己的陷阱對自己的動物沒有影響。',
+  'How do you win Jungle Chess?': '鬥獸棋怎麼算贏？',
+  'Move any animal into the enemy den, capture all eight enemy animals, or leave your opponent with no legal move. You cannot enter your own den. The game draws on threefold repetition or 100 half-moves without a capture.':
+    '任何一隻動物走進敵方獸穴、吃光敵方八隻動物，或讓對手無棋可走，都立刻獲勝。不能走進自己的獸穴。三次重複局面，或 100 個半回合沒有吃子，判和。',
+  'Is there a winning strategy for Jungle Chess?': '鬥獸棋有必勝法嗎？',
+  'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
+    '目前沒有已知的必勝法。鬥獸棋只被完全解到盤面剩七枚棋子，完整的十六枚棋子開局仍未解開。實戰上有用的想法是：留住鼠當作對付象的答案，讓獅和虎待在河邊發揮跳河的威脅，並且不要讓自己獸穴周圍的格子無人防守。',
+  'What other names does Jungle Chess have?': '鬥獸棋的英文怎麼說？',
+  'Dou Shou Qi, Animal Chess, Jungle, and Animal Checkers in English. Dou shou qi is the Chinese name, literally fighting-animal chess, and it is the same name in Taiwan, Hong Kong, and the mainland.':
+    '英文叫 Jungle Chess、Dou Shou Qi、Animal Chess，也有人叫 Jungle 或 Animal Checkers。中文在台灣和香港寫作鬥獸棋，中國大陸寫作斗兽棋。',
+  // Overrides for every zh-Hans key that fell through to Simplified on the zh-Hant pages (2026-09-17). OpenCC s2twp, then 炮→砲 and 機器人→電腦 to match the rest of this table; prose re-read by hand.
+  'The rat takes the elephant.': '鼠吃掉象。',
+  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, moves first as the point it stands on, then reveals. Play it free in your browser.':
+    '揭棋規則詳解：除將帥外的棋子都隱藏身份，首次按所在起始位置的棋子走法行棋，然後翻開並按真實身份行棋。免費線上對弈，無需註冊。',
+  "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
+    '揭棋保留象棋的棋盤和將死目標，但隱藏所有非將帥棋子的身份。暗子首次按它所在起始位置的棋子走法移動、攻擊和吃子，走完後翻開，之後按真實身份行棋。',
+  'Banqi, also called Chinese dark chess or blind chess: the 4 by 8 half-board game with face-down pieces, rank captures, and screen-jumping cannons. Play it free in your browser.':
+    '暗棋規則詳解：在 4×8 半盤上進行，棋子背面朝上，按等級吃子，砲隔子跳吃，也沒有王棋。免費線上對弈，無需註冊。',
+  'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
+    '暗棋是在半張象棋棋盤上進行的快節奏隱藏棋子遊戲。三十二枚棋子全部洗勻並背面朝上。第一次翻子決定雙方顏色。之後每回合都在兩種行動中選擇：翻開棋子，或移動一枚已翻開的棋子。除砲外，吃子按等級進行。',
+  'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
+    '雖然它使用[象棋](/rules/xiangqi)棋子，但它是獨立的遊戲：棋子每次移動一格，將不是王棋，背面朝下的棋子不能被吃。本頁說明 Mistboard 採用的確切規則。',
+  'Most pieces capture by stepping one square onto an adjacent revealed enemy. They may capture the same rank or any lower rank. On Mistboard, the order is General > Advisor > Elephant > Chariot > Horse > Soldier. Two exceptions connect the ends of the ladder: a soldier can capture the general, and the general cannot capture soldiers.':
+    '大多數棋子透過走一格到相鄰的已翻開敵子上來吃子。它們可以吃同級或任何更低等級的棋子。Mistboard 的順序是：將 > 士 > 象 > 車 > 馬 > 卒。兩個例外連接等級兩端：卒可以吃將，將不能吃卒。',
+  'Step through a real game between Mistboard’s strongest bot and a human. Red falls behind early, but its elephant becomes the highest-ranked piece left and turns the game around. Each tile reveals its dealt piece when it is first flipped.':
+    '逐步回放 Mistboard 最強電腦與人類的一盤真實對局。紅方開局落後，但它的象成為盤面剩餘棋子中等級最高的一枚，並逆轉了比賽。每枚棋子第一次翻開時會顯示其被分配的身份。',
+  "MistyBanqi is the bot you play in [Banqi](/rules/banqi) on Mistboard. It's a classical engine: it searches ahead and scores positions with a hand-written evaluation, no neural network, and it's open source. It will outplay most people. It also has a few honest blind spots, and the one worth knowing is that it can draw a game it has completely won.":
+    'MistyBanqi 是你在 Mistboard 上對弈[暗棋](/rules/banqi)時面對的電腦。它是一個經典引擎：向前搜尋，用手寫評估為局面打分，沒有神經網路，而且開源。它能贏過大多數人，但也有幾個坦誠的盲點，其中最值得了解的是：它會把已經完全贏定的棋下成和棋。',
+  'The board is seven files wide and nine ranks deep. Your den sits at the center of your back rank, ringed by three trap squares. Two rivers, each a 2×3 block of water, split the middle of the board. Red moves first from the fixed starting position below.':
+    '棋盤寬七列、深九行。你的獸穴位於底線中央，周圍有三個陷阱格。兩條河流各佔 2×3 格，分開棋盤中部。紅方從下方的固定初始局面先行。',
+  'Every animal moves one square up, down, left, or right. Animals never move diagonally. Most animals stay on land, so they cannot enter a river. The rat, lion, and tiger are the three movement exceptions.':
+    '每種動物都向上、下、左或右移動一格，不能斜走。大多數動物只能留在陸地，不能進入河流。鼠、獅和虎是三個移動例外。',
+  'The lion can move one land square normally, or leap straight across a river horizontally or vertically. It lands on the first square beyond the water and may capture an animal there if rank allows.':
+    '獅可以在陸地上正常移動一格，也可水平或垂直跳過整條河。它落在水面另一側的第一格，等級允許時可吃掉那裡的動物。',
+  'A rat in the river blocks the leap.': '河中的鼠會擋住跳躍。',
+  'A lion captures a lower-ranked wolf.': '獅吃掉等級較低的狼。',
+  'Equal ranks work differently. When an animal captures an enemy of its own rank, both pieces leave the board, and neither side keeps the square.':
+    '同等級的處理方式不同。當動物吃與自己同等級的敵子時，兩枚棋子都離開棋盤，雙方都不佔據該格。',
+  'Equal animals remove each other.': '同等級動物會一起離場。',
+  'Play on Mistboard': '在 Mistboard 上對弈',
+  'Play vs computer': '對戰電腦',
+  'Every xiangqi champion since 1956': '1956年以來的每一位全國象棋冠軍',
+  'Xiangqi is playable on Mistboard: find a casual or rated game against another player, take on the engine ladder, or challenge a friend. No account required. Signing in unlocks rated games.':
+    '象棋可在 Mistboard 上對弈：與其他玩家進行休閒或積分對局，挑戰引擎等級階梯，或邀請好友。無需帳號即可對弈，登入後可進行積分對局。',
+  'Find an opponent': '尋找對手',
+  'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '堡壘象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '暗棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '鬥獸棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '翻翻棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  'Jieqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '揭棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  'Fog Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '迷霧象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '迷霧國際象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  Years: '年份',
+  'The decade that was struck': '被抹去的十年',
+  'Play through the whole study': '走一遍完整研究',
+  'Shanghai, September 2025': '上海，2025年9月',
+  pandemic: '疫情',
+  'April 2023': '2023年4月',
+  'July 2023': '2023年7月',
+  'August 2023': '2023年8月',
+  '17 October 2023': '2023年10月17日',
+  '24 July 2024': '2024年7月24日',
+  '19 September 2024': '2024年9月19日',
+  '12 January 2025': '2025年1月12日',
+  'Second batch: 41 people': '第二批：41人',
+  '24 September 2025': '2025年9月24日',
+  '13 April 2026': '2026年4月13日',
+  'Third batch: 6 people': '第三批：6人',
+  '8 years': '8年',
+  '7 years': '7年',
+  '6 years': '6年',
+  '5 years': '5年',
+  '4 years': '4年',
+  '3 years': '3年',
+  '2 years': '2年',
+  '1 year': '1年',
+  // xiangqi piece table + FAQ, jieqi FAQ (2026-09-17)
+  Moves: '走法',
+  Limits: '限制',
+  'One point along a line': '沿線走一點',
+  'The same way': '與走法相同',
+  'Never leaves the palace; may not face the other general on an open file':
+    '不能離開九宮；兩將不能在無子的同一直線上照面',
+  'One point diagonally': '斜走一點',
+  'Never leaves the palace': '不能離開九宮',
+  'Two points diagonally': '斜走兩點（田字）',
+  'Cannot cross the river; blocked by a piece on the midpoint': '不能過河；田字中心有子則塞象眼',
+  'One point along a line, then one diagonally outward': '先直走一點再斜走一點（日字）',
+  'Blocked by a piece on the first point': '直走的第一點有子則蹩馬腿',
+  'Any distance along a line': '沿直線任意距離',
+  'Cannot jump': '不能跳過棋子',
+  'Jumps exactly one piece and takes the enemy beyond it': '隔一子跳吃後面的敵子',
+  'Needs a screen to capture': '吃子必須隔一子（砲架）',
+  'One point forward; one point sideways too after crossing the river':
+    '向前一點；過河後也可橫走一點',
+  'Never backward; never promotes': '永遠不能後退；沒有升變',
+  'The seven pieces. Every piece captures the way it moves, except the cannon.':
+    '七種棋子。除砲以外，每種棋子怎麼走就怎麼吃。',
+  'How does each piece move in xiangqi?': '象棋每種棋子怎麼走？',
+  'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is occupied. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.':
+    '將：在九宮內沿線走一點。士：在九宮內斜走一點。象：斜走兩點（田字），不能過河。馬：先直走一點再斜走一點（日字），第一點有子則蹩馬腿。車：沿直線任意距離。砲：走法同車，吃子時隔一子跳吃。兵：向前一點，過河後也可橫走一點。口訣：馬走日、象走田、車走直路砲翻山、士走斜線護將邊、小卒一去不回還。',
+  'What can a soldier capture?': '象棋兵可以吃什麼？',
+  'Any enemy piece on a point it could move to: the point straight ahead, and after crossing the river the points to its left and right as well. It never captures backward or diagonally, and it never promotes.':
+    '任何位於它能走到的點上的敵子：正前方一點，過河後還包括左右各一點。兵永遠不能向後或斜吃，也沒有升變。',
+  'Can the general capture a soldier?': '象棋將可以吃兵嗎？',
+  'Yes. The general captures any enemy piece on an adjacent point along a line, including a soldier, as long as it stays inside the palace and the move does not leave the two generals facing each other on an open file.':
+    '可以。將能吃掉沿線相鄰一點上的任何敵子，包括兵，只要它不離開九宮，而且吃完之後兩將不會在無子的同一直線上照面。',
+  'Which xiangqi pieces are worth the most?': '象棋棋子大小怎麼算？',
+  'The usual rule of thumb: chariot 9, cannon 4.5, horse 4, advisor 2, elephant 2, soldier 1 before crossing the river and 2 after. The chariot is worth about two of any other piece, so a trade of a horse or cannon for a chariot is nearly always good.':
+    '常用的估值：車 9、砲 4.5、馬 4、士 2、象 2、兵過河前 1、過河後 2。一個車大約值兩個其他子，所以用馬或砲換車幾乎總是划算的。',
+  'How do you win at xiangqi?': '象棋怎麼玩才會贏？',
+  'Checkmate the general, or leave your opponent with no legal move: unlike Western chess, stalemate is a loss for the player who cannot move. In practice games are decided by getting the chariots onto open files early, keeping cannons behind a screen, and using soldiers that have crossed the river as attacking pieces. The eight engine levels on this page start well below club strength, and the post-game review shows where a game turned.':
+    '將死對方的將，或讓對方無子可走：和國際象棋不同，困斃算輸。實戰中勝負常取決於盡早出車佔據開放線、砲後面留有砲架、以及把過河兵當作進攻棋子使用。本頁的八個引擎等級從遠低於棋社水準起步，賽後覆盤會指出一盤棋在哪裡轉折。',
+  'When was xiangqi invented?': '象棋是什麼時候發明的？',
+  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier, and it shares a root with chess, shogi, and janggi in the older Indian game chaturanga.':
+    '帶砲的現代象棋在中國宋代（960 至 1279 年）定型。它的前身可以再往前追溯幾百年，並與國際象棋、將棋、朝鮮將棋同源於更古老的印度遊戲恰圖蘭卡。',
+  'What is the difference between xiangqi and chess?': '象棋和國際象棋有什麼不同？',
+  'Pieces sit on the intersections of a 9 by 10 grid, not inside squares. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse can be blocked, elephants cannot cross the river, and soldiers never promote. Stalemate loses instead of drawing.':
+    '棋子放在 9×10 的交叉點上，而不是格子裡。楚河漢界把棋盤分成兩半，九宮限制將和士的活動。砲隔子吃，馬會被蹩腿，象不能過河，兵沒有升變。困斃算輸而不是和棋。',
+  'Where can I play jieqi online?': '揭棋線上哪裡可以玩？',
+  'Here. Play vs computer starts a game against the engine at the level you choose; Challenge a friend makes an invite link. No account is needed, and finished games get a move-by-move review.':
+    '就在這裡。「對戰電腦」按你選的等級開始一盤對引擎的棋；「挑戰好友」產生一個邀請連結。不需要帳號，結束的對局有逐步覆盤。',
+  'Is there a jieqi app?': '揭棋有 app 嗎？',
+  'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
+    '不需要安裝任何東西。Mistboard 在手機、平板或電腦的瀏覽器裡直接執行。',
+  'Can I play jieqi against an AI?': '揭棋可以和 AI 對弈嗎？',
+  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because no neural network has been trained for jieqi, and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.':
+    '可以，有八個等級。引擎是按揭棋規則打了補丁的皮卡魚（Pikafish）。它很強，但高手能贏它，主要因為還沒有人為揭棋訓練過神經網路；而且它看不到你的暗子：它拿到的是和你一樣背面朝上的棋盤，從不被告知底牌。',
+  'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
+    '同樣的棋盤、同樣的棋子、同樣的將死目標。除將帥外的棋子開局全部洗勻背面朝上，第一步按所在起始位置的棋子走法走一次，然後翻開按真實身份行棋。翻開的士可以出九宮，翻開的象可以過河。',
+  'Can a revealed advisor leave the palace, and can an elephant cross the river?':
+    '揭棋翻開的士可以出九宮嗎？象可以過河嗎？',
+  'Both, yes. After revealing, a piece plays by its identity from wherever it stands, so an advisor that revealed on a chariot point is an advisor anywhere on the board. The movement shapes do not change: advisors still step one point diagonally and elephants still move two, still blocked at the eye.':
+    '都可以。翻開之後，棋子在它所在的任何位置都按真實身份行棋，所以在車位翻開的士在全盤任何地方都是士。走法形狀不變：士仍然斜走一點，象仍然走田字，仍然會被塞象眼。',
+  'What happens when a dark piece is captured?': '暗子被吃掉會怎樣？',
+  'On Mistboard only the capturer learns what it was. The owner sees a dark piece leave the board and nothing else, so the capturer can rule that identity out elsewhere and the owner cannot.':
+    '在 Mistboard 上只有吃子的一方知道它是什麼。棋子的主人只看到一枚暗子離開棋盤，別的什麼都不知道，所以吃子方可以在別處排除這個身份，而主人不能。',
+  'Any tips for jieqi?': '揭棋有什麼技巧？',
+  'A dark piece is a one-shot option: on a chariot point it is a chariot for exactly one move, then whatever it really is. Do not spend that move on a cheap job. Strong players push a soldier before flipping the cannon, race to reveal a real chariot, and stop flipping once three major pieces are out. None of it has been measured; the openings article on this site lays out the argument with sources.':
+    '暗子是一次性的選擇權：在車位上它只在這一步是車，之後就是它真正的身份。不要把這一步花在便宜的活上。高手會先挺兵再翻砲，搶著翻出真車，翻出三個大子之後就不再翻。這些都還沒有被測量過；本站的開局文章把這場爭論連同出處寫了下來。',
+  // banqi rule variants (2026-09-17)
+  'Rule variants': '規則版本',
+  'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
+    '暗棋是民間棋戲，各地規則不同，常見的有三種。台灣規則用本頁的大小順序，砲隔一子跳吃。香港規則的大小是將、車、馬、砲、士、象、卒，砲在等級序列裡面。中國大陸的規則通常沒有跳吃的砲：砲和其他棋子一樣按等級吃相鄰的棋子。',
+  'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the table on this page is the one the engine and every game on the site follow.':
+    'Mistboard 採用台灣規則，加上台灣電腦對局協會的比賽和棋規則（Chen、Shen 與 Hsu，ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。兩條有文獻記載的變體規則刻意不採用：砲不能吃暗子，將永遠不能吃卒，就算是它的第一步也一樣。如果你學的是另一套大小順序，本頁的表格才是引擎和站上每一盤棋遵守的那一套。',
+  'Are there different banqi rules?': '暗棋規則有幾種？Mistboard 用哪一種？',
+  'Yes, three regional families: Taiwanese, Hong Kong, and mainland, differing on the capture ladder and on whether the cannon jumps. Mistboard uses the Taiwanese rules (general > advisor > elephant > chariot > horse > soldier, cannon captures by jumping one screen) with the Taiwan Computer Game Association draw rules. A cannon cannot capture a face-down tile and the general cannot capture a soldier.':
+    '常見的有三種：台灣、香港和中國大陸，差別在大小順序和砲能不能跳吃。Mistboard 用台灣規則（將 > 士 > 象 > 車 > 馬 > 卒，砲隔一子跳吃），加上台灣電腦對局協會的比賽和棋規則。砲不能吃暗子，將不能吃卒。',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

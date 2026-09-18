@@ -1,5 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { isArticleTranslationPublished } from './article-i18n.js';
 import {
   BANQI_BOARD_W,
   BANQI_ENGINE_THUMBNAIL,
@@ -665,7 +666,10 @@ describe('rules variant sidebar', () => {
     expect(pageText).not.toContain('Names');
     expect(pageText).not.toContain('any revealed enemy piece except a soldier can capture it');
     expect(pageText).not.toContain('It slides any distance');
-    expect(pageText).not.toContain('horse, cannon, soldier');
+    // The capture table lists what each piece takes; the old prose that put the
+    // cannon inside the ladder is what the guard below used to catch.
+    expect(pageText).toContain('Capture order on Mistboard');
+    expect(pageText).not.toContain('any revealed enemy piece except a soldier can capture it.');
     const banqiSvgs = [...page.querySelectorAll('.article-figure .xq-article-svg')];
     expect(banqiSvgs.length).toBeGreaterThanOrEqual(3);
     expect(
@@ -700,6 +704,7 @@ describe('rules variant sidebar', () => {
       'The pieces',
       'Check, checkmate, and endings',
       'A famous game',
+      'Common questions',
       'Play on Mistboard',
     ]);
     expect(headings('banqi')).toEqual([
@@ -708,7 +713,9 @@ describe('rules variant sidebar', () => {
       'Capture by rank',
       'The cannon',
       'Winning and draws',
+      'Rule variants',
       'A sample game',
+      'Common questions',
       'Play on Mistboard',
     ]);
     expect(headings('jieqi')).toEqual([
@@ -718,6 +725,7 @@ describe('rules variant sidebar', () => {
       'Captured dark pieces',
       'Checks, wins, and draws',
       'A sample game',
+      'Common questions',
       'Play on Mistboard',
     ]);
   });
@@ -781,6 +789,29 @@ describe('rules variant sidebar', () => {
     }
   });
 
+  it('keeps Simplified-only characters off the Traditional rules pages', () => {
+    // ZH_HANT starts from the whole ZH_HANS table, so a zh-Hans string with no
+    // zh-Hant override renders Simplified under a Traditional title and nothing
+    // fails. The banqi intro, capture paragraph, meta description and closing
+    // CTA shipped that way from 2026-07-12 to 2026-09-17, to the page's biggest
+    // audience (Taiwan and Hong Kong). Person names are exempt by rule
+    // (world-champion-name-script.test.ts) and live on blog pages, so only the
+    // rules pages are checked. 后 is left out: it is the Traditional queen.
+    const simplifiedOnly = /[无为与这说时动过进开机线规对详种选电网络软账]/;
+    const slugs = articles
+      .filter((article) => article.kind === 'rules' && isArticleTranslationPublished(article.slug))
+      .map((article) => article.slug);
+    expect(slugs).toContain('banqi');
+
+    for (const slug of slugs) {
+      const text = buildArticlePage(slug, 'zh-Hant').textContent ?? '';
+      const hit = text.match(simplifiedOnly);
+      const context =
+        hit?.index === undefined ? '' : text.slice(Math.max(0, hit.index - 24), hit.index + 24);
+      expect(hit, `${slug}: …${context}…`).toBeNull();
+    }
+  });
+
   it('pins the requested Xiangqi diagram positions', () => {
     expect(XQ_PRIMER_FACING_LEGAL.board.e5).toBeUndefined();
     expect(XQ_PRIMER_FACING_LEGAL.board.e6).toEqual({ color: 'black', role: 'soldier' });
@@ -818,6 +849,7 @@ describe('rules variant sidebar', () => {
       'Traps',
       'Winning and draws',
       'A sample game',
+      'Common questions',
       'Play on Mistboard',
     ]);
     expect(page.textContent).toContain('no piece can capture across the shoreline');

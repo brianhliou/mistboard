@@ -29,7 +29,7 @@ export const xiangqiArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-05-26',
-    updatedAt: '2026-07-23',
+    updatedAt: '2026-09-17',
     audience:
       'Players new to Xiangqi, and chess players who want to learn xiangqi and play it on Mistboard.',
     thumbnail: { kind: 'svg', svg: XQ_RULES_PRIMER_THUMBNAIL },
@@ -72,6 +72,45 @@ export const xiangqiArticle: Article = {
             kind: 'paragraph',
             text:
               'A piece captures by landing on an enemy-occupied point, and no piece may move through an occupied point. The cannon\'s capturing jump is the only exception. The pieces are listed below in the traditional order.',
+          },
+          {
+            kind: 'table',
+            headers: ['Piece (red / black)', 'Moves', 'Captures', 'Limits'],
+            rows: [
+              [
+                'General 帥 / 將',
+                'One point along a line',
+                'The same way',
+                'Never leaves the palace; may not face the other general on an open file',
+              ],
+              ['Advisor 仕 / 士', 'One point diagonally', 'The same way', 'Never leaves the palace'],
+              [
+                'Elephant 相 / 象',
+                'Two points diagonally',
+                'The same way',
+                'Cannot cross the river; blocked by a piece on the midpoint',
+              ],
+              [
+                'Horse 傌 / 馬',
+                'One point along a line, then one diagonally outward',
+                'The same way',
+                'Blocked by a piece on the first point',
+              ],
+              ['Chariot 俥 / 車', 'Any distance along a line', 'The same way', 'Cannot jump'],
+              [
+                'Cannon 炮 / 砲',
+                'Any distance along a line',
+                'Jumps exactly one piece and takes the enemy beyond it',
+                'Needs a screen to capture',
+              ],
+              [
+                'Soldier 兵 / 卒',
+                'One point forward; one point sideways too after crossing the river',
+                'The same way',
+                'Never backward; never promotes',
+              ],
+            ],
+            caption: 'The seven pieces. Every piece captures the way it moves, except the cannon.',
           },
           {
             kind: 'paragraph',
@@ -181,6 +220,51 @@ export const xiangqiArticle: Article = {
               resultText: 'Checkmate on move 13. Red\'s paired cannons pin the general on the open central file.',
             },
           } as ArticleBlock,
+        ],
+      },
+      {
+        heading: 'Common questions',
+        blocks: [
+          {
+            kind: 'faq',
+            items: [
+              {
+                question: 'How does each piece move in xiangqi?',
+                answer:
+                  'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is occupied. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.',
+              },
+              {
+                question: 'What can a soldier capture?',
+                answer:
+                  'Any enemy piece on a point it could move to: the point straight ahead, and after crossing the river the points to its left and right as well. It never captures backward or diagonally, and it never promotes.',
+              },
+              {
+                question: 'Can the general capture a soldier?',
+                answer:
+                  'Yes. The general captures any enemy piece on an adjacent point along a line, including a soldier, as long as it stays inside the palace and the move does not leave the two generals facing each other on an open file.',
+              },
+              {
+                question: 'Which xiangqi pieces are worth the most?',
+                answer:
+                  'The usual rule of thumb: chariot 9, cannon 4.5, horse 4, advisor 2, elephant 2, soldier 1 before crossing the river and 2 after. The chariot is worth about two of any other piece, so a trade of a horse or cannon for a chariot is nearly always good.',
+              },
+              {
+                question: 'How do you win at xiangqi?',
+                answer:
+                  'Checkmate the general, or leave your opponent with no legal move: unlike Western chess, stalemate is a loss for the player who cannot move. In practice games are decided by getting the chariots onto open files early, keeping cannons behind a screen, and using soldiers that have crossed the river as attacking pieces. The eight engine levels on this page start well below club strength, and the post-game review shows where a game turned.',
+              },
+              {
+                question: 'When was xiangqi invented?',
+                answer:
+                  'The modern game, with the cannon on the board, took shape in China during the Song dynasty (960 to 1279). Its ancestors run several centuries earlier, and it shares a root with chess, shogi, and janggi in the older Indian game chaturanga.',
+              },
+              {
+                question: 'What is the difference between xiangqi and chess?',
+                answer:
+                  'Pieces sit on the intersections of a 9 by 10 grid, not inside squares. A river splits the board and a palace confines the general and advisors. The cannon captures by jumping, the horse can be blocked, elephants cannot cross the river, and soldiers never promote. Stalemate loses instead of drawing.',
+              },
+            ],
+          },
         ],
       },
       playClosing({

@@ -21,7 +21,7 @@ export const jieqiArticle: Article = {
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-06-15',
-    updatedAt: '2026-07-23',
+    updatedAt: '2026-09-17',
     audience:
       'Xiangqi players and hidden-information fans who want a clean English rules reference for Jieqi.',
     thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },
@@ -148,6 +148,51 @@ export const jieqiArticle: Article = {
               deal: JIEQI_SAMPLE_GAME.deal,
               moves: JIEQI_SAMPLE_GAME.moves,
             },
+          },
+        ],
+      },
+      {
+        heading: 'Common questions',
+        blocks: [
+          {
+            kind: 'faq',
+            items: [
+              {
+                question: 'Where can I play jieqi online?',
+                answer:
+                  'Here. Play vs computer starts a game against the engine at the level you choose; Challenge a friend makes an invite link. No account is needed, and finished games get a move-by-move review.',
+              },
+              {
+                question: 'Is there a jieqi app?',
+                answer:
+                  'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.',
+              },
+              {
+                question: 'Can I play jieqi against an AI?',
+                answer:
+                  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because no neural network has been trained for jieqi, and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.',
+              },
+              {
+                question: 'How is jieqi different from xiangqi?',
+                answer:
+                  'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.',
+              },
+              {
+                question: 'Can a revealed advisor leave the palace, and can an elephant cross the river?',
+                answer:
+                  'Both, yes. After revealing, a piece plays by its identity from wherever it stands, so an advisor that revealed on a chariot point is an advisor anywhere on the board. The movement shapes do not change: advisors still step one point diagonally and elephants still move two, still blocked at the eye.',
+              },
+              {
+                question: 'What happens when a dark piece is captured?',
+                answer:
+                  'On Mistboard only the capturer learns what it was. The owner sees a dark piece leave the board and nothing else, so the capturer can rule that identity out elsewhere and the owner cannot.',
+              },
+              {
+                question: 'Any tips for jieqi?',
+                answer:
+                  'A dark piece is a one-shot option: on a chariot point it is a chariot for exactly one move, then whatever it really is. Do not spend that move on a cheap job. Strong players push a soldier before flipping the cannon, race to reveal a real chariot, and stop flipping once three major pieces are out. None of it has been measured; the openings article on this site lays out the argument with sources.',
+              },
+            ],
           },
         ],
       },

@@ -29,7 +29,7 @@ export const jungleArticle: Article = {
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
-  updatedAt: '2026-07-26',
+  updatedAt: '2026-09-17',
   playableOnMistboard: true,
   audience:
     'Experienced Jungle Chess players who want a clear reference, plus chess and xiangqi players meeting it for the first time.',
@@ -216,6 +216,51 @@ export const jungleArticle: Article = {
             resultText: JUNGLE_SAMPLE_GAME.result,
             moves: JUNGLE_SAMPLE_GAME.moves,
           },
+        },
+      ],
+    },
+    {
+      heading: 'Common questions',
+      blocks: [
+        {
+          kind: 'faq',
+          items: [
+            {
+              question: 'What is the rank order in Jungle Chess?',
+              answer:
+                'Elephant > lion > tiger > leopard > wolf > dog > cat > rat. An animal captures an adjacent enemy of equal or lower rank. The one exception: a rat on land can capture the elephant, and the elephant can never capture a rat.',
+            },
+            {
+              question: 'Can the elephant capture the rat?',
+              answer:
+                'No, never. The rat is the only piece that can capture the elephant, and only from a land square. A rat in the river cannot capture onto land.',
+            },
+            {
+              question: 'Which animals can jump the river?',
+              answer:
+                'The lion jumps a river sideways or lengthwise. On Mistboard the tiger jumps lengthwise only. Both land on the first square past the water and may capture there. A rat of either color on any water square in the path blocks the jump.',
+            },
+            {
+              question: 'How do the traps work?',
+              answer:
+                'An animal standing on one of the three trap squares around the enemy den loses all rank, so any defender can capture it, even a rat taking an elephant. Your own traps do nothing to your own animals.',
+            },
+            {
+              question: 'How do you win Jungle Chess?',
+              answer:
+                'Move any animal into the enemy den, capture all eight enemy animals, or leave your opponent with no legal move. You cannot enter your own den. The game draws on threefold repetition or 100 half-moves without a capture.',
+            },
+            {
+              question: 'Is there a winning strategy for Jungle Chess?',
+              answer:
+                'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.',
+            },
+            {
+              question: 'What other names does Jungle Chess have?',
+              answer:
+                'Dou Shou Qi, Animal Chess, Jungle, and Animal Checkers in English. Dou shou qi is the Chinese name, literally fighting-animal chess, and it is the same name in Taiwan, Hong Kong, and the mainland.',
+            },
+          ],
         },
       ],
     },
