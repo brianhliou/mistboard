@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The Lobby's bot rows change every six hours: Fortress, Duck and Atomic Xiangqi offer Level 3, 4 or 5 in turn, and each row's clock cycles through the variant's slower paces (never faster than its default); the Xiangqi Level 2/5/8 ladder stays fixed so it can be climbed ([f845ae22](https://github.com/brianhliou/mistboard/commit/f845ae22))
 - Atomic Xiangqi is rated: a rating pool of its own, a row on the profile rail with a game count and Games-tab filter, a leaderboard ladder, and rated matchmaking through Find opponent for signed-in players (friend links and bot games stay casual) ([ac497feb](https://github.com/brianhliou/mistboard/commit/ac497feb))
 - Atomic Xiangqi captures sound like what they are: an explosion for the mover and for the side it was done to, the cannon's shot keeping its slam as the one capture that does not explode ([714beb2d](https://github.com/brianhliou/mistboard/commit/714beb2d))
 - The variant order everywhere (play menu, quick pairing, the study and analysis pickers, the TV and rules rails, the rating grids) is now Xiangqi, Jieqi, Banqi, Atomic, Fog Xiangqi, Duck, Fortress, Fog Chess, Jungle, Flip Jungle: the Chinese-chess games in play order, then the originals ([9a2ce1f6](https://github.com/brianhliou/mistboard/commit/9a2ce1f6))
