@@ -43,6 +43,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The Banqi, Jungle, Xiangqi and Jieqi rules pages answer the questions people actually search: a capture-order table and a rule-variants section on Banqi (which of the three regional rulesets Mistboard plays, and why), a piece table on Xiangqi, and a common-questions block on all four, in English and both Chinese scripts ([8e2e720e](https://github.com/brianhliou/mistboard/commit/8e2e720e))
 - 心武残编 and 渊深海阔, two of the four great Qing composition manuals, are public studies (470 problems, credited to dpxq.com, held back where the record and the engine disagree); the rest of dpxq's classical shelf is seeded unlisted and follows in batches ([840ccd46](https://github.com/brianhliou/mistboard/commit/840ccd46))
 - "Horde on the Xiangqi Board: The River Is a Cliff" is published: the measurement behind a second variant that was not built, with kernel-checked boards and links to the full map and the evidence repository ([b21eb9ed](https://github.com/brianhliou/mistboard/commit/b21eb9ed))
 - A puzzle streak: the days in a row you solved a puzzle, on your own calendar and still alive the day after; it shows under Success when a puzzle is solved and on your profile with your best run, for signed-in solvers ([2191f43d](https://github.com/brianhliou/mistboard/commit/2191f43d))
@@ -89,6 +90,7 @@ Conventions:
 
 ### Fixed
 
+- The Traditional Chinese rules pages read as Traditional all the way through; the Banqi page's opening paragraphs, capture rule, search snippet and closing links had been showing Simplified under a Traditional title since July, and a test now catches any page that slips back ([8e2e720e](https://github.com/brianhliou/mistboard/commit/8e2e720e))
 - Share-card images (the picture a link to a game, study chapter or article shows in chat) are drawn off the server's main thread; a crawler fetching hundreds of them used to stall every live game on the site for a second per picture ([20c1a4dd](https://github.com/brianhliou/mistboard/commit/20c1a4dd))
 - The homepage board shows 1-0, 0-1 or ½-½ as soon as the game it was following ends, instead of holding the final clocks until a refresh; and changing the piece set repaints it at once on Jieqi, Banqi, Fortress and Fog Xiangqi games, as it already did on Xiangqi, Atomic and Duck ([7bda2d4d](https://github.com/brianhliou/mistboard/commit/7bda2d4d))
 - The Source button on a broadcast polled from dpxq's game list opens the dpxq tour page; it linked the poller's own discovery address, which no browser can open ([4be51a37](https://github.com/brianhliou/mistboard/commit/4be51a37))
