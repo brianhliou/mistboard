@@ -157,8 +157,17 @@ const PLACE_GLOSSARY: Array<[string, string]> = [
 ];
 
 const TEAM_GLOSSARY: Array<[string, string]> = [
-  // 市 is an administrative suffix English drops: 杭州市 -> Hangzhou.
+  // 市 and 省 are administrative suffixes English drops: 杭州市 -> Hangzhou,
+  // 广东省 -> Guangdong.
   ['市', ''],
+  ['省', ''],
+  // 2026 甲级联赛 stage one fielded three sponsors that are institutions, not
+  // brands, so they gloss rather than romanize: 常熟文旅酒店, 深圳市群众体育促进中心,
+  // 杭州环境集团队. Left to pinyin they rendered as one welded token each
+  // ("Changshuwenlujiudian").
+  ['群众体育促进中心', 'Mass Sports Promotion Centre'],
+  ['文旅酒店', 'Culture and Tourism Hotel'],
+  ['环境集团', 'Environment Group'],
   ['象棋俱乐部', 'Xiangqi Club'],
   ['象棋协会', 'Xiangqi Association'],
   ['棋类协会', 'Chess Association'],

@@ -208,6 +208,21 @@ test('team affiliations translate structure and romanize the proper nouns', () =
   assert.equal(translateXiangqiTeamName('龙江体彩队'), 'Longjiang Sports Lottery Team');
 });
 
+test('institutional sponsors from the 2026 league gloss instead of welding into pinyin', () => {
+  // Stage one, 2026-09-18: these three came out as "Changshuwenlujiudian",
+  // "Shenzhen Qunzhongtiyucujinzhongxin" and "Hangzhou Huanjingjituan Team",
+  // and 广东省 kept its 省.
+  assert.equal(translateXiangqiTeamName('常熟文旅酒店'), 'Changshu Culture and Tourism Hotel');
+  assert.equal(
+    translateXiangqiTeamName('深圳市群众体育促进中心'),
+    'Shenzhen Mass Sports Promotion Centre',
+  );
+  assert.equal(translateXiangqiTeamName('杭州环境集团队'), 'Hangzhou Environment Group Team');
+  assert.equal(translateXiangqiTeamName('广东省象棋协会'), 'Guangdong Xiangqi Association');
+  // Brands still romanize as one token.
+  assert.equal(translateXiangqiTeamName('上海金外滩象棋队'), 'Shanghai Jinwaitan Xiangqi Team');
+});
+
 test('a player tag caches the English team beside the English name', () => {
   const tag: XiangqiBroadcastPlayerTag = { name: '王家瑞', federation: '浙江民泰银行象棋队' };
   const translated = translatedXiangqiBroadcastPlayerTag(tag);
