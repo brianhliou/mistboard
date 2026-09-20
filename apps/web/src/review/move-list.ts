@@ -53,6 +53,9 @@ export type MoveListOptions = {
   /** Which side moves first — 'a' pairs (a,b) per row (chess/xiangqi: red/white
    *  first). Default 'a'. */
   firstMover?: 'a' | 'b';
+  /** Move number printed on the first row. Default 1; a composition rooted
+   *  mid-game passes the position's own number so "20... Bxe4" is not "1. Bxe4". */
+  firstNumber?: number;
 };
 
 /** Bring `cell` into view inside its own scroll container, never by scrolling the
@@ -99,18 +102,31 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     // in so an odd leading ply (rare) still aligns under the right side.
     const leadOffset = opts.firstMover === 'b' ? 1 : 0;
     let row: HTMLLIElement | null = null;
+    const startRow = (index: number): HTMLLIElement => {
+      const li = document.createElement('li');
+      li.className = 'review-move-list__row';
+      const number = document.createElement('span');
+      number.className = 'review-move-list__number';
+      number.textContent = String(Math.floor((index + leadOffset) / 2) + (opts.firstNumber ?? 1));
+      li.append(number);
+      list.append(li);
+      return li;
+    };
     entries.forEach((entry, index) => {
       const slot = (index + leadOffset) % 2;
       if (slot === 0) {
-        row = document.createElement('li');
-        row.className = 'review-move-list__row';
-        const number = document.createElement('span');
-        number.className = 'review-move-list__number';
-        number.textContent = String(Math.floor((index + leadOffset) / 2) + 1);
-        row.append(number);
-        list.append(row);
+        row = startRow(index);
+      } else if (!row) {
+        // A line that opens with the second mover: the row exists so the first
+        // entry has somewhere to land, with an empty first-mover cell so it sits
+        // in its own column. Without this the leading move was dropped.
+        row = startRow(index);
+        const gap = document.createElement('span');
+        gap.className = 'review-move-list__move review-move-list__move--gap';
+        gap.textContent = '…';
+        row.append(gap);
       }
-      row?.append(moveCell(entry));
+      row.append(moveCell(entry));
     });
   }
 

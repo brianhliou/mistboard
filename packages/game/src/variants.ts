@@ -449,6 +449,17 @@ export function positionFromState(state: GameState, turnOverride?: Color): Chess
   return Chess.fromSetup(setupFromState(state, turnOverride)).unwrap();
 }
 
+/** The chessops form of a standard-chess move (castling normalized), or null
+ *  when it is not legal in `state`. For callers that need chessops' own
+ *  spellings of a position and move (SAN with suffixes, in notation.ts). */
+export function standardChessLegalChessopsMove(state: GameState, move: Move): ChessopsMove | null {
+  if (state.status.type !== 'playing') return null;
+  const chessopsMove = toChessopsMove(normalizeCastlingMove(state, move) ?? move);
+  return chessopsMove != null && positionFromState(state).isLegal(chessopsMove)
+    ? chessopsMove
+    : null;
+}
+
 // Standard-chess legality (respects check), shared by bughouse to resolve a
 // player's pseudo-legal try against the canonical truth. Mirrors the gate
 // inside standardChessVariant.applyMove so the two never diverge.
@@ -523,19 +534,36 @@ const FOG_TOLERATED_SETUP_ERRORS: ReadonlySet<string> = new Set([IllegalSetup.Op
 
 const SETUP_ERROR_MESSAGES: Record<string, string> = {
   [IllegalSetup.Empty]: 'The board is empty.',
-  [IllegalSetup.Kings]: 'A fog chess position needs exactly one king per side.',
+  [IllegalSetup.Kings]: 'A chess position needs exactly one king per side.',
+  [IllegalSetup.OppositeCheck]: 'The side that just moved is in check, which no move can produce.',
   [IllegalSetup.PawnsOnBackrank]: 'A pawn is on a back rank, which no move can produce.',
   [IllegalSetup.Variant]: 'That position is not reachable in chess.',
 };
 
 export function parseDarkChessFen(fen: string, gameId = 'fen-import'): ParseDarkChessFenResult {
+  return parseChessFen(fen, gameId, 'dark-chess', FOG_TOLERATED_SETUP_ERRORS);
+}
+
+/** Standard chess FEN with chessops' full legality bar: unlike fog, a side
+ *  that is not to move may not stand in check. Used by the study-only chess
+ *  spec; the state carries the plain-chess kernel's variant id. */
+export function parseStandardChessFen(fen: string, gameId = 'fen-import'): ParseDarkChessFenResult {
+  return parseChessFen(fen, gameId, 'chess', new Set());
+}
+
+function parseChessFen(
+  fen: string,
+  gameId: string,
+  variant: 'dark-chess' | 'chess',
+  tolerated: ReadonlySet<string>,
+): ParseDarkChessFenResult {
   return parseFen(fen.trim()).unwrap<ParseDarkChessFenResult>(
     (setup) => {
       const invalid = Chess.fromSetup(setup).unwrap<string | null>(
         () => null,
         (error) => error.message,
       );
-      if (invalid && !FOG_TOLERATED_SETUP_ERRORS.has(invalid)) {
+      if (invalid && !tolerated.has(invalid)) {
         return {
           ok: false,
           error: SETUP_ERROR_MESSAGES[invalid] ?? `Illegal position (${invalid}).`,
@@ -543,7 +571,7 @@ export function parseDarkChessFen(fen: string, gameId = 'fen-import'): ParseDark
       }
       const state: GameState = {
         id: gameId,
-        variant: 'dark-chess',
+        variant,
         board: boardFromChessops(setup.board),
         status: { type: 'playing', turn: setup.turn },
         moveNumber: setup.fullmoves,

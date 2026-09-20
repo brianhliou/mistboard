@@ -48,6 +48,7 @@ test('every start-fen spec round-trips its own standard start', () => {
     jungle: jungleStateToEngineFen(createInitialJungleState('t')),
     'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),
     'dark-chess': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
+    chess: 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',
     // Duck Xiangqi: the standard six fields plus a SEVENTH naming the duck's
     // point, '-' at the start because the duck enters on Red's first turn.
     'duck-xiangqi': duckXiangqiFen(createInitialDuckXiangqiState('t')),
@@ -70,11 +71,20 @@ test('every start-fen spec round-trips its own standard start', () => {
 });
 
 test('normalizeStartFen is fail-closed off the list', () => {
-  for (const spec of ['chess', 'mahjong', 'not-a-variant', '']) {
+  for (const spec of ['mahjong', 'not-a-variant', '']) {
     assert.equal(hasStartFen(spec), false, `${spec} should not claim a start FEN`);
     const result = normalizeStartFen(spec, 'anything');
     assert.equal(result.ok, false);
   }
+});
+
+test('standard chess keeps the rule fog drops: the side not to move may not be in check', () => {
+  // White to move with the black king already attacked by the rook on a8.
+  const oppositeCheck = 'k7/8/8/8/8/8/8/R3K3 w - - 0 1';
+  assert.equal(normalizeStartFen('dark-chess', oppositeCheck).ok, true);
+  const strict = normalizeStartFen('chess', oppositeCheck);
+  assert.equal(strict.ok, false);
+  assert.ok(!strict.ok && /in check/.test(strict.error));
 });
 
 test('a study start FEN is trimmed and re-spelled, not echoed', () => {

@@ -23,8 +23,17 @@ import {
   renderGridBoardSvg,
 } from '@mistboard/board-render';
 import type { Color, Move, PieceRole, PlayerView, Square } from '@mistboard/game';
+import './board-glyph-marker.css';
 import './dark-chess-render.css';
 import { boardCoordinatesEnabled } from './display-preferences.js';
+import { type SvgBoardArrowStyle, svgBoardArrow } from './svg-board-arrow.js';
+import {
+  GLYPH_OFFSET_RATIO,
+  GLYPH_RADIUS_RATIO,
+  type SvgBoardMarkerStyle,
+  svgBoardCircleMarker,
+  svgBoardGlyphMarker,
+} from './svg-board-marker.js';
 
 const FILES = 8;
 const RANKS = 8;
@@ -63,7 +72,40 @@ export type DarkChessRenderOptions = {
   // Draw the fog overlay over non-visible squares. Defaults to true.
   showFog?: boolean;
   lastMove?: Move | null;
+  /** Judgment badge ('?', '??', '?!', '!', '!!') pinned to the last move's
+   *  destination, the xiangqi replay board's marker on the chess board. */
+  glyph?: string;
 };
+
+// Same palette classes as the xiangqi badge (board-glyph-marker.css), so a
+// chess study and a xiangqi study read the same verdict the same way.
+const GLYPH_CLASS: Record<string, string> = {
+  '??': 'xq-marker--blunder',
+  '?': 'xq-marker--mistake',
+  '?!': 'xq-marker--inaccuracy',
+  '!!': 'xq-marker--brilliant',
+  '!': 'xq-marker--good',
+};
+const GLYPH_RADIUS = (13 / 60) * CELL;
+const GLYPH_OFFSET = (21 / 60) * CELL;
+
+/** The judgment badge at the top-right corner of the destination square, in
+ *  screen space so it keeps its corner when the board flips. */
+function glyphBadgeSvg(to: Square, glyph: string, geom: GridGeometry): string {
+  const kind = GLYPH_CLASS[glyph];
+  if (!kind) return '';
+  const { file, rank } = coordOf(to);
+  const { x, y } = geom.topLeft(file, rank);
+  const cx = x + CELL / 2 + GLYPH_OFFSET;
+  const cy = y + CELL / 2 - GLYPH_OFFSET;
+  return (
+    `<g class="xq-marker xq-marker--glyph ${kind}">` +
+    `<circle class="xq-marker__disc" cx="${cx.toFixed(1)}" cy="${cy.toFixed(1)}" r="${GLYPH_RADIUS.toFixed(1)}"/>` +
+    `<text class="xq-marker__label" x="${cx.toFixed(1)}" y="${cy.toFixed(1)}" text-anchor="middle" ` +
+    `dominant-baseline="central" font-size="${(GLYPH_RADIUS * 1.15).toFixed(1)}">${glyph}</text>` +
+    '</g>'
+  );
+}
 
 let boardCounter = 0;
 
@@ -87,7 +129,11 @@ export function renderDarkChessBoardSvg(
     coords: boardCoordinatesEnabled(),
     flip: perspective === 'black',
     renderPieces: (geom) =>
-      [pieceLayer(view, geom, null), showFog ? fogLayer(visible, geom) : ''].join(''),
+      [
+        pieceLayer(view, geom, null),
+        showFog ? fogLayer(visible, geom) : '',
+        options.glyph && lastMove ? glyphBadgeSvg(lastMove.to, options.glyph, geom) : '',
+      ].join(''),
     lastMove: lastCells,
     selected: null,
     targets: [],
@@ -104,7 +150,59 @@ export type DarkChessInteractiveOptions = DarkChessRenderOptions & {
   selected?: Square | null;
   targets?: readonly Square[];
   draggingFrom?: Square | null;
+  /** Engine-line and user-drawn arrows, painted above the pieces. */
+  arrows?: readonly ChessBoardArrow[];
+  /** Rings and judgment badges, painted above the pieces. */
+  markers?: readonly ChessBoardMarker[];
 };
+
+/** One board arrow (engine PV, best-move advice, a drawn shape). Same style
+ *  vocabulary as the xiangqi board's (`xq-arrow--pv1`, `--alt`, `--draw`). */
+export type ChessBoardArrow = SvgBoardArrowStyle & { from: Square; to: Square };
+
+/** A ring on a square, or the judgment badge in its top-right corner. */
+export type ChessBoardMarker = SvgBoardMarkerStyle & {
+  square: Square;
+  kind: 'circle' | 'glyph';
+  text?: string;
+};
+
+function cellCentre(square: Square, geom: GridGeometry): { x: number; y: number } {
+  const { file, rank } = coordOf(square);
+  const { x, y } = geom.topLeft(file, rank);
+  return { x: x + CELL / 2, y: y + CELL / 2 };
+}
+
+/** Arrows above the pieces: from centre to centre, the shared arrow anatomy. */
+function arrowLayer(arrows: readonly ChessBoardArrow[], geom: GridGeometry): string {
+  return arrows
+    .map((arrow) =>
+      svgBoardArrow(arrow, cellCentre(arrow.from, geom), cellCentre(arrow.to, geom), {
+        baseClassName: 'xq-arrow',
+        startInset: CELL * 0.3,
+        tipInset: CELL * 0.12,
+      }),
+    )
+    .join('');
+}
+
+/** Rings and glyph badges above the pieces. */
+function markerLayer(markers: readonly ChessBoardMarker[], geom: GridGeometry): string {
+  return markers
+    .map((marker) => {
+      const centre = cellCentre(marker.square, geom);
+      return marker.kind === 'glyph'
+        ? svgBoardGlyphMarker(
+            marker,
+            centre,
+            CELL * GLYPH_RADIUS_RATIO,
+            CELL * GLYPH_OFFSET_RATIO,
+            { baseClassName: 'xq-marker' },
+          )
+        : svgBoardCircleMarker(marker, centre, CELL * 0.42, { baseClassName: 'xq-marker' });
+    })
+    .join('');
+}
 
 // Interactive (review/analysis) render: like renderDarkChessBoardSvg but with
 // selection highlight, legal-move target dots, drag-source dimming, and the grid's
@@ -130,7 +228,11 @@ export function renderDarkChessInteractiveBoardSvg(
     coords: boardCoordinatesEnabled(),
     flip: perspective === 'black',
     renderPieces: (geom) =>
-      [pieceLayer(view, geom, draggingFrom), showFog ? fogLayer(visible, geom) : ''].join(''),
+      [
+        pieceLayer(view, geom, draggingFrom),
+        showFog ? fogLayer(visible, geom) : '',
+        `<g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${arrowLayer(options.arrows ?? [], geom)}${markerLayer(options.markers ?? [], geom)}</g>`,
+      ].join(''),
     lastMove: lastCells,
     selected: options.selected ? coordOf(options.selected) : null,
     targets: (options.targets ?? []).map((square) => ({

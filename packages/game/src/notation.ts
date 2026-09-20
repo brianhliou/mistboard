@@ -1,3 +1,4 @@
+import { makeSan } from 'chessops/san';
 import {
   applyGameEvent,
   type GameEvent,
@@ -5,6 +6,7 @@ import {
   initialGameProjection,
 } from './events.js';
 import type { Board, GameState, Move, PieceRole, Square } from './types.js';
+import { positionFromState, standardChessLegalChessopsMove } from './variants.js';
 
 type PromotionRole = Exclude<PieceRole, 'king' | 'pawn'>;
 
@@ -17,6 +19,16 @@ const pieceLetters: Record<Exclude<PieceRole, 'pawn'>, string> = {
 };
 
 const files = ['a', 'b', 'c', 'd', 'e', 'f', 'g', 'h'] as const;
+
+/** Standard algebraic notation with the check and mate suffixes (chessops'
+ *  makeSan), for open chess. moveToAlgebraic below is the suffix-free spelling
+ *  the fog surfaces use, where "check" is not a concept. Falls back to it when
+ *  chessops does not accept the move. */
+export function standardChessSan(state: GameState, move: Move): string {
+  const chessopsMove = standardChessLegalChessopsMove(state, move);
+  if (chessopsMove == null) return moveToAlgebraic(state, move);
+  return makeSan(positionFromState(state), chessopsMove);
+}
 
 export function moveToAlgebraic(state: GameState, move: Move): string {
   const piece = state.board[move.from];

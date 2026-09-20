@@ -161,6 +161,17 @@ export async function mountStudyReview(
         root: parsed?.ok ? { truth: parsed.state, fen: darkChessFen(parsed.state) } : undefined,
       });
     }
+    case 'chess': {
+      const [{ mountChessReview }, { parseStandardChessFen, darkChessFen }] = await Promise.all([
+        import('./chess-review.js'),
+        import('@mistboard/game'),
+      ]);
+      const parsed = rootFen ? parseStandardChessFen(rootFen) : null;
+      return mountChessReview(root, {
+        ...base,
+        root: parsed?.ok ? { truth: parsed.state, fen: darkChessFen(parsed.state) } : undefined,
+      });
+    }
     // The dealt three. A chapter of these variants is only reconstructable from
     // its stored SerializedTree.rootFen: `deal` is null because there is no game
     // behind a study, so the six-field FEN's last field IS the deal. A chapter

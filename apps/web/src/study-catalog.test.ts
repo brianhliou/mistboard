@@ -44,7 +44,9 @@ describe('study catalog', () => {
     expect(isStudyVariantId('banqi')).toBe(true);
     expect(isStudyVariantId('jieqi')).toBe(true);
     expect(isStudyVariantId('jungle-flip')).toBe(true);
-    expect(isStudyVariantId('chess')).toBe(false);
+    // Study-only chess (2026-09-20) is a catalog member; mahjong never was.
+    expect(isStudyVariantId('chess')).toBe(true);
+    expect(isStudyVariantId('mahjong')).toBe(false);
     expect(isStudyVariantId('')).toBe(false);
   });
 
@@ -110,6 +112,7 @@ describe('study board dispatch', () => {
       'jungle-flip': './jungle-flip-review.js',
       'duck-xiangqi': './duck-xiangqi-review.js',
       'atomic-xiangqi': './atomic-xiangqi-review.js',
+      chess: './chess-review.js',
     };
     for (const variant of STUDY_VARIANTS) {
       const module = expected[variant.id];

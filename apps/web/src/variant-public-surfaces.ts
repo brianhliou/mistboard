@@ -28,6 +28,9 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // other xiangqi variants. The play menu is a separate switch (the tenant
   // registry's offerInMenu), still hidden.
   'atomic-xiangqi': true,
+  // Study-only: no rules page, no tile, no feed entry. Chess studies are
+  // reachable by their own URLs and the study picker, nothing lists the game.
+  chess: false,
 } satisfies Record<GameSpecId, boolean>;
 
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
@@ -38,6 +41,11 @@ const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
   'fog-chess': 'dark-chess',
   'fog-xiangqi': 'dark-xiangqi',
 };
+// /rules/chess is the chess primer (hidden from the rail since 2026-07-03,
+// indexed, linked from the Fog Chess page). It documents the game, not the
+// study-only `chess` spec that shares its name, so it must not inherit that
+// spec's hidden surface: the slug resolves to no spec.
+const RULES_SLUGS_NOT_A_SPEC = new Set(['chess']);
 
 export function isGameSpecId(value: string): value is GameSpecId {
   return gameSpecIds.has(value);
@@ -61,6 +69,7 @@ export function rulesSlugRetired(slug: string): boolean {
 
 export function rulesSlugPublicSurfaceEnabled(slug: string): boolean {
   if (HIDDEN_RULES_SLUGS.has(slug)) return false;
+  if (RULES_SLUGS_NOT_A_SPEC.has(slug)) return true;
   const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
   return !isGameSpecId(gameSpecId) || variantPublicSurfaceEnabled(gameSpecId);
 }
@@ -79,6 +88,9 @@ export function gameSpecIdFromRulesHref(href: string | undefined): GameSpecId | 
 /** The variant a `/rules/<slug>` page documents, or null when the slug is a
  *  concept page (`server-enforced-fog`) rather than a game. */
 export function gameSpecIdFromRulesSlug(slug: string): GameSpecId | null {
+  // Without this, /rules/chess would resolve to the study-only spec and the
+  // rules page would grow a "play a friend" button leading to a 501.
+  if (RULES_SLUGS_NOT_A_SPEC.has(slug)) return null;
   const gameSpecId = RULES_GAME_SPEC_BY_SLUG[slug] ?? slug;
   return isGameSpecId(gameSpecId) ? gameSpecId : null;
 }

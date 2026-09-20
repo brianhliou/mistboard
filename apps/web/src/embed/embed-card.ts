@@ -73,7 +73,12 @@ export type EmbedSeat = {
 export type EmbedBoardHandle = Pick<
   ReplayHandle,
   'destroy' | 'jumpToPly' | 'plyCount' | 'moveEntries' | 'clockAtPly' | 'bottomSeat'
->;
+> & {
+  /** How the score sheet numbers the line: who moves first from the root and
+   *  the root's move number. A board rooted mid-game (a study composition)
+   *  supplies it; a game from the opening leaves it off and gets "1." first. */
+  moveNumbering?: () => { firstMover: 'a' | 'b'; firstNumber: number };
+};
 
 export type EmbedCardOptions = {
   /** The line above the card: the event, or the variant and the clock. */
@@ -273,7 +278,7 @@ export async function mountEmbedCard(
 
   const entries: MoveListEntry[] = handle.moveEntries?.() ?? [];
   maxPly = handle.plyCount?.() ?? entries.length;
-  moveList = createMoveList(entries);
+  moveList = createMoveList(entries, handle.moveNumbering?.() ?? {});
   movesRoot.append(moveList.el);
 
   controls.append(

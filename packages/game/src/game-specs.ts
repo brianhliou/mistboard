@@ -121,7 +121,13 @@ export type GameSpecId =
   | 'xiangqi'
   // Hong Kong mahjong. Playable behind a server flag AND a per-account grant;
   // runtimeStatus is 'future' because nothing is built behind it yet.
-  | 'mahjong';
+  | 'mahjong'
+  // Standard chess, STUDY-ONLY (set 2026-09-20). Exists so chess studies can be
+  // written, reviewed and embedded (the shallow-labels puzzles on the blog);
+  // never playable here: no tenant on either side, the request gate answers
+  // 501, no rules page, no menu entry. Kernel: standardChessVariant
+  // (packages/game/src/variants.ts), the same one Fog Chess builds on.
+  | 'chess';
 export type GameSpecLookupId = GameSpecId;
 
 export type GameSpec = {
@@ -158,6 +164,7 @@ export const FORTRESS_XIANGQI_SPEC_ID = 'fortress-xiangqi' satisfies GameSpecId;
 export const XIANGQI_SPEC_ID = 'xiangqi' satisfies GameSpecId;
 export const DUCK_XIANGQI_SPEC_ID = 'duck-xiangqi' satisfies GameSpecId;
 export const ATOMIC_XIANGQI_SPEC_ID = 'atomic-xiangqi' satisfies GameSpecId;
+export const CHESS_SPEC_ID = 'chess' satisfies GameSpecId;
 
 // Specs that may be played by correspondence (days-per-move), in display order. The
 // SINGLE source of truth shared by the server's fail-closed allowlist
@@ -199,6 +206,10 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Standard chess: a tree-review stack (review/chess-tree-adapter.ts +
+  // chess-review.ts) and an ordinary chess FEN. The only spec that is
+  // study-eligible without a play route; see the GameSpecId comment.
+  CHESS_SPEC_ID,
 ];
 
 /** Fail-closed membership test for {@link STUDY_ELIGIBLE_SPEC_IDS} — narrows an
@@ -229,6 +240,8 @@ export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  // Study-only chess is deliberately absent: it is on no shelf, and an unlisted
+  // spec sorts last, which is where the study picker should offer it.
 ];
 
 /** Sort index for {@link CANONICAL_VARIANT_ORDER}; unlisted specs sort to the end. */
@@ -238,6 +251,27 @@ export function canonicalVariantOrderIndex(id: GameSpecId): number {
 }
 
 export const GAME_SPECS: readonly GameSpec[] = [
+  {
+    // Standard chess, study-only. Registered so the fail-closed dispatch can
+    // see it and studies can hold it; 'hidden' + no tenant + a bare gate entry
+    // is what keeps it off every play surface. Not rated, never will be here.
+    id: CHESS_SPEC_ID,
+    publicName: 'Chess',
+    family: 'chess',
+    board: 'chess-8x8',
+    movement: 'orthodox-chess',
+    objective: 'checkmate',
+    visibility: 'open',
+    setup: 'standard',
+    reserves: 'none',
+    dropPolicy: 'none',
+    // Nominal: no pool exists and `rated` is deliberately absent, so nothing
+    // reads this. Shares Fog Chess's base rather than minting one that would
+    // need a user_ratings CHECK migration for a game that cannot be played.
+    ratingPoolBase: 'fog',
+    publicSurface: 'hidden',
+    runtimeStatus: 'live',
+  },
   {
     id: DARK_CHESS_SPEC_ID,
     publicName: 'Fog Chess',
