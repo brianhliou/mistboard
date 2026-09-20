@@ -2343,7 +2343,74 @@
   padding-block: 9px;
 }
 
-@media (max-width: 1240px) {
+@media (min-width: 960px) and (max-width: 1240px) {
+  /* Two columns (lichess's middle band: the lobby app plus one side column).
+     The left rail folds into the right one: the center keeps the lobby panel
+     with the forum and chat under it, the rail carries the Play button, the
+     viewer, the daily puzzle and Top studies, and the blog row, the learn row
+     and News span both. Both columns scale with the window (a fixed 340px rail
+     beside a fluid center read as the center alone resizing): the rail is a
+     viewport fraction, re-sourced into the rail-width token so the viewer and
+     puzzle boards and the band-2 box height all derive from the same number,
+     and the 2x2 under the panel shares its lines the way band 2 does on
+     desktop. Before this band existed the page dropped straight from three
+     columns to one 640px column at 1240px, leaving ~40% of a 1000px window
+     empty on each side. */
+  .landing-demo {
+    --landing-rail-width: clamp(280px, 30vw, 380px);
+    grid-template-columns: minmax(0, 1fr) var(--landing-rail-width);
+    grid-template-areas:
+      "panel play"
+      "panel left"
+      "forum puzzle"
+      "chat  studies"
+      "blogs blogs"
+      "learn learn"
+      "news  news";
+    --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 552);
+    --landing-lower-widget-height: calc(
+      var(--landing-puzzle-board-height) +
+      (var(--landing-board-caption-line) + var(--landing-board-caption-gap)) *
+      2
+    );
+  }
+
+  .landing-lobby-panel {
+    align-self: stretch;
+  }
+
+  /* The play rail is a short row of its own here (the viewer sits in the next
+     row), so it flows from the top instead of centering against the panel. */
+  .landing-play-column {
+    align-self: start;
+    justify-content: flex-start;
+  }
+
+  .landing-puzzle-column .home-puzzle-box {
+    width: 100%;
+    height: var(--landing-puzzle-board-height);
+    aspect-ratio: auto;
+  }
+
+  .landing-chat-column {
+    align-self: start;
+  }
+
+  .landing-chat-column > .landing-chat-mount:not(:empty),
+  .landing-chat-column .landing-chat {
+    height: var(--landing-lower-widget-height);
+    min-height: 0;
+  }
+
+  .landing-viewer-column,
+  .landing-lobby-panel,
+  .landing-left-column,
+  .landing-board-column {
+    width: 100%;
+  }
+}
+
+@media (max-width: 959px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
      viewer, then the band-2 widgets (puzzle, forum, chat), the blog row, the
      learn row, and the two side-rail boxes (studies, news). */
