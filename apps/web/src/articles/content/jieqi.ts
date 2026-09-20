@@ -170,7 +170,7 @@ export const jieqiArticle: Article = {
               {
                 question: 'Can I play jieqi against an AI?',
                 answer:
-                  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because no neural network has been trained for jieqi, and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.',
+                  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because jieqi has no good neural network yet (we trained one and it never beat the hand-written evaluation), and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.',
               },
               {
                 question: 'How is jieqi different from xiangqi?',

@@ -2037,8 +2037,8 @@ const ZH_HANS: Record<string, string> = {
   'The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.':
     '揭子是随机的，你拿它做什么不是。你的准确率只由你的选择算出来，所以揭得好不会把它抬高，揭得差也不会把它拉低。',
   'Can a computer play jieqi well?': '电脑下揭棋下得好吗？',
-  'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because no neural network has been trained for jieqi.':
-    '还行，但谈不上出色。我们这个会被强棋手打败，主要是因为还没有为揭棋训练出神经网络。',
+  'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because jieqi has no good neural network yet: we trained one and it never came out stronger than the hand-written evaluation.':
+    '还行，但谈不上出色。我们这个会被强棋手打败，主要是因为揭棋还没有好用的神经网络：我们训练过一个，但它始终没有强过手写的评估函数。',
   'Can the engine see my hidden pieces?': '引擎看得到我的暗子吗？',
   'No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.':
     '看不到。它拿到的是和你一样的暗着的棋盘，从来不会被告知这一局是怎么摆的。只要有一个身份漏进发给它的数据里，就会有一个测试让构建失败。',
@@ -2554,8 +2554,8 @@ const ZH_HANS: Record<string, string> = {
   'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
     '不需要安装任何东西。Mistboard 在手机、平板或电脑的浏览器里直接运行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 对弈吗？',
-  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because no neural network has been trained for jieqi, and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.':
-    '可以，有八个等级。引擎是按揭棋规则打了补丁的皮卡鱼（Pikafish）。它很强，但高手能赢它，主要因为还没有人为揭棋训练过神经网络；而且它看不到你的暗子：它拿到的是和你一样的背面朝上的棋盘，从不被告知底牌。',
+  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because jieqi has no good neural network yet (we trained one and it never beat the hand-written evaluation), and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.':
+    '可以，有八个等级。引擎是按揭棋规则打了补丁的皮卡鱼（Pikafish）。它很强，但高手能赢它，主要因为揭棋还没有好用的神经网络（我们训练过一个，但它没能胜过手写的评估函数）；而且它看不到你的暗子：它拿到的是和你一样的背面朝上的棋盘，从不被告知底牌。',
   'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
     '同样的棋盘、同样的棋子、同样的将死目标。除将帅外的棋子开局全部洗匀背面朝上，第一步按所在起始位置的棋子走法走一次，然后翻开按真实身份行棋。翻开的士可以出九宫，翻开的象可以过河。',
   'Can a revealed advisor leave the palace, and can an elephant cross the river?':
@@ -4302,8 +4302,8 @@ const ZH_HANT: Record<string, string> = {
   'The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.':
     '揭子是隨機的，你拿它做什麼不是。你的準確率只由你的選擇算出來，所以揭得好不會把它抬高，揭得差也不會把它拉低。',
   'Can a computer play jieqi well?': '電腦下揭棋下得好嗎？',
-  'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because no neural network has been trained for jieqi.':
-    '還行，但談不上出色。我們這個會被強棋手打敗，主要是因為還沒有為揭棋訓練出類神經網路。',
+  'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because jieqi has no good neural network yet: we trained one and it never came out stronger than the hand-written evaluation.':
+    '還行，但談不上出色。我們這個會被強棋手打敗，主要是因為揭棋還沒有好用的類神經網路：我們訓練過一個，但它始終沒有強過手寫的評估函數。',
   'Can the engine see my hidden pieces?': '引擎看得到我的暗子嗎？',
   'No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.':
     '看不到。它拿到的是和你一樣的暗著的棋盤，從來不會被告知這一局是怎麼擺的。只要有一個身分漏進發給它的資料裡，就會有一個測試讓建置失敗。',
@@ -4891,8 +4891,8 @@ const ZH_HANT: Record<string, string> = {
   'There is nothing to install. Mistboard runs in the browser on a phone, tablet, or desktop.':
     '不需要安裝任何東西。Mistboard 在手機、平板或電腦的瀏覽器裡直接執行。',
   'Can I play jieqi against an AI?': '揭棋可以和 AI 對弈嗎？',
-  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because no neural network has been trained for jieqi, and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.':
-    '可以，有八個等級。引擎是按揭棋規則打了補丁的皮卡魚（Pikafish）。它很強，但高手能贏它，主要因為還沒有人為揭棋訓練過神經網路；而且它看不到你的暗子：它拿到的是和你一樣背面朝上的棋盤，從不被告知底牌。',
+  'Yes, at eight levels. The engine is a Pikafish build patched for jieqi rules. It is strong but beatable by a strong human, mainly because jieqi has no good neural network yet (we trained one and it never beat the hand-written evaluation), and it cannot see your hidden pieces: it gets the same face-down board you do and is never told the deal.':
+    '可以，有八個等級。引擎是按揭棋規則打了補丁的皮卡魚（Pikafish）。它很強，但高手能贏它，主要因為揭棋還沒有好用的類神經網路（我們訓練過一個，但它沒能勝過手寫的評估函數）；而且它看不到你的暗子：它拿到的是和你一樣背面朝上的棋盤，從不被告知底牌。',
   'Same board, same pieces, same checkmate goal. Every piece except the general starts face-down and shuffled, moves once as the piece that normally starts on its point, then flips and plays as itself. Revealed advisors may leave the palace and revealed elephants may cross the river.':
     '同樣的棋盤、同樣的棋子、同樣的將死目標。除將帥外的棋子開局全部洗勻背面朝上，第一步按所在起始位置的棋子走法走一次，然後翻開按真實身份行棋。翻開的士可以出九宮，翻開的象可以過河。',
   'Can a revealed advisor leave the palace, and can an elephant cross the river?':

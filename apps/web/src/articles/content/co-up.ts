@@ -62,7 +62,7 @@ export const CO_UP_VI: Record<string, string> = {
   "Is jieqi just luck?": "Cờ úp có phải chỉ ăn may không?",
   "The flips are random; what you do with them is not. Your accuracy score is built only from your choices, so a good draw cannot flatter it and a bad one cannot spoil it.": "Lật quân là may rủi, nhưng bạn làm gì với nó thì không. Chỉ số chính xác của bạn chỉ dựng từ các lựa chọn, nên lật trúng quân tốt không làm nó đẹp lên và lật phải quân xấu cũng không làm nó xấu đi.",
   "Can a computer play jieqi well?": "Máy chơi cờ úp có hay không?",
-  "Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because no neural network has been trained for jieqi.": "Khá, chưa xuất sắc. Engine của chúng tôi vẫn bị người chơi mạnh đánh bại, chủ yếu vì chưa có mạng nơ-ron nào được huấn luyện cho cờ úp.",
+  "Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because jieqi has no good neural network yet: we trained one and it never came out stronger than the hand-written evaluation.": "Khá, chưa xuất sắc. Engine của chúng tôi vẫn bị người chơi mạnh đánh bại, chủ yếu vì chưa có mạng nơ-ron nào được huấn luyện cho cờ úp.",
   "Can the engine see my hidden pieces?": "Engine có nhìn thấy quân úp của tôi không?",
   "No. It gets the same face-down board you do and is never told the deal. A test fails the build if an identity ever leaks into what it is sent.": "Không. Nó nhận đúng bàn cờ đã úp như bạn đang thấy và không bao giờ được cho biết lần xáo quân. Có một bài kiểm thử làm hỏng bản dựng nếu một thân phận lọt vào dữ liệu gửi cho nó.",
   "Is the shuffle fair?": "Xáo quân có công bằng không?",

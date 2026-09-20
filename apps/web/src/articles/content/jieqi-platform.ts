@@ -256,7 +256,7 @@ export const jieqiPlatformArticle: Article = {
             {
               question: 'Can a computer play jieqi well?',
               answer:
-                'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because no neural network has been trained for jieqi.',
+                'Reasonably, not brilliantly. Ours is beatable by a strong human, mainly because jieqi has no good neural network yet: we trained one and it never came out stronger than the hand-written evaluation.',
             },
             {
               question: 'Can the engine see my hidden pieces?',
