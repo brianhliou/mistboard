@@ -12,19 +12,41 @@ import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
 
-type PatronTierConfig = { key: string; mode: 'subscription' | 'payment'; isLifetime: boolean };
+type PatronTierMode = 'subscription' | 'payment';
+type PatronTierConfig = { key: string; mode: PatronTierMode };
 type PatronConfigResponse = { configured: boolean; tiers: PatronTierConfig[] };
 
-// USD display amounts for each monthly tier key. The server maps the key to a
-// Stripe price; the client only ever sends the key, never an amount.
+// The two frequencies the form offers, by Checkout mode: a monthly
+// subscription, or a one-time payment. Stripe Checkout decides which payment
+// methods each mode can take (cards for subscriptions; cards, Alipay and
+// WeChat Pay for one-time), so this page never names a method and carries no
+// caveat about one: the frequency is the whole choice.
+type Frequency = 'monthly' | 'once';
+const FREQUENCY_FOR_MODE: Record<PatronTierMode, Frequency> = {
+  subscription: 'monthly',
+  payment: 'once',
+};
+
+// USD display amounts for each tier key. The server maps the key to a Stripe
+// price; the client only ever sends the key, never an amount.
 const TIER_AMOUNT: Record<string, string> = {
   monthly_5: '$5',
   monthly_10: '$10',
   monthly_20: '$20',
   monthly_50: '$50',
+  once_5: '$5',
+  once_10: '$10',
+  once_20: '$20',
+  once_50: '$50',
 };
 
-const DEFAULT_MONTHLY = 'monthly_10';
+const DEFAULT_AMOUNT = '10';
+
+// The one locale-aware line. A zh-Hans reader is most likely on the mainland,
+// where the wallet in hand is Alipay or WeChat Pay and a card subscription is
+// the option that fails; open on the frequency that wallet can pay. Same
+// pattern as the piece-set default by locale: one line of data, no copy.
+const DEFAULT_FREQUENCY_BY_LOCALE: Partial<Record<Locale, Frequency>> = { 'zh-Hans': 'once' };
 
 // The monthly tiers shown when the live config is unavailable. These mirror the
 // Stripe prices; they are display-only and never sent to the checkout endpoint.
@@ -99,6 +121,7 @@ function buildBody(locale: Locale, options: PatronPageOptions): HTMLElement {
     faqRow('patron.faqPerkQuestion', 'patron.faqPerkAnswer', locale),
     faqRow('patron.faqTaxQuestion', 'patron.faqTaxAnswer', locale),
     faqRow('patron.faqCancelQuestion', 'patron.faqCancelAnswer', locale),
+    faqRow('patron.faqPayQuestion', 'patron.faqPayAnswer', locale),
     termsLine(locale),
   );
 
@@ -175,82 +198,82 @@ function buildTierPreview(
   return preview;
 }
 
-// The donation form mirrors lichess: a frequency segment (Monthly / Lifetime),
-// an amount segment (for monthly), and one prominent Donate button.
+// The donation form mirrors lichess: a frequency segment (Monthly / One-time),
+// an amount segment for the chosen frequency, and one prominent button whose
+// label follows the frequency.
 function buildDonateForm(
   tiers: PatronTierConfig[],
   user: AuthUser | null,
   locale: Locale,
 ): HTMLElement {
-  const monthly = tiers.filter((tier) => !tier.isLifetime);
-  const lifetime = tiers.find((tier) => tier.isLifetime) ?? null;
+  const byFrequency: Record<Frequency, PatronTierConfig[]> = { monthly: [], once: [] };
+  for (const tier of tiers) byFrequency[FREQUENCY_FOR_MODE[tier.mode]].push(tier);
+  const offered = (['monthly', 'once'] as const).filter((f) => byFrequency[f].length > 0);
 
   const form = document.createElement('div');
   form.className = 'patron-form';
 
-  // Selection state: default to monthly if available, else lifetime.
-  let frequency: 'monthly' | 'lifetime' = monthly.length > 0 ? 'monthly' : 'lifetime';
-  let monthlyKey =
-    monthly.find((tier) => tier.key === DEFAULT_MONTHLY)?.key ?? monthly[0]?.key ?? '';
+  // Selection state: the locale's preferred frequency when it is offered,
+  // else the first offered one; the default amount when the frequency has it.
+  const preferred = DEFAULT_FREQUENCY_BY_LOCALE[locale];
+  let frequency: Frequency =
+    preferred && offered.includes(preferred) ? preferred : (offered[0] ?? 'monthly');
+  let selectedKey = '';
 
-  // Frequency segment (only when both options exist).
   const freqSegment = document.createElement('div');
   freqSegment.className = 'patron-segment patron-frequency';
   const amountSegment = document.createElement('div');
   amountSegment.className = 'patron-segment patron-amounts';
-
-  const syncAmountsVisibility = (): void => {
-    amountSegment.style.display = frequency === 'monthly' ? '' : 'none';
-  };
-
-  if (monthly.length > 0 && lifetime) {
-    const monthlyBtn = segmentButton(
-      t('patron.frequencyMonthly', {}, locale),
-      frequency === 'monthly',
-    );
-    const lifetimeBtn = segmentButton(
-      t('patron.frequencyLifetime', {}, locale),
-      frequency === 'lifetime',
-    );
-    monthlyBtn.addEventListener('click', () => {
-      frequency = 'monthly';
-      selectOne(freqSegment, monthlyBtn);
-      syncAmountsVisibility();
-    });
-    lifetimeBtn.addEventListener('click', () => {
-      frequency = 'lifetime';
-      selectOne(freqSegment, lifetimeBtn);
-      syncAmountsVisibility();
-    });
-    freqSegment.append(monthlyBtn, lifetimeBtn);
-    form.append(freqSegment);
-  }
-
-  // Amount segment for monthly tiers.
-  for (const tier of monthly) {
-    const btn = segmentButton(TIER_AMOUNT[tier.key] ?? tier.key, tier.key === monthlyKey);
-    btn.classList.add('patron-amount-btn');
-    btn.addEventListener('click', () => {
-      monthlyKey = tier.key;
-      selectOne(amountSegment, btn);
-    });
-    amountSegment.append(btn);
-  }
-  if (monthly.length > 0) {
-    form.append(amountSegment);
-    syncAmountsVisibility();
-  }
-
-  // Donate button.
   const donateBtn = document.createElement('button');
   donateBtn.type = 'button';
   donateBtn.className = 'patron-donate-btn';
-  donateBtn.textContent = t('patron.donate', {}, locale);
+
+  const amountOf = (key: string): string => key.slice(key.indexOf('_') + 1);
+  const renderFrequency = (): void => {
+    const options = byFrequency[frequency];
+    selectedKey =
+      options.find((tier) => amountOf(tier.key) === DEFAULT_AMOUNT)?.key ?? options[0]?.key ?? '';
+    amountSegment.replaceChildren();
+    for (const tier of options) {
+      const btn = segmentButton(TIER_AMOUNT[tier.key] ?? tier.key, tier.key === selectedKey);
+      btn.classList.add('patron-amount-btn');
+      btn.addEventListener('click', () => {
+        selectedKey = tier.key;
+        selectOne(amountSegment, btn);
+      });
+      amountSegment.append(btn);
+    }
+    donateBtn.textContent = t(
+      frequency === 'monthly' ? 'patron.donate' : 'patron.donateOnce',
+      {},
+      locale,
+    );
+  };
+
+  // Frequency segment (only when both options exist).
+  if (offered.length > 1) {
+    const labelFor: Record<Frequency, I18nKey> = {
+      monthly: 'patron.frequencyMonthly',
+      once: 'patron.frequencyOnce',
+    };
+    for (const option of offered) {
+      const btn = segmentButton(t(labelFor[option], {}, locale), option === frequency);
+      btn.dataset.frequency = option;
+      btn.addEventListener('click', () => {
+        frequency = option;
+        selectOne(freqSegment, btn);
+        renderFrequency();
+      });
+      freqSegment.append(btn);
+    }
+    form.append(freqSegment);
+  }
+
+  renderFrequency();
   donateBtn.addEventListener('click', () => {
-    const tier = frequency === 'monthly' ? monthlyKey : (lifetime?.key ?? '');
-    if (tier) void startCheckout(tier, donateBtn, locale);
+    if (selectedKey) void startCheckout(selectedKey, donateBtn, locale);
   });
-  form.append(donateBtn);
+  form.append(amountSegment, donateBtn);
 
   if (!user) form.append(note(t('patron.signInFirst', {}, locale)));
   return form;

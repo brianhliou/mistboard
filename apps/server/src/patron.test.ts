@@ -7,11 +7,17 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
 import Stripe from 'stripe';
-import { findPatronTier, loadPatronConfig, PATRON_TIERS } from './patron-config.js';
-import type { PatronTransaction } from './persistence.js';
-import { PATRON_ACTIVE_STATUSES } from './persistence-patron.js';
 import {
-  lifetimeInputFromSession,
+  findPatronTier,
+  loadPatronConfig,
+  oneTimeMonthsForAmount,
+  PATRON_TIERS,
+} from './patron-config.js';
+import type { PatronTransaction } from './persistence.js';
+import { PATRON_ACTIVE_STATUSES, PATRON_ONE_TIME_STATUS } from './persistence-patron.js';
+import {
+  addMonths,
+  oneTimeInputFromSession,
   processWebhookEvent,
   resolveAccountIdFromMetadata,
   subscriptionInputFromStripe,
@@ -33,9 +39,11 @@ function session(overrides: Record<string, unknown>): Stripe.Checkout.Session {
   return {
     id: 'cs_123',
     mode: 'payment',
+    payment_status: 'paid',
+    amount_total: 2000,
     customer: 'cus_123',
     client_reference_id: 'acct_1',
-    metadata: { tier: 'lifetime', mistboard_account_id: 'acct_1' },
+    metadata: { tier: 'once_20', mistboard_account_id: 'acct_1' },
     ...overrides,
   } as unknown as Stripe.Checkout.Session;
 }
@@ -76,20 +84,75 @@ test('subscription with no tier metadata yields a null tier, never a guess', () 
   assert.equal(input.tier, null);
 });
 
-// ── one-time / lifetime mapping ──────────────────────────────────────────────
-test('payment-mode checkout completion is a lifetime donation', () => {
-  const input = lifetimeInputFromSession(session({}), 'acct_1', 'cus_123');
+// ── one-time mapping ─────────────────────────────────────────────────────────
+const NOW = new Date('2026-09-20T10:00:00.000Z');
+
+test("a paid payment-mode checkout grants the badge for the tier's months", () => {
+  const input = oneTimeInputFromSession(session({}), 'acct_1', 'cus_123', NOW);
   assert.ok(input);
-  assert.equal(input.isLifetime, true);
-  assert.equal(input.status, 'lifetime');
+  assert.equal(input.isLifetime, false);
+  assert.equal(input.status, PATRON_ONE_TIME_STATUS);
   assert.equal(input.stripeSubscriptionId, null);
-  assert.equal(input.tier, 'lifetime');
-  assert.equal(input.currentPeriodEnd, null);
+  assert.equal(input.tier, 'once_20');
+  // $20 one-time = four months, lichess's one month per $5.
+  assert.equal(input.currentPeriodEnd?.toISOString(), '2027-01-20T10:00:00.000Z');
 });
 
-test('subscription-mode checkout completion is NOT a lifetime row', () => {
+test('an unpaid payment-mode completion grants nothing (a delayed method pays later)', () => {
+  assert.equal(
+    oneTimeInputFromSession(session({ payment_status: 'unpaid' }), 'acct_1', 'cus_123', NOW),
+    null,
+  );
+  assert.equal(
+    oneTimeInputFromSession(
+      session({ payment_status: 'no_payment_required' }),
+      'acct_1',
+      'cus_123',
+      NOW,
+    ),
+    null,
+  );
+});
+
+test('an unknown one-time tier key falls back to the amount paid, never to zero months', () => {
+  const input = oneTimeInputFromSession(
+    session({ metadata: { tier: 'lifetime' }, amount_total: 5000 }),
+    'acct_1',
+    'cus_123',
+    NOW,
+  );
+  assert.ok(input);
+  assert.equal(input.tier, 'lifetime');
+  assert.equal(input.currentPeriodEnd?.toISOString(), '2027-07-20T10:00:00.000Z');
+});
+
+test('one-time months derive from the amount: one per $5, floor, never below one', () => {
+  assert.equal(oneTimeMonthsForAmount(500), 1);
+  assert.equal(oneTimeMonthsForAmount(2000), 4);
+  assert.equal(oneTimeMonthsForAmount(2499), 4);
+  assert.equal(oneTimeMonthsForAmount(100), 1);
+  assert.equal(oneTimeMonthsForAmount(0), 1);
+  assert.equal(oneTimeMonthsForAmount(null), 1);
+});
+
+test('addMonths clamps to the last day of the target month', () => {
+  assert.equal(
+    addMonths(new Date('2026-01-31T12:00:00.000Z'), 1).toISOString(),
+    '2026-02-28T12:00:00.000Z',
+  );
+  assert.equal(
+    addMonths(new Date('2026-10-31T00:00:00.000Z'), 4).toISOString(),
+    '2027-02-28T00:00:00.000Z',
+  );
+  assert.equal(
+    addMonths(new Date('2026-09-20T10:00:00.000Z'), 10).toISOString(),
+    '2027-07-20T10:00:00.000Z',
+  );
+});
+
+test('subscription-mode checkout completion is NOT a one-time row', () => {
   // The recurring row is written by the customer.subscription.* event instead.
-  const input = lifetimeInputFromSession(session({ mode: 'subscription' }), 'acct_1', 'cus_123');
+  const input = oneTimeInputFromSession(session({ mode: 'subscription' }), 'acct_1', 'cus_123');
   assert.equal(input, null);
 });
 
@@ -118,11 +181,22 @@ test('only active + trialing count as active patron statuses', () => {
 // ── tier catalog / config ────────────────────────────────────────────────────
 test('tier catalog: valid keys resolve, unknown keys reject', () => {
   assert.equal(findPatronTier('monthly_10')?.mode, 'subscription');
-  assert.equal(findPatronTier('lifetime')?.isLifetime, true);
+  assert.equal(findPatronTier('monthly_10')?.months, null);
+  assert.equal(findPatronTier('once_10')?.mode, 'payment');
+  assert.equal(findPatronTier('once_10')?.months, 2);
+  assert.equal(findPatronTier('lifetime'), null);
   assert.equal(findPatronTier('monthly_999'), null);
   assert.equal(findPatronTier(''), null);
-  // Exactly one lifetime (payment) tier; the rest are recurring.
-  assert.equal(PATRON_TIERS.filter((t) => t.isLifetime).length, 1);
+  // The same amount ladder under both frequencies: every monthly amount has a
+  // one-time twin, so the page can swap frequency without changing the amounts.
+  const amounts = (mode: string) =>
+    PATRON_TIERS.filter((t) => t.mode === mode).map((t) => t.key.split('_')[1]);
+  assert.deepEqual(amounts('subscription'), ['5', '10', '20', '50']);
+  assert.deepEqual(amounts('payment'), ['5', '10', '20', '50']);
+  // One-time badge months follow the amount, one month per $5.
+  for (const tier of PATRON_TIERS.filter((t) => t.mode === 'payment')) {
+    assert.equal(tier.months, Number(tier.key.split('_')[1]) / 5);
+  }
 });
 
 test('config is null without both Stripe secrets (fail closed)', () => {
@@ -136,11 +210,11 @@ test('config builds a price map only for tiers whose price env var is set', () =
     STRIPE_SECRET_KEY: 'sk_test_x',
     STRIPE_WEBHOOK_SECRET: 'whsec_x',
     STRIPE_PRICE_MONTHLY_10: 'price_10',
-    STRIPE_PRICE_LIFETIME: 'price_life',
+    STRIPE_PRICE_ONCE_10: 'price_once_10',
   });
   assert.ok(config);
   assert.equal(config.priceByTier.get('monthly_10'), 'price_10');
-  assert.equal(config.priceByTier.get('lifetime'), 'price_life');
+  assert.equal(config.priceByTier.get('once_10'), 'price_once_10');
   // monthly_5 has no env var set -> not offered.
   assert.equal(config.priceByTier.has('monthly_5'), false);
 });

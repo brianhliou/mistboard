@@ -375,9 +375,11 @@ export {
 export type { PatronSubscriptionInput, PatronTransaction } from './persistence-patron.js';
 export {
   applyPatronSubscription,
+  expireLapsedPatrons,
   findAccountIdByStripeCustomerId,
   getStripeCustomerId,
   PATRON_ACTIVE_STATUSES,
+  PATRON_ONE_TIME_STATUS,
   processStripeEvent,
   setStripeCustomerId,
 } from './persistence-patron.js';

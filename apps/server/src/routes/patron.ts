@@ -17,10 +17,12 @@ import { createAuthRateLimiter } from './../auth-rate-limit.js';
 import {
   findPatronTier,
   isPatronConfigured,
+  oneTimeMonthsForAmount,
   PATRON_TIERS,
   patronConfig,
 } from './../patron-config.js';
 import * as persistence from './../persistence.js';
+import { PATRON_ONE_TIME_STATUS } from './../persistence-patron.js';
 import { getStripeClient } from './../stripe-client.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
@@ -62,7 +64,7 @@ function handleConfig(request: IncomingMessage, response: ServerResponse): void 
   const config = patronConfig();
   const availableTiers = PATRON_TIERS.filter(
     (tier) => config?.priceByTier.has(tier.key) ?? false,
-  ).map((tier) => ({ key: tier.key, mode: tier.mode, isLifetime: tier.isLifetime }));
+  ).map((tier) => ({ key: tier.key, mode: tier.mode }));
   writeJson(response, 200, {
     configured: config !== null && availableTiers.length > 0,
     tiers: availableTiers,
@@ -245,7 +247,8 @@ export async function applyEvent(
   transaction?: persistence.PatronTransaction,
 ): Promise<void> {
   switch (event.type) {
-    case 'checkout.session.completed': {
+    case 'checkout.session.completed':
+    case 'checkout.session.async_payment_succeeded': {
       const session = event.data.object as Stripe.Checkout.Session;
       const customerId = idOf(session.customer);
       const accountId = await resolveAccount(
@@ -255,7 +258,7 @@ export async function applyEvent(
         transaction,
       );
       if (!accountId) {
-        logUnresolved('checkout.session.completed', customerId);
+        logUnresolved(event.type, customerId);
         return;
       }
       // Persist the account -> customer map for both modes so the portal + future
@@ -264,7 +267,7 @@ export async function applyEvent(
       if (customerId) {
         await persistence.setStripeCustomerId(accountId, customerId, transaction);
       }
-      const input = lifetimeInputFromSession(session, accountId, customerId);
+      const input = oneTimeInputFromSession(session, accountId, customerId);
       if (input) await persistence.applyPatronSubscription(input, transaction);
       return;
     }
@@ -290,26 +293,59 @@ export async function applyEvent(
   }
 }
 
-// A completed Checkout in `payment` mode is a one-time / lifetime donation.
+// A completed Checkout in `payment` mode is a one-time payment: it carries the
+// badge for a fixed number of months from now (the tier's, or derived from the
+// amount when the tier key is unknown), then lapses under the expiry sweep.
+// Only a session Stripe reports as PAID grants anything: Alipay, WeChat Pay and
+// cards confirm synchronously, so `checkout.session.completed` already says
+// `paid`; a delayed method completes `unpaid` and pays later through
+// `checkout.session.async_payment_succeeded`, which lands here too (Stripe sends
+// it only for a session that completed unpaid, so one session grants once).
 // `subscription` mode completions are handled by the customer.subscription.*
 // events, so this returns null for them (the customer map is persisted by the
-// caller regardless). Pure: no DB, no I/O — unit-tested directly.
-export function lifetimeInputFromSession(
+// caller regardless). Pure: no DB, no I/O.
+export function oneTimeInputFromSession(
   session: Stripe.Checkout.Session,
   accountId: string,
   customerId: string | null,
+  now: Date = new Date(),
 ): persistence.PatronSubscriptionInput | null {
   if (session.mode !== 'payment') return null;
+  if (session.payment_status !== 'paid') return null;
+  const tierKey = session.metadata?.tier ?? null;
+  const tier = tierKey ? findPatronTier(tierKey) : null;
+  const months = tier?.months ?? oneTimeMonthsForAmount(session.amount_total);
   return {
     accountId,
     stripeCustomerId: customerId,
     stripeSubscriptionId: null,
-    status: 'lifetime',
-    tier: session.metadata?.tier ?? 'lifetime',
-    currentPeriodEnd: null,
+    status: PATRON_ONE_TIME_STATUS,
+    tier: tierKey,
+    currentPeriodEnd: addMonths(now, months),
     cancelAtPeriodEnd: false,
-    isLifetime: true,
+    isLifetime: false,
   };
+}
+
+// Calendar months, UTC, clamped to the last day of the target month so a
+// payment on the 31st never spills into the month after.
+export function addMonths(from: Date, months: number): Date {
+  const target = new Date(
+    Date.UTC(
+      from.getUTCFullYear(),
+      from.getUTCMonth() + months,
+      1,
+      from.getUTCHours(),
+      from.getUTCMinutes(),
+      from.getUTCSeconds(),
+      from.getUTCMilliseconds(),
+    ),
+  );
+  const lastDay = new Date(
+    Date.UTC(target.getUTCFullYear(), target.getUTCMonth() + 1, 0),
+  ).getUTCDate();
+  target.setUTCDate(Math.min(from.getUTCDate(), lastDay));
+  return target;
 }
 
 // Map a Stripe subscription object to our upsert input. Pure: no DB, no I/O —

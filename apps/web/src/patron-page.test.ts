@@ -75,6 +75,130 @@ describe('patron card when checkout is not configured', () => {
   });
 });
 
+// Checkout open with both frequencies. The form is the whole choice: a
+// frequency, an amount, one button. Which payment methods each frequency can
+// take is Stripe Checkout's knowledge, never this page's, so the card names
+// no method and carries no caveat (docs-private/patron-track.md, 2026-09-20).
+describe('patron card with monthly and one-time tiers configured', () => {
+  const tiers = [
+    ...['monthly_5', 'monthly_10', 'monthly_20', 'monthly_50'].map((key) => ({
+      key,
+      mode: 'subscription',
+    })),
+    ...['once_5', 'once_10', 'once_20', 'once_50'].map((key) => ({ key, mode: 'payment' })),
+  ];
+  const checkoutCalls: string[] = [];
+
+  beforeEach(() => {
+    checkoutCalls.length = 0;
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+        const url = String(input);
+        if (url.includes('/api/patron/config')) {
+          return new Response(JSON.stringify({ configured: true, tiers }), {
+            headers: { 'content-type': 'application/json' },
+          });
+        }
+        if (url.includes('/api/patron/checkout')) {
+          checkoutCalls.push(String(init?.body));
+          return new Response('{}', { status: 401 });
+        }
+        return new Response('{}', { status: 401 });
+      }),
+    );
+    vi.stubGlobal('location', { ...window.location, assign: vi.fn() });
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  const frequencyButtons = (page: HTMLElement) => [
+    ...page.querySelectorAll<HTMLButtonElement>('.patron-frequency .patron-segment-btn'),
+  ];
+  const amounts = (page: HTMLElement) =>
+    [...page.querySelectorAll<HTMLElement>('.patron-amount-btn')].map((el) => el.textContent);
+  const selectedFrequency = (page: HTMLElement) =>
+    page.querySelector<HTMLButtonElement>('.patron-frequency .is-selected')?.dataset.frequency;
+
+  it('offers Monthly and One-time with the same amount ladder', async () => {
+    const page = buildPatronPage('en');
+    document.body.append(page);
+    await settle();
+
+    expect(frequencyButtons(page).map((b) => b.textContent)).toEqual(['Monthly', 'One-time']);
+    expect(selectedFrequency(page)).toBe('monthly');
+    expect(amounts(page)).toEqual(['$5', '$10', '$20', '$50']);
+    expect(page.querySelector('.patron-donate-btn')?.textContent).toBe('Subscribe');
+
+    frequencyButtons(page)[1]?.click();
+    expect(selectedFrequency(page)).toBe('once');
+    expect(amounts(page)).toEqual(['$5', '$10', '$20', '$50']);
+    expect(page.querySelector('.patron-donate-btn')?.textContent).toBe('Pay once');
+  });
+
+  it('sends the tier key for the chosen frequency and amount, never an amount', async () => {
+    const page = buildPatronPage('en');
+    document.body.append(page);
+    await settle();
+
+    frequencyButtons(page)[1]?.click();
+    page.querySelectorAll<HTMLButtonElement>('.patron-amount-btn')[2]?.click();
+    page.querySelector<HTMLButtonElement>('.patron-donate-btn')?.click();
+    await settle();
+
+    expect(checkoutCalls).toEqual([JSON.stringify({ tier: 'once_20' })]);
+  });
+
+  it('opens on One-time for a zh-Hans reader, by data rather than by copy', async () => {
+    const page = buildPatronPage('zh-Hans');
+    document.body.append(page);
+    await settle();
+
+    expect(selectedFrequency(page)).toBe('once');
+    expect(page.querySelector('.patron-donate-btn')?.textContent).toBe('单次付款');
+
+    const hant = buildPatronPage('zh-Hant');
+    document.body.append(hant);
+    await settle();
+    expect(selectedFrequency(hant)).toBe('monthly');
+  });
+
+  it('names no payment method and carries no caveat in the card', async () => {
+    for (const locale of ['en', 'zh-Hans', 'zh-Hant'] as const) {
+      const page = buildPatronPage(locale);
+      document.body.append(page);
+      await settle();
+
+      const card = page.querySelector('.patron-card')?.textContent ?? '';
+      expect(card).not.toMatch(/alipay|wechat|支付宝|支付寶|微信|card|银行卡|信用卡|note/i);
+      expect(card).not.toMatch(/cannot|can't|not available|不能|无法|無法/);
+      document.body.innerHTML = '';
+    }
+  });
+
+  it('shows only the amount segment when a single frequency is configured', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => {
+        return new Response(
+          JSON.stringify({ configured: true, tiers: tiers.filter((t) => t.mode === 'payment') }),
+          { headers: { 'content-type': 'application/json' } },
+        );
+      }),
+    );
+    const page = buildPatronPage('en');
+    document.body.append(page);
+    await settle();
+
+    expect(page.querySelector('.patron-frequency')).toBeNull();
+    expect(amounts(page)).toEqual(['$5', '$10', '$20', '$50']);
+    expect(page.querySelector('.patron-donate-btn')?.textContent).toBe('Pay once');
+  });
+});
+
 // The baked /patron frame. `dist/patron.html` is served as-is by
 // servePrerenderedPage, so whatever this returns IS the page a crawler, a
 // no-JS reader, or a payment processor fetching the URL gets. It shipped as an
