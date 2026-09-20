@@ -372,11 +372,16 @@ export {
   markNotificationsSeen,
   unreadWatchedForumTopics,
 } from './persistence-notifications.js';
-export type { PatronSubscriptionInput, PatronTransaction } from './persistence-patron.js';
+export type {
+  PatronStanding,
+  PatronSubscriptionInput,
+  PatronTransaction,
+} from './persistence-patron.js';
 export {
   applyPatronSubscription,
   expireLapsedPatrons,
   findAccountIdByStripeCustomerId,
+  getPatronStanding,
   getStripeCustomerId,
   PATRON_ACTIVE_STATUSES,
   PATRON_ONE_TIME_STATUS,

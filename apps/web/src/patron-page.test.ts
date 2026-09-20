@@ -1,4 +1,5 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { type AuthUser, setAccountNavUser } from './account-nav.js';
 import { buildPatronPage, renderPatronShellForPrerender } from './patron-page.js';
 
 // The card hydrates asynchronously off /api/patron/config and the cached user.
@@ -196,6 +197,67 @@ describe('patron card with monthly and one-time tiers configured', () => {
     expect(page.querySelector('.patron-frequency')).toBeNull();
     expect(amounts(page)).toEqual(['$5', '$10', '$20', '$50']);
     expect(page.querySelector('.patron-donate-btn')?.textContent).toBe('Pay once');
+  });
+});
+
+// A signed-in patron. What the badge rests on decides the card: a subscriber
+// gets the portal; a one-time patron gets the end date and keeps the form,
+// since there is nothing to manage and they may want to extend or subscribe.
+describe('patron card for a current patron', () => {
+  const tiers = [
+    { key: 'monthly_10', mode: 'subscription' },
+    { key: 'once_10', mode: 'payment' },
+  ];
+  const stub = (status: { subscription: boolean; until: string | null }) => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (input: RequestInfo | URL) => {
+        const url = String(input);
+        const json = (body: unknown) =>
+          new Response(JSON.stringify(body), { headers: { 'content-type': 'application/json' } });
+        if (url.includes('/api/patron/config')) return json({ configured: true, tiers });
+        if (url.includes('/api/patron/status')) return json({ active: true, ...status });
+        return new Response('{}', { status: 401 });
+      }),
+    );
+    setAccountNavUser({ id: 'u1', handle: 'p', isPatron: true } as unknown as AuthUser);
+  };
+
+  afterEach(() => {
+    setAccountNavUser(null);
+    vi.unstubAllGlobals();
+    document.body.innerHTML = '';
+  });
+
+  it('offers the billing portal to a subscriber', async () => {
+    stub({ subscription: true, until: null });
+    const page = buildPatronPage('en');
+    document.body.append(page);
+    await settle();
+    await settle();
+
+    const card = page.querySelector('.patron-card');
+    expect(card?.querySelector('.patron-thankyou')?.textContent).toBe(
+      'You are a Patron. Thank you.',
+    );
+    expect(card?.querySelector('.patron-donate-btn')?.textContent).toBe('Manage your subscription');
+    expect(card?.querySelector('.patron-form')).toBeNull();
+  });
+
+  it('tells a one-time patron how long the badge runs and keeps the form', async () => {
+    stub({ subscription: false, until: '2026-10-20T22:08:40.000Z' });
+    const page = buildPatronPage('en');
+    document.body.append(page);
+    await settle();
+    await settle();
+
+    const card = page.querySelector('.patron-card');
+    expect(card?.querySelector('.patron-thankyou')?.textContent).toBe(
+      'You are a Patron until October 20, 2026. Thank you.',
+    );
+    expect(card?.textContent).not.toContain('Manage your subscription');
+    expect(card?.querySelector('.patron-form')).not.toBeNull();
+    expect(card?.querySelector('.patron-donate-btn')?.textContent).toBe('Subscribe');
   });
 });
 

@@ -297,6 +297,7 @@ export const ZH_HANS_CONTENT = {
   'patron.donateOnce': '单次付款',
   'patron.manage': '管理你的订阅',
   'patron.alreadyPatron': '你已经是赞助者。谢谢。',
+  'patron.patronUntil': '你的赞助者身份有效至 {date}。谢谢。',
   'patron.signInFirst': '登录后继续',
   'patron.unavailable': '结账还没开放，不会产生任何扣款。请稍后再来。',
   'patron.checkoutError': '发起结账时出了问题，请重试。',
