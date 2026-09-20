@@ -82,6 +82,7 @@ Conventions:
 
 ### Removed
 
+- The "still face-down" panel in the Jieqi room: Jieqi reveals a captured hidden piece to the capturer only, so the panel could not know which of your own hidden pieces were already gone and listed them anyway; the captured strips carry the same facts. Banqi and Flip Jungle keep theirs ([bbfad4c0](https://github.com/brianhliou/mistboard/commit/bbfad4c0))
 - The homepage YouTube video strip is gone; the video library stays at /videos ([ac73fcf7](https://github.com/brianhliou/mistboard/commit/ac73fcf7))
 - The play streak, a day after it shipped: with nothing showing in the room it was a number on the profile that mostly read zero; the puzzle streak stays and now sits on the Puzzles heading line instead of in its own block ([b1ec937d](https://github.com/brianhliou/mistboard/commit/b1ec937d))
 - Eleven unlaunched variants are gone from the code, one commit each: Crossroads Chess and Dark Crossroads Chess, Fog Shogi, Drop Mini Xiangqi, Dark Mini Xiangqi and Mini Xiangqi with their puzzles, Reveal Chess, Dark Crazyhouse, Kriegspiel, Luzhanqi, and Dark Draft960 together with the whole pregame draft phase of Fog Chess. Their rules pages answer 410; finished games of theirs still replay. Five reserved-but-unbuilt spec ids went with them. Measured on the commit before and after: 551,242 → 477,016 source lines (−13.5%), 24 → 10 registered variants, 18 → 9 rating pools, 54 dead lazy chunks out of the web build; CI time unchanged ([2bf6490e](https://github.com/brianhliou/mistboard/commit/2bf6490e) through [ef6d463e](https://github.com/brianhliou/mistboard/commit/ef6d463e), #396)
@@ -92,6 +93,7 @@ Conventions:
 
 ### Fixed
 
+- Stepping back through the move list in a live game no longer moves the whole right rail: the "Viewing replay" notice is gone for the seated player (the Last move arrow lights up instead, and a click on the board returns to live), the captured-pieces band keeps its height whether or not anything was captured, and captured discs in the room are a little larger ([bbfad4c0](https://github.com/brianhliou/mistboard/commit/bbfad4c0))
 - The Traditional Chinese rules pages read as Traditional all the way through; the Banqi page's opening paragraphs, capture rule, search snippet and closing links had been showing Simplified under a Traditional title since July, and a test now catches any page that slips back ([8e2e720e](https://github.com/brianhliou/mistboard/commit/8e2e720e))
 - Share-card images (the picture a link to a game, study chapter or article shows in chat) are drawn off the server's main thread; a crawler fetching hundreds of them used to stall every live game on the site for a second per picture ([20c1a4dd](https://github.com/brianhliou/mistboard/commit/20c1a4dd))
 - The homepage board shows 1-0, 0-1 or ½-½ as soon as the game it was following ends, instead of holding the final clocks until a refresh; and changing the piece set repaints it at once on Jieqi, Banqi, Fortress and Fog Xiangqi games, as it already did on Xiangqi, Atomic and Duck ([7bda2d4d](https://github.com/brianhliou/mistboard/commit/7bda2d4d))
