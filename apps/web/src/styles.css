@@ -2173,3 +2173,12 @@ a.replay-game-id:focus-visible {
     width: 100%;
   }
 }
+
+/* A seated player scrubbed off live: the "Last move" arrow is the way back, and
+   it carries the state the rail used to announce with a notice row (which moved
+   the whole table on every step; game-shell round-table, 2026-09-20). */
+.replay-controls button.replay-controls__return {
+  border-color: var(--site-accent);
+  color: var(--site-accent);
+  box-shadow: 0 0 0 1px var(--site-accent) inset;
+}

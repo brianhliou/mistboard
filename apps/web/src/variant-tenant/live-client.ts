@@ -539,6 +539,22 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       chrome.tickCountdowns();
     }, 100);
     document.addEventListener('keydown', (event) => replay.handleKeyboard(event, renderAll));
+    // A seated player who scrubbed back and then touches the board wants to
+    // play, not to look: return to live before the tenant's click handler runs
+    // (capture phase), so the same click can go on to select a piece. This
+    // replaces the "Viewing replay / Return to latest" notice, which the room
+    // chrome no longer inserts for a seated live game because it moved the rail.
+    refs.board.addEventListener(
+      'click',
+      () => {
+        const view = state.view;
+        if (!view || replay.isLive() || !tenant.isColor(state.seat)) return;
+        if (view.status.type !== 'playing') return;
+        replay.jumpToPly(replay.latestPly());
+        renderAll();
+      },
+      { capture: true },
+    );
     renderAll();
   }
 

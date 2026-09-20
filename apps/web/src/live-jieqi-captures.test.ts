@@ -53,38 +53,13 @@ describe('renderJieqiMaterial', () => {
     expect(labels(s.capturesBottom)).toEqual(['black horse']);
   });
 
-  it('lists an exact opponent pool and an own pool that carries the unseen capture', () => {
+  it('renders no face-down pool: the own side cannot be computed under capturer-only reveal', () => {
     const s = slots();
     renderJieqiMaterial(s, asRed, 'red');
-    const rows = [...s.hiddenPool.querySelectorAll<HTMLElement>('.hidden-pool__row')];
-    expect(rows.map((row) => row.dataset.ink)).toEqual(['black', 'red']);
-    // Black: 15 dark pieces minus the revealed cannon minus the captured horse;
-    // the general is never in the pool.
-    expect(labels(rows[0]!)).toEqual([
-      'Black chariot x2',
-      'Black cannon',
-      'Black horse',
-      'Black elephant x2',
-      'Black advisor x2',
-      'Black soldier x5',
-    ]);
-    expect(rows[0]!.querySelector('.hidden-pool__note')).toBeNull();
-    // Red: 15 minus the chariot red saw taken. The dark piece black took is
-    // still listed (red cannot subtract it) and the note says so.
-    expect(labels(rows[1]!)).toEqual([
-      'Red chariot',
-      'Red cannon x2',
-      'Red horse x2',
-      'Red elephant x2',
-      'Red advisor x2',
-      'Red soldier x5',
-    ]);
-    expect(rows[1]!.querySelector('.hidden-pool__note')?.textContent).toBe(
-      '1 of these already taken, unknown which',
-    );
+    expect(s.hiddenPool.childElementCount).toBe(0);
   });
 
-  it('shows nothing for a spectator: an empty board is no information, not a full pool', () => {
+  it('shows nothing for a spectator: an empty board is no information', () => {
     const s = slots();
     renderJieqiMaterial(s, { ...asRed, board: {}, captured: [] }, 'red');
     expect(s.hiddenPool.childElementCount).toBe(0);

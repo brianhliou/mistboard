@@ -587,13 +587,18 @@ export function createTenantRoomChrome<C extends string>(
     refs.actionSection.hidden = false;
     const view = ctx.view();
     // During normal connected play, hide the turn notice — the board, clocks,
-    // and turn flash already convey whose move it is. Keep it for a scrubbed
-    // replay ("Viewing replay") and the invite window ("Invite opponent").
+    // and turn flash already convey whose move it is. Scrubbing the move list
+    // stays hidden too: the notice used to appear for a scrubbed replay
+    // ("Viewing replay"), which inserted a 70px row into the rail on every
+    // step back and pushed the whole table around (2026-09-20). The scrubbed
+    // state is carried by the replay controls (the "Last move" button lights
+    // up) and by the board itself (a click on it jumps back to live), neither
+    // of which changes the layout. The invite window ("Invite opponent") still
+    // shows, and a spectator or a finished room keeps the notice as before.
     if (
       view?.status.type === 'playing' &&
       seatColor() !== null &&
       ctx.connectionState() === 'connected' &&
-      ctx.isReplayLive() &&
       !waitingForOpponent()
     ) {
       refs.actionSection.hidden = true;

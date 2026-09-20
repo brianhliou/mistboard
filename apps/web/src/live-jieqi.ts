@@ -22,10 +22,8 @@ import type {
   JieqiPieceRole,
   JieqiSquare,
 } from '@mistboard/game';
-import { jieqiHiddenPool } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
-import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
@@ -341,24 +339,26 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
   if (core?.state.view) renderBoard(liveRefs, core.state.view);
 }
 
-// ── Material: captured pools + the face-down pool ────────────────────────────
+// ── Material: captured pools ─────────────────────────────────────────────────
 
 // Lichess convention: a player's captured material sits next to that player.
 // The bottom strip is the viewer's side, so it shows the pieces the viewer has
 // captured (the opponent's lost pieces); the top strip is the opponent's side,
 // so it shows the pieces the opponent has captured (the viewer's lost pieces).
 // A null role (a dark piece the viewer did not capture, so cannot identify)
-// renders as a shrouded "?" tile. Under the strips, the face-down pool lists
-// what each side still has unrevealed AS THIS VIEWER KNOWS IT: the opponent's
-// pool is exact (the viewer was told every dark piece they took), the viewer's
-// own pool still holds the dark pieces the opponent took, noted as "already
-// taken, unknown which".
+// renders as a shrouded "?" tile. Jieqi does NOT render the "still face-down"
+// pool the other flip variants do (hidden-pool-panel.ts): under capturer-only
+// reveal the viewer's own pool cannot be computed (the dark pieces the opponent
+// took are unknown to them), and a row that lists pieces which may already be
+// gone was read as a bug (2026-09-20). The strips carry the same facts; the
+// player does the subtraction. The hiddenPool slot is cleared so a variant
+// switch never leaves a stale panel behind.
 function renderCapturedPools(liveRefs: LiveRefs, view: JieqiWireView | null): void {
   renderJieqiMaterial(liveRefs, view, orientationFor(view));
 }
 
 // Exported for unit testing the material data path (revealed identity vs an
-// unidentifiable "?" dark piece, per-side pools) without a live socket — same
+// unidentifiable "?" dark piece) without a live socket — same
 // extraction rationale as live-jieqi-render / live-jieqi-interaction.
 export function renderJieqiMaterial(
   slots: Pick<LiveRefs, 'capturesTop' | 'capturesBottom' | 'hiddenPool'>,
@@ -382,19 +382,6 @@ export function renderJieqiMaterial(
   const opponent: JieqiColor = viewer === 'red' ? 'black' : 'red';
   fillCapturedPoolWith(slots.capturesTop, view.captured, viewer, glyph, hidden);
   fillCapturedPoolWith(slots.capturesBottom, view.captured, opponent, glyph, hidden);
-  const pool = jieqiHiddenPool(view);
-  renderHiddenPoolPanel(
-    slots.hiddenPool,
-    [
-      { color: opponent, label: jieqiInkLabel(opponent), side: pool[opponent] },
-      { color: viewer, label: jieqiInkLabel(viewer), side: pool[viewer] },
-    ],
-    glyph,
-  );
-}
-
-function jieqiInkLabel(ink: JieqiColor): string {
-  return ink === 'red' ? 'Red' : 'Black';
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────
