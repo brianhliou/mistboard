@@ -46,6 +46,16 @@ const ZH_HANS: Record<string, string> = {
   'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.':
     '首页和统计页上的已完成对局数，现在只计入自六月网站上线以来访客之间、或访客与引擎之间已完成的对局。引擎对引擎的比赛、我们自己的测试对局，以及在还没有其他人发现这个网站之前我们自己下的棋，都不计入。这样一来，数字降到了原来所显示的三分之一左右；另外三分之二是我们自己。',
   'See the statistics': '查看统计',
+  // ── 2026-09-20 (jieqi own-pool fix + open challenges) ──
+  'The Jieqi bot no longer knows which of your captures took its hidden pieces.':
+    '揭棋电脑不再知道你吃掉的是它哪些暗子。',
+  "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
+    '揭棋里，被吃掉的暗子只有吃子的一方知道是什么。此前电脑拿到的是它自己按真实局面剩余的暗子，所以你每吃掉它一个暗子，它就知道自己失去了什么，并据此重新估算其余暗子。现在它只按它这个座位的棋手能知道的信息来判断。它吃掉的对方棋子仍然对它可见，这是规则允许的。',
+  'Read the changelog': '查看更新记录',
+  'Wanted: a neural network for Jieqi.': '征集：揭棋神经网络。',
+  "Our Jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the Jieqi bot for players.":
+    '我们的揭棋电脑是手写的传统引擎，强手能赢它。皮卡鱼的揭棋分支有搜索和专为揭棋设计的 NNUE 结构，但从未发布过可加载的权重；我们用传统引擎自己的评估训练过十个网络，没有一个能赢过它。如果你的网络在两百局对抗中赢了它，它就会成为本站的电脑，并署上你的名字。暗棋和斗兽棋以同样的条件开放，棋手还可以挑战与揭棋电脑的八局三胜。',
+  'See the open challenges': '查看公开挑战',
   // ── 2026-09-17 (Atomic Xiangqi launch) ── terms follow the rules page's
   // entries in article-i18n.ts; 原子象棋 follows variant.atomicXiangqi.name.
   'Atomic Xiangqi has launched.': '原子象棋已上线。',
@@ -342,6 +352,16 @@ const ZH_HANT: Record<string, string> = {
   'The games-played number on the home page and the statistics page now counts finished games between visitors, or a visitor and a bot, since the site opened in June. Engine matches, our own test games, and the games we played before anyone else had found the site are left out. That takes the number down to about a third of what it showed; the other two thirds was us.':
     '首頁和統計頁上的已完成對局數，現在只計入自六月網站上線以來訪客之間、或訪客與引擎之間已完成的對局。引擎對引擎的比賽、我們自己的測試對局，以及在還沒有其他人發現這個網站之前我們自己下的棋，都不計入。這樣一來，數字降到了原來所顯示的三分之一左右；另外三分之二是我們自己。',
   'See the statistics': '查看統計',
+  // ── 2026-09-20 (jieqi own-pool fix + open challenges) ──
+  'The Jieqi bot no longer knows which of your captures took its hidden pieces.':
+    '揭棋電腦不再知道你吃掉的是它哪些暗子。',
+  "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
+    '揭棋裡，被吃掉的暗子只有吃子的一方知道是什麼。此前電腦拿到的是它自己按真實局面剩餘的暗子，所以你每吃掉它一個暗子，它就知道自己失去了什麼，並據此重新估算其餘暗子。現在它只按它這個座位的棋手能知道的資訊來判斷。它吃掉的對方棋子仍然對它可見，這是規則允許的。',
+  'Read the changelog': '查看更新記錄',
+  'Wanted: a neural network for Jieqi.': '徵集：揭棋類神經網路。',
+  "Our Jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the Jieqi bot for players.":
+    '我們的揭棋電腦是手寫的傳統引擎，強手能贏它。皮卡魚的揭棋分支有搜尋和專為揭棋設計的 NNUE 結構，但從未發布過可載入的權重；我們用傳統引擎自己的評估訓練過十個網路，沒有一個能贏過它。如果你的網路在兩百局對抗中贏了它，它就會成為本站的電腦，並署上你的名字。暗棋和鬥獸棋以同樣的條件開放，棋手還可以挑戰與揭棋電腦的八局三勝。',
+  'See the open challenges': '查看公開挑戰',
   // ── 2026-09-17 (Atomic Xiangqi launch) ──
   'Atomic Xiangqi has launched.': '原子象棋已上線。',
   'Chinese chess where every capture is an explosion: the piece that captures, the piece it takes and everything on the four points beside it are removed. Soldiers survive a blast; a general does not, so a capture next to the enemy general wins on the spot and you can never capture next to your own. The cannon is the one exception, its shot takes only its target. A threat to blow up the general counts as check for the repetition rule. Same set, same array, eight bot levels or a friend.':
