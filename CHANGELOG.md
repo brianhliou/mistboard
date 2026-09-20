@@ -44,6 +44,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Studies can hold standard chess: a chess chapter opens on the same review board as the other games (SAN move list, a local Fairy-Stockfish panel with its lines drawn as arrows, the judgment badge on the moved piece, drawn shapes) and embeds on other sites with the game move marked. Chess is study-only: there is no chess to play here ([a530fe14](https://github.com/brianhliou/mistboard/commit/a530fe14))
 - The Banqi, Flip Jungle, Fog Xiangqi and Fog Chess rules pages each answer whether the bot can see your hidden pieces (it cannot: face-down tiles reach it as unknown, fog bots get only their own vision), in English and both Chinese scripts, matching what the Jieqi page and the Misty post already said ([ae40e3f7](https://github.com/brianhliou/mistboard/commit/ae40e3f7))
 - The Banqi, Jungle, Xiangqi and Jieqi rules pages answer the questions people actually search: a capture-order table and a rule-variants section on Banqi (which of the three regional rulesets Mistboard plays, and why), a piece table on Xiangqi, and a common-questions block on all four, in English and both Chinese scripts ([8e2e720e](https://github.com/brianhliou/mistboard/commit/8e2e720e))
 - 心武残编 and 渊深海阔, two of the four great Qing composition manuals, are public studies (470 problems, credited to dpxq.com, held back where the record and the engine disagree); the rest of dpxq's classical shelf is seeded unlisted and follows in batches ([840ccd46](https://github.com/brianhliou/mistboard/commit/840ccd46))
@@ -93,6 +94,7 @@ Conventions:
 
 ### Fixed
 
+- An embedded study chapter that starts mid-game numbers its score sheet from the position's own move number, and a line that opens with the second mover no longer loses its first move ([a530fe14](https://github.com/brianhliou/mistboard/commit/a530fe14))
 - Stepping back through the move list in a live game no longer moves the whole right rail: the "Viewing replay" notice is gone for the seated player (the Last move arrow lights up instead, and a click on the board returns to live), the captured-pieces band keeps its height whether or not anything was captured, and captured discs in the room are a little larger ([bbfad4c0](https://github.com/brianhliou/mistboard/commit/bbfad4c0))
 - The Traditional Chinese rules pages read as Traditional all the way through; the Banqi page's opening paragraphs, capture rule, search snippet and closing links had been showing Simplified under a Traditional title since July, and a test now catches any page that slips back ([8e2e720e](https://github.com/brianhliou/mistboard/commit/8e2e720e))
 - Share-card images (the picture a link to a game, study chapter or article shows in chat) are drawn off the server's main thread; a crawler fetching hundreds of them used to stall every live game on the site for a second per picture ([20c1a4dd](https://github.com/brianhliou/mistboard/commit/20c1a4dd))
