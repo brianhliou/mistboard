@@ -30,6 +30,9 @@ const STUDY_VARIANT_IDS = [
   'dark-chess',
   'jungle',
   'jungle-flip',
+  // Study-only standard chess (2026-09-20): a board (review/chess-review.ts)
+  // and a FEN, no play route anywhere. Last, as an unlisted spec sorts.
+  'chess',
 ] as const satisfies readonly GameSpecId[];
 
 export type StudyVariantId = (typeof STUDY_VARIANT_IDS)[number];

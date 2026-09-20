@@ -186,6 +186,12 @@ export function createTenantReplayController<View>(): TenantReplayController<Vie
     for (const button of refs.replayControls) {
       const action = button.dataset.replay ?? '';
       button.disabled = controlDisabled(action);
+      // The scrubbed state lives on the controls (the "Last move" button lights
+      // up via CSS) rather than in a notice row, so stepping back never changes
+      // the rail's height. A seated player's board click also returns to live
+      // (live-client). Set on the button itself: the controls root is not on
+      // every LiveRefs shape that reaches this shell.
+      button.classList.toggle('replay-controls__return', action === 'latest' && !isLive());
       button.onclick = () => {
         handleControl(action);
         onChange();

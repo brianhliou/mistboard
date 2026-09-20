@@ -14,21 +14,31 @@
 
 /* Captured material / hands in the right rail (lichess: mat-top above the top
    clock, mat-bot below the bottom clock). The console is the size container so
-   the strips' cqw-based piece sizing resolves against the rail width, and the
-   strips lose their board-era fixed height (empty rows collapse). */
+   the strips' cqw-based piece sizing resolves against the rail width; each
+   strip keeps a reserved band (see .rail-material below). */
 .live-review__cluster .game-console {
   container-type: inline-size;
 }
 
 .live-review__cluster .rail-material {
+  /* Larger discs than the base strip (the rail has the width, and the count
+     badge needs the room); the band below is sized from this. */
+  --capture-piece-size: clamp(28px, calc((100cqw - 20px) / 10), 40px);
+
   height: auto;
-  min-height: 0;
+  /* The band is RESERVED whether or not anything was captured: the rail's
+     height must not depend on game state. Before 2026-09-20 an empty strip
+     collapsed (display: none), so the first capture grew the rail by a band and
+     every replay step that crossed a capture grew or shrank it again, and the
+     vertically centred console jumped with it. The fortress hands had already
+     made the same call (drop-mini-reserve-strip below). */
+  min-height: calc(var(--capture-piece-size) + 4px);
   padding: 2px 0;
   overflow: visible;
 }
 
 /* With the console gap collapsed (clock joins the table), keep a little air
-   between the material strips and the clock tabs; empty strips vanish. */
+   between the material strips and the clock tabs. */
 .live-review__cluster .captures-strip-top {
   margin-bottom: 6px;
 }
@@ -37,18 +47,12 @@
   margin-top: 6px;
 }
 
-.live-review__cluster .rail-material:empty {
-  display: none;
-}
-
 /* Drop-reserve strips (fortress hands) hold a FIXED band whether or not the
    pocket has pieces, so captures flowing in and out never shift the console
    under them. The band itself is defined in drop-reserve.css; the generic
-   .rail-material reset above (height:auto / min-height:0) and the :empty
-   collapse would otherwise undo it, which is exactly what made the right column
-   jump mid-game. Plain captured-material strips still collapse when empty — a
-   permanently reserved empty band is only wanted where drops are a real
-   mechanic. Both seats reserve their band independently (mat-top + mat-bot). */
+   .rail-material rule above reserves a one-disc band for plain captured
+   material, and this one sets the taller hand band. Both seats reserve their
+   band independently (mat-top + mat-bot). */
 .live-review__cluster .rail-material.drop-mini-reserve-strip,
 .live-review__cluster .rail-material.drop-mini-reserve-strip:empty {
   display: block;

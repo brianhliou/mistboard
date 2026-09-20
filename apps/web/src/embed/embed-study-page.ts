@@ -14,6 +14,7 @@
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
+import { chessChapterToReplaySpec, mountChessReplayBoard } from '../chess-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
@@ -67,6 +68,10 @@ export async function mountEmbedStudy(
   const chapter = (payload.chapters ?? []).find((c) => c.id === route.chapterId);
   if (!chapter) {
     note(root, 'This chapter is not available.');
+    return;
+  }
+  if (chapter.variant === 'chess') {
+    await mountChessEmbed(root, route, chapter, options);
     return;
   }
   const spec = studyChapterToReplaySpec(chapter);
@@ -133,6 +138,45 @@ export async function mountEmbedStudy(
               hooks,
             )
           : mountXiangqiReplayBoard(host, spec, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// A chess chapter is its own branch rather than a case in the xiangqi spec
+// conversion: that conversion re-spells UCI as ICCS (ranks 0-9), which reads
+// "e2e4" as a legal xiangqi token and lands every chess move on the wrong
+// rank. The chess board replays the tree's own UCI against the chess kernel.
+async function mountChessEmbed(
+  root: HTMLElement,
+  route: EmbedStudyRoute,
+  chapter: StudyChapterPayload,
+  options: { startPly?: number | null },
+): Promise<void> {
+  const spec = chessChapterToReplaySpec(chapter);
+  if (!spec) {
+    note(root, 'This chapter has no moves to show.');
+    return;
+  }
+  // Chapter tags are the lowercase whitelist routes/studies.ts stores: `red` is
+  // the first mover's seat (White here), as on every other variant.
+  const tags = chapter.tags ?? {};
+  const event = tags.event ?? chapter.name ?? 'Study';
+  const result = tags.result && tags.result !== '*' ? tags.result : '';
+  await mountEmbedCard(root, {
+    header: event,
+    seats: {
+      first: { name: tags.red ?? 'White', ink: 'white' },
+      second: { name: tags.black ?? 'Black', ink: 'black' },
+    },
+    result,
+    credit: {
+      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
+      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+    },
+    aspect: boardAspectForSpec('chess'),
+    railWidthPx: embedRailWidthPx('chess'),
+    startPly: options.startPly ?? 0,
+    mountBoard: async (host, hooks) => mountChessReplayBoard(host, spec, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

@@ -27,6 +27,7 @@ import { duckXiangqiFen, parseDuckXiangqiFen } from './duck-xiangqi-fen.js';
 import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
+  CHESS_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -40,7 +41,7 @@ import {
 import { jieqiStateToDealtFen, parseJieqiFen } from './jieqi-fen.js';
 import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
 import { jungleFlipStateToDealtFen, parseJungleFlipFen } from './jungle-flip-fen.js';
-import { darkChessFen, parseDarkChessFen } from './variants.js';
+import { darkChessFen, parseDarkChessFen, parseStandardChessFen } from './variants.js';
 import { createBanqiDeal, createInitialBanqiState } from './variants-banqi.js';
 import { fortressXiangqiEngineFen, parseFortressXiangqiFen } from './variants-fortress-xiangqi.js';
 import { createInitialJieqiState, createJieqiDeal } from './variants-jieqi.js';
@@ -59,6 +60,7 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
   JUNGLE_FLIP_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   ATOMIC_XIANGQI_SPEC_ID,
+  CHESS_SPEC_ID,
 ];
 
 export function hasStartFen(spec: string): boolean {
@@ -141,6 +143,11 @@ export function normalizeStartFen(spec: string, fen: string): NormalizeStartFenR
     }
     case DARK_CHESS_SPEC_ID: {
       const parsed = parseDarkChessFen(fen);
+      return parsed.ok ? { ok: true, fen: darkChessFen(parsed.state) } : parsed;
+    }
+    // Same board, same writer, the full legality bar (no opposite check).
+    case CHESS_SPEC_ID: {
+      const parsed = parseStandardChessFen(fen);
       return parsed.ok ? { ok: true, fen: darkChessFen(parsed.state) } : parsed;
     }
     // Hidden-deal variants: the canonical spelling is the six-field DEALT fen.

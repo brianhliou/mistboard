@@ -5,13 +5,19 @@
 // installSelectionClickAway) and holds its OWN selection/drag state, so the fog
 // triptych can mount three independent boards (truth + each POV) at once.
 //
-// Fog has no client engine and the renderer has no arrow/marker overlay, so
-// setArrows/setMarkers are no-ops. Pawn promotion auto-queens (the common case);
-// a promotion picker is a later refinement.
+// Arrows and markers (engine lines, drawn shapes, the judgment badge) are an
+// overlay layer above the pieces, kept across renders the way the xiangqi board
+// keeps them. Pawn promotion auto-queens (the common case); a promotion picker
+// is a later refinement.
 
 import type { Color, Move, PlayerView, Square } from '@mistboard/game';
 import { castlingKingDestinationFromView } from './chess-castling.js';
-import { darkChessPieceGhostSvg, renderDarkChessInteractiveBoardSvg } from './dark-chess-render.js';
+import {
+  type ChessBoardArrow,
+  type ChessBoardMarker,
+  darkChessPieceGhostSvg,
+  renderDarkChessInteractiveBoardSvg,
+} from './dark-chess-render.js';
 import { installBoardDrag } from './variant-tenant/board-drag.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 
@@ -27,13 +33,20 @@ export interface DarkChessInteractiveBoardOptions {
   seatFor: (view: PlayerView) => Color | null;
   enabled: () => boolean;
   onMove: (move: Move, view: PlayerView) => void;
+  /** Whether a read-only render fogs the squares the view cannot see. Fog
+   *  Chess's POV boards want it (default); the open chess study board never
+   *  does, because there every square is visible and a fog layer over a
+   *  finished position would be a lie about the game. */
+  fog?: boolean;
 }
 
 export interface DarkChessInteractiveBoard {
   render(view: PlayerView | null, perspective: Color): void;
   clearSelection(): void;
-  setArrows(): void;
-  setMarkers(): void;
+  /** Replace the arrow overlay (engine lines, drawn shapes); [] clears. Kept
+   *  across renders until the next call, the xiangqi board's contract. */
+  setArrows(arrows: readonly ChessBoardArrow[]): void;
+  setMarkers(markers: readonly ChessBoardMarker[]): void;
 }
 
 /** Legal move from → to, auto-queening a promotion (the legal set carries one
@@ -54,6 +67,8 @@ export function createDarkChessInteractiveBoard(
 ): DarkChessInteractiveBoard {
   let selectedSquare: Square | null = null;
   let draggingFrom: Square | null = null;
+  let arrows: readonly ChessBoardArrow[] = [];
+  let markers: readonly ChessBoardMarker[] = [];
 
   function render(view: PlayerView | null, perspective: Color): void {
     if (!view) {
@@ -73,10 +88,12 @@ export function createDarkChessInteractiveBoard(
       // The interactive board IS the fully-revealed truth board, so no fog; the
       // read-only POV secondaries keep theirs. In fog analysis the board you can
       // play on is the one with full information.
-      showFog: !opts.enabled(),
+      showFog: (opts.fog ?? true) && !opts.enabled(),
       selected: selectedSquare,
       targets,
       draggingFrom,
+      arrows,
+      markers,
     });
   }
 
@@ -168,5 +185,16 @@ export function createDarkChessInteractiveBoard(
     },
   });
 
-  return { render, clearSelection, setArrows: () => {}, setMarkers: () => {} };
+  return {
+    render,
+    clearSelection,
+    setArrows: (next) => {
+      arrows = next;
+      rerender();
+    },
+    setMarkers: (next) => {
+      markers = next;
+      rerender();
+    },
+  };
 }

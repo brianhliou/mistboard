@@ -204,7 +204,8 @@ test('every study-eligible spec is a real spec that can be rooted at a position'
   for (const id of [BANQI_SPEC_ID, JIEQI_SPEC_ID, JUNGLE_FLIP_SPEC_ID]) {
     assert.equal(isStudyEligibleSpecId(id), true, `${id} should be study-eligible`);
   }
-  assert.equal(isStudyEligibleSpecId('chess'), false);
+  // Study-only chess (2026-09-20): eligible for a chapter, never for a room.
+  assert.equal(isStudyEligibleSpecId('chess'), true);
   assert.equal(isStudyEligibleSpecId('not-a-variant'), false);
   assert.equal(isStudyEligibleSpecId(''), false);
 });

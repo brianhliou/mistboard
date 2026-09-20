@@ -98,6 +98,11 @@ const GATED_GAME_SPECS = {
     disabledError: 'atomic_xiangqi_disabled',
     notIntegratedError: 'atomic_xiangqi_not_integrated',
   },
+  // Study-only by design, not by omission: there is no flag to flip. Every
+  // room request answers 501 and that is the intended, permanent answer.
+  chess: {
+    notIntegratedError: 'chess_not_integrated',
+  },
 } satisfies { readonly [Id in GatedGameSpecId]: GateSpecEntry<Id> };
 
 type GateEntryUnion = (typeof GATED_GAME_SPECS)[GatedGameSpecId];

@@ -121,8 +121,16 @@ describe('tenant room chrome action status', () => {
     expect(refs.actionStatus.textContent).toContain('Room not active.');
   });
 
-  it('shows a replay notice while scrubbed off live', () => {
+  it('keeps the notice hidden while a seated player scrubs a live game', () => {
+    // The scrubbed state must not insert a row into the rail: the replay
+    // controls and the board carry it without moving the layout.
     const { chrome, refs } = chromeHarness({ isReplayLive: false });
+    chrome.renderActionStatus();
+    expect(refs.actionSection.hidden).toBe(true);
+  });
+
+  it('shows a replay notice to a spectator scrubbed off live', () => {
+    const { chrome, refs } = chromeHarness({ isReplayLive: false, seat: 'spectator' });
     chrome.renderActionStatus();
     expect(refs.actionSection.hidden).toBe(false);
     expect(refs.actionStatus.textContent).toContain('Viewing replay');
