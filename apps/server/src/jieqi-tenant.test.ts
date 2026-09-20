@@ -50,8 +50,9 @@ test('the deal is stripped from room-created before any client sees it', () => {
     assert.equal(clientEvent.type, 'room-created');
     assert.ok(!('setup' in clientEvent), `no deal leaks to ${seat}`);
   }
-  // /room/ never reveals: spectators receive no events.
-  assert.equal(jieqiClientEventFor(event, 'spectator', 0), null);
+  // The position is public: a spectator receives the same stripped event.
+  const spectatorEvent = jieqiClientEventFor(event, 'spectator', 0);
+  assert.ok(spectatorEvent && !('setup' in spectatorEvent), 'no deal leaks to a spectator');
 });
 
 test('replay reconstructs the same deal from the persisted setup', () => {
@@ -76,8 +77,11 @@ test('the client view masks every face-down identity', () => {
   assert.ok(a1 && a1.faceDown === true);
   assert.ok(!('role' in a1), 'a masked entry carries no role');
 
+  // A spectator gets the same masked board (the public view), never a role on
+  // a face-down piece and nothing to play.
   const spectator = getJieqiClientView(state, { id: 's', seat: 'spectator', solo: false });
-  assert.equal(Object.keys(spectator.board).length, 0);
+  assert.deepEqual(spectator.board, view.board);
+  assert.deepEqual(spectator.legalMoves, []);
 });
 
 test('a full jieqi game replays through the runtime identically to the kernel', () => {

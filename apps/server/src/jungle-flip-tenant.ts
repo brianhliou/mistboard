@@ -88,15 +88,14 @@ function asJungleFlipDeal(setup: unknown): JungleFlipDeal | undefined {
   return Array.isArray(setup) ? (setup as JungleFlipDeal) : undefined;
 }
 
-// Identity is hidden, position is not: moves are public to both seats. The only wire
-// redaction is stripping the server-secret deal from room-created. (Spectators get no
-// events for now — /room/ never reveals.)
+// Identity is hidden, position is not: moves are public to both seats and to a
+// spectator (a flip reveals to everyone at once). The only wire redaction is
+// stripping the server-secret deal from room-created.
 export function jungleFlipClientEventFor(
   event: TenantRoomEvent<JungleFlipSeat, JungleFlipMove, typeof JUNGLE_FLIP_SPEC_ID>,
-  seat: TenantSeat<JungleFlipSeat>,
+  _seat: TenantSeat<JungleFlipSeat>,
   ply: number,
 ): TenantClientEvent<JungleFlipSeat, JungleFlipMove, typeof JUNGLE_FLIP_SPEC_ID> | null {
-  if (seat === 'spectator') return null;
   if (event.type === 'room-created') {
     if (event.setup === undefined) return event;
     const redacted = { ...event };
@@ -107,26 +106,16 @@ export function jungleFlipClientEventFor(
   return event;
 }
 
-function emptyJungleFlipView(state: JungleFlipGameState): JungleFlipPlayerView {
-  return {
-    id: state.id,
-    perspective: 'red',
-    board: {},
-    legalMoves: [],
-    captured: [],
-    status: state.status,
-    ply: state.ply,
-    firstColor: null,
-    moveNumber: state.moveNumber,
-    lastMove: undefined,
-  };
-}
-
 export function getJungleFlipClientView(
   state: JungleFlipGameState,
   client: TenantSnapshotClient<JungleFlipSeat>,
 ): JungleFlipPlayerView {
-  if (client.seat === 'spectator') return emptyJungleFlipView(state);
+  // Spectator policy (docs-private/spectator-visibility-matrix.md): symmetric
+  // hidden-identity, same as banqi. Either seat's masked view is the public
+  // view; only the candidate moves differ per seat, and a spectator plays none.
+  if (client.seat === 'spectator') {
+    return { ...getJungleFlipPlayerView(state, JUNGLE_FLIP_SEATS[0]), legalMoves: [] };
+  }
   return getJungleFlipPlayerView(state, client.seat);
 }
 

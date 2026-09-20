@@ -73,22 +73,16 @@ export function isServerEngineClient(clientId: string | undefined): boolean {
 
 // May a non-seated client join this room's socket? A finished game is public for
 // every spec (the replay/review surfaces already serve it). An IN-PROGRESS game is
-// observable only when the spec hides NOTHING.
-//
-// This is deliberately STRICTER than canServeLiveBoard, which also admits the
-// symmetric hidden-identity variants (banqi, jungle-flip). The difference is not
-// about what may be seen — the masked board leaks nothing either way — but about
-// what is BUILT: Mistboard TV constructs the masked spectator payload itself
-// (see the per-tenant live watch payload builders), while the socket path would
-// hand a spectator whatever viewForClient returns, and for those tenants that is
-// still an EMPTY board (`/room/` never reveals). Admitting a spectator here would
-// therefore trade a clean refusal for a blank board. Widen this to
-// canServeLiveBoard once the tenants serve spectators their masked view.
+// observable exactly when Mistboard TV may broadcast it (canServeLiveBoard): the
+// spec hides nothing, or it is a hidden-identity spec whose tenant serves a
+// spectator its public view (viewForClient for seat 'spectator', the
+// "public view" row of docs-private/spectator-visibility-matrix.md). Until
+// 2026-09-20 this was stricter than TV because those tenants handed a socket
+// spectator an EMPTY board; they now serve the masked view, so the room URL and
+// TV answer the same question with the same predicate.
 export function canObserveRoom(isFinished: boolean, gameSpecId: string): boolean {
   if (isFinished) return true;
-  const spec = maybeGameSpecForId(gameSpecId);
-  if (!spec) return false;
-  return liveObservePolicy(spec.visibility) === 'open';
+  return canServeLiveBoard(gameSpecId);
 }
 
 // GameProjection-shaped wrapper for the legacy chess room path. Variant-tenant
@@ -104,9 +98,10 @@ export function canObserveLiveRoom(projection: GameProjection, gameSpecId: strin
 // VisibilityRulesId member fails the build until it gets an explicit branch —
 // the same fail-closed rule as variant dispatch):
 //   'open'   — nothing is hidden; the live board is servable to anyone.
-//   'masked' — hidden information exists and the redacted view a spectator would
-//              need differs from what at least one PLAYER sees, so serving it is
-//              a leak (or a design question) we have not answered.
+//   'masked' — hidden information exists and no public (spectator) view has been
+//              built and tested for it, so serving anything would be a leak or a
+//              design question we have not answered. No launched spec sits here;
+//              it is where an unclassified hidden-identity spec fails closed to.
 //   'sealed' — fog: hidden information exists and any pre-completion release
 //              leaks it (even time-delayed truth is intel to a live player).
 //              Fog games reach TV only via the finished-game replay path.
@@ -123,18 +118,24 @@ export type LiveObservePolicy = 'open' | 'masked' | 'sealed';
 //   leaks nothing. These serve live.
 //
 //   ASYMMETRIC — each player knows something the other does not (jieqi: a
-//   capturer learns the role of what it took). There is no single view that is honest to both seats, so a spectator
-//   board would have to pick a side. These stay masked until that surface exists.
+//   capturer learns the role of what it took). No seat's view is honest for a
+//   spectator, so these need a PUBLIC view built on purpose: what a neutral
+//   observer infers from the board alone, narrower than either seat
+//   (getJieqiPublicView: the shared mask, a dark capture listed with no role).
+//   Jieqi got one on 2026-09-20 and serves live through it, on the room socket
+//   (jieqi-tenant viewForClient) and on TV (jieqiLiveWatchPayloadFor).
 //
 // Explicit and exhaustive over the hidden-identity specs: a new one fails
 // hiddenIdentityLiveObservePolicy's key check in watch-live.test.ts until it is
 // classified here, and an unclassified spec falls through to 'masked'.
 const SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['banqi', 'jungle-flip'] as const;
-const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS = ['jieqi'] as const;
+const ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW = ['jieqi'] as const;
 
 export const HIDDEN_IDENTITY_LIVE_OBSERVE: Readonly<Record<string, LiveObservePolicy>> = {
   ...Object.fromEntries(SYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS.map((id) => [id, 'open' as const])),
-  ...Object.fromEntries(ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS.map((id) => [id, 'masked' as const])),
+  ...Object.fromEntries(
+    ASYMMETRIC_HIDDEN_IDENTITY_SPEC_IDS_WITH_PUBLIC_VIEW.map((id) => [id, 'open' as const]),
+  ),
 };
 
 export function liveObservePolicy(

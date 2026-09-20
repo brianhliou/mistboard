@@ -84,7 +84,7 @@ describe('renderJieqiMaterial', () => {
     );
   });
 
-  it('shows nothing for a spectator: an empty board is no information, not a full pool', () => {
+  it('shows nothing for an empty board: no information is not a full pool', () => {
     const s = slots();
     renderJieqiMaterial(s, { ...asRed, board: {}, captured: [] }, 'red');
     expect(s.hiddenPool.childElementCount).toBe(0);

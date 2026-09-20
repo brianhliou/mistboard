@@ -629,14 +629,138 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                }
+              ],
               "seats": {},
               "seatDisplayNames": {},
               "seatProfiles": {},
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "faceDown": true
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -1299,7 +1423,41 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                }
+              ],
               "seats": {
                 "red": "client-red"
               },
@@ -1308,7 +1466,104 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "faceDown": true
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -1341,7 +1596,13 @@
               "clientId": "client-red",
               "seat": "red"
             },
-            "spectator": null
+            "spectator": {
+              "type": "seat-assigned",
+              "at": 2000,
+              "roomId": "bq_golden-a",
+              "clientId": "client-red",
+              "seat": "red"
+            }
           }
         },
         {
@@ -2004,7 +2265,48 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -2014,7 +2316,104 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "faceDown": true
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -2047,7 +2446,13 @@
               "clientId": "client-black",
               "seat": "black"
             },
-            "spectator": null
+            "spectator": {
+              "type": "seat-assigned",
+              "at": 3000,
+              "roomId": "bq_golden-a",
+              "clientId": "client-black",
+              "seat": "black"
+            }
           }
         },
         {
@@ -2736,7 +3141,59 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -2746,7 +3203,106 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -2754,8 +3310,12 @@
                   "turn": "black"
                 },
                 "ply": 1,
-                "firstColor": null,
-                "moveNumber": 1
+                "firstColor": "black",
+                "moveNumber": 1,
+                "lastMove": {
+                  "from": "a1",
+                  "to": "a1"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -2787,7 +3347,17 @@
               },
               "ply": 1
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 10000,
+              "roomId": "bq_golden-a",
+              "color": "red",
+              "move": {
+                "from": "a1",
+                "to": "a1"
+              },
+              "ply": 1
+            }
           }
         },
         {
@@ -3494,7 +4064,70 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -3504,7 +4137,108 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "color": "black",
+                    "role": "general",
+                    "faceDown": false
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -3512,8 +4246,12 @@
                   "turn": "red"
                 },
                 "ply": 2,
-                "firstColor": null,
-                "moveNumber": 2
+                "firstColor": "black",
+                "moveNumber": 2,
+                "lastMove": {
+                  "from": "a2",
+                  "to": "a2"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -3545,7 +4283,17 @@
               },
               "ply": 2
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 15000,
+              "roomId": "bq_golden-a",
+              "color": "black",
+              "move": {
+                "from": "a2",
+                "to": "a2"
+              },
+              "ply": 2
+            }
           }
         },
         {
@@ -4274,7 +5022,81 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a3",
+                    "to": "a3"
+                  },
+                  "ply": 3
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -4284,7 +5106,110 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "color": "black",
+                    "role": "general",
+                    "faceDown": false
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -4292,8 +5217,12 @@
                   "turn": "black"
                 },
                 "ply": 3,
-                "firstColor": null,
-                "moveNumber": 2
+                "firstColor": "black",
+                "moveNumber": 2,
+                "lastMove": {
+                  "from": "a3",
+                  "to": "a3"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -4325,7 +5254,17 @@
               },
               "ply": 3
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 20000,
+              "roomId": "bq_golden-a",
+              "color": "red",
+              "move": {
+                "from": "a3",
+                "to": "a3"
+              },
+              "ply": 3
+            }
           }
         },
         {
@@ -5084,7 +6023,92 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a3",
+                    "to": "a3"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a3",
+                    "to": "a2"
+                  },
+                  "ply": 4
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -5094,16 +6118,123 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "color": "red",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "general"
+                  }
+                ],
                 "status": {
                   "type": "playing",
                   "turn": "red"
                 },
                 "ply": 4,
-                "firstColor": null,
-                "moveNumber": 3
+                "firstColor": "black",
+                "moveNumber": 3,
+                "lastMove": {
+                  "from": "a3",
+                  "to": "a2"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -5135,7 +6266,17 @@
               },
               "ply": 4
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 25000,
+              "roomId": "bq_golden-a",
+              "color": "black",
+              "move": {
+                "from": "a3",
+                "to": "a2"
+              },
+              "ply": 4
+            }
           }
         },
         {
@@ -5910,7 +7051,103 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a3",
+                    "to": "a3"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a3",
+                    "to": "a2"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 5
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -5920,16 +7157,122 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "general"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "soldier"
+                  }
+                ],
                 "status": {
                   "type": "playing",
                   "turn": "black"
                 },
                 "ply": 5,
-                "firstColor": null,
-                "moveNumber": 3
+                "firstColor": "black",
+                "moveNumber": 3,
+                "lastMove": {
+                  "from": "a1",
+                  "to": "a2"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -5961,7 +7304,17 @@
               },
               "ply": 5
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 30000,
+              "roomId": "bq_golden-a",
+              "color": "red",
+              "move": {
+                "from": "a1",
+                "to": "a2"
+              },
+              "ply": 5
+            }
           }
         },
         {
@@ -6758,7 +8111,114 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a3",
+                    "to": "a3"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a3",
+                    "to": "a2"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a4",
+                    "to": "a4"
+                  },
+                  "ply": 6
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -6768,16 +8228,124 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "general"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "soldier"
+                  }
+                ],
                 "status": {
                   "type": "playing",
                   "turn": "red"
                 },
                 "ply": 6,
-                "firstColor": null,
-                "moveNumber": 4
+                "firstColor": "black",
+                "moveNumber": 4,
+                "lastMove": {
+                  "from": "a4",
+                  "to": "a4"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -6809,7 +8377,17 @@
               },
               "ply": 6
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 35000,
+              "roomId": "bq_golden-a",
+              "color": "black",
+              "move": {
+                "from": "a4",
+                "to": "a4"
+              },
+              "ply": 6
+            }
           }
         },
         {
@@ -7624,7 +9202,125 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a3",
+                    "to": "a3"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a3",
+                    "to": "a2"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a4",
+                    "to": "a4"
+                  },
+                  "ply": 6
+                },
+                {
+                  "type": "move-played",
+                  "at": 40000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a2",
+                    "to": "a1"
+                  },
+                  "ply": 7
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -7634,16 +9330,124 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "general"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "soldier"
+                  }
+                ],
                 "status": {
                   "type": "playing",
                   "turn": "black"
                 },
                 "ply": 7,
-                "firstColor": null,
-                "moveNumber": 4
+                "firstColor": "black",
+                "moveNumber": 4,
+                "lastMove": {
+                  "from": "a2",
+                  "to": "a1"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -7675,7 +9479,17 @@
               },
               "ply": 7
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 40000,
+              "roomId": "bq_golden-a",
+              "color": "red",
+              "move": {
+                "from": "a2",
+                "to": "a1"
+              },
+              "ply": 7
+            }
           }
         },
         {
@@ -8512,7 +10326,136 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a3",
+                    "to": "a3"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a3",
+                    "to": "a2"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a4",
+                    "to": "a4"
+                  },
+                  "ply": 6
+                },
+                {
+                  "type": "move-played",
+                  "at": 40000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a2",
+                    "to": "a1"
+                  },
+                  "ply": 7
+                },
+                {
+                  "type": "move-played",
+                  "at": 45000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "b1",
+                    "to": "b1"
+                  },
+                  "ply": 8
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -8522,16 +10465,126 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "color": "red",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "general"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "soldier"
+                  }
+                ],
                 "status": {
                   "type": "playing",
                   "turn": "red"
                 },
                 "ply": 8,
-                "firstColor": null,
-                "moveNumber": 5
+                "firstColor": "black",
+                "moveNumber": 5,
+                "lastMove": {
+                  "from": "b1",
+                  "to": "b1"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -8563,7 +10616,17 @@
               },
               "ply": 8
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 45000,
+              "roomId": "bq_golden-a",
+              "color": "black",
+              "move": {
+                "from": "b1",
+                "to": "b1"
+              },
+              "ply": 8
+            }
           }
         },
         {
@@ -9426,7 +11489,147 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a3",
+                    "to": "a3"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a3",
+                    "to": "a2"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a4",
+                    "to": "a4"
+                  },
+                  "ply": 6
+                },
+                {
+                  "type": "move-played",
+                  "at": 40000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a2",
+                    "to": "a1"
+                  },
+                  "ply": 7
+                },
+                {
+                  "type": "move-played",
+                  "at": 45000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "b1",
+                    "to": "b1"
+                  },
+                  "ply": 8
+                },
+                {
+                  "type": "move-played",
+                  "at": 50000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 9
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -9436,16 +11639,126 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "b1": {
+                    "color": "red",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "general"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "soldier"
+                  }
+                ],
                 "status": {
                   "type": "playing",
                   "turn": "black"
                 },
                 "ply": 9,
-                "firstColor": null,
-                "moveNumber": 5
+                "firstColor": "black",
+                "moveNumber": 5,
+                "lastMove": {
+                  "from": "a1",
+                  "to": "a2"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -9477,7 +11790,17 @@
               },
               "ply": 9
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 50000,
+              "roomId": "bq_golden-a",
+              "color": "red",
+              "move": {
+                "from": "a1",
+                "to": "a2"
+              },
+              "ply": 9
+            }
           }
         },
         {
@@ -10362,7 +12685,158 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "gameSpecId": "banqi",
+                  "creatorPreference": "red",
+                  "timeControl": {
+                    "initialMs": 180000,
+                    "incrementMs": 2000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-a",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 2000,
+                    "initialMs": 180000,
+                    "remainingMs": {
+                      "black": 180000,
+                      "red": 180000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-a",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                },
+                {
+                  "type": "move-played",
+                  "at": 20000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a3",
+                    "to": "a3"
+                  },
+                  "ply": 3
+                },
+                {
+                  "type": "move-played",
+                  "at": 25000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a3",
+                    "to": "a2"
+                  },
+                  "ply": 4
+                },
+                {
+                  "type": "move-played",
+                  "at": 30000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 5
+                },
+                {
+                  "type": "move-played",
+                  "at": 35000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "a4",
+                    "to": "a4"
+                  },
+                  "ply": 6
+                },
+                {
+                  "type": "move-played",
+                  "at": 40000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a2",
+                    "to": "a1"
+                  },
+                  "ply": 7
+                },
+                {
+                  "type": "move-played",
+                  "at": 45000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "b1",
+                    "to": "b1"
+                  },
+                  "ply": 8
+                },
+                {
+                  "type": "move-played",
+                  "at": 50000,
+                  "roomId": "bq_golden-a",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a2"
+                  },
+                  "ply": 9
+                },
+                {
+                  "type": "move-played",
+                  "at": 55000,
+                  "roomId": "bq_golden-a",
+                  "color": "black",
+                  "move": {
+                    "from": "b1",
+                    "to": "a1"
+                  },
+                  "ply": 10
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -10372,16 +12846,126 @@
               "state": {
                 "id": "bq_golden-a",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "red",
+                    "role": "elephant",
+                    "faceDown": false
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
-                "captured": [],
+                "captured": [
+                  {
+                    "owner": "black",
+                    "role": "general"
+                  },
+                  {
+                    "owner": "red",
+                    "role": "soldier"
+                  }
+                ],
                 "status": {
                   "type": "playing",
                   "turn": "red"
                 },
                 "ply": 10,
-                "firstColor": null,
-                "moveNumber": 6
+                "firstColor": "black",
+                "moveNumber": 6,
+                "lastMove": {
+                  "from": "b1",
+                  "to": "a1"
+                }
               },
               "timeControl": {
                 "initialMs": 180000,
@@ -10413,7 +12997,17 @@
               },
               "ply": 10
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 55000,
+              "roomId": "bq_golden-a",
+              "color": "black",
+              "move": {
+                "from": "b1",
+                "to": "a1"
+              },
+              "ply": 10
+            }
           }
         },
         {
@@ -11549,7 +14143,12 @@
               "roomId": "bq_golden-a",
               "color": "red"
             },
-            "spectator": null
+            "spectator": {
+              "type": "seat-resigned",
+              "at": 100000,
+              "roomId": "bq_golden-a",
+              "color": "red"
+            }
           }
         }
       ]
@@ -12137,7 +14736,21 @@
                 "red": true,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-b",
+                  "gameSpecId": "banqi"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 1000,
+                  "roomId": "bq_golden-b",
+                  "clientId": "misty-banqi",
+                  "seat": "red"
+                }
+              ],
               "seats": {
                 "red": "misty-banqi"
               },
@@ -12152,7 +14765,104 @@
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "faceDown": true
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -12764,7 +15474,28 @@
                 "red": true,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-b",
+                  "gameSpecId": "banqi"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 1000,
+                  "roomId": "bq_golden-b",
+                  "clientId": "misty-banqi",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-b",
+                  "clientId": "client-black",
+                  "seat": "black"
+                }
+              ],
               "seats": {
                 "red": "misty-banqi",
                 "black": "client-black"
@@ -12780,7 +15511,104 @@
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "faceDown": true
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -12810,7 +15638,13 @@
               "clientId": "client-black",
               "seat": "black"
             },
-            "spectator": null
+            "spectator": {
+              "type": "seat-assigned",
+              "at": 2000,
+              "roomId": "bq_golden-b",
+              "clientId": "client-black",
+              "seat": "black"
+            }
           }
         },
         {
@@ -13163,7 +15997,34 @@
                 "red": true,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-b",
+                  "gameSpecId": "banqi"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 1000,
+                  "roomId": "bq_golden-b",
+                  "clientId": "misty-banqi",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-b",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "game-aborted",
+                  "at": 5000,
+                  "roomId": "bq_golden-b",
+                  "reason": "user-abort"
+                }
+              ],
               "seats": {
                 "red": "misty-banqi",
                 "black": "client-black"
@@ -13179,7 +16040,104 @@
               "state": {
                 "id": "bq_golden-b",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "faceDown": true
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -13207,7 +16165,12 @@
               "roomId": "bq_golden-b",
               "reason": "user-abort"
             },
-            "spectator": null
+            "spectator": {
+              "type": "game-aborted",
+              "at": 5000,
+              "roomId": "bq_golden-b",
+              "reason": "user-abort"
+            }
           }
         }
       ]
@@ -13873,7 +16836,47 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-c",
+                  "gameSpecId": "banqi",
+                  "timeControl": {
+                    "initialMs": 60000,
+                    "incrementMs": 1000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-c",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 1000,
+                    "initialMs": 60000,
+                    "remainingMs": {
+                      "black": 60000,
+                      "red": 60000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-c",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-c",
+                  "clientId": "client-black",
+                  "seat": "black"
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -13883,7 +16886,104 @@
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "faceDown": true
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -14586,7 +17686,58 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-c",
+                  "gameSpecId": "banqi",
+                  "timeControl": {
+                    "initialMs": 60000,
+                    "incrementMs": 1000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-c",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 1000,
+                    "initialMs": 60000,
+                    "remainingMs": {
+                      "black": 60000,
+                      "red": 60000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-c",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-c",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-c",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -14596,7 +17747,106 @@
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "faceDown": true
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -14604,8 +17854,12 @@
                   "turn": "black"
                 },
                 "ply": 1,
-                "firstColor": null,
-                "moveNumber": 1
+                "firstColor": "black",
+                "moveNumber": 1,
+                "lastMove": {
+                  "from": "a1",
+                  "to": "a1"
+                }
               },
               "timeControl": {
                 "initialMs": 60000,
@@ -14637,7 +17891,17 @@
               },
               "ply": 1
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 10000,
+              "roomId": "bq_golden-c",
+              "color": "red",
+              "move": {
+                "from": "a1",
+                "to": "a1"
+              },
+              "ply": 1
+            }
           }
         },
         {
@@ -15342,7 +18606,69 @@
                 "red": false,
                 "black": false
               },
-              "events": [],
+              "events": [
+                {
+                  "type": "room-created",
+                  "at": 1000,
+                  "roomId": "bq_golden-c",
+                  "gameSpecId": "banqi",
+                  "timeControl": {
+                    "initialMs": 60000,
+                    "incrementMs": 1000
+                  }
+                },
+                {
+                  "type": "clock-started",
+                  "at": 1000,
+                  "roomId": "bq_golden-c",
+                  "clock": {
+                    "activeColor": null,
+                    "incrementMs": 1000,
+                    "initialMs": 60000,
+                    "remainingMs": {
+                      "black": 60000,
+                      "red": 60000
+                    },
+                    "runningSince": null
+                  }
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 2000,
+                  "roomId": "bq_golden-c",
+                  "clientId": "client-red",
+                  "seat": "red"
+                },
+                {
+                  "type": "seat-assigned",
+                  "at": 3000,
+                  "roomId": "bq_golden-c",
+                  "clientId": "client-black",
+                  "seat": "black"
+                },
+                {
+                  "type": "move-played",
+                  "at": 10000,
+                  "roomId": "bq_golden-c",
+                  "color": "red",
+                  "move": {
+                    "from": "a1",
+                    "to": "a1"
+                  },
+                  "ply": 1
+                },
+                {
+                  "type": "move-played",
+                  "at": 15000,
+                  "roomId": "bq_golden-c",
+                  "color": "black",
+                  "move": {
+                    "from": "a2",
+                    "to": "a2"
+                  },
+                  "ply": 2
+                }
+              ],
               "seats": {
                 "red": "client-red",
                 "black": "client-black"
@@ -15352,7 +18678,108 @@
               "state": {
                 "id": "bq_golden-c",
                 "perspective": "red",
-                "board": {},
+                "board": {
+                  "a1": {
+                    "color": "black",
+                    "role": "soldier",
+                    "faceDown": false
+                  },
+                  "b1": {
+                    "faceDown": true
+                  },
+                  "c1": {
+                    "faceDown": true
+                  },
+                  "d1": {
+                    "faceDown": true
+                  },
+                  "e1": {
+                    "faceDown": true
+                  },
+                  "f1": {
+                    "faceDown": true
+                  },
+                  "g1": {
+                    "faceDown": true
+                  },
+                  "h1": {
+                    "faceDown": true
+                  },
+                  "a2": {
+                    "color": "black",
+                    "role": "general",
+                    "faceDown": false
+                  },
+                  "b2": {
+                    "faceDown": true
+                  },
+                  "c2": {
+                    "faceDown": true
+                  },
+                  "d2": {
+                    "faceDown": true
+                  },
+                  "e2": {
+                    "faceDown": true
+                  },
+                  "f2": {
+                    "faceDown": true
+                  },
+                  "g2": {
+                    "faceDown": true
+                  },
+                  "h2": {
+                    "faceDown": true
+                  },
+                  "a3": {
+                    "faceDown": true
+                  },
+                  "b3": {
+                    "faceDown": true
+                  },
+                  "c3": {
+                    "faceDown": true
+                  },
+                  "d3": {
+                    "faceDown": true
+                  },
+                  "e3": {
+                    "faceDown": true
+                  },
+                  "f3": {
+                    "faceDown": true
+                  },
+                  "g3": {
+                    "faceDown": true
+                  },
+                  "h3": {
+                    "faceDown": true
+                  },
+                  "a4": {
+                    "faceDown": true
+                  },
+                  "b4": {
+                    "faceDown": true
+                  },
+                  "c4": {
+                    "faceDown": true
+                  },
+                  "d4": {
+                    "faceDown": true
+                  },
+                  "e4": {
+                    "faceDown": true
+                  },
+                  "f4": {
+                    "faceDown": true
+                  },
+                  "g4": {
+                    "faceDown": true
+                  },
+                  "h4": {
+                    "faceDown": true
+                  }
+                },
                 "legalMoves": [],
                 "captured": [],
                 "status": {
@@ -15360,8 +18787,12 @@
                   "turn": "red"
                 },
                 "ply": 2,
-                "firstColor": null,
-                "moveNumber": 2
+                "firstColor": "black",
+                "moveNumber": 2,
+                "lastMove": {
+                  "from": "a2",
+                  "to": "a2"
+                }
               },
               "timeControl": {
                 "initialMs": 60000,
@@ -15393,7 +18824,17 @@
               },
               "ply": 2
             },
-            "spectator": null
+            "spectator": {
+              "type": "move-played",
+              "at": 15000,
+              "roomId": "bq_golden-c",
+              "color": "black",
+              "move": {
+                "from": "a2",
+                "to": "a2"
+              },
+              "ply": 2
+            }
           }
         },
         {
@@ -16315,7 +19756,22 @@
                 "runningSince": null
               }
             },
-            "spectator": null
+            "spectator": {
+              "type": "clock-expired",
+              "at": 90000,
+              "roomId": "bq_golden-c",
+              "color": "red",
+              "clock": {
+                "activeColor": null,
+                "incrementMs": 1000,
+                "initialMs": 60000,
+                "remainingMs": {
+                  "black": 61000,
+                  "red": 0
+                },
+                "runningSince": null
+              }
+            }
           }
         }
       ]

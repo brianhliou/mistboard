@@ -1,10 +1,13 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { JIEQI_SPEC_ID, STANDARD_JIEQI_DEAL } from '@mistboard/game';
+import { JIEQI_SPEC_ID, type JieqiPlayerView, STANDARD_JIEQI_DEAL } from '@mistboard/game';
 import type { JieqiEvent } from '../jieqi-runtime.js';
+import { jieqiTenant } from '../jieqi-tenant.js';
 import type { RecentEveGameRecord } from '../persistence.js';
+import { replayTenantEvents } from '../variant-tenant/runtime.js';
 import {
   type JieqiPostgamePersistence,
+  jieqiLiveWatchPayloadFor,
   jieqiPostgameForApi,
   jieqiWatchPostgameForApi,
 } from './jieqi-games.js';
@@ -336,9 +339,82 @@ test('Jieqi postgame returns null for an unfinished game', async () => {
 test('Jieqi watch postgame never releases truth for an unfinished game', async () => {
   const events = finishedCaptureEvents().slice(0, -1);
   const payload = await jieqiWatchPostgameForApi(ROOM_ID, deps(gameRecord(), events));
-  // Neither track: the masked board is not a licence to serve a live game, whose
-  // move list would still be a live-information leak.
+  // Neither track from the FINISHED route: a live game reaches TV only through
+  // jieqiLiveWatchPayloadFor, which builds the masked track alone.
   assert.equal(payload, null);
+});
+
+// ---------------------------------------------------------------------------
+// Mistboard TV live broadcast. Jieqi is ASYMMETRIC hidden-identity (the
+// capturer alone learns a dark capture), so TV serves the public view: the
+// shared masked board, no captures. The regression that matters is the FINISHED
+// payload's two full-truth fields (`view` = truth, `history.truth`) never riding
+// a live wire.
+// ---------------------------------------------------------------------------
+
+// Red's cannon has captured Black's dark b10 piece; game still in progress.
+function liveCaptureEvents(): JieqiEvent[] {
+  return finishedCaptureEvents().slice(0, -1); // drop the resignation
+}
+
+function liveRoom(events: JieqiEvent[] = liveCaptureEvents()) {
+  return {
+    id: ROOM_ID,
+    events,
+    projection: replayTenantEvents(jieqiTenant, events),
+  };
+}
+
+type LivePayload = {
+  game: { result: string; endedAt: string | null; plyCount: number; mode: string };
+  view: JieqiPlayerView;
+  history: { masked: Array<{ ply: number; view: JieqiPlayerView }>; truth?: unknown };
+};
+
+test('Jieqi live payload never ships a face-down identity or a capture', () => {
+  const payload = jieqiLiveWatchPayloadFor(ROOM_ID, liveRoom()) as LivePayload | null;
+  assert.ok(payload);
+
+  // The spoiler track is the whole deal: it must not exist at all.
+  assert.equal(payload.history.truth, undefined);
+  assert.equal(payload.history.masked.length, 2, 'ply 0 and ply 1');
+
+  const boards = [payload.view, ...payload.history.masked.map((entry) => entry.view)];
+  for (const view of boards) {
+    // No captures on the TV wire, in either direction of knowledge.
+    assert.deepEqual(view.captured, []);
+    assert.deepEqual(view.legalMoves, []);
+    let hidden = 0;
+    for (const [square, piece] of Object.entries(view.board)) {
+      if (!piece?.faceDown) continue;
+      hidden += 1;
+      assert.ok(!('role' in piece), `${square} leaks a face-down identity`);
+    }
+    // Serving the truth view would turn every piece face-up and make the loop
+    // above pass vacuously, so require that pieces are still hidden at all: 30
+    // at ply 0 (only the generals are dealt face-up), 28 after the capture
+    // (the cannon revealed itself by moving; its dark victim left the board).
+    assert.ok(hidden >= 28, `live board must still be masked (only ${hidden} hidden)`);
+  }
+  // ...and the revealed cannon reads correctly, so this is not vacuous.
+  assert.deepEqual(payload.view.board.b10, { color: 'red', role: 'cannon', faceDown: false });
+});
+
+test('Jieqi live payload is withheld for a room that is not in progress', () => {
+  assert.equal(jieqiLiveWatchPayloadFor(ROOM_ID, liveRoom(finishedCaptureEvents())), null);
+});
+
+test('Jieqi live payload is withheld when the room id does not match', () => {
+  assert.equal(jieqiLiveWatchPayloadFor('jq_other', liveRoom()), null);
+});
+
+test('Jieqi live payload reports the game as in-progress with no end time', () => {
+  const payload = jieqiLiveWatchPayloadFor(ROOM_ID, liveRoom()) as LivePayload | null;
+  assert.ok(payload);
+  assert.equal(payload.game.result, 'in-progress');
+  assert.equal(payload.game.endedAt, null);
+  assert.equal(payload.game.plyCount, 1);
+  assert.equal(payload.game.mode, 'pvp');
 });
 
 test('Jieqi postgame rejects a non-jieqi variant record', async () => {

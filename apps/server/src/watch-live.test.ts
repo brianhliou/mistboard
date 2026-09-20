@@ -26,7 +26,8 @@ import {
 // ---------------------------------------------------------------------------
 // Fail-closed policy conformance: every spec maps through liveObservePolicy.
 // Open-visibility specs always serve live; dark NEVER does; hidden-identity
-// splits on the explicit symmetric/asymmetric classification. A new visibility
+// follows its explicit classification (symmetric masks and asymmetric ones with
+// a built public view serve; anything unclassified fails closed). A new visibility
 // class fails the liveObservePolicy switch at compile time; a new spec is
 // covered here automatically via GAME_SPECS.
 // ---------------------------------------------------------------------------
@@ -80,15 +81,15 @@ test('every hidden-identity spec is explicitly classified symmetric or asymmetri
   }
 });
 
-// The split itself. Symmetric masks (both seats see the identical board) go live;
-// asymmetric ones (a player knows something the other does not) stay masked.
-test('symmetric hidden-identity variants serve live; asymmetric ones do not', () => {
+// The split itself. Symmetric masks (both seats see the identical board) go live
+// through either seat's view; the asymmetric one (jieqi: a player knows what it
+// captured) goes live through a purpose-built PUBLIC view (getJieqiPublicView),
+// classified 'open' only once that view existed on both the socket and TV.
+test('every launched hidden-identity variant serves live', () => {
   for (const id of ['banqi', 'jungle-flip']) {
     assert.equal(canServeLiveBoard(id), true, `${id} is symmetric and should serve live`);
   }
-  for (const id of ['jieqi']) {
-    assert.equal(canServeLiveBoard(id), false, `${id} is asymmetric and must NOT serve live`);
-  }
+  assert.equal(canServeLiveBoard('jieqi'), true, 'jieqi serves live through its public view');
 });
 
 // An unclassified hidden-identity spec falls through to 'masked', never 'open'.
@@ -169,9 +170,9 @@ registerVariantTenant(
   }),
 );
 
-// Every fake channel gets a payload builder — including the fog and
-// hidden-identity ones, proving the VISIBILITY policy (not the capability
-// gate) is what excludes them from live TV.
+// Every fake channel gets a payload builder — including the fog one, proving
+// the VISIBILITY policy (not the capability gate) is what excludes it from live
+// TV; the hidden-identity one proves the same policy ADMITS a classified spec.
 function fakePayloadFor(roomId: string): Record<string, unknown> {
   return { game: { roomId, result: 'in-progress' } };
 }
@@ -278,10 +279,20 @@ test('a playing open-visibility tenant room becomes a live candidate', () => {
   assert.ok(named, 'seat-token display name should surface');
 });
 
-test('fog and hidden-identity rooms NEVER become candidates, playing or not', () => {
+test('fog rooms NEVER become candidates, playing or not', () => {
   fogRooms.set('fkf_1', tenantRoom({ id: 'fkf_1' }));
-  hiddenRooms.set('fkh_1', tenantRoom({ id: 'fkh_1' }));
   assert.deepEqual(collectLiveTvCandidates(context(), NOW), []);
+});
+
+// Hidden-identity is not fog: a classified spec (jieqi, via its public view) is
+// a live candidate on the same terms as an open one.
+test('a classified hidden-identity room becomes a live candidate', () => {
+  hiddenRooms.set('fkh_1', tenantRoom({ id: 'fkh_1' }));
+  const candidates = collectLiveTvCandidates(context(), NOW);
+  assert.deepEqual(
+    candidates.map((candidate) => [candidate.roomId, candidate.channelId]),
+    [['fkh_1', 'jieqi']],
+  );
 });
 
 test('finished, stale, and half-seated rooms are excluded', () => {

@@ -763,6 +763,21 @@ describe('tenant game lifecycle analytics', () => {
     });
   });
 
+  it('emits nothing for a spectator: watching is not starting or finishing a game', () => {
+    // game_started is the number (human games started per week). Live rooms
+    // admit spectators (open variants since 2026-09-11, hidden-identity since
+    // 2026-09-20), and a visitor opening one sees the same status transitions a
+    // player does; without this gate every spectator counted as a game.
+    const h = createHarness({ gameSpecId: BANQI_SPEC_ID });
+    h.feedHello({ seat: 'spectator', state: view({ status: { type: 'playing', turn: 'red' } }) });
+    h.feedSnapshot({
+      seat: 'spectator',
+      state: view({ status: { type: 'finished', winner: 'blue', reason: 'no-moves' } }),
+    });
+    expect(named('game_started')).toHaveLength(0);
+    expect(named('game_finished')).toHaveLength(0);
+  });
+
   it('survives a gameSpecId the registry does not know', () => {
     // Variant dispatch is fail-closed and throws on an unknown id. Measurement
     // must not: an analytics call that can take down a live room is worse than

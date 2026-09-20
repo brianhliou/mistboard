@@ -18,7 +18,8 @@
  *        - symmetric info: both seats' board / captured / firstColor are
  *          byte-identical every step;
  *        - the position is public (both seats receive every move) while
- *          spectators get an empty view and no events.
+ *          spectators get the same masked view and the same events (banqi is
+ *          symmetric: a flip reveals to everyone at once).
  *
  * The scripted game flips tiles, captures a revealed enemy, and ends by
  * resignation / clock-expiry / abort across the three scripts.
@@ -358,15 +359,12 @@ test('banqi golden wire: the server-secret deal never reaches any client', () =>
       }
       const redCreated = snapshots.red!.events.filter((e) => e.type === 'room-created');
       assert.equal(redCreated.length, 1, `${script.id}/${step.label}: red must see room-created`);
-      if (isFinishedStep(step)) {
-        // Finished: the room opens, so the spectator now receives the log.
-        assert.ok(
-          snapshots.spectator!.events.length > 0,
-          `${script.id}/${step.label}: a finished room must hand the spectator its log`,
-        );
-      } else {
-        assert.equal(snapshots.spectator!.events.length, 0);
-      }
+      // Live or finished, the spectator holds the same public log as a seat.
+      assert.deepStrictEqual(
+        snapshots.spectator!.events,
+        snapshots.red!.events,
+        `${script.id}/${step.label}: a spectator receives the public log`,
+      );
     }
   }
   const created: BanqiEvent = {
@@ -376,11 +374,10 @@ test('banqi golden wire: the server-secret deal never reaches any client', () =>
     gameSpecId: BANQI_SPEC_ID,
     setup: GOLDEN_DEAL,
   };
-  for (const seat of ['red', 'black'] as const) {
+  for (const seat of SEATS) {
     const out = banqiClientEventFor(created, seat, 0);
     assert.ok(out && out.type === 'room-created' && !('setup' in out));
   }
-  assert.equal(banqiClientEventFor(created, 'spectator', 0), null);
 });
 
 test('banqi golden wire: face-down tiles carry no ink or role; revealed tiles carry both', () => {
@@ -471,7 +468,7 @@ test('banqi golden wire: the position is public — both seats share moves and l
       const efs = step.eventForSeat as Record<string, { type?: string } | null> | undefined;
       if (efs && (efs.red?.type === 'move-played' || efs.black?.type === 'move-played')) {
         assert.deepStrictEqual(efs.red, efs.black, 'both seats get the same move broadcast');
-        assert.equal(efs.spectator, null, 'spectators never receive a move broadcast');
+        assert.deepStrictEqual(efs.spectator, efs.red, 'a spectator gets the same broadcast');
       }
     }
   }
@@ -488,19 +485,31 @@ function isFinishedStep(step: GoldenStep): boolean {
   return state?.status?.type === 'finished';
 }
 
-test('banqi golden wire: spectators get an empty view while the game is live', () => {
+test('banqi golden wire: spectators get the masked view while the game is live', () => {
+  // The "public view" row of the matrix: banqi is symmetric, so the spectator
+  // board IS a seat's board (every face-down tile still carries no ink and no
+  // role), the captures are the same public list, and there is nothing to play.
+  let liveSteps = 0;
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
       if (isFinishedStep(step)) continue;
-      const spectator = wireSnapshots(step).spectator!;
-      assert.deepStrictEqual(spectator.state.board, {});
-      assert.deepStrictEqual(spectator.state.captured, []);
-      assert.deepStrictEqual(spectator.state.legalMoves, []);
-      assert.equal(spectator.state.firstColor, null);
-      assert.equal(spectator.state.lastMove, undefined);
-      assert.deepStrictEqual(spectator.events, []);
+      liveSteps += 1;
+      const { spectator, red } = wireSnapshots(step);
+      assert.deepStrictEqual(spectator!.state.board, red!.state.board);
+      assert.deepStrictEqual(spectator!.state.captured, red!.state.captured);
+      assert.deepStrictEqual(spectator!.state.legalMoves, []);
+      assert.deepStrictEqual(spectator!.state.lastMove, red!.state.lastMove);
+      for (const [square, entry] of Object.entries(spectator!.state.board)) {
+        if (!entry.faceDown) continue;
+        assert.deepStrictEqual(
+          Object.keys(entry),
+          ['faceDown'],
+          `${script.id}/${step.label}: spectator sees through face-down ${square}`,
+        );
+      }
     }
   }
+  assert.ok(liveSteps > 0, 'no live step in the scripts: this test asserted nothing');
 });
 
 test('banqi golden wire: a finished room opens fully to a spectator', () => {

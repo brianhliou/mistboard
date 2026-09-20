@@ -622,6 +622,10 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // Scrubbing a replay is not playing, and re-entering a finished room must
     // not re-emit its finish.
     if (!view || !replay.isLive()) return;
+    // game_started is the number (human games started per week): a spectator
+    // opening a live room is not a game starting, and a stranger opening a
+    // finished one is not a game finishing. Seated viewers only.
+    if (!tenant.isColor(state.seat)) return;
     const timeControl = state.timeControl ?? state.clock;
     const baseProps = {
       gameId: view.id,

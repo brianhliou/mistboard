@@ -4,6 +4,7 @@ import { resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { isRetiredGameSpec } from '@mistboard/game';
+import { canServeLiveBoard } from '../server-policy.js';
 // Importing register-tenants registers every tenant (module-scope side effect
 // of each *-registration.ts module — the "one registry entry" of the tenant
 // contract).
@@ -54,6 +55,26 @@ test('registry: every product-profile variant tenant exposes a lobby (Find oppon
     missing,
     [],
     `product variants offered in Find opponent but missing a server lobby (add a lobby to their *-registration.ts): ${missing.join(', ')}`,
+  );
+});
+
+test('registry: every live-broadcastable tenant binds its engine-seat predicate', () => {
+  // TV and /games label a room PvP or PvE by asking registration.isEngineClientId
+  // (falling back to the shared isServerEngineClient heuristic, which only knows
+  // the chess-stack id prefixes). A tenant with its own engine id namespace and
+  // no binding presents its bot as a nameless human and its PvE games as PvP,
+  // which then outrank real human games in the featured election. Banqi and
+  // Flip Jungle shipped live that way from 2026-07-26 until 2026-09-20; jieqi
+  // would have on the day it went live. Only live-servable specs are checked:
+  // that is the surface where the label is read.
+  const missing = registeredVariantTenants()
+    .filter((registration) => canServeLiveBoard(registration.gameSpecId))
+    .filter((registration) => registration.isEngineClientId === undefined)
+    .map((registration) => registration.gameSpecId);
+  assert.deepEqual(
+    missing,
+    [],
+    `live-servable tenants without isEngineClientId (bind tenant.engine?.isEngineClientId in their *-registration.ts): ${missing.join(', ')}`,
   );
 });
 

@@ -85,8 +85,9 @@ registerVariantTenant(
   }),
 );
 
-// Every fake channel gets a builder, including fog and hidden-identity, so the
-// tests below prove the VISIBILITY policy is what withholds the board.
+// Every fake channel gets a builder, including fog, so the tests below prove
+// the VISIBILITY policy is what withholds the board (and, for a classified
+// hidden-identity spec, what releases the builder's masked one).
 const BOARD_MARKER = 'position-would-leak-here';
 for (const channelId of ['xiangqi', 'dark-xiangqi', 'jieqi']) {
   registerLiveWatchPayloadBuilder(channelId, async (roomId) => ({
@@ -226,13 +227,21 @@ test('a fog game is listed as a card and never carries a board payload', async (
   assert.equal(JSON.stringify(payload).includes(BOARD_MARKER), false);
 });
 
-test('an asymmetric hidden-identity game is masked: listed, no board', async () => {
+// Jieqi is asymmetric hidden-identity, but it has a purpose-built public view
+// (getJieqiPublicView) and is classified 'open' since 2026-09-20, so it lists
+// WITH a board: the one its registered live builder masks, nothing hand-rolled.
+test('a classified hidden-identity game is open: listed with its builder board', async () => {
   hiddenRooms.set('fkh_1', tenantRoom({ id: 'fkh_1' }));
   const listed = collectCurrentGames(context(), NOW);
-  assert.equal(listed[0]?.observe, 'masked');
-  assert.equal(await currentGameBoardPayload(listed[0]!), null);
+  assert.equal(listed[0]?.observe, 'open');
+  assert.ok(await currentGameBoardPayload(listed[0]!), 'the builder payload is served');
   const { payload } = await getCurrent();
-  assert.equal(JSON.stringify(payload).includes(BOARD_MARKER), false);
+  assert.equal(JSON.stringify(payload).includes(BOARD_MARKER), true);
+});
+
+// An unclassified hidden-identity spec has no public view and fails closed.
+test('an unclassified hidden-identity spec stays masked', () => {
+  assert.equal(liveObservePolicy('hidden-identity', 'not-a-real-spec'), 'masked');
 });
 
 test('an open game carries its board payload, omitted when the client already has that ply', async () => {

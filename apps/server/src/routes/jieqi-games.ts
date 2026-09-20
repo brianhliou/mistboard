@@ -19,14 +19,17 @@ import {
   resolveJieqiDecisions,
 } from './../jieqi-analysis.js';
 import { jieqiEngineBinaryAvailable } from './../jieqi-engine.js';
+import { jieqiRooms } from './../jieqi-registration.js';
 import type { JieqiEvent, JieqiProjection } from './../jieqi-runtime.js';
 import { jieqiTenant } from './../jieqi-tenant.js';
 import * as persistence from './../persistence.js';
+import type { JieqiLiveRoom } from './../server-ws-jieqi.js';
 import {
   applyTenantEvent,
   isTenantEventLog,
   replayTenantEvents,
 } from './../variant-tenant/runtime.js';
+import { registerLiveWatchPayloadBuilder } from './../watch-live.js';
 import { createGameAnalysisRoutes } from './game-analysis-route.js';
 import {
   type HttpApiContext,
@@ -229,6 +232,83 @@ function jieqiWatchTruthView(state: JieqiGameState): JieqiPlayerView {
 function jieqiWatchMaskedView(state: JieqiGameState): JieqiPlayerView {
   return { ...jieqiWatchTruthView(state), board: jieqiMaskedBoard(state) };
 }
+
+// The masked per-ply track alone, for an IN-PROGRESS room. The finished builder
+// above walks the same events and adds the truth track beside it; this one must
+// never, because the truth track is the deal (every face-down identity at every
+// ply) and the game is still being played.
+function jieqiLiveMaskedHistory(events: readonly JieqiEvent[]): JieqiPostgameSnapshot[] {
+  const created = events[0];
+  if (created?.type !== 'room-created') return [];
+  let projection = replayTenantEvents(jieqiTenant, [created]);
+  let ply = 0;
+  const masked: JieqiPostgameSnapshot[] = [{ ply, view: jieqiWatchMaskedView(projection.state) }];
+  for (const event of events.slice(1)) {
+    projection = applyTenantEvent(jieqiTenant, projection, event);
+    if (event.type !== 'move-played') continue;
+    ply += 1;
+    masked.push({ ply, view: jieqiWatchMaskedView(projection.state) });
+  }
+  return masked;
+}
+
+// Mistboard TV live payload for an IN-PROGRESS jieqi room. Jieqi is ASYMMETRIC
+// hidden-identity (the capturer alone learns a dark capture), so no seat's view
+// is honest for a spectator; TV serves the public view instead: the shared
+// masked board, and no captures at all (the compact TV product never draws
+// them). The finished route's `view` (truth) and `history.truth` ARE the deal
+// and are excluded here; the client's Reveal control is inert for a live game.
+// Regression: jieqi-games.test.ts.
+export function jieqiLiveWatchPayloadFor(
+  roomId: string,
+  room: Pick<JieqiLiveRoom, 'id' | 'events' | 'projection'>,
+): Record<string, unknown> | null {
+  if (room.id !== roomId) return null;
+  const projection = room.projection;
+  if (projection.state.status.type !== 'playing') return null;
+  if (!isTenantEventLog(jieqiTenant, room.events, roomId)) return null;
+  const timeline = jieqiPostgameTimeline(room.events);
+  const isEngine = jieqiTenant.engine?.isEngineClientId ?? (() => false);
+  const hasEngineSeat = Object.values(projection.seats).some((clientId) => isEngine(clientId));
+  const masked = jieqiLiveMaskedHistory(room.events);
+  return {
+    game: {
+      roomId,
+      variant: JIEQI_SPEC_ID,
+      mode: hasEngineSeat ? 'pve' : 'pvp',
+      result: 'in-progress',
+      termination: 'in-progress',
+      plyCount: timeline.filter((entry) => entry.type === 'move-played').length,
+      startedAt: new Date(room.events[0]?.at ?? Date.now()).toISOString(),
+      endedAt: null,
+      rated: projection.rated,
+      visibility: 'public',
+      initialMs: projection.timeControl?.initialMs ?? null,
+      incrementMs: projection.timeControl?.incrementMs ?? null,
+    },
+    state: {
+      status: projection.state.status,
+      moveNumber: projection.state.moveNumber,
+      ...(projection.clock ? { clock: projection.clock } : {}),
+      ...(projection.timeControl ? { timeControl: projection.timeControl } : {}),
+    },
+    timeline,
+    // The masked board, NOT jieqiTruthView.
+    view: masked.at(-1)?.view ?? jieqiWatchMaskedView(projection.state),
+    // Masked track only; no `truth` track exists for a live game.
+    history: { masked },
+  };
+}
+
+async function jieqiLiveWatchPayload(roomId: string): Promise<Record<string, unknown> | null> {
+  if (!jieqiEnabled()) return null;
+  const room = jieqiRooms.get(roomId) ?? null;
+  if (!room) return null;
+  await room.pendingWrites.catch(() => undefined);
+  return jieqiLiveWatchPayloadFor(roomId, room);
+}
+
+registerLiveWatchPayloadBuilder('jieqi', jieqiLiveWatchPayload);
 
 // Shared loader for the analysis tiers (both `/analysis` and `/decisions`): the per-game deal
 // (from the room-created event) + the move list, but only for a FINISHED game. Returns null for

@@ -414,8 +414,9 @@ export function renderBanqiMaterial(
   slots.capturesTop.replaceChildren();
   slots.capturesBottom.replaceChildren();
   slots.hiddenPool.replaceChildren();
-  // A spectator's view in a tenant room is an EMPTY board (/room/ never reveals),
-  // and an empty board must not read as "everything still face-down".
+  // No view yet (or an empty board) must not read as "everything still
+  // face-down". A spectator's view is the shared masked board since 2026-09-20
+  // (banqi is symmetric), so the pools below render for a spectator too.
   if (!view || Object.keys(view.board).length === 0) return;
   const pieceSet = readStoredXiangqiPieceSet();
   const glyph = (entry: { color: BanqiColor; role: BanqiPieceRole }): string =>

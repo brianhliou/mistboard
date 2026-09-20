@@ -73,6 +73,12 @@ registerVariantTenant({
     label: 'Banqi',
     legacyVariants: ['banqi'],
   },
+  // TV / current-games composition labelling: the engine ids live in this
+  // tenant's own namespace, which the shared isServerEngineClient heuristic
+  // does not recognise, so without this binding a bot seat reads as a nameless
+  // human and the game as PvP.
+  isEngineClientId: banqiTenant.engine?.isEngineClientId,
+  engineDisplayName: (clientId) => banqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
   errorPrefix: 'banqi',
   enabled: banqiTenant.enabled,

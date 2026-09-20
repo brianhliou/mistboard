@@ -631,3 +631,39 @@ export function getJieqiPlayerView(state: JieqiGameState, color: JieqiColor): Ji
     lastMove: state.lastMove,
   };
 }
+
+// What a neutral observer knows from watching the board alone: the live
+// spectator view (docs-private/spectator-visibility-matrix.md, the jieqi
+// "public view" row). Strictly narrower than either seat's view:
+//   - the board is the shared mask (jieqiMaskedBoard), which both seats see;
+//   - a capture is listed by owner (the piece visibly left the board) with its
+//     role only when the piece was already face-up when taken. A dark capture
+//     stays `role: null`, which is exactly what the VICTIM sees for that piece,
+//     so the observer never holds a role that one of the seats lacks;
+//   - no legal moves (nothing to play); inCheck for the side to move, which
+//     depends only on the public board (a face-down piece moves as the role of
+//     its starting square).
+// Never use this to reveal a finished game; that is jieqiTruthView.
+export function getJieqiPublicView(state: JieqiGameState): JieqiPlayerView {
+  const captured: JieqiCapturedView[] = state.captures.map((c) => ({
+    owner: c.owner,
+    role: c.revealedAtCapture ? c.role : null,
+  }));
+  let inCheck = false;
+  if (state.status.type === 'playing') {
+    const toMove = state.status.turn;
+    const general = findJieqiGeneral(state.board, toMove);
+    inCheck = general ? isAttacked(state.board, oppositeJieqiColor(toMove), general) : false;
+  }
+  return {
+    id: state.id,
+    perspective: 'red',
+    board: jieqiMaskedBoard(state),
+    legalMoves: [],
+    captured,
+    inCheck,
+    status: state.status,
+    moveNumber: state.moveNumber,
+    lastMove: state.lastMove,
+  };
+}

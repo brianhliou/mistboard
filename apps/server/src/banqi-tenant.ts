@@ -100,16 +100,15 @@ function asBanqiDeal(setup: unknown): BanqiDeal | undefined {
   return Array.isArray(setup) ? (setup as BanqiDeal) : undefined;
 }
 
-// Identity is hidden, position is not: moves are public to both seats. The only
-// redaction on the wire is stripping the server-secret deal from room-created.
-// (Spectators receive no events for now — /room/ never reveals; a public masked
-// spectator view can come with the spectator surface.)
+// Identity is hidden, position is not: moves are public to both seats and to a
+// spectator (banqi is SYMMETRIC: a flip reveals to everyone at once, so the
+// masked board is the whole public record). The only redaction on the wire is
+// stripping the server-secret deal from room-created.
 export function banqiClientEventFor(
   event: TenantRoomEvent<BanqiSeat, BanqiMove, typeof BANQI_SPEC_ID>,
-  seat: TenantSeat<BanqiSeat>,
+  _seat: TenantSeat<BanqiSeat>,
   ply: number,
 ): TenantClientEvent<BanqiSeat, BanqiMove, typeof BANQI_SPEC_ID> | null {
-  if (seat === 'spectator') return null;
   if (event.type === 'room-created') {
     if (event.setup === undefined) return event;
     const redacted = { ...event };
@@ -120,29 +119,17 @@ export function banqiClientEventFor(
   return event;
 }
 
-function emptyBanqiView(state: BanqiGameState): BanqiPlayerView {
-  return {
-    id: state.id,
-    perspective: 'red',
-    board: {},
-    legalMoves: [],
-    captured: [],
-    status: state.status,
-    ply: state.ply,
-    firstColor: null,
-    moveNumber: state.moveNumber,
-    lastMove: undefined,
-  };
-}
-
 export function getBanqiClientView(
   state: BanqiGameState,
   client: TenantSnapshotClient<BanqiSeat>,
 ): BanqiPlayerView {
-  // Spectator policy: empty view for now (/room/ never reveals). A public masked
-  // view for observers can come with the spectator surface — banqi leaks nothing
-  // to a spectator except the deal, which the masked view already hides.
-  if (client.seat === 'spectator') return emptyBanqiView(state);
+  // Spectator policy (docs-private/spectator-visibility-matrix.md): banqi is
+  // symmetric hidden-identity, so either seat's masked view IS the public view;
+  // it differs per seat only in the candidate moves, which a spectator has no
+  // use for. The deal stays hidden exactly as it is from the players.
+  if (client.seat === 'spectator') {
+    return { ...getBanqiPlayerView(state, BANQI_SEATS[0]), legalMoves: [] };
+  }
   return getBanqiPlayerView(state, client.seat);
 }
 

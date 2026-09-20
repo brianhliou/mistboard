@@ -7,15 +7,17 @@
  * READ-ONLY spectator instead when the runtime is debug-authorized (non-
  * production, or an admin debug token in production). This suite pins:
  *
- *   a. Fail-closed: production runtime + no admin token → still closes 1008.
+ *   a. Fail-closed: production runtime + no admin token → a SEALED (fog) room
+ *      still closes 1008. (Jieqi used to be the closed example; since 2026-09-20
+ *      hidden-identity rooms admit spectators on their public view.)
  *   b. Dev spectator: non-production + full room → hello, no seat-assigned event
  *      appended, no seatToken in the hello.
  *   c. Read-only: a spectator's resign / move append NOTHING to the event log;
  *      snapshot:request is still answered.
  *   d. Hidden-info regression (repo invariant for any observer/payload change):
  *      against the REAL jieqi tenant (identity-hidden), the spectator payload
- *      carries none of the piece identities a seat view holds — jieqi's
- *      viewForClient returns an empty view for seat 'spectator'.
+ *      carries no face-down identity and no capture role a seat lacks: jieqi's
+ *      viewForClient returns the PUBLIC view for seat 'spectator'.
  *
  * The runtime is driven directly with a fake socket + a room hydrated from an
  * event log (both seats filled), so no server subprocess or DB is needed. The
@@ -26,8 +28,15 @@
 import assert from 'node:assert/strict';
 import type { IncomingMessage } from 'node:http';
 import test from 'node:test';
-import { JIEQI_SPEC_ID, STANDARD_JIEQI_DEAL, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  DARK_XIANGQI_SPEC_ID,
+  JIEQI_SPEC_ID,
+  STANDARD_JIEQI_DEAL,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
 import type { WebSocket } from 'ws';
+import type { DarkXiangqiEvent } from '../dark-xiangqi-runtime.js';
+import { darkXiangqiTenant } from '../dark-xiangqi-tenant.js';
 import type { JieqiEvent, JieqiRuntimeRoom } from '../jieqi-runtime.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import type { XiangqiEvent } from '../xiangqi-runtime.js';
@@ -37,6 +46,7 @@ import { createTenantWsRuntime } from './ws.js';
 
 process.env.MISTBOARD_JIEQI_ENABLED = 'true';
 process.env.MISTBOARD_XIANGQI_ENABLED = 'true';
+process.env.MISTBOARD_DARK_XIANGQI_ENABLED = 'true';
 
 const jieqiWs = createTenantWsRuntime(jieqiTenant);
 
@@ -120,6 +130,22 @@ function withEnv(key: string, value: string | undefined, fn: () => Promise<void>
 const xiangqiWs = createTenantWsRuntime(xiangqiTenant);
 type XiangqiLiveRoom = Parameters<typeof xiangqiWs.handleConnection>[3];
 
+const darkXiangqiWs = createTenantWsRuntime(darkXiangqiTenant);
+type DarkXiangqiLiveRoom = Parameters<typeof darkXiangqiWs.handleConnection>[3];
+
+// A full, still-LIVE fog xiangqi room: the sealed class, closed to spectators
+// at any status short of finished, on any runtime.
+function fullDarkXiangqiRoom(roomId: string): DarkXiangqiLiveRoom {
+  const events: DarkXiangqiEvent[] = [
+    { type: 'room-created', at: 1_000, roomId, gameSpecId: DARK_XIANGQI_SPEC_ID },
+    { type: 'seat-assigned', at: 2_000, roomId, clientId: 'client-red', seat: 'red' },
+    { type: 'seat-assigned', at: 3_000, roomId, clientId: 'client-black', seat: 'black' },
+  ];
+  const created = createTenantRuntimeRoomFromEvents(darkXiangqiTenant, events);
+  assert.ok(created.ok, 'fixture event log must hydrate');
+  return created.room as unknown as DarkXiangqiLiveRoom;
+}
+
 // A full, still-LIVE xiangqi room: both seats taken, no moves needed.
 function fullXiangqiRoom(roomId: string): XiangqiLiveRoom {
   const events: XiangqiEvent[] = [
@@ -162,9 +188,9 @@ test('an OPEN spec admits a live spectator in production with no admin token', a
 test('spectator fallback stays fail-closed in production without an admin token', async () => {
   await withEnv('NODE_ENV', 'production', () =>
     withEnv('MISTBOARD_ADMIN_DEBUG_TOKEN', undefined, async () => {
-      const room = fullJieqiRoom('jq_spectator_prod');
+      const room = fullDarkXiangqiRoom('dxq_spectator_prod');
       const socket = new FakeSocket();
-      await jieqiWs.handleConnection(
+      await darkXiangqiWs.handleConnection(
         WS_CTX,
         socket.asWebSocket(),
         fakeRequest('prod-visitor-01'),
@@ -265,7 +291,7 @@ test('spectator is read-only: resign / move append nothing; snapshot:request ans
   });
 });
 
-test('hidden-info: spectator payload holds none of the piece identities a seat view carries', async () => {
+test('hidden-info: spectator payload holds no face-down identity and no private capture role', async () => {
   await withEnv('NODE_ENV', 'test', async () => {
     const room = fullJieqiRoom('jq_spectator_hidden');
     const socket = new FakeSocket();
@@ -278,28 +304,31 @@ test('hidden-info: spectator payload holds none of the piece identities a seat v
 
     const hello = socket.sent[0] as {
       seat: string;
-      state: { board: Record<string, unknown>; captured: unknown[] };
-      events: unknown[];
+      state: {
+        board: Record<string, { faceDown: boolean; role?: string }>;
+        captured: unknown[];
+        legalMoves: unknown[];
+      };
+      events: Array<{ type: string; setup?: unknown }>;
     };
     assert.equal(hello.seat, 'spectator');
 
-    // A seated view of the SAME room DOES carry piece identities — establishes
-    // the redaction is real, not a vacuous empty-room assertion.
+    // A seated view of the SAME room is the same masked board (a face-down piece
+    // hides its role from its owner too), so the spectator gets exactly that:
+    // 32 pieces, only the two generals face-up, no role on anything face-down.
     const redView = tenantSnapshotPayload(jieqiTenant, room as unknown as JieqiRuntimeRoom, {
       id: 'client-red',
       seat: 'red',
       solo: false,
     });
-    assert.ok(
-      Object.keys(redView.state.board).length > 0,
-      'the red seat view must see a populated board (else the test is vacuous)',
-    );
-
-    // jieqi's viewForClient returns emptyJieqiView for a spectator: no board
-    // entries, no captured pieces, no events. None of the seat-view identities
-    // reach the spectator payload.
-    assert.deepEqual(hello.state.board, {}, 'spectator sees an empty board (no identities leaked)');
-    assert.deepEqual(hello.state.captured, [], 'spectator sees no captured pieces');
-    assert.deepEqual(hello.events, [], 'spectator receives no events');
+    assert.equal(Object.keys(redView.state.board).length, 32);
+    assert.deepEqual(hello.state.board, redView.state.board, 'spectator sees the shared mask');
+    const faceDown = Object.values(hello.state.board).filter((entry) => entry.faceDown);
+    assert.equal(faceDown.length, 30, 'only the generals are face-up at the start');
+    for (const entry of faceDown) assert.ok(!('role' in entry), 'a face-down piece has no role');
+    assert.deepEqual(hello.state.legalMoves, [], 'a spectator has nothing to play');
+    // The public log, with the deal stripped from room-created.
+    assert.ok(hello.events.length > 0, 'spectator receives the public log');
+    for (const event of hello.events) assert.ok(!('setup' in event), 'the deal never ships');
   });
 });

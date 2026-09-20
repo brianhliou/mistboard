@@ -15,8 +15,10 @@
  *        - a face-down board entry carries a COLOUR but never a ROLE;
  *        - CAPTURER-ONLY reveal: a hidden capture's role goes to the capturer,
  *          never the victim or spectators;
- *        - the position is public (both seats receive every move; both share the
- *          same lastMove) while spectators get an empty view and no events.
+ *        - the position is public (both seats and a spectator receive every move
+ *          and share the same lastMove); a spectator gets the PUBLIC view: the
+ *          shared masked board, and every capture by owner with its role only
+ *          where the piece was face-up when taken (never a role a seat lacks).
  *
  * The scripted game deliberately captures still-face-down pieces (a cannon and
  * a horse in the opening) so the capturer-only asymmetry is exercised, not just
@@ -364,18 +366,16 @@ test('jieqi golden wire: the server-secret deal never reaches any client', () =>
       // no events while the game is live, and the whole log once it ends.
       const redCreated = snapshots.red!.events.filter((e) => e.type === 'room-created');
       assert.equal(redCreated.length, 1, `${script.id}/${step.label}: red must see room-created`);
-      if (isFinishedStep(step)) {
-        assert.ok(
-          snapshots.spectator!.events.length > 0,
-          `${script.id}/${step.label}: a finished room must hand the spectator its log`,
-        );
-      } else {
-        assert.equal(snapshots.spectator!.events.length, 0);
-      }
+      // Live or finished, the spectator holds the same public log as a seat.
+      assert.deepStrictEqual(
+        snapshots.spectator!.events,
+        snapshots.red!.events,
+        `${script.id}/${step.label}: a spectator receives the public log`,
+      );
     }
   }
   // And directly at the redaction boundary: a room-created carrying a deal is
-  // stripped for both players and withheld from spectators.
+  // stripped for both players and for a spectator alike.
   const created: JieqiEvent = {
     type: 'room-created',
     at: 1,
@@ -383,18 +383,17 @@ test('jieqi golden wire: the server-secret deal never reaches any client', () =>
     gameSpecId: JIEQI_SPEC_ID,
     setup: STANDARD_JIEQI_DEAL,
   };
-  for (const seat of ['red', 'black'] as const) {
+  for (const seat of SEATS) {
     const out = jieqiClientEventFor(created, seat, 0);
     assert.ok(out && out.type === 'room-created' && !('setup' in out));
   }
-  assert.equal(jieqiClientEventFor(created, 'spectator', 0), null);
 });
 
 test('jieqi golden wire: a face-down board entry carries a colour but never a role', () => {
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
       const snapshots = wireSnapshots(step);
-      for (const seat of ['red', 'black'] as const) {
+      for (const seat of SEATS) {
         for (const [square, entry] of Object.entries(snapshots[seat]!.state.board)) {
           if (entry.faceDown) {
             assert.ok(
@@ -453,9 +452,18 @@ test('jieqi golden wire: capture reveal is capturer-only while the game is live'
           `${script.id}/${step.label}: the victim learned a hidden capture (${victimRole})`,
         );
         if (victimRole === null) hiddenCaptureSeen = true;
+        // A spectator holds the VICTIM's knowledge of each capture: the owner
+        // (public: the piece left the board) and a role only where the piece
+        // was face-up when taken. Never the capturer's private reveal.
+        const spectatorCapture = snapshots.spectator!.state.captured[i]!;
+        assert.equal(spectatorCapture.owner, owner);
+        assert.equal(
+          spectatorCapture.role,
+          victimRole,
+          `${script.id}/${step.label}: spectator capture ${i} must match the victim's view`,
+        );
       }
-      // Spectators see no captured pieces (empty view).
-      assert.deepStrictEqual(snapshots.spectator!.state.captured, []);
+      assert.equal(snapshots.spectator!.state.captured.length, red.length);
     }
   }
   assert.ok(
@@ -476,34 +484,48 @@ test('jieqi golden wire: the position is public — both seats share moves and l
         blackMoves,
         `${script.id}/${step.label}: both seats must receive the same public moves`,
       );
-      // Both seats see the same lastMove (a public {from,to}); spectators none.
+      // Everyone sees the same lastMove (a public {from,to}), spectators included.
       assert.deepStrictEqual(
         snapshots.red!.state.lastMove,
         snapshots.black!.state.lastMove,
         `${script.id}/${step.label}: lastMove is public in jieqi`,
       );
-      // A per-step broadcast of a move goes to BOTH seats, never a spectator.
+      assert.deepStrictEqual(snapshots.spectator!.state.lastMove, snapshots.red!.state.lastMove);
+      // A per-step broadcast of a move goes to both seats and the spectator alike.
       const efs = step.eventForSeat as Record<string, { type?: string } | null> | undefined;
       if (efs && (efs.red?.type === 'move-played' || efs.black?.type === 'move-played')) {
         assert.deepStrictEqual(efs.red, efs.black, 'both seats get the same move broadcast');
-        assert.equal(efs.spectator, null, 'spectators never receive a move broadcast');
+        assert.deepStrictEqual(efs.spectator, efs.red, 'a spectator gets the same broadcast');
       }
     }
   }
 });
 
-test('jieqi golden wire: spectators get an empty view while the game is live', () => {
+test('jieqi golden wire: spectators get the public view while the game is live', () => {
+  // The "public view" row of the matrix (docs-private/spectator-visibility-
+  // matrix.md): the shared masked board (both seats' board, since a face-down
+  // piece hides its role from its own owner too), nothing to play, and a
+  // captured pool that never carries a role a seat lacks (asserted capture by
+  // capture in the capturer-only test above).
+  let liveSteps = 0;
   for (const script of runAllScripts()) {
     for (const step of script.steps) {
       if (isFinishedStep(step)) continue;
-      const spectator = wireSnapshots(step).spectator!;
-      assert.deepStrictEqual(spectator.state.board, {});
-      assert.deepStrictEqual(spectator.state.captured, []);
-      assert.deepStrictEqual(spectator.state.legalMoves, []);
-      assert.equal(spectator.state.lastMove, undefined);
-      assert.deepStrictEqual(spectator.events, []);
+      liveSteps += 1;
+      const { spectator, red, black } = wireSnapshots(step);
+      assert.deepStrictEqual(spectator!.state.board, red!.state.board);
+      assert.deepStrictEqual(spectator!.state.board, black!.state.board);
+      assert.deepStrictEqual(spectator!.state.legalMoves, []);
+      for (const [square, entry] of Object.entries(spectator!.state.board)) {
+        if (!entry.faceDown) continue;
+        assert.ok(
+          !('role' in entry),
+          `${script.id}/${step.label}: spectator sees a role on face-down ${square}`,
+        );
+      }
     }
   }
+  assert.ok(liveSteps > 0, 'no live step in the scripts: this test asserted nothing');
 });
 
 test('jieqi golden wire: a finished room opens fully to a spectator', () => {

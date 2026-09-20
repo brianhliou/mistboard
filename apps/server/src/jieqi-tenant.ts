@@ -23,6 +23,7 @@ import {
   createInitialJieqiState,
   createJieqiDeal,
   getJieqiPlayerView,
+  getJieqiPublicView,
   isJieqiLegalMove,
   JIEQI_SPEC_ID,
   type JieqiColor,
@@ -95,14 +96,16 @@ function asJieqiDeal(setup: unknown): JieqiDeal | undefined {
   return { red: candidate.red as JieqiPieceRole[], black: candidate.black as JieqiPieceRole[] };
 }
 
-// Identity is hidden, position is not: moves are public to both seats. The only
-// redaction on the wire is stripping the server-secret deal from room-created.
+// Identity is hidden, position is not: moves are public to both seats and to a
+// spectator (a move event is a {from,to} the board already shows; the identity
+// it reveals reaches each viewer through their own view, not the event). The
+// only redaction on the wire is stripping the server-secret deal from
+// room-created.
 export function jieqiClientEventFor(
   event: TenantRoomEvent<JieqiColor, JieqiMove, typeof JIEQI_SPEC_ID>,
-  seat: TenantSeat<JieqiColor>,
+  _seat: TenantSeat<JieqiColor>,
   ply: number,
 ): TenantClientEvent<JieqiColor, JieqiMove, typeof JIEQI_SPEC_ID> | null {
-  if (seat === 'spectator') return null;
   if (event.type === 'room-created') {
     if (event.setup === undefined) return event;
     const redacted = { ...event };
@@ -113,27 +116,16 @@ export function jieqiClientEventFor(
   return event;
 }
 
-function emptyJieqiView(state: JieqiGameState): JieqiPlayerView {
-  return {
-    id: state.id,
-    perspective: 'red',
-    board: {},
-    legalMoves: [],
-    captured: [],
-    inCheck: false,
-    status: state.status,
-    moveNumber: state.moveNumber,
-    lastMove: undefined,
-  };
-}
-
 export function getJieqiClientView(
   state: JieqiGameState,
   client: TenantSnapshotClient<JieqiColor>,
 ): JieqiPlayerView {
-  // Spectator policy: empty view for now (/room/ never reveals). A public masked
-  // view for observers can come with the spectator surface.
-  if (client.seat === 'spectator') return emptyJieqiView(state);
+  // Spectator policy (docs-private/spectator-visibility-matrix.md, the jieqi
+  // "public view" row): the shared masked board, captures by owner with a role
+  // only where the piece was face-up when taken. Jieqi is ASYMMETRIC (the
+  // capturer alone learns a dark capture), so this is neither seat's view; it is
+  // what the victim knows about every capture, which both seats already hold.
+  if (client.seat === 'spectator') return getJieqiPublicView(state);
   const perspective = client.seat === 'black' ? 'black' : 'red';
   return getJieqiPlayerView(state, perspective);
 }

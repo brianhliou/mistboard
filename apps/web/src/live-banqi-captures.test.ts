@@ -98,7 +98,7 @@ describe('renderBanqiMaterial', () => {
     expect(labels(rows[0]!)).toHaveLength(7);
   });
 
-  it('shows nothing for a spectator: an empty board is no information, not a full pool', () => {
+  it('shows nothing for an empty board: no information is not a full pool', () => {
     const s = slots();
     renderBanqiMaterial(s, { ...midgame, board: {}, captured: [] }, null);
     expect(s.hiddenPool.childElementCount).toBe(0);

@@ -8,6 +8,7 @@ import {
   getJieqiLegalMoves,
   getJieqiLegalMovesFrom,
   getJieqiPlayerView,
+  getJieqiPublicView,
   isJieqiLegalMove,
   type JieqiBoard,
   type JieqiColor,
@@ -383,4 +384,65 @@ test('jieqiTruthView reveals every identity and captures carry full roles', () =
   assert.equal(truth.perspective, 'red');
   assert.equal(truth.inCheck, false);
   assert.deepEqual(truth.legalMoves, []);
+});
+
+// ── Public view (live spectators) ───────────────────────────────────────────
+
+test('the public view never holds a role that one of the seats lacks', () => {
+  // One dark capture (red takes a dark black cannon: only red learns it) and one
+  // revealed capture (black takes a face-up red chariot: public to everyone).
+  const state = playing({
+    d1: up('red', 'general'),
+    f10: up('black', 'general'),
+    a1: up('red', 'chariot'),
+    a3: dark('black', 'cannon'),
+    i10: up('black', 'chariot'),
+    i8: up('red', 'chariot'),
+    e5: dark('red', 'horse'),
+  });
+  const afterDarkCapture = applyJieqiMove(state, { from: 'a1', to: 'a3' });
+  const after = applyJieqiMove(afterDarkCapture, { from: 'i10', to: 'i8' });
+
+  const spectator = getJieqiPublicView(after);
+  const red = getJieqiPlayerView(after, 'red');
+  const black = getJieqiPlayerView(after, 'black');
+
+  // The board is the shared mask: dark pieces keep their colour and lose their role.
+  assert.deepEqual(spectator.board, red.board);
+  assert.deepEqual(spectator.board.e5, { color: 'red', faceDown: true });
+  // The dark capture is listed (the piece visibly left the board) with no role,
+  // which is what the victim sees; the revealed capture carries its public role.
+  assert.deepEqual(spectator.captured, [
+    { owner: 'black', role: null },
+    { owner: 'red', role: 'chariot' },
+  ]);
+  assert.deepEqual(red.captured, [
+    { owner: 'black', role: 'cannon' },
+    { owner: 'red', role: 'chariot' },
+  ]);
+  // Never more than either seat: each capture's public role is null or agrees
+  // with BOTH seats' knowledge of it.
+  spectator.captured.forEach((capture, index) => {
+    if (capture.role === null) return;
+    assert.equal(capture.role, red.captured[index]?.role);
+    assert.equal(capture.role, black.captured[index]?.role);
+  });
+  // Nothing to play from the rail.
+  assert.deepEqual(spectator.legalMoves, []);
+  assert.equal(spectator.lastMove?.to, 'i8');
+});
+
+test('the public view reports check for the side to move from the public board', () => {
+  // Black to move, in check from a face-up red chariot on the file.
+  const state = playing(
+    {
+      d1: up('red', 'general'),
+      f10: up('black', 'general'),
+      a10: up('red', 'chariot'),
+    },
+    'black',
+  );
+  assert.equal(getJieqiPublicView(state).inCheck, true);
+  assert.equal(getJieqiPlayerView(state, 'black').inCheck, true);
+  assert.equal(getJieqiPublicView(playing(state.board, 'red')).inCheck, false);
 });
