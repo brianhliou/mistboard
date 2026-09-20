@@ -52,3 +52,28 @@ test('move <-> Pikafish UCI round-trips with the rank-1 <-> rank-0 offset', () =
   assert.deepEqual(pikafishUciToJieqiMove('e9e8'), { from: 'e10', to: 'e9' });
   assert.equal(pikafishUciToJieqiMove('nope'), null);
 });
+
+test('the viewer never learns which of its own dark pieces were captured', () => {
+  // Black takes red's face-down b1 piece. Truth and black (the capturer) drop
+  // that identity from red's pool; red's own FEN keeps it, because under
+  // capturer-only reveal red was never told what it lost.
+  const state = createInitialJieqiState('t');
+  const victim = state.board.b1;
+  assert.ok(victim?.faceDown && victim.color === 'red');
+  const board = { ...state.board };
+  delete board.b1;
+  const captured = {
+    ...state,
+    board,
+    captures: [{ owner: 'red' as const, role: victim.role, revealedAtCapture: false }],
+  };
+  const pool = (fen: string): string => fen.split(' ')[2]!;
+  const before = pool(jieqiStateToPikafishFen(state));
+  assert.equal(before, pool(jieqiStateToPikafishFen(state, { viewer: 'red' })));
+  assert.equal(before, pool(jieqiStateToPikafishFen(state, { viewer: 'black' })));
+
+  const truth = pool(jieqiStateToPikafishFen(captured));
+  assert.equal(truth, pool(jieqiStateToPikafishFen(captured, { viewer: 'black' })));
+  assert.notEqual(truth, before);
+  assert.equal(pool(jieqiStateToPikafishFen(captured, { viewer: 'red' })), before);
+});
