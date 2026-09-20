@@ -16,6 +16,23 @@ type PatronDatabase = pg.Pool | PatronTransaction;
 // canceled/unpaid clears it.
 export const PATRON_ACTIVE_STATUSES: readonly string[] = ['active', 'trialing'];
 
+// A one-time payment (Checkout `payment` mode) is stored with this status and
+// a current_period_end computed at grant time; it qualifies until that instant
+// and nothing from Stripe ever ends it, so expiry is our sweep's job
+// (expireLapsedPatrons), not a webhook's.
+export const PATRON_ONE_TIME_STATUS = 'paid';
+
+// The one definition of a row that carries the badge. Every reader of
+// patron_subscriptions that decides "is this account a patron" (the badge
+// cache below, the expiry sweep, /metrics) goes through this fragment; never
+// spell the predicate out again. `statusesParam` / `nowParam` are the $n
+// placeholders the caller binds PATRON_ACTIVE_STATUSES and the current time to.
+export function patronQualifyingRowSql(statusesParam: string, nowParam: string): string {
+  return `(is_lifetime = true
+           OR status = ANY(${statusesParam}::text[])
+           OR (status = '${PATRON_ONE_TIME_STATUS}' AND current_period_end > ${nowParam}::timestamptz))`;
+}
+
 export type PatronSubscriptionInput = {
   accountId: string;
   stripeCustomerId: string | null;
@@ -127,28 +144,65 @@ export async function applyPatronSubscription(
         `INSERT INTO patron_subscriptions
            (account_id, provider, stripe_customer_id, stripe_subscription_id,
             status, tier, current_period_end, cancel_at_period_end, is_lifetime)
-         VALUES ($1, 'stripe', $2, NULL, $3, $4, NULL, false, $5)`,
-        [input.accountId, input.stripeCustomerId, input.status, input.tier, input.isLifetime],
+         VALUES ($1, 'stripe', $2, NULL, $3, $4, $5, false, $6)`,
+        [
+          input.accountId,
+          input.stripeCustomerId,
+          input.status,
+          input.tier,
+          input.currentPeriodEnd,
+          input.isLifetime,
+        ],
       );
     }
-
-    // Recompute users.patron_since from the account's current qualifying rows:
-    // earliest created_at among rows that are lifetime or in an active status;
-    // NULL when none qualify (badge drops). Only writes on change. In the same
-    // transaction so the badge cache can never drift from the underlying rows.
-    await client.query(
-      `UPDATE users u
-         SET patron_since = sub.since, updated_at = now()
-       FROM (
-         SELECT MIN(created_at) AS since
-           FROM patron_subscriptions
-          WHERE account_id = $1
-            AND (is_lifetime = true OR status = ANY($2::text[]))
-       ) sub
-       WHERE u.id = $1 AND u.patron_since IS DISTINCT FROM sub.since`,
-      [input.accountId, PATRON_ACTIVE_STATUSES],
-    );
+    await recomputePatronSince(input.accountId, new Date(), client);
   };
   if (transaction) await apply(transaction);
   else await withTransaction(apply);
+}
+
+// Recompute users.patron_since from the account's current qualifying rows:
+// earliest created_at among rows that qualify at `now`; NULL when none do
+// (badge drops). Only writes on change. Runs inside the caller's transaction
+// so the badge cache can never drift from the underlying rows.
+async function recomputePatronSince(
+  accountId: string,
+  now: Date,
+  client: PatronDatabase,
+): Promise<void> {
+  await client.query(
+    `UPDATE users u
+       SET patron_since = sub.since, updated_at = now()
+     FROM (
+       SELECT MIN(created_at) AS since
+         FROM patron_subscriptions
+        WHERE account_id = $1
+          AND ${patronQualifyingRowSql('$2', '$3')}
+     ) sub
+     WHERE u.id = $1 AND u.patron_since IS DISTINCT FROM sub.since`,
+    [accountId, PATRON_ACTIVE_STATUSES, now],
+  );
+}
+
+// Drop the badge from accounts whose only qualifying rows have lapsed. A
+// recurring row is ended by a Stripe event, which recomputes the cache on the
+// spot; a one-time row lapses on the clock with nothing from Stripe to say so.
+// Idempotent and cheap: touches only accounts whose cache is stale. Returns
+// the number of accounts whose badge was removed.
+export async function expireLapsedPatrons(
+  now: Date,
+  database: PatronDatabase = getPool(),
+): Promise<number> {
+  const { rowCount } = await database.query(
+    `UPDATE users u
+       SET patron_since = NULL, updated_at = now()
+     WHERE u.patron_since IS NOT NULL
+       AND NOT EXISTS (
+         SELECT 1 FROM patron_subscriptions p
+          WHERE p.account_id = u.id
+            AND ${patronQualifyingRowSql('$1', '$2')}
+       )`,
+    [PATRON_ACTIVE_STATUSES, now],
+  );
+  return rowCount ?? 0;
 }

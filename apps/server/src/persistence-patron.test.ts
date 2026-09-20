@@ -1,6 +1,8 @@
 import {
   applyPatronSubscription,
   createUser,
+  expireLapsedPatrons,
+  PATRON_ONE_TIME_STATUS,
   type PatronSubscriptionInput,
   processStripeEvent,
 } from './persistence.js';
@@ -80,7 +82,67 @@ definePersistenceTests('patron', () => {
     assert.equal(state.status, 'canceled');
     assert.equal(state.patronSince, null);
   });
+
+  // A one-time payment carries the badge until its period end and then lapses
+  // under the sweep, with nothing from Stripe to end it. The sweep must leave a
+  // live recurring patron alone.
+  test('a one-time payment lapses under the expiry sweep; a recurring patron does not', async () => {
+    const now = new Date('2026-09-20T00:00:00.000Z');
+    for (const id of ['once_user', 'monthly_user']) {
+      await createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: now,
+        handle: id.replace('_', '-'),
+        displayName: id,
+        now,
+      });
+    }
+    await applyPatronSubscription({
+      accountId: 'once_user',
+      stripeCustomerId: 'cus_once',
+      stripeSubscriptionId: null,
+      status: PATRON_ONE_TIME_STATUS,
+      tier: 'once_10',
+      currentPeriodEnd: new Date('2026-11-20T00:00:00.000Z'),
+      cancelAtPeriodEnd: false,
+      isLifetime: false,
+    });
+    await applyPatronSubscription({
+      ...patronInput('active'),
+      accountId: 'monthly_user',
+      stripeSubscriptionId: 'sub_monthly_user',
+      currentPeriodEnd: new Date('2026-10-20T00:00:00.000Z'),
+    });
+    assert.ok(await patronSince('once_user'), 'one-time grant sets the badge');
+    assert.ok(await patronSince('monthly_user'));
+
+    assert.equal(await expireLapsedPatrons(new Date('2026-11-19T23:59:59.000Z')), 0);
+    assert.ok(await patronSince('once_user'), 'still inside the paid months');
+
+    assert.equal(await expireLapsedPatrons(new Date('2026-11-20T00:00:01.000Z')), 1);
+    assert.equal(await patronSince('once_user'), null, 'lapsed');
+    // Stripe's period end is not ours to enforce: a recurring row stays until a
+    // webhook says otherwise, however far past current_period_end the clock is.
+    assert.ok(await patronSince('monthly_user'), 'recurring patron untouched');
+
+    assert.equal(await expireLapsedPatrons(new Date('2027-01-01T00:00:00.000Z')), 0, 'idempotent');
+  });
 });
+
+async function patronSince(accountId: string): Promise<Date | null> {
+  const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+  await client.connect();
+  try {
+    const { rows } = await client.query<{ patron_since: Date | null }>(
+      'SELECT patron_since FROM users WHERE id = $1',
+      [accountId],
+    );
+    return rows[0]?.patron_since ?? null;
+  } finally {
+    await client.end();
+  }
+}
 
 function patronInput(status: string): PatronSubscriptionInput {
   return {

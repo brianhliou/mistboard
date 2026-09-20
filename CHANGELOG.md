@@ -73,6 +73,7 @@ Conventions:
 
 ### Site
 
+- Patron support takes a one-time payment as well as a monthly subscription, over the same $5/10/20/50 amounts; a one-time payment carries the badge for one month per $5, and Stripe Checkout offers Alipay and WeChat Pay on it, so a mainland Chinese player can pay without a card ([17616293](https://github.com/brianhliou/mistboard/commit/17616293))
 - An Atomic Xiangqi game's link preview shows the game's turning point once it has been analysed, not only the final position ([d6ea0745](https://github.com/brianhliou/mistboard/commit/d6ea0745))
 - The homepage's fourth band is a learn row: how to play, the piece lessons, puzzles, the openings explorer, play the computer, the 心武残编 manual and every champion, one card each and all on this site, with our own episode leading; it renders everywhere, including where YouTube is blocked ([ac73fcf7](https://github.com/brianhliou/mistboard/commit/ac73fcf7))
 - The Atomic Xiangqi launch note's card shows the moment of a blast on the board, and its atom marker is bolder ([70b8c4b2](https://github.com/brianhliou/mistboard/commit/70b8c4b2))

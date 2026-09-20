@@ -13,7 +13,7 @@ import {
   sinceLaunch,
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
-import { PATRON_ACTIVE_STATUSES } from './persistence-patron.js';
+import { PATRON_ACTIVE_STATUSES, patronQualifyingRowSql } from './persistence-patron.js';
 
 // Admin /metrics, Postgres-true. Everything in `weekly` and the headline
 // figures is COUNTED play only (persistence-counted-games.ts): completed
@@ -253,7 +253,7 @@ async function collectHeadline(
          (SELECT count(DISTINCT (subject_type, subject_id)) FROM human_players
             WHERE ended_at < $1::timestamptz - INTERVAL '28 days')::int AS previous_active_28d,
          (SELECT count(DISTINCT account_id) FROM patron_subscriptions
-            WHERE is_lifetime = true OR status = ANY($2::text[]))::int AS active_patrons`,
+            WHERE ${patronQualifyingRowSql('$2', '$1')})::int AS active_patrons`,
       [now, PATRON_ACTIVE_STATUSES],
     ),
     db.query<{ result: string | null; n: number }>(

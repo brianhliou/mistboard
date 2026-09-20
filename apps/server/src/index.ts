@@ -10,6 +10,7 @@ import { MISTY_DARK_CHESS_ACTIVE_ENGINE_ID } from './first-party-bots.js';
 import { prewarmJieqiEngine } from './jieqi-engine.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import { runMigrations } from './migrate.js';
+import { type PatronExpirySweeper, startPatronExpirySweeper } from './patron-expiry-sweeper.js';
 import * as persistence from './persistence.js';
 import type { RematchOrchestrator } from './rematch.js';
 import { recordRoomLifecycleAuditSafe } from './room-lifecycle-audit.js';
@@ -211,6 +212,7 @@ const wsConnectionCtx: WebSocketConnectionContext = {
 let server: ReturnType<typeof createServer> | null = null;
 let wss: WebSocketServer | null = null;
 let deadlineSweeper: TenantDeadlineSweeper | null = null;
+let patronExpirySweeper: PatronExpirySweeper | null = null;
 let broadcastScheduler: XiangqiBroadcastScheduler | null = null;
 let botVsBotScheduler: BotVsBotScheduler | null = null;
 let shuttingDown = false;
@@ -242,6 +244,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
   roomLifecycle.startStalePausedSweep();
   deadlineSweeper = startTenantDeadlineSweeper();
   if (persistence.isInitialized()) {
+    patronExpirySweeper = startPatronExpirySweeper();
     broadcastScheduler = startXiangqiBroadcastScheduler();
     // Always started; the tick no-ops unless MISTBOARD_BOT_VS_BOT_ENABLED=true,
     // so ops can flip generation on/off without a restart.
@@ -344,6 +347,8 @@ export async function stopServer(): Promise<void> {
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
   deadlineSweeper = null;
+  patronExpirySweeper?.stop();
+  patronExpirySweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;
   botVsBotScheduler?.stop();
@@ -552,6 +557,8 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
   roomLifecycle.stopSweeps();
   deadlineSweeper?.stop();
   deadlineSweeper = null;
+  patronExpirySweeper?.stop();
+  patronExpirySweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;
   botVsBotScheduler?.stop();

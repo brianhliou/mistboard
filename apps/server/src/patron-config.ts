@@ -17,38 +17,47 @@ export type PatronTier = {
   // Stripe price id is read from this env var. Prices are created once in the
   // Stripe dashboard; ids live in env, not the DB.
   priceEnvVar: string;
-  isLifetime: boolean;
+  // How long a one-time payment carries the badge (lichess's rule: one month
+  // per $5). null for recurring tiers, whose period comes from Stripe.
+  months: number | null;
 };
 
 // USD-only v1. Multi-currency / a custom-amount slider are deferred (see
-// patron-track.md). Recurring monthly tiers plus one one-time "lifetime" gift.
+// patron-track.md). The same amount ladder under two frequencies: monthly
+// subscriptions and one-time payments. One-time exists because Alipay and
+// WeChat Pay, the wallets a mainland Chinese player actually holds, cannot be
+// charged in Checkout subscription mode; in payment mode Stripe offers them
+// automatically, so the page never has to name a method (patron-track.md,
+// 2026-09-20). The former `lifetime` tier never had a price set and is gone.
+const AMOUNTS_USD = [5, 10, 20, 50] as const;
+const MONTHS_PER_5_USD = 1;
+
 export const PATRON_TIERS: readonly PatronTier[] = [
-  {
-    key: 'monthly_5',
-    mode: 'subscription',
-    priceEnvVar: 'STRIPE_PRICE_MONTHLY_5',
-    isLifetime: false,
-  },
-  {
-    key: 'monthly_10',
-    mode: 'subscription',
-    priceEnvVar: 'STRIPE_PRICE_MONTHLY_10',
-    isLifetime: false,
-  },
-  {
-    key: 'monthly_20',
-    mode: 'subscription',
-    priceEnvVar: 'STRIPE_PRICE_MONTHLY_20',
-    isLifetime: false,
-  },
-  {
-    key: 'monthly_50',
-    mode: 'subscription',
-    priceEnvVar: 'STRIPE_PRICE_MONTHLY_50',
-    isLifetime: false,
-  },
-  { key: 'lifetime', mode: 'payment', priceEnvVar: 'STRIPE_PRICE_LIFETIME', isLifetime: true },
+  ...AMOUNTS_USD.map(
+    (amount): PatronTier => ({
+      key: `monthly_${amount}`,
+      mode: 'subscription',
+      priceEnvVar: `STRIPE_PRICE_MONTHLY_${amount}`,
+      months: null,
+    }),
+  ),
+  ...AMOUNTS_USD.map(
+    (amount): PatronTier => ({
+      key: `once_${amount}`,
+      mode: 'payment',
+      priceEnvVar: `STRIPE_PRICE_ONCE_${amount}`,
+      months: (amount / 5) * MONTHS_PER_5_USD,
+    }),
+  ),
 ];
+
+// Badge months for a one-time payment when the tier is unknown (a session
+// stamped by an older deploy): derive from the amount actually paid, never
+// zero for money received.
+export function oneTimeMonthsForAmount(amountTotalCents: number | null | undefined): number {
+  if (typeof amountTotalCents !== 'number' || !Number.isFinite(amountTotalCents)) return 1;
+  return Math.max(1, Math.floor(amountTotalCents / 500) * MONTHS_PER_5_USD);
+}
 
 export function findPatronTier(key: string): PatronTier | null {
   return PATRON_TIERS.find((tier) => tier.key === key) ?? null;
