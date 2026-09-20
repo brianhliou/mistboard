@@ -101,7 +101,10 @@ function engineToMove(room: JieqiEngineRoom, seat: JieqiColor): boolean {
 // `moves` is only the slice the engine replays; `gameMoves` is the whole game, and
 // the decision record needs BOTH. Reporting the window as the game's history is how
 // a twelve-ply game paged as a two-ply one on 2026-09-02.
-function jieqiEngineRepWindow(room: JieqiEngineRoom): {
+function jieqiEngineRepWindow(
+  room: JieqiEngineRoom,
+  seat: JieqiColor,
+): {
   fen: string;
   moves: string[];
   gameMoves: string[];
@@ -113,7 +116,11 @@ function jieqiEngineRepWindow(room: JieqiEngineRoom): {
   }
   const created = events[0];
   if (created?.type !== 'room-created') {
-    return { fen: jieqiStateToPikafishFen(room.projection.state), moves: [], gameMoves };
+    return {
+      fen: jieqiStateToPikafishFen(room.projection.state, { viewer: seat }),
+      moves: [],
+      gameMoves,
+    };
   }
   let proj = replayTenantEvents(jieqiTenant, [created]);
   let startState = proj.state;
@@ -134,7 +141,9 @@ function jieqiEngineRepWindow(room: JieqiEngineRoom): {
     }
   }
   return {
-    fen: jieqiStateToPikafishFen(startState),
+    // The engine's seat is the viewer: its own pool must not carry what the
+    // human captured from it face-down (jieqi-fen.ts, redaction argument).
+    fen: jieqiStateToPikafishFen(startState, { viewer: seat }),
     moves: windowMoves.map(jieqiMoveToPikafishUci),
     gameMoves,
   };
@@ -183,7 +192,7 @@ export async function playJieqiEngineMoveIfReady(
   const incrementMs = clock?.incrementMs ?? 0;
   if (remainingMs !== null && remainingMs <= 0) return;
 
-  const { fen, moves, gameMoves } = jieqiEngineRepWindow(room);
+  const { fen, moves, gameMoves } = jieqiEngineRepWindow(room, seat);
   // Clock-aware per-move budget (shared allocator). Jieqi's strength anchor is the
   // tier's search DEPTH (set inside jieqiLiveEngineMove); this movetime is the
   // latency ceiling + time-pressure guard. Existing ceiling preserved —

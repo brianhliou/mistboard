@@ -297,6 +297,7 @@ export const ZH_HANT_CONTENT = {
   'patron.donateOnce': '單次付款',
   'patron.manage': '管理你的訂閱',
   'patron.alreadyPatron': '你已經是贊助者。謝謝。',
+  'patron.patronUntil': '你的贊助者身份有效至 {date}。謝謝。',
   'patron.signInFirst': '登入後繼續',
   'patron.unavailable': '結帳還沒開放，不會產生任何扣款。請稍後再來。',
   'patron.checkoutError': '發起結帳時出了問題，請重試。',

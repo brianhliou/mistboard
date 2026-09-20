@@ -15,6 +15,9 @@ import { buildNav } from './site-shell.js';
 type PatronTierMode = 'subscription' | 'payment';
 type PatronTierConfig = { key: string; mode: PatronTierMode };
 type PatronConfigResponse = { configured: boolean; tiers: PatronTierConfig[] };
+// What a signed-in patron's badge rests on (/api/patron/status): a subscription
+// (the portal has something to manage) and/or a one-time payment (an end date).
+type PatronStatusResponse = { active: boolean; subscription: boolean; until: string | null };
 
 // The two frequencies the form offers, by Checkout mode: a monthly
 // subscription, or a one-time payment. Stripe Checkout decides which payment
@@ -151,12 +154,30 @@ async function hydrateCard(card: HTMLElement, locale: Locale): Promise<void> {
     fetchConfig(),
     loadCachedCurrentUser().catch(() => null),
   ]);
+  const status = user?.isPatron ? await fetchStatus() : null;
 
+  // A patron sees the thank-you and, with a subscription, the portal button.
+  // A one-time patron has nothing to manage; they see how long the badge
+  // runs and keep the form, so they can extend it or subscribe. A status read
+  // that fails leaves the pre-status behaviour (thank-you + portal).
   if (user?.isPatron) {
-    card.replaceChildren(
-      thankYou(t('patron.alreadyPatron', {}, locale)),
-      actionButton(t('patron.manage', {}, locale), () => void startPortal()),
-    );
+    const subscription = status?.subscription ?? true;
+    const until = status?.until ?? null;
+    const head =
+      !subscription && until
+        ? thankYou(t('patron.patronUntil', { date: formatDate(until, locale) }, locale))
+        : thankYou(t('patron.alreadyPatron', {}, locale));
+    if (subscription) {
+      card.replaceChildren(
+        head,
+        actionButton(t('patron.manage', {}, locale), () => void startPortal()),
+      );
+      return;
+    }
+    card.replaceChildren(head);
+    if (config?.configured && config.tiers.length > 0) {
+      card.append(buildDonateForm(config.tiers, user, locale));
+    }
     return;
   }
 
@@ -166,6 +187,14 @@ async function hydrateCard(card: HTMLElement, locale: Locale): Promise<void> {
   }
 
   card.replaceChildren(buildDonateForm(config.tiers, user, locale));
+}
+
+function formatDate(iso: string, locale: Locale): string {
+  try {
+    return new Intl.DateTimeFormat(locale, { dateStyle: 'long' }).format(new Date(iso));
+  } catch {
+    return iso.slice(0, 10);
+  }
 }
 
 // Before checkout is switched on, the card still shows what Patron support will
@@ -317,6 +346,16 @@ async function startPortal(): Promise<void> {
     if (resp.ok && data.url) window.location.assign(data.url);
   } catch {
     // no-op; the button stays available for a retry.
+  }
+}
+
+async function fetchStatus(): Promise<PatronStatusResponse | null> {
+  try {
+    const resp = await fetch('/api/patron/status', { credentials: 'same-origin' });
+    if (!resp.ok) return null;
+    return (await resp.json()) as PatronStatusResponse;
+  } catch {
+    return null;
   }
 }
 

@@ -18,19 +18,26 @@
 //   (ROOK, ADVISOR, CANNON, PAWN, KNIGHT, BISHOP), as "<char><count>" where count
 //   is that side's pieces still face-down. This is the flip-distribution pool.
 //
-// Redaction argument (why building from canonical truth is leak-free):
+// Redaction argument:
 //   The board only ever emits X/x for a dark piece, never its role, so no hidden
-//   identity reaches the engine. restPieces is the multiset of remaining hidden
-//   types — which for the OPPONENT is fully public information (start - revealed -
-//   captured), so it leaks no opponent secret; we compute it from canonical truth
-//   purely to keep the FEN internally consistent (its counts must sum to the
-//   on-board dark-square count, which a public-only derivation cannot guarantee
-//   once an own dark piece is captured). The only over-disclosure is that the
-//   engine's OWN pool reflects the true types of its own captured-while-dark
-//   pieces — self-information, never an opponent secret, strategically negligible,
-//   and not expressible as a single FEN multiset otherwise. Documented as a known
-//   minor rule-fidelity gap (the strict capturer-only-reveal rule).
-
+//   identity reaches the engine. restPieces is the multiset of hidden types per
+//   side. For the OPPONENT of a `viewer` it is public information under
+//   capturer-only reveal (start - revealed - captured: the viewer captured those
+//   pieces, so it knows them) and is built from canonical truth, which only
+//   makes the FEN internally consistent. For the viewer's OWN side the truth is
+//   NOT what the rule allows: the viewer never learns which of its dark pieces
+//   the opponent took, so its pool is start - own revealed, with nothing
+//   subtracted for captures it cannot see. From the victim's view every dark
+//   piece it still has is a uniform draw from that superset, so the superset
+//   gives exactly the right reveal odds and the right average value, and the
+//   engine (position.cpp) accepts it as is: its parser has no size check,
+//   material is a per-piece pool average, and the pool only shrinks in search.
+//   Until 2026-09-20 the own pool was the truth too, so the bot knew what it
+//   had lost the moment a human captured one of its dark pieces (its remaining
+//   dark pieces were revalued and its reveal odds sharpened): a rule violation
+//   against every human it played. `viewer` unset (analysis of finished games,
+//   the editor, exports) keeps both pools exact: those readers know everything.
+//
 import {
   type DealtFenParseOptions,
   isNonNegativeInteger,
@@ -101,12 +108,21 @@ function boardField(board: JieqiBoard): string {
   return rows.join('/');
 }
 
-function restPiecesField(board: JieqiBoard): string {
+function restPiecesField(state: JieqiGameState, viewer?: JieqiColor): string {
   const counts = new Map<string, number>();
-  for (const piece of Object.values(board)) {
-    if (!piece?.faceDown) continue;
-    const key = `${piece.color}:${piece.role}`;
+  const bump = (color: JieqiColor, role: JieqiPieceRole): void => {
+    const key = `${color}:${role}`;
     counts.set(key, (counts.get(key) ?? 0) + 1);
+  };
+  for (const piece of Object.values(state.board)) {
+    if (piece?.faceDown) bump(piece.color, piece.role);
+  }
+  // The viewer's own dark pieces that were captured while dark stay in its
+  // pool: it was never told what they were (see the redaction argument above).
+  if (viewer) {
+    for (const capture of state.captures) {
+      if (capture.owner === viewer && !capture.revealedAtCapture) bump(viewer, capture.role);
+    }
   }
   let out = '';
   for (const color of ['red', 'black'] as const) {
@@ -118,13 +134,19 @@ function restPiecesField(board: JieqiBoard): string {
   return out;
 }
 
+export type JieqiFenOptions = {
+  /** The seat the FEN is for. Its own pool then carries only what that seat may
+   *  know; unset means an all-knowing reader (finished-game analysis, editor). */
+  viewer?: JieqiColor;
+};
+
 /** Encode canonical jieqi state as a redacted Pikafish-jieqi FEN for the engine. */
-export function jieqiStateToPikafishFen(state: JieqiGameState): string {
+export function jieqiStateToPikafishFen(state: JieqiGameState, opts: JieqiFenOptions = {}): string {
   const turn = state.status.type === 'playing' ? state.status.turn : 'red';
   return [
     boardField(state.board),
     turn === 'red' ? 'w' : 'b',
-    restPiecesField(state.board),
+    restPiecesField(state, opts.viewer),
     state.noCaptureClock,
     state.moveNumber,
   ].join(' ');

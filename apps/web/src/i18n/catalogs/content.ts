@@ -105,6 +105,7 @@ export const EN_CONTENT = {
   'patron.donateOnce': 'Pay once',
   'patron.manage': 'Manage your subscription',
   'patron.alreadyPatron': 'You are a Patron. Thank you.',
+  'patron.patronUntil': 'You are a Patron until {date}. Thank you.',
   'patron.signInFirst': 'Sign in to continue',
   'patron.unavailable': 'Checkout is not open yet, so nothing is charged. Check back soon.',
   'patron.checkoutError': 'Something went wrong starting checkout. Please try again.',

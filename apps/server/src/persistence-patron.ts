@@ -184,6 +184,45 @@ async function recomputePatronSince(
   );
 }
 
+// What the account's badge rests on right now, for the page's own state.
+// `subscription` is true while any recurring row is in an active status
+// (there is something for the billing portal to manage); `until` is the
+// latest one-time period end that has not passed, or null. Both null/false
+// for a non-patron. Same qualifying predicate as everywhere else.
+export type PatronStanding = {
+  active: boolean;
+  subscription: boolean;
+  until: Date | null;
+};
+
+export async function getPatronStanding(
+  accountId: string,
+  now: Date = new Date(),
+  database: PatronDatabase = getPool(),
+): Promise<PatronStanding> {
+  const { rows } = await database.query<{
+    active: boolean;
+    subscription: boolean;
+    until: Date | null;
+  }>(
+    `SELECT
+       bool_or(${patronQualifyingRowSql('$2', '$3')}) AS active,
+       bool_or(stripe_subscription_id IS NOT NULL AND status = ANY($2::text[])) AS subscription,
+       max(current_period_end)
+         FILTER (WHERE status = '${PATRON_ONE_TIME_STATUS}' AND current_period_end > $3::timestamptz)
+         AS until
+     FROM patron_subscriptions
+     WHERE account_id = $1`,
+    [accountId, PATRON_ACTIVE_STATUSES, now],
+  );
+  const row = rows[0];
+  return {
+    active: row?.active ?? false,
+    subscription: row?.subscription ?? false,
+    until: row?.until ?? null,
+  };
+}
+
 // Drop the badge from accounts whose only qualifying rows have lapsed. A
 // recurring row is ended by a Stripe event, which recomputes the cache on the
 // spot; a one-time row lapses on the clock with nothing from Stripe to say so.

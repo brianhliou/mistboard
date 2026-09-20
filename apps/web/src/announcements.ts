@@ -24,6 +24,22 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-20',
+    kind: 'status',
+    headline: 'Wanted: a neural network for Jieqi.',
+    body: "Our Jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the Jieqi bot for players.",
+    href: 'https://brianhliou.com/challenges/',
+    cta: 'See the open challenges',
+  },
+  {
+    date: '2026-09-20',
+    kind: 'update',
+    headline: 'The Jieqi bot no longer knows which of your captures took its hidden pieces.',
+    body: "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.",
+    href: '/changelog',
+    cta: 'Read the changelog',
+  },
+  {
     date: '2026-09-17',
     kind: 'release',
     headline: 'Atomic Xiangqi has launched.',

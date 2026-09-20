@@ -40,6 +40,10 @@ export async function tryHandle(
     handleConfig(request, response);
     return true;
   }
+  if (pathname === '/api/patron/status') {
+    await handleStatus(request, response);
+    return true;
+  }
   if (pathname === '/api/patron/checkout') {
     await handleCheckout(request, response);
     return true;
@@ -68,6 +72,27 @@ function handleConfig(request: IncomingMessage, response: ServerResponse): void 
   writeJson(response, 200, {
     configured: config !== null && availableTiers.length > 0,
     tiers: availableTiers,
+  });
+}
+
+// ── Status (auth) ─────────────────────────────────────────────────────────────
+// What the signed-in account's badge rests on, so the page can offer the right
+// thing: the billing portal only when there is a subscription to manage, and
+// the end date when the badge comes from a one-time payment. Read-only; the
+// badge itself still comes from the session (isPatron), never from here.
+async function handleStatus(request: IncomingMessage, response: ServerResponse): Promise<void> {
+  if (!requireMethod(request, response, 'GET')) return;
+  if (!requirePersistence(response)) return;
+  const user = await currentAccountUser(request);
+  if (!user) {
+    writeJson(response, 401, { error: 'not_signed_in' });
+    return;
+  }
+  const standing = await persistence.getPatronStanding(user.id);
+  writeJson(response, 200, {
+    active: standing.active,
+    subscription: standing.subscription,
+    until: standing.until?.toISOString() ?? null,
   });
 }
 

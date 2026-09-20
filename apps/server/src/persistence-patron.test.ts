@@ -2,6 +2,7 @@ import {
   applyPatronSubscription,
   createUser,
   expireLapsedPatrons,
+  getPatronStanding,
   PATRON_ONE_TIME_STATUS,
   type PatronSubscriptionInput,
   processStripeEvent,
@@ -117,11 +118,34 @@ definePersistenceTests('patron', () => {
     assert.ok(await patronSince('once_user'), 'one-time grant sets the badge');
     assert.ok(await patronSince('monthly_user'));
 
+    // The page's state: a one-time patron has an end date and nothing to
+    // manage; a subscriber has the portal and no end date.
+    const at = new Date('2026-10-01T00:00:00.000Z');
+    assert.deepEqual(await getPatronStanding('once_user', at), {
+      active: true,
+      subscription: false,
+      until: new Date('2026-11-20T00:00:00.000Z'),
+    });
+    assert.deepEqual(await getPatronStanding('monthly_user', at), {
+      active: true,
+      subscription: true,
+      until: null,
+    });
+    assert.deepEqual(await getPatronStanding('nobody', at), {
+      active: false,
+      subscription: false,
+      until: null,
+    });
+
     assert.equal(await expireLapsedPatrons(new Date('2026-11-19T23:59:59.000Z')), 0);
     assert.ok(await patronSince('once_user'), 'still inside the paid months');
 
     assert.equal(await expireLapsedPatrons(new Date('2026-11-20T00:00:01.000Z')), 1);
     assert.equal(await patronSince('once_user'), null, 'lapsed');
+    assert.equal(
+      (await getPatronStanding('once_user', new Date('2026-11-20T00:00:01.000Z'))).active,
+      false,
+    );
     // Stripe's period end is not ours to enforce: a recurring row stays until a
     // webhook says otherwise, however far past current_period_end the clock is.
     assert.ok(await patronSince('monthly_user'), 'recurring patron untouched');
