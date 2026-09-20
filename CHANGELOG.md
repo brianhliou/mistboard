@@ -58,6 +58,7 @@ Conventions:
 
 ### Watching and review
 
+- Live Jieqi, Banqi and Flip Jungle games can be watched from their room link while they are being played: the board as both players see it, with face-down pieces still face-down, and in Jieqi a capture tray that shows a taken piece's role only if it was face-up when taken; the homepage board and Mistboard TV can now feature a live Jieqi game ([35a799a7](https://github.com/brianhliou/mistboard/commit/35a799a7))
 - Atomic Xiangqi has an analysis board (/analysis/atomic-xiangqi), a board editor, and a postgame with the local engine, annotations and Share & export; the browser Fairy-Stockfish is now built with the same patch the atomic bot runs, so it plays atomic's rules rather than a half-read definition, and a finished atomic game can request computer analysis for the advantage chart ([0374aaae](https://github.com/brianhliou/mistboard/commit/0374aaae))
 - Atomic Xiangqi games export as PGN with move text spelled against the board the game actually had (the explosion replayed), alongside JSON ([401bd59b](https://github.com/brianhliou/mistboard/commit/401bd59b))
 - A broadcast is one event page, lichess-style: the tour header with a round selector, then Boards (default, opening on the live round or the latest with games), Overview (dates in the event's own clock, venue, source, the schedule, share links) and Players (standings computed from the broadcast games); a round with no records yet says so and points at the source ([d44bca22](https://github.com/brianhliou/mistboard/commit/d44bca22))
@@ -92,6 +93,7 @@ Conventions:
 
 ### Fixed
 
+- Mistboard TV and the games-in-play list name the Jieqi, Banqi and Flip Jungle bots and count their games as bot games; they had shown the bot as an unnamed player and the game as two humans since those variants went live ([35a799a7](https://github.com/brianhliou/mistboard/commit/35a799a7))
 - The Traditional Chinese rules pages read as Traditional all the way through; the Banqi page's opening paragraphs, capture rule, search snippet and closing links had been showing Simplified under a Traditional title since July, and a test now catches any page that slips back ([8e2e720e](https://github.com/brianhliou/mistboard/commit/8e2e720e))
 - Share-card images (the picture a link to a game, study chapter or article shows in chat) are drawn off the server's main thread; a crawler fetching hundreds of them used to stall every live game on the site for a second per picture ([20c1a4dd](https://github.com/brianhliou/mistboard/commit/20c1a4dd))
 - The homepage board shows 1-0, 0-1 or ½-½ as soon as the game it was following ends, instead of holding the final clocks until a refresh; and changing the piece set repaints it at once on Jieqi, Banqi, Fortress and Fog Xiangqi games, as it already did on Xiangqi, Atomic and Duck ([7bda2d4d](https://github.com/brianhliou/mistboard/commit/7bda2d4d))
