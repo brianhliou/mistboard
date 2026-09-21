@@ -22,7 +22,7 @@ import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
 import { buildTopStudiesWidget } from './landing-community-widgets.js';
-import { buildLandingEventBanners } from './landing-event-banners.js';
+import { buildLandingEventBanners, loadBroadcastBanners } from './landing-event-banners.js';
 import { buildLandingForumPreview } from './landing-forum-preview.js';
 import {
   buildLandingPlayPanel,
@@ -600,7 +600,10 @@ function buildLandingStage(
   // it. The News feed left the homepage; its history lives on at /feed. ──
   const leftColumn = document.createElement('div');
   leftColumn.className = 'landing-left-column';
-  leftColumn.append(buildLandingEventBanners());
+  const eventBanners = buildLandingEventBanners();
+  leftColumn.append(eventBanners);
+  // Broadcast rows arrive from the API; the slot collapses until they do.
+  void loadBroadcastBanners(eventBanners, locale);
   const viewerColumn = document.createElement('div');
   viewerColumn.className = 'landing-viewer-column';
   const boardColumn = document.createElement('div');

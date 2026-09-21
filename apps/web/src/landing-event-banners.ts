@@ -2,10 +2,18 @@
 // timely announcements — a tournament, a broadcast, a stream — rendered as big
 // tappable rows at the top of the left rail. This is deliberately NOT the News
 // feed (dated release/update rows, /feed): a banner is an event with a start or
-// end moment, and the slot is empty almost all of the time. There is no server
-// announcement system yet; the list below is the whole publishing mechanism —
-// edit it, ship, revert when the event passes.
+// end moment, and the slot is empty almost all of the time.
+//
+// Since 2026-09-20 the broadcast rows come from the server: /api/xiangqi/broadcasts
+// lists every tour, and a tour that is live, in progress, about to start, or
+// finished within the last week gets a row (broadcastBanners). Before that the
+// only mechanism was the hand-edited EVENT_BANNERS list below, edited, shipped
+// and reverted per event, and the site's first real broadcast (the 2026 甲级联赛,
+// Hangzhou, Sep 14-18, 174 boards) came and went without a banner because
+// nobody made that edit. EVENT_BANNERS stays for events the API does not know
+// (a stream, an arena).
 import './landing-event-banners.css';
+import type { Locale } from './i18n/locale.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 
 export type EventBanner = {
@@ -19,11 +27,13 @@ export type EventBanner = {
   href: string;
 };
 
-// Production banners. Empty = the widget renders nothing and the viewer moves
-// up. Keep this list to at most 2-3 rows; it is a spotlight, not a feed.
+// Hand-published banners for events the broadcast API does not know. Empty =
+// nothing extra. Keep the whole slot to at most 2-3 rows; it is a spotlight,
+// not a feed.
 const EVENT_BANNERS: EventBanner[] = [];
 
-// Dev-only samples so the slot is visible while working on the homepage layout.
+// Dev-only samples so the slot is visible while working on the homepage layout
+// on a pair with no tours seeded.
 const DEV_SAMPLE_BANNERS: EventBanner[] = [
   {
     id: 'dev-sample-arena',
@@ -40,6 +50,100 @@ const DEV_SAMPLE_BANNERS: EventBanner[] = [
     href: '/watch',
   },
 ];
+
+// The slice of /api/xiangqi/broadcasts a banner needs (the index route in
+// apps/server/src/routes/xiangqi-broadcast; the ops page reads the same shape).
+export type BroadcastTourSummary = {
+  tour: {
+    slug: string;
+    name: string;
+    nameEn?: string;
+    startsAt?: string;
+    endsAt?: string;
+  };
+  boardCount: number;
+  liveBoardCount: number;
+  completeBoardCount: number;
+};
+
+const DAY_MS = 24 * 60 * 60 * 1000;
+// A finished tour keeps its row for a week: long enough that a visitor who
+// heard about the event finds the games, short enough that the slot is empty
+// again before the next one.
+const FINISHED_WINDOW_MS = 7 * DAY_MS;
+// An upcoming tour appears two weeks out.
+const UPCOMING_WINDOW_MS = 14 * DAY_MS;
+
+const WORDS: Record<Locale, { live: string; games: string; starts: string; finished: string }> = {
+  en: { live: 'Live now', games: 'games', starts: 'Starts', finished: 'Finished' },
+  'zh-Hans': { live: '直播中', games: '局', starts: '开始', finished: '已结束' },
+  'zh-Hant': { live: '直播中', games: '局', starts: '開始', finished: '已結束' },
+};
+
+function shortDate(iso: string, locale: Locale): string {
+  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date(iso));
+}
+
+function tourTitle(tour: BroadcastTourSummary['tour'], locale: Locale): string {
+  return locale === 'en' ? tour.nameEn || tour.name : tour.name;
+}
+
+/** Banner rows for the tours worth a spotlight right now, or none. Pure: the
+ *  caller fetches; tests feed it payloads and a clock. */
+export function broadcastBanners(
+  tours: readonly BroadcastTourSummary[],
+  locale: Locale,
+  now: number = Date.now(),
+): EventBanner[] {
+  const words = WORDS[locale];
+  const rows: EventBanner[] = [];
+  for (const entry of tours) {
+    const { tour } = entry;
+    const startsAt = tour.startsAt ? Date.parse(tour.startsAt) : Number.NaN;
+    const endsAt = tour.endsAt ? Date.parse(tour.endsAt) : Number.NaN;
+    let subtitle: string | null = null;
+    if (entry.liveBoardCount > 0) {
+      subtitle = `${words.live} · ${entry.liveBoardCount} ${words.games}`;
+    } else if (!Number.isNaN(startsAt) && startsAt > now) {
+      if (startsAt - now <= UPCOMING_WINDOW_MS) {
+        subtitle = `${words.starts} ${shortDate(tour.startsAt!, locale)}`;
+      }
+    } else if (!Number.isNaN(endsAt) && endsAt < now) {
+      if (now - endsAt <= FINISHED_WINDOW_MS && entry.completeBoardCount > 0) {
+        subtitle = `${words.finished} ${shortDate(tour.endsAt!, locale)} · ${entry.completeBoardCount} ${words.games}`;
+      }
+    } else if (entry.completeBoardCount > 0) {
+      // Between rounds of a tour that is under way by its dates.
+      subtitle = `${entry.completeBoardCount} ${words.games}`;
+    }
+    if (subtitle === null) continue;
+    rows.push({
+      id: `broadcast-${tour.slug}`,
+      kind: 'broadcast',
+      title: tourTitle(tour, locale),
+      subtitle,
+      href: `/broadcast/xiangqi/${encodeURIComponent(tour.slug)}`,
+    });
+  }
+  return rows;
+}
+
+/** Fetch the tours and append their rows to a mounted container. Failures
+ *  leave the slot as it was: a missing banner is never an error on the home page. */
+export async function loadBroadcastBanners(host: HTMLElement, locale: Locale): Promise<void> {
+  try {
+    const resp = await fetch('/api/xiangqi/broadcasts');
+    if (!resp.ok) return;
+    const data = (await resp.json()) as { tours?: BroadcastTourSummary[] };
+    const rows = broadcastBanners(data.tours ?? [], locale);
+    for (const banner of rows) host.append(eventBannerRow(banner));
+    if (rows.length > 0) {
+      for (const sample of host.querySelectorAll('[data-event-id^="dev-sample-"]')) sample.remove();
+    }
+  } catch {
+    // Offline or a dev pair without the route: the slot stays empty.
+  }
+}
 
 const BANNER_ICON: Record<EventBanner['kind'], UiIconName> = {
   tournament: 'event-tournament',
