@@ -435,6 +435,10 @@ export async function liveCuratorDeps(): Promise<CuratorDeps> {
 // --- scheduler --------------------------------------------------------------
 
 export const STUDY_CURATOR_INTERVAL_MS = 60 * 60 * 1000;
+/** First tick after boot. An hour would never arrive on a day with hourly
+ *  deploys (every deploy restarts the process and the clock with it); ten
+ *  minutes clears the deploy's own smokes and warm-ups and still runs. */
+export const STUDY_CURATOR_FIRST_TICK_MS = 10 * 60 * 1000;
 export const STUDY_CURATOR_ANALYSES_PER_TICK = 2;
 
 export function studyCuratorEnabled(env: NodeJS.ProcessEnv = process.env): boolean {
@@ -443,6 +447,7 @@ export function studyCuratorEnabled(env: NodeJS.ProcessEnv = process.env): boole
 
 export type StudyCuratorOptions = {
   intervalMs?: number;
+  firstTickMs?: number;
   isPersistenceInitialized?: () => boolean;
   enabled?: () => boolean;
   run?: () => Promise<RecipeRunReport[]>;
@@ -458,13 +463,15 @@ async function liveRun(): Promise<RecipeRunReport[]> {
 }
 
 /**
- * Hourly in-process job, on the sweeper pattern. Always started; the tick
- * no-ops unless MISTBOARD_STUDY_CURATOR_ENABLED=true, read at tick time so ops
- * can flip it without a restart. A run is serialised: a tick that fires while
- * the previous run is still analyzing is skipped, not queued.
+ * In-process job, on the sweeper pattern: a first tick ten minutes after
+ * boot, then hourly. Always started; the tick no-ops unless
+ * MISTBOARD_STUDY_CURATOR_ENABLED=true, read at tick time so ops can flip it
+ * without a restart. A run is serialised: a tick that fires while the
+ * previous run is still analyzing is skipped, not queued.
  */
 export function startStudyCurator(options: StudyCuratorOptions = {}): StudyCurator {
   const intervalMs = options.intervalMs ?? STUDY_CURATOR_INTERVAL_MS;
+  const firstTickMs = options.firstTickMs ?? STUDY_CURATOR_FIRST_TICK_MS;
   const isInitialized = options.isPersistenceInitialized ?? persistence.isInitialized;
   const enabled = options.enabled ?? studyCuratorEnabled;
   const run = options.run ?? liveRun;
@@ -495,5 +502,15 @@ export function startStudyCurator(options: StudyCuratorOptions = {}): StudyCurat
     void tick();
   }, intervalMs);
   timer.unref();
-  return { stop: () => clearInterval(timer), tick };
+  const first = setTimeout(() => {
+    void tick();
+  }, firstTickMs);
+  first.unref();
+  return {
+    stop: () => {
+      clearInterval(timer);
+      clearTimeout(first);
+    },
+    tick,
+  };
 }
