@@ -40,6 +40,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
   // while its English page was still a draft.
+  // Machine-drafted 2026-09-20, not native-reviewed, locked the day the English
+  // copy published. zh-Hans is this page's primary reader (growth plan lane 0).
+  'pikafish',
   'jieqi-platform',
   'jieqi-openings',
   // Machine-drafted 2026-09-01, not native-reviewed. Locked once its English
@@ -2669,6 +2672,62 @@ const ZH_HANS: Record<string, string> = {
   'Are there different banqi rules?': '暗棋规则有几种？Mistboard 用哪一种？',
   'Yes, three regional families: Taiwanese, Hong Kong, and mainland, differing on the capture ladder and on whether the cannon jumps. Mistboard uses the Taiwanese rules (general > advisor > elephant > chariot > horse > soldier, cannon captures by jumping one screen) with the Taiwan Computer Game Association draw rules. A cannon cannot capture a face-down tile and the general cannot capture a soldier.':
     '常见的有三种：台湾、香港和中国大陆，差别在大小顺序和炮能不能跳吃。Mistboard 用台湾规则（将 > 士 > 象 > 车 > 马 > 卒，炮隔一子跳吃），加上台湾电脑对局协会的比赛和棋规则。炮不能吃暗子，将不能吃卒。',
+  // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
+  'Pikafish on Mistboard': '皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈',
+  'Play Pikafish Online: Free Xiangqi Engine, No Download':
+    '皮卡鱼在线对弈：免费象棋引擎，网页版，无需下载',
+  'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
+    '在浏览器里直接与最强开源象棋引擎皮卡鱼对弈。免费、不用注册、不用下载。可选难度等级，可下揭棋，还能用它复盘你的对局。',
+  'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
+    '想找地方与皮卡鱼对弈或用它分析的象棋棋手。',
+  '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
+    '[皮卡鱼（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最强的开源象棋引擎，由 Stockfish 改造而来。多数人要先下载引擎，再配一个界面才能用。在这里，它直接在网页里运行。',
+  'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
+    '可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。免费，不用注册，不用安装，手机浏览器也能玩。',
+  'Play Pikafish': '与皮卡鱼对弈',
+  'Play Pikafish at jieqi': '与皮卡鱼下揭棋',
+  'Play against Pikafish': '人机对弈：挑战皮卡鱼',
+  'One click on the [Pikafish page](/bot/pikafish) starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
+    '在[皮卡鱼页面](/bot/pikafish)点一下就开局。系统给你分配颜色和时钟，对面是每步搜索三百万个局面的皮卡鱼。不需要账号。',
+  'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
+    '每步三百万个局面很强。皮卡鱼之下还有八级 Fairy-Stockfish 人机阶梯：一级适合这周刚学会走子的人，八级已接近顶端。每一级都有实测等级分，由各级互相对弈得出，并以一个随机走合法着法的引擎定为 1500 分作基准。',
+  Opponent: '对手',
+  'Rating on the ladder': '阶梯等级分',
+  'Fairy-Stockfish level 1': 'Fairy-Stockfish 一级',
+  'Fairy-Stockfish level 4': 'Fairy-Stockfish 四级',
+  'Fairy-Stockfish level 8': 'Fairy-Stockfish 八级',
+  Pikafish: '皮卡鱼',
+  'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move.':
+    '2026 年 9 月由站内引擎互弈实测。皮卡鱼为每步三百万个局面。',
+  'Every level is on the [bots page](/bots). Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.':
+    '所有级别都在[机器人页面](/bots)。在[对弈菜单](/?play=computer&gameSpecId=xiangqi)里选一个，赢几盘再往上爬。',
+  'Pikafish at jieqi': '皮卡鱼下揭棋',
+  '[Jieqi](/rules/jieqi) is xiangqi with every piece face-down. The engine here is PikaJieQi, [our build of Pikafish for the hidden game](https://github.com/brianhliou/pikafish-jieqi-wasm), and it gets the same face-down board you do: a test fails the build if a piece identity ever leaks into what it is sent. [Jieqi on Mistboard](/blog/jieqi-platform) covers the rest.':
+    '[揭棋](/rules/jieqi)是把所有棋子翻面盖住的象棋。这里的引擎是 PikaJieQi，[我们为暗子棋局改造的皮卡鱼版本](https://github.com/brianhliou/pikafish-jieqi-wasm)。它看到的棋盘和你一样全是暗子：只要有任何棋子身份泄露给引擎，构建测试就会失败。其余细节见[Mistboard 上的揭棋](/blog/jieqi-platform)。',
+  'Game review, built for xiangqi and for flip games': '对局复盘：为象棋而建，也为翻子棋而建',
+  'Every finished xiangqi game on the site can be sent for review. Pikafish runs over it on the server, and the move list shows where the evaluation moved, what it preferred instead, and which moves lost the game. The post-game review chess players are used to, for xiangqi.':
+    '站内每一盘下完的象棋都可以提交复盘。皮卡鱼在服务器上把整盘棋跑一遍，着法列表会显示评估在哪里发生了变化、它更倾向的走法，以及哪几步输掉了棋。国际象棋玩家习惯的那种赛后复盘，现在象棋也有。',
+  'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
+    '对暗棋、揭棋和翻棋斗兽棋，复盘还做了一件国际象棋复盘不需要做的事：给每一次翻子定价，让你把自己的选择和运气分开看。[把实力和运气分开](/blog/skill-vs-luck)一文解释了做法。',
+  'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Fairy-Stockfish in your browser, not Pikafish: instant and private, and weaker. Pikafish in the browser is not there yet.':
+    '[分析棋盘](/analysis/xiangqi)用于你自己摆的局面。它在你的浏览器里运行的是 Fairy-Stockfish，不是皮卡鱼：即开即用、数据不外传，但更弱。浏览器版皮卡鱼目前还没有。',
+  Questions: '常见问题',
+  'Can I play Pikafish online?': '可以在线和皮卡鱼下棋吗？',
+  'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':
+    '可以，就在这里，网页里直接下。在皮卡鱼页面点一下就开局；对弈菜单里还有八个更容易的级别。',
+  'Is it free?': '免费吗？',
+  'Yes. Playing, the ladder, jieqi, game review and the analysis board are all free. An account is optional.':
+    '免费。对弈、人机阶梯、揭棋、复盘和分析棋盘都免费。账号可选，不是必需。',
+  'Do I need to download anything?': '需要下载什么吗？',
+  'No. The game runs in the page. On a phone, open the site in the browser and play.':
+    '不需要。棋局直接在网页里运行。手机上用浏览器打开本站即可开始。',
+  'How strong is it?': '皮卡鱼有多强？',
+  'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
+    '皮卡鱼机器人在服务器上每步搜索三百万个局面，约四秒。这已超出任何人类棋手。上面的阶梯一路降到初学者也能赢的级别。',
+  'Does the jieqi engine see my hidden pieces?': '揭棋引擎能看到我的暗子吗？',
+  'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
+    '不能。它收到的棋盘和你看到的一样全是暗子，而且发牌结果没有任何一方知道：你不知道，引擎不知道，对手也不知道。',
+  'Pick a level': '选择级别',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -5094,6 +5153,62 @@ const ZH_HANT: Record<string, string> = {
   'Are there different banqi rules?': '暗棋規則有幾種？Mistboard 用哪一種？',
   'Yes, three regional families: Taiwanese, Hong Kong, and mainland, differing on the capture ladder and on whether the cannon jumps. Mistboard uses the Taiwanese rules (general > advisor > elephant > chariot > horse > soldier, cannon captures by jumping one screen) with the Taiwan Computer Game Association draw rules. A cannon cannot capture a face-down tile and the general cannot capture a soldier.':
     '常見的有三種：台灣、香港和中國大陸，差別在大小順序和砲能不能跳吃。Mistboard 用台灣規則（將 > 士 > 象 > 車 > 馬 > 卒，砲隔一子跳吃），加上台灣電腦對局協會的比賽和棋規則。砲不能吃暗子，將不能吃卒。',
+  // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
+  'Pikafish on Mistboard': '皮卡魚線上：在 Mistboard 上與皮卡魚對弈',
+  'Play Pikafish Online: Free Xiangqi Engine, No Download':
+    '皮卡魚線上對弈：免費象棋引擎，網頁版，免下載',
+  'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
+    '在瀏覽器裡直接與最強開源象棋引擎皮卡魚對弈。免費、不用註冊、不用下載。可選難度等級，可下揭棋，還能用它復盤你的對局。',
+  'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
+    '想找地方與皮卡魚對弈或用它分析的象棋棋手。',
+  '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
+    '[皮卡魚（Pikafish）](https://github.com/official-pikafish/Pikafish) 是目前最強的開源象棋引擎，由 Stockfish 改造而來。多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡運行。',
+  'Play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
+    '可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
+  'Play Pikafish': '與皮卡魚對弈',
+  'Play Pikafish at jieqi': '與皮卡魚下揭棋',
+  'Play against Pikafish': '人機對弈：挑戰皮卡魚',
+  'One click on the [Pikafish page](/bot/pikafish) starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
+    '在[皮卡魚頁面](/bot/pikafish)點一下就開局。系統給你分配顏色和時鐘，對面是每步搜尋三百萬個局面的皮卡魚。不需要帳號。',
+  'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
+    '每步三百萬個局面很強。皮卡魚之下還有八級 Fairy-Stockfish 人機階梯：一級適合這週剛學會走子的人，八級已接近頂端。每一級都有實測等級分，由各級互相對弈得出，並以一個隨機走合法著法的引擎定為 1500 分作基準。',
+  Opponent: '對手',
+  'Rating on the ladder': '階梯等級分',
+  'Fairy-Stockfish level 1': 'Fairy-Stockfish 一級',
+  'Fairy-Stockfish level 4': 'Fairy-Stockfish 四級',
+  'Fairy-Stockfish level 8': 'Fairy-Stockfish 八級',
+  Pikafish: '皮卡魚',
+  'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move.':
+    '2026 年 9 月由站內引擎互弈實測。皮卡魚為每步三百萬個局面。',
+  'Every level is on the [bots page](/bots). Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.':
+    '所有等級都在[機器人頁面](/bots)。在[對弈選單](/?play=computer&gameSpecId=xiangqi)裡選一個，贏幾盤再往上爬。',
+  'Pikafish at jieqi': '皮卡魚下揭棋',
+  '[Jieqi](/rules/jieqi) is xiangqi with every piece face-down. The engine here is PikaJieQi, [our build of Pikafish for the hidden game](https://github.com/brianhliou/pikafish-jieqi-wasm), and it gets the same face-down board you do: a test fails the build if a piece identity ever leaks into what it is sent. [Jieqi on Mistboard](/blog/jieqi-platform) covers the rest.':
+    '[揭棋](/rules/jieqi)是把所有棋子翻面蓋住的象棋。這裡的引擎是 PikaJieQi，[我們為暗子棋局改造的皮卡魚版本](https://github.com/brianhliou/pikafish-jieqi-wasm)。它看到的棋盤和你一樣全是暗子：只要有任何棋子身分洩漏給引擎，建置測試就會失敗。其餘細節見[Mistboard 上的揭棋](/blog/jieqi-platform)。',
+  'Game review, built for xiangqi and for flip games': '對局復盤：為象棋而建，也為翻子棋而建',
+  'Every finished xiangqi game on the site can be sent for review. Pikafish runs over it on the server, and the move list shows where the evaluation moved, what it preferred instead, and which moves lost the game. The post-game review chess players are used to, for xiangqi.':
+    '站內每一盤下完的象棋都可以提交復盤。皮卡魚在伺服器上把整盤棋跑一遍，著法列表會顯示評估在哪裡發生了變化、它更傾向的走法，以及哪幾步輸掉了棋。西洋棋玩家習慣的那種賽後復盤，現在象棋也有。',
+  'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
+    '對暗棋、揭棋和翻棋鬥獸棋，復盤還做了一件西洋棋復盤不需要做的事：給每一次翻子定價，讓你把自己的選擇和運氣分開看。[把實力和運氣分開](/blog/skill-vs-luck)一文解釋了做法。',
+  'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Fairy-Stockfish in your browser, not Pikafish: instant and private, and weaker. Pikafish in the browser is not there yet.':
+    '[分析棋盤](/analysis/xiangqi)用於你自己擺的局面。它在你的瀏覽器裡運行的是 Fairy-Stockfish，不是皮卡魚：即開即用、資料不外傳，但更弱。瀏覽器版皮卡魚目前還沒有。',
+  Questions: '常見問題',
+  'Can I play Pikafish online?': '可以線上和皮卡魚下棋嗎？',
+  'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':
+    '可以，就在這裡，網頁裡直接下。在皮卡魚頁面點一下就開局；對弈選單裡還有八個更容易的等級。',
+  'Is it free?': '免費嗎？',
+  'Yes. Playing, the ladder, jieqi, game review and the analysis board are all free. An account is optional.':
+    '免費。對弈、人機階梯、揭棋、復盤和分析棋盤都免費。帳號可選，不是必需。',
+  'Do I need to download anything?': '需要下載什麼嗎？',
+  'No. The game runs in the page. On a phone, open the site in the browser and play.':
+    '不需要。棋局直接在網頁裡運行。手機上用瀏覽器打開本站即可開始。',
+  'How strong is it?': '皮卡魚有多強？',
+  'The Pikafish bot searches three million positions a move, about four seconds, on the server. That is beyond any human. The ladder above it goes down to a level a beginner can beat.':
+    '皮卡魚機器人在伺服器上每步搜尋三百萬個局面，約四秒。這已超出任何人類棋手。上面的階梯一路降到初學者也能贏的等級。',
+  'Does the jieqi engine see my hidden pieces?': '揭棋引擎能看到我的暗子嗎？',
+  'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
+    '不能。它收到的棋盤和你看到的一樣全是暗子，而且發牌結果沒有任何一方知道：你不知道，引擎不知道，對手也不知道。',
+  'Pick a level': '選擇等級',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

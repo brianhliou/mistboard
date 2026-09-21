@@ -332,8 +332,12 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 export const HOME_ARTICLE_SLUGS = [
+  // The Pikafish page, scheduled for 2026-09-22 (publish-time.ts): the page a
+  // reader who searched 皮卡鱼在线 lands on, one click from a game (growth plan
+  // lane 0). Leads once live, since 09-22 is newer than the player page below.
+  'pikafish',
   // The first player page, dated 2026-09-21: a Chinese pro's month, five games
-  // on the board. The newest on the row, and the first that is about a person.
+  // on the board. The first that is about a person.
   'yin-sheng',
   // The Atomic Xiangqi launch note led while the variant was new, as the duck
   // one did before it; dated 2026-09-16.
@@ -960,14 +964,22 @@ function relatedArticles(article: BlogArticle): BlogArticle[] {
     .sort(compareArticlesNewestFirst);
   if (pool.length === 0) return [];
 
+  // An author-chosen list leads; the ring fills whatever it leaves open.
+  const chosen = (article.readNext ?? [])
+    .map((slug) => pool.find((candidate) => candidate.slug === slug))
+    .filter((candidate): candidate is BlogArticle => candidate !== undefined)
+    .slice(0, ARTICLE_FOOTER_RELATED_COUNT);
+  const chosenSlugs = new Set(chosen.map((candidate) => candidate.slug));
+
   // Slot this post back into the same ordering so the ring can start at its
   // next-older neighbour and wrap around to the newest.
   const ordered = [...pool, article].sort(compareArticlesNewestFirst);
   const start = ordered.findIndex((candidate) => candidate.slug === article.slug);
-  return Array.from(
-    { length: Math.min(ARTICLE_FOOTER_RELATED_COUNT, ordered.length - 1) },
+  const ring = Array.from(
+    { length: ordered.length - 1 },
     (_, i) => ordered[(start + 1 + i) % ordered.length]!,
-  );
+  ).filter((candidate) => !chosenSlugs.has(candidate.slug));
+  return [...chosen, ...ring].slice(0, ARTICLE_FOOTER_RELATED_COUNT);
 }
 
 // Left rail on rules surfaces (pychess variant-page grammar): every listed

@@ -15,6 +15,7 @@ import { chessArticle } from './articles/content/chess.js';
 import { coUpArticle } from './articles/content/co-up.js';
 import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
+import { pikafishArticle } from './articles/content/pikafish.js';
 import { darkChessArticle } from './articles/content/dark-chess.js';
 import { darkChessConceptsArticle } from './articles/content/fog-chess-concepts.js';
 import { fogOpeningsArticle } from './articles/content/fog-openings.js';
@@ -47,6 +48,7 @@ import { yinShengArticle } from './articles/content/yin-sheng.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
+  pikafishArticle,
   jieqiPlatformArticle,
   coUpArticle,
   luatCoUpArticle,
