@@ -4,10 +4,12 @@
 //
 // Identity is the source's own spelling of the name (`red->>'name'`), the
 // same key broadcast standings use: `nameEn` is a cached romanisation and two
-// boards can carry it differently. The federation is kept beside the name so
-// two people with one name in different provinces stay two people; a player
-// who changed teams is the case this cannot see, and that is what
-// `XIANGQI_PLAYER_ALIASES` below is for.
+// boards can carry it differently. The federation is NOT part of the key:
+// dpxq writes the province in a cup (浙江 尹昇) and the club in the league
+// (浙江民泰银行象棋队 尹昇), and keying on it split every league player in two
+// on the first live read (2026-09-21). Two people with one name is the rarer
+// case and is what `XIANGQI_PLAYER_ALIASES` below is for: it maps
+// `name|federation` to a distinct key when the data has to be split by hand.
 //
 // Only finished boards count (`result <> '*'`): a live board is a game in
 // progress, and a scheduled one is not a game.
@@ -64,9 +66,9 @@ export type XiangqiPlayerBoardRecord = {
 };
 
 /**
- * Hand-kept merges the data cannot make: the same person under two source
- * spellings or two federations (a team change mid-season). Key and value are
- * `name|federation` as the source writes them; the value is the canonical one.
+ * Hand-kept splits and merges the data cannot make. A value that differs from
+ * the name splits: `'张伟|广东': '张伟 (广东)'` makes the Guangdong 张伟 a second
+ * player. A value equal to another name merges a variant spelling into it.
  * Empty until a case turns up; the field exists so the first case has a home.
  */
 export const XIANGQI_PLAYER_ALIASES: Readonly<Record<string, string>> = {};
@@ -111,8 +113,7 @@ function isoDate(value: Date | null): string | null {
 }
 
 export function playerKey(name: string, federation: string | null): string {
-  const raw = `${name}|${federation ?? ''}`;
-  return XIANGQI_PLAYER_ALIASES[raw] ?? raw;
+  return XIANGQI_PLAYER_ALIASES[`${name}|${federation ?? ''}`] ?? name;
 }
 
 /** `Yin Sheng` -> `yin-sheng`; a name with no romanisation falls back to the
@@ -159,6 +160,10 @@ export async function listXiangqiPlayers(): Promise<XiangqiPlayerRecord[]> {
 
 export function foldPlayers(rows: readonly SideRow[]): XiangqiPlayerRecord[] {
   const byKey = new Map<string, XiangqiPlayerRecord>();
+  const latestFederation = new Map<
+    XiangqiPlayerRecord,
+    { on: string; federation: string | null; federationEn: string | null }
+  >();
   for (const row of rows) {
     const key = playerKey(row.name, row.federation);
     let player = byKey.get(key);
@@ -192,6 +197,15 @@ export function foldPlayers(rows: readonly SideRow[]): XiangqiPlayerRecord[] {
       lastPlayedOn: isoDate(row.last_played),
     };
     player.events.push(event);
+    const seen = latestFederation.get(player);
+    const on = event.lastPlayedOn ?? '';
+    if (!seen || on > seen.on) {
+      latestFederation.set(player, {
+        on,
+        federation: row.federation,
+        federationEn: row.federation_en,
+      });
+    }
     player.games += event.games;
     player.wins += event.wins;
     player.draws += event.draws;
@@ -229,6 +243,13 @@ export function foldPlayers(rows: readonly SideRow[]): XiangqiPlayerRecord[] {
 
   for (const p of players) {
     p.events.sort((a, b) => (b.lastPlayedOn ?? '').localeCompare(a.lastPlayedOn ?? ''));
+    // The federation shown is the most recent event's: a cup writes the
+    // province, the league the club, and the club is the more specific.
+    const latest = latestFederation.get(p);
+    if (latest) {
+      p.federation = latest.federation;
+      p.federationEn = latest.federationEn;
+    }
   }
   players.sort((a, b) => b.games - a.games || a.name.localeCompare(b.name, 'zh'));
   return players;
@@ -241,7 +262,7 @@ export async function getXiangqiPlayer(slug: string): Promise<XiangqiPlayerRecor
 
 /** Every finished board this player sat at, newest first. */
 export async function listXiangqiPlayerBoards(
-  player: Pick<XiangqiPlayerRecord, 'name' | 'federation'>,
+  player: Pick<XiangqiPlayerRecord, 'name'>,
   slugOf: (name: string, federation: string | null) => string | null,
 ): Promise<XiangqiPlayerBoardRecord[]> {
   const { rows } = await getPool().query<{
@@ -269,9 +290,8 @@ export async function listXiangqiPlayerBoards(
      JOIN xiangqi_broadcast_tours tours ON tours.slug = sides.tour_slug
      JOIN xiangqi_broadcast_rounds rounds ON rounds.id = sides.round_id
      WHERE sides.me->>'name' = $1
-       AND COALESCE(sides.me->>'federation', '') = COALESCE($2, '')
      ORDER BY rounds.starts_at DESC NULLS LAST, sides.board_id DESC`,
-    [player.name, player.federation],
+    [player.name],
   );
   return rows.map((row) => ({
     boardId: row.board_id,

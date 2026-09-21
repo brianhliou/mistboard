@@ -102,8 +102,37 @@ describe('player pages, derived from the archive', () => {
     expect([yin.firstPlayedOn, yin.lastPlayedOn]).toEqual(['2026-08-01', '2026-09-13']);
   });
 
-  it('keeps two players with one name in different federations apart, and slugs them by it', () => {
+  it('is one player across events that spell the federation differently', () => {
+    // dpxq writes the province in a cup and the club in the league; the first
+    // live read split every league player in two on this.
     const players = foldPlayers([
+      row({
+        name: '尹昇',
+        nameEn: 'Yin Sheng',
+        federation: '浙江',
+        tour: '2026-shanghai-cup',
+        games: 17,
+        last: '2026-09-13',
+      }),
+      {
+        ...row({
+          name: '尹昇',
+          nameEn: 'Yin Sheng',
+          federation: '浙江民泰银行象棋队',
+          tour: '2026-xiangqi-league',
+          games: 14,
+          last: '2026-09-16',
+        }),
+        federation_en: 'Zhejiang Mintai Bank Xiangqi Team',
+      },
+    ]);
+    expect(players.map((p) => [p.slug, p.games])).toEqual([['yin-sheng', 31]]);
+    // The federation shown is the latest event's, the club.
+    expect(players[0]?.federationEn).toBe('Zhejiang Mintai Bank Xiangqi Team');
+  });
+
+  it('splits two people with one name only through the alias map', () => {
+    const rows = [
       row({
         name: '张伟',
         nameEn: 'Zhang Wei',
@@ -118,42 +147,10 @@ describe('player pages, derived from the archive', () => {
         tour: '2026-league-qualifier',
         games: 2,
       }),
-    ]);
-    // No romanised federation in this fixture, so the source spelling splits
-    // the slug: two URLs, never one slug for two people.
-    expect(players.map((p) => [p.slug, p.games])).toEqual([
-      ['zhang-wei-吉林', 4],
-      ['zhang-wei-广东', 2],
-    ]);
-  });
-
-  it('splits a colliding slug by the romanised federation when there is one', () => {
-    const rows = [
-      {
-        ...row({
-          name: '张伟',
-          nameEn: 'Zhang Wei',
-          federation: '吉林',
-          tour: '2026-league-qualifier',
-          games: 4,
-        }),
-        federation_en: 'Jilin',
-      },
-      {
-        ...row({
-          name: '张伟',
-          nameEn: 'Zhang Wei',
-          federation: '广东',
-          tour: '2026-league-qualifier',
-          games: 2,
-        }),
-        federation_en: 'Guangdong',
-      },
     ];
-    expect(foldPlayers(rows).map((p) => p.slug)).toEqual([
-      'zhang-wei-jilin',
-      'zhang-wei-guangdong',
-    ]);
+    // Without an alias, one player: the data cannot tell them apart and a wrong
+    // merge is the lesser error than a wrong split of every team change.
+    expect(foldPlayers(rows).map((p) => [p.slug, p.games])).toEqual([['zhang-wei', 6]]);
   });
 
   it('orders by games played, then by name', () => {

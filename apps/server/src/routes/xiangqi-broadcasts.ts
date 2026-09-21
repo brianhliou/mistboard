@@ -861,9 +861,8 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    const slugOf = (name: string, federation: string | null): string | null =>
-      players.find((p) => p.name === name && (p.federation ?? '') === (federation ?? ''))?.slug ??
-      null;
+    const slugOf = (name: string): string | null =>
+      players.find((p) => p.name === name)?.slug ?? null;
     const boards = await persistence.listXiangqiPlayerBoards(player, slugOf);
     writeJson(response, 200, { player, boards });
     return true;
