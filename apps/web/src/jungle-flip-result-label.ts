@@ -1,5 +1,7 @@
 import type { JungleFlipColor } from '@mistboard/game';
 import { flipSeatInk } from './flip-seat-ink.js';
+import { type GameOutcome, humanizeToken, outcomeLabel } from './game-display.js';
+import { t } from './i18n/catalog.js';
 
 // Flip Jungle seats are first/second mover ('red' seat = first); the ink binds on the
 // opening flip and travels as the view's `firstColor`. The recorded result and the
@@ -21,18 +23,18 @@ export function jungleFlipSeatInkLabel(
   firstColor: JungleFlipColor | null,
 ): string {
   const ink = jungleFlipSeatInk(seat, firstColor);
-  if (ink === null) return seat === 'red' ? 'First' : 'Second';
+  if (ink === null) return seat === 'red' ? t('setup.first') : t('setup.second');
   // The Jungle family brands its navy ink "Blue" (internal id stays 'black').
-  return ink === 'red' ? 'Red' : 'Blue';
+  return ink === 'red' ? t('setup.red') : t('setup.blue');
+}
+
+export function jungleFlipOutcome(result: string, firstColor: JungleFlipColor | null): GameOutcome {
+  if (result === 'red-wins') return { winner: jungleFlipSeatInkLabel('red', firstColor) };
+  if (result === 'black-wins') return { winner: jungleFlipSeatInkLabel('black', firstColor) };
+  if (result === 'draw') return { draw: true };
+  return { label: humanizeToken(result) };
 }
 
 export function jungleFlipResultLabel(result: string, firstColor: JungleFlipColor | null): string {
-  if (result === 'red-wins') return `${jungleFlipSeatInkLabel('red', firstColor)} wins`;
-  if (result === 'black-wins') return `${jungleFlipSeatInkLabel('black', firstColor)} wins`;
-  if (result === 'draw') return 'Draw';
-  return result
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+  return outcomeLabel(jungleFlipOutcome(result, firstColor));
 }

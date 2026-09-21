@@ -11,10 +11,18 @@ import {
   parseStandardXiangqiFen,
   standardXiangqiEngineFen,
   standardXiangqiFen,
+  XIANGQI_SPEC_ID,
   type XiangqiGameState,
   type XiangqiGameStatus,
   type XiangqiMove,
 } from '@mistboard/game';
+import {
+  type GameOutcome,
+  outcomeLabel,
+  terminationLabel,
+  variantDisplayLabel,
+} from './game-display.js';
+import { seatColorWord } from './variant-seat-label.js';
 import './game-shell.css';
 import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
@@ -34,13 +42,25 @@ import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 
 function statusSummary(status: XiangqiGameStatus, plyCount: number): string {
   if (plyCount === 0) return t('analysis.playAMove');
-  const plies = `${plyCount} ${plyCount === 1 ? 'ply' : 'plies'}`;
+  const plies = pliesLabel(plyCount);
   if (status.type === 'finished') {
-    const outcome =
-      status.winner === 'red' ? 'Red wins' : status.winner === 'black' ? 'Black wins' : 'Draw';
-    return `${outcome} by ${status.reason} · ${plies}`;
+    return `${finishedStatusLine(status)} · ${plies}`;
   }
-  return `Analysis · ${plies}`;
+  return `${t('analysis.board')} · ${plies}`;
+}
+
+function pliesLabel(plyCount: number): string {
+  return plyCount === 1 ? t('replay.onePly') : t('watch.plyCount', { count: plyCount });
+}
+
+function finishedStatusLine(status: Extract<XiangqiGameStatus, { type: 'finished' }>): string {
+  const outcome: GameOutcome = status.winner
+    ? { winner: seatColorWord(XIANGQI_SPEC_ID, status.winner) }
+    : { draw: true };
+  return t('watch.resultByReason', {
+    result: outcomeLabel(outcome),
+    reason: terminationLabel(status.reason),
+  });
 }
 
 export interface XiangqiAnalysisOptions {
@@ -75,17 +95,14 @@ export function mountXiangqiAnalysis(
     createGameMetaCard({
       markerId: 'xiangqi',
       glyph: '象',
-      headline: ['Analysis board'],
-      variantName: 'Xiangqi',
+      headline: [t('analysis.board')],
+      variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
       subline: replay.maxPly
-        ? `${replay.maxPly} ${replay.maxPly === 1 ? 'ply' : 'plies'}`
+        ? pliesLabel(replay.maxPly)
         : opts.startState
-          ? 'Custom position'
-          : 'Start position',
-      status:
-        finalStatus.type === 'finished'
-          ? `${finalStatus.winner === 'red' ? 'Red wins' : finalStatus.winner === 'black' ? 'Black wins' : 'Draw'} by ${finalStatus.reason}`
-          : null,
+          ? t('analysis.customPosition')
+          : t('analysis.startPosition'),
+      status: finalStatus.type === 'finished' ? finishedStatusLine(finalStatus) : null,
     }).el;
 
   root.replaceChildren(...(opts.nav === false ? [] : [buildNav()]));

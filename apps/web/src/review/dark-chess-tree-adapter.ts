@@ -20,6 +20,7 @@ import {
   type PlayerView,
   type Square,
 } from '@mistboard/game';
+import { t } from '../i18n/catalog.js';
 import { revealKingCaptureForLoser } from '../replay-board.js';
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
 
@@ -110,9 +111,27 @@ export const darkChessTreeAdapter: VariantTreeAdapter<Move, GameState, PlayerVie
   },
   applyMove: (truth, move) => darkChessVariant.applyMove(truth, move),
   project: (truth): ProjectedView<PlayerView>[] => [
-    { key: 'truth', label: 'Truth', tier: 'primary', view: godView(truth) },
-    { key: 'white', label: "White's view", tier: 'secondary', view: povView(truth, 'white') },
-    { key: 'black', label: "Black's view", tier: 'secondary', view: povView(truth, 'black') },
+    {
+      key: 'truth',
+      label: t('watch.truth'),
+      shortLabel: t('watch.truth'),
+      tier: 'primary',
+      view: godView(truth),
+    },
+    {
+      key: 'white',
+      label: t('replay.whitesView'),
+      shortLabel: t('setup.white'),
+      tier: 'secondary',
+      view: povView(truth, 'white'),
+    },
+    {
+      key: 'black',
+      label: t('replay.blacksView'),
+      shortLabel: t('setup.black'),
+      tier: 'secondary',
+      view: povView(truth, 'black'),
+    },
   ],
   moveLabel: (move, parentTruth) => moveToAlgebraic(parentTruth, move),
   moveKey: (move) => moveToUci(move),

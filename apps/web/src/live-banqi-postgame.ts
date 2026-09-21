@@ -1,4 +1,5 @@
 import {
+  BANQI_SPEC_ID,
   type BanqiColor,
   type BanqiGameStatus,
   type BanqiMove,
@@ -12,7 +13,7 @@ import './live-xiangqi.css';
 import './landing.css';
 import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
-import { banqiResultLabel } from './banqi-result-label.js';
+import { banqiOutcome } from './banqi-result-label.js';
 import { banqiEnabled } from './feature-flags.js';
 import { installBanqiBoardStyles } from './live-banqi-render.js';
 import { reviewSeatProfiles } from './profile-link.js';
@@ -179,12 +180,12 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     : undefined;
 
   const status = reviewOutcomeLine(
-    banqiResultLabel(postgame.game.result, firstColor),
+    banqiOutcome(postgame.game.result, firstColor),
     postgame.game.termination,
   );
   const { metaCard, details } = buildReviewMeta({
     markerId: 'banqi',
-    variantName: 'Banqi',
+    variantName: variantDisplayLabel(BANQI_SPEC_ID),
     game: postgame.game,
     status,
     seatColors,

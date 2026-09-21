@@ -1,4 +1,5 @@
 import {
+  JUNGLE_FLIP_SPEC_ID,
   type JungleFlipGameStatus,
   type JungleFlipMove,
   type JungleFlipPlayerView,
@@ -13,7 +14,7 @@ import './landing.css';
 import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { jungleFlipEnabled } from './feature-flags.js';
-import { jungleFlipResultLabel, jungleFlipSeatInk } from './jungle-flip-result-label.js';
+import { jungleFlipOutcome, jungleFlipSeatInk } from './jungle-flip-result-label.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
@@ -173,12 +174,12 @@ function renderPostgame(root: HTMLElement, postgame: JungleFlipPostgameResponse)
   } as const;
 
   const status = reviewOutcomeLine(
-    jungleFlipResultLabel(postgame.game.result, firstColor),
+    jungleFlipOutcome(postgame.game.result, firstColor),
     postgame.game.termination,
   );
   const { metaCard, details } = buildReviewMeta({
     markerId: 'jungle-flip',
-    variantName: 'Flip Jungle',
+    variantName: variantDisplayLabel(JUNGLE_FLIP_SPEC_ID),
     game: postgame.game,
     status,
     seatColors,

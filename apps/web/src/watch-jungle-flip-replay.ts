@@ -4,6 +4,7 @@
 // Reveal/Hide control (and the `h` key) that swaps in the full-reveal overlay. The
 // deal has no sides, so orientation is ignored. The compact TV product draws no
 // captures; the live room does (live-jungle-flip.ts renderJungleFlipMaterial).
+import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/game';
 import {
@@ -41,7 +42,7 @@ export function mountJungleFlipWatchReplay(
     installStyles: () => {},
     loadPostgame: loadJungleFlipPostgame,
     maxPly: replayMaxPly,
-    viewEntries: () => [{ key: 'truth', label: 'Truth' }],
+    viewEntries: () => [{ key: 'truth', label: t('watch.truth') }],
     viewAtPly,
     paneKind: () => 'truth',
     renderBoard: (view) =>

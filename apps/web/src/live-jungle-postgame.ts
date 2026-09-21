@@ -1,4 +1,5 @@
 import {
+  JUNGLE_SPEC_ID,
   type JungleColor,
   type JungleGameStatus,
   type JungleMove,
@@ -9,7 +10,7 @@ import {
 import { reviewSeatProfiles } from './profile-link.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import './live-xiangqi.css';
-import { variantDisplayLabel } from './game-display.js';
+import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import './landing.css';
 import './game-route.css';
@@ -18,11 +19,7 @@ import { jungleEnabled } from './feature-flags.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import {
-  buildReviewMeta,
-  reviewOutcomeLine,
-  reviewResultLabel,
-} from './review/game-review-meta.js';
+import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { mountJungleReview } from './review/jungle-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -146,12 +143,12 @@ function renderPostgame(root: HTMLElement, postgame: JunglePostgameResponse): vo
   };
 
   const status = reviewOutcomeLine(
-    reviewResultLabel(postgame.game.result, 'jungle'),
+    gameOutcome(postgame.game.result, 'jungle'),
     postgame.game.termination,
   );
   const { metaCard, details } = buildReviewMeta({
     markerId: 'jungle',
-    variantName: 'Jungle Chess',
+    variantName: variantDisplayLabel(JUNGLE_SPEC_ID),
     game: postgame.game,
     status,
   });

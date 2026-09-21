@@ -799,6 +799,17 @@ export async function listXiangqiBroadcastTours(): Promise<StoredXiangqiBroadcas
   return rows.map(tourFromRow);
 }
 
+// Every stored board, for a whole-corpus check (the readout's serving sweep).
+// Takes the connection so the readout can run it on its own pool handle.
+export async function listAllXiangqiBroadcastBoardsOn(
+  client: Queryable,
+): Promise<StoredXiangqiBroadcastBoard[]> {
+  const { rows } = await client.query<BoardRow>(
+    `SELECT * FROM xiangqi_broadcast_boards ORDER BY tour_slug, round_id, board_number, id`,
+  );
+  return rows.map(boardFromRow);
+}
+
 export async function listXiangqiBroadcastRounds(
   tourSlug: string,
 ): Promise<StoredXiangqiBroadcastRound[]> {

@@ -6,7 +6,7 @@ import { describe, expect, it } from 'vitest';
 import '../../server/src/variant-tenant/register-tenants.js';
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import { listWatchChannels } from '../../server/src/watch-channels.js';
-import type { FeaturedGame } from './game-display.js';
+import { type FeaturedGame, watchChannelLabel } from './game-display.js';
 import { createGameTable } from './game-table.js';
 import { installReviewKeyboard } from './review/review-layout.js';
 import {
@@ -546,6 +546,37 @@ describe('seedWatchRail', () => {
     const bound: number[] = [];
     seedWatchRail({}, false, (ply) => bound.push(ply));
     expect(bound).toEqual([0]);
+  });
+});
+
+// The rail took the server's English `label` verbatim, so a zh reader saw
+// "Xiangqi" and "Featured" beside a translated meta card. The client owns the
+// locale: variant channels resolve through the variant-name catalog (channel
+// id == spec id), the two cross-variant channels through their own keys, and
+// an id the catalog cannot name keeps the server label.
+describe('watchChannelLabel', () => {
+  it('names the rail channels from the catalog in English', () => {
+    expect(watchChannelLabel({ id: 'top', label: 'Featured' })).toBe('Featured');
+    expect(watchChannelLabel({ id: 'engines', label: 'Engines' })).toBe('Engines');
+    expect(watchChannelLabel({ id: 'xiangqi', label: 'Xiangqi' })).toBe('Xiangqi');
+    expect(watchChannelLabel({ id: 'dark-chess', label: 'Fog Chess' })).toBe('Fog Chess');
+  });
+
+  it('keeps the server label for a channel the catalog cannot name', () => {
+    expect(watchChannelLabel({ id: 'not-a-spec', label: 'Server label' })).toBe('Server label');
+  });
+
+  it('translates the rail for a zh reader', async () => {
+    const { ensureLocaleCatalog } = await import('./i18n/catalog.js');
+    await ensureLocaleCatalog('zh-Hans');
+    window.history.pushState(null, '', '/zh-hans/watch');
+    try {
+      expect(watchChannelLabel({ id: 'top', label: 'Featured' })).toBe('精选');
+      expect(watchChannelLabel({ id: 'engines', label: 'Engines' })).toBe('引擎');
+      expect(watchChannelLabel({ id: 'xiangqi', label: 'Xiangqi' })).toBe('象棋');
+    } finally {
+      window.history.pushState(null, '', '/');
+    }
   });
 });
 

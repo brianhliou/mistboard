@@ -27,6 +27,20 @@ test('Staff picks curation rejects a non-admin before reading persistence', asyn
   }
 });
 
+test('cloning a study requires a session', async () => {
+  const response = captureResponse();
+  const request = {
+    method: 'POST',
+    headers: {},
+    socket: { remoteAddress: '127.0.0.1' },
+  } as unknown as IncomingMessage;
+  const handled = await tryHandle({}, request, response, '/api/studies/study1/clone');
+  assert.equal(handled, true);
+  // Without persistence the route answers 503 before the session check; with
+  // it, 401. Either way nothing is cloned for a signed-out caller.
+  assert.ok(response.status === 401 || response.status === 503, String(response.status));
+});
+
 test('chapter tags keep the allowlist and drop everything else', () => {
   assert.deepEqual(
     parseChapterTags({

@@ -1,4 +1,5 @@
 import {
+  DARK_CHESS_SPEC_ID,
   darkChessFen,
   darkChessVariant,
   type GameEvent,
@@ -6,6 +7,7 @@ import {
   type Move,
   moveToAlgebraic,
 } from '@mistboard/game';
+import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import './game-shell.css';
 import './landing.css';
 import './game-route.css';
@@ -24,11 +26,7 @@ import {
 import { formatDarkChessMove, mountDarkChessReview } from './review/dark-chess-review.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import {
-  buildReviewMeta,
-  reviewOutcomeLine,
-  reviewResultLabel,
-} from './review/game-review-meta.js';
+import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import { CHESS_SEAT_COLORS } from './review/review-seat-colors.js';
 import type { DecisionOverlay } from './review/tree-review.js';
@@ -121,10 +119,10 @@ export function mountDarkChessPostgame(
   const moveEvents = events.filter(isMovePlayed);
   const moves: Move[] = moveEvents.map((event) => event.move);
 
-  const status = reviewOutcomeLine(reviewResultLabel(game.result), game.termination);
+  const status = reviewOutcomeLine(gameOutcome(game.result), game.termination);
   const { metaCard, details } = buildReviewMeta({
     markerId: 'dark-chess',
-    variantName: 'Fog Chess',
+    variantName: variantDisplayLabel(DARK_CHESS_SPEC_ID),
     game,
     status,
   });

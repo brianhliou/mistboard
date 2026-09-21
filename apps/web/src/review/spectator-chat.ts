@@ -48,7 +48,7 @@ export function buildSpectatorChat(roomId: string): HTMLElement {
     ariaLabel: 'Spectator chat',
     live: false,
     pollMs: POLL_MS,
-    title: 'Spectator room',
+    title: t('review.spectatorRoom'),
     resizable: true,
   });
 }
@@ -67,7 +67,7 @@ export function buildLiveRoomChat(roomId: string): HTMLElement {
     pollMs: LIVE_POLL_MS,
     title: t('study.chatRoom'),
     apiUrl: playerChatApiUrl(roomId),
-    fallback: { apiUrl: gameChatApiUrl(roomId), title: 'Spectator room' },
+    fallback: { apiUrl: gameChatApiUrl(roomId), title: t('review.spectatorRoom') },
     resizable: true,
   });
 }

@@ -1,4 +1,5 @@
 import { spawnSync } from 'node:child_process';
+import { createHash } from 'node:crypto';
 
 // Where the drain token lives when it isn't in the environment. A release that
 // has to interrupt live games needs the token, and typing it into a shell (or
@@ -78,6 +79,93 @@ export function describeDrainToken() {
     };
   }
   return { ok: false, source: null, item: null, ...summarize(found.attempts) };
+}
+
+// A value's shadow: enough to say whether two copies of a secret are the same
+// copy, nothing that helps reconstruct either. Twelve hex digits of SHA-256
+// and the byte length. The length is what catches the classic mismatch, a
+// trailing newline pasted along with the value.
+export function fingerprintDrainToken(value) {
+  return {
+    sha: createHash('sha256').update(value, 'utf8').digest('hex').slice(0, 12),
+    length: Buffer.byteLength(value, 'utf8'),
+  };
+}
+
+// The shell command the check runs INSIDE the prod container to fingerprint
+// the token the server compares against. Same shape as fingerprintDrainToken
+// so the two sides are comparable; prints "unset" when the variable is absent
+// (the server then 401s every drain, whatever the laptop holds).
+export const PROD_FINGERPRINT_COMMAND =
+  'if [ -z "$MISTBOARD_DRAIN_TOKEN" ]; then echo unset; else ' +
+  'printf %s "$MISTBOARD_DRAIN_TOKEN" | sha256sum | cut -c1-12 | tr -d "\\n"; ' +
+  'printf " %s\\n" "$(printf %s "$MISTBOARD_DRAIN_TOKEN" | wc -c | tr -d " ")"; fi';
+
+/** Parse the container's answer. `null` when the output is not one of ours. */
+export function parseProdFingerprint(stdout) {
+  const line = String(stdout ?? '')
+    .split('\n')
+    .map((l) => l.trim())
+    .filter(Boolean)
+    .at(-1);
+  if (!line) return null;
+  if (line === 'unset') return { unset: true };
+  const m = /^([0-9a-f]{12}) (\d+)$/.exec(line);
+  return m ? { unset: false, sha: m[1], length: Number(m[2]) } : null;
+}
+
+/**
+ * Every source this resolver knows, in the order resolveDrainToken() consults
+ * them (env first, then each Keychain item), with a status and, when readable,
+ * a fingerprint. Never the value. Lets a check say WHICH stored copy a release
+ * will send and whether that copy is the one prod holds.
+ */
+export function listDrainTokenFingerprints() {
+  const entries = [];
+  const fromEnv = process.env.MISTBOARD_DRAIN_TOKEN;
+  if (fromEnv) {
+    entries.push({
+      item: 'env:MISTBOARD_DRAIN_TOKEN',
+      status: 'ok',
+      fingerprint: fingerprintDrainToken(fromEnv),
+    });
+  }
+  for (const item of KEYCHAIN_ITEMS) {
+    const attempt = readKeychainItem(item);
+    entries.push({
+      item,
+      status: attempt.status,
+      fingerprint: attempt.status === 'ok' ? fingerprintDrainToken(attempt.token) : null,
+    });
+  }
+  return entries;
+}
+
+/**
+ * The verdict a human acts on. `entries` is listDrainTokenFingerprints();
+ * `prod` is parseProdFingerprint(). Pure, so it is tested without a Keychain
+ * or a container.
+ *
+ *   match           the copy a release sends is the one prod holds
+ *   shadowed        prod's copy IS on this machine, but an earlier source
+ *                   holds a different value and wins the lookup
+ *   mismatch        no local copy equals prod's
+ *   local-none      nothing readable locally
+ *   prod-unset      the web service has no MISTBOARD_DRAIN_TOKEN at all
+ *   prod-unreadable the container did not answer in the expected shape
+ */
+export function compareDrainTokenFingerprints(entries, prod) {
+  const readable = entries.filter((e) => e.fingerprint);
+  const active = readable[0] ?? null;
+  if (!prod) return { verdict: 'prod-unreadable', active, matches: [] };
+  if (prod.unset) return { verdict: 'prod-unset', active, matches: [] };
+  const matches = readable.filter(
+    (e) => e.fingerprint.sha === prod.sha && e.fingerprint.length === prod.length,
+  );
+  if (!active) return { verdict: 'local-none', active, matches };
+  if (matches.some((e) => e.item === active.item)) return { verdict: 'match', active, matches };
+  if (matches.length > 0) return { verdict: 'shadowed', active, matches };
+  return { verdict: 'mismatch', active, matches };
 }
 
 // Try each known item name in order. The first that yields a non-empty value

@@ -218,15 +218,15 @@ function buildBotHeader(profile: BotSummaryProfile): HTMLElement {
 
   const badge = document.createElement('span');
   badge.className = 'profile-summary-card-badge';
-  badge.textContent = 'BOT';
+  badge.textContent = t('watch.botBadge');
   header.append(identity, badge);
   return header;
 }
 
-const TIME_CLASS_LABELS: Record<'bullet' | 'blitz' | 'rapid', string> = {
-  bullet: 'Bullet',
-  blitz: 'Blitz',
-  rapid: 'Rapid',
+const TIME_CLASS_LABELS: Record<'bullet' | 'blitz' | 'rapid', I18nKey> = {
+  bullet: 'live.timeClassBullet',
+  blitz: 'live.timeClassBlitz',
+  rapid: 'live.timeClassRapid',
 };
 
 // Compact rating grid: rated variants only (a "?"-provisional or settled Elo),

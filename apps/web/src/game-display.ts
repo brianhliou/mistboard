@@ -1,6 +1,7 @@
 import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import { isFlipSeatVariant, seatInkForVariant } from './flip-seat-ink.js';
 import { type I18nKey, t } from './i18n/catalog.js';
+import type { Locale } from './i18n/locale.js';
 import { seatColorWord } from './variant-seat-label.js';
 
 export const MISTBOARD_ENGINE_SNAPSHOT_ID = 'engine-v2-2026-05-24';
@@ -87,12 +88,18 @@ export function displayParticipantName(
   color: GameParticipant['color'],
 ): string {
   const participant = participantForColor(game, color);
-  if (participant)
+  if (participant) {
+    // The server names a nameless guest seat with the English literal 'Guest';
+    // it is a placeholder, not a name, so it goes through the catalog like the
+    // live paths' fallback does.
+    if (participant.subjectType === 'guest' && (participant.displayName ?? 'Guest') === 'Guest')
+      return t('watch.guest');
     return displayParticipant(
       participant.displayName,
       fallbackSeatName(game.variant, color, game.firstColor),
       participant.subjectId,
     );
+  }
   const fallback = fallbackSeatName(game.variant, color, game.firstColor);
   const legacyName =
     color === 'white'
@@ -135,7 +142,16 @@ export function matchupSeats(game: FeaturedGame): MatchupSeatPair {
 // player's name.
 export function matchupLabel(game: FeaturedGame): string {
   const [first, second] = matchupSeats(game);
-  return `${displayParticipantName(game, first)} vs ${displayParticipantName(game, second)}`;
+  return namesMatchupLabel(
+    displayParticipantName(game, first),
+    displayParticipantName(game, second),
+  );
+}
+
+// "X vs Y" from two already-resolved names: a whole-phrase key, because the
+// joining word is not "vs" in every locale.
+export function namesMatchupLabel(first: string, second: string): string {
+  return t('watch.matchup', { first, second });
 }
 
 function fallbackSeatName(
@@ -246,6 +262,89 @@ export function variantDisplayLabel(variant: string): string {
   const key = variantNameKeyForSpecId(variant);
   if (key) return t(key);
   return maybeGameSpecForId(variant)?.publicName ?? variant;
+}
+
+// "<Color> wins" for a resolved ink word. The colour word and the verb are one
+// key so the zh catalogs can write 红方获胜 instead of gluing "红方" to "wins".
+export function colorWinsLabel(colorWord: string): string {
+  return t('watch.colorWins', { color: colorWord });
+}
+
+// A finished game's outcome as data, so every sentence built around it (the
+// review meta card's "Checkmate • Red is victorious", the TV chip's "Red wins")
+// is one catalog key with the winner's word as a parameter. The string-surgery
+// version (strip " wins" off an English label to recover the winner) broke the
+// moment the label was translated. `winner` is the resolved ink WORD; `label`
+// is an outcome the model does not understand, shown as-is.
+export type GameOutcome = { winner: string } | { draw: true } | { label: string };
+
+// Outcome for the fixed-colour variants (seat == ink). Flip variants resolve
+// the winner through firstColor in their own modules (banqiOutcome,
+// jungleFlipOutcome).
+export function gameOutcome(result: string, variant?: string | null): GameOutcome {
+  if (result === 'red-wins') return { winner: seatColorWord(variant, 'red') };
+  if (result === 'black-wins') return { winner: seatColorWord(variant, 'black') };
+  if (result === 'white-wins') return { winner: seatColorWord(variant, 'white') };
+  if (result === 'draw') return { draw: true };
+  return { label: humanizeToken(result) };
+}
+
+// "Red wins" / "Draw" / the pass-through label.
+export function outcomeLabel(outcome: GameOutcome): string {
+  if ('winner' in outcome) return colorWinsLabel(outcome.winner);
+  if ('draw' in outcome) return t('watch.draw');
+  return outcome.label;
+}
+
+// 'no-progress' -> 'No progress'. The fallback for a code no catalog names.
+export function humanizeToken(value: string): string {
+  const spaced = value.replace(/[-_]+/g, ' ').trim();
+  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
+}
+
+// Player-facing label for a persisted games.termination code. Total over the
+// server's GameTermination union; an unknown code (a future one, or a legacy row)
+// humanizes the kebab token rather than throwing, so a list surface never dies
+// on one row. Mirrors the live room's reasonPhraseLabel, which covers only the
+// six reasons the chess stack emits.
+const TERMINATION_KEYS: Record<string, I18nKey> = {
+  'king-captured': 'replay.endKingCaptured',
+  'general-captured': 'replay.endGeneralCaptured',
+  timeout: 'replay.endTimeout',
+  checkmate: 'replay.endCheckmate',
+  draw: 'replay.endDraw',
+  resignation: 'replay.endResignation',
+  'engine-failure': 'replay.endEngineFailure',
+  'worker-aborted': 'replay.endWorkerAborted',
+  'server-restarted': 'replay.endServerRestarted',
+  abandoned: 'replay.endAbandoned',
+  abandonment: 'replay.endAbandoned',
+  'no-legal-moves': 'replay.endNoLegalMoves',
+  stalemate: 'replay.endStalemate',
+  repetition: 'replay.endRepetition',
+  'progress-clock': 'replay.endProgressClock',
+  truncated: 'replay.endTruncated',
+  race: 'replay.endRace',
+  chasing: 'replay.endChasing',
+  'dead-position': 'replay.endDeadPosition',
+};
+
+export function terminationLabel(termination: string, locale?: Locale): string {
+  if (!termination) return '';
+  const key = TERMINATION_KEYS[termination];
+  if (key) return t(key, {}, locale);
+  return humanizeToken(termination);
+}
+
+// A watch/games rail channel's name in the page locale. The server's `label` is
+// English; every variant channel's id IS its spec id, so the variant-name
+// catalog covers it, and the two cross-variant channels (Featured, Engines) get
+// their own keys. A channel the catalog cannot name keeps the server label.
+export function watchChannelLabel(channel: { id: string; label: string }): string {
+  if (channel.id === 'top') return t('watch.featuredChannel');
+  if (channel.id === 'engines') return t('watch.enginesChannel');
+  const key = variantNameKeyForSpecId(channel.id);
+  return key ? t(key) : channel.label;
 }
 
 export function sourceLabel(mode: FeaturedGame['mode']): string {

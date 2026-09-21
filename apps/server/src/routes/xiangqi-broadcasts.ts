@@ -1,19 +1,21 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import {
-  applyStandardXiangqiMove,
-  broadcastRecordsCredit,
-  createInitialXiangqiState,
-  getStandardXiangqiPlayerView,
-  type StandardXiangqiPlayerView,
-  type XiangqiColor,
-  type XiangqiMove,
-} from '@mistboard/game';
+import { broadcastRecordsCredit } from '@mistboard/game';
 import * as persistence from './../persistence.js';
+import {
+  type BroadcastLiveEval,
+  cachedBroadcastLiveEval,
+  requestBroadcastLiveEvalForBoard,
+} from './../xiangqi-broadcast-live-eval.js';
 import {
   pollXiangqiBroadcastSourceOnce,
   type XiangqiBroadcastPollResult,
 } from './../xiangqi-broadcast-poller.js';
 import { clampXiangqiBroadcastScheduleIntervalMs } from './../xiangqi-broadcast-scheduler.js';
+import {
+  buildXiangqiBroadcastBoardReplay,
+  finalXiangqiBoardView,
+} from './../xiangqi-broadcast-serving.js';
+import { type BroadcastViewerRegistry, broadcastViewers } from './../xiangqi-broadcast-viewers.js';
 import {
   type HttpApiContext,
   readJsonBody,
@@ -22,18 +24,6 @@ import {
   requirePersistence,
   writeJson,
 } from './lib.js';
-
-type BroadcastMoveTimelineEntry = {
-  type: 'move-played';
-  color: XiangqiColor;
-  move: XiangqiMove;
-  ply: number;
-};
-
-type BroadcastHistorySnapshot = {
-  ply: number;
-  view: StandardXiangqiPlayerView;
-};
 
 type BroadcastStreamEnvelope<T> = {
   version: string;
@@ -174,21 +164,6 @@ function featuredXiangqiBroadcastBoard(boards: persistence.StoredXiangqiBroadcas
     updatedAt: pick.updatedAt,
     view: finalXiangqiBoardView(pick),
   };
-}
-
-// Replay a stored board to its final position. Defensive about moves past a
-// terminal state so one bad row degrades to a stale thumbnail instead of a 500.
-// Legal moves are dead weight on a non-interactive thumbnail, so they are
-// stripped from the shipped view.
-function finalXiangqiBoardView(
-  board: persistence.StoredXiangqiBroadcastBoard,
-): StandardXiangqiPlayerView {
-  let state = createInitialXiangqiState(board.id);
-  for (const move of board.moves) {
-    if (state.status.type !== 'playing') break;
-    state = applyStandardXiangqiMove(state, move);
-  }
-  return { ...getStandardXiangqiPlayerView(state, 'red'), legalMoves: [] };
 }
 
 function roundBoardStats(
@@ -488,20 +463,32 @@ export async function xiangqiBroadcastRoundStreamForApi(
   };
 }
 
+/** Cached live-engine eval for a board at a ply; injectable for tests. */
+export type XiangqiBroadcastLiveEvalLookup = (
+  boardId: string,
+  plyCount: number,
+) => BroadcastLiveEval | null;
+
 export async function xiangqiBroadcastBoardForApi(
   boardId: string,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
+  liveEval: XiangqiBroadcastLiveEvalLookup = cachedBroadcastLiveEval,
 ) {
   const board = await deps.getXiangqiBroadcastBoard(boardId);
   if (!board) return null;
-  return buildXiangqiBroadcastBoardReplay(board);
+  const replay = buildXiangqiBroadcastBoardReplay(board);
+  // Only a live board carries the server eval: a finished one is a review
+  // page with its own engine, and a scheduled one has no position yet.
+  const evaluation = board.status === 'live' ? liveEval(board.id, board.plyCount) : null;
+  return { ...replay, ...(evaluation ? { liveEval: evaluation } : {}) };
 }
 
 export async function xiangqiBroadcastBoardStreamForApi(
   boardId: string,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
+  liveEval: XiangqiBroadcastLiveEvalLookup = cachedBroadcastLiveEval,
 ) {
-  const payload = await xiangqiBroadcastBoardForApi(boardId, deps);
+  const payload = await xiangqiBroadcastBoardForApi(boardId, deps, liveEval);
   if (!payload) return null;
   return {
     version: versionKey([
@@ -511,6 +498,9 @@ export async function xiangqiBroadcastBoardStreamForApi(
       payload.board.status,
       payload.board.result,
       payload.state.status.type,
+      // A fresh eval for the current ply is a change worth a push of its own.
+      payload.liveEval?.ply,
+      payload.liveEval?.nodes,
     ]),
     payload,
   };
@@ -535,54 +525,6 @@ export async function xiangqiBroadcastBoardExportForApi(
     result: board.result,
     moves: board.moves,
     ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
-  };
-}
-
-function buildXiangqiBroadcastBoardReplay(board: persistence.StoredXiangqiBroadcastBoard) {
-  let state = createInitialXiangqiState(board.id);
-  const timeline: BroadcastMoveTimelineEntry[] = [];
-  const truth: BroadcastHistorySnapshot[] = [
-    { ply: 0, view: getStandardXiangqiPlayerView(state, 'red') },
-  ];
-
-  for (const [index, move] of board.moves.entries()) {
-    if (state.status.type !== 'playing') {
-      throw new Error(`stored broadcast board ${board.id} has moves after terminal state`);
-    }
-    const color = state.status.turn;
-    state = applyStandardXiangqiMove(state, move);
-    const ply = index + 1;
-    timeline.push({ type: 'move-played', color, move, ply });
-    truth.push({ ply, view: getStandardXiangqiPlayerView(state, 'red') });
-  }
-
-  return {
-    board: {
-      id: board.id,
-      tourSlug: board.tourSlug,
-      roundId: board.roundId,
-      sourceBoardId: board.sourceBoardId,
-      boardNumber: board.boardNumber,
-      red: board.red,
-      black: board.black,
-      status: board.status,
-      result: board.result,
-      plyCount: board.plyCount,
-      finalStatus: board.finalStatus,
-      createdAt: board.createdAt,
-      updatedAt: board.updatedAt,
-      ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
-    },
-    state: {
-      status: state.status,
-      moveNumber: state.moveNumber,
-    },
-    timeline,
-    view: getStandardXiangqiPlayerView(state, 'red'),
-    views: {
-      truth: getStandardXiangqiPlayerView(state, 'red'),
-    },
-    history: { truth },
   };
 }
 
@@ -707,19 +649,24 @@ function writeSseEvent<T>(
   response.write(`data: ${JSON.stringify(envelope)}\n\n`);
 }
 
-function streamSnapshotEvents<T>(
+// Exported for the viewer-census test; the routes below are its only callers.
+export function streamSnapshotEvents<T>(
   request: IncomingMessage,
   response: ServerResponse,
   input: {
     event: string;
+    /** `board:<id>` / `round:<tour>/<round>`: the viewer registry's key. */
+    streamKey: string;
     pollMs: number;
     initial: BroadcastStreamEnvelope<T>;
     load(): Promise<BroadcastStreamEnvelope<T> | null>;
+    viewers?: BroadcastViewerRegistry;
   },
 ): void {
   let closed = false;
   let polling = false;
   let lastVersion = input.initial.version;
+  const releaseViewer = (input.viewers ?? broadcastViewers).open(input.streamKey);
 
   response.writeHead(200, {
     'content-type': 'text/event-stream; charset=utf-8',
@@ -756,6 +703,7 @@ function streamSnapshotEvents<T>(
   const close = () => {
     closed = true;
     clearInterval(interval);
+    releaseViewer();
   };
   request.on('close', close);
   response.on('close', close);
@@ -861,8 +809,15 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
+    // A viewer who arrives between polls still gets a number: the scheduler
+    // only evaluates when a poll changes a board, so an uncached live head is
+    // searched on stream open and the stream pushes it when the cache fills.
+    if (initial.payload.board.status === 'live' && !initial.payload.liveEval) {
+      void requestBroadcastLiveEvalForBoard(boardId);
+    }
     streamSnapshotEvents(request, response, {
       event: 'board',
+      streamKey: `board:${boardId}`,
       pollMs: parseEventPollMs(_parsedUrl),
       initial,
       load: () => xiangqiBroadcastBoardStreamForApi(boardId),
@@ -913,6 +868,7 @@ export async function tryHandle(
     }
     streamSnapshotEvents(request, response, {
       event: 'round',
+      streamKey: `round:${tourSlug}/${roundId}`,
       pollMs: parseEventPollMs(_parsedUrl),
       initial,
       load: () => xiangqiBroadcastRoundStreamForApi(tourSlug, roundId),

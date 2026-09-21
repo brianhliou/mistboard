@@ -9,6 +9,7 @@ import {
   type GameParticipant,
   matchupSeats,
   participantForColor,
+  variantNameKeyForSpecId,
 } from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
 import { type I18nKey, t } from './i18n/catalog.js';
@@ -107,14 +108,14 @@ export function buildProfileTabsShell(tabs: ProfileTab[]): HTMLElement {
   return section;
 }
 
-const GAME_VARIANT_LABEL_KEY: Record<string, I18nKey> = {
+// Persisted variant strings the canonical spec map does not resolve: the legacy
+// fog alias and the mini family deleted 2026-09-12, whose finished games are
+// still on file. Every registered spec resolves through variantNameKeyForSpecId
+// (game-display.ts), the one home for variant names.
+const LEGACY_GAME_VARIANT_LABEL_KEY: Record<string, I18nKey> = {
   fog: 'variant.darkChess.name',
-  'dark-chess': 'variant.darkChess.name',
   'mini-xiangqi': 'variant.miniXiangqi.name',
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
-  'dark-xiangqi': 'variant.darkXiangqi.name',
-  banqi: 'variant.banqi.name',
-  jieqi: 'variant.jieqi.name',
 };
 
 // Header shell: eyebrow + heading + a dot-separated meta line. Callers build the
@@ -204,7 +205,7 @@ export function buildProfileGameRow(
     const [first, second] = matchupSeats(game);
     opponent.append(
       matchupNameEl(game, first),
-      document.createTextNode(' vs '),
+      document.createTextNode(` ${t('watch.versus')} `),
       matchupNameEl(game, second),
     );
   } else {
@@ -354,7 +355,7 @@ export function profileGameSpecLabel(game: FeaturedGame, locale: Locale): string
   // 'Dark Chess' casing this pill uses (the dark-chess spec publicName is the
   // lowercase 'Fog Chess'). Everything else derives from the canonical spec so a
   // new variant (banqi, jieqi, ...) is labelled without editing here.
-  const key = GAME_VARIANT_LABEL_KEY[game.variant];
+  const key = LEGACY_GAME_VARIANT_LABEL_KEY[game.variant] ?? variantNameKeyForSpecId(game.variant);
   if (key) return t(key, {}, locale);
   return maybeGameSpecForId(game.variant)?.publicName ?? t('variant.darkChess.name', {}, locale);
 }

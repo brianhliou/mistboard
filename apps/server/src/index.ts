@@ -47,6 +47,7 @@ import {
   type WebSocketConnectionContext,
 } from './server-ws-connection.js';
 import type { DarkXiangqiLiveRoom } from './server-ws-dark-xiangqi.js';
+import { type StudyCurator, startStudyCurator } from './study-curator/curator.js';
 import {
   startTenantDeadlineSweeper,
   type TenantDeadlineSweeper,
@@ -213,6 +214,7 @@ let server: ReturnType<typeof createServer> | null = null;
 let wss: WebSocketServer | null = null;
 let deadlineSweeper: TenantDeadlineSweeper | null = null;
 let patronExpirySweeper: PatronExpirySweeper | null = null;
+let studyCurator: StudyCurator | null = null;
 let broadcastScheduler: XiangqiBroadcastScheduler | null = null;
 let botVsBotScheduler: BotVsBotScheduler | null = null;
 let shuttingDown = false;
@@ -245,6 +247,8 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
   deadlineSweeper = startTenantDeadlineSweeper();
   if (persistence.isInitialized()) {
     patronExpirySweeper = startPatronExpirySweeper();
+    // Always started; the tick no-ops unless MISTBOARD_STUDY_CURATOR_ENABLED=true.
+    studyCurator = startStudyCurator();
     broadcastScheduler = startXiangqiBroadcastScheduler();
     // Always started; the tick no-ops unless MISTBOARD_BOT_VS_BOT_ENABLED=true,
     // so ops can flip generation on/off without a restart.
@@ -348,6 +352,8 @@ export async function stopServer(): Promise<void> {
   deadlineSweeper?.stop();
   deadlineSweeper = null;
   patronExpirySweeper?.stop();
+  studyCurator?.stop();
+  studyCurator = null;
   patronExpirySweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;
@@ -558,6 +564,8 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
   deadlineSweeper?.stop();
   deadlineSweeper = null;
   patronExpirySweeper?.stop();
+  studyCurator?.stop();
+  studyCurator = null;
   patronExpirySweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;

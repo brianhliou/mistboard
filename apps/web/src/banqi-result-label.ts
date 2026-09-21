@@ -1,5 +1,7 @@
 import type { BanqiColor } from '@mistboard/game';
 import { flipSeatInk } from './flip-seat-ink.js';
+import { type GameOutcome, humanizeToken, outcomeLabel } from './game-display.js';
+import { t } from './i18n/catalog.js';
 
 // Banqi seats are first/second mover ('red' seat = first); the ink binds on the opening flip
 // and travels as the game state's `firstColor`. The recorded result and the timeline's `color`
@@ -11,17 +13,17 @@ import { flipSeatInk } from './flip-seat-ink.js';
 
 export function seatInkLabel(seat: BanqiColor, firstColor: BanqiColor | null): string {
   const ink = flipSeatInk(seat, firstColor);
-  if (ink === null) return seat === 'red' ? 'First' : 'Second';
-  return ink === 'red' ? 'Red' : 'Black';
+  if (ink === null) return seat === 'red' ? t('setup.first') : t('setup.second');
+  return ink === 'red' ? t('setup.red') : t('setup.black');
+}
+
+export function banqiOutcome(result: string, firstColor: BanqiColor | null): GameOutcome {
+  if (result === 'red-wins') return { winner: seatInkLabel('red', firstColor) };
+  if (result === 'black-wins') return { winner: seatInkLabel('black', firstColor) };
+  if (result === 'draw') return { draw: true };
+  return { label: humanizeToken(result) };
 }
 
 export function banqiResultLabel(result: string, firstColor: BanqiColor | null): string {
-  if (result === 'red-wins') return `${seatInkLabel('red', firstColor)} wins`;
-  if (result === 'black-wins') return `${seatInkLabel('black', firstColor)} wins`;
-  if (result === 'draw') return 'Draw';
-  return result
-    .split('-')
-    .filter(Boolean)
-    .map((part) => part.charAt(0).toUpperCase() + part.slice(1))
-    .join(' ');
+  return outcomeLabel(banqiOutcome(result, firstColor));
 }

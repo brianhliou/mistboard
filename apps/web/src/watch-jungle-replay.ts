@@ -2,6 +2,8 @@
 // renderer (watch-tenant-replay.ts). Jungle is PERFECT-INFORMATION: the board was
 // always fully visible, so there is one truth surface (no per-color triptych), no
 // reveal toggle, and no captured-pool fill (the board itself carries the material).
+import { t } from './i18n/catalog.js';
+import { reviewResultLabel } from './review/game-review-meta.js';
 import './live-xiangqi.css';
 import type { JungleBoard, JunglePlayerView } from '@mistboard/game';
 import { animateJungleBoardMove, renderJungleBoardSvg } from './jungle-render.js';
@@ -12,7 +14,6 @@ import {
   loadJunglePostgame,
 } from './live-jungle-postgame.js';
 import type { ReplayHandle } from './replay.js';
-import { seatColorWord } from './variant-seat-label.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
 
 export type JungleWatchReplayOptions = TenantWatchReplayOptions;
@@ -32,18 +33,13 @@ export function mountJungleWatchReplay(
       installStyles: () => {},
       loadPostgame: loadJunglePostgame,
       maxPly: junglePostgameMaxPly,
-      viewEntries: () => [{ key: 'truth', label: 'Truth' }],
+      viewEntries: () => [{ key: 'truth', label: t('watch.truth') }],
       viewAtPly: (postgame, _key, ply) => junglePostgameViewAtPly(postgame, ply),
       paneKind: () => 'truth',
       // Open Jungle is seat == ink, so the winning-side word comes straight from
       // the result — branded "Blue" for the dark side (see variant-seat-label.ts)
       // so the TV result line matches the postgame + rail.
-      resultLabel: (result) =>
-        result === 'draw'
-          ? 'Draw'
-          : result.endsWith('-wins')
-            ? `${seatColorWord('jungle', result.slice(0, -'-wins'.length))} wins`
-            : result,
+      resultLabel: (result) => reviewResultLabel(result, 'jungle'),
       renderBoard: (view, orientation) =>
         renderJungleBoardSvg(view.board as JungleBoard, {
           perspective: orientation,

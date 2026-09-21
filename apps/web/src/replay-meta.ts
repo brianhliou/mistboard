@@ -1,4 +1,5 @@
 import type { GameEvent } from '@mistboard/game';
+import { terminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { escapeHtml, formatClock } from './web-utils.js';
 
@@ -317,10 +318,6 @@ function resultLabel(result: string): string {
   if (result === 'white-wins') return t('watch.whiteWins');
   if (result === 'black-wins') return t('watch.blackWins');
   return t('watch.draw');
-}
-
-function terminationLabel(termination: string): string {
-  return termination.replace(/-/g, ' ').replace(/\b\w/g, (char) => char.toUpperCase());
 }
 
 function numericValue(value: unknown): number | null {

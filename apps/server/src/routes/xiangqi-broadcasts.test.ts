@@ -712,6 +712,51 @@ test('broadcast board API builds replay-compatible timeline and history', async 
   assert.deepEqual(payload.board.updatedAt, storedBoard.updatedAt);
 });
 
+// The stored rows hold the whole tournament record because ingestion replays
+// past the kernel's own repetition and progress-clock draws (an arbiter decides
+// those in real play). The serving side has to resume the same way: until
+// 2026-09-20 it threw "moves after terminal state" and 52 of 376 prod boards
+// answered 500 while the featured thumbnail silently froze at the auto-draw.
+for (const [file, reason] of [
+  ['repetition.json', 'repetition'],
+  ['progress-clock.json', 'progress-clock'],
+] as const) {
+  test(`broadcast board API replays a real game that ran past the kernel's ${reason} draw`, async () => {
+    const record = readJson<XiangqiBroadcastBoard>(`../arbiter-adjudicated/${file}`);
+    const ingest = replayXiangqiBroadcastBoard(record, { continuePastAdjudicatedDraw: true });
+    assert.equal(ingest.ok, true, ingest.ok ? undefined : ingest.reason);
+    if (!ingest.ok) return;
+    assert.ok(ingest.adjudications.length > 0, 'fixture must actually trip the auto-draw');
+    const stored: StoredXiangqiBroadcastBoard = {
+      ...record,
+      roundId: board.roundId,
+      plyCount: ingest.plies,
+      finalStatus: ingest.finalStatus,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    };
+    const persisted = deps({
+      getXiangqiBroadcastBoard: async (boardId) => (boardId === record.id ? stored : null),
+      listXiangqiBroadcastBoards: async (roundId) => (roundId === board.roundId ? [stored] : []),
+    });
+
+    const payload = await xiangqiBroadcastBoardForApi(record.id, persisted);
+    assert.ok(payload);
+    assert.equal(payload.timeline.length, record.moves.length);
+    assert.equal(payload.history.truth.length, record.moves.length + 1);
+    assert.deepEqual(payload.state.status, ingest.finalStatus);
+
+    // The thumbnail path resumes too: the featured position is the last ply,
+    // not the position the kernel called a draw on.
+    const lastPly = payload.history.truth[record.moves.length]!.view.board;
+    const index = await xiangqiBroadcastIndexForApi(persisted);
+    const featured = index.tours[0]?.featuredBoard;
+    assert.ok(featured);
+    assert.equal(featured.id, record.id);
+    assert.deepEqual(featured.view.board, lastPly);
+  });
+}
+
 test('broadcast board stream version changes when persisted state changes', async () => {
   const first = await xiangqiBroadcastBoardStreamForApi(board.id, deps());
   const updatedBoard = {
@@ -731,6 +776,51 @@ test('broadcast board stream version changes when persisted state changes', asyn
   assert.ok(next);
   assert.notEqual(first.version, next.version);
   assert.equal(next.payload.timeline.length, 2);
+});
+
+test('broadcast board payload carries the live eval only for a live board, and it bumps the stream version', async () => {
+  const liveBoard: StoredXiangqiBroadcastBoard = {
+    ...storedBoard,
+    status: 'live',
+    result: '*',
+    moves: storedBoard.moves.slice(0, 2),
+    plyCount: 2,
+  };
+  const liveDeps = deps({
+    getXiangqiBroadcastBoard: async (boardId) => (boardId === board.id ? liveBoard : null),
+  });
+  const evaluation = {
+    ply: 2,
+    nodes: 300_000,
+    depth: 14,
+    cp: 35,
+    mate: null,
+    lines: [{ move: 'b1c3', cp: 35, mate: null, pv: ['b1c3', 'b10c8'] }],
+  };
+  const lookups: Array<[string, number]> = [];
+  const lookup = (boardId: string, plyCount: number) => {
+    lookups.push([boardId, plyCount]);
+    return plyCount === 2 ? evaluation : null;
+  };
+
+  // Nothing cached yet: no field, and the version does not mention an eval.
+  const before = await xiangqiBroadcastBoardStreamForApi(board.id, liveDeps, () => null);
+  assert.ok(before);
+  assert.equal(Object.hasOwn(before.payload, 'liveEval'), false);
+
+  // The eval lands for the same persisted state: the payload carries it and
+  // the version moves, so the stream pushes it on its own.
+  const after = await xiangqiBroadcastBoardStreamForApi(board.id, liveDeps, lookup);
+  assert.ok(after);
+  assert.deepEqual(lookups, [[board.id, 2]]);
+  assert.deepEqual(after.payload.liveEval, evaluation);
+  assert.notEqual(after.version, before.version);
+  assert.equal(after.payload.timeline.length, 2);
+
+  // A finished board never asks the cache, whatever it holds.
+  const complete = await xiangqiBroadcastBoardForApi(board.id, deps(), () => evaluation);
+  assert.ok(complete);
+  assert.equal(Object.hasOwn(complete, 'liveEval'), false);
 });
 
 test('broadcast board export returns canonical coordinate JSON', async () => {

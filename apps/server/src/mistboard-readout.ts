@@ -84,8 +84,21 @@ export type MistboardReadoutEngines = {
   activeWorkers: number;
 };
 
+// Whether every stored broadcast board would answer the board API. Ingestion
+// and serving replay the rows through different code, and on 2026-09-20 52 of
+// 376 boards had 500ed for a week with nothing counting them: the only
+// broadcast signal was source-sync health, which was green because the rows
+// had ingested fine. Optional so snapshots that predate it still parse.
+export type MistboardReadoutBroadcasts = {
+  boards: number;
+  unservableBoards: number;
+  // A handful of ids so the comment says which rows, capped so the snapshot
+  // stays small when a whole tour breaks.
+  unservableBoardIds: string[];
+};
+
 export type MistboardReadoutCollectorError = {
-  section: 'product' | 'puzzles' | 'mining' | 'engines';
+  section: 'product' | 'puzzles' | 'mining' | 'engines' | 'broadcasts';
   code: 'collector_failed';
 };
 
@@ -108,11 +121,16 @@ export type MistboardReadoutV1 = {
     databaseRequired: boolean;
     persistence: 'enabled' | 'disabled';
     persistenceErrors: { count1m: number; lastAt: number | null };
+    // Peak open broadcast SSE streams this UTC day, from the process's viewer
+    // census. Runtime-only: absent on snapshots from before it existed, and
+    // it restarts from whoever is connected when the server restarts.
+    broadcastViewersPeak?: number;
   };
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
+  broadcasts?: MistboardReadoutBroadcasts | null;
   actions: MistboardReadoutAction[];
   collectorErrors: MistboardReadoutCollectorError[];
   trend: MistboardReadoutTrendPoint[];
@@ -128,6 +146,7 @@ export type MistboardReadoutFacts = {
   puzzles: ElephantChessPuzzleQualityReport | null;
   mining: MistboardReadoutMining | null;
   engines: MistboardReadoutEngines | null;
+  broadcasts?: MistboardReadoutBroadcasts | null;
   collectorErrors?: MistboardReadoutCollectorError[];
   trend?: MistboardReadoutTrendPoint[];
 };
@@ -190,6 +209,7 @@ export function buildMistboardReadout(input: {
     puzzles: input.facts.puzzles,
     mining: input.facts.mining,
     engines: input.facts.engines,
+    broadcasts: input.facts.broadcasts ?? null,
     actions,
     collectorErrors,
     trend: input.facts.trend ?? [],
@@ -391,6 +411,28 @@ function operationsActions(
       text: `${mining.staleLeases} mining shard lease${mining.staleLeases === 1 ? '' : 's'} expired without being reclaimed.`,
     });
   }
+  // A stored board that the API cannot replay is a 500 on a public page and
+  // stays one until code or data changes, so it latches like the counters
+  // above: fire on the increase. A snapshot from before the section existed
+  // has no baseline, so the first sweep after a deploy fires on any count.
+  const broadcasts = facts.broadcasts;
+  if (
+    broadcasts &&
+    grewSinceLastReport(
+      previousReport?.broadcasts?.unservableBoards,
+      broadcasts.unservableBoards,
+      previousReport !== null && previousReport.broadcasts === null,
+    )
+  ) {
+    const sample = broadcasts.unservableBoardIds.slice(0, 3).join(', ');
+    actions.push({
+      code: 'broadcast-boards-unservable',
+      severity: 'action',
+      dedupeKey: `broadcast-boards-unservable:${broadcasts.unservableBoards}`,
+      ownerIssue: null,
+      text: `${broadcasts.unservableBoards} of ${broadcasts.boards} stored broadcast board${broadcasts.boards === 1 ? '' : 's'} cannot be replayed by the board API (500 on the page)${sample ? `: ${sample}` : ''}.`,
+    });
+  }
   return actions;
 }
 
@@ -531,6 +573,11 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   lines.push(
     `- Production revision: \`${report.production.revision ?? 'unknown'}\`; active games: ${report.production.activeGames}`,
   );
+  if (report.production.broadcastViewersPeak !== undefined) {
+    lines.push(
+      `- Broadcast viewers: peak ${report.production.broadcastViewersPeak} open streams today (UTC day, runtime counter)`,
+    );
+  }
   if (!report.mining) lines.push('- Mining status unavailable.');
   else {
     lines.push(
@@ -546,6 +593,13 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   } else {
     lines.push(
       `- Engines: ${report.engines.activeWorkers} active workers, ${report.engines.failedTasks} failed tasks, ${report.engines.staleWorkers} stale workers`,
+    );
+  }
+  // Optional on the type because older snapshots predate the section; the
+  // renderer meets those on /readouts.
+  if (report.broadcasts) {
+    lines.push(
+      `- Broadcasts: ${report.broadcasts.boards} stored boards, ${report.broadcasts.unservableBoards} unservable`,
     );
   }
   if (report.collectorErrors.length > 0) {

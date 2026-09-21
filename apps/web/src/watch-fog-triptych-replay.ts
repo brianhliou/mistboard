@@ -1,3 +1,4 @@
+import { terminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
 import { createPane, type ReplayPaneHandle } from './replay-board.js';
@@ -85,11 +86,6 @@ type ControlRefs = {
 };
 
 type SeatCell = { row: HTMLElement; clock: HTMLElement };
-
-function labelize(value: string): string {
-  const spaced = value.replace(/-/g, ' ');
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
 
 function timeControlLabel(postgame: FogTriptychPostgameMeta): string {
   const initialMs = postgame.game.initialMs ?? postgame.state.timeControl?.initialMs ?? null;
@@ -311,10 +307,12 @@ export async function mountFogTriptychWatchReplay<
     chip.textContent = adapter.resultLabel(postgame.game.result);
     const detail = document.createElement('span');
     detail.className = 'replay-game-header-result-detail';
-    detail.textContent = `by ${labelize(postgame.game.termination)}`;
+    detail.textContent = t('watch.byReason', {
+      reason: terminationLabel(postgame.game.termination),
+    });
     header.result.append(chip, detail);
     const plies = document.createElement('span');
-    plies.textContent = `${postgame.game.plyCount} plies`;
+    plies.textContent = t('watch.plyCount', { count: postgame.game.plyCount });
     const sep = document.createElement('span');
     sep.className = 'replay-game-header-sep';
     sep.textContent = '·';

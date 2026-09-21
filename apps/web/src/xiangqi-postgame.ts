@@ -6,6 +6,7 @@
 import {
   type StandardXiangqiPlayerView,
   standardXiangqiFen,
+  XIANGQI_SPEC_ID,
   type XiangqiColor,
   type XiangqiMove,
 } from '@mistboard/game';
@@ -14,7 +15,7 @@ import { analysisHref, editorHref } from './review/position-links.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
 import './live-xiangqi.css';
-import { variantDisplayLabel } from './game-display.js';
+import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 // Reuse the shared dxq-postgame scaffold (.dxq-postgame__*) the other variants ride.
 import './dark-xiangqi-postgame.css';
@@ -24,11 +25,7 @@ import { xiangqiEnabled } from './feature-flags.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import {
-  buildReviewMeta,
-  reviewOutcomeLine,
-  reviewResultLabel,
-} from './review/game-review-meta.js';
+import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -145,13 +142,10 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     black: gamePlayers.find((p) => p.color === 'black')?.name,
   };
 
-  const status = reviewOutcomeLine(
-    reviewResultLabel(postgame.game.result),
-    postgame.game.termination,
-  );
+  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
     markerId: 'xiangqi',
-    variantName: 'Xiangqi',
+    variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
   });
@@ -193,8 +187,8 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     // signed-out visitor gets a sign-in CTA instead of a request that would 401.
     analysis: {
       requestLabel: isLikelySignedIn()
-        ? 'Request computer analysis'
-        : 'Sign in to request analysis',
+        ? t('replay.requestComputerAnalysis')
+        : t('replay.signInToRequestAnalysis'),
       requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
       fetchCached: () => fetchCachedGameAnalysis('xiangqi', postgame.game.roomId),
       run: () => requestGameAnalysis('xiangqi', postgame.game.roomId),

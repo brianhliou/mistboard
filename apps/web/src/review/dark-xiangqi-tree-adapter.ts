@@ -29,6 +29,7 @@ import {
   type XiangqiSquare,
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
+import { t } from '../i18n/catalog.js';
 import type { DarkXiangqiWireView } from '../live-dark-xiangqi.js';
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
 
@@ -104,9 +105,27 @@ export const darkXiangqiTreeAdapter: VariantTreeAdapter<
   isLegal: (truth, move) => truth.status.type === 'playing' && isLegalMove(truth, move),
   applyMove: (truth, move) => applyMove(truth, move),
   project: (truth): ProjectedView<DarkXiangqiWireView>[] => [
-    { key: 'truth', label: 'Truth', tier: 'primary', view: godWireView(truth) },
-    { key: 'red', label: "Red's view", tier: 'secondary', view: povWireView(truth, 'red') },
-    { key: 'black', label: "Black's view", tier: 'secondary', view: povWireView(truth, 'black') },
+    {
+      key: 'truth',
+      label: t('watch.truth'),
+      shortLabel: t('watch.truth'),
+      tier: 'primary',
+      view: godWireView(truth),
+    },
+    {
+      key: 'red',
+      label: t('replay.redsView'),
+      shortLabel: t('setup.red'),
+      tier: 'secondary',
+      view: povWireView(truth, 'red'),
+    },
+    {
+      key: 'black',
+      label: t('replay.blacksView'),
+      shortLabel: t('setup.black'),
+      tier: 'secondary',
+      view: povWireView(truth, 'black'),
+    },
   ],
   moveLabel: (move) => `${move.from}-${move.to}`,
   // FSF xiangqi UCI is 1-indexed = our square notation, so the engine key and the

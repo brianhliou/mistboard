@@ -11,15 +11,19 @@ import { variantMiniIdForRawVariant } from './variants.js';
 import { boardAspectForSpec } from './watch-board-aspect.js';
 import './watch-route.css';
 import {
+  colorWinsLabel,
   displayLiveName,
   displayParticipantName,
   type FeaturedGame,
   type GameParticipant,
   matchupLabel,
   matchupSeats,
+  namesMatchupLabel,
   participantForColor,
   sourceLabel,
+  terminationLabel,
   variantDisplayLabel,
+  watchChannelLabel,
 } from './game-display.js';
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from './game-meta.js';
 import { initLiveSound, playSound } from './live-sound.js';
@@ -1565,14 +1569,6 @@ function buildWatchSection(feed: WatchFeed | null): WatchSection {
   };
 }
 
-// Human label for a kebab-cased termination code ("king-captured" -> "King
-// captured"), for the meta-card result line.
-function watchTerminationLabel(termination: string): string {
-  if (!termination) return '';
-  const spaced = termination.replace(/[-_]+/g, ' ').trim();
-  return spaced.charAt(0).toUpperCase() + spaced.slice(1);
-}
-
 // The FeaturedGame currently showing on the board (the active room), or null.
 function activeWatchGame(feed: WatchFeed | null, activeRoomId: string | null): FeaturedGame | null {
   if (!feed || !activeRoomId) return null;
@@ -1661,7 +1657,7 @@ export function renderWatchMainReviewLink(
     return;
   }
 
-  const label = `Review ${watchQueueMatchupLabel(game)}`;
+  const label = t('watch.reviewMatchup', { matchup: watchQueueMatchupLabel(game) });
   link.href = reviewUrl;
   link.hidden = false;
   link.setAttribute('aria-label', label);
@@ -1706,13 +1702,15 @@ export function renderWatchHeadline(
 // "Name vs Name" from an already-resolved seat list (the live path has no
 // FeaturedGame to hand to matchupLabel).
 function playersMatchupLabel(players: GameMetaPlayer[]): string {
-  return players.map((player) => player.name).join(' vs ');
+  const [first, second] = players;
+  if (!first || !second) return players.map((player) => player.name).join(' ');
+  return namesMatchupLabel(first.name, second.name);
 }
 
 function watchGameStatusLine(game: FeaturedGame): string {
   const result = watchQueueResultLabel(game);
-  const termination = watchTerminationLabel(game.termination);
-  return termination ? `${result} by ${termination}` : result;
+  const reason = terminationLabel(game.termination);
+  return reason ? t('watch.resultByReason', { result, reason }) : result;
 }
 
 // Populate the shared room table's board-relative player rows. The second mover
@@ -1802,12 +1800,17 @@ export function renderWatchChannelList(root: HTMLElement, feed: WatchFeed | null
     link.className = 'watch-channel-link';
     link.href = `/watch?channel=${encodeURIComponent(channel.id)}`;
     const player = channel.topPlayer ?? null;
+    // The rail's headline seat carries the server's guest placeholder ('Guest',
+    // the same literal displayParticipantName translates); anything else is a
+    // real name and is shown as sent.
+    const playerName = player ? (player.name === 'Guest' ? t('watch.guest') : player.name) : '';
     const playerLine = player
       ? player.rating != null
-        ? `${player.name} ${player.rating}`
-        : player.name
+        ? `${playerName} ${player.rating}`
+        : playerName
       : '';
-    link.setAttribute('aria-label', playerLine ? `${channel.label}, ${playerLine}` : channel.label);
+    const channelLabel = watchChannelLabel(channel);
+    link.setAttribute('aria-label', playerLine ? `${channelLabel}, ${playerLine}` : channelLabel);
     // Lichess-style row: text block (channel name over the top-rated player)
     // right-aligned, with the variant marker on the RIGHT edge. Decorative
     // marker; aria-hidden because the link's aria-label already names the
@@ -1825,12 +1828,12 @@ export function renderWatchChannelList(root: HTMLElement, feed: WatchFeed | null
       thumb.setAttribute('translate', 'no');
       thumb.innerHTML = renderVariantMarker(miniId, {
         size: 112,
-        label: `${channel.label} marker`,
+        label: `${channelLabel} marker`,
       });
     }
     const label = document.createElement('span');
     label.className = 'watch-channel-name';
-    label.textContent = channel.label;
+    label.textContent = channelLabel;
     const text = document.createElement('span');
     text.className = 'watch-channel-text';
     text.append(label);
@@ -2020,8 +2023,8 @@ export function watchQueueResultLabel(game: FeaturedGame): string {
   if (game.variant === 'jungle-flip')
     return jungleFlipResultLabel(game.result, game.firstColor ?? null);
   const result = game.result;
-  if (result === 'red-wins') return `${seatColorWord(game.variant, 'red')} wins`;
-  if (result === 'black-wins') return `${seatColorWord(game.variant, 'black')} wins`;
-  if (result === 'white-wins') return `${seatColorWord(game.variant, 'white')} wins`;
+  if (result === 'red-wins') return colorWinsLabel(seatColorWord(game.variant, 'red'));
+  if (result === 'black-wins') return colorWinsLabel(seatColorWord(game.variant, 'black'));
+  if (result === 'white-wins') return colorWinsLabel(seatColorWord(game.variant, 'white'));
   return resultLabel(result);
 }

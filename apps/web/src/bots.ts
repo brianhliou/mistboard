@@ -4,6 +4,7 @@
 // (profile-shell, header shell, rating rail, game rows) so it renders as a
 // sibling of /@handle. Play affordances create the game directly via
 // bot-play.ts; there is no setup dialog.
+import { t } from './i18n/catalog.js';
 import './account-profile.css';
 import './bots.css';
 import { bindBotPlayControl } from './bot-play.js';
@@ -337,7 +338,7 @@ function buildBotIdentity(bot: BotProfile, gameSpecId: string): HTMLElement {
   meta.className = 'profile-header-meta';
   const badge = document.createElement('span');
   badge.className = 'profile-role-badge profile-role-bot';
-  badge.textContent = 'BOT';
+  badge.textContent = t('watch.botBadge');
   const owner = document.createElement('span');
   owner.className = 'profile-role-badge profile-role-owner';
   owner.textContent = bot.ownerType === 'system' ? 'First-party' : 'Community';

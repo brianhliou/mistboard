@@ -18,7 +18,9 @@
 
 import '../seat-disc-ink.css';
 import './game-meta-card.css';
+import { t } from '../i18n/catalog.js';
 import { type ProfileTarget, playerNameEl } from '../profile-link.js';
+import { timeAgo } from '../relative-time.js';
 import { renderVariantMarker } from '../variant-markers.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 
@@ -49,11 +51,11 @@ export type GameMetaPlayer = {
 /** Chess-notation score for one seat: winner, loser, draw. */
 export type GameMetaScore = '1' | '0' | '½';
 
-const SCORE_TITLES: Record<GameMetaScore, string> = {
-  '1': 'Won',
-  '0': 'Lost',
-  '½': 'Draw',
-};
+function scoreTitle(score: GameMetaScore): string {
+  if (score === '1') return t('result.win');
+  if (score === '0') return t('result.loss');
+  return t('result.draw');
+}
 
 /**
  * Per-seat scores for a finished game, parallel to `seats`.
@@ -183,7 +185,7 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
       if (player.isEngine) {
         const bot = document.createElement('span');
         bot.className = 'game-meta-card__bot';
-        bot.textContent = 'BOT';
+        bot.textContent = t('watch.botBadge');
         row.append(bot);
       }
       row.append(playerNameEl(player.name, player.profile ?? null, 'game-meta-card__name'));
@@ -199,8 +201,8 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
         score.textContent = player.score;
         // The glyph alone says nothing out loud, and '½' is worse than useless
         // read as a character.
-        score.title = SCORE_TITLES[player.score];
-        score.setAttribute('aria-label', SCORE_TITLES[player.score]);
+        score.title = scoreTitle(player.score);
+        score.setAttribute('aria-label', scoreTitle(player.score));
         row.append(score);
         // Only the winner is marked. A draw scores '½' on both rows, so a
         // won/lost pair of modifiers would have to invent a third state for it.
@@ -222,21 +224,10 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
   return { el, setSubline, setPlayers, setStatus };
 }
 
-/** "3 days ago" style relative label for a past timestamp; empty on bad input. */
+/** "3 days ago" / "3天前" for a past timestamp, in the site locale; empty on bad
+ *  input. Intl.RelativeTimeFormat owns the plural rules (see relative-time.ts). */
 export function timeAgoLabel(iso: string | null | undefined): string {
   if (!iso) return '';
-  const then = new Date(iso).getTime();
-  if (Number.isNaN(then)) return '';
-  const seconds = Math.max(0, Math.round((Date.now() - then) / 1000));
-  if (seconds < 60) return 'just now';
-  const minutes = Math.round(seconds / 60);
-  if (minutes < 60) return `${minutes} minute${minutes === 1 ? '' : 's'} ago`;
-  const hours = Math.round(minutes / 60);
-  if (hours < 24) return `${hours} hour${hours === 1 ? '' : 's'} ago`;
-  const days = Math.round(hours / 24);
-  if (days < 30) return `${days} day${days === 1 ? '' : 's'} ago`;
-  const months = Math.round(days / 30);
-  if (months < 12) return `${months} month${months === 1 ? '' : 's'} ago`;
-  const years = Math.round(months / 12);
-  return `${years} year${years === 1 ? '' : 's'} ago`;
+  if (Number.isNaN(new Date(iso).getTime())) return '';
+  return timeAgo(iso);
 }

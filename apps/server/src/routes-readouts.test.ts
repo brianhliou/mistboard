@@ -93,6 +93,9 @@ test('readout generation parses auto cadence and returns rendered aggregate data
       generate: async (input) => {
         assert.equal(input.trigger, 'weekly');
         assert.equal(input.dryRun, true);
+        // The broadcast viewer census is read off the context; this one has
+        // none, so the runtime carries no fabricated peak.
+        assert.equal(Object.hasOwn(input.runtime, 'broadcastViewersPeak'), false);
         return { report, reused: false, previousAlertKey: null };
       },
       latest: async () => report,
@@ -124,4 +127,39 @@ test('readout generation rejects network-supplied targets and malformed dry-run 
     status: 400,
     payload: { error: 'invalid_dry_run' },
   });
+});
+
+test('readout generation fills the broadcast viewer peak from the context census', async () => {
+  const now = new Date('2026-07-20T17:23:00Z');
+  const withCensus = {
+    ...ctx,
+    broadcastViewers: () => ({ current: 1, peakToday: 7, peakSinceBoot: 12 }),
+  } as unknown as HttpApiContext;
+  let seen: number | undefined;
+  await readoutGenerateForApi(
+    withCensus,
+    { trigger: 'daily', dryRun: true },
+    {
+      now: () => now,
+      verifyToken: async () => ({}),
+      generate: async (input) => {
+        seen = input.runtime.broadcastViewersPeak;
+        return {
+          report: buildMistboardReadout({
+            snapshotId: 'readout_census',
+            trigger: 'daily',
+            now,
+            runtime: input.runtime,
+            facts: { product: null, puzzles: null, mining: null, engines: null },
+          }),
+          reused: false,
+          previousAlertKey: null,
+        };
+      },
+      latest: async () => null,
+      list: async () => [],
+      email: async () => ({ send: false as const, reason: 'dry-run' as const }),
+    },
+  );
+  assert.equal(seen, 7);
 });

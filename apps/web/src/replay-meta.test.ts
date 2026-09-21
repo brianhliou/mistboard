@@ -96,7 +96,7 @@ describe('replay metadata rendering', () => {
     expect(panel.el.hidden).toBe(false);
     expect(panel.details.textContent).toContain('Fog of War');
     expect(panel.details.textContent).toContain('White wins');
-    expect(panel.details.textContent).toContain('King Captured');
+    expect(panel.details.textContent).toContain('King captured');
     expect(panel.details.textContent).toContain('5:00+2');
     expect(panel.details.textContent).toContain('sample-id');
   });

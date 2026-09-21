@@ -280,6 +280,43 @@ test('a stale engine worker alerts on the increase, not on the level', () => {
   assert.equal(worse.actions[0]!.code, 'engine-workers-stale');
 });
 
+test('an unservable broadcast board alerts on the increase and names the rows', () => {
+  // A board that 500s stays broken until code or data changes, so it latches
+  // like a stale worker; the first sweep after the section lands fires on any
+  // count because a pre-section snapshot has no baseline.
+  const broken = (n: number): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    broadcasts: {
+      boards: 376,
+      unservableBoards: n,
+      unservableBoardIds: Array.from({ length: n }, (_, i) => `tour-r01-b${i}`),
+    },
+  });
+  const first = reportWith(broken(2));
+  assert.equal(first.verdict, 'action');
+  assert.equal(first.actions[0]!.code, 'broadcast-boards-unservable');
+  assert.match(first.actions[0]!.text, /2 of 376 stored broadcast boards/);
+  assert.match(first.actions[0]!.text, /tour-r01-b0, tour-r01-b1/);
+  assert.match(
+    renderMistboardReadoutMarkdown(first),
+    /Broadcasts: 376 stored boards, 2 unservable/,
+  );
+
+  const second = reportWith(broken(2), first);
+  assert.equal(second.actions.length, 0);
+
+  const worse = reportWith(broken(3), second);
+  assert.equal(worse.actions[0]!.code, 'broadcast-boards-unservable');
+
+  const fixed = reportWith(broken(0), worse);
+  assert.equal(fixed.actions.length, 0);
+  assert.equal(fixed.verdict, 'healthy');
+
+  // A snapshot from before the section existed renders without the line.
+  const legacy = reportWith(emptyFacts);
+  assert.doesNotMatch(renderMistboardReadoutMarkdown(legacy), /Broadcasts:/);
+});
+
 test('the alert key holds steady while counters move under an unchanged problem', () => {
   const first = reportWith(
     factsWithProduct({ completedGames: 22, previousCompletedGames: 46, humanPlayers: 9 }),
@@ -420,3 +457,18 @@ function collectKeys(value: unknown, keys = new Set<string>()): Set<string> {
   }
   return keys;
 }
+
+test('the operations section carries the broadcast viewer peak only when the runtime has one', () => {
+  const without = renderMistboardReadoutMarkdown(reportWith(emptyFacts));
+  assert.doesNotMatch(without, /Broadcast viewers/);
+
+  const report = buildMistboardReadout({
+    snapshotId: 'readout_viewers',
+    trigger: 'weekly',
+    now: new Date('2026-07-20T17:23:00Z'),
+    runtime: { ...runtime, broadcastViewersPeak: 14 },
+    facts: emptyFacts,
+  });
+  assert.equal(report.production.broadcastViewersPeak, 14);
+  assert.match(renderMistboardReadoutMarkdown(report), /Broadcast viewers: peak 14 open streams/);
+});
