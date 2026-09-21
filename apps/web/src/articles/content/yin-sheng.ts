@@ -366,11 +366,11 @@ export const yinShengArticle: Article = {
       ],
     },
     {
-      heading: "League qualifier · Hangzhou, August 17 to 19 · 2 wins, 3 draws",
+      heading: "The league qualifier",
       blocks: [
         {
           kind: 'paragraph',
-          text: "The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's knight move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.",
+          text: "Hangzhou, August 17 to 19: two wins and three draws. The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's knight move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.",
         },
         {
           kind: 'xq-replay',
@@ -384,11 +384,11 @@ export const yinShengArticle: Article = {
       ],
     },
     {
-      heading: "Shanghai Cup · September 9 to 13 · winner · 6 wins, 11 draws",
+      heading: "The Shanghai Cup",
       blocks: [
         {
           kind: 'paragraph',
-          text: "A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's rook move on move 20 is the only move that punishes it.",
+          text: "September 9 to 13, and he won it: six wins and eleven draws. A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's rook move on move 20 is the only move that punishes it.",
         },
         {
           kind: 'xq-replay',
@@ -420,11 +420,11 @@ export const yinShengArticle: Article = {
       ],
     },
     {
-      heading: "League stage one · Hangzhou, September 14 to 16 · 3 wins, 6 draws",
+      heading: "The league, stage one",
       blocks: [
         {
           kind: 'paragraph',
-          text: "The messy one. Against Chen Hongsheng, with black, the engine counts four blunders for red and one real mistake for Yin Sheng, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand the game over. It is on the page because the section above would otherwise give you the wrong idea of what these games look like from the inside.",
+          text: "Back in Hangzhou, September 14 to 16: three wins and six draws. This is the messy one. Against Chen Hongsheng, with black, the engine counts four blunders for red and one real mistake for Yin Sheng, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand the game over. It is on the page because the section above would otherwise give you the wrong idea of what these games look like from the inside.",
         },
         {
           kind: 'xq-replay',
