@@ -11,10 +11,13 @@
   <rect x="126" y="527" width="371" height="371" rx="36" fill="#ffffff"/>
   <rect x="527" y="527" width="371" height="371" rx="36" fill="#424242"/>
 
-  <g clip-path="url(#fog-square)">
-    <rect x="586" y="818" width="312" height="120" fill="#e3e3e3"/>
-    <circle cx="642" cy="818" r="50" fill="#e3e3e3"/>
-    <circle cx="712" cy="786" r="66" fill="#e3e3e3"/>
-    <circle cx="804" cy="804" r="56" fill="#e3e3e3"/>
+  <g clip-path="url(#fog-square)" fill="#e3e3e3">
+    <circle cx="622" cy="888" r="45"/>
+    <circle cx="719" cy="829" r="59"/>
+    <circle cx="840" cy="750" r="94"/>
+    <rect x="570" y="888" width="350" height="60"/>
+    <rect x="719" y="829" width="300" height="120"/>
+    <rect x="760" y="815" width="100" height="150"/>
+    <rect x="840" y="750" width="300" height="200"/>
   </g>
 </svg>
