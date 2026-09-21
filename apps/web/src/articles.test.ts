@@ -61,6 +61,8 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The first player page, dated 2026-09-21.
+      '/blog/yin-sheng',
       // The atomic-xiangqi launch note is dated 2026-09-16, the horde-xiangqi
       // and anti-xiangqi write-ups 2026-09-15 and 2026-09-13, and this index
       // is ordered by date alone.
@@ -239,6 +241,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/yin-sheng',
       '/blog/atomic-xiangqi-build',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',

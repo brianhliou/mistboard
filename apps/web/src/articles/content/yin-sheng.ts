@@ -114,7 +114,7 @@ const G_MENG: XiangqiReplaySpec = {
         "glyph": "??",
         "note": "blunder: 21.0 win% given up, eval +2.78 after. The engine wanted the line in the sibling branch.",
         "line": "h5h7 e4e5 c7c6 g6g7 h7g7 e5d5 g7f7 d5d6 c6c7 d6e6 c7d7 d2c2 d7c7 c2b2 c7d7 e6d6 d7d9 b2c2 c9a9 e2c0 a6a5 a4a5 f7f6 b3b6 a9a5 d6e6 f6f3 e6e7 g9e7 b6e6 f3g3 e6e7",
-        "lineEval": "⩲"
+        "lineEval": "="
       },
       "63": {
         "glyph": "?!",

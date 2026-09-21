@@ -332,8 +332,11 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 export const HOME_ARTICLE_SLUGS = [
-  // The Atomic Xiangqi launch note leads while the variant is new, as the duck
-  // one did before it; dated 2026-09-16, the newest on the row.
+  // The first player page, dated 2026-09-21: a Chinese pro's month, five games
+  // on the board. The newest on the row, and the first that is about a person.
+  'yin-sheng',
+  // The Atomic Xiangqi launch note led while the variant was new, as the duck
+  // one did before it; dated 2026-09-16.
   'atomic-xiangqi-build',
   // The jieqi pair, shipped together on 2026-09-03 and dated a day apart. The
   // platform page is the clearest case of a page that sends a reader straight

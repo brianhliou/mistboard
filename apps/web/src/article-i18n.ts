@@ -128,6 +128,7 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 const ZH_HANS: Record<string, string> = {
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
+  'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
   '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
     '2026 年 8 月到 9 月，象甲预选赛、上海杯、象甲第一阶段，31 局一局未输。他的棋风、盘面上的五局，以及全部 31 局的引擎分析。',
   'Yin Sheng 尹昇': '尹昇',
@@ -2673,6 +2674,7 @@ const ZH_HANS: Record<string, string> = {
 const ZH_HANT: Record<string, string> = {
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
+  'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',
   '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
     '2026 年 8 月到 9 月，象甲預選賽、上海盃、象甲第一階段，31 局一局未輸。他的棋風、盤面上的五局，以及全部 31 局的引擎分析。',
   'Yin Sheng 尹昇': '尹昇',
