@@ -7,7 +7,7 @@ import {
   type XiangqiGameState,
   type XiangqiSquare,
 } from '@mistboard/game';
-import { XQ_BOARD_H, XQ_BOARD_W, xqBoardSvg, xqSvg } from '../diagrams.js';
+import { XQ_BOARD_H, XQ_BOARD_W, XQ_CELL, xqBoardSvg, xqPoint, xqSvg } from '../diagrams.js';
 
 // Player page, draft. Prose from docs-private/players/yin-sheng/draft.md (draft
 // 2, 2026-09-20); facts and their sources in facts.md beside it. The five specs
@@ -318,6 +318,25 @@ const HERO_SVG = () =>
     'xq-article-svg--hero',
   );
 
+// Index card: a close-up of the same position, the window centred on the rook
+// that just arrived on d7 and black's palace above it, in the 4:3 the cards use.
+const HERO_THUMB = () => {
+  const target = xqPoint(3, 7, 'red', 0, 0);
+  const w = XQ_CELL * 4.2;
+  const h = w * 0.75;
+  const left = target.x - w / 2;
+  const top = target.y - h * 0.45;
+  const board = xqBoardSvg({
+    state: heroState(),
+    x: 0,
+    y: -28,
+    label: '',
+    perspective: 'red',
+    arrows: [{ from: 'h7' as XiangqiSquare, to: 'd7' as XiangqiSquare }],
+  });
+  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Yin Sheng" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}</svg>`;
+};
+
 export const yinShengArticle: Article = {
   slug: 'yin-sheng',
   kind: 'article',
@@ -329,6 +348,9 @@ export const yinShengArticle: Article = {
     '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.',
   showSummaryOnPage: false,
   status: 'draft',
+  // Draft: updatedAt sorts it to the top of the dev index; set publishedAt on publish.
+  updatedAt: '2026-09-21',
+  thumbnail: { kind: 'svg', svg: HERO_THUMB },
   audience:
     'English-speaking xiangqi players who have never had a way to follow the Chinese pro circuit.',
   intro: [
@@ -343,7 +365,7 @@ export const yinShengArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Yin Sheng is a 21-year-old professional from Wenling, a small city on the Zhejiang coast, who has played in China\'s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. This page is about what he did next.',
+      text: 'Yin Sheng is a 21-year-old professional from Wenling, a small city on the Zhejiang coast, who has played in China\'s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.',
     },
   ],
   sections: [
