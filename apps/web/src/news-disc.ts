@@ -9,11 +9,15 @@
 //
 // One mark per kind, and the ink alternates so a run of releases does not
 // read as one long red column: red for things to use (release, update),
-// black for things to read (article, status).
+// black for things to read (article, status). Remapped 2026-09-20: the horn
+// (a notice) moved from release to status, the spark (something new) took
+// release, update got a wrench (a change to something that exists), and the
+// lantern went: at 36px it read as a plug, and nothing about a lantern says
+// "status".
 
 import type { AnnouncementKind } from './announcements.js';
 
-export type NewsDiscMark = 'horn' | 'scroll' | 'spark' | 'lantern';
+export type NewsDiscMark = 'horn' | 'scroll' | 'spark' | 'wrench';
 export type NewsDiscInk = 'red' | 'black';
 
 // Same hexes as the international set's disc and rings, so a marker beside a
@@ -24,13 +28,13 @@ const INK: Record<NewsDiscInk, string> = { red: '#c30d0d', black: '#202427' };
 export function newsDiscMarkForKind(kind: AnnouncementKind): NewsDiscMark {
   switch (kind) {
     case 'release':
-      return 'horn';
+      return 'spark';
     case 'article':
       return 'scroll';
     case 'update':
-      return 'spark';
+      return 'wrench';
     case 'status':
-      return 'lantern';
+      return 'horn';
   }
 }
 
@@ -64,15 +68,15 @@ const MARKS: Record<NewsDiscMark, (ink: string) => string> = {
   spark: (ink) =>
     `<path d="M46 22 C48 40 52 44 70 46 C52 48 48 52 46 70 C44 52 40 48 22 46 C40 44 44 40 46 22 Z" fill="${ink}"/>` +
     `<path d="M70 60 C71 66 72 67 78 68 C72 69 71 70 70 76 C69 70 68 69 62 68 C68 67 69 66 70 60 Z" fill="${ink}"/>`,
-  // A lantern: cap, round body with two ribs cut out, base and tassel. The
-  // first draft also cut a horizontal band across the body, which at 36px
-  // turned the body into a grid; the ribs alone say lantern.
-  lantern: (ink) =>
-    `<rect x="39" y="21" width="22" height="7" rx="2.5" fill="${ink}"/>` +
-    `<ellipse cx="50" cy="48" rx="22" ry="20" fill="${ink}"/>` +
-    `<rect x="41" y="67" width="18" height="6" rx="2" fill="${ink}"/>` +
-    `<rect x="46.5" y="73" width="7" height="9" rx="2" fill="${ink}"/>` +
-    `<path d="M41 33 V63 M59 33 V63" fill="none" stroke="${CREAM}" stroke-width="3.2" stroke-linecap="round"/>`,
+  // A wrench, diagonal: an open jaw at the top right (a round head with a
+  // cream notch cut out of it) and a straight handle to the bottom left, drawn
+  // as one rotated group so the silhouette stays a single filled shape.
+  wrench: (ink) =>
+    `<g transform="rotate(45 50 50)">` +
+    `<circle cx="50" cy="30" r="15" fill="${ink}"/>` +
+    `<rect x="45" y="12" width="10" height="20" fill="${CREAM}"/>` +
+    `<rect x="42" y="38" width="16" height="42" rx="6" fill="${ink}"/>` +
+    `</g>`,
 };
 
 export function newsDiscSvg(kind: AnnouncementKind): string {
