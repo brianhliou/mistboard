@@ -1,5 +1,6 @@
-/* Homepage event banners: big tappable spotlight rows at the top of the left
-   rail (PlayStrategy-style). The slot collapses entirely when no event is on. */
+/* Homepage event banners: big tappable spotlight rows under the activity stats
+   in the play column (PlayStrategy-style). The slot collapses entirely when no
+   event is on. */
 .landing-event-banners {
   display: flex;
   flex-direction: column;
@@ -57,13 +58,16 @@
 }
 
 .landing-event-banner-title {
+  /* Tour names run long ("2026 National Xiangqi Men Division A League"): two
+     lines, then an ellipsis, instead of one line that cut every name. */
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
   overflow: hidden;
-  font-size: 15px;
   font-weight: 600;
+  font-size: 15px;
   line-height: 1.25;
   color: var(--site-heading);
-  text-overflow: ellipsis;
-  white-space: nowrap;
 }
 
 .landing-event-banner:hover .landing-event-banner-title,

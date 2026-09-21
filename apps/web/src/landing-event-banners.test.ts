@@ -98,6 +98,33 @@ describe('broadcastBanners', () => {
     expect(broadcastBanners([LEAGUE], 'en', startsAt - 20 * day)).toEqual([]);
   });
 
+  it('gives an undated tour no row unless it is live: a record is not an event', () => {
+    const undated: BroadcastTourSummary = {
+      tour: {
+        slug: '2026-ewwox2',
+        name: '2026年全国象棋团体锦标赛',
+        nameEn: '2026 National Xiangqi Team Championship',
+      },
+      boardCount: 14,
+      liveBoardCount: 0,
+      completeBoardCount: 14,
+    };
+    expect(broadcastBanners([undated], 'en', endsAt)).toEqual([]);
+    expect(broadcastBanners([{ ...undated, liveBoardCount: 2 }], 'en', endsAt)[0]?.subtitle).toBe(
+      'Live now · 2 games',
+    );
+  });
+
+  it('says in progress between rounds of a dated tour', () => {
+    const rows = broadcastBanners([LEAGUE], 'en', Date.parse(LEAGUE.tour.startsAt!) + day);
+    expect(rows[0]?.subtitle).toBe('In progress · 174 games');
+  });
+
+  it('says one game, not one games', () => {
+    const rows = broadcastBanners([{ ...LEAGUE, liveBoardCount: 1 }], 'en', endsAt - day);
+    expect(rows[0]?.subtitle).toBe('Live now · 1 game');
+  });
+
   it('uses the Chinese name and words in the Chinese locales', () => {
     const rows = broadcastBanners([{ ...LEAGUE, liveBoardCount: 3 }], 'zh-Hant', endsAt - day);
     expect(rows[0]?.title).toBe('2026年全国象棋男子甲级联赛');

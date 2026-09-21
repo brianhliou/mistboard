@@ -140,15 +140,19 @@ describe('landing shell', () => {
     expect(demo?.querySelector('.landing-support-row')).toBeNull();
   });
 
-  it('leads the left rail with the event-banner slot over the viewer, News below', () => {
+  it('leads the left rail with the viewer and parks the event spotlight under the play stats', () => {
     const wrap = document.createElement('div');
     wrap.innerHTML = renderLandingShellForPrerender();
 
     const leftColumn = wrap.querySelector('.landing-left-column');
-    // The event-banner slot mounts first (it collapses via CSS when empty),
-    // the game viewer below it.
-    expect(leftColumn?.firstElementChild?.classList.contains('landing-event-banners')).toBe(true);
-    expect(leftColumn?.querySelector('.landing-viewer-column')).not.toBeNull();
+    expect(leftColumn?.firstElementChild?.classList.contains('landing-viewer-column')).toBe(true);
+    expect(leftColumn?.querySelector('.landing-event-banners')).toBeNull();
+    // The event-banner slot (collapses via CSS when empty) is the play column's
+    // last child, after the centred tagline/button/stats group, so it sits at
+    // the column's bottom edge and never moves the Play button.
+    const playColumn = wrap.querySelector('.landing-play-column');
+    expect(playColumn?.firstElementChild?.classList.contains('landing-play-center')).toBe(true);
+    expect(playColumn?.lastElementChild?.classList.contains('landing-event-banners')).toBe(true);
     // The News feed is back on the homepage, in the bands-3/4 left rail (not
     // band 1); chat left the play rail for the band-2 right slot.
     expect(wrap.querySelector('.landing-left-column .landing-announcements')).toBeNull();

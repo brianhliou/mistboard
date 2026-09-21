@@ -1,6 +1,8 @@
 // Homepage event banners (PlayStrategy / lishogi lobby-spotlight grammar): rare,
 // timely announcements — a tournament, a broadcast, a stream — rendered as big
-// tappable rows at the top of the left rail. This is deliberately NOT the News
+// tappable rows under the activity stats in the play column (moved there from
+// the top of the narrow left rail on 2026-09-20, where every tour name
+// truncated). This is deliberately NOT the News
 // feed (dated release/update rows, /feed): a banner is an event with a start or
 // end moment, and the slot is empty almost all of the time.
 //
@@ -74,11 +76,37 @@ const FINISHED_WINDOW_MS = 7 * DAY_MS;
 // An upcoming tour appears two weeks out.
 const UPCOMING_WINDOW_MS = 14 * DAY_MS;
 
-const WORDS: Record<Locale, { live: string; games: string; starts: string; finished: string }> = {
-  en: { live: 'Live now', games: 'games', starts: 'Starts', finished: 'Finished' },
-  'zh-Hans': { live: '直播中', games: '局', starts: '开始', finished: '已结束' },
-  'zh-Hant': { live: '直播中', games: '局', starts: '開始', finished: '已結束' },
+const WORDS: Record<
+  Locale,
+  { live: string; games: string; starts: string; finished: string; inProgress: string }
+> = {
+  en: {
+    live: 'Live now',
+    games: 'games',
+    starts: 'Starts',
+    finished: 'Finished',
+    inProgress: 'In progress',
+  },
+  'zh-Hans': {
+    live: '直播中',
+    games: '局',
+    starts: '开始',
+    finished: '已结束',
+    inProgress: '进行中',
+  },
+  'zh-Hant': {
+    live: '直播中',
+    games: '局',
+    starts: '開始',
+    finished: '已結束',
+    inProgress: '進行中',
+  },
 };
+
+function games(n: number, locale: Locale): string {
+  const word = WORDS[locale].games;
+  return locale === 'en' && n === 1 ? `${n} game` : `${n} ${word}`;
+}
 
 function shortDate(iso: string, locale: Locale): string {
   return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date(iso));
@@ -103,18 +131,20 @@ export function broadcastBanners(
     const endsAt = tour.endsAt ? Date.parse(tour.endsAt) : Number.NaN;
     let subtitle: string | null = null;
     if (entry.liveBoardCount > 0) {
-      subtitle = `${words.live} · ${entry.liveBoardCount} ${words.games}`;
+      subtitle = `${words.live} · ${games(entry.liveBoardCount, locale)}`;
     } else if (!Number.isNaN(startsAt) && startsAt > now) {
       if (startsAt - now <= UPCOMING_WINDOW_MS) {
         subtitle = `${words.starts} ${shortDate(tour.startsAt!, locale)}`;
       }
     } else if (!Number.isNaN(endsAt) && endsAt < now) {
       if (now - endsAt <= FINISHED_WINDOW_MS && entry.completeBoardCount > 0) {
-        subtitle = `${words.finished} ${shortDate(tour.endsAt!, locale)} · ${entry.completeBoardCount} ${words.games}`;
+        subtitle = `${words.finished} ${shortDate(tour.endsAt!, locale)} · ${games(entry.completeBoardCount, locale)}`;
       }
-    } else if (entry.completeBoardCount > 0) {
-      // Between rounds of a tour that is under way by its dates.
-      subtitle = `${entry.completeBoardCount} ${words.games}`;
+    } else if (!Number.isNaN(startsAt) && !Number.isNaN(endsAt) && entry.completeBoardCount > 0) {
+      // Between rounds of a tour that is under way by its dates. A tour with no
+      // dates and nothing live is a record, not an event (the Team
+      // Championship's 14 boards showed as a second row on 2026-09-20).
+      subtitle = `${words.inProgress} · ${games(entry.completeBoardCount, locale)}`;
     }
     if (subtitle === null) continue;
     rows.push({

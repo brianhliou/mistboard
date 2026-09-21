@@ -268,14 +268,23 @@
   min-width: 0;
 }
 
-/* Play column (band 1, right): tagline, the single Play button, activity stats.
-   Chat moved to the band-2 rail, so the rail still stretches to the lobby
-   panel's height but centers its (now short) contents against it. */
+/* Play column (band 1, right): tagline, the single Play button, activity stats,
+   centred against the lobby panel inside .landing-play-center (which takes the
+   column's free height); the event spotlight, when there is one, sits at the
+   column's bottom edge (2026-09-20). */
 .landing-play-column {
   grid-area: play;
   display: flex;
   flex-direction: column;
   align-self: stretch;
+  gap: clamp(12px, 1.6vw, 18px);
+  min-width: 0;
+}
+
+.landing-play-center {
+  display: flex;
+  flex: 1 1 auto;
+  flex-direction: column;
   justify-content: center;
   gap: clamp(12px, 1.6vw, 18px);
   min-width: 0;
@@ -2383,6 +2392,10 @@
      row), so it flows from the top instead of centering against the panel. */
   .landing-play-column {
     align-self: start;
+  }
+
+  .landing-play-center {
+    flex: 0 0 auto;
     justify-content: flex-start;
   }
 

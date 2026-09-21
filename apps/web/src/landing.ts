@@ -594,16 +594,11 @@ function buildLandingStage(
   const section = document.createElement('section');
   section.className = 'landing-demo';
 
-  // ── Left column (grid-area: left, band 1): the event-banner spotlight (rare,
-  // timely announcements — tournaments, broadcasts; the slot collapses when no
-  // event is on, which is almost always) with the cycling showcase board beneath
-  // it. The News feed left the homepage; its history lives on at /feed. ──
+  // ── Left column (grid-area: left, band 1): the cycling showcase board. The
+  // event-banner spotlight moved to the play column 2026-09-20; the News feed
+  // left the homepage earlier and lives on at /feed. ──
   const leftColumn = document.createElement('div');
   leftColumn.className = 'landing-left-column';
-  const eventBanners = buildLandingEventBanners();
-  leftColumn.append(eventBanners);
-  // Broadcast rows arrive from the API; the slot collapses until they do.
-  void loadBroadcastBanners(eventBanners, locale);
   const viewerColumn = document.createElement('div');
   viewerColumn.className = 'landing-viewer-column';
   const boardColumn = document.createElement('div');
@@ -655,9 +650,19 @@ function buildLandingStage(
   const about = document.createElement('h1');
   about.className = 'landing-about';
   appendLinkedTagline(about, t('home.tagline', {}, locale), localizedHref('/about', locale));
+  // The tagline, button and stats centre against the lobby panel as before
+  // (inside .landing-play-center, which takes the column's free height); the
+  // event spotlight sits at the column's bottom edge, level with the panel's
+  // bottom, so an event never moves the page's one conversion element.
+  // Broadcast rows arrive from the API; the slot collapses until they do.
+  const playCenter = document.createElement('div');
+  playCenter.className = 'landing-play-center';
+  playCenter.append(about, playStack);
+  const eventBanners = buildLandingEventBanners();
+  void loadBroadcastBanners(eventBanners, locale);
   const playColumn = document.createElement('div');
   playColumn.className = 'landing-play-column';
-  playColumn.append(about, playStack);
+  playColumn.append(playCenter, eventBanners);
 
   // ── Band 2: forum topics (center) and the lobby chat (right) beside the daily
   // puzzle. Chat took this slot from Top studies 2026-07-21, which moved down to
