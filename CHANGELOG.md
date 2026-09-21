@@ -44,6 +44,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Every study says which game it is: the variant leads the meta line on the /study cards and sits beside the heart on the study page, in the reader's language (chess studies read 国际象棋 in Chinese) ([02be9642](https://github.com/brianhliou/mistboard/commit/02be9642))
 - A second chess study, "The most played move is an inaccuracy": 144 opening positions from the Lichess explorer (1600-2200 players, 500,000+ games each) where the club's most played move loses winning chances against the engine at 20 million nodes, each played out to a verdict beside the engine's line, with the club share and the masters' top move by era ([d4accc3a](https://github.com/brianhliou/mistboard/commit/d4accc3a), [a99f6bc9](https://github.com/brianhliou/mistboard/commit/a99f6bc9))
 - Copy to my studies: any study you can open becomes a private study of your own, every chapter included, to annotate as you like; in Share & export beside the PGN download ([790543a3](https://github.com/brianhliou/mistboard/commit/790543a3))
 - Two curated studies fill themselves from the 2026 tournament broadcasts and grow as rounds land: Central Cannon vs Screen Horses model games (the whole game, every judged move marked with its numbers and the engine's line, the first departure from the usual line noted) and Where it turned (the board parked before each game's decisive move, guess the better one); a recipe file decides the opening, the events and the chapter count ([e6ed9ee9](https://github.com/brianhliou/mistboard/commit/e6ed9ee9))
