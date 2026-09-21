@@ -322,6 +322,10 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'paragraph',
+          text: "I also ran every other game from the Shanghai Cup and the league stage, 250 games in all, to see what that accuracy means against the field. It means less than it sounds: the median across every player was 96.9, and six players who played six or more games matched or beat his 98. Accuracy is not what separates him. Not losing is.",
+        },
+        {
+          kind: 'paragraph',
           text: "Some context on the opposition, because the names will mean little outside China. Xiangqi does have ratings: the Chinese Xiangqi Association ran an Elo-style system for over forty years, with the very top players around 2750 to 2800, before retiring it in January 2026 in favour of a tournament-points ranking. The last list it published is from September 2023, so the numbers below are three years old and frozen, but they are the only official ones, and they show the field. Every rated opponent in the run stood above him on that list. Chen Shaobo, who he beat in the final, was too young to be on it at all.",
         },
         {
