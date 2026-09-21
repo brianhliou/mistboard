@@ -77,15 +77,95 @@ describe('mountEmbedStudy', () => {
     expect(root.querySelector('.embed-card-header')?.textContent).toBe('1956');
     expect(root.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
     // The mainline in the shared score sheet, with the chapter's glyph as a suffix.
-    const moves = Array.from(root.querySelectorAll('.review-move-list__move'));
+    const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
     expect(moves.length).toBe(2);
     expect(root.querySelector('.review-move-list__suffix')?.textContent?.trim()).toBe('?!');
     expect(root.querySelector('.embed-card-status')?.textContent).toBe('0 / 2');
+    // The sideline hung off move one (the chapter's second child) is under its
+    // row as a branch, every move a button. The embed used to drop it, so a
+    // chapter arguing that a move was wrong showed the mark and not the
+    // argument.
+    const branch = root.querySelector<HTMLElement>('.review-move-list__branch');
+    expect(branch?.dataset.atPly).toBe('1');
+    const lineMoves = Array.from(branch?.querySelectorAll('.review-move-list__line-move') ?? []);
+    expect(lineMoves.map((m) => m.textContent)).toEqual(['Hc3']);
+    // Clicking into the line shows that position and marks the step; the
+    // status reads as "ply before the line + steps into it".
+    (lineMoves[0] as HTMLButtonElement).click();
+    expect(lineMoves[0]?.classList.contains('review-move-list__line-move--current')).toBe(true);
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('0+1');
+    // Stepping back out of a one-move line lands on the position it left from.
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('0 / 2');
+    expect(lineMoves[0]?.classList.contains('review-move-list__line-move--current')).toBe(false);
     const credit = root.querySelector<HTMLAnchorElement>('.embed-credit');
     expect(credit?.getAttribute('href')).toBe('/study/s/Ue0EgpS7');
     // It opens out of the frame it is living in.
     expect(credit?.getAttribute('target')).toBe('_blank');
     expect(credit?.getAttribute('rel')).toBe('noopener');
+    root.remove();
+  });
+
+  it("shows a chess chapter's sideline, verdicts and comments, not the mainline alone", async () => {
+    // Shaped like the club-move study: rooted after 1.e4 e5 2.f4 d6, the
+    // mainline is the club's 3.Nf3?! played out to a verdict, the sideline the
+    // engine's 3.d3! with its own verdict and comment. The embed on the post
+    // showed the ?! and nothing else.
+    const chess = {
+      id: 'DIavcvsA',
+      name: '1.e4 e5 2.f4 d6: 3.Nf3?!',
+      variant: 'chess',
+      orientation: 'white',
+      tags: { red: 'White', black: 'Black', event: 'Lichess database' },
+      root: {
+        rootFen: 'rnbqkbnr/ppp2ppp/3p4/4p3/4PP2/8/PPPP2PP/RNBQKBNR w KQkq - 0 3',
+        root: {
+          annotations: { comments: [{ text: '1.e4 e5 2.f4 d6.' }] },
+          children: [
+            {
+              uci: 'g1f3',
+              annotations: { glyphs: [6], comments: [{ text: 'The club move: 85% of games.' }] },
+              children: [
+                { uci: 'e5f4', children: [{ uci: 'd2d4', annotations: { glyphs: [15] } }] },
+              ],
+            },
+            {
+              uci: 'd2d3',
+              annotations: { glyphs: [1], comments: [{ text: 'd3: +0.25 at 20M nodes.' }] },
+              children: [{ uci: 'g8f6', annotations: { glyphs: [10] } }],
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [chess] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'DIavcvsA' });
+    const moves = Array.from(root.querySelectorAll('button.review-move-list__move'));
+    expect(
+      moves.map((m) => m.querySelector('.review-move-list__san')?.textContent?.trim()),
+    ).toEqual(['Nf3 ?!', 'exf4', 'd4']);
+    // The played move's comment, then the sideline as SAN with its verdict and
+    // its own comment.
+    const branch = root.querySelector<HTMLElement>('.review-move-list__branch');
+    expect(branch?.dataset.atPly).toBe('1');
+    expect(branch?.querySelector('.review-move-list__note')?.textContent).toBe(
+      'The club move: 85% of games.',
+    );
+    const line = Array.from(branch?.querySelectorAll('.review-move-list__line-move') ?? []);
+    expect(line.map((m) => m.textContent)).toEqual(['d3', 'Nf6']);
+    expect(branch?.querySelector('.review-move-list__line-verdict')?.textContent).toBe('=');
+    expect(branch?.querySelector('.review-move-list__note--line')?.textContent).toBe(
+      'd3: +0.25 at 20M nodes.',
+    );
+    // Stepping into the line and along it, then out of the front of it.
+    (line[1] as HTMLButtonElement).click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('0+2');
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('0+1');
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('0 / 3');
     root.remove();
   });
 

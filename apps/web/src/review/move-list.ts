@@ -24,6 +24,22 @@ export type MoveListEntry = {
   suffix?: string;
   /** Optional suffix colour class hook, e.g. 'blunder' → .review-move--blunder. */
   suffixClass?: string;
+  /** The author's or the engine's note on this move, shown under its row. */
+  note?: string;
+  /** A sideline hung off the position this move was played in: what should have
+   *  been played instead, as labels, closed by its verdict. Rendered as an
+   *  indented branch under the row, every move a button; clicking one asks the
+   *  board for that position (MoveList.bindLine). */
+  line?: MoveListLine;
+};
+
+export type MoveListLine = {
+  /** Rendered move text per step of the line, in order. */
+  moves: string[];
+  /** Assessment at the line's end ('±', '=', '+−', or a result), if measured. */
+  verdict?: string;
+  /** A note on the line itself (the study's comment on its first move). */
+  note?: string;
 };
 
 /** Post-hoc per-move annotation, keyed by the move's ply. Filled once whole-game
@@ -46,6 +62,13 @@ export type MoveList = {
   /** Apply/replace per-ply glyphs after analysis lands. Idempotent: plies absent
    *  from the map have any prior glyph cleared. */
   annotate(byPly: Map<number, MoveAnnotation>): void;
+  /** Bind the branch buttons: `jumpLine(atPly, cursor)` asks for the position
+   *  after `cursor` moves of the line hung off ply `atPly`. Unbound, the branch
+   *  is text. */
+  bindLine(jumpLine: (atPly: number, cursor: number) => void): void;
+  /** Highlight a step of a line (or clear every branch highlight with null).
+   *  Called instead of `update` while the board shows a sideline. */
+  highlightLine(current: { atPly: number; cursor: number } | null): void;
 };
 
 export type MoveListOptions = {
@@ -90,7 +113,9 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
   panel.append(list);
 
   const cellsByPly = new Map<number, HTMLButtonElement>();
+  const lineCells = new Map<string, HTMLButtonElement>();
   let onJump: ((ply: number) => void) | null = null;
+  let onJumpLine: ((atPly: number, cursor: number) => void) | null = null;
 
   if (entries.length === 0) {
     const empty = document.createElement('li');
@@ -127,7 +152,54 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
         row.append(gap);
       }
       row.append(moveCell(entry));
+      // A note or a sideline closes the row: the branch sits under the move it
+      // belongs to, and the other side's next move starts a fresh row (with the
+      // gap cell, above) so the columns stay aligned.
+      if (entry.note || entry.line) {
+        list.append(branchRow(entry));
+        row = null;
+      }
     });
+  }
+
+  function branchRow(entry: MoveListEntry): HTMLLIElement {
+    const li = document.createElement('li');
+    li.className = 'review-move-list__branch';
+    li.dataset.atPly = String(entry.ply);
+    if (entry.note) {
+      const note = document.createElement('p');
+      note.className = 'review-move-list__note';
+      note.textContent = entry.note;
+      li.append(note);
+    }
+    if (entry.line) {
+      const line = document.createElement('div');
+      line.className = 'review-move-list__line';
+      entry.line.moves.forEach((label, i) => {
+        const cursor = i + 1;
+        const button = document.createElement('button');
+        button.type = 'button';
+        button.className = 'review-move-list__line-move';
+        button.textContent = label;
+        button.addEventListener('click', () => onJumpLine?.(entry.ply, cursor));
+        lineCells.set(`${entry.ply}:${cursor}`, button);
+        line.append(button);
+      });
+      if (entry.line.verdict) {
+        const verdict = document.createElement('span');
+        verdict.className = 'review-move-list__line-verdict';
+        verdict.textContent = entry.line.verdict;
+        line.append(verdict);
+      }
+      li.append(line);
+      if (entry.line.note) {
+        const note = document.createElement('p');
+        note.className = 'review-move-list__note review-move-list__note--line';
+        note.textContent = entry.line.note;
+        li.append(note);
+      }
+    }
+    return li;
   }
 
   function moveCell(entry: MoveListEntry): HTMLButtonElement {
@@ -178,5 +250,24 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     }
   }
 
-  return { el: panel, update, annotate };
+  function bindLine(jumpLine: (atPly: number, cursor: number) => void): void {
+    onJumpLine = jumpLine;
+  }
+
+  function highlightLine(current: { atPly: number; cursor: number } | null): void {
+    let cell: HTMLButtonElement | undefined;
+    for (const [key, button] of lineCells) {
+      const isCurrent = current !== null && key === `${current.atPly}:${current.cursor}`;
+      button.classList.toggle('review-move-list__line-move--current', isCurrent);
+      if (isCurrent) cell = button;
+    }
+    if (current) {
+      for (const mainline of cellsByPly.values()) {
+        mainline.classList.remove('review-move-list__move--current');
+      }
+    }
+    if (cell) revealInScroller(cell);
+  }
+
+  return { el: panel, update, annotate, bindLine, highlightLine };
 }

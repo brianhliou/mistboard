@@ -63,6 +63,7 @@ Conventions:
 
 ### Watching and review
 
+- A study chapter embed shows the chapter's sidelines: the note under a judged move, the alternative line as steppable moves with its verdict at the end and its own comment, for xiangqi and chess chapters alike; the arrow keys walk into a line and back out ([4108cd67](https://github.com/brianhliou/mistboard/commit/4108cd67))
 - The first player page, Yin Sheng 尹昇 (/blog/yin-sheng): the 31 games he went unbeaten through in August and September, how he plays as measured by the engine across all of them and against the whole field, five games on the board that open at the moment the paragraph is about, and a 31-chapter study with every game annotated; replay boards can now open at a chosen ply (`startPly`) ([cd7df251](https://github.com/brianhliou/mistboard/commit/cd7df251))
 - A live tournament board shows the engine while the game is on: an eval bar, the top three lines and their arrows at the latest move, computed once on the server and shared by every viewer ([ea509eb0](https://github.com/brianhliou/mistboard/commit/ea509eb0))
 - Live Jieqi, Banqi and Flip Jungle games can be watched from their room link while they are being played: the board as both players see it, with face-down pieces still face-down, and in Jieqi a capture tray that shows a taken piece's role only if it was face-up when taken; the homepage board and Mistboard TV can now feature a live Jieqi game ([35a799a7](https://github.com/brianhliou/mistboard/commit/35a799a7))

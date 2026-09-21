@@ -78,6 +78,10 @@ export type EmbedBoardHandle = Pick<
    *  the root's move number. A board rooted mid-game (a study composition)
    *  supplies it; a game from the opening leaves it off and gets "1." first. */
   moveNumbering?: () => { firstMover: 'a' | 'b'; firstNumber: number };
+  /** Show the position after `cursor` moves of the sideline hung off mainline
+   *  ply `atPly` (the line the sheet's branch under that move lists). A board
+   *  without sidelines leaves this off and the sheet's branches are text. */
+  jumpToLine?: (atPly: number, cursor: number) => void;
 };
 
 export type EmbedCardOptions = {
@@ -214,8 +218,16 @@ export async function mountEmbedCard(
   let currentPly = 0;
   let maxPly = 0;
   let rowsForBottom: 'first' | 'second' | null = null;
+  // The sideline the board is showing, or null for the mainline. Stepping
+  // inside a line moves its cursor; stepping back past its first move, or
+  // clicking any mainline move, returns to the game.
+  let line: { atPly: number; cursor: number; length: number } | null = null;
   const clampPly = (ply: number): number => Math.max(0, Math.min(maxPly, ply));
   const jump = (ply: number): void => {
+    if (line) {
+      line = null;
+      moveList?.highlightLine(null);
+    }
     handle?.jumpToPly?.(clampPly(ply));
   };
 
@@ -237,6 +249,32 @@ export async function mountEmbedCard(
     seatBottom.clock.textContent = clock ? formatClock(clock.first, clock.first < 10_000) : '';
     seatTop.clock.textContent = clock ? formatClock(clock.second, clock.second < 10_000) : '';
   };
+  const lineLength = (atPly: number): number =>
+    handle?.moveEntries?.().find((e) => e.ply === atPly)?.line?.moves.length ?? 0;
+  const jumpLine = (atPly: number, cursor: number): void => {
+    if (!handle?.jumpToLine) return;
+    const length = lineLength(atPly);
+    if (cursor < 1 || cursor > length) return;
+    line = { atPly, cursor, length };
+    handle.jumpToLine(atPly, cursor);
+    moveList?.highlightLine(line);
+    status.textContent = `${atPly - 1}+${cursor}`;
+  };
+  const stepLine = (delta: number): boolean => {
+    if (!line) return false;
+    const next = line.cursor + delta;
+    if (next < 1) {
+      const back = line.atPly - 1;
+      line = null;
+      moveList?.highlightLine(null);
+      jump(back);
+      return true;
+    }
+    if (next > line.length) return true;
+    jumpLine(line.atPly, next);
+    return true;
+  };
+
   const onPlyChange = (ply: number, max: number): void => {
     currentPly = ply;
     maxPly = max;
@@ -279,19 +317,26 @@ export async function mountEmbedCard(
   const entries: MoveListEntry[] = handle.moveEntries?.() ?? [];
   maxPly = handle.plyCount?.() ?? entries.length;
   moveList = createMoveList(entries, handle.moveNumbering?.() ?? {});
+  if (handle.jumpToLine) moveList.bindLine(jumpLine);
   movesRoot.append(moveList.el);
 
   controls.append(
     control('first', 'First move', () => jump(0)),
-    control('prev', 'Previous move', () => jump(currentPly - 1)),
+    control('prev', 'Previous move', () => {
+      if (!stepLine(-1)) jump(currentPly - 1);
+    }),
     status,
-    control('next', 'Next move', () => jump(currentPly + 1)),
+    control('next', 'Next move', () => {
+      if (!stepLine(1)) jump(currentPly + 1);
+    }),
     control('last', 'Last move', () => jump(maxPly)),
   );
   document.addEventListener('keydown', (event) => {
-    if (event.key === 'ArrowLeft') jump(currentPly - 1);
-    else if (event.key === 'ArrowRight') jump(currentPly + 1);
-    else if (event.key === 'Home') jump(0);
+    if (event.key === 'ArrowLeft') {
+      if (!stepLine(-1)) jump(currentPly - 1);
+    } else if (event.key === 'ArrowRight') {
+      if (!stepLine(1)) jump(currentPly + 1);
+    } else if (event.key === 'Home') jump(0);
     else if (event.key === 'End') jump(maxPly);
     else return;
     event.preventDefault();

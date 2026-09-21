@@ -161,3 +161,54 @@
   color: #7c3aed;
   font-weight: 700;
 }
+
+/* A sideline under the move it refutes (the study's variation, or the engine's
+   line an article carries): indented, the moves as buttons, the verdict at the
+   end where the eye already is. Same idea as .xq-replay-branch on the article
+   widget; this is the review-shell rendering of it. */
+.review-move-list__branch {
+  padding: 2px 6px 4px 14px;
+  border-left: 2px solid color-mix(in srgb, var(--site-muted) 35%, transparent);
+  margin: 0 0 2px 10px;
+}
+.review-move-list__note {
+  margin: 2px 0 3px;
+  font-size: 12px;
+  line-height: 1.35;
+  color: var(--site-muted);
+}
+.review-move-list__note--line {
+  margin-top: 3px;
+}
+.review-move-list__line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 2px 6px;
+}
+.review-move-list__line-move {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  padding: 1px 3px;
+  border-radius: 3px;
+  font: inherit;
+  font-size: 12.5px;
+  color: var(--site-text);
+  cursor: pointer;
+  white-space: nowrap;
+}
+.review-move-list__line-move:hover {
+  background: color-mix(in srgb, var(--site-muted) 14%, transparent);
+}
+.review-move-list__line-move--current {
+  background: var(--site-accent, #3b73c4);
+  color: #fff;
+  font-weight: 700;
+}
+.review-move-list__line-verdict {
+  font-size: 12.5px;
+  font-weight: 600;
+  color: var(--site-muted);
+  padding-left: 2px;
+}

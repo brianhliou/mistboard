@@ -106,6 +106,9 @@ export type XiangqiReplayAnnotation = {
    * questions and routinely disagree. Measured by scripts/champions-line-evals.mjs.
    */
   lineEval?: string;
+  /** The study's own comment on the sideline (its first move's comment), when
+   *  the author wrote one; the engine-generated specs carry none. */
+  lineNote?: string;
 };
 
 export type XiangqiReplayAnnotations = {
@@ -1090,8 +1093,19 @@ export type XiangqiReplayBoardHandle = {
   jumpToPly: (ply: number) => void;
   plyCount: () => number;
   /** One entry per mainline ply, labelled in the reader's notation, with the
-   *  judgment glyph as the suffix where the chapter carries one. */
-  moveEntries: () => Array<{ ply: number; label: string; suffix?: string; suffixClass?: string }>;
+   *  judgment glyph as the suffix where the chapter carries one, the note under
+   *  it, and the sideline (labels, verdict, note) the host's sheet draws. */
+  moveEntries: () => Array<{
+    ply: number;
+    label: string;
+    suffix?: string;
+    suffixClass?: string;
+    note?: string;
+    line?: { moves: string[]; verdict?: string; note?: string };
+  }>;
+  /** Show the position after `cursor` moves of the sideline hung off `atPly`.
+   *  A ply with no sideline is ignored. jumpToPly leaves the line. */
+  jumpToLine: (atPly: number, cursor: number) => void;
   /** Which move-order seat sits at the bottom of the board. */
   bottomSeat: () => 'first' | 'second';
 };
@@ -1110,9 +1124,12 @@ const GLYPH_SUFFIX_CLASS: Record<string, string> = {
  * controls, the move list and the result around it (the embed card does), so
  * a study and a game framed side by side are one card with two boards.
  *
- * Mainline only. Engine sidelines, the flip menu and the narrative are the
- * article widget's (mountXiangqiReplay); an embed is a preview of a study,
- * and the credit link is the way to the full thing.
+ * The move entries carry each judged move's note and sideline (labels, verdict)
+ * for the host's sheet to draw, and jumpToLine shows a position inside a
+ * sideline, so an embedded chapter shows what the chapter argues rather than
+ * the mark alone (a study embed used to be mainline-only; the club-move post
+ * of 2026-09-21 embedded six chapters whose whole point was the sideline). The
+ * flip menu and the narrative stay the article widget's (mountXiangqiReplay).
  */
 export function mountXiangqiReplayBoard(
   host: HTMLElement,
@@ -1129,12 +1146,52 @@ export function mountXiangqiReplayBoard(
 
   let index = 0;
   let labels: string[] = [];
+  // Sidelines, keyed by the ply they hang off: the line's moves (parsed once)
+  // and its labels in the current notation.
+  const lines = new Map<number, { moves: XiangqiMove[]; labels: string[] }>();
   const relabel = (): void => {
     labels = formatXiangqiMoves(moves, currentXiangqiNotationStyle(), startState);
+    lines.clear();
+    for (const [key, a] of Object.entries(annotated?.byPly ?? {})) {
+      const ply = Number(key);
+      if (!a.line || ply < 1 || ply > total) continue;
+      const lineMoves = a.line
+        .trim()
+        .split(/\s+/)
+        .filter((tok) => /^[a-i]\d[a-i]\d$/.test(tok))
+        .map(iccsToMove);
+      if (!lineMoves.length) continue;
+      const prefix = moves.slice(0, ply - 1);
+      const lineLabels = formatXiangqiMoves(
+        [...prefix, ...lineMoves],
+        currentXiangqiNotationStyle(),
+        startState,
+      ).slice(prefix.length);
+      lines.set(ply, { moves: lineMoves, labels: lineLabels });
+    }
   };
   relabel();
 
+  // What the board is showing: a mainline ply, or a step inside a sideline.
+  let inLine: { atPly: number; cursor: number } | null = null;
+
   const render = (): void => {
+    if (inLine) {
+      // Replay the sideline from the position the judged move was played in;
+      // an illegal token truncates the line rather than throwing.
+      const line = lines.get(inLine.atPly);
+      let state = states[inLine.atPly - 1]!;
+      let last: XiangqiMove | undefined;
+      for (let i = 0; line && i < inLine.cursor; i += 1) {
+        const mv = line.moves[i]!;
+        const next = applyXiangqiMove(state, mv);
+        if (next === state) break;
+        state = next;
+        last = mv;
+      }
+      frame.innerHTML = boardSvg(state.board, last, perspective, 1000 + inLine.cursor);
+      return;
+    }
     const glyph = index > 0 ? annotated?.byPly[index]?.glyph : undefined;
     frame.innerHTML = boardSvg(
       states[index]!.board,
@@ -1159,19 +1216,38 @@ export function mountXiangqiReplayBoard(
     },
     jumpToPly: (ply) => {
       const clamped = Math.max(0, Math.min(total, ply));
-      if (clamped === index) return;
+      if (clamped === index && !inLine) return;
+      inLine = null;
       index = clamped;
+      render();
+    },
+    jumpToLine: (atPly, cursor) => {
+      const line = lines.get(atPly);
+      if (!line) return;
+      inLine = { atPly, cursor: Math.max(1, Math.min(line.moves.length, cursor)) };
       render();
     },
     plyCount: () => total,
     moveEntries: () =>
       moves.map((_, i) => {
         const ply = i + 1;
-        const glyph = annotated?.byPly[ply]?.glyph;
+        const a = annotated?.byPly[ply];
+        const glyph = a?.glyph;
+        const line = lines.get(ply);
         return {
           ply,
           label: labels[i] ?? '',
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
+          ...(a?.note ? { note: a.note } : {}),
+          ...(line
+            ? {
+                line: {
+                  moves: line.labels,
+                  ...(a?.lineEval ? { verdict: a.lineEval } : {}),
+                  ...(a?.lineNote ? { note: a.lineNote } : {}),
+                },
+              }
+            : {}),
         };
       }),
     // The board is drawn for `perspective`; that side sits at the bottom, and
