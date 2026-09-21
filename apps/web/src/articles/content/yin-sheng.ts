@@ -1,5 +1,13 @@
 import type { Article } from '../types.js';
 import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
+import {
+  applyStandardXiangqiMove,
+  createInitialXiangqiState,
+  pikafishUciToXiangqiSquares,
+  type XiangqiGameState,
+  type XiangqiSquare,
+} from '@mistboard/game';
+import { XQ_BOARD_H, XQ_BOARD_W, xqBoardSvg, xqSvg } from '../diagrams.js';
 
 // Player page, draft. Prose from docs-private/players/yin-sheng/draft.md (draft
 // 2, 2026-09-20); facts and their sources in facts.md beside it. The five specs
@@ -278,6 +286,37 @@ const G_QUALIFIER: XiangqiReplaySpec = {
   "perspective": "black"
 };
 
+
+
+// Hero: the final against Chen Shaobo after 22...车8平4 (ply 44), the move the
+// title game turned on. Replayed through the kernel at module load; an illegal
+// token throws here rather than shipping a wrong board. Tokens are
+// the spec's own ICCS mainline; pikafishUciToXiangqiSquares does the rank shift.
+const HERO_PLIES = ["c3c4", "b7c7", "h2e2", "c9e7", "d0e1", "h9g7", "h0g2", "i9h9", "i0h0", "g6g5", "h0h4", "b9d8", "b2d2", "a9b9", "b0a2", "b9b3", "a0b0", "b3b0", "a2b0", "h7i7", "h4f4", "d9e8", "b0c2", "h9h3", "d2d3", "h3h5", "c2d4", "d8b7", "d4c6", "b7a5", "c6a5", "a6a5", "c0a2", "c7a7", "f4d4", "a7a3", "c4c5", "g5g4", "d4g4", "g7f5", "e2e6", "h5h6", "e6e5", "h6d6"];
+function heroState(): XiangqiGameState {
+  let s = createInitialXiangqiState('yin-sheng-hero');
+  for (const tok of HERO_PLIES) {
+    const squares = pikafishUciToXiangqiSquares(tok);
+    const next = squares ? applyStandardXiangqiMove(s, squares) : s;
+    if (next === s) throw new Error(`yin-sheng hero: illegal ${tok}`);
+    s = next;
+  }
+  return s;
+}
+const HERO_SVG = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H + 52,
+    xqBoardSvg({
+      state: heroState(),
+      x: 0,
+      y: 0,
+      label: 'SHANGHAI CUP FINAL · AFTER 22...车8平4',
+      perspective: 'red',
+      arrows: [{ from: 'h7' as XiangqiSquare, to: 'd7' as XiangqiSquare }],
+    }),
+  );
+
 export const yinShengArticle: Article = {
   slug: 'yin-sheng',
   kind: 'article',
@@ -297,6 +336,11 @@ export const yinShengArticle: Article = {
       text: '**Yin Sheng 尹昇** · Zhejiang Mintai Bank 浙江民泰银行象棋队 · 全国大师, national master, 2023 · born 2005, Wenling, Zhejiang',
     },
     {
+      kind: 'raw-svg',
+      svg: HERO_SVG,
+      caption: 'Yin Sheng vs Chen Shaobo, Shanghai Cup final, 13 September 2026. Black has just played 22...车8平4; the game is below.',
+    },
+    {
       kind: 'paragraph',
       text: 'League debut at fifteen, the master title in 2023. At twenty he lost the World Championship final in Shanghai to Lại Lý Huynh of Vietnam, the first non-Chinese champion in nineteen editions, and got called 千古罪人 for it online. Then this.',
     },
@@ -311,7 +355,25 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "He was rated 2454 on the last official list, September 2023, 78th in China. Every rated opponent in the run stood above him on that list: Meng Fanrui 2567, Cao Yanlei 2551, Xu Wenzhang 2546, Chen Hongsheng 2517, Huang Guangying 2501, He Wenzhe 2471, Jin Bo 2467. Chen Shaobo, who he beat in the final, was too young to be on it.",
+          text: "He was rated 2454 on the last official list, September 2023, 78th in China. Every rated opponent in the run stood above him on it; Chen Shaobo, who he beat in the final, was too young to be on it at all.",
+        },
+        {
+          kind: 'table',
+          headers: ['Player', 'Rating, Sep 2023', 'Rank', 'Against Yin, Aug–Sep 2026'],
+          rows: [
+            ["Meng Fanrui 孟繁睿", "2567", "17", "1W 6D"],
+            ["Cao Yanlei 曹岩磊", "2551", "23", "1D"],
+            ["Xu Wenzhang 许文章", "2546", "24", "2D"],
+            ["Chen Hongsheng 陈泓盛", "2517", "36", "1W 1D"],
+            ["Huang Guangying 黄光颖", "2501", "42", "1D"],
+            ["He Wenzhe 何文哲", "2471", "65", "2W"],
+            ["Jin Bo 金波", "2467", "67", "1W 1D"],
+            ["Liu Bohong 刘柏宏", "2449", "84", "2D"],
+            ["Jin Yuyan 靳玉砚", "2448", "86", "1W"],
+            ["Yin Sheng 尹昇", "2454", "78", "11W 20D, all 31"],
+          ],
+          highlightRows: [9],
+          caption: 'CXA 等级分, men, list of 30 September 2023, the last the federation published before retiring the system in January 2026. Ratings are frozen there; results are from this run.',
         },
       ],
     },
@@ -332,25 +394,25 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "**Seventeen of the 31 games have nothing for the engine to mark on his side.** Not a brilliancy style. The engine found three `!!` and three `!` in the whole month, and one missed mate in one. What it mostly found was a player who does not give anything back.",
+          text: "**Seventeen of the 31 games have nothing for the engine to mark on his side.** Three `!!`, three `!`, one missed mate in one, and otherwise a player who does not give anything back.",
         },
       ],
     },
     {
-      heading: "象甲 league, stage one · Hangzhou, September 14 to 16 · 3W 6D 0L",
+      heading: "象甲 qualifier · Hangzhou, August 17 to 19 · 2W 3D 0L",
       blocks: [
         {
           kind: 'paragraph',
-          text: "The messy one. Against Chen Hongsheng, as black, the engine counts four blunders for red and one real mistake for Yin, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand it over. On the page because the paragraph above would give you the wrong idea of what these games look like from inside.",
+          text: "Day one, black against Zhang Rui of Tianjin. Zhang's knight jump on move 21 is the one error the engine finds, and Yin needs 38 more moves to turn it into a win. This is the shape of most of them.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_STAGE_ONE },
-          caption: "Chen Hongsheng vs Yin Sheng, 15 September 2026. The fight is moves 24 to 42.",
+          spec: { ...G_QUALIFIER },
+          caption: "Zhang Rui vs Yin Sheng, 17 August 2026. Move 21 is where it goes wrong for red.",
         },
         {
           kind: 'cta',
-          buttons: [{ label: "Stage one in the archive", href: "/broadcast/xiangqi/2026-xiangqi-league", emphasis: 'secondary' }],
+          buttons: [{ label: "The qualifier in the archive", href: "/broadcast/xiangqi/2026-league-qualifier", emphasis: 'secondary' }],
         },
       ],
     },
@@ -391,20 +453,20 @@ export const yinShengArticle: Article = {
       ],
     },
     {
-      heading: "象甲 qualifier · Hangzhou, August 17 to 19 · 2W 3D 0L",
+      heading: "象甲 league, stage one · Hangzhou, September 14 to 16 · 3W 6D 0L",
       blocks: [
         {
           kind: 'paragraph',
-          text: "Day one, black against Zhang Rui of Tianjin. Zhang's knight jump on move 21 is the one error the engine finds, and Yin needs 38 more moves to turn it into a win. This is the shape of most of them.",
+          text: "The messy one. Against Chen Hongsheng, as black, the engine counts four blunders for red and one real mistake for Yin, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand it over. On the page because the paragraph above would give you the wrong idea of what these games look like from inside.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_QUALIFIER },
-          caption: "Zhang Rui vs Yin Sheng, 17 August 2026. Move 21 is where it goes wrong for red.",
+          spec: { ...G_STAGE_ONE },
+          caption: "Chen Hongsheng vs Yin Sheng, 15 September 2026. The fight is moves 24 to 42.",
         },
         {
           kind: 'cta',
-          buttons: [{ label: "The qualifier in the archive", href: "/broadcast/xiangqi/2026-league-qualifier", emphasis: 'secondary' }],
+          buttons: [{ label: "Stage one in the archive", href: "/broadcast/xiangqi/2026-xiangqi-league", emphasis: 'secondary' }],
         },
       ],
     },
