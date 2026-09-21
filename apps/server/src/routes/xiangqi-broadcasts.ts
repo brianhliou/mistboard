@@ -840,6 +840,35 @@ export async function tryHandle(
     return true;
   }
 
+  // Player pages, derived from the archive (docs-private/players/
+  // players-surface-spec.md): the index and one player with every board they
+  // sat at. Public, read-only, no persistence means no players.
+  if (pathname === '/api/xiangqi/players') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const players = await persistence.listXiangqiPlayers();
+    writeJson(response, 200, { players });
+    return true;
+  }
+  const playerMatch = pathname.match(/^\/api\/xiangqi\/players\/([^/]+)$/);
+  if (playerMatch) {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const players = await persistence.listXiangqiPlayers();
+    const slug = decodeURIComponent(playerMatch[1]!);
+    const player = players.find((p) => p.slug === slug);
+    if (!player) {
+      writeJson(response, 404, { error: 'not_found' });
+      return true;
+    }
+    const slugOf = (name: string, federation: string | null): string | null =>
+      players.find((p) => p.name === name && (p.federation ?? '') === (federation ?? ''))?.slug ??
+      null;
+    const boards = await persistence.listXiangqiPlayerBoards(player, slugOf);
+    writeJson(response, 200, { player, boards });
+    return true;
+  }
+
   const boardMatch = pathname.match(/^\/api\/xiangqi\/broadcasts\/boards\/([^/]+)$/);
   if (boardMatch) {
     if (!requireMethod(request, response, 'GET')) return true;

@@ -583,6 +583,14 @@ export {
   readXiangqiOpeningBuild,
   replaceXiangqiOpeningMoves,
 } from './persistence-xiangqi-explorer.js';
+export {
+  getXiangqiPlayer,
+  listXiangqiPlayerBoards,
+  listXiangqiPlayers,
+  type XiangqiPlayerBoardRecord,
+  type XiangqiPlayerEventRecord,
+  type XiangqiPlayerRecord,
+} from './persistence-xiangqi-players.js';
 export type {
   XiangqiPuzzleEditorialCandidate,
   XiangqiPuzzleEditorialReason,
