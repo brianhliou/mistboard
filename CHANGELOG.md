@@ -98,6 +98,7 @@ Conventions:
 
 ### Fixed
 
+- Broadcast games that ran past a threefold repetition or sixty capture-free plies open again: the site's own rules call those a draw, a tournament arbiter does not, and 52 of 376 stored boards had answered "Broadcast unavailable" since the record was written ([06de17ed](https://github.com/brianhliou/mistboard/commit/06de17ed))
 - A Patron whose badge comes from a one-time payment sees how long it runs and can extend it or subscribe, instead of a "Manage your subscription" button with no subscription behind it ([26cfe7d3](https://github.com/brianhliou/mistboard/commit/26cfe7d3))
 - The Jieqi bot no longer knows which of its face-down pieces you captured. Jieqi reveals a captured hidden piece to the capturer only, but the engine was told its own remaining hidden pieces from the true state, so every capture of one of its dark pieces told it what it had lost; it now reasons from what a player in its seat may know ([2b4be2ca](https://github.com/brianhliou/mistboard/commit/2b4be2ca))
 - Mistboard TV and the games-in-play list name the Jieqi, Banqi and Flip Jungle bots and count their games as bot games; they had shown the bot as an unnamed player and the game as two humans since those variants went live ([35a799a7](https://github.com/brianhliou/mistboard/commit/35a799a7))
@@ -123,6 +124,7 @@ Conventions:
 
 ### Technical
 
+- The daily readout replays every stored broadcast board the way the board API does and raises `broadcast-boards-unservable` when the count of boards it would 500 on grows; the replay helpers live in `xiangqi-broadcast-serving.ts` so the sweep and the route judge a row by one loop ([622cab22](https://github.com/brianhliou/mistboard/commit/622cab22))
 - The engine-vs-engine runner plays any variant with a `VariantEveAdapter` (xiangqi, Fortress Xiangqi, Duck Xiangqi), with each ladder's random-mover floor registered, so `engine:enqueue-tournament --variant fortress-xiangqi` rates a ladder that was hand-set until now; a bot variant without an adapter fails the build ([33516d71](https://github.com/brianhliou/mistboard/commit/33516d71))
 - `worktree:prepare` installs again under npm 12: the nested `npm ci` no longer inherits a user-level `allow-scripts` as `npm_config_allow_scripts`, which npm 12 rejects in a project install ([99b4b3c2](https://github.com/brianhliou/mistboard/commit/99b4b3c2))
 - `/api/auth/me` names the allowlisted variants an account may play (`variantGrants`); admins hold every one without a grant row, and the play menu offers a gated variant only to an account the server would seat ([349ed346](https://github.com/brianhliou/mistboard/commit/349ed346))

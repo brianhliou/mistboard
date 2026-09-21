@@ -5,6 +5,7 @@ import { buildElephantChessPuzzleQualityReport } from './elephantchess-puzzle-qu
 import {
   buildMistboardReadout,
   ELEPHANTCHESS_PILOT_RUN_ID,
+  type MistboardReadoutBroadcasts,
   type MistboardReadoutCollectorError,
   type MistboardReadoutEngines,
   type MistboardReadoutFacts,
@@ -26,10 +27,12 @@ import {
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
+import { listAllXiangqiBroadcastBoardsOn } from './persistence-xiangqi-broadcasts.js';
 import {
   getXiangqiPuzzleMiningRun,
   listXiangqiPuzzleEditorialCandidates,
 } from './persistence-xiangqi-puzzle-mining.js';
+import { xiangqiBroadcastBoardServes } from './xiangqi-broadcast-serving.js';
 import { xiangqiEditorialCandidateSignals } from './xiangqi-puzzle-editorial-ranking.js';
 
 type Queryable = Pick<pg.Pool, 'query'>;
@@ -242,6 +245,7 @@ export async function collectMistboardReadoutFacts(
       collectPuzzles(db, now),
       collectMining(db),
       collectEngines(db, now),
+      collectBroadcasts(db),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
@@ -252,6 +256,7 @@ export async function collectMistboardReadoutFacts(
     'puzzles',
     'mining',
     'engines',
+    'broadcasts',
   ];
   const collectorErrors = collectors.flatMap((result, index) =>
     result.status === 'rejected'
@@ -263,6 +268,7 @@ export async function collectMistboardReadoutFacts(
     puzzles: settledValue(collectors[1]),
     mining: settledValue(collectors[2]),
     engines: settledValue(collectors[3]),
+    broadcasts: settledValue(collectors[4]),
     collectorErrors,
     trend,
   };
@@ -458,6 +464,22 @@ async function collectMining(db: Queryable): Promise<MistboardReadoutMining> {
     remainingGames: shards.rows.reduce((sum, row) => sum + row.remaining_games, 0),
     candidates: Object.fromEntries(candidates.rows.map((row) => [row.status, row.count])),
     staleLeases: shards.rows.reduce((sum, row) => sum + row.stale_leases, 0),
+  };
+}
+
+// Replays every stored broadcast board the way the board API does and counts
+// the ones it would 500 on. Whole-corpus on purpose: a board breaks when its
+// record is written, not when someone opens it, and the readout is the only
+// scheduled reader.
+const UNSERVABLE_BOARD_ID_CAP = 10;
+
+async function collectBroadcasts(db: Queryable): Promise<MistboardReadoutBroadcasts> {
+  const boards = await listAllXiangqiBroadcastBoardsOn(db);
+  const unservable = boards.filter((board) => !xiangqiBroadcastBoardServes(board));
+  return {
+    boards: boards.length,
+    unservableBoards: unservable.length,
+    unservableBoardIds: unservable.slice(0, UNSERVABLE_BOARD_ID_CAP).map((board) => board.id),
   };
 }
 

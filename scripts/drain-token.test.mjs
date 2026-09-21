@@ -1,10 +1,15 @@
 import assert from 'node:assert/strict';
+import { execFileSync } from 'node:child_process';
 import test from 'node:test';
 import {
+  compareDrainTokenFingerprints,
   DRAIN_TOKEN_KEYCHAIN_FALLBACK,
   DRAIN_TOKEN_KEYCHAIN_SERVICE,
   describeDrainToken,
   drainTokenSource,
+  fingerprintDrainToken,
+  PROD_FINGERPRINT_COMMAND,
+  parseProdFingerprint,
   resolveDrainToken,
 } from './lib/drain-token.mjs';
 
@@ -85,4 +90,54 @@ test('describeDrainToken names the env var as the source when it is set', () => 
     if (previous === undefined) delete process.env.MISTBOARD_DRAIN_TOKEN;
     else process.env.MISTBOARD_DRAIN_TOKEN = previous;
   }
+});
+
+// The equality check. Readability had been verified (drain:token-status) and
+// the token still 401ed twice; nothing compared the two copies because neither
+// may be printed. Fingerprints are the comparison, so both sides must derive
+// the same one from the same bytes, and a trailing newline (the classic
+// paste error) must show up as a different length.
+test('the shell fingerprint the container runs matches the node fingerprint', () => {
+  const value = 'not-a-real-token-0123456789';
+  const out = execFileSync(
+    'sh',
+    ['-c', PROD_FINGERPRINT_COMMAND.replace(/sha256sum/g, 'shasum -a 256')],
+    {
+      env: { ...process.env, MISTBOARD_DRAIN_TOKEN: value },
+      encoding: 'utf8',
+    },
+  );
+  assert.deepEqual(parseProdFingerprint(out), { unset: false, ...fingerprintDrainToken(value) });
+
+  const unset = execFileSync('sh', ['-c', PROD_FINGERPRINT_COMMAND], {
+    env: { PATH: process.env.PATH },
+    encoding: 'utf8',
+  });
+  assert.deepEqual(parseProdFingerprint(unset), { unset: true });
+  assert.equal(parseProdFingerprint('Unauthorized\n'), null);
+  assert.notEqual(fingerprintDrainToken(value).length, fingerprintDrainToken(`${value}\n`).length);
+});
+
+test('the verdict names the copy a release sends, not just whether one matches', () => {
+  const a = fingerprintDrainToken('copy-a');
+  const b = fingerprintDrainToken('copy-b');
+  const primary = { item: DRAIN_TOKEN_KEYCHAIN_SERVICE, status: 'ok', fingerprint: a };
+  const fallback = { item: DRAIN_TOKEN_KEYCHAIN_FALLBACK, status: 'ok', fingerprint: b };
+  const prodB = { unset: false, ...b };
+
+  // The release sends the first readable source. A later source holding
+  // prod's value is the SHADOWED case: the fix is the earlier item, and a
+  // plain "mismatch" would send the reader to the Railway dashboard instead.
+  assert.equal(compareDrainTokenFingerprints([primary, fallback], prodB).verdict, 'shadowed');
+  assert.equal(compareDrainTokenFingerprints([fallback, primary], prodB).verdict, 'match');
+  assert.equal(compareDrainTokenFingerprints([primary], prodB).verdict, 'mismatch');
+  assert.equal(
+    compareDrainTokenFingerprints(
+      [{ item: DRAIN_TOKEN_KEYCHAIN_SERVICE, status: 'absent', fingerprint: null }],
+      prodB,
+    ).verdict,
+    'local-none',
+  );
+  assert.equal(compareDrainTokenFingerprints([primary], { unset: true }).verdict, 'prod-unset');
+  assert.equal(compareDrainTokenFingerprints([primary], null).verdict, 'prod-unreadable');
 });

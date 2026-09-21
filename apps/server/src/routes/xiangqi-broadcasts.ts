@@ -1,13 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import {
-  applyStandardXiangqiMove,
-  broadcastRecordsCredit,
-  createInitialXiangqiState,
-  getStandardXiangqiPlayerView,
-  type StandardXiangqiPlayerView,
-  type XiangqiColor,
-  type XiangqiMove,
-} from '@mistboard/game';
+import { broadcastRecordsCredit } from '@mistboard/game';
 import * as persistence from './../persistence.js';
 import {
   type BroadcastLiveEval,
@@ -21,6 +13,10 @@ import {
 import { clampXiangqiBroadcastScheduleIntervalMs } from './../xiangqi-broadcast-scheduler.js';
 import { type BroadcastViewerRegistry, broadcastViewers } from './../xiangqi-broadcast-viewers.js';
 import {
+  buildXiangqiBroadcastBoardReplay,
+  finalXiangqiBoardView,
+} from './../xiangqi-broadcast-serving.js';
+import {
   type HttpApiContext,
   readJsonBody,
   requireAdminSession,
@@ -28,18 +24,6 @@ import {
   requirePersistence,
   writeJson,
 } from './lib.js';
-
-type BroadcastMoveTimelineEntry = {
-  type: 'move-played';
-  color: XiangqiColor;
-  move: XiangqiMove;
-  ply: number;
-};
-
-type BroadcastHistorySnapshot = {
-  ply: number;
-  view: StandardXiangqiPlayerView;
-};
 
 type BroadcastStreamEnvelope<T> = {
   version: string;
@@ -180,21 +164,6 @@ function featuredXiangqiBroadcastBoard(boards: persistence.StoredXiangqiBroadcas
     updatedAt: pick.updatedAt,
     view: finalXiangqiBoardView(pick),
   };
-}
-
-// Replay a stored board to its final position. Defensive about moves past a
-// terminal state so one bad row degrades to a stale thumbnail instead of a 500.
-// Legal moves are dead weight on a non-interactive thumbnail, so they are
-// stripped from the shipped view.
-function finalXiangqiBoardView(
-  board: persistence.StoredXiangqiBroadcastBoard,
-): StandardXiangqiPlayerView {
-  let state = createInitialXiangqiState(board.id);
-  for (const move of board.moves) {
-    if (state.status.type !== 'playing') break;
-    state = applyStandardXiangqiMove(state, move);
-  }
-  return { ...getStandardXiangqiPlayerView(state, 'red'), legalMoves: [] };
 }
 
 function roundBoardStats(
@@ -556,54 +525,6 @@ export async function xiangqiBroadcastBoardExportForApi(
     result: board.result,
     moves: board.moves,
     ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
-  };
-}
-
-function buildXiangqiBroadcastBoardReplay(board: persistence.StoredXiangqiBroadcastBoard) {
-  let state = createInitialXiangqiState(board.id);
-  const timeline: BroadcastMoveTimelineEntry[] = [];
-  const truth: BroadcastHistorySnapshot[] = [
-    { ply: 0, view: getStandardXiangqiPlayerView(state, 'red') },
-  ];
-
-  for (const [index, move] of board.moves.entries()) {
-    if (state.status.type !== 'playing') {
-      throw new Error(`stored broadcast board ${board.id} has moves after terminal state`);
-    }
-    const color = state.status.turn;
-    state = applyStandardXiangqiMove(state, move);
-    const ply = index + 1;
-    timeline.push({ type: 'move-played', color, move, ply });
-    truth.push({ ply, view: getStandardXiangqiPlayerView(state, 'red') });
-  }
-
-  return {
-    board: {
-      id: board.id,
-      tourSlug: board.tourSlug,
-      roundId: board.roundId,
-      sourceBoardId: board.sourceBoardId,
-      boardNumber: board.boardNumber,
-      red: board.red,
-      black: board.black,
-      status: board.status,
-      result: board.result,
-      plyCount: board.plyCount,
-      finalStatus: board.finalStatus,
-      createdAt: board.createdAt,
-      updatedAt: board.updatedAt,
-      ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
-    },
-    state: {
-      status: state.status,
-      moveNumber: state.moveNumber,
-    },
-    timeline,
-    view: getStandardXiangqiPlayerView(state, 'red'),
-    views: {
-      truth: getStandardXiangqiPlayerView(state, 'red'),
-    },
-    history: { truth },
   };
 }
 
