@@ -101,6 +101,7 @@ Conventions:
 
 ### Fixed
 
+- In Chinese, the watch page, every game review page, the games list, the profile and the analysis board no longer show English pieces (channel names, Guest, BOT, "Red wins by General captured", "3 days ago", the Truth/White/Black view buttons); the result line is one translated sentence ([4e363185](https://github.com/brianhliou/mistboard/commit/4e363185))
 - Broadcast games that ran past a threefold repetition or sixty capture-free plies open again: the site's own rules call those a draw, a tournament arbiter does not, and 52 of 376 stored boards had answered "Broadcast unavailable" since the record was written ([06de17ed](https://github.com/brianhliou/mistboard/commit/06de17ed))
 - A Patron whose badge comes from a one-time payment sees how long it runs and can extend it or subscribe, instead of a "Manage your subscription" button with no subscription behind it ([26cfe7d3](https://github.com/brianhliou/mistboard/commit/26cfe7d3))
 - The Jieqi bot no longer knows which of its face-down pieces you captured. Jieqi reveals a captured hidden piece to the capturer only, but the engine was told its own remaining hidden pieces from the true state, so every capture of one of its dark pieces told it what it had lost; it now reasons from what a player in its seat may know ([2b4be2ca](https://github.com/brianhliou/mistboard/commit/2b4be2ca))
