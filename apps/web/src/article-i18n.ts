@@ -2672,8 +2672,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
-  // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. Mainland
-  // players' names stay in one form in both scripts.
+  // Traditional starts from the complete Simplified key set, then every
+  // authored Taiwan lexical or glyph fork below overrides that shared value.
+  // Keep this spread first so new Traditional entries cannot be overwritten.
+  ...ZH_HANS,
+  // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
+  // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',
   '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
     '2026 年 8 月到 9 月，象甲預選賽、上海盃、象甲第一階段，31 局一局未輸。他的棋風、盤面上的五局，以及全部 31 局的引擎分析。',
@@ -2760,10 +2764,6 @@ const ZH_HANT: Record<string, string> = {
   '2026 Shanghai Cup': '2026 上海盃',
   '2026 Shanghai Cup, final': '2026 上海盃決賽',
   '2026 League qualifier, Hangzhou': '2026 象甲預選賽，杭州',
-  // Traditional starts from the complete Simplified key set, then every
-  // authored Taiwan lexical or glyph fork below overrides that shared value.
-  // Keep this spread first so new Traditional entries cannot be overwritten.
-  ...ZH_HANS,
   // Gate-ladder figure labels. localizeSvgMarkup swaps <text> nodes through
   // this dictionary at render, but article-prose.ts gives a raw-svg block only
   // its caption, so nothing demanded these and the figure shipped in English.
