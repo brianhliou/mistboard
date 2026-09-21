@@ -347,7 +347,10 @@ export const XIANGQI_ANALYSIS_MULTI_PV = 2;
 // and a flat 30s guard failed five of them at once on 2026-09-20.
 const XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS = 30_000;
 const analysisEvalTimeoutMs = (nodes: number) =>
-  Math.max(XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS, Math.ceil(nodes / 1_000_000) * XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS);
+  Math.max(
+    XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS,
+    Math.ceil(nodes / 1_000_000) * XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS,
+  );
 
 export type XiangqiPositionEval = {
   /** Centipawns from RED's POV (positive = Red better); null when mate is set. */

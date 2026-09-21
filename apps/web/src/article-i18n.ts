@@ -128,67 +128,91 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 const ZH_HANS: Record<string, string> = {
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
-  "31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.": "2026 年 8 月到 9 月，象甲预选赛、上海杯、象甲第一阶段，31 局一局未输。他的棋风、盘面上的五局，以及全部 31 局的引擎分析。",
-  "Yin Sheng 尹昇": "尹昇",
-  "Yin Sheng at the 2022 Zhejiang Provincial Games.": "2022 年浙江省运动会上的尹昇。",
-  "Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.": "2022 年浙江省第十七届运动会赛后，身穿红白色浙江队队服、戴眼镜的尹昇在赞助商背景板前微笑。",
-  "Yin Sheng at the 17th Zhejiang Provincial Games, July 2022, where he won the men’s title at seventeen. Photo: 浙江省第十七届运动会 via Sohu.": "2022 年 7 月，浙江省第十七届运动会上的尹昇，十七岁的他在这里拿下男子组冠军。图片：浙江省第十七届运动会，经搜狐转载。",
-  "Yin Sheng 尹昇 is a professional from Wenling, a small city on the Zhejiang coast, who plays for the Zhejiang Mintai Bank team. Born in 2005, he has been in China’s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.": "尹昇是浙江温岭人，效力于浙江民泰银行象棋队。他生于 2005 年，十五岁起征战象甲联赛，2023 年获得全国大师称号。去年九月，二十岁的他打进上海世锦赛男子个人决赛，负于越南棋手赖理兄，后者成为十九届赛事以来第一位非中国籍冠军。网上的反应并不友善。此后一年里他拿下四项公开赛冠军。这一页写的是其中的一个月：2026 年 8 月到 9 月，他一局未输。",
-  "The run": "这一段",
-  "Between August 17 and September 16 this year, Yin Sheng played 31 games across three events and did not lose one of them: eleven wins and twenty draws through the qualifier for China's top league, the Shanghai Cup, which he won, and the first stage of the league itself. I ran every game through the same engine analysis Mistboard gives your own games. His accuracy sat between 89 and 100, with a median of 98, and at no point in any of the 31 games did the engine rate his winning chances below 44 percent.": "今年 8 月 17 日到 9 月 16 日，尹昇在三项赛事里下了 31 局，一局未输：象甲预选赛、他夺冠的上海杯、象甲第一阶段，合计十一胜二十和。我把每一局都跑了一遍 Mistboard 给你自己的对局所用的同一套引擎分析。他的准确率在 89 到 100 之间，中位数 98；31 局里没有任何一步，引擎给他的胜率低于 44%。",
-  "I also ran every other game from the Shanghai Cup and the league stage, 250 games in all, to see what that accuracy means against the field. It means less than it sounds: the median across every player was 96.9, and six players who played six or more games matched or beat his 98. Accuracy is not what separates him. Not losing is.": "我也把上海杯和象甲这一阶段的其他所有对局都跑了一遍，共 250 局，看看这个准确率放在整个赛场上意味着什么。意味着的比听起来少：所有棋手的中位数是 96.9，下了六局以上的棋手中有六位追平或超过他的 98。让他与众不同的不是准确率，是不输。",
-  "Some context on the opposition, because the names will mean little outside China. Xiangqi does have ratings: the Chinese Xiangqi Association ran an Elo-style system for over forty years, with the very top players around 2750 to 2800, before retiring it in January 2026 in favour of a tournament-points ranking. The last list it published is from September 2023, so the numbers below are three years old and frozen, but they are the only official ones, and they show the field. Every rated opponent in the run stood above him on that list. Chen Shaobo, who he beat in the final, was too young to be on it at all.": "说一下对手，因为这些名字在中国以外没什么人认识。象棋是有等级分的：中国象棋协会用了四十多年的 Elo 式等级分，顶尖棋手在 2750 到 2800 上下，2026 年 1 月改为竞赛积分排名后废止。它公布的最后一期是 2023 年 9 月，所以下面的数字已经三年没动过，但它们是仅有的官方数字，也能看出对手的分量。这段路上每一位有等级分的对手，在那份榜上都排在他前面。决赛里被他击败的陈绍博，当时年纪太小，根本不在榜上。",
-  "Ratings and ranks from the Chinese Xiangqi Association list of 30 September 2023, the last one published. Results are from August 17 to September 16, 2026.": "等级分与排名取自中国象棋协会 2023 年 9 月 30 日截止的最后一期榜单。战绩为 2026 年 8 月 17 日至 9 月 16 日。",
-  "How he plays": "他的棋风",
-  "**With red, he opens with a soldier.** Ten of his fifteen games as red begin by advancing the third or seventh soldier, the family of openings called \"the immortal points the way,\" and four more by raising an elephant. Not once all month did he play the central cannon, the most direct opening in the game. He is not trying to win the opening; he is trying to reach a middlegame he understands.": "**执红先走兵。**他十五局红棋里有十局以兵三进一或兵七进一开局，也就是仙人指路一路，另有四局飞相。整整一个月没有走过一次中炮，这个最直接的开局。他不想在开局赢棋，他想走进一个自己看得懂的中局。",
-  "**With black, the engine can barely mark him.** His median accuracy as black was 98.6, against 95.6 as red, and he made one mistake in sixteen games with the black pieces. All four of his blunders came with red, and three of those were in games he went on to win anyway. He errs when he is pressing, not when he is holding.": "**执黑时，引擎几乎挑不出毛病。**他执黑的准确率中位数是 98.6，执红是 95.6；十六局黑棋只有一步错着。四步漏着全部出在红棋，其中三步出在他最终仍然赢下的对局里。他出错是在进攻的时候，不是在防守的时候。",
-  "**His draws are short and his wins are long.** Half of the twenty draws were over inside thirty moves, while the median win took fifty-two. In nine of the eleven wins, the other side made the first real mistake and the rest of the game was conversion. The other two he ground out against opponents the engine never faulted at all, over 52 and 84 moves of small edges.": "**他的和棋短，胜局长。**二十局和棋有一半在三十回合内结束，而胜局的回合数中位数是五十二。十一局胜局里有九局，是对方先犯下第一个真正的错误，剩下的只是兑现。另外两局，对手在引擎眼里没有一步错着，他靠一点点微弱优势磨了 52 回合和 84 回合。",
-  "**In seventeen of the 31 games the engine found nothing on his side worth marking.** Across the whole month it found three brilliant moves, three great ones, one missed mate in one, and otherwise a player who simply does not give anything back.": "**31 局里有 17 局，引擎在他这一边找不到任何值得标注的地方。**整个月它一共找到三步妙着、三步好棋、一次错过的一步杀，除此之外，就是一个不把任何东西还给对手的棋手。",
-  "The league qualifier": "象甲预选赛",
-  "Hangzhou, August 17 to 19: two wins and three draws. The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's horse move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.": "杭州，8 月 17 日至 19 日：两胜三和。这段路从第一天开始，执黑对天津张瑞。张瑞第 21 回合的一步马是引擎在全局唯一找到的错着，尹昇又用了 38 个回合把它变成胜利。他多数胜局都是这个形状：对方一个失误，然后再也回不去。",
-  "Zhang Rui vs Yin Sheng, 17 August 2026. The board opens just after red's 21st move, with Yin Sheng to play as black.": "张瑞 对 尹昇，2026 年 8 月 17 日。棋盘从红方第 21 回合刚走完的局面开始，轮到执黑的尹昇。",
-  "The qualifier in the archive": "棋谱库里的预选赛",
-  "The Shanghai Cup": "上海杯",
-  "September 9 to 13, and he won it: six wins and eleven draws. A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's chariot move on move 20 is the only move that punishes it.": "9 月 9 日至 13 日，他拿了冠军：六胜十一和。淘汰赛加快棋加赛，所以五天能下十七局。其中七局对孟繁睿：六局和棋，一局长达 162 回合，还有这一局。第 19 回合双方各推一步边兵，两步都是错的，孟繁睿错得更多，而尹昇第 20 回合的一步车是唯一能惩罚它的着法。",
-  "Yin Sheng vs Meng Fanrui, 11 September 2026. The board opens after black's 19th move, with the only winning reply for red still to find.": "尹昇 对 孟繁睿，2026 年 9 月 11 日。棋盘从黑方第 19 回合走完的局面开始，红方唯一的制胜应着还等着你去找。",
-  "Against Jin Bo, 88 moves. On move 30 he leaves a chariot where it can be taken, and the engine agrees it should be left there. Then, after black's 55th move, there is a mate in one on the board. He plays a cannon move instead, and wins 32 moves later. The board opens on that position; find the mate before you step forward.": "对金波，88 回合。第 30 回合他把一只车放在能被吃的地方，引擎认为就该放在那里。然后，黑方第 55 回合走完，盘面上出现了一步杀。他却走了一步炮，32 回合之后照样赢了。棋盘就从那个局面开始；先找出杀着，再往下走。",
-  "Yin Sheng vs Jin Bo, 12 September 2026. Red to move, and there is a mate in one.": "尹昇 对 金波，2026 年 9 月 12 日。轮到红方，盘面上有一步杀。",
-  "The final against Chen Shaobo went to four games, three draws and this one. Chen's 22nd move gives up 14 points of winning chances, and Yin Sheng plays the rest of the game at 95 percent accuracy. There is no single killing move. He just does not give any of it back.": "对陈绍博的决赛下了四局，三局和棋，加上这一局。陈绍博第 22 回合的一步棋让出了 14 个百分点的胜率，之后尹昇以 95% 的准确率下完了全局。没有哪一步是致命的。他只是什么都不还给对手。",
-  "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The board opens after black's 22nd, the move the title game turned on.": "尹昇 对 陈绍博，2026 年 9 月 13 日，决赛。棋盘从黑方第 22 回合走完的局面开始，这一步是这场冠军之战的转折。",
-  "The Shanghai Cup in the archive": "棋谱库里的上海杯",
-  "The league, stage one": "象甲第一阶段",
-  "Back in Hangzhou, September 14 to 16: three wins and six draws. This is the messy one. Against Chen Hongsheng, with black, the engine counts four blunders for red and one real mistake for Yin Sheng, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand the game over. It is on the page because the section above would otherwise give you the wrong idea of what these games look like from the inside.": "回到杭州，9 月 14 日至 16 日：三胜六和。这是最乱的一局。执黑对陈泓盛，引擎给红方记了四步漏着，给尹昇记了一步真正的错着，局面来回摇摆了二十个回合，直到红方第 39 和第 42 回合把棋送掉。把它放上来，是因为光看上面那一节，你会对这些棋从里面看是什么样子产生错误的印象。",
-  "Chen Hongsheng vs Yin Sheng, 15 September 2026. The board opens after red's 39th, with black to move and the game turning.": "陈泓盛 对 尹昇，2026 年 9 月 15 日。棋盘从红方第 39 回合走完的局面开始，轮到黑方，棋局正在逆转。",
-  "Stage one in the archive": "棋谱库里的第一阶段",
-  "The league's second stage is in October, and the national individual championship, the title that decides who China's best player is, runs from November 21 to 29 in Changchun. In 2023, on the day he became a master, Yin Sheng said he would give himself five years to a real result there.": "象甲第二阶段在十月，而决定谁是中国第一的全国象棋个人赛，11 月 21 日至 29 日在长春举行。2023 年拿到大师称号的那天，尹昇说他会给自己五年时间，在个人赛上拿出一个像样的成绩。",
-  "All 31 games": "全部 31 局",
-  "Every game of the run is in a Mistboard study, with the engine's judgments and lines on each one, and the three events are in the broadcast archive. Game records from dpxq.com; analysis by Pikafish through Mistboard's review pipeline, September 2026.": "这段路上的每一局都在一份 Mistboard 研究里，每局都带引擎的判断和变着；三项赛事都在直播棋谱库里。棋谱来自东萍象棋网；分析由皮卡鱼经 Mistboard 的复盘流程完成，2026 年 9 月。",
-  "Open the study": "打开研究",
-  "The broadcast archive": "直播棋谱库",
-  "Rating": "等级分",
-  "Rank in China": "全国排名",
-  "Against Yin Sheng this run": "这段路上对尹昇",
-  "Meng Fanrui": "孟繁睿",
-  "1 win, 6 draws": "1 胜 6 和",
-  "Cao Yanlei": "曹岩磊",
-  "1 draw": "1 和",
-  "Xu Wenzhang": "许文章",
-  "2 draws": "2 和",
-  "Chen Hongsheng": "陈泓盛",
-  "1 win, 1 draw": "1 胜 1 和",
-  "Huang Guangying": "黄光颖",
-  "He Wenzhe": "何文哲",
-  "2 wins": "2 胜",
-  "Jin Bo": "金波",
-  "Liu Bohong": "刘柏宏",
-  "Jin Yuyan": "靳玉砚",
-  "1 win": "1 胜",
-  "Yin Sheng": "尹昇",
-  "11 wins, 20 draws, no losses": "11 胜 20 和 0 负",
-  "2026 League, stage one": "2026 象甲第一阶段",
-  "2026 Shanghai Cup": "2026 上海杯",
-  "2026 Shanghai Cup, final": "2026 上海杯决赛",
-  "2026 League qualifier, Hangzhou": "2026 象甲预选赛，杭州",
+  '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
+    '2026 年 8 月到 9 月，象甲预选赛、上海杯、象甲第一阶段，31 局一局未输。他的棋风、盘面上的五局，以及全部 31 局的引擎分析。',
+  'Yin Sheng 尹昇': '尹昇',
+  'Yin Sheng at the 2022 Zhejiang Provincial Games.': '2022 年浙江省运动会上的尹昇。',
+  'Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.':
+    '2022 年浙江省第十七届运动会赛后，身穿红白色浙江队队服、戴眼镜的尹昇在赞助商背景板前微笑。',
+  'Yin Sheng at the 17th Zhejiang Provincial Games, July 2022, where he won the men’s title at seventeen. Photo: 浙江省第十七届运动会 via Sohu.':
+    '2022 年 7 月，浙江省第十七届运动会上的尹昇，十七岁的他在这里拿下男子组冠军。图片：浙江省第十七届运动会，经搜狐转载。',
+  'Yin Sheng 尹昇 is a professional from Wenling, a small city on the Zhejiang coast, who plays for the Zhejiang Mintai Bank team. Born in 2005, he has been in China’s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.':
+    '尹昇是浙江温岭人，效力于浙江民泰银行象棋队。他生于 2005 年，十五岁起征战象甲联赛，2023 年获得全国大师称号。去年九月，二十岁的他打进上海世锦赛男子个人决赛，负于越南棋手赖理兄，后者成为十九届赛事以来第一位非中国籍冠军。网上的反应并不友善。此后一年里他拿下四项公开赛冠军。这一页写的是其中的一个月：2026 年 8 月到 9 月，他一局未输。',
+  'The run': '这一段',
+  "Between August 17 and September 16 this year, Yin Sheng played 31 games across three events and did not lose one of them: eleven wins and twenty draws through the qualifier for China's top league, the Shanghai Cup, which he won, and the first stage of the league itself. I ran every game through the same engine analysis Mistboard gives your own games. His accuracy sat between 89 and 100, with a median of 98, and at no point in any of the 31 games did the engine rate his winning chances below 44 percent.":
+    '今年 8 月 17 日到 9 月 16 日，尹昇在三项赛事里下了 31 局，一局未输：象甲预选赛、他夺冠的上海杯、象甲第一阶段，合计十一胜二十和。我把每一局都跑了一遍 Mistboard 给你自己的对局所用的同一套引擎分析。他的准确率在 89 到 100 之间，中位数 98；31 局里没有任何一步，引擎给他的胜率低于 44%。',
+  'I also ran every other game from the Shanghai Cup and the league stage, 250 games in all, to see what that accuracy means against the field. It means less than it sounds: the median across every player was 96.9, and six players who played six or more games matched or beat his 98. Accuracy is not what separates him. Not losing is.':
+    '我也把上海杯和象甲这一阶段的其他所有对局都跑了一遍，共 250 局，看看这个准确率放在整个赛场上意味着什么。意味着的比听起来少：所有棋手的中位数是 96.9，下了六局以上的棋手中有六位追平或超过他的 98。让他与众不同的不是准确率，是不输。',
+  'Some context on the opposition, because the names will mean little outside China. Xiangqi does have ratings: the Chinese Xiangqi Association ran an Elo-style system for over forty years, with the very top players around 2750 to 2800, before retiring it in January 2026 in favour of a tournament-points ranking. The last list it published is from September 2023, so the numbers below are three years old and frozen, but they are the only official ones, and they show the field. Every rated opponent in the run stood above him on that list. Chen Shaobo, who he beat in the final, was too young to be on it at all.':
+    '说一下对手，因为这些名字在中国以外没什么人认识。象棋是有等级分的：中国象棋协会用了四十多年的 Elo 式等级分，顶尖棋手在 2750 到 2800 上下，2026 年 1 月改为竞赛积分排名后废止。它公布的最后一期是 2023 年 9 月，所以下面的数字已经三年没动过，但它们是仅有的官方数字，也能看出对手的分量。这段路上每一位有等级分的对手，在那份榜上都排在他前面。决赛里被他击败的陈绍博，当时年纪太小，根本不在榜上。',
+  'Ratings and ranks from the Chinese Xiangqi Association list of 30 September 2023, the last one published. Results are from August 17 to September 16, 2026.':
+    '等级分与排名取自中国象棋协会 2023 年 9 月 30 日截止的最后一期榜单。战绩为 2026 年 8 月 17 日至 9 月 16 日。',
+  'How he plays': '他的棋风',
+  '**With red, he opens with a soldier.** Ten of his fifteen games as red begin by advancing the third or seventh soldier, the family of openings called "the immortal points the way," and four more by raising an elephant. Not once all month did he play the central cannon, the most direct opening in the game. He is not trying to win the opening; he is trying to reach a middlegame he understands.':
+    '**执红先走兵。**他十五局红棋里有十局以兵三进一或兵七进一开局，也就是仙人指路一路，另有四局飞相。整整一个月没有走过一次中炮，这个最直接的开局。他不想在开局赢棋，他想走进一个自己看得懂的中局。',
+  '**With black, the engine can barely mark him.** His median accuracy as black was 98.6, against 95.6 as red, and he made one mistake in sixteen games with the black pieces. All four of his blunders came with red, and three of those were in games he went on to win anyway. He errs when he is pressing, not when he is holding.':
+    '**执黑时，引擎几乎挑不出毛病。**他执黑的准确率中位数是 98.6，执红是 95.6；十六局黑棋只有一步错着。四步漏着全部出在红棋，其中三步出在他最终仍然赢下的对局里。他出错是在进攻的时候，不是在防守的时候。',
+  '**His draws are short and his wins are long.** Half of the twenty draws were over inside thirty moves, while the median win took fifty-two. In nine of the eleven wins, the other side made the first real mistake and the rest of the game was conversion. The other two he ground out against opponents the engine never faulted at all, over 52 and 84 moves of small edges.':
+    '**他的和棋短，胜局长。**二十局和棋有一半在三十回合内结束，而胜局的回合数中位数是五十二。十一局胜局里有九局，是对方先犯下第一个真正的错误，剩下的只是兑现。另外两局，对手在引擎眼里没有一步错着，他靠一点点微弱优势磨了 52 回合和 84 回合。',
+  '**In seventeen of the 31 games the engine found nothing on his side worth marking.** Across the whole month it found three brilliant moves, three great ones, one missed mate in one, and otherwise a player who simply does not give anything back.':
+    '**31 局里有 17 局，引擎在他这一边找不到任何值得标注的地方。**整个月它一共找到三步妙着、三步好棋、一次错过的一步杀，除此之外，就是一个不把任何东西还给对手的棋手。',
+  'The league qualifier': '象甲预选赛',
+  "Hangzhou, August 17 to 19: two wins and three draws. The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's horse move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.":
+    '杭州，8 月 17 日至 19 日：两胜三和。这段路从第一天开始，执黑对天津张瑞。张瑞第 21 回合的一步马是引擎在全局唯一找到的错着，尹昇又用了 38 个回合把它变成胜利。他多数胜局都是这个形状：对方一个失误，然后再也回不去。',
+  "Zhang Rui vs Yin Sheng, 17 August 2026. The board opens just after red's 21st move, with Yin Sheng to play as black.":
+    '张瑞 对 尹昇，2026 年 8 月 17 日。棋盘从红方第 21 回合刚走完的局面开始，轮到执黑的尹昇。',
+  'The qualifier in the archive': '棋谱库里的预选赛',
+  'The Shanghai Cup': '上海杯',
+  "September 9 to 13, and he won it: six wins and eleven draws. A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's chariot move on move 20 is the only move that punishes it.":
+    '9 月 9 日至 13 日，他拿了冠军：六胜十一和。淘汰赛加快棋加赛，所以五天能下十七局。其中七局对孟繁睿：六局和棋，一局长达 162 回合，还有这一局。第 19 回合双方各推一步边兵，两步都是错的，孟繁睿错得更多，而尹昇第 20 回合的一步车是唯一能惩罚它的着法。',
+  "Yin Sheng vs Meng Fanrui, 11 September 2026. The board opens after black's 19th move, with the only winning reply for red still to find.":
+    '尹昇 对 孟繁睿，2026 年 9 月 11 日。棋盘从黑方第 19 回合走完的局面开始，红方唯一的制胜应着还等着你去找。',
+  "Against Jin Bo, 88 moves. On move 30 he leaves a chariot where it can be taken, and the engine agrees it should be left there. Then, after black's 55th move, there is a mate in one on the board. He plays a cannon move instead, and wins 32 moves later. The board opens on that position; find the mate before you step forward.":
+    '对金波，88 回合。第 30 回合他把一只车放在能被吃的地方，引擎认为就该放在那里。然后，黑方第 55 回合走完，盘面上出现了一步杀。他却走了一步炮，32 回合之后照样赢了。棋盘就从那个局面开始；先找出杀着，再往下走。',
+  'Yin Sheng vs Jin Bo, 12 September 2026. Red to move, and there is a mate in one.':
+    '尹昇 对 金波，2026 年 9 月 12 日。轮到红方，盘面上有一步杀。',
+  "The final against Chen Shaobo went to four games, three draws and this one. Chen's 22nd move gives up 14 points of winning chances, and Yin Sheng plays the rest of the game at 95 percent accuracy. There is no single killing move. He just does not give any of it back.":
+    '对陈绍博的决赛下了四局，三局和棋，加上这一局。陈绍博第 22 回合的一步棋让出了 14 个百分点的胜率，之后尹昇以 95% 的准确率下完了全局。没有哪一步是致命的。他只是什么都不还给对手。',
+  "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The board opens after black's 22nd, the move the title game turned on.":
+    '尹昇 对 陈绍博，2026 年 9 月 13 日，决赛。棋盘从黑方第 22 回合走完的局面开始，这一步是这场冠军之战的转折。',
+  'The Shanghai Cup in the archive': '棋谱库里的上海杯',
+  'The league, stage one': '象甲第一阶段',
+  "Back in Hangzhou, September 14 to 16: three wins and six draws. This is the messy one. Against Chen Hongsheng, with black, the engine counts four blunders for red and one real mistake for Yin Sheng, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand the game over. It is on the page because the section above would otherwise give you the wrong idea of what these games look like from the inside.":
+    '回到杭州，9 月 14 日至 16 日：三胜六和。这是最乱的一局。执黑对陈泓盛，引擎给红方记了四步漏着，给尹昇记了一步真正的错着，局面来回摇摆了二十个回合，直到红方第 39 和第 42 回合把棋送掉。把它放上来，是因为光看上面那一节，你会对这些棋从里面看是什么样子产生错误的印象。',
+  "Chen Hongsheng vs Yin Sheng, 15 September 2026. The board opens after red's 39th, with black to move and the game turning.":
+    '陈泓盛 对 尹昇，2026 年 9 月 15 日。棋盘从红方第 39 回合走完的局面开始，轮到黑方，棋局正在逆转。',
+  'Stage one in the archive': '棋谱库里的第一阶段',
+  "The league's second stage is in October, and the national individual championship, the title that decides who China's best player is, runs from November 21 to 29 in Changchun. In 2023, on the day he became a master, Yin Sheng said he would give himself five years to a real result there.":
+    '象甲第二阶段在十月，而决定谁是中国第一的全国象棋个人赛，11 月 21 日至 29 日在长春举行。2023 年拿到大师称号的那天，尹昇说他会给自己五年时间，在个人赛上拿出一个像样的成绩。',
+  'All 31 games': '全部 31 局',
+  "Every game of the run is in a Mistboard study, with the engine's judgments and lines on each one, and the three events are in the broadcast archive. Game records from dpxq.com; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
+    '这段路上的每一局都在一份 Mistboard 研究里，每局都带引擎的判断和变着；三项赛事都在直播棋谱库里。棋谱来自东萍象棋网；分析由皮卡鱼经 Mistboard 的复盘流程完成，2026 年 9 月。',
+  'Open the study': '打开研究',
+  'The broadcast archive': '直播棋谱库',
+  Rating: '等级分',
+  'Rank in China': '全国排名',
+  'Against Yin Sheng this run': '这段路上对尹昇',
+  'Meng Fanrui': '孟繁睿',
+  '1 win, 6 draws': '1 胜 6 和',
+  'Cao Yanlei': '曹岩磊',
+  '1 draw': '1 和',
+  'Xu Wenzhang': '许文章',
+  '2 draws': '2 和',
+  'Chen Hongsheng': '陈泓盛',
+  '1 win, 1 draw': '1 胜 1 和',
+  'Huang Guangying': '黄光颖',
+  'He Wenzhe': '何文哲',
+  '2 wins': '2 胜',
+  'Jin Bo': '金波',
+  'Liu Bohong': '刘柏宏',
+  'Jin Yuyan': '靳玉砚',
+  '1 win': '1 胜',
+  'Yin Sheng': '尹昇',
+  '11 wins, 20 draws, no losses': '11 胜 20 和 0 负',
+  '2026 League, stage one': '2026 象甲第一阶段',
+  '2026 Shanghai Cup': '2026 上海杯',
+  '2026 Shanghai Cup, final': '2026 上海杯决赛',
+  '2026 League qualifier, Hangzhou': '2026 象甲预选赛，杭州',
   // Gate-ladder figure labels. localizeSvgMarkup swaps <text> nodes through
   // this dictionary at render, but article-prose.ts gives a raw-svg block only
   // its caption, so nothing demanded these and the figure shipped in English.
@@ -2649,67 +2673,91 @@ const ZH_HANS: Record<string, string> = {
 const ZH_HANT: Record<string, string> = {
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
-  "31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.": "2026 年 8 月到 9 月，象甲預選賽、上海盃、象甲第一階段，31 局一局未輸。他的棋風、盤面上的五局，以及全部 31 局的引擎分析。",
-  "Yin Sheng 尹昇": "尹昇",
-  "Yin Sheng at the 2022 Zhejiang Provincial Games.": "2022 年浙江省運動會上的尹昇。",
-  "Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.": "2022 年浙江省第十七屆運動會賽後，身穿紅白色浙江隊隊服、戴眼鏡的尹昇在贊助商背景板前微笑。",
-  "Yin Sheng at the 17th Zhejiang Provincial Games, July 2022, where he won the men’s title at seventeen. Photo: 浙江省第十七届运动会 via Sohu.": "2022 年 7 月，浙江省第十七屆運動會上的尹昇，十七歲的他在這裡拿下男子組冠軍。圖片：浙江省第十七届运动会，經搜狐轉載。",
-  "Yin Sheng 尹昇 is a professional from Wenling, a small city on the Zhejiang coast, who plays for the Zhejiang Mintai Bank team. Born in 2005, he has been in China’s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.": "尹昇是浙江溫嶺人，效力於浙江民泰銀行象棋隊。他生於 2005 年，十五歲起征戰象甲聯賽，2023 年獲得全國大師稱號。去年九月，二十歲的他打進上海世錦賽男子個人決賽，負於越南棋手賴理兄，後者成為十九屆賽事以來第一位非中國籍冠軍。網上的反應並不友善。此後一年裡他拿下四項公開賽冠軍。這一頁寫的是其中的一個月：2026 年 8 月到 9 月，他一局未輸。",
-  "The run": "這一段",
-  "Between August 17 and September 16 this year, Yin Sheng played 31 games across three events and did not lose one of them: eleven wins and twenty draws through the qualifier for China's top league, the Shanghai Cup, which he won, and the first stage of the league itself. I ran every game through the same engine analysis Mistboard gives your own games. His accuracy sat between 89 and 100, with a median of 98, and at no point in any of the 31 games did the engine rate his winning chances below 44 percent.": "今年 8 月 17 日到 9 月 16 日，尹昇在三項賽事裡下了 31 局，一局未輸：象甲預選賽、他奪冠的上海盃、象甲第一階段，合計十一勝二十和。我把每一局都跑了一遍 Mistboard 給你自己的對局所用的同一套引擎分析。他的準確率在 89 到 100 之間，中位數 98；31 局裡沒有任何一步，引擎給他的勝率低於 44%。",
-  "I also ran every other game from the Shanghai Cup and the league stage, 250 games in all, to see what that accuracy means against the field. It means less than it sounds: the median across every player was 96.9, and six players who played six or more games matched or beat his 98. Accuracy is not what separates him. Not losing is.": "我也把上海盃和象甲這一階段的其他所有對局都跑了一遍，共 250 局，看看這個準確率放在整個賽場上意味著什麼。意味著的比聽起來少：所有棋手的中位數是 96.9，下了六局以上的棋手中有六位追平或超過他的 98。讓他與眾不同的不是準確率，是不輸。",
-  "Some context on the opposition, because the names will mean little outside China. Xiangqi does have ratings: the Chinese Xiangqi Association ran an Elo-style system for over forty years, with the very top players around 2750 to 2800, before retiring it in January 2026 in favour of a tournament-points ranking. The last list it published is from September 2023, so the numbers below are three years old and frozen, but they are the only official ones, and they show the field. Every rated opponent in the run stood above him on that list. Chen Shaobo, who he beat in the final, was too young to be on it at all.": "說一下對手，因為這些名字在中國以外沒什麼人認識。象棋是有等級分的：中國象棋協會用了四十多年的 Elo 式等級分，頂尖棋手在 2750 到 2800 上下，2026 年 1 月改為競賽積分排名後廢止。它公佈的最後一期是 2023 年 9 月，所以下面的數字已經三年沒動過，但它們是僅有的官方數字，也能看出對手的份量。這段路上每一位有等級分的對手，在那份榜上都排在他前面。決賽裡被他擊敗的陳紹博，當時年紀太小，根本不在榜上。",
-  "Ratings and ranks from the Chinese Xiangqi Association list of 30 September 2023, the last one published. Results are from August 17 to September 16, 2026.": "等級分與排名取自中國象棋協會 2023 年 9 月 30 日截止的最後一期榜單。戰績為 2026 年 8 月 17 日至 9 月 16 日。",
-  "How he plays": "他的棋風",
-  "**With red, he opens with a soldier.** Ten of his fifteen games as red begin by advancing the third or seventh soldier, the family of openings called \"the immortal points the way,\" and four more by raising an elephant. Not once all month did he play the central cannon, the most direct opening in the game. He is not trying to win the opening; he is trying to reach a middlegame he understands.": "**執紅先走兵。**他十五局紅棋裡有十局以兵三進一或兵七進一開局，也就是仙人指路一路，另有四局飛相。整整一個月沒有走過一次中炮，這個最直接的開局。他不想在開局贏棋，他想走進一個自己看得懂的中局。",
-  "**With black, the engine can barely mark him.** His median accuracy as black was 98.6, against 95.6 as red, and he made one mistake in sixteen games with the black pieces. All four of his blunders came with red, and three of those were in games he went on to win anyway. He errs when he is pressing, not when he is holding.": "**執黑時，引擎幾乎挑不出毛病。**他執黑的準確率中位數是 98.6，執紅是 95.6；十六局黑棋只有一步錯著。四步漏著全部出在紅棋，其中三步出在他最終仍然贏下的對局裡。他出錯是在進攻的時候，不是在防守的時候。",
-  "**His draws are short and his wins are long.** Half of the twenty draws were over inside thirty moves, while the median win took fifty-two. In nine of the eleven wins, the other side made the first real mistake and the rest of the game was conversion. The other two he ground out against opponents the engine never faulted at all, over 52 and 84 moves of small edges.": "**他的和棋短，勝局長。**二十局和棋有一半在三十回合內結束，而勝局的回合數中位數是五十二。十一局勝局裡有九局，是對方先犯下第一個真正的錯誤，剩下的只是兌現。另外兩局，對手在引擎眼裡沒有一步錯著，他靠一點點微弱優勢磨了 52 回合和 84 回合。",
-  "**In seventeen of the 31 games the engine found nothing on his side worth marking.** Across the whole month it found three brilliant moves, three great ones, one missed mate in one, and otherwise a player who simply does not give anything back.": "**31 局裡有 17 局，引擎在他這一邊找不到任何值得標註的地方。**整個月它一共找到三步妙著、三步好棋、一次錯過的一步殺，除此之外，就是一個不把任何東西還給對手的棋手。",
-  "The league qualifier": "象甲預選賽",
-  "Hangzhou, August 17 to 19: two wins and three draws. The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's horse move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.": "杭州，8 月 17 日至 19 日：兩勝三和。這段路從第一天開始，執黑對天津張瑞。張瑞第 21 回合的一步馬是引擎在全局唯一找到的錯著，尹昇又用了 38 個回合把它變成勝利。他多數勝局都是這個形狀：對方一個失誤，然後再也回不去。",
-  "Zhang Rui vs Yin Sheng, 17 August 2026. The board opens just after red's 21st move, with Yin Sheng to play as black.": "張瑞 對 尹昇，2026 年 8 月 17 日。棋盤從紅方第 21 回合剛走完的局面開始，輪到執黑的尹昇。",
-  "The qualifier in the archive": "棋譜庫裡的預選賽",
-  "The Shanghai Cup": "上海盃",
-  "September 9 to 13, and he won it: six wins and eleven draws. A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's chariot move on move 20 is the only move that punishes it.": "9 月 9 日至 13 日，他拿了冠軍：六勝十一和。淘汰賽加快棋加賽，所以五天能下十七局。其中七局對孟繁睿：六局和棋，一局長達 162 回合，還有這一局。第 19 回合雙方各推一步邊兵，兩步都是錯的，孟繁睿錯得更多，而尹昇第 20 回合的一步車是唯一能懲罰它的著法。",
-  "Yin Sheng vs Meng Fanrui, 11 September 2026. The board opens after black's 19th move, with the only winning reply for red still to find.": "尹昇 對 孟繁睿，2026 年 9 月 11 日。棋盤從黑方第 19 回合走完的局面開始，紅方唯一的制勝應著還等著你去找。",
-  "Against Jin Bo, 88 moves. On move 30 he leaves a chariot where it can be taken, and the engine agrees it should be left there. Then, after black's 55th move, there is a mate in one on the board. He plays a cannon move instead, and wins 32 moves later. The board opens on that position; find the mate before you step forward.": "對金波，88 回合。第 30 回合他把一隻車放在能被吃的地方，引擎認為就該放在那裡。然後，黑方第 55 回合走完，盤面上出現了一步殺。他卻走了一步炮，32 回合之後照樣贏了。棋盤就從那個局面開始；先找出殺著，再往下走。",
-  "Yin Sheng vs Jin Bo, 12 September 2026. Red to move, and there is a mate in one.": "尹昇 對 金波，2026 年 9 月 12 日。輪到紅方，盤面上有一步殺。",
-  "The final against Chen Shaobo went to four games, three draws and this one. Chen's 22nd move gives up 14 points of winning chances, and Yin Sheng plays the rest of the game at 95 percent accuracy. There is no single killing move. He just does not give any of it back.": "對陳紹博的決賽下了四局，三局和棋，加上這一局。陳紹博第 22 回合的一步棋讓出了 14 個百分點的勝率，之後尹昇以 95% 的準確率下完了全局。沒有哪一步是致命的。他只是什麼都不還給對手。",
-  "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The board opens after black's 22nd, the move the title game turned on.": "尹昇 對 陳紹博，2026 年 9 月 13 日，決賽。棋盤從黑方第 22 回合走完的局面開始，這一步是這場冠軍之戰的轉折。",
-  "The Shanghai Cup in the archive": "棋譜庫裡的上海盃",
-  "The league, stage one": "象甲第一階段",
-  "Back in Hangzhou, September 14 to 16: three wins and six draws. This is the messy one. Against Chen Hongsheng, with black, the engine counts four blunders for red and one real mistake for Yin Sheng, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand the game over. It is on the page because the section above would otherwise give you the wrong idea of what these games look like from the inside.": "回到杭州，9 月 14 日至 16 日：三勝六和。這是最亂的一局。執黑對陳泓盛，引擎給紅方記了四步漏著，給尹昇記了一步真正的錯著，局面來回搖擺了二十個回合，直到紅方第 39 和第 42 回合把棋送掉。把它放上來，是因為光看上面那一節，你會對這些棋從裡面看是什麼樣子產生錯誤的印象。",
-  "Chen Hongsheng vs Yin Sheng, 15 September 2026. The board opens after red's 39th, with black to move and the game turning.": "陳泓盛 對 尹昇，2026 年 9 月 15 日。棋盤從紅方第 39 回合走完的局面開始，輪到黑方，棋局正在逆轉。",
-  "Stage one in the archive": "棋譜庫裡的第一階段",
-  "The league's second stage is in October, and the national individual championship, the title that decides who China's best player is, runs from November 21 to 29 in Changchun. In 2023, on the day he became a master, Yin Sheng said he would give himself five years to a real result there.": "象甲第二階段在十月，而決定誰是中國第一的全國象棋個人賽，11 月 21 日至 29 日在長春舉行。2023 年拿到大師稱號的那天，尹昇說他會給自己五年時間，在個人賽上拿出一個像樣的成績。",
-  "All 31 games": "全部 31 局",
-  "Every game of the run is in a Mistboard study, with the engine's judgments and lines on each one, and the three events are in the broadcast archive. Game records from dpxq.com; analysis by Pikafish through Mistboard's review pipeline, September 2026.": "這段路上的每一局都在一份 Mistboard 研究裡，每局都帶引擎的判斷和變著；三項賽事都在直播棋譜庫裡。棋譜來自東萍象棋網；分析由皮卡魚經 Mistboard 的復盤流程完成，2026 年 9 月。",
-  "Open the study": "打開研究",
-  "The broadcast archive": "直播棋譜庫",
-  "Rating": "等級分",
-  "Rank in China": "全國排名",
-  "Against Yin Sheng this run": "這段路上對尹昇",
-  "Meng Fanrui": "孟繁睿",
-  "1 win, 6 draws": "1 勝 6 和",
-  "Cao Yanlei": "曹岩磊",
-  "1 draw": "1 和",
-  "Xu Wenzhang": "许文章",
-  "2 draws": "2 和",
-  "Chen Hongsheng": "陈泓盛",
-  "1 win, 1 draw": "1 勝 1 和",
-  "Huang Guangying": "黄光颖",
-  "He Wenzhe": "何文哲",
-  "2 wins": "2 勝",
-  "Jin Bo": "金波",
-  "Liu Bohong": "刘柏宏",
-  "Jin Yuyan": "靳玉砚",
-  "1 win": "1 勝",
-  "Yin Sheng": "尹昇",
-  "11 wins, 20 draws, no losses": "11 勝 20 和 0 負",
-  "2026 League, stage one": "2026 象甲第一階段",
-  "2026 Shanghai Cup": "2026 上海盃",
-  "2026 Shanghai Cup, final": "2026 上海盃決賽",
-  "2026 League qualifier, Hangzhou": "2026 象甲預選賽，杭州",
+  '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.':
+    '2026 年 8 月到 9 月，象甲預選賽、上海盃、象甲第一階段，31 局一局未輸。他的棋風、盤面上的五局，以及全部 31 局的引擎分析。',
+  'Yin Sheng 尹昇': '尹昇',
+  'Yin Sheng at the 2022 Zhejiang Provincial Games.': '2022 年浙江省運動會上的尹昇。',
+  'Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.':
+    '2022 年浙江省第十七屆運動會賽後，身穿紅白色浙江隊隊服、戴眼鏡的尹昇在贊助商背景板前微笑。',
+  'Yin Sheng at the 17th Zhejiang Provincial Games, July 2022, where he won the men’s title at seventeen. Photo: 浙江省第十七届运动会 via Sohu.':
+    '2022 年 7 月，浙江省第十七屆運動會上的尹昇，十七歲的他在這裡拿下男子組冠軍。圖片：浙江省第十七届运动会，經搜狐轉載。',
+  'Yin Sheng 尹昇 is a professional from Wenling, a small city on the Zhejiang coast, who plays for the Zhejiang Mintai Bank team. Born in 2005, he has been in China’s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.':
+    '尹昇是浙江溫嶺人，效力於浙江民泰銀行象棋隊。他生於 2005 年，十五歲起征戰象甲聯賽，2023 年獲得全國大師稱號。去年九月，二十歲的他打進上海世錦賽男子個人決賽，負於越南棋手賴理兄，後者成為十九屆賽事以來第一位非中國籍冠軍。網上的反應並不友善。此後一年裡他拿下四項公開賽冠軍。這一頁寫的是其中的一個月：2026 年 8 月到 9 月，他一局未輸。',
+  'The run': '這一段',
+  "Between August 17 and September 16 this year, Yin Sheng played 31 games across three events and did not lose one of them: eleven wins and twenty draws through the qualifier for China's top league, the Shanghai Cup, which he won, and the first stage of the league itself. I ran every game through the same engine analysis Mistboard gives your own games. His accuracy sat between 89 and 100, with a median of 98, and at no point in any of the 31 games did the engine rate his winning chances below 44 percent.":
+    '今年 8 月 17 日到 9 月 16 日，尹昇在三項賽事裡下了 31 局，一局未輸：象甲預選賽、他奪冠的上海盃、象甲第一階段，合計十一勝二十和。我把每一局都跑了一遍 Mistboard 給你自己的對局所用的同一套引擎分析。他的準確率在 89 到 100 之間，中位數 98；31 局裡沒有任何一步，引擎給他的勝率低於 44%。',
+  'I also ran every other game from the Shanghai Cup and the league stage, 250 games in all, to see what that accuracy means against the field. It means less than it sounds: the median across every player was 96.9, and six players who played six or more games matched or beat his 98. Accuracy is not what separates him. Not losing is.':
+    '我也把上海盃和象甲這一階段的其他所有對局都跑了一遍，共 250 局，看看這個準確率放在整個賽場上意味著什麼。意味著的比聽起來少：所有棋手的中位數是 96.9，下了六局以上的棋手中有六位追平或超過他的 98。讓他與眾不同的不是準確率，是不輸。',
+  'Some context on the opposition, because the names will mean little outside China. Xiangqi does have ratings: the Chinese Xiangqi Association ran an Elo-style system for over forty years, with the very top players around 2750 to 2800, before retiring it in January 2026 in favour of a tournament-points ranking. The last list it published is from September 2023, so the numbers below are three years old and frozen, but they are the only official ones, and they show the field. Every rated opponent in the run stood above him on that list. Chen Shaobo, who he beat in the final, was too young to be on it at all.':
+    '說一下對手，因為這些名字在中國以外沒什麼人認識。象棋是有等級分的：中國象棋協會用了四十多年的 Elo 式等級分，頂尖棋手在 2750 到 2800 上下，2026 年 1 月改為競賽積分排名後廢止。它公佈的最後一期是 2023 年 9 月，所以下面的數字已經三年沒動過，但它們是僅有的官方數字，也能看出對手的份量。這段路上每一位有等級分的對手，在那份榜上都排在他前面。決賽裡被他擊敗的陳紹博，當時年紀太小，根本不在榜上。',
+  'Ratings and ranks from the Chinese Xiangqi Association list of 30 September 2023, the last one published. Results are from August 17 to September 16, 2026.':
+    '等級分與排名取自中國象棋協會 2023 年 9 月 30 日截止的最後一期榜單。戰績為 2026 年 8 月 17 日至 9 月 16 日。',
+  'How he plays': '他的棋風',
+  '**With red, he opens with a soldier.** Ten of his fifteen games as red begin by advancing the third or seventh soldier, the family of openings called "the immortal points the way," and four more by raising an elephant. Not once all month did he play the central cannon, the most direct opening in the game. He is not trying to win the opening; he is trying to reach a middlegame he understands.':
+    '**執紅先走兵。**他十五局紅棋裡有十局以兵三進一或兵七進一開局，也就是仙人指路一路，另有四局飛相。整整一個月沒有走過一次中炮，這個最直接的開局。他不想在開局贏棋，他想走進一個自己看得懂的中局。',
+  '**With black, the engine can barely mark him.** His median accuracy as black was 98.6, against 95.6 as red, and he made one mistake in sixteen games with the black pieces. All four of his blunders came with red, and three of those were in games he went on to win anyway. He errs when he is pressing, not when he is holding.':
+    '**執黑時，引擎幾乎挑不出毛病。**他執黑的準確率中位數是 98.6，執紅是 95.6；十六局黑棋只有一步錯著。四步漏著全部出在紅棋，其中三步出在他最終仍然贏下的對局裡。他出錯是在進攻的時候，不是在防守的時候。',
+  '**His draws are short and his wins are long.** Half of the twenty draws were over inside thirty moves, while the median win took fifty-two. In nine of the eleven wins, the other side made the first real mistake and the rest of the game was conversion. The other two he ground out against opponents the engine never faulted at all, over 52 and 84 moves of small edges.':
+    '**他的和棋短，勝局長。**二十局和棋有一半在三十回合內結束，而勝局的回合數中位數是五十二。十一局勝局裡有九局，是對方先犯下第一個真正的錯誤，剩下的只是兌現。另外兩局，對手在引擎眼裡沒有一步錯著，他靠一點點微弱優勢磨了 52 回合和 84 回合。',
+  '**In seventeen of the 31 games the engine found nothing on his side worth marking.** Across the whole month it found three brilliant moves, three great ones, one missed mate in one, and otherwise a player who simply does not give anything back.':
+    '**31 局裡有 17 局，引擎在他這一邊找不到任何值得標註的地方。**整個月它一共找到三步妙著、三步好棋、一次錯過的一步殺，除此之外，就是一個不把任何東西還給對手的棋手。',
+  'The league qualifier': '象甲預選賽',
+  "Hangzhou, August 17 to 19: two wins and three draws. The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's horse move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.":
+    '杭州，8 月 17 日至 19 日：兩勝三和。這段路從第一天開始，執黑對天津張瑞。張瑞第 21 回合的一步馬是引擎在全局唯一找到的錯著，尹昇又用了 38 個回合把它變成勝利。他多數勝局都是這個形狀：對方一個失誤，然後再也回不去。',
+  "Zhang Rui vs Yin Sheng, 17 August 2026. The board opens just after red's 21st move, with Yin Sheng to play as black.":
+    '張瑞 對 尹昇，2026 年 8 月 17 日。棋盤從紅方第 21 回合剛走完的局面開始，輪到執黑的尹昇。',
+  'The qualifier in the archive': '棋譜庫裡的預選賽',
+  'The Shanghai Cup': '上海盃',
+  "September 9 to 13, and he won it: six wins and eleven draws. A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's chariot move on move 20 is the only move that punishes it.":
+    '9 月 9 日至 13 日，他拿了冠軍：六勝十一和。淘汰賽加快棋加賽，所以五天能下十七局。其中七局對孟繁睿：六局和棋，一局長達 162 回合，還有這一局。第 19 回合雙方各推一步邊兵，兩步都是錯的，孟繁睿錯得更多，而尹昇第 20 回合的一步車是唯一能懲罰它的著法。',
+  "Yin Sheng vs Meng Fanrui, 11 September 2026. The board opens after black's 19th move, with the only winning reply for red still to find.":
+    '尹昇 對 孟繁睿，2026 年 9 月 11 日。棋盤從黑方第 19 回合走完的局面開始，紅方唯一的制勝應著還等著你去找。',
+  "Against Jin Bo, 88 moves. On move 30 he leaves a chariot where it can be taken, and the engine agrees it should be left there. Then, after black's 55th move, there is a mate in one on the board. He plays a cannon move instead, and wins 32 moves later. The board opens on that position; find the mate before you step forward.":
+    '對金波，88 回合。第 30 回合他把一隻車放在能被吃的地方，引擎認為就該放在那裡。然後，黑方第 55 回合走完，盤面上出現了一步殺。他卻走了一步炮，32 回合之後照樣贏了。棋盤就從那個局面開始；先找出殺著，再往下走。',
+  'Yin Sheng vs Jin Bo, 12 September 2026. Red to move, and there is a mate in one.':
+    '尹昇 對 金波，2026 年 9 月 12 日。輪到紅方，盤面上有一步殺。',
+  "The final against Chen Shaobo went to four games, three draws and this one. Chen's 22nd move gives up 14 points of winning chances, and Yin Sheng plays the rest of the game at 95 percent accuracy. There is no single killing move. He just does not give any of it back.":
+    '對陳紹博的決賽下了四局，三局和棋，加上這一局。陳紹博第 22 回合的一步棋讓出了 14 個百分點的勝率，之後尹昇以 95% 的準確率下完了全局。沒有哪一步是致命的。他只是什麼都不還給對手。',
+  "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The board opens after black's 22nd, the move the title game turned on.":
+    '尹昇 對 陳紹博，2026 年 9 月 13 日，決賽。棋盤從黑方第 22 回合走完的局面開始，這一步是這場冠軍之戰的轉折。',
+  'The Shanghai Cup in the archive': '棋譜庫裡的上海盃',
+  'The league, stage one': '象甲第一階段',
+  "Back in Hangzhou, September 14 to 16: three wins and six draws. This is the messy one. Against Chen Hongsheng, with black, the engine counts four blunders for red and one real mistake for Yin Sheng, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand the game over. It is on the page because the section above would otherwise give you the wrong idea of what these games look like from the inside.":
+    '回到杭州，9 月 14 日至 16 日：三勝六和。這是最亂的一局。執黑對陳泓盛，引擎給紅方記了四步漏著，給尹昇記了一步真正的錯著，局面來回搖擺了二十個回合，直到紅方第 39 和第 42 回合把棋送掉。把它放上來，是因為光看上面那一節，你會對這些棋從裡面看是什麼樣子產生錯誤的印象。',
+  "Chen Hongsheng vs Yin Sheng, 15 September 2026. The board opens after red's 39th, with black to move and the game turning.":
+    '陳泓盛 對 尹昇，2026 年 9 月 15 日。棋盤從紅方第 39 回合走完的局面開始，輪到黑方，棋局正在逆轉。',
+  'Stage one in the archive': '棋譜庫裡的第一階段',
+  "The league's second stage is in October, and the national individual championship, the title that decides who China's best player is, runs from November 21 to 29 in Changchun. In 2023, on the day he became a master, Yin Sheng said he would give himself five years to a real result there.":
+    '象甲第二階段在十月，而決定誰是中國第一的全國象棋個人賽，11 月 21 日至 29 日在長春舉行。2023 年拿到大師稱號的那天，尹昇說他會給自己五年時間，在個人賽上拿出一個像樣的成績。',
+  'All 31 games': '全部 31 局',
+  "Every game of the run is in a Mistboard study, with the engine's judgments and lines on each one, and the three events are in the broadcast archive. Game records from dpxq.com; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
+    '這段路上的每一局都在一份 Mistboard 研究裡，每局都帶引擎的判斷和變著；三項賽事都在直播棋譜庫裡。棋譜來自東萍象棋網；分析由皮卡魚經 Mistboard 的復盤流程完成，2026 年 9 月。',
+  'Open the study': '打開研究',
+  'The broadcast archive': '直播棋譜庫',
+  Rating: '等級分',
+  'Rank in China': '全國排名',
+  'Against Yin Sheng this run': '這段路上對尹昇',
+  'Meng Fanrui': '孟繁睿',
+  '1 win, 6 draws': '1 勝 6 和',
+  'Cao Yanlei': '曹岩磊',
+  '1 draw': '1 和',
+  'Xu Wenzhang': '许文章',
+  '2 draws': '2 和',
+  'Chen Hongsheng': '陈泓盛',
+  '1 win, 1 draw': '1 勝 1 和',
+  'Huang Guangying': '黄光颖',
+  'He Wenzhe': '何文哲',
+  '2 wins': '2 勝',
+  'Jin Bo': '金波',
+  'Liu Bohong': '刘柏宏',
+  'Jin Yuyan': '靳玉砚',
+  '1 win': '1 勝',
+  'Yin Sheng': '尹昇',
+  '11 wins, 20 draws, no losses': '11 勝 20 和 0 負',
+  '2026 League, stage one': '2026 象甲第一階段',
+  '2026 Shanghai Cup': '2026 上海盃',
+  '2026 Shanghai Cup, final': '2026 上海盃決賽',
+  '2026 League qualifier, Hangzhou': '2026 象甲預選賽，杭州',
   // Traditional starts from the complete Simplified key set, then every
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.

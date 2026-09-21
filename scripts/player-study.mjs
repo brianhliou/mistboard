@@ -68,7 +68,9 @@ const YEAR_FIX = Object.fromEntries(
 );
 
 if (!DIR || !PLAYER || !STUDY_NAME) {
-  console.error('usage: player-study.mjs --dir <annotate-json dir> --player <zh name> --name <study name> [--names names.json] [--glyphs reviewed-positives.json] [--year-fix 2029=2026] [--create | --update <id>] [--cookie path] [--public]');
+  console.error(
+    'usage: player-study.mjs --dir <annotate-json dir> --player <zh name> --name <study name> [--names names.json] [--glyphs reviewed-positives.json] [--year-fix 2029=2026] [--create | --update <id>] [--cookie path] [--public]',
+  );
   process.exit(1);
 }
 
@@ -79,7 +81,11 @@ if (!DIR || !PLAYER || !STUDY_NAME) {
  * for a player whose name converts (Hong Kong, Taiwan, Macau, Vietnam).
  */
 const NAMES = argOf('names') ? JSON.parse(readFileSync(argOf('names'), 'utf8')) : {};
-const lastToken = (raw) => String(raw ?? '').trim().split(/\s+/).at(-1) ?? '';
+const lastToken = (raw) =>
+  String(raw ?? '')
+    .trim()
+    .split(/\s+/)
+    .at(-1) ?? '';
 function zhOf(raw) {
   for (const zh of Object.keys(NAMES)) if (String(raw ?? '').includes(zh)) return zh;
   return lastToken(raw);
@@ -205,7 +211,9 @@ function buildTree(iccs, byPly) {
 }
 
 function fixDate(raw) {
-  const date = String(raw ?? '').slice(0, 10).replace(/-00$/, '');
+  const date = String(raw ?? '')
+    .slice(0, 10)
+    .replace(/-00$/, '');
   const year = date.slice(0, 4);
   return YEAR_FIX[year] ? `${YEAR_FIX[year]}${date.slice(4)}` : date;
 }
@@ -249,7 +257,10 @@ const chapterName = (g) => `${g.date} · ${enOf(g.red)} vs ${enOf(g.black)} · $
 
 function chapterFor(g) {
   const i18n = {};
-  for (const [locale, script] of [['zh-Hans', 'hans'], ['zh-Hant', 'hant']]) {
+  for (const [locale, script] of [
+    ['zh-Hans', 'hans'],
+    ['zh-Hant', 'hant'],
+  ]) {
     i18n[locale] = {
       name: `${g.date} · ${zhScript(g.red, script)} 对 ${zhScript(g.black, script)} · ${g.result}`,
       tags: { red: zhScript(g.red, script), black: zhScript(g.black, script), event: g.event },
@@ -360,7 +371,9 @@ async function main() {
       `${chapterName(g).padEnd(48)} ${String(g.plies).padStart(3)} plies, ${String(lines).padStart(2)} lines, ${translated}/${comments} translated, ${g.side}`,
     );
   }
-  console.log(`\n${games.length} chapters, ${totalTranslated}/${totalComments} comments translated`);
+  console.log(
+    `\n${games.length} chapters, ${totalTranslated}/${totalComments} comments translated`,
+  );
 
   if (!CREATE && !UPDATE) {
     console.log('dry run. --create writes a new unlisted study, --update <id> syncs one.');

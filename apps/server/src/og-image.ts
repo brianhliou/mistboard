@@ -551,7 +551,11 @@ async function renderYinShengOgSvg(title: string, ctx: ArticleOgContext): Promis
   const artH = 420;
   const artY = 36;
   const artX = (OG_WIDTH - artW) / 2;
-  const uri = await fileDataUri(ctx.staticDir, 'article-thumbs/yin-sheng-2022-face.jpg', 'image/jpeg');
+  const uri = await fileDataUri(
+    ctx.staticDir,
+    'article-thumbs/yin-sheng-2022-face.jpg',
+    'image/jpeg',
+  );
   return [
     `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
     `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
