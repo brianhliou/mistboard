@@ -73,7 +73,7 @@ Conventions:
 
 ### Site
 
-- The homepage's event spotlight lists broadcasts on its own: a tour that is live, starting within two weeks, under way, or finished in the last week gets a row linking to its broadcast page, so an event no longer depends on someone editing the homepage ([7564fcbd](https://github.com/brianhliou/mistboard/commit/7564fcbd))
+- The homepage's event spotlight lists broadcasts on its own: a tour that is live, starting within two weeks, under way, or finished in the last week gets a row linking to its broadcast page, so an event no longer depends on someone editing the homepage. It sits under the games-played line in the play column, level with the bottom of the lobby panel ([7564fcbd](https://github.com/brianhliou/mistboard/commit/7564fcbd), [76e161b4](https://github.com/brianhliou/mistboard/commit/76e161b4))
 - The homepage has a two-column layout between 960 and 1240px wide (lobby, forum and chat beside a rail with Play, the viewer, the daily puzzle and Top studies), instead of dropping from three columns to one narrow column ([109eeaf8](https://github.com/brianhliou/mistboard/commit/109eeaf8))
 - Patron support takes a one-time payment as well as a monthly subscription, over the same $5/10/20/50 amounts; a one-time payment carries the badge for one month per $5, and Stripe Checkout offers Alipay and WeChat Pay on it, so a mainland Chinese player can pay without a card ([17616293](https://github.com/brianhliou/mistboard/commit/17616293))
 - An Atomic Xiangqi game's link preview shows the game's turning point once it has been analysed, not only the final position ([d6ea0745](https://github.com/brianhliou/mistboard/commit/d6ea0745))
