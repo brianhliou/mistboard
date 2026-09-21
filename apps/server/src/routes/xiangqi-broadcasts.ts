@@ -10,6 +10,11 @@ import {
 } from '@mistboard/game';
 import * as persistence from './../persistence.js';
 import {
+  type BroadcastLiveEval,
+  cachedBroadcastLiveEval,
+  requestBroadcastLiveEvalForBoard,
+} from './../xiangqi-broadcast-live-eval.js';
+import {
   pollXiangqiBroadcastSourceOnce,
   type XiangqiBroadcastPollResult,
 } from './../xiangqi-broadcast-poller.js';
@@ -489,20 +494,32 @@ export async function xiangqiBroadcastRoundStreamForApi(
   };
 }
 
+/** Cached live-engine eval for a board at a ply; injectable for tests. */
+export type XiangqiBroadcastLiveEvalLookup = (
+  boardId: string,
+  plyCount: number,
+) => BroadcastLiveEval | null;
+
 export async function xiangqiBroadcastBoardForApi(
   boardId: string,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
+  liveEval: XiangqiBroadcastLiveEvalLookup = cachedBroadcastLiveEval,
 ) {
   const board = await deps.getXiangqiBroadcastBoard(boardId);
   if (!board) return null;
-  return buildXiangqiBroadcastBoardReplay(board);
+  const replay = buildXiangqiBroadcastBoardReplay(board);
+  // Only a live board carries the server eval: a finished one is a review
+  // page with its own engine, and a scheduled one has no position yet.
+  const evaluation = board.status === 'live' ? liveEval(board.id, board.plyCount) : null;
+  return { ...replay, ...(evaluation ? { liveEval: evaluation } : {}) };
 }
 
 export async function xiangqiBroadcastBoardStreamForApi(
   boardId: string,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
+  liveEval: XiangqiBroadcastLiveEvalLookup = cachedBroadcastLiveEval,
 ) {
-  const payload = await xiangqiBroadcastBoardForApi(boardId, deps);
+  const payload = await xiangqiBroadcastBoardForApi(boardId, deps, liveEval);
   if (!payload) return null;
   return {
     version: versionKey([
@@ -512,6 +529,9 @@ export async function xiangqiBroadcastBoardStreamForApi(
       payload.board.status,
       payload.board.result,
       payload.state.status.type,
+      // A fresh eval for the current ply is a change worth a push of its own.
+      payload.liveEval?.ply,
+      payload.liveEval?.nodes,
     ]),
     payload,
   };
@@ -867,6 +887,12 @@ export async function tryHandle(
     if (!initial) {
       writeJson(response, 404, { error: 'not_found' });
       return true;
+    }
+    // A viewer who arrives between polls still gets a number: the scheduler
+    // only evaluates when a poll changes a board, so an uncached live head is
+    // searched on stream open and the stream pushes it when the cache fills.
+    if (initial.payload.board.status === 'live' && !initial.payload.liveEval) {
+      void requestBroadcastLiveEvalForBoard(boardId);
     }
     streamSnapshotEvents(request, response, {
       event: 'board',

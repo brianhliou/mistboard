@@ -686,6 +686,112 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     ]);
   });
 
+  // The server's Pikafish read of the head position, Red POV, our squares.
+  // After red's cannon move Black is to move, so the lines are Black's picks.
+  const LIVE_EVAL = {
+    ply: 1,
+    nodes: 300_000,
+    depth: 14,
+    cp: -20,
+    mate: null,
+    lines: [
+      { move: 'h10g8', cp: -20, mate: null, pv: ['h10g8', 'b1c3', 'h8e8'] },
+      { move: 'b10c8', cp: -12, mate: null, pv: ['b10c8', 'h1g3'] },
+      { move: 'a10a9', cp: 40, mate: null, pv: ['a10a9'] },
+    ],
+  };
+
+  it('renders the eval bar, the engine lines, and arrows at the head from the live eval', async () => {
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/')
+        ? { ...BOARD_RESPONSE, liveEval: LIVE_EVAL }
+        : ROUND,
+    );
+    stubEventSource();
+    window.history.replaceState(null, '', '/broadcast/xiangqi/board/t-r-b1');
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b1');
+
+    // Gauge beside the board, filled from Red's win probability (Black ahead: under half).
+    const gauge = root.querySelector(
+      '.xqb-board-stage-with-gauge .xqb-eval-gauge .review-eval-bar',
+    );
+    expect(gauge).not.toBeNull();
+    const fill = gauge?.querySelector<HTMLElement>('.review-eval-bar__fill');
+    expect(Number.parseFloat(fill?.style.height ?? '')).toBeLessThan(50);
+
+    // Compact panel: headline, engine name and depth, three formatted lines.
+    const panel = root.querySelector('.xqb-engine');
+    expect(panel?.querySelector('.xqb-engine-eval')?.textContent).toBe('-0.2');
+    expect(panel?.querySelector('.xqb-engine-sub')?.textContent).toBe('Pikafish, depth 14');
+    const lines = [...(panel?.querySelectorAll('.xqb-engine-line') ?? [])];
+    expect(lines.map((line) => line.querySelector('.xqb-engine-line-eval')?.textContent)).toEqual([
+      '-0.2',
+      '-0.1',
+      '+0.4',
+    ]);
+    expect(lines[0]?.querySelector('.xqb-engine-line-pv')?.textContent).toBe('h10-g8 b1-c3 h8-e8');
+    // At the head: no live tag, and the top lines draw as arrows.
+    expect(panel?.querySelector<HTMLElement>('.xqb-engine-live-tag')?.hidden).toBe(true);
+    const arrows = root.querySelectorAll('.xqb-board-frame .xq-live-arrows .xq-arrow');
+    expect(arrows.length).toBeGreaterThan(0);
+    expect(root.querySelector('.xq-arrow--pv1')).not.toBeNull();
+    // Arrows are drawn in our squares: PV1 runs h10 -> g8 (not Pikafish's h9g7).
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('hides the arrows and shows the live tag when the viewer scrolls back from the head', async () => {
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/')
+        ? { ...BOARD_RESPONSE, liveEval: LIVE_EVAL }
+        : ROUND,
+    );
+    stubEventSource();
+    window.history.replaceState(null, '', '/broadcast/xiangqi/board/t-r-b1');
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastBoard(root, 't-r-b1');
+    const prev = [...root.querySelectorAll<HTMLButtonElement>('.xqb-control')].find(
+      (button) => button.textContent === 'Prev',
+    );
+    prev?.click();
+
+    expect(root.querySelector('.xqb-ply-label')?.textContent).toBe('0 / 1');
+    expect(root.querySelectorAll('.xqb-board-frame .xq-arrow').length).toBe(0);
+    // The gauge and the panel keep the HEAD eval, flagged as the live position.
+    expect(root.querySelector('.xqb-eval-gauge .review-eval-bar')).not.toBeNull();
+    expect(root.querySelector('.xqb-engine-eval')?.textContent).toBe('-0.2');
+    expect(root.querySelector<HTMLElement>('.xqb-engine-live-tag')?.hidden).toBe(false);
+    expect(root.querySelector('.xqb-engine')?.classList.contains('xqb-engine-behind-head')).toBe(
+      true,
+    );
+    window.history.replaceState(null, '', '/');
+  });
+
+  it('ignores a live eval for a ply that is not the head, and renders no engine layer without one', async () => {
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/')
+        ? { ...BOARD_RESPONSE, liveEval: { ...LIVE_EVAL, ply: 0 } }
+        : ROUND,
+    );
+    stubEventSource();
+    const stale = document.createElement('div');
+    await mountXiangqiBroadcastBoard(stale, 't-r-b1');
+    expect(stale.querySelector('.xqb-engine')).toBeNull();
+    expect(stale.querySelector('.xqb-eval-gauge')).toBeNull();
+    expect(stale.querySelectorAll('.xq-arrow').length).toBe(0);
+
+    stubFetchJson((url) =>
+      url.includes('/api/xiangqi/broadcasts/boards/') ? BOARD_RESPONSE : ROUND,
+    );
+    const plain = document.createElement('div');
+    await mountXiangqiBroadcastBoard(plain, 't-r-b1');
+    expect(plain.querySelector('.xqb-engine')).toBeNull();
+    expect(plain.querySelector('.xqb-board-stage-with-gauge')).toBeNull();
+    expect(plain.querySelector('.xqb-board-frame')).not.toBeNull();
+  });
+
   it('renders the board without a rail when the round context fetch fails', async () => {
     vi.stubGlobal(
       'fetch',

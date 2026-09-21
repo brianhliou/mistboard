@@ -99,11 +99,12 @@ const NON_SELECTABLE_RIVER_ATTRS =
 // ── Rendering ────────────────────────────────────────────────────────────────
 
 /** Render-only board SVG (no click layer). Reused by postgame / replay /
- *  broadcast / analysis-review surfaces. */
+ *  broadcast / analysis-review surfaces. Arrows and markers ride along for a
+ *  read-only board that still shows engine lines (the live broadcast board). */
 export function renderXiangqiBoardSvg(
   view: StandardXiangqiPlayerView,
   perspective: XiangqiColor = view.perspective,
-  options: Pick<XiangqiBoardSvgState, 'layout' | 'coordinates'> = {},
+  options: Pick<XiangqiBoardSvgState, 'layout' | 'coordinates' | 'arrows' | 'markers'> = {},
 ): string {
   return xiangqiBoardSvg(view, perspective, {
     interactive: false,

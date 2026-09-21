@@ -250,6 +250,10 @@ export const EN_REVIEW = {
   'broadcast.round': 'Round',
   'broadcast.date': 'Date',
   'broadcast.awaitingRecords': 'Awaiting records',
+  // Live board engine layer: the server's Pikafish read of the head position.
+  'broadcast.engine': 'Engine',
+  'broadcast.engineDepth': '{name}, depth {depth}',
+  'broadcast.engineLivePosition': 'live position',
   // /practice, the shelf of engine-adjudicated exercise sets. The card titles
   // are NOT here: a card names a study, and a study carries its own per-locale
   // text (study-i18n.ts). These are the chrome around them, plus the section

@@ -21,6 +21,11 @@ import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale } from './i18n/locale.js';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
+import type { CevalLine } from './review/engine/ceval-types.js';
+import { engineArrowsFromLines } from './review/engine/engine-arrows.js';
+import { createEvalBar } from './review/engine/eval-bar.js';
+import { formatEval } from './review/engine/eval-format.js';
+import { formatXiangqiEngineMove } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -64,6 +69,25 @@ type BroadcastBoardSummary = {
   updatedAt?: string;
 };
 
+// The server's Pikafish read of a LIVE board's head position, Red POV, moves
+// in our square notation (`h3e3`, the browser engine's dialect). Present only
+// while the board is live and only once the server has searched this ply.
+type BroadcastLiveEvalLine = {
+  move: string;
+  cp: number | null;
+  mate: number | null;
+  pv: string[];
+};
+
+type BroadcastLiveEval = {
+  ply: number;
+  nodes: number;
+  depth: number;
+  cp: number | null;
+  mate: number | null;
+  lines: BroadcastLiveEvalLine[];
+};
+
 type BroadcastBoardResponse = {
   board: BroadcastBoardSummary & {
     finalStatus?: XiangqiGameStatus;
@@ -76,6 +100,7 @@ type BroadcastBoardResponse = {
   view: StandardXiangqiPlayerView;
   views: { truth: StandardXiangqiPlayerView };
   history: { truth: BroadcastHistorySnapshot[] };
+  liveEval?: BroadcastLiveEval;
 };
 
 // Per-round board counts computed by the server; they drive the status icons
@@ -1047,6 +1072,14 @@ function renderBoardReplay(
   const maxPly = frames.length - 1;
   const moveByPly = new Map(data.timeline.map((entry) => [entry.ply, entry.move]));
   let cursor = clamp(initialPlyFromUrl(), 0, maxPly);
+  // The server eval is for the HEAD position only. A stale one (the payload
+  // gained a ply the engine has not searched yet) says nothing about the
+  // board on screen, so it is dropped until the next push carries a fresh one.
+  const liveEval =
+    data.board.status !== 'complete' && data.liveEval && data.liveEval.ply === maxPly
+      ? data.liveEval
+      : null;
+  const liveArrows = liveEval ? engineArrowsFromLines(cevalLinesFromLiveEval(liveEval)) : [];
 
   document.title = `${playerName(data.board.red)} vs ${playerName(data.board.black)} · Mistboard`;
   const redZh = playerNameZh(data.board.red);
@@ -1081,6 +1114,20 @@ function renderBoardReplay(
   const boardFrame = document.createElement('div');
   boardFrame.className = 'xqb-board-frame xiangqi-live-board';
   boardFrame.setAttribute('aria-label', t('broadcast.boardAriaLabel'));
+  // The board sits in a stage so the eval gauge can take a column beside it
+  // (the review's gauge mode: a flow child, not an overlay to align).
+  const boardStage = document.createElement('div');
+  boardStage.className = 'xqb-board-stage';
+  if (liveEval) {
+    const gauge = document.createElement('div');
+    gauge.className = 'xqb-eval-gauge';
+    const bar = createEvalBar();
+    bar.setEval(liveEval.cp, liveEval.mate);
+    gauge.append(bar.el);
+    boardStage.classList.add('xqb-board-stage-with-gauge');
+    boardStage.append(gauge);
+  }
+  boardStage.append(boardFrame);
 
   const controls = document.createElement('div');
   controls.className = 'xqb-controls';
@@ -1096,10 +1143,15 @@ function renderBoardReplay(
   boardMeta.className = 'xqb-board-meta';
   boardMeta.append(playerPanel(t('setup.red'), data.board.red, data.board.result === '1-0'));
   boardMeta.append(playerPanel(t('setup.black'), data.board.black, data.board.result === '0-1'));
-  boardPanel.append(boardFrame, controls, boardMeta);
+  boardPanel.append(boardStage, controls, boardMeta);
 
   const movesPanel = document.createElement('aside');
   movesPanel.className = 'xqb-moves-panel';
+  // Engine lines above the moves, where lichess keeps its ceval: every viewer
+  // reads the same server numbers, and a viewer scrolled back is told they
+  // belong to the live position rather than the one on screen.
+  const enginePanel = liveEval ? renderLiveEnginePanel(liveEval) : null;
+  if (enginePanel) movesPanel.append(enginePanel.el);
   const moveHeading = document.createElement('h2');
   moveHeading.textContent = t('broadcast.moves');
   const moveList = document.createElement('div');
@@ -1145,7 +1197,13 @@ function renderBoardReplay(
 
   function renderCursor(): void {
     const frame = frames[cursor] ?? frames[frames.length - 1]!;
-    boardFrame.innerHTML = renderXiangqiBoardSvg(frame.view, 'red');
+    // Engine arrows belong to the head position; a viewer scrolled back sees
+    // the plain board, and the panel's live tag says the numbers are the head's.
+    const atHead = cursor === maxPly;
+    boardFrame.innerHTML = renderXiangqiBoardSvg(frame.view, 'red', {
+      arrows: atHead ? liveArrows : [],
+    });
+    enginePanel?.setAtHead(atHead);
     plyLabel.textContent = `${cursor} / ${maxPly}`;
     first.disabled = cursor === 0;
     prev.disabled = cursor === 0;
@@ -1176,6 +1234,87 @@ function renderBoardReplay(
     }
   }
   return main;
+}
+
+// The arrow builder ranks lines by how much each gives up against the best,
+// which only works in the mover's POV: in Red POV the best line for Black to
+// move is the LOWEST number and every alternate would be dropped as "better
+// than PV1". Red moves first, so Black is to move after an odd ply.
+function cevalLinesFromLiveEval(evaluation: BroadcastLiveEval): CevalLine[] {
+  const sign = evaluation.ply % 2 === 0 ? 1 : -1;
+  return evaluation.lines.map((line, index) => ({
+    multipv: index + 1,
+    depth: evaluation.depth,
+    scoreCp: line.cp == null ? null : line.cp * sign,
+    mate: line.mate == null ? null : line.mate * sign,
+    pvUci: line.pv,
+  }));
+}
+
+// Chip tone by who is ahead, Red POV, the engine panel's palette.
+function liveEvalTone(cp: number | null, mate: number | null): string {
+  const value = mate != null ? (mate > 0 ? 1 : -1) : (cp ?? 0) / 100;
+  if (value > 0.15) return 'is-red';
+  if (value < -0.15) return 'is-black';
+  return 'is-even';
+}
+
+type LiveEnginePanel = {
+  el: HTMLElement;
+  /** Show the "live" tag when the viewer is NOT at the head: the numbers are
+   *  the live position's, not the one on screen. */
+  setAtHead(atHead: boolean): void;
+};
+
+// A compact, read-only cousin of the review's engine panel: headline eval,
+// engine name and depth, then the ranked lines. No switch, no settings: the
+// search ran on the server and every viewer sees the same result.
+function renderLiveEnginePanel(evaluation: BroadcastLiveEval): LiveEnginePanel {
+  const el = document.createElement('section');
+  el.className = 'xqb-engine';
+  el.setAttribute('aria-label', t('broadcast.engine'));
+
+  const head = document.createElement('div');
+  head.className = 'xqb-engine-head';
+  const headline = document.createElement('span');
+  headline.className = `xqb-engine-eval ${liveEvalTone(evaluation.cp, evaluation.mate)}`;
+  headline.textContent = formatEval(evaluation.cp, evaluation.mate);
+  const id = document.createElement('span');
+  id.className = 'xqb-engine-id';
+  const name = document.createElement('strong');
+  name.textContent = t('broadcast.engine');
+  const sub = document.createElement('span');
+  sub.className = 'xqb-engine-sub';
+  sub.textContent = t('broadcast.engineDepth', { name: 'Pikafish', depth: evaluation.depth });
+  id.append(name, sub);
+  const liveTag = document.createElement('span');
+  liveTag.className = 'xqb-engine-live-tag';
+  liveTag.textContent = t('broadcast.engineLivePosition');
+  liveTag.hidden = true;
+  head.append(headline, id, liveTag);
+
+  const lines = document.createElement('ol');
+  lines.className = 'xqb-engine-lines';
+  for (const line of evaluation.lines) {
+    const item = document.createElement('li');
+    item.className = 'xqb-engine-line';
+    const score = document.createElement('span');
+    score.className = `xqb-engine-line-eval ${liveEvalTone(line.cp, line.mate)}`;
+    score.textContent = formatEval(line.cp, line.mate);
+    const pv = document.createElement('span');
+    pv.className = 'xqb-engine-line-pv';
+    pv.textContent = line.pv.slice(0, 8).map(formatXiangqiEngineMove).join(' ');
+    item.append(score, pv);
+    lines.append(item);
+  }
+  el.append(head, lines);
+  return {
+    el,
+    setAtHead(atHead) {
+      liveTag.hidden = atHead;
+      el.classList.toggle('xqb-engine-behind-head', !atHead);
+    },
+  };
 }
 
 function broadcastShell(): HTMLElement {
@@ -1675,6 +1814,8 @@ export function formatBroadcastFreshness(
   }).format(then);
 }
 
+// Mirrors the server's board stream version key, so the stream's first event
+// (the same snapshot the page fetched) is recognised as already painted.
 function boardVersion(data: BroadcastBoardResponse): string {
   return streamVersion([
     data.board.id,
@@ -1683,6 +1824,8 @@ function boardVersion(data: BroadcastBoardResponse): string {
     data.board.status,
     data.board.result,
     data.state.status.type,
+    data.liveEval?.ply,
+    data.liveEval?.nodes,
   ]);
 }
 

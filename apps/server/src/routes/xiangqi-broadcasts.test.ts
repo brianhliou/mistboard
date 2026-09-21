@@ -733,6 +733,51 @@ test('broadcast board stream version changes when persisted state changes', asyn
   assert.equal(next.payload.timeline.length, 2);
 });
 
+test('broadcast board payload carries the live eval only for a live board, and it bumps the stream version', async () => {
+  const liveBoard: StoredXiangqiBroadcastBoard = {
+    ...storedBoard,
+    status: 'live',
+    result: '*',
+    moves: storedBoard.moves.slice(0, 2),
+    plyCount: 2,
+  };
+  const liveDeps = deps({
+    getXiangqiBroadcastBoard: async (boardId) => (boardId === board.id ? liveBoard : null),
+  });
+  const evaluation = {
+    ply: 2,
+    nodes: 300_000,
+    depth: 14,
+    cp: 35,
+    mate: null,
+    lines: [{ move: 'b1c3', cp: 35, mate: null, pv: ['b1c3', 'b10c8'] }],
+  };
+  const lookups: Array<[string, number]> = [];
+  const lookup = (boardId: string, plyCount: number) => {
+    lookups.push([boardId, plyCount]);
+    return plyCount === 2 ? evaluation : null;
+  };
+
+  // Nothing cached yet: no field, and the version does not mention an eval.
+  const before = await xiangqiBroadcastBoardStreamForApi(board.id, liveDeps, () => null);
+  assert.ok(before);
+  assert.equal(Object.hasOwn(before.payload, 'liveEval'), false);
+
+  // The eval lands for the same persisted state: the payload carries it and
+  // the version moves, so the stream pushes it on its own.
+  const after = await xiangqiBroadcastBoardStreamForApi(board.id, liveDeps, lookup);
+  assert.ok(after);
+  assert.deepEqual(lookups, [[board.id, 2]]);
+  assert.deepEqual(after.payload.liveEval, evaluation);
+  assert.notEqual(after.version, before.version);
+  assert.equal(after.payload.timeline.length, 2);
+
+  // A finished board never asks the cache, whatever it holds.
+  const complete = await xiangqiBroadcastBoardForApi(board.id, deps(), () => evaluation);
+  assert.ok(complete);
+  assert.equal(Object.hasOwn(complete, 'liveEval'), false);
+});
+
 test('broadcast board export returns canonical coordinate JSON', async () => {
   const payload = await xiangqiBroadcastBoardExportForApi(board.id, deps());
 

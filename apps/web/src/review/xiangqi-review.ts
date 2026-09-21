@@ -201,8 +201,9 @@ function xiangqiOpeningExplorer(): NonNullable<XiangqiReviewConfig['explorer']> 
 }
 
 // Fairy-Stockfish xiangqi UCI back to our `from-to` notation for readable PV
-// lines. FSF is 1-indexed like us, so this is a plain square split.
-function formatXiangqiEngineMove(uci: string): string {
+// lines. FSF is 1-indexed like us, so this is a plain square split. Shared with
+// the live broadcast engine panel, whose server lines use the same dialect.
+export function formatXiangqiEngineMove(uci: string): string {
   const squares = fsfUciToXiangqiSquares(uci);
   return squares ? `${squares.from}-${squares.to}` : uci;
 }
