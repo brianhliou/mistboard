@@ -11,11 +11,11 @@ import {
   type XiangqiBroadcastPollResult,
 } from './../xiangqi-broadcast-poller.js';
 import { clampXiangqiBroadcastScheduleIntervalMs } from './../xiangqi-broadcast-scheduler.js';
-import { type BroadcastViewerRegistry, broadcastViewers } from './../xiangqi-broadcast-viewers.js';
 import {
   buildXiangqiBroadcastBoardReplay,
   finalXiangqiBoardView,
 } from './../xiangqi-broadcast-serving.js';
+import { type BroadcastViewerRegistry, broadcastViewers } from './../xiangqi-broadcast-viewers.js';
 import {
   type HttpApiContext,
   readJsonBody,
