@@ -420,3 +420,18 @@ function collectKeys(value: unknown, keys = new Set<string>()): Set<string> {
   }
   return keys;
 }
+
+test('the operations section carries the broadcast viewer peak only when the runtime has one', () => {
+  const without = renderMistboardReadoutMarkdown(reportWith(emptyFacts));
+  assert.doesNotMatch(without, /Broadcast viewers/);
+
+  const report = buildMistboardReadout({
+    snapshotId: 'readout_viewers',
+    trigger: 'weekly',
+    now: new Date('2026-07-20T17:23:00Z'),
+    runtime: { ...runtime, broadcastViewersPeak: 14 },
+    facts: emptyFacts,
+  });
+  assert.equal(report.production.broadcastViewersPeak, 14);
+  assert.match(renderMistboardReadoutMarkdown(report), /Broadcast viewers: peak 14 open streams/);
+});

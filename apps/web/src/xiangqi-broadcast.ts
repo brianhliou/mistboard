@@ -17,7 +17,9 @@ import {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import './xiangqi-broadcast.css';
+import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';
+import { currentLocale } from './i18n/locale.js';
 import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
@@ -145,10 +147,26 @@ type BroadcastStreamEnvelope<T> = {
   payload: T;
 };
 
+// One `broadcast_opened` per mount, fired once the page has data to describe
+// itself with. SSE repaints and the appearance refresh never fire it again, and
+// a live board that finishes hands off to the review page, which fires its own
+// `review_opened`; this event is not repeated there.
+type BroadcastOpenedProps = {
+  surface: 'index' | 'tour' | 'round' | 'board';
+  tour_slug?: string;
+  round_id?: string;
+  board_status?: XiangqiBroadcastBoardStatus;
+};
+
+function trackBroadcastOpened(props: BroadcastOpenedProps): void {
+  track('broadcast_opened', { ...props, locale: currentLocale() });
+}
+
 export async function mountXiangqiBroadcastIndex(root: HTMLElement): Promise<void> {
   setBroadcastRoot(root, t('broadcast.loadingBroadcasts'));
   try {
     const data = await fetchJson<BroadcastIndexResponse>('/api/xiangqi/broadcasts');
+    trackBroadcastOpened({ surface: 'index' });
     const paint = (): void => root.replaceChildren(buildNav(), renderIndex(data));
     paint();
     installBroadcastAppearanceRefresh(paint);
@@ -172,6 +190,7 @@ export async function mountXiangqiBroadcastTour(
     );
     const round = defaultRound(data.rounds);
     if (!round) {
+      trackBroadcastOpened({ surface: 'tour', tour_slug: tourSlug });
       const paint = (): void =>
         root.replaceChildren(
           buildNav(),
@@ -181,7 +200,7 @@ export async function mountXiangqiBroadcastTour(
       installBroadcastAppearanceRefresh(paint);
       return;
     }
-    await mountRoundPage(root, tourSlug, round.id);
+    await mountRoundPage(root, tourSlug, round.id, 'tour');
   } catch (err) {
     renderError(root, err);
   }
@@ -194,7 +213,7 @@ export async function mountXiangqiBroadcastRound(
 ): Promise<void> {
   setBroadcastRoot(root, t('broadcast.loadingRound'));
   try {
-    await mountRoundPage(root, tourSlug, roundId);
+    await mountRoundPage(root, tourSlug, roundId, 'round');
   } catch (err) {
     renderError(root, err);
   }
@@ -233,10 +252,16 @@ type EventPageState = {
   loadStandings?: () => void;
 };
 
-async function mountRoundPage(root: HTMLElement, tourSlug: string, roundId: string): Promise<void> {
+async function mountRoundPage(
+  root: HTMLElement,
+  tourSlug: string,
+  roundId: string,
+  surface: 'tour' | 'round',
+): Promise<void> {
   let data = await fetchJson<BroadcastRoundResponse>(
     `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}/rounds/${encodeURIComponent(roundId)}`,
   );
+  trackBroadcastOpened({ surface, tour_slug: tourSlug, round_id: roundId });
   // Every stream push repaints the whole round, and a card is expensive:
   // boardCard replays its game from move one and builds a board SVG. Twenty
   // boards is ~1,700 plies, so rebuilding all of them per push blocks the
@@ -300,6 +325,12 @@ export async function mountXiangqiBroadcastBoard(
       `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}`,
     );
     const context = await fetchBoardRoundContext(data.board.tourSlug, data.board.roundId);
+    trackBroadcastOpened({
+      surface: 'board',
+      tour_slug: data.board.tourSlug,
+      round_id: data.board.roundId,
+      board_status: data.board.status,
+    });
     // A finished game is a game to study, so it gets the same review surface as
     // an archive game (engine, chart, notation, share); a live one keeps the
     // streaming replay, which follows the head as moves arrive.

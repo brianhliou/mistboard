@@ -32,6 +32,7 @@ import {
 } from './server-static-pages.js';
 import type { LobbyTicket, Room } from './server-types.js';
 import { viewerCountryCookie, viewerCountryFromRequest } from './viewer-country.js';
+import { broadcastViewers } from './xiangqi-broadcast-viewers.js';
 
 export type PersistenceHealthEntry = {
   at: number;
@@ -694,6 +695,7 @@ function buildApiContext(options: ServerHttpHandlerOptions): HttpApiContext {
     activeGameCount: options.drainController.activeGameCount,
     deployGateCensus: options.drainController.deployGateCensus,
     persistenceHealth: () => currentPersistenceHealth(options.persistenceErrors),
+    broadcastViewers: () => broadcastViewers.stats(),
   };
 }
 

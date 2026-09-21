@@ -14,6 +14,7 @@ import {
   type XiangqiBroadcastPollResult,
 } from './../xiangqi-broadcast-poller.js';
 import { clampXiangqiBroadcastScheduleIntervalMs } from './../xiangqi-broadcast-scheduler.js';
+import { type BroadcastViewerRegistry, broadcastViewers } from './../xiangqi-broadcast-viewers.js';
 import {
   type HttpApiContext,
   readJsonBody,
@@ -707,19 +708,24 @@ function writeSseEvent<T>(
   response.write(`data: ${JSON.stringify(envelope)}\n\n`);
 }
 
-function streamSnapshotEvents<T>(
+// Exported for the viewer-census test; the routes below are its only callers.
+export function streamSnapshotEvents<T>(
   request: IncomingMessage,
   response: ServerResponse,
   input: {
     event: string;
+    /** `board:<id>` / `round:<tour>/<round>`: the viewer registry's key. */
+    streamKey: string;
     pollMs: number;
     initial: BroadcastStreamEnvelope<T>;
     load(): Promise<BroadcastStreamEnvelope<T> | null>;
+    viewers?: BroadcastViewerRegistry;
   },
 ): void {
   let closed = false;
   let polling = false;
   let lastVersion = input.initial.version;
+  const releaseViewer = (input.viewers ?? broadcastViewers).open(input.streamKey);
 
   response.writeHead(200, {
     'content-type': 'text/event-stream; charset=utf-8',
@@ -756,6 +762,7 @@ function streamSnapshotEvents<T>(
   const close = () => {
     closed = true;
     clearInterval(interval);
+    releaseViewer();
   };
   request.on('close', close);
   response.on('close', close);
@@ -863,6 +870,7 @@ export async function tryHandle(
     }
     streamSnapshotEvents(request, response, {
       event: 'board',
+      streamKey: `board:${boardId}`,
       pollMs: parseEventPollMs(_parsedUrl),
       initial,
       load: () => xiangqiBroadcastBoardStreamForApi(boardId),
@@ -913,6 +921,7 @@ export async function tryHandle(
     }
     streamSnapshotEvents(request, response, {
       event: 'round',
+      streamKey: `round:${tourSlug}/${roundId}`,
       pollMs: parseEventPollMs(_parsedUrl),
       initial,
       load: () => xiangqiBroadcastRoundStreamForApi(tourSlug, roundId),

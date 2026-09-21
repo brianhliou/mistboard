@@ -1,5 +1,6 @@
 import { XIANGQI_BROADCAST_SCHEMA, type XiangqiColor, type XiangqiMove } from '@mistboard/game';
-import { afterEach, describe, expect, it, vi } from 'vitest';
+import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { track } from './analytics.js';
 import { importXiangqiGame } from './review/xiangqi-import.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -12,6 +13,24 @@ import {
   mountXiangqiBroadcastTour,
   serializeBroadcastMovesForAnalysis,
 } from './xiangqi-broadcast.js';
+
+// Only `track` is stubbed; the review shell a finished board mounts still
+// needs the module's other exports (reviewOpenedProps and friends).
+vi.mock('./analytics.js', async (importOriginal) => ({
+  ...(await importOriginal<typeof import('./analytics.js')>()),
+  track: vi.fn(),
+}));
+
+beforeEach(() => {
+  vi.mocked(track).mockClear();
+});
+
+function broadcastOpenedCalls(): unknown[] {
+  return vi
+    .mocked(track)
+    .mock.calls.filter(([name]) => name === 'broadcast_opened')
+    .map(([, props]) => props);
+}
 
 type TimelineEntry = {
   type: 'move-played';
@@ -240,6 +259,21 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelectorAll('.xqb-board-card-live .xqb-card-player').length).toBe(2);
     // The live status renders as the accent badge.
     expect(root.querySelector('.xqb-board-card-live .xqb-badge-live')).not.toBeNull();
+  });
+
+  it('fires broadcast_opened once for the round surface, not again per stream push', async () => {
+    stubFetchJson(() => ROUND);
+    const stream = stubPushableEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    expect(broadcastOpenedCalls()).toEqual([
+      { surface: 'round', tour_slug: 't', round_id: 'r', locale: 'en' },
+    ]);
+
+    stream.push({ ...ROUND, round: { ...ROUND.round, updatedAt: 'later' } }, 'v2');
+    window.dispatchEvent(new Event(xiangqiAppearanceChangedEvent));
+    expect(broadcastOpenedCalls()).toHaveLength(1);
   });
 
   // The round grid draws every board at once, and .xq-piece in live-xiangqi.css
@@ -585,6 +619,7 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     const headings = [...root.querySelectorAll('.xqb-section h2')].map((node) => node.textContent);
     expect(headings).toEqual(['Broadcasts']);
     expect(root.querySelectorAll('.xqb-tour-card').length).toBe(1);
+    expect(broadcastOpenedCalls()).toEqual([{ surface: 'index', locale: 'en' }]);
   });
 });
 
@@ -645,6 +680,10 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     const select = root.querySelector<HTMLSelectElement>('.xqb-hero .xqb-round-select');
     expect(select).not.toBeNull();
     expect(select?.value).toBe('r');
+    // One open event, carrying the board's status at mount time.
+    expect(broadcastOpenedCalls()).toEqual([
+      { surface: 'board', tour_slug: 't', round_id: 'r', board_status: 'live', locale: 'en' },
+    ]);
   });
 
   it('renders the board without a rail when the round context fetch fails', async () => {
@@ -695,6 +734,10 @@ describe('event page (tabs, default round, standings)', () => {
     await mountXiangqiBroadcastTour(root, 't');
 
     expect(urls).toEqual(['/api/xiangqi/broadcasts/t', '/api/xiangqi/broadcasts/t/rounds/r']);
+    // The tour URL resolves to a round page but is tracked as the tour surface.
+    expect(broadcastOpenedCalls()).toEqual([
+      { surface: 'tour', tour_slug: 't', round_id: 'r', locale: 'en' },
+    ]);
     const tabs = [...root.querySelectorAll('.xqb-tab')];
     expect(tabs.map((tab) => tab.textContent)).toEqual(['Boards', 'Overview', 'Players']);
     expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Boards');
@@ -860,5 +903,10 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     expect(rail?.querySelector('h2 .xqb-round-select')).not.toBeNull();
     // The live-replay chrome is gone.
     expect(root.querySelector('.xqb-controls')).toBeNull();
+    // The board surface fires its open event once; the review shell it hands
+    // off to owns `review_opened` and does not get a second broadcast_opened.
+    expect(broadcastOpenedCalls()).toEqual([
+      { surface: 'board', tour_slug: 't', round_id: 'r', board_status: 'complete', locale: 'en' },
+    ]);
   });
 });

@@ -108,6 +108,10 @@ export type MistboardReadoutV1 = {
     databaseRequired: boolean;
     persistence: 'enabled' | 'disabled';
     persistenceErrors: { count1m: number; lastAt: number | null };
+    // Peak open broadcast SSE streams this UTC day, from the process's viewer
+    // census. Runtime-only: absent on snapshots from before it existed, and
+    // it restarts from whoever is connected when the server restarts.
+    broadcastViewersPeak?: number;
   };
   product: MistboardReadoutProduct | null;
   puzzles: ElephantChessPuzzleQualityReport | null;
@@ -531,6 +535,11 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   lines.push(
     `- Production revision: \`${report.production.revision ?? 'unknown'}\`; active games: ${report.production.activeGames}`,
   );
+  if (report.production.broadcastViewersPeak !== undefined) {
+    lines.push(
+      `- Broadcast viewers: peak ${report.production.broadcastViewersPeak} open streams today (UTC day, runtime counter)`,
+    );
+  }
   if (!report.mining) lines.push('- Mining status unavailable.');
   else {
     lines.push(

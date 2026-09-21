@@ -344,3 +344,42 @@ test('players/online reports playing seats and the anonymous count', async () =>
   assert.equal(byHandle.get('beta')?.playing, false, 'spectating is not playing');
   assert.equal(result.anonymousOnline, 2, 'one legacy + one tenant anonymous connection');
 });
+
+// The status route reads the broadcast viewer census off the context the way
+// it reads activeGames: a context built without it (tests, tools) reports
+// null rather than a fabricated zero.
+test('server-status reports the broadcast viewer census from the context', async () => {
+  const ctx = {
+    rooms: new Map(),
+    drainDeadlineMs: () => null,
+    activeGameCount: () => 0,
+    broadcastViewers: () => ({ current: 2, peakToday: 5, peakSinceBoot: 9 }),
+  } as unknown as HttpApiContext;
+  const response = captureResponse();
+  const handled = await tryHandle(
+    ctx,
+    getRequest(),
+    response,
+    '/api/server-status',
+    new URL('http://localhost/api/server-status'),
+  );
+  assert.equal(handled, true);
+  assert.equal(response.status, 200);
+  const body = JSON.parse(response.body) as { broadcastViewers: unknown; activeGames: number };
+  assert.deepEqual(body.broadcastViewers, { current: 2, peakToday: 5, peakSinceBoot: 9 });
+  assert.equal(body.activeGames, 0);
+
+  const bare = captureResponse();
+  await tryHandle(
+    {
+      rooms: new Map(),
+      drainDeadlineMs: () => null,
+      activeGameCount: () => 0,
+    } as unknown as HttpApiContext,
+    getRequest(),
+    bare,
+    '/api/server-status',
+    new URL('http://localhost/api/server-status'),
+  );
+  assert.equal((JSON.parse(bare.body) as { broadcastViewers: unknown }).broadcastViewers, null);
+});
