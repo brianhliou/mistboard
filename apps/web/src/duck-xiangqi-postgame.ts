@@ -4,6 +4,7 @@ import type {
   DuckXiangqiPlayerView,
   DuckXiangqiTurn,
 } from '@mistboard/game';
+import { DUCK_XIANGQI_SPEC_ID } from '@mistboard/game';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 // The xiangqi surface stylesheets, IN THIS ORDER. `live-xiangqi.css` carries the
 // board ground, grid, palace and river; `duck-xiangqi.css` only adds the duck and
@@ -15,13 +16,9 @@ import './duck-xiangqi.css';
 import './landing.css';
 import './game-route.css';
 import { duckXiangqiEnabled } from './feature-flags.js';
-import { variantDisplayLabel } from './game-display.js';
+import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
-import {
-  buildReviewMeta,
-  reviewOutcomeLine,
-  reviewResultLabel,
-} from './review/game-review-meta.js';
+import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { createMoveList, type MoveListEntry } from './review/move-list.js';
 import { mountReviewLayout } from './review/review-layout.js';
 import { buildNav } from './site-shell.js';
@@ -177,18 +174,15 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
   boardHost.style.width = '100%';
   boardHost.style.aspectRatio = `${DUCK_BOARD_VIEWBOX.width} / ${DUCK_BOARD_VIEWBOX.height}`;
 
-  const moveList = createMoveList(moveEntries(postgame), { title: 'Moves' });
+  const moveList = createMoveList(moveEntries(postgame), { title: t('replay.moves') });
 
-  const status = reviewOutcomeLine(
-    reviewResultLabel(postgame.game.result),
-    postgame.game.termination,
-  );
+  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   // Glyph, not markerId: `VariantMiniId` has no 'duck-xiangqi' member yet, and a
   // marker id that is not in that union is a compile error rather than a missing
   // tile. The duck stands in until a mini board exists.
   const { metaCard, details } = buildReviewMeta({
     glyph: '🦆',
-    variantName: 'Duck Xiangqi',
+    variantName: variantDisplayLabel(DUCK_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
   });

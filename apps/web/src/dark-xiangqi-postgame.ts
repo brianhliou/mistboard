@@ -1,10 +1,11 @@
 import {
+  DARK_XIANGQI_SPEC_ID,
   standardXiangqiFen,
   type XiangqiColor,
   type XiangqiGameStatus,
   type XiangqiMove,
 } from '@mistboard/game';
-import { variantDisplayLabel } from './game-display.js';
+import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { analysisHref, editorHref } from './review/position-links.js';
@@ -16,11 +17,7 @@ import type { DarkXiangqiWireView } from './live-dark-xiangqi.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { mountDarkXiangqiReview } from './review/dark-xiangqi-review.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import {
-  buildReviewMeta,
-  reviewOutcomeLine,
-  reviewResultLabel,
-} from './review/game-review-meta.js';
+import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { buildNav } from './site-shell.js';
 
 export type DarkXiangqiPostgameViewKey = XiangqiColor | 'truth';
@@ -144,13 +141,10 @@ function renderPostgame(root: HTMLElement, postgame: DarkXiangqiPostgameResponse
     black: gamePlayers.find((p) => p.color === 'black')?.name,
   };
 
-  const status = reviewOutcomeLine(
-    reviewResultLabel(postgame.game.result),
-    postgame.game.termination,
-  );
+  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
     markerId: 'dark-xiangqi',
-    variantName: 'Fog Xiangqi',
+    variantName: variantDisplayLabel(DARK_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
   });

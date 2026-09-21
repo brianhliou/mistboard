@@ -50,6 +50,30 @@ export const EN_REVIEW = {
   'watch.casual': 'Casual',
   'watch.whiteWins': 'White wins',
   'watch.draw': 'Draw',
+  // Whole-phrase keys for the lines the watch page used to glue together in
+  // English word order ("{color} wins", "{result} by {reason}", "{a} vs {b}").
+  'watch.colorWins': '{color} wins',
+  'watch.resultByReason': '{result} by {reason}',
+  'watch.matchup': '{first} vs {second}',
+  'watch.reviewMatchup': 'Review {matchup}',
+  // The two cross-variant rail channels; variant channels use variant.*.name.
+  'watch.featuredChannel': 'Featured',
+  'watch.enginesChannel': 'Engines',
+  'watch.versus': 'vs',
+  // The review meta card's outcome line with no recorded reason.
+  'review.colorVictorious': '{color} is victorious',
+  'review.spectatorRoom': 'Spectator room',
+  // The xiangqi analysis board's meta card.
+  'analysis.board': 'Analysis board',
+  'analysis.customPosition': 'Custom position',
+  'analysis.startPosition': 'Start position',
+  // The review page's FEN / moves import panel (tree-review.ts).
+  'analysis.fen': 'FEN',
+  'analysis.currentPositionFen': 'Current position FEN',
+  'analysis.setPosition': 'Set position',
+  'analysis.pasteGamePlaceholder': 'Paste a game to import',
+  'analysis.movesToImport': 'Moves to import',
+  'analysis.importMoves': 'Import moves',
   'watch.noUnlockedDarkReplays': 'No unlocked dark replays yet',
   'watch.noReplaysYet': 'No replays yet',
   'watch.replayFeedUnavailable': 'Replay feed unavailable',
@@ -85,6 +109,22 @@ export const EN_REVIEW = {
   'replay.endTimeout': 'Timeout',
   'replay.endCheckmate': 'Checkmate',
   'replay.endDraw': 'Draw',
+  // The rest of the server's GameTermination union (game-display.ts
+  // terminationLabel); the four above predate it.
+  'replay.endGeneralCaptured': 'General captured',
+  'replay.endResignation': 'Resignation',
+  'replay.endEngineFailure': 'Engine failure',
+  'replay.endWorkerAborted': 'Worker aborted',
+  'replay.endServerRestarted': 'Server restarted',
+  'replay.endAbandoned': 'Abandoned',
+  'replay.endNoLegalMoves': 'No legal moves',
+  'replay.endStalemate': 'Stalemate',
+  'replay.endRepetition': 'Repetition',
+  'replay.endProgressClock': 'Progress clock',
+  'replay.endTruncated': 'Truncated',
+  'replay.endRace': 'Den entered',
+  'replay.endChasing': 'Perpetual check',
+  'replay.endDeadPosition': 'Dead position',
   // Replay meta card + share button (replay-meta.ts).
   'replay.share': 'Share',
   'replay.copied': 'Copied',
@@ -94,6 +134,7 @@ export const EN_REVIEW = {
   // view"); a whole-sentence key is the only form that survives translation.
   'replay.whitesView': "White's view",
   'replay.blacksView': "Black's view",
+  'replay.redsView': "Red's view",
   'replay.playersView': "{name}'s view",
   'replay.viewGame': 'View game',
   'replay.gameMetadata': 'Game metadata',

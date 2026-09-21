@@ -1,4 +1,5 @@
 import {
+  FORTRESS_XIANGQI_SPEC_ID,
   type FortressXiangqiColor,
   type FortressXiangqiMove,
   type FortressXiangqiPlayerView,
@@ -7,7 +8,7 @@ import {
 import { reviewSeatProfiles } from './profile-link.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import './drop-reserve.css';
-import { variantDisplayLabel } from './game-display.js';
+import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import './landing.css';
 import './game-route.css';
@@ -18,11 +19,7 @@ import { crosstableConfig } from './review/crosstable.js';
 import { mountFortressXiangqiReview } from './review/fortress-xiangqi-review.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import {
-  buildReviewMeta,
-  reviewOutcomeLine,
-  reviewResultLabel,
-} from './review/game-review-meta.js';
+import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
@@ -157,13 +154,10 @@ function renderPostgame(root: HTMLElement, postgame: FortressXiangqiPostgameResp
     black: gamePlayers.find((p) => p.color === 'black')?.name,
   };
 
-  const status = reviewOutcomeLine(
-    reviewResultLabel(postgame.game.result),
-    postgame.game.termination,
-  );
+  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
     markerId: 'fortress-xiangqi',
-    variantName: 'Fortress Xiangqi',
+    variantName: variantDisplayLabel(FORTRESS_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
   });

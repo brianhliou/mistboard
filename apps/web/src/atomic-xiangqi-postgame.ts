@@ -1,4 +1,5 @@
 import {
+  ATOMIC_XIANGQI_SPEC_ID,
   type AtomicXiangqiColor,
   type AtomicXiangqiGameStatus,
   type AtomicXiangqiMove,
@@ -9,18 +10,14 @@ import './landing.css';
 import './game-route.css';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
-import { variantDisplayLabel } from './game-display.js';
+import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { mountAtomicXiangqiReview } from './review/atomic-xiangqi-review.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import {
-  buildReviewMeta,
-  reviewOutcomeLine,
-  reviewResultLabel,
-} from './review/game-review-meta.js';
+import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
@@ -157,13 +154,10 @@ function renderPostgame(root: HTMLElement, postgame: AtomicXiangqiPostgameRespon
     black: gamePlayers.find((p) => p.color === 'black')?.name,
   };
 
-  const status = reviewOutcomeLine(
-    reviewResultLabel(postgame.game.result),
-    postgame.game.termination,
-  );
+  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
     markerId: 'atomic-xiangqi',
-    variantName: 'Atomic Xiangqi',
+    variantName: variantDisplayLabel(ATOMIC_XIANGQI_SPEC_ID),
     game: postgame.game,
     status,
   });

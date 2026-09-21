@@ -12,7 +12,9 @@ import {
   type GameParticipant,
   matchupLabel,
   matchupSeats,
+  terminationLabel,
 } from './game-display.js';
+import { ensureLocaleCatalog } from './i18n/catalog.js';
 
 // Regression suite for the "white vs pikajieqi" bug: surfaces that hardcoded a
 // 'white' seat lookup dropped the red player's name on every red/black variant
@@ -153,6 +155,53 @@ describe('displayParticipantName', () => {
       ],
     };
     expect(displayParticipantName(human, 'red')).toBe('Misty the Great');
+  });
+
+  // The server writes the English literal 'Guest' into a nameless guest seat's
+  // displayName; the /watch meta card showed it verbatim beside translated copy.
+  it('routes the server guest placeholder through the catalog', async () => {
+    await ensureLocaleCatalog('zh-Hans');
+    const guest = {
+      ...game(XIANGQI_SPEC_ID),
+      participants: [
+        {
+          color: 'red' as const,
+          displayName: 'Guest',
+          subjectType: 'guest' as const,
+          subjectId: null,
+          visibility: 'public' as const,
+        },
+      ],
+    };
+    expect(displayParticipantName(guest, 'red')).toBe('Guest');
+    window.history.pushState(null, '', '/zh-hans/watch');
+    try {
+      expect(displayParticipantName(guest, 'red')).toBe('访客');
+    } finally {
+      window.history.pushState(null, '', '/');
+    }
+  });
+});
+
+// The watch meta card humanized the kebab code ("General captured") in every
+// locale; every persisted GameTermination now has a catalog entry.
+describe('terminationLabel', () => {
+  it('names every persisted termination in English', () => {
+    expect(terminationLabel('general-captured')).toBe('General captured');
+    expect(terminationLabel('king-captured')).toBe('King captured');
+    expect(terminationLabel('progress-clock')).toBe('Progress clock');
+    expect(terminationLabel('race')).toBe('Den entered');
+    expect(terminationLabel('')).toBe('');
+  });
+
+  it('translates through the catalog for a zh locale', async () => {
+    await ensureLocaleCatalog('zh-Hans');
+    expect(terminationLabel('general-captured', 'zh-Hans')).toBe('将帅被擒');
+    expect(terminationLabel('timeout', 'zh-Hans')).toBe('超时');
+  });
+
+  it('humanizes an unknown code instead of throwing', () => {
+    expect(terminationLabel('some-future-code')).toBe('Some future code');
   });
 });
 

@@ -11,6 +11,8 @@ import type {
   XiangqiColor,
   XiangqiMove,
 } from '@mistboard/game';
+import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import { variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
 import './game-shell.css';
 import './live-xiangqi.css';
@@ -68,7 +70,7 @@ export function mountBroadcastBoardReview(
     markerId: 'xiangqi',
     glyph: '象',
     headline: [eventName ?? t('broadcast.eyebrow')],
-    variantName: 'Xiangqi',
+    variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
     subline: [roundName, `${t('broadcast.board')} ${data.board.boardNumber}`, playedOn]
       .filter(Boolean)
       .join(' · '),

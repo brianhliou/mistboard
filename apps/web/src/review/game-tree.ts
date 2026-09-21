@@ -38,6 +38,9 @@ export interface ProjectedView<View> {
   key: string;
   /** Human label for the board host, e.g. 'Truth' | "White's view". */
   label: string;
+  /** One-word form for the segmented POV control ('Truth' | 'White'); the
+   *  control falls back to stripping an English possessive off `label`. */
+  shortLabel?: string;
   /** Which board slot: the dominant board vs. a click-to-promote secondary. */
   tier: 'primary' | 'secondary';
   /** What the variant's board renderer consumes (a PlayerView, typically). */

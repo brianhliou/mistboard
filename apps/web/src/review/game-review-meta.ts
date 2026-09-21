@@ -20,10 +20,16 @@
 // Everything else (time control, casual/rated, time-ago, players, marker, spectator
 // room) is plain envelope data and lives here so it can't drift between variants.
 
-import { brandedEngineName } from '../game-display.js';
+import {
+  brandedEngineName,
+  type GameOutcome,
+  gameOutcome,
+  outcomeLabel,
+  terminationLabel,
+} from '../game-display.js';
+import { t } from '../i18n/catalog.js';
 import { profileTargetFor } from '../profile-link.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
-import { seatColorWord } from '../variant-seat-label.js';
 import {
   createGameMetaCard,
   type GameMetaPlayer,
@@ -95,7 +101,7 @@ export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
   const card = createGameMetaCard({
     markerId: config.markerId,
     glyph: config.glyph,
-    headline: [reviewTimeControlLabel(game), game.rated ? 'Rated' : 'Casual'],
+    headline: [reviewTimeControlLabel(game), game.rated ? t('watch.rated') : t('watch.casual')],
     variantName: config.variantName,
     subline: timeAgoLabel(game.endedAt),
     players: reviewMetaPlayers(game.players, config.seatColors, game.result),
@@ -124,8 +130,12 @@ export function reviewMetaPlayers(
         ? reviewColorForSeat(player.color, seatColors)
         : player.color,
     // The persisted seat name is the engine BUILD ("Misty DXQ 1.1"); the card
-    // shows the brand, same as every list surface (see brandedEngineName).
-    name: brandedEngineName(player.name) ?? player.name,
+    // shows the brand, same as every list surface (see brandedEngineName). A
+    // nameless guest seat arrives as the server's English placeholder 'Guest'.
+    name:
+      player.kind === 'guest' && player.name === 'Guest'
+        ? t('watch.guest')
+        : (brandedEngineName(player.name) ?? player.name),
     rating: player.rating ?? null,
     // `kind` merges bots into 'account', so a bot seat needs its own tell here or
     // the BOT tag goes missing on every review page that faces one.
@@ -149,38 +159,35 @@ export function reviewTimeControlLabel(game: {
   } | null;
   const initialMs = game.initialMs ?? nested?.initialMs ?? null;
   const incrementMs = game.incrementMs ?? nested?.incrementMs ?? null;
-  if (initialMs === null && incrementMs === null) return 'Untimed';
+  if (initialMs === null && incrementMs === null) return t('watch.untimed');
   return `${clockLabel(initialMs ?? 0)}+${Math.round((incrementMs ?? 0) / 1000)}`;
 }
 
 /** Generic outcome word for the fixed-color variants (red/black/white + draw).
  *  Pass `variant` so the winning-side word honours the variant's canonical seat
  *  colors (the Jungle family shows "Blue", not "Black"). Variants with
- *  seat-relative results (Flip Jungle, Banqi) compute their own label
- *  from `firstColor` instead. */
+ *  seat-relative results (Flip Jungle, Banqi) compute their own outcome
+ *  from `firstColor` instead (banqiOutcome, jungleFlipOutcome). */
 export function reviewResultLabel(result: string, variant?: string): string {
-  if (result === 'red-wins') return `${seatColorWord(variant, 'red')} wins`;
-  if (result === 'black-wins') return `${seatColorWord(variant, 'black')} wins`;
-  if (result === 'white-wins') return `${seatColorWord(variant, 'white')} wins`;
-  if (result === 'draw') return 'Draw';
-  return labelize(result);
+  return outcomeLabel(gameOutcome(result, variant));
 }
 
 /** Lichess room-anatomy outcome line, matching the live room meta card
  *  (live-render.ts `renderGameInfo`): "<Reason> • <Winner> is victorious" for a
- *  decisive result, "Draw • <reason>" for a draw. Replaces the ad-hoc
- *  "<Winner> wins by <Reason>" each postgame adapter used to build, so the
- *  postgame page reads the same as the live room. `resultLabel` is the
- *  already-computed "<Color> wins" / "Draw" string (variant- and seat-aware);
- *  `termination` is the raw kebab reason (e.g. 'king-captured'). */
-export function reviewOutcomeLine(resultLabel: string, termination: string): string {
-  const reason = termination.replace(/-/g, ' ').trim();
-  if (/^draw\b/i.test(resultLabel)) {
-    return reason ? `Draw • ${reason}` : 'Draw';
+ *  decisive result, "Draw • <reason>" for a draw. Takes the outcome as DATA
+ *  (see GameOutcome): the earlier version recovered the winner by stripping
+ *  " wins" off an English label, which returned the whole translated label as
+ *  the winner the moment the label stopped being English. `termination` is the
+ *  raw kebab reason (e.g. 'king-captured'). */
+export function reviewOutcomeLine(outcome: GameOutcome, termination: string): string {
+  const reason = terminationLabel(termination);
+  if ('draw' in outcome) return reason ? t('result.drawByReason', { reason }) : t('watch.draw');
+  if ('winner' in outcome) {
+    return reason
+      ? t('result.colorVictorious', { reason, color: outcome.winner })
+      : t('review.colorVictorious', { color: outcome.winner });
   }
-  const winner = resultLabel.replace(/\s+wins?\b.*$/i, '').trim() || resultLabel.trim();
-  const capped = reason ? `${reason.charAt(0).toUpperCase()}${reason.slice(1)}` : '';
-  return capped ? `${capped} • ${winner} is victorious` : `${winner} is victorious`;
+  return reason ? `${reason} • ${outcome.label}` : outcome.label;
 }
 
 /** kebab/space token → Title Case, e.g. 'king-captured' → 'King Captured'. */

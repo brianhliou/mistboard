@@ -1,4 +1,5 @@
 import {
+  JIEQI_SPEC_ID,
   type JieqiColor,
   type JieqiGameStatus,
   type JieqiMove,
@@ -6,7 +7,7 @@ import {
   jieqiStateToDealtFen,
   jieqiStateToPikafishFen,
 } from '@mistboard/game';
-import { variantDisplayLabel } from './game-display.js';
+import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import './landing.css';
@@ -18,11 +19,7 @@ import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import {
-  buildReviewMeta,
-  reviewOutcomeLine,
-  reviewResultLabel,
-} from './review/game-review-meta.js';
+import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import {
   fetchCachedJieqiDecisions,
   type JieqiDecisionSummary,
@@ -182,13 +179,10 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     black: gamePlayers.find((p) => p.color === 'black')?.name,
   };
 
-  const status = reviewOutcomeLine(
-    reviewResultLabel(postgame.game.result),
-    postgame.game.termination,
-  );
+  const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
     markerId: 'jieqi',
-    variantName: 'Jieqi',
+    variantName: variantDisplayLabel(JIEQI_SPEC_ID),
     game: postgame.game,
     status,
   });

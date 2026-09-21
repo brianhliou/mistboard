@@ -10,6 +10,7 @@
 // Dark chess stays on the chessground path in replay.ts; this generic
 // is for the xiangqi-style SVG tenants only.
 
+import { terminationLabel as sharedTerminationLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import type { GameMeta, ReplayHandle } from './replay.js';
@@ -264,20 +265,12 @@ function localizeResultLabel(label: string | undefined, result: string, locale: 
   return label;
 }
 
+// English keeps the Title Case token this strip always showed; the zh locales
+// go through the shared, total termination map (the old four-case switch here
+// let "General Captured" and "No Legal Moves" through untranslated).
 function terminationLabel(reason: string, locale: Locale): string {
   if (locale === 'en') return labelize(reason);
-  switch (reason) {
-    case 'resignation':
-      return t('result.resignation', {}, locale);
-    case 'timeout':
-      return t('result.timeout', {}, locale);
-    case 'abandonment':
-      return t('result.abandonment', {}, locale);
-    case 'checkmate':
-      return t('result.checkmate', {}, locale);
-    default:
-      return labelize(reason);
-  }
+  return sharedTerminationLabel(reason, locale);
 }
 
 function localizePaneLabel(label: string, locale: Locale): string {

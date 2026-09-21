@@ -745,9 +745,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // A nameless seat falls back to a word. Before the flip binds, no colour word
     // is true, so it falls back to the move order instead of picking a side.
     const inkWord = (ink: string, isFirstMover: boolean): string => {
-      if (ink === UNBOUND_SEAT_INK) return isFirstMover ? 'First' : 'Second';
+      if (ink === UNBOUND_SEAT_INK) return isFirstMover ? t('setup.first') : t('setup.second');
+      if (ink === 'red') return t('setup.red');
+      if (ink === 'black') return t('setup.black');
+      if (ink === 'white') return t('setup.white');
+      if (ink === 'blue') return t('setup.blue');
       return `${ink.charAt(0).toUpperCase()}${ink.slice(1)}`;
     };
+    // The server names a nameless guest seat with the English literal 'Guest'
+    // (a placeholder, not a name); every other name is shown as sent.
+    const displayName = (name: string | undefined): string | undefined =>
+      name === 'Guest' ? t('watch.guest') : name;
     const paint = (
       el: HTMLElement,
       name: string | undefined,
@@ -762,8 +770,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       disc.className = 'review-seat__disc';
       // A seat with no name falls back to its ink word, which names nobody, so
       // the link is bound to the resolved name rather than the slot.
-      const label = name
-        ? playerNameEl(name, profile ?? null, 'review-seat__name')
+      const shown = displayName(name);
+      const label = shown
+        ? playerNameEl(shown, profile ?? null, 'review-seat__name')
         : playerNameEl(inkWord(ink, isFirstMover), null, 'review-seat__name');
       el.append(disc, label);
     };
@@ -864,7 +873,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       button.dataset.pov = pv.key;
       // Compact single word: the projection label is "Red's view" — strip the
       // possessive so the segmented control stays terse (truth reads "Truth").
-      button.textContent = pv.key === truthKey ? pv.label : pv.label.replace(/['’]s view$/i, '');
+      button.textContent =
+        pv.shortLabel ?? (pv.key === truthKey ? pv.label : pv.label.replace(/['’]s view$/i, ''));
       button.setAttribute('aria-pressed', pv.key === currentPov ? 'true' : 'false');
       button.addEventListener('click', () => {
         if (currentPov === pv.key) return;
@@ -2334,14 +2344,14 @@ function createImportPanel(
 
   const fenLabel = document.createElement('label');
   fenLabel.className = 'review-share__label review-import__label';
-  fenLabel.textContent = 'FEN';
+  fenLabel.textContent = t('analysis.fen');
   const fenInput = document.createElement('input');
   fenInput.className = 'review-share__field review-import__field';
   fenInput.id = 'review-import-fen';
   fenLabel.htmlFor = fenInput.id;
   fenInput.readOnly = !onImportFen;
   fenInput.spellcheck = false;
-  fenInput.setAttribute('aria-label', 'Current position FEN');
+  fenInput.setAttribute('aria-label', t('analysis.currentPositionFen'));
   fenInput.addEventListener('focus', () => fenInput.select());
   el.append(fenLabel, fenInput);
   if (onImportFen) {
@@ -2354,7 +2364,7 @@ function createImportPanel(
     const setButton = document.createElement('button');
     setButton.type = 'button';
     setButton.className = 'review-share__copy review-import__button';
-    setButton.textContent = 'Set position';
+    setButton.textContent = t('analysis.setPosition');
     setButton.addEventListener('click', submitFen);
     el.append(setButton);
   } else {
@@ -2363,19 +2373,19 @@ function createImportPanel(
 
   const movesLabel = document.createElement('label');
   movesLabel.className = 'review-share__label review-import__label review-import__label--moves';
-  movesLabel.textContent = 'Moves';
+  movesLabel.textContent = t('replay.moves');
   const movesInput = document.createElement('textarea');
   movesInput.className = 'review-share__field review-share__field--moves review-import__field';
   movesInput.id = 'review-import-moves';
   movesLabel.htmlFor = movesInput.id;
   movesInput.rows = 2;
   movesInput.spellcheck = false;
-  movesInput.placeholder = 'Paste a game to import';
-  movesInput.setAttribute('aria-label', 'Moves to import');
+  movesInput.placeholder = t('analysis.pasteGamePlaceholder');
+  movesInput.setAttribute('aria-label', t('analysis.movesToImport'));
   const importButton = document.createElement('button');
   importButton.type = 'button';
   importButton.className = 'review-share__copy review-import__button review-import__button--moves';
-  importButton.textContent = 'Import moves';
+  importButton.textContent = t('analysis.importMoves');
   importButton.addEventListener('click', () => {
     error.textContent = onImport(movesInput.value) ?? '';
   });

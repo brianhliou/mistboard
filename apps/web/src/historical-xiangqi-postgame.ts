@@ -1,5 +1,8 @@
 import type { XiangqiMove } from '@mistboard/game';
+import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import { type GameOutcome, variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
+import { seatColorWord } from './variant-seat-label.js';
 import './game-shell.css';
 import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
@@ -92,7 +95,7 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
     markerId: 'xiangqi',
     glyph: '象',
     headline: ['Historical game'],
-    variantName: 'Xiangqi',
+    variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
     subline: [formatDate(game.playedOn), game.eventName].filter(Boolean).join(' · '),
     players: [
       { color: 'red', name: game.redNameRaw ?? 'Red' },
@@ -260,8 +263,15 @@ async function safeJson(response: Response): Promise<{ error?: unknown } | null>
 }
 
 function resultStatus(game: HistoricalXiangqiGameDetail): string {
-  const result = historicalXiangqiOutcomeLabel(game.result);
-  return game.termination ? reviewOutcomeLine(result, game.termination) : result;
+  if (!game.termination) return historicalXiangqiOutcomeLabel(game.result);
+  return reviewOutcomeLine(historicalXiangqiOutcome(game.result), game.termination);
+}
+
+function historicalXiangqiOutcome(result: HistoricalXiangqiResult): GameOutcome {
+  if (result === '1-0') return { winner: seatColorWord(XIANGQI_SPEC_ID, 'red') };
+  if (result === '0-1') return { winner: seatColorWord(XIANGQI_SPEC_ID, 'black') };
+  if (result === '1/2-1/2') return { draw: true };
+  return { label: t('historical.unfinished') };
 }
 
 function formatDate(value: string | null): string {

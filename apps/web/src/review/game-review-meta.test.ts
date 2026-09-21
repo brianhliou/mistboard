@@ -1,4 +1,5 @@
 import { describe, expect, it } from 'vitest';
+import { gameOutcome } from '../game-display.js';
 import {
   buildReviewMeta,
   labelize,
@@ -49,20 +50,38 @@ describe('reviewResultLabel', () => {
 
 describe('reviewOutcomeLine', () => {
   it('reads like the live room meta card for a decisive result', () => {
-    expect(reviewOutcomeLine('Black wins', 'checkmate')).toBe('Checkmate • Black is victorious');
-    expect(reviewOutcomeLine('Red wins', 'king-captured')).toBe(
+    expect(reviewOutcomeLine({ winner: 'Black' }, 'checkmate')).toBe(
+      'Checkmate • Black is victorious',
+    );
+    expect(reviewOutcomeLine({ winner: 'Red' }, 'king-captured')).toBe(
       'King captured • Red is victorious',
     );
-    expect(reviewOutcomeLine('Blue wins', 'elimination')).toBe('Elimination • Blue is victorious');
+    expect(reviewOutcomeLine({ winner: 'Blue' }, 'elimination')).toBe(
+      'Elimination • Blue is victorious',
+    );
   });
 
   it('formats draws as "Draw • <reason>"', () => {
-    expect(reviewOutcomeLine('Draw', 'no-progress')).toBe('Draw • no progress');
-    expect(reviewOutcomeLine('Draw', '')).toBe('Draw');
+    expect(reviewOutcomeLine({ draw: true }, 'no-progress')).toBe('Draw • No progress');
+    expect(reviewOutcomeLine({ draw: true }, '')).toBe('Draw');
   });
 
   it('degrades gracefully when the termination is missing', () => {
-    expect(reviewOutcomeLine('Black wins', '')).toBe('Black is victorious');
+    expect(reviewOutcomeLine({ winner: 'Black' }, '')).toBe('Black is victorious');
+  });
+
+  // The old signature took the English label and stripped " wins" to recover
+  // the winner, which handed back the whole label once it was translated.
+  it('takes the outcome as data, so a translated winner word survives', async () => {
+    const { ensureLocaleCatalog } = await import('../i18n/catalog.js');
+    await ensureLocaleCatalog('zh-Hans');
+    window.history.pushState(null, '', '/zh-hans/');
+    try {
+      expect(reviewOutcomeLine(gameOutcome('red-wins'), 'checkmate')).toBe('将死 • 红方获胜');
+      expect(reviewOutcomeLine(gameOutcome('draw'), 'repetition')).toBe('和棋 • 重复局面');
+    } finally {
+      window.history.pushState(null, '', '/');
+    }
   });
 });
 

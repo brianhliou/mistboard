@@ -14,7 +14,13 @@
 
 import './current-games.css';
 import './account-profile.css';
-import { displayLiveName, type FeaturedGame, variantDisplayLabel } from './game-display.js';
+import {
+  displayLiveName,
+  type FeaturedGame,
+  namesMatchupLabel,
+  variantDisplayLabel,
+  watchChannelLabel,
+} from './game-display.js';
 import { timeControlLabelForGame } from './game-meta.js';
 import { t } from './i18n/catalog.js';
 import { playerNameEl, profileTargetFor } from './profile-link.js';
@@ -250,10 +256,11 @@ export async function mountCurrentGames(root: HTMLElement): Promise<void> {
       }
       // The seeks and CTAs are channel-independent; only the headline says
       // whether it is this channel or the whole site that is quiet.
-      const label =
+      const entry =
         channel === CHANNEL_ALL
           ? null
-          : (lastResponse?.channels.find((entry) => entry.id === channel)?.label ?? null);
+          : (lastResponse?.channels.find((entry) => entry.id === channel) ?? null);
+      const label = entry ? watchChannelLabel(entry) : null;
       const title = emptyHost.querySelector<HTMLElement>('.current-games-empty h2');
       if (title) title.textContent = label ? t('games.noneInChannel', { label }) : t('games.none');
       emptyHost.hidden = false;
@@ -445,7 +452,8 @@ function renderRail(root: HTMLElement, data: CurrentGamesResponse, active: strin
     ?.append(buildUiIcon('featured-channel', 'current-games-rail-crown'));
   root.append(all);
   for (const channel of data.channels) {
-    const link = railLink(channel.id, channel.label, channel.count, active === channel.id);
+    const channelLabel = watchChannelLabel(channel);
+    const link = railLink(channel.id, channelLabel, channel.count, active === channel.id);
     const miniId = CHANNEL_MINI_BY_ID[channel.id];
     const thumb = link.querySelector<HTMLElement>('.current-games-rail-thumb');
     if (thumb && miniId) {
@@ -453,7 +461,7 @@ function renderRail(root: HTMLElement, data: CurrentGamesResponse, active: strin
       thumb.setAttribute('translate', 'no');
       thumb.innerHTML = renderVariantMarker(miniId, {
         size: 112,
-        label: `${channel.label} marker`,
+        label: `${channelLabel} marker`,
       });
     }
     if (channel.count === 0) link.classList.add('is-quiet');
@@ -578,7 +586,7 @@ function matchupLabel(game: CurrentGame): string {
   const [top, bottom] = seatOrder(game);
   const a = displayLiveName(bottom?.name, t('games.guest'));
   const b = displayLiveName(top?.name, t('games.guest'));
-  return `${a} vs ${b}`;
+  return namesMatchupLabel(a, b);
 }
 
 function namesFor(game: CurrentGame): { first: string; second: string } {

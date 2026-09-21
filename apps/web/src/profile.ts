@@ -286,11 +286,11 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
 // Everything derives from the build-time variant registry, so both the client
 // mount and the build-time prerender can render it without data.
 // Each rated pace has its own ladder, so the players page is a grid per pace.
-// English labels match the lobby's speed chips, which are English-for-now.
-const LEADERBOARD_TIME_CLASSES: readonly { id: ProfileRatingTimeClass; label: string }[] = [
-  { id: 'bullet', label: 'Bullet' },
-  { id: 'blitz', label: 'Blitz' },
-  { id: 'rapid', label: 'Rapid' },
+// Same keys as the live room's time-class line (live-render.ts).
+const LEADERBOARD_TIME_CLASSES: readonly { id: ProfileRatingTimeClass; label: I18nKey }[] = [
+  { id: 'bullet', label: 'live.timeClassBullet' },
+  { id: 'blitz', label: 'live.timeClassBlitz' },
+  { id: 'rapid', label: 'live.timeClassRapid' },
 ];
 
 function buildLeaderboardFrame(locale: Locale): {
@@ -339,7 +339,7 @@ function buildLeaderboardFrame(locale: Locale): {
     button.type = 'button';
     button.className = 'leaderboard-pace';
     button.dataset.timeClass = pace.id;
-    button.textContent = pace.label;
+    button.textContent = t(pace.label);
     button.setAttribute('role', 'tab');
     const selected = pace.id === DEFAULT_LEADERBOARD_TIME_CLASS;
     button.classList.toggle('selected', selected);
@@ -2113,7 +2113,8 @@ export function buildProfileRatings(
 }
 
 function timeClassLabel(timeClass: ProfileRatingTimeClass): string {
-  return LEADERBOARD_TIME_CLASSES.find((pace) => pace.id === timeClass)?.label ?? timeClass;
+  const key = LEADERBOARD_TIME_CLASSES.find((pace) => pace.id === timeClass)?.label;
+  return key ? t(key) : timeClass;
 }
 
 // The pace a variant's rating surfaces default to for this player: the default
