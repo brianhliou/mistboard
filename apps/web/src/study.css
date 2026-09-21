@@ -315,6 +315,16 @@
   cursor: pointer;
 }
 
+.study-actions__clone {
+  padding: 7px 10px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm, 6px);
+  background: var(--site-panel);
+  color: var(--site-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
 .study-actions__like.is-liked {
   border-color: color-mix(in srgb, var(--site-accent) 60%, var(--site-border-soft));
   color: var(--site-accent-strong);
@@ -801,9 +811,20 @@
 /* The favourite and the errata invitation sit with the study, not the chapter.
  * In the rail head the heart is one of the icon tools; at the rail foot the
  * errata line is a quiet close. */
-.study-page__title-row > .study-actions__like {
+.study-page__title-row {
+  flex-wrap: wrap;
+}
+
+.study-page__title-row > .study-actions {
+  display: flex;
+  flex: 1 0 100%;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+}
+
+.study-page__title-row .study-actions__like,
+.study-page__title-row .study-actions__clone {
   flex: 0 0 auto;
-  align-self: flex-start;
   padding: 0.15rem 0.45rem;
   font-size: 0.78rem;
   line-height: 1.4;

@@ -2,6 +2,7 @@ import type { UserAccount } from './persistence.js';
 import { createUser } from './persistence.js';
 import {
   addChapter,
+  cloneStudy,
   createStudy,
   deleteChapter,
   deleteStudy,
@@ -292,6 +293,55 @@ definePersistenceTests('studies', () => {
       (await listFeaturedStudies(30, 'featured cannon')).map((entry) => entry.id),
       [],
     );
+  });
+
+  test('clones a readable study to a new owner as a private copy, curator mark stripped', async () => {
+    const author = await makeUser('clone-author');
+    const reader = await makeUser('clone-reader');
+    const source = await makeStudy(author.id, 'Curated');
+    assert.ok(source);
+    await updateStudyMeta(source.id, author.id, { visibility: 'unlisted' });
+    const second = await addChapter(source.id, author.id, {
+      name: 'Chapter 2',
+      variant: 'xiangqi',
+      orientation: 'black',
+      root: tree,
+      denorm: { curator: { recipeId: 'r', gameId: 'g' }, other: 1 },
+      tags: { red: 'A', black: 'B' },
+    });
+    assert.ok(second.ok);
+    await setChapterGamebook(second.chapter.id, author.id, true);
+
+    const cloned = await cloneStudy(source.id, reader.id);
+    assert.ok(cloned.ok);
+    assert.notEqual(cloned.study.id, source.id);
+    assert.equal(cloned.study.ownerId, reader.id);
+    assert.equal(cloned.study.visibility, 'private');
+    assert.equal(cloned.study.slug, null);
+    assert.equal(cloned.study.name, 'Curated');
+    assert.equal(cloned.study.chapters.length, 2);
+    const copy = cloned.study.chapters[1]!;
+    assert.notEqual(copy.id, second.chapter.id);
+    assert.equal(copy.name, 'Chapter 2');
+    assert.equal(copy.orientation, 'black');
+    assert.equal(copy.gamebook, true);
+    assert.deepEqual(copy.tags, { red: 'A', black: 'B' });
+    assert.deepEqual(copy.denorm, { other: 1 });
+    // The reader owns the copy and can edit it; the source is untouched.
+    const edited = await renameChapter(copy.id, reader.id, 'Mine');
+    assert.ok(edited.ok);
+    const original = await getStudyById(source.id);
+    assert.equal(original?.chapters[1]?.name, 'Chapter 2');
+    assert.equal(original?.ownerId, author.id);
+
+    // A private study clones only for its owner; a stranger sees not_found.
+    await updateStudyMeta(source.id, author.id, { visibility: 'private' });
+    const denied = await cloneStudy(source.id, reader.id);
+    assert.ok(!denied.ok && denied.error === 'not_found');
+    const own = await cloneStudy(source.id, author.id);
+    assert.ok(own.ok);
+    const missing = await cloneStudy('nope1234', reader.id);
+    assert.ok(!missing.ok);
   });
 
   test('adds, renames, and deletes chapters (owner only, keeps at least one)', async () => {

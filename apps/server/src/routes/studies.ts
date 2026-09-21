@@ -13,6 +13,7 @@
 //   PATCH  /api/studies/:id/chapters          reorder all chapters (owner)
 //   PATCH  /api/studies/:id/chapters/:cid     save tree (version-guarded), rename, retag (owner)
 //   DELETE /api/studies/:id/chapters/:cid     delete a chapter (owner; refuses the last)
+//   POST   /api/studies/:id/clone             copy a readable study to the signed-in user (private)
 //   PUT    /api/admin/studies/:id/featured    feature/unfeature a public study (admin)
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
@@ -38,6 +39,7 @@ const STUDY_PATH = new RegExp(`^/api/studies/(${ID})$`);
 const CHAPTERS_PATH = new RegExp(`^/api/studies/(${ID})/chapters$`);
 const CHAPTER_PATH = new RegExp(`^/api/studies/(${ID})/chapters/(${ID})$`);
 const LIKE_PATH = new RegExp(`^/api/studies/(${ID})/like$`);
+const CLONE_PATH = new RegExp(`^/api/studies/(${ID})/clone$`);
 const FEATURED_PATH = new RegExp(`^/api/admin/studies/(${ID})/featured$`);
 const SLUG_PATH = new RegExp(`^/api/admin/studies/(${ID})/slug$`);
 
@@ -319,6 +321,27 @@ export async function tryHandle(
     }
     const state = await persistence.setStudyLike(likeMatch[1]!, user.id, body.liked);
     writeJson(response, state ? 200 : 404, state ?? { error: 'not_found' });
+    return true;
+  }
+
+  // ── Copy a study into the reader's own studies ──
+  // Anyone who can read the study can take a private copy of it and edit that;
+  // the source (and its likes, slug, featured pick) is untouched.
+  const cloneMatch = CLONE_PATH.exec(pathname);
+  if (cloneMatch) {
+    if (!requireMethod(request, response, 'POST')) return true;
+    if (!requirePersistence(response)) return true;
+    const user = await currentAccountUser(request);
+    if (!user) {
+      writeJson(response, 401, { error: 'not_signed_in' });
+      return true;
+    }
+    const result = await persistence.cloneStudy(cloneMatch[1]!, user.id);
+    if (!result.ok) {
+      writeJson(response, result.error === 'forbidden' ? 403 : 404, { error: result.error });
+      return true;
+    }
+    writeJson(response, 201, { study: { id: result.study.id, name: result.study.name } });
     return true;
   }
 

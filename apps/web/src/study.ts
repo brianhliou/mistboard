@@ -345,6 +345,23 @@ function renderStudy(
 
   const pgnExportable = (): boolean => studyVariant() === 'xiangqi';
 
+  // "Copy to my studies" sits with the other ways a study leaves the page: a
+  // reader who wants to annotate takes a private copy and edits that.
+  const cloneRow = (): HTMLElement => {
+    const row = document.createElement('div');
+    row.className = 'review-share__row';
+    const label = document.createElement('span');
+    label.className = 'review-share__label';
+    label.textContent = t('study.cloneLabel');
+    const note = document.createElement('span');
+    note.className = 'review-share__note';
+    note.textContent = t('study.cloneHint');
+    const button = cloneButton(study);
+    button.className = 'review-share__copy';
+    row.append(label, note, button);
+    return row;
+  };
+
   const pgnExportRow = (): HTMLElement => {
     const row = document.createElement('div');
     row.className = 'review-share__row';
@@ -785,7 +802,7 @@ function renderStudy(
           ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
         });
       });
-      attachStudyTitleRow(root, study.id, study.visibility === 'public' ? likeButton(study) : null);
+      attachStudyTitleRow(root, study.id, studyActions(study));
       return;
     }
 
@@ -802,7 +819,7 @@ function renderStudy(
         summary: localizedStudyName(chapter.name, chapter.i18n),
         aside,
       });
-      attachStudyTitleRow(root, study.id, study.visibility === 'public' ? likeButton(study) : null);
+      attachStudyTitleRow(root, study.id, studyActions(study));
       return;
     }
 
@@ -900,7 +917,7 @@ function renderStudy(
       // PGN download sits with FEN/Share/Moves rather than in the owner-only
       // settings menu: a study whose work cannot leave it is a trap, so every
       // viewer gets it.
-      ...(pgnExportable() ? { shareExtra: [pgnExportRow()] } : {}),
+      shareExtra: [...(pgnExportable() ? [pgnExportRow()] : []), cloneRow()],
       details: buildStudyChat(study.id),
       gamebookEditing: gamebookable && chapter.gamebook && study.isOwner,
       annotationLessonControls: lessonControls,
@@ -963,11 +980,7 @@ function renderStudy(
     })
       .then((mounted) => {
         if (mountToken !== mountSeq) return;
-        attachStudyTitleRow(
-          root,
-          study.id,
-          study.visibility === 'public' ? likeButton(study) : null,
-        );
+        attachStudyTitleRow(root, study.id, studyActions(study, { clone: false }));
         handle = mounted;
         activeHandle = mounted;
       })
@@ -990,17 +1003,27 @@ function renderStudy(
  * The row is built whenever there is anything to put in it, not only when a
  * thumbnail exists: only five studies have one.
  */
-function attachStudyTitleRow(root: HTMLElement, studyId: string, like: HTMLElement | null): void {
+/** The study-level actions under the title: the heart on a public study, and,
+ *  on the mounts that have no Share & export tab (practice, gamebook), the
+ *  copy button. The review mount puts the copy in Share & export instead. */
+function studyActions(study: StudyDto, opts: { clone?: boolean } = {}): HTMLElement[] {
+  return [
+    ...(study.visibility === 'public' ? [likeButton(study)] : []),
+    ...(opts.clone === false ? [] : [cloneButton(study)]),
+  ];
+}
+
+function attachStudyTitleRow(root: HTMLElement, studyId: string, actions: HTMLElement[]): void {
   const title = root.querySelector<HTMLElement>('.review-info-card__title, .gamebook__title');
   if (!title) return;
   const existing = title.closest('.study-page__title-row');
   if (existing) {
     // A rerender reuses the row; do not stack a second heart into it.
-    if (like && !existing.querySelector('.study-actions__like')) existing.append(like);
+    if (!existing.querySelector('.study-actions')) existing.append(actionsRow(actions));
     return;
   }
   const thumbnail = buildStudyThumbnail(studyId, 'study-page__thumbnail', 'eager');
-  if (!thumbnail && !like) return;
+  if (!thumbnail && actions.length === 0) return;
 
   const summary = title.nextElementSibling;
   const hasSummary =
@@ -1013,8 +1036,19 @@ function attachStudyTitleRow(root: HTMLElement, studyId: string, like: HTMLEleme
   row.className = 'study-page__title-row';
   title.before(row);
   copy.append(title, ...(hasSummary ? [summary] : []));
-  row.append(...(thumbnail ? [thumbnail] : []), copy, ...(like ? [like] : []));
+  row.append(...(thumbnail ? [thumbnail] : []), copy);
   if (hasSummary) attachSummaryToggle(copy, summary);
+  // The actions take a full-width line UNDER the title copy (the row wraps),
+  // not a column beside it: "Copy to my studies" beside a long title squeezed
+  // the title into single words.
+  if (actions.length) row.append(actionsRow(actions));
+}
+
+function actionsRow(actions: HTMLElement[]): HTMLElement {
+  const row = document.createElement('div');
+  row.className = 'study-actions';
+  row.append(...actions);
+  return row;
 }
 
 /**
@@ -1257,6 +1291,43 @@ function likeButton(study: StudyDto): HTMLButtonElement {
         study.likeCount = state.likeCount;
         study.likedByViewer = state.likedByViewer;
         render();
+      })
+      .finally(() => {
+        button.disabled = false;
+      });
+  });
+  return button;
+}
+
+/**
+ * Copy the study into the reader's own studies (POST /clone) and open the copy.
+ * The copy is private and theirs to edit; the source is untouched. A signed-out
+ * reader is told to sign in rather than sent through a redirect.
+ */
+function cloneButton(study: StudyDto): HTMLButtonElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'study-actions__clone';
+  button.textContent = t('study.clone');
+  button.title = t('study.cloneHint');
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    void fetch(`/api/studies/${encodeURIComponent(study.id)}/clone`, { method: 'POST' })
+      .then(async (response) => {
+        if (response.status === 401) {
+          button.title = t('study.signInToClone');
+          button.textContent = t('study.signInToClone');
+          return;
+        }
+        if (!response.ok) {
+          button.textContent = t('study.cloneFailed');
+          return;
+        }
+        const body = (await response.json()) as { study: { id: string } };
+        window.location.assign(`/study/${encodeURIComponent(body.study.id)}`);
+      })
+      .catch(() => {
+        button.textContent = t('study.cloneFailed');
       })
       .finally(() => {
         button.disabled = false;
