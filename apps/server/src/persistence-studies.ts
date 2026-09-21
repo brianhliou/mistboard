@@ -359,6 +359,79 @@ export async function createStudy(input: CreateStudyInput): Promise<StudyWithCha
   }
 }
 
+export type CloneStudyResult =
+  | { ok: true; study: StudyWithChapters }
+  | { ok: false; error: 'not_found' | 'forbidden' };
+
+/**
+ * Copy a study and every chapter to a new owner, as a PRIVATE study of theirs.
+ * A reader who wants to annotate a curated or public study gets their own
+ * tree to edit; the source is untouched and keeps its likes, slug and
+ * featured pick, none of which follow the copy. Private studies clone only
+ * for their owner (the same visibility gate the read path applies).
+ *
+ * Chapter `denorm` is copied minus the curator mark: a copy is the reader's
+ * work from that moment on, and the curator must not re-derive it.
+ */
+export async function cloneStudy(sourceId: string, ownerId: string): Promise<CloneStudyResult> {
+  if (!isInitialized()) return { ok: false, error: 'not_found' };
+  const source = await getStudyById(sourceId);
+  if (!source) return { ok: false, error: 'not_found' };
+  if (source.visibility === 'private' && source.ownerId !== ownerId) {
+    return { ok: false, error: 'not_found' };
+  }
+  const client = await getPool().connect();
+  try {
+    await client.query('BEGIN');
+    const studyId = shortId();
+    await client.query(
+      `INSERT INTO studies (id, owner_id, slug, name, description, i18n, visibility)
+         VALUES ($1, $2, NULL, $3, $4, $5::jsonb, 'private')`,
+      [studyId, ownerId, source.name, source.description, JSON.stringify(source.i18n ?? {})],
+    );
+    for (const chapter of source.chapters) {
+      const denorm =
+        typeof chapter.denorm === 'object' && chapter.denorm !== null
+          ? Object.fromEntries(
+              Object.entries(chapter.denorm as Record<string, unknown>).filter(
+                ([key]) => key !== 'curator',
+              ),
+            )
+          : {};
+      await client.query(
+        `INSERT INTO study_chapters
+           (id, study_id, ordinal, name, i18n, variant, orientation, root, denorm, tags,
+            gamebook, practice, practice_goal)
+           VALUES ($1, $2, $3, $4, $5::jsonb, $6, $7, $8::jsonb, $9::jsonb, $10::jsonb, $11, $12, $13)`,
+        [
+          shortId(),
+          studyId,
+          chapter.ordinal,
+          chapter.name,
+          JSON.stringify(chapter.i18n ?? {}),
+          chapter.variant,
+          chapter.orientation,
+          JSON.stringify(chapter.root),
+          JSON.stringify(denorm),
+          JSON.stringify(chapter.tags ?? {}),
+          chapter.gamebook,
+          chapter.practice,
+          chapter.practiceGoal,
+        ],
+      );
+    }
+    await client.query('COMMIT');
+    const study = await getStudyById(studyId);
+    if (!study) return { ok: false, error: 'not_found' };
+    return { ok: true, study };
+  } catch (error) {
+    await client.query('ROLLBACK');
+    throw error;
+  } finally {
+    client.release();
+  }
+}
+
 export async function getStudyById(id: string): Promise<StudyWithChapters | null> {
   if (!isInitialized()) return null;
   // Joined to `users` so the detail view can name the author: an exported PGN
@@ -381,6 +454,21 @@ export async function getStudyById(id: string): Promise<StudyWithChapters | null
     [id],
   );
   return { ...mapStudy(row), chapters: chapters.rows.map(mapChapter) };
+}
+
+/**
+ * Resolve a curated slug to its full study, any visibility. The study curator
+ * keys its studies on the slug (a recipe id), so this is how a re-run finds
+ * the study it wrote last time; `getPracticeStudiesBySlug` is the reader-facing
+ * lookup and hides private studies, which a curator re-run must not.
+ */
+export async function getStudyBySlug(slug: string): Promise<StudyWithChapters | null> {
+  if (!isInitialized()) return null;
+  const { rows } = await getPool().query<{ id: string }>(`SELECT id FROM studies WHERE slug = $1`, [
+    slug,
+  ]);
+  const id = rows[0]?.id;
+  return id ? getStudyById(id) : null;
 }
 
 /** One curated practice study, as the /practice index needs it. */

@@ -484,6 +484,7 @@ export { getPublicSiteStats, getSiteStats } from './persistence-site-stats.js';
 export { rememberStatsExcludedDevice } from './persistence-stats-excluded-devices.js';
 export type {
   AddChapterResult,
+  CloneStudyResult,
   CreateStudyInput,
   DeleteChapterResult,
   NewChapterInput,
@@ -501,11 +502,13 @@ export type {
 } from './persistence-studies.js';
 export {
   addChapter,
+  cloneStudy,
   createStudy,
   deleteChapter,
   deleteStudy,
   getPracticeStudiesBySlug,
   getStudyById,
+  getStudyBySlug,
   getStudyLikeState,
   isStudyVisibility,
   listFavoriteStudies,

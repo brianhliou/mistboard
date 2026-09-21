@@ -1,0 +1,76 @@
+{
+  "version": 1,
+  "recipes": [
+    {
+      "id": "model-games-central-cannon-vs-screen-horses-2026",
+      "version": 1,
+      "study": {
+        "name": "Central Cannon vs Screen Horses: model games, 2026",
+        "description": "Decisive games from the 2026 professional events in xiangqi's mainline: Red's central cannon against Black's screen horses. Chosen by the curator for a clean win and a loss that turns on one or two moves. Engine notes are Pikafish; every judged move carries its numbers and the engine's line.",
+        "i18n": {
+          "zh-Hans": {
+            "name": "中炮对屏风马：2026 年典范对局",
+            "description": "2026 年职业赛事中的分胜负对局，开局为中炮对屏风马。由系统按赢方走得干净、输方败在一两步的标准挑选。引擎注解为 Pikafish，每一步被判定的着法都附有数据与引擎变化。"
+          },
+          "zh-Hant": {
+            "name": "中炮對屏風馬：2026 年典範對局",
+            "description": "2026 年職業賽事中的分勝負對局，開局為中炮對屏風馬。由系統按贏方走得乾淨、輸方敗在一兩步的標準挑選。引擎註解為 Pikafish，每一步被判定的著法都附有數據與引擎變化。"
+          }
+        },
+        "visibility": "public",
+        "orientation": "red"
+      },
+      "source": {
+        "playedFrom": "2026-01-01",
+        "results": ["1-0", "0-1"],
+        "plyMin": 40,
+        "plyMax": 120
+      },
+      "opening": {
+        "name": "Central Cannon vs Screen Horses",
+        "nameZh": "中炮对屏风马",
+        "byPly": 8,
+        "red": ["C@e3"],
+        "black": ["H@c8", "H@g8"]
+      },
+      "mode": "model-games",
+      "chapters": {
+        "max": 12
+      },
+      "annotate": {
+        "maxMoments": 6,
+        "openingDeviation": true
+      }
+    },
+    {
+      "id": "decisive-moments-2026",
+      "version": 1,
+      "study": {
+        "name": "Where it turned: decisive moments, 2026",
+        "description": "One position per game from the 2026 professional events: the move that decided it, with the board set before it was played. Guess the better move; the engine's line grades you and the game's own move sits beside it.",
+        "i18n": {
+          "zh-Hans": {
+            "name": "胜负手：2026 年关键时刻",
+            "description": "2026 年职业赛事每局一个局面：决定胜负的那一步，棋盘停在它走出之前。请猜出更好的着法，引擎变化负责判分，实战着法列在旁边。"
+          },
+          "zh-Hant": {
+            "name": "勝負手：2026 年關鍵時刻",
+            "description": "2026 年職業賽事每局一個局面：決定勝負的那一步，棋盤停在它走出之前。請猜出更好的著法，引擎變化負責判分，實戰著法列在旁邊。"
+          }
+        },
+        "visibility": "public",
+        "orientation": "winner"
+      },
+      "source": {
+        "playedFrom": "2026-01-01",
+        "results": ["1-0", "0-1"],
+        "plyMin": 30,
+        "plyMax": 140
+      },
+      "mode": "decisive-moments",
+      "chapters": {
+        "max": 20
+      }
+    }
+  ]
+}

@@ -102,6 +102,7 @@
     "pilot:elephantchess-status": "npm run pilot:elephantchess-status --workspace @mistboard/server --",
     "pilot:elephantchess-quality": "npm run pilot:elephantchess-quality --workspace @mistboard/server --",
     "readout:mistboard": "npm run readout:mistboard --workspace @mistboard/server --",
+    "curate:studies": "npm run curate:studies --workspace @mistboard/server --",
     "pilot:elephantchess-review:export": "npm run pilot:elephantchess-review:export --workspace @mistboard/server --",
     "pilot:elephantchess-publish": "npm run pilot:elephantchess-publish --workspace @mistboard/server --",
     "release:local-smoke": "node scripts/release-local-smoke.mjs",
