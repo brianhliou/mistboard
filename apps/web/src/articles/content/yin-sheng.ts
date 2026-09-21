@@ -20,7 +20,7 @@ const G_STAGE_ONE: XiangqiReplaySpec = {
   "iccs": "b0c2 c6c5 b2a2 b9c7 a0b0 a9b9 b0b4 h9g7 h0g2 h7h5 g3g4 g9e7 g0e2 c7b5 b4f4 b5c3 a2a6 b7c7 a6c6 b9b6 c6c3 c7c3 f4d4 f9e8 c2e1 e6e5 g2f4 h5f5 h2h5 g6g5 g4g5 e7g5 h5f5 g7f5 d4d5 g5e7 e1g2 f5h6 d5e5 h6f7 e5f5 i9g9 f0e1 c3b3 f5d5 f7g5 g2h4 b6h6 f4g2 g5h3 i0g0 c5c4 h4f5 g9g5 e3e4 c4c3 d5d6 h6h9 e4e5 b3b2 f5e3 g5e5 e3g4 e5g5 g2e3 h3f4 e3c4 f4d3 c4b6 h9h8 b6c8 e9f9 e1d2 h8f8 g0h0 f8f3 d6d4 e7g9 i3i4 g5g7 c8d6 b2b0 d6b5 g7e7 h0h2 f3f0 e0e1 e7f7 h2h1 b0b1 g4e5 c3c2 b5c3 f7f5",
   "red": "Chen Hongsheng",
   "black": "Yin Sheng",
-  "event": "2026 象甲 league, stage one",
+  "event": "2026 League, stage one",
   "resultText": "0-1",
   "annotations": {
     "byPly": {
@@ -247,7 +247,7 @@ const G_QUALIFIER: XiangqiReplaySpec = {
   "iccs": "h2e2 h9g7 c3c4 b7c7 b0c2 c9e7 h0g2 c6c5 i0h0 i9h9 h0h4 h7i7 h4f4 h9h5 c2b4 c7c9 e2c2 d9e8 c0e2 c9d9 d0e1 b9d8 g3g4 a6a5 f4f8 c5c4 e2c4 g6g5 f8g8 g7f5 g4g5 h5g5 g8g5 e7g5 g0e2 g5e7 c2c3 i6i5 a0a1 a9a7 b4c6 d8c6 c3c6 a7b7 b2d2 d9a9 e3e4 b7b6 c6c8 f5d6 c8a8 d6e4 a1c1 e6e5 c1c2 e4c5 a8c8 a9a3 c2a2 a5a4 d2d4 b6b3 g2h4 i7i3 h4f5 e7g5 d4g4 g9e7 c8c6 e8f7 c6h6 f9e8 h6h4 i3i4 h4h2 i4i2 a2a0 i5i4 a0d0 i4h4 g4g0 h4h3 h2f2 i2i0 f5g7 h3h2 f2f6 h2g2 f6g6 g5i7 e2g4 g2g1 g6g1 b3g3 g7f5 g3g1 c4e2 g1f1 f5e3 f1f3 e3c4 a3e3 c4e3 f3e3 d0d6 c5b3 e0d0 b3c1 e1d2 e3d3 d6d3 c1d3 g0h0 i0f0 h0h4 f0f4 h4h1 f4d4",
   "red": "Zhang Rui",
   "black": "Yin Sheng",
-  "event": "2026 象甲 qualifier, Hangzhou",
+  "event": "2026 League qualifier, Hangzhou",
   "resultText": "0-1",
   "annotations": {
     "byPly": {
@@ -311,10 +311,11 @@ const HERO_SVG = () =>
       state: heroState(),
       x: 0,
       y: 0,
-      label: 'SHANGHAI CUP FINAL · AFTER 22...车8平4',
+      label: 'THE FINAL · RED TO MOVE',
       perspective: 'red',
       arrows: [{ from: 'h7' as XiangqiSquare, to: 'd7' as XiangqiSquare }],
     }),
+    'xq-article-svg--hero',
   );
 
 export const yinShengArticle: Article = {
@@ -325,7 +326,7 @@ export const yinShengArticle: Article = {
   title: 'Yin Sheng 尹昇',
   seoTitle: 'Yin Sheng 尹昇: games, results, and analysis',
   summary:
-    '31 games without a loss, August 17 to September 16, 2026, across the 象甲 qualifier, the Shanghai Cup and the first league stage. How he plays, five games on the board, all 31 analysed.',
+    '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.',
   showSummaryOnPage: false,
   status: 'draft',
   audience:
@@ -333,47 +334,47 @@ export const yinShengArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: '**Yin Sheng 尹昇** · Zhejiang Mintai Bank 浙江民泰银行象棋队 · 全国大师, national master, 2023 · born 2005, Wenling, Zhejiang',
+      text: '**Yin Sheng 尹昇** · Zhejiang Mintai Bank team · national master · born 2005, Wenling, Zhejiang',
     },
     {
       kind: 'raw-svg',
       svg: HERO_SVG,
-      caption: 'Yin Sheng vs Chen Shaobo, Shanghai Cup final, 13 September 2026. Black has just played 22...车8平4; the game is below.',
+      caption: 'Yin Sheng vs Chen Shaobo, Shanghai Cup final, 13 September 2026. Black has just played his 22nd move, and the title game is about to turn. The full game is below.',
     },
     {
       kind: 'paragraph',
-      text: 'League debut at fifteen, the master title in 2023. At twenty he lost the World Championship final in Shanghai to Lại Lý Huynh of Vietnam, the first non-Chinese champion in nineteen editions, and got called 千古罪人 for it online. Then this.',
+      text: 'Yin Sheng is a 21-year-old professional from Wenling, a small city on the Zhejiang coast, who has played in China\'s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. This page is about what he did next.',
     },
   ],
   sections: [
     {
-      heading: "The number",
+      heading: "The run",
       blocks: [
         {
           kind: 'paragraph',
-          text: "**31 games without a loss, August 17 to September 16, 2026.** Eleven wins, twenty draws, three events. Every game went through the same engine analysis Mistboard runs on your games: accuracy between 89 and 100, median 98, and at no move in any of the 31 did the engine put his winning chances under 44 percent.",
+          text: "Between August 17 and September 16 this year, Yin Sheng played 31 games across three events and did not lose one of them: eleven wins and twenty draws through the qualifier for China's top league, the Shanghai Cup, which he won, and the first stage of the league itself. I ran every game through the same engine analysis Mistboard gives your own games. His accuracy sat between 89 and 100, with a median of 98, and at no point in any of the 31 games did the engine rate his winning chances below 44 percent.",
         },
         {
           kind: 'paragraph',
-          text: "He was rated 2454 on the last official list, September 2023, 78th in China. Every rated opponent in the run stood above him on it; Chen Shaobo, who he beat in the final, was too young to be on it at all.",
+          text: "Some context on the opposition, because the names will mean little outside China. Xiangqi does have ratings: the Chinese Xiangqi Association ran an Elo-style system for over forty years, with the very top players around 2750 to 2800, before retiring it in January 2026 in favour of a tournament-points ranking. The last list it published is from September 2023, so the numbers below are three years old and frozen, but they are the only official ones, and they show the field. Every rated opponent in the run stood above him on that list. Chen Shaobo, who he beat in the final, was too young to be on it at all.",
         },
         {
           kind: 'table',
-          headers: ['Player', 'Rating, Sep 2023', 'Rank', 'Against Yin, Aug–Sep 2026'],
+          headers: ['Player', 'Rating', 'Rank in China', 'Against Yin Sheng this run'],
           rows: [
-            ["Meng Fanrui 孟繁睿", "2567", "17", "1W 6D"],
-            ["Cao Yanlei 曹岩磊", "2551", "23", "1D"],
-            ["Xu Wenzhang 许文章", "2546", "24", "2D"],
-            ["Chen Hongsheng 陈泓盛", "2517", "36", "1W 1D"],
-            ["Huang Guangying 黄光颖", "2501", "42", "1D"],
-            ["He Wenzhe 何文哲", "2471", "65", "2W"],
-            ["Jin Bo 金波", "2467", "67", "1W 1D"],
-            ["Liu Bohong 刘柏宏", "2449", "84", "2D"],
-            ["Jin Yuyan 靳玉砚", "2448", "86", "1W"],
-            ["Yin Sheng 尹昇", "2454", "78", "11W 20D, all 31"],
+            ["Meng Fanrui", "2567", "17", "1 win, 6 draws"],
+            ["Cao Yanlei", "2551", "23", "1 draw"],
+            ["Xu Wenzhang", "2546", "24", "2 draws"],
+            ["Chen Hongsheng", "2517", "36", "1 win, 1 draw"],
+            ["Huang Guangying", "2501", "42", "1 draw"],
+            ["He Wenzhe", "2471", "65", "2 wins"],
+            ["Jin Bo", "2467", "67", "1 win, 1 draw"],
+            ["Liu Bohong", "2449", "84", "2 draws"],
+            ["Jin Yuyan", "2448", "86", "1 win"],
+            ["Yin Sheng", "2454", "78", "11 wins, 20 draws, no losses"],
           ],
           highlightRows: [9],
-          caption: 'CXA 等级分, men, list of 30 September 2023, the last the federation published before retiring the system in January 2026. Ratings are frozen there; results are from this run.',
+          caption: 'Ratings and ranks from the Chinese Xiangqi Association list of 30 September 2023, the last one published. Results are from August 17 to September 16, 2026.',
         },
       ],
     },
@@ -382,91 +383,91 @@ export const yinShengArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "**With red, he opens with the pawn.** Ten of his fifteen red games start 兵七进一 or 兵三进一, the 仙人指路 systems, four more with 飞相, one with 过宫炮. Not a single central cannon all month. He is not trying to win the opening; he is trying to get a middlegame.",
+          text: "**With red, he opens with a soldier.** Ten of his fifteen games as red begin by advancing the third or seventh soldier, the family of openings called \"the immortal points the way,\" and four more by raising an elephant. Not once all month did he play the central cannon, the most direct opening in the game. He is not trying to win the opening; he is trying to reach a middlegame he understands.",
         },
         {
           kind: 'paragraph',
-          text: "**With black, he is nearly unmarkable.** Median accuracy 98.6 as black against 95.6 as red. One mistake in sixteen games as black. All four of his blunders came with red, three of them in games he won anyway: he errs when he is pressing, not when he is holding.",
+          text: "**With black, the engine can barely mark him.** His median accuracy as black was 98.6, against 95.6 as red, and he made one mistake in sixteen games with the black pieces. All four of his blunders came with red, and three of those were in games he went on to win anyway. He errs when he is pressing, not when he is holding.",
         },
         {
           kind: 'paragraph',
-          text: "**His draws are short and his wins are long.** Half the draws were over inside thirty moves; the median win took fifty-two. In nine of the eleven wins the other side made the first real mistake and the rest was conversion. The other two he ground out against opponents the engine never faulted, 52 and 84 moves of small edges.",
+          text: "**His draws are short and his wins are long.** Half of the twenty draws were over inside thirty moves, while the median win took fifty-two. In nine of the eleven wins, the other side made the first real mistake and the rest of the game was conversion. The other two he ground out against opponents the engine never faulted at all, over 52 and 84 moves of small edges.",
         },
         {
           kind: 'paragraph',
-          text: "**Seventeen of the 31 games have nothing for the engine to mark on his side.** Three `!!`, three `!`, one missed mate in one, and otherwise a player who does not give anything back.",
+          text: "**In seventeen of the 31 games the engine found nothing on his side worth marking.** Across the whole month it found three brilliant moves, three great ones, one missed mate in one, and otherwise a player who simply does not give anything back.",
         },
       ],
     },
     {
-      heading: "象甲 qualifier · Hangzhou, August 17 to 19 · 2W 3D 0L",
+      heading: "League qualifier · Hangzhou, August 17 to 19 · 2 wins, 3 draws",
       blocks: [
         {
           kind: 'paragraph',
-          text: "Day one, black against Zhang Rui of Tianjin. Zhang's knight jump on move 21 is the one error the engine finds, and Yin needs 38 more moves to turn it into a win. This is the shape of most of them.",
+          text: "The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's knight move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_QUALIFIER },
-          caption: "Zhang Rui vs Yin Sheng, 17 August 2026. Move 21 is where it goes wrong for red.",
+          spec: { ...G_QUALIFIER, startPly: 41 },
+          caption: "Zhang Rui vs Yin Sheng, 17 August 2026. The board opens just after red's 21st move, with Yin Sheng to play as black.",
         },
         {
           kind: 'cta',
-          buttons: [{ label: "The qualifier in the archive", href: "/broadcast/xiangqi/2026-league-qualifier", emphasis: 'secondary' }],
+          buttons: [{ label: "The qualifier in the archive", href: "/broadcast/xiangqi/2026-league-qualifier", emphasis: "secondary" }],
         },
       ],
     },
     {
-      heading: "Shanghai Cup · September 9 to 13 · winner · 6W 11D 0L",
+      heading: "Shanghai Cup · September 9 to 13 · winner · 6 wins, 11 draws",
       blocks: [
         {
           kind: 'paragraph',
-          text: "Seven games against Meng Fanrui: six draws, one of them 162 moves, and this one. Move 19 is a pair of edge-pawn pushes, both wrong, Meng's more so, and 20.车八平六 is the only move that punishes it.",
+          text: "A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's rook move on move 20 is the only move that punishes it.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_MENG },
-          caption: "Yin Sheng vs Meng Fanrui, 11 September 2026. Watch move 19 for both sides, and 20 for red.",
+          spec: { ...G_MENG, startPly: 38 },
+          caption: "Yin Sheng vs Meng Fanrui, 11 September 2026. The board opens after black's 19th move, with the only winning reply for red still to find.",
         },
         {
           kind: 'paragraph',
-          text: "Against Jin Bo, 88 moves. At move 30 he leaves a chariot where it can be taken and the engine agrees it should be left there. After black's 55th there is a mate in one on the board; he plays a cannon move instead and wins 32 moves later. Stop the board at move 55 and find it.",
+          text: "Against Jin Bo, 88 moves. On move 30 he leaves a rook where it can be taken, and the engine agrees it should be left there. Then, after black's 55th move, there is a mate in one on the board. He plays a cannon move instead, and wins 32 moves later. The board opens on that position; find the mate before you step forward.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_JIN },
-          caption: "Yin Sheng vs Jin Bo, 12 September 2026. The mate is on the board after black's 55th.",
+          spec: { ...G_JIN, startPly: 110 },
+          caption: "Yin Sheng vs Jin Bo, 12 September 2026. Red to move, and there is a mate in one.",
         },
         {
           kind: 'paragraph',
-          text: "The final against Chen Shaobo went four games, three draws and this one. Chen's 22nd move gives up 14 points of winning chances, and Yin plays the rest at 95 percent. No killing move. He just doesn't give any of it back.",
+          text: "The final against Chen Shaobo went to four games, three draws and this one. Chen's 22nd move gives up 14 points of winning chances, and Yin Sheng plays the rest of the game at 95 percent accuracy. There is no single killing move. He just does not give any of it back.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_FINAL },
-          caption: "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The engine's quibbles with red are three small ones, moves 26, 31 and 32.",
+          spec: { ...G_FINAL, startPly: 44 },
+          caption: "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The board opens after black's 22nd, the position on the cover of this page.",
         },
         {
           kind: 'cta',
-          buttons: [{ label: "The Shanghai Cup in the archive", href: "/broadcast/xiangqi/2026-shanghai-cup", emphasis: 'secondary' }],
+          buttons: [{ label: "The Shanghai Cup in the archive", href: "/broadcast/xiangqi/2026-shanghai-cup", emphasis: "secondary" }],
         },
       ],
     },
     {
-      heading: "象甲 league, stage one · Hangzhou, September 14 to 16 · 3W 6D 0L",
+      heading: "League stage one · Hangzhou, September 14 to 16 · 3 wins, 6 draws",
       blocks: [
         {
           kind: 'paragraph',
-          text: "The messy one. Against Chen Hongsheng, as black, the engine counts four blunders for red and one real mistake for Yin, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand it over. On the page because the paragraph above would give you the wrong idea of what these games look like from inside.",
+          text: "The messy one. Against Chen Hongsheng, with black, the engine counts four blunders for red and one real mistake for Yin Sheng, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand the game over. It is on the page because the section above would otherwise give you the wrong idea of what these games look like from the inside.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_STAGE_ONE },
-          caption: "Chen Hongsheng vs Yin Sheng, 15 September 2026. The fight is moves 24 to 42.",
+          spec: { ...G_STAGE_ONE, startPly: 77 },
+          caption: "Chen Hongsheng vs Yin Sheng, 15 September 2026. The board opens after red's 39th, with black to move and the game turning.",
         },
         {
           kind: 'cta',
-          buttons: [{ label: "Stage one in the archive", href: "/broadcast/xiangqi/2026-xiangqi-league", emphasis: 'secondary' }],
+          buttons: [{ label: "Stage one in the archive", href: "/broadcast/xiangqi/2026-xiangqi-league", emphasis: "secondary" }],
         },
       ],
     },
@@ -475,20 +476,21 @@ export const yinShengArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "The league's second stage is in October. The national individual championship is November 21 to 29 in Changchun; in 2023, on getting the master title, he said he'd give himself five years to a result there.",
+          text: "The league's second stage is in October, and the national individual championship, the title that decides who China's best player is, runs from November 21 to 29 in Changchun. In 2023, on the day he became a master, Yin Sheng said he would give himself five years to a real result there.",
         },
       ],
     },
     {
-      heading: "All games",
+      heading: "All 31 games",
       blocks: [
         {
           kind: 'paragraph',
-          text: "All 31, with the engine's judgments and lines, in [the study](/study/VSX0aLce); the three events in the archive. Games from dpxq.com; analysis by Pikafish through Mistboard's review pipeline, September 2026.",
+          text: "Every game of the run is in a Mistboard study, with the engine's judgments and lines on each one, and the three events are in the broadcast archive. Game records from dpxq.com; analysis by Pikafish through Mistboard's review pipeline, September 2026.",
         },
         {
           kind: 'cta',
-          buttons: [{ label: "The archive", href: "/broadcast/xiangqi", emphasis: 'secondary' }],
+          buttons: [{ label: "Open the study", href: "/study/VSX0aLce", emphasis: "primary" }, { label: "The broadcast archive", href: "/broadcast/xiangqi", emphasis: "secondary" }],
+          layout: 'single-row',
         },
       ],
     },

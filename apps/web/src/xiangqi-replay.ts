@@ -144,6 +144,14 @@ export type XiangqiReplaySpec = {
    * judgment glyphs and steppable engine lines.
    */
   annotations?: XiangqiReplayAnnotations;
+  /**
+   * Mainline ply to open on (the position AFTER this many plies), so a page can
+   * start a game at the moment it is about, with the reader's side to move,
+   * instead of at the opening every time. 0 or absent is the opening; a value
+   * past the end clamps to the final position. The stepper still walks the
+   * whole game from there in either direction.
+   */
+  startPly?: number;
 };
 
 export type XiangqiReplayController = { destroy: () => void };
@@ -559,7 +567,7 @@ export function mountXiangqiReplay(
     host.append(header, frame, controls, slider, narrative);
   }
 
-  let index = 0;
+  let index = Math.max(0, Math.min(total, Math.floor(spec.startPly ?? 0)));
   /**
    * When set, the board is showing the engine's line instead of the game: the
    * mainline up to `atPly - 1`, then `moves` up to `cursor`. Mainline `index`
