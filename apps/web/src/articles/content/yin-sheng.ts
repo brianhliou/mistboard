@@ -309,7 +309,7 @@ export const yinShengArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Yin Sheng 尹昇 is a 21-year-old professional from Wenling, a small city on the Zhejiang coast, who plays for the Zhejiang Mintai Bank team. He has been in China’s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.',
+      text: 'Yin Sheng 尹昇 is a professional from Wenling, a small city on the Zhejiang coast, who plays for the Zhejiang Mintai Bank team. Born in 2005, he has been in China’s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.',
     },
   ],
   sections: [
@@ -370,7 +370,7 @@ export const yinShengArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "Hangzhou, August 17 to 19: two wins and three draws. The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's knight move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.",
+          text: "Hangzhou, August 17 to 19: two wins and three draws. The run starts on day one, with black against Zhang Rui of Tianjin. Zhang's horse move on move 21 is the only error the engine finds in the game, and Yin Sheng needs 38 more moves to turn it into a win. This is the shape of most of his wins: one error from the other side, then no way back.",
         },
         {
           kind: 'xq-replay',
@@ -388,7 +388,7 @@ export const yinShengArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "September 9 to 13, and he won it: six wins and eleven draws. A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's rook move on move 20 is the only move that punishes it.",
+          text: "September 9 to 13, and he won it: six wins and eleven draws. A knockout with rapid tiebreaks, which is how seventeen games fit into five days. Seven of them were against Meng Fanrui: six draws, one of them 162 moves long, and this one. Move 19 is a pair of edge-soldier pushes, both of them wrong, Meng's more so, and Yin Sheng's chariot move on move 20 is the only move that punishes it.",
         },
         {
           kind: 'xq-replay',
@@ -397,7 +397,7 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Against Jin Bo, 88 moves. On move 30 he leaves a rook where it can be taken, and the engine agrees it should be left there. Then, after black's 55th move, there is a mate in one on the board. He plays a cannon move instead, and wins 32 moves later. The board opens on that position; find the mate before you step forward.",
+          text: "Against Jin Bo, 88 moves. On move 30 he leaves a chariot where it can be taken, and the engine agrees it should be left there. Then, after black's 55th move, there is a mate in one on the board. He plays a cannon move instead, and wins 32 moves later. The board opens on that position; find the mate before you step forward.",
         },
         {
           kind: 'xq-replay',
