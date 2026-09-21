@@ -206,6 +206,11 @@
   color: #fff;
   font-weight: 700;
 }
+.review-move-list__line-number {
+  font-size: 11.5px;
+  color: var(--site-muted);
+  padding-right: 1px;
+}
 .review-move-list__line-verdict {
   font-size: 12.5px;
   font-weight: 600;

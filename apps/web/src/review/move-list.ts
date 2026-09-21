@@ -175,8 +175,21 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     if (entry.line) {
       const line = document.createElement('div');
       line.className = 'review-move-list__line';
+      // Numbered the way the rows above are: the line's first move replaces the
+      // judged move, so it carries that move's number, and "N..." marks a line
+      // that opens with the second mover. Without these a sideline read as a
+      // bare string of moves next to a numbered game.
+      const leadOffset = opts.firstMover === 'b' ? 1 : 0;
       entry.line.moves.forEach((label, i) => {
         const cursor = i + 1;
+        const index = entry.ply - 1 + i;
+        const slot = (index + leadOffset) % 2;
+        if (slot === 0 || i === 0) {
+          const n = document.createElement('span');
+          n.className = 'review-move-list__line-number';
+          n.textContent = `${Math.floor((index + leadOffset) / 2) + (opts.firstNumber ?? 1)}${slot === 0 ? '.' : '...'}`;
+          line.append(n);
+        }
         const button = document.createElement('button');
         button.type = 'button';
         button.className = 'review-move-list__line-move';

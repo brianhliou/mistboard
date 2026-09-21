@@ -155,6 +155,12 @@ describe('mountEmbedStudy', () => {
     );
     const line = Array.from(branch?.querySelectorAll('.review-move-list__line-move') ?? []);
     expect(line.map((m) => m.textContent)).toEqual(['d3', 'Nf6']);
+    // Numbered like the game: the line replaces White's third move.
+    expect(
+      Array.from(branch?.querySelectorAll('.review-move-list__line-number') ?? []).map(
+        (n) => n.textContent,
+      ),
+    ).toEqual(['3.']);
     expect(branch?.querySelector('.review-move-list__line-verdict')?.textContent).toBe('=');
     expect(branch?.querySelector('.review-move-list__note--line')?.textContent).toBe(
       'd3: +0.25 at 20M nodes.',
