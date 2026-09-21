@@ -286,7 +286,7 @@ export const yinShengArticle: Article = {
   title: 'Yin Sheng 尹昇',
   seoTitle: 'Yin Sheng 尹昇: games, results, and analysis',
   summary:
-    '31 games without a loss, August 17 to September 16, 2026, across the 象甲 qualifier, the Shanghai Cup and the first league stage. Five of them on the board, all of them analysed.',
+    '31 games without a loss, August 17 to September 16, 2026, across the 象甲 qualifier, the Shanghai Cup and the first league stage. How he plays, five games on the board, all 31 analysed.',
   showSummaryOnPage: false,
   status: 'draft',
   audience:
@@ -298,11 +298,7 @@ export const yinShengArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Made his 象甲 league debut in 2020 at fifteen, among the youngest players ever to appear in it. Won the national youth championship in 2023 and the master title with it.',
-    },
-    {
-      kind: 'paragraph',
-      text: 'In September 2025, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam. Every one of the eighteen previous men\'s titles had gone to a Chinese player. He had won the World Rapid Open and team gold the same fortnight; what the internet remembered was the final, and the phrase it used was 千古罪人, sinner for the ages. He never issued a statement. Between November 2025 and May 2026 he won four open tournaments. Then August, and this.',
+      text: 'League debut at fifteen, the master title in 2023. At twenty he lost the World Championship final in Shanghai to Lại Lý Huynh of Vietnam, the first non-Chinese champion in nineteen editions, and got called 千古罪人 for it online. Then this.',
     },
   ],
   sections: [
@@ -311,20 +307,41 @@ export const yinShengArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "**31 games without a loss, August 17 to September 16, 2026.** Nine wins, 22 draws, three events. Every game went through the same engine analysis Mistboard runs on your games: accuracy between 89 and 100, median 98, and at no move in any of the 31 did the engine put his winning chances under 44 percent. The engine never had him worse than close to even.",
+          text: "**31 games without a loss, August 17 to September 16, 2026.** Eleven wins, twenty draws, three events. Every game went through the same engine analysis Mistboard runs on your games: accuracy between 89 and 100, median 98, and at no move in any of the 31 did the engine put his winning chances under 44 percent.",
         },
         {
           kind: 'paragraph',
-          text: "He was rated 2454 on the last official list, September 2023, 78th in China. Every rated opponent in the run stood above him on that list: Meng Fanrui 2567, Cao Yanlei 2551, Xu Wenzhang 2546, Chen Hongsheng 2517, Huang Guangying 2501, He Wenzhe 2471, Jin Bo 2467. Chen Shaobo, who he beat in the final, was too young to be on it. The rating system was retired in January 2026; nothing official has replaced the numbers yet.",
+          text: "He was rated 2454 on the last official list, September 2023, 78th in China. Every rated opponent in the run stood above him on that list: Meng Fanrui 2567, Cao Yanlei 2551, Xu Wenzhang 2546, Chen Hongsheng 2517, Huang Guangying 2501, He Wenzhe 2471, Jin Bo 2467. Chen Shaobo, who he beat in the final, was too young to be on it.",
         },
       ],
     },
     {
-      heading: "象甲 league, stage one · Hangzhou, September 14 to 16 · 3W 7D 0L",
+      heading: "How he plays",
       blocks: [
         {
           kind: 'paragraph',
-          text: "Not every game was clean. Against Chen Hongsheng, as black, Yin made one real mistake and four smaller ones, and the engine counts four blunders for his opponent. The evaluation swings both ways for 20 moves before red's 39th and 42nd hand it over. It's on the page because a run of 97 percent accuracy would give you the wrong idea of what these games look like from inside.",
+          text: "**With red, he opens with the pawn.** Ten of his fifteen red games start 兵七进一 or 兵三进一, the 仙人指路 systems, four more with 飞相, one with 过宫炮. Not a single central cannon all month. He is not trying to win the opening; he is trying to get a middlegame.",
+        },
+        {
+          kind: 'paragraph',
+          text: "**With black, he is nearly unmarkable.** Median accuracy 98.6 as black against 95.6 as red. One mistake in sixteen games as black. All four of his blunders came with red, three of them in games he won anyway: he errs when he is pressing, not when he is holding.",
+        },
+        {
+          kind: 'paragraph',
+          text: "**His draws are short and his wins are long.** Half the draws were over inside thirty moves; the median win took fifty-two. In nine of the eleven wins the other side made the first real mistake and the rest was conversion. The other two he ground out against opponents the engine never faulted, 52 and 84 moves of small edges.",
+        },
+        {
+          kind: 'paragraph',
+          text: "**Seventeen of the 31 games have nothing for the engine to mark on his side.** Not a brilliancy style. The engine found three `!!` and three `!` in the whole month, and one missed mate in one. What it mostly found was a player who does not give anything back.",
+        },
+      ],
+    },
+    {
+      heading: "象甲 league, stage one · Hangzhou, September 14 to 16 · 3W 6D 0L",
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: "The messy one. Against Chen Hongsheng, as black, the engine counts four blunders for red and one real mistake for Yin, and the evaluation swings both ways for twenty moves before red's 39th and 42nd hand it over. On the page because the paragraph above would give you the wrong idea of what these games look like from inside.",
         },
         {
           kind: 'xq-replay',
@@ -342,7 +359,7 @@ export const yinShengArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "A knockout with rapid tiebreaks, which is why 17 games fit in five days. Seven of them were against Meng Fanrui, his teammate on the 2025 World Championship team: six draws, one of them 162 moves, and this one. Move 19 is a pair of edge-pawn pushes. Yin's is a blunder. Meng's answer is a bigger one, and 20.车八平六 is the only move that punishes it; everything else gives the game back.",
+          text: "Seven games against Meng Fanrui: six draws, one of them 162 moves, and this one. Move 19 is a pair of edge-pawn pushes, both wrong, Meng's more so, and 20.车八平六 is the only move that punishes it.",
         },
         {
           kind: 'xq-replay',
@@ -351,7 +368,7 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Against Jin Bo, 88 moves. At move 30 he leaves a chariot where it can be taken and the engine agrees it should be left there. After black's 55th there is a mate in one on the board. Yin plays a cannon move instead and the game goes on for another 32 moves. He wins it anyway. Stop the board at move 55 and find red's move before you step forward.",
+          text: "Against Jin Bo, 88 moves. At move 30 he leaves a chariot where it can be taken and the engine agrees it should be left there. After black's 55th there is a mate in one on the board; he plays a cannon move instead and wins 32 moves later. Stop the board at move 55 and find it.",
         },
         {
           kind: 'xq-replay',
@@ -360,7 +377,7 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "The final against Chen Shaobo went four games, three draws and this one. Chen's 22nd move, rook to the 4th file, gives up 14 points of winning chances, and Yin plays the rest at 95 percent. There's no single killing move. He just doesn't give any of it back.",
+          text: "The final against Chen Shaobo went four games, three draws and this one. Chen's 22nd move gives up 14 points of winning chances, and Yin plays the rest at 95 percent. No killing move. He just doesn't give any of it back.",
         },
         {
           kind: 'xq-replay',
@@ -378,7 +395,7 @@ export const yinShengArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "Where the run starts: day one, black against Zhang Rui of Tianjin. Zhang's knight jump on move 21 is the one error the engine finds, and Yin needs 38 more moves to turn it into a win. This is the shape of most of his wins. One error from the other side, then no way back.",
+          text: "Day one, black against Zhang Rui of Tianjin. Zhang's knight jump on move 21 is the one error the engine finds, and Yin needs 38 more moves to turn it into a win. This is the shape of most of them.",
         },
         {
           kind: 'xq-replay',
@@ -392,15 +409,11 @@ export const yinShengArticle: Article = {
       ],
     },
     {
-      heading: "What he said",
+      heading: "What's next",
       blocks: [
         {
           kind: 'paragraph',
-          text: "**May 2023**, to 新浪体育, on receiving the master title: two years to establish himself in the league, then five years to a good result at the national individual championship. Three years on, the first half is done. The 全国象棋个人赛 is November 21 to 29 in Changchun.",
-        },
-        {
-          kind: 'paragraph',
-          text: "**After the 2025 final**, nothing. A May 2026 profile in 腾讯新闻 says he made no statement and answered nothing, and that the game he lost is the one he kept setting up on the board.",
+          text: "The league's second stage is in October. The national individual championship is November 21 to 29 in Changchun; in 2023, on getting the master title, he said he'd give himself five years to a result there.",
         },
       ],
     },
@@ -409,7 +422,7 @@ export const yinShengArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "All 31 games of the run are in [the study](/study/VSX0aLce); the three events are in the broadcast archive. Games from dpxq.com; analysis by Pikafish through Mistboard's review pipeline, September 2026.",
+          text: "All 31, with the engine's judgments and lines, in [the study](/study/VSX0aLce); the three events in the archive. Games from dpxq.com; analysis by Pikafish through Mistboard's review pipeline, September 2026.",
         },
         {
           kind: 'cta',

@@ -249,7 +249,7 @@ export const ARTICLE_META: Record<
     title: 'Yin Sheng 尹昇',
     kind: 'article',
     description:
-      '31 games without a loss, August 17 to September 16, 2026, across the 象甲 qualifier, the Shanghai Cup and the first league stage. Five of them on the board, all of them analysed.',
+      '31 games without a loss, August 17 to September 16, 2026, across the 象甲 qualifier, the Shanghai Cup and the first league stage. How he plays, five games on the board, all 31 analysed.',
   },
   'titled-players': {
     title: 'Bring your title to Mistboard',
