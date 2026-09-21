@@ -51,12 +51,24 @@ const STUDY_DESCRIPTION = argOf(
   'description',
   'Every game of the run, through the same engine analysis Mistboard runs on your games. Judged moves carry the engine line as a variation you can step into.',
 );
+/**
+ * Reviewed positive glyphs, `{ "<key>": { "<ply>": "!!" | "!" } }`. The
+ * analyser marks negatives only; the positives come from
+ * xq-positive-glyphs-scan.mjs and are baked only after a human has replayed
+ * them (docs-private/xiangqi-positive-annotations-research.md). A ply that is
+ * also judged negative keeps the negative: the scan never marks one of those.
+ */
+const GLYPHS = argOf('glyphs') ? JSON.parse(readFileSync(argOf('glyphs'), 'utf8')) : {};
+const POSITIVE_NOTE = {
+  '!!': "Brilliant: a piece offered and not recovered, confirmed along the engine's own line.",
+  '!': 'Great: the only move that punishes the error before it, and every alternative is at least a mistake worse.',
+};
 const YEAR_FIX = Object.fromEntries(
   args.flatMap((a, i) => (a === '--year-fix' ? [String(args[i + 1]).split('=')] : [])),
 );
 
 if (!DIR || !PLAYER || !STUDY_NAME) {
-  console.error('usage: player-study.mjs --dir <annotate-json dir> --player <zh name> --name <study name> [--names names.json] [--year-fix 2029=2026] [--create | --update <id>] [--cookie path] [--public]');
+  console.error('usage: player-study.mjs --dir <annotate-json dir> --player <zh name> --name <study name> [--names names.json] [--glyphs reviewed-positives.json] [--year-fix 2029=2026] [--create | --update <id>] [--cookie path] [--public]');
   process.exit(1);
 }
 
@@ -121,8 +133,11 @@ function evalText(row) {
 }
 
 /** annotate-game rows -> the byPly map annotated-game-to-spec.mjs would emit. */
-function annotationsOf(rows) {
+function annotationsOf(rows, key) {
   const byPly = {};
+  for (const [ply, glyph] of Object.entries(GLYPHS[key] ?? {})) {
+    if (POSITIVE_NOTE[glyph]) byPly[String(ply)] = { glyph, note: POSITIVE_NOTE[glyph] };
+  }
   for (const row of rows) {
     if (!row.symbol || !row.judgment) continue;
     const line = (row.pv ?? []).join(' ');
@@ -220,7 +235,7 @@ function loadGames() {
       result: String(game.result ?? ''),
       sourceUrl: game.sourceUrl ?? '',
       iccs: rows.map((r) => r.uci).join(' '),
-      byPly: annotationsOf(rows),
+      byPly: annotationsOf(rows, game.key ?? file.replace(/\.json$/, '')),
       plies: rows.length,
     });
   }
