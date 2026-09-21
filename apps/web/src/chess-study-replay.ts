@@ -13,6 +13,7 @@ import {
   standardChessSan,
   standardChessVariant,
 } from '@mistboard/game';
+import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
 import { renderDarkChessBoardSvg } from './dark-chess-render.js';
 import { chessUciToMove } from './review/chess-tree-adapter.js';
 import type { StudyChapterPayload, StudyTreeNode } from './study-chapter-spec.js';
@@ -25,6 +26,12 @@ export type ChessReplaySpec = {
   perspective?: 'white' | 'black';
   /** Judgment glyph per 1-based mainline ply, from the chapter's NAGs. */
   glyphs?: Record<number, string>;
+  /** The chapter's comment on a mainline move, by ply. */
+  notes?: Record<number, string>;
+  /** The first sideline hung off the position a mainline move was played in,
+   *  by that move's ply: plain UCI, its verdict (the assessment NAG on its last
+   *  node), and its own comment (on its first move). */
+  lines?: Record<number, { moves: string[]; verdict?: string; note?: string }>;
 };
 
 /** NAG codes as the study stores them, to the glyph the board and sheet show. */
@@ -37,19 +44,46 @@ const GLYPH_SUFFIX_CLASS: Record<string, string> = {
   '!': 'great',
 };
 
-/** The mainline of a chess chapter's tree: the FIRST child at every node, in
- *  the tree adapter's own UCI. Sidelines are the study page's; the embed shows
- *  the line the author put first. */
+/** A chess chapter's tree as the embed shows it: the FIRST child at every node
+ *  is the mainline, in the tree adapter's own UCI; any later child is a
+ *  sideline hung off the same position, kept with its verdict and comment so
+ *  the embed shows what the chapter argues (the same walk as
+ *  studyChapterToReplaySpec, which the xiangqi embed reads). */
 export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessReplaySpec | null {
   const moves: string[] = [];
   const glyphs: Record<number, string> = {};
+  const notes: Record<number, string> = {};
+  const lines: Record<number, { moves: string[]; verdict?: string; note?: string }> = {};
   let node: StudyTreeNode | undefined = chapter.root?.root;
   while (node?.children?.length) {
     const played = node.children[0];
     if (!played?.uci) break;
     moves.push(played.uci);
+    const ply = moves.length;
     const glyph = (played.annotations?.glyphs ?? []).map((code) => NAG_GLYPH[code]).find(Boolean);
-    if (glyph) glyphs[moves.length] = glyph;
+    if (glyph) glyphs[ply] = glyph;
+    const note = played.annotations?.comments?.[0]?.text;
+    if (note) notes[ply] = note;
+    const sibling = node.children[1];
+    if (sibling?.uci) {
+      const line: string[] = [];
+      let verdict: string | undefined;
+      let variation: StudyTreeNode | undefined = sibling;
+      while (variation?.uci) {
+        line.push(variation.uci);
+        const assessed = (variation.annotations?.glyphs ?? []).find(
+          (code) => ASSESSMENT_GLYPH[code] !== undefined,
+        );
+        verdict = assessed === undefined ? undefined : ASSESSMENT_GLYPH[assessed];
+        variation = variation.children?.[0];
+      }
+      const lineNote = sibling.annotations?.comments?.[0]?.text;
+      lines[ply] = {
+        moves: line,
+        ...(verdict ? { verdict } : {}),
+        ...(lineNote ? { note: lineNote } : {}),
+      };
+    }
     node = played;
   }
   if (!moves.length) return null;
@@ -59,6 +93,8 @@ export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessRep
     moves,
     perspective: chapter.orientation === 'black' ? 'black' : 'white',
     glyphs,
+    notes,
+    lines,
   };
 }
 
@@ -66,12 +102,19 @@ export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessRep
  *  the line rather than poisoning every position after it. */
 function replayChess(spec: ChessReplaySpec): { states: GameState[]; labels: string[] } {
   const parsed = spec.rootFen ? parseStandardChessFen(spec.rootFen, 'embed') : null;
-  let state: GameState = parsed?.ok
+  const start: GameState = parsed?.ok
     ? parsed.state
     : standardChessVariant.createInitialState('embed');
+  return replayFrom(start, spec.moves);
+}
+
+/** Replay `moves` from `start`; the same truncation rule for a sideline as for
+ *  the mainline. */
+function replayFrom(start: GameState, moves: string[]): { states: GameState[]; labels: string[] } {
+  let state = start;
   const states = [state];
   const labels: string[] = [];
-  for (const uci of spec.moves) {
+  for (const uci of moves) {
     const move: Move | null = chessUciToMove(uci);
     if (!move || state.status.type !== 'playing') break;
     const legal = standardChessVariant
@@ -104,14 +147,32 @@ export function mountChessReplayBoard(
 ): {
   destroy: () => void;
   jumpToPly: (ply: number) => void;
+  jumpToLine: (atPly: number, cursor: number) => void;
   plyCount: () => number;
-  moveEntries: () => Array<{ ply: number; label: string; suffix?: string; suffixClass?: string }>;
+  moveEntries: () => Array<{
+    ply: number;
+    label: string;
+    suffix?: string;
+    suffixClass?: string;
+    note?: string;
+    line?: { moves: string[]; verdict?: string; note?: string };
+  }>;
   bottomSeat: () => 'first' | 'second';
   moveNumbering: () => { firstMover: 'a' | 'b'; firstNumber: number };
 } {
   const perspective = spec.perspective ?? 'white';
   const { states, labels } = replayChess(spec);
   const total = labels.length;
+  // Sidelines replayed from the position their judged move was played in.
+  const lines = new Map<number, { states: GameState[]; labels: string[] }>();
+  for (const [key, line] of Object.entries(spec.lines ?? {})) {
+    const ply = Number(key);
+    const from = states[ply - 1];
+    if (!from || ply > total) continue;
+    const replayed = replayFrom(from, line.moves);
+    if (replayed.labels.length) lines.set(ply, replayed);
+  }
+  let inLine: { atPly: number; cursor: number } | null = null;
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-chess';
@@ -119,6 +180,15 @@ export function mountChessReplayBoard(
 
   let index = 0;
   const render = (): void => {
+    if (inLine) {
+      const line = lines.get(inLine.atPly);
+      const state = line?.states[inLine.cursor] ?? states[inLine.atPly - 1]!;
+      frame.innerHTML = renderDarkChessBoardSvg(
+        { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
+        { perspective, showFog: false },
+      );
+      return;
+    }
     const state = states[index]!;
     const glyph = index > 0 ? spec.glyphs?.[index] : undefined;
     frame.innerHTML = renderDarkChessBoardSvg(
@@ -132,17 +202,38 @@ export function mountChessReplayBoard(
   return {
     destroy: () => host.replaceChildren(),
     jumpToPly: (ply: number) => {
+      inLine = null;
       index = Math.max(0, Math.min(total, Math.trunc(ply)));
+      render();
+    },
+    jumpToLine: (atPly: number, cursor: number) => {
+      const line = lines.get(atPly);
+      if (!line) return;
+      inLine = { atPly, cursor: Math.max(1, Math.min(line.labels.length, Math.trunc(cursor))) };
       render();
     },
     plyCount: () => total,
     moveEntries: () =>
       labels.map((label, i) => {
-        const glyph = spec.glyphs?.[i + 1];
+        const ply = i + 1;
+        const glyph = spec.glyphs?.[ply];
+        const note = spec.notes?.[ply];
+        const line = lines.get(ply);
+        const meta = spec.lines?.[ply];
         return {
-          ply: i + 1,
+          ply,
           label,
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
+          ...(note ? { note } : {}),
+          ...(line
+            ? {
+                line: {
+                  moves: line.labels,
+                  ...(meta?.verdict ? { verdict: meta.verdict } : {}),
+                  ...(meta?.note ? { note: meta.note } : {}),
+                },
+              }
+            : {}),
         };
       }),
     // White moves first, so a white-perspective board puts the first mover at

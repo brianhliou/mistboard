@@ -115,6 +115,8 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
       // sidelines ending on nothing: the NAGs were stored, and this hop dropped
       // every code outside the 1-6 the GLYPH map above covers.
       let lineEval: string | undefined;
+      // The study's comment on the sideline itself sits on its first move.
+      const lineNote = siblings[0]?.annotations?.comments?.[0]?.text;
       while (variation?.uci) {
         const step = toToken(variation.uci);
         if (!step) break;
@@ -130,6 +132,7 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
         ...(note ? { note } : {}),
         ...(line.length ? { line: line.join(' ') } : {}),
         ...(lineEval ? { lineEval } : {}),
+        ...(lineNote ? { lineNote } : {}),
       };
     }
     node = played;
