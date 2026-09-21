@@ -1,13 +1,5 @@
 import type { Article } from '../types.js';
 import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
-import {
-  applyStandardXiangqiMove,
-  createInitialXiangqiState,
-  pikafishUciToXiangqiSquares,
-  type XiangqiGameState,
-  type XiangqiSquare,
-} from '@mistboard/game';
-import { XQ_BOARD_H, XQ_BOARD_W, XQ_CELL, xqBoardSvg, xqPoint, xqSvg } from '../diagrams.js';
 
 // Player page, draft. Prose from docs-private/players/yin-sheng/draft.md (draft
 // 2, 2026-09-20); facts and their sources in facts.md beside it. The five specs
@@ -288,55 +280,6 @@ const G_QUALIFIER: XiangqiReplaySpec = {
 
 
 
-// Hero: the final against Chen Shaobo after 22...车8平4 (ply 44), the move the
-// title game turned on. Replayed through the kernel at module load; an illegal
-// token throws here rather than shipping a wrong board. Tokens are
-// the spec's own ICCS mainline; pikafishUciToXiangqiSquares does the rank shift.
-const HERO_PLIES = ["c3c4", "b7c7", "h2e2", "c9e7", "d0e1", "h9g7", "h0g2", "i9h9", "i0h0", "g6g5", "h0h4", "b9d8", "b2d2", "a9b9", "b0a2", "b9b3", "a0b0", "b3b0", "a2b0", "h7i7", "h4f4", "d9e8", "b0c2", "h9h3", "d2d3", "h3h5", "c2d4", "d8b7", "d4c6", "b7a5", "c6a5", "a6a5", "c0a2", "c7a7", "f4d4", "a7a3", "c4c5", "g5g4", "d4g4", "g7f5", "e2e6", "h5h6", "e6e5", "h6d6"];
-function heroState(): XiangqiGameState {
-  let s = createInitialXiangqiState('yin-sheng-hero');
-  for (const tok of HERO_PLIES) {
-    const squares = pikafishUciToXiangqiSquares(tok);
-    const next = squares ? applyStandardXiangqiMove(s, squares) : s;
-    if (next === s) throw new Error(`yin-sheng hero: illegal ${tok}`);
-    s = next;
-  }
-  return s;
-}
-const HERO_SVG = () =>
-  xqSvg(
-    XQ_BOARD_W,
-    XQ_BOARD_H + 52,
-    xqBoardSvg({
-      state: heroState(),
-      x: 0,
-      y: 0,
-      label: 'THE FINAL · RED TO MOVE',
-      perspective: 'red',
-      arrows: [{ from: 'h7' as XiangqiSquare, to: 'd7' as XiangqiSquare }],
-    }),
-    'xq-article-svg--hero',
-  );
-
-// Index card: a close-up of the same position, the window centred on the rook
-// that just arrived on d7 and black's palace above it, in the 4:3 the cards use.
-const HERO_THUMB = () => {
-  const target = xqPoint(3, 7, 'red', 0, 0);
-  const w = XQ_CELL * 4.2;
-  const h = w * 0.75;
-  const left = target.x - w / 2;
-  const top = target.y - h * 0.45;
-  const board = xqBoardSvg({
-    state: heroState(),
-    x: 0,
-    y: -28,
-    label: '',
-    perspective: 'red',
-    arrows: [{ from: 'h7' as XiangqiSquare, to: 'd7' as XiangqiSquare }],
-  });
-  return `<svg class="xq-article-svg" viewBox="${left} ${top} ${w} ${h}" role="img" aria-label="Yin Sheng" xmlns="http://www.w3.org/2000/svg"><rect class="xq-diagram-bg" x="${left}" y="${top}" width="${w}" height="${h}"/>${board}</svg>`;
-};
-
 export const yinShengArticle: Article = {
   slug: 'yin-sheng',
   kind: 'article',
@@ -350,7 +293,11 @@ export const yinShengArticle: Article = {
   status: 'draft',
   // Draft: updatedAt sorts it to the top of the dev index; set publishedAt on publish.
   updatedAt: '2026-09-21',
-  thumbnail: { kind: 'svg', svg: HERO_THUMB },
+  thumbnail: {
+    kind: 'image',
+    src: '/article-thumbs/yin-sheng-2022-face.jpg',
+    alt: 'Yin Sheng at the 2022 Zhejiang Provincial Games.',
+  },
   audience:
     'English-speaking xiangqi players who have never had a way to follow the Chinese pro circuit.',
   intro: [
@@ -358,7 +305,7 @@ export const yinShengArticle: Article = {
       kind: 'image-figure',
       src: '/article-thumbs/yin-sheng-2022.jpg',
       alt: 'Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.',
-      caption: 'Yin Sheng at the 17th Zhejiang Provincial Games, July 2022, where he won the men’s title at seventeen. Photo: the Games’ official account, via Sohu. If you hold the rights to this image and want it credited differently or removed, write to us.',
+      caption: 'Yin Sheng at the 17th Zhejiang Provincial Games, July 2022, where he won the men’s title at seventeen. Photo: 浙江省第十七届运动会 via Sohu.',
     },
     {
       kind: 'paragraph',
