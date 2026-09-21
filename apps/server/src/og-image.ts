@@ -179,6 +179,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'skill-vs-luck': renderSkillVsLuckOgSvg,
   shogi4: renderShogi4OgSvg,
   misty: renderMistyOgSvg,
+  'yin-sheng': renderYinShengOgSvg,
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
@@ -538,6 +539,25 @@ async function renderMistyOgSvg(title: string, ctx: ArticleOgContext): Promise<s
     `<clipPath id="misty-art"><rect x="${artX}" y="${artY}" width="${artSize}" height="${artSize}" rx="10"/></clipPath>`,
     `<image href="${uri}" x="${artX}" y="${artY}" width="${artSize}" height="${artSize}" preserveAspectRatio="xMidYMid slice" clip-path="url(#misty-art)"/>`,
     ogFooterLine(title, artY + artSize + 48),
+    `</svg>`,
+  ].join('');
+}
+
+// A player page's card is the player: the same face crop the index card uses,
+// landscape, title below. Same shape as Misty's card with a wider frame,
+// because a face crop is 3:2 and a square would cut the sides off it.
+async function renderYinShengOgSvg(title: string, ctx: ArticleOgContext): Promise<string> {
+  const artW = 660;
+  const artH = 420;
+  const artY = 36;
+  const artX = (OG_WIDTH - artW) / 2;
+  const uri = await fileDataUri(ctx.staticDir, 'article-thumbs/yin-sheng-2022-face.jpg', 'image/jpeg');
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    `<clipPath id="yin-sheng-art"><rect x="${artX}" y="${artY}" width="${artW}" height="${artH}" rx="10"/></clipPath>`,
+    `<image href="${uri}" x="${artX}" y="${artY}" width="${artW}" height="${artH}" preserveAspectRatio="xMidYMid slice" clip-path="url(#yin-sheng-art)"/>`,
+    ogFooterLine(title, artY + artH + 48),
     `</svg>`,
   ].join('');
 }
