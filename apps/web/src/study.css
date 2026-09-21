@@ -842,3 +842,21 @@
   color: var(--site-text, inherit);
   white-space: pre-wrap;
 }
+
+/* The study's variant, first on the actions line under the title. A quiet
+ * pill, not a link: it names the game, it does not (yet) filter by it. Sized
+ * to the heart and copy buttons beside it. */
+.study-variant-chip {
+  align-self: center;
+  display: inline-block;
+  padding: 0.05rem 0.5rem;
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 600;
+  line-height: 1.5;
+  letter-spacing: 0.01em;
+  color: var(--site-muted);
+  background: var(--site-panel-soft);
+  white-space: nowrap;
+}

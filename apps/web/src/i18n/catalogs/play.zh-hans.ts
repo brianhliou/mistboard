@@ -115,6 +115,7 @@ export const ZH_HANS_PLAY = {
   'variant.jungle.name': '斗兽棋',
   'variant.jungleFlip.name': '翻翻棋',
   'variant.jieqi.name': '揭棋',
+  'variant.chess.name': '国际象棋',
   'live.abort': '中止',
   'live.resign': '认输',
   'live.makeFirstMoveAbortingIn': '请走第一步，否则 {seconds} 秒后中止',

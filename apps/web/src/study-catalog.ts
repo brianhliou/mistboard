@@ -12,6 +12,7 @@
 // imports) so the create dialog does not pull a board stack.
 
 import { type GameSpecId, gameSpecForId, hasStartFen, XIANGQI_SPEC_ID } from '@mistboard/game';
+import { variantDisplayLabel } from './game-display.js';
 import { variantPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 // The literal mirror of STUDY_ELIGIBLE_SPEC_IDS. It exists so the client gets a
@@ -56,8 +57,23 @@ export function isStudyVariantId(value: string): value is StudyVariantId {
   return (STUDY_VARIANT_IDS as readonly string[]).includes(value);
 }
 
+/** The variant's name in the page locale. */
 export function studyVariantLabel(id: StudyVariantId): string {
-  return gameSpecForId(id).publicName;
+  return variantDisplayLabel(id);
+}
+
+/** The variant chip on the study page's actions line. Eleven variants share
+ *  /study and four of them are xiangqi boards to the eye (fortress, atomic,
+ *  duck, jieqi), so the board alone does not say which game a study is about.
+ *  Xiangqi is labelled like the rest: an unlabelled study beside a labelled one
+ *  reads as "unknown", not "xiangqi". The card on /study carries the same
+ *  word inside its meta line instead (a chip line per card was the grid's
+ *  height). */
+export function studyVariantChip(variant: StudyVariantId): HTMLElement {
+  const chip = document.createElement('span');
+  chip.className = 'study-variant-chip';
+  chip.textContent = variantDisplayLabel(variant);
+  return chip;
 }
 
 /** The variant `<select>` on the create-study dialog. Chapters inherit the

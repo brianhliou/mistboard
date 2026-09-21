@@ -40,6 +40,7 @@ import {
   DEFAULT_STUDY_VARIANT,
   isStudyVariantId,
   type StudyVariantId,
+  studyVariantChip,
   studyVariantLabel,
   studyVariantSupportsComposition,
   studyVariantSupportsGamebook,
@@ -802,7 +803,7 @@ function renderStudy(
           ...(nextChapter ? { onNext: () => void switchTo(nextChapter.id) } : {}),
         });
       });
-      attachStudyTitleRow(root, study.id, studyActions(study));
+      attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study));
       return;
     }
 
@@ -819,7 +820,7 @@ function renderStudy(
         summary: localizedStudyName(chapter.name, chapter.i18n),
         aside,
       });
-      attachStudyTitleRow(root, study.id, studyActions(study));
+      attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study));
       return;
     }
 
@@ -980,7 +981,7 @@ function renderStudy(
     })
       .then((mounted) => {
         if (mountToken !== mountSeq) return;
-        attachStudyTitleRow(root, study.id, studyActions(study, { clone: false }));
+        attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study, { clone: false }));
         handle = mounted;
         activeHandle = mounted;
       })
@@ -1013,17 +1014,21 @@ function studyActions(study: StudyDto, opts: { clone?: boolean } = {}): HTMLElem
   ];
 }
 
-function attachStudyTitleRow(root: HTMLElement, studyId: string, actions: HTMLElement[]): void {
+function attachStudyTitleRow(
+  root: HTMLElement,
+  studyId: string,
+  variant: StudyVariantId,
+  actions: HTMLElement[],
+): void {
   const title = root.querySelector<HTMLElement>('.review-info-card__title, .gamebook__title');
   if (!title) return;
   const existing = title.closest('.study-page__title-row');
   if (existing) {
     // A rerender reuses the row; do not stack a second heart into it.
-    if (!existing.querySelector('.study-actions')) existing.append(actionsRow(actions));
+    if (!existing.querySelector('.study-actions')) existing.append(actionsRow(variant, actions));
     return;
   }
   const thumbnail = buildStudyThumbnail(studyId, 'study-page__thumbnail', 'eager');
-  if (!thumbnail && actions.length === 0) return;
 
   const summary = title.nextElementSibling;
   const hasSummary =
@@ -1040,14 +1045,16 @@ function attachStudyTitleRow(root: HTMLElement, studyId: string, actions: HTMLEl
   if (hasSummary) attachSummaryToggle(copy, summary);
   // The actions take a full-width line UNDER the title copy (the row wraps),
   // not a column beside it: "Copy to my studies" beside a long title squeezed
-  // the title into single words.
-  if (actions.length) row.append(actionsRow(actions));
+  // the title into single words. The variant chip opens that line: it is the
+  // one line the page already spends on study-level chrome, and a line of its
+  // own under the title pushed the chapter list down on every study.
+  row.append(actionsRow(variant, actions));
 }
 
-function actionsRow(actions: HTMLElement[]): HTMLElement {
+function actionsRow(variant: StudyVariantId, actions: HTMLElement[]): HTMLElement {
   const row = document.createElement('div');
   row.className = 'study-actions';
-  row.append(...actions);
+  row.append(studyVariantChip(variant), ...actions);
   return row;
 }
 
