@@ -43,6 +43,7 @@ import { xiangqiChampionsArticle } from './articles/content/xiangqi-champions.js
 import { xiangqiMatchFixingArticle } from './articles/content/xiangqi-match-fixing.js';
 import { xiangqiWorldChampionshipArticle } from './articles/content/xiangqi-world-championship.js';
 import { xiangqiArticle } from './articles/content/xiangqi.js';
+import { yinShengArticle } from './articles/content/yin-sheng.js';
 import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json' };
 
 export const articles: Article[] = [
@@ -58,6 +59,7 @@ export const articles: Article[] = [
   khaiCuocCoUpArticle,
   xiangqiArticle,
   xiangqiChampionsArticle,
+  yinShengArticle,
   xiangqiMatchFixingArticle,
   xiangqiWorldChampionshipArticle,
   darkXiangqiArticle,

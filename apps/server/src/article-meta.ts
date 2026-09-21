@@ -245,6 +245,12 @@ export const ARTICLE_META: Record<
     description:
       'The complete rules of Banqi, also called Chinese dark chess or blind chess: flip or move one square each turn, capture by rank, cannons jump. Play it free in your browser.',
   },
+  'yin-sheng': {
+    title: 'Yin Sheng 尹昇',
+    kind: 'article',
+    description:
+      '31 games without a loss, August 17 to September 16, 2026, across the 象甲 qualifier, the Shanghai Cup and the first league stage. Five of them on the board, all of them analysed.',
+  },
   'titled-players': {
     title: 'Bring your title to Mistboard',
     kind: 'article',
