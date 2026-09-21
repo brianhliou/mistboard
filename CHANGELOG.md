@@ -102,6 +102,7 @@ Conventions:
 
 ### Fixed
 
+- The study curator runs ten minutes after a deploy instead of an hour after, so a day of frequent deploys can no longer keep it from ever running ([28a82e5e](https://github.com/brianhliou/mistboard/commit/28a82e5e))
 - The International piece set draws every piece with one outline weight: a soldier over the river no longer looks bolder than one at home, and the general, elephant and chariot sit at the same weight as the rest ([e5ac3804](https://github.com/brianhliou/mistboard/commit/e5ac3804))
 - In Chinese, the watch page, every game review page, the games list, the profile and the analysis board no longer show English pieces (channel names, Guest, BOT, "Red wins by General captured", "3 days ago", the Truth/White/Black view buttons); the result line is one translated sentence ([4e363185](https://github.com/brianhliou/mistboard/commit/4e363185))
 - Broadcast games that ran past a threefold repetition or sixty capture-free plies open again: the site's own rules call those a draw, a tournament arbiter does not, and 52 of 376 stored boards had answered "Broadcast unavailable" since the record was written ([06de17ed](https://github.com/brianhliou/mistboard/commit/06de17ed))
