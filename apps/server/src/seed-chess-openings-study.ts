@@ -4,9 +4,11 @@
  * each) where the MOST PLAYED move loses at least 0.1 winning chances at
  * 20,000,000 nodes against the best move, verified by a second independent
  * search. One chapter per position, the champions shape: the club move on the
- * mainline with its glyph and a comment carrying the club share, the masters'
- * top move by era and both engine numbers; the engine's line as the sideline,
- * `!` on its first move and a verdict glyph at its end.
+ * mainline with its glyph, a comment carrying the club share, the masters' top
+ * move by era and both engine numbers, and then the engine's continuation
+ * played out to a verdict glyph, so the reader sees WHY it is worse; the
+ * engine's own line as the sideline, `!` on its first move and its verdict at
+ * the end. Two lines, two verdicts, side by side.
  *
  * Input: results/openings-study.json from chess-companion/experiments/
  * shallow-labels (openings_export.py), featured ten first.
@@ -60,6 +62,9 @@ type Node = {
   best_cp: number;
   best_pv: string;
   best_pv_ucis: string[];
+  /** The engine's continuation after the club move, so the mainline plays the
+   *  inaccuracy out to where the gap shows. */
+  played_pv_ucis: string[];
   second: string | null;
   second_cp: number | null;
   drop: number;
@@ -175,7 +180,7 @@ export function chapterPayload(n: Node) {
   const nag = gap >= 0.3 ? 4 : gap >= 0.2 ? 2 : 6;
   const points = Math.round(gap * 50);
 
-  const playedLine = verifiedLine(`${n.key} played`, start, [n.played_uci]);
+  const playedLine = verifiedLine(`${n.key} played`, start, [n.played_uci, ...n.played_pv_ucis]);
   const bestLine = verifiedLine(
     `${n.key} best`,
     start,
@@ -199,10 +204,14 @@ export function chapterPayload(n: Node) {
       : '') +
     `. ${n.best_pv}`;
 
-  const mainline = chain(playedLine);
+  const mainline = chain(playedLine, [assessmentNag(n.played_cp)]);
   const variation = chain(bestLine, [assessmentNag(n.best_cp)]);
   if (!mainline || !variation) throw new Error(`${n.key}: empty line`);
-  mainline.annotations = { glyphs: [nag], comments: [{ text: playedComment }] };
+  mainline.annotations = {
+    ...(mainline.annotations ?? {}),
+    glyphs: [nag, ...(mainline.annotations?.glyphs ?? [])],
+    comments: [{ text: playedComment }],
+  };
   variation.annotations = {
     ...(variation.annotations ?? {}),
     glyphs: [1, ...(variation.annotations?.glyphs ?? [])],
