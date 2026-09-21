@@ -162,6 +162,13 @@ describe('mountEmbedStudy', () => {
       ),
     ).toEqual(['3.']);
     expect(branch?.querySelector('.review-move-list__line-verdict')?.textContent).toBe('=');
+    // The mainline plays the club move out to a verdict too (NAG 15 on 4.d4):
+    // it sits in the last move's eval slot, where the study's tree view puts it.
+    expect(
+      Array.from(
+        root.querySelectorAll('button.review-move-list__move .review-move-list__eval'),
+      ).map((e) => e.textContent),
+    ).toEqual(['', '', '⩱']);
     expect(branch?.querySelector('.review-move-list__note--line')?.textContent).toBe(
       'd3: +0.25 at 20M nodes.',
     );

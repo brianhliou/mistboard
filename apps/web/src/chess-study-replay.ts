@@ -28,6 +28,8 @@ export type ChessReplaySpec = {
   glyphs?: Record<number, string>;
   /** The chapter's comment on a mainline move, by ply. */
   notes?: Record<number, string>;
+  /** A verdict NAG on a mainline move's own position, by ply. */
+  assessments?: Record<number, string>;
   /** The first sideline hung off the position a mainline move was played in,
    *  by that move's ply: plain UCI, its verdict (the assessment NAG on its last
    *  node), and its own comment (on its first move). */
@@ -53,6 +55,7 @@ export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessRep
   const moves: string[] = [];
   const glyphs: Record<number, string> = {};
   const notes: Record<number, string> = {};
+  const assessments: Record<number, string> = {};
   const lines: Record<number, { moves: string[]; verdict?: string; note?: string }> = {};
   let node: StudyTreeNode | undefined = chapter.root?.root;
   while (node?.children?.length) {
@@ -64,6 +67,10 @@ export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessRep
     if (glyph) glyphs[ply] = glyph;
     const note = played.annotations?.comments?.[0]?.text;
     if (note) notes[ply] = note;
+    const assessedCode = (played.annotations?.glyphs ?? []).find(
+      (code) => ASSESSMENT_GLYPH[code] !== undefined,
+    );
+    if (assessedCode !== undefined) assessments[ply] = ASSESSMENT_GLYPH[assessedCode];
     const sibling = node.children[1];
     if (sibling?.uci) {
       const line: string[] = [];
@@ -94,6 +101,7 @@ export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessRep
     perspective: chapter.orientation === 'black' ? 'black' : 'white',
     glyphs,
     notes,
+    assessments,
     lines,
   };
 }
@@ -155,6 +163,7 @@ export function mountChessReplayBoard(
     suffix?: string;
     suffixClass?: string;
     note?: string;
+    assessment?: string;
     line?: { moves: string[]; verdict?: string; note?: string };
   }>;
   bottomSeat: () => 'first' | 'second';
@@ -218,6 +227,7 @@ export function mountChessReplayBoard(
         const ply = i + 1;
         const glyph = spec.glyphs?.[ply];
         const note = spec.notes?.[ply];
+        const assessment = spec.assessments?.[ply];
         const line = lines.get(ply);
         const meta = spec.lines?.[ply];
         return {
@@ -225,6 +235,7 @@ export function mountChessReplayBoard(
           label,
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
           ...(note ? { note } : {}),
+          ...(assessment ? { assessment } : {}),
           ...(line
             ? {
                 line: {

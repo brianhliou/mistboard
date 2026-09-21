@@ -109,6 +109,9 @@ export type XiangqiReplayAnnotation = {
   /** The study's own comment on the sideline (its first move's comment), when
    *  the author wrote one; the engine-generated specs carry none. */
   lineNote?: string;
+  /** Assessment on the position after the played move itself (a study's NAG
+   *  10-19 on a mainline node): the verdict a chapter's mainline plays out to. */
+  assessment?: string;
 };
 
 export type XiangqiReplayAnnotations = {
@@ -1101,6 +1104,7 @@ export type XiangqiReplayBoardHandle = {
     suffix?: string;
     suffixClass?: string;
     note?: string;
+    assessment?: string;
     line?: { moves: string[]; verdict?: string; note?: string };
   }>;
   /** Show the position after `cursor` moves of the sideline hung off `atPly`.
@@ -1239,6 +1243,7 @@ export function mountXiangqiReplayBoard(
           label: labels[i] ?? '',
           ...(glyph ? { suffix: glyph, suffixClass: GLYPH_SUFFIX_CLASS[glyph] } : {}),
           ...(a?.note ? { note: a.note } : {}),
+          ...(a?.assessment ? { assessment: a.assessment } : {}),
           ...(line
             ? {
                 line: {

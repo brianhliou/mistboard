@@ -106,8 +106,14 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
       .find((g): g is NonNullable<XiangqiReplayAnnotation['glyph']> => Boolean(g));
     const note = played.annotations?.comments?.[0]?.text;
     const siblings = node.children.slice(1);
+    // A verdict on the played move's own position (NAG 10-19 on a mainline
+    // node): the curated openings chapters play the club move out to one.
+    const assessedCode = (played.annotations?.glyphs ?? []).find(
+      (code) => ASSESSMENT_GLYPH[code] !== undefined,
+    );
+    const assessment = assessedCode === undefined ? undefined : ASSESSMENT_GLYPH[assessedCode];
 
-    if (glyph || note || siblings.length) {
+    if (glyph || note || siblings.length || assessment) {
       const line: string[] = [];
       let variation: StudyTreeNode | undefined = siblings[0];
       // The verdict closes the line, so it sits on the line's LAST node. Walking
@@ -133,6 +139,7 @@ export function studyChapterToReplaySpec(chapter: StudyChapterPayload): XiangqiR
         ...(line.length ? { line: line.join(' ') } : {}),
         ...(lineEval ? { lineEval } : {}),
         ...(lineNote ? { lineNote } : {}),
+        ...(assessment ? { assessment } : {}),
       };
     }
     node = played;

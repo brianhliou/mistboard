@@ -24,6 +24,10 @@ export type MoveListEntry = {
   suffix?: string;
   /** Optional suffix colour class hook, e.g. 'blunder' → .review-move--blunder. */
   suffixClass?: string;
+  /** A verdict on the position after this move ('±', '=', '+−'), shown in the
+   *  right-aligned eval slot the way a study's tree view shows an assessment NAG.
+   *  A chapter that plays a line out to a verdict puts it on the last move. */
+  assessment?: string;
   /** The author's or the engine's note on this move, shown under its row. */
   note?: string;
   /** A sideline hung off the position this move was played in: what should have
@@ -226,6 +230,7 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
     san.textContent = entry.label;
     const evalEl = document.createElement('span');
     evalEl.className = 'review-move-list__eval';
+    if (entry.assessment) evalEl.textContent = entry.assessment;
     button.append(san, evalEl);
     if (entry.suffix) appendGlyph(san, entry.suffix, entry.suffixClass);
     button.addEventListener('click', () => onJump?.(entry.ply));
