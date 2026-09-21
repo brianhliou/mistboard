@@ -11,6 +11,7 @@ import { localizedStudyName } from './study-i18n.js';
 import './study.css';
 import './study-index.css';
 import { initialStartFen, normalizeStartFen } from '@mistboard/game';
+import { variantDisplayLabel } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META } from './i18n/locale.js';
 import { buildNav } from './site-shell.js';
@@ -482,18 +483,25 @@ function cardHead(study: StudySummary): HTMLElement {
   return head;
 }
 
-// Public cards read like lichess: likes · author · date. Own-studies cards, where
-// author + likes aren't shown, fall back to chapter count · visibility · date.
+// Public cards read like lichess: variant · likes · author · date. Own-studies
+// cards, where author + likes aren't shown, fall back to variant · chapter count
+// · visibility · date. The variant leads because eleven of them share this list
+// and four look like xiangqi at thumbnail size (fortress, atomic, duck, jieqi);
+// it is a word in the line, not a chip on its own line, because a third line
+// per card head was the whole grid's height. It rides on the preview board
+// (chapter 1's), so a study with no chapter yet has none to show.
 function metaLine(study: StudySummary): string {
   const when = timeAgo(study.updatedAt);
+  const variant = study.previewBoard?.variant;
+  const lead = variant ? `${variantDisplayLabel(variant)} · ` : '';
   if (study.owner) {
-    return `♥ ${study.likeCount ?? 0} · ${study.owner.displayName} · ${when}`;
+    return `${lead}♥ ${study.likeCount ?? 0} · ${study.owner.displayName} · ${when}`;
   }
   const chapters =
     study.chapterCount === 1
       ? t('study.chapterCountOne')
       : t('study.chapterCount', { count: study.chapterCount });
-  return `${chapters} · ${t(VISIBILITY_KEYS[study.visibility])} · ${when}`;
+  return `${lead}${chapters} · ${t(VISIBILITY_KEYS[study.visibility])} · ${when}`;
 }
 
 function chapterPreview(study: StudySummary): HTMLElement {

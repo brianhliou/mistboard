@@ -274,6 +274,7 @@ test('the scheduler tick is gated on the flag and never overlaps', async () => {
   const releases: (() => void)[] = [];
   const curator = startStudyCurator({
     intervalMs: 60 * 60 * 1000,
+    firstTickMs: 60 * 60 * 1000,
     isPersistenceInitialized: () => true,
     enabled: () => enabled,
     run: () =>
@@ -295,6 +296,26 @@ test('the scheduler tick is gated on the flag and never overlaps', async () => {
     assert.equal(runs, 2);
     releases.shift()?.();
     await third;
+  } finally {
+    curator.stop();
+  }
+});
+
+test('the first tick fires on its own short timer, then the interval takes over', async () => {
+  let runs = 0;
+  const curator = startStudyCurator({
+    intervalMs: 60 * 60 * 1000,
+    firstTickMs: 5,
+    isPersistenceInitialized: () => true,
+    enabled: () => true,
+    run: async () => {
+      runs += 1;
+      return [];
+    },
+  });
+  try {
+    await new Promise((resolve) => setTimeout(resolve, 40));
+    assert.equal(runs, 1);
   } finally {
     curator.stop();
   }

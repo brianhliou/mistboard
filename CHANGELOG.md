@@ -44,6 +44,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- Every study says which game it is: the variant leads the meta line on the /study cards and sits beside the heart on the study page, in the reader's language (chess studies read 国际象棋 in Chinese) ([02be9642](https://github.com/brianhliou/mistboard/commit/02be9642))
+- A second chess study, "The most played move is an inaccuracy": 144 opening positions from the Lichess explorer (1600-2200 players, 500,000+ games each) where the club's most played move loses winning chances against the engine at 20 million nodes, each played out to a verdict beside the engine's line, with the club share and the masters' top move by era ([d4accc3a](https://github.com/brianhliou/mistboard/commit/d4accc3a), [a99f6bc9](https://github.com/brianhliou/mistboard/commit/a99f6bc9))
 - Copy to my studies: any study you can open becomes a private study of your own, every chapter included, to annotate as you like; in Share & export beside the PGN download ([790543a3](https://github.com/brianhliou/mistboard/commit/790543a3))
 - Two curated studies fill themselves from the 2026 tournament broadcasts and grow as rounds land: Central Cannon vs Screen Horses model games (the whole game, every judged move marked with its numbers and the engine's line, the first departure from the usual line noted) and Where it turned (the board parked before each game's decisive move, guess the better one); a recipe file decides the opening, the events and the chapter count ([e6ed9ee9](https://github.com/brianhliou/mistboard/commit/e6ed9ee9))
 - Studies can hold standard chess: a chess chapter opens on the same review board as the other games (SAN move list, a local Fairy-Stockfish panel with its lines drawn as arrows, the judgment badge on the moved piece, drawn shapes) and embeds on other sites with the game move marked. Chess is study-only: there is no chess to play here ([a530fe14](https://github.com/brianhliou/mistboard/commit/a530fe14))
@@ -102,6 +104,7 @@ Conventions:
 
 ### Fixed
 
+- The study curator runs ten minutes after a deploy instead of an hour after, so a day of frequent deploys can no longer keep it from ever running ([28a82e5e](https://github.com/brianhliou/mistboard/commit/28a82e5e))
 - The International piece set draws every piece with one outline weight: a soldier over the river no longer looks bolder than one at home, and the general, elephant and chariot sit at the same weight as the rest ([e5ac3804](https://github.com/brianhliou/mistboard/commit/e5ac3804))
 - In Chinese, the watch page, every game review page, the games list, the profile and the analysis board no longer show English pieces (channel names, Guest, BOT, "Red wins by General captured", "3 days ago", the Truth/White/Black view buttons); the result line is one translated sentence ([4e363185](https://github.com/brianhliou/mistboard/commit/4e363185))
 - Broadcast games that ran past a threefold repetition or sixty capture-free plies open again: the site's own rules call those a draw, a tournament arbiter does not, and 52 of 376 stored boards had answered "Broadcast unavailable" since the record was written ([06de17ed](https://github.com/brianhliou/mistboard/commit/06de17ed))

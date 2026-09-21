@@ -238,8 +238,19 @@ a.study-index__rail-tab.is-active:hover {
   text-decoration: underline;
 }
 
+/* Two lines are reserved for the meta line, not one: with the variant leading
+ * it ("Xiangqi · ♥ 0 · author · 14d ago") the line fits a full-width card and
+ * wraps beside a thumbnail, and a card head that is two lines here and three
+ * there made the grid ragged. Capped at two as well, so a long author name
+ * cannot take a third. */
 .study-index__meta {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  min-height: calc(2 * 1.35em);
   font-size: 0.78rem;
+  line-height: 1.35;
   color: var(--site-muted);
 }
 
