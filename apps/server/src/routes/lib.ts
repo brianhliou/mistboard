@@ -18,6 +18,7 @@ import type { DeployGateCensus } from './../deploy-gate.js';
 import * as persistence from './../persistence.js';
 import { isAdminDebugToken, isProductionLikeRuntime } from './../server-policy.js';
 import type { LobbyTicket, Room } from './../server-types.js';
+import type { BroadcastViewerStats } from './../xiangqi-broadcast-viewers.js';
 
 // ── Constants ──────────────────────────────────────────────────────────────
 export const minRoomClockInitialMs = 10_000;
@@ -86,6 +87,9 @@ export interface HttpApiContext {
   // reads it.
   deployGateCensus?(): DeployGateCensus;
   persistenceHealth?(): { count1m: number; lastAt: number | null };
+  // Open broadcast SSE streams (current / peak today / peak since boot); read by
+  // the status route and the readout. Optional for the same reason as above.
+  broadcastViewers?(): BroadcastViewerStats;
 }
 
 // ── HTTP utilities ─────────────────────────────────────────────────────────

@@ -4,6 +4,7 @@
 // (source policy, timeout, sync logs) and its failure backoff.
 
 import * as persistence from './persistence.js';
+import { requestBroadcastLiveEvalForBoard } from './xiangqi-broadcast-live-eval.js';
 import {
   nextXiangqiBroadcastPollDelayMs,
   pollXiangqiBroadcastSourceOnce,
@@ -37,6 +38,10 @@ export type XiangqiBroadcastSchedulerDeps = {
     input: Parameters<typeof persistence.recordXiangqiBroadcastSyncLog>[0],
   ): Promise<void>;
   now(): number;
+  /** Ask the live engine layer for a board that just gained moves. Fire and
+   *  forget: the scheduler never waits on a search. Optional so the polling
+   *  tests need no engine. */
+  evaluateLiveBoard?(boardId: string): Promise<void>;
 };
 
 const liveDeps: XiangqiBroadcastSchedulerDeps = {
@@ -44,7 +49,13 @@ const liveDeps: XiangqiBroadcastSchedulerDeps = {
   poll: (input) => pollXiangqiBroadcastSourceOnce(input),
   recordSyncLog: (input) => persistence.recordXiangqiBroadcastSyncLog(input),
   now: () => Date.now(),
+  evaluateLiveBoard: (boardId) => requestBroadcastLiveEvalForBoard(boardId),
 };
+
+// Update statuses that change a board's head position. `unchanged` is the
+// idle poll; the live-eval trigger re-reads the board and skips one that the
+// same update finished.
+const LIVE_EVAL_TRIGGER_STATUSES = new Set(['created', 'extended', 'updated', 'corrected']);
 
 export type XiangqiBroadcastScheduler = {
   tick(): Promise<void>;
@@ -94,6 +105,22 @@ export function createXiangqiBroadcastScheduler(
           tourSlug: tour.slug,
           timeoutMs: 10_000,
         });
+        if (result.ok && deps.evaluateLiveBoard) {
+          for (const update of result.updates) {
+            if (!update.ok || !LIVE_EVAL_TRIGGER_STATUSES.has(update.status)) continue;
+            deps.evaluateLiveBoard(update.boardId).catch((error: unknown) => {
+              console.error(
+                JSON.stringify({
+                  level: 'error',
+                  kind: 'xiangqi_broadcast_live_eval_trigger_failed',
+                  boardId: update.boardId,
+                  error: error instanceof Error ? error.message : String(error),
+                  at: deps.now(),
+                }),
+              );
+            });
+          }
+        }
         // The poller records its own failure sync logs; the scheduler only
         // records successful polls that changed something, so a healthy idle
         // source does not grow the log table on every interval.

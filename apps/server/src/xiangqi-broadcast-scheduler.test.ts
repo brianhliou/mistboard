@@ -193,3 +193,42 @@ test('scheduler hands each poll the tour it is polling for', async () => {
   await scheduler.tick();
   assert.deepEqual(h.pollSlugs, ['wxc']);
 });
+
+test('scheduler asks the live engine layer for every board a poll moved, never for an idle one', async () => {
+  const h = harness();
+  h.setTours([
+    { slug: 'wxc', sourceUrl: 'https://fixture.invalid/source.json', pollIntervalMs: 10_000 },
+  ]);
+  const requested: string[] = [];
+  const scheduler = createXiangqiBroadcastScheduler({
+    ...h.deps,
+    evaluateLiveBoard: async (boardId) => {
+      requested.push(boardId);
+      if (boardId === 'b4') throw new Error('engine unavailable');
+    },
+  });
+
+  h.setPollResult(
+    okResult({
+      updates: [
+        { ok: true, boardId: 'b1', status: 'created', plyCount: 2 },
+        { ok: true, boardId: 'b2', status: 'unchanged', plyCount: 8 },
+        { ok: true, boardId: 'b3', status: 'extended', plyCount: 10 },
+        { ok: true, boardId: 'b4', status: 'corrected', plyCount: 9 },
+        { ok: true, boardId: 'b5', status: 'updated', plyCount: 9 },
+        { ok: false, boardId: 'b6', kind: 'illegal_move', message: 'nope' },
+      ],
+    }),
+  );
+  // A trigger that rejects (b4) is logged, not fatal: the tick still completes
+  // and schedules the next poll.
+  await scheduler.tick();
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(requested, ['b1', 'b3', 'b4', 'b5']);
+
+  // The trigger is optional: polling tests without an engine keep working.
+  const bare = createXiangqiBroadcastScheduler(h.deps);
+  h.advance(10_001);
+  await bare.tick();
+  assert.deepEqual(requested, ['b1', 'b3', 'b4', 'b5']);
+});

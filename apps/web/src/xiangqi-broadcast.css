@@ -382,6 +382,158 @@
   width: min(100%, 72vh, 620px);
 }
 
+/* Board stage: the frame alone, or the eval gauge in a narrow column beside
+   it while the board is live. The gauge is the review's bar in its flow
+   ("gauge") mode: a grid child stretched to the board's height, no overlay
+   alignment. The 20px column plus gap is taken from the frame's budget so the
+   board keeps its width and the stage never overflows the panel. */
+.xqb-board-stage {
+  width: min(100%, 72vh, 620px);
+  display: grid;
+  grid-template-columns: minmax(0, 1fr);
+  align-items: stretch;
+}
+
+.xqb-board-stage .xqb-board-frame {
+  width: 100%;
+  min-width: 0;
+}
+
+.xqb-board-stage-with-gauge {
+  grid-template-columns: 20px minmax(0, 1fr);
+  gap: 8px;
+}
+
+.xqb-eval-gauge {
+  position: relative;
+  min-height: 0;
+}
+
+.xqb-eval-gauge .review-eval-bar {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  background: color-mix(in srgb, #34302e 85%, var(--site-panel, #fff));
+}
+
+.xqb-eval-gauge .review-eval-bar__fill {
+  background: color-mix(in srgb, #c0563f 72%, var(--site-panel, #fff));
+}
+
+/* Live engine panel: headline eval, engine name and depth, ranked lines.
+   Class names shadow the review's engine panel so the chips read the same. */
+.xqb-engine {
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel-soft);
+  display: flex;
+  flex-direction: column;
+}
+
+.xqb-engine-head {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  padding: 7px 10px;
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.xqb-engine-eval {
+  flex: 0 0 auto;
+  min-width: 2.4em;
+  font-size: 20px;
+  font-weight: 700;
+  line-height: 1;
+  font-variant-numeric: tabular-nums;
+  color: var(--site-heading);
+}
+
+.xqb-engine-id {
+  flex: 1 1 auto;
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+}
+
+.xqb-engine-id strong {
+  color: var(--site-heading);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.xqb-engine-sub {
+  color: var(--site-muted);
+  font-size: 11px;
+}
+
+.xqb-engine-live-tag {
+  flex: 0 0 auto;
+  border-radius: 999px;
+  padding: 2px 8px;
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-size: 11px;
+  font-weight: 900;
+  text-transform: uppercase;
+  letter-spacing: 0.02em;
+}
+
+.xqb-engine-lines {
+  margin: 0;
+  padding: 6px 10px 8px;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 3px;
+}
+
+.xqb-engine-behind-head .xqb-engine-lines {
+  opacity: 0.6;
+}
+
+.xqb-engine-line {
+  display: flex;
+  gap: 8px;
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.xqb-engine-line-eval {
+  flex: 0 0 auto;
+  min-width: 3em;
+  padding: 1px 5px;
+  border-radius: 4px;
+  text-align: center;
+  font-variant-numeric: tabular-nums;
+  font-weight: 700;
+  color: var(--site-text);
+}
+
+.xqb-engine-line-eval.is-red {
+  background: #f2ede3;
+  color: #2b2724;
+}
+
+.xqb-engine-line-eval.is-black {
+  background: #34302e;
+  color: #f2ede3;
+}
+
+.xqb-engine-line-eval.is-even {
+  background: color-mix(in srgb, var(--site-muted) 20%, transparent);
+  color: var(--site-text);
+}
+
+.xqb-engine-line-pv {
+  flex: 1 1 auto;
+  min-width: 0;
+  color: var(--site-muted);
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+}
+
 .xqb-controls {
   width: min(100%, 620px);
   display: grid;

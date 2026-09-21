@@ -43,6 +43,13 @@ const READOUT_PATHS = [
   '/api/admin/readouts/history',
 ] as const;
 
+// The field is optional on the report: a context without the census (tests,
+// older snapshots) leaves it out rather than reporting a peak of zero.
+function broadcastViewersRuntime(ctx: HttpApiContext): { broadcastViewersPeak?: number } {
+  const stats = ctx.broadcastViewers?.();
+  return stats ? { broadcastViewersPeak: stats.peakToday } : {};
+}
+
 export async function readoutGenerateForApi(
   ctx: HttpApiContext,
   body: Record<string, unknown>,
@@ -64,6 +71,7 @@ export async function readoutGenerateForApi(
       databaseRequired: ctx.databaseRequired,
       persistence: persistence.isInitialized() ? 'enabled' : 'disabled',
       persistenceErrors: ctx.persistenceHealth?.() ?? { count1m: 0, lastAt: null },
+      ...broadcastViewersRuntime(ctx),
     },
   });
   // Fire and forget, like the engine alerts: a mail provider having a bad day

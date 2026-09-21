@@ -42,6 +42,9 @@ export async function tryHandle(
       // Web-side in-process UCI engine-pool saturation (#203): the leading signal for
       // the non-fog engine-service split, visible before it sheds load as timeouts.
       enginePools: aggregateEnginePoolStats(),
+      // Open broadcast SSE streams: how many people are watching a tournament
+      // right now, plus the UTC day's and the boot's peak. Runtime counters only.
+      broadcastViewers: ctx.broadcastViewers?.() ?? null,
     });
     return true;
   }
