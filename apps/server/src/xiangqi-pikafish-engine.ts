@@ -341,8 +341,13 @@ export const XIANGQI_ANALYSIS_NODES = 1_000_000;
 export const XIANGQI_ANALYSIS_MULTI_PV = 2;
 // Hard per-position wall-clock guard for a sweep eval. 1M nodes is normally a
 // few seconds; this only fires when the engine wedges (then the session dies
-// and the sweep fails closed rather than hanging the job).
+// and the sweep fails closed rather than hanging the job). Scaled with the
+// node budget: a 10M-node sweep (the depth a published board is checked at)
+// legitimately takes 8-40s a position depending on what else is on the CPU,
+// and a flat 30s guard failed five of them at once on 2026-09-20.
 const XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS = 30_000;
+const analysisEvalTimeoutMs = (nodes: number) =>
+  Math.max(XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS, Math.ceil(nodes / 1_000_000) * XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS);
 
 export type XiangqiPositionEval = {
   /** Centipawns from RED's POV (positive = Red better); null when mate is set. */
@@ -484,7 +489,7 @@ export async function withXiangqiAnalysisSession<T>(
       const evaluation = await session.multiPvPosition({
         positionCommand: positionCommand(moves),
         goCommand: `go nodes ${nodes}`,
-        timeoutMs: XIANGQI_ANALYSIS_EVAL_TIMEOUT_MS,
+        timeoutMs: analysisEvalTimeoutMs(nodes),
         timeoutMessage: 'pikafish-xiangqi analysis eval timed out',
       });
       const base = redPovEval(evaluation, moves.length);
