@@ -712,6 +712,51 @@ test('broadcast board API builds replay-compatible timeline and history', async 
   assert.deepEqual(payload.board.updatedAt, storedBoard.updatedAt);
 });
 
+// The stored rows hold the whole tournament record because ingestion replays
+// past the kernel's own repetition and progress-clock draws (an arbiter decides
+// those in real play). The serving side has to resume the same way: until
+// 2026-09-20 it threw "moves after terminal state" and 52 of 376 prod boards
+// answered 500 while the featured thumbnail silently froze at the auto-draw.
+for (const [file, reason] of [
+  ['repetition.json', 'repetition'],
+  ['progress-clock.json', 'progress-clock'],
+] as const) {
+  test(`broadcast board API replays a real game that ran past the kernel's ${reason} draw`, async () => {
+    const record = readJson<XiangqiBroadcastBoard>(`../arbiter-adjudicated/${file}`);
+    const ingest = replayXiangqiBroadcastBoard(record, { continuePastAdjudicatedDraw: true });
+    assert.equal(ingest.ok, true, ingest.ok ? undefined : ingest.reason);
+    if (!ingest.ok) return;
+    assert.ok(ingest.adjudications.length > 0, 'fixture must actually trip the auto-draw');
+    const stored: StoredXiangqiBroadcastBoard = {
+      ...record,
+      roundId: board.roundId,
+      plyCount: ingest.plies,
+      finalStatus: ingest.finalStatus,
+      createdAt: new Date(0),
+      updatedAt: new Date(0),
+    };
+    const persisted = deps({
+      getXiangqiBroadcastBoard: async (boardId) => (boardId === record.id ? stored : null),
+      listXiangqiBroadcastBoards: async (roundId) => (roundId === board.roundId ? [stored] : []),
+    });
+
+    const payload = await xiangqiBroadcastBoardForApi(record.id, persisted);
+    assert.ok(payload);
+    assert.equal(payload.timeline.length, record.moves.length);
+    assert.equal(payload.history.truth.length, record.moves.length + 1);
+    assert.deepEqual(payload.state.status, ingest.finalStatus);
+
+    // The thumbnail path resumes too: the featured position is the last ply,
+    // not the position the kernel called a draw on.
+    const lastPly = payload.history.truth[record.moves.length]!.view.board;
+    const index = await xiangqiBroadcastIndexForApi(persisted);
+    const featured = index.tours[0]?.featuredBoard;
+    assert.ok(featured);
+    assert.equal(featured.id, record.id);
+    assert.deepEqual(featured.view.board, lastPly);
+  });
+}
+
 test('broadcast board stream version changes when persisted state changes', async () => {
   const first = await xiangqiBroadcastBoardStreamForApi(board.id, deps());
   const updatedBoard = {

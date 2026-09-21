@@ -1,11 +1,13 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import {
+  ARBITER_ADJUDICATED_DRAWS,
   applyStandardXiangqiMove,
   broadcastRecordsCredit,
   createInitialXiangqiState,
   getStandardXiangqiPlayerView,
   type StandardXiangqiPlayerView,
   type XiangqiColor,
+  type XiangqiGameState,
   type XiangqiMove,
 } from '@mistboard/game';
 import * as persistence from './../persistence.js';
@@ -176,15 +178,32 @@ function featuredXiangqiBroadcastBoard(boards: persistence.StoredXiangqiBroadcas
   };
 }
 
+// A stored board is a tournament RECORD, not live play: the kernel auto-draws
+// on repetition and on the progress clock, but an arbiter applies the
+// perpetual-check/chase rules instead and the real game runs on. Ingestion
+// already replays past those two reasons (`continuePastAdjudicatedDraw`), so
+// the rows hold the full game; the serving side has to resume the same way or
+// a legitimate record reads as "moves after terminal state". Before 2026-09-20
+// only ingestion did, and 52 of 376 boards in prod answered 500 (42 repetition,
+// 10 progress-clock). Mirrors `replayXiangqiBroadcastBoard` in the game package
+// and the web replay, which both resume on the ply's mover.
+function resumePastArbiterDraw(state: XiangqiGameState, index: number): XiangqiGameState {
+  if (state.status.type !== 'finished' || !ARBITER_ADJUDICATED_DRAWS.has(state.status.reason)) {
+    return state;
+  }
+  return { ...state, status: { type: 'playing', turn: index % 2 === 0 ? 'red' : 'black' } };
+}
+
 // Replay a stored board to its final position. Defensive about moves past a
-// terminal state so one bad row degrades to a stale thumbnail instead of a 500.
-// Legal moves are dead weight on a non-interactive thumbnail, so they are
-// stripped from the shipped view.
+// genuinely terminal state so one bad row degrades to a stale thumbnail instead
+// of a 500. Legal moves are dead weight on a non-interactive thumbnail, so they
+// are stripped from the shipped view.
 function finalXiangqiBoardView(
   board: persistence.StoredXiangqiBroadcastBoard,
 ): StandardXiangqiPlayerView {
   let state = createInitialXiangqiState(board.id);
-  for (const move of board.moves) {
+  for (const [index, move] of board.moves.entries()) {
+    state = resumePastArbiterDraw(state, index);
     if (state.status.type !== 'playing') break;
     state = applyStandardXiangqiMove(state, move);
   }
@@ -546,6 +565,7 @@ function buildXiangqiBroadcastBoardReplay(board: persistence.StoredXiangqiBroadc
   ];
 
   for (const [index, move] of board.moves.entries()) {
+    state = resumePastArbiterDraw(state, index);
     if (state.status.type !== 'playing') {
       throw new Error(`stored broadcast board ${board.id} has moves after terminal state`);
     }
