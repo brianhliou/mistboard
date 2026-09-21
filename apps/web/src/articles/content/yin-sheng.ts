@@ -355,17 +355,14 @@ export const yinShengArticle: Article = {
     'English-speaking xiangqi players who have never had a way to follow the Chinese pro circuit.',
   intro: [
     {
-      kind: 'paragraph',
-      text: '**Yin Sheng 尹昇** · Zhejiang Mintai Bank team · national master · born 2005, Wenling, Zhejiang',
-    },
-    {
-      kind: 'raw-svg',
-      svg: HERO_SVG,
-      caption: 'Yin Sheng vs Chen Shaobo, Shanghai Cup final, 13 September 2026. Black has just played his 22nd move, and the title game is about to turn. The full game is below.',
+      kind: 'image-figure',
+      src: '/article-thumbs/yin-sheng-2022.jpg',
+      alt: 'Yin Sheng, in a red and white Zhejiang team jacket and glasses, smiling at a sponsor backdrop after a game at the 17th Zhejiang Provincial Games in 2022.',
+      caption: 'Yin Sheng at the 17th Zhejiang Provincial Games, July 2022, where he won the men’s title at seventeen. Photo: the Games’ official account, via Sohu. If you hold the rights to this image and want it credited differently or removed, write to us.',
     },
     {
       kind: 'paragraph',
-      text: 'Yin Sheng is a 21-year-old professional from Wenling, a small city on the Zhejiang coast, who has played in China\'s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.',
+      text: 'Yin Sheng 尹昇 is a 21-year-old professional from Wenling, a small city on the Zhejiang coast, who plays for the Zhejiang Mintai Bank team. He has been in China’s top league since he was fifteen and became a national master in 2023. Last September, at twenty, he reached the final of the World Championship in Shanghai and lost it to Lại Lý Huynh of Vietnam, the first player from outside China to win the title in its nineteen editions. The Chinese internet was not kind about it. In the year since he has won four open tournaments. This page is about one month of it, August to September 2026, when he did not lose a game.',
     },
   ],
   sections: [
