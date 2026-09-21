@@ -172,7 +172,14 @@ async function startDrain() {
     body: JSON.stringify({ windowMs, ...(options.owner ? { owner: options.owner } : {}) }),
   });
   if (res.status !== 200) {
-    throw withExit(3, `/admin/drain returned ${res.status}: ${JSON.stringify(res.body)}`);
+    // A 401 here means the token this machine READ is not the one prod holds.
+    // Readability was already proven by getting this far, so the next question
+    // is equality, which drain:token-check answers by fingerprint (no values).
+    const hint =
+      res.status === 401
+        ? ' The token was readable but prod rejected it: run `npm run drain:token-check` in your own terminal to see which copy differs.'
+        : '';
+    throw withExit(3, `/admin/drain returned ${res.status}: ${JSON.stringify(res.body)}${hint}`);
   }
   console.log(
     `drain started. restartAt=${new Date(res.body.restartAt ?? Date.now() + windowMs).toISOString()}`,
