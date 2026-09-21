@@ -136,6 +136,7 @@ Conventions:
 
 ### Technical
 
+- Player index API, derived from the broadcast archive: `GET /api/xiangqi/players` (every name with a finished game in an A-level event, games and W-D-L per event) and `/api/xiangqi/players/:slug` (the player and every board they sat at); the data layer under the coming /players pages ([93d5cc8b](https://github.com/brianhliou/mistboard/commit/93d5cc8b))
 - Broadcast pages fire `broadcast_opened`, the SSE streams count their viewers (today's and since-boot peaks on `/api/server-status` and a readout line), and `npm run curate:studies` runs the study curator by hand; the hourly job is behind `MISTBOARD_STUDY_CURATOR_ENABLED` ([b9e8dadb](https://github.com/brianhliou/mistboard/commit/b9e8dadb), [e6ed9ee9](https://github.com/brianhliou/mistboard/commit/e6ed9ee9))
 - The daily readout replays every stored broadcast board the way the board API does and raises `broadcast-boards-unservable` when the count of boards it would 500 on grows; the replay helpers live in `xiangqi-broadcast-serving.ts` so the sweep and the route judge a row by one loop ([622cab22](https://github.com/brianhliou/mistboard/commit/622cab22))
 - The engine-vs-engine runner plays any variant with a `VariantEveAdapter` (xiangqi, Fortress Xiangqi, Duck Xiangqi), with each ladder's random-mover floor registered, so `engine:enqueue-tournament --variant fortress-xiangqi` rates a ladder that was hand-set until now; a bot variant without an adapter fails the build ([33516d71](https://github.com/brianhliou/mistboard/commit/33516d71))
