@@ -290,9 +290,8 @@ export const yinShengArticle: Article = {
   summary:
     '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.',
   showSummaryOnPage: false,
-  status: 'draft',
-  // Draft: updatedAt sorts it to the top of the dev index; set publishedAt on publish.
-  updatedAt: '2026-09-21',
+  status: 'published',
+  publishedAt: '2026-09-21',
   thumbnail: {
     kind: 'image',
     src: '/article-thumbs/yin-sheng-2022-face.jpg',
@@ -415,7 +414,7 @@ export const yinShengArticle: Article = {
         {
           kind: 'xq-replay',
           spec: { ...G_FINAL, startPly: 44 },
-          caption: "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The board opens after black's 22nd, the position on the cover of this page.",
+          caption: "Yin Sheng vs Chen Shaobo, 13 September 2026, the final. The board opens after black's 22nd, the move the title game turned on.",
         },
         {
           kind: 'cta',
