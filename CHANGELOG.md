@@ -44,6 +44,8 @@ Conventions:
 
 ### Learning and puzzles
 
+- Copy to my studies: any study you can open becomes a private study of your own, every chapter included, to annotate as you like; in Share & export beside the PGN download ([790543a3](https://github.com/brianhliou/mistboard/commit/790543a3))
+- Two curated studies fill themselves from the 2026 tournament broadcasts and grow as rounds land: Central Cannon vs Screen Horses model games (the whole game, every judged move marked with its numbers and the engine's line, the first departure from the usual line noted) and Where it turned (the board parked before each game's decisive move, guess the better one); a recipe file decides the opening, the events and the chapter count ([e6ed9ee9](https://github.com/brianhliou/mistboard/commit/e6ed9ee9))
 - Studies can hold standard chess: a chess chapter opens on the same review board as the other games (SAN move list, a local Fairy-Stockfish panel with its lines drawn as arrows, the judgment badge on the moved piece, drawn shapes) and embeds on other sites with the game move marked. Chess is study-only: there is no chess to play here ([a530fe14](https://github.com/brianhliou/mistboard/commit/a530fe14))
 - The Banqi, Flip Jungle, Fog Xiangqi and Fog Chess rules pages each answer whether the bot can see your hidden pieces (it cannot: face-down tiles reach it as unknown, fog bots get only their own vision), in English and both Chinese scripts, matching what the Jieqi page and the Misty post already said ([ae40e3f7](https://github.com/brianhliou/mistboard/commit/ae40e3f7))
 - The Banqi, Jungle, Xiangqi and Jieqi rules pages answer the questions people actually search: a capture-order table and a rule-variants section on Banqi (which of the three regional rulesets Mistboard plays, and why), a piece table on Xiangqi, and a common-questions block on all four, in English and both Chinese scripts ([8e2e720e](https://github.com/brianhliou/mistboard/commit/8e2e720e))
@@ -59,6 +61,7 @@ Conventions:
 
 ### Watching and review
 
+- A live tournament board shows the engine while the game is on: an eval bar, the top three lines and their arrows at the latest move, computed once on the server and shared by every viewer ([ea509eb0](https://github.com/brianhliou/mistboard/commit/ea509eb0))
 - Live Jieqi, Banqi and Flip Jungle games can be watched from their room link while they are being played: the board as both players see it, with face-down pieces still face-down, and in Jieqi a capture tray that shows a taken piece's role only if it was face-up when taken; the homepage board and Mistboard TV can now feature a live Jieqi game ([35a799a7](https://github.com/brianhliou/mistboard/commit/35a799a7))
 - Atomic Xiangqi has an analysis board (/analysis/atomic-xiangqi), a board editor, and a postgame with the local engine, annotations and Share & export; the browser Fairy-Stockfish is now built with the same patch the atomic bot runs, so it plays atomic's rules rather than a half-read definition, and a finished atomic game can request computer analysis for the advantage chart ([0374aaae](https://github.com/brianhliou/mistboard/commit/0374aaae))
 - Atomic Xiangqi games export as PGN with move text spelled against the board the game actually had (the explosion replayed), alongside JSON ([401bd59b](https://github.com/brianhliou/mistboard/commit/401bd59b))
@@ -124,6 +127,7 @@ Conventions:
 
 ### Technical
 
+- Broadcast pages fire `broadcast_opened`, the SSE streams count their viewers (today's and since-boot peaks on `/api/server-status` and a readout line), and `npm run curate:studies` runs the study curator by hand; the hourly job is behind `MISTBOARD_STUDY_CURATOR_ENABLED` ([b9e8dadb](https://github.com/brianhliou/mistboard/commit/b9e8dadb), [e6ed9ee9](https://github.com/brianhliou/mistboard/commit/e6ed9ee9))
 - The daily readout replays every stored broadcast board the way the board API does and raises `broadcast-boards-unservable` when the count of boards it would 500 on grows; the replay helpers live in `xiangqi-broadcast-serving.ts` so the sweep and the route judge a row by one loop ([622cab22](https://github.com/brianhliou/mistboard/commit/622cab22))
 - The engine-vs-engine runner plays any variant with a `VariantEveAdapter` (xiangqi, Fortress Xiangqi, Duck Xiangqi), with each ladder's random-mover floor registered, so `engine:enqueue-tournament --variant fortress-xiangqi` rates a ladder that was hand-set until now; a bot variant without an adapter fails the build ([33516d71](https://github.com/brianhliou/mistboard/commit/33516d71))
 - `worktree:prepare` installs again under npm 12: the nested `npm ci` no longer inherits a user-level `allow-scripts` as `npm_config_allow_scripts`, which npm 12 rejects in a project install ([99b4b3c2](https://github.com/brianhliou/mistboard/commit/99b4b3c2))
