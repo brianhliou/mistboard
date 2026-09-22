@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- A bot game no longer ends because you put your phone down: a disconnect never forfeits a game against the computer, and the 30-second countdown a human opponent's leave starts is now shown in every variant's room rather than three of them ([aad6f186](https://github.com/brianhliou/mistboard/commit/aad6f186))
 - The Jungle tiger jumps the river sideways as well as lengthwise, the same leap as the lion, following the Chinese rule sets (Tencent's QQ游戏, Leiden) rather than English Wikipedia's lion-only reading; the bot, the analysis board, the rules page in three languages and the puzzles follow, and one material puzzle the new jump refutes is withdrawn ([6f499b0e](https://github.com/brianhliou/mistboard/commit/6f499b0e))
 - On the banqi board, selecting a piece tints its whole cell and a piece it can capture is outlined in green; the old inset tint and thin ring were easy to miss ([819b3fa4](https://github.com/brianhliou/mistboard/commit/819b3fa4))
 - The Lobby's bot rows change every six hours: Fortress, Duck and Atomic Xiangqi offer Level 3, 4 or 5 in turn, and each row's clock cycles through the variant's slower paces (never faster than its default); the Xiangqi Level 2/5/8 ladder stays fixed so it can be climbed ([f845ae22](https://github.com/brianhliou/mistboard/commit/f845ae22))
