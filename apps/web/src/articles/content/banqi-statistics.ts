@@ -23,6 +23,7 @@ import type { Article, ArticleBlock } from '../types.js';
 
 const PLAY_ENGINE = '/?play=computer&gameSpecId=banqi';
 const PLAY_FRIEND = '/?play=friend&gameSpecId=banqi';
+const STUDY = '/study/FsA5sowX';
 
 export const banqiStatisticsArticle: Article = {
   slug: 'banqi-statistics',
@@ -32,9 +33,9 @@ export const banqiStatisticsArticle: Article = {
   boardFamily: 'xiangqi',
   playableOnMistboard: true,
   title: 'Banqi by the Numbers',
-  seoTitle: 'Banqi Statistics: How Big a Lead Is Safe, and When',
+  seoTitle: 'Banqi Statistics: How Big a Lead Is Safe, and When a Game Is Decided',
   summary:
-    'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. A lead of one or two small pieces is a coin flip at move 30; eleven points is 98%. The side that loses its general first loses 87% of the time.',
+    'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. On the engine\u2019s own point scale, a lead under ten points is a coin flip at every stage of the game, and the side that loses its general first loses 87% of the time.',
   showSummaryOnPage: false,
   status: 'draft',
   publishedAt: '2026-09-23',
@@ -49,7 +50,7 @@ export const banqiStatisticsArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'Here are 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays. Every game is a fresh deal, both seats are the same engine at the same search, and material is counted on one fixed scale throughout: general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2.',
+      text: 'Here are 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays. Every game is a fresh deal and both seats are the same engine at the same search, so any edge belongs to the seat, not to a player.',
     },
     {
       kind: 'table',
@@ -63,70 +64,77 @@ export const banqiStatisticsArticle: Article = {
         ['first player won, of decided games', '89 of 168 (53%)'],
       ],
     },
+    {
+      kind: 'paragraph',
+      text: 'Material below is counted in points, on the engine\u2019s own value table: general 30, chariot 14, cannon 12, advisor and elephant 10, horse 8, soldier 4. Those are MistyBanqi\u2019s numbers rather than mine, which is the point, because these are its games. They do not follow the capture ladder either: the chariot is fourth in rank and second in value, and a general is worth more than twice any other piece.',
+    },
   ],
   sections: [
     {
-      heading: 'A lead under a cannon is not a lead',
+      heading: 'Under ten points is a coin flip',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The question a player has mid-game is whether the material on the table means anything yet. It depends on the size, and less than you would think on the clock.',
+          text: 'The question mid-game is whether the material you are up means anything yet. It depends on the size, and much less than you would think on how far along the game is.',
         },
         {
           kind: 'raw-svg',
           svg: BANQI_LEAD_SAFETY_GRID,
           caption:
-            'How often the side ahead on material went on to win, by the size of the lead and the move it was measured at. Percentages are of decided games; drawn games sit in the counts but not the rate.',
+            'How often the side ahead on points went on to win, by the size of the lead and the move it was measured at. Rates are of decided games; drawn games are in the counts but not the rate. Games dead level at a checkpoint are in no column.',
         },
         {
           kind: 'paragraph',
-          text: 'One or two small pieces is worth nothing. A one to five point lead at move 30 wins 53% of the time, a coin flip, and it is still 51% at move 40. Six points, a cannon or an elephant, is the first lead that holds: 89% by move 30. Eleven points, roughly a chariot and a horse, is 98% and the game is effectively over. So the honest read of a two-soldier advantage at move 30 is that you are not ahead, you are level with extra tiles.',
+          text: 'A soldier or a horse ahead is nothing. Under ten points the leader wins 52% at move 10 and 59% at move 40: a coin flip that never improves, however long it is held. One middling piece, ten to nineteen points, is worth about 70% early and 81% late. It takes forty points, a general or a chariot plus two mid pieces, before the game is actually over: 95% at move 20, and every one of the 56 games that reached move 30 that far ahead. So a two-soldier lead at move 30 is not a lead. You are level with more tiles.',
         },
       ],
     },
     {
-      heading: 'Half the games settle by move 5, a fifth stay live past move 46',
+      heading: 'Banqi is two games',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The median game changes leader twice, and after move 13 it never changes again. That median hides the shape.',
+          text: 'The median game changes leader twice, and after move 16 it never changes again. The median is the least interesting thing in the chart.',
         },
         {
           kind: 'raw-svg',
           svg: BANQI_LEAD_SETTLE_CHART,
           caption:
-            'The move at which the eventual winner took the material lead for the last time, across the 168 decided games.',
+            'The move at which the eventual winner took the lead for the last time, across the 168 decided games. Each bar counts games.',
         },
         {
           kind: 'paragraph',
-          text: 'Banqi is two games. In 52 of the 168 the winner was ahead by move 5 and simply stayed there; in 34 the lead was still changing hands after move 46. A quarter of all 200 games never changed leader at all: whoever drew blood first held it to the end. The first capture lands at move 3 in the median game, so the half that settles early settles while most of the board is still face-down, which is exactly where the flips are. That is why a chess-style review credits the winner for what was often a good bag, and why the [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile.',
+          text: 'In 43 of the 168 decided games the winner was ahead by move 5 and simply stayed there. In 36 the lead was still changing hands after move 46. A fifth of all 200 games never changed leader once: whoever drew blood first held it to the end. The early half settles while most of the board is still face-down, which is exactly where the flips are, and that is why a chess-style review credits the winner for what was often a good bag. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.',
         },
       ],
     },
     {
-      heading: 'Losing the general first loses the game 87% of the time',
+      heading: 'Losing your general first loses the game',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A general fell in 188 of the 200 games, the first one at move 24 in the median game. In the 167 decided games where one was taken, the side that lost its general first lost 146: 87%, give or take three points. Here is what that looks like in one ply.',
+          text: 'A general fell in 188 of the 200 games, the first at move 24 in the median game. In the 167 decided games where one was taken, the side that lost its general first lost 146: 87%, give or take three points. Thirty points changing hands in a single move is why.',
         },
         {
           kind: 'svg-row',
           items: [
             { svg: BANQI_STATS_BEFORE, caption: 'Black has just flipped its own general onto c3.' },
-            { svg: BANQI_STATS_AFTER, caption: 'A red soldier walks in and takes it. Black led by 6; now red does.' },
+            {
+              svg: BANQI_STATS_AFTER,
+              caption: 'A red soldier walks in and takes it. Black led by 4; now red leads by 26.',
+            },
           ],
           caption:
             'The exhibit game, seed 1183 of the run: 72 moves, and the lead changes hands here for the last time.',
         },
         {
           kind: 'paragraph',
-          text: 'The general is twelve points against seven for the next piece down, so losing it usually is the lead. It is also the one piece that cannot be defended by rank: a soldier, the lowest piece on the board, takes it.',
+          text: 'No other piece swings the score like that, and the general is the one piece that cannot be defended by rank. The lowest piece on the board takes it.',
         },
       ],
     },
     {
-      heading: 'Flipping first is worth nothing this sample can measure',
+      heading: 'Flipping first is worth nothing',
       blocks: [
         {
           kind: 'paragraph',
@@ -135,11 +143,11 @@ export const banqiStatisticsArticle: Article = {
       ],
     },
     {
-      heading: 'One game in six is a draw, and the engine causes most of them',
+      heading: 'One game in six is a draw',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Thirty-two games were drawn, 31 of them on the forty-ply no-progress clock and one stopped at 150 moves. No game repeated a position three times. Read the 16% as a fact about MistyBanqi first: fourteen of those draws passed through a twenty-point lead, which is the engine’s [known blind spot](/blog/mistybanqi), since nothing in its evaluation rewards finishing a won game over holding what it has. Draws are the long games, 88 moves against 71. A player who converts what this engine drifts on would draw less often.',
+          text: 'Thirty-two games were drawn, 31 of them on the forty-ply no-progress clock and one stopped at 150 moves. No game repeated a position three times. Read the 16% as a fact about MistyBanqi first: seventeen of those draws passed through a forty-point lead, the size the grid above calls decisive, and that is the engine\u2019s [known blind spot](/blog/mistybanqi), since nothing in its evaluation rewards finishing a won game over holding what it has. Draws are the long games, 88 moves against 71. A player who converts what this engine drifts on would draw less often.',
         },
       ],
     },
@@ -171,17 +179,17 @@ export const banqiStatisticsArticle: Article = {
             {
               question: 'How big a lead is safe in banqi?',
               answer:
-                'Bigger than most people play as if it is. In 200 engine games, a one to five point lead at move 30 won 53% of the time, a six to ten point lead 89%, and eleven points or more 98%. Counting on the usual scale: general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2.',
+                'Bigger than most people play as if it is. In 200 engine games, counting material on the engine\u2019s scale (general 30, chariot 14, cannon 12, advisor and elephant 10, horse 8, soldier 4), a lead under ten points won 59% at move 30, ten to nineteen points won 81%, and forty points or more won every game that got that far ahead by move 30.',
             },
             {
               question: 'When is a banqi game decided?',
               answer:
-                'Half the time, almost immediately. In 52 of 168 decided engine games the winner took the lead for good by move 5, and in 34 of them the lead was still changing hands after move 46. The median is move 13 of a 71-move game.',
+                'In two ways at once. In 43 of 168 decided engine games the winner took the lead for good by move 5; in 36 the lead was still changing hands after move 46. The median is move 16 of a 71-move game.',
             },
             {
               question: 'How important is the general in banqi?',
               answer:
-                'A general was captured in 94% of 200 engine games, and the side that lost its general first lost 87% of the decided games. It is worth twelve points against seven for the next piece down, and a soldier, the lowest piece, is one of the few things that can take it.',
+                'A general was captured in 94% of 200 engine games, and the side that lost its general first lost 87% of the decided games. The engine values it at 30 points against 14 for a chariot, the next piece down, and a soldier, the lowest piece, is one of the few things that can take it.',
             },
             {
               question: 'Does the first player have an advantage in banqi?',
@@ -209,6 +217,7 @@ export const banqiStatisticsArticle: Article = {
           buttons: [
             { label: 'Play the engine', href: PLAY_ENGINE, emphasis: 'primary' },
             { label: 'Play a friend', href: PLAY_FRIEND, emphasis: 'secondary' },
+            { label: 'Browse the 20 games', href: STUDY, emphasis: 'secondary' },
           ],
         },
       ],

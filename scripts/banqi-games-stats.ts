@@ -25,14 +25,22 @@ type SelfPlayGame = {
   deal: BanqiDeal;
 };
 
+/**
+ * MistyBanqi's own evaluation values, from misty-banqi/banqi_rust/src/engine.rs
+ * (`const VALUE: [f64; 7] = [30.0, 10.0, 10.0, 14.0, 8.0, 12.0, 4.0]` in role
+ * order general, advisor, elephant, chariot, horse, cannon, soldier). These are
+ * engine games, so the scale that decides them is the engine's, not one picked
+ * here: the chariot outranks the cannon on the capture ladder but is worth more
+ * than it, and the general is worth twice any other piece.
+ */
 const ROLE_VALUE: Record<BanqiPieceRole, number> = {
-  general: 12,
-  advisor: 7,
-  elephant: 6,
-  chariot: 5,
-  horse: 4,
-  cannon: 6,
-  soldier: 2,
+  general: 30,
+  advisor: 10,
+  elephant: 10,
+  chariot: 14,
+  horse: 8,
+  cannon: 12,
+  soldier: 4,
 };
 const RANKS: BanqiPieceRole[] = [
   'general',
@@ -236,7 +244,7 @@ out.push(
 );
 out.push(`first general capture: median ply ${median(gTaken.map((r) => r.firstGeneralPly ?? 0))}`);
 out.push(
-  `lead changes: median ${median(rows.map((r) => r.leadChanges))}, max ${Math.max(...rows.map((r) => r.leadChanges))}; max lead: median ${median(rows.map((r) => r.maxLead))} points (general 12, advisor 7, elephant/cannon 6, chariot 5, horse 4, soldier 2)`,
+  `lead changes: median ${median(rows.map((r) => r.leadChanges))}, max ${Math.max(...rows.map((r) => r.leadChanges))}; max lead: median ${median(rows.map((r) => r.maxLead))} points (engine values: general 30, chariot 14, cannon 12, advisor/elephant 10, horse 8, soldier 4)`,
 );
 const wl = decisive.filter((r) => r.winnerLedFromMove !== null);
 out.push(

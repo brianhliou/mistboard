@@ -503,11 +503,20 @@
     /* The variant rail hugs its content (compact markers + one-line names) so it
        sits close to the sheet; the old fixed 272px was sized for the retired wide
        markers and left a dead gap. The TOC can stay narrower. */
-    grid-template-columns: max-content minmax(0, 800px) 180px;
+    grid-template-columns: max-content minmax(0, 800px) 200px;
     grid-template-areas: "variants sheet toc";
     justify-content: center;
     column-gap: 28px;
     align-items: start;
+  }
+
+  /* 180px wrapped every heading longer than three words onto three lines, which
+     made the rail read as a column of fragments. There is room for the wider
+     column once the window has it. */
+  @media (min-width: 1440px) {
+    .article-shell {
+      grid-template-columns: max-content minmax(0, 800px) 248px;
+    }
   }
 
   .article-sheet {

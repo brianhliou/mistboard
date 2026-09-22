@@ -32,11 +32,11 @@ describe('banqi statistics figures', () => {
 
   it('renders both charts with their numbers in the markup', () => {
     const grid = BANQI_LEAD_SAFETY_GRID();
-    expect(grid).toContain('53%');
+    expect(grid).toContain('52%');
     expect(grid).toContain('100%');
     const chart = BANQI_LEAD_SETTLE_CHART();
-    expect(chart).toContain('move number');
-    expect(chart).toContain('>52<');
+    expect(chart).toContain('move the lead last changed hands');
+    expect(chart).toContain('>43<');
   });
 
   it('the exhibit boards bracket the capture that settles the lead', () => {

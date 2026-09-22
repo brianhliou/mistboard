@@ -23,22 +23,61 @@ import { BANQI_STATS_GAME, BANQI_STATS_GAME_DECIDING_PLY } from './content/banqi
 const TITLE_H = 28;
 const FULL_W = 568;
 
-/** Leader's win rate by how big the lead is, at four points in the game. */
+/**
+ * Leader's win rate by how big the lead is, at four points in the game.
+ * Material is counted on MistyBanqi's own evaluation values (general 30,
+ * chariot 14, cannon 12, advisor and elephant 10, horse 8, soldier 4), from
+ * misty-banqi/banqi_rust/src/engine.rs. Games level on material at the
+ * checkpoint are not in any column: 16 at move 10, 6 at move 20, 2 at move 30,
+ * 3 at move 40.
+ */
 export const LEAD_SAFETY = {
-  buckets: ['1-5', '6-10', '11-20', '21+'],
+  buckets: ['1-9', '10-19', '20-39', '40+'],
   rows: [
-    { move: 10, cells: [{ pct: 48, n: 52 }, { pct: 72, n: 50 }, { pct: 81, n: 48 }, { pct: 92, n: 13 }] },
-    { move: 20, cells: [{ pct: 71, n: 42 }, { pct: 72, n: 32 }, { pct: 90, n: 61 }, { pct: 93, n: 27 }] },
-    { move: 30, cells: [{ pct: 53, n: 45 }, { pct: 89, n: 28 }, { pct: 98, n: 49 }, { pct: 100, n: 43 }] },
-    { move: 40, cells: [{ pct: 51, n: 35 }, { pct: 85, n: 34 }, { pct: 98, n: 41 }, { pct: 100, n: 53 }] },
+    {
+      move: 10,
+      cells: [
+        { pct: 52, n: 33 },
+        { pct: 67, n: 51 },
+        { pct: 81, n: 52 },
+        { pct: 89, n: 18 },
+      ],
+    },
+    {
+      move: 20,
+      cells: [
+        { pct: 52, n: 33 },
+        { pct: 69, n: 39 },
+        { pct: 87, n: 55 },
+        { pct: 95, n: 37 },
+      ],
+    },
+    {
+      move: 30,
+      cells: [
+        { pct: 59, n: 37 },
+        { pct: 81, n: 27 },
+        { pct: 89, n: 46 },
+        { pct: 100, n: 56 },
+      ],
+    },
+    {
+      move: 40,
+      cells: [
+        { pct: 59, n: 27 },
+        { pct: 81, n: 31 },
+        { pct: 90, n: 42 },
+        { pct: 98, n: 62 },
+      ],
+    },
   ],
 } as const;
 
 /** Where in the game the material lead changed hands for the last time. */
 export const LEAD_SETTLE = {
   labels: ['1-5', '6-10', '11-15', '16-20', '21-25', '26-30', '31-35', '36-40', '41-45', '46+'],
-  counts: [52, 25, 14, 11, 9, 8, 4, 6, 5, 34],
-  median: 13,
+  counts: [43, 21, 18, 7, 10, 10, 8, 12, 3, 36],
+  median: 16,
 } as const;
 
 function heatFill(pct: number): string {
@@ -49,19 +88,22 @@ function heatFill(pct: number): string {
 }
 
 export const BANQI_LEAD_SAFETY_GRID = () => {
-  const colW = 104;
-  const rowH = 52;
-  const labelW = 132;
-  const headH = 34;
+  const colW = 108;
+  const rowH = 56;
+  const labelW = 136;
+  const headH = 52;
   const width = labelW + colW * LEAD_SAFETY.buckets.length;
   const height = TITLE_H + headH + rowH * LEAD_SAFETY.rows.length;
   const parts: string[] = [
-    `<text x="${width / 2}" y="14" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title">HOW OFTEN THE LEADER WINS</text>`,
+    `<text x="${width / 2}" y="14" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title">HOW OFTEN THE MATERIAL LEADER WINS</text>`,
+    // The columns are meaningless without their unit, and the unit is the
+    // engine's own point scale, so it gets said here and not only in the caption.
+    `<text x="${labelW + (colW * LEAD_SAFETY.buckets.length) / 2}" y="${TITLE_H + 14}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" class="xq-diagram-outside-text">size of the lead, in points</text>`,
   ];
   LEAD_SAFETY.buckets.forEach((bucket, i) => {
     const x = labelW + i * colW + colW / 2;
     parts.push(
-      `<text x="${x}" y="${TITLE_H + 20}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="12" font-weight="600" class="xq-diagram-outside-text">${bucket}</text>`,
+      `<text x="${x}" y="${TITLE_H + 38}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title">${bucket}</text>`,
     );
   });
   LEAD_SAFETY.rows.forEach((row, r) => {
@@ -91,8 +133,9 @@ export const BANQI_LEAD_SETTLE_CHART = () => {
   const height = axisY + 40;
   const max = Math.max(...LEAD_SETTLE.counts);
   const parts: string[] = [
-    `<text x="${width / 2}" y="14" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title">WHEN THE LEAD CHANGED HANDS FOR THE LAST TIME</text>`,
+    `<text x="${width / 2}" y="14" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title">WHEN THE WINNER TOOK THE LEAD FOR GOOD</text>`,
     `<line x1="${left - 8}" y1="${axisY}" x2="${width - 8}" y2="${axisY}" class="xq-diagram-line" stroke-width="1"/>`,
+    `<text x="14" y="${TITLE_H + 40}" text-anchor="middle" transform="rotate(-90 14 ${TITLE_H + 40})" font-family="system-ui, sans-serif" font-size="11" class="xq-diagram-outside-text">games</text>`,
   ];
   LEAD_SETTLE.counts.forEach((count, i) => {
     const x = left + i * (barW + gap);
@@ -104,7 +147,7 @@ export const BANQI_LEAD_SETTLE_CHART = () => {
     );
   });
   parts.push(
-    `<text x="${width / 2}" y="${axisY + 33}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" class="xq-diagram-outside-text">move number</text>`,
+    `<text x="${width / 2}" y="${axisY + 33}" text-anchor="middle" font-family="system-ui, sans-serif" font-size="11" class="xq-diagram-outside-text">move the lead last changed hands</text>`,
   );
   return xqSvg(width, height, parts.join(''));
 };
@@ -134,7 +177,7 @@ function exhibitBoard(ply: number, title: string, highlight: string | null): () 
 
 export const BANQI_STATS_BEFORE = exhibitBoard(
   BANQI_STATS_GAME_DECIDING_PLY - 1,
-  'MOVE 12: BLACK LEADS BY 6',
+  'MOVE 12: BLACK LEADS BY 4',
   'c3',
 );
 export const BANQI_STATS_AFTER = exhibitBoard(

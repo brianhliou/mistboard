@@ -2675,15 +2675,16 @@ const ZH_HANS: Record<string, string> = {
     '不能。它收到的棋盘和你看到的一样全是暗子，而且发牌结果没有任何一方知道：你不知道，引擎不知道，对手也不知道。',
   // banqi-statistics (2026-09-22): the banqi result post, 200 engine games. zh-Hant is the primary reader; this block is its simplified mirror.
   'Banqi by the Numbers': '用数字看暗棋',
-  'Banqi Statistics: How Big a Lead Is Safe, and When': '暗棋统计：领先多少才算安全，什么时候才算',
-  'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. A lead of one or two small pieces is a coin flip at move 30; eleven points is 98%. The side that loses its general first loses 87% of the time.':
-    'MistyBanqi 按台湾比赛规则自我对弈 200 盘，每步搜索一千万个节点。领先一两颗小子，在第 30 回合的胜率跟掷硬币一样；领先十一分则是 98%。先失将的一方，有 87% 输掉那盘棋。',
+  'Banqi Statistics: How Big a Lead Is Safe, and When a Game Is Decided':
+    '暗棋统计：领先多少才算安全，一盘棋什么时候就定了',
+  'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. On the engine’s own point scale, a lead under ten points is a coin flip at every stage of the game, and the side that loses its general first loses 87% of the time.':
+    'MistyBanqi 按台湾比赛规则自我对弈 200 盘，每步搜索一千万个节点。用引擎自己的分值算，领先不到十分的一方，在对局的任何阶段都跟掷硬币差不多；而先失将的一方，有 87% 输掉那盘棋。',
   'Banqi players who want numbers behind the questions every table argues about: how big a lead is safe, when a game is decided, what losing the general costs, and whether flipping first is an advantage.':
     '想要数字来回答每张棋桌都在争论的问题的暗棋玩家：领先多少才算安全、一盘棋什么时候就定了、失将要付出什么代价、先翻是不是优势。',
   'Banqi has no game database. Xiangqi has a century of master games and chess has hundreds of millions; banqi is played in parks and on phones, and the games are gone when the tiles go back in the box. So the questions every table argues about have no numbers behind them. Am I winning? When is it over? Does flipping first help?':
     '暗棋没有棋谱数据库。象棋有上百年的名手对局，国际象棋有几亿盘；暗棋是在公园和手机上下的，棋子收回盒子，那盘棋就没了。所以每张棋桌都在争论的那些问题，背后没有任何数字。我现在是赢还是输？什么时候就定了？先翻有利吗？',
-  'Here are 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays. Every game is a fresh deal, both seats are the same engine at the same search, and material is counted on one fixed scale throughout: general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2.':
-    '这里是 [MistyBanqi](/blog/mistybanqi) 自我对弈的 200 盘棋，每步搜索一千万个节点，采用本站的[台湾比赛规则](/rules/banqi)。每一盘都是重新发子，两边坐的是同一个引擎、同样的搜索量，而全文的子力都用同一套分值计算：将 12、士 7、象和炮 6、车 5、马 4、卒 2。',
+  'Here are 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays. Every game is a fresh deal and both seats are the same engine at the same search, so any edge belongs to the seat, not to a player.':
+    '这里是 [MistyBanqi](/blog/mistybanqi) 自我对弈的 200 盘棋，每步搜索一千万个节点，采用本站的[台湾比赛规则](/rules/banqi)。每一盘都是重新发子，两边坐的是同一个引擎、同样的搜索量，所以任何优势都属于座位，不属于棋手。',
   '200 games, MistyBanqi against itself at 10M nodes': '200 盘，MistyBanqi 每步 10M 节点自我对弈',
   decided: '分出胜负',
   drawn: '和棋',
@@ -2695,52 +2696,29 @@ const ZH_HANS: Record<string, string> = {
   '188 games (94%)': '188 盘（94%）',
   'first player won, of decided games': '先手在分出胜负的对局中获胜',
   '89 of 168 (53%)': '168 盘中的 89 盘（53%）',
-  'A lead under a cannon is not a lead': '领先不到一颗炮，就不算领先',
-  'The question a player has mid-game is whether the material on the table means anything yet. It depends on the size, and less than you would think on the clock.':
-    '棋下到一半，你想知道的是台面上的子力差有没有意义。答案取决于差距多大，而跟下到第几回合的关系比你以为的小。',
-  'How often the side ahead on material went on to win, by the size of the lead and the move it was measured at. Percentages are of decided games; drawn games sit in the counts but not the rate.':
-    '子力领先的一方最后获胜的比率，按领先幅度和量测的回合分开。百分比是分出胜负的对局中的比率；和棋算在盘数里，不算在比率里。',
-  'One or two small pieces is worth nothing. A one to five point lead at move 30 wins 53% of the time, a coin flip, and it is still 51% at move 40. Six points, a cannon or an elephant, is the first lead that holds: 89% by move 30. Eleven points, roughly a chariot and a horse, is 98% and the game is effectively over. So the honest read of a two-soldier advantage at move 30 is that you are not ahead, you are level with extra tiles.':
-    '领先一两颗小子等于没有领先。第 30 回合领先一到五分的一方赢 53%，跟掷硬币一样，到第 40 回合还是 51%。六分，也就是一颗炮或一颗象，是第一个站得住的领先：第 30 回合 89%。十一分，大约是一车一马，98%，棋基本上已经结束。所以第 30 回合领先两颗卒的正确读法是：你没有领先，你只是多了几颗子的平盘。',
-  'Half the games settle by move 5, a fifth stay live past move 46':
-    '一半的对局在第 5 回合就定了，五分之一到第 46 回合还在变',
-  'The median game changes leader twice, and after move 13 it never changes again. That median hides the shape.':
-    '中位数的对局领先方换两次手，第 13 回合之后就不再换。但中位数把形状藏起来了。',
-  'The move at which the eventual winner took the material lead for the last time, across the 168 decided games.':
-    '最后的赢家最后一次取得子力领先的回合数，168 盘分出胜负的对局。',
-  'Banqi is two games. In 52 of the 168 the winner was ahead by move 5 and simply stayed there; in 34 the lead was still changing hands after move 46. A quarter of all 200 games never changed leader at all: whoever drew blood first held it to the end. The first capture lands at move 3 in the median game, so the half that settles early settles while most of the board is still face-down, which is exactly where the flips are. That is why a chess-style review credits the winner for what was often a good bag, and why the [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile.':
-    '暗棋其实是两种棋。168 盘里有 52 盘，赢家在第 5 回合就领先，然后就一直领先到底；另外 34 盘，领先到第 46 回合之后还在易手。全部 200 盘里有四分之一从头到尾没换过领先方：先见血的一方一路握到终局。中位数的对局第一次吃子在第 3 回合，所以早早定下来的那一半，是在大半棋盘还盖着的时候定的，而那正是翻子集中的地方。照国际象棋那套复盘，赢家会因为运气好的一袋子被记成一功；[完局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和棋子，就是为了这件事。',
-  'Losing the general first loses the game 87% of the time': '先失将的一方，有 87% 输掉那盘棋',
-  'A general fell in 188 of the 200 games, the first one at move 24 in the median game. In the 167 decided games where one was taken, the side that lost its general first lost 146: 87%, give or take three points. Here is what that looks like in one ply.':
-    '200 盘里有 188 盘有将倒下，中位数的对局在第 24 回合。有将被吃且分出胜负的 167 盘里，先失将的一方输了 146 盘：87%，上下三个百分点。一步棋就能看懂这件事。',
+  'The median game changes leader twice, and after move 16 it never changes again. The median is the least interesting thing in the chart.':
+    '中位数的对局领先方换两次手，第 16 回合之后就不再换。但中位数是这张图里最不有趣的东西。',
+  'A general fell in 188 of the 200 games, the first at move 24 in the median game. In the 167 decided games where one was taken, the side that lost its general first lost 146: 87%, give or take three points. Thirty points changing hands in a single move is why.':
+    '200 盘里有 188 盘有将倒下，中位数的对局在第 24 回合。有将被吃且分出胜负的 167 盘里，先失将的一方输了 146 盘：87%，上下三个百分点。原因是一步棋就有三十分易手。',
   'The exhibit game, seed 1183 of the run: 72 moves, and the lead changes hands here for the last time.':
     '示例对局，这批棋的第 1183 号种子：72 回合，领先就在这里最后一次易手。',
   'Black has just flipped its own general onto c3.': '黑方刚把自己的将翻在 c3。',
-  'A red soldier walks in and takes it. Black led by 6; now red does.':
-    '红方一颗卒走过去吃掉它。原本黑方领先 6 分，现在换红方。',
-  'The general is twelve points against seven for the next piece down, so losing it usually is the lead. It is also the one piece that cannot be defended by rank: a soldier, the lowest piece on the board, takes it.':
-    '将值十二分，下一级只值七分，所以失将通常就等于失去领先。它也是唯一没办法靠大小顺序保护的子：卒，棋盘上最小的子，吃得掉它。',
-  'Flipping first is worth nothing this sample can measure': '先翻的价值，这个样本量不出来',
   'The first player won 89 of the 168 decided games, 53%, give or take four points, and 52.5% counting draws as half. The colour the first flip hands you makes no difference (45 of 80 as red, 44 of 88 as black), and neither does its rank, as far as 200 games can see: split seven ways, each rank keeps a dozen or two games and the error bars swallow the differences. Two hundred games rule out a large first-move advantage and cannot rule out a small one, so the answer to the oldest argument at the table is that if flipping first helps, it helps by less than this.':
     '先手在 168 盘分出胜负的对局里赢了 89 盘，53%，上下四个百分点；把和棋算半分则是 52.5%。第一翻给的颜色没有差别（拿红 80 盘赢 45，拿黑 88 盘赢 44），第一颗子的大小也一样，至少 200 盘看不出来：切成七种之后每种只剩十几二十盘，误差范围把差异都吞掉了。200 盘能排除先手有大优势，排除不了小优势，所以对棋桌上那个最老的争论，答案是：先翻就算有用，也比这个幅度更小。',
-  'One game in six is a draw, and the engine causes most of them':
-    '每六盘有一盘和棋，而且多半是引擎造成的',
-  'Thirty-two games were drawn, 31 of them on the forty-ply no-progress clock and one stopped at 150 moves. No game repeated a position three times. Read the 16% as a fact about MistyBanqi first: fourteen of those draws passed through a twenty-point lead, which is the engine’s [known blind spot](/blog/mistybanqi), since nothing in its evaluation rewards finishing a won game over holding what it has. Draws are the long games, 88 moves against 71. A player who converts what this engine drifts on would draw less often.':
-    '32 盘和棋，其中 31 盘是 40 步无进展计数判和，一盘下到 150 回合被中止。没有一盘重复同一局面三次。先把这 16% 当成关于 MistyBanqi 的事实：其中 14 盘曾经走到一方领先二十分以上的局面，那正是这个引擎[出了名的盲点](/blog/mistybanqi)，因为它的评估函数里没有任何一项奖励把赢棋收官、而不是守着手上的子力。和棋也都是长棋，88 回合对 71 回合。能把这个引擎磨掉的优势兑现的棋手，和棋会更少。',
+  'Thirty-two games were drawn, 31 of them on the forty-ply no-progress clock and one stopped at 150 moves. No game repeated a position three times. Read the 16% as a fact about MistyBanqi first: seventeen of those draws passed through a forty-point lead, the size the grid above calls decisive, and that is the engine’s [known blind spot](/blog/mistybanqi), since nothing in its evaluation rewards finishing a won game over holding what it has. Draws are the long games, 88 moves against 71. A player who converts what this engine drifts on would draw less often.':
+    '32 盘和棋，其中 31 盘是 40 步无进展计数判和，一盘下到 150 回合被中止。没有一盘重复同一局面三次。先把这 16% 当成关于 MistyBanqi 的事实：其中 17 盘曾经走到一方领先四十分的局面，也就是上面那张表说已经稳了的幅度，而那正是这个引擎[出了名的盲点](/blog/mistybanqi)，因为它的评估函数里没有任何一项奖励把赢棋收官、而不是守着手上的子力。和棋也都是长棋，88 回合对 71 回合。能把这个引擎磨掉的优势兑现的棋手，和棋会更少。',
   'What engine games leave out': '引擎对局没说的事',
   'Two hundred games of one engine against itself measure that engine, not banqi in a park. The first-player and first-tile numbers come from the deal and the rules, so they should carry over; the rest carries less. People lose generals to traps a ten-million-node search does not walk into, people convert won games this engine shuffles away, and two players of unequal strength settle games earlier than two copies of one program. The same engine has played [fifty-two games against people](/blog/skill-vs-luck) here, where the humans won 14, lost 33 and drew 5. The park rules change it too: chain captures, the straight-charging chariot and the cannon that jumps to empty squares would each move these numbers, and none of them are played here.':
     '一个引擎自我对弈 200 盘，量到的是这个引擎，不是公园里的暗棋。先手和第一颗子的数字来自发子和规则，应该可以照搬；其余的没那么能照搬。人会被一千万节点的搜索不会踩的陷阱吃掉将，人会把这个引擎磨掉的赢棋收下来，实力不对等的两个人也比同一个程式的两份复本更早分出胜负。同一个引擎在本站[跟人下过五十二盘](/blog/skill-vs-luck)，人这边 14 胜 33 负 5 和。公园规则也会改变这些数字：连吃、车直冲、炮翻山跳到空格，每一条都会动到上面的结果，而本站一条都不采用。',
   'One of [twenty games](/study/FsA5sowX) from the same run, kept as a study. Step through it with the arrows; a tile nobody has flipped stays face-down.':
     '同一批棋里的[二十盘](/study/FsA5sowX)之一，存成一份研究。用箭头一步步看；没人翻过的子保持盖着。',
   'How big a lead is safe in banqi?': '暗棋领先多少才算安全？',
-  'Bigger than most people play as if it is. In 200 engine games, a one to five point lead at move 30 won 53% of the time, a six to ten point lead 89%, and eleven points or more 98%. Counting on the usual scale: general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2.':
-    '比大多数人下棋时以为的要多。200 盘引擎对局里，第 30 回合领先一到五分的一方赢 53%，领先六到十分赢 89%，领先十一分以上赢 98%。分值按惯例算：将 12、士 7、象和炮 6、车 5、马 4、卒 2。',
+  'Bigger than most people play as if it is. In 200 engine games, counting material on the engine’s scale (general 30, chariot 14, cannon 12, advisor and elephant 10, horse 8, soldier 4), a lead under ten points won 59% at move 30, ten to nineteen points won 81%, and forty points or more won every game that got that far ahead by move 30.':
+    '比大多数人下棋时以为的要多。200 盘引擎对局里，用引擎的分值算（将 30、车 14、炮 12、士和象 10、马 8、卒 4），第 30 回合领先不到十分的一方赢 59%，领先十到十九分赢 81%，而第 30 回合领先四十分以上的，一盘都没输。',
   'When is a banqi game decided?': '暗棋一盘棋什么时候就定了？',
-  'Half the time, almost immediately. In 52 of 168 decided engine games the winner took the lead for good by move 5, and in 34 of them the lead was still changing hands after move 46. The median is move 13 of a 71-move game.':
-    '有一半几乎是立刻。168 盘分出胜负的引擎对局里，有 52 盘赢家在第 5 回合就取得不再改变的领先，另有 34 盘到第 46 回合之后领先还在易手。中位数是 71 回合对局里的第 13 回合。',
   'How important is the general in banqi?': '将在暗棋里有多重要？',
-  'A general was captured in 94% of 200 engine games, and the side that lost its general first lost 87% of the decided games. It is worth twelve points against seven for the next piece down, and a soldier, the lowest piece, is one of the few things that can take it.':
-    '200 盘引擎对局里有 94% 有将被吃，而先失将的一方在分出胜负的对局中输了 87%。将值十二分，下一级只值七分，而卒，棋盘上最小的子，是少数吃得掉它的其中一个。',
+  'A general was captured in 94% of 200 engine games, and the side that lost its general first lost 87% of the decided games. The engine values it at 30 points against 14 for a chariot, the next piece down, and a soldier, the lowest piece, is one of the few things that can take it.':
+    '200 盘引擎对局里有 94% 有将被吃，而先失将的一方在分出胜负的对局中输了 87%。引擎给将 30 分，给下一级的车 14 分，而卒，棋盘上最小的子，是少数吃得掉它的其中一个。',
   'Does the first player have an advantage in banqi?': '暗棋先手有优势吗？',
   'No advantage large enough for 200 engine games to detect. The first player won 53% of the decided games, within four points of a coin flip, and the colour handed over by the first flip made no difference.':
     '没有大到 200 盘引擎对局量得出来的优势。先手在分出胜负的对局赢了 53%，离掷硬币不到四个百分点，而第一翻给的颜色没有差别。',
@@ -2750,14 +2728,40 @@ const ZH_HANS: Record<string, string> = {
   'Play banqi': '来下暗棋',
   'The engine in these games takes the other seat the moment you open the board, and every finished game gets the review that separates your decisions from your tiles.':
     '这些对局里的引擎，你一打开棋盘它就坐到对面；每一盘下完的棋都有一份复盘，把你的决定和你翻到的子分开。',
-  'HOW OFTEN THE LEADER WINS': '领先方最后赢了多少',
-  'WHEN THE LEAD CHANGED HANDS FOR THE LAST TIME': '领先最后一次易手是在第几回合',
+  'Material below is counted in points, on the engine’s own value table: general 30, chariot 14, cannon 12, advisor and elephant 10, horse 8, soldier 4. Those are MistyBanqi’s numbers rather than mine, which is the point, because these are its games. They do not follow the capture ladder either: the chariot is fourth in rank and second in value, and a general is worth more than twice any other piece.':
+    '底下的子力都用分数计算，用的是引擎自己的分值表：将 30、车 14、炮 12、士和象 10、马 8、卒 4。这是 MistyBanqi 的数字，不是我挑的，这点很重要，因为这些是它下的棋。这套分值也不按大小顺序走：车在大小顺序上排第四，价值却排第二，而将的价值比其他任何一颗子的两倍还多。',
+  'Under ten points is a coin flip': '领先不到十分，跟掷硬币一样',
+  'The question mid-game is whether the material you are up means anything yet. It depends on the size, and much less than you would think on how far along the game is.':
+    '棋下到一半，你想知道的是手上多出来的子力有没有意义。答案取决于差距多大，而跟下到第几回合的关系，比你以为的小得多。',
+  'How often the side ahead on points went on to win, by the size of the lead and the move it was measured at. Rates are of decided games; drawn games are in the counts but not the rate. Games dead level at a checkpoint are in no column.':
+    '分数领先的一方最后获胜的比率，按领先幅度和量测的回合分开。比率是分出胜负的对局中的比率；和棋算在盘数里，不算在比率里。在该回合完全平手的对局不归任何一栏。',
+  'A soldier or a horse ahead is nothing. Under ten points the leader wins 52% at move 10 and 59% at move 40: a coin flip that never improves, however long it is held. One middling piece, ten to nineteen points, is worth about 70% early and 81% late. It takes forty points, a general or a chariot plus two mid pieces, before the game is actually over: 95% at move 20, and every one of the 56 games that reached move 30 that far ahead. So a two-soldier lead at move 30 is not a lead. You are level with more tiles.':
+    '多一颗卒或一匹马等于没有。领先不到十分的一方，第 10 回合赢 52%，第 40 回合赢 59%：就是掷硬币，握多久都不会变好。领先一颗中等的子，也就是十到十九分，早盘大约 70%，后盘 81%。要到四十分，一个将，或一车加两颗中等的子，棋才真的结束：第 20 回合 95%，而第 30 回合领先到这个幅度的 56 盘，一盘都没输。所以第 30 回合领先两颗卒不算领先，你只是平盘多了几颗子。',
+  'Banqi is two games': '暗棋其实是两种棋',
+  'The move at which the eventual winner took the lead for the last time, across the 168 decided games. Each bar counts games.':
+    '最后的赢家最后一次取得领先的回合数，168 盘分出胜负的对局。每一根柱子数的是盘数。',
+  'In 43 of the 168 decided games the winner was ahead by move 5 and simply stayed there. In 36 the lead was still changing hands after move 46. A fifth of all 200 games never changed leader once: whoever drew blood first held it to the end. The early half settles while most of the board is still face-down, which is exactly where the flips are, and that is why a chess-style review credits the winner for what was often a good bag. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.':
+    '168 盘分出胜负的对局里，有 43 盘赢家在第 5 回合就领先，然后就一直领先下去；另外 36 盘，领先到第 46 回合之后还在易手。全部 200 盘里有五分之一从头到尾没换过领先方：先见血的一方一路握到终局。早早定下来的那一半，是在大半棋盘还盖着的时候定的，而那正是翻子集中的地方，所以照国际象棋那套复盘，赢家会因为运气好的一袋子被记成一功。[完局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和棋子，就是为了这件事。',
+  'Losing your general first loses the game': '先失将，就输了这盘棋',
+  'A red soldier walks in and takes it. Black led by 4; now red leads by 26.':
+    '红方一颗卒走过去吃掉它。原本黑方领先 4 分，现在红方领先 26 分。',
+  'No other piece swings the score like that, and the general is the one piece that cannot be defended by rank. The lowest piece on the board takes it.':
+    '没有别的子能让分数这样一次翻过去，而将也是唯一没办法靠大小顺序保护的子。棋盘上最小的那颗子吃得掉它。',
+  'Flipping first is worth nothing': '先翻没有价值',
+  'One game in six is a draw': '每六盘有一盘和棋',
+  'In two ways at once. In 43 of 168 decided engine games the winner took the lead for good by move 5; in 36 the lead was still changing hands after move 46. The median is move 16 of a 71-move game.':
+    '同时有两种答案。168 盘分出胜负的引擎对局里，有 43 盘赢家在第 5 回合就取得不再改变的领先；另外 36 盘，领先到第 46 回合之后还在易手。中位数是 71 回合对局里的第 16 回合。',
+  'Browse the 20 games': '看那二十盘棋',
+  'HOW OFTEN THE MATERIAL LEADER WINS': '子力领先方最后赢了多少',
+  'size of the lead, in points': '领先幅度（分）',
+  games: '盘数',
+  'WHEN THE WINNER TOOK THE LEAD FOR GOOD': '赢家在第几回合取得不再改变的领先',
   'after move 10': '第 10 回合后',
   'after move 20': '第 20 回合后',
   'after move 30': '第 30 回合后',
   'after move 40': '第 40 回合后',
-  'move number': '回合数',
-  'MOVE 12: BLACK LEADS BY 6': '第 12 回合：黑方领先 6 分',
+  'move the lead last changed hands': '领先最后一次易手的回合',
+  'MOVE 12: BLACK LEADS BY 4': '第 12 回合：黑方领先 4 分',
   'MOVE 13: THE SOLDIER TAKES THE GENERAL': '第 13 回合：卒吃将',
   // banqi rules page re-cut 2026-09-21: real-board diagrams, shorter prose.
   'The board is half a xiangqi board, a 4 by 8 grid. Pieces sit in the squares, and the thirty-two shuffled pieces fill it exactly, every one face-down.':
@@ -5232,15 +5236,16 @@ const ZH_HANT: Record<string, string> = {
     '不能。它收到的棋盤和你看到的一樣全是暗子，而且發牌結果沒有任何一方知道：你不知道，引擎不知道，對手也不知道。',
   // banqi-statistics (2026-09-22): Taiwanese reader; 砲 / 覆盤 / 回合 for a full move, 步 for a ply as on the rules page.
   'Banqi by the Numbers': '用數字看暗棋',
-  'Banqi Statistics: How Big a Lead Is Safe, and When': '暗棋統計：領先多少才算安全，什麼時候才算',
-  'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. A lead of one or two small pieces is a coin flip at move 30; eleven points is 98%. The side that loses its general first loses 87% of the time.':
-    'MistyBanqi 依台灣比賽規則自我對弈 200 盤，每步搜尋一千萬個節點。領先一兩顆小子，在第 30 回合的勝率跟擲硬幣一樣；領先十一分則是 98%。先失將的一方，有 87% 輸掉那盤棋。',
+  'Banqi Statistics: How Big a Lead Is Safe, and When a Game Is Decided':
+    '暗棋統計：領先多少才算安全，一盤棋什麼時候就定了',
+  'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. On the engine’s own point scale, a lead under ten points is a coin flip at every stage of the game, and the side that loses its general first loses 87% of the time.':
+    'MistyBanqi 依台灣比賽規則自我對弈 200 盤，每步搜尋一千萬個節點。用引擎自己的分值算，領先不到十分的一方，在棋局的任何階段都跟擲硬幣差不多；而先失將的一方，有 87% 輸掉那盤棋。',
   'Banqi players who want numbers behind the questions every table argues about: how big a lead is safe, when a game is decided, what losing the general costs, and whether flipping first is an advantage.':
     '想要數字來回答每張棋桌都在爭論的問題的暗棋玩家：領先多少才算安全、一盤棋什麼時候就定了、失將要付出什麼代價、先翻是不是優勢。',
   'Banqi has no game database. Xiangqi has a century of master games and chess has hundreds of millions; banqi is played in parks and on phones, and the games are gone when the tiles go back in the box. So the questions every table argues about have no numbers behind them. Am I winning? When is it over? Does flipping first help?':
     '暗棋沒有棋譜資料庫。象棋有上百年的名手對局，西洋棋有幾億盤；暗棋是在公園和手機上下的，棋子收回盒子，那盤棋就沒了。所以每張棋桌都在爭論的那些問題，背後沒有任何數字。我現在是贏還是輸？什麼時候就定了？先翻有利嗎？',
-  'Here are 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays. Every game is a fresh deal, both seats are the same engine at the same search, and material is counted on one fixed scale throughout: general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2.':
-    '這裡是 [MistyBanqi](/blog/mistybanqi) 自我對弈的 200 盤棋，每步搜尋一千萬個節點，採用本站的[台灣比賽規則](/rules/banqi)。每一盤都是重新發子，兩邊坐的是同一個引擎、同樣的搜尋量，而全文的子力都用同一套分值計算：將 12、士 7、象和砲 6、車 5、馬 4、卒 2。',
+  'Here are 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays. Every game is a fresh deal and both seats are the same engine at the same search, so any edge belongs to the seat, not to a player.':
+    '這裡是 [MistyBanqi](/blog/mistybanqi) 自我對弈的 200 盤棋，每步搜尋一千萬個節點，採用本站的[台灣比賽規則](/rules/banqi)。每一盤都是重新發子，兩邊坐的是同一個引擎、同樣的搜尋量，所以任何優勢都屬於座位，不屬於棋手。',
   '200 games, MistyBanqi against itself at 10M nodes': '200 盤，MistyBanqi 每步 10M 節點自我對弈',
   decided: '分出勝負',
   drawn: '和棋',
@@ -5252,52 +5257,29 @@ const ZH_HANT: Record<string, string> = {
   '188 games (94%)': '188 盤（94%）',
   'first player won, of decided games': '先手在分出勝負的棋局中獲勝',
   '89 of 168 (53%)': '168 盤中的 89 盤（53%）',
-  'A lead under a cannon is not a lead': '領先不到一顆砲，就不算領先',
-  'The question a player has mid-game is whether the material on the table means anything yet. It depends on the size, and less than you would think on the clock.':
-    '棋下到一半，你想知道的是檯面上的子力差有沒有意義。答案取決於差距多大，而跟下到第幾回合的關係比你以為的小。',
-  'How often the side ahead on material went on to win, by the size of the lead and the move it was measured at. Percentages are of decided games; drawn games sit in the counts but not the rate.':
-    '子力領先的一方最後獲勝的比率，按領先幅度和量測的回合分開。百分比是分出勝負的棋局中的比率；和棋算在盤數裡，不算在比率裡。',
-  'One or two small pieces is worth nothing. A one to five point lead at move 30 wins 53% of the time, a coin flip, and it is still 51% at move 40. Six points, a cannon or an elephant, is the first lead that holds: 89% by move 30. Eleven points, roughly a chariot and a horse, is 98% and the game is effectively over. So the honest read of a two-soldier advantage at move 30 is that you are not ahead, you are level with extra tiles.':
-    '領先一兩顆小子等於沒有領先。第 30 回合領先一到五分的一方贏 53%，跟擲硬幣一樣，到第 40 回合還是 51%。六分，也就是一顆砲或一顆象，是第一個站得住的領先：第 30 回合 89%。十一分，大約是一車一馬，98%，棋基本上已經結束。所以第 30 回合領先兩顆卒的正確讀法是：你沒有領先，你只是多了幾顆子的平盤。',
-  'Half the games settle by move 5, a fifth stay live past move 46':
-    '一半的棋局在第 5 回合就定了，五分之一到第 46 回合還在變',
-  'The median game changes leader twice, and after move 13 it never changes again. That median hides the shape.':
-    '中位數的棋局領先方換兩次手，第 13 回合之後就不再換。但中位數把形狀藏起來了。',
-  'The move at which the eventual winner took the material lead for the last time, across the 168 decided games.':
-    '最後的贏家最後一次取得子力領先的回合數，168 盤分出勝負的棋局。',
-  'Banqi is two games. In 52 of the 168 the winner was ahead by move 5 and simply stayed there; in 34 the lead was still changing hands after move 46. A quarter of all 200 games never changed leader at all: whoever drew blood first held it to the end. The first capture lands at move 3 in the median game, so the half that settles early settles while most of the board is still face-down, which is exactly where the flips are. That is why a chess-style review credits the winner for what was often a good bag, and why the [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile.':
-    '暗棋其實是兩種棋。168 盤裡有 52 盤，贏家在第 5 回合就領先，然後就一直領先到底；另外 34 盤，領先到第 46 回合之後還在易手。全部 200 盤裡有四分之一從頭到尾沒換過領先方：先見血的一方一路握到終局。中位數的棋局第一次吃子在第 3 回合，所以早早定下來的那一半，是在大半棋盤還蓋著的時候定的，而那正是翻子集中的地方。照西洋棋那套覆盤，贏家會因為運氣好的一袋子被記成一功；[完局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和棋子，就是為了這件事。',
-  'Losing the general first loses the game 87% of the time': '先失將的一方，有 87% 輸掉那盤棋',
-  'A general fell in 188 of the 200 games, the first one at move 24 in the median game. In the 167 decided games where one was taken, the side that lost its general first lost 146: 87%, give or take three points. Here is what that looks like in one ply.':
-    '200 盤裡有 188 盤有將倒下，中位數的棋局在第 24 回合。有將被吃且分出勝負的 167 盤裡，先失將的一方輸了 146 盤：87%，上下三個百分點。一步棋就能看懂這件事。',
+  'The median game changes leader twice, and after move 16 it never changes again. The median is the least interesting thing in the chart.':
+    '中位數的棋局領先方換兩次手，第 16 回合之後就不再換。但中位數是這張圖裡最不有趣的東西。',
+  'A general fell in 188 of the 200 games, the first at move 24 in the median game. In the 167 decided games where one was taken, the side that lost its general first lost 146: 87%, give or take three points. Thirty points changing hands in a single move is why.':
+    '200 盤裡有 188 盤有將倒下，中位數的棋局在第 24 回合。有將被吃且分出勝負的 167 盤裡，先失將的一方輸了 146 盤：87%，上下三個百分點。原因是一步棋就有三十分易手。',
   'The exhibit game, seed 1183 of the run: 72 moves, and the lead changes hands here for the last time.':
     '示例棋局，這批棋的第 1183 號種子：72 回合，領先就在這裡最後一次易手。',
   'Black has just flipped its own general onto c3.': '黑方剛把自己的將翻在 c3。',
-  'A red soldier walks in and takes it. Black led by 6; now red does.':
-    '紅方一顆卒走過去吃掉它。原本黑方領先 6 分，現在換紅方。',
-  'The general is twelve points against seven for the next piece down, so losing it usually is the lead. It is also the one piece that cannot be defended by rank: a soldier, the lowest piece on the board, takes it.':
-    '將值十二分，下一級只值七分，所以失將通常就等於失去領先。它也是唯一沒辦法靠大小順序保護的子：卒，棋盤上最小的子，吃得掉它。',
-  'Flipping first is worth nothing this sample can measure': '先翻的價值，這個樣本量不出來',
   'The first player won 89 of the 168 decided games, 53%, give or take four points, and 52.5% counting draws as half. The colour the first flip hands you makes no difference (45 of 80 as red, 44 of 88 as black), and neither does its rank, as far as 200 games can see: split seven ways, each rank keeps a dozen or two games and the error bars swallow the differences. Two hundred games rule out a large first-move advantage and cannot rule out a small one, so the answer to the oldest argument at the table is that if flipping first helps, it helps by less than this.':
     '先手在 168 盤分出勝負的棋局裡贏了 89 盤，53%，上下四個百分點；把和棋算半分則是 52.5%。第一翻給的顏色沒有差別（拿紅 80 盤贏 45，拿黑 88 盤贏 44），第一顆子的大小也一樣，至少 200 盤看不出來：切成七種之後每種只剩十幾二十盤，誤差範圍把差異都吞掉了。200 盤能排除先手有大優勢，排除不了小優勢，所以對棋桌上那個最老的爭論，答案是：先翻就算有用，也比這個幅度更小。',
-  'One game in six is a draw, and the engine causes most of them':
-    '每六盤有一盤和棋，而且多半是引擎造成的',
-  'Thirty-two games were drawn, 31 of them on the forty-ply no-progress clock and one stopped at 150 moves. No game repeated a position three times. Read the 16% as a fact about MistyBanqi first: fourteen of those draws passed through a twenty-point lead, which is the engine’s [known blind spot](/blog/mistybanqi), since nothing in its evaluation rewards finishing a won game over holding what it has. Draws are the long games, 88 moves against 71. A player who converts what this engine drifts on would draw less often.':
-    '32 盤和棋，其中 31 盤是 40 步無進展計數判和，一盤下到 150 回合被中止。沒有一盤重複同一局面三次。先把這 16% 當成關於 MistyBanqi 的事實：其中 14 盤曾經走到一方領先二十分以上的局面，那正是這個引擎[出了名的盲點](/blog/mistybanqi)，因為它的評估函數裡沒有任何一項獎勵把贏棋收官、而不是守著手上的子力。和棋也都是長棋，88 回合對 71 回合。能把這個引擎磨掉的優勢兌現的棋手，和棋會更少。',
+  'Thirty-two games were drawn, 31 of them on the forty-ply no-progress clock and one stopped at 150 moves. No game repeated a position three times. Read the 16% as a fact about MistyBanqi first: seventeen of those draws passed through a forty-point lead, the size the grid above calls decisive, and that is the engine’s [known blind spot](/blog/mistybanqi), since nothing in its evaluation rewards finishing a won game over holding what it has. Draws are the long games, 88 moves against 71. A player who converts what this engine drifts on would draw less often.':
+    '32 盤和棋，其中 31 盤是 40 步無進展計數判和，一盤下到 150 回合被中止。沒有一盤重複同一局面三次。先把這 16% 當成關於 MistyBanqi 的事實：其中 17 盤曾經走到一方領先四十分的局面，也就是上面那張表說已經穩了的幅度，而那正是這個引擎[出了名的盲點](/blog/mistybanqi)，因為它的評估函數裡沒有任何一項獎勵把贏棋收官、而不是守著手上的子力。和棋也都是長棋，88 回合對 71 回合。能把這個引擎磨掉的優勢兌現的棋手，和棋會更少。',
   'What engine games leave out': '引擎對局沒說的事',
   'Two hundred games of one engine against itself measure that engine, not banqi in a park. The first-player and first-tile numbers come from the deal and the rules, so they should carry over; the rest carries less. People lose generals to traps a ten-million-node search does not walk into, people convert won games this engine shuffles away, and two players of unequal strength settle games earlier than two copies of one program. The same engine has played [fifty-two games against people](/blog/skill-vs-luck) here, where the humans won 14, lost 33 and drew 5. The park rules change it too: chain captures, the straight-charging chariot and the cannon that jumps to empty squares would each move these numbers, and none of them are played here.':
     '一個引擎自我對弈 200 盤，量到的是這個引擎，不是公園裡的暗棋。先手和第一顆子的數字來自發子和規則，應該可以照搬；其餘的沒那麼能照搬。人會被一千萬節點的搜尋不會踩的陷阱吃掉將，人會把這個引擎磨掉的贏棋收下來，實力不對等的兩個人也比同一個程式的兩份複本更早分出勝負。同一個引擎在本站[跟人下過五十二盤](/blog/skill-vs-luck)，人這邊 14 勝 33 負 5 和。公園規則也會改變這些數字：連吃、車直衝、砲翻山跳到空格，每一條都會動到上面的結果，而本站一條都不採用。',
   'One of [twenty games](/study/FsA5sowX) from the same run, kept as a study. Step through it with the arrows; a tile nobody has flipped stays face-down.':
     '同一批棋裡的[二十盤](/study/FsA5sowX)之一，存成一份研究。用箭頭一步步看；沒人翻過的子保持蓋著。',
   'How big a lead is safe in banqi?': '暗棋領先多少才算安全？',
-  'Bigger than most people play as if it is. In 200 engine games, a one to five point lead at move 30 won 53% of the time, a six to ten point lead 89%, and eleven points or more 98%. Counting on the usual scale: general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2.':
-    '比大多數人下棋時以為的要多。200 盤引擎對局裡，第 30 回合領先一到五分的一方贏 53%，領先六到十分贏 89%，領先十一分以上贏 98%。分值照慣例算：將 12、士 7、象和砲 6、車 5、馬 4、卒 2。',
+  'Bigger than most people play as if it is. In 200 engine games, counting material on the engine’s scale (general 30, chariot 14, cannon 12, advisor and elephant 10, horse 8, soldier 4), a lead under ten points won 59% at move 30, ten to nineteen points won 81%, and forty points or more won every game that got that far ahead by move 30.':
+    '比大多數人下棋時以為的要多。200 盤引擎對局裡，用引擎的分值算（將 30、車 14、砲 12、士和象 10、馬 8、卒 4），第 30 回合領先不到十分的一方贏 59%，領先十到十九分贏 81%，而第 30 回合領先四十分以上的，一盤都沒輸。',
   'When is a banqi game decided?': '暗棋一盤棋什麼時候就定了？',
-  'Half the time, almost immediately. In 52 of 168 decided engine games the winner took the lead for good by move 5, and in 34 of them the lead was still changing hands after move 46. The median is move 13 of a 71-move game.':
-    '有一半幾乎是立刻。168 盤分出勝負的引擎對局裡，有 52 盤贏家在第 5 回合就取得不再改變的領先，另有 34 盤到第 46 回合之後領先還在易手。中位數是 71 回合棋局裡的第 13 回合。',
   'How important is the general in banqi?': '將在暗棋裡有多重要？',
-  'A general was captured in 94% of 200 engine games, and the side that lost its general first lost 87% of the decided games. It is worth twelve points against seven for the next piece down, and a soldier, the lowest piece, is one of the few things that can take it.':
-    '200 盤引擎對局裡有 94% 有將被吃，而先失將的一方在分出勝負的棋局中輸了 87%。將值十二分，下一級只值七分，而卒，棋盤上最小的子，是少數吃得掉它的其中一個。',
+  'A general was captured in 94% of 200 engine games, and the side that lost its general first lost 87% of the decided games. The engine values it at 30 points against 14 for a chariot, the next piece down, and a soldier, the lowest piece, is one of the few things that can take it.':
+    '200 盤引擎對局裡有 94% 有將被吃，而先失將的一方在分出勝負的棋局中輸了 87%。引擎給將 30 分，給下一級的車 14 分，而卒，棋盤上最小的子，是少數吃得掉它的其中一個。',
   'Does the first player have an advantage in banqi?': '暗棋先手有優勢嗎？',
   'No advantage large enough for 200 engine games to detect. The first player won 53% of the decided games, within four points of a coin flip, and the colour handed over by the first flip made no difference.':
     '沒有大到 200 盤引擎對局量得出來的優勢。先手在分出勝負的棋局贏了 53%，離擲硬幣不到四個百分點，而第一翻給的顏色沒有差別。',
@@ -5307,14 +5289,40 @@ const ZH_HANT: Record<string, string> = {
   'Play banqi': '來下暗棋',
   'The engine in these games takes the other seat the moment you open the board, and every finished game gets the review that separates your decisions from your tiles.':
     '這些棋局裡的引擎，你一打開棋盤它就坐到對面；每一盤下完的棋都有一份覆盤，把你的決定和你翻到的子分開。',
-  'HOW OFTEN THE LEADER WINS': '領先方最後贏了多少',
-  'WHEN THE LEAD CHANGED HANDS FOR THE LAST TIME': '領先最後一次易手是在第幾回合',
+  'Material below is counted in points, on the engine’s own value table: general 30, chariot 14, cannon 12, advisor and elephant 10, horse 8, soldier 4. Those are MistyBanqi’s numbers rather than mine, which is the point, because these are its games. They do not follow the capture ladder either: the chariot is fourth in rank and second in value, and a general is worth more than twice any other piece.':
+    '底下的子力都用分數計算，用的是引擎自己的分值表：將 30、車 14、砲 12、士和象 10、馬 8、卒 4。這是 MistyBanqi 的數字，不是我挑的，這點很重要，因為這些是它下的棋。這套分值也不照大小順序走：車在大小順序上排第四，價值卻排第二，而將的價值比其他任何一顆子的兩倍還多。',
+  'Under ten points is a coin flip': '領先不到十分，跟擲硬幣一樣',
+  'The question mid-game is whether the material you are up means anything yet. It depends on the size, and much less than you would think on how far along the game is.':
+    '棋下到一半，你想知道的是手上多出來的子力有沒有意義。答案取決於差距多大，而跟下到第幾回合的關係，比你以為的小得多。',
+  'How often the side ahead on points went on to win, by the size of the lead and the move it was measured at. Rates are of decided games; drawn games are in the counts but not the rate. Games dead level at a checkpoint are in no column.':
+    '分數領先的一方最後獲勝的比率，按領先幅度和量測的回合分開。比率是分出勝負的棋局中的比率；和棋算在盤數裡，不算在比率裡。在該回合完全平手的棋局不歸任何一欄。',
+  'A soldier or a horse ahead is nothing. Under ten points the leader wins 52% at move 10 and 59% at move 40: a coin flip that never improves, however long it is held. One middling piece, ten to nineteen points, is worth about 70% early and 81% late. It takes forty points, a general or a chariot plus two mid pieces, before the game is actually over: 95% at move 20, and every one of the 56 games that reached move 30 that far ahead. So a two-soldier lead at move 30 is not a lead. You are level with more tiles.':
+    '多一顆卒或一匹馬等於沒有。領先不到十分的一方，第 10 回合贏 52%，第 40 回合贏 59%：就是擲硬幣，握多久都不會變好。領先一顆中等的子，也就是十到十九分，早盤大約 70%，後盤 81%。要到四十分，一個將，或一車加兩顆中等的子，棋才真的結束：第 20 回合 95%，而第 30 回合領先到這個幅度的 56 盤，一盤都沒輸。所以第 30 回合領先兩顆卒不算領先，你只是平盤多了幾顆子。',
+  'Banqi is two games': '暗棋其實是兩種棋',
+  'The move at which the eventual winner took the lead for the last time, across the 168 decided games. Each bar counts games.':
+    '最後的贏家最後一次取得領先的回合數，168 盤分出勝負的棋局。每一根柱子數的是盤數。',
+  'In 43 of the 168 decided games the winner was ahead by move 5 and simply stayed there. In 36 the lead was still changing hands after move 46. A fifth of all 200 games never changed leader once: whoever drew blood first held it to the end. The early half settles while most of the board is still face-down, which is exactly where the flips are, and that is why a chess-style review credits the winner for what was often a good bag. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.':
+    '168 盤分出勝負的棋局裡，有 43 盤贏家在第 5 回合就領先，然後就一直領先下去；另外 36 盤，領先到第 46 回合之後還在易手。全部 200 盤裡有五分之一從頭到尾沒換過領先方：先見血的一方一路握到終局。早早定下來的那一半，是在大半棋盤還蓋著的時候定的，而那正是翻子集中的地方，所以照西洋棋那套覆盤，贏家會因為運氣好的一袋子被記成一功。[完局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和棋子，就是為了這件事。',
+  'Losing your general first loses the game': '先失將，就輸了這盤棋',
+  'A red soldier walks in and takes it. Black led by 4; now red leads by 26.':
+    '紅方一顆卒走過去吃掉它。原本黑方領先 4 分，現在紅方領先 26 分。',
+  'No other piece swings the score like that, and the general is the one piece that cannot be defended by rank. The lowest piece on the board takes it.':
+    '沒有別的子能讓分數這樣一次翻過去，而將也是唯一沒辦法靠大小順序保護的子。棋盤上最小的那顆子吃得掉它。',
+  'Flipping first is worth nothing': '先翻沒有價值',
+  'One game in six is a draw': '每六盤有一盤和棋',
+  'In two ways at once. In 43 of 168 decided engine games the winner took the lead for good by move 5; in 36 the lead was still changing hands after move 46. The median is move 16 of a 71-move game.':
+    '同時有兩種答案。168 盤分出勝負的引擎對局裡，有 43 盤贏家在第 5 回合就取得不再改變的領先；另外 36 盤，領先到第 46 回合之後還在易手。中位數是 71 回合棋局裡的第 16 回合。',
+  'Browse the 20 games': '看那二十盤棋',
+  'HOW OFTEN THE MATERIAL LEADER WINS': '子力領先方最後贏了多少',
+  'size of the lead, in points': '領先幅度（分）',
+  games: '盤數',
+  'WHEN THE WINNER TOOK THE LEAD FOR GOOD': '贏家在第幾回合取得不再改變的領先',
   'after move 10': '第 10 回合後',
   'after move 20': '第 20 回合後',
   'after move 30': '第 30 回合後',
   'after move 40': '第 40 回合後',
-  'move number': '回合數',
-  'MOVE 12: BLACK LEADS BY 6': '第 12 回合：黑方領先 6 分',
+  'move the lead last changed hands': '領先最後一次易手的回合',
+  'MOVE 12: BLACK LEADS BY 4': '第 12 回合：黑方領先 4 分',
   'MOVE 13: THE SOLDIER TAKES THE GENERAL': '第 13 回合：卒吃將',
   // banqi rules page re-cut 2026-09-21 (zh-Hant: 砲、暗子、砲架、大小順序).
   'The board is half a xiangqi board, a 4 by 8 grid. Pieces sit in the squares, and the thirty-two shuffled pieces fill it exactly, every one face-down.':
