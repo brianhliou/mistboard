@@ -866,13 +866,28 @@
   text-decoration: underline;
 }
 
+/* The "On this page" box, in the brianhliou.com shape (assets/main.scss
+   .toc-sticky there): a bordered card on the soft panel tone, a small muted
+   uppercase title, muted links, and the current section in heading colour at
+   semibold with no fill. The dark theme used to paint the current link as an
+   accent-soft pill through the generic "active row" rule in theme.css; the
+   TOC is opted out of that rule, since a pill next to a chrome-free rail read
+   as a button. Scoped to the TOC sidebar: the variant rail shares
+   .article-toc-sticky and stays chrome-free. */
+.article-toc-sidebar .article-toc-sticky {
+  padding: 16px;
+  background: var(--site-panel-soft);
+  border: 1px solid var(--site-border-soft);
+  border-radius: 8px;
+}
+
 .article-toc-title {
-  font-size: 11px;
+  font-size: 13px;
   font-weight: 600;
   text-transform: uppercase;
   letter-spacing: 0.05em;
   color: var(--site-muted);
-  margin: 0 0 8px;
+  margin: 0 0 12px;
 }
 
 .article-toc-nav {
