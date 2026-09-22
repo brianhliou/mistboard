@@ -164,3 +164,13 @@ describe('renderBanqiBoardSvg', () => {
     }
   });
 });
+
+describe('the board stylesheet mirror', () => {
+  it('live-banqi-board.css carries BANQI_BOARD_CSS exactly', async () => {
+    const { readFileSync } = await import('node:fs');
+    const { resolve } = await import('node:path');
+    const file = readFileSync(resolve(__dirname, 'live-banqi-board.css'), 'utf-8');
+    const body = file.replace(/^\/\*[\s\S]*?\*\/\n/, '').trim();
+    expect(body).toBe(BANQI_BOARD_CSS.trim());
+  });
+});

@@ -901,19 +901,9 @@ const ZH_HANS: Record<string, string> = {
     '连续 120 个半回合，也就是双方各走 60 步而没有吃子时，Mistboard 自动判和。重复局面不会另外触发自动和棋。',
   'Step through a self-play game. Dark pieces appear as colored backs and reveal their identity the first time they move. Red wins by checkmate.':
     '逐步查看一盘自我对弈。暗子以彩色背面显示，第一次走动时翻明身份。红方以将死获胜。',
-  'The board is half a xiangqi board: thirty-two squares in a 4x8 grid, shown here with the long side horizontal. Unlike xiangqi, pieces sit inside the squares rather than on intersections, and the thirty-two shuffled pieces exactly fill the board, every one face-down.':
-    '棋盘是半张象棋棋盘：4×8 共三十二个方格，此处以长边横置显示。与象棋不同，棋子放在方格之内，而不是交叉点上；洗匀后的三十二枚棋子恰好填满棋盘，每一枚都背面朝下。',
-  'Colors are not assigned in advance. The first player opens the game by flipping any piece: whatever color comes up is theirs, and the opponent plays the other.':
-    '颜色不会事先分配。先行的一方翻开任意一枚棋子来开局：翻出什么颜色，那一方就执该色，对手执另一色。',
   Turns: '回合',
-  'On your turn, do exactly one of two things: **flip** any face-down tile, or **move** one of your revealed pieces one square up, down, left, or right. A move may land on an empty square or capture an enemy when the rank rules allow it. A flip reveals the piece to both players, even if it belongs to your opponent. There is no passing.':
-    '轮到你时，只能做两件事之一：**翻开**任意一枚背面朝下的棋子，或把一枚己方已翻开的棋子向上、下、左、右移动一格。移动可落到空格，也可在等级规则允许时吃掉敌子。翻子会向双方亮出该棋子，即使它属于对手。不能跳过回合。',
   'Capture by rank': '按等级吃子',
-  'Face-down tiles cannot be captured. The cannon uses a different attack, so it sits outside the ladder when capturing. The dashed slot shows only how other pieces treat a cannon as a target: it ranks between the horse and soldier.':
-    '背面朝下的棋子不能被吃。炮使用不同的攻击方式，因此进攻时不属于等级序列。虚线位置只表示其他棋子把炮当作目标时如何计算：炮排在马与卒之间。',
   'The cannon': '炮',
-  'The cannon ignores rank when it captures. Instead of taking an adjacent piece, it travels along a row or column, jumps exactly one intervening piece called the screen, and captures the first piece beyond it if that piece is a revealed enemy. The screen may be friendly, enemy, or face-down. Without a capture, the cannon moves one square like every other piece. Because it needs a screen, it cannot capture an adjacent piece.':
-    '炮吃子时不论等级。它不吃相邻棋子，而是沿一行或一列越过恰好一枚作为炮架的棋子，并在炮架另一侧第一枚棋子是已翻开的敌子时将其吃掉。炮架可以是己方、敌方或背面朝下的棋子。不吃子时，炮与其他棋子一样只走一格。由于吃子需要炮架，它不能吃相邻棋子。',
   'You win when your opponent has no legal move, usually because every enemy piece is captured, sometimes because they are boxed in. The general is not royal: capturing it is progress, not the win, and play continues until one side is wiped out or stuck.':
     '当对手轮到自己却无棋可走时，你获胜——通常是因为敌方棋子被全部吃光，有时则是被困死、无路可走。这里的将不是王棋：吃掉它只是进展，而非胜利，棋局会一直进行到一方被吃光或被困死为止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
@@ -1046,10 +1036,6 @@ const ZH_HANS: Record<string, string> = {
     '暗棋是在半张象棋棋盘上进行的快节奏隐藏棋子游戏。三十二枚棋子全部洗匀并背面朝上。第一次翻子决定双方颜色。之后每回合都在两种行动中选择：翻开棋子，或移动一枚已翻开的棋子。除炮外，吃子按等级进行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
     '虽然它使用[象棋](/rules/xiangqi)棋子，但它是独立的游戏：棋子每次移动一格，将不是王棋，背面朝下的棋子不能被吃。本页说明 Mistboard 采用的确切规则。',
-  'Most pieces capture by stepping one square onto an adjacent revealed enemy. They may capture the same rank or any lower rank. On Mistboard, the order is General > Advisor > Elephant > Chariot > Horse > Soldier. Two exceptions connect the ends of the ladder: a soldier can capture the general, and the general cannot capture soldiers.':
-    '大多数棋子通过走一格到相邻的已翻开敌子上来吃子。它们可以吃同级或任何更低等级的棋子。Mistboard 的顺序是：将 > 士 > 象 > 车 > 马 > 卒。两个例外连接等级两端：卒可以吃将，将不能吃卒。',
-  'Step through a real game between Mistboard’s strongest bot and a human. Red falls behind early, but its elephant becomes the highest-ranked piece left and turns the game around. Each tile reveals its dealt piece when it is first flipped.':
-    '逐步回放 Mistboard 最强机器人与人类的一盘真实对局。红方开局落后，但它的象成为盘面剩余棋子中等级最高的一枚，并逆转了比赛。每枚棋子第一次翻开时会显示其被分配的身份。',
   "MistyBanqi is the bot you play in [Banqi](/rules/banqi) on Mistboard. It's a classical engine: it searches ahead and scores positions with a hand-written evaluation, no neural network, and it's open source. It will outplay most people. It also has a few honest blind spots, and the one worth knowing is that it can draw a game it has completely won.":
     'MistyBanqi 是你在 Mistboard 上对弈[暗棋](/rules/banqi)时面对的机器人。它是一个经典引擎：向前搜索，用手写评估为局面打分，没有神经网络，而且开源。它能赢过大多数人，但也有几个坦诚的盲点，其中最值得了解的是：它会把已经完全赢定的棋下成和棋。',
   'The board is seven files wide and nine ranks deep. Your den sits at the center of your back rank, ringed by three trap squares. Two rivers, each a 2×3 block of water, split the middle of the board. Red moves first from the fixed starting position below.':
@@ -1090,8 +1076,6 @@ const ZH_HANS: Record<string, string> = {
   'Find an opponent': '寻找对手',
   'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '堡垒象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '暗棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
   'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '斗兽棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
   'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
@@ -1102,11 +1086,7 @@ const ZH_HANS: Record<string, string> = {
     '迷雾象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
   'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '迷雾国际象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'FIRST FLIP ASSIGNS COLOR': '首次翻子决定颜色',
-  'CANNON SCREEN CAPTURE': '炮隔子吃',
   'CAPTURED PIECE KNOWLEDGE': '被吃暗子信息',
-  HIGH: '高',
-  LOW: '低',
   General: '将',
   Advisor: '士',
   Elephant: '象',
@@ -1118,10 +1098,6 @@ const ZH_HANS: Record<string, string> = {
   'BLACK KNOWS': '黑方知道',
   'the captured piece was a horse': '被吃的是马',
   'one dark piece disappeared': '一枚暗子消失了',
-  'Attacking, the cannon jumps a screen and ignores rank.': '炮进攻时隔一子跳吃，不看等级。',
-  'As a target it ranks here: taken by horse and up, never by a soldier.':
-    '作为目标时，炮排在这里：马以上可吃，卒不可吃。',
-  'CAPTURE RANK LADDER': '吃子等级序列',
   // skill-vs-luck (drafted; native validation pending before the slug joins TRANSLATED_ARTICLE_SLUGS)
   '/article-thumbs/skill-vs-luck-summary.png': '/article-thumbs/skill-vs-luck-summary.zh-hans.png',
   'for each tile the square could be:\n    put that tile under the square\n    play the flip\n    evaluate the position\naverage the results, weighted by count':
@@ -2535,10 +2511,7 @@ const ZH_HANS: Record<string, string> = {
     '八个引擎强度档位，或者用邀请链接约朋友。规则页面配有图解，讲得完整。',
   'Invite a friend': '邀请朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
-  Rank: '等级',
   'Piece (red / black)': '棋子（红 / 黑）',
-  'Can capture': '可以吃',
-  Exception: '例外',
   'General 帥 / 將': '将帅：帅 / 将',
   'Advisor 仕 / 士': '士：仕 / 士',
   'Elephant 相 / 象': '象：相 / 象',
@@ -2546,18 +2519,6 @@ const ZH_HANS: Record<string, string> = {
   'Horse 傌 / 馬': '马：傌 / 马',
   'Soldier 兵 / 卒': '兵卒：兵 / 卒',
   'Cannon 炮 / 砲': '炮：炮 / 炮',
-  'general, advisor, elephant, chariot, horse, cannon': '将、士、象、车、马、炮',
-  'advisor, elephant, chariot, horse, cannon, soldier': '士、象、车、马、炮、卒',
-  'elephant, chariot, horse, cannon, soldier': '象、车、马、炮、卒',
-  'chariot, horse, cannon, soldier': '车、马、炮、卒',
-  'horse, cannon, soldier': '马、炮、卒',
-  'soldier, general': '卒、将',
-  'any revealed enemy, by jumping one screen': '隔一子跳吃任何已翻开的敌子',
-  'cannot capture a soldier': '不能吃卒',
-  'the only piece that captures the general': '唯一能吃将的棋子',
-  'as a target it ranks between horse and soldier': '被吃时算在马与卒之间',
-  'Capture order on Mistboard. A piece may also capture its own rank.':
-    'Mistboard 的吃子顺序。同等级也可以互吃。',
   'What is the capture order in banqi?': '暗棋的大小顺序是什么？',
   'General > Advisor > Elephant > Chariot > Horse > Soldier. A piece captures its own rank or anything below it. Two exceptions: the soldier can capture the general, and the general cannot capture a soldier. The cannon captures by jumping and sits outside the ladder.':
     '将 > 士 > 象 > 车 > 马 > 卒。棋子可以吃同等级或更低等级的棋子。两个例外：卒可以吃将，将不能吃卒。炮靠跳吃，不在这个等级序列里。',
@@ -2573,14 +2534,6 @@ const ZH_HANS: Record<string, string> = {
   'Can you capture more than once in a turn?': '暗棋可以连吃吗？',
   'No. A turn is exactly one action: flip one face-down tile, or move one revealed piece one square, capturing or not. There are no chain captures on Mistboard.':
     '不行。一回合只做一件事：翻开一枚暗子，或把一枚已翻开的棋子走一格（吃子或不吃子）。Mistboard 上没有连吃。',
-  'What other names does banqi have?': '暗棋的英文怎么说？还有哪些名字？',
-  'Chinese dark chess, blind chess, and half-board xiangqi in English. The Chinese name is an qi, the everyday word for it in Taiwan and Hong Kong; fan qi and ban pan xiangqi are also used.':
-    '英文叫 Banqi，也叫 Chinese dark chess、blind chess 或 half-board xiangqi。中文在台湾和香港通常叫暗棋，也有人叫翻棋或半盘象棋。',
-  'How do I play banqi online with a friend?': '暗棋在线双人怎么玩？',
-  'No. MistyBanqi gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do. A test fails the build if an identity ever leaks into what it is sent.':
-    '不能。MistyBanqi 拿到的棋盘和你一样：每个背面朝上的棋子都以未知的形式发给它，只附带尚未翻开的棋子数量；它和你在同一时刻，也就是翻开的那一刻，才知道那是什么棋子。如果有任何身份泄露到发给它的内容里，测试会让构建失败。',
-  'Choose Challenge a friend on this page. It creates an invite link; your friend opens it and the game starts. No account is needed for either player.':
-    '点本页的“挑战好友”会生成一个邀请链接，朋友打开就开始对局。双方都不需要注册账号。',
   'What is the rank order in Jungle Chess?': '斗兽棋的大小顺序是什么？',
   'Elephant > lion > tiger > leopard > wolf > dog > cat > rat. An animal captures an adjacent enemy of equal or lower rank. The one exception: a rat on land can capture the elephant, and the elephant can never capture a rat.':
     '象 > 狮 > 虎 > 豹 > 狼 > 狗 > 猫 > 鼠。动物可以吃相邻的同等级或更低等级的敌方动物。唯一的例外：在陆地上的鼠可以吃象，而象永远不能吃鼠。',
@@ -2670,11 +2623,6 @@ const ZH_HANS: Record<string, string> = {
   'Rule variants': '规则版本',
   'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
     '暗棋是民间棋戏，各地规则不同，常见的有三种。台湾规则用本页的大小顺序，炮隔一子跳吃。香港规则的大小是将、车、马、炮、士、象、卒，炮在等级序列里面。中国大陆的规则通常没有跳吃的炮：炮和其他棋子一样按等级吃相邻的棋子。',
-  'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the table on this page is the one the engine and every game on the site follow.':
-    'Mistboard 采用台湾规则，加上台湾电脑对局协会的比赛和棋规则（Chen、Shen 与 Hsu，ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。两条有文献记载的变体规则刻意不采用：炮不能吃暗子，将永远不能吃卒，就算是它的第一步也一样。如果你学的是另一套大小顺序，本页的表格才是引擎和站上每一盘棋遵守的那一套。',
-  'Are there different banqi rules?': '暗棋规则有几种？Mistboard 用哪一种？',
-  'Yes, three regional families: Taiwanese, Hong Kong, and mainland, differing on the capture ladder and on whether the cannon jumps. Mistboard uses the Taiwanese rules (general > advisor > elephant > chariot > horse > soldier, cannon captures by jumping one screen) with the Taiwan Computer Game Association draw rules. A cannon cannot capture a face-down tile and the general cannot capture a soldier.':
-    '常见的有三种：台湾、香港和中国大陆，差别在大小顺序和炮能不能跳吃。Mistboard 用台湾规则（将 > 士 > 象 > 车 > 马 > 卒，炮隔一子跳吃），加上台湾电脑对局协会的比赛和棋规则。炮不能吃暗子，将不能吃卒。',
   // pikafish (2026-09-21, machine-drafted, not native-reviewed). Mainland wording on purpose: 在线, 网页版, 人机, 账号, 服务器 are the words the Bing corpus uses.
   'Pikafish on Mistboard': '皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
@@ -2781,6 +2729,46 @@ const ZH_HANS: Record<string, string> = {
     '可以，这就是默认：一打开棋盘，引擎就坐到对面。它只有一种固定棋力。',
   'Free, nothing to install, no account. Flip a tile and see what you get.':
     '免费、免安装、免注册。翻一颗子，看看拿到什么。',
+  // banqi rules page re-cut 2026-09-21: real-board diagrams, shorter prose.
+  'The board is half a xiangqi board, a 4 by 8 grid. Pieces sit in the squares, and the thirty-two shuffled pieces fill it exactly, every one face-down.':
+    '棋盘是半张象棋盘，4 列 8 行。棋子放在格子里，洗匀的三十二颗子刚好填满棋盘，每一颗都盖着。',
+  'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs, and the opponent plays the other.':
+    '颜色不是事先分好的。先手翻开任何一颗子：翻到什么颜色就是他的，对手用另一种。',
+  'Before the first flip. Nobody has a color yet.': '第一次翻子之前。谁都还没有颜色。',
+  'On your turn, either flip a face-down tile or move one of your revealed pieces one square up, down, left, or right. A move onto an enemy piece is a capture when the ladder below allows it. The cannon is the one exception: it captures by jumping, not by stepping.':
+    '轮到你时，翻开一颗暗子，或把你翻开的一颗子往上、下、左、右走一格。走到敌子上就是吃子，前提是下面的大小顺序允許。炮是唯一的例外：它靠跳吃，不靠走。',
+  'One square, four directions. A face-down tile is not a destination.':
+    '一格，四个方向。暗子不能当目的地。',
+  'The horse may take the soldier or the other horse, not the chariot above it.':
+    '马可以吃卒或另一只马，不能吃排在它上面的车。',
+  'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank. Face-down tiles cannot be captured.':
+    '从大到小：将、士、象、车、马、卒。一颗子可以吃相邻、已翻开、同级或更小的敌子。暗子不能被吃。',
+  'Strongest at the left, weakest at the right. The cannon captures by jumping; as a target it ranks where it stands here, between the horse and the soldier.':
+    '最大在左，最小在右。炮靠跳吃；被吃的时候，它的位置就是这里，在马和卒之间。',
+  'One exception connects the ends of the ladder: the soldier can capture the general, and the general cannot capture a soldier.':
+    '一条例外把顺序的两端接起来：卒可以吃将，将不能吃卒。',
+  'The lowest piece can take the highest.': '最小的子可以吃最大的。',
+  'The general cannot take the soldier back.': '将不能回头吃卒。',
+  'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first revealed enemy beyond it, whatever its rank. The screen can be any piece: friendly, enemy, or face-down. With nothing to jump, it cannot capture at all, so an adjacent piece is safe from it. Without a capture it moves one square like everything else.':
+    '炮沿直行或横列吃子：正好跳过一颗子（炮架），吃掉后面第一颗翻开的敌子，不论大小。炮架可以是任何子：自己的、对方的、或暗子。没有子可跳就完全不能吃，所以紧邻的子是安全的。不吃子的时候，它和其他子一样走一格。',
+  'One screen, then the target. Rank does not matter.': '一颗炮架，再来是目标。大小不重要。',
+  'No screen, no capture: the chariot beside it is safe.': '没有炮架就不能吃：旁边的车是安全的。',
+  'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.':
+    '自己的子也能当炮架。象后面的暗子不是目标。',
+  'As a target, the cannon is below the horse: the horse may take it.':
+    '被吃的时候，炮排在马下面：马可以吃它。',
+  'A soldier cannot take a cannon. It can take the other soldier, or the general.':
+    '卒不能吃炮。它可以吃另一颗卒，或吃将。',
+  'Play against the engine or challenge a friend. No account required.':
+    '跟引擎下，或邀朋友对弈。不用账号。',
+  'How MistyBanqi plays': 'MistyBanqi 怎么下棋',
+  'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
+    'Mistboard 采用台湾规则，加上台湾电脑对局协会的比赛和棋规则（Chen、Shen 与 Hsu，ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。两条有文献记载的变体规则刻意不采用：炮不能吃暗子，将永远不能吃卒，就算是它的第一步也一样。如果你学的是另一套大小顺序，本页这一套才是引擎和站上每一盘棋遵守的。',
+  'An engine game': '一盘引擎对局',
+  'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/Hs0q6Z26) has every game from the same run, one chapter each, with a note on how it went.':
+    'MistyBanqi 自己对自己，每步一千万个节点，是站上机器人棋力的三倍。用箭头一步一步看。[配套研究](/study/Hs0q6Z26)收了同一批的每一盘，一盘一章，附一段说明。',
+  'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
+  'The engine games': '引擎对局',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -3635,19 +3623,9 @@ const ZH_HANT: Record<string, string> = {
     '連續 120 個半回合，也就是雙方各走 60 步而沒有吃子時，Mistboard 自動判和。重複局面不會另外觸發自動和棋。',
   'Step through a self-play game. Dark pieces appear as colored backs and reveal their identity the first time they move. Red wins by checkmate.':
     '逐步查看一盤自我對弈。暗子以彩色背面顯示，第一次走動時翻明身份。紅方以將死獲勝。',
-  'The board is half a xiangqi board: thirty-two squares in a 4x8 grid, shown here with the long side horizontal. Unlike xiangqi, pieces sit inside the squares rather than on intersections, and the thirty-two shuffled pieces exactly fill the board, every one face-down.':
-    '棋盤是半張象棋棋盤：4×8 共三十二個方格，此處以長邊橫置顯示。與象棋不同，棋子放在方格之內，而不是交叉點上；洗勻後的三十二枚棋子恰好填滿棋盤，每一枚都背面朝下。',
-  'Colors are not assigned in advance. The first player opens the game by flipping any piece: whatever color comes up is theirs, and the opponent plays the other.':
-    '顏色不會事先分配。先行的一方翻開任意一枚棋子來開局：翻出什麼顏色，那一方就執該色，對手執另一色。',
   Turns: '回合',
-  'On your turn, do exactly one of two things: **flip** any face-down tile, or **move** one of your revealed pieces one square up, down, left, or right. A move may land on an empty square or capture an enemy when the rank rules allow it. A flip reveals the piece to both players, even if it belongs to your opponent. There is no passing.':
-    '輪到你時，只能做兩件事之一：**翻開**任意一枚背面朝下的棋子，或把一枚己方已翻開的棋子向上、下、左、右移動一格。移動可落到空格，也可在等級規則允許時吃掉敵子。翻子會向雙方亮出該棋子，即使它屬於對手。不能跳過回合。',
   'Capture by rank': '按等級吃子',
-  'Face-down tiles cannot be captured. The cannon uses a different attack, so it sits outside the ladder when capturing. The dashed slot shows only how other pieces treat a cannon as a target: it ranks between the horse and soldier.':
-    '背面朝下的棋子不能被吃。砲使用不同的攻擊方式，因此進攻時不屬於等級序列。虛線位置只表示其他棋子把砲當作目標時如何計算：砲排在馬與卒之間。',
   'The cannon': '砲',
-  'The cannon ignores rank when it captures. Instead of taking an adjacent piece, it travels along a row or column, jumps exactly one intervening piece called the screen, and captures the first piece beyond it if that piece is a revealed enemy. The screen may be friendly, enemy, or face-down. Without a capture, the cannon moves one square like every other piece. Because it needs a screen, it cannot capture an adjacent piece.':
-    '砲吃子時不論等級。它不吃相鄰棋子，而是沿一行或一列越過恰好一枚作為砲架的棋子，並在砲架另一側第一枚棋子是已翻開的敵子時將其吃掉。砲架可以是己方、敵方或背面朝下的棋子。不吃子時，砲與其他棋子一樣只走一格。由於吃子需要砲架，它不能吃相鄰棋子。',
   'You win when your opponent has no legal move, usually because every enemy piece is captured, sometimes because they are boxed in. The general is not royal: capturing it is progress, not the win, and play continues until one side is wiped out or stuck.':
     '當對手輪到自己卻無棋可走時，你獲勝——通常是因為敵方棋子被全部吃光，有時則是被困死、無路可走。這裡的將不是王棋：吃掉它只是進展，而非勝利，棋局會一直進行到一方被吃光或被困死為止。',
   'Mistboard draws a game two ways: 40 plies (single moves) with no flip or capture, or threefold repetition, the same position three times. A flip or capture resets both counters because it changes the position irreversibly.':
@@ -3786,11 +3764,7 @@ const ZH_HANT: Record<string, string> = {
     '虎可以在陸地上正常移動一格，也可縱向跳過河流。與獅不同，它不能橫向跳河。路徑上任何水格裡只要有一隻任意顏色的鼠，就會阻止兩種動物跳躍。',
   'Flip Jungle is a compact hidden-piece relative of [Jungle Chess](/rules/jungle). All sixteen animals begin face-down on a 4×4 board. There are no rivers, dens, or traps: reveal tiles, move your animals, and eliminate the other color.':
     '翻翻棋是[鬥獸棋](/rules/jungle)的緊湊型隱藏棋子變體。十六枚動物棋子全部背面朝上放在 4×4 棋盤上。這裡沒有河流、獸穴或陷阱：翻開棋子、移動動物，並消滅另一種顏色。',
-  'FIRST FLIP ASSIGNS COLOR': '首次翻子決定顏色',
-  'CANNON SCREEN CAPTURE': '砲隔子吃',
   'CAPTURED PIECE KNOWLEDGE': '被吃暗子資訊',
-  HIGH: '高',
-  LOW: '低',
   General: '將',
   Advisor: '士',
   Elephant: '象',
@@ -3802,10 +3776,6 @@ const ZH_HANT: Record<string, string> = {
   'BLACK KNOWS': '黑方知道',
   'the captured piece was a horse': '被吃的是馬',
   'one dark piece disappeared': '一枚暗子消失了',
-  'Attacking, the cannon jumps a screen and ignores rank.': '砲進攻時隔一子跳吃，不看等級。',
-  'As a target it ranks here: taken by horse and up, never by a soldier.':
-    '作為目標時，砲排在這裡：馬以上可吃，卒不可吃。',
-  'CAPTURE RANK LADDER': '吃子等級序列',
   // skill-vs-luck (drafted; native validation pending before the slug joins TRANSLATED_ARTICLE_SLUGS)
   '/article-thumbs/skill-vs-luck-summary.png': '/article-thumbs/skill-vs-luck-summary.zh-hant.png',
   'for each tile the square could be:\n    put that tile under the square\n    play the flip\n    evaluate the position\naverage the results, weighted by count':
@@ -4993,10 +4963,7 @@ const ZH_HANT: Record<string, string> = {
     '八個引擎強度檔位，或者用邀請連結約朋友。規則頁面配有圖解，講得完整。',
   'Invite a friend': '邀請朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
-  Rank: '等級',
   'Piece (red / black)': '棋子（紅 / 黑）',
-  'Can capture': '可以吃',
-  Exception: '例外',
   'General 帥 / 將': '將帥：帥 / 將',
   'Advisor 仕 / 士': '士：仕 / 士',
   'Elephant 相 / 象': '象：相 / 象',
@@ -5004,18 +4971,6 @@ const ZH_HANT: Record<string, string> = {
   'Horse 傌 / 馬': '馬：傌 / 馬',
   'Soldier 兵 / 卒': '兵卒：兵 / 卒',
   'Cannon 炮 / 砲': '砲：炮 / 砲',
-  'general, advisor, elephant, chariot, horse, cannon': '將、士、象、車、馬、砲',
-  'advisor, elephant, chariot, horse, cannon, soldier': '士、象、車、馬、砲、卒',
-  'elephant, chariot, horse, cannon, soldier': '象、車、馬、砲、卒',
-  'chariot, horse, cannon, soldier': '車、馬、砲、卒',
-  'horse, cannon, soldier': '馬、砲、卒',
-  'soldier, general': '卒、將',
-  'any revealed enemy, by jumping one screen': '隔一子跳吃任何已翻開的敵子',
-  'cannot capture a soldier': '不能吃卒',
-  'the only piece that captures the general': '唯一能吃將的棋子',
-  'as a target it ranks between horse and soldier': '被吃時算在馬與卒之間',
-  'Capture order on Mistboard. A piece may also capture its own rank.':
-    'Mistboard 的吃子順序。同等級也可以互吃。',
   'What is the capture order in banqi?': '暗棋的大小順序是什麼？',
   'General > Advisor > Elephant > Chariot > Horse > Soldier. A piece captures its own rank or anything below it. Two exceptions: the soldier can capture the general, and the general cannot capture a soldier. The cannon captures by jumping and sits outside the ladder.':
     '將 > 士 > 象 > 車 > 馬 > 卒。棋子可以吃同等級或更低等級的棋子。兩個例外：卒可以吃將，將不能吃卒。砲靠跳吃，不在這個等級序列裡。',
@@ -5031,14 +4986,6 @@ const ZH_HANT: Record<string, string> = {
   'Can you capture more than once in a turn?': '暗棋可以連吃嗎？',
   'No. A turn is exactly one action: flip one face-down tile, or move one revealed piece one square, capturing or not. There are no chain captures on Mistboard.':
     '不行。一回合只做一件事：翻開一枚暗子，或把一枚已翻開的棋子走一格（吃子或不吃子）。Mistboard 上沒有連吃。',
-  'What other names does banqi have?': '暗棋的英文怎麼說？還有哪些名字？',
-  'Chinese dark chess, blind chess, and half-board xiangqi in English. The Chinese name is an qi, the everyday word for it in Taiwan and Hong Kong; fan qi and ban pan xiangqi are also used.':
-    '英文叫 Banqi，也叫 Chinese dark chess、blind chess 或 half-board xiangqi。中文在台灣和香港通常叫暗棋，也有人叫翻棋或半盤象棋。',
-  'How do I play banqi online with a friend?': '暗棋線上雙人怎麼玩？',
-  'No. MistyBanqi gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do. A test fails the build if an identity ever leaks into what it is sent.':
-    '不能。MistyBanqi 拿到的棋盤和你一樣：每個背面朝上的棋子都以未知的形式發給它，只附帶尚未翻開的棋子數量；它和你在同一時刻，也就是翻開的那一刻，才知道那是什麼棋子。如果有任何身份洩露到發給它的內容裡，測試會讓建置失敗。',
-  'Choose Challenge a friend on this page. It creates an invite link; your friend opens it and the game starts. No account is needed for either player.':
-    '按本頁的「挑戰好友」會產生一個邀請連結，朋友點開就開始對局。雙方都不需要註冊帳號。',
   'What is the rank order in Jungle Chess?': '鬥獸棋的大小順序是什麼？',
   'Elephant > lion > tiger > leopard > wolf > dog > cat > rat. An animal captures an adjacent enemy of equal or lower rank. The one exception: a rat on land can capture the elephant, and the elephant can never capture a rat.':
     '象 > 獅 > 虎 > 豹 > 狼 > 狗 > 貓 > 鼠。動物可以吃相鄰的同等級或更低等級的敵方動物。唯一的例外：在陸地上的鼠可以吃象，而象永遠不能吃鼠。',
@@ -5072,10 +5019,6 @@ const ZH_HANT: Record<string, string> = {
     '暗棋是在半張象棋棋盤上進行的快節奏隱藏棋子遊戲。三十二枚棋子全部洗勻並背面朝上。第一次翻子決定雙方顏色。之後每回合都在兩種行動中選擇：翻開棋子，或移動一枚已翻開的棋子。除砲外，吃子按等級進行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
     '雖然它使用[象棋](/rules/xiangqi)棋子，但它是獨立的遊戲：棋子每次移動一格，將不是王棋，背面朝下的棋子不能被吃。本頁說明 Mistboard 採用的確切規則。',
-  'Most pieces capture by stepping one square onto an adjacent revealed enemy. They may capture the same rank or any lower rank. On Mistboard, the order is General > Advisor > Elephant > Chariot > Horse > Soldier. Two exceptions connect the ends of the ladder: a soldier can capture the general, and the general cannot capture soldiers.':
-    '大多數棋子透過走一格到相鄰的已翻開敵子上來吃子。它們可以吃同級或任何更低等級的棋子。Mistboard 的順序是：將 > 士 > 象 > 車 > 馬 > 卒。兩個例外連接等級兩端：卒可以吃將，將不能吃卒。',
-  'Step through a real game between Mistboard’s strongest bot and a human. Red falls behind early, but its elephant becomes the highest-ranked piece left and turns the game around. Each tile reveals its dealt piece when it is first flipped.':
-    '逐步回放 Mistboard 最強電腦與人類的一盤真實對局。紅方開局落後，但它的象成為盤面剩餘棋子中等級最高的一枚，並逆轉了比賽。每枚棋子第一次翻開時會顯示其被分配的身份。',
   "MistyBanqi is the bot you play in [Banqi](/rules/banqi) on Mistboard. It's a classical engine: it searches ahead and scores positions with a hand-written evaluation, no neural network, and it's open source. It will outplay most people. It also has a few honest blind spots, and the one worth knowing is that it can draw a game it has completely won.":
     'MistyBanqi 是你在 Mistboard 上對弈[暗棋](/rules/banqi)時面對的電腦。它是一個經典引擎：向前搜尋，用手寫評估為局面打分，沒有神經網路，而且開源。它能贏過大多數人，但也有幾個坦誠的盲點，其中最值得了解的是：它會把已經完全贏定的棋下成和棋。',
   'The board is seven files wide and nine ranks deep. Your den sits at the center of your back rank, ringed by three trap squares. Two rivers, each a 2×3 block of water, split the middle of the board. Red moves first from the fixed starting position below.':
@@ -5097,8 +5040,6 @@ const ZH_HANT: Record<string, string> = {
   'Find an opponent': '尋找對手',
   'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '堡壘象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '暗棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
   'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '鬥獸棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
   'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
@@ -5201,11 +5142,6 @@ const ZH_HANT: Record<string, string> = {
   'Rule variants': '規則版本',
   'Banqi is a folk game and the rules differ by region. Three families are common. Taiwanese rules use the ladder above and a cannon that captures by jumping one screen. Hong Kong rules rank the pieces general, chariot, horse, cannon, advisor, elephant, soldier, with the cannon inside the ladder. Mainland rules usually have no jumping cannon at all: it captures adjacent pieces by rank like everything else.':
     '暗棋是民間棋戲，各地規則不同，常見的有三種。台灣規則用本頁的大小順序，砲隔一子跳吃。香港規則的大小是將、車、馬、砲、士、象、卒，砲在等級序列裡面。中國大陸的規則通常沒有跳吃的砲：砲和其他棋子一樣按等級吃相鄰的棋子。',
-  'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the table on this page is the one the engine and every game on the site follow.':
-    'Mistboard 採用台灣規則，加上台灣電腦對局協會的比賽和棋規則（Chen、Shen 與 Hsu，ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。兩條有文獻記載的變體規則刻意不採用：砲不能吃暗子，將永遠不能吃卒，就算是它的第一步也一樣。如果你學的是另一套大小順序，本頁的表格才是引擎和站上每一盤棋遵守的那一套。',
-  'Are there different banqi rules?': '暗棋規則有幾種？Mistboard 用哪一種？',
-  'Yes, three regional families: Taiwanese, Hong Kong, and mainland, differing on the capture ladder and on whether the cannon jumps. Mistboard uses the Taiwanese rules (general > advisor > elephant > chariot > horse > soldier, cannon captures by jumping one screen) with the Taiwan Computer Game Association draw rules. A cannon cannot capture a face-down tile and the general cannot capture a soldier.':
-    '常見的有三種：台灣、香港和中國大陸，差別在大小順序和砲能不能跳吃。Mistboard 用台灣規則（將 > 士 > 象 > 車 > 馬 > 卒，砲隔一子跳吃），加上台灣電腦對局協會的比賽和棋規則。砲不能吃暗子，將不能吃卒。',
   // pikafish: Taiwan forms (線上, 網頁, 帳號, 伺服器, 等級, 選單, 資料, 西洋棋, 建置).
   'Pikafish on Mistboard': '皮卡魚線上：在 Mistboard 上與皮卡魚對弈',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
@@ -5312,6 +5248,46 @@ const ZH_HANT: Record<string, string> = {
     '可以，這就是預設：一打開棋盤，引擎就坐到對面。它只有一種固定棋力。',
   'Free, nothing to install, no account. Flip a tile and see what you get.':
     '免費、免安裝、免註冊。翻一顆子，看看拿到什麼。',
+  // banqi rules page re-cut 2026-09-21 (zh-Hant: 砲、暗子、砲架、大小順序).
+  'The board is half a xiangqi board, a 4 by 8 grid. Pieces sit in the squares, and the thirty-two shuffled pieces fill it exactly, every one face-down.':
+    '棋盤是半張象棋盤，4 列 8 行。棋子放在格子裡，洗勻的三十二顆子剛好填滿棋盤，每一顆都蓋著。',
+  'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs, and the opponent plays the other.':
+    '顏色不是事先分好的。先手翻開任何一顆子：翻到什麼顏色就是他的，對手用另一種。',
+  'Before the first flip. Nobody has a color yet.': '第一次翻子之前。誰都還沒有顏色。',
+  'On your turn, either flip a face-down tile or move one of your revealed pieces one square up, down, left, or right. A move onto an enemy piece is a capture when the ladder below allows it. The cannon is the one exception: it captures by jumping, not by stepping.':
+    '輪到你時，翻開一顆暗子，或把你翻開的一顆子往上、下、左、右走一格。走到敵子上就是吃子，前提是下面的大小順序允許。砲是唯一的例外：它靠跳吃，不靠走。',
+  'One square, four directions. A face-down tile is not a destination.':
+    '一格，四個方向。暗子不能當目的地。',
+  'The horse may take the soldier or the other horse, not the chariot above it.':
+    '馬可以吃卒或另一隻馬，不能吃排在它上面的車。',
+  'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank. Face-down tiles cannot be captured.':
+    '從大到小：將、士、象、車、馬、卒。一顆子可以吃相鄰、已翻開、同級或更小的敵子。暗子不能被吃。',
+  'Strongest at the left, weakest at the right. The cannon captures by jumping; as a target it ranks where it stands here, between the horse and the soldier.':
+    '最大在左，最小在右。砲靠跳吃；被吃的時候，它的位置就是這裡，在馬和卒之間。',
+  'One exception connects the ends of the ladder: the soldier can capture the general, and the general cannot capture a soldier.':
+    '一條例外把順序的兩端接起來：卒可以吃將，將不能吃卒。',
+  'The lowest piece can take the highest.': '最小的子可以吃最大的。',
+  'The general cannot take the soldier back.': '將不能回頭吃卒。',
+  'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first revealed enemy beyond it, whatever its rank. The screen can be any piece: friendly, enemy, or face-down. With nothing to jump, it cannot capture at all, so an adjacent piece is safe from it. Without a capture it moves one square like everything else.':
+    '砲沿直行或橫列吃子：正好跳過一顆子（砲架），吃掉後面第一顆翻開的敵子，不論大小。砲架可以是任何子：自己的、對方的、或暗子。沒有子可跳就完全不能吃，所以緊鄰的子是安全的。不吃子的時候，它和其他子一樣走一格。',
+  'One screen, then the target. Rank does not matter.': '一顆砲架，再來是目標。大小不重要。',
+  'No screen, no capture: the chariot beside it is safe.': '沒有砲架就不能吃：旁邊的車是安全的。',
+  'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.':
+    '自己的子也能當砲架。象後面的暗子不是目標。',
+  'As a target, the cannon is below the horse: the horse may take it.':
+    '被吃的時候，砲排在馬下面：馬可以吃它。',
+  'A soldier cannot take a cannon. It can take the other soldier, or the general.':
+    '卒不能吃砲。它可以吃另一顆卒，或吃將。',
+  'Play against the engine or challenge a friend. No account required.':
+    '跟引擎下，或邀朋友對弈。不用帳號。',
+  'How MistyBanqi plays': 'MistyBanqi 怎麼下棋',
+  'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
+    'Mistboard 採用台灣規則，加上台灣電腦對局協會的比賽和棋規則（Chen、Shen 與 Hsu，ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。兩條有文獻記載的變體規則刻意不採用：砲不能吃暗子，將永遠不能吃卒，就算是它的第一步也一樣。如果你學的是另一套大小順序，本頁這一套才是引擎和站上每一盤棋遵守的。',
+  'An engine game': '一盤引擎對局',
+  'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/Hs0q6Z26) has every game from the same run, one chapter each, with a note on how it went.':
+    'MistyBanqi 自己對自己，每步一千萬個節點，是站上機器人棋力的三倍。用箭頭一步一步看。[配套研究](/study/Hs0q6Z26)收了同一批的每一盤，一盤一章，附一段說明。',
+  'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
+  'The engine games': '引擎對局',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

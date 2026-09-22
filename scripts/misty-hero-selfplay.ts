@@ -434,13 +434,25 @@ function arg(flag: string): string | undefined {
 
 async function main(): Promise<void> {
   const variant = (arg('--variant') ?? '') as VariantId;
-  const spec = ENGINES[variant];
-  if (!spec) {
+  const shipped = ENGINES[variant];
+  if (!shipped) {
     console.error(
-      'usage: --variant jungle|jungle-flip|banqi --out <file.json> [--seed N] [--games N] [--max-plies N]',
+      'usage: --variant jungle|jungle-flip|banqi --out <file.json> [--seed N] [--games N] [--max-plies N] [--nodes N]',
     );
     process.exit(1);
   }
+  // `--nodes N` plays above (or below) the shipped budget: a companion study
+  // wants the engine at its best, not at the strength a first-timer faces.
+  // The output records the budget it actually used, and budgetSource says so.
+  const nodesOverride = arg('--nodes') ? Number(arg('--nodes')) : null;
+  const spec: EngineSpec =
+    nodesOverride === null
+      ? shipped
+      : {
+          ...shipped,
+          nodes: nodesOverride,
+          budgetSource: `--nodes ${nodesOverride} (shipped: ${shipped.nodes}, ${shipped.budgetSource})`,
+        };
   if (!existsSync(spec.bin)) {
     console.error(`${spec.label} binary not built: ${spec.bin}`);
     process.exit(1);
