@@ -1,8 +1,11 @@
 # Fairy-Stockfish (WASM) — vendored engine assets
 
-These files are the client-side analysis engine that powers the review board's
-"local engine" (ceval). They run entirely in the browser, in a Web Worker, and
-require a cross-origin-isolated context (`SharedArrayBuffer`).
+These files are the client-side analysis engine behind the review board's
+"local engine" (ceval) for the xiangqi variants (fortress, atomic) and chess.
+Standard xiangqi runs on mainline Pikafish instead (`../pikafish/`, since
+2026-09); jieqi on PikaJieQi (`../pikafish-jieqi/`). They run entirely in the
+browser, in a Web Worker, and require a cross-origin-isolated context
+(`SharedArrayBuffer`).
 
 - `stockfish.js` / `stockfish.wasm` / `stockfish.worker.js` — the multi-threaded
   Fairy-Stockfish WASM build, **patched** (see Provenance).
@@ -11,10 +14,13 @@ require a cross-origin-isolated context (`SharedArrayBuffer`).
   load time (`VariantPath` names one file), then selected per evaluation with
   `UCI_Variant=fortressxiangqi` / `atomicxiangqi`. Each is a hand-mirrored copy
   of the server's (`apps/server/src/*.ini`); nothing keeps them in sync but a
-  diff. Standard xiangqi uses Fairy-Stockfish's built-in `xiangqi` variant.
-- `xiangqi-c07e94a5c7cb.nnue` — Fairy-Stockfish's official standard-xiangqi NNUE
-  net, the same one the server's Level 8 bot runs. Fetched lazily on the first
-  xiangqi evaluation and written to the engine's in-memory FS.
+  diff.
+
+Until 2026-09 this directory also carried `xiangqi-c07e94a5c7cb.nnue`, FSF's
+official standard-xiangqi net (the one the server's Level 8 bot still runs),
+fetched lazily for standard-xiangqi boards. That board moved to Pikafish, so
+the net and its load path (`loadXiangqiNet` in ceval.ts) went with it; every
+variant left on this core runs the classical evaluation.
 
 ## Provenance
 

@@ -4,10 +4,10 @@
 // misty-ceval.ts would otherwise type-import back from ceval.ts). ceval.ts re-exports
 // everything here, so existing `from './ceval.js'` importers are unaffected.
 
-/** Variants a client engine can evaluate. `xiangqi`/`fortressxiangqi`/
- *  `atomicxiangqi`/`chess` use Fairy-Stockfish, `jieqi` uses PikaJieQi, and the
- *  remaining variants use Misty. createCeval() dispatches to the appropriate
- *  backend. */
+/** Variants a client engine can evaluate. `xiangqi` uses Pikafish,
+ *  `fortressxiangqi`/`atomicxiangqi`/`chess` use Fairy-Stockfish, `jieqi` uses
+ *  PikaJieQi, and the remaining variants use Misty. createCeval() dispatches to
+ *  the appropriate backend. */
 export type CevalVariant =
   | 'xiangqi'
   | 'fortressxiangqi'
@@ -82,10 +82,19 @@ export interface CevalRequest {
   onUpdate?: (update: CevalUpdate) => void;
 }
 
+/** Bytes of a large engine asset fetched so far (Pikafish's 51 MB net).
+ *  `total` is 0 when the response carried no Content-Length. */
+export interface CevalLoadProgress {
+  loaded: number;
+  total: number;
+}
+
 export interface CevalHandle {
   readonly variant: CevalVariant;
-  /** Warm the engine ahead of the first evaluate (load + init). Idempotent. */
-  preload(): Promise<void>;
+  /** Warm the engine ahead of the first evaluate (load + init). Idempotent.
+   *  A backend with a large download reports it through `onProgress` until the
+   *  promise settles; the others never call it. */
+  preload(onProgress?: (progress: CevalLoadProgress) => void): Promise<void>;
   /** Evaluate a position; resolves with the deepest update reached. */
   evaluate(req: CevalRequest): Promise<CevalUpdate>;
   /** Halt the current search (the pending evaluate never resolves). */

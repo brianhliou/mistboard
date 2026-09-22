@@ -55,7 +55,7 @@ export function buildXiangqiClientAnalysisSource(
       }
       return computeGameAnalysis(
         {
-          engineId: 'fairy-stockfish',
+          engineId: 'pikafish',
           depth: ANALYSIS_SWEEP_DEPTH,
           plies,
         },

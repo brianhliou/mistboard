@@ -54,7 +54,8 @@ describe('variant dispatch', () => {
     expect(cevalEngineName('banqi')).toBe('MistyBanqi');
     expect(cevalEngineName('jungleflip')).toBe('MistyJungleFlip');
     expect(cevalEngineName('jungle')).toBe('MistyJungle');
-    expect(cevalEngineName('xiangqi')).toBe('Fairy-Stockfish');
+    expect(cevalEngineName('xiangqi')).toBe('Pikafish');
+    expect(cevalEngineName('fortressxiangqi')).toBe('Fairy-Stockfish');
   });
 
   it('reports the Misty variants as supported without cross-origin isolation', () => {

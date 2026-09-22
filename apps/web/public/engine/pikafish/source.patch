@@ -1,0 +1,129 @@
+diff --git a/src/main.cpp b/src/main.cpp
+index 57667d13..01ce5a5a 100644
+--- a/src/main.cpp
++++ b/src/main.cpp
+@@ -26,6 +26,10 @@
+ #include "tune.h"
+ #include "uci.h"
+ 
++#ifdef __EMSCRIPTEN__
++    #include <emscripten/emscripten.h>
++#endif
++
+ using namespace Stockfish;
+ 
+ #ifdef UNIVERSAL_BINARY
+@@ -37,6 +41,12 @@ __attribute__((used))  // keep main alive
+ #endif
+ 
+ int main(int argc, char* argv[]) {
++#ifdef __EMSCRIPTEN__
++    // The browser build drives the engine through pikafish_command(); main()
++    // runs at module load and must not block on stdin.
++    (void) argc;
++    (void) argv;
++#else
+     std::cout << engine_info() << std::endl;
+ 
+     Attacks::init();
+@@ -48,10 +58,45 @@ int main(int argc, char* argv[]) {
+     Tune::init(uci->engine_options());
+ 
+     uci->loop();
++#endif
+ 
+     return 0;
+ }
+ 
++#ifdef __EMSCRIPTEN__
++namespace {
++std::unique_ptr<UCIEngine> wasmUci;
++}
++
++extern "C" {
++
++// Builds the engine once. Call after the NNUE file is in the module's
++// filesystem so the default EvalFile load succeeds, or follow with
++// `setoption name EvalFile value /path/to/pikafish.nnue`.
++EMSCRIPTEN_KEEPALIVE
++void pikafish_initialize() {
++    if (wasmUci)
++        return;
++    std::cout << engine_info() << std::endl;
++    Attacks::init();
++    Position::init();
++    static char  program[] = "/pikafish";
++    static char* argv[]    = {program, nullptr};
++    wasmUci = std::make_unique<UCIEngine>(CommandLine(1, argv));
++    Tune::init(wasmUci->engine_options());
++}
++
++// One UCI command line, exactly as it would be typed on stdin. `go` returns
++// as soon as the search threads are started; output arrives through stdout.
++EMSCRIPTEN_KEEPALIVE
++void pikafish_command(const char* command) {
++    if (wasmUci && command)
++        wasmUci->execute(command);
++}
++
++}
++#endif
++
+ #ifdef UNIVERSAL_BINARY
+ }  // namespace Stockfish
+ 
+diff --git a/src/uci.cpp b/src/uci.cpp
+index 1cc837c7..ea8bd7a3 100644
+--- a/src/uci.cpp
++++ b/src/uci.cpp
+@@ -93,17 +93,26 @@ void UCIEngine::init_search_update_listeners() {
+ 
+ void UCIEngine::loop() {
+     set_console_utf8();
+-    std::string token, cmd;
++    std::string cmd;
+ 
+     for (int i = 1; i < cli.argc; ++i)
+         cmd += std::string(cli.argv[i]) + " ";
+ 
++    bool running = true;
+     do
+     {
+         if (cli.argc == 1
+             && !getline(std::cin, cmd))  // Wait for an input or an end-of-file (EOF) indication
+             cmd = "quit";
+ 
++        running = execute(cmd);
++    } while (running && cli.argc <= 1);  // The command-line arguments are one-shot
++}
++
++bool UCIEngine::execute(const std::string& cmd) {
++    std::string token;
++
++    {
+         currentCmd = cmd;
+         std::istringstream is(cmd);
+ 
+@@ -185,7 +194,8 @@ void UCIEngine::loop() {
+             sync_cout << "Unknown command: '" << cmd << "'. Type help for more information."
+                       << sync_endl;
+ 
+-    } while (token != "quit" && cli.argc <= 1);  // The command-line arguments are one-shot
++    }
++    return token != "quit";
+ }
+ 
+ Search::LimitsType UCIEngine::parse_limits(std::istream& is) {
+diff --git a/src/uci.h b/src/uci.h
+index 910fcc9b..14427ec3 100644
+--- a/src/uci.h
++++ b/src/uci.h
+@@ -42,6 +42,8 @@ class UCIEngine {
+     UCIEngine(CommandLine cli);
+ 
+     void loop();
++    // One UCI command line; returns false once 'quit' has been processed.
++    bool execute(const std::string& cmd);
+ 
+     static int         to_cp(Value v, const Position& pos);
+     static std::string format_score(const Score& s);

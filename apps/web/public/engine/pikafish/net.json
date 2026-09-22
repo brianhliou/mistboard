@@ -1,0 +1,8 @@
+{
+  "file": "pikafish.nnue",
+  "url": "https://github.com/brianhliou/pikafish-wasm/releases/download/v0.1.0/pikafish.nnue",
+  "sha256": "7d13d73569a9b571ba0eb20cf1596247bc2a42738967e61afef6482b231e900e",
+  "bytes": 50706378,
+  "upstream": "https://github.com/official-pikafish/Networks/releases/download/master-net/pikafish.nnue as of 2026-09-06",
+  "engineCommit": "6a59ee2f7b105bff64d9efc2692591107787e2b1"
+}

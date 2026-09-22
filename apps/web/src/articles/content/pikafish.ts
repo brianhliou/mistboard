@@ -12,8 +12,9 @@ import type { Article } from '../types.js';
 // headline is PLAYING it, at a level you choose, and at jieqi, which is rare
 // in a browser. Analysis is one section, worded honestly: finished xiangqi
 // games are reviewed by Pikafish on the server (xiangqi-analysis.ts,
-// pikafish-xiangqi-analysis pool); the live /analysis board runs Fairy-Stockfish
-// in the browser; jieqi analysis runs pikafish-jieqi in the browser.
+// pikafish-xiangqi-analysis pool); the live /analysis board runs Pikafish in
+// the browser (pikafish-ceval.ts, since 2026-09; Fairy-Stockfish before that);
+// jieqi analysis runs pikafish-jieqi in the browser.
 //
 // Facts checked against prod on 2026-09-20: /api/bots lists `pikafish`
 // (engine pikafish-xiangqi-level-8, xiangqi + jieqi) above eight Fairy-Stockfish
@@ -142,7 +143,7 @@ export const pikafishArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Fairy-Stockfish in your browser, not Pikafish: instant and private, and weaker. Pikafish in the browser is not there yet.',
+            'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.',
         },
       ],
     },

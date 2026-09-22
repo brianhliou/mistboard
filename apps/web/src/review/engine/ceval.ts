@@ -1,5 +1,8 @@
 // Client-side ("local") engine analysis for the review board, powered by the
-// vendored Fairy-Stockfish WASM build (apps/web/public/engine/fairy-stockfish).
+// vendored Fairy-Stockfish WASM build (apps/web/public/engine/fairy-stockfish)
+// for the xiangqi variants and chess. Standard xiangqi dispatches to Pikafish
+// (pikafish-ceval.ts), jieqi to PikaJieQi, the Misty games to misty-ceval.ts;
+// createCeval() at the bottom is the one place that decides.
 //
 // FSF-wasm is multi-threaded-only: it allocates a *shared* WebAssembly.Memory and
 // THROWS when SharedArrayBuffer is unavailable, so the host document MUST be
@@ -15,6 +18,7 @@ import type {
   CevalEffort,
   CevalHandle,
   CevalLine,
+  CevalLoadProgress,
   CevalRequest,
   CevalUpdate,
   CevalVariant,
@@ -22,6 +26,7 @@ import type {
 import { cevalSupportsInfinite, depthForEffort } from './ceval-types.js';
 import { isMistyCevalVariant, MistyCeval, mistyEngineName } from './misty-ceval.js';
 import { createMultiPvBurstCollector, createThrottledEmitter } from './multipv-burst.js';
+import { isPikafishCevalVariant, PikafishCeval, pikafishEngineName } from './pikafish-ceval.js';
 import { isPikaJieqiCevalVariant, PikaJieQiCeval, pikaJieqiEngineName } from './pikajieqi-ceval.js';
 import { parseInfo } from './uci-info.js';
 
@@ -30,6 +35,7 @@ export {
   type CevalEffort,
   type CevalHandle,
   type CevalLine,
+  type CevalLoadProgress,
   type CevalRequest,
   type CevalUpdate,
   type CevalVariant,
@@ -64,8 +70,8 @@ export const CEVAL_ENGINE_NAME = 'Fairy-Stockfish';
  *  lethalCheck) parse only on the patched build vendored here; see the README. */
 const CUSTOM_VARIANT_INIS = ['fortress-xiangqi.ini', 'atomic-xiangqi.ini'] as const;
 
-/** Whether the client engine for `variant` can run in this page. Fairy-Stockfish
- *  and PikaJieQi need SharedArrayBuffer (cross-origin isolation); the
+/** Whether the client engine for `variant` can run in this page. Fairy-Stockfish,
+ *  Pikafish and PikaJieQi need SharedArrayBuffer (cross-origin isolation); the
  *  single-threaded Misty variants do not. Called with no argument, it reports
  *  the threaded-engine requirement for backward compatibility. */
 export function cevalSupported(variant?: CevalVariant): boolean {
@@ -79,7 +85,12 @@ export function cevalSupported(variant?: CevalVariant): boolean {
 
 /** Human label for the engine backing `variant`. */
 export function cevalEngineName(variant: CevalVariant): string {
-  return mistyEngineName(variant) ?? pikaJieqiEngineName(variant) ?? CEVAL_ENGINE_NAME;
+  return (
+    mistyEngineName(variant) ??
+    pikafishEngineName(variant) ??
+    pikaJieqiEngineName(variant) ??
+    CEVAL_ENGINE_NAME
+  );
 }
 
 // --- low-level engine (singleton) ---------------------------------------------
@@ -194,55 +205,6 @@ async function loadEngineCore(): Promise<EngineCore> {
   return core;
 }
 
-/**
- * Fairy-Stockfish's official standard-xiangqi NNUE net, loaded lazily on the
- * first xiangqi evaluation.
- *
- * Without it FSF evaluates xiangqi with its CLASSICAL evaluation, which has no
- * endgame knowledge: measured against the 32-position basic-endgame corpus at
- * depth 16 it agreed with the book verdict 17 times, calling won positions 0cp
- * draws and one book draw a +523cp win. With the net it is 32/32. That is not a
- * strength nicety, it is the difference between an analysis board that can read
- * an endgame and one that cannot (#363).
- *
- * Lazy and xiangqi-only on purpose: the net is 10.7MB, and the Fortress variant
- * shares this engine core but is a custom .ini variant the net does not apply
- * to, so a fortress-only session must not pay for it. `Use NNUE` is set per
- * evaluation for the same reason -- EvalFile is a global engine option, and the
- * core is a module singleton that outlives any one board.
- */
-const XIANGQI_NNUE_NET = 'xiangqi-c07e94a5c7cb.nnue';
-let xiangqiNetPromise: Promise<boolean> | null = null;
-
-function loadXiangqiNet(core: EngineCore): Promise<boolean> {
-  if (!xiangqiNetPromise) {
-    xiangqiNetPromise = (async () => {
-      try {
-        const bytes = await fetch(engineAsset(XIANGQI_NNUE_NET)).then((r) => {
-          if (!r.ok) throw new Error(`ceval: net fetch ${r.status}`);
-          return r.arrayBuffer();
-        });
-        core.writeFile(XIANGQI_NNUE_NET, new Uint8Array(bytes));
-        core.send(`setoption name EvalFile value ${XIANGQI_NNUE_NET}`);
-        return true;
-      } catch (err) {
-        // Fall back to the classical evaluation rather than failing the board.
-        // The analysis is weaker, not broken, and a null result here would take
-        // the whole engine panel down with it.
-        //
-        // Say so out loud. A silent fallback is how the classical evaluation was
-        // shipping in the first place, and it is invisible from the outside: the
-        // board keeps answering, just with the evaluation that could not read an
-        // endgame. `prod:smoke:ceval` gates on the resulting numbers, and this
-        // line is what tells a human WHY when it fires.
-        console.error('ceval: xiangqi NNUE net failed to load, falling back to classical', err);
-        return false;
-      }
-    })();
-  }
-  return xiangqiNetPromise;
-}
-
 /** Warm the engine up ahead of the first evaluate (script + wasm + variant load). */
 export function preloadEngine(): Promise<void> {
   if (!enginePromise) enginePromise = loadEngineCore();
@@ -278,15 +240,11 @@ class Ceval implements CevalHandle {
 
     core.send('stop');
     core.send(`setoption name UCI_Variant value ${this.variant}`);
-    // Standard xiangqi runs on the NNUE net; every other variant on this core
-    // (Fortress, Atomic) has no net and must be told so explicitly, because
-    // EvalFile persists on the shared engine once any xiangqi board has set it.
-    if (this.variant === 'xiangqi') {
-      const loaded = await loadXiangqiNet(core);
-      core.send(`setoption name Use NNUE value ${loaded ? 'true' : 'false'}`);
-    } else {
-      core.send('setoption name Use NNUE value false');
-    }
+    // Every variant on this core (Fortress, Atomic, chess) runs the classical
+    // evaluation; no net is shipped for them. Standard xiangqi, which ran here
+    // on FSF's xiangqi net until 2026-09, now dispatches to Pikafish
+    // (pikafish-ceval.ts), and the net went with it.
+    core.send('setoption name Use NNUE value false');
     core.send(`setoption name MultiPV value ${multiPv}`);
     const base = req.initialFen ? `fen ${req.initialFen}` : 'startpos';
     core.send(
@@ -369,6 +327,7 @@ class Ceval implements CevalHandle {
 
 export function createCeval(variant: CevalVariant): CevalHandle {
   if (isMistyCevalVariant(variant)) return new MistyCeval(variant);
+  if (isPikafishCevalVariant(variant)) return new PikafishCeval(variant);
   if (isPikaJieqiCevalVariant(variant)) return new PikaJieQiCeval(variant);
   return new Ceval(variant);
 }
