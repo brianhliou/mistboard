@@ -49,7 +49,7 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The banqi result post is a draft dated 2026-09-23 (DEV lists drafts
+      // The banqi result post is scheduled for 2026-09-23 (DEV shows it early
       // for review), the newest on the site.
       '/blog/banqi-statistics',
       // The Pikafish page is scheduled for 2026-09-22 (DEV shows it early for
@@ -235,6 +235,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/banqi-statistics',
       '/blog/pikafish',
       '/blog/yin-sheng',
       '/blog/atomic-xiangqi-build',

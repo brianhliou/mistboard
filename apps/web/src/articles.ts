@@ -336,6 +336,10 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 export const HOME_ARTICLE_SLUGS = [
+  // The banqi statistics post, scheduled for 2026-09-23: 200 engine games
+  // reduced to what a player can use mid-game, and the only measured banqi
+  // page in either language. Leads once live.
+  'banqi-statistics',
   // The Pikafish page, scheduled for 2026-09-22 (publish-time.ts): the page a
   // reader who searched 皮卡鱼在线 lands on, one click from a game (growth plan
   // lane 0). Leads once live, since 09-22 is newer than the player page below.

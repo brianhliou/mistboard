@@ -83,9 +83,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'shogi4',
   'jieqi',
   'banqi',
-  // 'banqi-statistics' — dictionary complete (zh-Hant drafted first, Taiwanese
-  // vocabulary: 砲、覆盤、回合), NOT locked: a draft pending Brian's read, the
-  // successor of the play post pulled 2026-09-21. Lock it the day it publishes.
+  // Machine-drafted 2026-09-22 (zh-Hant first, Taiwanese vocabulary: 砲、覆盤、
+  // 回合), not native-reviewed, locked the day the English copy published.
+  'banqi-statistics',
   'mistybanqi',
   'jungle',
   'jungle-flip',
@@ -132,6 +132,10 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '这对你是有好处的。如果你子力落后，不代表就输了：把它一颗强子引进长捉，MistyBanqi 可能就走进那个它看不出该拒绝的和棋。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
+  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -580,8 +584,6 @@ const ZH_HANS: Record<string, string> = {
     '同样这个引擎，下面处在一个它已经完全赢定的局面。它以十子对两子领先，已经没有子可吃，唯一要做的就是把胜势走到底。结果它却下成了和棋。',
   "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.":
     '评估里没有任何一项会因为「把优势转化为胜利」而比「单纯守住子力」给更高的分，于是一个遥遥领先的局面和一个真正已经赢下的局面，得分几乎一样。既然没有哪一项促使它取得进展，它就只是来回挪子，而暗棋的三次重复局面规则便把这盘判成和棋。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline.":
-    '这对你有个实用的启示。如果你子力落后，并不一定就输了：用长捉缠住它的一枚大子，MistyBanqi 可能就一头走进那个它看不出自己本该拒绝的和棋。',
   'It can also lose its own general': '它也可能丢掉自己的将帅',
   'A related blind spot involves the general. A soldier is the only piece that can capture it, and the engine is slow to make room for a general boxed into a corner. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.':
     '另一个相关的盲点和将帅有关。只有兵（卒）能吃将帅，而当将帅被逼到角落时，引擎迟迟不为它腾出退路。有时它会把一枚棋子调到棋盘另一头，任由一枚孤零零的敌方兵走上来把将帅困死。这和上面的和棋是同一类毛病：评估对一个缓慢、安静、还要好几步才成形的威胁，没有真正的感觉。',
@@ -2789,8 +2791,6 @@ const ZH_HANS: Record<string, string> = {
   'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
     'Mistboard 采用台湾规则，加上台湾电脑对局协会的比赛和棋规则（Chen、Shen 与 Hsu，ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。两条有文献记载的变体规则刻意不采用：炮不能吃暗子，将永远不能吃卒，就算是它的第一步也一样。如果你学的是另一套大小顺序，本页这一套才是引擎和站上每一盘棋遵守的。',
   'An engine game': '一盘引擎对局',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went.':
-    '[MistyBanqi](/blog/mistybanqi) 自己对自己，每步一千万个节点，是站上机器人棋力的三倍。用箭头一步一步看。[配套研究](/study/FsA5sowX)收了这一批全部二十盘，一盘一章，附一段说明。',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
   'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
     '颜色不是事先分好的。先手翻开任何一颗子：翻到什么颜色，这一盘就是他的，对手用另一种。',
@@ -2816,6 +2816,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
+    '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
+  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
+    '這對你是有好處的。如果你子力落後，不代表就輸了：把它一顆強子引進長捉，MistyBanqi 可能就走進那個它看不出該拒絕的和棋。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
   // Traditional starts from the complete Simplified key set, then every
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
@@ -3351,8 +3355,6 @@ const ZH_HANT: Record<string, string> = {
     '同樣這個引擎，下面處在一個它已經完全贏定的局面。它以十子對兩子領先，已經沒有子可吃，唯一要做的就是把勝勢走到底。結果它卻下成了和棋。',
   "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.":
     '評估裡沒有任何一項會因為「把優勢轉化為勝利」而比「單純守住子力」給更高的分，於是一個遙遙領先的局面和一個真正已經贏下的局面，得分幾乎一樣。既然沒有哪一項促使它取得進展，它就只是來回挪子，而暗棋的三次重複局面規則便把這盤判成和棋。',
-  "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline.":
-    '這對你有個實用的啟示。如果你子力落後，並不一定就輸了：用長捉纏住它的一枚大子，MistyBanqi 可能就一頭走進那個它看不出自己本該拒絕的和棋。',
   'It can also lose its own general': '它也可能丟掉自己的將帥',
   'A related blind spot involves the general. A soldier is the only piece that can capture it, and the engine is slow to make room for a general boxed into a corner. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.':
     '另一個相關的盲點和將帥有關。只有兵（卒）能吃將帥，而當將帥被逼到角落時，引擎遲遲不為它騰出退路。有時它會把一枚棋子調到棋盤另一頭，任由一枚孤零零的敵方兵走上來把將帥困死。這和上面的和棋是同一類毛病：評估對一個緩慢、安靜、還要好幾步才成形的威脅，沒有真正的感覺。',
@@ -5352,8 +5354,6 @@ const ZH_HANT: Record<string, string> = {
   'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
     'Mistboard 採用台灣規則，加上台灣電腦對局協會的比賽和棋規則（Chen、Shen 與 Hsu，ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。兩條有文獻記載的變體規則刻意不採用：砲不能吃暗子，將永遠不能吃卒，就算是它的第一步也一樣。如果你學的是另一套大小順序，本頁這一套才是引擎和站上每一盤棋遵守的。',
   'An engine game': '一盤引擎對局',
-  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went.':
-    '[MistyBanqi](/blog/mistybanqi) 自己對自己，每步一千萬個節點，是站上機器人棋力的三倍。用箭頭一步一步看。[配套研究](/study/FsA5sowX)收了這一批全部二十盤，一盤一章，附一段說明。',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
   'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
     '顏色不是事先分好的。先手翻開任何一顆子：翻到什麼顏色，這一盤就是他的，對手用另一種。',
