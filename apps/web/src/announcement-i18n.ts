@@ -52,6 +52,18 @@ const ZH_HANS: Record<string, string> = {
   "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
     '揭棋里，被吃掉的暗子只有吃子的一方知道是什么。此前电脑拿到的是它自己按真实局面剩余的暗子，所以你每吃掉它一个暗子，它就知道自己失去了什么，并据此重新估算其余暗子。现在它只按它这个座位的棋手能知道的信息来判断。它吃掉的对方棋子仍然对它可见，这是规则允许的。',
   'Read the changelog': '查看更新记录',
+  // ── 2026-09-22 (Pikafish article) ── 皮卡鱼 / 人机阶梯 / 复盘 follow article-i18n.ts
+  // for the same article; the body reuses its intro sentence.
+  'Pikafish on Mistboard.': '皮卡鱼在 Mistboard。',
+  'Pikafish is the strongest open-source xiangqi engine, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
+    '皮卡鱼是最强的开源象棋引擎，多数人要先下载引擎，再配一个界面才能用。在这里，它直接在网页里跑：可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。免费，不用注册，不用安装，手机浏览器也能玩。',
+  // ── 2026-09-21 (Pikafish in the browser) ── 分析棋盘 follows analysis.board; 权重 follows
+  // article-i18n.ts for the analysis-board sentence; variant names follow the launch entries.
+  'Pikafish now runs in your browser for xiangqi analysis.':
+    '象棋的本地分析现在在你的浏览器里运行皮卡鱼。',
+  'Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty.':
+    '象棋的本地分析此前用的是 Fairy-Stockfish 加一个小权重。现在直接运行皮卡鱼本身：全强度，带它自己的权重，也就是我们服务器上的电脑所用的那一份；分析棋盘和对局复盘都用它，齿轮里的设置（最佳着法箭头、多条变化、搜索深度）照旧。权重 51 MB，只需下载一次；之后你分析的内容不会离开你的电脑。堡垒象棋、原子象棋和鸭子象棋仍用 Fairy-Stockfish，暗子类玩法仍用 Misty。',
+  'Open the analysis board': '打开分析棋盘',
   // ── 2026-09-21 (Jungle tiger jump) ── terms follow the jungle rules page in article-i18n.ts.
   'The Jungle tiger now jumps the river sideways.': '斗兽棋的虎现在可以横向跳河了。',
   'Until today the tiger on Mistboard leapt a river lengthwise only and the lion both ways, the reading in English Wikipedia. The Chinese rule sets, and the digital versions most players come from, give both animals the same leap, so the tiger now has it too: on the board, in the bot and the analysis engine, on the rules page in three languages, and in the puzzles (one that the new jump refutes is withdrawn). Every earlier game stays legal as played; the change only adds moves.':
@@ -363,6 +375,18 @@ const ZH_HANT: Record<string, string> = {
   "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
     '揭棋裡，被吃掉的暗子只有吃子的一方知道是什麼。此前電腦拿到的是它自己按真實局面剩餘的暗子，所以你每吃掉它一個暗子，它就知道自己失去了什麼，並據此重新估算其餘暗子。現在它只按它這個座位的棋手能知道的資訊來判斷。它吃掉的對方棋子仍然對它可見，這是規則允許的。',
   'Read the changelog': '查看更新記錄',
+  // ── 2026-09-22 (Pikafish article) ── 皮卡魚 / 人機階梯 / 復盤 follow article-i18n.ts
+  // for the same article; the body reuses its intro sentence.
+  'Pikafish on Mistboard.': '皮卡魚在 Mistboard。',
+  'Pikafish is the strongest open-source xiangqi engine, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
+    '皮卡魚是最強的開源象棋引擎，多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡跑：可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
+  // ── 2026-09-21 (Pikafish in the browser) ── 分析棋盤 follows analysis.board; 權重 follows
+  // article-i18n.ts for the analysis-board sentence; variant names follow the launch entries.
+  'Pikafish now runs in your browser for xiangqi analysis.':
+    '象棋的本機分析現在在你的瀏覽器裡執行皮卡魚。',
+  'Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty.':
+    '象棋的本機分析先前用的是 Fairy-Stockfish 加一個小權重。現在直接執行皮卡魚本身：全強度，帶它自己的權重，也就是我們伺服器上的電腦所用的那一份；分析棋盤和對局復盤都用它，齒輪裡的設定（最佳著法箭頭、多條變化、搜尋深度）照舊。權重 51 MB，只需下載一次；之後你分析的內容不會離開你的電腦。堡壘象棋、原子象棋和鴨子象棋仍用 Fairy-Stockfish，暗子類玩法仍用 Misty。',
+  'Open the analysis board': '打開分析棋盤',
   // ── 2026-09-21 (Jungle tiger jump) ── terms follow the jungle rules page in article-i18n.ts.
   'The Jungle tiger now jumps the river sideways.': '鬥獸棋的虎現在可以橫向跳河了。',
   'Until today the tiger on Mistboard leapt a river lengthwise only and the lion both ways, the reading in English Wikipedia. The Chinese rule sets, and the digital versions most players come from, give both animals the same leap, so the tiger now has it too: on the board, in the bot and the analysis engine, on the rules page in three languages, and in the puzzles (one that the new jump refutes is withdrawn). Every earlier game stays legal as played; the change only adds moves.':

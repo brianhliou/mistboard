@@ -32,6 +32,21 @@ test('the prerendered index goes stale the moment a scheduled post goes live', (
   assert.equal(prerenderedIndexIsStale(schedule, LIVE), true);
 });
 
+test('a scheduled announcement makes the prerendered pages stale on the same clock', () => {
+  const schedule = parseArticleSchedule(
+    JSON.stringify({
+      builtAt: new Date(T0).toISOString(),
+      scheduled: [],
+      announcements: [{ slug: '2026-09-25-pikafish', liveAt: new Date(LIVE).toISOString() }],
+    }),
+  );
+  assert.equal(schedule.announcements.length, 1);
+  assert.equal(prerenderedIndexIsStale(schedule, LIVE - 1), false);
+  assert.equal(prerenderedIndexIsStale(schedule, LIVE), true);
+  // A schedule file from before announcements were listed still parses.
+  assert.deepEqual(parseArticleSchedule(sample).announcements, []);
+});
+
 test('a missing or malformed schedule file means nothing is scheduled', async () => {
   resetArticleScheduleCache();
   const dir = await mkdtemp(join(tmpdir(), 'mistboard-schedule-'));

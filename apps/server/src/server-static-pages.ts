@@ -668,7 +668,12 @@ function gamePageParticipantName(game: persistence.GameRecord, color: Color): st
 // crawlers, no-JS clients, and first
 // paint get real content instead of the empty SPA shell. Throws when the file
 // is absent (e.g. an older build) so the caller can fall back to serving
-// index.html (the bare shell).
+// index.html (the bare shell), and for the pages that list dated entries
+// (home.html, feed.html) once a scheduled post or announcement has gone live
+// since the build: the baked page predates it, and the shell renders a
+// current one client-side until the next deploy (article-schedule.ts).
+const SCHEDULE_DATED_PAGES: ReadonlySet<string> = new Set(['home.html', 'feed.html']);
+
 export async function servePrerenderedPage(params: {
   response: ServerResponse;
   staticDir: string;
@@ -682,6 +687,12 @@ export async function servePrerenderedPage(params: {
     | 'puzzles.html'
     | 'patron.html';
 }): Promise<void> {
+  if (
+    SCHEDULE_DATED_PAGES.has(params.file) &&
+    prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))
+  ) {
+    throw new Error(`${params.file} predates a scheduled entry that is now live`);
+  }
   const html = await fs.readFile(resolve(params.staticDir, params.file), 'utf-8');
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);

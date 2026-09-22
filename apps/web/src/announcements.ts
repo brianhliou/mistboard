@@ -4,11 +4,21 @@
 // today's date. Newest first (both surfaces sort by date descending). Skip
 // for internal-only changes (engine internals, infra, CI, refactors).
 //
+// SCHEDULING: an entry goes live at the article publish moment of its date
+// (articles/publish-time.ts: 09:00 Pacific), on the same clock as a scheduled
+// post, so an entry announcing a post dated for next week ships today and
+// appears with the post. Until then production hides it on the rail, /feed,
+// the home article row and feed.xml; dev shows it for review. The corollary:
+// an entry dated today and deployed before 09:00 Pacific waits for 09:00.
+// Date it yesterday if it must show at once.
+//
 // STUDIES: do not post per published study, and never count them ("two new
 // studies"): the count is wrong the next time one ships, and the homepage
 // already lists them live from the API. Post when a WORK is finished (a manual,
 // not a volume) or at a milestone worth a reader's attention. Individual
 // publications reach people through the studies widget and /study on their own.
+
+import { articleGoesLiveAt } from './articles/publish-time.js';
 
 export type AnnouncementKind = 'status' | 'article' | 'release' | 'update';
 
@@ -23,6 +33,23 @@ export type Announcement = {
 };
 
 const baseAnnouncements: Announcement[] = [
+  {
+    date: '2026-09-22',
+    kind: 'article',
+    headline: 'Pikafish on Mistboard.',
+    body: 'Pikafish is the strongest open-source xiangqi engine, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.',
+    href: '/blog/pikafish',
+    cta: 'Read the article',
+    showInHomeArticleWidget: true,
+  },
+  {
+    date: '2026-09-21',
+    kind: 'release',
+    headline: 'Pikafish now runs in your browser for xiangqi analysis.',
+    body: 'Local analysis for xiangqi used Fairy-Stockfish with a small net. It now runs Pikafish itself, at full strength on its own net, the same one our server bots play with: on the analysis board and in game review, with the gear settings (best-move arrows, several lines, search effort) as before. The net is 51 MB and downloads once; after that nothing you analyze leaves your machine. Fortress, atomic and duck keep Fairy-Stockfish, and the dark variants keep Misty.',
+    href: '/analysis/xiangqi',
+    cta: 'Open the analysis board',
+  },
   {
     date: '2026-09-21',
     kind: 'update',
@@ -577,8 +604,35 @@ const baseAnnouncements: Announcement[] = [
   },
 ];
 
-export function announcements(): Announcement[] {
+/**
+ * Live from the article publish moment of its date (publish-time.ts), the
+ * clock a scheduled post keeps, so an entry that announces a post cannot go
+ * out before the post does (it did on 2026-08-27, and the link 404'd for two
+ * days). A malformed date is live rather than hidden forever on a typo.
+ */
+export function announcementIsLive(entry: Announcement, now: number = Date.now()): boolean {
+  const liveAt = articleGoesLiveAt(entry.date);
+  return Number.isNaN(liveAt) ? true : liveAt <= now;
+}
+
+/**
+ * Every entry, scheduled ones included: for the coverage and link tests, and
+ * for the build to list what is still ahead (article-schedule.json).
+ */
+export function allAnnouncements(): Announcement[] {
   return baseAnnouncements;
+}
+
+/**
+ * What a reader may see now. Dev shows everything so a scheduled entry can be
+ * reviewed on the rail and /feed before its day, as articles.ts does for a
+ * scheduled post. Once it is live the client renders it without a deploy;
+ * the server stops serving the prerendered home and feed pages that predate
+ * it (server/article-schedule.ts), and feed.xml catches up on the next build.
+ */
+export function announcements(now: number = Date.now()): Announcement[] {
+  if (import.meta.env.DEV) return baseAnnouncements;
+  return baseAnnouncements.filter((entry) => announcementIsLive(entry, now));
 }
 
 /**

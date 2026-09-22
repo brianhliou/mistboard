@@ -426,6 +426,10 @@ try {
   // the server can 404 them until their moment and stop serving the stale
   // blog index once one goes live without a rebuild. publish-time.ts has the
   // full story.
+  //
+  // Announcements keep the same clock (announcements.ts): the ones still ahead
+  // are listed beside the posts, so the server also stops serving home.html and
+  // feed.html once an entry goes live without a rebuild.
   const builtAt = Date.now();
   const scheduled = articles
     .filter((a) => a.status === 'published' && !articleIsLive(a, builtAt))
@@ -433,15 +437,34 @@ try {
       slug: a.slug,
       liveAt: new Date(articleGoesLiveAt(a.publishedAt)).toISOString(),
     }));
+  const { allAnnouncements, announcementIsLive, announcementSlug } =
+    await server.ssrLoadModule('/src/announcements.ts');
+  const scheduledAnnouncements = allAnnouncements()
+    .filter((entry) => !announcementIsLive(entry, builtAt))
+    .map((entry) => ({
+      slug: announcementSlug(entry),
+      liveAt: new Date(articleGoesLiveAt(entry.date)).toISOString(),
+    }));
   await fs.writeFile(
     resolve(distDir, 'article-schedule.json'),
-    `${JSON.stringify({ builtAt: new Date(builtAt).toISOString(), scheduled }, null, 2)}\n`,
+    `${JSON.stringify(
+      {
+        builtAt: new Date(builtAt).toISOString(),
+        scheduled,
+        announcements: scheduledAnnouncements,
+      },
+      null,
+      2,
+    )}\n`,
     'utf-8',
   );
-  if (scheduled.length > 0) {
-    console.log(
-      `scheduled, not prerendered: ${scheduled.map((s) => `${s.slug} (${s.liveAt})`).join(', ')}`,
-    );
+  for (const [label, list] of [
+    ['scheduled, not prerendered', scheduled],
+    ['announcements scheduled, not baked', scheduledAnnouncements],
+  ]) {
+    if (list.length > 0) {
+      console.log(`${label}: ${list.map((s) => `${s.slug} (${s.liveAt})`).join(', ')}`);
+    }
   }
   const published = articles.filter((a) => articleIsLive(a, builtAt));
   const publishedBySlug = new Map(published.map((a) => [a.slug, a]));
@@ -716,7 +739,7 @@ try {
   const { rulesHrefPublicSurfaceEnabled } = await server.ssrLoadModule(
     '/src/variant-public-surfaces.ts',
   );
-  const feedEntries = announcements()
+  const feedEntries = announcements(builtAt)
     .filter((entry) => rulesHrefPublicSurfaceEnabled(entry.href))
     .sort((a, b) => b.date.localeCompare(a.date));
   await fs.writeFile(resolve(distDir, 'feed.xml'), renderNewsRss(feedEntries), 'utf-8');

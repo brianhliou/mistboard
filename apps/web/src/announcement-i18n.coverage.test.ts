@@ -4,7 +4,7 @@ import {
   announcementTranslationKeys,
   hasAnnouncementTranslation,
 } from './announcement-i18n.js';
-import { announcements } from './announcements.js';
+import { allAnnouncements } from './announcements.js';
 
 // Announcements are authored in English and translated in announcement-i18n.ts.
 // Two directions are checked, and both matter:
@@ -22,7 +22,7 @@ function truncate(text: string): string {
 
 function liveStrings(): Set<string> {
   const strings = new Set<string>();
-  for (const entry of announcements()) {
+  for (const entry of allAnnouncements()) {
     strings.add(entry.headline);
     if (entry.body) strings.add(entry.body);
     if (entry.cta) strings.add(entry.cta);
