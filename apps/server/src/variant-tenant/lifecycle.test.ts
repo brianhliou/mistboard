@@ -7,11 +7,13 @@ import {
   type RoomTimeControl,
 } from '@mistboard/game';
 import { type DarkChessTenantEvent, darkChessTenant } from '../dark-chess-tenant.js';
+import { PVP_DISCONNECT_FORFEIT_ENABLED } from '../lifecycle-windows.js';
 import {
   clearTenantRuntimeTimers,
   scheduleTenantLifecycleTimers,
   type TenantLifecycleClient,
   tenantAbortAnchorAt,
+  tenantForfeitingSeat,
 } from './lifecycle.js';
 import { createTenantRuntimeRoomFromEvents } from './runtime.js';
 
@@ -121,7 +123,7 @@ test('days-per-move arms no clock timer and never forfeits a disconnected seat',
   clearTenantRuntimeTimers(room);
 });
 
-test('the live policy on the same log still arms clock and forfeit timers', () => {
+test('the live policy on the same log arms the clock timer', () => {
   const roomId = 'dchx_live_midgame';
   const room = hydrate([...roomEvents(roomId, LIVE_TC), ...firstMoves(roomId)]);
   room.clients = new Set([{ seat: 'white', displaced: false }]);
@@ -130,8 +132,26 @@ test('the live policy on the same log still arms clock and forfeit timers', () =
   scheduleTenantLifecycleTimers(darkChessTenant, room, ctx);
 
   assert.notEqual(room.clockTimer, null);
-  assert.equal(room.forfeitSeat, 'black');
-  assert.notEqual(room.forfeitTimer, null);
+  clearTenantRuntimeTimers(room);
+});
+
+test('a PvP tenant room arms no forfeit while the PvP policy is off (#436)', () => {
+  const roomId = 'dchx_pvp_leaver';
+  const room = hydrate([...roomEvents(roomId, LIVE_TC), ...firstMoves(roomId)]);
+  // Mid-game, black's socket gone, white still there: the shape the 30 s window
+  // was written for. Off by policy until a waiting player says the wait is the
+  // problem; the clock timer below is what ends this game instead.
+  room.clients = new Set([{ seat: 'white', displaced: false }]);
+  const ctx = lifecycleContext();
+
+  scheduleTenantLifecycleTimers(darkChessTenant, room, ctx);
+
+  assert.equal(PVP_DISCONNECT_FORFEIT_ENABLED, false, 'policy under test');
+  assert.equal(tenantForfeitingSeat(darkChessTenant, room), null);
+  assert.equal(room.forfeitSeat, null);
+  assert.equal(room.forfeitDeadline, null);
+  assert.equal(room.forfeitTimer, null);
+  assert.notEqual(room.clockTimer, null, 'the clock is the reaper now');
   clearTenantRuntimeTimers(room);
 });
 

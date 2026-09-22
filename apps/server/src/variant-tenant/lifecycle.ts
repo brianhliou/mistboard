@@ -16,7 +16,12 @@
  */
 
 import { clockPolicyKindFor, DAY_MS } from '@mistboard/game';
-import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from '../lifecycle-windows.js';
+import {
+  ABORT_WINDOW_MS,
+  FORFEIT_WINDOW_MS,
+  JOIN_WINDOW_MS,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
+} from '../lifecycle-windows.js';
 import { logger } from '../obs.js';
 import { expireTenantClock, tenantClockRemainingMs } from './runtime.js';
 import type {
@@ -363,6 +368,10 @@ export function tenantForfeitingSeat<
       if (tenant.engine.isEngineClientId(room.projection.seats[seat])) return null;
     }
   }
+  // PvP: off by policy while the flag is false (lifecycle-windows.ts, #436).
+  // Deliberately below the PvE check so the two reasons stay separable: PvE is
+  // settled, this one is waiting on measurement.
+  if (!PVP_DISCONNECT_FORFEIT_ENABLED) return null;
   const connected = tenantConnectedSeats(tenant, room.clients);
   const [first, second] = tenant.colors;
   if (connected[first] && !connected[second]) return second;

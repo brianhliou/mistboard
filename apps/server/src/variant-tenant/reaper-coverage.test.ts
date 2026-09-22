@@ -16,7 +16,8 @@ import { appendTenantRuntimeEvent, createTenantRuntimeRoom } from './runtime.js'
 // condition, so the state space is covered only by coincidence unless something
 // asserts it. In-memory (lifecycle.ts): the clock timer needs an ARMED clock,
 // the abort timer needs moveNumber < 2, the forfeit timer needs EXACTLY ONE
-// seat absent. Durable: the guest-prestart sweep needs zero
+// seat absent AND a disconnect-forfeit policy that is on (both are off since
+// #436, so this mechanism currently claims nothing). Durable: the guest-prestart sweep needs zero
 // move-played/clock-started events AND no signed-in seat token
 // (persistence-game-lifecycle.ts:356), the stale-paused sweep needs `paused`,
 // the deadline sweeper needs days-per-move.
@@ -58,7 +59,12 @@ const CELLS: Cell[] = [
     reaped: true,
   },
   {
-    name: 'live clock, both seated, past move 1, one gone -> leaver forfeits',
+    // The clock is the only reaper left in this cell: the disconnect forfeit is
+    // off for PvE and, since the PvP half, for human opponents too (#436,
+    // lifecycle-windows.ts). It is enough BECAUSE the clock runs through a
+    // disconnect, so the absent seat flags. The clockless version of this same
+    // shape is the row below, and it is why the create route defaults a clock.
+    name: 'live clock, both seated, past move 1, one gone -> absent seat flags',
     timeControl: LIVE_TC,
     seats: 'both',
     moves: 2,

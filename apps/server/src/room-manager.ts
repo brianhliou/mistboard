@@ -24,7 +24,12 @@ import {
   type LiveSeatProfile,
   liveSeatProfileIdentity,
 } from './first-party-bots.js';
-import { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS, JOIN_WINDOW_MS } from './lifecycle-windows.js';
+import {
+  ABORT_WINDOW_MS,
+  FORFEIT_WINDOW_MS,
+  JOIN_WINDOW_MS,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
+} from './lifecycle-windows.js';
 import {
   chooseLiveEngineMove,
   type LiveEngineFallbackEvent,
@@ -41,7 +46,11 @@ import type { Client, Room, SeatTokenState } from './server-types.js';
 
 // Re-exported for back-compat: these moved to lifecycle-windows.ts, but
 // room-manager.test.ts and historical importers still resolve them from here.
-export { ABORT_WINDOW_MS, FORFEIT_WINDOW_MS } from './lifecycle-windows.js';
+export {
+  ABORT_WINDOW_MS,
+  FORFEIT_WINDOW_MS,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
+} from './lifecycle-windows.js';
 
 export interface RoomManagerContext {
   send: (client: Client, payload: unknown) => void;
@@ -772,6 +781,8 @@ function forfeitingSeat(room: Room): Color | null {
   if (status.type !== 'playing' || moveNumber < 2 || room.projection.paused) return null;
   const engineSeat = engineSeatFor(room);
   if (engineSeat !== null) return null;
+  // PvP: off by policy while the flag is false (lifecycle-windows.ts, #436).
+  if (!PVP_DISCONNECT_FORFEIT_ENABLED) return null;
   const connected = computeConnectedSeats(room.clients);
   const present = (seat: Color): boolean => connected[seat];
   const whitePresent = present('white');

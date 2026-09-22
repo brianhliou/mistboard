@@ -17,10 +17,10 @@ import {
   buildGameSummary,
   buildLiveEngineDecisionArtifactPayload,
   clearAbortTimer,
-  clearForfeitTimer,
   expireActiveClock,
   FORFEIT_WINDOW_MS,
   forfeitEngineOnFailure,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
   pauseRoomOnShutdown,
   playMove,
   type RoomManagerContext,
@@ -1528,17 +1528,16 @@ test('scheduleForfeitTimeout: no forfeit while both players are present', () => 
   assert.equal(room.forfeitTimer, null);
 });
 
-test('scheduleForfeitTimeout: arms a countdown for the lone absent seat', () => {
+test('scheduleForfeitTimeout: the lone absent seat keeps its game while the PvP policy is off', () => {
   const room = makeRoom('ff-gone', 'dark-chess', move2Events('ff-gone'));
   room.clients.add(makeClient('wc', 'white')); // only white present; black is gone
-  const before = Date.now();
   scheduleForfeitTimeout(makeCtx(), room);
-  assert.equal(room.forfeitSeat, 'black');
-  assert.ok(room.forfeitTimer !== null);
-  assert.ok(
-    room.forfeitDeadline !== null && room.forfeitDeadline >= before + FORFEIT_WINDOW_MS - 50,
-  );
-  clearForfeitTimer(room);
+  assert.equal(PVP_DISCONNECT_FORFEIT_ENABLED, false, 'policy under test');
+  assert.ok(FORFEIT_WINDOW_MS > 0, 'the window survives for a re-enable');
+  // Would have been: forfeitSeat 'black', a timer, deadline now + the window.
+  assert.equal(room.forfeitSeat, null);
+  assert.equal(room.forfeitTimer, null);
+  assert.equal(room.forfeitDeadline, null);
 });
 
 test('scheduleForfeitTimeout: no forfeit before both first moves (pre-move-2)', () => {
@@ -1557,15 +1556,15 @@ test('scheduleForfeitTimeout: no forfeit when both players are absent', () => {
   assert.equal(room.forfeitTimer, null);
 });
 
-test('scheduleForfeitTimeout: reconnect (both present again) cancels the countdown', () => {
+test('scheduleForfeitTimeout: a seat that leaves and returns still has a game', () => {
   const room = makeRoom('ff-reconnect', 'dark-chess', move2Events('ff-reconnect'));
-  const white = makeClient('wc', 'white');
-  room.clients.add(white); // black gone → forfeit armed
+  room.clients.add(makeClient('wc', 'white')); // black gone
   scheduleForfeitTimeout(makeCtx(), room);
-  assert.equal(room.forfeitSeat, 'black');
-  // Black returns.
+  assert.equal(room.forfeitSeat, null, 'nothing armed to cancel');
+  // Black returns; the room is still playing, which is the whole point.
   room.clients.add(makeClient('bc', 'black'));
   scheduleForfeitTimeout(makeCtx(), room);
+  assert.equal(room.projection.state.status.type, 'playing');
   assert.equal(room.forfeitSeat, null);
   assert.equal(room.forfeitTimer, null);
 });
@@ -1590,12 +1589,13 @@ test('scheduleForfeitTimeout: a PvE room never forfeits, in either direction (#4
   assert.equal(room.forfeitTimer, null);
 });
 
-test('scheduleForfeitTimeout: PvP still forfeits a leaver, engine id absent', () => {
-  // The guard is "is there an engine seat", not "is anyone missing": a PvP room
-  // with the same shape must keep the countdown it has always had.
+test('scheduleForfeitTimeout: PvP no longer forfeits a leaver either (#436)', () => {
+  // This case kept the countdown when the PvE half shipped (aad6f186); the PvP
+  // half turned it off too. Both reasons are recorded in lifecycle-windows.ts,
+  // and they are separate flags because only this one is waiting on evidence.
   const room = makeRoom('ff-pvp', 'dark-chess', move2Events('ff-pvp'));
   room.clients.add(makeClient('wc', 'white'));
   scheduleForfeitTimeout(makeCtx(), room);
-  assert.equal(room.forfeitSeat, 'black');
-  clearForfeitTimer(room);
+  assert.equal(room.forfeitSeat, null);
+  assert.equal(room.forfeitTimer, null);
 });
