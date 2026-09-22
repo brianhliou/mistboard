@@ -1,21 +1,9 @@
 import { readFileSync } from 'node:fs';
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { isArticleTranslationPublished } from './article-i18n.js';
 import {
   BANQI_BOARD_W,
   BANQI_ENGINE_THUMBNAIL,
   BANQI_RULES_THUMBNAIL,
-  BANQI_SETUP_BOARD,
-  JUNGLE_ELEPHANT_STUCK,
-  JUNGLE_FLIP_REVEAL,
-  JUNGLE_LION_LEAP_ACROSS,
-  JUNGLE_LION_LEAP_CAPTURE,
-  JUNGLE_RAT_BLOCKS,
-  JUNGLE_TIGER_NO_HORIZONTAL,
-  XQ_FOG_SAMPLE_STATES,
-  XQ_FOG_SAMPLE_STEPS,
-  XQ_PRIMER_FACING_LEGAL,
-  XQ_PRIMER_HORSE_BLOCKED,
 } from './articles/diagrams.js';
 import { articleIsLive } from './articles/publish-time.js';
 import {
@@ -23,7 +11,6 @@ import {
   buildArticlesIndex,
   buildHomeArticleCards,
   buildRulesIndex,
-  mountPendingWidgets,
 } from './articles.js';
 import { articles } from './articles-data.js';
 

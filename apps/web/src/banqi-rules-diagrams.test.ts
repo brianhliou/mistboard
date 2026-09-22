@@ -52,7 +52,10 @@ describe('banqi replay board (the study embed)', () => {
       '@mistboard/game'
     );
     let n = 0.37;
-    const deal = createBanqiDeal(() => (n = (n * 9301 + 49297) % 233280) / 233280);
+    const deal = createBanqiDeal(() => {
+      n = (n * 9301 + 49297) % 233280;
+      return n / 233280;
+    });
     const rootFen = banqiStateToDealtFen(createInitialBanqiState('t', deal));
     const host = document.createElement('div');
     const board = mountBanqiReplayBoard(host, { rootFen, moves: ['b2b2', 'c2c2'] }, {});
