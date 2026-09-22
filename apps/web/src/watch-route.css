@@ -807,9 +807,11 @@
 }
 
 /* A live broadcast is not scrubbable: the Top channel's live board follows the
-   game to the latest ply, so hide the right-rail move list + replay controls
-   (the seat rows stay, sans clocks — live payloads carry no ratings/clocks). */
-.watch-live-mode .watch-game-table .replay-console {
+   game to the latest ply, so hide the replay controls. The move list and the
+   clocks stay (the live payload carries a timeline and the server clock; the
+   rail reads both off the live handle), so a live game on /watch reads like
+   the room does. */
+.watch-live-mode .watch-game-table .replay-controls {
   display: none;
 }
 

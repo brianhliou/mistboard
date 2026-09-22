@@ -274,7 +274,8 @@ test('a playing open-visibility tenant room becomes a live candidate', () => {
   assert.equal(candidate.roomId, 'fko_1');
   assert.equal(candidate.channelId, 'xiangqi');
   assert.equal(candidate.composition, 'pvp');
-  assert.equal(candidate.ply, 4);
+  // Plies played (one move-played event), not the state's moveNumber (4).
+  assert.equal(candidate.ply, 1);
   const named = candidate.players.find((player) => player.name === 'Ada');
   assert.ok(named, 'seat-token display name should surface');
 });
@@ -489,6 +490,20 @@ test('GET /api/watch/live serves the featured open game with its payload, omitte
     (stale.payload.featured as Record<string, unknown>).payload,
     fakePayloadFor('fko_1'),
   );
+
+  // The second mover's ply is a change too: the room's moveNumber has not
+  // advanced, but the follower must get the new position (until 2026-09-21
+  // the token was the moveNumber and every first-mover move read as
+  // "unchanged", so the live boards lagged a ply half the time).
+  const room = openRooms.get('fko_1')!;
+  openRooms.set('fko_1', {
+    ...room,
+    events: [...(room.events ?? []), { type: 'move-played', at: NOW - 500 }],
+  });
+  const next = await getLive(`?channel=xiangqi&room=fko_1&ply=${ply}`);
+  const nextFeatured = next.payload.featured as Record<string, unknown>;
+  assert.equal(nextFeatured.ply, ply + 1);
+  assert.deepEqual(nextFeatured.payload, fakePayloadFor('fko_1'));
 });
 
 test('an open tenant WITHOUT a live payload builder never yields candidates (capability gate)', () => {
