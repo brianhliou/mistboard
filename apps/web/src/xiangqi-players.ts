@@ -7,6 +7,7 @@
 // same kind of page as an event page, and the reader crosses between them.
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
+import { buildCommunityLayout } from './community-rail.js';
 import { CXA_POINTS, CXA_POINTS_LISTS } from './players/cxa-points.js';
 import { CXA_LISTS, CXA_RATINGS } from './players/cxa-ratings.js';
 import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
@@ -63,7 +64,7 @@ export async function mountXiangqiPlayersIndex(root: HTMLElement): Promise<void>
   setRoot(root, 'Loading players');
   try {
     const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
-    root.replaceChildren(buildNav(), renderIndex(data.players));
+    root.replaceChildren(buildNav(), renderIndex(data.players).main);
   } catch (err) {
     renderError(root, err);
   }
@@ -76,7 +77,7 @@ export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promi
       `/api/xiangqi/players/${encodeURIComponent(slug)}`,
     );
     document.title = `${displayName(data.player)} · Mistboard`;
-    root.replaceChildren(buildNav(), renderPlayer(data.player, data.boards));
+    root.replaceChildren(buildNav(), renderPlayer(data.player, data.boards).main);
   } catch (err) {
     renderError(root, err);
   }
@@ -147,7 +148,7 @@ export function playerTitle(player: Pick<PlayerRecord, 'slug' | 'name'>): Player
 // ---------------------------------------------------------------------------
 // The index: one row per player, a search box, sortable by the column headers.
 
-function renderIndex(players: PlayerRecord[]): HTMLElement {
+function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
   const main = shell();
   const events = new Set(players.flatMap((p) => p.events.map((e) => e.tourSlug)));
 
@@ -309,7 +310,10 @@ function cell(text: string, className?: string): HTMLTableCellElement {
 // ---------------------------------------------------------------------------
 // One player: photo and facts, the official rating, events, every board.
 
-function renderPlayer(player: PlayerRecord, boards: PlayerBoardRecord[]): HTMLElement {
+function renderPlayer(
+  player: PlayerRecord,
+  boards: PlayerBoardRecord[],
+): HTMLElement & { main: HTMLElement } {
   const main = shell();
   const profile = PLAYER_PROFILES[player.slug];
 
@@ -580,10 +584,16 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
 
 // ---------------------------------------------------------------------------
 
-function shell(): HTMLElement {
+/** The community shell with its rail (Leaderboard / … / Pro players), the
+ *  page content in the column beside it. Returns the column; callers append
+ *  sections to it and mount `main` on the root. */
+function shell(): HTMLElement & { main: HTMLElement } {
   const main = document.createElement('main');
-  main.className = 'xqb-shell';
-  return main;
+  main.className = 'site-section community-shell';
+  const column = Object.assign(document.createElement('div'), { main });
+  column.className = 'xqb-shell xqp-column';
+  main.append(buildCommunityLayout('/players', column));
+  return column;
 }
 
 function hero(input: {
