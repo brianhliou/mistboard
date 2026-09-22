@@ -7,6 +7,7 @@
 // same kind of page as an event page, and the reader crosses between them.
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
+import { CXA_POINTS, CXA_POINTS_LISTS } from './players/cxa-points.js';
 import { CXA_LISTS, CXA_RATINGS } from './players/cxa-ratings.js';
 import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
@@ -372,8 +373,20 @@ function renderPlayer(player: PlayerRecord, boards: PlayerBoardRecord[]): HTMLEl
   header.append(figure, copy);
   main.append(header);
 
-  const rating = ratingCard(player);
-  if (rating) main.append(rating);
+  const officialRating = [pointsCard(player), ratingCard(player)].filter(
+    (x): x is HTMLElement => x !== null,
+  );
+  if (officialRating.length > 0) {
+    const section = document.createElement('section');
+    section.className = 'xqb-section';
+    const h2 = document.createElement('h2');
+    h2.textContent = 'Official rating';
+    const cards = document.createElement('div');
+    cards.className = 'xqp-rating-row';
+    cards.append(...officialRating);
+    section.append(h2, cards);
+    main.append(section);
+  }
 
   const events = document.createElement('section');
   events.className = 'xqb-section';
@@ -419,24 +432,54 @@ function eventCard(event: PlayerEventRecord): HTMLElement {
   return card;
 }
 
-/** The CXA 等级分 series, when the player was on the lists: the last value,
- *  the last rank, and the shape of the series behind it. */
-function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
-  const entries = CXA_RATINGS[player.name];
+/** The current CXA 竞赛积分排名: tournament points over a rolling window,
+ *  replacing 等级分 since January 2026. One list published so far, so no
+ *  sparkline yet — the series grows every time the CXA posts a new one. */
+function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
+  const entries = CXA_POINTS[player.name];
   if (!entries || entries.length === 0) return null;
   const last = entries[entries.length - 1];
-  const lastList = CXA_LISTS.find((l) => l.id === last.list);
-  const section = document.createElement('section');
-  section.className = 'xqb-section';
-  const h2 = document.createElement('h2');
-  h2.textContent = 'Official rating';
+  const list = CXA_POINTS_LISTS.find((l) => l.id === last.list);
+  const size = list ? (last.group === 'men' ? list.men : list.women) : null;
   const card = document.createElement('div');
   card.className = 'xqp-rating';
   const head = document.createElement('div');
   head.className = 'xqp-rating-head';
   const label = document.createElement('span');
   label.className = 'xqp-rating-label';
-  label.textContent = 'CXA 等级分';
+  label.textContent = 'CXA 竞赛积分';
+  const value = document.createElement('span');
+  value.className = 'xqp-rating-value';
+  value.textContent = String(last.points);
+  head.append(label, value);
+  const sub = document.createElement('p');
+  sub.className = 'xqp-rating-sub';
+  sub.textContent = [
+    size !== null ? `#${last.rank} of ${size}` : `#${last.rank}`,
+    `${last.events} events, best ${last.best}`,
+    list?.window ? `rolling window since ${list.window[0]}` : null,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  card.append(head, sub);
+  return card;
+}
+
+/** The CXA 等级分 series, when the player was on the lists: the last value,
+ *  the last rank, and the shape of the series behind it. Closed history —
+ *  the CXA replaced it with tournament points in January 2026. */
+function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
+  const entries = CXA_RATINGS[player.name];
+  if (!entries || entries.length === 0) return null;
+  const last = entries[entries.length - 1];
+  const lastList = CXA_LISTS.find((l) => l.id === last.list);
+  const card = document.createElement('div');
+  card.className = 'xqp-rating';
+  const head = document.createElement('div');
+  head.className = 'xqp-rating-head';
+  const label = document.createElement('span');
+  label.className = 'xqp-rating-label';
+  label.textContent = 'CXA 等级分 (closed)';
   const value = document.createElement('span');
   value.className = 'xqp-rating-value';
   value.textContent = String(last.rating);
@@ -446,7 +489,7 @@ function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
   sub.textContent = [
     last.rank !== null && lastList ? `#${last.rank} of ${lastList.size}` : null,
     lastList ? `last list ${lastList.label}` : null,
-    'the CXA replaced Elo with tournament points in January 2026',
+    'replaced by tournament points in January 2026',
   ]
     .filter(Boolean)
     .join(' · ');
@@ -458,8 +501,7 @@ function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
     ),
     sub,
   );
-  section.append(h2, card);
-  return section;
+  return card;
 }
 
 /** An area sparkline, lichess-style: no axes, the series is the shape. */
