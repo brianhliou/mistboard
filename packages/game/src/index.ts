@@ -17,6 +17,7 @@ export * from './jieqi-fen.js';
 export * from './js-compat.js';
 export * from './jungle-fen.js';
 export * from './jungle-flip-fen.js';
+export * from './jungle-katago-gtp.js';
 export * from './notation.js';
 export * from './practice.js';
 export * from './practice-catalog.js';
