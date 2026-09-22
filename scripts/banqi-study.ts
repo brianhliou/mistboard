@@ -134,9 +134,10 @@ function describe(game: SelfPlayGame, index: number): StudyGame {
   const reason = status.type === 'finished' ? status.reason : 'unfinished';
   const moves = Math.ceil(tokens.length / 2);
   const result = winnerSeat === 'red' ? '1-0' : winnerSeat === 'black' ? '0-1' : '1/2-1/2';
+  const loserInk = winnerSeat ? inkOf(winnerSeat === 'red' ? 'black' : 'red') : null;
   const ending =
     reason === 'stalemate'
-      ? `${winnerSeat === 'red' ? 'Black' : 'Red'} was left with no move`
+      ? `${loserInk === 'red' ? 'Red' : 'Black'} was left with no move`
       : reason === 'no-progress'
         ? 'forty plies passed with no flip or capture'
         : reason === 'repetition'

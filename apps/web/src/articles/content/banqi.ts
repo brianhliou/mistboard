@@ -168,11 +168,11 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/Hs0q6Z26) has every game from the same run, one chapter each, with a note on how it went.',
+          text: 'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has every game from the same run, one chapter each, with a note on how it went.',
         },
         {
           kind: 'embed',
-          path: '/embed/study/Hs0q6Z26/spkosVAN',
+          path: '/embed/study/FsA5sowX/spkosVAN',
           title: 'Banqi: an engine game under the competition rules',
           // Width-bound at the article column: a 2:1 board beside the 226px
           // sheet, plus the seat rows, controls and credit line.
@@ -227,7 +227,7 @@ export const banqiArticle: Article = {
             { label: 'Play vs computer', href: '/?play=computer&gameSpecId=banqi', emphasis: 'primary' },
             { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=banqi', emphasis: 'secondary' },
             { label: 'How MistyBanqi plays', href: '/blog/mistybanqi', emphasis: 'secondary' },
-            { label: 'The engine games', href: '/study/Hs0q6Z26', emphasis: 'secondary' },
+            { label: 'The engine games', href: '/study/FsA5sowX', emphasis: 'secondary' },
           ],
         },
       ],

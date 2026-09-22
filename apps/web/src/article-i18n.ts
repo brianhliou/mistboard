@@ -2765,8 +2765,8 @@ const ZH_HANS: Record<string, string> = {
   'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
     'Mistboard 采用台湾规则，加上台湾电脑对局协会的比赛和棋规则（Chen、Shen 与 Hsu，ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。两条有文献记载的变体规则刻意不采用：炮不能吃暗子，将永远不能吃卒，就算是它的第一步也一样。如果你学的是另一套大小顺序，本页这一套才是引擎和站上每一盘棋遵守的。',
   'An engine game': '一盘引擎对局',
-  'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/Hs0q6Z26) has every game from the same run, one chapter each, with a note on how it went.':
-    'MistyBanqi 自己对自己，每步一千万个节点，是站上机器人棋力的三倍。用箭头一步一步看。[配套研究](/study/Hs0q6Z26)收了同一批的每一盘，一盘一章，附一段说明。',
+  'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has every game from the same run, one chapter each, with a note on how it went.':
+    'MistyBanqi 自己对自己，每步一千万个节点，是站上机器人棋力的三倍。用箭头一步一步看。[配套研究](/study/FsA5sowX)收了同一批的每一盘，一盘一章，附一段说明。',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
   'The engine games': '引擎对局',
 };
@@ -5284,8 +5284,8 @@ const ZH_HANT: Record<string, string> = {
   'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
     'Mistboard 採用台灣規則，加上台灣電腦對局協會的比賽和棋規則（Chen、Shen 與 Hsu，ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。兩條有文獻記載的變體規則刻意不採用：砲不能吃暗子，將永遠不能吃卒，就算是它的第一步也一樣。如果你學的是另一套大小順序，本頁這一套才是引擎和站上每一盤棋遵守的。',
   'An engine game': '一盤引擎對局',
-  'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/Hs0q6Z26) has every game from the same run, one chapter each, with a note on how it went.':
-    'MistyBanqi 自己對自己，每步一千萬個節點，是站上機器人棋力的三倍。用箭頭一步一步看。[配套研究](/study/Hs0q6Z26)收了同一批的每一盤，一盤一章，附一段說明。',
+  'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has every game from the same run, one chapter each, with a note on how it went.':
+    'MistyBanqi 自己對自己，每步一千萬個節點，是站上機器人棋力的三倍。用箭頭一步一步看。[配套研究](/study/FsA5sowX)收了同一批的每一盤，一盤一章，附一段說明。',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
   'The engine games': '引擎對局',
 };
