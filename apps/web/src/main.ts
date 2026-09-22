@@ -36,7 +36,7 @@ import {
   registerNotificationSource,
 } from './notification-nav.js';
 import { setRatedModeEnabled } from './rated-flag.js';
-import { mountRestartBanner, setRestartBanner } from './restart-banner.js';
+import { mountRestartBanner, refreshRestartBanner, setRestartBanner } from './restart-banner.js';
 import { initializeThemeSettings, pinSiteTheme } from './theme.js';
 import {
   type WebVariantTenant,
@@ -94,9 +94,14 @@ if (isEmbedDocument) {
 }
 
 // The account nav renders localized labels, so it waits for the locale chunk
-// like the route mounts do (mountOrReport). The restart banner is English-only.
+// like the route mounts do (mountOrReport). The restart banner mounts at once
+// (a drain must never wait on a chunk) and repaints in the page's language
+// once the chunk lands; until then it reads in English.
 if (!isEmbedDocument) {
-  void localeReady.then(() => initializeAccountNav());
+  void localeReady.then(() => {
+    initializeAccountNav();
+    refreshRestartBanner();
+  });
   mountRestartBanner();
 }
 // Its only consumers are the restart banner and the rated-mode flag, both of

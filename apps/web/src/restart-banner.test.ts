@@ -1,5 +1,5 @@
-import { beforeEach, describe, expect, it } from 'vitest';
-import { mountRestartBanner, setRestartBanner } from './restart-banner.js';
+import { afterEach, beforeEach, describe, expect, it } from 'vitest';
+import { mountRestartBanner, refreshRestartBanner, setRestartBanner } from './restart-banner.js';
 
 function getBanner(): HTMLDivElement {
   const el = document.body.querySelector<HTMLDivElement>('.restart-banner');
@@ -52,5 +52,33 @@ describe('restart-banner', () => {
     expect(getBanner().hidden).toBe(false);
     setRestartBanner(null);
     expect(getBanner().hidden).toBe(true);
+  });
+
+  describe('in a Chinese locale', () => {
+    afterEach(() => {
+      window.history.replaceState(null, '', '/');
+    });
+
+    it('reads in the page language, and repaints when the locale lands after the phase', () => {
+      // Painted in English first (the boot fetch can answer before the locale
+      // chunk), then the chunk lands and the visible phase is repainted.
+      setRestartBanner('restarting');
+      expect(getLabelText()).toBe('Server restarting now');
+      window.history.replaceState(null, '', '/zh-hans/');
+      refreshRestartBanner();
+      expect(getLabelText()).toBe('服务器正在重启');
+      expect(getHintText()).toBe('请稍后重新连接。');
+
+      window.history.replaceState(null, '', '/zh-hant/');
+      setRestartBanner('pending');
+      expect(getLabelText()).toBe('即將更新');
+    });
+
+    it('refresh with no phase on screen keeps the banner hidden', () => {
+      setRestartBanner(null);
+      window.history.replaceState(null, '', '/zh-hans/');
+      refreshRestartBanner();
+      expect(getBanner().hidden).toBe(true);
+    });
   });
 });
