@@ -9,6 +9,7 @@
 // files are not in the repo; the test beside this file checks that each figure
 // still sums to the sample it claims.
 import {
+  banqiBackPieces,
   BANQI_BOARD_H,
   BANQI_BOARD_W,
   BANQI_CELL,
@@ -201,28 +202,11 @@ export const BANQI_STATS_AFTER = exhibitBoard(
   'red',
 );
 
-// Card thumbnail: the settle histogram with its labels stripped, at the 320x200
-// the luck article's chart thumbnail uses. A board would say "banqi" and stop;
-// this says "banqi, measured", and the two tall ends are the post's most
-// distinctive finding legible at card size, where any label would not be.
-export const BANQI_STATS_THUMBNAIL = () => {
-  const W = 320;
-  const H = 200;
-  const pad = 18;
-  const baseline = H - 24;
-  const max = Math.max(...LEAD_SETTLE.counts);
-  const slot = (W - pad * 2) / LEAD_SETTLE.counts.length;
-  const barW = slot - 6;
-  const bars = LEAD_SETTLE.counts.map((count, i) => {
-    const h = Math.round((count / max) * (baseline - 34));
-    const x = pad + i * slot + 3;
-    const strong = count > max * 0.6;
-    return `<rect x="${x}" y="${baseline - h}" width="${barW}" height="${h}" rx="3" fill="var(--site-accent, #15785b)" fill-opacity="${strong ? 0.95 : 0.45}"/>`;
-  });
-  return [
-    `<svg viewBox="0 0 ${W} ${H}" xmlns="http://www.w3.org/2000/svg" style="width:100%;height:auto" role="img">`,
-    ...bars,
-    `<line x1="${pad}" y1="${baseline + 4}" x2="${W - pad}" y2="${baseline + 4}" stroke="var(--xq-diagram-ink, #4b3c2a)" stroke-opacity="0.45" stroke-width="2"/>`,
-    `</svg>`,
-  ].join('');
-};
+// Card thumbnail: the position every banqi game starts from, all thirty-two
+// tiles face down. On an index of board cards the card's job is to be
+// recognisable at 140px rather than to argue the finding, and the share card
+// (apps/server/src/og-image.ts) already carries the numbers. Distinguishable
+// from the MistyBanqi card, which is the same board thirty plies in with
+// pieces revealed.
+export const BANQI_STATS_THUMBNAIL = () =>
+  xqSvg(BANQI_BOARD_W, BANQI_BOARD_H, [banqiBoardGrid(0, 0), banqiBackPieces(0, 0)].join(''));
