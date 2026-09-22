@@ -87,6 +87,7 @@ Conventions:
 
 ### Site
 
+- Statistics shows one Games per week chart, switchable by variant, over full weeks only; the week in progress is a line of text under it, both charts on the page share the same start and the same Monday ticks, and the always-rising Games over time chart is gone ([c3bab05d](https://github.com/brianhliou/mistboard/commit/c3bab05d))
 - The homepage's event spotlight lists broadcasts on its own: a tour that is live, starting within two weeks, under way, or finished in the last week gets a row linking to its broadcast page, so an event no longer depends on someone editing the homepage. It sits under the games-played line in the play column, level with the bottom of the lobby panel ([7564fcbd](https://github.com/brianhliou/mistboard/commit/7564fcbd), [76e161b4](https://github.com/brianhliou/mistboard/commit/76e161b4))
 - The homepage has a two-column layout between 960 and 1240px wide (lobby, forum and chat beside a rail with Play, the viewer, the daily puzzle and Top studies), instead of dropping from three columns to one narrow column ([109eeaf8](https://github.com/brianhliou/mistboard/commit/109eeaf8))
 - Patron support takes a one-time payment as well as a monthly subscription, over the same $5/10/20/50 amounts; a one-time payment carries the badge for one month per $5, and Stripe Checkout offers Alipay and WeChat Pay on it, so a mainland Chinese player can pay without a card ([17616293](https://github.com/brianhliou/mistboard/commit/17616293))
@@ -112,6 +113,8 @@ Conventions:
 
 ### Fixed
 
+- The admin engine roster credits live bot games to the engine that played them, so Pikafish's jieqi games and each Fairy-Stockfish level's games per variant appear under their engine instead of nowhere; rows show the bot's name and variant, and bot seats now record their engine ([59d5bda8](https://github.com/brianhliou/mistboard/commit/59d5bda8))
+- The admin game database splits results by seat only inside one variant (Red/Black, White/Black, First/Second for flip games) and shows decisive vs draw across all variants, instead of adding chess Black and xiangqi Black into one bar ([caea0157](https://github.com/brianhliou/mistboard/commit/caea0157))
 - The study curator runs ten minutes after a deploy instead of an hour after, so a day of frequent deploys can no longer keep it from ever running ([28a82e5e](https://github.com/brianhliou/mistboard/commit/28a82e5e))
 - The International piece set draws every piece with one outline weight, matched to the disc ring: a soldier over the river no longer looks bolder than one at home, and the soldiers, elephant and cannon sit at the same weight as the rest ([e5ac3804](https://github.com/brianhliou/mistboard/commit/e5ac3804) to [e907139d](https://github.com/brianhliou/mistboard/commit/e907139d))
 - In Chinese, the watch page, every game review page, the games list, the profile and the analysis board no longer show English pieces (channel names, Guest, BOT, "Red wins by General captured", "3 days ago", the Truth/White/Black view buttons); the result line is one translated sentence ([4e363185](https://github.com/brianhliou/mistboard/commit/4e363185))
@@ -141,6 +144,7 @@ Conventions:
 
 ### Technical
 
+- The readout judges a games surge with the busiest player's games removed and prints that player's share, and raises `product-abort-share-high` once when aborts cross 40% of the games that ended; migration 148 adds `game_participants.engine_id` ([f4303bc4](https://github.com/brianhliou/mistboard/commit/f4303bc4), [59d5bda8](https://github.com/brianhliou/mistboard/commit/59d5bda8))
 - Player index API, derived from the broadcast archive: `GET /api/xiangqi/players` (every name with a finished game in an A-level event, games and W-D-L per event) and `/api/xiangqi/players/:slug` (the player and every board they sat at); the data layer under the coming /players pages ([93d5cc8b](https://github.com/brianhliou/mistboard/commit/93d5cc8b))
 - Broadcast pages fire `broadcast_opened`, the SSE streams count their viewers (today's and since-boot peaks on `/api/server-status` and a readout line), and `npm run curate:studies` runs the study curator by hand; the hourly job is behind `MISTBOARD_STUDY_CURATOR_ENABLED` ([b9e8dadb](https://github.com/brianhliou/mistboard/commit/b9e8dadb), [e6ed9ee9](https://github.com/brianhliou/mistboard/commit/e6ed9ee9))
 - The daily readout replays every stored broadcast board the way the board API does and raises `broadcast-boards-unservable` when the count of boards it would 500 on grows; the replay helpers live in `xiangqi-broadcast-serving.ts` so the sweep and the route judge a row by one loop ([622cab22](https://github.com/brianhliou/mistboard/commit/622cab22))
