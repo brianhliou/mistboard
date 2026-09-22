@@ -24,6 +24,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-21',
+    kind: 'update',
+    headline: 'The Jungle tiger now jumps the river sideways.',
+    body: 'Until today the tiger on Mistboard leapt a river lengthwise only and the lion both ways, the reading in English Wikipedia. The Chinese rule sets, and the digital versions most players come from, give both animals the same leap, so the tiger now has it too: on the board, in the bot and the analysis engine, on the rules page in three languages, and in the puzzles (one that the new jump refutes is withdrawn). Every earlier game stays legal as played; the change only adds moves.',
+    href: '/rules/jungle',
+    cta: 'Jungle rules',
+  },
+  {
     date: '2026-09-20',
     kind: 'status',
     headline: 'Wanted: a neural network for Jieqi.',

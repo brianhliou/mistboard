@@ -238,7 +238,7 @@ export const jungleArticle: Article = {
             {
               question: 'Which animals can jump the river?',
               answer:
-                'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do.',
+                'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do. Until 21 September 2026 the tiger on Mistboard jumped lengthwise only, so games and puzzles from before then were played under that rule.',
             },
             {
               question: 'How do the traps work?',

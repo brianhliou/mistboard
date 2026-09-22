@@ -2541,8 +2541,8 @@ const ZH_HANS: Record<string, string> = {
   'No, never. The rat is the only piece that can capture the elephant, and only from a land square. A rat in the river cannot capture onto land.':
     '不行，永远不行。鼠是唯一能吃象的棋子，而且只能从陆地格吃。河里的鼠不能吃岸上的棋子。',
   'Which animals can jump the river?': '斗兽棋哪些动物可以跳河？',
-  'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do.':
-    '狮和虎都可以横跳或直跳过河，落在河对岸的第一格，落点若有敌子且等级允许就可以吃。跳跃路线上的任一水格若有任何一方的鼠，就不能跳。部分英文规则只允许狮横跳；Mistboard 采用中文规则，狮和虎都可以。',
+  'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do. Until 21 September 2026 the tiger on Mistboard jumped lengthwise only, so games and puzzles from before then were played under that rule.':
+    '狮和虎都可以横跳或直跳过河，落在河对岸的第一格，落点若有敌子且等级允许就可以吃。跳跃路线上的任一水格若有任何一方的鼠，就不能跳。部分英文规则只允许狮横跳；Mistboard 采用中文规则，狮和虎都可以。2026 年 9 月 21 日之前，Mistboard 上的虎只能直跳，此前的对局和残局都是按那条规则进行的。',
   'How do the traps work?': '斗兽棋的陷阱怎么用？',
   'An animal standing on one of the three trap squares around the enemy den loses all rank, so any defender can capture it, even a rat taking an elephant. Your own traps do nothing to your own animals.':
     '动物站在敌方兽穴旁的三个陷阱格上时会失去所有等级，任何防守的棋子都能吃它，连鼠都能吃掉陷阱里的象。自己的陷阱对自己的动物没有影响。',
@@ -5001,8 +5001,8 @@ const ZH_HANT: Record<string, string> = {
   'No, never. The rat is the only piece that can capture the elephant, and only from a land square. A rat in the river cannot capture onto land.':
     '不行，永遠不行。鼠是唯一能吃象的棋子，而且只能從陸地格吃。河裡的鼠不能吃岸上的棋子。',
   'Which animals can jump the river?': '鬥獸棋哪些動物可以跳河？',
-  'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do.':
-    '獅和虎都可以橫跳或直跳過河，落在河對岸的第一格，落點若有敵子且等級允許就可以吃。跳躍路線上的任一水格若有任何一方的鼠，就不能跳。部分英文規則只允許獅橫跳；Mistboard 採用中文規則，獅和虎都可以。',
+  'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do. Until 21 September 2026 the tiger on Mistboard jumped lengthwise only, so games and puzzles from before then were played under that rule.':
+    '獅和虎都可以橫跳或直跳過河，落在河對岸的第一格，落點若有敵子且等級允許就可以吃。跳躍路線上的任一水格若有任何一方的鼠，就不能跳。部分英文規則只允許獅橫跳；Mistboard 採用中文規則，獅和虎都可以。2026 年 9 月 21 日之前，Mistboard 上的虎只能直跳，此前的對局和殘局都是按那條規則進行的。',
   'How do the traps work?': '鬥獸棋的陷阱怎麼用？',
   'An animal standing on one of the three trap squares around the enemy den loses all rank, so any defender can capture it, even a rat taking an elephant. Your own traps do nothing to your own animals.':
     '動物站在敵方獸穴旁的三個陷阱格上時會失去所有等級，任何防守的棋子都能吃它，連鼠都能吃掉陷阱裡的象。自己的陷阱對自己的動物沒有影響。',
