@@ -6,6 +6,7 @@ import {
   createInitialJungleState,
   getJungleLegalMovesFrom,
   JUNGLE_DENS,
+  JUNGLE_JUMP_DIRS,
   type JungleBoard,
   type JungleColor,
   type JungleGameState,
@@ -126,17 +127,35 @@ test('rat-beats-elephant works on land but not from the water', () => {
 
 // ── Lion / tiger river jumps ─────────────────────────────────────────────────
 
-test('lion jumps the river vertically and horizontally; tiger vertical only', () => {
+test('lion and tiger both jump the river vertically and horizontally', () => {
   // West lake = files b,c ranks 4-6. Vertical jump from b3 -> b7 (over b4,b5,b6).
   const lionV = playing({ b3: p('red', 'lion') });
   assert.ok(dests(lionV, 'b3').includes('b7'));
   const tigerV = playing({ b3: p('red', 'tiger') });
   assert.ok(dests(tigerV, 'b3').includes('b7'));
-  // Horizontal jump at rank 4 from a4 -> d4 (over b4,c4). Lion yes, tiger no.
+  // Horizontal jump at rank 4 from a4 -> d4 (over b4,c4), for both animals.
   const lionH = playing({ a4: p('red', 'lion') });
   assert.ok(dests(lionH, 'a4').includes('d4'));
   const tigerH = playing({ a4: p('red', 'tiger') });
-  assert.ok(!dests(tigerH, 'a4').includes('d4'));
+  assert.ok(dests(tigerH, 'a4').includes('d4'));
+  // From the central lane the tiger clears BOTH lakes sideways, like the lion.
+  const tigerMid = playing({ d5: p('red', 'tiger') });
+  assert.deepEqual(
+    dests(tigerMid, 'd5').filter((sq) => sq === 'a5' || sq === 'g5'),
+    ['a5', 'g5'],
+  );
+  // Nobody else jumps: a leopard on the same square only steps along the lane.
+  const leopard = playing({ d5: p('red', 'leopard') });
+  assert.ok(!dests(leopard, 'd5').includes('a5'));
+});
+
+test('the tiger jump is the same table as the lion jump, so the cue and the rules agree', () => {
+  assert.deepEqual(JUNGLE_JUMP_DIRS.tiger, JUNGLE_JUMP_DIRS.lion);
+});
+
+test('a rat in the lake blocks the tiger sideways as it does the lion', () => {
+  const blocked = playing({ a4: p('red', 'tiger'), c4: p('black', 'rat') });
+  assert.ok(!dests(blocked, 'a4').includes('d4'));
 });
 
 test('a rat of either colour in the lake blocks the jump', () => {

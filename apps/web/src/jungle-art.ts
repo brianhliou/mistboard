@@ -137,8 +137,8 @@ export function framedTokenSvg(opts: FramedTokenOptions): string {
  *
  * The DIRECTIONS are not written here. They are read out of the rules
  * (JUNGLE_JUMP_DIRS / jungleRoleMayEnterWater), so a badge cannot promise a jump
- * the move generator will refuse. In this ruleset the Tiger jumps VERTICALLY
- * only; only the Lion also jumps sideways.
+ * the move generator will refuse. In this ruleset the Tiger and the Lion both
+ * jump vertically or sideways (the Tiger was vertical-only until #430).
  *
  * Corner placement is screen-space and direction-free, so flipping the board for
  * Black's perspective needs no special case. The chevrons ARE direction-bearing,
@@ -235,9 +235,9 @@ const CUE_CORNERS: Record<JungleCueBadgeSpec['corner'], readonly [number, number
  *
  * Shaft, not a bare chevron. Four bare chevrons at this size close up into a
  * diamond outline: the reader sees one rhombus rather than four directions, which
- * loses the entire Tiger-vs-Lion distinction the badge exists to carry. Shafts
- * make the Lion a four-way arrow and the Tiger a double-headed vertical one --
- * two shapes nobody has to be taught.
+ * loses the distinction between a four-way and a two-way jumper. Shafts make
+ * a both-axes jumper a four-way arrow and a vertical-only one a double-headed
+ * vertical arrow -- two shapes nobody has to be taught.
  */
 function cueArrow(
   bx: number,
@@ -309,9 +309,9 @@ export function jungleCueBadgeSvg(
     return `${disc}<path d="${d}" fill="${spec.glyph}"/>`;
   }
 
-  // One arrow per direction the piece may LEAP. Two for the Tiger (vertical only),
-  // four for the Lion -- so the two badges differ in overall SHAPE, not in the
-  // count of marks a reader would have to stop and tally.
+  // One arrow per direction the piece may LEAP: four for a both-axes jumper (Lion
+  // and Tiger), two for a vertical-only one -- so the badges differ in overall
+  // SHAPE, not in the count of marks a reader would have to stop and tally.
   const dirs: ReadonlyArray<readonly [number, number]> =
     glyph === 'jump-ortho'
       ? [

@@ -934,7 +934,7 @@ const ZH_HANS: Record<string, string> = {
   'The same jump lengthwise, landing on the wolf and taking it.':
     '同样的跳跃沿河的长边进行，落在狼所在格并把它吃掉。',
   'The tiger clears the river the long way.': '虎沿河的长边跳过整条河。',
-  'The tiger on the lion’s square: no sideways jump.': '同一格换成虎：没有横向跳跃。',
+  'The tiger on the lion’s square: the same leaps sideways.': '同一格换成虎：同样可以横向跳河。',
   'The rat takes the elephant.': '鼠吃掉象。',
   'The elephant cannot take the rat back.': '象无法反过来吃掉鼠。',
   'A revealed animal steps one square.': '已翻开的动物走一格。',
@@ -1071,8 +1071,8 @@ const ZH_HANS: Record<string, string> = {
   'The lion can move one land square normally, or leap straight across a river horizontally or vertically. It lands on the first square beyond the water and may capture an animal there if rank allows.':
     '狮可以在陆地上正常移动一格，也可水平或垂直跳过整条河。它落在水面另一侧的第一格，等级允许时可吃掉那里的动物。',
   Tiger: '虎',
-  'The tiger can move one land square normally or leap vertically across a river. Unlike the lion, it cannot leap horizontally. A rat of either color on any water square in the path blocks either animal’s jump.':
-    '虎可以在陆地上正常移动一格，也可纵向跳过河流。与狮不同，它不能横向跳河。路径上任何水格里只要有一只任意颜色的鼠，就会阻止两种动物跳跃。',
+  'The tiger moves exactly like the lion: one land square, or a leap straight across a river lengthwise or sideways, landing on the first square past the water. A rat of either color on any water square in the path blocks either animal’s jump.':
+    '虎的走法与狮完全相同：在陆地上走一格，或者纵向、横向直线跳过河流，落在河对岸的第一格。路径上任何水格里只要有一只任意颜色的鼠，就会阻止两种动物跳跃。',
   'A rat in the river blocks the leap.': '河中的鼠会挡住跳跃。',
   'Flip Jungle is a compact hidden-piece relative of [Jungle Chess](/rules/jungle). All sixteen animals begin face-down on a 4×4 board. There are no rivers, dens, or traps: reveal tiles, move your animals, and eliminate the other color.':
     '翻翻棋是[斗兽棋](/rules/jungle)的紧凑型隐藏棋子变体。十六枚动物棋子全部背面朝上放在 4×4 棋盘上。这里没有河流、兽穴或陷阱：翻开棋子、移动动物，并消灭另一种颜色。',
@@ -2588,8 +2588,8 @@ const ZH_HANS: Record<string, string> = {
   'No, never. The rat is the only piece that can capture the elephant, and only from a land square. A rat in the river cannot capture onto land.':
     '不行，永远不行。鼠是唯一能吃象的棋子，而且只能从陆地格吃。河里的鼠不能吃岸上的棋子。',
   'Which animals can jump the river?': '斗兽棋哪些动物可以跳河？',
-  'The lion jumps a river sideways or lengthwise. On Mistboard the tiger jumps lengthwise only. Both land on the first square past the water and may capture there. A rat of either color on any water square in the path blocks the jump.':
-    '狮可以横跳或直跳过河。在 Mistboard 上，虎只能直跳。两者都落在河对岸的第一格，落点若有敌子且等级允许就可以吃。跳跃路线上的任一水格若有任何一方的鼠，就不能跳。',
+  'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do.':
+    '狮和虎都可以横跳或直跳过河，落在河对岸的第一格，落点若有敌子且等级允许就可以吃。跳跃路线上的任一水格若有任何一方的鼠，就不能跳。部分英文规则只允许狮横跳；Mistboard 采用中文规则，狮和虎都可以。',
   'How do the traps work?': '斗兽棋的陷阱怎么用？',
   'An animal standing on one of the three trap squares around the enemy den loses all rank, so any defender can capture it, even a rat taking an elephant. Your own traps do nothing to your own animals.':
     '动物站在敌方兽穴旁的三个陷阱格上时会失去所有等级，任何防守的棋子都能吃它，连鼠都能吃掉陷阱里的象。自己的陷阱对自己的动物没有影响。',
@@ -3767,7 +3767,7 @@ const ZH_HANT: Record<string, string> = {
   'The same jump lengthwise, landing on the wolf and taking it.':
     '同樣的跳躍沿河的長邊進行，落在狼所在格並把它吃掉。',
   'The tiger clears the river the long way.': '虎沿河的長邊跳過整條河。',
-  'The tiger on the lion’s square: no sideways jump.': '同一格換成虎：沒有橫向跳躍。',
+  'The tiger on the lion’s square: the same leaps sideways.': '同一格換成虎：同樣可以橫向跳河。',
   'The elephant cannot take the rat back.': '象無法反過來吃掉鼠。',
   'A revealed animal steps one square.': '已翻開的動物走一格。',
   'On red’s trap the lion is rank 0, so a cat takes it.':
@@ -3782,8 +3782,8 @@ const ZH_HANT: Record<string, string> = {
     '鼠是唯一能進入水中的動物。河中的鼠可以移動，也可吃掉另一隻河中的鼠，但任何棋子都不能隔著水岸吃子：陸地上的鼠不能吃進水中，水中的鼠也不能吃上陸地。',
   Lion: '獅',
   Tiger: '虎',
-  'The tiger can move one land square normally or leap vertically across a river. Unlike the lion, it cannot leap horizontally. A rat of either color on any water square in the path blocks either animal’s jump.':
-    '虎可以在陸地上正常移動一格，也可縱向跳過河流。與獅不同，它不能橫向跳河。路徑上任何水格裡只要有一隻任意顏色的鼠，就會阻止兩種動物跳躍。',
+  'The tiger moves exactly like the lion: one land square, or a leap straight across a river lengthwise or sideways, landing on the first square past the water. A rat of either color on any water square in the path blocks either animal’s jump.':
+    '虎的走法與獅完全相同：在陸地上走一格，或者縱向、橫向直線跳過河流，落在河對岸的第一格。路徑上任何水格裡只要有一隻任意顏色的鼠，就會阻止兩種動物跳躍。',
   'Flip Jungle is a compact hidden-piece relative of [Jungle Chess](/rules/jungle). All sixteen animals begin face-down on a 4×4 board. There are no rivers, dens, or traps: reveal tiles, move your animals, and eliminate the other color.':
     '翻翻棋是[鬥獸棋](/rules/jungle)的緊湊型隱藏棋子變體。十六枚動物棋子全部背面朝上放在 4×4 棋盤上。這裡沒有河流、獸穴或陷阱：翻開棋子、移動動物，並消滅另一種顏色。',
   'FIRST FLIP ASSIGNS COLOR': '首次翻子決定顏色',
@@ -5046,8 +5046,8 @@ const ZH_HANT: Record<string, string> = {
   'No, never. The rat is the only piece that can capture the elephant, and only from a land square. A rat in the river cannot capture onto land.':
     '不行，永遠不行。鼠是唯一能吃象的棋子，而且只能從陸地格吃。河裡的鼠不能吃岸上的棋子。',
   'Which animals can jump the river?': '鬥獸棋哪些動物可以跳河？',
-  'The lion jumps a river sideways or lengthwise. On Mistboard the tiger jumps lengthwise only. Both land on the first square past the water and may capture there. A rat of either color on any water square in the path blocks the jump.':
-    '獅可以橫跳或直跳過河。在 Mistboard 上，虎只能直跳。兩者都落在河對岸的第一格，落點若有敵子且等級允許就可以吃。跳躍路線上的任一水格若有任何一方的鼠，就不能跳。',
+  'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do.':
+    '獅和虎都可以橫跳或直跳過河，落在河對岸的第一格，落點若有敵子且等級允許就可以吃。跳躍路線上的任一水格若有任何一方的鼠，就不能跳。部分英文規則只允許獅橫跳；Mistboard 採用中文規則，獅和虎都可以。',
   'How do the traps work?': '鬥獸棋的陷阱怎麼用？',
   'An animal standing on one of the three trap squares around the enemy den loses all rank, so any defender can capture it, even a rat taking an elephant. Your own traps do nothing to your own animals.':
     '動物站在敵方獸穴旁的三個陷阱格上時會失去所有等級，任何防守的棋子都能吃它，連鼠都能吃掉陷阱裡的象。自己的陷阱對自己的動物沒有影響。',

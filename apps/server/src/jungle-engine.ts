@@ -20,8 +20,11 @@ import { resolve } from 'node:path';
 import { runUciEval, UciEnginePool, type UciEval } from './uci-engine-harness.js';
 
 // The binary self-reports "MistyJungle <version>" over UCI; bump on every shipped
-// eval/search change so the per-game configHash stays meaningful.
-export const JUNGLE_RUST_ENGINE_VERSION = '0.0.4';
+// eval/search change so the per-game configHash stays meaningful. It is also the
+// analysis cache id (jungle-analysis.ts), so a RULES change bumps it too: 0.0.6 gives
+// the tiger the lion's sideways river jump (#430), and every eval cached under 0.0.4
+// was computed with a tiger that could not.
+export const JUNGLE_RUST_ENGINE_VERSION = '0.0.6';
 
 export type JungleRustTier = {
   id: string;

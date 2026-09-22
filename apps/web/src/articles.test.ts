@@ -11,7 +11,7 @@ import {
   JUNGLE_LION_LEAP_ACROSS,
   JUNGLE_LION_LEAP_CAPTURE,
   JUNGLE_RAT_BLOCKS,
-  JUNGLE_TIGER_NO_HORIZONTAL,
+  JUNGLE_TIGER_LEAP_ACROSS,
   XQ_FOG_SAMPLE_STATES,
   XQ_FOG_SAMPLE_STEPS,
   XQ_PRIMER_FACING_LEGAL,
@@ -861,7 +861,7 @@ describe('rules variant sidebar', () => {
       'Play on Mistboard',
     ]);
     expect(page.textContent).toContain('no piece can capture across the shoreline');
-    expect(page.textContent).toContain('Unlike the lion, it cannot leap horizontally');
+    expect(page.textContent).toContain('The tiger moves exactly like the lion');
     expect(page.textContent).toContain('leaving your opponent with no legal move');
     expect(page.innerHTML).toContain('red-elephant.png');
     expect(page.innerHTML).toContain('black-elephant.png');
@@ -874,11 +874,11 @@ describe('rules variant sidebar', () => {
   it('draws Jungle leaps as arrows and shows what cancels them', () => {
     const arrows = (svg: string): number => (svg.match(/class="xq-arrow"/g) ?? []).length;
 
-    // The lion on the dry lane clears BOTH rivers sideways; the tiger on the
-    // same square has no horizontal leap at all. Same position, different
-    // repertoire — the arrows are the whole difference.
+    // The lion on the dry lane clears BOTH rivers sideways, and so does the tiger
+    // on the same square (#430: the tiger has the lion's jump). Same position,
+    // same arrows; the diagram is drawn from the move generator, so it proves it.
     expect(arrows(JUNGLE_LION_LEAP_ACROSS)).toBe(2);
-    expect(arrows(JUNGLE_TIGER_NO_HORIZONTAL)).toBe(0);
+    expect(arrows(JUNGLE_TIGER_LEAP_ACROSS)).toBe(2);
 
     // A leap onto an occupied square keeps its capture ring, so the diagram
     // shows the landing AND the capture.

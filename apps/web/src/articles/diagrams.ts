@@ -96,7 +96,7 @@ export {
   JUNGLE_START_BOARD,
   JUNGLE_STEP,
   JUNGLE_TIGER_LEAP,
-  JUNGLE_TIGER_NO_HORIZONTAL,
+  JUNGLE_TIGER_LEAP_ACROSS,
   JUNGLE_TRAP,
 } from '../jungle-rules-diagrams.js';
 

@@ -13,8 +13,9 @@
 // rather than ring, so that is where this one goes. Numbers in jungle-art.ts.
 //
 // The GLYPH comes out of the rules (JUNGLE_JUMP_DIRS), never out of this file.
-// In this ruleset the TIGER jumps vertically only; only the LION jumps sideways
-// as well -- so the Tiger badge is a vertical bar and the Lion a cross.
+// Since 2026-09-21 (#430) the TIGER jumps sideways as well as vertically, like
+// the LION, so both badges are a cross; the vertical bar remains available for a
+// ruleset that restricts one of them again.
 //
 // Nothing here ships: main.ts gates the route on import.meta.env.DEV, and the
 // badge is off by default in jungle-art.ts.
@@ -34,7 +35,7 @@ const CONTROL_ROLE: JunglePieceRole = 'elephant';
 
 const ROLE_NOTE: Partial<Record<JunglePieceRole, string>> = {
   rat: 'enters the water — droplet',
-  tiger: 'jumps the river vertically only — a vertical bar',
+  tiger: 'jumps vertically or sideways — a cross',
   lion: 'jumps vertically or sideways — a cross',
   elephant: 'control: no river business, no badge',
 };
@@ -192,9 +193,9 @@ export function mountJungleCuesLab(root: HTMLElement): void {
     `<h1>Jungle river-ability badges</h1>` +
     `<p class="lede">A corner badge saying "this piece and the river have business with each ` +
     `other". Droplet = enters the water. A bar or a cross = leaps it, along those axes.</p>` +
-    `<div class="rule-callout"><strong>Rules check:</strong> in this ruleset the <strong>Tiger ` +
-    `jumps vertically only</strong> (a bar); the <strong>Lion</strong> jumps vertically ` +
-    `<em>or</em> sideways (a cross). The glyph is generated from <code>JUNGLE_JUMP_DIRS</code>, so ` +
+    `<div class="rule-callout"><strong>Rules check:</strong> in this ruleset the <strong>Tiger</strong> ` +
+    `and the <strong>Lion</strong> both jump vertically <em>or</em> sideways (a cross); a bar ` +
+    `would mean vertical only. The glyph is generated from <code>JUNGLE_JUMP_DIRS</code>, so ` +
     `it follows the move generator rather than a second copy of the rule.</div>`;
 
   const controls = document.createElement('div');

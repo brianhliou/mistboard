@@ -43,8 +43,8 @@ const REGISTRY_PINS: Record<SeedPuzzleRegistry, { count: number; hash: string }>
     hash: '4f53cda18c2baa0c0354bb5f9a3ecbe5ed12ab4d8e11ba873c2f11161202b945',
   },
   jungle: {
-    count: 110,
-    hash: '4fb627a5ea16fd17f3fc6a3fe8481c646de04e41114d1ff3427de1dd2cadbe92',
+    count: 109,
+    hash: 'c6811543b08a2bed8aed4be4bf1bbd5cbc942054f8fe5de6a18c19783434e621',
   },
   xiangqi: {
     count: 38,

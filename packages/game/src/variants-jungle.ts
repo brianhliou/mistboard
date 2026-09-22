@@ -28,9 +28,13 @@
 //     neither capture onto land nor be captured from land; only a water-Rat captures
 //     a water-Rat. The Rat-beats-Elephant wrap works only from a LAND square.
 //   - The Lion and Tiger jump a river: in line over the contiguous water to the land
-//     square beyond (capturing a takeable enemy there). The TIGER jumps VERTICALLY
-//     only; the LION jumps vertically OR horizontally. A Rat of EITHER colour on any
-//     intervening water square blocks the jump.
+//     square beyond (capturing a takeable enemy there), vertically OR horizontally,
+//     both animals alike. A Rat of EITHER colour on any intervening water square
+//     blocks the jump. Until 2026-09-21 the Tiger jumped vertically only, a reading
+//     that exists in English Wikipedia and nowhere else we checked (Tencent's QQ
+//     rules, Leiden's Dou Shou Qi page and KataGo-AnimalChess all give the Tiger the
+//     Lion's jump); see #430. The change only ADDS moves, so every recorded game
+//     stays legal under it.
 //   - Win = den-entry OR capturing all enemy pieces (subsumed by no-legal-move).
 //     Draws (academic/digital convention, not folk canon): the no-progress clock and
 //     threefold repetition.
@@ -163,21 +167,18 @@ const ORTHO: ReadonlyArray<readonly [number, number]> = [
 ];
 
 /**
- * River-jump directions by role, as [fileDelta, rankDelta]. The TIGER jumps
- * vertically only; the LION jumps vertically or horizontally; nobody else jumps.
+ * River-jump directions by role, as [fileDelta, rankDelta]. The LION and the
+ * TIGER both jump vertically or horizontally; nobody else jumps.
  *
  * Exported because the board's movement cue draws from it. A cue that restated
- * "tiger = vertical" in the art layer would be a second copy of a rule, free to
+ * the jump directions in the art layer would be a second copy of a rule, free to
  * drift into telling the player something the move generator will not honour;
  * reading the same table means the arcs cannot claim a jump that does not exist.
  */
 export const JUNGLE_JUMP_DIRS: Readonly<
   Partial<Record<JunglePieceRole, ReadonlyArray<readonly [number, number]>>>
 > = {
-  tiger: [
-    [0, 1],
-    [0, -1],
-  ],
+  tiger: ORTHO,
   lion: ORTHO,
 };
 
@@ -366,7 +367,7 @@ export function getJungleLegalMovesFrom(state: JungleGameState, from: JungleSqua
     tryLand(to);
   }
 
-  // Lion/Tiger river jumps. Tiger: vertical only. Lion: vertical or horizontal.
+  // Lion/Tiger river jumps, vertical or horizontal for both.
   const jumpDirs = JUNGLE_JUMP_DIRS[piece.role];
   if (jumpDirs) {
     for (const [df, dr] of jumpDirs) {

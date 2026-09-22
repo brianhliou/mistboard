@@ -14,7 +14,7 @@ import {
   JUNGLE_START_BOARD,
   JUNGLE_STEP,
   JUNGLE_TIGER_LEAP,
-  JUNGLE_TIGER_NO_HORIZONTAL,
+  JUNGLE_TIGER_LEAP_ACROSS,
   JUNGLE_TRAP,
   playClosing,
 } from '../diagrams.js';
@@ -112,15 +112,15 @@ export const jungleArticle: Article = {
         { kind: 'sub-heading', text: 'Tiger' },
         {
           kind: 'paragraph',
-          text: 'The tiger can move one land square normally or leap vertically across a river. Unlike the lion, it cannot leap horizontally. A rat of either color on any water square in the path blocks either animal’s jump.',
+          text: 'The tiger moves exactly like the lion: one land square, or a leap straight across a river lengthwise or sideways, landing on the first square past the water. A rat of either color on any water square in the path blocks either animal’s jump.',
         },
         {
           kind: 'svg-row',
           items: [
             { svg: JUNGLE_TIGER_LEAP, caption: 'The tiger clears the river the long way.' },
             {
-              svg: JUNGLE_TIGER_NO_HORIZONTAL,
-              caption: 'The tiger on the lion’s square: no sideways jump.',
+              svg: JUNGLE_TIGER_LEAP_ACROSS,
+              caption: 'The tiger on the lion’s square: the same leaps sideways.',
             },
           ],
         },
@@ -238,7 +238,7 @@ export const jungleArticle: Article = {
             {
               question: 'Which animals can jump the river?',
               answer:
-                'The lion jumps a river sideways or lengthwise. On Mistboard the tiger jumps lengthwise only. Both land on the first square past the water and may capture there. A rat of either color on any water square in the path blocks the jump.',
+                'The lion and the tiger both jump a river sideways or lengthwise, land on the first square past the water, and may capture there. A rat of either color on any water square in the path blocks the jump. Some English rule sets let only the lion jump sideways; Mistboard follows the Chinese rule sets, where both animals do.',
             },
             {
               question: 'How do the traps work?',
@@ -270,7 +270,11 @@ export const jungleArticle: Article = {
       playLabel: 'Play vs computer',
       playHref: '/?play=computer&gameSpecId=jungle',
       secondary: [
-        { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=jungle', emphasis: 'secondary' },
+        {
+          label: 'Challenge a friend',
+          href: '/?play=friend&gameSpecId=jungle',
+          emphasis: 'secondary',
+        },
       ],
     }),
   ],

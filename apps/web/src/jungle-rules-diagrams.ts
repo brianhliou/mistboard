@@ -201,7 +201,7 @@ export const JUNGLE_LION_LEAP_CAPTURE = jungleMoveDiagram({
   from: 'b3',
 });
 
-// The tiger's one leap: the same vertical clearance as the lion.
+// The tiger's leap along the lake: the same vertical clearance as the lion.
 export const JUNGLE_TIGER_LEAP = jungleMoveDiagram({
   id: '-tiger-leap',
   board: { b3: { color: 'red', role: 'tiger' } },
@@ -209,8 +209,10 @@ export const JUNGLE_TIGER_LEAP = jungleMoveDiagram({
 });
 
 // Deliberately the same square as JUNGLE_LION_LEAP_ACROSS: identical position,
-// different animal, and the two horizontal arrows are gone.
-export const JUNGLE_TIGER_NO_HORIZONTAL = jungleMoveDiagram({
+// different animal, identical arrows. The tiger has had the lion's sideways leap
+// since 2026-09-21 (#430); this diagram is drawn from the move generator, so it
+// is the proof that the two animals jump alike, not a claim about it.
+export const JUNGLE_TIGER_LEAP_ACROSS = jungleMoveDiagram({
   id: '-tiger-flat',
   board: { d4: { color: 'red', role: 'tiger' } },
   from: 'd4',

@@ -28,7 +28,9 @@ import type {
 // edge cache keys for the worker script, the JS glue, AND the wasm.
 // -coep1: the 0.2.4-2 keys were edge-cached before the server started sending
 // COEP/CORP on /engine/<pkg>/ assets (2026-07-16); fresh keys pick the headers up.
-const MISTY_ASSET_VERSION = '0.2.5-continuous2';
+// -tiger-jump: the misty-jungle wasm was rebuilt with the tiger's sideways river jump
+// (#430, 2026-09-21); a cached old wasm would analyse a different game than the bot plays.
+const MISTY_ASSET_VERSION = '0.2.6-tiger-jump';
 
 interface MistyEngineConfig {
   /** Public base path of the vendored wasm build. */
