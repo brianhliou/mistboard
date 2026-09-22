@@ -88,6 +88,7 @@ Conventions:
 
 ### Site
 
+- The server-restart banner ("Update pending", "Server restarting now") reads in the page's language on zh-Hans and zh-Hant pages ([146efc9d](https://github.com/brianhliou/mistboard/commit/146efc9d))
 - Statistics shows one Games per week chart, switchable by variant, over full weeks only; the week in progress is a line of text under it, both charts on the page share the same start and the same Monday ticks, and the always-rising Games over time chart is gone ([c3bab05d](https://github.com/brianhliou/mistboard/commit/c3bab05d))
 - The homepage's event spotlight lists broadcasts on its own: a tour that is live, starting within two weeks, under way, or finished in the last week gets a row linking to its broadcast page, so an event no longer depends on someone editing the homepage. It sits under the games-played line in the play column, level with the bottom of the lobby panel ([7564fcbd](https://github.com/brianhliou/mistboard/commit/7564fcbd), [76e161b4](https://github.com/brianhliou/mistboard/commit/76e161b4))
 - The homepage has a two-column layout between 960 and 1240px wide (lobby, forum and chat beside a rail with Play, the viewer, the daily puzzle and Top studies), instead of dropping from three columns to one narrow column ([109eeaf8](https://github.com/brianhliou/mistboard/commit/109eeaf8))
