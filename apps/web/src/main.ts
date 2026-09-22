@@ -873,7 +873,11 @@ if (replaySample) {
 } else if (wantsLag) {
   setTitleKey('lag.heading');
   void mountOrReport(() => import('./lag-page.js').then(({ mountLag }) => mountLag(appRoot)));
-} else if (path === '/') {
+} else if (path === '/' || path === '/zh-hans' || path === '/zh-hant') {
+  // The bare locale prefix is the Chinese home page, the same landing in the
+  // reader's language. Compared explicitly, the way /rules does above, rather
+  // than stripping the prefix for every route: each route decides for itself
+  // whether it has a localized URL.
   void mountOrReport(() =>
     import('./landing.js').then(({ mountLanding }) => mountLanding(appRoot)),
   );

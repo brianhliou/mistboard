@@ -304,6 +304,12 @@ export function isEmbedRoute(pathname: string): boolean {
 export function isClientRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (
+    // The Chinese home pages. Served from their own prerendered files, but they
+    // need to be client routes too, or the SPA fallback hands a reader the 404
+    // shell when the prerender is missing — and before they existed the static
+    // handler answered /zh-hans/ with a directory listing of the build.
+    normalized === '/zh-hans' ||
+    normalized === '/zh-hant' ||
     normalized === '/about' ||
     // The legacy /learn hub is intentionally NOT here: it is gated off in the
     // web build (learnEnabled), so a prod direct hit falls through to the

@@ -183,8 +183,9 @@ export function localizedHref(path: string, locale = currentLocale()): string {
 export type LocaleSwitchNavigation = { kind: 'navigate'; href: string } | { kind: 'reload' };
 
 // How the language switcher should leave the page once the new locale is
-// stored. Only /rules, /blog and /learn/xiangqi carry a locale prefix, so on every other route
-// localizedHref hands back the current URL unchanged. Assigning an identical
+// stored. Only the home page, /rules, /blog and /learn/xiangqi carry a locale
+// prefix, so on every other route localizedHref hands back the current URL
+// unchanged. Assigning an identical
 // URL to location.href normally reloads, but when the URL carries a fragment
 // (/feed#id, /learn#/stage, /api-docs#tag) the browser treats it as a
 // same-document fragment navigation and reloads nothing, leaving the page in
@@ -223,6 +224,7 @@ export function stripLocalePrefix(path: string): string {
 
 function isContentPath(pathname: string): boolean {
   return (
+    pathname === '/' ||
     pathname === '/rules' ||
     pathname.startsWith('/rules/') ||
     pathname === '/blog' ||

@@ -612,15 +612,68 @@ try {
   // instead of the empty SPA shell. index.html already carries the homepage meta;
   // we add a self-referencing canonical and write a separate home.html (the bare
   // index.html stays the empty shell that every other client route falls back to).
+  //
+  // Once per interface language. The landing reads its locale from the URL the
+  // same way the browser does, so the page is baked by pointing the DOM at the
+  // URL it will be served from rather than threading a locale through every
+  // widget the stage builds; a widget that reads currentLocale() four levels
+  // down gets it for free, and a missed one would have baked English into a
+  // Chinese page silently. /zh-hans and /zh-hant are the Chinese home pages:
+  // before this the path served a directory listing of dist/, and the site had
+  // no Chinese URL for the page that matters most to a Chinese search.
   const { renderLandingShellForPrerender } = await server.ssrLoadModule('/src/landing.ts');
-  const landingInner = renderLandingShellForPrerender();
-  let homeHtml = shell.replace('<div id="app"></div>', `<div id="app">${landingInner}</div>`);
-  homeHtml = homeHtml.replace(
-    '</head>',
-    `<link rel="canonical" href="${host}/" />${landingAssetLinks}</head>`,
-  );
-  await fs.writeFile(resolve(distDir, 'home.html'), homeHtml, 'utf-8');
-  console.log('prerendered / (home.html)');
+  const homeVariants = [
+    { path: '/', file: 'home.html', htmlLang: 'en', meta: null },
+    {
+      path: '/zh-hans',
+      file: 'zh-hans-home.html',
+      htmlLang: 'zh-Hans',
+      meta: {
+        title: '中国象棋在线 · 免费对弈与分析 | Mistboard',
+        description:
+          '免费在线下中国象棋：与人对弈或挑战电脑，服务器判规，皮卡鱼在浏览器里分析，残局题目，以及从第一步开始的课程。不用注册。',
+      },
+    },
+    {
+      path: '/zh-hant',
+      file: 'zh-hant-home.html',
+      htmlLang: 'zh-Hant',
+      meta: {
+        title: '中國象棋線上 · 免費對弈與分析 | Mistboard',
+        description:
+          '免費線上下中國象棋：與人對弈或挑戰電腦，伺服器判規，皮卡魚在瀏覽器裡分析，殘局題目，以及從第一步開始的課程。免註冊。',
+      },
+    },
+  ];
+  const homeHreflang = [
+    ...homeVariants.map(
+      (v) =>
+        `<link rel="alternate" hreflang="${v.htmlLang}" href="${host}${v.path === '/' ? '/' : v.path}" />`,
+    ),
+    `<link rel="alternate" hreflang="x-default" href="${host}/" />`,
+  ].join('');
+  for (const variant of homeVariants) {
+    win.happyDOM.setURL(`${host}${variant.path}`);
+    const landingInner = renderLandingShellForPrerender();
+    const url = `${host}${variant.path === '/' ? '/' : variant.path}`;
+    let homeHtml = shell
+      .replace('<html lang="en">', `<html lang="${variant.htmlLang}">`)
+      .replace('<div id="app"></div>', `<div id="app">${landingInner}</div>`);
+    if (variant.meta) {
+      homeHtml = injectPageMeta(homeHtml, {
+        title: variant.meta.title,
+        description: variant.meta.description,
+        url,
+      });
+    }
+    homeHtml = homeHtml.replace(
+      '</head>',
+      `<link rel="canonical" href="${url}" />${homeHreflang}${landingAssetLinks}</head>`,
+    );
+    await fs.writeFile(resolve(distDir, variant.file), homeHtml, 'utf-8');
+    console.log(`prerendered ${variant.path} (${variant.file}, lang=${variant.htmlLang})`);
+  }
+  win.happyDOM.setURL(host);
 
   // /blog: the post index. Authored data only, so the baked DOM is the page a
   // reader gets. It has been in the sitemap all along while answering with the

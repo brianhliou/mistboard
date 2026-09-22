@@ -691,13 +691,20 @@ function gamePageParticipantName(game: persistence.GameRecord, color: Color): st
 // (home.html, feed.html) once a scheduled post or announcement has gone live
 // since the build: the baked page predates it, and the shell renders a
 // current one client-side until the next deploy (article-schedule.ts).
-const SCHEDULE_DATED_PAGES: ReadonlySet<string> = new Set(['home.html', 'feed.html']);
+const SCHEDULE_DATED_PAGES: ReadonlySet<string> = new Set([
+  'home.html',
+  'zh-hans-home.html',
+  'zh-hant-home.html',
+  'feed.html',
+]);
 
 export async function servePrerenderedPage(params: {
   response: ServerResponse;
   staticDir: string;
   file:
     | 'home.html'
+    | 'zh-hans-home.html'
+    | 'zh-hant-home.html'
     | 'leaderboard.html'
     | 'player.html'
     | 'learn-xiangqi.html'
@@ -725,7 +732,11 @@ export async function servePrerenderedPage(params: {
 // advertised /learn, which prod 404s).
 export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/',
+  '/zh-hans',
+  '/zh-hant',
   '/blog',
+  '/zh-hans/blog',
+  '/zh-hant/blog',
   '/rules',
   '/zh-hans/rules',
   '/zh-hant/rules',
@@ -806,17 +817,25 @@ export async function serveSitemap(params: {
   // with no commentary is not, and a sitemap full of those reads as thin. The
   // gate is deliberately content-driven, so the indexable set grows as the
   // library's verification work lands instead of advertising it early.
+  //
+  // Each study URL is listed once per interface language. serveStudyPage
+  // already renders a localized name, description and body at the prefixed
+  // path AND emits hreflang naming all three, so listing only the English URL
+  // told a crawler the alternates existed and then never pointed at them.
   const studyUrls = await persistence
     .listTopPublicStudies(100)
     .then(async (studies) => {
       const urls: string[] = [];
+      const everyLocale = (path: string): string[] => [path, `/zh-hans${path}`, `/zh-hant${path}`];
       for (const summary of studies) {
         const base = `/study/${encodeURIComponent(summary.id)}`;
-        urls.push(base);
+        urls.push(...everyLocale(base));
         const full = await persistence.getStudyById(summary.id).catch(() => null);
         if (!full) continue;
         for (const chapter of [...full.chapters].sort((a, b) => a.ordinal - b.ordinal)) {
-          if (chapterIsSubstantial(chapter)) urls.push(`${base}/${encodeURIComponent(chapter.id)}`);
+          if (chapterIsSubstantial(chapter)) {
+            urls.push(...everyLocale(`${base}/${encodeURIComponent(chapter.id)}`));
+          }
         }
       }
       return urls;

@@ -15,6 +15,7 @@ import {
   serveArticlePage,
   serveArticlesIndexPage,
   serveNotFoundShell,
+  servePrerenderedPage,
   serveRulesIndexPage,
   serveSitemap,
   serveSpaShellWithRoutePreloads,
@@ -180,6 +181,56 @@ test('serveArticlePage marks an unlisted rules page as non-indexable', async () 
 
   assert.equal(response.status, 200);
   assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+});
+
+// Every localized surface must be reachable AND advertised. Before this the
+// sitemap named the zh articles and rules docs but not the blog indexes, not
+// the locale-prefixed study permalinks (which the study page itself advertises
+// through hreflang), and there was no Chinese home URL at all — /zh-hans fell
+// through to the static handler, which answered with a directory listing of the
+// build.
+test('the Chinese home pages and blog indexes are routed, advertised and titled', async () => {
+  for (const route of ['/zh-hans', '/zh-hant', '/zh-hans/blog', '/zh-hant/blog']) {
+    assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is not advertised in the sitemap`);
+  }
+  // The bare English home stays the x-default; the prefixes are additions.
+  assert.ok(SITEMAP_STATIC_ROUTES.includes('/'));
+
+  // Each is exempt from the distinct-title sweep above because it has its own
+  // renderer; this is that sweep, through the renderer each one actually uses.
+  const staticDir = await staticDirWithPreloadManifest();
+  for (const [file, marker] of [
+    ['zh-hans-home.html', '中国象棋在线'],
+    ['zh-hant-home.html', '中國象棋線上'],
+  ] as const) {
+    await writeFile(join(staticDir, file), `<title>${marker} | Mistboard</title>`, 'utf-8');
+    const response = captureResponse();
+    await servePrerenderedPage({ response, staticDir, file });
+    assert.equal(response.status, 200);
+    assert.ok(response.body.includes(marker), `${file} did not serve its own title`);
+  }
+
+  // Both scripts write the heading 文章 the same way, so the titles match by
+  // rights; the description is where simplified and traditional part company,
+  // and a shared description would mean one script is serving the other's page.
+  const indexDescriptions = new Set<string>();
+  for (const langPrefix of ['zh-hans', 'zh-hant']) {
+    const response = captureResponse();
+    await serveArticlesIndexPage({
+      response,
+      publicHost: 'https://mistboard.com',
+      staticDir,
+      langPrefix,
+    });
+    const title = response.body.match(/<title>([^<]*)<\/title>/)?.[1] ?? 'Mistboard';
+    assert.ok(title !== 'Mistboard', `/${langPrefix}/blog serves the default shell title`);
+    const description =
+      response.body.match(/<meta name="description" content="([^"]*)"/)?.[1] ?? '';
+    assert.ok(description, `/${langPrefix}/blog serves no description`);
+    indexDescriptions.add(description);
+  }
+  assert.equal(indexDescriptions.size, 2, 'the two Chinese blog indexes share a description');
 });
 
 test('serveSitemap omits unlisted and retired rules while retaining public articles', async () => {
@@ -601,7 +652,14 @@ test('serveSpaShellWithRoutePreloads serves route meta even with no preload mani
 // advertised route now carries its own title.
 const SITEMAP_ROUTES_WITH_OWN_RENDERER = new Set([
   '/',
+  // The Chinese home pages: prerendered files with meta baked at build time
+  // (prerender-articles.mjs), served by servePrerenderedPage. The test below
+  // covers them through that renderer instead.
+  '/zh-hans',
+  '/zh-hant',
   '/blog',
+  '/zh-hans/blog',
+  '/zh-hant/blog',
   '/rules',
   '/zh-hans/rules',
   '/zh-hant/rules',

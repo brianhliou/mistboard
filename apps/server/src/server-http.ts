@@ -504,6 +504,21 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // The Chinese home pages, the same landing baked in each script. This must
+    // stay ahead of the static handler: dist/zh-hans is a real directory (the
+    // localized article files live there), so without a route of its own the
+    // handler answered /zh-hans/ with a browsable listing of the build, 200 and
+    // indexable.
+    const localeHomeMatch = pathname.match(/^\/(zh-hans|zh-hant)\/?$/);
+    if (localeHomeMatch) {
+      const file = `${localeHomeMatch[1]}-home.html` as 'zh-hans-home.html' | 'zh-hant-home.html';
+      void servePrerenderedPage({ response, staticDir: options.staticDir, file }).catch(() => {
+        request.url = '/';
+        void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
     // Default-locale player page gets its prerendered frame; localized paths
     // stay on the client-rendered shell below.
     if (pathname === '/player') {

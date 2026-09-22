@@ -201,6 +201,8 @@ try {
 
   announceNews({ deployRequired: release.deployRequired });
 
+  submitIndexNow({ deployRequired: release.deployRequired });
+
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.log(`release: ok in ${formatDuration(elapsedMs)}`);
 } catch (error) {
@@ -949,6 +951,27 @@ function announceNews({ deployRequired }) {
   if (result.status !== 0) {
     console.error(
       'warning: news tweet failed; the release is live, run `npm run news:tweet -- --post` by hand',
+    );
+  }
+}
+
+// Tell Bing what this release changed. The prerendered set (static routes plus
+// every article in three languages, ~130 URLs) goes out after the smokes, so a
+// page no longer waits for someone to remember `npm run indexnow` — the growth
+// plan asked for this on release and it was never built. Studies are excluded;
+// see the script's header. A failed submission is a warning: the pages are live
+// either way and a re-run costs nothing.
+function submitIndexNow({ deployRequired }) {
+  if (!deployRequired) {
+    console.log('skip: indexnow (no deploy)');
+    return;
+  }
+  const command = ['node', 'scripts/indexnow-submit.mjs', '--prerendered'];
+  console.log(`\n$ ${quoteCommand(command)}`);
+  const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
+  if (result.status !== 0) {
+    console.error(
+      'warning: indexnow submission failed; re-run `npm run indexnow -- --prerendered`',
     );
   }
 }
