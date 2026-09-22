@@ -2042,6 +2042,14 @@
   border-bottom: 1px solid var(--site-border-soft, rgba(0, 0, 0, 0.07));
 }
 
+/* Columns after the first need their own gutter: cells only pad to the right,
+   which is invisible while the table is stretched to the column width and
+   becomes a collision the moment it shrinks to its content. */
+.article-table th + th,
+.article-table td + td {
+  padding-left: 28px;
+}
+
 .article-table tbody tr:last-child td {
   border-bottom: none;
 }
@@ -2715,8 +2723,14 @@ a.article-meta-author:hover .article-meta-author-name {
   align-items: center;
 }
 
+/* A narrow table centres under its figure instead of stretching: width:100%
+   spread two columns across the whole article column and left the values
+   floating in the middle of it. Wide tables still scroll inside the figure,
+   because max-width caps the shrink-to-content width at the column. */
 .article-figure-table .article-table {
   margin-inline: auto;
+  width: max-content;
+  max-width: 100%;
 }
 
 /* The line's assessment, sitting at its end the way it does in a printed game
