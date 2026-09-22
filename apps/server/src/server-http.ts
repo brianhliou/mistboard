@@ -150,6 +150,15 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     if (isIsolatedEngineAssetPath(pathname)) {
       response.setHeader('Cross-Origin-Embedder-Policy', 'require-corp');
       response.setHeader('Cross-Origin-Resource-Policy', 'same-origin');
+      // These files are immutable by construction: every reference carries a
+      // ?v= built from the engine commit, the net's date and the toolchain, so
+      // a new build is a new URL rather than a new body at the old one. Without
+      // this header nothing downstream knows that, and Pikafish's 51 MB net was
+      // re-fetched from the origin on every visit -- no browser cache, and
+      // cf-cache-status DYNAMIC, since Cloudflare caches an unknown extension
+      // like .nnue only when told to. The browser half is fixed here; the edge
+      // half needs a Cloudflare cache rule on /engine/*.
+      response.setHeader('Cache-Control', 'public, max-age=31536000, immutable');
     }
 
     // Page navigations carry the viewer's country (Cloudflare's CF-IPCountry)

@@ -191,7 +191,7 @@ async function loadEngineCore(): Promise<EngineCore> {
   // (apps/server/src/*.ini) that is diffed against it.
   try {
     const inis = await Promise.all(
-      CUSTOM_VARIANT_INIS.map((file) => fetch(`${ENGINE_BASE}${file}`).then((r) => r.text())),
+      CUSTOM_VARIANT_INIS.map((file) => fetch(engineAsset(file)).then((r) => r.text())),
     );
     core.writeFile('variants.ini', inis.join('\n\n'));
     core.send('setoption name VariantPath value variants.ini');
