@@ -381,6 +381,8 @@ export function isClientRoute(pathname: string): boolean {
     /^\/forum\/[^/]+$/.test(normalized) ||
     normalized.startsWith('/forum/t/') ||
     normalized.startsWith('/forum/redirect/post/') ||
+    normalized === '/players' ||
+    /^\/players\/[^/]+$/.test(normalized) ||
     normalized === '/broadcast/xiangqi' ||
     normalized === '/broadcast/xiangqi/ops' ||
     /^\/broadcast\/xiangqi\/(?!board$)[^/]+$/.test(normalized) ||

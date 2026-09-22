@@ -379,6 +379,7 @@ test('isClientRoute covers every literal route declared in main.ts', () => {
 const PARAMETRIC_ROUTE_SAMPLES: Record<string, readonly string[]> = {
   '^\\/inbox(?:\\/([^/]+))?$': ['/inbox', '/inbox/somehandle'],
   '^\\/coach(?:\\/([^/]+))?$': ['/coach', '/coach/somehandle'],
+  '^\\/players\\/([^/]+)$': ['/players/yin-sheng'],
   '^(?:\\/(?:zh-hans|zh-hant))?\\/study\\/([A-Za-z0-9]+)$': [
     '/study/Ab12cd',
     '/zh-hans/study/Ab12cd',
@@ -540,6 +541,9 @@ test('isClientRoute matches parametric SPA routes', () => {
   assert.equal(isClientRoute('/forum/general-discussion'), true);
   assert.equal(isClientRoute('/forum/t/topic_123/example-topic'), true);
   assert.equal(isClientRoute('/forum/redirect/post/post_123'), true);
+  assert.equal(isClientRoute('/players'), true);
+  assert.equal(isClientRoute('/players/yin-sheng'), true);
+  assert.equal(isClientRoute('/players/yin-sheng/extra'), false);
   assert.equal(isClientRoute('/broadcast/xiangqi'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample'), true);
   assert.equal(isClientRoute('/broadcast/xiangqi/2025-wxc-sample/round/men-r1'), true);

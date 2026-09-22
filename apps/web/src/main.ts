@@ -251,6 +251,8 @@ const wantsVideos =
   path === '/zh-hans/videos' ||
   path === '/zh-hant/videos' ||
   page === 'videos';
+const wantsXiangqiPlayersIndex = path === '/players';
+const xiangqiPlayerSlug = /^\/players\/([^/]+)$/.exec(path)?.[1] ?? null;
 const wantsXiangqiBroadcastIndex = path === '/broadcast/xiangqi';
 const wantsXiangqiBroadcastOps = path === '/broadcast/xiangqi/ops';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
@@ -605,6 +607,20 @@ if (replaySample) {
 } else if (wantsVideos) {
   setTitleKey('nav.videoLibrary');
   void mountOrReport(() => import('./videos.js').then(({ mountVideos }) => mountVideos(appRoot)));
+} else if (wantsXiangqiPlayersIndex) {
+  setTitle('Xiangqi players');
+  void mountOrReport(() =>
+    import('./xiangqi-players.js').then(({ mountXiangqiPlayersIndex }) =>
+      mountXiangqiPlayersIndex(appRoot),
+    ),
+  );
+} else if (xiangqiPlayerSlug) {
+  setTitle('Xiangqi player');
+  void mountOrReport(() =>
+    import('./xiangqi-players.js').then(({ mountXiangqiPlayer }) =>
+      mountXiangqiPlayer(appRoot, decodeURIComponent(xiangqiPlayerSlug)),
+    ),
+  );
 } else if (wantsXiangqiBroadcastIndex) {
   setTitle('Xiangqi broadcasts');
   void mountOrReport(() =>
