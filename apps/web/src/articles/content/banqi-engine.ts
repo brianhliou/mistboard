@@ -110,7 +110,7 @@ export const banqiEngineArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            "A related blind spot involves the general. A soldier is the only piece that can capture it, and the engine is slow to make room for a general boxed into a corner. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.",
+            "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.",
         },
         {
           kind: 'paragraph',

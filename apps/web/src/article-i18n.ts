@@ -132,6 +132,8 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
+    '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一种子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
   "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
     '这对你是有好处的。如果你子力落后，不代表就输了：把它一颗强子引进长捉，MistyBanqi 可能就走进那个它看不出该拒绝的和棋。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
@@ -585,8 +587,6 @@ const ZH_HANS: Record<string, string> = {
   "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.":
     '评估里没有任何一项会因为「把优势转化为胜利」而比「单纯守住子力」给更高的分，于是一个遥遥领先的局面和一个真正已经赢下的局面，得分几乎一样。既然没有哪一项促使它取得进展，它就只是来回挪子，而暗棋的三次重复局面规则便把这盘判成和棋。',
   'It can also lose its own general': '它也可能丢掉自己的将帅',
-  'A related blind spot involves the general. A soldier is the only piece that can capture it, and the engine is slow to make room for a general boxed into a corner. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.':
-    '另一个相关的盲点和将帅有关。只有兵（卒）能吃将帅，而当将帅被逼到角落时，引擎迟迟不为它腾出退路。有时它会把一枚棋子调到棋盘另一头，任由一枚孤零零的敌方兵走上来把将帅困死。这和上面的和棋是同一类毛病：评估对一个缓慢、安静、还要好几步才成形的威胁，没有真正的感觉。',
   'How each of these was found, reproduced, and measured is written up in detail in the engineering post linked below.':
     '这些问题各自是如何被发现、复现并量化的，下面链接的工程博客文章里有详细记录。',
   'Why these exist, and what’s next': '为什么会有这些问题，以及下一步',
@@ -2820,6 +2820,8 @@ const ZH_HANT: Record<string, string> = {
     '[MistyBanqi](/blog/mistybanqi) 自我對弈，每步搜尋一千萬個節點，是本站機器人的三倍棋力。用箭頭一步步看。[配套研究](/study/FsA5sowX)收了這批棋的全部二十盤，一盤一章，附上每盤怎麼走完的註記。同一批棋裡的兩百盤被整理成數字，放在[用數字看暗棋](/blog/banqi-statistics)：領先多少才算安全，一盤棋什麼時候就定了。',
   "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
     '這對你是有好處的。如果你子力落後，不代表就輸了：把它一顆強子引進長捉，MistyBanqi 可能就走進那個它看不出該拒絕的和棋。這種事多到可以量：引擎自我對弈的 200 盤裡，[每六盤就有一盤和棋](/blog/banqi-statistics)，其中一半曾經走到贏定的局面。',
+  "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
+    '另一個相關的盲點跟將有關。只有卒、對方的將或砲的跳吃拿得下它，所以被圍住的將一次只怕一種子，而引擎很慢才會替被逼到角落的將騰出空間。它有時候會把一顆子調到棋盤另一頭，同時一顆孤零零的敵方卒走過來把它困死。跟上面那個和棋是同一個缺口：這套評估函數對於好幾步之外慢慢成形的安靜威脅，沒有什麼感覺。',
   // Traditional starts from the complete Simplified key set, then every
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
@@ -3356,8 +3358,6 @@ const ZH_HANT: Record<string, string> = {
   "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.":
     '評估裡沒有任何一項會因為「把優勢轉化為勝利」而比「單純守住子力」給更高的分，於是一個遙遙領先的局面和一個真正已經贏下的局面，得分幾乎一樣。既然沒有哪一項促使它取得進展，它就只是來回挪子，而暗棋的三次重複局面規則便把這盤判成和棋。',
   'It can also lose its own general': '它也可能丟掉自己的將帥',
-  'A related blind spot involves the general. A soldier is the only piece that can capture it, and the engine is slow to make room for a general boxed into a corner. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.':
-    '另一個相關的盲點和將帥有關。只有兵（卒）能吃將帥，而當將帥被逼到角落時，引擎遲遲不為它騰出退路。有時它會把一枚棋子調到棋盤另一頭，任由一枚孤零零的敵方兵走上來把將帥困死。這和上面的和棋是同一類毛病：評估對一個緩慢、安靜、還要好幾步才成形的威脅，沒有真正的感覺。',
   'How each of these was found, reproduced, and measured is written up in detail in the engineering post linked below.':
     '這些問題各自是如何被發現、重現並量化的，下面連結的工程部落格文章裡有詳細記錄。',
   'Why these exist, and what’s next': '為什麼會有這些問題，以及下一步',

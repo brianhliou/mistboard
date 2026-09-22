@@ -1,4 +1,5 @@
 import { describe, expect, it, vi } from 'vitest';
+import { articleGoesLiveAt, articleIsLive } from './articles/publish-time.js';
 import { buildArticlePage } from './articles.js';
 import { articles } from './articles-data.js';
 
@@ -19,6 +20,60 @@ describe('internal article links', () => {
           expect(hidden.has(href), `${article.slug} links to unpublished ${href}`).toBe(false);
         }
       }
+    } finally {
+      vi.unstubAllEnvs();
+    }
+  });
+
+  it('never links prose to a draft, and only briefly to a scheduled page', () => {
+    // The guard above walks .article-cta only, so a markdown link in a
+    // paragraph could point at a hidden page and ship a dead link with nothing
+    // failing. It happened on 2026-09-22: the banqi rules page and the
+    // MistyBanqi post both linked a post scheduled for the next morning.
+    //
+    // Two different failures, so two rules. A link to a draft is dead until
+    // someone remembers it; that fails. A link to a scheduled page is dead
+    // until a known moment, which is fine when the link ships with the page it
+    // points at, and a bug when someone links something a month out. The
+    // window is the assertion.
+    const SCHEDULED_LINK_WINDOW_MS = 48 * 60 * 60 * 1000;
+    vi.stubEnv('DEV', false);
+    try {
+      const now = Date.now();
+      const hidden = new Map(
+        articles
+          .filter((a) => !articleIsLive(a, now))
+          .map((a) => [
+            `/blog/${a.slug}`,
+            {
+              status: a.status,
+              liveAt: a.publishedAt ? articleGoesLiveAt(a.publishedAt) : Number.NaN,
+            },
+          ]),
+      );
+      const dead: string[] = [];
+      const farOff: string[] = [];
+      for (const article of articles.filter((a) => articleIsLive(a, now))) {
+        const page = buildArticlePage(article.slug);
+        for (const anchor of page.querySelectorAll<HTMLAnchorElement>('a[href^="/blog/"]')) {
+          const href = (anchor.getAttribute('href') ?? '').split(/[#?]/)[0] ?? '';
+          const target = hidden.get(href);
+          // Read-next cards are built from the live set already; this is about
+          // links an author typed into prose.
+          if (!target || anchor.closest('.articles-index-card')) continue;
+          if (target.status !== 'published' || Number.isNaN(target.liveAt)) {
+            dead.push(`${article.slug} -> ${href} (${target.status})`);
+          } else if (target.liveAt - now > SCHEDULED_LINK_WINDOW_MS) {
+            const days = Math.round((target.liveAt - now) / 86_400_000);
+            farOff.push(`${article.slug} -> ${href} (goes live in ${days}d)`);
+          }
+        }
+      }
+      expect(dead, `live pages linking a draft:\n${dead.join('\n')}`).toEqual([]);
+      expect(
+        farOff,
+        `live pages linking a page that is not live for days:\n${farOff.join('\n')}`,
+      ).toEqual([]);
     } finally {
       vi.unstubAllEnvs();
     }
