@@ -573,6 +573,7 @@ describe('profile ratings rail', () => {
       '/player',
       '/player/rating-stats',
       '/bots',
+      '/players',
     ]);
     expect(rail?.querySelector('a[aria-current="page"]')?.textContent).toBe('Leaderboard');
 
