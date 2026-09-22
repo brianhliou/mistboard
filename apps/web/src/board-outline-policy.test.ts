@@ -79,7 +79,10 @@ describe('board outer-outline policy', () => {
 
   it('keeps the Reveal and Banqi replay widgets outline-free', () => {
     const reveal = findArticle('jieqi');
-    const flip = findArticle('banqi');
+    // The banqi rules page no longer carries a banqi-replay block (its sample
+    // game is a study embed), so the Banqi replay is exercised on the block
+    // the play page draft still holds.
+    const flip = findArticle('banqi-online');
     const revealBlock =
       reveal && articleBlocks(reveal).find((block) => block.kind === 'jieqi-replay');
     const flipBlock = flip && articleBlocks(flip).find((block) => block.kind === 'banqi-replay');

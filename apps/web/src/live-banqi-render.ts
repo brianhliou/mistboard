@@ -245,11 +245,22 @@ export function animateBanqiBoardMove(
   }
 }
 
+// The selection tints the whole cell, grid line to grid line: pieces sit in
+// cells here, so the cell is the unit, and an inset rounded rect read as a
+// sticker behind the piece rather than a selected square (Brian, 2026-09-21,
+// on the rules-page diagrams that draw exactly this).
 function selectionRing(selection: BanqiSquare | null): string {
   if (!selection) return '';
   const { x, y } = cellCenter(selection);
-  return `<rect class="banqi-selection" x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}" rx="6"/>`;
+  return `<rect class="banqi-selection" x="${x - CELL / 2}" y="${y - CELL / 2}" width="${CELL}" height="${CELL}"/>`;
 }
+
+// A capturable piece is outlined in the hint green: the ring sits ON the
+// piece's own edge (PIECE_SIZE/2), wide enough to replace its outline. A ring
+// outside the piece would cross into the neighbouring cell, since a piece
+// fills 90% of its cell. Same radius in the static and interactive layers.
+const CAPTURE_RING_R = PIECE_SIZE / 2;
+const HINT_DOT_R = 10;
 
 // Drawn ABOVE the piece layer, where the interactive hit layer draws the same
 // marks: a capture ring sits around the target piece, and under the pieces it
@@ -262,8 +273,8 @@ function moveHints(view: BanqiPlayerView, moves: readonly BanqiMove[]): string {
       const occupant = view.board[move.to];
       const capture = !!occupant && !occupant.faceDown;
       return capture
-        ? `<circle class="banqi-hint-capture" cx="${x}" cy="${y}" r="${CELL * 0.42}"/>`
-        : `<circle class="banqi-hint" cx="${x}" cy="${y}" r="9"/>`;
+        ? `<circle class="banqi-hint-capture" cx="${x}" cy="${y}" r="${CAPTURE_RING_R}"/>`
+        : `<circle class="banqi-hint" cx="${x}" cy="${y}" r="${HINT_DOT_R}"/>`;
     })
     .join('');
 }
@@ -316,8 +327,8 @@ function hitLayerWithTargets(moves: readonly BanqiMove[], view?: BanqiPlayerView
     const target = targets.get(square);
     const marker = target
       ? target.capture
-        ? `<circle class="banqi-hint-capture" cx="${x}" cy="${y}" r="${CELL * 0.42}"/>`
-        : `<circle class="banqi-hint" cx="${x}" cy="${y}" r="9"/>`
+        ? `<circle class="banqi-hint-capture" cx="${x}" cy="${y}" r="${CAPTURE_RING_R}"/>`
+        : `<circle class="banqi-hint" cx="${x}" cy="${y}" r="${HINT_DOT_R}"/>`
       : '';
     const hover = target
       ? `<rect class="banqi-target-hover" x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}" rx="6"/>`
@@ -383,7 +394,7 @@ export const BANQI_BOARD_CSS = `
     .banqi-selection { fill: rgba(31, 111, 91, 0.32); stroke: none; pointer-events: none; }
     .banqi-hint { fill: rgba(31, 111, 91, 0.72); opacity: 0.7; pointer-events: none; }
     .banqi-hint-capture {
-      fill: none; stroke: rgba(31, 111, 91, 0.48); stroke-width: 3; pointer-events: none;
+      fill: none; stroke: rgba(31, 111, 91, 0.85); stroke-width: 4.5; pointer-events: none;
     }
     .banqi-target-hover {
       fill: rgba(31, 111, 91, 0.3);

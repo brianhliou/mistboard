@@ -34,8 +34,8 @@
 }
 .banqi-hint-capture {
   fill: none;
-  stroke: rgba(31, 111, 91, 0.48);
-  stroke-width: 3;
+  stroke: rgba(31, 111, 91, 0.85);
+  stroke-width: 4.5;
   pointer-events: none;
 }
 .banqi-target-hover {
