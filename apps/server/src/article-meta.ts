@@ -65,8 +65,10 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   // a dead link that the CTA-only link guard does not catch.
   'fog-openings',
   'fog-chess-concepts',
-  // Pulled to draft 2026-09-21 the evening it shipped, pending a read.
-  'banqi-online',
+  // The banqi result post (200 engine games). Its predecessor, the play post,
+  // was pulled to draft 2026-09-21 the evening it shipped; this one waits for
+  // a read before it publishes.
+  'banqi-statistics',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {
@@ -247,11 +249,11 @@ export const ARTICLE_META: Record<
     description:
       'The complete rules of Jieqi, the hidden-piece Chinese chess variant, in English: every piece except the generals starts face-down, makes its first move as the point it stands on, and reveals itself after moving. Play it free in your browser.',
   },
-  'banqi-online': {
-    title: 'Banqi on Mistboard',
+  'banqi-statistics': {
+    title: 'Banqi by the Numbers',
     kind: 'article',
     description:
-      'Banqi (Chinese dark chess) in the browser: nothing to install, no account, an engine that will beat most people, a link to play a friend, and the competition rules used in Taiwan.',
+      'Banqi statistics from 200 engine games under the Taiwanese competition rules: the first player wins 53% of decided games, one game in six is a draw, a general falls in 94% of games, and the side that loses its general first loses 87% of the time.',
   },
   banqi: {
     title: 'Banqi Rules (Chinese Dark Chess)',

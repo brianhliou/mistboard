@@ -49,12 +49,11 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // The banqi post is a draft dated 2026-09-22 (DEV lists drafts for
-      // review); it shares the date with the Pikafish page and neither is in
-      // HOME_ARTICLE_SLUGS, so the tie falls to registry order.
-      '/blog/banqi-online',
+      // The banqi result post is a draft dated 2026-09-23 (DEV lists drafts
+      // for review), the newest on the site.
+      '/blog/banqi-statistics',
       // The Pikafish page is scheduled for 2026-09-22 (DEV shows it early for
-      // review), the newest on the site.
+      // review).
       '/blog/pikafish',
       // The first player page, dated 2026-09-21.
       '/blog/yin-sheng',
