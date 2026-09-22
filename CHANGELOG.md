@@ -63,6 +63,7 @@ Conventions:
 
 ### Watching and review
 
+- Player pages show the current CXA 竞赛积分排名 (tournament points) next to the closed 等级分 history, spot-checked row by row against the source before publishing — the pipeline never auto-corrects an OCR name against a known-name list, since a first pass silently relabeled an amateur's record with a world champion's name off a one-character match ([b2702ce2](https://github.com/brianhliou/mistboard/commit/b2702ce2))
 - The player index and player pages take the shape of lichess.org/fide: a face (or the surname character), a title tag, the team under the name, a search box, the whole row a link; a player page opens with the portrait and a fact list, then the official CXA 等级分 series 2019–2023 as a sparkline with the last value and rank, and the note that the CXA replaced Elo with tournament points in 2026 ([835e820d](https://github.com/brianhliou/mistboard/commit/835e820d))
 - Player pages: /players lists every professional the archive has seen in an A-level event, with team, games, W-D-L and score, sortable; /players/<name> is one player's page, the record by event and every game they played in a relayed event, each a link to its board, with a button to the written profile where one exists ([468429eb](https://github.com/brianhliou/mistboard/commit/468429eb))
 - A study chapter embed shows the verdict a chapter's mainline plays out to, in the last move's eval slot ([05effc8c](https://github.com/brianhliou/mistboard/commit/05effc8c))
