@@ -52,6 +52,11 @@ const ZH_HANS: Record<string, string> = {
   "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
     '揭棋里，被吃掉的暗子只有吃子的一方知道是什么。此前电脑拿到的是它自己按真实局面剩余的暗子，所以你每吃掉它一个暗子，它就知道自己失去了什么，并据此重新估算其余暗子。现在它只按它这个座位的棋手能知道的信息来判断。它吃掉的对方棋子仍然对它可见，这是规则允许的。',
   'Read the changelog': '查看更新记录',
+  // ── 2026-09-21 (Jungle tiger jump) ── terms follow the jungle rules page in article-i18n.ts.
+  'The Jungle tiger now jumps the river sideways.': '斗兽棋的虎现在可以横向跳河了。',
+  'Until today the tiger on Mistboard leapt a river lengthwise only and the lion both ways, the reading in English Wikipedia. The Chinese rule sets, and the digital versions most players come from, give both animals the same leap, so the tiger now has it too: on the board, in the bot and the analysis engine, on the rules page in three languages, and in the puzzles (one that the new jump refutes is withdrawn). Every earlier game stays legal as played; the change only adds moves.':
+    '在此之前，Mistboard 上的虎只能纵向跳河，只有狮能横跳，这是英文维基百科的读法。中文规则以及大多数棋手熟悉的电子版本都让两种动物有同样的跳法，所以现在虎也可以了：棋盘上、电脑和分析引擎里、三种语言的规则页面上，以及残局里（有一题被新跳法破解，已下架）。此前的对局按当时走法依然合法，这次改动只增加了着法。',
+  'Jungle rules': '斗兽棋规则',
   'Wanted: a neural network for Jieqi.': '征集：揭棋神经网络。',
   "Our Jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the Jieqi bot for players.":
     '我们的揭棋电脑是手写的传统引擎，强手能赢它。皮卡鱼的揭棋分支有搜索和专为揭棋设计的 NNUE 结构，但从未发布过可加载的权重；我们用传统引擎自己的评估训练过十个网络，没有一个能赢过它。如果你的网络在两百局对抗中赢了它，它就会成为本站的电脑，并署上你的名字。暗棋和斗兽棋以同样的条件开放，棋手还可以挑战与揭棋电脑的八局三胜。',
@@ -358,6 +363,11 @@ const ZH_HANT: Record<string, string> = {
   "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
     '揭棋裡，被吃掉的暗子只有吃子的一方知道是什麼。此前電腦拿到的是它自己按真實局面剩餘的暗子，所以你每吃掉它一個暗子，它就知道自己失去了什麼，並據此重新估算其餘暗子。現在它只按它這個座位的棋手能知道的資訊來判斷。它吃掉的對方棋子仍然對它可見，這是規則允許的。',
   'Read the changelog': '查看更新記錄',
+  // ── 2026-09-21 (Jungle tiger jump) ── terms follow the jungle rules page in article-i18n.ts.
+  'The Jungle tiger now jumps the river sideways.': '鬥獸棋的虎現在可以橫向跳河了。',
+  'Until today the tiger on Mistboard leapt a river lengthwise only and the lion both ways, the reading in English Wikipedia. The Chinese rule sets, and the digital versions most players come from, give both animals the same leap, so the tiger now has it too: on the board, in the bot and the analysis engine, on the rules page in three languages, and in the puzzles (one that the new jump refutes is withdrawn). Every earlier game stays legal as played; the change only adds moves.':
+    '在此之前，Mistboard 上的虎只能縱向跳河，只有獅能橫跳，這是英文維基百科的讀法。中文規則以及大多數棋手熟悉的電子版本都讓兩種動物有同樣的跳法，所以現在虎也可以了：棋盤上、電腦和分析引擎裡、三種語言的規則頁面上，以及殘局裡（有一題被新跳法破解，已下架）。此前的對局按當時走法依然合法，這次改動只增加了著法。',
+  'Jungle rules': '鬥獸棋規則',
   'Wanted: a neural network for Jieqi.': '徵集：揭棋類神經網路。',
   "Our Jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the Jieqi bot for players.":
     '我們的揭棋電腦是手寫的傳統引擎，強手能贏它。皮卡魚的揭棋分支有搜尋和專為揭棋設計的 NNUE 結構，但從未發布過可載入的權重；我們用傳統引擎自己的評估訓練過十個網路，沒有一個能贏過它。如果你的網路在兩百局對抗中贏了它，它就會成為本站的電腦，並署上你的名字。暗棋和鬥獸棋以同樣的條件開放，棋手還可以挑戰與揭棋電腦的八局三勝。',
