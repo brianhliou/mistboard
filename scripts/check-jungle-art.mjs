@@ -2,13 +2,13 @@
 // Keeps the in-app Jungle art and the blog in agreement. CANONICAL = the in-app set
 // (apps/web/src/jungle-art.ts recipe + public/.../dobutsu pieces). The blog is downstream.
 //
-// This asserts (1) the blog widget's composition values (brianhliou.github.io,
+// This asserts (1) the blog widget's composition values (brianhliou.com,
 // assets/js/jungle-replay.js) still match the canonical recipe in jungle-art.ts, and
 // (2) the blog's pieces still mirror the canonical public pieces (else: run
 // publish:jungle-art). Skips cleanly when the blog repo isn't a sibling (e.g. headless CI).
 //
 // Usage: node scripts/check-jungle-art.mjs   (or: npm run check:jungle-art)
-//   MISTBOARD_BLOG_DIR overrides the blog repo location (default ../brianhliou.github.io).
+//   MISTBOARD_BLOG_DIR overrides the blog repo location (default ../brianhliou.com).
 
 import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
@@ -17,7 +17,7 @@ import { fileURLToPath } from 'node:url';
 const REPO_ROOT = resolve(dirname(fileURLToPath(import.meta.url)), '..');
 const BLOG_DIR = process.env.MISTBOARD_BLOG_DIR
   ? resolve(process.env.MISTBOARD_BLOG_DIR)
-  : resolve(REPO_ROOT, '..', 'brianhliou.github.io');
+  : resolve(REPO_ROOT, '..', 'brianhliou.com');
 
 const REPLAY_JS = resolve(BLOG_DIR, 'assets/js/jungle-replay.js');
 const BLOG_PIECES = resolve(BLOG_DIR, 'assets/jungle-dobutsu-pieces');
@@ -29,7 +29,7 @@ const PUBLIC_BOARD = resolve(PUBLIC_PIECES, 'board');
 
 if (!existsSync(REPLAY_JS)) {
   console.log(`check:jungle-art — SKIP (blog repo not found at ${BLOG_DIR}).`);
-  console.log('  Set MISTBOARD_BLOG_DIR or clone brianhliou.github.io as a sibling to run it.');
+  console.log('  Set MISTBOARD_BLOG_DIR or clone brianhliou.com as a sibling to run it.');
   process.exit(0);
 }
 

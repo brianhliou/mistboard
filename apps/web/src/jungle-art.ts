@@ -4,7 +4,7 @@
 // look here once and every jungle surface follows.
 //
 // CANONICAL: this recipe + the in-app piece set (apps/web/public/.../dobutsu) are the
-// source of truth. The Dou Shou Qi blog widget (brianhliou.github.io,
+// source of truth. The Dou Shou Qi blog widget (brianhliou.com,
 // assets/js/jungle-replay.js) is a DOWNSTREAM copy that should match these values.
 // Drop new piece art in public/, push it to the blog with `npm run publish:jungle-art`,
 // and verify both are aligned with `npm run check:jungle-art` (diffs this recipe against

@@ -248,8 +248,6 @@ const ZH_HANS: Record<string, string> = {
   'PikaJieQi self-play': 'PikaJieQi 自对弈',
   'Red works through the reveals and delivers checkmate on move 36.':
     '红方在一次次揭子中推进，第 36 回合将死。',
-  'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.':
-    '黑方子力占优，五子对三子，却动不了红方的象，那是场上仅存的最大子，而它正一个一个地吃掉黑方的子。黑方认输。在暗棋里，大小压过纯粹的子力。',
   'Engine self-play · 2.5 s per move': '引擎自对弈 · 每步 2.5 秒',
   'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.':
     '黑方第 43 回合以兵到 b1 将死，正是第 4 回合过河的那个兵。红帅无处可走：己方的兵挡住 a2，而 b1 和 b2 都在黑方控制之下。',
@@ -598,7 +596,6 @@ const ZH_HANS: Record<string, string> = {
   'The engineering story': '工程幕后故事',
   Human: '人类',
   'Human vs engine · mistboard.com': '人类对引擎 · mistboard.com',
-  'Human vs engine': '人类对引擎',
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重复局面和棋 · MistyBanqi 十子对两子领先',
   'MistyBanqi wins · the opponent is left with no piece to move':
     'MistyBanqi 获胜 · 对手已无子可走',
@@ -910,8 +907,6 @@ const ZH_HANS: Record<string, string> = {
     'Mistboard 有两种自动和棋：连续 40 个半回合没有翻子或吃子，或同一局面出现三次。翻子或吃子会不可逆地改变局面，因此会重置两个计数。',
   'Play MistyBanqi': '对战 MistyBanqi',
   'Challenge a friend': '挑战好友',
-  'MistyBanqi · Strongest': 'MistyBanqi · 最强',
-  'MistyBanqi (Red) wins by resignation · 49 moves': 'MistyBanqi（红方）因对手认输获胜 · 49 回合',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
     '三条规则赋予了这盘棋的特色：老鼠能吃大象，只有老鼠能下水，狮和虎能跳过河。',
   'Strongest at the left, weakest at the right.': '最强在左，最弱在右。',
@@ -2679,42 +2674,18 @@ const ZH_HANS: Record<string, string> = {
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     '不能。它收到的棋盘和你看到的一样全是暗子，而且发牌结果没有任何一方知道：你不知道，引擎不知道，对手也不知道。',
   // banqi-online (2026-09-21): the banqi play page, lane 0. zh-Hant is the primary reader; this block is its simplified mirror.
-  'Play Banqi Online': '在线翻棋（暗棋）：免安装，直接开玩',
   'Play Banqi Online: No Install, vs the Engine or a Friend':
     '在线翻棋（暗棋）：免安装、免注册，跟电脑或朋友对弈',
-  'Banqi (Chinese dark chess) in the browser: nothing to install, no account, an engine that will beat most people, a link to play a friend, and the competition rules used in Taiwan.':
-    '在浏览器里玩暗棋（翻棋）：不用安装、不用注册，有一个赢得过大多数人的引擎、一条邀朋友对弈的链接，规则用台湾的比赛规则。',
   'Anyone who searched for somewhere to play banqi online and wants a board now, with the rules question that always comes up answered on the same page.':
     '搜索“在线暗棋”想马上开一盘的人，顺便把每次都会问到的规则问题在同一页答完。',
-  'Banqi is the half-board xiangqi game where all thirty-two pieces start face-down. Open the board, flip a tile, and you are playing. Nothing to install, no account, no ads on the board.':
-    '暗棋是用半张象棋盘、三十二颗棋子全部盖着开始的象棋变体。打开棋盘、翻一颗子，就开始了。不用安装、不用注册，棋盘上没有广告。',
-  'A real game against the engine, played on this site. Step through it with the arrows; plain discs are still face-down.':
-    '这是在本站跟引擎下的真实对局。用箭头一步一步看；素色的圆片是还没翻开的暗子。',
-  'Play in the browser': '在浏览器里玩',
-  'The board runs on the page, on a phone or a computer, so there is nothing to download and nothing to sign up for. Pick a time control and the engine takes the other seat. To play a person, send them the link the site gives you: whoever opens it sits down opposite you, on any device, with no account either.':
-    '棋盘直接在网页上跑，手机或电脑都行，所以没有东西要下载，也没有账号要注册。选一个时限，引擎就坐到对面。想跟人下，把网站给你的链接传给对方：谁打开链接谁就坐到你对面，任何设备都行，同样不用账号。',
-  'Finished games stay on the site with a review: every move judged by the engine, and every flip scored for how lucky it was, so you can see whether you lost to a bad decision or a bad tile. [How the review separates skill from luck](/blog/skill-vs-luck).':
-    '下完的棋会留在站上，附一份复盘：每一步都由引擎判断，每一次翻子都算出运气好坏，所以你看得出自己是输在一个坏决定，还是输在一颗坏子。[复盘怎么把实力和运气分开](/blog/skill-vs-luck)。',
-  'You play [MistyBanqi](/blog/mistybanqi), an engine written for this game: it searches ahead, treats every flip as a roll of the remaining tiles, and scores positions with a hand-written evaluation. It plays at one fixed strength and will beat most people. Its one known weakness is that it can let a won game drift into a draw, which is worth knowing when you are the one losing.':
-    '你的对手是 [MistyBanqi](/blog/mistybanqi)，一个专为这个游戏写的引擎：它会往前搜索，把每一次翻子当成剩余棋子的一次掷骰，再用手写的评估函数替局面打分。它只有一种固定棋力，能赢过大多数人。它唯一已知的弱点是会把赢定的棋拖成和棋，当输的那个是你时，这点值得知道。',
   'The same engine sits behind the [analysis board](/analysis/banqi), where you can set up any position and ask it what it would do.':
     '同一个引擎也在[分析棋盘](/analysis/banqi)后面，你可以摆任何局面，问它会怎么走。',
-  'The rules on this board': '这个棋盘用的规则',
-  'Taiwanese rules, as played in competition. The ladder is general, advisor, elephant, chariot, horse, soldier: a piece captures its own rank or anything below it, the soldier can capture the general, and the general cannot capture a soldier. The cannon is the exception: it captures any revealed enemy piece by jumping exactly one piece along a row or column, and as a target it ranks between the horse and the soldier. Face-down tiles cannot be captured.':
-    '台湾规则，照比赛的下法。大小顺序是将、士、象、车、马、卒：一颗子可以吃同级或更小的子，卒可以吃将，将不能吃卒。炮是例外：它沿直行或横列隔一颗子跳过去，吃掉后面任何一颗翻开的敌子，不受大小限制；被吃的时候，炮排在马和卒之间。盖着的暗子不能被吃。',
-  'Draws follow the Taiwan Computer Game Association competition rules: forty moves with no capture or flip is a draw, and so is a repeated position. Each turn is one action, a flip or a move. The full ladder with diagrams is on the [rules page](/rules/banqi).':
-    '和棋照台湾电脑对局协会的比赛规则：四十步没有吃子也没有翻子就是和棋，重复局面也是和棋。每一回合只做一件事，翻子或走子。完整的大小顺序和图解在[规则页](/rules/banqi)。',
   'Park rules and competition rules': '公园规则和比赛规则',
   'Banqi is a park game before it is a competition game, and every park has its own rules. Three come up constantly. Chain captures, where a piece that captures may capture again in the same turn. The straight-charging chariot, which slides any distance along an empty line and captures across it regardless of rank. The flying cannon, which may also jump to an empty square as an ordinary move.':
     '暗棋先是公园里的游戏，才是比赛项目，而每个公园都有自己的规矩。最常碰到的有三条。连吃：吃了子的棋子在同一回合可以再吃。车直冲：车沿着空的直线可以走任意格数，隔着几格吃子也不受大小限制。炮翻山：炮除了跳吃之外，也可以跳到空格当作普通的移动。',
-  'None of these are played here. The board uses the competition rules, one action per turn, every piece moving one square, and the cannon jumping only to capture, because that is the version an engine can be tuned against and the version two strangers can agree on without a conversation first. If you learned the park version, the table on the rules page is the one every game on this site follows.':
-    '这里三条都不用。棋盘用的是比赛规则：一回合一个动作，每颗子走一格，炮只在吃子时跳，因为那是引擎能针对调校的版本，也是两个陌生人不用先讲好就能同意的版本。如果你学的是公园版，规则页上的表格才是本站每一盘棋遵守的那一套。',
   'Can you chain captures in banqi?': '暗棋可以连吃吗？',
   'Not under competition rules, and not on this board: a turn is one flip or one move, and a capture ends it. Chain captures are a park rule some tables play.':
     '比赛规则不行，这个棋盘也不行：一回合就是翻一颗子或走一步，吃了子回合就结束。连吃是有些棋桌在玩的公园规则。',
-  'How do you play banqi?': '暗棋怎么玩？',
-  'Thirty-two xiangqi pieces are shuffled face-down on half a board. Your first flip decides your colour. Each turn you either flip a tile or move a revealed piece one square; captures follow the rank ladder, and the cannon captures by jumping one piece. You win when your opponent has no move or no pieces. The rules page has the ladder and the diagrams.':
-    '三十二颗象棋子洗匀后盖在半张棋盘上。你翻开的第一颗子决定你的颜色。每回合翻一颗子，或把翻开的子走一格；吃子照大小顺序，炮隔一颗子跳吃。对方没有子可走或没有子了，你就赢了。大小顺序和图解在规则页。',
   'Where can I play banqi online for free?': '哪里可以免费玩在线暗棋？',
   'Here. The board runs in the browser on a phone or a computer, with no download and no account. Play the engine, or send a friend the game link.':
     '就在这里。棋盘在浏览器里跑，手机、电脑都行，不用下载、不用账号。跟引擎下，或把对局链接传给朋友。',
@@ -2777,6 +2748,25 @@ const ZH_HANS: Record<string, string> = {
     '一颗炮架，再来是目标。大小不重要：炮吃将。',
   'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
     '没有炮架就不能吃：旁边的车是安全的，上面隔两格、中间没有子的马也是。',
+  'Banqi on Mistboard': 'Mistboard 上的翻棋（暗棋）',
+  'Banqi in the browser: nothing to install, no account, an engine that beats most people, a friend link, and a straight answer on the park rules the competition rules leave out.':
+    '在浏览器里玩暗棋：不用安装、不用注册，有一个赢得过大多数人的引擎、一条邀朋友的链接，还有一个直接的答案：比赛规则不采用的那些公园规则是哪些。',
+  'Banqi is the half-board xiangqi game where all thirty-two pieces start face-down. Open the board, flip a tile, and you are playing. Nothing to install, no account, no ads on the board. The [rules page](/rules/banqi) has every rule on a board; this page is the rest.':
+    '暗棋是用半张象棋盘、三十二颗棋子全部盖着开始的象棋变体。打开棋盘、翻一颗子，就开始了。不用安装、不用注册，棋盘上没有广告。[规则页](/rules/banqi)把每一条规则都画在棋盘上；这一页讲其余的事。',
+  'That is [MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, one of [twenty games](/study/FsA5sowX) from the same run. Step through it with the arrows; a tile nobody has flipped is still face-down.':
+    '这是 [MistyBanqi](/blog/mistybanqi) 自己对自己、每步一千万个节点的对局，同一批[二十盘](/study/FsA5sowX)里的一盘。用箭头一步一步看；还没有人翻过的子仍然盖着。',
+  'The draw rules come from the same source, the Taiwan Computer Game Association: forty moves with no capture or flip is a draw, and so is a repeated position. In the twenty engine games above, fifteen ended with a side unable to move and five on the forty-move clock; none by repetition.':
+    '和棋规则来自同一个来源，台湾电脑对局协会：四十步没有吃子也没有翻子就是和棋，重复局面也是和棋。上面那二十盘引擎对局里，十五盘以一方無子可走结束，五盘因四十步计数和棋；没有一盘因重复局面。',
+  'None of these are played here. The board uses the Taiwanese competition rules: one action per turn, every piece moving one square, and the cannon jumping only to capture. Those are the rules the strongest programs play, they are the version an engine can be tuned against, and they are the version two strangers can agree on without a conversation first. If you learned the park version, the ladder on the rules page is the one every game on this site follows.':
+    '这里三条都不用。棋盘用的是台湾比赛规则：一回合一个动作，每颗子走一格，炮只在吃子时跳。那是最强的程式在下的规则，是引擎能针对调校的版本，也是两个陌生人不用先讲好就能同意的版本。如果你学的是公园版，规则页上的大小顺序才是本站每一盘棋遵守的。',
+  'You play MistyBanqi, an engine written for this game: it searches ahead, treats every flip as a roll of the remaining tiles, and scores positions with a hand-written evaluation. It plays at one fixed strength and will beat most people. Its one known weakness is that it can let a won game drift into a draw, which is worth knowing when you are the one losing. [How it thinks, and where it cracks.](/blog/mistybanqi)':
+    '你的对手是 MistyBanqi，一个专为这个游戏写的引擎：它会往前搜索，把每一次翻子当成剩余棋子的一次掷骰，再用手写的评估函数替局面打分。它只有一种固定棋力，能赢过大多数人。它唯一已知的弱点是会把赢定的棋拖成和棋，当输的那个是你时，这点值得知道。[它怎么想，又在哪里出错。](/blog/mistybanqi)',
+  'A bad decision or a bad tile': '坏决定，还是坏子',
+  'Half the moves in banqi are flips, and a flip is a dice roll. A chess-style review would blame you for variance. Finished games here get a review that splits every flip into the decision and the tile: your accuracy with the luck stripped out, and a luck line on the advantage graph, so you can see whether you lost to a bad move or a bad draw. [How the review separates skill from luck](/blog/skill-vs-luck), with what fifty-two human games against the engine say about who really earned their wins.':
+    '暗棋一半的步数是翻子，而翻子是掷骰。照西洋棋那套复盘，你会被算成失誤的其实是运气。这里下完的棋会有一份复盘，把每一次翻子拆成决定和棋子两部分：扣掉运气之后的准确率，还有优势图上的一条运气线，让你看得出自己是输在一步坏棋，还是一颗坏子。[复盘怎么把实力和运气分开](/blog/skill-vs-luck)，以及五十二盘人对引擎的棋说明了谁的胜利是真的赢来的。',
+  'Playing without installing anything': '不用安装就能玩',
+  'The board runs on the page, on a phone or a computer, so there is nothing to download and nothing to sign up for. Pick a time control and the engine takes the other seat. To play a person, send them the link the site gives you: whoever opens it sits down opposite you, on any device, with no account either. Finished games stay on the site with their review.':
+    '棋盘直接在网页上跑，手机或电脑都行，所以没有东西要下载，也没有账号要注册。选一个时限，引擎就坐到对面。想跟人下，把网站给你的链接传给对方：谁打开链接谁就坐到你对面，任何设备都行，同样不用账号。下完的棋连同复盘留在站上。',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -2900,8 +2890,6 @@ const ZH_HANT: Record<string, string> = {
   'PikaJieQi self-play': 'PikaJieQi 自對弈',
   'Red works through the reveals and delivers checkmate on move 36.':
     '紅方在一次次揭子中推進，第 36 回合將死。',
-  'Black is up material — five pieces to three — but cannot touch Red’s elephant, the highest piece left, while it picks off Black’s pieces one by one. Black resigns. In Banqi, rank beats raw material.':
-    '黑方子力佔優，五子對三子，卻動不了紅方的象，那是場上僅存的最大子，而它正一個一個地吃掉黑方的子。黑方認輸。在暗棋裡，大小壓過純粹的子力。',
   'Engine self-play · 2.5 s per move': '引擎自對弈 · 每步 2.5 秒',
   'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.':
     '黑方第 43 回合以兵到 b1 將死，正是第 4 回合過河的那個兵。紅帥無處可走：己方的兵擋住 a2，而 b1 和 b2 都在黑方控制之下。',
@@ -3333,7 +3321,6 @@ const ZH_HANT: Record<string, string> = {
   'The engineering story': '工程幕後故事',
   Human: '人類',
   'Human vs engine · mistboard.com': '人類對引擎 · mistboard.com',
-  'Human vs engine': '人類對引擎',
   'Draw by repetition · MistyBanqi up 10 pieces to 2': '重複局面和棋 · MistyBanqi 十子對兩子領先',
   'MistyBanqi wins · the opponent is left with no piece to move':
     'MistyBanqi 獲勝 · 對手已無子可走',
@@ -3640,8 +3627,6 @@ const ZH_HANT: Record<string, string> = {
     'Mistboard 有兩種自動和棋：連續 40 個半回合沒有翻子或吃子，或同一局面出現三次。翻子或吃子會不可逆地改變局面，因此會重置兩個計數。',
   'Play MistyBanqi': '對戰 MistyBanqi',
   'Challenge a friend': '挑戰好友',
-  'MistyBanqi · Strongest': 'MistyBanqi · 最強',
-  'MistyBanqi (Red) wins by resignation · 49 moves': 'MistyBanqi（紅方）因對手認輸獲勝 · 49 回合',
   'Three rules give the game its character: the rat captures the elephant, only the rat can swim, and the lion and tiger leap the rivers.':
     '三條規則賦予了這盤棋的特色：老鼠能吃大象，只有老鼠能下水，獅和虎能跳過河。',
   'Strongest at the left, weakest at the right.': '最強在左，最弱在右。',
@@ -5206,42 +5191,18 @@ const ZH_HANT: Record<string, string> = {
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     '不能。它收到的棋盤和你看到的一樣全是暗子，而且發牌結果沒有任何一方知道：你不知道，引擎不知道，對手也不知道。',
   // banqi-online (2026-09-21): Taiwanese reader; 線上 / 免安裝 / 砲 / 覆盤; the park-rule names as searched (連吃、車直衝、炮翻山).
-  'Play Banqi Online': '線上暗棋：免安裝，直接開玩',
   'Play Banqi Online: No Install, vs the Engine or a Friend':
     '線上暗棋：免安裝、免註冊，跟電腦或朋友對弈',
-  'Banqi (Chinese dark chess) in the browser: nothing to install, no account, an engine that will beat most people, a link to play a friend, and the competition rules used in Taiwan.':
-    '在瀏覽器裡玩暗棋（翻棋）：不用安裝、不用註冊，有一個贏得過大多數人的引擎、一條邀朋友對弈的連結，規則用台灣的比賽規則。',
   'Anyone who searched for somewhere to play banqi online and wants a board now, with the rules question that always comes up answered on the same page.':
     '搜尋「線上暗棋」想馬上開一盤的人，順便把每次都會問到的規則問題在同一頁答完。',
-  'Banqi is the half-board xiangqi game where all thirty-two pieces start face-down. Open the board, flip a tile, and you are playing. Nothing to install, no account, no ads on the board.':
-    '暗棋是用半張象棋盤、三十二顆棋子全部蓋著開始的象棋變體。打開棋盤、翻一顆子，就開始了。不用安裝、不用註冊，棋盤上沒有廣告。',
-  'A real game against the engine, played on this site. Step through it with the arrows; plain discs are still face-down.':
-    '這是在本站跟引擎下的真實對局。用箭頭一步一步看；素色的圓片是還沒翻開的暗子。',
-  'Play in the browser': '在瀏覽器裡玩',
-  'The board runs on the page, on a phone or a computer, so there is nothing to download and nothing to sign up for. Pick a time control and the engine takes the other seat. To play a person, send them the link the site gives you: whoever opens it sits down opposite you, on any device, with no account either.':
-    '棋盤直接在網頁上跑，手機或電腦都行，所以沒有東西要下載，也沒有帳號要註冊。選一個時限，引擎就坐到對面。想跟人下，把網站給你的連結傳給對方：誰打開連結誰就坐到你對面，任何裝置都行，同樣不用帳號。',
-  'Finished games stay on the site with a review: every move judged by the engine, and every flip scored for how lucky it was, so you can see whether you lost to a bad decision or a bad tile. [How the review separates skill from luck](/blog/skill-vs-luck).':
-    '下完的棋會留在站上，附一份覆盤：每一步都由引擎判斷，每一次翻子都算出運氣好壞，所以你看得出自己是輸在一個壞決定，還是輸在一顆壞子。[覆盤怎麼把實力和運氣分開](/blog/skill-vs-luck)。',
-  'You play [MistyBanqi](/blog/mistybanqi), an engine written for this game: it searches ahead, treats every flip as a roll of the remaining tiles, and scores positions with a hand-written evaluation. It plays at one fixed strength and will beat most people. Its one known weakness is that it can let a won game drift into a draw, which is worth knowing when you are the one losing.':
-    '你的對手是 [MistyBanqi](/blog/mistybanqi)，一個專為這個遊戲寫的引擎：它會往前搜尋，把每一次翻子當成剩餘棋子的一次擲骰，再用手寫的評估函數替局面打分。它只有一種固定棋力，能贏過大多數人。它唯一已知的弱點是會把贏定的棋拖成和棋，當輸的那個是你時，這點值得知道。',
   'The same engine sits behind the [analysis board](/analysis/banqi), where you can set up any position and ask it what it would do.':
     '同一個引擎也在[分析棋盤](/analysis/banqi)後面，你可以擺任何局面，問它會怎麼走。',
-  'The rules on this board': '這個棋盤用的規則',
-  'Taiwanese rules, as played in competition. The ladder is general, advisor, elephant, chariot, horse, soldier: a piece captures its own rank or anything below it, the soldier can capture the general, and the general cannot capture a soldier. The cannon is the exception: it captures any revealed enemy piece by jumping exactly one piece along a row or column, and as a target it ranks between the horse and the soldier. Face-down tiles cannot be captured.':
-    '台灣規則，照比賽的下法。大小順序是將、士、象、車、馬、卒：一顆子可以吃同級或更小的子，卒可以吃將，將不能吃卒。砲是例外：它沿直行或橫列隔一顆子跳過去，吃掉後面任何一顆翻開的敵子，不受大小限制；被吃的時候，砲排在馬和卒之間。蓋著的暗子不能被吃。',
-  'Draws follow the Taiwan Computer Game Association competition rules: forty moves with no capture or flip is a draw, and so is a repeated position. Each turn is one action, a flip or a move. The full ladder with diagrams is on the [rules page](/rules/banqi).':
-    '和棋照台灣電腦對局協會的比賽規則：四十步沒有吃子也沒有翻子就是和棋，重複局面也是和棋。每一回合只做一件事，翻子或走子。完整的大小順序和圖解在[規則頁](/rules/banqi)。',
   'Park rules and competition rules': '公園規則和比賽規則',
   'Banqi is a park game before it is a competition game, and every park has its own rules. Three come up constantly. Chain captures, where a piece that captures may capture again in the same turn. The straight-charging chariot, which slides any distance along an empty line and captures across it regardless of rank. The flying cannon, which may also jump to an empty square as an ordinary move.':
     '暗棋先是公園裡的遊戲，才是比賽項目，而每個公園都有自己的規矩。最常碰到的有三條。連吃：吃了子的棋子在同一回合可以再吃。車直衝：車沿著空的直線可以走任意格數，隔著幾格吃子也不受大小限制。炮翻山：砲除了跳吃之外，也可以跳到空格當作普通的移動。',
-  'None of these are played here. The board uses the competition rules, one action per turn, every piece moving one square, and the cannon jumping only to capture, because that is the version an engine can be tuned against and the version two strangers can agree on without a conversation first. If you learned the park version, the table on the rules page is the one every game on this site follows.':
-    '這裡三條都不用。棋盤用的是比賽規則：一回合一個動作，每顆子走一格，砲只在吃子時跳，因為那是引擎能針對調校的版本，也是兩個陌生人不用先講好就能同意的版本。如果你學的是公園版，規則頁上的表格才是本站每一盤棋遵守的那一套。',
   'Can you chain captures in banqi?': '暗棋可以連吃嗎？',
   'Not under competition rules, and not on this board: a turn is one flip or one move, and a capture ends it. Chain captures are a park rule some tables play.':
     '比賽規則不行，這個棋盤也不行：一回合就是翻一顆子或走一步，吃了子回合就結束。連吃是有些棋桌在玩的公園規則。',
-  'How do you play banqi?': '暗棋怎麼玩？',
-  'Thirty-two xiangqi pieces are shuffled face-down on half a board. Your first flip decides your colour. Each turn you either flip a tile or move a revealed piece one square; captures follow the rank ladder, and the cannon captures by jumping one piece. You win when your opponent has no move or no pieces. The rules page has the ladder and the diagrams.':
-    '三十二顆象棋子洗勻後蓋在半張棋盤上。你翻開的第一顆子決定你的顏色。每回合翻一顆子，或把翻開的子走一格；吃子照大小順序，砲隔一顆子跳吃。對方沒有子可走或沒有子了，你就贏了。大小順序和圖解在規則頁。',
   'Where can I play banqi online for free?': '哪裡可以免費玩線上暗棋？',
   'Here. The board runs in the browser on a phone or a computer, with no download and no account. Play the engine, or send a friend the game link.':
     '就在這裡。棋盤在瀏覽器裡跑，手機、電腦都行，不用下載、不用帳號。跟引擎下，或把對局連結傳給朋友。',
@@ -5304,6 +5265,25 @@ const ZH_HANT: Record<string, string> = {
     '一顆砲架，再來是目標。大小不重要：砲吃將。',
   'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
     '沒有砲架就不能吃：旁邊的車是安全的，上面隔兩格、中間沒有子的馬也是。',
+  'Banqi on Mistboard': 'Mistboard 上的暗棋',
+  'Banqi in the browser: nothing to install, no account, an engine that beats most people, a friend link, and a straight answer on the park rules the competition rules leave out.':
+    '在瀏覽器裡玩暗棋：不用安裝、不用註冊，有一個贏得過大多數人的引擎、一條邀朋友的連結，還有一個直接的答案：比賽規則不採用的那些公園規則是哪些。',
+  'Banqi is the half-board xiangqi game where all thirty-two pieces start face-down. Open the board, flip a tile, and you are playing. Nothing to install, no account, no ads on the board. The [rules page](/rules/banqi) has every rule on a board; this page is the rest.':
+    '暗棋是用半張象棋盤、三十二顆棋子全部蓋著開始的象棋變體。打開棋盤、翻一顆子，就開始了。不用安裝、不用註冊，棋盤上沒有廣告。[規則頁](/rules/banqi)把每一條規則都畫在棋盤上；這一頁講其餘的事。',
+  'That is [MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, one of [twenty games](/study/FsA5sowX) from the same run. Step through it with the arrows; a tile nobody has flipped is still face-down.':
+    '這是 [MistyBanqi](/blog/mistybanqi) 自己對自己、每步一千萬個節點的對局，同一批[二十盤](/study/FsA5sowX)裡的一盤。用箭頭一步一步看；還沒有人翻過的子仍然蓋著。',
+  'The draw rules come from the same source, the Taiwan Computer Game Association: forty moves with no capture or flip is a draw, and so is a repeated position. In the twenty engine games above, fifteen ended with a side unable to move and five on the forty-move clock; none by repetition.':
+    '和棋規則來自同一個來源，台灣電腦對局協會：四十步沒有吃子也沒有翻子就是和棋，重複局面也是和棋。上面那二十盤引擎對局裡，十五盤以一方無子可走結束，五盤因四十步計數和棋；沒有一盤因重複局面。',
+  'None of these are played here. The board uses the Taiwanese competition rules: one action per turn, every piece moving one square, and the cannon jumping only to capture. Those are the rules the strongest programs play, they are the version an engine can be tuned against, and they are the version two strangers can agree on without a conversation first. If you learned the park version, the ladder on the rules page is the one every game on this site follows.':
+    '這裡三條都不用。棋盤用的是台灣比賽規則：一回合一個動作，每顆子走一格，砲只在吃子時跳。那是最強的程式在下的規則，是引擎能針對調校的版本，也是兩個陌生人不用先講好就能同意的版本。如果你學的是公園版，規則頁上的大小順序才是本站每一盤棋遵守的。',
+  'You play MistyBanqi, an engine written for this game: it searches ahead, treats every flip as a roll of the remaining tiles, and scores positions with a hand-written evaluation. It plays at one fixed strength and will beat most people. Its one known weakness is that it can let a won game drift into a draw, which is worth knowing when you are the one losing. [How it thinks, and where it cracks.](/blog/mistybanqi)':
+    '你的對手是 MistyBanqi，一個專為這個遊戲寫的引擎：它會往前搜尋，把每一次翻子當成剩餘棋子的一次擲骰，再用手寫的評估函數替局面打分。它只有一種固定棋力，能贏過大多數人。它唯一已知的弱點是會把贏定的棋拖成和棋，當輸的那個是你時，這點值得知道。[它怎麼想，又在哪裡出錯。](/blog/mistybanqi)',
+  'A bad decision or a bad tile': '壞決定，還是壞子',
+  'Half the moves in banqi are flips, and a flip is a dice roll. A chess-style review would blame you for variance. Finished games here get a review that splits every flip into the decision and the tile: your accuracy with the luck stripped out, and a luck line on the advantage graph, so you can see whether you lost to a bad move or a bad draw. [How the review separates skill from luck](/blog/skill-vs-luck), with what fifty-two human games against the engine say about who really earned their wins.':
+    '暗棋一半的步數是翻子，而翻子是擲骰。照西洋棋那套覆盤，你會被算成失誤的其實是運氣。這裡下完的棋會有一份覆盤，把每一次翻子拆成決定和棋子兩部分：扣掉運氣之後的準確率，還有優勢圖上的一條運氣線，讓你看得出自己是輸在一步壞棋，還是一顆壞子。[覆盤怎麼把實力和運氣分開](/blog/skill-vs-luck)，以及五十二盤人對引擎的棋說明了誰的勝利是真的贏來的。',
+  'Playing without installing anything': '不用安裝就能玩',
+  'The board runs on the page, on a phone or a computer, so there is nothing to download and nothing to sign up for. Pick a time control and the engine takes the other seat. To play a person, send them the link the site gives you: whoever opens it sits down opposite you, on any device, with no account either. Finished games stay on the site with their review.':
+    '棋盤直接在網頁上跑，手機或電腦都行，所以沒有東西要下載，也沒有帳號要註冊。選一個時限，引擎就坐到對面。想跟人下，把網站給你的連結傳給對方：誰打開連結誰就坐到你對面，任何裝置都行，同樣不用帳號。下完的棋連同覆盤留在站上。',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

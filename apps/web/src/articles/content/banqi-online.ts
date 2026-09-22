@@ -1,45 +1,38 @@
-// The banqi play page (growth plan lane 0, #422): the page a "暗棋 線上" or
-// "暗棋 免安裝" search should land on. Its primary reader is Taiwanese, in
-// zh-Hant; the English is the dictionary key. Rules-kind so it sits in the
-// rules index for good rather than aging out of the blog ring, and so it
-// carries the /rules/ authority the domain already has for 暗棋 queries.
-// The canonical rules page stays /rules/banqi; this page links to it and
-// takes the play-shaped queries (線上玩, 免安裝, AI 對戰, 雙人).
-import { BANQI_SAMPLE_GAME } from '../../banqi-sample-game.js';
+// The banqi post (growth plan lane 0, #422): what the rules page does not
+// carry. Brian, 2026-09-21: "a blog post on banqi — covering stuff the banqi
+// rules page doesn't." The rules page keeps the rules; this takes the park
+// rules nobody on page 1 answers straight, the engine and its blind spot, the
+// review that separates a bad decision from a bad tile, and playing without
+// installing anything. Its primary reader is Taiwanese, in zh-Hant; the
+// English is the dictionary key.
 import { BANQI_ONLINE_THUMBNAIL } from '../diagrams.js';
-import type { Article } from '../types.js';
+import type { Article, ArticleBlock } from '../types.js';
 
 const PLAY_ENGINE = '/?play=computer&gameSpecId=banqi';
 const PLAY_FRIEND = '/?play=friend&gameSpecId=banqi';
 
 export const banqiOnlineArticle: Article = {
   slug: 'banqi-online',
+  kind: 'article',
+  publisher: 'mistboard',
   gameSpecId: 'banqi',
   boardFamily: 'xiangqi',
-  kind: 'rules',
   playableOnMistboard: true,
-  // Not on the rules index: that grid is one icon per game, and this is the
-  // play page for a game that already has its icon there. Search, the sitemap
-  // and the link from /rules/banqi are its paths in.
-  showInIndex: false,
-  title: 'Play Banqi Online',
+  title: 'Banqi on Mistboard',
   seoTitle: 'Play Banqi Online: No Install, vs the Engine or a Friend',
   summary:
-    'Banqi (Chinese dark chess) in the browser: nothing to install, no account, an engine that will beat most people, a link to play a friend, and the competition rules used in Taiwan.',
+    'Banqi in the browser: nothing to install, no account, an engine that beats most people, a friend link, and a straight answer on the park rules the competition rules leave out.',
   showSummaryOnPage: false,
-  // Pulled to draft 2026-09-21 the evening it shipped (Brian: "it's not
-  // ready. sorry we rushed it a bit"): the zh-Hant copy goes back through a
-  // read on localhost before it publishes again. The dictionary entries stay.
   status: 'draft',
-  publishedAt: '2026-09-21',
+  publishedAt: '2026-09-22',
   audience:
     'Anyone who searched for somewhere to play banqi online and wants a board now, with the rules question that always comes up answered on the same page.',
   thumbnail: { kind: 'svg', svg: BANQI_ONLINE_THUMBNAIL },
+  readNext: ['banqi', 'mistybanqi', 'skill-vs-luck'],
   intro: [
     {
       kind: 'paragraph',
-      text:
-        'Banqi is the half-board xiangqi game where all thirty-two pieces start face-down. Open the board, flip a tile, and you are playing. Nothing to install, no account, no ads on the board.',
+      text: 'Banqi is the half-board xiangqi game where all thirty-two pieces start face-down. Open the board, flip a tile, and you are playing. Nothing to install, no account, no ads on the board. The [rules page](/rules/banqi) has every rule on a board; this page is the rest.',
     },
     {
       kind: 'cta',
@@ -49,33 +42,31 @@ export const banqiOnlineArticle: Article = {
       ],
     },
     {
-      kind: 'banqi-replay',
-      spec: {
-        red: BANQI_SAMPLE_GAME.red,
-        black: BANQI_SAMPLE_GAME.black,
-        event: BANQI_SAMPLE_GAME.event,
-        outcome: 'MistyBanqi (Red) wins by resignation · 49 moves',
-        resultText: BANQI_SAMPLE_GAME.result,
-        deal: BANQI_SAMPLE_GAME.deal,
-        moves: BANQI_SAMPLE_GAME.moves,
-      },
-      caption:
-        'A real game against the engine, played on this site. Step through it with the arrows; plain discs are still face-down.',
+      kind: 'embed',
+      path: '/embed/study/FsA5sowX/F8fezAhm',
+      title: 'Banqi: an engine game under the competition rules',
+      aspect: [702, 440],
+    } as ArticleBlock,
+    {
+      kind: 'paragraph',
+      text: 'That is [MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, one of [twenty games](/study/FsA5sowX) from the same run. Step through it with the arrows; a tile nobody has flipped is still face-down.',
     },
   ],
   sections: [
     {
-      heading: 'Play in the browser',
+      heading: 'Park rules and competition rules',
       blocks: [
         {
           kind: 'paragraph',
-          text:
-            'The board runs on the page, on a phone or a computer, so there is nothing to download and nothing to sign up for. Pick a time control and the engine takes the other seat. To play a person, send them the link the site gives you: whoever opens it sits down opposite you, on any device, with no account either.',
+          text: 'Banqi is a park game before it is a competition game, and every park has its own rules. Three come up constantly. Chain captures, where a piece that captures may capture again in the same turn. The straight-charging chariot, which slides any distance along an empty line and captures across it regardless of rank. The flying cannon, which may also jump to an empty square as an ordinary move.',
         },
         {
           kind: 'paragraph',
-          text:
-            'Finished games stay on the site with a review: every move judged by the engine, and every flip scored for how lucky it was, so you can see whether you lost to a bad decision or a bad tile. [How the review separates skill from luck](/blog/skill-vs-luck).',
+          text: 'None of these are played here. The board uses the Taiwanese competition rules: one action per turn, every piece moving one square, and the cannon jumping only to capture. Those are the rules the strongest programs play, they are the version an engine can be tuned against, and they are the version two strangers can agree on without a conversation first. If you learned the park version, the ladder on the rules page is the one every game on this site follows.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The draw rules come from the same source, the Taiwan Computer Game Association: forty moves with no capture or flip is a draw, and so is a repeated position. In the twenty engine games above, fifteen ended with a side unable to move and five on the forty-move clock; none by repetition.',
         },
       ],
     },
@@ -84,43 +75,29 @@ export const banqiOnlineArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text:
-            'You play [MistyBanqi](/blog/mistybanqi), an engine written for this game: it searches ahead, treats every flip as a roll of the remaining tiles, and scores positions with a hand-written evaluation. It plays at one fixed strength and will beat most people. Its one known weakness is that it can let a won game drift into a draw, which is worth knowing when you are the one losing.',
+          text: 'You play MistyBanqi, an engine written for this game: it searches ahead, treats every flip as a roll of the remaining tiles, and scores positions with a hand-written evaluation. It plays at one fixed strength and will beat most people. Its one known weakness is that it can let a won game drift into a draw, which is worth knowing when you are the one losing. [How it thinks, and where it cracks.](/blog/mistybanqi)',
         },
         {
           kind: 'paragraph',
-          text:
-            'The same engine sits behind the [analysis board](/analysis/banqi), where you can set up any position and ask it what it would do.',
+          text: 'The same engine sits behind the [analysis board](/analysis/banqi), where you can set up any position and ask it what it would do.',
         },
       ],
     },
     {
-      heading: 'The rules on this board',
+      heading: 'A bad decision or a bad tile',
       blocks: [
         {
           kind: 'paragraph',
-          text:
-            'Taiwanese rules, as played in competition. The ladder is general, advisor, elephant, chariot, horse, soldier: a piece captures its own rank or anything below it, the soldier can capture the general, and the general cannot capture a soldier. The cannon is the exception: it captures any revealed enemy piece by jumping exactly one piece along a row or column, and as a target it ranks between the horse and the soldier. Face-down tiles cannot be captured.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'Draws follow the Taiwan Computer Game Association competition rules: forty moves with no capture or flip is a draw, and so is a repeated position. Each turn is one action, a flip or a move. The full ladder with diagrams is on the [rules page](/rules/banqi).',
+          text: 'Half the moves in banqi are flips, and a flip is a dice roll. A chess-style review would blame you for variance. Finished games here get a review that splits every flip into the decision and the tile: your accuracy with the luck stripped out, and a luck line on the advantage graph, so you can see whether you lost to a bad move or a bad draw. [How the review separates skill from luck](/blog/skill-vs-luck), with what fifty-two human games against the engine say about who really earned their wins.',
         },
       ],
     },
     {
-      heading: 'Park rules and competition rules',
+      heading: 'Playing without installing anything',
       blocks: [
         {
           kind: 'paragraph',
-          text:
-            'Banqi is a park game before it is a competition game, and every park has its own rules. Three come up constantly. Chain captures, where a piece that captures may capture again in the same turn. The straight-charging chariot, which slides any distance along an empty line and captures across it regardless of rank. The flying cannon, which may also jump to an empty square as an ordinary move.',
-        },
-        {
-          kind: 'paragraph',
-          text:
-            'None of these are played here. The board uses the competition rules, one action per turn, every piece moving one square, and the cannon jumping only to capture, because that is the version an engine can be tuned against and the version two strangers can agree on without a conversation first. If you learned the park version, the table on the rules page is the one every game on this site follows.',
+          text: 'The board runs on the page, on a phone or a computer, so there is nothing to download and nothing to sign up for. Pick a time control and the engine takes the other seat. To play a person, send them the link the site gives you: whoever opens it sits down opposite you, on any device, with no account either. Finished games stay on the site with their review.',
         },
       ],
     },
@@ -134,11 +111,6 @@ export const banqiOnlineArticle: Article = {
               question: 'Can you chain captures in banqi?',
               answer:
                 'Not under competition rules, and not on this board: a turn is one flip or one move, and a capture ends it. Chain captures are a park rule some tables play.',
-            },
-            {
-              question: 'How do you play banqi?',
-              answer:
-                'Thirty-two xiangqi pieces are shuffled face-down on half a board. Your first flip decides your colour. Each turn you either flip a tile or move a revealed piece one square; captures follow the rank ladder, and the cannon captures by jumping one piece. You win when your opponent has no move or no pieces. The rules page has the ladder and the diagrams.',
             },
             {
               question: 'Where can I play banqi online for free?',
@@ -176,7 +148,6 @@ export const banqiOnlineArticle: Article = {
           buttons: [
             { label: 'Play the engine', href: PLAY_ENGINE, emphasis: 'primary' },
             { label: 'Play a friend', href: PLAY_FRIEND, emphasis: 'secondary' },
-            { label: 'Read the rules', href: '/rules/banqi', emphasis: 'secondary' },
           ],
         },
       ],

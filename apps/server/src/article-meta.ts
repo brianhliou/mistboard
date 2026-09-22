@@ -248,8 +248,8 @@ export const ARTICLE_META: Record<
       'The complete rules of Jieqi, the hidden-piece Chinese chess variant, in English: every piece except the generals starts face-down, makes its first move as the point it stands on, and reveals itself after moving. Play it free in your browser.',
   },
   'banqi-online': {
-    title: 'Play Banqi Online',
-    kind: 'rules',
+    title: 'Banqi on Mistboard',
+    kind: 'article',
     description:
       'Banqi (Chinese dark chess) in the browser: nothing to install, no account, an engine that will beat most people, a link to play a friend, and the competition rules used in Taiwan.',
   },
