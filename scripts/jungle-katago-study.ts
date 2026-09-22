@@ -23,6 +23,16 @@ import {
   jungleStateToEngineFen,
   parseJungleFen,
 } from '@mistboard/game';
+import {
+  BENCHMARK_STUDY_I18N,
+  benchmarkChapterName,
+  benchmarkComment,
+  type Localized,
+  MATCH_STUDY_I18N,
+  matchChapterComment,
+  matchChapterName,
+  SCRIPTS,
+} from './lib/jungle-match-study-i18n.js';
 
 const args = process.argv.slice(2);
 const flag = (name: string): string | undefined => {
@@ -56,6 +66,9 @@ type StudyGame = {
   date: string;
   orientation: 'red' | 'black';
   game: number;
+  /** zh-Hans and zh-Hant for this chapter's name and its root comment, written
+   *  beside the English by the same code that generates it. */
+  i18n?: { name: Localized; comment: Localized | null };
 };
 
 const NAME = { katago: 'KataGo-AnimalChess', misty: 'MistyJungle 0.0.6' } as const;
@@ -112,8 +125,20 @@ function describe(game: MatchGame, why: string): StudyGame {
         .map((j) => `${j.uci} (ply ${j.ply}, ${j.side === 'katago' ? 'KataGo' : 'Misty'})`)
         .join(', ')}.`
     : ' No sideways tiger jump in this game.';
+  const zhName = matchChapterName(game.game, why);
+  const zhComment = matchChapterComment({
+    reason: why,
+    plies: game.plies,
+    kataSeat: kata,
+    winner: game.winner,
+    result: game.result,
+    endReason: game.reason,
+    captures: r.captures,
+    sideways: r.sideways,
+  });
   return {
     name: `Game ${game.game}: ${why}`,
+    ...(zhName ? { i18n: { name: zhName, comment: zhComment } } : {}),
     rootFen: r.rootFen,
     moves: game.moves,
     intro: `${why}. KataGo-AnimalChess plays ${kata}, MistyJungle ${kata === 'red' ? 'black' : 'red'}. ${ending} ${r.captures} captures.${jumps}`,
@@ -174,6 +199,7 @@ function compile(file: string): void {
   }
   const data = {
     name: 'KataGo-AnimalChess vs MistyJungle',
+    i18n: MATCH_STUDY_I18N,
     description:
       "All 200 games in which KataGo-AnimalChess (hzyhhzy, Kouza), a self-play net for Dou Shou Qi, beat MistyJungle 82-0 with 118 draws at matched time per move, right after Mistboard gave the tiger the lion's sideways river jump. Eight named games first, then the rest, decisive games before draws. The harness and the records are linked from the post on brianhliou.com.",
     games: pick.map(([g, why]) => describe(g, why)),
@@ -210,8 +236,11 @@ function compileJson(files: string[]): void {
       state = next;
     }
     const name = g.result_text ?? g.event;
+    const zhName = benchmarkChapterName(name);
+    const zhComment = benchmarkComment(g.event, g.result_text ?? '', moves.length);
     return {
       name,
+      ...(zhName ? { i18n: { name: zhName, comment: zhComment } } : {}),
       rootFen: g.start,
       moves,
       intro:
@@ -229,6 +258,7 @@ function compileJson(files: string[]): void {
   });
   const data = {
     name: 'MistyJungle benchmark games, June 2026',
+    i18n: BENCHMARK_STUDY_I18N,
     description:
       'The games behind "Dou Shou Qi: Classical Search Beat the Learned Eval" on brianhliou.com: MistyJungle against the strongest classical engine it could be matched with, and against itself at 8M nodes. Played under the lengthwise-only tiger rule Mistboard used until September 2026; every move stays legal under the current rule.',
     games,
@@ -247,7 +277,14 @@ function parseStart(fen: string): JungleGameState {
 
 function buildTree(game: StudyGame) {
   const root: { annotations: object; children: unknown[] } = { annotations: {}, children: [] };
-  if (game.intro) root.annotations = { comments: [{ text: game.intro }] };
+  if (game.intro) {
+    // A comment's translation rides on the comment itself, inside the tree, the
+    // way study-name-i18n.mjs writes one.
+    const comment: Record<string, unknown> = { text: game.intro };
+    const zh = game.i18n?.comment;
+    if (zh) comment.i18n = Object.fromEntries(SCRIPTS.map((sc) => [sc, { text: zh[sc] }]));
+    root.annotations = { comments: [comment] };
+  }
   let cursor = root;
   for (const uci of game.moves) {
     const node = { uci, children: [] as unknown[] };
@@ -263,6 +300,9 @@ function chapterFor(game: StudyGame) {
     variant: 'jungle',
     orientation: game.orientation,
     root: buildTree(game),
+    ...(game.i18n
+      ? { i18n: Object.fromEntries(SCRIPTS.map((s) => [s, { name: game.i18n?.name[s] }])) }
+      : {}),
     tags: {
       red: game.red,
       black: game.black,
@@ -315,6 +355,7 @@ async function main(): Promise<void> {
   const data = JSON.parse(readFileSync(DATA, 'utf8')) as {
     name: string;
     description: string;
+    i18n?: Record<string, { name: string; description: string }>;
     games: StudyGame[];
   };
   for (const game of data.games) {
@@ -355,7 +396,7 @@ async function main(): Promise<void> {
     await send(
       'PATCH',
       `/api/studies/${update}`,
-      { name: data.name, description: data.description },
+      { name: data.name, description: data.description, i18n: data.i18n },
       cookie,
     );
     console.log(`${BASE}/study/${update}`);
@@ -369,6 +410,7 @@ async function main(): Promise<void> {
       {
         name: data.name,
         description: data.description,
+        i18n: data.i18n,
         visibility: has('public') ? 'public' : 'unlisted',
         chapter: chapterFor(first!),
       },

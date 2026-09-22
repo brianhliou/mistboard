@@ -1,9 +1,29 @@
 {
   "name": "KataGo-AnimalChess vs MistyJungle",
+  "i18n": {
+    "zh-Hans": {
+      "name": "KataGo-AnimalChess 对 MistyJungle",
+      "description": "KataGo-AnimalChess（hzyhhzy、Kouza）是一个用于斗兽棋的自我对弈神经网络。在每着用时相同的条件下，它以 82 胜 0 负 118 和击败 MistyJungle，这里是全部 200 局。对局在 Mistboard 让虎拥有狮的横向跳河之后进行。八局有名字的排在最前，随后是其余对局，分出胜负的在前。"
+    },
+    "zh-Hant": {
+      "name": "KataGo-AnimalChess 對 MistyJungle",
+      "description": "KataGo-AnimalChess（hzyhhzy、Kouza）是一個用於鬥獸棋的自我對弈類神經網路。在每著用時相同的條件下，牠以 82 勝 0 負 118 和擊敗 MistyJungle，這裡是全部 200 局。對局在 Mistboard 讓虎擁有獅的橫向跳河之後進行。八局有名字的排在最前，隨後是其餘對局，分出勝負的在前。"
+    }
+  },
   "description": "All 200 games in which KataGo-AnimalChess (hzyhhzy, Kouza), a self-play net for Dou Shou Qi, beat MistyJungle 82-0 with 118 draws at matched time per move, right after Mistboard gave the tiger the lion's sideways river jump. Eight named games first, then the rest, decisive games before draws. The harness and the records are linked from the post on brianhliou.com.",
   "games": [
     {
       "name": "Game 67: the tiger's sideways jump, then the den",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 67 局：虎的横向跳河，随后入穴",
+          "zh-Hant": "第 67 局：虎的橫向跳河，隨後入穴"
+        },
+        "comment": {
+          "zh-Hans": "虎的横向跳河，随后入穴。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 90 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 31 步，Misty）、a5d5（第 54 步，KataGo）。",
+          "zh-Hant": "虎的橫向跳河，隨後入穴。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 90 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 31 步，Misty）、a5d5（第 54 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -108,6 +128,16 @@
     },
     {
       "name": "Game 138: the shortest win as red",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 138 局：执红最短的胜局",
+          "zh-Hant": "第 138 局：執紅最短的勝局"
+        },
+        "comment": {
+          "zh-Hans": "执红最短的胜局。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 81 步以入穴获胜。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d5g5（第 80 步，Misty）。",
+          "zh-Hant": "執紅最短的勝局。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 81 步以入穴獲勝。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d5g5（第 80 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -203,6 +233,16 @@
     },
     {
       "name": "Game 3: the shortest win as black",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 3 局：执黑最短的胜局",
+          "zh-Hant": "第 3 局：執黑最短的勝局"
+        },
+        "comment": {
+          "zh-Hans": "执黑最短的胜局。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 76 步以入穴获胜。共 8 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "執黑最短的勝局。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 76 步以入穴獲勝。共 8 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -293,6 +333,16 @@
     },
     {
       "name": "Game 74: a sideways jump as red",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 74 局：执红的一次横向跳河",
+          "zh-Hant": "第 74 局：執紅的一次橫向跳河"
+        },
+        "comment": {
+          "zh-Hans": "执红的一次横向跳河。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 125 步以入穴获胜。共 10 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 16 步，Misty）、g4d4（第 45 步，KataGo）。",
+          "zh-Hant": "執紅的一次橫向跳河。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 125 步以入穴獲勝。共 10 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 16 步，Misty）、g4d4（第 45 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -432,6 +482,16 @@
     },
     {
       "name": "Game 146: the longest win",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 146 局：最长的胜局",
+          "zh-Hant": "第 146 局：最長的勝局"
+        },
+        "comment": {
+          "zh-Hans": "最长的胜局。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 331 步以入穴获胜。共 11 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5g5（第 163 步，KataGo）、g6d6（第 167 步，KataGo）、d6a6（第 169 步，KataGo）。",
+          "zh-Hant": "最長的勝局。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 331 步以入穴獲勝。共 11 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5g5（第 163 步，KataGo）、g6d6（第 167 步，KataGo）、d6a6（第 169 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -777,6 +837,16 @@
     },
     {
       "name": "Game 110: the shortest draw",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 110 局：最短的和局",
+          "zh-Hant": "第 110 局：最短的和局"
+        },
+        "comment": {
+          "zh-Hans": "最短的和局。KataGo-AnimalChess 执红，MistyJungle 执黑。46 步后以三次重复局面成和。共 0 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 32 步，Misty）。",
+          "zh-Hant": "最短的和局。KataGo-AnimalChess 執紅，MistyJungle 執黑。46 步後以三次重複局面成和。共 0 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 32 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -837,6 +907,16 @@
     },
     {
       "name": "Game 108: the longest draw, a repetition grind",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 108 局：最长的和局，重复局面的消耗战",
+          "zh-Hant": "第 108 局：最長的和局，重複局面的消耗戰"
+        },
+        "comment": {
+          "zh-Hans": "最长的和局，重复局面的消耗战。KataGo-AnimalChess 执红，MistyJungle 执黑。312 步后以三次重复局面成和。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d5a5（第 52 步，Misty）。",
+          "zh-Hant": "最長的和局，重複局面的消耗戰。KataGo-AnimalChess 執紅，MistyJungle 執黑。312 步後以三次重複局面成和。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d5a5（第 52 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -1163,6 +1243,16 @@
     },
     {
       "name": "Game 55: the second-shortest win as black",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 55 局：执黑第二短的胜局",
+          "zh-Hant": "第 55 局：執黑第二短的勝局"
+        },
+        "comment": {
+          "zh-Hans": "执黑第二短的胜局。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 88 步以入穴获胜。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 19 步，Misty）。",
+          "zh-Hant": "執黑第二短的勝局。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 88 步以入穴獲勝。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 19 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -1265,6 +1355,16 @@
     },
     {
       "name": "Game 196: KataGo wins as red, 81 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 196 局：KataGo 执红获胜，81 步",
+          "zh-Hant": "第 196 局：KataGo 執紅獲勝，81 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，81 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 81 步以入穴获胜。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 44 步，Misty）、d6a6（第 62 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，81 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 81 步以入穴獲勝。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 44 步，Misty）、d6a6（第 62 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -1360,6 +1460,16 @@
     },
     {
       "name": "Game 54: KataGo wins as red, 83 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 54 局：KataGo 执红获胜，83 步",
+          "zh-Hant": "第 54 局：KataGo 執紅獲勝，83 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，83 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 83 步以入穴获胜。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）、d4a4（第 56 步，Misty）、a4d4（第 58 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，83 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 83 步以入穴獲勝。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）、d4a4（第 56 步，Misty）、a4d4（第 58 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -1457,6 +1567,16 @@
     },
     {
       "name": "Game 134: KataGo wins as red, 83 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 134 局：KataGo 执红获胜，83 步",
+          "zh-Hant": "第 134 局：KataGo 執紅獲勝，83 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，83 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 83 步以入穴获胜。共 6 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，83 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 83 步以入穴獲勝。共 6 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -1554,6 +1674,16 @@
     },
     {
       "name": "Game 124: KataGo wins as red, 85 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 124 局：KataGo 执红获胜，85 步",
+          "zh-Hant": "第 124 局：KataGo 執紅獲勝，85 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，85 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 85 步以入穴获胜。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，85 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 85 步以入穴獲勝。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -1653,6 +1783,16 @@
     },
     {
       "name": "Game 8: KataGo wins as red, 89 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 8 局：KataGo 执红获胜，89 步",
+          "zh-Hant": "第 8 局：KataGo 執紅獲勝，89 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，89 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 89 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，89 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 89 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -1756,6 +1896,16 @@
     },
     {
       "name": "Game 150: KataGo wins as red, 89 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 150 局：KataGo 执红获胜，89 步",
+          "zh-Hant": "第 150 局：KataGo 執紅獲勝，89 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，89 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 89 步以入穴获胜。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 22 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，89 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 89 步以入穴獲勝。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 22 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -1859,6 +2009,16 @@
     },
     {
       "name": "Game 154: KataGo wins as red, 89 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 154 局：KataGo 执红获胜，89 步",
+          "zh-Hant": "第 154 局：KataGo 執紅獲勝，89 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，89 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 89 步以入穴获胜。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 26 步，Misty）、d6a6（第 44 步，Misty）、a5d5（第 66 步，Misty）、d5a5（第 76 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，89 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 89 步以入穴獲勝。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 26 步，Misty）、d6a6（第 44 步，Misty）、a5d5（第 66 步，Misty）、d5a5（第 76 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -1962,6 +2122,16 @@
     },
     {
       "name": "Game 174: KataGo wins as red, 89 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 174 局：KataGo 执红获胜，89 步",
+          "zh-Hant": "第 174 局：KataGo 執紅獲勝，89 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，89 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 89 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 30 步，Misty）、d6a6（第 44 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，89 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 89 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 30 步，Misty）、d6a6（第 44 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -2065,6 +2235,16 @@
     },
     {
       "name": "Game 177: KataGo wins as black, 90 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 177 局：KataGo 执黑获胜，90 步",
+          "zh-Hant": "第 177 局：KataGo 執黑獲勝，90 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，90 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 90 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5a5（第 41 步，Misty）、a6d6（第 69 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，90 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 90 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5a5（第 41 步，Misty）、a6d6（第 69 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -2169,6 +2349,16 @@
     },
     {
       "name": "Game 167: KataGo wins as black, 90 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 167 局：KataGo 执黑获胜，90 步",
+          "zh-Hant": "第 167 局：KataGo 執黑獲勝，90 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，90 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 90 步以入穴获胜。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 19 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，90 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 90 步以入穴獲勝。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 19 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -2273,6 +2463,16 @@
     },
     {
       "name": "Game 126: KataGo wins as red, 91 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 126 局：KataGo 执红获胜，91 步",
+          "zh-Hant": "第 126 局：KataGo 執紅獲勝，91 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，91 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 91 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 28 步，Misty）、d4a4（第 52 步，Misty）、a4d4（第 62 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，91 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 91 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 28 步，Misty）、d4a4（第 52 步，Misty）、a4d4（第 62 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -2378,6 +2578,16 @@
     },
     {
       "name": "Game 153: KataGo wins as black, 92 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 153 局：KataGo 执黑获胜，92 步",
+          "zh-Hant": "第 153 局：KataGo 執黑獲勝，92 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，92 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 92 步以入穴获胜。共 7 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，92 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 92 步以入穴獲勝。共 7 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -2484,6 +2694,16 @@
     },
     {
       "name": "Game 0: KataGo wins as red, 93 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 0 局：KataGo 执红获胜，93 步",
+          "zh-Hant": "第 0 局：KataGo 執紅獲勝，93 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，93 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 93 步以入穴获胜。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 22 步，Misty）、d5g5（第 50 步，Misty）、g5d5（第 74 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，93 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 93 步以入穴獲勝。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 22 步，Misty）、d5g5（第 50 步，Misty）、g5d5（第 74 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -2591,6 +2811,16 @@
     },
     {
       "name": "Game 84: KataGo wins as red, 93 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 84 局：KataGo 执红获胜，93 步",
+          "zh-Hant": "第 84 局：KataGo 執紅獲勝，93 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，93 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 93 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d4a4（第 38 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，93 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 93 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d4a4（第 38 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -2698,6 +2928,16 @@
     },
     {
       "name": "Game 190: KataGo wins as red, 95 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 190 局：KataGo 执红获胜，95 步",
+          "zh-Hant": "第 190 局：KataGo 執紅獲勝，95 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，95 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 95 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d6a6（第 44 步，Misty）、a6d6（第 46 步，Misty）、d6a6（第 48 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，95 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 95 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d6a6（第 44 步，Misty）、a6d6（第 46 步，Misty）、d6a6（第 48 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -2807,6 +3047,16 @@
     },
     {
       "name": "Game 13: KataGo wins as black, 96 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 13 局：KataGo 执黑获胜，96 步",
+          "zh-Hant": "第 13 局：KataGo 執黑獲勝，96 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，96 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 96 步以入穴获胜。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 19 步，Misty）、d5g5（第 41 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，96 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 96 步以入穴獲勝。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 19 步，Misty）、d5g5（第 41 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -2917,6 +3167,16 @@
     },
     {
       "name": "Game 40: KataGo wins as red, 99 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 40 局：KataGo 执红获胜，99 步",
+          "zh-Hant": "第 40 局：KataGo 執紅獲勝，99 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，99 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 99 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 26 步，Misty）、d6a6（第 42 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，99 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 99 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 26 步，Misty）、d6a6（第 42 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -3030,6 +3290,16 @@
     },
     {
       "name": "Game 101: KataGo wins as black, 100 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 101 局：KataGo 执黑获胜，100 步",
+          "zh-Hant": "第 101 局：KataGo 執黑獲勝，100 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，100 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 100 步以入穴获胜。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 19 步，Misty）、d6a6（第 69 步，Misty）、a6d6（第 85 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，100 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 100 步以入穴獲勝。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 19 步，Misty）、d6a6（第 69 步，Misty）、a6d6（第 85 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -3144,6 +3414,16 @@
     },
     {
       "name": "Game 195: KataGo wins as black, 100 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 195 局：KataGo 执黑获胜，100 步",
+          "zh-Hant": "第 195 局：KataGo 執黑獲勝，100 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，100 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 100 步以入穴获胜。共 6 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，100 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 100 步以入穴獲勝。共 6 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -3258,6 +3538,16 @@
     },
     {
       "name": "Game 22: KataGo wins as red, 101 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 22 局：KataGo 执红获胜，101 步",
+          "zh-Hant": "第 22 局：KataGo 執紅獲勝，101 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，101 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 101 步以入穴获胜。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，101 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 101 步以入穴獲勝。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -3373,6 +3663,16 @@
     },
     {
       "name": "Game 192: KataGo wins as red, 101 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 192 局：KataGo 执红获胜，101 步",
+          "zh-Hant": "第 192 局：KataGo 執紅獲勝，101 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，101 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 101 步以入穴获胜。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d4g4（第 78 步，Misty）、g4d4（第 96 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，101 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 101 步以入穴獲勝。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d4g4（第 78 步，Misty）、g4d4（第 96 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -3488,6 +3788,16 @@
     },
     {
       "name": "Game 47: KataGo wins as black, 102 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 47 局：KataGo 执黑获胜，102 步",
+          "zh-Hant": "第 47 局：KataGo 執黑獲勝，102 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，102 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 102 步以入穴获胜。共 7 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，102 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 102 步以入穴獲勝。共 7 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -3604,6 +3914,16 @@
     },
     {
       "name": "Game 83: KataGo wins as black, 102 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 83 局：KataGo 执黑获胜，102 步",
+          "zh-Hant": "第 83 局：KataGo 執黑獲勝，102 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，102 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 102 步以入穴获胜。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 46 步，KataGo）、d5a5（第 54 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，102 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 102 步以入穴獲勝。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 46 步，KataGo）、d5a5（第 54 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -3720,6 +4040,16 @@
     },
     {
       "name": "Game 65: KataGo wins as black, 102 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 65 局：KataGo 执黑获胜，102 步",
+          "zh-Hant": "第 65 局：KataGo 執黑獲勝，102 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，102 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 102 步以入穴获胜。共 7 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，102 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 102 步以入穴獲勝。共 7 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -3836,6 +4166,16 @@
     },
     {
       "name": "Game 56: KataGo wins as red, 103 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 56 局：KataGo 执红获胜，103 步",
+          "zh-Hant": "第 56 局：KataGo 執紅獲勝，103 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，103 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 103 步以入穴获胜。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，103 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 103 步以入穴獲勝。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -3953,6 +4293,16 @@
     },
     {
       "name": "Game 144: KataGo wins as red, 103 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 144 局：KataGo 执红获胜，103 步",
+          "zh-Hant": "第 144 局：KataGo 執紅獲勝，103 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，103 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 103 步以入穴获胜。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d4a4（第 38 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，103 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 103 步以入穴獲勝。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d4a4（第 38 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -4070,6 +4420,16 @@
     },
     {
       "name": "Game 12: KataGo wins as red, 107 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 12 局：KataGo 执红获胜，107 步",
+          "zh-Hant": "第 12 局：KataGo 執紅獲勝，107 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，107 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 107 步以入穴获胜。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 16 步，Misty）、d4a4（第 66 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，107 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 107 步以入穴獲勝。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 16 步，Misty）、d4a4（第 66 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -4191,6 +4551,16 @@
     },
     {
       "name": "Game 112: KataGo wins as red, 107 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 112 局：KataGo 执红获胜，107 步",
+          "zh-Hant": "第 112 局：KataGo 執紅獲勝，107 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，107 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 107 步以入穴获胜。共 8 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，107 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 107 步以入穴獲勝。共 8 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -4312,6 +4682,16 @@
     },
     {
       "name": "Game 155: KataGo wins as black, 108 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 155 局：KataGo 执黑获胜，108 步",
+          "zh-Hant": "第 155 局：KataGo 執黑獲勝，108 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，108 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 108 步以入穴获胜。共 6 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，108 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 108 步以入穴獲勝。共 6 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -4434,6 +4814,16 @@
     },
     {
       "name": "Game 143: KataGo wins as black, 108 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 143 局：KataGo 执黑获胜，108 步",
+          "zh-Hant": "第 143 局：KataGo 執黑獲勝，108 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，108 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 108 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 60 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，108 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 108 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 60 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -4556,6 +4946,16 @@
     },
     {
       "name": "Game 122: KataGo wins as red, 109 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 122 局：KataGo 执红获胜，109 步",
+          "zh-Hant": "第 122 局：KataGo 執紅獲勝，109 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，109 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 109 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d5a5（第 42 步，Misty）、a5d5（第 46 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，109 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 109 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d5a5（第 42 步，Misty）、a5d5（第 46 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -4679,6 +5079,16 @@
     },
     {
       "name": "Game 115: KataGo wins as black, 110 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 115 局：KataGo 执黑获胜，110 步",
+          "zh-Hant": "第 115 局：KataGo 執黑獲勝，110 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，110 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 110 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4a4（第 44 步，KataGo）、a4d4（第 50 步，KataGo）、d4a4（第 52 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，110 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 110 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4a4（第 44 步，KataGo）、a4d4（第 50 步，KataGo）、d4a4（第 52 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -4803,6 +5213,16 @@
     },
     {
       "name": "Game 66: KataGo wins as red, 111 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 66 局：KataGo 执红获胜，111 步",
+          "zh-Hant": "第 66 局：KataGo 執紅獲勝，111 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，111 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 111 步以入穴获胜。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）、d4a4（第 88 步，Misty）、a4d4（第 92 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，111 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 111 步以入穴獲勝。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）、d4a4（第 88 步，Misty）、a4d4（第 92 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -4928,6 +5348,16 @@
     },
     {
       "name": "Game 64: KataGo wins as red, 113 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 64 局：KataGo 执红获胜，113 步",
+          "zh-Hant": "第 64 局：KataGo 執紅獲勝，113 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，113 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 113 步以入穴获胜。共 10 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，113 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 113 步以入穴獲勝。共 10 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -5055,6 +5485,16 @@
     },
     {
       "name": "Game 102: KataGo wins as red, 113 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 102 局：KataGo 执红获胜，113 步",
+          "zh-Hant": "第 102 局：KataGo 執紅獲勝，113 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，113 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 113 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d4g4（第 60 步，Misty）、g4d4（第 64 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，113 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 113 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d4g4（第 60 步，Misty）、g4d4（第 64 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -5182,6 +5622,16 @@
     },
     {
       "name": "Game 139: KataGo wins as black, 114 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 139 局：KataGo 执黑获胜，114 步",
+          "zh-Hant": "第 139 局：KataGo 執黑獲勝，114 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，114 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 114 步以入穴获胜。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 17 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，114 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 114 步以入穴獲勝。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 17 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -5310,6 +5760,16 @@
     },
     {
       "name": "Game 161: KataGo wins as black, 114 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 161 局：KataGo 执黑获胜，114 步",
+          "zh-Hant": "第 161 局：KataGo 執黑獲勝，114 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，114 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 114 步以入穴获胜。共 7 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，114 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 114 步以入穴獲勝。共 7 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -5438,6 +5898,16 @@
     },
     {
       "name": "Game 70: KataGo wins as red, 115 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 70 局：KataGo 执红获胜，115 步",
+          "zh-Hant": "第 70 局：KataGo 執紅獲勝，115 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，115 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 115 步以入穴获胜。共 9 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，115 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 115 步以入穴獲勝。共 9 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -5567,6 +6037,16 @@
     },
     {
       "name": "Game 187: KataGo wins as black, 116 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 187 局：KataGo 执黑获胜，116 步",
+          "zh-Hant": "第 187 局：KataGo 執黑獲勝，116 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，116 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 116 步以入穴获胜。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 72 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，116 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 116 步以入穴獲勝。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 72 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -5697,6 +6177,16 @@
     },
     {
       "name": "Game 94: KataGo wins as red, 117 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 94 局：KataGo 执红获胜，117 步",
+          "zh-Hant": "第 94 局：KataGo 執紅獲勝，117 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，117 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 117 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 22 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，117 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 117 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 22 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -5828,6 +6318,16 @@
     },
     {
       "name": "Game 118: KataGo wins as red, 119 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 118 局：KataGo 执红获胜，119 步",
+          "zh-Hant": "第 118 局：KataGo 執紅獲勝，119 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，119 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 119 步以入穴获胜。共 8 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，119 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 119 步以入穴獲勝。共 8 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -5961,6 +6461,16 @@
     },
     {
       "name": "Game 188: KataGo wins as red, 119 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 188 局：KataGo 执红获胜，119 步",
+          "zh-Hant": "第 188 局：KataGo 執紅獲勝，119 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，119 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 119 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 16 步，Misty）、d5g5（第 52 步，Misty）、g5d5（第 56 步，Misty）、d4a4（第 84 步，Misty）、a4d4（第 88 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，119 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 119 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 16 步，Misty）、d5g5（第 52 步，Misty）、g5d5（第 56 步，Misty）、d4a4（第 84 步，Misty）、a4d4（第 88 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -6094,6 +6604,16 @@
     },
     {
       "name": "Game 93: KataGo wins as black, 122 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 93 局：KataGo 执黑获胜，122 步",
+          "zh-Hant": "第 93 局：KataGo 執黑獲勝，122 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，122 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 122 步以入穴获胜。共 6 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，122 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 122 步以入穴獲勝。共 6 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -6230,6 +6750,16 @@
     },
     {
       "name": "Game 105: KataGo wins as black, 124 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 105 局：KataGo 执黑获胜，124 步",
+          "zh-Hant": "第 105 局：KataGo 執黑獲勝，124 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，124 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 124 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 15 步，Misty）、d6g6（第 43 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，124 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 124 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 15 步，Misty）、d6g6（第 43 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -6368,6 +6898,16 @@
     },
     {
       "name": "Game 87: KataGo wins as black, 124 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 87 局：KataGo 执黑获胜，124 步",
+          "zh-Hant": "第 87 局：KataGo 執黑獲勝，124 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，124 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 124 步以入穴获胜。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g5d5（第 17 步，Misty）、d6g6（第 92 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，124 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 124 步以入穴獲勝。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g5d5（第 17 步，Misty）、d6g6（第 92 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -6506,6 +7046,16 @@
     },
     {
       "name": "Game 191: KataGo wins as black, 126 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 191 局：KataGo 执黑获胜，126 步",
+          "zh-Hant": "第 191 局：KataGo 執黑獲勝，126 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，126 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 126 步以入穴获胜。共 5 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，126 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 126 步以入穴獲勝。共 5 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -6646,6 +7196,16 @@
     },
     {
       "name": "Game 178: KataGo wins as red, 127 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 178 局：KataGo 执红获胜，127 步",
+          "zh-Hant": "第 178 局：KataGo 執紅獲勝，127 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，127 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 127 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 38 步，Misty）、d5a5（第 58 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，127 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 127 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 38 步，Misty）、d5a5（第 58 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -6787,6 +7347,16 @@
     },
     {
       "name": "Game 85: KataGo wins as black, 128 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 85 局：KataGo 执黑获胜，128 步",
+          "zh-Hant": "第 85 局：KataGo 執黑獲勝，128 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，128 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 128 步以入穴获胜。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 72 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，128 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 128 步以入穴獲勝。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 72 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -6929,6 +7499,16 @@
     },
     {
       "name": "Game 26: KataGo wins as red, 133 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 26 局：KataGo 执红获胜，133 步",
+          "zh-Hant": "第 26 局：KataGo 執紅獲勝，133 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，133 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 133 步以入穴获胜。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 24 步，Misty）、d4a4（第 36 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，133 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 133 步以入穴獲勝。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 24 步，Misty）、d4a4（第 36 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -7076,6 +7656,16 @@
     },
     {
       "name": "Game 168: KataGo wins as red, 133 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 168 局：KataGo 执红获胜，133 步",
+          "zh-Hant": "第 168 局：KataGo 執紅獲勝，133 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，133 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 133 步以入穴获胜。共 7 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，133 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 133 步以入穴獲勝。共 7 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -7223,6 +7813,16 @@
     },
     {
       "name": "Game 98: KataGo wins as red, 135 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 98 局：KataGo 执红获胜，135 步",
+          "zh-Hant": "第 98 局：KataGo 執紅獲勝，135 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，135 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 135 步以入穴获胜。共 10 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，135 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 135 步以入穴獲勝。共 10 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -7372,6 +7972,16 @@
     },
     {
       "name": "Game 121: KataGo wins as black, 140 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 121 局：KataGo 执黑获胜，140 步",
+          "zh-Hant": "第 121 局：KataGo 執黑獲勝，140 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，140 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 140 步以入穴获胜。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 19 步，Misty）、d6g6（第 43 步，Misty）、d6g6（第 100 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，140 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 140 步以入穴獲勝。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 19 步，Misty）、d6g6（第 43 步，Misty）、d6g6（第 100 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -7526,6 +8136,16 @@
     },
     {
       "name": "Game 20: KataGo wins as red, 143 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 20 局：KataGo 执红获胜，143 步",
+          "zh-Hant": "第 20 局：KataGo 執紅獲勝，143 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，143 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 143 步以入穴获胜。共 10 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，143 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 143 步以入穴獲勝。共 10 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -7683,6 +8303,16 @@
     },
     {
       "name": "Game 184: KataGo wins as red, 143 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 184 局：KataGo 执红获胜，143 步",
+          "zh-Hant": "第 184 局：KataGo 執紅獲勝，143 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，143 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 143 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 26 步，Misty）、d6g6（第 40 步，Misty）、g6d6（第 58 步，Misty）、d6a6（第 74 步，Misty）、a6d6（第 78 步，Misty）、d6a6（第 80 步，Misty）、a6d6（第 118 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，143 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 143 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 26 步，Misty）、d6g6（第 40 步，Misty）、g6d6（第 58 步，Misty）、d6a6（第 74 步，Misty）、a6d6（第 78 步，Misty）、d6a6（第 80 步，Misty）、a6d6（第 118 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -7840,6 +8470,16 @@
     },
     {
       "name": "Game 157: KataGo wins as black, 144 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 157 局：KataGo 执黑获胜，144 步",
+          "zh-Hant": "第 157 局：KataGo 執黑獲勝，144 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，144 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 144 步以入穴获胜。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 19 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，144 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 144 步以入穴獲勝。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 19 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -7998,6 +8638,16 @@
     },
     {
       "name": "Game 58: KataGo wins as red, 145 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 58 局：KataGo 执红获胜，145 步",
+          "zh-Hant": "第 58 局：KataGo 執紅獲勝，145 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，145 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 145 步以入穴获胜。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，145 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 145 步以入穴獲勝。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -8157,6 +8807,16 @@
     },
     {
       "name": "Game 51: KataGo wins as black, 148 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 51 局：KataGo 执黑获胜，148 步",
+          "zh-Hant": "第 51 局：KataGo 執黑獲勝，148 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，148 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 148 步以入穴获胜。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g5d5（第 21 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，148 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 148 步以入穴獲勝。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g5d5（第 21 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -8319,6 +8979,16 @@
     },
     {
       "name": "Game 100: KataGo wins as red, 151 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 100 局：KataGo 执红获胜，151 步",
+          "zh-Hant": "第 100 局：KataGo 執紅獲勝，151 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，151 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 151 步以入穴获胜。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 18 步，Misty）、d4g4（第 106 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，151 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 151 步以入穴獲勝。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 18 步，Misty）、d4g4（第 106 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -8484,6 +9154,16 @@
     },
     {
       "name": "Game 27: KataGo wins as black, 152 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 27 局：KataGo 执黑获胜，152 步",
+          "zh-Hant": "第 27 局：KataGo 執黑獲勝，152 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，152 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 152 步以入穴获胜。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 70 步，KataGo）、d5a5（第 106 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，152 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 152 步以入穴獲勝。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 70 步，KataGo）、d5a5（第 106 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -8650,6 +9330,16 @@
     },
     {
       "name": "Game 185: KataGo wins as black, 158 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 185 局：KataGo 执黑获胜，158 步",
+          "zh-Hant": "第 185 局：KataGo 執黑獲勝，158 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，158 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 158 步以入穴获胜。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 44 步，KataGo）、d5a5（第 76 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，158 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 158 步以入穴獲勝。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 44 步，KataGo）、d5a5（第 76 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -8822,6 +9512,16 @@
     },
     {
       "name": "Game 166: KataGo wins as red, 161 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 166 局：KataGo 执红获胜，161 步",
+          "zh-Hant": "第 166 局：KataGo 執紅獲勝，161 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，161 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 161 步以入穴获胜。共 10 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 16 步，Misty）、d4a4（第 32 步，Misty）、d5a5（第 54 步，Misty）、d4g4（第 155 步，KataGo）。",
+          "zh-Hant": "KataGo 執紅獲勝，161 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 161 步以入穴獲勝。共 10 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 16 步，Misty）、d4a4（第 32 步，Misty）、d5a5（第 54 步，Misty）、d4g4（第 155 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -8997,6 +9697,16 @@
     },
     {
       "name": "Game 48: KataGo wins as red, 167 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 48 局：KataGo 执红获胜，167 步",
+          "zh-Hant": "第 48 局：KataGo 執紅獲勝，167 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，167 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 167 步以入穴获胜。共 11 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 36 步，Misty）、d6a6（第 46 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，167 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 167 步以入穴獲勝。共 11 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 36 步，Misty）、d6a6（第 46 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -9178,6 +9888,16 @@
     },
     {
       "name": "Game 15: KataGo wins as black, 176 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 15 局：KataGo 执黑获胜，176 步",
+          "zh-Hant": "第 15 局：KataGo 執黑獲勝，176 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，176 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 176 步以入穴获胜。共 11 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，176 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 176 步以入穴獲勝。共 11 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -9368,6 +10088,16 @@
     },
     {
       "name": "Game 45: KataGo wins as black, 178 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 45 局：KataGo 执黑获胜，178 步",
+          "zh-Hant": "第 45 局：KataGo 執黑獲勝，178 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，178 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 178 步以入穴获胜。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 94 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，178 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 178 步以入穴獲勝。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 94 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -9560,6 +10290,16 @@
     },
     {
       "name": "Game 41: KataGo wins as black, 180 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 41 局：KataGo 执黑获胜，180 步",
+          "zh-Hant": "第 41 局：KataGo 執黑獲勝，180 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，180 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 180 步以入穴获胜。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 124 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，180 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 180 步以入穴獲勝。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 124 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -9754,6 +10494,16 @@
     },
     {
       "name": "Game 158: KataGo wins as red, 181 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 158 局：KataGo 执红获胜，181 步",
+          "zh-Hant": "第 158 局：KataGo 執紅獲勝，181 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，181 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 181 步以入穴获胜。共 7 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執紅獲勝，181 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 181 步以入穴獲勝。共 7 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -9949,6 +10699,16 @@
     },
     {
       "name": "Game 197: KataGo wins as black, 182 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 197 局：KataGo 执黑获胜，182 步",
+          "zh-Hant": "第 197 局：KataGo 執黑獲勝，182 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，182 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 182 步以入穴获胜。共 11 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 112 步，KataGo）、g6d6（第 116 步，KataGo）、d6g6（第 118 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，182 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 182 步以入穴獲勝。共 11 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 112 步，KataGo）、g6d6（第 116 步，KataGo）、d6g6（第 118 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -10145,6 +10905,16 @@
     },
     {
       "name": "Game 19: KataGo wins as black, 212 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 19 局：KataGo 执黑获胜，212 步",
+          "zh-Hant": "第 19 局：KataGo 執黑獲勝，212 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，212 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 212 步以入穴获胜。共 11 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5a5（第 108 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，212 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 212 步以入穴獲勝。共 11 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5a5（第 108 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -10371,6 +11141,16 @@
     },
     {
       "name": "Game 169: KataGo wins as black, 226 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 169 局：KataGo 执黑获胜，226 步",
+          "zh-Hant": "第 169 局：KataGo 執黑獲勝，226 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，226 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 226 步以入穴获胜。共 10 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 19 步，Misty）、d6g6（第 43 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，226 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 226 步以入穴獲勝。共 10 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 19 步，Misty）、d6g6（第 43 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -10611,6 +11391,16 @@
     },
     {
       "name": "Game 135: KataGo wins as black, 236 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 135 局：KataGo 执黑获胜，236 步",
+          "zh-Hant": "第 135 局：KataGo 執黑獲勝，236 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，236 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 236 步以入穴获胜。共 10 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 52 步，KataGo）、d6g6（第 94 步，KataGo）。",
+          "zh-Hant": "KataGo 執黑獲勝，236 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 236 步以入穴獲勝。共 10 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 52 步，KataGo）、d6g6（第 94 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -10861,6 +11651,16 @@
     },
     {
       "name": "Game 137: KataGo wins as black, 238 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 137 局：KataGo 执黑获胜，238 步",
+          "zh-Hant": "第 137 局：KataGo 執黑獲勝，238 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，238 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 238 步以入穴获胜。共 11 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "KataGo 執黑獲勝，238 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 238 步以入穴獲勝。共 11 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -11113,6 +11913,16 @@
     },
     {
       "name": "Game 132: KataGo wins as red, 245 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 132 局：KataGo 执红获胜，245 步",
+          "zh-Hant": "第 132 局：KataGo 執紅獲勝，245 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，245 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 245 步以入穴获胜。共 10 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d5a5（第 40 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，245 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 245 步以入穴獲勝。共 10 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d5a5（第 40 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -11372,6 +12182,16 @@
     },
     {
       "name": "Game 149: KataGo wins as black, 250 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 149 局：KataGo 执黑获胜，250 步",
+          "zh-Hant": "第 149 局：KataGo 執黑獲勝，250 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，250 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 250 步以入穴获胜。共 11 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 17 步，Misty）、d6g6（第 43 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，250 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 250 步以入穴獲勝。共 11 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 17 步，Misty）、d6g6（第 43 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -11636,6 +12456,16 @@
     },
     {
       "name": "Game 72: KataGo wins as red, 255 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 72 局：KataGo 执红获胜，255 步",
+          "zh-Hant": "第 72 局：KataGo 執紅獲勝，255 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，255 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 255 步以入穴获胜。共 13 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）、d4g4（第 92 步，Misty）、g4d4（第 130 步，Misty）。",
+          "zh-Hant": "KataGo 執紅獲勝，255 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 255 步以入穴獲勝。共 13 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）、d4g4（第 92 步，Misty）、g4d4（第 130 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -11905,6 +12735,16 @@
     },
     {
       "name": "Game 119: KataGo wins as black, 266 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 119 局：KataGo 执黑获胜，266 步",
+          "zh-Hant": "第 119 局：KataGo 執黑獲勝，266 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执黑获胜，266 步。KataGo-AnimalChess 执黑，MistyJungle 执红。KataGo-AnimalChess（黑方）在第 266 步以入穴获胜。共 11 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4a4（第 81 步，Misty）、a4d4（第 87 步，Misty）、d5a5（第 95 步，Misty）。",
+          "zh-Hant": "KataGo 執黑獲勝，266 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。KataGo-AnimalChess（黑方）在第 266 步以入穴獲勝。共 11 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4a4（第 81 步，Misty）、a4d4（第 87 步，Misty）、d5a5（第 95 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -12185,6 +13025,16 @@
     },
     {
       "name": "Game 116: KataGo wins as red, 269 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 116 局：KataGo 执红获胜，269 步",
+          "zh-Hant": "第 116 局：KataGo 執紅獲勝，269 步"
+        },
+        "comment": {
+          "zh-Hans": "KataGo 执红获胜，269 步。KataGo-AnimalChess 执红，MistyJungle 执黑。KataGo-AnimalChess（红方）在第 269 步以入穴获胜。共 11 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5g5（第 215 步，KataGo）。",
+          "zh-Hant": "KataGo 執紅獲勝，269 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。KataGo-AnimalChess（紅方）在第 269 步以入穴獲勝。共 11 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5g5（第 215 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -12468,6 +13318,16 @@
     },
     {
       "name": "Game 142: draw, 50 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 142 局：和局，50 步",
+          "zh-Hant": "第 142 局：和局，50 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，50 步。KataGo-AnimalChess 执红，MistyJungle 执黑。50 步后以三次重复局面成和。共 0 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 16 步，Misty）、d5a5（第 44 步，Misty）、a5d5（第 46 步，Misty）。",
+          "zh-Hant": "和局，50 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。50 步後以三次重複局面成和。共 0 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 16 步，Misty）、d5a5（第 44 步，Misty）、a5d5（第 46 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -12532,6 +13392,16 @@
     },
     {
       "name": "Game 75: draw, 55 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 75 局：和局，55 步",
+          "zh-Hant": "第 75 局：和局，55 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，55 步。KataGo-AnimalChess 执黑，MistyJungle 执红。55 步后以三次重复局面成和。共 1 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，55 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。55 步後以三次重複局面成和。共 1 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -12601,6 +13471,16 @@
     },
     {
       "name": "Game 152: draw, 56 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 152 局：和局，56 步",
+          "zh-Hant": "第 152 局：和局，56 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，56 步。KataGo-AnimalChess 执红，MistyJungle 执黑。56 步后以三次重复局面成和。共 0 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）。",
+          "zh-Hant": "和局，56 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。56 步後以三次重複局面成和。共 0 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -12671,6 +13551,16 @@
     },
     {
       "name": "Game 183: draw, 57 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 183 局：和局，57 步",
+          "zh-Hant": "第 183 局：和局，57 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，57 步。KataGo-AnimalChess 执黑，MistyJungle 执红。57 步后以三次重复局面成和。共 1 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，57 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。57 步後以三次重複局面成和。共 1 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -12742,6 +13632,16 @@
     },
     {
       "name": "Game 30: draw, 68 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 30 局：和局，68 步",
+          "zh-Hant": "第 30 局：和局，68 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，68 步。KataGo-AnimalChess 执红，MistyJungle 执黑。68 步后以三次重复局面成和。共 1 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d5a5（第 34 步，Misty）。",
+          "zh-Hant": "和局，68 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。68 步後以三次重複局面成和。共 1 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d5a5（第 34 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -12824,6 +13724,16 @@
     },
     {
       "name": "Game 68: draw, 68 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 68 局：和局，68 步",
+          "zh-Hant": "第 68 局：和局，68 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，68 步。KataGo-AnimalChess 执红，MistyJungle 执黑。68 步后以三次重复局面成和。共 0 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）。",
+          "zh-Hant": "和局，68 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。68 步後以三次重複局面成和。共 0 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -12906,6 +13816,16 @@
     },
     {
       "name": "Game 163: draw, 68 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 163 局：和局，68 步",
+          "zh-Hant": "第 163 局：和局，68 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，68 步。KataGo-AnimalChess 执黑，MistyJungle 执红。68 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 40 步，KataGo）、d6a6（第 54 步，KataGo）。",
+          "zh-Hant": "和局，68 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。68 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 40 步，KataGo）、d6a6（第 54 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -12988,6 +13908,16 @@
     },
     {
       "name": "Game 78: draw, 72 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 78 局：和局，72 步",
+          "zh-Hant": "第 78 局：和局，72 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，72 步。KataGo-AnimalChess 执红，MistyJungle 执黑。72 步后以三次重复局面成和。共 3 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，72 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。72 步後以三次重複局面成和。共 3 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -13074,6 +14004,16 @@
     },
     {
       "name": "Game 151: draw, 73 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 151 局：和局，73 步",
+          "zh-Hant": "第 151 局：和局，73 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，73 步。KataGo-AnimalChess 执黑，MistyJungle 执红。73 步后以三次重复局面成和。共 1 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 36 步，KataGo）。",
+          "zh-Hant": "和局，73 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。73 步後以三次重複局面成和。共 1 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 36 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13161,6 +14101,16 @@
     },
     {
       "name": "Game 10: draw, 74 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 10 局：和局，74 步",
+          "zh-Hant": "第 10 局：和局，74 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，74 步。KataGo-AnimalChess 执红，MistyJungle 执黑。74 步后以三次重复局面成和。共 1 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）。",
+          "zh-Hant": "和局，74 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。74 步後以三次重複局面成和。共 1 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13249,6 +14199,16 @@
     },
     {
       "name": "Game 43: draw, 74 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 43 局：和局，74 步",
+          "zh-Hant": "第 43 局：和局，74 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，74 步。KataGo-AnimalChess 执黑，MistyJungle 执红。74 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g5d5（第 21 步，Misty）。",
+          "zh-Hant": "和局，74 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。74 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g5d5（第 21 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13337,6 +14297,16 @@
     },
     {
       "name": "Game 90: draw, 78 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 90 局：和局，78 步",
+          "zh-Hant": "第 90 局：和局，78 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，78 步。KataGo-AnimalChess 执红，MistyJungle 执黑。78 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 22 步，Misty）、d4g4（第 54 步，Misty）。",
+          "zh-Hant": "和局，78 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。78 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 22 步，Misty）、d4g4（第 54 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13429,6 +14399,16 @@
     },
     {
       "name": "Game 140: draw, 78 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 140 局：和局，78 步",
+          "zh-Hant": "第 140 局：和局，78 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，78 步。KataGo-AnimalChess 执红，MistyJungle 执黑。78 步后以三次重复局面成和。共 0 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 32 步，Misty）。",
+          "zh-Hant": "和局，78 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。78 步後以三次重複局面成和。共 0 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 32 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -13521,6 +14501,16 @@
     },
     {
       "name": "Game 164: draw, 80 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 164 局：和局，80 步",
+          "zh-Hant": "第 164 局：和局，80 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，80 步。KataGo-AnimalChess 执红，MistyJungle 执黑。80 步后以三次重复局面成和。共 0 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）。",
+          "zh-Hant": "和局，80 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。80 步後以三次重複局面成和。共 0 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13615,6 +14605,16 @@
     },
     {
       "name": "Game 145: draw, 80 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 145 局：和局，80 步",
+          "zh-Hant": "第 145 局：和局，80 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，80 步。KataGo-AnimalChess 执黑，MistyJungle 执红。80 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g5d5（第 21 步，Misty）、a4d4（第 62 步，KataGo）、d6g6（第 68 步，KataGo）、g6d6（第 72 步，KataGo）。",
+          "zh-Hant": "和局，80 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。80 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g5d5（第 21 步，Misty）、a4d4（第 62 步，KataGo）、d6g6（第 68 步，KataGo）、g6d6（第 72 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13709,6 +14709,16 @@
     },
     {
       "name": "Game 31: draw, 81 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 31 局：和局，81 步",
+          "zh-Hant": "第 31 局：和局，81 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，81 步。KataGo-AnimalChess 执黑，MistyJungle 执红。81 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 31 步，Misty）、a5d5（第 54 步，KataGo）。",
+          "zh-Hant": "和局，81 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。81 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 31 步，Misty）、a5d5（第 54 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13804,6 +14814,16 @@
     },
     {
       "name": "Game 109: draw, 81 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 109 局：和局，81 步",
+          "zh-Hant": "第 109 局：和局，81 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，81 步。KataGo-AnimalChess 执黑，MistyJungle 执红。81 步后以三次重复局面成和。共 1 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 36 步，KataGo）。",
+          "zh-Hant": "和局，81 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。81 步後以三次重複局面成和。共 1 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 36 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13899,6 +14919,16 @@
     },
     {
       "name": "Game 44: draw, 84 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 44 局：和局，84 步",
+          "zh-Hant": "第 44 局：和局，84 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，84 步。KataGo-AnimalChess 执红，MistyJungle 执黑。84 步后以三次重复局面成和。共 0 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 18 步，Misty）。",
+          "zh-Hant": "和局，84 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。84 步後以三次重複局面成和。共 0 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 18 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -13997,6 +15027,16 @@
     },
     {
       "name": "Game 160: draw, 85 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 160 局：和局，85 步",
+          "zh-Hant": "第 160 局：和局，85 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，85 步。KataGo-AnimalChess 执红，MistyJungle 执黑。85 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4a4（第 37 步，KataGo）。",
+          "zh-Hant": "和局，85 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。85 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4a4（第 37 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -14096,6 +15136,16 @@
     },
     {
       "name": "Game 193: draw, 85 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 193 局：和局，85 步",
+          "zh-Hant": "第 193 局：和局，85 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，85 步。KataGo-AnimalChess 执黑，MistyJungle 执红。85 步后以三次重复局面成和。共 2 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，85 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。85 步後以三次重複局面成和。共 2 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -14195,6 +15245,16 @@
     },
     {
       "name": "Game 32: draw, 86 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 32 局：和局，86 步",
+          "zh-Hant": "第 32 局：和局，86 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，86 步。KataGo-AnimalChess 执红，MistyJungle 执黑。86 步后以三次重复局面成和。共 2 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，86 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。86 步後以三次重複局面成和。共 2 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -14295,6 +15355,16 @@
     },
     {
       "name": "Game 21: draw, 86 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 21 局：和局，86 步",
+          "zh-Hant": "第 21 局：和局，86 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，86 步。KataGo-AnimalChess 执黑，MistyJungle 执红。86 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g5d5（第 21 步，Misty）、a6d6（第 52 步，KataGo）、d6g6（第 66 步，KataGo）、g6d6（第 70 步，KataGo）、d6a6（第 74 步，KataGo）。",
+          "zh-Hant": "和局，86 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。86 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g5d5（第 21 步，Misty）、a6d6（第 52 步，KataGo）、d6g6（第 66 步，KataGo）、g6d6（第 70 步，KataGo）、d6a6（第 74 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -14395,6 +15465,16 @@
     },
     {
       "name": "Game 86: draw, 89 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 86 局：和局，89 步",
+          "zh-Hant": "第 86 局：和局，89 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，89 步。KataGo-AnimalChess 执红，MistyJungle 执黑。89 步后以三次重复局面成和。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 24 步，Misty）、d6a6（第 32 步，Misty）。",
+          "zh-Hant": "和局，89 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。89 步後以三次重複局面成和。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 24 步，Misty）、d6a6（第 32 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -14498,6 +15578,16 @@
     },
     {
       "name": "Game 103: draw, 89 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 103 局：和局，89 步",
+          "zh-Hant": "第 103 局：和局，89 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，89 步。KataGo-AnimalChess 执黑，MistyJungle 执红。89 步后以三次重复局面成和。共 1 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，89 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。89 步後以三次重複局面成和。共 1 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -14601,6 +15691,16 @@
     },
     {
       "name": "Game 141: draw, 93 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 141 局：和局，93 步",
+          "zh-Hant": "第 141 局：和局，93 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，93 步。KataGo-AnimalChess 执黑，MistyJungle 执红。93 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 19 步，Misty）。",
+          "zh-Hant": "和局，93 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。93 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 19 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -14708,6 +15808,16 @@
     },
     {
       "name": "Game 131: draw, 95 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 131 局：和局，95 步",
+          "zh-Hant": "第 131 局：和局，95 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，95 步。KataGo-AnimalChess 执黑，MistyJungle 执红。95 步后以三次重复局面成和。共 0 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，95 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。95 步後以三次重複局面成和。共 0 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -14817,6 +15927,16 @@
     },
     {
       "name": "Game 129: draw, 95 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 129 局：和局，95 步",
+          "zh-Hant": "第 129 局：和局，95 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，95 步。KataGo-AnimalChess 执黑，MistyJungle 执红。95 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g5d5（第 21 步，Misty）、a6d6（第 52 步，KataGo）、d4g4（第 60 步，KataGo）、g5d5（第 64 步，KataGo）、d6g6（第 70 步，KataGo）、g6d6（第 74 步，KataGo）、d6a6（第 78 步，KataGo）。",
+          "zh-Hant": "和局，95 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。95 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g5d5（第 21 步，Misty）、a6d6（第 52 步，KataGo）、d4g4（第 60 步，KataGo）、g5d5（第 64 步，KataGo）、d6g6（第 70 步，KataGo）、g6d6（第 74 步，KataGo）、d6a6（第 78 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -14926,6 +16046,16 @@
     },
     {
       "name": "Game 107: draw, 97 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 107 局：和局，97 步",
+          "zh-Hant": "第 107 局：和局，97 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，97 步。KataGo-AnimalChess 执黑，MistyJungle 执红。97 步后以三次重复局面成和。共 2 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，97 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。97 步後以三次重複局面成和。共 2 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -15037,6 +16167,16 @@
     },
     {
       "name": "Game 71: draw, 99 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 71 局：和局，99 步",
+          "zh-Hant": "第 71 局：和局，99 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，99 步。KataGo-AnimalChess 执黑，MistyJungle 执红。99 步后以三次重复局面成和。共 1 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 70 步，KataGo）。",
+          "zh-Hant": "和局，99 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。99 步後以三次重複局面成和。共 1 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 70 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -15150,6 +16290,16 @@
     },
     {
       "name": "Game 114: draw, 101 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 114 局：和局，101 步",
+          "zh-Hant": "第 114 局：和局，101 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，101 步。KataGo-AnimalChess 执红，MistyJungle 执黑。101 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 28 步，Misty）。",
+          "zh-Hant": "和局，101 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。101 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 28 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -15265,6 +16415,16 @@
     },
     {
       "name": "Game 89: draw, 107 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 89 局：和局，107 步",
+          "zh-Hant": "第 89 局：和局，107 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，107 步。KataGo-AnimalChess 执黑，MistyJungle 执红。107 步后以三次重复局面成和。共 8 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，107 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。107 步後以三次重複局面成和。共 8 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -15386,6 +16546,16 @@
     },
     {
       "name": "Game 79: draw, 107 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 79 局：和局，107 步",
+          "zh-Hant": "第 79 局：和局，107 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，107 步。KataGo-AnimalChess 执黑，MistyJungle 执红。107 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 91 步，Misty）。",
+          "zh-Hant": "和局，107 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。107 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 91 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -15507,6 +16677,16 @@
     },
     {
       "name": "Game 49: draw, 107 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 49 局：和局，107 步",
+          "zh-Hant": "第 49 局：和局，107 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，107 步。KataGo-AnimalChess 执黑，MistyJungle 执红。107 步后以三次重复局面成和。共 1 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，107 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。107 步後以三次重複局面成和。共 1 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -15628,6 +16808,16 @@
     },
     {
       "name": "Game 198: draw, 108 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 198 局：和局，108 步",
+          "zh-Hant": "第 198 局：和局，108 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，108 步。KataGo-AnimalChess 执红，MistyJungle 执黑。108 步后以三次重复局面成和。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d4a4（第 46 步，Misty）。",
+          "zh-Hant": "和局，108 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。108 步後以三次重複局面成和。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d4a4（第 46 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -15750,6 +16940,16 @@
     },
     {
       "name": "Game 97: draw, 110 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 97 局：和局，110 步",
+          "zh-Hant": "第 97 局：和局，110 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，110 步。KataGo-AnimalChess 执黑，MistyJungle 执红。110 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4a4（第 84 步，KataGo）。",
+          "zh-Hant": "和局，110 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。110 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4a4（第 84 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -15874,6 +17074,16 @@
     },
     {
       "name": "Game 120: draw, 112 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 120 局：和局，112 步",
+          "zh-Hant": "第 120 局：和局，112 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，112 步。KataGo-AnimalChess 执红，MistyJungle 执黑。112 步后以三次重复局面成和。共 5 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，112 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。112 步後以三次重複局面成和。共 5 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -16000,6 +17210,16 @@
     },
     {
       "name": "Game 37: draw, 113 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 37 局：和局，113 步",
+          "zh-Hant": "第 37 局：和局，113 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，113 步。KataGo-AnimalChess 执黑，MistyJungle 执红。113 步后以三次重复局面成和。共 5 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，113 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。113 步後以三次重複局面成和。共 5 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -16127,6 +17347,16 @@
     },
     {
       "name": "Game 128: draw, 113 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 128 局：和局，113 步",
+          "zh-Hant": "第 128 局：和局，113 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，113 步。KataGo-AnimalChess 执红，MistyJungle 执黑。113 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 12 步，Misty）。",
+          "zh-Hant": "和局，113 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。113 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a3a4",
@@ -16254,6 +17484,16 @@
     },
     {
       "name": "Game 53: draw, 116 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 53 局：和局，116 步",
+          "zh-Hant": "第 53 局：和局，116 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，116 步。KataGo-AnimalChess 执黑，MistyJungle 执红。116 步后以三次重复局面成和。共 5 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，116 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。116 步後以三次重複局面成和。共 5 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -16384,6 +17624,16 @@
     },
     {
       "name": "Game 23: draw, 117 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 23 局：和局，117 步",
+          "zh-Hant": "第 23 局：和局，117 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，117 步。KataGo-AnimalChess 执黑，MistyJungle 执红。117 步后以三次重复局面成和。共 3 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，117 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。117 步後以三次重複局面成和。共 3 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -16515,6 +17765,16 @@
     },
     {
       "name": "Game 69: draw, 117 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 69 局：和局，117 步",
+          "zh-Hant": "第 69 局：和局，117 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，117 步。KataGo-AnimalChess 执黑，MistyJungle 执红。117 步后以三次重复局面成和。共 1 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5g5（第 94 步，KataGo）。",
+          "zh-Hant": "和局，117 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。117 步後以三次重複局面成和。共 1 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5g5（第 94 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -16646,6 +17906,16 @@
     },
     {
       "name": "Game 162: draw, 118 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 162 局：和局，118 步",
+          "zh-Hant": "第 162 局：和局，118 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，118 步。KataGo-AnimalChess 执红，MistyJungle 执黑。118 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）。",
+          "zh-Hant": "和局，118 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。118 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -16778,6 +18048,16 @@
     },
     {
       "name": "Game 33: draw, 119 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 33 局：和局，119 步",
+          "zh-Hant": "第 33 局：和局，119 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，119 步。KataGo-AnimalChess 执黑，MistyJungle 执红。119 步后以三次重复局面成和。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 17 步，Misty）。",
+          "zh-Hant": "和局，119 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。119 步後以三次重複局面成和。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 17 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -16911,6 +18191,16 @@
     },
     {
       "name": "Game 17: draw, 119 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 17 局：和局，119 步",
+          "zh-Hant": "第 17 局：和局，119 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，119 步。KataGo-AnimalChess 执黑，MistyJungle 执红。119 步后以三次重复局面成和。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g6d6（第 95 步，Misty）。",
+          "zh-Hant": "和局，119 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。119 步後以三次重複局面成和。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g6d6（第 95 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -17044,6 +18334,16 @@
     },
     {
       "name": "Game 73: draw, 119 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 73 局：和局，119 步",
+          "zh-Hant": "第 73 局：和局，119 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，119 步。KataGo-AnimalChess 执黑，MistyJungle 执红。119 步后以三次重复局面成和。共 3 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，119 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。119 步後以三次重複局面成和。共 3 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -17177,6 +18477,16 @@
     },
     {
       "name": "Game 52: draw, 122 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 52 局：和局，122 步",
+          "zh-Hant": "第 52 局：和局，122 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，122 步。KataGo-AnimalChess 执红，MistyJungle 执黑。122 步后以三次重复局面成和。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d4g4（第 86 步，Misty）。",
+          "zh-Hant": "和局，122 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。122 步後以三次重複局面成和。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d4g4（第 86 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -17313,6 +18623,16 @@
     },
     {
       "name": "Game 199: draw, 124 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 199 局：和局，124 步",
+          "zh-Hant": "第 199 局：和局，124 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，124 步。KataGo-AnimalChess 执黑，MistyJungle 执红。124 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 54 步，KataGo）、d5g5（第 88 步，KataGo）。",
+          "zh-Hant": "和局，124 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。124 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 54 步，KataGo）、d5g5（第 88 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -17451,6 +18771,16 @@
     },
     {
       "name": "Game 77: draw, 129 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 77 局：和局，129 步",
+          "zh-Hant": "第 77 局：和局，129 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，129 步。KataGo-AnimalChess 执黑，MistyJungle 执红。129 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5g5（第 110 步，KataGo）。",
+          "zh-Hant": "和局，129 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。129 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5g5（第 110 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -17594,6 +18924,16 @@
     },
     {
       "name": "Game 127: draw, 129 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 127 局：和局，129 步",
+          "zh-Hant": "第 127 局：和局，129 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，129 步。KataGo-AnimalChess 执黑，MistyJungle 执红。129 步后以三次重复局面成和。共 2 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，129 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。129 步後以三次重複局面成和。共 2 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -17737,6 +19077,16 @@
     },
     {
       "name": "Game 175: draw, 129 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 175 局：和局，129 步",
+          "zh-Hant": "第 175 局：和局，129 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，129 步。KataGo-AnimalChess 执黑，MistyJungle 执红。129 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 70 步，KataGo）。",
+          "zh-Hant": "和局，129 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。129 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 70 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -17880,6 +19230,16 @@
     },
     {
       "name": "Game 24: draw, 130 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 24 局：和局，130 步",
+          "zh-Hant": "第 24 局：和局，130 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，130 步。KataGo-AnimalChess 执红，MistyJungle 执黑。130 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）、d5a5（第 44 步，Misty）。",
+          "zh-Hant": "和局，130 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。130 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）、d5a5（第 44 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -18024,6 +19384,16 @@
     },
     {
       "name": "Game 35: draw, 131 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 35 局：和局，131 步",
+          "zh-Hant": "第 35 局：和局，131 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，131 步。KataGo-AnimalChess 执黑，MistyJungle 执红。131 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 15 步，Misty）。",
+          "zh-Hant": "和局，131 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。131 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 15 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -18169,6 +19539,16 @@
     },
     {
       "name": "Game 189: draw, 131 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 189 局：和局，131 步",
+          "zh-Hant": "第 189 局：和局，131 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，131 步。KataGo-AnimalChess 执黑，MistyJungle 执红。131 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 76 步，KataGo）。",
+          "zh-Hant": "和局，131 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。131 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 76 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -18314,6 +19694,16 @@
     },
     {
       "name": "Game 133: draw, 133 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 133 局：和局，133 步",
+          "zh-Hant": "第 133 局：和局，133 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，133 步。KataGo-AnimalChess 执黑，MistyJungle 执红。133 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 56 步，KataGo）、d4a4（第 92 步，KataGo）。",
+          "zh-Hant": "和局，133 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。133 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 56 步，KataGo）、d4a4（第 92 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -18461,6 +19851,16 @@
     },
     {
       "name": "Game 173: draw, 134 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 173 局：和局，134 步",
+          "zh-Hant": "第 173 局：和局，134 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，134 步。KataGo-AnimalChess 执黑，MistyJungle 执红。134 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4a4（第 82 步，KataGo）。",
+          "zh-Hant": "和局，134 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。134 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4a4（第 82 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -18609,6 +20009,16 @@
     },
     {
       "name": "Game 82: draw, 136 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 82 局：和局，136 步",
+          "zh-Hant": "第 82 局：和局，136 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，136 步。KataGo-AnimalChess 执红，MistyJungle 执黑。136 步后以三次重复局面成和。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）。",
+          "zh-Hant": "和局，136 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。136 步後以三次重複局面成和。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -18759,6 +20169,16 @@
     },
     {
       "name": "Game 99: draw, 137 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 99 局：和局，137 步",
+          "zh-Hant": "第 99 局：和局，137 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，137 步。KataGo-AnimalChess 执黑，MistyJungle 执红。137 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a4d4（第 80 步，KataGo）。",
+          "zh-Hant": "和局，137 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。137 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a4d4（第 80 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -18910,6 +20330,16 @@
     },
     {
       "name": "Game 50: draw, 142 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 50 局：和局，142 步",
+          "zh-Hant": "第 50 局：和局，142 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，142 步。KataGo-AnimalChess 执红，MistyJungle 执黑。142 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 30 步，Misty）。",
+          "zh-Hant": "和局，142 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。142 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 30 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -19066,6 +20496,16 @@
     },
     {
       "name": "Game 130: draw, 146 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 130 局：和局，146 步",
+          "zh-Hant": "第 130 局：和局，146 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，146 步。KataGo-AnimalChess 执红，MistyJungle 执黑。146 步后以三次重复局面成和。共 1 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 85 步，KataGo）、d4a4（第 93 步，KataGo）。",
+          "zh-Hant": "和局，146 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。146 步後以三次重複局面成和。共 1 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 85 步，KataGo）、d4a4（第 93 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -19226,6 +20666,16 @@
     },
     {
       "name": "Game 147: draw, 147 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 147 局：和局，147 步",
+          "zh-Hant": "第 147 局：和局，147 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，147 步。KataGo-AnimalChess 执黑，MistyJungle 执红。147 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 48 步，KataGo）、d6g6（第 58 步，KataGo）。",
+          "zh-Hant": "和局，147 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。147 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 48 步，KataGo）、d6g6（第 58 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -19387,6 +20837,16 @@
     },
     {
       "name": "Game 16: draw, 150 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 16 局：和局，150 步",
+          "zh-Hant": "第 16 局：和局，150 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，150 步。KataGo-AnimalChess 执红，MistyJungle 执黑。150 步后以三次重复局面成和。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4a4（第 77 步，KataGo）、a4d4（第 95 步，KataGo）、d4g4（第 99 步，KataGo）、g4d4（第 103 步，KataGo）。",
+          "zh-Hant": "和局，150 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。150 步後以三次重複局面成和。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4a4（第 77 步，KataGo）、a4d4（第 95 步，KataGo）、d4g4（第 99 步，KataGo）、g4d4（第 103 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -19551,6 +21011,16 @@
     },
     {
       "name": "Game 179: draw, 150 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 179 局：和局，150 步",
+          "zh-Hant": "第 179 局：和局，150 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，150 步。KataGo-AnimalChess 执黑，MistyJungle 执红。150 步后以三次重复局面成和。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5a5（第 80 步，KataGo）。",
+          "zh-Hant": "和局，150 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。150 步後以三次重複局面成和。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5a5（第 80 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -19715,6 +21185,16 @@
     },
     {
       "name": "Game 18: draw, 151 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 18 局：和局，151 步",
+          "zh-Hant": "第 18 局：和局，151 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，151 步。KataGo-AnimalChess 执红，MistyJungle 执黑。151 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 18 步，Misty）。",
+          "zh-Hant": "和局，151 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。151 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 18 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -19880,6 +21360,16 @@
     },
     {
       "name": "Game 159: draw, 151 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 159 局：和局，151 步",
+          "zh-Hant": "第 159 局：和局，151 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，151 步。KataGo-AnimalChess 执黑，MistyJungle 执红。151 步后以三次重复局面成和。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 64 步，KataGo）、d6g6（第 82 步，KataGo）。",
+          "zh-Hant": "和局，151 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。151 步後以三次重複局面成和。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 64 步，KataGo）、d6g6（第 82 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -20045,6 +21535,16 @@
     },
     {
       "name": "Game 92: draw, 153 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 92 局：和局，153 步",
+          "zh-Hant": "第 92 局：和局，153 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，153 步。KataGo-AnimalChess 执红，MistyJungle 执黑。153 步后以三次重复局面成和。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4g4（第 61 步，KataGo）、g4d4（第 65 步，KataGo）、d4a4（第 69 步，KataGo）。",
+          "zh-Hant": "和局，153 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。153 步後以三次重複局面成和。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4g4（第 61 步，KataGo）、g4d4（第 65 步，KataGo）、d4a4（第 69 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -20212,6 +21712,16 @@
     },
     {
       "name": "Game 125: draw, 153 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 125 局：和局，153 步",
+          "zh-Hant": "第 125 局：和局，153 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，153 步。KataGo-AnimalChess 执黑，MistyJungle 执红。153 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 46 步，KataGo）、d5a5（第 54 步，KataGo）、a5d5（第 68 步，KataGo）。",
+          "zh-Hant": "和局，153 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。153 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 46 步，KataGo）、d5a5（第 54 步，KataGo）、a5d5（第 68 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -20379,6 +21889,16 @@
     },
     {
       "name": "Game 186: draw, 153 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 186 局：和局，153 步",
+          "zh-Hant": "第 186 局：和局，153 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，153 步。KataGo-AnimalChess 执红，MistyJungle 执黑。153 步后以三次重复局面成和。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）。",
+          "zh-Hant": "和局，153 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。153 步後以三次重複局面成和。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -20546,6 +22066,16 @@
     },
     {
       "name": "Game 165: draw, 155 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 165 局：和局，155 步",
+          "zh-Hant": "第 165 局：和局，155 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，155 步。KataGo-AnimalChess 执黑，MistyJungle 执红。155 步后以三次重复局面成和。共 2 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，155 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。155 步後以三次重複局面成和。共 2 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -20715,6 +22245,16 @@
     },
     {
       "name": "Game 61: draw, 156 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 61 局：和局，156 步",
+          "zh-Hant": "第 61 局：和局，156 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，156 步。KataGo-AnimalChess 执黑，MistyJungle 执红。156 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 86 步，KataGo）。",
+          "zh-Hant": "和局，156 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。156 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 86 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -20885,6 +22425,16 @@
     },
     {
       "name": "Game 91: draw, 157 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 91 局：和局，157 步",
+          "zh-Hant": "第 91 局：和局，157 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，157 步。KataGo-AnimalChess 执黑，MistyJungle 执红。157 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 84 步，KataGo）。",
+          "zh-Hant": "和局，157 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。157 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 84 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -21056,6 +22606,16 @@
     },
     {
       "name": "Game 88: draw, 157 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 88 局：和局，157 步",
+          "zh-Hant": "第 88 局：和局，157 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，157 步。KataGo-AnimalChess 执红，MistyJungle 执黑。157 步后以三次重复局面成和。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d4a4（第 100 步，Misty）。",
+          "zh-Hant": "和局，157 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。157 步後以三次重複局面成和。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d4a4（第 100 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -21227,6 +22787,16 @@
     },
     {
       "name": "Game 25: draw, 157 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 25 局：和局，157 步",
+          "zh-Hant": "第 25 局：和局，157 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，157 步。KataGo-AnimalChess 执黑，MistyJungle 执红。157 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 90 步，KataGo）、g6d6（第 122 步，KataGo）。",
+          "zh-Hant": "和局，157 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。157 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 90 步，KataGo）、g6d6（第 122 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -21398,6 +22968,16 @@
     },
     {
       "name": "Game 123: draw, 158 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 123 局：和局，158 步",
+          "zh-Hant": "第 123 局：和局，158 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，158 步。KataGo-AnimalChess 执黑，MistyJungle 执红。158 步后以三次重复局面成和。共 4 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，158 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。158 步後以三次重複局面成和。共 4 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -21570,6 +23150,16 @@
     },
     {
       "name": "Game 63: draw, 161 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 63 局：和局，161 步",
+          "zh-Hant": "第 63 局：和局，161 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，161 步。KataGo-AnimalChess 执黑，MistyJungle 执红。161 步后以三次重复局面成和。共 10 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，161 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。161 步後以三次重複局面成和。共 10 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -21745,6 +23335,16 @@
     },
     {
       "name": "Game 39: draw, 163 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 39 局：和局，163 步",
+          "zh-Hant": "第 39 局：和局，163 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，163 步。KataGo-AnimalChess 执黑，MistyJungle 执红。163 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4a4（第 76 步，KataGo）。",
+          "zh-Hant": "和局，163 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。163 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4a4（第 76 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -21922,6 +23522,16 @@
     },
     {
       "name": "Game 6: draw, 164 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 6 局：和局，164 步",
+          "zh-Hant": "第 6 局：和局，164 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，164 步。KataGo-AnimalChess 执红，MistyJungle 执黑。164 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a4d4（第 133 步，KataGo）。",
+          "zh-Hant": "和局，164 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。164 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a4d4（第 133 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -22100,6 +23710,16 @@
     },
     {
       "name": "Game 1: draw, 169 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 1 局：和局，169 步",
+          "zh-Hant": "第 1 局：和局，169 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，169 步。KataGo-AnimalChess 执黑，MistyJungle 执红。169 步后以三次重复局面成和。共 1 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 64 步，KataGo）。",
+          "zh-Hant": "和局，169 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。169 步後以三次重複局面成和。共 1 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 64 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -22283,6 +23903,16 @@
     },
     {
       "name": "Game 59: draw, 170 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 59 局：和局，170 步",
+          "zh-Hant": "第 59 局：和局，170 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，170 步。KataGo-AnimalChess 执黑，MistyJungle 执红。170 步后以三次重复局面成和。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5g5（第 68 步，KataGo）。",
+          "zh-Hant": "和局，170 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。170 步後以三次重複局面成和。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5g5（第 68 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -22467,6 +24097,16 @@
     },
     {
       "name": "Game 113: draw, 171 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 113 局：和局，171 步",
+          "zh-Hant": "第 113 局：和局，171 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，171 步。KataGo-AnimalChess 执黑，MistyJungle 执红。171 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 93 步，Misty）、d4a4（第 95 步，Misty）。",
+          "zh-Hant": "和局，171 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。171 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 93 步，Misty）、d4a4（第 95 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -22652,6 +24292,16 @@
     },
     {
       "name": "Game 81: draw, 171 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 81 局：和局，171 步",
+          "zh-Hant": "第 81 局：和局，171 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，171 步。KataGo-AnimalChess 执黑，MistyJungle 执红。171 步后以三次重复局面成和。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5a5（第 126 步，KataGo）、a5d5（第 134 步，KataGo）、d5a5（第 138 步，KataGo）。",
+          "zh-Hant": "和局，171 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。171 步後以三次重複局面成和。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5a5（第 126 步，KataGo）、a5d5（第 134 步，KataGo）、d5a5（第 138 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -22837,6 +24487,16 @@
     },
     {
       "name": "Game 96: draw, 173 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 96 局：和局，173 步",
+          "zh-Hant": "第 96 局：和局，173 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，173 步。KataGo-AnimalChess 执红，MistyJungle 执黑。173 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 156 步，Misty）。",
+          "zh-Hant": "和局，173 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。173 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 156 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -23024,6 +24684,16 @@
     },
     {
       "name": "Game 7: draw, 174 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 7 局：和局，174 步",
+          "zh-Hant": "第 7 局：和局，174 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，174 步。KataGo-AnimalChess 执黑，MistyJungle 执红。174 步后以三次重复局面成和。共 8 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，174 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。174 步後以三次重複局面成和。共 8 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -23212,6 +24882,16 @@
     },
     {
       "name": "Game 156: draw, 174 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 156 局：和局，174 步",
+          "zh-Hant": "第 156 局：和局，174 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，174 步。KataGo-AnimalChess 执红，MistyJungle 执黑。174 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 22 步，Misty）、d4a4（第 74 步，Misty）。",
+          "zh-Hant": "和局，174 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。174 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 22 步，Misty）、d4a4（第 74 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -23400,6 +25080,16 @@
     },
     {
       "name": "Game 62: draw, 175 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 62 局：和局，175 步",
+          "zh-Hant": "第 62 局：和局，175 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，175 步。KataGo-AnimalChess 执红，MistyJungle 执黑。175 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）、d4a4（第 44 步，Misty）。",
+          "zh-Hant": "和局，175 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。175 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）、d4a4（第 44 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -23589,6 +25279,16 @@
     },
     {
       "name": "Game 46: draw, 180 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 46 局：和局，180 步",
+          "zh-Hant": "第 46 局：和局，180 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，180 步。KataGo-AnimalChess 执红，MistyJungle 执黑。180 步后以三次重复局面成和。共 3 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 66 步，Misty）、d6g6（第 126 步，Misty）、g6d6（第 134 步，Misty）、d6g6（第 142 步，Misty）、g6d6（第 144 步，Misty）。",
+          "zh-Hant": "和局，180 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。180 步後以三次重複局面成和。共 3 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 66 步，Misty）、d6g6（第 126 步，Misty）、g6d6（第 134 步，Misty）、d6g6（第 142 步，Misty）、g6d6（第 144 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -23783,6 +25483,16 @@
     },
     {
       "name": "Game 172: draw, 184 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 172 局：和局，184 步",
+          "zh-Hant": "第 172 局：和局，184 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，184 步。KataGo-AnimalChess 执红，MistyJungle 执黑。184 步后以三次重复局面成和。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 32 步，Misty）、d5a5（第 50 步，Misty）、a5d5（第 66 步，Misty）、d5a5（第 138 步，Misty）、a4d4（第 156 步，Misty）。",
+          "zh-Hant": "和局，184 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。184 步後以三次重複局面成和。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 32 步，Misty）、d5a5（第 50 步，Misty）、a5d5（第 66 步，Misty）、d5a5（第 138 步，Misty）、a4d4（第 156 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -23981,6 +25691,16 @@
     },
     {
       "name": "Game 170: draw, 184 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 170 局：和局，184 步",
+          "zh-Hant": "第 170 局：和局，184 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，184 步。KataGo-AnimalChess 执红，MistyJungle 执黑。184 步后以三次重复局面成和。共 3 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，184 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。184 步後以三次重複局面成和。共 3 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -24179,6 +25899,16 @@
     },
     {
       "name": "Game 14: draw, 187 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 14 局：和局，187 步",
+          "zh-Hant": "第 14 局：和局，187 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，187 步。KataGo-AnimalChess 执红，MistyJungle 执黑。187 步后以三次重复局面成和。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d4g4（第 141 步，KataGo）、g4d4（第 167 步，KataGo）。",
+          "zh-Hant": "和局，187 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。187 步後以三次重複局面成和。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d4g4（第 141 步，KataGo）、g4d4（第 167 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -24380,6 +26110,16 @@
     },
     {
       "name": "Game 95: draw, 187 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 95 局：和局，187 步",
+          "zh-Hant": "第 95 局：和局，187 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，187 步。KataGo-AnimalChess 执黑，MistyJungle 执红。187 步后以三次重复局面成和。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d5a5（第 102 步，KataGo）、a4d4（第 170 步，KataGo）、d4g4（第 172 步，KataGo）。",
+          "zh-Hant": "和局，187 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。187 步後以三次重複局面成和。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d5a5（第 102 步，KataGo）、a4d4（第 170 步，KataGo）、d4g4（第 172 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -24581,6 +26321,16 @@
     },
     {
       "name": "Game 180: draw, 188 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 180 局：和局，188 步",
+          "zh-Hant": "第 180 局：和局，188 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，188 步。KataGo-AnimalChess 执红，MistyJungle 执黑。188 步后以三次重复局面成和。共 2 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 34 步，Misty）、d5g5（第 84 步，Misty）。",
+          "zh-Hant": "和局，188 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。188 步後以三次重複局面成和。共 2 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 34 步，Misty）、d5g5（第 84 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -24783,6 +26533,16 @@
     },
     {
       "name": "Game 11: draw, 191 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 11 局：和局，191 步",
+          "zh-Hant": "第 11 局：和局，191 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，191 步。KataGo-AnimalChess 执黑，MistyJungle 执红。191 步后以三次重复局面成和。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 68 步，KataGo）。",
+          "zh-Hant": "和局，191 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。191 步後以三次重複局面成和。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 68 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -24988,6 +26748,16 @@
     },
     {
       "name": "Game 57: draw, 197 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 57 局：和局，197 步",
+          "zh-Hant": "第 57 局：和局，197 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，197 步。KataGo-AnimalChess 执黑，MistyJungle 执红。197 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 54 步，KataGo）。",
+          "zh-Hant": "和局，197 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。197 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 54 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -25199,6 +26969,16 @@
     },
     {
       "name": "Game 36: draw, 200 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 36 局：和局，200 步",
+          "zh-Hant": "第 36 局：和局，200 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，200 步。KataGo-AnimalChess 执红，MistyJungle 执黑。200 步后以三次重复局面成和。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 24 步，Misty）、d4a4（第 48 步，Misty）。",
+          "zh-Hant": "和局，200 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。200 步後以三次重複局面成和。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 24 步，Misty）、d4a4（第 48 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -25413,6 +27193,16 @@
     },
     {
       "name": "Game 34: draw, 202 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 34 局：和局，202 步",
+          "zh-Hant": "第 34 局：和局，202 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，202 步。KataGo-AnimalChess 执红，MistyJungle 执黑。202 步后以三次重复局面成和。共 10 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 18 步，Misty）。",
+          "zh-Hant": "和局，202 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。202 步後以三次重複局面成和。共 10 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 18 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -25629,6 +27419,16 @@
     },
     {
       "name": "Game 117: draw, 202 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 117 局：和局，202 步",
+          "zh-Hant": "第 117 局：和局，202 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，202 步。KataGo-AnimalChess 执黑，MistyJungle 执红。202 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 15 步，Misty）、d6g6（第 45 步，Misty）。",
+          "zh-Hant": "和局，202 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。202 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 15 步，Misty）、d6g6（第 45 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -25845,6 +27645,16 @@
     },
     {
       "name": "Game 182: draw, 202 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 182 局：和局，202 步",
+          "zh-Hant": "第 182 局：和局，202 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，202 步。KataGo-AnimalChess 执红，MistyJungle 执黑。202 步后以三次重复局面成和。共 4 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，202 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。202 步後以三次重複局面成和。共 4 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -26061,6 +27871,16 @@
     },
     {
       "name": "Game 4: draw, 204 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 4 局：和局，204 步",
+          "zh-Hant": "第 4 局：和局，204 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，204 步。KataGo-AnimalChess 执红，MistyJungle 执黑。204 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：d6g6（第 139 步，KataGo）。",
+          "zh-Hant": "和局，204 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。204 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：d6g6（第 139 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -26279,6 +28099,16 @@
     },
     {
       "name": "Game 2: draw, 215 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 2 局：和局，215 步",
+          "zh-Hant": "第 2 局：和局，215 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，215 步。KataGo-AnimalChess 执红，MistyJungle 执黑。215 步后以三次重复局面成和。共 11 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 30 步，Misty）、d4g4（第 48 步，Misty）、g6d6（第 62 步，Misty）、d4a4（第 127 步，KataGo）。",
+          "zh-Hant": "和局，215 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。215 步後以三次重複局面成和。共 11 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 30 步，Misty）、d4g4（第 48 步，Misty）、g6d6（第 62 步，Misty）、d4a4（第 127 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -26508,6 +28338,16 @@
     },
     {
       "name": "Game 80: draw, 215 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 80 局：和局，215 步",
+          "zh-Hant": "第 80 局：和局，215 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，215 步。KataGo-AnimalChess 执红，MistyJungle 执黑。215 步后以三次重复局面成和。共 5 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，215 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。215 步後以三次重複局面成和。共 5 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -26737,6 +28577,16 @@
     },
     {
       "name": "Game 9: draw, 216 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 9 局：和局，216 步",
+          "zh-Hant": "第 9 局：和局，216 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，216 步。KataGo-AnimalChess 执黑，MistyJungle 执红。216 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 58 步，KataGo）、d6g6（第 74 步，KataGo）。",
+          "zh-Hant": "和局，216 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。216 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 58 步，KataGo）、d6g6（第 74 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -26967,6 +28817,16 @@
     },
     {
       "name": "Game 60: draw, 216 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 60 局：和局，216 步",
+          "zh-Hant": "第 60 局：和局，216 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，216 步。KataGo-AnimalChess 执红，MistyJungle 执黑。216 步后以三次重复局面成和。共 5 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，216 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。216 步後以三次重複局面成和。共 5 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -27197,6 +29057,16 @@
     },
     {
       "name": "Game 194: draw, 218 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 194 局：和局，218 步",
+          "zh-Hant": "第 194 局：和局，218 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，218 步。KataGo-AnimalChess 执红，MistyJungle 执黑。218 步后以三次重复局面成和。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 12 步，Misty）。",
+          "zh-Hant": "和局，218 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。218 步後以三次重複局面成和。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 12 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -27429,6 +29299,16 @@
     },
     {
       "name": "Game 28: draw, 222 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 28 局：和局，222 步",
+          "zh-Hant": "第 28 局：和局，222 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，222 步。KataGo-AnimalChess 执红，MistyJungle 执黑。222 步后以三次重复局面成和。共 8 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，222 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。222 步後以三次重複局面成和。共 8 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -27665,6 +29545,16 @@
     },
     {
       "name": "Game 42: draw, 228 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 42 局：和局，228 步",
+          "zh-Hant": "第 42 局：和局，228 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，228 步。KataGo-AnimalChess 执红，MistyJungle 执黑。228 步后以三次重复局面成和。共 6 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 16 步，Misty）。",
+          "zh-Hant": "和局，228 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。228 步後以三次重複局面成和。共 6 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 16 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -27907,6 +29797,16 @@
     },
     {
       "name": "Game 181: draw, 230 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 181 局：和局，230 步",
+          "zh-Hant": "第 181 局：和局，230 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，230 步。KataGo-AnimalChess 执黑，MistyJungle 执红。230 步后以三次重复局面成和。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 74 步，KataGo）、d5a5（第 140 步，KataGo）。",
+          "zh-Hant": "和局，230 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。230 步後以三次重複局面成和。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 74 步，KataGo）、d5a5（第 140 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -28151,6 +30051,16 @@
     },
     {
       "name": "Game 111: draw, 238 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 111 局：和局，238 步",
+          "zh-Hant": "第 111 局：和局，238 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，238 步。KataGo-AnimalChess 执黑，MistyJungle 执红。238 步后以三次重复局面成和。共 5 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g6d6（第 23 步，Misty）、d6g6（第 45 步，Misty）。",
+          "zh-Hant": "和局，238 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。238 步後以三次重複局面成和。共 5 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g6d6（第 23 步，Misty）、d6g6（第 45 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -28403,6 +30313,16 @@
     },
     {
       "name": "Game 76: draw, 243 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 76 局：和局，243 步",
+          "zh-Hant": "第 76 局：和局，243 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，243 步。KataGo-AnimalChess 执红，MistyJungle 执黑。243 步后以三次重复局面成和。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 30 步，Misty）、d5g5（第 70 步，Misty）。",
+          "zh-Hant": "和局，243 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。243 步後以三次重複局面成和。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 30 步，Misty）、d5g5（第 70 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1f1",
@@ -28660,6 +30580,16 @@
     },
     {
       "name": "Game 29: draw, 243 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 29 局：和局，243 步",
+          "zh-Hant": "第 29 局：和局，243 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，243 步。KataGo-AnimalChess 执黑，MistyJungle 执红。243 步后以三次重复局面成和。共 9 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g4d4（第 15 步，Misty）、d4a4（第 102 步，KataGo）。",
+          "zh-Hant": "和局，243 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。243 步後以三次重複局面成和。共 9 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g4d4（第 15 步，Misty）、d4a4（第 102 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -28917,6 +30847,16 @@
     },
     {
       "name": "Game 38: draw, 244 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 38 局：和局，244 步",
+          "zh-Hant": "第 38 局：和局，244 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，244 步。KataGo-AnimalChess 执红，MistyJungle 执黑。244 步后以三次重复局面成和。共 8 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，244 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。244 步後以三次重複局面成和。共 8 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -29175,6 +31115,16 @@
     },
     {
       "name": "Game 176: draw, 253 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 176 局：和局，253 步",
+          "zh-Hant": "第 176 局：和局，253 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，253 步。KataGo-AnimalChess 执红，MistyJungle 执黑。253 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 20 步，Misty）、d5a5（第 30 步，Misty）、d5g5（第 199 步，KataGo）、g5d5（第 203 步，KataGo）、d5g5（第 229 步，KataGo）、g6d6（第 237 步，KataGo）。",
+          "zh-Hant": "和局，253 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。253 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 20 步，Misty）、d5a5（第 30 步，Misty）、d5g5（第 199 步，KataGo）、g5d5（第 203 步，KataGo）、d5g5（第 229 步，KataGo）、g6d6（第 237 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1a2",
@@ -29442,6 +31392,16 @@
     },
     {
       "name": "Game 148: draw, 257 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 148 局：和局，257 步",
+          "zh-Hant": "第 148 局：和局，257 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，257 步。KataGo-AnimalChess 执红，MistyJungle 执黑。257 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 10 步，Misty）。",
+          "zh-Hant": "和局，257 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。257 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 10 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -29713,6 +31673,16 @@
     },
     {
       "name": "Game 5: draw, 259 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 5 局：和局，259 步",
+          "zh-Hant": "第 5 局：和局，259 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，259 步。KataGo-AnimalChess 执黑，MistyJungle 执红。259 步后以三次重复局面成和。共 8 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：g5d5（第 21 步，Misty）。",
+          "zh-Hant": "和局，259 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。259 步後以三次重複局面成和。共 8 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：g5d5（第 21 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -29986,6 +31956,16 @@
     },
     {
       "name": "Game 104: draw, 266 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 104 局：和局，266 步",
+          "zh-Hant": "第 104 局：和局，266 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，266 步。KataGo-AnimalChess 执红，MistyJungle 执黑。266 步后以三次重复局面成和。共 10 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a5d5（第 32 步，Misty）、d4a4（第 42 步，Misty）、a5d5（第 186 步，Misty）。",
+          "zh-Hant": "和局，266 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。266 步後以三次重複局面成和。共 10 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a5d5（第 32 步，Misty）、d4a4（第 42 步，Misty）、a5d5（第 186 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -30266,6 +32246,16 @@
     },
     {
       "name": "Game 136: draw, 272 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 136 局：和局，272 步",
+          "zh-Hant": "第 136 局：和局，272 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，272 步。KataGo-AnimalChess 执红，MistyJungle 执黑。272 步后以三次重复局面成和。共 4 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 14 步，Misty）。",
+          "zh-Hant": "和局，272 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。272 步後以三次重複局面成和。共 4 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 14 步，Misty）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
@@ -30552,6 +32542,16 @@
     },
     {
       "name": "Game 171: draw, 282 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 171 局：和局，282 步",
+          "zh-Hant": "第 171 局：和局，282 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，282 步。KataGo-AnimalChess 执黑，MistyJungle 执红。282 步后以三次重复局面成和。共 5 次吃子。本局没有出现虎的横向跳河。",
+          "zh-Hant": "和局，282 步。KataGo-AnimalChess 執黑，MistyJungle 執紅。282 步後以三次重複局面成和。共 5 次吃子。本局沒有出現虎的橫向跳河。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "a1b1",
@@ -30848,6 +32848,16 @@
     },
     {
       "name": "Game 106: draw, 296 plies",
+      "i18n": {
+        "name": {
+          "zh-Hans": "第 106 局：和局，296 步",
+          "zh-Hant": "第 106 局：和局，296 步"
+        },
+        "comment": {
+          "zh-Hans": "和局，296 步。KataGo-AnimalChess 执红，MistyJungle 执黑。296 步后以三次重复局面成和。共 7 次吃子。虎的横向跳河，也就是旧规则不允许的那一步：a6d6（第 16 步，Misty）、d4a4（第 60 步，Misty）、d4a4（第 135 步，KataGo）、a4d4（第 141 步，KataGo）。",
+          "zh-Hant": "和局，296 步。KataGo-AnimalChess 執紅，MistyJungle 執黑。296 步後以三次重複局面成和。共 7 次吃子。虎的橫向跳河，也就是舊規則不允許的那一步：a6d6（第 16 步，Misty）、d4a4（第 60 步，Misty）、d4a4（第 135 步，KataGo）、a4d4（第 141 步，KataGo）。"
+        }
+      },
       "rootFen": "t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1",
       "moves": [
         "g1g2",
