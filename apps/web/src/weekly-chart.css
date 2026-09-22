@@ -102,6 +102,11 @@
   text-anchor: middle;
 }
 
+.weekly-chart-x-axis text.weekly-chart-x-label-last {
+  text-anchor: end;
+  transform: translateX(6px);
+}
+
 .weekly-chart-empty {
   fill: var(--site-muted);
   font-size: 13px;

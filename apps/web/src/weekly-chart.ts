@@ -111,6 +111,9 @@ export function buildWeeklyChart(options: WeeklyChartOptions): HTMLElement {
     const label = svgNode('text');
     label.setAttribute('x', x.toFixed(1));
     label.setAttribute('y', String(plot.yMax + 18));
+    // The last tick sits 12 units from the viewBox edge; a centred "Sep 21"
+    // lost its final digit there, so it hangs to the left instead.
+    if (isLast) label.setAttribute('class', 'weekly-chart-x-label-last');
     label.textContent = formatWeekLabel(week, locale);
     xGroup.append(line, label);
   });

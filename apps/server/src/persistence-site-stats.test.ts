@@ -72,7 +72,10 @@ definePersistenceTests('site stats', () => {
     assert.equal(stats.generatedAt, now.toISOString());
     // The excluded operator is not a registered account here.
     assert.equal(stats.accounts, 0);
-    assert.equal(stats.weeklyCompletedGames.length, 26);
+    // Eight weeks: from the first counted game's week (06-08) to the current
+    // one, the same origin as the daily series below, not a fixed 26 back.
+    assert.equal(stats.weeklyCompletedGames.length, 8);
+    assert.equal(stats.weeklyCompletedGames[0]?.weekStart, '2026-06-08');
     assert.equal(stats.weeklyCompletedGames.at(-1)?.weekStart, '2026-07-27');
     // weekOne (04-06, a Monday) and the two `recent` games (05-29, the
     // current week); the weekTwo game is EvE and the internal one is excluded,
@@ -82,6 +85,21 @@ definePersistenceTests('site stats', () => {
       [
         { weekStart: '2026-06-08', completedGames: 2 },
         { weekStart: '2026-07-27', completedGames: 2 },
+      ],
+    );
+    // The per-variant weekly series share the axis and sum to the total row.
+    assert.deepEqual(
+      stats.weeklyByVariant.map((v) => [v.variant, v.total, v.weeks.length]),
+      [
+        ['dark-chess', 3, 8],
+        ['xiangqi', 1, 8],
+      ],
+    );
+    assert.deepEqual(
+      stats.weeklyByVariant[0]?.weeks.filter((w) => w.completedGames > 0),
+      [
+        { weekStart: '2026-06-08', completedGames: 2 },
+        { weekStart: '2026-07-27', completedGames: 1 },
       ],
     );
     assert.equal(stats.totalCompletedGames, 4);

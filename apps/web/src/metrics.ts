@@ -20,6 +20,7 @@ import {
   formatStatNumber,
   type PublicSiteStats,
   type PublicStatsMode,
+  type PublicStatsWeek,
 } from './stats-charts.js';
 import { buildWeeklyChart, type WeeklySeries } from './weekly-chart.js';
 
@@ -162,28 +163,8 @@ async function mountPublicStats(root: HTMLElement): Promise<void> {
     parts.push(
       buildChartSection(
         t('stats.gamesPerWeek', {}, locale),
-        buildWeeklyChart({
-          weeks: weekly.map((week) => week.weekStart),
-          series: [
-            {
-              key: 'games',
-              label: t('stats.gamesPerWeekSeries', {}, locale),
-              values: weekly.map((week) => week.completedGames),
-            },
-          ],
-          ariaLabel: t('stats.gamesPerWeekLabel', { count: String(weekly.length) }, locale),
-          locale,
-        }),
+        buildVariantWeeklyChart(publicStats, locale),
         'metrics-weekly-section',
-      ),
-    );
-  }
-
-  if (publicStats.dailyCompletedGames.length > 0) {
-    parts.push(
-      buildChartSection(
-        t('stats.gamesOverTime', {}, locale),
-        buildInteractiveActivityChart(buildActivitySeries(publicStats, locale), locale),
       ),
     );
   }
@@ -373,6 +354,113 @@ function buildChartSection(title: string, chart: HTMLElement, extraClass?: strin
   section.append(sectionHeading(title));
   section.append(chart);
   return section;
+}
+
+// The public weekly chart: one line, switchable between all games and each
+// curated live variant that has games (the chips the cumulative chart used to
+// carry; that chart was the same read as this one, always rising, and is gone).
+// Full weeks only. The current week used to end the line as a dashed dive on
+// the day people look, since a Monday's week is one day of games; it is a line
+// of text under the chart instead.
+type WeeklyVariantSeries = { key: string; label: string; weeks: PublicStatsWeek[] };
+
+export function weeklyVariantSeries(
+  publicStats: PublicSiteStats,
+  locale: Locale,
+): WeeklyVariantSeries[] {
+  const all: WeeklyVariantSeries = {
+    key: '__all',
+    label: t('stats.allGames', {}, locale),
+    weeks: publicStats.weeklyCompletedGames ?? [],
+  };
+  const byVariant = new Map((publicStats.weeklyByVariant ?? []).map((v) => [v.variant, v]));
+  const variants: WeeklyVariantSeries[] = [];
+  for (const id of STATS_VARIANTS) {
+    const series = byVariant.get(id);
+    if (series && series.total > 0) {
+      variants.push({ key: id, label: variantPublicName(id, locale), weeks: series.weeks });
+    }
+  }
+  return [all, ...variants];
+}
+
+// The weeks a public chart plots: every week but the one still in progress
+// (the series ends on the current Monday-start week), unless that is all there is.
+export function completedWeeks<T>(weeks: T[]): T[] {
+  return weeks.length > 1 ? weeks.slice(0, -1) : weeks;
+}
+
+function buildVariantWeeklyChart(publicStats: PublicSiteStats, locale: Locale): HTMLElement {
+  const series = weeklyVariantSeries(publicStats, locale);
+  const figure = document.createElement('div');
+  figure.className = 'stats-weekly';
+
+  const filter = document.createElement('div');
+  filter.className = 'stats-chart-filter';
+  filter.setAttribute('role', 'group');
+  filter.setAttribute('aria-label', 'Filter the chart by variant');
+  const chips = new Map<string, HTMLButtonElement>();
+  const plot = document.createElement('div');
+  plot.className = 'stats-weekly-plot';
+  const soFar = document.createElement('p');
+  soFar.className = 'stats-weekly-so-far';
+
+  let selectedKey = series[0]?.key ?? '__all';
+  const render = (): void => {
+    const active = series.find((s) => s.key === selectedKey) ?? series[0];
+    const weeks = active?.weeks ?? [];
+    const plotted = completedWeeks(weeks);
+    plot.replaceChildren(
+      buildWeeklyChart({
+        weeks: plotted.map((week) => week.weekStart),
+        series: [
+          {
+            key: active?.key ?? 'games',
+            label: active?.label ?? t('stats.gamesPerWeekSeries', {}, locale),
+            values: plotted.map((week) => week.completedGames),
+          },
+        ],
+        ariaLabel: t('stats.gamesPerWeekLabel', { count: String(plotted.length) }, locale),
+        partialLast: false,
+        locale,
+      }),
+    );
+    const current = weeks.length > 1 ? weeks.at(-1) : undefined;
+    soFar.hidden = !current;
+    soFar.textContent = current
+      ? t(
+          'stats.thisWeekSoFar',
+          { count: formatStatNumber(current.completedGames, locale) },
+          locale,
+        )
+      : '';
+  };
+  const select = (key: string): void => {
+    selectedKey = key;
+    for (const [chipKey, chip] of chips) {
+      const on = chipKey === key;
+      chip.classList.toggle('is-active', on);
+      chip.setAttribute('aria-pressed', on ? 'true' : 'false');
+    }
+    render();
+  };
+  if (series.length > 1) {
+    for (const s of series) {
+      const chip = document.createElement('button');
+      chip.type = 'button';
+      chip.className = 'stats-chart-chip';
+      chip.textContent = s.label;
+      chip.setAttribute('aria-pressed', s.key === selectedKey ? 'true' : 'false');
+      if (s.key === selectedKey) chip.classList.add('is-active');
+      chip.addEventListener('click', () => select(s.key));
+      chips.set(s.key, chip);
+      filter.append(chip);
+    }
+    figure.append(filter);
+  }
+  figure.append(plot, soFar);
+  render();
+  return figure;
 }
 
 // "All games" (the true cumulative total, matching the headline) plus one

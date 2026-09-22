@@ -33,6 +33,8 @@ export type PublicSiteStats = {
   // Both optional so an older cached payload still parses.
   accounts?: number;
   weeklyCompletedGames?: PublicStatsWeek[];
+  // Per-variant series on the same week axis; optional like the above.
+  weeklyByVariant?: Array<{ variant: string; total: number; weeks: PublicStatsWeek[] }>;
   modeTotals: Record<PublicStatsMode, number>;
   variantTotals: Array<{ variant: string; count: number }>;
   dailyCompletedGames: PublicStatsDay[];
@@ -172,17 +174,27 @@ function niceTickStep(raw: number): number {
   return 10 * magnitude;
 }
 
-function xAxisTicks(days: PublicStatsDay[]): Array<{ position: number; date: string }> {
+// Ticks on Mondays, every fourth week counting back from the last Monday in
+// the series (every second, or every one, when the series is short): the same
+// rule the weekly chart uses, so the two charts on /stats label the same dates.
+export function xAxisTicks(days: PublicStatsDay[]): Array<{ position: number; date: string }> {
   if (days.length === 1) return [{ position: 0.5, date: days[0]?.date ?? '' }];
-  const tickCount = Math.min(days.length, 5);
   const lastIndex = days.length - 1;
-  const ticks: Array<{ position: number; date: string }> = [];
-  for (let i = 0; i < tickCount; i++) {
-    const position = i / (tickCount - 1);
-    const index = Math.round(position * lastIndex);
-    const day = days[index];
-    if (day) ticks.push({ position, date: day.date });
+  const mondays = days
+    .map((day, index) => ({ index, date: day.date }))
+    .filter((day) => new Date(`${day.date}T00:00:00.000Z`).getUTCDay() === 1);
+  if (mondays.length === 0) {
+    return [
+      { position: 0, date: days[0]?.date ?? '' },
+      { position: 1, date: days[lastIndex]?.date ?? '' },
+    ];
   }
+  const tickEvery = mondays.length > 12 ? 4 : mondays.length > 6 ? 2 : 1;
+  const ticks: Array<{ position: number; date: string }> = [];
+  mondays.forEach((monday, slot) => {
+    if ((mondays.length - 1 - slot) % tickEvery !== 0) return;
+    ticks.push({ position: monday.index / lastIndex, date: monday.date });
+  });
   return ticks;
 }
 

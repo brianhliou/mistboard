@@ -147,3 +147,14 @@
   font-size: 13px;
   line-height: 1.5;
 }
+
+/* Public /stats weekly chart: variant chips above the weekly primitive, the
+   in-progress week as a line of text below it instead of a dashed dive. */
+.stats-weekly .stats-chart-filter {
+  margin-bottom: 0.75rem;
+}
+.stats-weekly-so-far {
+  margin: 0.5rem 0 0;
+  font-size: 0.9rem;
+  color: var(--site-muted);
+}

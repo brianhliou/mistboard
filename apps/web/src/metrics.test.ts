@@ -12,6 +12,35 @@ const publicStats = {
     { weekStart: '2026-07-13', completedGames: 31 },
     { weekStart: '2026-07-20', completedGames: 4 },
   ],
+  weeklyByVariant: [
+    {
+      variant: 'xiangqi',
+      total: 402,
+      weeks: [
+        { weekStart: '2026-07-06', completedGames: 12 },
+        { weekStart: '2026-07-13', completedGames: 20 },
+        { weekStart: '2026-07-20', completedGames: 3 },
+      ],
+    },
+    {
+      variant: 'dark-xiangqi',
+      total: 180,
+      weeks: [
+        { weekStart: '2026-07-06', completedGames: 8 },
+        { weekStart: '2026-07-13', completedGames: 11 },
+        { weekStart: '2026-07-20', completedGames: 1 },
+      ],
+    },
+    {
+      variant: 'mini-xiangqi',
+      total: 25,
+      weeks: [
+        { weekStart: '2026-07-06', completedGames: 0 },
+        { weekStart: '2026-07-13', completedGames: 0 },
+        { weekStart: '2026-07-20', completedGames: 0 },
+      ],
+    },
+  ],
   modeTotals: { pvp: 300, pve: 382, eve: 12 },
   variantTotals: [
     { variant: 'xiangqi', count: 402 },
@@ -154,20 +183,21 @@ describe('metrics page', () => {
     const sectionTitles = [...root.querySelectorAll('.metrics-section-heading')].map(
       (n) => n.textContent,
     );
-    expect(sectionTitles).toEqual([
-      'Games per week',
-      'Games over time',
-      'Games by variant',
-      'Games by mode',
-    ]);
-    // Games per week is the weekly primitive with one series and a table.
+    // One chart: the cumulative "Games over time" was the same read, always rising.
+    expect(sectionTitles).toEqual(['Games per week', 'Games by variant', 'Games by mode']);
+    // Games per week is the weekly primitive with one series and a table,
+    // plotting full weeks only: the in-progress week (07-20) is the line of
+    // text under the chart, not a dashed dive at the end of the line.
     const weekly = root.querySelector('.metrics-weekly-section');
     expect(weekly?.querySelector('.weekly-chart-legend')).toBeNull();
+    expect(weekly?.querySelector('.weekly-chart-line-partial')).toBeNull();
     const firstRow = weekly?.querySelector('.weekly-chart-table tr:nth-child(2)');
     expect([...(firstRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
-      '2026-07-20',
-      '4',
+      '2026-07-13',
+      '31',
     ]);
+    expect(weekly?.querySelector('.stats-weekly-so-far')?.textContent).toBe('4 so far this week');
+    expect(root.querySelector('svg.stats-chart-svg')).toBeNull();
 
     // Variant labels use the public-facing names (dark-xiangqi -> Fog Xiangqi).
     expect(root.textContent).toContain('Fog Xiangqi');
@@ -176,10 +206,20 @@ describe('metrics page', () => {
     // returns a non-zero eve count.
     expect(root.textContent).toContain('Player vs player');
     expect(root.textContent).not.toContain('Bot vs bot');
-    expect(root.querySelector('svg.stats-chart-svg')).not.toBeNull();
 
+    // The variant chips sit on the weekly chart and swap its series in place.
     const chipLabels = [...root.querySelectorAll('.stats-chart-chip')].map((n) => n.textContent);
     expect(chipLabels).toEqual(['All games', 'Xiangqi', 'Fog Xiangqi']);
+    const fogChip = [...root.querySelectorAll<HTMLButtonElement>('.stats-chart-chip')].find(
+      (chip) => chip.textContent === 'Fog Xiangqi',
+    );
+    fogChip?.click();
+    const fogRow = weekly?.querySelector('.weekly-chart-table tr:nth-child(2)');
+    expect([...(fogRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
+      '2026-07-13',
+      '11',
+    ]);
+    expect(weekly?.querySelector('.stats-weekly-so-far')?.textContent).toBe('1 so far this week');
 
     const variantSection = [...root.querySelectorAll('.metrics-section')].find((s) =>
       s.querySelector('.metrics-section-heading')?.textContent?.includes('Games by variant'),

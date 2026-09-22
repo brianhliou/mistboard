@@ -36,6 +36,15 @@ export interface PublicStatsWeek {
   completedGames: number;
 }
 
+export interface PublicVariantWeeks {
+  variant: string;
+  total: number;
+  // Counted games per week for this variant on the SAME week axis as
+  // {@link PublicSiteStats.weeklyCompletedGames}, so the chart can swap
+  // series in place.
+  weeks: PublicStatsWeek[];
+}
+
 export const PUBLIC_STATS_WEEKS = 26;
 
 export interface PublicSiteStats {
@@ -47,9 +56,13 @@ export interface PublicSiteStats {
   // nothing else are left out). A count, never a roster.
   accounts: number;
   // Counted games per Monday-start week, oldest first, the current partial
-  // week last. The growth read; the cumulative daily series below always
-  // rises and says less.
+  // week last; starts on the first counted game's week, at most
+  // PUBLIC_STATS_WEEKS back, the same origin as dailyCompletedGames. The
+  // growth read; the cumulative daily series below always rises and says less.
   weeklyCompletedGames: PublicStatsWeek[];
+  // Per-variant weekly series (most-played first) for the chart's variant
+  // filter. Same scope as variantTotals; the client decides which to show.
+  weeklyByVariant: PublicVariantWeeks[];
   modeTotals: Record<PublicStatsMode, number>;
   // Completed pvp/pve games by variant id, most-played first. Aggregate counts,
   // safe for the public /stats surface.
@@ -152,10 +165,14 @@ export async function getPublicSiteStats(
      ORDER BY n DESC, g.variant ASC`,
   );
 
+  // Both series share one origin: the Monday of the week the first counted
+  // game finished. The weekly chart used to start a fixed 26 weeks back and
+  // the daily one on the first game, so the two x-axes on /stats disagreed
+  // by two months of flat zero and their ticks never lined up.
   const daily = await pool.query<{ day: Date | string; n: number }>(
     `WITH bounds AS (
        SELECT
-         min(g.ended_at)::date AS first_day,
+         date_trunc('week', min(g.ended_at))::date AS first_day,
          $1::timestamptz::date AS today
        FROM games g
        WHERE ${COUNTED}
@@ -180,13 +197,24 @@ export async function getPublicSiteStats(
 
   // Weekly axis from generate_series so a quiet week is a zero, not a gap;
   // week keys cast to text in SQL so a non-UTC dev process cannot shift them.
+  // Starts on the first counted game's week (the daily series' origin) and
+  // never earlier than PUBLIC_STATS_WEEKS back.
   const weekly = await pool.query<{ week: string; n: number }>(
-    `WITH weeks AS (
+    `WITH bounds AS (
+       SELECT date_trunc('week', min(g.ended_at)) AS first_week
+       FROM games g
+       WHERE ${COUNTED}
+     ),
+     weeks AS (
        SELECT generate_series(
-         date_trunc('week', $1::timestamptz) - ($2::int - 1) * INTERVAL '1 week',
+         GREATEST(
+           COALESCE(bounds.first_week, date_trunc('week', $1::timestamptz)),
+           date_trunc('week', $1::timestamptz) - ($2::int - 1) * INTERVAL '1 week'
+         ),
          date_trunc('week', $1::timestamptz),
          INTERVAL '1 week'
        ) AS week_start
+       FROM bounds
      )
      SELECT weeks.week_start::date::text AS week,
        (SELECT count(*) FROM games g
@@ -201,6 +229,36 @@ export async function getPublicSiteStats(
     weekStart: row.week,
     completedGames: row.n,
   }));
+
+  // Per-(week, variant) counts projected onto the weekly axis above. The week
+  // key is truncated and cast in SQL exactly as the axis is, so the two agree
+  // whatever the process time zone.
+  const weeklyByVariantRows = await pool.query<{ week: string; variant: string; n: number }>(
+    `SELECT date_trunc('week', g.ended_at)::date::text AS week, g.variant, count(*)::int AS n
+     FROM games g
+     WHERE ${COUNTED}
+     GROUP BY week, g.variant`,
+  );
+  const perVariantByWeek = new Map<string, Map<string, number>>();
+  for (const r of weeklyByVariantRows.rows) {
+    let byWeek = perVariantByWeek.get(r.variant);
+    if (!byWeek) {
+      byWeek = new Map();
+      perVariantByWeek.set(r.variant, byWeek);
+    }
+    byWeek.set(r.week, r.n);
+  }
+  const weeklyByVariant: PublicVariantWeeks[] = byVariant.rows.map((r) => {
+    const byWeek = perVariantByWeek.get(r.variant);
+    return {
+      variant: r.variant,
+      total: r.n,
+      weeks: weeklyCompletedGames.map((w) => ({
+        weekStart: w.weekStart,
+        completedGames: byWeek?.get(w.weekStart) ?? 0,
+      })),
+    };
+  });
 
   let cumulativeGames = 0;
   const dailyCompletedGames = daily.rows.map((row) => {
@@ -250,6 +308,7 @@ export async function getPublicSiteStats(
     publicGames: row?.public_games ?? 0,
     accounts: row?.accounts ?? 0,
     weeklyCompletedGames,
+    weeklyByVariant,
     modeTotals: {
       pvp: 0,
       pve: 0,
