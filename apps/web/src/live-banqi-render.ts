@@ -251,6 +251,9 @@ function selectionRing(selection: BanqiSquare | null): string {
   return `<rect class="banqi-selection" x="${x - HIT_HALF}" y="${y - HIT_HALF}" width="${HIT_HALF * 2}" height="${HIT_HALF * 2}" rx="6"/>`;
 }
 
+// Drawn ABOVE the piece layer, where the interactive hit layer draws the same
+// marks: a capture ring sits around the target piece, and under the pieces it
+// was hidden by the piece's own outline (the rules diagrams found this).
 function moveHints(view: BanqiPlayerView, moves: readonly BanqiMove[]): string {
   return moves
     .filter((move) => move.from !== move.to)
@@ -340,8 +343,8 @@ export function renderBanqiBoardSvg(
       <g class="banqi-grid">${gridLines()}</g>
       ${lastMoveMarkers(view)}
       ${selectionRing(options.selectedSquare ?? null)}
-      ${options.interactive ? '' : moveHints(view, moves)}
       ${pieceLayer(view, pieceSet, options.draggingFrom ?? null)}
+      ${options.interactive ? '' : moveHints(view, moves)}
       <g class="banqi-board-markers xq-live-markers" aria-hidden="true" pointer-events="none">${(options.markers ?? []).map(banqiMarkerSvg).join('')}</g>
       <g class="banqi-board-arrows xq-live-arrows" aria-hidden="true" pointer-events="none">${(options.arrows ?? []).map(banqiArrowSvg).join('')}</g>
       ${options.interactive ? hitLayerWithTargets(moves, view) : ''}

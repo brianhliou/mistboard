@@ -196,7 +196,7 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has every game from the same run, one chapter each, with a note on how it went.',
+          text: '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went.',
         },
         {
           kind: 'embed',
@@ -222,7 +222,7 @@ export const banqiArticle: Article = {
             {
               question: 'How does the cannon capture in banqi?',
               answer:
-                'It moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else.',
+                'Under the Taiwanese rules this site plays: it moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else. Hong Kong and mainland tables differ; see Rule variants above.',
             },
             {
               question: 'Can a soldier capture a cannon?',
@@ -254,8 +254,6 @@ export const banqiArticle: Article = {
           buttons: [
             { label: 'Play vs computer', href: '/?play=computer&gameSpecId=banqi', emphasis: 'primary' },
             { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=banqi', emphasis: 'secondary' },
-            { label: 'How MistyBanqi plays', href: '/blog/mistybanqi', emphasis: 'secondary' },
-            { label: 'The engine games', href: '/study/FsA5sowX', emphasis: 'secondary' },
           ],
         },
       ],

@@ -2523,8 +2523,8 @@ const ZH_HANS: Record<string, string> = {
   'General > Advisor > Elephant > Chariot > Horse > Soldier. A piece captures its own rank or anything below it. Two exceptions: the soldier can capture the general, and the general cannot capture a soldier. The cannon captures by jumping and sits outside the ladder.':
     '将 > 士 > 象 > 车 > 马 > 卒。棋子可以吃同等级或更低等级的棋子。两个例外：卒可以吃将，将不能吃卒。炮靠跳吃，不在这个等级序列里。',
   'How does the cannon capture in banqi?': '暗棋的炮怎么吃？',
-  'It moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else.':
-    '炮沿直线或横线走，隔着恰好一枚棋子（明子或暗子、哪一方的都可以）跳过去，吃掉后面第一枚已翻开的敌子，不论等级。因为一定要隔一子，炮不能吃相邻的棋子。不吃子时，炮和其他棋子一样只走一格。',
+  'Under the Taiwanese rules this site plays: it moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else. Hong Kong and mainland tables differ; see Rule variants above.':
+    '在本站采用的台湾规则下：炮沿直线或横线走，隔着恰好一枚棋子（明子或暗子、哪一方的都可以）跳过去，吃掉后面第一枚已翻开的敌子，不论等级。因为一定要隔一子，炮不能吃相邻的棋子。不吃子时，炮和其他棋子一样只走一格。香港和大陆的下法不同，见上面的“规则变体”。',
   'Can a soldier capture a cannon?': '暗棋的兵可以吃炮吗？',
   'No. A soldier captures only soldiers and the general. As a target, the cannon ranks between the horse and the soldier, so the horse and everything above it can take a cannon, and a soldier cannot.':
     '不行。卒只能吃卒和将。炮被吃时算在马与卒之间，所以马以上的棋子都能吃炮，卒不能。',
@@ -2750,14 +2750,12 @@ const ZH_HANS: Record<string, string> = {
     '卒不能吃炮。它可以吃另一颗卒，或吃将。',
   'Play against the engine or challenge a friend. No account required.':
     '跟引擎下，或邀朋友对弈。不用账号。',
-  'How MistyBanqi plays': 'MistyBanqi 怎么下棋',
   'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
     'Mistboard 采用台湾规则，加上台湾电脑对局协会的比赛和棋规则（Chen、Shen 与 Hsu，ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。两条有文献记载的变体规则刻意不采用：炮不能吃暗子，将永远不能吃卒，就算是它的第一步也一样。如果你学的是另一套大小顺序，本页这一套才是引擎和站上每一盘棋遵守的。',
   'An engine game': '一盘引擎对局',
-  'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has every game from the same run, one chapter each, with a note on how it went.':
-    'MistyBanqi 自己对自己，每步一千万个节点，是站上机器人棋力的三倍。用箭头一步一步看。[配套研究](/study/FsA5sowX)收了同一批的每一盘，一盘一章，附一段说明。',
+  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went.':
+    '[MistyBanqi](/blog/mistybanqi) 自己对自己，每步一千万个节点，是站上机器人棋力的三倍。用箭头一步一步看。[配套研究](/study/FsA5sowX)收了这一批全部二十盘，一盘一章，附一段说明。',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
-  'The engine games': '引擎对局',
   'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
     '颜色不是事先分好的。先手翻开任何一颗子：翻到什么颜色，这一盘就是他的，对手用另一种。',
   'The first flip turned up red, so the player who flipped it is red.':
@@ -4985,8 +4983,8 @@ const ZH_HANT: Record<string, string> = {
   'General > Advisor > Elephant > Chariot > Horse > Soldier. A piece captures its own rank or anything below it. Two exceptions: the soldier can capture the general, and the general cannot capture a soldier. The cannon captures by jumping and sits outside the ladder.':
     '將 > 士 > 象 > 車 > 馬 > 卒。棋子可以吃同等級或更低等級的棋子。兩個例外：卒可以吃將，將不能吃卒。砲靠跳吃，不在這個等級序列裡。',
   'How does the cannon capture in banqi?': '暗棋的砲怎麼吃？',
-  'It moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else.':
-    '砲沿直線或橫線走，隔著恰好一枚棋子（明子或暗子、哪一方的都可以）跳過去，吃掉後面第一枚已翻開的敵子，不論等級。因為一定要隔一子，砲不能吃相鄰的棋子。不吃子時，砲和其他棋子一樣只走一格。',
+  'Under the Taiwanese rules this site plays: it moves along a row or column, jumps over exactly one piece (face-up or face-down, either color), and captures the first revealed enemy beyond it, whatever its rank. It cannot capture an adjacent piece because it needs that one piece to jump. Without a capture it moves one square like everything else. Hong Kong and mainland tables differ; see Rule variants above.':
+    '在本站採用的台灣規則下：砲沿直線或橫線走，隔著恰好一枚棋子（明子或暗子、哪一方的都可以）跳過去，吃掉後面第一枚已翻開的敵子，不論等級。因為一定要隔一子，砲不能吃相鄰的棋子。不吃子時，砲和其他棋子一樣只走一格。香港和大陸的下法不同，見上面的「規則變體」。',
   'Can a soldier capture a cannon?': '暗棋的兵可以吃砲嗎？',
   'No. A soldier captures only soldiers and the general. As a target, the cannon ranks between the horse and the soldier, so the horse and everything above it can take a cannon, and a soldier cannot.':
     '不行。卒只能吃卒和將。砲被吃時算在馬與卒之間，所以馬以上的棋子都能吃砲，卒不能。',
@@ -5279,14 +5277,12 @@ const ZH_HANT: Record<string, string> = {
     '卒不能吃砲。它可以吃另一顆卒，或吃將。',
   'Play against the engine or challenge a friend. No account required.':
     '跟引擎下，或邀朋友對弈。不用帳號。',
-  'How MistyBanqi plays': 'MistyBanqi 怎麼下棋',
   'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
     'Mistboard 採用台灣規則，加上台灣電腦對局協會的比賽和棋規則（Chen、Shen 與 Hsu，ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。兩條有文獻記載的變體規則刻意不採用：砲不能吃暗子，將永遠不能吃卒，就算是它的第一步也一樣。如果你學的是另一套大小順序，本頁這一套才是引擎和站上每一盤棋遵守的。',
   'An engine game': '一盤引擎對局',
-  'MistyBanqi against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has every game from the same run, one chapter each, with a note on how it went.':
-    'MistyBanqi 自己對自己，每步一千萬個節點，是站上機器人棋力的三倍。用箭頭一步一步看。[配套研究](/study/FsA5sowX)收了同一批的每一盤，一盤一章，附一段說明。',
+  '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went.':
+    '[MistyBanqi](/blog/mistybanqi) 自己對自己，每步一千萬個節點，是站上機器人棋力的三倍。用箭頭一步一步看。[配套研究](/study/FsA5sowX)收了這一批全部二十盤，一盤一章，附一段說明。',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
-  'The engine games': '引擎對局',
   'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
     '顏色不是事先分好的。先手翻開任何一顆子：翻到什麼顏色，這一盤就是他的，對手用另一種。',
   'The first flip turned up red, so the player who flipped it is red.':

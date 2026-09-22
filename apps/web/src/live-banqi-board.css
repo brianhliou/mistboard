@@ -1,48 +1,61 @@
-/* MIRROR of BANQI_BOARD_CSS in live-banqi-render.ts, byte for byte after this
-   header (the one interpolation, LAST_MOVE_FLIP_STROKE, resolved). The string
+/* MIRROR of BANQI_BOARD_CSS in live-banqi-render.ts, rule for rule after this
+   header, whitespace aside (the one interpolation, LAST_MOVE_FLIP_STROKE, resolved). The string
    is the source: the hero-frame rasterizer inlines it. The article pages need
    the same rules in a stylesheet the prerendered page carries, for the rules
    diagrams drawn with renderBanqiBoardSvg. live-banqi-render.test.ts fails if
    the two differ: edit the string, then paste it here. */
 .banqi-board {
-      display: block;
-      width: 100%;
-      height: auto;
-      touch-action: manipulation;
-      -webkit-user-select: none;
-      user-select: none;
-      /* Match the room-page boards' soft card lift (xiangqi-live-board). */
-      filter: drop-shadow(0 14px 36px rgba(37, 31, 24, 0.18));
-    }
-    .banqi-board-bg { fill: var(--mini-xq-board-bg, #f0d6a4); }
-    .banqi-grid line {
-      stroke: var(--mini-xq-grid, #5b4a32);
-      stroke-width: 1.5;
-      stroke-linecap: round;
-    }
-    .banqi-selection { fill: rgba(31, 111, 91, 0.32); stroke: none; pointer-events: none; }
-    .banqi-hint { fill: rgba(31, 111, 91, 0.72); opacity: 0.7; pointer-events: none; }
-    .banqi-hint-capture {
-      fill: none; stroke: rgba(31, 111, 91, 0.48); stroke-width: 3; pointer-events: none;
-    }
-    .banqi-target-hover {
-      fill: rgba(31, 111, 91, 0.3);
-      opacity: 0;
-      pointer-events: none;
-    }
-    .banqi-hit--target:hover .banqi-target-hover {
-      opacity: 1;
-    }
-    .banqi-hit--target:hover .banqi-hint,
-    .banqi-hit--target:hover .banqi-hint-capture {
-      opacity: 0;
-    }
-    /* Last move: a tinted CELL, not a ring around the piece (see the geometry
+  display: block;
+  width: 100%;
+  height: auto;
+  touch-action: manipulation;
+  -webkit-user-select: none;
+  user-select: none;
+  /* Match the room-page boards' soft card lift (xiangqi-live-board). */
+  filter: drop-shadow(0 14px 36px rgba(37, 31, 24, 0.18));
+}
+.banqi-board-bg {
+  fill: var(--mini-xq-board-bg, #f0d6a4);
+}
+.banqi-grid line {
+  stroke: var(--mini-xq-grid, #5b4a32);
+  stroke-width: 1.5;
+  stroke-linecap: round;
+}
+.banqi-selection {
+  fill: rgba(31, 111, 91, 0.32);
+  stroke: none;
+  pointer-events: none;
+}
+.banqi-hint {
+  fill: rgba(31, 111, 91, 0.72);
+  opacity: 0.7;
+  pointer-events: none;
+}
+.banqi-hint-capture {
+  fill: none;
+  stroke: rgba(31, 111, 91, 0.48);
+  stroke-width: 3;
+  pointer-events: none;
+}
+.banqi-target-hover {
+  fill: rgba(31, 111, 91, 0.3);
+  opacity: 0;
+  pointer-events: none;
+}
+.banqi-hit--target:hover .banqi-target-hover {
+  opacity: 1;
+}
+.banqi-hit--target:hover .banqi-hint,
+.banqi-hit--target:hover .banqi-hint-capture {
+  opacity: 0;
+}
+/* Last move: a tinted CELL, not a ring around the piece (see the geometry
        note in this file). The tint carries the MOVER's ink so a flip says who
        flipped -- on a normal move the piece that landed already tells you, but a
        flip turns up a random tile whose colour means nothing about the mover.
        Gold is the fallback for the opening flip, before an ink is bound. */
-    /* EVERY alpha here lives in the rgba colour, never in `opacity`. The arrival
+/* EVERY alpha here lives in the rgba colour, never in `opacity`. The arrival
        animation (drawMarkerOnArrival) fades element opacity 0 -> 1, so a mark
        whose resting opacity is 0.36 ramps to fully solid and then snaps back
        when the animation clears: it reads as a dark flash that settles lighter.
@@ -53,23 +66,56 @@
        cell was measurably harder to read than this at the same board scale.
        Red and black are balanced by eye rather than sharing one alpha -- red
        keeps far more chroma than navy does when composited over #f0d6a4. */
-    .banqi-lastmove { pointer-events: none; }
-    .banqi-lastmove-from { fill: rgba(214, 175, 78, 0.24); }
-    .banqi-lastmove-to { fill: rgba(214, 175, 78, 0.4); }
-    .banqi-lastmove--red.banqi-lastmove-from { fill: rgba(194, 32, 26, 0.19); }
-    .banqi-lastmove--red.banqi-lastmove-to { fill: rgba(194, 32, 26, 0.36); }
-    .banqi-lastmove--black.banqi-lastmove-from { fill: rgba(22, 40, 58, 0.22); }
-    .banqi-lastmove--black.banqi-lastmove-to { fill: rgba(22, 40, 58, 0.44); }
-    /* One tinted cell already reads as a flip against a move's two; the border
+.banqi-lastmove {
+  pointer-events: none;
+}
+.banqi-lastmove-from {
+  fill: rgba(214, 175, 78, 0.24);
+}
+.banqi-lastmove-to {
+  fill: rgba(214, 175, 78, 0.4);
+}
+.banqi-lastmove--red.banqi-lastmove-from {
+  fill: rgba(194, 32, 26, 0.19);
+}
+.banqi-lastmove--red.banqi-lastmove-to {
+  fill: rgba(194, 32, 26, 0.36);
+}
+.banqi-lastmove--black.banqi-lastmove-from {
+  fill: rgba(22, 40, 58, 0.22);
+}
+.banqi-lastmove--black.banqi-lastmove-to {
+  fill: rgba(22, 40, 58, 0.44);
+}
+/* One tinted cell already reads as a flip against a move's two; the border
        says so on a glance that catches only the one cell. */
-    .banqi-lastmove-flip {
-      stroke: rgba(214, 175, 78, 0.4);
-      stroke-width: 2.5;
-    }
-    .banqi-lastmove-flip.banqi-lastmove--red { stroke: rgba(143, 26, 20, 0.36); }
-    .banqi-lastmove-flip.banqi-lastmove--black { stroke: rgba(11, 23, 35, 0.44); }
-    .banqi-piece { pointer-events: none; filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2)); }
-    .banqi-back { pointer-events: none; filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3)); }
-    .banqi-drag-source { opacity: 0.34; }
-    .banqi-back circle { fill: #2f8f6b; stroke: #184a38; stroke-width: 2; }
-    .banqi-hit rect { fill: transparent; cursor: pointer; }
+.banqi-lastmove-flip {
+  stroke: rgba(214, 175, 78, 0.4);
+  stroke-width: 2.5;
+}
+.banqi-lastmove-flip.banqi-lastmove--red {
+  stroke: rgba(143, 26, 20, 0.36);
+}
+.banqi-lastmove-flip.banqi-lastmove--black {
+  stroke: rgba(11, 23, 35, 0.44);
+}
+.banqi-piece {
+  pointer-events: none;
+  filter: drop-shadow(0 2px 2px rgba(0, 0, 0, 0.2));
+}
+.banqi-back {
+  pointer-events: none;
+  filter: drop-shadow(0 2px 3px rgba(0, 0, 0, 0.3));
+}
+.banqi-drag-source {
+  opacity: 0.34;
+}
+.banqi-back circle {
+  fill: #2f8f6b;
+  stroke: #184a38;
+  stroke-width: 2;
+}
+.banqi-hit rect {
+  fill: transparent;
+  cursor: pointer;
+}

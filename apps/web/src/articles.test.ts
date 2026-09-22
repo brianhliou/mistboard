@@ -429,7 +429,10 @@ describe('article public listing gates', () => {
       expect(headerRow, slug).toBeTruthy();
       expect(headerRow?.querySelectorAll('.article-cta').length, slug).toBeGreaterThan(0);
       const headerCtas = headerRow?.querySelectorAll('.article-cta').length ?? 0;
-      expect(page.querySelectorAll('.article-cta').length - headerCtas, slug).toBeGreaterThanOrEqual(2);
+      expect(
+        page.querySelectorAll('.article-cta').length - headerCtas,
+        slug,
+      ).toBeGreaterThanOrEqual(2);
       expect(page.textContent, slug).toContain('No account required.');
     }
   });
@@ -665,7 +668,9 @@ describe('rules variant sidebar', () => {
 
     expect(pageText).not.toContain('[VISUAL:');
     expect(pageText).toContain('General > Advisor > Elephant > Chariot > Horse > Soldier');
-    expect(pageText).toContain('Strongest to weakest: general, advisor, elephant, chariot, horse, soldier');
+    expect(pageText).toContain(
+      'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier',
+    );
     expect(pageText).toContain('40 plies (single moves) with no flip or capture');
     expect(pageText).toContain('threefold repetition');
     expect(pageText).toContain('On your turn you do exactly one of two things.');
@@ -680,7 +685,9 @@ describe('rules variant sidebar', () => {
     // every diagram is a live-board SVG, and at least one shows a capture ring.
     const boards = [...page.querySelectorAll('.article-figure svg.banqi-board')];
     expect(boards.length).toBeGreaterThanOrEqual(10);
-    expect(page.querySelector('.article-figure svg.banqi-board circle.banqi-hint-capture')).not.toBeNull();
+    expect(
+      page.querySelector('.article-figure svg.banqi-board circle.banqi-hint-capture'),
+    ).not.toBeNull();
     expect(page.querySelector('.article-figure svg.banqi-board circle.banqi-hint')).not.toBeNull();
     // No custom panel diagrams left: no titled canvases, no HIGH/LOW.
     expect(pageText).not.toContain('CAPTURE RANK LADDER');

@@ -170,7 +170,14 @@ describe('the board stylesheet mirror', () => {
     const { readFileSync } = await import('node:fs');
     const { resolve } = await import('node:path');
     const file = readFileSync(resolve(__dirname, 'live-banqi-board.css'), 'utf-8');
-    const body = file.replace(/^\/\*[\s\S]*?\*\/\n/, '').trim();
-    expect(body).toBe(BANQI_BOARD_CSS.trim());
+    // Biome formats the .css; the string keeps its own indentation. Compare
+    // the rules, not the whitespace.
+    const norm = (s: string): string =>
+      s
+        .replace(/\s+/g, ' ')
+        .replace(/\s*([{};:,])\s*/g, '$1')
+        .trim();
+    const body = file.replace(/^\/\*[\s\S]*?\*\/\n/, '');
+    expect(norm(body)).toBe(norm(BANQI_BOARD_CSS));
   });
 });
