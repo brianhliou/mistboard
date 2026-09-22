@@ -66,6 +66,7 @@ Conventions:
 
 ### Watching and review
 
+- The xiangqi analysis board runs Pikafish in the browser, at full strength on its own net: the same engine that reviews finished games on the server, now in the local panel (which names it and shows the one-time 51 MB net download as it lands); fortress, atomic and duck keep Fairy-Stockfish ([9a8bb492](https://github.com/brianhliou/mistboard/commit/9a8bb492))
 - Pro players (/players) sits in the Community rail beside Leaderboard, Rating stats and Online bots, where lichess keeps FIDE players; the players pages render inside that layout, and the broadcast index links to it ([2c7b1640](https://github.com/brianhliou/mistboard/commit/2c7b1640))
 - Player pages show the current CXA 竞赛积分排名 (tournament points) next to the closed 等级分 history, spot-checked row by row against the source before publishing — the pipeline never auto-corrects an OCR name against a known-name list, since a first pass silently relabeled an amateur's record with a world champion's name off a one-character match ([b2702ce2](https://github.com/brianhliou/mistboard/commit/b2702ce2))
 - The player index and player pages take the shape of lichess.org/fide: a face (or the surname character), a title tag, the team under the name, a search box, the whole row a link; a player page opens with the portrait and a fact list, then the official CXA 等级分 series 2019–2023 as a sparkline with the last value and rank, and the note that the CXA replaced Elo with tournament points in 2026 ([835e820d](https://github.com/brianhliou/mistboard/commit/835e820d))
@@ -106,6 +107,7 @@ Conventions:
 
 ### Removed
 
+- Fairy-Stockfish's xiangqi net (11 MB) and its lazy load on the analysis board, superseded by Pikafish's ([9a8bb492](https://github.com/brianhliou/mistboard/commit/9a8bb492))
 - The "still face-down" panel in the Jieqi room: Jieqi reveals a captured hidden piece to the capturer only, so the panel could not know which of your own hidden pieces were already gone and listed them anyway; the captured strips carry the same facts. Banqi and Flip Jungle keep theirs ([bbfad4c0](https://github.com/brianhliou/mistboard/commit/bbfad4c0))
 - The homepage YouTube video strip is gone; the video library stays at /videos ([ac73fcf7](https://github.com/brianhliou/mistboard/commit/ac73fcf7))
 - The play streak, a day after it shipped: with nothing showing in the room it was a number on the profile that mostly read zero; the puzzle streak stays and now sits on the Puzzles heading line instead of in its own block ([b1ec937d](https://github.com/brianhliou/mistboard/commit/b1ec937d))
