@@ -351,6 +351,7 @@ async function collectPlayers(
   signedInPlayers: number;
   activeAccounts28d: number;
   previousActiveAccounts28d: number;
+  topPlayerGames: number;
 }> {
   const result = await db.query<{
     human_players: number;
@@ -359,6 +360,7 @@ async function collectPlayers(
     signed_in_players: number;
     active_accounts_28d: number;
     previous_active_accounts_28d: number;
+    top_player_games: number;
   }>(
     `WITH current_players AS (
        SELECT DISTINCT p.subject_type, p.subject_id
@@ -396,7 +398,15 @@ async function collectPlayers(
           WHERE ${COUNTED_SEAT} AND ${COUNTED_GAME}
             AND g.ended_at >= $2::timestamptz - INTERVAL '56 days'
             AND g.ended_at < $2::timestamptz - INTERVAL '28 days')::int
-         AS previous_active_accounts_28d`,
+         AS previous_active_accounts_28d,
+       COALESCE((SELECT count(*)::int
+          FROM game_participants p
+          JOIN games g ON g.room_id = p.game_id
+          WHERE ${COUNTED_SEAT} AND ${COUNTED_GAME}
+            AND g.ended_at >= $1 AND g.ended_at < $2
+          GROUP BY p.subject_type, p.subject_id
+          ORDER BY count(*) DESC
+          LIMIT 1), 0) AS top_player_games`,
     [period.periodStart, period.periodEnd, period.previousPeriodStart],
   );
   const row = result.rows[0];
@@ -407,6 +417,7 @@ async function collectPlayers(
     signedInPlayers: row?.signed_in_players ?? 0,
     activeAccounts28d: row?.active_accounts_28d ?? 0,
     previousActiveAccounts28d: row?.previous_active_accounts_28d ?? 0,
+    topPlayerGames: row?.top_player_games ?? 0,
   };
 }
 

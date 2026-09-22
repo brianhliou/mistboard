@@ -249,6 +249,76 @@ test('a halved week raises an action and a doubled week raises a watch', () => {
   assert.equal(stopped.actions[0]!.code, 'product-activity-stopped');
 });
 
+test('a week that doubled on one player is not a surge to chase', () => {
+  // The 2026-09-21 weekly: 156 from 69, 129 of them one jieqi regular. Without
+  // that player the week is 27 games, below the week before.
+  const onePlayer = reportWith(
+    factsWithProduct({
+      completedGames: 156,
+      previousCompletedGames: 69,
+      humanPlayers: 36,
+      topPlayerGames: 129,
+    }),
+  );
+  assert.equal(onePlayer.actions.length, 0);
+  assert.equal(onePlayer.verdict, 'healthy');
+  assert.match(
+    renderMistboardReadoutMarkdown(onePlayer),
+    /Busiest player: 129 of the 156 completed games \(83%\)/,
+  );
+
+  // The same totals spread across people still fire.
+  const manyPeople = reportWith(
+    factsWithProduct({
+      completedGames: 156,
+      previousCompletedGames: 69,
+      humanPlayers: 36,
+      topPlayerGames: 9,
+    }),
+  );
+  assert.equal(manyPeople.actions[0]?.code, 'product-activity-surged');
+
+  // A snapshot from before the fact existed keeps the old behaviour.
+  const unknown = reportWith(
+    factsWithProduct({ completedGames: 156, previousCompletedGames: 69, humanPlayers: 36 }),
+  );
+  assert.equal(unknown.actions[0]?.code, 'product-activity-surged');
+});
+
+test('a high abort share fires on the crossing, once', () => {
+  // Steady volume, so the week-over-week rules stay quiet.
+  const steady = { completedGames: 60, previousCompletedGames: 60 };
+  const quiet = reportWith(factsWithProduct({ ...steady, abortedGames: 10 }));
+  assert.equal(quiet.actions.length, 0);
+
+  // 40% of 100 terminal games, crossing from a quiet week.
+  const crossed = reportWith(factsWithProduct({ ...steady, abortedGames: 40 }), quiet);
+  assert.equal(crossed.actions[0]?.code, 'product-abort-share-high');
+  assert.match(
+    crossed.actions[0]!.text,
+    /40% of games ended without a result.*40 aborted, 60 completed/,
+  );
+  assert.equal(crossed.verdict, 'watch');
+  assert.match(
+    renderMistboardReadoutMarkdown(crossed),
+    /Aborted before a result: 40 \(40% of 100 that ended\)/,
+  );
+
+  // Still high the next day: the level holds, the action does not repeat.
+  const held = reportWith(
+    factsWithProduct({ completedGames: 55, previousCompletedGames: 60, abortedGames: 42 }),
+    crossed,
+  );
+  assert.equal(held.actions.length, 0);
+
+  // Too few games for a share to mean anything.
+  const tiny = reportWith(
+    factsWithProduct({ completedGames: 8, previousCompletedGames: 8, abortedGames: 12 }),
+    quiet,
+  );
+  assert.equal(tiny.actions.length, 0);
+});
+
 test('week over week noise at low volume raises nothing', () => {
   // 4 to 9 is a doubling in ratio terms and pure Poisson noise in reality.
   const report = reportWith(factsWithProduct({ completedGames: 9, previousCompletedGames: 4 }));

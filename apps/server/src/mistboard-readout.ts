@@ -14,6 +14,12 @@ export const ELEPHANTCHESS_QUALITY_ISSUE = 156;
 const PRODUCT_DROP_FLOOR = 15;
 const PRODUCT_SURGE_FLOOR = 3;
 const PRODUCT_SURGE_ABSOLUTE_STEP = 15;
+// Share of the period's terminal games (completed + aborted) that ended
+// without a result, above which the readout says so. Judged on the crossing:
+// the share is a level that a bad week sets and a normal week clears.
+const PRODUCT_ABORT_SHARE_CEILING = 0.4;
+// Aborts below this many terminal games are noise, not a share.
+const PRODUCT_ABORT_SHARE_FLOOR = 30;
 // Engine task failures are a windowed rate (they age out of the period), so
 // unlike the latching counters below they can be judged on level.
 const ENGINE_FAILED_TASK_FLOOR = 5;
@@ -55,6 +61,11 @@ export type MistboardReadoutProduct = {
   // guest browsers joined the same day); optional so older snapshots parse.
   activeAccounts28d?: number;
   previousActiveAccounts28d?: number;
+  // Games the busiest counted player finished this period. A week can double
+  // on one person grinding the bot, and the surge rule reads this so it does
+  // not send anyone looking for a channel that is one player. Optional so
+  // older snapshots parse.
+  topPlayerGames?: number;
 };
 
 // One prior weekly period, oldest first, so a weekly readout carries a trend
@@ -333,12 +344,39 @@ function productActions(
     current >= before * 2 &&
     current - before >= PRODUCT_SURGE_ABSOLUTE_STEP
   ) {
+    // A surge is worth chasing when it is many people. Judge it with the
+    // busiest player taken out: 156 games of which 129 are one person is a
+    // regular, not a channel, and the Product section already names the share.
+    const topPlayer = product.topPlayerGames ?? 0;
+    const others = current - topPlayer;
+    const manyPeople =
+      typeof product.topPlayerGames !== 'number' ||
+      (others >= before * 2 && others - before >= PRODUCT_SURGE_ABSOLUTE_STEP);
+    if (manyPeople) {
+      actions.push({
+        code: 'product-activity-surged',
+        severity: 'watch',
+        dedupeKey: `product-activity-surged:${before}-${current}`,
+        ownerIssue: null,
+        text: `Completed games rose to ${current} from ${before} week over week${typeof product.humanPlayers === 'number' ? `, across ${product.humanPlayers} players` : ''}. Find out where they came from while the trail is warm.`,
+      });
+    }
+  }
+  // Aborts are demand the completed count cannot see, and the guest-pace fix
+  // was meant to move exactly this share. Fire on the crossing, not the level.
+  const terminal = current + product.abortedGames;
+  const abortShare = terminal > 0 ? product.abortedGames / terminal : 0;
+  if (
+    terminal >= PRODUCT_ABORT_SHARE_FLOOR &&
+    abortShare >= PRODUCT_ABORT_SHARE_CEILING &&
+    previousAbortShare(previousReport) < PRODUCT_ABORT_SHARE_CEILING
+  ) {
     actions.push({
-      code: 'product-activity-surged',
+      code: 'product-abort-share-high',
       severity: 'watch',
-      dedupeKey: `product-activity-surged:${before}-${current}`,
+      dedupeKey: `product-abort-share-high:${product.abortedGames}-${current}`,
       ownerIssue: null,
-      text: `Completed games rose to ${current} from ${before} week over week${typeof product.humanPlayers === 'number' ? `, across ${product.humanPlayers} players` : ''}. Find out where they came from while the trail is warm.`,
+      text: `${Math.round(abortShare * 100)}% of games ended without a result this week (${product.abortedGames} aborted, ${current} completed). Read the per-variant abort rate before assuming it is the guest pace.`,
     });
   }
   // Retention is the half of the funnel that a volume count hides: a week can
@@ -357,6 +395,17 @@ function productActions(
     });
   }
   return actions;
+}
+
+// The previous report's abort share, or 0 when it has no product section (a
+// failed collector, or a v1 snapshot without abortedGames): a missing baseline
+// counts as below the ceiling, so the first sweep after a deploy can fire once.
+function previousAbortShare(previousReport: MistboardReadoutV1 | null): number {
+  const product = previousReport?.product;
+  if (!product) return 0;
+  const aborted = product.abortedGames ?? 0;
+  const terminal = product.completedGames + aborted;
+  return terminal > 0 ? aborted / terminal : 0;
 }
 
 // Both counters below are levels that can latch: a hard-crashed worker leaves a
@@ -551,7 +600,15 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
       lines.push(`- Variants: ${renderVariants(product.completedGamesByVariant)}`);
     }
     if (product.abortedGames > 0) {
-      lines.push(`- Aborted before a result: ${product.abortedGames}`);
+      const terminal = product.completedGames + product.abortedGames;
+      lines.push(
+        `- Aborted before a result: ${product.abortedGames} (${Math.round((product.abortedGames / terminal) * 100)}% of ${terminal} that ended)`,
+      );
+    }
+    if (typeof product.topPlayerGames === 'number' && product.completedGames > 0) {
+      lines.push(
+        `- Busiest player: ${product.topPlayerGames} of the ${product.completedGames} completed games (${Math.round((product.topPlayerGames / product.completedGames) * 100)}%)`,
+      );
     }
     lines.push(
       `- New accounts: ${product.accountsCreated} (${signedDelta(product.accountsCreated - product.previousAccountsCreated)} week over week)`,
