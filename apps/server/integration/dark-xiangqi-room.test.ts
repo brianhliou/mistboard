@@ -346,7 +346,7 @@ test('Dark Xiangqi rooms accept native aborts before both first moves', async ()
   }
 });
 
-test('Dark Xiangqi rooms forfeit a disconnected seat after both first moves', async () => {
+test('Dark Xiangqi rooms keep playing when a seat disconnects after both first moves', async () => {
   const before = process.env[darkXiangqiKey];
   process.env[darkXiangqiKey] = 'true';
   const server = await startTestServer();
@@ -376,31 +376,30 @@ test('Dark Xiangqi rooms forfeit a disconnected seat after both first moves', as
       (msg) => msg.type === 'event-appended' && msg.gameSpecId === 'dark-xiangqi',
     );
 
+    // Until #436 this armed a 30 s countdown against black and ended the game by
+    // abandonment. Both halves of that rule are off now (lifecycle-windows.ts:
+    // PvE on its own merits, PvP pending evidence), so a dropped socket ends
+    // nothing: black's clock runs on and black flags if they never return.
     await black.disconnect();
     const room = server.darkXiangqiRooms.get(created.roomId);
     assert.ok(room);
-    await waitUntil(() => room.forfeitSeat === 'black');
-    room.forfeitDeadline = Date.now() - 1;
-    scheduleDarkXiangqiLifecycleTimers(room);
 
-    const finalFrame = await red.waitFor<{
-      type: string;
-      state: { status: { type: string; winner: string; reason: string } };
-    }>(
+    // No countdown is armed, and re-deriving the timers does not create one.
+    await waitUntil(() => room.clients.size === 1);
+    scheduleDarkXiangqiLifecycleTimers(room);
+    assert.equal(room.forfeitSeat, null);
+    assert.equal(room.forfeitDeadline, null);
+    assert.equal(room.forfeitTimer, null);
+
+    // The game is still on: red plays again and the move lands.
+    red.send({ type: 'move', from: 'b4', to: 'b5' });
+    const moved = await red.waitFor<{ type: string; state: { status: { type: string } } }>(
       (msg) =>
         msg.type === 'snapshot' &&
         msg.gameSpecId === 'dark-xiangqi' &&
-        (msg.state as { status?: { type?: string; reason?: string } } | undefined)?.status?.type ===
-          'finished' &&
-        (msg.state as { status?: { reason?: string } } | undefined)?.status?.reason ===
-          'abandonment',
+        (msg.state as { status?: { type?: string } } | undefined)?.status?.type === 'playing',
     );
-
-    assert.deepEqual(finalFrame.state.status, {
-      type: 'finished',
-      winner: 'red',
-      reason: 'abandonment',
-    });
+    assert.equal(moved.state.status.type, 'playing');
   } finally {
     restoreEnv(darkXiangqiKey, before);
     await server.close();
