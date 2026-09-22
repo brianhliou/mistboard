@@ -98,11 +98,9 @@ if (isEmbedDocument) {
 // (a drain must never wait on a chunk) and repaints in the page's language
 // once the chunk lands; until then it reads in English.
 if (!isEmbedDocument) {
-  void localeReady.then(() => {
-    initializeAccountNav();
-    refreshRestartBanner();
-  });
+  void localeReady.then(() => initializeAccountNav());
   mountRestartBanner();
+  void localeReady.then(() => refreshRestartBanner());
 }
 // Its only consumers are the restart banner and the rated-mode flag, both of
 // which an embed has no use for.
