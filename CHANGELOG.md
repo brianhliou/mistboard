@@ -90,7 +90,8 @@ Conventions:
 
 ### Site
 
-- Mistboard is on X as @Mistboard: every News entry is posted there once, by the release that ships it ([announce-tweet.mjs](https://github.com/brianhliou/mistboard/blob/main/scripts/announce-tweet.mjs), #433)
+- The News box no longer shows an announcement twice on the homepage when it points at a blog post of its own ([93a5e704](https://github.com/brianhliou/mistboard/commit/93a5e704))
+- Mistboard is on X as [@Mistboard](https://x.com/Mistboard): every News entry is posted there once, by the release that ships it ([6dd2a1a7](https://github.com/brianhliou/mistboard/commit/6dd2a1a7))
 - A News entry can be scheduled: it goes live at 09:00 Pacific on its date, the same moment as a scheduled blog post, so an announcement ships with the post it points at and neither goes out first; the homepage and /feed pick it up on the day without a deploy ([fc5151d9](https://github.com/brianhliou/mistboard/commit/fc5151d9))
 - The server-restart banner ("Update pending", "Server restarting now") reads in the page's language on zh-Hans and zh-Hant pages ([146efc9d](https://github.com/brianhliou/mistboard/commit/146efc9d))
 - The "On this page" box on articles matches brianhliou.com: a bordered card, muted links, the current section in heading colour with no fill ([e8cb2294](https://github.com/brianhliou/mistboard/commit/e8cb2294))
