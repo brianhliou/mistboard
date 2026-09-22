@@ -1,3 +1,4 @@
+import type { Locale } from '../../i18n/locale.js';
 import type { Article } from '../types.js';
 
 // Platform page for Pikafish: the page a "皮卡鱼在线 / play pikafish online"
@@ -24,22 +25,42 @@ import type { Article } from '../types.js';
 // Same text-card thumbnail family as jieqi-platform and the champions card:
 // CJK eyebrow, one English mark, a quieter line. The eyebrow is 皮卡鱼 because
 // that is the word the reader searched.
-const PIKAFISH_THUMBNAIL = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-  'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-  'aria-label="A card reading Pikafish, play it in your browser">',
-  '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-  '<text x="160" y="62" text-anchor="middle" font-family="\'Noto Sans SC\', ',
-  '\'PingFang SC\', \'Hiragino Sans GB\', \'Microsoft YaHei\', system-ui, sans-serif" ',
-  'font-size="26" font-weight="700" letter-spacing="10" fill="#b9832f" ',
-  'opacity="0.5">皮卡鱼</text>',
-  '<text x="160" y="118" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="40" font-weight="700" fill="#b9832f">PIKAFISH</text>',
-  '<text x="160" y="150" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
-  'PLAY IT IN YOUR BROWSER</text>',
-  '</svg>',
-].join('');
+// The card carries two words, so it is set in the language of the page it sits
+// on: the reader's script leads and the other name sits above it, small. The
+// palette is the xiangqi board's, so the card reads as one of ours next to a
+// board thumbnail. Locale, not the piece-set thunk's job: board appearance is
+// CSS, this is language.
+const PIKAFISH_THUMBNAIL = (locale: Locale): string => {
+  const zh = locale === 'zh-Hans' || locale === 'zh-Hant';
+  const hanzi = locale === 'zh-Hant' ? '皮卡魚' : '皮卡鱼';
+  const lead = zh ? hanzi : 'PIKAFISH';
+  const above = zh ? 'PIKAFISH' : hanzi;
+  const tagline = zh
+    ? locale === 'zh-Hant'
+      ? '在瀏覽器裡直接對弈'
+      : '在浏览器里直接对弈'
+    : 'PLAY IT IN YOUR BROWSER';
+  const hanziFont =
+    "'Noto Sans SC', 'PingFang SC', 'Hiragino Sans GB', 'Microsoft YaHei', system-ui, sans-serif";
+  const latinFont = 'Roboto, system-ui, sans-serif';
+  return [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
+    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
+    `aria-label="A card reading ${zh ? hanzi : 'Pikafish'}, play it in your browser">`,
+    '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
+    `<text x="160" y="62" text-anchor="middle" font-family="${zh ? latinFont : hanziFont}" `,
+    `font-size="${zh ? 22 : 26}" font-weight="700" letter-spacing="${zh ? 6 : 10}" fill="#b9832f" `,
+    `opacity="0.5">${above}</text>`,
+    `<text x="160" y="118" text-anchor="middle" font-family="${zh ? hanziFont : latinFont}" `,
+    `font-size="${zh ? 46 : 40}" font-weight="700" letter-spacing="${zh ? 8 : 0}" fill="#b9832f">`,
+    `${lead}</text>`,
+    `<text x="160" y="150" text-anchor="middle" font-family="${zh ? hanziFont : latinFont}" `,
+    `font-size="${zh ? 16 : 15}" font-weight="600" letter-spacing="${zh ? 3 : 1.4}" `,
+    'fill="#b9832f" opacity="0.62">',
+    `${tagline}</text>`,
+    '</svg>',
+  ].join('');
+};
 
 export const pikafishArticle: Article = {
   slug: 'pikafish',

@@ -86,7 +86,7 @@ export const check2Stage = {
     'learn.xiangqi.check2.goal.2':
       'Your soldier is already the perfect screen. Reroute the cannon in behind it and take aim!',
     'learn.xiangqi.check2.goal.3':
-      'Two jumps carry the horse to the palace corner. Mind the legs on the way in!',
+      'Two jumps carry the horse to the trough point beside the palace, with check. Mind the legs on the way in!',
     'learn.xiangqi.check2.goal.4':
       'Your own general is standing on the winning file. Step him aside, then slide the chariot across!',
     'learn.xiangqi.check2.goal.5':

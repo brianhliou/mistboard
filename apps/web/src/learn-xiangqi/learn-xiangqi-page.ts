@@ -305,6 +305,12 @@ export function mountLearnXiangqi(root: HTMLElement): void {
 
     const board = createXiangqiInteractiveBoard({
       board: boardHost,
+      // Goal copy names points ("lift each cannon to b3 and h3", "every
+      // advisor road runs through e2"), so the labels are part of the lesson:
+      // always on, in the native a-i / 1-10 squares the copy uses, whatever
+      // the reader's board preference says.
+      coordinates: true,
+      coordinateStyle: 'coordinate',
       getInteractionView: () => runner?.view() ?? null,
       getPerspective: () => level.color,
       seatFor: () => level.color,

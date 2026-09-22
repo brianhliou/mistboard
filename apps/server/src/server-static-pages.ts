@@ -141,6 +141,21 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     title: 'Learn Chinese Chess (Xiangqi) | Mistboard',
     description:
       'A free interactive xiangqi course in English. Learn the pieces, the rules, and core tactics by playing them.',
+    localeGroup: '/learn/xiangqi',
+  },
+  // The course ships in all three interface locales; before 2026-09-22 only the
+  // English URL was routable, so the Chinese course had no indexable address.
+  '/zh-hans/learn/xiangqi': {
+    title: '学下象棋 | Mistboard',
+    description: '免费的互动象棋入门课程：边玩边学棋子走法、规则和基本战术。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/learn/xiangqi',
+  },
+  '/zh-hant/learn/xiangqi': {
+    title: '學下象棋 | Mistboard',
+    description: '免費的互動象棋入門課程：邊玩邊學棋子走法、規則和基本戰術。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/learn/xiangqi',
   },
   '/analysis': {
     title: 'Xiangqi Analysis Board | Mistboard',
@@ -714,6 +729,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/stats',
   '/puzzles',
   '/learn/xiangqi',
+  '/zh-hans/learn/xiangqi',
+  '/zh-hant/learn/xiangqi',
   '/practice',
   '/analysis',
   '/editor',

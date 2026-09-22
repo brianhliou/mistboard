@@ -72,8 +72,11 @@ const scriptedDemos: LearnLevelPartial[] = [
     // Perpetual CHASE (长捉): the black chariot hounds your unprotected horse
     // from square to square. The horse hops g4/e3; the chariot follows for
     // two cycles. Endless chasing is forbidden just like endless checking.
+    // The red general sits on f1, off both files the chariot uses: on e1 the
+    // e8 chariot PINNED the e3 horse and the scripted hop back to g4 was a
+    // self-check (relaxed rules let it through until 2026-09-22).
     goal: 'learn.xiangqi.perpetual.goal.3',
-    fen: '3k5/9/1r7/9/9/9/6N2/9/9/4K4 b',
+    fen: '3k5/9/1r7/9/9/9/6N2/9/9/5K3 b',
     color: 'red',
     nbMoves: 4,
     shapes: [circle('g4', 'yellow')],

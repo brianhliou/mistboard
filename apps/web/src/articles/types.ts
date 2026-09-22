@@ -14,6 +14,7 @@ import type {
 } from '@mistboard/game';
 import type { AtomicXiangqiReplaySpec } from '../atomic-xiangqi-replay.js';
 import type { ChessReplaySpec } from '../chess-replay.js';
+import type { Locale } from '../i18n/locale.js';
 import type { PlayerTitle } from '../player-titles.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
@@ -385,8 +386,11 @@ export type BoardArticleThumbnail = {
 export type SvgArticleThumbnail = {
   kind: 'svg';
   // String is baked once; a render thunk re-runs on xiangqi appearance change so
-  // the index/announcement card tracks the picked piece set (board theme is CSS).
-  svg: string | (() => string);
+  // the index/announcement card tracks the picked piece set (board theme is CSS),
+  // and takes the reader's locale, so a card whose art carries words can set them
+  // in the language of the page it sits on. A thunk that ignores the argument is
+  // still valid.
+  svg: string | ((locale: Locale) => string);
 };
 
 export type ImageArticleThumbnail = {

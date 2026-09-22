@@ -262,7 +262,7 @@ function learnCard(card: LearnCard, locale: Locale): HTMLElement {
   const link = cardShell(card.role, localizedHref(card.href, locale), locale);
   const thumb = document.createElement('div');
   thumb.className = 'landing-article-card-thumb landing-learn-card-thumb';
-  if (card.thumbnail) thumb.append(renderArticleThumbnail(card.thumbnail));
+  if (card.thumbnail) thumb.append(renderArticleThumbnail(card.thumbnail, locale));
   else thumb.classList.add('is-empty');
   link.append(thumb);
   cardText(link, card.role, locale);

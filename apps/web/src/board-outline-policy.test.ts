@@ -1,12 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import { type Article, type ArticleBlock, articles, findArticle } from './articles-data.js';
 import { mountBanqiReplay } from './banqi-replay.js';
+import type { Locale } from './i18n/locale.js';
 import { mountJieqiReplay } from './jieqi-replay.js';
 
 type SvgSample = { label: string; svg: string };
 
-function renderSvg(svg: string | (() => string)): string {
-  return typeof svg === 'function' ? svg() : svg;
+function renderSvg(svg: string | ((locale: Locale) => string), locale: Locale = 'en'): string {
+  return typeof svg === 'function' ? svg(locale) : svg;
 }
 
 function articleBlocks(article: Article): ArticleBlock[] {

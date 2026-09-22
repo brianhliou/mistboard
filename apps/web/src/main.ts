@@ -218,7 +218,12 @@ const inboxHandle = inboxMatch?.[1] ? decodeURIComponent(inboxMatch[1]) : null;
 const wantsFollowing = path === '/following' || page === 'following';
 // Interactive beginner course (lichess /learn parity), xiangqi first. Ungated —
 // distinct from the legacy /learn hub above.
-const wantsLearnXiangqi = path === '/learn/xiangqi';
+// Locale-prefixed too (/zh-hans/learn/xiangqi): localeFromPath() lands the
+// visitor on the Chinese course, the same shape as /zh-hans/videos.
+const wantsLearnXiangqi =
+  path === '/learn/xiangqi' ||
+  path === '/zh-hans/learn/xiangqi' ||
+  path === '/zh-hant/learn/xiangqi';
 // Coordinate + file-number drill. Its own surface rather than a Learn stage:
 // Learn levels are declarative positions graded by board asserts, and this is a
 // timed generator whose answer is a typed or tapped name. Parked: see #327.

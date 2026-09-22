@@ -309,7 +309,7 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
     tile.href = localizedArticleHref(article, locale);
     const miniTile = renderVariantMiniThumb(article.slug);
     if (miniTile) tile.append(miniTile);
-    else if (article.thumbnail) tile.append(renderArticleThumbnail(article.thumbnail));
+    else if (article.thumbnail) tile.append(renderArticleThumbnail(article.thumbnail, locale));
     const label = document.createElement('span');
     label.className = 'rules-landing-tile-label';
     label.textContent = variantNavLabel(localized.title);
@@ -551,7 +551,7 @@ function landingArticleCard(article: Article, locale: Locale): HTMLElement {
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
-    thumb.append(renderArticleThumbnail(article.thumbnail));
+    thumb.append(renderArticleThumbnail(article.thumbnail, locale));
   } else {
     thumb.classList.add('is-empty');
   }
@@ -1024,7 +1024,7 @@ function buildVariantSidebar(currentSlug: string | null, lang?: ArticleLang): HT
     link.href = localizedArticleHref(entry, locale);
     const miniRail = renderVariantMiniThumb(entry.slug);
     if (miniRail) link.append(miniRail);
-    else if (entry.thumbnail) link.append(renderArticleThumbnail(entry.thumbnail));
+    else if (entry.thumbnail) link.append(renderArticleThumbnail(entry.thumbnail, locale));
     const localized = entryLang ? translateArticle(entry, entryLang) : entry;
     const label = document.createElement('span');
     label.className = 'article-variant-label';
@@ -2321,7 +2321,7 @@ function articleCard(
   if (mini) {
     thumb.append(mini);
   } else if (article.thumbnail) {
-    thumb.append(renderArticleThumbnail(article.thumbnail));
+    thumb.append(renderArticleThumbnail(article.thumbnail, locale));
   } else {
     thumb.classList.add('is-empty');
   }
@@ -2363,7 +2363,10 @@ function articleCard(
   return item;
 }
 
-export function renderArticleThumbnail(thumb: ArticleThumbnail): HTMLElement {
+export function renderArticleThumbnail(
+  thumb: ArticleThumbnail,
+  locale: Locale = currentLocale(),
+): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'articles-index-card-thumb';
   wrap.setAttribute('aria-hidden', 'true');
@@ -2387,7 +2390,7 @@ export function renderArticleThumbnail(thumb: ArticleThumbnail): HTMLElement {
       const paint = () =>
         applySvg(
           withXiangqiBoardLayout(readStoredXiangqiBoardLayout(), () =>
-            withXiangqiPieceSet(readStoredXiangqiPieceSet(), svgThunk),
+            withXiangqiPieceSet(readStoredXiangqiPieceSet(), () => svgThunk(locale)),
           ),
         );
       paint();

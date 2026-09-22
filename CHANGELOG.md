@@ -47,6 +47,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The xiangqi course is readable in Chinese at its own address (/zh-hans/learn/xiangqi, /zh-hant/learn/xiangqi) after shipping in three languages behind one English URL, the board shows its coordinates on every level because the lessons name points, and six lesson defects are fixed: a perpetual-chase demo whose scripted reply was an illegal move out of a pin, a 卧槽马 sitting on the 钓鱼马 point, g9 called a palace corner, cannons described as sitting behind the horses, a Register tile promising progress on any device when progress is stored in the browser, and a phone layout that hid "Back to menu" ([77aba92e](https://github.com/brianhliou/mistboard/commit/77aba92e))
 - The banqi rules page draws every rule on the real board with the board's own move marks, checked against the rules engine, with the ladder as a row of pieces, a first-flip diagram, five FAQ rows instead of nine, and a companion study of twenty MistyBanqi games at ten million nodes embedded as the sample game ([9e4aa092](https://github.com/brianhliou/mistboard/commit/9e4aa092))
 - Every study says which game it is: the variant leads the meta line on the /study cards and sits beside the heart on the study page, in the reader's language (chess studies read 国际象棋 in Chinese) ([02be9642](https://github.com/brianhliou/mistboard/commit/02be9642))
 - A second chess study, "The most played move is an inaccuracy": 144 opening positions from the Lichess explorer (1600-2200 players, 500,000+ games each) where the club's most played move loses winning chances against the engine at 20 million nodes, each played out to a verdict beside the engine's line, with the club share and the masters' top move by era ([d4accc3a](https://github.com/brianhliou/mistboard/commit/d4accc3a), [a99f6bc9](https://github.com/brianhliou/mistboard/commit/a99f6bc9))
@@ -91,6 +92,7 @@ Conventions:
 
 ### Site
 
+- An article card whose art carries words sets them in the page language: the Pikafish card reads PIKAFISH in English and 皮卡鱼 (皮卡魚 in traditional) on the Chinese pages, tagline to match ([80d2cd14](https://github.com/brianhliou/mistboard/commit/80d2cd14))
 - The News box no longer shows an announcement twice on the homepage when it points at a blog post of its own ([93a5e704](https://github.com/brianhliou/mistboard/commit/93a5e704))
 - Mistboard is on X as [@Mistboard](https://x.com/Mistboard): every News entry is posted there once, by the release that ships it ([6dd2a1a7](https://github.com/brianhliou/mistboard/commit/6dd2a1a7))
 - A News entry can be scheduled: it goes live at 09:00 Pacific on its date, the same moment as a scheduled blog post, so an announcement ships with the post it points at and neither goes out first; the homepage and /feed pick it up on the day without a deploy ([fc5151d9](https://github.com/brianhliou/mistboard/commit/fc5151d9))

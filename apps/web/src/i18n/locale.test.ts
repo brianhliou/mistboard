@@ -162,8 +162,14 @@ describe('locale helpers', () => {
     // assigning it to location.href with a hash is a fragment navigation and
     // never reloads, so the switcher must reload explicitly.
     expect(localeSwitchNavigation('/feed#2026-09-02-embed', 'zh-Hant')).toEqual({ kind: 'reload' });
-    expect(localeSwitchNavigation('/learn/xiangqi#/openings/3', 'zh-Hans')).toEqual({
+    expect(localeSwitchNavigation('/puzzles#daily', 'zh-Hans')).toEqual({
       kind: 'reload',
+    });
+    // The course carries a locale prefix since 2026-09-22 (the Chinese course
+    // had no indexable URL before), so the switcher navigates, fragment intact.
+    expect(localeSwitchNavigation('/learn/xiangqi#/openings/3', 'zh-Hans')).toEqual({
+      kind: 'navigate',
+      href: '/zh-hans/learn/xiangqi#/openings/3',
     });
     expect(localeSwitchNavigation('/api-docs?x=1#tag-games', 'zh-Hant')).toEqual({
       kind: 'reload',

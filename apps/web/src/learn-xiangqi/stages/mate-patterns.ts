@@ -49,19 +49,24 @@ const levels: LearnLevelPartial[] = [
     ],
   },
   {
-    // 卧槽马: the horse leaps to the stable point c8, checking d10 and
-    // guarding e9; the chariot delivers the back-rank mate.
+    // 卧槽马: the horse leaps to the trough point c9, the point one rank in
+    // front of black's bottom elephant (底象前一线, zh.wikipedia 卧槽马; WB:
+    // 2nd rank from the edge, 3rd file), checking the general on its home
+    // point e10. Until 2026-09-22 this level put the horse on c8, which is the
+    // 钓鱼马 post L7 teaches (the enemy's 屏风马 square), under the 卧槽 name.
+    // Own advisors on f10 and e9 leave d10 as the only flight; the soldier on
+    // d8 then covers d9 and the chariot lifts to a10 for the back-rank mate.
     goal: 'learn.xiangqi.matePatterns.goal.3',
-    fen: '3k5/R8/9/9/3N5/9/9/9/4A4/4K4 w',
+    fen: '4ka3/4a4/3P5/1N7/9/9/9/9/R8/4K4 w',
     nbMoves: 2,
     rules: 'strict',
     detectCapture: false,
     success: mate('red'),
-    shapes: [arrow('d6', 'c8'), circle('c8', 'blue')],
+    shapes: [arrow('b7', 'c9'), circle('c9', 'blue')],
     scenario: [
-      { from: 'd6', to: 'c8' },
-      { move: { from: 'd10', to: 'e10' }, shapes: [arrow('a9', 'a10', 'green')] },
-      { from: 'a9', to: 'a10' },
+      { from: 'b7', to: 'c9' },
+      { move: { from: 'e10', to: 'd10' }, shapes: [arrow('a2', 'a10', 'green')] },
+      { from: 'a2', to: 'a10' },
     ],
   },
   {

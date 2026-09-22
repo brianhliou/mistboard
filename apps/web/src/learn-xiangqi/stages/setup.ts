@@ -116,11 +116,11 @@ export const setupStage = {
     'learn.xiangqi.setup.intro':
       'Every xiangqi game starts from the same formation. Walk each piece to its home point, around the comrades already at their posts, and learn the battle line by heart.',
     'learn.xiangqi.setup.complete':
-      'Congratulations! You know the starting position: chariots in the corners, cannons behind the horses, and the general safe at the heart of his palace.',
+      'Congratulations! You know the starting position: chariots in the corners, cannons two points in front of the horses, and the general safe at the heart of his palace.',
     'learn.xiangqi.setup.goal.chariot':
       'Chariots anchor the corners. Home is a1, but the horse on b1 seals the back rank. Find another road in.',
     'learn.xiangqi.setup.goal.cannon':
-      'Cannons sit just behind the horses, on b3 and h3. Yours are parked on the elephant points, and the horses block the direct slide. Lift each cannon up and over.',
+      'Cannons sit two points in front of the horses, on b3 and h3. Yours are parked on the elephant points, and the horses block the direct slide. Lift each cannon up and over.',
     'learn.xiangqi.setup.goal.elephant':
       'Elephants guard from c1 and g1, hopping two points diagonally. Both want g1 first. Choose wisely, or one elephant strands the other.',
     'learn.xiangqi.setup.goal.palace':
