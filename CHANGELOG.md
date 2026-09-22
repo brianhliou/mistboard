@@ -90,6 +90,7 @@ Conventions:
 
 ### Site
 
+- A News entry can be scheduled: it goes live at 09:00 Pacific on its date, the same moment as a scheduled blog post, so an announcement ships with the post it points at and neither goes out first; the homepage and /feed pick it up on the day without a deploy ([fc5151d9](https://github.com/brianhliou/mistboard/commit/fc5151d9))
 - The server-restart banner ("Update pending", "Server restarting now") reads in the page's language on zh-Hans and zh-Hant pages ([146efc9d](https://github.com/brianhliou/mistboard/commit/146efc9d))
 - The "On this page" box on articles matches brianhliou.com: a bordered card, muted links, the current section in heading colour with no fill ([e8cb2294](https://github.com/brianhliou/mistboard/commit/e8cb2294))
 - Statistics shows one Games per week chart, switchable by variant, over full weeks only; the week in progress is a line of text under it, both charts on the page share the same start and the same Monday ticks, and the always-rising Games over time chart is gone ([c3bab05d](https://github.com/brianhliou/mistboard/commit/c3bab05d))
