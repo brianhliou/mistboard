@@ -91,6 +91,7 @@ Conventions:
 
 ### Site
 
+- An article card whose art carries words sets them in the page language: the Pikafish card reads PIKAFISH in English and 皮卡鱼 (皮卡魚 in traditional) on the Chinese pages, tagline to match ([80d2cd14](https://github.com/brianhliou/mistboard/commit/80d2cd14))
 - The News box no longer shows an announcement twice on the homepage when it points at a blog post of its own ([93a5e704](https://github.com/brianhliou/mistboard/commit/93a5e704))
 - Mistboard is on X as [@Mistboard](https://x.com/Mistboard): every News entry is posted there once, by the release that ships it ([6dd2a1a7](https://github.com/brianhliou/mistboard/commit/6dd2a1a7))
 - A News entry can be scheduled: it goes live at 09:00 Pacific on its date, the same moment as a scheduled blog post, so an announcement ships with the post it points at and neither goes out first; the homepage and /feed pick it up on the day without a deploy ([fc5151d9](https://github.com/brianhliou/mistboard/commit/fc5151d9))
