@@ -49,6 +49,8 @@ type Row = {
   plies: number;
   moves: number;
   winnerSeat: 'red' | 'black' | null;
+  /** The winner's ink, which is what the material columns are keyed by. */
+  winnerInk: 'red' | 'black' | null;
   reason: string;
   firstFlipRole: BanqiPieceRole;
   firstFlipColor: 'red' | 'black';
@@ -65,7 +67,16 @@ type Row = {
   /** Plies from the last lead change (or first capture) to the end. */
   decidedForPlies: number;
   winnerLedFromMove: number | null;
+  /**
+   * Signed material difference (red minus black, in ROLE_VALUE points) after
+   * each checkpoint move, for the conversion table: at move M, how often does
+   * the side that is ahead by D go on to win? null once the game has ended.
+   */
+  leadAt: Record<number, number | null>;
 };
+
+/** Move numbers the conversion table is cut at. */
+const CHECKPOINTS = [10, 20, 30, 40];
 
 function parseMove(token: string): BanqiMove {
   return { from: token.slice(0, 2) as BanqiSquare, to: token.slice(2, 4) as BanqiSquare };
@@ -88,6 +99,17 @@ function replay(game: SelfPlayGame): Row {
   let firstFlipRole: BanqiPieceRole | null = null;
   let firstFlipColor: 'red' | 'black' | null = null;
   let winnerLedFromMove: number | null = null;
+  const leadAt: Record<number, number | null> = Object.fromEntries(
+    CHECKPOINTS.map((m) => [m, null]),
+  );
+  // A checkpoint is the position after both sides have played move M, so it is
+  // recorded at the end of every even ply, flips included.
+  const checkpoint = (ply: number): void => {
+    const moveNumber = ply / 2;
+    if (ply % 2 === 0 && CHECKPOINTS.includes(moveNumber)) {
+      leadAt[moveNumber] = taken.red - taken.black;
+    }
+  };
   for (const [i, token] of tokens.entries()) {
     const move = parseMove(token);
     const before = state;
@@ -102,6 +124,7 @@ function replay(game: SelfPlayGame): Row {
           firstFlipColor = p.color;
         }
       }
+      checkpoint(i + 1);
       continue;
     }
     if (state.captures.length > before.captures.length) {
@@ -126,6 +149,7 @@ function replay(game: SelfPlayGame): Row {
         lastChangePly = i + 1;
       }
     }
+    checkpoint(i + 1);
   }
   const status = state.status;
   const winnerSeat = status.type === 'finished' ? (status.winner ?? null) : null;
@@ -139,6 +163,7 @@ function replay(game: SelfPlayGame): Row {
     plies: tokens.length,
     moves: Math.ceil(tokens.length / 2),
     winnerSeat,
+    winnerInk,
     reason: status.type === 'finished' ? (status.reason ?? '') : 'unfinished',
     firstFlipRole: firstFlipRole ?? 'soldier',
     firstFlipColor: firstFlipColor ?? 'red',
@@ -150,6 +175,7 @@ function replay(game: SelfPlayGame): Row {
     lostGeneralFirstLost: firstGeneralOwner && winnerInk ? firstGeneralOwner !== winnerInk : null,
     maxLead,
     leadChanges,
+    leadAt,
     decidedForPlies: tokens.length - lastChangePly,
     winnerLedFromMove,
   };
