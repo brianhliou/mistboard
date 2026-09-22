@@ -17,8 +17,9 @@ import {
   BANQI_LEAD_SETTLE_CHART,
   BANQI_STATS_AFTER,
   BANQI_STATS_BEFORE,
+  BANQI_STATS_THUMBNAIL,
 } from '../banqi-statistics-diagrams.js';
-import { BANQI_ONLINE_THUMBNAIL } from '../diagrams.js';
+
 import type { Article, ArticleBlock } from '../types.js';
 
 const PLAY_ENGINE = '/?play=computer&gameSpecId=banqi';
@@ -41,7 +42,7 @@ export const banqiStatisticsArticle: Article = {
   publishedAt: '2026-09-23',
   audience:
     'Banqi players who want numbers behind the questions every table argues about: how big a lead is safe, when a game is decided, what losing the general costs, and whether flipping first is an advantage.',
-  thumbnail: { kind: 'svg', svg: BANQI_ONLINE_THUMBNAIL },
+  thumbnail: { kind: 'svg', svg: BANQI_STATS_THUMBNAIL },
   readNext: ['banqi', 'mistybanqi', 'skill-vs-luck'],
   intro: [
     {
