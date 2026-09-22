@@ -995,6 +995,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/seed-riverbank-study.ts` | _needs a one-line description_ |
 | `apps/server/src/seed-xiangqi-champions-study.ts` | _needs a one-line description_ |
 | `apps/web/src/articles/banqi-luck-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/articles/banqi-statistics-diagrams.ts` | Figures for the banqi statistics post: the lead-safety grid, the settle histogram, the exhibit boards and the card thumbnail. |
 | `apps/web/src/articles/derived-translation.ts` | _needs a one-line description_ |
 | `apps/web/src/articles/puzzle-mining-diagrams.ts` | _needs a one-line description_ |
 | `apps/web/src/articles/puzzles-with-more-than-one-solution-diagrams.ts` | Card art (16:10 SVG) for "Puzzles with more than one solution": two answers on one line; the article body is boards and tables, its diagrams were cut |

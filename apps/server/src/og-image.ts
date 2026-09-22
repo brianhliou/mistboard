@@ -183,6 +183,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
+  'banqi-statistics': renderBanqiStatsOgSvg,
 };
 
 // Rules pages whose card is the variant's start position on the site board
@@ -723,6 +724,48 @@ function renderPuzzleMiningOgSvg(title: string): string {
     shares,
     legend.join(''),
     ogFooterLine(title, 578),
+    `</svg>`,
+  ].join('');
+}
+
+// The banqi statistics card: one row of the article's lead-safety grid, the
+// move-30 cut, which is the finding the post is quoted for. Four numbers is
+// what a share card can carry; the grid's other three rows are the article's
+// job. Numbers are the move-30 row of LEAD_SAFETY in
+// apps/web/src/articles/articles/banqi-statistics-diagrams.ts (the server cannot
+// import the web bundle); change them together.
+const BANQI_STATS_OG_ROW: ReadonlyArray<{ bucket: string; pct: number }> = [
+  { bucket: '1-9', pct: 59 },
+  { bucket: '10-19', pct: 81 },
+  { bucket: '20-39', pct: 89 },
+  { bucket: '40+', pct: 100 },
+];
+
+function renderBanqiStatsOgSvg(title: string): string {
+  const cellW = 236;
+  const gap = 24;
+  const totalW = cellW * BANQI_STATS_OG_ROW.length + gap * (BANQI_STATS_OG_ROW.length - 1);
+  const left = (OG_WIDTH - totalW) / 2;
+  const top = 214;
+  const cellH = 188;
+  const cells = BANQI_STATS_OG_ROW.flatMap(({ bucket, pct }, i) => {
+    const x = left + i * (cellW + gap);
+    // One hue, opacity carrying the rate, exactly as the in-article grid does.
+    const alpha = (0.14 + (Math.max(pct - 40, 0) / 60) * 0.7).toFixed(2);
+    return [
+      `<rect x="${x}" y="${top}" width="${cellW}" height="${cellH}" rx="14" fill="#5da271" fill-opacity="${alpha}"/>`,
+      `<text x="${x + cellW / 2}" y="${top + 104}" text-anchor="middle" font-family="${FONT}" font-size="72" font-weight="700" fill="#f3f4f6">${pct}%</text>`,
+      `<text x="${x + cellW / 2}" y="${top + 150}" text-anchor="middle" font-family="${FONT}" font-size="30" font-weight="600" fill="#cbd5cf">${bucket} pts</text>`,
+    ];
+  });
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    `<text x="${OG_WIDTH / 2}" y="104" text-anchor="middle" font-family="${FONT}" font-size="30" font-weight="600" letter-spacing="2" fill="#5da271">200 ENGINE GAMES, TAIWANESE RULES</text>`,
+    `<text x="${OG_WIDTH / 2}" y="168" text-anchor="middle" font-family="${FONT}" font-size="46" font-weight="700" fill="#f3f4f6">How often the material leader wins</text>`,
+    ...cells,
+    `<text x="${OG_WIDTH / 2}" y="${top + cellH + 52}" text-anchor="middle" font-family="${FONT}" font-size="30" fill="#9ca3af">points ahead after move 30</text>`,
+    ogFooterLine(title, OG_HEIGHT - 44),
     `</svg>`,
   ].join('');
 }

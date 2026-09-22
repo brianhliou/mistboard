@@ -43,7 +43,9 @@ export const banqiStatisticsArticle: Article = {
   audience:
     'Banqi players who want numbers behind the questions every table argues about: how big a lead is safe, when a game is decided, what losing the general costs, and whether flipping first is an advantage.',
   thumbnail: { kind: 'svg', svg: BANQI_STATS_THUMBNAIL },
-  readNext: ['banqi', 'mistybanqi', 'skill-vs-luck'],
+  // Rules slugs are filtered out of the read-next pool, so listing 'banqi'
+  // here would silently do nothing; the intro links /rules/banqi in prose.
+  readNext: ['mistybanqi', 'skill-vs-luck'],
   intro: [
     {
       kind: 'paragraph',

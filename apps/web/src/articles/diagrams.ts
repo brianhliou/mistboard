@@ -2563,23 +2563,6 @@ export const BANQI_ENGINE_THUMBNAIL = () => {
   );
 };
 
-// The play page's card: the sample game a few dozen plies in, so the card
-// shows what a game in progress looks like (mixed face-down and revealed)
-// rather than the rules page's fresh board.
-export const BANQI_ONLINE_THUMBNAIL = () => {
-  const view = banqiReplayViewAt(BANQI_SAMPLE_GAME.deal, BANQI_SAMPLE_GAME.moves, 40);
-  return xqSvg(
-    BANQI_BOARD_W,
-    BANQI_ENGINE_THUMB_H,
-    [
-      `<g data-banqi-thumbnail-layout="online-full-board">`,
-      banqiBoardGrid(0, BANQI_ENGINE_THUMB_Y),
-      banqiPiecesFromView(view, 0, BANQI_ENGINE_THUMB_Y),
-      `</g>`,
-    ].join(''),
-  );
-};
-
 export const BANQI_RANK_ORDER: Array<{ role: XiangqiPiece['role']; label: string }> = [
   { role: 'general', label: 'General' },
   { role: 'advisor', label: 'Advisor' },
