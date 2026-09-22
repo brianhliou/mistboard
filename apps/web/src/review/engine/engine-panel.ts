@@ -10,6 +10,7 @@ import {
   type CevalEffort,
   type CevalHandle,
   type CevalLine,
+  type CevalLoadProgress,
   type CevalUpdate,
   type CevalVariant,
   cevalEngineName,
@@ -315,7 +316,11 @@ export function createEnginePanel(opts: EnginePanelOptions): EnginePanel {
     opts.evalBar?.setIdle(false);
     sub.textContent = 'loading…';
     void handle
-      .preload()
+      .preload((progress) => {
+        // Pikafish's net is 51 MB; the first open of a xiangqi board is a real
+        // download, and a bare "loading…" for ten seconds reads as a hang.
+        if (on) sub.textContent = formatLoadProgress(engineName, progress);
+      })
       .then(() => {
         if (on) evaluateNow();
       })
@@ -530,4 +535,14 @@ function redPov(line: CevalLine, side: Side): { cp: number | null; mate: number 
 
 function formatKnps(nps: number): string {
   return nps >= 1000 ? `${Math.round(nps / 1000)}k nps` : `${nps} nps`;
+}
+
+/** `loading Pikafish · 23 / 51 MB` while a large engine asset downloads. */
+export function formatLoadProgress(engineName: string, progress: CevalLoadProgress): string {
+  const mb = (bytes: number) => `${Math.round(bytes / 1_000_000)}`;
+  const amount =
+    progress.total > 0
+      ? `${mb(progress.loaded)} / ${mb(progress.total)} MB`
+      : `${mb(progress.loaded)} MB`;
+  return `loading ${engineName} · ${amount}`;
 }

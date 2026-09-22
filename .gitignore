@@ -107,3 +107,7 @@ scripts/.benedict-diagrams.mjs
 # dev path drops a ~47MB binary into `git add -A` range. The container builds its
 # own copy from the pinned refs; nothing here is ever committed.
 /bin/
+
+# The 51 MB Pikafish net is fetched by apps/web/scripts/fetch-pikafish-net.mjs
+# against the pin in net.json (predev/build); upstream rolls it without a tag.
+apps/web/public/engine/pikafish/pikafish.nnue

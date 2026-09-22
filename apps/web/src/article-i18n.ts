@@ -2660,8 +2660,8 @@ const ZH_HANS: Record<string, string> = {
     '站内每一盘下完的象棋都可以提交复盘。皮卡鱼在服务器上把整盘棋跑一遍，着法列表会显示评估在哪里发生了变化、它更倾向的走法，以及哪几步输掉了棋。国际象棋玩家习惯的那种赛后复盘，现在象棋也有。',
   'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
     '对暗棋、揭棋和翻棋斗兽棋，复盘还做了一件国际象棋复盘不需要做的事：给每一次翻子定价，让你把自己的选择和运气分开看。[把实力和运气分开](/blog/skill-vs-luck)一文解释了做法。',
-  'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Fairy-Stockfish in your browser, not Pikafish: instant and private, and weaker. Pikafish in the browser is not there yet.':
-    '[分析棋盘](/analysis/xiangqi)用于你自己摆的局面。它在你的浏览器里运行的是 Fairy-Stockfish，不是皮卡鱼：即开即用、数据不外传，但更弱。浏览器版皮卡鱼目前还没有。',
+  'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
+    '[分析棋盘](/analysis/xiangqi)用于你自己摆的局面。它在你的浏览器里运行全强度的皮卡鱼，带官方权重，你分析的内容不会离开你的电脑。权重 51 MB，只需下载一次。',
   Questions: '常见问题',
   'Can I play Pikafish online?': '可以在线和皮卡鱼下棋吗？',
   'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':
@@ -5187,8 +5187,8 @@ const ZH_HANT: Record<string, string> = {
     '站內每一盤下完的象棋都可以提交復盤。皮卡魚在伺服器上把整盤棋跑一遍，著法列表會顯示評估在哪裡發生了變化、它更傾向的走法，以及哪幾步輸掉了棋。西洋棋玩家習慣的那種賽後復盤，現在象棋也有。',
   'For banqi, jieqi and flip jungle the review does something no chess review needs: it prices every flip, so you see what you chose apart from what you drew. [Separating skill from luck](/blog/skill-vs-luck) explains how.':
     '對暗棋、揭棋和翻棋鬥獸棋，復盤還做了一件西洋棋復盤不需要做的事：給每一次翻子定價，讓你把自己的選擇和運氣分開看。[把實力和運氣分開](/blog/skill-vs-luck)一文解釋了做法。',
-  'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Fairy-Stockfish in your browser, not Pikafish: instant and private, and weaker. Pikafish in the browser is not there yet.':
-    '[分析棋盤](/analysis/xiangqi)用於你自己擺的局面。它在你的瀏覽器裡運行的是 Fairy-Stockfish，不是皮卡魚：即開即用、資料不外傳，但更弱。瀏覽器版皮卡魚目前還沒有。',
+  'The [analysis board](/analysis/xiangqi) is for a position you set up yourself. It runs Pikafish in your browser at full strength, on its own net, so nothing you analyze leaves your machine. The net is 51 MB and downloads once.':
+    '[分析棋盤](/analysis/xiangqi)用於你自己擺的局面。它在你的瀏覽器裡運行全強度的皮卡魚，帶官方權重，你分析的內容不會離開你的電腦。權重 51 MB，只需下載一次。',
   Questions: '常見問題',
   'Can I play Pikafish online?': '可以線上和皮卡魚下棋嗎？',
   'Yes, here, in the browser. One click on the Pikafish page starts a game against it; the play menu offers eight easier levels.':

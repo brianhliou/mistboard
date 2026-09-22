@@ -7,14 +7,14 @@
   "scripts": {
     "dev": "vite --host 0.0.0.0 --port ${PORT:-3000} --strictPort",
     "dev:agent": "vite --host 0.0.0.0 --port ${PORT:-3099} --strictPort",
-    "build": "tsc -p tsconfig.json && vite build && node scripts/prerender-articles.mjs",
+    "build": "node scripts/fetch-pikafish-net.mjs && tsc -p tsconfig.json && vite build && node scripts/prerender-articles.mjs",
     "test:unit": "vitest run",
     "video:frames": "tsx src/video/cli.ts",
     "typecheck": "tsc -p tsconfig.json --noEmit",
     "i18n:check": "node scripts/app-i18n-check.mjs",
     "i18n:coverage": "node scripts/i18n-coverage.mjs",
     "i18n:prune": "node scripts/prune-article-i18n.mjs",
-    "predev": "node ../../scripts/ensure-packages-built.mjs",
+    "predev": "node ../../scripts/ensure-packages-built.mjs && node scripts/fetch-pikafish-net.mjs",
     "pretypecheck": "node ../../scripts/ensure-packages-built.mjs",
     "pretest:unit": "node ../../scripts/ensure-packages-built.mjs",
     "pretest": "node ../../scripts/ensure-packages-built.mjs"

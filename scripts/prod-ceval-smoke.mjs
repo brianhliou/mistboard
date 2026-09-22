@@ -5,12 +5,17 @@
 // exercised a real search).
 //
 // Backends (see apps/web/src/review/engine/):
-//   fsf   - Fairy-Stockfish pthread wasm on /analysis/xiangqi,
-//           /analysis/fortress-xiangqi and /analysis/atomic-xiangqi (needs
-//           COOP/COEP cross-origin isolation + SharedArrayBuffer). ceval.ts.
+//   fsf   - Fairy-Stockfish pthread wasm on /analysis/fortress-xiangqi and
+//           /analysis/atomic-xiangqi (needs COOP/COEP cross-origin isolation +
+//           SharedArrayBuffer). ceval.ts.
 //           The atomic board is gated on BEHAVIOUR: the vendored build is
 //           patched for atomic's rules, and a stock build loads the same .ini
 //           without complaint and plays a different game.
+//   pikafish - mainline Pikafish pthread wasm on /analysis/xiangqi with its
+//           51 MB NNUE net (pikafish-ceval.ts). Gated on the net's versioned URL
+//           serving AND on the engine naming itself and reading a dead-drawn
+//           endgame near 0.0: Pikafish refuses to search without a net, so a
+//           panel that answers at all proves the net loaded.
 //   misty - Misty single-threaded wasm on /analysis/jungle,
 //           /analysis/jungle-flip, plus MistyBanqi on a finished banqi game's
 //           review page. The game id is DISCOVERED at runtime from the public
@@ -26,7 +31,7 @@
 // Each check: load the page, mount the board/panel, toggle the engine on, and
 // wait for a real eval + at least one PV line. Fails on engine console errors.
 //
-// Usage: node scripts/prod-ceval-smoke.mjs [--backend fsf|misty|pika|all]
+// Usage: node scripts/prod-ceval-smoke.mjs [--backend fsf|pikafish|misty|pika|all]
 // Defaults to prod + all backends; point MISTBOARD_WEB_URL at a local build to
 // smoke locally. MISTBOARD_CEVAL_SMOKE_BACKEND is the env equivalent.
 import { readFileSync } from 'node:fs';
@@ -54,6 +59,9 @@ try {
   if (backend === 'fsf' || backend === 'all') {
     await runCheck('fsf', () => checkFsf(browser));
   }
+  if (backend === 'pikafish' || backend === 'all') {
+    await runCheck('pikafish', () => checkPikafish(browser));
+  }
   if (backend === 'misty' || backend === 'all') {
     await runCheck('misty', () => checkMisty(browser));
   }
@@ -79,18 +87,28 @@ async function runCheck(name, fn) {
 
 // ── Fairy-Stockfish on the standalone analysis board ────────────────────────
 async function checkFsf(browser) {
-  const xiangqi = await checkFsfAnalysisSurface(browser, {
-    slug: 'xiangqi',
-    query: `?moves=${encodeURIComponent(moves)}`,
-    boardSelector: '.xiangqi-live-board svg',
-  });
   const fortressXiangqi = await checkFsfAnalysisSurface(browser, {
     slug: 'fortress-xiangqi',
     boardSelector: '.fortress-xiangqi-live-board svg',
   });
   const atomicXiangqi = await checkAtomicXiangqiPatched(browser);
-  const nnue = await checkXiangqiNnueLoaded(browser);
-  return { surfaces: { xiangqi, fortressXiangqi, atomicXiangqi }, nnue };
+  return { surfaces: { fortressXiangqi, atomicXiangqi } };
+}
+
+// ── Pikafish on the standalone xiangqi analysis board ───────────────────────
+async function checkPikafish(browser) {
+  const netUrl = await assertPikafishAssetHeaders();
+  // The pasted move list: the board reconstructs it, the engine searches it,
+  // and the best-move arrow proves the PV came back in the board's a1-i10
+  // coordinates (the backend shifts ranks both ways; a bad shift draws an
+  // arrow from an empty point, or none).
+  const xiangqi = await checkFsfAnalysisSurface(browser, {
+    slug: 'xiangqi',
+    query: `?moves=${encodeURIComponent(moves)}`,
+    boardSelector: '.xiangqi-live-board svg',
+  });
+  const nnue = await checkPikafishNetLoaded(browser);
+  return { netUrl, xiangqi, nnue };
 }
 
 /**
@@ -136,38 +154,18 @@ async function checkAtomicXiangqiPatched(browser) {
 }
 
 /**
- * Assert the browser xiangqi engine is actually running on its NNUE net.
+ * Assert the xiangqi analysis board is Pikafish on its net, not a fallback.
  *
- * This is a RELEASE GATE, not a nicety. `loadXiangqiNet` in ceval.ts falls back
- * to the classical evaluation when the net cannot be fetched, deliberately, so
- * that a CDN miss degrades the analysis instead of taking the engine panel down.
- * The cost of that choice is that a 404 on the 11MB asset is invisible: the
- * board keeps answering, just with the evaluation that could not tell a won
- * basic endgame from a drawn one in 15 of 32 corpus positions (#363).
- *
- * So this asserts on BEHAVIOUR rather than on the asset alone. The 200 check
- * names the cause when it breaks; the evaluation check is what actually proves
- * the engine is using it, because a fetched-but-unloaded net would still pass a
- * network assertion.
+ * Pikafish has no classical evaluation: a missing or mismatched net terminates
+ * the engine, so a panel that names Pikafish and answers with a number has
+ * loaded the net. The number is still checked, on the same dead-drawn basic
+ * endgame the FSF gate used (a red soldier stranded on the last rank plus an
+ * elephant), which Pikafish reads about +0.3 and a broken build would not read
+ * at all.
  */
-async function checkXiangqiNnueLoaded(browser) {
-  // A dead-drawn basic endgame: a red soldier stranded on the last rank, where
-  // it can only shuffle sideways, plus an elephant that cannot mate either.
-  // Declared here rather than at module scope because the checks run as
-  // top-level await ABOVE this point, and a module-level const is still in its
-  // temporal dead zone when they do.
+async function checkPikafishNetLoaded(browser) {
   const probeFen = '5P3/9/3k5/9/9/2B6/9/9/9/4K4 w - - 17 17';
-  // Classical FSF reads this +0.7 ("Red is better"); with the net it reads 0.0.
-  const maxAbsEval = 0.3;
-  const assetUrl = `${baseUrl}/engine/fairy-stockfish/${xiangqiNnueNet()}?v=${encodeURIComponent(fsfAssetVersion())}`;
-  const asset = await fetch(assetUrl, { method: 'HEAD' });
-  if (!asset.ok) {
-    throw new Error(
-      `${assetUrl} returned HTTP ${asset.status}: the xiangqi NNUE net is not being served, so ` +
-        'every xiangqi board silently falls back to the classical evaluation (#363).',
-    );
-  }
-
+  const maxAbsEval = 0.8;
   const url = `${baseUrl}/analysis/xiangqi?fen=${encodeURIComponent(probeFen)}`;
   const page = await browser.newPage({ viewport: { width: 1280, height: 800 } });
   try {
@@ -182,6 +180,10 @@ async function checkXiangqiNnueLoaded(browser) {
     await toggleEngineOn(page);
     await waitForEvalAndLines(page);
     const panel = await readPanel(page);
+    const engineNamed = await page.evaluate(() =>
+      (document.querySelector('.engine-panel__name')?.textContent ?? '').includes('Pikafish'),
+    );
+    if (!engineNamed) throw new Error('engine panel did not name Pikafish on /analysis/xiangqi');
     const score = Number.parseFloat(String(panel.eval ?? '').replace(/[^\d.+-]/g, ''));
     if (!Number.isFinite(score)) {
       throw new Error(
@@ -190,13 +192,13 @@ async function checkXiangqiNnueLoaded(browser) {
     }
     if (Math.abs(score) > maxAbsEval) {
       throw new Error(
-        `xiangqi analysis reads ${panel.eval} on a dead-drawn endgame; with the NNUE net it reads about 0.0, ` +
-          'so the engine is running its classical evaluation. The net was served but did not load: ' +
-          'check the FS.writeFile / EvalFile path in loadXiangqiNet (apps/web/src/review/engine/ceval.ts).',
+        `Pikafish reads ${panel.eval} on a dead-drawn endgame; with its net it reads about +0.3. ` +
+          'Check that the served pikafish.nnue matches net.json and the engine commit ' +
+          '(apps/web/public/engine/pikafish/README.md).',
       );
     }
     assertNoFatalErrors(errors);
-    return { url, eval: panel.eval, netUrl: assetUrl };
+    return { url, eval: panel.eval };
   } finally {
     await page.close();
   }
@@ -452,10 +454,66 @@ function fsfAssetVersion() {
   return match[1];
 }
 
-function xiangqiNnueNet() {
-  const match = fsfSource().match(/XIANGQI_NNUE_NET = '([^']+)'/);
-  if (!match) throw new Error('XIANGQI_NNUE_NET not found in ceval.ts');
+function pikafishSource() {
+  return readFileSync(
+    new URL('../apps/web/src/review/engine/pikafish-ceval.ts', import.meta.url),
+    'utf8',
+  );
+}
+
+function pikafishAssetVersion() {
+  const match = pikafishSource().match(/PIKAFISH_ASSET_VERSION = '([^']+)'/);
+  if (!match) throw new Error('PIKAFISH_ASSET_VERSION not found in pikafish-ceval.ts');
   return match[1];
+}
+
+function pikafishNnueNet() {
+  const match = pikafishSource().match(/PIKAFISH_NNUE_NET = '([^']+)'/);
+  if (!match) throw new Error('PIKAFISH_NNUE_NET not found in pikafish-ceval.ts');
+  return match[1];
+}
+
+// The Pikafish worker, wasm and net at the exact versioned URLs the client
+// fetches. The net is the one that can silently go missing: it is not tracked
+// in git and is fetched into public/ at build time (fetch-pikafish-net.mjs),
+// so a build that skipped that step ships a 404 the engine cannot recover from.
+async function assertPikafishAssetHeaders() {
+  const v = encodeURIComponent(pikafishAssetVersion());
+  const workerUrl = `${baseUrl}/engine/pikafish/worker.js?v=${v}`;
+  const worker = await fetch(workerUrl);
+  if (!worker.ok) throw new Error(`${workerUrl} returned HTTP ${worker.status}`);
+  const workerType = worker.headers.get('content-type') ?? '';
+  if (!/javascript/.test(workerType)) {
+    throw new Error(`${workerUrl} content-type is ${workerType || 'missing'}, expected javascript`);
+  }
+  const coep = worker.headers.get('cross-origin-embedder-policy');
+  if (coep !== 'require-corp' && coep !== 'credentialless') {
+    throw new Error(
+      `${workerUrl} is served without a compatible Cross-Origin-Embedder-Policy (got ${coep ?? 'none'})`,
+    );
+  }
+  const wasmUrl = `${baseUrl}/engine/pikafish/pikafish.wasm?v=${v}`;
+  const wasm = await fetch(wasmUrl, { method: 'HEAD' });
+  if (!wasm.ok) throw new Error(`${wasmUrl} returned HTTP ${wasm.status}`);
+  const wasmType = wasm.headers.get('content-type') ?? '';
+  if (!wasmType.includes('application/wasm')) {
+    throw new Error(
+      `${wasmUrl} content-type is ${wasmType || 'missing'}, expected application/wasm`,
+    );
+  }
+  const netUrl = `${baseUrl}/engine/pikafish/${pikafishNnueNet()}?v=${v}`;
+  const net = await fetch(netUrl, { method: 'HEAD' });
+  if (!net.ok) {
+    throw new Error(
+      `${netUrl} returned HTTP ${net.status}: the Pikafish net is not being served, so ` +
+        'every xiangqi analysis board fails to start (fetch-pikafish-net.mjs did not run at build?)',
+    );
+  }
+  const length = Number(net.headers.get('content-length') ?? 0);
+  if (length > 0 && length < 40_000_000) {
+    throw new Error(`${netUrl} is ${length} bytes; the net is about 51 MB`);
+  }
+  return netUrl;
 }
 
 function mistyAssetVersion() {
@@ -648,7 +706,7 @@ function readPanel(page) {
 
 function assertNoFatalErrors(errors) {
   const fatal = errors.filter((message) =>
-    /pthread|SharedArrayBuffer|ceval|engine global missing|failed to load engine|misty|pikajieqi|ERR_BLOCKED_BY_RESPONSE|Engine unavailable/i.test(
+    /pthread|SharedArrayBuffer|ceval|engine global missing|failed to load engine|misty|pikajieqi|pikafish|ERR_BLOCKED_BY_RESPONSE|Engine unavailable/i.test(
       message,
     ),
   );
@@ -668,18 +726,19 @@ function parseArgs(args) {
       parsed.baseUrl = args[++index];
     } else {
       throw new Error(
-        `unknown argument: ${arg} (usage: [--backend fsf|misty|pika|all] [--base <url>])`,
+        `unknown argument: ${arg} (usage: [--backend fsf|pikafish|misty|pika|all] [--base <url>])`,
       );
     }
   }
   if (
     parsed.backend !== 'fsf' &&
+    parsed.backend !== 'pikafish' &&
     parsed.backend !== 'misty' &&
     parsed.backend !== 'pika' &&
     parsed.backend !== 'all'
   ) {
     throw new Error(
-      `--backend must be fsf, misty, pika, or all (got ${parsed.backend ?? 'nothing'})`,
+      `--backend must be fsf, pikafish, misty, pika, or all (got ${parsed.backend ?? 'nothing'})`,
     );
   }
   if (parsed.baseUrl !== null && !parsed.baseUrl) throw new Error('--base requires a value');
