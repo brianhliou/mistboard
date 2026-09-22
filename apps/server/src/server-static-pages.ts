@@ -8,6 +8,7 @@ import {
   prerenderedIndexIsStale,
   readArticleSchedule,
 } from './article-schedule.js';
+import { botPageMeta } from './bot-page-meta.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
 import {
   ARTICLE_OG_IMAGE_VERSION,
@@ -427,7 +428,10 @@ function localeAlternateLinks(publicHost: string, basePath: string): string {
 // the manifest is absent), so the caller can fall back to the plain static
 // shell exactly as before.
 async function liveGameMeta(pathname: string): Promise<TenantGamePageMeta | null> {
-  return persistence.isInitialized() ? tenantGamePageMeta(pathname) : null;
+  if (!persistence.isInitialized()) return null;
+  // A bot profile page names its bot the way a finished game names its
+  // players (bot-page-meta.ts); both ride the same slot.
+  return (await botPageMeta(pathname)) ?? tenantGamePageMeta(pathname);
 }
 
 export async function serveSpaShellWithRoutePreloads(params: {
