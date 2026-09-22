@@ -2,7 +2,8 @@
 // Push a production release only through the safe CI -> deploy -> smoke order.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { hostname } from 'node:os';
+import { existsSync } from 'node:fs';
+import { homedir, hostname } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
 import { ciOutcome, classifyJobs } from './lib/ci-run-verdict.mjs';
@@ -197,6 +198,8 @@ try {
   }
 
   await runSmoke({ deployRequired: release.deployRequired, headRevision: release.headRevision });
+
+  announceNews({ deployRequired: release.deployRequired });
 
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.log(`release: ok in ${formatDuration(elapsedMs)}`);
@@ -909,6 +912,31 @@ function run(command) {
   if (result.error) throw result.error;
   if (result.signal) throw new Error(`${command[0]} exited with signal ${result.signal}`);
   if (result.status !== 0) throw new Error(`${command[0]} exited with ${result.status}`);
+}
+
+// The megaphone, after the deploy is proven: announce-tweet.mjs reads the
+// LIVE /feed.xml and posts each entry the ledger has not seen, so a release
+// that adds a News entry tweets it here (mistboard#433). Only when a deploy
+// happened (a no-deploy release changes no feed) and the release machine has
+// the credentials file; a failed post is a warning and the release stays ok,
+// since the site is already up and the post can be retried by hand.
+function announceNews({ deployRequired }) {
+  if (!deployRequired) {
+    console.log('skip: news tweet (no deploy)');
+    return;
+  }
+  if (!existsSync(path.join(homedir(), '.config', 'mistboard', 'x.env'))) {
+    console.log('skip: news tweet (no ~/.config/mistboard/x.env on this machine)');
+    return;
+  }
+  const command = ['node', 'scripts/announce-tweet.mjs', '--post', '--max', '3'];
+  console.log(`\n$ ${quoteCommand(command)}`);
+  const result = spawnSync(command[0], command.slice(1), { cwd: workdir, stdio: 'inherit' });
+  if (result.status !== 0) {
+    console.error(
+      'warning: news tweet failed; the release is live, run `npm run news:tweet -- --post` by hand',
+    );
+  }
 }
 
 function cancelUnpublishedDrain() {

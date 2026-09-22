@@ -7,9 +7,14 @@
 //      is not yet on the site. A megaphone that runs ahead of the deploy points
 //      people at a 404.
 //
-// Idempotency is a committed ledger (scripts/data/tweeted-announcements.json)
-// keyed by the RSS <guid>, which is derived from the announcement's date and
-// headline and does not change when its link does.
+// Idempotency is a ledger keyed by the RSS <guid>, which is derived from the
+// announcement's date and headline and does not change when its link does.
+// The ledger lives at ~/.config/mistboard/tweeted-announcements.json, beside
+// the credentials, because the poster runs on the release machine after the
+// release has pushed: a committed ledger would leave every release with a
+// dirty file to commit and push again. scripts/data/tweeted-announcements.json
+// is the seed a machine starts from when it has no ledger yet (the feed as of
+// 2026-09-22, all marked, so a new machine never tweets the backlog).
 //
 //   node scripts/announce-tweet.mjs                  # dry run, shows what would post
 //   node scripts/announce-tweet.mjs --post           # actually post
@@ -17,18 +22,26 @@
 //   node scripts/announce-tweet.mjs --max 1          # cap this run (default 3)
 //   node scripts/announce-tweet.mjs --host http://localhost:3000
 //
-// Credentials come from the environment and are never printed:
+// Credentials come from the environment, or from ~/.config/mistboard/x.env
+// (KEY=VALUE lines) when the environment has none, and are never printed:
 //   X_API_KEY  X_API_SECRET  X_ACCESS_TOKEN  X_ACCESS_TOKEN_SECRET
 // They are an X app's consumer pair plus the @Mistboard account's user tokens,
-// with Read and write permission. Posting needs a paid X API tier; the free
-// tier's write quota is small enough to run out mid-month.
+// with Read and write permission (mistboard#433). The app's project is pay per
+// use, so a post costs a fraction of a cent and a missing card fails the post.
+//
+// release-prod.mjs runs `--post --max 3` after a deploy's smokes pass, when the
+// credentials file exists; a failure there is a warning, not a failed release.
 import { createHmac, randomBytes } from 'node:crypto';
 import { promises as fs } from 'node:fs';
+import { homedir } from 'node:os';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
 
 const __dirname = dirname(fileURLToPath(import.meta.url));
-const ledgerPath = resolve(__dirname, 'data', 'tweeted-announcements.json');
+const configDir = resolve(homedir(), '.config', 'mistboard');
+const ledgerPath = resolve(configDir, 'tweeted-announcements.json');
+const seedLedgerPath = resolve(__dirname, 'data', 'tweeted-announcements.json');
+export const credentialsPath = resolve(configDir, 'x.env');
 
 const TWEET_LIMIT = 280;
 // X counts every link as this many characters regardless of its real length.
@@ -96,17 +109,27 @@ async function readFeed(host) {
 
 // --- ledger -----------------------------------------------------------------
 
-async function readLedger() {
+async function readLedgerFile(path) {
   try {
-    const parsed = JSON.parse(await fs.readFile(ledgerPath, 'utf-8'));
+    const parsed = JSON.parse(await fs.readFile(path, 'utf-8'));
     return Array.isArray(parsed.posted) ? parsed : { posted: [] };
   } catch (err) {
-    if (err.code === 'ENOENT') return { posted: [] };
+    if (err.code === 'ENOENT') return null;
     throw err;
   }
 }
 
+// The local ledger, or the committed seed on a machine that has none yet.
+async function readLedger() {
+  const local = await readLedgerFile(ledgerPath);
+  if (local) return local;
+  const seed = await readLedgerFile(seedLedgerPath);
+  if (seed) console.log(`no ledger at ${ledgerPath}; starting from the committed seed`);
+  return seed ?? { posted: [] };
+}
+
 async function writeLedger(ledger) {
+  await fs.mkdir(configDir, { recursive: true, mode: 0o700 });
   await fs.writeFile(ledgerPath, `${JSON.stringify(ledger, null, 2)}\n`, 'utf-8');
 }
 
@@ -165,12 +188,39 @@ function authorizationHeader(credentials) {
   return `OAuth ${header}`;
 }
 
-function readCredentials() {
+// KEY=VALUE lines; blank lines and # comments skipped; optional quotes around
+// the value. Values are returned, never logged.
+export function parseEnvFile(text) {
+  const values = {};
+  for (const raw of text.split('\n')) {
+    const line = raw.trim();
+    if (!line || line.startsWith('#')) continue;
+    const eq = line.indexOf('=');
+    if (eq <= 0) continue;
+    const key = line.slice(0, eq).trim();
+    let value = line.slice(eq + 1).trim();
+    if (value.length >= 2 && (value[0] === '"' || value[0] === "'") && value.at(-1) === value[0]) {
+      value = value.slice(1, -1);
+    }
+    values[key] = value;
+  }
+  return values;
+}
+
+async function readCredentials() {
+  const fromFile = await fs
+    .readFile(credentialsPath, 'utf-8')
+    .then(parseEnvFile)
+    .catch((err) => {
+      if (err.code === 'ENOENT') return {};
+      throw err;
+    });
+  const env = (name) => process.env[name] || fromFile[name];
   const credentials = {
-    apiKey: process.env.X_API_KEY,
-    apiSecret: process.env.X_API_SECRET,
-    accessToken: process.env.X_ACCESS_TOKEN,
-    accessSecret: process.env.X_ACCESS_TOKEN_SECRET,
+    apiKey: env('X_API_KEY'),
+    apiSecret: env('X_API_SECRET'),
+    accessToken: env('X_ACCESS_TOKEN'),
+    accessSecret: env('X_ACCESS_TOKEN_SECRET'),
   };
   const missing = Object.entries(credentials)
     .filter(([, value]) => !value)
@@ -183,7 +233,11 @@ function readCredentials() {
           accessSecret: 'X_ACCESS_TOKEN_SECRET',
         })[name],
     );
-  if (missing.length > 0) throw new Error(`missing credentials: ${missing.join(', ')}`);
+  if (missing.length > 0) {
+    throw new Error(
+      `missing credentials: ${missing.join(', ')} (environment or ${credentialsPath})`,
+    );
+  }
   return credentials;
 }
 
@@ -250,7 +304,7 @@ async function main() {
     return;
   }
 
-  const credentials = readCredentials();
+  const credentials = await readCredentials();
   for (const item of batch) {
     const text = composeTweet(item);
     // Persist per item, not at the end: a mid-run failure must not re-announce
@@ -260,7 +314,6 @@ async function main() {
     await writeLedger(ledger);
     console.log(`posted ${item.guid} -> ${tweetId ?? 'unknown id'}`);
   }
-  console.log('commit scripts/data/tweeted-announcements.json so the next run sees this');
 }
 
 if (import.meta.url === `file://${process.argv[1]}`) {

@@ -1,6 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { composeTweet } from './announce-tweet.mjs';
+import { composeTweet, parseEnvFile } from './announce-tweet.mjs';
 
 const LINK = 'https://mistboard.com/rules/fog-chess';
 // X counts every link as 23 characters however long it is, so the real budget
@@ -42,4 +42,12 @@ test('handles an entry with no body at all', () => {
   const text = composeTweet({ title: 'Mistboard is in alpha.', description: null, link: LINK });
 
   assert.equal(text, `Mistboard is in alpha. ${LINK}`);
+});
+
+test('parses the credentials file: KEY=VALUE, quotes optional, comments and blanks skipped', () => {
+  const values = parseEnvFile(
+    '# x app\nX_API_KEY=abc\nX_API_SECRET="s=cr=et"\n\nX_ACCESS_TOKEN=\'tok\'\nnot a pair\n',
+  );
+
+  assert.deepEqual(values, { X_API_KEY: 'abc', X_API_SECRET: 's=cr=et', X_ACCESS_TOKEN: 'tok' });
 });
