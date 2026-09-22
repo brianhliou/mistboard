@@ -25,7 +25,7 @@
  */
 
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
-import { liveSeatProfileIdentity } from './first-party-bots.js';
+import { liveSeatEngineName, liveSeatProfileIdentity } from './first-party-bots.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard, isServerEngineClient } from './server-policy.js';
 import type { Room } from './server-types.js';
@@ -199,12 +199,22 @@ function candidateFromTenantRoom(
     if (!clientId) continue;
     const engineSeat = isEngine(clientId);
     const token = room.seatTokens?.[color];
-    const engineName = engineSeat ? (registration.engineDisplayName?.(clientId) ?? clientId) : null;
+    const engineName = engineSeat
+      ? liveSeatEngineName(
+          clientId,
+          room.pveBotId,
+          () => registration.engineDisplayName?.(clientId) ?? clientId,
+        )
+      : null;
     players.push({
       color,
       isEngine: engineSeat,
       name: token?.userDisplayName ?? token?.userHandle ?? engineName,
-      ...liveSeatProfileIdentity(engineSeat ? clientId : null, token?.userHandle ?? null),
+      ...liveSeatProfileIdentity(
+        engineSeat ? clientId : null,
+        token?.userHandle ?? null,
+        room.pveBotId,
+      ),
     });
   }
   if (players.length < 2) return null;

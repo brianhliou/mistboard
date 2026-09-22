@@ -57,6 +57,9 @@ export type TenantManagedRoom = {
     clock?: unknown;
   };
   events?: readonly { type: string; at?: number }[];
+  // The first-party bot a PvE room was created for, when one was (the live
+  // feeds name the engine seat after it, like the room wire does).
+  pveBotId?: string | null;
   seatTokens?: Partial<
     Record<
       string,

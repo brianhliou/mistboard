@@ -27,7 +27,7 @@
 
 import { clockPolicyKindFor, maybeGameSpecForId, timeClassForPace } from '@mistboard/game';
 import { isGameInPlay } from './deploy-gate.js';
-import { liveSeatProfileIdentity } from './first-party-bots.js';
+import { liveSeatEngineName, liveSeatProfileIdentity } from './first-party-bots.js';
 import { logger } from './obs.js';
 import * as persistence from './persistence.js';
 import type { HttpApiContext } from './routes/lib.js';
@@ -219,14 +219,24 @@ function gameFromTenantRoom(
     if (!clientId) continue;
     const engineSeat = isEngine(clientId);
     const token = room.seatTokens?.[color];
-    const engineName = engineSeat ? (registration.engineDisplayName?.(clientId) ?? clientId) : null;
+    const engineName = engineSeat
+      ? liveSeatEngineName(
+          clientId,
+          room.pveBotId,
+          () => registration.engineDisplayName?.(clientId) ?? clientId,
+        )
+      : null;
     players.push({
       color,
       handle: null,
       botId: null,
       isEngine: engineSeat,
       name: token?.userDisplayName ?? token?.userHandle ?? engineName,
-      ...liveSeatProfileIdentity(engineSeat ? clientId : null, token?.userHandle ?? null),
+      ...liveSeatProfileIdentity(
+        engineSeat ? clientId : null,
+        token?.userHandle ?? null,
+        room.pveBotId,
+      ),
     });
   }
   if (players.length < 2) return null;

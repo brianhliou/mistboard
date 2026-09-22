@@ -37,6 +37,7 @@ type CtxOverrides = Partial<{
   connectionState: string;
   closeReason: string;
   connectedSeats: Partial<Record<Color, boolean>>;
+  seats: Partial<Record<Color, string>>;
   seatDisplayNames: Partial<Record<Color, string>>;
   seatProfiles: Partial<Record<Color, ProfileIdentity>>;
   clock: {
@@ -63,6 +64,7 @@ function chromeHarness(
     clock: () => overrides.clock ?? null,
     timeControl: () => overrides.timeControl ?? null,
     connectedSeats: () => overrides.connectedSeats ?? { white: true, red: true },
+    seats: () => overrides.seats ?? { white: 'c-white', red: 'c-red' },
     seatDisplayNames: () => overrides.seatDisplayNames ?? {},
     seatProfiles: () => overrides.seatProfiles ?? {},
     abortDeadline: () => null,
@@ -226,11 +228,25 @@ describe('tenant room chrome player names', () => {
     expect(`${names[0]}${names[1]}`).not.toContain('You');
   });
 
-  it('falls back to You / seat label for anonymous seats', () => {
+  it('falls back to You / Guest for anonymous seats, seat label for an empty one', () => {
     const { chrome, refs } = chromeHarness({ clock: armedClock, timeControl });
     chrome.renderClocks();
     expect(refs.playerBottom.textContent).toContain('You');
-    expect(refs.playerTop.textContent).toContain('Red');
+    // The same person is "Guest" on /games and /watch; the room said "Red".
+    expect(refs.playerTop.textContent).toContain('Guest');
+    expect(refs.playerTop.textContent).not.toContain('Red');
+
+    const empty = chromeHarness({ clock: null, timeControl, seats: { white: 'c-white' } });
+    empty.chrome.renderClocks();
+    expect(empty.refs.playerTop.textContent).toContain('Red');
+    expect(empty.refs.playerTop.textContent).not.toContain('Guest');
+  });
+
+  it('names an anonymous opponent Guest on the meta card too', () => {
+    const { chrome, refs } = chromeHarness({});
+    chrome.renderMeta();
+    expect(refs.gameInfo.textContent).toContain('Guest (Red)');
+    expect(refs.gameInfo.textContent).toContain('You (White)');
   });
 
   it('gives the pregame (unarmed) rows the same seat identity as the armed rows', () => {

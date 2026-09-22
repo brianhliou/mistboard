@@ -111,8 +111,10 @@ export type TenantChromeContext<C extends string> = {
   clock(): TenantWebClock<C> | null | undefined;
   timeControl(): { initialMs: number; incrementMs: number } | null | undefined;
   connectedSeats(): Partial<Record<C, boolean>>;
+  // Who holds each seat (client id), empty for an unfilled seat.
+  seats(): Partial<Record<C, string>>;
   // Server-resolved player names (account/bot/engine); guests absent, so
-  // renderers fall back to the seat label.
+  // renderers fall back to "Guest" (or the seat label for an empty seat).
   seatDisplayNames(): Partial<Record<C, string>>;
   seatProfiles(): Partial<Record<C, ProfileIdentity>>;
   abortDeadline(): number | null;
@@ -173,12 +175,16 @@ export function createTenantRoomChrome<C extends string>(
   }
 
   // A seat's player name for chrome rows: the server-resolved name (account,
-  // bot, engine) when known, else the seat label ("You" for the viewer's own
-  // anonymous seat, matching the legacy chess clock).
+  // bot, engine) when known; "You" for the viewer's own anonymous seat
+  // (matching the legacy chess clock); "Guest" for anyone else's anonymous
+  // seat, the word /games and /watch already use for the same person, so a
+  // spectator no longer reads "Red" in the room and "Guest" on the tile; and
+  // the seat label only while the seat is empty.
   function playerName(color: C): string {
     const serverName = ctx.seatDisplayNames()[color];
     if (serverName) return serverName;
-    return color === ctx.seat() ? 'You' : seatName(color);
+    if (color === ctx.seat()) return 'You';
+    return ctx.seats()[color] ? 'Guest' : seatName(color);
   }
 
   function setRenderTarget(
@@ -447,7 +453,13 @@ export function createTenantRoomChrome<C extends string>(
           // left on the row — a raw seat here is silently wrong for half of all flip
           // games rather than merely inconsistent.
           color: tenant.seatInk ? tenant.seatInk(color) : color,
-          name: serverName ?? (color === seat ? `You (${seatName(color)})` : seatName(color)),
+          name:
+            serverName ??
+            (color === seat
+              ? `You (${seatName(color)})`
+              : ctx.seats()[color]
+                ? `Guest (${seatName(color)})`
+                : seatName(color)),
         };
       }),
       status: statusLine,

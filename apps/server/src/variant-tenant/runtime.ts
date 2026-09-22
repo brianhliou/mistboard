@@ -20,6 +20,7 @@ import {
   firstPartyBotForEngine,
   firstPartyBotForId,
   type LiveSeatProfile,
+  liveSeatEngineName,
 } from '../first-party-bots.js';
 import { roomViewPolicy } from '../server-policy.js';
 import type {
@@ -623,10 +624,10 @@ export function tenantSeatDisplayNames<
   for (const color of tenant.colors) {
     const clientId = room.projection.seats[color];
     if (clientId && tenant.engine?.isEngineClientId(clientId)) {
-      const bot = room.pveBotId
-        ? firstPartyBotForId(room.pveBotId)
-        : firstPartyBotForEngine(clientId);
-      names[color] = bot?.displayName ?? tenant.engine.displayName(clientId);
+      const engine = tenant.engine;
+      names[color] = liveSeatEngineName(clientId, room.pveBotId, () =>
+        engine.displayName(clientId),
+      );
       continue;
     }
     const token = room.seatTokens[color];

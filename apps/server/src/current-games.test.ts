@@ -109,11 +109,13 @@ function tenantRoom(args: {
   timeControl?: { initialMs: number; incrementMs: number; daysPerMove?: number };
   clock?: unknown;
   paused?: boolean;
+  pveBotId?: string;
 }): TenantManagedRoom {
   const lastEventAt = args.lastEventAt ?? NOW - 1_000;
   return {
     id: args.id,
     clients: [],
+    ...(args.pveBotId ? { pveBotId: args.pveBotId } : {}),
     events: [
       { type: 'room-created', at: lastEventAt - 60_000 },
       { type: 'move-played', at: lastEventAt },
@@ -315,6 +317,25 @@ test('engine seats are labelled through the tenant display name, PvE composition
   const human = game?.players.find((player) => !player.isEngine);
   assert.equal(human?.name, 'Ada');
   assert.equal(human?.handle, 'ada');
+});
+
+test('an engine seat fronted by a first-party bot is named after the bot, as the room names it', () => {
+  // The room wire resolves the bot profile first; the tile used to resolve the
+  // tier name only, so one game read "Pikafish" in the room and
+  // "PikaJieQi - Strongest" on /games.
+  openRooms.set(
+    'fko_bot',
+    tenantRoom({
+      id: 'fko_bot',
+      seats: { black: `${FAKE_ENGINE_PREFIX}strongest`, red: 'client-a' },
+      pveBotId: 'pikafish',
+    }),
+  );
+  const [game] = collectCurrentGames(context(), NOW);
+  const engine = game?.players.find((player) => player.isEngine);
+  assert.equal(engine?.name, 'Pikafish');
+  assert.equal(engine?.botId, 'pikafish');
+  openRooms.delete('fko_bot');
 });
 
 // ---------------------------------------------------------------------------

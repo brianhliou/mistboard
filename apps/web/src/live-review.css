@@ -37,6 +37,23 @@
   overflow: visible;
 }
 
+/* On the xiangqi-family rails the captured discs are the BOARD's discs: the
+   same diameter, so a jieqi pool (half the position: it is where the revealed
+   pieces show) reads at a glance next to the board instead of as a row of
+   thumbnails. 0.098 is piece / board viewBox width for the 9-file boards
+   (65/660 jieqi, 54/552 xiangqi; coordinates on adds a gutter and reads ~4%
+   small). Capped so five groups still sit on one row of a narrow rail; past
+   that the row wraps (the band below reserves one row, so a late-game pool can
+   grow the strip by a row). Below the two-column breakpoint --uni-board-width
+   is unset and the base clamp above holds. */
+@media (min-width: 800px) {
+  :is(.live-route--jieqi, .live-route--xiangqi, .live-route--duck-xiangqi)
+    .live-review__cluster
+    .rail-material {
+    --capture-piece-size: min(calc(var(--uni-board-width) * 0.098), calc((100cqw - 20px) / 5));
+  }
+}
+
 /* With the console gap collapsed (clock joins the table), keep a little air
    between the material strips and the clock tabs. */
 .live-review__cluster .captures-strip-top {
@@ -116,6 +133,14 @@
     display: flex;
     flex-direction: column;
     min-height: 0;
+    /* The row is viewport-tall (review-shell.css min-height) while the board is
+       bounded by its height budget and the user's grip scale, so a stretched
+       rail ran ~160px past the board's bottom edge on a wide screen and the
+       chat filled the void. Cap the rail at the board's rendered height (width
+       over aspect, the same formula the shell uses for the board slot) so the
+       chat's bottom edge lands on the board's; the chat's own handle still
+       shrinks it below that (chat-resize.ts reads this rail's leftover). */
+    max-height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
   }
   .live-review__cluster .review-spectator-chat--live {
     display: flex;
