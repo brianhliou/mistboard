@@ -95,6 +95,12 @@ export const ARTICLE_META: Record<
     description:
       'Luật cờ úp đầy đủ: cách bày quân, cách đi quân úp trước và sau khi lật, ăn quân úp, chiếu bí và các trường hợp hòa.',
   },
+  pikafish: {
+    title: 'Pikafish on Mistboard',
+    kind: 'article',
+    description:
+      'Play Pikafish, the strongest open-source xiangqi engine, in your browser: free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
+  },
   'jieqi-platform': {
     title: 'Jieqi on Mistboard',
     kind: 'article',

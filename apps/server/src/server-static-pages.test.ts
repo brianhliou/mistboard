@@ -4,6 +4,7 @@ import type { ServerResponse } from 'node:http';
 import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
+import { resetArticleScheduleCache } from './article-schedule.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import { isClientRoute } from './server-policy.js';
 import {
@@ -201,6 +202,64 @@ test('serveSitemap omits unlisted and retired rules while retaining public artic
   assert.match(response.body, /https:\/\/mistboard\.test\/rules\/xiangqi/);
   assert.match(response.body, /https:\/\/mistboard\.test\/blog\/misty/);
   assert.doesNotMatch(response.body, /shogi4|kriegspiel/);
+});
+
+// A scheduled post (published, dated ahead) has no prerendered file; before
+// its moment the server must 404 rather than hand a crawler the shell with
+// real meta, and once it is live the stale prerendered blog index must give
+// way to the shell so the client can list it.
+test('a scheduled article 404s before its moment and the blog index goes stale after it', async () => {
+  resetArticleScheduleCache();
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(join(staticDir, 'blog.html'), '<html><body>baked index</body></html>', 'utf-8');
+  const liveAt = new Date(Date.now() + 86_400_000).toISOString();
+  await writeFile(
+    join(staticDir, 'article-schedule.json'),
+    JSON.stringify({
+      builtAt: new Date().toISOString(),
+      scheduled: [{ slug: 'pikafish', liveAt }],
+    }),
+    'utf-8',
+  );
+
+  const page = captureResponse();
+  await serveArticlePage({
+    slug: 'pikafish',
+    base: 'blog',
+    response: page,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+  assert.equal(page.status, 404);
+  assert.match(page.body, /noindex/);
+
+  const index = captureResponse();
+  await serveArticlesIndexPage({
+    response: index,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+  assert.equal(index.status, 200);
+  assert.match(index.body, /baked index/, 'nothing has gone live: the prerendered index serves');
+
+  resetArticleScheduleCache();
+  await writeFile(
+    join(staticDir, 'article-schedule.json'),
+    JSON.stringify({
+      builtAt: new Date(Date.now() - 3_600_000).toISOString(),
+      scheduled: [{ slug: 'pikafish', liveAt: new Date(Date.now() - 60_000).toISOString() }],
+    }),
+    'utf-8',
+  );
+  const later = captureResponse();
+  await serveArticlesIndexPage({
+    response: later,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+  assert.equal(later.status, 200);
+  assert.doesNotMatch(later.body, /baked index/, 'a post went live after the build: shell instead');
 });
 
 test('serveArticlePage 301s legacy /articles/<rules-slug> to /rules/<clean>', async () => {

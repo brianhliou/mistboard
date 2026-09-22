@@ -3,6 +3,11 @@ import type { ServerResponse } from 'node:http';
 import { resolve } from 'node:path';
 import type { Color } from '@mistboard/game';
 import { ARTICLE_META, articleIsIndexable, canonicalArticleBase } from './article-meta.js';
+import {
+  articleIsScheduledAhead,
+  prerenderedIndexIsStale,
+  readArticleSchedule,
+} from './article-schedule.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
 import {
   ARTICLE_OG_IMAGE_VERSION,
@@ -818,6 +823,14 @@ export async function serveArticlePage(params: {
     return;
   }
 
+  // A scheduled post (article-schedule.ts) is not public before its moment:
+  // no prerendered file exists, and the shell fallback below would hand a
+  // crawler a 200 with real meta for a page the client then 404s.
+  if (articleIsScheduledAhead(await readArticleSchedule(params.staticDir), params.slug)) {
+    await serveNotFoundShell({ response: params.response, staticDir: params.staticDir });
+    return;
+  }
+
   // Published articles are pre-rendered at build time (apps/web/scripts/
   // prerender-articles.mjs): prose + meta baked into the document so crawlers
   // and LLMs see real content, not an empty #app. Translated variants live under
@@ -887,7 +900,13 @@ export async function serveArticlesIndexPage(params: {
 
   // The default-locale post list is prerendered (blog.html). The localized
   // indexes and the community view are not, and stay on the shell below.
-  if (langKey === 'en' && params.view !== 'community') {
+  // Once a scheduled post has gone live since the build, blog.html predates
+  // it; the shell renders a current list client-side until the next deploy.
+  if (
+    langKey === 'en' &&
+    params.view !== 'community' &&
+    !prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))
+  ) {
     const prerendered = await fs
       .readFile(resolve(params.staticDir, 'blog.html'), 'utf-8')
       .catch(() => null);

@@ -482,5 +482,10 @@ export type Article = ArticleBase &
         // Explicit so the official-only view stays fail-closed when community
         // authors are introduced later.
         publisher: 'mistboard' | 'community';
+        // Author-chosen "Read next" slugs, in order. The footer defaults to a
+        // date ring because the schema has no topic field; a platform page
+        // whose neighbours by date are unrelated variants can name its own.
+        // Missing or unlisted slugs are skipped and the ring fills the rest.
+        readNext?: string[];
       }
   );

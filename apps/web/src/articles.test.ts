@@ -17,6 +17,7 @@ import {
   XQ_PRIMER_FACING_LEGAL,
   XQ_PRIMER_HORSE_BLOCKED,
 } from './articles/diagrams.js';
+import { articleIsLive } from './articles/publish-time.js';
 import {
   buildArticlePage,
   buildArticlesIndex,
@@ -61,6 +62,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The Pikafish page is scheduled for 2026-09-22 (DEV shows it early for
+      // review), the newest on the site.
+      '/blog/pikafish',
       // The first player page, dated 2026-09-21.
       '/blog/yin-sheng',
       // The atomic-xiangqi launch note is dated 2026-09-16, the horde-xiangqi
@@ -241,6 +245,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/pikafish',
       '/blog/yin-sheng',
       '/blog/atomic-xiangqi-build',
       '/blog/horde-xiangqi',
@@ -989,13 +994,15 @@ describe('blog post read-next footer', () => {
     vi.unstubAllEnvs();
   });
 
+  // Live, not merely published: a scheduled post (dated ahead) is hidden in
+  // production and has no footer of its own until its moment.
   const publishedBlogSlugs = (): string[] => {
     vi.stubEnv('DEV', false);
     return articles
       .filter(
         (article) =>
           article.kind === 'article' &&
-          article.status === 'published' &&
+          articleIsLive(article) &&
           article.showInIndex !== false &&
           article.publisher === 'mistboard',
       )
@@ -1006,6 +1013,19 @@ describe('blog post read-next footer', () => {
     [...buildArticlePage(slug).querySelectorAll('.article-footer .articles-index-card')].map(
       (card) => card.getAttribute('href') ?? '',
     );
+
+  // The date ring has no topic signal, so a platform page whose neighbours by
+  // date are unrelated variant write-ups names its own onward posts. Missing
+  // slugs are skipped and the ring fills the rest, so the footer never shrinks.
+  it('honours an author-chosen readNext list before the date ring', () => {
+    // DEV so the page renders while it is still scheduled.
+    vi.stubEnv('DEV', true);
+    expect(footerLinks('pikafish')).toEqual([
+      '/blog/jieqi-platform',
+      '/blog/skill-vs-luck',
+      '/blog/jieqi-openings',
+    ]);
+  });
 
   it('closes a blog post with three onward posts instead of nothing', () => {
     vi.stubEnv('DEV', false);

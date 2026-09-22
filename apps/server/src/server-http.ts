@@ -3,6 +3,7 @@ import type { RoomTimeControl, VariantId } from '@mistboard/game';
 import serveHandler from 'serve-handler';
 import { articleIsRetired } from './article-meta.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
+import { INDEXNOW_KEY, isIndexNowKeyRequest } from './indexnow.js';
 import { serveAnyGameOgImage } from './og-game-tenant.js';
 import { serveArticleOgImage, serveStudyOgImage } from './og-image.js';
 import { servePositionOgImage } from './og-position.js';
@@ -297,6 +298,13 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       response.end(
         `User-agent: *\nAllow: /\nDisallow: /database\nDisallow: /engines\nDisallow: /accounts\nSitemap: ${options.publicHost}/sitemap.xml\n`,
       );
+      return;
+    }
+
+    // IndexNow ownership proof; see indexnow.ts.
+    if (isIndexNowKeyRequest(pathname)) {
+      response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
+      response.end(INDEXNOW_KEY);
       return;
     }
 
