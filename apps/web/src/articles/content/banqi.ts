@@ -200,7 +200,7 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'embed',
-          path: '/embed/study/FsA5sowX/spkosVAN',
+          path: '/embed/study/FsA5sowX/F8fezAhm',
           title: 'Banqi: an engine game under the competition rules',
           // Width-bound at the article column: a 2:1 board beside the 226px
           // sheet, plus the seat rows, controls and credit line.
