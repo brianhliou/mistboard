@@ -92,6 +92,7 @@ Conventions:
 
 ### Site
 
+- A bot's page carries its own title and description instead of the homepage's, so a crawler following the Pikafish article's first link sees the bot ([9c12b7bc](https://github.com/brianhliou/mistboard/commit/9c12b7bc))
 - An article card whose art carries words sets them in the page language: the Pikafish card reads PIKAFISH in English and 皮卡鱼 (皮卡魚 in traditional) on the Chinese pages, tagline to match ([80d2cd14](https://github.com/brianhliou/mistboard/commit/80d2cd14))
 - The News box no longer shows an announcement twice on the homepage when it points at a blog post of its own ([93a5e704](https://github.com/brianhliou/mistboard/commit/93a5e704))
 - Mistboard is on X as [@Mistboard](https://x.com/Mistboard): every News entry is posted there once, by the release that ships it ([6dd2a1a7](https://github.com/brianhliou/mistboard/commit/6dd2a1a7))
@@ -158,6 +159,7 @@ Conventions:
 
 ### Technical
 
+- The readout's aborted-game count asks whether a person sat in the room: 796 of 801 aborted games in the six weeks to 2026-09-21 were the prod smoke probes aborting their own rooms, so the surge it reported was ours, not players' ([43d911c9](https://github.com/brianhliou/mistboard/commit/43d911c9))
 - The readout judges a games surge with the busiest player's games removed and prints that player's share, and raises `product-abort-share-high` once when aborts cross 40% of the games that ended; migration 148 adds `game_participants.engine_id` ([f4303bc4](https://github.com/brianhliou/mistboard/commit/f4303bc4), [59d5bda8](https://github.com/brianhliou/mistboard/commit/59d5bda8))
 - Player index API, derived from the broadcast archive: `GET /api/xiangqi/players` (every name with a finished game in an A-level event, games and W-D-L per event) and `/api/xiangqi/players/:slug` (the player and every board they sat at); the data layer under the coming /players pages ([93d5cc8b](https://github.com/brianhliou/mistboard/commit/93d5cc8b))
 - Broadcast pages fire `broadcast_opened`, the SSE streams count their viewers (today's and since-boot peaks on `/api/server-status` and a readout line), and `npm run curate:studies` runs the study curator by hand; the hourly job is behind `MISTBOARD_STUDY_CURATOR_ENABLED` ([b9e8dadb](https://github.com/brianhliou/mistboard/commit/b9e8dadb), [e6ed9ee9](https://github.com/brianhliou/mistboard/commit/e6ed9ee9))
