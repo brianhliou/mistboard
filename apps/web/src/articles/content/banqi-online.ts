@@ -27,7 +27,10 @@ export const banqiOnlineArticle: Article = {
   summary:
     'Banqi (Chinese dark chess) in the browser: nothing to install, no account, an engine that will beat most people, a link to play a friend, and the competition rules used in Taiwan.',
   showSummaryOnPage: false,
-  status: 'published',
+  // Pulled to draft 2026-09-21 the evening it shipped (Brian: "it's not
+  // ready. sorry we rushed it a bit"): the zh-Hant copy goes back through a
+  // read on localhost before it publishes again. The dictionary entries stay.
+  status: 'draft',
   publishedAt: '2026-09-21',
   audience:
     'Anyone who searched for somewhere to play banqi online and wants a board now, with the rules question that always comes up answered on the same page.',

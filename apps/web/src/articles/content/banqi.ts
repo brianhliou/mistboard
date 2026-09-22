@@ -222,7 +222,7 @@ export const banqiArticle: Article = {
       },
       playClosing({
         heading: 'Play on Mistboard',
-        lead: 'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required. [The play page](/rules/banqi-online) has what to expect from the engine and the house rules it does not use.',
+        lead: 'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
         playLabel: 'Play vs computer',
         playHref: '/?play=computer&gameSpecId=banqi',
         secondary: [
