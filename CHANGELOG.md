@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- On the banqi board, selecting a piece tints its whole cell and a piece it can capture is outlined in green; the old inset tint and thin ring were easy to miss ([819b3fa4](https://github.com/brianhliou/mistboard/commit/819b3fa4))
 - The Lobby's bot rows change every six hours: Fortress, Duck and Atomic Xiangqi offer Level 3, 4 or 5 in turn, and each row's clock cycles through the variant's slower paces (never faster than its default); the Xiangqi Level 2/5/8 ladder stays fixed so it can be climbed ([f845ae22](https://github.com/brianhliou/mistboard/commit/f845ae22))
 - Atomic Xiangqi is rated: a rating pool of its own, a row on the profile rail with a game count and Games-tab filter, a leaderboard ladder, and rated matchmaking through Find opponent for signed-in players (friend links and bot games stay casual) ([ac497feb](https://github.com/brianhliou/mistboard/commit/ac497feb))
 - Atomic Xiangqi captures sound like what they are: an explosion for the mover and for the side it was done to, the cannon's shot keeping its slam as the one capture that does not explode ([714beb2d](https://github.com/brianhliou/mistboard/commit/714beb2d))
@@ -44,6 +45,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The banqi rules page draws every rule on the real board with the board's own move marks, checked against the rules engine, with the ladder as a row of pieces, a first-flip diagram, five FAQ rows instead of nine, and a companion study of twenty MistyBanqi games at ten million nodes embedded as the sample game ([9e4aa092](https://github.com/brianhliou/mistboard/commit/9e4aa092))
 - Every study says which game it is: the variant leads the meta line on the /study cards and sits beside the heart on the study page, in the reader's language (chess studies read 国际象棋 in Chinese) ([02be9642](https://github.com/brianhliou/mistboard/commit/02be9642))
 - A second chess study, "The most played move is an inaccuracy": 144 opening positions from the Lichess explorer (1600-2200 players, 500,000+ games each) where the club's most played move loses winning chances against the engine at 20 million nodes, each played out to a verdict beside the engine's line, with the club share and the masters' top move by era ([d4accc3a](https://github.com/brianhliou/mistboard/commit/d4accc3a), [a99f6bc9](https://github.com/brianhliou/mistboard/commit/a99f6bc9))
 - Copy to my studies: any study you can open becomes a private study of your own, every chapter included, to annotate as you like; in Share & export beside the PGN download ([790543a3](https://github.com/brianhliou/mistboard/commit/790543a3))
