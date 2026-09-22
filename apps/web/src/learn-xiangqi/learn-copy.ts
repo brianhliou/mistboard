@@ -51,7 +51,7 @@ const CHROME_COPY: Record<string, string> = {
   // rather than inlined at the call site: they were the last six English strings
   // on an otherwise translated page.
   'learn.xiangqi.next.register': 'Register',
-  'learn.xiangqi.next.registerSub': 'Keep your progress on any device',
+  'learn.xiangqi.next.registerSub': 'Rated games, a puzzle rating, a profile',
   'learn.xiangqi.next.puzzles': 'Puzzles',
   'learn.xiangqi.next.puzzlesSub': 'Sharpen your tactics',
   'learn.xiangqi.next.playPeople': 'Play people',

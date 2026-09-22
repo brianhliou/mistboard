@@ -136,6 +136,14 @@ function minimalAppleMoves(level: LearnLevel, maxDepth: number): number | null {
   return null;
 }
 
+function bothGeneralsPresent(state: XiangqiGameState): boolean {
+  const colors = new Set<XiangqiColor>();
+  for (const piece of Object.values(state.board)) {
+    if (piece?.role === 'general') colors.add(piece.color);
+  }
+  return colors.size === 2;
+}
+
 /** Walk the full scenario as scripted and return the final assert data. */
 function walkScenario(level: LearnLevel): AssertData {
   let state = levelState(level);
@@ -155,6 +163,19 @@ function walkScenario(level: LearnLevel): AssertData {
       ),
       `level ${level.id}: scenario step ${step.move.from}${step.move.to} illegal for ${mover}`,
     ).toBe(true);
+    // A relaxed level walks geometry only, so a scripted move that leaves the
+    // mover's own general in check passed this gate: perpetual L3 shipped a
+    // pinned horse hopping out of its pin (2026-09-22). Whenever both generals
+    // are on the board the scripted line must also hold under the real rules;
+    // a learner who knows the game reads a self-check as a bug, not a demo.
+    if (bothGeneralsPresent(state)) {
+      expect(
+        learnLegalMoves(state, 'strict').some(
+          (move) => move.from === step.move.from && move.to === step.move.to,
+        ),
+        `level ${level.id}: scenario step ${step.move.from}${step.move.to} is a self-check (or otherwise illegal) for ${mover} under strict rules`,
+      ).toBe(true);
+    }
     if (mover === level.color) {
       expect(scenario.player(step.move)).toBe('matched');
       playerMoves += 1;

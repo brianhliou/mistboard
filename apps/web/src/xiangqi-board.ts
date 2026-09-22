@@ -563,6 +563,13 @@ export interface XiangqiInteractiveBoardOptions {
    *  Absent = no draw affordance (live boards). The caller owns shape state and
    *  repaints via setArrows / setMarkers. */
   onDrawShape?: (orig: XiangqiSquare, dest: XiangqiSquare | null, opts: { alt: boolean }) => void;
+  /** Optional: pin the edge labels on (or off) and their notation, overriding
+   *  the reader's preference. Same contract as XiangqiBoardSvgState. A surface
+   *  whose copy names points (the learn course: "lift the cannon to b3") has to
+   *  show them or the instruction is unreadable to a beginner. Absent = the
+   *  reader's preference, right for a board they are playing on. */
+  coordinates?: boolean;
+  coordinateStyle?: XiangqiNotationStyle;
 }
 
 export interface XiangqiInteractiveBoard {
@@ -598,6 +605,8 @@ export function createXiangqiInteractiveBoard(
       draggingFrom,
       arrows,
       markers,
+      ...(opts.coordinates === undefined ? {} : { coordinates: opts.coordinates }),
+      ...(opts.coordinateStyle === undefined ? {} : { coordinateStyle: opts.coordinateStyle }),
     });
   }
 

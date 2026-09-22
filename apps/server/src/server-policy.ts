@@ -310,6 +310,8 @@ export function isClientRoute(pathname: string): boolean {
     // branded 404 shell instead of booting a dead route. /learn/xiangqi (the
     // ungated xiangqi course) stays a client route.
     normalized === '/learn/xiangqi' ||
+    normalized === '/zh-hans/learn/xiangqi' ||
+    normalized === '/zh-hant/learn/xiangqi' ||
     // /embed/study/:studyId/:chapterId — the one route on this site meant to be
     // rendered inside someone else's page. It is a client route like any other;
     // what makes it an embed is that the framing headers let it be framed and

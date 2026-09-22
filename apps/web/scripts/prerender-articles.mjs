@@ -196,7 +196,10 @@ const ROUTE_PRELOADS = [
   { pattern: '^/@/[^/]+$', module: 'src/profile.ts' },
   { pattern: '^/videos$', module: 'src/videos.ts' },
   { pattern: '^/forum(?:/.+)?$', module: 'src/forum.ts' },
-  { pattern: '^/learn/xiangqi$', module: 'src/learn-xiangqi/learn-xiangqi-page.ts' },
+  {
+    pattern: '^(?:/zh-han[st])?/learn/xiangqi$',
+    module: 'src/learn-xiangqi/learn-xiangqi-page.ts',
+  },
   { pattern: '^/account(?:/.+)?$', module: 'src/account.ts' },
   { pattern: '^/inbox(?:/.+)?$', module: 'src/inbox.ts' },
   {
@@ -768,9 +771,19 @@ try {
       'A free interactive xiangqi course in English. Learn the pieces, the rules, and core tactics by playing them.',
     url: `${host}/learn/xiangqi`,
   });
+  // The zh-Hans/zh-Hant course URLs are served from the SPA shell with the
+  // same alternates (server-static-pages localeGroup), so the three read as
+  // one page in three languages.
+  const learnAlternates = [
+    ['en', `${host}/learn/xiangqi`],
+    ['zh-Hans', `${host}/zh-hans/learn/xiangqi`],
+    ['zh-Hant', `${host}/zh-hant/learn/xiangqi`],
+  ]
+    .map(([lang, href]) => `<link rel="alternate" hreflang="${lang}" href="${href}">`)
+    .join('');
   learnHtml = learnHtml.replace(
     '</head>',
-    `<link rel="canonical" href="${host}/learn/xiangqi" />${learnAssetLinks}</head>`,
+    `<link rel="canonical" href="${host}/learn/xiangqi" />${learnAlternates}${learnAssetLinks}</head>`,
   );
   await fs.writeFile(resolve(distDir, 'learn-xiangqi.html'), learnHtml, 'utf-8');
   console.log('prerendered /learn/xiangqi (learn-xiangqi.html)');

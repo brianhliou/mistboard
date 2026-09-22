@@ -675,6 +675,43 @@ test('the videos library serves all three locales, each distinct and cross-linke
   assert.match(seen.get('/videos')!.body, /<html lang="en">/);
 });
 
+test('the xiangqi course serves all three locales, each distinct and cross-linked', async () => {
+  // Before 2026-09-22 only /learn/xiangqi was routable: the zh course existed
+  // in the bundle (learn-copy-zh.ts) and had no URL, so nothing could index
+  // or share it. Same contract as the videos library above.
+  const staticDir = await staticDirWithPreloadManifest();
+  const seen = new Map<string, { title: string; body: string }>();
+  for (const route of ['/learn/xiangqi', '/zh-hans/learn/xiangqi', '/zh-hant/learn/xiangqi']) {
+    assert.ok(isClientRoute(route), `${route} would 404 on a direct hit in production`);
+    assert.ok(SITEMAP_STATIC_ROUTES.includes(route), `${route} is not advertised in the sitemap`);
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname: route,
+      publicHost: 'https://mistboard.com',
+    });
+    assert.equal(served, true, `${route} fell through to the plain shell`);
+    const title = response.body.match(/<title>([^<]*)<\/title>/)?.[1] ?? '';
+    assert.ok(title && title !== 'Mistboard', `${route} serves the default title`);
+    seen.set(route, { title, body: response.body });
+    for (const [lang, href] of [
+      ['en', 'https://mistboard.com/learn/xiangqi'],
+      ['zh-Hans', 'https://mistboard.com/zh-hans/learn/xiangqi'],
+      ['zh-Hant', 'https://mistboard.com/zh-hant/learn/xiangqi'],
+    ]) {
+      assert.ok(
+        response.body.includes(`<link rel="alternate" hreflang="${lang}" href="${href}">`),
+        `${route} is missing the ${lang} alternate`,
+      );
+    }
+  }
+  assert.equal(new Set([...seen.values()].map((v) => v.title)).size, 3, 'titles must differ');
+  assert.match(seen.get('/zh-hans/learn/xiangqi')!.body, /<html lang="zh-Hans">/);
+  assert.match(seen.get('/zh-hant/learn/xiangqi')!.body, /<html lang="zh-Hant">/);
+  assert.match(seen.get('/learn/xiangqi')!.body, /<html lang="en">/);
+});
+
 // --- position routes (/analysis, /editor) --------------------------------------
 
 // A mid-game banqi deal: five public fields plus the sixth field naming the

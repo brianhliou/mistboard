@@ -57,7 +57,7 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.congrats.8': '你很有天分！',
 
   'learn.xiangqi.next.register': '注册',
-  'learn.xiangqi.next.registerSub': '在任何设备上保存你的进度',
+  'learn.xiangqi.next.registerSub': '排位对局、题目等级分和个人主页',
   'learn.xiangqi.next.puzzles': '题目',
   'learn.xiangqi.next.puzzlesSub': '磨练你的战术',
   'learn.xiangqi.next.playPeople': '与人对弈',
@@ -269,10 +269,10 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
   'learn.xiangqi.setup.intro':
     '每一盘象棋都从同一个阵形开始。把每个子走回自己的原位，绕开已经站好的同伴，把这条阵线记熟。',
   'learn.xiangqi.setup.complete':
-    '恭喜！你记住开局阵形了：车镇两角，炮在马后，将稳稳坐在九宫中央。',
+    '恭喜！你记住开局阵形了：车镇两角，炮在马前两步，将稳稳坐在九宫中央。',
   'learn.xiangqi.setup.goal.chariot': '车镇角。它的家在左下角，但马堵住了底线。另找一条路进去。',
   'learn.xiangqi.setup.goal.cannon':
-    '炮就位在马的后面，也就是二路和八路。你的两个炮停在象位上，马又挡住了直路。把炮抬起来绕过去。',
+    '炮就位在马前面两步的位置，也就是二路和八路。你的两个炮停在象位上，马又挡住了直路。把炮抬起来绕过去。',
   'learn.xiangqi.setup.goal.elephant':
     '象守在三路和七路，走田字。两个象都想先去同一个点。选错了，一个象就会把另一个困住。',
   'learn.xiangqi.setup.goal.palace':
@@ -338,7 +338,7 @@ export const LEARN_XIANGQI_ZH_HANS: Record<string, string> = {
     '很好！车、炮、马，哪怕一个小兵，每一个攻击子都能提前一步做好将军的准备。能想到两步之后，才是进攻的开始。',
   'learn.xiangqi.check2.goal.1': '这里车走一步是将不了军的。先占住那条通路，再拐上底线！',
   'learn.xiangqi.check2.goal.2': '你的兵已经是现成的炮架了。把炮调到它后面，瞄准！',
-  'learn.xiangqi.check2.goal.3': '两跳就能把马送到九宫角上。进去的路上留意马腿！',
+  'learn.xiangqi.check2.goal.3': '两跳就能把马送到九宫旁的卧槽点将军。进去的路上留意马腿！',
   'learn.xiangqi.check2.goal.4': '你自己的将正好站在要用的那一路上。先把他挪开，再把车横过去！',
   'learn.xiangqi.check2.goal.5': '把兵拱到九宫门口，再横一步。和将面对面！',
   'learn.xiangqi.check2.goal.6':
@@ -425,7 +425,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.congrats.8': '你很有天分！',
 
   'learn.xiangqi.next.register': '註冊',
-  'learn.xiangqi.next.registerSub': '在任何裝置上保存你的進度',
+  'learn.xiangqi.next.registerSub': '排位對局、題目等級分和個人主頁',
   'learn.xiangqi.next.puzzles': '題目',
   'learn.xiangqi.next.puzzlesSub': '磨練你的戰術',
   'learn.xiangqi.next.playPeople': '與人對弈',
@@ -638,10 +638,10 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
   'learn.xiangqi.setup.intro':
     '每一盤象棋都從同一個陣形開始。把每個子走回自己的原位，繞開已經站好的同伴，把這條陣線記熟。',
   'learn.xiangqi.setup.complete':
-    '恭喜！你記住開局陣形了：車鎮兩角，砲在馬後，將穩穩坐在九宮中央。',
+    '恭喜！你記住開局陣形了：車鎮兩角，砲在馬前兩步，將穩穩坐在九宮中央。',
   'learn.xiangqi.setup.goal.chariot': '車鎮角。它的家在左下角，但馬堵住了底線。另找一條路進去。',
   'learn.xiangqi.setup.goal.cannon':
-    '砲就位在馬的後面，也就是二路和八路。你的兩個砲停在象位上，馬又擋住了直路。把砲抬起來繞過去。',
+    '砲就位在馬前面兩步的位置，也就是二路和八路。你的兩個砲停在象位上，馬又擋住了直路。把砲抬起來繞過去。',
   'learn.xiangqi.setup.goal.elephant':
     '象守在三路和七路，走田字。兩個象都想先去同一個點。選錯了，一個象就會把另一個困住。',
   'learn.xiangqi.setup.goal.palace':
@@ -707,7 +707,7 @@ export const LEARN_XIANGQI_ZH_HANT: Record<string, string> = {
     '很好！車、砲、馬，哪怕一個小兵，每一個攻擊子都能提前一步做好將軍的準備。能想到兩步之後，才是進攻的開始。',
   'learn.xiangqi.check2.goal.1': '這裡車走一步是將不了軍的。先占住那條通路，再拐上底線！',
   'learn.xiangqi.check2.goal.2': '你的兵已經是現成的砲架了。把砲調到它後面，瞄準！',
-  'learn.xiangqi.check2.goal.3': '兩跳就能把馬送到九宮角上。進去的路上留意馬腿！',
+  'learn.xiangqi.check2.goal.3': '兩跳就能把馬送到九宮旁的臥槽點將軍。進去的路上留意馬腿！',
   'learn.xiangqi.check2.goal.4': '你自己的將正好站在要用的那一路上。先把他挪開，再把車橫過去！',
   'learn.xiangqi.check2.goal.5': '把兵拱到九宮門口，再橫一步。和將面對面！',
   'learn.xiangqi.check2.goal.6':
