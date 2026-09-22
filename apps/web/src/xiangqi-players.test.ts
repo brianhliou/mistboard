@@ -1,5 +1,12 @@
 import { describe, expect, it } from 'vitest';
-import { displayName, recordText, scorePercent, sortPlayers } from './xiangqi-players.js';
+import {
+  displayName,
+  matchesQuery,
+  playerTitle,
+  recordText,
+  scorePercent,
+  sortPlayers,
+} from './xiangqi-players.js';
 
 function player(input: {
   name: string;
@@ -48,5 +55,23 @@ describe('player pages', () => {
     expect(sortPlayers(players, 'games').map((p) => p.slug)).toEqual(['bing', 'jia', 'yi']);
     expect(sortPlayers(players, 'score').map((p) => p.slug)).toEqual(['yi', 'bing', 'jia']);
     expect(sortPlayers(players, 'name').map((p) => p.slug)).toEqual(['bing', 'jia', 'yi']);
+  });
+
+  it('matches a search in either script or by team', () => {
+    const p = {
+      ...player({ name: '尹昇', nameEn: 'Yin Sheng', games: 1 }),
+      federationEn: 'Zhejiang',
+    };
+    expect(matchesQuery(p, 'yin')).toBe(true);
+    expect(matchesQuery(p, '昇')).toBe(true);
+    expect(matchesQuery(p, 'zhe')).toBe(true);
+    expect(matchesQuery(p, 'wang')).toBe(false);
+    expect(matchesQuery(p, '  ')).toBe(true);
+  });
+
+  it('titles a player from the authored profile, else the last official list', () => {
+    expect(playerTitle({ slug: 'yin-sheng', name: '尹昇' })).toBe('NM');
+    expect(playerTitle({ slug: 'wang-tianyi', name: '王天一' })).toBe('GM');
+    expect(playerTitle({ slug: 'nobody', name: '无名' })).toBe(null);
   });
 });

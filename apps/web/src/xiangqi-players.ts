@@ -7,6 +7,8 @@
 // same kind of page as an event page, and the reader crosses between them.
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
+import { CXA_LISTS, CXA_RATINGS } from './players/cxa-ratings.js';
+import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 
 export type PlayerEventRecord = {
@@ -55,13 +57,6 @@ export type PlayerBoardRecord = {
 
 type PlayersIndexResponse = { players: PlayerRecord[] };
 type PlayerResponse = { player: PlayerRecord; boards: PlayerBoardRecord[] };
-
-/** Authored profiles, by slug: the article that is this player's story. The
- *  profile becomes a section of this page in the next step of the spec; until
- *  then the page links out to it. */
-const PROFILE_HREF: Readonly<Record<string, string>> = {
-  'yin-sheng': '/blog/yin-sheng',
-};
 
 export async function mountXiangqiPlayersIndex(root: HTMLElement): Promise<void> {
   setRoot(root, 'Loading players');
@@ -115,7 +110,6 @@ export function recordText(r: { wins: number; draws: number; losses: number }): 
   return `${r.wins}-${r.draws}-${r.losses}`;
 }
 
-/** Wins count 1, draws ½: score per game, as a percentage for a sortable column. */
 export function scorePercent(r: { games: number; wins: number; draws: number }): number {
   return r.games === 0 ? 0 : Math.round(((r.wins + r.draws / 2) / r.games) * 100);
 }
@@ -131,12 +125,36 @@ export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): 
   return out;
 }
 
+/** Does the query match the player, in either script or by team? */
+export function matchesQuery(player: PlayerRecord, query: string): boolean {
+  const q = query.trim().toLowerCase();
+  if (!q) return true;
+  return [player.name, player.nameEn, player.federation, player.federationEn].some((s) =>
+    s?.toLowerCase().includes(q),
+  );
+}
+
+/** The title tag for a player: authored first, else the last official list. */
+export function playerTitle(player: Pick<PlayerRecord, 'slug' | 'name'>): PlayerTitle | null {
+  const authored = PLAYER_PROFILES[player.slug]?.title;
+  if (authored) return authored;
+  const entries = CXA_RATINGS[player.name];
+  const last = entries?.[entries.length - 1];
+  return last?.title === '特' ? 'GM' : last?.title === '大' ? 'NM' : null;
+}
+
 // ---------------------------------------------------------------------------
-// The index: one row per player, sortable by the column headers.
+// The index: one row per player, a search box, sortable by the column headers.
 
 function renderIndex(players: PlayerRecord[]): HTMLElement {
   const main = shell();
   const events = new Set(players.flatMap((p) => p.events.map((e) => e.tourSlug)));
+
+  const search = document.createElement('input');
+  search.type = 'search';
+  search.className = 'xqp-search';
+  search.placeholder = 'Search';
+  search.setAttribute('aria-label', 'Search players');
   main.append(
     hero({
       eyebrow: 'Players',
@@ -144,40 +162,44 @@ function renderIndex(players: PlayerRecord[]): HTMLElement {
       meta: [
         `${players.length} players`,
         `${events.size} events`,
-        'From the broadcast archive: everyone with a finished game in a top-level event',
+        'Everyone with a finished game in a top-level relayed event',
       ],
+      actions: [search],
     }),
   );
 
   const section = document.createElement('section');
   section.className = 'xqb-section';
   const table = document.createElement('table');
-  table.className = 'xqb-standings xqp-index';
+  table.className = 'xqp-index';
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  const columns: Array<{ label: string; sort?: IndexSort }> = [
-    { label: '#' },
-    { label: 'Player', sort: 'name' },
-    { label: 'Team' },
+  const columns: Array<{ label: string; sort?: IndexSort; className?: string }> = [
+    { label: 'Name', sort: 'name', className: 'xqp-col-name' },
     { label: 'Games', sort: 'games' },
-    { label: 'W-D-L' },
     { label: 'Score', sort: 'score' },
+    { label: 'W-D-L' },
     { label: 'Events' },
     { label: 'Last seen' },
   ];
   let sort: IndexSort = 'games';
+  let query = '';
+  const sortHeaders = new Map<IndexSort, HTMLElement>();
   for (const column of columns) {
     const th = document.createElement('th');
+    if (column.className) th.className = column.className;
     if (column.sort) {
       const button = document.createElement('button');
       button.type = 'button';
       button.className = 'xqp-sort';
       button.textContent = column.label;
+      const key = column.sort;
       button.addEventListener('click', () => {
-        sort = column.sort!;
+        sort = key;
         paintRows();
       });
       th.append(button);
+      sortHeaders.set(key, th);
     } else {
       th.textContent = column.label;
     }
@@ -187,43 +209,92 @@ function renderIndex(players: PlayerRecord[]): HTMLElement {
   const tbody = document.createElement('tbody');
   table.append(thead, tbody);
 
+  const empty = document.createElement('p');
+  empty.className = 'xqp-empty';
+  empty.hidden = true;
+
   function paintRows(): void {
     tbody.replaceChildren();
-    for (const th of headRow.querySelectorAll<HTMLElement>('th')) {
-      th.classList.toggle('xqp-sorted', th.textContent === columnLabel(sort));
-    }
-    sortPlayers(players, sort).forEach((player, i) => {
+    for (const [key, th] of sortHeaders) th.classList.toggle('xqp-sorted', key === sort);
+    const shown = sortPlayers(players, sort).filter((p) => matchesQuery(p, query));
+    for (const player of shown) {
       const tr = document.createElement('tr');
+      tr.className = 'xqp-row';
       tr.append(
-        cell(String(i + 1), 'xqb-standings-rank'),
-        playerCell(player),
-        cell(player.federationEn ?? player.federation ?? ''),
+        nameCell(player),
         cell(String(player.games)),
-        cell(recordText(player)),
         cell(`${scorePercent(player)}%`),
+        cell(recordText(player)),
         cell(String(player.events.length)),
         cell(player.lastPlayedOn ?? ''),
       );
+      tr.addEventListener('click', (event) => {
+        if ((event.target as HTMLElement).closest('a')) return;
+        window.location.href = playerHref(player);
+      });
       tbody.append(tr);
-    });
+    }
+    empty.hidden = shown.length > 0;
+    empty.textContent = shown.length > 0 ? '' : `No player matches “${query.trim()}”.`;
   }
+  search.addEventListener('input', () => {
+    query = search.value;
+    paintRows();
+  });
   paintRows();
-  section.append(table);
+  section.append(table, empty);
   main.append(section);
   return main;
 }
 
-function columnLabel(sort: IndexSort): string {
-  return sort === 'name' ? 'Player' : sort === 'score' ? 'Score' : 'Games';
+function playerHref(player: Pick<PlayerRecord, 'slug'>): string {
+  return `/players/${encodeURIComponent(player.slug)}`;
 }
 
-function playerCell(player: PlayerRecord): HTMLTableCellElement {
+/** Photo when we have one, else a tile with the surname character. */
+function avatar(player: Pick<PlayerRecord, 'slug' | 'name'>, size: 'row' | 'page'): HTMLElement {
+  const profile = PLAYER_PROFILES[player.slug];
+  if (profile?.photo) {
+    const img = document.createElement('img');
+    img.className = `xqp-avatar xqp-avatar-${size}`;
+    img.src = profile.photo;
+    img.alt = '';
+    img.loading = 'lazy';
+    img.decoding = 'async';
+    return img;
+  }
+  const tile = document.createElement('span');
+  tile.className = `xqp-avatar xqp-avatar-${size} xqp-avatar-tile`;
+  tile.textContent = Array.from(player.name)[0] ?? '';
+  tile.setAttribute('aria-hidden', 'true');
+  return tile;
+}
+
+function titleTag(title: PlayerTitle | null): HTMLElement | null {
+  if (!title) return null;
+  const tag = document.createElement('span');
+  tag.className = 'xqp-title';
+  tag.textContent = title;
+  tag.title = PLAYER_TITLE_LABEL[title];
+  return tag;
+}
+
+function nameCell(player: PlayerRecord): HTMLTableCellElement {
   const td = document.createElement('td');
+  td.className = 'xqp-col-name';
+  const wrap = document.createElement('span');
+  wrap.className = 'xqp-name';
   const link = document.createElement('a');
-  link.className = 'xqb-link';
-  link.href = `/players/${encodeURIComponent(player.slug)}`;
-  link.textContent = displayName(player);
-  td.append(link);
+  link.className = 'xqp-name-link';
+  link.href = playerHref(player);
+  const tag = titleTag(playerTitle(player));
+  if (tag) link.append(tag, ' ');
+  link.append(displayName(player));
+  const team = document.createElement('span');
+  team.className = 'xqp-team';
+  team.textContent = player.federationEn ?? player.federation ?? '';
+  wrap.append(link, team);
+  td.append(avatar(player, 'row'), wrap);
   return td;
 }
 
@@ -235,64 +306,83 @@ function cell(text: string, className?: string): HTMLTableCellElement {
 }
 
 // ---------------------------------------------------------------------------
-// One player: header, record by event, every board.
+// One player: photo and facts, the official rating, events, every board.
 
 function renderPlayer(player: PlayerRecord, boards: PlayerBoardRecord[]): HTMLElement {
   const main = shell();
-  const span =
+  const profile = PLAYER_PROFILES[player.slug];
+
+  const header = document.createElement('section');
+  header.className = 'xqp-header';
+  const figure = document.createElement('figure');
+  figure.className = 'xqp-portrait';
+  figure.append(avatar(player, 'page'));
+  if (profile?.photoCredit) {
+    const cap = document.createElement('figcaption');
+    cap.textContent = `Credit: ${profile.photoCredit}`;
+    figure.append(cap);
+  }
+  const copy = document.createElement('div');
+  copy.className = 'xqp-header-copy';
+  const h1 = document.createElement('h1');
+  h1.className = 'xqp-h1';
+  const tag = titleTag(playerTitle(player));
+  if (tag) h1.append(tag, ' ');
+  h1.append(player.nameEn ?? player.name);
+  if (player.nameEn && player.nameEn !== player.name) {
+    const zh = document.createElement('span');
+    zh.className = 'xqp-h1-zh';
+    zh.textContent = player.name;
+    h1.append(' ', zh);
+  }
+  const facts = document.createElement('dl');
+  facts.className = 'xqp-facts';
+  const fact = (label: string, value: string | Node | null | undefined): void => {
+    if (!value) return;
+    const dt = document.createElement('dt');
+    dt.textContent = label;
+    const dd = document.createElement('dd');
+    dd.append(value);
+    facts.append(dt, dd);
+  };
+  fact('Team', player.federationEn ?? player.federation);
+  fact('Born', profile?.born);
+  fact('Archive', `${player.games} games, ${recordText(player)}, ${scorePercent(player)}%`);
+  fact(
+    'Seen',
     player.firstPlayedOn && player.lastPlayedOn
       ? `${player.firstPlayedOn} to ${player.lastPlayedOn}`
-      : null;
-  main.append(
-    hero({
-      eyebrow: 'Player',
-      title: player.nameEn ?? player.name,
-      subtitle: player.nameEn ? player.name : null,
-      meta: [
-        player.federationEn ?? player.federation ?? '',
-        `${player.games} games in the archive, ${recordText(player)}`,
-        span,
-      ].filter((x): x is string => Boolean(x)),
-      backHref: '/players',
-      backLabel: 'All players',
-      profileHref: PROFILE_HREF[player.slug],
-    }),
+      : null,
   );
-
-  const byEvent = document.createElement('section');
-  byEvent.className = 'xqb-section';
-  const h2 = document.createElement('h2');
-  h2.textContent = 'By event';
-  const table = document.createElement('table');
-  table.className = 'xqb-standings';
-  table.innerHTML =
-    '<thead><tr><th>Event</th><th>Dates</th><th>Games</th><th>W-D-L</th><th>Score</th></tr></thead>';
-  const tbody = document.createElement('tbody');
-  for (const event of player.events) {
-    const tr = document.createElement('tr');
-    const eventTd = document.createElement('td');
+  const actions = document.createElement('div');
+  actions.className = 'xqb-hero-actions xqp-header-actions';
+  const back = document.createElement('a');
+  back.className = 'xqb-link';
+  back.href = '/players';
+  back.textContent = 'All players';
+  actions.append(back);
+  if (profile?.profileHref) {
     const link = document.createElement('a');
-    link.className = 'xqb-link';
-    link.href = `/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`;
-    link.textContent = event.tourNameEn ?? event.tourName;
-    eventTd.append(link);
-    const dates =
-      event.firstPlayedOn && event.lastPlayedOn
-        ? event.firstPlayedOn === event.lastPlayedOn
-          ? event.firstPlayedOn
-          : `${event.firstPlayedOn} to ${event.lastPlayedOn}`
-        : '';
-    tr.append(
-      eventTd,
-      cell(dates),
-      cell(String(event.games)),
-      cell(recordText(event)),
-      cell(`${scorePercent(event)}%`),
-    );
-    tbody.append(tr);
+    link.className = 'xqb-link xqb-link-primary';
+    link.href = profile.profileHref;
+    link.textContent = 'Read the profile';
+    actions.append(link);
   }
-  table.append(tbody);
-  byEvent.append(h2, table);
+  copy.append(h1, facts, actions);
+  header.append(figure, copy);
+  main.append(header);
+
+  const rating = ratingCard(player);
+  if (rating) main.append(rating);
+
+  const events = document.createElement('section');
+  events.className = 'xqb-section';
+  const h2 = document.createElement('h2');
+  h2.textContent = 'Events';
+  const grid = document.createElement('div');
+  grid.className = 'xqp-events';
+  for (const event of player.events) grid.append(eventCard(event));
+  events.append(h2, grid);
 
   const games = document.createElement('section');
   games.className = 'xqb-section';
@@ -303,8 +393,105 @@ function renderPlayer(player: PlayerRecord, boards: PlayerBoardRecord[]): HTMLEl
   for (const board of boards) list.append(boardRow(board, player));
   games.append(h2b, list);
 
-  main.append(byEvent, games);
+  main.append(events, games);
   return main;
+}
+
+function eventCard(event: PlayerEventRecord): HTMLElement {
+  const card = document.createElement('a');
+  card.className = 'xqp-event';
+  card.href = `/broadcast/xiangqi/${encodeURIComponent(event.tourSlug)}`;
+  const dates = document.createElement('span');
+  dates.className = 'xqp-event-dates';
+  dates.textContent =
+    event.firstPlayedOn && event.lastPlayedOn
+      ? event.firstPlayedOn === event.lastPlayedOn
+        ? event.firstPlayedOn
+        : `${event.firstPlayedOn} to ${event.lastPlayedOn}`
+      : '';
+  const name = document.createElement('span');
+  name.className = 'xqp-event-name';
+  name.textContent = event.tourNameEn ?? event.tourName;
+  const record = document.createElement('span');
+  record.className = 'xqp-event-record';
+  record.textContent = `${event.games} games · ${recordText(event)} · ${scorePercent(event)}%`;
+  card.append(dates, name, record);
+  return card;
+}
+
+/** The CXA 等级分 series, when the player was on the lists: the last value,
+ *  the last rank, and the shape of the series behind it. */
+function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
+  const entries = CXA_RATINGS[player.name];
+  if (!entries || entries.length === 0) return null;
+  const last = entries[entries.length - 1];
+  const lastList = CXA_LISTS.find((l) => l.id === last.list);
+  const section = document.createElement('section');
+  section.className = 'xqb-section';
+  const h2 = document.createElement('h2');
+  h2.textContent = 'Official rating';
+  const card = document.createElement('div');
+  card.className = 'xqp-rating';
+  const head = document.createElement('div');
+  head.className = 'xqp-rating-head';
+  const label = document.createElement('span');
+  label.className = 'xqp-rating-label';
+  label.textContent = 'CXA 等级分';
+  const value = document.createElement('span');
+  value.className = 'xqp-rating-value';
+  value.textContent = String(last.rating);
+  head.append(label, value);
+  const sub = document.createElement('p');
+  sub.className = 'xqp-rating-sub';
+  sub.textContent = [
+    last.rank !== null && lastList ? `#${last.rank} of ${lastList.size}` : null,
+    lastList ? `last list ${lastList.label}` : null,
+    'the CXA replaced Elo with tournament points in January 2026',
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  card.append(
+    head,
+    sparkline(
+      entries.map((e) => e.rating),
+      entries.map((e) => CXA_LISTS.find((l) => l.id === e.list)?.label ?? e.list),
+    ),
+    sub,
+  );
+  section.append(h2, card);
+  return section;
+}
+
+/** An area sparkline, lichess-style: no axes, the series is the shape. */
+export function sparkline(values: readonly number[], labels: readonly string[]): SVGSVGElement {
+  const width = 300;
+  const height = 80;
+  const pad = 4;
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  svg.setAttribute('viewBox', `0 0 ${width} ${height}`);
+  svg.setAttribute('class', 'xqp-spark');
+  svg.setAttribute('role', 'img');
+  const min = Math.min(...values);
+  const max = Math.max(...values);
+  const span = Math.max(1, max - min);
+  const x = (i: number): number =>
+    values.length === 1 ? width / 2 : pad + (i * (width - 2 * pad)) / (values.length - 1);
+  const y = (v: number): number => height - pad - ((v - min) / span) * (height - 2 * pad);
+  const points = values.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`);
+  const area = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  area.setAttribute(
+    'd',
+    `M${x(0).toFixed(1)},${height} L${points.join(' L')} L${x(values.length - 1).toFixed(1)},${height} Z`,
+  );
+  area.setAttribute('class', 'xqp-spark-area');
+  const line = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+  line.setAttribute('d', `M${points.join(' L')}`);
+  line.setAttribute('class', 'xqp-spark-line');
+  svg.append(area, line);
+  const title = document.createElementNS('http://www.w3.org/2000/svg', 'title');
+  title.textContent = values.map((v, i) => `${labels[i] ?? ''}: ${v}`).join(', ');
+  svg.append(title);
+  return svg;
 }
 
 function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
@@ -322,7 +509,7 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   me.textContent = player.nameEn ?? player.name;
   const vs = document.createElement('span');
   vs.className = 'xqp-vs';
-  vs.textContent = board.colour === 'red' ? ' vs ' : ' vs ';
+  vs.textContent = ' vs ';
   const them = document.createElement('span');
   them.textContent = board.opponent.nameEn ?? board.opponent.name;
   // Red is listed first on every board on the site; keep that order here.
@@ -360,11 +547,8 @@ function shell(): HTMLElement {
 function hero(input: {
   eyebrow: string;
   title: string;
-  subtitle?: string | null;
   meta: string[];
-  backHref?: string;
-  backLabel?: string;
-  profileHref?: string;
+  actions?: HTMLElement[];
 }): HTMLElement {
   const section = document.createElement('section');
   section.className = 'xqb-hero';
@@ -376,12 +560,6 @@ function hero(input: {
   const title = document.createElement('h1');
   title.textContent = input.title;
   copy.append(eyebrow, title);
-  if (input.subtitle) {
-    const subtitle = document.createElement('p');
-    subtitle.className = 'xqb-hero-zh';
-    subtitle.textContent = input.subtitle;
-    copy.append(subtitle);
-  }
   if (input.meta.length > 0) {
     const meta = document.createElement('p');
     meta.className = 'xqb-hero-meta';
@@ -390,20 +568,7 @@ function hero(input: {
   }
   const actions = document.createElement('div');
   actions.className = 'xqb-hero-actions';
-  if (input.backHref && input.backLabel) {
-    const back = document.createElement('a');
-    back.className = 'xqb-link';
-    back.href = input.backHref;
-    back.textContent = input.backLabel;
-    actions.append(back);
-  }
-  if (input.profileHref) {
-    const profile = document.createElement('a');
-    profile.className = 'xqb-link xqb-link-primary';
-    profile.href = input.profileHref;
-    profile.textContent = 'Read the profile';
-    actions.append(profile);
-  }
+  for (const el of input.actions ?? []) actions.append(el);
   section.append(copy, actions);
   return section;
 }
