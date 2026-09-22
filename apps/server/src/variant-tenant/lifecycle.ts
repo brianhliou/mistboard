@@ -347,15 +347,23 @@ export function tenantForfeitingSeat<
 >(tenant: TenantLifecycleTenant<C>, room: TenantLifecycleRoom<C, M, State, Spec>): C | null {
   const { status, moveNumber } = room.projection.state;
   if (status.type !== 'playing' || moveNumber < 2) return null;
-  const connected = tenantConnectedSeats(tenant, room.clients);
-  // PvE: the engine seat has no WS client but is always "present" — never forfeit
-  // it for "disconnection" (else a PvE game self-forfeits to the human the moment
-  // play starts). A human who actually leaves still forfeits their own seat.
+  // PvE: no disconnect forfeit at all, in either direction.
+  //
+// A disconnect forfeit answers "your opponent is waiting and you left". Against
+// an engine nobody is waiting, so it only takes games away: measured on prod
+// (#436), 13 xiangqi PvE games ended this way 33-73 s after the human's last
+// move, and at the final position 5 were level and 4 ahead, one with a forced
+// mate. A phone locking closes the socket at once, and the client only retries
+// on throttled background timers, so 30 s is reachable by putting the phone
+// down. A human who never returns still loses: their clock runs through the
+// disconnect and flags (a tenant room always has one, rooms-route.ts defaults
+// it), which is what sitting at a board does too.
   if (tenant.engine) {
     for (const seat of tenant.colors) {
-      if (tenant.engine.isEngineClientId(room.projection.seats[seat])) connected[seat] = true;
+      if (tenant.engine.isEngineClientId(room.projection.seats[seat])) return null;
     }
   }
+  const connected = tenantConnectedSeats(tenant, room.clients);
   const [first, second] = tenant.colors;
   if (connected[first] && !connected[second]) return second;
   if (!connected[first] && connected[second]) return first;

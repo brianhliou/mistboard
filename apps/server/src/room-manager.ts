@@ -755,16 +755,25 @@ export function clearForfeitTimer(room: Room): void {
 
 // The seat that should be forfeiting right now, or null if no forfeit applies.
 // A forfeit runs only when exactly one side is absent (the other is present to
-// be awarded the win). The engine seat counts as always-present (it lives
-// server-side and never holds a WS client), so a PvE human disconnect forfeits
-// to the engine, and the engine itself never forfeits. Both-absent → null (no
-// one to award), both-present → null (nobody left).
+// be awarded the win). Both-absent → null (no one to award), both-present →
+// null (nobody left).
+//
+// A disconnect forfeit answers "your opponent is waiting and you left". Against
+// an engine nobody is waiting, so it only takes games away: measured on prod
+// (#436), 13 xiangqi PvE games ended this way 33-73 s after the human's last
+// move, and at the final position 5 were level and 4 ahead, one with a forced
+// mate. A phone locking closes the socket at once, and the client only retries
+// on throttled background timers, so 30 s is reachable by putting the phone
+// down. A human who never returns still loses: their clock runs through the
+// disconnect and flags (a tenant room always has one, rooms-route.ts defaults
+// it), which is what sitting at a board does too.
 function forfeitingSeat(room: Room): Color | null {
   const { status, moveNumber } = room.projection.state;
   if (status.type !== 'playing' || moveNumber < 2 || room.projection.paused) return null;
   const engineSeat = engineSeatFor(room);
+  if (engineSeat !== null) return null;
   const connected = computeConnectedSeats(room.clients);
-  const present = (seat: Color): boolean => seat === engineSeat || connected[seat];
+  const present = (seat: Color): boolean => connected[seat];
   const whitePresent = present('white');
   const blackPresent = present('black');
   if (whitePresent && !blackPresent) return 'black';

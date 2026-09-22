@@ -1570,16 +1570,32 @@ test('scheduleForfeitTimeout: reconnect (both present again) cancels the countdo
   assert.equal(room.forfeitTimer, null);
 });
 
-test('scheduleForfeitTimeout: PvE human disconnect forfeits to the always-present engine', () => {
+test('scheduleForfeitTimeout: a PvE room never forfeits, in either direction (#436)', () => {
+  // Nobody is waiting on the other side of a bot game, so a disconnect forfeit
+  // only takes games away: on prod it ended 13 xiangqi PvE games 33-73 s after
+  // the human's last move, 9 of them level or winning. A human who never comes
+  // back still loses, on the clock, which runs through the disconnect.
   const room = makeRoom('ff-pve', 'dark-chess', move2Events('ff-pve', 'engine-1', 'human-1'));
   room.pveEngineId = 'engine-1'; // engine plays white; it never holds a WS client
-  // Human (black) is absent; the engine seat counts as present.
-  scheduleForfeitTimeout(makeCtx(), room);
-  assert.equal(room.forfeitSeat, 'black', 'human forfeits to the engine');
-  clearForfeitTimer(room);
 
-  // With the human present, no forfeit — and the engine seat never forfeits.
+  // Human (black) absent: no countdown, no timer.
+  scheduleForfeitTimeout(makeCtx(), room);
+  assert.equal(room.forfeitSeat, null, 'the human does not forfeit to a bot');
+  assert.equal(room.forfeitTimer, null);
+
+  // Human present: still nothing, and the engine seat never forfeits either.
   room.clients.add(makeClient('human-1', 'black'));
   scheduleForfeitTimeout(makeCtx(), room);
   assert.equal(room.forfeitSeat, null);
+  assert.equal(room.forfeitTimer, null);
+});
+
+test('scheduleForfeitTimeout: PvP still forfeits a leaver, engine id absent', () => {
+  // The guard is "is there an engine seat", not "is anyone missing": a PvP room
+  // with the same shape must keep the countdown it has always had.
+  const room = makeRoom('ff-pvp', 'dark-chess', move2Events('ff-pvp'));
+  room.clients.add(makeClient('wc', 'white'));
+  scheduleForfeitTimeout(makeCtx(), room);
+  assert.equal(room.forfeitSeat, 'black');
+  clearForfeitTimer(room);
 });

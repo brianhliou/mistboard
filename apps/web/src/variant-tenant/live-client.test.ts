@@ -205,6 +205,19 @@ describe('tenant live-client core', () => {
     expect(h.client.state.timeControl).toEqual({ initialMs: 60_000, incrementMs: 0 });
   });
 
+  it('captures the forfeit countdown from the frame, for every tenant (#436)', () => {
+    // It used to be each tenant's own module variable, read through an optional
+    // chrome getter, so the five rooms that never wired one showed no countdown
+    // at all before their 30 s ran out. It is a room fact; the core keeps it.
+    const h = createHarness();
+    h.feedHello({ forfeitDeadline: 1_234 });
+    expect(h.client.state.forfeitDeadline).toBe(1_234);
+    // A frame without one means "no countdown now", not "keep the old one":
+    // the seat came back.
+    h.feedSnapshot({});
+    expect(h.client.state.forfeitDeadline).toBeNull();
+  });
+
   it('drives the shared lifecycle frame from viewer-safe room state', () => {
     const h = createHarness();
     h.feedHello({

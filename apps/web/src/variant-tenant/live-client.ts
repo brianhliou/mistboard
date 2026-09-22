@@ -86,6 +86,7 @@ export type TenantLiveFrame<C extends string, V> = {
   clock?: TenantLiveClock<C> | null;
   connectedSeats?: Record<C, boolean>;
   abortDeadline?: number | null;
+  forfeitDeadline?: number | null;
   timeControl?: { initialMs: number; incrementMs: number } | null;
   events?: TenantLiveEvent[];
   event?: TenantLiveEvent;
@@ -109,6 +110,7 @@ export type TenantLiveState<C extends string, V> = {
   connectedSeats: Partial<Record<C, boolean>>;
   events: TenantLiveEvent[];
   abortDeadline: number | null;
+  forfeitDeadline: number | null;
 };
 
 // Everything a tenant's interaction/setup code needs from the core. Handed to
@@ -312,6 +314,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     connectedSeats: {},
     events: [],
     abortDeadline: null,
+    forfeitDeadline: null,
   };
 
   let socket: TenantSocketClient | null = null;
@@ -369,7 +372,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     seatDisplayNames: () => state.seatDisplayNames,
     seatProfiles: () => state.seatProfiles,
     abortDeadline: () => state.abortDeadline,
-    forfeitDeadline: config.chrome?.forfeitDeadline ?? (() => null),
+    forfeitDeadline: config.chrome?.forfeitDeadline ?? (() => state.forfeitDeadline),
     roomMode: config.chrome?.roomMode ?? (() => 'pvp'),
     room: () => state.room,
     debugRequested: config.chrome?.debugRequested ?? (() => false),
@@ -400,6 +403,12 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.seatProfiles = frame.seatDisplayNames ? (frame.seatProfiles ?? {}) : state.seatProfiles;
     if (frame.connectedSeats) state.connectedSeats = frame.connectedSeats;
     state.abortDeadline = frame.abortDeadline ?? null;
+    // Read here rather than in each tenant's onFrame: the countdown is a room
+    // fact, not a variant one, and the three tenants that wired it by hand were
+    // the only three rooms that showed it. Xiangqi, jieqi, banqi, jungle and
+    // flip jungle warned nobody before their 30 s ran out (#436).
+    state.forfeitDeadline =
+      typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
     if (frame.events) state.events = frame.events;
     config.onFrame?.(frame);
   }
@@ -469,6 +478,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const room =
       roomIdFromPath(window.location.pathname) ?? params.get('room') ?? config.defaultRoomId;
     state.room = room;
+    state.forfeitDeadline = null;
+    state.abortDeadline = null;
     lastCapturedView = null;
     lastCapturedKey = null;
     pendingLiveAnimation = null;

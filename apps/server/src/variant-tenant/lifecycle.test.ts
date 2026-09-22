@@ -135,6 +135,28 @@ test('the live policy on the same log still arms clock and forfeit timers', () =
   clearTenantRuntimeTimers(room);
 });
 
+test('a PvE tenant room never arms the disconnect forfeit (#436)', () => {
+  // Same log, same absent seat as the live-policy test above, but white's seat
+  // holds the engine client. Nobody is waiting, so nothing is forfeited; the
+  // human's clock still runs and flags if they never come back.
+  const roomId = 'dchx_pve_midgame';
+  const room = hydrate([...roomEvents(roomId, LIVE_TC), ...firstMoves(roomId)]);
+  room.clients = new Set([]); // the human (black) is gone; white is the engine
+  const ctx = lifecycleContext();
+  const pveTenant = {
+    ...darkChessTenant,
+    engine: { isEngineClientId: (clientId: string | undefined) => clientId === 'white-client' },
+  };
+
+  scheduleTenantLifecycleTimers(pveTenant, room, ctx);
+
+  assert.notEqual(room.clockTimer, null, 'the clock still runs, so a leaver flags');
+  assert.equal(room.forfeitSeat, null);
+  assert.equal(room.forfeitDeadline, null);
+  assert.equal(room.forfeitTimer, null);
+  clearTenantRuntimeTimers(room);
+});
+
 test('replay applies the days-per-move reset through the tenant projection', () => {
   const roomId = 'dchx_corr_reset';
   const sixHoursLater = 20_000 + DAY_MS / 4;
