@@ -2675,79 +2675,76 @@ const ZH_HANS: Record<string, string> = {
     '不能。它收到的棋盘和你看到的一样全是暗子，而且发牌结果没有任何一方知道：你不知道，引擎不知道，对手也不知道。',
   // banqi-statistics (2026-09-22): the banqi result post, 200 engine games. zh-Hant is the primary reader; this block is its simplified mirror.
   'Banqi by the Numbers': '用数字看暗棋',
-  'Banqi Statistics: First-Player Advantage, Draws and Game Length in 200 Engine Games':
-    '暗棋统计：200 盘引擎对局里的先手优势、和棋率与对局长度',
-  'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. The first player won 53% of the decided games, one game in six was a draw, a general fell in 94 games of 100, and the side that lost its general first lost 87% of the time.':
-    'MistyBanqi 按台湾比赛规则自我对弈 200 盘，每步搜索一千万个节点。分出胜负的对局里先手赢了 53%，每六盘有一盘和棋，每 100 盘有 94 盘有将被吃掉，而先失将的一方有 87% 输掉那盘棋。',
-  'Banqi players who want numbers behind the questions every table argues about: whether flipping first is an advantage, how long a game runs, how often it is a draw, and what losing the general costs.':
-    '想要数字来回答每张棋桌都在争论的问题的暗棋玩家：先翻是不是优势、一盘棋多长、多常和棋、失将要付出什么代价。',
-  'Banqi has no game database. Xiangqi has a century of recorded master games and chess has hundreds of millions; banqi is played in parks and on phones, and the games are gone when the tiles go back in the box. So the questions every table argues about have no numbers behind them. Does flipping first help? How long is a game? How often is it a draw? What does losing the general cost?':
-    '暗棋没有棋谱数据库。象棋有上百年的名手对局记录，国际象棋有几亿盘；暗棋是在公园和手机上下的，棋子收回盒子，那盘棋就没了。所以每张棋桌都在争论的那些问题，背后没有任何数字。先翻有利吗？一盘棋多长？多常和棋？失将要付出什么代价？',
-  'These are the numbers from 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays: one flip or one move a turn, the cannon jumping one screen to capture, forty plies without a flip or a capture a draw, a position repeated three times a draw. Every game is a fresh random deal. The first player flips a tile and takes its colour, so red and black are decided by that flip. Both seats are the same engine at the same search, which means any edge in the results belongs to the seat, not to a player. Engine games are not park games, and the last section says what that changes. But 200 of them put an error bar on each answer, which is more than banqi has had.':
-    '这些数字来自 [MistyBanqi](/blog/mistybanqi) 自我对弈的 200 盘棋，每步搜索一千万个节点，采用本站的[台湾比赛规则](/rules/banqi)：一回合翻一颗子或走一步，炮隔一子跳吃，40 步没有翻子也没有吃子判和，同一局面重复三次判和。每一盘都是重新随机发子。先手翻开一颗子就拿那颗子的颜色，所以谁红谁黑由第一翻决定。两边坐的是同一个引擎、同样的搜索量，所以结果里的任何优势都属于座位，不属于棋手。引擎的棋不是公园的棋，最后一节会说这改变了什么。但 200 盘足以给每个答案标上误差范围，这已经比暗棋以前有过的多。',
+  'Banqi Statistics: 200 Engine Games on Leads, Generals, Draws and Length':
+    '暗棋统计：200 盘引擎对局里的领先、将、和棋与长度',
+  'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. The material leader stopped changing at move 13 of a median 71, the side that lost its general first lost 87% of the time, and flipping first was worth nothing this sample could measure.':
+    'MistyBanqi 按台湾比赛规则自我对弈 200 盘，每步搜索一千万个节点。子力领先方在中位数 71 回合的对局里，第 13 回合之后就不再改变；先失将的一方有 87% 输掉那盘棋；而先翻的价值，这个样本量不出来。',
+  'Banqi players who want numbers behind the questions every table argues about: when a game is actually decided, what losing the general costs, whether flipping first is an advantage, and how often it ends in a draw.':
+    '想要数字来回答每张棋桌都在争论的问题的暗棋玩家：一盘棋什么时候就定了、失将要付出什么代价、先翻是不是优势、多常和棋。',
+  'Banqi has no game database. Xiangqi has a century of recorded master games and chess has hundreds of millions; banqi is played in parks and on phones, and the games are gone when the tiles go back in the box. So the questions every table argues about have no numbers behind them. When is a game actually decided? What does losing the general cost? Does flipping first help? How often is it a draw?':
+    '暗棋没有棋谱数据库。象棋有上百年的名手对局记录，国际象棋有几亿盘；暗棋是在公园和手机上下的，棋子收回盒子，那盘棋就没了。所以每张棋桌都在争论的那些问题，背后没有任何数字。一盘棋到底什么时候就定了？失将要付出什么代价？先翻有利吗？多常和棋？',
+  'These are the numbers from 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays: one flip or one move a turn, the cannon jumping one screen to capture, forty plies without a flip or a capture a draw, a position repeated three times a draw. Every game is a fresh random deal, and the first player flips a tile and takes its colour, so red and black are decided by that flip. Both seats are the same engine at the same search, which means any edge in the results belongs to the seat, not to a player.':
+    '这些数字来自 [MistyBanqi](/blog/mistybanqi) 自我对弈的 200 盘棋，每步搜索一千万个节点，采用本站的[台湾比赛规则](/rules/banqi)：一回合翻一颗子或走一步，炮隔一子跳吃，40 步没有翻子也没有吃子判和，同一局面重复三次判和。每一盘都是重新随机发子，先手翻开一颗子就拿那颗子的颜色，所以谁红谁黑由第一翻决定。两边坐的是同一个引擎、同样的搜索量，所以结果里的任何优势都属于座位，不属于棋手。',
+  '200 games, MistyBanqi against itself at 10M nodes': '200 盘，MistyBanqi 每步 10M 节点自我对弈',
+  decided: '分出胜负',
+  drawn: '和棋',
+  'median length': '长度中位数',
+  '75 moves a side': '每方 75 回合',
+  'median captures': '吃子中位数',
+  '27 of 32 pieces': '32 颗里的 27 颗',
+  'first capture': '第一次吃子',
+  'move 3 in the median game': '中位数对局的第 3 回合',
+  'a general captured': '有将被吃',
+  '188 games (94%)': '188 盘（94%）',
+  'first player won, of decided games': '先手在分出胜负的对局中获胜',
+  '89 of 168 (53%)': '168 盘中的 89 盘（53%）',
   'One of [twenty games](/study/FsA5sowX) from the same engine at the same settings, kept as a study. Step through with the arrows; a tile nobody has flipped stays face-down.':
     '同一个引擎、同样设定下的[二十盘棋](/study/FsA5sowX)之一，存成一份研究。用箭头一步步看；没人翻过的子保持盖着。',
-  'The first player wins 53% of decided games': '分出胜负的对局里，先手赢 53%',
-  'Of the 168 games that ended in a win, the first player took 89: 53%, give or take four points. Counting draws as half a point each, the first seat scored 52.5% over all 200. So flipping first is somewhere between a coin flip and a modest edge. Two hundred games rule out a large first-move advantage; they cannot rule out a small one.':
-    '分出胜负的 168 盘里，先手拿下 89 盘：53%，上下四个百分点。把和棋各算半分，先手在全部 200 盘的得分率是 52.5%。所以先翻大概介于掷硬币和小幅优势之间。200 盘能排除先手有大优势，排除不了小优势。',
-  'The colour the first flip hands you makes no difference either. The deal gave the first player red in exactly 100 games and black in 100, and the first seat won 45 of 80 decided games as red and 44 of 88 as black.':
-    '第一翻给你的颜色也没有差别。发子让先手刚好 100 盘拿红、100 盘拿黑；先手拿红时在分出胜负的 80 盘里赢 45 盘，拿黑时 88 盘里赢 44 盘。',
-  'Nor does the rank of that first tile, as far as this sample can see. Cut 200 games seven ways and each rank is left with a dozen or two, and the error bars swallow every difference.':
-    '第一颗子的大小也一样，至少这个样本看不出差别。把 200 盘切成七种，每种只剩十几二十盘，误差范围把所有差异都吞掉了。',
-  'first tile flipped': '第一颗翻开的子',
-  games: '盘数',
-  'first player won (decided games)': '先手赢（分出胜负的对局）',
-  rate: '胜率',
-  general: '将',
-  advisor: '士',
-  elephant: '象',
-  chariot: '车',
-  horse: '马',
-  cannon: '炮',
-  soldier: '卒',
-  '8 of 12': '12 盘中 8 盘',
-  '11 of 23': '23 盘中 11 盘',
-  '15 of 24': '24 盘中 15 盘',
-  '16 of 28': '28 盘中 16 盘',
-  '1 of 10': '10 盘中 1 盘',
-  '22 of 43': '43 盘中 22 盘',
-  'First seat win rate in decided games by the rank of the first tile flipped, 200 games. The ± is one standard error.':
-    '按第一颗翻开的子的大小，先手在分出胜负对局中的胜率，共 200 盘。± 是一个标准误。',
-  'A general first won eight of twelve and a horse first won one of ten. Both are what a small sample does when you slice it: a dozen games with a ten-point error bar. The reading that survives is that no rank moved the win rate by more than the noise. The first flip decides your colour, and the colour does not matter.':
-    '第一翻翻到将的十二盘赢了八盘，翻到马的十盘只赢一盘。这两个都是小样本切开之后会出现的东西：十来盘棋，误差十个百分点。站得住的结论是，没有哪一种子把胜率推得超出噪声。第一翻决定你的颜色，而颜色不重要。',
-  'A general falls in 94 games of 100': '每 100 盘有 94 盘有将被吃',
+  'The lead stops changing at move 13 of 71': '领先在 71 回合的对局里，第 13 回合之后就不再改变',
+  'Count captured material on a fixed scale (general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2) and the leader settles early. In the games that were won, the winner took the lead for the last time at move 13 of a median 71, and in 46% of them by move 10. Four fifths of the average game is played after the last time the lead changed hands.':
+    '用固定的分值计算被吃的子力（将 12、士 7、象和炮 6、车 5、马 4、卒 2），领先方很早就定下来。在分出胜负的对局里，赢家最后一次取得领先是在中位数 71 回合对局的第 13 回合，其中 46% 在第 10 回合以前。平均一盘棋有五分之四，是在领先最后一次易手之后才下的。',
+  'The games are not quiet. The first capture lands at move 3, the median game trades 27 of the 32 pieces, and the lead changes hands twice before it settles. But in a quarter of the 200 it never changed at all: whoever drew blood first held the advantage to the end. One drawn game swung twelve times, which is what a game with no winner looks like from this angle.':
+    '这些棋并不平静。第一次吃子在第 3 回合，中位数的对局换掉 32 颗子里的 27 颗，领先在定下来之前易手两次。但 200 盘里有四分之一从头到尾没有易手过：先见血的一方一路领先到终局。有一盘和棋摆荡了十二次，那就是从这个角度看，没有赢家的棋长什么样子。',
+  'Part of this is definitional. A banqi game ends when a side has nothing left to move, and that side is usually the one that has been losing material, so the winner leading at the end is close to a tautology. The timing is not. The decision happens in the first fifth of the game, which is exactly where the flips are: a quarter of the tiles are still face-down at move 13 in the median game. A chess-style review would credit the winner for what was often a good bag, and the [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.':
+    '这里有一部分是定义使然。暗棋是一方无子可动就结束，而那一方通常就是一路在掉子力的那方，所以赢家在终局领先几乎是套套逻辑。时间点则不是。胜负在前五分之一就定了，而那正是翻子集中的地方：中位数的对局到第 13 回合，还有四分之一的子盖着。照国际象棋那套复盘，赢家常常会因为运气好的一袋子被记成一功，[完局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和棋子，正是为了这件事。',
+  'Losing the general first loses the game 87% of the time': '先失将的一方，有 87% 输掉那盘棋',
   'A general was captured in 188 of the 200 games, and both generals in 46. The first one fell at move 24 in the median game; a quarter of the time by move 12, a quarter of the time after move 46. Only twelve games ended with both generals still standing, and eleven of those were draws.':
     '200 盘里有 188 盘有将被吃掉，46 盘两个将都被吃。中位数的那盘棋，第一个将在第 24 回合倒下；四分之一的对局在第 12 回合前，四分之一在第 46 回合后。只有十二盘结束时两个将都还在，其中十一盘是和棋。',
-  'Losing yours first is close to losing the game. In the 167 decided games where a general was taken, the side that lost its general first lost 146 of them: 87%, give or take three points. The general tops the ladder, and only a soldier, the other general or a cannon’s jump can take it, so the side that keeps its general keeps the one piece the other side can hardly answer. In these games the engine almost never recovered from giving that up.':
-    '先失将，离输棋就不远了。有将被吃且分出胜负的 167 盘里，先失将的一方输了 146 盘：87%，上下三个百分点。将在大小顺序的顶端，只有卒、对方的将或炮的跳吃能拿下它，所以保住将的一方就握有对方几乎无法应付的那颗子。在这些对局里，引擎把将送掉之后几乎没有翻盘过。',
-  'One game in six is a draw, and every draw is on the clock':
-    '每六盘有一盘和棋，而且全都是计数判和',
-  'Thirty-two of the 200 games were drawn, 16%. Thirty-one of them ran forty plies without a flip or a capture and the clock ended them. The last was still going at 150 moves and was stopped. Not one game repeated a position three times, so the repetition rule never fired at this search depth.':
-    '200 盘里有 32 盘和棋，16%。其中 31 盘是 40 步没有翻子也没有吃子，被计数判和。剩下那盘下到 150 回合还没完，被中止。没有任何一盘重复同一局面三次，所以在这个搜索深度下，重复判和的规则一次都没触发。',
-  'Draws are the long games: 88 moves in the median draw against 71 in the median win. And fourteen of the 32 passed through a position where one side was up twenty points or more, a general and a chariot of material. That is the [blind spot](/blog/mistybanqi) MistyBanqi is known for. Nothing in its evaluation rewards finishing a won game over holding what it has, so a winning position can shuffle until the forty-ply clock runs out. Read 16% as this engine’s draw rate under these rules, and as a ceiling for the game itself: a player who converts what this engine drifts on would draw less.':
-    '和棋都是长棋：和棋的中位数是 88 回合，胜负局是 71 回合。而且 32 盘里有 14 盘曾经走到一方领先二十分以上的局面，相当于一个将加一个车的子力。这就是 MistyBanqi 出了名的[盲点](/blog/mistybanqi)。它的评估函数里没有任何一项奖励把赢棋收官、而不是守着手上的子力，所以赢定的局面可能一直磨到 40 步计数用完。把 16% 当成这个引擎在这套规则下的和棋率，也当成这个游戏本身的上限：能把引擎磨掉的优势兑现的棋手，和棋会更少。',
-  'The lead is taken by move 13 and kept': '第 13 回合就取得领先，然后一路保持',
-  'Material changed hands early and often. The first capture came at move 3 in the median game and never later than move 9. All 32 tiles were turned in 198 of the 200 games, and the median game saw 27 captures, which is 27 of the 32 pieces gone. Counting captured material on a fixed scale (general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2), the lead changed hands twice in the median game and never in fifty of them. One draw swung twelve times.':
-    '子力交换得又早又频繁。中位数的对局第一次吃子在第 3 回合，最晚也不超过第 9 回合。200 盘里有 198 盘把 32 颗子全部翻开，中位数的对局吃了 27 次子，也就是 32 颗子里有 27 颗离开棋盘。用固定的分值计算被吃的子力（将 12、士 7、象和炮 6、车 5、马 4、卒 2），中位数的对局领先方换了两次，有五十盘从头到尾没换过。有一盘和棋换了十二次。',
-  'In the games that were won, the winner took the material lead for the last time at move 13 of a median 71, and in 46% of them by move 10. From there the lead was held to the end in every one of the 168. Most of a banqi game, counted in moves, is the leader converting a lead it already holds, and the swing that decides it happens in the first fifth. That is also where the flips are, which is why a chess-style review would credit the winner for what was often a good draw. The [review on finished games](/blog/skill-vs-luck) splits each flip into the decision and the tile for exactly this reason.':
-    '在分出胜负的对局里，赢家最后一次取得子力领先是在中位数 71 回合中的第 13 回合，其中 46% 在第 10 回合以前。从那之后，168 盘每一盘的领先都保持到终局。以回合数计，一盘暗棋大部分的时间是领先方在兑现已经到手的优势，决定胜负的那次翻转发生在前五分之一。翻子也集中在那里，所以照国际象棋那套复盘，赢家常常会因为运气好的翻子被记成一功。[完局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和棋子，正是为了这件事。',
+  'In the 167 decided games where a general was taken, the side that lost its general first lost 146 of them: 87%, give or take three points. The general tops the ladder, and only a soldier, the other general or a cannon’s jump can take it, so the side that keeps its general keeps the one piece the other side can hardly answer. It is worth twelve points on the scale above against seven for the next piece down, which is usually enough to set the lead the section above says never comes back.':
+    '有将被吃且分出胜负的 167 盘里，先失将的一方输了 146 盘：87%，上下三个百分点。将在大小顺序的顶端，只有卒、对方的将或炮的跳吃能拿下它，所以保住将的一方就握有对方几乎无法应付的那颗子。它在上面那套分值里值十二分，下一级只值七分，通常足以造出上一节说的那种不再回头的领先。',
+  'Flipping first is worth nothing this sample can measure': '先翻的价值，这个样本量不出来',
+  'Of the 168 games that ended in a win, the first player took 89: 53%, give or take four points. Counting draws as half a point each, the first seat scored 52.5% over all 200. Two hundred games rule out a large first-move advantage and cannot rule out a small one, so the answer to the oldest argument at the table is that if flipping first helps, it helps by less than this.':
+    '分出胜负的 168 盘里，先手拿下 89 盘：53%，上下四个百分点。把和棋各算半分，先手在全部 200 盘的得分率是 52.5%。200 盘能排除先手有大优势，排除不了小优势，所以对棋桌上那个最老的争论，答案是：先翻就算有用，也比这个幅度更小。',
+  'The colour that first flip hands you makes no difference either. The deal gave the first player red in exactly 100 games and black in 100, and the first seat won 45 of 80 decided games as red and 44 of 88 as black.':
+    '第一翻给你的颜色也没有差别。发子让先手刚好 100 盘拿红、100 盘拿黑；先手拿红时在分出胜负的 80 盘里赢 45 盘，拿黑时 88 盘里赢 44 盘。',
+  'Nor, as far as this sample can see, does the rank of that first tile. Split 200 games seven ways and each rank keeps a dozen or two: a general first won eight of twelve and a horse first won one of ten, which is what small samples do rather than a finding about horses. Telling a five-point effect per rank apart from noise would take several thousand games, and this is 200.':
+    '第一颗子的大小也一样，至少这个样本看不出来。把 200 盘切成七种，每种只剩十几二十盘：第一翻翻到将的十二盘赢了八盘，翻到马的十盘只赢一盘，这是小样本切开之后会有的样子，不是关于马的发现。要把每种子五个百分点的差别和噪声分开，得下好几千盘，而这里是 200 盘。',
+  'One game in six is a draw, and the engine causes most of them':
+    '每六盘有一盘和棋，而且多半是引擎造成的',
+  'Thirty-two of the 200 games were drawn, 16%. Thirty-one of them ran forty plies without a flip or a capture and the clock ended them; the last was still going at 150 moves and was stopped. Not one game repeated a position three times, so the repetition rule never fired at this search depth.':
+    '200 盘里有 32 盘和棋，16%。其中 31 盘是 40 步没有翻子也没有吃子，被计数判和；剩下那盘下到 150 回合还没完，被中止。没有任何一盘重复同一局面三次，所以在这个搜索深度下，重复判和的规则一次都没触发。',
+  'Read that 16% as a fact about MistyBanqi before reading it as a fact about banqi. Fourteen of the 32 draws passed through a position where one side was up twenty points or more, a general and a chariot of material, and that is the engine’s [known blind spot](/blog/mistybanqi): nothing in its evaluation rewards finishing a won game over holding what it has, so a winning position can shuffle until the clock runs out. Draws are also the long games, 88 moves in the median draw against 71 in the median win, which is what shuffling looks like in the length data. A player who converts what this engine drifts on would draw less often than one game in six.':
+    '先把 16% 当成关于 MistyBanqi 的事实，再当成关于暗棋的事实。32 盘和棋里有 14 盘曾经走到一方领先二十分以上的局面，相当于一个将加一个车的子力，而这正是这个引擎[出了名的盲点](/blog/mistybanqi)：它的评估函数里没有任何一项奖励把赢棋收官、而不是守着手上的子力，所以赢定的局面可能一直磨到计数用完。和棋也都是长棋，和棋中位数 88 回合对胜负局的 71 回合，那就是磨棋在长度数据里的样子。能把这个引擎磨掉的优势兑现的棋手，和棋会少于六盘一盘。',
   'What engine games leave out': '引擎对局没说的事',
-  'Two hundred games of one engine against itself measure that engine under these rules, not banqi in a park. The first-player and first-tile numbers should carry over, because they come from the deal and the rules rather than from anyone’s style. The general and the draw numbers carry over less. People lose generals to traps an engine at ten million nodes does not walk into, and people convert won games that this engine shuffles into draws, so a human table probably sees more decisive games and earlier generals than these. The same engine has played [fifty-two games against people](/blog/skill-vs-luck) on this site, and that post has the human side of the picture.':
-    '一个引擎自我对弈 200 盘，量到的是这个引擎在这套规则下的表现，不是公园里的暗棋。先手和第一颗子的数字应该可以照搬，因为它们来自发子和规则，不是谁的棋风。将和和棋的数字就没那么能照搬。人会被引擎在一千万节点下不会踩的陷阱吃掉将，人也会把这个引擎磨成和棋的赢棋收下来，所以人的棋桌上大概会有更多分出胜负的对局，将也倒得更早。同一个引擎在本站[跟人下过五十二盘](/blog/skill-vs-luck)，那篇文章有人这一边的样子。',
+  'Two hundred games of one engine against itself measure that engine under these rules, not banqi in a park. The first-player and first-tile numbers should carry over, because they come from the deal and the rules rather than from anyone’s style. The rest carries over less. People lose generals to traps an engine searching ten million nodes does not walk into, people convert won games that this engine shuffles away, and two players of unequal strength settle games earlier than two copies of one program. The same engine has played [fifty-two games against people](/blog/skill-vs-luck) on this site, where the humans won 14, lost 33 and drew 5.':
+    '一个引擎自我对弈 200 盘，量到的是这个引擎在这套规则下的表现，不是公园里的暗棋。先手和第一颗子的数字应该可以照搬，因为它们来自发子和规则，不是谁的棋风。其余的就没那么能照搬。人会被引擎搜索一千万节点时不会踩的陷阱吃掉将，人会把这个引擎磨掉的赢棋收下来，实力不对等的两个人也比同一个程式的两份复本更早分出胜负。同一个引擎在本站[跟人下过五十二盘](/blog/skill-vs-luck)，人这边 14 胜 33 负 5 和。',
   'The rules matter too. Chain captures, the straight-charging chariot and the cannon that jumps to empty squares are park rules, and each would change the capture counts and the draw rate. These 200 games follow the competition ladder on the [rules page](/rules/banqi) and nothing else.':
     '规则也有影响。连吃、车直冲、炮翻山跳到空格，都是公园规则，每一条都会改变吃子数和和棋率。这 200 盘只按[规则页](/rules/banqi)上的比赛大小顺序下，没有别的。',
+  'When is a banqi game decided?': '暗棋一盘棋什么时候就定了？',
+  'Earlier than it looks. In 200 engine games the winner took the material lead for the last time at move 13 of a median 71-move game, and in a quarter of the games the leader never changed at all.':
+    '比看起来早。200 盘引擎对局里，赢家最后一次取得子力领先是在中位数 71 回合对局的第 13 回合，而且有四分之一的对局，领先方从头到尾没变过。',
+  'How important is the general in banqi?': '将在暗棋里有多重要？',
+  'In 200 engine games a general was captured in 94% of them, and the side that lost its general first lost 87% of the decided games. Only a soldier, the other general or a cannon can capture a general, so keeping yours while taking theirs is most of the game.':
+    '200 盘引擎对局里有 94% 有将被吃，而先失将的一方在分出胜负的对局中输了 87%。只有卒、对方的将或炮能吃将，所以保住自己的将、吃掉对方的将，就是这个游戏的大半。',
   'Does the first player have an advantage in banqi?': '暗棋先手有优势吗？',
-  'A small one at most. In 200 engine games under the Taiwanese competition rules, the first player won 53% of the decided games, within four points of a coin flip, and the colour handed over by the first flip made no difference.':
-    '最多只有一点点。按台湾比赛规则的 200 盘引擎对局里，先手在分出胜负的对局赢了 53%，离掷硬币不到四个百分点，而第一翻给的颜色没有差别。',
+  'No advantage large enough for 200 engine games to detect. The first player won 53% of the decided games, within four points of a coin flip, and the colour handed over by the first flip made no difference.':
+    '没有大到 200 盘引擎对局量得出来的优势。先手在分出胜负的对局赢了 53%，离掷硬币不到四个百分点，而第一翻给的颜色没有差别。',
   'How long is a game of banqi?': '一盘暗棋要下多久？',
   'About 75 moves per side in the median engine game, with half of all games between 60 and 87 moves. The shortest of 200 was 36 moves. Draws run longer than wins, 88 moves against 71.':
     '引擎对局的中位数大约是各 75 回合，一半的对局落在 60 到 87 回合之间。200 盘里最短的是 36 回合。和棋比胜负局长，88 回合对 71 回合。',
   'How often does banqi end in a draw?': '暗棋多常和棋？',
-  'One game in six between two copies of the same engine, and every draw came from the forty-ply no-progress rule rather than repetition. Human games, where won positions get converted and generals get trapped, are likely to draw less often.':
-    '同一个引擎自我对弈是每六盘一盘，而且每一盘和棋都来自 40 步无进展的规则，不是重复局面。人的对局里赢棋会被收下、将会被围死，和棋应该会更少。',
-  'How important is the general in banqi?': '将在暗棋里有多重要？',
-  'A general was captured in 94% of 200 engine games, and the side that lost its general first lost 87% of the decided games. Only a soldier, the other general or a cannon can capture a general, so keeping yours while taking theirs is most of the game.':
-    '200 盘引擎对局里有 94% 有将被吃，而先失将的一方在分出胜负的对局中输了 87%。只有卒、对方的将或炮能吃将，所以保住自己的将、吃掉对方的将，就是这个游戏的大半。',
+  'One game in six when this engine plays itself, and every one of those came from the forty-ply no-progress rule rather than repetition. That rate says as much about the engine, which struggles to convert won positions, as about the game; human games are likely to draw less often.':
+    '这个引擎自我对弈是每六盘一盘，而且每一盘和棋都来自 40 步无进展的规则，不是重复局面。这个比率讲的既是这个引擎不擅长把赢棋收下来，也是这个游戏本身；人的对局和棋应该会更少。',
   'Play banqi': '来下暗棋',
   'The engine in these games takes the other seat the moment you open the board, and every finished game gets the review that separates your decisions from your tiles.':
     '这些对局里的引擎，你一打开棋盘它就坐到对面；每一盘下完的棋都有一份复盘，把你的决定和你翻到的子分开。',
@@ -5224,79 +5221,76 @@ const ZH_HANT: Record<string, string> = {
     '不能。它收到的棋盤和你看到的一樣全是暗子，而且發牌結果沒有任何一方知道：你不知道，引擎不知道，對手也不知道。',
   // banqi-statistics (2026-09-22): Taiwanese reader; 砲 / 覆盤 / 回合 for a full move, 步 for a ply as on the rules page.
   'Banqi by the Numbers': '用數字看暗棋',
-  'Banqi Statistics: First-Player Advantage, Draws and Game Length in 200 Engine Games':
-    '暗棋統計：200 盤引擎對局裡的先手優勢、和棋率與棋局長度',
-  'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. The first player won 53% of the decided games, one game in six was a draw, a general fell in 94 games of 100, and the side that lost its general first lost 87% of the time.':
-    'MistyBanqi 依台灣比賽規則自我對弈 200 盤，每步搜尋一千萬個節點。分出勝負的棋局裡先手贏了 53%，每六盤有一盤和棋，每 100 盤有 94 盤有將被吃掉，而先失將的一方有 87% 輸掉那盤棋。',
-  'Banqi players who want numbers behind the questions every table argues about: whether flipping first is an advantage, how long a game runs, how often it is a draw, and what losing the general costs.':
-    '想要數字來回答每張棋桌都在爭論的問題的暗棋玩家：先翻是不是優勢、一盤棋多長、多常和棋、失將要付出什麼代價。',
-  'Banqi has no game database. Xiangqi has a century of recorded master games and chess has hundreds of millions; banqi is played in parks and on phones, and the games are gone when the tiles go back in the box. So the questions every table argues about have no numbers behind them. Does flipping first help? How long is a game? How often is it a draw? What does losing the general cost?':
-    '暗棋沒有棋譜資料庫。象棋有上百年的名手對局紀錄，西洋棋有幾億盤；暗棋是在公園和手機上下的，棋子收回盒子，那盤棋就沒了。所以每張棋桌都在爭論的那些問題，背後沒有任何數字。先翻有利嗎？一盤棋多長？多常和棋？失將要付出什麼代價？',
-  'These are the numbers from 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays: one flip or one move a turn, the cannon jumping one screen to capture, forty plies without a flip or a capture a draw, a position repeated three times a draw. Every game is a fresh random deal. The first player flips a tile and takes its colour, so red and black are decided by that flip. Both seats are the same engine at the same search, which means any edge in the results belongs to the seat, not to a player. Engine games are not park games, and the last section says what that changes. But 200 of them put an error bar on each answer, which is more than banqi has had.':
-    '這些數字來自 [MistyBanqi](/blog/mistybanqi) 自我對弈的 200 盤棋，每步搜尋一千萬個節點，採用本站的[台灣比賽規則](/rules/banqi)：一回合翻一顆子或走一步，砲隔一子跳吃，40 步沒有翻子也沒有吃子判和，同一局面重複三次判和。每一盤都是重新隨機發子。先手翻開一顆子就拿那顆子的顏色，所以誰紅誰黑由第一翻決定。兩邊坐的是同一個引擎、同樣的搜尋量，所以結果裡的任何優勢都屬於座位，不屬於棋手。引擎的棋不是公園的棋，最後一節會說這改變了什麼。但 200 盤足以給每個答案標上誤差範圍，這已經比暗棋以前有過的多。',
+  'Banqi Statistics: 200 Engine Games on Leads, Generals, Draws and Length':
+    '暗棋統計：200 盤引擎對局裡的領先、將、和棋與長度',
+  'MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. The material leader stopped changing at move 13 of a median 71, the side that lost its general first lost 87% of the time, and flipping first was worth nothing this sample could measure.':
+    'MistyBanqi 依台灣比賽規則自我對弈 200 盤，每步搜尋一千萬個節點。子力領先方在中位數 71 回合的棋局裡，第 13 回合之後就不再改變；先失將的一方有 87% 輸掉那盤棋；而先翻的價值，這個樣本量不出來。',
+  'Banqi players who want numbers behind the questions every table argues about: when a game is actually decided, what losing the general costs, whether flipping first is an advantage, and how often it ends in a draw.':
+    '想要數字來回答每張棋桌都在爭論的問題的暗棋玩家：一盤棋什麼時候就定了、失將要付出什麼代價、先翻是不是優勢、多常和棋。',
+  'Banqi has no game database. Xiangqi has a century of recorded master games and chess has hundreds of millions; banqi is played in parks and on phones, and the games are gone when the tiles go back in the box. So the questions every table argues about have no numbers behind them. When is a game actually decided? What does losing the general cost? Does flipping first help? How often is it a draw?':
+    '暗棋沒有棋譜資料庫。象棋有上百年的名手對局紀錄，西洋棋有幾億盤；暗棋是在公園和手機上下的，棋子收回盒子，那盤棋就沒了。所以每張棋桌都在爭論的那些問題，背後沒有任何數字。一盤棋到底什麼時候就定了？失將要付出什麼代價？先翻有利嗎？多常和棋？',
+  'These are the numbers from 200 games of [MistyBanqi](/blog/mistybanqi) against itself, ten million nodes a move, under the [Taiwanese competition rules](/rules/banqi) this site plays: one flip or one move a turn, the cannon jumping one screen to capture, forty plies without a flip or a capture a draw, a position repeated three times a draw. Every game is a fresh random deal, and the first player flips a tile and takes its colour, so red and black are decided by that flip. Both seats are the same engine at the same search, which means any edge in the results belongs to the seat, not to a player.':
+    '這些數字來自 [MistyBanqi](/blog/mistybanqi) 自我對弈的 200 盤棋，每步搜尋一千萬個節點，採用本站的[台灣比賽規則](/rules/banqi)：一回合翻一顆子或走一步，砲隔一子跳吃，40 步沒有翻子也沒有吃子判和，同一局面重複三次判和。每一盤都是重新隨機發子，先手翻開一顆子就拿那顆子的顏色，所以誰紅誰黑由第一翻決定。兩邊坐的是同一個引擎、同樣的搜尋量，所以結果裡的任何優勢都屬於座位，不屬於棋手。',
+  '200 games, MistyBanqi against itself at 10M nodes': '200 盤，MistyBanqi 每步 10M 節點自我對弈',
+  decided: '分出勝負',
+  drawn: '和棋',
+  'median length': '長度中位數',
+  '75 moves a side': '每方 75 回合',
+  'median captures': '吃子中位數',
+  '27 of 32 pieces': '32 顆裡的 27 顆',
+  'first capture': '第一次吃子',
+  'move 3 in the median game': '中位數棋局的第 3 回合',
+  'a general captured': '有將被吃',
+  '188 games (94%)': '188 盤（94%）',
+  'first player won, of decided games': '先手在分出勝負的棋局中獲勝',
+  '89 of 168 (53%)': '168 盤中的 89 盤（53%）',
   'One of [twenty games](/study/FsA5sowX) from the same engine at the same settings, kept as a study. Step through with the arrows; a tile nobody has flipped stays face-down.':
     '同一個引擎、同樣設定下的[二十盤棋](/study/FsA5sowX)之一，存成一份研究。用箭頭一步步看；沒人翻過的子保持蓋著。',
-  'The first player wins 53% of decided games': '分出勝負的棋局裡，先手贏 53%',
-  'Of the 168 games that ended in a win, the first player took 89: 53%, give or take four points. Counting draws as half a point each, the first seat scored 52.5% over all 200. So flipping first is somewhere between a coin flip and a modest edge. Two hundred games rule out a large first-move advantage; they cannot rule out a small one.':
-    '分出勝負的 168 盤裡，先手拿下 89 盤：53%，上下四個百分點。把和棋各算半分，先手在全部 200 盤的得分率是 52.5%。所以先翻大概介於擲硬幣和小幅優勢之間。200 盤能排除先手有大優勢，排除不了小優勢。',
-  'The colour the first flip hands you makes no difference either. The deal gave the first player red in exactly 100 games and black in 100, and the first seat won 45 of 80 decided games as red and 44 of 88 as black.':
-    '第一翻給你的顏色也沒有差別。發子讓先手剛好 100 盤拿紅、100 盤拿黑；先手拿紅時在分出勝負的 80 盤裡贏 45 盤，拿黑時 88 盤裡贏 44 盤。',
-  'Nor does the rank of that first tile, as far as this sample can see. Cut 200 games seven ways and each rank is left with a dozen or two, and the error bars swallow every difference.':
-    '第一顆子的大小也一樣，至少這個樣本看不出差別。把 200 盤切成七種，每種只剩十幾二十盤，誤差範圍把所有差異都吞掉了。',
-  'first tile flipped': '第一顆翻開的子',
-  games: '盤數',
-  'first player won (decided games)': '先手贏（分出勝負的棋局）',
-  rate: '勝率',
-  general: '將',
-  advisor: '士',
-  elephant: '象',
-  chariot: '車',
-  horse: '馬',
-  cannon: '砲',
-  soldier: '卒',
-  '8 of 12': '12 盤中 8 盤',
-  '11 of 23': '23 盤中 11 盤',
-  '15 of 24': '24 盤中 15 盤',
-  '16 of 28': '28 盤中 16 盤',
-  '1 of 10': '10 盤中 1 盤',
-  '22 of 43': '43 盤中 22 盤',
-  'First seat win rate in decided games by the rank of the first tile flipped, 200 games. The ± is one standard error.':
-    '依第一顆翻開的子的大小，先手在分出勝負棋局中的勝率，共 200 盤。± 是一個標準誤。',
-  'A general first won eight of twelve and a horse first won one of ten. Both are what a small sample does when you slice it: a dozen games with a ten-point error bar. The reading that survives is that no rank moved the win rate by more than the noise. The first flip decides your colour, and the colour does not matter.':
-    '第一翻翻到將的十二盤贏了八盤，翻到馬的十盤只贏一盤。這兩個都是小樣本切開之後會出現的東西：十來盤棋，誤差十個百分點。站得住的結論是，沒有哪一種子把勝率推得超出雜訊。第一翻決定你的顏色，而顏色不重要。',
-  'A general falls in 94 games of 100': '每 100 盤有 94 盤有將被吃',
+  'The lead stops changing at move 13 of 71': '領先在 71 回合的棋局裡，第 13 回合之後就不再改變',
+  'Count captured material on a fixed scale (general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2) and the leader settles early. In the games that were won, the winner took the lead for the last time at move 13 of a median 71, and in 46% of them by move 10. Four fifths of the average game is played after the last time the lead changed hands.':
+    '用固定的分值計算被吃的子力（將 12、士 7、象和砲 6、車 5、馬 4、卒 2），領先方很早就定下來。在分出勝負的棋局裡，贏家最後一次取得領先是在中位數 71 回合棋局的第 13 回合，其中 46% 在第 10 回合以前。平均一盤棋有五分之四，是在領先最後一次易手之後才下的。',
+  'The games are not quiet. The first capture lands at move 3, the median game trades 27 of the 32 pieces, and the lead changes hands twice before it settles. But in a quarter of the 200 it never changed at all: whoever drew blood first held the advantage to the end. One drawn game swung twelve times, which is what a game with no winner looks like from this angle.':
+    '這些棋並不平靜。第一次吃子在第 3 回合，中位數的棋局換掉 32 顆子裡的 27 顆，領先在定下來之前易手兩次。但 200 盤裡有四分之一從頭到尾沒有易手過：先見血的一方一路領先到終局。有一盤和棋擺盪了十二次，那就是從這個角度看，沒有贏家的棋長什麼樣子。',
+  'Part of this is definitional. A banqi game ends when a side has nothing left to move, and that side is usually the one that has been losing material, so the winner leading at the end is close to a tautology. The timing is not. The decision happens in the first fifth of the game, which is exactly where the flips are: a quarter of the tiles are still face-down at move 13 in the median game. A chess-style review would credit the winner for what was often a good bag, and the [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.':
+    '這裡有一部分是定義使然。暗棋是一方無子可動就結束，而那一方通常就是一路在掉子力的那方，所以贏家在終局領先幾乎是套套邏輯。時間點則不是。勝負在前五分之一就定了，而那正是翻子集中的地方：中位數的棋局到第 13 回合，還有四分之一的子蓋著。照西洋棋那套覆盤，贏家常常會因為運氣好的一袋子被記成一功，[完局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和棋子，正是為了這件事。',
+  'Losing the general first loses the game 87% of the time': '先失將的一方，有 87% 輸掉那盤棋',
   'A general was captured in 188 of the 200 games, and both generals in 46. The first one fell at move 24 in the median game; a quarter of the time by move 12, a quarter of the time after move 46. Only twelve games ended with both generals still standing, and eleven of those were draws.':
     '200 盤裡有 188 盤有將被吃掉，46 盤兩個將都被吃。中位數的那盤棋，第一個將在第 24 回合倒下；四分之一的棋局在第 12 回合前，四分之一在第 46 回合後。只有十二盤結束時兩個將都還在，其中十一盤是和棋。',
-  'Losing yours first is close to losing the game. In the 167 decided games where a general was taken, the side that lost its general first lost 146 of them: 87%, give or take three points. The general tops the ladder, and only a soldier, the other general or a cannon’s jump can take it, so the side that keeps its general keeps the one piece the other side can hardly answer. In these games the engine almost never recovered from giving that up.':
-    '先失將，離輸棋就不遠了。有將被吃且分出勝負的 167 盤裡，先失將的一方輸了 146 盤：87%，上下三個百分點。將在大小順序的頂端，只有卒、對方的將或砲的跳吃能拿下它，所以保住將的一方就握有對方幾乎無法應付的那顆子。在這些棋局裡，引擎把將送掉之後幾乎沒有翻盤過。',
-  'One game in six is a draw, and every draw is on the clock':
-    '每六盤有一盤和棋，而且全都是計數判和',
-  'Thirty-two of the 200 games were drawn, 16%. Thirty-one of them ran forty plies without a flip or a capture and the clock ended them. The last was still going at 150 moves and was stopped. Not one game repeated a position three times, so the repetition rule never fired at this search depth.':
-    '200 盤裡有 32 盤和棋，16%。其中 31 盤是 40 步沒有翻子也沒有吃子，被計數判和。剩下那盤下到 150 回合還沒完，被中止。沒有任何一盤重複同一局面三次，所以在這個搜尋深度下，重複判和的規則一次都沒觸發。',
-  'Draws are the long games: 88 moves in the median draw against 71 in the median win. And fourteen of the 32 passed through a position where one side was up twenty points or more, a general and a chariot of material. That is the [blind spot](/blog/mistybanqi) MistyBanqi is known for. Nothing in its evaluation rewards finishing a won game over holding what it has, so a winning position can shuffle until the forty-ply clock runs out. Read 16% as this engine’s draw rate under these rules, and as a ceiling for the game itself: a player who converts what this engine drifts on would draw less.':
-    '和棋都是長棋：和棋的中位數是 88 回合，勝負局是 71 回合。而且 32 盤裡有 14 盤曾經走到一方領先二十分以上的局面，相當於一個將加一個車的子力。這就是 MistyBanqi 出了名的[盲點](/blog/mistybanqi)。它的評估函數裡沒有任何一項獎勵把贏棋收官、而不是守著手上的子力，所以贏定的局面可能一直磨到 40 步計數用完。把 16% 當成這個引擎在這套規則下的和棋率，也當成這個遊戲本身的上限：能把引擎磨掉的優勢兌現的棋手，和棋會更少。',
-  'The lead is taken by move 13 and kept': '第 13 回合就取得領先，然後一路保持',
-  'Material changed hands early and often. The first capture came at move 3 in the median game and never later than move 9. All 32 tiles were turned in 198 of the 200 games, and the median game saw 27 captures, which is 27 of the 32 pieces gone. Counting captured material on a fixed scale (general 12, advisor 7, elephant and cannon 6, chariot 5, horse 4, soldier 2), the lead changed hands twice in the median game and never in fifty of them. One draw swung twelve times.':
-    '子力交換得又早又頻繁。中位數的棋局第一次吃子在第 3 回合，最晚也不超過第 9 回合。200 盤裡有 198 盤把 32 顆子全部翻開，中位數的棋局吃了 27 次子，也就是 32 顆子裡有 27 顆離開棋盤。用固定的分值計算被吃的子力（將 12、士 7、象和砲 6、車 5、馬 4、卒 2），中位數的棋局領先方換了兩次，有五十盤從頭到尾沒換過。有一盤和棋換了十二次。',
-  'In the games that were won, the winner took the material lead for the last time at move 13 of a median 71, and in 46% of them by move 10. From there the lead was held to the end in every one of the 168. Most of a banqi game, counted in moves, is the leader converting a lead it already holds, and the swing that decides it happens in the first fifth. That is also where the flips are, which is why a chess-style review would credit the winner for what was often a good draw. The [review on finished games](/blog/skill-vs-luck) splits each flip into the decision and the tile for exactly this reason.':
-    '在分出勝負的棋局裡，贏家最後一次取得子力領先是在中位數 71 回合中的第 13 回合，其中 46% 在第 10 回合以前。從那之後，168 盤每一盤的領先都保持到終局。以回合數計，一盤暗棋大部分的時間是領先方在兌現已經到手的優勢，決定勝負的那次翻轉發生在前五分之一。翻子也集中在那裡，所以照西洋棋那套覆盤，贏家常常會因為運氣好的翻子被記成一功。[完局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和棋子，正是為了這件事。',
+  'In the 167 decided games where a general was taken, the side that lost its general first lost 146 of them: 87%, give or take three points. The general tops the ladder, and only a soldier, the other general or a cannon’s jump can take it, so the side that keeps its general keeps the one piece the other side can hardly answer. It is worth twelve points on the scale above against seven for the next piece down, which is usually enough to set the lead the section above says never comes back.':
+    '有將被吃且分出勝負的 167 盤裡，先失將的一方輸了 146 盤：87%，上下三個百分點。將在大小順序的頂端，只有卒、對方的將或砲的跳吃能拿下它，所以保住將的一方就握有對方幾乎無法應付的那顆子。它在上面那套分值裡值十二分，下一級只值七分，通常足以造出上一節說的那種不再回頭的領先。',
+  'Flipping first is worth nothing this sample can measure': '先翻的價值，這個樣本量不出來',
+  'Of the 168 games that ended in a win, the first player took 89: 53%, give or take four points. Counting draws as half a point each, the first seat scored 52.5% over all 200. Two hundred games rule out a large first-move advantage and cannot rule out a small one, so the answer to the oldest argument at the table is that if flipping first helps, it helps by less than this.':
+    '分出勝負的 168 盤裡，先手拿下 89 盤：53%，上下四個百分點。把和棋各算半分，先手在全部 200 盤的得分率是 52.5%。200 盤能排除先手有大優勢，排除不了小優勢，所以對棋桌上那個最老的爭論，答案是：先翻就算有用，也比這個幅度更小。',
+  'The colour that first flip hands you makes no difference either. The deal gave the first player red in exactly 100 games and black in 100, and the first seat won 45 of 80 decided games as red and 44 of 88 as black.':
+    '第一翻給你的顏色也沒有差別。發子讓先手剛好 100 盤拿紅、100 盤拿黑；先手拿紅時在分出勝負的 80 盤裡贏 45 盤，拿黑時 88 盤裡贏 44 盤。',
+  'Nor, as far as this sample can see, does the rank of that first tile. Split 200 games seven ways and each rank keeps a dozen or two: a general first won eight of twelve and a horse first won one of ten, which is what small samples do rather than a finding about horses. Telling a five-point effect per rank apart from noise would take several thousand games, and this is 200.':
+    '第一顆子的大小也一樣，至少這個樣本看不出來。把 200 盤切成七種，每種只剩十幾二十盤：第一翻翻到將的十二盤贏了八盤，翻到馬的十盤只贏一盤，這是小樣本切開之後會有的樣子，不是關於馬的發現。要把每種子五個百分點的差別和雜訊分開，得下好幾千盤，而這裡是 200 盤。',
+  'One game in six is a draw, and the engine causes most of them':
+    '每六盤有一盤和棋，而且多半是引擎造成的',
+  'Thirty-two of the 200 games were drawn, 16%. Thirty-one of them ran forty plies without a flip or a capture and the clock ended them; the last was still going at 150 moves and was stopped. Not one game repeated a position three times, so the repetition rule never fired at this search depth.':
+    '200 盤裡有 32 盤和棋，16%。其中 31 盤是 40 步沒有翻子也沒有吃子，被計數判和；剩下那盤下到 150 回合還沒完，被中止。沒有任何一盤重複同一局面三次，所以在這個搜尋深度下，重複判和的規則一次都沒觸發。',
+  'Read that 16% as a fact about MistyBanqi before reading it as a fact about banqi. Fourteen of the 32 draws passed through a position where one side was up twenty points or more, a general and a chariot of material, and that is the engine’s [known blind spot](/blog/mistybanqi): nothing in its evaluation rewards finishing a won game over holding what it has, so a winning position can shuffle until the clock runs out. Draws are also the long games, 88 moves in the median draw against 71 in the median win, which is what shuffling looks like in the length data. A player who converts what this engine drifts on would draw less often than one game in six.':
+    '先把 16% 當成關於 MistyBanqi 的事實，再當成關於暗棋的事實。32 盤和棋裡有 14 盤曾經走到一方領先二十分以上的局面，相當於一個將加一個車的子力，而這正是這個引擎[出了名的盲點](/blog/mistybanqi)：它的評估函數裡沒有任何一項獎勵把贏棋收官、而不是守著手上的子力，所以贏定的局面可能一直磨到計數用完。和棋也都是長棋，和棋中位數 88 回合對勝負局的 71 回合，那就是磨棋在長度數據裡的樣子。能把這個引擎磨掉的優勢兌現的棋手，和棋會少於六盤一盤。',
   'What engine games leave out': '引擎對局沒說的事',
-  'Two hundred games of one engine against itself measure that engine under these rules, not banqi in a park. The first-player and first-tile numbers should carry over, because they come from the deal and the rules rather than from anyone’s style. The general and the draw numbers carry over less. People lose generals to traps an engine at ten million nodes does not walk into, and people convert won games that this engine shuffles into draws, so a human table probably sees more decisive games and earlier generals than these. The same engine has played [fifty-two games against people](/blog/skill-vs-luck) on this site, and that post has the human side of the picture.':
-    '一個引擎自我對弈 200 盤，量到的是這個引擎在這套規則下的表現，不是公園裡的暗棋。先手和第一顆子的數字應該可以照搬，因為它們來自發子和規則，不是誰的棋風。將和和棋的數字就沒那麼能照搬。人會被引擎在一千萬節點下不會踩的陷阱吃掉將，人也會把這個引擎磨成和棋的贏棋收下來，所以人的棋桌上大概會有更多分出勝負的棋局，將也倒得更早。同一個引擎在本站[跟人下過五十二盤](/blog/skill-vs-luck)，那篇文章有人這一邊的樣子。',
+  'Two hundred games of one engine against itself measure that engine under these rules, not banqi in a park. The first-player and first-tile numbers should carry over, because they come from the deal and the rules rather than from anyone’s style. The rest carries over less. People lose generals to traps an engine searching ten million nodes does not walk into, people convert won games that this engine shuffles away, and two players of unequal strength settle games earlier than two copies of one program. The same engine has played [fifty-two games against people](/blog/skill-vs-luck) on this site, where the humans won 14, lost 33 and drew 5.':
+    '一個引擎自我對弈 200 盤，量到的是這個引擎在這套規則下的表現，不是公園裡的暗棋。先手和第一顆子的數字應該可以照搬，因為它們來自發子和規則，不是誰的棋風。其餘的就沒那麼能照搬。人會被引擎搜尋一千萬節點時不會踩的陷阱吃掉將，人會把這個引擎磨掉的贏棋收下來，實力不對等的兩個人也比同一個程式的兩份複本更早分出勝負。同一個引擎在本站[跟人下過五十二盤](/blog/skill-vs-luck)，人這邊 14 勝 33 負 5 和。',
   'The rules matter too. Chain captures, the straight-charging chariot and the cannon that jumps to empty squares are park rules, and each would change the capture counts and the draw rate. These 200 games follow the competition ladder on the [rules page](/rules/banqi) and nothing else.':
     '規則也有影響。連吃、車直衝、砲翻山跳到空格，都是公園規則，每一條都會改變吃子數和和棋率。這 200 盤只照[規則頁](/rules/banqi)上的比賽大小順序下，沒有別的。',
+  'When is a banqi game decided?': '暗棋一盤棋什麼時候就定了？',
+  'Earlier than it looks. In 200 engine games the winner took the material lead for the last time at move 13 of a median 71-move game, and in a quarter of the games the leader never changed at all.':
+    '比看起來早。200 盤引擎對局裡，贏家最後一次取得子力領先是在中位數 71 回合棋局的第 13 回合，而且有四分之一的棋局，領先方從頭到尾沒變過。',
+  'How important is the general in banqi?': '將在暗棋裡有多重要？',
+  'In 200 engine games a general was captured in 94% of them, and the side that lost its general first lost 87% of the decided games. Only a soldier, the other general or a cannon can capture a general, so keeping yours while taking theirs is most of the game.':
+    '200 盤引擎對局裡有 94% 有將被吃，而先失將的一方在分出勝負的棋局中輸了 87%。只有卒、對方的將或砲能吃將，所以保住自己的將、吃掉對方的將，就是這個遊戲的大半。',
   'Does the first player have an advantage in banqi?': '暗棋先手有優勢嗎？',
-  'A small one at most. In 200 engine games under the Taiwanese competition rules, the first player won 53% of the decided games, within four points of a coin flip, and the colour handed over by the first flip made no difference.':
-    '最多只有一點點。依台灣比賽規則的 200 盤引擎對局裡，先手在分出勝負的棋局贏了 53%，離擲硬幣不到四個百分點，而第一翻給的顏色沒有差別。',
+  'No advantage large enough for 200 engine games to detect. The first player won 53% of the decided games, within four points of a coin flip, and the colour handed over by the first flip made no difference.':
+    '沒有大到 200 盤引擎對局量得出來的優勢。先手在分出勝負的棋局贏了 53%，離擲硬幣不到四個百分點，而第一翻給的顏色沒有差別。',
   'How long is a game of banqi?': '一盤暗棋要下多久？',
   'About 75 moves per side in the median engine game, with half of all games between 60 and 87 moves. The shortest of 200 was 36 moves. Draws run longer than wins, 88 moves against 71.':
     '引擎對局的中位數大約是各 75 回合，一半的棋局落在 60 到 87 回合之間。200 盤裡最短的是 36 回合。和棋比勝負局長，88 回合對 71 回合。',
   'How often does banqi end in a draw?': '暗棋多常和棋？',
-  'One game in six between two copies of the same engine, and every draw came from the forty-ply no-progress rule rather than repetition. Human games, where won positions get converted and generals get trapped, are likely to draw less often.':
-    '同一個引擎自我對弈是每六盤一盤，而且每一盤和棋都來自 40 步無進展的規則，不是重複局面。人的對局裡贏棋會被收下、將會被圍死，和棋應該會更少。',
-  'How important is the general in banqi?': '將在暗棋裡有多重要？',
-  'A general was captured in 94% of 200 engine games, and the side that lost its general first lost 87% of the decided games. Only a soldier, the other general or a cannon can capture a general, so keeping yours while taking theirs is most of the game.':
-    '200 盤引擎對局裡有 94% 有將被吃，而先失將的一方在分出勝負的棋局中輸了 87%。只有卒、對方的將或砲能吃將，所以保住自己的將、吃掉對方的將，就是這個遊戲的大半。',
+  'One game in six when this engine plays itself, and every one of those came from the forty-ply no-progress rule rather than repetition. That rate says as much about the engine, which struggles to convert won positions, as about the game; human games are likely to draw less often.':
+    '這個引擎自我對弈是每六盤一盤，而且每一盤和棋都來自 40 步無進展的規則，不是重複局面。這個比率講的既是這個引擎不擅長把贏棋收下來，也是這個遊戲本身；人的對局和棋應該會更少。',
   'Play banqi': '來下暗棋',
   'The engine in these games takes the other seat the moment you open the board, and every finished game gets the review that separates your decisions from your tiles.':
     '這些棋局裡的引擎，你一打開棋盤它就坐到對面；每一盤下完的棋都有一份覆盤，把你的決定和你翻到的子分開。',
