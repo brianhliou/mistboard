@@ -51,7 +51,7 @@ export const pikafishArticle: Article = {
     'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
   showSummaryOnPage: false,
   status: 'published',
-  publishedAt: '2026-09-20',
+  publishedAt: '2026-09-22',
   audience: 'Xiangqi players looking for somewhere to play or analyze with Pikafish.',
   thumbnail: { kind: 'svg', svg: PIKAFISH_THUMBNAIL },
   readNext: ['jieqi-platform', 'skill-vs-luck', 'jieqi-openings'],
@@ -85,7 +85,7 @@ export const pikafishArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'One click on the [Pikafish page](/bot/pikafish) starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.',
+            'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.',
         },
         {
           kind: 'paragraph',
@@ -112,7 +112,7 @@ export const pikafishArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'Every level is on the [bots page](/bots). Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.',
+            'Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.',
         },
       ],
     },
@@ -177,23 +177,6 @@ export const pikafishArticle: Article = {
               answer:
                 'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.',
             },
-          ],
-        },
-      ],
-    },
-    {
-      heading: 'Start playing',
-      blocks: [
-        {
-          kind: 'cta',
-          buttons: [
-            { label: 'Play Pikafish', href: '/bot/pikafish', emphasis: 'primary' },
-            {
-              label: 'Pick a level',
-              href: '/?play=computer&gameSpecId=xiangqi',
-              emphasis: 'secondary',
-            },
-            { label: 'Read the rules', href: '/rules/xiangqi', emphasis: 'secondary' },
           ],
         },
       ],

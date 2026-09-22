@@ -17,6 +17,7 @@ import {
   XQ_PRIMER_FACING_LEGAL,
   XQ_PRIMER_HORSE_BLOCKED,
 } from './articles/diagrams.js';
+import { articleIsLive } from './articles/publish-time.js';
 import {
   buildArticlePage,
   buildArticlesIndex,
@@ -993,13 +994,15 @@ describe('blog post read-next footer', () => {
     vi.unstubAllEnvs();
   });
 
+  // Live, not merely published: a scheduled post (dated ahead) is hidden in
+  // production and has no footer of its own until its moment.
   const publishedBlogSlugs = (): string[] => {
     vi.stubEnv('DEV', false);
     return articles
       .filter(
         (article) =>
           article.kind === 'article' &&
-          article.status === 'published' &&
+          articleIsLive(article) &&
           article.showInIndex !== false &&
           article.publisher === 'mistboard',
       )
@@ -1015,7 +1018,8 @@ describe('blog post read-next footer', () => {
   // date are unrelated variant write-ups names its own onward posts. Missing
   // slugs are skipped and the ring fills the rest, so the footer never shrinks.
   it('honours an author-chosen readNext list before the date ring', () => {
-    vi.stubEnv('DEV', false);
+    // DEV so the page renders while it is still scheduled.
+    vi.stubEnv('DEV', true);
     expect(footerLinks('pikafish')).toEqual([
       '/blog/jieqi-platform',
       '/blog/skill-vs-luck',

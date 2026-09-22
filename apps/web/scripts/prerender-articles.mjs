@@ -353,6 +353,9 @@ try {
   const { rulesSlugPublicSurfaceEnabled } = await server.ssrLoadModule(
     '/src/variant-public-surfaces.ts',
   );
+  const { articleIsLive, articleGoesLiveAt } = await server.ssrLoadModule(
+    '/src/articles/publish-time.ts',
+  );
 
   // en + the two zh scripts. urlPrefix feeds canonical/hreflang URLs; htmlLang
   // sets <html lang> and JSON-LD inLanguage; langDir is the output-path segment.
@@ -418,7 +421,29 @@ try {
     { en: 'jieqi', vi: 'luat-co-up' },
   ];
 
-  const published = articles.filter((a) => a.status === 'published');
+  // Scheduled posts (published, dated in the future at build time) are left
+  // out of every baked surface and listed in article-schedule.json instead, so
+  // the server can 404 them until their moment and stop serving the stale
+  // blog index once one goes live without a rebuild. publish-time.ts has the
+  // full story.
+  const builtAt = Date.now();
+  const scheduled = articles
+    .filter((a) => a.status === 'published' && !articleIsLive(a, builtAt))
+    .map((a) => ({
+      slug: a.slug,
+      liveAt: new Date(articleGoesLiveAt(a.publishedAt)).toISOString(),
+    }));
+  await fs.writeFile(
+    resolve(distDir, 'article-schedule.json'),
+    `${JSON.stringify({ builtAt: new Date(builtAt).toISOString(), scheduled }, null, 2)}\n`,
+    'utf-8',
+  );
+  if (scheduled.length > 0) {
+    console.log(
+      `scheduled, not prerendered: ${scheduled.map((s) => `${s.slug} (${s.liveAt})`).join(', ')}`,
+    );
+  }
+  const published = articles.filter((a) => articleIsLive(a, builtAt));
   const publishedBySlug = new Map(published.map((a) => [a.slug, a]));
   const crossLanguageAlternates = new Map();
   for (const pair of CROSS_LANGUAGE_PAIRS) {

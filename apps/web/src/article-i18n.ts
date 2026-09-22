@@ -2103,8 +2103,8 @@ const ZH_HANS: Record<string, string> = {
     '打开本地引擎后的分析棋盘：PikaJieQi 深度 18，每秒 335,000 个节点，三条候选变化各带一个评分，并在揭棋棋盘上分别画出箭头。',
   'Open the analysis board': '打开分析棋盘',
   'The engine': '关于引擎',
-  'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent.':
-    'PikaJieQi 是开源象棋引擎 [Pikafish](https://github.com/official-pikafish/Pikafish) 揭棋分支的一个分叉。经典的 alpha-beta 搜索，配一套手写评估函数，没有神经网络。让它成为揭棋引擎而不是象棋引擎的地方在于：它把每一个暗子当作一个概率节点，一个着法的分数，是那个点上所有仍然可能的子分别算分之后的平均。它自始至终只看得到那张暗着的棋盘，只要有任何一个隐藏身份漏进发给它的数据里，就会有一个测试让构建失败。',
+  'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent. [Pikafish itself](/blog/pikafish), at full strength for standard xiangqi, is on the site too.':
+    'PikaJieQi 是开源象棋引擎 [Pikafish](https://github.com/official-pikafish/Pikafish) 揭棋分支的一个分叉。经典的 alpha-beta 搜索，配一套手写评估函数，没有神经网络。让它成为揭棋引擎而不是象棋引擎的地方在于：它把每一个暗子当作一个概率节点，一个着法的分数，是那个点上所有仍然可能的子分别算分之后的平均。它自始至终只看得到那张暗着的棋盘，只要有任何一个隐藏身份漏进发给它的数据里，就会有一个测试让构建失败。标准象棋的[皮卡鱼本尊](/blog/pikafish)也在站内，全力运行。',
   "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network and jieqi has no good one: we trained a net and it never came out stronger than the hand-written evaluation, so this is an open problem rather than a chore nobody got round to. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).":
     '它是能被打败的，本页最上面那盘棋就是它输的。你可以在[这些引擎对局](/study/wd6c7qvG)里看它自己和自己下。现代 Pikafish 的力量几乎全在它的神经网络里，而揭棋没有一张好网络：我们训练过一张，始终没有强过手写的评估函数，所以这是一个还没解决的问题，不是没人愿意干的杂活。如果你会训练网络，或者对揭棋熟到能指出它判断错在哪里，那是我们最想要的帮助；公开挑战的条件和可下载的引擎在 [brianhliou.com/challenges](https://brianhliou.com/challenges/)。',
   'On Mistboard': '在 Mistboard 上',
@@ -2687,8 +2687,8 @@ const ZH_HANS: Record<string, string> = {
   'Play Pikafish': '与皮卡鱼对弈',
   'Play Pikafish at jieqi': '与皮卡鱼下揭棋',
   'Play against Pikafish': '人机对弈：挑战皮卡鱼',
-  'One click on the [Pikafish page](/bot/pikafish) starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
-    '在[皮卡鱼页面](/bot/pikafish)点一下就开局。系统给你分配颜色和时钟，对面是每步搜索三百万个局面的皮卡鱼。不需要账号。',
+  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
+    '点一下就开局。系统给你分配颜色和时钟，对面是每步搜索三百万个局面的皮卡鱼。不需要账号。',
   'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
     '每步三百万个局面很强。皮卡鱼之下还有八级 Fairy-Stockfish 人机阶梯：一级适合这周刚学会走子的人，八级已接近顶端。每一级都有实测等级分，由各级互相对弈得出，并以一个随机走合法着法的引擎定为 1500 分作基准。',
   Opponent: '对手',
@@ -2699,8 +2699,8 @@ const ZH_HANS: Record<string, string> = {
   Pikafish: '皮卡鱼',
   'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move.':
     '2026 年 9 月由站内引擎互弈实测。皮卡鱼为每步三百万个局面。',
-  'Every level is on the [bots page](/bots). Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.':
-    '所有级别都在[机器人页面](/bots)。在[对弈菜单](/?play=computer&gameSpecId=xiangqi)里选一个，赢几盘再往上爬。',
+  'Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.':
+    '在[对弈菜单](/?play=computer&gameSpecId=xiangqi)里选一个，赢几盘再往上爬。',
   'Pikafish at jieqi': '皮卡鱼下揭棋',
   '[Jieqi](/rules/jieqi) is xiangqi with every piece face-down. The engine here is PikaJieQi, [our build of Pikafish for the hidden game](https://github.com/brianhliou/pikafish-jieqi-wasm), and it gets the same face-down board you do: a test fails the build if a piece identity ever leaks into what it is sent. [Jieqi on Mistboard](/blog/jieqi-platform) covers the rest.':
     '[揭棋](/rules/jieqi)是把所有棋子翻面盖住的象棋。这里的引擎是 PikaJieQi，[我们为暗子棋局改造的皮卡鱼版本](https://github.com/brianhliou/pikafish-jieqi-wasm)。它看到的棋盘和你一样全是暗子：只要有任何棋子身份泄露给引擎，构建测试就会失败。其余细节见[Mistboard 上的揭棋](/blog/jieqi-platform)。',
@@ -2727,7 +2727,6 @@ const ZH_HANS: Record<string, string> = {
   'Does the jieqi engine see my hidden pieces?': '揭棋引擎能看到我的暗子吗？',
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     '不能。它收到的棋盘和你看到的一样全是暗子，而且发牌结果没有任何一方知道：你不知道，引擎不知道，对手也不知道。',
-  'Pick a level': '选择级别',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -4512,8 +4511,8 @@ const ZH_HANT: Record<string, string> = {
     '打開本機引擎後的分析棋盤：PikaJieQi 深度 18，每秒 335,000 個節點，三條候選變化各帶一個評分，並在揭棋棋盤上分別畫出箭頭。',
   'Open the analysis board': '打開分析棋盤',
   'The engine': '關於引擎',
-  'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent.':
-    'PikaJieQi 是開放原始碼象棋引擎 [Pikafish](https://github.com/official-pikafish/Pikafish) 揭棋分支的一個分支版本。經典的 alpha-beta 搜尋，配一套手寫評估函式，沒有類神經網路。讓它成為揭棋引擎而不是象棋引擎的地方在於：它把每一個暗子當作一個機率節點，一個著法的分數，是那個點上所有仍然可能的子分別算分之後的平均。它自始至終只看得到那張暗著的棋盤，只要有任何一個隱藏身分漏進發給它的資料裡，就會有一個測試讓建置失敗。',
+  'PikaJieQi is a fork of [Pikafish](https://github.com/official-pikafish/Pikafish), the open-source xiangqi engine, on its jieqi branch. Classical alpha-beta search with a hand-written evaluation and no neural network. What makes it a jieqi engine rather than a xiangqi one is that it treats every face-down piece as a chance node, scoring a move as the average over each piece that tile could still be. It only ever sees the face-down board, and a test fails the build if a hidden identity ever leaks into what it is sent. [Pikafish itself](/blog/pikafish), at full strength for standard xiangqi, is on the site too.':
+    'PikaJieQi 是開放原始碼象棋引擎 [Pikafish](https://github.com/official-pikafish/Pikafish) 揭棋分支的一個分支版本。經典的 alpha-beta 搜尋，配一套手寫評估函式，沒有類神經網路。讓它成為揭棋引擎而不是象棋引擎的地方在於：它把每一個暗子當作一個機率節點，一個著法的分數，是那個點上所有仍然可能的子分別算分之後的平均。它自始至終只看得到那張暗著的棋盤，只要有任何一個隱藏身分漏進發給它的資料裡，就會有一個測試讓建置失敗。標準象棋的[皮卡魚本尊](/blog/pikafish)也在站內，全力運行。',
   "It is beatable, and the game at the top of this page is one it lost. You can watch it play itself in [these engine games](/study/wd6c7qvG). Almost all of modern Pikafish's strength lives in its neural network and jieqi has no good one: we trained a net and it never came out stronger than the hand-written evaluation, so this is an open problem rather than a chore nobody got round to. If you train nets, or know jieqi well enough to say where its judgement goes wrong, that is the help we would most like; the terms of the open challenge, and the prebuilt engine to beat, are at [brianhliou.com/challenges](https://brianhliou.com/challenges/).":
     '它是能被打敗的，本頁最上面那盤棋就是它輸的。你可以在[這些引擎對局](/study/wd6c7qvG)裡看它自己和自己下。現代 Pikafish 的力量幾乎全在它的類神經網路裡，而揭棋沒有一張好網路：我們訓練過一張，始終沒有強過手寫的評估函式，所以這是一個還沒解決的問題，不是沒人願意幹的雜活。如果你會訓練網路，或者對揭棋熟到能指出它判斷錯在哪裡，那是我們最想要的幫助；公開挑戰的條件和可下載的引擎在 [brianhliou.com/challenges](https://brianhliou.com/challenges/)。',
   'On Mistboard': '在 Mistboard 上',
@@ -5168,8 +5167,8 @@ const ZH_HANT: Record<string, string> = {
   'Play Pikafish': '與皮卡魚對弈',
   'Play Pikafish at jieqi': '與皮卡魚下揭棋',
   'Play against Pikafish': '人機對弈：挑戰皮卡魚',
-  'One click on the [Pikafish page](/bot/pikafish) starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
-    '在[皮卡魚頁面](/bot/pikafish)點一下就開局。系統給你分配顏色和時鐘，對面是每步搜尋三百萬個局面的皮卡魚。不需要帳號。',
+  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
+    '點一下就開局。系統給你分配顏色和時鐘，對面是每步搜尋三百萬個局面的皮卡魚。不需要帳號。',
   'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
     '每步三百萬個局面很強。皮卡魚之下還有八級 Fairy-Stockfish 人機階梯：一級適合這週剛學會走子的人，八級已接近頂端。每一級都有實測等級分，由各級互相對弈得出，並以一個隨機走合法著法的引擎定為 1500 分作基準。',
   Opponent: '對手',
@@ -5180,8 +5179,8 @@ const ZH_HANT: Record<string, string> = {
   Pikafish: '皮卡魚',
   'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move.':
     '2026 年 9 月由站內引擎互弈實測。皮卡魚為每步三百萬個局面。',
-  'Every level is on the [bots page](/bots). Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.':
-    '所有等級都在[機器人頁面](/bots)。在[對弈選單](/?play=computer&gameSpecId=xiangqi)裡選一個，贏幾盤再往上爬。',
+  'Pick one from the [play menu](/?play=computer&gameSpecId=xiangqi), win a few games there, and move up.':
+    '在[對弈選單](/?play=computer&gameSpecId=xiangqi)裡選一個，贏幾盤再往上爬。',
   'Pikafish at jieqi': '皮卡魚下揭棋',
   '[Jieqi](/rules/jieqi) is xiangqi with every piece face-down. The engine here is PikaJieQi, [our build of Pikafish for the hidden game](https://github.com/brianhliou/pikafish-jieqi-wasm), and it gets the same face-down board you do: a test fails the build if a piece identity ever leaks into what it is sent. [Jieqi on Mistboard](/blog/jieqi-platform) covers the rest.':
     '[揭棋](/rules/jieqi)是把所有棋子翻面蓋住的象棋。這裡的引擎是 PikaJieQi，[我們為暗子棋局改造的皮卡魚版本](https://github.com/brianhliou/pikafish-jieqi-wasm)。它看到的棋盤和你一樣全是暗子：只要有任何棋子身分洩漏給引擎，建置測試就會失敗。其餘細節見[Mistboard 上的揭棋](/blog/jieqi-platform)。',
@@ -5208,7 +5207,6 @@ const ZH_HANT: Record<string, string> = {
   'Does the jieqi engine see my hidden pieces?': '揭棋引擎能看到我的暗子嗎？',
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     '不能。它收到的棋盤和你看到的一樣全是暗子，而且發牌結果沒有任何一方知道：你不知道，引擎不知道，對手也不知道。',
-  'Pick a level': '選擇等級',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

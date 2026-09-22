@@ -15,6 +15,7 @@ import {
   type Square,
 } from '@mistboard/game';
 import { track } from './analytics.js';
+import { articleIsLive } from './articles/publish-time.js';
 import { makeFigureZoomable } from './figure-lightbox.js';
 import './community-rail.css';
 import './articles.css';
@@ -112,9 +113,12 @@ export type ChromeNodes = {
 // URL access (the URL 404s). Dev shows everything so we can review outlines
 // and drafts locally before promoting them. Vite injects import.meta.env.DEV
 // as true in the dev server and false in the production build.
+//
+// A published article dated in the future is scheduled: hidden in production
+// until its live moment (articles/publish-time.ts), visible in dev for review.
 function isArticleVisibleInThisEnv(article: Article): boolean {
-  if (article.status === 'published') return true;
-  return import.meta.env.DEV;
+  if (import.meta.env.DEV) return true;
+  return articleIsLive(article);
 }
 
 function isArticleListedInThisEnv(article: Article): boolean {
