@@ -29,6 +29,10 @@ export type Announcement = {
   body?: string;
   href?: string;
   cta?: string; // inline link label on /feed; falls back to "Read more"
+  // Put this entry in the home article row beside the blog cards. Only for an
+  // entry with no article of its own: an entry linking /blog/<slug> would sit
+  // there twice, once as itself and once as the post (2026-09-22, two Pikafish
+  // cards on the homepage). announcement-links.test.ts holds the rule.
   showInHomeArticleWidget?: boolean;
 };
 
@@ -40,7 +44,6 @@ const baseAnnouncements: Announcement[] = [
     body: 'Pikafish is the strongest open-source xiangqi engine, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.',
     href: '/blog/pikafish',
     cta: 'Read the article',
-    showInHomeArticleWidget: true,
   },
   {
     date: '2026-09-21',

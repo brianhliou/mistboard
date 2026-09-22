@@ -44,6 +44,16 @@ describe('announcement links', () => {
     expect(dead, `announcements linking to hidden pages:\n${dead.join('\n')}`).toEqual([]);
   });
 
+  it('never puts an entry in the home article row beside its own article', () => {
+    // The row already lists published articles; an entry linking one renders a
+    // second card with the same title (2026-09-22, both Pikafish cards live).
+    const doubled = allAnnouncements()
+      .filter((entry) => entry.showInHomeArticleWidget === true)
+      .filter((entry) => /^\/blog\/[a-z0-9-]+$/.test(entry.href ?? ''))
+      .map((entry) => `${entry.date} "${entry.headline}" -> ${entry.href}`);
+    expect(doubled, `announcements doubling an article card:\n${doubled.join('\n')}`).toEqual([]);
+  });
+
   it('has article links to check, so the guard is not vacuous', () => {
     const checked = allAnnouncements().filter((e) => /^\/(blog|rules)\//.test(e.href ?? ''));
     expect(checked.length).toBeGreaterThan(0);
