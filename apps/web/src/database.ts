@@ -4,7 +4,8 @@
 // through to the variant's review route. Admin-gated by the
 // /api/admin/games/query endpoint (open in local dev). No nav entry.
 import './database.css';
-import { findTimeControl } from '@mistboard/game';
+import { findTimeControl, maybeGameSpecForId } from '@mistboard/game';
+import { isFlipSeatVariant } from './flip-seat-ink.js';
 import {
   type FeaturedGame,
   matchupLabel,
@@ -12,6 +13,7 @@ import {
   variantDisplayLabel,
 } from './game-display.js';
 import { buildNav } from './site-shell.js';
+import { brandsBlackAsBlue, seatColorWord } from './variant-seat-label.js';
 import { webVariantTenantForRoomId } from './variant-tenant/registry.js';
 
 type GameRow = FeaturedGame & {
@@ -100,7 +102,7 @@ export async function mountDatabase(root: HTMLElement): Promise<void> {
   shell.append(heading, sub, filtersHost, summaryHost, resultsHost);
   root.append(buildNav(), shell);
 
-  let filters = readFilters();
+  let filters = dropForeignResult(readFilters());
 
   const run = async (): Promise<void> => {
     writeFilters(filters);
@@ -116,12 +118,12 @@ export async function mountDatabase(root: HTMLElement): Promise<void> {
       return;
     }
     filtersHost.replaceChildren(buildFilterForm(filters, data.facets, applyFilters));
-    summaryHost.replaceChildren(buildSummary(data.aggregates));
+    summaryHost.replaceChildren(buildSummary(data.aggregates, filters.variant));
     resultsHost.replaceChildren(buildResults(data, applyFilters));
   };
 
   function applyFilters(next: Filters): void {
-    filters = next;
+    filters = dropForeignResult(next);
     void run();
   }
 
@@ -227,10 +229,7 @@ function buildFilterForm(
   ]);
   addSelect('result', 'Result', [
     { value: '', label: 'Any result' },
-    { value: 'white-wins', label: 'White wins' },
-    { value: 'black-wins', label: 'Black wins' },
-    { value: 'red-wins', label: 'Red wins' },
-    { value: 'draw', label: 'Draw' },
+    ...resultFilterOptions(filters.variant),
   ]);
   addSelect('termination', 'Termination', [
     { value: '', label: 'Any ending' },
@@ -302,7 +301,114 @@ function buildFilterForm(
   return form;
 }
 
-function buildSummary(aggregates: Aggregates): HTMLElement {
+export type WinSegment = {
+  label: string;
+  value: number;
+  cls: 'white' | 'black' | 'blue' | 'red' | 'draw' | 'decisive';
+};
+
+// The two seats a variant's results are keyed on, first mover first, or null
+// when the variant has no two-seat result (mahjong keys wins on the wind).
+// Mirrors matchupSeats in game-display.ts, which works from a game row; here
+// there is only the variant id, so the family decides.
+function resultSeatsForVariant(variant: string): readonly ['white' | 'red', 'black'] | null {
+  const family = maybeGameSpecForId(variant)?.family;
+  if (family === 'mahjong') return null;
+  if (family === 'xiangqi' || family === 'jungle') return ['red', 'black'];
+  return ['white', 'black'];
+}
+
+// What a seat is called on the summary and in the result filter. Flip variants
+// (banqi, jungle-flip) seat by move order, so 'red' there is the first-mover
+// slot, not an ink: the word must not claim a colour half the games did not have.
+function resultSeatLabel(variant: string, seat: 'white' | 'red' | 'black'): string {
+  if (isFlipSeatVariant(variant)) return seat === 'black' ? 'Second' : 'First';
+  return seatColorWord(variant, seat);
+}
+
+function seatSegmentClass(variant: string, seat: 'white' | 'red' | 'black'): WinSegment['cls'] {
+  if (seat === 'black' && brandsBlackAsBlue(variant)) return 'blue';
+  return seat;
+}
+
+// The win bar for a slice. A seat split ("White 15%, Black 50%") only means
+// something inside one variant: across the whole database chess-black and
+// xiangqi-black are different games added into one segment, and Red beside
+// White is a category error. So the mixed slice gets decisive vs draw, the one
+// quantity that is comparable across variants, and a single variant gets its
+// own two seats under the names that game uses.
+export function sliceWinSegments(
+  variant: string,
+  results: Aggregates['results'],
+  total: number,
+): { segments: WinSegment[]; note: string | null } {
+  const draws = results.draws;
+  const decisive = Math.max(0, total - draws);
+  const seats = variant ? resultSeatsForVariant(variant) : null;
+  if (!seats) {
+    return {
+      segments: [
+        { label: 'Decisive', value: decisive, cls: 'decisive' },
+        { label: 'Draw', value: draws, cls: 'draw' },
+      ],
+      note: variant
+        ? null
+        : 'Pick one variant for the seat split; seats mean different games here.',
+    };
+  }
+  const [first, second] = seats;
+  const firstWins = first === 'red' ? results.redWins : results.whiteWins;
+  return {
+    segments: [
+      {
+        label: resultSeatLabel(variant, first),
+        value: firstWins,
+        cls: seatSegmentClass(variant, first),
+      },
+      {
+        label: resultSeatLabel(variant, second),
+        value: results.blackWins,
+        cls: seatSegmentClass(variant, second),
+      },
+      { label: 'Draw', value: draws, cls: 'draw' },
+    ],
+    note: null,
+  };
+}
+
+// The result filter's options for the current variant: the same two seats the
+// bar shows, so "White wins" is never offered on a xiangqi slice. The mixed
+// slice keeps every value because each one is real somewhere in it.
+export function resultFilterOptions(variant: string): { value: string; label: string }[] {
+  const seats = variant ? resultSeatsForVariant(variant) : null;
+  if (!seats) {
+    const all = [
+      { value: 'white-wins', label: 'White wins' },
+      { value: 'black-wins', label: 'Black wins' },
+      { value: 'red-wins', label: 'Red wins' },
+    ];
+    // Mahjong has no seat result to filter on; only the draw survives.
+    const mixed = variant === '';
+    return [...(mixed ? all : []), { value: 'draw', label: 'Draw' }];
+  }
+  const [first, second] = seats;
+  return [
+    { value: `${first}-wins`, label: `${resultSeatLabel(variant, first)} wins` },
+    { value: `${second}-wins`, label: `${resultSeatLabel(variant, second)} wins` },
+    { value: 'draw', label: 'Draw' },
+  ];
+}
+
+// A result the chosen variant can never produce (white-wins on a xiangqi
+// slice, carried over from the form that offered it) would match nothing while
+// the narrowed select showed "Any result". Clear it so the URL and the form agree.
+export function dropForeignResult(filters: Filters): Filters {
+  if (!filters.result || !filters.variant) return filters;
+  const offered = resultFilterOptions(filters.variant).some((o) => o.value === filters.result);
+  return offered ? filters : { ...filters, result: '' };
+}
+
+function buildSummary(aggregates: Aggregates, variant: string): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'database-summary';
 
@@ -314,20 +420,14 @@ function buildSummary(aggregates: Aggregates): HTMLElement {
 
   if (total === 0) return wrap;
 
-  const { whiteWins, blackWins, redWins, draws } = aggregates.results;
+  const { segments, note } = sliceWinSegments(variant, aggregates.results, total);
   const bar = document.createElement('div');
   bar.className = 'database-winbar';
   bar.setAttribute('role', 'img');
   bar.setAttribute(
     'aria-label',
-    `White ${pct(whiteWins, total)}, Black ${pct(blackWins, total)}, Draw ${pct(draws, total)}`,
+    segments.map((segment) => `${segment.label} ${pct(segment.value, total)}`).join(', '),
   );
-  const segments: { label: string; value: number; cls: string }[] = [
-    { label: 'White', value: whiteWins, cls: 'white' },
-    { label: 'Black', value: blackWins, cls: 'black' },
-    { label: 'Draw', value: draws, cls: 'draw' },
-  ];
-  if (redWins > 0) segments.splice(2, 0, { label: 'Red', value: redWins, cls: 'red' });
   for (const segment of segments) {
     if (segment.value === 0) continue;
     const seg = document.createElement('div');
@@ -344,6 +444,12 @@ function buildSummary(aggregates: Aggregates): HTMLElement {
     const item = document.createElement('span');
     item.className = `database-winlegend-item database-winlegend-${segment.cls}`;
     item.textContent = `${segment.label} ${pct(segment.value, total)}`;
+    legend.append(item);
+  }
+  if (note) {
+    const item = document.createElement('span');
+    item.className = 'database-winlegend-note';
+    item.textContent = note;
     legend.append(item);
   }
   wrap.append(legend);

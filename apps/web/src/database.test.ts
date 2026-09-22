@@ -1,6 +1,12 @@
-import { XIANGQI_SPEC_ID } from '@mistboard/game';
+import { BANQI_SPEC_ID, JUNGLE_SPEC_ID, MAHJONG_SPEC_ID, XIANGQI_SPEC_ID } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
-import { databaseMatchupLabel, databaseReviewHref } from './database.js';
+import {
+  databaseMatchupLabel,
+  databaseReviewHref,
+  dropForeignResult,
+  resultFilterOptions,
+  sliceWinSegments,
+} from './database.js';
 import type { FeaturedGame } from './game-display.js';
 
 describe('database game rows', () => {
@@ -33,6 +39,96 @@ describe('database game rows', () => {
         variant: XIANGQI_SPEC_ID,
       }),
     ).toBe('Red vs Black');
+  });
+});
+
+describe('sliceWinSegments', () => {
+  // The prod read that prompted this: 2,586 games across every variant showed
+  // White 15% / Black 50% / Red 29%, the Black segment being chess-black and
+  // xiangqi-black added together. A mixed slice has no seat split.
+  const results = { whiteWins: 388, blackWins: 1293, redWins: 750, draws: 155 };
+
+  it('shows decisive vs draw for the mixed slice, with a note', () => {
+    const { segments, note } = sliceWinSegments('', results, 2586);
+    expect(segments.map((s) => [s.label, s.value, s.cls])).toEqual([
+      ['Decisive', 2431, 'decisive'],
+      ['Draw', 155, 'draw'],
+    ]);
+    expect(note).toMatch(/one variant/);
+  });
+
+  it('names xiangqi seats red and black, red first', () => {
+    const { segments, note } = sliceWinSegments(XIANGQI_SPEC_ID, results, 2586);
+    expect(segments.map((s) => [s.label, s.value, s.cls])).toEqual([
+      ['Red', 750, 'red'],
+      ['Black', 1293, 'black'],
+      ['Draw', 155, 'draw'],
+    ]);
+    expect(note).toBeNull();
+  });
+
+  it('names chess-family seats white and black', () => {
+    const { segments } = sliceWinSegments('fog', results, 2586);
+    expect(segments.map((s) => [s.label, s.cls])).toEqual([
+      ['White', 'white'],
+      ['Black', 'black'],
+      ['Draw', 'draw'],
+    ]);
+  });
+
+  it('brands the jungle dark seat Blue, word and swatch together', () => {
+    const { segments } = sliceWinSegments(JUNGLE_SPEC_ID, results, 2586);
+    expect(segments[1]).toMatchObject({ label: 'Blue', cls: 'blue' });
+  });
+
+  it('calls flip-variant seats First and Second, never a colour', () => {
+    const { segments } = sliceWinSegments(BANQI_SPEC_ID, results, 2586);
+    expect(segments.map((s) => s.label)).toEqual(['First', 'Second', 'Draw']);
+  });
+
+  it('has no seat split for mahjong and no note either', () => {
+    const { segments, note } = sliceWinSegments(MAHJONG_SPEC_ID, results, 2586);
+    expect(segments.map((s) => s.label)).toEqual(['Decisive', 'Draw']);
+    expect(note).toBeNull();
+  });
+});
+
+describe('result filter options follow the variant', () => {
+  it('offers every seat result on the mixed slice', () => {
+    expect(resultFilterOptions('').map((o) => o.value)).toEqual([
+      'white-wins',
+      'black-wins',
+      'red-wins',
+      'draw',
+    ]);
+  });
+
+  it('never offers White wins on a xiangqi slice', () => {
+    expect(resultFilterOptions(XIANGQI_SPEC_ID).map((o) => o.label)).toEqual([
+      'Red wins',
+      'Black wins',
+      'Draw',
+    ]);
+  });
+
+  it('drops a result the chosen variant cannot produce', () => {
+    const filters = {
+      variant: XIANGQI_SPEC_ID,
+      mode: '',
+      result: 'white-wins',
+      termination: '',
+      rated: '',
+      timeClass: '',
+      plyMin: '',
+      plyMax: '',
+      from: '',
+      to: '',
+      offset: 0,
+      limit: 50,
+    };
+    expect(dropForeignResult(filters).result).toBe('');
+    expect(dropForeignResult({ ...filters, result: 'red-wins' }).result).toBe('red-wins');
+    expect(dropForeignResult({ ...filters, variant: '' }).result).toBe('white-wins');
   });
 });
 

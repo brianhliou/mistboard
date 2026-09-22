@@ -143,6 +143,14 @@
 .database-winseg-red {
   background: #b03636;
 }
+/* Jungle brands its dark side Blue; same lifted value the eval bar uses. */
+.database-winseg-blue {
+  background: #34557a;
+}
+/* The mixed slice: wins of any seat, against draws. */
+.database-winseg-decisive {
+  background: var(--site-accent);
+}
 
 .database-winlegend {
   display: flex;
@@ -174,6 +182,16 @@
 }
 .database-winlegend-red::before {
   background: #b03636;
+}
+.database-winlegend-blue::before {
+  background: #34557a;
+}
+.database-winlegend-decisive::before {
+  background: var(--site-accent);
+}
+.database-winlegend-note {
+  flex-basis: 100%;
+  font-style: italic;
 }
 
 .database-length {
