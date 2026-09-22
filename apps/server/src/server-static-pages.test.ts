@@ -20,6 +20,7 @@ import {
   serveSitemap,
   serveSpaShellWithRoutePreloads,
   serveStudyPage,
+  studyChaptersAreListable,
 } from './server-static-pages.js';
 
 type ResponseCapture = {
@@ -1000,6 +1001,25 @@ test('serveStudyPage without persistence serves the plain shell (no meta leak, n
   assert.equal(response.status, 200);
   // Uninitialized persistence -> no study -> the generic shell title survives.
   assert.match(response.body, /<title>Mistboard<\/title>/);
+  // ...and because it does, the page must not be indexable. A study page that
+  // injects no meta of its own wears the home page's title, and Google had
+  // eleven chapters of an unlisted manual indexed under exactly that.
+  assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+});
+
+// Chapter permalinks are advertised per study, not per site: a study whose
+// chapters are numbered rather than named contributes its own URL and stops
+// there. Measured in Search Console before it was written down; the comment on
+// STUDIES_WITH_ENUMERATED_CHAPTERS carries the numbers.
+test('a study with enumerated chapters contributes no chapter URLs', () => {
+  // The engine match and the bulk position set: 344 chapter URLs, zero
+  // impressions in 90 days.
+  assert.equal(studyChaptersAreListable('0t8xpyv6'), false);
+  assert.equal(studyChaptersAreListable('ibFQtGAL'), false);
+  // Everything else, including the classical manuals whose compositions carry
+  // their own names, keeps its chapters.
+  assert.equal(studyChaptersAreListable('vQveCryp'), true);
+  assert.equal(studyChaptersAreListable('tOceiaI7'), true);
 });
 
 test('the /games database carries its own route meta and sitemap entry', async () => {

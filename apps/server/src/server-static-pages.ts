@@ -626,6 +626,15 @@ export async function serveStudyPage(params: {
       '<div id="app"></div>',
       `<div id="app">${renderStudyBody({ study, chapter, locale, localePath })}</div>`,
     );
+  } else {
+    // An unlisted study (or one that is gone) gets none of the above, so the
+    // shell keeps the HOME PAGE's title and description and is otherwise
+    // indexable. Google had eleven chapters of an unlisted manual in its index
+    // that way, all reading "Free Online Chinese Chess (Xiangqi) | Mistboard".
+    // Unlisted means anyone with the link, not anyone with a search box: the
+    // page still serves, it just stops advertising itself. `follow` because the
+    // links on it are ordinary site links.
+    html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
   }
 
   const preloadLinks = await routePreloadLinksForPath({
@@ -724,6 +733,30 @@ export async function servePrerenderedPage(params: {
   params.response.end(html);
 }
 
+// Studies whose chapters are machine-enumerated: a game number or a position
+// out of a bulk set, not a thing anyone types into a search box. Their study
+// page is still advertised and their chapters still serve, they are just not
+// listed one by one.
+//
+// Measured, not guessed. Over the 90 days to 2026-09-22, Search Console had
+// 160 chapter pages earning impressions; the teaching studies carried them
+// (basic endgames 38 pages/73 impressions, Every Xiangqi Champion 22/38, and
+// the Chinese variants outperformed the English), while these two studies had
+// 344 chapter URLs in the sitemap the whole time and earned zero between them.
+// The classical manuals stay listed: a composition has a name from a book and
+// is looked up by it.
+//
+// Add a study here when its chapters are numbered rather than named.
+const STUDIES_WITH_ENUMERATED_CHAPTERS: ReadonlySet<string> = new Set([
+  '0t8xpyv6', // KataGo-AnimalChess vs MistyJungle: 200 engine games
+  'ibFQtGAL', // The most played move is an inaccuracy: 144 opening positions
+]);
+
+/** Whether this study's chapters are worth a sitemap entry each. */
+export function studyChaptersAreListable(studyId: string): boolean {
+  return !STUDIES_WITH_ENUMERATED_CHAPTERS.has(studyId);
+}
+
 // Static, always-on public routes advertised in the sitemap. Every entry
 // (except '/', served as the static index itself) must be accepted by the SPA
 // fallback allowlist (server-policy.ts isClientRoute) and must not be a
@@ -811,7 +844,8 @@ export async function serveSitemap(params: {
   // (in-memory dev) lists none.
   //
   // Chapter permalinks are listed too, but only when the chapter carries enough
-  // of its own text to be worth a URL (chapterIsSubstantial). A classical manual
+  // of its own text to be worth a URL (chapterIsSubstantial) and the study is
+  // one whose chapters a person looks for by name (STUDIES_WITH_ENUMERATED_CHAPTERS). A classical manual
   // is a set of individually named, individually searched compositions, so its
   // chapters are article-shaped rather than puzzle-shaped; a one-ply chapter
   // with no commentary is not, and a sitemap full of those reads as thin. The
@@ -830,6 +864,7 @@ export async function serveSitemap(params: {
       for (const summary of studies) {
         const base = `/study/${encodeURIComponent(summary.id)}`;
         urls.push(...everyLocale(base));
+        if (!studyChaptersAreListable(summary.id)) continue;
         const full = await persistence.getStudyById(summary.id).catch(() => null);
         if (!full) continue;
         for (const chapter of [...full.chapters].sort((a, b) => a.ordinal - b.ordinal)) {

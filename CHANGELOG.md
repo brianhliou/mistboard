@@ -93,6 +93,8 @@ Conventions:
 
 ### Site
 
+- An unlisted study is no longer indexable: its page served the home page's title and description, and Google had eleven chapters of a manual still being verified in its index under that title (COMMITHASH)
+- The sitemap stops listing a chapter per game for the two studies whose chapters are numbered rather than named — an engine match and a bulk position set, 344 URLs that earned no impressions in ninety days; every study page and every named composition stays (COMMITHASH)
 - Chinese home pages at `/zh-hans` and `/zh-hant`: the same lobby baked in each script, with their own title, description and hreflang. The path used to answer with a browsable listing of the build directory, and the site had no Chinese URL for the page a Chinese search is most likely to want ([0dc7831c](https://github.com/brianhliou/mistboard/commit/0dc7831c))
 - The sitemap now names every localized page it has: both Chinese blog indexes and all three language variants of each study permalink, which the study pages had been advertising through hreflang while the sitemap listed only the English URL ([0dc7831c](https://github.com/brianhliou/mistboard/commit/0dc7831c))
 - A bot's page carries its own title and description instead of the homepage's, so a crawler following the Pikafish article's first link sees the bot ([9c12b7bc](https://github.com/brianhliou/mistboard/commit/9c12b7bc))
