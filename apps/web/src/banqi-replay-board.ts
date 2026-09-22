@@ -8,7 +8,7 @@ import {
   type BanqiGameState,
   type BanqiMove,
   type BanqiSquare,
-  banqiTruthView,
+  getBanqiPlayerView,
   parseBanqiFen,
 } from '@mistboard/game';
 import {
@@ -74,8 +74,15 @@ export function mountBanqiReplayBoard(
   host.replaceChildren(frame);
 
   let index = 0;
+  // The player view, not the truth view: a tile nobody has flipped yet is a
+  // face-down disc in a replay too, the way it was to the players. The truth
+  // view (every identity revealed) is the postgame's, for reading a finished
+  // game with the deal known.
   const paint = (): void => {
-    frame.innerHTML = renderBanqiBoardSvg(banqiTruthView(states[index]), perspective);
+    frame.innerHTML = renderBanqiBoardSvg(
+      getBanqiPlayerView(states[index], perspective),
+      perspective,
+    );
   };
   const render = (animateFrom?: number): void => {
     paint();

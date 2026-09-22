@@ -44,3 +44,22 @@ describe('banqi rules diagrams', () => {
     expect(screen.match(/<circle class="banqi-hint-capture"/g)?.length).toBe(1);
   });
 });
+
+describe('banqi replay board (the study embed)', () => {
+  it('keeps unflipped tiles face-down instead of showing the deal', async () => {
+    const { mountBanqiReplayBoard } = await import('./banqi-replay-board.js');
+    const { createBanqiDeal, createInitialBanqiState, banqiStateToDealtFen } = await import(
+      '@mistboard/game'
+    );
+    let n = 0.37;
+    const deal = createBanqiDeal(() => (n = (n * 9301 + 49297) % 233280) / 233280);
+    const rootFen = banqiStateToDealtFen(createInitialBanqiState('t', deal));
+    const host = document.createElement('div');
+    const board = mountBanqiReplayBoard(host, { rootFen, moves: ['b2b2', 'c2c2'] }, {});
+    // At the start every tile is face-down: no piece glyph, thirty-two discs.
+    expect(host.querySelectorAll('.banqi-back').length).toBe(32);
+    board.jumpToPly(2);
+    expect(host.querySelectorAll('.banqi-back').length).toBe(30);
+    board.destroy();
+  });
+});
