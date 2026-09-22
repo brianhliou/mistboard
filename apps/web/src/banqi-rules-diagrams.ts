@@ -29,8 +29,9 @@ function responsive(svg: string, maxWidth: number): string {
     );
 }
 
-const PAIR_WIDTH = 340;
-const FULL_WIDTH = 480;
+// The room draws the board at its native 568 units; the diagrams do the same, so
+// the selection tint, the dots and the capture rings are the size a player sees.
+const FULL_WIDTH = 568;
 
 /** Tag the SVG with the diagram id. The board's presentation comes from
  *  live-banqi-board.css, imported above, so the prerendered page styles it. */
@@ -109,7 +110,7 @@ export function banqiMoveDiagram(opts: {
         ? [{ from: opts.from, to: opts.arrowTo, color: '#1f6f5b', opacity: 0.88, width: 9 }]
         : [],
     });
-    return responsive(withStyle(svg, opts.id), opts.maxWidth ?? PAIR_WIDTH);
+    return responsive(withStyle(svg, opts.id), opts.maxWidth ?? FULL_WIDTH);
   };
 }
 
@@ -117,10 +118,16 @@ export function banqiMoveDiagram(opts: {
 export function banqiPositionDiagram(opts: {
   id: string;
   board: BanqiDiagramBoard;
+  /** The tile just flipped, tinted the way the room tints a last move. */
+  flipped?: BanqiSquare;
   maxWidth?: number;
 }): () => string {
   return () => {
     const state = diagramState(opts.board, 'red');
+    if (opts.flipped) {
+      state.lastMove = { from: opts.flipped, to: opts.flipped };
+      state.ply = 1;
+    }
     const view = getBanqiPlayerView(state, 'red');
     const svg = renderBanqiBoardSvg(view, 'red', { pieceSet: activeXiangqiPieceSet });
     return responsive(withStyle(svg, opts.id), opts.maxWidth ?? FULL_WIDTH);
@@ -181,6 +188,17 @@ export const BANQI_SETUP: () => string = banqiPositionDiagram({
 
 const down = (squares: readonly BanqiSquare[]): BanqiDiagramBoard =>
   Object.fromEntries(squares.map((s) => [s, 'down'])) as BanqiDiagramBoard;
+
+/** The first flip: one tile turned up red, so the player who flipped it is red
+ *  for the game and the opponent is black. The tint is the room's last-move mark. */
+export const BANQI_FIRST_FLIP: () => string = banqiPositionDiagram({
+  id: 'first-flip',
+  board: {
+    ...down(ALL_BANQI_SQUARES.filter((s) => s !== 'd2')),
+    d2: { color: 'red', role: 'horse' },
+  },
+  flipped: 'd2',
+});
 
 // A move: one square in four directions, onto empty squares only; the
 // face-down tile beside it is not a destination.

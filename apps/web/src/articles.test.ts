@@ -668,7 +668,8 @@ describe('rules variant sidebar', () => {
     expect(pageText).toContain('Strongest to weakest: general, advisor, elephant, chariot, horse, soldier');
     expect(pageText).toContain('40 plies (single moves) with no flip or capture');
     expect(pageText).toContain('threefold repetition');
-    expect(pageText).toContain('The cannon is the one exception: it captures by jumping, not by stepping.');
+    expect(pageText).toContain('On your turn you do exactly one of two things.');
+    expect(pageText).toContain('it captures by jumping, not by stepping');
     expect(pageText).toContain('jumping exactly one piece, the screen');
     expect(pageText).toContain('Without a capture it moves one square like everything else.');
     expect(pageText).not.toContain('Rules used on Mistboard');
@@ -678,7 +679,7 @@ describe('rules variant sidebar', () => {
     // The rules are drawn on the real board renderer with its own move hints:
     // every diagram is a live-board SVG, and at least one shows a capture ring.
     const boards = [...page.querySelectorAll('.article-figure svg.banqi-board')];
-    expect(boards.length).toBeGreaterThanOrEqual(9);
+    expect(boards.length).toBeGreaterThanOrEqual(10);
     expect(page.querySelector('.article-figure svg.banqi-board circle.banqi-hint-capture')).not.toBeNull();
     expect(page.querySelector('.article-figure svg.banqi-board circle.banqi-hint')).not.toBeNull();
     // No custom panel diagrams left: no titled canvases, no HIGH/LOW.
@@ -707,7 +708,7 @@ describe('rules variant sidebar', () => {
     const text = page.textContent ?? '';
     expect(text).toContain('第一次翻子之前。谁都还没有颜色。');
     expect(text).toContain('最大在左，最小在右。');
-    expect(text).toContain('一颗炮架，再来是目标。大小不重要。');
+    expect(text).toContain('一颗炮架，再来是目标。大小不重要：炮吃将。');
     expect(text).not.toContain('Before the first flip.');
     expect(text).not.toContain('One screen, then the target.');
     // The engine game is a study-chapter embed, the same card every other

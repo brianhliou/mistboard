@@ -3,6 +3,7 @@ import {
   BANQI_CANNON_FRIENDLY_SCREEN,
   BANQI_CANNON_NO_SCREEN,
   BANQI_CANNON_SCREEN,
+  BANQI_FIRST_FLIP,
   BANQI_GENERAL_CANNOT_TAKE_SOLDIER,
   BANQI_RANK_CAPTURE,
   BANQI_RANK_LADDER,
@@ -56,9 +57,18 @@ export const banqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs, and the opponent plays the other.',
+          text: 'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.',
         },
-        { kind: 'raw-svg', svg: BANQI_SETUP, caption: 'Before the first flip. Nobody has a color yet.' },
+        {
+          kind: 'svg-row',
+          items: [
+            { svg: BANQI_SETUP, caption: 'Before the first flip. Nobody has a color yet.' },
+            {
+              svg: BANQI_FIRST_FLIP,
+              caption: 'The first flip turned up red, so the player who flipped it is red.',
+            },
+          ],
+        },
       ],
     },
     {
@@ -66,17 +76,24 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'On your turn, either flip a face-down tile or move one of your revealed pieces one square up, down, left, or right. A move onto an enemy piece is a capture when the ladder below allows it. The cannon is the one exception: it captures by jumping, not by stepping.',
+          text: 'On your turn you do exactly one of two things.',
         },
         {
-          kind: 'svg-row',
-          items: [
-            { svg: BANQI_STEP, caption: 'One square, four directions. A face-down tile is not a destination.' },
-            {
-              svg: BANQI_RANK_CAPTURE,
-              caption: 'The horse may take the soldier or the other horse, not the chariot above it.',
-            },
-          ],
+          kind: 'paragraph',
+          text: '**Flip** any face-down tile. It turns over for both players to see, whichever color it turns out to be, and your turn is over.',
+        },
+        {
+          kind: 'paragraph',
+          text: '**Move** one of your revealed pieces one square up, down, left, or right, onto an empty square or onto an enemy piece it outranks, which captures it. Face-down tiles block the way and cannot be captured.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The cannon is the one exception to both the movement and the ranks below: it moves one square like everything else, but it captures by jumping, not by stepping, and rank does not apply to what it takes.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: BANQI_STEP,
+          caption: 'The selected horse can move to the three marked squares. The face-down tile above it is not a destination.',
         },
       ],
     },
@@ -85,7 +102,7 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank. Face-down tiles cannot be captured.',
+          text: 'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank.',
         },
         {
           kind: 'raw-svg',
@@ -94,15 +111,23 @@ export const banqiArticle: Article = {
             'Strongest at the left, weakest at the right. The cannon captures by jumping; as a target it ranks where it stands here, between the horse and the soldier.',
         },
         {
+          kind: 'raw-svg',
+          svg: BANQI_RANK_CAPTURE,
+          caption: 'The horse may take the soldier or the other horse, not the chariot above it.',
+        },
+        {
           kind: 'paragraph',
           text: 'One exception connects the ends of the ladder: the soldier can capture the general, and the general cannot capture a soldier.',
         },
         {
-          kind: 'svg-row',
-          items: [
-            { svg: BANQI_SOLDIER_TAKES_GENERAL, caption: 'The lowest piece can take the highest.' },
-            { svg: BANQI_GENERAL_CANNOT_TAKE_SOLDIER, caption: 'The general cannot take the soldier back.' },
-          ],
+          kind: 'raw-svg',
+          svg: BANQI_SOLDIER_TAKES_GENERAL,
+          caption: 'The lowest piece can take the highest.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: BANQI_GENERAL_CANNOT_TAKE_SOLDIER,
+          caption: 'The general cannot take the soldier back; the advisor beside it, it can.',
         },
       ],
     },
@@ -114,21 +139,24 @@ export const banqiArticle: Article = {
           text: 'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first revealed enemy beyond it, whatever its rank. The screen can be any piece: friendly, enemy, or face-down. With nothing to jump, it cannot capture at all, so an adjacent piece is safe from it. Without a capture it moves one square like everything else.',
         },
         {
-          kind: 'svg-row',
-          items: [
-            { svg: BANQI_CANNON_SCREEN, caption: 'One screen, then the target. Rank does not matter.' },
-            { svg: BANQI_CANNON_NO_SCREEN, caption: 'No screen, no capture: the chariot beside it is safe.' },
-          ],
+          kind: 'raw-svg',
+          svg: BANQI_CANNON_SCREEN,
+          caption: 'One screen, then the target. Rank does not matter: the cannon takes the general.',
         },
         {
-          kind: 'svg-row',
-          items: [
-            {
-              svg: BANQI_CANNON_FRIENDLY_SCREEN,
-              caption: 'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.',
-            },
-            { svg: BANQI_CANNON_AS_TARGET, caption: 'As a target, the cannon is below the horse: the horse may take it.' },
-          ],
+          kind: 'raw-svg',
+          svg: BANQI_CANNON_NO_SCREEN,
+          caption: 'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: BANQI_CANNON_FRIENDLY_SCREEN,
+          caption: 'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: BANQI_CANNON_AS_TARGET,
+          caption: 'As a target, the cannon is below the horse: the horse may take it.',
         },
         {
           kind: 'raw-svg',

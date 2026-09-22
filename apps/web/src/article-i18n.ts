@@ -2732,27 +2732,16 @@ const ZH_HANS: Record<string, string> = {
   // banqi rules page re-cut 2026-09-21: real-board diagrams, shorter prose.
   'The board is half a xiangqi board, a 4 by 8 grid. Pieces sit in the squares, and the thirty-two shuffled pieces fill it exactly, every one face-down.':
     '棋盘是半张象棋盘，4 列 8 行。棋子放在格子里，洗匀的三十二颗子刚好填满棋盘，每一颗都盖着。',
-  'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs, and the opponent plays the other.':
-    '颜色不是事先分好的。先手翻开任何一颗子：翻到什么颜色就是他的，对手用另一种。',
   'Before the first flip. Nobody has a color yet.': '第一次翻子之前。谁都还没有颜色。',
-  'On your turn, either flip a face-down tile or move one of your revealed pieces one square up, down, left, or right. A move onto an enemy piece is a capture when the ladder below allows it. The cannon is the one exception: it captures by jumping, not by stepping.':
-    '轮到你时，翻开一颗暗子，或把你翻开的一颗子往上、下、左、右走一格。走到敌子上就是吃子，前提是下面的大小顺序允許。炮是唯一的例外：它靠跳吃，不靠走。',
-  'One square, four directions. A face-down tile is not a destination.':
-    '一格，四个方向。暗子不能当目的地。',
   'The horse may take the soldier or the other horse, not the chariot above it.':
     '马可以吃卒或另一只马，不能吃排在它上面的车。',
-  'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank. Face-down tiles cannot be captured.':
-    '从大到小：将、士、象、车、马、卒。一颗子可以吃相邻、已翻开、同级或更小的敌子。暗子不能被吃。',
   'Strongest at the left, weakest at the right. The cannon captures by jumping; as a target it ranks where it stands here, between the horse and the soldier.':
     '最大在左，最小在右。炮靠跳吃；被吃的时候，它的位置就是这里，在马和卒之间。',
   'One exception connects the ends of the ladder: the soldier can capture the general, and the general cannot capture a soldier.':
     '一条例外把顺序的两端接起来：卒可以吃将，将不能吃卒。',
   'The lowest piece can take the highest.': '最小的子可以吃最大的。',
-  'The general cannot take the soldier back.': '将不能回头吃卒。',
   'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first revealed enemy beyond it, whatever its rank. The screen can be any piece: friendly, enemy, or face-down. With nothing to jump, it cannot capture at all, so an adjacent piece is safe from it. Without a capture it moves one square like everything else.':
     '炮沿直行或横列吃子：正好跳过一颗子（炮架），吃掉后面第一颗翻开的敌子，不论大小。炮架可以是任何子：自己的、对方的、或暗子。没有子可跳就完全不能吃，所以紧邻的子是安全的。不吃子的时候，它和其他子一样走一格。',
-  'One screen, then the target. Rank does not matter.': '一颗炮架，再来是目标。大小不重要。',
-  'No screen, no capture: the chariot beside it is safe.': '没有炮架就不能吃：旁边的车是安全的。',
   'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.':
     '自己的子也能当炮架。象后面的暗子不是目标。',
   'As a target, the cannon is below the horse: the horse may take it.':
@@ -2769,6 +2758,27 @@ const ZH_HANS: Record<string, string> = {
     'MistyBanqi 自己对自己，每步一千万个节点，是站上机器人棋力的三倍。用箭头一步一步看。[配套研究](/study/FsA5sowX)收了同一批的每一盘，一盘一章，附一段说明。',
   'Banqi: an engine game under the competition rules': '暗棋：比赛规则下的一盘引擎对局',
   'The engine games': '引擎对局',
+  'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
+    '颜色不是事先分好的。先手翻开任何一颗子：翻到什么颜色，这一盘就是他的，对手用另一种。',
+  'The first flip turned up red, so the player who flipped it is red.':
+    '第一次翻子翻到红，所以翻的人这盘是红方。',
+  'On your turn you do exactly one of two things.': '轮到你时，两件事里做一件。',
+  '**Flip** any face-down tile. It turns over for both players to see, whichever color it turns out to be, and your turn is over.':
+    '**翻**任何一颗暗子。它翻开給双方看，不管翻出什么颜色，你这一回合就结束了。',
+  '**Move** one of your revealed pieces one square up, down, left, or right, onto an empty square or onto an enemy piece it outranks, which captures it. Face-down tiles block the way and cannot be captured.':
+    '**走**你翻开的一颗子，往上、下、左、右一格，走到空格，或走到一颗比它小的敌子上把它吃掉。暗子挡路，也不能被吃。',
+  'The cannon is the one exception to both the movement and the ranks below: it moves one square like everything else, but it captures by jumping, not by stepping, and rank does not apply to what it takes.':
+    '炮是走法和下面大小顺序的唯一例外：它和其他子一样走一格，但吃子靠跳、不靠走，而且吃什么不看大小。',
+  'The selected horse can move to the three marked squares. The face-down tile above it is not a destination.':
+    '选中的马可以走到三个标记的格子。它上面的暗子不能当目的地。',
+  'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank.':
+    '从大到小：将、士、象、车、马、卒。一颗子可以吃相邻、已翻开、同级或更小的敌子。',
+  'The general cannot take the soldier back; the advisor beside it, it can.':
+    '将不能回头吃卒；旁边的士，它可以吃。',
+  'One screen, then the target. Rank does not matter: the cannon takes the general.':
+    '一颗炮架，再来是目标。大小不重要：炮吃将。',
+  'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
+    '没有炮架就不能吃：旁边的车是安全的，上面隔两格、中间没有子的马也是。',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -5251,27 +5261,16 @@ const ZH_HANT: Record<string, string> = {
   // banqi rules page re-cut 2026-09-21 (zh-Hant: 砲、暗子、砲架、大小順序).
   'The board is half a xiangqi board, a 4 by 8 grid. Pieces sit in the squares, and the thirty-two shuffled pieces fill it exactly, every one face-down.':
     '棋盤是半張象棋盤，4 列 8 行。棋子放在格子裡，洗勻的三十二顆子剛好填滿棋盤，每一顆都蓋著。',
-  'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs, and the opponent plays the other.':
-    '顏色不是事先分好的。先手翻開任何一顆子：翻到什麼顏色就是他的，對手用另一種。',
   'Before the first flip. Nobody has a color yet.': '第一次翻子之前。誰都還沒有顏色。',
-  'On your turn, either flip a face-down tile or move one of your revealed pieces one square up, down, left, or right. A move onto an enemy piece is a capture when the ladder below allows it. The cannon is the one exception: it captures by jumping, not by stepping.':
-    '輪到你時，翻開一顆暗子，或把你翻開的一顆子往上、下、左、右走一格。走到敵子上就是吃子，前提是下面的大小順序允許。砲是唯一的例外：它靠跳吃，不靠走。',
-  'One square, four directions. A face-down tile is not a destination.':
-    '一格，四個方向。暗子不能當目的地。',
   'The horse may take the soldier or the other horse, not the chariot above it.':
     '馬可以吃卒或另一隻馬，不能吃排在它上面的車。',
-  'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank. Face-down tiles cannot be captured.':
-    '從大到小：將、士、象、車、馬、卒。一顆子可以吃相鄰、已翻開、同級或更小的敵子。暗子不能被吃。',
   'Strongest at the left, weakest at the right. The cannon captures by jumping; as a target it ranks where it stands here, between the horse and the soldier.':
     '最大在左，最小在右。砲靠跳吃；被吃的時候，它的位置就是這裡，在馬和卒之間。',
   'One exception connects the ends of the ladder: the soldier can capture the general, and the general cannot capture a soldier.':
     '一條例外把順序的兩端接起來：卒可以吃將，將不能吃卒。',
   'The lowest piece can take the highest.': '最小的子可以吃最大的。',
-  'The general cannot take the soldier back.': '將不能回頭吃卒。',
   'The cannon captures along a row or column by jumping exactly one piece, the screen, and taking the first revealed enemy beyond it, whatever its rank. The screen can be any piece: friendly, enemy, or face-down. With nothing to jump, it cannot capture at all, so an adjacent piece is safe from it. Without a capture it moves one square like everything else.':
     '砲沿直行或橫列吃子：正好跳過一顆子（砲架），吃掉後面第一顆翻開的敵子，不論大小。砲架可以是任何子：自己的、對方的、或暗子。沒有子可跳就完全不能吃，所以緊鄰的子是安全的。不吃子的時候，它和其他子一樣走一格。',
-  'One screen, then the target. Rank does not matter.': '一顆砲架，再來是目標。大小不重要。',
-  'No screen, no capture: the chariot beside it is safe.': '沒有砲架就不能吃：旁邊的車是安全的。',
   'A friendly piece is a screen too. The face-down tile beyond the elephant is not a target.':
     '自己的子也能當砲架。象後面的暗子不是目標。',
   'As a target, the cannon is below the horse: the horse may take it.':
@@ -5288,6 +5287,27 @@ const ZH_HANT: Record<string, string> = {
     'MistyBanqi 自己對自己，每步一千萬個節點，是站上機器人棋力的三倍。用箭頭一步一步看。[配套研究](/study/FsA5sowX)收了同一批的每一盤，一盤一章，附一段說明。',
   'Banqi: an engine game under the competition rules': '暗棋：比賽規則下的一盤引擎對局',
   'The engine games': '引擎對局',
+  'Colors are not assigned in advance. The first player flips any tile: whatever color comes up is theirs for the game, and the opponent plays the other.':
+    '顏色不是事先分好的。先手翻開任何一顆子：翻到什麼顏色，這一盤就是他的，對手用另一種。',
+  'The first flip turned up red, so the player who flipped it is red.':
+    '第一次翻子翻到紅，所以翻的人這盤是紅方。',
+  'On your turn you do exactly one of two things.': '輪到你時，兩件事裡做一件。',
+  '**Flip** any face-down tile. It turns over for both players to see, whichever color it turns out to be, and your turn is over.':
+    '**翻**任何一顆暗子。它翻開給雙方看，不管翻出什麼顏色，你這一回合就結束了。',
+  '**Move** one of your revealed pieces one square up, down, left, or right, onto an empty square or onto an enemy piece it outranks, which captures it. Face-down tiles block the way and cannot be captured.':
+    '**走**你翻開的一顆子，往上、下、左、右一格，走到空格，或走到一顆比它小的敵子上把它吃掉。暗子擋路，也不能被吃。',
+  'The cannon is the one exception to both the movement and the ranks below: it moves one square like everything else, but it captures by jumping, not by stepping, and rank does not apply to what it takes.':
+    '砲是走法和下面大小順序的唯一例外：它和其他子一樣走一格，但吃子靠跳、不靠走，而且吃什麼不看大小。',
+  'The selected horse can move to the three marked squares. The face-down tile above it is not a destination.':
+    '選中的馬可以走到三個標記的格子。它上面的暗子不能當目的地。',
+  'Strongest to weakest: general, advisor, elephant, chariot, horse, soldier. A piece captures an adjacent revealed enemy of equal or lower rank.':
+    '從大到小：將、士、象、車、馬、卒。一顆子可以吃相鄰、已翻開、同級或更小的敵子。',
+  'The general cannot take the soldier back; the advisor beside it, it can.':
+    '將不能回頭吃卒；旁邊的士，它可以吃。',
+  'One screen, then the target. Rank does not matter: the cannon takes the general.':
+    '一顆砲架，再來是目標。大小不重要：砲吃將。',
+  'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
+    '沒有砲架就不能吃：旁邊的車是安全的，上面隔兩格、中間沒有子的馬也是。',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {
