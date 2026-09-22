@@ -230,7 +230,9 @@ describe('mountEmbedStudy', () => {
       tags: { red: 'MistyJungle', black: 'KataGo-AnimalChess', event: 'match', result: '0-1' },
       root: {
         rootFen: 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1',
-        root: { children: [{ uci: 'a1b1', children: [{ uci: 'a9b9', children: [{ uci: 'b1c1' }] }] }] },
+        root: {
+          children: [{ uci: 'a1b1', children: [{ uci: 'a9b9', children: [{ uci: 'b1c1' }] }] }],
+        },
       },
     };
     stubFetch(200, { study: { id: 's' }, chapters: [jungleChapter] });
