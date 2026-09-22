@@ -26,6 +26,12 @@ const files =
     : changedFiles(options.localSha, options.remoteSha);
 const plan = buildPlan(files, options);
 
+if (options.json) {
+  // Data, so the release gate can run this same classifier instead of keeping
+  // a second copy of the path rules (scripts/release-prod.mjs).
+  process.stdout.write(`${JSON.stringify({ files, ...plan })}\n`);
+  process.exit(0);
+}
 printPlan(files, plan);
 if (options.planOnly) process.exit(0);
 
@@ -37,6 +43,7 @@ console.log('pre-push: ok');
 function parseArgs(args) {
   const options = {
     planOnly: false,
+    json: false,
     explicitFiles: false,
     files: [],
     localSha: null,
@@ -47,6 +54,8 @@ function parseArgs(args) {
     const arg = args[index];
     if (arg === '--plan') {
       options.planOnly = true;
+    } else if (arg === '--json') {
+      options.json = true;
     } else if (arg === '--files') {
       options.explicitFiles = true;
       index += 1;

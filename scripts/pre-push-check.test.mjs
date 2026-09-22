@@ -60,6 +60,32 @@ test('unwatched files still get the drift check', () => {
   assert.match(output, /npm run check:drift/);
 });
 
+test('--json prints the same plan as data, for the release gate to reuse', () => {
+  // scripts/release-prod.mjs asks this classifier for its local gate instead of
+  // running ci:quick every time. If the shape changes, that gate silently falls
+  // back to the full suite, which is the slow path this replaced.
+  const raw = execFileSync(
+    process.execPath,
+    [script, '--plan', '--json', '--files', 'apps/web/src/articles/content/banqi.ts'],
+    { cwd: join(scriptsDir, '..'), encoding: 'utf8' },
+  );
+  const parsed = JSON.parse(raw);
+  assert.equal(parsed.kind, 'targeted');
+  assert.ok(Array.isArray(parsed.commands) && parsed.commands.length > 0);
+  assert.deepEqual(parsed.commands[0], ['npm', 'run', 'check:drift']);
+  assert.equal(typeof parsed.reason, 'string');
+
+  const broad = JSON.parse(
+    execFileSync(
+      process.execPath,
+      [script, '--plan', '--json', '--files', 'packages/game/src/variants-banqi.ts'],
+      { cwd: join(scriptsDir, '..'), encoding: 'utf8' },
+    ),
+  );
+  assert.equal(broad.kind, 'broad');
+  assert.deepEqual(broad.commands, [['npm', 'run', 'ci:quick']]);
+});
+
 test('the git hook blocks direct pushes to main in favor of the release path', () => {
   const env = { ...process.env };
   delete env.MISTBOARD_RELEASE_PUSH;

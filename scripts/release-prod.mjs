@@ -145,7 +145,11 @@ try {
   }
 
   if (options.localCi) {
-    runTimed('local ci:quick', ['npm', 'run', 'ci:quick']);
+    const gate = localGateFor(ciPlan.changedFiles, options.fullCi);
+    console.log(`local gate: ${gate.kind} (${gate.reason})`);
+    for (const command of gate.commands) {
+      runTimed(`local ${command.slice(2).join(' ')}`, command);
+    }
     // ci:quick does NOT include test:persistent, and the push below goes out
     // with --no-verify, which skips the pre-push hook that WOULD have run it.
     // So without this a persistence change reaches hosted CI unproven: that is
@@ -153,7 +157,7 @@ try {
     // the next deploy behind them.
     await runReleasePersistenceGate(ciPlan.changedFiles);
   } else {
-    console.log('skip: local ci:quick (--skip-local-ci)');
+    console.log('skip: local gate (--skip-local-ci)');
   }
 
   if (options.push) {
@@ -221,6 +225,7 @@ function parseArgs(args) {
     head: 'HEAD',
     help: false,
     localCi: true,
+    fullCi: false,
     plan: false,
     planBase: null,
     planFiles: [],
@@ -254,6 +259,8 @@ function parseArgs(args) {
       parsed.remote = requiredValue(args, ++index, arg);
     } else if (arg === '--skip-ci-wait') {
       parsed.ciWait = false;
+    } else if (arg === '--full-ci') {
+      parsed.fullCi = true;
     } else if (arg === '--skip-local-ci') {
       parsed.localCi = false;
     } else if (arg === '--smoke') {
@@ -421,6 +428,47 @@ function planChangedFiles() {
       .filter(Boolean);
   }
   return null;
+}
+
+/**
+ * The local gate, chosen by what changed. It used to be ci:quick every time:
+ * the whole repo's suite for an article edit, 8-12 minutes, which is long
+ * enough on a busy day for main to move and the push to be rejected (three
+ * attempts on 2026-09-22). The path rules live in scripts/pre-push-check.mjs
+ * and are asked for as data rather than copied, so the release gate and the
+ * pre-push gate cannot drift apart. This is the ONLY local gate on the release
+ * path, because the push goes out with --no-verify.
+ *
+ * Falls back to ci:quick whenever the classifier cannot be trusted: --full-ci,
+ * an unreadable diff, or a change set large enough that argv is the wrong
+ * channel for it.
+ */
+function localGateFor(changedFiles, fullCi) {
+  const FULL = { kind: 'full', reason: 'ci:quick', commands: [['npm', 'run', 'ci:quick']] };
+  if (fullCi) return { ...FULL, reason: '--full-ci' };
+  if (!Array.isArray(changedFiles) || changedFiles.length === 0) {
+    return { ...FULL, reason: 'no readable change set' };
+  }
+  if (changedFiles.length > 400) {
+    return { ...FULL, reason: `${changedFiles.length} changed files` };
+  }
+  const result = spawnSync(
+    'node',
+    ['scripts/pre-push-check.mjs', '--plan', '--json', '--files', ...changedFiles],
+    { encoding: 'utf8' },
+  );
+  if (result.status !== 0 || !result.stdout) {
+    return { ...FULL, reason: 'could not read the path plan' };
+  }
+  try {
+    const plan = JSON.parse(result.stdout);
+    if (!Array.isArray(plan.commands) || plan.commands.length === 0) {
+      return { ...FULL, reason: `${plan.kind} plan had no commands` };
+    }
+    return { kind: plan.kind, reason: plan.reason, commands: plan.commands };
+  } catch {
+    return { ...FULL, reason: 'could not parse the path plan' };
+  }
 }
 
 function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatched }) {
@@ -1132,7 +1180,8 @@ Options:
   --target-branch <name>   Production branch to push/wait, default ${DEFAULT_TARGET_BRANCH}.
   --remote <name>          Git remote for --push, default ${DEFAULT_REMOTE}.
   --smoke <tier>           Smoke tier: full, web, lite, none. Default ${DEFAULT_SMOKE}.
-  --skip-local-ci          Do not run npm run ci:quick before push.
+  --skip-local-ci          Do not run the local gate before push.
+  --full-ci                Force ci:quick as the local gate, whatever changed.
   --skip-ci-wait           Do not wait for hosted GitHub CI.
   --ci-workflow <file>     GitHub CI workflow to wait for, default ${DEFAULT_CI_WORKFLOW}.
   --base <url>             Production base URL, default ${DEFAULT_BASE_URL}.
