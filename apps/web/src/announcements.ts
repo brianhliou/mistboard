@@ -39,6 +39,14 @@ export type Announcement = {
 const baseAnnouncements: Announcement[] = [
   {
     date: '2026-09-22',
+    kind: 'release',
+    headline: 'The Bamboo Fragrance Studio Manual and the Hundred Games Manual are online.',
+    body: "竹香斋 (1800, three collections) and 百局象棋谱 (1801), the other two of the four great Qing manuals, join the shelf, with 百变象棋谱 (1522) and its Tongzhi-era sequel 神妙变化象棋谱 — the oldest surviving printed xiangqi composition books. Three hundred and ninety-two more problems, each on its own board with the book's line played out as the mainline and the original title kept beside the English one. Positions come from dpxq.com and are credited on every composition.",
+    href: '/study',
+    cta: 'Open the studies',
+  },
+  {
+    date: '2026-09-22',
     kind: 'article',
     headline: 'Pikafish on Mistboard.',
     body: 'Pikafish is the strongest open-source xiangqi engine, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.',
