@@ -16,6 +16,9 @@ test('exactly the embed paths are frameable', () => {
   assert.equal(isEmbedRoute('/embed/puzzle/abc'), true);
   assert.equal(isEmbedRoute('/embed/analysis'), true);
   assert.equal(isEmbedRoute('/embed/analysis/xiangqi'), true);
+  // A bare line: the variant is checked by the client, so any slug-shaped one frames.
+  assert.equal(isEmbedRoute('/embed/line/jungle'), true);
+  assert.equal(isEmbedRoute('/embed/line/xiangqi/'), true);
 });
 
 test('nothing else on the site is', () => {
@@ -35,6 +38,8 @@ test('nothing else on the site is', () => {
     '/embed/tv/xiangqi',
     '/embed/puzzle/a/b',
     '/embed/analysis/banqi',
+    '/embed/line',
+    '/embed/line/a/b',
     '/watch',
     '/puzzles',
     '/analysis/xiangqi',

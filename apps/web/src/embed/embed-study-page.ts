@@ -73,16 +73,58 @@ export async function mountEmbedStudy(
     note(root, 'This chapter is not available.');
     return;
   }
-  if (chapter.variant === 'chess') {
-    await mountChessEmbed(root, route, chapter, options);
+  await mountChapterEmbed(
+    root,
+    {
+      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
+      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+    },
+    chapter,
+    options,
+  );
+}
+
+export type EmbedCredit = { href: string; text: string };
+
+/** The variants this card can draw. A chapter of any other variant is refused
+ *  by name: the old fallthrough drew it on the xiangqi board, which is how a
+ *  jungle chapter once rendered as a xiangqi position with jungle squares
+ *  ringed on it. */
+const CHAPTER_EMBED_VARIANTS = new Set([
+  'xiangqi',
+  'duck-xiangqi',
+  'atomic-xiangqi',
+  'banqi',
+  'jungle',
+  'chess',
+]);
+
+/**
+ * One chapter payload on the embed card, whoever built it: the study page
+ * after fetching a study, or the line page from a query string. Dispatches on
+ * the chapter's own variant to the board that can draw it.
+ */
+export async function mountChapterEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: { startPly?: number | null },
+): Promise<void> {
+  const variant = chapter.variant ?? 'xiangqi';
+  if (!CHAPTER_EMBED_VARIANTS.has(variant)) {
+    note(root, `A ${variant} game cannot be framed yet.`);
     return;
   }
-  if (chapter.variant === 'banqi') {
-    await mountBanqiEmbed(root, route, chapter, options);
+  if (variant === 'chess') {
+    await mountChessEmbed(root, credit, chapter, options);
     return;
   }
-  if (chapter.variant === 'jungle') {
-    await mountJungleEmbed(root, route, chapter, options);
+  if (variant === 'banqi') {
+    await mountBanqiEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'jungle') {
+    await mountJungleEmbed(root, credit, chapter, options);
     return;
   }
   const spec = studyChapterToReplaySpec(chapter);
@@ -106,8 +148,8 @@ export async function mountEmbedStudy(
     },
     result: xiangqiResultLabel(spec.resultText, copy),
     credit: {
-      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
-      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+      href: credit.href,
+      text: credit.text,
     },
     // Duck games need the duck renderer: the xiangqi board has no way to draw
     // the duck, which lives in the seventh FEN field, so a duck chapter used
@@ -159,7 +201,7 @@ export async function mountEmbedStudy(
 // is what makes its moves replayable; without it there is nothing to show.
 async function mountBanqiEmbed(
   root: HTMLElement,
-  route: EmbedStudyRoute,
+  credit: EmbedCredit,
   chapter: StudyChapterPayload,
   options: { startPly?: number | null },
 ): Promise<void> {
@@ -198,8 +240,8 @@ async function mountBanqiEmbed(
     },
     result,
     credit: {
-      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
-      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+      href: credit.href,
+      text: credit.text,
     },
     aspect: boardAspectForSpec('banqi'),
     railWidthPx: embedRailWidthPx('banqi'),
@@ -229,7 +271,7 @@ function mainlineTokens(chapter: StudyChapterPayload): string[] {
 
 async function mountJungleEmbed(
   root: HTMLElement,
-  route: EmbedStudyRoute,
+  credit: EmbedCredit,
   chapter: StudyChapterPayload,
   options: { startPly?: number | null },
 ): Promise<void> {
@@ -257,8 +299,8 @@ async function mountJungleEmbed(
     },
     result,
     credit: {
-      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
-      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+      href: credit.href,
+      text: credit.text,
     },
     aspect: boardAspectForSpec('jungle'),
     railWidthPx: embedRailWidthPx('jungle'),
@@ -275,7 +317,7 @@ async function mountJungleEmbed(
 // rank. The chess board replays the tree's own UCI against the chess kernel.
 async function mountChessEmbed(
   root: HTMLElement,
-  route: EmbedStudyRoute,
+  credit: EmbedCredit,
   chapter: StudyChapterPayload,
   options: { startPly?: number | null },
 ): Promise<void> {
@@ -297,8 +339,8 @@ async function mountChessEmbed(
     },
     result,
     credit: {
-      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
-      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+      href: credit.href,
+      text: credit.text,
     },
     aspect: boardAspectForSpec('chess'),
     railWidthPx: embedRailWidthPx('chess'),

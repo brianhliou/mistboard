@@ -292,7 +292,12 @@ export function isEmbedRoute(pathname: string): boolean {
     // only what the anonymous public sees on /watch, /puzzles and /analysis.
     normalized === '/embed/tv' ||
     /^\/embed\/puzzle(?:\/[A-Za-z0-9_-]{1,64})?$/.test(normalized) ||
-    /^\/embed\/analysis(?:\/xiangqi)?$/.test(normalized)
+    /^\/embed\/analysis(?:\/xiangqi)?$/.test(normalized) ||
+    // A bare move list carried in the query string, no game or study behind
+    // it, so nothing stored is read: the page shows only what the embedder
+    // typed. The variant list is the client's (EMBED_LINE_VARIANTS); an
+    // unknown one gets the embed shell and a refusal there.
+    /^\/embed\/line\/[a-z-]{1,32}$/.test(normalized)
   );
 }
 

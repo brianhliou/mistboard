@@ -87,6 +87,32 @@ export function embedAnalysisPath(): string {
 }
 
 /**
+ * `/embed/line/:variant?moves=…`, a move list with no game or study behind it.
+ * `moves` are the variant's own tokens (`a1b1` for jungle and banqi, ICCS or
+ * UCI for xiangqi); `fen` starts from a position other than the initial one.
+ */
+export function embedLinePath(
+  variant: string,
+  line: {
+    moves: readonly string[];
+    fen?: string;
+    red?: string;
+    black?: string;
+    event?: string;
+    result?: string;
+  },
+): string {
+  const params = new URLSearchParams();
+  if (line.fen) params.set('fen', line.fen);
+  params.set('moves', line.moves.join(','));
+  for (const key of ['red', 'black', 'event', 'result'] as const) {
+    const value = line[key];
+    if (value) params.set(key, value);
+  }
+  return `/embed/line/${variant}?${params.toString()}`;
+}
+
+/**
  * What a pasted Mistboard URL embeds as, or null when it embeds as nothing.
  *
  * One parser for the two consumers that must agree on the answer: the oEmbed

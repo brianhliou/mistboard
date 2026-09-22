@@ -2,6 +2,7 @@ import './app-base.css';
 import {
   embedChannelFromSearch,
   embedColorFromSearch,
+  embedLineFromSearch,
   embedNotationFromSearch,
   embedPlyFromSearch,
   embedPovFromSearch,
@@ -774,6 +775,15 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./embed/embed-puzzle-page.js').then(({ mountEmbedPuzzle }) =>
       mountEmbedPuzzle(appRoot, puzzleRoute),
+    ),
+  );
+} else if (embedRoute?.kind === 'line') {
+  const lineRoute = embedRoute.route;
+  const line = embedLineFromSearch(window.location.search);
+  const startPly = embedPlyFromSearch(window.location.search);
+  void mountOrReport(() =>
+    import('./embed/embed-line-page.js').then(({ mountEmbedLine }) =>
+      mountEmbedLine(appRoot, lineRoute, line, { startPly }),
     ),
   );
 } else if (embedRoute?.kind === 'analysis') {

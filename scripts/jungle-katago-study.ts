@@ -21,6 +21,7 @@ import {
   type JungleMove,
   type JungleSquare,
   jungleStateToEngineFen,
+  parseJungleFen,
 } from '@mistboard/game';
 
 const args = process.argv.slice(2);
@@ -30,7 +31,7 @@ const flag = (name: string): string | undefined => {
 };
 const has = (name: string): boolean => args.includes(`--${name}`);
 const BASE = flag('base') ?? 'https://mistboard.com';
-const DATA = resolve('scripts/data/jungle-katago-study.json');
+const DATA = resolve(flag('data') ?? 'scripts/data/jungle-katago-study.json');
 
 type MatchGame = {
   game: number;
@@ -181,6 +182,69 @@ function compile(file: string): void {
   console.log(`${data.games.length} chapters -> ${DATA}`);
 }
 
+// The June 2026 benchmark games (brianhliou.com, "Dou Shou Qi: Classical Search
+// Beat the Learned Eval"): the site's own replay files, one JSON per game with
+// `start`, `moves: [{uci}]`, the seats and a result line. Played under the
+// lengthwise-only tiger, and still legal under the sideways one (the change only
+// added moves), which the kernel replay below proves for each.
+//   npx tsx scripts/jungle-katago-study.ts --compile-json <jg_*.json ...> --data scripts/data/jungle-benchmark-study.json
+type SavedGame = {
+  start: string;
+  moves: { uci: string }[];
+  red: string;
+  black: string;
+  result: string;
+  event: string;
+  result_text?: string;
+};
+
+function compileJson(files: string[]): void {
+  const games: StudyGame[] = files.map((file) => {
+    const g = JSON.parse(readFileSync(file, 'utf8')) as SavedGame;
+    const moves = g.moves.map((m) => m.uci);
+    // Replay for legality; the final status is whatever the record says.
+    let state: JungleGameState = parseStart(g.start);
+    for (const uci of moves) {
+      const next = applyJungleMove(state, parseMove(uci));
+      if (!next) throw new Error(`${file}: illegal ${uci}`);
+      state = next;
+    }
+    const name = g.result_text ?? g.event;
+    return {
+      name,
+      rootFen: g.start,
+      moves,
+      intro:
+        `${g.event}. ${g.result_text ?? ''} ${moves.length} plies. Played in June 2026, when the tiger on Mistboard jumped the river lengthwise only.`
+          .replace(/\s+/g, ' ')
+          .trim(),
+      red: g.red,
+      black: g.black,
+      result: g.result === 'draw' ? '1/2-1/2' : g.result === 'red' ? '1-0' : '0-1',
+      event: g.event,
+      date: '2026-06-27',
+      orientation: 'red',
+      game: 0,
+    };
+  });
+  const data = {
+    name: 'MistyJungle benchmark games, June 2026',
+    description:
+      'The games behind "Dou Shou Qi: Classical Search Beat the Learned Eval" on brianhliou.com: MistyJungle against the strongest classical engine it could be matched with, and against itself at 8M nodes. Played under the lengthwise-only tiger rule Mistboard used until September 2026; every move stays legal under the current rule.',
+    games,
+  };
+  writeFileSync(DATA, `${JSON.stringify(data, null, 2)}\n`);
+  console.log(`${games.length} chapters -> ${DATA}`);
+}
+
+function parseStart(fen: string): JungleGameState {
+  const initial = createInitialJungleState('saved');
+  if (fen.split(' ')[0] === jungleStateToEngineFen(initial).split(' ')[0]) return initial;
+  const parsed = parseJungleFen(fen, 'saved');
+  if (!parsed.ok) throw new Error(`bad start FEN: ${parsed.error}`);
+  return parsed.state;
+}
+
 function buildTree(game: StudyGame) {
   const root: { annotations: object; children: unknown[] } = { annotations: {}, children: [] };
   if (game.intro) root.annotations = { comments: [{ text: game.intro }] };
@@ -239,6 +303,13 @@ async function main(): Promise<void> {
   const compileFile = flag('compile');
   if (compileFile) {
     compile(compileFile);
+    return;
+  }
+  if (has('compile-json')) {
+    const rest = args.slice(args.indexOf('--compile-json') + 1);
+    const stop = rest.findIndex((a) => a.startsWith('--'));
+    const files = stop < 0 ? rest : rest.slice(0, stop);
+    compileJson(files);
     return;
   }
   const data = JSON.parse(readFileSync(DATA, 'utf8')) as {

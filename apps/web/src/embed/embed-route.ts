@@ -84,7 +84,71 @@ export type EmbedRoute =
   | { kind: 'game'; route: EmbedGameRoute }
   | { kind: 'tv' }
   | { kind: 'puzzle'; route: EmbedPuzzleRoute }
-  | { kind: 'analysis'; route: EmbedAnalysisRoute };
+  | { kind: 'analysis'; route: EmbedAnalysisRoute }
+  | { kind: 'line'; route: EmbedLineRoute };
+
+/** The variants a bare line can be framed as: the ones with a replay board on
+ *  the embed card. Anything else is refused by name rather than drawn on the
+ *  xiangqi board, which is what the study embed once did for jungle. */
+export const EMBED_LINE_VARIANTS = [
+  'xiangqi',
+  'duck-xiangqi',
+  'atomic-xiangqi',
+  'banqi',
+  'jungle',
+  'chess',
+] as const;
+export type EmbedLineVariant = (typeof EMBED_LINE_VARIANTS)[number];
+
+export type EmbedLineRoute = { variant: EmbedLineVariant };
+
+/** `/embed/line/:variant`: a move list with no game or study behind it, carried
+ *  in the query string (`?fen=` for a position other than the start, `?moves=`
+ *  as comma- or space-separated tokens in the variant's own spelling, plus
+ *  `red=`, `black=`, `event=`, `result=` for the card's chrome). */
+export function embedLineRouteFromPath(pathname: string): EmbedLineRoute | null {
+  const m = /^\/embed\/line\/([a-z-]{1,32})\/?$/.exec(pathname);
+  if (!m) return null;
+  const variant = m[1] as EmbedLineVariant;
+  return (EMBED_LINE_VARIANTS as readonly string[]).includes(variant) ? { variant } : null;
+}
+
+export type EmbedLineSpec = {
+  fen: string | null;
+  moves: string[];
+  red: string | null;
+  black: string | null;
+  event: string | null;
+  result: string | null;
+};
+
+const LINE_TOKEN = /^[a-z0-9@+=#-]{2,12}$/i;
+const LINE_MAX_MOVES = 1000;
+
+/** The line itself, from the query string. Tokens are only shape-checked here;
+ *  the variant's kernel decides legality when the board replays them, and a
+ *  token it refuses ends the line there. */
+export function embedLineFromSearch(search: string): EmbedLineSpec {
+  const params = new URLSearchParams(search);
+  const text = (k: string, max: number): string | null => {
+    const v = params.get(k)?.trim() ?? '';
+    return v ? v.slice(0, max) : null;
+  };
+  const fenRaw = params.get('fen')?.trim().replace(/_/g, ' ') ?? '';
+  const moves = (params.get('moves') ?? '')
+    .split(/[\s,]+/)
+    .map((tok) => tok.trim())
+    .filter((tok) => tok.length > 0 && LINE_TOKEN.test(tok))
+    .slice(0, LINE_MAX_MOVES);
+  return {
+    fen: fenRaw ? fenRaw.slice(0, 200) : null,
+    moves,
+    red: text('red', 80),
+    black: text('black', 80),
+    event: text('event', 160),
+    result: text('result', 20),
+  };
+}
 
 /** `/embed/tv`: the live board, following the featured game of a channel. */
 export function isEmbedTvPath(pathname: string): boolean {
@@ -119,6 +183,8 @@ export function embedRouteFromPath(pathname: string): EmbedRoute | null {
   if (puzzle) return { kind: 'puzzle', route: puzzle };
   const analysis = embedAnalysisRouteFromPath(pathname);
   if (analysis) return { kind: 'analysis', route: analysis };
+  const line = embedLineRouteFromPath(pathname);
+  if (line) return { kind: 'line', route: line };
   return null;
 }
 

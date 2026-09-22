@@ -11,6 +11,7 @@ import {
   exampleEmbedUrl,
   exampleStudyUrl,
   gameSnippet,
+  lineSnippet,
   mountDevelopers,
   oembedRequestUrl,
   puzzleSnippet,
@@ -41,6 +42,7 @@ describe('the developers page documents something real', () => {
       [tvSnippet(ORIGIN, 'xiangqi'), 'tv'],
       [puzzleSnippet(ORIGIN), 'puzzle'],
       [analysisSnippet(ORIGIN), 'analysis'],
+      [lineSnippet(ORIGIN), 'line'],
     ];
     for (const [snippet, kind] of expected) {
       const src = /src="([^"]+)"/.exec(snippet)?.[1];
@@ -87,7 +89,7 @@ describe('the developers page documents something real', () => {
     const kinds = [...root.querySelectorAll<HTMLIFrameElement>('.developers-example iframe')].map(
       (el) => embedRouteFromPath(new URL(el.getAttribute('src') ?? '', ORIGIN).pathname)?.kind,
     );
-    expect(kinds).toEqual(['study', 'game', 'tv', 'puzzle', 'analysis']);
+    expect(kinds).toEqual(['study', 'game', 'tv', 'puzzle', 'analysis', 'line']);
 
     const text = root.textContent ?? '';
     expect(text).toContain(String(EMBED_MIN_WIDTH));

@@ -5,6 +5,8 @@ import {
   embedAnalysisRouteFromPath,
   embedChannelFromSearch,
   embedColorFromSearch,
+  embedLineFromSearch,
+  embedLineRouteFromPath,
   embedPovFromSearch,
   embedPuzzleRouteFromPath,
   embedRouteFromPath,
@@ -23,6 +25,29 @@ describe('the TV, puzzle and analysis embed routes', () => {
     expect(embedAnalysisRouteFromPath('/embed/analysis')).toEqual({ variant: 'xiangqi' });
     expect(embedAnalysisRouteFromPath('/embed/analysis/xiangqi')).toEqual({ variant: 'xiangqi' });
     expect(embedAnalysisRouteFromPath('/embed/analysis/banqi')).toBeNull();
+  });
+
+  it('frame a bare line for the variants with a board on the card, and refuse the rest', () => {
+    expect(embedLineRouteFromPath('/embed/line/jungle')).toEqual({ variant: 'jungle' });
+    expect(embedLineRouteFromPath('/embed/line/banqi/')).toEqual({ variant: 'banqi' });
+    // fortress has no replay board on the card; refused at the route, not drawn as xiangqi
+    expect(embedLineRouteFromPath('/embed/line/fortress-xiangqi')).toBeNull();
+    expect(embedLineRouteFromPath('/embed/line')).toBeNull();
+    expect(embedRouteFromPath('/embed/line/xiangqi')?.kind).toBe('line');
+  });
+
+  it('reads the line out of the query string, shape-checked, capped, nothing decoded twice', () => {
+    const line = embedLineFromSearch(
+      '?fen=t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T_r_0_1&moves=a1b1,a9a8 b1a1&red=KataGo&black=Misty&event=Game%2067&result=0-1',
+    );
+    expect(line.fen).toBe('t5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1');
+    expect(line.moves).toEqual(['a1b1', 'a9a8', 'b1a1']);
+    expect(line.red).toBe('KataGo');
+    expect(line.event).toBe('Game 67');
+    expect(line.result).toBe('0-1');
+    // a token that is not move-shaped is dropped rather than passed to a kernel
+    expect(embedLineFromSearch('?moves=a1b1,<script>,b1a1').moves).toEqual(['a1b1', 'b1a1']);
+    expect(embedLineFromSearch('').moves).toEqual([]);
   });
 
   it('discriminate through embedRouteFromPath', () => {
@@ -87,6 +112,8 @@ describe('the client and server embed lists agree', () => {
     '/embed/puzzle/a',
     '/embed/analysis',
     '/embed/analysis/xiangqi',
+    '/embed/line/jungle',
+    '/embed/line/Jungle',
     '/embed/tv/x',
     '/embed/analysis/banqi',
     '/embed/game/a/b',

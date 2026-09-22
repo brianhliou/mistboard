@@ -18,6 +18,7 @@ import {
   embedAnalysisPath,
   embedGamePath,
   embedHeightForWidth,
+  embedLinePath,
   embedPuzzlePath,
   embedStudyPath,
   embedTvPath,
@@ -132,6 +133,51 @@ export function analysisSnippet(origin = siteOrigin()): string {
     `${origin}${embedAnalysisPath()}`,
     { width: '100%', aspect: '4/3' },
     'Xiangqi analysis board',
+  );
+}
+
+// Game 67 of the KataGo-AnimalChess match, the tiger's sideways river jump at
+// ply 54 and the den at ply 90: a line with a study behind it, but the snippet
+// carries the moves itself, which is the point of this embed.
+export const EXAMPLE_LINE = {
+  variant: 'jungle',
+  moves: [
+    'a1b1',
+    'a9a8',
+    'b1a1',
+    'a7b7',
+    'a1b1',
+    'g7g6',
+    'b1a1',
+    'a8a7',
+    'a1a2',
+    'a7a6',
+    'a3b3',
+    'a6d6',
+    'c3c2',
+    'd6d5',
+    'b2b1',
+    'g9g8',
+    'g1f1',
+    'g6g5',
+    'g3f3',
+    'g8g7',
+    'f1e1',
+    'g7g6',
+    'e1e2',
+    'g5g4',
+  ],
+  red: 'MistyJungle',
+  black: 'KataGo-AnimalChess',
+  event: 'Game 67, KataGo-AnimalChess vs MistyJungle',
+  result: '0-1',
+} as const;
+
+export function lineSnippet(origin = siteOrigin()): string {
+  return frameSnippet(
+    `${origin}${embedLinePath(EXAMPLE_LINE.variant, EXAMPLE_LINE)}`,
+    { width: EMBED_DEFAULT_WIDTH, height: 700 },
+    'A jungle line',
   );
 }
 
@@ -409,6 +455,23 @@ function buildDevelopers(_locale: Locale = currentLocale()): HTMLElement {
         'frame says so rather than half-working. For engine analysis, link to the ' +
         'analysis board itself.',
     ]),
+
+    proseSubheading('Embed a line of moves'),
+    proseParagraph([
+      'A move list with no game or study behind it, the same card as a chapter: an engine ' +
+        "game from a match log, a puzzle's solution, a line from a book. Put the moves in " +
+        "moves= as the variant's own tokens, comma-separated (jungle and banqi squares like " +
+        'a1b1, xiangqi ICCS or UCI), add fen= to start from a position other than the setup, ' +
+        "and red=, black=, event= and result= for the card's chrome. ply= opens on a move. " +
+        'The kernel replays the moves; one it refuses ends the line there. Variants: ' +
+        'xiangqi, duck-xiangqi, atomic-xiangqi, banqi, jungle and chess.',
+    ]),
+    liveFrame(
+      embedLinePath(EXAMPLE_LINE.variant, EXAMPLE_LINE),
+      { width: EMBED_DEFAULT_WIDTH, height: 700 },
+      'A jungle line',
+    ).figure,
+    codeBlock(lineSnippet(origin)),
 
     proseSubheading('Sizing'),
     proseParagraph([
