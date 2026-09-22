@@ -25,7 +25,7 @@
  */
 
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
-import { liveSeatProfileIdentity } from './first-party-bots.js';
+import { liveSeatEngineName, liveSeatProfileIdentity } from './first-party-bots.js';
 import type { HttpApiContext } from './routes/lib.js';
 import { canServeLiveBoard, isServerEngineClient } from './server-policy.js';
 import type { Room } from './server-types.js';
@@ -81,13 +81,27 @@ export async function liveWatchPayloadForFeatured(
 // on the hero board.
 export const LIVE_TV_FRESH_WINDOW_MS = 10 * 60 * 1000;
 
-// A game earns the hero board only once BOTH sides have moved. A candidate's
-// `ply` is the state's moveNumber, which every variant starts at 1 and advances
-// after the second mover's ply, so 2 is the first position both players have
+// A game earns the hero board only once BOTH sides have moved. The gate reads
+// the state's moveNumber, which every variant starts at 1 and advances after
+// the second mover's ply, so 2 is the first position both players have
 // touched. Below that the board is untouched or one move old, and a room
 // abandoned at that point strands the homepage on an all-face-down board
 // (2026-08-27: the hero sat on a one-flip banqi room after both guests left).
 export const LIVE_TV_MIN_MOVE_NUMBER = 2;
+
+// A candidate's `ply` is the number of plies PLAYED (move events), the same
+// count the tenant runtime stamps on client events, and it is what followers
+// compare to learn the position changed. Until 2026-09-21 it was the
+// moveNumber above, which only advances after the SECOND mover's ply, so
+// `?ply=` reported "unchanged" for every first-mover move and the /watch and
+// homepage boards updated on every other ply, one move behind half the time.
+function pliesPlayed(events: readonly { type: string }[]): number {
+  let ply = 0;
+  for (const event of events) {
+    if (event.type === 'move-played' || event.type === 'move') ply += 1;
+  }
+  return ply;
+}
 
 export type LiveTvComposition = 'pvp' | 'pve';
 
@@ -110,6 +124,7 @@ export type LiveTvCandidate = {
   channelId: string;
   composition: LiveTvComposition;
   players: LiveTvPlayer[];
+  // Plies played so far (see pliesPlayed); the follower's change token.
   ply: number;
   rated: boolean;
   startedAt: number | null;
@@ -176,9 +191,9 @@ function candidateFromChessRoom(
     clock: null,
     events: room.events as readonly { type: string; at?: number }[],
     gameSpecId: room.gameSpecId,
+    moveNumber: (room.projection.state as { moveNumber?: number }).moveNumber ?? 0,
     now,
     players,
-    ply: (room.projection.state as { moveNumber?: number }).moveNumber ?? 0,
     rated: room.rated,
     roomId: room.id,
     timeControl: room.timeControl ?? null,
@@ -199,12 +214,22 @@ function candidateFromTenantRoom(
     if (!clientId) continue;
     const engineSeat = isEngine(clientId);
     const token = room.seatTokens?.[color];
-    const engineName = engineSeat ? (registration.engineDisplayName?.(clientId) ?? clientId) : null;
+    const engineName = engineSeat
+      ? liveSeatEngineName(
+          clientId,
+          room.pveBotId,
+          () => registration.engineDisplayName?.(clientId) ?? clientId,
+        )
+      : null;
     players.push({
       color,
       isEngine: engineSeat,
       name: token?.userDisplayName ?? token?.userHandle ?? engineName,
-      ...liveSeatProfileIdentity(engineSeat ? clientId : null, token?.userHandle ?? null),
+      ...liveSeatProfileIdentity(
+        engineSeat ? clientId : null,
+        token?.userHandle ?? null,
+        room.pveBotId,
+      ),
     });
   }
   if (players.length < 2) return null;
@@ -213,9 +238,9 @@ function candidateFromTenantRoom(
     clock: projection.clock ?? null,
     events: room.events ?? [],
     gameSpecId: registration.gameSpecId,
+    moveNumber: projection.state.moveNumber ?? 0,
     now,
     players,
-    ply: projection.state.moveNumber ?? 0,
     rated: projection.rated ?? false,
     roomId: room.id,
     timeControl: projection.timeControl ?? null,
@@ -227,9 +252,9 @@ function finishCandidate(args: {
   clock: unknown;
   events: readonly { type: string; at?: number }[];
   gameSpecId: string;
+  moveNumber: number;
   now: number;
   players: LiveTvPlayer[];
-  ply: number;
   rated: boolean;
   roomId: string;
   timeControl: unknown;
@@ -237,7 +262,7 @@ function finishCandidate(args: {
   // Headless EvE never creates rooms; a both-engine live room would be a new
   // code path this module has not vetted, so refuse rather than mislabel.
   if (args.players.every((player) => player.isEngine)) return null;
-  if (args.ply < LIVE_TV_MIN_MOVE_NUMBER) return null;
+  if (args.moveNumber < LIVE_TV_MIN_MOVE_NUMBER) return null;
   const lastActivityAt = latestEventAt(args.events);
   if (lastActivityAt === null || args.now - lastActivityAt > LIVE_TV_FRESH_WINDOW_MS) return null;
   return {
@@ -247,7 +272,7 @@ function finishCandidate(args: {
     gameSpecId: args.gameSpecId,
     lastActivityAt,
     players: args.players,
-    ply: args.ply,
+    ply: pliesPlayed(args.events),
     rated: args.rated,
     roomId: args.roomId,
     startedAt: firstEventAt(args.events),

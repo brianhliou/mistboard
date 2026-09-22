@@ -14,6 +14,7 @@
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
+import { mountBanqiReplayBoard } from '../banqi-replay-board.js';
 import { chessChapterToReplaySpec, mountChessReplayBoard } from '../chess-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
@@ -72,6 +73,10 @@ export async function mountEmbedStudy(
   }
   if (chapter.variant === 'chess') {
     await mountChessEmbed(root, route, chapter, options);
+    return;
+  }
+  if (chapter.variant === 'banqi') {
+    await mountBanqiEmbed(root, route, chapter, options);
     return;
   }
   const spec = studyChapterToReplaySpec(chapter);
@@ -138,6 +143,63 @@ export async function mountEmbedStudy(
               hooks,
             )
           : mountXiangqiReplayBoard(host, spec, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// A banqi chapter is its own branch for the same reason as chess below: the
+// xiangqi spec conversion re-spells UCI as ICCS, and a banqi token (`b2b2`, a
+// flip; `a1b1`, a step) is not xiangqi UCI. The chapter's dealt root (rootFen)
+// is what makes its moves replayable; without it there is nothing to show.
+async function mountBanqiEmbed(
+  root: HTMLElement,
+  route: EmbedStudyRoute,
+  chapter: StudyChapterPayload,
+  options: { startPly?: number | null },
+): Promise<void> {
+  const rootFen = chapter.root?.rootFen;
+  if (!rootFen) {
+    note(root, 'This chapter has no dealt position to show.');
+    return;
+  }
+  const moves: string[] = [];
+  let node = chapter.root?.root;
+  while (node?.children?.length) {
+    const played = node.children[0];
+    if (!played?.uci) break;
+    moves.push(played.uci);
+    node = played;
+  }
+  const tags = chapter.tags ?? {};
+  const event = tags.event ?? chapter.name ?? 'Study';
+  // The tags' result is seat-keyed (1-0 is the first mover), and a seat's ink
+  // is whatever the first flip turned up, so the label names the seat.
+  const result =
+    tags.result === '1-0'
+      ? 'First seat wins'
+      : tags.result === '0-1'
+        ? 'Second seat wins'
+        : tags.result === '1/2-1/2'
+          ? 'Draw'
+          : '';
+  await mountEmbedCard(root, {
+    header: event,
+    // The seats are the first and second mover; the ink each plays is bound by
+    // the first flip, so the seat rows carry the seat, not a colour.
+    seats: {
+      first: { name: tags.red ?? 'First seat', ink: 'red' },
+      second: { name: tags.black ?? 'Second seat', ink: 'black' },
+    },
+    result,
+    credit: {
+      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
+      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+    },
+    aspect: boardAspectForSpec('banqi'),
+    railWidthPx: embedRailWidthPx('banqi'),
+    startPly: options.startPly ?? 0,
+    mountBoard: async (host, hooks) =>
+      mountBanqiReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

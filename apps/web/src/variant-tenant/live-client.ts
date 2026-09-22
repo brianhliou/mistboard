@@ -365,6 +365,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     clock: () => state.clock,
     timeControl: () => state.timeControl,
     connectedSeats: () => state.connectedSeats,
+    seats: () => state.seats,
     seatDisplayNames: () => state.seatDisplayNames,
     seatProfiles: () => state.seatProfiles,
     abortDeadline: () => state.abortDeadline,

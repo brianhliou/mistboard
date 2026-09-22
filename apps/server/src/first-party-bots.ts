@@ -163,6 +163,23 @@ export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile |
   return botByEngineId.get(engineId) ?? null;
 }
 
+/**
+ * The public name of an engine seat, the same on every live surface (room
+ * wire, /games, /watch, the homepage TV): the first-party bot fronting it,
+ * which is the name the player picked in setup, else the engine's own name.
+ * The room resolved the bot first and the feeds resolved the tier name only,
+ * so one jieqi game read "Pikafish" in the room and "PikaJieQi - Strongest" on
+ * its tile.
+ */
+export function liveSeatEngineName(
+  engineClientId: string,
+  pveBotId: string | null | undefined,
+  engineName: () => string,
+): string {
+  const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
+  return bot?.displayName ?? engineName();
+}
+
 // games.variant values that name the same spec as a bot's engine-map key. The
 // chess stack wrote 'fog' before it wrote 'dark-chess'; a Misty seat on either
 // is the dark-chess engine.
@@ -212,9 +229,12 @@ export type LiveSeatProfile = { handle?: string; botId?: string };
 export function liveSeatProfileIdentity(
   engineClientId: string | null,
   userHandle: string | null,
+  pveBotId?: string | null,
 ): LiveSeatProfile {
   if (engineClientId) {
-    const bot = firstPartyBotForEngine(engineClientId);
+    // Same order as liveSeatEngineName: the name and the page it links to come
+    // from one source.
+    const bot = pveBotId ? firstPartyBotForId(pveBotId) : firstPartyBotForEngine(engineClientId);
     return bot ? { botId: bot.id } : {};
   }
   return userHandle ? { handle: userHandle } : {};

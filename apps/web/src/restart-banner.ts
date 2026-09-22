@@ -1,6 +1,7 @@
 // Server-restart drain banner.
 //
 import './restart-banner.css';
+import { t } from './i18n/catalog.js';
 
 // Two sources update it:
 //   1. /api/server-status at page boot (covers the case where the user loads
@@ -11,6 +12,9 @@ import './restart-banner.css';
 let bannerEl: HTMLDivElement | null = null;
 let labelEl: HTMLSpanElement | null = null;
 let hintEl: HTMLSpanElement | null = null;
+// The phase on screen, so a locale chunk landing after the banner was painted
+// (a zh page loaded mid-drain) can repaint it in the right language.
+let currentPhase: RestartBannerPhase | null = null;
 
 export type RestartBannerPhase = 'pending' | 'restarting';
 
@@ -32,16 +36,23 @@ export function mountRestartBanner(): void {
 
 export function setRestartBanner(phase: RestartBannerPhase | null): void {
   if (!bannerEl) mountRestartBanner();
+  currentPhase = phase;
   if (phase === null) {
     if (bannerEl) bannerEl.hidden = true;
     return;
   }
   if (bannerEl) bannerEl.hidden = false;
   if (phase === 'pending') {
-    if (labelEl) labelEl.textContent = 'Update pending';
-    if (hintEl) hintEl.textContent = 'Active games can finish before the restart.';
+    if (labelEl) labelEl.textContent = t('connection.restartPending');
+    if (hintEl) hintEl.textContent = t('connection.restartPendingHint');
   } else {
-    if (labelEl) labelEl.textContent = 'Server restarting now';
-    if (hintEl) hintEl.textContent = 'Please reconnect in a moment.';
+    if (labelEl) labelEl.textContent = t('connection.restartNow');
+    if (hintEl) hintEl.textContent = t('connection.restartNowHint');
   }
+}
+
+/** Repaint the visible phase, if any, in the current locale (called once the
+ *  locale chunk has loaded; before that `t()` answers in English). */
+export function refreshRestartBanner(): void {
+  if (currentPhase !== null) setRestartBanner(currentPhase);
 }

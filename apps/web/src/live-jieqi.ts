@@ -346,7 +346,9 @@ function dropJieqiPiece(liveRefs: LiveRefs, from: JieqiSquare, to: JieqiSquare |
 // captured (the opponent's lost pieces); the top strip is the opponent's side,
 // so it shows the pieces the opponent has captured (the viewer's lost pieces).
 // A null role (a dark piece the viewer did not capture, so cannot identify)
-// renders as a shrouded "?" tile. Jieqi does NOT render the "still face-down"
+// renders as the board's own face-down disc (the brown / green back), not a
+// "?" token: the pool then reads in the board's vocabulary, and the cream "?"
+// disc was the one tile on the rail that matched nothing on the board. Jieqi does NOT render the "still face-down"
 // pool the other flip variants do (hidden-pool-panel.ts): under capturer-only
 // reveal the viewer's own pool cannot be computed (the dark pieces the opponent
 // took are unknown to them), and a row that lists pieces which may already be
@@ -381,6 +383,7 @@ export function renderJieqiMaterial(
     renderXiangqiPieceGlyphed({ color, role: 'soldier' }, pieceSet, {
       ariaLabel: `${color} hidden piece`,
       shrouded: true,
+      shroudedStyle: 'back',
     });
   const opponent: JieqiColor = viewer === 'red' ? 'black' : 'red';
   fillCapturedPoolWith(slots.capturesTop, view.captured, viewer, glyph, hidden);

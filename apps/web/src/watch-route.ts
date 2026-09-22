@@ -331,6 +331,9 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     livePayload = null;
     liveHandle?.destroy();
     liveHandle = null;
+    // The rail was drawn from the live handle; stop its ticker before the
+    // completed-feed render seeds the rail again (or nothing does).
+    clearMoveList();
     watch.el.classList.remove('watch-live-mode');
   };
 
@@ -397,8 +400,14 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   // Jump the board through the active handle (pauses autoplay). The handle's
   // onPlyChange then fires syncMoveList, re-highlighting + re-bounding.
+  // The handle the right rail drives: the live board while following a game,
+  // else the completed-feed replay. Live mode used to leave the rail empty (no
+  // clocks, no move list) although the live payload carries both; a spectator
+  // read two name rows and nothing else for the whole game.
+  const railHandle = (): ReplayHandle | null => (liveActive ? liveHandle : replayHandle);
+
   const jumpBoardToPly = (ply: number): void => {
-    replayHandle?.jumpToPly?.(clampPly(ply, watchMaxPly));
+    railHandle()?.jumpToPly?.(clampPly(ply, watchMaxPly));
   };
 
   const moveScrubber = buildWatchScrubber(
@@ -444,7 +453,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   };
 
   const syncClocks = (): void => {
-    const readout = replayHandle?.clockAtPly?.() ?? null;
+    const readout = railHandle()?.clockAtPly?.() ?? null;
     if (!readout) {
       if (clockSeats) clearClocks();
       return;
@@ -721,7 +730,15 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
 
   const handleVisibilityChange = (): void => {
     clearPollTimer();
-    if (!document.hidden) void refreshFeed();
+    if (document.hidden) return;
+    void refreshFeed();
+    // The live tick skips fetches while hidden (below), so a tab that comes back
+    // after minutes behind another window is showing a frame from a game that may
+    // have ended. Poll now instead of waiting out the current timer: an occluded
+    // window is "hidden" on macOS Chrome, and a viewer switching back read a
+    // stale LIVE board for as long as the throttled timer took (2026-09-21).
+    if (livePollTimer !== null) window.clearTimeout(livePollTimer);
+    void liveTick().then(scheduleLivePoll);
   };
 
   const handleNavigationClick = (event: MouseEvent): void => {
@@ -901,15 +918,15 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       namesByRoomId,
       undefined,
       showcaseRendererKindForSpec(featured.gameSpecId),
-      undefined,
+      syncMoveList,
       false,
       { loadPostgameOverride: liveLoadPostgameOverride },
     );
-    liveHandle.jumpToPly?.(liveHandle.plyCount?.() ?? 0);
     liveActive = true;
     liveRoomId = featured.roomId;
     liveShownPly = featured.ply;
     watch.el.classList.add('watch-live-mode');
+    followLiveRail(liveHandle);
     renderLiveMeta(featured);
     renderQueue(currentFeed, null, null);
     // Top always follows the CURRENT top game, so the shareable URL is
@@ -922,10 +939,20 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     if (featured.payload) livePayload = { roomId: featured.roomId, payload: featured.payload };
     if (featured.ply > liveShownPly && featured.payload && liveHandle) {
       await liveHandle.loadGame(featured.roomId);
-      liveHandle.jumpToPly?.(liveHandle.plyCount?.() ?? 0);
       liveShownPly = featured.ply;
+      followLiveRail(liveHandle);
       renderLiveMeta(featured);
     }
+  };
+
+  // Snap the live board to its latest ply and rebuild the rail from it: the
+  // move list (read-only in spirit; a click reviews an earlier ply and the next
+  // frame snaps back, as the room does) and the clocks, which the handle
+  // projects from the server's clock to now so they tick between polls.
+  const followLiveRail = (handle: ReplayHandle): void => {
+    const latest = handle.plyCount?.() ?? 0;
+    handle.jumpToPly?.(latest);
+    rebuildMoveList(handle, latest);
   };
 
   // The live game ended (or vanished): drop the live board and fall back to the
@@ -949,7 +976,11 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
         liveActive && liveRoomId
           ? `?channel=top&room=${encodeURIComponent(liveRoomId)}&ply=${liveShownPly}`
           : '?channel=top';
-      const resp = await fetch(`/api/watch/live${query}`);
+      // Bounded: a response that never completes would otherwise hold
+      // liveTickInFlight forever and freeze live mode with no error.
+      const resp = await fetch(`/api/watch/live${query}`, {
+        signal: AbortSignal.timeout(LIVE_TV_TOP_POLL_MS * 2),
+      });
       if (resp.ok) {
         const data = (await resp.json()) as { featured: LiveFeatured | null };
         if (data.featured) {
@@ -959,14 +990,16 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
           await exitLive();
         }
       }
-    } catch {
-      // Transient network failure: keep whatever is on the board.
+    } catch (err) {
+      // Transient network failure or timeout: keep whatever is on the board.
+      console.warn(err);
     } finally {
       liveTickInFlight = false;
     }
   };
 
   const scheduleLivePoll = (): void => {
+    if (livePollTimer !== null) window.clearTimeout(livePollTimer);
     livePollTimer = window.setTimeout(async () => {
       if (!watch.el.isConnected || abortController.signal.aborted) return;
       await liveTick();
