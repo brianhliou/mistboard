@@ -82,8 +82,8 @@ const {
 const HERE = path.dirname(fileURLToPath(import.meta.url));
 const CSS = path.join(HERE, '../apps/web/src/articles.css');
 const GAMES = path.join(HERE, 'data/benedict-xiangqi-games.json');
-const OUT = '/Users/brianliou/projects/brianhliou.github.io/assets/posts/benedict-xiangqi-balance';
-const INCLUDES = '/Users/brianliou/projects/brianhliou.github.io/_includes';
+const OUT = '/Users/brianliou/projects/brianhliou.com/assets/posts/benedict-xiangqi-balance';
+const INCLUDES = '/Users/brianliou/projects/brianhliou.com/_includes';
 // The international set draws pieces from PNGs. An SVG loaded through <img> is
 // sandboxed and cannot fetch them, so the frames are emitted as INLINE svg in a
 // Jekyll include instead, and the art is copied next to the post and shared by

@@ -73,7 +73,7 @@ const { duckPieceMarks, renderXiangqiPieceGlyphed } = await import(
 const { allDuckXiangqiSquares, duckXiangqiGeneralsFace } = await import('@mistboard/game');
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
-const BLOG = '/Users/brianliou/projects/brianhliou.github.io';
+const BLOG = '/Users/brianliou/projects/brianhliou.com';
 const OUT = path.join(BLOG, 'assets/posts/duck-xiangqi');
 const INCLUDES = path.join(BLOG, '_includes');
 const PUBLIC = path.join(HERE, '../apps/web/public');

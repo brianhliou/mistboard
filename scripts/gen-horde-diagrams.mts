@@ -713,7 +713,7 @@ figure(
 // ── Blog output (--blog): brianhliou.com includes and piece art ───────────
 
 if (process.argv.includes('--blog')) {
-  const BLOG = '/Users/brianliou/projects/brianhliou.github.io';
+  const BLOG = '/Users/brianliou/projects/brianhliou.com';
   const BLOG_ASSETS = path.join(BLOG, 'assets/posts/horde-xiangqi');
   const BLOG_ART = '/assets/posts/horde-xiangqi/pieces';
   const INCLUDES = path.join(BLOG, '_includes');

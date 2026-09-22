@@ -527,7 +527,7 @@ console.log(`  figures/index.html (${figures.length} figures)`);
 
 if (process.argv.includes('--blog')) {
   const { Resvg } = await import('@resvg/resvg-js');
-  const BLOG = '/Users/brianliou/projects/brianhliou.github.io';
+  const BLOG = '/Users/brianliou/projects/brianhliou.com';
   const BLOG_ASSETS = path.join(BLOG, 'assets/posts/atomic-xiangqi');
   const BLOG_ART = '/assets/posts/atomic-xiangqi/pieces';
   const INCLUDES = path.join(BLOG, '_includes');
