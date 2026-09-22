@@ -481,6 +481,7 @@ export function tenantParticipant<
         // Canonicalize: a room created against a pre-consolidation bot id
         // still attributes its game to the merged identity.
         subjectId: bot?.id ?? room.pveBotId,
+        engineId: seatedClientId,
         ...(engineVersion != null ? { engineVersion } : {}),
         visibility,
       };
@@ -492,6 +493,7 @@ export function tenantParticipant<
         displayName: bot.displayName,
         subjectType: 'bot',
         subjectId: bot.id,
+        engineId: seatedClientId,
         ...(engineVersion != null ? { engineVersion } : {}),
         visibility,
       };

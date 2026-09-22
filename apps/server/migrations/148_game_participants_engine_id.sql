@@ -1,0 +1,13 @@
+-- The engine behind a bot seat. Since the bot-identity consolidation a live PvE
+-- game writes its engine seat as subject_type 'bot' with subject_id = the bot
+-- ('pikafish', 'misty', 'fairy-stockfish-level-8'), and nothing on the row said
+-- WHICH engine that bot fronted for the game: the same bot id covers Pikafish's
+-- xiangqi and jieqi engines, and one Fairy-Stockfish level covers four variants.
+-- /engines read only 'engine-version' seats, so every live bot showed no games
+-- vs humans for three months while /bots showed hundreds.
+--
+-- Additive + nullable. Rows before this migration stay NULL and are attributed
+-- by (bot, variant) through the bot profile's current engine map, marked as
+-- inferred; rows from now on carry the engine id the seat actually ran.
+-- 'engine-version' seats leave it NULL: their subject_id already is the engine.
+ALTER TABLE game_participants ADD COLUMN IF NOT EXISTS engine_id TEXT;

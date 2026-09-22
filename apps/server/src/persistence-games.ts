@@ -10,6 +10,7 @@ import {
 } from '@mistboard/game';
 import type { MahjongSeat } from '@mistboard/mahjong';
 import { engineVersionDisplayName } from './engine-registry.js';
+import { botEngineAttributions, firstPartyBotForEngine } from './first-party-bots.js';
 import { getPool, withTransaction } from './persistence-db.js';
 import type {
   GameMode,
@@ -94,6 +95,12 @@ export type GameParticipant = {
   // the version in subject_id (Misty/DMX). Optional + omitted-when-null to keep the
   // participant shape unchanged for the many constructors that don't set it.
   engineVersion?: string | null;
+  // The engine a `bot` seat actually ran (e.g. 'pikafish-jieqi-strongest' under
+  // bot 'pikafish'), so the game attributes to an engine without guessing from
+  // the variant. Null on 'engine-version' seats (subject_id is the engine) and
+  // on bot seats written before migration 148, which are attributed by (bot,
+  // variant) instead. Optional + omitted-when-null like engineVersion.
+  engineId?: string | null;
   // Rating before/after this game, for rated games only (null otherwise). Lets
   // the game page show the +/- delta. Optional so the many non-DB participant
   // constructors don't need to supply it.
@@ -317,82 +324,138 @@ export async function listCorpusGames(corpusId: string, limit = 100): Promise<Ga
 export type EngineVersionStats = {
   engineId: string;
   name: string | null;
+  // The bot the engine fronts (Pikafish, Misty, Fairy-Stockfish Level N), when
+  // a first-party bot owns it; the name a player would recognise.
+  botName: string | null;
+  // games.variant values this engine has played, most games first.
+  variants: string[];
   // vs-humans (headline) and vs other engines / bakeoff (secondary), per engine.
   pve: EngineModeRecord;
   eve: EngineModeRecord;
+  // True when any PvE game was attributed by (bot, variant) rather than by the
+  // engine id the seat recorded (bot seats before migration 148).
+  pveInferred: boolean;
   totalGames: number;
   lastPlayedAt: string | null;
 };
 
-// Per-engine-version record across all completed games, split by mode. Sources
-// from game_participants (subject_type 'engine-version') — the canonical engine
-// attribution, written for every engine game (PvE and EvE) — so the roster stays
-// consistent with the per-engine profile (the eve_games sidecar is not written
-// by every path). Names come from the engine_versions registry (LEFT JOIN, so an
-// id with no registry row still appears under its raw id).
+// Every completed game's engine seats, attributed to an engine id. Two seat
+// kinds carry an engine: 'engine-version' seats (EvE ladders, pre-consolidation
+// PvE) whose subject_id IS the engine, and 'bot' seats (every live PvE game since
+// the bot-identity consolidation) whose subject_id is the bot and whose engine
+// is engine_id, or, for rows older than migration 148, the bot profile's engine
+// for the game's variant. /engines read only the first kind until 2026-09-21 and
+// showed no games vs humans for any live bot for three months. The CTE takes
+// $1..$3 as the attribution table (unnested in parallel), so a caller's own
+// parameters start at $4.
+const ENGINE_SEATS_CTE = `
+  engine_seats AS (
+    SELECT game_participants.game_id,
+           game_participants.color,
+           CASE
+             WHEN game_participants.subject_type = 'engine-version' THEN game_participants.subject_id
+             ELSE COALESCE(game_participants.engine_id, bot_engine.engine_id,
+                           game_participants.subject_id)
+           END AS engine_id,
+           (game_participants.subject_type = 'bot' AND game_participants.engine_id IS NULL)
+             AS inferred
+    FROM game_participants
+    JOIN games ON games.room_id = game_participants.game_id
+    LEFT JOIN unnest($1::text[], $2::text[], $3::text[]) AS bot_engine(bot_id, variant, engine_id)
+      ON game_participants.subject_type = 'bot'
+     AND bot_engine.bot_id = game_participants.subject_id
+     AND bot_engine.variant = games.variant
+    WHERE game_participants.subject_type IN ('engine-version', 'bot')
+      AND game_participants.subject_id IS NOT NULL
+      AND games.status = 'completed'
+  )`;
+
+function engineSeatsParams(): [string[], string[], string[]] {
+  const rows = botEngineAttributions();
+  return [rows.map((r) => r.botId), rows.map((r) => r.variant), rows.map((r) => r.engineId)];
+}
+
+// The engine's own result, from its seat colour. Shared by every aggregate below
+// so the roster and the profile can never disagree about what a win is.
+const ENGINE_SEAT_WON = `(
+  (engine_seats.color = 'white' AND games.result = 'white-wins')
+  OR (engine_seats.color = 'red' AND games.result = 'red-wins')
+  OR (engine_seats.color = 'black' AND games.result = 'black-wins')
+)`;
+const ENGINE_SEAT_LOST = `(
+  (engine_seats.color = 'white' AND games.result = 'black-wins')
+  OR (engine_seats.color = 'red' AND games.result = 'black-wins')
+  OR (engine_seats.color = 'black' AND games.result = 'red-wins')
+  OR (engine_seats.color = 'black' AND games.result = 'white-wins')
+)`;
+
+// Per-engine record across all completed games, split by mode. Names come from
+// the engine_versions registry (LEFT JOIN, so an id with no registry row still
+// appears under its raw id) and the first-party bot that fronts the engine.
 export async function listEngineVersionStats(): Promise<EngineVersionStats[]> {
   const { rows } = await getPool().query<{
     engine_id: string;
     name: string | null;
+    variants: string[];
     total_games: string;
     pve_games: string;
     pve_wins: string;
     pve_losses: string;
     pve_draws: string;
+    pve_inferred: boolean;
     eve_games: string;
     eve_wins: string;
     eve_losses: string;
     eve_draws: string;
     last_played_at: Date | null;
   }>(
-    `SELECT game_participants.subject_id AS engine_id,
+    `WITH ${ENGINE_SEATS_CTE},
+     variant_counts AS (
+       SELECT engine_seats.engine_id, games.variant, COUNT(*) AS games
+       FROM engine_seats
+       JOIN games ON games.room_id = engine_seats.game_id
+       GROUP BY engine_seats.engine_id, games.variant
+     ),
+     engine_variants AS (
+       SELECT engine_id,
+              array_agg(variant ORDER BY games DESC, variant) AS variants
+       FROM variant_counts
+       GROUP BY engine_id
+     )
+     SELECT engine_seats.engine_id,
             engine_versions.name,
+            engine_variants.variants,
             COUNT(*) AS total_games,
             COUNT(*) FILTER (WHERE games.mode = 'pve') AS pve_games,
-            COUNT(*) FILTER (WHERE games.mode = 'pve' AND (
-              (game_participants.color = 'white' AND games.result = 'white-wins')
-              OR (game_participants.color = 'red' AND games.result = 'red-wins')
-              OR (game_participants.color = 'black' AND games.result = 'black-wins')
-            )) AS pve_wins,
-            COUNT(*) FILTER (WHERE games.mode = 'pve' AND (
-              (game_participants.color = 'white' AND games.result = 'black-wins')
-              OR (game_participants.color = 'red' AND games.result = 'black-wins')
-              OR (game_participants.color = 'black' AND games.result = 'red-wins')
-              OR (game_participants.color = 'black' AND games.result = 'white-wins')
-            )) AS pve_losses,
+            COUNT(*) FILTER (WHERE games.mode = 'pve' AND ${ENGINE_SEAT_WON}) AS pve_wins,
+            COUNT(*) FILTER (WHERE games.mode = 'pve' AND ${ENGINE_SEAT_LOST}) AS pve_losses,
             COUNT(*) FILTER (WHERE games.mode = 'pve' AND games.result = 'draw') AS pve_draws,
+            bool_or(games.mode = 'pve' AND engine_seats.inferred) AS pve_inferred,
             COUNT(*) FILTER (WHERE games.mode = 'eve') AS eve_games,
-            COUNT(*) FILTER (WHERE games.mode = 'eve' AND (
-              (game_participants.color = 'white' AND games.result = 'white-wins')
-              OR (game_participants.color = 'red' AND games.result = 'red-wins')
-              OR (game_participants.color = 'black' AND games.result = 'black-wins')
-            )) AS eve_wins,
-            COUNT(*) FILTER (WHERE games.mode = 'eve' AND (
-              (game_participants.color = 'white' AND games.result = 'black-wins')
-              OR (game_participants.color = 'red' AND games.result = 'black-wins')
-              OR (game_participants.color = 'black' AND games.result = 'red-wins')
-              OR (game_participants.color = 'black' AND games.result = 'white-wins')
-            )) AS eve_losses,
+            COUNT(*) FILTER (WHERE games.mode = 'eve' AND ${ENGINE_SEAT_WON}) AS eve_wins,
+            COUNT(*) FILTER (WHERE games.mode = 'eve' AND ${ENGINE_SEAT_LOST}) AS eve_losses,
             COUNT(*) FILTER (WHERE games.mode = 'eve' AND games.result = 'draw') AS eve_draws,
             MAX(games.ended_at) AS last_played_at
-     FROM game_participants
-     JOIN games ON games.room_id = game_participants.game_id
-     LEFT JOIN engine_versions ON engine_versions.id = game_participants.subject_id
-     WHERE game_participants.subject_type = 'engine-version'
-       AND game_participants.subject_id IS NOT NULL
-       AND games.status = 'completed'
-     GROUP BY game_participants.subject_id, engine_versions.name
-     ORDER BY COUNT(*) DESC, game_participants.subject_id`,
+     FROM engine_seats
+     JOIN games ON games.room_id = engine_seats.game_id
+     LEFT JOIN engine_versions ON engine_versions.id = engine_seats.engine_id
+     LEFT JOIN engine_variants ON engine_variants.engine_id = engine_seats.engine_id
+     GROUP BY engine_seats.engine_id, engine_versions.name, engine_variants.variants
+     ORDER BY COUNT(*) DESC, engine_seats.engine_id`,
+    engineSeatsParams(),
   );
   return rows.map((row) => ({
     engineId: row.engine_id,
     name: row.name,
+    botName: firstPartyBotForEngine(row.engine_id)?.displayName ?? null,
+    variants: row.variants ?? [],
     pve: {
       games: Number(row.pve_games),
       wins: Number(row.pve_wins),
       losses: Number(row.pve_losses),
       draws: Number(row.pve_draws),
     },
+    pveInferred: row.pve_inferred === true,
     eve: {
       games: Number(row.eve_games),
       wins: Number(row.eve_wins),
@@ -422,10 +485,10 @@ export type EngineProfile = {
 
 const EMPTY_ENGINE_RECORD: EngineModeRecord = { games: 0, wins: 0, losses: 0, draws: 0 };
 
-// Per-engine-version profile. Sources from game_participants (subject_type
-// 'engine-version'), the same polymorphic seat model the user profile reads —
-// so it works for PvE (one engine seat) and EvE (two) alike, split by mode.
-// PvE is the meaningful competitive record; EvE is internal calibration.
+// Per-engine profile over the same attributed seats as the roster
+// (ENGINE_SEATS_CTE: engine-version seats and bot seats alike), so it works for
+// PvE (one engine seat) and EvE (two) alike, split by mode. PvE is the
+// meaningful competitive record; EvE is internal calibration.
 export async function getEngineProfile(engineId: string): Promise<EngineProfile | null> {
   const pool = getPool();
 
@@ -434,7 +497,8 @@ export async function getEngineProfile(engineId: string): Promise<EngineProfile 
     [engineId],
   );
 
-  // Per-mode W/L/D from the engine's own perspective (its seat colour vs result).
+  // Per-mode W/L/D from the engine's own perspective (its seat colour vs result),
+  // over the same attributed seats as the roster.
   const recordResult = await pool.query<{
     mode: GameMode;
     games: string;
@@ -442,27 +506,17 @@ export async function getEngineProfile(engineId: string): Promise<EngineProfile 
     losses: string;
     draws: string;
   }>(
-    `SELECT games.mode,
+    `WITH ${ENGINE_SEATS_CTE}
+     SELECT games.mode,
             COUNT(*) AS games,
-            COUNT(*) FILTER (
-              WHERE (game_participants.color = 'white' AND games.result = 'white-wins')
-                 OR (game_participants.color = 'red' AND games.result = 'red-wins')
-                 OR (game_participants.color = 'black' AND games.result = 'black-wins')
-            ) AS wins,
-            COUNT(*) FILTER (
-              WHERE (game_participants.color = 'white' AND games.result = 'black-wins')
-                 OR (game_participants.color = 'red' AND games.result = 'black-wins')
-                 OR (game_participants.color = 'black' AND games.result = 'red-wins')
-                 OR (game_participants.color = 'black' AND games.result = 'white-wins')
-            ) AS losses,
+            COUNT(*) FILTER (WHERE ${ENGINE_SEAT_WON}) AS wins,
+            COUNT(*) FILTER (WHERE ${ENGINE_SEAT_LOST}) AS losses,
             COUNT(*) FILTER (WHERE games.result = 'draw') AS draws
-     FROM game_participants
-     JOIN games ON games.room_id = game_participants.game_id
-     WHERE game_participants.subject_type = 'engine-version'
-       AND game_participants.subject_id = $1
-       AND games.status = 'completed'
+     FROM engine_seats
+     JOIN games ON games.room_id = engine_seats.game_id
+     WHERE engine_seats.engine_id = $4
      GROUP BY games.mode`,
-    [engineId],
+    [...engineSeatsParams(), engineId],
   );
 
   if (recordResult.rows.length === 0 && nameResult.rows.length === 0) return null;
@@ -478,21 +532,20 @@ export async function getEngineProfile(engineId: string): Promise<EngineProfile 
   }
 
   const recentResult = await pool.query<RecentEngineGameRow>(
-    `SELECT games.room_id, game_participants.color AS player_color,
+    `WITH ${ENGINE_SEATS_CTE}
+     SELECT games.room_id, engine_seats.color AS player_color,
             games.variant, games.mode, games.result, games.termination,
             games.ply_count, games.started_at, games.ended_at,
             games.white_name, games.black_name, games.corpus_id,
             games.initial_ms, games.increment_ms,
             COALESCE(games.rated, false) AS rated, games.visibility
-     FROM game_participants
-     JOIN games ON games.room_id = game_participants.game_id
-     WHERE game_participants.subject_type = 'engine-version'
-       AND game_participants.subject_id = $1
+     FROM engine_seats
+     JOIN games ON games.room_id = engine_seats.game_id
+     WHERE engine_seats.engine_id = $4
        AND games.mode = 'pve'
-       AND games.status = 'completed'
      ORDER BY games.ended_at DESC, games.room_id DESC
      LIMIT 15`,
-    [engineId],
+    [...engineSeatsParams(), engineId],
   );
   const recentPveGames = await attachGameParticipants(
     recentResult.rows.map(engineProfileGameFromRow),
@@ -1406,14 +1459,16 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
     for (const participant of participants) {
       await client.query(
         `INSERT INTO game_participants
-           (game_id, color, subject_type, subject_id, display_name, visibility, engine_version)
-         VALUES ($1, $2, $3, $4, $5, $6, $7)
+           (game_id, color, subject_type, subject_id, display_name, visibility, engine_version,
+            engine_id)
+         VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
          ON CONFLICT (game_id, color) DO UPDATE SET
            subject_type = EXCLUDED.subject_type,
            subject_id = EXCLUDED.subject_id,
            display_name = EXCLUDED.display_name,
            visibility = EXCLUDED.visibility,
-           engine_version = EXCLUDED.engine_version`,
+           engine_version = EXCLUDED.engine_version,
+           engine_id = EXCLUDED.engine_id`,
         [
           roomId,
           participant.color,
@@ -1422,6 +1477,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
           participant.displayName,
           participant.visibility,
           participant.engineVersion ?? null,
+          participant.engineId ?? null,
         ],
       );
     }

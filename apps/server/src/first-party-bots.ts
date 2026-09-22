@@ -163,6 +163,40 @@ export function firstPartyBotForEngine(engineId: string): FirstPartyBotProfile |
   return botByEngineId.get(engineId) ?? null;
 }
 
+// games.variant values that name the same spec as a bot's engine-map key. The
+// chess stack wrote 'fog' before it wrote 'dark-chess'; a Misty seat on either
+// is the dark-chess engine.
+const VARIANT_ALIASES: Readonly<Record<string, readonly string[]>> = {
+  'dark-chess': ['fog'],
+};
+
+export type BotEngineAttribution = { botId: string; variant: string; engineId: string };
+
+/**
+ * (bot, games.variant) -> engine id, for bot seats written before
+ * game_participants.engine_id existed (migration 148). Those rows say which bot
+ * sat down but not which engine it ran, and the bot profile's CURRENT engine map
+ * is the only thing that can say: exact for the Fairy-Stockfish level bots (one
+ * engine per variant per level) and Pikafish xiangqi, an approximation for a bot
+ * whose engine for a variant has moved (Misty's dark-chess builds). Callers mark
+ * a record built this way as inferred. Legacy bot ids are included so a seat
+ * written under a pre-consolidation id still resolves.
+ */
+export function botEngineAttributions(): BotEngineAttribution[] {
+  const rows: BotEngineAttribution[] = [];
+  for (const bot of FIRST_PARTY_BOT_PROFILES) {
+    const botIds = [bot.id, ...(bot.legacyBotIds ?? [])];
+    for (const [variant, engineId] of Object.entries(bot.engines)) {
+      for (const botId of botIds) {
+        for (const v of [variant, ...(VARIANT_ALIASES[variant] ?? [])]) {
+          rows.push({ botId, variant: v, engineId });
+        }
+      }
+    }
+  }
+  return rows;
+}
+
 /**
  * The linkable profile identity behind a live seat, as the `handle`/`botId`
  * fields the live feeds carry (LiveTvPlayer, CurrentGamePlayer). At most one is

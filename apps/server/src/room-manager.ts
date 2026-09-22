@@ -267,6 +267,7 @@ function inMemoryParticipant(
         // Canonicalize: a room created against a pre-consolidation bot id
         // still attributes its game to the merged identity.
         subjectId: bot?.id ?? botId,
+        engineId: engineVersionId,
         visibility,
       };
     }
@@ -277,6 +278,7 @@ function inMemoryParticipant(
         displayName: displayName ?? bot.displayName,
         subjectType: 'bot',
         subjectId: bot.id,
+        engineId: engineVersionId,
         visibility,
       };
     }

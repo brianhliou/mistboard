@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import {
+  botEngineAttributions,
   FIRST_PARTY_BOT_PROFILES,
   firstPartyBotEngineFor,
   firstPartyBotForEngine,
@@ -131,4 +132,27 @@ test('no engine id is claimed by two profiles with different identities', () => 
       owners.set(engineId, bot.id);
     }
   }
+});
+
+test('bot seats without an engine id attribute by (bot, variant) through the current map', () => {
+  const rows = botEngineAttributions();
+  const lookup = (botId: string, variant: string) =>
+    rows.find((row) => row.botId === botId && row.variant === variant)?.engineId ?? null;
+  // The case that hid the jieqi bot from /engines: seat says 'pikafish', game says jieqi.
+  assert.equal(lookup('pikafish', 'jieqi'), 'pikafish-jieqi-strongest');
+  assert.equal(lookup('pikafish', 'xiangqi'), 'pikafish-xiangqi-level-8');
+  // One level bot, four variants, four engines.
+  assert.equal(lookup('fairy-stockfish-level-8', 'xiangqi'), 'fairy-stockfish-xiangqi-level-8');
+  assert.equal(
+    lookup('fairy-stockfish-level-8', 'atomic-xiangqi'),
+    'fairy-stockfish-atomic-xiangqi-level-8',
+  );
+  // The chess stack wrote 'fog' before 'dark-chess'; both are Misty's dark-chess engine.
+  assert.equal(lookup('misty', 'fog'), lookup('misty', 'dark-chess'));
+  assert.notEqual(lookup('misty', 'dark-chess'), null);
+  // A pre-consolidation bot id on the seat still resolves.
+  assert.equal(lookup('misty-banqi', 'banqi'), 'misty-banqi');
+  // No (bot, variant) pair maps to two engines.
+  const keys = rows.map((row) => `${row.botId}\u0000${row.variant}`);
+  assert.equal(new Set(keys).size, keys.length);
 });

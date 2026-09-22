@@ -4,6 +4,7 @@
 // entry. The per-engine profile (/engine/:id) is a planned follow-up; rows are
 // not linked yet.
 import './engines.css';
+import { variantDisplayLabel } from './game-display.js';
 import { buildNav } from './site-shell.js';
 
 type ModeRecord = { games: number; wins: number; losses: number; draws: number };
@@ -11,11 +12,28 @@ type ModeRecord = { games: number; wins: number; losses: number; draws: number }
 type EngineRow = {
   engineId: string;
   name: string | null;
+  botName: string | null;
+  variants: string[];
   pve: ModeRecord;
   eve: ModeRecord;
+  pveInferred: boolean;
   totalGames: number;
   lastPlayedAt: string | null;
 };
+
+// The name a player would recognise: the bot that fronts the engine (Pikafish,
+// Fairy-Stockfish Level 8), else the registry name, else the raw id. The raw id
+// stays on the row underneath, since it is what every ops command takes.
+export function engineRowTitle(engine: Pick<EngineRow, 'engineId' | 'name' | 'botName'>): string {
+  return engine.botName ?? engine.name ?? engine.engineId;
+}
+
+// One label per variant the engine has played, most games first. An engine id
+// plays one variant, so this is almost always one word; the pre-tenant builtins
+// (random-legal, capture-seeker) span the chess stack and list them all.
+export function engineVariantsLabel(variants: string[]): string {
+  return variants.map((variant) => variantDisplayLabel(variant)).join(', ');
+}
 
 class AdminRequiredError extends Error {}
 
@@ -33,7 +51,7 @@ export async function mountEngines(root: HTMLElement): Promise<void> {
   const sub = document.createElement('p');
   sub.className = 'engines-sub';
   sub.textContent =
-    'Internal · admin only. Per engine version: record vs humans (PvE) and vs other engines (EvE) across completed games.';
+    'Internal · admin only. Per engine: record vs humans (PvE) and vs other engines (EvE, ladders and bake-offs) across completed games. A ≈ record was attributed by bot and variant, because those seats predate the engine id on the row.';
 
   const body = document.createElement('section');
   body.className = 'engines-body';
@@ -74,7 +92,15 @@ function buildTable(engines: EngineRow[]): HTMLElement {
 
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  for (const label of ['#', 'Engine', 'vs Humans', 'vs Engines', 'Games', 'Last played']) {
+  for (const label of [
+    '#',
+    'Engine',
+    'Variant',
+    'vs Humans',
+    'vs Engines',
+    'Games',
+    'Last played',
+  ]) {
     const th = document.createElement('th');
     th.textContent = label;
     headRow.append(th);
@@ -94,19 +120,28 @@ function buildTable(engines: EngineRow[]): HTMLElement {
     const nameLink = document.createElement('a');
     nameLink.className = 'engines-name-link';
     nameLink.href = `/engine/${encodeURIComponent(engine.engineId)}`;
-    nameLink.textContent = engine.name ?? engine.engineId;
+    const title = engineRowTitle(engine);
+    nameLink.textContent = title;
     name.append(nameLink);
-    if (engine.name && engine.name !== engine.engineId) {
+    if (title !== engine.engineId) {
       const id = document.createElement('span');
       id.className = 'engines-id';
       id.textContent = engine.engineId;
       name.append(id);
     }
 
+    const pve = recordCell(engine.pve);
+    if (engine.pveInferred && engine.pve.games > 0) {
+      pve.textContent = `${pve.textContent} ≈`;
+      pve.title =
+        'Some of these games were attributed by bot and variant; the seat did not record its engine.';
+    }
+
     tr.append(
       rank,
       name,
-      recordCell(engine.pve),
+      cell(engineVariantsLabel(engine.variants)),
+      pve,
       recordCell(engine.eve),
       cell(String(engine.totalGames)),
       cell(formatDate(engine.lastPlayedAt)),
@@ -114,7 +149,7 @@ function buildTable(engines: EngineRow[]): HTMLElement {
     tbody.append(tr);
   });
   table.append(tbody);
-  // Six columns do not fit a phone: unwrapped, this table pushed the whole page
+  // Seven columns do not fit a phone: unwrapped, this table pushed the whole page
   // 54px wider than the viewport. Give it its own scroller so the page itself
   // never scrolls sideways.
   const scroller = document.createElement('div');

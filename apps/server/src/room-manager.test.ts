@@ -641,6 +641,9 @@ test('buildGameSummary: current first-party engine seat records bot profile iden
     displayName: 'Misty',
     subjectType: 'bot',
     subjectId: 'misty',
+    // The engine behind the bot seat rides along (migration 148), so /engines
+    // can attribute the game without guessing from the variant.
+    engineId: 'python-v2-v1.6',
     visibility: 'public',
   });
 });
@@ -681,6 +684,7 @@ test('buildGameSummary: explicit PvE bot id wins over engine-id inference', () =
   // game-summary time, so new completions attribute to one profile.
   assert.equal(summary.participants?.[1]?.subjectId, 'misty');
   assert.equal(summary.participants?.[1]?.displayName, 'Misty');
+  assert.equal(summary.participants?.[1]?.engineId, 'python-v2-v1.6');
 });
 
 test('buildGameSummary: historical first-party engine seat records bot profile identity', () => {
