@@ -114,6 +114,7 @@ Conventions:
 
 ### Fixed
 
+- A bot game is named the same everywhere: the room, the current-games tile and the TV all say the bot the player picked (Pikafish, not "PikaJieQi - Strongest"), and an anonymous player is "Guest" in the room as on the tiles rather than the seat colour; the room's chat ends at the board's bottom edge, and captured pieces on the xiangqi-family rails are the board's size, with a jieqi capture of unknown identity drawn as the face-down disc instead of a "?" ([11732e00](https://github.com/brianhliou/mistboard/commit/11732e00))
 - The admin engine roster credits live bot games to the engine that played them, so Pikafish's jieqi games and each Fairy-Stockfish level's games per variant appear under their engine instead of nowhere; rows show the bot's name and variant, and bot seats now record their engine ([59d5bda8](https://github.com/brianhliou/mistboard/commit/59d5bda8))
 - The admin game database splits results by seat only inside one variant (Red/Black, White/Black, First/Second for flip games) and shows decisive vs draw across all variants, instead of adding chess Black and xiangqi Black into one bar ([caea0157](https://github.com/brianhliou/mistboard/commit/caea0157))
 - The study curator runs ten minutes after a deploy instead of an hour after, so a day of frequent deploys can no longer keep it from ever running ([28a82e5e](https://github.com/brianhliou/mistboard/commit/28a82e5e))

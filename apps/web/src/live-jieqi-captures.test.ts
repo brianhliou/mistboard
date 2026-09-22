@@ -51,6 +51,10 @@ describe('renderJieqiMaterial', () => {
     renderJieqiMaterial(s, asRed, 'red');
     expect(labels(s.capturesTop)).toEqual(['red chariot', 'red hidden piece']);
     expect(labels(s.capturesBottom)).toEqual(['black horse']);
+    // The unknown tile is the board's face-down disc, not a "?" glyph.
+    const hidden = s.capturesTop.querySelector('[aria-label="red hidden piece"]');
+    expect(hidden?.querySelector('.xq-piece-back-mark')).not.toBeNull();
+    expect(hidden?.textContent).not.toContain('?');
   });
 
   it('renders no face-down pool: the own side cannot be computed under capturer-only reveal', () => {
