@@ -63,6 +63,7 @@ Conventions:
 
 ### Watching and review
 
+- Player pages: /players lists every professional the archive has seen in an A-level event, with team, games, W-D-L and score, sortable; /players/<name> is one player's page, the record by event and every game they played in a relayed event, each a link to its board, with a button to the written profile where one exists ([468429eb](https://github.com/brianhliou/mistboard/commit/468429eb))
 - A study chapter embed shows the verdict a chapter's mainline plays out to, in the last move's eval slot ([05effc8c](https://github.com/brianhliou/mistboard/commit/05effc8c))
 - A study chapter embed numbers a sideline's moves the way the game rows are numbered ([b73d9543](https://github.com/brianhliou/mistboard/commit/b73d9543))
 - A study chapter embed shows the chapter's sidelines: the note under a judged move, the alternative line as steppable moves with its verdict at the end and its own comment, for xiangqi and chess chapters alike; the arrow keys walk into a line and back out ([4108cd67](https://github.com/brianhliou/mistboard/commit/4108cd67))
