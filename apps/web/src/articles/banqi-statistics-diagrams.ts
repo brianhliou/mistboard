@@ -152,36 +152,51 @@ export const BANQI_LEAD_SETTLE_CHART = () => {
   return xqSvg(width, height, parts.join(''));
 };
 
-function exhibitBoard(ply: number, title: string, highlight: string | null): () => string {
+// The live board's last-move marks, in the diagram's own geometry: the square
+// moved from tinted lightly, the square moved to tinted harder, both in the ink
+// of the side that acted. Same fills as live-banqi-render.ts, so a reader who
+// has played a game here recognises the mark instead of learning a new one.
+const LAST_MOVE_FILL: Record<'red' | 'black', { from: string; to: string }> = {
+  red: { from: 'rgba(194, 32, 26, 0.19)', to: 'rgba(194, 32, 26, 0.36)' },
+  black: { from: 'rgba(22, 40, 58, 0.22)', to: 'rgba(22, 40, 58, 0.44)' },
+};
+
+function squareRect(square: string, fill: string): string {
+  // Square ids are file letter + rank digit; the grid draws rank 4 on top.
+  const col = square.charCodeAt(0) - 97;
+  const row = 4 - Number(square[1]);
+  const x = BANQI_MARGIN + col * BANQI_CELL;
+  const y = TITLE_H + BANQI_MARGIN + row * BANQI_CELL;
+  return `<rect x="${x}" y="${y}" width="${BANQI_CELL}" height="${BANQI_CELL}" fill="${fill}"/>`;
+}
+
+function exhibitBoard(ply: number, title: string, mover: 'red' | 'black'): () => string {
   return () => {
+    const view = banqiReplayViewAt(BANQI_STATS_GAME.deal, BANQI_STATS_GAME.moves, ply);
     const parts = [
       `<text x="${BANQI_BOARD_W / 2}" y="14" text-anchor="middle" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title">${title}</text>`,
       banqiBoardGrid(0, TITLE_H),
     ];
-    if (highlight) {
-      // Square ids are file letter + rank digit; the grid draws rank 4 on top.
-      const col = highlight.charCodeAt(0) - 97;
-      const row = 4 - Number(highlight[1]);
-      const x = BANQI_MARGIN + col * BANQI_CELL;
-      const y = TITLE_H + BANQI_MARGIN + row * BANQI_CELL;
-      parts.push(
-        `<rect x="${x + 2}" y="${y + 2}" width="${BANQI_CELL - 4}" height="${BANQI_CELL - 4}" rx="6" fill="none" stroke="rgba(21, 120, 91, 0.95)" stroke-width="3"/>`,
-      );
+    const last = view.lastMove;
+    if (last) {
+      const fill = LAST_MOVE_FILL[mover];
+      parts.push(squareRect(last.from, fill.from));
+      if (last.to !== last.from) parts.push(squareRect(last.to, fill.to));
     }
-    parts.push(
-      banqiPiecesFromView(banqiReplayViewAt(BANQI_STATS_GAME.deal, BANQI_STATS_GAME.moves, ply), 0, TITLE_H),
-    );
+    parts.push(banqiPiecesFromView(view, 0, TITLE_H));
     return xqSvg(BANQI_BOARD_W, BANQI_BOARD_H + TITLE_H, parts.join(''));
   };
 }
 
+// Ply 24 is black's b3-b4, taking a soldier; ply 25 is red's d3-c3, taking the
+// general it just saw flipped.
 export const BANQI_STATS_BEFORE = exhibitBoard(
   BANQI_STATS_GAME_DECIDING_PLY - 1,
   'MOVE 12: BLACK LEADS BY 4',
-  'c3',
+  'black',
 );
 export const BANQI_STATS_AFTER = exhibitBoard(
   BANQI_STATS_GAME_DECIDING_PLY,
   'MOVE 13: THE SOLDIER TAKES THE GENERAL',
-  'c3',
+  'red',
 );

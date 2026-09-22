@@ -2696,8 +2696,8 @@ const ZH_HANS: Record<string, string> = {
   '188 games (94%)': '188 盘（94%）',
   'first player won, of decided games': '先手在分出胜负的对局中获胜',
   '89 of 168 (53%)': '168 盘中的 89 盘（53%）',
-  'The median game changes leader twice, and after move 16 it never changes again. The median is the least interesting thing in the chart.':
-    '中位数的对局领先方换两次手，第 16 回合之后就不再换。但中位数是这张图里最不有趣的东西。',
+  'Every game has a moment when the material lead changes hands for the last time. Before it the two sides are still trading; after it one of them is ahead and stays ahead. The chart is where that moment fell in each of the 168 decided games.':
+    '每一盘棋都有一个时刻，是子力领先最后一次易手。在那之前，两边还在互换；在那之后，一方领先并且一路领先下去。下面这张图就是这个时刻落在 168 盘分出胜负的对局的第几回合。',
   'A general fell in 188 of the 200 games, the first at move 24 in the median game. In the 167 decided games where one was taken, the side that lost its general first lost 146: 87%, give or take three points. Thirty points changing hands in a single move is why.':
     '200 盘里有 188 盘有将倒下，中位数的对局在第 24 回合。有将被吃且分出胜负的 167 盘里，先失将的一方输了 146 盘：87%，上下三个百分点。原因是一步棋就有三十分易手。',
   'The exhibit game, seed 1183 of the run: 72 moves, and the lead changes hands here for the last time.':
@@ -2737,11 +2737,11 @@ const ZH_HANS: Record<string, string> = {
     '分数领先的一方最后获胜的比率，按领先幅度和量测的回合分开。比率是分出胜负的对局中的比率；和棋算在盘数里，不算在比率里。在该回合完全平手的对局不归任何一栏。',
   'A soldier or a horse ahead is nothing. Under ten points the leader wins 52% at move 10 and 59% at move 40: a coin flip that never improves, however long it is held. One middling piece, ten to nineteen points, is worth about 70% early and 81% late. It takes forty points, a general or a chariot plus two mid pieces, before the game is actually over: 95% at move 20, and every one of the 56 games that reached move 30 that far ahead. So a two-soldier lead at move 30 is not a lead. You are level with more tiles.':
     '多一颗卒或一匹马等于没有。领先不到十分的一方，第 10 回合赢 52%，第 40 回合赢 59%：就是掷硬币，握多久都不会变好。领先一颗中等的子，也就是十到十九分，早盘大约 70%，后盘 81%。要到四十分，一个将，或一车加两颗中等的子，棋才真的结束：第 20 回合 95%，而第 30 回合领先到这个幅度的 56 盘，一盘都没输。所以第 30 回合领先两颗卒不算领先，你只是平盘多了几颗子。',
-  'Banqi is two games': '暗棋其实是两种棋',
+  'Decided in five moves, or not for fifty': '五回合就定了，不然就是五十回合都定不了',
   'The move at which the eventual winner took the lead for the last time, across the 168 decided games. Each bar counts games.':
     '最后的赢家最后一次取得领先的回合数，168 盘分出胜负的对局。每一根柱子数的是盘数。',
-  'In 43 of the 168 decided games the winner was ahead by move 5 and simply stayed there. In 36 the lead was still changing hands after move 46. A fifth of all 200 games never changed leader once: whoever drew blood first held it to the end. The early half settles while most of the board is still face-down, which is exactly where the flips are, and that is why a chess-style review credits the winner for what was often a good bag. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.':
-    '168 盘分出胜负的对局里，有 43 盘赢家在第 5 回合就领先，然后就一直领先下去；另外 36 盘，领先到第 46 回合之后还在易手。全部 200 盘里有五分之一从头到尾没换过领先方：先见血的一方一路握到终局。早早定下来的那一半，是在大半棋盘还盖着的时候定的，而那正是翻子集中的地方，所以照国际象棋那套复盘，赢家会因为运气好的一袋子被记成一功。[完局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和棋子，就是为了这件事。',
+  'It is not a bell curve around the median of move 16. In 43 games the last change came inside the first five moves: someone won an early exchange and was never caught. In 36 it came after move 46, at the end of a long fight. Little lands in between. A fifth of all 200 games never changed leader at all. The early group is the one to worry about. At move 5 most of the board is still face-down, so those games were settled by the first few flips and what the players made of them. A chess-style review reads that as skill. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.':
+    '它不是绕着第 16 回合中位数的正态分布。有 43 盘，最后一次易手发生在前五回合以内：有人赢下一次早期的交换，然后再也没被追上。另有 36 盘发生在第 46 回合之后，一场长仗的尾声。中间落下的不多，而全部 200 盘里有五分之一从头到尾没换过领先方。要担心的是早的那一群。第 5 回合时大半棋盘还盖着，所以那些棋是被前面几次翻子、以及棋手怎么处理它们决定的。照国际象棋那套复盘，这会被算成实力。[完局复盘](/blog/skill-vs-luck)把每一次翻子拆成决定和棋子，就是为了这件事。',
   'Losing your general first loses the game': '先失将，就输了这盘棋',
   'A red soldier walks in and takes it. Black led by 4; now red leads by 26.':
     '红方一颗卒走过去吃掉它。原本黑方领先 4 分，现在红方领先 26 分。',
@@ -2752,6 +2752,8 @@ const ZH_HANS: Record<string, string> = {
   'In two ways at once. In 43 of 168 decided engine games the winner took the lead for good by move 5; in 36 the lead was still changing hands after move 46. The median is move 16 of a 71-move game.':
     '同时有两种答案。168 盘分出胜负的引擎对局里，有 43 盘赢家在第 5 回合就取得不再改变的领先；另外 36 盘，领先到第 46 回合之后还在易手。中位数是 71 回合对局里的第 16 回合。',
   'Browse the 20 games': '看那二十盘棋',
+  'The usual expectation runs the other way. The first flip hands your opponent a piece to see and answer, fixes your colour before you know anything, and leaves one of your pieces out there undefended. These games do not show that cost. They are also the weakest place to look for it: every face-down tile is a chance node, thirty-two of them at move one, so the engine searches shallowest exactly where the question lives. A person, or a learned evaluation, can reason about the shape of the bag without enumerating it. If flipping first is a handicap, this is the number I would expect a strong opening player to overturn.':
+    '一般的预期刚好相反。先翻的那一下，把一颗子摊给对手看、让他来应，在你对棋盘一无所知的时候就定死你的颜色，还把你自己的一颗子丢在外面没人保护。这 200 盘看不出这个代价，而它们也是最不适合用来找这个代价的地方：每一颗盖着的子都是一个概率节点，第一手就有三十二颗，所以引擎的搜索正好在问题所在的地方最浅。人，或是学出来的评估函数，可以不用穷举就想清楚那一袋子大概长什么样。如果先翻真的是吃亏，这会是我预期强的开局棋手最先推翻的一个数字。',
   'HOW OFTEN THE MATERIAL LEADER WINS': '子力领先方最后赢了多少',
   'size of the lead, in points': '领先幅度（分）',
   games: '盘数',
@@ -5257,8 +5259,8 @@ const ZH_HANT: Record<string, string> = {
   '188 games (94%)': '188 盤（94%）',
   'first player won, of decided games': '先手在分出勝負的棋局中獲勝',
   '89 of 168 (53%)': '168 盤中的 89 盤（53%）',
-  'The median game changes leader twice, and after move 16 it never changes again. The median is the least interesting thing in the chart.':
-    '中位數的棋局領先方換兩次手，第 16 回合之後就不再換。但中位數是這張圖裡最不有趣的東西。',
+  'Every game has a moment when the material lead changes hands for the last time. Before it the two sides are still trading; after it one of them is ahead and stays ahead. The chart is where that moment fell in each of the 168 decided games.':
+    '每一盤棋都有一個時刻，是子力領先最後一次易手。在那之前，兩邊還在互換；在那之後，一方領先並且一路領先下去。下面這張圖就是這個時刻落在 168 盤分出勝負的棋局的第幾回合。',
   'A general fell in 188 of the 200 games, the first at move 24 in the median game. In the 167 decided games where one was taken, the side that lost its general first lost 146: 87%, give or take three points. Thirty points changing hands in a single move is why.':
     '200 盤裡有 188 盤有將倒下，中位數的棋局在第 24 回合。有將被吃且分出勝負的 167 盤裡，先失將的一方輸了 146 盤：87%，上下三個百分點。原因是一步棋就有三十分易手。',
   'The exhibit game, seed 1183 of the run: 72 moves, and the lead changes hands here for the last time.':
@@ -5298,11 +5300,11 @@ const ZH_HANT: Record<string, string> = {
     '分數領先的一方最後獲勝的比率，按領先幅度和量測的回合分開。比率是分出勝負的棋局中的比率；和棋算在盤數裡，不算在比率裡。在該回合完全平手的棋局不歸任何一欄。',
   'A soldier or a horse ahead is nothing. Under ten points the leader wins 52% at move 10 and 59% at move 40: a coin flip that never improves, however long it is held. One middling piece, ten to nineteen points, is worth about 70% early and 81% late. It takes forty points, a general or a chariot plus two mid pieces, before the game is actually over: 95% at move 20, and every one of the 56 games that reached move 30 that far ahead. So a two-soldier lead at move 30 is not a lead. You are level with more tiles.':
     '多一顆卒或一匹馬等於沒有。領先不到十分的一方，第 10 回合贏 52%，第 40 回合贏 59%：就是擲硬幣，握多久都不會變好。領先一顆中等的子，也就是十到十九分，早盤大約 70%，後盤 81%。要到四十分，一個將，或一車加兩顆中等的子，棋才真的結束：第 20 回合 95%，而第 30 回合領先到這個幅度的 56 盤，一盤都沒輸。所以第 30 回合領先兩顆卒不算領先，你只是平盤多了幾顆子。',
-  'Banqi is two games': '暗棋其實是兩種棋',
+  'Decided in five moves, or not for fifty': '五回合就定了，不然就是五十回合都定不了',
   'The move at which the eventual winner took the lead for the last time, across the 168 decided games. Each bar counts games.':
     '最後的贏家最後一次取得領先的回合數，168 盤分出勝負的棋局。每一根柱子數的是盤數。',
-  'In 43 of the 168 decided games the winner was ahead by move 5 and simply stayed there. In 36 the lead was still changing hands after move 46. A fifth of all 200 games never changed leader once: whoever drew blood first held it to the end. The early half settles while most of the board is still face-down, which is exactly where the flips are, and that is why a chess-style review credits the winner for what was often a good bag. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.':
-    '168 盤分出勝負的棋局裡，有 43 盤贏家在第 5 回合就領先，然後就一直領先下去；另外 36 盤，領先到第 46 回合之後還在易手。全部 200 盤裡有五分之一從頭到尾沒換過領先方：先見血的一方一路握到終局。早早定下來的那一半，是在大半棋盤還蓋著的時候定的，而那正是翻子集中的地方，所以照西洋棋那套覆盤，贏家會因為運氣好的一袋子被記成一功。[完局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和棋子，就是為了這件事。',
+  'It is not a bell curve around the median of move 16. In 43 games the last change came inside the first five moves: someone won an early exchange and was never caught. In 36 it came after move 46, at the end of a long fight. Little lands in between. A fifth of all 200 games never changed leader at all. The early group is the one to worry about. At move 5 most of the board is still face-down, so those games were settled by the first few flips and what the players made of them. A chess-style review reads that as skill. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.':
+    '它不是繞著第 16 回合中位數的常態分布。有 43 盤，最後一次易手發生在前五回合以內：有人贏下一次早期的交換，然後再也沒被追上。另有 36 盤發生在第 46 回合之後，一場長仗的尾聲。中間落下的不多，而全部 200 盤裡有五分之一從頭到尾沒換過領先方。要擔心的是早的那一群。第 5 回合時大半棋盤還蓋著，所以那些棋是被前面幾次翻子、以及棋手怎麼處理它們決定的。照西洋棋那套覆盤，這會被算成實力。[完局覆盤](/blog/skill-vs-luck)把每一次翻子拆成決定和棋子，就是為了這件事。',
   'Losing your general first loses the game': '先失將，就輸了這盤棋',
   'A red soldier walks in and takes it. Black led by 4; now red leads by 26.':
     '紅方一顆卒走過去吃掉它。原本黑方領先 4 分，現在紅方領先 26 分。',
@@ -5313,6 +5315,8 @@ const ZH_HANT: Record<string, string> = {
   'In two ways at once. In 43 of 168 decided engine games the winner took the lead for good by move 5; in 36 the lead was still changing hands after move 46. The median is move 16 of a 71-move game.':
     '同時有兩種答案。168 盤分出勝負的引擎對局裡，有 43 盤贏家在第 5 回合就取得不再改變的領先；另外 36 盤，領先到第 46 回合之後還在易手。中位數是 71 回合棋局裡的第 16 回合。',
   'Browse the 20 games': '看那二十盤棋',
+  'The usual expectation runs the other way. The first flip hands your opponent a piece to see and answer, fixes your colour before you know anything, and leaves one of your pieces out there undefended. These games do not show that cost. They are also the weakest place to look for it: every face-down tile is a chance node, thirty-two of them at move one, so the engine searches shallowest exactly where the question lives. A person, or a learned evaluation, can reason about the shape of the bag without enumerating it. If flipping first is a handicap, this is the number I would expect a strong opening player to overturn.':
+    '一般的預期剛好相反。先翻的那一下，把一顆子攤給對手看、讓他來應，在你對棋盤一無所知的時候就定死你的顏色，還把你自己的一顆子丟在外面沒人保護。這 200 盤看不出這個代價，而它們也是最不適合用來找這個代價的地方：每一顆蓋著的子都是一個機率節點，第一手就有三十二顆，所以引擎的搜尋正好在問題所在的地方最淺。人，或是學出來的評估函數，可以不用窮舉就想清楚那一袋子大概長什麼樣。如果先翻真的是吃虧，這會是我預期強的開局棋手最先推翻的一個數字。',
   'HOW OFTEN THE MATERIAL LEADER WINS': '子力領先方最後贏了多少',
   'size of the lead, in points': '領先幅度（分）',
   games: '盤數',

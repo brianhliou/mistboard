@@ -90,11 +90,11 @@ export const banqiStatisticsArticle: Article = {
       ],
     },
     {
-      heading: 'Banqi is two games',
+      heading: 'Decided in five moves, or not for fifty',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'The median game changes leader twice, and after move 16 it never changes again. The median is the least interesting thing in the chart.',
+          text: 'Every game has a moment when the material lead changes hands for the last time. Before it the two sides are still trading; after it one of them is ahead and stays ahead. The chart is where that moment fell in each of the 168 decided games.',
         },
         {
           kind: 'raw-svg',
@@ -104,7 +104,7 @@ export const banqiStatisticsArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'In 43 of the 168 decided games the winner was ahead by move 5 and simply stayed there. In 36 the lead was still changing hands after move 46. A fifth of all 200 games never changed leader once: whoever drew blood first held it to the end. The early half settles while most of the board is still face-down, which is exactly where the flips are, and that is why a chess-style review credits the winner for what was often a good bag. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.',
+          text: 'It is not a bell curve around the median of move 16. In 43 games the last change came inside the first five moves: someone won an early exchange and was never caught. In 36 it came after move 46, at the end of a long fight. Little lands in between. A fifth of all 200 games never changed leader at all. The early group is the one to worry about. At move 5 most of the board is still face-down, so those games were settled by the first few flips and what the players made of them. A chess-style review reads that as skill. The [review on finished games](/blog/skill-vs-luck) splits every flip into the decision and the tile for that reason.',
         },
       ],
     },
@@ -139,6 +139,10 @@ export const banqiStatisticsArticle: Article = {
         {
           kind: 'paragraph',
           text: 'The first player won 89 of the 168 decided games, 53%, give or take four points, and 52.5% counting draws as half. The colour the first flip hands you makes no difference (45 of 80 as red, 44 of 88 as black), and neither does its rank, as far as 200 games can see: split seven ways, each rank keeps a dozen or two games and the error bars swallow the differences. Two hundred games rule out a large first-move advantage and cannot rule out a small one, so the answer to the oldest argument at the table is that if flipping first helps, it helps by less than this.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'The usual expectation runs the other way. The first flip hands your opponent a piece to see and answer, fixes your colour before you know anything, and leaves one of your pieces out there undefended. These games do not show that cost. They are also the weakest place to look for it: every face-down tile is a chance node, thirty-two of them at move one, so the engine searches shallowest exactly where the question lives. A person, or a learned evaluation, can reason about the shape of the bag without enumerating it. If flipping first is a handicap, this is the number I would expect a strong opening player to overturn.',
         },
       ],
     },

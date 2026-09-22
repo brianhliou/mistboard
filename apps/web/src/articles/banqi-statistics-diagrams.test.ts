@@ -56,5 +56,11 @@ describe('banqi statistics figures', () => {
     const count = (v: typeof before) => Object.values(v.board).filter(Boolean).length;
     expect(count(after)).toBe(count(before) - 1);
     expect(BANQI_STATS_BEFORE()).not.toBe(BANQI_STATS_AFTER());
+    // Each board carries the live last-move marks for the ply it shows, in the
+    // acting side's ink: black's b3-b4 before, red's d3-c3 after.
+    expect(before.lastMove).toEqual({ from: 'b3', to: 'b4' });
+    expect(after.lastMove).toEqual({ from: 'd3', to: 'c3' });
+    expect(BANQI_STATS_BEFORE()).toContain('rgba(22, 40, 58, 0.44)');
+    expect(BANQI_STATS_AFTER()).toContain('rgba(194, 32, 26, 0.36)');
   });
 });
