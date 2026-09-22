@@ -102,7 +102,8 @@ function describe(game: SelfPlayGame, index: number): StudyGame {
     const move = parseMove(token);
     const before = state.captures.length;
     const next = applyBanqiMove(state, move);
-    if (next === state) throw new Error(`seed ${game.seed}: ply ${i + 1} ${token} refused by the kernel`);
+    if (next === state)
+      throw new Error(`seed ${game.seed}: ply ${i + 1} ${token} refused by the kernel`);
     state = next;
     if (move.from === move.to) flips += 1;
     if (state.captures.length > before) {
@@ -117,7 +118,10 @@ function describe(game: SelfPlayGame, index: number): StudyGame {
         leader = nowLeads;
       }
       const value = ROLE_VALUE[cap.role];
-      if (!biggest || value > ROLE_VALUE[(biggest as { role?: BanqiPieceRole }).role ?? 'soldier']) {
+      if (
+        !biggest ||
+        value > ROLE_VALUE[(biggest as { role?: BanqiPieceRole }).role ?? 'soldier']
+      ) {
         biggest = {
           ply: i + 1,
           text: `${cap.owner} ${ROLE_NAME[cap.role]} taken at move ${Math.floor(i / 2) + 1}`,
@@ -232,7 +236,13 @@ function chapterFor(game: StudyGame) {
     variant: 'banqi',
     orientation: game.orientation,
     root: buildTree(game),
-    tags: { red: game.red, black: game.black, result: game.result, event: game.event, date: game.date },
+    tags: {
+      red: game.red,
+      black: game.black,
+      result: game.result,
+      event: game.event,
+      date: game.date,
+    },
   };
 }
 
@@ -286,12 +296,16 @@ async function main(): Promise<void> {
     games: StudyGame[];
   };
   for (const game of data.games) {
-    console.log(`${game.name.padEnd(40)} ${String(game.moves.length).padStart(3)} plies, ${game.result}`);
+    console.log(
+      `${game.name.padEnd(40)} ${String(game.moves.length).padStart(3)} plies, ${game.result}`,
+    );
   }
   const create = has('create');
   const update = flag('update');
   if (!create && !update) {
-    console.log(`\ndry run: ${data.games.length} chapters. --create writes a new study, --update <id> syncs one.`);
+    console.log(
+      `\ndry run: ${data.games.length} chapters. --create writes a new study, --update <id> syncs one.`,
+    );
     return;
   }
   const devEmail = flag('dev-login');
@@ -301,7 +315,10 @@ async function main(): Promise<void> {
   if (update) {
     const current = (await send('GET', `/api/studies/${update}`)).json;
     const byName = new Map<string, { id: string; version: number; root: unknown; tags?: unknown }>(
-      current.chapters.map((c: { name: string; id: string; version: number; root: unknown }) => [c.name, c]),
+      current.chapters.map((c: { name: string; id: string; version: number; root: unknown }) => [
+        c.name,
+        c,
+      ]),
     );
     for (const game of data.games) {
       const chapter = byName.get(game.name);
@@ -325,7 +342,12 @@ async function main(): Promise<void> {
       );
       console.log(`  ~ ${game.name}`);
     }
-    await send('PATCH', `/api/studies/${update}`, { name: data.name, description: data.description }, cookie);
+    await send(
+      'PATCH',
+      `/api/studies/${update}`,
+      { name: data.name, description: data.description },
+      cookie,
+    );
     console.log(`${BASE}/study/${update}`);
     return;
   }
