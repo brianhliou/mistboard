@@ -920,7 +920,21 @@ function run(command) {
 // happened (a no-deploy release changes no feed) and the release machine has
 // the credentials file; a failed post is a warning and the release stays ok,
 // since the site is already up and the post can be retried by hand.
+//
+// OFF BY DEFAULT since 2026-09-22 (Brian): the account is not launched, and a
+// post that mirrors the feed entry verbatim is not the post we want to launch
+// with. The channel wants its own shape first: images, and a human approval
+// step before anything goes out. Until that exists a release says so and
+// posts nothing, the ledger is left alone, and `npm run news:tweet -- --post`
+// still sends by hand. Set MISTBOARD_ANNOUNCE_TWEET=1 to re-arm the release
+// leg; delete this gate when the approval flow lands.
 function announceNews({ deployRequired }) {
+  if (process.env.MISTBOARD_ANNOUNCE_TWEET !== '1') {
+    console.log(
+      'skip: news tweet (the X leg is off until the channel has its own format and an approval step; MISTBOARD_ANNOUNCE_TWEET=1 re-arms it, or run `npm run news:tweet -- --post` by hand)',
+    );
+    return;
+  }
   if (!deployRequired) {
     console.log('skip: news tweet (no deploy)');
     return;
