@@ -586,6 +586,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `learn-content.ts` | `/learn` static curriculum data and data-shape types: module list, chapter list, tutorial steps, endgame lesson metadata |
 | `learn.css` | `/learn` tutorial route styles loaded by `learn.ts` |
 | `articles.ts` | Articles page renderer and article thumbnail board mounting. Loads `articles.css` for article index/page/widget styles |
+| `article-thumbnail-locale.test.ts` | A thumbnail render thunk gets the page locale: the Pikafish card leads with the reader script (PIKAFISH in English, 皮卡鱼/皮卡魚 in Chinese) with the other name above it and its own tagline, and `renderArticleThumbnail` paints the locale it is passed rather than the ambient one |
 | `articles.css` | Article index, article page, and article interactive widget styles loaded by `articles.ts` |
 | `articles-data.ts` | Article content (large; content not code) |
 | `article-i18n.ts` | Article localization strings and language helpers |
