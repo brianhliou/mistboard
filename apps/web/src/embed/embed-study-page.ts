@@ -17,7 +17,9 @@ import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
 import { mountBanqiReplayBoard } from '../banqi-replay-board.js';
 import { chessChapterToReplaySpec, mountChessReplayBoard } from '../chess-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
+import { mountJungleReplayBoard } from '../jungle-replay-board.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
+import { reviewResultLabel } from '../review/game-review-meta.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
 import { mountXiangqiReplayBoard, xiangqiResultLabel } from '../xiangqi-replay.js';
@@ -77,6 +79,10 @@ export async function mountEmbedStudy(
   }
   if (chapter.variant === 'banqi') {
     await mountBanqiEmbed(root, route, chapter, options);
+    return;
+  }
+  if (chapter.variant === 'jungle') {
+    await mountJungleEmbed(root, route, chapter, options);
     return;
   }
   const spec = studyChapterToReplaySpec(chapter);
@@ -200,6 +206,65 @@ async function mountBanqiEmbed(
     startPly: options.startPly ?? 0,
     mountBoard: async (host, hooks) =>
       mountBanqiReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// A jungle chapter is its own branch for the banqi reason: `a1b1` is not xiangqi
+// UCI, and the xiangqi spec conversion would draw a xiangqi board under jungle
+// moves (which is exactly what the first jungle study embed did, 2026-09-21).
+// Open jungle is perfect information, so the root is the start position and
+// the seats are the inks.
+function mainlineTokens(chapter: StudyChapterPayload): string[] {
+  const moves: string[] = [];
+  let node = chapter.root?.root;
+  while (node?.children?.length) {
+    const played = node.children[0];
+    if (!played?.uci) break;
+    moves.push(played.uci);
+    node = played;
+  }
+  return moves;
+}
+
+async function mountJungleEmbed(
+  root: HTMLElement,
+  route: EmbedStudyRoute,
+  chapter: StudyChapterPayload,
+  options: { startPly?: number | null },
+): Promise<void> {
+  const rootFen = chapter.root?.rootFen;
+  if (!rootFen) {
+    note(root, 'This chapter has no position to show.');
+    return;
+  }
+  const moves = mainlineTokens(chapter);
+  const tags = chapter.tags ?? {};
+  const event = tags.event ?? chapter.name ?? 'Study';
+  const result =
+    tags.result === '1-0'
+      ? reviewResultLabel('red-wins', 'jungle')
+      : tags.result === '0-1'
+        ? reviewResultLabel('black-wins', 'jungle')
+        : tags.result === '1/2-1/2'
+          ? reviewResultLabel('draw', 'jungle')
+          : '';
+  await mountEmbedCard(root, {
+    header: event,
+    seats: {
+      first: { name: tags.red ?? 'Red', ink: 'red' },
+      second: { name: tags.black ?? 'Blue', ink: 'blue' },
+    },
+    result,
+    credit: {
+      href: `/study/${encodeURIComponent(route.studyId)}/${encodeURIComponent(route.chapterId)}`,
+      text: `${chapter.name ?? 'Study'} · mistboard.com`,
+    },
+    aspect: boardAspectForSpec('jungle'),
+    railWidthPx: embedRailWidthPx('jungle'),
+    startPly: options.startPly ?? 0,
+    mountBoard: async (host, hooks) =>
+      mountJungleReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

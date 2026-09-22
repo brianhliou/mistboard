@@ -217,6 +217,39 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it('draws a jungle chapter on the JUNGLE board, not the xiangqi one', async () => {
+    // The first jungle study embed (2026-09-21) fell through to the xiangqi
+    // branch: a 7x9 game drawn on a 9x10 xiangqi start position with the jungle
+    // move squares ringed on it. A jungle chapter's root is a jungle FEN and its
+    // tokens are kernel coordinates; the xiangqi conversion cannot read either.
+    const jungleChapter = {
+      id: 'Jngl1234',
+      name: 'Game 67',
+      orientation: 'red',
+      variant: 'jungle',
+      tags: { red: 'MistyJungle', black: 'KataGo-AnimalChess', event: 'match', result: '0-1' },
+      root: {
+        rootFen: 't5l/1c3d1/e1w1p1r/7/7/7/R1P1W1E/1D3C1/L5T r 0 1',
+        root: { children: [{ uci: 'a1b1', children: [{ uci: 'a9b9', children: [{ uci: 'b1c1' }] }] }] },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jungleChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Jngl1234' });
+
+    // The jungle renderer names its squares in jungle coordinates; a xiangqi
+    // board has no g9 and no a1-based 7x9 grid.
+    expect(root.innerHTML).toContain('data-piece-square="g9"');
+    expect(root.innerHTML).not.toContain('data-piece-square="i10"');
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toEqual(['a1-b1', 'a9-b9', 'b1-c1']);
+    root.remove();
+  });
+
   it('opens on the ply the link names, not always move one', async () => {
     // ?ply=N was parsed but only ever reached the GAME embed, so a study
     // chapter linked to make a point about one move always opened on move

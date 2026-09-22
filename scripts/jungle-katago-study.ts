@@ -161,10 +161,20 @@ function compile(file: string): void {
     [...wins].filter((g) => g.red === 'misty').sort(byPlies)[1],
     'the second-shortest win as black',
   );
+  // The eight named games lead; every other game follows, decisive first and
+  // shortest first within each, so the whole match is on record.
+  const rest = games
+    .filter((g) => !used.has(g.game))
+    .sort((a, b) => Number(a.winner === null) - Number(b.winner === null) || byPlies(a, b));
+  for (const g of rest) {
+    const who =
+      g.winner === null ? 'draw' : `KataGo wins as ${g.red === 'katago' ? 'red' : 'black'}`;
+    pick.push([g, `${who}, ${g.plies} plies`]);
+  }
   const data = {
     name: 'KataGo-AnimalChess vs MistyJungle',
     description:
-      "Eight of the 200 games in which KataGo-AnimalChess (hzyhhzy, Kouza), a self-play net for Dou Shou Qi, beat MistyJungle 82-0 with 118 draws at matched time per move, right after Mistboard gave the tiger the lion's sideways river jump. The full match and its harness are linked from the post on brianhliou.com.",
+      "All 200 games in which KataGo-AnimalChess (hzyhhzy, Kouza), a self-play net for Dou Shou Qi, beat MistyJungle 82-0 with 118 draws at matched time per move, right after Mistboard gave the tiger the lion's sideways river jump. Eight named games first, then the rest, decisive games before draws. The harness and the records are linked from the post on brianhliou.com.",
     games: pick.map(([g, why]) => describe(g, why)),
   };
   writeFileSync(DATA, `${JSON.stringify(data, null, 2)}\n`);
