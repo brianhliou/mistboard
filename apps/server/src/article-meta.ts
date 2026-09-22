@@ -65,6 +65,8 @@ const UNPUBLISHED_ARTICLE_SLUGS = new Set([
   // a dead link that the CTA-only link guard does not catch.
   'fog-openings',
   'fog-chess-concepts',
+  // Pulled to draft 2026-09-21 the evening it shipped, pending a read.
+  'banqi-online',
 ]);
 
 export function articleIsUnpublished(slug: string): boolean {

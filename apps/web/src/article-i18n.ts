@@ -83,10 +83,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'shogi4',
   'jieqi',
   'banqi',
-  // Machine-drafted 2026-09-21, not native-reviewed, locked the day the English
-  // copy published. The banqi play page (lane 0, #422): zh-Hant is its primary
-  // reader, Taiwanese vocabulary (線上、免安裝、砲).
-  'banqi-online',
+  // 'banqi-online' — dictionary complete (zh-Hant drafted first, Taiwanese
+  // vocabulary: 線上、免安裝、砲), NOT locked: pulled to draft 2026-09-21 the
+  // evening it shipped, pending Brian's read. Lock it the day it republishes.
   'mistybanqi',
   'jungle',
   'jungle-flip',
@@ -1091,8 +1090,8 @@ const ZH_HANS: Record<string, string> = {
   'Find an opponent': '寻找对手',
   'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '堡垒象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required. [The play page](/rules/banqi-online) has what to expect from the engine and the house rules it does not use.':
-    '暗棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。[对弈页](/rules/banqi-online)说明了引擎的实力，以及它不采用的那些公园规则。',
+  'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '暗棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
   'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '斗兽棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
   'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
@@ -5098,8 +5097,8 @@ const ZH_HANT: Record<string, string> = {
   'Find an opponent': '尋找對手',
   'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '堡壘象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required. [The play page](/rules/banqi-online) has what to expect from the engine and the house rules it does not use.':
-    '暗棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。[對弈頁](/rules/banqi-online)說明了引擎的實力，以及它不採用的那些公園規則。',
+  'Banqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
+    '暗棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
   'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
     '鬥獸棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
   'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':

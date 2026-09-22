@@ -26,7 +26,6 @@ Conventions:
 
 ### Playing
 
-- A banqi play page (/rules/banqi-online, zh-Hant first): the board with nothing to install, the engine and the friend link, the competition rules the board uses, and the park rules it does not — 連吃, 車直衝, 炮翻山 — named as such; linked from the banqi rules page ([264dff1d](https://github.com/brianhliou/mistboard/commit/264dff1d))
 - The Lobby's bot rows change every six hours: Fortress, Duck and Atomic Xiangqi offer Level 3, 4 or 5 in turn, and each row's clock cycles through the variant's slower paces (never faster than its default); the Xiangqi Level 2/5/8 ladder stays fixed so it can be climbed ([f845ae22](https://github.com/brianhliou/mistboard/commit/f845ae22))
 - Atomic Xiangqi is rated: a rating pool of its own, a row on the profile rail with a game count and Games-tab filter, a leaderboard ladder, and rated matchmaking through Find opponent for signed-in players (friend links and bot games stay casual) ([ac497feb](https://github.com/brianhliou/mistboard/commit/ac497feb))
 - Atomic Xiangqi captures sound like what they are: an explosion for the mover and for the side it was done to, the cannon's shot keeping its slam as the one capture that does not explode ([714beb2d](https://github.com/brianhliou/mistboard/commit/714beb2d))
