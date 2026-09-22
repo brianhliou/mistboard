@@ -32,6 +32,7 @@ export const ZH_HANS_SHELL = {
   'nav.leaderboard': '排行榜',
   'nav.ratingStats': '评分统计',
   'nav.onlineBots': '在线机器人',
+  'nav.proPlayers': '职业棋手',
   'nav.bots': '机器人',
   'nav.tools': '工具',
   'nav.admin': '管理',

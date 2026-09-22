@@ -506,6 +506,8 @@ function renderIndex(data: BroadcastIndexResponse): HTMLElement {
     heroSection({
       eyebrow: t('broadcast.eyebrow'),
       title: t('broadcast.tournamentBroadcasts'),
+      backHref: '/players',
+      backLabel: t('nav.proPlayers'),
       meta: [
         t(data.tours.length === 1 ? 'broadcast.tournamentCountOne' : 'broadcast.tournamentCount', {
           count: data.tours.length,

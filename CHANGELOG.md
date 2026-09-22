@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- A banqi play page (/rules/banqi-online, zh-Hant first): the board with nothing to install, the engine and the friend link, the competition rules the board uses, and the park rules it does not — 連吃, 車直衝, 炮翻山 — named as such; linked from the banqi rules page ([264dff1d](https://github.com/brianhliou/mistboard/commit/264dff1d))
 - The Lobby's bot rows change every six hours: Fortress, Duck and Atomic Xiangqi offer Level 3, 4 or 5 in turn, and each row's clock cycles through the variant's slower paces (never faster than its default); the Xiangqi Level 2/5/8 ladder stays fixed so it can be climbed ([f845ae22](https://github.com/brianhliou/mistboard/commit/f845ae22))
 - Atomic Xiangqi is rated: a rating pool of its own, a row on the profile rail with a game count and Games-tab filter, a leaderboard ladder, and rated matchmaking through Find opponent for signed-in players (friend links and bot games stay casual) ([ac497feb](https://github.com/brianhliou/mistboard/commit/ac497feb))
 - Atomic Xiangqi captures sound like what they are: an explosion for the mover and for the side it was done to, the cannon's shot keeping its slam as the one capture that does not explode ([714beb2d](https://github.com/brianhliou/mistboard/commit/714beb2d))
@@ -63,6 +64,7 @@ Conventions:
 
 ### Watching and review
 
+- Pro players (/players) sits in the Community rail beside Leaderboard, Rating stats and Online bots, where lichess keeps FIDE players; the players pages render inside that layout, and the broadcast index links to it ([2c7b1640](https://github.com/brianhliou/mistboard/commit/2c7b1640))
 - Player pages show the current CXA 竞赛积分排名 (tournament points) next to the closed 等级分 history, spot-checked row by row against the source before publishing — the pipeline never auto-corrects an OCR name against a known-name list, since a first pass silently relabeled an amateur's record with a world champion's name off a one-character match ([b2702ce2](https://github.com/brianhliou/mistboard/commit/b2702ce2))
 - The player index and player pages take the shape of lichess.org/fide: a face (or the surname character), a title tag, the team under the name, a search box, the whole row a link; a player page opens with the portrait and a fact list, then the official CXA 等级分 series 2019–2023 as a sparkline with the last value and rank, and the note that the CXA replaced Elo with tournament points in 2026 ([835e820d](https://github.com/brianhliou/mistboard/commit/835e820d))
 - Player pages: /players lists every professional the archive has seen in an A-level event, with team, games, W-D-L and score, sortable; /players/<name> is one player's page, the record by event and every game they played in a relayed event, each a link to its board, with a button to the written profile where one exists ([468429eb](https://github.com/brianhliou/mistboard/commit/468429eb))

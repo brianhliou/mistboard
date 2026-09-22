@@ -432,3 +432,12 @@
     display: none;
   }
 }
+
+/* ---- inside the community layout ---------------------------------------- */
+
+/* The column beside the rail: the broadcast shell's spacing without its own
+   horizontal padding or width cap, since the community shell sets both. */
+.xqp-column {
+  max-width: none;
+  padding: 0 0 36px;
+}
