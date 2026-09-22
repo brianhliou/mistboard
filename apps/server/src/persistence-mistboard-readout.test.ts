@@ -125,6 +125,16 @@ definePersistenceTests('Mistboard readout', () => {
       endedAt: '2026-07-17T12:00:00Z',
       participants: [{ color: 'white', subjectType: 'guest', subjectId: 'guest-3' }],
     });
+    // A prod smoke probe: a pve room created and pregame-aborted by a script,
+    // with no guest or user seat at all. It is not demand (#424).
+    await insertGame({
+      roomId: 'room-current-probe',
+      variant: 'fortress-xiangqi',
+      mode: 'pve',
+      status: 'aborted',
+      endedAt: '2026-07-17T13:00:00Z',
+      participants: [],
+    });
     await insertGame({
       roomId: 'room-current-eve',
       variant: 'xiangqi',
@@ -166,7 +176,8 @@ definePersistenceTests('Mistboard readout', () => {
     const product = report.product;
     assert.ok(product);
     // Bot-vs-bot and aborted rows stay out of the headline count, and out of
-    // the player count: neither is a person choosing to play.
+    // the player count: neither is a person choosing to play. The aborted
+    // count itself holds guest-3's abort and not the seatless probe.
     assert.equal(product.completedGames, 2);
     assert.equal(product.previousCompletedGames, 1);
     assert.equal(product.abortedGames, 1);

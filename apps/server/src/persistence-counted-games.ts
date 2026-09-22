@@ -72,11 +72,26 @@ export function countedHumanGame(gamesAlias = 'g'): string {
     AND NOT ${excludedSeatExists(gamesAlias)}`;
 }
 
-// Aborted pvp/pve game since launch with no excluded seat (the readout's
-// demand signal).
+// A person sat in the game: at least one guest or user seat. The prod smoke
+// probes (scripts/prod-*-smoke.mjs) create a PvE room and pregame-abort it,
+// leaving status='aborted', ply 0, untimed rows with no guest/user participant
+// at all, and the dark-chess pvp probe does the same. Over the 42 days to
+// 2026-09-21 that was 796 such rows against 5 real human aborts, so an aborted
+// count without this clause is a probe count (#424): the readout reported
+// "125 aborted vs 69 completed" and a retention issue was opened on it.
+export function humanSeatExists(gamesAlias: string): string {
+  return `EXISTS (
+    SELECT 1 FROM game_participants hp
+    WHERE hp.game_id = ${gamesAlias}.room_id AND hp.subject_type IN ('guest', 'user')
+  )`;
+}
+
+// Aborted pvp/pve game since launch with a human seat and no excluded seat
+// (the readout's demand signal).
 export function countedAbortedGame(gamesAlias = 'g'): string {
   return `${gamesAlias}.status = 'aborted' AND ${gamesAlias}.mode IN ('pvp', 'pve')
     AND ${sinceLaunch(gamesAlias)}
+    AND ${humanSeatExists(gamesAlias)}
     AND NOT ${excludedSeatExists(gamesAlias)}`;
 }
 
