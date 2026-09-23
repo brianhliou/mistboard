@@ -2,7 +2,7 @@
 // Push a production release only through the safe CI -> deploy -> smoke order.
 
 import { spawn, spawnSync } from 'node:child_process';
-import { existsSync } from 'node:fs';
+import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import { homedir, hostname } from 'node:os';
 import path from 'node:path';
 import { performance } from 'node:perf_hooks';
@@ -89,6 +89,14 @@ const release = {
   productionRevision: null,
   pushCompleted: false,
   targetRevision: null,
+  // The record this release appends to the release log at exit: every timed
+  // stage with its duration, the gate it chose, the smoke tier, the CI run.
+  // Until 2026-09-23 the only record of a release was the session transcript.
+  startedAtIso: new Date().toISOString(),
+  stages: [],
+  gate: null,
+  smokeTier: null,
+  ciRunUrl: null,
 };
 
 try {
@@ -159,6 +167,7 @@ try {
 
   if (options.localCi) {
     const gate = localGateFor(ciPlan.changedFiles, options.fullCi);
+    release.gate = { kind: gate.kind, reason: gate.reason };
     console.log(`local gate: ${gate.kind} (${gate.reason})`);
     for (const command of gate.commands) {
       runTimed(`local ${command.slice(2).join(' ')}`, command);
@@ -196,7 +205,9 @@ try {
   }
 
   if (release.ciRequired && options.ciWait) {
-    const verified = await waitForGithubCi({ headRevision: release.headRevision });
+    const verified = await timedStage('hosted CI wait', () =>
+      waitForGithubCi({ headRevision: release.headRevision }),
+    );
     if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
   } else if (!release.ciRequired) {
     console.log(`skip: hosted CI wait (${release.ciReason})`);
@@ -225,11 +236,17 @@ try {
 
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.log(`release: ok in ${formatDuration(elapsedMs)}${adoptionSummary()}`);
+  writeReleaseRecord({ elapsedMs, outcome: 'ok' });
 } catch (error) {
   cancelUnpublishedDrain();
   const elapsedMs = Math.round(performance.now() - startedAt);
   console.error(`release: failed after ${formatDuration(elapsedMs)}${adoptionSummary()}`);
   console.error(error instanceof Error ? error.message : String(error));
+  writeReleaseRecord({
+    elapsedMs,
+    outcome: 'failed',
+    error: (error instanceof Error ? error.message : String(error)).split('\n')[0].slice(0, 300),
+  });
   process.exit(1);
 }
 
@@ -532,6 +549,7 @@ async function waitForGithubCi({ headRevision }) {
   while (Date.now() <= deadline) {
     attempt += 1;
     run = findGithubRun(revision);
+    if (run?.url) release.ciRunUrl = run.url;
     // Checked every poll, not once (see above).
     const superseded = supersededBy(revision);
     const isAncestor = superseded ? confirmAncestor(revision, superseded) : false;
@@ -801,6 +819,7 @@ function pushCommand(headRevision) {
 
 async function runSmoke({ deployRequired, headRevision }) {
   const smoke = resolveSmokeTier(headRevision);
+  release.smokeTier = smoke;
   if (smoke === 'none') {
     console.log('skip: prod smoke (--smoke none)');
     return;
@@ -912,6 +931,14 @@ async function runParallelSmokes(smokes) {
   console.log(`\n# engine-family smokes (${smokes.length} in parallel)`);
   for (const smoke of smokes) console.log(`$ ${quoteCommand(smoke.command)}`);
   const results = await Promise.all(smokes.map(runSmokeProcess));
+  for (const result of results) {
+    recordStage({
+      label: result.label,
+      startedAt: result.startedAt,
+      ms: result.elapsedMs,
+      ok: result.ok,
+    });
+  }
 
   for (const result of results) {
     const verdict = result.ok
@@ -936,6 +963,7 @@ async function runParallelSmokes(smokes) {
 
 function runSmokeProcess({ label, tag, command }) {
   return new Promise((resolve) => {
+    const startedAtIso = new Date().toISOString();
     const startedAt = performance.now();
     const child = spawn(command[0], command.slice(1), {
       cwd: workdir,
@@ -956,6 +984,7 @@ function runSmokeProcess({ label, tag, command }) {
         status,
         signal,
         output,
+        startedAt: startedAtIso,
         elapsedMs: Math.round(performance.now() - startedAt),
       });
     child.on('error', (error) => {
@@ -1054,7 +1083,78 @@ function npmCommand(script, args = []) {
 }
 
 function runTimed(label, command) {
-  run(['node', 'scripts/time-command.mjs', '--label', label, '--', ...command]);
+  const startedAt = new Date().toISOString();
+  const begun = performance.now();
+  try {
+    run(['node', 'scripts/time-command.mjs', '--label', label, '--', ...command]);
+    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: true });
+  } catch (error) {
+    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: false });
+    throw error;
+  }
+}
+
+// An async stage that has its own logging (the CI wait), timed the same way.
+async function timedStage(label, work) {
+  const startedAt = new Date().toISOString();
+  const begun = performance.now();
+  try {
+    const result = await work();
+    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: true });
+    return result;
+  } catch (error) {
+    recordStage({ label, startedAt, ms: Math.round(performance.now() - begun), ok: false });
+    throw error;
+  }
+}
+
+function recordStage(stage) {
+  release.stages.push(stage);
+}
+
+// One JSON line per release attempt, passed or failed, so "where does a
+// release spend its minutes" is a query (npm run release:profile) rather than
+// an afternoon of transcript parsing. Never fails the release: a record that
+// cannot be written is a warning.
+function writeReleaseRecord({ elapsedMs, outcome, error = null }) {
+  if (options.plan) return;
+  const logPath =
+    process.env.MISTBOARD_RELEASE_LOG ||
+    path.join(homedir(), '.local', 'share', 'mistboard', 'releases.jsonl');
+  const record = {
+    v: 1,
+    source: 'release',
+    startedAt: release.startedAtIso,
+    endedAt: new Date().toISOString(),
+    elapsedMs,
+    outcome,
+    ...(error ? { error } : {}),
+    head: release.headRevision,
+    expectedRevision: release.expectedRevision,
+    adopted: release.adopted,
+    targetRevision: release.targetRevision,
+    productionRevisionBefore: release.productionRevision,
+    deployRequired: release.deployRequired,
+    ciRequired: release.ciRequired,
+    ciRunUrl: release.ciRunUrl,
+    gate: release.gate,
+    smokeTier: release.smokeTier,
+    push: options.push,
+    stages: release.stages,
+    hostname: hostname(),
+    cwd: releaseRoot,
+  };
+  try {
+    mkdirSync(path.dirname(logPath), { recursive: true });
+    appendFileSync(logPath, `${JSON.stringify(record)}\n`);
+    console.log(`release record: ${logPath}`);
+  } catch (writeError) {
+    console.warn(
+      `warn: could not write the release record to ${logPath} (${
+        writeError instanceof Error ? writeError.message : String(writeError)
+      })`,
+    );
+  }
 }
 
 // Once the push lands the branch reads as merged, and a merged task worktree

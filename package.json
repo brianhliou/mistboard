@@ -107,6 +107,7 @@
     "pilot:elephantchess-publish": "npm run pilot:elephantchess-publish --workspace @mistboard/server --",
     "release:local-smoke": "node scripts/release-local-smoke.mjs",
     "release:prod": "node scripts/release-prod.mjs",
+    "release:profile": "node scripts/release-profile.mjs",
     "indexnow": "node scripts/indexnow-submit.mjs",
     "drain:token-status": "node scripts/drain-token-status.mjs",
     "drain:token-check": "node scripts/drain-token-check.mjs",
