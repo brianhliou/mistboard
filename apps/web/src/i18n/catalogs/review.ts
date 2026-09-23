@@ -281,6 +281,9 @@ export const EN_REVIEW = {
   'broadcast.copied': 'Copied',
   'broadcast.standingsNote':
     'Standings are calculated from the broadcast games and may differ from the official results.',
+  'broadcast.playing': 'Playing',
+  'broadcast.results': 'Results',
+  'broadcast.noLiveGames': 'No games are being played right now.',
   'broadcast.evalGauge': 'Evaluation gauge',
   'broadcast.teams': 'Teams',
   'broadcast.team': 'Team',
@@ -295,6 +298,38 @@ export const EN_REVIEW = {
   'broadcast.table': 'Table {n}',
   'broadcast.tableGame': 'Table {n} · Game {g}',
   'broadcast.otherGames': 'Other games',
+  'broadcast.sectionNav': 'Broadcasts menu',
+  'broadcast.calendar': 'Calendar',
+  'broadcast.about': 'About',
+  'broadcast.statusLive': 'Live',
+  'broadcast.statusUpcoming': 'Upcoming',
+  'broadcast.statusFinished': 'Finished',
+  'broadcast.watch': 'Watch',
+  'broadcast.comingUp': 'Coming up',
+  'broadcast.fullCalendar': 'Full calendar',
+  'broadcast.roundLive': '{round} · Live',
+  'broadcast.roundOn': '{round} · {date}',
+  'broadcast.startsOn': 'Starts {date}',
+  'broadcast.calendarTitle': 'Broadcast calendar',
+  'broadcast.calendarNote':
+    'Top events from the dpxq.com tournament tracker, and the events we relay. Dates are as the organisers publish them, and they can move.',
+  'broadcast.calendarUnavailable':
+    'The tournament calendar could not be loaded. Try again in a few minutes.',
+  'broadcast.aboutTitle': 'About broadcasts',
+  'broadcast.aboutIntro':
+    'Mistboard relays top xiangqi tournaments in English: every game we can get, with the players, the teams and the standings, and an engine to look at the positions with.',
+  'broadcast.aboutSourcesTitle': 'Where the games come from',
+  'broadcast.aboutSources':
+    'The game records come from dpxq.com, a Chinese xiangqi site that records tournament games. Its editors enter each round, usually after it is over, so a round can take hours or days to fill in. We check every move against the rules and credit the source on every event page.',
+  'broadcast.aboutAnalysisTitle': 'Engine analysis',
+  'broadcast.aboutAnalysis':
+    'Finished games are analysed once on our server with Pikafish, and everyone sees the same result: the advantage chart and the marks on inaccuracies, mistakes and blunders. You can also run the engine in your own browser from any position.',
+  'broadcast.aboutPlayersTitle': 'Players',
+  'broadcast.aboutPlayers':
+    'Each player from a national-level event has a page with their results across the events we carry, their CXA rankings and their games.',
+  'broadcast.aboutNotationTitle': 'Notation',
+  'broadcast.aboutNotation':
+    'Moves are shown in algebraic notation by default (Che3). Chinese and WXF notation are in the settings menu.',
   'broadcast.loadingStandings': 'Loading standings',
   'broadcast.player': 'Player',
   'broadcast.games': 'Games',

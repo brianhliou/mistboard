@@ -63,6 +63,15 @@ const EVENT_GLOSSARY: Array<[string, string]> = [
   ['世界象棋锦标赛', 'World Xiangqi Championship'],
   ['亚洲象棋锦标赛', 'Asian Xiangqi Championship'],
   ['五羊杯', 'Five Rams Cup'],
+  // Found untranslated on the broadcast calendar (2026-09-23): the parts fell
+  // through to pinyin ("Geren", "Kuaiqi", "Dashi", "Haixuansai").
+  ['腾讯天天象棋', 'Tencent Tiantian Xiangqi'],
+  ['个人锦标赛', 'Individual Championship'],
+  ['大师公开赛', 'Masters Open'],
+  ['快棋锦标赛', 'Rapid Championship'],
+  ['海选赛', 'Qualifier'],
+  ['双人赛', 'Pairs'],
+  ['快棋', 'Rapid'],
   ['女子组', 'Women'],
   ['男子组', 'Men'],
   ['公开组', 'Open'],

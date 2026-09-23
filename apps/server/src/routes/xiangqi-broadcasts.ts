@@ -3,6 +3,12 @@ import { broadcastRecordsCredit } from '@mistboard/game';
 import * as persistence from './../persistence.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from '../xiangqi-analysis.js';
 import { handleXiangqiBroadcastAnalysisRoutes } from '../xiangqi-broadcast-analysis.js';
+import { roundNumberFromRoundId } from '../xiangqi-broadcast-discovery.js';
+import {
+  buildBroadcastCalendar,
+  dpxqTourIndexForCalendar,
+} from '../xiangqi-broadcast-dpxq-index.js';
+import { defaultXiangqiBroadcastFetch } from '../xiangqi-broadcast-fetch.js';
 import {
   type BroadcastLiveEval,
   cachedBroadcastLiveEval,
@@ -17,6 +23,7 @@ import {
   buildXiangqiBroadcastBoardReplay,
   finalXiangqiBoardView,
 } from './../xiangqi-broadcast-serving.js';
+import { translateXiangqiEventName } from '../xiangqi-broadcast-translate.js';
 import { type BroadcastViewerRegistry, broadcastViewers } from './../xiangqi-broadcast-viewers.js';
 import {
   type HttpApiContext,
@@ -149,6 +156,8 @@ export async function xiangqiBroadcastIndexForApi(
           ...boards.map((board) => board.updatedAt),
         ]),
         featuredBoard: featuredXiangqiBroadcastBoard(boards),
+        ...indexRoundStatus(rounds, boardsByRound),
+        players: indexPlayers(boards),
         lastSyncLog: syncLogs[0]
           ? {
               severity: syncLogs[0].severity,
@@ -160,6 +169,80 @@ export async function xiangqiBroadcastIndexForApi(
     }),
   );
   return { tours: entries };
+}
+
+type IndexRound = {
+  id: string;
+  name: string;
+  nameEn?: string;
+  /** The seeded start, else the earliest start a game in it states. */
+  startsAt: string | null;
+  live: boolean;
+};
+
+/**
+ * The index card's status line, lichess's "Round 8 · in 11 hours": the latest
+ * round that has games, and the next round seeded with a start in the future
+ * and no games yet. Rounds are ordered by their number (`<slug>-rNN`), since a
+ * round the source named but nobody scheduled has no start to sort by.
+ */
+function indexRoundStatus(
+  rounds: readonly persistence.StoredXiangqiBroadcastRound[],
+  boardsByRound: readonly (readonly persistence.StoredXiangqiBroadcastBoard[])[],
+): { latestRound: IndexRound | null; nextRound: IndexRound | null } {
+  const now = Date.now();
+  const ordered = rounds
+    .map((round, index) => ({ round, boards: boardsByRound[index] ?? [], index }))
+    .sort(
+      (a, b) =>
+        (roundNumberFromRoundId(a.round.id) ?? a.index) -
+          (roundNumberFromRoundId(b.round.id) ?? b.index) || a.index - b.index,
+    );
+  const summary = (entry: (typeof ordered)[number]): IndexRound => {
+    const stated = entry.boards
+      .map((board) => board.details?.playedAt)
+      .filter((at): at is string => typeof at === 'string')
+      .sort((a, b) => Date.parse(a) - Date.parse(b))[0];
+    return {
+      id: entry.round.id,
+      name: entry.round.name,
+      ...(entry.round.nameEn ? { nameEn: entry.round.nameEn } : {}),
+      startsAt: stated ?? entry.round.startsAt ?? null,
+      live: entry.boards.some((board) => board.status === 'live'),
+    };
+  };
+  const withGames = ordered.filter((entry) => entry.boards.length > 0);
+  const latest = withGames[withGames.length - 1];
+  const next = ordered.find(
+    (entry) =>
+      entry.boards.length === 0 &&
+      entry.round.startsAt !== undefined &&
+      Date.parse(entry.round.startsAt) > now,
+  );
+  return {
+    latestRound: latest ? summary(latest) : null,
+    nextRound: next ? summary(next) : null,
+  };
+}
+
+// Who played, for the card's "top players" line; the page ranks them by its
+// CXA data, which lives with the player pages in the web app. One entry per
+// name, capped so a big open cannot bloat the index.
+const INDEX_PLAYER_CAP = 96;
+
+function indexPlayers(boards: readonly persistence.StoredXiangqiBroadcastBoard[]) {
+  const seen = new Map<string, { name: string; nameEn?: string; title?: string }>();
+  for (const board of boards) {
+    for (const player of [board.red, board.black]) {
+      if (seen.has(player.name) || seen.size >= INDEX_PLAYER_CAP) continue;
+      seen.set(player.name, {
+        name: player.name,
+        ...(player.nameEn ? { nameEn: player.nameEn } : {}),
+        ...(player.title ? { title: player.title } : {}),
+      });
+    }
+  }
+  return [...seen.values()];
 }
 
 // The index page shows one mini-board thumbnail per tour: the most recently
@@ -916,6 +999,27 @@ export async function tryHandle(
       return true;
     }
     writeJson(response, 200, payload);
+    return true;
+  }
+
+  // The broadcast calendar: top events from dpxq's tour index (cached six
+  // hours; the scheduler's sweep keeps it warm) merged with the events we relay.
+  if (pathname === '/api/xiangqi/broadcasts/calendar') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    if (!requirePersistence(response)) return true;
+    const [rows, tours] = await Promise.all([
+      dpxqTourIndexForCalendar({ fetchImpl: defaultXiangqiBroadcastFetch }),
+      persistence.listXiangqiBroadcastTours(),
+    ]);
+    writeJson(response, 200, {
+      sourceReadable: rows !== null,
+      events: buildBroadcastCalendar({
+        rows: rows ?? [],
+        tours,
+        now: Date.now(),
+        translate: translateXiangqiEventName,
+      }),
+    });
     return true;
   }
 

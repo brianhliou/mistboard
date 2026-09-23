@@ -1353,3 +1353,354 @@
   font-size: 13px;
   cursor: pointer;
 }
+
+/* The broadcast section's own pages (index, calendar, about), lichess's
+   frame: a left rail of the section's pages and one centred panel, rather
+   than a full-width column that left the right half of the screen empty. */
+.xqb-section-page {
+  max-width: 1240px;
+}
+
+.xqb-section-layout {
+  display: grid;
+  grid-template-columns: 184px minmax(0, 1fr);
+  gap: 24px;
+  align-items: start;
+}
+
+.xqb-rail {
+  position: sticky;
+  top: 12px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-top: 6px;
+}
+
+.xqb-rail-link {
+  padding: 7px 12px;
+  border-radius: var(--site-radius-sm);
+  color: var(--site-muted);
+  font-size: 14px;
+  text-decoration: none;
+}
+
+.xqb-rail-link:hover,
+.xqb-rail-link:focus-visible {
+  color: var(--site-text);
+  background: color-mix(in srgb, var(--site-panel) 70%, transparent);
+}
+
+.xqb-rail-link-active {
+  color: var(--site-text);
+  background: var(--site-panel);
+  font-weight: 600;
+}
+
+.xqb-section-panel {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.xqb-section-title {
+  margin: 4px 0 0;
+  color: var(--site-heading);
+  font-size: 30px;
+  font-weight: 600;
+  line-height: 1.15;
+}
+
+/* The status line leads a card, lichess's "Round 8 · in 11 hours"; live is
+   the site's live red, the same as the live badge. */
+.xqb-tour-status {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+  letter-spacing: 0.02em;
+}
+
+.xqb-tour-status-live {
+  color: #d23b2e;
+}
+
+.xqb-tour-card-name {
+  color: var(--site-heading);
+  font-size: 15px;
+  line-height: 1.3;
+}
+
+.xqb-tour-players {
+  color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1.4;
+}
+
+.xqb-tour-card-live {
+  border-color: color-mix(in srgb, #d23b2e 55%, var(--site-border-soft));
+}
+
+/* The featured event: the board beside the event, larger type. */
+.xqb-tour-card-featured {
+  display: grid;
+  grid-template-columns: minmax(180px, 280px) minmax(0, 1fr);
+  gap: 18px;
+  align-items: center;
+  padding: 14px;
+}
+
+.xqb-tour-card-featured .xqb-tour-card-copy {
+  gap: 6px;
+}
+
+.xqb-tour-card-featured .xqb-tour-card-name {
+  font-size: 22px;
+}
+
+.xqb-tour-card-featured .xqb-tour-status,
+.xqb-tour-card-featured .xqb-tour-players {
+  font-size: 14px;
+}
+
+/* Calendar rows, on the calendar page and the index's "Coming up". */
+.xqb-coming-up-head {
+  display: flex;
+  align-items: baseline;
+  justify-content: space-between;
+  gap: 12px;
+}
+
+.xqb-cal-month h2 {
+  margin: 0 0 8px;
+  color: var(--site-heading);
+  font-size: 16px;
+}
+
+.xqb-cal {
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+}
+
+.xqb-cal-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-panel);
+}
+
+.xqb-cal-row {
+  display: grid;
+  grid-template-columns: 150px minmax(0, 1fr) auto auto;
+  gap: 12px;
+  align-items: center;
+  padding: 10px 14px;
+}
+
+.xqb-cal-row + .xqb-cal-row {
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.xqb-cal-when {
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqb-cal-what {
+  min-width: 0;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.xqb-cal-what strong {
+  color: var(--site-text);
+  font-size: 14px;
+}
+
+.xqb-cal-sub {
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.xqb-cal-status {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 600;
+}
+
+.xqb-cal-status-live {
+  color: #d23b2e;
+}
+
+.xqb-about {
+  max-width: 68ch;
+  color: var(--site-text);
+  font-size: 15px;
+  line-height: 1.6;
+}
+
+.xqb-about h2 {
+  margin: 22px 0 6px;
+  color: var(--site-heading);
+  font-size: 17px;
+}
+
+.xqb-about p {
+  margin: 0;
+}
+
+@media (max-width: 760px) {
+  .xqb-section-layout {
+    grid-template-columns: minmax(0, 1fr);
+    gap: 10px;
+  }
+
+  .xqb-rail {
+    position: static;
+    flex-direction: row;
+    overflow-x: auto;
+    padding-top: 0;
+  }
+
+  .xqb-rail-link {
+    white-space: nowrap;
+  }
+
+  .xqb-tour-card-featured {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xqb-cal-row {
+    grid-template-columns: minmax(0, 1fr) auto;
+  }
+
+  .xqb-cal-when {
+    grid-column: 1 / -1;
+  }
+}
+
+/* lichess's board card: the players on the board's own sides, Black above
+   and Red below, each with their score. */
+.xqb-card-seat {
+  display: grid;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  gap: 6px;
+  align-items: center;
+  min-height: 20px;
+  color: var(--site-text);
+  font-size: 13px;
+  line-height: 1.2;
+}
+
+.xqb-card-seat-disc {
+  width: 9px;
+  height: 9px;
+  border-radius: 50%;
+}
+
+/* The seat strips' inks (review/seat-labels.css), so a card and the review
+   it opens agree. */
+.xqb-card-seat-red .xqb-card-seat-disc {
+  background: #a63328;
+}
+
+.xqb-card-seat-black .xqb-card-seat-disc {
+  background: var(--seat-dark-ink, #34302e);
+  box-shadow: 0 0 0 1px var(--seat-dark-ink-border, #8f8b83);
+}
+
+.xqb-card-seat-name {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xqb-card-seat-winner .xqb-card-seat-name {
+  font-weight: 600;
+}
+
+.xqb-score {
+  min-width: 1.2em;
+  color: var(--site-text);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.xqb-card-live {
+  color: #d23b2e;
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  text-transform: uppercase;
+}
+
+/* The left list, lichess's: a number, both players stacked with scores. */
+.xqb-rail-row {
+  display: grid;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  gap: 8px;
+  align-items: center;
+}
+
+.xqb-rail-no {
+  color: var(--site-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+  text-align: right;
+}
+
+.xqb-rail-row .xqb-rail-players {
+  display: flex;
+  flex-direction: column;
+  gap: 1px;
+  min-width: 0;
+  white-space: normal;
+}
+
+.xqb-rail-row .xqb-card-seat {
+  min-height: 17px;
+  font-size: 12px;
+}
+
+.xqb-boards-toolbar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 18px;
+}
+
+/* Playing: only live games, and a match with none of them goes too. */
+.xqb-live-only .xqb-board-card:not(.xqb-board-card-live),
+.xqb-live-only .xqb-match:not(:has(.xqb-board-card-live)),
+.xqb-live-only .xqb-match-subheading {
+  display: none;
+}
+
+.xqb-live-empty {
+  display: none;
+}
+
+.xqb-live-only .xqb-live-empty {
+  display: block;
+}
+
+/* Results off: every score and anything that gives the result away. The
+   space stays, so the layout does not jump when it comes back. */
+.xqb-results-off .xqb-score,
+.xqb-results-off .xqb-match-score,
+.xqb-results-off .xqb-match-split {
+  visibility: hidden;
+}
+
+.xqb-results-off .xqb-card-seat-winner .xqb-card-seat-name {
+  font-weight: inherit;
+}
+
+.xqb-results-off .xqb-match-team-won {
+  text-decoration: none;
+}

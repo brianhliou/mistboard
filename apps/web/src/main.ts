@@ -264,6 +264,10 @@ const wantsXiangqiPlayersIndex = path === '/players';
 const xiangqiPlayerSlug = /^\/players\/([^/]+)$/.exec(path)?.[1] ?? null;
 const wantsXiangqiBroadcastIndex = path === '/broadcast/xiangqi';
 const wantsXiangqiBroadcastOps = path === '/broadcast/xiangqi/ops';
+// The section's own pages. Matched before the tour route below, which would
+// otherwise read `calendar` and `about` as tour slugs.
+const wantsXiangqiBroadcastCalendar = path === '/broadcast/xiangqi/calendar';
+const wantsXiangqiBroadcastAbout = path === '/broadcast/xiangqi/about';
 const xiangqiBroadcastBoardId = xiangqiBroadcastBoardIdFromPath(path);
 const xiangqiBroadcastRound = xiangqiBroadcastRoundFromPath(path);
 const xiangqiBroadcastTourSlug = xiangqiBroadcastTourSlugFromPath(path);
@@ -635,6 +639,20 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastIndex }) =>
       mountXiangqiBroadcastIndex(appRoot),
+    ),
+  );
+} else if (wantsXiangqiBroadcastCalendar) {
+  setTitle('Xiangqi broadcast calendar');
+  void mountOrReport(() =>
+    import('./xiangqi-broadcast-pages.js').then(({ mountXiangqiBroadcastCalendar }) =>
+      mountXiangqiBroadcastCalendar(appRoot),
+    ),
+  );
+} else if (wantsXiangqiBroadcastAbout) {
+  setTitle('About xiangqi broadcasts');
+  void mountOrReport(() =>
+    import('./xiangqi-broadcast-pages.js').then(({ mountXiangqiBroadcastAbout }) =>
+      mountXiangqiBroadcastAbout(appRoot),
     ),
   );
 } else if (wantsXiangqiBroadcastOps) {

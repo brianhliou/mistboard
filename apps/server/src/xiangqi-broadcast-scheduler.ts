@@ -13,7 +13,11 @@
 
 import * as persistence from './persistence.js';
 import { getPool } from './persistence-db.js';
-import { fetchDpxqTourIndex, planDpxqIndexSync } from './xiangqi-broadcast-dpxq-index.js';
+import {
+  fetchDpxqTourIndex,
+  planDpxqIndexSync,
+  rememberDpxqTourIndex,
+} from './xiangqi-broadcast-dpxq-index.js';
 import { defaultXiangqiBroadcastFetch } from './xiangqi-broadcast-fetch.js';
 import { requestBroadcastLiveEvalForBoard } from './xiangqi-broadcast-live-eval.js';
 import {
@@ -106,6 +110,7 @@ export async function sweepDpxqTourIndex(
     });
     return;
   }
+  rememberDpxqTourIndex(index.rows);
   const tours = await persistence.listXiangqiBroadcastTourSourcesOn(getPool());
   const plan = planDpxqIndexSync({ rows: index.rows, tours, now: (deps.now ?? Date.now)() });
   for (const move of plan.endDateMoves) {

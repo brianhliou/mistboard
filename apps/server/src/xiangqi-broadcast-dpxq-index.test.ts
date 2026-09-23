@@ -2,6 +2,7 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import test from 'node:test';
 import {
+  buildBroadcastCalendar,
   dpxqTourIdFromSourceUrl,
   fetchDpxqTourIndex,
   isTopDpxqEvent,
@@ -167,4 +168,48 @@ test('an index that parses to no rows is a failure, not a quiet week', async () 
     }),
   });
   assert.equal(result.ok, false);
+});
+
+test('the calendar lists top events live, upcoming and just finished, linked to our page when we relay one', async () => {
+  const rows = parseDpxqTourIndex(await indexFixture());
+  const events = buildBroadcastCalendar({
+    rows,
+    now: NOW,
+    tours: [
+      {
+        slug: '2026-xiangqi-league',
+        name: '2026年全国象棋男子甲级联赛',
+        sourceUrl: 'mistboard-discover://dpxq-tour?tour=12683&tourSlug=2026-xiangqi-league',
+      },
+      // A hand import dpxq's index has no row for still makes the calendar.
+      {
+        slug: '2026-league-qualifier',
+        name: '2026 China Xiangqi League Qualifier',
+        startsAt: '2026-08-17T09:00:00+08:00',
+        endsAt: '2026-08-19T18:00:00+08:00',
+      },
+    ],
+    translate: (zh) => (zh === '2026年全国象棋女子甲级联赛' ? '2026 Women League' : undefined),
+  });
+  const byName = new Map(events.map((event) => [event.name, event]));
+  const women = byName.get('2026年全国象棋女子甲级联赛');
+  assert.equal(women?.status, 'live');
+  assert.equal(women?.nameEn, '2026 Women League');
+  assert.equal(women?.tourSlug, null);
+  assert.equal(women?.sourceUrl, 'http://www.dpxq.com/hldcg/tour_12776.html');
+  assert.equal(byName.get('2026年全国象棋男子甲级联赛')?.tourSlug, '2026-xiangqi-league');
+  assert.equal(byName.get('2026年全国象棋男子甲级联赛')?.status, 'finished');
+  // The hand-imported qualifier maps onto dpxq's own row (12656) rather than
+  // appearing twice; the fixture index predates the qualifier's section, so
+  // it comes in through the tours list.
+  assert.equal(events.filter((event) => event.tourSlug === '2026-league-qualifier').length, 1);
+  assert.equal(byName.get('2026年全国象棋个人赛')?.status, 'upcoming');
+  // Community and youth events stay off it.
+  assert.equal(
+    events.some((event) => event.name.includes('银龄')),
+    false,
+  );
+  // Sorted by start.
+  const starts = events.map((event) => event.startsOn);
+  assert.deepEqual(starts, [...starts].sort());
 });

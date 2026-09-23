@@ -182,3 +182,125 @@ export async function fetchDpxqTourIndex(input: {
     clearTimeout(timer);
   }
 }
+
+// The last index read, shared by the sweep (which refreshes it every six hours)
+// and the public calendar (which reads it, and fetches only when it is cold).
+const INDEX_CACHE_MS = 6 * 60 * 60_000;
+let lastIndex: { at: number; rows: DpxqIndexRow[] } | null = null;
+
+export function rememberDpxqTourIndex(rows: DpxqIndexRow[], at = Date.now()): void {
+  lastIndex = { at, rows };
+}
+
+/** The index for the calendar: the cached read when fresh, else one fetch.
+ *  A failed fetch serves a stale read rather than nothing. */
+export async function dpxqTourIndexForCalendar(input: {
+  fetchImpl: XiangqiBroadcastSourceFetch;
+  now?: number;
+}): Promise<DpxqIndexRow[] | null> {
+  const now = input.now ?? Date.now();
+  if (lastIndex && now - lastIndex.at < INDEX_CACHE_MS) return lastIndex.rows;
+  const fetched = await fetchDpxqTourIndex({ fetchImpl: input.fetchImpl, timeoutMs: 15_000 });
+  if (fetched.ok) {
+    rememberDpxqTourIndex(fetched.rows, now);
+    return fetched.rows;
+  }
+  return lastIndex?.rows ?? null;
+}
+
+export type BroadcastCalendarEvent = {
+  name: string;
+  nameEn?: string;
+  location: string;
+  startsOn: string;
+  endsOn: string;
+  status: 'live' | 'upcoming' | 'finished';
+  /** Our event page when we relay it, else dpxq's tour page. */
+  tourSlug: string | null;
+  sourceUrl: string | null;
+};
+
+// Tours imported by hand, whose source URL names a game page rather than the
+// dpxq tour, mapped to that tour so the calendar lists each event once.
+// Reviewed in the same diff as the tour it maps, like the level grades.
+export const HAND_IMPORTED_DPXQ_TOURS: Readonly<Record<string, string>> = {
+  // 象甲"腾讯天天象棋"预选赛, Aug 17-19: 99 games pasted from movelist_12656.
+  '2026-league-qualifier': '12656',
+};
+
+// How far back the calendar reaches: long enough to cover a finished stage
+// whose records are still arriving.
+const CALENDAR_PAST_MS = 60 * 24 * 60 * 60_000;
+
+/**
+ * The public calendar: every top event dpxq lists as live or upcoming, or
+ * finished in the last two months, plus the events we relay that dpxq's index
+ * does not carry (hand imports). Status follows dpxq's own section.
+ */
+export function buildBroadcastCalendar(input: {
+  rows: readonly DpxqIndexRow[];
+  tours: readonly {
+    slug: string;
+    name: string;
+    nameEn?: string;
+    location?: string;
+    startsAt?: string;
+    endsAt?: string;
+    sourceUrl?: string | null;
+  }[];
+  now: number;
+  translate?: (zh: string) => string | undefined;
+}): BroadcastCalendarEvent[] {
+  const slugByDpxqTour = new Map<string, string>();
+  for (const tour of input.tours) {
+    const tourId = dpxqTourIdFromSourceUrl(tour.sourceUrl) ?? HAND_IMPORTED_DPXQ_TOURS[tour.slug];
+    if (tourId) slugByDpxqTour.set(tourId, tour.slug);
+  }
+  const events: BroadcastCalendarEvent[] = [];
+  const listed = new Set<string>();
+  for (const row of input.rows) {
+    if (!isTopDpxqEvent(row.name)) continue;
+    const ended = Date.parse(dpxqEndOfDay(row.endsOn));
+    if (row.section === 'ended' && input.now - ended > CALENDAR_PAST_MS) continue;
+    const tourSlug = slugByDpxqTour.get(row.tourId) ?? null;
+    if (tourSlug) listed.add(tourSlug);
+    const nameEn = input.translate?.(row.name);
+    events.push({
+      name: row.name,
+      ...(nameEn ? { nameEn } : {}),
+      location: row.location,
+      startsOn: row.startsOn,
+      endsOn: row.endsOn,
+      status:
+        row.section === 'live' ? 'live' : row.section === 'upcoming' ? 'upcoming' : 'finished',
+      tourSlug,
+      sourceUrl: `http://www.dpxq.com/hldcg/tour_${row.tourId}.html`,
+    });
+  }
+  for (const tour of input.tours) {
+    if (listed.has(tour.slug) || !tour.startsAt) continue;
+    const startsOn = tour.startsAt.slice(0, 10);
+    const endsOn = (tour.endsAt ?? tour.startsAt).slice(0, 10);
+    const endMs = Date.parse(dpxqEndOfDay(endsOn));
+    if (input.now - endMs > CALENDAR_PAST_MS) continue;
+    const startMs = Date.parse(`${startsOn}T00:00:00+08:00`);
+    // The same translation the dpxq rows get, so our row does not carry an
+    // older cached English name beside them; an English name stays as it is.
+    const nameEn = /[\u4e00-\u9fff]/.test(tour.name)
+      ? (input.translate?.(tour.name) ?? tour.nameEn)
+      : tour.nameEn;
+    events.push({
+      name: tour.name,
+      ...(nameEn ? { nameEn } : {}),
+      location: tour.location ?? '',
+      startsOn,
+      endsOn,
+      status: input.now < startMs ? 'upcoming' : input.now <= endMs ? 'live' : 'finished',
+      tourSlug: tour.slug,
+      sourceUrl: null,
+    });
+  }
+  return events.sort(
+    (a, b) => a.startsOn.localeCompare(b.startsOn) || a.name.localeCompare(b.name),
+  );
+}

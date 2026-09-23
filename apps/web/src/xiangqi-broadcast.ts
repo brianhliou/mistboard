@@ -38,6 +38,14 @@ import {
   type TeamMatch,
   teamStandings,
 } from './xiangqi-broadcast-matches.js';
+import {
+  type BroadcastCalendarResponse,
+  type BroadcastPlayerRef,
+  broadcastSectionLayout,
+  calendarEventRow,
+  fetchBroadcastCalendar,
+  topBroadcastPlayers,
+} from './xiangqi-broadcast-pages.js';
 import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
 import { broadcastStandings, formatStandingsScore } from './xiangqi-broadcast-standings.js';
 import {
@@ -174,7 +182,20 @@ type BroadcastIndexEntry = {
   totalPlies: number;
   updatedAt: string | null;
   featuredBoard?: BroadcastFeaturedBoard | null;
+  /** The latest round with games and the next seeded one, for the status line. */
+  latestRound?: BroadcastIndexRound | null;
+  nextRound?: BroadcastIndexRound | null;
+  /** Who played, for the card's top-players line. */
+  players?: BroadcastPlayerRef[];
   lastSyncLog: BroadcastSyncLogSummary | null;
+};
+
+type BroadcastIndexRound = {
+  id: string;
+  name: string;
+  nameEn?: string;
+  startsAt: string | null;
+  live: boolean;
 };
 
 type BroadcastIndexResponse = {
@@ -204,9 +225,12 @@ function trackBroadcastOpened(props: BroadcastOpenedProps): void {
 export async function mountXiangqiBroadcastIndex(root: HTMLElement): Promise<void> {
   setBroadcastRoot(root, t('broadcast.loadingBroadcasts'));
   try {
-    const data = await fetchJson<BroadcastIndexResponse>('/api/xiangqi/broadcasts');
+    const [data, calendar] = await Promise.all([
+      fetchJson<BroadcastIndexResponse>('/api/xiangqi/broadcasts'),
+      fetchBroadcastCalendar(),
+    ]);
     trackBroadcastOpened({ surface: 'index' });
-    const paint = (): void => root.replaceChildren(buildNav(), renderIndex(data));
+    const paint = (): void => root.replaceChildren(buildNav(), renderIndex(data, calendar));
     paint();
     installBroadcastAppearanceRefresh(paint);
   } catch (err) {
@@ -512,36 +536,159 @@ function parseStreamEnvelope<T>(event: Event): BroadcastStreamEnvelope<T> | null
 
 // Two zones: tours with a live board first, everything else below. Each zone
 // is a card grid with a featured-board thumbnail per tour.
-function renderIndex(data: BroadcastIndexResponse): HTMLElement {
-  const main = broadcastShell();
-  const live = data.tours.filter((entry) => entry.liveBoardCount > 0);
-  const past = data.tours.filter((entry) => entry.liveBoardCount === 0);
-  main.append(
-    heroSection({
-      eyebrow: t('broadcast.eyebrow'),
-      title: t('broadcast.tournamentBroadcasts'),
-      backHref: '/players',
-      backLabel: t('nav.proPlayers'),
-      meta: [
-        t(data.tours.length === 1 ? 'broadcast.tournamentCountOne' : 'broadcast.tournamentCount', {
-          count: data.tours.length,
-        }),
-        live.length > 0 ? t('broadcast.liveNowCount', { count: live.length }) : null,
-      ].filter(Boolean) as string[],
-    }),
-  );
+// lichess's broadcast index: the section rail on the left, and in a centred
+// panel the featured event (live, else the latest), then live, upcoming and
+// past events, and the next few events on the calendar.
+function renderIndex(
+  data: BroadcastIndexResponse,
+  calendar: BroadcastCalendarResponse | null,
+): HTMLElement {
+  const heading = document.createElement('h1');
+  heading.className = 'xqb-section-title';
+  heading.textContent = t('broadcast.tournamentBroadcasts');
 
-  if (live.length > 0) main.append(tourZone(t('broadcast.liveNow'), sortByFreshness(live), true));
-  if (past.length > 0 || live.length === 0) {
-    main.append(
-      tourZone(
-        live.length > 0 ? t('broadcast.past') : t('broadcast.broadcasts'),
-        sortByFreshness(past),
-        false,
-      ),
-    );
+  const now = Date.now();
+  const live = data.tours.filter((entry) => entry.liveBoardCount > 0);
+  const upcoming = data.tours.filter(
+    (entry) => entry.liveBoardCount === 0 && isAfter(entry.tour.startsAt, now),
+  );
+  const past = data.tours.filter(
+    (entry) => entry.liveBoardCount === 0 && !isAfter(entry.tour.startsAt, now),
+  );
+  const featured =
+    sortByFreshness(live)[0] ??
+    [...upcoming].sort((a, b) => dateMs(a.tour.startsAt) - dateMs(b.tour.startsAt))[0] ??
+    sortByFreshness(past)[0] ??
+    null;
+  const without = (entries: BroadcastIndexEntry[]) => entries.filter((entry) => entry !== featured);
+
+  const content: HTMLElement[] = [heading];
+  if (featured) content.push(featuredTourCard(featured));
+  if (without(live).length > 0) {
+    content.push(tourZone(t('broadcast.liveNow'), sortByFreshness(without(live)), true));
   }
-  return main;
+  const comingUp = comingUpSection(calendar, data.tours);
+  if (comingUp) content.push(comingUp);
+  if (without(upcoming).length > 0) {
+    content.push(tourZone(t('broadcast.upcoming'), without(upcoming), false));
+  }
+  if (without(past).length > 0) {
+    content.push(tourZone(t('broadcast.past'), sortByFreshness(without(past)), false));
+  }
+  if (data.tours.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'xqb-empty';
+    empty.textContent = t('broadcast.noneAvailable');
+    content.push(empty);
+  }
+  return broadcastSectionLayout('broadcasts', ...content);
+}
+
+function dateMs(value: string | null | undefined): number {
+  const ms = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
+}
+
+function isAfter(value: string | null | undefined, now: number): boolean {
+  const ms = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(ms) && ms > now;
+}
+
+/**
+ * The card's status line, lichess's "Round 8 · in 11 hours": live, else the
+ * next seeded round, else a start date still ahead, else the latest round
+ * with games and when it was played. Never our import time.
+ */
+function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boolean } | null {
+  const latest = entry.latestRound ?? null;
+  if (entry.liveBoardCount > 0) {
+    const round = latest ? primaryName(latest) : null;
+    return {
+      text: round ? t('broadcast.roundLive', { round }) : t('broadcast.statusLive'),
+      live: true,
+    };
+  }
+  const next = entry.nextRound ?? null;
+  if (next?.startsAt) {
+    return {
+      text: t('broadcast.roundOn', {
+        round: primaryName(next),
+        date: formatEventDay(next.startsAt) ?? '',
+      }),
+      live: false,
+    };
+  }
+  if (isAfter(entry.tour.startsAt, Date.now())) {
+    return {
+      text: t('broadcast.startsOn', { date: formatEventDay(entry.tour.startsAt) ?? '' }),
+      live: false,
+    };
+  }
+  if (latest) {
+    const date = formatEventDay(latest.startsAt ?? undefined);
+    return {
+      text: date
+        ? t('broadcast.roundOn', { round: primaryName(latest), date })
+        : primaryName(latest),
+      live: false,
+    };
+  }
+  return null;
+}
+
+function statusLineEl(entry: BroadcastIndexEntry): HTMLElement | null {
+  const status = tourStatusLine(entry);
+  if (!status) return null;
+  const el = document.createElement('span');
+  el.className = status.live ? 'xqb-tour-status xqb-tour-status-live' : 'xqb-tour-status';
+  el.textContent = status.text;
+  return el;
+}
+
+function topPlayersEl(entry: BroadcastIndexEntry, count: number): HTMLElement | null {
+  const names = topBroadcastPlayers(entry.players ?? [], count);
+  if (names.length === 0) return null;
+  const el = document.createElement('span');
+  el.className = 'xqb-tour-players';
+  el.textContent = names.join(', ');
+  return el;
+}
+
+/** The featured event, large: the board beside the event, lichess's hero card. */
+function featuredTourCard(entry: BroadcastIndexEntry): HTMLElement {
+  const card = tourCard(entry, { featured: true });
+  return card;
+}
+
+/** The next few events on the calendar that we do not have a page for yet. */
+function comingUpSection(
+  calendar: BroadcastCalendarResponse | null,
+  tours: readonly BroadcastIndexEntry[],
+): HTMLElement | null {
+  if (!calendar) return null;
+  const relayed = new Set(tours.map((entry) => entry.tour.slug));
+  const events = calendar.events
+    .filter(
+      (event) => event.status !== 'finished' && !(event.tourSlug && relayed.has(event.tourSlug)),
+    )
+    .slice(0, 4);
+  if (events.length === 0) return null;
+  const section = document.createElement('section');
+  section.className = 'xqb-section xqb-coming-up';
+  const head = document.createElement('div');
+  head.className = 'xqb-coming-up-head';
+  const title = document.createElement('h2');
+  title.textContent = t('broadcast.comingUp');
+  const all = document.createElement('a');
+  all.className = 'xqb-link';
+  all.href = '/broadcast/xiangqi/calendar';
+  all.textContent = t('broadcast.fullCalendar');
+  head.append(title, all);
+  const list = document.createElement('ul');
+  list.className = 'xqb-cal-list';
+  for (const event of events) list.append(calendarEventRow(event));
+  section.append(head, list);
+  return section;
 }
 
 function sortByFreshness(entries: BroadcastIndexEntry[]): BroadcastIndexEntry[] {
@@ -626,6 +773,7 @@ function renderEvent(
 
   const layout = document.createElement('div');
   layout.className = 'xqb-event-layout';
+  applyStoredToggles(layout);
   const content = document.createElement('section');
   content.className = 'xqb-section xqb-event-content';
   content.append(tabs);
@@ -697,10 +845,14 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
   const roundPlayedOn = data.boards.every((board) => board.status !== 'live')
     ? formatEventDay(roundPlayedAt(data.boards) ?? data.round.startsAt)
     : null;
-  if (data.boards.some((board) => board.evaluation)) {
-    wrap.append(evalGaugeToggle(wrap));
+  wrap.append(boardsToolbar(wrap, data.boards));
+  // Playing with nothing live: say so rather than show an empty page.
+  if (!data.boards.some((board) => board.status === 'live')) {
+    const none = document.createElement('p');
+    none.className = 'xqb-empty xqb-live-empty';
+    none.textContent = t('broadcast.noLiveGames');
+    wrap.append(none);
   }
-  wrap.classList.toggle('xqb-gauges-off', !evalGaugeOn());
   // Live boards lead the grid; within a status band the pairing order holds.
   const boards = [...data.boards].sort(
     (a, b) =>
@@ -736,34 +888,91 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
   return wrap;
 }
 
-const EVAL_GAUGE_KEY = 'mistboard.broadcast.evalGauge';
+// lichess's board toolbar: Playing (live games only), Results (off hides
+// every score, so a round can be watched later without spoilers), and the
+// Evaluation gauge. Each is one class on the panel, remembered per browser,
+// so flipping one rebuilds no card.
+type BoardsToggle = {
+  key: string;
+  /** The panel class that applies when the toggle is in its non-default state. */
+  offClass: string;
+  label: Parameters<typeof t>[0];
+  /** Checked means the default (results shown, gauges shown, all games). */
+  defaultOn: boolean;
+};
 
-/** The grid gauge's on/off, per browser; on unless the reader turned it off. */
-function evalGaugeOn(): boolean {
+const BOARDS_TOGGLES: readonly BoardsToggle[] = [
+  {
+    key: 'mistboard.broadcast.liveOnly',
+    offClass: 'xqb-live-only',
+    label: 'broadcast.playing',
+    defaultOn: false,
+  },
+  {
+    key: 'mistboard.broadcast.results',
+    offClass: 'xqb-results-off',
+    label: 'broadcast.results',
+    defaultOn: true,
+  },
+  {
+    key: 'mistboard.broadcast.evalGauge',
+    offClass: 'xqb-gauges-off',
+    label: 'broadcast.evalGauge',
+    defaultOn: true,
+  },
+];
+
+function readToggle(toggle: BoardsToggle): boolean {
   try {
-    return window.localStorage.getItem(EVAL_GAUGE_KEY) !== 'off';
+    const stored = window.localStorage.getItem(toggle.key);
+    return stored === null ? toggle.defaultOn : stored === 'on';
   } catch {
-    return true;
+    return toggle.defaultOn;
   }
 }
 
-function evalGaugeToggle(panel: HTMLElement): HTMLElement {
-  const label = document.createElement('label');
-  label.className = 'xqb-gauge-toggle';
-  const input = document.createElement('input');
-  input.type = 'checkbox';
-  input.checked = evalGaugeOn();
-  // One class on the panel shows or hides every gauge: no card is rebuilt.
-  input.addEventListener('change', () => {
-    panel.classList.toggle('xqb-gauges-off', !input.checked);
-    try {
-      window.localStorage.setItem(EVAL_GAUGE_KEY, input.checked ? 'on' : 'off');
-    } catch {
-      // Storage refused (private mode): the toggle still works for this view.
-    }
-  });
-  label.append(input, document.createTextNode(` ${t('broadcast.evalGauge')}`));
-  return label;
+function applyToggle(panel: HTMLElement, toggle: BoardsToggle, on: boolean): void {
+  // Playing is the one that adds a filter when ON; the other two remove
+  // something when OFF.
+  const active = toggle.defaultOn ? !on : on;
+  panel.classList.toggle(toggle.offClass, active);
+}
+
+function boardsToolbar(panel: HTMLElement, boards: readonly BroadcastBoardSummary[]): HTMLElement {
+  const bar = document.createElement('div');
+  bar.className = 'xqb-boards-toolbar';
+  const hasEval = boards.some((board) => board.evaluation);
+  for (const toggle of BOARDS_TOGGLES) {
+    if (toggle.offClass === 'xqb-gauges-off' && !hasEval) continue;
+    const on = readToggle(toggle);
+    applyToggle(panel, toggle, on);
+    const label = document.createElement('label');
+    label.className = 'xqb-gauge-toggle';
+    const input = document.createElement('input');
+    input.type = 'checkbox';
+    input.checked = on;
+    input.addEventListener('change', () => {
+      // The event layout, so the left list's scores follow the Results toggle.
+      applyToggle(toggleTarget(panel), toggle, input.checked);
+      try {
+        window.localStorage.setItem(toggle.key, input.checked ? 'on' : 'off');
+      } catch {
+        // Storage refused (private mode): the toggle still works for this view.
+      }
+    });
+    label.append(input, document.createTextNode(` ${t(toggle.label)}`));
+    bar.append(label);
+  }
+  return bar;
+}
+
+function toggleTarget(panel: HTMLElement): HTMLElement {
+  return panel.closest<HTMLElement>('.xqb-event-layout') ?? panel;
+}
+
+/** The stored toggles, applied to the event layout at render. */
+function applyStoredToggles(target: HTMLElement): void {
+  for (const toggle of BOARDS_TOGGLES) applyToggle(target, toggle, readToggle(toggle));
 }
 
 /** When a round was played, from its games: the earliest start a game states.
@@ -803,16 +1012,24 @@ function matchSection(
   section.append(header);
   const split = (label: string, points: [number, number]) =>
     `${label} ${formatPoints(points[0])}–${formatPoints(points[1])}`;
-  const sub = [
-    match.nameEn ? match.nameEn.replace('-', ' vs ') : null,
-    match.name,
+  const names = [match.nameEn ? match.nameEn.replace('-', ' vs ') : null, match.name].filter(
+    Boolean,
+  );
+  const scores = [
     match.slow.boards.length > 0 ? split(t('broadcast.slow'), match.slow.score) : null,
     match.blitz.boards.length > 0 ? split(t('broadcast.blitz'), match.blitz.score) : null,
     match.finished && !match.complete ? t('broadcast.recordMissing') : null,
   ].filter(Boolean);
   const subline = document.createElement('p');
   subline.className = 'xqb-match-sub';
-  subline.textContent = sub.join(' · ');
+  subline.textContent = names.join(' · ');
+  // The split is a result too, so the Results toggle hides it with the score.
+  if (scores.length > 0) {
+    const splitEl = document.createElement('span');
+    splitEl.className = 'xqb-match-split';
+    splitEl.textContent = ` · ${scores.join(' · ')}`;
+    subline.append(splitEl);
+  }
   section.append(subline);
   if (match.slow.boards.length > 0) section.append(grid(match.slow.boards));
   if (match.blitz.boards.length > 0) {
@@ -1580,10 +1797,16 @@ function heroSection(input: {
 // Index card: featured-board thumbnail + tour identity + counts + freshness.
 // Tours without a featured board (nothing live or complete yet) fall back to
 // the initial position so every card keeps the same silhouette.
-function tourCard(entry: BroadcastIndexEntry): HTMLElement {
+function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {}): HTMLElement {
   const live = entry.liveBoardCount > 0;
   const card = document.createElement('a');
-  card.className = live ? 'xqb-tour-card xqb-tour-card-live' : 'xqb-tour-card';
+  card.className = [
+    'xqb-tour-card',
+    live ? 'xqb-tour-card-live' : null,
+    opts.featured ? 'xqb-tour-card-featured' : null,
+  ]
+    .filter(Boolean)
+    .join(' ');
   card.href = `/broadcast/xiangqi/${encodeURIComponent(entry.tour.slug)}`;
 
   const boardEl = document.createElement('div');
@@ -1597,7 +1820,12 @@ function tourCard(entry: BroadcastIndexEntry): HTMLElement {
 
   const copy = document.createElement('div');
   copy.className = 'xqb-tour-card-copy';
+  // lichess's card order: where the event stands, its name, then who is
+  // playing. The status line replaced "Updated 12m ago", which was our import.
+  const status = statusLineEl(entry);
+  if (status) copy.append(status);
   const name = document.createElement('strong');
+  name.className = 'xqb-tour-card-name';
   name.textContent = primaryName(entry.tour);
   copy.append(name);
   const tourZh = zhSubline(secondaryName(entry.tour));
@@ -1611,68 +1839,57 @@ function tourCard(entry: BroadcastIndexEntry): HTMLElement {
     placeLine.textContent = place;
     copy.append(placeLine);
   }
-  const counts = document.createElement('span');
-  counts.className = 'xqb-tour-card-meta';
-  counts.textContent = [
-    countLabel(entry.roundCount, 'round', 'rounds'),
-    countLabel(entry.boardCount, 'board', 'boards'),
-    live ? `${entry.liveBoardCount} live` : null,
-  ]
-    .filter(Boolean)
-    .join(' / ');
-  copy.append(counts);
-
-  const foot = document.createElement('div');
-  foot.className = 'xqb-card-foot';
-  if (live) {
-    foot.append(liveBadge());
-  } else {
-    const fresh = formatBroadcastFreshness(entry.updatedAt);
-    if (fresh) foot.textContent = `Updated ${fresh}`;
+  const players = topPlayersEl(entry, opts.featured ? 6 : 3);
+  if (players) copy.append(players);
+  if (opts.featured) {
+    const counts = document.createElement('span');
+    counts.className = 'xqb-tour-card-meta';
+    counts.textContent = [
+      countLabel(entry.roundCount, 'round', 'rounds'),
+      countLabel(entry.boardCount, 'game', 'games'),
+    ].join(' / ');
+    copy.append(counts);
   }
 
-  card.append(boardEl, copy, foot);
+  card.append(boardEl, copy);
   return card;
-}
-
-function liveBadge(): HTMLElement {
-  const badge = document.createElement('span');
-  badge.className = 'xqb-badge-live';
-  badge.textContent = t('broadcast.live');
-  return badge;
 }
 
 // A scannable mini-board card: the current position rebuilt from the board's
 // move list (broadcasts are open truth, so the red-perspective truth view is
 // safe to render), plus pairing + result/status. Links to the full board page.
-function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTMLElement {
+// lichess's board card: the players on the board's own sides (Black above,
+// Red below, as the board is drawn), each with their score, and nothing else.
+// A team game keeps one small label naming its table and game, which the
+// match header above it needs; a live game says so there too.
+function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTMLElement {
   const card = document.createElement('a');
   card.className = `xqb-board-card xqb-board-card-${board.status}`;
   card.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
 
-  const top = document.createElement('div');
-  top.className = 'xqb-card-top';
-  const number = document.createElement('span');
-  number.className = 'xqb-card-number';
-  // A team game names its table and which game of the pair it is; the source's
-  // running board number means nothing to a reader there ("Board 73").
   const table = board.details?.table;
-  number.textContent = table
+  const label = table
     ? board.details?.game
       ? t('broadcast.tableGame', { n: table, g: board.details.game })
       : t('broadcast.table', { n: table })
-    : `Board ${board.boardNumber}`;
-  // Live boards get the accent badge; finished boards get a neutral result pill.
-  const badge =
-    board.status === 'live'
-      ? ' xqb-badge-live'
-      : board.status === 'complete'
-        ? ' xqb-badge-result'
-        : '';
-  const status = document.createElement('span');
-  status.className = `xqb-status xqb-status-${board.status}${badge}`;
-  status.textContent = resultLabel(board);
-  top.append(number, status);
+    : null;
+  if (label || board.status === 'live') {
+    const top = document.createElement('div');
+    top.className = 'xqb-card-top';
+    if (label) {
+      const number = document.createElement('span');
+      number.className = 'xqb-card-number';
+      number.textContent = label;
+      top.append(number);
+    }
+    if (board.status === 'live') {
+      const live = document.createElement('span');
+      live.className = 'xqb-card-live';
+      live.textContent = t('broadcast.statusLive');
+      top.append(live);
+    }
+    card.append(top);
+  }
 
   const boardEl = document.createElement('div');
   boardEl.className = 'xqb-card-board xiangqi-live-board';
@@ -1683,31 +1900,6 @@ function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTML
   // are noise at that size, and the card is framed by hand, so the reserved
   // gutter would change the silhouette every card shares.
   boardEl.innerHTML = renderXiangqiBoardSvg(view, 'red', { coordinates: false });
-
-  const players = document.createElement('div');
-  players.className = 'xqb-card-players';
-  players.append(
-    cardPlayer('red', board.red, board.result === '1-0'),
-    cardPlayer('black', board.black, board.result === '0-1'),
-  );
-
-  const foot = document.createElement('div');
-  foot.className = 'xqb-card-foot';
-  // "2m ago" is a live signal and the right thing during a relay. Once a round
-  // is over it falls through to a bare date, which reads as the date the game
-  // was played and is in fact the date WE imported it: every board of a round
-  // played Aug 16-18 said "Aug 29". A finished round shows the round's own date
-  // instead, which is the fact a reader wanted from that slot. A finished
-  // board in a round with no date (one the source named but nobody scheduled,
-  // like the 2026 league's round 6) shows no date at all: "27m ago" there was
-  // our import again, read as the game's age.
-  const fresh =
-    board.status === 'live'
-      ? 'live'
-      : (formatEventDay(board.details?.playedAt) ??
-        playedOn ??
-        (board.status === 'complete' ? null : formatBroadcastFreshness(board.updatedAt)));
-  foot.textContent = [`${plyCount(board)} plies`, fresh].filter(Boolean).join(' / ');
 
   // lichess's "Evaluation gauge": a thin bar beside the board, the review's
   // own bar and colours, filled by the same win-probability curve. Rendered
@@ -1734,36 +1926,45 @@ function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTML
     boardSlot.className = 'xqb-card-board-row';
     boardSlot.append(gauge, boardEl);
   }
-  card.append(top, boardSlot, players, foot);
+  card.append(
+    cardSeat('black', board.black, seatScore(board, 'black')),
+    boardSlot,
+    cardSeat('red', board.red, seatScore(board, 'red')),
+  );
   return card;
 }
 
-function cardPlayer(
+/** A side's score for the game: 1, 0 or ½ once it is over, else nothing. */
+function seatScore(
+  board: Pick<BroadcastBoardSummary, 'status' | 'result'>,
+  color: XiangqiColor,
+): string {
+  if (board.status !== 'complete') return '';
+  if (board.result === '1/2-1/2') return '½';
+  if (board.result === '1-0') return color === 'red' ? '1' : '0';
+  if (board.result === '0-1') return color === 'black' ? '1' : '0';
+  return '';
+}
+
+/** One side of a card or a list row: the seat's ink, the name, the score. The
+ *  Chinese name and the team ride the tooltip, where lichess keeps the flag. */
+function cardSeat(
   color: XiangqiColor,
   player: XiangqiBroadcastPlayerTag,
-  won: boolean,
+  score: string,
 ): HTMLElement {
   const row = document.createElement('span');
-  row.className = `xqb-card-player xqb-card-player-${color}${won ? ' xqb-card-player-winner' : ''}`;
-  // Name and team as separate elements, not one concatenated string. As one
-  // string the ellipsis lands wherever the width runs out, which on a card this
-  // wide was inside the team: "Wang Jiarui (Zhejian...". Split, the team gives
-  // up its characters first and the player's name survives, which is the half a
-  // reader is scanning for.
+  row.className = `xqb-card-seat xqb-card-seat-${color}${score === '1' ? ' xqb-card-seat-winner' : ''}`;
+  const disc = document.createElement('span');
+  disc.className = 'xqb-card-seat-disc';
   const name = document.createElement('span');
-  name.className = 'xqb-card-player-name';
+  name.className = 'xqb-card-seat-name';
   name.textContent = `${player.title ? `${player.title} ` : ''}${primaryName(player)}`;
-  row.append(name);
-  const federation = primaryFederation(player);
-  if (federation) {
-    const team = document.createElement('span');
-    team.className = 'xqb-card-player-team';
-    team.textContent = federation;
-    team.title = federation;
-    row.append(team);
-  }
-  const zh = zhSubline(playerNameZh(player), 'xqb-name-zh xqb-name-zh-inline');
-  if (zh) row.append(zh);
+  name.title = [playerNameZh(player), primaryFederation(player)].filter(Boolean).join(' · ');
+  const points = document.createElement('span');
+  points.className = 'xqb-score';
+  points.textContent = score;
+  row.append(disc, name, points);
   return row;
 }
 
@@ -1780,7 +1981,13 @@ function sideRail(
   currentBoardId: string,
   header?: HTMLElement | null,
 ): HTMLElement | null {
-  const boards = [...context.boards].sort((a, b) => a.boardNumber - b.boardNumber);
+  const grouped = groupRoundByMatch(context.boards);
+  const boards = grouped
+    ? [
+        ...grouped.matches.flatMap((match) => [...match.slow.boards, ...match.blitz.boards]),
+        ...grouped.other,
+      ]
+    : [...context.boards].sort((a, b) => a.boardNumber - b.boardNumber);
   if (boards.length === 0) return null;
   const rail = document.createElement('aside');
   rail.className = 'xqb-side-rail';
@@ -1805,15 +2012,27 @@ function sideRail(
     row.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
     if (current) row.setAttribute('aria-current', 'page');
 
+    // lichess's game list: a number, then both players stacked with their
+    // scores. A team game numbers by table and marks its blitz game.
+    const number = document.createElement('span');
+    number.className = 'xqb-rail-no';
+    number.textContent = board.details?.table
+      ? `${board.details.table}${board.details.kind === 'blitz' ? 'b' : ''}`
+      : String(board.boardNumber);
+    if (board.details?.kind === 'blitz') number.title = t('broadcast.blitz');
     const players = document.createElement('span');
     players.className = 'xqb-rail-players';
-    players.textContent = `${primaryName(board.red)} vs ${primaryName(board.black)}`;
-
-    const marker = document.createElement('span');
-    marker.className = `xqb-rail-marker xqb-status-${board.status}`;
-    marker.textContent = railMarker(board);
-
-    row.append(players, marker);
+    players.append(
+      cardSeat('red', board.red, seatScore(board, 'red')),
+      cardSeat('black', board.black, seatScore(board, 'black')),
+    );
+    row.append(number, players);
+    if (board.status === 'live') {
+      const marker = document.createElement('span');
+      marker.className = 'xqb-rail-marker xqb-status-live';
+      marker.textContent = t('broadcast.live');
+      row.append(marker);
+    }
     list.append(row);
     if (current) currentRow = row;
   }
@@ -1827,13 +2046,6 @@ function roundSwitcherFor(
   context: BroadcastRoundResponse,
 ): HTMLElement | null {
   return roundSwitcher(data.board.tourSlug, context.rounds ?? [], data.board.roundId);
-}
-
-function railMarker(board: Pick<BroadcastBoardSummary, 'status' | 'result'>): string {
-  if (board.status === 'live') return t('broadcast.live');
-  if (board.result === '1/2-1/2') return '½-½';
-  if (board.result !== '*') return board.result;
-  return '';
 }
 
 // Scroll the rail (not the page) so the current pairing is centered once the
@@ -2082,10 +2294,6 @@ function timestamp(value: unknown): string | undefined {
 
 function streamVersion(values: Array<string | number | null | undefined>): string {
   return values.map((value) => value ?? '').join('|');
-}
-
-function plyCount(board: BroadcastBoardSummary): number {
-  return board.plyCount ?? board.moves?.length ?? 0;
 }
 
 function moveLabel(move: XiangqiMove): string {

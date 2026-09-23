@@ -251,14 +251,23 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     // Each card rebuilds a position and renders the shared board SVG (the board
     // root carries .xq-live-svg; pieces are nested svgs, so match the root only).
     expect(root.querySelectorAll('.xqb-card-board > svg.xq-live-svg').length).toBe(2);
-    // Pairing names are present.
-    expect(root.textContent).toContain('王天一');
-    expect(root.textContent).toContain('郑惟桐');
-    // The live board carries the live status class; both players are shown.
-    expect(root.querySelector('.xqb-board-card-live .xqb-status-live')).not.toBeNull();
-    expect(root.querySelectorAll('.xqb-board-card-live .xqb-card-player').length).toBe(2);
-    // The live status renders as the accent badge.
-    expect(root.querySelector('.xqb-board-card-live .xqb-badge-live')).not.toBeNull();
+    // lichess's card: both players on the board's own sides, Black above.
+    const liveSeats = [...root.querySelectorAll('.xqb-board-card-live .xqb-card-seat')];
+    expect(liveSeats.map((seat) => seat.className)).toEqual([
+      'xqb-card-seat xqb-card-seat-black',
+      'xqb-card-seat xqb-card-seat-red',
+    ]);
+    // The Chinese names ride the tooltip.
+    const titles = [...root.querySelectorAll('.xqb-card-seat-name')].map((node) =>
+      node.getAttribute('title'),
+    );
+    expect(titles.join(' ')).toContain('王天一');
+    expect(titles.join(' ')).toContain('郑惟桐');
+    // The live board says so above the board; a live game has no score yet.
+    expect(root.querySelector('.xqb-board-card-live .xqb-card-live')?.textContent).toBe('Live');
+    expect(
+      [...root.querySelectorAll('.xqb-board-card-live .xqb-score')].map((node) => node.textContent),
+    ).toEqual(['', '']);
   });
 
   it('fires broadcast_opened once for the round surface, not again per stream push', async () => {
@@ -385,19 +394,15 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelector('.xqb-round-heading')?.textContent).toBe('Round 1');
     expect(root.querySelector('.xqb-tab-panel > .xqb-name-zh')?.textContent).toBe('第1轮');
 
-    // Player names: English primary, Chinese secondary span alongside.
-    const names = [...root.querySelectorAll('.xqb-card-player-name')].map(
-      (node) => node.textContent,
-    );
-    expect(names).toContain('Wang Tianyi');
-    expect(names).toContain('Zheng Weitong');
-    const zh = [...root.querySelectorAll('.xqb-name-zh')].map((node) => node.textContent);
-    expect(zh).toContain('王天一');
-    expect(zh).toContain('郑惟桐');
-
-    // Already-English names get no duplicate secondary line.
-    expect(zh).not.toContain('A Player');
-    expect(root.querySelectorAll('.xqb-board-card')[1]?.querySelector('.xqb-name-zh')).toBeNull();
+    // Player names: English primary, the Chinese in the tooltip.
+    const names = [...root.querySelectorAll('.xqb-board-card .xqb-card-seat-name')];
+    expect(names.map((node) => node.textContent)).toContain('Wang Tianyi');
+    expect(names.map((node) => node.textContent)).toContain('Zheng Weitong');
+    const titles = names.map((node) => node.getAttribute('title') ?? '');
+    expect(titles).toContain('王天一');
+    expect(titles).toContain('郑惟桐');
+    // Already-English names get no duplicate Chinese.
+    expect(titles.some((title) => title.includes('A Player'))).toBe(false);
   });
 
   it('renders a round switcher listing sibling rounds with the current round selected', async () => {
@@ -459,11 +464,15 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const fill = gauges[0]?.querySelector<HTMLElement>('.review-eval-bar__fill');
     expect(Number.parseFloat(fill?.style.height ?? '100')).toBeLessThan(25);
 
-    const toggle = root.querySelector<HTMLInputElement>('.xqb-gauge-toggle input');
+    const toggle = [...root.querySelectorAll<HTMLLabelElement>('.xqb-gauge-toggle')]
+      .find((label) => label.textContent?.includes('Evaluation gauge'))
+      ?.querySelector('input');
     expect(toggle?.checked).toBe(true);
     toggle!.checked = false;
     toggle!.dispatchEvent(new Event('change'));
-    expect(root.querySelector('.xqb-tab-panel')?.classList.contains('xqb-gauges-off')).toBe(true);
+    expect(root.querySelector('.xqb-event-layout')?.classList.contains('xqb-gauges-off')).toBe(
+      true,
+    );
     expect(stored.get('mistboard.broadcast.evalGauge')).toBe('off');
     vi.unstubAllGlobals();
   });
@@ -491,20 +500,18 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 't', 'r');
 
-    const numbers = [...root.querySelectorAll('.xqb-card-number')].map((node) => node.textContent);
-    expect(numbers).toEqual(['Board 3', 'Board 1', 'Board 2']);
-    // Finished boards carry a neutral result pill. With no round date the
-    // foot shows no age: the only time the card has is our import, which read
-    // as the game's age ("27m ago" on a game played a week earlier).
-    expect(root.querySelector('.xqb-board-card-complete .xqb-badge-result')?.textContent).toBe(
-      'Red wins',
-    );
-    expect(root.querySelector('.xqb-board-card-complete .xqb-card-foot')?.textContent).not.toMatch(
-      /ago/,
-    );
-    expect(root.querySelector('.xqb-board-card-live .xqb-card-foot')?.textContent).toContain(
-      'live',
-    );
+    // Live leads, then the pairing order; the Red player is each card's last seat.
+    const reds = [
+      ...root.querySelectorAll('.xqb-board-card .xqb-card-seat-red .xqb-card-seat-name'),
+    ];
+    expect(reds.map((node) => node.textContent)).toEqual(['R3', 'R1', 'R2']);
+    // A finished game shows each side's score, lichess-style, and nothing
+    // about when we imported it.
+    const complete = root.querySelector('.xqb-board-card-complete');
+    expect(
+      [...(complete?.querySelectorAll('.xqb-score') ?? [])].map((node) => node.textContent),
+    ).toEqual(['0', '1']);
+    expect(complete?.textContent).not.toMatch(/ago|plies/);
   });
 });
 
@@ -603,49 +610,70 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     };
   }
 
-  it('zones live tours above past tours as cards with thumbnails and freshness', async () => {
+  it('features the live event, lists the rest under Past, and never shows our import time', async () => {
     const threeMinutesAgo = new Date(Date.now() - 3 * 60_000).toISOString();
-    // Past tour listed first in the payload to prove zoning is status-driven,
-    // not order-driven. It also has no featured board, covering the
-    // initial-position thumbnail fallback.
+    // Past tour listed first in the payload to prove the featured slot is
+    // status-driven, not order-driven. It also has no featured board, covering
+    // the initial-position thumbnail fallback.
     stubFetchJson(() => ({
       tours: [
-        indexEntry({
-          slug: 'past-open',
-          name: 'Past Open',
-          live: false,
-          updatedAt: threeMinutesAgo,
-          featured: false,
-        }),
-        indexEntry({
-          slug: 'live-cup',
-          name: '直播杯',
-          nameEn: 'Live Cup',
-          live: true,
-          updatedAt: threeMinutesAgo,
-        }),
+        {
+          ...indexEntry({
+            slug: 'past-open',
+            name: 'Past Open',
+            live: false,
+            updatedAt: threeMinutesAgo,
+            featured: false,
+          }),
+          latestRound: {
+            id: 'past-open-r05',
+            name: 'Round 5',
+            startsAt: '2026-07-08T13:00:00+08:00',
+            live: false,
+          },
+        },
+        {
+          ...indexEntry({
+            slug: 'live-cup',
+            name: '直播杯',
+            nameEn: 'Live Cup',
+            live: true,
+            updatedAt: threeMinutesAgo,
+          }),
+          latestRound: { id: 'live-cup-r03', name: 'Round 3', startsAt: null, live: true },
+          players: [
+            { name: '无名', nameEn: 'Nobody Ranked' },
+            { name: '王天一', nameEn: 'Wang Tianyi' },
+          ],
+        },
       ],
     }));
 
     const root = document.createElement('div');
     await mountXiangqiBroadcastIndex(root);
 
+    // The section rail, lichess's left column.
+    expect([...root.querySelectorAll('.xqb-rail-link')].map((node) => node.textContent)).toEqual([
+      'Broadcasts',
+      'Calendar',
+      'Pro players',
+      'About',
+    ]);
+    expect(root.querySelector('.xqb-rail-link-active')?.textContent).toBe('Broadcasts');
+
+    const featured = root.querySelector('.xqb-tour-card-featured');
+    expect(featured?.className).toContain('xqb-tour-card-live');
+    expect(featured?.querySelector('.xqb-tour-status-live')?.textContent).toBe('Round 3 · Live');
+    expect(featured?.querySelector('.xqb-tour-card-name')?.textContent).toBe('Live Cup');
+    expect(featured?.querySelector('.xqb-name-zh')?.textContent).toBe('直播杯');
+    // Who is playing: ranked by the CXA lists; an unranked name stays off.
+    expect(featured?.querySelector('.xqb-tour-players')?.textContent).toBe('GM Wang Tianyi');
+
     const headings = [...root.querySelectorAll('.xqb-section h2')].map((node) => node.textContent);
-    expect(headings).toEqual(['Live now', 'Past']);
-
-    const zones = root.querySelectorAll('.xqb-section');
-    const liveCard = zones[0]?.querySelector('.xqb-tour-card');
-    expect(liveCard?.className).toContain('xqb-tour-card-live');
-    expect(liveCard?.querySelector('.xqb-badge-live')).not.toBeNull();
-    // English primary, Chinese secondary, location and counts on the card.
-    expect(liveCard?.querySelector('strong')?.textContent).toBe('Live Cup');
-    expect(liveCard?.querySelector('.xqb-name-zh')?.textContent).toBe('直播杯');
-    expect(liveCard?.textContent).toContain('Chengdu');
-    expect(liveCard?.textContent).toContain('3 rounds / 14 boards / 2 live');
-
-    const pastCard = zones[1]?.querySelector('.xqb-tour-card');
-    expect(pastCard?.querySelector('.xqb-badge-live')).toBeNull();
-    expect(pastCard?.textContent).toContain('Updated 3m ago');
+    expect(headings).toEqual(['Past']);
+    const pastCard = root.querySelector('.xqb-section .xqb-tour-card');
+    expect(pastCard?.querySelector('.xqb-tour-status')?.textContent).toMatch(/^Round 5 · Jul 8/);
+    expect(pastCard?.textContent).not.toContain('Updated');
 
     // Both cards render a mini-board thumbnail, including the featured-board
     // fallback for the past tour.
@@ -654,7 +682,7 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     );
   });
 
-  it('renders a single zone when nothing is live', async () => {
+  it('features the latest event when nothing is live', async () => {
     stubFetchJson(() => ({
       tours: [
         indexEntry({
@@ -669,8 +697,9 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastIndex(root);
 
-    const headings = [...root.querySelectorAll('.xqb-section h2')].map((node) => node.textContent);
-    expect(headings).toEqual(['Broadcasts']);
+    expect(root.querySelector('.xqb-tour-card-featured .xqb-tour-card-name')?.textContent).toBe(
+      'Past Open',
+    );
     expect(root.querySelectorAll('.xqb-tour-card').length).toBe(1);
     expect(broadcastOpenedCalls()).toEqual([{ surface: 'index', locale: 'en' }]);
   });
@@ -724,9 +753,9 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     expect(current?.getAttribute('href')).toBe('/broadcast/xiangqi/board/t-r-b1');
     expect(current?.getAttribute('aria-current')).toBe('page');
     // Players render English-primary; the live board carries a live marker.
-    expect(current?.querySelector('.xqb-rail-players')?.textContent).toBe(
-      'Wang Tianyi vs Zheng Weitong',
-    );
+    expect(
+      [...(current?.querySelectorAll('.xqb-card-seat-name') ?? [])].map((node) => node.textContent),
+    ).toEqual(['Wang Tianyi', 'Zheng Weitong']);
     expect(current?.querySelector('.xqb-rail-marker')?.textContent).toBe('Live');
 
     // The hero carries the same round switcher as the round page.
