@@ -3,6 +3,7 @@ import { readFileSync } from 'node:fs';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import { looksLikeDpxqPage, normalizeDpxqPageToFrameHtml } from './xiangqi-broadcast-dpxq.js';
+import { decodeSourceBody } from './xiangqi-broadcast-fetch.js';
 import { interpretXiangqiBroadcastSourceBody } from './xiangqi-broadcast-poller.js';
 import { translateXiangqiBroadcastSnapshot } from './xiangqi-broadcast-translate.js';
 import { convertWxfDhtmlXqPageToSnapshot } from './xiangqi-broadcast-wxf-dhtmlxq.js';
@@ -320,4 +321,56 @@ test('an individual game gets no invented affiliation', () => {
   assert.equal(board.red.name, '王天一');
   assert.equal(board.red.federation, undefined);
   assert.equal(board.black.federation, undefined);
+});
+
+// Two real 2026 men's league game pages (gb2312, round 6, 2026-09-22 uploads):
+// table 4 of 北京-江苏 game 1, a standard game with a year typo in its date,
+// and table 4 of 广东-上海 game 2, a 5+3 blitz tiebreak that the flat grid
+// used to number "Board 73".
+function leaguePage(name: string): string {
+  const bytes = readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)));
+  return decodeSourceBody(new Uint8Array(bytes), null);
+}
+
+test('a league game page carries its match, table, game, kind and date onto the board', () => {
+  const normalized = normalizeDpxqPageToFrameHtml(leaguePage('view_m_143907-league-r06.html'));
+  assert.equal(normalized.ok, true);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const [board] = translateXiangqiBroadcastSnapshot(converted.snapshot).boards;
+  assert.deepEqual(board?.details, {
+    match: '北京-江苏',
+    table: 4,
+    game: 1,
+    kind: 'standard',
+    timeControl: '40分＋20秒',
+    // The page says 2029; the event is 2026年…, so the event's year wins.
+    playedAt: '2026-09-16T19:00:00+08:00',
+    opening: 'B05 中炮对进左马',
+    matchEn: 'Beijing-Jiangsu',
+  });
+});
+
+test('a tiebreak page is marked blitz with its own time control', () => {
+  const normalized = normalizeDpxqPageToFrameHtml(
+    leaguePage('view_m_143921-league-r06-blitz.html'),
+  );
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const details = converted.snapshot.boards[0]?.details;
+  assert.equal(details?.match, '广东-上海');
+  assert.equal(details?.table, 4);
+  assert.equal(details?.game, 2);
+  assert.equal(details?.kind, 'blitz');
+  assert.equal(details?.timeControl, '5分＋3秒');
+});
+
+test('a page that states no details still records that it was read', () => {
+  const normalized = normalizeDpxqPageToFrameHtml(ARCHIVE_HTML);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  assert.ok(converted.snapshot.boards[0]?.details, 'an empty details object, not undefined');
 });

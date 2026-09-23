@@ -537,16 +537,21 @@ function isMovePrefix(prefix: readonly XiangqiMove[], value: readonly XiangqiMov
   return movesEqual(prefix, value.slice(0, prefix.length));
 }
 
-function boardTagsEqual(
-  a: Pick<XiangqiBroadcastBoard, 'red' | 'black' | 'status' | 'result' | 'sourceUrl'>,
-  b: Pick<XiangqiBroadcastBoard, 'red' | 'black' | 'status' | 'result' | 'sourceUrl'>,
-): boolean {
+type BoardTags = Pick<
+  XiangqiBroadcastBoard,
+  'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details'
+>;
+
+function boardTagsEqual(a: BoardTags, b: BoardTags): boolean {
   return (
     JSON.stringify(a.red) === JSON.stringify(b.red) &&
     JSON.stringify(a.black) === JSON.stringify(b.black) &&
     a.status === b.status &&
     a.result === b.result &&
-    a.sourceUrl === b.sourceUrl
+    a.sourceUrl === b.sourceUrl &&
+    // The game's details arrive on a re-read of a board stored before they
+    // existed; same moves, new details is an update, not a duplicate.
+    JSON.stringify(a.details ?? null) === JSON.stringify(b.details ?? null)
   );
 }
 

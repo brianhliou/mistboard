@@ -3,6 +3,7 @@ import {
   squareOf,
   XIANGQI_BROADCAST_SCHEMA,
   type XiangqiBroadcastBoard,
+  type XiangqiBroadcastGameDetails,
   type XiangqiBroadcastResult,
   type XiangqiBroadcastRound,
   type XiangqiBroadcastTour,
@@ -190,6 +191,48 @@ function boardNumberFromSourceId(
 function playerTeam(tags: Map<string, string>, key: string): string | undefined {
   const value = tags.get(key)?.trim();
   return value && value.length > 0 ? value : undefined;
+}
+
+/**
+ * A game's details from its frame tags (dpxq names them; see
+ * XiangqiBroadcastGameDetails). Always an object: an empty one records that
+ * the page was read and stated none, which is what lets a complete board stop
+ * being re-read (the poller skips complete boards that carry details).
+ *
+ * The date is the one field that needs a guard: 2026 league game pages carry
+ * `2029-09-16 19:00`, a typo in the year. The event tag leads with its year
+ * (2026年…), so a date whose year disagrees takes the event's.
+ */
+export function gameDetailsFromFrameTags(tags: Map<string, string>): XiangqiBroadcastGameDetails {
+  const details: XiangqiBroadcastGameDetails = {};
+  const match = tags.get('group')?.trim();
+  if (match) details.match = match;
+  const table = Number(tags.get('table')?.match(/(\d+)/)?.[1]);
+  if (Number.isInteger(table) && table > 0) details.table = table;
+  const game = Number(tags.get('other')?.match(/第\s*(\d+)\s*局/)?.[1]);
+  if (Number.isInteger(game) && game > 0) details.game = game;
+  const kind = tags.get('gametype') ?? '';
+  // 超快棋 contains 快棋, so the longer name is tested first.
+  if (kind.includes('超快')) details.kind = 'blitz';
+  else if (kind.includes('快棋')) details.kind = 'rapid';
+  else if (kind.includes('慢棋')) details.kind = 'standard';
+  const timeControl = tags.get('timerule')?.trim();
+  if (timeControl) details.timeControl = timeControl;
+  const playedAt = playedAtFromTags(tags.get('date'), tags.get('event'));
+  if (playedAt) details.playedAt = playedAt;
+  const opening = tags.get('open')?.trim();
+  if (opening) details.opening = opening;
+  return details;
+}
+
+function playedAtFromTags(date: string | undefined, event: string | undefined): string | undefined {
+  const parts = date?.match(/(\d{4})-(\d{1,2})-(\d{1,2})(?:[ T](\d{1,2}):(\d{2}))?/);
+  if (!parts) return undefined;
+  const eventYear = event?.match(/^\s*(\d{4})\s*年/)?.[1];
+  const year = eventYear && eventYear !== parts[1] ? eventYear : parts[1];
+  const pad = (value: string | undefined) => (value ?? '0').padStart(2, '0');
+  const iso = `${year}-${pad(parts[2])}-${pad(parts[3])}T${pad(parts[4])}:${pad(parts[5])}:00+08:00`;
+  return Number.isFinite(Date.parse(iso)) ? iso : undefined;
 }
 
 function cleanPlayerName(name: string): string {
@@ -383,6 +426,7 @@ export function convertWxfDhtmlXqPageToSnapshot(
       moves: moves.moves,
       ...(options.sourceUrl ? { sourceUrl: options.sourceUrl } : {}),
     };
+    board.details = gameDetailsFromFrameTags(tags);
     const replayIssue = issueForReplayFailure(board);
     if (replayIssue) {
       issues.push(replayIssue);

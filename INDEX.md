@@ -1101,5 +1101,6 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/review/atomic-xiangqi-tree-adapter.ts` | Atomic Xiangqi VariantTreeAdapter (kernel replay, FSF UCI in and out) |
 | `apps/web/src/watch-atomic-xiangqi-replay.ts` | Atomic Xiangqi TV/watch replay adapter with detonations on forward steps |
 | `apps/web/src/xiangqi-broadcast-review.ts` | _needs a one-line description_ |
+| `apps/web/src/xiangqi-broadcast-matches.ts` | A team league round grouped by match (slow and blitz games per table, from `board.details`) and the league table, scored by the 2026 league's 规程 (game 2/1/0, match 3/1.5/0) |
 | `apps/web/src/xiangqi-broadcast-standings.ts` | _needs a one-line description_ |
 | `apps/web/src/xiangqi-broadcast-time.ts` | _needs a one-line description_ |

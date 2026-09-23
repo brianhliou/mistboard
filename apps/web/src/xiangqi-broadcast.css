@@ -1260,3 +1260,49 @@
     overflow-x: auto;
   }
 }
+
+/* A team league round, one section per match: the two teams and the score,
+   the match name beneath, its tables, then any tiebreak. */
+.xqb-match {
+  display: grid;
+  gap: 10px;
+  padding-top: 14px;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.xqb-match-header {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 12px;
+  color: var(--site-heading);
+  font-size: 16px;
+  font-weight: 600;
+  line-height: 1.3;
+}
+
+.xqb-match-team-won {
+  text-decoration: underline;
+  text-decoration-thickness: 2px;
+  text-underline-offset: 4px;
+}
+
+.xqb-match-score {
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.xqb-match-sub {
+  margin: 0;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+.xqb-match-subheading {
+  margin: 4px 0 0;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: uppercase;
+  letter-spacing: 0.04em;
+}

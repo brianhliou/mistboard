@@ -52,6 +52,36 @@ export type XiangqiBroadcastRound = {
   sourceUrl?: string;
 };
 
+/** How a game was played, as the source states it: 慢棋 standard, 快棋 rapid,
+ *  超快棋 blitz (a team league's tiebreak). */
+export type XiangqiBroadcastGameKind = 'standard' | 'rapid' | 'blitz';
+
+/**
+ * What a source says about the game beyond the moves: which team match it
+ * belongs to, the table, which game of the table's pair, how it was played.
+ * A team league round is a set of matches (北京-江苏), each with four tables
+ * that play twice with colours swapped, plus blitz tiebreaks when a match is
+ * level; without these a round reads as the same pairings listed twice.
+ * Every field is optional: archive and WXF pages carry few of them.
+ */
+export type XiangqiBroadcastGameDetails = {
+  /** The team match as the source names it, "北京-江苏". */
+  match?: string;
+  /** Cached English form of `match`; recomputed at ingestion. */
+  matchEn?: string;
+  /** Table within the match (第04台). */
+  table?: number;
+  /** Game within the table's pairing (第1局). */
+  game?: number;
+  kind?: XiangqiBroadcastGameKind;
+  /** The time control as the source writes it, "40分＋20秒". */
+  timeControl?: string;
+  /** When the game was played, ISO with the event's offset. */
+  playedAt?: string;
+  /** Opening as the source classifies it, "B05 中炮对进左马". */
+  opening?: string;
+};
+
 export type XiangqiBroadcastBoard = {
   schema: typeof XIANGQI_BROADCAST_SCHEMA;
   id: string;
@@ -65,6 +95,7 @@ export type XiangqiBroadcastBoard = {
   result: XiangqiBroadcastResult;
   moves: XiangqiMove[];
   sourceUrl?: string;
+  details?: XiangqiBroadcastGameDetails;
 };
 
 export type XiangqiBroadcastTapeEvent = {
@@ -236,9 +267,30 @@ export function validateXiangqiBroadcastBoard(
   }
   validateMoveList(value.moves, 'board.moves', errors);
   validateOptionalString(value, 'sourceUrl', 'board', errors);
+  if (value.details !== undefined) validateGameDetails(value.details, errors);
   return errors.length
     ? { ok: false, errors }
     : { ok: true, value: value as XiangqiBroadcastBoard };
+}
+
+const GAME_KINDS = new Set<XiangqiBroadcastGameKind>(['standard', 'rapid', 'blitz']);
+
+function validateGameDetails(value: unknown, errors: string[]): void {
+  if (!isRecord(value)) {
+    errors.push('board.details must be an object');
+    return;
+  }
+  for (const key of ['match', 'matchEn', 'timeControl', 'playedAt', 'opening'] as const) {
+    validateOptionalString(value, key, 'board.details', errors);
+  }
+  for (const key of ['table', 'game'] as const) {
+    if (value[key] !== undefined && (!Number.isInteger(value[key]) || Number(value[key]) < 1)) {
+      errors.push(`board.details.${key} must be a positive integer`);
+    }
+  }
+  if (value.kind !== undefined && !GAME_KINDS.has(value.kind as XiangqiBroadcastGameKind)) {
+    errors.push('board.details.kind must be standard, rapid, or blitz');
+  }
 }
 
 export function validateXiangqiBroadcastTape(

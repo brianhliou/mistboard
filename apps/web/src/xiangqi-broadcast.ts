@@ -1,6 +1,7 @@
 import type {
   StandardXiangqiPlayerView,
   XiangqiBroadcastBoardStatus,
+  XiangqiBroadcastGameDetails,
   XiangqiBroadcastPlayerTag,
   XiangqiBroadcastResult,
   XiangqiBroadcastRound,
@@ -30,6 +31,13 @@ import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
+import {
+  formatPoints,
+  groupRoundByMatch,
+  type MatchTeam,
+  type TeamMatch,
+  teamStandings,
+} from './xiangqi-broadcast-matches.js';
 import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
 import { broadcastStandings, formatStandingsScore } from './xiangqi-broadcast-standings.js';
 import {
@@ -65,6 +73,7 @@ type BroadcastBoardSummary = {
   plyCount?: number;
   moves?: XiangqiMove[];
   sourceUrl?: string;
+  details?: XiangqiBroadcastGameDetails;
   createdAt?: string;
   updatedAt?: string;
 };
@@ -262,11 +271,11 @@ function eventWithoutRounds(data: BroadcastTourResponse): BroadcastRoundResponse
   };
 }
 
-type EventTab = 'boards' | 'overview' | 'players';
+type EventTab = 'boards' | 'overview' | 'players' | 'teams';
 
 function eventTabFromUrl(): EventTab {
   const raw = new URLSearchParams(window.location.search).get('tab');
-  return raw === 'overview' || raw === 'players' ? raw : 'boards';
+  return raw === 'overview' || raw === 'players' || raw === 'teams' ? raw : 'boards';
 }
 
 type EventPageState = {
@@ -300,7 +309,7 @@ async function mountRoundPage(
     if (tab === 'boards') url.searchParams.delete('tab');
     else url.searchParams.set('tab', tab);
     window.history.replaceState({}, '', `${url.pathname}${url.search}${url.hash}`);
-    if (tab === 'players') state.loadStandings?.();
+    if (tab === 'players' || tab === 'teams') state.loadStandings?.();
     paint();
   };
   // The standings need every round's games, and the round payload carries only
@@ -326,7 +335,7 @@ async function mountRoundPage(
     });
   };
   const paint = (): void => root.replaceChildren(buildNav(), renderEvent(data, cards, state));
-  if (state.tab === 'players') state.loadStandings();
+  if (state.tab === 'players' || state.tab === 'teams') state.loadStandings();
   paint();
   // A skin or layout change rewrites every board SVG, so no cached card
   // survives it.
@@ -587,13 +596,17 @@ function renderEvent(
     }),
   );
 
-  const tab = state.tab ?? 'boards';
+  // A team event gets a Teams tab: the league table is the story of 象甲, and
+  // the Players tab alone reads it as individuals.
+  const teamEvent = data.boards.some((board) => board.details?.match);
+  const tab = state.tab === 'teams' && !teamEvent ? 'boards' : (state.tab ?? 'boards');
   const tabs = document.createElement('nav');
   tabs.className = 'xqb-tabs';
   tabs.setAttribute('aria-label', t('broadcast.eventSections'));
   const tabDefs: Array<{ id: EventTab; label: string }> = [
     { id: 'boards', label: t('broadcast.boards') },
     { id: 'overview', label: t('broadcast.overview') },
+    ...(teamEvent ? [{ id: 'teams' as const, label: t('broadcast.teams') }] : []),
     { id: 'players', label: t('broadcast.players') },
   ];
   for (const def of tabDefs) {
@@ -613,6 +626,7 @@ function renderEvent(
   content.append(tabs);
   if (tab === 'overview') content.append(renderOverviewTab(data));
   else if (tab === 'players') content.append(renderPlayersTab(data, state));
+  else if (tab === 'teams') content.append(renderTeamsTab(data, state));
   else content.append(renderBoardsTab(data, cards));
   layout.append(content);
   // The round's pairings, lichess's left column: scan the round without the
@@ -641,7 +655,7 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
   const meta = document.createElement('p');
   meta.className = 'xqb-round-meta';
   meta.textContent = [
-    formatEventDateTime(data.round.startsAt),
+    formatEventDateTime(roundPlayedAt(data.boards) ?? data.round.startsAt),
     countLabel(data.boards.length, 'board', 'boards'),
     liveCount > 0 ? `${liveCount} live` : null,
   ]
@@ -676,26 +690,165 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
   // Only once the round is over: while it is running, freshness is the more
   // useful thing in that slot and the round date is the same on every card.
   const roundPlayedOn = data.boards.every((board) => board.status !== 'live')
-    ? formatEventDay(data.round.startsAt)
+    ? formatEventDay(roundPlayedAt(data.boards) ?? data.round.startsAt)
     : null;
-  const grid = document.createElement('div');
-  grid.className = 'xqb-board-grid';
   // Live boards lead the grid; within a status band the pairing order holds.
   const boards = [...data.boards].sort(
     (a, b) =>
       Number(a.status !== 'live') - Number(b.status !== 'live') || a.boardNumber - b.boardNumber,
   );
-  for (const board of boards) {
-    grid.append(boardCardFor(board, cards, roundPlayedOn));
+  const grid = (list: readonly BroadcastBoardSummary[]): HTMLElement => {
+    const el = document.createElement('div');
+    el.className = 'xqb-board-grid';
+    for (const board of list) el.append(boardCardFor(board, cards, roundPlayedOn));
+    return el;
+  };
+  // A team league round reads as its matches: each match's score, its tables
+  // in order, then any tiebreak. An individual event keeps the one grid.
+  const byMatch = groupRoundByMatch(boards);
+  if (byMatch) {
+    for (const match of byMatch.matches) wrap.append(matchSection(match, grid));
+    if (byMatch.other.length > 0) {
+      const heading = document.createElement('h3');
+      heading.className = 'xqb-match-subheading';
+      heading.textContent = t('broadcast.otherGames');
+      wrap.append(heading, grid(byMatch.other));
+    }
+  } else {
+    wrap.append(grid(boards));
   }
   // Boards that left the round entirely must not pin their cards in memory.
   if (cards) {
     const live = new Set(boards.map((board) => board.id));
     for (const id of [...cards.keys()]) if (!live.has(id)) cards.delete(id);
   }
-  wrap.append(grid);
   const credit = recordsCreditLine(data.boards);
   if (credit) wrap.append(credit);
+  return wrap;
+}
+
+/** When a round was played, from its games: the earliest start a game states.
+ *  The seeded schedule is a guess made before the event (the 2026 league was
+ *  seeded one round a day at 14:30; it played two a day, 13:00 and 19:00), so
+ *  the games' own dates win whenever they carry one. */
+function roundPlayedAt(boards: readonly BroadcastBoardSummary[]): string | undefined {
+  let earliest: string | undefined;
+  for (const board of boards) {
+    const at = board.details?.playedAt;
+    if (at && (!earliest || Date.parse(at) < Date.parse(earliest))) earliest = at;
+  }
+  return earliest;
+}
+
+function matchSection(
+  match: TeamMatch<BroadcastBoardSummary>,
+  grid: (list: readonly BroadcastBoardSummary[]) => HTMLElement,
+): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'xqb-match';
+  const header = document.createElement('div');
+  header.className = 'xqb-match-header';
+  const side = (team: MatchTeam, index: 0 | 1): HTMLElement => {
+    const el = document.createElement('span');
+    el.className = `xqb-match-team${match.winner === index ? ' xqb-match-team-won' : ''}`;
+    el.textContent = team.nameEn ?? team.name;
+    if (team.nameEn) el.title = team.name;
+    return el;
+  };
+  // Game points, the league's 2 a win and 1 a draw, slow and blitz together:
+  // the number that decides the match.
+  const score = document.createElement('span');
+  score.className = 'xqb-match-score';
+  score.textContent = `${formatPoints(match.score[0])} – ${formatPoints(match.score[1])}`;
+  header.append(side(match.teams[0], 0), score, side(match.teams[1], 1));
+  section.append(header);
+  const split = (label: string, points: [number, number]) =>
+    `${label} ${formatPoints(points[0])}–${formatPoints(points[1])}`;
+  const sub = [
+    match.nameEn ? match.nameEn.replace('-', ' vs ') : null,
+    match.name,
+    match.slow.boards.length > 0 ? split(t('broadcast.slow'), match.slow.score) : null,
+    match.blitz.boards.length > 0 ? split(t('broadcast.blitz'), match.blitz.score) : null,
+    match.finished && !match.complete ? t('broadcast.recordMissing') : null,
+  ].filter(Boolean);
+  const subline = document.createElement('p');
+  subline.className = 'xqb-match-sub';
+  subline.textContent = sub.join(' · ');
+  section.append(subline);
+  if (match.slow.boards.length > 0) section.append(grid(match.slow.boards));
+  if (match.blitz.boards.length > 0) {
+    const heading = document.createElement('h3');
+    heading.className = 'xqb-match-subheading';
+    heading.textContent = t('broadcast.blitz');
+    section.append(heading, grid(match.blitz.boards));
+  }
+  return section;
+}
+
+function renderTeamsTab(data: BroadcastRoundResponse, state: EventPageState): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'xqb-tab-panel';
+  const note = document.createElement('p');
+  note.className = 'xqb-note';
+  note.textContent = t('broadcast.teamsNote');
+  wrap.append(note);
+  if (state.standingsBoards === null) {
+    wrap.append(emptyState(t('broadcast.loadingStandings')));
+    return wrap;
+  }
+  const rows = teamStandings([...(state.standingsBoards ?? []), ...data.boards]);
+  if (rows.length === 0) {
+    wrap.append(emptyState(t('broadcast.noGamesYet')));
+    return wrap;
+  }
+  const table = document.createElement('table');
+  table.className = 'xqb-standings';
+  const head = document.createElement('thead');
+  const headRow = document.createElement('tr');
+  for (const label of [
+    '#',
+    t('broadcast.team'),
+    t('broadcast.matches'),
+    t('broadcast.winsDrawsLosses'),
+    t('broadcast.matchPoints'),
+    t('broadcast.gamePoints'),
+  ]) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    headRow.append(th);
+  }
+  head.append(headRow);
+  const body = document.createElement('tbody');
+  rows.forEach((row, index) => {
+    const tr = document.createElement('tr');
+    const rank = document.createElement('td');
+    rank.className = 'xqb-standings-rank';
+    rank.textContent = String(index + 1);
+    const team = document.createElement('td');
+    team.className = 'xqb-standings-player';
+    const name = document.createElement('strong');
+    name.textContent = row.team.nameEn ?? row.team.name;
+    team.append(name);
+    if (row.team.nameEn) {
+      const zh = document.createElement('span');
+      zh.className = 'xqb-standings-sub';
+      zh.textContent = row.team.name;
+      team.append(zh);
+    }
+    const matches = document.createElement('td');
+    matches.textContent = String(row.matches);
+    const wdl = document.createElement('td');
+    wdl.textContent = `${row.wins}-${row.draws}-${row.losses}`;
+    const matchPoints = document.createElement('td');
+    matchPoints.className = 'xqb-standings-score';
+    matchPoints.textContent = formatPoints(row.matchPoints);
+    const gamePoints = document.createElement('td');
+    gamePoints.textContent = formatPoints(row.gamePoints);
+    tr.append(rank, team, matches, wdl, matchPoints, gamePoints);
+    body.append(tr);
+  });
+  table.append(head, body);
+  wrap.append(table);
   return wrap;
 }
 
@@ -1024,6 +1177,7 @@ function boardCardSignature(board: BroadcastBoardSummary, playedOn?: string | nu
     board.boardNumber,
     board.red,
     board.black,
+    board.details ?? null,
   ]);
 }
 
@@ -1460,7 +1614,14 @@ function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTML
   top.className = 'xqb-card-top';
   const number = document.createElement('span');
   number.className = 'xqb-card-number';
-  number.textContent = `Board ${board.boardNumber}`;
+  // A team game names its table and which game of the pair it is; the source's
+  // running board number means nothing to a reader there ("Board 73").
+  const table = board.details?.table;
+  number.textContent = table
+    ? board.details?.game
+      ? t('broadcast.tableGame', { n: table, g: board.details.game })
+      : t('broadcast.table', { n: table })
+    : `Board ${board.boardNumber}`;
   // Live boards get the accent badge; finished boards get a neutral result pill.
   const badge =
     board.status === 'live'
@@ -1503,7 +1664,8 @@ function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTML
   const fresh =
     board.status === 'live'
       ? 'live'
-      : (playedOn ??
+      : (formatEventDay(board.details?.playedAt) ??
+        playedOn ??
         (board.status === 'complete' ? null : formatBroadcastFreshness(board.updatedAt)));
   foot.textContent = [`${plyCount(board)} plies`, fresh].filter(Boolean).join(' / ');
 

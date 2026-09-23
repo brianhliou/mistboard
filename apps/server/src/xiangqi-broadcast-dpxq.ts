@@ -100,6 +100,18 @@ function parseDpxqTitle(title: string): TitleParts {
   return parts;
 }
 
+// dpxq game tags carried through to board.details (see XiangqiBroadcastGameDetails).
+const GAME_DETAIL_TAGS = [
+  'event',
+  'group',
+  'table',
+  'other',
+  'gametype',
+  'timerule',
+  'date',
+  'open',
+];
+
 function escapeFrameValue(value: string): string {
   // Guard the frame delimiters; a stray "[/DhtmlXQ_x]" inside a name would
   // otherwise truncate a tag when the converter re-parses the synthesized page.
@@ -172,6 +184,13 @@ export function normalizeDpxqPageToFrameHtml(text: string): DpxqNormalizeResult 
     ...(redTeam ? [`[DhtmlXQ_redteam]${escapeFrameValue(redTeam)}[/DhtmlXQ_redteam]`] : []),
     ...(blackTeam ? [`[DhtmlXQ_blackteam]${escapeFrameValue(blackTeam)}[/DhtmlXQ_blackteam]`] : []),
     `[DhtmlXQ_result]${escapeFrameValue(result)}[/DhtmlXQ_result]`,
+    // What the game was, beyond its moves: the team match, table, which game
+    // of the pair, how it was played, when, and the opening. The converter
+    // reads them into board.details; a page without them carries none.
+    ...GAME_DETAIL_TAGS.flatMap((tag) => {
+      const value = tags.get(tag)?.trim();
+      return value ? [`[DhtmlXQ_${tag}]${escapeFrameValue(value)}[/DhtmlXQ_${tag}]`] : [];
+    }),
     `[DhtmlXQ_movelist]${movelist}[/DhtmlXQ_movelist]`,
     '[/DhtmlXQiFrame]',
   ].join('\n');

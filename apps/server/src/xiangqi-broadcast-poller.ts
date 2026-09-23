@@ -296,7 +296,16 @@ type PollContext = {
    * source_malformed on every poll.
    */
   tourSlug?: string;
+  /** Pause between a manifest's page fetches; see LEAF_FETCH_SPACING_MS. */
+  leafSpacingMs: number;
 };
+
+// dpxq answers 503 to a burst: 33 requests in two seconds (one game list and a
+// manifest's 32 pages) failed from a laptop on 2026-09-23, and prod logged
+// source_fetch_error the day before. A pause between pages keeps a full poll
+// near fifteen seconds. Only the real network gets it; an injected fetch (the
+// tests, the fake source server) has no one to be polite to.
+export const LEAF_FETCH_SPACING_MS = 400;
 
 async function recordSourceError(
   context: Pick<PollContext, 'dryRun' | 'tourSlug'>,
@@ -633,7 +642,11 @@ async function discoverStatedRounds(
   const completeUrls = new Set<string>();
   for (const round of rounds) {
     for (const board of await listXiangqiBroadcastBoards(round.id)) {
-      if (board.status === 'complete' && board.sourceUrl) completeUrls.add(board.sourceUrl);
+      // A complete board stored before game details existed is read once more
+      // so its match, table and date arrive; after that it is final.
+      if (board.status === 'complete' && board.sourceUrl && board.details) {
+        completeUrls.add(board.sourceUrl);
+      }
     }
   }
 
@@ -751,8 +764,11 @@ async function pollSourceOutcomes(
     )
   > = [];
   if (body.kind === 'manifest') {
-    for (const entry of body.manifest.sources) {
+    for (const [index, entry] of body.manifest.sources.entries()) {
       const { url, ...entryOptions } = entry;
+      if (index > 0 && context.leafSpacingMs > 0) {
+        await new Promise((resolve) => setTimeout(resolve, context.leafSpacingMs));
+      }
       resolutions.push({
         sourceUrl: url,
         ...(await resolveLeafSource(context, url, entryOptions, { manifestUrl: sourceUrl })),
@@ -809,6 +825,7 @@ export async function pollXiangqiBroadcastSourceOnce(input: {
   timeoutMs?: number;
   fetchImpl?: XiangqiBroadcastSourceFetch;
   sourcePolicy?: XiangqiBroadcastSourceUrlPolicy;
+  leafSpacingMs?: number;
 }): Promise<XiangqiBroadcastPollResult> {
   const context: PollContext = {
     timeoutMs: input.timeoutMs ?? 5_000,
@@ -817,6 +834,7 @@ export async function pollXiangqiBroadcastSourceOnce(input: {
     fetchImpl: input.fetchImpl ?? defaultXiangqiBroadcastFetch,
     sourcePolicy: input.sourcePolicy ?? xiangqiBroadcastSourceUrlPolicyFromEnv(),
     ...(input.tourSlug ? { tourSlug: input.tourSlug } : {}),
+    leafSpacingMs: input.leafSpacingMs ?? (input.fetchImpl ? 0 : LEAF_FETCH_SPACING_MS),
   };
 
   const polled = await pollSourceOutcomes(context, input.sourceUrl);

@@ -509,17 +509,41 @@ export function translatedXiangqiBroadcastPlayerTag<
   return withRecomputedFederationEn(withRecomputedNameEn(player, romanizeXiangqiPlayerName));
 }
 
+/**
+ * A team match's English name, side by side ("北京-江苏" -> "Beijing-Jiangsu"),
+ * keeping the source's delimiter so a reader splits both forms the same way.
+ * Undefined unless every side translates: half-English reads worse than the
+ * Chinese.
+ */
+export function translateXiangqiMatchName(zh: string): string | undefined {
+  const sides = zh.split('-').map((side) => side.trim());
+  if (sides.length < 2 || sides.some((side) => side.length === 0)) return undefined;
+  const english = sides.map((side) => translateXiangqiTeamName(side));
+  return english.every((side) => side !== undefined) ? english.join('-') : undefined;
+}
+
+// Same self-healing contract as nameEn, for the match on a board's details.
+function withRecomputedMatchEn<T extends { details?: { match?: string; matchEn?: string } }>(
+  board: T,
+): T {
+  if (!board.details) return board;
+  const { matchEn: _stale, ...rest } = board.details;
+  const matchEn = rest.match ? translateXiangqiMatchName(rest.match) : undefined;
+  return { ...board, details: matchEn === undefined ? rest : { ...rest, matchEn } };
+}
+
 export function translatedXiangqiBroadcastBoard<
   T extends {
     red: { name: string; nameEn?: string; federation?: string; federationEn?: string };
     black: { name: string; nameEn?: string; federation?: string; federationEn?: string };
+    details?: { match?: string; matchEn?: string };
   },
 >(board: T): T {
-  return {
+  return withRecomputedMatchEn({
     ...board,
     red: translatedXiangqiBroadcastPlayerTag(board.red),
     black: translatedXiangqiBroadcastPlayerTag(board.black),
-  };
+  });
 }
 
 export function translateXiangqiBroadcastSnapshot<
