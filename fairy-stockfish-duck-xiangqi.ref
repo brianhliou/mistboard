@@ -1,6 +1,6 @@
 1b5bdd40499bd5c7417bdc532d52fef8847bdf3f
 # ^ The Fairy-Stockfish commit the prod image builds for the Duck Xiangqi bot
-# (railpack reads the first line; this comment is ignored). Deliberately the
+# (scripts/engine-assets.sh reads the first line; this comment is ignored). Deliberately the
 # SAME upstream commit as fairy-stockfish-xiangqi.ref: our patch applies cleanly
 # to it, so there is one upstream pin to move rather than two, and no fork to
 # maintain (contrast pikafish-jieqi.ref, whose fork branch makes a bump a

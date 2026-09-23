@@ -1,0 +1,78 @@
+name: Build engines
+
+# Compiles the six server engines (three patched Fairy-Stockfish builds,
+# Stockfish, Pikafish-jieqi, Pikafish) once per recipe and publishes them as
+# release `engines-<recipe hash>`; railpack.json fetches that release at image
+# build time instead of compiling on every deploy. The recipe and its hash live
+# in scripts/engine-assets.sh; the paths below are exactly its inputs
+# (scripts/engine-assets.test.mjs keeps them in step).
+#
+# Idempotent: a recipe that is already published is a no-op, so re-running is
+# safe and a docs edit to a .ref file's comment changes nothing.
+
+on:
+  workflow_dispatch:
+  push:
+    branches: [main]
+    paths:
+      - fairy-stockfish-xiangqi.ref
+      - fairy-stockfish-duck-xiangqi.ref
+      - fairy-stockfish-duck-xiangqi.patch
+      - fairy-stockfish-atomic-xiangqi.ref
+      - fairy-stockfish-atomic-xiangqi.patch
+      - stockfish.ref
+      - pikafish-jieqi.ref
+      - pikafish.ref
+      - scripts/engine-assets.sh
+      - .github/workflows/build-engines.yml
+
+permissions:
+  contents: write
+
+concurrency:
+  group: build-engines
+  cancel-in-progress: false
+
+jobs:
+  build:
+    name: Build and publish
+    runs-on: ubuntu-24.04
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Recipe tag
+        id: recipe
+        run: echo "tag=$(sh scripts/engine-assets.sh tag)" >> "$GITHUB_OUTPUT"
+
+      - name: Already published?
+        id: published
+        run: |
+          if gh release view "${{ steps.recipe.outputs.tag }}" --json tagName >/dev/null 2>&1; then
+            echo "engines: ${{ steps.recipe.outputs.tag }} is already published; nothing to do"
+            echo "yes=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "yes=false" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Build
+        if: steps.published.outputs.yes != 'true'
+        run: sh scripts/engine-assets.sh build "$RUNNER_TEMP/bin"
+
+      - name: Verify
+        if: steps.published.outputs.yes != 'true'
+        run: sh scripts/engine-assets.sh verify "$RUNNER_TEMP/bin" apps/server/src
+
+      - name: Package
+        if: steps.published.outputs.yes != 'true'
+        run: sh scripts/engine-assets.sh package "$RUNNER_TEMP/bin" "$RUNNER_TEMP/dist"
+
+      - name: Publish release
+        if: steps.published.outputs.yes != 'true'
+        run: |
+          gh release create "${{ steps.recipe.outputs.tag }}" \
+            --target "$GITHUB_SHA" \
+            --title "Engine binaries ${{ steps.recipe.outputs.tag }}" \
+            --notes-file "$RUNNER_TEMP/dist/MANIFEST" \
+            "$RUNNER_TEMP/dist/"*

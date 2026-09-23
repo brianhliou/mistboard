@@ -1,5 +1,5 @@
 // The Duck Xiangqi Fairy-Stockfish build is pinned in FOUR places that must
-// agree: fairy-stockfish-duck-xiangqi.ref (the commit railpack checks out),
+// agree: fairy-stockfish-duck-xiangqi.ref (the commit the engine recipe checks out),
 // fairy-stockfish-duck-xiangqi.patch (what makes that commit able to play this
 // variant at all), and the two constants in the provider that name them. Unlike
 // the xiangqi build, the ref alone does NOT identify this engine — the patch
@@ -22,6 +22,7 @@ import {
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const refFile = resolve(repoRoot, 'fairy-stockfish-duck-xiangqi.ref');
 const patchFile = resolve(repoRoot, 'fairy-stockfish-duck-xiangqi.patch');
+const recipe = readFileSync(resolve(repoRoot, 'scripts/engine-assets.sh'), 'utf8');
 const railpack = readFileSync(resolve(repoRoot, 'railpack.json'), 'utf8');
 
 function pinnedRef(): string {
@@ -42,7 +43,7 @@ test('DUCK_XIANGQI_FSF_ENGINE_REF is the short form of the pinned .ref commit', 
   );
 });
 
-test('DUCK_XIANGQI_FSF_PATCH_SHA256 is the digest of the patch railpack applies', () => {
+test('DUCK_XIANGQI_FSF_PATCH_SHA256 is the digest of the patch the recipe applies', () => {
   const digest = createHash('sha256').update(readFileSync(patchFile)).digest('hex');
   assert.equal(
     digest,
@@ -53,24 +54,28 @@ test('DUCK_XIANGQI_FSF_PATCH_SHA256 is the digest of the patch railpack applies'
   );
 });
 
-test('railpack builds from the .ref, applies the patch, and gates on perft', () => {
+test('the recipe builds from the .ref, applies the patch, and gates on perft', () => {
+  // The recipe (scripts/engine-assets.sh) compiles on a GitHub runner and
+  // publishes a release; railpack fetches it and re-runs the same verify step,
+  // so the gates below run both where the binary is built and where it ships.
+  assert.ok(recipe.includes('pin fairy-stockfish-duck-xiangqi.ref'), 'the build reads the .ref');
   assert.ok(
-    railpack.includes('/app/fairy-stockfish-duck-xiangqi.ref'),
-    'the build step reads the .ref',
-  );
-  assert.ok(
-    railpack.includes('/app/fairy-stockfish-duck-xiangqi.patch'),
-    'the build step applies the patch; stock Fairy-Stockfish cannot play this variant',
+    recipe.includes('fairy-stockfish-duck-xiangqi.patch"'),
+    'the build applies the patch; stock Fairy-Stockfish cannot play this variant',
   );
   // The gate is agreement with the KERNEL's own legal-turn count for the opening
   // array, not merely that the binary starts: a build generating only the 44
   // piece moves would not crash, it would just play a different game.
   assert.ok(
-    railpack.includes('Nodes searched: 2554'),
+    recipe.includes('duckxiangqi startpos 2554'),
     'the build must be gated on perft(1) = 2554 against duck-xiangqi.ini',
   );
   assert.ok(
-    railpack.includes('/app/apps/server/src/duck-xiangqi.ini'),
+    recipe.includes('duck-xiangqi.ini'),
     'the perft gate must run against the same .ini the server hands the engine',
+  );
+  assert.ok(
+    railpack.includes('engine-assets.sh verify /app/bin /app/apps/server/src'),
+    'the image re-runs the verify gates against the .ini directory the server uses',
   );
 });

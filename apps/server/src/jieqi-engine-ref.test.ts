@@ -1,5 +1,5 @@
 // The pinned engine commit exists in two places that MUST agree: pikafish-jieqi.ref
-// (which the railpack build step reads to check out the binary) and
+// (which the engine recipe reads to check out the binary) and
 // PIKAFISH_JIEQI_ENGINE_REF (which is part of the analysis cache key). If they drift,
 // prod builds one engine and files its evals under another engine's key, which is the
 // exact silent-divergence bug pinning was introduced to close. There is no runtime

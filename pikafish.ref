@@ -1,0 +1,15 @@
+6a59ee2f7b105bff64d9efc2692591107787e2b1
+# ^ The official-pikafish/Pikafish commit the live xiangqi Pikafish bot runs
+# (scripts/engine-assets.sh reads the first line; this comment is ignored).
+# `Pikafish dev-20260919-6a59ee2f`, upstream master.
+#
+# Pinned 2026-09-23. Until then the image did `git clone --depth 1` of upstream
+# master on every deploy, so the bot was whatever Pikafish had merged that day
+# (the reproducibility hole pikafish-jieqi.ref describes). This commit is the
+# one production was running when the engines moved to prebuilt release assets,
+# so the pin itself changed nothing about how the bot plays.
+#
+# Bumping is a behaviour change to a live bot, not just an upgrade: Pikafish's
+# search and net move between commits. Change the SHA, let the Build engines
+# workflow publish the new release, deploy, then re-run the EvE calibration for
+# the xiangqi Pikafish rungs so their ratings are measured on the new binary.

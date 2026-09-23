@@ -1,6 +1,6 @@
 cb3d4ee9b47d0c5aae855b12379378ea1439675c
-# ^ The official-stockfish/Stockfish commit the prod image builds (railpack
-# reads the first line; this comment is ignored). Tag sf_18, 2026-01-31.
+# ^ The official-stockfish/Stockfish commit the prod image runs
+# (scripts/engine-assets.sh reads the first line; this comment is ignored). Tag sf_18, 2026-01-31.
 #
 # WHY THIS FILE EXISTS (2026-09-06). Until now Stockfish was the ONLY engine in
 # railpack.json that was not pinned: `deploy.aptPackages` carried a bare
@@ -11,7 +11,8 @@ cb3d4ee9b47d0c5aae855b12379378ea1439675c
 # faithful. Flagged in the 2026-06-12 klussfix bakeoff verdict as a "separate
 # thread" and never closed.
 #
-# Built from source rather than fetched as a release binary because sf_18
+# Built from source by the Build engines workflow (scripts/engine-assets.sh)
+# and fetched by the image as our own release asset, because sf_18
 # publishes no x86-64-sse41-popcnt asset, and this image targets that ISA for
 # fairy-stockfish-xiangqi, pikafish-jieqi and pikafish. Do not swap in an avx2
 # release binary without first confirming the container's CPU flags.

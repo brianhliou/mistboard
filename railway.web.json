@@ -18,6 +18,13 @@
       "/package-lock.json",
       "/fairy-stockfish-xiangqi.ref",
       "/stockfish.ref",
+      "/fairy-stockfish-duck-xiangqi.ref",
+      "/fairy-stockfish-duck-xiangqi.patch",
+      "/fairy-stockfish-atomic-xiangqi.ref",
+      "/fairy-stockfish-atomic-xiangqi.patch",
+      "/pikafish-jieqi.ref",
+      "/pikafish.ref",
+      "/scripts/engine-assets.sh",
       "/railpack.json",
       "/railway.web.json",
       "/tsconfig.base.json"

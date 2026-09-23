@@ -1,5 +1,5 @@
 // The xiangqi Fairy-Stockfish build is pinned in three places that MUST agree:
-// fairy-stockfish-xiangqi.ref (railpack checks that commit out and builds it),
+// fairy-stockfish-xiangqi.ref (the engine recipe checks that commit out and builds it),
 // XIANGQI_FSF_ENGINE_REF (part of every xiangqi FSF rung's engine configHash), and
 // the railpack net line (which net, from which commit, with which digest). If they
 // drift, prod plays one engine and rates it under another engine's identity, which
@@ -14,6 +14,7 @@ import { XIANGQI_FSF_ENGINE_REF, XIANGQI_FSF_NNUE_NET } from './xiangqi-fsf-engi
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const refFile = resolve(repoRoot, 'fairy-stockfish-xiangqi.ref');
+const recipe = readFileSync(resolve(repoRoot, 'scripts/engine-assets.sh'), 'utf8');
 const railpack = readFileSync(resolve(repoRoot, 'railpack.json'), 'utf8');
 
 function pinnedRef(): string {
@@ -35,8 +36,12 @@ test('XIANGQI_FSF_ENGINE_REF is the short form of the pinned .ref commit', () =>
   );
 });
 
-test('railpack builds from the .ref file and fetches the net the provider names', () => {
-  assert.ok(railpack.includes('/app/fairy-stockfish-xiangqi.ref'), 'build step reads the .ref');
+test('the recipe builds from the .ref file and railpack fetches the net the provider names', () => {
+  assert.ok(recipe.includes('pin fairy-stockfish-xiangqi.ref'), 'the build reads the .ref');
+  assert.ok(
+    railpack.includes('engine-assets.sh fetch /app/bin'),
+    'the image installs the published build beside the net',
+  );
   assert.ok(
     railpack.includes(`/app/bin/${XIANGQI_FSF_NNUE_NET}`),
     `railpack must place ${XIANGQI_FSF_NNUE_NET} beside the xiangqi binary`,

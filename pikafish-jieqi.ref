@@ -1,11 +1,11 @@
 e75cee3a3698794b4b6f5574a8774f0575bc0c21
-# ^ The commit the prod image builds (railpack build step reads the first line; this
-# comment is ignored).
+# ^ The commit the prod image runs (scripts/engine-assets.sh reads the first line;
+# this comment is ignored).
 #
 # NOT an upstream commit as of 2026-08-31. It is upstream `23b9466c` plus two
 # patches, carried on https://github.com/brianhliou/pikafish-jieqi-wasm branch
-# `jieqi_old-mistboard`, and railpack clones THAT repo rather than
-# official-pikafish/Pikafish. The upstream base is unchanged, so moving to a newer
+# `jieqi_old-mistboard`, and the Build engines workflow fetches it from THAT repo
+# rather than official-pikafish/Pikafish. The upstream base is unchanged, so moving to a newer
 # upstream jieqi_old is a cherry-pick, not a merge. The pinned commit must be
 # reachable from that branch: the build clones it --single-branch.
 #
@@ -27,9 +27,9 @@ e75cee3a3698794b4b6f5574a8774f0575bc0c21
 # (room, engine, depth), and the engine component was a hand-maintained version
 # string that knew nothing about the binary. Two deploys either side of an upstream
 # commit would therefore file evals from two different engines under one identical
-# key, with nothing to detect it. The same shape applies to the xiangqi Pikafish
-# build on the following railpack line, which is still unpinned; pinning it would
-# also change the live xiangqi bot, so it is deliberately left for its own change.
+# key, with nothing to detect it. The xiangqi Pikafish build had the same hole
+# until 2026-09-23, when pikafish.ref pinned it to the commit production was
+# already running.
 #
 # The short form of this SHA is part of JIEQI_ANALYSIS_ENGINE_ID, so moving this pin
 # invalidates jieqi analysis caches on purpose rather than silently reusing them.
