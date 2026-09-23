@@ -9,7 +9,7 @@
   "steps": {
     "build": {
       "commands": [
-        "echo cachebust-2026-09-16-engine-d05df13",
+        "echo cachebust-2026-09-23-engine-946d931",
         "if [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then mkdir -p ~/.ssh && chmod 700 ~/.ssh; else echo MISTBOARD_BUILD_ENGINE_not_1_skipping_private_engine_checkout; fi",
         "if [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then printenv MISTBOARD_ENGINE_DEPLOY_KEY | base64 -di > ~/.ssh/id_ed25519 && chmod 600 ~/.ssh/id_ed25519; fi",
         "if [ ${MISTBOARD_BUILD_ENGINE:-0} = 1 ]; then ssh-keyscan -t ed25519 github.com >> ~/.ssh/known_hosts 2>/dev/null; fi",
