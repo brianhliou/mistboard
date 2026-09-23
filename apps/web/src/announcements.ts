@@ -41,7 +41,7 @@ const baseAnnouncements: Announcement[] = [
     date: '2026-09-22',
     kind: 'release',
     headline: 'The Bamboo Fragrance Studio Manual and the Hundred Games Manual are online.',
-    body: "竹香斋 (1800, three collections) and 百局象棋谱 (1801), the other two of the four great Qing manuals, join the shelf, with 百变象棋谱 (1522) and its Tongzhi-era sequel 神妙变化象棋谱 — the oldest surviving printed xiangqi composition books. Three hundred and ninety-two more problems, each on its own board with the book's line played out as the mainline and the original title kept beside the English one. Positions come from dpxq.com and are credited on every composition.",
+    body: "The Bamboo Fragrance Studio Manual (1800, three collections) and the Hundred Games Manual (1801), the other two of the four great Qing manuals, join the shelf with the Hundred Variations Manual (1522) and its Tongzhi-era sequel, the Wondrous Variations Manual: the oldest surviving printed xiangqi composition books. Three hundred and ninety-two more problems, each on its own board with the book's line played out as the mainline and the original title kept beside the English one. Positions come from dpxq.com and are credited on every composition.",
     href: '/study',
     cta: 'Open the studies',
   },
