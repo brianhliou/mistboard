@@ -136,6 +136,7 @@ Conventions:
 
 ### Fixed
 
+- In dark mode, the player names under a chess game on the homepage viewer are plain text like every other variant's, instead of boxed rows with a green bar on the winner ([4a9187e9](https://github.com/brianhliou/mistboard/commit/4a9187e9))
 - A fog chess game written with standard castling moves (as engines and other tools write them) now loads into a study past the castle, where it used to stop ([849b4c24](https://github.com/brianhliou/mistboard/commit/849b4c24))
 - Reviews of red-and-black games read red and black in dark mode: the advantage chart's Black area is dark rather than cream, the engine's line scores are red or black chips, and the Middlegame and Endgame lines show. Broadcast round cards with an eval gauge keep their board, and the gauge is red and black ([a10a0ea5](https://github.com/brianhliou/mistboard/commit/a10a0ea5))
 - A tournament or archive game that ran past a repetition or the no-capture count plays to its real end on the review board: those draws are an arbiter's call, and the board used to stop there and call the record truncated. Finished broadcast boards with no round date no longer show the time we imported them as the game's age ([f879a5b1](https://github.com/brianhliou/mistboard/commit/f879a5b1))
