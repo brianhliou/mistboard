@@ -1,6 +1,7 @@
 import type { Move } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import { darkChessTreeAdapter } from './dark-chess-tree-adapter.js';
+import { deserializeTree, type SerializedNode, type SerializedTree } from './tree-serialize.js';
 
 // Web-side half of the fog hidden-info guarantee for Fog Chess: the adapter projects
 // a FULLY REVEALED truth board plus each seat's fogged POV. Dark-chess fog masks by
@@ -70,5 +71,68 @@ describe('darkChessTreeAdapter.project', () => {
       to: 'e8',
       promotion: 'queen',
     });
+  });
+});
+
+/** A linear chapter tree (children[0] chains) from a UCI list. */
+function linearTree(moves: string[]): SerializedTree {
+  let node: SerializedNode = { children: [] };
+  const root = node;
+  for (const uci of moves) {
+    const child: SerializedNode = { uci, children: [] };
+    node.children.push(child);
+    node = child;
+  }
+  return { version: 1, root };
+}
+
+// White castles short, Black castles long, then one more move so "replays past
+// the castle" means past BOTH of them.
+const CASTLING_LINE = [
+  'e2e4',
+  'd7d6',
+  'g1f3',
+  'c8e6',
+  'f1c4',
+  'b8c6',
+  'e1g1', // O-O, standard UCI
+  'd8d7',
+  'b1c3',
+  'e8c8', // O-O-O, standard UCI
+  'd2d3',
+];
+
+describe('darkChessTreeAdapter castling spellings (#451)', () => {
+  it('replays a chapter written in standard UCI castling (e1g1, e8c8) past the castle', () => {
+    const tree = deserializeTree(darkChessTreeAdapter, linearTree(CASTLING_LINE));
+    const tip = tree.nodeAt(tree.mainlinePath())!;
+    expect(tip.ply).toBe(CASTLING_LINE.length);
+    const board = tip.truth.board;
+    expect(board.g1).toEqual({ color: 'white', role: 'king' });
+    expect(board.f1).toEqual({ color: 'white', role: 'rook' });
+    expect(board.c8).toEqual({ color: 'black', role: 'king' });
+    expect(board.d8).toEqual({ color: 'black', role: 'rook' });
+    expect(board.e1).toBeUndefined();
+    expect(board.h1).toBeUndefined();
+    expect(board.a8).toBeUndefined();
+  });
+
+  it('keys both spellings to the board form, so they land on one node', () => {
+    const standard = deserializeTree(darkChessTreeAdapter, linearTree(CASTLING_LINE));
+    const kingOntoRook = deserializeTree(
+      darkChessTreeAdapter,
+      linearTree(CASTLING_LINE.map((m) => (m === 'e1g1' ? 'e1h1' : m === 'e8c8' ? 'e8a8' : m))),
+    );
+    const ids = (tree: typeof standard) => tree.mainlinePath();
+    expect(ids(standard)).toEqual(ids(kingOntoRook));
+    expect(ids(standard)).toContain('e1h1');
+    expect(ids(standard)).toContain('e8a8');
+    const castle = standard.nodeAt(ids(standard).slice(0, 7))!;
+    expect(castle.label).toBe('O-O');
+  });
+
+  it('leaves a non-castling king move alone', () => {
+    const truth = darkChessTreeAdapter.initialTruth();
+    expect(darkChessTreeAdapter.fromUci('e1f1', truth)).toEqual({ from: 'e1', to: 'f1' });
   });
 });

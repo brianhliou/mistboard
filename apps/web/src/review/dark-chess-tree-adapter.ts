@@ -12,6 +12,7 @@
 
 import {
   type Color,
+  canonicalChessCastlingMove,
   darkChessVariant,
   type GameState,
   type Move,
@@ -105,9 +106,10 @@ export const darkChessTreeAdapter: VariantTreeAdapter<Move, GameState, PlayerVie
   initialTruth: () => darkChessVariant.createInitialState('analysis'),
   isLegal: (truth, move) => {
     if (truth.status.type !== 'playing') return false;
+    const legal = canonicalChessCastlingMove(truth, move);
     return darkChessVariant
       .getLegalMoves(truth, truth.status.turn)
-      .some((m) => m.from === move.from && m.to === move.to && m.promotion === move.promotion);
+      .some((m) => m.from === legal.from && m.to === legal.to && m.promotion === legal.promotion);
   },
   applyMove: (truth, move) => darkChessVariant.applyMove(truth, move),
   project: (truth): ProjectedView<PlayerView>[] => [
@@ -136,5 +138,12 @@ export const darkChessTreeAdapter: VariantTreeAdapter<Move, GameState, PlayerVie
   moveLabel: (move, parentTruth) => moveToAlgebraic(parentTruth, move),
   moveKey: (move) => moveToUci(move),
   toEngineUci: (move) => moveToUci(move),
-  fromUci: (uci) => uciToMove(uci),
+  // The board spells castling king-onto-rook (e1h1); Misty's own records and any
+  // UCI engine write e1g1. Normalise at this boundary so a saved tree, a URL line
+  // or an engine PV in either spelling replays past the castle and keys the same
+  // node as a castle played on the board (#451).
+  fromUci: (uci, parentTruth) => {
+    const move = uciToMove(uci);
+    return move ? canonicalChessCastlingMove(parentTruth, move) : null;
+  },
 };

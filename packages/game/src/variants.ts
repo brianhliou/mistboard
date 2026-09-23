@@ -687,6 +687,15 @@ function withCastlingAliases(state: GameState, moves: Move[]): Move[] {
   return aliases.length > 0 ? [...moves, ...aliases] : moves;
 }
 
+/** A castling move in the board's own spelling, king onto its rook (`e1h1`,
+ *  `e8a8`), whichever spelling it arrived in: standard UCI (`e1g1`, `e8c8`, what
+ *  python-chess and every UCI engine write) or king-onto-rook. Any other move is
+ *  returned unchanged. For boundaries that read move tokens from outside the
+ *  kernel (a saved study tree, an engine line) so both spellings land on one key. */
+export function canonicalChessCastlingMove(state: GameState, move: Move): Move {
+  return normalizeCastlingMove(state, move) ?? move;
+}
+
 function normalizeCastlingMove(state: GameState, move: Move): Move | null {
   const piece = state.board[move.from];
   if (piece?.role !== 'king') return null;
