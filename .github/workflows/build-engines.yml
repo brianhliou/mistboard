@@ -13,7 +13,9 @@ name: Build engines
 on:
   workflow_dispatch:
   push:
-    branches: [main]
+    # agent/release-speed is temporary: GitHub only dispatches a workflow that
+    # exists on the default branch, so the first build runs off the branch push.
+    branches: [main, agent/release-speed]
     paths:
       - fairy-stockfish-xiangqi.ref
       - fairy-stockfish-duck-xiangqi.ref
