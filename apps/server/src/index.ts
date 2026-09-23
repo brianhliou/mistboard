@@ -58,6 +58,10 @@ import {
 } from './variant-tenant/registry.js';
 import { type BotVsBotScheduler, startBotVsBotScheduler } from './xiangqi-bot-vs-bot-scheduler.js';
 import {
+  type BroadcastAnalysisSweep,
+  startBroadcastAnalysisSweep,
+} from './xiangqi-broadcast-analysis.js';
+import {
   startXiangqiBroadcastScheduler,
   type XiangqiBroadcastScheduler,
 } from './xiangqi-broadcast-scheduler.js';
@@ -215,6 +219,7 @@ let wss: WebSocketServer | null = null;
 let deadlineSweeper: TenantDeadlineSweeper | null = null;
 let patronExpirySweeper: PatronExpirySweeper | null = null;
 let studyCurator: StudyCurator | null = null;
+let broadcastAnalysisSweep: BroadcastAnalysisSweep | null = null;
 let broadcastScheduler: XiangqiBroadcastScheduler | null = null;
 let botVsBotScheduler: BotVsBotScheduler | null = null;
 let shuttingDown = false;
@@ -250,6 +255,7 @@ export async function startServer(options: StartServerOptions = {}): Promise<Sta
     // Always started; the tick no-ops unless MISTBOARD_STUDY_CURATOR_ENABLED=true.
     studyCurator = startStudyCurator();
     broadcastScheduler = startXiangqiBroadcastScheduler();
+    broadcastAnalysisSweep = startBroadcastAnalysisSweep();
     // Always started; the tick no-ops unless MISTBOARD_BOT_VS_BOT_ENABLED=true,
     // so ops can flip generation on/off without a restart.
     botVsBotScheduler = startBotVsBotScheduler();
@@ -354,6 +360,8 @@ export async function stopServer(): Promise<void> {
   patronExpirySweeper?.stop();
   studyCurator?.stop();
   studyCurator = null;
+  broadcastAnalysisSweep?.stop();
+  broadcastAnalysisSweep = null;
   patronExpirySweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;
@@ -566,6 +574,8 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
   patronExpirySweeper?.stop();
   studyCurator?.stop();
   studyCurator = null;
+  broadcastAnalysisSweep?.stop();
+  broadcastAnalysisSweep = null;
   patronExpirySweeper = null;
   broadcastScheduler?.stop();
   broadcastScheduler = null;

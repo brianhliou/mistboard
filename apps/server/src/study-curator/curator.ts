@@ -10,12 +10,15 @@
 // Everything that touches Postgres or the engine comes in through `deps`, so the
 // orchestration is testable with fakes and the CLI can run it dry.
 
-import type { XiangqiMove } from '@mistboard/game';
 import { logger } from '../obs.js';
 import * as persistence from '../persistence.js';
 import type { StudyWithChapters } from '../persistence-studies.js';
 import { resolveXiangqiAnalysis } from '../routes/xiangqi-games.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID } from '../xiangqi-analysis.js';
+import {
+  broadcastAnalysisRoomId,
+  broadcastAnalysisTimeline,
+} from '../xiangqi-broadcast-analysis.js';
 import {
   ANNOTATOR_VERSION,
   buildDecisiveMomentChapter,
@@ -338,14 +341,12 @@ export async function runStudyCurator(
 export const STUDY_CURATOR_OWNER_HANDLE =
   process.env.MISTBOARD_STUDY_CURATOR_OWNER_HANDLE ?? 'mistboard';
 
-function timelineOf(moves: readonly XiangqiMove[]) {
-  return { timeline: moves.map((move) => ({ type: 'move-played', move })) };
-}
+// The broadcast analysis key and timeline are shared with the broadcast
+// analysis sweep and endpoint, so a board either path analysed is never
+// analysed twice.
+const timelineOf = broadcastAnalysisTimeline;
 
-/** A broadcast board's analysis lives under this room key (game_analysis has no FK). */
-export function broadcastAnalysisRoomId(boardId: string): string {
-  return `broadcast:${boardId}`;
-}
+export { broadcastAnalysisRoomId };
 
 async function listBroadcastCandidates(recipe: StudyRecipe): Promise<CuratorGame[]> {
   const results = recipe.source.results ?? ['1-0', '0-1'];

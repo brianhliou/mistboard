@@ -19,9 +19,11 @@ import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import { t } from './i18n/catalog.js';
+import { fetchCachedGameAnalysis } from './review/game-analysis.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
 import { downloadRow } from './review/underboard-tabs.js';
 import { buildXiangqiClientAnalysisSource } from './review/xiangqi-client-analysis.js';
+import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildNav } from './site-shell.js';
@@ -100,10 +102,24 @@ export function mountBroadcastBoardReview(
       variant: DEFAULT_STUDY_VARIANT,
       name: eventName ? `${red} vs ${black} (${eventName})` : `${red} vs ${black}`,
     },
-    // No room and no server sweep behind a relayed game: whole-game analysis is
-    // the shared client ceval sweep, the same as an archive game.
-    analysis: buildXiangqiClientAnalysisSource(replay),
+    // The server analyses every finished broadcast game once and stores it
+    // (xiangqi-broadcast-analysis.ts), so the review opens with the chart and
+    // the move marks already there, as a site game's does. Until the sweep
+    // reaches a game, the button runs the same sweep in the reader's browser.
+    analysis: broadcastAnalysisSource(data.board.id, replay),
   });
+}
+
+function broadcastAnalysisSource(
+  boardId: string,
+  replay: ReturnType<typeof buildXiangqiReplayFromMoves>,
+): XiangqiAnalysisSource | null {
+  const local = buildXiangqiClientAnalysisSource(replay);
+  if (!local) return null;
+  return {
+    ...local,
+    fetchCached: () => fetchCachedGameAnalysis('xiangqi-broadcasts', boardId),
+  };
 }
 
 function provenance(

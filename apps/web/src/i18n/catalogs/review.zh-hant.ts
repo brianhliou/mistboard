@@ -450,6 +450,7 @@ export const ZH_HANT_REVIEW = {
   'broadcast.copy': '複製',
   'broadcast.copied': '已複製',
   'broadcast.standingsNote': '排名根據直播棋譜計算，可能與官方成績不同。',
+  'broadcast.evalGauge': '評估條',
   'broadcast.teams': '團體',
   'broadcast.team': '隊伍',
   'broadcast.matches': '場次',

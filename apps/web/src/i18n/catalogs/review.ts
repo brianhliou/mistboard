@@ -281,6 +281,7 @@ export const EN_REVIEW = {
   'broadcast.copied': 'Copied',
   'broadcast.standingsNote':
     'Standings are calculated from the broadcast games and may differ from the official results.',
+  'broadcast.evalGauge': 'Evaluation gauge',
   'broadcast.teams': 'Teams',
   'broadcast.team': 'Team',
   'broadcast.matches': 'Matches',

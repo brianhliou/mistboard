@@ -1306,3 +1306,35 @@
   text-transform: uppercase;
   letter-spacing: 0.04em;
 }
+
+/* The round grid's eval gauge: the review's bar in its in-flow gauge mode
+   (review-shell__gauge), a thin column flush against the card's board. */
+.xqb-card-board-row {
+  display: grid;
+  grid-template-columns: 6px minmax(0, 1fr);
+  gap: 4px;
+  align-items: stretch;
+}
+
+.xqb-card-gauge {
+  position: relative;
+  min-height: 0;
+}
+
+.xqb-gauges-off .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.xqb-gauges-off .xqb-card-gauge {
+  display: none;
+}
+
+.xqb-gauge-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  justify-self: start;
+  color: var(--site-muted);
+  font-size: 13px;
+  cursor: pointer;
+}

@@ -3,6 +3,7 @@ import { fileURLToPath } from 'node:url';
 import type { XiangqiBroadcastBoard } from '@mistboard/game';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
 import { getPool } from './persistence-db.js';
+import { getGameAnalysis, saveGameAnalysis } from './persistence-game-analysis.js';
 import {
   assert,
   definePersistenceTests,
@@ -19,11 +20,13 @@ import {
   getXiangqiBroadcastTour,
   importXiangqiBroadcastPack,
   listXiangqiBroadcastBoards,
+  listXiangqiBroadcastFinalEvals,
   listXiangqiBroadcastRounds,
   listXiangqiBroadcastScheduledTours,
   listXiangqiBroadcastSyncLogs,
   listXiangqiBroadcastTourSourcesOn,
   listXiangqiBroadcastTours,
+  nextUnanalysedXiangqiBroadcastBoard,
   queryCompletedXiangqiBroadcastBoards,
   setXiangqiBroadcastTourSchedule,
 } from './persistence-xiangqi-broadcasts.js';
@@ -874,6 +877,48 @@ definePersistenceTests('xiangqi broadcasts', () => {
       }),
       null,
     );
+  });
+
+  test('the analysis sweep finds finished boards without analysis, and a move change drops a stored one', async () => {
+    const pack = await fixturePack();
+    const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;
+    await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
+    const partial: XiangqiBroadcastBoard = {
+      ...fullBoard,
+      status: 'complete',
+      moves: fullBoard.moves.slice(0, 2),
+    };
+    await applyXiangqiBroadcastBoardUpdate(partial);
+    const query = { engineId: 'engine@1', depth: 12, maxPlies: 300, skip: [] as string[] };
+
+    assert.equal((await nextUnanalysedXiangqiBroadcastBoard(query))?.id, fullBoard.id);
+    assert.equal(
+      await nextUnanalysedXiangqiBroadcastBoard({ ...query, skip: [fullBoard.id] }),
+      null,
+    );
+
+    await saveGameAnalysis(`broadcast:${fullBoard.id}`, 'engine@1', 12, [
+      { ply: 0, cp: 20, mate: null, best: null },
+      { ply: 2, cp: -310, mate: null, best: null },
+    ]);
+    assert.equal(await nextUnanalysedXiangqiBroadcastBoard(query), null);
+    assert.deepEqual(
+      await listXiangqiBroadcastFinalEvals({
+        boardIds: [fullBoard.id],
+        engineId: 'engine@1',
+        depth: 12,
+      }),
+      new Map([[fullBoard.id, { cp: -310, mate: null }]]),
+    );
+
+    // A late upload extends the record: the evals no longer describe it.
+    const extended = await applyXiangqiBroadcastBoardUpdate({
+      ...partial,
+      moves: fullBoard.moves.slice(0, 4),
+    });
+    assert.equal(extended.ok ? extended.status : extended.kind, 'extended');
+    assert.equal(await getGameAnalysis(`broadcast:${fullBoard.id}`, 'engine@1', 12), null);
+    assert.equal((await nextUnanalysedXiangqiBroadcastBoard(query))?.id, fullBoard.id);
   });
 
   test('an end date only ever moves later, in the column and the payload together', async () => {

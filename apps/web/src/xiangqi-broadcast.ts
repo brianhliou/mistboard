@@ -25,7 +25,7 @@ import { renderXiangqiBoardSvg } from './live-xiangqi.js';
 import type { CevalLine } from './review/engine/ceval-types.js';
 import { engineArrowsFromLines } from './review/engine/engine-arrows.js';
 import { createEvalBar } from './review/engine/eval-bar.js';
-import { formatEval } from './review/engine/eval-format.js';
+import { formatEval, winProbRed } from './review/engine/eval-format.js';
 import { formatXiangqiEngineMove } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
@@ -74,6 +74,9 @@ type BroadcastBoardSummary = {
   moves?: XiangqiMove[];
   sourceUrl?: string;
   details?: XiangqiBroadcastGameDetails;
+  /** Red-POV eval for the grid gauge: a finished game's stored analysis at its
+   *  final position, or the live engine layer's read of a live one. */
+  evaluation?: { cp: number | null; mate: number | null; source: 'analysis' | 'live' };
   createdAt?: string;
   updatedAt?: string;
 };
@@ -692,6 +695,10 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
   const roundPlayedOn = data.boards.every((board) => board.status !== 'live')
     ? formatEventDay(roundPlayedAt(data.boards) ?? data.round.startsAt)
     : null;
+  if (data.boards.some((board) => board.evaluation)) {
+    wrap.append(evalGaugeToggle(wrap));
+  }
+  wrap.classList.toggle('xqb-gauges-off', !evalGaugeOn());
   // Live boards lead the grid; within a status band the pairing order holds.
   const boards = [...data.boards].sort(
     (a, b) =>
@@ -725,6 +732,36 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
   const credit = recordsCreditLine(data.boards);
   if (credit) wrap.append(credit);
   return wrap;
+}
+
+const EVAL_GAUGE_KEY = 'mistboard.broadcast.evalGauge';
+
+/** The grid gauge's on/off, per browser; on unless the reader turned it off. */
+function evalGaugeOn(): boolean {
+  try {
+    return window.localStorage.getItem(EVAL_GAUGE_KEY) !== 'off';
+  } catch {
+    return true;
+  }
+}
+
+function evalGaugeToggle(panel: HTMLElement): HTMLElement {
+  const label = document.createElement('label');
+  label.className = 'xqb-gauge-toggle';
+  const input = document.createElement('input');
+  input.type = 'checkbox';
+  input.checked = evalGaugeOn();
+  // One class on the panel shows or hides every gauge: no card is rebuilt.
+  input.addEventListener('change', () => {
+    panel.classList.toggle('xqb-gauges-off', !input.checked);
+    try {
+      window.localStorage.setItem(EVAL_GAUGE_KEY, input.checked ? 'on' : 'off');
+    } catch {
+      // Storage refused (private mode): the toggle still works for this view.
+    }
+  });
+  label.append(input, document.createTextNode(` ${t('broadcast.evalGauge')}`));
+  return label;
 }
 
 /** When a round was played, from its games: the earliest start a game states.
@@ -1178,6 +1215,7 @@ function boardCardSignature(board: BroadcastBoardSummary, playedOn?: string | nu
     board.red,
     board.black,
     board.details ?? null,
+    board.evaluation ?? null,
   ]);
 }
 
@@ -1669,7 +1707,30 @@ function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTML
         (board.status === 'complete' ? null : formatBroadcastFreshness(board.updatedAt)));
   foot.textContent = [`${plyCount(board)} plies`, fresh].filter(Boolean).join(' / ');
 
-  card.append(top, boardEl, players, foot);
+  // lichess's "Evaluation gauge": a thin bar beside the board, the review's
+  // own bar in its in-flow gauge mode, filled by the same win-probability
+  // curve. Rendered whenever there is an eval; the panel's toggle hides them.
+  const evaluation = board.evaluation;
+  let boardSlot: HTMLElement = boardEl;
+  if (evaluation) {
+    const gauge = document.createElement('div');
+    gauge.className = 'xqb-card-gauge review-shell__gauge';
+    const bar = document.createElement('div');
+    bar.className = 'review-eval-bar';
+    bar.setAttribute('aria-hidden', 'true');
+    const fill = document.createElement('div');
+    fill.className = 'review-eval-bar__fill';
+    const redShare = winProbRed(evaluation.cp, evaluation.mate);
+    fill.style.height = `${(redShare * 100).toFixed(1)}%`;
+    bar.classList.toggle('review-eval-bar--red-ahead', redShare >= 0.5);
+    bar.append(fill);
+    gauge.append(bar);
+    gauge.title = formatEval(evaluation.cp, evaluation.mate);
+    boardSlot = document.createElement('div');
+    boardSlot.className = 'xqb-card-board-row';
+    boardSlot.append(gauge, boardEl);
+  }
+  card.append(top, boardSlot, players, foot);
   return card;
 }
 

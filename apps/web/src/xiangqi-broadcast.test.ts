@@ -417,6 +417,57 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(options[1]?.textContent).toBe('✓ Round 2');
   });
 
+  it('draws an eval gauge on boards that have an eval, and the toggle hides them all', async () => {
+    const stored = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => stored.set(key, value),
+      removeItem: (key: string) => stored.delete(key),
+    });
+    stubFetchJson(() => ({
+      ...ROUND,
+      boards: [
+        {
+          ...fixtureBoard({
+            n: 1,
+            red: 'R1',
+            black: 'B1',
+            moves: [],
+            status: 'complete',
+            result: '0-1',
+          }),
+          evaluation: { cp: -900, mate: null, source: 'analysis' },
+        },
+        fixtureBoard({
+          n: 2,
+          red: 'R2',
+          black: 'B2',
+          moves: [],
+          status: 'complete',
+          result: '1-0',
+        }),
+      ],
+    }));
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const gauges = root.querySelectorAll('.xqb-card-gauge');
+    expect(gauges).toHaveLength(1);
+    // Black well ahead: Red's share of the bar is small.
+    const fill = gauges[0]?.querySelector<HTMLElement>('.review-eval-bar__fill');
+    expect(Number.parseFloat(fill?.style.height ?? '100')).toBeLessThan(25);
+
+    const toggle = root.querySelector<HTMLInputElement>('.xqb-gauge-toggle input');
+    expect(toggle?.checked).toBe(true);
+    toggle!.checked = false;
+    toggle!.dispatchEvent(new Event('change'));
+    expect(root.querySelector('.xqb-tab-panel')?.classList.contains('xqb-gauges-off')).toBe(true);
+    expect(stored.get('mistboard.broadcast.evalGauge')).toBe('off');
+    vi.unstubAllGlobals();
+  });
+
   it('sorts live boards ahead of finished and scheduled boards with result badges', async () => {
     const twoHoursAgo = new Date(Date.now() - 2 * 3_600_000).toISOString();
     stubFetchJson(() => ({

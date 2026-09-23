@@ -680,6 +680,55 @@ test('broadcast round API returns only boards under the requested round', async 
   assert.equal(payload.boards[0]?.id, board.id);
 });
 
+test('broadcast round API gives a finished board its stored final eval for the gauge', async () => {
+  const asked: string[][] = [];
+  const payload = await xiangqiBroadcastRoundForApi(
+    tour.slug,
+    'men-r1',
+    deps({
+      listXiangqiBroadcastFinalEvals: async (ids) => {
+        asked.push([...ids]);
+        return new Map([[board.id, { cp: -135, mate: null }]]);
+      },
+    }),
+  );
+  assert.ok(payload);
+  assert.deepEqual(asked, [[board.id]]);
+  const [row] = payload.boards;
+  assert.deepEqual(row && 'evaluation' in row ? row.evaluation : null, {
+    cp: -135,
+    mate: null,
+    source: 'analysis',
+  });
+
+  // Not analysed yet: no gauge rather than a zero that reads as level.
+  const bare = await xiangqiBroadcastRoundForApi(
+    tour.slug,
+    'men-r1',
+    deps({ listXiangqiBroadcastFinalEvals: async () => new Map() }),
+  );
+  assert.equal(bare?.boards[0] && 'evaluation' in bare.boards[0], false);
+});
+
+test('broadcast round API gives a live board the live engine read', async () => {
+  const live = { ...storedBoard, status: 'live' as const, result: '*' as const };
+  const payload = await xiangqiBroadcastRoundForApi(
+    tour.slug,
+    'men-r1',
+    deps({ listXiangqiBroadcastBoards: async () => [live] }),
+    (boardId, plyCount) =>
+      boardId === live.id && plyCount === live.plyCount
+        ? { ply: plyCount, nodes: 1, depth: 10, cp: 40, mate: null, lines: [] }
+        : null,
+  );
+  const [row] = payload?.boards ?? [];
+  assert.deepEqual(row && 'evaluation' in row ? row.evaluation : null, {
+    cp: 40,
+    mate: null,
+    source: 'live',
+  });
+});
+
 test('broadcast round API lists sibling rounds with stats for the round switcher', async () => {
   const payload = await xiangqiBroadcastRoundForApi(tour.slug, 'men-r1', deps());
 

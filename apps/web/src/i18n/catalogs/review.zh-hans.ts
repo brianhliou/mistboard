@@ -450,6 +450,7 @@ export const ZH_HANS_REVIEW = {
   'broadcast.copy': '复制',
   'broadcast.copied': '已复制',
   'broadcast.standingsNote': '排名根据直播棋谱计算，可能与官方成绩不同。',
+  'broadcast.evalGauge': '评估条',
   'broadcast.teams': '团体',
   'broadcast.team': '队伍',
   'broadcast.matches': '场次',

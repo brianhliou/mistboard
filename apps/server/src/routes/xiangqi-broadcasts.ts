@@ -1,6 +1,8 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { broadcastRecordsCredit } from '@mistboard/game';
 import * as persistence from './../persistence.js';
+import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from '../xiangqi-analysis.js';
+import { handleXiangqiBroadcastAnalysisRoutes } from '../xiangqi-broadcast-analysis.js';
 import {
   type BroadcastLiveEval,
   cachedBroadcastLiveEval,
@@ -30,7 +32,20 @@ type BroadcastStreamEnvelope<T> = {
   payload: T;
 };
 
+/** A board's eval for the round grid's gauge, Red's point of view: the final
+ *  position of a finished game's stored analysis, or the live engine layer's
+ *  read of a live game's current position. */
+export type XiangqiBroadcastBoardEvaluation = {
+  cp: number | null;
+  mate: number | null;
+  source: 'analysis' | 'live';
+};
+
 export type XiangqiBroadcastApiPersistence = {
+  /** Optional so test fakes need not model the analysis table. */
+  listXiangqiBroadcastFinalEvals?(
+    boardIds: readonly string[],
+  ): Promise<Map<string, { cp: number | null; mate: number | null }>>;
   listXiangqiBroadcastTours(): ReturnType<typeof persistence.listXiangqiBroadcastTours>;
   getXiangqiBroadcastTour(slug: string): ReturnType<typeof persistence.getXiangqiBroadcastTour>;
   listXiangqiBroadcastRounds(
@@ -64,6 +79,12 @@ const livePersistence: XiangqiBroadcastApiPersistence = {
   recordXiangqiBroadcastSyncLog: (input) => persistence.recordXiangqiBroadcastSyncLog(input),
   setXiangqiBroadcastTourSchedule: (slug, schedule) =>
     persistence.setXiangqiBroadcastTourSchedule(slug, schedule),
+  listXiangqiBroadcastFinalEvals: (boardIds) =>
+    persistence.listXiangqiBroadcastFinalEvals({
+      boardIds,
+      engineId: XIANGQI_ANALYSIS_ENGINE_ID,
+      depth: XIANGQI_ANALYSIS_REQUEST_DEPTH,
+    }),
 };
 
 type XiangqiBroadcastPollSource = typeof pollXiangqiBroadcastSourceOnce;
@@ -416,8 +437,9 @@ export async function xiangqiBroadcastRoundForApi(
   tourSlug: string,
   roundId: string,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
+  liveEval: XiangqiBroadcastLiveEvalLookup = cachedBroadcastLiveEval,
 ) {
-  const [tour, rounds, boards] = await Promise.all([
+  const [tour, rounds, storedBoards] = await Promise.all([
     deps.getXiangqiBroadcastTour(tourSlug),
     deps.listXiangqiBroadcastRounds(tourSlug),
     deps.listXiangqiBroadcastBoards(roundId),
@@ -425,12 +447,22 @@ export async function xiangqiBroadcastRoundForApi(
   if (!tour) return null;
   const round = rounds.find((entry) => entry.id === roundId);
   if (!round) return null;
+  const finals =
+    (await deps.listXiangqiBroadcastFinalEvals?.(
+      storedBoards.filter((board) => board.status === 'complete').map((board) => board.id),
+    )) ?? new Map<string, { cp: number | null; mate: number | null }>();
+  const boards = storedBoards.map((board) => {
+    const evaluation = boardEvaluation(board, finals, liveEval);
+    return evaluation ? { ...board, evaluation } : board;
+  });
   // Sibling rounds with stats power the round switcher on the round and board
   // pages. The current round reuses the boards already fetched above; the SSE
   // poller shares this path, so the extra queries scale with round count.
   const boardsByRound = await Promise.all(
     rounds.map((entry) =>
-      entry.id === roundId ? Promise.resolve(boards) : deps.listXiangqiBroadcastBoards(entry.id),
+      entry.id === roundId
+        ? Promise.resolve(storedBoards)
+        : deps.listXiangqiBroadcastBoards(entry.id),
     ),
   );
   return {
@@ -442,6 +474,22 @@ export async function xiangqiBroadcastRoundForApi(
       ...roundBoardStats(boardsByRound[index] ?? []),
     })),
   };
+}
+
+function boardEvaluation(
+  board: { id: string; status: string; plyCount: number },
+  finals: Map<string, { cp: number | null; mate: number | null }>,
+  liveEval: XiangqiBroadcastLiveEvalLookup,
+): XiangqiBroadcastBoardEvaluation | null {
+  if (board.status === 'complete') {
+    const final = finals.get(board.id);
+    return final ? { ...final, source: 'analysis' } : null;
+  }
+  if (board.status === 'live') {
+    const live = liveEval(board.id, board.plyCount);
+    return live ? { cp: live.cp, mate: live.mate, source: 'live' } : null;
+  }
+  return null;
 }
 
 export async function xiangqiBroadcastRoundStreamForApi(
@@ -456,7 +504,16 @@ export async function xiangqiBroadcastRoundStreamForApi(
       payload.tour.updatedAt,
       payload.round.updatedAt,
       ...payload.boards.map((board) =>
-        versionKey([board.id, board.updatedAt, board.plyCount, board.status, board.result]),
+        versionKey([
+          board.id,
+          board.updatedAt,
+          board.plyCount,
+          board.status,
+          board.result,
+          // A new live read or a finished analysis repaints the gauge.
+          'evaluation' in board ? board.evaluation?.cp : null,
+          'evaluation' in board ? board.evaluation?.mate : null,
+        ]),
       ),
     ]),
     payload,
@@ -716,6 +773,7 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await handleXiangqiBroadcastAnalysisRoutes(request, response, pathname)) return true;
   if (pathname === '/api/admin/xiangqi/broadcasts') {
     if (!requireMethod(request, response, 'GET')) return true;
     if (!(await requireAdminSession(request, response))) return true;

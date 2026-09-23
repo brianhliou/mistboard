@@ -537,6 +537,17 @@ function isMovePrefix(prefix: readonly XiangqiMove[], value: readonly XiangqiMov
   return movesEqual(prefix, value.slice(0, prefix.length));
 }
 
+/**
+ * A board's stored whole-game analysis describes the moves it was run on, and
+ * game_analysis saves are insert-once, so a record whose moves change (a late
+ * upload extending it, an operator correction) would keep the old evals for
+ * good. Every row under its key goes, progress checkpoints included; the
+ * sweep analyses it again once it is finished.
+ */
+async function dropBroadcastAnalysis(client: Queryable, boardId: string): Promise<void> {
+  await client.query(`DELETE FROM game_analysis WHERE room_id = $1`, [`broadcast:${boardId}`]);
+}
+
 type BoardTags = Pick<
   XiangqiBroadcastBoard,
   'red' | 'black' | 'status' | 'result' | 'sourceUrl' | 'details'
@@ -636,6 +647,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
 
     if (isMovePrefix(existing.moves, board.moves)) {
       await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      await dropBroadcastAnalysis(client, board.id);
       return { ok: true, boardId: board.id, status: 'extended', plyCount: replay.plies };
     }
 
@@ -645,6 +657,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
 
     if (options.allowCorrection) {
       await upsertBoard(client, board, replay.plies, replay.finalStatus);
+      await dropBroadcastAnalysis(client, board.id);
       await appendSyncLog(client, {
         tourSlug: board.tourSlug,
         roundId: board.roundId,
@@ -1064,6 +1077,62 @@ export async function setXiangqiBroadcastTourSchedule(
     pollIntervalMs: row.poll_interval_ms,
     endsAt: row.ends_at?.toISOString() ?? null,
   };
+}
+
+/**
+ * The newest finished board with no stored whole-game analysis under
+ * (engineId, depth), for the broadcast analysis sweep. Newest first, so the
+ * round readers are opening fills before the archive. `skip` holds boards this
+ * process already failed on, so one bad record cannot stall the sweep.
+ */
+export async function nextUnanalysedXiangqiBroadcastBoard(input: {
+  engineId: string;
+  depth: number;
+  maxPlies: number;
+  skip: readonly string[];
+}): Promise<StoredXiangqiBroadcastBoard | null> {
+  const { rows } = await getPool().query<BoardRow>(
+    `SELECT b.* FROM xiangqi_broadcast_boards b
+      WHERE b.status = 'complete'
+        AND b.ply_count BETWEEN 1 AND $3
+        AND NOT (b.id = ANY($4::text[]))
+        AND NOT EXISTS (
+          SELECT 1 FROM game_analysis g
+           WHERE g.room_id = 'broadcast:' || b.id AND g.engine_id = $1 AND g.depth = $2
+        )
+      ORDER BY b.updated_at DESC, b.id
+      LIMIT 1`,
+    [input.engineId, input.depth, input.maxPlies, [...input.skip]],
+  );
+  return rows[0] ? boardFromRow(rows[0]) : null;
+}
+
+/** The final-position eval of each board's stored analysis, for the round
+ *  grid's gauge: the last ply's score, Red's point of view. */
+export async function listXiangqiBroadcastFinalEvals(input: {
+  boardIds: readonly string[];
+  engineId: string;
+  depth: number;
+}): Promise<Map<string, { cp: number | null; mate: number | null }>> {
+  const evals = new Map<string, { cp: number | null; mate: number | null }>();
+  if (input.boardIds.length === 0) return evals;
+  const { rows } = await getPool().query<{
+    room_id: string;
+    last: { cp?: number | null; mate?: number | null } | null;
+  }>(
+    `SELECT room_id, plies -> (jsonb_array_length(plies) - 1) AS last
+       FROM game_analysis
+      WHERE room_id = ANY($1::text[]) AND engine_id = $2 AND depth = $3`,
+    [input.boardIds.map((id) => `broadcast:${id}`), input.engineId, input.depth],
+  );
+  for (const row of rows) {
+    if (!row.last) continue;
+    evals.set(row.room_id.slice('broadcast:'.length), {
+      cp: typeof row.last.cp === 'number' ? row.last.cp : null,
+      mate: typeof row.last.mate === 'number' ? row.last.mate : null,
+    });
+  }
+  return evals;
 }
 
 /** Every tour's source and end date, for the dpxq index sweep (which ones
