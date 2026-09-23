@@ -111,3 +111,7 @@ scripts/.benedict-diagrams.mjs
 # The 51 MB Pikafish net is fetched by apps/web/scripts/fetch-pikafish-net.mjs
 # against the pin in net.json (predev/build); upstream rolls it without a tag.
 apps/web/public/engine/pikafish/pikafish.nnue
+
+# Playwright e2e suite (playwright.config.ts): per-run artifacts
+test-results/
+playwright-report/
