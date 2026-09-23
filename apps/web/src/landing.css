@@ -2137,6 +2137,24 @@
   color: var(--site-accent);
 }
 
+/* theme.css boxes the homepage clock rows in dark mode (panel fill, and on a
+   finished game an accent fill plus a 4px inset bar on the winner) at up to
+   (1,6,0), above the unboxed rows above. Without this the chess seats wore
+   pills in dark mode while every tenant seat stayed plain text. */
+:root[data-effective-theme="dark"]
+  .landing-page
+  #landing-replay.replay-compact
+  :is(
+    .replay-layout-single-white .replay-pane-white,
+    .replay-layout-single-black .replay-pane-black
+  )
+  .replay-clock-row {
+  background: none;
+  border-color: transparent;
+  box-shadow: none;
+  color: inherit;
+}
+
 @media (min-width: 1241px) {
   /* ── Band-1 bottom alignment ─────────────────────────────────────────────────
      The three band-1 columns share one bottom edge: the play rail already
