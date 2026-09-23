@@ -133,6 +133,7 @@ Conventions:
 
 ### Fixed
 
+- The fog chess bot's belief state records en passant on the fog rule rather than standard legality, so a capture fog chess allows no longer drops the true board from its model; the engine fix from 2026-09-10 reaches production with the engine pin ([509e389a](https://github.com/brianhliou/mistboard/commit/509e389a))
 - The studies browse shows the whole library: it fetched thirty and offered no way to ask for the rest, so once the classical shelf passed that a third of it could not be reached from /study at all ([d344b25a](https://github.com/brianhliou/mistboard/commit/d344b25a))
 - The engine files a browser downloads to analyze — Pikafish's 51 MB net above all — are cached for good instead of re-fetched on every visit; they were served with no cache headers at all, so each engine start pulled the whole net again ([8ed1398e](https://github.com/brianhliou/mistboard/commit/8ed1398e))
 - Mistboard TV follows a live game on every ply, not every other one: the follower token was the move number, which only advances after the second mover, so the /watch board and the homepage TV sat a ply behind half the time; the live rail on /watch now shows both clocks (the mover's ticking) and the move list instead of two name rows; and a /watch tab that was behind another window catches up the moment it is visible instead of showing a stale LIVE board ([05a252c0](https://github.com/brianhliou/mistboard/commit/05a252c0))
