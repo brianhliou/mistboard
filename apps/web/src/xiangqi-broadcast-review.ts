@@ -55,7 +55,7 @@ export function mountBroadcastBoardReview(
 ): void {
   const context = opts.context ?? data.context ?? null;
   const moves = [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move);
-  const replay = buildXiangqiReplayFromMoves(moves);
+  const replay = buildXiangqiReplayFromMoves(moves, undefined, { record: true });
   const red = playerLabel(data.board.red);
   const black = playerLabel(data.board.black);
   const result = resultOf(data.board.result);
@@ -92,6 +92,7 @@ export function mountBroadcastBoardReview(
     ...(opts.rail ? { details: opts.rail } : {}),
     provenance: provenance(data, context),
     moves,
+    record: true,
     players: { red, black },
     result,
     shareExtra: [downloadRow([exportLink(data.board.id)])],

@@ -442,12 +442,14 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
 
     const numbers = [...root.querySelectorAll('.xqb-card-number')].map((node) => node.textContent);
     expect(numbers).toEqual(['Board 3', 'Board 1', 'Board 2']);
-    // Finished boards carry a neutral result pill; card feet carry freshness.
+    // Finished boards carry a neutral result pill. With no round date the
+    // foot shows no age: the only time the card has is our import, which read
+    // as the game's age ("27m ago" on a game played a week earlier).
     expect(root.querySelector('.xqb-board-card-complete .xqb-badge-result')?.textContent).toBe(
       'Red wins',
     );
-    expect(root.querySelector('.xqb-board-card-complete .xqb-card-foot')?.textContent).toContain(
-      '2h ago',
+    expect(root.querySelector('.xqb-board-card-complete .xqb-card-foot')?.textContent).not.toMatch(
+      /ago/,
     );
     expect(root.querySelector('.xqb-board-card-live .xqb-card-foot')?.textContent).toContain(
       'live',

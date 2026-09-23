@@ -39,7 +39,7 @@ import {
   type TreeReviewHandle,
 } from './tree-review.js';
 import { xiangqiGamePhases } from './xiangqi-phases.js';
-import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
+import { xiangqiRecordTreeAdapter, xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 
 /** Whole-game analysis source (variant-neutral; re-exported for the callers). */
 export type { AnalysisSource as XiangqiAnalysisSource } from './tree-review.js';
@@ -52,6 +52,9 @@ export type XiangqiReviewConfig = TreeReviewConfig<
 > & {
   /** Attach the opening-explorer underboard tab. Defaults to true. */
   openingExplorer?: boolean;
+  /** The moves are a played record (a broadcast or archive game): replay past
+   *  the draws an arbiter decides instead of stopping at the kernel's call. */
+  record?: boolean;
 };
 
 /** Handle returned by mountXiangqiReview: snapshot the current tree to persist it. */
@@ -169,7 +172,10 @@ export function mountXiangqiReview(
   // on a surface where nobody looks.
   const explorer =
     config.openingExplorer === false ? undefined : (config.explorer ?? xiangqiOpeningExplorer());
-  return mountTreeReview(root, xiangqiPresentation, { ...config, explorer });
+  const presentation = config.record
+    ? { ...xiangqiPresentation, adapter: xiangqiRecordTreeAdapter }
+    : xiangqiPresentation;
+  return mountTreeReview(root, presentation, { ...config, explorer });
 }
 
 /** The shared explorer panel, typed to the xiangqi kernel state. */

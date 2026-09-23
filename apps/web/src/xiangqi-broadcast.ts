@@ -1496,9 +1496,15 @@ function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTML
   // is over it falls through to a bare date, which reads as the date the game
   // was played and is in fact the date WE imported it: every board of a round
   // played Aug 16-18 said "Aug 29". A finished round shows the round's own date
-  // instead, which is the fact a reader wanted from that slot.
+  // instead, which is the fact a reader wanted from that slot. A finished
+  // board in a round with no date (one the source named but nobody scheduled,
+  // like the 2026 league's round 6) shows no date at all: "27m ago" there was
+  // our import again, read as the game's age.
   const fresh =
-    board.status === 'live' ? 'live' : (playedOn ?? formatBroadcastFreshness(board.updatedAt));
+    board.status === 'live'
+      ? 'live'
+      : (playedOn ??
+        (board.status === 'complete' ? null : formatBroadcastFreshness(board.updatedAt)));
   foot.textContent = [`${plyCount(board)} plies`, fresh].filter(Boolean).join(' / ');
 
   card.append(top, boardEl, players, foot);

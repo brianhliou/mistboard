@@ -90,7 +90,7 @@ export function historicalXiangqiGameApiUrl(gameId: string): string {
 }
 
 function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiGameDetail): void {
-  const replay = buildXiangqiReplayFromMoves(game.moves);
+  const replay = buildXiangqiReplayFromMoves(game.moves, undefined, { record: true });
   const metaCard = createGameMetaCard({
     markerId: 'xiangqi',
     glyph: '象',
@@ -106,6 +106,7 @@ function renderHistoricalXiangqiGame(root: HTMLElement, game: HistoricalXiangqiG
 
   root.replaceChildren(buildNav());
   mountXiangqiReview(root, {
+    record: true,
     pageClassName: 'xiangqi-review',
     ariaLabel: 'Historical Xiangqi game review',
     title: 'Xiangqi game',
