@@ -71,6 +71,7 @@ Conventions:
 
 ### Watching and review
 
+- Finished broadcast games get the engine analysis site games get, computed once on the server and shown to everyone: the review opens with the advantage chart and the move marks, and the round grid shows an evaluation gauge beside each board (toggle it off above the grid). Older games fill in over a few days ([3dbee330](https://github.com/brianhliou/mistboard/commit/3dbee330))
 - A team league round on a broadcast reads as its matches: each match shows the two teams and the score over its slow and blitz games, then its tables in order, and a Teams tab ranks the league by its own rules (match points, then game points). Games carry their table, their real start time and their time control ([8ba1a2e7](https://github.com/brianhliou/mistboard/commit/8ba1a2e7))
 - The xiangqi analysis board runs Pikafish in the browser, at full strength on its own net: the same engine that reviews finished games on the server, now in the local panel (which names it and shows the one-time 51 MB net download as it lands); fortress, atomic and duck keep Fairy-Stockfish ([9a8bb492](https://github.com/brianhliou/mistboard/commit/9a8bb492))
 - Pro players (/players) sits in the Community rail beside Leaderboard, Rating stats and Online bots, where lichess keeps FIDE players; the players pages render inside that layout, and the broadcast index links to it ([2c7b1640](https://github.com/brianhliou/mistboard/commit/2c7b1640))
