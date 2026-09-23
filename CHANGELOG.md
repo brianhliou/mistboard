@@ -133,6 +133,7 @@ Conventions:
 
 ### Fixed
 
+- Broadcast games from a league's later stages land on their own: a round the source names now appears when its first record does, where it used to wait for someone to schedule it, and an event's dates follow the source's tournament index as the next stage is announced ([89ec708c](https://github.com/brianhliou/mistboard/commit/89ec708c))
 - The fog chess bot's belief state records en passant on the fog rule rather than standard legality, so a capture fog chess allows no longer drops the true board from its model; the engine fix from 2026-09-10 reaches production with the engine pin ([509e389a](https://github.com/brianhliou/mistboard/commit/509e389a))
 - The studies browse shows the whole library: it fetched thirty and offered no way to ask for the rest, so once the classical shelf passed that a third of it could not be reached from /study at all ([d344b25a](https://github.com/brianhliou/mistboard/commit/d344b25a))
 - The engine files a browser downloads to analyze — Pikafish's 51 MB net above all — are cached for good instead of re-fetched on every visit; they were served with no cache headers at all, so each engine start pulled the whole net again ([8ed1398e](https://github.com/brianhliou/mistboard/commit/8ed1398e))
