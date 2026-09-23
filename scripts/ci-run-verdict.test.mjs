@@ -258,3 +258,80 @@ test('an absent run keeps waiting', () => {
   assert.equal(decide({ run: null }).outcome, 'wait');
   assert.equal(decide({ run: { status: 'queued' } }).outcome, 'wait');
 });
+
+// --- Judging an in-progress run on its jobs (2026-09-23) -----------------------
+// A run is "completed" only after the aggregator and the two issue jobs have
+// each queued for a runner: 20-40 s after every test job was green.
+
+const inProgress = { status: 'in_progress', conclusion: null, url: 'https://run' };
+
+test('classifyJobs keeps queued and running jobs apart as pending', () => {
+  const verdict = classifyJobs([
+    { name: 'Lint', status: 'completed', conclusion: 'success' },
+    { name: 'Unit tests (web 1/2)', status: 'in_progress', conclusion: null },
+    { name: 'node', status: 'queued', conclusion: null },
+    { name: 'Browser smoke', status: 'completed', conclusion: 'skipped' },
+  ]);
+
+  assert.deepEqual(verdict.pending, ['Unit tests (web 1/2)', 'node']);
+  assert.equal(verdict.succeeded, 1);
+  assert.deepEqual(verdict.forgiven, ['Browser smoke:skipped']);
+  assert.deepEqual(verdict.blocking, []);
+});
+
+test('an in-progress run passes once every required job is green, without the aggregator', () => {
+  const verdict = classifyJobs([
+    { name: 'Lint', status: 'completed', conclusion: 'success' },
+    { name: 'Unit tests (web 1/2)', status: 'completed', conclusion: 'success' },
+    { name: 'Unit tests (web 2/2)', status: 'completed', conclusion: 'success' },
+    { name: 'Browser smoke', status: 'completed', conclusion: 'skipped' },
+    { name: 'node', status: 'queued', conclusion: null },
+    { name: 'close-ci-failure', status: 'waiting', conclusion: null },
+    { name: 'notify-ci-failure', status: 'waiting', conclusion: null },
+  ]);
+
+  const decision = decide({ run: inProgress, verdict });
+
+  assert.equal(decision.outcome, 'pass');
+  assert.match(decision.message, /every required job is green \(3 passed/);
+  assert.match(decision.message, /not waiting for node, close-ci-failure, notify-ci-failure/);
+});
+
+test('an in-progress run waits while a required job is still running, naming it', () => {
+  const verdict = classifyJobs([
+    { name: 'Lint', status: 'completed', conclusion: 'success' },
+    { name: 'Unit tests (web 2/2)', status: 'in_progress', conclusion: null },
+    { name: 'node', status: 'queued', conclusion: null },
+  ]);
+
+  const decision = decide({ run: inProgress, verdict });
+
+  assert.equal(decision.outcome, 'wait');
+  assert.match(decision.message, /waiting on Unit tests \(web 2\/2\)/);
+  assert.doesNotMatch(decision.message, /node/);
+});
+
+test('an in-progress run fails as soon as a required job has failed', () => {
+  const verdict = classifyJobs([
+    { name: 'Lint', status: 'completed', conclusion: 'failure' },
+    { name: 'Unit tests (web 1/2)', status: 'in_progress', conclusion: null },
+  ]);
+
+  const decision = decide({ run: inProgress, verdict });
+
+  assert.equal(decision.outcome, 'fail');
+  assert.match(decision.message, /failing jobs: Lint/);
+});
+
+test('an in-progress run with no job data yet keeps waiting', () => {
+  assert.equal(decide({ run: inProgress }).outcome, 'wait');
+});
+
+test('an in-progress run whose jobs are all still queued keeps waiting', () => {
+  const verdict = classifyJobs([
+    { name: 'Lint', status: 'queued', conclusion: null },
+    { name: 'node', status: 'queued', conclusion: null },
+  ]);
+
+  assert.equal(decide({ run: inProgress, verdict }).outcome, 'wait');
+});

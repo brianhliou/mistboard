@@ -41,15 +41,32 @@
 export function classifyJobs(jobs) {
   const blocking = [];
   const forgiven = [];
+  const pending = [];
   let succeeded = 0;
   for (const job of jobs) {
+    // A job still queued or running has no conclusion yet; keep it apart from
+    // the forgiven ones so an in-progress run can be judged on what is done.
+    if (job.status && job.status !== 'completed') {
+      pending.push(job.name);
+      continue;
+    }
     if (job.conclusion === 'success') succeeded += 1;
     else if (job.conclusion === 'failure' || job.conclusion === 'timed_out') {
       blocking.push(job.name);
     } else forgiven.push(`${job.name}:${job.conclusion ?? 'none'}`);
   }
-  return { blocking, forgiven, succeeded };
+  return { blocking, forgiven, succeeded, pending };
 }
+
+// ci.yml's jobs that exist to report on the others: the aggregator that turns
+// the required jobs into one status, and the two that file or close the
+// "CI red on main" issue. A run is not "completed" until each has found a
+// runner and finished, about 15 s after the last test job on 2026-09-23, plus
+// however much of the release's 10 s poll interval that straddles. The release
+// judges the required jobs itself and does not wait for these to say so; the
+// larger saving is the other direction, failing on a red job the moment it is
+// red instead of when the run winds down minutes later.
+export const HOUSEKEEPING_JOBS = new Set(['node', 'notify-ci-failure', 'close-ci-failure']);
 
 const short = (revision) =>
   typeof revision === 'string' ? revision.slice(0, 12) : String(revision);
@@ -171,7 +188,35 @@ export function ciOutcome({
 
   if (!run) return { outcome: 'wait', message: 'waiting for the run to appear' };
   if (run.status !== 'completed') {
-    return { outcome: 'wait', message: `${run.status} ${run.url ?? ''}`.trim() };
+    if (!verdict) return { outcome: 'wait', message: `${run.status} ${run.url ?? ''}`.trim() };
+    // Judged on the jobs, not on the run: a required job that has already
+    // failed fails the release now rather than when the run finishes, and a
+    // run whose only unfinished jobs are housekeeping (HOUSEKEEPING_JOBS) has
+    // already given its verdict.
+    if (verdict.blocking.length > 0) {
+      return {
+        outcome: 'fail',
+        message:
+          `hosted CI has a failed job while the run is still ${run.status}; ` +
+          `failing jobs: ${verdict.blocking.join(', ')}: ${where}`,
+      };
+    }
+    const required = verdict.pending.filter((name) => !HOUSEKEEPING_JOBS.has(name));
+    if (required.length === 0 && verdict.succeeded > 0) {
+      return {
+        outcome: 'pass',
+        message:
+          `hosted CI passed: every required job is green (${verdict.succeeded} passed` +
+          (verdict.forgiven.length > 0 ? `, forgiving [${verdict.forgiven.join(', ')}]` : '') +
+          `); not waiting for ${verdict.pending.join(', ') || 'the aggregator'}: ${where}`,
+      };
+    }
+    return {
+      outcome: 'wait',
+      message: `${run.status}: waiting on ${required.join(', ') || 'jobs to be listed'} ${
+        run.url ?? ''
+      }`.trim(),
+    };
   }
   if (run.conclusion === 'success') {
     return { outcome: 'pass', message: `hosted CI passed: ${where}` };

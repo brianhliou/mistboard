@@ -536,7 +536,11 @@ async function waitForGithubCi({ headRevision }) {
     const superseded = supersededBy(revision);
     const isAncestor = superseded ? confirmAncestor(revision, superseded) : false;
     const tipRun = superseded && isAncestor === true ? findGithubRun(superseded) : null;
-    const verdict = run?.status === 'completed' ? jobVerdict(run) : null;
+    // Jobs are read while the run is still in progress too: the verdict passes
+    // as soon as every required job is green (lib/ci-run-verdict.mjs), instead
+    // of after the aggregator and issue jobs have each queued for a runner.
+    const verdict =
+      run && (run.status === 'completed' || run.status === 'in_progress') ? jobVerdict(run) : null;
     const decision = ciOutcome({
       run,
       verdict,
