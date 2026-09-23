@@ -129,9 +129,17 @@ jobs:
       - name: Unit tests (web, shard ${{ matrix.shard }} of 2)
         run: npm run test:unit --workspace @mistboard/web -- --shard ${{ matrix.shard }}/2
 
+  # Two shards, like the web job: 100-105 s as one job on 2026-09-23, with the
+  # 1,928-test suite split by node's own --test-shard (the flag has to precede
+  # the file list, which is why the workspace script reads MISTBOARD_TEST_SHARD
+  # instead of taking it as a trailing argument).
   unit-server:
-    name: Unit tests (server)
+    name: Unit tests (server ${{ matrix.shard }}/2)
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
     steps:
       - uses: actions/checkout@v7
       - uses: actions/setup-node@v7
@@ -147,7 +155,9 @@ jobs:
           npm run build --workspace @mistboard/board-render
           npm run build --workspace @mistboard/mahjong
           npm run build --workspace @mistboard/server
-      - name: Unit tests (server)
+      - name: Unit tests (server, shard ${{ matrix.shard }} of 2)
+        env:
+          MISTBOARD_TEST_SHARD: ${{ matrix.shard }}/2
         run: npm run test:unit --workspace @mistboard/server
 
   # The two pure packages plus the repo's own tooling tests. Small enough to
@@ -250,12 +260,12 @@ jobs:
   # its own Postgres. See scripts/persistent-shard.mjs for the file split and
   # for the measurements behind it.
   persistent:
-    name: Persistent tests (${{ matrix.shard }}/3)
+    name: Persistent tests (${{ matrix.shard }}/4)
     runs-on: ubuntu-latest
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2, 3]
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgres:16-alpine
@@ -286,10 +296,10 @@ jobs:
           npm run build --workspace @mistboard/mahjong
       - name: Compile server
         run: npx tsc -p apps/server/tsconfig.json
-      - name: Persistent tests (shard ${{ matrix.shard }} of 3)
+      - name: Persistent tests (shard ${{ matrix.shard }} of 4)
         env:
           SHARD_INDEX: ${{ matrix.shard }}
-          SHARD_TOTAL: 3
+          SHARD_TOTAL: 4
         run: node scripts/persistent-shard.mjs
 
   browser-smoke:
