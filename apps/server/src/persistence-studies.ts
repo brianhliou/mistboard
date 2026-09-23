@@ -553,12 +553,21 @@ export async function listStudiesForOwner(ownerId: string, q?: string): Promise<
  *  studies ever liked above everything published since; recency is the honest
  *  order until there are enough likes for a decayed "hot" score to mean
  *  something. `q` filters by study name (case-insensitive substring). */
-export async function listTopPublicStudies(limit = 5, q?: string): Promise<PublicStudySummary[]> {
+export async function listTopPublicStudies(
+  limit = 5,
+  q?: string,
+  offset = 0,
+): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, 50));
   const filter = nameFilter(q, 2);
   const params: unknown[] = [bounded];
   if (filter.value !== undefined) params.push(filter.value);
+  // Bound, not interpolated: the value is already clamped to a
+  // non-negative integer, and SQL built by concatenation is how the
+  // next one stops being.
+  params.push(Math.max(0, Math.trunc(offset)));
+  const offsetParam = `$${params.length}`;
   const { rows } = await getPool().query<PublicStudyRow>(
     `SELECT ${STUDY_COLS.split(', ')
       .map((column) => `s.${column}`)
@@ -577,7 +586,7 @@ export async function listTopPublicStudies(limit = 5, q?: string): Promise<Publi
         AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
       GROUP BY s.id, u.handle, u.display_name
       ORDER BY s.updated_at DESC, s.id
-      LIMIT $1`,
+      LIMIT $1 OFFSET ${offsetParam}`,
     params,
   );
   return rows.map(mapPublicStudy);
@@ -585,12 +594,21 @@ export async function listTopPublicStudies(limit = 5, q?: string): Promise<Publi
 
 /** Staff-curated public studies, newest selection first. A pick remains invisible
  * if its study or owner is no longer publicly listable. */
-export async function listFeaturedStudies(limit = 30, q?: string): Promise<PublicStudySummary[]> {
+export async function listFeaturedStudies(
+  limit = 30,
+  q?: string,
+  offset = 0,
+): Promise<PublicStudySummary[]> {
   if (!isInitialized()) return [];
   const bounded = Math.max(1, Math.min(limit, 50));
   const filter = nameFilter(q, 2);
   const params: unknown[] = [bounded];
   if (filter.value !== undefined) params.push(filter.value);
+  // Bound, not interpolated: the value is already clamped to a
+  // non-negative integer, and SQL built by concatenation is how the
+  // next one stops being.
+  params.push(Math.max(0, Math.trunc(offset)));
+  const offsetParam = `$${params.length}`;
   const { rows } = await getPool().query<PublicStudyRow>(
     `SELECT ${STUDY_COLS.split(', ')
       .map((column) => `s.${column}`)
@@ -610,7 +628,7 @@ export async function listFeaturedStudies(limit = 30, q?: string): Promise<Publi
         AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
       GROUP BY s.id, u.handle, u.display_name
       ORDER BY s.featured_at DESC, s.updated_at DESC, s.id
-      LIMIT $1`,
+      LIMIT $1 OFFSET ${offsetParam}`,
     params,
   );
   return rows.map(mapPublicStudy);

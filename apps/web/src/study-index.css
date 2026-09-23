@@ -568,3 +568,35 @@ a.study-index__rail-tab.is-active:hover {
   font-size: 0.82rem;
   color: var(--site-muted);
 }
+
+/* Next page of the browse. A quiet outline button under the grid rather than a
+   numbered pager: the shelf is one list and the reader is already at its foot. */
+.study-index__more {
+  display: flex;
+  justify-content: center;
+  padding: 1.25rem 0 0.25rem;
+}
+.study-index__more-button {
+  padding: 0.45rem 1.4rem;
+  font: inherit;
+  font-size: 0.85rem;
+  font-weight: 600;
+  border: 1px solid var(--site-border);
+  border-radius: var(--site-radius-sm);
+  background: transparent;
+  color: var(--site-text);
+  cursor: pointer;
+}
+.study-index__more-button:hover {
+  border-color: var(--site-link);
+  color: var(--site-link);
+}
+.study-index__more-button:disabled {
+  opacity: 0.6;
+  cursor: default;
+}
+@media (pointer: coarse) {
+  .study-index__more-button {
+    min-height: 44px;
+  }
+}

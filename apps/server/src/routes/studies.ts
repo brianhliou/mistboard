@@ -112,6 +112,23 @@ function parseLimit(params: URLSearchParams, fallback: number): number {
   return Number.isFinite(value) && value > 0 ? value : fallback;
 }
 
+function parseOffset(params: URLSearchParams): number {
+  const value = Number(params.get('offset'));
+  return Number.isFinite(value) && value > 0 ? Math.trunc(value) : 0;
+}
+
+/** Ask for one past the page so the client knows whether to offer another.
+ *  The extra row is dropped before it is served. */
+async function pageOf(
+  list: (limit: number, q: string | undefined, offset: number) => Promise<unknown[]>,
+  params: URLSearchParams,
+  fallbackLimit: number,
+): Promise<{ studies: unknown[]; hasMore: boolean }> {
+  const limit = parseLimit(params, fallbackLimit);
+  const rows = await list(limit + 1, params.get('q') ?? undefined, parseOffset(params));
+  return { studies: rows.slice(0, limit), hasMore: rows.length > limit };
+}
+
 // Banqi, jieqi and flip jungle have no standard opening: a chapter that stores
 // only moves replays into a different deal every time it is opened, so it does
 // not open at all. Every chapter of those variants therefore needs a root, and
@@ -237,11 +254,11 @@ export async function tryHandle(
     // ?limit lets the /study "All studies" browse ask for more than the homepage
     // widget's default 5. ?q filters by study name. listTopPublicStudies clamps.
     const params = new URL(request.url ?? '', 'http://localhost').searchParams;
-    const studies = await persistence.listTopPublicStudies(
-      parseLimit(params, 5),
-      params.get('q') ?? undefined,
-    );
-    writeJson(response, 200, { studies: studies.map(publicStudyView) });
+    const page = await pageOf(persistence.listTopPublicStudies, params, 5);
+    writeJson(response, 200, {
+      studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
+      hasMore: page.hasMore,
+    });
     return true;
   }
 
@@ -250,11 +267,11 @@ export async function tryHandle(
     if (!requireMethod(request, response, 'GET')) return true;
     if (!requirePersistence(response)) return true;
     const params = new URL(request.url ?? '', 'http://localhost').searchParams;
-    const studies = await persistence.listFeaturedStudies(
-      parseLimit(params, 30),
-      params.get('q') ?? undefined,
-    );
-    writeJson(response, 200, { studies: studies.map(publicStudyView) });
+    const page = await pageOf(persistence.listFeaturedStudies, params, 30);
+    writeJson(response, 200, {
+      studies: (page.studies as persistence.PublicStudySummary[]).map(publicStudyView),
+      hasMore: page.hasMore,
+    });
     return true;
   }
 

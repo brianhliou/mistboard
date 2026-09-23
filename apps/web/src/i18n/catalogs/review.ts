@@ -361,6 +361,7 @@ export const EN_REVIEW = {
   'study.gameSource': 'Source',
   'study.errataTitle': 'Spotted a mistake?',
   'study.showMore': 'Show more',
+  'study.indexMore': 'More studies',
   'study.showLess': 'Show less',
   'study.errataBody':
     'Some studies are transcribed from historical sources, so a move, a name, or a comment can be wrong. If something looks off, tell us and we will check it against the original.',

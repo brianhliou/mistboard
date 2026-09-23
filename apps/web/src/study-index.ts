@@ -79,10 +79,17 @@ function searchQuery(): string {
   return (new URLSearchParams(window.location.search).get('q') ?? '').trim();
 }
 
-function endpointFor(tab: StudyTab, q: string): string {
+// One page of the browse. 30 was the whole list until the classical-manual
+// library outgrew it: 42 public studies against a 30-row fetch with no way to
+// ask for the rest, so a third of the shelf — including books an announcement
+// was pointing at — could not be reached from the index at all.
+const PAGE_SIZE = 30;
+
+function endpointFor(tab: StudyTab, q: string, offset = 0): string {
   const params = new URLSearchParams();
-  if (tab !== 'mine') params.set('limit', '30');
+  if (tab !== 'mine') params.set('limit', String(PAGE_SIZE));
   if (q) params.set('q', q);
+  if (offset > 0) params.set('offset', String(offset));
   const base =
     tab === 'mine'
       ? '/api/studies/mine'
@@ -114,8 +121,8 @@ export function mountStudyIndex(root: HTMLElement): void {
         renderMessage(root, t('study.unavailable'), t('study.unavailableBody'));
         return;
       }
-      const body = (await response.json()) as { studies: StudySummary[] };
-      renderList(root, tab, q, body.studies);
+      const body = (await response.json()) as { studies: StudySummary[]; hasMore?: boolean };
+      renderList(root, tab, q, body.studies, body.hasMore === true);
     })
     .catch(() => renderMessage(root, t('study.unavailable'), t('study.unavailableBody')));
 }
@@ -127,11 +134,17 @@ const TAB_TITLE_KEYS: Record<StudyTab, I18nKey> = {
   staff: 'study.indexStaff',
 };
 
-function renderList(root: HTMLElement, tab: StudyTab, q: string, studies: StudySummary[]): void {
+function renderList(
+  root: HTMLElement,
+  tab: StudyTab,
+  q: string,
+  studies: StudySummary[],
+  hasMore: boolean,
+): void {
   const main = document.createElement('main');
   main.className = 'study-index';
 
-  main.append(buildRail(tab), buildContent(tab, q, studies));
+  main.append(buildRail(tab), buildContent(tab, q, studies, hasMore));
   root.replaceChildren(buildNav(), main);
 }
 
@@ -164,7 +177,12 @@ function buildRail(active: StudyTab): HTMLElement {
   return rail;
 }
 
-function buildContent(tab: StudyTab, q: string, studies: StudySummary[]): HTMLElement {
+function buildContent(
+  tab: StudyTab,
+  q: string,
+  studies: StudySummary[],
+  hasMore: boolean,
+): HTMLElement {
   const content = document.createElement('section');
   content.className = 'study-index__content';
 
@@ -186,9 +204,48 @@ function buildContent(tab: StudyTab, q: string, studies: StudySummary[]): HTMLEl
     grid.className = 'study-index__grid';
     for (const study of studies) grid.append(studyCard(study));
     content.append(grid);
+    if (hasMore) content.append(showMoreButton(tab, q, grid, studies.length));
   }
 
   return content;
+}
+
+// Appends the next page to the grid in place rather than paging the URL: the
+// browse is one scrolling shelf, and a reader who has scrolled to the bottom of
+// forty cards should not lose their place to see the next ten.
+function showMoreButton(tab: StudyTab, q: string, grid: HTMLElement, loaded: number): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'study-index__more';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'study-index__more-button';
+  button.textContent = t('study.indexMore');
+  let offset = loaded;
+  button.addEventListener('click', () => {
+    button.disabled = true;
+    button.textContent = t('study.loadingList');
+    void fetch(endpointFor(tab, q, offset), { headers: { accept: 'application/json' } })
+      .then(async (response) => {
+        if (!response.ok) throw new Error(String(response.status));
+        return (await response.json()) as { studies: StudySummary[]; hasMore?: boolean };
+      })
+      .then((body) => {
+        for (const study of body.studies) grid.append(studyCard(study));
+        offset += body.studies.length;
+        if (body.hasMore === true && body.studies.length > 0) {
+          button.disabled = false;
+          button.textContent = t('study.indexMore');
+        } else {
+          wrap.remove();
+        }
+      })
+      .catch(() => {
+        button.disabled = false;
+        button.textContent = t('study.indexMore');
+      });
+  });
+  wrap.append(button);
+  return wrap;
 }
 
 function emptyMessage(tab: StudyTab, q: string): string {
