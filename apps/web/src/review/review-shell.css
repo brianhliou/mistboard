@@ -418,11 +418,13 @@
   min-width: 1px;
   border-radius: 1px 1px 0 0;
 }
+/* The family's inks (seat-disc-ink.css), so a jungle game's second seat is Blue
+   and a dark-theme Black bar is the charcoal that shows on the dark panel. */
 .review-move-times__bar--red {
-  background: #c0563f;
+  background: var(--seat-first-ink, #c0563f);
 }
 .review-move-times__bar--black {
-  background: #34302e;
+  background: var(--seat-second-ink, #34302e);
 }
 /* Chess: the first seat plays White. This used to be a `.dark-chess-review
    .review-move-times__bar--red` override -- the bar was still CALLED red and a page
@@ -430,7 +432,7 @@
    named for what it is, so the override is REMOVED in the same change rather than
    left to rot beside the rule that replaced it. */
 .review-move-times__bar--white {
-  background: #e9e5dc;
+  background: var(--ink-white, #e9e5dc);
   border: 1px solid #b8b1a5;
   box-sizing: border-box;
 }

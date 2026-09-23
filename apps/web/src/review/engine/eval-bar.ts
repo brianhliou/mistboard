@@ -8,6 +8,7 @@
 // slot, so the bar is absolutely positioned inside the board host and aligned to
 // the board's measured rect (alignTo), re-run on a ResizeObserver — it can't drift
 // when the board rescales.
+import '../../seat-disc-ink.css';
 import './eval-bar.css';
 import { winProbRed } from './eval-format.js';
 

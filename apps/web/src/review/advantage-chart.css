@@ -31,8 +31,11 @@
    a gradient that fades out from the midline (see advantage-chart.ts): the cue
    survives, the hard seam that made the chart read as two stacked boxes does
    not. Colour comes from the stops, so the zone classes only carry the hue. */
-.advantage-chart__zone {
-  --advantage-zone-ink: #34302e;
+/* Black's zone is the family's second ink, like its area (Blue in jungle). Red's
+   and White's are softer tints of their own, the same in every family. */
+.advantage-chart__zone,
+.advantage-chart__zone--black {
+  --advantage-zone-ink: var(--seat-second-ink, #34302e);
 }
 .advantage-chart__zone--red {
   --advantage-zone-ink: #c7a06a;
@@ -91,71 +94,31 @@
    thing this chart is about, so it gets a solid shape rather than a wash, and the
    curve is the hard edge of that shape rather than a line laid over a tint. This
    is the reason the axis, the phase dividers and the luck band all draw above the
-   fills (see advantage-chart.ts): under an opaque fill they would not exist. */
+   fills (see advantage-chart.ts): under an opaque fill they would not exist.
+
+   The area classes name INKS, already resolved through `seatColors` in TS, so a
+   flip game's areas follow the reveal. The family's two inks come from
+   seat-disc-ink.css: `--red` is its first ink and `--black` its second, which is
+   Blue in the jungle family and the grey that separates from White in chess. The
+   dark-theme lifts (charcoal Black, #7a716a chess Black, lifted Blue) live there
+   too, so there are no theme or family rules left in this file. */
 .advantage-chart__area--red {
-  fill: #c0563f;
+  fill: var(--seat-first-ink, #c0563f);
 }
 .advantage-chart__area--black {
-  fill: #34302e;
+  fill: var(--seat-second-ink, #34302e);
 }
 /* Chess: the first analysis slot is named 'red' but plays White, so it resolves to
    a white ink. Light theme wants a near-white that still reads as a filled AREA
-   against the panel rather than as a hole in it. */
+   against the panel rather than as a hole in it; dark pulls it off pure white so
+   it does not out-glare the Black opposite it. */
 .advantage-chart__area--white {
-  fill: #e9e5dc;
+  fill: var(--ink-white, #e9e5dc);
 }
-/* Dark theme: Black's area stays black, lifted to a charcoal so it still reads
-   as a filled shape against the near-black ground. It was a light neutral
-   (lichess dark's white/black trick), which on a Red/Black game read as Red
-   against WHITE: the wrong side's colour (Brian, 2026-09-23). */
-:root[data-effective-theme="dark"] .advantage-chart__area--black {
-  fill: #574f48;
-}
-:root[data-effective-theme="dark"] .advantage-chart__zone--black {
-  --advantage-zone-ink: #574f48;
-}
-:root[data-effective-theme="dark"] .advantage-chart__area--red {
-  fill: #d4674c;
-}
-/* Dark theme: White's area keeps a light fill, but pulled off pure white so it does
-   not out-glare Black's #d8d2c6 sitting directly opposite it. */
-/* Chess pairing on dark: Black's generic lift (#d8d2c6) exists so a dark fill is
-   not lost against the panel, and it works when the other half is Red. Against
-   WHITE it collapses -- both halves render cream, 1.28:1, which reads as one
-   undifferentiated block. Black takes a mid warm grey here instead: 4.05:1
-   against White's area and 3.82:1 against the panel, so it separates from both
-   rather than trading one invisibility for another. */
-:root[data-effective-theme="dark"] .advantage-chart--white-black .advantage-chart__area--black {
-  fill: #7a716a;
-}
-:root[data-effective-theme="dark"] .advantage-chart--white-black .advantage-chart__zone--black {
-  --advantage-zone-ink: #7a716a;
-}
-:root[data-effective-theme="dark"] .advantage-chart__area--white {
-  fill: #f0ece3;
-}
+/* White's zone tint is its own lighter value in light (a wash, not the area);
+   in dark it is the area ink, as before. */
 :root[data-effective-theme="dark"] .advantage-chart__zone--white {
-  --advantage-zone-ink: #f0ece3;
-}
-/* Jungle family (Jungle Chess + Flip Jungle): the "black" side is Blue, so its
-   advantage area/zone wear the piece navy (lifted to read clearly as blue),
-   matching the eval bar. The dark-theme rule above would otherwise recolor it
-   neutral, so re-assert a lighter blue at higher specificity for dark mode. */
-.jungle-review .advantage-chart__area--black,
-.jungle-flip-review .advantage-chart__area--black {
-  fill: #34557a;
-}
-.jungle-review .advantage-chart__zone--black,
-.jungle-flip-review .advantage-chart__zone--black {
-  --advantage-zone-ink: #34557a;
-}
-:root[data-effective-theme="dark"] .jungle-review .advantage-chart__area--black,
-:root[data-effective-theme="dark"] .jungle-flip-review .advantage-chart__area--black {
-  fill: #6b96c8;
-}
-:root[data-effective-theme="dark"] .jungle-review .advantage-chart__zone--black,
-:root[data-effective-theme="dark"] .jungle-flip-review .advantage-chart__zone--black {
-  --advantage-zone-ink: #6b96c8;
+  --advantage-zone-ink: var(--ink-white, #f0ece3);
 }
 /* Accent for the eval curve + ply cursor: the site's own brand accent, which is
    already defined per theme.

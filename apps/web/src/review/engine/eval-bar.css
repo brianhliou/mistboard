@@ -12,8 +12,10 @@
      left and the move rail on its right. */
   border-radius: 0;
   overflow: hidden;
-  /* Dark track = Black's share of the bar. */
-  background: #34302e;
+  /* Track = the second seat's share of the bar. Colours come from the family
+     tokens in seat-disc-ink.css; the fallback is the chess pair this bar had
+     before there were tokens. */
+  background: var(--seat-second-gauge, #34302e);
   box-shadow: inset 0 0 0 1px rgba(0, 0, 0, 0.15);
 }
 
@@ -46,17 +48,17 @@
   box-shadow: 0 0 0 0.5px rgba(0, 0, 0, 0.35);
   z-index: 2;
 }
-/* Light fill = Red's share, growing from the bottom (Red's default end). */
+/* Fill = the first seat's share, growing from the bottom (its default end). */
 .review-eval-bar__fill {
   position: absolute;
   left: 0;
   right: 0;
   bottom: 0;
   height: 50%;
-  background: #f2ede3;
+  background: var(--seat-first-gauge, #f2ede3);
   transition: height 0.18s ease;
 }
-/* Flipped board → Red sits at the top, so the fill grows from the top. */
+/* Flipped board → the first seat sits at the top, so the fill grows from there. */
 .review-eval-bar--flipped .review-eval-bar__fill {
   bottom: auto;
   top: 0;
@@ -65,51 +67,11 @@
   opacity: 0.6;
 }
 
-/* Xiangqi family: Red vs Black. Match the computer-analysis chart's leading-side
-   colors exactly — its areas are #c0563f @72% (red) and #34302e @85% (black)
-   composited over the white panel, so mixing the same ratios over --site-panel
-   gives an eval bar whose two shades read identically to the graph (clear, not
-   muddy).
-
-   Every xiangqi-kernel review surface belongs here, flip variants included: the
-   default light/near-black gauge is a CHESS presentation, and a variant whose
-   pieces are red and black reading as white and black is a straight mismatch.
-   The broadcast round grid's card gauges too (xqb-card-gauge): they shipped
-   white and black because the grid is not inside a review. */
-.xiangqi-review .review-eval-bar,
-.fortress-xiangqi-review .review-eval-bar,
-.atomic-xiangqi-review .review-eval-bar,
-.duck-xiangqi-review .review-eval-bar,
-.dark-xiangqi-review .review-eval-bar,
-.jieqi-review .review-eval-bar,
-.banqi-review .review-eval-bar,
-.xqb-card-gauge .review-eval-bar {
-  background: color-mix(in srgb, #34302e 85%, var(--site-panel, #fff));
-}
-.xiangqi-review .review-eval-bar__fill,
-.fortress-xiangqi-review .review-eval-bar__fill,
-.atomic-xiangqi-review .review-eval-bar__fill,
-.duck-xiangqi-review .review-eval-bar__fill,
-.dark-xiangqi-review .review-eval-bar__fill,
-.jieqi-review .review-eval-bar__fill,
-.banqi-review .review-eval-bar__fill,
-.xqb-card-gauge .review-eval-bar__fill {
-  background: color-mix(in srgb, #c0563f 72%, var(--site-panel, #fff));
-}
-
-/* Jungle family (Jungle Chess + Flip Jungle): Red vs Blue, matching the pieces
-   (red ink #b5322b, navy ink #28323c) rather than the default light/near-black
-   gauge. The blue is lifted off the near-black piece ink so the track reads
-   clearly as blue, and it matches the advantage chart's blue area (composited
-   at the same ratios over the panel). */
-.jungle-review .review-eval-bar,
-.jungle-flip-review .review-eval-bar {
-  background: color-mix(in srgb, #34557a 85%, var(--site-panel, #fff));
-}
-.jungle-review .review-eval-bar__fill,
-.jungle-flip-review .review-eval-bar__fill {
-  background: color-mix(in srgb, #b5322b 72%, var(--site-panel, #fff));
-}
+/* No per-family rules here. Red/Black (every xiangqi-kernel surface, the
+   broadcast round grid's card gauges included), Red/Blue (jungle) and White/Black
+   (chess) all come from the slot tokens in seat-disc-ink.css. The page-class
+   lists that used to sit here were the defect: a gauge outside them shipped
+   white and black on a red/black game. */
 
 /* Banqi and Flip Jungle have no ink ownership before the opening flip. Keep the
    gauge readable without implying that either seat already owns Red or Black. */

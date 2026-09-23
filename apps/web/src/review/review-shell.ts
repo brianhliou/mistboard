@@ -5,6 +5,7 @@
 // and its rails. This is the platform layout for every variant's postgame (and,
 // later, the live room). Pair the center with review/board-stage.ts.
 
+import '../seat-disc-ink.css';
 import './review-shell.css';
 
 export type ReviewShellPanels = {

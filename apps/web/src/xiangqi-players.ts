@@ -5,6 +5,7 @@
 //
 // Styled with the broadcast surface's own classes (xqb-*): a player page is the
 // same kind of page as an event page, and the reader crosses between them.
+import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
 import { buildCommunityLayout } from './community-rail.js';

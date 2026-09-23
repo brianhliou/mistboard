@@ -8,6 +8,7 @@
 // lights those plies on the advantage chart, clicking jumps to the next one after
 // the current position and cycles. Between the two players sits the "Learn from
 // your mistakes" button (retro mode) when the surface offers it.
+import '../seat-disc-ink.css';
 import './analysis-summary.css';
 import type { MoveJudgment } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';

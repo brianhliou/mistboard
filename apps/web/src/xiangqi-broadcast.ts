@@ -17,6 +17,7 @@ import {
   xiangqiMoveToFsfUci,
 } from '@mistboard/game';
 import './live-xiangqi.css';
+import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import { track } from './analytics.js';
 import { t } from './i18n/catalog.js';

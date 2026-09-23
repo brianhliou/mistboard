@@ -18,6 +18,7 @@ import {
   cevalSupportsInfinite,
   createCeval,
 } from './ceval.js';
+import '../../seat-disc-ink.css';
 import './engine-panel.css';
 import type { EvalBar } from './eval-bar.js';
 import { formatEval, formatMistyEval } from './eval-format.js';

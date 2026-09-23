@@ -248,53 +248,21 @@
   font-weight: 700;
   color: var(--site-text);
 }
-/* Chip palette mirrors the on-board eval bar: light = Red ahead, dark = Black. */
+/* Chips wear the seats' inks: `is-red` is the first seat ahead (Red POV), so it
+   takes the first slot's chip ink and `is-black` the second's. Red/Black,
+   Red/Blue or chess cream/charcoal all come from seat-disc-ink.css; the chip tier
+   is the one tuned for the text on it. Fallbacks are the chess pair. */
 .engine-panel__line-eval.is-red {
-  background: #f2ede3;
-  color: #2b2724;
+  background: var(--seat-first-chip, #f2ede3);
+  color: var(--seat-first-on-chip, #2b2724);
 }
 .engine-panel__line-eval.is-black {
-  background: #34302e;
-  color: #f2ede3;
+  background: var(--seat-second-chip, #34302e);
+  color: var(--seat-second-on-chip, #f2ede3);
 }
 .engine-panel__line-eval.is-even {
   background: color-mix(in srgb, var(--site-muted) 20%, transparent);
   color: var(--site-text);
-}
-/* The light/dark chips above are chess (White/Black). A variant whose pieces
-   are red and black wears red and black, the eval bar's and the chart's inks;
-   the jungle family's second side is blue. Keyed by the review page classes
-   eval-bar.css uses. */
-:is(
-  .xiangqi-review,
-  .fortress-xiangqi-review,
-  .atomic-xiangqi-review,
-  .duck-xiangqi-review,
-  .dark-xiangqi-review,
-  .jieqi-review,
-  .banqi-review,
-  .jungle-review,
-  .jungle-flip-review
-) .engine-panel__line-eval.is-red {
-  background: #c0563f;
-  color: #fff;
-}
-:is(
-    .xiangqi-review,
-    .fortress-xiangqi-review,
-    .atomic-xiangqi-review,
-    .duck-xiangqi-review,
-    .dark-xiangqi-review,
-    .jieqi-review,
-    .banqi-review
-  )
-  .engine-panel__line-eval.is-black {
-  background: #34302e;
-  color: #f2ede3;
-}
-:is(.jungle-review, .jungle-flip-review) .engine-panel__line-eval.is-black {
-  background: #34557a;
-  color: #fff;
 }
 /* On the dark panel a black chip needs an edge to read as a chip. */
 :root[data-effective-theme="dark"] .engine-panel__line-eval.is-black {

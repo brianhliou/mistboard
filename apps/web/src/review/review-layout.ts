@@ -20,6 +20,7 @@ import { createGameFavoriteButton } from '../game-favorite.js';
 import { t } from '../i18n/catalog.js';
 import { createReviewControls, REVIEW_MENU_ICONS } from './review-controls.js';
 import { type BoardStageHandle, type BoardStageSlot, createBoardStage } from './review-stage.js';
+import '../seat-disc-ink.css';
 import './review-shell.css';
 import { createReviewShell } from './review-shell.js';
 

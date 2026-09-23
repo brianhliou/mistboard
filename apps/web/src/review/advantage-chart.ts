@@ -5,6 +5,7 @@
 // a cursor marks the current ply. Win% (bounded, mate-aware) is used instead of
 // raw cp so mates don't spike the axis.
 import { winPercent } from '@mistboard/game';
+import '../seat-disc-ink.css';
 import './advantage-chart.css';
 import { formatEval } from './engine/eval-format.js';
 import type { GamePhases, PlyEval } from './game-analysis.js';
