@@ -27,6 +27,12 @@ import {
 // that are now illegal. A parity gate that stopped at 3 could not tell the two
 // rule sets apart at all.
 const PERFT: readonly number[] = [42, 1740, 70681, 2816895];
+// Depth 4 is 2.8M nodes, 34 s on a laptop and the longest single file in the
+// game suite (the whole rest of it is 50 s serial). It runs on every push in
+// its own CI job (ci.yml "Deep perft gates", MISTBOARD_DEEP_PERFT=1) so the
+// local test:unit hot path and the unit-shared job stop at depth 3, which is
+// still the full movegen parity check, just not the one that sees (A).
+const PERFT_DEPTH = process.env.MISTBOARD_DEEP_PERFT === '1' ? PERFT.length : 3;
 
 function perft(state: BenedictXiangqiGameState, depth: number): number {
   const moves = getBenedictXiangqiLegalMoves(state);
@@ -41,8 +47,8 @@ function perft(state: BenedictXiangqiGameState, depth: number): number {
   return total;
 }
 
-test('perft matches the reference kernels', () => {
-  for (let depth = 1; depth <= PERFT.length; depth++) {
+test(`perft matches the reference kernels to depth ${PERFT_DEPTH}`, () => {
+  for (let depth = 1; depth <= PERFT_DEPTH; depth++) {
     const state = createInitialBenedictXiangqiState('perft');
     assert.equal(perft(state, depth), PERFT[depth - 1], `perft ${depth}`);
   }

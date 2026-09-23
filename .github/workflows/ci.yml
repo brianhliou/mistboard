@@ -184,6 +184,24 @@ jobs:
       - name: Verify puzzle corpus
         run: npm run test:puzzles:corpus
 
+  # The Benedict xiangqi depth-4 perft (2.8M nodes, ~35 s on a laptop, more on
+  # a runner) is the parity gate that can see rule (A), and it was the longest
+  # single file in the game suite. Same shape as puzzle-corpus: its own
+  # parallel job on every push, so the unit-shared job and the local test:unit
+  # hot path stop at depth 3.
+  perft-deep:
+    name: Deep perft gates
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - run: npm ci
+      - name: Deep perft gates
+        run: MISTBOARD_DEEP_PERFT=1 npx tsx --test packages/game/src/variants-benedict-xiangqi.test.ts
+
   integration:
     name: Server integration
     runs-on: ubuntu-latest
@@ -333,6 +351,7 @@ jobs:
       - unit-server
       - unit-shared
       - puzzle-corpus
+      - perft-deep
       - integration
       - persistent
       - browser-smoke
