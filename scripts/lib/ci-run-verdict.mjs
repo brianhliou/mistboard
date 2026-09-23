@@ -14,7 +14,23 @@
 // So forgiveness now depends on WHY jobs were cancelled. Cancelled housekeeping
 // inside a run nobody superseded is still forgiven, because that is the case the
 // rule was written for. Cancelled anything in a run that a newer commit
-// superseded is not: the release has no verdict, and must say so.
+// superseded is not: the release has no verdict of its own.
+//
+// A superseded run has a second reading (2026-09-22). Eleven September releases
+// died on "superseded" and each was re-run from the new main, five minutes
+// apiece, although the newer run already covered them: the pushed commit was an
+// ancestor of the new tip, so the tip's run tests a tree that contains it, and
+// Railway deploys the tip, which contains it too. So when the caller has
+// confirmed that ancestry AND the tip has a run of its own, the verdict is
+// 'adopt': the release follows the tip's run, whatever state our own run is in
+// (cancelled, still running, or even passed: production will serve the tip, so
+// a revision wait pinned to our commit would sit until it timed out). The one
+// exception is a job of our own that really failed; following the tip would
+// paper over it. A tip that does NOT contain the pushed commit (history
+// rewritten) fails unless our run already passed, since nothing covers what was
+// pushed. A tip with no run yet is not adopted: ci.yml's path filter skips a
+// docs-only push, and a wait for a run that never starts is the timeout this
+// rule exists to avoid, so our own run is left to finish and speak for both.
 
 /**
  * Split a run's jobs into ones that genuinely failed and ones that merely did
@@ -47,22 +63,109 @@ const short = (revision) =>
  * @param {string} params.headRevision the revision being released
  * @param {string|null} params.superseded the branch tip, when it is no longer
  *   headRevision; null when this release still owns the tip
- * @returns {{outcome: 'wait'|'pass'|'fail', message: string}}
+ * @param {boolean|null} [params.isAncestor] whether headRevision is an ancestor
+ *   of `superseded`, as the caller read it against the fetched tip. `true`
+ *   lets the release adopt the tip; `false` (or omitted) means the tip does not
+ *   contain the pushed commit; `null` means the caller could not tell on this
+ *   poll (fetch failed, or main moved again before the tip was fetched), so the
+ *   release polls again rather than deciding.
+ * @param {{status?: string, conclusion?: string|null, url?: string|null}|null} [params.tipRun]
+ *   the CI run for `superseded`, or null when GitHub lists none (not created
+ *   yet, or the tip's push matched no ci.yml path)
+ * @returns {{outcome: 'wait'|'pass'|'fail', message: string}
+ *   | {outcome: 'adopt', adoptRevision: string, message: string}}
  */
-export function ciOutcome({ run, verdict, headRevision, superseded }) {
+export function ciOutcome({
+  run,
+  verdict,
+  headRevision,
+  superseded,
+  isAncestor = false,
+  tipRun = null,
+}) {
   const where = run?.url ?? short(headRevision);
 
-  // A newer commit owns main. Whatever this run reports, it is either already
-  // cancelled or about to be, so waiting longer cannot produce a verdict.
-  if (superseded && run?.conclusion !== 'success') {
+  // A newer commit owns main. GitHub cancels our run when the tip's run starts,
+  // and Railway deploys the tip: the question is whether the tip can stand in
+  // for our commit, and that is ancestry plus a run of its own.
+  if (superseded) {
+    const completed = run?.status === 'completed';
+    const succeeded = completed && run.conclusion === 'success';
+    const cancelled = completed && run.conclusion === 'cancelled';
+    const ownFailure = (verdict?.blocking.length ?? 0) > 0;
+
+    if (isAncestor === true && tipRun && !ownFailure) {
+      const ours = succeeded
+        ? 'this run passed, but production will serve the tip'
+        : cancelled
+          ? 'this run was cancelled for it'
+          : `this run is ${run?.status ?? 'not listed'} and GitHub cancels it`;
+      return {
+        outcome: 'adopt',
+        adoptRevision: superseded,
+        message:
+          `superseded: ${short(headRevision)} was pushed to main, but main is now ` +
+          `${short(superseded)}, which contains ${short(headRevision)}; ${ours}, so ` +
+          `following ${short(superseded)}'s run: ${tipRun.url ?? short(superseded)}`,
+      };
+    }
+    if (succeeded) {
+      // Earned before the tip moved. With no tip run to follow (yet), this is
+      // the verdict for both trees; the caller decides which one production
+      // will serve.
+      const contains =
+        isAncestor === true
+          ? `contains ${short(headRevision)} but has no run of its own`
+          : isAncestor === false
+            ? `does not contain ${short(headRevision)}`
+            : `may or may not contain ${short(headRevision)}`;
+      return {
+        outcome: 'pass',
+        message:
+          `hosted CI passed: ${where} (main has since moved to ${short(superseded)}, which ` +
+          `${contains}; this run still verified ${short(headRevision)})`,
+      };
+    }
+    if (!ownFailure && isAncestor !== false && (cancelled || !completed)) {
+      // Not decided yet. Either the tip's run is about to be listed (adopt on
+      // the next poll), or the tip's push matched no ci.yml path and this run
+      // finishes with a verdict of its own.
+      const state = cancelled ? 'was cancelled' : `is ${run?.status ?? 'not listed yet'}`;
+      const contains =
+        isAncestor === true
+          ? `contains ${short(headRevision)}`
+          : `may contain ${short(headRevision)} (ancestry not readable yet)`;
+      return {
+        outcome: 'wait',
+        message:
+          `main moved to ${short(superseded)}, which ${contains}; this run ${state}; ` +
+          `waiting for ${short(superseded)}'s run to be listed` +
+          (cancelled ? '' : ', or for this one to finish'),
+      };
+    }
+
+    const fate = cancelled
+      ? 'this run was cancelled rather than finished'
+      : completed
+        ? `this run finished ${run.conclusion ?? 'unknown'}`
+        : `this run is ${run?.status ?? 'not listed'} and will be cancelled`;
+    const coverage = ownFailure
+      ? `the failure (${verdict.blocking.join(', ')}) is this run's own, whatever ` +
+        `${short(superseded)} contains`
+      : isAncestor === true
+        ? `${short(superseded)} contains ${short(headRevision)} but has no run to follow, ` +
+          "so this run's conclusion stands"
+        : isAncestor === false
+          ? `${short(superseded)} does not contain ${short(headRevision)} (history was ` +
+            'rewritten), so no run covers the pushed commit'
+          : `whether ${short(superseded)} contains ${short(headRevision)} could not be read, ` +
+            'so no run is known to cover the pushed commit';
     return {
       outcome: 'fail',
       message:
         `superseded: ${short(headRevision)} was pushed to main, but main is now ` +
-        `${short(superseded)}, so this run was cancelled rather than finished. ` +
-        `${short(headRevision)} is an ancestor of ${short(superseded)} and will be ` +
-        `verified by that release; this one has no verdict of its own. ` +
-        `Re-run from the current main if you need one: ${where}`,
+        `${short(superseded)}; ${fate}. ${coverage}. ` +
+        `Re-run from the current main if you need a verdict: ${where}`,
     };
   }
 
@@ -71,10 +174,7 @@ export function ciOutcome({ run, verdict, headRevision, superseded }) {
     return { outcome: 'wait', message: `${run.status} ${run.url ?? ''}`.trim() };
   }
   if (run.conclusion === 'success') {
-    const note = superseded
-      ? ` (main has since moved to ${short(superseded)}; this run still verified ${short(headRevision)})`
-      : '';
-    return { outcome: 'pass', message: `hosted CI passed: ${where}${note}` };
+    return { outcome: 'pass', message: `hosted CI passed: ${where}` };
   }
 
   // Not superseded, so a cancelled or skipped job is housekeeping noise rather

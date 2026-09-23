@@ -55,6 +55,10 @@ const VALID_SMOKE_TIERS = new Set(['full', 'web', 'lite', 'none']);
 // that directory is gone the spawn itself dies with "process.cwd failed".
 const releaseRoot = process.cwd();
 let workdir = releaseRoot;
+// The control worktree, once the post-push steps have moved into it (see
+// enterPostPushWorkdir); null while they run from releaseRoot. Kept apart from
+// `workdir` so an adopted tip can fast-forward it again (settleExpectedRevision).
+let controlWorktree = null;
 
 const options = parseArgs(process.argv.slice(2));
 if (options.help) {
@@ -73,6 +77,14 @@ const release = {
   drainRequired: false,
   deployRequired: false,
   headRevision: null,
+  // The revision production is expected to serve, which the revision wait, the
+  // smoke tier and --expect-revision all track. It is headRevision until
+  // another session's push supersedes ours during the hosted CI wait and the
+  // release adopts the new tip (see waitForGithubCi); headRevision then stays
+  // the commit this release pushed, for the summary.
+  expectedRevision: null,
+  // Every tip adopted during the CI wait, oldest first.
+  adopted: [],
   planReason: null,
   productionRevision: null,
   pushCompleted: false,
@@ -82,6 +94,7 @@ const release = {
 try {
   if (!options.plan) ensureCleanWorktree();
   release.headRevision = git(['rev-parse', '--verify', options.head]);
+  release.expectedRevision = release.headRevision;
   release.targetRevision = readRemoteTargetRevision();
 
   if (options.plan) {
@@ -183,7 +196,8 @@ try {
   }
 
   if (release.ciRequired && options.ciWait) {
-    await waitForGithubCi({ headRevision: release.headRevision });
+    const verified = await waitForGithubCi({ headRevision: release.headRevision });
+    if (verified.tip !== release.headRevision) settleExpectedRevision(verified);
   } else if (!release.ciRequired) {
     console.log(`skip: hosted CI wait (${release.ciReason})`);
   } else {
@@ -191,28 +205,30 @@ try {
   }
 
   if (release.deployRequired) {
-    runTimed('production revision wait', prodWaitCommand(release.headRevision));
+    runTimed('production revision wait', prodWaitCommand(release.expectedRevision));
   } else {
     console.log(
-      `skip: exact revision wait; production is not expected to serve ${release.headRevision.slice(
-        0,
-        12,
+      `skip: exact revision wait; production is not expected to serve ${shortRevision(
+        release.expectedRevision,
       )} (${release.planReason})`,
     );
   }
 
-  await runSmoke({ deployRequired: release.deployRequired, headRevision: release.headRevision });
+  await runSmoke({
+    deployRequired: release.deployRequired,
+    headRevision: release.expectedRevision,
+  });
 
   announceNews({ deployRequired: release.deployRequired });
 
   submitIndexNow({ deployRequired: release.deployRequired });
 
   const elapsedMs = Math.round(performance.now() - startedAt);
-  console.log(`release: ok in ${formatDuration(elapsedMs)}`);
+  console.log(`release: ok in ${formatDuration(elapsedMs)}${adoptionSummary()}`);
 } catch (error) {
   cancelUnpublishedDrain();
   const elapsedMs = Math.round(performance.now() - startedAt);
-  console.error(`release: failed after ${formatDuration(elapsedMs)}`);
+  console.error(`release: failed after ${formatDuration(elapsedMs)}${adoptionSummary()}`);
   console.error(error instanceof Error ? error.message : String(error));
   process.exit(1);
 }
@@ -485,27 +501,68 @@ function printHostedCiPlan({ changedFiles, ciRequired, matched, reason, unmatche
   console.log('');
 }
 
+/**
+ * Wait for hosted CI to pass on `headRevision`, or on whatever main's tip
+ * becomes while we wait. Resolves to `{ revision, tip, adopted }`: the
+ * revision whose run passed, the newest tip of main confirmed to contain it
+ * (equal to `revision` unless a run-less descendant landed meanwhile), and the
+ * tips adopted on the way (empty when the pushed commit's own run passed).
+ *
+ * Another session can win the push race at any point in the several minutes
+ * this wait runs for, and the moment it does, ci.yml's cancel-in-progress kills
+ * the run we are watching. Until 2026-09-22 that failed the release (eleven
+ * times in September, each a five-minute re-run from the new main). Now, when
+ * the new tip CONTAINS the pushed commit and has a run of its own, the release
+ * adopts it: the tip's run tests a tree with our change in it and Railway
+ * deploys the tip, so following it is the same verification with no re-run,
+ * and the only revision wait that can end. Adoption can repeat (the adopted
+ * tip is just as exposed to the next push), and every adoption spends the one
+ * deadline set here: a release does not earn more time by being overtaken.
+ * The decision rules, including the tips that must NOT be adopted, live in
+ * lib/ci-run-verdict.mjs.
+ */
 async function waitForGithubCi({ headRevision }) {
   const deadline = Date.now() + options.timeoutMs;
+  let revision = headRevision;
+  const adopted = [];
   let run = null;
   let attempt = 0;
 
   console.log(`# hosted CI wait`);
   while (Date.now() <= deadline) {
     attempt += 1;
-    const runs = listGithubRuns(headRevision);
-    run = runs.find((candidate) => candidate.headSha === headRevision) ?? null;
-    // Checked every poll, not once: another session can win the push race at any
-    // point in the several minutes this wait runs for, and the moment it does,
-    // ci.yml's cancel-in-progress kills the run we are watching.
-    const superseded = supersededBy(headRevision);
+    run = findGithubRun(revision);
+    // Checked every poll, not once (see above).
+    const superseded = supersededBy(revision);
+    const isAncestor = superseded ? confirmAncestor(revision, superseded) : false;
+    const tipRun = superseded && isAncestor === true ? findGithubRun(superseded) : null;
     const verdict = run?.status === 'completed' ? jobVerdict(run) : null;
-    const decision = ciOutcome({ run, verdict, headRevision, superseded });
+    const decision = ciOutcome({
+      run,
+      verdict,
+      headRevision: revision,
+      superseded,
+      isAncestor,
+      tipRun,
+    });
     if (decision.outcome === 'pass') {
       console.log(decision.message);
-      return;
+      const tip = superseded && isAncestor === true ? superseded : revision;
+      return { revision, tip, adopted };
     }
     if (decision.outcome === 'fail') throw new Error(decision.message);
+    if (decision.outcome === 'adopt') {
+      console.log(`attempt ${attempt}: ${decision.message}`);
+      console.log(
+        `adopt: pushed ${shortRevision(headRevision)}, main is now ` +
+          `${shortRevision(decision.adoptRevision)} which contains it; following ` +
+          `${shortRevision(decision.adoptRevision)}'s run with the same deadline`,
+      );
+      adopted.push(decision.adoptRevision);
+      revision = decision.adoptRevision;
+      run = null;
+      continue;
+    }
     console.log(`attempt ${attempt}: ${decision.message}`);
 
     if (Date.now() + GITHUB_POLL_MS > deadline) break;
@@ -513,10 +570,112 @@ async function waitForGithubCi({ headRevision }) {
   }
 
   throw new Error(
-    `timed out waiting for ${options.ciWorkflow} on ${headRevision}; last run=${
-      run ? `${run.status}/${run.conclusion ?? 'none'} ${run.url ?? ''}` : 'not found'
-    }`,
+    `timed out waiting for ${options.ciWorkflow} on ${revision}${
+      adopted.length > 0 ? ` (adopted after pushing ${headRevision})` : ''
+    }; last run=${run ? `${run.status}/${run.conclusion ?? 'none'} ${run.url ?? ''}` : 'not found'}`,
   );
+}
+
+// Whether `pushed` is an ancestor of `tip`, the commit another session moved
+// main to. True: the tip's run tests a tree containing our change and
+// production will serve the tip, so the release can follow it. False: history
+// was rewritten and nothing on main covers what we pushed. Null: not knowable on
+// this poll (the fetch failed, or main moved again between the ls-remote and
+// the fetch so the tip is not local yet); the caller polls again, inside the
+// same deadline.
+//
+// The tip is fetched, never assumed local: it is another session's commit and
+// this checkout has never seen it. The fetch lands in the shared .git, which is
+// what lets the control worktree fast-forward to the tip afterwards.
+const ancestryCache = new Map();
+function confirmAncestor(pushed, tip) {
+  const key = `${pushed}..${tip}`;
+  if (ancestryCache.has(key)) return ancestryCache.get(key);
+  const gitHere = (args) =>
+    spawnSync('git', args, { cwd: workdir, encoding: 'utf8', stdio: ['ignore', 'pipe', 'pipe'] });
+  const fetched = gitHere([
+    'fetch',
+    '--quiet',
+    options.remote,
+    `refs/heads/${options.targetBranch}`,
+  ]);
+  if (fetched.status !== 0) {
+    console.log(
+      `warn: could not fetch ${options.remote} ${options.targetBranch} (${firstLine(fetched.stderr)})`,
+    );
+    return null;
+  }
+  if (gitHere(['cat-file', '-e', `${tip}^{commit}`]).status !== 0) return null;
+  const ancestry = gitHere(['merge-base', '--is-ancestor', pushed, tip]);
+  if (ancestry.status !== 0 && ancestry.status !== 1) {
+    console.log(
+      `warn: could not compare ${shortRevision(pushed)} with ${shortRevision(tip)} (${firstLine(
+        ancestry.stderr,
+      )})`,
+    );
+    return null;
+  }
+  const result = ancestry.status === 0;
+  ancestryCache.set(key, result);
+  return result;
+}
+
+// Main moved past the pushed commit to `tip`, which contains it. Decide which
+// revision production will serve, since the revision wait and the smokes'
+// --expect-revision are pinned to one SHA and time out on any other: Railway
+// deploys a push only when it touches a watch pattern (railway.web.json), so
+// the tip is served when the pushed..tip diff matches one, and the pushed
+// commit stays served when it does not (a docs-only or scripts-only push). The
+// same classifier as the deploy plan answers it, against the same config. An
+// unreadable answer keeps the tip, which is what a push that cancelled our run
+// (apps/**, packages/**) deploys nearly always.
+//
+// The control worktree follows the tip when the post-push steps run from there
+// (enterPostPushWorkdir fast-forwarded it to the pushed commit; the tip is a
+// descendant, fetched by confirmAncestor). A refused fast-forward is a warning:
+// the smokes then run from the pushed commit's scripts, as before adoption.
+function settleExpectedRevision({ tip, adopted }) {
+  release.adopted = adopted;
+  const deploys = tipDeploysOver(release.headRevision, tip);
+  release.expectedRevision = deploys === false ? release.headRevision : tip;
+  console.log(
+    `release: main moved to ${tip} (${adopted.length > 0 ? `adopted ${adopted.map(shortRevision).join(' -> ')}` : 'no run of its own'}); ` +
+      (deploys === false
+        ? `production keeps serving ${shortRevision(release.headRevision)}, the newer commits match no Railway watch pattern`
+        : `production is expected to serve ${shortRevision(tip)}, not ${shortRevision(release.headRevision)}${deploys === null ? ' (watch-pattern read failed; assuming the tip deploys)' : ''}`),
+  );
+  if (!controlWorktree) return;
+  const reason = bringControlWorktreeTo(controlWorktree, tip);
+  if (reason) {
+    console.log(
+      `warn: control worktree ${controlWorktree} stays behind the adopted tip (${reason}); post-push steps keep running from it`,
+    );
+  }
+}
+
+// Whether the base..head diff matches a Railway web watch pattern, read from
+// the deploy planner so the two can never disagree. Null when it cannot be read.
+function tipDeploysOver(base, head) {
+  try {
+    const output = runCapture(
+      'adopted tip deploy plan',
+      ['node', 'scripts/prod-smoke-plan.mjs', '--base', base, '--head', head],
+      { quiet: true },
+    );
+    return parsePlan(output).deployRequired;
+  } catch (error) {
+    console.log(
+      `warn: could not classify ${shortRevision(base)}..${shortRevision(head)} (${error.message})`,
+    );
+    return null;
+  }
+}
+
+function adoptionSummary() {
+  if (release.adopted.length === 0) return '';
+  return ` (pushed ${shortRevision(release.headRevision)}, followed ${release.adopted
+    .map(shortRevision)
+    .join(' -> ')}; production serves ${shortRevision(release.expectedRevision)})`;
 }
 
 // Read a run's per-job conclusions. The decision made from them, including when
@@ -560,6 +719,11 @@ function supersededBy(headRevision) {
   }
   if (!remote || revisionMatches(remote, headRevision)) return null;
   return remote;
+}
+
+// The ci.yml push run for one revision, or null when GitHub lists none.
+function findGithubRun(revision) {
+  return listGithubRuns(revision).find((candidate) => candidate.headSha === revision) ?? null;
 }
 
 function listGithubRuns(headRevision) {
@@ -922,6 +1086,7 @@ function enterPostPushWorkdir() {
     return;
   }
   workdir = primary;
+  controlWorktree = primary;
   console.log(
     `post-push steps run from ${primary}: this task worktree reads as merged now and may be swept`,
   );
@@ -1099,6 +1264,14 @@ function revisionMatches(left, right) {
   return left === right || left.startsWith(right) || right.startsWith(left);
 }
 
+function shortRevision(revision) {
+  return revision.slice(0, 12);
+}
+
+function firstLine(output) {
+  return (output || '').trim().split('\n')[0] || 'no output';
+}
+
 function printList(label, values) {
   if (values.length === 0) return;
   console.log(`${label}:`);
@@ -1198,5 +1371,15 @@ the exact-revision wait because production is not expected to serve that SHA,
 but still waits for hosted CI when the diff matches the CI workflow paths. When
 local ci:quick runs, --push uses git push --no-verify to avoid running the same
 broad pre-push gate twice. With --skip-local-ci, the pre-push hook still runs
-normally.`);
+normally.
+
+If another session pushes to main during the hosted CI wait, ci.yml cancels the
+run for the pushed commit. When the new tip contains that commit and has a run
+of its own, the release adopts the tip whatever its own run was doing: it waits
+for the tip's run instead, expects production to serve the tip (unless the
+newer commits match no Railway watch pattern, when production keeps serving the
+pushed commit), and runs the smokes against that, all inside the original
+--timeout-ms (adoption can repeat; the summary names the chain). A job of the
+pushed commit's own that failed still fails the release, and so does a tip
+that does not contain the pushed commit, since no run covers what was pushed.`);
 }
