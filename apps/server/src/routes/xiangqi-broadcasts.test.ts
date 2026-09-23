@@ -95,6 +95,7 @@ function deps(
             sourceUrl: tour.sourceUrl ?? null,
             pollEnabled: schedule.pollEnabled,
             pollIntervalMs: schedule.pollIntervalMs,
+            endsAt: tour.endsAt ?? null,
           }
         : null,
     ...overrides,
@@ -532,6 +533,7 @@ test('schedule update validates input and persists the clamped schedule', async 
           sourceUrl: tour.sourceUrl ?? null,
           pollEnabled: schedule.pollEnabled,
           pollIntervalMs: schedule.pollIntervalMs,
+          endsAt: tour.endsAt ?? null,
         };
       },
     }),

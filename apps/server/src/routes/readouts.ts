@@ -17,6 +17,7 @@ import {
   listMistboardReadoutSummaries,
 } from '../persistence-mistboard-readout.js';
 import { sendReadoutEmail } from '../readout-email.js';
+import { defaultXiangqiBroadcastFetch } from '../xiangqi-broadcast-fetch.js';
 import { type HttpApiContext, isHttpAdminSession, readJsonBody, writeJson } from './lib.js';
 
 type ReadoutRouteDependencies = {
@@ -65,6 +66,7 @@ export async function readoutGenerateForApi(
     trigger,
     now,
     dryRun: body.dryRun === true,
+    dpxqIndexFetch: defaultXiangqiBroadcastFetch,
     runtime: {
       revision: getBuildInfo().revision,
       activeGames: ctx.activeGameCount?.() ?? 0,

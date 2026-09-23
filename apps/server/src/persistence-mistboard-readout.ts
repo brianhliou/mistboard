@@ -27,11 +27,16 @@ import {
 } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 import { listPuzzleQualityAggregates } from './persistence-puzzle-quality.js';
-import { listAllXiangqiBroadcastBoardsOn } from './persistence-xiangqi-broadcasts.js';
+import {
+  listAllXiangqiBroadcastBoardsOn,
+  listXiangqiBroadcastTourSourcesOn,
+} from './persistence-xiangqi-broadcasts.js';
 import {
   getXiangqiPuzzleMiningRun,
   listXiangqiPuzzleEditorialCandidates,
 } from './persistence-xiangqi-puzzle-mining.js';
+import { fetchDpxqTourIndex, planDpxqIndexSync } from './xiangqi-broadcast-dpxq-index.js';
+import type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 import { xiangqiBroadcastBoardServes } from './xiangqi-broadcast-serving.js';
 import { xiangqiEditorialCandidateSignals } from './xiangqi-puzzle-editorial-ranking.js';
 
@@ -50,16 +55,24 @@ export async function generateMistboardReadout(input: {
   runtime: MistboardReadoutRuntime;
   dryRun?: boolean;
   db?: pg.Pool;
+  /** Reads dpxq's tour index for the untracked-events line. The route and
+   *  the CLI pass the real fetch; left out (the tests), the line is not
+   *  collected, so no test reaches dpxq. */
+  dpxqIndexFetch?: XiangqiBroadcastSourceFetch;
 }): Promise<{ report: MistboardReadoutV1; reused: boolean; previousAlertKey: string | null }> {
   const db = input.db ?? getPool();
   const now = input.now ?? new Date();
   const snapshotKey = readoutSnapshotKey(input.trigger, now);
 
+  // Read dpxq before taking the generation lock: a slow source must not hold
+  // the transaction open.
+  const untrackedEvents = input.dpxqIndexFetch
+    ? await collectUntrackedDpxqEvents(db, now, input.dpxqIndexFetch)
+    : undefined;
+  const collect = () => collectMistboardReadoutFacts(db, now, { untrackedEvents });
+
   if (input.dryRun) {
-    const [facts, previousReport] = await Promise.all([
-      collectMistboardReadoutFacts(db, now),
-      latestMistboardReadout(db),
-    ]);
+    const [facts, previousReport] = await Promise.all([collect(), latestMistboardReadout(db)]);
     return {
       report: buildMistboardReadout({
         snapshotId: `readout_dry_${randomUUID()}`,
@@ -93,10 +106,7 @@ export async function generateMistboardReadout(input: {
     // Keep the advisory lock on this transaction while independent read-only
     // collectors use the pool. Parallel query() calls on one PoolClient rely on
     // pg's deprecated implicit queuing and will stop working in pg 9.
-    const [facts, previousReport] = await Promise.all([
-      collectMistboardReadoutFacts(db, now),
-      latestMistboardReadout(db),
-    ]);
+    const [facts, previousReport] = await Promise.all([collect(), latestMistboardReadout(db)]);
     const report = buildMistboardReadout({
       snapshotId: `readout_${randomUUID()}`,
       trigger: input.trigger,
@@ -238,6 +248,7 @@ export async function recentWeeklyTrend(
 export async function collectMistboardReadoutFacts(
   db: Queryable,
   now: Date,
+  extra: { untrackedEvents?: MistboardReadoutBroadcasts['untrackedEvents'] } = {},
 ): Promise<MistboardReadoutFacts> {
   const [collectors, trend] = await Promise.all([
     Promise.allSettled([
@@ -245,7 +256,7 @@ export async function collectMistboardReadoutFacts(
       collectPuzzles(db, now),
       collectMining(db),
       collectEngines(db, now),
-      collectBroadcasts(db),
+      collectBroadcasts(db, extra.untrackedEvents),
     ] as const),
     // Context, not a graded section: losing the trend line must not turn a
     // healthy readout into an unknown one.
@@ -484,14 +495,42 @@ async function collectMining(db: Queryable): Promise<MistboardReadoutMining> {
 // scheduled reader.
 const UNSERVABLE_BOARD_ID_CAP = 10;
 
-async function collectBroadcasts(db: Queryable): Promise<MistboardReadoutBroadcasts> {
+async function collectBroadcasts(
+  db: Queryable,
+  untrackedEvents: MistboardReadoutBroadcasts['untrackedEvents'],
+): Promise<MistboardReadoutBroadcasts> {
   const boards = await listAllXiangqiBroadcastBoardsOn(db);
   const unservable = boards.filter((board) => !xiangqiBroadcastBoardServes(board));
   return {
     boards: boards.length,
     unservableBoards: unservable.length,
     unservableBoardIds: unservable.slice(0, UNSERVABLE_BOARD_ID_CAP).map((board) => board.id),
+    ...(untrackedEvents === undefined ? {} : { untrackedEvents }),
   };
+}
+
+// dpxq's tour index against the tours we poll. An unreachable dpxq is null,
+// not a collector failure: the stored-board sweep above must still report.
+async function collectUntrackedDpxqEvents(
+  db: Queryable,
+  now: Date,
+  fetchImpl: XiangqiBroadcastSourceFetch,
+): Promise<MistboardReadoutBroadcasts['untrackedEvents']> {
+  const [index, tours] = await Promise.all([
+    fetchDpxqTourIndex({ fetchImpl, timeoutMs: 15_000 }),
+    listXiangqiBroadcastTourSourcesOn(db),
+  ]);
+  if (!index.ok) return null;
+  return planDpxqIndexSync({ rows: index.rows, tours, now: now.getTime() }).untracked.map(
+    (row) => ({
+      dpxqTour: row.tourId,
+      name: row.name,
+      startsOn: row.startsOn,
+      endsOn: row.endsOn,
+      section: row.section,
+      hasGameList: row.hasGameList,
+    }),
+  );
 }
 
 async function collectEngines(db: Queryable, now: Date): Promise<MistboardReadoutEngines> {

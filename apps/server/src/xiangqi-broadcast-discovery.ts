@@ -307,8 +307,9 @@ export type StatedRoundManifestBuild =
       droppedForCap: number;
       /** Boards already stored complete; nothing on the source can change them. */
       skippedComplete: number;
-      /** Boards whose stated round has no seeded round to land in. */
-      droppedUnscheduled: number;
+      /** Round numbers the source stated that had no seeded round; each is
+       *  filed under `<tourSlug>-r<NN>` and created by the import. */
+      roundsAdded: number[];
     }
   | { ok: false; message: string; quiet?: true };
 
@@ -361,17 +362,25 @@ export function buildStatedRoundManifestSources(input: {
   const rankInRound = new Map<number, number>();
   const candidates: DiscoveryManifestSource[] = [];
   let skippedComplete = 0;
-  let droppedUnscheduled = 0;
+  const roundsAdded = new Set<number>();
   for (const board of byEvent) {
     if (board.roundNumber === undefined) {
       return { ok: false, message: `listed board ${board.url} states no round` };
     }
     const rank = (rankInRound.get(board.roundNumber) ?? 0) + 1;
     rankInRound.set(board.roundNumber, rank);
-    const round = roundsByNumber.get(board.roundNumber);
+    let round = roundsByNumber.get(board.roundNumber);
     if (!round) {
-      droppedUnscheduled += 1;
-      continue;
+      // The source states the round, so this is not a guess. A league is
+      // seeded a stage at a time (the 2026 men's league had rounds 1-5 when
+      // stage two was still unannounced); dropping later rounds meant nothing
+      // landed until someone re-seeded by hand.
+      round = {
+        id: `${input.source.tourSlug}-r${String(board.roundNumber).padStart(2, '0')}`,
+        name: `Round ${board.roundNumber}`,
+      };
+      roundsByNumber.set(board.roundNumber, round);
+      roundsAdded.add(board.roundNumber);
     }
     if (input.completeUrls.has(board.url)) {
       skippedComplete += 1;
@@ -388,13 +397,7 @@ export function buildStatedRoundManifestSources(input: {
   }
 
   if (candidates.length === 0) {
-    if (skippedComplete > 0) {
-      return { ok: false, message: NOTHING_NEW_MESSAGE, quiet: true };
-    }
-    return {
-      ok: false,
-      message: `${droppedUnscheduled} listed board(s) state rounds the schedule has not seeded`,
-    };
+    return { ok: false, message: NOTHING_NEW_MESSAGE, quiet: true };
   }
 
   const kept = candidates.slice(0, input.source.maxBoards);
@@ -403,6 +406,6 @@ export function buildStatedRoundManifestSources(input: {
     sources: kept,
     droppedForCap: candidates.length - kept.length,
     skippedComplete,
-    droppedUnscheduled,
+    roundsAdded: [...roundsAdded].sort((a, b) => a - b),
   };
 }

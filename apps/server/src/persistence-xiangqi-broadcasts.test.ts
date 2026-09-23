@@ -2,6 +2,7 @@ import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
 import type { XiangqiBroadcastBoard } from '@mistboard/game';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
+import { getPool } from './persistence-db.js';
 import {
   assert,
   definePersistenceTests,
@@ -13,6 +14,7 @@ import {
   applyXiangqiBroadcastBoardUpdate,
   backfillXiangqiBroadcastTranslations,
   deleteXiangqiBroadcastTour,
+  extendXiangqiBroadcastTourEndsAt,
   getXiangqiBroadcastBoard,
   getXiangqiBroadcastTour,
   importXiangqiBroadcastPack,
@@ -20,6 +22,7 @@ import {
   listXiangqiBroadcastRounds,
   listXiangqiBroadcastScheduledTours,
   listXiangqiBroadcastSyncLogs,
+  listXiangqiBroadcastTourSourcesOn,
   listXiangqiBroadcastTours,
   queryCompletedXiangqiBroadcastBoards,
   setXiangqiBroadcastTourSchedule,
@@ -849,6 +852,7 @@ definePersistenceTests('xiangqi broadcasts', () => {
       sourceUrl: 'https://www.wxf-xiangqi.org/',
       pollEnabled: true,
       pollIntervalMs: 15_000,
+      endsAt: '2025-09-27T00:00:00.000Z',
     });
 
     const scheduled = await listXiangqiBroadcastScheduledTours();
@@ -869,6 +873,31 @@ definePersistenceTests('xiangqi broadcasts', () => {
         pollIntervalMs: 15_000,
       }),
       null,
+    );
+  });
+
+  test('an end date only ever moves later, in the column and the payload together', async () => {
+    const pack = await fixturePack();
+    await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
+
+    // The fixture ends 2025-09-27; dpxq extending a league to its next stage.
+    assert.equal(
+      await extendXiangqiBroadcastTourEndsAt('2025-wxc-sample', '2025-11-30T23:59:59+08:00'),
+      true,
+    );
+    const moved = await getXiangqiBroadcastTour('2025-wxc-sample');
+    assert.equal(moved?.endsAt, '2025-11-30T23:59:59+08:00');
+    const [listed] = await listXiangqiBroadcastTourSourcesOn(getPool());
+    assert.equal(listed?.endsAt, '2025-11-30T15:59:59.000Z');
+
+    // Earlier is refused, so a row dpxq shortened by mistake cannot cut polling.
+    assert.equal(
+      await extendXiangqiBroadcastTourEndsAt('2025-wxc-sample', '2025-10-01T23:59:59+08:00'),
+      false,
+    );
+    assert.equal(
+      (await getXiangqiBroadcastTour('2025-wxc-sample'))?.endsAt,
+      '2025-11-30T23:59:59+08:00',
     );
   });
 

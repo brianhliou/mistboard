@@ -253,7 +253,7 @@ test('stated rounds file each board under the seeded round with that number', ()
   );
   assert.equal(built.sources[0]?.tourName, 'Cup');
   assert.equal(built.skippedComplete, 0);
-  assert.equal(built.droppedUnscheduled, 0);
+  assert.deepEqual(built.roundsAdded, []);
 });
 
 // Records arrive on dpxq days after the round, so a schedule window would have
@@ -297,30 +297,26 @@ test('a list with nothing new is quiet, not an error', () => {
   assert.equal(built.quiet, true);
 });
 
-test('boards for rounds the schedule never seeded are dropped and counted, not guessed', () => {
+test('a stated round the schedule never seeded is created, not dropped', () => {
+  // The 2026 men's league was seeded rounds 1-5; stage two's rounds arrive
+  // stated (第09轮) and must land without a hand re-seed.
   const built = buildStatedRoundManifestSources({
     source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
-    boards: [stated('1', 1), stated('9', 9)],
+    boards: [stated('1', 1), stated('9', 9), stated('10', 9)],
     rounds: SEEDED,
     completeUrls: new Set(),
   });
   assert.equal(built.ok, true);
   if (!built.ok) return;
   assert.deepEqual(
-    built.sources.map((s) => s.roundId),
-    ['cup-r01'],
+    built.sources.map((s) => [s.roundId, s.roundName, s.boardNumber]),
+    [
+      ['cup-r01', 'Round 1', 1],
+      ['cup-r09', 'Round 9', 1],
+      ['cup-r09', 'Round 9', 2],
+    ],
   );
-  assert.equal(built.droppedUnscheduled, 1);
-
-  const onlyUnseeded = buildStatedRoundManifestSources({
-    source: parsed('mistboard-discover://fake-live?tourSlug=cup'),
-    boards: [stated('9', 9)],
-    rounds: SEEDED,
-    completeUrls: new Set(),
-  });
-  assert.equal(onlyUnseeded.ok, false);
-  if (onlyUnseeded.ok) return;
-  assert.equal(onlyUnseeded.quiet, undefined);
+  assert.deepEqual(built.roundsAdded, [9]);
 });
 
 test('a board that states no round fails the whole build closed', () => {

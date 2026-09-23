@@ -44,6 +44,9 @@ export type XiangqiBroadcastTourSchedule = {
   sourceUrl: string | null;
   pollEnabled: boolean;
   pollIntervalMs: number;
+  /** The event's last day, ISO. The scheduler slows down past it and stops
+   *  three weeks later; null means the tour has no end and polls as set. */
+  endsAt: string | null;
 };
 
 export type XiangqiBroadcastBoardSearchFilters = {
@@ -1054,7 +1057,46 @@ export async function setXiangqiBroadcastTourSchedule(
     sourceUrl: row.source_url,
     pollEnabled: row.poll_enabled,
     pollIntervalMs: row.poll_interval_ms,
+    endsAt: row.ends_at?.toISOString() ?? null,
   };
+}
+
+/** Every tour's source and end date, for the dpxq index sweep (which ones
+ *  we already relay, and whose end date dpxq has since moved). */
+export async function listXiangqiBroadcastTourSourcesOn(
+  client: Queryable,
+): Promise<Array<{ slug: string; sourceUrl: string | null; endsAt: string | null }>> {
+  const { rows } = await client.query<Pick<TourRow, 'slug' | 'source_url' | 'ends_at'>>(
+    `SELECT slug, source_url, ends_at FROM xiangqi_broadcast_tours ORDER BY slug`,
+  );
+  return rows.map((row) => ({
+    slug: row.slug,
+    sourceUrl: row.source_url,
+    endsAt: row.ends_at?.toISOString() ?? null,
+  }));
+}
+
+/**
+ * Move a tour's end date later, column and payload together (readers
+ * reconstruct the tour from the payload; see upsertTour). Never earlier: the
+ * guard is in the WHERE so two sweeps racing cannot shorten it either.
+ * Returns whether the row moved.
+ */
+export async function extendXiangqiBroadcastTourEndsAt(
+  slug: string,
+  endsAt: string,
+): Promise<boolean> {
+  const { rowCount } = await getPool().query(
+    `UPDATE xiangqi_broadcast_tours
+        SET ends_at = $2::timestamptz,
+            -- $3 is the same value as text: a reuse of $2 would render
+            -- Postgres's own timestamp format into the payload.
+            payload = jsonb_set(payload, '{endsAt}', to_jsonb($3::text)),
+            updated_at = now()
+      WHERE slug = $1 AND (ends_at IS NULL OR ends_at < $2::timestamptz)`,
+    [slug, endsAt, endsAt],
+  );
+  return (rowCount ?? 0) > 0;
 }
 
 export async function listXiangqiBroadcastScheduledTours(): Promise<
@@ -1068,6 +1110,7 @@ export async function listXiangqiBroadcastScheduledTours(): Promise<
     sourceUrl: row.source_url,
     pollEnabled: row.poll_enabled,
     pollIntervalMs: row.poll_interval_ms,
+    endsAt: row.ends_at?.toISOString() ?? null,
   }));
 }
 

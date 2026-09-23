@@ -651,14 +651,14 @@ async function discoverStatedRounds(
       ...(built.quiet ? { quiet: true as const } : {}),
     };
   }
-  if (built.droppedForCap > 0 || built.droppedUnscheduled > 0) {
-    // The cap is not a loss here (the rest come on the next poll, since the
-    // imported ones drop out), but an unseeded round is: those boards never
-    // land until someone seeds it, so say so where an operator will look.
+  if (built.droppedForCap > 0 || built.roundsAdded.length > 0) {
+    // The cap is not a loss (the rest come on the next poll, since the
+    // imported ones drop out); a new round is worth a line because it has no
+    // start time until someone seeds one.
     console.warn(
       `[xiangqi-broadcast] ${source.provider.name} kept ${built.sources.length} board(s), ` +
         `deferred ${built.droppedForCap} over the manifest cap, ` +
-        `dropped ${built.droppedUnscheduled} for rounds the schedule has not seeded`,
+        `added round(s) ${built.roundsAdded.join(', ') || 'none'} the schedule had not seeded`,
     );
   }
   return {

@@ -16,6 +16,10 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   // professional circuit's spine.
   '2026-xiangqi-league': 'A',
   '2026-league-qualifier': 'A',
+  // 女甲 (the national women's league), dpxq 12776, stage one 09-23..27 in
+  // 绥芬河: the women's side of the same circuit. Graded before it is seeded
+  // so the import lands with player pages on.
+  '2026-womens-xiangqi-league': 'A',
   // 上海杯: marquee open, >¥1M prize, 48 seats by invitation and qualification.
   '2026-shanghai-cup': 'A',
   // 全国象棋团体赛 (July 2026): the national team championship, professional.

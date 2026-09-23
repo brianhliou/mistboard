@@ -387,6 +387,51 @@ test('an unservable broadcast board alerts on the increase and names the rows', 
   assert.doesNotMatch(renderMistboardReadoutMarkdown(legacy), /Broadcasts:/);
 });
 
+test('a top event dpxq lists and we do not relay alerts the day it appears, not every day', () => {
+  const women = {
+    dpxqTour: '12776',
+    name: '2026年全国象棋女子甲级联赛',
+    startsOn: '2026-09-23',
+    endsOn: '2026-09-27',
+    section: 'live' as const,
+    hasGameList: false,
+  };
+  const asian = {
+    ...women,
+    dpxqTour: '12526',
+    name: '亚洲象棋个人锦标赛',
+    section: 'upcoming' as const,
+  };
+  const withEvents = (
+    untrackedEvents: NonNullable<MistboardReadoutFacts['broadcasts']>['untrackedEvents'],
+  ): MistboardReadoutFacts => ({
+    ...emptyFacts,
+    broadcasts: { boards: 376, unservableBoards: 0, unservableBoardIds: [], untrackedEvents },
+  });
+
+  const first = reportWith(withEvents([women]));
+  assert.equal(first.actions[0]!.code, 'broadcast-events-untracked');
+  assert.match(
+    first.actions[0]!.text,
+    /2026年全国象棋女子甲级联赛 \(dpxq 12776, live, 09-23 to 09-27\)/,
+  );
+  assert.match(
+    renderMistboardReadoutMarkdown(first),
+    /Broadcasts: 376 stored boards, 0 unservable, 1 top event on dpxq not relayed/,
+  );
+
+  const second = reportWith(withEvents([women]), first);
+  assert.equal(second.actions.length, 0, 'the standing list does not re-fire');
+
+  const third = reportWith(withEvents([women, asian]), second);
+  assert.equal(third.actions.length, 1);
+  assert.match(third.actions[0]!.text, /dpxq lists 1 top event we do not relay: 亚洲/);
+
+  const unreadable = reportWith(withEvents(null), third);
+  assert.equal(unreadable.actions.length, 0);
+  assert.match(renderMistboardReadoutMarkdown(unreadable), /dpxq index unreadable/);
+});
+
 test('the alert key holds steady while counters move under an unchanged problem', () => {
   const first = reportWith(
     factsWithProduct({ completedGames: 22, previousCompletedGames: 46, humanPlayers: 9 }),

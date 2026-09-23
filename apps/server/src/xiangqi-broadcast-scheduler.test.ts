@@ -4,7 +4,11 @@ import type { XiangqiBroadcastPollResult } from './xiangqi-broadcast-poller.js';
 import {
   clampXiangqiBroadcastScheduleIntervalMs,
   createXiangqiBroadcastScheduler,
+  XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS,
+  XIANGQI_BROADCAST_AFTER_EVENT_WINDOW_MS,
+  XIANGQI_BROADCAST_INDEX_SWEEP_MS,
   type XiangqiBroadcastSchedulerDeps,
+  xiangqiBroadcastPollPhase,
 } from './xiangqi-broadcast-scheduler.js';
 
 function okResult(overrides: Partial<Extract<XiangqiBroadcastPollResult, { ok: true }>> = {}) {
@@ -34,19 +38,27 @@ function failedResult(): XiangqiBroadcastPollResult {
   };
 }
 
+type HarnessTour = {
+  slug: string;
+  sourceUrl: string | null;
+  pollIntervalMs: number;
+  endsAt?: string | null;
+};
+
 type Harness = {
   deps: XiangqiBroadcastSchedulerDeps;
   polls: string[];
   pollSlugs: string[];
   logs: unknown[];
   advance(ms: number): void;
-  setTours(tours: Array<{ slug: string; sourceUrl: string | null; pollIntervalMs: number }>): void;
+  now(): number;
+  setTours(tours: HarnessTour[]): void;
   setPollResult(result: XiangqiBroadcastPollResult): void;
 };
 
 function harness(): Harness {
   let now = 1_000_000;
-  let tours: Array<{ slug: string; sourceUrl: string | null; pollIntervalMs: number }> = [];
+  let tours: HarnessTour[] = [];
   let pollResult: XiangqiBroadcastPollResult = okResult();
   const polls: string[] = [];
   const pollSlugs: string[] = [];
@@ -57,6 +69,7 @@ function harness(): Harness {
     advance(ms) {
       now += ms;
     },
+    now: () => now,
     setTours(next) {
       tours = next;
     },
@@ -65,7 +78,8 @@ function harness(): Harness {
     },
     pollSlugs,
     deps: {
-      listScheduledTours: async () => tours.map((tour) => ({ ...tour, pollEnabled: true })),
+      listScheduledTours: async () =>
+        tours.map((tour) => ({ endsAt: null, ...tour, pollEnabled: true })),
       poll: async (input) => {
         polls.push(input.sourceUrl);
         pollSlugs.push(input.tourSlug);
@@ -231,4 +245,119 @@ test('scheduler asks the live engine layer for every board a poll moved, never f
   h.advance(10_001);
   await bare.tick();
   assert.deepEqual(requested, ['b1', 'b3', 'b4', 'b5']);
+});
+
+test('poll phase follows the end date: as set, slow for three weeks, then done', () => {
+  const end = Date.parse('2026-09-18T15:59:59.000Z');
+  assert.equal(xiangqiBroadcastPollPhase(null, end + 1), 'event');
+  assert.equal(xiangqiBroadcastPollPhase('not a date', end + 1), 'event');
+  assert.equal(xiangqiBroadcastPollPhase('2026-09-18T23:59:59+08:00', end), 'event');
+  assert.equal(xiangqiBroadcastPollPhase('2026-09-18T23:59:59+08:00', end + 1), 'after-event');
+  assert.equal(
+    xiangqiBroadcastPollPhase(
+      '2026-09-18T23:59:59+08:00',
+      end + XIANGQI_BROADCAST_AFTER_EVENT_WINDOW_MS,
+    ),
+    'after-event',
+  );
+  assert.equal(
+    xiangqiBroadcastPollPhase(
+      '2026-09-18T23:59:59+08:00',
+      end + XIANGQI_BROADCAST_AFTER_EVENT_WINDOW_MS + 1,
+    ),
+    'ended',
+  );
+});
+
+test('scheduler polls a finished event every half hour while late records land', async () => {
+  const h = harness();
+  const scheduler = createXiangqiBroadcastScheduler(h.deps);
+  // Ended an hour ago: inside the after-event window.
+  h.setTours([
+    {
+      slug: 'finished',
+      sourceUrl: 'https://fixture.invalid/finished.json',
+      pollIntervalMs: 30_000,
+      endsAt: new Date(h.now() - 60 * 60_000).toISOString(),
+    },
+  ]);
+
+  await scheduler.tick();
+  assert.equal(h.polls.length, 1);
+
+  h.advance(30_000);
+  await scheduler.tick();
+  assert.equal(h.polls.length, 1, 'the operator interval no longer applies after the event');
+
+  h.advance(XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS);
+  await scheduler.tick();
+  assert.equal(h.polls.length, 2);
+  assert.deepEqual(h.logs, []);
+});
+
+test('scheduler stops polling three weeks after the event, logs once, and resumes on a moved end', async () => {
+  const h = harness();
+  const scheduler = createXiangqiBroadcastScheduler(h.deps);
+  const longOver = {
+    slug: 'long-over',
+    sourceUrl: 'https://fixture.invalid/over.json',
+    pollIntervalMs: 30_000,
+    endsAt: new Date(h.now() - XIANGQI_BROADCAST_AFTER_EVENT_WINDOW_MS - 1).toISOString(),
+  };
+  h.setTours([
+    longOver,
+    { slug: 'no-end', sourceUrl: 'https://fixture.invalid/open.json', pollIntervalMs: 30_000 },
+  ]);
+
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs, ['no-end'], 'a tour with no end date polls as set');
+  assert.deepEqual(
+    h.logs.map((log) => (log as { kind: string }).kind),
+    ['poll_stopped_after_event'],
+  );
+
+  h.advance(30_000);
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs, ['no-end', 'no-end']);
+  assert.equal(h.logs.length, 1, 'the stop is logged once, not every tick');
+
+  // The index sweep found the league's next stage: the end date moves out.
+  h.setTours([{ ...longOver, endsAt: new Date(h.now() + 86_400_000).toISOString() }]);
+  h.advance(30_000);
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs.slice(-1), ['long-over']);
+});
+
+test('scheduler sweeps the dpxq index before polling, then every six hours', async () => {
+  const h = harness();
+  let sweeps = 0;
+  const scheduler = createXiangqiBroadcastScheduler({
+    ...h.deps,
+    sweepIndex: async () => {
+      sweeps += 1;
+    },
+  });
+  await scheduler.tick();
+  assert.equal(sweeps, 1);
+  h.advance(60 * 60_000);
+  await scheduler.tick();
+  assert.equal(sweeps, 1);
+  h.advance(XIANGQI_BROADCAST_INDEX_SWEEP_MS);
+  await scheduler.tick();
+  assert.equal(sweeps, 2);
+});
+
+test('a failing index sweep never stops the polls', async () => {
+  const h = harness();
+  h.setTours([
+    { slug: 'cup', sourceUrl: 'https://fixture.invalid/cup.json', pollIntervalMs: 30_000 },
+  ]);
+  const scheduler = createXiangqiBroadcastScheduler({
+    ...h.deps,
+    sweepIndex: async () => {
+      throw new Error('dpxq down');
+    },
+  });
+  await scheduler.tick();
+  assert.deepEqual(h.pollSlugs, ['cup']);
 });

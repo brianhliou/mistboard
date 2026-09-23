@@ -106,6 +106,20 @@ export type MistboardReadoutBroadcasts = {
   // A handful of ids so the comment says which rows, capped so the snapshot
   // stays small when a whole tour breaks.
   unservableBoardIds: string[];
+  // Top events dpxq's tour index lists that no tour of ours polls: live,
+  // upcoming, or just finished with records up. Null when the index could not
+  // be read; absent on snapshots from before 2026-09-23, when the 2026 women's
+  // league was found live on dpxq while our calendar said it had no edition.
+  untrackedEvents?: MistboardReadoutUntrackedEvent[] | null;
+};
+
+export type MistboardReadoutUntrackedEvent = {
+  dpxqTour: string;
+  name: string;
+  startsOn: string;
+  endsOn: string;
+  section: 'live' | 'upcoming' | 'ended';
+  hasGameList: boolean;
 };
 
 export type MistboardReadoutCollectorError = {
@@ -482,6 +496,35 @@ function operationsActions(
       text: `${broadcasts.unservableBoards} of ${broadcasts.boards} stored broadcast board${broadcasts.boards === 1 ? '' : 's'} cannot be replayed by the board API (500 on the page)${sample ? `: ${sample}` : ''}.`,
     });
   }
+  // An event dpxq tracks and we do not is a seed waiting to happen, and a
+  // league's rounds are announced days ahead, so this fires the day a new one
+  // appears, not on the standing list. An unreadable index says nothing.
+  const untracked = broadcasts?.untrackedEvents;
+  if (untracked && untracked.length > 0) {
+    const previousIds = new Set(
+      (previousReport?.broadcasts?.untrackedEvents ?? []).map((event) => event.dpxqTour),
+    );
+    const fresh = untracked.filter((event) => !previousIds.has(event.dpxqTour));
+    if (fresh.length > 0) {
+      const listed = fresh
+        .slice(0, 3)
+        .map(
+          (event) =>
+            `${event.name} (dpxq ${event.dpxqTour}, ${event.section === 'ended' ? 'records up' : event.section}, ${event.startsOn.slice(5)} to ${event.endsOn.slice(5)})`,
+        )
+        .join('; ');
+      actions.push({
+        code: 'broadcast-events-untracked',
+        severity: 'action',
+        dedupeKey: `broadcast-events-untracked:${fresh
+          .map((event) => event.dpxqTour)
+          .sort()
+          .join(',')}`,
+        ownerIssue: null,
+        text: `dpxq lists ${fresh.length} top event${fresh.length === 1 ? '' : 's'} we do not relay: ${listed}${fresh.length > 3 ? '; …' : ''}. Seed and grade it (xiangqi-broadcast-levels.ts).`,
+      });
+    }
+  }
   return actions;
 }
 
@@ -655,8 +698,14 @@ export function renderMistboardReadoutMarkdown(report: MistboardReadoutV1): stri
   // Optional on the type because older snapshots predate the section; the
   // renderer meets those on /readouts.
   if (report.broadcasts) {
+    const untracked = report.broadcasts.untrackedEvents;
     lines.push(
-      `- Broadcasts: ${report.broadcasts.boards} stored boards, ${report.broadcasts.unservableBoards} unservable`,
+      `- Broadcasts: ${report.broadcasts.boards} stored boards, ${report.broadcasts.unservableBoards} unservable` +
+        (untracked === undefined
+          ? ''
+          : untracked === null
+            ? ', dpxq index unreadable'
+            : `, ${untracked.length} top event${untracked.length === 1 ? '' : 's'} on dpxq not relayed`),
     );
   }
   if (report.collectorErrors.length > 0) {
