@@ -146,14 +146,18 @@ describe('the committed CHANGELOG.md', () => {
         }
       }
     }
-    const missing = [...hashes].filter((hash) => {
-      try {
-        execFileSync('git', ['cat-file', '-e', `${hash}^{commit}`], { stdio: 'ignore' });
-        return false;
-      } catch {
-        return true;
-      }
+    // One git process for every hash, not one per hash: the file links 137
+    // commits and gains one or two per release, and 140 spawns took over
+    // vitest's 15 s budget at load average 115 (2026-09-23), failing a release
+    // gate on a test whose cost grows with the page it checks (#445).
+    const report = execFileSync('git', ['cat-file', '--batch-check'], {
+      encoding: 'utf-8',
+      input: [...hashes].map((hash) => `${hash}^{commit}\n`).join(''),
     });
+    const missing = report
+      .split('\n')
+      .filter((line) => / (missing|ambiguous)$/.test(line))
+      .map((line) => line.replace(/\^\{commit\} .*$/, ''));
     expect(missing, 'changelog links commits that do not exist').toEqual([]);
   });
 });
