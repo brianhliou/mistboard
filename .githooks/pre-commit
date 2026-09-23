@@ -52,4 +52,15 @@ if [ -n "$unstaged_paths" ] || [ -n "$untracked_paths" ]; then
   stash_created=1
 fi
 
+# Biome first: about a second, and it is what the release gate fails on most
+# often (a format-only fix costs a push, a CI run and a deploy). --staged reads
+# the staged paths, whose working copies match the index here: the tree is
+# clean, or the --keep-index stash above set the unstaged edits aside.
+# --no-errors-on-unmatched: a commit with no Biome-handled files passes.
+if ! npm run lint -- --staged --no-errors-on-unmatched; then
+  echo "pre-commit: Biome found formatting or lint problems in the staged files." >&2
+  echo "pre-commit: npm run lint:fix fixes formatting; re-stage the files and commit again." >&2
+  exit 1
+fi
+
 npm run typecheck --workspaces --if-present

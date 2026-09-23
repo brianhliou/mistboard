@@ -207,7 +207,33 @@ function buildPlan(files, options) {
       '--workspace',
       '@mistboard/web',
     ]);
-    add('web-unit', 'web unit tests', ['npm', 'run', 'test:unit', '--workspace', '@mistboard/web']);
+    if (web && !boardRender) {
+      // Only the tests whose import graph reaches a changed file (vitest --changed).
+      // Workspace packages resolve to dist/, so a board-render change is invisible
+      // to that graph and keeps the full suite below. Hosted CI runs the full suite
+      // after the push either way.
+      add('web-unit', 'web unit tests related to the change', [
+        'npm',
+        'run',
+        'test:unit',
+        '--workspace',
+        '@mistboard/web',
+        '--',
+        '--changed',
+        ...(options.mode === 'since' ? [options.since] : []),
+      ]);
+      notes.push(
+        'note: web unit tests are scoped to the change (vitest --changed); hosted CI runs the full web suite after the push.',
+      );
+    } else {
+      add('web-unit', 'web unit tests', [
+        'npm',
+        'run',
+        'test:unit',
+        '--workspace',
+        '@mistboard/web',
+      ]);
+    }
   }
 
   if (broad) {
