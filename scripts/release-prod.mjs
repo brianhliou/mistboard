@@ -183,6 +183,7 @@ try {
   }
 
   if (options.push) {
+    catchUpWithMain();
     if (release.drainRequired) {
       runTimed('production drain', [
         'node',
@@ -808,6 +809,75 @@ function prodWaitCommand(headRevision) {
   ];
   if (options.baseUrl) command.push('--base', options.baseUrl);
   return command;
+}
+
+// Main moved while the local gate ran. In the 30 days to 2026-09-22, 30 of
+// 148 failed release attempts were pushes rejected as non-fast-forward, each
+// retried by hand (merge, re-gate, push) at about five minutes. Before the
+// push, read the remote once more: when it moved and this checkout is on
+// HEAD, merge it in, re-run the path-aware gate on this release's own
+// changes, and push the merge commit. One pass, since a second move during a
+// 20-second re-gate is rare and the push still rejects it as before. A merge
+// conflict aborts the merge and fails the release naming the branch to merge,
+// because resolving it is a person's call.
+//
+// The re-gate is the targeted plan for the diff against the moved main (the
+// merged-in commits passed hosted CI on their own). When that plan would be
+// ci:quick again, only lint and typecheck run here: they catch what a merge
+// breaks (a type that moved, a format the merge re-wrapped), and hosted CI
+// runs everything on the merge commit before the release calls it done.
+function catchUpWithMain() {
+  if (options.head !== 'HEAD') return;
+  const remote = readRemoteTargetRevision();
+  if (!remote || !release.targetRevision || revisionMatches(remote, release.targetRevision)) {
+    return;
+  }
+  git(['fetch', '--quiet', options.remote, `refs/heads/${options.targetBranch}`]);
+  const contained = spawnSync('git', ['merge-base', '--is-ancestor', remote, 'HEAD'], {
+    cwd: workdir,
+    stdio: 'ignore',
+  });
+  if (contained.status === 0) {
+    release.targetRevision = remote;
+    return;
+  }
+  console.log(
+    `main moved during the gate: ${shortRevision(release.targetRevision)} -> ${shortRevision(
+      remote,
+    )}; merging it in before the push`,
+  );
+  const merge = spawnSync('git', ['merge', '--no-edit', remote], {
+    cwd: workdir,
+    stdio: 'inherit',
+  });
+  if (merge.status !== 0) {
+    spawnSync('git', ['merge', '--abort'], { cwd: workdir, stdio: 'ignore' });
+    throw new Error(
+      `main moved to ${shortRevision(remote)} during the gate and merging it conflicts; ` +
+        `run git merge ${options.remote}/${options.targetBranch}, resolve, and re-run the release`,
+    );
+  }
+  release.headRevision = git(['rev-parse', '--verify', 'HEAD']);
+  release.expectedRevision = release.headRevision;
+  release.targetRevision = remote;
+  release.adopted = [];
+  const changed = readChangedFiles({ base: remote, head: release.headRevision });
+  const gate = localGateFor(changed, false);
+  const commands =
+    gate.kind === 'full' || gate.kind === 'broad'
+      ? [
+          ['npm', 'run', 'lint'],
+          ['npm', 'run', 'typecheck'],
+        ]
+      : gate.commands;
+  console.log(
+    `re-gate after merge: ${gate.kind} (${gate.reason})${
+      commands === gate.commands ? '' : ', trimmed to lint + typecheck; hosted CI covers the rest'
+    }`,
+  );
+  for (const command of commands) {
+    runTimed(`local ${command.slice(2).join(' ')} (after merge)`, command);
+  }
 }
 
 function pushCommand(headRevision) {
