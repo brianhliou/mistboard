@@ -35,6 +35,19 @@ command railway run -s Postgres -- sh run-seed-v2.sh \
 `--book` selects the manual (`shi-qing-ya-qu`, `ju-zhong-mi`). Volume count comes
 from the mined data, so a flat book seeds as one volume.
 
+Staff picks is set with `set-study-featured.mjs`, by study id, through the same
+`railway run -s Postgres` wrapper as the visibility script:
+
+```
+command railway run -s Postgres -- sh -c \
+  'DATABASE_URL="$DATABASE_PUBLIC_URL" node scripts/xiangqi-compositions/set-study-featured.mjs \
+     --ids a,b,c'        # add --apply to write
+```
+
+`--ids` describes the WHOLE list: anything featured and absent is unfeatured, so
+the picks stay a doorway rather than an ever-growing catalog. `--add` appends
+instead. Re-running does not reorder a pick that is already there.
+
 `seed-v2.mjs` only CREATES. Re-pointing an existing chapter is a PATCH against
 the live study, never a re-seed: delete-and-recreate loses the chapter id, its
 permalink, and its place in the ordering.
