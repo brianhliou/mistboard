@@ -71,7 +71,8 @@ Conventions:
 
 ### Watching and review
 
-- A broadcast game seats its players above and below the board, the way lichess does: the name, the team, and a link to the player's page. Names in the seat strips on other reviews are clickable now too ([c2fdf73c](https://github.com/brianhliou/mistboard/commit/c2fdf73c))
+- The broadcasts page follows lichess's: a side menu (Broadcasts, Calendar, Pro players, About), the featured event, then live, upcoming and past events, each card saying where the event stands ("Round 5 · Sep 18") and who the strongest players are. A calendar lists the top events coming up, and an about page says where the games come from. On an event page, board cards show each player and their score above and below the board, the game list stacks both players with scores, and new toggles show only live games or hide every result ([2d0e1cd6](https://github.com/brianhliou/mistboard/commit/2d0e1cd6))
+- A broadcast game seats its players above and below the board, the way lichess does: the name, the team, and a link to the player's page. Names in the seat strips on other reviews are clickable now too ([4f437059](https://github.com/brianhliou/mistboard/commit/4f437059))
 - Finished broadcast games get the engine analysis site games get, computed once on the server and shown to everyone: the review opens with the advantage chart and the move marks, and the round grid shows an evaluation gauge beside each board (toggle it off above the grid). Older games fill in over a few days ([3dbee330](https://github.com/brianhliou/mistboard/commit/3dbee330))
 - A team league round on a broadcast reads as its matches: each match shows the two teams and the score over its slow and blitz games, then its tables in order, and a Teams tab ranks the league by its own rules (match points, then game points). Games carry their table, their real start time and their time control ([8ba1a2e7](https://github.com/brianhliou/mistboard/commit/8ba1a2e7))
 - The xiangqi analysis board runs Pikafish in the browser, at full strength on its own net: the same engine that reviews finished games on the server, now in the local panel (which names it and shows the one-time 51 MB net download as it lands); fortress, atomic and duck keep Fairy-Stockfish ([9a8bb492](https://github.com/brianhliou/mistboard/commit/9a8bb492))
@@ -136,6 +137,7 @@ Conventions:
 
 ### Fixed
 
+- Seat colours follow the game's own pieces everywhere: red and black for xiangqi and its variants, red and blue for jungle, white and black for fog chess, in light and dark mode, including the eval bar, the engine's line scores, the advantage chart and the move-time bars ([aea952f6](https://github.com/brianhliou/mistboard/commit/aea952f6))
 - In dark mode, the player names under a chess game on the homepage viewer are plain text like every other variant's, instead of boxed rows with a green bar on the winner ([4a9187e9](https://github.com/brianhliou/mistboard/commit/4a9187e9))
 - A fog chess game written with standard castling moves (as engines and other tools write them) now loads into a study past the castle, where it used to stop ([849b4c24](https://github.com/brianhliou/mistboard/commit/849b4c24))
 - Reviews of red-and-black games read red and black in dark mode: the advantage chart's Black area is dark rather than cream, the engine's line scores are red or black chips, and the Middlegame and Endgame lines show. Broadcast round cards with an eval gauge keep their board, and the gauge is red and black ([a10a0ea5](https://github.com/brianhliou/mistboard/commit/a10a0ea5))
