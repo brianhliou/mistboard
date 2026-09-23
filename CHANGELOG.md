@@ -135,6 +135,7 @@ Conventions:
 
 ### Fixed
 
+- Reviews of red-and-black games read red and black in dark mode: the advantage chart's Black area is dark rather than cream, the engine's line scores are red or black chips, and the Middlegame and Endgame lines show. Broadcast round cards with an eval gauge keep their board, and the gauge is red and black ([a10a0ea5](https://github.com/brianhliou/mistboard/commit/a10a0ea5))
 - A tournament or archive game that ran past a repetition or the no-capture count plays to its real end on the review board: those draws are an arbiter's call, and the board used to stop there and call the record truncated. Finished broadcast boards with no round date no longer show the time we imported them as the game's age ([f879a5b1](https://github.com/brianhliou/mistboard/commit/f879a5b1))
 - Broadcast games from a league's later stages land on their own: a round the source names now appears when its first record does, where it used to wait for someone to schedule it, and an event's dates follow the source's tournament index as the next stage is announced ([89ec708c](https://github.com/brianhliou/mistboard/commit/89ec708c))
 - The fog chess bot's belief state records en passant on the fog rule rather than standard legality, so a capture fog chess allows no longer drops the true board from its model; the engine fix from 2026-09-10 reaches production with the engine pin ([509e389a](https://github.com/brianhliou/mistboard/commit/509e389a))
