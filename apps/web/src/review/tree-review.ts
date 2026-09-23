@@ -464,6 +464,9 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  first-mover slot, which is White on the chess boards). Absent or null for a
    *  seat with no page, which renders as plain text. */
   playerProfiles?: { red?: ProfileTarget | null; black?: ProfileTarget | null };
+  /** A muted line after each seat strip's name, keyed like `players`: the
+   *  team for a broadcast game, where lichess puts title and rating. */
+  seatDetails?: { red?: string; black?: string };
   /**
    * Draw the names as strips above and below the board. OPT-IN, and separate
    * from `players` on purpose: every game-review surface already passes
@@ -742,6 +745,9 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const profiles = config.playerProfiles;
     const nearProfile = bottomIsRed ? profiles?.red : profiles?.black;
     const farProfile = bottomIsRed ? profiles?.black : profiles?.red;
+    const details = config.seatDetails;
+    const nearDetail = bottomIsRed ? details?.red : details?.black;
+    const farDetail = bottomIsRed ? details?.black : details?.red;
     // A nameless seat falls back to a word. Before the flip binds, no colour word
     // is true, so it falls back to the move order instead of picking a side.
     const inkWord = (ink: string, isFirstMover: boolean): string => {
@@ -763,6 +769,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       ink: string,
       isFirstMover: boolean,
       slot: 'top' | 'bottom',
+      detail: string | undefined,
     ): void => {
       el.className = `review-seat review-seat--${slot} review-seat--${ink}`;
       el.replaceChildren();
@@ -775,11 +782,17 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         ? playerNameEl(shown, profile ?? null, 'review-seat__name')
         : playerNameEl(inkWord(ink, isFirstMover), null, 'review-seat__name');
       el.append(disc, label);
+      if (shown && detail) {
+        const muted = document.createElement('span');
+        muted.className = 'review-seat__detail';
+        muted.textContent = detail;
+        el.append(muted);
+      }
     };
     // The first-mover SEAT is the one `perspective(false)` names, whatever ink it
     // ended up with; it is the bottom strip exactly when the board is unflipped.
-    paint(topSeat, far, farProfile, topInk, !bottomIsRed, 'top');
-    paint(bottomSeat, near, nearProfile, bottomInk, bottomIsRed, 'bottom');
+    paint(topSeat, far, farProfile, topInk, !bottomIsRed, 'top', farDetail);
+    paint(bottomSeat, near, nearProfile, bottomInk, bottomIsRed, 'bottom', nearDetail);
   }
   if (topSeat && bottomSeat) {
     // The strips are taken OUT of the flow and anchored to the wrapper. Adding

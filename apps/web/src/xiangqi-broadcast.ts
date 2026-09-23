@@ -113,6 +113,8 @@ type BroadcastBoardResponse = {
   views: { truth: StandardXiangqiPlayerView };
   history: { truth: BroadcastHistorySnapshot[] };
   liveEval?: BroadcastLiveEval;
+  /** Each side's player page, when the player has one. */
+  playerSlugs?: { red: string | null; black: string | null };
 };
 
 // Per-round board counts computed by the server; they drive the status icons

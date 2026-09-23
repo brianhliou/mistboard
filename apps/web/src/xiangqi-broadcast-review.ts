@@ -19,6 +19,7 @@ import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
 import './xiangqi-postgame.css';
 import { t } from './i18n/catalog.js';
+import type { ProfileTarget } from './profile-link.js';
 import { fetchCachedGameAnalysis } from './review/game-analysis.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
 import { downloadRow } from './review/underboard-tabs.js';
@@ -48,6 +49,9 @@ export type BroadcastReviewInput = {
     tour: { name: string; nameEn?: string };
     round: { name: string; nameEn?: string; startsAt?: string };
   } | null;
+  /** Each side's player page slug, when the player has one (the board API
+   *  resolves them against the player index). */
+  playerSlugs?: { red: string | null; black: string | null };
 };
 
 export function mountBroadcastBoardReview(
@@ -76,12 +80,13 @@ export function mountBroadcastBoardReview(
     subline: [roundName, `${t('broadcast.board')} ${data.board.boardNumber}`, playedOn]
       .filter(Boolean)
       .join(' · '),
-    players: [
-      { color: 'red', name: red },
-      { color: 'black', name: black },
-    ],
+    // The players are named in the strips above and below the board, the way
+    // lichess seats a broadcast game; the card keeps the event and the result.
     status: result.label,
   });
+  const slugs = data.playerSlugs;
+  const profileFor = (slug: string | null | undefined): ProfileTarget | null =>
+    slug ? { kind: 'player', slug } : null;
 
   root.replaceChildren(buildNav());
   mountXiangqiReview(root, {
@@ -96,6 +101,9 @@ export function mountBroadcastBoardReview(
     moves,
     record: true,
     players: { red, black },
+    seatLabels: true,
+    playerProfiles: { red: profileFor(slugs?.red), black: profileFor(slugs?.black) },
+    seatDetails: { red: teamOf(data.board.red), black: teamOf(data.board.black) },
     result,
     shareExtra: [downloadRow([exportLink(data.board.id)])],
     studyExport: {
@@ -171,6 +179,11 @@ function primary(entity: { name: string; nameEn?: string }): string {
 
 function secondary(entity: { name: string; nameEn?: string }): string | null {
   return entity.nameEn?.trim() && entity.nameEn.trim() !== entity.name ? entity.name : null;
+}
+
+/** The player's team, English first, for the strip's muted line. */
+function teamOf(player: XiangqiBroadcastPlayerTag): string | undefined {
+  return player.federationEn?.trim() || player.federation?.trim() || undefined;
 }
 
 function playerLabel(player: XiangqiBroadcastPlayerTag): string {

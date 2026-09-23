@@ -26,7 +26,9 @@ import type { GameParticipant } from './game-display.js';
 /** A player-name destination: a member profile, or a bot profile. */
 export type ProfileTarget =
   | { readonly kind: 'user'; readonly handle: string }
-  | { readonly kind: 'bot'; readonly botId: string };
+  | { readonly kind: 'bot'; readonly botId: string }
+  /** A professional's page built from the broadcast archive (/players/<slug>). */
+  | { readonly kind: 'player'; readonly slug: string };
 
 /** Seat identity as the server emits it on postgame rows and the live TV feed.
  *  Both fields absent/null means "no page" — the common case (guests, corpus
@@ -40,9 +42,9 @@ export type ProfileIdentity = {
 // /bot/<id> for a bot. Encoded because a handle can legally hold characters that
 // need escaping in a path segment.
 function profileHref(target: ProfileTarget): string {
-  return target.kind === 'user'
-    ? `/@/${encodeURIComponent(target.handle)}`
-    : `/bot/${encodeURIComponent(target.botId)}`;
+  if (target.kind === 'user') return `/@/${encodeURIComponent(target.handle)}`;
+  if (target.kind === 'bot') return `/bot/${encodeURIComponent(target.botId)}`;
+  return `/players/${encodeURIComponent(target.slug)}`;
 }
 
 /** The target for a seat carrying explicit `handle`/`botId` identity (postgame

@@ -82,3 +82,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* The strip lets clicks through to the board around it; a name that links to a
+   profile or a player page takes them back, or the link is decoration. */
+.review-seat .player-name-link {
+  pointer-events: auto;
+}
+
+.review-seat__detail {
+  overflow: hidden;
+  color: var(--site-muted);
+  font-weight: 400;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}

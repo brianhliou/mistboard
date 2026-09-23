@@ -492,6 +492,27 @@ function boardEvaluation(
   return null;
 }
 
+// The player index folds every stored board, so a board page does not rebuild it
+// per view: a minute's staleness only delays a brand-new player's link.
+const PLAYER_INDEX_TTL_MS = 60_000;
+let playerIndexCache: {
+  at: number;
+  players: Promise<Awaited<ReturnType<typeof persistence.listXiangqiPlayers>>>;
+} | null = null;
+
+function cachedXiangqiPlayers() {
+  const now = Date.now();
+  if (!playerIndexCache || now - playerIndexCache.at > PLAYER_INDEX_TTL_MS) {
+    const players = persistence.listXiangqiPlayers();
+    // A failed read must not stick for a minute; the next view retries.
+    players.catch(() => {
+      if (playerIndexCache?.players === players) playerIndexCache = null;
+    });
+    playerIndexCache = { at: now, players };
+  }
+  return playerIndexCache.players;
+}
+
 export async function xiangqiBroadcastRoundStreamForApi(
   tourSlug: string,
   roundId: string,
@@ -935,7 +956,18 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, payload);
+    // Each side's player page, for the name strips around the board. The same
+    // name -> slug match the player page uses for its opponents.
+    const players = await cachedXiangqiPlayers();
+    const slugOf = (name: string): string | null =>
+      players.find((player) => player.name === name)?.slug ?? null;
+    writeJson(response, 200, {
+      ...payload,
+      playerSlugs: {
+        red: slugOf(payload.board.red.name),
+        black: slugOf(payload.board.black.name),
+      },
+    });
     return true;
   }
 
