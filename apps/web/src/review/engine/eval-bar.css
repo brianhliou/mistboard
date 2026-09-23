@@ -73,14 +73,17 @@
 
    Every xiangqi-kernel review surface belongs here, flip variants included: the
    default light/near-black gauge is a CHESS presentation, and a variant whose
-   pieces are red and black reading as white and black is a straight mismatch. */
+   pieces are red and black reading as white and black is a straight mismatch.
+   The broadcast round grid's card gauges too (xqb-card-gauge): they shipped
+   white and black because the grid is not inside a review. */
 .xiangqi-review .review-eval-bar,
 .fortress-xiangqi-review .review-eval-bar,
 .atomic-xiangqi-review .review-eval-bar,
 .duck-xiangqi-review .review-eval-bar,
 .dark-xiangqi-review .review-eval-bar,
 .jieqi-review .review-eval-bar,
-.banqi-review .review-eval-bar {
+.banqi-review .review-eval-bar,
+.xqb-card-gauge .review-eval-bar {
   background: color-mix(in srgb, #34302e 85%, var(--site-panel, #fff));
 }
 .xiangqi-review .review-eval-bar__fill,
@@ -89,7 +92,8 @@
 .duck-xiangqi-review .review-eval-bar__fill,
 .dark-xiangqi-review .review-eval-bar__fill,
 .jieqi-review .review-eval-bar__fill,
-.banqi-review .review-eval-bar__fill {
+.banqi-review .review-eval-bar__fill,
+.xqb-card-gauge .review-eval-bar__fill {
   background: color-mix(in srgb, #c0563f 72%, var(--site-panel, #fff));
 }
 

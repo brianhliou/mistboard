@@ -261,6 +261,45 @@
   background: color-mix(in srgb, var(--site-muted) 20%, transparent);
   color: var(--site-text);
 }
+/* The light/dark chips above are chess (White/Black). A variant whose pieces
+   are red and black wears red and black, the eval bar's and the chart's inks;
+   the jungle family's second side is blue. Keyed by the review page classes
+   eval-bar.css uses. */
+:is(
+  .xiangqi-review,
+  .fortress-xiangqi-review,
+  .atomic-xiangqi-review,
+  .duck-xiangqi-review,
+  .dark-xiangqi-review,
+  .jieqi-review,
+  .banqi-review,
+  .jungle-review,
+  .jungle-flip-review
+) .engine-panel__line-eval.is-red {
+  background: #c0563f;
+  color: #fff;
+}
+:is(
+    .xiangqi-review,
+    .fortress-xiangqi-review,
+    .atomic-xiangqi-review,
+    .duck-xiangqi-review,
+    .dark-xiangqi-review,
+    .jieqi-review,
+    .banqi-review
+  )
+  .engine-panel__line-eval.is-black {
+  background: #34302e;
+  color: #f2ede3;
+}
+:is(.jungle-review, .jungle-flip-review) .engine-panel__line-eval.is-black {
+  background: #34557a;
+  color: #fff;
+}
+/* On the dark panel a black chip needs an edge to read as a chip. */
+:root[data-effective-theme="dark"] .engine-panel__line-eval.is-black {
+  box-shadow: inset 0 0 0 1px rgba(242, 237, 227, 0.22);
+}
 .engine-panel__line-pv {
   flex: 1 1 auto;
   color: var(--site-muted);

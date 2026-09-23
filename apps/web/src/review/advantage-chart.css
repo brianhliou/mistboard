@@ -50,13 +50,13 @@
 }
 /* The axis and dividers now cross opaque fills as well as bare ground, so they
    are drawn in the page colour rather than a muted ink: a grey line disappears
-   into the black half, while the ground colour reads against every fill. */
-.advantage-chart__axis {
-  opacity: 0.5;
-}
+   into the black half, while the ground colour reads against every fill. The
+   half strength sits on each line rather than the group, so dark mode can give
+   the dividers their own. */
 .advantage-chart__mid {
   stroke: var(--site-bg);
   stroke-width: 0.5;
+  opacity: 0.5;
 }
 /* Game-phase dividers + rotated segment labels (lichess: Opening / Middlegame /
    Endgame read downward at each phase start). Labels are HTML overlays so the
@@ -65,6 +65,14 @@
   stroke: var(--site-bg);
   stroke-width: 1;
   vector-effect: non-scaling-stroke;
+  opacity: 0.5;
+}
+/* Dark theme: the page colour is near-black, so a divider drawn in it at half
+   strength was invisible on the ground and read only where it crossed a light
+   fill. A light ink instead, which reads on the ground and on both fills. */
+:root[data-effective-theme="dark"] .advantage-chart__phase {
+  stroke: color-mix(in srgb, var(--site-text) 55%, transparent);
+  opacity: 1;
 }
 .advantage-chart__phase-label {
   position: absolute;
@@ -96,13 +104,15 @@
 .advantage-chart__area--white {
   fill: #e9e5dc;
 }
-/* Dark theme: a dark fill vanishes against the dark panel; Black's area reads as
-   a light neutral instead (lichess dark does the same). */
+/* Dark theme: Black's area stays black, lifted to a charcoal so it still reads
+   as a filled shape against the near-black ground. It was a light neutral
+   (lichess dark's white/black trick), which on a Red/Black game read as Red
+   against WHITE: the wrong side's colour (Brian, 2026-09-23). */
 :root[data-effective-theme="dark"] .advantage-chart__area--black {
-  fill: #d8d2c6;
+  fill: #574f48;
 }
 :root[data-effective-theme="dark"] .advantage-chart__zone--black {
-  --advantage-zone-ink: #d8d2c6;
+  --advantage-zone-ink: #574f48;
 }
 :root[data-effective-theme="dark"] .advantage-chart__area--red {
   fill: #d4674c;

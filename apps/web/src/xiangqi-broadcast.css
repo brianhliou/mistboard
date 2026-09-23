@@ -510,14 +510,19 @@
   color: var(--site-text);
 }
 
+/* Red and Black, the review engine panel's xiangqi chips (engine-panel.css). */
 .xqb-engine-line-eval.is-red {
-  background: #f2ede3;
-  color: #2b2724;
+  background: #c0563f;
+  color: #fff;
 }
 
 .xqb-engine-line-eval.is-black {
   background: #34302e;
   color: #f2ede3;
+}
+
+:root[data-effective-theme="dark"] .xqb-engine-line-eval.is-black {
+  box-shadow: inset 0 0 0 1px rgba(242, 237, 227, 0.22);
 }
 
 .xqb-engine-line-eval.is-even {
@@ -1307,18 +1312,28 @@
   letter-spacing: 0.04em;
 }
 
-/* The round grid's eval gauge: the review's bar in its in-flow gauge mode
-   (review-shell__gauge), a thin column flush against the card's board. */
+/* The round grid's eval gauge: the review's bar, in flow, a thin column
+   flush against the card's board. The row aligns to the top so the board
+   keeps its own aspect-ratio height (stretching it to a row with no height
+   collapsed it), and only the gauge stretches to match. */
 .xqb-card-board-row {
   display: grid;
-  grid-template-columns: 6px minmax(0, 1fr);
+  grid-template-columns: 7px minmax(0, 1fr);
   gap: 4px;
-  align-items: stretch;
+  align-items: start;
 }
 
 .xqb-card-gauge {
   position: relative;
+  align-self: stretch;
   min-height: 0;
+}
+
+.xqb-card-gauge .review-eval-bar {
+  position: relative;
+  width: 100%;
+  height: 100%;
+  /* Colours: the review's xiangqi palette (review/engine/eval-bar.css). */
 }
 
 .xqb-gauges-off .xqb-card-board-row {

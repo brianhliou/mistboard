@@ -1708,13 +1708,15 @@ function boardCard(board: BroadcastBoardSummary, playedOn?: string | null): HTML
   foot.textContent = [`${plyCount(board)} plies`, fresh].filter(Boolean).join(' / ');
 
   // lichess's "Evaluation gauge": a thin bar beside the board, the review's
-  // own bar in its in-flow gauge mode, filled by the same win-probability
-  // curve. Rendered whenever there is an eval; the panel's toggle hides them.
+  // own bar and colours, filled by the same win-probability curve. Rendered
+  // whenever there is an eval; the panel's toggle hides them. Not the review's
+  // gauge-column class: review-shell.css hides that outside the review layout,
+  // and the card board collapsed to nothing beside it in prod.
   const evaluation = board.evaluation;
   let boardSlot: HTMLElement = boardEl;
   if (evaluation) {
     const gauge = document.createElement('div');
-    gauge.className = 'xqb-card-gauge review-shell__gauge';
+    gauge.className = 'xqb-card-gauge';
     const bar = document.createElement('div');
     bar.className = 'review-eval-bar';
     bar.setAttribute('aria-hidden', 'true');
