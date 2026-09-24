@@ -54,7 +54,13 @@ export type MatchSegment<B extends MatchBoard> = {
   wins: [number, number];
 };
 
+/** Which rules a match is scored by: the 2026 league's (a table's slow game
+ *  or its blitz playoff, a deciding game, match points 3/1.5/0) or a team
+ *  championship's (one slow game a table, match points 2/1/0). */
+export type MatchFormat = 'league' | 'championship';
+
 export type TeamMatch<B extends MatchBoard> = {
+  format: MatchFormat;
   key: string;
   /** The source's match name, "北京-江苏", and its English form. */
   name: string;
@@ -95,12 +101,14 @@ export type RoundByMatch<B extends MatchBoard> = {
 export function groupRoundByMatch<B extends MatchBoard>(
   boards: readonly B[],
 ): RoundByMatch<B> | null {
-  if (!boards.some((board) => board.details?.match)) return null;
+  if (!boards.some((board) => isMatchName(board.details?.match))) {
+    return groupChampionshipRound(boards);
+  }
   const byMatch = new Map<string, B[]>();
   const other: B[] = [];
   for (const board of boards) {
     const name = board.details?.match;
-    if (!name || !board.red.federation || !board.black.federation) {
+    if (!isMatchName(name) || !board.red.federation || !board.black.federation) {
       other.push(board);
       continue;
     }
@@ -174,6 +182,7 @@ export function groupRoundByMatch<B extends MatchBoard>(
           ? deciderResult
           : null;
     matches.push({
+      format: 'league',
       key: name,
       name,
       ...(list[0]?.details?.matchEn ? { nameEn: list[0].details.matchEn } : {}),
@@ -195,6 +204,66 @@ export function groupRoundByMatch<B extends MatchBoard>(
   return { matches, other };
 }
 
+/**
+ * A team championship's round (the 2026 national team championship): dpxq
+ * tags every game with the section ("男子组"), not the match, so the match is
+ * the two teams a game pits against each other, one slow game a table. A
+ * round where some game has no team on a side is left ungrouped rather than
+ * guessed at.
+ */
+function groupChampionshipRound<B extends MatchBoard>(
+  boards: readonly B[],
+): RoundByMatch<B> | null {
+  const sectioned = boards.filter((board) => board.details?.match);
+  if (sectioned.length === 0) return null;
+  if (sectioned.some((board) => !board.red.federation || !board.black.federation)) return null;
+  const byPair = new Map<string, B[]>();
+  const other: B[] = boards.filter((board) => !board.details?.match);
+  for (const board of sectioned) {
+    const pair = [board.red.federation!, board.black.federation!].sort().join('|');
+    if (board.red.federation === board.black.federation) {
+      other.push(board);
+      continue;
+    }
+    const list = byPair.get(pair) ?? [];
+    list.push(board);
+    byPair.set(pair, list);
+  }
+  const matches: TeamMatch<B>[] = [];
+  for (const list of byPair.values()) {
+    const sorted = [...list].sort(compareInMatch);
+    const first = sorted[0]!;
+    const teams: [MatchTeam, MatchTeam] = [teamOf(first.red), teamOf(first.black)];
+    const slow = segment(sorted, teams);
+    const score: [number, number] = [slow.score[0], slow.score[1]];
+    const finished = sorted.every((board) => board.status === 'complete');
+    const winner: 0 | 1 | null =
+      finished && score[0] !== score[1] ? (score[0] > score[1] ? 0 : 1) : null;
+    const name = `${teams[0].name}-${teams[1].name}`;
+    matches.push({
+      format: 'championship',
+      key: name,
+      name,
+      ...(teams[0].nameEn && teams[1].nameEn
+        ? { nameEn: `${teams[0].nameEn}-${teams[1].nameEn}` }
+        : {}),
+      teams,
+      slow,
+      blitz: { boards: [], score: [0, 0], wins: [0, 0] },
+      decider: null,
+      score,
+      winner,
+      deciderDrawn: false,
+      finished,
+      complete: finished,
+    });
+  }
+  matches.sort(
+    (a, b) => lowestBoardNumber(a) - lowestBoardNumber(b) || a.name.localeCompare(b.name),
+  );
+  return { matches, other };
+}
+
 export type TeamStandingsRow = {
   team: MatchTeam;
   matches: number;
@@ -205,14 +274,21 @@ export type TeamStandingsRow = {
   matchPoints: number;
   /** 总局分: every game, 2 a win, 1 a draw. */
   gamePoints: number;
-  /** 慢棋总局分 and 慢棋总胜局, the last two tiebreaks. */
+  /** 慢棋总局分 and 慢棋总胜局, the league's last two tiebreaks. */
   slowGamePoints: number;
   slowWins: number;
+  /** 对手总场分: the match points of every team this one played, a team
+   *  championship's first tiebreak. */
+  opponentsMatchPoints: number;
+  /** 总胜局: games won, the championship's last tiebreak. */
+  gameWins: number;
 };
 
 /** League table from finished matches, ranked the way the 规程 ranks it. */
 export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[] {
   const rows = new Map<string, TeamStandingsRow>();
+  const opponents = new Map<string, string[]>();
+  let format: MatchFormat = 'league';
   const rowFor = (team: MatchTeam): TeamStandingsRow => {
     let row = rows.get(team.name);
     if (!row) {
@@ -226,6 +302,8 @@ export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[]
         gamePoints: 0,
         slowGamePoints: 0,
         slowWins: 0,
+        opponentsMatchPoints: 0,
+        gameWins: 0,
       };
       rows.set(team.name, row);
     }
@@ -245,38 +323,67 @@ export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[]
       // A short match counts when its winner is beyond doubt; its table points
       // are then the ones on record.
       if (!match.complete && match.winner === null) continue;
+      format = match.format;
+      const points = MATCH_POINTS[match.format];
       const sides = match.teams.map(rowFor) as [TeamStandingsRow, TeamStandingsRow];
       sides.forEach((row, index) => {
+        const other = match.teams[index === 0 ? 1 : 0]!.name;
+        opponents.set(row.team.name, [...(opponents.get(row.team.name) ?? []), other]);
         row.matches += 1;
         // 总局分 is the tables' points; the deciding game settles the match only.
         row.gamePoints += match.score[index]!;
         row.slowGamePoints += match.slow.score[index]!;
         row.slowWins += match.slow.wins[index]!;
+        row.gameWins += match.slow.wins[index]! + match.blitz.wins[index]!;
         if (match.winner === null) {
           row.draws += 1;
-          row.matchPoints += MATCH_DRAW_POINTS;
+          row.matchPoints += points.draw;
         } else if (match.winner === index) {
           row.wins += 1;
-          row.matchPoints += MATCH_WIN_POINTS;
+          row.matchPoints += points.win;
         } else {
           row.losses += 1;
         }
       });
     }
   }
+  // Opponents' match points need every team's total first.
+  for (const row of rows.values()) {
+    row.opponentsMatchPoints = (opponents.get(row.team.name) ?? []).reduce(
+      (sum, name) => sum + (rows.get(name)?.matchPoints ?? 0),
+      0,
+    );
+  }
+  const tiebreak =
+    format === 'championship'
+      ? // 场分，对手总场分，总局分，胜场，总胜局 (the championship's 规程)
+        (x: TeamStandingsRow, y: TeamStandingsRow) =>
+          y.opponentsMatchPoints - x.opponentsMatchPoints ||
+          y.gamePoints - x.gamePoints ||
+          y.wins - x.wins ||
+          y.gameWins - x.gameWins
+      : // 场分，总局分，慢棋总局分，慢棋总胜局 (the league's)
+        (x: TeamStandingsRow, y: TeamStandingsRow) =>
+          y.gamePoints - x.gamePoints ||
+          y.slowGamePoints - x.slowGamePoints ||
+          y.slowWins - x.slowWins;
   return [...rows.values()].sort(
     (x, y) =>
-      y.matchPoints - x.matchPoints ||
-      y.gamePoints - x.gamePoints ||
-      y.slowGamePoints - x.slowGamePoints ||
-      y.slowWins - x.slowWins ||
-      x.team.name.localeCompare(y.team.name),
+      y.matchPoints - x.matchPoints || tiebreak(x, y) || x.team.name.localeCompare(y.team.name),
   );
 }
 
-// The 2026 league's 规程: 团体场分 胜3 和1.5 负0, 个人局分 胜2 和1 负0.
-const MATCH_WIN_POINTS = 3;
-const MATCH_DRAW_POINTS = 1.5;
+/** The format the matches in these boards are scored by, when any are. */
+export function matchFormatOf(boards: readonly MatchBoard[]): MatchFormat | null {
+  return groupRoundByMatch(boards)?.matches[0]?.format ?? null;
+}
+
+// 团体场分 by format: the 2026 league's 胜3 和1.5 负0; the national team
+// championship's 胜2 和1 负0. 个人局分 is 胜2 和1 负0 in both.
+const MATCH_POINTS: Record<MatchFormat, { win: number; draw: number }> = {
+  league: { win: 3, draw: 1.5 },
+  championship: { win: 2, draw: 1 },
+};
 const GAME_WIN_POINTS = 2;
 const GAME_DRAW_POINTS = 1;
 
@@ -354,6 +461,17 @@ function segment<B extends MatchBoard>(
     }
   }
   return { boards, score, wins };
+}
+
+/**
+ * A match names its two sides ("北京-江苏"). dpxq files other events' group in
+ * the same tag: the 2026 national team championship's games all say "男子组"
+ * (men's section), which read as one match of every team, grouped nothing and
+ * left an empty Teams tab. Those events score by their own rules (a Swiss,
+ * match points 2/1/0) anyway, so until they have them they stay one grid.
+ */
+export function isMatchName(name: string | undefined): name is string {
+  return Boolean(name && /\S\s*[-–]\s*\S/.test(name));
 }
 
 /** Points with a half as "½": 1.5 match points read "1½". */

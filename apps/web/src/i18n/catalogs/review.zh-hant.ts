@@ -486,6 +486,8 @@ export const ZH_HANT_REVIEW = {
   'broadcast.deciderDrawn': '決勝超快棋和棋',
   'broadcast.ongoing': '進行中',
   'broadcast.toMove': '輪到走棋',
+  'broadcast.teamsNoteChampionship':
+    '團體排名根據直播棋譜按比賽規程計算：每台一局，個人局分勝2和1負0；團體場分勝2和1負0；場分相同比對手總場分、總局分、勝場、總勝局。可能與官方成績不同。',
   'broadcast.otherGames': '其他對局',
   'broadcast.sectionNav': '直播選單',
   'broadcast.calendar': '賽程',

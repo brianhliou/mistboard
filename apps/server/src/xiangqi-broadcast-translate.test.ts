@@ -240,3 +240,18 @@ test('a player with no team gets no federationEn key at all', () => {
   const tag: XiangqiBroadcastPlayerTag = { name: '王天一' };
   assert.equal('federationEn' in translatedXiangqiBroadcastPlayerTag(tag), false);
 });
+
+test('translateXiangqiTeamName glosses the national team championship sports bodies', () => {
+  // The 2026 national team championship's teams are provincial sports bodies;
+  // left to pinyin they welded into one token each.
+  const cases: Array<[string, string]> = [
+    ['河北省体育局棋牌运动中心', 'Hebei Sports Bureau Board Games Centre'],
+    ['浙江省智力运动管理中心', 'Zhejiang Mind Sports Centre'],
+    ['广东省二沙体育训练中心', 'Guangdong Ersha Sports Training Centre'],
+    ['黑龙江省社会体育指导与棋牌运动管理中心', 'Heilongjiang Sports and Board Games Centre'],
+    ['新疆维吾尔自治区体育局', 'Xinjiang Sports Bureau'],
+    // A bracketed alias keeps its brackets.
+    ['北京棋院（北京市棋牌运动管理中心）', 'Beijing Chess Academy (Beijing Board Games Centre)'],
+  ];
+  for (const [zh, en] of cases) assert.equal(translateXiangqiTeamName(zh), en, zh);
+});

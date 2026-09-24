@@ -486,6 +486,8 @@ export const ZH_HANS_REVIEW = {
   'broadcast.deciderDrawn': '决胜超快棋和棋',
   'broadcast.ongoing': '进行中',
   'broadcast.toMove': '轮到走棋',
+  'broadcast.teamsNoteChampionship':
+    '团体排名根据直播棋谱按比赛规程计算：每台一局，个人局分胜2和1负0；团体场分胜2和1负0；场分相同比对手总场分、总局分、胜场、总胜局。可能与官方成绩不同。',
   'broadcast.otherGames': '其他对局',
   'broadcast.sectionNav': '直播菜单',
   'broadcast.calendar': '赛程',

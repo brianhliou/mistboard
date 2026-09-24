@@ -175,6 +175,26 @@ const TEAM_GLOSSARY: Array<[string, string]> = [
   // 杭州环境集团队. Left to pinyin they rendered as one welded token each
   // ("Changshuwenlujiudian").
   ['群众体育促进中心', 'Mass Sports Promotion Centre'],
+  // The 2026 national team championship is played by provincial sports
+  // bodies, whose names are administrative vocabulary rather than brands. Left
+  // to pinyin they welded into one token ("Hebei Tiyujuqipaiyundongzhongxin");
+  // glossed, they read as what they are, short where English allows.
+  ['社会体育指导与棋牌运动管理中心', 'Sports and Board Games Centre'],
+  ['社会体育运动发展中心', 'Sports Development Centre'],
+  ['文化体育广电和旅游局', 'Culture, Sports and Tourism Bureau'],
+  ['生产建设兵团', 'Production and Construction Corps'],
+  ['维吾尔自治区', ''],
+  ['棋牌运动管理中心', 'Board Games Centre'],
+  ['棋牌运动中心', 'Board Games Centre'],
+  ['智力运动管理中心', 'Mind Sports Centre'],
+  ['智力运动中心', 'Mind Sports Centre'],
+  ['智力运动队', 'Mind Sports Team'],
+  ['体育训练中心', 'Sports Training Centre'],
+  ['全民健身中心', 'Fitness Centre'],
+  ['体育总会', 'Sports Federation'],
+  ['体育局', 'Sports Bureau'],
+  ['二沙', 'Ersha'],
+  ['玻璃', 'Glass'],
   ['文旅酒店', 'Culture and Tourism Hotel'],
   ['环境集团', 'Environment Group'],
   ['象棋俱乐部', 'Xiangqi Club'],
@@ -450,6 +470,13 @@ function translateGlossaryText(
       if (cleaned.length > 0) tokens.push(cleaned);
       continue;
     }
+    if (char === '（' || char === '）') {
+      // A bracketed alias (北京棋院（北京市棋牌运动管理中心）) keeps its brackets.
+      flushResidual();
+      tokens.push(char === '（' ? '(' : ')');
+      i += 1;
+      continue;
+    }
     if (/[\p{P}\p{S}]/u.test(char)) {
       // CJK punctuation acts as a separator.
       flushResidual();
@@ -461,7 +488,13 @@ function translateGlossaryText(
   }
   flushResidual();
 
-  const result = tokens.join(' ').replace(/\s+/g, ' ').trim();
+  const result = tokens
+    .join(' ')
+    .replace(/\s+/g, ' ')
+    .replace(/\( /g, '(')
+    .replace(/ \)/g, ')')
+    .replace(/\(\)/g, '')
+    .trim();
   return result.length > 0 ? result : undefined;
 }
 

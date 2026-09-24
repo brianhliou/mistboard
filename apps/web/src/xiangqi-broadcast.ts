@@ -39,6 +39,7 @@ import {
   groupRoundByMatch,
   type MatchTeam,
   matchBoards,
+  matchFormatOf,
   type TeamMatch,
   teamStandings,
 } from './xiangqi-broadcast-matches.js';
@@ -1013,8 +1014,10 @@ function renderEvent(
   return renderEventShell(data, state, body, '');
 }
 
+// A team event is one whose games form team matches: the league names its
+// matches, a team championship's are the pairs of teams its games state.
 function isTeamEvent(data: BroadcastRoundResponse): boolean {
-  return data.boards.some((board) => board.details?.match);
+  return (groupRoundByMatch(data.boards)?.matches.length ?? 0) > 0;
 }
 
 /** Which event page a shell shows: a later page for the same round keeps it. */
@@ -1621,7 +1624,10 @@ function renderTeamsTab(data: BroadcastRoundResponse, state: EventPageState): HT
   }
   const note = document.createElement('p');
   note.className = 'xqb-note';
-  note.textContent = t('broadcast.teamsNote');
+  note.textContent =
+    matchFormatOf(data.boards) === 'championship'
+      ? t('broadcast.teamsNoteChampionship')
+      : t('broadcast.teamsNote');
   wrap.append(note);
   if (state.standingsBoards === null) {
     wrap.append(emptyState(t('broadcast.loadingStandings')));

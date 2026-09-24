@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   formatPoints,
   groupRoundByMatch,
+  isMatchName,
   type MatchBoard,
   teamStandings,
 } from './xiangqi-broadcast-matches.js';
@@ -170,6 +171,66 @@ describe('records the source lacks', () => {
     expect(teamStandings(boards).map((row) => [row.team.name, row.matchPoints])).toEqual([
       [ZJ, 3],
       [CS, 0],
+    ]);
+  });
+});
+
+describe('a team championship (the section in the match tag)', () => {
+  // The 2026 national team championship: dpxq tags every game "男子组", so
+  // the match is the pair of teams a game states; one slow game a table.
+  const champ = (
+    red: [string, string],
+    black: [string, string],
+    result: XiangqiBroadcastResult,
+    table: number,
+    roundId: string,
+  ) => ({
+    ...game(red, black, result, slow(table), roundId),
+    details: { match: '男子组', table, game: 1, kind: 'standard' as const },
+  });
+  const HB = '河北';
+  const GD = '广东';
+  const JS = '江苏';
+  const SH = '上海';
+
+  it('reads the section as no match name, and pairs the games by their two teams', () => {
+    expect(isMatchName('男子组')).toBe(false);
+    expect(isMatchName('北京-江苏')).toBe(true);
+    const round = [
+      champ(['甲', HB], ['乙', GD], '1-0', 1, 'r1'),
+      champ(['丙', GD], ['丁', HB], '1/2-1/2', 2, 'r1'),
+      champ(['戊', JS], ['己', SH], '0-1', 1, 'r1'),
+    ];
+    const grouped = groupRoundByMatch(round)!;
+    expect(grouped.matches.map((m) => [m.format, m.teams.map((t) => t.name)])).toEqual([
+      ['championship', [HB, GD]],
+      ['championship', [JS, SH]],
+    ]);
+    // Tables score 2 a win and 1 a draw: 河北 3-1, 上海 2-0.
+    expect(grouped.matches.map((m) => [m.score, m.winner])).toEqual([
+      [[3, 1], 0],
+      [[0, 2], 1],
+    ]);
+  });
+
+  it("scores matches 2 / 1 / 0 and breaks ties on the opponents' match points", () => {
+    const boards = [
+      // Round 1: 河北 beats 广东, 江苏 draws 上海.
+      champ(['甲', HB], ['乙', GD], '1-0', 1, 'r1'),
+      champ(['丙', JS], ['丁', SH], '1/2-1/2', 1, 'r1'),
+      // Round 2: 河北 draws 江苏, 广东 beats 上海.
+      champ(['甲', HB], ['丙', JS], '1/2-1/2', 1, 'r2'),
+      champ(['乙', GD], ['丁', SH], '1-0', 1, 'r2'),
+    ];
+    const rows = teamStandings(boards);
+    expect(rows.map((row) => [row.team.name, row.matchPoints, row.opponentsMatchPoints])).toEqual([
+      // 河北 3 points (2 + 1); its opponents 广东 (2) and 江苏 (2) total 4.
+      [HB, 3, 4],
+      // 广东 and 江苏 both 2, their opponents' points both 4 and game points
+      // both 2; match wins decide it, 广东 1 against 江苏 0.
+      [GD, 2, 4],
+      [JS, 2, 4],
+      [SH, 1, 4],
     ]);
   });
 });
