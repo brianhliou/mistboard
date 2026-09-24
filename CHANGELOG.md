@@ -139,6 +139,7 @@ Conventions:
 
 ### Fixed
 
+- Misty's bot profile names the engine its fog chess games actually run, 1.6; it had still said 1.5 since the August upgrade ([4096375c](https://github.com/brianhliou/mistboard/commit/4096375c))
 - Seat colours follow the game's own pieces everywhere: red and black for xiangqi and its variants, red and blue for jungle, white and black for fog chess, in light and dark mode, including the eval bar, the engine's line scores, the advantage chart and the move-time bars ([aea952f6](https://github.com/brianhliou/mistboard/commit/aea952f6))
 - In dark mode, the player names under a chess game on the homepage viewer are plain text like every other variant's, instead of boxed rows with a green bar on the winner ([4a9187e9](https://github.com/brianhliou/mistboard/commit/4a9187e9))
 - A fog chess game written with standard castling moves (as engines and other tools write them) now loads into a study past the castle, where it used to stop ([849b4c24](https://github.com/brianhliou/mistboard/commit/849b4c24))
