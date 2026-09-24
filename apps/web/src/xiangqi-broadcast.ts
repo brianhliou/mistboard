@@ -154,6 +154,9 @@ type BroadcastRoundResponse = {
   round: XiangqiBroadcastRound;
   boards: BroadcastBoardSummary[];
   rounds?: BroadcastRoundWithStats[];
+  /** Player page slugs by Chinese name (the round endpoint only; stream pushes
+   *  leave them out, so the page keeps what it has). */
+  playerSlugs?: Record<string, string>;
 };
 
 type BroadcastSyncLogSummary = {
@@ -322,6 +325,8 @@ type EventPageState = {
   /** A team event's Boards filter: one team's games, or every game (null). */
   team?: string | null;
   setTeam?: (team: string | null) => void;
+  /** Player page slugs by Chinese name, gathered from every round read. */
+  playerSlugs?: Map<string, string>;
   loadStandings?: () => void;
 };
 
@@ -344,7 +349,11 @@ async function mountRoundPage(
   // main thread for hundreds of milliseconds on exactly the rounds that push
   // most. Cards survive across paints and only the changed ones are rebuilt.
   const cards: BoardCardCache = new Map();
-  const state: EventPageState = { tab: eventTabFromUrl() };
+  const state: EventPageState = { tab: eventTabFromUrl(), playerSlugs: new Map() };
+  const addSlugs = (slugs: Record<string, string> | undefined): void => {
+    for (const [name, slug] of Object.entries(slugs ?? {})) state.playerSlugs?.set(name, slug);
+  };
+  addSlugs(data.playerSlugs);
   state.setTab = (tab) => {
     state.tab = tab;
     const url = new URL(window.location.href);
@@ -372,7 +381,10 @@ async function mountRoundPage(
             round.id,
           )}`,
         )
-          .then((response) => response.boards)
+          .then((response) => {
+            addSlugs(response.playerSlugs);
+            return response.boards;
+          })
           .catch(() => [] as BroadcastBoardSummary[]),
       ),
     ).then((rounds) => {
@@ -1734,8 +1746,22 @@ function renderPlayersTab(data: BroadcastRoundResponse, state: EventPageState): 
     rank.textContent = String(index + 1);
     const player = document.createElement('td');
     player.className = 'xqb-standings-player';
-    const name = document.createElement('strong');
-    name.textContent = `${row.player.title ? `${row.player.title} ` : ''}${primaryName(row.player)}`;
+    // The name opens the player's page (lichess's Players tab opens a player),
+    // with the title tag the game list shows.
+    const slug = state.playerSlugs?.get(row.player.name);
+    const name = document.createElement(slug ? 'a' : 'strong');
+    name.className = 'xqb-standings-name';
+    if (slug && name instanceof HTMLAnchorElement)
+      name.href = `/players/${encodeURIComponent(slug)}`;
+    const title =
+      row.player.title ?? playerTitleFor({ name: row.player.name, nameEn: row.player.nameEn });
+    if (title) {
+      const tag = document.createElement('span');
+      tag.className = 'xqb-player-title';
+      tag.textContent = title;
+      name.append(tag, ' ');
+    }
+    name.append(primaryName(row.player));
     player.append(name);
     const zh = playerNameZh(row.player);
     const team = primaryFederation(row.player);
@@ -2314,27 +2340,18 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   // whenever there is an eval; the panel's toggle hides them. Not the review's
   // gauge-column class: review-shell.css hides that outside the review layout,
   // and the card board collapsed to nothing beside it in prod.
-  const evaluation = board.evaluation;
-  let boardSlot: HTMLElement = boardEl;
-  if (evaluation) {
-    const gauge = document.createElement('div');
-    gauge.className = 'xqb-card-gauge';
-    const bar = document.createElement('div');
-    bar.className = 'review-eval-bar';
-    bar.setAttribute('aria-hidden', 'true');
-    const fill = document.createElement('div');
-    fill.className = 'review-eval-bar__fill';
-    const redShare = winProbRed(evaluation.cp, evaluation.mate);
-    fill.style.height = `${(redShare * 100).toFixed(1)}%`;
-    bar.classList.toggle('review-eval-bar--red-ahead', redShare >= 0.5);
-    bar.append(fill);
-    gauge.append(bar);
-    gauge.title = formatEval(evaluation.cp, evaluation.mate);
-    boardSlot = document.createElement('div');
-    boardSlot.className = 'xqb-card-board-row';
-    // Right of the board, where lichess puts it.
-    boardSlot.append(boardEl, gauge);
-  }
+  // Every card keeps the gauge's column, filled or not, so every board in the
+  // grid is the same size (a board without an eval yet was a gauge wider).
+  const gauge = document.createElement('div');
+  gauge.className = 'xqb-card-gauge';
+  const share = gaugeShare(board);
+  if (share) gauge.append(evalBarEl(share.red));
+  else gauge.classList.add('xqb-card-gauge-empty');
+  if (share) gauge.title = share.label;
+  const boardSlot = document.createElement('div');
+  boardSlot.className = 'xqb-card-board-row';
+  // Right of the board, where lichess puts it.
+  boardSlot.append(boardEl, gauge);
   card.append(
     cardSeat('black', board.black, seatScore(board, 'black')),
     boardSlot,
@@ -2400,22 +2417,44 @@ function railGauge(board: BroadcastBoardSummary): HTMLElement {
   const gauge = document.createElement('span');
   gauge.className = 'xqb-rail-gauge';
   gauge.setAttribute('aria-hidden', 'true');
-  const evaluation = board.evaluation;
-  if (!evaluation) {
+  const share = gaugeShare(board);
+  if (!share) {
     gauge.classList.add('xqb-rail-gauge-empty');
     return gauge;
   }
+  gauge.append(evalBarEl(share.red));
+  gauge.title = share.label;
+  return gauge;
+}
+
+/**
+ * What a board's gauge shows: the stored evaluation of its last position, or,
+ * for a finished draw not analysed yet, level (a drawn game ends even, and a
+ * blank pill beside ½-½ read as broken). A decisive game with no evaluation
+ * yet stays empty until the sweep reaches it.
+ */
+function gaugeShare(board: BroadcastBoardSummary): { red: number; label: string } | null {
+  const evaluation = board.evaluation;
+  if (evaluation) {
+    return {
+      red: winProbRed(evaluation.cp, evaluation.mate),
+      label: formatEval(evaluation.cp, evaluation.mate),
+    };
+  }
+  if (board.status === 'complete' && board.result === '1/2-1/2') return { red: 0.5, label: '½-½' };
+  return null;
+}
+
+function evalBarEl(redShare: number): HTMLElement {
   const bar = document.createElement('span');
   bar.className = 'review-eval-bar';
+  bar.setAttribute('aria-hidden', 'true');
   const fill = document.createElement('span');
   fill.className = 'review-eval-bar__fill';
-  const redShare = winProbRed(evaluation.cp, evaluation.mate);
   fill.style.height = `${(redShare * 100).toFixed(1)}%`;
   bar.classList.toggle('review-eval-bar--red-ahead', redShare >= 0.5);
   bar.append(fill);
-  gauge.append(bar);
-  gauge.title = formatEval(evaluation.cp, evaluation.mate);
-  return gauge;
+  return bar;
 }
 
 // The relay-games analog: every board in the same round, current pairing

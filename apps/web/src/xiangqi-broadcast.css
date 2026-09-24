@@ -2139,3 +2139,93 @@
   border-radius: 3px;
   background: color-mix(in srgb, var(--site-text) 28%, transparent);
 }
+
+/* An empty card gauge keeps its column (every board the same size) and
+   draws a faint track, like the game list's empty pill. */
+.xqb-card-gauge-empty {
+  border-radius: 2px;
+  background: color-mix(in srgb, var(--site-text) 10%, transparent);
+}
+
+.xqb-card-gauge .review-eval-bar {
+  display: block;
+}
+
+/* Packed tighter (lichess's grid): rows touch, the names hug their board, and
+   the gauge sits nearly flush against it. The hover card's padding is the only
+   space between boards. */
+.xqb-event-content .xqb-board-grid {
+  gap: 0 4px;
+}
+
+.xqb-event-content .xqb-board-card {
+  gap: 2px;
+  padding: 4px 4px 5px;
+}
+
+.xqb-event-content .xqb-card-seat {
+  min-height: 18px;
+}
+
+.xqb-event-content .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr) 6px;
+  gap: 3px;
+}
+
+.xqb-event-content .xqb-gauges-off .xqb-card-board-row,
+.xqb-gauges-off .xqb-event-content .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+/* Bigger boards, less between them: the panel's side padding and the space
+   between columns go to the boards themselves. */
+.xqb-event:not(.xqb-event-board-open) .xqb-event-content {
+  padding: 0 12px 16px;
+}
+
+.xqb-event-content > .xqb-event-header {
+  margin: 0 -12px;
+}
+
+.xqb-event-content > .xqb-tabs,
+.xqb-event-content > .xqb-event-body > .xqb-boards-head {
+  padding-inline: 4px;
+}
+
+.xqb-event-content .xqb-board-grid {
+  gap: 0 2px;
+}
+
+.xqb-event-content .xqb-board-card {
+  padding: 3px 2px 4px;
+}
+
+.xqb-event-content .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr) 5px;
+  gap: 2px;
+}
+
+/* The card gauge a touch thicker, closer to lichess's. */
+.xqb-event-content .xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr) 8px;
+}
+
+/* Slightly rounded ends on the card gauge, filled or empty. */
+.xqb-card-gauge .review-eval-bar,
+.xqb-card-gauge-empty {
+  border-radius: 3px;
+}
+
+/* Players tab: the name is the way to the player's page. */
+a.xqb-standings-name {
+  color: var(--site-heading);
+  font-weight: 700;
+  text-decoration: none;
+}
+
+a.xqb-standings-name:hover,
+a.xqb-standings-name:focus-visible {
+  color: var(--site-accent-strong);
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}

@@ -1110,7 +1110,18 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, payload);
+    // Each player's page, by Chinese name, for the Players tab's links (lichess
+    // opens a player from there). Only players who have a page are listed.
+    const players = await cachedXiangqiPlayers();
+    const slugByName = new Map(players.map((player) => [player.name, player.slug]));
+    const playerSlugs: Record<string, string> = {};
+    for (const board of payload.boards) {
+      for (const seat of [board.red, board.black]) {
+        const slug = slugByName.get(seat.name);
+        if (slug) playerSlugs[seat.name] = slug;
+      }
+    }
+    writeJson(response, 200, { ...payload, playerSlugs });
     return true;
   }
 

@@ -466,7 +466,11 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 't', 'r');
 
-    const gauges = root.querySelectorAll('.xqb-card-gauge');
+    // Every card keeps its gauge column so the boards line up; only the
+    // evaluated one is filled.
+    expect(root.querySelectorAll('.xqb-card-gauge')).toHaveLength(2);
+    expect(root.querySelectorAll('.xqb-card-gauge-empty')).toHaveLength(1);
+    const gauges = root.querySelectorAll('.xqb-card-gauge:not(.xqb-card-gauge-empty)');
     expect(gauges).toHaveLength(1);
     // Black well ahead: Red's share of the bar is small.
     const fill = gauges[0]?.querySelector<HTMLElement>('.review-eval-bar__fill');
@@ -1227,5 +1231,34 @@ describe('team league round (lichess: one grid, a team filter, matches on Teams)
     fixtures[1]!.querySelector<HTMLButtonElement>('.xqb-match-open')!.click();
     expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Boards');
     expect(cards()).toHaveLength(1);
+  });
+});
+
+describe('eval gauge for a finished draw not analysed yet', () => {
+  afterEach(() => vi.unstubAllGlobals());
+
+  it('draws it level rather than blank, in the list and on the card', async () => {
+    stubFetchJson(() => ({
+      ...ROUND,
+      boards: [
+        fixtureBoard({
+          n: 1,
+          red: 'R1',
+          black: 'B1',
+          moves: [],
+          status: 'complete',
+          result: '1/2-1/2',
+        }),
+      ],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    const pill = root.querySelector<HTMLElement>(
+      '.xqb-side-rail .xqb-rail-gauge .review-eval-bar__fill',
+    );
+    expect(pill?.style.height).toBe('50.0%');
+    const card = root.querySelector<HTMLElement>('.xqb-card-gauge .review-eval-bar__fill');
+    expect(card?.style.height).toBe('50.0%');
   });
 });
