@@ -113,6 +113,16 @@
   color: var(--site-text);
 }
 
+.game-meta-card__headline-link {
+  color: inherit;
+  text-decoration: none;
+}
+
+.game-meta-card__headline-link:hover,
+.game-meta-card__headline-link:focus-visible {
+  text-decoration: underline;
+}
+
 .game-meta-card__variant {
   color: var(--site-accent, #237960);
   text-transform: none;

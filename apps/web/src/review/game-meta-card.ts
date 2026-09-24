@@ -91,6 +91,8 @@ export type GameMetaCardConfig = {
   glyph?: string;
   /** "5+0 • Casual" style segments; falsy segments are skipped. */
   headline: Array<string | null | undefined>;
+  /** Makes the headline text a link (a broadcast game's event page). */
+  headlineHref?: string;
   /** Accented trailing headline segment (the variant name). */
   variantName?: string;
   /** Subline under the headline (e.g. "3 days ago", "Waiting for opponent"). */
@@ -146,7 +148,15 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
   const headline = document.createElement('p');
   headline.className = 'game-meta-card__headline';
   const segments = config.headline.filter((segment): segment is string => Boolean(segment));
-  headline.append(document.createTextNode(segments.join(' • ')));
+  if (config.headlineHref && segments.length > 0) {
+    const link = document.createElement('a');
+    link.className = 'game-meta-card__headline-link';
+    link.href = config.headlineHref;
+    link.textContent = segments.join(' • ');
+    headline.append(link);
+  } else {
+    headline.append(document.createTextNode(segments.join(' • ')));
+  }
   if (config.variantName) {
     if (segments.length > 0) headline.append(document.createTextNode(' • '));
     const variant = document.createElement('span');

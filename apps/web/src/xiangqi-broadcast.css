@@ -1700,3 +1700,58 @@
 .xqb-results-off .xqb-match-team-won {
   text-decoration: none;
 }
+
+/* ── Event page, lichess's relay layout ──────────────────────────────────────
+   The game list is the left column from the top of the page; the header, the
+   tabs and the section sit in the column beside it, and an open board takes
+   that whole column. The page uses the window's width the way the review
+   pages do, so a board has room to fill the height. */
+.xqb-shell.xqb-event {
+  max-width: max(1440px, min(94vw, 2100px));
+}
+
+.xqb-event-header {
+  border-bottom: 0;
+  padding: 0;
+  align-items: center;
+}
+
+.xqb-event-header h1 {
+  font-size: 26px;
+  line-height: 1.15;
+}
+
+.xqb-event-header .xqb-hero-meta {
+  font-size: 13px;
+  font-weight: 600;
+  text-transform: none;
+}
+
+.xqb-rail-back {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.xqb-rail-back-arrow {
+  font-size: 22px;
+  line-height: 0.8;
+  color: var(--site-muted);
+}
+
+.xqb-rail-back:hover .xqb-rail-back-arrow,
+.xqb-rail-back:focus-visible .xqb-rail-back-arrow {
+  color: var(--site-accent-strong);
+}
+
+.xqb-boards-head {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 6px 18px;
+}
+
+.xqb-boards-head .xqb-round-meta {
+  margin: 0;
+}

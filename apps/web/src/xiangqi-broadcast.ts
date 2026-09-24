@@ -45,6 +45,8 @@ import {
   broadcastSectionLayout,
   calendarEventRow,
   fetchBroadcastCalendar,
+  mountXiangqiBroadcastAbout,
+  mountXiangqiBroadcastCalendar,
   topBroadcastPlayers,
 } from './xiangqi-broadcast-pages.js';
 import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
@@ -224,12 +226,13 @@ function trackBroadcastOpened(props: BroadcastOpenedProps): void {
 }
 
 export async function mountXiangqiBroadcastIndex(root: HTMLElement): Promise<void> {
-  setBroadcastRoot(root, t('broadcast.loadingBroadcasts'));
+  const signal = setBroadcastRoot(root, t('broadcast.loadingBroadcasts'));
   try {
     const [data, calendar] = await Promise.all([
       fetchJson<BroadcastIndexResponse>('/api/xiangqi/broadcasts'),
       fetchBroadcastCalendar(),
     ]);
+    if (signal.aborted) return;
     trackBroadcastOpened({ surface: 'index' });
     const paint = (): void => root.replaceChildren(buildNav(), renderIndex(data, calendar));
     paint();
@@ -247,11 +250,12 @@ export async function mountXiangqiBroadcastTour(
   root: HTMLElement,
   tourSlug: string,
 ): Promise<void> {
-  setBroadcastRoot(root, t('broadcast.loadingBroadcast'));
+  const signal = setBroadcastRoot(root, t('broadcast.loadingBroadcast'));
   try {
     const data = await fetchJson<BroadcastTourResponse>(
       `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}`,
     );
+    if (signal.aborted) return;
     const round = defaultRound(data.rounds);
     if (!round) {
       trackBroadcastOpened({ surface: 'tour', tour_slug: tourSlug });
@@ -275,7 +279,7 @@ export async function mountXiangqiBroadcastRound(
   tourSlug: string,
   roundId: string,
 ): Promise<void> {
-  setBroadcastRoot(root, t('broadcast.loadingRound'));
+  beginEventPage(root, `${tourSlug}/${roundId}`, t('broadcast.loadingRound'));
   try {
     await mountRoundPage(root, tourSlug, roundId, 'round');
   } catch (err) {
@@ -322,9 +326,12 @@ async function mountRoundPage(
   roundId: string,
   surface: 'tour' | 'round',
 ): Promise<void> {
+  const signal = currentPageSignal();
   let data = await fetchJson<BroadcastRoundResponse>(
     `/api/xiangqi/broadcasts/${encodeURIComponent(tourSlug)}/rounds/${encodeURIComponent(roundId)}`,
   );
+  if (signal?.aborted) return;
+  rememberRound(data);
   trackBroadcastOpened({ surface, tour_slug: tourSlug, round_id: roundId });
   // Every stream push repaints the whole round, and a card is expensive:
   // boardCard replays its game from move one and builds a board SVG. Twenty
@@ -364,7 +371,8 @@ async function mountRoundPage(
       paint();
     });
   };
-  const paint = (): void => root.replaceChildren(buildNav(), renderEvent(data, cards, state));
+  const paint = (): void =>
+    keepRailScroll(root, () => root.replaceChildren(buildNav(), renderEvent(data, cards, state)));
   if (state.tab === 'players' || state.tab === 'teams') state.loadStandings();
   paint();
   // A skin or layout change rewrites every board SVG, so no cached card
@@ -375,6 +383,7 @@ async function mountRoundPage(
   });
   connectRoundStream(tourSlug, roundId, roundVersion(data), (next) => {
     data = next;
+    rememberRound(next);
     paint();
   });
 }
@@ -383,12 +392,28 @@ export async function mountXiangqiBroadcastBoard(
   root: HTMLElement,
   boardId: string,
 ): Promise<void> {
-  setBroadcastRoot(root, t('broadcast.loadingBoard'));
+  // Opened from its own round's page, the board takes over the content column
+  // while the header and the game list stay where they are.
+  // The cached round is used only when its page is the one on screen: a
+  // board opened any other way fetches its round fresh.
+  const shownKey = root.querySelector<HTMLElement>('.xqb-event')?.dataset.roundKey;
+  const known =
+    lastRound &&
+    roundKey(lastRound) === shownKey &&
+    lastRound.boards.some((board) => board.id === boardId)
+      ? lastRound
+      : null;
+  const signal = beginEventPage(root, known ? roundKey(known) : null, t('broadcast.loadingBoard'));
   try {
     let data = await fetchJson<BroadcastBoardResponse>(
       `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}`,
     );
-    const context = await fetchBoardRoundContext(data.board.tourSlug, data.board.roundId);
+    let context =
+      known && known.round.id === data.board.roundId
+        ? known
+        : await fetchBoardRoundContext(data.board.tourSlug, data.board.roundId);
+    if (signal.aborted) return;
+    if (context) rememberRound(context);
     trackBroadcastOpened({
       surface: 'board',
       tour_slug: data.board.tourSlug,
@@ -398,22 +423,62 @@ export async function mountXiangqiBroadcastBoard(
     // A finished game is a game to study, so it gets the same review surface as
     // an archive game (engine, chart, notation, share); a live one keeps the
     // streaming replay, which follows the head as moves arrive.
-    const paint = (animateHeadAdvance = false): void => {
-      if (data.board.status === 'complete') {
-        mountBroadcastBoardReview(root, data, {
-          rail: context ? sideRail(context, data.board.id, roundSwitcherFor(data, context)) : null,
-          context,
-        });
+    // A finished board's review owns an engine worker and page-wide
+    // listeners. Every repaint (a stream push, a notation or piece-set change)
+    // used to mount a new review over the old one and leave the old one's
+    // worker running; the previous one is destroyed first now, and the last
+    // one goes when the page does.
+    let review: { destroy(): void } | null = null;
+    signal.addEventListener('abort', () => review?.destroy(), { once: true });
+    const body = document.createElement('div');
+    body.className = 'xqb-board-view';
+    const state: EventPageState = {
+      tab: 'boards',
+      setTab: (tab) => navigateBroadcast(roundHref(data.board.tourSlug, data.board.roundId, tab)),
+    };
+    const paintShell = (): void => {
+      if (!context) {
+        root.replaceChildren(buildNav(), body);
         return;
       }
-      root.replaceChildren(buildNav(), renderBoardReplay(data, context, { animateHeadAdvance }));
+      const shellContext = context;
+      keepRailScroll(root, () =>
+        root.replaceChildren(
+          buildNav(),
+          renderEventShell(shellContext, state, body, data.board.id),
+        ),
+      );
     };
-    paint();
-    installBroadcastAppearanceRefresh(() => paint());
+    const paintBoard = (animateHeadAdvance = false): void => {
+      review?.destroy();
+      review = null;
+      const embedded = context !== null;
+      if (data.board.status === 'complete') {
+        review = mountBroadcastBoardReview(body, data, { context, embedded });
+        return;
+      }
+      const replay = renderBoardReplay(data, context, { animateHeadAdvance, embedded });
+      if (embedded) body.replaceChildren(replay);
+      else body.replaceChildren(buildNav(), replay);
+    };
+    paintShell();
+    paintBoard();
+    installBroadcastAppearanceRefresh(() => {
+      paintShell();
+      paintBoard();
+    });
     connectBoardStream(boardId, boardVersion(data), data.timeline.length, (next, animate) => {
       data = next;
-      paint(animate);
+      paintBoard(animate);
     });
+    // The game list and the header follow the round while a board is open.
+    if (context) {
+      connectRoundStream(data.board.tourSlug, data.board.roundId, roundVersion(context), (next) => {
+        context = next;
+        rememberRound(next);
+        paintShell();
+      });
+    }
   } catch (err) {
     renderError(root, err);
   }
@@ -436,9 +501,183 @@ async function fetchBoardRoundContext(
   }
 }
 
-function setBroadcastRoot(root: HTMLElement, loadingLabel: string): void {
+function setBroadcastRoot(root: HTMLElement, loadingLabel: string): AbortSignal {
+  const signal = beginBroadcastPage(root);
   root.classList.add('landing-page', 'xiangqi-broadcast-route');
   root.replaceChildren(buildNav(), buildLoadingState(loadingLabel));
+  return signal;
+}
+
+/**
+ * Start an event page. When the same round's shell is already on screen (a
+ * board opened from its round, or the way back), only the content column
+ * shows the loading state; the header and the game list stay put.
+ */
+function beginEventPage(root: HTMLElement, key: string | null, loadingLabel: string): AbortSignal {
+  const shell = key ? root.querySelector<HTMLElement>('.xqb-event') : null;
+  const body = shell?.dataset.roundKey === key ? shell?.querySelector('.xqb-event-body') : null;
+  if (!body) return setBroadcastRoot(root, loadingLabel);
+  const signal = beginBroadcastPage(root);
+  body.replaceChildren(buildLoadingState(loadingLabel));
+  return signal;
+}
+
+// The last round an event page showed, kept fresh by its stream: a board
+// opened from it paints inside the same shell without fetching the round again.
+let lastRound: BroadcastRoundResponse | null = null;
+
+function rememberRound(data: BroadcastRoundResponse): void {
+  if (data.round.id !== '') lastRound = data;
+}
+
+/**
+ * Repaint without moving the game list: its scroll position survives when the
+ * same round is still on screen, as long as the open board stays in view.
+ */
+function keepRailScroll(root: HTMLElement, repaint: () => void): void {
+  const before = root.querySelector<HTMLElement>('.xqb-rail-list');
+  const beforeKey = before?.closest<HTMLElement>('.xqb-event')?.dataset.roundKey;
+  const top = before?.scrollTop ?? 0;
+  repaint();
+  const list = root.querySelector<HTMLElement>('.xqb-rail-list');
+  if (!before || !list || list.closest<HTMLElement>('.xqb-event')?.dataset.roundKey !== beforeKey) {
+    return;
+  }
+  const restore = (): void => {
+    list.scrollTop = top;
+    const row = list.querySelector<HTMLElement>('.xqb-rail-row-current');
+    if (!row) return;
+    const rowTop = row.offsetTop - list.scrollTop;
+    if (rowTop < 0 || rowTop + row.offsetHeight > list.clientHeight) {
+      list.scrollTop = Math.max(0, row.offsetTop - (list.clientHeight - row.offsetHeight) / 2);
+    }
+  };
+  // After sideRail's own centring, which runs a frame later too.
+  if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(restore);
+  else restore();
+}
+
+// ---------------------------------------------------------------------------
+// In-place navigation, lichess's: moving between the index, an event and a
+// board swaps the page without loading a new one. A broadcast page owns what
+// it starts (its event stream, its listeners, a board's review and engine
+// worker) through one signal; the next page aborts it first. Before this each
+// click was a full load, and the only cleanup anything had was `pagehide`.
+
+let pageAbort: AbortController | null = null;
+
+/** Abort the previous broadcast page's work and start this one's. */
+function beginBroadcastPage(root: HTMLElement): AbortSignal {
+  pageAbort?.abort();
+  pageAbort = new AbortController();
+  // A board review adds its own route classes; the next page must not keep
+  // them.
+  root.classList.remove('xiangqi-postgame-route', 'xqb-review-route');
+  return pageAbort.signal;
+}
+
+function currentPageSignal(): AbortSignal | undefined {
+  return pageAbort?.signal;
+}
+
+const BROADCAST_ROOT_PATH = '/broadcast/xiangqi';
+// Section pages and the operator console: never read as a tour slug. The
+// console is not a reader page and keeps its own full load.
+const NON_TOUR_SEGMENTS = new Set(['board', 'calendar', 'about', 'ops']);
+
+type BroadcastPage = (root: HTMLElement) => Promise<void> | void;
+
+/** The broadcast page a path opens, or null for anything else. */
+export function broadcastPageForPath(path: string): BroadcastPage | null {
+  if (path === BROADCAST_ROOT_PATH) return (root) => mountXiangqiBroadcastIndex(root);
+  if (path === `${BROADCAST_ROOT_PATH}/calendar`) {
+    return (root) => {
+      beginBroadcastPage(root);
+      return mountXiangqiBroadcastCalendar(root);
+    };
+  }
+  if (path === `${BROADCAST_ROOT_PATH}/about`) {
+    return (root) => {
+      beginBroadcastPage(root);
+      mountXiangqiBroadcastAbout(root);
+    };
+  }
+  const board = path.match(/^\/broadcast\/xiangqi\/board\/([^/]+)$/);
+  if (board) return (root) => mountXiangqiBroadcastBoard(root, decodeURIComponent(board[1]!));
+  const round = path.match(/^\/broadcast\/xiangqi\/([^/]+)\/round\/([^/]+)$/);
+  if (round && !NON_TOUR_SEGMENTS.has(round[1]!)) {
+    return (root) =>
+      mountXiangqiBroadcastRound(
+        root,
+        decodeURIComponent(round[1]!),
+        decodeURIComponent(round[2]!),
+      );
+  }
+  const tour = path.match(/^\/broadcast\/xiangqi\/([^/]+)$/);
+  if (tour && !NON_TOUR_SEGMENTS.has(tour[1]!)) {
+    return (root) => mountXiangqiBroadcastTour(root, decodeURIComponent(tour[1]!));
+  }
+  return null;
+}
+
+let routerRoot: HTMLElement | null = null;
+let pushedInPlace = false;
+
+/**
+ * Take over links between broadcast pages: a same-origin click to another
+ * broadcast page swaps the page in place and pushes the URL; Back and Forward
+ * swap it back. Anything else (another section, a new tab, a modified click)
+ * is left to the browser. Installed once, by main.ts, on a broadcast load.
+ */
+export function installBroadcastNavigation(root: HTMLElement): void {
+  if (routerRoot) return;
+  routerRoot = root;
+  document.addEventListener('click', (event) => {
+    if (event.defaultPrevented || event.button !== 0) return;
+    if (event.metaKey || event.ctrlKey || event.shiftKey || event.altKey) return;
+    const link = (event.target as Element | null)?.closest?.('a[href]');
+    if (!(link instanceof HTMLAnchorElement)) return;
+    if ((link.target && link.target !== '_self') || link.hasAttribute('download')) return;
+    const url = new URL(link.href, window.location.href);
+    if (url.origin !== window.location.origin) return;
+    if (!broadcastPageForPath(url.pathname)) return;
+    event.preventDefault();
+    navigateBroadcast(`${url.pathname}${url.search}${url.hash}`);
+  });
+  window.addEventListener('popstate', () => {
+    const page = broadcastPageForPath(window.location.pathname);
+    if (page) {
+      void swapBroadcastPage(page);
+    } else if (pushedInPlace) {
+      // Back past the first broadcast page to another section: that page was
+      // never mounted here, so load it.
+      window.location.reload();
+    }
+  });
+}
+
+/** Open a broadcast path in place when the router is installed, else load it. */
+export function navigateBroadcast(href: string): void {
+  const url = new URL(href, window.location.href);
+  const page = routerRoot ? broadcastPageForPath(url.pathname) : null;
+  if (!page) {
+    window.location.assign(href);
+    return;
+  }
+  if (`${url.pathname}${url.search}` === `${window.location.pathname}${window.location.search}`) {
+    return;
+  }
+  window.history.pushState({ broadcast: true }, '', `${url.pathname}${url.search}${url.hash}`);
+  pushedInPlace = true;
+  window.scrollTo(0, 0);
+  void swapBroadcastPage(page);
+}
+
+async function swapBroadcastPage(page: BroadcastPage): Promise<void> {
+  if (!routerRoot) return;
+  // A page load counts one pageview (main.ts); a swap is a page too.
+  track('$pageview', { path: window.location.pathname });
+  await page(routerRoot);
 }
 
 async function fetchJson<T>(url: string): Promise<T> {
@@ -514,11 +753,18 @@ function connectBoardStream(
 
 function closeStreamOnPageExit(source: EventSource): void {
   window.addEventListener('pagehide', () => source.close(), { once: true });
+  // The page swapped in place: this stream belongs to the page that left.
+  const signal = currentPageSignal();
+  if (signal?.aborted) source.close();
+  else signal?.addEventListener('abort', () => source.close(), { once: true });
 }
 
 function installBroadcastAppearanceRefresh(paint: () => void): void {
-  window.addEventListener(xiangqiNotationChangedEvent, () => paint());
-  window.addEventListener(xiangqiAppearanceChangedEvent, paint);
+  const signal = currentPageSignal();
+  if (signal?.aborted) return;
+  const options = signal ? { signal } : undefined;
+  window.addEventListener(xiangqiNotationChangedEvent, () => paint(), options);
+  window.addEventListener(xiangqiAppearanceChangedEvent, paint, options);
   window.addEventListener(
     'pagehide',
     () => window.removeEventListener(xiangqiAppearanceChangedEvent, paint),
@@ -729,29 +975,100 @@ function renderEvent(
   document.title = hasRound
     ? `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`
     : `${primaryName(data.tour)} · Mistboard`;
+  let body: HTMLElement;
+  if (state.tab === 'overview') body = renderOverviewTab(data);
+  else if (state.tab === 'players') body = renderPlayersTab(data, state);
+  else if (state.tab === 'teams' && isTeamEvent(data)) body = renderTeamsTab(data, state);
+  else body = renderBoardsTab(data, cards);
+  return renderEventShell(data, state, body, '');
+}
+
+function isTeamEvent(data: BroadcastRoundResponse): boolean {
+  return data.boards.some((board) => board.details?.match);
+}
+
+/** Which event page a shell shows: a later page for the same round keeps it. */
+function roundKey(data: { tour: { slug: string }; round: { id: string } }): string {
+  return `${data.tour.slug}/${data.round.id}`;
+}
+
+function roundHref(tourSlug: string, roundId: string, tab: EventTab = 'boards'): string {
+  const base = `/broadcast/xiangqi/${encodeURIComponent(tourSlug)}/round/${encodeURIComponent(roundId)}`;
+  return tab === 'boards' ? base : `${base}?tab=${tab}`;
+}
+
+/**
+ * The event page around whatever the content column shows: the header, the
+ * section tabs and the round's game list. The boards grid, the other tabs and
+ * an open board all render inside it, so moving between them changes the
+ * content column and nothing else (lichess's relay: a board replaces the
+ * right three quarters of the page). `body` is moved in, not rebuilt, so a
+ * repaint of the header or the list keeps a mounted board as it is.
+ */
+function renderEventShell(
+  data: BroadcastRoundResponse,
+  state: EventPageState,
+  body: HTMLElement,
+  currentBoardId: string,
+): HTMLElement {
+  const hasRound = data.round.id !== '';
+  const boardOpen = currentBoardId !== '';
   const main = broadcastShell();
   main.classList.add('xqb-event');
+  if (boardOpen) main.classList.add('xqb-event-board-open');
+  main.dataset.roundKey = roundKey(data);
+
+  const layout = document.createElement('div');
+  layout.className = 'xqb-event-layout';
+  applyStoredToggles(layout);
+  const content = document.createElement('section');
+  content.className = 'xqb-section xqb-event-content';
+  body.classList.add('xqb-event-body');
+  // An open board takes the whole column, header and tabs included, so it
+  // fills the height of the screen; the game list's back arrow returns.
+  if (boardOpen) content.append(body);
+  else content.append(eventHeader(data), eventTabs(data, state), body);
+  layout.append(content);
+  // The round's pairings, lichess's left column: scan the round without the
+  // thumbnails, and jump straight to a board from any tab. The same list on
+  // every page of the round, the open board marked.
+  const rail = hasRound ? sideRail(data, currentBoardId) : null;
+  if (rail) {
+    layout.classList.add('xqb-event-layout-with-rail');
+    layout.append(rail);
+  }
+  main.append(layout);
+  return main;
+}
+
+// The event's header, at the top of the content column beside the game list
+// (lichess's relay): the name, one line of facts, the round and the source.
+// One line of facts rather than an eyebrow, a subtitle and a meta row, so the
+// boards start near the top of the screen.
+function eventHeader(data: BroadcastRoundResponse): HTMLElement {
   const rounds = data.rounds ?? [];
   const liveCount = data.boards.filter((board) => board.status === 'live').length;
-  main.append(
-    heroSection({
-      eyebrow: t('broadcast.eyebrow'),
-      title: primaryName(data.tour),
-      subtitle: secondaryName(data.tour),
-      href: broadcastSourcePageHref(data.tour.sourceUrl),
-      meta: [
-        data.tour.location,
-        formatEventDateRange(data.tour.startsAt, data.tour.endsAt),
-        countLabel(rounds.length, 'round', 'rounds'),
-        liveCount > 0 ? `${liveCount} live` : null,
-      ].filter(Boolean) as string[],
-      switcher: hasRound ? roundSwitcher(data.tour.slug, rounds, data.round.id) : null,
-    }),
-  );
+  const header = heroSection({
+    eyebrow: '',
+    title: primaryName(data.tour),
+    href: broadcastSourcePageHref(data.tour.sourceUrl),
+    meta: [
+      secondaryName(data.tour),
+      data.tour.location,
+      formatEventDateRange(data.tour.startsAt, data.tour.endsAt),
+      countLabel(rounds.length, 'round', 'rounds'),
+      liveCount > 0 ? `${liveCount} live` : null,
+    ].filter(Boolean) as string[],
+    switcher: data.round.id !== '' ? roundSwitcher(data.tour.slug, rounds, data.round.id) : null,
+  });
+  header.classList.add('xqb-event-header');
+  return header;
+}
 
+function eventTabs(data: BroadcastRoundResponse, state: EventPageState): HTMLElement {
   // A team event gets a Teams tab: the league table is the story of 象甲, and
   // the Players tab alone reads it as individuals.
-  const teamEvent = data.boards.some((board) => board.details?.match);
+  const teamEvent = isTeamEvent(data);
   const tab = state.tab === 'teams' && !teamEvent ? 'boards' : (state.tab ?? 'boards');
   const tabs = document.createElement('nav');
   tabs.className = 'xqb-tabs';
@@ -771,27 +1088,7 @@ function renderEvent(
     button.addEventListener('click', () => state.setTab?.(def.id));
     tabs.append(button);
   }
-
-  const layout = document.createElement('div');
-  layout.className = 'xqb-event-layout';
-  applyStoredToggles(layout);
-  const content = document.createElement('section');
-  content.className = 'xqb-section xqb-event-content';
-  content.append(tabs);
-  if (tab === 'overview') content.append(renderOverviewTab(data));
-  else if (tab === 'players') content.append(renderPlayersTab(data, state));
-  else if (tab === 'teams') content.append(renderTeamsTab(data, state));
-  else content.append(renderBoardsTab(data, cards));
-  layout.append(content);
-  // The round's pairings, lichess's left column: scan the round without the
-  // thumbnails, and jump straight to a board from any tab.
-  const rail = hasRound ? sideRail(data, '') : null;
-  if (rail) {
-    layout.classList.add('xqb-event-layout-with-rail');
-    layout.append(rail);
-  }
-  main.append(layout);
-  return main;
+  return tabs;
 }
 
 function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): HTMLElement {
@@ -802,10 +1099,11 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
     return wrap;
   }
   const liveCount = data.boards.filter((board) => board.status === 'live').length;
-  const heading = document.createElement('h2');
-  heading.className = 'xqb-round-heading';
-  heading.textContent = primaryName(data.round);
-  const roundZh = zhSubline(secondaryName(data.round));
+  // No round heading: the round is named in the header's switcher and at the
+  // top of the game list. Its facts and the toggles share one line (lichess's
+  // boards bar), so the grid starts right under the tabs.
+  const head = document.createElement('div');
+  head.className = 'xqb-boards-head';
   const meta = document.createElement('p');
   meta.className = 'xqb-round-meta';
   meta.textContent = [
@@ -815,9 +1113,8 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
   ]
     .filter(Boolean)
     .join(' / ');
-  wrap.append(heading);
-  if (roundZh) wrap.append(roundZh);
-  wrap.append(meta);
+  head.append(meta);
+  wrap.append(head);
 
   if (data.boards.length === 0) {
     // Records for a dpxq-relayed round arrive when the operator uploads them,
@@ -846,7 +1143,7 @@ function renderBoardsTab(data: BroadcastRoundResponse, cards?: BoardCardCache): 
   const roundPlayedOn = data.boards.every((board) => board.status !== 'live')
     ? formatEventDay(roundPlayedAt(data.boards) ?? data.round.startsAt)
     : null;
-  wrap.append(boardsToolbar(wrap, data.boards));
+  head.append(boardsToolbar(wrap, data.boards));
   // Playing with nothing live: say so rather than show an empty page.
   if (!data.boards.some((board) => board.status === 'live')) {
     const none = document.createElement('p');
@@ -1409,7 +1706,7 @@ function roundSwitcher(
   }
   select.addEventListener('change', () => {
     if (select.value === currentRoundId) return;
-    window.location.assign(
+    navigateBroadcast(
       `/broadcast/xiangqi/${encodeURIComponent(tourSlug)}/round/${encodeURIComponent(select.value)}`,
     );
   });
@@ -1479,7 +1776,7 @@ function creditLineFrom(
 function renderBoardReplay(
   data: BroadcastBoardResponse,
   context: BroadcastRoundResponse | null = null,
-  opts: { animateHeadAdvance?: boolean } = {},
+  opts: { animateHeadAdvance?: boolean; embedded?: boolean } = {},
 ): HTMLElement {
   const main = broadcastShell();
   const frames = data.history.truth.length > 0 ? data.history.truth : [{ ply: 0, view: data.view }];
@@ -1578,7 +1875,8 @@ function renderBoardReplay(
   movesPanel.append(moveHeading, moveList, actions);
 
   layout.append(boardPanel, movesPanel);
-  const rail = context ? sideRail(context, data.board.id) : null;
+  // Embedded in the event page, whose header and game list are already there.
+  const rail = context && !opts.embedded ? sideRail(context, data.board.id) : null;
   if (rail) {
     // Grid areas place the rail in the left column on wide viewports while it
     // stays last in DOM order, so narrow layouts stack it below the moves.
@@ -1586,6 +1884,7 @@ function renderBoardReplay(
     layout.append(rail);
   }
   main.append(hero, layout);
+  const view = opts.embedded ? layout : main;
 
   const moveButtons = renderMoveButtons(moveList, data.timeline, setCursor);
 
@@ -1647,7 +1946,7 @@ function renderBoardReplay(
       else glide();
     }
   }
-  return main;
+  return view;
 }
 
 // The arrow builder ranks lines by how much each gives up against the best,
@@ -1752,12 +2051,15 @@ function heroSection(input: {
   const copy = document.createElement('div');
   copy.className = 'xqb-hero-copy';
 
-  const eyebrow = document.createElement('p');
-  eyebrow.className = 'xqb-eyebrow';
-  eyebrow.textContent = input.eyebrow;
+  if (input.eyebrow) {
+    const eyebrow = document.createElement('p');
+    eyebrow.className = 'xqb-eyebrow';
+    eyebrow.textContent = input.eyebrow;
+    copy.append(eyebrow);
+  }
   const title = document.createElement('h1');
   title.textContent = input.title;
-  copy.append(eyebrow, title);
+  copy.append(title);
 
   if (input.subtitle) {
     const subtitle = document.createElement('p');
@@ -2000,7 +2302,18 @@ function sideRail(
     back.href = `/broadcast/xiangqi/${encodeURIComponent(
       context.tour.slug,
     )}/round/${encodeURIComponent(context.round.id)}`;
-    back.textContent = primaryName(context.round);
+    // With a board open, the heading is the way back to the round's boards
+    // (lichess's arrow beside the round name).
+    if (currentBoardId) {
+      back.className = 'xqb-rail-back';
+      back.title = t('broadcast.boards');
+      const arrow = document.createElement('span');
+      arrow.className = 'xqb-rail-back-arrow';
+      arrow.setAttribute('aria-hidden', 'true');
+      arrow.textContent = '‹';
+      back.append(arrow);
+    }
+    back.append(primaryName(context.round));
     heading.append(back);
   }
   const list = document.createElement('div');

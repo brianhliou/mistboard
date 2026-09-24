@@ -5,6 +5,7 @@ import { importXiangqiGame } from './review/xiangqi-import.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import {
+  broadcastPageForPath,
   broadcastRecordsCredit,
   formatBroadcastFreshness,
   mountXiangqiBroadcastBoard,
@@ -388,11 +389,12 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 't', 'r');
 
-    // The hero is the tour's (one event page, lichess-style); the round heads
-    // the Boards panel, English primary with the Chinese as its secondary line.
-    expect(root.querySelector('.xqb-hero h1')?.textContent).toBe('Test Cup');
-    expect(root.querySelector('.xqb-round-heading')?.textContent).toBe('Round 1');
-    expect(root.querySelector('.xqb-tab-panel > .xqb-name-zh')?.textContent).toBe('第1轮');
+    // The header is the tour's, in the column beside the game list (lichess's
+    // relay); the round is named by the switcher and the list's heading, not
+    // by a heading of its own above the boards.
+    expect(root.querySelector('.xqb-event-content .xqb-hero h1')?.textContent).toBe('Test Cup');
+    expect(root.querySelector('.xqb-round-heading')).toBeNull();
+    expect(root.querySelector('.xqb-side-rail h2')?.textContent).toBe('Round 1');
 
     // Player names: English primary, the Chinese in the tooltip.
     const names = [...root.querySelectorAll('.xqb-board-card .xqb-card-seat-name')];
@@ -758,10 +760,14 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     ).toEqual(['Wang Tianyi', 'Zheng Weitong']);
     expect(current?.querySelector('.xqb-rail-marker')?.textContent).toBe('Live');
 
-    // The hero carries the same round switcher as the round page.
-    const select = root.querySelector<HTMLSelectElement>('.xqb-hero .xqb-round-select');
-    expect(select).not.toBeNull();
-    expect(select?.value).toBe('r');
+    // An open board takes the whole content column (lichess): no header or
+    // tabs above it; the list's heading is the way back to the round.
+    expect(root.querySelector('.xqb-event-board-open')).not.toBeNull();
+    expect(root.querySelector('.xqb-hero')).toBeNull();
+    expect(root.querySelector('.xqb-tabs')).toBeNull();
+    expect(root.querySelector('.xqb-side-rail h2 .xqb-rail-back')?.getAttribute('href')).toBe(
+      '/broadcast/xiangqi/t/round/r',
+    );
     // One open event, carrying the board's status at mount time.
     expect(broadcastOpenedCalls()).toEqual([
       { surface: 'board', tour_slug: 't', round_id: 'r', board_status: 'live', locale: 'en' },
@@ -1056,7 +1062,7 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     history: { truth: replay.views.map((view, ply) => ({ ply, view })) },
   };
 
-  it('mounts the shared review (engine, provenance, pairings rail) for a finished game', async () => {
+  it('mounts the shared review inside the event page for a finished game', async () => {
     stubFetchJson((url) =>
       url.includes('/api/xiangqi/broadcasts/boards/')
         ? COMPLETE
@@ -1067,28 +1073,30 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     const root = document.createElement('div');
     await mountXiangqiBroadcastBoard(root, 't-r-b1');
 
+    // The board takes the event page's content column beside the round's
+    // game list (lichess's relay), as the page's only content.
+    const body = root.querySelector('.xqb-event-board-open .xqb-event-content > .xqb-event-body');
+    expect(body?.querySelector('.review-shell--embedded')).not.toBeNull();
+    expect(root.querySelector('.xqb-event-content')?.children.length).toBe(1);
+    // Embedded: no info card or second rail inside the review.
+    expect(root.querySelector('.game-meta-card')).toBeNull();
+    expect(root.querySelector('.review-shell__left')).toBeNull();
+    expect(root.querySelectorAll('.xqb-side-rail').length).toBe(1);
     expect(root.querySelector('.xiangqi-live-board')).not.toBeNull();
     expect(root.querySelector('.engine-panel')).not.toBeNull();
     expect(root.textContent).toContain('Computer analysis');
-    // Meta card: the event, then round / board / date in the event clock.
-    expect(root.textContent).toContain('Test Cup');
-    expect(root.textContent).toContain('Round 1 · Board 1 · Sep 9, 2026, 2:30 PM');
     expect(root.textContent).toContain('Cheng Yudong');
-    expect(root.textContent).toContain('Black wins');
     // Provenance: the dpxq page, by host.
     const provenance = root.querySelector('.review-provenance');
     expect(provenance?.querySelector('a')?.getAttribute('href')).toBe(
       'http://www.dpxq.com/hldcg/search/view_m_143066.html',
     );
     expect(provenance?.querySelector('a')?.textContent).toBe('dpxq.com');
-    // The round's pairings ride the left rail, current board marked, with the
-    // round switcher in the rail's header.
+    // The round's game list, current board marked.
     const rail = root.querySelector('.xqb-side-rail');
-    expect(rail).not.toBeNull();
     expect(rail?.querySelector('.xqb-rail-row-current')?.getAttribute('href')).toBe(
       '/broadcast/xiangqi/board/t-r-b1',
     );
-    expect(rail?.querySelector('h2 .xqb-round-select')).not.toBeNull();
     // The live-replay chrome is gone.
     expect(root.querySelector('.xqb-controls')).toBeNull();
     // The board surface fires its open event once; the review shell it hands
@@ -1096,5 +1104,30 @@ describe('mountXiangqiBroadcastBoard (finished board on the review shell)', () =
     expect(broadcastOpenedCalls()).toEqual([
       { surface: 'board', tour_slug: 't', round_id: 'r', board_status: 'complete', locale: 'en' },
     ]);
+  });
+});
+
+describe('broadcastPageForPath (in-place navigation)', () => {
+  it('opens every reader page in place and leaves the rest to a page load', () => {
+    for (const path of [
+      '/broadcast/xiangqi',
+      '/broadcast/xiangqi/calendar',
+      '/broadcast/xiangqi/about',
+      '/broadcast/xiangqi/2026-xiangqi-league',
+      '/broadcast/xiangqi/2026-xiangqi-league/round/2026-xiangqi-league-r05',
+      '/broadcast/xiangqi/board/2026-xiangqi-league-r05-b1',
+    ]) {
+      expect(broadcastPageForPath(path), path).not.toBeNull();
+    }
+    for (const path of [
+      '/broadcast/xiangqi/ops',
+      '/broadcast/xiangqi/board',
+      '/broadcast/xiangqi/ops/round/r1',
+      '/broadcast/xiangqi/a/b/c',
+      '/players/wang-yubo',
+      '/',
+    ]) {
+      expect(broadcastPageForPath(path), path).toBeNull();
+    }
   });
 });

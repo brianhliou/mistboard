@@ -637,22 +637,31 @@ if (replaySample) {
 } else if (wantsXiangqiBroadcastIndex) {
   setTitle('Xiangqi broadcasts');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastIndex }) =>
-      mountXiangqiBroadcastIndex(appRoot),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, mountXiangqiBroadcastIndex }) => {
+        installBroadcastNavigation(appRoot);
+        return mountXiangqiBroadcastIndex(appRoot);
+      },
     ),
   );
 } else if (wantsXiangqiBroadcastCalendar) {
   setTitle('Xiangqi broadcast calendar');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast-pages.js').then(({ mountXiangqiBroadcastCalendar }) =>
-      mountXiangqiBroadcastCalendar(appRoot),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, broadcastPageForPath }) => {
+        installBroadcastNavigation(appRoot);
+        return broadcastPageForPath(path)?.(appRoot);
+      },
     ),
   );
 } else if (wantsXiangqiBroadcastAbout) {
   setTitle('About xiangqi broadcasts');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast-pages.js').then(({ mountXiangqiBroadcastAbout }) =>
-      mountXiangqiBroadcastAbout(appRoot),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, broadcastPageForPath }) => {
+        installBroadcastNavigation(appRoot);
+        return broadcastPageForPath(path)?.(appRoot);
+      },
     ),
   );
 } else if (wantsXiangqiBroadcastOps) {
@@ -665,26 +674,35 @@ if (replaySample) {
 } else if (xiangqiBroadcastBoardId) {
   setTitle('Xiangqi broadcast');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastBoard }) =>
-      mountXiangqiBroadcastBoard(appRoot, xiangqiBroadcastBoardId),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, mountXiangqiBroadcastBoard }) => {
+        installBroadcastNavigation(appRoot);
+        return mountXiangqiBroadcastBoard(appRoot, xiangqiBroadcastBoardId);
+      },
     ),
   );
 } else if (xiangqiBroadcastRound) {
   setTitle('Xiangqi broadcast');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastRound }) =>
-      mountXiangqiBroadcastRound(
-        appRoot,
-        xiangqiBroadcastRound.tourSlug,
-        xiangqiBroadcastRound.roundId,
-      ),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, mountXiangqiBroadcastRound }) => {
+        installBroadcastNavigation(appRoot);
+        return mountXiangqiBroadcastRound(
+          appRoot,
+          xiangqiBroadcastRound.tourSlug,
+          xiangqiBroadcastRound.roundId,
+        );
+      },
     ),
   );
 } else if (xiangqiBroadcastTourSlug) {
   setTitle('Xiangqi broadcast');
   void mountOrReport(() =>
-    import('./xiangqi-broadcast.js').then(({ mountXiangqiBroadcastTour }) =>
-      mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug),
+    import('./xiangqi-broadcast.js').then(
+      ({ installBroadcastNavigation, mountXiangqiBroadcastTour }) => {
+        installBroadcastNavigation(appRoot);
+        return mountXiangqiBroadcastTour(appRoot, xiangqiBroadcastTourSlug);
+      },
     ),
   );
 } else if (wantsPuzzles) {

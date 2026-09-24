@@ -22,6 +22,8 @@ export type ReviewMenuItem = {
 };
 
 export type ReviewControlsOptions = {
+  /** Removes the page-wide Escape listener when the review is destroyed. */
+  signal?: AbortSignal;
   onFirst(): void;
   onPrevious(): void;
   onNext(): void;
@@ -142,9 +144,13 @@ export function createReviewControls(opts: ReviewControlsOptions): ReviewControl
     menuButton.setAttribute('aria-expanded', 'false');
   }
   menuButton.addEventListener('click', () => (overlay.hidden ? openMenu() : closeMenu()));
-  document.addEventListener('keydown', (event) => {
-    if (event.key === 'Escape' && !overlay.hidden) closeMenu();
-  });
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key === 'Escape' && !overlay.hidden) closeMenu();
+    },
+    opts.signal ? { signal: opts.signal } : undefined,
+  );
 
   return {
     el,

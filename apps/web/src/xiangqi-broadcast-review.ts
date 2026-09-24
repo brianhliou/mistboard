@@ -57,8 +57,14 @@ export type BroadcastReviewInput = {
 export function mountBroadcastBoardReview(
   root: HTMLElement,
   data: BroadcastReviewInput,
-  opts: { rail?: HTMLElement | null; context?: BroadcastReviewInput['context'] } = {},
-): void {
+  opts: {
+    rail?: HTMLElement | null;
+    context?: BroadcastReviewInput['context'];
+    /** Board and moves only, in the event page's content column: the event
+     *  header and game list around it already name the event and the result. */
+    embedded?: boolean;
+  } = {},
+): { destroy(): void } {
   const context = opts.context ?? data.context ?? null;
   const moves = [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move);
   const replay = buildXiangqiReplayFromMoves(moves, undefined, { record: true });
@@ -70,12 +76,18 @@ export function mountBroadcastBoardReview(
   const playedOn = context ? formatEventDateTime(context.round.startsAt) : null;
 
   document.title = `${red} vs ${black} · ${eventName ?? 'Mistboard'}`;
-  root.classList.add('landing-page', 'xiangqi-postgame-route', 'xqb-review-route');
+  if (!opts.embedded) {
+    root.classList.add('landing-page', 'xiangqi-postgame-route', 'xqb-review-route');
+  }
 
   const metaCard = createGameMetaCard({
     markerId: 'xiangqi',
     glyph: '象',
     headline: [eventName ?? t('broadcast.eyebrow')],
+    // Lichess's board view names its event as the way back to the boards.
+    headlineHref: `/broadcast/xiangqi/${encodeURIComponent(
+      data.board.tourSlug,
+    )}/round/${encodeURIComponent(data.board.roundId)}`,
     variantName: variantDisplayLabel(XIANGQI_SPEC_ID),
     subline: [roundName, `${t('broadcast.board')} ${data.board.boardNumber}`, playedOn]
       .filter(Boolean)
@@ -88,15 +100,17 @@ export function mountBroadcastBoardReview(
   const profileFor = (slug: string | null | undefined): ProfileTarget | null =>
     slug ? { kind: 'player', slug } : null;
 
-  root.replaceChildren(buildNav());
-  mountXiangqiReview(root, {
+  if (opts.embedded) root.replaceChildren();
+  else root.replaceChildren(buildNav());
+  return mountXiangqiReview(root, {
+    embedded: opts.embedded,
     pageClassName: 'xiangqi-review',
     ariaLabel: t('broadcast.boardAriaLabel'),
     title: `${red} vs ${black}`,
     summary: `${result.label} · ${replay.maxPly} plies`,
     boardAriaLabel: t('broadcast.boardAriaLabel'),
-    metaCard: metaCard.el,
-    ...(opts.rail ? { details: opts.rail } : {}),
+    ...(opts.embedded ? {} : { metaCard: metaCard.el }),
+    ...(opts.rail && !opts.embedded ? { details: opts.rail } : {}),
     provenance: provenance(data, context),
     moves,
     record: true,

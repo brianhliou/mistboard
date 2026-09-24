@@ -310,7 +310,10 @@ export type AnalysisSource = {
   /** Cached result that never computes (server path). Optional. */
   fetchCached?(): Promise<GameAnalysis | null>;
   /** Compute the whole-game analysis; report progress when known. */
-  run(onProgress: (done: number, total: number) => void): Promise<GameAnalysis>;
+  run(
+    onProgress: (done: number, total: number) => void,
+    signal?: AbortSignal,
+  ): Promise<GameAnalysis>;
 };
 
 /** Per-reveal decision-vs-luck info the review overlays onto a chance-move game (jieqi). A
@@ -390,6 +393,8 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  The engine derives its own base FEN from the root truth. */
   root?: { truth: Truth; fen: string };
   pageClassName?: string;
+  /** Board and moves only, inside a host page's column (review-shell.ts). */
+  embedded?: boolean;
   ariaLabel: string;
   /** Info-card eyebrow when no meta card ('Analysis' / 'Game review'). */
   eyebrow?: string;
@@ -574,6 +579,12 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
  *  (to persist it — "save as study", autosave). */
 export interface TreeReviewHandle {
   serialize(): SerializedTree;
+  /** Stop everything the mount started: page-wide listeners, the layout's
+   *  resize work, the local engine's worker, a whole-game sweep in flight. A
+   *  surface that swaps reviews without a page load (a broadcast board opened
+   *  in place, a finished board repainting) calls this before the next mount,
+   *  or each mount leaves a Pikafish worker running behind it. */
+  destroy(): void;
 }
 
 /** Keyboard listener is document-wide; on re-mount (import re-seeds) abort the
@@ -589,6 +600,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   type Tree = GameTree<Move, Truth, View>;
   const { adapter } = presentation;
 
+  // One signal for everything this mount starts; destroy() aborts it.
+  const mountAbort = new AbortController();
   const tree: Tree = config.initialTree
     ? deserializeTree(adapter, config.initialTree, config.root?.truth)
     : createGameTree(adapter, config.moves, config.root?.truth);
@@ -1248,6 +1261,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     });
   }
   const controls = createReviewControls({
+    signal: mountAbort.signal,
     // The book tool appears only when a corpus is behind it (see review-controls).
     ...(config.explorer
       ? { onToggleExplorer: (open: boolean) => config.explorer?.setActive(open) }
@@ -1573,6 +1587,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   }
 
   const scaffold = createReviewScaffold(root, {
+    signal: mountAbort.signal,
+    embedded: config.embedded,
     reviewSurface: config.reviewSurface ?? 'game',
     ariaLabel: config.ariaLabel,
     pageClassName: config.pageClassName,
@@ -2154,7 +2170,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         source
           .run((done, total) => {
             label.textContent = `Analysing… ${done}/${total}`;
-          })
+          }, mountAbort.signal)
           .then((analysis) => {
             applyAnalysis(analysis);
             // The decomposition (jieqi) is the heavier follow-on pass; kick it off once the basic
@@ -2227,8 +2243,11 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   refreshMoveTreeAnnotations();
   render();
   scaffold.refit();
+  // The module-level handle is the backstop for a surface that re-mounts
+  // without calling destroy(): the next mount still aborts the last one's
+  // page-wide listeners.
   keyboardAbort?.abort();
-  keyboardAbort = new AbortController();
+  keyboardAbort = mountAbort;
   // Some variants render pieces as inline SVG, so a piece-set change needs a
   // re-render (a board that picks up its set via CSS does not, and omits the
   // event). Reuse the per-mount abort signal so a re-mount drops the stale
@@ -2302,7 +2321,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     keyboardAbort.signal,
   );
 
-  return { serialize: serializeCurrentTree };
+  return {
+    serialize: serializeCurrentTree,
+    destroy() {
+      mountAbort.abort();
+      enginePanel?.dispose();
+    },
+  };
 }
 
 function resolveBoardAspect(aspect: number | (() => number)): number {

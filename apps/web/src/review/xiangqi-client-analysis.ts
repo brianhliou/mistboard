@@ -26,11 +26,14 @@ export function buildXiangqiClientAnalysisSource(
   const redStarts = startStatus?.type !== 'playing' || startStatus.turn === 'red';
   return {
     requestLabel: 'Analyse the whole game',
-    run: async (onProgress) => {
+    run: async (onProgress, signal) => {
       const handle = createCeval('xiangqi');
       const plies: PlyEval[] = [];
       try {
         for (let ply = 0; ply <= replay.maxPly; ply += 1) {
+          // A destroyed review stops its sweep at the next ply; the worker goes
+          // in the finally below instead of running on behind a closed page.
+          if (signal?.aborted) throw new DOMException('analysis cancelled', 'AbortError');
           const update = await handle.evaluate({
             movesUci: engineMovesUci.slice(0, ply),
             initialFen,

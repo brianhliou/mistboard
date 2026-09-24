@@ -99,6 +99,12 @@ export type ReviewLayoutAdapter = {
 const NAV_AND_PADDING_PX = 122; // site nav + shell top/bottom padding
 const VIEWPORT_CHROME_PX = 108;
 const RAILS_AND_GUTTERS_PX = 640;
+// Where a full-page review's cluster starts (site nav + shell top padding): an
+// embedded review below a taller host header gives the difference back.
+const EMBED_BASE_TOP_PX = 76;
+const EMBED_MIN_BOARD_H_PX = 440;
+// Matches the embedded shell's two-column container query (review-shell.css).
+const EMBED_TWO_COLUMN_MIN_PX = 640;
 const PRIMARY_LABEL_PX = 30;
 const STACK_GAP_PX = 16;
 const SECONDARY_LABEL_PX = 24;
@@ -122,6 +128,10 @@ type SizingInput = {
 };
 
 export type ReviewScaffoldConfig = SizingInput & {
+  /** Stops the resize work when the review is destroyed. */
+  signal?: AbortSignal;
+  /** Board and moves only, inside a host page's column (review-shell.ts). */
+  embedded?: boolean;
   /** Product surface using the shared scaffold. Analysis and game reviews share
    *  the same board/rail alignment contract; studies keep their document UI. */
   reviewSurface: ReviewSurface;
@@ -257,7 +267,7 @@ export function createReviewScaffold(
     favoriteGameId && !config.metaCard
       ? reviewActionsWithFavorite(config.actions, favoriteGameId)
       : config.actions;
-  const left = infoRail({ ...config, actions });
+  const left = config.embedded ? [] : infoRail({ ...config, actions });
   // Right rail, lichess order: material-top · [analyse table: engine panel ·
   // move list · advice · navigation] · summary · material-bottom. The analyse
   // table is ONE visually connected box (lichess's analyse tools) whose bottom
@@ -338,6 +348,7 @@ export function createReviewScaffold(
     left,
     center,
     right,
+    embedded: config.embedded,
   });
   if (config.gauge) {
     const cluster = shell.querySelector<HTMLElement>('.review-shell__cluster');
@@ -390,9 +401,13 @@ export function createReviewScaffold(
     refit();
   }
 
-  setTimeout(refit, 60);
-  setTimeout(refit, 260);
-  window.addEventListener('resize', refit);
+  const signal = config.signal;
+  const refitUnlessDestroyed = () => {
+    if (!signal?.aborted) refit();
+  };
+  setTimeout(refitUnlessDestroyed, 60);
+  setTimeout(refitUnlessDestroyed, 260);
+  window.addEventListener('resize', refit, signal ? { signal } : undefined);
   if (typeof ResizeObserver !== 'undefined') {
     let lastViewportHeight = typeof window !== 'undefined' ? window.innerHeight : 0;
     const observer = new ResizeObserver(() => {
@@ -401,6 +416,7 @@ export function createReviewScaffold(
       refit();
     });
     observer.observe(stage.el);
+    signal?.addEventListener('abort', () => observer.disconnect(), { once: true });
   }
 
   return { stage, refit, setBoardAspect, railFooter };
@@ -598,14 +614,28 @@ function fitPrimaryToViewport(
         ? underboard.getBoundingClientRect().height + STACK_GAP_PX
         : 0;
     const cluster = stageEl.closest<HTMLElement>('.review-shell__cluster');
+    // An embedded review starts below its host's header, not under the site
+    // nav, so the board fits the height left beneath that header, never less
+    // than a readable board.
+    // One column (a phone) scrolls past the header to a full-width board.
+    const embeddedShell = cluster?.closest<HTMLElement>('.review-shell--embedded');
+    const hostHeaderPx =
+      cluster && embeddedShell && embeddedShell.clientWidth >= EMBED_TWO_COLUMN_MIN_PX
+        ? Math.round(
+            Math.min(
+              Math.max(0, cluster.getBoundingClientRect().top + window.scrollY - EMBED_BASE_TOP_PX),
+              Math.max(0, window.innerHeight - VIEWPORT_CHROME_PX - EMBED_MIN_BOARD_H_PX),
+            ),
+          )
+        : 0;
     if (cluster) {
       const baseChrome = Number(cluster.dataset.uniBaseChrome ?? '0') || 0;
       cluster.style.setProperty(
         '--uni-board-chrome-h',
-        `${baseChrome + Math.round(underboardPx)}px`,
+        `${baseChrome + Math.round(underboardPx) + hostHeaderPx}px`,
       );
     }
-    const available = window.innerHeight - VIEWPORT_CHROME_PX - underboardPx;
+    const available = window.innerHeight - VIEWPORT_CHROME_PX - underboardPx - hostHeaderPx;
     const slot = stageEl.querySelector<HTMLElement>('.review-stage__slot--primary');
     if (available <= 0 || !slot) return;
     const visibleStageRows = [...stageEl.children].filter(

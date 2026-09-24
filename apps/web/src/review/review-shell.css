@@ -1519,3 +1519,75 @@
   font-weight: 600;
   cursor: pointer;
 }
+
+/* Embedded: board and moves only, inside a host page's column (a broadcast
+   event keeps its header and game list around the board, lichess's relay).
+   The columns follow the host column's width, not the viewport's, so every
+   rule here is a container query on the shell. */
+.review-shell--embedded {
+  max-width: none;
+  /* The player strip sits above the board, in the space a full-page shell
+     takes from its top padding and the nav. */
+  padding: 26px 0 0;
+  container-type: inline-size;
+  --uni-table-min: 280px;
+  /* The moves take the width the board leaves, up to lichess's widest. */
+  --uni-table-max: 520px;
+}
+
+.review-shell--embedded .review-shell__cluster {
+  grid-template-columns: minmax(0, 1fr);
+  grid-template-areas:
+    "board"
+    "table";
+  grid-template-rows: auto;
+  min-height: 0;
+  width: 100%;
+  justify-items: center;
+}
+
+.review-shell--embedded .review-shell__gauge {
+  display: none;
+}
+
+@container (min-width: 640px) {
+  .review-shell--embedded .review-shell__cluster {
+    --uni-board-w-budget: calc(
+      100cqw -
+      var(--uni-table-min) -
+      var(--uni-gap) -
+      var(--uni-gauge-w, 0px)
+    );
+    --uni-board-width: min(
+      calc(
+        min(
+          var(--uni-board-w-budget),
+          calc(var(--uni-board-h-budget) * var(--uni-board-aspect, 1)),
+          var(--uni-board-max, 10000px)
+        ) *
+        var(--uni-board-scale, 1)
+      ),
+      var(--uni-board-fit-w, 10000px)
+    );
+    grid-template-columns: var(--uni-board-width) minmax(var(--uni-table-min), var(--uni-table-max));
+    grid-template-areas: "board table";
+    justify-content: start;
+    justify-items: stretch;
+    width: auto;
+    margin-inline: 0;
+  }
+
+  .review-shell--embedded .review-shell__cluster--gauge {
+    --uni-gauge-w: 20px;
+    column-gap: 0;
+    grid-template-columns:
+      var(--uni-board-width)
+      var(--uni-gauge-w)
+      minmax(var(--uni-table-min), var(--uni-table-max));
+    grid-template-areas: "board gauge table";
+  }
+
+  .review-shell--embedded .review-shell__cluster--gauge .review-shell__gauge {
+    display: block;
+  }
+}
