@@ -72,6 +72,8 @@ Conventions:
 
 ### Watching and review
 
+- Broadcast event pages take lichess's shape: the round's game list sits pinned on the left with the event's chat room under it, each game showing an evaluation pill, titles (GM, NM) and results in colour; the right side holds the header, pill tabs and the boards, four to a row with pages of 12, 24 or 48. A team round is one grid with a team filter, and its matches and scores moved to the Teams tab ([beb13bb9](https://github.com/brianhliou/mistboard/commit/beb13bb9))
+- A broadcast's Overview is one strip of the event's facts (dates, format, time controls, city) with Source and Standings links, then the share links; the Players tab links each name to the player's page ([0516380f](https://github.com/brianhliou/mistboard/commit/0516380f))
 - A broadcast board opens in place on its event page, the way lichess's does: the round's game list stays in the left column, and the board and moves take the rest of the page at the full height of the screen. The arrow beside the round name goes back to the boards, and Back and Forward move between them without reloading. The event header is shorter, so the boards start nearer the top ([08419c61](https://github.com/brianhliou/mistboard/commit/08419c61))
 - The broadcasts page follows lichess's: a side menu (Broadcasts, Calendar, Pro players, About), the featured event, then live, upcoming and past events, each card saying where the event stands ("Round 5 · Sep 18") and who the strongest players are. A calendar lists the top events coming up, and an about page says where the games come from. On an event page, board cards show each player and their score above and below the board, the game list stacks both players with scores, and new toggles show only live games or hide every result ([2d0e1cd6](https://github.com/brianhliou/mistboard/commit/2d0e1cd6))
 - A broadcast game seats its players above and below the board, the way lichess does: the name, the team, and a link to the player's page. Names in the seat strips on other reviews are clickable now too ([4f437059](https://github.com/brianhliou/mistboard/commit/4f437059))
@@ -101,6 +103,7 @@ Conventions:
 
 ### Site
 
+- Broadcasts is the first item in the Watch menu ([cd94da3f](https://github.com/brianhliou/mistboard/commit/cd94da3f))
 - An unlisted study is no longer indexable: its page served the home page's title and description, and Google had eleven chapters of a manual still being verified in its index under that title ([6ae24ef2](https://github.com/brianhliou/mistboard/commit/6ae24ef2))
 - The sitemap stops listing a chapter per game for the two studies whose chapters are numbered rather than named — an engine match and a bulk position set, 344 URLs that earned no impressions in ninety days; every study page and every named composition stays ([6ae24ef2](https://github.com/brianhliou/mistboard/commit/6ae24ef2))
 - Chinese home pages at `/zh-hans` and `/zh-hant`: the same lobby baked in each script, with their own title, description and hreflang. The path used to answer with a browsable listing of the build directory, and the site had no Chinese URL for the page a Chinese search is most likely to want ([0dc7831c](https://github.com/brianhliou/mistboard/commit/0dc7831c))
@@ -139,6 +142,8 @@ Conventions:
 
 ### Fixed
 
+- The local engine runs on broadcast boards in Chrome; it said "Safari cannot run it yet" on every one ([f16f9e2d](https://github.com/brianhliou/mistboard/commit/f16f9e2d))
+- A drawn broadcast game without an evaluation shows a level gauge rather than a blank one, and every board in the grid is the same size ([47af939b](https://github.com/brianhliou/mistboard/commit/47af939b))
 - Misty's bot profile names the engine its fog chess games actually run, 1.6; it had still said 1.5 since the August upgrade ([4096375c](https://github.com/brianhliou/mistboard/commit/4096375c))
 - Seat colours follow the game's own pieces everywhere: red and black for xiangqi and its variants, red and blue for jungle, white and black for fog chess, in light and dark mode, including the eval bar, the engine's line scores, the advantage chart and the move-time bars ([aea952f6](https://github.com/brianhliou/mistboard/commit/aea952f6))
 - In dark mode, the player names under a chess game on the homepage viewer are plain text like every other variant's, instead of boxed rows with a green bar on the winner ([4a9187e9](https://github.com/brianhliou/mistboard/commit/4a9187e9))
