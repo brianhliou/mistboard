@@ -2355,13 +2355,6 @@ function sideRail(
   return rail;
 }
 
-function roundSwitcherFor(
-  data: BroadcastBoardResponse,
-  context: BroadcastRoundResponse,
-): HTMLElement | null {
-  return roundSwitcher(data.board.tourSlug, context.rounds ?? [], data.board.roundId);
-}
-
 // Scroll the rail (not the page) so the current pairing is centered once the
 // rail is attached; render runs before replaceChildren, so defer a frame.
 // Guarded so happy-dom's partial layout support stays harmless.
