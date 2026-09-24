@@ -484,6 +484,8 @@ export const ZH_HANS_REVIEW = {
   'broadcast.allOnOnePage': '全部显示',
   'broadcast.deciderWon': '{team}赢得决胜超快棋',
   'broadcast.deciderDrawn': '决胜超快棋和棋',
+  'broadcast.ongoing': '进行中',
+  'broadcast.toMove': '轮到走棋',
   'broadcast.otherGames': '其他对局',
   'broadcast.sectionNav': '直播菜单',
   'broadcast.calendar': '赛程',

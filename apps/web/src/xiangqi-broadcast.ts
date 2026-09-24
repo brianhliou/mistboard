@@ -1133,7 +1133,50 @@ function eventHeader(data: BroadcastRoundResponse): HTMLElement {
     switcher: data.round.id !== '' ? roundSwitcher(data.tour.slug, rounds, data.round.id) : null,
   });
   header.classList.add('xqb-event-header');
+  // lichess's banner on the header's right.
+  header.append(eventArt(data.tour));
   return header;
+}
+
+// A placeholder for an event's art (lichess shows the broadcaster's image):
+// the event's Chinese name large over a faint board, the English name, the
+// city and the year, in one of a few inks picked from the event's slug so
+// events tell apart. Drawn in HTML and CSS, so there is no file to host and
+// no right to clear; real art replaces it where it sits.
+const EVENT_ART_INKS = ['#a63328', '#237960', '#3b4f8f', '#9a6419', '#7a3b69'] as const;
+
+function eventArt(tour: {
+  slug: string;
+  name: string;
+  nameEn?: string;
+  location?: string;
+  startsAt?: string;
+}): HTMLElement {
+  const art = document.createElement('div');
+  art.className = 'xqb-event-art';
+  art.setAttribute('aria-hidden', 'true');
+  let hash = 0;
+  for (const char of tour.slug) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  art.style.setProperty('--xqb-art-ink', EVENT_ART_INKS[hash % EVENT_ART_INKS.length]!);
+  const year = tour.startsAt?.slice(0, 4) ?? tour.name.match(/^(\d{4})/)?.[1] ?? null;
+  const zh = document.createElement('span');
+  zh.className = 'xqb-event-art-zh';
+  zh.textContent = tour.name.replace(/^\d{4}\s*年?/, '');
+  art.append(zh);
+  if (tour.nameEn) {
+    const en = document.createElement('span');
+    en.className = 'xqb-event-art-en';
+    en.textContent = tour.nameEn.replace(/^\d{4}\s*/, '');
+    art.append(en);
+  }
+  const meta = [tour.location, year].filter(Boolean).join(' · ');
+  if (meta) {
+    const line = document.createElement('span');
+    line.className = 'xqb-event-art-meta';
+    line.textContent = meta;
+    art.append(line);
+  }
+  return art;
 }
 
 function eventTabs(data: BroadcastRoundResponse, state: EventPageState): HTMLElement {
@@ -1728,8 +1771,16 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
   const share = document.createElement('details');
   share.className = 'xqb-share xqb-overview-share';
   share.open = true;
+  // lichess's share box: its title is a tab on the box's top edge, with a
+  // chevron that turns as it opens and closes.
   const summary = document.createElement('summary');
-  summary.textContent = t('broadcast.shareByUrl');
+  summary.className = 'xqb-share-tab';
+  summary.append(t('broadcast.shareByUrl'));
+  const chevron = document.createElement('span');
+  chevron.className = 'xqb-share-chevron';
+  chevron.setAttribute('aria-hidden', 'true');
+  chevron.innerHTML = CARET_DOWN;
+  summary.append(chevron);
   share.append(summary);
   const origin = window.location.origin;
   share.append(
@@ -1806,21 +1857,35 @@ function shareRow(label: string, url: string): HTMLElement {
   field.className = 'xqb-share-url';
   field.setAttribute('aria-label', label);
   field.addEventListener('focus', () => field.select());
+  // The copy button is joined to the field (lichess's clipboard tab); it
+  // shows a check for a moment once the link is on the clipboard.
   const copy = document.createElement('button');
   copy.type = 'button';
   copy.className = 'xqb-share-copy';
-  copy.textContent = t('broadcast.copy');
+  copy.setAttribute('aria-label', t('broadcast.copy'));
+  copy.title = t('broadcast.copy');
+  copy.innerHTML = CLIPBOARD_ICON;
   copy.addEventListener('click', () => {
     void navigator.clipboard?.writeText(url).then(() => {
-      copy.textContent = t('broadcast.copied');
+      copy.innerHTML = CHECK_MARK;
+      copy.title = t('broadcast.copied');
+      copy.classList.add('xqb-share-copied');
       window.setTimeout(() => {
-        copy.textContent = t('broadcast.copy');
+        copy.innerHTML = CLIPBOARD_ICON;
+        copy.title = t('broadcast.copy');
+        copy.classList.remove('xqb-share-copied');
       }, 1500);
     });
   });
-  row.append(name, field, copy);
+  const joined = document.createElement('div');
+  joined.className = 'xqb-share-field';
+  joined.append(field, copy);
+  row.append(name, joined);
   return row;
 }
+
+const CLIPBOARD_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><rect x="6" y="4.5" width="12" height="16" rx="2"/><path d="M9.5 4.5V3.5h5v1M9 10h6M9 14h6"/></svg>';
 
 // Players: standings from the broadcast games, the way lichess computes its
 // Players tab, with the same caveat that they may differ from the official
@@ -1917,42 +1982,145 @@ function roundPhase(stats: Partial<BroadcastRoundStats>): RoundPhase {
   return 'upcoming';
 }
 
-// Text markers stand in for lila's icon font: live disc, finished check,
-// upcoming hollow disc. Used by both the tour rows and the round switcher.
-const ROUND_PHASE_MARKS: Record<RoundPhase, string> = {
-  live: '●',
-  finished: '✓',
-  upcoming: '○',
-};
-
 // Native select styled to match the hero links; hops between sibling rounds
 // without a trip back to the tour page. Idempotent per render: the selected
 // option is derived from the payload, so SSE re-renders keep the current
 // round selected.
+// lichess's round selector: a wide pill naming the round and where it stands
+// (Finished, Live, "in 27 minutes"), opening a panel of every round with its
+// start and status. A native <select> drew the system menu, one line per
+// round with no date, and a check mark doubled by the platform's own.
 function roundSwitcher(
   tourSlug: string,
   rounds: BroadcastRoundWithStats[],
   currentRoundId: string,
-): HTMLSelectElement | null {
+): HTMLElement | null {
   if (rounds.length === 0) return null;
-  const select = document.createElement('select');
-  select.className = 'xqb-round-select';
-  select.setAttribute('aria-label', t('broadcast.switchRound'));
+  const current = rounds.find((round) => round.id === currentRoundId) ?? rounds[0]!;
+  const picker = document.createElement('div');
+  picker.className = 'xqb-round-picker';
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'xqb-round-picker-button';
+  button.setAttribute('aria-haspopup', 'listbox');
+  button.setAttribute('aria-expanded', 'false');
+  button.setAttribute('aria-label', `${t('broadcast.switchRound')}: ${primaryName(current)}`);
+  const name = document.createElement('span');
+  name.className = 'xqb-round-picker-name';
+  name.textContent = primaryName(current);
+  const caret = document.createElement('span');
+  caret.className = 'xqb-round-picker-caret';
+  caret.setAttribute('aria-hidden', 'true');
+  caret.innerHTML = CARET_DOWN;
+  button.append(name, roundStatusEl(current, { withLabel: true }), caret);
+
+  const panel = document.createElement('div');
+  panel.className = 'xqb-round-picker-panel';
+  panel.setAttribute('role', 'listbox');
+  panel.hidden = true;
   for (const round of rounds) {
-    const option = document.createElement('option');
-    option.value = round.id;
-    option.textContent = `${ROUND_PHASE_MARKS[roundPhase(round)]} ${primaryName(round)}`;
-    if (round.id === currentRoundId) option.selected = true;
-    select.append(option);
+    const option = document.createElement('a');
+    option.className =
+      round.id === current.id ? 'xqb-round-option xqb-round-option-current' : 'xqb-round-option';
+    option.href = roundHref(tourSlug, round.id);
+    option.setAttribute('role', 'option');
+    option.setAttribute('aria-selected', round.id === current.id ? 'true' : 'false');
+    const label = document.createElement('span');
+    label.className = 'xqb-round-option-name';
+    label.textContent = primaryName(round);
+    const when = document.createElement('span');
+    when.className = 'xqb-round-option-when';
+    when.textContent = formatEventDateTime(round.startsAt) ?? '';
+    option.append(label, when, roundStatusEl(round, { withLabel: false }));
+    option.addEventListener('click', () => close());
+    panel.append(option);
   }
-  select.addEventListener('change', () => {
-    if (select.value === currentRoundId) return;
-    navigateBroadcast(
-      `/broadcast/xiangqi/${encodeURIComponent(tourSlug)}/round/${encodeURIComponent(select.value)}`,
-    );
-  });
-  return select;
+
+  const signal = currentPageSignal();
+  const open = (): void => {
+    panel.hidden = false;
+    button.setAttribute('aria-expanded', 'true');
+    panel
+      .querySelector<HTMLElement>('.xqb-round-option-current')
+      ?.scrollIntoView?.({ block: 'nearest' });
+  };
+  const close = (): void => {
+    panel.hidden = true;
+    button.setAttribute('aria-expanded', 'false');
+  };
+  button.addEventListener('click', () => (panel.hidden ? open() : close()));
+  // Outside a click or on Escape the panel closes; the listeners go with the page.
+  document.addEventListener(
+    'click',
+    (event) => {
+      if (!panel.hidden && !picker.contains(event.target as Node)) close();
+    },
+    { signal },
+  );
+  document.addEventListener(
+    'keydown',
+    (event) => {
+      if (event.key === 'Escape' && !panel.hidden) {
+        close();
+        button.focus();
+      }
+    },
+    { signal },
+  );
+  picker.append(button, panel);
+  return picker;
 }
+
+/** Where a round stands: a check once finished, a live mark, or when it
+ *  starts ("in 27 minutes"), lichess's wording. */
+function roundStatusEl(round: BroadcastRoundWithStats, opts: { withLabel: boolean }): HTMLElement {
+  const el = document.createElement('span');
+  const phase = roundPhase(round);
+  el.className = `xqb-round-status xqb-round-status-${phase}`;
+  if (phase === 'finished') {
+    if (opts.withLabel) el.append(t('broadcast.finished'), ' ');
+    const check = document.createElement('span');
+    check.className = 'xqb-round-status-check';
+    check.setAttribute('aria-hidden', 'true');
+    check.innerHTML = CHECK_MARK;
+    el.append(check);
+    if (!opts.withLabel) el.setAttribute('aria-label', t('broadcast.finished'));
+  } else if (phase === 'live') {
+    // lichess's "Ongoing", a red dot before it.
+    const dot = document.createElement('span');
+    dot.className = 'xqb-round-status-dot';
+    dot.setAttribute('aria-hidden', 'true');
+    el.append(dot, t('broadcast.ongoing'));
+  } else {
+    const at = round.startsAt ? new Date(round.startsAt).getTime() : Number.NaN;
+    el.textContent =
+      Number.isFinite(at) && at > Date.now()
+        ? relativeFromNow(at)
+        : roundHasStarted(round)
+          ? t('broadcast.awaitingRecords')
+          : t('broadcast.upcoming');
+  }
+  return el;
+}
+
+function relativeFromNow(at: number): string {
+  const minutes = Math.round((at - Date.now()) / 60_000);
+  const format = new Intl.RelativeTimeFormat(currentLocaleTag(), { numeric: 'always' });
+  if (minutes < 60) return format.format(Math.max(1, minutes), 'minute');
+  const hours = Math.round(minutes / 60);
+  if (hours < 36) return format.format(hours, 'hour');
+  return format.format(Math.round(hours / 24), 'day');
+}
+
+function currentLocaleTag(): string {
+  const lang = document.documentElement.lang;
+  return lang || 'en';
+}
+
+const CARET_DOWN =
+  '<svg viewBox="0 0 24 24" width="16" height="16" fill="currentColor" aria-hidden="true"><path d="M6 9l6 6 6-6z"/></svg>';
+const CHECK_MARK =
+  '<svg viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M5 12.5l4.5 4.5L19 7.5"/></svg>';
 
 // A rendered card plus the inputs it was built from. Keyed by board id.
 type BoardCardCache = Map<string, { signature: string; el: HTMLElement }>;
@@ -2353,14 +2521,9 @@ function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {})
     .join(' ');
   card.href = `/broadcast/xiangqi/${encodeURIComponent(entry.tour.slug)}`;
 
-  const boardEl = document.createElement('div');
-  boardEl.className = 'xqb-card-board xiangqi-live-board';
-  boardEl.setAttribute('aria-hidden', 'true');
-  const view = entry.featuredBoard?.view ?? buildXiangqiReplayFromMoves([]).views[0]!;
-  // Card thumbnail, aria-hidden and about a hundred pixels across. Coordinates
-  // are noise at that size, and the card is framed by hand, so the reserved
-  // gutter would change the silhouette every card shares.
-  boardEl.innerHTML = renderXiangqiBoardSvg(view, 'red', { coordinates: false });
+  // The event's art, lichess's card image; a drawn placeholder until events
+  // have art of their own (eventArt).
+  const boardEl = eventArt(entry.tour);
 
   const copy = document.createElement('div');
   copy.className = 'xqb-tour-card-copy';
@@ -2448,18 +2611,25 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   boardSlot.className = 'xqb-card-board-row';
   // Right of the board, where lichess puts it.
   boardSlot.append(boardEl, gauge);
-  const topSeat = cardSeat('black', board.black, seatScore(board, 'black'));
-  // A live game has no score yet, so its LIVE mark takes the score's place on
-  // the top row; a row of its own above the board made live cards taller than
-  // the rest and knocked the grid out of line.
-  if (board.status === 'live') {
-    const live = document.createElement('span');
-    live.className = 'xqb-card-live';
-    live.textContent = t('broadcast.statusLive');
-    topSeat.querySelector('.xqb-score')?.replaceWith(live);
-  }
-  card.append(topSeat, boardSlot, cardSeat('red', board.red, seatScore(board, 'red')));
+  // A live game shows who is to move where a finished one shows its score:
+  // lichess runs that side's clock there in orange. The source has no clocks,
+  // so the mark is the turn alone.
+  const mover = board.status === 'live' ? sideToMove(board) : null;
+  const topSeat = cardSeat('black', board.black, seatScore(board, 'black'), {
+    toMove: mover === 'black',
+  });
+  card.append(
+    topSeat,
+    boardSlot,
+    cardSeat('red', board.red, seatScore(board, 'red'), { toMove: mover === 'red' }),
+  );
   return card;
+}
+
+/** Whose turn it is in a game: Red moves first, so Red after an even ply. */
+function sideToMove(board: Pick<BroadcastBoardSummary, 'plyCount' | 'moves'>): XiangqiColor {
+  const plies = board.plyCount ?? board.moves?.length ?? 0;
+  return plies % 2 === 0 ? 'red' : 'black';
 }
 
 /** A side's score for the game: 1, 0 or ½ once it is over, else nothing. */
@@ -2480,7 +2650,7 @@ function cardSeat(
   color: XiangqiColor,
   player: XiangqiBroadcastPlayerTag,
   score: string,
-  opts: { resultInk?: boolean } = {},
+  opts: { resultInk?: boolean; toMove?: boolean } = {},
 ): HTMLElement {
   const row = document.createElement('span');
   row.className = `xqb-card-seat xqb-card-seat-${color}${score === '1' ? ' xqb-card-seat-winner' : ''}`;
@@ -2507,6 +2677,12 @@ function cardSeat(
     points.classList.add(score === '1' ? 'xqb-score-win' : 'xqb-score-loss');
   }
   points.textContent = score;
+  if (opts.toMove) {
+    points.classList.add('xqb-to-move');
+    points.textContent = '';
+    points.title = t('broadcast.toMove');
+    points.setAttribute('aria-label', t('broadcast.toMove'));
+  }
   row.append(disc, name, points);
   return row;
 }
@@ -2625,19 +2801,21 @@ function sideRail(
         : t('broadcast.table', { n: table });
       row.title = board.details?.kind === 'blitz' ? `${where} · ${t('broadcast.blitz')}` : where;
     }
+    const rowMover = board.status === 'live' ? sideToMove(board) : null;
     const players = document.createElement('span');
     players.className = 'xqb-rail-players';
     players.append(
-      cardSeat('red', board.red, seatScore(board, 'red'), { resultInk: true }),
-      cardSeat('black', board.black, seatScore(board, 'black'), { resultInk: true }),
+      cardSeat('red', board.red, seatScore(board, 'red'), {
+        resultInk: true,
+        toMove: rowMover === 'red',
+      }),
+      cardSeat('black', board.black, seatScore(board, 'black'), {
+        resultInk: true,
+        toMove: rowMover === 'black',
+      }),
     );
     row.append(number, railGauge(board), players);
-    if (board.status === 'live') {
-      const marker = document.createElement('span');
-      marker.className = 'xqb-rail-marker xqb-status-live';
-      marker.textContent = t('broadcast.live');
-      row.append(marker);
-    }
+    if (board.status === 'live') row.classList.add('xqb-rail-row-live');
     list.append(row);
     if (current) currentRow = row;
   }

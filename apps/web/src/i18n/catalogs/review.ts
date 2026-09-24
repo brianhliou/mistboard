@@ -315,6 +315,8 @@ export const EN_REVIEW = {
   'broadcast.allOnOnePage': 'All on one page',
   'broadcast.deciderWon': '{team} won the deciding blitz game',
   'broadcast.deciderDrawn': 'The deciding blitz game was drawn',
+  'broadcast.ongoing': 'Ongoing',
+  'broadcast.toMove': 'To move',
   'broadcast.otherGames': 'Other games',
   'broadcast.sectionNav': 'Broadcasts menu',
   'broadcast.calendar': 'Calendar',

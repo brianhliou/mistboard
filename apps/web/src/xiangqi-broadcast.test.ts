@@ -264,16 +264,18 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     );
     expect(titles.join(' ')).toContain('王天一');
     expect(titles.join(' ')).toContain('郑惟桐');
-    // A live game has no score yet, so its Live mark takes the top row's score
-    // slot rather than a row of its own (which made live cards taller).
+    // A live game has no score yet: the side to move is marked in that slot
+    // (lichess runs its clock there), no badge row of its own. One move in,
+    // Black is to move.
     const liveCard = root.querySelector('.xqb-board-card-live');
-    expect(liveCard?.querySelector('.xqb-card-seat-black .xqb-card-live')?.textContent).toBe(
-      'Live',
-    );
-    expect(liveCard?.querySelector('.xqb-card-top')).toBeNull();
+    expect(
+      liveCard?.querySelector('.xqb-card-seat-black .xqb-to-move')?.getAttribute('title'),
+    ).toBe('To move');
+    expect(liveCard?.querySelector('.xqb-card-seat-red .xqb-to-move')).toBeNull();
+    expect(liveCard?.querySelector('.xqb-card-top, .xqb-card-live')).toBeNull();
     expect(
       [...(liveCard?.querySelectorAll('.xqb-score') ?? [])].map((node) => node.textContent),
-    ).toEqual(['']);
+    ).toEqual(['', '']);
   });
 
   it('fires broadcast_opened once for the round surface, not again per stream push', async () => {
@@ -425,14 +427,29 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 't', 'r');
 
-    const select = root.querySelector<HTMLSelectElement>('.xqb-hero .xqb-round-select');
-    expect(select).not.toBeNull();
-    const options = [...(select?.querySelectorAll('option') ?? [])];
-    expect(options.map((option) => option.value)).toEqual(['r', 'r2']);
-    expect(select?.value).toBe('r');
-    // Status markers: live disc for round 1, finished check for round 2.
-    expect(options[0]?.textContent).toBe('● Round 1');
-    expect(options[1]?.textContent).toBe('✓ Round 2');
+    // lichess's picker: a pill naming the round and its status, opening a
+    // panel of every round linked in place, the current one marked.
+    const button = root.querySelector<HTMLButtonElement>('.xqb-hero .xqb-round-picker-button');
+    expect(button?.querySelector('.xqb-round-picker-name')?.textContent).toBe('Round 1');
+    // A live round reads lichess's "Ongoing".
+    expect(button?.querySelector('.xqb-round-status-live')?.textContent).toBe('Ongoing');
+    const panel = root.querySelector<HTMLElement>('.xqb-round-picker-panel');
+    expect(panel?.hidden).toBe(true);
+    button!.click();
+    expect(panel?.hidden).toBe(false);
+    expect(button?.getAttribute('aria-expanded')).toBe('true');
+    const options = [...(panel?.querySelectorAll<HTMLAnchorElement>('.xqb-round-option') ?? [])];
+    expect(options.map((option) => option.getAttribute('href'))).toEqual([
+      '/broadcast/xiangqi/t/round/r',
+      '/broadcast/xiangqi/t/round/r2',
+    ]);
+    expect(options[0]?.getAttribute('aria-selected')).toBe('true');
+    // Round 2 is finished: a check, named for screen readers.
+    expect(
+      options[1]?.querySelector('.xqb-round-status-finished')?.getAttribute('aria-label'),
+    ).toBe('Finished');
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape' }));
+    expect(panel?.hidden).toBe(true);
   });
 
   it('draws an eval gauge on boards that have an eval, and the toggle hides them all', async () => {
@@ -703,11 +720,12 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(pastCard?.querySelector('.xqb-tour-status')?.textContent).toMatch(/^Round 5 · Jul 8/);
     expect(pastCard?.textContent).not.toContain('Updated');
 
-    // Both cards render a mini-board thumbnail, including the featured-board
-    // fallback for the past tour.
-    expect(root.querySelectorAll('.xqb-tour-card .xqb-card-board > svg.xq-live-svg').length).toBe(
-      2,
-    );
+    // Both cards carry the event's art (a drawn placeholder: its name over a
+    // board motif), lichess's card image, in place of a board thumbnail.
+    const arts = root.querySelectorAll('.xqb-tour-card > .xqb-event-art');
+    expect(arts.length).toBe(2);
+    expect(arts[0]?.querySelector('.xqb-event-art-zh')?.textContent).toBeTruthy();
+    expect(root.querySelector('.xqb-tour-card .xqb-card-board')).toBeNull();
   });
 
   it('features the latest event when nothing is live', async () => {
@@ -786,7 +804,9 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
       [...(current?.querySelectorAll('.xqb-card-seat-name') ?? [])].map((node) => node.textContent),
     ).toEqual(['GM Wang Tianyi', 'GM Zheng Weitong']);
     expect(current?.querySelector('.xqb-rail-gauge.xqb-rail-gauge-empty')).not.toBeNull();
-    expect(current?.querySelector('.xqb-rail-marker')?.textContent).toBe('Live');
+    // Live: the side to move marked in the score column, as on the cards.
+    expect(current?.classList.contains('xqb-rail-row-live')).toBe(true);
+    expect(current?.querySelector('.xqb-card-seat-black .xqb-to-move')).not.toBeNull();
 
     // An open board takes the whole content column (lichess): no header or
     // tabs above it; the list's heading is the way back to the round.

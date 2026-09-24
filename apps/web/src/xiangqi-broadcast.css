@@ -2354,3 +2354,448 @@ a.xqb-standings-name:focus-visible {
 .xqb-per-page {
   min-width: 150px;
 }
+
+/* ── Round picker, lichess's (2026-09-23) ────────────────────────────────────
+   A wide pill naming the round and its status, opening a panel of every round
+   with its start and status. */
+.xqb-round-picker {
+  position: relative;
+  width: min(100%, 560px);
+}
+
+.xqb-round-picker-button {
+  appearance: none;
+  display: flex;
+  align-items: center;
+  gap: 14px;
+  width: 100%;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--site-panel) 80%, var(--site-bg, #000));
+  color: var(--site-heading);
+  padding: 9px 14px 9px 20px;
+  font: inherit;
+  text-align: left;
+  cursor: pointer;
+}
+
+.xqb-round-picker-button:hover,
+.xqb-round-picker-button:focus-visible,
+.xqb-round-picker-button[aria-expanded="true"] {
+  border-color: color-mix(in srgb, var(--site-accent) 55%, var(--site-border-soft));
+}
+
+.xqb-round-picker-name {
+  flex: 1 1 auto;
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+  font-size: 20px;
+  font-weight: 400;
+}
+
+.xqb-round-picker-caret {
+  display: inline-flex;
+  color: var(--site-accent);
+}
+
+.xqb-round-picker-panel {
+  position: absolute;
+  z-index: 30;
+  top: calc(100% + 6px);
+  left: 0;
+  right: 0;
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 12px;
+  background: color-mix(in srgb, var(--site-panel) 88%, var(--site-text));
+  box-shadow: 0 12px 32px rgba(0, 0, 0, 0.28);
+  padding: 6px 0;
+  scrollbar-width: thin;
+}
+
+.xqb-round-option {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto minmax(88px, auto);
+  align-items: center;
+  gap: 18px;
+  padding: 9px 20px;
+  color: var(--site-text);
+  text-decoration: none;
+}
+
+.xqb-round-option-name {
+  color: var(--site-accent-strong);
+  font-size: 17px;
+}
+
+.xqb-round-option-when {
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqb-round-option .xqb-round-status {
+  justify-self: end;
+}
+
+.xqb-round-option:hover,
+.xqb-round-option:focus-visible {
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+}
+
+.xqb-round-option-current,
+.xqb-round-option-current:hover {
+  background: var(--site-accent);
+}
+
+.xqb-round-option-current .xqb-round-option-name,
+.xqb-round-option-current .xqb-round-option-when,
+.xqb-round-option-current .xqb-round-status {
+  color: var(--site-on-accent, #fff);
+}
+
+.xqb-round-status {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--site-muted);
+  font-size: 14px;
+  white-space: nowrap;
+}
+
+.xqb-round-status-check {
+  display: inline-flex;
+  color: #4f8a2a;
+}
+
+:root[data-effective-theme="dark"] .xqb-round-status-check {
+  color: #7fb24a;
+}
+
+.xqb-round-status-live {
+  color: #d23b2e;
+  font-weight: 700;
+}
+
+.xqb-round-option-current .xqb-round-status-check {
+  color: inherit;
+}
+
+/* ── Overview polish ──────────────────────────────────────────────────────── */
+.xqb-overview-strip {
+  justify-content: space-evenly;
+  gap: 12px 32px;
+  padding: 18px 28px;
+}
+
+.xqb-overview-icon {
+  color: var(--site-accent);
+}
+
+/* The share box: the title is a tab sitting on the box's top-right edge. */
+.xqb-overview-share {
+  position: relative;
+  margin-top: 30px;
+  padding: 34px 28px 26px;
+  gap: 22px;
+}
+
+.xqb-overview-share:not([open]) {
+  padding: 0;
+  min-height: 12px;
+}
+
+.xqb-share-tab {
+  position: absolute;
+  top: -22px;
+  right: 28px;
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  border-radius: 12px 12px 0 0;
+  background: inherit;
+  padding: 10px 18px 8px;
+  color: var(--site-text);
+  font-size: 15px;
+  font-weight: 500;
+  list-style: none;
+  cursor: pointer;
+}
+
+.xqb-share-tab::-webkit-details-marker {
+  display: none;
+}
+
+.xqb-share-chevron {
+  display: inline-flex;
+  transform: rotate(180deg);
+  transition: transform 120ms ease;
+}
+
+.xqb-overview-share:not([open]) .xqb-share-chevron {
+  transform: none;
+}
+
+.xqb-overview-share .xqb-share-row {
+  display: grid;
+  gap: 8px;
+}
+
+.xqb-share-label {
+  color: var(--site-heading);
+  font-size: 14px;
+  font-weight: 600;
+}
+
+.xqb-share-field {
+  display: flex;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 10px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--site-panel) 70%, var(--site-bg, #000));
+}
+
+.xqb-share-field .xqb-share-url {
+  flex: 1 1 auto;
+  min-width: 0;
+  border: 0;
+  border-radius: 0;
+  background: transparent;
+  color: var(--site-text);
+  padding: 11px 16px;
+  font: inherit;
+  font-size: 14px;
+}
+
+.xqb-share-field .xqb-share-url:focus {
+  outline: none;
+}
+
+.xqb-share-field:focus-within {
+  border-color: color-mix(in srgb, var(--site-accent) 55%, var(--site-border-soft));
+}
+
+.xqb-share-field .xqb-share-copy {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 50px;
+  border: 0;
+  border-left: 1px solid var(--site-border-soft);
+  border-radius: 0;
+  background: color-mix(in srgb, var(--site-text) 6%, transparent);
+  color: var(--site-text);
+  padding: 0;
+  cursor: pointer;
+}
+
+.xqb-share-field .xqb-share-copy:hover,
+.xqb-share-field .xqb-share-copy:focus-visible {
+  color: var(--site-accent-strong);
+  background: color-mix(in srgb, var(--site-accent) 14%, transparent);
+}
+
+.xqb-share-field .xqb-share-copied {
+  color: #4f8a2a;
+}
+
+:root[data-effective-theme="dark"] .xqb-round-option-current .xqb-round-status-check {
+  color: inherit;
+}
+
+/* <details> does not lay its content out as flex everywhere; space the rows
+   with margins instead. */
+.xqb-overview-share .xqb-share-row + .xqb-share-row {
+  margin-top: 24px;
+}
+
+.xqb-overview-share[open] .xqb-share-tab {
+  box-shadow: 0 -1px 0 var(--site-border-soft);
+}
+
+.xqb-overview-share[open] {
+  border-top: 1px solid var(--site-border-soft);
+}
+
+/* Centred rows (lichess's strip): a wrapped second row sits under the first
+   instead of being pulled to the edges. */
+.xqb-overview-strip {
+  justify-content: center;
+  gap: 12px 36px;
+}
+
+/* ── Event art placeholder (2026-09-24) ──────────────────────────────────────
+   A board-coloured panel with a faint grid and river, the event's Chinese
+   name large in its ink, the English name and "city · year" below. Stands in
+   for real art in the event header and on the broadcast list's cards. */
+.xqb-event-art {
+  --xqb-art-ink: #a63328;
+  position: relative;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  align-items: center;
+  gap: 6px;
+  aspect-ratio: 16 / 9;
+  overflow: hidden;
+  border-radius: 8px;
+  background-color: #f1dcb0;
+  background-image:
+    linear-gradient(
+      to bottom,
+      transparent calc(50% - 9px),
+      color-mix(in srgb, #f1dcb0 70%, var(--xqb-art-ink)) calc(50% - 9px),
+      color-mix(in srgb, #f1dcb0 70%, var(--xqb-art-ink)) calc(50% + 9px),
+      transparent calc(50% + 9px)
+    ),
+    repeating-linear-gradient(
+      to right,
+      color-mix(in srgb, var(--xqb-art-ink) 13%, transparent) 0 1px,
+      transparent 1px 11.11%
+    ),
+    repeating-linear-gradient(
+      to bottom,
+      color-mix(in srgb, var(--xqb-art-ink) 13%, transparent) 0 1px,
+      transparent 1px 10%
+    );
+  box-shadow:
+    inset 0 0 0 5px #f1dcb0,
+    inset 0 0 0 6px color-mix(in srgb, var(--xqb-art-ink) 45%, transparent);
+  padding: 14px 18px;
+  text-align: center;
+  color: var(--xqb-art-ink);
+}
+
+.xqb-event-art-zh {
+  max-width: 100%;
+  font-family: "Noto Serif SC", "Songti SC", "STSong", "SimSun", serif;
+  font-size: clamp(16px, 2.2cqw, 30px);
+  font-weight: 700;
+  letter-spacing: 0.04em;
+  line-height: 1.2;
+  text-wrap: balance;
+  background: #f1dcb0;
+  padding: 2px 8px;
+  border-radius: 4px;
+}
+
+.xqb-event-art-en {
+  max-width: 100%;
+  color: #3b2a1c;
+  font-size: 13px;
+  font-weight: 600;
+  line-height: 1.25;
+  text-wrap: balance;
+  background: #f1dcb0;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+.xqb-event-art-meta {
+  color: color-mix(in srgb, #3b2a1c 70%, transparent);
+  font-size: 11px;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: #f1dcb0;
+  padding: 1px 6px;
+  border-radius: 3px;
+}
+
+/* The event header: the art on the right, flush with the header's edges. */
+.xqb-event-content > .xqb-event-header {
+  grid-template-columns: minmax(0, 1fr) minmax(220px, 34%);
+  grid-template-areas:
+    "copy art"
+    "actions art";
+  column-gap: 24px;
+}
+
+.xqb-event-header > .xqb-hero-copy {
+  grid-area: copy;
+}
+
+.xqb-event-header > .xqb-hero-actions {
+  grid-area: actions;
+}
+
+.xqb-event-header > .xqb-event-art {
+  grid-area: art;
+  align-self: stretch;
+  aspect-ratio: auto;
+  min-height: 150px;
+  margin: -22px -24px -20px 0;
+  border-radius: 0 var(--site-radius) 0 0;
+}
+
+.xqb-event-header > .xqb-event-art .xqb-event-art-zh {
+  font-size: 24px;
+}
+
+@container (max-width: 760px) {
+  .xqb-event-content > .xqb-event-header {
+    grid-template-columns: minmax(0, 1fr);
+    grid-template-areas:
+      "copy"
+      "actions";
+  }
+
+  .xqb-event-header > .xqb-event-art {
+    display: none;
+  }
+}
+
+/* The list's cards: the art on top, lichess's card image. */
+.xqb-tour-card > .xqb-event-art .xqb-event-art-zh {
+  font-size: 17px;
+}
+
+.xqb-tour-card > .xqb-event-art .xqb-event-art-en {
+  font-size: 11px;
+}
+
+.xqb-tour-card-featured > .xqb-event-art .xqb-event-art-zh {
+  font-size: 22px;
+}
+
+/* Card-size art: a ten-character name fits on one line. */
+.xqb-tour-card > .xqb-event-art {
+  padding: 10px 10px;
+}
+
+.xqb-tour-card > .xqb-event-art .xqb-event-art-zh {
+  font-size: 15px;
+  letter-spacing: 0.02em;
+}
+
+/* ── Live state, lichess's (2026-09-24) ──────────────────────────────────────
+   The side to move is marked where a finished game shows its score (lichess
+   runs that side's clock there in orange; the source has no clocks). A live
+   round reads "Ongoing" after a red dot. */
+.xqb-to-move::before {
+  content: "";
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: #d64f00;
+  box-shadow: 0 0 0 3px color-mix(in srgb, #d64f00 22%, transparent);
+  vertical-align: middle;
+}
+
+.xqb-round-status-dot {
+  display: inline-block;
+  width: 10px;
+  height: 10px;
+  border-radius: 50%;
+  background: #d23b2e;
+}
+
+.xqb-round-status-live {
+  color: var(--site-text);
+  font-weight: 500;
+}

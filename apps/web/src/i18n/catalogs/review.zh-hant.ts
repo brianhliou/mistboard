@@ -484,6 +484,8 @@ export const ZH_HANT_REVIEW = {
   'broadcast.allOnOnePage': '全部顯示',
   'broadcast.deciderWon': '{team}贏得決勝超快棋',
   'broadcast.deciderDrawn': '決勝超快棋和棋',
+  'broadcast.ongoing': '進行中',
+  'broadcast.toMove': '輪到走棋',
   'broadcast.otherGames': '其他對局',
   'broadcast.sectionNav': '直播選單',
   'broadcast.calendar': '賽程',
