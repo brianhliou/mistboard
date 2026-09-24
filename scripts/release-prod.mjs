@@ -99,6 +99,13 @@ const release = {
   ciRunUrl: null,
 };
 
+// Module state the run below reads. It must be declared ABOVE the run block:
+// the functions are hoisted and callable from it, a `const` is not, and one
+// declared further down throws "Cannot access before initialization" the
+// first time a rare path reaches it (release-prod-structure.test.mjs).
+// confirmAncestor's answers, keyed pushed..tip.
+const ancestryCache = new Map();
+
 try {
   if (!options.plan) ensureCleanWorktree();
   release.headRevision = git(['rev-parse', '--verify', options.head]);
@@ -610,7 +617,6 @@ async function waitForGithubCi({ headRevision }) {
 // The tip is fetched, never assumed local: it is another session's commit and
 // this checkout has never seen it. The fetch lands in the shared .git, which is
 // what lets the control worktree fast-forward to the tip afterwards.
-const ancestryCache = new Map();
 function confirmAncestor(pushed, tip) {
   const key = `${pushed}..${tip}`;
   if (ancestryCache.has(key)) return ancestryCache.get(key);
