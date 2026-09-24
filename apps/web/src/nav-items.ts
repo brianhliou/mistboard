@@ -154,11 +154,13 @@ export function adminNavItems(): NavItem[] {
 // (streamers, video) to list.
 export function watchNavItems(): NavItem[] {
   return [
+    // Tournament broadcasts lead the menu (lichess's order): the top events,
+    // live and archived, are the headline thing to watch.
+    { label: 'Broadcasts', labelKey: 'nav.broadcasts', href: '/broadcast/xiangqi' },
     { label: 'Mistboard TV', labelKey: 'nav.tv', href: '/watch' },
     // Every game in progress right now, live and correspondence (lichess's
     // "Current games"). Distinct from the finished-games database under Tools.
     { label: 'Current games', labelKey: 'nav.currentGames', href: '/games' },
-    { label: 'Broadcasts', labelKey: 'nav.broadcasts', href: '/broadcast/xiangqi' },
     // Streamers appears only once the curated directory has someone in it.
     // Deriving the link from the data means an empty /streamer is never
     // reachable from the nav, and seeding the first entry needs no second edit.

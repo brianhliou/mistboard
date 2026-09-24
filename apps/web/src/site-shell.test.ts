@@ -99,7 +99,7 @@ describe('site shell nav', () => {
     expect(nav.querySelector<HTMLAnchorElement>('a[href="/bots"]')).toBeNull();
 
     // Watch is a split menu: the title links to Mistboard TV (/watch) and the
-    // panel lists Mistboard TV explicitly alongside Broadcasts.
+    // panel lists Broadcasts first, then Mistboard TV explicitly.
     const watchMenu = [...nav.querySelectorAll<HTMLElement>('.site-nav-menu')].find(
       (menu) => menu.querySelector('.site-nav-menu-toggle')?.textContent === 'Watch',
     );
@@ -117,7 +117,7 @@ describe('site shell nav', () => {
       [...(watchPanel?.querySelectorAll<HTMLAnchorElement>('a') ?? [])].map(
         (link) => link.textContent,
       ),
-    ).toEqual(['Mistboard TV', 'Current games', 'Broadcasts', 'Video library']);
+    ).toEqual(['Broadcasts', 'Mistboard TV', 'Current games', 'Video library']);
     expect(watchPanel?.querySelector<HTMLAnchorElement>('a[href="/games"]')?.textContent).toBe(
       'Current games',
     );

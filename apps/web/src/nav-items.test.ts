@@ -13,9 +13,9 @@ describe('watch nav', () => {
     const { watchNavItems } = await import('./nav-items.js');
 
     expect(watchNavItems().map((item) => item.label)).toEqual([
+      'Broadcasts',
       'Mistboard TV',
       'Current games',
-      'Broadcasts',
       'Video library',
     ]);
   });
@@ -38,9 +38,9 @@ describe('watch nav', () => {
 
     const items = watchNavItems();
     expect(items.map((item) => item.label)).toEqual([
+      'Broadcasts',
       'Mistboard TV',
       'Current games',
-      'Broadcasts',
       'Streamers',
       'Video library',
     ]);
