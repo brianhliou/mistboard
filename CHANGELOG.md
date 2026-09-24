@@ -142,6 +142,7 @@ Conventions:
 
 ### Fixed
 
+- Team league matches on broadcasts are scored the way the 2026 league plays them: a table counts once (its slow game, or the blitz playoff after a drawn one), and a level match is settled by its deciding game. Every match no longer claims a missing record, and the league table matches the official one ([a2035ec8](https://github.com/brianhliou/mistboard/commit/a2035ec8))
 - The local engine runs on broadcast boards in Chrome; it said "Safari cannot run it yet" on every one ([f16f9e2d](https://github.com/brianhliou/mistboard/commit/f16f9e2d))
 - A drawn broadcast game without an evaluation shows a level gauge rather than a blank one, and every board in the grid is the same size ([47af939b](https://github.com/brianhliou/mistboard/commit/47af939b))
 - Misty's bot profile names the engine its fog chess games actually run, 1.6; it had still said 1.5 since the August upgrade ([4096375c](https://github.com/brianhliou/mistboard/commit/4096375c))
