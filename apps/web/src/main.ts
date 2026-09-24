@@ -261,7 +261,12 @@ const wantsVideos =
   path === '/zh-hant/videos' ||
   page === 'videos';
 const wantsXiangqiPlayersIndex = path === '/players';
-const xiangqiPlayerSlug = /^\/players\/([^/]+)$/.exec(path)?.[1] ?? null;
+// Teams first: /players/teams would otherwise read as a player slug.
+const wantsXiangqiTeamsIndex = path === '/players/teams';
+const xiangqiTeamKey = /^\/players\/teams\/([^/]+)$/.exec(path)?.[1] ?? null;
+const xiangqiPlayerSlug = wantsXiangqiTeamsIndex
+  ? null
+  : (/^\/players\/([^/]+)$/.exec(path)?.[1] ?? null);
 const wantsXiangqiBroadcastIndex = path === '/broadcast/xiangqi';
 const wantsXiangqiBroadcastOps = path === '/broadcast/xiangqi/ops';
 // The section's own pages. Matched before the tour route below, which would
@@ -625,6 +630,20 @@ if (replaySample) {
   void mountOrReport(() =>
     import('./xiangqi-players.js').then(({ mountXiangqiPlayersIndex }) =>
       mountXiangqiPlayersIndex(appRoot),
+    ),
+  );
+} else if (wantsXiangqiTeamsIndex) {
+  setTitle('Xiangqi teams');
+  void mountOrReport(() =>
+    import('./xiangqi-players.js').then(({ mountXiangqiTeamsIndex }) =>
+      mountXiangqiTeamsIndex(appRoot),
+    ),
+  );
+} else if (xiangqiTeamKey) {
+  setTitle('Xiangqi team');
+  void mountOrReport(() =>
+    import('./xiangqi-players.js').then(({ mountXiangqiTeam }) =>
+      mountXiangqiTeam(appRoot, decodeURIComponent(xiangqiTeamKey)),
     ),
   );
 } else if (xiangqiPlayerSlug) {

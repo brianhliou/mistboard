@@ -1,5 +1,6 @@
 // The broadcast section's own pages beside the index, lichess-style: a left
-// rail (Broadcasts, Calendar, Players, About) shared by all three, the
+// rail (Broadcasts, Calendar, About, then Pro players and Pro teams, lichess's
+// FIDE players and federations) shared by every page it lists, the
 // calendar of top events, and the about page. Also the "top players" ranking
 // the index cards use, from the CXA data the player pages already carry.
 
@@ -10,22 +11,25 @@ import { CXA_RATINGS } from './players/cxa-ratings.js';
 import { buildNav } from './site-shell.js';
 import { formatEventDateRange } from './xiangqi-broadcast-time.js';
 
-export type BroadcastRailItem = 'broadcasts' | 'calendar' | 'players' | 'about';
+export type BroadcastRailItem = 'broadcasts' | 'calendar' | 'about' | 'players' | 'teams';
 
 /** The section's left rail; `active` marks the page it sits on. */
 export function broadcastRail(active: BroadcastRailItem): HTMLElement {
   const nav = document.createElement('nav');
   nav.className = 'xqb-rail';
   nav.setAttribute('aria-label', t('broadcast.sectionNav'));
-  const items: Array<{ id: BroadcastRailItem; href: string; label: string }> = [
+  // The people start a second group, set apart by a gap, as on lichess.
+  const items: Array<{ id: BroadcastRailItem; href: string; label: string; group?: true }> = [
     { id: 'broadcasts', href: '/broadcast/xiangqi', label: t('broadcast.broadcasts') },
     { id: 'calendar', href: '/broadcast/xiangqi/calendar', label: t('broadcast.calendar') },
-    { id: 'players', href: '/players', label: t('nav.proPlayers') },
     { id: 'about', href: '/broadcast/xiangqi/about', label: t('broadcast.about') },
+    { id: 'players', href: '/players', label: t('nav.proPlayers'), group: true },
+    { id: 'teams', href: '/players/teams', label: t('nav.proTeams') },
   ];
   for (const item of items) {
     const link = document.createElement('a');
     link.className = item.id === active ? 'xqb-rail-link xqb-rail-link-active' : 'xqb-rail-link';
+    if (item.group) link.classList.add('xqb-rail-link-group');
     link.href = item.href;
     link.textContent = item.label;
     if (item.id === active) link.setAttribute('aria-current', 'page');

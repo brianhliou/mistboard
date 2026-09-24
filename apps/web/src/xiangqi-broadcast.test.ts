@@ -701,8 +701,9 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect([...root.querySelectorAll('.xqb-rail-link')].map((node) => node.textContent)).toEqual([
       'Broadcasts',
       'Calendar',
-      'Pro players',
       'About',
+      'Pro players',
+      'Pro teams',
     ]);
     expect(root.querySelector('.xqb-rail-link-active')?.textContent).toBe('Broadcasts');
 

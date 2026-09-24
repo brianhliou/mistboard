@@ -8,12 +8,12 @@
 import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
-import { buildCommunityLayout } from './community-rail.js';
 import { CXA_POINTS, CXA_POINTS_LISTS } from './players/cxa-points.js';
 import { CXA_LISTS, CXA_RATINGS } from './players/cxa-ratings.js';
 import { playerTitleFor } from './players/player-title.js';
 import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
+import { type BroadcastRailItem, broadcastSectionLayout } from './xiangqi-broadcast-pages.js';
 
 export type PlayerEventRecord = {
   tourSlug: string;
@@ -85,6 +85,29 @@ export async function mountXiangqiPlayer(root: HTMLElement, slug: string): Promi
   }
 }
 
+export async function mountXiangqiTeamsIndex(root: HTMLElement): Promise<void> {
+  setRoot(root, 'Loading teams');
+  try {
+    const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
+    root.replaceChildren(buildNav(), renderTeams(data.players).main);
+  } catch (err) {
+    renderError(root, err);
+  }
+}
+
+export async function mountXiangqiTeam(root: HTMLElement, key: string): Promise<void> {
+  setRoot(root, 'Loading team');
+  try {
+    const data = await fetchJson<PlayersIndexResponse>('/api/xiangqi/players');
+    const team = teamsOf(data.players).find((entry) => entry.key === key);
+    if (!team) throw new Error('No team by that name');
+    document.title = `${teamLabel(team)} · Mistboard`;
+    root.replaceChildren(buildNav(), renderTeam(team).main);
+  } catch (err) {
+    renderError(root, err);
+  }
+}
+
 function setRoot(root: HTMLElement, loadingLabel: string): void {
   root.classList.add('landing-page', 'xiangqi-broadcast-route');
   root.replaceChildren(buildNav(), buildLoadingState(loadingLabel));
@@ -118,14 +141,53 @@ export function scorePercent(r: { games: number; wins: number; draws: number }):
   return r.games === 0 ? 0 : Math.round(((r.wins + r.draws / 2) / r.games) * 100);
 }
 
-export type IndexSort = 'games' | 'score' | 'name';
+// ---------------------------------------------------------------------------
+// The index, lichess's FIDE players page: one panel with the title and a
+// search, then one row per player, sortable by the column headers. The CXA's
+// current points list leads, the way lichess leads with classical rating.
+
+/** The player's entry on the latest CXA points list they appear on. */
+export function latestPoints(name: string): { points: number; rank: number } | null {
+  const entries = CXA_POINTS[name];
+  const last = entries?.[entries.length - 1];
+  return last ? { points: last.points, rank: last.rank } : null;
+}
+
+/** The player's last CXA rating (the series closed in 2026). */
+export function latestRating(name: string): number | null {
+  const entries = CXA_RATINGS[name];
+  return entries?.[entries.length - 1]?.rating ?? null;
+}
+
+function byNullableDesc(a: number | null, b: number | null): number {
+  if (a === null && b === null) return 0;
+  if (a === null) return 1;
+  if (b === null) return -1;
+  return b - a;
+}
+
+export type IndexSort = 'points' | 'rating' | 'games' | 'score' | 'name';
 
 export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): PlayerRecord[] {
   const out = [...players];
+  const byGames = (a: PlayerRecord, b: PlayerRecord) =>
+    b.games - a.games || displayName(a).localeCompare(displayName(b));
   if (sort === 'name') out.sort((a, b) => displayName(a).localeCompare(displayName(b)));
   else if (sort === 'score')
     out.sort((a, b) => scorePercent(b) - scorePercent(a) || b.games - a.games);
-  else out.sort((a, b) => b.games - a.games || displayName(a).localeCompare(displayName(b)));
+  else if (sort === 'points')
+    out.sort(
+      (a, b) =>
+        byNullableDesc(
+          latestPoints(a.name)?.points ?? null,
+          latestPoints(b.name)?.points ?? null,
+        ) ||
+        byNullableDesc(latestRating(a.name), latestRating(b.name)) ||
+        byGames(a, b),
+    );
+  else if (sort === 'rating')
+    out.sort((a, b) => byNullableDesc(latestRating(a.name), latestRating(b.name)) || byGames(a, b));
+  else out.sort(byGames);
   return out;
 }
 
@@ -143,51 +205,71 @@ export function playerTitle(player: Pick<PlayerRecord, 'slug' | 'name'>): Player
   return playerTitleFor(player);
 }
 
-// ---------------------------------------------------------------------------
-// The index: one row per player, a search box, sortable by the column headers.
+const SEARCH_ICON =
+  '<svg viewBox="0 0 24 24" width="18" height="18" aria-hidden="true"><circle cx="10.5" cy="10.5" r="6.5" fill="none" stroke="currentColor" stroke-width="2.2"/><path d="M15.5 15.5 21 21" stroke="currentColor" stroke-width="2.2" stroke-linecap="round"/></svg>';
 
-function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
-  const main = shell();
-  const events = new Set(players.flatMap((p) => p.events.map((e) => e.tourSlug)));
+/** The panel's head: a light title on the left, lichess's search on the right. */
+function boardHead(title: HTMLElement, search?: HTMLInputElement): HTMLElement {
+  const head = document.createElement('header');
+  head.className = 'xqp-board-head';
+  head.append(title);
+  if (search) {
+    const form = document.createElement('form');
+    form.className = 'xqp-search-form';
+    form.setAttribute('role', 'search');
+    const button = document.createElement('button');
+    button.type = 'submit';
+    button.className = 'xqp-search-button';
+    button.setAttribute('aria-label', 'Search');
+    button.innerHTML = SEARCH_ICON;
+    form.addEventListener('submit', (event) => {
+      event.preventDefault();
+      search.dispatchEvent(new Event('input'));
+    });
+    form.append(search, button);
+    head.append(form);
+  }
+  return head;
+}
 
+function searchInput(label: string): HTMLInputElement {
   const search = document.createElement('input');
   search.type = 'search';
   search.className = 'xqp-search';
   search.placeholder = 'Search';
-  search.setAttribute('aria-label', 'Search players');
-  main.append(
-    hero({
-      eyebrow: 'Players',
-      title: 'Xiangqi players',
-      meta: [
-        `${players.length} players`,
-        `${events.size} events`,
-        'Everyone with a finished game in a top-level relayed event',
-      ],
-      actions: [search],
-    }),
-  );
+  search.setAttribute('aria-label', label);
+  return search;
+}
 
-  const section = document.createElement('section');
-  section.className = 'xqb-section';
+type Column<T, K extends string> = {
+  label: string;
+  sort?: K;
+  className?: string;
+  hint?: string;
+  value: (row: T) => HTMLTableCellElement;
+};
+
+/** A sortable, searchable table in the panel; returns the table and a repaint. */
+function sortableTable<T, K extends string>(input: {
+  rows: readonly T[];
+  columns: Column<T, K>[];
+  sort: K;
+  order: (rows: readonly T[], sort: K) => T[];
+  matches: (row: T, query: string) => boolean;
+  href: (row: T) => string;
+  search?: HTMLInputElement;
+}): HTMLElement {
+  const wrap = document.createElement('div');
+  wrap.className = 'xqp-table-wrap';
   const table = document.createElement('table');
   table.className = 'xqp-index';
-  const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
-  const columns: Array<{ label: string; sort?: IndexSort; className?: string }> = [
-    { label: 'Name', sort: 'name', className: 'xqp-col-name' },
-    { label: 'Games', sort: 'games' },
-    { label: 'Score', sort: 'score' },
-    { label: 'W-D-L' },
-    { label: 'Events' },
-    { label: 'Last seen' },
-  ];
-  let sort: IndexSort = 'games';
-  let query = '';
-  const sortHeaders = new Map<IndexSort, HTMLElement>();
-  for (const column of columns) {
+  let sort = input.sort;
+  const sortHeaders = new Map<K, HTMLElement>();
+  for (const column of input.columns) {
     const th = document.createElement('th');
     if (column.className) th.className = column.className;
+    if (column.hint) th.title = column.hint;
     if (column.sort) {
       const button = document.createElement('button');
       button.type = 'button';
@@ -196,7 +278,7 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
       const key = column.sort;
       button.addEventListener('click', () => {
         sort = key;
-        paintRows();
+        paint();
       });
       th.append(button);
       sortHeaders.set(key, th);
@@ -205,45 +287,287 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
     }
     headRow.append(th);
   }
+  const thead = document.createElement('thead');
   thead.append(headRow);
   const tbody = document.createElement('tbody');
   table.append(thead, tbody);
-
   const empty = document.createElement('p');
   empty.className = 'xqp-empty';
   empty.hidden = true;
 
-  function paintRows(): void {
+  function paint(): void {
+    const query = input.search?.value ?? '';
     tbody.replaceChildren();
     for (const [key, th] of sortHeaders) th.classList.toggle('xqp-sorted', key === sort);
-    const shown = sortPlayers(players, sort).filter((p) => matchesQuery(p, query));
-    for (const player of shown) {
+    const shown = input.order(input.rows, sort).filter((row) => input.matches(row, query));
+    for (const row of shown) {
       const tr = document.createElement('tr');
       tr.className = 'xqp-row';
-      tr.append(
-        nameCell(player),
-        cell(String(player.games)),
-        cell(`${scorePercent(player)}%`),
-        cell(recordText(player)),
-        cell(String(player.events.length)),
-        cell(player.lastPlayedOn ?? ''),
-      );
+      for (const column of input.columns) {
+        const td = column.value(row);
+        if (column.sort === sort) td.classList.add('xqp-sorted-cell');
+        tr.append(td);
+      }
       tr.addEventListener('click', (event) => {
         if ((event.target as HTMLElement).closest('a')) return;
-        window.location.href = playerHref(player);
+        window.location.href = input.href(row);
       });
       tbody.append(tr);
     }
     empty.hidden = shown.length > 0;
-    empty.textContent = shown.length > 0 ? '' : `No player matches “${query.trim()}”.`;
+    empty.textContent = shown.length > 0 ? '' : `Nothing matches “${query.trim()}”.`;
   }
-  search.addEventListener('input', () => {
-    query = search.value;
-    paintRows();
+  input.search?.addEventListener('input', paint);
+  paint();
+  wrap.append(table, empty);
+  return wrap;
+}
+
+function numberCell(value: number | null | undefined, suffix = ''): HTMLTableCellElement {
+  return cell(value === null || value === undefined ? '' : `${value}${suffix}`);
+}
+
+function playerColumns(showTeam: boolean): Column<PlayerRecord, IndexSort>[] {
+  return [
+    {
+      label: 'Name',
+      sort: 'name',
+      className: 'xqp-col-name',
+      value: (p) => nameCell(p, showTeam),
+    },
+    {
+      label: 'Points',
+      sort: 'points',
+      hint: 'CXA tournament points, the latest list the player is on',
+      value: (p) => numberCell(latestPoints(p.name)?.points),
+    },
+    {
+      label: 'Rating',
+      sort: 'rating',
+      hint: 'Last CXA rating (the rating lists ended in 2026)',
+      value: (p) => numberCell(latestRating(p.name)),
+    },
+    { label: 'Games', sort: 'games', value: (p) => numberCell(p.games) },
+    { label: 'Score', sort: 'score', value: (p) => numberCell(scorePercent(p), '%') },
+  ];
+}
+
+function playersTable(
+  players: readonly PlayerRecord[],
+  search: HTMLInputElement | undefined,
+  showTeam: boolean,
+): HTMLElement {
+  return sortableTable<PlayerRecord, IndexSort>({
+    rows: players,
+    columns: playerColumns(showTeam),
+    sort: 'points',
+    order: sortPlayers,
+    matches: matchesQuery,
+    href: playerHref,
+    search,
   });
-  paintRows();
-  section.append(table, empty);
-  main.append(section);
+}
+
+function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
+  const main = shell('players');
+  const title = document.createElement('h1');
+  title.className = 'xqp-board-title';
+  title.textContent = 'Xiangqi players';
+  const search = searchInput('Search players');
+  const panel = document.createElement('section');
+  panel.className = 'xqp-board';
+  panel.append(boardHead(title, search), playersTable(players, search, true));
+  main.append(panel);
+  return main;
+}
+
+// ---------------------------------------------------------------------------
+// Teams, lichess's FIDE federations: the clubs and provinces the players sit
+// for, each from the players' latest team. The badge stands in for a flag.
+
+export type TeamRecord = {
+  key: string;
+  name: string;
+  nameEn: string | null;
+  players: PlayerRecord[];
+  games: number;
+  wins: number;
+  draws: number;
+  losses: number;
+};
+
+/** A URL-safe key for a team: its English name slugged, else the Chinese. */
+export function teamKey(player: Pick<PlayerRecord, 'federation' | 'federationEn'>): string | null {
+  const slug = (player.federationEn ?? '')
+    .toLowerCase()
+    .replace(/[^a-z0-9]+/g, '-')
+    .replace(/^-+|-+$/g, '');
+  return slug || player.federation || null;
+}
+
+export function teamsOf(players: readonly PlayerRecord[]): TeamRecord[] {
+  const teams = new Map<string, TeamRecord>();
+  for (const player of players) {
+    const key = teamKey(player);
+    if (!key || !player.federation) continue;
+    let team = teams.get(key);
+    if (!team) {
+      team = {
+        key,
+        name: player.federation,
+        nameEn: player.federationEn,
+        players: [],
+        games: 0,
+        wins: 0,
+        draws: 0,
+        losses: 0,
+      };
+      teams.set(key, team);
+    }
+    team.players.push(player);
+    team.games += player.games;
+    team.wins += player.wins;
+    team.draws += player.draws;
+    team.losses += player.losses;
+  }
+  return [...teams.values()];
+}
+
+/** The points of the team's five best players added up, lichess's "top 10
+ *  average" for a list where most players have no points: a mean over the
+ *  ranked few would put a team with one ranked player first. */
+export function teamStrength(team: Pick<TeamRecord, 'players'>): number | null {
+  const best = team.players
+    .map((p) => latestPoints(p.name)?.points)
+    .filter((x): x is number => x !== undefined)
+    .sort((a, b) => b - a)
+    .slice(0, 5);
+  if (best.length === 0) return null;
+  return best.reduce((a, b) => a + b, 0);
+}
+
+export type TeamSort = 'name' | 'players' | 'strength' | 'games' | 'score';
+
+export function sortTeams(teams: readonly TeamRecord[], sort: TeamSort): TeamRecord[] {
+  const out = [...teams];
+  const byPlayers = (a: TeamRecord, b: TeamRecord) =>
+    b.players.length - a.players.length || b.games - a.games;
+  if (sort === 'name') out.sort((a, b) => teamLabel(a).localeCompare(teamLabel(b)));
+  else if (sort === 'players') out.sort(byPlayers);
+  else if (sort === 'games') out.sort((a, b) => b.games - a.games);
+  else if (sort === 'score')
+    out.sort((a, b) => scorePercent(b) - scorePercent(a) || byPlayers(a, b));
+  else out.sort((a, b) => byNullableDesc(teamStrength(a), teamStrength(b)) || byPlayers(a, b));
+  return out;
+}
+
+function teamLabel(team: Pick<TeamRecord, 'name' | 'nameEn'>): string {
+  return team.nameEn ?? team.name;
+}
+
+function teamHref(key: string): string {
+  return `/players/teams/${encodeURIComponent(key)}`;
+}
+
+const TEAM_INKS = ['#a63328', '#237960', '#3b4f8f', '#9a6419', '#7a3b69'] as const;
+
+/** The team's badge: its first character on an ink hashed from the key. */
+function teamBadge(
+  team: { key: string; name: string },
+  size: 'row' | 'mini' | 'page',
+): HTMLElement {
+  const badge = document.createElement('span');
+  badge.className = `xqp-team-badge xqp-team-badge-${size}`;
+  badge.setAttribute('aria-hidden', 'true');
+  let hash = 0;
+  for (const char of team.key) hash = (hash * 31 + char.charCodeAt(0)) >>> 0;
+  badge.style.setProperty('--xqp-team-ink', TEAM_INKS[hash % TEAM_INKS.length]!);
+  badge.textContent = Array.from(team.name)[0] ?? '';
+  return badge;
+}
+
+function teamNameCell(team: TeamRecord): HTMLTableCellElement {
+  const td = document.createElement('td');
+  td.className = 'xqp-col-name';
+  const wrap = document.createElement('span');
+  wrap.className = 'xqp-name';
+  const link = document.createElement('a');
+  link.className = 'xqp-name-link';
+  link.href = teamHref(team.key);
+  link.textContent = teamLabel(team);
+  wrap.append(link);
+  if (team.nameEn && team.nameEn !== team.name) {
+    const zh = document.createElement('span');
+    zh.className = 'xqp-team';
+    zh.textContent = team.name;
+    wrap.append(zh);
+  }
+  td.append(teamBadge(team, 'row'), wrap);
+  return td;
+}
+
+function renderTeams(players: PlayerRecord[]): HTMLElement & { main: HTMLElement } {
+  const main = shell('teams');
+  const title = document.createElement('h1');
+  title.className = 'xqp-board-title';
+  title.textContent = 'Xiangqi teams';
+  const search = searchInput('Search teams');
+  const panel = document.createElement('section');
+  panel.className = 'xqp-board';
+  panel.append(
+    boardHead(title, search),
+    sortableTable<TeamRecord, TeamSort>({
+      rows: teamsOf(players),
+      columns: [
+        { label: 'Team', sort: 'name', className: 'xqp-col-name', value: teamNameCell },
+        { label: 'Players', sort: 'players', value: (t) => numberCell(t.players.length) },
+        {
+          label: 'Top 5 points',
+          sort: 'strength',
+          hint: 'The CXA points of the team’s five best players, added up',
+          value: (t) => numberCell(teamStrength(t)),
+        },
+        { label: 'Games', sort: 'games', value: (t) => numberCell(t.games) },
+        { label: 'Score', sort: 'score', value: (t) => numberCell(scorePercent(t), '%') },
+      ],
+      sort: 'strength',
+      order: sortTeams,
+      matches: (team, query) => {
+        const q = query.trim().toLowerCase();
+        return !q || [team.name, team.nameEn].some((s) => s?.toLowerCase().includes(q));
+      },
+      href: (team) => teamHref(team.key),
+      search,
+    }),
+  );
+  main.append(panel);
+  return main;
+}
+
+function renderTeam(team: TeamRecord): HTMLElement & { main: HTMLElement } {
+  const main = shell('teams');
+  const title = document.createElement('div');
+  title.className = 'xqp-team-head';
+  const copy = document.createElement('div');
+  const h1 = document.createElement('h1');
+  h1.className = 'xqp-board-title';
+  h1.textContent = teamLabel(team);
+  copy.append(h1);
+  const meta = document.createElement('p');
+  meta.className = 'xqp-team-meta';
+  meta.textContent = [
+    team.nameEn && team.nameEn !== team.name ? team.name : null,
+    `${team.players.length} ${team.players.length === 1 ? 'player' : 'players'}`,
+    `${team.games} games, ${recordText(team)}`,
+  ]
+    .filter(Boolean)
+    .join(' · ');
+  copy.append(meta);
+  title.append(teamBadge(team, 'page'), copy);
+  const panel = document.createElement('section');
+  panel.className = 'xqp-board';
+  panel.append(boardHead(title), playersTable(team.players, undefined, false));
+  main.append(panel);
   return main;
 }
 
@@ -279,7 +603,7 @@ function titleTag(title: PlayerTitle | null): HTMLElement | null {
   return tag;
 }
 
-function nameCell(player: PlayerRecord): HTMLTableCellElement {
+function nameCell(player: PlayerRecord, showTeam = true): HTMLTableCellElement {
   const td = document.createElement('td');
   td.className = 'xqp-col-name';
   const wrap = document.createElement('span');
@@ -290,10 +614,19 @@ function nameCell(player: PlayerRecord): HTMLTableCellElement {
   const tag = titleTag(playerTitle(player));
   if (tag) link.append(tag, ' ');
   link.append(displayName(player));
-  const team = document.createElement('span');
-  team.className = 'xqp-team';
-  team.textContent = player.federationEn ?? player.federation ?? '';
-  wrap.append(link, team);
+  wrap.append(link);
+  const key = teamKey(player);
+  if (showTeam && key && player.federation) {
+    // The team under the name, lichess's flag and country.
+    const team = document.createElement('a');
+    team.className = 'xqp-team';
+    team.href = teamHref(key);
+    team.append(
+      teamBadge({ key, name: player.federation }, 'mini'),
+      player.federationEn ?? player.federation,
+    );
+    wrap.append(team);
+  }
   td.append(avatar(player, 'row'), wrap);
   return td;
 }
@@ -312,7 +645,7 @@ function renderPlayer(
   player: PlayerRecord,
   boards: PlayerBoardRecord[],
 ): HTMLElement & { main: HTMLElement } {
-  const main = shell();
+  const main = shell('players');
   const profile = PLAYER_PROFILES[player.slug];
 
   const header = document.createElement('section');
@@ -348,7 +681,14 @@ function renderPlayer(
     dd.append(value);
     facts.append(dt, dd);
   };
-  fact('Team', player.federationEn ?? player.federation);
+  const key = teamKey(player);
+  if (key && player.federation) {
+    const team = document.createElement('a');
+    team.className = 'xqp-fact-link';
+    team.href = teamHref(key);
+    team.textContent = player.federationEn ?? player.federation;
+    fact('Team', team);
+  }
   fact('Born', profile?.born);
   fact('Archive', `${player.games} games, ${recordText(player)}, ${scorePercent(player)}%`);
   fact(
@@ -582,43 +922,13 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
 
 // ---------------------------------------------------------------------------
 
-/** The community shell with its rail (Leaderboard / … / Pro players), the
- *  page content in the column beside it. Returns the column; callers append
- *  sections to it and mount `main` on the root. */
-function shell(): HTMLElement & { main: HTMLElement } {
-  const main = document.createElement('main');
-  main.className = 'site-section community-shell';
-  const column = Object.assign(document.createElement('div'), { main });
-  column.className = 'xqb-shell xqp-column';
-  main.append(buildCommunityLayout('/players', column));
-  return column;
-}
-
-function hero(input: {
-  eyebrow: string;
-  title: string;
-  meta: string[];
-  actions?: HTMLElement[];
-}): HTMLElement {
-  const section = document.createElement('section');
-  section.className = 'xqb-hero';
-  const copy = document.createElement('div');
-  copy.className = 'xqb-hero-copy';
-  const eyebrow = document.createElement('p');
-  eyebrow.className = 'xqb-eyebrow';
-  eyebrow.textContent = input.eyebrow;
-  const title = document.createElement('h1');
-  title.textContent = input.title;
-  copy.append(eyebrow, title);
-  if (input.meta.length > 0) {
-    const meta = document.createElement('p');
-    meta.className = 'xqb-hero-meta';
-    meta.textContent = input.meta.join(' / ');
-    copy.append(meta);
-  }
-  const actions = document.createElement('div');
-  actions.className = 'xqb-hero-actions';
-  for (const el of input.actions ?? []) actions.append(el);
-  section.append(copy, actions);
-  return section;
+/** The broadcast section's frame: its rail (Broadcasts … Pro players, Pro
+ *  teams) and the page in the panel beside it. Returns the column; callers
+ *  append sections to it and mount `main` on the root. */
+function shell(active: BroadcastRailItem): HTMLElement & { main: HTMLElement } {
+  const column = document.createElement('div');
+  column.className = 'xqp-column';
+  const main = broadcastSectionLayout(active, column);
+  main.classList.add('xqp-page');
+  return Object.assign(column, { main });
 }

@@ -25,16 +25,12 @@
 .xqp-index {
   width: 100%;
   border-collapse: collapse;
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
-  background: var(--site-panel);
   font-size: 14px;
-  overflow: hidden;
 }
 
 .xqp-index th,
 .xqp-index td {
-  padding: 8px 12px;
+  padding: 10px 16px;
   text-align: right;
   vertical-align: middle;
   font-variant-numeric: tabular-nums;
@@ -43,10 +39,8 @@
 
 .xqp-index th {
   color: var(--site-muted);
-  font-size: 12px;
-  font-weight: 700;
-  text-transform: uppercase;
-  letter-spacing: 0.04em;
+  font-size: 13px;
+  font-weight: 500;
   background: var(--site-panel-soft);
   border-bottom: 1px solid var(--site-border-soft);
 }
@@ -143,8 +137,8 @@
 }
 
 .xqp-avatar-row {
-  width: 44px;
-  height: 44px;
+  width: 46px;
+  height: 46px;
 }
 
 .xqp-avatar-page {
@@ -425,19 +419,170 @@
     font-size: 24px;
   }
 
+  .xqp-index th:nth-child(3),
+  .xqp-index td:nth-child(3),
   .xqp-index th:nth-child(5),
-  .xqp-index td:nth-child(5),
-  .xqp-index th:nth-child(6),
-  .xqp-index td:nth-child(6) {
+  .xqp-index td:nth-child(5) {
     display: none;
+  }
+
+  .xqp-board-head {
+    padding: 18px 14px 14px;
+    flex-wrap: wrap;
+  }
+
+  .xqp-board-title {
+    font-size: 26px;
+  }
+
+  .xqp-index th:first-child,
+  .xqp-index td:first-child {
+    padding-left: 12px;
   }
 }
 
-/* ---- inside the community layout ---------------------------------------- */
+/* ---- inside the broadcast section --------------------------------------- */
 
-/* The column beside the rail: the broadcast shell's spacing without its own
-   horizontal padding or width cap, since the community shell sets both. */
+/* The column in the section panel, beside the broadcast rail. */
 .xqp-column {
-  max-width: none;
+  display: flex;
+  flex-direction: column;
+  gap: 18px;
+  min-width: 0;
   padding: 0 0 36px;
+}
+
+/* lichess's FIDE players frame: one panel holding a light title, the search
+   and the table, the rows running edge to edge. */
+.xqp-board {
+  background: var(--site-panel);
+  border-radius: var(--site-radius);
+  overflow: hidden;
+}
+
+.xqp-board-head {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 18px;
+  padding: 30px 40px 24px;
+}
+
+.xqp-board-title {
+  margin: 0;
+  color: var(--site-heading);
+  font-size: 34px;
+  font-weight: 400;
+  line-height: 1.15;
+}
+
+.xqp-search-form {
+  display: flex;
+  flex: none;
+}
+
+.xqp-search-form .xqp-search {
+  border-radius: 999px 0 0 999px;
+  border-right: 0;
+  min-height: 40px;
+  padding: 6px 16px;
+  background: var(--site-bg-soft);
+}
+
+.xqp-search-button {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 54px;
+  border: 0;
+  border-radius: 0 999px 999px 0;
+  background: var(--site-accent);
+  color: #fff;
+  cursor: pointer;
+}
+
+.xqp-search-button:hover {
+  background: var(--site-accent-strong);
+}
+
+.xqp-table-wrap {
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.xqp-board .xqp-index th:first-child,
+.xqp-board .xqp-index td:first-child {
+  padding-left: 40px;
+}
+
+.xqp-board .xqp-index th:last-child,
+.xqp-board .xqp-index td:last-child {
+  padding-right: 40px;
+}
+
+.xqp-board .xqp-empty {
+  padding: 0 40px 20px;
+}
+
+/* The team line under a name: a badge where lichess has the flag. */
+a.xqp-team {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  text-decoration: none;
+}
+
+a.xqp-team:hover {
+  color: var(--site-text);
+  text-decoration: underline;
+}
+
+.xqp-team-badge {
+  --xqp-team-ink: #a63328;
+  flex: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  border-radius: 4px;
+  background: color-mix(in srgb, var(--xqp-team-ink) 82%, #000);
+  color: #f6e7c8;
+  font-weight: 700;
+  line-height: 1;
+}
+
+.xqp-team-badge-mini {
+  width: 15px;
+  height: 15px;
+  font-size: 10px;
+  border-radius: 3px;
+}
+
+.xqp-team-badge-row {
+  width: 44px;
+  height: 44px;
+  font-size: 20px;
+  border-radius: var(--site-radius-sm);
+}
+
+.xqp-team-badge-page {
+  width: 72px;
+  height: 72px;
+  font-size: 36px;
+  border-radius: var(--site-radius);
+}
+
+.xqp-team-head {
+  display: flex;
+  align-items: center;
+  gap: 18px;
+  min-width: 0;
+}
+
+.xqp-team-meta {
+  margin: 6px 0 0;
+  color: var(--site-muted);
+  font-size: 14px;
+}
+
+.xqp-fact-link {
+  color: inherit;
 }

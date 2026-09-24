@@ -1393,6 +1393,12 @@
   font-weight: 600;
 }
 
+/* Pro players and Pro teams start a second group, as lichess sets its FIDE
+   pages apart from the broadcast ones. */
+.xqb-rail-link-group {
+  margin-top: 22px;
+}
+
 .xqb-section-panel {
   min-width: 0;
   display: flex;
@@ -1565,6 +1571,11 @@
 
   .xqb-rail-link {
     white-space: nowrap;
+  }
+
+  .xqb-rail-link-group {
+    margin-top: 0;
+    margin-left: 12px;
   }
 
   .xqb-tour-card-featured {

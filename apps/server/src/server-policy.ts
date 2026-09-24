@@ -396,6 +396,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized.startsWith('/forum/redirect/post/') ||
     normalized === '/players' ||
     /^\/players\/[^/]+$/.test(normalized) ||
+    /^\/players\/teams\/[^/]+$/.test(normalized) ||
     normalized === '/broadcast/xiangqi' ||
     normalized === '/broadcast/xiangqi/ops' ||
     /^\/broadcast\/xiangqi\/(?!board$)[^/]+$/.test(normalized) ||

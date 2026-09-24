@@ -105,8 +105,6 @@ export function communityRailItems(): NavItem[] {
     { label: 'Leaderboard', labelKey: 'nav.leaderboard', href: '/player' },
     { label: 'Rating stats', labelKey: 'nav.ratingStats', href: '/player/rating-stats' },
     { label: 'Online bots', labelKey: 'nav.onlineBots', href: '/bots' },
-    // The professionals in the broadcast archive (lichess: "FIDE players").
-    { label: 'Pro players', labelKey: 'nav.proPlayers', href: '/players' },
   ];
 }
 

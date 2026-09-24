@@ -33,6 +33,7 @@ export const ZH_HANT_SHELL = {
   'nav.ratingStats': '評分統計',
   'nav.onlineBots': '線上機器人',
   'nav.proPlayers': '職業棋手',
+  'nav.proTeams': '職業隊伍',
   'nav.bots': '機器人',
   'nav.tools': '工具',
   'nav.admin': '管理',

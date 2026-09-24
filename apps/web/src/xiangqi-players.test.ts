@@ -1,11 +1,16 @@
 import { describe, expect, it } from 'vitest';
 import {
   displayName,
+  latestPoints,
   matchesQuery,
   playerTitle,
   recordText,
   scorePercent,
   sortPlayers,
+  sortTeams,
+  teamKey,
+  teamStrength,
+  teamsOf,
 } from './xiangqi-players.js';
 
 function player(input: {
@@ -73,5 +78,54 @@ describe('player pages', () => {
     expect(playerTitle({ slug: 'yin-sheng', name: '尹昇' })).toBe('NM');
     expect(playerTitle({ slug: 'wang-tianyi', name: '王天一' })).toBe('GM');
     expect(playerTitle({ slug: 'nobody', name: '无名' })).toBe(null);
+  });
+
+  it('leads with the CXA points list, then the last rating, then games', () => {
+    expect(latestPoints('孟繁睿')).toEqual({ points: 3105, rank: 1 });
+    expect(latestPoints('无名')).toBe(null);
+    const players = [
+      player({ name: '无名', nameEn: 'Nobody', games: 40 }),
+      player({ name: '王天一', nameEn: 'Wang Tianyi', games: 2 }),
+      player({ name: '孟辰', nameEn: 'Meng Chen', games: 5 }),
+      player({ name: '孟繁睿', nameEn: 'Meng Fanrui', games: 3 }),
+    ];
+    // Points first; a player off the points list falls to the rating, then games.
+    expect(sortPlayers(players, 'points')[0]?.name).toBe('孟繁睿');
+    expect(sortPlayers(players, 'points')[1]?.name).toBe('孟辰');
+    expect(sortPlayers(players, 'points').at(-1)?.name).toBe('无名');
+    expect(sortPlayers(players, 'rating')[0]?.name).toBe('王天一');
+  });
+
+  it('groups players into teams by their latest team, keyed by the English name', () => {
+    const on = (name: string, federation: string, federationEn: string | null, games: number) => ({
+      ...player({ name, games, wins: games }),
+      federation,
+      federationEn,
+    });
+    const players = [
+      on('孟繁睿', '河北队', 'Hebei Team', 10),
+      on('孟辰', '上海队', 'Shanghai Team', 4),
+      on('甲', '河北队', 'Hebei Team', 6),
+      on('乙', '某队', null, 1),
+      { ...player({ name: '丙', games: 2 }) },
+    ];
+    expect(teamKey({ federation: '河北队', federationEn: 'Hebei Team' })).toBe('hebei-team');
+    expect(teamKey({ federation: '某队', federationEn: null })).toBe('某队');
+    expect(teamKey({ federation: null, federationEn: null })).toBe(null);
+    const teams = teamsOf(players);
+    expect(teams.map((t) => t.key)).toEqual(['hebei-team', 'shanghai-team', '某队']);
+    const hebei = teams[0]!;
+    expect(hebei.players.map((p) => p.name)).toEqual(['孟繁睿', '甲']);
+    expect(hebei.games).toBe(16);
+    // Only 孟繁睿 is on the points list; the rest add nothing.
+    expect(teamStrength(hebei)).toBe(3105);
+    expect(teamStrength({ players: [players[0]!, players[1]!] })).toBe(3105 + 2980);
+    expect(teamStrength(teams[2]!)).toBe(null);
+    expect(sortTeams(teams, 'players').map((t) => t.key)[0]).toBe('hebei-team');
+    expect(sortTeams(teams, 'strength').map((t) => t.key)).toEqual([
+      'hebei-team',
+      'shanghai-team',
+      '某队',
+    ]);
   });
 });
