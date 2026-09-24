@@ -72,6 +72,7 @@ Conventions:
 
 ### Watching and review
 
+- The national team championships show their matches and standings the way the organisers score them (2 points a match win, opponents' match points as the first tiebreak), with the Teams tab and team filter; club and bureau names read in English instead of half-translated pinyin ([31cb9062](https://github.com/brianhliou/mistboard/commit/31cb9062))
 - Broadcast events pick their round from a panel that shows each round's start and status (Finished, Ongoing, in 27 minutes); each event has a cover card in its header and on the broadcast list; live games mark the side to move; the Overview's share links copy with one click ([07f50810](https://github.com/brianhliou/mistboard/commit/07f50810))
 - Broadcast event pages take lichess's shape: the round's game list sits pinned on the left with the event's chat room under it, each game showing an evaluation pill, titles (GM, NM) and results in colour; the right side holds the header, pill tabs and the boards, four to a row with pages of 12, 24 or 48. A team round is one grid with a team filter, and its matches and scores moved to the Teams tab ([beb13bb9](https://github.com/brianhliou/mistboard/commit/beb13bb9))
 - A broadcast's Overview is one strip of the event's facts (dates, format, time controls, city) with Source and Standings links, then the share links; the Players tab links each name to the player's page ([0516380f](https://github.com/brianhliou/mistboard/commit/0516380f))
