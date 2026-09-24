@@ -1075,10 +1075,15 @@ function eventChat(slug: string): HTMLElement {
 // Sticky at the offset it sits at before any scroll, so it stays exactly
 // there instead of riding up to the top edge and then stopping. Measured once
 // the shell is on the page: the offset is the site nav and the page padding.
+// Read off the grid it sits in, never the column itself: a sticky element
+// reports where it is stuck, so measuring it on a page that is already
+// scrolled (a restored scroll, a repaint mid-scroll) pinned it far down the
+// page, and on prod it sat 1,645px from the top.
 function pinEventSide(side: HTMLElement): void {
   const pin = (): void => {
-    if (!side.isConnected) return;
-    const top = Math.max(0, Math.round(side.getBoundingClientRect().top + window.scrollY));
+    const layout = side.parentElement;
+    if (!side.isConnected || !layout) return;
+    const top = Math.max(0, Math.round(layout.getBoundingClientRect().top + window.scrollY));
     side.style.setProperty('--xqb-side-top', `${top}px`);
   };
   if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(pin);
