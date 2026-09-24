@@ -51,7 +51,7 @@ const LINK_PATTERN = /https?:\/\/|www\./i;
 type ChatRoomAction = 'room' | 'report' | 'timeout' | 'hide';
 
 type ChatRoomTarget = {
-  kind: 'lobby' | 'game' | 'study' | 'player';
+  kind: 'lobby' | 'game' | 'study' | 'player' | 'broadcast';
   room: string;
   /** Bare id inside the room key (the room id / study id); null for the lobby. */
   scopeId: string | null;
@@ -88,6 +88,16 @@ export async function tryHandle(
     }
     if (!(await persistence.isRoomSeatUser(target.scopeId ?? '', viewer.id))) {
       writeJson(response, 403, { error: 'not_a_player' });
+      return true;
+    }
+  }
+
+  // A broadcast's room is one per event (lichess's relay chat), shared by its
+  // boards grid and every board. Only an event that exists has one, so a
+  // made-up slug cannot open a room.
+  if (target?.kind === 'broadcast' && target.action === 'room') {
+    if (!(await persistence.getXiangqiBroadcastTour(target.scopeId ?? ''))) {
+      writeJson(response, 404, { error: 'not_found' });
       return true;
     }
   }
@@ -328,10 +338,10 @@ function chatRoomTarget(pathname: string): ChatRoomTarget | null {
   }
 
   const scopedMatch = pathname.match(
-    /^\/api\/chat\/(game|study|player)\/([^/]+)(?:\/(report|timeout|hide))?$/,
+    /^\/api\/chat\/(game|study|player|broadcast)\/([^/]+)(?:\/(report|timeout|hide))?$/,
   );
   if (!scopedMatch) return null;
-  const kind = scopedMatch[1] as 'game' | 'study' | 'player';
+  const kind = scopedMatch[1] as 'game' | 'study' | 'player' | 'broadcast';
   const roomId = decodeChatRoomSegment(scopedMatch[2] ?? '');
   if (!roomId) return null;
   return {

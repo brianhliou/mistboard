@@ -87,6 +87,21 @@ export function buildStudyChat(studyId: string): HTMLElement {
   });
 }
 
+/**
+ * A broadcast event's room (lichess's relay chat): one per event, shared by
+ * its boards grid and every board, so the conversation stays put while a
+ * reader moves between boards.
+ */
+export function buildBroadcastChat(tourSlug: string): HTMLElement {
+  return buildGameChat(tourSlug, {
+    ariaLabel: 'Broadcast chat',
+    live: false,
+    pollMs: POLL_MS,
+    title: t('broadcast.chatRoom'),
+    apiUrl: `/api/chat/broadcast/${encodeURIComponent(tourSlug)}`,
+  });
+}
+
 function buildGameChat(roomId: string, options: GameChatOptions): HTMLElement {
   const panel = document.createElement('section');
   panel.className = 'review-spectator-chat';

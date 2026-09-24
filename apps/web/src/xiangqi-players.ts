@@ -11,6 +11,7 @@ import './xiangqi-players.css';
 import { buildCommunityLayout } from './community-rail.js';
 import { CXA_POINTS, CXA_POINTS_LISTS } from './players/cxa-points.js';
 import { CXA_LISTS, CXA_RATINGS } from './players/cxa-ratings.js';
+import { playerTitleFor } from './players/player-title.js';
 import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 
@@ -139,11 +140,7 @@ export function matchesQuery(player: PlayerRecord, query: string): boolean {
 
 /** The title tag for a player: authored first, else the last official list. */
 export function playerTitle(player: Pick<PlayerRecord, 'slug' | 'name'>): PlayerTitle | null {
-  const authored = PLAYER_PROFILES[player.slug]?.title;
-  if (authored) return authored;
-  const entries = CXA_RATINGS[player.name];
-  const last = entries?.[entries.length - 1];
-  return last?.title === '特' ? 'GM' : last?.title === '大' ? 'NM' : null;
+  return playerTitleFor(player);
 }
 
 // ---------------------------------------------------------------------------

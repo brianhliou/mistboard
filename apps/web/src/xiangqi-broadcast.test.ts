@@ -395,11 +395,17 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelector('.xqb-event-content .xqb-hero h1')?.textContent).toBe('Test Cup');
     expect(root.querySelector('.xqb-round-heading')).toBeNull();
     expect(root.querySelector('.xqb-side-rail h2')?.textContent).toBe('Round 1');
+    // lichess's left column: the game list over the event's chat room; no
+    // Source button in the header.
+    expect(root.querySelector('.xqb-event-side > .xqb-side-rail + .xqb-event-chat')).not.toBeNull();
+    expect(root.querySelector('.xqb-event-header .xqb-link-primary')).toBeNull();
 
-    // Player names: English primary, the Chinese in the tooltip.
+    // Player names: English primary, the Chinese in the tooltip, and the
+    // official list's title before the name in its own tag (lichess's GM).
     const names = [...root.querySelectorAll('.xqb-board-card .xqb-card-seat-name')];
-    expect(names.map((node) => node.textContent)).toContain('Wang Tianyi');
-    expect(names.map((node) => node.textContent)).toContain('Zheng Weitong');
+    expect(names.map((node) => node.textContent)).toContain('GM Wang Tianyi');
+    expect(names.map((node) => node.textContent)).toContain('GM Zheng Weitong');
+    expect(names[0]?.querySelector('.xqb-player-title')?.textContent).toBe('GM');
     const titles = names.map((node) => node.getAttribute('title') ?? '');
     expect(titles).toContain('王天一');
     expect(titles).toContain('郑惟桐');
@@ -465,6 +471,17 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     // Black well ahead: Red's share of the bar is small.
     const fill = gauges[0]?.querySelector<HTMLElement>('.review-eval-bar__fill');
     expect(Number.parseFloat(fill?.style.height ?? '100')).toBeLessThan(25);
+
+    // The game list: the same evaluation in its pill, and each result in
+    // colour, the winner's 1 green and the loser's 0 red.
+    const railFill = root.querySelector<HTMLElement>(
+      '.xqb-side-rail .xqb-rail-gauge .review-eval-bar__fill',
+    );
+    expect(Number.parseFloat(railFill?.style.height ?? '100')).toBeLessThan(25);
+    expect(root.querySelectorAll('.xqb-side-rail .xqb-rail-gauge-empty')).toHaveLength(1);
+    const firstRow = root.querySelector('.xqb-side-rail .xqb-rail-row');
+    expect(firstRow?.querySelector('.xqb-card-seat-black .xqb-score-win')?.textContent).toBe('1');
+    expect(firstRow?.querySelector('.xqb-card-seat-red .xqb-score-loss')?.textContent).toBe('0');
 
     const toggle = [...root.querySelectorAll<HTMLLabelElement>('.xqb-gauge-toggle')]
       .find((label) => label.textContent?.includes('Evaluation gauge'))
@@ -754,10 +771,12 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     const current = root.querySelector('.xqb-rail-row-current');
     expect(current?.getAttribute('href')).toBe('/broadcast/xiangqi/board/t-r-b1');
     expect(current?.getAttribute('aria-current')).toBe('page');
-    // Players render English-primary; the live board carries a live marker.
+    // Players render English-primary with their titles; the row carries an
+    // eval pill (empty until the game has an evaluation) and a live marker.
     expect(
       [...(current?.querySelectorAll('.xqb-card-seat-name') ?? [])].map((node) => node.textContent),
-    ).toEqual(['Wang Tianyi', 'Zheng Weitong']);
+    ).toEqual(['GM Wang Tianyi', 'GM Zheng Weitong']);
+    expect(current?.querySelector('.xqb-rail-gauge.xqb-rail-gauge-empty')).not.toBeNull();
     expect(current?.querySelector('.xqb-rail-marker')?.textContent).toBe('Live');
 
     // An open board takes the whole content column (lichess): no header or
@@ -927,7 +946,12 @@ describe('event page (tabs, default round, standings)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastTour(root, 't');
 
-    expect(urls).toEqual(['/api/xiangqi/broadcasts/t', '/api/xiangqi/broadcasts/t/rounds/r']);
+    // The broadcast reads, in order; the event's chat room loads beside them.
+    expect(urls.filter((url) => url.startsWith('/api/xiangqi/'))).toEqual([
+      '/api/xiangqi/broadcasts/t',
+      '/api/xiangqi/broadcasts/t/rounds/r',
+    ]);
+    expect(urls).toContain('/api/chat/broadcast/t');
     // The tour URL resolves to a round page but is tracked as the tour surface.
     expect(broadcastOpenedCalls()).toEqual([
       { surface: 'tour', tour_slug: 't', round_id: 'r', locale: 'en' },
@@ -1129,5 +1153,79 @@ describe('broadcastPageForPath (in-place navigation)', () => {
     ]) {
       expect(broadcastPageForPath(path), path).toBeNull();
     }
+  });
+});
+
+describe('team league round (lichess: one grid, a team filter, matches on Teams)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState({}, '', '/');
+  });
+
+  const teamBoard = (
+    n: number,
+    red: [string, string],
+    black: [string, string],
+    match: string,
+    kind: 'standard' | 'blitz',
+  ) => ({
+    ...fixtureBoard({
+      n,
+      red: red[0],
+      black: black[0],
+      moves: [],
+      status: 'complete',
+      result: '1-0',
+    }),
+    red: { name: red[0], federation: red[1] },
+    black: { name: black[0], federation: black[1] },
+    details: { match, table: 1, game: kind === 'blitz' ? 2 : 1, kind },
+  });
+  const TEAM_ROUND = {
+    ...ROUND,
+    boards: [
+      teamBoard(1, ['甲', '浙江'], ['乙', '江苏'], '浙江-江苏', 'standard'),
+      teamBoard(2, ['乙', '江苏'], ['甲', '浙江'], '浙江-江苏', 'blitz'),
+      teamBoard(3, ['丙', '北京'], ['丁', '上海'], '北京-上海', 'standard'),
+    ],
+  };
+
+  it('shows every game in one grid, narrows it to a team, and lists the matches on Teams', async () => {
+    stubFetchJson(() => TEAM_ROUND);
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const cards = () => root.querySelectorAll('.xqb-event-body .xqb-board-card');
+    // No match sections nested in the Boards tab: one grid of all three.
+    expect(root.querySelector('.xqb-event-body .xqb-match')).toBeNull();
+    expect(root.querySelectorAll('.xqb-event-body .xqb-board-grid')).toHaveLength(1);
+    expect(cards()).toHaveLength(3);
+
+    const filter = root.querySelector<HTMLSelectElement>('.xqb-team-filter');
+    expect([...(filter?.options ?? [])].map((option) => option.value)).toEqual([
+      '',
+      '上海',
+      '北京',
+      '江苏',
+      '浙江',
+    ]);
+    filter!.value = '浙江';
+    filter!.dispatchEvent(new Event('change'));
+    // That team's two games, under its match's line.
+    expect(cards()).toHaveLength(2);
+    expect(root.querySelectorAll('.xqb-event-body .xqb-match')).toHaveLength(1);
+
+    const teamsTab = [...root.querySelectorAll<HTMLButtonElement>('.xqb-tab')].find(
+      (button) => button.textContent === 'Teams',
+    );
+    teamsTab!.click();
+    await vi.waitFor(() => expect(root.querySelector('.xqb-standings')).not.toBeNull());
+    const fixtures = root.querySelectorAll('.xqb-match-list .xqb-match');
+    expect(fixtures).toHaveLength(2);
+    // A match's Boards button opens the grid on that match.
+    fixtures[1]!.querySelector<HTMLButtonElement>('.xqb-match-open')!.click();
+    expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Boards');
+    expect(cards()).toHaveLength(1);
   });
 });

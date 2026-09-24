@@ -1707,7 +1707,15 @@
    that whole column. The page uses the window's width the way the review
    pages do, so a board has room to fill the height. */
 .xqb-shell.xqb-event {
-  max-width: max(1440px, min(94vw, 2100px));
+  /* lichess's relay page: about 1420px, centred, however wide the window. */
+  max-width: 1420px;
+}
+
+/* lichess's proportions: a 350px left column at full width, narrowing with
+   the window, then a 15px gap. */
+.xqb-event .xqb-event-layout-with-rail {
+  grid-template-columns: clamp(240px, 25%, 350px) minmax(0, 1fr);
+  gap: 15px;
 }
 
 .xqb-event-header {
@@ -1754,4 +1762,380 @@
 
 .xqb-boards-head .xqb-round-meta {
   margin: 0;
+}
+
+/* ── Event page, lichess's proportions (2026-09-23) ──────────────────────────
+   The left column (game list over the event's chat room) is pinned where it
+   first sits and fills the height below it, so it never moves while the
+   boards scroll. The right column is one panel: a header, pill tabs, a row of
+   switches, then the boards straight on the panel, five to a row at most,
+   each drawn as a card only under the pointer. */
+.xqb-event-layout-with-rail .xqb-event-side {
+  grid-area: rail;
+  position: sticky;
+  top: var(--xqb-side-top, 12px);
+  align-self: start;
+  /* Ends where the page's bottom padding starts (.xqb-shell, 36px), so at the
+     foot of the page the column is not pushed up by its own container. */
+  height: calc(100vh - var(--xqb-side-top, 12px) - 36px);
+  min-height: 360px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px;
+}
+
+.xqb-event-side .xqb-side-rail {
+  position: static;
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+.xqb-event-side .xqb-rail-list {
+  flex: 1 1 auto;
+  min-height: 0;
+  max-height: none;
+}
+
+.xqb-event-chat {
+  flex: 0 0 38%;
+  min-height: 200px;
+  display: flex;
+}
+
+.xqb-event-chat .review-spectator-chat {
+  flex: 1 1 auto;
+  min-height: 0;
+}
+
+@media (max-width: 900px) {
+  .xqb-event-layout-with-rail .xqb-event-side {
+    position: static;
+    height: auto;
+    min-height: 0;
+  }
+
+  .xqb-event-chat {
+    flex: none;
+    height: 320px;
+  }
+}
+
+.xqb-event:not(.xqb-event-board-open) .xqb-event-content {
+  container-type: inline-size;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  padding: 0 20px 20px;
+  gap: 14px;
+}
+
+.xqb-event-content > .xqb-event-header {
+  margin: 0 -20px;
+  padding: 22px 24px 20px;
+  border-radius: var(--site-radius) var(--site-radius) 0 0;
+  background: color-mix(in srgb, var(--site-panel) 94%, var(--site-text));
+  grid-template-columns: minmax(0, 1fr);
+  gap: 14px;
+  align-items: start;
+}
+
+.xqb-event-content > .xqb-event-header h1 {
+  font-size: 30px;
+  font-weight: 500;
+  line-height: 1.15;
+}
+
+.xqb-event-content > .xqb-event-header .xqb-hero-actions {
+  justify-content: flex-start;
+}
+
+.xqb-event-header .xqb-round-select {
+  min-width: min(100%, 340px);
+}
+
+/* Pill tabs, lichess's: each section a bordered button, the open one in the
+   accent. */
+.xqb-event-content .xqb-tabs {
+  flex-wrap: wrap;
+  gap: 10px;
+  border-bottom: 0;
+  padding-top: 4px;
+}
+
+.xqb-event-content .xqb-tab {
+  border: 1px solid var(--site-border-soft);
+  border-radius: 7px;
+  margin: 0;
+  padding: 8px 20px;
+  color: var(--site-text);
+  font-weight: 500;
+}
+
+.xqb-event-content .xqb-tab:hover,
+.xqb-event-content .xqb-tab:focus-visible {
+  border-color: color-mix(in srgb, var(--site-accent) 50%, var(--site-border-soft));
+}
+
+.xqb-event-content .xqb-tab-active {
+  border-color: var(--site-accent);
+  color: var(--site-accent-strong);
+}
+
+.xqb-boards-head .xqb-round-meta {
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+/* Switches, not checkboxes, for the boards toggles. */
+.xqb-gauge-toggle input {
+  appearance: none;
+  position: relative;
+  flex: none;
+  width: 30px;
+  height: 16px;
+  margin: 0;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--site-text) 22%, transparent);
+  cursor: pointer;
+  transition: background-color 120ms ease;
+}
+
+.xqb-gauge-toggle input::after {
+  content: "";
+  position: absolute;
+  top: 2px;
+  left: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 50%;
+  background: var(--site-panel);
+  transition: transform 120ms ease;
+}
+
+.xqb-gauge-toggle input:checked {
+  background: var(--site-accent);
+}
+
+.xqb-gauge-toggle input:checked::after {
+  transform: translateX(14px);
+}
+
+.xqb-gauge-toggle input:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 2px;
+}
+
+/* Five boards to a row at most, fewer as the column narrows; every match's
+   tables line up under each other because the count is fixed per width. */
+.xqb-event-content .xqb-board-grid {
+  grid-template-columns: repeat(var(--xqb-grid-cols, 2), minmax(0, 1fr));
+  gap: 6px 8px;
+}
+
+@container (min-width: 560px) {
+  .xqb-event-content .xqb-board-grid {
+    --xqb-grid-cols: 3;
+  }
+}
+
+@container (min-width: 780px) {
+  .xqb-event-content .xqb-board-grid {
+    --xqb-grid-cols: 4;
+  }
+}
+
+@container (min-width: 960px) {
+  .xqb-event-content .xqb-board-grid {
+    --xqb-grid-cols: 5;
+  }
+}
+
+.xqb-event-content .xqb-board-card {
+  gap: 4px;
+  border: 1px solid transparent;
+  border-radius: 7px;
+  background: transparent;
+  padding: 5px 4px;
+}
+
+.xqb-event-content .xqb-board-card:hover,
+.xqb-event-content .xqb-board-card:focus-visible {
+  border-color: var(--site-border-soft);
+  background: color-mix(in srgb, var(--site-panel) 90%, var(--site-text));
+}
+
+.xqb-event-content .xqb-card-board {
+  box-shadow: none;
+  border-radius: 6px;
+}
+
+/* The gauge sits right of the board, lichess's side. */
+.xqb-card-board-row {
+  grid-template-columns: minmax(0, 1fr) 7px;
+}
+
+@media (max-width: 900px) {
+  .xqb-event .xqb-event-layout-with-rail {
+    grid-template-columns: 1fr;
+  }
+}
+
+/* ── Game list rows, lichess's (2026-09-23) ──────────────────────────────────
+   Number, an eval pill, the pair with titles, scores coloured by result; rows
+   ruled apart rather than floating as rounded chips. */
+.xqb-side-rail .xqb-rail-list {
+  gap: 0;
+}
+
+.xqb-side-rail .xqb-rail-row {
+  grid-template-columns: 18px 10px minmax(0, 1fr) auto;
+  gap: 10px;
+  border: 0;
+  border-bottom: 1px solid var(--site-border-soft);
+  border-radius: 0;
+  padding: 7px 8px 7px 2px;
+}
+
+.xqb-side-rail .xqb-rail-row:last-child {
+  border-bottom: 0;
+}
+
+.xqb-side-rail .xqb-rail-row .xqb-card-seat {
+  font-size: 13px;
+  font-weight: 500;
+  min-height: 19px;
+}
+
+.xqb-rail-gauge {
+  position: relative;
+  width: 10px;
+  height: 34px;
+  border-radius: 5px;
+  overflow: hidden;
+  background: color-mix(in srgb, var(--site-text) 14%, transparent);
+}
+
+.xqb-rail-gauge .review-eval-bar {
+  position: absolute;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+}
+
+/* The even line, lichess's tick across the middle. */
+.xqb-rail-gauge:not(.xqb-rail-gauge-empty)::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  top: 50%;
+  height: 1px;
+  background: color-mix(in srgb, var(--site-accent) 70%, transparent);
+}
+
+.xqb-score-win {
+  color: #4f8a2a;
+}
+
+.xqb-score-loss {
+  color: #c23b2e;
+}
+
+.xqb-player-title {
+  color: #a86f12;
+  font-weight: 700;
+}
+
+:root[data-effective-theme="dark"] .xqb-score-win {
+  color: #7fb24a;
+}
+
+:root[data-effective-theme="dark"] .xqb-score-loss {
+  color: #e2604f;
+}
+
+:root[data-effective-theme="dark"] .xqb-player-title {
+  color: #d4a24a;
+}
+
+/* ── Team events, lichess's (2026-09-23) ─────────────────────────────────────
+   Boards is one grid with a team filter; the round's matches are listed on
+   the Teams tab above the league table, each with a way to its games. */
+.xqb-team-filter {
+  min-width: 220px;
+}
+
+.xqb-teams-heading {
+  margin: 6px 0 0;
+  color: var(--site-heading);
+  font-size: 15px;
+  font-weight: 600;
+}
+
+.xqb-match-list {
+  display: grid;
+}
+
+.xqb-match-list .xqb-match {
+  grid-template-columns: minmax(0, 1fr) auto;
+  column-gap: 16px;
+  row-gap: 4px;
+  padding: 12px 0;
+}
+
+.xqb-match-list .xqb-match:last-child {
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.xqb-match-open {
+  grid-column: 2;
+  grid-row: 1 / span 2;
+  align-self: center;
+  appearance: none;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 7px;
+  background: transparent;
+  color: var(--site-text);
+  padding: 6px 16px;
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.xqb-match-open:hover,
+.xqb-match-open:focus-visible {
+  border-color: var(--site-accent);
+  color: var(--site-accent-strong);
+}
+
+/* A filtered team's match line above its games: no rule above it. */
+.xqb-tab-panel > .xqb-match {
+  border-top: 0;
+  padding-top: 0;
+}
+
+/* The game list's scrollbar, lichess's: thin, flush with the panel's right
+   edge, a quiet thumb on no track. */
+.xqb-event-side .xqb-side-rail {
+  padding-right: 0;
+}
+
+.xqb-event-side .xqb-rail-list {
+  padding-right: 4px;
+  scrollbar-width: thin;
+  scrollbar-color: color-mix(in srgb, var(--site-text) 28%, transparent) transparent;
+}
+
+.xqb-event-side .xqb-rail-list::-webkit-scrollbar {
+  width: 6px;
+}
+
+.xqb-event-side .xqb-rail-list::-webkit-scrollbar-track {
+  background: transparent;
+}
+
+.xqb-event-side .xqb-rail-list::-webkit-scrollbar-thumb {
+  border-radius: 3px;
+  background: color-mix(in srgb, var(--site-text) 28%, transparent);
 }
