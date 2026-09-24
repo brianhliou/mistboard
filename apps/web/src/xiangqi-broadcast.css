@@ -1944,9 +1944,10 @@
   }
 }
 
+/* Four to a row at most (tried five; four gives each board more room). */
 @container (min-width: 960px) {
   .xqb-event-content .xqb-board-grid {
-    --xqb-grid-cols: 5;
+    --xqb-grid-cols: 4;
   }
 }
 
@@ -2228,4 +2229,128 @@ a.xqb-standings-name:focus-visible {
   color: var(--site-accent-strong);
   text-decoration: underline;
   text-underline-offset: 2px;
+}
+
+/* ── Overview, lichess's (2026-09-23) ────────────────────────────────────────
+   One rounded strip of the event's facts and links, then the share box as a
+   disclosure. */
+.xqb-overview-strip {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 28px;
+  border-radius: var(--site-radius);
+  background: color-mix(in srgb, var(--site-panel) 92%, var(--site-text));
+  padding: 16px 22px;
+  color: var(--site-text);
+  font-size: 14px;
+}
+
+.xqb-overview-item {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.xqb-overview-icon {
+  display: inline-flex;
+  color: var(--site-muted);
+}
+
+.xqb-overview-link {
+  appearance: none;
+  border: 0;
+  background: none;
+  padding: 0;
+  color: var(--site-link, var(--site-accent-strong));
+  font: inherit;
+  font-size: 14px;
+  text-decoration: none;
+  cursor: pointer;
+}
+
+.xqb-overview-link:hover,
+.xqb-overview-link:focus-visible {
+  text-decoration: underline;
+  text-underline-offset: 2px;
+}
+
+.xqb-overview-share {
+  border-radius: var(--site-radius);
+  background: color-mix(in srgb, var(--site-panel) 92%, var(--site-text));
+  padding: 4px 22px 18px;
+}
+
+.xqb-overview-share > summary {
+  cursor: pointer;
+  padding: 12px 0;
+  color: var(--site-heading);
+  font-size: 15px;
+  font-weight: 600;
+  list-style-position: inside;
+}
+
+.xqb-overview-share:not([open]) {
+  padding-bottom: 4px;
+}
+
+.xqb-overview-share {
+  display: flex;
+  flex-direction: column;
+  gap: 14px;
+}
+
+/* ── Boards pager, lichess's (2026-09-23) ────────────────────────────────────
+   Page buttons and the count, the team filter, the page size; the switches
+   sit on the row below. */
+.xqb-boards-nav {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px 14px;
+  padding-inline: 4px;
+}
+
+.xqb-pager {
+  display: inline-flex;
+  align-items: center;
+  gap: 2px;
+}
+
+.xqb-pager-button {
+  appearance: none;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 34px;
+  height: 34px;
+  border: 0;
+  border-radius: 6px;
+  background: transparent;
+  color: var(--site-text);
+  cursor: pointer;
+}
+
+.xqb-pager-button:hover:not(:disabled),
+.xqb-pager-button:focus-visible {
+  background: color-mix(in srgb, var(--site-text) 10%, transparent);
+  color: var(--site-accent-strong);
+}
+
+.xqb-pager-button:disabled {
+  color: color-mix(in srgb, var(--site-text) 30%, transparent);
+  cursor: default;
+}
+
+.xqb-pager-count {
+  min-width: 72px;
+  padding: 0 6px;
+  color: var(--site-text);
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+  text-align: center;
+}
+
+.xqb-per-page {
+  min-width: 150px;
 }

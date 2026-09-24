@@ -264,11 +264,16 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     );
     expect(titles.join(' ')).toContain('王天一');
     expect(titles.join(' ')).toContain('郑惟桐');
-    // The live board says so above the board; a live game has no score yet.
-    expect(root.querySelector('.xqb-board-card-live .xqb-card-live')?.textContent).toBe('Live');
+    // A live game has no score yet, so its Live mark takes the top row's score
+    // slot rather than a row of its own (which made live cards taller).
+    const liveCard = root.querySelector('.xqb-board-card-live');
+    expect(liveCard?.querySelector('.xqb-card-seat-black .xqb-card-live')?.textContent).toBe(
+      'Live',
+    );
+    expect(liveCard?.querySelector('.xqb-card-top')).toBeNull();
     expect(
-      [...root.querySelectorAll('.xqb-board-card-live .xqb-score')].map((node) => node.textContent),
-    ).toEqual(['', '']);
+      [...(liveCard?.querySelectorAll('.xqb-score') ?? [])].map((node) => node.textContent),
+    ).toEqual(['']);
   });
 
   it('fires broadcast_opened once for the round surface, not again per stream push', async () => {
@@ -961,7 +966,8 @@ describe('event page (tabs, default round, standings)', () => {
       { surface: 'tour', tour_slug: 't', round_id: 'r', locale: 'en' },
     ]);
     const tabs = [...root.querySelectorAll('.xqb-tab')];
-    expect(tabs.map((tab) => tab.textContent)).toEqual(['Boards', 'Overview', 'Players']);
+    // lichess's order, Overview first; the event still opens on Boards.
+    expect(tabs.map((tab) => tab.textContent)).toEqual(['Overview', 'Boards', 'Players']);
     expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Boards');
     expect(root.querySelectorAll('.xqb-board-card')).toHaveLength(2);
     // The round's pairings sit in the rail with nothing highlighted.
@@ -1006,12 +1012,14 @@ describe('event page (tabs, default round, standings)', () => {
     const root = document.createElement('div');
     await mountXiangqiBroadcastRound(root, 't', 'r');
 
-    (root.querySelectorAll('.xqb-tab')[1] as HTMLButtonElement).click();
+    (root.querySelectorAll('.xqb-tab')[0] as HTMLButtonElement).click();
     expect(root.querySelector('.xqb-tab-active')?.textContent).toBe('Overview');
     expect(window.location.search).toBe('?tab=overview');
-    expect(
-      [...root.querySelectorAll('.xqb-round-row')].map((row) => row.getAttribute('href')),
-    ).toEqual(['/broadcast/xiangqi/t/round/r', '/broadcast/xiangqi/t/round/r2']);
+    // lichess's overview: one strip of facts and links, then the share box; no
+    // schedule (the round select is the schedule) and no table of labels.
+    expect(root.querySelector('.xqb-overview-strip')?.textContent).toContain('2 rounds');
+    expect(root.querySelector('.xqb-round-row')).toBeNull();
+    expect(root.querySelector('.xqb-facts')).toBeNull();
     expect(root.querySelectorAll('.xqb-share-url')).toHaveLength(2);
 
     (root.querySelectorAll('.xqb-tab')[2] as HTMLButtonElement).click();
@@ -1260,5 +1268,51 @@ describe('eval gauge for a finished draw not analysed yet', () => {
     expect(pill?.style.height).toBe('50.0%');
     const card = root.querySelector<HTMLElement>('.xqb-card-gauge .review-eval-bar__fill');
     expect(card?.style.height).toBe('50.0%');
+  });
+});
+
+describe('boards pager (lichess: pages, a page size that persists)', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+    window.history.replaceState({}, '', '/');
+  });
+
+  it('shows twelve boards a page by default, pages through, and remembers the page size', async () => {
+    const stored = new Map<string, string>();
+    vi.stubGlobal('localStorage', {
+      getItem: (key: string) => stored.get(key) ?? null,
+      setItem: (key: string, value: string) => void stored.set(key, value),
+      removeItem: (key: string) => void stored.delete(key),
+    });
+    const boards = Array.from({ length: 15 }, (_, i) =>
+      fixtureBoard({
+        n: i + 1,
+        red: `R${i}`,
+        black: `B${i}`,
+        moves: [],
+        status: 'complete',
+        result: '1-0',
+      }),
+    );
+    stubFetchJson(() => ({ ...ROUND, boards }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const cards = () => root.querySelectorAll('.xqb-event-body .xqb-board-card').length;
+    const count = () => root.querySelector('.xqb-pager-count')?.textContent;
+    const buttons = () => root.querySelectorAll<HTMLButtonElement>('.xqb-pager-button');
+    expect([count(), cards()]).toEqual(['1-12 / 15', 12]);
+    expect(buttons()[0]?.disabled).toBe(true);
+    buttons()[2]!.click();
+    expect([count(), cards()]).toEqual(['13-15 / 15', 3]);
+    expect(buttons()[3]?.disabled).toBe(true);
+
+    const size = root.querySelector<HTMLSelectElement>('.xqb-per-page')!;
+    size.value = '24';
+    size.dispatchEvent(new Event('change'));
+    // A new size starts again at the first page, and is kept for next time.
+    expect([count(), cards()]).toEqual(['1-15 / 15', 15]);
+    expect(stored.get('mistboard.broadcast.perPage')).toBe('24');
   });
 });

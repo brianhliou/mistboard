@@ -325,6 +325,9 @@ type EventPageState = {
   /** A team event's Boards filter: one team's games, or every game (null). */
   team?: string | null;
   setTeam?: (team: string | null) => void;
+  /** The Boards tab's page, from 0; a team or page-size change resets it. */
+  page?: number;
+  setPage?: (page: number) => void;
   /** Player page slugs by Chinese name, gathered from every round read. */
   playerSlugs?: Map<string, string>;
   loadStandings?: () => void;
@@ -365,6 +368,11 @@ async function mountRoundPage(
   };
   state.setTeam = (team) => {
     state.team = team;
+    state.page = 0;
+    paint();
+  };
+  state.setPage = (page) => {
+    state.page = page;
     paint();
   };
   // The standings need every round's games, and the round payload carries only
@@ -997,7 +1005,7 @@ function renderEvent(
     ? `${primaryName(data.round)} · ${primaryName(data.tour)} · Mistboard`
     : `${primaryName(data.tour)} · Mistboard`;
   let body: HTMLElement;
-  if (state.tab === 'overview') body = renderOverviewTab(data);
+  if (state.tab === 'overview') body = renderOverviewTab(data, state);
   else if (state.tab === 'players') body = renderPlayersTab(data, state);
   else if (state.tab === 'teams' && isTeamEvent(data)) body = renderTeamsTab(data, state);
   else body = renderBoardsTab(data, cards, state);
@@ -1135,9 +1143,10 @@ function eventTabs(data: BroadcastRoundResponse, state: EventPageState): HTMLEle
   const tabs = document.createElement('nav');
   tabs.className = 'xqb-tabs';
   tabs.setAttribute('aria-label', t('broadcast.eventSections'));
+  // lichess's order: Overview first. Boards stays the tab an event opens on.
   const tabDefs: Array<{ id: EventTab; label: string }> = [
-    { id: 'boards', label: t('broadcast.boards') },
     { id: 'overview', label: t('broadcast.overview') },
+    { id: 'boards', label: t('broadcast.boards') },
     ...(teamEvent ? [{ id: 'teams' as const, label: t('broadcast.teams') }] : []),
     { id: 'players', label: t('broadcast.players') },
   ];
@@ -1231,13 +1240,18 @@ function renderBoardsTab(
   // A team league round is one grid too, lichess's: each match's games stay
   // together (its tables, slow then blitz), and a team filter narrows the
   // grid to one team. The matches and their scores are the Teams tab's.
+  // The pager row (lichess's): page buttons, the team filter, the page size.
+  const nav = document.createElement('div');
+  nav.className = 'xqb-boards-nav';
+  head.before(nav);
+  let list: BroadcastBoardSummary[] = boards;
   const byMatch = groupRoundByMatch(boards);
   if (byMatch) {
     const team = state?.team ?? null;
     const matches = team
       ? byMatch.matches.filter((match) => match.teams.some((side) => side.name === team))
       : byMatch.matches;
-    head.prepend(teamFilter(byMatch.matches, team, state));
+    nav.append(teamFilter(byMatch.matches, team, state));
     // The filtered team's match heads its games, so its score is on screen.
     for (const match of team ? matches : []) wrap.append(matchSummary(match));
     const ordered = [
@@ -1246,10 +1260,17 @@ function renderBoardsTab(
     ];
     // Live games still lead, the match order held within each band.
     ordered.sort((a, b) => Number(a.status !== 'live') - Number(b.status !== 'live'));
-    wrap.append(grid(ordered));
-  } else {
-    wrap.append(grid(boards));
+    list = ordered;
   }
+  // lichess's pages: a pager, then the page's boards; the page size is the
+  // reader's and persists. Sizes are rows of four, so a page ends on a full row.
+  const perPage = readBoardsPerPage();
+  const pageCount = perPage ? Math.max(1, Math.ceil(list.length / perPage)) : 1;
+  const page = Math.min(Math.max(0, state?.page ?? 0), pageCount - 1);
+  const shown = perPage ? list.slice(page * perPage, (page + 1) * perPage) : list;
+  nav.prepend(boardsPager(page, pageCount, list.length, perPage, state));
+  nav.append(perPageSelect(perPage, state));
+  wrap.append(grid(shown));
 
   // Boards that left the round entirely must not pin their cards in memory.
   if (cards) {
@@ -1407,6 +1428,88 @@ function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
   return section;
 }
 
+const BOARDS_PER_PAGE_KEY = 'mistboard.broadcast.perPage';
+// Rows of four (the grid's widest), lichess's 12 by default.
+const BOARDS_PER_PAGE_OPTIONS = [12, 24, 48] as const;
+const DEFAULT_BOARDS_PER_PAGE = 12;
+
+/** The reader's page size; 0 is every board on one page. */
+function readBoardsPerPage(): number {
+  try {
+    const raw = window.localStorage.getItem(BOARDS_PER_PAGE_KEY);
+    if (raw === 'all') return 0;
+    const n = Number(raw);
+    if ((BOARDS_PER_PAGE_OPTIONS as readonly number[]).includes(n)) return n;
+  } catch {
+    // Storage refused (private mode): the default holds.
+  }
+  return DEFAULT_BOARDS_PER_PAGE;
+}
+
+function boardsPager(
+  page: number,
+  pageCount: number,
+  total: number,
+  perPage: number,
+  state?: EventPageState,
+): HTMLElement {
+  const pager = document.createElement('div');
+  pager.className = 'xqb-pager';
+  const button = (label: string, icon: string, target: number, disabled: boolean): void => {
+    const el = document.createElement('button');
+    el.type = 'button';
+    el.className = 'xqb-pager-button';
+    el.setAttribute('aria-label', label);
+    el.title = label;
+    el.innerHTML = icon;
+    el.disabled = disabled;
+    el.addEventListener('click', () => state?.setPage?.(target));
+    pager.append(el);
+  };
+  const atStart = page === 0;
+  const atEnd = page >= pageCount - 1;
+  button(t('broadcast.pageFirst'), PAGER_FIRST, 0, atStart);
+  button(t('broadcast.pagePrev'), PAGER_PREV, page - 1, atStart);
+  const count = document.createElement('span');
+  count.className = 'xqb-pager-count';
+  const from = total === 0 ? 0 : perPage ? page * perPage + 1 : 1;
+  const to = perPage ? Math.min(total, (page + 1) * perPage) : total;
+  count.textContent = `${from}-${to} / ${total}`;
+  pager.append(count);
+  button(t('broadcast.pageNext'), PAGER_NEXT, page + 1, atEnd);
+  button(t('broadcast.pageLast'), PAGER_LAST, pageCount - 1, atEnd);
+  return pager;
+}
+
+function perPageSelect(perPage: number, state?: EventPageState): HTMLElement {
+  const select = document.createElement('select');
+  select.className = 'xqb-round-select xqb-per-page';
+  select.setAttribute('aria-label', t('broadcast.boardsPerPage'));
+  for (const n of [...BOARDS_PER_PAGE_OPTIONS, 0]) {
+    const option = document.createElement('option');
+    option.value = n ? String(n) : 'all';
+    option.textContent = n ? t('broadcast.perPage', { n }) : t('broadcast.allOnOnePage');
+    option.selected = n === perPage;
+    select.append(option);
+  }
+  select.addEventListener('change', () => {
+    try {
+      window.localStorage.setItem(BOARDS_PER_PAGE_KEY, select.value);
+    } catch {
+      // Storage refused: the choice holds for this view only.
+    }
+    state?.setPage?.(0);
+  });
+  return select;
+}
+
+const PAGER_ATTRS =
+  'viewBox="0 0 24 24" width="18" height="18" fill="currentColor" aria-hidden="true"';
+const PAGER_FIRST = `<svg ${PAGER_ATTRS}><path d="M6 5h2v14H6zM19 5v14l-9-7z"/></svg>`;
+const PAGER_PREV = `<svg ${PAGER_ATTRS}><path d="M7 5h2v14H7zM18 5v14l-8-7z"/></svg>`;
+const PAGER_NEXT = `<svg ${PAGER_ATTRS}><path d="M15 5h2v14h-2zM6 5v14l8-7z"/></svg>`;
+const PAGER_LAST = `<svg ${PAGER_ATTRS}><path d="M16 5h2v14h-2zM5 5v14l9-7z"/></svg>`;
+
 // lichess's "All teams" select above a team event's boards.
 function teamFilter(
   matches: readonly TeamMatch<BroadcastBoardSummary>[],
@@ -1454,6 +1557,7 @@ function renderTeamsTab(data: BroadcastRoundResponse, state: EventPageState): HT
       open.textContent = t('broadcast.matchBoards');
       open.addEventListener('click', () => {
         state.team = match.teams[0].name;
+        state.page = 0;
         state.setTab?.('boards');
       });
       row.append(open);
@@ -1555,86 +1659,70 @@ function emptyState(text: string): HTMLElement {
 // Overview: the facts lichess puts in its header strip (dates, venue, format,
 // source) plus the schedule, which is where the old tour page's round list
 // went. The share block is the tour URL and the round URL, copyable.
-function renderOverviewTab(data: BroadcastRoundResponse): HTMLElement {
+function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState): HTMLElement {
   const wrap = document.createElement('div');
   wrap.className = 'xqb-tab-panel';
-  const facts = document.createElement('dl');
-  facts.className = 'xqb-facts';
+  // lichess's overview: one strip of the event's facts and its links, then the
+  // share box. The schedule is the round select's, and the facts no longer sit
+  // in a table of labels.
+  const strip = document.createElement('div');
+  strip.className = 'xqb-overview-strip';
+  const item = (icon: string, text: string | null): void => {
+    if (!text) return;
+    const el = document.createElement('span');
+    el.className = 'xqb-overview-item';
+    const glyph = document.createElement('span');
+    glyph.className = 'xqb-overview-icon';
+    glyph.setAttribute('aria-hidden', 'true');
+    glyph.innerHTML = icon;
+    el.append(glyph, text);
+    strip.append(el);
+  };
   const clock = formatEventOffset(data.round.startsAt ?? data.tour.startsAt);
-  addFact(
-    facts,
-    t('broadcast.dates'),
+  item(
+    ICON_CALENDAR,
     [formatEventDateRange(data.tour.startsAt, data.tour.endsAt), clock ? `(${clock})` : null]
       .filter(Boolean)
       .join(' '),
   );
-  addFact(facts, t('broadcast.location'), data.tour.location ?? null);
   const rounds = data.rounds ?? [];
-  addFact(facts, t('broadcast.rounds'), rounds.length > 0 ? String(rounds.length) : null);
+  const teamEvent = isTeamEvent(data);
+  item(
+    ICON_TROPHY,
+    [
+      teamEvent ? t('broadcast.teamLeague') : null,
+      rounds.length > 0 ? countLabel(rounds.length, 'round', 'rounds') : null,
+    ]
+      .filter(Boolean)
+      .join(' · ') || null,
+  );
+  item(ICON_CLOCK, eventTimeControls(data.boards));
+  item(ICON_PIN, data.tour.location ?? null);
   const source = broadcastSourcePageHref(data.tour.sourceUrl);
   if (source) {
     const link = document.createElement('a');
+    link.className = 'xqb-overview-link';
     link.href = source;
     link.rel = 'noreferrer';
-    link.textContent = sourceHost(source) ?? source;
-    addFact(facts, t('broadcast.source'), link);
+    link.textContent = t('broadcast.source');
+    strip.append(link);
   }
-  const credit = broadcastRecordsCredit(data.boards);
-  if (credit) {
-    const link = document.createElement('a');
-    link.href = credit.href;
-    link.rel = 'noreferrer';
-    link.textContent = credit.host;
-    addFact(facts, t('broadcast.gameRecords'), link);
-  }
-  wrap.append(facts);
-
   if (rounds.length > 0) {
-    const heading = document.createElement('h2');
-    heading.textContent = t('broadcast.schedule');
-    const list = document.createElement('div');
-    list.className = 'xqb-list';
-    for (const round of rounds) {
-      const row = document.createElement('a');
-      row.className =
-        round.id === data.round.id
-          ? 'xqb-row xqb-round-row xqb-row-current'
-          : 'xqb-row xqb-round-row';
-      row.href = `/broadcast/xiangqi/${encodeURIComponent(data.tour.slug)}/round/${encodeURIComponent(
-        round.id,
-      )}`;
-      const phase = roundPhase(round);
-      const copy = document.createElement('span');
-      copy.className = 'xqb-row-copy';
-      const name = document.createElement('strong');
-      name.textContent = primaryName(round);
-      const meta = document.createElement('span');
-      meta.textContent = [
-        formatEventDateTime(round.startsAt),
-        round.boardCount !== undefined ? countLabel(round.boardCount, 'board', 'boards') : null,
-        // A past round with no boards is not upcoming; its records have not
-        // been published yet, which is the normal state of a dpxq relay.
-        phase === 'upcoming' && roundHasStarted(round)
-          ? t('broadcast.awaitingRecords')
-          : roundPhaseLabel(phase),
-      ]
-        .filter(Boolean)
-        .join(' / ');
-      copy.append(name);
-      const roundZh = zhSubline(secondaryName(round));
-      if (roundZh) copy.append(roundZh);
-      copy.append(meta);
-      row.append(roundIcon(phase), copy, chevron());
-      list.append(row);
-    }
-    wrap.append(heading, list);
+    const standings = document.createElement('button');
+    standings.type = 'button';
+    standings.className = 'xqb-overview-link';
+    standings.textContent = t('broadcast.standingsLink');
+    standings.addEventListener('click', () => state?.setTab?.(teamEvent ? 'teams' : 'players'));
+    strip.append(standings);
   }
+  wrap.append(strip);
 
-  const share = document.createElement('div');
-  share.className = 'xqb-share';
-  const shareHeading = document.createElement('h2');
-  shareHeading.textContent = t('broadcast.shareByUrl');
-  share.append(shareHeading);
+  const share = document.createElement('details');
+  share.className = 'xqb-share xqb-overview-share';
+  share.open = true;
+  const summary = document.createElement('summary');
+  summary.textContent = t('broadcast.shareByUrl');
+  share.append(summary);
   const origin = window.location.origin;
   share.append(
     shareRow(
@@ -1652,27 +1740,50 @@ function renderOverviewTab(data: BroadcastRoundResponse): HTMLElement {
       ),
     );
   }
-  wrap.append(share);
+  const credit = broadcastRecordsCredit(data.boards);
+  if (credit) {
+    const line = document.createElement('p');
+    line.className = 'xqb-records-credit';
+    line.append(`${t('broadcast.gameRecords')}: `);
+    const link = document.createElement('a');
+    link.href = credit.href;
+    link.rel = 'noreferrer';
+    link.textContent = credit.host;
+    line.append(link);
+    wrap.append(share, line);
+  } else {
+    wrap.append(share);
+  }
   return wrap;
 }
 
-function addFact(list: HTMLElement, label: string, value: string | HTMLElement | null): void {
-  if (!value) return;
-  const dt = document.createElement('dt');
-  dt.textContent = label;
-  const dd = document.createElement('dd');
-  if (typeof value === 'string') dd.textContent = value;
-  else dd.append(value);
-  list.append(dt, dd);
+// "40分＋20秒" is dpxq's; lichess writes "90 min + 30 sec / move". A team
+// league plays a slow and a blitz game at each table, so it gets both.
+function eventTimeControls(boards: readonly BroadcastBoardSummary[]): string | null {
+  const format = (raw: string | undefined): string | null => {
+    const match = raw?.match(/(\d+)\s*分\s*[＋+]\s*(\d+)\s*秒/);
+    return match ? t('broadcast.timeControlMinSec', { m: match[1]!, s: match[2]! }) : null;
+  };
+  const slow = boards.find(
+    (board) => board.details?.kind !== 'blitz' && board.details?.timeControl,
+  );
+  const blitz = boards.find(
+    (board) => board.details?.kind === 'blitz' && board.details?.timeControl,
+  );
+  const slowText = format(slow?.details?.timeControl);
+  const blitzText = format(blitz?.details?.timeControl);
+  if (slowText && blitzText) {
+    return `${t('broadcast.slow')} ${slowText} · ${t('broadcast.blitz')} ${blitzText}`;
+  }
+  return slowText ?? blitzText;
 }
 
-function sourceHost(href: string): string | null {
-  try {
-    return new URL(href).host.replace(/^www\./, '');
-  } catch {
-    return null;
-  }
-}
+const ICON_ATTRS =
+  'viewBox="0 0 24 24" width="18" height="18" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"';
+const ICON_CALENDAR = `<svg ${ICON_ATTRS}><rect x="3.5" y="5" width="17" height="15" rx="2"/><path d="M3.5 10h17M8 3v4M16 3v4"/></svg>`;
+const ICON_TROPHY = `<svg ${ICON_ATTRS}><path d="M8 4h8v5a4 4 0 0 1-8 0V4zM8 6H5a3 3 0 0 0 3 4M16 6h3a3 3 0 0 1-3 4M12 13v4M9 20h6"/></svg>`;
+const ICON_CLOCK = `<svg ${ICON_ATTRS}><circle cx="12" cy="12" r="8.5"/><path d="M12 7.5V12l3 2"/></svg>`;
+const ICON_PIN = `<svg ${ICON_ATTRS}><path d="M12 21s-6.5-6.2-6.5-11a6.5 6.5 0 0 1 13 0c0 4.8-6.5 11-6.5 11z"/><circle cx="12" cy="10" r="2.3"/></svg>`;
 
 function shareRow(label: string, url: string): HTMLElement {
   const row = document.createElement('div');
@@ -1798,12 +1909,6 @@ function roundPhase(stats: Partial<BroadcastRoundStats>): RoundPhase {
   return 'upcoming';
 }
 
-function roundPhaseLabel(phase: RoundPhase): string {
-  if (phase === 'live') return t('broadcast.live');
-  if (phase === 'finished') return t('broadcast.finished');
-  return t('broadcast.upcoming');
-}
-
 // Text markers stand in for lila's icon font: live disc, finished check,
 // upcoming hollow disc. Used by both the tour rows and the round switcher.
 const ROUND_PHASE_MARKS: Record<RoundPhase, string> = {
@@ -1811,14 +1916,6 @@ const ROUND_PHASE_MARKS: Record<RoundPhase, string> = {
   finished: '✓',
   upcoming: '○',
 };
-
-function roundIcon(phase: RoundPhase): HTMLElement {
-  const icon = document.createElement('span');
-  icon.className = `xqb-round-icon xqb-round-icon-${phase}`;
-  icon.setAttribute('aria-hidden', 'true');
-  icon.textContent = ROUND_PHASE_MARKS[phase];
-  return icon;
-}
 
 // Native select styled to match the hero links; hops between sibling rounds
 // without a trip back to the tour page. Idempotent per render: the selected
@@ -2315,15 +2412,6 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   // The table rides in the tooltip: lichess's cards are the two players and
   // the board, and the game list and the open board both carry the table.
   if (label) card.title = label;
-  if (board.status === 'live') {
-    const top = document.createElement('div');
-    top.className = 'xqb-card-top';
-    const live = document.createElement('span');
-    live.className = 'xqb-card-live';
-    live.textContent = t('broadcast.statusLive');
-    top.append(live);
-    card.append(top);
-  }
 
   const boardEl = document.createElement('div');
   boardEl.className = 'xqb-card-board xiangqi-live-board';
@@ -2352,11 +2440,17 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   boardSlot.className = 'xqb-card-board-row';
   // Right of the board, where lichess puts it.
   boardSlot.append(boardEl, gauge);
-  card.append(
-    cardSeat('black', board.black, seatScore(board, 'black')),
-    boardSlot,
-    cardSeat('red', board.red, seatScore(board, 'red')),
-  );
+  const topSeat = cardSeat('black', board.black, seatScore(board, 'black'));
+  // A live game has no score yet, so its LIVE mark takes the score's place on
+  // the top row; a row of its own above the board made live cards taller than
+  // the rest and knocked the grid out of line.
+  if (board.status === 'live') {
+    const live = document.createElement('span');
+    live.className = 'xqb-card-live';
+    live.textContent = t('broadcast.statusLive');
+    topSeat.querySelector('.xqb-score')?.replaceWith(live);
+  }
+  card.append(topSeat, boardSlot, cardSeat('red', board.red, seatScore(board, 'red')));
   return card;
 }
 
@@ -2664,14 +2758,6 @@ function exportLink(boardId: string): HTMLElement {
   link.href = `/api/xiangqi/broadcasts/boards/${encodeURIComponent(boardId)}/export`;
   link.textContent = t('broadcast.exportJson');
   return link;
-}
-
-function chevron(): HTMLElement {
-  const mark = document.createElement('span');
-  mark.className = 'xqb-chevron';
-  mark.setAttribute('aria-hidden', 'true');
-  mark.textContent = '>';
-  return mark;
 }
 
 // Ingestion caches an English form (nameEn) next to the original Chinese
