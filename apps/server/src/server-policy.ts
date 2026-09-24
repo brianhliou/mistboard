@@ -511,7 +511,15 @@ export function isReviewShellRoute(pathname: string): boolean {
     // on the localized URL only.
     /^(?:\/(?:zh-hans|zh-hant))?\/study\/[A-Za-z0-9]+(?:\/[A-Za-z0-9]+)?$/.test(normalized) ||
     normalized === '/puzzles' ||
-    /^\/puzzles\/[^/]+$/.test(normalized)
+    /^\/puzzles\/[^/]+$/.test(normalized) ||
+    // A finished broadcast board is a review with the ceval engine, and it opens
+    // in place from its event page (pushState, no reload), so every broadcast
+    // reader page must be isolated, not just the board URL: isolation is fixed
+    // when the document loads. The operator console keeps a plain document.
+    // Missing entirely until 2026-09-23: the local engine told Chrome readers
+    // "Safari cannot run it yet" on every broadcast board in prod.
+    (/^\/broadcast\/xiangqi(?:\/.*)?$/.test(normalized) &&
+      !/^\/broadcast\/xiangqi\/ops(?:\/|$)/.test(normalized))
   );
 }
 

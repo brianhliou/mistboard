@@ -618,6 +618,18 @@ test('isReviewShellRoute matches postgame review documents (COOP/COEP scope)', (
   assert.equal(isReviewShellRoute('/puzzles'), true);
   assert.equal(isReviewShellRoute('/puzzles/xq-mined-hxq_abc123-60'), true);
   assert.equal(isReviewShellRoute('/puzzles/bMpKA'), true);
+  // Broadcast boards mount the engine and open in place from the event and
+  // index pages, so the whole reader section is isolated; the ops console is not.
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi'), true);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/2026-xiangqi-league'), true);
+  assert.equal(
+    isReviewShellRoute('/broadcast/xiangqi/2026-xiangqi-league/round/2026-xiangqi-league-r05'),
+    true,
+  );
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/board/2026-xiangqi-league-r05-b1'), true);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/calendar'), true);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/ops'), false);
+  assert.equal(isReviewShellRoute('/broadcast/xiangqi/ops/tour/x'), false);
 });
 
 test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)', () => {
@@ -627,7 +639,6 @@ test('isReviewShellRoute excludes non-review surfaces (keeps them non-isolated)'
   assert.equal(isReviewShellRoute('/'), false);
   assert.equal(isReviewShellRoute('/patron'), false);
   assert.equal(isReviewShellRoute('/play'), false);
-  assert.equal(isReviewShellRoute('/broadcast/xiangqi/board/2025-wxc-sample-men-r1-b01'), false);
   assert.equal(isReviewShellRoute('/xiangqi/game/'), false); // no game id
   assert.equal(isReviewShellRoute('/historical-xiangqi/games'), false);
   assert.equal(isReviewShellRoute('/blog/dark-chess-concepts'), false);
