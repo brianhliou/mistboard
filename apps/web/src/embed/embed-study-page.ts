@@ -15,7 +15,11 @@ import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
 import { mountBanqiReplayBoard } from '../banqi-replay-board.js';
-import { chessChapterToReplaySpec, mountChessReplayBoard } from '../chess-study-replay.js';
+import {
+  chessChapterToReplaySpec,
+  mountChessReplayBoard,
+  replayChess,
+} from '../chess-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
 import { mountJungleReplayBoard } from '../jungle-replay-board.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
@@ -90,13 +94,14 @@ export type EmbedCredit = { href: string; text: string };
  *  by name: the old fallthrough drew it on the xiangqi board, which is how a
  *  jungle chapter once rendered as a xiangqi position with jungle squares
  *  ringed on it. */
-const CHAPTER_EMBED_VARIANTS = new Set([
+export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'xiangqi',
   'duck-xiangqi',
   'atomic-xiangqi',
   'banqi',
   'jungle',
   'chess',
+  'dark-chess',
 ]);
 
 /**
@@ -115,7 +120,7 @@ export async function mountChapterEmbed(
     note(root, `A ${variant} game cannot be framed yet.`);
     return;
   }
-  if (variant === 'chess') {
+  if (variant === 'chess' || variant === 'dark-chess') {
     await mountChessEmbed(root, credit, chapter, options);
     return;
   }
@@ -315,6 +320,11 @@ async function mountJungleEmbed(
 // conversion: that conversion re-spells UCI as ICCS (ranks 0-9), which reads
 // "e2e4" as a legal xiangqi token and lands every chess move on the wrong
 // rank. The chess board replays the tree's own UCI against the chess kernel.
+//
+// A fog chess chapter takes the same branch on the fog chess kernel, drawn as
+// the revealed truth board: a chapter is a finished record its author chose to
+// publish, shown the way a finished room and the study page's primary board
+// show it. The per-seat fogged views stay the study page's.
 async function mountChessEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
@@ -330,7 +340,12 @@ async function mountChessEmbed(
   // the first mover's seat (White here), as on every other variant.
   const tags = chapter.tags ?? {};
   const event = tags.event ?? chapter.name ?? 'Study';
-  const result = tags.result && tags.result !== '*' ? tags.result : '';
+  const result =
+    tags.result && tags.result !== '*'
+      ? tags.result
+      : spec.variant === 'dark-chess'
+        ? darkChessEndingLabel(spec)
+        : '';
   await mountEmbedCard(root, {
     header: event,
     seats: {
@@ -348,4 +363,17 @@ async function mountChessEmbed(
     mountBoard: async (host, hooks) => mountChessReplayBoard(host, spec, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+/** A fog chess chapter's ending read off its last position, for a chapter with
+ *  no result tag (the Misty self-play studies carry none): a king capture or a
+ *  kernel draw is on the board, so the card can say it. Empty when the line
+ *  stops mid-game. */
+function darkChessEndingLabel(spec: NonNullable<ReturnType<typeof chessChapterToReplaySpec>>) {
+  const { states } = replayChess(spec);
+  const status = states[states.length - 1]?.status;
+  if (status?.type !== 'finished') return '';
+  if (status.winner === 'white') return reviewResultLabel('white-wins', 'dark-chess');
+  if (status.winner === 'black') return reviewResultLabel('black-wins', 'dark-chess');
+  return reviewResultLabel('draw', 'dark-chess');
 }

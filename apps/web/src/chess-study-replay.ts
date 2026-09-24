@@ -6,8 +6,11 @@
 // reads a live study chapter, which is the embed's whole promise.)
 
 import {
+  canonicalChessCastlingMove,
+  darkChessVariant,
   type GameState,
   type Move,
+  moveToAlgebraic,
   parseStandardChessFen,
   type Square,
   standardChessSan,
@@ -19,7 +22,14 @@ import { chessUciToMove } from './review/chess-tree-adapter.js';
 import type { StudyChapterPayload, StudyTreeNode } from './study-chapter-spec.js';
 
 export type ChessReplaySpec = {
-  /** Start position; the standard opening when absent. */
+  /** Which kernel replays the line. Fog chess ('dark-chess') has no check: a
+   *  king may walk into attack and the game ends when a king is CAPTURED, so
+   *  its moves are illegal to the standard kernel and its last move is not a
+   *  legal chess move at all. Standard chess when absent. */
+  variant?: 'chess' | 'dark-chess';
+  /** Start position; the standard opening when absent. Standard chess only:
+   *  a fog chess chapter always starts from the opening, as its tree adapter
+   *  does. */
   rootFen?: string;
   /** Mainline moves, plain chess UCI. */
   moves: string[];
@@ -94,8 +104,10 @@ export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessRep
     node = played;
   }
   if (!moves.length) return null;
-  const rootFen = chapter.root?.rootFen;
+  const variant = chapter.variant === 'dark-chess' ? 'dark-chess' : 'chess';
+  const rootFen = variant === 'chess' ? chapter.root?.rootFen : undefined;
   return {
+    variant,
     ...(rootFen ? { rootFen } : {}),
     moves,
     perspective: chapter.orientation === 'black' ? 'black' : 'white',
@@ -107,37 +119,71 @@ export function chessChapterToReplaySpec(chapter: StudyChapterPayload): ChessRep
 }
 
 /** Replay the line against the kernel; an unreadable or illegal move truncates
- *  the line rather than poisoning every position after it. */
-function replayChess(spec: ChessReplaySpec): { states: GameState[]; labels: string[] } {
+ *  the line rather than poisoning every position after it. Exported so the
+ *  embed can read a fog chess chapter's ending (a king capture) off the final
+ *  position when the chapter carries no result tag. */
+export function replayChess(spec: ChessReplaySpec): { states: GameState[]; labels: string[] } {
+  if (spec.variant === 'dark-chess') {
+    return replayFrom(darkChessVariant.createInitialState('embed'), spec.moves, 'dark-chess');
+  }
   const parsed = spec.rootFen ? parseStandardChessFen(spec.rootFen, 'embed') : null;
   const start: GameState = parsed?.ok
     ? parsed.state
     : standardChessVariant.createInitialState('embed');
-  return replayFrom(start, spec.moves);
+  return replayFrom(start, spec.moves, 'chess');
+}
+
+/** The move a UCI token names in this position, as the kernel's own legal move
+ *  object, or null. Fog chess goes through the same kernel calls its study tree
+ *  adapter makes (review/dark-chess-tree-adapter.ts): castling normalised to the
+ *  kernel's spelling first, so a chapter storing e1g1 or e1h1 replays past the
+ *  castle either way (#451). The adapter itself is not imported: it pulls the
+ *  chessground replay board and its stylesheet into a third party's frame. */
+function legalMoveFor(
+  state: GameState,
+  uci: string,
+  variant: 'chess' | 'dark-chess',
+): { move: Move; label: string } | null {
+  const parsed: Move | null = chessUciToMove(uci);
+  if (!parsed || state.status.type !== 'playing') return null;
+  const kernel = variant === 'dark-chess' ? darkChessVariant : standardChessVariant;
+  const move = variant === 'dark-chess' ? canonicalChessCastlingMove(state, parsed) : parsed;
+  const legal = kernel
+    .getLegalMoves(state, state.status.turn)
+    .find((m) => m.from === move.from && m.to === move.to && m.promotion === move.promotion);
+  if (!legal) return null;
+  return {
+    move: legal,
+    label:
+      variant === 'dark-chess' ? moveToAlgebraic(state, legal) : standardChessSan(state, legal),
+  };
 }
 
 /** Replay `moves` from `start`; the same truncation rule for a sideline as for
  *  the mainline. */
-function replayFrom(start: GameState, moves: string[]): { states: GameState[]; labels: string[] } {
+function replayFrom(
+  start: GameState,
+  moves: string[],
+  variant: 'chess' | 'dark-chess',
+): { states: GameState[]; labels: string[] } {
+  const kernel = variant === 'dark-chess' ? darkChessVariant : standardChessVariant;
   let state = start;
   const states = [state];
   const labels: string[] = [];
   for (const uci of moves) {
-    const move: Move | null = chessUciToMove(uci);
-    if (!move || state.status.type !== 'playing') break;
-    const legal = standardChessVariant
-      .getLegalMoves(state, state.status.turn)
-      .find((m) => m.from === move.from && m.to === move.to && m.promotion === move.promotion);
-    if (!legal) break;
-    labels.push(standardChessSan(state, legal));
-    state = standardChessVariant.applyMove(state, legal);
+    const step = legalMoveFor(state, uci, variant);
+    if (!step) break;
+    labels.push(step.label);
+    state = kernel.applyMove(state, step.move);
     states.push(state);
   }
   return { states, labels };
 }
 
 /** Every square: the open board hides nothing, so the fog-capable renderer
- *  gets the full set and paints no fog. */
+ *  gets the full set and paints no fog. A fog chess chapter is drawn the same
+ *  way: it is a finished record its author chose to publish, and the study
+ *  page's primary board for it is the revealed truth board too. */
 const ALL_SQUARES: Square[] = (() => {
   const squares: Square[] = [];
   for (let file = 0; file < 8; file += 1) {
@@ -178,7 +224,7 @@ export function mountChessReplayBoard(
     const ply = Number(key);
     const from = states[ply - 1];
     if (!from || ply > total) continue;
-    const replayed = replayFrom(from, line.moves);
+    const replayed = replayFrom(from, line.moves, spec.variant ?? 'chess');
     if (replayed.labels.length) lines.set(ply, replayed);
   }
   let inLine: { atPly: number; cursor: number } | null = null;

@@ -1,6 +1,7 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { STUDY_VARIANTS } from '../study-catalog.js';
 import { embedStudyRouteFromPath } from './embed-route.js';
-import { mountEmbedStudy } from './embed-study-page.js';
+import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 
 const CHAPTER = {
   id: 'Ue0EgpS7',
@@ -250,6 +251,107 @@ describe('mountEmbedStudy', () => {
     );
     expect(moves).toEqual(['a1-b1', 'a9-b9', 'b1-c1']);
     root.remove();
+  });
+
+  it('draws a fog chess chapter on the truth board through castling to the king capture', async () => {
+    // A fog chess chapter used to be refused ("A dark-chess game cannot be
+    // framed yet."). It is a finished record, so the embed shows the revealed
+    // truth board, like a finished room and the study page's primary board.
+    // White castles in the kernel's spelling of the stored king-to-g1 move and
+    // Black in the king-onto-rook spelling: both must replay (#451). The game
+    // ends the way only fog chess can: Bxg8 takes the king, which the standard
+    // chess kernel would refuse as a move at all.
+    const line = [
+      'e2e4',
+      'e7e5',
+      'g1f3',
+      'g8f6',
+      'f1c4',
+      'f8e7',
+      'e1g1',
+      'e8h8',
+      'c4f7',
+      'a7a6',
+      'f7g8',
+    ];
+    const tree = line.reduceRight<{ uci?: string; children?: unknown[] }>(
+      (child, uci) => ({ uci, children: child.uci ? [child] : [] }),
+      {},
+    );
+    const fogChapter = {
+      id: 'Fog12345',
+      name: 'Seed 1: White wins in 6 moves',
+      orientation: 'red',
+      variant: 'dark-chess',
+      tags: {},
+      root: {
+        root: {
+          children: [
+            {
+              ...tree,
+              annotations: { comments: [{ text: 'Both sides open in the fog.' }] },
+            },
+          ],
+        },
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [fogChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Fog12345' }, { startPly: 99 });
+
+    expect(root.textContent).not.toContain('cannot be framed');
+    expect(root.querySelector('.embed-board svg')).not.toBeNull();
+    const moves = Array.from(root.querySelectorAll('button.review-move-list__move')).map((m) =>
+      m.querySelector('.review-move-list__san')?.textContent?.trim(),
+    );
+    expect(moves).toHaveLength(line.length);
+    expect(moves[6]).toBe('O-O');
+    expect(moves[7]).toBe('O-O');
+    expect(moves[10]).toBe('Bxg8');
+    // An out-of-range link clamps to the last ply: the king capture.
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('11 / 11');
+    // No result tag on the chapter: the ending is read off the final position.
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('White wins');
+    expect(root.querySelector('.review-move-list__note')?.textContent).toBe(
+      'Both sides open in the fog.',
+    );
+    // The truth board: no fog square anywhere, at the end or mid-game, where
+    // either seat's own view would shroud most of the other side's pieces.
+    expect(root.querySelector('.embed-board')?.innerHTML).not.toContain('dark-chess-fog-square');
+    const seats = Array.from(root.querySelectorAll<HTMLElement>('.embed-card-seat'));
+    expect(seats.map((s) => s.querySelector('.embed-card-seat-name')?.textContent)).toEqual([
+      'Black',
+      'White',
+    ]);
+    // Stepping works from the end.
+    root.querySelector<HTMLButtonElement>('[aria-label="Previous move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('10 / 11');
+    expect(root.querySelector('.embed-board')?.innerHTML).not.toContain('dark-chess-fog-square');
+    root.remove();
+  });
+
+  it('refuses a chapter of a variant it cannot draw, by name', async () => {
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [{ ...CHAPTER, id: 'Unknown1', variant: 'made-up-chess' }],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Unknown1' });
+    expect(root.textContent).toBe('A made-up-chess game cannot be framed yet.');
+    expect(root.querySelector('svg')).toBeNull();
+  });
+
+  it('dispatches only study variants, fog chess among them', () => {
+    // Fail-closed: every variant the card draws is one a study can hold, and
+    // nothing else reaches a board.
+    const studyIds = new Set<string>(STUDY_VARIANTS.map((v) => v.id));
+    for (const variant of CHAPTER_EMBED_VARIANTS) {
+      expect(studyIds.has(variant), variant).toBe(true);
+    }
+    expect(CHAPTER_EMBED_VARIANTS.has('dark-chess')).toBe(true);
+    expect(CHAPTER_EMBED_VARIANTS.has('made-up-chess')).toBe(false);
   });
 
   it('opens on the ply the link names, not always move one', async () => {
