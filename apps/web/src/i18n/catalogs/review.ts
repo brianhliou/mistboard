@@ -317,6 +317,12 @@ export const EN_REVIEW = {
   'broadcast.deciderDrawn': 'The deciding blitz game was drawn',
   'broadcast.ongoing': 'Ongoing',
   'broadcast.toMove': 'To move',
+  'broadcast.teamsNoteWomensLeague':
+    "Team standings are calculated from the broadcast games with the women's league scoring: each of the three tables plays one slow game, scoring 2 for a win and 1 for a draw. The higher total takes the match for 3 points; a level match goes to one blitz game between the drawn tables' players, whose winner scores 2 and loser 1 (1.5 each if drawn). Ties go to slow-game points, then slow-game wins. They may differ from the official table.",
+  'broadcast.noGamesInEvent':
+    "No games yet. The source publishes this event's records after play, round by round, and each game appears here when it does.",
+  'broadcast.formatWomensLeague':
+    "How it is played: a double round robin over 18 rounds, each match three tables of one slow game (40 minutes plus 20 seconds a move). The higher total takes the match 3-0; a level match goes to one blitz game (10 minutes plus 5 seconds) between the drawn tables' players, won 2-1.",
   'broadcast.teamsNoteChampionship':
     "Team standings are calculated from the broadcast games with the championship's scoring: each table plays one game, scoring 2 for a win and 1 for a draw, and a match scores 2 for a win and 1 for a draw. Ties go to the opponents' match points, then game points, then match wins, then game wins. They may differ from the official table.",
   'broadcast.otherGames': 'Other games',

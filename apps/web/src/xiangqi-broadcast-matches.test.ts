@@ -4,6 +4,7 @@ import {
   formatPoints,
   groupRoundByMatch,
   isMatchName,
+  leagueRulesFor,
   type MatchBoard,
   teamStandings,
 } from './xiangqi-broadcast-matches.js';
@@ -274,5 +275,84 @@ describe('a missing record', () => {
     expect(match.complete).toBe(false);
     expect(match.winner).toBeNull();
     expect(teamStandings(short)).toEqual([]);
+  });
+});
+
+// The 2026 women's league (dpxq 12776): three tables, one slow game each, no
+// playoff at a table; a level match goes to one blitz game between the drawn
+// tables' players, won 2-1 and drawn 1.5 each; slow wins take the match 3-0.
+describe("the women's league", () => {
+  const HB = '河北女队';
+  const SH = '上海女队';
+  function women(
+    red: [string, string],
+    black: [string, string],
+    result: XiangqiBroadcastResult,
+    details: XiangqiBroadcastGameDetails,
+    roundId: string,
+  ) {
+    const board = game(red, black, result, details, roundId);
+    return { ...board, details: { ...board.details, match: '河北-上海' } };
+  }
+  const slowAt = (table: number) => ({ table, game: 1, kind: 'standard' as const });
+  const playoffAt = (table: number) => ({ table, game: 2, kind: 'blitz' as const });
+
+  it("is chosen by the event's name", () => {
+    expect(leagueRulesFor({ name: '2026年全国象棋女子甲级联赛' })).toBe('womens-league');
+    expect(leagueRulesFor({ name: '2026年全国象棋男子甲级联赛' })).toBe('league');
+    expect(leagueRulesFor(null)).toBe('league');
+  });
+
+  it('scores a drawn table as a draw and a slow-game win 3-0', () => {
+    const boards = [
+      women(['甲', HB], ['乙', SH], '1-0', slowAt(1), 'w1'),
+      women(['丙', SH], ['丁', HB], '1/2-1/2', slowAt(2), 'w1'),
+      women(['戊', HB], ['己', SH], '1/2-1/2', slowAt(3), 'w1'),
+    ];
+    const match = groupRoundByMatch(boards, 'womens-league')?.matches[0];
+    expect(match?.format).toBe('womens-league');
+    expect(match?.score).toEqual([4, 2]);
+    expect(match?.teams[match.winner ?? 0]?.name).toBe(HB);
+    expect(match?.wonOnPlayoff).toBe(false);
+    const rows = teamStandings(boards, 'womens-league');
+    expect(rows.map((r) => [r.team.name, r.matchPoints])).toEqual([
+      [HB, 3],
+      [SH, 0],
+    ]);
+  });
+
+  it("settles a level match on the playoff, 2-1, and the men's rules would not", () => {
+    const boards = [
+      women(['甲', HB], ['乙', SH], '1-0', slowAt(1), 'w2'),
+      women(['丙', SH], ['丁', HB], '1-0', slowAt(2), 'w2'),
+      women(['戊', HB], ['己', SH], '1/2-1/2', slowAt(3), 'w2'),
+      // The drawn table's players, colours swapped; 上海 wins it.
+      women(['己', SH], ['戊', HB], '1-0', playoffAt(3), 'w2'),
+    ];
+    const match = groupRoundByMatch(boards, 'womens-league')?.matches[0];
+    expect(match?.score).toEqual([3, 3]);
+    expect(match?.wonOnPlayoff).toBe(true);
+    expect(match?.teams[match.winner ?? 0]?.name).toBe(SH);
+    const rows = teamStandings(boards, 'womens-league');
+    expect(rows.map((r) => [r.team.name, r.matchPoints, r.slowGamePoints])).toEqual([
+      [SH, 2, 3],
+      [HB, 1, 3],
+    ]);
+    // Read as the men's league, the blitz game would be table 3's own playoff.
+    expect(teamStandings(boards).map((r) => r.matchPoints)).toEqual([3, 0]);
+  });
+
+  it('shares a drawn playoff 1.5 each and leaves a level match with no playoff out', () => {
+    const drawn = [
+      women(['甲', HB], ['乙', SH], '1/2-1/2', slowAt(1), 'w3'),
+      women(['丙', SH], ['丁', HB], '1/2-1/2', slowAt(2), 'w3'),
+      women(['戊', HB], ['己', SH], '1/2-1/2', slowAt(3), 'w3'),
+      women(['乙', SH], ['甲', HB], '1/2-1/2', playoffAt(1), 'w3'),
+    ];
+    expect(teamStandings(drawn, 'womens-league').map((r) => r.matchPoints)).toEqual([1.5, 1.5]);
+    const short = drawn.slice(0, 3);
+    const match = groupRoundByMatch(short, 'womens-league')?.matches[0];
+    expect(match?.complete).toBe(false);
+    expect(teamStandings(short, 'womens-league')).toEqual([]);
   });
 });

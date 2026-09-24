@@ -486,6 +486,11 @@ export const ZH_HANS_REVIEW = {
   'broadcast.deciderDrawn': '决胜超快棋和棋',
   'broadcast.ongoing': '进行中',
   'broadcast.toMove': '轮到走棋',
+  'broadcast.teamsNoteWomensLeague':
+    '团体排名按女子甲级联赛规程由转播对局计算：每队三台各下一局慢棋，胜2分、和1分；慢棋总分高者得场分3分；慢棋总分相同，由两队和棋台次的棋手加赛一局快棋，胜方得2分、负方得1分，和棋各1.5分。场分相同依次比较慢棋总局分、慢棋胜局。可能与官方成绩有出入。',
+  'broadcast.noGamesInEvent': '暂无对局。来源在赛后逐轮发布本赛事的棋谱，每局发布后即在此显示。',
+  'broadcast.formatWomensLeague':
+    '赛制：双循环共18轮，每场三台，各下一局慢棋（基本用时40分钟，每步加20秒）。慢棋总分高者以3比0取胜；慢棋总分相同，由两队和棋台次的棋手加赛一局快棋（10分钟，每步加5秒），胜方得2分、负方得1分。',
   'broadcast.teamsNoteChampionship':
     '团体排名根据直播棋谱按比赛规程计算：每台一局，个人局分胜2和1负0；团体场分胜2和1负0；场分相同比对手总场分、总局分、胜场、总胜局。可能与官方成绩不同。',
   'broadcast.otherGames': '其他对局',

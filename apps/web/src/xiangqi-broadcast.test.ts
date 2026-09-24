@@ -278,6 +278,41 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     ).toEqual(['', '']);
   });
 
+  it('opens an event with no games on the Overview, with its format and no "not started"', async () => {
+    // The women's league as it stands before dpxq posts a record: rounds with
+    // no games and no times.
+    const empty = {
+      tour: {
+        schema: XIANGQI_BROADCAST_SCHEMA,
+        slug: 'w',
+        name: '2026年全国象棋女子甲级联赛',
+        nameEn: '2026 National Xiangqi Women Division A League',
+        startsAt: '2026-09-23T00:00:00+08:00',
+      },
+      round: { schema: XIANGQI_BROADCAST_SCHEMA, id: 'w-r01', tourSlug: 'w', name: 'Round 1' },
+      rounds: [1, 2].map((n) => ({
+        schema: XIANGQI_BROADCAST_SCHEMA,
+        id: `w-r0${n}`,
+        tourSlug: 'w',
+        name: `Round ${n}`,
+        boardCount: 0,
+      })),
+      boards: [],
+    };
+    stubFetchJson(() => empty);
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 'w', 'w-r01');
+
+    expect(root.querySelector('.xqb-tab.xqb-tab-active')?.textContent).toBe('Overview');
+    const pending = root.querySelector('.xqb-overview-pending')?.textContent ?? '';
+    expect(pending).toContain('three tables');
+    expect(pending).toContain('No games yet');
+    // An undated round of a running event is not called upcoming.
+    expect(root.querySelector('.xqb-round-picker-button')?.textContent).not.toContain('Upcoming');
+    expect(root.textContent).not.toContain('This round has not started');
+  });
+
   it('fires broadcast_opened once for the round surface, not again per stream push', async () => {
     stubFetchJson(() => ROUND);
     const stream = stubPushableEventSource();

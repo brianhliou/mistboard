@@ -2810,3 +2810,24 @@ a.xqb-standings-name:focus-visible {
   color: var(--site-text);
   font-weight: 500;
 }
+
+/* An event with no records yet: its format and when its games arrive, under
+   the facts strip, where the boards grid would otherwise be empty. */
+.xqb-overview-pending {
+  margin-top: 14px;
+  padding: 16px 20px;
+  border-radius: var(--site-radius);
+  background: var(--site-panel-soft);
+  color: var(--site-text);
+  font-size: 14px;
+  line-height: 1.55;
+}
+
+.xqb-overview-pending p {
+  margin: 0;
+  max-width: 72ch;
+}
+
+.xqb-overview-pending p + p {
+  margin-top: 8px;
+}

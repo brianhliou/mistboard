@@ -37,6 +37,7 @@ import { animateXiangqiBoardMove } from './xiangqi-board.js';
 import {
   formatPoints,
   groupRoundByMatch,
+  leagueRulesFor,
   type MatchTeam,
   matchBoards,
   matchFormatOf,
@@ -314,9 +315,17 @@ function eventWithoutRounds(data: BroadcastTourResponse): BroadcastRoundResponse
 
 type EventTab = 'boards' | 'overview' | 'players' | 'teams';
 
-function eventTabFromUrl(): EventTab {
+function eventTabFromUrl(): EventTab | null {
   const raw = new URLSearchParams(window.location.search).get('tab');
-  return raw === 'overview' || raw === 'players' || raw === 'teams' ? raw : 'boards';
+  return raw === 'overview' || raw === 'players' || raw === 'teams' || raw === 'boards'
+    ? raw
+    : null;
+}
+
+/** No round of the event has a game yet: it opens on the Overview, where its
+ *  facts are, rather than an empty grid. */
+function eventHasNoGames(data: BroadcastRoundResponse): boolean {
+  return data.boards.length === 0 && (data.rounds ?? []).every((round) => !round.boardCount);
 }
 
 type EventPageState = {
@@ -354,7 +363,10 @@ async function mountRoundPage(
   // main thread for hundreds of milliseconds on exactly the rounds that push
   // most. Cards survive across paints and only the changed ones are rebuilt.
   const cards: BoardCardCache = new Map();
-  const state: EventPageState = { tab: eventTabFromUrl(), playerSlugs: new Map() };
+  const state: EventPageState = {
+    tab: eventTabFromUrl() ?? (eventHasNoGames(data) ? 'overview' : 'boards'),
+    playerSlugs: new Map(),
+  };
   const addSlugs = (slugs: Record<string, string> | undefined): void => {
     for (const [name, slug] of Object.entries(slugs ?? {})) state.playerSlugs?.set(name, slug);
   };
@@ -1017,7 +1029,7 @@ function renderEvent(
 // A team event is one whose games form team matches: the league names its
 // matches, a team championship's are the pairs of teams its games state.
 function isTeamEvent(data: BroadcastRoundResponse): boolean {
-  return (groupRoundByMatch(data.boards)?.matches.length ?? 0) > 0;
+  return (groupRoundByMatch(data.boards, leagueRulesFor(data.tour))?.matches.length ?? 0) > 0;
 }
 
 /** Which event page a shell shows: a later page for the same round keeps it. */
@@ -1243,7 +1255,11 @@ function renderBoardsTab(
     // which is after the round and on no fixed delay; say so rather than show
     // a bare zero, and point at where they will come from.
     const empty = emptyState(
-      roundPhase(roundStatsFor(data)) === 'upcoming' && !roundHasStarted(data.round)
+      // "Not started" only for a round dated in the future: an undated round
+      // of a running event may well have been played already.
+      roundPhase(roundStatsFor(data)) === 'upcoming' &&
+        data.round.startsAt !== undefined &&
+        !roundHasStarted(data.round)
         ? t('broadcast.roundNotStarted')
         : t('broadcast.noGamesYet'),
     );
@@ -1292,7 +1308,7 @@ function renderBoardsTab(
   nav.className = 'xqb-boards-nav';
   head.before(nav);
   let list: BroadcastBoardSummary[] = boards;
-  const byMatch = groupRoundByMatch(boards);
+  const byMatch = groupRoundByMatch(boards, leagueRulesFor(data.tour));
   if (byMatch) {
     const team = state?.team ?? null;
     const matches = team
@@ -1464,7 +1480,9 @@ function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
   // and read as a second, different score.
   const winnerName = match.winner === null ? null : teamLabel(match.teams[match.winner]);
   const scores = [
-    match.decider && winnerName ? t('broadcast.deciderWon', { team: winnerName }) : null,
+    match.decider && winnerName && (match.format !== 'womens-league' || match.wonOnPlayoff)
+      ? t('broadcast.deciderWon', { team: winnerName })
+      : null,
     match.deciderDrawn ? t('broadcast.deciderDrawn') : null,
     match.finished && !match.complete ? t('broadcast.recordMissing') : null,
   ].filter(Boolean);
@@ -1596,7 +1614,7 @@ function renderTeamsTab(data: BroadcastRoundResponse, state: EventPageState): HT
   wrap.className = 'xqb-tab-panel';
   // The round's matches first (the fixtures a round is made of), each with a
   // way to its games, then the league table they add up to.
-  const byMatch = groupRoundByMatch(data.boards);
+  const byMatch = groupRoundByMatch(data.boards, leagueRulesFor(data.tour));
   if (byMatch && byMatch.matches.length > 0) {
     const heading = document.createElement('h3');
     heading.className = 'xqb-teams-heading';
@@ -1624,16 +1642,22 @@ function renderTeamsTab(data: BroadcastRoundResponse, state: EventPageState): HT
   }
   const note = document.createElement('p');
   note.className = 'xqb-note';
+  const format = matchFormatOf(data.boards, leagueRulesFor(data.tour));
   note.textContent =
-    matchFormatOf(data.boards) === 'championship'
+    format === 'championship'
       ? t('broadcast.teamsNoteChampionship')
-      : t('broadcast.teamsNote');
+      : format === 'womens-league' || leagueRulesFor(data.tour) === 'womens-league'
+        ? t('broadcast.teamsNoteWomensLeague')
+        : t('broadcast.teamsNote');
   wrap.append(note);
   if (state.standingsBoards === null) {
     wrap.append(emptyState(t('broadcast.loadingStandings')));
     return wrap;
   }
-  const rows = teamStandings([...(state.standingsBoards ?? []), ...data.boards]);
+  const rows = teamStandings(
+    [...(state.standingsBoards ?? []), ...data.boards],
+    leagueRulesFor(data.tour),
+  );
   if (rows.length === 0) {
     wrap.append(emptyState(t('broadcast.noGamesYet')));
     return wrap;
@@ -1773,6 +1797,22 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     strip.append(standings);
   }
   wrap.append(strip);
+  if (eventHasNoGames(data)) {
+    // Before the first record: how the event is played, when we know its
+    // rules, and when its games will appear.
+    const note = document.createElement('div');
+    note.className = 'xqb-overview-pending';
+    if (leagueRulesFor(data.tour) === 'womens-league') {
+      const format = document.createElement('p');
+      format.textContent = t('broadcast.formatWomensLeague');
+      note.append(format);
+    }
+    const when = document.createElement('p');
+    when.className = 'xqb-note';
+    when.textContent = t('broadcast.noGamesInEvent');
+    note.append(when);
+    wrap.append(note);
+  }
 
   const share = document.createElement('details');
   share.className = 'xqb-share xqb-overview-share';
@@ -2098,9 +2138,12 @@ function roundStatusEl(round: BroadcastRoundWithStats, opts: { withLabel: boolea
     dot.setAttribute('aria-hidden', 'true');
     el.append(dot, t('broadcast.ongoing'));
   } else {
+    // An undated round says nothing: the source gave no time, and "Upcoming"
+    // was wrong for the rounds of a running event already played.
     const at = round.startsAt ? new Date(round.startsAt).getTime() : Number.NaN;
-    el.textContent =
-      Number.isFinite(at) && at > Date.now()
+    el.textContent = !round.startsAt
+      ? ''
+      : Number.isFinite(at) && at > Date.now()
         ? relativeFromNow(at)
         : roundHasStarted(round)
           ? t('broadcast.awaitingRecords')
@@ -2754,7 +2797,7 @@ function sideRail(
   currentBoardId: string,
   header?: HTMLElement | null,
 ): HTMLElement | null {
-  const grouped = groupRoundByMatch(context.boards);
+  const grouped = groupRoundByMatch(context.boards, leagueRulesFor(context.tour));
   const boards = grouped
     ? [...grouped.matches.flatMap((match) => matchBoards(match)), ...grouped.other]
     : [...context.boards].sort((a, b) => a.boardNumber - b.boardNumber);

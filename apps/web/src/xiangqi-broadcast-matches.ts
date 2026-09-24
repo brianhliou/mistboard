@@ -19,8 +19,15 @@
 // deciding game settles a level match but not what a drawn one means. The
 // official table counts it a drawn match (Zhejiang's 13.5 after round 5, on
 // sohu.com 2026-09-16, includes one; the drawn game won by Black would make it
-// 15), so it is scored a draw and the line says the decider was drawn. The women's league uses the same
-// 规程 family; an event scored differently needs its own rules.
+// 15), so it is scored a draw and the line says the decider was drawn.
+//
+// The 2026 women's league plays it differently (its 规程 and 补充规定 on dpxq,
+// tour 12776, news 26005): three tables, one slow game each and no playoff at
+// a table, so a drawn table is a draw. Higher slow total takes the match 3-0;
+// a level match goes to one blitz game between the drawn tables' players
+// ("两队慢棋阶段总分战平，由两队和棋台次的运动员进行快棋加赛"), won 2-1 and
+// drawn 1.5 each. Teams rank by match points, then slow-game points, then
+// slow-game wins; the playoff counts for neither.
 //
 // A team is the affiliation on the player tag (`federation`), the name the
 // cards already show. The match's own name uses short forms (北京, 江苏) that do
@@ -54,10 +61,20 @@ export type MatchSegment<B extends MatchBoard> = {
   wins: [number, number];
 };
 
-/** Which rules a match is scored by: the 2026 league's (a table's slow game
- *  or its blitz playoff, a deciding game, match points 3/1.5/0) or a team
- *  championship's (one slow game a table, match points 2/1/0). */
-export type MatchFormat = 'league' | 'championship';
+/** Which rules a match is scored by: the 2026 men's league's (a table's slow
+ *  game or its blitz playoff, a deciding game, match points 3/1.5/0), the
+ *  women's league's (slow games only, a level match's playoff won 2-1), or a
+ *  team championship's (one slow game a table, match points 2/1/0). */
+export type MatchFormat = 'league' | 'womens-league' | 'championship';
+
+/** The rules a league event's named matches follow; a championship is told
+ *  apart by its data (no match names), not by this. */
+export type LeagueRules = 'league' | 'womens-league';
+
+/** The women's league's rules for its own events, the men's otherwise. */
+export function leagueRulesFor(tour: { name: string } | null | undefined): LeagueRules {
+  return tour && /女子甲级联赛|女子甲級聯賽/.test(tour.name) ? 'womens-league' : 'league';
+}
 
 export type TeamMatch<B extends MatchBoard> = {
   format: MatchFormat;
@@ -82,6 +99,9 @@ export type TeamMatch<B extends MatchBoard> = {
   /** The deciding game was drawn: the rules do not say who takes the match,
    *  so it stands as a draw. */
   deciderDrawn: boolean;
+  /** The match went to the playoff and its winner took it 2-1 (the women's
+   *  league); false for a match won on the slow games. */
+  wonOnPlayoff: boolean;
   /** No game still to finish. */
   finished: boolean;
   /** Every table has its result: a drawn slow game with no playoff, or a
@@ -100,6 +120,7 @@ export type RoundByMatch<B extends MatchBoard> = {
  *  individual event keeps its plain grid). */
 export function groupRoundByMatch<B extends MatchBoard>(
   boards: readonly B[],
+  rules: LeagueRules = 'league',
 ): RoundByMatch<B> | null {
   if (!boards.some((board) => isMatchName(board.details?.match))) {
     return groupChampionshipRound(boards);
@@ -125,6 +146,10 @@ export function groupRoundByMatch<B extends MatchBoard>(
       continue;
     }
     const sorted = [...list].sort(compareInMatch);
+    if (rules === 'womens-league') {
+      matches.push(womensLeagueMatch(name, sorted, teams));
+      continue;
+    }
     const slowBoards = sorted.filter((board) => board.details?.kind !== 'blitz');
     const slowTables = new Set(slowBoards.map((board) => board.details?.table));
     const blitzBoards = sorted.filter((board) => board.details?.kind === 'blitz');
@@ -193,6 +218,7 @@ export function groupRoundByMatch<B extends MatchBoard>(
       score,
       winner,
       deciderDrawn: complete && level && deciderResult === 'draw',
+      wonOnPlayoff: false,
       finished,
       complete,
     });
@@ -202,6 +228,51 @@ export function groupRoundByMatch<B extends MatchBoard>(
     (a, b) => lowestBoardNumber(a) - lowestBoardNumber(b) || a.name.localeCompare(b.name),
   );
   return { matches, other };
+}
+
+/** One women's league match: the slow games score the tables; a level match
+ *  is settled by its blitz game(s), every blitz game in the match being the
+ *  playoff whatever table the source files it under. */
+function womensLeagueMatch<B extends MatchBoard>(
+  name: string,
+  sorted: B[],
+  teams: [MatchTeam, MatchTeam],
+): TeamMatch<B> {
+  const slowBoards = sorted.filter((board) => board.details?.kind !== 'blitz');
+  const playoffBoards = sorted.filter((board) => board.details?.kind === 'blitz');
+  const slow = segment(slowBoards, teams);
+  const blitz = segment(playoffBoards, teams);
+  const score: [number, number] = [slow.score[0], slow.score[1]];
+  const finished = sorted.every((board) => board.status === 'complete');
+  const level = score[0] === score[1];
+  const playoffPlayed = playoffBoards.length > 0;
+  const complete = finished && slowBoards.length > 0 && (!level || playoffPlayed);
+  const playoffWinner: 0 | 1 | null =
+    blitz.score[0] === blitz.score[1] ? null : blitz.score[0] > blitz.score[1] ? 0 : 1;
+  const winner: 0 | 1 | null = !complete
+    ? null
+    : !level
+      ? score[0] > score[1]
+        ? 0
+        : 1
+      : playoffWinner;
+  return {
+    format: 'womens-league',
+    key: name,
+    name,
+    ...(sorted[0]?.details?.matchEn ? { nameEn: sorted[0].details.matchEn } : {}),
+    teams,
+    slow,
+    blitz,
+    // The playoff is the match's deciding game, the one line the card shows.
+    decider: playoffBoards[0] ?? null,
+    score,
+    winner,
+    deciderDrawn: complete && level && playoffWinner === null,
+    wonOnPlayoff: complete && level && playoffWinner !== null,
+    finished,
+    complete,
+  };
 }
 
 /**
@@ -254,6 +325,7 @@ function groupChampionshipRound<B extends MatchBoard>(
       score,
       winner,
       deciderDrawn: false,
+      wonOnPlayoff: false,
       finished,
       complete: finished,
     });
@@ -285,7 +357,10 @@ export type TeamStandingsRow = {
 };
 
 /** League table from finished matches, ranked the way the 规程 ranks it. */
-export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[] {
+export function teamStandings(
+  boards: readonly MatchBoard[],
+  rules: LeagueRules = 'league',
+): TeamStandingsRow[] {
   const rows = new Map<string, TeamStandingsRow>();
   const opponents = new Map<string, string[]>();
   let format: MatchFormat = 'league';
@@ -319,7 +394,7 @@ export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[]
     byRound.set(round, list);
   }
   for (const list of byRound.values()) {
-    for (const match of groupRoundByMatch(list)?.matches ?? []) {
+    for (const match of groupRoundByMatch(list, rules)?.matches ?? []) {
       // A short match counts when its winner is beyond doubt; its table points
       // are then the ones on record.
       if (!match.complete && match.winner === null) continue;
@@ -340,9 +415,10 @@ export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[]
           row.matchPoints += points.draw;
         } else if (match.winner === index) {
           row.wins += 1;
-          row.matchPoints += points.win;
+          row.matchPoints += match.wonOnPlayoff ? points.playoffWin : points.win;
         } else {
           row.losses += 1;
+          row.matchPoints += match.wonOnPlayoff ? points.playoffLoss : 0;
         }
       });
     }
@@ -355,18 +431,23 @@ export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[]
     );
   }
   const tiebreak =
-    format === 'championship'
-      ? // 场分，对手总场分，总局分，胜场，总胜局 (the championship's 规程)
+    format === 'womens-league'
+      ? // 场分，慢棋总局分，慢棋胜局 (the women's league's 补充规定; 直胜 and
+        // 犯规 after those are not in the data)
         (x: TeamStandingsRow, y: TeamStandingsRow) =>
-          y.opponentsMatchPoints - x.opponentsMatchPoints ||
-          y.gamePoints - x.gamePoints ||
-          y.wins - x.wins ||
-          y.gameWins - x.gameWins
-      : // 场分，总局分，慢棋总局分，慢棋总胜局 (the league's)
-        (x: TeamStandingsRow, y: TeamStandingsRow) =>
-          y.gamePoints - x.gamePoints ||
-          y.slowGamePoints - x.slowGamePoints ||
-          y.slowWins - x.slowWins;
+          y.slowGamePoints - x.slowGamePoints || y.slowWins - x.slowWins
+      : format === 'championship'
+        ? // 场分，对手总场分，总局分，胜场，总胜局 (the championship's 规程)
+          (x: TeamStandingsRow, y: TeamStandingsRow) =>
+            y.opponentsMatchPoints - x.opponentsMatchPoints ||
+            y.gamePoints - x.gamePoints ||
+            y.wins - x.wins ||
+            y.gameWins - x.gameWins
+        : // 场分，总局分，慢棋总局分，慢棋总胜局 (the league's)
+          (x: TeamStandingsRow, y: TeamStandingsRow) =>
+            y.gamePoints - x.gamePoints ||
+            y.slowGamePoints - x.slowGamePoints ||
+            y.slowWins - x.slowWins;
   return [...rows.values()].sort(
     (x, y) =>
       y.matchPoints - x.matchPoints || tiebreak(x, y) || x.team.name.localeCompare(y.team.name),
@@ -374,15 +455,24 @@ export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[]
 }
 
 /** The format the matches in these boards are scored by, when any are. */
-export function matchFormatOf(boards: readonly MatchBoard[]): MatchFormat | null {
-  return groupRoundByMatch(boards)?.matches[0]?.format ?? null;
+export function matchFormatOf(
+  boards: readonly MatchBoard[],
+  rules: LeagueRules = 'league',
+): MatchFormat | null {
+  return groupRoundByMatch(boards, rules)?.matches[0]?.format ?? null;
 }
 
-// 团体场分 by format: the 2026 league's 胜3 和1.5 负0; the national team
-// championship's 胜2 和1 负0. 个人局分 is 胜2 和1 负0 in both.
-const MATCH_POINTS: Record<MatchFormat, { win: number; draw: number }> = {
-  league: { win: 3, draw: 1.5 },
-  championship: { win: 2, draw: 1 },
+// 团体场分 by format: the 2026 men's league's 胜3 和1.5 负0; the women's
+// league's 胜3 负0 on the slow games and 2-1 (1.5 each if drawn) on the
+// playoff; the national team championship's 胜2 和1 负0. 个人局分 is 胜2 和1
+// 负0 in all three.
+const MATCH_POINTS: Record<
+  MatchFormat,
+  { win: number; draw: number; playoffWin: number; playoffLoss: number }
+> = {
+  league: { win: 3, draw: 1.5, playoffWin: 3, playoffLoss: 0 },
+  'womens-league': { win: 3, draw: 1.5, playoffWin: 2, playoffLoss: 1 },
+  championship: { win: 2, draw: 1, playoffWin: 2, playoffLoss: 0 },
 };
 const GAME_WIN_POINTS = 2;
 const GAME_DRAW_POINTS = 1;
