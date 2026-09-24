@@ -460,7 +460,7 @@ export const ZH_HANT_REVIEW = {
   'broadcast.matches': '場次',
   'broadcast.gamePoints': '局分',
   'broadcast.teamsNote':
-    '團體排名根據直播棋譜按聯賽規程計算：個人局分勝2和1負0（慢棋與超快棋相同），團體場分勝3和1.5負0；場分相同比總局分、慢棋總局分、慢棋總勝局。可能與官方成績不同。',
+    '團體排名根據直播棋譜按聯賽規程計算：每台先下慢棋，慢棋和棋則換先加賽超快棋，台次勝2和1負0；各台積分相同則各派一人加賽一盤超快棋決定勝負。團體場分勝3和1.5負0；場分相同比總局分、慢棋總局分、慢棋總勝局。可能與官方成績不同。',
   'broadcast.recordMissing': '來源缺少一局棋譜，此比分不完整',
   'broadcast.matchPoints': '場分',
   'broadcast.slow': '慢棋',
@@ -482,6 +482,8 @@ export const ZH_HANT_REVIEW = {
   'broadcast.boardsPerPage': '每頁台數',
   'broadcast.perPage': '每頁 {n} 台',
   'broadcast.allOnOnePage': '全部顯示',
+  'broadcast.deciderWon': '{team}贏得決勝超快棋',
+  'broadcast.deciderDrawn': '決勝超快棋和棋',
   'broadcast.otherGames': '其他對局',
   'broadcast.sectionNav': '直播選單',
   'broadcast.calendar': '賽程',

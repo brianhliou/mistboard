@@ -38,6 +38,7 @@ import {
   formatPoints,
   groupRoundByMatch,
   type MatchTeam,
+  matchBoards,
   type TeamMatch,
   teamStandings,
 } from './xiangqi-broadcast-matches.js';
@@ -1255,7 +1256,7 @@ function renderBoardsTab(
     // The filtered team's match heads its games, so its score is on screen.
     for (const match of team ? matches : []) wrap.append(matchSummary(match));
     const ordered = [
-      ...matches.flatMap((match) => [...match.slow.boards, ...match.blitz.boards]),
+      ...matches.flatMap((match) => matchBoards(match)),
       ...(team ? [] : byMatch.other),
     ];
     // Live games still lead, the match order held within each band.
@@ -1385,6 +1386,10 @@ function roundPlayedAt(boards: readonly BroadcastBoardSummary[]): string | undef
 // One match's line: the two teams and the score, the match name, the slow and
 // blitz split. The Teams tab lists the round's matches this way, and the
 // Boards grid heads a filtered team's games with it.
+function teamLabel(team: MatchTeam): string {
+  return team.nameEn ?? team.name;
+}
+
 function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
   const section = document.createElement('section');
   section.className = 'xqb-match';
@@ -1404,14 +1409,17 @@ function matchSummary(match: TeamMatch<BroadcastBoardSummary>): HTMLElement {
   score.textContent = `${formatPoints(match.score[0])} – ${formatPoints(match.score[1])}`;
   header.append(side(match.teams[0], 0), score, side(match.teams[1], 1));
   section.append(header);
-  const split = (label: string, points: [number, number]) =>
-    `${label} ${formatPoints(points[0])}–${formatPoints(points[1])}`;
   const names = [match.nameEn ? match.nameEn.replace('-', ' vs ') : null, match.name].filter(
     Boolean,
   );
+  // What settled it, in words: the score above is the tables' points, and a
+  // level match is decided by one more blitz game. The slow and blitz point
+  // split this line used to show counted the two games at a table separately
+  // and read as a second, different score.
+  const winnerName = match.winner === null ? null : teamLabel(match.teams[match.winner]);
   const scores = [
-    match.slow.boards.length > 0 ? split(t('broadcast.slow'), match.slow.score) : null,
-    match.blitz.boards.length > 0 ? split(t('broadcast.blitz'), match.blitz.score) : null,
+    match.decider && winnerName ? t('broadcast.deciderWon', { team: winnerName }) : null,
+    match.deciderDrawn ? t('broadcast.deciderDrawn') : null,
     match.finished && !match.complete ? t('broadcast.recordMissing') : null,
   ].filter(Boolean);
   const subline = document.createElement('p');
@@ -2566,10 +2574,7 @@ function sideRail(
 ): HTMLElement | null {
   const grouped = groupRoundByMatch(context.boards);
   const boards = grouped
-    ? [
-        ...grouped.matches.flatMap((match) => [...match.slow.boards, ...match.blitz.boards]),
-        ...grouped.other,
-      ]
+    ? [...grouped.matches.flatMap((match) => matchBoards(match)), ...grouped.other]
     : [...context.boards].sort((a, b) => a.boardNumber - b.boardNumber);
   if (boards.length === 0) return null;
   const rail = document.createElement('aside');

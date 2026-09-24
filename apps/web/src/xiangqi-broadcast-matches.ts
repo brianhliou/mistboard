@@ -1,15 +1,26 @@
 // A team league round, read as the league plays it. The 2026 men's league
-// round is a set of team matches (北京-江苏); each match has four tables, and
-// each table plays a slow game (40+20) and then a blitz game (5+3) with the
-// colours swapped. Both count. The source states all of this per game
-// (board.details), and a flat grid of it read as the same pairings listed
-// twice plus a "Board 73".
+// round is a set of team matches (北京-江苏) of four tables. Each table plays a
+// slow game (40+20); only if it is drawn do the two play a blitz playoff (5+3)
+// with the colours swapped, and a drawn playoff leaves the table drawn. A
+// match level on points after its tables is decided by one more blitz game
+// between a player from each team (the source files it as a fifth table).
+// Source: the new-season report (news.qq.com, 2026-09-15): "当一台次双方棋手在
+// 慢棋比赛中出现和局时，则换先马上进行超快棋加赛，如加赛再获和局，则计该台次为和
+// 局" and "两边棋手若战成积分相同，则各派遣1名棋手再进行一台超快棋加赛，以决定当轮
+// 次团体胜负归属". Every round's data agrees: 31 of 31 decisive slow games have no
+// blitz game, 85 of 87 drawn ones do. Until 2026-09-23 this module scored the
+// slow and blitz games as two games that both count, which marked every match
+// with a decisive slow game as missing a record and miscounted the rest.
 //
 // Scoring is the league's own, from its 规程 as dpxq reproduces it (tour
-// 12683): a game scores 2 for a win and 1 for a draw (个人局分), a match 3 for a
-// win and 1.5 for a draw (团体场分), and teams rank by match points, then total
-// game points, then slow-game points, then slow-game wins. The women's league
-// uses the same 规程 family; an event scored differently needs its own rules.
+// 12683): a table scores 2 for a win and 1 for a draw (个人局分), a match 3 for
+// a win and 1.5 for a draw (团体场分), and teams rank by match points, then total
+// game points, then slow-game points, then slow-game wins. The rules say the
+// deciding game settles a level match but not what a drawn one means. The
+// official table counts it a drawn match (Zhejiang's 13.5 after round 5, on
+// sohu.com 2026-09-16, includes one; the drawn game won by Black would make it
+// 15), so it is scored a draw and the line says the decider was drawn. The women's league uses the same
+// 规程 family; an event scored differently needs its own rules.
 //
 // A team is the affiliation on the player tag (`federation`), the name the
 // cards already show. The match's own name uses short forms (北京, 江苏) that do
@@ -50,20 +61,26 @@ export type TeamMatch<B extends MatchBoard> = {
   nameEn?: string;
   /** The two sides, in the match name's order where the names allow it. */
   teams: [MatchTeam, MatchTeam];
-  /** Slow games (standard or rapid). */
+  /** Slow games (standard or rapid); their points are the 慢棋 tiebreaks. */
   slow: MatchSegment<B>;
-  /** Blitz games, the second game at each table. */
+  /** Blitz playoffs, played at a table whose slow game was drawn. */
   blitz: MatchSegment<B>;
-  /** Game points over every game of the match. */
+  /** The blitz game that decides a match level after its tables. */
+  decider: B | null;
+  /** Table points: each table's result (the slow game, else its playoff), 2
+   *  a win and 1 a draw. */
   score: [number, number];
   /** Index into `teams` of the winner once every game is in; null while
-   *  games remain or when the match is drawn. */
+   *  games remain, when the match is drawn, or when a record is missing. */
   winner: 0 | 1 | null;
+  /** The deciding game was drawn: the rules do not say who takes the match,
+   *  so it stands as a draw. */
+  deciderDrawn: boolean;
   /** No game still to finish. */
   finished: boolean;
-  /** Every table has both its games: a table with a slow game and no blitz
-   *  game (or the reverse) means the source is missing a record, and the
-   *  score is short. Such a match stays out of the standings. */
+  /** Every table has its result: a drawn slow game with no playoff, or a
+   *  level match with no deciding game, means the source is missing a
+   *  record. Such a match stays out of the standings. */
   complete: boolean;
 };
 
@@ -100,22 +117,62 @@ export function groupRoundByMatch<B extends MatchBoard>(
       continue;
     }
     const sorted = [...list].sort(compareInMatch);
-    const slow = segment(
-      sorted.filter((board) => board.details?.kind !== 'blitz'),
-      teams,
-    );
-    const blitz = segment(
-      sorted.filter((board) => board.details?.kind === 'blitz'),
-      teams,
-    );
-    const score: [number, number] = [
-      slow.score[0] + blitz.score[0],
-      slow.score[1] + blitz.score[1],
-    ];
+    const slowBoards = sorted.filter((board) => board.details?.kind !== 'blitz');
+    const slowTables = new Set(slowBoards.map((board) => board.details?.table));
+    const blitzBoards = sorted.filter((board) => board.details?.kind === 'blitz');
+    // The source numbers a table's playoff game 2 and files the deciding game
+    // as game 1 of a fifth table; with no game number, a blitz game at a table
+    // that has no slow game is read as the decider.
+    const isDecider = (board: B): boolean =>
+      board.details?.game !== undefined
+        ? board.details.game === 1
+        : !slowTables.has(board.details?.table);
+    const playoffs = blitzBoards.filter((board) => !isDecider(board));
+    const decider = blitzBoards.find(isDecider) ?? null;
+    const slow = segment(slowBoards, teams);
+    const blitz = segment(playoffs, teams);
+
+    const tables = [...new Set([...slowBoards, ...playoffs].map((board) => board.details?.table))];
+    const score: [number, number] = [0, 0];
+    let missingTables = 0;
+    for (const table of tables) {
+      const slowGame = slowBoards.find((board) => board.details?.table === table);
+      const playoff = playoffs.find((board) => board.details?.table === table);
+      // A playoff is only ever played after a drawn slow game, so one whose
+      // slow record the source lacks still says how that game ended.
+      if (!slowGame && playoff) {
+        slow.score[0] += GAME_DRAW_POINTS;
+        slow.score[1] += GAME_DRAW_POINTS;
+      }
+      const slowWinner = slowGame ? gameWinner(slowGame, teams) : 'draw';
+      const outcome =
+        slowWinner !== 'draw' ? slowWinner : playoff ? gameWinner(playoff, teams) : 'missing';
+      if (outcome === 'draw') {
+        score[0] += GAME_DRAW_POINTS;
+        score[1] += GAME_DRAW_POINTS;
+      } else if (outcome === 0 || outcome === 1) {
+        score[outcome] += GAME_WIN_POINTS;
+      } else if (outcome === 'missing') {
+        missingTables += 1;
+      }
+    }
     const finished = sorted.every((board) => board.status === 'complete');
-    const complete =
-      finished && (blitz.boards.length === 0 || blitz.boards.length === slow.boards.length);
-    const winner = complete && score[0] !== score[1] ? (score[0] > score[1] ? 0 : 1) : null;
+    const level = score[0] === score[1];
+    const deciderResult = decider ? gameWinner(decider, teams) : null;
+    const complete = finished && missingTables === 0 && !(level && !decider);
+    // A short match still has a winner when the missing tables could not
+    // change it: each is worth at most a 2-point swing. The official table
+    // counts such a match (Hebei's 9 after round 5 includes one).
+    const lead = Math.abs(score[0] - score[1]);
+    const decidedAnyway = finished && missingTables > 0 && lead > GAME_WIN_POINTS * missingTables;
+    const winner: 0 | 1 | null =
+      decidedAnyway || (complete && !level)
+        ? score[0] > score[1]
+          ? 0
+          : 1
+        : complete && (deciderResult === 0 || deciderResult === 1)
+          ? deciderResult
+          : null;
     matches.push({
       key: name,
       name,
@@ -123,8 +180,10 @@ export function groupRoundByMatch<B extends MatchBoard>(
       teams,
       slow,
       blitz,
+      decider,
       score,
       winner,
+      deciderDrawn: complete && level && deciderResult === 'draw',
       finished,
       complete,
     });
@@ -183,10 +242,13 @@ export function teamStandings(boards: readonly MatchBoard[]): TeamStandingsRow[]
   }
   for (const list of byRound.values()) {
     for (const match of groupRoundByMatch(list)?.matches ?? []) {
-      if (!match.complete) continue;
+      // A short match counts when its winner is beyond doubt; its table points
+      // are then the ones on record.
+      if (!match.complete && match.winner === null) continue;
       const sides = match.teams.map(rowFor) as [TeamStandingsRow, TeamStandingsRow];
       sides.forEach((row, index) => {
         row.matches += 1;
+        // 总局分 is the tables' points; the deciding game settles the match only.
         row.gamePoints += match.score[index]!;
         row.slowGamePoints += match.slow.score[index]!;
         row.slowWins += match.slow.wins[index]!;
@@ -229,9 +291,21 @@ function compareInMatch(a: MatchBoard, b: MatchBoard): number {
 }
 
 function lowestBoardNumber(match: TeamMatch<MatchBoard>): number {
-  return Math.min(
-    ...[...match.slow.boards, ...match.blitz.boards].map((board) => board.boardNumber),
-  );
+  return Math.min(...matchBoards(match).map((board) => board.boardNumber));
+}
+
+/** Every game of a match in reading order: the slow games by table, the
+ *  playoffs by table, then the deciding game. */
+export function matchBoards<B extends MatchBoard>(match: TeamMatch<B>): B[] {
+  return [...match.slow.boards, ...match.blitz.boards, ...(match.decider ? [match.decider] : [])];
+}
+
+/** Which side won a game: a team index, 'draw', or 'pending' while it runs. */
+function gameWinner(board: MatchBoard, teams: [MatchTeam, MatchTeam]): 0 | 1 | 'draw' | 'pending' {
+  if (board.status !== 'complete' || board.result === '*') return 'pending';
+  if (board.result === '1/2-1/2') return 'draw';
+  const redSide = board.red.federation === teams[0].name ? 0 : 1;
+  return board.result === '1-0' ? redSide : redSide === 0 ? 1 : 0;
 }
 
 function teamOf(player: XiangqiBroadcastPlayerTag): MatchTeam {

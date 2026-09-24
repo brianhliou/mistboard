@@ -291,7 +291,7 @@ export const EN_REVIEW = {
   'broadcast.matches': 'Matches',
   'broadcast.gamePoints': 'Game points',
   'broadcast.teamsNote':
-    "Team standings are calculated from the broadcast games with the league's scoring: a game scores 2 for a win and 1 for a draw, slow and blitz alike; a match scores 3 for a win and 1.5 for a draw. Ties go to game points, then slow-game points, then slow-game wins. They may differ from the official table.",
+    "Team standings are calculated from the broadcast games with the league's scoring. Each table plays a slow game; a drawn one goes to a blitz playoff with colours swapped, and the table scores 2 for a win and 1 for a draw. A match level after its tables is decided by one more blitz game. A match scores 3 for a win and 1.5 for a draw; ties go to game points, then slow-game points, then slow-game wins. They may differ from the official table.",
   'broadcast.recordMissing': 'A game record is missing from the source, so this score is short',
   'broadcast.matchPoints': 'Match points',
   'broadcast.slow': 'Slow',
@@ -313,6 +313,8 @@ export const EN_REVIEW = {
   'broadcast.boardsPerPage': 'Boards per page',
   'broadcast.perPage': '{n} per page',
   'broadcast.allOnOnePage': 'All on one page',
+  'broadcast.deciderWon': '{team} won the deciding blitz game',
+  'broadcast.deciderDrawn': 'The deciding blitz game was drawn',
   'broadcast.otherGames': 'Other games',
   'broadcast.sectionNav': 'Broadcasts menu',
   'broadcast.calendar': 'Calendar',
