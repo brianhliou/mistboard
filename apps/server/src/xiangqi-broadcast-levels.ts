@@ -22,8 +22,18 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   '2026-womens-xiangqi-league': 'A',
   // 上海杯: marquee open, >¥1M prize, 48 seats by invitation and qualification.
   '2026-shanghai-cup': 'A',
-  // 全国象棋团体赛 (July 2026): the national team championship, professional.
-  '2026-ewwox2': 'A',
+  // 全国象棋团体赛 (March to April 2026, dpxq 12438 and 12462): the national
+  // team championship, professional. The earlier '2026-ewwox2' was a stray
+  // 14-game copy of it, deleted from prod 2026-09-24.
+  '2026-xiangqi-team-championship': 'A',
+  '2026-womens-xiangqi-team-championship': 'A',
+  // The spring invitationals, backfilled 2026-09-24 from dpxq's single game
+  // pages (they have no dpxq tour): 五羊杯, the national champions' event, and
+  // the 春丘大叶杯 masters ten-game match (曹岩磊 against 赖理兄) and masters
+  // challenge.
+  '2026-wuyang-cup': 'A',
+  '2026-chunqiu-dayie-ten-game-match': 'A',
+  '2026-chunqiu-dayie-challenge': 'A',
   // The M0 fixture pack (packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample),
   // graded so the persistence tests can exercise the gate; it never reaches prod.
   '2025-wxc-sample': 'A',

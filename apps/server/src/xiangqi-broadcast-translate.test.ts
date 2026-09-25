@@ -70,6 +70,17 @@ test('translateXiangqiEventName handles ordinals, cups, groups, and year markers
   assert.equal(translateXiangqiEventName('世界象棋锦标赛'), 'World Xiangqi Championship');
 });
 
+test('translateXiangqiEventName names the 2026 spring invitationals', () => {
+  assert.equal(
+    translateXiangqiEventName('2026年“春丘大叶杯”象棋大师十番棋战'),
+    '2026 Chunqiu Dayie Cup Xiangqi Masters Ten-Game Match',
+  );
+  assert.equal(
+    translateXiangqiEventName('2026年“春丘大叶杯”象棋大师擂台赛'),
+    '2026 Chunqiu Dayie Cup Xiangqi Masters Challenge',
+  );
+});
+
 test('translateXiangqiEventName always yields fully Latin output for CJK input', () => {
   for (const name of ['象棋直播室', '测试联赛', '赛事测试杯']) {
     const translated = translateXiangqiEventName(name);
