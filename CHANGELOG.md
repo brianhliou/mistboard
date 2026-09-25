@@ -75,6 +75,7 @@ Conventions:
 
 ### Watching and review
 
+- Broadcast games download as PGN with English names; xiangqi game reviews (broadcast, site and archive games) keep your place in the address, so a copied link opens on that move; broadcast game, round and event links preview as the game's board with both players ([98262a71](https://github.com/brianhliou/mistboard/commit/98262a71))
 - The broadcast calendar keeps every event we relay this year, so January's to August's events sit behind Show earlier months instead of dropping off after two months ([bb2aebba](https://github.com/brianhliou/mistboard/commit/bb2aebba))
 - The broadcast list puts past events in date order, newest first, and gives events still in progress their own Ongoing section; the calendar opens on the current month; the 21st Asian Xiangqi Individual Championship (men and women, October 2 to 8) has its pages ahead of play ([b3c0e0e2](https://github.com/brianhliou/mistboard/commit/b3c0e0e2))
 - Eight more 2026 events join the broadcasts with English names: the Guangdong Ten Tigers matches against Shandong, the Young Masters, Beijing and Chongqing, and the Xintai, Baizuishan, Tianchang and Gaoxin Gaogang Cup opens ([9290db95](https://github.com/brianhliou/mistboard/commit/9290db95))
