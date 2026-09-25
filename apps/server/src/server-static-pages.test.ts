@@ -8,9 +8,11 @@ import { resetArticleScheduleCache } from './article-schedule.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
 import { isClientRoute } from './server-policy.js';
 import {
+  chapterIsListable,
   injectPageMeta,
   positionRouteMeta,
   routePreloadLinksForPath,
+  SITEMAP_SECTIONS,
   SITEMAP_STATIC_ROUTES,
   serveArticlePage,
   serveArticlesIndexPage,
@@ -18,8 +20,10 @@ import {
   servePrerenderedPage,
   serveRulesIndexPage,
   serveSitemap,
+  serveSitemapIndex,
   serveSpaShellWithRoutePreloads,
   serveStudyPage,
+  sitemapSectionFromPath,
   studyChaptersAreListable,
 } from './server-static-pages.js';
 
@@ -248,12 +252,52 @@ test('serveSitemap omits unlisted and retired rules while retaining public artic
     response,
     publicHost: 'https://mistboard.test',
     staticDir,
+    section: 'pages',
   });
 
   assert.equal(response.status, 200);
   assert.match(response.body, /https:\/\/mistboard\.test\/rules\/xiangqi/);
   assert.match(response.body, /https:\/\/mistboard\.test\/blog\/misty/);
   assert.doesNotMatch(response.body, /shogi4|kriegspiel/);
+});
+
+// Search Console reports indexing per submitted sitemap, so the index splits
+// the site into the sections a decision is made about. The lastmod comes from
+// the article's own JSON-LD, never the file: a date that moved on every deploy
+// would teach a crawler to ignore it.
+test('the sitemap is an index of sections, and articles carry their own lastmod', async () => {
+  const index = captureResponse();
+  serveSitemapIndex({ response: index, publicHost: 'https://mistboard.test' });
+  assert.match(index.body, /<sitemapindex /);
+  for (const section of SITEMAP_SECTIONS) {
+    assert.ok(index.body.includes(`https://mistboard.test/sitemap-${section}.xml`), section);
+    assert.equal(sitemapSectionFromPath(`/sitemap-${section}.xml`), section);
+  }
+  assert.equal(sitemapSectionFromPath('/sitemap-nope.xml'), null);
+  assert.equal(sitemapSectionFromPath('/sitemap.xml'), null);
+
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await mkdir(join(staticDir, 'blog'), { recursive: true });
+  await mkdir(join(staticDir, 'rules'), { recursive: true });
+  await writeFile(
+    join(staticDir, 'blog', 'misty.html'),
+    '<script type="application/ld+json">{"datePublished":"2026-08-23","dateModified":"2026-09-17"}</script>',
+  );
+  await writeFile(
+    join(staticDir, 'rules', 'xiangqi.html'),
+    '<script type="application/ld+json">{"datePublished":"2026-05-26"}</script>',
+  );
+  const pages = captureResponse();
+  await serveSitemap({
+    response: pages,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+    section: 'pages',
+  });
+  assert.match(pages.body, /\/blog\/misty<\/loc><lastmod>2026-09-17<\/lastmod>/);
+  assert.match(pages.body, /\/rules\/xiangqi<\/loc><lastmod>2026-05-26<\/lastmod>/);
+  assert.match(pages.body, /<loc>https:\/\/mistboard\.test\/about<\/loc><\/url>/);
+  assert.doesNotMatch(pages.body, /\/study\//);
 });
 
 // A scheduled post (published, dated ahead) has no prerendered file; before
@@ -1016,10 +1060,42 @@ test('a study with enumerated chapters contributes no chapter URLs', () => {
   // impressions in 90 days.
   assert.equal(studyChaptersAreListable('0t8xpyv6'), false);
   assert.equal(studyChaptersAreListable('ibFQtGAL'), false);
-  // Everything else, including the classical manuals whose compositions carry
-  // their own names, keeps its chapters.
+  // Everything else can still list chapters; chapterIsListable decides which.
   assert.equal(studyChaptersAreListable('vQveCryp'), true);
   assert.equal(studyChaptersAreListable('tOceiaI7'), true);
+});
+
+// A study that earns in Search Console lists every substantial chapter; any
+// other lists only chapters with commentary on a move. The manual chapter here
+// is the live shape: 21 moves and a root comment naming the problem and its
+// source, nothing on a move.
+test('chapters are listed by what their study earns, or by commentary on a move', () => {
+  const tree = (plies: number, moveComment?: string) => {
+    let node: Record<string, unknown> = { children: [] };
+    for (let i = plies; i >= 1; i -= 1) {
+      const next: Record<string, unknown> = { uci: `a${i}a${i}`, children: [node] };
+      if (i === 1 && moveComment) next.annotations = { comments: [{ text: moveComment }] };
+      node = next;
+    }
+    return {
+      version: 1,
+      root: { annotations: { comments: [{ text: 'Problem 198. From dpxq.' }] }, children: [node] },
+    };
+  };
+  const chapterOf = (root: unknown) =>
+    ({ id: 'c', ordinal: 0, root, updatedAt: new Date() }) as unknown as Parameters<
+      typeof chapterIsListable
+    >[1];
+
+  const bare = chapterOf(tree(21));
+  const annotated = chapterOf(tree(21, 'The chariot sacrifice decides it.'));
+  // Basic endgames earns: its bare chapters stay listed.
+  assert.equal(chapterIsListable('tOceiaI7', bare), true);
+  // Deep Abyss, Wide Sea does not: only an annotated chapter is listed.
+  assert.equal(chapterIsListable('vQveCryp', bare), false);
+  assert.equal(chapterIsListable('vQveCryp', annotated), true);
+  // An enumerated study lists nothing, annotated or not.
+  assert.equal(chapterIsListable('ibFQtGAL', annotated), false);
 });
 
 test('the /games database carries its own route meta and sitemap entry', async () => {
@@ -1053,7 +1129,12 @@ test('the /games database carries its own route meta and sitemap entry', async (
   assert.doesNotMatch(current.body, /noindex/);
 
   const sitemap = captureResponse();
-  await serveSitemap({ response: sitemap, publicHost: 'https://mistboard.com', staticDir });
+  await serveSitemap({
+    response: sitemap,
+    publicHost: 'https://mistboard.com',
+    staticDir,
+    section: 'pages',
+  });
   assert.match(sitemap.body, /<loc>https:\/\/mistboard\.com\/games<\/loc>/);
   assert.match(sitemap.body, /<loc>https:\/\/mistboard\.com\/games\/search<\/loc>/);
 });
@@ -1072,6 +1153,11 @@ test('the /study index carries its own route meta and sitemap entry', async () =
   assert.match(response.body, /<title>Xiangqi Studies \| Mistboard<\/title>/);
 
   const sitemap = captureResponse();
-  await serveSitemap({ response: sitemap, publicHost: 'https://mistboard.com', staticDir });
+  await serveSitemap({
+    response: sitemap,
+    publicHost: 'https://mistboard.com',
+    staticDir,
+    section: 'pages',
+  });
   assert.match(sitemap.body, /<loc>https:\/\/mistboard\.com\/study<\/loc>/);
 });

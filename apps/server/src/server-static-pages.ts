@@ -25,7 +25,12 @@ import {
 } from './og-position.js';
 import * as persistence from './persistence.js';
 import { isNoindexRoute } from './server-policy.js';
-import { chapterIsSubstantial, chapterPageMeta, renderStudyBody } from './study-page-body.js';
+import {
+  chapterHasMoveCommentary,
+  chapterIsSubstantial,
+  chapterPageMeta,
+  renderStudyBody,
+} from './study-page-body.js';
 
 export { ARTICLE_META, canonicalArticleBase };
 
@@ -749,8 +754,6 @@ export async function servePrerenderedPage(params: {
 // (basic endgames 38 pages/73 impressions, Every Xiangqi Champion 22/38, and
 // the Chinese variants outperformed the English), while these two studies had
 // 344 chapter URLs in the sitemap the whole time and earned zero between them.
-// The classical manuals stay listed: a composition has a name from a book and
-// is looked up by it.
 //
 // Add a study here when its chapters are numbered rather than named.
 const STUDIES_WITH_ENUMERATED_CHAPTERS: ReadonlySet<string> = new Set([
@@ -761,6 +764,39 @@ const STUDIES_WITH_ENUMERATED_CHAPTERS: ReadonlySet<string> = new Set([
 /** Whether this study's chapters are worth a sitemap entry each. */
 export function studyChaptersAreListable(studyId: string): boolean {
   return !STUDIES_WITH_ENUMERATED_CHAPTERS.has(studyId);
+}
+
+// Studies whose chapters Search Console shows earning: 10+ chapter impressions
+// over the 90 days to 2026-09-18 (docs-private/seo/gsc/gsc-pages.tsv, summed
+// per study across the three locales). Every substantial chapter of these is
+// listed, commented or not; basic endgames carried 73 impressions and 3 of the
+// 4 chapter clicks with barely a comment on a move, which a commentary gate
+// alone would have thrown out. Re-read the TSV and redo this list at each GSC
+// pull; a study earns its way on, it is not reasoned on.
+const STUDIES_WHOSE_CHAPTERS_EARN: ReadonlySet<string> = new Set([
+  'tOceiaI7', // Xiangqi basic endgames: 38 pages, 73 impressions, 3 clicks
+  'ytSzepET', // Every Xiangqi Champion: 22 pages, 38 impressions
+  '3LGIVr59', // The Riverbank Cannon: 27 pages, 28 impressions
+  'wd6c7qvG', // Jieqi: eighteen engine games: 15 pages, 21 impressions
+  'NUVBVjFf', // Fortress Xiangqi: twenty engine games: 15 pages, 20 impressions
+  'EarRoCib', // 11 pages, 20 impressions
+  '1pfJeXA1', // Every Xiangqi World Champion: 10 pages, 14 impressions
+]);
+
+// Which chapters get a sitemap entry each. Everywhere else a chapter must carry
+// commentary on its moves: the classical manuals were listed wholesale on the
+// argument that a composition is looked up by its name, and a sample of the
+// live pages (2026-09-25) found 74 of 80 listed chapters carrying only a title,
+// a move count and a source line, three times over for the locales. The
+// unlisted chapters still serve and stay linked from their study page; this
+// decides what the site advertises, not what exists.
+export function chapterIsListable(
+  studyId: string,
+  chapter: persistence.StudyChapterRecord,
+): boolean {
+  if (!studyChaptersAreListable(studyId)) return false;
+  if (STUDIES_WHOSE_CHAPTERS_EARN.has(studyId)) return chapterIsSubstantial(chapter);
+  return chapterHasMoveCommentary(chapter);
 }
 
 // Static, always-on public routes advertised in the sitemap. Every entry
@@ -810,20 +846,139 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/api-docs',
 ];
 
-// Sitemap of public, indexable surfaces: static content routes plus every
-// pre-rendered article (discovered from dist/blog/*.html, so the published
-// set stays the single source of truth in articles-data -> prerender output).
+// The sitemap is an index of three sections rather than one list, so Search
+// Console and Bing Webmaster report submitted-vs-indexed per section. Measured
+// 2026-09-25 over a week of proxy logs: 94% of Googlebot's page fetches went to
+// study chapters (98% of a single 6,362-URL sitemap), while 8 of 36 rules URLs
+// and 19 of 66 blog URLs were fetched at all. One list could not say which of
+// those the index actually kept.
+export const SITEMAP_SECTIONS = ['pages', 'studies', 'chapters'] as const;
+export type SitemapSection = (typeof SITEMAP_SECTIONS)[number];
+
+type SitemapEntry = { path: string; lastmod?: string };
+
+export function sitemapSectionFromPath(pathname: string): SitemapSection | null {
+  const match = /^\/sitemap-([a-z]+)\.xml$/.exec(pathname);
+  const section = match?.[1];
+  return SITEMAP_SECTIONS.find((known) => known === section) ?? null;
+}
+
+export function serveSitemapIndex(params: { response: ServerResponse; publicHost: string }): void {
+  const body = SITEMAP_SECTIONS.map(
+    (section) => `  <sitemap><loc>${params.publicHost}/sitemap-${section}.xml</loc></sitemap>`,
+  ).join('\n');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<sitemapindex xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</sitemapindex>\n`;
+  params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
+  params.response.end(xml);
+}
+
+// A prerendered article's last change, from the JSON-LD the prerender bakes in
+// (dateModified, else datePublished). Never the file's mtime: every deploy
+// rewrites dist, and a lastmod that moves on every deploy teaches a crawler to
+// ignore it. dist is immutable for the life of the process, hence the cache.
+const articleLastmodCache = new Map<string, string | null>();
+
+async function articleLastmod(file: string): Promise<string | undefined> {
+  if (!articleLastmodCache.has(file)) {
+    const html = await fs.readFile(file, 'utf-8').catch(() => '');
+    const modified = /"dateModified":"(\d{4}-\d{2}-\d{2})/.exec(html)?.[1];
+    const published = /"datePublished":"(\d{4}-\d{2}-\d{2})/.exec(html)?.[1];
+    articleLastmodCache.set(file, modified ?? published ?? null);
+  }
+  return articleLastmodCache.get(file) ?? undefined;
+}
+
+const isoDate = (date: Date): string => date.toISOString().slice(0, 10);
+
+// Every public study. listTopPublicStudies clamps a page to 50, and the sitemap
+// once asked it for 100 in one call: past the fiftieth study the oldest would
+// have dropped out of the sitemap one by one, silently, as new ones landed.
+async function listEveryPublicStudy(): Promise<persistence.PublicStudySummary[]> {
+  const pageSize = 50;
+  const seen = new Map<string, persistence.PublicStudySummary>();
+  for (let offset = 0; offset < 5_000; offset += pageSize) {
+    const page = await persistence.listTopPublicStudies(pageSize, undefined, offset);
+    for (const summary of page) seen.set(summary.id, summary);
+    if (page.length < pageSize) break;
+  }
+  return [...seen.values()];
+}
+
+// Each study URL is listed once per interface language. serveStudyPage
+// already renders a localized name, description and body at the prefixed
+// path AND emits hreflang naming all three, so listing only the English URL
+// told a crawler the alternates existed and then never pointed at them.
+const everyLocale = (path: string): string[] => [path, `/zh-hans${path}`, `/zh-hant${path}`];
+
+async function studySitemapEntries(): Promise<SitemapEntry[]> {
+  const entries: SitemapEntry[] = [];
+  for (const summary of await listEveryPublicStudy()) {
+    const lastmod = isoDate(summary.updatedAt);
+    for (const path of everyLocale(`/study/${encodeURIComponent(summary.id)}`)) {
+      entries.push({ path, lastmod });
+    }
+  }
+  return entries;
+}
+
+// Chapter permalinks, filtered by chapterIsListable: chapters of studies that
+// earn in Search Console, and elsewhere only chapters with commentary on their
+// moves. The set grows as annotation lands instead of advertising it early.
+async function chapterSitemapEntries(): Promise<SitemapEntry[]> {
+  const entries: SitemapEntry[] = [];
+  for (const summary of await listEveryPublicStudy()) {
+    if (!studyChaptersAreListable(summary.id)) continue;
+    const full = await persistence.getStudyById(summary.id).catch(() => null);
+    if (!full) continue;
+    const base = `/study/${encodeURIComponent(summary.id)}`;
+    for (const chapter of [...full.chapters].sort((a, b) => a.ordinal - b.ordinal)) {
+      if (!chapterIsListable(summary.id, chapter)) continue;
+      const lastmod = isoDate(chapter.updatedAt);
+      for (const path of everyLocale(`${base}/${encodeURIComponent(chapter.id)}`)) {
+        entries.push({ path, lastmod });
+      }
+    }
+  }
+  return entries;
+}
+
+// One section of the sitemap. 'pages' is the static content routes plus every
+// pre-rendered article (discovered from dist/blog/*.html, so the published set
+// stays the single source of truth in articles-data -> prerender output).
+// Public studies are indexable dynamic content (each serves real per-study meta
+// AND a server-rendered body via serveStudyPage); absent persistence (in-memory
+// dev) the study sections are empty.
 export async function serveSitemap(params: {
   response: ServerResponse;
   publicHost: string;
   staticDir: string;
+  section: SitemapSection;
 }): Promise<void> {
+  let entries: SitemapEntry[];
+  if (params.section === 'pages') {
+    entries = await pageSitemapEntries(params.staticDir);
+  } else {
+    const load = params.section === 'studies' ? studySitemapEntries : chapterSitemapEntries;
+    entries = await load().catch(() => [] as SitemapEntry[]);
+  }
+  const body = entries
+    .map(({ path, lastmod }) => {
+      const date = lastmod ? `<lastmod>${lastmod}</lastmod>` : '';
+      return `  <url><loc>${params.publicHost}${path}</loc>${date}</url>`;
+    })
+    .join('\n');
+  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
+  params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
+  params.response.end(xml);
+}
+
+async function pageSitemapEntries(staticDir: string): Promise<SitemapEntry[]> {
   // Each article is listed once per pre-rendered language variant (dist/blog,
   // dist/zh-hans/blog, dist/zh-hant/blog), so the published+translated set
   // stays single-sourced in the prerender output.
   const readSlugs = (dir: string): Promise<string[]> =>
     fs
-      .readdir(resolve(params.staticDir, dir))
+      .readdir(resolve(staticDir, dir))
       .then((files) =>
         files
           .filter((f) => f.endsWith('.html'))
@@ -839,54 +994,14 @@ export async function serveSitemap(params: {
     ['zh-hans/rules', '/zh-hans/rules'],
     ['zh-hant/rules', '/zh-hant/rules'],
   ];
-  const articleUrls: string[] = [];
+  const entries: SitemapEntry[] = SITEMAP_STATIC_ROUTES.map((path) => ({ path }));
   for (const [dir, urlBase] of langDirs) {
     for (const slug of await readSlugs(dir)) {
-      articleUrls.push(`${urlBase}/${encodeURIComponent(slug)}`);
+      const lastmod = await articleLastmod(resolve(staticDir, dir, `${slug}.html`));
+      entries.push({ path: `${urlBase}/${encodeURIComponent(slug)}`, lastmod });
     }
   }
-  // Public studies are indexable dynamic content (each serves real per-study
-  // meta AND a server-rendered body via serveStudyPage). Absent persistence
-  // (in-memory dev) lists none.
-  //
-  // Chapter permalinks are listed too, but only when the chapter carries enough
-  // of its own text to be worth a URL (chapterIsSubstantial) and the study is
-  // one whose chapters a person looks for by name (STUDIES_WITH_ENUMERATED_CHAPTERS). A classical manual
-  // is a set of individually named, individually searched compositions, so its
-  // chapters are article-shaped rather than puzzle-shaped; a one-ply chapter
-  // with no commentary is not, and a sitemap full of those reads as thin. The
-  // gate is deliberately content-driven, so the indexable set grows as the
-  // library's verification work lands instead of advertising it early.
-  //
-  // Each study URL is listed once per interface language. serveStudyPage
-  // already renders a localized name, description and body at the prefixed
-  // path AND emits hreflang naming all three, so listing only the English URL
-  // told a crawler the alternates existed and then never pointed at them.
-  const studyUrls = await persistence
-    .listTopPublicStudies(100)
-    .then(async (studies) => {
-      const urls: string[] = [];
-      const everyLocale = (path: string): string[] => [path, `/zh-hans${path}`, `/zh-hant${path}`];
-      for (const summary of studies) {
-        const base = `/study/${encodeURIComponent(summary.id)}`;
-        urls.push(...everyLocale(base));
-        if (!studyChaptersAreListable(summary.id)) continue;
-        const full = await persistence.getStudyById(summary.id).catch(() => null);
-        if (!full) continue;
-        for (const chapter of [...full.chapters].sort((a, b) => a.ordinal - b.ordinal)) {
-          if (chapterIsSubstantial(chapter)) {
-            urls.push(...everyLocale(`${base}/${encodeURIComponent(chapter.id)}`));
-          }
-        }
-      }
-      return urls;
-    })
-    .catch(() => [] as string[]);
-  const urls = [...SITEMAP_STATIC_ROUTES, ...articleUrls, ...studyUrls];
-  const body = urls.map((path) => `  <url><loc>${params.publicHost}${path}</loc></url>`).join('\n');
-  const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
-  params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
-  params.response.end(xml);
+  return entries;
 }
 
 export async function serveArticlePage(params: {

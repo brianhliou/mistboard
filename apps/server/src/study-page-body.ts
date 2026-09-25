@@ -171,6 +171,22 @@ export function chapterIsSubstantial(chapter: StudyChapterRecord): boolean {
   return mainlineComments(chapter.root, 'en', 1).length > 0;
 }
 
+/** Whether any move on the mainline carries a comment: annotation a reader came
+ *  for, as opposed to the root comment, which on an imported chapter is its
+ *  title, problem number and source line. Sampled 2026-09-25, 74 of 80 listed
+ *  chapters had nothing but that root line, so the page was a title, a move
+ *  count and a citation. */
+export function chapterHasMoveCommentary(chapter: StudyChapterRecord): boolean {
+  const root = treeRoot(chapter.root);
+  let node = root ? nodeChildren(root)[0] : undefined;
+  while (node && typeof node.uci === 'string') {
+    const comments = node.annotations?.comments;
+    if (Array.isArray(comments) && comments.some((raw) => commentText(raw, 'en'))) return true;
+    node = nodeChildren(node)[0];
+  }
+  return false;
+}
+
 const MIN_INDEXABLE_PLIES = 4;
 
 /** Per-chapter page meta for a chapter permalink. Without this every chapter of

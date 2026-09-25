@@ -4,7 +4,12 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { StudyChapterRecord, StudyWithChapters } from './persistence-studies.js';
-import { chapterIsSubstantial, chapterPageMeta, renderStudyBody } from './study-page-body.js';
+import {
+  chapterHasMoveCommentary,
+  chapterIsSubstantial,
+  chapterPageMeta,
+  renderStudyBody,
+} from './study-page-body.js';
 
 const NOW = new Date('2026-08-08T00:00:00Z');
 
@@ -225,6 +230,25 @@ test('chapter substance gates on plies or commentary, not on existing', () => {
     chapterIsSubstantial(chapter({ root: mainline(1, [{ text: 'A genuine one-move entry.' }]) })),
     true,
   );
+});
+
+// An imported chapter's root comment is its title and source line; only a
+// comment on a move is commentary a reader came for.
+test('move commentary means a comment on a move, not on the root', () => {
+  assert.equal(chapterHasMoveCommentary(chapter({ root: mainline(20) })), false);
+  assert.equal(
+    chapterHasMoveCommentary(chapter({ root: mainline(6, [{ text: 'The key sacrifice.' }]) })),
+    true,
+  );
+  const rootOnly = {
+    version: 1,
+    root: {
+      annotations: { comments: [{ text: 'Problem 198. Transcribed from dpxq.' }] },
+      children: mainline(6).root.children,
+    },
+  };
+  assert.equal(chapterHasMoveCommentary(chapter({ root: rootOnly })), false);
+  assert.equal(chapterHasMoveCommentary(chapter({ root: mainline(3, [{ text: '  ' }]) })), false);
 });
 
 // serveStudyPage injects the body by string-replacing this exact anchor in the

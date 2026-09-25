@@ -29,8 +29,10 @@ import {
   servePrerenderedPage,
   serveRulesIndexPage,
   serveSitemap,
+  serveSitemapIndex,
   serveSpaShellWithRoutePreloads,
   serveStudyPage,
+  sitemapSectionFromPath,
 } from './server-static-pages.js';
 import type { LobbyTicket, Room } from './server-types.js';
 import { viewerCountryCookie, viewerCountryFromRequest } from './viewer-country.js';
@@ -336,10 +338,17 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     }
 
     if (pathname === '/sitemap.xml') {
+      serveSitemapIndex({ response, publicHost: options.publicHost });
+      return;
+    }
+
+    const sitemapSection = sitemapSectionFromPath(pathname);
+    if (sitemapSection) {
       void serveSitemap({
         response,
         publicHost: options.publicHost,
         staticDir: options.staticDir,
+        section: sitemapSection,
       }).catch(() => {
         response.writeHead(500);
         response.end();
