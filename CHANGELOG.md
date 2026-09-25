@@ -73,6 +73,7 @@ Conventions:
 
 ### Watching and review
 
+- Eight more 2026 events join the broadcasts with English names: the Guangdong Ten Tigers matches against Shandong, the Young Masters, Beijing and Chongqing, and the Xintai, Baizuishan, Tianchang and Gaoxin Gaogang Cup opens ([9290db95](https://github.com/brianhliou/mistboard/commit/9290db95))
 - Three 2026 invitationals join the broadcasts: the 32nd Five Rams Cup, and the Chunqiu Dayie Cup masters ten-game match (Cao Yanlei against Lai Lixiong) and masters challenge, with English names; the players of both national team championships now appear under Pro players ([16187857](https://github.com/brianhliou/mistboard/commit/16187857))
 - The 2026 women's league has its broadcast page before its first game is posted, opening on its format and dates; its matches are scored by its own rules (three tables, a level match settled by one blitz game won 2-1), and a round with no time yet no longer reads "Upcoming" ([c8bb763c](https://github.com/brianhliou/mistboard/commit/c8bb763c))
 - Pro players moved under the broadcast section, beside Broadcasts, Calendar and About, in the shape of lichess's FIDE players page: one panel with search, led by the CXA points list, each player's team linked under the name; new Pro teams pages rank the teams by their top five players' points and list each team's players ([2754e340](https://github.com/brianhliou/mistboard/commit/2754e340))
