@@ -169,15 +169,18 @@ type PostHogLike = {
   captureException?: (error: unknown, props?: Record<string, unknown>) => void;
   identify: (distinctId: string, props?: Record<string, unknown>) => void;
   register?: (props: Record<string, unknown>) => void;
+  setPersonProperties?: (props: Record<string, unknown>) => void;
   reset: () => void;
 };
 
 // A browser a stats-excluded account (the owner, test accounts) has signed in
-// from is tagged is_internal on every event, and PostHog's "filter out
-// internal and test users" setting drops it from dashboards. Events still
-// arrive, so the owner's own errors keep reaching Error Tracking. The flag is
-// ours, in localStorage, because posthog.reset() on sign-out wipes super
-// properties and the browser is still the owner's after signing out.
+// from is marked internal in PostHog two ways: the person gets
+// $internal_or_test_user, which the project's default "Internal / Test users"
+// cohort filters on (so dashboards drop it with no settings change), and every
+// event carries is_internal for SQL. Events still arrive, so the owner's own
+// errors keep reaching Error Tracking. The flag is ours, in localStorage,
+// because posthog.reset() on sign-out starts a new anonymous person and wipes
+// super properties, and the browser is still the owner's after signing out.
 const INTERNAL_BROWSER_KEY = 'mistboard-internal-browser';
 
 export function isInternalBrowser(): boolean {
@@ -194,13 +197,18 @@ export function markInternalBrowser(): void {
   } catch {
     // Storage blocked: tag this page load only.
   }
-  enqueue((ph) => ph.register?.({ is_internal: true }));
+  enqueue((ph) => tagInternal(ph));
+}
+
+function tagInternal(ph: Pick<PostHogLike, 'register' | 'setPersonProperties'>): void {
+  ph.register?.({ is_internal: true });
+  ph.setPersonProperties?.({ $internal_or_test_user: true });
 }
 
 // Called on the live instance before its first event (main.ts) and after every
 // reset, so a known internal browser never sends an untagged event.
-export function applyInternalTag(ph: Pick<PostHogLike, 'register'>): void {
-  if (isInternalBrowser()) ph.register?.({ is_internal: true });
+export function applyInternalTag(ph: Pick<PostHogLike, 'register' | 'setPersonProperties'>): void {
+  if (isInternalBrowser()) tagInternal(ph);
 }
 
 let posthogInstance: PostHogLike | null = null;

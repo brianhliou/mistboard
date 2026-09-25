@@ -232,10 +232,18 @@ describe('internal browser tag', () => {
 
   it('marks the browser and registers is_internal on the live instance', () => {
     const register = vi.fn();
-    setPostHogInstance({ capture: vi.fn(), identify: vi.fn(), reset: vi.fn(), register });
+    const setPersonProperties = vi.fn();
+    setPostHogInstance({
+      capture: vi.fn(),
+      identify: vi.fn(),
+      reset: vi.fn(),
+      register,
+      setPersonProperties,
+    });
     markInternalBrowser();
     expect(isInternalBrowser()).toBe(true);
     expect(register).toHaveBeenCalledWith({ is_internal: true });
+    expect(setPersonProperties).toHaveBeenCalledWith({ $internal_or_test_user: true });
   });
 
   it('re-tags after sign-out, because posthog.reset() clears super properties', () => {
