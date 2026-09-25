@@ -41,6 +41,9 @@ export type UnderboardOptions = {
    *  when the variant has no engine FEN (the fog reviews), so the row is
    *  omitted rather than shown empty. */
   shareFenInput?: HTMLInputElement;
+  /** The Share link's field, when its caller keeps it current (a review that
+   *  mirrors the position into the URL). */
+  shareUrlInput?: HTMLInputElement;
   /** Live move-export textarea, refreshed by the caller on every navigation. */
   shareMovesInput: HTMLTextAreaElement;
   gameUrl: string;
@@ -94,7 +97,13 @@ export function underboardPanel(analysisBody: HTMLElement, opts: UnderboardOptio
   tabDefs.push({
     id: 'share',
     label: t('underboard.shareExport'),
-    body: shareExportBody(opts.shareFenInput, opts.shareMovesInput, opts.gameUrl, opts.shareExtra),
+    body: shareExportBody(
+      opts.shareFenInput,
+      opts.shareMovesInput,
+      opts.gameUrl,
+      opts.shareExtra,
+      opts.shareUrlInput,
+    ),
   });
 
   const panel = document.createElement('section');
@@ -239,6 +248,7 @@ function shareExportBody(
   movesInput: HTMLTextAreaElement,
   gameUrl: string,
   extra?: readonly HTMLElement[],
+  sharedUrlInput?: HTMLInputElement,
 ): HTMLElement {
   const body = document.createElement('div');
   const grid = document.createElement('div');
@@ -250,10 +260,10 @@ function shareExportBody(
     grid.append(shareRow('FEN', fenInput));
   }
 
-  const urlInput = document.createElement('input');
+  const urlInput = sharedUrlInput ?? document.createElement('input');
   urlInput.className = 'review-share__field';
   urlInput.readOnly = true;
-  urlInput.value = gameUrl;
+  if (!urlInput.value) urlInput.value = gameUrl;
   grid.append(shareRow('Share', urlInput));
 
   movesInput.className = 'review-share__field review-share__field--moves';

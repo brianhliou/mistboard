@@ -14,6 +14,12 @@ import type {
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
+import {
+  type BroadcastPgnInput,
+  broadcastGamePgn,
+  broadcastPgnFileName,
+  pgnDataHref,
+} from './xiangqi-broadcast-pgn.js';
 import './game-shell.css';
 import './live-xiangqi.css';
 import './dark-xiangqi-postgame.css';
@@ -100,6 +106,17 @@ export function mountBroadcastBoardReview(
   const profileFor = (slug: string | null | undefined): ProfileTarget | null =>
     slug ? { kind: 'player', slug } : null;
 
+  // The game as PGN for a creator's own tools (#454), beside the JSON.
+  const pgnInput: BroadcastPgnInput = {
+    boardId: data.board.id,
+    red: data.board.red,
+    black: data.board.black,
+    result: data.board.result,
+    moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
+    tour: context?.tour ?? null,
+    round: context?.round ?? null,
+    origin: window.location.origin,
+  };
   if (opts.embedded) root.replaceChildren();
   else root.replaceChildren(buildNav());
   return mountXiangqiReview(root, {
@@ -119,7 +136,18 @@ export function mountBroadcastBoardReview(
     playerProfiles: { red: profileFor(slugs?.red), black: profileFor(slugs?.black) },
     seatDetails: { red: teamOf(data.board.red), black: teamOf(data.board.black) },
     result,
-    shareExtra: [downloadRow([exportLink(data.board.id)])],
+    // A link can name a move (?ply=34), for a creator's video description.
+    urlPly: true,
+    shareExtra: [
+      downloadRow([
+        {
+          text: 'PGN',
+          href: pgnDataHref(broadcastGamePgn(pgnInput)),
+          filename: broadcastPgnFileName(pgnInput),
+        },
+        exportLink(data.board.id),
+      ]),
+    ],
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
       name: eventName ? `${red} vs ${black} (${eventName})` : `${red} vs ${black}`,

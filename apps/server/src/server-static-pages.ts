@@ -9,6 +9,7 @@ import {
   readArticleSchedule,
 } from './article-schedule.js';
 import { botPageMeta } from './bot-page-meta.js';
+import { broadcastPageMeta } from './og-broadcast.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
 import {
   ARTICLE_OG_IMAGE_VERSION,
@@ -431,7 +432,12 @@ async function liveGameMeta(pathname: string): Promise<TenantGamePageMeta | null
   if (!persistence.isInitialized()) return null;
   // A bot profile page names its bot the way a finished game names its
   // players (bot-page-meta.ts); both ride the same slot.
-  return (await botPageMeta(pathname)) ?? tenantGamePageMeta(pathname);
+  // A broadcast game, round or event (og-broadcast.ts, #454) names its game.
+  return (
+    (await botPageMeta(pathname)) ??
+    (await tenantGamePageMeta(pathname)) ??
+    broadcastPageMeta(pathname)
+  );
 }
 
 export async function serveSpaShellWithRoutePreloads(params: {

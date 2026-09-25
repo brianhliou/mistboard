@@ -4,6 +4,7 @@ import serveHandler from 'serve-handler';
 import { articleIsRetired } from './article-meta.js';
 import { type HttpApiContext, handleApiRequest } from './http-api.js';
 import { INDEXNOW_KEY, isIndexNowKeyRequest } from './indexnow.js';
+import { serveBroadcastBoardOgImage } from './og-broadcast.js';
 import { serveAnyGameOgImage } from './og-game-tenant.js';
 import { serveArticleOgImage, serveStudyOgImage } from './og-image.js';
 import { servePositionOgImage } from './og-position.js';
@@ -249,6 +250,23 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       const roomId = decodeURIComponent(ogImageMatch[1]!);
       void serveAnyGameOgImage(roomId, response, options.staticDir).catch((err) => {
         console.warn('og image render failed', (err as Error).message);
+        if (!response.headersSent) {
+          response.writeHead(302, { location: '/og-image.png' });
+          response.end();
+        }
+      });
+      return;
+    }
+
+    // /og/broadcast/board/:id.png: a broadcast game's card (#454).
+    const broadcastOgMatch = pathname.match(/^\/og\/broadcast\/board\/([^/]+)\.png$/);
+    if (broadcastOgMatch && persistence.isInitialized()) {
+      void serveBroadcastBoardOgImage(
+        decodeURIComponent(broadcastOgMatch[1]!),
+        response,
+        options.staticDir,
+      ).catch((err: Error) => {
+        console.warn('broadcast og render failed', err.message);
         if (!response.headersSent) {
           response.writeHead(302, { location: '/og-image.png' });
           response.end();

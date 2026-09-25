@@ -169,6 +169,8 @@ function renderPostgame(root: HTMLElement, postgame: XiangqiPostgameResponse): v
     players: playerNames,
     playerProfiles: reviewSeatProfiles(gamePlayers),
     result: { score: resultScore(postgame.game.result), label: status },
+    // A link can name a move (?ply=34), for a creator's video description (#454).
+    urlPly: true,
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
     // Position hand-offs: continue this node on /analysis, or open it in the editor.
     analyseFromHere: (truth) => analysisHref('xiangqi', standardXiangqiFen(truth)),

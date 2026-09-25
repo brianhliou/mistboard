@@ -54,6 +54,12 @@ import {
   mountXiangqiBroadcastCalendar,
   topBroadcastPlayers,
 } from './xiangqi-broadcast-pages.js';
+import {
+  type BroadcastPgnInput,
+  broadcastGamePgn,
+  broadcastPgnFileName,
+  pgnDataHref,
+} from './xiangqi-broadcast-pgn.js';
 import { mountBroadcastBoardReview } from './xiangqi-broadcast-review.js';
 import { broadcastStandings, formatStandingsScore } from './xiangqi-broadcast-standings.js';
 import {
@@ -2348,7 +2354,19 @@ function renderBoardReplay(
   actions.className = 'xqb-board-actions';
   const analysisHref = analysisDeeplink(data.timeline);
   if (analysisHref) actions.append(analyseLink(analysisHref));
-  actions.append(exportLink(data.board.id));
+  actions.append(
+    pgnLink({
+      boardId: data.board.id,
+      red: data.board.red,
+      black: data.board.black,
+      result: data.board.result,
+      moves: [...data.timeline].sort((a, b) => a.ply - b.ply).map((entry) => entry.move),
+      tour: context?.tour ?? null,
+      round: context?.round ?? null,
+      origin: window.location.origin,
+    }),
+    exportLink(data.board.id),
+  );
   movesPanel.append(moveHeading, moveList, actions);
 
   layout.append(boardPanel, movesPanel);
@@ -3007,6 +3025,17 @@ function analyseLink(href: string): HTMLElement {
   link.target = '_blank';
   link.rel = 'noopener';
   link.textContent = t('broadcast.analyseWithEngine');
+  return link;
+}
+
+// The game as a PGN file, for a creator's own tools (#454); the moves are
+// the ones on the page, so a live game downloads as far as it has gone.
+function pgnLink(input: BroadcastPgnInput): HTMLElement {
+  const link = document.createElement('a');
+  link.className = 'xqb-export-link';
+  link.href = pgnDataHref(broadcastGamePgn(input));
+  link.download = broadcastPgnFileName(input);
+  link.textContent = t('broadcast.downloadPgn');
   return link;
 }
 

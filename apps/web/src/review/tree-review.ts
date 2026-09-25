@@ -420,6 +420,10 @@ export type TreeReviewConfig<Move, Truth = never, Arrow = unknown> = {
    *  annotated game on its final position asks the reader to rewind before they
    *  can begin. */
   initialPosition?: 'start' | 'end';
+  /** Keep the reader's place in the URL as `?ply=N` (a mainline position),
+   *  and open on it: a link to "the blunder at move 34" for the creators who
+   *  cover broadcast games (#454). Off by default. */
+  urlPly?: boolean;
   /** Which way the board faces on mount. False (default) puts the first player
    *  at the bottom. A study chapter passes its stored orientation here: a black
    *  repertoire read from red's side asks the reader to mentally mirror every
@@ -612,7 +616,12 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   const mainlineLen = tree.mainlinePath().length;
   const notifyChange = (): void => config.onChange?.();
 
-  let currentPath: TreePath = config.initialPosition === 'start' ? [] : tree.last();
+  const defaultPath: TreePath = config.initialPosition === 'start' ? [] : tree.last();
+  let currentPath: TreePath = defaultPath;
+  if (config.urlPly) {
+    const ply = plyFromUrl();
+    if (ply !== null) currentPath = tree.mainlinePath().slice(0, Math.min(ply, mainlineLen));
+  }
   // `?flip=1` opens the review from the second seat's side: the crosstable links
   // a row's games that way, so a click reads as "this game from their side".
   // An explicit initialFlipped (the study's chapter orientation) still wins.
@@ -1331,6 +1340,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
   // Live-FEN share input, refreshed on every navigation (see render()).
   const shareFenInput = document.createElement('input');
   const shareMovesInput = document.createElement('textarea');
+  // The Share link follows the position when the URL does (urlPly).
+  const shareUrlInput = document.createElement('input');
   // FEN + moves-import block below the underboard tools (analysis board only);
   // its FEN mirrors the current node, its moves box prefills with the current
   // line but never clobbers in-progress typing (see render()).
@@ -1554,6 +1565,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     ...(presentation.engine ? { shareFenInput } : {}),
     shareMovesInput,
     gameUrl: typeof window !== 'undefined' ? window.location.href : '',
+    ...(config.urlPly ? { shareUrlInput } : {}),
     shareExtra: config.shareExtra,
   });
 
@@ -1828,6 +1840,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const fenOf = presentation.fen ?? presentation.engine?.fen;
     if (fenOf) shareFenInput.value = fenOf(node.truth);
     shareMovesInput.value = uciTo(node).join(' ');
+    if (config.urlPly) {
+      writePlyToUrl(tree.mainlinePath(), currentPath, defaultPath);
+      if (typeof window !== 'undefined') shareUrlInput.value = window.location.href;
+    }
     // The import block mirrors the same live state: FEN of the current node, and
     // the current line in display notation — but never over a paste in progress.
     if (importPanel) {
@@ -2478,4 +2494,29 @@ function revealsUngradedCaption(): HTMLElement {
   cap.className = 'review-decision-summary__caption';
   cap.textContent = 'Reveals are not graded on this game; accuracy covers the other moves.';
   return cap;
+}
+
+/** `?ply=N` from the page URL, or null when absent or not a whole number. */
+export function plyFromUrl(): number | null {
+  if (typeof window === 'undefined') return null;
+  const raw = new URLSearchParams(window.location.search).get('ply');
+  if (raw === null || !/^\d+$/.test(raw)) return null;
+  return Number(raw);
+}
+
+/** Mirror the position into `?ply=`: a mainline position other than the one
+ *  the page opens on gets its ply; the opening position or a side variation
+ *  (which a ply cannot name) drops it. replaceState, so Back leaves the game. */
+export function writePlyToUrl(mainline: TreePath, current: TreePath, opening: TreePath): void {
+  if (typeof window === 'undefined') return;
+  const onMainline = current.every((id, index) => mainline[index] === id);
+  const atOpening =
+    current.length === opening.length && current.every((id, index) => opening[index] === id);
+  const url = new URL(window.location.href);
+  if (onMainline && !atOpening) url.searchParams.set('ply', String(current.length));
+  else url.searchParams.delete('ply');
+  const next = `${url.pathname}${url.search}${url.hash}`;
+  if (next !== `${window.location.pathname}${window.location.search}${window.location.hash}`) {
+    window.history.replaceState(window.history.state, '', next);
+  }
 }

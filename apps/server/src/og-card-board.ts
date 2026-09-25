@@ -606,6 +606,7 @@ const NAME_MIN = 30;
 const SCORE_SIZE = 40;
 const TOKEN_SIZE = 56;
 const VARIANT_SIZE = 38;
+const VARIANT_MIN = 26;
 
 /** The seat's king piece, drawn the way the board draws it: the general on
  *  the xiangqi family, the lion on the jungle boards, the cburnett king on the
@@ -683,11 +684,24 @@ function playerRows(
   const topY = boardY + 8 + size;
   const bottomY = boardY + boardHeight - 10 - (bottomLines.length - 1) * lineGap;
   const midY = (topY + (topLines.length - 1) * lineGap + bottomY) / 2;
-  const variantY = midY - 6;
+  // A long label (a broadcast event's name) wraps like a name rather than
+  // running off the card; a one-line label sits exactly where it always did.
+  // The width estimate runs narrow on bold Latin, hence the margin; a label
+  // still too long for two lines shrinks, never below VARIANT_MIN.
+  const variantWidth = width * 0.9;
+  const variantLines = breakLine(players.variant, VARIANT_SIZE, variantWidth);
+  const variantSize = Math.min(
+    ...variantLines.map((line) => fit(line, VARIANT_SIZE, VARIANT_MIN, variantWidth)),
+  );
+  const variantGap = variantSize * 1.15;
+  const variantY = midY - 6 - ((variantLines.length - 1) * variantGap) / 2;
   return [
     row(players.top, topLines, topY),
-    `<text x="${x}" y="${variantY}" fill="#c9cfc3" font-family="${OG_FONT}" font-size="${VARIANT_SIZE}" font-weight="600">${escapeXml(players.variant)}</text>`,
-    brandLine(x, variantY + VARIANT_SIZE * 1.3),
+    ...variantLines.map(
+      (line, index) =>
+        `<text x="${x}" y="${variantY + index * variantGap}" fill="#c9cfc3" font-family="${OG_FONT}" font-size="${variantSize}" font-weight="600">${escapeXml(line)}</text>`,
+    ),
+    brandLine(x, variantY + (variantLines.length - 1) * variantGap + VARIANT_SIZE * 1.3),
     row(players.bottom, bottomLines, bottomY),
   ];
 }
