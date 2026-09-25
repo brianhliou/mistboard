@@ -193,7 +193,7 @@ export async function mountXiangqiBroadcastCalendar(root: HTMLElement): Promise<
     list.push(event);
     byMonth.set(month, list);
   }
-  for (const [month, events] of byMonth) {
+  const monthSection = (month: string, events: BroadcastCalendarEvent[]): HTMLElement => {
     const section = document.createElement('section');
     section.className = 'xqb-cal-month';
     const title = document.createElement('h2');
@@ -205,8 +205,30 @@ export async function mountXiangqiBroadcastCalendar(root: HTMLElement): Promise<
     list.className = 'xqb-cal-list';
     for (const event of events) list.append(calendarEventRow(event));
     section.append(title, list);
-    body.append(section);
+    return section;
+  };
+  // It opens on this month and what is ahead, as lichess's does; the months
+  // behind wait behind one button rather than pushing September below August.
+  const thisMonth = calendarMonthKey(new Date());
+  const months = [...byMonth.entries()];
+  const earlier = months.filter(([month]) => month < thisMonth);
+  const ahead = months.filter(([month]) => month >= thisMonth);
+  if (earlier.length > 0) {
+    const more = document.createElement('button');
+    more.type = 'button';
+    more.className = 'xqb-cal-earlier';
+    more.textContent = t('broadcast.calendarEarlier');
+    more.addEventListener('click', () => {
+      more.replaceWith(...earlier.map(([month, events]) => monthSection(month, events)));
+    });
+    body.append(more);
   }
+  for (const [month, events] of ahead) body.append(monthSection(month, events));
+}
+
+/** "2026-09" for a date, in the viewer's own calendar month. */
+export function calendarMonthKey(date: Date): string {
+  return `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
 }
 
 export function mountXiangqiBroadcastAbout(root: HTMLElement): void {

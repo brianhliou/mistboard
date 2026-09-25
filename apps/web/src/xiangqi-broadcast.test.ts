@@ -690,6 +690,36 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     };
   }
 
+  it('orders Past by event date, newest first, and puts a running event under Ongoing', async () => {
+    const entry = (slug: string, startsAt: string, endsAt: string, updatedAt: string) => {
+      const base = indexEntry({ slug, name: slug, live: false, updatedAt });
+      return { ...base, tour: { ...base.tour, startsAt, endsAt } };
+    };
+    const soon = new Date(Date.now() + 3 * 86_400_000).toISOString();
+    stubFetchJson(() => ({
+      tours: [
+        // Synced last, played first: the backfill that used to top the list.
+        entry('spring', '2026-03-01', '2026-03-05', '2026-09-24T10:00:00Z'),
+        entry('summer', '2026-07-01', '2026-07-05', '2026-09-01T10:00:00Z'),
+        entry('autumn', '2026-09-09', '2026-09-13', '2026-09-02T10:00:00Z'),
+        entry('running', '2026-09-20', soon, '2026-09-23T10:00:00Z'),
+      ],
+    }));
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastIndex(root);
+
+    // The running event is the featured one; the rest are past, newest first.
+    expect(root.querySelector('.xqb-tour-card-featured .xqb-tour-card-name')?.textContent).toBe(
+      'running',
+    );
+    const pastSection = [...root.querySelectorAll('.xqb-section')].find(
+      (section) => section.querySelector('h2')?.textContent === 'Past',
+    );
+    expect(
+      [...(pastSection?.querySelectorAll('.xqb-tour-card-name') ?? [])].map((n) => n.textContent),
+    ).toEqual(['autumn', 'summer', 'spring']);
+  });
+
   it('features the live event, lists the rest under Past, and never shows our import time', async () => {
     const threeMinutesAgo = new Date(Date.now() - 3 * 60_000).toISOString();
     // Past tour listed first in the payload to prove the featured slot is

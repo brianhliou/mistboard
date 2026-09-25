@@ -2839,3 +2839,22 @@ a.xqb-standings-name:focus-visible {
   color: var(--site-muted);
   font-size: 13px;
 }
+
+/* The calendar's months before this one, one click away. */
+.xqb-cal-earlier {
+  align-self: flex-start;
+  margin: 0 0 6px;
+  padding: 7px 14px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 999px;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.xqb-cal-earlier:hover {
+  color: var(--site-text);
+  border-color: var(--site-border);
+}

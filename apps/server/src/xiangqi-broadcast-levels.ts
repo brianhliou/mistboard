@@ -34,6 +34,10 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   '2026-wuyang-cup': 'A',
   '2026-chunqiu-dayie-ten-game-match': 'A',
   '2026-chunqiu-dayie-challenge': 'A',
+  // 第21届亚洲象棋个人锦标赛 (the Philippines, 10-02..08; dpxq 12526 men, 12527
+  // women): the continental championship, graded before its games arrive.
+  '2026-asian-individual-men': 'A',
+  '2026-asian-individual-women': 'A',
   // The second tier, backfilled the same way: the 广东十虎 exhibitions and the
   // national opens. Professionals play, but the fields are mixed, so they do
   // not give a name a player page of its own.

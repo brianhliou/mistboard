@@ -842,13 +842,18 @@ function renderIndex(
   const upcoming = data.tours.filter(
     (entry) => entry.liveBoardCount === 0 && isAfter(entry.tour.startsAt, now),
   );
-  const past = data.tours.filter(
+  // Started but not over, with no board moving right now (the women's league
+  // between rounds): ongoing, not past.
+  const started = data.tours.filter(
     (entry) => entry.liveBoardCount === 0 && !isAfter(entry.tour.startsAt, now),
   );
+  const ongoing = started.filter((entry) => isAfter(entry.tour.endsAt, now));
+  const past = started.filter((entry) => !isAfter(entry.tour.endsAt, now));
   const featured =
     sortByFreshness(live)[0] ??
+    sortByEventDate(ongoing)[0] ??
     [...upcoming].sort((a, b) => dateMs(a.tour.startsAt) - dateMs(b.tour.startsAt))[0] ??
-    sortByFreshness(past)[0] ??
+    sortByEventDate(past)[0] ??
     null;
   const without = (entries: BroadcastIndexEntry[]) => entries.filter((entry) => entry !== featured);
 
@@ -857,13 +862,16 @@ function renderIndex(
   if (without(live).length > 0) {
     content.push(tourZone(t('broadcast.liveNow'), sortByFreshness(without(live)), true));
   }
+  if (without(ongoing).length > 0) {
+    content.push(tourZone(t('broadcast.ongoing'), sortByEventDate(without(ongoing)), false));
+  }
   const comingUp = comingUpSection(calendar, data.tours);
   if (comingUp) content.push(comingUp);
   if (without(upcoming).length > 0) {
     content.push(tourZone(t('broadcast.upcoming'), without(upcoming), false));
   }
   if (without(past).length > 0) {
-    content.push(tourZone(t('broadcast.past'), sortByFreshness(without(past)), false));
+    content.push(tourZone(t('broadcast.past'), sortByEventDate(without(past)), false));
   }
   if (data.tours.length === 0) {
     const empty = document.createElement('p');
@@ -985,6 +993,17 @@ function sortByFreshness(entries: BroadcastIndexEntry[]): BroadcastIndexEntry[] 
   return [...entries].sort(
     (a, b) => (Date.parse(b.updatedAt ?? '') || 0) - (Date.parse(a.updatedAt ?? '') || 0),
   );
+}
+
+/** Newest event first, by when it started; an undated one last. Past events
+ *  were sorted by their last sync, so a backfilled spring event sat above
+ *  September's. */
+function sortByEventDate(entries: BroadcastIndexEntry[]): BroadcastIndexEntry[] {
+  const at = (entry: BroadcastIndexEntry): number => {
+    const ms = entry.tour.startsAt ? Date.parse(entry.tour.startsAt) : Number.NaN;
+    return Number.isFinite(ms) ? ms : Number.NEGATIVE_INFINITY;
+  };
+  return [...entries].sort((a, b) => at(b) - at(a));
 }
 
 function tourZone(title: string, entries: BroadcastIndexEntry[], liveZone: boolean): HTMLElement {
