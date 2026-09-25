@@ -2831,3 +2831,11 @@ a.xqb-standings-name:focus-visible {
 .xqb-overview-pending p + p {
   margin-top: 8px;
 }
+
+/* The game list of a round with no games yet. */
+.xqb-rail-empty {
+  margin: 0;
+  padding: 14px 12px;
+  color: var(--site-muted);
+  font-size: 13px;
+}

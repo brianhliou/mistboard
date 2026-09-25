@@ -2801,7 +2801,6 @@ function sideRail(
   const boards = grouped
     ? [...grouped.matches.flatMap((match) => matchBoards(match)), ...grouped.other]
     : [...context.boards].sort((a, b) => a.boardNumber - b.boardNumber);
-  if (boards.length === 0) return null;
   const rail = document.createElement('aside');
   rail.className = 'xqb-side-rail';
   const heading = document.createElement('h2');
@@ -2828,6 +2827,14 @@ function sideRail(
   }
   const list = document.createElement('div');
   list.className = 'xqb-rail-list';
+  // A round with no games keeps the column (the page keeps its shape, and
+  // the chat its place) and says so where the games will appear.
+  if (boards.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'xqb-rail-empty';
+    empty.textContent = t('broadcast.railNoGames');
+    list.append(empty);
+  }
   let currentRow: HTMLElement | null = null;
   for (const [index, board] of boards.entries()) {
     const current = board.id === currentBoardId;

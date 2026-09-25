@@ -1106,7 +1106,10 @@ describe('event page (tabs, default round, standings)', () => {
     expect(empty?.querySelector('a')?.getAttribute('href')).toBe(
       'http://www.dpxq.com/hldcg/movelist_12524.html',
     );
-    expect(root.querySelector('.xqb-side-rail')).toBeNull();
+    // The left column stays, so the page keeps its shape and its chat: the
+    // game list says there are none yet.
+    expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe('No games yet');
+    expect(root.querySelector('.xqb-event-side')).not.toBeNull();
   });
 
   it('renders round times in the event clock, not the viewer clock', async () => {
