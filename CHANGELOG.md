@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- When a xiangqi or jieqi game ends while you watch, the generals say how: a red badge on the loser's naming the ending (checkmate, resignation, timeout, perpetual check), a green crown on the winner's, grey on both for a draw ([4e80220d](https://github.com/brianhliou/mistboard/commit/4e80220d))
 - No game ends because a connection dropped: a player who disconnects mid-game against another person is no longer forfeited after 30 seconds either, the way a bot game already was not; if they never come back their clock runs out, the same as leaving a board ([770a18ef](https://github.com/brianhliou/mistboard/commit/770a18ef))
 - A bot game no longer ends because you put your phone down: a disconnect never forfeits a game against the computer, and the 30-second countdown a human opponent's leave starts is now shown in every variant's room rather than three of them ([aad6f186](https://github.com/brianhliou/mistboard/commit/aad6f186))
 - The Jungle tiger jumps the river sideways as well as lengthwise, the same leap as the lion, following the Chinese rule sets (Tencent's QQ游戏, Leiden) rather than English Wikipedia's lion-only reading; the bot, the analysis board, the rules page in three languages and the puzzles follow, and one material puzzle the new jump refutes is withdrawn ([6f499b0e](https://github.com/brianhliou/mistboard/commit/6f499b0e))
