@@ -302,6 +302,8 @@ export const ZH_HANS_REVIEW = {
   'replay.endTruncated': '未完成',
   'replay.endRace': '进入兽穴',
   'replay.endChasing': '长将',
+  'replay.endDenEntered': '入兽穴',
+  'replay.endPiecesCaptured': '吃光全部棋子',
   'replay.endDeadPosition': '死局',
   'replay.share': '分享',
   'replay.copied': '已复制',

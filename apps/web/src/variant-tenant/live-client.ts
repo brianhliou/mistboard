@@ -266,7 +266,9 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
    * OPTIONAL game-over badges (live-finish-badges.ts) for a view that just
    * finished. The rendered board must key its piece slots `[data-piece-square]`.
    */
-  finishBadges?(view: V): FinishBadge[];
+  finishBadges?(view: V, previous: V | null): FinishBadge[];
+  /** Hold the badges back for the board's own finishing animation. */
+  finishBadgeDelayMs?: number;
   /** Extra teardown when the tenant flag is off (captures strips, selection). */
   onDisabled?(refs: LiveRefs): void;
   /** Capture tenant snapshot extras from every frame (roomMode, forfeitDeadline...). */
@@ -339,6 +341,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   let lastDisplayedView: V | null = null;
   let lifecycleEffects: LiveLifecycleEffects | null = null;
   let finishBadges: LiveFinishBadges | null = null;
+  // The live view before the current one: where a general captured by the
+  // finishing move last stood.
+  let previousFinishView: V | null = null;
 
   const replay = createTenantReplayController<V>();
 
@@ -499,6 +504,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lifecycleEffects = null;
     finishBadges?.destroy();
     finishBadges = null;
+    previousFinishView = null;
     replay.reset();
     chrome.resetState();
     initLiveSound();
@@ -632,8 +638,13 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // After the board render so the badges measure the pieces they sit on.
   function syncFinishBadges(view: V | null, effect: string | null): void {
     if (!finishBadges || !config.finishBadges) return;
+    const previous = previousFinishView;
+    if (view !== previous) previousFinishView = view;
     if (view && effect?.startsWith('finish')) {
-      finishBadges.play(view.id, config.finishBadges(view));
+      const prior = previous?.id === view.id ? previous : null;
+      finishBadges.play(view.id, config.finishBadges(view, prior), {
+        ...(config.finishBadgeDelayMs !== undefined ? { delayMs: config.finishBadgeDelayMs } : {}),
+      });
     }
     finishBadges.sync(view?.id ?? null, view?.status.type === 'finished' && replay.isLive());
   }

@@ -2,6 +2,8 @@
    the rendered piece's box; the disc starts as a corner badge, then grows over
    the piece, and the pill pops in above it. */
 .finish-badges {
+  --finish-badge-delay: 250ms;
+
   position: absolute;
   inset: 0;
   z-index: 15;
@@ -10,7 +12,6 @@
 
 .finish-badge {
   --finish-badge-color: #7d7d7d;
-  --finish-badge-delay: 250ms;
 
   position: absolute;
 }

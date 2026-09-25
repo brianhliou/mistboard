@@ -33,6 +33,7 @@ import {
   maybePlayAtomicXiangqiSnapshotSound,
   soundForOwnAtomicXiangqiMove,
 } from './live-atomic-xiangqi-sound.js';
+import { finishBadgesForResult, generalSquareIn } from './live-finish-badges.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { resetXiangqiSoundState } from './live-xiangqi-sound.js';
@@ -120,6 +121,18 @@ const client = createTenantLiveClient<
   },
   renderBoard,
   renderExtras: renderCheckStatus,
+  finishBadges: (view, previous) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: atomicXiangqiWebTenant.colors,
+          winner: view.status.winner,
+          reason: view.status.reason,
+          // A captured general is gone from the final board: badge where it stood.
+          generalSquare: (color) => generalSquareIn([view.board, previous?.board], color),
+        })
+      : [],
+  // Let the blast and its ghosts finish before the badges land.
+  finishBadgeDelayMs: 650,
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();

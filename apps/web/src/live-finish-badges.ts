@@ -10,6 +10,10 @@
 // positioned from the rendered piece slot (`[data-piece-square]`), so the layer
 // needs no board geometry of its own and follows the board through resizes.
 //
+// A badge sits on the rendered piece on its square; an empty square (a general
+// blown up in atomic, a jungle den) falls back to the board's hit cell for that
+// square (`[data-square]`).
+//
 // It plays only on a live playing -> finished transition (the caller passes the
 // lifecycle effect), so reloading a finished room or scrubbing a replay never
 // replays it. It clears when the viewer leaves the final position or a new game
@@ -36,9 +40,10 @@ const LOSER_ICONS: Record<string, FinishBadgeIcon> = {
 };
 
 /**
- * Badges for a finished game in a king-based family (xiangqi, jieqi). A side
- * whose general is off the board (general captured) simply gets no badge; the
- * winner's still shows.
+ * Badges for a finished game. `generalSquare` names each side's royal square:
+ * its general (xiangqi family; for a captured general, where it stood before
+ * the last move) or, in jungle, its den. A side with no such square gets no
+ * badge; the other side's still shows.
  */
 export function finishBadgesForResult<C extends string>(result: {
   colors: readonly C[];
@@ -65,6 +70,46 @@ export function finishBadgesForResult<C extends string>(result: {
     }
   }
   return badges;
+}
+
+/**
+ * Jungle has no king, so only two endings get badges (Brian, 2026-09-24): a den
+ * entry crowns the animal standing in the den, and a repetition marks the
+ * pieces that made the last repeated moves (the final move and the one before
+ * it, from the previous view). Every other ending shows no badge.
+ */
+export function jungleFinishBadges(result: {
+  winner: string | null;
+  reason: string;
+  lastMove?: { to: string } | undefined;
+  previousLastMove?: { to: string } | undefined;
+}): FinishBadge[] {
+  const label = terminationLabel(result.reason);
+  if (result.reason === 'den-entered' && result.winner !== null && result.lastMove) {
+    return [{ square: result.lastMove.to, kind: 'winner', icon: 'crown', label }];
+  }
+  if (result.reason === 'repetition') {
+    const squares = [result.lastMove?.to, result.previousLastMove?.to].filter(
+      (square, index, all): square is string => !!square && all.indexOf(square) === index,
+    );
+    return squares.map((square) => ({ square, kind: 'draw', icon: 'draw', label }));
+  }
+  return [];
+}
+
+/** Square of `color`'s general, looking in each board in turn (pass the previous
+ *  view's board second to find a general the last move captured). */
+export function generalSquareIn(
+  boards: ReadonlyArray<
+    Readonly<Record<string, { color: string; role?: string } | undefined>> | undefined
+  >,
+  color: string,
+): string | null {
+  for (const board of boards) {
+    const square = board ? generalSquareOn(board, color) : null;
+    if (square) return square;
+  }
+  return null;
 }
 
 /** Square of `color`'s general on a square-keyed board (face-down pieces carry no role). */
@@ -108,9 +153,23 @@ function badgeElement(badge: FinishBadge): HTMLElement {
   return root;
 }
 
+/** `anchor` itself, or a box of the reference piece's size centred on it. */
+function pieceBox(anchor: DOMRect, reference: DOMRect | null | undefined) {
+  if (!reference || reference.width === 0) return anchor;
+  const x = anchor.left + anchor.width / 2;
+  const y = anchor.top + anchor.height / 2;
+  return {
+    left: x - reference.width / 2,
+    top: y - reference.height / 2,
+    width: reference.width,
+    height: reference.height,
+  };
+}
+
 export type LiveFinishBadges = {
-  /** Start the animation for a game that just finished. */
-  play(gameId: string, badges: readonly FinishBadge[]): void;
+  /** Start the animation for a game that just finished. `delayMs` holds it
+   *  back for a board's own finishing animation (atomic's blast). */
+  play(gameId: string, badges: readonly FinishBadge[], options?: { delayMs?: number }): void;
   /**
    * Call after every board render: keeps the badges on their pieces, and
    * clears them once the viewer is no longer on this game's final position.
@@ -130,10 +189,16 @@ export function createLiveFinishBadges(stage: HTMLElement, board: HTMLElement): 
   function position(): void {
     if (!layer) return;
     const stageRect = stage.getBoundingClientRect();
+    // Any piece gives the badge size, so a badge on an empty square (whose hit
+    // cell may be larger or smaller than a piece) matches the ones on pieces.
+    const pieceRect = board.querySelector('[data-piece-square]')?.getBoundingClientRect();
     for (const el of layer.querySelectorAll<HTMLElement>('.finish-badge')) {
       const square = el.dataset.finishSquare ?? '';
       const piece = board.querySelector(`[data-piece-square="${square}"]`);
-      const rect = piece?.getBoundingClientRect();
+      const anchor = piece ?? board.querySelector(`[data-square="${square}"]`);
+      const rect = anchor
+        ? pieceBox(anchor.getBoundingClientRect(), piece ? null : pieceRect)
+        : null;
       if (!rect || rect.width === 0) {
         el.hidden = true;
         continue;
@@ -158,11 +223,14 @@ export function createLiveFinishBadges(stage: HTMLElement, board: HTMLElement): 
   }
 
   return {
-    play(gameId, badges) {
+    play(gameId, badges, options = {}) {
       clear();
       if (badges.length === 0) return;
       layer = document.createElement('div');
       layer.className = 'finish-badges';
+      if (options.delayMs !== undefined) {
+        layer.style.setProperty('--finish-badge-delay', `${options.delayMs}ms`);
+      }
       layer.append(...badges.map(badgeElement));
       stage.append(layer);
       activeGameId = gameId;

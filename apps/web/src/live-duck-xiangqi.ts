@@ -30,6 +30,7 @@ import {
 import './live-xiangqi.css';
 import './duck-xiangqi.css';
 import { duckXiangqiEnabled } from './feature-flags.js';
+import { finishBadgesForResult, generalSquareIn } from './live-finish-badges.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
@@ -88,6 +89,16 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
   gameSpecId: DUCK_XIANGQI_SPEC_ID,
   defaultRoomId: 'dkx_dev',
   boardClass: 'duck-xiangqi-live-board',
+  finishBadges: (view, previous) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: duckWebTenant.colors,
+          winner: view.status.winner,
+          reason: view.status.reason,
+          // A captured general is gone from the final board: badge where it stood.
+          generalSquare: (color) => generalSquareIn([view.board, previous?.board], color),
+        })
+      : [],
   chrome: {
     roomMode: () => roomMode,
     forfeitDeadline: () => forfeitDeadline,

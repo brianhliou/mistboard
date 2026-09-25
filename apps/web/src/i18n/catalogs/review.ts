@@ -124,6 +124,8 @@ export const EN_REVIEW = {
   'replay.endTruncated': 'Truncated',
   'replay.endRace': 'Den entered',
   'replay.endChasing': 'Perpetual check',
+  'replay.endDenEntered': 'Den entered',
+  'replay.endPiecesCaptured': 'All pieces captured',
   'replay.endDeadPosition': 'Dead position',
   // Replay meta card + share button (replay-meta.ts).
   'replay.share': 'Share',

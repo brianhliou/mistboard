@@ -23,6 +23,7 @@ import {
   junglePieceGhostSvg,
   renderJungleBoardSvg,
 } from './jungle-render.js';
+import { jungleFinishBadges } from './live-finish-badges.js';
 import {
   maybePlayJungleSnapshotSound,
   resetJungleSoundState,
@@ -163,6 +164,15 @@ const client = createTenantLiveClient<JungleColor, JungleWireView, JungleMove>({
   // reverse-glide the undone one. Skipped mid-drag so a glide never fights the
   // drag ghost. Mirrors live-banqi.ts; this room had no hook at all until then,
   // so jungle glided everywhere EXCEPT the one surface people actually play on.
+  finishBadges: (view, previous) =>
+    view.status.type === 'finished'
+      ? jungleFinishBadges({
+          winner: view.status.winner,
+          reason: view.status.reason,
+          lastMove: view.lastMove,
+          previousLastMove: previous?.lastMove,
+        })
+      : [],
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
