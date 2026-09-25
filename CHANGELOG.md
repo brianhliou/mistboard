@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The game-over badges reach duck xiangqi, atomic xiangqi and jungle: a captured general is marked where it fell, a jungle den entry crowns the animal in the den, and a jungle repetition marks the pieces that repeated ([a9bfda07](https://github.com/brianhliou/mistboard/commit/a9bfda07))
 - When a xiangqi or jieqi game ends while you watch, the generals say how: a red badge on the loser's naming the ending (checkmate, resignation, timeout, perpetual check), a green crown on the winner's, grey on both for a draw ([4e80220d](https://github.com/brianhliou/mistboard/commit/4e80220d))
 - No game ends because a connection dropped: a player who disconnects mid-game against another person is no longer forfeited after 30 seconds either, the way a bot game already was not; if they never come back their clock runs out, the same as leaving a board ([770a18ef](https://github.com/brianhliou/mistboard/commit/770a18ef))
 - A bot game no longer ends because you put your phone down: a disconnect never forfeits a game against the computer, and the 30-second countdown a human opponent's leave starts is now shown in every variant's room rather than three of them ([aad6f186](https://github.com/brianhliou/mistboard/commit/aad6f186))
