@@ -26,6 +26,7 @@ import {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { xiangqiEnabled } from './feature-flags.js';
+import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import {
@@ -151,6 +152,15 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
   // Scrubs: adjacent forward steps glide the stepped-into move; back steps
   // reverse-glide the undone move (the previous view's lastMove). Skipped
   // mid-drag so a glide never fights the drag ghost.
+  finishBadges: (view) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: xiangqiWebTenant.colors,
+          winner: view.status.winner,
+          reason: view.status.reason,
+          generalSquare: (color) => generalSquareOn(view.board, color),
+        })
+      : [],
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();

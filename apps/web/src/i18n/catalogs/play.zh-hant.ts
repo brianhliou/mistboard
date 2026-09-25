@@ -362,4 +362,5 @@ export const ZH_HANT_PLAY = {
   'live.challengeFriend': '邀請好友對局',
   'live.challengeFriendCreating': '正在建立邀請',
   'live.challengeFriendRetry': '重試建立邀請',
+  'live.finishWinner': '勝方',
 } satisfies Partial<Record<PlayI18nKey, string>>;

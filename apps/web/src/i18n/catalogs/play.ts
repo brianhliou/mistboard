@@ -375,6 +375,7 @@ export const EN_PLAY = {
   'live.challengeFriend': 'Challenge a friend',
   'live.challengeFriendCreating': 'Creating challenge',
   'live.challengeFriendRetry': 'Try challenge again',
+  'live.finishWinner': 'Winner',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;

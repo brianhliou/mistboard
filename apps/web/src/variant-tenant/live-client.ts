@@ -27,6 +27,11 @@ import {
   roomModeAnalyticsProps,
 } from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
+import {
+  createLiveFinishBadges,
+  type FinishBadge,
+  type LiveFinishBadges,
+} from '../live-finish-badges.js';
 import { createLiveLayout, setLiveLayoutGameSpec } from '../live-layout.js';
 import {
   createLiveLifecycleEffects,
@@ -257,6 +262,11 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
   ): void;
   /** Between board and move list: hands, promotion pickers, etc. */
   renderExtras?(refs: LiveRefs, view: V | null): void;
+  /**
+   * OPTIONAL game-over badges (live-finish-badges.ts) for a view that just
+   * finished. The rendered board must key its piece slots `[data-piece-square]`.
+   */
+  finishBadges?(view: V): FinishBadge[];
   /** Extra teardown when the tenant flag is off (captures strips, selection). */
   onDisabled?(refs: LiveRefs): void;
   /** Capture tenant snapshot extras from every frame (roomMode, forfeitDeadline...). */
@@ -328,6 +338,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
   // move that view carried (its lastMove), which the new view no longer has.
   let lastDisplayedView: V | null = null;
   let lifecycleEffects: LiveLifecycleEffects | null = null;
+  let finishBadges: LiveFinishBadges | null = null;
 
   const replay = createTenantReplayController<V>();
 
@@ -486,6 +497,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lastDisplayedView = null;
     lifecycleEffects?.destroy();
     lifecycleEffects = null;
+    finishBadges?.destroy();
+    finishBadges = null;
     replay.reset();
     chrome.resetState();
     initLiveSound();
@@ -508,6 +521,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const boardStage = refs.board.closest<HTMLElement>('.board-stage');
     if (!boardStage) throw new Error('missing board stage');
     lifecycleEffects = createLiveLifecycleEffects(boardStage);
+    if (config.finishBadges) finishBadges = createLiveFinishBadges(boardStage, refs.board);
     setLiveLayoutGameSpec(app, config.gameSpecId);
     chrome.setRenderTarget(refs, {
       sendSocket: send,
@@ -581,7 +595,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const view = state.view;
     captureReplayView(view);
     const displayed = replay.currentView(view);
-    updateLifecycleEffects(view);
+    const lifecycleEffect = updateLifecycleEffects(view);
     trackGameLifecycle(view);
     // Drain the animation channel on EVERY render (even disabled/hook-less
     // paths) so nothing stale carries into a later, unrelated render.
@@ -612,6 +626,16 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
         return value;
       });
     }
+    syncFinishBadges(view, lifecycleEffect);
+  }
+
+  // After the board render so the badges measure the pieces they sit on.
+  function syncFinishBadges(view: V | null, effect: string | null): void {
+    if (!finishBadges || !config.finishBadges) return;
+    if (view && effect?.startsWith('finish')) {
+      finishBadges.play(view.id, config.finishBadges(view));
+    }
+    finishBadges.sync(view?.id ?? null, view?.status.type === 'finished' && replay.isLive());
   }
 
   // Start/finish funnel for every tenant variant. Until 2026-08-28 this fired
@@ -681,8 +705,8 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     });
   }
 
-  function updateLifecycleEffects(view: V | null): void {
-    if (!lifecycleEffects || !view) return;
+  function updateLifecycleEffects(view: V | null): string | null {
+    if (!lifecycleEffects || !view) return null;
     const seated = tenant.isColor(state.seat);
     const opponentConnected =
       seated &&
@@ -693,7 +717,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     const ready =
       roomMode !== 'correspondence' &&
       (roomMode !== 'pvp' || view.moveNumber >= 2 || opponentConnected);
-    lifecycleEffects.update({
+    return lifecycleEffects.update({
       gameId: view.id,
       status: view.status.type,
       moveNumber: view.moveNumber,

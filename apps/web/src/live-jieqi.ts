@@ -24,6 +24,7 @@ import type {
 } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jieqiEnabled } from './feature-flags.js';
+import { finishBadgesForResult, generalSquareOn } from './live-finish-badges.js';
 import { jieqiClickResult } from './live-jieqi-interaction.js';
 import {
   animateJieqiBoardMove,
@@ -151,6 +152,15 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   // drag ghost. A jieqi move may also REVEAL the piece it moves; the glide
   // carries whatever the final render put on the destination square, so the
   // reveal lands with the piece rather than ahead of it.
+  finishBadges: (view) =>
+    view.status.type === 'finished'
+      ? finishBadgesForResult({
+          colors: jieqiWebTenant.colors,
+          winner: view.status.winner,
+          reason: view.status.reason,
+          generalSquare: (color) => generalSquareOn(view.board, color),
+        })
+      : [],
   animateBoard: (liveRefs, view, takePendingAnimation) => {
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();

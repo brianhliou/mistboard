@@ -362,4 +362,5 @@ export const ZH_HANS_PLAY = {
   'live.challengeFriend': '邀请好友对局',
   'live.challengeFriendCreating': '正在创建邀请',
   'live.challengeFriendRetry': '重试创建邀请',
+  'live.finishWinner': '胜方',
 } satisfies Partial<Record<PlayI18nKey, string>>;
