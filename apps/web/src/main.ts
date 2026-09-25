@@ -576,7 +576,9 @@ if (replaySample) {
     ),
   );
 } else if (wantsBots) {
-  setTitleKey('profile.bots');
+  // The one title setter for /bots; the page itself sets none, so the two
+  // cannot race (the old pair left zh tabs reading 机器人).
+  setTitleKey('bots.tabTitle');
   void mountOrReport(() => import('./bots.js').then(({ mountBots }) => mountBots(appRoot)));
 } else if (botProfileId) {
   setTitle('Bot');

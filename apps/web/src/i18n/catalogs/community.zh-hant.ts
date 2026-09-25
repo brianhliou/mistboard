@@ -457,7 +457,7 @@ export const ZH_HANT_COMMUNITY = {
     '違反以上幾點的貼文可能被隱藏，屢犯者可能失去論壇權限。拿不準的時候，請以善意為先。如果不清楚 Mistboard 的某項功能怎麼用，請看',
   'forum.etiquetteFaqLink': '常見問題',
   'forum.etiquetteModerationAfter': '。',
-  'bots.pageTitle': '象棋人機對戰 · Mistboard',
+  'bots.tabTitle': '象棋人機對戰',
   'bots.eyebrow': '人機對戰',
   'bots.heading': '和電腦下象棋',
   'bots.sub': '八個難度等級，從入門到很強，最強的對手是皮卡魚。免費，打開瀏覽器就能下，無需註冊。',

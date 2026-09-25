@@ -137,7 +137,6 @@ describe('bot pages', () => {
     await mountBots(root);
 
     expect(root.querySelector('h1')?.textContent).toBe('Play xiangqi against the computer');
-    expect(document.title).toBe('Play Xiangqi Against the Computer · Mistboard');
     expect(
       [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
     ).toEqual(['Xiangqi, level by level', 'Other games']);

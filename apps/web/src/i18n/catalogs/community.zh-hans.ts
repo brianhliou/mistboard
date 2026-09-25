@@ -457,7 +457,7 @@ export const ZH_HANS_COMMUNITY = {
     '违反以上几点的帖子可能被隐藏，屡犯者可能失去论坛权限。拿不准的时候，请以善意为先。如果不清楚 Mistboard 的某项功能怎么用，请看',
   'forum.etiquetteFaqLink': '常见问题',
   'forum.etiquetteModerationAfter': '。',
-  'bots.pageTitle': '象棋人机对战 · Mistboard',
+  'bots.tabTitle': '象棋人机对战',
   'bots.eyebrow': '人机对战',
   'bots.heading': '和电脑下象棋',
   'bots.sub': '八个难度等级，从入门到很强，最强的对手是皮卡鱼。免费，打开浏览器就能下，无需注册。',

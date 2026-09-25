@@ -89,7 +89,6 @@ const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 export async function mountBots(root: HTMLElement): Promise<void> {
   root.replaceChildren();
   root.classList.add('landing-page', 'bots-route');
-  document.title = t('bots.pageTitle');
 
   const shell = document.createElement('main');
   shell.className = 'site-section community-shell bots-shell';

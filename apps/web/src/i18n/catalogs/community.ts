@@ -483,7 +483,7 @@ export const EN_COMMUNITY = {
     'Posts that break these guidelines may be hidden, and repeat offenders may lose forum access. When in doubt, be kind. See the ',
   'forum.etiquetteFaqLink': 'FAQ',
   'forum.etiquetteModerationAfter': ' if you are unsure how something on Mistboard works.',
-  'bots.pageTitle': 'Play Xiangqi Against the Computer · Mistboard',
+  'bots.tabTitle': 'Play xiangqi against the computer',
   'bots.eyebrow': 'Play against the computer',
   'bots.heading': 'Play xiangqi against the computer',
   'bots.sub':
@@ -521,7 +521,7 @@ export const EN_COMMUNITY = {
 export type CommunityI18nKey = keyof typeof EN_COMMUNITY;
 
 export const CRITICAL_COMMUNITY_I18N_KEYS = [
-  'bots.pageTitle',
+  'bots.tabTitle',
   'bots.eyebrow',
   'bots.heading',
   'bots.sub',
