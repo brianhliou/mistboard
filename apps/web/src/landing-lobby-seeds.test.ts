@@ -58,17 +58,12 @@ describe('landing lobby bot seeks', () => {
     ]);
     expect(new Set(signature).size).toBe(9);
     expect(new Set(seeds.map((seed) => seed.dataset.gameSpec)).size).toBe(7);
-    // Every clock is at or slower than the variant's own default, in the row
-    // order asserted above:
-    //   xiangqi x3, jieqi, atomic at 10+5 — deliberate full-board variants whose
-    //     default is already the slowest pace, so they have nothing to rotate to;
-    //   banqi, fortress — house 3+2 default, rotating through 3+2/5+5/10+5;
-    //   duck — 5+5 default, rotating through 5+5/10+5;
-    //   fog chess at 5+5 — an engine PIN, not a preference: Misty's per-move
-    //     floor outruns a 2s increment and it loses on time (#283).
+    // Every bot row advertises the bot default, 10+5, in every variant: it is
+    // the slowest pace, so the rotation has nothing slower to move to, and it
+    // clears the fog engines' 5s increment floor (#283).
     expect(
       seeds.map((seed) => seed.querySelector('.landing-lobby-seed-time')?.textContent),
-    ).toEqual(['10+5', '10+5', '10+5', '10+5', '10+5', '10+5', '10+5', '3+2', '5+5']);
+    ).toEqual(Array(9).fill('10+5'));
   });
 
   it('labels each seed as an engine game rather than a human seek', () => {
@@ -125,9 +120,9 @@ describe('landing lobby bot seeks', () => {
       mode: 'pve',
       botId: 'misty',
       gameSpecId: 'dark-chess',
-      // Pinned pace, not the house 3+2 (#283) — and the row's label matches, so
-      // the click starts the clock it advertised.
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      // The bot default, not the house 3+2 (#283) — and the row's label
+      // matches, so the click starts the clock it advertised.
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
       preferredColor: 'random',
       rated: false,
     });
