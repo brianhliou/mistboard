@@ -51,6 +51,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Every rules page shows its sample game in the study embed, with a link to the study it came from: Duck Xiangqi, Fortress, Jieqi, Jungle, Flip Jungle, Fog Chess, Xiangqi and Chess join Banqi and Atomic, and study embeds now draw Fortress (with both hands), Jieqi and Flip Jungle games. Flip Jungle gets a study of twenty engine games ([b304a491](https://github.com/brianhliou/mistboard/commit/b304a491))
 - Study embeds show fog of war chess chapters, so a fog chess study can be framed on another site the way a xiangqi or chess study can ([1477f52d](https://github.com/brianhliou/mistboard/commit/1477f52d))
 - The Bamboo Fragrance Studio Manual (竹香斋象戏谱) and the Hundred Games Manual (百局象棋谱), the other two of the four great Qing composition manuals, join the library with the Hundred Variations Manual (1522) and its sequel the Wondrous Variations Manual: 392 more problems, each on its own board with the book's line as the mainline, credited to dpxq.com ([fb827d2a](https://github.com/brianhliou/mistboard/commit/fb827d2a))
 - Banqi by the Numbers: 200 engine games at ten million nodes a move, reduced to what a player can use mid-game — how big a lead is safe at each stage, when the lead stops changing hands, and what losing the general first costs ([e1128dea](https://github.com/brianhliou/mistboard/commit/e1128dea))
