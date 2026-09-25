@@ -83,3 +83,17 @@
   text-overflow: ellipsis;
   white-space: nowrap;
 }
+
+/* Past the two-row cap: the rest are on the broadcast list. */
+.landing-event-banners-more {
+  align-self: flex-end;
+  padding: 2px 4px;
+  color: var(--site-muted);
+  font-size: 13px;
+  text-decoration: none;
+}
+
+.landing-event-banners-more:hover {
+  color: var(--site-text);
+  text-decoration: underline;
+}

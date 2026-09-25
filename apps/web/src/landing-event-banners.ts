@@ -76,16 +76,28 @@ const FINISHED_WINDOW_MS = 7 * DAY_MS;
 // An upcoming tour appears two weeks out.
 const UPCOMING_WINDOW_MS = 14 * DAY_MS;
 
-const WORDS: Record<
-  Locale,
-  { live: string; games: string; starts: string; finished: string; inProgress: string }
-> = {
+// The slot has room for two rows; the rest are one link away.
+export const MAX_BROADCAST_BANNERS = 2;
+
+type Words = {
+  live: string;
+  games: string;
+  starts: string;
+  finished: string;
+  inProgress: string;
+  sections: string;
+  more: (n: number) => string;
+};
+
+const WORDS: Record<Locale, Words> = {
   en: {
     live: 'Live now',
     games: 'games',
     starts: 'Starts',
     finished: 'Finished',
     inProgress: 'In progress',
+    sections: 'men and women',
+    more: (n) => `${n} more ${n === 1 ? 'broadcast' : 'broadcasts'}`,
   },
   'zh-Hans': {
     live: '直播中',
@@ -93,6 +105,8 @@ const WORDS: Record<
     starts: '开始',
     finished: '已结束',
     inProgress: '进行中',
+    sections: '男子组、女子组',
+    more: (n) => `还有 ${n} 场转播`,
   },
   'zh-Hant': {
     live: '直播中',
@@ -100,6 +114,8 @@ const WORDS: Record<
     starts: '開始',
     finished: '已結束',
     inProgress: '進行中',
+    sections: '男子組、女子組',
+    more: (n) => `還有 ${n} 場轉播`,
   },
 };
 
@@ -108,54 +124,134 @@ function games(n: number, locale: Locale): string {
   return locale === 'en' && n === 1 ? `${n} game` : `${n} ${word}`;
 }
 
-function shortDate(iso: string, locale: Locale): string {
-  return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(new Date(iso));
+/** The day as the event itself states it: an ISO time with an offset
+ *  ("2026-10-02T00:00:00+08:00") is that date, wherever the visitor is. In a
+ *  US browser the plain conversion read the Asian championship's Oct 2 start
+ *  as Oct 1. */
+export function shortDate(iso: string, locale: Locale): string {
+  const offset = /([+-])(\d{2}):?(\d{2})$/.exec(iso);
+  const at = Date.parse(iso);
+  if (!offset || Number.isNaN(at)) {
+    return new Intl.DateTimeFormat(locale, { month: 'short', day: 'numeric' }).format(
+      new Date(iso),
+    );
+  }
+  const sign = offset[1] === '-' ? -1 : 1;
+  const shift = sign * (Number(offset[2]) * 60 + Number(offset[3])) * 60_000;
+  return new Intl.DateTimeFormat(locale, {
+    month: 'short',
+    day: 'numeric',
+    timeZone: 'UTC',
+  }).format(new Date(at + shift));
 }
 
 function tourTitle(tour: BroadcastTourSummary['tour'], locale: Locale): string {
   return locale === 'en' ? tour.nameEn || tour.name : tour.name;
 }
 
-/** Banner rows for the tours worth a spotlight right now, or none. Pure: the
- *  caller fetches; tests feed it payloads and a clock. */
+// An event's men's and women's sections are two tours on dpxq ("…个人锦标赛
+// 男子组", "… 女子组"); on a two-row spotlight they are one event.
+const SECTION_SUFFIX_ZH = /\s*(男子组|女子组|男子組|女子組)$/;
+const SECTION_SUFFIX_EN = /,?\s+(Men|Women)$/;
+
+type RankedBanner = EventBanner & { rank: number; order: number };
+
+/** Banner rows for the tours worth a spotlight right now, most pressing first:
+ *  live (most live games first), between rounds, starting soonest, finished
+ *  most recently. An event's two sections share one row. Pure: the caller
+ *  fetches and caps; tests feed it payloads and a clock. */
 export function broadcastBanners(
   tours: readonly BroadcastTourSummary[],
   locale: Locale,
   now: number = Date.now(),
 ): EventBanner[] {
   const words = WORDS[locale];
-  const rows: EventBanner[] = [];
+  const groups = new Map<string, BroadcastTourSummary[]>();
   for (const entry of tours) {
-    const { tour } = entry;
-    const startsAt = tour.startsAt ? Date.parse(tour.startsAt) : Number.NaN;
-    const endsAt = tour.endsAt ? Date.parse(tour.endsAt) : Number.NaN;
-    let subtitle: string | null = null;
-    if (entry.liveBoardCount > 0) {
-      subtitle = `${words.live} · ${games(entry.liveBoardCount, locale)}`;
-    } else if (!Number.isNaN(startsAt) && startsAt > now) {
-      if (startsAt - now <= UPCOMING_WINDOW_MS) {
-        subtitle = `${words.starts} ${shortDate(tour.startsAt!, locale)}`;
-      }
-    } else if (!Number.isNaN(endsAt) && endsAt < now) {
-      if (now - endsAt <= FINISHED_WINDOW_MS && entry.completeBoardCount > 0) {
-        subtitle = `${words.finished} ${shortDate(tour.endsAt!, locale)} · ${games(entry.completeBoardCount, locale)}`;
-      }
-    } else if (!Number.isNaN(startsAt) && !Number.isNaN(endsAt) && entry.completeBoardCount > 0) {
-      // Between rounds of a tour that is under way by its dates. A tour with no
-      // dates and nothing live is a record, not an event (the Team
-      // Championship's 14 boards showed as a second row on 2026-09-20).
-      subtitle = `${words.inProgress} · ${games(entry.completeBoardCount, locale)}`;
-    }
-    if (subtitle === null) continue;
+    const key = entry.tour.name.replace(SECTION_SUFFIX_ZH, '');
+    groups.set(key, [...(groups.get(key) ?? []), entry]);
+  }
+  const rows: RankedBanner[] = [];
+  for (const [key, group] of groups) {
+    const first = group[0]!;
+    const sum = (pick: (entry: BroadcastTourSummary) => number) =>
+      group.reduce((total, entry) => total + pick(entry), 0);
+    const merged: BroadcastTourSummary = {
+      tour: first.tour,
+      boardCount: sum((entry) => entry.boardCount),
+      liveBoardCount: sum((entry) => entry.liveBoardCount),
+      completeBoardCount: sum((entry) => entry.completeBoardCount),
+    };
+    const state = bannerState(merged, words, locale, now);
+    if (!state) continue;
+    const both = group.length > 1;
+    const title = both
+      ? locale === 'en'
+        ? (first.tour.nameEn ?? first.tour.name).replace(SECTION_SUFFIX_EN, '')
+        : key
+      : tourTitle(first.tour, locale);
+    // Two sections open on the men's page, the one dpxq lists first; its rail
+    // and the index reach the other.
+    const lead = group.find((entry) => /男子/.test(entry.tour.name)) ?? first;
     rows.push({
-      id: `broadcast-${tour.slug}`,
+      id: `broadcast-${lead.tour.slug}`,
       kind: 'broadcast',
-      title: tourTitle(tour, locale),
-      subtitle,
-      href: `/broadcast/xiangqi/${encodeURIComponent(tour.slug)}`,
+      title,
+      subtitle: both ? `${state.subtitle} · ${words.sections}` : state.subtitle,
+      href: `/broadcast/xiangqi/${encodeURIComponent(lead.tour.slug)}`,
+      rank: state.rank,
+      order: state.order,
     });
   }
-  return rows;
+  return rows
+    .sort((a, b) => a.rank - b.rank || a.order - b.order)
+    .map(({ rank: _rank, order: _order, ...banner }) => banner);
+}
+
+/** Why a tour is on the spotlight now, and where it ranks, or null. */
+function bannerState(
+  entry: BroadcastTourSummary,
+  words: Words,
+  locale: Locale,
+  now: number,
+): { subtitle: string; rank: number; order: number } | null {
+  const { tour } = entry;
+  const startsAt = tour.startsAt ? Date.parse(tour.startsAt) : Number.NaN;
+  const endsAt = tour.endsAt ? Date.parse(tour.endsAt) : Number.NaN;
+  if (entry.liveBoardCount > 0) {
+    return {
+      subtitle: `${words.live} · ${games(entry.liveBoardCount, locale)}`,
+      rank: 0,
+      order: -entry.liveBoardCount,
+    };
+  }
+  if (!Number.isNaN(startsAt) && startsAt > now) {
+    if (startsAt - now > UPCOMING_WINDOW_MS) return null;
+    return {
+      subtitle: `${words.starts} ${shortDate(tour.startsAt!, locale)}`,
+      rank: 2,
+      order: startsAt,
+    };
+  }
+  if (!Number.isNaN(endsAt) && endsAt < now) {
+    if (now - endsAt > FINISHED_WINDOW_MS || entry.completeBoardCount === 0) return null;
+    return {
+      subtitle: `${words.finished} ${shortDate(tour.endsAt!, locale)} · ${games(entry.completeBoardCount, locale)}`,
+      rank: 3,
+      order: -endsAt,
+    };
+  }
+  if (!Number.isNaN(startsAt) && !Number.isNaN(endsAt) && entry.completeBoardCount > 0) {
+    // Between rounds of a tour that is under way by its dates. A tour with no
+    // dates and nothing live is a record, not an event (the Team
+    // Championship's 14 boards showed as a second row on 2026-09-20).
+    return {
+      subtitle: `${words.inProgress} · ${games(entry.completeBoardCount, locale)}`,
+      rank: 1,
+      order: -startsAt,
+    };
+  }
+  return null;
 }
 
 /** Fetch the tours and append their rows to a mounted container. Failures
@@ -166,7 +262,16 @@ export async function loadBroadcastBanners(host: HTMLElement, locale: Locale): P
     if (!resp.ok) return;
     const data = (await resp.json()) as { tours?: BroadcastTourSummary[] };
     const rows = broadcastBanners(data.tours ?? [], locale);
-    for (const banner of rows) host.append(eventBannerRow(banner));
+    const shown = rows.slice(0, MAX_BROADCAST_BANNERS);
+    for (const banner of shown) host.append(eventBannerRow(banner));
+    if (rows.length > shown.length) {
+      // lichess's "more broadcasts" under its featured ones.
+      const more = document.createElement('a');
+      more.className = 'landing-event-banners-more';
+      more.href = '/broadcast/xiangqi';
+      more.textContent = WORDS[locale].more(rows.length - shown.length);
+      host.append(more);
+    }
     if (rows.length > 0) {
       for (const sample of host.querySelectorAll('[data-event-id^="dev-sample-"]')) sample.remove();
     }
