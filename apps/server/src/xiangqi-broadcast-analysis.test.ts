@@ -85,3 +85,30 @@ test('a board the engine cannot score is skipped from then on, not retried every
   assert.deepEqual(h.analysed, ['b1']);
   assert.deepEqual(h.skipsSeen.at(-1), ['b0']);
 });
+
+test('with slots to spare, the sweep runs that many games side by side, never the same one twice', async () => {
+  const started: string[] = [];
+  let release: () => void = () => {};
+  const gate = new Promise<void>((resolve) => {
+    release = resolve;
+  });
+  const all = boards(5);
+  const sweep = createBroadcastAnalysisSweep(
+    {
+      pendingJobs: () => 0,
+      nextBoard: async (skip) => all.find((board) => !skip.includes(board.id)) ?? null,
+      analyse: (board) => {
+        started.push(board.id);
+        return gate;
+      },
+      now: () => 1_000_000,
+    },
+    { concurrency: 3, perHour: 100 },
+  );
+  const tick = sweep.tick();
+  // All three slots fill before any game finishes, each with its own board.
+  await new Promise((resolve) => setImmediate(resolve));
+  assert.deepEqual(started, ['b0', 'b1', 'b2']);
+  release();
+  assert.equal(await tick, 3);
+});

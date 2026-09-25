@@ -1090,6 +1090,9 @@ export async function nextUnanalysedXiangqiBroadcastBoard(input: {
   depth: number;
   maxPlies: number;
   skip: readonly string[];
+  /** Tours whose boards go first (the top grade), then the rest, each by
+   *  most recently updated. */
+  preferTourSlugs?: readonly string[];
 }): Promise<StoredXiangqiBroadcastBoard | null> {
   const { rows } = await getPool().query<BoardRow>(
     `SELECT b.* FROM xiangqi_broadcast_boards b
@@ -1100,9 +1103,15 @@ export async function nextUnanalysedXiangqiBroadcastBoard(input: {
           SELECT 1 FROM game_analysis g
            WHERE g.room_id = 'broadcast:' || b.id AND g.engine_id = $1 AND g.depth = $2
         )
-      ORDER BY b.updated_at DESC, b.id
+      ORDER BY (b.tour_slug = ANY($5::text[])) DESC, b.updated_at DESC, b.id
       LIMIT 1`,
-    [input.engineId, input.depth, input.maxPlies, [...input.skip]],
+    [
+      input.engineId,
+      input.depth,
+      input.maxPlies,
+      [...input.skip],
+      [...(input.preferTourSlugs ?? [])],
+    ],
   );
   return rows[0] ? boardFromRow(rows[0]) : null;
 }

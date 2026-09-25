@@ -896,6 +896,21 @@ definePersistenceTests('xiangqi broadcasts', () => {
       await nextUnanalysedXiangqiBroadcastBoard({ ...query, skip: [fullBoard.id] }),
       null,
     );
+    // The top events go first, and a board outside them is still found.
+    assert.equal(
+      (await nextUnanalysedXiangqiBroadcastBoard({ ...query, preferTourSlugs: ['another-tour'] }))
+        ?.id,
+      fullBoard.id,
+    );
+    assert.equal(
+      (
+        await nextUnanalysedXiangqiBroadcastBoard({
+          ...query,
+          preferTourSlugs: [fullBoard.tourSlug],
+        })
+      )?.id,
+      fullBoard.id,
+    );
 
     await saveGameAnalysis(`broadcast:${fullBoard.id}`, 'engine@1', 12, [
       { ply: 0, cp: 20, mate: null, best: null },

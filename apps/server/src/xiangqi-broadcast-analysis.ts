@@ -21,6 +21,7 @@ import * as persistence from './persistence.js';
 import { createGameAnalysisRoutes } from './routes/game-analysis-route.js';
 import { resolveXiangqiAnalysis } from './routes/xiangqi-games.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from './xiangqi-analysis.js';
+import { XIANGQI_BROADCAST_TOUR_LEVELS } from './xiangqi-broadcast-levels.js';
 
 /** A broadcast board's analysis lives under this room key (game_analysis has no FK). */
 export function broadcastAnalysisRoomId(boardId: string): string {
@@ -67,6 +68,16 @@ export const SWEEP_GAMES_PER_HOUR = (() => {
   return Number.isInteger(configured) && configured > 0 ? configured : 6;
 })();
 const SWEEP_ACCOUNT_ID = 'system:broadcast-analysis-sweep';
+// How many games the sweep analyses side by side. One (the default) goes
+// through the shared analysis queue, serial with readers' requests. More runs
+// the engine directly, one analysis-pool slot each, so the pool needs one slot
+// beyond this for a reader's request (MISTBOARD_PIKAFISH_ANALYSIS_MAX_PROCESSES
+// = this + 1). The web service has 24 vCPUs and averaged 0.2 in use over the
+// week of 2026-09-18; four games at once is about four cores (2026-09-25).
+export const SWEEP_CONCURRENCY = (() => {
+  const configured = Number(process.env.MISTBOARD_BROADCAST_ANALYSIS_CONCURRENCY);
+  return Number.isInteger(configured) && configured > 0 ? configured : 1;
+})();
 
 export type BroadcastAnalysisSweepDeps = {
   pendingJobs(): number;
@@ -84,8 +95,20 @@ const liveDeps: BroadcastAnalysisSweepDeps = {
       depth: XIANGQI_ANALYSIS_REQUEST_DEPTH,
       maxPlies: MAX_ANALYSED_PLIES,
       skip,
+      // The top events first (the grade map), so a page a reader is sent to
+      // fills before the opens and exhibitions do.
+      preferTourSlugs: Object.entries(XIANGQI_BROADCAST_TOUR_LEVELS)
+        .filter(([, level]) => level === 'A')
+        .map(([slug]) => slug),
     }),
   analyse: (board) => {
+    // Side by side, the engine runs directly: the shared queue is serial.
+    if (SWEEP_CONCURRENCY > 1) {
+      return resolveXiangqiAnalysis(
+        broadcastAnalysisRoomId(board.id),
+        broadcastAnalysisTimeline(board.moves),
+      ).then(() => undefined);
+    }
     let resolveDone: () => void = () => {};
     let rejectDone: (error: unknown) => void = () => {};
     const done = new Promise<void>((resolve, reject) => {
@@ -116,43 +139,60 @@ const liveDeps: BroadcastAnalysisSweepDeps = {
   now: () => Date.now(),
 };
 
-export type BroadcastAnalysisSweep = { tick(): Promise<void>; start(): void; stop(): void };
+export type BroadcastAnalysisSweep = { tick(): Promise<number>; start(): void; stop(): void };
 
 export function createBroadcastAnalysisSweep(
   deps: BroadcastAnalysisSweepDeps = liveDeps,
+  options: { concurrency?: number; perHour?: number } = {},
 ): BroadcastAnalysisSweep {
+  const concurrency = options.concurrency ?? SWEEP_CONCURRENCY;
+  const perHour = options.perHour ?? SWEEP_GAMES_PER_HOUR;
   const startedAt: number[] = [];
   // Boards whose analysis failed in this process: skipped until a restart, so
   // one record the engine cannot score never stalls the rest.
   const failed = new Set<string>();
-  let busy = false;
+  // Boards being analysed now, so a second slot never takes the same one.
+  const running = new Set<string>();
+  let filling = false;
   let interval: NodeJS.Timeout | null = null;
 
-  async function tick(): Promise<void> {
-    if (busy) return;
-    const now = deps.now();
-    while (startedAt.length > 0 && now - (startedAt[0] ?? 0) > 60 * 60_000) startedAt.shift();
-    if (startedAt.length >= SWEEP_GAMES_PER_HOUR) return;
-    // A reader's request goes first: the queue is one process, first in first out.
-    if (deps.pendingJobs() > 0) return;
-    busy = true;
+  /** Fill the free slots (one, by default) and wait for those games; resolves
+   *  to how many it started. */
+  async function tick(): Promise<number> {
+    if (filling) return 0;
+    filling = true;
+    const jobs: Promise<void>[] = [];
     try {
-      const board = await deps.nextBoard([...failed]);
-      if (!board) return;
-      const job = deps.analyse(board);
-      if (!job) return;
-      startedAt.push(now);
-      await job.catch((error: unknown) => {
-        failed.add(board.id);
-        console.error(
-          JSON.stringify({
-            level: 'error',
-            kind: 'xiangqi_broadcast_analysis_sweep_failed',
-            boardId: board.id,
-            error: error instanceof Error ? error.message : String(error),
-          }),
+      while (running.size < concurrency) {
+        const now = deps.now();
+        while (startedAt.length > 0 && now - (startedAt[0] ?? 0) > 60 * 60_000) {
+          startedAt.shift();
+        }
+        if (startedAt.length >= perHour) break;
+        // A reader's request goes first: the queue is one process, first in first out.
+        if (deps.pendingJobs() > 0) break;
+        const board = await deps.nextBoard([...failed, ...running]);
+        if (!board) break;
+        const job = deps.analyse(board);
+        if (!job) break;
+        startedAt.push(now);
+        running.add(board.id);
+        jobs.push(
+          job
+            .catch((error: unknown) => {
+              failed.add(board.id);
+              console.error(
+                JSON.stringify({
+                  level: 'error',
+                  kind: 'xiangqi_broadcast_analysis_sweep_failed',
+                  boardId: board.id,
+                  error: error instanceof Error ? error.message : String(error),
+                }),
+              );
+            })
+            .finally(() => running.delete(board.id)),
         );
-      });
+      }
     } catch (error) {
       console.error(
         JSON.stringify({
@@ -162,7 +202,24 @@ export function createBroadcastAnalysisSweep(
         }),
       );
     } finally {
-      busy = false;
+      filling = false;
+    }
+    await Promise.all(jobs);
+    return jobs.length;
+  }
+
+  // Keep going while there is work, so a slot is not left idle until the next
+  // five-minute tick; the tick is the fallback that notices new records.
+  let draining = false;
+  async function drain(): Promise<void> {
+    if (draining) return;
+    draining = true;
+    try {
+      while (interval && (await tick()) > 0) {
+        // loop until nothing starts
+      }
+    } finally {
+      draining = false;
     }
   }
 
@@ -171,7 +228,7 @@ export function createBroadcastAnalysisSweep(
     start() {
       if (interval) return;
       interval = setInterval(() => {
-        void tick();
+        void drain();
       }, SWEEP_TICK_MS);
       interval.unref?.();
     },
