@@ -34,6 +34,17 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   '2026-wuyang-cup': 'A',
   '2026-chunqiu-dayie-ten-game-match': 'A',
   '2026-chunqiu-dayie-challenge': 'A',
+  // The second tier, backfilled the same way: the 广东十虎 exhibitions and the
+  // national opens. Professionals play, but the fields are mixed, so they do
+  // not give a name a player page of its own.
+  '2026-guangdong-tigers-v-beijing': 'B',
+  '2026-guangdong-tigers-v-shandong': 'B',
+  '2026-guangdong-tigers-v-young-masters': 'B',
+  '2026-guangdong-tigers-v-chongqing': 'B',
+  '2026-gaogang-cup': 'B',
+  '2026-tianchang-cup': 'B',
+  '2026-xintai-cup': 'B',
+  '2026-baizuishan-cup': 'B',
   // The M0 fixture pack (packages/game/fixtures/xiangqi-broadcast/2025-wxc-sample),
   // graded so the persistence tests can exercise the gate; it never reaches prod.
   '2025-wxc-sample': 'A',

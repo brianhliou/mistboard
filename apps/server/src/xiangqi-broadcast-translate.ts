@@ -68,6 +68,17 @@ const EVENT_GLOSSARY: Array<[string, string]> = [
   ['腾讯天天象棋', 'Tencent Tiantian Xiangqi'],
   ['个人锦标赛', 'Individual Championship'],
   ['大师公开赛', 'Masters Open'],
+  // The 2026 exhibitions and opens, found as pinyin on the second backfill
+  // (2026-09-24: "Guangdongshihu", "Shoujie", "Duikangsai").
+  ['广东十虎', 'Guangdong Ten Tigers'],
+  ['北京十杰', 'Beijing Top Ten'],
+  ['山东十好汉', 'Shandong Ten Heroes'],
+  ['重庆十强', 'Chongqing Top Ten'],
+  ['年轻大师联队', 'Young Masters Team'],
+  ['团体对抗赛', 'Team Match'],
+  ['对抗赛', 'Match'],
+  ['高新高港杯', 'Gaoxin Gaogang Cup'],
+  ['首届', '1st'],
   // The 2026 spring invitationals, found as pinyin on the backfill
   // (2026-09-24: "Dashishifanqizhan", "Dashileitaisai").
   ['春丘大叶杯', 'Chunqiu Dayie Cup'],

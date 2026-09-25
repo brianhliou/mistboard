@@ -146,6 +146,29 @@ test('dpxq archive page normalizes and replays as the full real game', () => {
   assert.equal(board.status, 'complete');
 });
 
+test('an archive page filed with no round does not take its opening as the round', () => {
+  // The 2026 春丘大叶杯 ten-game match: "players - event - opening - site",
+  // four parts, and an empty round tag.
+  const noRound = ARCHIVE_HTML.replace(/ - 第02轮 - D33 /, ' - D33 ').replace(
+    /\[DhtmlXQ_round\][^[]*\[\/DhtmlXQ_round\]/,
+    '[DhtmlXQ_round][/DhtmlXQ_round]',
+  );
+  assert.notEqual(noRound, ARCHIVE_HTML);
+  const normalized = normalizeDpxqPageToFrameHtml(noRound);
+  assert.equal(normalized.ok, true);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '');
+  assert.equal(converted.ok, true);
+  if (!converted.ok) return;
+  const round = converted.snapshot.rounds[0]!;
+  assert.doesNotMatch(round.name, /D33|中炮/);
+  assert.doesNotMatch(round.id, /d33/i);
+
+  // The stated round still comes through.
+  const stated = normalizeDpxqPageToFrameHtml(ARCHIVE_HTML);
+  const withRound = convertWxfDhtmlXqPageToSnapshot(stated.ok ? stated.html : '');
+  assert.equal(withRound.ok && withRound.snapshot.rounds[0]!.name, '第02轮');
+});
+
 test('interpret routes a raw dpxq page through the dpxq adapter', () => {
   const body = interpretXiangqiBroadcastSourceBody(ARCHIVE_HTML);
   assert.equal(body.kind, 'wxf-dhtmlxq');

@@ -81,6 +81,17 @@ test('translateXiangqiEventName names the 2026 spring invitationals', () => {
   );
 });
 
+test('translateXiangqiEventName names the 2026 exhibitions and opens', () => {
+  assert.equal(
+    translateXiangqiEventName('2026年广东十虎VS年轻大师联队对抗赛'),
+    '2026 Guangdong Ten Tigers VS Young Masters Team Match',
+  );
+  assert.equal(
+    translateXiangqiEventName('2026年首届“天长杯”全国象棋公开赛'),
+    '2026 1st Tianchang Cup National Xiangqi Open',
+  );
+});
+
 test('translateXiangqiEventName always yields fully Latin output for CJK input', () => {
   for (const name of ['象棋直播室', '测试联赛', '赛事测试杯']) {
     const translated = translateXiangqiEventName(name);

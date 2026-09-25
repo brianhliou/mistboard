@@ -73,15 +73,23 @@ function splitTeamAndPlayer(raw: string | undefined): { team?: string; player?: 
   return { ...(team ? { team } : {}), ...(player ? { player } : {}) };
 }
 
+// An ECCO opening code at the start of a title part: A00 to E99.
+const ECCO_OPENING = /^[A-E]\d{2}(\s|$)/;
+
 // dpxq archive titles read
 //   "RedTeam RedName <和|胜|负> BlackTeam BlackName - Event - Round - Opening - Site".
 // The middle marker between the two players encodes the result relative to red.
 function parseDpxqTitle(title: string): TitleParts {
   const segments = title.split(/\s+-\s+/).map((part) => part.trim());
   const head = segments[0] ?? '';
+  // A game filed with no round (a match's 十番棋, an exhibition) has a title of
+  // four parts, "players - event - opening - site", so its third part is the
+  // opening, an ECCO code ("C72 五七炮…"). Read as the round, every game of
+  // the 2026 春丘大叶杯 ten-game match became a round named after its opening.
+  const third = segments.length >= 5 ? segments[2] : undefined;
   const parts: TitleParts = {
     event: segments[1] || undefined,
-    round: segments[2] || undefined,
+    round: third && !ECCO_OPENING.test(third) ? third : undefined,
   };
 
   const markerMatch = head.match(/\s(和|胜|负|先和|先胜|先负)\s/);
