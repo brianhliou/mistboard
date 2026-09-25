@@ -88,8 +88,11 @@ export function parseDpxqTourIndex(html: string): DpxqIndexRow[] {
 // and ~100 rows a year are the latter. Inclusion names the professional and
 // international series; exclusion drops the amateur, youth and community
 // events that share their vocabulary (全国业余…棋王, 全国大学生…锦标赛).
+// 等级赛 counts only as the national one (全国象棋等级赛): a bare 等级赛 also
+// caught a city's (北京市秋季象棋等级赛, 2026-09-24). The grades themselves are
+// in docs-private/broadcast-calendar.md → Grading.
 const TOP_EVENT_PATTERN =
-  /甲级联赛|全国象棋个人赛|全国象棋团体赛|全国象棋锦标赛|世界象棋|世界快棋|亚洲象棋|大师|五羊杯|上海杯|天元赛|王位赛|楚河汉界|碧桂园杯|等级赛/;
+  /甲级联赛|全国象棋个人赛|全国象棋团体赛|全国象棋锦标赛|世界象棋|世界快棋|亚洲象棋|大师|五羊杯|上海杯|天元赛|王位赛|楚河汉界|碧桂园杯|全国象棋等级赛/;
 const MINOR_EVENT_PATTERN =
   /业余|少年|少儿|青少年|儿童|幼儿|中小学|大学生|学生|老年|银龄|社区|街道|月月赛|全民健身|职工|机关|企业|残疾人/;
 

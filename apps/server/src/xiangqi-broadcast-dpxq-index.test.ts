@@ -53,6 +53,7 @@ test('top-event filter keeps the professional series and drops amateur, youth an
     '2026年第21届亚洲象棋个人锦标赛 男子组',
     '2026年第五届世界象棋公开赛',
     '2026年第六届“上海杯”象棋大师公开赛',
+    '2026年润德健行杯第20届全国象棋等级赛',
   ]) {
     assert.equal(isTopDpxqEvent(name), true, name);
   }
@@ -62,6 +63,8 @@ test('top-event filter keeps the professional series and drops amateur, youth an
     '2026年全国大学生象棋锦标赛',
     '2026年大竹林街道凤栖沱社区“银龄杯”象棋比赛 公开组',
     '2026年全国象棋公开赛高密站',
+    // A city's rating event, not the national one.
+    '2026年北京市秋季象棋等级赛',
   ]) {
     assert.equal(isTopDpxqEvent(name), false, name);
   }
