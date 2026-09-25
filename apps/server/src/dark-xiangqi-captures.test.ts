@@ -180,6 +180,25 @@ test('game summary: an engine seat with no pveBotId still resolves its first-par
   assert.equal(black?.subjectId, 'misty');
 });
 
+test('game summary: records the room time control, so the finished game is not untimed', () => {
+  // Regression: this builder omitted initialMs/incrementMs, so every finished
+  // Fog Xiangqi row stored a NULL clock and the review header read "Untimed"
+  // for 5+5 games.
+  const roomId = 'dxq_summary_clock';
+  const events = captureGameEvents(roomId, { resign: true });
+  events[0] = {
+    ...events[0]!,
+    timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+  } as DarkXiangqiEvent;
+
+  const created = createTenantRuntimeRoomFromEvents(darkXiangqiTenant, events);
+  if (!created.ok) throw new Error('clocked game must hydrate');
+
+  const summary = buildDarkXiangqiGameSummary(created.room);
+  assert.equal(summary.initialMs, 300_000);
+  assert.equal(summary.incrementMs, 5_000);
+});
+
 // ── Postgame history truncation ──────────────────────────────────────────────
 
 test('postgame history: captures accumulate ply-by-ply, later captures excluded mid-game', async () => {

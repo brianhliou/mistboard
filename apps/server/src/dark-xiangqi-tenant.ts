@@ -252,8 +252,8 @@ function emptyDarkXiangqiView(
   };
 }
 
-// Legacy persisted-record shape, with the DXQ-specific no-clock fields kept,
-// but PvE metadata preserved so finished bot games remain attributable.
+// Persisted-record shape; PvE metadata preserved so finished bot games remain
+// attributable.
 export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persistence.GameSummary {
   const status = room.projection.state.status;
   if (status.type !== 'finished') {
@@ -280,6 +280,8 @@ export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persis
     whiteName: null,
     blackName: null,
     corpusId: null,
+    initialMs: room.projection.timeControl?.initialMs ?? null,
+    incrementMs: room.projection.timeControl?.incrementMs ?? null,
     rated: false,
     visibility,
     participants: [
