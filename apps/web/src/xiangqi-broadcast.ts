@@ -34,6 +34,7 @@ import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
+import { broadcastEmbedCode } from './xiangqi-broadcast-embed-code.js';
 import {
   formatPoints,
   groupRoundByMatch,
@@ -2366,6 +2367,10 @@ function renderBoardReplay(
       origin: window.location.origin,
     }),
     exportLink(data.board.id),
+    embedCodeButton(
+      data.board.id,
+      `${primaryName(data.board.red)} vs ${primaryName(data.board.black)} · Mistboard`,
+    ),
   );
   movesPanel.append(moveHeading, moveList, actions);
 
@@ -3037,6 +3042,26 @@ function pgnLink(input: BroadcastPgnInput): HTMLElement {
   link.download = broadcastPgnFileName(input);
   link.textContent = t('broadcast.downloadPgn');
   return link;
+}
+
+// Copies the game's iframe code, for a creator's own page (#454).
+function embedCodeButton(boardId: string, title: string): HTMLElement {
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'xqb-export-link';
+  button.textContent = t('broadcast.copyEmbed');
+  button.addEventListener('click', () => {
+    void navigator.clipboard
+      ?.writeText(broadcastEmbedCode(boardId, title, window.location.origin))
+      .then(
+        () => {
+          button.textContent = t('broadcast.copied');
+          setTimeout(() => (button.textContent = t('broadcast.copyEmbed')), 1500);
+        },
+        () => {},
+      );
+  });
+  return button;
 }
 
 function exportLink(boardId: string): HTMLElement {

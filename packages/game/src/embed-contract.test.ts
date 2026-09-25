@@ -130,6 +130,15 @@ test('the frameable path round-trips through the target', () => {
     ['https://mistboard.com/embed/tv?channel=xiangqi', '/embed/tv?channel=xiangqi'],
     ['https://mistboard.com/embed/tv', '/embed/tv'],
     ['https://mistboard.com/embed/analysis', '/embed/analysis/xiangqi'],
+    // A broadcast game's page, and a move in it, frame as that game.
+    [
+      'https://mistboard.com/broadcast/xiangqi/board/2026-wuyang-cup-r01-b1',
+      '/embed/broadcast/xiangqi/board/2026-wuyang-cup-r01-b1',
+    ],
+    [
+      'https://mistboard.com/broadcast/xiangqi/board/2026-wuyang-cup-r01-b1?ply=34',
+      '/embed/broadcast/xiangqi/board/2026-wuyang-cup-r01-b1?ply=34',
+    ],
   ];
   for (const [url, path] of cases) {
     const target = embedTargetFromUrl(url);

@@ -14,6 +14,7 @@ import type {
 import { XIANGQI_SPEC_ID } from '@mistboard/game';
 import { variantDisplayLabel } from './game-display.js';
 import { DEFAULT_STUDY_VARIANT } from './study-catalog.js';
+import { broadcastEmbedCode } from './xiangqi-broadcast-embed-code.js';
 import {
   type BroadcastPgnInput,
   broadcastGamePgn,
@@ -28,7 +29,7 @@ import { t } from './i18n/catalog.js';
 import type { ProfileTarget } from './profile-link.js';
 import { fetchCachedGameAnalysis } from './review/game-analysis.js';
 import { createGameMetaCard } from './review/game-meta-card.js';
-import { downloadRow } from './review/underboard-tabs.js';
+import { downloadRow, shareRow } from './review/underboard-tabs.js';
 import { buildXiangqiClientAnalysisSource } from './review/xiangqi-client-analysis.js';
 import type { XiangqiAnalysisSource } from './review/xiangqi-review.js';
 import { mountXiangqiReview } from './review/xiangqi-review.js';
@@ -147,6 +148,7 @@ export function mountBroadcastBoardReview(
         },
         exportLink(data.board.id),
       ]),
+      embedRow(data.board.id, `${red} vs ${black} · Mistboard`),
     ],
     studyExport: {
       variant: DEFAULT_STUDY_VARIANT,
@@ -254,6 +256,14 @@ function hostOf(href: string): string | null {
   } catch {
     return null;
   }
+}
+
+/** The game's iframe code, for a creator's own page (#454). */
+function embedRow(boardId: string, title: string): HTMLElement {
+  const code = document.createElement('textarea');
+  code.value = broadcastEmbedCode(boardId, title, window.location.origin);
+  code.rows = 2;
+  return shareRow('Embed', code);
 }
 
 function exportLink(boardId: string): { text: string; href: string; filename: string } {

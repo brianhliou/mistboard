@@ -85,7 +85,16 @@ export type EmbedRoute =
   | { kind: 'tv' }
   | { kind: 'puzzle'; route: EmbedPuzzleRoute }
   | { kind: 'analysis'; route: EmbedAnalysisRoute }
-  | { kind: 'line'; route: EmbedLineRoute };
+  | { kind: 'line'; route: EmbedLineRoute }
+  | { kind: 'broadcast'; route: EmbedBroadcastRoute };
+
+export type EmbedBroadcastRoute = { boardId: string };
+
+/** `/embed/broadcast/xiangqi/board/:boardId`, or null when the path is not one. */
+export function embedBroadcastRouteFromPath(pathname: string): EmbedBroadcastRoute | null {
+  const m = /^\/embed\/broadcast\/xiangqi\/board\/([A-Za-z0-9_-]{1,160})\/?$/.exec(pathname);
+  return m ? { boardId: m[1] as string } : null;
+}
 
 /** The variants a bare line can be framed as: the ones with a replay board on
  *  the embed card. Anything else is refused by name rather than drawn on the
@@ -185,6 +194,8 @@ export function embedRouteFromPath(pathname: string): EmbedRoute | null {
   if (analysis) return { kind: 'analysis', route: analysis };
   const line = embedLineRouteFromPath(pathname);
   if (line) return { kind: 'line', route: line };
+  const broadcast = embedBroadcastRouteFromPath(pathname);
+  if (broadcast) return { kind: 'broadcast', route: broadcast };
   return null;
 }
 

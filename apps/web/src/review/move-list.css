@@ -167,9 +167,13 @@
    end where the eye already is. Same idea as .xq-replay-branch on the article
    widget; this is the review-shell rendering of it. */
 .review-move-list__branch {
-  padding: 2px 6px 4px 14px;
-  border-left: 2px solid color-mix(in srgb, var(--site-muted) 35%, transparent);
-  margin: 0 0 2px 10px;
+  /* The article widget's branch (.xq-replay-annotated .xq-replay-branch):
+     full width, no indent or rule, a tinted block, small muted moves led by
+     its tag. The indent and rule spent a narrow column on saying "branch",
+     which the tag and the tint already say. */
+  padding: 4px 3px 5px;
+  margin: 1px 0 3px;
+  background: var(--site-bg-soft);
 }
 .review-move-list__note {
   margin: 2px 0 3px;
@@ -184,7 +188,14 @@
   display: flex;
   flex-wrap: wrap;
   align-items: baseline;
-  gap: 2px 6px;
+  gap: 0 1px;
+}
+.review-move-list__line-tag {
+  margin-right: 3px;
+  color: var(--site-muted);
+  font-size: 10px;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
 }
 .review-move-list__line-move {
   appearance: none;
@@ -193,8 +204,10 @@
   padding: 1px 3px;
   border-radius: 3px;
   font: inherit;
-  font-size: 12.5px;
-  color: var(--site-text);
+  font-size: 11px;
+  font-weight: 500;
+  line-height: 1.4;
+  color: var(--site-muted);
   cursor: pointer;
   white-space: nowrap;
 }
@@ -207,12 +220,12 @@
   font-weight: 700;
 }
 .review-move-list__line-number {
-  font-size: 11.5px;
+  font-size: 9.5px;
   color: var(--site-muted);
   padding-right: 1px;
 }
 .review-move-list__line-verdict {
-  font-size: 12.5px;
+  font-size: 11px;
   font-weight: 600;
   color: var(--site-muted);
   padding-left: 2px;

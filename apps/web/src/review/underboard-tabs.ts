@@ -276,7 +276,10 @@ function shareExportBody(
   return body;
 }
 
-function shareRow(label: string, field: HTMLInputElement | HTMLTextAreaElement): HTMLElement {
+export function shareRow(
+  label: string,
+  field: HTMLInputElement | HTMLTextAreaElement,
+): HTMLElement {
   const row = document.createElement('div');
   row.className = 'review-share__row';
   const name = document.createElement('span');

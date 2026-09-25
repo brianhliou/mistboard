@@ -44,6 +44,9 @@ export type MoveListLine = {
   verdict?: string;
   /** A note on the line itself (the study's comment on its first move). */
   note?: string;
+  /** The line's tag ("better was", or the author's own), leading it the way
+   *  the article widget's branch does. */
+  tag?: string;
 };
 
 /** Post-hoc per-move annotation, keyed by the move's ply. Filled once whole-game
@@ -184,6 +187,12 @@ export function createMoveList(entries: MoveListEntry[], opts: MoveListOptions =
       // that opens with the second mover. Without these a sideline read as a
       // bare string of moves next to a numbered game.
       const leadOffset = opts.firstMover === 'b' ? 1 : 0;
+      if (entry.line.tag) {
+        const tag = document.createElement('span');
+        tag.className = 'review-move-list__line-tag';
+        tag.textContent = entry.line.tag;
+        line.append(tag);
+      }
       entry.line.moves.forEach((label, i) => {
         const cursor = i + 1;
         const index = entry.ply - 1 + i;

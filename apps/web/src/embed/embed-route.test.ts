@@ -34,6 +34,11 @@ describe('the TV, puzzle and analysis embed routes', () => {
     expect(embedLineRouteFromPath('/embed/line/fortress-xiangqi')).toBeNull();
     expect(embedLineRouteFromPath('/embed/line')).toBeNull();
     expect(embedRouteFromPath('/embed/line/xiangqi')?.kind).toBe('line');
+    expect(embedRouteFromPath('/embed/broadcast/xiangqi/board/2026-wuyang-cup-r01-b1')).toEqual({
+      kind: 'broadcast',
+      route: { boardId: '2026-wuyang-cup-r01-b1' },
+    });
+    expect(embedRouteFromPath('/embed/broadcast/xiangqi/board/')).toBeNull();
   });
 
   it('reads the line out of the query string, shape-checked, capped, nothing decoded twice', () => {
@@ -114,6 +119,8 @@ describe('the client and server embed lists agree', () => {
     '/embed/analysis/xiangqi',
     '/embed/line/jungle',
     '/embed/line/Jungle',
+    '/embed/broadcast/xiangqi/board/2026-wuyang-cup-r01-b1',
+    '/embed/broadcast/xiangqi/board/a/b',
     '/embed/tv/x',
     '/embed/analysis/banqi',
     '/embed/game/a/b',

@@ -1143,6 +1143,7 @@ export function mountXiangqiReplayBoard(
   const perspective: XiangqiColor = spec.perspective ?? 'red';
   const { moves, states, startState, firstMover, total } = replayLine(spec);
   const annotated = spec.annotations;
+  const branchTag = replayStepperCopy(undefined, 'xiangqi').betterWas;
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
@@ -1248,6 +1249,9 @@ export function mountXiangqiReplayBoard(
             ? {
                 line: {
                   moves: line.labels,
+                  // The article widget's tag: "better was" for an engine line,
+                  // or the author's own label for an alternative.
+                  tag: a?.label ?? branchTag,
                   ...(a?.lineEval ? { verdict: a.lineEval } : {}),
                   ...(a?.lineNote ? { note: a.lineNote } : {}),
                 },

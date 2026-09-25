@@ -328,6 +328,7 @@ export const EN_REVIEW = {
   'broadcast.railNoGames': 'No games yet',
   'broadcast.calendarEarlier': 'Show earlier months',
   'broadcast.downloadPgn': 'Download PGN',
+  'broadcast.copyEmbed': 'Copy embed code',
   'broadcast.teamsNoteChampionship':
     "Team standings are calculated from the broadcast games with the championship's scoring: each table plays one game, scoring 2 for a win and 1 for a draw, and a match scores 2 for a win and 1 for a draw. Ties go to the opponents' match points, then game points, then match wins, then game wins. They may differ from the official table.",
   'broadcast.otherGames': 'Other games',

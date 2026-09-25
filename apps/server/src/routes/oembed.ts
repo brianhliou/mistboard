@@ -140,6 +140,17 @@ export async function tryHandle(
     case 'analysis':
       frame('Xiangqi analysis board · Mistboard');
       return true;
+    case 'broadcast': {
+      if (!requirePersistence(response)) return true;
+      const board = await persistence.getXiangqiBroadcastBoard(embed.boardId);
+      if (!board) {
+        writeJson(response, 404, { error: 'not_found' });
+        return true;
+      }
+      const name = (tag: { name: string; nameEn?: string }) => tag.nameEn?.trim() || tag.name;
+      frame(`${name(board.red)} vs ${name(board.black)} · ${board.result} · Mistboard`);
+      return true;
+    }
   }
 }
 

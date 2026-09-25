@@ -852,6 +852,14 @@ if (replaySample) {
       mountEmbedLine(appRoot, lineRoute, line, { startPly }),
     ),
   );
+} else if (embedRoute?.kind === 'broadcast') {
+  const broadcastRoute = embedRoute.route;
+  const startPly = embedPlyFromSearch(window.location.search);
+  void mountOrReport(() =>
+    import('./embed/embed-broadcast-page.js').then(({ mountEmbedBroadcast }) =>
+      mountEmbedBroadcast(appRoot, broadcastRoute, { startPly }),
+    ),
+  );
 } else if (embedRoute?.kind === 'analysis') {
   const color = embedColorFromSearch(window.location.search);
   void mountOrReport(() =>

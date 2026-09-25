@@ -297,7 +297,10 @@ export function isEmbedRoute(pathname: string): boolean {
     // it, so nothing stored is read: the page shows only what the embedder
     // typed. The variant list is the client's (EMBED_LINE_VARIANTS); an
     // unknown one gets the embed shell and a refusal there.
-    /^\/embed\/line\/[a-z-]{1,32}$/.test(normalized)
+    /^\/embed\/line\/[a-z-]{1,32}$/.test(normalized) ||
+    // One relayed professional game: the same moves and names the public
+    // broadcast page shows, nothing hidden (xiangqi is open information).
+    /^\/embed\/broadcast\/xiangqi\/board\/[A-Za-z0-9_-]{1,160}$/.test(normalized)
   );
 }
 

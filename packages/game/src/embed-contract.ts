@@ -69,6 +69,12 @@ export function embedGamePath(roomId: string): string {
   return `/embed/game/${roomId}`;
 }
 
+/** `/embed/broadcast/xiangqi/board/:boardId`, one relayed professional game
+ *  (live or finished), for the creators who cover them (#454). */
+export function embedBroadcastBoardPath(boardId: string): string {
+  return `/embed/broadcast/xiangqi/board/${boardId}`;
+}
+
 /** `/embed/tv`, the live board; `channel` narrows it to one watch channel. */
 export function embedTvPath(channel?: string): string {
   return channel && channel !== 'top'
@@ -140,7 +146,8 @@ export type EmbedTarget =
   | { kind: 'study'; studyId: string; chapterId: string }
   | { kind: 'puzzle'; puzzleId: string | null }
   | { kind: 'tv'; channel: string | null }
-  | { kind: 'analysis' };
+  | { kind: 'analysis' }
+  | { kind: 'broadcast'; boardId: string; ply: number | null };
 
 const ID = '([A-Za-z0-9_-]{1,64})';
 // `/black` after the id is lichess's spelling for "seen from Black's side", kept
@@ -152,6 +159,8 @@ const STUDY_TARGET = new RegExp(`^/(?:embed/)?study/${ID}/${ID}/?$`);
 const PUZZLE_PERMALINK = new RegExp(`^/puzzles/${ID}/?$`);
 const PUZZLE_EMBED = new RegExp(`^/embed/puzzle(?:/${ID})?/?$`);
 const TV_EMBED = /^\/embed\/tv\/?$/;
+// A broadcast board id carries its tour and round slugs, so it runs long.
+const BROADCAST_TARGET = /^\/(?:embed\/)?broadcast\/xiangqi\/board\/([A-Za-z0-9_-]{1,160})\/?$/;
 const ANALYSIS_EMBED = /^\/embed\/analysis(?:\/xiangqi)?\/?$/;
 
 /** Accepts an absolute URL or a bare path; a string that is neither is null. */
@@ -186,6 +195,14 @@ export function embedTargetFromUrl(url: string): EmbedTarget | null {
     return { kind: 'tv', channel: channel && /^[a-z0-9-]{1,40}$/.test(channel) ? channel : null };
   }
   if (ANALYSIS_EMBED.test(pathname)) return { kind: 'analysis' };
+  const broadcast = BROADCAST_TARGET.exec(pathname);
+  if (broadcast) {
+    return {
+      kind: 'broadcast',
+      boardId: broadcast[1] as string,
+      ply: embedPly(new URLSearchParams(search).get('ply') ?? hash.slice(1)),
+    };
+  }
   return null;
 }
 
@@ -210,6 +227,11 @@ export function embedPathForTarget(target: EmbedTarget): string {
       return embedTvPath(target.channel ?? undefined);
     case 'analysis':
       return embedAnalysisPath();
+    case 'broadcast':
+      return (
+        embedBroadcastBoardPath(encodeURIComponent(target.boardId)) +
+        (target.ply !== null ? `?ply=${target.ply}` : '')
+      );
   }
 }
 

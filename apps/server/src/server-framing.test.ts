@@ -19,6 +19,8 @@ test('exactly the embed paths are frameable', () => {
   // A bare line: the variant is checked by the client, so any slug-shaped one frames.
   assert.equal(isEmbedRoute('/embed/line/jungle'), true);
   assert.equal(isEmbedRoute('/embed/line/xiangqi/'), true);
+  assert.equal(isEmbedRoute('/embed/broadcast/xiangqi/board/2026-wuyang-cup-r01-b1'), true);
+  assert.equal(isEmbedRoute('/broadcast/xiangqi/board/2026-wuyang-cup-r01-b1'), false);
 });
 
 test('nothing else on the site is', () => {
