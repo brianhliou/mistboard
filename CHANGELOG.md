@@ -74,6 +74,7 @@ Conventions:
 
 ### Watching and review
 
+- The broadcast list puts past events in date order, newest first, and gives events still in progress their own Ongoing section; the calendar opens on the current month; the 21st Asian Xiangqi Individual Championship (men and women, October 2 to 8) has its pages ahead of play ([b3c0e0e2](https://github.com/brianhliou/mistboard/commit/b3c0e0e2))
 - Eight more 2026 events join the broadcasts with English names: the Guangdong Ten Tigers matches against Shandong, the Young Masters, Beijing and Chongqing, and the Xintai, Baizuishan, Tianchang and Gaoxin Gaogang Cup opens ([9290db95](https://github.com/brianhliou/mistboard/commit/9290db95))
 - Three 2026 invitationals join the broadcasts: the 32nd Five Rams Cup, and the Chunqiu Dayie Cup masters ten-game match (Cao Yanlei against Lai Lixiong) and masters challenge, with English names; the players of both national team championships now appear under Pro players ([16187857](https://github.com/brianhliou/mistboard/commit/16187857))
 - The 2026 women's league has its broadcast page before its first game is posted, opening on its format and dates; its matches are scored by its own rules (three tables, a level match settled by one blitz game won 2-1), and a round with no time yet no longer reads "Upcoming" ([c8bb763c](https://github.com/brianhliou/mistboard/commit/c8bb763c))
