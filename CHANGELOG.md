@@ -152,6 +152,7 @@ Conventions:
 
 ### Fixed
 
+- Finished Fog Xiangqi games show the clock they were played at: every one was saved as untimed, so the review header, the database filter, profile game lists and exports read 5+5 and 3+2 games as "Untimed"; the 47 earlier games are corrected too ([46e599bb](https://github.com/brianhliou/mistboard/commit/46e599bb))
 - A broadcast round with no games yet keeps its game list and chat column, instead of the page shrinking to a narrower panel ([85c62f33](https://github.com/brianhliou/mistboard/commit/85c62f33))
 - Team league matches on broadcasts are scored the way the 2026 league plays them: a table counts once (its slow game, or the blitz playoff after a drawn one), and a level match is settled by its deciding game. Every match no longer claims a missing record, and the league table matches the official one ([a2035ec8](https://github.com/brianhliou/mistboard/commit/a2035ec8))
 - The local engine runs on broadcast boards in Chrome; it said "Safari cannot run it yet" on every one ([f16f9e2d](https://github.com/brianhliou/mistboard/commit/f16f9e2d))
