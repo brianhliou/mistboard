@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Every bot game starts at 10 + 5 unless you pick another clock, in every variant (games against people keep their own defaults), and Fog Chess and Fog Xiangqi bot games now offer 10 + 5 as well as 5 + 5 ([dc66e529](https://github.com/brianhliou/mistboard/commit/dc66e529))
 - The game-over badges reach duck xiangqi, atomic xiangqi and jungle: a captured general is marked where it fell, a jungle den entry crowns the animal in the den, and a jungle repetition marks the pieces that repeated ([a9bfda07](https://github.com/brianhliou/mistboard/commit/a9bfda07))
 - When a xiangqi or jieqi game ends while you watch, the generals say how: a red badge on the loser's naming the ending (checkmate, resignation, timeout, perpetual check), a green crown on the winner's, grey on both for a draw ([4e80220d](https://github.com/brianhliou/mistboard/commit/4e80220d))
 - No game ends because a connection dropped: a player who disconnects mid-game against another person is no longer forfeited after 30 seconds either, the way a bot game already was not; if they never come back their clock runs out, the same as leaving a board ([770a18ef](https://github.com/brianhliou/mistboard/commit/770a18ef))
@@ -141,6 +142,7 @@ Conventions:
 
 ### Removed
 
+- The collapsed Table under Games per week on /stats ([0be3e4d4](https://github.com/brianhliou/mistboard/commit/0be3e4d4))
 - Fairy-Stockfish's xiangqi net (11 MB) and its lazy load on the analysis board, superseded by Pikafish's ([9a8bb492](https://github.com/brianhliou/mistboard/commit/9a8bb492))
 - The "still face-down" panel in the Jieqi room: Jieqi reveals a captured hidden piece to the capturer only, so the panel could not know which of your own hidden pieces were already gone and listed them anyway; the captured strips carry the same facts. Banqi and Flip Jungle keep theirs ([bbfad4c0](https://github.com/brianhliou/mistboard/commit/bbfad4c0))
 - The homepage YouTube video strip is gone; the video library stays at /videos ([ac73fcf7](https://github.com/brianhliou/mistboard/commit/ac73fcf7))
@@ -153,6 +155,7 @@ Conventions:
 
 ### Fixed
 
+- The bars on /stats and /metrics all end at the same point; a row with a shorter number used to get a longer bar ([0be3e4d4](https://github.com/brianhliou/mistboard/commit/0be3e4d4))
 - Finished Fog Xiangqi games show the clock they were played at: every one was saved as untimed, so the review header, the database filter, profile game lists and exports read 5+5 and 3+2 games as "Untimed"; the 47 earlier games are corrected too ([46e599bb](https://github.com/brianhliou/mistboard/commit/46e599bb))
 - A broadcast round with no games yet keeps its game list and chat column, instead of the page shrinking to a narrower panel ([85c62f33](https://github.com/brianhliou/mistboard/commit/85c62f33))
 - Team league matches on broadcasts are scored the way the 2026 league plays them: a table counts once (its slow game, or the blitz playoff after a drawn one), and a level match is settled by its deciding game. Every match no longer claims a missing record, and the league table matches the official one ([a2035ec8](https://github.com/brianhliou/mistboard/commit/a2035ec8))
