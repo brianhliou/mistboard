@@ -327,9 +327,6 @@ const TERMINATION_KEYS: Record<string, I18nKey> = {
   race: 'replay.endRace',
   chasing: 'replay.endChasing',
   'dead-position': 'replay.endDeadPosition',
-  // Duck Xiangqi's and Jungle's names for the no-capture limit.
-  progress: 'replay.endProgressClock',
-  'no-progress': 'replay.endProgressClock',
   'den-entered': 'replay.endDenEntered',
   'pieces-captured': 'replay.endPiecesCaptured',
 };
