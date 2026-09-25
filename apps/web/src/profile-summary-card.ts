@@ -3,11 +3,12 @@
 // one renderer contract; sizing/positioning belong to the host.
 
 import './profile-summary-card.css';
-import { maybeGameSpecForId, type RatingVariant } from '@mistboard/game';
+import type { RatingVariant } from '@mistboard/game';
 import { bindBotPlayControl } from './bot-play.js';
 import { openChallengeDialog } from './challenge-dialog.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { buildFlairIconIfSet } from './flair.js';
+import { variantDisplayLabel } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, LOCALE_META, type Locale } from './i18n/locale.js';
 import { buildTitleBadge } from './player-titles.js';
@@ -83,12 +84,6 @@ export type BotSummaryProfile = {
 // How many rated variants the compact grid shows before it stops (a hover card
 // should not grow into a full ratings rail). Highest-rated first.
 const MAX_RATING_TILES = 6;
-const GAME_SPEC_LABEL_KEYS: Record<string, I18nKey> = {
-  'dark-chess': 'variant.darkChess.name',
-  jieqi: 'variant.jieqi.name',
-  banqi: 'variant.banqi.name',
-  'fortress-xiangqi': 'variant.fortressXiangqi.name',
-};
 
 // ── card body ───────────────────────────────────────────────────────────────
 
@@ -112,22 +107,44 @@ export function buildUserCard(
   return card;
 }
 
-export function buildBotSummaryCard(profile: BotSummaryProfile): HTMLElement {
+// What a host page can say about a bot that the bot's own record cannot: the
+// /bots directory names a ladder rung "Level 2" rather than by its engine, marks
+// where a newcomer starts, and leads with one playable game. The hover popover
+// passes nothing and renders the record as it is.
+export type BotCardOptions = {
+  name?: string;
+  subtitle?: string;
+  badge?: string;
+  /** Replaces the stored bio; null drops it. The stored bio is English-only. */
+  bio?: string | null;
+  /** Show only this variant's rating, labeled with the variant, instead of the grid. */
+  ratingGameSpecId?: string;
+  /** This variant's chip reads "Play <variant>" and leads the row as the primary action. */
+  primaryPlayGameSpecId?: string;
+};
+
+export function buildBotSummaryCard(
+  profile: BotSummaryProfile,
+  options: BotCardOptions = {},
+): HTMLElement {
   const card = buildCardShell('bot');
   card.dataset.botId = profile.id;
-  card.append(buildBotHeader(profile));
+  card.append(buildBotHeader(profile, options));
 
-  if (profile.bio.trim()) {
+  const bioText = options.bio === undefined ? profile.bio : options.bio;
+  if (bioText?.trim()) {
     const bio = document.createElement('p');
     bio.className = 'profile-summary-card-bio';
-    bio.textContent = profile.bio;
+    bio.textContent = bioText;
     card.append(bio);
   }
 
-  const ratings = buildBotRatingGrid(profile);
+  const ratings = options.ratingGameSpecId
+    ? buildBotSingleRating(profile, options.ratingGameSpecId)
+    : buildBotRatingGrid(profile);
   if (ratings) card.append(ratings);
 
-  const actions = buildBotActions(profile);
+  const actions = buildBotActions(profile, options.primaryPlayGameSpecId);
   if (actions) card.append(actions);
   card.append(buildBotFooter(profile));
   return card;
@@ -189,7 +206,7 @@ function buildHeader(
   return header;
 }
 
-function buildBotHeader(profile: BotSummaryProfile): HTMLElement {
+function buildBotHeader(profile: BotSummaryProfile, options: BotCardOptions): HTMLElement {
   const header = document.createElement('div');
   header.className = 'profile-summary-card-header';
 
@@ -210,17 +227,38 @@ function buildBotHeader(profile: BotSummaryProfile): HTMLElement {
   const name = document.createElement('a');
   name.className = 'profile-summary-card-name';
   name.href = `/bot/${encodeURIComponent(profile.id)}`;
-  name.textContent = profile.displayName;
+  name.textContent = options.name ?? profile.displayName;
   const owner = document.createElement('span');
   owner.className = 'profile-summary-card-subtitle';
-  owner.textContent = profile.ownerType === 'system' ? 'First-party bot' : 'Community bot';
+  owner.textContent =
+    options.subtitle ?? (profile.ownerType === 'system' ? 'First-party bot' : 'Community bot');
   identity.append(name, owner);
 
   const badge = document.createElement('span');
   badge.className = 'profile-summary-card-badge';
-  badge.textContent = t('watch.botBadge');
+  if (options.badge) badge.classList.add('profile-summary-card-badge-callout');
+  badge.textContent = options.badge ?? t('watch.botBadge');
   header.append(identity, badge);
   return header;
+}
+
+// One variant's rating, named: on a page about playing xiangqi, four bare
+// numbers beside four icons read as noise. The number is the engine ladder's
+// (random-legal = 1500), so the label says so rather than passing it off as a
+// player rating.
+function buildBotSingleRating(profile: BotSummaryProfile, gameSpecId: string): HTMLElement | null {
+  const rating = botRatings(profile).find((candidate) => candidate.gameSpecId === gameSpecId);
+  if (!rating) return null;
+  const line = document.createElement('p');
+  line.className = 'profile-summary-card-rating-line';
+  const value = document.createElement('span');
+  value.className = 'profile-summary-card-rating-value';
+  value.textContent = `${new Intl.NumberFormat().format(rating.rating)}${rating.provisional ? '?' : ''}`;
+  const label = document.createElement('span');
+  label.className = 'profile-summary-card-rating-label';
+  label.textContent = t('bots.engineRating', { variant: gameSpecLabel(gameSpecId) });
+  line.append(value, label);
+  return line;
 }
 
 const TIME_CLASS_LABELS: Record<'bullet' | 'blitz' | 'rapid', I18nKey> = {
@@ -300,20 +338,29 @@ function buildBotRatingGrid(profile: BotSummaryProfile): HTMLElement | null {
   return grid;
 }
 
-function buildBotActions(profile: BotSummaryProfile): HTMLElement | null {
+function buildBotActions(
+  profile: BotSummaryProfile,
+  primaryGameSpecId?: string,
+): HTMLElement | null {
   const options = botPlayOptions(profile);
   if (options.length === 0) return null;
+  const primary = options.find((option) => option.gameSpecId === primaryGameSpecId);
+  const ordered = primary ? [primary, ...options.filter((option) => option !== primary)] : options;
   const row = document.createElement('div');
   row.className = 'profile-summary-card-actions profile-summary-card-bot-actions';
-  for (const option of options) row.append(buildBotPlayControl(profile, option));
+  for (const option of ordered) {
+    row.append(buildBotPlayControl(profile, option, option === primary));
+  }
   return row;
 }
 
 function buildBotPlayControl(
   profile: BotSummaryProfile,
   option: BotSummaryPlayOption,
+  primary = false,
 ): HTMLElement {
-  const label = gameSpecLabel(option.gameSpecId);
+  const variant = gameSpecLabel(option.gameSpecId);
+  const label = primary ? t('bots.playVariant', { variant }) : variant;
   if (!option.playable) {
     const control = document.createElement('span');
     control.className = 'profile-summary-card-action profile-summary-card-action-unavailable';
@@ -325,6 +372,7 @@ function buildBotPlayControl(
   const control = document.createElement('button');
   control.type = 'button';
   control.className = 'profile-summary-card-action';
+  if (primary) control.classList.add('profile-summary-card-action-primary');
   control.textContent = label;
   bindBotPlayControl(
     control,
@@ -642,10 +690,11 @@ function botRatings(profile: BotSummaryProfile): BotSummaryRating[] {
       : [];
 }
 
+// The site's one catalog-name map. This file kept its own four-entry copy, so
+// xiangqi, duck, atomic, fog xiangqi and the jungles read in English on the
+// Chinese bot directory.
 function gameSpecLabel(gameSpecId: string): string {
-  const key = GAME_SPEC_LABEL_KEYS[gameSpecId];
-  if (key) return t(key);
-  return maybeGameSpecForId(gameSpecId)?.publicName ?? gameSpecId;
+  return variantDisplayLabel(gameSpecId);
 }
 
 function timeClassLabel(timeClass: BotSummaryRating['timeClass']): string {
@@ -653,7 +702,9 @@ function timeClassLabel(timeClass: BotSummaryRating['timeClass']): string {
 }
 
 function gameCountLabel(games: number): string {
-  return `${new Intl.NumberFormat().format(games)} ${games === 1 ? 'game' : 'games'}`;
+  return t(games === 1 ? 'bots.gameCountOne' : 'bots.gameCountMany', {
+    count: new Intl.NumberFormat().format(games),
+  });
 }
 
 function variantLabel(variant: RatingVariant): string {

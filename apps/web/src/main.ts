@@ -334,7 +334,9 @@ const wantsAccountsAdmin = path === '/accounts';
 const engineProfileId = path.startsWith('/engine/')
   ? decodeURIComponent(path.slice('/engine/'.length))
   : null;
-const wantsBots = path === '/bots';
+// Locale-prefixed too, the /zh-hans/videos shape: the prefix alone sets the
+// locale, so 象棋人机对战 has an indexable Chinese URL.
+const wantsBots = path === '/bots' || path === '/zh-hans/bots' || path === '/zh-hant/bots';
 const botProfileId = path.startsWith('/bot/')
   ? decodeURIComponent(path.slice('/bot/'.length))
   : null;

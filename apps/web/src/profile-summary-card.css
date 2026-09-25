@@ -212,3 +212,37 @@
   color: var(--site-muted);
   font-size: 0.78rem;
 }
+
+/* /bots: the rung's one playable game leads the row as a filled button, so it
+   reads as the action rather than one tag among the variant chips. */
+.profile-summary-card-action-primary {
+  flex: 2;
+  border-color: var(--site-accent);
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+}
+
+.profile-summary-card-action-primary:hover {
+  filter: brightness(1.08);
+}
+
+/* "Start here" / "Strongest" replaces the BOT badge: filled so the eye finds
+   where a newcomer begins. */
+.profile-summary-card-badge-callout {
+  background: var(--site-accent);
+  border-color: var(--site-accent);
+  color: var(--site-on-accent);
+}
+
+.profile-summary-card-rating-line {
+  display: flex;
+  align-items: baseline;
+  gap: 0.4rem;
+  margin: 0;
+  padding: 0.35rem 0.8rem;
+}
+
+.profile-summary-card-rating-label {
+  color: var(--site-muted, var(--site-text));
+  font-size: 0.78rem;
+}

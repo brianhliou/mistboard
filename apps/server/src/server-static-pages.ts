@@ -82,6 +82,29 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   // homepage title and description, which the note above forbids. Each
   // description is drawn from the page's own copy rather than written fresh,
   // so a search result cannot promise something the page does not say.
+  // The page for "play xiangqi against the computer" (象棋人机对战, 25K Bing
+  // impressions a quarter on 象棋ai alone, 2026-09-20 demand read). It served
+  // the homepage title until 2026-09-25, and had no Chinese URL.
+  '/bots': {
+    title: 'Play Xiangqi Against the Computer · 8 Levels and Pikafish | Mistboard',
+    description:
+      'Play Chinese chess (xiangqi) against the computer: eight levels from beginner to strong, with Pikafish at the top. Free, in the browser, no account needed.',
+    localeGroup: '/bots',
+  },
+  '/zh-hans/bots': {
+    title: '象棋人机对战 · 八个等级与皮卡鱼 | Mistboard',
+    description:
+      '和电脑下象棋：八个难度等级，从入门到很强，最强的对手是皮卡鱼。免费网页版，无需下载，无需注册。',
+    htmlLang: 'zh-Hans',
+    localeGroup: '/bots',
+  },
+  '/zh-hant/bots': {
+    title: '象棋人機對戰 · 八個等級與皮卡魚 | Mistboard',
+    description:
+      '和電腦下象棋：八個難度等級，從入門到很強，最強的對手是皮卡魚。免費網頁版，無需下載，無需註冊。',
+    htmlLang: 'zh-Hant',
+    localeGroup: '/bots',
+  },
   '/about': {
     title: 'About Mistboard | Chinese Chess (Xiangqi) in English',
     description:
@@ -832,6 +855,9 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/videos',
   '/zh-hans/videos',
   '/zh-hant/videos',
+  '/bots',
+  '/zh-hans/bots',
+  '/zh-hant/bots',
   '/streamer',
   '/player',
   '/player/rating-stats',

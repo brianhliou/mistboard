@@ -229,7 +229,10 @@ function isContentPath(pathname: string): boolean {
     pathname.startsWith('/rules/') ||
     pathname === '/blog' ||
     pathname.startsWith('/blog/') ||
-    pathname === '/learn/xiangqi'
+    pathname === '/learn/xiangqi' ||
+    // 象棋人机对战: the bot directory has Chinese URLs, so a link or the
+    // language switcher on it lands a Chinese reader on /zh-hans/bots.
+    pathname === '/bots'
   );
 }
 

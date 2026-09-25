@@ -126,42 +126,66 @@ describe('bot pages', () => {
     vi.restoreAllMocks();
   });
 
-  it('renders featured and Fairy-Stockfish opponents with one uniform card UI', async () => {
+  // The page is for "play xiangqi against the computer": the ladder leads, named
+  // by level, Pikafish is its top rung, the first-timer level says Start here,
+  // and Misty (no xiangqi) follows under Other games.
+  it('leads with the xiangqi ladder by level, Pikafish on top, Misty after', async () => {
     vi.spyOn(globalThis, 'fetch').mockResolvedValue(jsonResponse(rosterPayload()));
     const root = document.createElement('div');
     const { mountBots } = await import('./bots.js');
 
     await mountBots(root);
 
+    expect(root.querySelector('h1')?.textContent).toBe('Play xiangqi against the computer');
+    expect(document.title).toBe('Play Xiangqi Against the Computer · Mistboard');
     expect(
       [...root.querySelectorAll('.bot-roster-section h2')].map((el) => el.textContent),
-    ).toEqual(['Featured opponents', 'Fairy-Stockfish ladder']);
+    ).toEqual(['Xiangqi, level by level', 'Other games']);
     // Community rail is shared with /player; Online bots is the active entry.
     expect(root.querySelector('.community-rail a[aria-current="page"]')?.textContent).toBe(
       'Online bots',
     );
 
-    const featuredNames = [
-      ...root.querySelectorAll(
-        '.bot-roster-section:first-of-type .profile-summary-card .profile-summary-card-name',
-      ),
-    ].map((el) => el.textContent);
-    expect(featuredNames).toEqual(['Misty', 'Pikafish']);
-    expect(
-      root.querySelector<HTMLAnchorElement>('.profile-summary-card .profile-summary-card-name')
-        ?.href,
-    ).toContain('/bot/misty');
-    expect(root.textContent).toContain('Searches hidden positions');
-    expect(root.querySelector('.profile-summary-card-rating-value')?.textContent).toBe('1,812');
-    expect(root.querySelector('.profile-summary-card-footer')?.textContent).toContain('12 games');
+    const sectionNames = (index: number) =>
+      [
+        ...root.querySelectorAll(
+          `.bot-roster-section:nth-of-type(${index}) .profile-summary-card .profile-summary-card-name`,
+        ),
+      ].map((el) => el.textContent);
+    expect(sectionNames(1)).toEqual([
+      ...[1, 2, 3, 4, 5, 6, 7, 8].map((level) => `Level ${level}`),
+      'Pikafish',
+    ]);
+    expect(sectionNames(2)).toEqual(['Misty']);
+    // The stored bios are English-only; the page carries its own localized lines.
+    expect(root.textContent).toContain("Mistboard's own engine for fog chess");
+    expect(root.textContent).not.toContain('Searches hidden positions');
+    const mistyCard = root.querySelector('.profile-summary-card[data-bot-id="misty"]');
+    expect(mistyCard?.querySelector('.profile-summary-card-rating-value')?.textContent).toBe(
+      '1,812',
+    );
+    expect(mistyCard?.querySelector('.profile-summary-card-footer')?.textContent).toContain(
+      '12 games',
+    );
+
+    const badge = (botId: string) =>
+      root.querySelector(
+        `.profile-summary-card[data-bot-id="${botId}"] .profile-summary-card-badge`,
+      )?.textContent;
+    expect(badge('fairy-stockfish-level-2')).toBe('Start here');
+    expect(badge('fairy-stockfish-level-1')).toBe('BOT');
+    expect(badge('pikafish')).toBe('Strongest');
+    // Each rung leads with one filled Play xiangqi button.
+    const primary = root.querySelector(
+      '.profile-summary-card[data-bot-id="fairy-stockfish-level-1"] .profile-summary-card-action',
+    );
+    expect(primary?.textContent).toBe('Play Xiangqi');
+    expect(primary?.classList.contains('profile-summary-card-action-primary')).toBe(true);
 
     const ladderCards = [
       ...root.querySelectorAll('.profile-summary-card[data-bot-id^="fairy-stockfish-level-"]'),
     ];
     expect(ladderCards).toHaveLength(8);
-    expect(
-      ladderCards.map((card) => card.querySelector('.profile-summary-card-name')?.textContent),
-    ).toEqual([1, 2, 3, 4, 5, 6, 7, 8].map((level) => `Fairy-Stockfish Level ${level}`));
     expect(
       ladderCards.map((card) =>
         card.querySelector<HTMLAnchorElement>('.profile-summary-card-name')?.getAttribute('href'),
@@ -170,7 +194,7 @@ describe('bot pages', () => {
     for (const card of ladderCards) {
       expect(card.getAttribute('data-subject-kind')).toBe('bot');
       expect(card.querySelector('.profile-summary-card-avatar')).not.toBeNull();
-      expect(card.querySelector('.profile-summary-card-bio')).not.toBeNull();
+      expect(card.querySelector('.profile-summary-card-bio')).toBeNull();
       expect(card.querySelector('.profile-summary-card-actions')).not.toBeNull();
       expect(card.querySelector('.profile-summary-card-footer')).not.toBeNull();
     }

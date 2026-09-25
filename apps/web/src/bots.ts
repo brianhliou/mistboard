@@ -10,6 +10,7 @@ import './bots.css';
 import { bindBotPlayControl } from './bot-play.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
+import { XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
 import { buildBotSummaryCard } from './profile-summary-card.js';
 import {
   buildProfileDashboard,
@@ -81,9 +82,14 @@ class BotNotFound extends Error {}
 
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 
+// /bots is the page for "play xiangqi against the computer" (象棋人机对战), in
+// all three interface languages (/zh-hans/bots, /zh-hant/bots): the heading
+// says what a searcher typed, and the ladder comes first because that is what
+// they came to play.
 export async function mountBots(root: HTMLElement): Promise<void> {
   root.replaceChildren();
   root.classList.add('landing-page', 'bots-route');
+  document.title = t('bots.pageTitle');
 
   const shell = document.createElement('main');
   shell.className = 'site-section community-shell bots-shell';
@@ -95,23 +101,22 @@ export async function mountBots(root: HTMLElement): Promise<void> {
 
   const eyebrow = document.createElement('span');
   eyebrow.className = 'account-eyebrow';
-  eyebrow.textContent = 'Play against the computer';
+  eyebrow.textContent = t('bots.eyebrow');
 
   const heading = document.createElement('h1');
   heading.className = 'site-section-heading';
-  heading.textContent = 'Choose your opponent';
+  heading.textContent = t('bots.heading');
 
   const sub = document.createElement('p');
   sub.className = 'bots-sub';
-  sub.textContent =
-    'Meet every engine, compare strength, or jump straight into a game. Every bot has a full public profile.';
+  sub.textContent = t('bots.sub');
 
   const meta = document.createElement('div');
   meta.className = 'bots-directory-meta';
   meta.append(
-    buildDirectoryMeta('Public profiles'),
-    buildDirectoryMeta('One-click play'),
-    buildDirectoryMeta('Eight strength levels'),
+    buildDirectoryMeta(t('bots.metaFree')),
+    buildDirectoryMeta(t('bots.metaNoAccount')),
+    buildDirectoryMeta(t('bots.metaLevels')),
   );
   headerCopy.append(eyebrow, heading, sub, meta);
 
@@ -130,7 +135,7 @@ export async function mountBots(root: HTMLElement): Promise<void> {
 
   const body = document.createElement('section');
   body.className = 'bots-directory';
-  body.append(statusLine('Loading bots...'));
+  body.append(statusLine(t('bots.loading')));
 
   const content = document.createElement('div');
   content.className = 'bots-main';
@@ -143,12 +148,12 @@ export async function mountBots(root: HTMLElement): Promise<void> {
   try {
     bots = await fetchBots();
   } catch {
-    body.replaceChildren(buildNotice('Bots unavailable', 'The bot directory could not load.'));
+    body.replaceChildren(buildNotice(t('bots.unavailableTitle'), t('bots.unavailableBody')));
     return;
   }
 
   if (bots.length === 0) {
-    body.replaceChildren(statusLine('No bots available.'));
+    body.replaceChildren(statusLine(t('bots.none')));
     return;
   }
 
@@ -241,32 +246,75 @@ async function fetchBotProfile(botId: string): Promise<BotProfile> {
 
 // ── Directory ───────────────────────────────────────────────────────────────
 
+// The xiangqi ladder leads, level 1 to 8 and then every other system bot that
+// plays xiangqi (Pikafish) as the top rung. Each rung is named by its level,
+// shows its one xiangqi rating, and leads with "Play xiangqi"; the level a
+// first-timer is given (XIANGQI_FIRST_GAME_LEVEL) says "Start here". Bots that
+// do not play xiangqi (Misty) follow under Other games.
 function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
   const system = bots.filter((bot) => bot.ownerType === 'system');
   const ladder = system
     .filter((bot) => bot.id.startsWith(LADDER_BOT_ID_PREFIX))
     .sort((a, b) => ladderLevel(a) - ladderLevel(b));
-  const featured = system.filter((bot) => !bot.id.startsWith(LADDER_BOT_ID_PREFIX));
+  const others = system.filter((bot) => !bot.id.startsWith(LADDER_BOT_ID_PREFIX));
+  const topRungs = others.filter((bot) => playsXiangqi(bot));
+  const otherGames = others.filter((bot) => !playsXiangqi(bot));
   const community = bots.filter((bot) => bot.ownerType === 'user');
+  const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
 
   const groups: BotRosterGroup[] = [
     {
-      title: 'Featured opponents',
-      intro: 'Distinct engines with their own styles and variant specialties.',
-      rows: featured.map(buildBotSummaryCard),
+      title: t('bots.ladderTitle'),
+      intro: t('bots.ladderIntro'),
+      rows: [
+        ...ladder.map((bot) => {
+          const level = ladderLevel(bot);
+          return buildBotSummaryCard(bot, {
+            ...xiangqiCard,
+            name: t('bots.levelName', { level }),
+            subtitle: t('bots.ladderSubtitle'),
+            badge: level === XIANGQI_FIRST_GAME_LEVEL ? t('bots.startHere') : undefined,
+            // The stored bio restates the level and lists the games the chips
+            // already name, in English on every locale.
+            bio: null,
+          });
+        }),
+        ...topRungs.map((bot) =>
+          buildBotSummaryCard(bot, {
+            ...xiangqiCard,
+            badge: t('bots.strongest'),
+            subtitle: t('bots.firstParty'),
+            bio: systemBotBio(bot),
+          }),
+        ),
+      ],
     },
     {
-      title: 'Fairy-Stockfish ladder',
-      intro: 'Pick a level that feels competitive, then move up when you are ready.',
-      rows: ladder.map(buildBotSummaryCard),
+      title: t('bots.otherTitle'),
+      intro: t('bots.otherIntro'),
+      rows: otherGames.map((bot) =>
+        buildBotSummaryCard(bot, { subtitle: t('bots.firstParty'), bio: systemBotBio(bot) }),
+      ),
     },
     {
-      title: 'Community bots',
-      intro: 'Engines shared by the Mistboard community.',
-      rows: community.map(buildBotSummaryCard),
+      title: t('bots.communityTitle'),
+      intro: t('bots.communityIntro'),
+      rows: community.map((bot) => buildBotSummaryCard(bot)),
     },
   ];
   return groups.filter((group) => group.rows.length > 0).map(buildRosterSection);
+}
+
+// A localized one-liner for the named system bots; any other keeps its stored
+// bio (undefined leaves the card's default in place).
+function systemBotBio(bot: BotProfile): string | undefined {
+  if (bot.id === 'pikafish') return t('bots.pikafishBio');
+  if (bot.id === 'misty') return t('bots.mistyBio');
+  return undefined;
+}
+
+function playsXiangqi(bot: BotProfile): boolean {
+  return playOptionsFor(bot).some((option) => option.gameSpecId === 'xiangqi' && option.playable);
 }
 
 type BotRosterGroup = {
@@ -299,7 +347,9 @@ function buildRosterSection(group: BotRosterGroup): HTMLElement {
 
   const count = document.createElement('span');
   count.className = 'bot-roster-count';
-  count.textContent = `${group.rows.length} ${group.rows.length === 1 ? 'bot' : 'bots'}`;
+  count.textContent = t(group.rows.length === 1 ? 'bots.countOne' : 'bots.countMany', {
+    count: group.rows.length,
+  });
 
   header.append(headerCopy, count);
 

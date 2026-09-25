@@ -386,6 +386,8 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/accounts' ||
     normalized === '/readouts' ||
     normalized === '/bots' ||
+    normalized === '/zh-hans/bots' ||
+    normalized === '/zh-hant/bots' ||
     normalized === '/blog' ||
     normalized === '/zh-hans/blog' ||
     normalized === '/zh-hant/blog' ||

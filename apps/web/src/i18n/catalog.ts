@@ -91,6 +91,7 @@ const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
       'streamer',
       'challenge',
       'forum',
+      'bots',
     ],
     english: EN_COMMUNITY,
     critical: CRITICAL_COMMUNITY_I18N_KEYS,
