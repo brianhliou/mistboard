@@ -17,7 +17,7 @@ import {
   renderHomePuzzleWidget,
 } from './home-puzzle-widget.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, localizedHref } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { buildLandingActivity } from './landing-activity.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { buildLandingChat } from './landing-chat.js';
@@ -655,9 +655,35 @@ function buildLandingStage(
   // event spotlight sits at the column's bottom edge, level with the panel's
   // bottom, so an event never moves the page's one conversion element.
   // Broadcast rows arrive from the API; the slot collapses until they do.
+  // One line under the tagline that answers what a 象棋在线 / "xiangqi online"
+  // searcher checks first: is it the web version, is it free, can I play the
+  // computer. The tagline says who the site is for; this says what it does.
+  // Each phrase is its own no-wrap span, so a narrow rail breaks between
+  // phrases (after a ·) and never inside one.
+  const playSummary = document.createElement('p');
+  playSummary.className = 'landing-play-summary';
+  t('home.playSummary', {}, locale)
+    .split(' · ')
+    .forEach((phrase, index) => {
+      if (index > 0) {
+        const sep = document.createElement('span');
+        sep.className = 'landing-play-summary-sep';
+        sep.textContent = '·';
+        playSummary.append(sep);
+      }
+      const span = document.createElement('span');
+      span.className = 'landing-play-summary-phrase';
+      span.textContent = phrase;
+      playSummary.append(span);
+    });
+  // Tagline and summary read as one unit, tighter to each other than to the
+  // button below.
+  const playIntro = document.createElement('div');
+  playIntro.className = 'landing-play-intro';
+  playIntro.append(about, playSummary);
   const playCenter = document.createElement('div');
   playCenter.className = 'landing-play-center';
-  playCenter.append(about, playStack);
+  playCenter.append(playIntro, playStack);
   const eventBanners = buildLandingEventBanners();
   void loadBroadcastBanners(eventBanners, locale);
   const playColumn = document.createElement('div');
@@ -779,8 +805,42 @@ function buildLandingStage(
 
   // The footer lives only on the homepage now (stripped from interior routes),
   // blended into the bottom of the stage rather than rendered as a separate bar.
-  stage.append(section, buildHomeFooter(locale));
+  stage.append(section, buildHomePlayFaq(locale), buildHomeFooter(locale));
   return { el: stage, replayRoot, caption, viewerLink, applyEngines };
+}
+
+// The questions people type before they play (网页版, 需要下载吗, 人机对战,
+// 和朋友下; the 2026-09-20 demand read), answered where the prerender bakes
+// them, so the home page carries text a crawler can rank beside the lobby.
+function buildHomePlayFaq(locale: Locale): HTMLElement {
+  const faq = document.createElement('section');
+  faq.className = 'site-box landing-play-faq';
+  const title = document.createElement('h2');
+  title.className = 'site-box-title';
+  title.textContent = t('home.faqTitle', {}, locale);
+  faq.append(title);
+  const pairs = [
+    ['home.faqQ1', 'home.faqA1'],
+    ['home.faqQ2', 'home.faqA2'],
+    ['home.faqQ3', 'home.faqA3'],
+    ['home.faqQ4', 'home.faqA4'],
+    ['home.faqQ5', 'home.faqA5'],
+    ['home.faqQ6', 'home.faqA6'],
+  ] as const;
+  for (const [questionKey, answerKey] of pairs) {
+    const question = document.createElement('h3');
+    question.textContent = t(questionKey, {}, locale);
+    const answer = document.createElement('p');
+    answer.textContent = t(answerKey, {}, locale);
+    if (answerKey === 'home.faqA3') {
+      const link = document.createElement('a');
+      link.href = localizedHref('/bots', locale);
+      link.textContent = t('home.faqBotsLink', {}, locale);
+      answer.append(' ', link);
+    }
+    faq.append(question, answer);
+  }
+  return faq;
 }
 
 // Build-time static render of the homepage (nav + stage), baked by the prerender

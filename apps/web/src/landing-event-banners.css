@@ -1,9 +1,11 @@
 /* Homepage event banners: big tappable spotlight rows under the activity stats
    in the play column (PlayStrategy-style). The slot collapses entirely when no
    event is on. */
+/* A grid of equal rows, so a title that wraps to two lines does not leave its
+   neighbour a shorter card. */
 .landing-event-banners {
-  display: flex;
-  flex-direction: column;
+  display: grid;
+  grid-auto-rows: 1fr;
   gap: 8px;
   width: 100%;
   min-width: 0;

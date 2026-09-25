@@ -268,10 +268,12 @@
   min-width: 0;
 }
 
-/* Play column (band 1, right): tagline, the single Play button, activity stats,
-   centred against the lobby panel inside .landing-play-center (which takes the
-   column's free height); the event spotlight, when there is one, sits at the
-   column's bottom edge (2026-09-20). */
+/* Play column (band 1, right): tagline and summary, the single Play button and
+   the activity stats top-aligned with the lobby panel on one gap; the event
+   spotlight pinned to the column's bottom edge, level with the panel's bottom,
+   so an event never moves the Play button. The top group used to centre against
+   the panel, which with the summary line added left four different gaps down
+   the rail (2026-09-25). */
 .landing-play-column {
   grid-area: play;
   display: flex;
@@ -281,11 +283,15 @@
   min-width: 0;
 }
 
+.landing-play-column > .landing-event-banners {
+  margin-top: auto;
+}
+
 .landing-play-center {
   display: flex;
-  flex: 1 1 auto;
+  flex: 0 0 auto;
   flex-direction: column;
-  justify-content: center;
+  justify-content: flex-start;
   gap: clamp(12px, 1.6vw, 18px);
   min-width: 0;
 }
@@ -2642,4 +2648,51 @@
   .showcase-reserve.drop-mini-reserve-strip--all-roles
   .drop-mini-reserve-piece.is-empty {
   opacity: 0.24;
+}
+
+.landing-play-intro {
+  display: flex;
+  flex-direction: column;
+  gap: 8px;
+}
+
+.landing-play-intro .landing-about {
+  margin: 0;
+}
+
+.landing-play-summary {
+  display: flex;
+  flex-wrap: wrap;
+  column-gap: 0;
+  row-gap: 2px;
+  margin: 0;
+  font-size: 14px;
+  line-height: 1.45;
+  color: var(--site-muted, var(--site-text));
+}
+
+.landing-play-summary-phrase {
+  white-space: nowrap;
+}
+
+.landing-play-summary-sep {
+  padding: 0 0.45em;
+}
+
+.landing-play-faq {
+  max-width: 1100px;
+  margin: 24px auto 0;
+  padding: 16px 20px;
+}
+
+.landing-play-faq h3 {
+  margin: 14px 0 4px;
+  font-size: 15px;
+  color: var(--site-heading);
+}
+
+.landing-play-faq p {
+  margin: 0;
+  line-height: 1.55;
+  color: var(--site-muted, var(--site-text));
 }
