@@ -210,15 +210,12 @@ export const xiangqiArticle: Article = {
               'To see the pieces work together, step through a famous trap from a manual printed in 1632. Red gives up a horse; when Black grabs it, Red\'s chariots and cannons pour through the gap and checkmate on the thirteenth move.',
           },
           {
-            kind: 'xq-replay',
-            spec: {
-              iccs: 'h2e2 h7e7 h0g2 h9g7 i0i1 i9h9 i1d1 h9h3 d1d8 b9a7 a0a1 b7b0 b2b7 g7h9 e2e6 f9e8 a1d1 e9f9 d8d9 e8d9 d1f1 e7f7 f1f7 f9e9 b7e7',
-              red: 'Red',
-              black: 'Black',
-              title: 'Sacrifice the Horse in 13',
-              event: 'Classic manual, 1632',
-              resultText: 'Checkmate on move 13. Red\'s paired cannons pin the general on the open central file.',
-            },
+            kind: 'embed',
+            path: '/embed/study/dpz2AiXD/47mvlshL',
+            title: 'Xiangqi: Sacrifice the Horse in 13, from a manual printed in 1632',
+            // Width-bound at the 702px column: the 9x10 board beside the SAN
+            // move sheet, plus seat rows, controls, header and credit.
+            aspect: [702, 600],
           } as ArticleBlock,
         ],
       },

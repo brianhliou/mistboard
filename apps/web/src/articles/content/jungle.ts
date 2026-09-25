@@ -1,4 +1,3 @@
-import { JUNGLE_SAMPLE_GAME } from '../../jungle-sample-game.js';
 import {
   JUNGLE_DEN_ENTRY,
   JUNGLE_ELEPHANT_STUCK,
@@ -18,7 +17,7 @@ import {
   JUNGLE_TRAP,
   playClosing,
 } from '../diagrams.js';
-import type { Article } from '../types.js';
+import type { Article, ArticleBlock } from '../types.js';
 
 export const jungleArticle: Article = {
   slug: 'jungle',
@@ -204,18 +203,19 @@ export const jungleArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'This engine game shows a lion leap, a rat swim and capture an elephant, and the final entry into Blue’s den.',
+          text: 'An engine game from a 200-game match between KataGo-AnimalChess (Red) and Mistboard’s own engine (Blue), and it uses nearly every rule on this page. Blue’s tiger jumps the left river sideways on move 11, and its lion jumps the right one on move 13. On move 38 Red’s lion jumps the river lengthwise, and on move 40 Red’s rat, standing on land, takes Blue’s elephant. Three moves later a wolf takes a tiger standing in Red’s own trap, where it has no rank left, and on move 47 Red walks into Blue’s den.',
         },
         {
-          kind: 'jungle-replay',
-          spec: {
-            red: JUNGLE_SAMPLE_GAME.red,
-            black: JUNGLE_SAMPLE_GAME.black,
-            event: JUNGLE_SAMPLE_GAME.event,
-            outcome: JUNGLE_SAMPLE_GAME.outcome,
-            resultText: JUNGLE_SAMPLE_GAME.result,
-            moves: JUNGLE_SAMPLE_GAME.moves,
-          },
+          kind: 'embed',
+          path: '/embed/study/0t8xpyv6/QMMg2Yz8',
+          title: 'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry',
+          // Width-bound at the 702px column: the 7x9 board gets the column
+          // minus the move sheet, plus seat rows, controls, header and credit.
+          aspect: [702, 780],
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'All 200 games are in the [companion study](/study/0t8xpyv6), with the sideways tiger jumps and the shortest and longest wins picked out first.',
         },
       ],
     },
@@ -275,6 +275,7 @@ export const jungleArticle: Article = {
           href: '/?play=friend&gameSpecId=jungle',
           emphasis: 'secondary',
         },
+        { label: 'The 200 engine games', href: '/study/0t8xpyv6', emphasis: 'secondary' },
       ],
     }),
   ],

@@ -188,16 +188,12 @@ export const fortressXiangqiArticle: Article = {
           text: 'This engine game shows both new rules at work. Three soldiers cross the river and gain their sideways step, and on move 23 Red drops its captured Treasure on d1, back inside its own half, because that is the only half it may enter.',
         },
         {
-          kind: 'fortress-xiangqi-replay',
-          spec: {
-            red: 'Fairy-Stockfish',
-            black: 'Fairy-Stockfish',
-            event: 'Engine self-play · 2.5 s per move',
-            moves:
-              'd1b3 c8c6 e1d1 a7a6 f2f3 a6a5 f3f4 a5a4 f1e3 a8a5 f4f5 a5c5 d1f1 c5c3 f5g5 d8f6 e3f5 c6b6 f5d4 d7d6 g5f5 d6d5 d4b5 c3c5 f5f6 c5b5 f6e6 N@f4 E@d1 d5d4 e6d6 b5c5 g2g3 f7f6 d6e6 g8f7 e6f6 f7f6 f1f6 P@c2 d1f3 d4d3 d2d3 f4d3 T@d1 P@c3 P@a5 c5a5 d1c2 c3c2 P@d2 c2d2 f6d6 P@c2 g1f1 a5c5 d6d2 c2d2 P@b5 c5b5 P@a6 b6b3 b2b3 d2c2 a1b2 c2b2 c1b2 P@c2 f3d1 P@f2 b1a1 c2b2 f1f2 d3f2 C@f1 f2d1 P@f6 e8f7 f6f7 f8f7 A@b1 C@e1 P@c1 d1c3 f1f6 b2b1',
-            resultText:
-              'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.',
-          },
+          kind: 'embed',
+          path: '/embed/study/NUVBVjFf/qh5eSTC9',
+          title: 'Fortress Xiangqi: an engine game, Black mates on move 43',
+          // Width-bound at the 702px column: the board plus both hands (two rows
+          // of seven drop slots), seat rows, controls, header and credit.
+          aspect: [702, 826],
         } as ArticleBlock,
         {
           kind: 'paragraph',
@@ -215,7 +211,7 @@ export const fortressXiangqiArticle: Article = {
           label: 'Challenge a friend',
           href: '/?play=friend&gameSpecId=fortress-xiangqi',
           emphasis: 'secondary',
-        },
+        },        { label: 'Twenty engine games', href: '/study/NUVBVjFf', emphasis: 'secondary' },
       ],
     }),
   ],

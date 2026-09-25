@@ -272,6 +272,27 @@ export const darkChessArticle: Article = {
         ],
       },
       {
+        heading: 'An engine game',
+        blocks: [
+          {
+            kind: 'paragraph',
+            text: 'Misty against itself at 30 seconds a move, shown with the whole board visible. Black wins White’s queen for a rook on move 10, but on move 27 White’s rook lands on e8 and Black’s king steps to d8 beside it. Fog chess has no check to warn it, and 28.Rxd8 captures the king.',
+          },
+          {
+            kind: 'embed',
+            path: '/embed/study/MbaW80XR/GMg6Qz89',
+            title: 'Fog Chess: Misty against itself, White captures the king on move 28',
+            // Width-bound at the 702px column: the 8x8 board gets the column
+            // minus the move sheet, plus seat rows, controls, header and credit.
+            aspect: [702, 645],
+          } as ArticleBlock,
+          {
+            kind: 'paragraph',
+            text: 'The [companion study](/study/MbaW80XR) has eleven of these games, and shows each side’s fogged view move by move.',
+          },
+        ],
+      },
+      {
         heading: 'Common questions',
         blocks: [
           {
@@ -297,6 +318,7 @@ export const darkChessArticle: Article = {
             href: '/?play=friend&gameSpecId=dark-chess',
             emphasis: 'secondary',
           },
+          { label: 'Eleven engine games', href: '/study/MbaW80XR', emphasis: 'secondary' },
         ],
       }),
     ],

@@ -245,18 +245,9 @@ const ZH_HANS: Record<string, string> = {
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
-  'World Championship Game 11, Sochi 2014': '世界冠军赛第 11 局，2014 年索契',
-  'Anand resigns. Carlsen (White) wins the match.': '阿南德认输。卡尔森（白方）赢得这场比赛。',
-  'Sacrifice the Horse in 13': '弃马十三着',
-  'Classic manual, 1632': '古谱，1632 年',
-  "Checkmate on move 13. Red's paired cannons pin the general on the open central file.":
-    '第 13 回合将死。红方双炮沿着打通的中路把将困死。',
   'PikaJieQi self-play': 'PikaJieQi 自对弈',
   'Red works through the reveals and delivers checkmate on move 36.':
     '红方在一次次揭子中推进，第 36 回合将死。',
-  'Engine self-play · 2.5 s per move': '引擎自对弈 · 每步 2.5 秒',
-  'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.':
-    '黑方第 43 回合以兵到 b1 将死，正是第 4 回合过河的那个兵。红帅无处可走：己方的兵挡住 a2，而 b1 和 b2 都在黑方控制之下。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Machine-drafted, not native-reviewed, per the standing decision above.
   // Terms are taken from what this site already publishes rather than invented:
@@ -898,8 +889,6 @@ const ZH_HANS: Record<string, string> = {
     '通常的将军规则依然适用：走子后不能让己方将帅受到攻击，被将军时必须应对。将死对方，或让对方无合法走法，即可获胜。将帅对脸规则仍然有效，暗子也和其他棋子一样会挡住纵线。',
   'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture. Repeated positions do not trigger a separate automatic draw.':
     '连续 120 个半回合，也就是双方各走 60 步而没有吃子时，Mistboard 自动判和。重复局面不会另外触发自动和棋。',
-  'Step through a self-play game. Dark pieces appear as colored backs and reveal their identity the first time they move. Red wins by checkmate.':
-    '逐步查看一盘自我对弈。暗子以彩色背面显示，第一次走动时翻明身份。红方以将死获胜。',
   Turns: '回合',
   'Capture by rank': '按等级吃子',
   'The cannon': '炮',
@@ -938,8 +927,6 @@ const ZH_HANS: Record<string, string> = {
     '任何一枚棋子走进敌方兽穴、吃光敌方所有棋子，或让对手无合法着法，你都立即获胜。棋子不能走进己方兽穴。',
   'Games draw on threefold repetition, or when 100 half-moves (50 by each player) pass with no capture.':
     '若同一局面出现三次，或连续 100 个半回合（每方 50 步）无吃子，则判和。',
-  'This engine game shows a lion leap, a rat swim and capture an elephant, and the final entry into Blue’s den.':
-    '这盘引擎对局展示狮子跳河、老鼠游水并吃掉大象，以及最后进入蓝方兽穴。',
   'One of each animal in two colors is shuffled and placed face-down on the sixteen squares. Nobody knows what is under a tile until it is flipped. The first tile the first player flips sets that player’s color; the other player takes the other color.':
     '两种颜色各一套八种动物，洗匀后背面朝上放在十六个格子里。在翻开之前，谁也不知道棋子下面是什么。先行者翻开的第一枚棋子决定其颜色，另一位玩家执另一色。',
   'On your turn, do one thing: flip one face-down tile, or move one of your revealed animals one square up, down, left, or right. Face-down tiles block movement and cannot be captured. You cannot pass.':
@@ -957,19 +944,9 @@ const ZH_HANS: Record<string, string> = {
     '若同一局面出现三次，或连续 40 个半回合（每方 20 步）没有翻棋、吃子或同归于尽，则判和。',
   'Mistboard also ends a fully revealed, one-animal-each position when neither side can force a win. Equal ranks are always dead because any meeting removes both; some unequal-rank chases are also unwinnable. These positions are drawn immediately.':
     '当棋子全部翻开、双方各剩一只动物且谁也无法强制获胜时，Mistboard 也会结束对局。同级棋子必为死局，因为相遇会双双离场；某些不同等级的追逐也无法取胜。这些局面立即判和。',
-  'This engine game shows two equal-rank trades: first the Lions, then the Elephants. Blue wins after Red’s last animal leaves the board.':
-    '这盘引擎对局展示两次同级兑子：先是双方的狮子，再是双方的大象。红方最后一只动物离场后，蓝方获胜。',
   'Can the bot see the face-down tiles?': '电脑能看到背面朝上的棋子吗？',
   'No. The engine gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do.':
     '不能。引擎拿到的棋盘和你一样：每个背面朝上的棋子都以未知的形式发给它，只附带尚未翻开的棋子数量；它和你在同一时刻，也就是翻开的那一刻，才知道那是什么棋子。',
-  'Engine vs engine': '引擎对引擎',
-  'Red wins by reaching the den · 69 plies': '红方进入兽穴获胜 · 69 个半回合',
-  'Red’s rat has already taken Blue’s elephant in the open, and with the strongest piece off the board Red walks a piece straight into Blue’s undefended den. Reaching the enemy den ends the game at once, no matter what material is left.':
-    '红方的老鼠已经在空地上吃掉了蓝方的大象，最强的棋子离场后，红方径直把一枚棋子走进蓝方无人防守的兽穴。进入对方兽穴会立刻结束对局，无论场上还剩多少子力。',
-  'Engine self-play': '引擎自我对弈',
-  'Blue wins by elimination · 36 plies': '蓝方吃光对手获胜 · 36 个半回合',
-  'Both lions and both elephants have already traded off the board, and the pieces that survived all belong to Blue. Red has nothing left that can move, so the game ends: with no piece to move and no tile to flip, Red loses.':
-    '两只狮子和两头大象都已同归于尽离场，存活下来的棋子全部属于蓝方。红方再无可走之子，于是对局结束：既没有棋子可走，也没有棋子可翻，红方告负。',
 
   // -- Branded rules names --
   'Fog Chess Rules': '迷雾国际象棋规则',
@@ -2127,7 +2104,6 @@ const ZH_HANS: Record<string, string> = {
   // rules page has been serving this line in English on both zh pages since it
   // was locked.
   'Black wins by checkmate · 73 moves': '黑方将死获胜 · 73 回合',
-  'Red wins by checkmate · 36 moves': '红方将死获胜 · 36 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鸭子象棋规则',
   'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
@@ -2180,9 +2156,6 @@ const ZH_HANS: Record<string, string> = {
     '所以鸭子既能挡路也能防守，而且是个难受的防守者：守住一路，等于每一回合都要把鸭子押在那里。',
   'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.':
     '一盘引擎全力对局，每步 8 秒。看鸭子，别看棋子：全局 120 着里有 30 着是炮隔着它开火，接近尾声时红方正用它守住一路，少了这一路帅就活不成。',
-  'Engine self-play · 8s per move': '引擎自对弈 · 每步 8 秒',
-  'Black captures the general on move 60. Red had the better of the opening, but the engine eval was still within a pawn and a half of level as late as ply 63, and Black ground it out from there.':
-    '黑方在第 60 回合吃掉将帅。红方开局占优，但到第 63 着时引擎评估离均势仍不到一个半兵，黑方从那里一点点磨了下来。',
   'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
     '这盘棋是从同样条件下的 8 盘里挑出来的，因为鸭子在其中出力最多。8 盘里有 7 盘下完；这 7 盘都收在[配套研究](/study/uMbk76wd)里，一盘一章，并注明每盘僵持了多久、鸭子在做什么。',
   'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
@@ -2813,6 +2786,43 @@ const ZH_HANS: Record<string, string> = {
     '一颗炮架，再来是目标。大小不重要：炮吃将。',
   'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
     '没有炮架就不能吃：旁边的车是安全的，上面隔两格、中间没有子的马也是。',
+  // Rules-page study embeds (2026-09-25): duck, jungle, fog chess.
+  'Misty against itself at 30 seconds a move, shown with the whole board visible. Black wins White’s queen for a rook on move 10, but on move 27 White’s rook lands on e8 and Black’s king steps to d8 beside it. Fog chess has no check to warn it, and 28.Rxd8 captures the king.':
+    'Misty 自我对弈，每步 30 秒，这里显示整个棋盘。第 10 回合黑方以一车换得白方的后，但第 27 回合白方的车落到 e8，黑方的王走到旁边的 d8。迷雾国际象棋没有将军来提醒它，28.Rxd8 吃掉了王。',
+  'Fog Chess: Misty against itself, White captures the king on move 28':
+    '迷雾国际象棋：Misty 自我对弈，白方第 28 回合吃王',
+  'The [companion study](/study/MbaW80XR) has eleven of these games, and shows each side’s fogged view move by move.':
+    '[配套研究](/study/MbaW80XR)收录了十一盘这样的对局，并逐步显示双方各自在迷雾中看到的局面。',
+  'Eleven engine games': '十一盘引擎对局',
+  'An engine game from a 200-game match between KataGo-AnimalChess (Red) and Mistboard’s own engine (Blue), and it uses nearly every rule on this page. Blue’s tiger jumps the left river sideways on move 11, and its lion jumps the right one on move 13. On move 38 Red’s lion jumps the river lengthwise, and on move 40 Red’s rat, standing on land, takes Blue’s elephant. Three moves later a wolf takes a tiger standing in Red’s own trap, where it has no rank left, and on move 47 Red walks into Blue’s den.':
+    '这盘引擎对局出自 KataGo-AnimalChess（红方）与 Mistboard 自家引擎（蓝方）的 200 盘对抗赛，几乎用到了本页的所有规则。第 11 回合蓝方的老虎横跳过左边的河，第 13 回合它的狮子跳过右边的河。第 38 回合红方的狮子纵跳过河，第 40 回合红方站在陆地上的老鼠吃掉了蓝方的大象。三回合后，一只狼吃掉了站在红方陷阱里、已失去全部等级的老虎；第 47 回合红方走进蓝方兽穴。',
+  'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry':
+    '斗兽棋：一盘有跳河、鼠吃象和入穴的引擎对局',
+  'All 200 games are in the [companion study](/study/0t8xpyv6), with the sideways tiger jumps and the shortest and longest wins picked out first.':
+    '全部 200 盘都收录在[配套研究](/study/0t8xpyv6)里，老虎横跳、最短和最长的胜局排在最前面。',
+  'The 200 engine games': '200 盘引擎对局',
+  'Duck Xiangqi: an engine game, Black captures the general on move 60':
+    '鸭子象棋：一盘引擎对局，黑方第 60 回合吃掉帅',
+  // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
+  'Xiangqi: Sacrifice the Horse in 13, from a manual printed in 1632':
+    '象棋：弃马十三着，出自 1632 年刊印的棋谱',
+  'Chess: Carlsen vs Anand, World Championship 2014, Game 11':
+    '国际象棋：卡尔森对阿南德，2014 年世界冠军赛第 11 局',
+  'Fortress Xiangqi: an engine game, Black mates on move 43':
+    '堡垒象棋：一盘引擎对局，黑方第 43 回合将死',
+  'Twenty engine games': '二十盘引擎对局',
+  'PikaJieQi against itself at the settings the site’s bot uses. Face-down pieces show as colored backs until they first move. Red’s advisor point on d1 turns out to hold a chariot on move 9, and between moves 13 and 23 Red’s chariots take five of Black’s pieces before they are ever turned over. The corners do not keep their promise either: Black’s a10 is an elephant, and Red’s a1 and i1 are an elephant and a soldier. Red mates on move 37.':
+    'PikaJieQi 以本站电脑所用的设置自我对弈。暗子在第一次走动前以彩色背面显示。红方 d1 仕位上的暗子在第 9 回合翻出来是一只车；第 13 到第 23 回合之间，红方的车吃掉了黑方五枚还没翻开的暗子。角上的棋子也不守承诺：黑方 a10 是一只象，红方 a1 和 i1 分别是相和兵。红方在第 37 回合将死。',
+  'Jieqi: an engine game, Red mates on move 37': '揭棋：一盘引擎对局，红方第 37 回合将死',
+  'The [companion study](/study/wd6c7qvG) has eighteen games played the same way, one chapter each.':
+    '[配套研究](/study/wd6c7qvG)收录了十八盘以同样方式下的对局，每盘一章。',
+  'Eighteen engine games': '十八盘引擎对局',
+  // Rules-page study embeds, flip jungle (2026-09-25).
+  'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
+    'MistyJungleFlip 以本站电脑三倍的强度自我对弈。第一次翻出的是红子，所以先手执红。第 10 回合双方的猫相遇并同归于尽，第 24 回合红方的老鼠吃掉了蓝方的大象，第 28 回合双方的狮子也同归于尽，蓝方随即无子可走。红方获胜。',
+  'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盘引擎对局，红方第 28 回合获胜',
+  'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
+    '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -2933,18 +2943,9 @@ const ZH_HANT: Record<string, string> = {
   // Replay headers and result lines. article-prose.ts extracts these as of
   // 2026-09-02; before that only a stepper's caption counted, so these shipped
   // in English beside translated prose with the coverage test green.
-  'World Championship Game 11, Sochi 2014': '世界冠軍賽第 11 局，2014 年索契',
-  'Anand resigns. Carlsen (White) wins the match.': '阿南德認輸。卡爾森（白方）贏得這場比賽。',
-  'Sacrifice the Horse in 13': '棄馬十三著',
-  'Classic manual, 1632': '古譜，1632 年',
-  "Checkmate on move 13. Red's paired cannons pin the general on the open central file.":
-    '第 13 回合將死。紅方雙炮沿著打通的中路把將困死。',
   'PikaJieQi self-play': 'PikaJieQi 自對弈',
   'Red works through the reveals and delivers checkmate on move 36.':
     '紅方在一次次揭子中推進，第 36 回合將死。',
-  'Engine self-play · 2.5 s per move': '引擎自對弈 · 每步 2.5 秒',
-  'Black mates on move 43 with the soldier to b1, the same soldier that crossed the river on move 4. Red’s general has nowhere to go: its own soldier blocks a2, and Black covers both b1 and b2.':
-    '黑方第 43 回合以兵到 b1 將死，正是第 4 回合過河的那個兵。紅帥無處可走：己方的兵擋住 a2，而 b1 和 b2 都在黑方控制之下。',
   // ── how-puzzle-mining-works (2026-09-01) ──
   // Script conversion of the Simplified above, not an independent translation:
   // the coverage test requires the two to stay parallel in length and to carry
@@ -3664,8 +3665,6 @@ const ZH_HANT: Record<string, string> = {
     '通常的將軍規則依然適用：走子後不能讓己方將帥受到攻擊，被將軍時必須應對。將死對方，或讓對方無合法走法，即可獲勝。將帥對臉規則仍然有效，暗子也和其他棋子一樣會擋住縱線。',
   'Mistboard automatically draws after 120 plies, or 60 moves by each player, without a capture. Repeated positions do not trigger a separate automatic draw.':
     '連續 120 個半回合，也就是雙方各走 60 步而沒有吃子時，Mistboard 自動判和。重複局面不會另外觸發自動和棋。',
-  'Step through a self-play game. Dark pieces appear as colored backs and reveal their identity the first time they move. Red wins by checkmate.':
-    '逐步查看一盤自我對弈。暗子以彩色背面顯示，第一次走動時翻明身份。紅方以將死獲勝。',
   Turns: '回合',
   'Capture by rank': '按等級吃子',
   'The cannon': '砲',
@@ -3685,8 +3684,6 @@ const ZH_HANT: Record<string, string> = {
     '任何一枚棋子走進敵方獸穴、吃光敵方所有棋子，或讓對手無合法著法，你都立即獲勝。棋子不能走進己方獸穴。',
   'Games draw on threefold repetition, or when 100 half-moves (50 by each player) pass with no capture.':
     '若同一局面出現三次，或連續 100 個半回合（每方 50 步）無吃子，則判和。',
-  'This engine game shows a lion leap, a rat swim and capture an elephant, and the final entry into Blue’s den.':
-    '這盤引擎對局展示獅子跳河、老鼠游水並吃掉大象，以及最後進入藍方獸穴。',
   'One of each animal in two colors is shuffled and placed face-down on the sixteen squares. Nobody knows what is under a tile until it is flipped. The first tile the first player flips sets that player’s color; the other player takes the other color.':
     '兩種顏色各一套八種動物，洗勻後背面朝上放在十六個格子裡。在翻開之前，誰也不知道棋子下面是什麼。先行者翻開的第一枚棋子決定其顏色，另一位玩家執另一色。',
   'On your turn, do one thing: flip one face-down tile, or move one of your revealed animals one square up, down, left, or right. Face-down tiles block movement and cannot be captured. You cannot pass.':
@@ -3704,19 +3701,9 @@ const ZH_HANT: Record<string, string> = {
     '若同一局面出現三次，或連續 40 個半回合（每方 20 步）沒有翻棋、吃子或同歸於盡，則判和。',
   'Mistboard also ends a fully revealed, one-animal-each position when neither side can force a win. Equal ranks are always dead because any meeting removes both; some unequal-rank chases are also unwinnable. These positions are drawn immediately.':
     '當棋子全部翻開、雙方各剩一隻動物且誰也無法強制獲勝時，Mistboard 也會結束對局。同級棋子必為死局，因為相遇會雙雙離場；某些不同等級的追逐也無法取勝。這些局面立即判和。',
-  'This engine game shows two equal-rank trades: first the Lions, then the Elephants. Blue wins after Red’s last animal leaves the board.':
-    '這盤引擎對局展示兩次同級兌子：先是雙方的獅子，再是雙方的大象。紅方最後一隻動物離場後，藍方獲勝。',
   'Can the bot see the face-down tiles?': '電腦能看到背面朝上的棋子嗎？',
   'No. The engine gets the same board you do. Every face-down tile is sent to it as unknown, along with the count of what is still hidden, and it learns what a tile is at the moment it flips, the same moment you do.':
     '不能。引擎拿到的棋盤和你一樣：每個背面朝上的棋子都以未知的形式發給它，只附帶尚未翻開的棋子數量；它和你在同一時刻，也就是翻開的那一刻，才知道那是什麼棋子。',
-  'Engine vs engine': '引擎對引擎',
-  'Red wins by reaching the den · 69 plies': '紅方進入獸穴獲勝 · 69 個半回合',
-  'Red’s rat has already taken Blue’s elephant in the open, and with the strongest piece off the board Red walks a piece straight into Blue’s undefended den. Reaching the enemy den ends the game at once, no matter what material is left.':
-    '紅方的老鼠已經在空地上吃掉了藍方的大象，最強的棋子離場後，紅方逕直把一枚棋子走進藍方無人防守的獸穴。進入對方獸穴會立刻結束對局，無論場上還剩多少子力。',
-  'Engine self-play': '引擎自我對弈',
-  'Blue wins by elimination · 36 plies': '藍方吃光對手獲勝 · 36 個半回合',
-  'Both lions and both elephants have already traded off the board, and the pieces that survived all belong to Blue. Red has nothing left that can move, so the game ends: with no piece to move and no tile to flip, Red loses.':
-    '兩隻獅子和兩頭大象都已同歸於盡離場，存活下來的棋子全部屬於藍方。紅方再無可走之子，於是對局結束：既沒有棋子可走，也沒有棋子可翻，紅方告負。',
 
   // -- Branded rules names --
   'Fog Chess Rules': '迷霧國際象棋規則',
@@ -4624,7 +4611,6 @@ const ZH_HANT: Record<string, string> = {
   // rules page has been serving this line in English on both zh pages since it
   // was locked.
   'Black wins by checkmate · 73 moves': '黑方將死獲勝 · 73 回合',
-  'Red wins by checkmate · 36 moves': '紅方將死獲勝 · 36 回合',
   // -- Duck Xiangqi --
   'Duck Xiangqi Rules': '鴨子象棋規則',
   'Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.':
@@ -4677,9 +4663,6 @@ const ZH_HANT: Record<string, string> = {
     '所以鴨子既能擋路也能防守，而且是個難受的防守者：守住一路，等於每一回合都要把鴨子押在那裡。',
   'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.':
     '一盤引擎全力對局，每步 8 秒。看鴨子，別看棋子：全局 120 著裡有 30 著是炮隔著它開火，接近尾聲時紅方正用它守住一路，少了這一路帥就活不成。',
-  'Engine self-play · 8s per move': '引擎自對弈 · 每步 8 秒',
-  'Black captures the general on move 60. Red had the better of the opening, but the engine eval was still within a pawn and a half of level as late as ply 63, and Black ground it out from there.':
-    '黑方在第 60 回合吃掉將帥。紅方開局占優，但到第 63 著時引擎評估離均勢仍不到一個半兵，黑方從那裡一點點磨了下來。',
   'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
     '這盤棋是從同樣條件下的 8 盤裡挑出來的，因為鴨子在其中出力最多。8 盤裡有 7 盤下完；這 7 盤都收在[配套研究](/study/uMbk76wd)裡，一盤一章，並註明每盤僵持了多久、鴨子在做什麼。',
   'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
@@ -5376,6 +5359,43 @@ const ZH_HANT: Record<string, string> = {
     '一顆砲架，再來是目標。大小不重要：砲吃將。',
   'No screen, no capture: the chariot beside it is safe, and so is the horse two squares up with nothing between.':
     '沒有砲架就不能吃：旁邊的車是安全的，上面隔兩格、中間沒有子的馬也是。',
+  // Rules-page study embeds (2026-09-25): duck, jungle, fog chess.
+  'Misty against itself at 30 seconds a move, shown with the whole board visible. Black wins White’s queen for a rook on move 10, but on move 27 White’s rook lands on e8 and Black’s king steps to d8 beside it. Fog chess has no check to warn it, and 28.Rxd8 captures the king.':
+    'Misty 自我對弈，每步 30 秒，這裡顯示整個棋盤。第 10 回合黑方以一車換得白方的后，但第 27 回合白方的車落到 e8，黑方的王走到旁邊的 d8。迷霧國際象棋沒有將軍來提醒它，28.Rxd8 吃掉了王。',
+  'Fog Chess: Misty against itself, White captures the king on move 28':
+    '迷霧國際象棋：Misty 自我對弈，白方第 28 回合吃王',
+  'The [companion study](/study/MbaW80XR) has eleven of these games, and shows each side’s fogged view move by move.':
+    '[配套研究](/study/MbaW80XR)收錄了十一盤這樣的對局，並逐步顯示雙方各自在迷霧中看到的局面。',
+  'Eleven engine games': '十一盤引擎對局',
+  'An engine game from a 200-game match between KataGo-AnimalChess (Red) and Mistboard’s own engine (Blue), and it uses nearly every rule on this page. Blue’s tiger jumps the left river sideways on move 11, and its lion jumps the right one on move 13. On move 38 Red’s lion jumps the river lengthwise, and on move 40 Red’s rat, standing on land, takes Blue’s elephant. Three moves later a wolf takes a tiger standing in Red’s own trap, where it has no rank left, and on move 47 Red walks into Blue’s den.':
+    '這盤引擎對局出自 KataGo-AnimalChess（紅方）與 Mistboard 自家引擎（藍方）的 200 盤對抗賽，幾乎用到了本頁的所有規則。第 11 回合藍方的老虎橫跳過左邊的河，第 13 回合它的獅子跳過右邊的河。第 38 回合紅方的獅子縱跳過河，第 40 回合紅方站在陸地上的老鼠吃掉了藍方的大象。三回合後，一隻狼吃掉了站在紅方陷阱裡、已失去全部等級的老虎；第 47 回合紅方走進藍方獸穴。',
+  'Jungle: an engine game with river jumps, a rat taking the elephant, and a den entry':
+    '鬥獸棋：一盤有跳河、鼠吃象和入穴的引擎對局',
+  'All 200 games are in the [companion study](/study/0t8xpyv6), with the sideways tiger jumps and the shortest and longest wins picked out first.':
+    '全部 200 盤都收錄在[配套研究](/study/0t8xpyv6)裡，老虎橫跳、最短和最長的勝局排在最前面。',
+  'The 200 engine games': '200 盤引擎對局',
+  'Duck Xiangqi: an engine game, Black captures the general on move 60':
+    '鴨子象棋：一盤引擎對局，黑方第 60 回合吃掉帥',
+  // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
+  'Xiangqi: Sacrifice the Horse in 13, from a manual printed in 1632':
+    '象棋：棄馬十三著，出自 1632 年刊印的棋譜',
+  'Chess: Carlsen vs Anand, World Championship 2014, Game 11':
+    '國際象棋：卡爾森對阿南德，2014 年世界冠軍賽第 11 局',
+  'Fortress Xiangqi: an engine game, Black mates on move 43':
+    '堡壘象棋：一盤引擎對局，黑方第 43 回合將死',
+  'Twenty engine games': '二十盤引擎對局',
+  'PikaJieQi against itself at the settings the site’s bot uses. Face-down pieces show as colored backs until they first move. Red’s advisor point on d1 turns out to hold a chariot on move 9, and between moves 13 and 23 Red’s chariots take five of Black’s pieces before they are ever turned over. The corners do not keep their promise either: Black’s a10 is an elephant, and Red’s a1 and i1 are an elephant and a soldier. Red mates on move 37.':
+    'PikaJieQi 以本站電腦所用的設定自我對弈。暗子在第一次走動前以彩色背面顯示。紅方 d1 仕位上的暗子在第 9 回合翻出來是一隻車；第 13 到第 23 回合之間，紅方的車吃掉了黑方五枚還沒翻開的暗子。角上的棋子也不守承諾：黑方 a10 是一隻象，紅方 a1 和 i1 分別是相和兵。紅方在第 37 回合將死。',
+  'Jieqi: an engine game, Red mates on move 37': '揭棋：一盤引擎對局，紅方第 37 回合將死',
+  'The [companion study](/study/wd6c7qvG) has eighteen games played the same way, one chapter each.':
+    '[配套研究](/study/wd6c7qvG)收錄了十八盤以同樣方式下的對局，每盤一章。',
+  'Eighteen engine games': '十八盤引擎對局',
+  // Rules-page study embeds, flip jungle (2026-09-25).
+  'MistyJungleFlip against itself at three times the strength the site’s bot plays at. The first flip turns up red, so the first player is Red. The cats meet and trade off on move 10, a red rat takes Blue’s elephant on move 24, and on move 28 the two lions trade off too, which leaves Blue with no move. Red wins.':
+    'MistyJungleFlip 以本站電腦三倍的強度自我對弈。第一次翻出的是紅子，所以先手執紅。第 10 回合雙方的貓相遇並同歸於盡，第 24 回合紅方的老鼠吃掉了藍方的大象，第 28 回合雙方的獅子也同歸於盡，藍方隨即無子可走。紅方獲勝。',
+  'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盤引擎對局，紅方第 28 回合獲勝',
+  'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
+    '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

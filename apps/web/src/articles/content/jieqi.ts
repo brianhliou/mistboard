@@ -7,7 +7,7 @@ import {
   playClosing,
 } from '../diagrams.js';
 import { JIEQI_SAMPLE_GAME } from '../../jieqi-sample-game.js';
-import type { Article } from '../types.js';
+import type { Article, ArticleBlock } from '../types.js';
 
 export const jieqiArticle: Article = {
     slug: 'jieqi',
@@ -134,20 +134,19 @@ export const jieqiArticle: Article = {
         blocks: [
           {
             kind: 'paragraph',
-            text:
-              'Step through a self-play game. Dark pieces appear as colored backs and reveal their identity the first time they move. Red wins by checkmate.',
+            text: 'PikaJieQi against itself at the settings the site’s bot uses. Face-down pieces show as colored backs until they first move. Red’s advisor point on d1 turns out to hold a chariot on move 9, and between moves 13 and 23 Red’s chariots take five of Black’s pieces before they are ever turned over. The corners do not keep their promise either: Black’s a10 is an elephant, and Red’s a1 and i1 are an elephant and a soldier. Red mates on move 37.',
           },
           {
-            kind: 'jieqi-replay',
-            spec: {
-              red: JIEQI_SAMPLE_GAME.red,
-              black: JIEQI_SAMPLE_GAME.black,
-              event: JIEQI_SAMPLE_GAME.event,
-              outcome: 'Red wins by checkmate · 36 moves',
-              resultText: JIEQI_SAMPLE_GAME.result,
-              deal: JIEQI_SAMPLE_GAME.deal,
-              moves: JIEQI_SAMPLE_GAME.moves,
-            },
+            kind: 'embed',
+            path: '/embed/study/wd6c7qvG/FqAeRJhD',
+            title: 'Jieqi: an engine game, Red mates on move 37',
+            // Width-bound at the 702px column: the 9x10 board plus seat rows,
+            // controls, header and credit (measured on a local copy of the chapter).
+            aspect: [702, 692],
+          } as ArticleBlock,
+          {
+            kind: 'paragraph',
+            text: 'The [companion study](/study/wd6c7qvG) has eighteen games played the same way, one chapter each.',
           },
         ],
       },
@@ -203,6 +202,7 @@ export const jieqiArticle: Article = {
         playHref: '/?play=computer&gameSpecId=jieqi',
         secondary: [
           { label: 'Challenge a friend', href: '/?play=friend&gameSpecId=jieqi', emphasis: 'secondary' },
+          { label: 'Eighteen engine games', href: '/study/wd6c7qvG', emphasis: 'secondary' },
         ],
       }),
     ],

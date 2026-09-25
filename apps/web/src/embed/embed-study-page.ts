@@ -21,10 +21,20 @@ import {
   replayChess,
 } from '../chess-study-replay.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
+import { seatInkForVariant } from '../flip-seat-ink.js';
+import {
+  FORTRESS_EMBED_HAND_RATIO,
+  mountFortressXiangqiReplayBoard,
+  replayFortressXiangqiLine,
+} from '../fortress-xiangqi-replay-board.js';
+import { mountJieqiReplayBoard, replayJieqiLine } from '../jieqi-replay-board.js';
+import { mountJungleFlipReplayBoard, replayJungleFlipLine } from '../jungle-flip-replay-board.js';
+import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import { mountJungleReplayBoard } from '../jungle-replay-board.js';
 import { replayStepperCopy } from '../replay-stepper-copy.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
+import { seatInkFamily } from '../variant-seat-label.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
 import { mountXiangqiReplayBoard, xiangqiResultLabel } from '../xiangqi-replay.js';
 import { embedRailWidthPx, mountEmbedCard } from './embed-card.js';
@@ -98,8 +108,11 @@ export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'xiangqi',
   'duck-xiangqi',
   'atomic-xiangqi',
+  'fortress-xiangqi',
+  'jieqi',
   'banqi',
   'jungle',
+  'jungle-flip',
   'chess',
   'dark-chess',
 ]);
@@ -130,6 +143,18 @@ export async function mountChapterEmbed(
   }
   if (variant === 'jungle') {
     await mountJungleEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'jungle-flip') {
+    await mountJungleFlipEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'fortress-xiangqi') {
+    await mountFortressXiangqiEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'jieqi') {
+    await mountJieqiEmbed(root, credit, chapter, options);
     return;
   }
   const spec = studyChapterToReplaySpec(chapter);
@@ -312,6 +337,145 @@ async function mountJungleEmbed(
     startPly: options.startPly ?? 0,
     mountBoard: async (host, hooks) =>
       mountJungleReplayBoard(host, { rootFen, moves, perspective: 'red' }, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+type ResultToken = 'red-wins' | 'black-wins' | 'draw';
+
+/** A chapter's result tag as a seat-keyed token (1-0 is the first mover), or
+ *  null when the tag is absent or says the game did not finish. */
+function tagResultToken(tag: string | undefined): ResultToken | null {
+  if (tag === '1-0') return 'red-wins';
+  if (tag === '0-1') return 'black-wins';
+  if (tag === '1/2-1/2') return 'draw';
+  return null;
+}
+
+/** The ending read off the last replayed position, for a chapter with no
+ *  result tag (the engine-game studies carry none): the kernel knows a mate or
+ *  a draw when the line reaches one. Null when the line stops mid-game. */
+function statusResultToken(status: {
+  type: string;
+  winner?: 'red' | 'black' | null;
+}): ResultToken | null {
+  if (status.type !== 'finished') return null;
+  if (status.winner === 'red') return 'red-wins';
+  if (status.winner === 'black') return 'black-wins';
+  return 'draw';
+}
+
+// Fortress Xiangqi is its own branch for the duck reason: a drop (`N@f4`) is
+// not an ICCS move, and the board is 7x8 with both hands beside it, which the
+// xiangqi board cannot draw. The chapter may carry no rootFen: the engine-game
+// studies start from the standard position and store only the moves.
+async function mountFortressXiangqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: { startPly?: number | null },
+): Promise<void> {
+  const line = replayFortressXiangqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  if (!line) {
+    note(root, 'This chapter has no position to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states[line.states.length - 1]!;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  // The hands ride above and below the board and scale with it, so the column
+  // the card sizes is taller than the board alone by both bands.
+  const boardAspect = boardAspectForSpec('fortress-xiangqi');
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: { name: tags.red ?? 'Red', ink: 'red' },
+      second: { name: tags.black ?? 'Black', ink: 'black' },
+    },
+    result: token ? reviewResultLabel(token, 'fortress-xiangqi') : '',
+    credit: { href: credit.href, text: credit.text },
+    aspect: 1 / (1 / boardAspect + 2 * FORTRESS_EMBED_HAND_RATIO),
+    railWidthPx: embedRailWidthPx('fortress-xiangqi'),
+    startPly: options.startPly ?? 0,
+    mountBoard: async (host, hooks) =>
+      mountFortressXiangqiReplayBoard(host, line, { perspective: 'red' }, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// Jieqi is its own branch for the banqi reason: the moves only replay against
+// the deal, which rides in the root's sixth FEN field; the xiangqi board would
+// start every dark piece as the piece its square begins with. The seats own a
+// fixed ink from move one (unlike banqi), so they are the inks.
+async function mountJieqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: { startPly?: number | null },
+): Promise<void> {
+  const line = replayJieqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  if (!line) {
+    note(root, 'This chapter has no dealt position to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states[line.states.length - 1]!;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: { name: tags.red ?? 'Red', ink: 'red' },
+      second: { name: tags.black ?? 'Black', ink: 'black' },
+    },
+    result: token ? reviewResultLabel(token, 'jieqi') : '',
+    credit: { href: credit.href, text: credit.text },
+    aspect: boardAspectForSpec('jieqi'),
+    railWidthPx: embedRailWidthPx('jieqi'),
+    startPly: options.startPly ?? 0,
+    mountBoard: async (host, hooks) =>
+      mountJieqiReplayBoard(host, line, { perspective: 'red' }, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// Flip Jungle is banqi's shape on a 4x4: a dealt root, flips spelled as a
+// self-move, and seats that are move order until the first flip binds an ink.
+// The replayed line knows which ink that was, so the seat discs and the result
+// name the colour on the board rather than "first seat".
+async function mountJungleFlipEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: { startPly?: number | null },
+): Promise<void> {
+  const line = replayJungleFlipLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  if (!line) {
+    note(root, 'This chapter has no dealt position to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states[line.states.length - 1]!;
+  const firstColor = final.firstColor ?? null;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: {
+        name: tags.red ?? 'First seat',
+        ink: seatInkForVariant('jungle-flip', 'red', firstColor),
+      },
+      second: {
+        name: tags.black ?? 'Second seat',
+        ink: seatInkForVariant('jungle-flip', 'black', firstColor),
+      },
+    },
+    result: token ? jungleFlipResultLabel(token, firstColor) : '',
+    credit: { href: credit.href, text: credit.text },
+    inkFamily: seatInkFamily('jungle-flip'),
+    aspect: boardAspectForSpec('jungle-flip'),
+    railWidthPx: embedRailWidthPx('jungle-flip'),
+    startPly: options.startPly ?? 0,
+    mountBoard: async (host, hooks) => mountJungleFlipReplayBoard(host, line, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

@@ -268,6 +268,63 @@ body.embed-body {
   overflow: hidden;
 }
 
+/* The study boards that paint a bare svg into their own frame (jieqi, flip
+   jungle, fortress): width-driven, height from the viewBox, like the rest. */
+.embed-board :is(.jieqi-embed-board, .jungle-flip-embed-board, .fxq-embed-board-svg) {
+  line-height: 0;
+}
+
+.embed-board :is(.jieqi-embed-board, .jungle-flip-embed-board, .fxq-embed-board-svg) > svg {
+  display: block;
+  width: 100%;
+  height: auto;
+}
+
+/* Fortress Xiangqi: each hand as a pocket band above and below the board, one
+   slot per droppable role with the empty ones ghosted (the review rail's
+   pocket, drop-reserve.css). The slot scales with the board, 62/516 of its
+   width as in the review, so the column keeps one aspect ratio at any size:
+   the band is 0.13 of the board width, FORTRESS_EMBED_HAND_RATIO in
+   fortress-xiangqi-replay-board.ts, which the card's arithmetic reads. */
+.embed-board .fxq-embed-board {
+  container-type: inline-size;
+}
+
+.embed-board .fxq-embed-hand.drop-mini-reserve-strip {
+  --drop-mini-hand-piece-size: calc(100cqw * 62 / 516);
+  --drop-mini-hand-tile-size: var(--drop-mini-hand-piece-size);
+  --drop-mini-hand-band-height: calc(100cqw * 0.13);
+
+  display: flex;
+  align-items: center;
+  height: var(--drop-mini-hand-band-height);
+  min-height: 0;
+  padding: 0;
+}
+
+.embed-board .fxq-embed-hand .drop-mini-reserve-row {
+  gap: calc(100cqw * 4 / 516);
+}
+
+.embed-board .fxq-embed-hand .drop-mini-reserve-piece {
+  flex: 0 1 var(--drop-mini-hand-piece-size);
+  min-width: 0;
+  width: auto;
+  height: auto;
+  aspect-ratio: 1;
+  border-color: transparent;
+  background: transparent;
+}
+
+.embed-board .fxq-embed-hand .drop-mini-reserve-piece svg {
+  width: 100%;
+  height: 100%;
+}
+
+.embed-board .fxq-embed-hand .drop-mini-reserve-piece.is-empty {
+  opacity: 0.24;
+}
+
 /* Back, forward, and the two jumps, with the ply count between them. Under the
    board, not under the sheet: the reader's eye is on the board when stepping. */
 .embed-card-controls {

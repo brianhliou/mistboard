@@ -1,4 +1,6 @@
+import { createInitialJungleFlipState, jungleFlipStateToDealtFen } from '@mistboard/game';
 import { afterEach, describe, expect, it, vi } from 'vitest';
+import { JUNGLE_ART } from '../jungle-art.js';
 import { STUDY_VARIANTS } from '../study-catalog.js';
 import { embedStudyRouteFromPath } from './embed-route.js';
 import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
@@ -17,6 +19,32 @@ const CHAPTER = {
     },
   },
 };
+
+/** A mainline as the study tree stores it: each move the first child of the last. */
+function chainTree(tokens: readonly string[]): { children: unknown[] } {
+  let children: unknown[] = [];
+  for (const uci of [...tokens].reverse()) children = [{ uci, children }];
+  return { children };
+}
+
+// Prod study NUVBVjFf chapter qh5eSTC9 (fortress), the full mainline.
+const FORTRESS_GAME_1 = (
+  'd1b3 c8c6 e1d1 a7a6 f2f3 a6a5 f3f4 a5a4 f1e3 a8a5 f4f5 a5c5 d1f1 c5c3 f5g5 d8f6 e3f5 ' +
+  'c6b6 f5d4 d7d6 g5f5 d6d5 d4b5 c3c5 f5f6 c5b5 f6e6 N@f4 E@d1 d5d4 e6d6 b5c5 g2g3 f7f6 ' +
+  'd6e6 g8f7 e6f6 f7f6 f1f6 P@c2 d1f3 d4d3 d2d3 f4d3 Q@d1 P@c3 P@a5 c5a5 d1c2 c3c2 P@d2 ' +
+  'c2d2 f6d6 P@c2 g1f1 a5c5 d6d2 c2d2 P@b5 c5b5 P@a6 b6b3 b2b3 d2c2 a1b2 c2b2 c1b2 P@c2 ' +
+  'f3d1 P@f2 b1a1 c2b2 f1f2 d3f2 C@f1 f2d1 P@f6 e8f7 f6f7 f8f7 A@b1 C@e1 P@c1 d1c3 f1f6 b2b1'
+).split(' ');
+
+// Prod study wd6c7qvG chapter AMY9DrPj (jieqi): the dealt root and the mainline.
+const JIEQI_GAME_18_ROOT =
+  'xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w ' +
+  'R2A2C2P5N2B2r2a2c2p5n2b2 0 1 prnabpbrccppanpCNPNAPAPBRPPRCB';
+const JIEQI_GAME_18 = (
+  'i4i5 a7a6 g4g5 g7g6 c4c5 h8h1 i1h1 c7c6 c5d3 g6i5 d3e5 c10e8 e5c6 b8b1 a1b1 a6a5 c6e7 ' +
+  'a5a4 h3h9 i10i9 b3b9 i9h9 e4e5 i5g4 f1e2 h9h1 e2e3 h1g1 e1e2 b10d9 g5h7 g1d1 h7f8 e10e9 ' +
+  'e7c8 e9f9 c8d10 a10d10 b1b2 d9d2'
+).split(' ');
 
 function stubFetch(status: number, body: unknown) {
   vi.stubGlobal('fetch', async () => ({
@@ -250,6 +278,187 @@ describe('mountEmbedStudy', () => {
       el.textContent?.trim(),
     );
     expect(moves).toEqual(['a1-b1', 'a9-b9', 'b1-c1']);
+    root.remove();
+  });
+
+  it('draws a fortress chapter on the FORTRESS board with both hands, drops included', async () => {
+    // Prod study NUVBVjFf, chapter qh5eSTC9, as stored: no rootFen (the
+    // standard start), no tags, FSF UCI with the treasure dropped as `Q@`.
+    const fortressChapter = {
+      id: 'qh5eSTC9',
+      name: 'Game 1: Black mates on move 43',
+      orientation: 'red',
+      variant: 'fortress-xiangqi',
+      tags: {},
+      root: { root: chainTree(FORTRESS_GAME_1) },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [fortressChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'qh5eSTC9' }, { startPly: 999 });
+
+    // The fortress renderer's board, 7x8: a g8 square exists, no xiangqi i10.
+    const board = root.querySelector('.embed-board');
+    expect(board?.querySelector('svg.fxq-board')).not.toBeNull();
+    expect(board?.innerHTML).not.toContain('data-piece-square="i10"');
+    // Both hands, every droppable role a slot.
+    const hands = Array.from(root.querySelectorAll<HTMLElement>('.fxq-embed-hand'));
+    expect(hands.map((h) => h.dataset.owner)).toEqual(['black', 'red']);
+    expect(hands[0]?.querySelectorAll('.drop-mini-reserve-piece')).toHaveLength(7);
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toHaveLength(86);
+    expect(moves[0]).toBe('d1-b3');
+    expect(moves[27]).toBe('N@f4');
+    // The treasure's drop letter, the one spelling the article's tokens differ on.
+    expect(moves[44]).toBe('T@d1');
+    // No result tag: the mate is read off the final position.
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('86 / 86');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
+    const seats = Array.from(root.querySelectorAll<HTMLElement>('.embed-card-seat'));
+    expect(seats.map((s) => s.querySelector('.embed-card-seat-name')?.textContent)).toEqual([
+      'Black',
+      'Red',
+    ]);
+    root.remove();
+  });
+
+  it('stops a fortress line at the first token the kernel refuses', async () => {
+    const tokens = [...FORTRESS_GAME_1.slice(0, 4), 'a1a8', ...FORTRESS_GAME_1.slice(4, 8)];
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'FxqBad01',
+          name: 'broken',
+          variant: 'fortress-xiangqi',
+          tags: { result: '1-0' },
+          root: { root: chainTree(tokens) },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'FxqBad01' }, { startPly: 999 });
+    expect(root.querySelectorAll('.review-move-list__move')).toHaveLength(4);
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('4 / 4');
+    // A tag, when the chapter has one, is the result.
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
+    root.remove();
+  });
+
+  it('draws a jieqi chapter from its dealt root, dark pieces dark until they move', async () => {
+    // Prod study wd6c7qvG, chapter AMY9DrPj, as stored: the deal rides in the
+    // root's sixth FEN field, no tags.
+    const jieqiChapter = {
+      id: 'AMY9DrPj',
+      name: 'Game 18: Black mates on move 20',
+      orientation: 'red',
+      variant: 'jieqi',
+      tags: {},
+      root: { rootFen: JIEQI_GAME_18_ROOT, root: chainTree(JIEQI_GAME_18) },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [jieqiChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'AMY9DrPj' });
+
+    const board = root.querySelector('.embed-board');
+    expect(board?.querySelector('svg.jieqi-board')).not.toBeNull();
+    const hidden = () => board?.querySelectorAll('[aria-label$="hidden piece"]').length ?? 0;
+    // The start: every piece but the generals face down.
+    expect(hidden()).toBe(30);
+    root.querySelector<HTMLButtonElement>('[aria-label="Next move"]')?.click();
+    // i4i5 moved a dark piece: it shows what the deal made it.
+    expect(hidden()).toBe(29);
+    expect(board?.querySelector('[data-piece-square="i5"]')?.innerHTML).not.toContain(
+      'hidden piece',
+    );
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toHaveLength(40);
+    expect(moves[11]).toBe('c10-e8');
+    root.querySelector<HTMLButtonElement>('[aria-label="Last move"]')?.click();
+    expect(root.querySelector('.embed-card-status')?.textContent).toBe('40 / 40');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
+    root.remove();
+  });
+
+  it('refuses a jieqi chapter whose root carries no deal', async () => {
+    // A five-field FEN would have the parser sample identities: a board of
+    // pieces that were never there.
+    const publicFen = JIEQI_GAME_18_ROOT.split(' ').slice(0, 5).join(' ');
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'JqNoDeal',
+          name: 'no deal',
+          variant: 'jieqi',
+          root: { rootFen: publicFen, root: chainTree(JIEQI_GAME_18.slice(0, 4)) },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'JqNoDeal' });
+    expect(root.textContent).toBe('This chapter has no dealt position to show.');
+    expect(root.querySelector('svg')).toBeNull();
+  });
+
+  it('draws a flip jungle chapter face down until each tile is flipped', async () => {
+    // No flip jungle study exists on prod yet; this is the shape the study
+    // builder writes (scripts/banqi-study.ts): the dealt root, seat-keyed
+    // result tag, flips as self-moves. The fourth token re-flips a tile that
+    // is already face up, which the kernel refuses, so the line ends at three.
+    const start = createInitialJungleFlipState('t');
+    const flipChapter = {
+      id: 'Flip1234',
+      name: 'Game 1',
+      orientation: 'red',
+      variant: 'jungle-flip',
+      tags: { red: 'MistyFlip A', black: 'MistyFlip B', event: 'self-play', result: '1-0' },
+      root: {
+        rootFen: jungleFlipStateToDealtFen(start),
+        root: chainTree(['a1a1', 'd4d4', 'b2b2', 'a1a1', 'c3c3']),
+      },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [flipChapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Flip1234' });
+
+    const board = root.querySelector('.embed-board');
+    const faceDown = () =>
+      (board?.innerHTML ?? '').split(`fill="${JUNGLE_ART.faceDown.fill}"`).length - 1;
+    expect(board?.querySelector('[data-piece-square="d4"]')).not.toBeNull();
+    expect(board?.innerHTML).not.toContain('data-piece-square="e5"');
+    expect(faceDown()).toBe(16);
+    const moves = Array.from(root.querySelectorAll('.review-move-list__move')).map((el) =>
+      el.textContent?.trim(),
+    );
+    expect(moves).toEqual(['a1', 'd4', 'b2']);
+    root.querySelector<HTMLButtonElement>('[aria-label="Last move"]')?.click();
+    expect(faceDown()).toBe(13);
+    // The first flip bound the first seat's ink: the discs and the result
+    // name the colour on the board, not the seat.
+    const firstInk = start.board.a1?.color;
+    const seats = Array.from(root.querySelectorAll<HTMLElement>('.embed-card-seat'));
+    expect(seats.map((s) => s.querySelector('.embed-card-seat-name')?.textContent)).toEqual([
+      'MistyFlip B',
+      'MistyFlip A',
+    ]);
+    expect(seats[1]?.querySelector('.embed-seat-disc')?.className).toBe(
+      `embed-seat-disc embed-seat-disc--${firstInk}`,
+    );
+    expect(root.querySelector('.embed-card')?.getAttribute('data-seat-ink-family')).toBe('jungle');
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe(
+      firstInk === 'red' ? 'Red wins' : 'Blue wins',
+    );
     root.remove();
   });
 
