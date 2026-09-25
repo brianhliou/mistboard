@@ -116,6 +116,7 @@ Conventions:
 
 ### Site
 
+- The sitemap is split into pages, studies and chapters, each entry carries the date it last changed, and a study chapter is listed only when its study earns search traffic or its moves carry commentary: 6,093 chapter URLs became 855. Unlisted chapters still open from their study ([cca3c724](https://github.com/brianhliou/mistboard/commit/cca3c724))
 - The homepage broadcast spotlight shows at most two rows, most pressing first (live, then between rounds, then starting soonest), gives an event's men's and women's sections one row, dates events by their own day, and links the rest ([358ff65e](https://github.com/brianhliou/mistboard/commit/358ff65e))
 - Broadcasts is the first item in the Watch menu ([cd94da3f](https://github.com/brianhliou/mistboard/commit/cd94da3f))
 - An unlisted study is no longer indexable: its page served the home page's title and description, and Google had eleven chapters of a manual still being verified in its index under that title ([6ae24ef2](https://github.com/brianhliou/mistboard/commit/6ae24ef2))
