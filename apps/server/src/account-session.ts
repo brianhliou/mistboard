@@ -112,6 +112,10 @@ export function publicUser(user: persistence.UserAccount): Record<string, unknow
     // Play lock (126). Exposed so the client can explain a refusal it would
     // otherwise render as a generic error; the server never trusts it back.
     playDisabled: user.playDisabledAt !== null,
+    // Stats exclusion: the owner's and test accounts. The client uses it only
+    // to tag its own browser as internal in PostHog, so the owner's visits stay
+    // out of the dashboards the way their games stay out of /stats.
+    statsExcluded: (user.statsExcludedAt ?? null) !== null,
     flair: user.flair,
     locale: user.locale,
     dmPolicy: user.dmPolicy,

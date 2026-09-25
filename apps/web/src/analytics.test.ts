@@ -1,10 +1,14 @@
 import { DARK_CHESS_SPEC_ID, gameSpecForId } from '@mistboard/game';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  applyInternalTag,
   classifyTimeControl,
   createGameLifecycleTracker,
   gameSpecAnalyticsProps,
+  isInternalBrowser,
+  markInternalBrowser,
   puzzleAttemptedProps,
+  resetIdentity,
   reviewOpenedProps,
   reviewRouteForAnalytics,
   roomModeAnalyticsProps,
@@ -202,5 +206,46 @@ describe('puzzleAttemptedProps', () => {
       outcome: 'solved',
       clean: true,
     });
+  });
+});
+
+describe('internal browser tag', () => {
+  beforeEach(() => {
+    // happy-dom here has no Storage; stub a fresh one per test (as account-nav.test does).
+    const store = new Map<string, string>();
+    Object.defineProperty(window, 'localStorage', {
+      configurable: true,
+      value: {
+        getItem: (k: string) => store.get(k) ?? null,
+        setItem: (k: string, v: string) => void store.set(k, v),
+        removeItem: (k: string) => void store.delete(k),
+      },
+    });
+  });
+
+  it('tags nothing for an ordinary browser', () => {
+    const register = vi.fn();
+    applyInternalTag({ register });
+    expect(isInternalBrowser()).toBe(false);
+    expect(register).not.toHaveBeenCalled();
+  });
+
+  it('marks the browser and registers is_internal on the live instance', () => {
+    const register = vi.fn();
+    setPostHogInstance({ capture: vi.fn(), identify: vi.fn(), reset: vi.fn(), register });
+    markInternalBrowser();
+    expect(isInternalBrowser()).toBe(true);
+    expect(register).toHaveBeenCalledWith({ is_internal: true });
+  });
+
+  it('re-tags after sign-out, because posthog.reset() clears super properties', () => {
+    const calls: string[] = [];
+    const register = vi.fn(() => calls.push('register'));
+    const reset = vi.fn(() => calls.push('reset'));
+    setPostHogInstance({ capture: vi.fn(), identify: vi.fn(), reset, register });
+    markInternalBrowser();
+    calls.length = 0;
+    resetIdentity();
+    expect(calls).toEqual(['reset', 'register']);
   });
 });

@@ -168,8 +168,40 @@ type PostHogLike = {
   capture: (name: string, props?: Record<string, unknown>) => void;
   captureException?: (error: unknown, props?: Record<string, unknown>) => void;
   identify: (distinctId: string, props?: Record<string, unknown>) => void;
+  register?: (props: Record<string, unknown>) => void;
   reset: () => void;
 };
+
+// A browser a stats-excluded account (the owner, test accounts) has signed in
+// from is tagged is_internal on every event, and PostHog's "filter out
+// internal and test users" setting drops it from dashboards. Events still
+// arrive, so the owner's own errors keep reaching Error Tracking. The flag is
+// ours, in localStorage, because posthog.reset() on sign-out wipes super
+// properties and the browser is still the owner's after signing out.
+const INTERNAL_BROWSER_KEY = 'mistboard-internal-browser';
+
+export function isInternalBrowser(): boolean {
+  try {
+    return window.localStorage.getItem(INTERNAL_BROWSER_KEY) === '1';
+  } catch {
+    return false;
+  }
+}
+
+export function markInternalBrowser(): void {
+  try {
+    window.localStorage.setItem(INTERNAL_BROWSER_KEY, '1');
+  } catch {
+    // Storage blocked: tag this page load only.
+  }
+  enqueue((ph) => ph.register?.({ is_internal: true }));
+}
+
+// Called on the live instance before its first event (main.ts) and after every
+// reset, so a known internal browser never sends an untagged event.
+export function applyInternalTag(ph: Pick<PostHogLike, 'register'>): void {
+  if (isInternalBrowser()) ph.register?.({ is_internal: true });
+}
 
 let posthogInstance: PostHogLike | null = null;
 // Actions queued before posthog-js finishes its async import (see main.ts).
@@ -295,7 +327,10 @@ export function resetIdentity(): void {
   if (import.meta.env.DEV) {
     console.log('[reset]');
   }
-  enqueue((ph) => ph.reset());
+  enqueue((ph) => {
+    ph.reset();
+    applyInternalTag(ph);
+  });
 }
 
 // Which locale the app actually rendered in, and which input decided it. The

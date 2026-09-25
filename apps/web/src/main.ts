@@ -13,7 +13,12 @@ import './board-fog.css';
 import './styles.css';
 import { initializeAccountNav } from './account-nav.js';
 import { analysisVariantFromPath, analysisVariantLabel } from './analysis-catalog.js';
-import { captureException, setPostHogInstance, trackLocaleResolved } from './analytics.js';
+import {
+  applyInternalTag,
+  captureException,
+  setPostHogInstance,
+  trackLocaleResolved,
+} from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
 import {
   clearChunkReloadAttempt,
@@ -164,6 +169,7 @@ if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
         return event;
       },
     });
+    applyInternalTag(posthog);
     posthog.capture('$pageview', { path: window.location.pathname });
     setPostHogInstance(posthog);
   });

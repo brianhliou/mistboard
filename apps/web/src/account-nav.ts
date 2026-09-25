@@ -1,7 +1,7 @@
 import './account-nav.css';
 
 import { type AccountPreferences, replaceAccountPreferences } from './account-preferences.js';
-import { identify, resetIdentity } from './analytics.js';
+import { identify, markInternalBrowser, resetIdentity } from './analytics.js';
 import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { type ConnectionStatus, createConnectionStatus } from './connection-status.js';
 import { t } from './i18n/catalog.js';
@@ -63,6 +63,8 @@ type AuthUser = {
   // Allowlisted variants this account may sit down at (139), server-derived.
   // Optional so cached payloads from before it existed still parse.
   variantGrants?: readonly string[];
+  // A stats-excluded account (owner, test); tags this browser internal in PostHog.
+  statsExcluded?: boolean;
 };
 
 export type { AuthUser };
@@ -478,6 +480,7 @@ async function loadCurrentUser(): Promise<AuthUser | null> {
           account_role: user.accountRole,
           email_verified: user.emailVerified,
         });
+        if (user.statsExcluded) markInternalBrowser();
       }
       return user;
     })
