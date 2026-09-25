@@ -104,15 +104,18 @@ export const RATED_TIME_CONTROLS: readonly TimeControlSpec[] = TIME_CONTROLS.fil
   (tc) => tc.rated,
 );
 
-// Paces an engine cannot honor, pinned to the slowest one it can.
+// The smallest increment an engine can live on, for engines whose per-move
+// cost has a floor the clock does not govern.
 //
 // Misty's per-move cost in fog has a floor of roughly 5s: belief enumeration
 // runs before the search's time budget applies, so the clock does not govern
 // it. A 1s or 2s increment cannot cover that, the bank drains a few seconds
 // per move, and the engine loses on time in any long enough game — measured in
 // prod game 14f0ca10 at 3+2, where Misty flagged while the guest still held
-// 117s of 180. The fog engines are pinned to 5+5 until the floor is bounded
-// (#283).
+// 117s of 180. Until the floor is bounded (#283) the fog engines need an
+// increment of at least 5s. The bank does not matter, the increment does, so
+// this is a floor on the increment rather than a single pinned pace: 10+5 is
+// strictly safer than 5+5 and was refused only because the rule named one pace.
 //
 // PvE only, and per game spec: the floor belongs to the engine, not to the
 // variant, so human games keep every pace their landing config offers, and
@@ -124,25 +127,36 @@ export const RATED_TIME_CONTROLS: readonly TimeControlSpec[] = TIME_CONTROLS.fil
 // rooms.ts for fog chess, routes/dark-xiangqi-rooms.ts for fog xiangqi), so a
 // hand-crafted POST cannot start a pace the picker refuses.
 //
-// A pin MUST be a pace the variant itself offers, or the picker narrows to an
-// empty set while the create route rejects everything, which strands the
-// surface. `variant-registry-sync.test.ts` holds that invariant.
-const ENGINE_TIME_CONTROL_PINS: Readonly<Partial<Record<GameSpecId, TimeControlId>>> = {
-  [DARK_CHESS_SPEC_ID]: '5m5',
+// A floored variant MUST still offer some pace that clears the floor, or the
+// picker narrows to an empty set while the create route rejects everything,
+// which strands the surface. `variant-registry-sync.test.ts` holds that.
+const ENGINE_MIN_INCREMENT_MS: Readonly<Partial<Record<GameSpecId, number>>> = {
+  [DARK_CHESS_SPEC_ID]: 5_000,
   // Fog xiangqi (python-fdx) runs its own belief stack rather than the fog
-  // chess time manager, so its floor is not separately measured; pinned on the
+  // chess time manager, so its floor is not separately measured; floored on the
   // shared-mechanism argument while #283 is open, not on its own flag evidence.
-  [DARK_XIANGQI_SPEC_ID]: '5m5',
+  [DARK_XIANGQI_SPEC_ID]: 5_000,
 };
 
-/** Every spec carrying an engine pin. Exported so conformance tests can assert
- *  each pin is a pace its own variant offers. */
-export const ENGINE_PINNED_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
-  ENGINE_TIME_CONTROL_PINS,
+/** Every spec whose engine carries an increment floor. Exported so
+ *  conformance tests can assert each still offers a pace that clears it. */
+export const ENGINE_FLOORED_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
+  ENGINE_MIN_INCREMENT_MS,
 ) as GameSpecId[];
 
-// The pace a variant PRESELECTS, for variants that want something other than
-// the house 3+2. A preference, not a constraint: every pace the variant offers
+// The pace every bot game starts at when nobody picked one, in every variant.
+// Bot games never rate, and they are where a new player lands first: guests
+// flagged in a third of their xiangqi and jieqi bot games at 3+2 (measured
+// 2026-09-01, see 10m5 above), running out of clock rather than being
+// outplayed. So bot games default to the unhurried rung everywhere, while human
+// games keep each variant's own default (VARIANT_DEFAULT_TIME_CONTROLS below).
+// It must clear every engine floor and be offered by every variant; tests hold
+// both.
+export const BOT_DEFAULT_TIME_CONTROL_ID: TimeControlId = '10m5';
+
+// The pace a variant PRESELECTS for human games, for variants that want
+// something other than the house 3+2. Bot games ignore this and start at
+// BOT_DEFAULT_TIME_CONTROL_ID. A preference, not a constraint: every pace the variant offers
 // stays selectable, and a player's stored choice outranks this.
 //
 // Deliberate variants sit here because a full xiangqi board at 3+2 is a pace
@@ -185,9 +199,8 @@ export const VARIANT_DEFAULT_GAME_SPEC_IDS: readonly GameSpecId[] = Object.keys(
 ) as GameSpecId[];
 
 /**
- * The pace a new game on this spec should start at when nobody picked one.
- * Precedence is the caller's job: an explicit request wins, then the engine pin
- * (a hard constraint), then this.
+ * The pace a new HUMAN game on this spec should start at when nobody picked
+ * one. Bot games start at defaultEngineTimeControl instead.
  */
 export function variantDefaultTimeControl(gameSpecId: GameSpecId | string): TimeControlSpec {
   const id = VARIANT_DEFAULT_TIME_CONTROLS[gameSpecId as GameSpecId] ?? DEFAULT_TIME_CONTROL_ID;
@@ -197,31 +210,34 @@ export function variantDefaultTimeControl(gameSpecId: GameSpecId | string): Time
 }
 
 /**
- * The pace a PvE game on this spec starts at absent an explicit request: the
- * engine pin if the engine cannot honor anything else, otherwise the variant
- * default. One function so the web chip and the server create route cannot
- * drift into advertising one clock and starting another.
+ * The pace a PvE game on this spec starts at absent an explicit request. One
+ * function so the web chip, the picker and the server create routes cannot
+ * drift into advertising one clock and starting another. Takes the spec so a
+ * future per-variant bot pace has one place to go.
  */
-export function defaultEngineTimeControl(gameSpecId: GameSpecId | string): TimeControlSpec {
-  return engineTimeControlPin(gameSpecId as GameSpecId) ?? variantDefaultTimeControl(gameSpecId);
+export function defaultEngineTimeControl(_gameSpecId: GameSpecId | string): TimeControlSpec {
+  const spec = TIME_CONTROLS.find((tc) => tc.id === BOT_DEFAULT_TIME_CONTROL_ID);
+  if (!spec)
+    throw new Error(`bot default ${BOT_DEFAULT_TIME_CONTROL_ID} is not a known time control`);
+  return spec;
 }
 
-/** The pace an engine game for this spec is pinned to, or null when unpinned. */
-export function engineTimeControlPin(gameSpecId: GameSpecId): TimeControlSpec | null {
-  const pinned = ENGINE_TIME_CONTROL_PINS[gameSpecId];
-  if (pinned === undefined) return null;
-  return TIME_CONTROLS.find((tc) => tc.id === pinned) ?? null;
+/** The smallest increment an engine game on this spec may run at (0 = any). */
+export function engineMinIncrementMs(gameSpecId: GameSpecId | string): number {
+  return ENGINE_MIN_INCREMENT_MS[gameSpecId as GameSpecId] ?? 0;
 }
 
 /**
- * Whether an engine game for this spec may run at this pace. Unpinned specs
- * accept anything (their own variant allowlist still applies); a pinned spec
- * accepts only its pin. Correspondence is out of scope — no engine plays it.
+ * Whether an engine game for this spec may run at this pace. Unfloored specs
+ * accept anything (their own variant allowlist still applies); a floored spec
+ * accepts any pace whose increment clears the floor. Correspondence is out of
+ * scope — no engine plays it.
  */
-export function isAllowedEngineTimeControl(gameSpecId: GameSpecId, tc: RoomTimeControl): boolean {
-  const pin = engineTimeControlPin(gameSpecId);
-  if (pin === null) return true;
-  return tc.initialMs === pin.initialMs && tc.incrementMs === pin.incrementMs;
+export function isAllowedEngineTimeControl(
+  gameSpecId: GameSpecId | string,
+  tc: Pick<RoomTimeControl, 'incrementMs'>,
+): boolean {
+  return tc.incrementMs >= engineMinIncrementMs(gameSpecId);
 }
 
 export function findTimeControl(

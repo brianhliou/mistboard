@@ -596,13 +596,12 @@ describe('landing play panel', () => {
   });
 
   // The fog engines' per-move floor outruns a 1s or 2s increment and they lose
-  // on time in long games (#283), so bot games there are pinned to the slowest
-  // pace. The pin is PvE-only: the same variant keeps all three paces against a
-  // human.
-  it('pins Fog Chess bot games to 5+5 and starts them there', async () => {
+  // on time in long games (#283), so bot games there need a 5s increment. The
+  // floor is PvE-only: the same variant keeps every pace against a human.
+  it('offers Fog Chess bot games 5+5 and 10+5 and starts them at 10+5', async () => {
     const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
       if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
-      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/pinned' });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/floored' });
       return jsonResponse({}, { status: 404 });
     });
     vi.stubGlobal('fetch', fetchSpy);
@@ -612,20 +611,19 @@ describe('landing play panel', () => {
 
     openPlaySetup(panel, 'Play a bot');
     selectModalVariant('dark-chess');
-    expect(visibleModalTimeControls()).toEqual(['5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['5 + 5', '10 + 5']);
 
-    // The stored/house default is 3+2, which the pin hides: starting without
-    // touching the picker must still send the pinned pace, not the hidden one.
+    // Starting without touching the picker sends the bot default.
     clickModalButton('Start game');
     await flushPromises();
 
     expect(roomPostBody(fetchSpy)).toMatchObject({
       mode: 'pve',
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
     });
   });
 
-  it('pins Fog Xiangqi bot games to 5+5 as well', () => {
+  it('offers Fog Xiangqi bot games 5+5 and 10+5 as well', () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse({ playing: 0, online: 0 })),
@@ -636,7 +634,28 @@ describe('landing play panel', () => {
     openPlaySetup(panel, 'Play a bot');
     selectModalVariant('dark-xiangqi');
 
-    expect(visibleModalTimeControls()).toEqual(['5 + 5']);
+    expect(visibleModalTimeControls()).toEqual(['5 + 5', '10 + 5']);
+  });
+
+  it('starts every bot game at 10+5 when the player has not picked a pace', async () => {
+    vi.stubEnv('VITE_BANQI_ENABLED', 'true');
+    const fetchSpy = vi.fn(async (input: RequestInfo | URL, _init?: RequestInit) => {
+      if (String(input) === '/api/live-stats') return jsonResponse({ playing: 0, online: 0 });
+      if (String(input) === '/api/rooms') return jsonResponse({ url: '/room/bot_default' });
+      return jsonResponse({}, { status: 404 });
+    });
+    vi.stubGlobal('fetch', fetchSpy);
+    setRoomNavigator(() => {});
+    const panel = buildLandingPlayPanel([]);
+    document.body.append(panel);
+
+    // Banqi keeps 3+2 for human games; its bot game still opens on 10+5.
+    openPlaySetup(panel, 'Play a bot');
+    selectModalVariant('banqi');
+    const selected = document.querySelector<HTMLButtonElement>(
+      '.landing-time-presets:not(.landing-correspondence-presets) button.selected',
+    );
+    expect(selected?.textContent?.trim()).toBe('10 + 5');
   });
 
   it('leaves human fog games on every pace', () => {

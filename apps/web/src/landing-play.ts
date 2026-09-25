@@ -7,9 +7,10 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
-  engineTimeControlPin,
+  defaultEngineTimeControl,
   FORTRESS_XIANGQI_SPEC_ID,
   gameSpecForId,
+  isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -161,12 +162,27 @@ const LANDING_TIME_PRESETS: LandingTimePreset[] = TIME_CONTROLS.map((tc) => ({
   timeClass: tc.timeClass,
 }));
 
-// The engine-pace pin for a variant, from the shared policy in @mistboard/game
-// (engineTimeControlPin) that the create route also rejects against. Fog Chess
-// PvE is pinned to 5+5 because Misty's per-move floor outruns a 2s increment
-// and it loses on time in long games (#283); see that policy for the detail.
-function pveTimePresetPin(gameSpecId: LandingGameSpecId): LandingTimePresetId | null {
-  return engineTimeControlPin(gameSpecId)?.id ?? null;
+// Whether this variant's bot can play at this pace, from the shared policy in
+// @mistboard/game (isAllowedEngineTimeControl) that the create route also
+// rejects against. The fog bots need a 5s increment or more because their
+// per-move floor outruns a 2s increment and they lose on time in long games
+// (#283); see that policy for the detail.
+function engineCanPlayPreset(gameSpecId: LandingGameSpecId, id: LandingTimePresetId): boolean {
+  const preset = LANDING_TIME_PRESETS.find((candidate) => candidate.id === id);
+  return preset !== undefined && isAllowedEngineTimeControl(gameSpecId, preset);
+}
+
+// The pace the picker preselects when the player has no stored choice: bot
+// games start at the shared bot default (10+5 everywhere), human games at the
+// variant's own default. The server resolves an omitted bot pace to the same
+// defaultEngineTimeControl, so the two cannot disagree.
+function defaultPresetForMode(
+  gameSpecId: LandingGameSpecId,
+  mode: LandingPlayMode,
+): LandingTimePresetId {
+  return mode === 'pve'
+    ? defaultEngineTimeControl(gameSpecId).id
+    : defaultTimePresetForSpec(gameSpecId);
 }
 
 // Lichess pairs every quick-pairing pool with its speed category (Bullet / Blitz /
@@ -182,14 +198,17 @@ function allowedTimePresetIds(
   mode: LandingPlayMode,
 ): ReadonlySet<LandingTimePresetId> {
   const tenantLanding = webVariantTenantForSpecId(gameSpecId)?.landing;
-  // The no-tenant-config fallback is fog chess. Its PvE is
-  // pinned to 5+5 (#283) and the pin narrows this set below, so the 10+5 rung
-  // here only ever reaches their human games.
+  // The no-tenant-config fallback is fog chess. Its PvE needs a 5s increment
+  // (#283), which narrows this set below to 5+5 and 10+5 for bot games.
   const offered = tenantLanding
     ? new Set<LandingTimePresetId>(tenantLanding.timePresetIds)
     : new Set<LandingTimePresetId>(['1m1', '3m2', '5m5', '10m5']);
-  const pin = mode === 'pve' ? pveTimePresetPin(gameSpecId) : null;
-  const paced = pin && offered.has(pin) ? new Set<LandingTimePresetId>([pin]) : offered;
+  const paced =
+    mode === 'pve'
+      ? new Set<LandingTimePresetId>(
+          [...offered].filter((id) => engineCanPlayPreset(gameSpecId, id)),
+        )
+      : offered;
   if (!rated) return paced;
   // Same source as the server's rated allowlist: the `rated` flag on each
   // time-control spec (@mistboard/game), so the two cannot drift.
@@ -872,8 +891,8 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
     if (botOffer) {
       // The shared bot policy names the pace; retain the first-offered fallback
       // so a future variant with narrower clocks cannot render a dead control.
-      // Resolved against the PvE set, not the human-pool one above, so a pinned
-      // engine pace (pveTimePresetPin) cannot be widened back here.
+      // Resolved against the PvE set, not the human-pool one above, so a pace
+      // the engine cannot play (engineCanPlayPreset) cannot be widened back here.
       //
       // Looked up in LANDING_TIME_PRESETS, NOT in `columns`: the bot chip is
       // appended after the grid rather than being one of its cells, so it is
@@ -1661,9 +1680,9 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
     ...gameSpecAnalyticsPropsForId(selectedGameSpecId),
   });
   // A stored preference is the player's own choice and always wins; otherwise
-  // the variant's own default, then the house default.
+  // the bot default for a bot game, or the variant's own default for a human one.
   let selectedPreset: LandingTimePresetId =
-    storedPreference.timePresetId ?? defaultTimePresetForSpec(selectedGameSpecId);
+    storedPreference.timePresetId ?? defaultPresetForMode(selectedGameSpecId, choice.mode);
   // Whether selectedPreset is a CHOICE or merely the variant's default. Every
   // variant offers 10+5, so switching variants no longer narrows the preset out
   // of the allowed set — without this flag, xiangqi's 10+5 default would follow
@@ -1967,13 +1986,13 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
 
     const allowed = allowedTimePresetIds(selectedGameSpecId, rated, choice.mode);
     // An untouched preset follows the selected variant; a chosen one sticks.
-    if (!presetIsExplicit) selectedPreset = defaultTimePresetForSpec(selectedGameSpecId);
-    // Fall back INSIDE the allowed set: the variant's default is the first
-    // choice, but a pinned engine pace or the rated allowlist can exclude it,
+    if (!presetIsExplicit) selectedPreset = defaultPresetForMode(selectedGameSpecId, choice.mode);
+    // Fall back INSIDE the allowed set: the default is the first choice, but
+    // an engine's increment floor or the rated allowlist can exclude it,
     // and selecting a hidden preset would start a game at a pace the picker
     // refuses to show.
     if (!allowed.has(selectedPreset)) {
-      const preferred = defaultTimePresetForSpec(selectedGameSpecId);
+      const preferred = defaultPresetForMode(selectedGameSpecId, choice.mode);
       selectedPreset =
         allowed.has(preferred) || allowed.size === 0
           ? preferred
@@ -3342,25 +3361,21 @@ function joinLobbyFromPlay(
   };
 
   // The seek's pace is a HUMAN pace; the bot the offer starts may not be able to
-  // honor it (pveTimePresetPin). Re-pace the room here rather than let the offer
-  // become the back door that reintroduces the flag — the seek itself keeps
-  // waiting at whatever pace the player picked.
-  const enginePreset = pveTimePresetPin(setup.gameSpecId);
-  const engineTimeControl = enginePreset
-    ? LANDING_TIME_PRESETS.find((preset) => preset.id === enginePreset)
-    : undefined;
-  const engineSetup: LandingRoomSetup =
-    engineTimeControl &&
-    (engineTimeControl.initialMs !== setup.timeControl.initialMs ||
-      engineTimeControl.incrementMs !== setup.timeControl.incrementMs)
-      ? {
-          ...setup,
-          timeControl: {
-            initialMs: engineTimeControl.initialMs,
-            incrementMs: engineTimeControl.incrementMs,
-          },
-        }
-      : setup;
+  // honor it (isAllowedEngineTimeControl). Re-pace the room to the bot default
+  // here rather than let the offer become the back door that reintroduces the
+  // flag — the seek itself keeps waiting at whatever pace the player picked.
+  const engineTimeControl = isAllowedEngineTimeControl(setup.gameSpecId, setup.timeControl)
+    ? undefined
+    : defaultEngineTimeControl(setup.gameSpecId);
+  const engineSetup: LandingRoomSetup = engineTimeControl
+    ? {
+        ...setup,
+        timeControl: {
+          initialMs: engineTimeControl.initialMs,
+          incrementMs: engineTimeControl.incrementMs,
+        },
+      }
+    : setup;
   const engineRepaced = engineSetup !== setup;
 
   const acceptEngineOffer = (playButton: HTMLButtonElement) => {

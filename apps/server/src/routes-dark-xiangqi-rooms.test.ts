@@ -133,9 +133,9 @@ test('Dark Xiangqi PvE route seats the default engine opposite the human', async
       mode: 'pve',
       gameSpecId: DARK_XIANGQI_SPEC_ID,
       region: 'global',
-      // The request named no pace, so the engine pin supplied one and the
-      // response reports it (#283) instead of staying silent about the clock.
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      // The request named no pace, so the bot default supplied one and the
+      // response reports it instead of staying silent about the clock.
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
     });
   } finally {
     restoreFlag(before);
@@ -371,8 +371,8 @@ test('Dark Xiangqi room route refuses a bot game at a pace the engine cannot hon
   process.env[darkXiangqiFlag] = 'true';
   try {
     // Fog engines have a per-move floor a 1s or 2s increment cannot cover, so
-    // they lose on time in long games (#283); PvE is pinned to 5+5 until the
-    // floor is bounded. Rejected BEFORE the engine seat reservation, so a
+    // they lose on time in long games (#283); PvE needs a 5s increment until
+    // the floor is bounded. Rejected BEFORE the engine seat reservation, so a
     // refused request never holds one.
     let reservations = 0;
     const ctx = testContext({
@@ -401,7 +401,7 @@ test('Dark Xiangqi room route refuses a bot game at a pace the engine cannot hon
   }
 });
 
-test('Dark Xiangqi PvE with no named pace starts at the pin, not the house default', async () => {
+test('Dark Xiangqi PvE with no named pace starts at the bot default, not the house default', async () => {
   const before = process.env[darkXiangqiFlag];
   process.env[darkXiangqiFlag] = 'true';
   try {
@@ -425,7 +425,7 @@ test('Dark Xiangqi PvE with no named pace starts at the pin, not the house defau
     // The response echoes the effective pace, so a caller that named none can
     // see what it actually got.
     assert.deepEqual(responseJson(response).timeControl, {
-      initialMs: 300_000,
+      initialMs: 600_000,
       incrementMs: 5_000,
     });
 
@@ -437,13 +437,13 @@ test('Dark Xiangqi PvE with no named pace starts at the pin, not the house defau
     });
     assert.equal(human.status, 201);
 
-    assert.deepEqual(startedPaces, [{ initialMs: 300_000, incrementMs: 5_000 }, undefined]);
+    assert.deepEqual(startedPaces, [{ initialMs: 600_000, incrementMs: 5_000 }, undefined]);
   } finally {
     restoreFlag(before);
   }
 });
 
-test('Dark Xiangqi room route admits the pinned pace and leaves human games alone', async () => {
+test('Dark Xiangqi room route admits paces that clear the floor and leaves human games alone', async () => {
   const before = process.env[darkXiangqiFlag];
   process.env[darkXiangqiFlag] = 'true';
   try {
@@ -456,13 +456,15 @@ test('Dark Xiangqi room route admits the pinned pace and leaves human games alon
       },
     });
 
-    const pinned = captureResponse();
-    await handleDarkXiangqiCreate(ctx, pinned, {
-      gameSpecId: DARK_XIANGQI_SPEC_ID,
-      mode: 'pve',
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
-    });
-    assert.equal(pinned.status, 201);
+    for (const initialMs of [300_000, 600_000]) {
+      const floored = captureResponse();
+      await handleDarkXiangqiCreate(ctx, floored, {
+        gameSpecId: DARK_XIANGQI_SPEC_ID,
+        mode: 'pve',
+        timeControl: { initialMs, incrementMs: 5_000 },
+      });
+      assert.equal(floored.status, 201, `${initialMs}+5000`);
+    }
 
     // The same pace the bot is refused, between humans: the floor belongs to
     // the engine, not to the variant.
@@ -476,6 +478,7 @@ test('Dark Xiangqi room route admits the pinned pace and leaves human games alon
 
     assert.deepEqual(startedPaces, [
       { initialMs: 300_000, incrementMs: 5_000 },
+      { initialMs: 600_000, incrementMs: 5_000 },
       { initialMs: 180_000, incrementMs: 2_000 },
     ]);
   } finally {

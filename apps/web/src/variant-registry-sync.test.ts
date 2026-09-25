@@ -14,8 +14,11 @@ import { isClientRoute } from '../../server/src/server-policy.js';
 // apps/server/src/index.ts (and registry.test.ts) do.
 import '../../server/src/variant-tenant/register-tenants.js';
 import {
-  ENGINE_PINNED_GAME_SPEC_IDS,
-  engineTimeControlPin,
+  BOT_DEFAULT_TIME_CONTROL_ID,
+  defaultEngineTimeControl,
+  ENGINE_FLOORED_GAME_SPEC_IDS,
+  isAllowedEngineTimeControl,
+  TIME_CONTROLS,
   VARIANT_DEFAULT_GAME_SPEC_IDS,
   variantDefaultTimeControl,
 } from '@mistboard/game';
@@ -26,7 +29,7 @@ import {
   XIANGQI_PUBLIC_ENGINES,
 } from '../../server/src/xiangqi-engine-catalog.js';
 import { landingBotOffer } from './landing-bot-policy.js';
-import { defaultTimePresetForSpec, webVariantTenants } from './variant-tenant/registry.js';
+import { webVariantTenants } from './variant-tenant/registry.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
 
@@ -132,24 +135,36 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     }
   });
 
-  it('every engine-pinned variant offers the pace it is pinned to', () => {
-    // A pin narrows the PvE picker to a single preset and the create route to a
-    // single pace (#283). If the variant's own allowlist does not contain that
-    // preset, the picker narrows to nothing while the route rejects everything,
-    // which strands bot play on that variant entirely.
-    for (const gameSpecId of ENGINE_PINNED_GAME_SPEC_IDS) {
-      const pin = engineTimeControlPin(gameSpecId);
-      expect(pin, `${gameSpecId} is listed as pinned but resolves to no time control`).toBeTruthy();
+  it('every engine-floored variant offers a pace its bot can play', () => {
+    // An increment floor narrows the PvE picker and the create route (#283). If
+    // none of the variant's own presets clears it, the picker narrows to
+    // nothing while the route rejects everything, which strands bot play on
+    // that variant entirely.
+    for (const gameSpecId of ENGINE_FLOORED_GAME_SPEC_IDS) {
       const tenantLanding = webVariantTenants().find(
         (tenant) => tenant.gameSpecId === gameSpecId,
       )?.landing;
-      // Variants with no tenant landing config (fog chess) fall back
-      // to all three official controls in the picker, so any pin is offered.
+      // Variants with no tenant landing config (fog chess) fall back to every
+      // official pace in the picker, 10+5 among them.
       if (!tenantLanding) continue;
+      const playable = tenantLanding.timePresetIds.filter((id) => {
+        const tc = TIME_CONTROLS.find((candidate) => candidate.id === id);
+        return tc !== undefined && isAllowedEngineTimeControl(gameSpecId, tc);
+      });
+      expect(playable, `${gameSpecId} offers no pace its bot can play`).not.toEqual([]);
+    }
+  });
+
+  it('every variant offers the bot default pace', () => {
+    // Bot games preselect BOT_DEFAULT_TIME_CONTROL_ID in every variant and the
+    // server starts an omitted bot pace there, so a variant that does not render
+    // it would preselect an invisible control.
+    for (const tenant of webVariantTenants()) {
+      if (!tenant.landing) continue;
       expect(
-        tenantLanding.timePresetIds,
-        `${gameSpecId} is pinned to ${pin?.id} but its landing config does not offer it`,
-      ).toContain(pin?.id);
+        tenant.landing.timePresetIds,
+        `${tenant.gameSpecId} does not offer the bot default ${BOT_DEFAULT_TIME_CONTROL_ID}`,
+      ).toContain(BOT_DEFAULT_TIME_CONTROL_ID);
     }
   });
 
@@ -176,18 +191,17 @@ describe('web tenant registry <-> server tenant registry parity', () => {
 
   it('a bot offer advertises the pace its own picker will preselect', () => {
     // The Lobby row and Quick Pairing chip print a clock beside the bot's name;
-    // landing-play then opens the setup dialog on the variant's default. Those
-    // are computed in two places (landing-bot-policy offerPace, registry
-    // defaultTimePresetForSpec), so nothing but this test stops them drifting
-    // into advertising one pace and starting another.
+    // landing-play then opens the setup dialog on the bot default, and the
+    // server starts an omitted bot pace at defaultEngineTimeControl. Nothing but
+    // this test stops them drifting into advertising one pace and starting
+    // another.
     for (const tenant of webVariantTenants()) {
       const offer = landingBotOffer(tenant.gameSpecId);
       if (!offer) continue;
-      const pin = engineTimeControlPin(tenant.gameSpecId)?.id;
       expect(
         offer.timeControlId,
         `${tenant.gameSpecId} advertises ${offer.timeControlId} for ${offer.botName}`,
-      ).toBe(pin ?? defaultTimePresetForSpec(tenant.gameSpecId));
+      ).toBe(defaultEngineTimeControl(tenant.gameSpecId).id);
     }
   });
 });

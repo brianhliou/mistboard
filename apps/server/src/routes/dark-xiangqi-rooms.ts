@@ -2,7 +2,7 @@ import { randomBytes } from 'node:crypto';
 import type { ServerResponse } from 'node:http';
 import {
   DARK_XIANGQI_SPEC_ID,
-  engineTimeControlPin,
+  defaultEngineTimeControl,
   isAllowedEngineTimeControl,
   type RoomTimeControl,
 } from '@mistboard/game';
@@ -71,9 +71,9 @@ export async function handleDarkXiangqiCreate(
   // An engine that cannot honor a pace must not be handed one (#283). Checked
   // before the seat reservation below, so a rejected request never holds one.
   // Human games are untouched: the floor belongs to the engine, not the variant.
-  // An omitted pace resolves to the pin rather than the room factory's default
-  // clock, so a caller that names no pace cannot bypass this (see routes/
-  // rooms.ts for the same resolution on the fog chess side).
+  // An omitted pace resolves to the bot default (10+5) rather than the room
+  // factory's default clock, so a caller that names no pace cannot bypass this
+  // (see routes/rooms.ts for the same resolution on the fog chess side).
   if (
     mode === 'pve' &&
     timeControl &&
@@ -82,10 +82,12 @@ export async function handleDarkXiangqiCreate(
     writeJson(response, 400, { error: 'engine_time_control_unsupported' });
     return;
   }
-  const enginePin = mode === 'pve' ? engineTimeControlPin(DARK_XIANGQI_SPEC_ID) : null;
+  const engineDefault = mode === 'pve' ? defaultEngineTimeControl(DARK_XIANGQI_SPEC_ID) : null;
   const effectiveTimeControl =
     timeControl ??
-    (enginePin ? { initialMs: enginePin.initialMs, incrementMs: enginePin.incrementMs } : null);
+    (engineDefault
+      ? { initialMs: engineDefault.initialMs, incrementMs: engineDefault.incrementMs }
+      : null);
   const botId = typeof body.botId === 'string' ? body.botId : undefined;
   let engine:
     | { engineId: string; seat: 'red' | 'black'; reservationId: string; botId?: string }

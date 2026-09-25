@@ -30,10 +30,10 @@ describe('landing bot policy', () => {
     }
   });
 
-  it('pins one stable FSF opponent per variant, at the variant default pace', () => {
-    // Xiangqi is a deliberate variant: it defaults to 10+5, not the 3+2 house
-    // pace, because guests flagged 36% of their games at 3+2. The offer has to
-    // advertise that, since the click starts the picker on the same default.
+  it('pins one stable FSF opponent per variant, at the bot default pace', () => {
+    // Every bot game defaults to 10+5, not the 3+2 house pace, because guests
+    // flagged a third of their xiangqi and jieqi bot games at 3+2. The offer has
+    // to advertise that, since the click starts the picker on the same default.
     // A device with no remembered xiangqi engine is a first-time visitor and
     // gets the bottom rung (#365); see the memory cases below.
     expect(landingBotOffer('xiangqi')).toMatchObject({
@@ -41,10 +41,10 @@ describe('landing bot policy', () => {
       botName: 'Fairy-Stockfish Level 2',
       timeControlId: '10m5',
     });
-    // Fortress xiangqi has no default of its own, so it keeps the house pace.
+    // Fortress xiangqi keeps 3+2 for human games, but its bot game is 10+5.
     expect(landingBotOffer('fortress-xiangqi')).toMatchObject({
       botId: 'fairy-stockfish-level-4',
-      timeControlId: '3m2',
+      timeControlId: '10m5',
     });
   });
 
@@ -119,42 +119,21 @@ describe('landing bot policy', () => {
       expect(new Set(rowsFor('jieqi').map((offer) => offer.botId))).toEqual(new Set(['pikafish']));
     });
 
-    it('rotates the clock through the allowed paces at or slower than the default', () => {
-      // House-pace variants have three slower-or-equal paces and visit them all.
-      for (const gameSpecId of ['banqi', 'fortress-xiangqi', 'jungle', 'jungle-flip']) {
-        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
-          new Set(['3m2', '5m5', '10m5']),
-        );
-      }
-      expect(
-        new Set(rowsFor('duck-xiangqi', ['3m2', '5m5', '10m5']).map((o) => o.timeControlId)),
-      ).toEqual(new Set(['5m5', '10m5']));
-      // The deliberate variants default to the slowest pace (the 2026-09-01
-      // guest-pace fix), so there is nothing slower to rotate to and they
-      // never drop back to the 3+2 that flagged a third of guest games.
-      for (const gameSpecId of ['xiangqi', 'jieqi', 'atomic-xiangqi']) {
+    it('never rotates the clock below the bot default', () => {
+      // The bot default is the slowest pace, so there is nothing slower to
+      // rotate to, and no row drops back to the 3+2 that flagged a third of
+      // guest games. Holds for the fog engines too: 10+5 clears their floor.
+      for (const gameSpecId of LANDING_BOT_GAME_SPEC_IDS) {
         expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
           new Set(['10m5']),
         );
       }
     });
 
-    it('holds a pinned engine to its pin whatever the picker offers', () => {
-      for (const gameSpecId of ['dark-chess', 'dark-xiangqi']) {
-        expect(new Set(rowsFor(gameSpecId).map((offer) => offer.timeControlId))).toEqual(
-          new Set(['5m5']),
-        );
-      }
-    });
-
     it('never advertises a pace the picker would not start', () => {
-      // A narrowed picker (only 5+5 offered) narrows the rotation with it.
-      expect(new Set(rowsFor('banqi', ['5m5']).map((offer) => offer.timeControlId))).toEqual(
-        new Set(['5m5']),
-      );
-      // An empty set falls back to the variant default rather than a dead row.
+      // An empty set falls back to the bot default rather than a dead row.
       expect(new Set(rowsFor('banqi', []).map((offer) => offer.timeControlId))).toEqual(
-        new Set(['3m2']),
+        new Set(['10m5']),
       );
     });
 
@@ -163,7 +142,7 @@ describe('landing bot policy', () => {
       for (const bucket of buckets) {
         expect(landingBotOffer('fortress-xiangqi')).toMatchObject({
           botId: 'fairy-stockfish-level-4',
-          timeControlId: '3m2',
+          timeControlId: '10m5',
         });
         expect(
           landingLobbyBotOffer('fortress-xiangqi', { bucket, allowedPaces: ALL_PACES }),
@@ -174,20 +153,13 @@ describe('landing bot policy', () => {
 
   it('uses the established house bot for every other supported variant', () => {
     expect(landingBotOffer('jieqi')?.botId).toBe('pikafish');
-    for (const gameSpecId of ['banqi', 'jungle', 'jungle-flip']) {
+    // Every Misty variant, fog included, advertises the 10+5 bot default. For
+    // the fog engines it also clears the 5s increment floor (#283) the picker
+    // and the create routes enforce (isAllowedEngineTimeControl).
+    for (const gameSpecId of ['banqi', 'jungle', 'jungle-flip', 'dark-chess', 'dark-xiangqi']) {
       expect(landingBotOffer(gameSpecId)).toMatchObject({
         botId: 'misty',
-        timeControlId: '3m2',
-      });
-    }
-    // The fog variants are the exception to the house pace: their engines have
-    // a per-move floor a 2s increment cannot cover, so they lose on time in
-    // long games (#283) and their offers take the 5+5 pin the picker and the
-    // create routes also enforce (engineTimeControlPin).
-    for (const gameSpecId of ['dark-chess', 'dark-xiangqi']) {
-      expect(landingBotOffer(gameSpecId)).toMatchObject({
-        botId: 'misty',
-        timeControlId: '5m5',
+        timeControlId: '10m5',
       });
     }
   });

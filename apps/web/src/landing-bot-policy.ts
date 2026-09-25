@@ -4,8 +4,9 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
-  engineTimeControlPin,
+  defaultEngineTimeControl,
   FORTRESS_XIANGQI_SPEC_ID,
+  isAllowedEngineTimeControl,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
   JUNGLE_SPEC_ID,
@@ -13,7 +14,6 @@ import {
   type TimeControlId,
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
-import { defaultTimePresetForSpec } from './variant-tenant/registry.js';
 
 // One small merchandising policy shared by the Lobby rows and Quick Pairing's
 // Computer chips. Room creation remains server-authoritative.
@@ -162,15 +162,12 @@ export function landingBotOffer(
 }
 
 // The Lobby row and the Quick Pairing chip must advertise the clock the click
-// will actually start, so this mirrors the picker's preselection exactly.
-// Precedence, strongest first:
-//   1. the engine pin — a HARD constraint: the fog engines lose on time at 3+2
-//      (#283) and the create route rejects anything else;
-//   2. the variant's own default — a preference, slower on the deliberate
-//      variants because guests cannot finish a full-board game at 3+2;
-//   3. the house pace, 3+2.
+// will actually start, so this mirrors the picker's preselection exactly: the
+// shared bot default, 10+5 in every variant (defaultEngineTimeControl). It
+// clears the fog engines' increment floor (#283), and guests could not finish
+// a full-board game at 3+2.
 function offerPace(gameSpecId: LandingBotGameSpecId): TimeControlId {
-  return engineTimeControlPin(gameSpecId)?.id ?? defaultTimePresetForSpec(gameSpecId);
+  return defaultEngineTimeControl(gameSpecId).id;
 }
 
 export type LandingLobbyBotOfferContext = {
@@ -185,12 +182,12 @@ export type LandingLobbyBotOfferContext = {
 // canonical offer, with the rung and the clock rotated:
 //   - a Fairy-Stockfish rung moves within LOBBY_LEVEL_OFFSETS of its tier;
 //     Misty and Pikafish have no rungs and stay put;
-//   - the clock walks the variant's allowed paces AT OR SLOWER THAN its
+//   - the clock walks the variant's allowed paces AT OR SLOWER THAN the bot
 //     default. Never faster: the default is the pace a first game is dropped
-//     into (xiangqi and jieqi moved to 10+5 on 2026-09-01 because guests
-//     flagged a third of their games at 3+2), so a rotation below it would
-//     re-introduce the flagging the default was set to stop. A pinned engine
-//     (the fog variants) has exactly one pace and never rotates.
+//     into (bot games moved to 10+5 because guests flagged a third of their
+//     xiangqi and jieqi games at 3+2), so a rotation below it would
+//     re-introduce the flagging the default was set to stop. With 10+5 the
+//     slowest rung, every row advertises 10+5 today.
 // Rung and clock advance on different strides, so a variant with three of
 // each shows every pairing over nine buckets instead of the same three.
 export function landingLobbyBotOffer(
@@ -225,13 +222,13 @@ function lobbyPaces(
   gameSpecId: LandingBotGameSpecId,
   allowedPaces: readonly TimeControlId[],
 ): readonly TimeControlId[] {
-  const pin = engineTimeControlPin(gameSpecId)?.id;
-  if (pin) return [pin];
-  const floor = TIME_CONTROLS.findIndex((tc) => tc.id === defaultTimePresetForSpec(gameSpecId));
+  const botDefault = offerPace(gameSpecId);
+  const floor = TIME_CONTROLS.findIndex((tc) => tc.id === botDefault);
   const slowEnough = TIME_CONTROLS.filter(
-    (tc, index) => index >= floor && allowedPaces.includes(tc.id),
+    (tc, index) =>
+      index >= floor && allowedPaces.includes(tc.id) && isAllowedEngineTimeControl(gameSpecId, tc),
   ).map((tc) => tc.id);
-  return slowEnough.length > 0 ? slowEnough : [defaultTimePresetForSpec(gameSpecId)];
+  return slowEnough.length > 0 ? slowEnough : [botDefault];
 }
 
 function clampLevel(level: number): number {

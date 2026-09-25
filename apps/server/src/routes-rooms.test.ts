@@ -88,8 +88,9 @@ definePersistenceTests('room bot play requests', () => {
       options: { engineColor: 'black', engineReservationId: 'reservation-1', botId: 'play-bot' },
       rated: false,
       // The fixture's stored standing clock is the house 3+2, which fog engines
-      // cannot honor (#283); the pin overrides it rather than 400-ing the create.
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
+      // cannot honor (#283); the bot default overrides it rather than 400-ing
+      // the create.
+      timeControl: { initialMs: 600_000, incrementMs: 5_000 },
       variant: 'dark-chess',
     });
     assert.equal((JSON.parse(response.body) as { url?: string }).url, '/room/bot-room');
@@ -131,10 +132,10 @@ definePersistenceTests('room bot play requests', () => {
     assert.deepEqual(reserved, { color: 'black', engineId: 'python-v2-v1.6' });
   });
 
-  test('a fog bot profile stored at an unplayable pace starts at the pin, not a 400', async () => {
+  test('a fog bot profile stored at an unplayable pace starts at the bot default, not a 400', async () => {
     // Bot profiles carry a standing clock in the DB. The fog rows predate the
-    // engine pin and sit at the house 3+2 (#283). A bot-id create that omits a
-    // time control must still start a game: the pin overrides the stored pace
+    // engine floor and sit at the house 3+2 (#283). A bot-id create that omits a
+    // time control must still start a game: the bot default overrides the stored pace
     // rather than rejecting it, so no profile migration is needed to keep bot
     // play working. Caught by hosted CI, which runs the Postgres-gated tests
     // this file's other cases live in.
@@ -157,12 +158,12 @@ definePersistenceTests('room bot play requests', () => {
 
     assert.equal(handled, true);
     assert.equal(response.status, 201);
-    assert.deepEqual(startedPaces, [{ initialMs: 300_000, incrementMs: 5_000 }]);
+    assert.deepEqual(startedPaces, [{ initialMs: 600_000, incrementMs: 5_000 }]);
   });
 
   // The bot's stored pace is the house 3+2 on every real row, and it is one
   // pace per BOT where the pace belongs to the VARIANT. A jieqi bot create that
-  // names no clock has to resolve to jieqi's own default, or the Quick Pairing
+  // names no clock has to resolve to the bot default, or the Quick Pairing
   // chip advertises 10+5 while the room starts at 3+2 — the pace guests could
   // not finish a game in, which is the whole reason the default moved.
   //
@@ -170,7 +171,7 @@ definePersistenceTests('room bot play requests', () => {
   // where the pace is resolved, and it runs BEFORE tenant dispatch, so a tenant
   // variant like jieqi never reaches the chess-path room factory a context
   // fixture can hook.
-  test('an unpinned bot create that names no pace resolves to the variant default', async () => {
+  test('a bot create that names no pace resolves to the bot default', async () => {
     await insertBotProfile('jieqi-bot', 'Jieqi Bot', 'public', 'jieqi', JIEQI_DEFAULT_ENGINE_ID);
     const resolved = await withJieqiEnabled(() =>
       resolveBotRoomRequest(captureResponse(), { botId: 'jieqi-bot', mode: 'pve' }),
@@ -179,16 +180,16 @@ definePersistenceTests('room bot play requests', () => {
     assert.deepEqual(resolved?.timeControl, { initialMs: 600_000, incrementMs: 5_000 });
   });
 
-  test('a pinned bot create still takes the pin over the variant default', async () => {
+  test('a fog bot create that names no pace resolves to the bot default too', async () => {
     await insertBotProfile('fog-bot', 'Fog Bot', 'public', 'dark-chess');
     const resolved = await resolveBotRoomRequest(captureResponse(), {
       botId: 'fog-bot',
       mode: 'pve',
     });
-    assert.deepEqual(resolved?.timeControl, { initialMs: 300_000, incrementMs: 5_000 });
+    assert.deepEqual(resolved?.timeControl, { initialMs: 600_000, incrementMs: 5_000 });
   });
 
-  test('an explicit pace still outranks both pin and variant default', async () => {
+  test('an explicit pace still outranks the bot default', async () => {
     await insertBotProfile(
       'jieqi-bot-explicit',
       'Jieqi Bot',
@@ -381,13 +382,13 @@ async function insertBotProfile(
 
 // An engine that cannot honor a pace must not be handed one: Misty's per-move
 // cost in fog has a floor the 1s and 2s increments do not cover, so it loses on
-// time in long games (#283). The picker narrows to the pin; this is the
-// defense in depth that a hand-crafted POST hits.
-test('a fog PvE create that names no pace starts at the pin, not the house default', async () => {
-  // The room factory's default clock is the house 3+2 — the pace the pin exists
-  // to refuse (#283). Callers that omit a time control (the prod engine smokes,
-  // API clients) would bypass the pin entirely if it only validated explicit
-  // input, so an omitted pace RESOLVES to the pin here.
+// time in long games (#283). The picker narrows to paces that clear the floor;
+// this is the defense in depth that a hand-crafted POST hits.
+test('a fog PvE create that names no pace starts at the bot default, not the house default', async () => {
+  // The room factory's default clock is the house 3+2 — the pace the floor
+  // exists to refuse (#283). Callers that omit a time control (the prod engine
+  // smokes, API clients) would bypass the floor entirely if it only validated
+  // explicit input, so an omitted pace RESOLVES to the bot default here.
   const startedPaces: (RoomTimeControl | undefined)[] = [];
   const base = createContext({
     createRoom: async (mode, _variant, _engineId, timeControl) => {
@@ -402,12 +403,12 @@ test('a fog PvE create that names no pace starts at the pin, not the house defau
   assert.equal(response.status, 201);
 
   // A human game with no named pace still takes the room factory default: the
-  // pin is a PvE constraint, not a new global default.
+  // bot default is a PvE rule, not a new global default.
   const human = captureResponse();
   await tryHandle(ctx, jsonPost({ mode: 'pvp', variant: 'dark-chess' }), human, '/api/rooms');
   assert.equal(human.status, 201);
 
-  assert.deepEqual(startedPaces, [{ initialMs: 300_000, incrementMs: 5_000 }, undefined]);
+  assert.deepEqual(startedPaces, [{ initialMs: 600_000, incrementMs: 5_000 }, undefined]);
 });
 
 // An omitted side means "nobody asked", and nobody asking must not cost the
@@ -460,7 +461,7 @@ test('room creation rejects a fog chess bot game at a pace the engine cannot hon
   }
 });
 
-test('the engine pin admits its own pace and leaves human games alone', async () => {
+test('the engine floor admits 5+5 and 10+5 and leaves human games alone', async () => {
   // Collected rather than assigned to a `let`: a callback write does not narrow,
   // so reading a property off the captured value would type as `never`.
   const startedPaces: (RoomTimeControl | undefined)[] = [];
@@ -470,22 +471,27 @@ test('the engine pin admits its own pace and leaves human games alone', async ()
       return roomFixture({ id: 'paced-room', mode, timeControl });
     },
   });
-  // No Postgres in this unit path; the pin is checked before the persistence gate.
+  // No Postgres in this unit path; the floor is checked before the persistence gate.
   const ctx: HttpApiContext = { ...base, databaseRequired: false };
 
-  const pinned = captureResponse();
-  await tryHandle(
-    ctx,
-    jsonPost({
-      mode: 'pve',
-      variant: 'dark-chess',
-      timeControl: { initialMs: 300_000, incrementMs: 5_000 },
-    }),
-    pinned,
-    '/api/rooms',
-  );
-  assert.equal(pinned.status, 201);
-  assert.deepEqual(startedPaces, [{ initialMs: 300_000, incrementMs: 5_000 }]);
+  for (const initialMs of [300_000, 600_000]) {
+    const floored = captureResponse();
+    await tryHandle(
+      ctx,
+      jsonPost({
+        mode: 'pve',
+        variant: 'dark-chess',
+        timeControl: { initialMs, incrementMs: 5_000 },
+      }),
+      floored,
+      '/api/rooms',
+    );
+    assert.equal(floored.status, 201, `${initialMs}+5000`);
+  }
+  assert.deepEqual(startedPaces, [
+    { initialMs: 300_000, incrementMs: 5_000 },
+    { initialMs: 600_000, incrementMs: 5_000 },
+  ]);
 
   // PvP at the same pace the bot is refused: the floor belongs to the engine,
   // not to Fog Chess, so humans keep every official control.
@@ -503,6 +509,7 @@ test('the engine pin admits its own pace and leaves human games alone', async ()
   assert.equal(human.status, 201);
   assert.deepEqual(startedPaces, [
     { initialMs: 300_000, incrementMs: 5_000 },
+    { initialMs: 600_000, incrementMs: 5_000 },
     { initialMs: 180_000, incrementMs: 2_000 },
   ]);
 });

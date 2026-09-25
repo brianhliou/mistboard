@@ -2,11 +2,13 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 
 import {
+  BOT_DEFAULT_TIME_CONTROL_ID,
   correspondenceTimeControl,
   DAY_MS,
   DAYS_PER_MOVE_OPTIONS,
   defaultEngineTimeControl,
-  engineTimeControlPin,
+  ENGINE_FLOORED_GAME_SPEC_IDS,
+  engineMinIncrementMs,
   findTimeControl,
   isAllowedEngineTimeControl,
   isOfficialCorrespondenceTimeControl,
@@ -193,40 +195,27 @@ test('the live allowlist rejects correspondence time controls', () => {
 // Fog Chess Misty cannot honor a 1s or 2s increment: its per-move cost has a
 // floor the increment does not cover, so it drains its bank and loses on time
 // in long games (#283). Both the picker and the create route derive from this.
-test('the engine pin scopes fog bot games to 5+5', () => {
-  const pin = engineTimeControlPin('dark-chess');
-  assert.equal(pin?.id, '5m5');
-  // Fog xiangqi runs its own belief stack, pinned on the shared-mechanism
+test('the engine floor keeps fog bot games at a 5s increment or more', () => {
+  // Fog xiangqi runs its own belief stack, floored on the shared-mechanism
   // argument rather than its own measured flag.
-  assert.equal(engineTimeControlPin('dark-xiangqi')?.id, '5m5');
-
-  assert.equal(
-    isAllowedEngineTimeControl('dark-chess', { initialMs: 300_000, incrementMs: 5_000 }),
-    true,
-  );
-  assert.equal(
-    isAllowedEngineTimeControl('dark-chess', { initialMs: 180_000, incrementMs: 2_000 }),
-    false,
-  );
-  assert.equal(
-    isAllowedEngineTimeControl('dark-xiangqi', { initialMs: 180_000, incrementMs: 2_000 }),
-    false,
-  );
+  for (const gameSpecId of ['dark-chess', 'dark-xiangqi']) {
+    assert.equal(engineMinIncrementMs(gameSpecId), 5_000);
+    const allowed = TIME_CONTROLS.filter((tc) => isAllowedEngineTimeControl(gameSpecId, tc));
+    assert.deepEqual(
+      allowed.map((tc) => tc.id),
+      ['5m5', '10m5'],
+      `${gameSpecId} bot games`,
+    );
+  }
 });
 
-test('unpinned specs accept every pace their own allowlist offers', () => {
-  // Engines with a bounded per-move cost are absent from the pin map; the
+test('unfloored specs accept every pace their own allowlist offers', () => {
+  // Engines with a bounded per-move cost are absent from the floor map; the
   // variant's own time-control allowlist stays the only constraint on them.
-  assert.equal(engineTimeControlPin('xiangqi'), null);
-  assert.equal(engineTimeControlPin('banqi'), null);
+  assert.equal(engineMinIncrementMs('xiangqi'), 0);
+  assert.equal(engineMinIncrementMs('banqi'), 0);
   for (const tc of TIME_CONTROLS) {
-    assert.equal(
-      isAllowedEngineTimeControl('xiangqi', {
-        initialMs: tc.initialMs,
-        incrementMs: tc.incrementMs,
-      }),
-      true,
-    );
+    assert.equal(isAllowedEngineTimeControl('xiangqi', tc), true);
   }
 });
 
@@ -239,15 +228,29 @@ test('variantDefaultTimeControl: deliberate variants opt out of the house pace',
   assert.equal(variantDefaultTimeControl('not-a-real-spec').id, '3m2');
 });
 
-test('defaultEngineTimeControl: pin outranks the variant default', () => {
-  // The precedence the web chip (landing-bot-policy offerPace) and the server
-  // create route (routes/rooms.ts) BOTH have to apply, or one advertises a pace
-  // the other does not start. A pin is a hard constraint (#283); a variant
-  // default is only a preference.
-  assert.equal(defaultEngineTimeControl('dark-chess').id, '5m5');
-  assert.equal(defaultEngineTimeControl('dark-xiangqi').id, '5m5');
-  assert.equal(defaultEngineTimeControl('jieqi').id, '10m5');
-  assert.equal(defaultEngineTimeControl('banqi').id, '3m2');
+test('defaultEngineTimeControl: every bot game starts at 10+5', () => {
+  // The pace the web chip (landing-bot-policy offerPace), the picker and the
+  // server create routes ALL have to apply, or one advertises a pace the other
+  // does not start. Human games keep their variant default.
+  for (const gameSpecId of [
+    'dark-chess',
+    'dark-xiangqi',
+    'jieqi',
+    'xiangqi',
+    'banqi',
+    'duck-xiangqi',
+  ]) {
+    assert.equal(defaultEngineTimeControl(gameSpecId).id, '10m5', gameSpecId);
+  }
+  assert.equal(variantDefaultTimeControl('banqi').id, '3m2');
+});
+
+test('the bot default clears every engine floor', () => {
+  const spec = TIME_CONTROLS.find((tc) => tc.id === BOT_DEFAULT_TIME_CONTROL_ID);
+  assert.ok(spec);
+  for (const gameSpecId of ENGINE_FLOORED_GAME_SPEC_IDS) {
+    assert.equal(isAllowedEngineTimeControl(gameSpecId, spec), true, gameSpecId);
+  }
 });
 
 test('every variant default is a real, offerable pace', () => {
