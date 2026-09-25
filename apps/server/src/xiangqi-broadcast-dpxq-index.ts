@@ -231,14 +231,23 @@ export const HAND_IMPORTED_DPXQ_TOURS: Readonly<Record<string, string>> = {
   '2026-league-qualifier': '12656',
 };
 
-// How far back the calendar reaches: long enough to cover a finished stage
-// whose records are still arriving.
+// How far back the calendar reaches for an event only dpxq lists: long enough
+// to cover a finished stage whose records are still arriving. An event we
+// relay stays for the whole year (see calendarYearStart): the page opens on
+// the current month, so the spring does not push September down.
 const CALENDAR_PAST_MS = 60 * 24 * 60 * 60_000;
+
+/** Midnight on January 1 of `now`'s year, China time, the calendar's zone. */
+function calendarYearStart(now: number): number {
+  const year = new Date(now + 8 * 60 * 60_000).getUTCFullYear();
+  return Date.parse(`${year}-01-01T00:00:00+08:00`);
+}
 
 /**
  * The public calendar: every top event dpxq lists as live or upcoming, or
- * finished in the last two months, plus the events we relay that dpxq's index
- * does not carry (hand imports). Status follows dpxq's own section.
+ * finished in the last two months, plus every event we relay this year that
+ * dpxq's index does not carry (hand imports, the spring backfill: dpxq's index
+ * only reaches back to August). Status follows dpxq's own section.
  */
 export function buildBroadcastCalendar(input: {
   rows: readonly DpxqIndexRow[];
@@ -285,7 +294,7 @@ export function buildBroadcastCalendar(input: {
     const startsOn = tour.startsAt.slice(0, 10);
     const endsOn = (tour.endsAt ?? tour.startsAt).slice(0, 10);
     const endMs = Date.parse(dpxqEndOfDay(endsOn));
-    if (input.now - endMs > CALENDAR_PAST_MS) continue;
+    if (endMs < calendarYearStart(input.now)) continue;
     const startMs = Date.parse(`${startsOn}T00:00:00+08:00`);
     // The same translation the dpxq rows get, so our row does not carry an
     // older cached English name beside them; an English name stays as it is.

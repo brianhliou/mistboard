@@ -184,6 +184,20 @@ test('the calendar lists top events live, upcoming and just finished, linked to 
         name: '2026年全国象棋男子甲级联赛',
         sourceUrl: 'mistboard-discover://dpxq-tour?tour=12683&tourSlug=2026-xiangqi-league',
       },
+      // A spring event we relay stays on it for the year, though dpxq's index
+      // no longer lists it; one from last year does not.
+      {
+        slug: '2026-wuyang-cup',
+        name: '2026年第32届“五羊杯”全国象棋冠军赛',
+        startsAt: '2026-01-29T00:00:00+08:00',
+        endsAt: '2026-03-02T19:00:00+08:00',
+      },
+      {
+        slug: '2025-wuyang-cup',
+        name: '2025年第31届“五羊杯”全国象棋冠军赛',
+        startsAt: '2025-02-20T00:00:00+08:00',
+        endsAt: '2025-02-24T19:00:00+08:00',
+      },
       // A hand import dpxq's index has no row for still makes the calendar.
       {
         slug: '2026-league-qualifier',
@@ -207,6 +221,11 @@ test('the calendar lists top events live, upcoming and just finished, linked to 
   // it comes in through the tours list.
   assert.equal(events.filter((event) => event.tourSlug === '2026-league-qualifier').length, 1);
   assert.equal(byName.get('2026年全国象棋个人赛')?.status, 'upcoming');
+  assert.equal(events.find((event) => event.tourSlug === '2026-wuyang-cup')?.status, 'finished');
+  assert.equal(
+    events.some((event) => event.tourSlug === '2025-wuyang-cup'),
+    false,
+  );
   // Community and youth events stay off it.
   assert.equal(
     events.some((event) => event.name.includes('银龄')),
