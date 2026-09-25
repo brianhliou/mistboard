@@ -185,17 +185,16 @@ describe('metrics page', () => {
     );
     // One chart: the cumulative "Games over time" was the same read, always rising.
     expect(sectionTitles).toEqual(['Games per week', 'Games by variant', 'Games by mode']);
-    // Games per week is the weekly primitive with one series and a table,
-    // plotting full weeks only: the in-progress week (07-20) is the line of
-    // text under the chart, not a dashed dive at the end of the line.
+    // Games per week is the weekly primitive with one series and no table
+    // (the admin /metrics charts keep theirs), plotting full weeks only: the
+    // in-progress week (07-20) is the line of text under the chart, not a
+    // dashed dive at the end of the line.
     const weekly = root.querySelector('.metrics-weekly-section');
     expect(weekly?.querySelector('.weekly-chart-legend')).toBeNull();
     expect(weekly?.querySelector('.weekly-chart-line-partial')).toBeNull();
-    const firstRow = weekly?.querySelector('.weekly-chart-table tr:nth-child(2)');
-    expect([...(firstRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
-      '2026-07-13',
-      '31',
-    ]);
+    expect(weekly?.querySelector('.weekly-chart-table')).toBeNull();
+    const allGamesLine = weekly?.querySelector('.weekly-chart-line')?.getAttribute('points');
+    expect(allGamesLine).toBeTruthy();
     expect(weekly?.querySelector('.stats-weekly-so-far')?.textContent).toBe('4 so far this week');
     expect(root.querySelector('svg.stats-chart-svg')).toBeNull();
 
@@ -214,11 +213,10 @@ describe('metrics page', () => {
       (chip) => chip.textContent === 'Fog Xiangqi',
     );
     fogChip?.click();
-    const fogRow = weekly?.querySelector('.weekly-chart-table tr:nth-child(2)');
-    expect([...(fogRow?.querySelectorAll('td') ?? [])].map((n) => n.textContent)).toEqual([
-      '2026-07-13',
-      '11',
-    ]);
+    expect(weekly?.querySelector('.weekly-chart-line')?.getAttribute('points')).not.toBe(
+      allGamesLine,
+    );
+    expect(weekly?.querySelector('.weekly-chart-table')).toBeNull();
     expect(weekly?.querySelector('.stats-weekly-so-far')?.textContent).toBe('1 so far this week');
 
     const variantSection = [...root.querySelectorAll('.metrics-section')].find((s) =>

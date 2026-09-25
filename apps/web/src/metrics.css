@@ -56,10 +56,14 @@
   width: 100%;
 }
 
+/* The columns live on the list and each row takes them as a subgrid, so the
+ * value column is as wide as the WIDEST number in the list and every bar
+ * track ends at the same x. A per-row grid sized each row's value column to
+ * its own number, so a two-digit row got a longer track than a three-digit one. */
 .metrics-breakdown {
-  display: flex;
-  flex-direction: column;
-  gap: 8px;
+  display: grid;
+  grid-template-columns: minmax(96px, 160px) 1fr auto;
+  gap: 8px 12px;
   margin: 0;
   padding: 0;
   list-style: none;
@@ -67,9 +71,9 @@
 
 .metrics-breakdown-row {
   display: grid;
-  grid-template-columns: minmax(96px, 160px) 1fr auto;
+  grid-column: 1 / -1;
+  grid-template-columns: subgrid;
   align-items: center;
-  gap: 12px;
 }
 
 .metrics-breakdown-label {
@@ -105,7 +109,7 @@
 }
 
 @media (max-width: 520px) {
-  .metrics-breakdown-row {
+  .metrics-breakdown {
     grid-template-columns: minmax(80px, 1fr) auto;
   }
 

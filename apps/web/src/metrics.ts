@@ -423,6 +423,7 @@ function buildVariantWeeklyChart(publicStats: PublicSiteStats, locale: Locale): 
         ariaLabel: t('stats.gamesPerWeekLabel', { count: String(plotted.length) }, locale),
         partialLast: false,
         locale,
+        table: false,
       }),
     );
     const current = weeks.length > 1 ? weeks.at(-1) : undefined;
