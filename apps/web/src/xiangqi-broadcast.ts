@@ -1106,14 +1106,17 @@ function renderEventShell(
   const rail = hasRound ? sideRail(data, currentBoardId) : null;
   if (rail) {
     layout.classList.add('xqb-event-layout-with-rail');
-    // The list and the event's chat room, lichess's left column. It never
-    // moves while the page scrolls: pinned where it first sits, it fills the
-    // height below that, the list taking what the chat leaves.
+    // The list and the event's chat room, lichess's left column. Beside the
+    // boards it never moves while the page scrolls: pinned where it first
+    // sits, it fills the height below that, the list taking what the chat
+    // leaves. Beside an open board it is the review page's left column: it
+    // scrolls with the board and ends where the board ends.
     const side = document.createElement('div');
     side.className = 'xqb-event-side';
     side.append(rail, eventChat(data.tour.slug));
     layout.append(side);
-    pinEventSide(side);
+    if (boardOpen) matchBoardHeight(side, content);
+    else pinEventSide(side);
   }
   main.append(layout);
   return main;
@@ -1150,6 +1153,24 @@ function pinEventSide(side: HTMLElement): void {
   };
   if (typeof window.requestAnimationFrame === 'function') window.requestAnimationFrame(pin);
   else pin();
+}
+
+// The open board's height, onto the left column beside it, so the two end on
+// one line like the review page's. The board is sized to the screen and by
+// its resize grip, both after this runs, so it follows the board rather than
+// measuring once.
+function matchBoardHeight(side: HTMLElement, content: HTMLElement): void {
+  if (typeof ResizeObserver !== 'function') return;
+  const observer = new ResizeObserver(() => {
+    if (!side.isConnected) {
+      observer.disconnect();
+      return;
+    }
+    const board = content.querySelector<HTMLElement>('.review-board-host');
+    const height = board ? Math.round(board.getBoundingClientRect().height) : 0;
+    if (height > 0) side.style.setProperty('--xqb-board-h', `${height}px`);
+  });
+  observer.observe(content);
 }
 
 // The event's header, at the top of the content column beside the game list

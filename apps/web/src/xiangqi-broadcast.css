@@ -1818,6 +1818,26 @@
   min-height: 0;
 }
 
+/* An open board: the review page's alignment. The board, the moves and the
+   left column start on one line, the player strip above the board in the
+   layout's top padding rather than inside the board's column, and the left
+   column scrolls with the board and ends where it ends (matchBoardHeight).
+   One column keeps the embedded shell's own strip space. */
+@media (min-width: 901px) {
+  .xqb-event-board-open .xqb-event-layout-with-rail {
+    padding-top: 26px;
+  }
+
+  .xqb-event-board-open .xqb-event-layout-with-rail .review-shell--embedded {
+    padding-top: 0;
+  }
+
+  .xqb-event-board-open .xqb-event-layout-with-rail .xqb-event-side {
+    position: static;
+    height: var(--xqb-board-h, calc(100vh - 160px));
+  }
+}
+
 @media (max-width: 900px) {
   .xqb-event-layout-with-rail .xqb-event-side {
     position: static;
