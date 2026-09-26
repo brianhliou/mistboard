@@ -228,3 +228,172 @@
     align-items: center;
   }
 }
+
+/* col1 (phone): lichess mobile round anatomy. The shared col1 stack put the
+   whole right rail (material band, clock, boxed table, clock) BELOW the board
+   and the game-meta card, so on a 390x664 phone the opponent's clock started
+   ~10px under the fold and the viewer's clock, the abort countdown and
+   Resign/Abort sat another 300px down behind an empty reserved material band.
+   A phone player never saw a clock while playing.
+
+   Here the rail's wrappers dissolve (display: contents) so the table's pieces
+   become items of the cluster, which turns into a wrapping flex row ordered by
+   hand:
+     opponent name · material · clock
+     board
+     viewer name · material · clock
+     status notice, Abort/Resign, room actions, clocks note, face-down pool
+     replay arrows + move list
+     game-meta card, then anything the rail deferred
+   A flex row (not grid areas) because an item this list does not name (a
+   tenant extra) must land at the end at full width, never auto-placed into a
+   named row that happens to be empty; `order: 50` puts it there. The three
+   seat pieces share a line; everything else takes a line of its own. */
+@media (max-width: 799px) {
+  .live-review__cluster {
+    display: flex;
+    flex-flow: row wrap;
+    align-items: center;
+    justify-content: flex-start;
+    gap: 6px 8px;
+  }
+
+  .live-review__cluster > *,
+  .live-review__cluster .moves-panel > *,
+  .live-review__cluster .game-console > *,
+  .live-review__cluster .round-table__box > * {
+    flex: 0 0 100%;
+    min-width: 0;
+    order: 50;
+  }
+
+  .live-review__cluster .moves-panel,
+  .live-review__cluster .game-console,
+  .live-review__cluster .round-table__box {
+    display: contents;
+  }
+
+  .live-review__cluster > .review-shell__center {
+    order: 20;
+    justify-content: center;
+  }
+
+  .live-review__cluster > .meta-panel {
+    order: 70;
+  }
+
+  /* Seat lines: name (ellipsised, at most ~55% of the line), the captured
+     material taking what is left, the clock pinned right. */
+  .live-review__cluster .round-table__player--top,
+  .live-review__cluster .round-table__player--bottom {
+    flex: 0 1 auto;
+    max-width: 55%;
+    min-height: 0;
+    padding: 0 2px;
+    border-top: 0;
+  }
+
+  .live-review__cluster .round-table__player--bottom:not(:empty) {
+    border-top: 0;
+  }
+
+  .live-review__cluster .captures-strip-top,
+  .live-review__cluster .captures-strip-bottom {
+    flex: 1 1 0;
+    margin: 0;
+  }
+
+  .live-review__cluster [data-clock-top],
+  .live-review__cluster [data-clock-bottom] {
+    flex: 0 0 auto;
+    margin-left: auto;
+  }
+
+  .live-review__cluster .round-table__player--top {
+    order: 10;
+  }
+  .live-review__cluster .captures-strip-top {
+    order: 11;
+  }
+  .live-review__cluster [data-clock-top] {
+    order: 12;
+  }
+  .live-review__cluster .round-table__player--bottom {
+    order: 30;
+  }
+  .live-review__cluster .captures-strip-bottom {
+    order: 31;
+  }
+  .live-review__cluster [data-clock-bottom] {
+    order: 32;
+  }
+  .live-review__cluster [data-action-section] {
+    order: 40;
+  }
+  .live-review__cluster [data-game-controls-section] {
+    order: 41;
+  }
+  .live-review__cluster .round-table__row:has(> .room-actions) {
+    order: 42;
+  }
+  .live-review__cluster .clocks-pregame-note {
+    order: 43;
+    margin: 0;
+  }
+  .live-review__cluster .hidden-pool {
+    order: 44;
+  }
+  .live-review__cluster .replay-console {
+    order: 60;
+  }
+
+  /* Material sits inside the seat line: small discs, one reserved band, so the
+     first capture does not push the board down under a finger. The console is
+     no longer a box, so cqw has no container here; size in px. */
+  .live-review__cluster .rail-material {
+    --capture-piece-size: 20px;
+    min-height: calc(var(--capture-piece-size) + 4px);
+    height: auto;
+    padding: 0;
+  }
+
+  /* Fortress hands are drop sources the player taps, so they keep full-size
+     discs on a line of their own, directly outside their seat line. */
+  .live-review__cluster .rail-material.drop-mini-reserve-strip {
+    --capture-piece-size: initial;
+    flex: 0 0 100%;
+  }
+  .live-review__cluster .captures-strip-top.drop-mini-reserve-strip {
+    order: 9;
+  }
+  .live-review__cluster .captures-strip-bottom.drop-mini-reserve-strip {
+    order: 33;
+  }
+
+  /* Compact clock tab: the seat line is ~40px, not the rail's 52px block. */
+  .live-review__cluster .clocks div {
+    width: auto;
+    min-height: 0;
+    padding: 4px 12px;
+    border: 1px solid var(--site-border);
+    border-radius: var(--site-radius-sm, 6px);
+  }
+
+  .live-review__cluster .clocks strong {
+    font-size: 26px;
+  }
+
+  /* The table's rows lose the box around them; the replay band keeps its own
+     hairlines and the notice keeps its tint. */
+  .live-review__cluster .round-table__row {
+    padding: 2px 0;
+  }
+
+  .live-review__cluster .replay-console {
+    margin-top: 6px;
+    border: 1px solid var(--site-border);
+    border-radius: var(--site-radius, 10px);
+    background: var(--site-panel, var(--site-surface));
+    overflow: hidden;
+  }
+}
