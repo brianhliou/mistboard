@@ -51,6 +51,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The [xiangqi rules](/rules/xiangqi) are rewritten for chess players: the six rules that catch them out, setup, repetition as the site scores it (perpetual check loses), common mistakes, the three notations, a first opening, and new questions on the characters and the flying general ([adb78502](https://github.com/brianhliou/mistboard/commit/adb78502))
 - Chơi cờ tướng với máy: the Pikafish page in Vietnamese, at [/blog/choi-co-tuong-voi-may](/blog/choi-co-tuong-voi-may) ([19942f24](https://github.com/brianhliou/mistboard/commit/19942f24))
 - Every rules page shows its sample game in the study embed, with a link to the study it came from: Duck Xiangqi, Fortress, Jieqi, Jungle, Flip Jungle, Fog Chess, Xiangqi and Chess join Banqi and Atomic, and study embeds now draw Fortress (with both hands), Jieqi and Flip Jungle games. Flip Jungle gets a study of twenty engine games ([b304a491](https://github.com/brianhliou/mistboard/commit/b304a491))
 - Study embeds show fog of war chess chapters, so a fog chess study can be framed on another site the way a xiangqi or chess study can ([1477f52d](https://github.com/brianhliou/mistboard/commit/1477f52d))
