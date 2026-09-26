@@ -183,7 +183,8 @@ const FRAMES: Record<string, { x: number; y: number; w: number; h: number }> = {
   cannon: { x: -11, y: -11, w: 122, h: 122 },
   soldier: { x: 0, y: 0, w: 100, h: 100 },
   'crossed-soldier': { x: 0, y: 0, w: 100, h: 100 },
-  treasure: { x: -7, y: -7, w: 114, h: 114 },
+  // 2 units low, as on the site's disc: the diamond is top-heavy (xiangqi-piece-sets.ts).
+  treasure: { x: -7, y: -5, w: 114, h: 114 },
 };
 
 // ── Geometry ──────────────────────────────────────────────────────────────────

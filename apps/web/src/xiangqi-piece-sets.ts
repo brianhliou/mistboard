@@ -313,9 +313,17 @@ const INTERNATIONAL_IMAGE_FRAMES: Record<InternationalArtRole, InternationalImag
   treasure: { x: -7, y: -7, width: 114, height: 114 },
 };
 
+// The treasure diamond is top-heavy (a wide table over a point), so centred by
+// its box it reads high on the disc; it drops 2 units to sit visually centred
+// (2026-09-25). The disc set only: the Chess-style figure has its own fits.
+const INTERNATIONAL_DISC_Y_NUDGE: Partial<Record<InternationalArtRole, number>> = {
+  treasure: 2,
+};
+
 function internationalImageMark(href: string, role: InternationalArtRole): string {
   const frame = INTERNATIONAL_IMAGE_FRAMES[role];
-  return `<image href="${escapeAttr(href)}" x="${frame.x}" y="${frame.y}" width="${frame.width}" height="${frame.height}" preserveAspectRatio="xMidYMid meet"/>`;
+  const y = frame.y + (INTERNATIONAL_DISC_Y_NUDGE[role] ?? 0);
+  return `<image href="${escapeAttr(href)}" x="${frame.x}" y="${y}" width="${frame.width}" height="${frame.height}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
 const INTERNATIONAL_FLAT_IMAGE_SCALE = 1.34;
@@ -368,7 +376,7 @@ function isImagePieceSet(set: XiangqiPieceSet): set is ImageXiangqiPieceSet {
 // query is needed to bust CDN/browser caches when the art changes (e.g. the v2
 // dobutsu-minimal swap). Bump on every animal-art change.
 const ANIMAL_ART_VERSION = 4;
-const INTERNATIONAL_ART_VERSION = 14;
+const INTERNATIONAL_ART_VERSION = 15;
 const INTERNATIONAL_FLAT_ART_VERSION = 2;
 
 function internationalPieceHref(piece: XiangqiPiece, crossed = false): string {

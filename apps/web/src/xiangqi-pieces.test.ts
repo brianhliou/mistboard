@@ -71,7 +71,7 @@ describe('xiangqi piece sprites', () => {
       { color: 'red', role: 'general' },
       { pieceSet: 'international' },
     );
-    expect(svg).toContain('/piece-sets/xiangqi/international/red-general.png?v=14');
+    expect(svg).toContain('/piece-sets/xiangqi/international/red-general.png?v=15');
     expect(svg).toContain('stroke="#c30d0d"');
     expect(svg).not.toContain(XIANGQI_GLYPH_PATHS.帥);
   });
