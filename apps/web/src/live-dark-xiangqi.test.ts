@@ -66,6 +66,21 @@ describe('Dark Xiangqi board svg', () => {
     expect(fog).toContain('<rect x="65.5" y="425.5" width="61" height="61" fill="black"/>');
   });
 
+  // The square grid's cells are opaque, so palace bands drawn before them were
+  // painted over and Fog Xiangqi showed no palace at all on that layout.
+  it('draws the square-grid palace above the cells', () => {
+    window.history.replaceState({}, '', '/?xqLayout=cell');
+    try {
+      const svg = renderDarkXiangqiBoardSvg(viewFixture());
+      expect(svg.indexOf('class="xq-live-palace-bands"')).toBeGreaterThan(
+        svg.indexOf('class="xq-live-grid"'),
+      );
+      expect(svg).toContain('xq-live-palace-band');
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
+  });
+
   it('masks fog by default and drops the mask when fog is off', () => {
     expect(renderDarkXiangqiBoardSvg(viewFixture())).toContain('xq-live-fog-mask');
     expect(renderDarkXiangqiBoardSvg(viewFixture(), 'red', { showFog: false })).not.toContain(
