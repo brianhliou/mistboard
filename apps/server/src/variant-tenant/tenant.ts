@@ -114,7 +114,42 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       reason: AbortReason;
       clock?: TenantClockState<C>;
     }
-  | { type: 'seat-forfeited'; at: number; roomId: string; color: C; clock?: TenantClockState<C> };
+  | { type: 'seat-forfeited'; at: number; roomId: string; color: C; clock?: TenantClockState<C> }
+  // Server bookkeeping, never sent to a client (tenantEventsForClient and the
+  // live broadcast drop them): the server stopped with this game live, so its
+  // clock froze at `at` instead of charging the outage to the side to move.
+  // `clock` is the frozen snapshot; `activeColor` is who was on move, which
+  // the frozen clock no longer says (a frozen clock and a not-yet-armed one
+  // look the same), and the resume needs it to restart the right clock.
+  | {
+      type: 'clock-paused';
+      at: number;
+      roomId: string;
+      reason: TenantPauseReason;
+      activeColor: C | null;
+      clock: TenantClockState<C>;
+    }
+  | {
+      type: 'clock-resumed';
+      at: number;
+      roomId: string;
+      reason: TenantResumeReason;
+      clock: TenantClockState<C>;
+    };
+
+// 'shutdown': the server was told to stop. 'orphaned': it died without saying
+// so, found on hydration by the gap since the last event.
+export type TenantPauseReason = 'shutdown' | 'orphaned';
+// 'players-returned': every human seat is connected again. 'grace-elapsed':
+// the wait ran out with a seat still empty, and that seat's clock runs.
+export type TenantResumeReason = 'players-returned' | 'grace-elapsed';
+
+// Event types that stay on the server: the persisted log keeps them as the
+// replay source of truth, and no client (live, reconnect or review) sees them.
+export const TENANT_SERVER_ONLY_EVENT_TYPES: ReadonlySet<string> = new Set([
+  'clock-paused',
+  'clock-resumed',
+]);
 
 // Wire-side event: move-played gains its 1-based ply so clients can sequence.
 export type TenantClientEvent<C extends string, M, Spec extends string = string> =
@@ -134,6 +169,10 @@ export type TenantProjection<
   seats: Partial<Record<C, string>>;
   clock?: TenantClockState<C>;
   timeControl?: RoomTimeControl;
+  // Set while the game is paused by a server stop: when it paused and who was
+  // on move. Moves are refused and no clock or engine timer runs until a
+  // clock-resumed event clears it.
+  paused?: { at: number; activeColor: C | null };
 };
 
 export type TenantClientRef<C extends string> = {
@@ -204,6 +243,11 @@ export type TenantRuntimeRoom<
   // Fires the tenant's pendingAction. Distinct from the forfeit timer: that one
   // ends the game, this one continues it.
   actionTimer: ReturnType<typeof setTimeout> | null;
+  // While paused by a server stop: resumes the clock when the grace window
+  // runs out with a seat still empty. Optional so rooms built before pauses
+  // existed need no new field; absent reads as no timer.
+  resumeTimer?: ReturnType<typeof setTimeout> | null;
+  resumeDeadline?: number | null;
   forfeitSeat: C | null;
   gameEndRecorded: boolean;
   /**

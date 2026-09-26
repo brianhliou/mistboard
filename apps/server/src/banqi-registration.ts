@@ -20,11 +20,13 @@ import {
 } from './server-banqi-room-factory.js';
 import {
   type BanqiLiveRoom,
+  banqiWs,
   clearBanqiRuntimeTimers,
   handleBanqiWebSocketConnection,
 } from './server-ws-banqi.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -97,6 +99,8 @@ registerVariantTenant({
       room as unknown as BanqiLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearBanqiRuntimeTimers(room as unknown as BanqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(banqiTenant, banqiRooms.values(), banqiWs.lifecycleCtx, at),
   clearRooms: () => banqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsBanqi,

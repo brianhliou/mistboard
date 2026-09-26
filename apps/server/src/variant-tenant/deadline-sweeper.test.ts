@@ -25,6 +25,7 @@ function registrationStub(
       throw new Error('unexpected ws attach in sweeper test');
     },
     clearRuntimeTimers: () => {},
+    pauseOnShutdown: async () => 0,
     clearRooms: () => {},
     http: {
       matchesCreateRequest: () => false,

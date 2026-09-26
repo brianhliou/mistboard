@@ -26,9 +26,11 @@ import {
   clearJungleFlipRuntimeTimers,
   handleJungleFlipWebSocketConnection,
   type JungleFlipLiveRoom,
+  jungleFlipWs,
 } from './server-ws-jungle-flip.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -101,6 +103,13 @@ registerVariantTenant({
       room as unknown as JungleFlipLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearJungleFlipRuntimeTimers(room as unknown as JungleFlipLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      jungleFlipTenant,
+      jungleFlipRooms.values(),
+      jungleFlipWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => jungleFlipRooms.clear(),
   http: {
     matchesCreateRequest: requestsJungleFlip,

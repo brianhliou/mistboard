@@ -29,6 +29,7 @@ import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleFortressXiangqiEngineMove } from './server-fortress-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -139,6 +140,13 @@ registerVariantTenant({
     ),
   clearRuntimeTimers: (room) =>
     clearTenantRuntimeTimers(room as unknown as FortressXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      fortressXiangqiTenant,
+      fortressXiangqiRooms.values(),
+      fortressXiangqiWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => fortressXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsFortressXiangqi,

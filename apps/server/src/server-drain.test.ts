@@ -147,6 +147,7 @@ test('drain controller counts live variant-tenant games alongside chess rooms', 
       throw new Error('unexpected ws attach in drain test');
     },
     clearRuntimeTimers: () => {},
+    pauseOnShutdown: async () => 0,
     clearRooms: () => {},
     http: {
       matchesCreateRequest: () => false,
@@ -340,6 +341,7 @@ test('drain broadcasts reach variant-tenant room clients', async () => {
       throw new Error('unexpected ws attach in drain test');
     },
     clearRuntimeTimers: () => {},
+    pauseOnShutdown: async () => 0,
     clearRooms: () => {},
     http: {
       matchesCreateRequest: () => false,

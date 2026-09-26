@@ -22,9 +22,11 @@ import {
   clearJieqiRuntimeTimers,
   handleJieqiWebSocketConnection,
   type JieqiLiveRoom,
+  jieqiWs,
 } from './server-ws-jieqi.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -98,6 +100,8 @@ registerVariantTenant({
       room as unknown as JieqiLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearJieqiRuntimeTimers(room as unknown as JieqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(jieqiTenant, jieqiRooms.values(), jieqiWs.lifecycleCtx, at),
   clearRooms: () => jieqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsJieqi,

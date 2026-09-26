@@ -23,9 +23,11 @@ import {
   clearJungleRuntimeTimers,
   handleJungleWebSocketConnection,
   type JungleLiveRoom,
+  jungleWs,
 } from './server-ws-jungle.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -94,6 +96,8 @@ registerVariantTenant({
       room as unknown as JungleLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearJungleRuntimeTimers(room as unknown as JungleLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(jungleTenant, jungleRooms.values(), jungleWs.lifecycleCtx, at),
   clearRooms: () => jungleRooms.clear(),
   http: {
     matchesCreateRequest: requestsJungle,

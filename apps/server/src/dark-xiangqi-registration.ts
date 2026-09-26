@@ -25,10 +25,12 @@ import {
 import {
   clearDarkXiangqiRuntimeTimers,
   type DarkXiangqiLiveRoom,
+  darkXiangqiWs,
   handleDarkXiangqiWebSocketConnection,
 } from './server-ws-dark-xiangqi.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -101,6 +103,13 @@ registerVariantTenant({
     ),
   clearRuntimeTimers: (room) =>
     clearDarkXiangqiRuntimeTimers(room as unknown as DarkXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      darkXiangqiTenant,
+      darkXiangqiRooms.values(),
+      darkXiangqiWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => darkXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsDarkXiangqi,

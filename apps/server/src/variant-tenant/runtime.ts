@@ -29,14 +29,22 @@ import type {
   TenantEndReason,
   TenantGameStateLike,
   TenantGameStatus,
+  TenantPauseReason,
   TenantProjection,
+  TenantResumeReason,
   TenantRoomEvent,
   TenantRuntimeRoom,
   TenantSeat,
   TenantSnapshotClient,
   VariantTenant,
 } from './tenant.js';
-import { assertForfeitPolicy, forfeitWinnerOf, lastSeat, tenantSeatMayAct } from './tenant.js';
+import {
+  assertForfeitPolicy,
+  forfeitWinnerOf,
+  lastSeat,
+  TENANT_SERVER_ONLY_EVENT_TYPES,
+  tenantSeatMayAct,
+} from './tenant.js';
 
 export type TenantRoomCreation<
   Kind extends string,
@@ -361,6 +369,8 @@ const REJECTABLE_EVENT_TYPES = new Set([
   'seat-resigned',
   'game-aborted',
   'seat-forfeited',
+  'clock-paused',
+  'clock-resumed',
 ]);
 
 /**
@@ -518,6 +528,9 @@ export function applyTenantEvent<
   }
   if (event.type === 'move-played') {
     if (status.type !== 'playing') return projection;
+    // A paused game takes no moves: its clock is frozen, and a move landing on
+    // a frozen clock would read it as not yet armed and never restart it.
+    if (projection.paused) return projection;
     // Same predicate the live path uses, so a replayed claim is accepted by
     // exactly the states that accepted it live.
     if (!tenantSeatMayAct(tenant, projection.state, event.color)) return projection;
@@ -573,7 +586,85 @@ export function applyTenantEvent<
       state: finishByForfeit(tenant, projection.state, event.color, 'abandonment'),
     };
   }
+  if (event.type === 'clock-paused') {
+    if (status.type !== 'playing' || projection.paused || !projection.clock) return projection;
+    return {
+      ...projection,
+      clock: event.clock,
+      paused: { at: event.at, activeColor: event.activeColor },
+    };
+  }
+  if (event.type === 'clock-resumed') {
+    if (status.type !== 'playing' || !projection.paused) return projection;
+    const { paused: _paused, ...rest } = projection;
+    return { ...rest, clock: event.clock };
+  }
   return projection;
+}
+
+/**
+ * The pause a server stop appends to a live game, or null when there is
+ * nothing to protect: a finished or already-paused game, an untimed one, or a
+ * correspondence game (its days-scale deadline is durable and a restart costs
+ * it nothing). The clock freezes at `at`; who was on move rides along because
+ * the frozen clock drops it.
+ */
+export function tenantPauseEventFor<C extends string, M, Spec extends string>(
+  projection: TenantProjection<C, TenantGameStateLike<C>, Spec>,
+  at: number,
+  reason: TenantPauseReason,
+): Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-paused' }> | null {
+  if (projection.state.status.type !== 'playing' || projection.paused) return null;
+  const clock = projection.clock;
+  if (!clock) return null;
+  if (clockPolicyKindFor(projection.timeControl) === 'days-per-move') return null;
+  const frozen = freezeTenantClock(clock, at);
+  if (!frozen) return null;
+  return {
+    type: 'clock-paused',
+    at,
+    roomId: projection.roomId,
+    reason,
+    activeColor: clock.activeColor,
+    clock: frozen,
+  };
+}
+
+// The resume that restarts the clock of whoever was on move when it paused.
+export function tenantResumeEventFor<C extends string, M, Spec extends string>(
+  projection: TenantProjection<C, TenantGameStateLike<C>, Spec>,
+  at: number,
+  reason: TenantResumeReason,
+): Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-resumed' }> | null {
+  const paused = projection.paused;
+  if (projection.state.status.type !== 'playing' || !paused || !projection.clock) return null;
+  return {
+    type: 'clock-resumed',
+    at,
+    roomId: projection.roomId,
+    reason,
+    clock: {
+      ...projection.clock,
+      activeColor: paused.activeColor,
+      runningSince: paused.activeColor === null ? null : at,
+    },
+  };
+}
+
+// A server that died without running its shutdown (SIGKILL, a crash) leaves a
+// live game with no pause, and the whole outage would land on the side to
+// move. Found on hydration by the gap since the last event: past the threshold
+// it is an outage, not a long think, and the game is paused at the last event.
+// Same rule and threshold as the chess stack's applyOrphanRecoveryIfNeeded.
+export function tenantOrphanPauseFor<C extends string, M, Spec extends string>(
+  projection: TenantProjection<C, TenantGameStateLike<C>, Spec>,
+  events: readonly TenantRoomEvent<C, M, Spec>[],
+  now: number,
+  orphanThresholdMs: number,
+): Extract<TenantRoomEvent<C, M, Spec>, { type: 'clock-paused' }> | null {
+  const last = events[events.length - 1];
+  if (!last || now - last.at < orphanThresholdMs) return null;
+  return tenantPauseEventFor<C, M, Spec>(projection, last.at + 1, 'orphaned');
 }
 
 // The full per-seat snapshot wire shape. Pinned per tenant by its golden wire
@@ -783,6 +874,7 @@ export function tenantEventsForClient<
   const reveal = tenantRoomRevealsTruth(tenant, room, client);
   let ply = 0;
   for (const event of room.events) {
+    if (TENANT_SERVER_ONLY_EVENT_TYPES.has(event.type)) continue;
     if (event.type === 'move-played') ply += 1;
     const visible = reveal
       ? ((event.type === 'move-played'
@@ -946,6 +1038,19 @@ export function isTenantEvent<
     return (
       tenant.rules.isColor(event.color) &&
       (event.clock === undefined || isTenantClockState(tenant, event.clock))
+    );
+  }
+  if (event.type === 'clock-paused') {
+    return (
+      (event.reason === 'shutdown' || event.reason === 'orphaned') &&
+      (event.activeColor === null || tenant.rules.isColor(event.activeColor)) &&
+      isTenantClockState(tenant, event.clock)
+    );
+  }
+  if (event.type === 'clock-resumed') {
+    return (
+      (event.reason === 'players-returned' || event.reason === 'grace-elapsed') &&
+      isTenantClockState(tenant, event.clock)
     );
   }
   return false;

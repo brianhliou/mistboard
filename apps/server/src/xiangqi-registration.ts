@@ -25,7 +25,7 @@ import {
 } from './server-xiangqi-room-factory.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
-import { sweepTenantRoomDeadline } from './variant-tenant/lifecycle.js';
+import { pauseTenantRoomsOnShutdown, sweepTenantRoomDeadline } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -156,6 +156,8 @@ registerVariantTenant({
       room as unknown as XiangqiLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearXiangqiRuntimeTimers(room as unknown as XiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(xiangqiTenant, xiangqiRooms.values(), xiangqiWs.lifecycleCtx, at),
   clearRooms: () => xiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsXiangqi,

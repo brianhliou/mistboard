@@ -30,7 +30,11 @@ import {
 } from './routes/correspondence-rooms.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
-import { clearTenantRuntimeTimers, sweepTenantRoomDeadline } from './variant-tenant/lifecycle.js';
+import {
+  clearTenantRuntimeTimers,
+  pauseTenantRoomsOnShutdown,
+  sweepTenantRoomDeadline,
+} from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -167,6 +171,13 @@ registerVariantTenant({
       room as unknown as DarkChessLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearTenantRuntimeTimers(room as unknown as DarkChessLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      darkChessTenant,
+      darkChessTenantRooms.values(),
+      darkChessWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => darkChessTenantRooms.clear(),
   http: {
     matchesCreateRequest: requestsCorrespondence,

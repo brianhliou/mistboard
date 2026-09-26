@@ -32,6 +32,7 @@ import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleDuckXiangqiEngineMove } from './server-duck-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -142,6 +143,13 @@ registerVariantTenant({
       room as unknown as DuckXiangqiLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearTenantRuntimeTimers(room as unknown as DuckXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      duckXiangqiTenant,
+      duckXiangqiRooms.values(),
+      duckXiangqiWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => duckXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsDuckXiangqi,

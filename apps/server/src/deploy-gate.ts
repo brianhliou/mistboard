@@ -24,7 +24,10 @@ export type DeployGateRoom = {
   // activity is not evidence that nobody is playing.
   events?: readonly { at?: number }[];
   projection: {
-    paused?: boolean;
+    // Chess rooms carry a boolean; tenant rooms carry the pause record
+    // ({ at, activeColor }) while a server stop has them paused. Either way,
+    // present and truthy means no clock is running.
+    paused?: boolean | object;
     state: { status: { type: string } };
     timeControl?: { daysPerMove?: number } | null;
   };

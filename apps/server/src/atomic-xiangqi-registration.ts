@@ -36,6 +36,7 @@ import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleAtomicXiangqiEngineMove } from './server-atomic-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
 import {
   registerVariantTenant,
   type TenantManagedRoom,
@@ -148,6 +149,13 @@ registerVariantTenant({
       room as unknown as AtomicXiangqiLiveRoom,
     ),
   clearRuntimeTimers: (room) => clearTenantRuntimeTimers(room as unknown as AtomicXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      atomicXiangqiTenant,
+      atomicXiangqiRooms.values(),
+      atomicXiangqiWs.lifecycleCtx,
+      at,
+    ),
   clearRooms: () => atomicXiangqiRooms.clear(),
   http: {
     matchesCreateRequest: requestsAtomicXiangqi,

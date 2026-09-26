@@ -68,7 +68,7 @@ import type {
   TenantSeat,
   VariantTenant,
 } from './tenant.js';
-import { tenantSeatMayAct } from './tenant.js';
+import { TENANT_SERVER_ONLY_EVENT_TYPES, tenantSeatMayAct } from './tenant.js';
 
 export type TenantLiveClient<C extends string> = {
   debugRequested: false;
@@ -177,6 +177,10 @@ export function createTenantWsRuntime<
   }
 
   function scheduleEngineMove(room: LiveRoom): void {
+    // A paused game takes no moves, and an engine move refused mid-think reads
+    // to the engine loop as a failure it answers by resigning the bot's seat.
+    // The resume event runs this again once the clock is back.
+    if (room.projection.paused) return;
     options.scheduleEngineMove?.(lifecycleCtx, room);
   }
 
@@ -447,6 +451,8 @@ export function createTenantWsRuntime<
     if (move === null) return;
     const status = room.projection.state.status;
     if (status.type !== 'playing') return;
+    // Paused by a server stop: the clock is frozen until the players are back.
+    if (room.projection.paused) return;
     // No moves until both seats are filled (a fresh room starts in `playing`, so
     // a seated player could otherwise move before the opponent/engine joined).
     for (const color of tenant.colors) {
@@ -587,11 +593,15 @@ export function createTenantWsRuntime<
       }
       const snapshot = transportSnapshotPayload(room, client);
       const { events: _events, ...base } = snapshot;
-      const clientEvent = tenant.visibility.clientEventFor(
-        event,
-        client.seat,
-        tenantPlyAtEventIndex(room.events, seq),
-      );
+      // Pause bookkeeping never reaches a client; the frame still carries the
+      // snapshot, whose clock is what stops or restarts on screen.
+      const clientEvent = TENANT_SERVER_ONLY_EVENT_TYPES.has(event.type)
+        ? null
+        : tenant.visibility.clientEventFor(
+            event,
+            client.seat,
+            tenantPlyAtEventIndex(room.events, seq),
+          );
       sendPayload(client, {
         ...base,
         type: 'event-appended',

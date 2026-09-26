@@ -229,6 +229,11 @@ export type VariantTenantRegistration = {
   ): Promise<void>;
   // Shutdown sweep hook: clear this room's runtime timers.
   clearRuntimeTimers(room: TenantManagedRoom): void;
+  // Shutdown hook, run before the timer sweep: pause every live game in the
+  // room map so the outage is not charged to whoever is on move
+  // (pauseTenantRoomsOnShutdown over the ws runtime's lifecycleCtx). Required
+  // so a new tenant cannot register without it. Resolves to rooms paused.
+  pauseOnShutdown(at: number): Promise<number>;
   // Shutdown/test-teardown hook: empty the live map.
   clearRooms(): void;
   http: {

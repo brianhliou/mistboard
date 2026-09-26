@@ -84,6 +84,7 @@ function registerFakeLobbyTenant(options: {
       throw new Error('unexpected ws attach in lobby test');
     },
     clearRuntimeTimers: () => {},
+    pauseOnShutdown: async () => 0,
     clearRooms: () => {},
     http: {
       matchesCreateRequest: () => false,

@@ -341,11 +341,33 @@ export function installShutdownHandlers(): void {
   }
 }
 
+// Pause every tenant's live games (xiangqi and the rest of the tenant stack),
+// the counterpart of pauseActiveRoomsOnShutdown for chess rooms. One failing
+// tenant must not stop the others from pausing.
+async function pauseTenantRoomsForShutdown(at: number): Promise<void> {
+  for (const registration of registeredVariantTenants()) {
+    try {
+      await registration.pauseOnShutdown(at);
+    } catch (err) {
+      console.error(
+        JSON.stringify({
+          level: 'error',
+          kind: 'tenant_pause_on_shutdown_failure',
+          tenant: registration.kind,
+          error: (err as Error).message,
+          at: Date.now(),
+        }),
+      );
+    }
+  }
+}
+
 // Tear down for tests / hot restart. Mirrors shutdown() but does NOT call
 // process.exit, so the runner stays alive across tests.
 export async function stopServer(): Promise<void> {
   if (!server || !wss) return;
   await pauseActiveRoomsOnShutdown(rooms.values(), roomMgrCtx);
+  await pauseTenantRoomsForShutdown(Date.now());
   for (const room of rooms.values()) {
     clearRoomRuntimeTimers(room, { clearPendingVacates: true });
   }
@@ -560,6 +582,7 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
   });
 
   await pauseActiveRoomsOnShutdown(rooms.values(), roomMgrCtx);
+  await pauseTenantRoomsForShutdown(Date.now());
 
   for (const room of rooms.values()) {
     clearRoomRuntimeTimers(room);
