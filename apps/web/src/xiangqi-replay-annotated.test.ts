@@ -1,5 +1,9 @@
 import { beforeEach, expect, test } from 'vitest';
-import { mountXiangqiReplay, type XiangqiReplaySpec } from './xiangqi-replay.js';
+import {
+  mountXiangqiReplay,
+  mountXiangqiReplayBoard,
+  type XiangqiReplaySpec,
+} from './xiangqi-replay.js';
 
 // 1.C2.5 H8+7 2.H2+3 P7+1 — four real plies, enough to judge one of them.
 const ICCS = 'h2e2 h9g7 h0g2 g6g5';
@@ -218,6 +222,36 @@ test('a judged move carries its cost on the move, not in a card below', () => {
 
   // The sideline says what it is rather than where it came from.
   expect(el.querySelector('.xq-replay-branch-tag')?.textContent).toBe('better was');
+  c.destroy();
+});
+
+test('a sideline under an unmarked move is an alternative, not an improvement', () => {
+  // A study's second key or equally fast mate hangs off a move nobody faulted;
+  // every such branch used to read "better was".
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: { byPly: { 1: { note: 'A second key.', line: 'h0g2 h9g7' } } },
+  });
+  expect(el.querySelector('.xq-replay-branch-tag')?.textContent).toBe('also');
+  c.destroy();
+});
+
+test('the embed board tags its sidelines the same way', () => {
+  const b = mountXiangqiReplayBoard(el, {
+    ...base,
+    annotations: { byPly: { 1: { line: 'h0g2 h9g7' }, 2: { glyph: '?!', line: 'h9g7' } } },
+  });
+  const tags = b.moveEntries().map((e) => e.line?.tag);
+  expect(tags.slice(0, 2)).toEqual(['also', 'better was']);
+  b.destroy();
+});
+
+test('an author label still names the sideline', () => {
+  const c = mountXiangqiReplay(el, {
+    ...base,
+    annotations: { byPly: { 1: { glyph: '?', label: 'the book', line: 'h0g2 h9g7' } } },
+  });
+  expect(el.querySelector('.xq-replay-branch-tag')?.textContent).toBe('the book');
   c.destroy();
 });
 

@@ -796,10 +796,9 @@ export function mountXiangqiReplay(
       const tag = document.createElement('span');
       tag.className = 'xq-replay-branch-tag';
       // "engine" named the source; this names the thing, which is what a reader
-      // needs. An engine branch belongs to a ?!/?/?? move, so by default it is
-      // a line that was better than the one played; an author can name it
-      // otherwise (a second answer that is not better, only different).
-      tag.textContent = a?.label ?? copy.betterWas;
+      // needs. An author can name it outright (a second answer that is not
+      // better, only different); otherwise the played move's mark decides.
+      tag.textContent = branchTag(a, copy);
       branch.appendChild(tag);
       // A line replacing a Black move starts mid-pair, so it opens the way a
       // score sheet does: the move number, then an ellipsis standing in for
@@ -1106,7 +1105,7 @@ export type XiangqiReplayBoardHandle = {
     suffixClass?: string;
     note?: string;
     assessment?: string;
-    line?: { moves: string[]; verdict?: string; note?: string };
+    line?: { moves: string[]; tag?: string; verdict?: string; note?: string };
   }>;
   /** Show the position after `cursor` moves of the sideline hung off `atPly`.
    *  A ply with no sideline is ignored. jumpToPly leaves the line. */
@@ -1122,6 +1121,19 @@ const GLYPH_SUFFIX_CLASS: Record<string, string> = {
   '!!': 'brilliant',
   '!': 'great',
 };
+
+const FAULT_GLYPHS: ReadonlySet<string> = new Set(['?', '??', '?!']);
+
+/**
+ * The tag on a sideline. "Better was" is a verdict, so it needs a faulted move
+ * to hang off: an engine line always has one, but a study's branch often does
+ * not (a second key, an equally fast mate), and every study embed once called
+ * those better. The author's own label still wins.
+ */
+export function branchTag(a: XiangqiReplayAnnotation | undefined, copy: ReplayStepperCopy): string {
+  if (a?.label) return a.label;
+  return a?.glyph && FAULT_GLYPHS.has(a.glyph) ? copy.betterWas : copy.alsoWas;
+}
 
 /**
  * The board alone: the position at a ply, the last-move marks, the judgment
@@ -1144,7 +1156,7 @@ export function mountXiangqiReplayBoard(
   const perspective: XiangqiColor = spec.perspective ?? 'red';
   const { moves, states, startState, firstMover, total } = replayLine(spec);
   const annotated = spec.annotations;
-  const branchTag = replayStepperCopy(undefined, 'xiangqi').betterWas;
+  const stepperCopy = replayStepperCopy(undefined, 'xiangqi');
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
@@ -1250,9 +1262,8 @@ export function mountXiangqiReplayBoard(
             ? {
                 line: {
                   moves: line.labels,
-                  // The article widget's tag: "better was" for an engine line,
-                  // or the author's own label for an alternative.
-                  tag: a?.label ?? branchTag,
+                  // Same tag as the article widget's (branchTag).
+                  tag: branchTag(a, stepperCopy),
                   ...(a?.lineEval ? { verdict: a.lineEval } : {}),
                   ...(a?.lineNote ? { note: a.lineNote } : {}),
                 },

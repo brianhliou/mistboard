@@ -22,6 +22,12 @@ export type ReplayStepperCopy = {
   /** Labels the engine's preferred line under a move it faulted. */
   betterWas: string;
   /**
+   * Labels a sideline under a move nobody faulted: a second key, an equally
+   * fast mate, a book's alternative. "Better was" there claims a verdict the
+   * line does not carry.
+   */
+  alsoWas: string;
+  /**
    * Hover text for a judged move: the verdict, then what it cost.
    *
    * This is generated from the stored note by a regex rather than held as
@@ -68,6 +74,7 @@ const COMMON: Record<
     movePrefix: (moveNumber) => `Move ${moveNumber}`,
     noPieces: 'No pieces',
     betterWas: 'better was',
+    alsoWas: 'also',
     judgment: {
       '??': 'Blunder',
       '?': 'Mistake',
@@ -91,6 +98,7 @@ const COMMON: Record<
     movePrefix: (moveNumber) => `第 ${moveNumber} 回合`,
     noPieces: '无持子',
     betterWas: '更好的走法',
+    alsoWas: '另一着法',
     judgment: {
       '??': '漏着',
       '?': '错着',
@@ -114,6 +122,7 @@ const COMMON: Record<
     movePrefix: (moveNumber) => `第 ${moveNumber} 回合`,
     noPieces: '無持子',
     betterWas: '更好的走法',
+    alsoWas: '另一著法',
     judgment: {
       '??': '漏著',
       '?': '錯著',
