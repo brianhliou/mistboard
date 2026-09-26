@@ -120,6 +120,7 @@ Conventions:
 
 ### Site
 
+- Embedded boards step like the boards in our posts (back, a menu, forward), keep the move list beside the board at its own width, fill small frames on phones, and follow your settings live on Mistboard's own pages ([8018f928](https://github.com/brianhliou/mistboard/commit/8018f928))
 - The play-online questions moved from the homepage to the top of [the FAQ](/faq); the homepage keeps the one-line summary under the tagline ([933c9104](https://github.com/brianhliou/mistboard/commit/933c9104))
 - `/bots` is the page for playing xiangqi against the computer, in English, simplified and traditional Chinese: the eight levels come first with Pikafish on top, level 2 says Start here, and each level leads with a Play xiangqi button ([d74cb0c5](https://github.com/brianhliou/mistboard/commit/d74cb0c5))
 - The home page says what it does under the tagline (free in the browser, no download or sign-up, eight computer levels, play a friend) and answers six common questions above the footer; the play column sits on one spacing with the event cards at the lobby's bottom edge ([21bdbc4c](https://github.com/brianhliou/mistboard/commit/21bdbc4c))
