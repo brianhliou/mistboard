@@ -96,6 +96,23 @@
      and the SVG letterboxed inside it with a dead band above and below. */
   align-self: start;
 }
+/* Seated: the strips hang outside the board. The board's top stays level with
+   the rail and coach tops, so the top strip sits ABOVE the grid, in a taller
+   top margin; the bottom strip's room (seat-labels.css reserves it below the
+   board) comes out of the row, so the board is fitted to the row less that. */
+.gamebook.gamebook--seated {
+  --gamebook-seat-room: 26px;
+  margin-top: calc(0.75rem + 26px);
+}
+@media (min-width: 60.0625rem) {
+  .gamebook.gamebook--seated:not(.practice) {
+    --gamebook-board-fit: min(
+      calc((var(--gamebook-page-height) - var(--gamebook-seat-room)) * 0.89),
+      40rem
+    );
+  }
+}
+
 /* The gamebook's grid item: carries the scaled width and hosts the resize grip,
    which cannot live on the board because the board is repainted every move. */
 .gamebook__board-frame {
@@ -251,20 +268,12 @@
   font-size: 0.9rem;
 }
 .gamebook__game {
-  padding: 0.6rem 0 0.7rem;
-  border-top: 1px solid var(--site-border-soft, var(--site-border));
-  border-bottom: 1px solid var(--site-border-soft, var(--site-border));
-}
-.gamebook__game-players {
   margin: 0;
-  font-weight: 600;
-  font-size: 0.92rem;
-}
-.gamebook__game-detail {
-  margin: 0.15rem 0 0;
+  padding-bottom: 0.8rem;
+  border-bottom: 1px solid var(--site-border-soft, var(--site-border));
   color: var(--site-muted);
-  font-size: 0.78rem;
-  line-height: 1.4;
+  font-size: 0.8rem;
+  line-height: 1.45;
 }
 .gamebook:not(.practice) .gamebook__bubble {
   padding: 0;
@@ -295,6 +304,12 @@
 .gamebook:not(.practice) .gamebook__coach[data-state="success"] .gamebook__feedback {
   border-left-color: #4ea96a;
   background: color-mix(in srgb, #4ea96a 10%, transparent);
+}
+
+/* Hint ring. A circle marker has no stroke colour of its own (it takes it from
+   this class), so without the rule the ring is in the DOM and invisible. */
+.xq-marker--circle.xq-marker--gamebook-hint {
+  stroke: #d8a01d;
 }
 
 /* One column below the point where a rail, a board and a panel stop fitting

@@ -39,7 +39,7 @@ import {
 import type { StudyRecipe } from './recipes.js';
 
 /** Bump when the tree a given (game, analysis, recipe) produces would change. */
-export const ANNOTATOR_VERSION = 2;
+export const ANNOTATOR_VERSION = 3;
 
 // The tree grammar the study page reads (apps/web/src/review/tree-serialize.ts).
 // Duplicated here as plain JSON, the way every seeder does it.
@@ -418,15 +418,21 @@ export function decisivePosition(
 ): { verdict: PlyVerdict; state: XiangqiGameState } | null {
   const moment = findDecisiveMoment(game.result, verdicts);
   if (!moment) return null;
+  const state = stateAfter(game, moment.verdict.ply - 1);
+  return state ? { verdict: moment.verdict, state } : null;
+}
+
+/** The position after the game's first `plies` moves, or null if the record
+ *  stops being legal or the game ends first. */
+function stateAfter(game: CuratorGame, plies: number): XiangqiGameState | null {
   let state = createInitialXiangqiState(`study-curator-decisive-${game.id}`);
-  for (const move of game.moves.slice(0, moment.verdict.ply - 1)) {
+  for (const move of game.moves.slice(0, plies)) {
     if (state.status.type !== 'playing') return null;
     const next = applyMove(state, move);
     if (next === state) return null;
     state = next;
   }
-  if (state.status.type !== 'playing') return null;
-  return { verdict: moment.verdict, state };
+  return state.status.type === 'playing' ? state : null;
 }
 
 /** A decisive-moment chapter: rooted before the loser's turning-point move,
@@ -505,19 +511,36 @@ export function buildDecisiveMomentChapter(
   const solutionNode = chainOf(solution, closing);
   if (!solutionNode) return null;
 
-  const root: SerializedNode = {
-    annotations: {
-      comments: [
-        { text: intro, i18n: { 'zh-Hans': introZh('zh-Hans'), 'zh-Hant': introZh('zh-Hant') } },
-      ],
-      gamebook: {
-        hint: `${sideEn} is not losing yet. The engine's move keeps the game level or better.`,
-      },
+  const keyPiece = state.board[solution[0]!.from]?.role;
+  const decisive: NodeAnnotations = {
+    comments: [
+      { text: intro, i18n: { 'zh-Hans': introZh('zh-Hans'), 'zh-Hant': introZh('zh-Hant') } },
+    ],
+    gamebook: {
+      // Names the piece. The old hint ("Black is not losing yet...") was the
+      // same sentence on every chapter and helped with none of them; a long
+      // cannon retreat from the opponent's back rank went unfound with it. The
+      // lesson player also rings the piece on the board when the hint is asked.
+      hint: `Look at your ${keyPiece ?? 'pieces'}. One move keeps ${sideEn} in the game.`,
     },
-    // The engine's line is the mainline the gamebook grades against; the game's
-    // own move is the variation the reader most likely tries.
-    children: [solutionNode, playedNode],
   };
+  // The engine's line is the mainline the gamebook grades against; the game's
+  // own move is the variation the reader most likely tries.
+  const branches = [solutionNode, playedNode];
+
+  // Rooted one ply earlier, on the opponent's move that led here, when there is
+  // one. A FEN carries no last move, so a chapter rooted AT the decisive
+  // position opened with no last-move mark and the learner had to work out what
+  // had just happened; the lesson player auto-plays the opponent's move on open,
+  // so it lands on the same position with that move drawn. The intro and hint
+  // ride that node, which is where the player reads them from.
+  const lead = verdict.ply >= 2 ? game.moves[verdict.ply - 2] : undefined;
+  const leadState = lead ? stateAfter(game, verdict.ply - 2) : null;
+  const root: SerializedNode =
+    lead && leadState
+      ? { children: [{ uci: uciOf(lead), annotations: decisive, children: branches }] }
+      : { annotations: decisive, children: branches };
+  const rootState = lead && leadState ? leadState : state;
 
   const name = `Move ${moveNumber}, ${sideEn} to play · ${playerName(game.red)} vs ${playerName(game.black)}`;
   const nameZh = (script: 'zh-Hans' | 'zh-Hant') =>
@@ -530,7 +553,7 @@ export function buildDecisiveMomentChapter(
       'zh-Hant': { name: nameZh('zh-Hant'), tags: tags18['zh-Hant'] },
     },
     orientation: mover,
-    root: { version: 1, root, rootFen: standardXiangqiFen(state) },
+    root: { version: 1, root, rootFen: standardXiangqiFen(rootState) },
     tags: tagsFor(game),
     gamebook: true,
   };

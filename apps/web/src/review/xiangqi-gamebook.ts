@@ -21,6 +21,7 @@ import { createGamebookSession, type GamebookFeedback } from './gamebook-play.js
 import { deserializeTree, type SerializedTree } from './tree-serialize.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 import './gamebook.css';
+import './seat-labels.css';
 
 export interface XiangqiGamebookOptions {
   /** The solution tree (with per-node hint/deviation/comment). */
@@ -34,9 +35,12 @@ export interface XiangqiGamebookOptions {
   nav?: HTMLElement;
   /** Optional left-rail element (chapter tabs, "edit lesson", etc.). */
   aside?: HTMLElement;
-  /** The game this position came from, shown under the prompt: who played it
-   *  and where. Absent for a lesson that is not a game position. */
-  game?: { players: string; detail: string };
+  /** The game this position came from, shown under the prompt: where it was
+   *  played. Absent for a lesson that is not a game position. */
+  game?: { detail: string };
+  /** Who had each side, drawn as the review page's seat strips above and below
+   *  the board (the learner's side at the bottom). */
+  seats?: { red: string; black: string };
 }
 
 export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOptions): void {
@@ -83,6 +87,18 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   boardEl.className = 'gamebook__board xiangqi-live-board';
   boardEl.setAttribute('aria-label', 'Xiangqi lesson board');
   boardFrame.append(boardEl);
+  // The same strips the review and game pages hang on their boards, so a game
+  // position reads the same everywhere: names beside the board, not in a panel.
+  // The board never flips here, so the learner's side is always the bottom one.
+  if (opts.seats) {
+    wrap.classList.add('gamebook--seated');
+    boardFrame.classList.add('review-board-wrap--seated');
+    const far: XiangqiColor = opts.orientation === 'red' ? 'black' : 'red';
+    boardFrame.append(
+      seatStrip(opts.seats[far], far, 'top'),
+      seatStrip(opts.seats[opts.orientation], opts.orientation, 'bottom'),
+    );
+  }
   wrap.append(boardFrame);
   // The same grip and persisted --uni-board-scale as every other board, so a
   // size set once holds here too.
@@ -108,19 +124,10 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   promptTask.textContent = 'Find the best move.';
   prompt.append(promptSide, promptTask);
   coach.append(prompt);
-  if (opts.game) {
-    const game = document.createElement('div');
+  if (opts.game?.detail) {
+    const game = document.createElement('p');
     game.className = 'gamebook__game';
-    const players = document.createElement('p');
-    players.className = 'gamebook__game-players';
-    players.textContent = opts.game.players;
-    game.append(players);
-    if (opts.game.detail) {
-      const detail = document.createElement('p');
-      detail.className = 'gamebook__game-detail';
-      detail.textContent = opts.game.detail;
-      game.append(detail);
-    }
+    game.textContent = opts.game.detail;
     coach.append(game);
   }
   const bubble = document.createElement('div');
@@ -135,9 +142,8 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   const controls = document.createElement('div');
   controls.className = 'gamebook__controls';
   const hintBtn = button('Hint', 'gamebook__btn');
-  const retryBtn = button('Try again', 'gamebook__btn gamebook__btn--primary');
   const restartBtn = button('Restart lesson', 'gamebook__btn');
-  controls.append(hintBtn, retryBtn, restartBtn);
+  controls.append(hintBtn, restartBtn);
   coach.append(bubble, controls);
   wrap.append(coach);
 
@@ -165,13 +171,17 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     },
   });
 
+  // The hint rings the piece the lesson's move starts from, as well as showing
+  // the authored text: a sentence alone left a long retreat unfindable, and the
+  // square is known from the mainline without any extra authoring.
   hintBtn.addEventListener('click', () => {
-    const hint = session.view().hint;
-    hintText.textContent = hint ?? 'No hint for this move.';
-  });
-  retryBtn.addEventListener('click', () => {
-    session.retry();
-    render();
+    const next = session.node().children[0]?.move;
+    if (next) {
+      interactive.setMarkers([
+        { square: next.from, kind: 'circle', className: 'xq-marker--gamebook-hint' },
+      ]);
+    }
+    hintText.textContent = session.view().hint ?? (next ? 'Look at the circled piece.' : '');
   });
   restartBtn.addEventListener('click', () => {
     session.reset();
@@ -184,6 +194,8 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
 
   function render(justAttempted?: 'good' | 'bad'): void {
     const view = session.view();
+    // A hint ring belongs to the position it was asked in.
+    if (justAttempted === 'good' || view.feedback !== 'bad') interactive.setMarkers([]);
     interactive.render(currentView(), opts.orientation);
     coach.dataset.state = view.feedback;
     hintText.textContent = '';
@@ -191,8 +203,10 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     lastFeedback = view.feedback;
 
     if (view.feedback === 'bad') {
-      comment.textContent = '';
-      feedback.textContent = view.deviation ?? 'Not the move — try again.';
+      // The lesson text stays; the note under it says what was wrong, and the
+      // board is still live, so the next move is the retry.
+      comment.textContent = view.comment ?? '';
+      feedback.textContent = view.deviation ?? 'Not that one. Try another move.';
     } else if (view.feedback === 'end') {
       comment.textContent = view.comment ?? '';
       feedback.textContent = 'Lesson complete! 🎉';
@@ -203,8 +217,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
       feedback.textContent = justAttempted === 'good' ? 'Correct! Keep going.' : '';
     }
 
-    hintBtn.hidden = view.feedback !== 'play' || !view.hint;
-    retryBtn.hidden = view.feedback !== 'bad';
+    hintBtn.hidden = view.feedback === 'end' || !session.node().children[0];
     restartBtn.hidden = view.feedback !== 'end';
   }
 
@@ -233,6 +246,18 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   root.replaceChildren(...chrome, wrap);
   fitGamebookToViewport(wrap);
   render();
+}
+
+function seatStrip(name: string, ink: XiangqiColor, slot: 'top' | 'bottom'): HTMLElement {
+  const el = document.createElement('div');
+  el.className = `review-seat review-seat--${slot} review-seat--${ink}`;
+  const disc = document.createElement('span');
+  disc.className = 'review-seat__disc';
+  const label = document.createElement('span');
+  label.className = 'review-seat__name';
+  label.textContent = name;
+  el.append(disc, label);
+  return el;
 }
 
 function button(label: string, className: string): HTMLButtonElement {

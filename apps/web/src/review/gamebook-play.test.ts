@@ -63,6 +63,16 @@ describe('gamebook session', () => {
     expect(session.view().feedback).toBe('play');
   });
 
+  it('keeps the board live after a wrong move: the next attempt is the retry', () => {
+    const { tree, altFirst, m1 } = build();
+    const session = createGamebookSession(tree, config());
+    expect(session.attempt(altFirst)).toBe('bad');
+    expect(session.view().awaitingMove).toBe(true);
+    expect(session.attempt(altFirst)).toBe('bad');
+    expect(session.attempt(m1)).toBe('good');
+    expect(session.view().feedback).not.toBe('bad');
+  });
+
   it('surfaces the current play node hint and resets to the top', () => {
     const { tree, m1 } = build();
     tree.annotateAt(ROOT_PATH, { gamebook: { hint: 'Open the cannon.' } });

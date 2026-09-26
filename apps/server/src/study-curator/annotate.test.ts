@@ -173,35 +173,45 @@ test('the deviation comment lands on the deviating move', async () => {
   assert.match(line[1]?.annotations?.comments?.[0]?.text ?? '', /Hc8 was played 97%/);
 });
 
-test('a decisive-moment chapter roots before the move and puts the engine line first', () => {
+test('a decisive-moment chapter opens on the move that led to it, then the engine line first', () => {
   const game = gameOf('b4', MOVES, '1-0');
   const chapter = buildDecisiveMomentChapter(game, judgeGame(UCI, EVALS));
   assert.ok(chapter);
   assert.equal(chapter.gamebook, true);
   assert.equal(chapter.orientation, 'black');
+  // Rooted one ply early, with Red to move: the lesson auto-plays Red's actual
+  // move on open, so the board shows it as the last move (a FEN has none).
   assert.ok(chapter.root.rootFen);
-  assert.match(chapter.root.rootFen, / b /);
+  assert.match(chapter.root.rootFen, / r /);
   assert.equal(chapter.name, 'Move 2, Black to play · Yin Sheng vs Yang Shizhe');
   const root = chapter.root.root;
-  assert.equal(root.children.length, 2);
-  assert.equal(root.children[0]?.uci, 'b10c8');
-  assert.equal(root.children[0]?.children[0]?.uci, 'i1h1');
-  assert.equal(root.children[1]?.uci, 'i10h10');
-  assert.deepEqual(root.children[1]?.annotations?.glyphs, [4]);
+  assert.equal(root.children.length, 1);
+  assert.equal(root.annotations, undefined);
+  const decisive = root.children[0];
+  assert.equal(decisive?.uci, UCI[2]);
+  assert.equal(decisive?.children.length, 2);
+  assert.equal(decisive?.children[0]?.uci, 'b10c8');
+  assert.equal(decisive?.children[0]?.children[0]?.uci, 'i1h1');
+  assert.equal(decisive?.children[1]?.uci, 'i10h10');
+  assert.deepEqual(decisive?.children[1]?.annotations?.glyphs, [4]);
   // The task, and nothing the game card already shows: provenance lives in the
-  // chapter's tags, not in the intro.
-  const intro = root.annotations?.comments?.[0]?.text ?? '';
+  // chapter's tags, not in the intro. It rides the node the player lands on.
+  const intro = decisive?.annotations?.comments?.[0]?.text ?? '';
   assert.match(
     intro,
     /^The game turned here\. Yang Shizhe played a move that gave up \d+ win% points\. Find the better one\.$/,
   );
+  // The hint names the piece the engine moves (b10c8 is Black's horse).
+  assert.equal(
+    decisive?.annotations?.gamebook?.hint,
+    'Look at your horse. One move keeps Black in the game.',
+  );
   assert.equal(chapter.tags?.red, 'Yin Sheng');
   // One graded move and the reply, not the engine's whole line; the reply
   // carries the closing note the finished lesson shows.
-  const reply = root.children[0]?.children[0];
+  const reply = decisive?.children[0]?.children[0];
   assert.equal(reply?.children.length, 0);
   assert.match(reply?.annotations?.comments?.[0]?.text ?? '', /^Found it\. .* best reply\.$/);
-  assert.ok(root.annotations?.gamebook?.hint);
 });
 
 test('a decisive-moment chapter is null when the loser has no open give-away', () => {

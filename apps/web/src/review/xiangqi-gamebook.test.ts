@@ -1,7 +1,7 @@
 // The gamebook (interactive-lesson) PLAYER. gamebook-play.test.ts proves the
 // state machine; this proves the surface a learner sees -- that a correct move
 // advances with the coach's encouragement, that a wrong one shows the author's
-// "why not" and offers a retry, and that reaching the tip says so.
+// "why not" and the next move is the retry, and that reaching the tip says so.
 //
 // It also pins that mounting the player is safe with the sound wiring attached.
 // A jsdom run has no AudioContext, so `playSound` is a no-op here and the tones
@@ -76,13 +76,16 @@ test('a correct move advances past the opponent reply and encourages', () => {
   expect(state(host)).toBe('play');
 });
 
-test('a legal wrong move is refused with a retry, not a dead end', () => {
-  const { host, wrongFirst } = mount();
+test('a legal wrong move is refused, and the next move is the retry', () => {
+  const { host, wrongFirst, m1 } = mount();
   play(host, wrongFirst);
   expect(state(host)).toBe('bad');
-  expect(feedback(host)).toBe('Not the move — try again.');
+  expect(feedback(host)).toBe('Not that one. Try another move.');
+  // No take-back button: the board stays live after a wrong move.
   const retry = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Try again');
-  expect(retry?.hidden, 'a wrong move must offer the take-back').toBe(false);
+  expect(retry).toBeUndefined();
+  play(host, m1);
+  expect(state(host)).not.toBe('bad');
 });
 
 test('reaching the tip completes the lesson', () => {
@@ -91,4 +94,12 @@ test('reaching the tip completes the lesson', () => {
   play(host, m3);
   expect(state(host)).toBe('end');
   expect(feedback(host)).toBe('Lesson complete! 🎉');
+});
+
+test('the hint rings the piece the lesson moves', () => {
+  const { host } = mount();
+  const hint = [...host.querySelectorAll('button')].find((b) => b.textContent === 'Hint');
+  expect(hint?.hidden).toBe(false);
+  hint?.click();
+  expect(host.querySelector('.xq-marker--gamebook-hint')).not.toBeNull();
 });

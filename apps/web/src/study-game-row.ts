@@ -13,7 +13,6 @@ import { localizedChapterTags } from './study-i18n.js';
 export type GameRowChapter = {
   orientation: string;
   i18n?: unknown;
-  root?: { rootFen?: string | null } | null;
   tags?: { red?: string; black?: string; event?: string; round?: string };
 };
 
@@ -27,9 +26,10 @@ export type GameRowParts = {
  * The row's parts, or null when the chapter is not a game position (no players
  * on both sides), in which case the rail keeps the plain name.
  *
- * Side to move comes from the chapter's start FEN, the position the learner is
- * handed; the orientation (the side they play) is the fallback for a chapter
- * without one.
+ * The side marked is the side the learner plays (the chapter's orientation),
+ * which in a guess-the-move chapter is the side to move once the lesson opens.
+ * Not the start FEN's side: a chapter may open on the opponent's move that led
+ * to the position, which the player auto-plays.
  */
 export function gameRowParts(
   chapter: GameRowChapter,
@@ -38,15 +38,7 @@ export function gameRowParts(
   const base = chapter.tags;
   if (!base?.red || !base.black) return null;
   const tags = localizedChapterTags(base, chapter.i18n, locale);
-  const side = chapter.root?.rootFen?.trim().split(/\s+/)[1];
-  const toMove =
-    side === 'b'
-      ? 'black'
-      : side === 'w' || side === 'r'
-        ? 'red'
-        : chapter.orientation === 'black'
-          ? 'black'
-          : 'red';
+  const toMove = chapter.orientation === 'black' ? 'black' : 'red';
   return { red: tags.red!, black: tags.black!, toMove };
 }
 
@@ -83,13 +75,13 @@ function player(name: string, seat: 'red' | 'black', toMove: boolean): HTMLEleme
 }
 
 /**
- * The coach's game card: players, then event, round, date and result. The rail
- * row shows only the players; the rest is read once, beside the position.
+ * The coach's game card: event, round, date and result. The players are the
+ * board's seat strips, so the card does not name them again.
  */
 export function gameCoachContext(
   chapter: GameRowChapter & { tags?: { date?: string; result?: string } },
   locale: Locale = currentLocale(),
-): { players: string; detail: string } | null {
+): { detail: string } | null {
   const base = chapter.tags;
   if (!base?.red || !base.black) return null;
   const tags = localizedChapterTags(base, chapter.i18n, locale);
@@ -100,5 +92,5 @@ export function gameCoachContext(
   else if (tags.round) detail.push(tags.round);
   if (tags.date) detail.push(tags.date);
   if (tags.result && tags.result !== '*') detail.push(tags.result);
-  return { players: `${tags.red} – ${tags.black}`, detail: detail.join(' · ') };
+  return { detail: detail.join(' · ') };
 }

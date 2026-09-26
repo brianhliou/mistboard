@@ -6,7 +6,8 @@
 // the opponent's replies are auto-advanced.
 //
 // Feedback states (lila-style): 'play' (learner to move), 'bad' (wrong attempt →
-// show the deviation, then retry), 'end' (line complete). A correct attempt advances
+// show the deviation; the board stays live, so the next attempt IS the retry),
+// 'end' (line complete). A correct attempt advances
 // past the learner's move and any auto opponent reply, landing on the next 'play' (or
 // 'end'). The tree is never mutated — attempts are compared to it by move key.
 
@@ -46,7 +47,8 @@ export interface GamebookSession<M, T> {
   node(): GameTreeNode<M, T>;
   view(): GamebookView;
   /** Learner attempts a move. 'good' advances (their move + auto opponent reply);
-   *  'bad' stays and shows the deviation; 'invalid' = not a move from here. */
+   *  'bad' stays and shows the deviation until the next attempt, which is
+   *  accepted from 'bad' as from 'play'; 'invalid' = not a move from here. */
   attempt(move: M): 'good' | 'bad' | 'invalid';
   /** Clear a 'bad' state back to 'play' at the same position. */
   retry(): void;
@@ -83,7 +85,10 @@ export function createGamebookSession<M, T, V>(
   }
 
   function attempt(move: M): 'good' | 'bad' | 'invalid' {
-    if (feedback !== 'play') return 'invalid';
+    // A wrong move does not lock the board: making a move is how a learner
+    // tries again, and a take-back button between every guess was a click that
+    // bought nothing (the position never changed on a wrong move).
+    if (feedback === 'end') return 'invalid';
     const node = nodeAt(cursor);
     const key = config.moveKey(move);
     const main = node.children[0];
@@ -122,8 +127,10 @@ export function createGamebookSession<M, T, V>(
         : undefined;
       return {
         feedback,
+        comment: config.comment(node),
         deviation: fromVariation ?? config.deviation(node),
-        awaitingMove: false,
+        hint: config.hint(node),
+        awaitingMove: true,
       };
     }
     if (feedback === 'end') {

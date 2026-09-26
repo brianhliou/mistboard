@@ -3,7 +3,6 @@ import { gameCoachContext, gameRowParts, shortEvent } from './study-game-row.js'
 
 const chapter = {
   orientation: 'black',
-  root: { rootFen: 'rc1akab2/9/2R1b1n2/p3p1p1p/9/1R4P2/P1N1P3P/2C1C4/4AK3/2BA3rc b - - 7 21' },
   tags: {
     red: 'Gu Bowen',
     black: 'Jiang Mingcheng',
@@ -18,7 +17,7 @@ const chapter = {
 };
 
 describe('gameRowParts', () => {
-  it('reads the side to move from the start position', () => {
+  it('marks the side the learner plays', () => {
     expect(gameRowParts(chapter, 'en')).toEqual({
       red: 'Gu Bowen',
       black: 'Jiang Mingcheng',
@@ -30,8 +29,8 @@ describe('gameRowParts', () => {
     expect(gameRowParts(chapter, 'zh-Hans')).toMatchObject({ red: '顾博文', black: '蒋明成' });
   });
 
-  it('falls back to the orientation without a start position', () => {
-    expect(gameRowParts({ ...chapter, root: null, orientation: 'red' }, 'en')?.toMove).toBe('red');
+  it('follows the orientation, not the start position', () => {
+    expect(gameRowParts({ ...chapter, orientation: 'red' }, 'en')?.toMove).toBe('red');
   });
 
   it('is null for a chapter that is not a game', () => {
@@ -40,16 +39,14 @@ describe('gameRowParts', () => {
 });
 
 describe('gameCoachContext', () => {
-  it('puts players first and the event, round, date and result under them', () => {
+  it('lists the event, round, date and result (the players are the seat strips)', () => {
     expect(gameCoachContext(chapter, 'en')).toEqual({
-      players: 'Gu Bowen – Jiang Mingcheng',
       detail: 'National Xiangqi Men Division A League · Round 3 · 2026-09-16 · 1-0',
     });
   });
 
-  it('localizes the players, event and round', () => {
+  it('localizes the event and round', () => {
     expect(gameCoachContext(chapter, 'zh-Hans')).toEqual({
-      players: '顾博文 – 蒋明成',
       detail: '全国象棋男子甲级联赛 · 第 3 轮 · 2026-09-16 · 1-0',
     });
   });

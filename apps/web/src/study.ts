@@ -858,6 +858,7 @@ function renderStudy(
       railCard.append(railHead, chapterRail);
       aside.append(railCard);
       const game = gameCoachContext(chapter);
+      const players = gameRowParts(chapter);
       mountXiangqiGamebook(root, {
         tree: chapter.root,
         orientation: chapter.orientation === 'black' ? 'black' : 'red',
@@ -866,6 +867,7 @@ function renderStudy(
         nav: buildNav(),
         aside,
         ...(game ? { game } : {}),
+        ...(players ? { seats: { red: players.red, black: players.black } } : {}),
       });
       return;
     }
