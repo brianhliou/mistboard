@@ -180,6 +180,15 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // Count the creates a drain turns away. Every create route answers 503
+    // server_draining while draining, so the status is the signal and no route
+    // has to remember to report itself.
+    if (request.method === 'POST' && options.drainController.isDraining()) {
+      response.once('finish', () => {
+        if (response.statusCode === 503) options.drainController.noteRefusedCreate(pathname);
+      });
+    }
+
     if (pathname === '/admin/drain' || pathname === '/admin/drain/cancel') {
       void options.drainController.handleRequest(request, response, pathname).catch((err) => {
         console.error(

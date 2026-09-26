@@ -204,10 +204,11 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
   body.textContent = 'Loading…';
   shell.append(body);
 
-  const [publicStats, live, admin] = await Promise.all([
+  const [publicStats, live, admin, deploys] = await Promise.all([
     fetchPublicStats(),
     fetchLiveStats(),
     fetchAdminMetrics(),
+    fetchDeployHistory(),
   ]);
 
   if (!publicStats && !admin) {
@@ -264,6 +265,8 @@ async function mountAdminMetrics(root: HTMLElement): Promise<void> {
     }
     parts.push(buildEnginesSection(admin, locale));
   }
+
+  if (deploys) parts.push(buildDeploysSection(deploys));
 
   body.replaceChildren(...parts);
 }
@@ -758,6 +761,132 @@ async function fetchLiveStats(): Promise<LiveStats | null> {
     const data = (await resp.json()) as Partial<LiveStats>;
     if (typeof data.playing !== 'number' || typeof data.online !== 'number') return null;
     return { playing: data.playing, online: data.online };
+  } catch {
+    return null;
+  }
+}
+
+// ── restarts and drains ─────────────────────────────────────────────────────
+// Mirrors DeployHistoryEntry in apps/server/src/deploy-history.ts.
+export type DeployHistoryEntry = {
+  at: string;
+  kind: 'restart' | 'drain-cancelled' | 'drain-lapsed';
+  buildRevision: string | null;
+  drain: {
+    durationMs: number;
+    committed: boolean;
+    commitWaitMs: number | null;
+    activeGamesAtStart: number;
+    peakActiveGames: number;
+    refusedCreates: number;
+  } | null;
+  withoutDrain: boolean;
+  activeGamesAtShutdown: number | null;
+  pausedOnShutdown: number;
+  resumedPlayersBack: number;
+  resumedAfterGrace: number;
+};
+
+const DEPLOY_COLUMNS = [
+  'When',
+  'What',
+  'Drain',
+  'Games waited on',
+  'New games refused',
+  'Live at shutdown',
+  'Resumed (back / grace)',
+] as const;
+
+function formatDuration(ms: number): string {
+  const seconds = Math.round(ms / 1000);
+  if (seconds < 90) return `${seconds}s`;
+  return `${Math.round(seconds / 60)}m`;
+}
+
+// One table row per restart or drain. A restart with a drain summary reads its
+// numbers; one without says whether the server logged going down undrained or
+// simply predates the summaries.
+export function deployRowCells(entry: DeployHistoryEntry, locale = 'en-US'): string[] {
+  const when = new Date(entry.at).toLocaleString(locale, {
+    month: 'short',
+    day: 'numeric',
+    hour: '2-digit',
+    minute: '2-digit',
+  });
+  const what =
+    entry.kind === 'restart'
+      ? 'Restart'
+      : entry.kind === 'drain-cancelled'
+        ? 'Drain cancelled'
+        : 'Drain lapsed';
+  const drain = entry.drain;
+  const drainCell = drain
+    ? `${formatDuration(drain.durationMs)}${drain.committed ? '' : ', never committed'}`
+    : entry.withoutDrain
+      ? 'none (undrained)'
+      : 'not recorded';
+  const waited = drain
+    ? drain.peakActiveGames > drain.activeGamesAtStart
+      ? `${drain.activeGamesAtStart} (peak ${drain.peakActiveGames})`
+      : String(drain.activeGamesAtStart)
+    : '';
+  const refused = drain ? String(drain.refusedCreates) : '';
+  const live =
+    entry.kind === 'restart' && entry.activeGamesAtShutdown !== null
+      ? String(entry.activeGamesAtShutdown)
+      : '';
+  const resumed =
+    entry.pausedOnShutdown > 0
+      ? `${entry.resumedPlayersBack} / ${entry.resumedAfterGrace} of ${entry.pausedOnShutdown}`
+      : '';
+  return [when, what, drainCell, waited, refused, live, resumed];
+}
+
+function buildDeploysSection(entries: DeployHistoryEntry[]): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'metrics-section metrics-deploys';
+  section.append(sectionHeading('Restarts and drains, last 30 days'));
+  const note = document.createElement('p');
+  note.className = 'metrics-section-note';
+  note.textContent =
+    'Live at shutdown should be 0 for a drained restart. Resumed counts chess-stack rooms paused by the shutdown: players back on both seats, or the grace timer resuming with a seat empty. Xiangqi-family rooms are not paused on shutdown and do not appear there.';
+  section.append(note);
+  if (entries.length === 0) {
+    const empty = document.createElement('p');
+    empty.className = 'metrics-section-note';
+    empty.textContent = 'No restarts recorded.';
+    section.append(empty);
+    return section;
+  }
+  const scroller = document.createElement('div');
+  scroller.className = 'metrics-deploys-scroll';
+  const table = document.createElement('table');
+  table.className = 'metrics-deploys-table';
+  const head = table.createTHead().insertRow();
+  for (const label of DEPLOY_COLUMNS) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    head.append(th);
+  }
+  const body = table.createTBody();
+  for (const entry of entries) {
+    const row = body.insertRow();
+    if (entry.withoutDrain || (entry.activeGamesAtShutdown ?? 0) > 0) {
+      row.classList.add('is-warning');
+    }
+    for (const cell of deployRowCells(entry)) row.insertCell().textContent = cell;
+  }
+  scroller.append(table);
+  section.append(scroller);
+  return section;
+}
+
+async function fetchDeployHistory(): Promise<DeployHistoryEntry[] | null> {
+  try {
+    const resp = await fetch('/api/admin/deploys', { credentials: 'same-origin' });
+    if (!resp.ok) return null;
+    const data = (await resp.json()) as { deploys?: DeployHistoryEntry[] };
+    return Array.isArray(data.deploys) ? data.deploys : null;
   } catch {
     return null;
   }

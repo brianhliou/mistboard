@@ -162,3 +162,32 @@
   font-size: 0.9rem;
   color: var(--site-muted);
 }
+
+/* Restarts and drains: a plain admin table, scrolled sideways on phones. */
+.metrics-deploys-scroll {
+  overflow-x: auto;
+}
+
+.metrics-deploys-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.metrics-deploys-table th,
+.metrics-deploys-table td {
+  padding: 6px 10px;
+  text-align: left;
+  white-space: nowrap;
+  border-bottom: 1px solid color-mix(in srgb, currentColor 12%, transparent);
+}
+
+.metrics-deploys-table th {
+  font-weight: 600;
+  opacity: 0.75;
+}
+
+.metrics-deploys-table tr.is-warning td {
+  color: #c53434;
+}

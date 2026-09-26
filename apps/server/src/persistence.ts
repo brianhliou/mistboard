@@ -259,6 +259,7 @@ export {
   listGameDebugArtifactPayloads,
   listGameDebugArtifactSummaries,
   listRoomLifecycleAudit,
+  listRoomLifecycleAuditByKinds,
   loadRoom,
   loadRoomEvents,
   recordGameDebugArtifact,

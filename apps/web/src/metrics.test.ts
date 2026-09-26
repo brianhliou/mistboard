@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { mountMetrics } from './metrics.js';
+import { type DeployHistoryEntry, deployRowCells, mountMetrics } from './metrics.js';
 
 const publicStats = {
   generatedAt: '2026-07-21T00:00:00.000Z',
@@ -370,3 +370,41 @@ function json(body: unknown, status = 200): Response {
     headers: { 'Content-Type': 'application/json' },
   });
 }
+
+describe('deploy history rows', () => {
+  const base: DeployHistoryEntry = {
+    at: '2026-09-25T20:00:00Z',
+    kind: 'restart',
+    buildRevision: 'abc',
+    drain: null,
+    withoutDrain: false,
+    activeGamesAtShutdown: 0,
+    pausedOnShutdown: 0,
+    resumedPlayersBack: 0,
+    resumedAfterGrace: 0,
+  };
+
+  it('reads a drained restart from its summary', () => {
+    const cells = deployRowCells({
+      ...base,
+      drain: {
+        durationMs: 14 * 60_000,
+        committed: true,
+        commitWaitMs: 9 * 60_000,
+        activeGamesAtStart: 1,
+        peakActiveGames: 2,
+        refusedCreates: 3,
+      },
+      pausedOnShutdown: 2,
+      resumedPlayersBack: 1,
+      resumedAfterGrace: 1,
+    });
+    expect(cells.slice(1)).toEqual(['Restart', '14m', '1 (peak 2)', '3', '0', '1 / 1 of 2']);
+  });
+
+  it('says when a restart went down with no drain', () => {
+    const cells = deployRowCells({ ...base, withoutDrain: true, activeGamesAtShutdown: 1 });
+    expect(cells.slice(1, 3)).toEqual(['Restart', 'none (undrained)']);
+    expect(cells[5]).toBe('1');
+  });
+});

@@ -548,6 +548,7 @@ async function shutdown(signal: 'SIGINT' | 'SIGTERM'): Promise<void> {
   }, shutdownGraceMs);
   forceExit.unref();
 
+  await drainController.finalizeOnShutdown();
   await recordRoomLifecycleAuditSafe({
     kind: 'server_shutdown_requested',
     atMs: shutdownAt,

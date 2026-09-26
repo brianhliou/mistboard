@@ -1,5 +1,6 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { getBuildInfo } from '../build-info.js';
+import { buildDeployHistory, DEPLOY_HISTORY_KINDS } from '../deploy-history.js';
 import { darkXiangqiEnabled, ratedEnabled } from '../feature-flags.js';
 import { collectLiveRoomStats } from '../live-room-stats.js';
 import * as persistence from '../persistence.js';
@@ -188,8 +189,32 @@ export async function tryHandle(
     return true;
   }
 
+  if (pathname === '/api/admin/deploys') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    // Same gate as /api/stats/admin: the /metrics page reads it with a cookie.
+    if (!isHttpAdminAuthorized(request) && !(await isHttpAdminSession(request))) {
+      writeJson(response, 401, { error: 'unauthorized' });
+      return true;
+    }
+    if (!requirePersistence(response)) return true;
+    const rows = await persistence.listRoomLifecycleAuditByKinds(
+      DEPLOY_HISTORY_KINDS,
+      Date.now() - DEPLOY_HISTORY_WINDOW_MS,
+    );
+    writeJson(
+      response,
+      200,
+      { deploys: buildDeployHistory(rows).slice(0, DEPLOY_HISTORY_LIMIT) },
+      { 'cache-control': 'no-store' },
+    );
+    return true;
+  }
+
   return false;
 }
+
+const DEPLOY_HISTORY_WINDOW_MS = 30 * 24 * 60 * 60 * 1000;
+const DEPLOY_HISTORY_LIMIT = 30;
 
 // Cap on the online-players listing; `count` still reports the full total.
 const ONLINE_PLAYERS_LIMIT = 50;

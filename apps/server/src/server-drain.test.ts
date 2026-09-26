@@ -449,3 +449,109 @@ test('a cancel that names no owner still cancels an owned drain', async () => {
   assert.equal(cancel.status, 200);
   assert.equal(drain.isDraining(), false);
 });
+
+function loggedKinds(calls: readonly { arguments: unknown[] }[]): Record<string, unknown>[] {
+  const out: Record<string, unknown>[] = [];
+  for (const call of calls) {
+    const line = call.arguments[0];
+    if (typeof line !== 'string' || !line.startsWith('{')) continue;
+    out.push(JSON.parse(line) as Record<string, unknown>);
+  }
+  return out;
+}
+
+// A drain whose deadline passes without a restart used to end silently: the
+// server stopped refusing games, but no client was told, so every open tab kept
+// "Update pending" until a reload. The lapse now broadcasts the cancel and
+// closes the drain's summary.
+test('a lapsed drain tells clients and closes its summary as lapsed', async (t) => {
+  const log = t.mock.method(console, 'log', () => {});
+  const sent: string[] = [];
+  const socket = {
+    send(message: string) {
+      sent.push(message);
+    },
+  } as unknown as WebSocket;
+  const room = roomFixture({ clients: [clientFixture({ socket })] });
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms: new Map([[room.id, room]]),
+  });
+
+  await drain.handleRequest(request({ body: { windowMs: 20 } }), captureResponse(), '/admin/drain');
+  await new Promise((resolve) => setTimeout(resolve, 60));
+
+  assert.equal(drain.isDraining(), false);
+  assert.deepEqual(JSON.parse(sent.at(-1)!) as Record<string, unknown>, {
+    type: 'server_restart_cancelled',
+  });
+  const summary = loggedKinds(log.mock.calls).find((entry) => entry.kind === 'drain_summary');
+  assert.equal(summary?.outcome, 'lapsed');
+  assert.equal(summary?.committed, false);
+});
+
+test('a cancelled drain summary counts the creates it refused, by route', async (t) => {
+  const log = t.mock.method(console, 'log', () => {});
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms: new Map(),
+  });
+
+  drain.noteRefusedCreate('/api/rooms'); // before any drain: not counted
+  await drain.handleRequest(
+    request({ body: { windowMs: 1500 } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+  drain.noteRefusedCreate('/api/rooms');
+  drain.noteRefusedCreate('/api/rooms');
+  drain.noteRefusedCreate('/api/xiangqi/rooms/xq_0a1b2c3d-4e5f/join');
+  await drain.handleRequest(request(), captureResponse(), '/admin/drain/cancel');
+
+  const summary = loggedKinds(log.mock.calls).find((entry) => entry.kind === 'drain_summary');
+  assert.equal(summary?.outcome, 'cancelled');
+  assert.equal(summary?.refusedCreates, 3);
+  assert.deepEqual(summary?.refusedByRoute, {
+    '/api/rooms': 2,
+    '/api/xiangqi/rooms/:id/join': 1,
+  });
+});
+
+test('shutdown closes a committed drain, and a shutdown with no drain says so', async (t) => {
+  const log = t.mock.method(console, 'log', () => {});
+  const drain = createDrainController({
+    drainWindowDefaultMs: 1000,
+    drainWindowMaxMs: 2000,
+    rooms: new Map(),
+  });
+
+  await drain.handleRequest(
+    request({ body: { windowMs: 1500 } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+  await drain.handleRequest(
+    request({ body: { phase: 'restarting' } }),
+    captureResponse(),
+    '/admin/drain',
+  );
+  await drain.finalizeOnShutdown();
+
+  const logged = loggedKinds(log.mock.calls);
+  const summary = logged.find((entry) => entry.kind === 'drain_summary');
+  assert.equal(summary?.outcome, 'shutdown');
+  assert.equal(summary?.committed, true);
+  assert.equal(typeof summary?.commitWaitMs, 'number');
+  assert.equal(
+    logged.some((entry) => entry.kind === 'shutdown_without_drain'),
+    false,
+  );
+
+  await drain.finalizeOnShutdown();
+  assert.equal(
+    loggedKinds(log.mock.calls).some((entry) => entry.kind === 'shutdown_without_drain'),
+    true,
+  );
+});

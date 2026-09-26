@@ -192,6 +192,44 @@ export async function listRoomLifecycleAudit(
   }));
 }
 
+// Server-wide audit rows of the given kinds since a moment, oldest first: the
+// deploy history reads drains, shutdowns and the resumes that followed them.
+export async function listRoomLifecycleAuditByKinds(
+  kinds: readonly string[],
+  sinceMs: number,
+  limit = 2000,
+): Promise<RoomLifecycleAuditRecord[]> {
+  const { rows } = await getPool().query<{
+    id: string;
+    room_id: string | null;
+    kind: string;
+    occurred_at: Date;
+    at_ms: string | null;
+    event_seq: number | null;
+    build_revision: string | null;
+    payload: Record<string, unknown>;
+    created_at: Date;
+  }>(
+    `SELECT id, room_id, kind, occurred_at, at_ms, event_seq, build_revision, payload, created_at
+     FROM room_lifecycle_audit
+     WHERE kind = ANY($1::text[]) AND occurred_at >= to_timestamp($2::double precision / 1000.0)
+     ORDER BY occurred_at ASC, id ASC
+     LIMIT $3`,
+    [kinds, sinceMs, limit],
+  );
+  return rows.map((row) => ({
+    id: Number(row.id),
+    roomId: row.room_id,
+    kind: row.kind,
+    occurredAt: row.occurred_at,
+    atMs: row.at_ms === null ? null : Number(row.at_ms),
+    eventSeq: row.event_seq,
+    buildRevision: row.build_revision,
+    payload: row.payload,
+    createdAt: row.created_at,
+  }));
+}
+
 export async function getRoomLifecycleTimeline(
   roomId: string,
   options: { auditLimit?: number } = {},
