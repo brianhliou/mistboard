@@ -161,6 +161,7 @@ Conventions:
 
 ### Fixed
 
+- A broadcast game's board, moves and game list start on one line and scroll together, as on the review page; the game list used to stay pinned while the board scrolled away ([0f1de4b7](https://github.com/brianhliou/mistboard/commit/0f1de4b7))
 - The bars on /stats and /metrics all end at the same point; a row with a shorter number used to get a longer bar ([0be3e4d4](https://github.com/brianhliou/mistboard/commit/0be3e4d4))
 - Finished Fog Xiangqi games show the clock they were played at: every one was saved as untimed, so the review header, the database filter, profile game lists and exports read 5+5 and 3+2 games as "Untimed"; the 47 earlier games are corrected too ([46e599bb](https://github.com/brianhliou/mistboard/commit/46e599bb))
 - A broadcast round with no games yet keeps its game list and chat column, instead of the page shrinking to a narrower panel ([85c62f33](https://github.com/brianhliou/mistboard/commit/85c62f33))
