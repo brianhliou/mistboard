@@ -21,6 +21,7 @@
 
 import type { DuckXiangqiPlayerView, DuckXiangqiSquare, DuckXiangqiTurn } from '@mistboard/game';
 import {
+  readStoredXiangqiBoardLayout,
   readStoredXiangqiPieceSet,
   type XiangqiBoardLayout,
 } from './xiangqi-appearance-storage.js';
@@ -294,6 +295,17 @@ function lastMoveLayer(
   layout: XiangqiBoardLayout,
 ): string {
   if (!view.lastMove) return '';
+  // Square grid: tint the two cells, the cell boards' grammar (the intersection
+  // layout rings the piece instead). Same classes as the standard board.
+  if (layout === 'cell') {
+    const c = LIVE_BOARD_GEO.cell;
+    const from = point(view.lastMove.from, perspective, layout);
+    const to = point(view.lastMove.to, perspective, layout);
+    return (
+      `<rect class="xq-live-lastmove-square xq-live-lastmove-from" x="${from.x - c / 2}" y="${from.y - c / 2}" width="${c}" height="${c}"/>` +
+      `<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="${to.x - c / 2}" y="${to.y - c / 2}" width="${c}" height="${c}"/>`
+    );
+  }
   // The SHARED marker markup, not an invented class: origin shadow disc plus a
   // gold destination ring, tuned on the standard xiangqi board and used by every
   // token board here. Rolling my own gave two unstyled circles.
@@ -338,7 +350,10 @@ export function duckXiangqiBoardSvg(
   perspective: Color,
   state: DuckXiangqiBoardState,
 ): string {
-  const layout = state.layout ?? 'intersection';
+  // The reader's board preference, like every other xiangqi-shaped board. This
+  // defaulted to 'intersection' and no caller passed one, so 'Square grid' never
+  // reached Duck Xiangqi even though the page CSS already sized for it.
+  const layout = state.layout ?? readStoredXiangqiBoardLayout();
   const vb = xiangqiBoardViewBox(layout, DUCK_SURFACE.geo);
   const viewBox = `${vb.minX} ${vb.minY} ${vb.width} ${vb.height}`;
   const selected = state.phase.kind === 'piece' ? state.phase.selected : null;

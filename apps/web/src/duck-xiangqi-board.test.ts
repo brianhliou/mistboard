@@ -230,6 +230,27 @@ describe('duckXiangqiBoardSvg', () => {
     expect(svg.match(/data-square="/g)?.length).toBe(90);
   });
 
+  // 'Square grid' never reached this board: the renderer defaulted to the lined
+  // board and no caller passed a layout, while the page CSS already sized for it.
+  it('follows the square-grid preference, tinting the last-move cells', () => {
+    window.history.replaceState({}, '', '/?xqLayout=cell');
+    try {
+      const svg = duckXiangqiBoardSvg(
+        { ...openingView(), lastMove: { from: 'b3', to: 'e3' } },
+        'red',
+        {
+          interactive: false,
+          phase: PIECE_PHASE(null),
+          targets: [],
+        },
+      );
+      expect(svg).toContain('data-xiangqi-layout="cell"');
+      expect(svg.match(/xq-live-lastmove-square/g)).toHaveLength(2);
+    } finally {
+      window.history.replaceState({}, '', '/');
+    }
+  });
+
   it('draws right-click arrows and circles', () => {
     const svg = duckXiangqiBoardSvg(openingView(), 'red', {
       interactive: true,

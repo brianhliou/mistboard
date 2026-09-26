@@ -49,6 +49,7 @@ import {
 } from './variant-tenant/live-client.js';
 import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
+import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 
 type DuckMoveEvent = TenantMovePlayed<DuckXiangqiColor, DuckXiangqiTurn>;
 
@@ -284,7 +285,7 @@ function installBoardInteraction(liveRefs: LiveRefs): void {
     },
     perspective: () => orientationFor(core?.state.view ?? null),
     // Mirrors the renderer's own default: this client never passes a layout.
-    layout: () => 'intersection',
+    layout: () => readStoredXiangqiBoardLayout(),
     pieceSet: () => undefined,
   });
   installBoardDrag({

@@ -57,7 +57,10 @@ import {
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
 import { installBoardDrag, installBoardDraw } from '../variant-tenant/board-drag.js';
 import { installSelectionClickAway } from '../variant-tenant/selection-click-away.js';
-import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
+import {
+  readStoredXiangqiBoardLayout,
+  type XiangqiBoardLayout,
+} from '../xiangqi-appearance-storage.js';
 import {
   LIVE_BOARD_GEO,
   type XiangqiBoardArrow,
@@ -78,12 +81,15 @@ import {
 } from './tree-review.js';
 
 /**
- * The duck board draws no coordinate labels, so it renders at ONE layout, and
- * the overlay patches below have to use the same one the SVG was built with or
- * an arrow lands on the wrong point. Naming it once is what makes that true by
- * construction; duckXiangqiBoardSvg defaults to the same value.
+ * The overlay patches below have to use the layout the SVG was built with or an
+ * arrow lands on the wrong point, so every draw reads it through this one
+ * function; duckXiangqiBoardSvg defaults to the same preference. It was pinned to
+ * 'intersection' while boardAspect (xiangqiBoardAspect) already followed the
+ * stored layout, so a 'Square grid' reader got a lined board in a square box.
  */
-const DUCK_BOARD_LAYOUT: XiangqiBoardLayout = 'intersection';
+function duckBoardLayout(): XiangqiBoardLayout {
+  return readStoredXiangqiBoardLayout();
+}
 
 /**
  * Board geometry with the coordinate gutter ZEROED, unconditionally.
@@ -153,7 +159,7 @@ function createDuckXiangqiInteractiveBoard(
       interactive: opts.enabled(),
       phase,
       targets: targets(),
-      layout: DUCK_BOARD_LAYOUT,
+      layout: duckBoardLayout(),
       arrows,
       markers,
     });
@@ -178,7 +184,7 @@ function createDuckXiangqiInteractiveBoard(
     const layer = opts.board.querySelector('.xq-live-arrows');
     if (layer) {
       layer.innerHTML = arrows
-        .map((arrow) => xiangqiArrowSvg(arrow, perspective, DUCK_BOARD_LAYOUT))
+        .map((arrow) => xiangqiArrowSvg(arrow, perspective, duckBoardLayout()))
         .join('');
     }
   }
@@ -196,7 +202,7 @@ function createDuckXiangqiInteractiveBoard(
       if (!layer) continue;
       layer.innerHTML = markers
         .filter((marker) => (marker.kind === 'glyph') === glyphBand)
-        .map((marker) => xiangqiMarkerSvg(marker, perspective, DUCK_BOARD_LAYOUT))
+        .map((marker) => xiangqiMarkerSvg(marker, perspective, duckBoardLayout()))
         .join('');
     }
   }
