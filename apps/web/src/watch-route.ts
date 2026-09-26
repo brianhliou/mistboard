@@ -1139,7 +1139,6 @@ async function mountWatchReplay(
     showControls: false,
     keyboardNav: false,
     revealOnFinish: false,
-    clampPace: true,
     metadataMode: 'compact',
     showCaptures: false,
     hideGameIdPill: true,

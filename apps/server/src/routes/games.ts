@@ -19,7 +19,7 @@ import { internalEngineAnalysisConfigured } from './../internal-engine-client.js
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
-import { eventReplayResponse, parsePositiveInteger } from './../server-policy.js';
+import { eventReplayResponse, parsePositiveInteger, withDelayedAir } from './../server-policy.js';
 import { listWatchChannels, type WatchChannel, watchChannelForId } from './../watch-channels.js';
 import {
   collectLiveTvCandidates,
@@ -411,7 +411,9 @@ export async function tryHandle(
     const variants = [
       ...new Set(listWatchChannels().flatMap((channel) => [...channel.legacyVariants])),
     ];
-    const games = await persistence.listShowcaseGames({ variants });
+    // delayedAir: whether the homepage TV may air the game after the fact (fog
+    // variants only; live-capable ones only ever show frozen). See airsOnDelay.
+    const games = withDelayedAir(await persistence.listShowcaseGames({ variants }));
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ games }));
     return true;

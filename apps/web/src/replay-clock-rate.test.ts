@@ -1,31 +1,36 @@
 // A CLOCK ONLY EVER TICKS AT ONE SECOND PER SECOND.
 //
-// The homepage TV and /watch have exactly two clock states, and this file pins both:
+// The homepage TV and /watch clocks, in every state this file pins:
 //
-//   live    — the server's clock projected against Date.now(): ticks at real speed.
-//   replay  — the ply's recorded value, held STATIC until the next move lands.
+//   live     — the server's clock projected against Date.now(): ticks at real speed.
+//   playing  — a recorded game playing back at its TRUE timing: the mover counts down at
+//              real speed through the recorded think and lands on the recorded value.
+//   still    — paused or scrubbed: the ply's recorded value, static.
 //
-// The third state, removed 2026-09-04, drained the mover's clock by the real time the move
-// cost across the CLAMPED playback window (moveDelays, [700, 2500] ms). Delta real, window
-// compressed, so the rate was the ratio between them: measured on one homepage game, the bot
-// read a uniform 1.61x and the human swung 1.00x-7.60x. The whole suite was green when that
-// shipped because nothing asserted the RATE, only the endpoints. So: assert the rate.
-import type {
-  GameEvent,
-  JieqiColor,
-  JieqiMove,
-  JieqiPlayerBoard,
-  JieqiPlayerView,
+// History: until 2026-09-04 a replay drained the mover's clock by the real time the move
+// cost across a CLAMPED playback window ([700, 2500] ms), so the rate was the ratio (1.61x
+// for a bot, 1.00x-7.60x for a human on one homepage game); the fix then was a static
+// label. On 2026-09-26 the clamp itself was retired ("always true timing, never faked"):
+// each move now plays for exactly its recorded think, so a real-rate tick is honest. The
+// suite was green through both bugs because nothing asserted the RATE, only the
+// endpoints. So: assert the rate.
+import {
+  createClock,
+  type GameEvent,
+  type JieqiColor,
+  type JieqiMove,
+  type JieqiPlayerBoard,
+  type JieqiPlayerView,
 } from '@mistboard/game';
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import type { JieqiPostgameResponse } from './live-jieqi-postgame.js';
 import { mountReplay } from './replay.js';
 import { mountJieqiWatchReplay } from './watch-jieqi-replay.js';
 
-// Fixed epoch so runningSince arithmetic is exact under fake timers.
+// Fixed epoch so the timestamp arithmetic is exact under fake timers.
 const NOW = Date.UTC(2026, 8, 4, 12, 0, 0);
 
-describe('replay clock tick rate', () => {
+describe('replay clock tick rate (tenant renderer)', () => {
   beforeEach(() => {
     vi.useFakeTimers();
     vi.setSystemTime(NOW);
@@ -36,9 +41,7 @@ describe('replay clock tick rate', () => {
     vi.unstubAllGlobals();
   });
 
-  it('holds a replay clock still between plies, however long the move really took', async () => {
-    // Ply 3 is a 19-SECOND think played back in a 2500 ms window: the 7.6x case from the
-    // reported homepage game, and the one any reinstated drain would fail on first.
+  it('plays each move for its recorded think and ticks the mover at one second per second', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse(replayFixture())),
@@ -46,34 +49,36 @@ describe('replay clock tick rate', () => {
     const root = document.createElement('div');
     const handle = await mountJieqiWatchReplay(root, 'jq_rate', { autoplay: true, compact: true });
 
-    // moveDelays = [0, 700 (first move: unknown think), 2000, 2500 (the 19s think), 2000].
-    // 700 + 2000 lands on ply 2, with Red to move and 19 s about to come off her clock.
-    await vi.advanceTimersByTimeAsync(2700);
-    const atPly2 = handle.clockAtPly?.();
-    expect(atPly2).toEqual({ first: 605_000, second: 603_000, toMove: 'first' });
+    // Ply 2 lands exactly 3 s in (its recorded timestamp), not after a clamped window.
+    await vi.advanceTimersByTimeAsync(2_900);
+    expect(handle.clockAtPly?.()).toMatchObject({ toMove: 'second' });
+    await vi.advanceTimersByTimeAsync(100);
+    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 605_000, toMove: 'first' });
 
-    // Holding still must not mean showing nothing: the seats carry real clock readings, and
-    // "unchanged" below is only meaningful because there is something on screen to change.
-    const rendered = seatClockText(root);
-    expect(rendered).toHaveLength(2);
-    for (const text of rendered) expect(text).toMatch(/^\d+:\d{2}$/);
+    // Red now thinks for NINETEEN seconds, and the board sits on ply 2 for all of it. Her
+    // clock drops by exactly the real time elapsed, sampled every second: rate 1.00x.
+    let previous = 605_000;
+    for (let second = 1; second <= 18; second += 1) {
+      await vi.advanceTimersByTimeAsync(1_000);
+      const readout = handle.clockAtPly?.();
+      expect(readout).toEqual({
+        first: 605_000 - second * 1_000,
+        second: 605_000,
+        toMove: 'first',
+      });
+      expect(previous - readout!.first).toBe(1_000);
+      previous = readout!.first;
+    }
+    // The seats render the same ticking value.
+    expect(seatClockText(root)).toContain('9:47');
 
-    // A fifth of the way through the playback window. The drain used to report 601_200 here
-    // (605_000 minus a fifth of the real 19 s); the recorded value has not changed, so
-    // neither may the display.
-    await vi.advanceTimersByTimeAsync(500);
-    expect(handle.clockAtPly?.()).toEqual(atPly2);
-    expect(seatClockText(root)).toEqual(rendered);
-
-    // Still inside the same window at 2400 ms of 2500 ms: no creep at the far end either.
-    await vi.advanceTimersByTimeAsync(1900);
-    expect(handle.clockAtPly?.()).toEqual(atPly2);
-    expect(seatClockText(root)).toEqual(rendered);
-
+    // The move lands at 22 s on its recorded value: 605_000 - 19_000 + 5_000 increment.
+    await vi.advanceTimersByTimeAsync(1_000);
+    expect(handle.clockAtPly?.()).toEqual({ first: 591_000, second: 605_000, toMove: 'second' });
     handle.destroy();
   });
 
-  it('advances a replay clock only when the next move lands, and by the recorded amount', async () => {
+  it('holds each side still through its first move, which the server never charged', async () => {
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse(replayFixture())),
@@ -81,20 +86,35 @@ describe('replay clock tick rate', () => {
     const root = document.createElement('div');
     const handle = await mountJieqiWatchReplay(root, 'jq_rate', { autoplay: true, compact: true });
 
-    await vi.advanceTimersByTimeAsync(2700);
-    expect(handle.clockAtPly?.()).toMatchObject({ first: 605_000 });
+    await vi.advanceTimersByTimeAsync(1_200); // ply 1 on, black's first think under way
+    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 600_000, toMove: 'second' });
+    await vi.advanceTimersByTimeAsync(1_500);
+    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 600_000, toMove: 'second' });
+    handle.destroy();
+  });
 
-    // Crossing into ply 3 charges Red the full 19 s and credits the 5 s increment at once:
-    // 605_000 - 19_000 + 5_000. The jump is the point — it is where the time actually went.
-    await vi.advanceTimersByTimeAsync(2500);
-    expect(handle.clockAtPly?.()).toEqual({ first: 591_000, second: 603_000, toMove: 'second' });
+  it('shows the recorded value, static, on a paused or scrubbed replay', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(replayFixture())),
+    );
+    const root = document.createElement('div');
+    const handle = await mountJieqiWatchReplay(root, 'jq_rate', { autoplay: true, compact: true });
+    await vi.advanceTimersByTimeAsync(8_000);
+    expect(handle.clockAtPly?.()).toMatchObject({ first: 600_000 });
 
+    // A manual jump pauses playback: the clock parks on the ply's recorded value.
+    handle.jumpToPly?.(2);
+    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 605_000, toMove: 'first' });
+    const rendered = seatClockText(root);
+    await vi.advanceTimersByTimeAsync(10_000);
+    expect(handle.clockAtPly?.()).toEqual({ first: 605_000, second: 605_000, toMove: 'first' });
+    expect(seatClockText(root)).toEqual(rendered);
     handle.destroy();
   });
 
   it('ticks a LIVE clock at exactly one second per second', async () => {
-    // The other half of the doctrine: removing the replay drain must not stop live games
-    // from counting down, and they count down against the wall, not against a window.
+    // Live games count down against the wall, not against a window.
     vi.stubGlobal(
       'fetch',
       vi.fn(async () => jsonResponse(liveFixture())),
@@ -109,7 +129,7 @@ describe('replay clock tick rate', () => {
     expect(handle.clockAtPly?.()).toMatchObject({ first: 300_000, second: 240_000 });
 
     await vi.advanceTimersByTimeAsync(3_000);
-    // Red is on the clock: exactly 3 s gone, not 1.61x of it. Black is idle and unmoved.
+    // Red is on the clock: exactly 3 s gone. Black is idle and unmoved.
     expect(handle.clockAtPly?.()).toMatchObject({ first: 297_000, second: 240_000 });
 
     await vi.advanceTimersByTimeAsync(7_000);
@@ -119,13 +139,134 @@ describe('replay clock tick rate', () => {
   });
 });
 
+describe('replay clock tick rate (chess renderer)', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+  });
+
+  it('ticks a timed fog chess replay at one second per second and lands on the recorded value', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const replay = await mountReplay(root, 'timed-chess', {
+      autoplay: true,
+      showControls: false,
+      loaderForId: async () => timedChessEvents,
+    });
+    try {
+      // Ply 2 (black's first move, which arms the clock) lands 2 s in.
+      await vi.advanceTimersByTimeAsync(2_000);
+      expect(replay.clockAtPly?.()).toEqual({ first: 60_000, second: 60_000, toMove: 'first' });
+
+      // White's 10 s think: one second off per second of playback.
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(replay.clockAtPly?.()).toEqual({ first: 57_000, second: 60_000, toMove: 'first' });
+      await vi.advanceTimersByTimeAsync(4_000);
+      expect(replay.clockAtPly?.()).toEqual({ first: 53_000, second: 60_000, toMove: 'first' });
+
+      // The move lands at 12 s on the recorded value (no increment in this time control).
+      await vi.advanceTimersByTimeAsync(3_000);
+      expect(replay.clockAtPly?.()).toEqual({ first: 50_000, second: 60_000, toMove: 'second' });
+    } finally {
+      replay.destroy();
+      root.remove();
+    }
+  });
+});
+
+// Playback is a function of the wall clock (recorded-playback.ts): the homepage TV joins a
+// delayed air at the ply it is on now, and a tab whose timers stalled catches up in one
+// step instead of resuming where it stopped.
+describe('wall-anchored playback', () => {
+  beforeEach(() => {
+    vi.useFakeTimers();
+    vi.setSystemTime(NOW);
+  });
+
+  afterEach(() => {
+    vi.useRealTimers();
+    vi.unstubAllGlobals();
+  });
+
+  it('joins a delayed air at the ply and clock the broadcast is on now (tenant)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(replayFixture())),
+    );
+    const root = document.createElement('div');
+    // The air went on 10 s ago: ply 2 landed at 3 s, so red is 7 s into her 19 s think.
+    const handle = await mountJieqiWatchReplay(root, 'jq_rate', {
+      autoplay: true,
+      compact: true,
+      airStartMs: NOW - 10_000,
+    });
+    expect(handle.clockAtPly?.()).toEqual({ first: 598_000, second: 605_000, toMove: 'first' });
+    await vi.advanceTimersByTimeAsync(12_000);
+    expect(handle.clockAtPly?.()).toEqual({ first: 591_000, second: 605_000, toMove: 'second' });
+    handle.destroy();
+  });
+
+  it('catches up in one step when the tab comes back from a stall (tenant)', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(replayFixture())),
+    );
+    const root = document.createElement('div');
+    const plies: number[] = [];
+    const handle = await mountJieqiWatchReplay(root, 'jq_rate', {
+      autoplay: true,
+      compact: true,
+      onPlyChange: (ply) => plies.push(ply),
+    });
+    expect(plies).toEqual([0]);
+
+    // A hidden tab: 23 s pass and not one timer fires.
+    vi.setSystemTime(NOW + 23_000);
+    document.dispatchEvent(new Event('visibilitychange'));
+
+    // Straight to ply 3 (landed at 22 s), black 1 s into his think; no replay of 1 and 2.
+    expect(plies).toEqual([0, 3]);
+    expect(handle.clockAtPly?.()).toEqual({ first: 591_000, second: 604_000, toMove: 'second' });
+    handle.destroy();
+  });
+
+  it('joins a delayed air at the ply and clock the broadcast is on now (chess)', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    // 7 s into the air: ply 2 landed at 2 s, white is 5 s into a 10 s think.
+    const replay = await mountReplay(root, 'timed-chess', {
+      autoplay: true,
+      showControls: false,
+      airStartMs: NOW - 7_000,
+      loaderForId: async () => timedChessEvents,
+    });
+    try {
+      expect(root.dataset.ply).toBe('2');
+      expect(replay.clockAtPly?.()).toEqual({ first: 55_000, second: 60_000, toMove: 'first' });
+
+      // Stall past the next move, then come back: one step to ply 3.
+      vi.setSystemTime(NOW + 5_500);
+      document.dispatchEvent(new Event('visibilitychange'));
+      expect(root.dataset.ply).toBe('3');
+    } finally {
+      replay.destroy();
+      root.remove();
+    }
+  });
+});
+
 function seatClockText(root: HTMLElement): string[] {
   return [...root.querySelectorAll('.showcase-seat-clock')].map((el) => el.textContent ?? '');
 }
 
-// Four plies, 10+5, whose third move is a 19-second think. clockSeries reconstructs:
-//   [0] 600_000 / 600_000   [1] 605_000 / 600_000   [2] 605_000 / 603_000
-//   [3] 591_000 / 603_000   [4] 591_000 / 606_000
+// Four plies, 10+5, whose third move is a 19-second think. clockSeries reconstructs (first
+// moves are free, the checkmating move earns no increment):
+//   [0] 600_000 / 600_000   [1] 605_000 / 600_000   [2] 605_000 / 605_000
+//   [3] 591_000 / 605_000   [4] 591_000 / 603_000
 function replayFixture(): JieqiPostgameResponse {
   const move: JieqiMove = { from: 'a4', to: 'a5' };
   const playingRed = { type: 'playing' as const, turn: 'red' as const };
@@ -153,12 +294,12 @@ function replayFixture(): JieqiPostgameResponse {
       moveNumber: 3,
       timeControl: { initialMs: 600_000, incrementMs: 5_000 },
     },
-    // The gaps are what matter: 2 s, then NINETEEN, then 2 s.
+    // From the start (NOW): 1 s, 2 s, then NINETEEN, then 2 s.
     timeline: [
-      { type: 'move-played', at: 1_000, color: 'red', move, ply: 1 },
-      { type: 'move-played', at: 3_000, color: 'black', move, ply: 2 },
-      { type: 'move-played', at: 22_000, color: 'red', move, ply: 3 },
-      { type: 'move-played', at: 24_000, color: 'black', move, ply: 4 },
+      { type: 'move-played', at: NOW + 1_000, color: 'red', move, ply: 1 },
+      { type: 'move-played', at: NOW + 3_000, color: 'black', move, ply: 2 },
+      { type: 'move-played', at: NOW + 22_000, color: 'red', move, ply: 3 },
+      { type: 'move-played', at: NOW + 24_000, color: 'black', move, ply: 4 },
     ],
     view: view('red', board(4), move, at(4)),
     history: {
@@ -251,9 +392,9 @@ function jsonResponse(body: unknown): Response {
 }
 
 // A clockless engine game has no clock, so its per-move BUDGET is the clock and the row
-// counts that allowance down. Same rule as above: real wall time, never a fraction of the
-// clamped playback window. This path used to count UP to the move's real think time across
-// that window, so a 14 s think ran at 5.6x.
+// counts that allowance down at real seconds. This path once counted UP to the move's real
+// think time across a clamped playback window, so a 14 s think ran at 5.6x; the window is
+// now the full recorded think.
 describe('clockless per-move budget countdown', () => {
   beforeEach(() => {
     vi.useFakeTimers();
@@ -263,14 +404,12 @@ describe('clockless per-move budget countdown', () => {
     vi.useRealTimers();
   });
 
-  it('counts the budget down at one second per second inside a clamped window', async () => {
+  it('counts the budget down at one second per second', async () => {
     const root = document.createElement('div');
     document.body.append(root);
-    // Move 1 took 14 s, so clampPace squeezes its playback window to 2500 ms: the exact
-    // ratio (5.6x) the old count-up rendered at.
+    // Move 1 took 14 s and now plays for all 14 s.
     const replay = await mountReplay(root, 'think-countdown-test', {
       autoplay: true,
-      clampPace: true,
       showControls: false,
       loaderForId: async () => clocklessEvents,
       metadataByRoomId: { 'think-countdown-test': budgetMeta() },
@@ -280,7 +419,7 @@ describe('clockless per-move budget countdown', () => {
       // White is to move and has not spent anything yet: full allowance on both rows.
       expect(clockTimes(root)).toEqual(['5.0s', '5s']);
 
-      // 1200 ms of real time must remove exactly 1200 ms of budget. The old code read
+      // 1200 ms of real time must remove exactly 1200 ms of budget. The old count-up read
       // 14000 * (1200/2500) = 6720 ms spent, i.e. already past the whole 5 s allowance.
       await vi.advanceTimersByTimeAsync(1_200);
       expect(clockTimes(root)[0]).toBe('3.8s');
@@ -297,8 +436,7 @@ describe('clockless per-move budget countdown', () => {
     const root = document.createElement('div');
     document.body.append(root);
     const replay = await mountReplay(root, 'think-countdown-test', {
-      autoplay: true,
-      clampPace: false, // unclamped: the window is the full 14 s think, so the budget expires
+      autoplay: true, // the window is the full 14 s think, so the 5 s budget expires inside it
       showControls: false,
       loaderForId: async () => clocklessEvents,
       metadataByRoomId: { 'think-countdown-test': budgetMeta() },
@@ -351,5 +489,47 @@ const clocklessEvents: GameEvent[] = [
     color: 'black',
     move: { from: 'd7', to: 'd5' },
     thinkTimeMs: 3_000,
+  },
+] as GameEvent[];
+
+// A timed dark chess game, 1+0: black's first move (2 s in) arms the clock, then white
+// thinks 10 s.
+const TIMED_ROOM = 'timed-chess';
+const timedChessEvents: GameEvent[] = [
+  {
+    type: 'room-created',
+    at: NOW,
+    roomId: TIMED_ROOM,
+    variant: 'dark-chess',
+    timeControl: { initialMs: 60_000, incrementMs: 0 },
+  },
+  { type: 'clock-started', at: NOW, roomId: TIMED_ROOM, clock: createClock(NOW, 60_000, 0) },
+  {
+    type: 'move-played',
+    at: NOW + 1_000,
+    roomId: TIMED_ROOM,
+    color: 'white',
+    move: { from: 'e2', to: 'e4' },
+  },
+  {
+    type: 'move-played',
+    at: NOW + 2_000,
+    roomId: TIMED_ROOM,
+    color: 'black',
+    move: { from: 'd7', to: 'd5' },
+  },
+  {
+    type: 'move-played',
+    at: NOW + 12_000,
+    roomId: TIMED_ROOM,
+    color: 'white',
+    move: { from: 'e4', to: 'd5' },
+  },
+  {
+    type: 'move-played',
+    at: NOW + 13_000,
+    roomId: TIMED_ROOM,
+    color: 'black',
+    move: { from: 'd8', to: 'd5' },
   },
 ] as GameEvent[];

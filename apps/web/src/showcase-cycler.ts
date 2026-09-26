@@ -22,7 +22,25 @@ export type ShowcaseEntry = {
   // for this: the server pool is variety-interleaved across variants, not sorted
   // by recency, so anything that needs "the newest game" has to compare this.
   endedAt?: string;
+  // When the game started (ISO, from the showcase API). With endedAt it sizes a
+  // delayed air: the game airs from its end for as long as it lasted.
+  startedAt?: string;
+  // Server-set (/api/games/showcase, airsOnDelay): true only for a variant that can
+  // never be shown live (fog), which the homepage TV airs after the fact. Absent
+  // means NOT airable: the entry only ever shows as a frozen final position.
+  delayedAir?: boolean;
 };
+
+// The air fields of a showcase API game, for an entry built from it.
+export function showcaseAirFields(game: {
+  startedAt?: string;
+  delayedAir?: boolean;
+}): Pick<ShowcaseEntry, 'startedAt' | 'delayedAir'> {
+  return {
+    ...(game.startedAt ? { startedAt: game.startedAt } : {}),
+    ...(game.delayedAir === true ? { delayedAir: true } : {}),
+  };
+}
 
 export type ShowcaseCyclerOptions = {
   metadataByRoomId: Record<string, GameMeta>;

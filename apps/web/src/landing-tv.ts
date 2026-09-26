@@ -1,15 +1,30 @@
-// Homepage Mistboard TV controller: one board that honors TRUE LIVE.
+// Homepage Mistboard TV controller: a CHANNEL that keeps running while nobody
+// is looking.
 //
-// The TV model (decided 2026-07-20, tightened 2026-07-21): follow the
-// top-rated live game when one exists (moves arrive via a short poll of
-// /api/watch/live); otherwise FREEZE on the last game's final position.
-// Auto-playback of already-finished games is never broadcast: everything that
-// was finished before the visitor arrived is baseline history and only ever
-// shows as a frozen final position. The single exception is a game that
-// COMPLETES while the visitor is watching — it airs exactly once at recorded
-// pace (the delayed-release broadcast; this is also how a fog game's
-// post-completion reveal reaches the board) and then freezes. Fog games can
-// never appear live — the server's visibility policy is fail-closed.
+// The channel model (Brian, 2026-09-26). On every sync (boot, each live poll,
+// the tab becoming visible, a pool update, an air reaching its end) the board
+// asks "what is on now?":
+//
+//   1. A featured LIVE game: follow it live (moves arrive via a short poll of
+//      /api/watch/live). When it leaves the feed, freeze on its final position.
+//   2. Else a DELAYED AIR that is on now: show it, joined at the ply it is on
+//      now. Only a variant that can never be shown live airs (fog; the server's
+//      canServeLiveBoard is false, carried to the client as
+//      ShowcaseEntry.delayedAir, and a missing field means NOT airable). A game's
+//      air starts when it ended and lasts as long as the game did, played at
+//      the recorded timing, so a fog game that ended three minutes before the
+//      visitor arrived is three minutes into its air. An air already on the
+//      board keeps it until its window closes; otherwise the newest-ended game
+//      whose window contains now goes on.
+//   3. Else FREEZE on the most recently finished game's final position.
+//
+// A live-capable variant (xiangqi, jieqi, banqi, ...) is NEVER aired after the
+// fact: it had its turn on the live board, and one that finished while the tab
+// was hidden simply appears frozen. An air's playback is anchored to the wall
+// clock inside the renderer (ply shown = f(now - air start)), so a hidden tab
+// that comes back shows the right ply, or the right later state, and never a
+// stalled mid-air. Fog games can never appear live: the server's visibility
+// policy is fail-closed.
 
 import type { GameEvent } from '@mistboard/game';
 import { reloadForChunkLoadError } from './chunk-load-recovery.js';
@@ -22,6 +37,27 @@ import type { ShowcaseEntry } from './showcase-cycler.js';
 import { showcaseRendererKindForSpec } from './showcase-dispatch.js';
 
 const LIVE_POLL_MS = 4_000;
+
+// A delayed air: `entry` goes on at `startMs` (when it ended) and stays on until
+// `endMs` (as long again as the game lasted).
+export type AirWindow = { entry: ShowcaseEntry; startMs: number; endMs: number };
+
+function timestampMs(value: string | undefined): number {
+  const parsed = value ? Date.parse(value) : Number.NaN;
+  return Number.isFinite(parsed) ? parsed : Number.NaN;
+}
+
+// The air window of a pool entry, or null when it may not air: not flagged
+// airable by the server (fail closed), or missing/inconsistent timestamps.
+export function airWindowFor(entry: ShowcaseEntry): AirWindow | null {
+  if (entry.delayedAir !== true) return null;
+  const endedAt = timestampMs(entry.endedAt);
+  const startedAt = timestampMs(entry.startedAt);
+  if (!Number.isFinite(endedAt) || !Number.isFinite(startedAt) || startedAt > endedAt) {
+    return null;
+  }
+  return { entry, startMs: endedAt, endMs: endedAt + (endedAt - startedAt) };
+}
 
 export type LandingTvMode = 'live' | 'replay' | 'frozen';
 
@@ -48,16 +84,12 @@ export type LandingTvOptions = {
 };
 
 export type LandingTvController = {
-  // The completed-games showcase pool. Its HEAD is the site's most recently
-  // finished game ("the last game" the board freezes on), but the rest is a
-  // breadth interleave across variants, NOT recency order — so anything that
-  // needs "the newest" out of the tail compares endedAt, never pool position.
-  // Entries never seen in any prior pool are treated as games that finished
-  // DURING this session and air once; everything else is history and only ever
-  // shows frozen. `jumpNow` marks a
-  // BASELINE refresh (the first real pool replacing the static fallback):
-  // nothing airs, the board re-freezes on the new head. A live game is never
-  // cut by pool updates.
+  // The completed-games showcase pool. It is a breadth interleave across
+  // variants, NOT recency order, so "the newest" always compares endedAt, never
+  // pool position. Every update re-asks what is on now (see the header).
+  // `jumpNow` marks a BASELINE refresh (the first real pool replacing the static
+  // fallback): whatever the fallback put on the board gives way. A live game is
+  // never cut by pool updates.
   updateCompletedPool(entries: ShowcaseEntry[], opts?: { jumpNow?: boolean }): void;
   destroy(): void;
 };
@@ -78,16 +110,14 @@ export async function mountLandingTv(
   let currentRoomId: string | null = null;
   let currentSpecId: string | null = null;
   let completedPool = initialPool.slice();
-  // Rooms fully shown this session (live-followed, aired, or frozen-displayed):
-  // never re-aired. Failed rooms land here too so a broken payload can't loop.
-  const airedRoomIds = new Set<string>();
-  // Every room id that has EVER appeared in a pool this session. The boot pool
-  // is pre-session history by definition, so it seeds the set; a later entry
-  // outside it is a game that finished while the visitor was here — the only
-  // kind that earns a one-time airing.
-  const seenRoomIds = new Set<string>(initialPool.map((entry) => entry.roomId));
-  // The one game queued to air (a mid-session completion), or null.
-  let pendingAir: ShowcaseEntry | null = null;
+  // The delayed air on the board (mode 'replay'), kept until its window closes.
+  let airing: AirWindow | null = null;
+  // When the frozen game on the board finished, so a pool update only replaces it
+  // with a NEWER finished game (a live game that just ended is not in the pool yet).
+  let shownFinishedAtMs = Number.NEGATIVE_INFINITY;
+  // Airs whose game failed to load: skipped for the rest of the session so a broken
+  // payload cannot re-mount every poll.
+  const failedAirRoomIds = new Set<string>();
   // Latest live payload per featured room; the loadPostgameOverride below reads
   // it, and clearing it makes the override fall back to the real finished-game
   // endpoint (the live→finished handoff).
@@ -137,7 +167,13 @@ export async function mountLandingTv(
   // so the page doesn't jump across the swap (cycler behavior, kept).
   const mountGame = async (
     entry: { roomId: string; specId: string; pov: 'white' | 'black' },
-    mountOptions: { autoplay: boolean; live: boolean; onGameEnd?: () => void },
+    mountOptions: {
+      autoplay: boolean;
+      live: boolean;
+      onGameEnd?: () => void;
+      airStartMs?: number;
+      onLoadError?: () => boolean;
+    },
   ): Promise<void> => {
     const kind = showcaseRendererKindForSpec(entry.specId);
     // Reuse the mounted handle only when its baked flags match; live and
@@ -164,6 +200,8 @@ export async function mountLandingTv(
         pov: entry.pov,
         autoplay: mountOptions.autoplay,
         ...(mountOptions.onGameEnd ? { onGameEnd: mountOptions.onGameEnd } : {}),
+        ...(mountOptions.airStartMs !== undefined ? { airStartMs: mountOptions.airStartMs } : {}),
+        ...(mountOptions.onLoadError ? { onLoadError: mountOptions.onLoadError } : {}),
         // The live handle keeps its last frame on any load failure rather than
         // wiping to an error: normal following never sees one (the override
         // always answers), and the live→frozen handoff drives its finished-game
@@ -222,7 +260,6 @@ export async function mountLandingTv(
       livePayload = { payload: featured.payload, roomId: featured.roomId };
     }
     registerLiveNames(featured);
-    airedRoomIds.add(featured.roomId);
     const following = mode === 'live' && currentRoomId === featured.roomId;
     if (!following) {
       if (!featured.payload) return; // need a payload to mount; next poll carries one
@@ -230,6 +267,7 @@ export async function mountLandingTv(
         { pov: 'white', roomId: featured.roomId, specId: featured.gameSpecId },
         { autoplay: false, live: true },
       );
+      airing = null;
       jumpToEnd();
       shownLivePly = featured.ply;
       notify(featured.roomId, featured.gameSpecId, 'live');
@@ -255,9 +293,9 @@ export async function mountLandingTv(
   // runs, so a 404 left an empty error box.
   //
   // A failed load means the game never became a retrievable finished game, so
-  // its last live frame is a dead position and the hero hands back to the pool
-  // head. Keeping that frame is only right when there is no completed game to
-  // fall back to.
+  // its last live frame is a dead position and the hero hands back to the pool.
+  // Keeping that frame is only right when there is no completed game to fall
+  // back to.
   const finishLiveHandoff = async (): Promise<void> => {
     const roomId = currentRoomId;
     const specId = currentSpecId;
@@ -265,77 +303,136 @@ export async function mountLandingTv(
     livePayload = null;
     if (!handle) {
       // No live handle to reuse (shouldn't happen while mode === 'live'): fall
-      // back to freezing on the pool head rather than leaving a blank board.
-      // freezeOnHead notifies for the game it actually mounts.
-      await freezeOnHead();
+      // back to the pool rather than leaving a blank board. syncChannel notifies
+      // for the game it actually mounts.
+      mode = 'frozen';
+      await syncChannel({ rebaseline: true });
       return;
     }
     liveLoadFailed = false;
     await handle.loadGame(roomId);
-    if (liveLoadFailed && completedPool[0]) {
-      await freezeOnHead();
+    if (liveLoadFailed && completedPool.length > 0) {
+      mode = 'frozen';
+      await syncChannel({ rebaseline: true });
       return;
     }
     jumpToEnd();
+    // It just ended, so nothing in the pool is newer; the next poll's sync decides
+    // whether an air goes on instead.
+    shownFinishedAtMs = Date.now();
     notify(roomId, specId, 'frozen');
   };
 
-  // Freeze the board on the pool head's final position (the "last game").
-  const freezeOnHead = async (): Promise<void> => {
-    const target = completedPool[0];
-    if (!target) return;
-    if (currentRoomId === target.roomId && mode !== 'live') return;
-    airedRoomIds.add(target.roomId);
-    await mountGame(target, { autoplay: false, live: false });
-    jumpToEnd();
-    notify(target.roomId, target.specId, 'frozen');
-  };
-
-  const syncCompleted = async (): Promise<void> => {
-    // A game that finished during this session airs exactly once, then the
-    // end-of-game hold freezes it in place.
-    if (pendingAir && !airedRoomIds.has(pendingAir.roomId)) {
-      const target = pendingAir;
-      pendingAir = null;
-      airedRoomIds.add(target.roomId);
-      await mountGame(target, {
-        autoplay: true,
-        live: false,
-        onGameEnd: () => {
-          if (destroyed) return;
-          notify(target.roomId, target.specId, 'frozen');
-          // Another game may have finished while this one aired.
-          enqueue(syncCompleted);
-        },
-      });
-      notify(target.roomId, target.specId, 'replay');
-      return;
-    }
-    pendingAir = null;
-    // A board already showing something keeps it: pre-session history never
-    // replaces fresher state (e.g. the live game that just ended). Only an
-    // empty board (first paint) freezes onto the head.
-    if (currentRoomId !== null && mode !== 'live') return;
-    await freezeOnHead();
-  };
-
-  // The one entry allowed to air: the most recently FINISHED game among those the
-  // client has not shown yet. Pool position is the wrong signal — the server pool
-  // interleaves variants for breadth, so the first not-yet-aired entry is
-  // whichever variant sorts earliest in the round-robin and can easily be days
-  // old. Airing that one broadcasts stale history as if it had just finished.
-  // Entries with no endedAt (bundled demos) sort last and never win.
+  // When a pool entry finished; entries without endedAt (bundled demos) sort last.
   const finishedAtMs = (entry: ShowcaseEntry): number => {
-    const parsed = entry.endedAt ? Date.parse(entry.endedAt) : Number.NaN;
+    const parsed = timestampMs(entry.endedAt);
     return Number.isFinite(parsed) ? parsed : Number.NEGATIVE_INFINITY;
   };
-  const newestUnaired = (entries: ShowcaseEntry[]): ShowcaseEntry | null => {
+
+  // The most recently finished game in the pool (pool head on a tie, which is
+  // also what an all-demo pool with no finish times falls back to).
+  const newestFinished = (): ShowcaseEntry | null => {
     let best: ShowcaseEntry | null = null;
-    for (const entry of entries) {
-      if (airedRoomIds.has(entry.roomId)) continue;
+    for (const entry of completedPool) {
       if (!best || finishedAtMs(entry) > finishedAtMs(best)) best = entry;
     }
     return best;
+  };
+
+  // The delayed air that is on now: the one on the board while its window is open,
+  // else the newest-ended airable game whose window contains `now`.
+  const onAirNow = (now: number): AirWindow | null => {
+    if (airing && mode === 'replay' && airing.startMs <= now && now < airing.endMs) {
+      return airing;
+    }
+    let best: AirWindow | null = null;
+    for (const entry of completedPool) {
+      if (failedAirRoomIds.has(entry.roomId)) continue;
+      const window = airWindowFor(entry);
+      if (!window || now < window.startMs || now >= window.endMs) continue;
+      if (!best || window.startMs > best.startMs) best = window;
+    }
+    return best;
+  };
+
+  // Put an air on the board, joined at the ply it is on now (the renderer derives
+  // the ply from airStartMs and the wall clock, and keeps doing so every tick).
+  const showAir = async (air: AirWindow): Promise<void> => {
+    const target = air.entry;
+    let loadFailed = false;
+    try {
+      await mountGame(target, {
+        autoplay: true,
+        live: false,
+        airStartMs: air.startMs,
+        onGameEnd: () => {
+          // Every move is out; the board holds the final position (result marks)
+          // until the window closes and a sync moves on.
+          if (!destroyed) enqueue(() => syncChannel());
+        },
+        onLoadError: () => {
+          loadFailed = true;
+          return false;
+        },
+      });
+    } catch (err) {
+      console.warn('[landing-tv] air failed to load', target.roomId, err);
+      reloadForChunkLoadError(err);
+      loadFailed = true;
+    }
+    if (loadFailed) {
+      failedAirRoomIds.add(target.roomId);
+      airing = null;
+      mode = null;
+      await freezeOnNewest(true);
+      return;
+    }
+    airing = air;
+    notify(target.roomId, target.specId, 'replay');
+  };
+
+  // Freeze on the most recently finished game's final position. A frozen board
+  // keeps its game unless the pool holds a newer one (or `rebaseline` says the
+  // board is showing a fallback that must give way).
+  const freezeOnNewest = async (rebaseline = false): Promise<void> => {
+    const target = newestFinished();
+    if (!target) return;
+    if (mode === 'replay' && currentRoomId === target.roomId) {
+      // The air that just closed is the newest game: settle on its final position
+      // in place (the renderer stops playing and parks on the last ply).
+      airing = null;
+      jumpToEnd();
+      shownFinishedAtMs = finishedAtMs(target);
+      notify(target.roomId, target.specId, 'frozen');
+      return;
+    }
+    if (mode === 'frozen' && currentRoomId === target.roomId) return;
+    if (
+      !rebaseline &&
+      mode === 'frozen' &&
+      currentRoomId !== null &&
+      shownFinishedAtMs >= finishedAtMs(target)
+    ) {
+      return;
+    }
+    airing = null;
+    await mountGame(target, { autoplay: false, live: false });
+    jumpToEnd();
+    shownFinishedAtMs = finishedAtMs(target);
+    notify(target.roomId, target.specId, 'frozen');
+  };
+
+  // "What is on now?" for everything but the live game, which the poll decides.
+  const syncChannel = async (opts: { rebaseline?: boolean } = {}): Promise<void> => {
+    if (destroyed || mode === 'live') return;
+    const air = onAirNow(Date.now());
+    if (air) {
+      // Already airing it: the renderer is wall-anchored, nothing to re-mount.
+      if (mode === 'replay' && currentRoomId === air.entry.roomId) return;
+      await showAir(air);
+      return;
+    }
+    await freezeOnNewest(opts.rebaseline === true);
   };
 
   const stopPolling = (): void => {
@@ -375,7 +472,7 @@ export async function mountLandingTv(
         } else if (mode === 'live') {
           enqueue(finishLiveHandoff);
         } else {
-          enqueue(syncCompleted);
+          enqueue(() => syncChannel());
         }
       }
     } catch {
@@ -385,7 +482,8 @@ export async function mountLandingTv(
   };
 
   // Hidden tabs skip the fetch (see pollLive), so poll immediately when the
-  // tab comes back instead of waiting out the current interval.
+  // tab comes back instead of waiting out the current interval. The poll's sync
+  // then puts on whatever the channel is showing NOW.
   const onVisibilityChange = (): void => {
     if (destroyed || document.visibilityState !== 'visible') return;
     stopPolling();
@@ -393,11 +491,11 @@ export async function mountLandingTv(
   };
   document.addEventListener('visibilitychange', onVisibilityChange);
 
-  // Boot: freeze on the last game's final position (nothing pre-session ever
-  // auto-plays), then start watching for live games.
+  // Boot: tune in (an air on now, else the last game's final position), then
+  // start watching for live games.
   enqueue(async () => {
     try {
-      await freezeOnHead();
+      await syncChannel();
     } catch (err) {
       renderWatchReplayFailure(root);
       throw err;
@@ -409,19 +507,9 @@ export async function mountLandingTv(
     updateCompletedPool: (entries, opts) => {
       if (destroyed) return;
       completedPool = entries.slice();
-      const fresh = entries.filter((entry) => !seenRoomIds.has(entry.roomId));
-      for (const entry of entries) seenRoomIds.add(entry.roomId);
-      if (opts?.jumpNow) {
-        // Baseline refresh: the first real pool replacing the static fallback
-        // is pre-session history — never air it, re-freeze on its head.
-        pendingAir = null;
-        if (mode !== 'live') enqueue(freezeOnHead);
-        return;
-      }
-      const candidate = newestUnaired(fresh);
-      if (candidate) pendingAir = candidate;
-      if (mode === 'live') return; // the airing waits out the live broadcast
-      if (mode !== 'replay') enqueue(syncCompleted);
+      if (mode === 'live') return; // live wins; the poll hands off when it ends
+      const rebaseline = opts?.jumpNow === true;
+      enqueue(() => syncChannel({ rebaseline }));
     },
     destroy: () => {
       destroyed = true;

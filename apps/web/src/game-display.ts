@@ -63,7 +63,11 @@ export type FeaturedGame = {
   whiteName: string | null;
   blackName: string | null;
   corpusId: string | null;
+  startedAt?: string;
   endedAt?: string;
+  // /api/games/showcase only: whether the homepage TV may air the game after the
+  // fact (fog variants). See ShowcaseEntry.delayedAir.
+  delayedAir?: boolean;
   jobId?: string | null;
   gameIndex?: number | null;
   whiteEngineId?: string | null;

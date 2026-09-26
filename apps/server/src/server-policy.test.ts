@@ -6,6 +6,7 @@ import { fileURLToPath } from 'node:url';
 import { createClock, expireClock, type GameEvent, replayGameEvents } from '@mistboard/game';
 import {
   adminDebugTokenFromProtocolHeader,
+  airsOnDelay,
   canExposeFullEventReplay,
   canObserveLiveRoom,
   canServeLiveBoard,
@@ -23,6 +24,7 @@ import {
   type RuntimeEnv,
   recordMessageTimestamp,
   seatTokenFromProtocolHeader,
+  withDelayedAir,
 } from './server-policy.js';
 import { SITEMAP_STATIC_ROUTES } from './server-static-pages.js';
 
@@ -230,6 +232,30 @@ test('canObserveLiveRoom admits a live room iff Mistboard TV may broadcast it', 
   assert.equal(live('dark-xiangqi'), false);
   // Fail-closed on an id the spec registry cannot resolve.
   assert.equal(live('not-a-real-variant'), false);
+});
+
+test('showcase entries air on a delay only for variants that can never be shown live', () => {
+  // Fog variants: sealed while live, so the homepage TV airs them after the fact.
+  for (const variant of ['dark-chess', 'fog', 'dark-xiangqi']) {
+    assert.equal(airsOnDelay(variant), true, `${variant} airs on a delay`);
+  }
+  // Live-capable variants had their turn on the live board: frozen only.
+  for (const variant of ['xiangqi', 'jieqi', 'banqi', 'jungle', 'jungle-flip']) {
+    assert.equal(airsOnDelay(variant), false, `${variant} is never aired after the fact`);
+  }
+  // Fail closed: an unknown variant is not airable.
+  assert.equal(airsOnDelay('not-a-real-variant'), false);
+  assert.equal(airsOnDelay(''), false);
+
+  // The route's mapper tags every entry and keeps the record intact.
+  const tagged = withDelayedAir([
+    { roomId: 'a', variant: 'dark-xiangqi' },
+    { roomId: 'b', variant: 'jieqi' },
+  ]);
+  assert.deepEqual(tagged, [
+    { roomId: 'a', variant: 'dark-xiangqi', delayedAir: true },
+    { roomId: 'b', variant: 'jieqi', delayedAir: false },
+  ]);
 });
 
 test('finished persisted events are public replay data', () => {

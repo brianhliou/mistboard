@@ -168,6 +168,27 @@ export function canServeLiveBoard(gameSpecId: string): boolean {
   return liveObservePolicy(spec.visibility, spec.id) === 'open';
 }
 
+// The homepage TV channel airs a finished game on a delay (from its end, for its
+// recorded length) only when the game could never be shown live: a fog/sealed
+// variant. A live-capable variant already had its chance on the live board, so
+// after the fact it only ever shows frozen. `variant` is the persisted
+// games.variant string ('fog' is the pre-rename Fog Chess value). An unknown
+// variant answers false: the client treats "not airable" as the safe state (a
+// frozen final position), so this fails closed.
+export function airsOnDelay(variant: string): boolean {
+  const spec = maybeGameSpecForId(variant === 'fog' ? 'dark-chess' : variant);
+  if (!spec) return false;
+  return !canServeLiveBoard(spec.id);
+}
+
+// Tag each /api/games/showcase entry with whether the homepage TV may air it on
+// a delay. The client reads a missing field as false.
+export function withDelayedAir<T extends { variant: string }>(
+  games: readonly T[],
+): Array<T & { delayedAir: boolean }> {
+  return games.map((game) => ({ ...game, delayedAir: airsOnDelay(game.variant) }));
+}
+
 // What a room serves a given client, keyed on the spec's visibility class and
 // the game's status. This is the executable form of the signed-off matrix in
 // docs-private/spectator-visibility-matrix.md, and it is the ONE place that

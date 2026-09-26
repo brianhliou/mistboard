@@ -143,6 +143,9 @@ export type WebVariantTenant = {
         loadPostgameOverride?: (
           roomId: string,
         ) => Promise<{ ok: true; postgame: unknown } | { ok: false }>;
+        // Delayed air (homepage TV channel): wall ms the game's start went on
+        // air; autoplay joins the broadcast at the ply it is on now.
+        airStartMs?: number;
       },
     ): Promise<ReplayHandle>;
   };

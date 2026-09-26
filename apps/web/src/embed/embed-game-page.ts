@@ -102,7 +102,6 @@ async function mountBoard(
     showControls: false,
     keyboardNav: false,
     revealOnFinish: side === null,
-    clampPace: true,
     metadataMode: 'compact',
     compactClockLayout: 'board-edges',
     endStatusMode: 'clock',

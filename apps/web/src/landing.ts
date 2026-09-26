@@ -40,7 +40,7 @@ import { type GameMeta, mountReplay } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { enginePanelsForReview, loadGameForReview } from './review.js';
 import { roomIdFromPath } from './room-url.js';
-import type { ShowcaseEntry } from './showcase-cycler.js';
+import { type ShowcaseEntry, showcaseAirFields } from './showcase-cycler.js';
 import { specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildHomeFooter, buildNav, buildNotice } from './site-shell.js';
 import { type WebVariantTenant, webVariantTenantForRoomId } from './variant-tenant/registry.js';
@@ -129,6 +129,7 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
       specId: specIdForShowcaseVariant(game.variant),
       pov,
       ...(game.endedAt ? { endedAt: game.endedAt } : {}),
+      ...showcaseAirFields(game),
     };
   };
   const params = new URLSearchParams(window.location.search);
@@ -184,10 +185,10 @@ export async function mountLanding(root: HTMLElement): Promise<void> {
     }
   }
 
-  // Mistboard TV controller (2026-07-20, replaces the endless replay cycler):
-  // follow the top-rated LIVE game when one exists, else air the freshest
-  // unseen completed game once, else hold the last final position. Each game
-  // shows as a single compact board; the completed pool refreshes below.
+  // Mistboard TV controller: a channel that keeps running while nobody looks.
+  // A LIVE game when one exists; else a fog game on its delayed air (joined at
+  // the ply it is on now); else the last finished game's final position. Each
+  // game shows as a single compact board; the completed pool refreshes below.
   const tv = await mountLandingTv(stage.replayRoot, cyclePool, {
     metadataByRoomId,
     namesByRoomId,

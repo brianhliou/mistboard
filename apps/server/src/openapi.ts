@@ -339,7 +339,7 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         tags: ['Games'],
         summary: 'Curated recent games across variants',
         description:
-          'The pool the homepage board draws from: substantial finished games, interleaved across variants for breadth, not sorted by recency.',
+          'The pool the homepage board draws from: substantial finished games, interleaved across variants for breadth, not sorted by recency. Each entry also carries `delayedAir` (boolean): true for fog variants that can never be shown live, which the homepage board replays after they end, at their recorded pace.',
         responses: { '200': OK(games(ref('GameRecord'))), '503': PERSISTENCE },
       },
     },

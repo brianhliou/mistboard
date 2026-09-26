@@ -5,10 +5,14 @@
 // showcase can show the real clocks the players actually had — not just a static
 // time-control label.
 //
-// Reconstruction (Fischer): a mover's think time is the gap from the previous
-// move (when it became their turn) to their own move; their remaining time after
-// the move is prev - spent + increment. The first mover's think time is measured
-// from the game start.
+// Reconstruction mirrors the server's clock (nextTenantClockForMove in
+// apps/server/src/variant-tenant/runtime.ts, nextClockForMove in
+// packages/game/src/clocks.ts):
+//   - The clock starts frozen. Each side's FIRST move (plies 1 and 2) costs
+//     nothing and earns the increment; the second mover's first move arms it.
+//   - After that a mover is charged the gap since the previous move and earns
+//     the increment.
+//   - The game-ending move is charged but earns no increment.
 
 export type ShowcaseTimelineMove = {
   at: number;
@@ -28,50 +32,56 @@ export function showcaseResultMarks(result: string): { first: string; second: st
 
 export type ShowcaseClockPair = { first: number; second: number };
 
-// Per-ply playback delays derived from the same move timestamps, so the showcase
-// replays each move at (a clamped version of) the real time it took rather than a
-// fixed pace. delays[p] = how long to show ply p-1 before revealing ply p (i.e.
-// the think time for move p); the side to move drains its clock across it.
-// Clamped to [minMs, maxMs] so a blitz move is still visible and a long think does
-// not stall the loop. delays[0] is unused.
-export function reconstructMoveDelays(args: {
-  moves: readonly ShowcaseTimelineMove[];
-  minMs: number;
-  maxMs: number;
-}): number[] {
-  const ordered = [...args.moves].sort((a, b) => a.ply - b.ply);
-  const delays: number[] = [0];
-  let prevAt: number | null = null;
-  for (const move of ordered) {
-    // First move's think time is unknown (no game-start timestamp); show it briefly.
-    const raw = prevAt === null ? args.minMs : Math.max(0, move.at - prevAt);
-    delays.push(Math.min(args.maxMs, Math.max(args.minMs, raw)));
-    prevAt = move.at;
-  }
-  return delays;
-}
+// Plies played while the clock is still frozen (each side's first move). Two-seat
+// tenants arm on the second mover's first move, so plies 1 and 2 are free.
+export const SHOWCASE_PREARM_PLIES = 2;
 
 // series[0] = both sides at the initial time; series[p] = remaining after ply p.
 // `firstColor` is the side that moves first (its remaining maps to `.first`).
+// `lastMoveEndsGame`: the final move in `moves` is the one that ended the game
+// (mate, capture, no legal moves), so it earns no increment. False when the game
+// ended some other way after it (resignation, timeout) or is still going.
 export function reconstructShowcaseClocks(args: {
   moves: readonly ShowcaseTimelineMove[];
-  startedAt: number | null;
   initialMs: number;
   incrementMs: number;
   firstColor: string;
+  lastMoveEndsGame?: boolean;
 }): Array<ShowcaseClockPair> {
-  const { moves, startedAt, initialMs, incrementMs, firstColor } = args;
+  const { moves, initialMs, incrementMs, firstColor } = args;
   const ordered = [...moves].sort((a, b) => a.ply - b.ply);
   const clock = { first: initialMs, second: initialMs };
   const series: Array<ShowcaseClockPair> = [{ ...clock }];
-  let prevAt = startedAt;
-  for (const move of ordered) {
+  let prevAt: number | null = null;
+  ordered.forEach((move, index) => {
     const side = move.color === firstColor ? 'first' : 'second';
+    const prearm = index < SHOWCASE_PREARM_PLIES;
+    const ending = args.lastMoveEndsGame === true && index === ordered.length - 1;
     // Guard against missing/backwards timestamps: never charge negative time.
-    const spent = prevAt === null ? 0 : Math.max(0, move.at - prevAt);
-    clock[side] = Math.max(0, clock[side] - spent) + incrementMs;
+    const spent = prearm || prevAt === null ? 0 : Math.max(0, move.at - prevAt);
+    const credit = prearm || !ending ? incrementMs : 0;
+    clock[side] = Math.max(0, clock[side] - spent) + credit;
     series.push({ ...clock });
     prevAt = move.at;
-  }
+  });
   return series;
+}
+
+// The pair to SHOW while the side to move thinks, `elapsedMs` into the think that
+// follows ply `ply`. The mover counts down at one real second per second from the
+// recorded value, and stops at the recorded think (`windowMs`): that is the value
+// the move is charged, so it only ever moves down until the next ply lands and
+// credits the increment. A pre-arm think (the clock was not running) and the idle
+// side hold still.
+export function projectShowcaseClock(args: {
+  series: readonly ShowcaseClockPair[];
+  ply: number;
+  elapsedMs: number;
+  windowMs: number;
+  mover: 'first' | 'second';
+}): ShowcaseClockPair {
+  const at = args.series[Math.min(args.ply, args.series.length - 1)] ?? { first: 0, second: 0 };
+  if (args.ply < SHOWCASE_PREARM_PLIES) return { ...at };
+  const spent = Math.max(0, Math.min(args.elapsedMs, args.windowMs));
+  return { ...at, [args.mover]: Math.max(0, at[args.mover] - spent) };
 }
