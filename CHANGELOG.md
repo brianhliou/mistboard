@@ -118,6 +118,7 @@ Conventions:
 
 ### Site
 
+- The play-online questions moved from the homepage to the top of [the FAQ](/faq); the homepage keeps the one-line summary under the tagline ([933c9104](https://github.com/brianhliou/mistboard/commit/933c9104))
 - `/bots` is the page for playing xiangqi against the computer, in English, simplified and traditional Chinese: the eight levels come first with Pikafish on top, level 2 says Start here, and each level leads with a Play xiangqi button ([d74cb0c5](https://github.com/brianhliou/mistboard/commit/d74cb0c5))
 - The home page says what it does under the tagline (free in the browser, no download or sign-up, eight computer levels, play a friend) and answers six common questions above the footer; the play column sits on one spacing with the event cards at the lobby's bottom edge ([21bdbc4c](https://github.com/brianhliou/mistboard/commit/21bdbc4c))
 - The sitemap is split into pages, studies and chapters, each entry carries the date it last changed, and a study chapter is listed only when its study earns search traffic or its moves carry commentary: 6,093 chapter URLs became 855. Unlisted chapters still open from their study ([cca3c724](https://github.com/brianhliou/mistboard/commit/cca3c724))
