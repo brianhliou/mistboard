@@ -133,6 +133,7 @@ Conventions:
 
 ### Site
 
+- The homepage puts Latest studies beside the daily puzzle and the forum, and the chat moves to the lower right beside the article rows ([96544bf7](https://github.com/brianhliou/mistboard/commit/96544bf7))
 - The top bar lines up with lichess's on wide screens instead of running to the edges, keeps its links on the bar down to a 940px window, and shows the full mistboard.com name whenever it fits ([c654ede1](https://github.com/brianhliou/mistboard/commit/c654ede1))
 - The xiangqi and chess rules pages show their famous game in the page instead of an embedded one-game study: the 1632 horse-sacrifice trap in the blog's card layout, Carlsen–Anand 2014 game 11 on the chess replay ([0ea95e5e](https://github.com/brianhliou/mistboard/commit/0ea95e5e))
 - Tables in blog posts fit a phone: short data tables tighten their spacing on a small screen and tables of sentences wrap, instead of scrolling sideways ([86cc7c0d](https://github.com/brianhliou/mistboard/commit/86cc7c0d))
