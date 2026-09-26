@@ -89,6 +89,12 @@ export const ARTICLE_META: Record<
     description:
       'Chơi cờ úp với máy hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích engine tách riêng phần may rủi khỏi phần quyết định.',
   },
+  'choi-co-tuong-voi-may': {
+    title: 'Chơi cờ tướng với máy: Pikafish trên Mistboard',
+    kind: 'article',
+    description:
+      'Chơi cờ tướng với máy ngay trên trình duyệt, đối thủ là Pikafish, engine cờ tướng mã nguồn mở mạnh nhất. Miễn phí, không cần tài khoản, không cần tải về. Chọn cấp độ, chơi cờ úp, và xem lại ván đấu bằng engine.',
+  },
   'luat-co-up': {
     title: 'Luật cờ úp',
     kind: 'article',

@@ -13,6 +13,7 @@ import { banqiStatisticsArticle } from './articles/content/banqi-statistics.js';
 import { banqiEngineArticle } from './articles/content/banqi-engine.js';
 import { banqiLuckArticle } from './articles/content/banqi-luck.js';
 import { chessArticle } from './articles/content/chess.js';
+import { choiCoTuongVoiMayArticle } from './articles/content/choi-co-tuong-voi-may.js';
 import { coUpArticle } from './articles/content/co-up.js';
 import { luatCoUpArticle } from './articles/content/luat-co-up.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
@@ -50,6 +51,7 @@ import articleSnapshotFog from './article-snapshot-fog.json' with { type: 'json'
 
 export const articles: Article[] = [
   pikafishArticle,
+  choiCoTuongVoiMayArticle,
   jieqiPlatformArticle,
   coUpArticle,
   luatCoUpArticle,

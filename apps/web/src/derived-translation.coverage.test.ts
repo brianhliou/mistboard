@@ -7,10 +7,12 @@
 // has to meet, and until now nothing asserted it, so a page could ship half
 // English and every suite stayed green.
 import { describe, expect, it } from 'vitest';
+import { CHOI_CO_TUONG_VOI_MAY_VI } from './articles/content/choi-co-tuong-voi-may.js';
 import { CO_UP_VI } from './articles/content/co-up.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { KHAI_CUOC_CO_UP_VI } from './articles/content/khai-cuoc-co-up.js';
+import { pikafishArticle } from './articles/content/pikafish.js';
 import { untranslatedStrings } from './articles/derived-translation.js';
 import { buildArticlePage } from './articles.js';
 import { articles } from './articles-data.js';
@@ -18,6 +20,7 @@ import { articles } from './articles-data.js';
 const DERIVED = [
   { slug: 'co-up', source: jieqiPlatformArticle, dict: CO_UP_VI },
   { slug: 'khai-cuoc-co-up', source: jieqiOpeningsArticle, dict: KHAI_CUOC_CO_UP_VI },
+  { slug: 'choi-co-tuong-voi-may', source: pikafishArticle, dict: CHOI_CO_TUONG_VOI_MAY_VI },
 ];
 
 describe('derived translations', () => {
