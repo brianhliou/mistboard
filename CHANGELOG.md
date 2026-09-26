@@ -177,6 +177,7 @@ Conventions:
 
 ### Fixed
 
+- Share cards show Chinese characters: player pages and Chinese-named studies previewed their names as empty boxes ([9bfcff51](https://github.com/brianhliou/mistboard/commit/9bfcff51))
 - Search engines now see the full rules and blog pages and their search titles even when a page script fails to load ([fa16763c](https://github.com/brianhliou/mistboard/commit/fa16763c))
 - Fog Xiangqi shows its palaces on the square grid again; the squares were drawn over them ([27f50d46](https://github.com/brianhliou/mistboard/commit/27f50d46))
 - Duck Xiangqi follows the Square grid board choice in games and reviews; it always drew the lined board ([fcfa2271](https://github.com/brianhliou/mistboard/commit/fcfa2271))
