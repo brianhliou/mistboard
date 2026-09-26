@@ -513,6 +513,8 @@ try {
     ].join('');
   };
   let count = 0;
+  // Alternate links as written, by page path, for the group check below.
+  const emittedAlternates = new Map();
 
   for (const article of published) {
     const slug = encodeURIComponent(article.slug);
@@ -615,6 +617,10 @@ try {
       const dir = resolve(distDir, ...(v.langDir ? [v.langDir, base] : [base]));
       await fs.mkdir(dir, { recursive: true });
       await fs.writeFile(resolve(dir, `${article.slug}.html`), html, 'utf-8');
+      emittedAlternates.set(
+        `${v.urlPrefix}/${base}/${article.slug}`,
+        (html.match(/<link rel="alternate" hreflang=[^>]*>/g) ?? []).join(''),
+      );
       count += 1;
       console.log(`prerendered ${v.urlPrefix}/${base}/${article.slug} (lang=${v.htmlLang})`);
     }
@@ -622,6 +628,33 @@ try {
   console.log(
     `done: ${count} page(s) across ${published.length} article(s); localized variants require publication lock`,
   );
+
+  // Every member of a translation group must carry the English page's alternate
+  // set, read from the HTML actually written. The per-page expansion this
+  // replaced was locally correct on each page and inconsistent across the
+  // group, which nothing noticed for three weeks (2026-09-25), so the build
+  // fails on a mismatch instead.
+  const groupMismatches = [];
+  for (const [rootSlug, partners] of partnersOfRoot) {
+    const root = publishedBySlug.get(rootSlug);
+    const rootPath = (prefix) =>
+      `${prefix}/${root.kind === 'rules' ? 'rules' : 'blog'}/${root.slug}`;
+    const expected = emittedAlternates.get(rootPath(''));
+    const members = [
+      ...(isArticleTranslationPublished(rootSlug) ? ['/zh-hans', '/zh-hant'].map(rootPath) : []),
+      ...partners.map((partner) => {
+        const partnerArticle = publishedBySlug.get(partner.slug);
+        return `/${partnerArticle.kind === 'rules' ? 'rules' : 'blog'}/${partnerArticle.slug}`;
+      }),
+    ];
+    for (const member of members) {
+      if (emittedAlternates.get(member) !== expected)
+        groupMismatches.push(`${member} vs ${rootPath('')}`);
+    }
+  }
+  if (groupMismatches.length > 0) {
+    throw new Error(`translation group alternates disagree: ${groupMismatches.join('; ')}`);
+  }
 
   // Homepage: bake the static landing shell so crawlers, no-JS clients, and
   // first paint get real content (heading, play panel, article links, footer)
