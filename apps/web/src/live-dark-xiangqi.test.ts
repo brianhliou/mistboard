@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 import {
   type DarkXiangqiWireView,
   darkXiangqiClickResult,
+  fogLayer,
   renderDarkXiangqiBoardSvg,
 } from './live-dark-xiangqi.js';
 
@@ -40,6 +41,29 @@ describe('Dark Xiangqi board svg', () => {
 
     expect(svg).toContain('aria-label="black hidden piece"');
     expect(svg).not.toContain('aria-label="black soldier"');
+  });
+
+  // The homepage viewer drew the square grid with fog holes cut at intersection
+  // heights (a river gap too high below the river) and a fog sheet 6 units
+  // short of the bottom edge, because the fog was built before the layout was
+  // known and sized to the intersection board.
+  it('cuts square-grid fog holes on the square-grid cells, river gap included', () => {
+    const view: DarkXiangqiWireView = { ...viewFixture(), visibleSquares: ['b3', 'a1'] };
+    const fog = fogLayer(view, 'red', 'm', 'cell');
+
+    // The sheet spans the cells plus the river strip: 9 x 60 by 10 x 60 + 12.
+    expect(fog).toContain('<rect x="6" y="6" width="540" height="612" rx="0" fill="white"/>');
+    // b3 sits below the river: row 7, centre 36 + 7 * 60 + 12 = 468.
+    expect(fog).toContain('<rect x="65.5" y="437.5" width="61" height="61" fill="black"/>');
+    // a1 is the bottom-left square and bleeds to the sheet's own edges.
+    expect(fog).toContain('<rect x="6" y="557.5" width="60.5" height="60.5" fill="black"/>');
+  });
+
+  it('keeps intersection-board fog holes where they were', () => {
+    const fog = fogLayer({ ...viewFixture(), visibleSquares: ['b3'] }, 'red', 'm', 'intersection');
+
+    expect(fog).toContain('<rect x="0" y="0" width="552" height="612" rx="0" fill="white"/>');
+    expect(fog).toContain('<rect x="65.5" y="425.5" width="61" height="61" fill="black"/>');
   });
 
   it('masks fog by default and drops the mask when fog is off', () => {

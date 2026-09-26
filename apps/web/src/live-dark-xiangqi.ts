@@ -101,8 +101,6 @@ const FILE_COUNT = 9;
 const RANK_COUNT = 10;
 const CELL = 60;
 const MARGIN = 36;
-const WIDTH = MARGIN * 2 + (FILE_COUNT - 1) * CELL;
-const HEIGHT = MARGIN * 2 + (RANK_COUNT - 1) * CELL;
 const PIECE_SIZE = tokenPieceSize(CELL);
 const HIT_HALF = 26;
 const NON_SELECTABLE_RIVER_ATTRS =
@@ -361,9 +359,9 @@ function boardSvg(
   // board resolved url(#…) to the red board's mask and showed RED's fog. The
   // view's perspective (red vs black) is unique per fogged board.
   const maskId = `xq-live-fog-${view.id.replace(/[^a-zA-Z0-9_-]/g, '')}-${view.perspective}`;
-  const fog = options.showFog === false ? '' : fogLayer(view, perspective, maskId);
   const layout = options.layout ?? readStoredXiangqiBoardLayout();
   activeLayout = layout;
+  const fog = options.showFog === false ? '' : fogLayer(view, perspective, maskId, layout);
   const showCoords = readDisplayPreferences().boardCoordinates;
   const surface = showCoords ? FOG_SURFACE : { ...FOG_SURFACE, geo: FOG_GEO_NO_COORDS };
   const vb = xiangqiBoardViewBox(layout, surface.geo);
@@ -406,11 +404,30 @@ function boardSvg(
   `;
 }
 
-function fogLayer(view: DarkXiangqiWireView, perspective: XiangqiColor, maskId: string): string {
+export function fogLayer(
+  view: DarkXiangqiWireView,
+  perspective: XiangqiColor,
+  maskId: string,
+  layout: XiangqiBoardLayout,
+): string {
+  // The fog covers the board as drawn: the intersection board from the origin,
+  // or the square grid's cells plus its river strip, which start half a cell
+  // before the first intersection and end 6 units below the intersection board.
+  // Sizing it to the intersection board on the square grid left the bottom
+  // edge of every last-row square unfogged.
+  const bounds = xiangqiBoardViewBox(layout, FOG_GEO_NO_COORDS);
+  const minX = bounds.minX;
+  const minY = bounds.minY;
+  const maxX = bounds.minX + bounds.width;
+  const maxY = bounds.minY + bounds.height;
   const cutouts = view.visibleSquares
     .map((square) => {
       const coord = coordOf(square);
-      const center = intersection(coord.file, coord.rank, perspective);
+      // The layout is explicit, not the module's activeLayout: the fog used to
+      // be built before activeLayout was set, so a first render on the square
+      // grid cut its holes at intersection heights, a river gap too high on
+      // every square below the river.
+      const center = intersection(coord.file, coord.rank, perspective, layout);
       const displayRank = displayRankFor(coord.rank, perspective);
       // Edge cutouts bleed to the board edge so no fog hairline survives between
       // a visible outer square and the frame. The test must therefore be on the
@@ -418,17 +435,25 @@ function fogLayer(view: DarkXiangqiWireView, perspective: XiangqiColor, maskId: 
       // file a sits on the right. (The y axis already used displayRank; x did
       // not, which was invisible only while flipping mirrored the rank alone.)
       const displayFile = xiangqiDisplayFile(coord.file, perspective, FILE_COUNT);
-      const x0 = displayFile === 0 ? 0 : center.x - CELL / 2 - FOG_OVERLAP;
-      const x1 = displayFile === FILE_COUNT - 1 ? WIDTH : center.x + CELL / 2 + FOG_OVERLAP;
-      const y0 = displayRank === 0 ? 0 : center.y - CELL / 2 - FOG_OVERLAP;
-      const y1 = displayRank === RANK_COUNT - 1 ? HEIGHT : center.y + CELL / 2 + FOG_OVERLAP;
+      const x0 = displayFile === 0 ? minX : center.x - CELL / 2 - FOG_OVERLAP;
+      const x1 = displayFile === FILE_COUNT - 1 ? maxX : center.x + CELL / 2 + FOG_OVERLAP;
+      const y0 = displayRank === 0 ? minY : center.y - CELL / 2 - FOG_OVERLAP;
+      const y1 = displayRank === RANK_COUNT - 1 ? maxY : center.y + CELL / 2 + FOG_OVERLAP;
       return `<rect x="${x0}" y="${y0}" width="${x1 - x0}" height="${y1 - y0}" fill="black"/>`;
     })
     .join('');
   return xiangqiFogRegion(
     // The `.xiangqi-live-board` wrapper clips every full-bleed SVG layer to its
     // CSS radius. A second viewBox-unit radius would diverge when responsive.
-    { width: WIDTH, height: HEIGHT, cell: CELL, margin: MARGIN, rx: 0 },
+    {
+      x: minX,
+      y: minY,
+      width: bounds.width,
+      height: bounds.height,
+      cell: CELL,
+      margin: MARGIN,
+      rx: 0,
+    },
     maskId,
     'xq-live-fog-mask',
     cutouts,
