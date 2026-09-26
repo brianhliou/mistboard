@@ -130,6 +130,7 @@ Conventions:
 
 ### Site
 
+- The xiangqi and chess rules pages show their famous game in the page instead of an embedded one-game study: the 1632 horse-sacrifice trap in the blog's card layout, Carlsen–Anand 2014 game 11 on the chess replay ([0ea95e5e](https://github.com/brianhliou/mistboard/commit/0ea95e5e))
 - Tables in blog posts fit a phone: short data tables tighten their spacing on a small screen and tables of sentences wrap, instead of scrolling sideways ([86cc7c0d](https://github.com/brianhliou/mistboard/commit/86cc7c0d))
 - In a blog post's annotated boards the result sits under the move list, level with the controls, and reads Red wins or Black wins; tables of names wrap on a phone instead of scrolling sideways ([d524258d](https://github.com/brianhliou/mistboard/commit/d524258d))
 - Embedded boards step like the boards in our posts (back, a menu, forward), keep the move list beside the board at its own width, fill small frames on phones, and follow your settings live on Mistboard's own pages ([8018f928](https://github.com/brianhliou/mistboard/commit/8018f928))
@@ -179,6 +180,8 @@ Conventions:
 
 ### Fixed
 
+- A server restart during a xiangqi, jieqi, banqi or other xiangqi-family game no longer costs anyone clock time: the game pauses when the server stops and resumes once both players are back, or after 90 seconds ([4a2a5b95](https://github.com/brianhliou/mistboard/commit/4a2a5b95))
+- The Patron page now says checkout shows prices in your local currency; the FAQ no longer says every payment is in US dollars ([cc5d4df9](https://github.com/brianhliou/mistboard/commit/cc5d4df9))
 - Share cards show Chinese characters: player pages and Chinese-named studies previewed their names as empty boxes ([9bfcff51](https://github.com/brianhliou/mistboard/commit/9bfcff51))
 - Search engines now see the full rules and blog pages and their search titles even when a page script fails to load ([fa16763c](https://github.com/brianhliou/mistboard/commit/fa16763c))
 - Fog Xiangqi shows its palaces on the square grid again; the squares were drawn over them ([27f50d46](https://github.com/brianhliou/mistboard/commit/27f50d46))
