@@ -82,6 +82,7 @@ Conventions:
 
 ### Watching and review
 
+- Pro players carry their title (GM, IM, FM, NM) from the CXA's grade lists and the WXF's international titles, each with a source: 90 players tagged instead of 8, and none whose grade the match-fixing rulings revoked ([14d1871e](https://github.com/brianhliou/mistboard/commit/14d1871e))
 - Broadcasts start following an event by themselves from 12 hours before it begins until a week after it ends, so an upcoming event no longer waits for someone to switch it on ([b2640430](https://github.com/brianhliou/mistboard/commit/b2640430))
 - The second player page, Cao Yanlei 曹岩磊 (/blog/cao-yanlei): the ten-game match he won against the world champion Lại Lý Huynh, then his 2026 event by event, six games on the board seen from his side, and a 75-chapter study with every game annotated ([86cc7c0d](https://github.com/brianhliou/mistboard/commit/86cc7c0d))
 - Pages for the 13 archive players the Chinese Xiangqi Association sanctioned in the 2024 to 2026 match-fixing case say so in one sentence linked to the case write-up, and players whose ban may have revoked their grade no longer carry a GM or NM tag, on the event cards too ([51d72464](https://github.com/brianhliou/mistboard/commit/51d72464), [534426da](https://github.com/brianhliou/mistboard/commit/534426da))
