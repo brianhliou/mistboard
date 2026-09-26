@@ -213,6 +213,7 @@ Conventions:
 
 ### Technical
 
+- Each Vietnamese page and its English original list the same language versions, with English as the default, so search engines read them as one page in several languages ([bc121fc3](https://github.com/brianhliou/mistboard/commit/bc121fc3))
 - `/bots` serves its heading and level list in the page HTML in all three languages, so search engines that do not run the page's code read it too ([a29c7ed5](https://github.com/brianhliou/mistboard/commit/a29c7ed5))
 - A deploy no longer compiles the six server engines from source (2.5 minutes of every 5.6-minute deploy): the Build engines workflow publishes them once per pin as a GitHub release, and the image fetches and re-verifies them with the same perft and uci gates; first deploy on this path went push-to-live in 2m19s ([c36d9fc7](https://github.com/brianhliou/mistboard/commit/c36d9fc7))
 - Ship-speed housekeeping: a release overtaken by another session's push now follows that push's CI run instead of failing ([6409f8c9](https://github.com/brianhliou/mistboard/commit/6409f8c9)); the pre-commit hook runs Biome on staged files and the push gate runs only the web tests related to the change ([9a8ee6d4](https://github.com/brianhliou/mistboard/commit/9a8ee6d4)); the depth-4 Benedict perft moved to its own CI job ([c1c50949](https://github.com/brianhliou/mistboard/commit/c1c50949))
