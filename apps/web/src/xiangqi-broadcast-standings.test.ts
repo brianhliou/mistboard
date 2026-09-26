@@ -60,3 +60,61 @@ describe('formatStandingsScore', () => {
     expect(formatStandingsScore(2.5)).toBe('2½');
   });
 });
+
+describe('broadcastStandings with round-page results', () => {
+  it('counts a result with no moves like any other game', () => {
+    // A round page's pairing: the result is the source's, the moves never came.
+    const rows = broadcastStandings([
+      { red: p('郑彦隆'), black: p('吴宗翰'), result: '1-0', status: 'complete' },
+      { red: p('吴宗翰'), black: p('于文彬'), result: '1/2-1/2', status: 'complete' },
+      { red: p('于文彬'), black: p('郑彦隆'), result: '*', status: 'scheduled' },
+    ]);
+    expect(rows.map((r) => [r.player.name, r.games, r.score])).toEqual([
+      ['郑彦隆', 1, 1],
+      ['于文彬', 1, 0.5],
+      ['吴宗翰', 2, 0.5],
+    ]);
+  });
+
+  it('counts a slow game and its playoff at one table as one game', () => {
+    // The 2024 Asian final, round 7 table 1: the slow game drawn, the rapid
+    // playoff won by 刘柏宏. dpxq's table: 7 games, 6 won, 1 drawn.
+    const round7 = [
+      {
+        red: p('黄学谦'),
+        black: p('刘柏宏'),
+        result: '1/2-1/2' as const,
+        status: 'complete' as const,
+        roundId: 'r07',
+        details: { table: 1, game: 1, kind: 'standard' as const },
+      },
+      {
+        red: p('刘柏宏'),
+        black: p('黄学谦'),
+        result: '1-0' as const,
+        status: 'complete' as const,
+        roundId: 'r07',
+        details: { table: 1, game: 2, kind: 'rapid' as const },
+      },
+      {
+        red: p('郑彦隆'),
+        black: p('吴宗翰'),
+        result: '1-0' as const,
+        status: 'complete' as const,
+        roundId: 'r07',
+        details: { table: 2 },
+      },
+    ];
+    const rows = broadcastStandings(round7);
+    const liu = rows.find((r) => r.player.name === '刘柏宏');
+    const wong = rows.find((r) => r.player.name === '黄学谦');
+    expect([liu?.games, liu?.wins, liu?.draws, liu?.score]).toEqual([1, 1, 0, 1]);
+    expect([wong?.games, wong?.losses, wong?.score]).toEqual([1, 1, 0]);
+    // Two slow games at a table (no playoff) still count as two.
+    const pair = broadcastStandings([
+      { ...round7[0]!, details: { table: 1, game: 1, kind: 'standard' as const } },
+      { ...round7[1]!, details: { table: 1, game: 2, kind: 'standard' as const } },
+    ]);
+    expect(pair.find((r) => r.player.name === '刘柏宏')?.games).toBe(2);
+  });
+});

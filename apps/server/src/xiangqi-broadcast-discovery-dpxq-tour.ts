@@ -24,6 +24,11 @@ import type {
   DiscoveryProvider,
   DiscoveryProviderInput,
 } from './xiangqi-broadcast-discovery.js';
+import {
+  type DpxqPairing,
+  parseDpxqRoundPage,
+  roundPageUrl,
+} from './xiangqi-broadcast-dpxq-pairings.js';
 
 const DPXQ_ORIGIN = 'http://www.dpxq.com';
 
@@ -35,16 +40,17 @@ export function archiveBoardUrl(id: string, origin = DPXQ_ORIGIN): string {
   return `${origin}/hldcg/search/view_m_${id}.html`;
 }
 
-export type DpxqTourGame = { id: string; roundNumber?: number };
+export type DpxqTourGame = { id: string; roundNumber?: number; table?: number };
 
 /**
- * Pull (round, game id) out of a tour's game list.
+ * Pull (round, table, game id) out of a tour's game list.
  *
- * Only the round label and the record link are read. The players and the result
- * are on the row too, but the game page states them in tagged fields, and a
- * team event writes the two sides in mirrored order ("team player" for red,
- * "player team" for black), so parsing them here would add a second, more
- * fragile source of the same facts.
+ * Only the round label, the table and the record link are read. The players
+ * and the result are on the row too, but the game page states them in tagged
+ * fields, and a team event writes the two sides in mirrored order ("team
+ * player" for red, "player team" for black), so parsing them here would add a
+ * second, more fragile source of the same facts. The table is the second
+ * cell when it is a number; a multi-game table's rows say 第1局 there instead.
  */
 export function parseDpxqTourGameList(html: string): DpxqTourGame[] {
   const games: DpxqTourGame[] = [];
@@ -56,9 +62,14 @@ export function parseDpxqTourGameList(html: string): DpxqTourGame[] {
     seen.add(id);
     const text = body.replace(/<[^>]+>/g, ' ');
     const round = Number(text.match(/第\s*(\d+)\s*轮/)?.[1]);
+    const cells = [...body.matchAll(/<td[^>]*>([\s\S]*?)<\/td>/gi)].map((cell) =>
+      (cell[1] ?? '').replace(/<[^>]+>/g, '').trim(),
+    );
+    const table = /^\d+$/.test(cells[1] ?? '') ? Number(cells[1]) : Number.NaN;
     games.push({
       id,
       ...(Number.isInteger(round) && round > 0 ? { roundNumber: round } : {}),
+      ...(Number.isInteger(table) && table > 0 ? { table } : {}),
     });
   }
   return games;
@@ -84,6 +95,43 @@ async function fetchText(
   }
 }
 
+/**
+ * Every pairing the tour's round pages list. The latest page comes first and
+ * names the round count; earlier rounds are read unless the caller says they
+ * are settled. A page that cannot be read or parsed contributes nothing: the
+ * game list still stands on its own.
+ */
+async function readPairings(
+  input: DiscoveryProviderInput,
+  tour: string,
+  origin: string,
+): Promise<Array<DpxqPairing & { pageUrl: string }>> {
+  const latestUrl = roundPageUrl(tour, undefined, origin);
+  const latest = await fetchText(input, latestUrl);
+  if (!latest.ok) return [];
+  const page = parseDpxqRoundPage(latest.text);
+  if (!page) return [];
+  // The page's canonical per-round address, so a board's source link names
+  // its round and does not move when the next round is paired.
+  const pairings = page.pairings.map((pairing) => ({
+    ...pairing,
+    pageUrl: roundPageUrl(tour, page.roundNumber, origin),
+  }));
+  for (let round = 1; round <= page.roundCount; round += 1) {
+    if (round === page.roundNumber || input.settledRounds?.has(round)) continue;
+    if (input.spacingMs) await new Promise((resolve) => setTimeout(resolve, input.spacingMs));
+    const url = roundPageUrl(tour, round, origin);
+    const fetched = await fetchText(input, url);
+    if (!fetched.ok) continue;
+    const parsed = parseDpxqRoundPage(fetched.text);
+    // A page that answers for another round (dpxq falls back to the latest
+    // for a round it does not have) is not this round's pairings.
+    if (!parsed || parsed.roundNumber !== round) continue;
+    for (const pairing of parsed.pairings) pairings.push({ ...pairing, pageUrl: url });
+  }
+  return pairings;
+}
+
 export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
   name: 'dpxq-tour',
   statesRounds: true,
@@ -94,12 +142,18 @@ export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
       return { ok: false, message: 'dpxq-tour discovery needs a numeric tour id (tour=12683)' };
     }
 
+    // `pairings=0` opts a tour out of the round pages (records only).
+    const pairings =
+      input.config.get('pairings') === '0' ? [] : await readPairings(input, tour, origin);
+
     const listUrl = tourGameListUrl(tour, origin);
     const list = await fetchText(input, listUrl);
-    if (!list.ok) return { ok: false, message: `tour game list unreachable: ${list.message}` };
+    if (!list.ok && pairings.length === 0) {
+      return { ok: false, message: `tour game list unreachable: ${list.message}` };
+    }
 
-    const games = parseDpxqTourGameList(list.text);
-    if (games.length === 0) {
+    const games = list.ok ? parseDpxqTourGameList(list.text) : [];
+    if (games.length === 0 && pairings.length === 0) {
       // Normal before a tour has any uploaded records; the caller's backoff
       // widens the gap rather than treating it as a fault.
       return { ok: false, message: `tour ${tour} lists no game records yet` };
@@ -111,7 +165,8 @@ export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
     const boards: DiscoveredBoard[] = games.map((game) => ({
       url: archiveBoardUrl(game.id, origin),
       ...(game.roundNumber !== undefined ? { roundNumber: game.roundNumber } : {}),
+      ...(game.table !== undefined ? { table: game.table } : {}),
     }));
-    return { ok: true, boards };
+    return { ok: true, boards, ...(pairings.length > 0 ? { pairings } : {}) };
   },
 };

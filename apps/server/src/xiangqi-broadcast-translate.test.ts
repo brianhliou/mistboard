@@ -8,6 +8,7 @@ import {
   translatedXiangqiBroadcastTour,
   translateXiangqiBroadcastSnapshot,
   translateXiangqiEventName,
+  translateXiangqiMatchName,
   translateXiangqiRoundLabel,
   translateXiangqiTeamName,
 } from './xiangqi-broadcast-translate.js';
@@ -292,4 +293,84 @@ test('federations at the Asian and world events read as countries, not pinyin', 
   assert.equal(translateXiangqiTeamName('中华台北'), 'Chinese Taipei');
   assert.equal(translateXiangqiTeamName('马来西亚'), 'Malaysia');
   assert.equal(translateXiangqiTeamName('武汉大学棋类协会'), 'Wuhan University Chess Association');
+});
+
+test('the prod translation pass (2026-09-25) fixes what came out as pinyin or literal', () => {
+  assert.equal(
+    translateXiangqiTeamName('中国香港象棋总会'),
+    'Hong Kong Xiangqi Federation',
+    'was "Zhongguo Hong Kong Xiangqi Federation"',
+  );
+  assert.equal(
+    translateXiangqiTeamName('厦门市体育事业发展中心'),
+    'Xiamen Sports Development Centre',
+    'was "Xiamen Tiyushiyefazhanzhongxin"',
+  );
+  assert.equal(
+    translateXiangqiTeamName('山东济南钢城民生实业队'),
+    'Shandong Jinan Gangcheng Minsheng Industrial Team',
+  );
+  assert.equal(
+    translateXiangqiEventName('2026年全国象棋男子甲级联赛'),
+    "2026 National Xiangqi Men's Division A League",
+  );
+  // 么 is Yao as a surname; pinyin-pro reads it me even in surname mode.
+  assert.equal(romanizeXiangqiPlayerName('么毅'), 'Yao Yi');
+});
+
+test('a section label in the match field translates like a round label', () => {
+  assert.equal(translateXiangqiMatchName('元老组'), 'Veterans');
+  assert.equal(
+    translateXiangqiMatchName('预赛港澳台组'),
+    'Preliminary Hong Kong, Macau and Taiwan',
+  );
+  assert.equal(translateXiangqiMatchName('第一季红帅组'), 'Season 1 Team Red');
+  assert.equal(translateXiangqiMatchName('北京-江苏'), 'Beijing-Jiangsu');
+});
+
+test('Asian championship federations read as their English names', () => {
+  const cases: Array<[string, string]> = [
+    ['中国', 'China'],
+    ['中国香港', 'Hong Kong'],
+    ['中国澳门', 'Macau'],
+    ['中华台北', 'Chinese Taipei'],
+    ['西马', 'West Malaysia'],
+    ['东马', 'East Malaysia'],
+    ['黎巴嫩', 'Lebanon'],
+    ['印度', 'India'],
+    ['印度尼西亚', 'Indonesia'],
+    ['菲律宾', 'Philippines'],
+    ['文莱', 'Brunei'],
+    ['澳大利亚', 'Australia'],
+  ];
+  for (const [zh, en] of cases) assert.equal(translateXiangqiTeamName(zh), en, zh);
+});
+
+test('players from outside mainland China take their own spelling, scoped by federation', () => {
+  const tag = (name: string, federation?: string) =>
+    translatedXiangqiBroadcastPlayerTag<XiangqiBroadcastPlayerTag>({
+      name,
+      ...(federation ? { federation } : {}),
+    }).nameEn;
+  assert.equal(tag('阮黄燕', '越南'), 'Nguyễn Hoàng Yến');
+  assert.equal(tag('阮明日光', '越南'), 'Nguyễn Minh Nhật Quang');
+  assert.equal(tag('黄学谦', '中国香港'), 'Wong Hok Him');
+  assert.equal(tag('黄学谦', '香港象棋总会'), 'Wong Hok Him');
+  assert.equal(tag('吴兰香', '新加坡'), 'Ngô Lan Hương');
+  // The 2024 Asian championship entrants, as the AXF results sheet spells them.
+  assert.equal(tag('武国达', '越南'), 'Vũ Quốc Đạt');
+  assert.equal(tag('沈毅豪', '西马'), 'Sim Yip How');
+  assert.equal(tag('许鲁斌', '东马'), 'Robin Hii Lu Bin');
+  assert.equal(tag('葛振衣', '中华台北'), 'Ge Jen-yi');
+  assert.equal(tag('葛振衣', '台北'), 'Ge Jen-yi');
+  assert.equal(tag('苏俊豪', '中国澳门'), 'Sou Chon Hou');
+  assert.equal(tag('可儿宏晖', '日本'), 'Kani Hiroaki');
+  assert.equal(tag('所司和晴', '日本'), 'Shoshi Kazuharu');
+  assert.equal(tag('单文杰', '泰国'), 'Sura Sinthuyodsakun');
+  // The world champion is famous enough to need no federation.
+  assert.equal(tag('赖理兄'), 'Lại Lý Huynh');
+  // A common name on a mainland team keeps pinyin.
+  assert.equal(tag('林嘉欣', '中国香港'), 'Lam Ka Yan');
+  assert.equal(tag('林嘉欣', '广东'), 'Lin Jiaxin');
+  assert.equal(tag('林嘉欣'), 'Lin Jiaxin');
 });

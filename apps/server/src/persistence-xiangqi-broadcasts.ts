@@ -441,6 +441,45 @@ async function retireRekeyedTwin(client: Queryable, board: XiangqiBroadcastBoard
   }
 }
 
+// A results-only board (a round page's pairing, `r07t05`) is filed under its
+// pairing's id, and the poller files a record it can match to the pairing
+// under that same id, so the moves extend it in place. A record it could not
+// match (no link on the pairing's row, no table on the game list) arrives
+// under its own id; this retires the results-only board it duplicates: same
+// tour and round, same two players in the same colours, no moves. One row,
+// so a table that played the same colours twice keeps its other game.
+async function retireResultsOnlyTwin(
+  client: Queryable,
+  board: XiangqiBroadcastBoard,
+): Promise<void> {
+  if (board.moves.length === 0) return;
+  const { rows } = await client.query<{ id: string }>(
+    `DELETE FROM xiangqi_broadcast_boards
+      WHERE id = (
+        SELECT id FROM xiangqi_broadcast_boards
+         WHERE tour_slug = $1 AND round_id = $2
+           AND red->>'name' = $3 AND black->>'name' = $4
+           AND ply_count = 0 AND id <> $5
+           AND source_board_id ~ '^r[0-9]+t[0-9]+(g[0-9]+)?$'
+         ORDER BY source_board_id
+         LIMIT 1)
+      RETURNING id`,
+    [board.tourSlug, board.roundId, board.red.name, board.black.name, board.id],
+  );
+  for (const row of rows) {
+    await appendSyncLog(client, {
+      tourSlug: board.tourSlug,
+      roundId: board.roundId,
+      boardId: board.id,
+      sourceBoardId: board.sourceBoardId,
+      severity: 'info',
+      kind: 'rekeyed',
+      message: `retired ${row.id}: its record arrived as ${board.id}`,
+      payload: { retiredBoardId: row.id, sourceUrl: board.sourceUrl ?? null },
+    });
+  }
+}
+
 async function appendSyncLog(
   client: Queryable,
   input: {
@@ -633,6 +672,7 @@ export async function applyXiangqiBroadcastBoardUpdateOn(
     const existing = await getBoardById(client, board.id);
     if (!existing) {
       await retireRekeyedTwin(client, board);
+      await retireResultsOnlyTwin(client, board);
       await upsertBoard(client, board, replay.plies, replay.finalStatus);
       return { ok: true, boardId: board.id, status: 'created', plyCount: replay.plies };
     }
@@ -862,7 +902,9 @@ function buildCompletedBoardSearchWhere(filters: XiangqiBroadcastBoardSearchFilt
   clause: string;
   values: unknown[];
 } {
-  const conditions: string[] = [`boards.result <> '*'`];
+  // A results-only board (a pairing with no published moves) is a result,
+  // not a game record: the games database and the study curator list games.
+  const conditions: string[] = [`boards.result <> '*'`, 'boards.ply_count > 0'];
   const values: unknown[] = [];
   const bind = (value: unknown): string => {
     values.push(value);
@@ -1031,6 +1073,7 @@ export async function listAggregatableXiangqiBroadcastGames(opts: {
      JOIN xiangqi_broadcast_tours tours ON tours.slug = boards.tour_slug
      JOIN xiangqi_broadcast_rounds rounds ON rounds.id = boards.round_id
      WHERE boards.result <> '*'
+       AND boards.ply_count > 0
        AND boards.id > $1
      ORDER BY boards.id ASC
      LIMIT $2`,

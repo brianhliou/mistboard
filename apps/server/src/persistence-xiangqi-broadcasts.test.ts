@@ -351,6 +351,127 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(rekeyLog?.payload.retiredBoardId, legacy.id);
   });
 
+  test('a dpxq tour poll files every paired table; a record extends its results-only board', async () => {
+    // The 2024 Asian individual championship, men (dpxq tour 9503): round
+    // pages for rounds 1 and 7, the game list's records for those rounds.
+    const dpxqFixture = (name: string) =>
+      readFileSync(fileURLToPath(new URL(`../fixtures/dpxq/${name}`, import.meta.url)), 'utf-8');
+    const slug = 'asian-2024-men';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=9503&tourSlug=${slug}`;
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2024年第20届亚洲象棋个人锦标赛 男子组',
+        sourceUrl,
+      },
+      rounds: [],
+      boards: [],
+    });
+    const pages: Record<string, string> = {
+      'http://www.dpxq.com/hldcg/round_9503.html': dpxqFixture(
+        'round_9503-asian-2024-men-r07.html',
+      ),
+      'http://www.dpxq.com/hldcg/round_9503_1.html': dpxqFixture(
+        'round_9503_1-asian-2024-men-r01.html',
+      ),
+      'http://www.dpxq.com/hldcg/movelist_9503.html': dpxqFixture(
+        'movelist_9503-asian-2024-men-r01-r07.html',
+      ),
+    };
+    for (const id of ['128342', '128343', '131470', '131471']) {
+      pages[`http://www.dpxq.com/hldcg/search/view_m_${id}.html`] = dpxqFixture(
+        `view_m_${id}-asian-2024.html`,
+      );
+    }
+    const fetched: string[] = [];
+    const pageFetch = multiSourceFetch(pages);
+    const poll = () =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: async (url, init) => {
+          fetched.push(url);
+          return await pageFetch(url, init);
+        },
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+
+    const first = await poll();
+    assert.equal(first.ok, true, first.ok ? '' : first.message);
+    const rounds = await listXiangqiBroadcastRounds(slug);
+    assert.deepEqual(
+      rounds.map((round) => round.id),
+      [`${slug}-r01`, `${slug}-r07`],
+    );
+    const r01 = await listXiangqiBroadcastBoards(`${slug}-r01`);
+    const r07 = await listXiangqiBroadcastBoards(`${slug}-r07`);
+    assert.equal(r01.length, 15, 'every table of round 1');
+    assert.equal(r07.length, 16, 'every table of round 7, the final as its two games');
+    const withMoves = [...r01, ...r07].filter((board) => board.moves.length > 0);
+    assert.deepEqual(withMoves.map((board) => board.sourceBoardId).sort(), [
+      'r01t13',
+      'r01t15',
+      'r07t01g1',
+      'r07t01g2',
+    ]);
+    const t02 = r07.find((board) => board.sourceBoardId === 'r07t02')!;
+    assert.equal(t02.status, 'complete');
+    assert.equal(t02.result, '1-0');
+    assert.equal(t02.red.name, '郑彦隆');
+    assert.equal(t02.red.federation, '中国香港');
+    assert.equal(t02.sourceUrl, 'http://www.dpxq.com/hldcg/round_9503_7.html');
+    // The records did not rename the tour after their event tag.
+    assert.equal(
+      (await getXiangqiBroadcastTour(slug))?.name,
+      '2024年第20届亚洲象棋个人锦标赛 男子组',
+    );
+
+    // Nothing changed: quiet. Round 1 is settled (every board finished) and
+    // is not fetched again; rounds 2-6 hold nothing yet and still are.
+    fetched.length = 0;
+    const second = await poll();
+    assert.equal(second.ok, false);
+    assert.equal(second.ok ? '' : second.message, 'every listed board is already imported');
+    const roundPages = fetched.filter((url) => url.includes('round_'));
+    assert.equal(roundPages[0], 'http://www.dpxq.com/hldcg/round_9503.html');
+    assert.equal(roundPages.includes('http://www.dpxq.com/hldcg/round_9503_1.html'), false);
+    assert.equal(roundPages.length, 6);
+    assert.equal(
+      fetched.some((url) => url.includes('view_m_')),
+      false,
+      'records are final',
+    );
+    assert.equal((await listXiangqiBroadcastBoards(`${slug}-r07`)).length, 16);
+
+    // The games database lists games, not results.
+    const listed = await queryCompletedXiangqiBroadcastBoards({ event: '亚洲' });
+    assert.equal(listed.total, 4);
+
+    // A record filed under the pairing's id extends the results-only board.
+    const moves = withMoves.find((board) => board.sourceBoardId === 'r01t13')!.moves;
+    const extended = await applyXiangqiBroadcastBoardUpdate({
+      ...t02,
+      moves: moves.slice(0, 6),
+      sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_1.html',
+    });
+    assert.equal(extended.ok ? extended.status : extended.kind, 'extended');
+
+    // A record that arrives under its own id retires the results-only twin.
+    const t03 = r07.find((board) => board.sourceBoardId === 'r07t03')!;
+    const twin = await applyXiangqiBroadcastBoardUpdate({
+      ...t03,
+      id: `${slug}-${slug}-r07-bunmatched`,
+      sourceBoardId: 'bunmatched',
+      moves: moves.slice(0, 4),
+      sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_2.html',
+    });
+    assert.equal(twin.ok ? twin.status : twin.kind, 'created');
+    const after = (await listXiangqiBroadcastBoards(`${slug}-r07`)).map((board) => board.id);
+    assert.equal(after.includes(t03.id), false, 'results-only twin retired');
+    assert.equal(after.length, 16);
+  });
+
   test('explicit correction can replace a non-prefix legal board update', async () => {
     const pack = await fixturePack();
     const fullBoard = (pack.boards as XiangqiBroadcastBoard[])[0]!;

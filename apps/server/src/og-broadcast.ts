@@ -53,12 +53,71 @@ export function broadcastOutcome(board: {
   result: string;
   moves: readonly unknown[];
 }): string {
+  // A result the source published without the game's moves.
+  if (board.moves.length === 0) {
+    if (board.result === '1-0')
+      return `${english(board.red)} beat ${english(board.black)} with Red`;
+    if (board.result === '0-1')
+      return `${english(board.black)} beat ${english(board.red)} with Black`;
+    if (board.result === '1/2-1/2') return 'Drawn';
+    return 'Not played yet';
+  }
   const moves = Math.max(1, Math.ceil(board.moves.length / 2));
   const count = `${moves} ${moves === 1 ? 'move' : 'moves'}`;
   if (board.result === '1-0') return `${english(board.red)} won with Red in ${count}`;
   if (board.result === '0-1') return `${english(board.black)} won with Black in ${count}`;
   if (board.result === '1/2-1/2') return `Drawn in ${count}`;
   return `In play, ${count} so far`;
+}
+
+/** "2-8 Oct 2026", "30 Sep - 2 Oct 2026", or one day; null without a start. */
+export function eventDateRange(startsAt?: string, endsAt?: string): string | null {
+  // The event's own calendar day: the stored instants carry its offset
+  // (2026-10-02T00:00:00+08:00), so the date is read off the string, not
+  // converted to the server's zone.
+  const day = (iso?: string) => {
+    const m = iso?.match(/^(\d{4})-(\d{2})-(\d{2})/);
+    return m ? { y: Number(m[1]), mo: Number(m[2]) - 1, d: Number(m[3]) } : null;
+  };
+  const start = day(startsAt);
+  if (!start) return null;
+  const end = day(endsAt) ?? start;
+  const month = (mo: number) =>
+    ['Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun', 'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'][mo]!;
+  if (start.y === end.y && start.mo === end.mo && start.d === end.d) {
+    return `${start.d} ${month(start.mo)} ${start.y}`;
+  }
+  if (start.y === end.y && start.mo === end.mo) {
+    return `${start.d}-${end.d} ${month(start.mo)} ${start.y}`;
+  }
+  if (start.y === end.y)
+    return `${start.d} ${month(start.mo)} - ${end.d} ${month(end.mo)} ${end.y}`;
+  return `${start.d} ${month(start.mo)} ${start.y} - ${end.d} ${month(end.mo)} ${end.y}`;
+}
+
+/** The site's own card, for an event with no game to show yet. */
+export const BROADCAST_FALLBACK_IMAGE_PATH = '/og-image.png?v=8';
+
+/** Meta for an event page before any of its games has moves: the event's
+ *  name, its dates and place, the site card. Without it a link shared before
+ *  round 1 previewed as the homepage. */
+export function broadcastEventFallbackMeta(
+  tour: Named & { location?: string; startsAt?: string; endsAt?: string },
+  pathname: string,
+  round?: Named | null,
+): TenantGamePageMeta {
+  const when = [eventDateRange(tour.startsAt, tour.endsAt), tour.location?.trim() || null]
+    .filter(Boolean)
+    .join(', ');
+  const title = round
+    ? `${english(round)} · ${english(tour)} | Mistboard`
+    : `${english(tour)} | Mistboard broadcast`;
+  return {
+    title,
+    description: `${english(tour)}${when ? `, ${when}` : ''}. Follow every round in English with results, standings and engine evals, on Mistboard.`,
+    urlPath: pathname,
+    imagePath: BROADCAST_FALLBACK_IMAGE_PATH,
+  };
 }
 
 const BOARD_ROUTE = /^\/broadcast\/xiangqi\/board\/([^/]+)$/;
@@ -95,7 +154,10 @@ export async function broadcastPageMeta(pathname: string): Promise<TenantGamePag
     const where = [round ? english(round) : null, tour ? english(tour) : null].filter(Boolean);
     return {
       title: `${english(board.red)} vs ${english(board.black)}${where.length > 0 ? ` · ${where.join(' · ')}` : ''} | Mistboard`,
-      description: `${broadcastOutcome(board)}. Replay it move by move with an engine eval, in English, on Mistboard.`,
+      description:
+        board.moves.length > 0
+          ? `${broadcastOutcome(board)}. Replay it move by move with an engine eval, in English, on Mistboard.`
+          : `${broadcastOutcome(board)}. The result is in; the moves are not published. Every round in English, on Mistboard.`,
       urlPath: pathname,
       imagePath: imagePath(board.id, board.moves.length),
     };
@@ -111,6 +173,7 @@ export async function broadcastPageMeta(pathname: string): Promise<TenantGamePag
   // A round link previews one of its games; an event link, a game from its
   // latest round that has one.
   const ordered = roundId ? rounds.filter((entry) => entry.id === roundId) : [...rounds].reverse();
+  if (roundId && ordered.length === 0) return null;
   for (const round of ordered) {
     const boards = await persistence.listXiangqiBroadcastBoards(round.id);
     const shown = boards.find((board) => board.moves.length > 0);
@@ -128,7 +191,7 @@ export async function broadcastPageMeta(pathname: string): Promise<TenantGamePag
       imagePath: imagePath(shown.id, shown.moves.length),
     };
   }
-  return null;
+  return broadcastEventFallbackMeta(tour, pathname, roundId ? (ordered[0] ?? null) : null);
 }
 
 /** /og/broadcast/board/:id.png: the game's final position, the two players

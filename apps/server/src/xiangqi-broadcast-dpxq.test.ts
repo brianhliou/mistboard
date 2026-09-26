@@ -119,6 +119,39 @@ test('a tiebreak with the same pairing and colours in one round is its own board
   assert.notEqual(convert(undefined).id, classical.id);
 });
 
+test('a record matched to its round-page pairing is filed under the pairing id', () => {
+  // Real record: 2024 Asian individual championship, men r07 table 1 game 2
+  // (the final's rapid playoff), view_m_128343.
+  const page = readFileSync(
+    fileURLToPath(new URL('../fixtures/dpxq/view_m_128343-asian-2024.html', import.meta.url)),
+    'utf-8',
+  );
+  const normalized = normalizeDpxqPageToFrameHtml(page);
+  assert.ok(normalized.ok);
+  const converted = convertWxfDhtmlXqPageToSnapshot(normalized.ok ? normalized.html : '', {
+    tourSlug: 'asian-2024-men',
+    roundId: 'asian-2024-men-r07',
+    sourceUrl: 'http://www.dpxq.com/hldcg/search/view_m_128343.html',
+    sourceBoardId: 'r07t01g2',
+    boardNumber: 1,
+  });
+  assert.ok(converted.ok);
+  if (!converted.ok) return;
+  const board = converted.snapshot.boards[0]!;
+  // The same id the results-only board from the round page carries, so the
+  // record extends it in place.
+  assert.equal(board.id, 'asian-2024-men-asian-2024-men-r07-r07t01g2');
+  assert.equal(board.sourceBoardId, 'r07t01g2');
+  assert.equal(board.boardNumber, 1);
+  assert.equal(board.red.name, '刘柏宏');
+  assert.equal(board.result, '1-0');
+  assert.equal(board.moves.length, 63);
+  assert.deepEqual(
+    { table: board.details?.table, game: board.details?.game, kind: board.details?.kind },
+    { table: 1, game: 2, kind: 'rapid' },
+  );
+});
+
 test('looksLikeDpxqPage flags raw dpxq pages, not framed WXF or JSON', () => {
   assert.equal(looksLikeDpxqPage(ARCHIVE_HTML), true);
   assert.equal(looksLikeDpxqPage(liveBoardPage({ red: 'A', black: 'B', plies: 4 })), true);

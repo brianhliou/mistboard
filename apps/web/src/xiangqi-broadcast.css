@@ -2880,3 +2880,53 @@ a.xqb-standings-name:focus-visible {
   color: var(--site-text);
   border-color: var(--site-border);
 }
+
+/* ── Results-only boards (2026-09-25) ────────────────────────────────────────
+   A pairing the source published with its result and no moves (dpxq round
+   pages): the start position faded under a label, the seats and scores as
+   on any card, and no hover, because there is nothing to open. */
+.xqb-board-card-no-moves {
+  cursor: default;
+}
+
+.xqb-board-card-no-moves .xqb-card-board {
+  position: relative;
+}
+
+.xqb-board-card-no-moves .xqb-card-board svg {
+  opacity: 0.35;
+}
+
+.xqb-card-no-moves {
+  position: absolute;
+  inset: 50% 8% auto;
+  transform: translateY(-50%);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--site-panel) 88%, transparent);
+  color: var(--site-muted);
+  font-size: 0.78rem;
+  font-weight: 600;
+  line-height: 1.2;
+  padding: 4px 6px;
+  text-align: center;
+}
+
+.xqb-board-card-no-moves:hover {
+  border-color: var(--site-border-soft);
+  background: var(--site-panel);
+}
+
+.xqb-event-content .xqb-board-card-no-moves:hover {
+  border-color: transparent;
+  background: transparent;
+}
+
+.xqb-rail-row-no-moves {
+  cursor: default;
+}
+
+.xqb-rail-row-no-moves:hover,
+.xqb-side-rail .xqb-rail-row-no-moves:hover {
+  border-color: var(--site-border-soft);
+  background: transparent;
+}

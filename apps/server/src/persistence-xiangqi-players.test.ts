@@ -202,6 +202,7 @@ describe('player pages, derived from the archive', () => {
 
   it('slugs from the romanised name and falls back to the source spelling', () => {
     expect(playerSlugBase('Lại Lý Huynh', '赖理兄')).toBe('lai-ly-huynh');
+    expect(playerSlugBase('Vũ Quốc Đạt', '武国达')).toBe('vu-quoc-dat');
     expect(playerSlugBase(null, '尹昇')).toBe('尹昇');
     expect(playerSlugBase('', '')).toBe('player');
   });

@@ -68,11 +68,15 @@ export type MatchSegment<B extends MatchBoard> = {
 export type MatchFormat = 'league' | 'womens-league' | 'championship';
 
 /** The rules a league event's named matches follow; a championship is told
- *  apart by its data (no match names), not by this. */
-export type LeagueRules = 'league' | 'womens-league';
+ *  apart by its data (no match names), not by this. 'individual' is an
+ *  individual championship (个人赛), whose games carry a section tag (男子组)
+ *  and federations but form no team matches. */
+export type LeagueRules = 'league' | 'womens-league' | 'individual';
 
-/** The women's league's rules for its own events, the men's otherwise. */
+/** Individual events by name, the women's league's rules for its own
+ *  events, the men's otherwise. */
 export function leagueRulesFor(tour: { name: string } | null | undefined): LeagueRules {
+  if (tour && /个人|個人/.test(tour.name)) return 'individual';
   return tour && /女子甲级联赛|女子甲級聯賽/.test(tour.name) ? 'womens-league' : 'league';
 }
 
@@ -122,6 +126,10 @@ export function groupRoundByMatch<B extends MatchBoard>(
   boards: readonly B[],
   rules: LeagueRules = 'league',
 ): RoundByMatch<B> | null {
+  // The 2024 Asian individual championship's records carry 男子组 and each
+  // player's federation, which read as a team championship's section and
+  // teams: every China-Vietnam game became a "match".
+  if (rules === 'individual') return null;
   if (!boards.some((board) => isMatchName(board.details?.match))) {
     return groupChampionshipRound(boards);
   }

@@ -856,9 +856,10 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
 
     expect(root.querySelector('.xqb-side-rail')).not.toBeNull();
     const rows = [...root.querySelectorAll('.xqb-rail-row')];
+    // Board 2 is paired and not started, with no moves: listed, not a link.
     expect(rows.map((row) => row.getAttribute('href'))).toEqual([
       '/broadcast/xiangqi/board/t-r-b1',
-      '/broadcast/xiangqi/board/t-r-b2',
+      null,
     ]);
 
     const current = root.querySelector('.xqb-rail-row-current');
@@ -1403,5 +1404,115 @@ describe('boards pager (lichess: pages, a page size that persists)', () => {
     // A new size starts again at the first page, and is kept for next time.
     expect([count(), cards()]).toEqual(['1-15 / 15', 15]);
     expect(stored.get('mistboard.broadcast.perPage')).toBe('24');
+  });
+});
+
+describe("results-only boards (a round page's pairing and result, no moves)", () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const RESULTS_ROUND = {
+    ...ROUND,
+    tour: {
+      schema: XIANGQI_BROADCAST_SCHEMA,
+      slug: 't',
+      name: '2024年第20届亚洲象棋个人锦标赛 男子组',
+      nameEn: '2024 20th Asian Xiangqi Individual Championship Men',
+    },
+    boards: [
+      {
+        ...fixtureBoard({
+          n: 1,
+          red: '刘柏宏',
+          redEn: 'Liu Bohong',
+          black: '黄学谦',
+          blackEn: 'Wong Hok Him',
+          moves: [{ from: 'b3', to: 'e3' }],
+          status: 'complete',
+          result: '1-0',
+        }),
+        red: { name: '刘柏宏', nameEn: 'Liu Bohong', federation: '中国' },
+        black: { name: '黄学谦', nameEn: 'Wong Hok Him', federation: '中国香港' },
+        details: { match: '男子组', table: 1 },
+      },
+      {
+        ...fixtureBoard({
+          n: 2,
+          red: '郑彦隆',
+          redEn: 'Zheng Yanlong',
+          black: '吴宗翰',
+          blackEn: 'Wu Zonghan',
+          moves: [],
+          status: 'complete',
+          result: '1-0',
+        }),
+        red: { name: '郑彦隆', nameEn: 'Zheng Yanlong', federation: '中国香港' },
+        black: { name: '吴宗翰', nameEn: 'Wu Zonghan', federation: '新加坡' },
+        details: { table: 2 },
+      },
+    ],
+  };
+
+  it('shows the players, the result and the start position, and opens nothing', async () => {
+    stubFetchJson(() => RESULTS_ROUND);
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+
+    const cards = [...root.querySelectorAll('.xqb-board-card')];
+    expect(cards).toHaveLength(2);
+    const [played, resultOnly] = cards;
+    expect(played?.tagName).toBe('A');
+    expect(resultOnly?.tagName).toBe('DIV');
+    expect(resultOnly?.classList.contains('xqb-board-card-no-moves')).toBe(true);
+    expect(resultOnly?.querySelector('.xqb-card-no-moves')?.textContent).toBe('Result only');
+    // The start position still draws, under the label.
+    expect(resultOnly?.querySelector('.xqb-card-board > svg.xq-live-svg')).not.toBeNull();
+    expect(
+      [...(resultOnly?.querySelectorAll('.xqb-score') ?? [])].map((node) => node.textContent),
+    ).toEqual(['0', '1']);
+    expect(resultOnly?.getAttribute('title')).toContain('without the game');
+
+    const rows = [...root.querySelectorAll('.xqb-rail-row')];
+    expect(rows.map((row) => row.tagName)).toEqual(['A', 'DIV']);
+    expect(rows[1]?.classList.contains('xqb-rail-row-no-moves')).toBe(true);
+  });
+
+  it('an individual championship is not read as team matches', async () => {
+    // Its records carry 男子组 and federations, the team championship's shape.
+    stubFetchJson(() => RESULTS_ROUND);
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    expect(root.querySelector('.xqb-team-filter')).toBeNull();
+    expect([...root.querySelectorAll('.xqb-tab')].map((tab) => tab.textContent)).not.toContain(
+      'Teams',
+    );
+  });
+});
+
+describe('event header before any round exists', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  it('gives the dates and says nothing about rounds', async () => {
+    stubFetchJson(() => ({
+      tour: {
+        schema: XIANGQI_BROADCAST_SCHEMA,
+        slug: 't',
+        name: 'Test Cup',
+        startsAt: '2026-10-02T00:00:00+08:00',
+        endsAt: '2026-10-08T23:59:59+08:00',
+      },
+      rounds: [],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    const header = root.querySelector('.xqb-event-header')?.textContent ?? '';
+    expect(header).toContain('Test Cup');
+    expect(header).not.toMatch(/0 rounds/);
   });
 });

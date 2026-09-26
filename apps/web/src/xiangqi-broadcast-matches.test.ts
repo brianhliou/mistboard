@@ -301,6 +301,25 @@ describe("the women's league", () => {
     expect(leagueRulesFor({ name: '2026年全国象棋女子甲级联赛' })).toBe('womens-league');
     expect(leagueRulesFor({ name: '2026年全国象棋男子甲级联赛' })).toBe('league');
     expect(leagueRulesFor(null)).toBe('league');
+    expect(leagueRulesFor({ name: '2026年第21届亚洲象棋个人锦标赛 男子组' })).toBe('individual');
+  });
+
+  it('an individual championship forms no matches, whatever its tags say', () => {
+    // Its records carry 男子组 and each player's federation, the shape a team
+    // championship's games have.
+    const boards = [
+      {
+        id: 'b1',
+        red: { name: '刘柏宏', federation: '中国' },
+        black: { name: '阮明日光', federation: '越南' },
+        result: '1-0' as XiangqiBroadcastResult,
+        status: 'complete' as const,
+        boardNumber: 1,
+        details: { match: '男子组', table: 1 } as XiangqiBroadcastGameDetails,
+      },
+    ];
+    expect(groupRoundByMatch(boards, 'league')?.matches.length).toBe(1);
+    expect(groupRoundByMatch(boards, 'individual')).toBeNull();
   });
 
   it('scores a drawn table as a draw and a slow-game win 3-0', () => {

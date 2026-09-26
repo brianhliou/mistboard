@@ -494,6 +494,9 @@ export const ZH_HANS_REVIEW = {
   'broadcast.formatWomensLeague':
     '赛制：双循环共18轮，每场三台，各下一局慢棋（基本用时40分钟，每步加20秒）。慢棋总分高者以3比0取胜；慢棋总分相同，由两队和棋台次的棋手加赛一局快棋（10分钟，每步加5秒），胜方得2分、负方得1分。',
   'broadcast.railNoGames': '暂无对局',
+  'broadcast.resultOnly': '仅有结果',
+  'broadcast.resultOnlyHint': '来源只公布了本局结果，没有公布棋谱。',
+  'broadcast.gameNotStarted': '未开始',
   'broadcast.calendarEarlier': '显示之前的月份',
   'broadcast.downloadPgn': '下载 PGN',
   'broadcast.copyEmbed': '复制嵌入代码',

@@ -139,6 +139,8 @@ export function playerSlugBase(nameEn: string | null, name: string): string {
     .normalize('NFKD')
     .replace(/[\u0300-\u036f]/g, '')
     .toLowerCase()
+    // Vietnamese đ has no decomposition, so NFKD leaves it (Đạt was "đat").
+    .replace(/đ/g, 'd')
     .replace(/[^\p{L}\p{N}]+/gu, '-')
     .replace(/^-+|-+$/g, '');
   return base || 'player';

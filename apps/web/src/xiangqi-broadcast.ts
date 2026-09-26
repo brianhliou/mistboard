@@ -1189,7 +1189,9 @@ function eventHeader(data: BroadcastRoundResponse): HTMLElement {
       secondaryName(data.tour),
       data.tour.location,
       formatEventDateRange(data.tour.startsAt, data.tour.endsAt),
-      countLabel(rounds.length, 'round', 'rounds'),
+      // Before the first round is paired the dates say it; "0 rounds" read as
+      // an event with nothing in it.
+      rounds.length > 0 ? countLabel(rounds.length, 'round', 'rounds') : null,
       liveCount > 0 ? `${liveCount} live` : null,
     ].filter(Boolean) as string[],
     switcher: data.round.id !== '' ? roundSwitcher(data.tour.slug, rounds, data.round.id) : null,
@@ -2681,10 +2683,27 @@ function tourCard(entry: BroadcastIndexEntry, opts: { featured?: boolean } = {})
 // Red below, as the board is drawn), each with their score, and nothing else.
 // A team game keeps one small label naming its table and game, which the
 // match header above it needs; a live game says so there too.
+/**
+ * A board with nothing to replay: a pairing the source listed with its result
+ * (or none yet) and no moves. Most games of an event arrive this way from
+ * dpxq's round pages. A live board with no moves yet is a game about to start
+ * and still opens.
+ */
+export function isResultsOnlyBoard(
+  board: Pick<BroadcastBoardSummary, 'status' | 'plyCount' | 'moves'>,
+): boolean {
+  return board.status !== 'live' && (board.plyCount ?? board.moves?.length ?? 0) === 0;
+}
+
 function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTMLElement {
-  const card = document.createElement('a');
+  const resultsOnly = isResultsOnlyBoard(board);
+  // Not a link: the board page would open an empty review. The result, the
+  // players and the start position say everything the source published.
+  const card = document.createElement(resultsOnly ? 'div' : 'a');
   card.className = `xqb-board-card xqb-board-card-${board.status}`;
-  card.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
+  if (card instanceof HTMLAnchorElement) {
+    card.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
+  }
 
   const table = board.details?.table;
   const label = table
@@ -2695,6 +2714,12 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   // The table rides in the tooltip: lichess's cards are the two players and
   // the board, and the game list and the open board both carry the table.
   if (label) card.title = label;
+  if (resultsOnly) {
+    card.classList.add('xqb-board-card-no-moves');
+    card.title = [label, board.status === 'complete' ? t('broadcast.resultOnlyHint') : null]
+      .filter(Boolean)
+      .join(' · ');
+  }
 
   const boardEl = document.createElement('div');
   boardEl.className = 'xqb-card-board xiangqi-live-board';
@@ -2723,6 +2748,14 @@ function boardCard(board: BroadcastBoardSummary, _playedOn?: string | null): HTM
   boardSlot.className = 'xqb-card-board-row';
   // Right of the board, where lichess puts it.
   boardSlot.append(boardEl, gauge);
+  if (resultsOnly) {
+    // Over the start position, so it does not read as a game still to begin.
+    const stamp = document.createElement('span');
+    stamp.className = 'xqb-card-no-moves';
+    stamp.textContent =
+      board.status === 'complete' ? t('broadcast.resultOnly') : t('broadcast.gameNotStarted');
+    boardEl.append(stamp);
+  }
   // A live game shows who is to move where a finished one shows its score:
   // lichess runs that side's clock there in orange. The source has no clocks,
   // so the mark is the turn alone.
@@ -2901,9 +2934,14 @@ function sideRail(
   let currentRow: HTMLElement | null = null;
   for (const [index, board] of boards.entries()) {
     const current = board.id === currentBoardId;
-    const row = document.createElement('a');
+    const resultsOnly = isResultsOnlyBoard(board);
+    // A results-only row names the pairing and the result and opens nothing.
+    const row = document.createElement(resultsOnly && !current ? 'div' : 'a');
     row.className = current ? 'xqb-rail-row xqb-rail-row-current' : 'xqb-rail-row';
-    row.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
+    if (row instanceof HTMLAnchorElement) {
+      row.href = `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`;
+    }
+    if (resultsOnly) row.classList.add('xqb-rail-row-no-moves');
     if (current) row.setAttribute('aria-current', 'page');
 
     // lichess's game list: the row's place in the list, then both players
@@ -2919,6 +2957,9 @@ function sideRail(
         ? t('broadcast.tableGame', { n: table, g: board.details.game })
         : t('broadcast.table', { n: table });
       row.title = board.details?.kind === 'blitz' ? `${where} · ${t('broadcast.blitz')}` : where;
+    }
+    if (resultsOnly && board.status === 'complete') {
+      row.title = [row.title, t('broadcast.resultOnlyHint')].filter(Boolean).join(' · ');
     }
     const rowMover = board.status === 'live' ? sideToMove(board) : null;
     const players = document.createElement('span');

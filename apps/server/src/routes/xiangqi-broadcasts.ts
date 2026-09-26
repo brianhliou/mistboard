@@ -251,7 +251,11 @@ function indexPlayers(boards: readonly persistence.StoredXiangqiBroadcastBoard[]
 // the board's whole move list.
 function featuredXiangqiBroadcastBoard(boards: persistence.StoredXiangqiBroadcastBoard[]) {
   const live = boards.filter((board) => board.status === 'live');
-  const pool = live.length > 0 ? live : boards.filter((board) => board.status === 'complete');
+  const complete = boards.filter((board) => board.status === 'complete');
+  // A game with moves over a results-only board, whose thumbnail would be
+  // the opening position.
+  const played = complete.filter((board) => board.plyCount > 0);
+  const pool = live.length > 0 ? live : played.length > 0 ? played : complete;
   if (pool.length === 0) return null;
   const pick = pool.reduce((best, board) =>
     board.updatedAt.getTime() > best.updatedAt.getTime() ? board : best,

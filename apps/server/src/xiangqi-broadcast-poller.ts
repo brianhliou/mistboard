@@ -1,4 +1,9 @@
-import type { XiangqiBroadcastBoard } from '@mistboard/game';
+import {
+  XIANGQI_BROADCAST_SCHEMA,
+  type XiangqiBroadcastBoard,
+  type XiangqiBroadcastRound,
+  type XiangqiBroadcastTour,
+} from '@mistboard/game';
 import type pg from 'pg';
 import * as persistence from './persistence.js';
 import { withRollbackTransaction } from './persistence-db.js';
@@ -9,6 +14,7 @@ import { defaultXiangqiBroadcastFetch } from './xiangqi-broadcast-fetch.js';
 export type { XiangqiBroadcastSourceFetch } from './xiangqi-broadcast-fetch.js';
 
 import {
+  getXiangqiBroadcastTour,
   listXiangqiBroadcastBoards,
   listXiangqiBroadcastRounds,
 } from './persistence-xiangqi-broadcasts.js';
@@ -20,6 +26,8 @@ import {
   NO_ACTIVE_ROUND_MESSAGE,
   parseXiangqiBroadcastDiscoverySource,
   resolveScheduledRound,
+  roundNumberFromRoundId,
+  type StoredBoardRef,
 } from './xiangqi-broadcast-discovery.js';
 import { registerDefaultXiangqiBroadcastDiscoveryProviders } from './xiangqi-broadcast-discovery-dpxq.js';
 
@@ -50,6 +58,12 @@ export type XiangqiBroadcastManifestSource = {
   roundName?: string;
   /** Board number to assign, for sources that serve one game per page. */
   boardNumber?: number;
+  /** Board id to file a single-game page under (discovery only; see
+   *  DiscoveryManifestSource.sourceBoardId). */
+  sourceBoardId?: string;
+  /** A board to apply as it is, with nothing to fetch (discovery only: a
+   *  round page's pairing and result). Never read from a fetched manifest. */
+  resultsOnly?: XiangqiBroadcastBoard;
 };
 
 export type XiangqiBroadcastSourceManifest = {
@@ -491,6 +505,29 @@ async function convertWxfSourceUnit(
   };
 }
 
+// A results-only board carries its tour and round in the manifest entry, the
+// same pins a fetched page gets; the tour name is the stored one, so applying
+// it renames nothing.
+function resultsOnlyUnit(
+  sourceUrl: string,
+  entry: XiangqiBroadcastManifestSource,
+  board: XiangqiBroadcastBoard,
+): SourceUnit {
+  const tour: XiangqiBroadcastTour = {
+    schema: XIANGQI_BROADCAST_SCHEMA,
+    slug: board.tourSlug,
+    name: entry.tourName ?? board.tourSlug,
+  };
+  const round: XiangqiBroadcastRound = {
+    schema: XIANGQI_BROADCAST_SCHEMA,
+    id: board.roundId,
+    tourSlug: board.tourSlug,
+    name: entry.roundName ?? board.roundId,
+    sourceUrl,
+  };
+  return { sourceUrl, snapshot: { tour, rounds: [round], boards: [board] } };
+}
+
 async function applySourceUnit(
   context: PollContext,
   unit: SourceUnit,
@@ -630,31 +667,72 @@ async function discoverStatedRounds(
   | { ok: true; manifest: XiangqiBroadcastSourceManifest }
   | { ok: false; kind: XiangqiBroadcastPollErrorKind; message: string; quiet?: true }
 > {
+  const completeUrls = new Set<string>();
+  const stored: StoredBoardRef[] = [];
+  // Rounds whose every stored board is finished: a provider that reads a
+  // page per round skips them, so a finished event costs one page a poll.
+  const settledRounds = new Set<number>();
+  for (const round of rounds) {
+    const roundNumber = roundNumberFromRoundId(round.id);
+    const boards = await listXiangqiBroadcastBoards(round.id);
+    if (
+      roundNumber !== undefined &&
+      boards.length > 0 &&
+      boards.every((board) => board.status === 'complete')
+    ) {
+      settledRounds.add(roundNumber);
+    }
+    for (const board of boards) {
+      // A complete board stored before game details existed is read once more
+      // so its match, table and date arrive; after that it is final. A
+      // results-only board has no moves to read, so its source never counts.
+      if (
+        board.status === 'complete' &&
+        board.sourceUrl &&
+        board.details &&
+        board.moves.length > 0
+      ) {
+        completeUrls.add(board.sourceUrl);
+      }
+      stored.push({
+        id: board.id,
+        ...(roundNumber !== undefined ? { roundNumber } : {}),
+        ...(board.sourceUrl ? { sourceUrl: board.sourceUrl } : {}),
+        red: board.red,
+        black: board.black,
+        status: board.status,
+        result: board.result,
+        plies: board.moves.length,
+        ...(board.details ? { details: board.details } : {}),
+      });
+    }
+  }
+
   const discovered = await source.provider.discover({
     config: source.config,
     fetchImpl: context.fetchImpl,
     timeoutMs: context.timeoutMs,
+    settledRounds,
+    spacingMs: context.leafSpacingMs,
   });
   if (!discovered.ok) {
     return { ok: false, kind: 'source_fetch_error', message: discovered.message };
   }
 
-  const completeUrls = new Set<string>();
-  for (const round of rounds) {
-    for (const board of await listXiangqiBroadcastBoards(round.id)) {
-      // A complete board stored before game details existed is read once more
-      // so its match, table and date arrive; after that it is final.
-      if (board.status === 'complete' && board.sourceUrl && board.details) {
-        completeUrls.add(board.sourceUrl);
-      }
-    }
-  }
+  // The tour's own name, unless the source URL pins one: a converted record
+  // names its tour after the event tag (2026年第21届亚洲象棋个人锦标赛), which
+  // drops the section a curated name carries (男子组) and would merge the men's
+  // and women's pages into one name on the first import.
+  const storedTour = source.tourName ? null : await getXiangqiBroadcastTour(source.tourSlug);
+  const named: DiscoverySource = storedTour ? { ...source, tourName: storedTour.name } : source;
 
   const built = buildStatedRoundManifestSources({
-    source,
+    source: named,
     boards: discovered.boards,
     rounds: rounds.map((row) => ({ id: row.id, ...(row.name ? { name: row.name } : {}) })),
     completeUrls,
+    ...(discovered.pairings ? { pairings: discovered.pairings } : {}),
+    stored,
   });
   if (!built.ok) {
     return {
@@ -764,11 +842,21 @@ async function pollSourceOutcomes(
     )
   > = [];
   if (body.kind === 'manifest') {
-    for (const [index, entry] of body.manifest.sources.entries()) {
-      const { url, ...entryOptions } = entry;
-      if (index > 0 && context.leafSpacingMs > 0) {
+    let fetchedLeaves = 0;
+    for (const entry of body.manifest.sources) {
+      const { url, resultsOnly, ...entryOptions } = entry;
+      if (resultsOnly) {
+        resolutions.push({
+          sourceUrl: url,
+          ok: true,
+          unit: resultsOnlyUnit(url, entry, resultsOnly),
+        });
+        continue;
+      }
+      if (fetchedLeaves > 0 && context.leafSpacingMs > 0) {
         await new Promise((resolve) => setTimeout(resolve, context.leafSpacingMs));
       }
+      fetchedLeaves += 1;
       resolutions.push({
         sourceUrl: url,
         ...(await resolveLeafSource(context, url, entryOptions, { manifestUrl: sourceUrl })),

@@ -46,6 +46,12 @@ export type WxfDhtmlXqConversionOptions = {
    * sees index 0; the caller knows the ordering and passes it here.
    */
   boardNumber?: number;
+  /**
+   * The board id for a single-game page, when the caller already knows which
+   * board the game is (a dpxq record matched to its round page's pairing).
+   * Ignored on a page with more than one game.
+   */
+  sourceBoardId?: string;
 };
 
 export const STANDARD_DHTMLXQ_BINIT =
@@ -352,7 +358,8 @@ export function convertWxfDhtmlXqPageToSnapshot(
   frames.forEach((frame, index) => {
     const tags = parseFrameTags(frame);
     const title = cleanTagValue(tags.get('title'));
-    let sourceBoardId = sourceBoardIdFromTitle(title, index);
+    const pinned = frames.length === 1 ? options.sourceBoardId : undefined;
+    let sourceBoardId = pinned ?? sourceBoardIdFromTitle(title, index);
     const binit = requireTag(tags, 'binit', sourceBoardId);
     if (!binit.ok) {
       issues.push(binit.issue);
@@ -389,7 +396,7 @@ export function convertWxfDhtmlXqPageToSnapshot(
     // other six as incompatible updates (#416). When the page URL names the
     // game (dpxq's view_m_<id>.html is one record), that id is the identity and
     // goes into the hash; a page that names no game keeps the pairing key.
-    if (/^board-\d+$/.test(sourceBoardId)) {
+    if (!pinned && /^board-\d+$/.test(sourceBoardId)) {
       const gameId = sourceGameId(options.sourceUrl);
       sourceBoardId = `b${hashToken(
         `${red.value}|${black.value}|${pageRoundTag ?? ''}${gameId ? `|${gameId}` : ''}`,
