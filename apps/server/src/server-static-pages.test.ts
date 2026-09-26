@@ -1180,3 +1180,66 @@ test('a route body is served inside the app root', async () => {
   assert.match(response.body, /<div id="app"><main><h1>和电脑下象棋<\/h1><\/main><\/div>/);
   assert.match(response.body, /<title>象棋人机对战 · 八个等级与皮卡鱼 \| Mistboard<\/title>/);
 });
+
+// A player page (#458) carries its own title, a canonical link, its card and a
+// crawler body; a slug the archive does not know keeps the generic meta and is
+// kept out of the index.
+test('a player page gets its meta, canonical link and body; an unknown one is noindex', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  const served = await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/players/meng-fanrui',
+    publicHost: 'https://mistboard.com',
+    playerPage: async (pathname) =>
+      pathname === '/players/meng-fanrui'
+        ? {
+            meta: {
+              title: 'Meng Fanrui (孟繁睿) · Xiangqi player · Mistboard',
+              description: 'Xiangqi grandmaster for Zhejiang.',
+              urlPath: '/players/meng-fanrui',
+              imagePath: '/og/player/meng-fanrui.png?v=1&k=abc',
+            },
+            body: '<main><h1>Meng Fanrui</h1></main>',
+          }
+        : null,
+  });
+  assert.equal(served, true);
+  assert.match(
+    response.body,
+    /<title>Meng Fanrui \(孟繁睿\) · Xiangqi player · Mistboard<\/title>/,
+  );
+  assert.match(
+    response.body,
+    /<link rel="canonical" href="https:\/\/mistboard\.com\/players\/meng-fanrui">/,
+  );
+  assert.match(
+    response.body,
+    /property="og:image" content="https:\/\/mistboard\.com\/og\/player\/meng-fanrui\.png\?v=1&amp;k=abc"/,
+  );
+  assert.match(response.body, /<div id="app"><main><h1>Meng Fanrui<\/h1><\/main><\/div>/);
+  assert.doesNotMatch(response.body, /noindex/);
+
+  const unknown = captureResponse();
+  await serveSpaShellWithRoutePreloads({
+    response: unknown,
+    staticDir,
+    pathname: '/players/nobody',
+    publicHost: 'https://mistboard.com',
+    playerPage: async () => ({ noindex: true }),
+  });
+  assert.match(unknown.body, /<meta name="robots" content="noindex, follow">/);
+  assert.match(unknown.body, /<title>Mistboard<\/title>/);
+  assert.doesNotMatch(unknown.body, /rel="canonical"/);
+});
+
+test('the sitemap index lists the players and broadcasts sections', () => {
+  const index = captureResponse();
+  serveSitemapIndex({ response: index, publicHost: 'https://mistboard.test' });
+  assert.ok(index.body.includes('https://mistboard.test/sitemap-players.xml'));
+  assert.ok(index.body.includes('https://mistboard.test/sitemap-broadcasts.xml'));
+  assert.equal(sitemapSectionFromPath('/sitemap-players.xml'), 'players');
+  assert.equal(sitemapSectionFromPath('/sitemap-broadcasts.xml'), 'broadcasts');
+});

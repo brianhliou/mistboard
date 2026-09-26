@@ -162,6 +162,36 @@ const PLACE_GLOSSARY: Array<[string, string]> = [
   ['台湾', 'Taiwan'],
   ['香港', 'Hong Kong'],
   ['澳门', 'Macau'],
+  // Federations at the Asian and world events, which the romaniser otherwise
+  // spells out in pinyin (越南 came out as "Yuenan").
+  ['中华台北', 'Chinese Taipei'],
+  ['台北', 'Taipei'],
+  ['越南', 'Vietnam'],
+  ['新加坡', 'Singapore'],
+  ['马来西亚', 'Malaysia'],
+  ['菲律宾', 'Philippines'],
+  ['泰国', 'Thailand'],
+  ['印度尼西亚', 'Indonesia'],
+  ['印尼', 'Indonesia'],
+  ['文莱', 'Brunei'],
+  ['缅甸', 'Myanmar'],
+  ['柬埔寨', 'Cambodia'],
+  ['日本', 'Japan'],
+  ['韩国', 'South Korea'],
+  ['蒙古', 'Mongolia'],
+  ['澳大利亚', 'Australia'],
+  ['新西兰', 'New Zealand'],
+  ['加拿大', 'Canada'],
+  ['美国', 'United States'],
+  ['英国', 'United Kingdom'],
+  ['法国', 'France'],
+  ['德国', 'Germany'],
+  ['意大利', 'Italy'],
+  ['荷兰', 'Netherlands'],
+  ['芬兰', 'Finland'],
+  ['瑞典', 'Sweden'],
+  ['俄罗斯', 'Russia'],
+  ['大学', 'University'],
   ['济南', 'Jinan'],
   ['杭州', 'Hangzhou'],
   ['深圳', 'Shenzhen'],
@@ -522,7 +552,11 @@ export function translateXiangqiEventName(zh: string): string | undefined {
 }
 
 export function translateXiangqiRoundLabel(zh: string): string | undefined {
-  return translateGlossaryText(zh, ROUND_GLOSSARY_SORTED, ROUND_UNITS);
+  // A stage heads what follows it: 第2阶段第09轮 -> "Stage 2, Round 9".
+  return translateGlossaryText(zh, ROUND_GLOSSARY_SORTED, ROUND_UNITS)?.replace(
+    /\b(Stage \d+) (?=\S)/g,
+    '$1, ',
+  );
 }
 
 export function translateXiangqiTeamName(zh: string): string | undefined {

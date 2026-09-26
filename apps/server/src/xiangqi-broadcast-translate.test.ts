@@ -130,6 +130,14 @@ test('translateXiangqiRoundLabel maps stage labels and combinations', () => {
   assert.equal(translateXiangqiRoundLabel('半决赛第2局'), 'Semifinal Game 2');
 });
 
+test('translateXiangqiRoundLabel maps a staged round, dropping leading zeros', () => {
+  // 2026 Chunqiu Dayie Cup (春秋大业杯) labels its rounds by stage.
+  assert.equal(translateXiangqiRoundLabel('第2阶段第09轮'), 'Stage 2, Round 9');
+  assert.equal(translateXiangqiRoundLabel('第1阶段第1轮'), 'Stage 1, Round 1');
+  assert.equal(translateXiangqiRoundLabel('第二阶段第十轮'), 'Stage 2, Round 10');
+  assert.equal(translateXiangqiRoundLabel('第2阶段'), 'Stage 2');
+});
+
 test('translateXiangqiRoundLabel returns undefined for ASCII input', () => {
   assert.equal(translateXiangqiRoundLabel('Round 1'), undefined);
   assert.equal(translateXiangqiRoundLabel('WXF Round'), undefined);
@@ -276,4 +284,12 @@ test('translateXiangqiTeamName glosses the national team championship sports bod
     ['北京棋院（北京市棋牌运动管理中心）', 'Beijing Chess Academy (Beijing Board Games Centre)'],
   ];
   for (const [zh, en] of cases) assert.equal(translateXiangqiTeamName(zh), en, zh);
+});
+
+test('federations at the Asian and world events read as countries, not pinyin', () => {
+  assert.equal(translateXiangqiTeamName('越南'), 'Vietnam');
+  assert.equal(translateXiangqiTeamName('台北'), 'Taipei');
+  assert.equal(translateXiangqiTeamName('中华台北'), 'Chinese Taipei');
+  assert.equal(translateXiangqiTeamName('马来西亚'), 'Malaysia');
+  assert.equal(translateXiangqiTeamName('武汉大学棋类协会'), 'Wuhan University Chess Association');
 });

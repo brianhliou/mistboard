@@ -1,8 +1,13 @@
 import { describe, expect, it } from 'vitest';
 import {
+  currentSeason,
   displayName,
+  indexFilterFromSearch,
+  indexSearchFromFilter,
   latestPoints,
+  matchesFilter,
   matchesQuery,
+  playerGroup,
   playerTitle,
   recordText,
   scorePercent,
@@ -93,6 +98,13 @@ describe('player pages', () => {
     expect(sortPlayers(players, 'points')[0]?.name).toBe('孟繁睿');
     expect(sortPlayers(players, 'points')[1]?.name).toBe('孟辰');
     expect(sortPlayers(players, 'points').at(-1)?.name).toBe('无名');
+    // The women's list is its own ranking: its leader (2775) sorts after the
+    // men's list, not between two men with fewer points.
+    const mixed = [
+      player({ name: '李沁', nameEn: 'Li Qin', games: 0 }),
+      player({ name: '曹岩磊', nameEn: 'Cao Yanlei', games: 30 }),
+    ];
+    expect(sortPlayers(mixed, 'points').map((p) => p.name)).toEqual(['曹岩磊', '李沁']);
     expect(sortPlayers(players, 'rating')[0]?.name).toBe('王天一');
   });
 
@@ -127,5 +139,70 @@ describe('player pages', () => {
       'shanghai-team',
       '某队',
     ]);
+  });
+
+  it('reads the CXA points under the CXA spelling of a name', () => {
+    // The points list prints 粱妍婷; the archive prints 梁妍婷.
+    expect(latestPoints('梁妍婷')).toEqual({ points: 1198, rank: 7 });
+  });
+
+  it('files a player as men or women from the list, else from the events', () => {
+    const event = (tourSlug: string, tourName: string) => ({ tourSlug, tourName });
+    expect(playerGroup({ name: '孟繁睿', events: [] })).toBe('men');
+    expect(
+      playerGroup({
+        name: '某人',
+        events: [event('2026-womens-xiangqi-team-championship', '2026年全国象棋女子团体赛')],
+      }),
+    ).toBe('women');
+    expect(
+      playerGroup({ name: '某人', events: [event('2026-xiangqi-league', '全国象棋男子甲级联赛')] }),
+    ).toBe('men');
+    expect(playerGroup({ name: '某人', events: [event('2026-shanghai-cup', '上海杯')] })).toBe(
+      null,
+    );
+  });
+
+  it('filters the index by title, list, team and season, and keeps it in the URL', () => {
+    const meng = {
+      ...player({ name: '孟繁睿', nameEn: 'Meng Fanrui', games: 4 }),
+      federation: '河北队',
+      federationEn: 'Hebei Team',
+      lastPlayedOn: '2026-09-18',
+    };
+    const listed = {
+      ...player({ name: '王天一', nameEn: 'Wang Tianyi', games: 0 }),
+      cxaOnly: true,
+    };
+    expect(currentSeason([meng, listed])).toBe('2026');
+    expect(matchesFilter(listed, { title: 'GM' })).toBe(true);
+    expect(matchesFilter(meng, { title: 'GM' })).toBe(false);
+    expect(matchesFilter(meng, { title: 'none', group: 'men', team: 'hebei-team' })).toBe(true);
+    expect(matchesFilter(meng, { group: 'women' })).toBe(false);
+    expect(matchesFilter(meng, { season: '2026' })).toBe(true);
+    expect(matchesFilter(listed, { season: '2026' })).toBe(false);
+    const search = indexSearchFromFilter({
+      title: 'NM',
+      group: 'women',
+      team: 'hebei-team',
+      season: '2026',
+    });
+    expect(search).toBe('?title=NM&list=women&team=hebei-team&active=2026');
+    expect(indexFilterFromSearch(search)).toEqual({
+      title: 'NM',
+      group: 'women',
+      team: 'hebei-team',
+      season: '2026',
+    });
+    expect(indexFilterFromSearch('?title=IM&list=other&active=soon')).toEqual({});
+  });
+
+  it('sorts a player with no games below every scored player', () => {
+    const listed = {
+      ...player({ name: '王天一', nameEn: 'Wang Tianyi', games: 0 }),
+      cxaOnly: true,
+    };
+    const loser = player({ name: '乙', nameEn: 'Yi', games: 2 });
+    expect(sortPlayers([listed, loser], 'score').map((p) => p.name)).toEqual(['乙', '王天一']);
   });
 });

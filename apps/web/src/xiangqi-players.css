@@ -586,3 +586,522 @@ a.xqp-team:hover {
 .xqp-fact-link {
   color: inherit;
 }
+
+/* ---- filters (index and games list) ------------------------------------ */
+
+.xqp-filters {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 16px;
+  padding: 0 40px 18px;
+  font-size: 13px;
+}
+
+.xqp-games-filters {
+  padding: 0 0 10px;
+}
+
+.xqp-filter {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  color: var(--site-muted);
+  min-width: 0;
+}
+
+.xqp-filter-select {
+  min-height: 32px;
+  max-width: 240px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius-sm);
+  background: var(--site-bg-soft);
+  color: var(--site-text);
+  padding: 4px 8px;
+  font: inherit;
+}
+
+.xqp-filter-select:focus-visible,
+.xqp-segment:focus-visible,
+.xqp-filter-clear:focus-visible,
+.xqp-more:focus-visible {
+  outline: 2px solid var(--site-accent);
+  outline-offset: 1px;
+}
+
+.xqp-filter-check {
+  cursor: pointer;
+  color: var(--site-text);
+}
+
+.xqp-filter-check input {
+  accent-color: var(--site-accent);
+  margin: 0;
+}
+
+.xqp-filter-count {
+  margin-left: auto;
+  color: var(--site-muted);
+  font-variant-numeric: tabular-nums;
+}
+
+.xqp-segmented {
+  display: inline-flex;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 999px;
+  overflow: hidden;
+}
+
+.xqp-segment,
+.xqp-filter-clear,
+.xqp-more {
+  appearance: none;
+  border: 0;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  cursor: pointer;
+}
+
+.xqp-segment {
+  padding: 5px 14px;
+}
+
+.xqp-segment + .xqp-segment {
+  border-left: 1px solid var(--site-border-soft);
+}
+
+.xqp-segment:hover {
+  color: var(--site-text);
+}
+
+.xqp-segment-on {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong);
+  font-weight: 700;
+}
+
+.xqp-filter-clear,
+.xqp-more {
+  padding: 4px 2px;
+  color: var(--site-link, var(--site-accent-strong));
+  text-decoration: underline;
+}
+
+.xqp-games-summary {
+  margin: 0 0 10px;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqp-section-note {
+  margin: -4px 0 12px;
+  color: var(--site-muted);
+  font-size: 13px;
+}
+
+/* ---- no games yet (a CXA-listed player the archive has not seen) ------- */
+
+.xqp-no-games {
+  padding: 18px 20px;
+  border: 1px dashed var(--site-border);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  color: var(--site-muted);
+  font-size: 14px;
+  line-height: 1.5;
+}
+
+.xqp-no-games p {
+  margin: 0;
+  max-width: 60ch;
+}
+
+.xqp-no-games .xqp-no-games-title {
+  margin-bottom: 4px;
+  color: var(--site-heading);
+  font-weight: 700;
+}
+
+/* ---- record by colour --------------------------------------------------- */
+
+.xqp-stats-wrap {
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  overflow-x: auto;
+}
+
+.xqp-stats {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 14px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqp-stats th,
+.xqp-stats td {
+  padding: 9px 14px;
+  text-align: right;
+  white-space: nowrap;
+}
+
+.xqp-stats thead th {
+  color: var(--site-muted);
+  font-size: 12px;
+  font-weight: 500;
+  background: var(--site-panel-soft);
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.xqp-stats tbody th {
+  text-align: left;
+  font-weight: 600;
+}
+
+.xqp-stats-row {
+  cursor: pointer;
+}
+
+.xqp-stats-row + .xqp-stats-row {
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.xqp-stats-row:hover {
+  background: color-mix(in srgb, var(--site-accent) 8%, var(--site-panel));
+}
+
+.xqp-stats-link {
+  color: var(--site-heading);
+  text-decoration: none;
+}
+
+.xqp-stats-link:hover {
+  text-decoration: underline;
+}
+
+.xqp-stats td.xqp-stats-bar {
+  width: 40%;
+  min-width: 90px;
+}
+
+/* A seat disc before a colour's label, in the family's inks. */
+.xqp-colour-dot-red::before,
+.xqp-colour-dot-black::before {
+  content: "";
+  display: inline-block;
+  width: 0.7em;
+  height: 0.7em;
+  margin-right: 0.45em;
+  border-radius: 50%;
+  vertical-align: 0.02em;
+}
+
+.xqp-colour-dot-red::before {
+  background: var(--ink-red, #c0563f);
+}
+
+.xqp-colour-dot-black::before {
+  background: var(--ink-black, #34302e);
+  /* Black on the dark panel needs an edge to be there at all. */
+  box-shadow: 0 0 0 1px var(--site-border);
+}
+
+.xqp-result-bar {
+  display: flex;
+  height: 8px;
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--site-bg-soft);
+}
+
+.xqp-result-win {
+  background: #1a7f64;
+}
+
+.xqp-result-draw {
+  background: color-mix(in srgb, var(--site-muted) 55%, var(--site-panel));
+}
+
+.xqp-result-loss {
+  background: #b3261e;
+}
+
+/* ---- head to head ------------------------------------------------------- */
+
+.xqp-h2h {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 24px;
+  margin-top: 12px;
+  font-size: 14px;
+}
+
+.xqp-h2h-result {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: baseline;
+  gap: 4px 16px;
+}
+
+.xqp-h2h-line {
+  margin: 0;
+  display: inline-flex;
+  align-items: baseline;
+  gap: 10px;
+  color: var(--site-heading);
+  font-weight: 600;
+}
+
+.xqp-h2h-score {
+  font-size: 20px;
+  font-weight: 800;
+  font-variant-numeric: tabular-nums;
+}
+
+a.xqp-h2h-name {
+  color: inherit;
+}
+
+.xqp-h2h-games {
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+/* ---- openings by colour ------------------------------------------------- */
+
+.xqp-openings {
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  gap: 12px;
+}
+
+.xqp-openings-col {
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+  min-width: 0;
+}
+
+.xqp-openings-head {
+  margin: 0 0 2px;
+  color: var(--site-heading);
+  font-size: 14px;
+  font-weight: 700;
+}
+
+.xqp-opening-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+}
+
+.xqp-opening-link {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 4px 10px;
+  align-items: baseline;
+  padding: 8px 12px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+  color: var(--site-text);
+  text-decoration: none;
+  font-size: 14px;
+}
+
+.xqp-opening-link:hover {
+  border-color: var(--site-accent);
+}
+
+.xqp-opening-name {
+  min-width: 0;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.xqp-opening-code {
+  color: var(--site-accent-strong);
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqp-opening-numbers {
+  color: var(--site-muted);
+  font-size: 13px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqp-opening-link .xqp-result-bar {
+  grid-column: 1 / -1;
+  height: 5px;
+}
+
+.xqp-more {
+  align-self: flex-start;
+  font-size: 13px;
+}
+
+/* ---- rating history chart ------------------------------------------------ */
+
+.xqp-chart {
+  margin: 0;
+  padding: 12px 14px 10px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: var(--site-radius);
+  background: var(--site-panel);
+}
+
+.xqp-chart-legend {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px 20px;
+  font-size: 13px;
+  color: var(--site-text);
+}
+
+.xqp-chart-key::before {
+  content: "";
+  display: inline-block;
+  width: 14px;
+  height: 3px;
+  margin-right: 6px;
+  vertical-align: 0.25em;
+  border-radius: 2px;
+}
+
+.xqp-chart-key-rating::before {
+  background: var(--site-accent-strong);
+}
+
+.xqp-chart-key-points::before {
+  background: var(--site-heading);
+}
+
+.xqp-chart-frame {
+  width: 100%;
+  margin-top: 6px;
+}
+
+.xqp-chart-svg {
+  display: block;
+  max-width: 100%;
+}
+
+.xqp-chart-grid line {
+  stroke: var(--site-border-soft);
+  stroke-width: 1;
+}
+
+.xqp-chart-grid text,
+.xqp-chart-axis text,
+.xqp-chart-note {
+  fill: var(--site-muted);
+  font-size: 11px;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqp-chart-axis line {
+  stroke: var(--site-border);
+  stroke-width: 1;
+}
+
+.xqp-chart-break {
+  stroke: var(--site-border);
+  stroke-width: 1;
+  stroke-dasharray: 3 4;
+}
+
+.xqp-chart-area-rating {
+  fill: color-mix(in srgb, var(--site-accent) 14%, transparent);
+}
+
+.xqp-chart-line {
+  fill: none;
+  stroke-width: 2;
+  stroke-linejoin: round;
+  stroke-linecap: round;
+}
+
+.xqp-chart-line-rating {
+  stroke: var(--site-accent-strong);
+}
+
+.xqp-chart-line-points {
+  stroke: var(--site-heading);
+}
+
+.xqp-chart-area-points {
+  fill: color-mix(in srgb, var(--site-heading) 8%, transparent);
+}
+
+.xqp-chart-dot {
+  stroke: var(--site-panel);
+  stroke-width: 1.5;
+}
+
+.xqp-chart-dot-rating {
+  fill: var(--site-accent-strong);
+}
+
+.xqp-chart-dot-points {
+  fill: var(--site-heading);
+}
+
+.xqp-chart-value {
+  fill: var(--site-heading);
+  /* The panel's own colour behind the digits, so a label that lands on the
+     line stays readable. */
+  paint-order: stroke;
+  stroke: var(--site-panel);
+  stroke-width: 4px;
+  stroke-linejoin: round;
+  font-size: 12px;
+  font-weight: 700;
+  font-variant-numeric: tabular-nums;
+}
+
+.xqp-chart figcaption {
+  margin-top: 4px;
+  color: var(--site-muted);
+  font-size: 12px;
+  line-height: 1.45;
+}
+
+@media (max-width: 640px) {
+  .xqp-filters {
+    padding: 0 14px 14px;
+  }
+
+  .xqp-games-filters {
+    padding: 0 0 10px;
+  }
+
+  .xqp-filter-count {
+    margin-left: 0;
+  }
+
+  .xqp-filter-select {
+    max-width: 180px;
+  }
+
+  .xqp-openings {
+    grid-template-columns: minmax(0, 1fr);
+  }
+
+  .xqp-stats th,
+  .xqp-stats td {
+    padding: 8px 8px;
+  }
+
+  .xqp-stats td.xqp-stats-bar {
+    display: none;
+  }
+}

@@ -7,6 +7,7 @@ import { INDEXNOW_KEY, isIndexNowKeyRequest } from './indexnow.js';
 import { serveBroadcastBoardOgImage } from './og-broadcast.js';
 import { serveAnyGameOgImage } from './og-game-tenant.js';
 import { serveArticleOgImage, serveStudyOgImage } from './og-image.js';
+import { servePlayerOgImage } from './og-player.js';
 import { servePositionOgImage } from './og-position.js';
 import * as persistence from './persistence.js';
 import { RequestBodyTooLargeError } from './routes/lib.js';
@@ -269,6 +270,30 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
         options.staticDir,
       ).catch((err: Error) => {
         console.warn('broadcast og render failed', err.message);
+        if (!response.headersSent) {
+          response.writeHead(302, { location: '/og-image.png' });
+          response.end();
+        }
+      });
+      return;
+    }
+
+    // /og/player/:slug.png: a player page's card (#458).
+    const playerOgMatch = pathname.match(/^\/og\/player\/([^/]+)\.png$/);
+    if (playerOgMatch && persistence.isInitialized()) {
+      let slug: string | null = null;
+      try {
+        slug = decodeURIComponent(playerOgMatch[1]!);
+      } catch {
+        slug = null;
+      }
+      if (!slug) {
+        response.writeHead(302, { location: '/og-image.png' });
+        response.end();
+        return;
+      }
+      void servePlayerOgImage(slug, response, options.staticDir).catch((err: Error) => {
+        console.warn('player og render failed', err.message);
         if (!response.headersSent) {
           response.writeHead(302, { location: '/og-image.png' });
           response.end();

@@ -25,7 +25,14 @@ import {
   publicPositionFen,
 } from './og-position.js';
 import * as persistence from './persistence.js';
+import {
+  cachedPlayers,
+  livePlayerPage,
+  type PlayerPage,
+  playerSitemapEntries,
+} from './player-pages.js';
 import { isNoindexRoute } from './server-policy.js';
+import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
 import {
   chapterHasMoveCommentary,
   chapterIsSubstantial,
@@ -480,20 +487,30 @@ export async function serveSpaShellWithRoutePreloads(params: {
   gameMeta?: (pathname: string) => Promise<TenantGamePageMeta | null>;
   /** Override the server-rendered route body (tests); the default reads persistence. */
   routeBody?: (pathname: string) => Promise<string | null>;
+  /** Override the player-page lookup (tests); the default reads persistence. */
+  playerPage?: (pathname: string) => Promise<PlayerPage | null>;
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
+  // A player, team or the players index (#458, player-pages.ts): its own meta,
+  // a canonical link and a crawler body, from one read of the archive. A name
+  // the archive does not know keeps the generic meta and is kept out of the
+  // index, the way an unlisted study is.
+  const player = await (
+    params.playerPage ?? ((pathname: string) => livePlayerPage(pathname, params.staticDir))
+  )(params.pathname).catch(() => null);
   // A tenant game page (/<tenant>/game/:id, /room/:id) names a finished game:
   // its own title, description, canonical review URL and card (#368). Needs
   // persistence; without it (or for a live game) the route keeps its generic
   // meta exactly as before.
   const lookupGameMeta = params.gameMeta ?? liveGameMeta;
-  const gameMeta = await lookupGameMeta(params.pathname).catch(() => null);
-  const positionMeta = gameMeta ?? positionRouteMeta(params.pathname, params.search ?? '');
+  const gameMeta = player?.meta ? null : await lookupGameMeta(params.pathname).catch(() => null);
+  const positionMeta =
+    player?.meta ?? gameMeta ?? positionRouteMeta(params.pathname, params.search ?? '');
   // Read separately from routeMeta: that one is a union with the position-route
   // shape, which carries no locale of its own (a FEN is not a language).
   const spaMeta = SPA_ROUTE_META[params.pathname];
   const routeMeta = positionMeta ?? spaMeta;
-  const noindex = isNoindexRoute(params.pathname);
+  const noindex = isNoindexRoute(params.pathname) || player?.noindex === true;
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static
@@ -521,6 +538,12 @@ export async function serveSpaShellWithRoutePreloads(params: {
       `${localeAlternateLinks(params.publicHost, spaMeta.localeGroup)}</head>`,
     );
   }
+  if (player?.meta && params.publicHost) {
+    html = html.replace(
+      '</head>',
+      `<link rel="canonical" href="${escapeHtml(`${params.publicHost}${player.meta.urlPath}`)}"></head>`,
+    );
+  }
   if (noindex) {
     html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
   }
@@ -528,7 +551,9 @@ export async function serveSpaShellWithRoutePreloads(params: {
   // A client route that exists to answer a search (/bots) also carries its text
   // in the HTML, for a crawler that does not run the bundle. The client clears
   // the root on mount, so the two never show together.
-  const body = await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null);
+  const body =
+    player?.body ??
+    (await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null));
   if (body) html = html.replace('<div id="app"></div>', `<div id="app">${body}</div>`);
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
@@ -886,7 +911,10 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
 // study chapters (98% of a single 6,362-URL sitemap), while 8 of 36 rules URLs
 // and 19 of 66 blog URLs were fetched at all. One list could not say which of
 // those the index actually kept.
-export const SITEMAP_SECTIONS = ['pages', 'studies', 'chapters'] as const;
+// Players and broadcasts (#458) are their own sections for the same reason:
+// they are dynamic pages dated from their latest game, and the index should
+// report on them apart from the hand-listed routes.
+export const SITEMAP_SECTIONS = ['pages', 'studies', 'chapters', 'players', 'broadcasts'] as const;
 export type SitemapSection = (typeof SITEMAP_SECTIONS)[number];
 
 type SitemapEntry = { path: string; lastmod?: string };
@@ -992,8 +1020,13 @@ export async function serveSitemap(params: {
   if (params.section === 'pages') {
     entries = await pageSitemapEntries(params.staticDir);
   } else {
-    const load = params.section === 'studies' ? studySitemapEntries : chapterSitemapEntries;
-    entries = await load().catch(() => [] as SitemapEntry[]);
+    const loaders: Record<Exclude<SitemapSection, 'pages'>, () => Promise<SitemapEntry[]>> = {
+      studies: studySitemapEntries,
+      chapters: chapterSitemapEntries,
+      players: playerSectionEntries,
+      broadcasts: broadcastSectionEntries,
+    };
+    entries = await loaders[params.section]().catch(() => [] as SitemapEntry[]);
   }
   const body = entries
     .map(({ path, lastmod }) => {
@@ -1004,6 +1037,17 @@ export async function serveSitemap(params: {
   const xml = `<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n${body}\n</urlset>\n`;
   params.response.writeHead(200, { 'content-type': 'application/xml; charset=utf-8' });
   params.response.end(xml);
+}
+
+// Absent persistence (in-memory dev) there is no archive and both are empty.
+async function playerSectionEntries(): Promise<SitemapEntry[]> {
+  if (!persistence.isInitialized()) return [];
+  return playerSitemapEntries(await cachedPlayers());
+}
+
+async function broadcastSectionEntries(): Promise<SitemapEntry[]> {
+  if (!persistence.isInitialized()) return [];
+  return broadcastSitemapEntries(await listBroadcastRoundDates());
 }
 
 async function pageSitemapEntries(staticDir: string): Promise<SitemapEntry[]> {

@@ -8,10 +8,37 @@
 import './seat-disc-ink.css';
 import './xiangqi-broadcast.css';
 import './xiangqi-players.css';
-import { CXA_POINTS, CXA_POINTS_LISTS } from './players/cxa-points.js';
-import { CXA_LISTS, CXA_RATINGS } from './players/cxa-ratings.js';
+import { t } from './i18n/catalog.js';
+import { currentLocale } from './i18n/locale.js';
+import {
+  cxaGroupFor,
+  cxaPointsFor,
+  cxaRatingsFor,
+  type PlayerGroup,
+} from './players/cxa-coverage.js';
+import { CXA_POINTS_LISTS } from './players/cxa-points.js';
+import { CXA_LISTS } from './players/cxa-ratings.js';
+import { eccoEnglish } from './players/ecco-english.js';
+import {
+  type BoardFilter,
+  type Colour,
+  ECCO_FAMILY_KEYS,
+  filterBoards,
+  filterFromSearch,
+  type Opening,
+  type OpeningRow,
+  openingsOf,
+  opponentKey,
+  opponentsOf,
+  pointsOf,
+  type Record3,
+  recordByColour,
+  recordOf,
+  searchFromFilter,
+} from './players/player-stats.js';
 import { playerTitleFor } from './players/player-title.js';
 import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
+import { ratingHistoryFigure } from './players/rating-history-chart.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { type BroadcastRailItem, broadcastSectionLayout } from './xiangqi-broadcast-pages.js';
 
@@ -41,6 +68,10 @@ export type PlayerRecord = {
   events: PlayerEventRecord[];
   firstPlayedOn: string | null;
   lastPlayedOn: string | null;
+  /** On a CXA list with no game in the archive, listed by the server
+   *  (cxa-listed-players.ts): the page is the list's facts and an empty games
+   *  state. Absent on every player with games. */
+  cxaOnly?: boolean;
 };
 
 export type PlayerBoardRecord = {
@@ -50,6 +81,7 @@ export type PlayerBoardRecord = {
   tourNameEn: string | null;
   roundId: string;
   roundName: string;
+  roundNameEn?: string | null;
   playedOn: string | null;
   colour: 'red' | 'black';
   opponent: { name: string; nameEn: string | null; slug: string | null };
@@ -57,6 +89,8 @@ export type PlayerBoardRecord = {
   outcome: 'win' | 'draw' | 'loss';
   plyCount: number;
   sourceUrl: string | null;
+  /** "C70 五七炮对屏风马进３卒"; absent from responses that predate the field. */
+  opening?: string | null;
 };
 
 type PlayersIndexResponse = { players: PlayerRecord[] };
@@ -148,15 +182,15 @@ export function scorePercent(r: { games: number; wins: number; draws: number }):
 
 /** The player's entry on the latest CXA points list they appear on. */
 export function latestPoints(name: string): { points: number; rank: number } | null {
-  const entries = CXA_POINTS[name];
-  const last = entries?.[entries.length - 1];
+  const entries = cxaPointsFor(name);
+  const last = entries[entries.length - 1];
   return last ? { points: last.points, rank: last.rank } : null;
 }
 
 /** The player's last CXA rating (the series closed in 2026). */
 export function latestRating(name: string): number | null {
-  const entries = CXA_RATINGS[name];
-  return entries?.[entries.length - 1]?.rating ?? null;
+  const entries = cxaRatingsFor(name);
+  return entries[entries.length - 1]?.rating ?? null;
 }
 
 function byNullableDesc(a: number | null, b: number | null): number {
@@ -168,16 +202,31 @@ function byNullableDesc(a: number | null, b: number | null): number {
 
 export type IndexSort = 'points' | 'rating' | 'games' | 'score' | 'name';
 
+function listOrder(player: PlayerRecord): number {
+  const entries = cxaPointsFor(player.name);
+  const group = entries[entries.length - 1]?.group;
+  return group === 'men' ? 0 : group === 'women' ? 1 : 2;
+}
+
 export function sortPlayers(players: readonly PlayerRecord[], sort: IndexSort): PlayerRecord[] {
   const out = [...players];
   const byGames = (a: PlayerRecord, b: PlayerRecord) =>
     b.games - a.games || displayName(a).localeCompare(displayName(b));
   if (sort === 'name') out.sort((a, b) => displayName(a).localeCompare(displayName(b)));
   else if (sort === 'score')
-    out.sort((a, b) => scorePercent(b) - scorePercent(a) || b.games - a.games);
-  else if (sort === 'points')
     out.sort(
       (a, b) =>
+        byNullableDesc(
+          a.games > 0 ? scorePercent(a) : null,
+          b.games > 0 ? scorePercent(b) : null,
+        ) || b.games - a.games,
+    );
+  else if (sort === 'points')
+    // The men's and women's lists are separate rankings on their own scales,
+    // so the men's list comes first and the women's after it, never interleaved.
+    out.sort(
+      (a, b) =>
+        listOrder(a) - listOrder(b) ||
         byNullableDesc(
           latestPoints(a.name)?.points ?? null,
           latestPoints(b.name)?.points ?? null,
@@ -198,6 +247,80 @@ export function matchesQuery(player: PlayerRecord, query: string): boolean {
   return [player.name, player.nameEn, player.federation, player.federationEn].some((s) =>
     s?.toLowerCase().includes(q),
   );
+}
+
+/** Men's or women's: the CXA list the player is on, else the events they
+ *  played (a 女子 event, or one whose slug says women; a 男子 event).
+ *  Null when neither says, rather than a guess. */
+export function playerGroup(
+  player: Pick<PlayerRecord, 'name'> & {
+    events: readonly Pick<PlayerEventRecord, 'tourSlug' | 'tourName'>[];
+  },
+): PlayerGroup | null {
+  const listed = cxaGroupFor(player.name);
+  if (listed) return listed;
+  if (
+    player.events.some((e) => e.tourName.includes('女子') || /(^|-)womens?(-|$)/.test(e.tourSlug))
+  )
+    return 'women';
+  if (player.events.some((e) => e.tourName.includes('男子') || /(^|-)men(-|$)/.test(e.tourSlug)))
+    return 'men';
+  return null;
+}
+
+/** The season the index calls current: the latest year any player played in.
+ *  From the data, not the clock, so the filter never empties on New Year's Day. */
+export function currentSeason(
+  players: readonly Pick<PlayerRecord, 'lastPlayedOn'>[],
+): string | null {
+  let latest: string | null = null;
+  for (const p of players)
+    if (p.lastPlayedOn && (!latest || p.lastPlayedOn > latest)) latest = p.lastPlayedOn;
+  return latest ? latest.slice(0, 4) : null;
+}
+
+export type IndexFilter = {
+  title?: PlayerTitle | 'none';
+  group?: PlayerGroup;
+  team?: string;
+  /** Only players with a game in this season (a year, "2026"). */
+  season?: string;
+};
+
+export function matchesFilter(player: PlayerRecord, filter: IndexFilter): boolean {
+  if (filter.title) {
+    const title = playerTitle(player);
+    if (filter.title === 'none' ? title !== null : title !== filter.title) return false;
+  }
+  if (filter.group && playerGroup(player) !== filter.group) return false;
+  if (filter.team && teamKey(player) !== filter.team) return false;
+  if (filter.season && !player.lastPlayedOn?.startsWith(filter.season)) return false;
+  return true;
+}
+
+/** ?title=GM&list=women&team=beijing&active=2026, keeping only values that mean something. */
+export function indexFilterFromSearch(search: string): IndexFilter {
+  const params = new URLSearchParams(search);
+  const filter: IndexFilter = {};
+  const title = params.get('title');
+  if (title === 'GM' || title === 'NM' || title === 'none') filter.title = title;
+  const group = params.get('list');
+  if (group === 'men' || group === 'women') filter.group = group;
+  const team = params.get('team');
+  if (team) filter.team = team;
+  const season = params.get('active');
+  if (season && /^\d{4}$/.test(season)) filter.season = season;
+  return filter;
+}
+
+export function indexSearchFromFilter(filter: IndexFilter): string {
+  const params = new URLSearchParams();
+  if (filter.title) params.set('title', filter.title);
+  if (filter.group) params.set('list', filter.group);
+  if (filter.team) params.set('team', filter.team);
+  if (filter.season) params.set('active', filter.season);
+  const text = params.toString();
+  return text ? `?${text}` : '';
 }
 
 /** The title tag for a player: authored first, else the last official list. */
@@ -258,7 +381,10 @@ function sortableTable<T, K extends string>(input: {
   matches: (row: T, query: string) => boolean;
   href: (row: T) => string;
   search?: HTMLInputElement;
-}): HTMLElement {
+  /** Filters beyond the search box; call `repaint` after changing them. */
+  filter?: (row: T) => boolean;
+  onPaint?: (shown: number) => void;
+}): HTMLElement & { repaint: () => void } {
   const wrap = document.createElement('div');
   wrap.className = 'xqp-table-wrap';
   const table = document.createElement('table');
@@ -299,7 +425,9 @@ function sortableTable<T, K extends string>(input: {
     const query = input.search?.value ?? '';
     tbody.replaceChildren();
     for (const [key, th] of sortHeaders) th.classList.toggle('xqp-sorted', key === sort);
-    const shown = input.order(input.rows, sort).filter((row) => input.matches(row, query));
+    const shown = input
+      .order(input.rows, sort)
+      .filter((row) => input.matches(row, query) && (input.filter?.(row) ?? true));
     for (const row of shown) {
       const tr = document.createElement('tr');
       tr.className = 'xqp-row';
@@ -315,12 +443,18 @@ function sortableTable<T, K extends string>(input: {
       tbody.append(tr);
     }
     empty.hidden = shown.length > 0;
-    empty.textContent = shown.length > 0 ? '' : `Nothing matches “${query.trim()}”.`;
+    empty.textContent =
+      shown.length > 0
+        ? ''
+        : query.trim()
+          ? `Nothing matches “${query.trim()}”.`
+          : 'Nothing matches.';
+    input.onPaint?.(shown.length);
   }
   input.search?.addEventListener('input', paint);
   paint();
   wrap.append(table, empty);
-  return wrap;
+  return Object.assign(wrap, { repaint: paint });
 }
 
 function numberCell(value: number | null | undefined, suffix = ''): HTMLTableCellElement {
@@ -347,8 +481,13 @@ function playerColumns(showTeam: boolean): Column<PlayerRecord, IndexSort>[] {
       hint: 'Last CXA rating (the rating lists ended in 2026)',
       value: (p) => numberCell(latestRating(p.name)),
     },
-    { label: 'Games', sort: 'games', value: (p) => numberCell(p.games) },
-    { label: 'Score', sort: 'score', value: (p) => numberCell(scorePercent(p), '%') },
+    // A CXA-only player has no games to count, which is not the same as none won.
+    { label: 'Games', sort: 'games', value: (p) => numberCell(p.cxaOnly ? null : p.games) },
+    {
+      label: 'Score',
+      sort: 'score',
+      value: (p) => numberCell(p.games > 0 ? scorePercent(p) : null, '%'),
+    },
   ];
 }
 
@@ -356,7 +495,8 @@ function playersTable(
   players: readonly PlayerRecord[],
   search: HTMLInputElement | undefined,
   showTeam: boolean,
-): HTMLElement {
+  extra?: Pick<Parameters<typeof sortableTable<PlayerRecord, IndexSort>>[0], 'filter' | 'onPaint'>,
+): HTMLElement & { repaint: () => void } {
   return sortableTable<PlayerRecord, IndexSort>({
     rows: players,
     columns: playerColumns(showTeam),
@@ -365,6 +505,7 @@ function playersTable(
     matches: matchesQuery,
     href: playerHref,
     search,
+    ...extra,
   });
 }
 
@@ -376,9 +517,102 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
   const search = searchInput('Search players');
   const panel = document.createElement('section');
   panel.className = 'xqp-board';
-  panel.append(boardHead(title, search), playersTable(players, search, true));
+  const season = currentSeason(players);
+  const teams = sortTeams(teamsOf(players), 'name');
+  const state: { filter: IndexFilter } = { filter: indexFilterFromSearch(window.location.search) };
+  if (state.filter.team && !teams.some((team) => team.key === state.filter.team)) {
+    delete state.filter.team;
+  }
+  const count = document.createElement('span');
+  count.className = 'xqp-filter-count';
+  const table = playersTable(players, search, true, {
+    filter: (p) => matchesFilter(p, state.filter),
+    onPaint: (shown) => {
+      count.textContent = t('broadcast.playersCount', { n: shown });
+    },
+  });
+  const apply = (next: IndexFilter): void => {
+    state.filter = next;
+    const url = `${window.location.pathname}${indexSearchFromFilter(next)}${window.location.hash}`;
+    window.history.replaceState(window.history.state, '', url);
+    table.repaint();
+  };
+  const bar = document.createElement('div');
+  bar.className = 'xqp-filters';
+  bar.append(
+    filterSelect(
+      t('broadcast.playersFilterTitle'),
+      [
+        ['', t('broadcast.playersAnyTitle')],
+        ['GM', 'GM'],
+        ['NM', 'NM'],
+        ['none', t('broadcast.playersUntitled')],
+      ],
+      state.filter.title ?? '',
+      (value) => apply({ ...state.filter, title: (value || undefined) as IndexFilter['title'] }),
+    ),
+    filterSelect(
+      t('broadcast.playersFilterGroup'),
+      [
+        ['', t('broadcast.playersMenAndWomen')],
+        ['men', t('broadcast.playersMen')],
+        ['women', t('broadcast.playersWomen')],
+      ],
+      state.filter.group ?? '',
+      (value) => apply({ ...state.filter, group: (value || undefined) as IndexFilter['group'] }),
+    ),
+    filterSelect(
+      t('broadcast.playersFilterTeam'),
+      [
+        ['', t('broadcast.playersAnyTeam')],
+        ...teams.map((team) => [team.key, teamLabel(team)] as [string, string]),
+      ],
+      state.filter.team ?? '',
+      (value) => apply({ ...state.filter, team: value || undefined }),
+    ),
+  );
+  if (season) {
+    const label = document.createElement('label');
+    label.className = 'xqp-filter xqp-filter-check';
+    const box = document.createElement('input');
+    box.type = 'checkbox';
+    box.checked = state.filter.season === season;
+    box.addEventListener('change', () =>
+      apply({ ...state.filter, season: box.checked ? season : undefined }),
+    );
+    label.append(box, t('broadcast.playersActive', { year: season }));
+    bar.append(label);
+  }
+  bar.append(count);
+  panel.append(boardHead(title, search), bar, table);
   main.append(panel);
   return main;
+}
+
+/** One labelled select in a filter bar. */
+function filterSelect(
+  label: string,
+  options: readonly (readonly [string, string])[],
+  value: string,
+  onChange: (value: string) => void,
+): HTMLElement {
+  const wrap = document.createElement('label');
+  wrap.className = 'xqp-filter';
+  const caption = document.createElement('span');
+  caption.className = 'xqp-filter-label';
+  caption.textContent = label;
+  const select = document.createElement('select');
+  select.className = 'xqp-filter-select';
+  for (const [optionValue, optionLabel] of options) {
+    const option = document.createElement('option');
+    option.value = optionValue;
+    option.textContent = optionLabel;
+    select.append(option);
+  }
+  select.value = value;
+  select.addEventListener('change', () => onChange(select.value));
+  wrap.append(caption, select);
+  return wrap;
 }
 
 // ---------------------------------------------------------------------------
@@ -626,6 +860,18 @@ function nameCell(player: PlayerRecord, showTeam = true): HTMLTableCellElement {
       player.federationEn ?? player.federation,
     );
     wrap.append(team);
+  } else if (showTeam && player.cxaOnly) {
+    // No team to show: the list the player is on stands in, and says why the
+    // row has no games.
+    const group = cxaGroupFor(player.name);
+    if (group) {
+      const line = document.createElement('span');
+      line.className = 'xqp-team';
+      line.textContent = t(
+        group === 'women' ? 'broadcast.playerListWomen' : 'broadcast.playerListMen',
+      );
+      wrap.append(line);
+    }
   }
   td.append(avatar(player, 'row'), wrap);
   return td;
@@ -639,7 +885,8 @@ function cell(text: string, className?: string): HTMLTableCellElement {
 }
 
 // ---------------------------------------------------------------------------
-// One player: photo and facts, the official rating, events, every board.
+// One player: photo and facts, the official rating and its history, the
+// record cut by colour, opponent and opening, events, every board.
 
 function renderPlayer(
   player: PlayerRecord,
@@ -689,8 +936,17 @@ function renderPlayer(
     team.textContent = player.federationEn ?? player.federation;
     fact('Team', team);
   }
+  const group = cxaGroupFor(player.name);
+  if (player.cxaOnly && group) {
+    fact(
+      t('broadcast.playerListLabel'),
+      t(group === 'women' ? 'broadcast.playerListWomen' : 'broadcast.playerListMen'),
+    );
+  }
   fact('Born', profile?.born);
-  fact('Archive', `${player.games} games, ${recordText(player)}, ${scorePercent(player)}%`);
+  if (player.games > 0) {
+    fact('Archive', `${player.games} games, ${recordText(player)}, ${scorePercent(player)}%`);
+  }
   fact(
     'Seen',
     player.firstPlayedOn && player.lastPlayedOn
@@ -719,37 +975,448 @@ function renderPlayer(
     (x): x is HTMLElement => x !== null,
   );
   if (officialRating.length > 0) {
-    const section = document.createElement('section');
-    section.className = 'xqb-section';
-    const h2 = document.createElement('h2');
-    h2.textContent = 'Official rating';
     const cards = document.createElement('div');
     cards.className = 'xqp-rating-row';
     cards.append(...officialRating);
-    section.append(h2, cards);
-    main.append(section);
+    main.append(section('Official rating', cards));
   }
 
-  const events = document.createElement('section');
-  events.className = 'xqb-section';
-  const h2 = document.createElement('h2');
-  h2.textContent = 'Events';
-  const grid = document.createElement('div');
-  grid.className = 'xqp-events';
-  for (const event of player.events) grid.append(eventCard(event));
-  events.append(h2, grid);
+  const history = ratingHistoryFigure(cxaRatingsFor(player.name), cxaPointsFor(player.name));
+  if (history) main.append(section(t('broadcast.playerRatingHistory'), history));
 
-  const games = document.createElement('section');
-  games.className = 'xqb-section';
-  const h2b = document.createElement('h2');
-  h2b.textContent = `Games (${boards.length})`;
+  if (boards.length === 0) {
+    // A CXA-listed player the archive has not seen play: say so plainly
+    // rather than show an empty record.
+    const empty = document.createElement('div');
+    empty.className = 'xqp-no-games';
+    const title = document.createElement('p');
+    title.className = 'xqp-no-games-title';
+    title.textContent = t('broadcast.playerNoGames');
+    const body = document.createElement('p');
+    body.textContent = t('broadcast.playerNoGamesBody', { name: player.nameEn ?? player.name });
+    empty.append(title, body);
+    main.append(section(`Games (0)`, empty));
+    return main;
+  }
+
+  const view = gamesView(player, boards);
+  main.append(recordSection(player, boards, view));
+  const openings = openingsSection(boards, view);
+  if (openings) main.append(openings);
+
+  if (player.events.length > 0) {
+    const grid = document.createElement('div');
+    grid.className = 'xqp-events';
+    for (const event of player.events) grid.append(eventCard(event));
+    main.append(section('Events', grid));
+  }
+  main.append(view.section);
+  return main;
+}
+
+function section(title: string, ...body: Node[]): HTMLElement {
+  const wrap = document.createElement('section');
+  wrap.className = 'xqb-section';
+  const h2 = document.createElement('h2');
+  h2.textContent = title;
+  wrap.append(h2, ...body);
+  return wrap;
+}
+
+/** The games list and the one filter every control on the page drives: the
+ *  record rows, the head-to-head picker, the opening rows and the bar above
+ *  the list. Kept in the URL (?colour=red&vs=<opponent>&opening=C70) so a
+ *  filtered list is a link. */
+type GamesView = {
+  section: HTMLElement;
+  filter: () => BoardFilter;
+  set: (next: BoardFilter, scroll?: boolean) => void;
+  subscribe: (paint: (filter: BoardFilter) => void) => void;
+  href: (filter: BoardFilter) => string;
+};
+
+function gamesView(player: PlayerRecord, boards: readonly PlayerBoardRecord[]): GamesView {
+  let filter = filterFromSearch(window.location.search, boards);
+  const listeners: ((filter: BoardFilter) => void)[] = [];
+  const wrap = section(`Games (${boards.length})`);
+  wrap.id = 'games';
+  const href = (next: BoardFilter): string =>
+    `${window.location.pathname}${searchFromFilter(next)}#games`;
+  const view: GamesView = {
+    section: wrap,
+    filter: () => filter,
+    set: (next, scroll = false) => {
+      filter = next;
+      window.history.replaceState(
+        window.history.state,
+        '',
+        `${window.location.pathname}${searchFromFilter(next)}${window.location.hash}`,
+      );
+      for (const paint of listeners) paint(filter);
+      if (scroll) wrap.scrollIntoView({ behavior: 'smooth', block: 'start' });
+    },
+    subscribe: (paint) => {
+      listeners.push(paint);
+      paint(filter);
+    },
+    href,
+  };
+
+  const bar = document.createElement('div');
+  bar.className = 'xqp-filters xqp-games-filters';
+  const colours = document.createElement('div');
+  colours.className = 'xqp-segmented';
+  colours.setAttribute('role', 'group');
+  colours.setAttribute('aria-label', t('broadcast.playerFilterColour'));
+  const colourButtons = (
+    [
+      [undefined, t('broadcast.playerFilterAll')],
+      ['red', t('broadcast.playerFilterRed')],
+      ['black', t('broadcast.playerFilterBlack')],
+    ] as const
+  ).map(([colour, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'xqp-segment';
+    button.textContent = label;
+    button.addEventListener('click', () => view.set({ ...filter, colour }));
+    colours.append(button);
+    return { colour, button };
+  });
+
+  const opponents = opponentsOf(boards);
+  const opponentSelect = filterSelect(
+    t('broadcast.playerFilterOpponent'),
+    [
+      ['', t('broadcast.playerFilterAnyOpponent')],
+      ...opponents.map(
+        (o) => [o.key, `${o.nameEn ?? o.name} (${o.record.games})`] as [string, string],
+      ),
+    ],
+    filter.opponent ?? '',
+    (value) => view.set({ ...filter, opponent: value || undefined }),
+  );
+  const openingOptions = openingChoices(boards);
+  const openingSelect =
+    openingOptions.length > 0
+      ? filterSelect(
+          t('broadcast.playerFilterOpening'),
+          [
+            ['', t('broadcast.playerFilterAnyOpening')],
+            ...openingOptions.map(
+              (o) =>
+                [
+                  o.key,
+                  `${o.code ? `${o.code} ` : ''}${openingLabel(o).name} (${o.record.games})`,
+                ] as [string, string],
+            ),
+          ],
+          filter.opening ?? '',
+          (value) => view.set({ ...filter, opening: value || undefined }),
+        )
+      : null;
+  const clear = document.createElement('button');
+  clear.type = 'button';
+  clear.className = 'xqp-filter-clear';
+  clear.textContent = t('broadcast.playerFilterClear');
+  clear.addEventListener('click', () => view.set({}));
+  bar.append(colours, opponentSelect, ...(openingSelect ? [openingSelect] : []), clear);
+
+  const summary = document.createElement('p');
+  summary.className = 'xqp-games-summary';
   const list = document.createElement('div');
   list.className = 'xqp-games';
-  for (const board of boards) list.append(boardRow(board, player));
-  games.append(h2b, list);
+  wrap.append(bar, summary, list);
 
-  main.append(events, games);
-  return main;
+  view.subscribe((current) => {
+    for (const { colour, button } of colourButtons) {
+      const on = current.colour === colour;
+      button.classList.toggle('xqp-segment-on', on);
+      button.setAttribute('aria-pressed', String(on));
+    }
+    const opponentInput = opponentSelect.querySelector('select')!;
+    opponentInput.value = current.opponent ?? '';
+    const openingInput = openingSelect?.querySelector('select');
+    if (openingInput) openingInput.value = current.opening ?? '';
+    const active = Boolean(current.colour || current.opponent || current.opening);
+    clear.hidden = !active;
+    const shown = filterBoards(boards, current);
+    const r = recordOf(shown);
+    summary.textContent = [
+      active ? t('broadcast.playerGamesShown', { n: shown.length, total: boards.length }) : null,
+      active && shown.length > 0 ? `${recordText(r)} · ${scorePercent(r)}%` : null,
+    ]
+      .filter(Boolean)
+      .join(' · ');
+    summary.hidden = !active;
+    list.replaceChildren(...shown.map((board) => boardRow(board, player)));
+  });
+  return view;
+}
+
+/** Every opening in the games, both colours together, for the bar's select. */
+function openingChoices(boards: readonly PlayerBoardRecord[]): OpeningRow[] {
+  const byKey = new Map<string, OpeningRow>();
+  for (const row of [...openingsOf(boards, 'red'), ...openingsOf(boards, 'black')]) {
+    const seen = byKey.get(row.key);
+    if (!seen) byKey.set(row.key, { ...row, record: { ...row.record } });
+    else {
+      seen.record.games += row.record.games;
+      seen.record.wins += row.record.wins;
+      seen.record.draws += row.record.draws;
+      seen.record.losses += row.record.losses;
+    }
+  }
+  return [...byKey.values()].sort((a, b) => a.key.localeCompare(b.key));
+}
+
+/** A W/D/L bar: the shares of the record, lichess's result strip. */
+function resultBar(r: Record3): HTMLElement {
+  const bar = document.createElement('span');
+  bar.className = 'xqp-result-bar';
+  bar.setAttribute('aria-hidden', 'true');
+  for (const [kind, n] of [
+    ['win', r.wins],
+    ['draw', r.draws],
+    ['loss', r.losses],
+  ] as const) {
+    if (n === 0) continue;
+    const part = document.createElement('span');
+    part.className = `xqp-result-${kind}`;
+    part.style.flexGrow = String(n);
+    bar.append(part);
+  }
+  return bar;
+}
+
+/** Overall, as red, as black, each row a link to those games; then the
+ *  head-to-head picker, which drives the same filter as the games list. */
+function recordSection(
+  player: PlayerRecord,
+  boards: readonly PlayerBoardRecord[],
+  view: GamesView,
+): HTMLElement {
+  const byColour = recordByColour(boards);
+  const table = document.createElement('table');
+  table.className = 'xqp-stats';
+  const head = document.createElement('tr');
+  for (const label of [
+    '',
+    'Games',
+    t('broadcast.playerWon'),
+    t('broadcast.playerDrawn'),
+    t('broadcast.playerLost'),
+    'Score',
+    '',
+  ]) {
+    const th = document.createElement('th');
+    th.textContent = label;
+    head.append(th);
+  }
+  const thead = document.createElement('thead');
+  thead.append(head);
+  const tbody = document.createElement('tbody');
+  const rows: [Colour | undefined, string, Record3][] = [
+    [undefined, t('broadcast.playerOverall'), byColour.all],
+    ['red', t('broadcast.playerAsRed'), byColour.red],
+    ['black', t('broadcast.playerAsBlack'), byColour.black],
+  ];
+  for (const [colour, label, r] of rows) {
+    const tr = document.createElement('tr');
+    tr.className = 'xqp-stats-row';
+    const name = document.createElement('th');
+    name.scope = 'row';
+    const link = document.createElement('a');
+    link.href = view.href({ colour });
+    link.className = colour ? `xqp-stats-link xqp-colour-dot-${colour}` : 'xqp-stats-link';
+    link.textContent = label;
+    link.addEventListener('click', (event) => {
+      event.preventDefault();
+      view.set({ colour }, true);
+    });
+    name.append(link);
+    tr.append(
+      name,
+      cell(String(r.games)),
+      cell(String(r.wins)),
+      cell(String(r.draws)),
+      cell(String(r.losses)),
+      cell(r.games > 0 ? `${scorePercent(r)}%` : ''),
+    );
+    const barCell = document.createElement('td');
+    barCell.className = 'xqp-stats-bar';
+    if (r.games > 0) barCell.append(resultBar(r));
+    tr.append(barCell);
+    if (r.games > 0) {
+      tr.addEventListener('click', (event) => {
+        if ((event.target as HTMLElement).closest('a')) return;
+        view.set({ colour }, true);
+      });
+    }
+    tbody.append(tr);
+  }
+  table.append(thead, tbody);
+  const wrap = document.createElement('div');
+  wrap.className = 'xqp-stats-wrap';
+  wrap.append(table);
+  return section(t('broadcast.playerRecord'), wrap, headToHead(player, boards, view));
+}
+
+/** Pick an opponent, see the score between the two and the games. */
+function headToHead(
+  player: PlayerRecord,
+  boards: readonly PlayerBoardRecord[],
+  view: GamesView,
+): HTMLElement {
+  const box = document.createElement('div');
+  box.className = 'xqp-h2h';
+  const opponents = opponentsOf(boards);
+  const picker = filterSelect(
+    t('broadcast.playerHeadToHead'),
+    [
+      ['', t('broadcast.playerFilterAnyOpponent')],
+      ...opponents.map(
+        (o) => [o.key, `${o.nameEn ?? o.name} (${o.record.games})`] as [string, string],
+      ),
+    ],
+    view.filter().opponent ?? '',
+    (value) => view.set({ ...view.filter(), opponent: value || undefined }),
+  );
+  const result = document.createElement('div');
+  result.className = 'xqp-h2h-result';
+  box.append(picker, result);
+  view.subscribe((filter) => {
+    picker.querySelector('select')!.value = filter.opponent ?? '';
+    const opponent = opponents.find((o) => o.key === filter.opponent);
+    result.replaceChildren();
+    result.hidden = !opponent;
+    if (!opponent) return;
+    // Over every game between the two, whatever the colour or opening filter.
+    const r = recordOf(boards.filter((b) => opponentKey(b.opponent) === opponent.key));
+    const me = document.createElement('span');
+    me.className = 'xqp-h2h-name';
+    me.textContent = player.nameEn ?? player.name;
+    const score = document.createElement('span');
+    score.className = 'xqp-h2h-score';
+    score.textContent = `${formatPoints(pointsOf(r))} : ${formatPoints(r.games - pointsOf(r))}`;
+    const them = document.createElement(opponent.slug ? 'a' : 'span');
+    them.className = 'xqp-h2h-name';
+    if (them instanceof HTMLAnchorElement && opponent.slug) {
+      them.href = playerHref({ slug: opponent.slug });
+    }
+    them.textContent = opponent.nameEn ?? opponent.name;
+    const line = document.createElement('p');
+    line.className = 'xqp-h2h-line';
+    line.append(me, score, them);
+    const games = document.createElement('a');
+    games.className = 'xqp-h2h-games';
+    games.href = view.href({ opponent: opponent.key });
+    games.textContent = `${r.games} games · +${r.wins} =${r.draws} -${r.losses}`;
+    games.addEventListener('click', (event) => {
+      event.preventDefault();
+      view.set({ opponent: opponent.key }, true);
+    });
+    result.append(line, games);
+  });
+  return box;
+}
+
+/** 6.5, 3, 0.5: points as a score sheet writes them. */
+function formatPoints(value: number): string {
+  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+}
+
+const OPENINGS_SHOWN = 6;
+
+/** An opening's name as the page shows it: English on an English page when
+ *  the glossary names every term, else the source's Chinese. The title is
+ *  always the source's full string (code and Chinese), for a tooltip. */
+function openingLabel(opening: Opening): { name: string; title: string } {
+  const title = opening.code ? `${opening.code} ${opening.name}` : opening.name;
+  if (currentLocale() !== 'en') return { name: opening.name, title };
+  return { name: eccoEnglish(title).en ?? opening.name, title };
+}
+
+/** Openings by colour, as the source classifies each game, each row a link
+ *  to those games. Null when no game names an opening. */
+function openingsSection(
+  boards: readonly PlayerBoardRecord[],
+  view: GamesView,
+): HTMLElement | null {
+  const columns = (['red', 'black'] as const).map((colour) => ({
+    colour,
+    rows: openingsOf(boards, colour),
+  }));
+  if (columns.every((c) => c.rows.length === 0)) return null;
+  const grid = document.createElement('div');
+  grid.className = 'xqp-openings';
+  for (const { colour, rows } of columns) {
+    const column = document.createElement('div');
+    column.className = 'xqp-openings-col';
+    const h3 = document.createElement('h3');
+    h3.className = `xqp-openings-head xqp-colour-dot-${colour}`;
+    h3.textContent = t(colour === 'red' ? 'broadcast.playerAsRed' : 'broadcast.playerAsBlack');
+    column.append(h3);
+    const list = document.createElement('ol');
+    list.className = 'xqp-opening-list';
+    rows.forEach((row, index) => {
+      const item = document.createElement('li');
+      item.className = 'xqp-opening';
+      if (index >= OPENINGS_SHOWN) item.hidden = true;
+      const link = document.createElement('a');
+      link.className = 'xqp-opening-link';
+      link.href = view.href({ colour, opening: row.key });
+      link.addEventListener('click', (event) => {
+        event.preventDefault();
+        view.set({ colour, opening: row.key }, true);
+      });
+      const name = document.createElement('span');
+      name.className = 'xqp-opening-name';
+      if (row.code) {
+        const code = document.createElement('span');
+        code.className = 'xqp-opening-code';
+        code.textContent = row.code;
+        const family = ECCO_FAMILY_KEYS[row.code[0] as keyof typeof ECCO_FAMILY_KEYS];
+        if (family) code.title = t(family);
+        name.append(code, ' ');
+      }
+      const shown = openingLabel(row);
+      name.append(shown.name);
+      link.title = shown.title;
+      const numbers = document.createElement('span');
+      numbers.className = 'xqp-opening-numbers';
+      numbers.textContent = `${row.record.games} · ${scorePercent(row.record)}%`;
+      link.append(name, numbers, resultBar(row.record));
+      item.append(link);
+      list.append(item);
+    });
+    column.append(list);
+    if (rows.length > OPENINGS_SHOWN) {
+      const more = document.createElement('button');
+      more.type = 'button';
+      more.className = 'xqp-more';
+      let open = false;
+      const label = (): void => {
+        more.textContent = open
+          ? t('broadcast.playerShowFewer')
+          : t('broadcast.playerShowAll', { n: rows.length });
+      };
+      label();
+      more.addEventListener('click', () => {
+        open = !open;
+        list.querySelectorAll<HTMLElement>('.xqp-opening').forEach((item, index) => {
+          item.hidden = !open && index >= OPENINGS_SHOWN;
+        });
+        label();
+      });
+      column.append(more);
+    }
+    grid.append(column);
+  }
+  const note = document.createElement('p');
+  note.className = 'xqp-section-note';
+  note.textContent = t('broadcast.playerOpeningsNote');
+  return section(t('broadcast.playerOpenings'), note, grid);
 }
 
 function eventCard(event: PlayerEventRecord): HTMLElement {
@@ -778,8 +1445,8 @@ function eventCard(event: PlayerEventRecord): HTMLElement {
  *  replacing 等级分 since January 2026. One list published so far, so no
  *  sparkline yet — the series grows every time the CXA posts a new one. */
 function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
-  const entries = CXA_POINTS[player.name];
-  if (!entries || entries.length === 0) return null;
+  const entries = cxaPointsFor(player.name);
+  if (entries.length === 0) return null;
   const last = entries[entries.length - 1];
   const list = CXA_POINTS_LISTS.find((l) => l.id === last.list);
   const size = list ? (last.group === 'men' ? list.men : list.women) : null;
@@ -811,8 +1478,8 @@ function pointsCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
  *  the last rank, and the shape of the series behind it. Closed history —
  *  the CXA replaced it with tournament points in January 2026. */
 function ratingCard(player: Pick<PlayerRecord, 'name'>): HTMLElement | null {
-  const entries = CXA_RATINGS[player.name];
-  if (!entries || entries.length === 0) return null;
+  const entries = cxaRatingsFor(player.name);
+  if (entries.length === 0) return null;
   const last = entries[entries.length - 1];
   const lastList = CXA_LISTS.find((l) => l.id === last.list);
   const card = document.createElement('div');
@@ -908,7 +1575,7 @@ function boardRow(board: PlayerBoardRecord, player: PlayerRecord): HTMLElement {
   meta.className = 'xqp-game-meta';
   meta.textContent = [
     board.tourNameEn ?? board.tourName,
-    board.roundName,
+    board.roundNameEn ?? board.roundName,
     board.playedOn ?? '',
     `${Math.ceil(board.plyCount / 2)} moves`,
     board.result,

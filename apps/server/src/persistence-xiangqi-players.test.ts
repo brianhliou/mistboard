@@ -1,5 +1,6 @@
 import { fileURLToPath } from 'node:url';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
+import { getPool } from './persistence-db.js';
 import { assert, definePersistenceTests, test } from './persistence-test-support.js';
 import { importXiangqiBroadcastPack } from './persistence-xiangqi-broadcasts.js';
 import {
@@ -161,6 +162,44 @@ describe('player pages, derived from the archive', () => {
     expect(players.map((p) => p.slug)).toEqual(['yi', 'jia']);
   });
 
+  it('gives every CXA-listed player a page, games or none, without moving a slug', () => {
+    const players = foldPlayers(
+      [
+        row({ name: '王浩', nameEn: 'Wang Hao', tour: '2026-shanghai-cup', games: 4 }),
+        // Listed, but seen only in an ungraded open: the gate alone keeps no page.
+        row({
+          name: '张红萍',
+          nameEn: 'Zhang Hongping',
+          tour: '2026-some-open',
+          games: 3,
+          wins: 2,
+        }),
+      ],
+      [
+        { name: '王天一', group: 'men' },
+        { name: '张红萍', group: 'women' },
+        // Romanises to the gated player's slug, which stays his.
+        { name: '王昊', group: 'women' },
+        { name: '王浩', group: 'men' },
+      ],
+    );
+    expect(players.map((p) => [p.slug, p.name, p.games, p.cxaOnly ?? false])).toEqual([
+      ['wang-hao', '王浩', 4, false],
+      ['zhang-hongping', '张红萍', 3, false],
+      ['wang-hao-women', '王昊', 0, true],
+      ['wang-tianyi', '王天一', 0, true],
+    ]);
+    const wang = players.find((p) => p.name === '王天一')!;
+    expect(wang.nameEn).toBe('Wang Tianyi');
+    expect(wang.events).toEqual([]);
+    // Without the lists, the archive's own pages are exactly as before.
+    expect(
+      foldPlayers([
+        row({ name: '王浩', nameEn: 'Wang Hao', tour: '2026-shanghai-cup', games: 4 }),
+      ]).map((p) => p.slug),
+    ).toEqual(['wang-hao']);
+  });
+
   it('slugs from the romanised name and falls back to the source spelling', () => {
     expect(playerSlugBase('Lại Lý Huynh', '赖理兄')).toBe('lai-ly-huynh');
     expect(playerSlugBase(null, '尹昇')).toBe('尹昇');
@@ -171,7 +210,10 @@ describe('player pages, derived from the archive', () => {
 definePersistenceTests('xiangqi players', () => {
   test('lists the fixture pack players from finished boards only, with their boards', async () => {
     await importXiangqiBroadcastPack(await readXiangqiBroadcastFixturePack(FIXTURE_DIR, false));
-    const players = await listXiangqiPlayers();
+    const all = await listXiangqiPlayers();
+    const players = all.filter((p) => !p.cxaOnly);
+    // The CXA-listed players come after, each with a page and no games.
+    assert.ok(all.some((p) => p.cxaOnly && p.name === '王天一' && p.slug === 'wang-tianyi'));
     // The live board's two players have no finished game and no page.
     assert.deepEqual(
       players.map((p) => [p.slug, p.games, p.wins, p.losses]),
@@ -190,5 +232,16 @@ definePersistenceTests('xiangqi players', () => {
     assert.equal(boards[0]?.colour, 'red');
     assert.equal(boards[0]?.outcome, 'win');
     assert.equal(boards[0]?.opponent.slug, 'black-master');
+    // The fixture names no opening; a board whose source does carries it
+    // through, ECCO code and all, for the page's openings table.
+    assert.equal(boards[0]?.opening, null);
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_boards
+          SET payload = jsonb_set(payload, '{details}', $2::jsonb)
+        WHERE id = $1`,
+      [boards[0]!.boardId, JSON.stringify({ opening: 'C70 五七炮对屏风马进３卒' })],
+    );
+    const withOpening = await listXiangqiPlayerBoards(red, () => null);
+    assert.equal(withOpening[0]?.opening, 'C70 五七炮对屏风马进３卒');
   });
 });

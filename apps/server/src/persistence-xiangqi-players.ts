@@ -14,8 +14,13 @@
 // Only finished boards count (`result <> '*'`): a live board is a game in
 // progress, and a scheduled one is not a game.
 import type { XiangqiBroadcastResult } from '@mistboard/game';
+import { CXA_LISTED_PLAYERS, type CxaListedPlayer } from './cxa-listed-players.js';
 import { getPool } from './persistence-db.js';
 import { xiangqiBroadcastTourLevel } from './xiangqi-broadcast-levels.js';
+import {
+  romanizeXiangqiPlayerName,
+  translateXiangqiRoundLabel,
+} from './xiangqi-broadcast-translate.js';
 
 export type XiangqiPlayerEventRecord = {
   tourSlug: string;
@@ -46,6 +51,9 @@ export type XiangqiPlayerRecord = {
   events: XiangqiPlayerEventRecord[];
   firstPlayedOn: string | null;
   lastPlayedOn: string | null;
+  /** On a CXA list with no game in the archive: the page is the list's facts
+   *  and an empty games state. Absent on every player with games. */
+  cxaOnly?: true;
 };
 
 export type XiangqiPlayerBoardRecord = {
@@ -55,6 +63,9 @@ export type XiangqiPlayerBoardRecord = {
   tourNameEn: string | null;
   roundId: string;
   roundName: string;
+  /** Translated when the page reads it, not from the round row's cached
+   *  nameEn, so a glossary change shows without a re-import. */
+  roundNameEn?: string | null;
   playedOn: string | null;
   colour: 'red' | 'black';
   opponent: { name: string; nameEn: string | null; slug: string | null };
@@ -63,6 +74,9 @@ export type XiangqiPlayerBoardRecord = {
   outcome: 'win' | 'draw' | 'loss';
   plyCount: number;
   sourceUrl: string | null;
+  /** The opening as the source classifies it, ECCO code first ("C70 五七炮对屏风马"),
+   *  or null when the source names none. */
+  opening: string | null;
 };
 
 /**
@@ -95,6 +109,7 @@ const SIDES_CTE = `
   WITH sides AS (
     SELECT boards.id AS board_id, boards.tour_slug, boards.round_id, boards.result,
            boards.ply_count, boards.source_url,
+           boards.payload->'details'->>'opening' AS opening,
            boards.red AS me, boards.black AS them, 'red' AS colour,
            CASE boards.result WHEN '1-0' THEN 'win' WHEN '0-1' THEN 'loss' ELSE 'draw' END AS outcome
     FROM xiangqi_broadcast_boards boards
@@ -102,6 +117,7 @@ const SIDES_CTE = `
     UNION ALL
     SELECT boards.id, boards.tour_slug, boards.round_id, boards.result,
            boards.ply_count, boards.source_url,
+           boards.payload->'details'->>'opening',
            boards.black, boards.red, 'black',
            CASE boards.result WHEN '0-1' THEN 'win' WHEN '1-0' THEN 'loss' ELSE 'draw' END
     FROM xiangqi_broadcast_boards boards
@@ -131,7 +147,8 @@ export function playerSlugBase(nameEn: string | null, name: string): string {
 /**
  * Every player with at least one finished game in an A-level event, with
  * their record over ALL events (the gate is on who gets a page, not on which
- * games count once they have one). Sorted by games desc, then name.
+ * games count once they have one), then every CXA-listed player the gate left
+ * out (#458). Sorted by games desc, then name.
  */
 export async function listXiangqiPlayers(): Promise<XiangqiPlayerRecord[]> {
   const { rows } = await getPool().query<SideRow>(
@@ -155,10 +172,15 @@ export async function listXiangqiPlayers(): Promise<XiangqiPlayerRecord[]> {
      WHERE sides.me->>'name' IS NOT NULL
      GROUP BY sides.me->>'name', sides.me->>'federation', sides.tour_slug, tours.name, tours.payload->>'nameEn'`,
   );
-  return foldPlayers(rows);
+  return foldPlayers(rows, CXA_LISTED_PLAYERS);
 }
 
-export function foldPlayers(rows: readonly SideRow[]): XiangqiPlayerRecord[] {
+/** `listed`: the players on the CXA lists the site carries, who get a page
+ *  whether or not the archive gates them in. */
+export function foldPlayers(
+  rows: readonly SideRow[],
+  listed: readonly CxaListedPlayer[] = [],
+): XiangqiPlayerRecord[] {
   const byKey = new Map<string, XiangqiPlayerRecord>();
   const latestFederation = new Map<
     XiangqiPlayerRecord,
@@ -241,6 +263,47 @@ export function foldPlayers(rows: readonly SideRow[]): XiangqiPlayerRecord[] {
     }
   }
 
+  // CXA-listed players past the gate (#458): a page for everyone on a list the
+  // site carries. One with games only below A level keeps those games; one with
+  // none gets a page of the list's facts, named by the romaniser ingestion uses,
+  // so the slug is the one their first game would give them. Their slugs are
+  // assigned after the gated players' and never take one those hold, so
+  // listing them cannot move an existing page; a collision takes the list's
+  // group, then a number.
+  const taken = new Set(players.map((p) => p.slug));
+  const gatedNames = new Set(players.map((p) => p.name));
+  const ungated = new Map<string, XiangqiPlayerRecord>();
+  for (const p of byKey.values()) {
+    if (!gatedNames.has(p.name) && !ungated.has(p.name)) ungated.set(p.name, p);
+  }
+  const lateEntries = [...listed]
+    .filter((entry) => !gatedNames.has(entry.name))
+    .sort((a, b) => (a.name < b.name ? -1 : a.name > b.name ? 1 : 0));
+  for (const entry of lateEntries) {
+    if (players.some((p) => p.name === entry.name)) continue;
+    const p: XiangqiPlayerRecord = ungated.get(entry.name) ?? {
+      slug: '',
+      name: entry.name,
+      nameEn: romanizeXiangqiPlayerName(entry.name) ?? null,
+      federation: null,
+      federationEn: null,
+      games: 0,
+      wins: 0,
+      draws: 0,
+      losses: 0,
+      events: [],
+      firstPlayedOn: null,
+      lastPlayedOn: null,
+      cxaOnly: true,
+    };
+    const base = playerSlugBase(p.nameEn, p.name);
+    let slug = taken.has(base) ? `${base}-${entry.group}` : base;
+    for (let n = 2; taken.has(slug); n += 1) slug = `${base}-${n}`;
+    taken.add(slug);
+    p.slug = slug;
+    players.push(p);
+  }
+
   for (const p of players) {
     p.events.sort((a, b) => (b.lastPlayedOn ?? '').localeCompare(a.lastPlayedOn ?? ''));
     // The federation shown is the most recent event's: a cup writes the
@@ -279,13 +342,14 @@ export async function listXiangqiPlayerBoards(
     outcome: 'win' | 'draw' | 'loss';
     ply_count: number;
     source_url: string | null;
+    opening: string | null;
   }>(
     `${SIDES_CTE}
      SELECT sides.board_id, sides.tour_slug, tours.name AS tour_name,
             tours.payload->>'nameEn' AS tour_name_en,
             sides.round_id, rounds.name AS round_name, rounds.starts_at,
             sides.colour, sides.them, sides.result, sides.outcome,
-            sides.ply_count, sides.source_url
+            sides.ply_count, sides.source_url, sides.opening
      FROM sides
      JOIN xiangqi_broadcast_tours tours ON tours.slug = sides.tour_slug
      JOIN xiangqi_broadcast_rounds rounds ON rounds.id = sides.round_id
@@ -300,6 +364,7 @@ export async function listXiangqiPlayerBoards(
     tourNameEn: row.tour_name_en,
     roundId: row.round_id,
     roundName: row.round_name,
+    roundNameEn: translateXiangqiRoundLabel(row.round_name) ?? null,
     playedOn: isoDate(row.starts_at),
     colour: row.colour,
     opponent: {
@@ -311,5 +376,6 @@ export async function listXiangqiPlayerBoards(
     outcome: row.outcome,
     plyCount: row.ply_count,
     sourceUrl: row.source_url,
+    opening: row.opening?.trim() || null,
   }));
 }

@@ -470,6 +470,68 @@ try {
       console.log(`${label}: ${list.map((s) => `${s.slug} (${s.liveAt})`).join(', ')}`);
     }
   }
+
+  // The player pages' reference data for the server (issue #458): the CXA
+  // points and rating lists and the title tags live in the web app
+  // (src/players/), and the server, which writes each player page's title,
+  // description, crawler body and share card, cannot import web code. It reads
+  // this file instead (apps/server/src/player-reference.ts), so the lists stay
+  // single-sourced here. Only each player's latest entry: that is all a title
+  // or a description names.
+  const { CXA_POINTS, CXA_POINTS_LISTS } = await server.ssrLoadModule('/src/players/cxa-points.ts');
+  const { CXA_RATINGS, CXA_LISTS } = await server.ssrLoadModule('/src/players/cxa-ratings.ts');
+  const { PLAYER_PROFILES } = await server.ssrLoadModule('/src/players/profiles.ts');
+  const { playerTitleFor } = await server.ssrLoadModule('/src/players/player-title.ts');
+  const { CXA_NAME_ALIASES } = await server.ssrLoadModule('/src/players/cxa-coverage.ts');
+  // Keyed by the archive's spelling where the CXA list prints a variant one
+  // (players/cxa-coverage.ts), since the server looks players up by that.
+  const archiveName = (name) => CXA_NAME_ALIASES[name] ?? name;
+  const playerPoints = {};
+  for (const [name, entries] of Object.entries(CXA_POINTS)) {
+    const last = entries[entries.length - 1];
+    if (!last) continue;
+    const list = CXA_POINTS_LISTS.find((l) => l.id === last.list);
+    playerPoints[archiveName(name)] = {
+      points: last.points,
+      rank: last.rank,
+      group: last.group,
+      of: list ? (last.group === 'men' ? list.men : list.women) : null,
+      listDate: list?.date ?? null,
+    };
+  }
+  const playerRatings = {};
+  const playerTitlesByName = {};
+  for (const [name, entries] of Object.entries(CXA_RATINGS)) {
+    const last = entries[entries.length - 1];
+    if (!last) continue;
+    const list = CXA_LISTS.find((l) => l.id === last.list);
+    playerRatings[archiveName(name)] = {
+      rating: last.rating,
+      rank: last.rank,
+      of: list?.size ?? null,
+      listLabel: list?.label ?? last.list,
+    };
+    const title = playerTitleFor({ name });
+    if (title) playerTitlesByName[archiveName(name)] = title;
+  }
+  const playerTitlesBySlug = {};
+  for (const [slug, profile] of Object.entries(PLAYER_PROFILES)) {
+    if (profile.title) playerTitlesBySlug[slug] = profile.title;
+  }
+  await fs.writeFile(
+    resolve(distDir, 'players-reference.json'),
+    `${JSON.stringify({
+      points: playerPoints,
+      ratings: playerRatings,
+      titlesByName: playerTitlesByName,
+      titlesBySlug: playerTitlesBySlug,
+    })}\n`,
+    'utf-8',
+  );
+  console.log(
+    `players reference: ${Object.keys(playerPoints).length} on the points list, ${Object.keys(playerRatings).length} rated`,
+  );
+
   const published = articles.filter((a) => articleIsLive(a, builtAt));
   const publishedBySlug = new Map(published.map((a) => [a.slug, a]));
   // Every page of a translation group emits the SAME alternate set, built from

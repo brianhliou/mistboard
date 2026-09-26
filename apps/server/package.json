@@ -16,6 +16,7 @@
     "typecheck": "tsc -p tsconfig.json --noEmit && tsc -p integration/tsconfig.json && tsc -p loadtest/tsconfig.json",
     "loadtest": "tsx loadtest/cli.ts",
     "og:default": "tsx src/scripts/generate-default-og.ts",
+    "bake:cxa-players": "tsx src/scripts/bake-cxa-listed-players.ts",
     "readme:hero": "tsx src/scripts/generate-xiangqi-hero.ts",
     "migrate": "tsx src/migrate.ts",
     "seed:profiles": "node scripts/seed-profile-fixtures.mjs",
