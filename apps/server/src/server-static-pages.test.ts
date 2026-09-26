@@ -1161,3 +1161,22 @@ test('the /study index carries its own route meta and sitemap entry', async () =
   });
   assert.match(sitemap.body, /<loc>https:\/\/mistboard\.com\/study<\/loc>/);
 });
+
+// The /bots body lands inside #app of the served shell, beside the route's own
+// meta, so a crawler without the bundle reads the page and not an empty root.
+test('a route body is served inside the app root', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  const served = await serveSpaShellWithRoutePreloads({
+    response,
+    staticDir,
+    pathname: '/zh-hans/bots',
+    publicHost: 'https://mistboard.com',
+    routeBody: async (pathname) =>
+      pathname === '/zh-hans/bots' ? '<main><h1>和电脑下象棋</h1></main>' : null,
+  });
+  assert.equal(served, true);
+  assert.match(response.body, /<div id="app"><main><h1>和电脑下象棋<\/h1><\/main><\/div>/);
+  assert.match(response.body, /<title>象棋人机对战 · 八个等级与皮卡鱼 \| Mistboard<\/title>/);
+});

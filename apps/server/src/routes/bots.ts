@@ -14,7 +14,7 @@ type BotPlayOption = {
   playable: boolean;
 };
 
-function botPlayOptions(bot: BotProfile): BotPlayOption[] {
+export function botPlayOptions(bot: BotProfile): BotPlayOption[] {
   const specIds =
     bot.supportedGameSpecIds.length > 0 ? bot.supportedGameSpecIds : [bot.defaultGameSpecId];
   const firstParty = firstPartyBotForId(bot.id);

@@ -9,6 +9,7 @@ import {
   readArticleSchedule,
 } from './article-schedule.js';
 import { botPageMeta } from './bot-page-meta.js';
+import { botsDirectoryBody } from './bots-page-body.js';
 import { broadcastPageMeta } from './og-broadcast.js';
 import { type TenantGamePageMeta, tenantGamePageMeta } from './og-game-tenant.js';
 import {
@@ -477,6 +478,8 @@ export async function serveSpaShellWithRoutePreloads(params: {
   publicHost?: string;
   /** Override the finished-game meta lookup (tests); the default reads persistence. */
   gameMeta?: (pathname: string) => Promise<TenantGamePageMeta | null>;
+  /** Override the server-rendered route body (tests); the default reads persistence. */
+  routeBody?: (pathname: string) => Promise<string | null>;
 }): Promise<boolean> {
   const links = await routePreloadLinksForPath(params);
   // A tenant game page (/<tenant>/game/:id, /room/:id) names a finished game:
@@ -522,6 +525,11 @@ export async function serveSpaShellWithRoutePreloads(params: {
     html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
   }
   if (links) html = html.replace('</head>', `${links}</head>`);
+  // A client route that exists to answer a search (/bots) also carries its text
+  // in the HTML, for a crawler that does not run the bundle. The client clears
+  // the root on mount, so the two never show together.
+  const body = await (params.routeBody ?? botsDirectoryBody)(params.pathname).catch(() => null);
+  if (body) html = html.replace('<div id="app"></div>', `<div id="app">${body}</div>`);
   params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });
   params.response.end(html);
   return true;
