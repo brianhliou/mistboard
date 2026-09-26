@@ -156,6 +156,7 @@ Conventions:
 
 ### Removed
 
+- The player page's All players button and head-to-head picker, and the players list's team filter: the sidebar, the games list's opponent filter and the Pro teams page cover them ([25e972ef](https://github.com/brianhliou/mistboard/commit/25e972ef))
 - The collapsed Table under Games per week on /stats ([0be3e4d4](https://github.com/brianhliou/mistboard/commit/0be3e4d4))
 - Fairy-Stockfish's xiangqi net (11 MB) and its lazy load on the analysis board, superseded by Pikafish's ([9a8bb492](https://github.com/brianhliou/mistboard/commit/9a8bb492))
 - The "still face-down" panel in the Jieqi room: Jieqi reveals a captured hidden piece to the capturer only, so the panel could not know which of your own hidden pieces were already gone and listed them anyway; the captured strips carry the same facts. Banqi and Flip Jungle keep theirs ([bbfad4c0](https://github.com/brianhliou/mistboard/commit/bbfad4c0))
