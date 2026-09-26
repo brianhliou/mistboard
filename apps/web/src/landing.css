@@ -39,9 +39,9 @@
      initial screen): event banners + the game viewer (left), the tall tabbed
      lobby panel (center, the focal element), the single Play button + activity
      stats (right). Band 2: daily puzzle (left), forum topics (center), top
-     players (right). Bands 3-4: the blog row then the learn row in the center,
-     flanked by the News feed (left) and Top studies (right), each spanning both
-     rows. */
+     studies (right). Bands 3-4: the blog row then the learn row in the center,
+     flanked by the News feed (left) and the lobby chat (right), each spanning
+     both rows. */
   /* lila proportions: the lobby is the dominant element (lila's app is 66% of a
      34%/1fr grid). Center takes the free space (1fr) while the side rails hold
      a tight 280-340px, so the panel reads as the focal block, not a co-equal
@@ -51,9 +51,9 @@
     minmax(280px, var(--landing-rail-width));
   grid-template-areas:
     "left   panel  play"
-    "puzzle forum  chat"
-    "news   blogs  studies"
-    "news   learn  studies";
+    "puzzle forum  studies"
+    "news   blogs  chat"
+    "news   learn  chat";
   --landing-col-gap: clamp(10px, 0.9vw, 15px);
   --landing-row-gap: clamp(14px, 1.8vw, 24px);
   column-gap: var(--landing-col-gap);
@@ -309,7 +309,7 @@
 }
 
 /* Band-2 center column: forum topics, sharing the band's box height with the
-   puzzle and the chat so the row reads as one strip. */
+   puzzle and Top studies so the row reads as one strip. */
 .landing-forum-column {
   grid-area: forum;
   display: flex;
@@ -317,8 +317,10 @@
   min-width: 0;
 }
 
-/* Band-2 right rail: the lobby chat, stretched to the band's shared height so
-   the puzzle / forum / chat strip lines up top AND bottom. */
+/* Bands 3-4 right rail: the lobby chat, spanning the blog and learn rows like
+   News on the left (the stretch lives in the desktop block). It traded places
+   with Top studies 2026-09-26: the band-2 slot is the only one of the three that
+   starts above a desktop fold, and a quiet chat there read as an empty site. */
 .landing-chat-column {
   grid-area: chat;
   display: flex;
@@ -327,11 +329,11 @@
   min-width: 0;
 }
 
-/* Bands 3-4 side rails: News (left) and Top studies (right) each span the blog
-   and learn rows on desktop, so their boxes stretch from the blog row's top edge
-   to the learn row's bottom edge (the stretch itself lives in the desktop block;
-   stacked, the boxes keep their own fixed height). News scrolls inside its box;
-   Top studies fits whole rows to it (site-box-fit.ts). */
+/* Bands 3-4 left rail: News spans the blog and learn rows on desktop, so its box
+   stretches from the blog row's top edge to the learn row's bottom edge (the
+   stretch itself lives in the desktop block; stacked, the box keeps its own
+   fixed height) and scrolls inside. Band-2 right rail: Top studies, stretched to
+   the band's shared height and fitting whole rows to it (site-box-fit.ts). */
 .landing-news-column {
   grid-area: news;
   display: flex;
@@ -2205,32 +2207,31 @@
     aspect-ratio: auto;
   }
 
-  /* The chat box takes the same band-2 height instead of its standalone one, so
-     puzzle / forum / chat share both edges. */
-  .landing-chat-column > .landing-chat-mount:not(:empty),
-  .landing-chat-column .landing-chat {
-    height: 100%;
-    min-height: 0;
-  }
-
-  /* ── Bands 3-4 side rails ────────────────────────────────────────────────────
-     News and Top studies span the blog + learn rows and fill the spanned area:
-     top-aligned with the blog row, bottom-aligned with the learn row, the News
-     body scrolling inside and Top studies fitting whole rows to the box. The
-     boxes are taken out of flow (absolute in the stretched
-     rail) so their long timelines contribute NOTHING to the auto row heights —
-     in flow they would inflate rows 3-4 and tear the blog row away from the
-     learn row. */
+  /* ── Stretched boxes ─────────────────────────────────────────────────────────
+     News and the chat span the blog + learn rows and fill the spanned area:
+     top-aligned with the blog row, bottom-aligned with the learn row, each body
+     scrolling inside. Top studies fills band 2 beside the puzzle and forum,
+     fitting whole rows to the box. All three are taken out of flow (absolute in
+     the stretched column) so their own content contributes NOTHING to the auto
+     row heights: in flow a long timeline would inflate rows 3-4 and tear the
+     blog row away from the learn row. */
   .landing-news-column,
+  .landing-chat-column,
   .landing-studies-column {
     position: relative;
   }
 
   .landing-news-column .landing-announcements,
+  .landing-chat-column > .landing-chat-mount:not(:empty),
   .landing-studies-column .landing-community-widget {
     position: absolute;
     inset: 0;
     height: auto;
+    min-height: 0;
+  }
+
+  .landing-chat-column .landing-chat {
+    height: 100%;
     min-height: 0;
   }
 
@@ -2396,7 +2397,7 @@
       "panel play"
       "panel left"
       "forum puzzle"
-      "chat  studies"
+      "studies chat"
       "blogs blogs"
       "learn learn"
       "news  news";
@@ -2449,8 +2450,8 @@
 
 @media (max-width: 959px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
-     viewer, then the band-2 widgets (puzzle, forum, chat), the blog row, the
-     learn row, and the two side-rail boxes (studies, news). */
+     viewer, then the band-2 widgets (puzzle, forum, studies), the blog row, the
+     learn row, and the two side-rail boxes (chat, news). */
   .landing-demo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -2459,10 +2460,10 @@
       "left"
       "puzzle"
       "forum"
-      "chat"
+      "studies"
       "blogs"
       "learn"
-      "studies"
+      "chat"
       "news";
     max-width: 640px;
   }
