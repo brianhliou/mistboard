@@ -129,6 +129,7 @@ function requestResign(sendSocket: SendSocket, locale: Locale = currentLocale())
     title: t('live.resignTitle', {}, locale),
     body: t('live.resignBody', {}, locale),
     confirmLabel: t('live.resign', {}, locale),
+    cancelLabel: t('setup.cancel', {}, locale),
     confirmTone: 'danger',
     onConfirm: () => {
       sendSocket({ type: 'resign' });
@@ -145,6 +146,7 @@ function requestAbort(sendSocket: SendSocket, locale: Locale = currentLocale()):
     title: t('live.abortTitle', {}, locale),
     body: t('live.abortBody', {}, locale),
     confirmLabel: t('live.abort', {}, locale),
+    cancelLabel: t('setup.cancel', {}, locale),
     confirmTone: 'danger',
     onConfirm: () => {
       sendSocket({ type: 'abort' });

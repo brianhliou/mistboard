@@ -55,7 +55,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -96,7 +96,7 @@ let roomMode: 'pve' | 'pvp' = 'pvp';
 let pveEngineId: string | null = null;
 
 const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
-  displayName: 'Jieqi',
+  displayName: 'variant.jieqi.name',
   metaMarkerId: 'jieqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
@@ -105,11 +105,8 @@ const jieqiWebTenant: WebVariantTenant<JieqiColor> = {
   enabled: jieqiEnabled,
   reviewUrl: (roomId) => `/jieqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: jieqiReasonPhrase,
-  disabledTitle: 'Jieqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Jieqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching without private information.',
-  selectInstruction: 'Select one of your pieces, then choose a destination.',
+  spectatorBody: 'live.spectatorNoPrivateInfo',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
 const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
@@ -220,22 +217,22 @@ export function bootstrapJieqiLiveRoom(): void {
   client.bootstrap();
 }
 
-function jieqiReasonPhrase(reason: string): string {
+function jieqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
-      return 'checkmate';
+      return 'result.checkmate';
     case 'stalemate':
-      return 'stalemate';
+      return 'result.stalemate';
     case 'no-capture-clock':
-      return 'no progress';
+      return 'result.noProgress';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 

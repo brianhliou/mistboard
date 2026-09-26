@@ -31,7 +31,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 
 let core: TenantLiveClientContext<MahjongSeat, MahjongPlayerView> | null = null;
 let roomMode: 'pvp' | 'pve' = 'pve';
@@ -41,21 +41,27 @@ function isMahjongSeat(value: unknown): value is MahjongSeat {
   return typeof value === 'string' && (MAHJONG_SEATS as readonly string[]).includes(value);
 }
 
-function mahjongReasonPhrase(reason: string): string {
+function mahjongReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'exhausted':
-      return 'the wall ran out';
+      return 'result.wallRanOut';
     case 'self-draw':
-      return 'won on a self-draw';
+      return 'result.selfDraw';
     case 'discard':
-      return 'won on a discard';
+      return 'result.onDiscard';
+    case 'timeout':
+      return 'result.timeout';
+    case 'resignation':
+      return 'result.resignation';
+    case 'abandonment':
+      return 'result.abandonment';
     default:
-      return reason.replace(/-/g, ' ');
+      return 'result.gameRules';
   }
 }
 
 const mahjongWebTenant: WebVariantTenant<MahjongSeat> = {
-  displayName: 'Mahjong',
+  displayName: 'variant.mahjong.name',
   metaGlyph: '🀄',
   colors: MAHJONG_SEATS,
   isColor: isMahjongSeat,
@@ -75,11 +81,9 @@ const mahjongWebTenant: WebVariantTenant<MahjongSeat> = {
   enabled: mahjongEnabled,
   reviewUrl: (roomId) => `/mahjong/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: mahjongReasonPhrase,
-  disabledTitle: 'Mahjong disabled',
-  disabledBody: 'This client build has the mahjong table off.',
-  rejectedBody: 'This mahjong room is not active. Start a new game to play a hand.',
-  spectatorBody: 'Watching the table. Hands stay concealed until the hand ends.',
-  selectInstruction: 'Click a tile to discard it.',
+  rejectedBody: 'live.mahjongRoomNotActive',
+  spectatorBody: 'live.spectatorMahjong',
+  selectInstruction: 'live.selectMahjong',
 };
 
 /** Turn a move into the one line the move list shows. */

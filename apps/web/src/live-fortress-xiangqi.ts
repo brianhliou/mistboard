@@ -32,6 +32,7 @@ import {
   fortressXiangqiDropTargets,
   fortressXiangqiMoveLabel,
 } from './fortress-xiangqi-view.js';
+import { t } from './i18n/catalog.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
@@ -49,7 +50,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 
 type FortressMoveEvent = TenantMovePlayed<FortressXiangqiColor, FortressXiangqiMove>;
@@ -71,7 +72,7 @@ let forfeitDeadline: number | null = null;
 let lastStatusType: string | null = null;
 
 const fortressWebTenant: WebVariantTenant<FortressXiangqiColor> = {
-  displayName: 'Fortress Xiangqi',
+  displayName: 'variant.fortressXiangqi.name',
   metaMarkerId: 'fortress-xiangqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
@@ -80,11 +81,8 @@ const fortressWebTenant: WebVariantTenant<FortressXiangqiColor> = {
   enabled: fortressXiangqiEnabled,
   reviewUrl: (roomId) => `/fortress-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: fortressReasonPhrase,
-  disabledTitle: 'Fortress disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Fortress room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the full board.',
-  selectInstruction: 'Select a piece, or select a reserve and then a drop square.',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectFortress',
 };
 
 const client = createTenantLiveClient<
@@ -248,12 +246,14 @@ function renderCheckStatus(liveRefs: LiveRefs, view: FortressXiangqiPlayerView |
   const notice = document.createElement('div');
   notice.className = 'action-notice danger';
   const title = document.createElement('strong');
-  title.textContent = 'Check';
+  title.textContent = t('live.checkTitle');
   const body = document.createElement('p');
   body.textContent =
     core?.state.seat === view.perspective
-      ? 'Your general is in check. Answer the threat.'
-      : `${capitalize(view.perspective)} general is in check.`;
+      ? t('live.checkYourGeneral')
+      : t('live.checkColorGeneral', {
+          color: t(view.perspective === 'red' ? 'setup.red' : 'setup.black'),
+        });
   notice.append(title, body);
   liveRefs.actionStatus.append(notice);
 }
@@ -529,24 +529,24 @@ function orientationFor(view: FortressXiangqiPlayerView | null): FortressXiangqi
   return view?.perspective ?? 'red';
 }
 
-function fortressReasonPhrase(reason: string): string {
+function fortressReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
-      return 'checkmate';
+      return 'result.checkmate';
     case 'stalemate':
-      return 'stalemate';
+      return 'result.stalemate';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     case 'repetition':
-      return 'threefold repetition';
+      return 'result.threefoldRepetition';
     case 'chasing':
-      return 'perpetual check';
+      return 'result.perpetualCheck';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 
@@ -560,9 +560,4 @@ function isFortressSquare(value: string): value is FortressXiangqiSquare {
 
 function isDropRole(value: string): value is FortressXiangqiDropRole {
   return (FORTRESS_DROP_ROLES as readonly string[]).includes(value);
-}
-
-function capitalize(value: string): string {
-  if (!value) return value;
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
 }

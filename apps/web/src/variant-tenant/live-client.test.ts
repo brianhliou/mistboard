@@ -32,18 +32,15 @@ type TView = TenantWebView<TColor> & {
 };
 
 const tenant: WebVariantTenant<TColor> = {
-  displayName: 'Testline',
+  displayName: 'variant.xiangqi.name',
   colors: ['red', 'blue'],
   isColor: (value): value is TColor => value === 'red' || value === 'blue',
   oppositeColor: (color) => (color === 'red' ? 'blue' : 'red'),
   enabled: () => enabledFlag,
   reviewUrl: (roomId) => `/testline/game/${roomId}`,
-  reasonPhrase: () => 'the rules',
-  disabledTitle: 'Testline disabled',
-  disabledBody: 'off',
-  rejectedBody: 'rejected',
-  spectatorBody: 'watching',
-  selectInstruction: 'pick',
+  reasonPhrase: () => 'result.gameRules',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
 let enabledFlag = true;

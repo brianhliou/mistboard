@@ -16,6 +16,7 @@ import {
   renderFortressXiangqiBoardSvg,
 } from './fortress-xiangqi-render.js';
 import { fillFortressXiangqiReserve } from './fortress-xiangqi-view.js';
+import { variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { renderXiangqiBoardSvg } from './xiangqi-board.js';
@@ -109,7 +110,7 @@ export function renderHomePuzzleWidget(daily: HomeDailyPuzzle): HTMLElement {
 function renderHomePuzzleWidgetContent(puzzle: HomeDailyPuzzle['puzzle']): HTMLElement[] {
   const title = document.createElement('span');
   title.className = 'home-puzzle-widget-title';
-  title.textContent = t('homePuzzle.title', { variant: variantLabel(puzzle.variant) });
+  title.textContent = t('homePuzzle.title', { variant: variantDisplayLabel(puzzle.variant) });
 
   const turn = document.createElement('span');
   turn.className = 'home-puzzle-widget-turn';
@@ -203,16 +204,6 @@ function isHomeDailyPuzzle(value: Partial<HomeDailyPuzzle>): value is HomeDailyP
     typeof value.puzzle.initial === 'object' &&
     value.puzzle.initial !== null
   );
-}
-
-function variantLabel(variant: string): string {
-  if (variant === FORTRESS_XIANGQI_SPEC_ID) return 'Fortress Xiangqi';
-  if (variant === XIANGQI_SPEC_ID) return 'Xiangqi';
-  return variant
-    .split('-')
-    .filter(Boolean)
-    .map((part) => `${part[0]?.toUpperCase() ?? ''}${part.slice(1)}`)
-    .join(' ');
 }
 
 function colorLabel(color: XiangqiColor | null): string {

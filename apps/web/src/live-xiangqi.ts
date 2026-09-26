@@ -47,7 +47,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import {
   animateXiangqiBoardMove,
@@ -84,7 +84,7 @@ let annotations: BoardAnnotations | null = null;
 // ── Shared tenant room chrome config ─────────────────────────────────────────
 
 const xiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
-  displayName: 'Xiangqi',
+  displayName: 'variant.xiangqi.name',
   metaMarkerId: 'xiangqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
@@ -93,33 +93,30 @@ const xiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
   enabled: xiangqiEnabled,
   reviewUrl: (roomId) => `/xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: xiangqiReasonPhrase,
-  disabledTitle: 'Xiangqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Xiangqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the full board.',
-  selectInstruction: 'Select one of your pieces, then choose a destination.',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
-function xiangqiReasonPhrase(reason: string): string {
+function xiangqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
-      return 'checkmate';
+      return 'result.checkmate';
     case 'stalemate':
-      return 'stalemate';
+      return 'result.stalemate';
     case 'general-captured':
-      return 'general capture';
+      return 'result.generalCapture';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     case 'repetition':
-      return 'threefold repetition';
+      return 'result.threefoldRepetition';
     case 'chasing':
-      return 'perpetual check';
+      return 'result.perpetualCheck';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 

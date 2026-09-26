@@ -30,6 +30,8 @@ import type {
   XiangqiPieceRole,
 } from '@mistboard/game';
 import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
+import { t } from './i18n/catalog.js';
+import type { TenantReasonKey } from './variant-tenant/room-chrome.js';
 import { LIVE_BOARD_GEO, XIANGQI_PIECE_SIZE, type XiangqiBoardMarker } from './xiangqi-board.js';
 import { xiangqiBoardPoint } from './xiangqi-board-geometry.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
@@ -162,33 +164,35 @@ export function animateAtomicXiangqiCapture(
 }
 
 /** The reason phrase for the room chrome's end-of-game line. */
-export function atomicXiangqiReasonPhrase(reason: string): string {
+export function atomicXiangqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'checkmate':
-      return 'checkmate';
+      return 'result.checkmate';
     case 'stalemate':
-      return 'stalemate';
+      return 'result.stalemate';
     case 'general-captured':
-      return 'the general was blown up';
+      return 'result.generalBlownUp';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     case 'repetition':
-      return 'threefold repetition';
+      return 'result.threefoldRepetition';
     case 'chasing':
-      return 'perpetual check';
+      return 'result.perpetualCheck';
     case 'progress-clock':
-      return 'sixty plies without a capture';
+      return 'result.sixtyPliesNoCapture';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 
 /** Check notice body: whose general, and what the threat is. */
 export function atomicXiangqiCheckBody(perspective: AtomicXiangqiColor, ownSeat: boolean): string {
-  const whose = ownSeat ? 'Your' : perspective === 'red' ? 'Red’s' : 'Black’s';
-  return `${whose} general can be taken or blown up next move. A repeated check like this loses.`;
+  if (ownSeat) return t('live.atomicCheckYour');
+  return t('live.atomicCheckColor', {
+    color: t(perspective === 'red' ? 'setup.red' : 'setup.black'),
+  });
 }

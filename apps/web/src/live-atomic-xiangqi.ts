@@ -29,6 +29,7 @@ import {
   markAtomicXiangqiBlastHost,
 } from './atomic-xiangqi-board.js';
 import { atomicXiangqiEnabled } from './feature-flags.js';
+import { t } from './i18n/catalog.js';
 import {
   maybePlayAtomicXiangqiSnapshotSound,
   soundForOwnAtomicXiangqiMove,
@@ -76,7 +77,7 @@ let detonatedKey: string | null = null;
 let cancelCapture: (() => void) | null = null;
 
 const atomicXiangqiWebTenant: WebVariantTenant<AtomicXiangqiColor> = {
-  displayName: 'Atomic Xiangqi',
+  displayName: 'variant.atomicXiangqi.name',
   metaMarkerId: 'xiangqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
@@ -85,11 +86,8 @@ const atomicXiangqiWebTenant: WebVariantTenant<AtomicXiangqiColor> = {
   enabled: atomicXiangqiEnabled,
   reviewUrl: (roomId) => `/atomic-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: atomicXiangqiReasonPhrase,
-  disabledTitle: 'Atomic Xiangqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Atomic Xiangqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the full board.',
-  selectInstruction: 'Select one of your pieces, then choose a destination.',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
 const client = createTenantLiveClient<
@@ -254,7 +252,7 @@ function renderCheckStatus(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | n
   const notice = document.createElement('div');
   notice.className = 'action-notice danger';
   const title = document.createElement('strong');
-  title.textContent = 'Check';
+  title.textContent = t('live.checkTitle');
   const body = document.createElement('p');
   body.textContent = atomicXiangqiCheckBody(
     view.perspective,

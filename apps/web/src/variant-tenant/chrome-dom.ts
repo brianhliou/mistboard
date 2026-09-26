@@ -3,6 +3,8 @@
  * no variant or live-state knowledge.
  */
 
+import { t } from '../i18n/catalog.js';
+
 export function infoItem(label: string, value: string): HTMLDivElement {
   const item = document.createElement('div');
   const key = document.createElement('span');
@@ -28,8 +30,9 @@ export function noticeBody(text: string): HTMLElement {
 export function presenceDot(connected: boolean): HTMLSpanElement {
   const dot = document.createElement('span');
   dot.className = `presence-dot ${connected ? 'is-online' : 'is-offline'}`;
-  dot.setAttribute('aria-label', connected ? 'Connected' : 'Disconnected');
-  dot.title = connected ? 'Connected' : 'Disconnected';
+  const label = connected ? t('live.connConnected') : t('live.connDisconnected');
+  dot.setAttribute('aria-label', label);
+  dot.title = label;
   return dot;
 }
 

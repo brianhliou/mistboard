@@ -356,7 +356,7 @@ async function transitionToRoom(
       window.location.href = url;
       return;
     }
-    prepareRoomTransition(root, url, teardownLanding);
+    prepareRoomTransition(root, url, teardownLanding, t(tenant.pageTitleKey));
     bootstrap();
     return;
   }
@@ -368,7 +368,7 @@ async function transitionToRoom(
     window.location.href = url;
     return;
   }
-  prepareRoomTransition(root, url, teardownLanding);
+  prepareRoomTransition(root, url, teardownLanding, t('live.pageTitle'));
   liveModule.bootstrapLiveRoom();
 }
 
@@ -385,9 +385,17 @@ export function landingRoomClientKindForUrl(url: string): 'tenant' | 'standard' 
   return landingRoomTenantForUrl(url) ? 'tenant' : 'standard';
 }
 
-function prepareRoomTransition(root: HTMLElement, url: string, teardownLanding: () => void): void {
+// The room gets the tab title a full load of its URL would (main.ts setTitle);
+// without it the tab kept the homepage's English title for the whole game.
+function prepareRoomTransition(
+  root: HTMLElement,
+  url: string,
+  teardownLanding: () => void,
+  title: string,
+): void {
   teardownLanding();
   window.history.pushState(null, '', url);
+  document.title = `${title} · Mistboard`;
   root.classList.remove('landing-page', 'game-route');
   root.replaceChildren();
   window.addEventListener('popstate', reloadOnPopState);

@@ -3289,16 +3289,16 @@ function roomCreationError(status: number, failure: RoomCreationFailure): Error 
 
 function roomCreationStatusText(err: unknown, mode: 'pvp' | 'pve'): string {
   if (err instanceof Error && err.name === 'invalid_time_control') {
-    return 'That time control is not available. Try another one.';
+    return t('home.setupErrorTimeControl');
   }
   if (err instanceof Error && err.name === 'persistence_disabled') {
-    return 'Room storage is not available on this server.';
+    return t('home.setupErrorStorage');
   }
   if (mode === 'pve' && err instanceof Error && err.name === 'engine_unavailable') {
-    return 'The engine service is unavailable. Try again soon.';
+    return t('home.setupErrorEngineUnavailable');
   }
-  if (mode === 'pve') return 'Could not start an engine game. Try again.';
-  return 'Could not create the room. Try again.';
+  if (mode === 'pve') return t('home.setupErrorEngineGame');
+  return t('home.setupErrorRoom');
 }
 
 function sleep(ms: number): Promise<void> {

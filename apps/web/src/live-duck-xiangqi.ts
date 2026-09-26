@@ -30,6 +30,7 @@ import {
 import './live-xiangqi.css';
 import './duck-xiangqi.css';
 import { duckXiangqiEnabled } from './feature-flags.js';
+import { t } from './i18n/catalog.js';
 import { finishBadgesForResult, generalSquareIn } from './live-finish-badges.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
@@ -47,7 +48,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 
@@ -67,7 +68,7 @@ function isDuckColor(value: unknown): value is DuckXiangqiColor {
 }
 
 const duckWebTenant: WebVariantTenant<DuckXiangqiColor> = {
-  displayName: 'Duck Xiangqi',
+  displayName: 'variant.duckXiangqi.name',
   metaGlyph: '🦆',
   colors: ['red', 'black'],
   isColor: isDuckColor,
@@ -78,11 +79,8 @@ const duckWebTenant: WebVariantTenant<DuckXiangqiColor> = {
   // postgame, which 403s on a tenant event log.
   reviewUrl: (roomId) => `/duck-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: duckReasonPhrase,
-  disabledTitle: 'Duck Xiangqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Duck Xiangqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the full board.',
-  selectInstruction: 'Move a piece, then place the duck on any empty point.',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectDuck',
 };
 
 const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, DuckXiangqiTurn>({
@@ -253,9 +251,9 @@ function renderPhaseNotice(liveRefs: LiveRefs, view: DuckXiangqiPlayerView | nul
   // a player has seen this exact card say "Invite opponent" a minute earlier.
   notice.className = 'action-notice pending';
   const strong = document.createElement('strong');
-  strong.textContent = 'Now place the duck';
+  strong.textContent = t('live.duckPlaceTitle');
   const body = document.createElement('p');
-  body.textContent = 'Any empty point. Your move is not sent until you do.';
+  body.textContent = t('live.duckPlaceBody');
   notice.append(strong, body);
   liveRefs.actionStatus.append(notice);
 }
@@ -440,17 +438,23 @@ function replayPositionKey(view: DuckXiangqiPlayerView): string {
   return JSON.stringify({ board, duck: view.duck ?? null, moveNumber: view.moveNumber });
 }
 
-function duckReasonPhrase(reason: string): string {
+function duckReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'general-captured':
-      return 'general captured';
+      return 'result.generalCaptured';
     case 'stalemate':
-      return 'no legal turn';
+      return 'result.noLegalTurn';
     case 'progress':
-      return '60 moves without a capture';
+      return 'result.sixtyMovesNoCapture';
     case 'repetition':
-      return 'threefold repetition';
+      return 'result.threefoldRepetition';
+    case 'timeout':
+      return 'result.timeout';
+    case 'resignation':
+      return 'result.resignation';
+    case 'abandonment':
+      return 'result.abandonment';
     default:
-      return reason.replace(/-/g, ' ');
+      return 'result.gameRules';
   }
 }

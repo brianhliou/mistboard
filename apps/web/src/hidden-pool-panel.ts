@@ -1,5 +1,6 @@
 import type { HiddenPoolSide } from '@mistboard/game';
 import './hidden-pool-panel.css';
+import { t } from './i18n/catalog.js';
 import { countBadge } from './review/captured-pool.js';
 
 // The "still face-down" panel for the flip variants: one row per ink listing the
@@ -18,7 +19,7 @@ import { countBadge } from './review/captured-pool.js';
 
 export type HiddenPoolRow<Color extends string, Role extends string> = {
   color: Color;
-  /** Row label: the ink as the variant brands it ("Red", "Black", "Blue"). */
+  /** Row label: the localized ink as the variant brands it (setup.red / black / blue). */
   label: string;
   side: HiddenPoolSide<Role>;
 };
@@ -32,7 +33,7 @@ export function renderHiddenPoolPanel<Color extends string, Role extends string>
   if (rows.every((row) => row.side.total === 0)) return;
   const caption = document.createElement('div');
   caption.className = 'hidden-pool__caption';
-  caption.textContent = 'Still face-down';
+  caption.textContent = t('live.stillFaceDown');
   host.append(caption);
   for (const row of rows) {
     const line = document.createElement('div');
@@ -47,7 +48,7 @@ export function renderHiddenPoolPanel<Color extends string, Role extends string>
     if (row.side.total === 0) {
       const none = document.createElement('span');
       none.className = 'hidden-pool__none';
-      none.textContent = 'all revealed';
+      none.textContent = t('live.allRevealed');
       pieces.append(none);
     }
     for (const entry of row.side.entries) {
@@ -63,7 +64,7 @@ export function renderHiddenPoolPanel<Color extends string, Role extends string>
     if (row.side.unknownCaptured > 0) {
       const note = document.createElement('span');
       note.className = 'hidden-pool__note';
-      note.textContent = `${row.side.unknownCaptured} of these already taken, unknown which`;
+      note.textContent = t('live.unknownCaptured', { count: row.side.unknownCaptured });
       line.append(note);
     }
     host.append(line);

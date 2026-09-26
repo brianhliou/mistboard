@@ -1,5 +1,6 @@
 import { type Color, clockRemainingMs, type GameEvent, type PlayerView } from '@mistboard/game';
 import { shouldShowClockTenths } from './account-preferences.js';
+import { type I18nKey, t } from './i18n/catalog.js';
 import { isLive } from './live-replay.js';
 import { maybePlayLowTimeSound } from './live-sound.js';
 import { type LiveRefs, liveState } from './live-state.js';
@@ -42,7 +43,7 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
       const isTurn = color === toMove;
       const playerLine = document.createElement('span');
       playerLine.className = isTurn ? 'clock-player-line active' : 'clock-player-line';
-      const name = liveState.seatDisplayNames[color] ?? capitalize(color);
+      const name = liveState.seatDisplayNames[color] ?? colorWord(color);
       // Only a real seat name links; the capitalized colour fallback names
       // nobody, so it must not carry the seat's profile href.
       playerLine.append(
@@ -57,7 +58,7 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
       if (isTurn) {
         const pill = document.createElement('span');
         pill.className = 'clock-to-move';
-        pill.textContent = color === liveState.seat ? 'your move' : 'to move';
+        pill.textContent = color === liveState.seat ? t('live.yourMovePill') : t('live.toMove');
         pill.setAttribute('aria-hidden', 'false');
         playerLine.append(pill);
       }
@@ -78,7 +79,7 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
           : formatClock(tc.initialMs);
       refs.clockNote.textContent = dayScale
         ? daysPerMoveNote()
-        : `${tcLabel} · clock starts when both players are ready`;
+        : t('live.clockStartsWhenReady', { control: tcLabel });
       refs.clockNote.hidden = false;
     }
     return;
@@ -124,7 +125,11 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     const serverName = liveState.seatDisplayNames[color];
     const playerName =
       serverName ??
-      (color === humanColor ? 'You' : liveState.roomMode === 'pve' ? 'Bot' : capitalize(color));
+      (color === humanColor
+        ? t('live.you')
+        : liveState.roomMode === 'pve'
+          ? t('play.opponentEngine')
+          : colorWord(color));
     // 'You' / 'Bot' / the colour word are placeholders for an unnamed seat, so
     // they stay plain text; only a server-supplied name gets its profile link.
     playerLine.append(
@@ -136,7 +141,7 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     );
     const toMove = document.createElement('span');
     toMove.className = 'clock-to-move';
-    toMove.textContent = 'to move';
+    toMove.textContent = t('live.toMove');
     toMove.setAttribute('aria-hidden', isActive ? 'false' : 'true');
     playerLine.append(toMove);
     const remainingMs = clockRemainingMs(clock, color, displayAt);
@@ -163,7 +168,9 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
 function daysPerMoveNote(): string {
   const allowance = daysPerMoveAllowance();
   if (allowance === null) return '';
-  return allowance === 1 ? '1 day per move' : `${allowance} days per move`;
+  return allowance === 1
+    ? t('live.oneDayPerMoveNote')
+    : t('live.daysPerMoveNote', { count: allowance });
 }
 
 // The room's days-per-move allowance, or null for live clocks. Present on every
@@ -219,12 +226,20 @@ function roomInitialClockMs(): number | null {
 function presenceDot(connected: boolean, opts?: { reconnecting?: boolean }): HTMLSpanElement {
   const dot = document.createElement('span');
   dot.className = `presence-dot ${connected ? 'is-online' : 'is-offline'}`;
-  const label = connected ? 'Connected' : opts?.reconnecting ? 'Reconnecting' : 'Disconnected';
+  const label = connected
+    ? t('live.connConnected')
+    : opts?.reconnecting
+      ? t('live.statusReconnecting')
+      : t('live.connDisconnected');
   dot.setAttribute('aria-label', label);
   dot.title = label;
   return dot;
 }
 
-function capitalize(value: string): string {
-  return `${value.slice(0, 1).toUpperCase()}${value.slice(1)}`;
+// The placeholder for an unnamed seat: the shared setup.* colour word, so the
+// clock rows read the same word as the pregame picker and the result line.
+const COLOR_WORD_KEYS: Record<Color, I18nKey> = { white: 'setup.white', black: 'setup.black' };
+
+function colorWord(color: Color): string {
+  return t(COLOR_WORD_KEYS[color]);
 }

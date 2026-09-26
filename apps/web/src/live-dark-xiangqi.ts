@@ -52,7 +52,7 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type { TenantReasonKey, WebVariantTenant } from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import type { XiangqiBoardLayout } from './xiangqi-appearance-storage.js';
 import { readStoredXiangqiBoardLayout } from './xiangqi-appearance-storage.js';
@@ -147,7 +147,7 @@ let draggingFrom: XiangqiSquare | null = null;
 // ── Shared tenant room chrome config ─────────────────────────────────────────
 
 const darkXiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
-  displayName: 'Fog Xiangqi',
+  displayName: 'variant.darkXiangqi.name',
   metaMarkerId: 'dark-xiangqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
@@ -156,25 +156,22 @@ const darkXiangqiWebTenant: WebVariantTenant<XiangqiColor> = {
   enabled: darkXiangqiEnabled,
   reviewUrl: (roomId) => `/dark-xiangqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: darkXiangqiReasonPhrase,
-  disabledTitle: 'Fog Xiangqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Fog Xiangqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching without private information.',
-  selectInstruction: 'Select one of your visible pieces, then choose a destination.',
+  spectatorBody: 'live.spectatorNoPrivateInfo',
+  selectInstruction: 'live.selectVisiblePiece',
 };
 
-function darkXiangqiReasonPhrase(reason: string): string {
+function darkXiangqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'general-captured':
-      return 'general capture';
+      return 'result.generalCapture';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 

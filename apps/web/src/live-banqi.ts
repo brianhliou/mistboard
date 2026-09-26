@@ -28,6 +28,7 @@ import { banqiHiddenPool } from '@mistboard/game';
 import './live-xiangqi.css';
 import { banqiEnabled } from './feature-flags.js';
 import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
+import { t } from './i18n/catalog.js';
 import { banqiClickResult } from './live-banqi-interaction.js';
 import {
   animateBanqiBoardMove,
@@ -58,7 +59,11 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type {
+  TenantReasonKey,
+  TenantSeatKey,
+  WebVariantTenant,
+} from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
@@ -110,10 +115,10 @@ export function banqiSeatInk(seat: BanqiSeat, view: BanqiWireView | null): Banqi
 // A seat's player label. Banqi's seat names are NOT colors, so labeling by seat shows the
 // engine as "Red" even when it flipped black. Label by the bound ink once the flip
 // assigns it, else by move order ("First"/"Second") — colors do not exist pre-flip.
-function banqiSeatLabel(seat: BanqiSeat): string {
+function banqiSeatLabel(seat: BanqiSeat): TenantSeatKey {
   const ink = banqiLiveSeatInk(seat);
-  if (ink) return ink === 'red' ? 'Red' : 'Black';
-  return seat === 'red' ? 'First' : 'Second';
+  if (ink) return ink === 'red' ? 'setup.red' : 'setup.black';
+  return seat === 'red' ? 'setup.first' : 'setup.second';
 }
 
 // The ink for the CURRENT live view — what the meta card's player disc renders.
@@ -122,7 +127,7 @@ function banqiLiveSeatInk(seat: BanqiSeat): BanqiColor | null {
 }
 
 const banqiWebTenant: WebVariantTenant<BanqiSeat> = {
-  displayName: 'Banqi',
+  displayName: 'variant.banqi.name',
   metaMarkerId: 'banqi',
   metaGlyph: '象',
   colors: ['red', 'black'],
@@ -131,11 +136,8 @@ const banqiWebTenant: WebVariantTenant<BanqiSeat> = {
   enabled: banqiEnabled,
   reviewUrl: (roomId) => `/banqi/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: banqiReasonPhrase,
-  disabledTitle: 'Banqi disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Banqi room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching without private information.',
-  selectInstruction: 'Tap a face-down tile to flip it, or select one of your pieces to move.',
+  spectatorBody: 'live.spectatorNoPrivateInfo',
+  selectInstruction: 'live.selectBanqi',
   // Banqi colors are assigned by the opening flip; label players by ink (or move order
   // before the flip), and surface the opening "to move" before the clock arms.
   seatLabel: banqiSeatLabel,
@@ -246,22 +248,22 @@ export function bootstrapBanqiLiveRoom(): void {
   client.bootstrap();
 }
 
-function banqiReasonPhrase(reason: string): string {
+function banqiReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'stalemate':
-      return 'no legal move';
+      return 'result.noLegalMove';
     case 'no-progress':
-      return 'no progress';
+      return 'result.noProgress';
     case 'repetition':
-      return 'repetition';
+      return 'result.repetition';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 
@@ -441,7 +443,7 @@ export function renderBanqiMaterial(
 }
 
 function banqiInkLabel(ink: BanqiColor): string {
-  return ink === 'red' ? 'Red' : 'Black';
+  return t(ink === 'red' ? 'setup.red' : 'setup.black');
 }
 
 // ── Replay capture (no fog to redact; capture every distinct position) ────────

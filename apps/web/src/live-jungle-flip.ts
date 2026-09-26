@@ -26,6 +26,7 @@ import { jungleFlipHiddenPool, jungleFlipLastMoverInk } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleFlipEnabled } from './feature-flags.js';
 import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
+import { t } from './i18n/catalog.js';
 import {
   animateJungleFlipBoardMove,
   JUNGLE_FLIP_BOARD_VIEW,
@@ -55,7 +56,11 @@ import {
   type TenantLiveEvent,
   type TenantMovePlayed,
 } from './variant-tenant/live-client.js';
-import type { WebVariantTenant } from './variant-tenant/room-chrome.js';
+import type {
+  TenantReasonKey,
+  TenantSeatKey,
+  WebVariantTenant,
+} from './variant-tenant/room-chrome.js';
 import { installSelectionClickAway } from './variant-tenant/selection-click-away.js';
 
 // ── Wire shapes (mirror JungleFlipPlayerView) ─────────────────────────────────
@@ -111,15 +116,15 @@ function jungleFlipLiveSeatInk(seat: JungleFlipSeat): JungleFlipColor | null {
 
 // A seat's player label. Flip Jungle's seat names are NOT colors, so label by the bound ink
 // once the flip assigns it, else by move order ("First"/"Second").
-function jungleFlipSeatLabel(seat: JungleFlipSeat): string {
+function jungleFlipSeatLabel(seat: JungleFlipSeat): TenantSeatKey {
   const ink = jungleFlipLiveSeatInk(seat);
   // The Jungle family brands its navy ink "Blue" (internal ink id stays 'black').
-  if (ink) return ink === 'red' ? 'Red' : 'Blue';
-  return seat === 'red' ? 'First' : 'Second';
+  if (ink) return ink === 'red' ? 'setup.red' : 'setup.blue';
+  return seat === 'red' ? 'setup.first' : 'setup.second';
 }
 
 const jungleFlipWebTenant: WebVariantTenant<JungleFlipSeat> = {
-  displayName: 'Flip Jungle',
+  displayName: 'variant.jungleFlip.name',
   metaMarkerId: 'jungle-flip',
   metaGlyph: '虎',
   colors: ['red', 'black'],
@@ -128,11 +133,8 @@ const jungleFlipWebTenant: WebVariantTenant<JungleFlipSeat> = {
   enabled: jungleFlipEnabled,
   reviewUrl: (roomId) => `/jungle-flip/game/${encodeURIComponent(roomId)}`,
   reasonPhrase: jungleFlipReasonPhrase,
-  disabledTitle: 'Flip Jungle disabled',
-  disabledBody: 'This client build has the room renderer off.',
-  rejectedBody: 'This Flip Jungle room is not active. Create a new invite to start a game.',
-  spectatorBody: 'Watching the game.',
-  selectInstruction: 'Tap a face-down tile to flip it, or select one of your animals to move.',
+  spectatorBody: 'live.spectatorWatchingGame',
+  selectInstruction: 'live.selectJungleFlip',
   seatLabel: jungleFlipSeatLabel,
   seatInk: jungleFlipLiveSeatInk,
   showPregameTurn: true,
@@ -298,27 +300,27 @@ export function renderJungleFlipMaterial(
 
 // The Jungle family brands its navy ink "Blue" (internal ink id stays 'black').
 function jungleFlipInkLabel(ink: JungleFlipColor): string {
-  return ink === 'red' ? 'Red' : 'Blue';
+  return t(ink === 'red' ? 'setup.red' : 'setup.blue');
 }
 
-function jungleFlipReasonPhrase(reason: string): string {
+function jungleFlipReasonPhrase(reason: string): TenantReasonKey {
   switch (reason) {
     case 'stalemate':
-      return 'no legal move';
+      return 'result.noLegalMove';
     case 'no-progress':
-      return 'no progress';
+      return 'result.noProgress';
     case 'repetition':
-      return 'repetition';
+      return 'result.repetition';
     case 'dead-position':
-      return 'a dead position';
+      return 'result.deadPosition';
     case 'timeout':
-      return 'timeout';
+      return 'result.timeout';
     case 'resignation':
-      return 'resignation';
+      return 'result.resignation';
     case 'abandonment':
-      return 'abandonment';
+      return 'result.abandonment';
     default:
-      return 'the game rules';
+      return 'result.gameRules';
   }
 }
 

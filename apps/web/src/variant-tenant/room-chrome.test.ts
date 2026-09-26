@@ -1,4 +1,4 @@
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
 import {
@@ -14,21 +14,31 @@ import {
 // (clocks, countdowns, confirm dialogs, room actions) stays pinned through
 // the DMX room suite, the web reference tenant.
 
+// The locale is read from window.localStorage (i18n/locale.ts resolveLocale);
+// happy-dom does not provide one here, so the smallest stand-in does (same shim
+// as forum-i18n.test.ts). Empty, every test below reads English.
+const store = new Map<string, string>();
+Object.defineProperty(window, 'localStorage', {
+  configurable: true,
+  value: {
+    getItem: (key: string) => store.get(key) ?? null,
+    setItem: (key: string, value: string) => void store.set(key, value),
+    removeItem: (key: string) => void store.delete(key),
+  },
+});
+
 type Color = 'white' | 'red';
 
 const tenant: WebVariantTenant<Color> = {
-  displayName: 'Testboard',
+  displayName: 'variant.xiangqi.name',
   colors: ['white', 'red'],
   isColor: (value): value is Color => value === 'white' || value === 'red',
   oppositeColor: (color) => (color === 'white' ? 'red' : 'white'),
   enabled: () => true,
   reviewUrl: (roomId) => `/testboard/game/${roomId}`,
-  reasonPhrase: (reason) => reason,
-  disabledTitle: 'Testboard disabled',
-  disabledBody: 'Renderer off.',
-  rejectedBody: 'Room not active.',
-  spectatorBody: 'Watching.',
-  selectInstruction: 'Pick a piece.',
+  reasonPhrase: () => 'result.gameRules',
+  spectatorBody: 'live.spectatorFullBoard',
+  selectInstruction: 'live.selectPieceThenDestination',
 };
 
 type CtxOverrides = Partial<{
@@ -110,7 +120,7 @@ describe('tenant room chrome action status', () => {
     chrome.renderActionStatus();
     expect(refs.actionStatus.textContent).toContain('Playing is off');
     expect(refs.actionStatus.textContent).toContain('This account cannot play games.');
-    expect(refs.actionStatus.textContent).not.toContain('Room not active.');
+    expect(refs.actionStatus.textContent).not.toContain('room is not active.');
   });
 
   it('falls back to the tenant rejected line for every other close reason', () => {
@@ -120,7 +130,7 @@ describe('tenant room chrome action status', () => {
     });
     chrome.renderActionStatus();
     expect(refs.actionStatus.textContent).toContain('Room unavailable');
-    expect(refs.actionStatus.textContent).toContain('Room not active.');
+    expect(refs.actionStatus.textContent).toContain('This Xiangqi room is not active.');
   });
 
   it('keeps the notice hidden while a seated player scrubs a live game', () => {
@@ -170,8 +180,8 @@ describe('tenant room chrome action status', () => {
     // ink. The "X wins" line must use the tenant's ink-aware label, never the seat.
     const inkTenant: WebVariantTenant<Color> = {
       ...tenant,
-      seatLabel: (seat) => (seat === 'white' ? 'Black' : 'Red'),
-      reasonPhrase: () => 'no legal move',
+      seatLabel: (seat) => (seat === 'white' ? 'setup.black' : 'setup.red'),
+      reasonPhrase: () => 'result.noLegalMove',
     };
     const { chrome, refs } = chromeHarness(
       {
@@ -191,7 +201,7 @@ describe('tenant room chrome action status', () => {
   it('renders the spectator "to move" label via the tenant seatLabel', () => {
     const inkTenant: WebVariantTenant<Color> = {
       ...tenant,
-      seatLabel: (seat) => (seat === 'white' ? 'First' : 'Second'),
+      seatLabel: (seat) => (seat === 'white' ? 'setup.first' : 'setup.second'),
     };
     const { chrome, refs } = chromeHarness(
       { seat: 'spectator', view: playingView({ status: { type: 'playing', turn: 'red' } }) },
@@ -309,7 +319,7 @@ describe('tenant room chrome player discs', () => {
     // seat here is silently wrong rather than merely inconsistent.
     const flipTenant: WebVariantTenant<Color> = {
       ...tenant,
-      seatLabel: (seat) => (seat === 'white' ? 'Black' : 'Red'),
+      seatLabel: (seat) => (seat === 'white' ? 'setup.black' : 'setup.red'),
       seatInk: (seat) => (seat === 'white' ? 'black' : 'red'),
     };
     const { chrome, refs } = chromeHarness(
@@ -323,7 +333,7 @@ describe('tenant room chrome player discs', () => {
   it('renders a neutral disc while a flip variant has no ink bound yet', () => {
     const preFlipTenant: WebVariantTenant<Color> = {
       ...tenant,
-      seatLabel: (seat) => (seat === 'white' ? 'First' : 'Second'),
+      seatLabel: (seat) => (seat === 'white' ? 'setup.first' : 'setup.second'),
       seatInk: () => null,
     };
     const { chrome, refs } = chromeHarness({}, preFlipTenant);
@@ -339,17 +349,17 @@ describe('tenant room chrome meta and invite emphasis', () => {
   it('appends the variant detail to the Variant row', () => {
     const { chrome, refs } = chromeHarness({ variantDetail: '5+5' });
     chrome.renderMeta();
-    expect(refs.gameInfo.textContent).toContain('Testboard · 5+5');
+    expect(refs.gameInfo.textContent).toContain('Xiangqi · 5+5');
   });
 
   it('keeps the bare variant name without a detail hook', () => {
     const { chrome, refs } = chromeHarness();
     chrome.renderMeta();
-    expect(refs.gameInfo.textContent).toContain('Testboard');
+    expect(refs.gameInfo.textContent).toContain('Xiangqi');
     expect(refs.gameInfo.textContent).not.toContain('·');
   });
 
-  it('labels the seat by capitalize(seat) without a seatLabel hook', () => {
+  it('labels the seat by its colour word without a seatLabel hook', () => {
     const { chrome, refs } = chromeHarness({ seat: 'white' });
     chrome.renderMeta();
     expect(refs.gameInfo.textContent).toContain('White');
@@ -359,7 +369,7 @@ describe('tenant room chrome meta and invite emphasis', () => {
     // Banqi-style: seat names are not colors, so the chrome must honor the tenant's label.
     const labelTenant: WebVariantTenant<Color> = {
       ...tenant,
-      seatLabel: (seat) => (seat === 'white' ? 'First' : 'Second'),
+      seatLabel: (seat) => (seat === 'white' ? 'setup.first' : 'setup.second'),
     };
     const { chrome, refs } = chromeHarness({ seat: 'white' }, labelTenant);
     chrome.renderMeta();
@@ -380,6 +390,61 @@ describe('tenant room chrome meta and invite emphasis', () => {
     expect(playingCopy?.textContent).toBe('Copy invite');
     expect(playingCopy?.className).toBe('');
   });
+});
+
+// #427: the room was English end to end for zh visitors with every suite green.
+// Render the whole chrome in each zh locale and read it back for Latin words.
+describe('tenant room chrome in Chinese', () => {
+  afterEach(() => {
+    store.delete('mistboard.locale');
+  });
+
+  const timeControl = { initialMs: 300_000, incrementMs: 5000 };
+  const latin = (text: string | null) => (text ?? '').match(/[A-Za-z]{3,}/g) ?? [];
+
+  for (const locale of ['zh-Hant', 'zh-Hans']) {
+    it(`renders ${locale} with no English words`, () => {
+      store.set('mistboard.locale', locale);
+      const texts: string[] = [];
+
+      const playing = chromeHarness({ timeControl });
+      playing.chrome.renderMeta();
+      playing.chrome.renderClocks();
+      playing.chrome.renderGameControls();
+      playing.chrome.renderRoomActions();
+      texts.push(
+        playing.refs.gameInfo.textContent ?? '',
+        playing.refs.playerTop.textContent ?? '',
+        playing.refs.playerBottom.textContent ?? '',
+        playing.refs.clockNote.textContent ?? '',
+        playing.refs.gameControls.textContent ?? '',
+        playing.refs.roomActions.textContent ?? '',
+      );
+
+      const resigned = chromeHarness({
+        view: {
+          id: 'test_room',
+          status: { type: 'finished', winner: 'red', reason: 'resignation' },
+          moveNumber: 9,
+        },
+      });
+      resigned.chrome.renderMeta();
+      resigned.chrome.renderActionStatus();
+      resigned.chrome.renderRoomActions();
+      texts.push(
+        resigned.refs.gameInfo.textContent ?? '',
+        resigned.refs.actionStatus.textContent ?? '',
+        resigned.refs.roomActions.textContent ?? '',
+      );
+
+      const spectator = chromeHarness({ seat: 'spectator', connectionState: 'reconnecting' });
+      spectator.chrome.renderActionStatus();
+      texts.push(spectator.refs.actionStatus.textContent ?? '');
+
+      expect(texts.flatMap(latin)).toEqual([]);
+      expect(texts.join(' ')).toContain('象棋');
+    });
+  }
 });
 
 function refsFixture(): LiveRefs {

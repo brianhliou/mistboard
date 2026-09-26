@@ -16,6 +16,7 @@
 import '../game-shell.css';
 import { readAccountPreferences, shouldShowClockTenths } from '../account-preferences.js';
 import { openConfirmDialog } from '../confirm-dialog.js';
+import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
 import { postGameInviteButton } from '../postgame-invite.js';
@@ -42,8 +43,17 @@ import { clockRemainingMs, type TenantWebClock } from './clock-projection.js';
 
 export type { TenantWebClock } from './clock-projection.js';
 
+// Everything a tenant hands the chrome to SAY is a catalog key, never a
+// string, so a tenant cannot put an English sentence in front of a zh visitor
+// (#427: the room was English end to end because the contract took prose).
+// Reason phrases are the in-sentence, lowercase 'result.*' words ("wins by
+// {reason}"); seat labels are the shared setup.* colour and move-order words.
+export type TenantReasonKey = Extract<I18nKey, `result.${string}`>;
+export type TenantSeatKey = Extract<I18nKey, `setup.${string}` | `live.seat${string}`>;
+
 export type WebVariantTenant<C extends string> = {
-  displayName: string;
+  // Variant name key ('variant.xiangqi.name').
+  displayName: I18nKey;
   // Meta-card icon: the finalized variant marker, the same icon language the
   // picker, watch rail, puzzles, profile, and the review page's meta card use.
   // Set it on every tenant — the room is the one surface where a game's identity
@@ -72,18 +82,19 @@ export type WebVariantTenant<C extends string> = {
   oppositeColor(color: C): C;
   enabled(): boolean;
   reviewUrl(roomId: string): string;
-  reasonPhrase(reason: string): string;
-  disabledTitle: string;
-  disabledBody: string;
-  rejectedBody: string;
-  spectatorBody: string;
-  selectInstruction: string;
+  // The wire's termination reason as an in-sentence phrase key. Total by
+  // construction: a tenant's default branch returns 'result.gameRules'.
+  reasonPhrase(reason: string): TenantReasonKey;
+  // The rejected-room body. Default: 'live.roomNotActive' with the variant name.
+  rejectedBody?: I18nKey;
+  spectatorBody: I18nKey;
+  selectInstruction: I18nKey;
   // Optional: how to label a seat's player. Default (chess/xiangqi/jieqi):
-  // capitalize(seat), because the seat name IS the color. Banqi overrides — its seats are
+  // the seat's colour word (setup.red etc.), because the seat name IS the color. Banqi overrides — its seats are
   // first/second mover and the ink is bound by the opening flip, so the label is the bound
   // ink ("Red"/"Black") once flipped, else the move order ("First"/"Second"). The tenant
   // reads its own live view for this; the chrome passes only the seat.
-  seatLabel?(seat: C): string;
+  seatLabel?(seat: C): TenantSeatKey;
   // Optional companion to seatLabel: the INK a seat renders as, for the meta card's
   // player disc. Omit when the seat name IS the color (chess/xiangqi/jieqi)
   // and the chrome passes the seat straight through. Flip variants MUST implement it:
@@ -171,7 +182,16 @@ export function createTenantRoomChrome<C extends string>(
 
   // A seat's display label: the tenant's ink-aware override (banqi) or the seat name.
   function seatName(color: C): string {
-    return tenant.seatLabel?.(color) ?? capitalize(color);
+    const key = tenant.seatLabel?.(color) ?? SEAT_WORD_KEYS[color];
+    return key ? t(key) : capitalize(color);
+  }
+
+  function variantName(): string {
+    return t(tenant.displayName);
+  }
+
+  function reasonText(reason: string): string {
+    return t(tenant.reasonPhrase(reason));
   }
 
   // A seat's player name for chrome rows: the server-resolved name (account,
@@ -183,8 +203,8 @@ export function createTenantRoomChrome<C extends string>(
   function playerName(color: C): string {
     const serverName = ctx.seatDisplayNames()[color];
     if (serverName) return serverName;
-    if (color === ctx.seat()) return 'You';
-    return ctx.seats()[color] ? 'Guest' : seatName(color);
+    if (color === ctx.seat()) return t('live.you');
+    return ctx.seats()[color] ? t('watch.guest') : seatName(color);
   }
 
   function setRenderTarget(
@@ -289,7 +309,7 @@ export function createTenantRoomChrome<C extends string>(
         if (isTurn) {
           const toMove = document.createElement('span');
           toMove.className = 'clock-to-move';
-          toMove.textContent = 'to move';
+          toMove.textContent = t('live.toMove');
           toMove.setAttribute('aria-hidden', 'false');
           playerLine.append(toMove);
         }
@@ -317,7 +337,7 @@ export function createTenantRoomChrome<C extends string>(
         const ended = view?.status.type === 'finished' || view?.status.type === 'aborted';
         refs.clockNote.textContent = ended
           ? ''
-          : `${tcLabel} · clock starts after the opening moves`;
+          : t('live.clockStartsAfterOpening', { control: tcLabel });
         refs.clockNote.hidden = ended;
       }
       lastActiveClockColor = null;
@@ -359,7 +379,7 @@ export function createTenantRoomChrome<C extends string>(
       );
       const toMove = document.createElement('span');
       toMove.className = 'clock-to-move';
-      toMove.textContent = 'to move';
+      toMove.textContent = t('live.toMove');
       toMove.setAttribute('aria-hidden', isActive ? 'false' : 'true');
       playerLine.append(toMove);
       const time = document.createElement('strong');
@@ -422,12 +442,17 @@ export function createTenantRoomChrome<C extends string>(
     let statusLine: string | null = null;
     if (status?.type === 'finished') {
       statusLine = status.winner
-        ? `${tenant.reasonPhrase(status.reason)} • ${seatName(status.winner)} is victorious`
-        : `Draw • ${tenant.reasonPhrase(status.reason)}`;
+        ? t('result.colorVictorious', {
+            reason: reasonText(status.reason),
+            color: seatName(status.winner),
+          })
+        : t('result.drawByReason', { reason: reasonText(status.reason) });
     } else if (status?.type === 'aborted') {
-      statusLine = 'Game aborted';
+      statusLine = t('live.statusGameAborted');
     } else if (status?.type === 'playing') {
-      subline = waitingForOpponent() ? 'Waiting for opponent' : 'Playing right now';
+      subline = waitingForOpponent()
+        ? t('live.statusWaitingForOpponent')
+        : t('live.playingRightNow');
     }
 
     // The status line above names the winning COLOUR; these score the ROWS, so a
@@ -441,8 +466,8 @@ export function createTenantRoomChrome<C extends string>(
     const card = createGameMetaCard({
       markerId: tenant.metaMarkerId,
       glyph: tenant.metaGlyph,
-      headline: [tcLabel, 'Casual'],
-      variantName: detail ? `${tenant.displayName} · ${detail}` : tenant.displayName,
+      headline: [tcLabel, t('live.modeCasual')],
+      variantName: detail ? `${variantName()} · ${detail}` : variantName(),
       subline,
       players: tenant.colors.map((color, index) => {
         const serverName = ctx.seatDisplayNames()[color];
@@ -456,9 +481,9 @@ export function createTenantRoomChrome<C extends string>(
           name:
             serverName ??
             (color === seat
-              ? `You (${seatName(color)})`
+              ? t('live.youAre', { color: seatName(color) })
               : ctx.seats()[color]
-                ? `Guest (${seatName(color)})`
+                ? t('live.guestAre', { color: seatName(color) })
                 : seatName(color)),
         };
       }),
@@ -466,7 +491,7 @@ export function createTenantRoomChrome<C extends string>(
     });
     refs.gameInfo.replaceChildren(card.el);
     if (ctx.debugRequested()) {
-      refs.roomMeta.textContent = `${tenant.displayName}${seat ? ` · Playing as ${seatName(seat)}` : ''}`;
+      refs.roomMeta.textContent = `${variantName()}${seat ? ` · Playing as ${seatName(seat)}` : ''}`;
     }
   }
 
@@ -493,7 +518,7 @@ export function createTenantRoomChrome<C extends string>(
     if (view?.status.type === 'finished' || view?.status.type === 'aborted') {
       // Only finished games have a postgame review (the endpoint 404s otherwise).
       if (view.status.type === 'finished') {
-        const review = roomLink('Review game', tenant.reviewUrl(ctx.room()));
+        const review = roomLink(t('live.reviewGame'), tenant.reviewUrl(ctx.room()));
         review.className = 'primary';
         row.append(review);
       }
@@ -541,14 +566,14 @@ export function createTenantRoomChrome<C extends string>(
     const copy = document.createElement('button');
     copy.type = 'button';
     if (waitingForOpponent()) copy.className = 'primary';
-    copy.textContent = 'Copy invite';
+    copy.textContent = t('live.copyInvite');
     copy.addEventListener('click', () => {
       navigator.clipboard
         ?.writeText(window.location.href)
         .then(() => {
-          copy.textContent = 'Link copied!';
+          copy.textContent = t('live.linkCopied');
           setTimeout(() => {
-            copy.textContent = 'Copy invite';
+            copy.textContent = t('live.copyInvite');
           }, 2000);
         })
         .catch(() => {});
@@ -563,10 +588,10 @@ export function createTenantRoomChrome<C extends string>(
     button.disabled = playAgainStatus === 'creating';
     button.textContent =
       playAgainStatus === 'creating'
-        ? 'Creating'
+        ? t('setup.creating')
         : playAgainStatus === 'failed'
-          ? 'Try play again'
-          : 'Play again';
+          ? t('live.tryPlayAgain')
+          : t('live.playAgain');
     button.addEventListener('click', () => {
       void createPlayAgainRoom();
     });
@@ -620,7 +645,10 @@ export function createTenantRoomChrome<C extends string>(
 
     if (!tenant.enabled()) {
       notice.className = 'action-notice danger';
-      notice.append(noticeTitle(tenant.disabledTitle), noticeBody(tenant.disabledBody));
+      notice.append(
+        noticeTitle(t('live.roomDisabledTitle', { variant: variantName() })),
+        noticeBody(t('live.roomDisabledBody')),
+      );
       refs.actionStatus.append(notice);
       return;
     }
@@ -630,7 +658,7 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() === 'disconnected' || ctx.connectionState() === 'reconnecting') {
       const reconnect = document.createElement('button');
       reconnect.type = 'button';
-      reconnect.textContent = 'Reconnect now';
+      reconnect.textContent = t('live.reconnectNow');
       reconnect.addEventListener('click', () => reconnectNow());
       notice.append(reconnect);
     }
@@ -649,16 +677,18 @@ export function createTenantRoomChrome<C extends string>(
 
   function actionTitle(view: TenantWebView<C> | null): string {
     if (ctx.connectionState() === 'rejected') {
-      return ctx.closeReason() === 'play disabled' ? 'Playing is off' : 'Room unavailable';
+      return ctx.closeReason() === 'play disabled'
+        ? t('live.titlePlayingOff')
+        : t('live.titleRoomUnavailable');
     }
-    if (ctx.connectionState() === 'displaced') return 'Session moved';
-    if (!view) return 'Connecting';
-    if (!ctx.isReplayLive()) return 'Viewing replay';
-    if (waitingForOpponent()) return 'Invite opponent';
-    if (view.status.type === 'finished') return 'Game finished';
-    if (view.status.type === 'aborted') return 'Game aborted';
-    if (ctx.seat() === view.status.turn) return 'Your move';
-    return `${seatName(view.status.turn)} to move`;
+    if (ctx.connectionState() === 'displaced') return t('live.statusSessionMoved');
+    if (!view) return t('live.statusConnecting');
+    if (!ctx.isReplayLive()) return t('live.titleViewingReplay');
+    if (waitingForOpponent()) return t('live.titleInviteOpponent');
+    if (view.status.type === 'finished') return t('live.titleGameFinished');
+    if (view.status.type === 'aborted') return t('live.statusGameAborted');
+    if (ctx.seat() === view.status.turn) return t('live.statusYourMove');
+    return t('puzzle.toMove', { color: seatName(view.status.turn) });
   }
 
   function actionBody(view: TenantWebView<C> | null): string {
@@ -667,25 +697,25 @@ export function createTenantRoomChrome<C extends string>(
       // "this room is not active" line would send the player off to create
       // another invite that will be refused the same way.
       return ctx.closeReason() === 'play disabled'
-        ? 'This account cannot play games. Sign in with your playing account.'
-        : tenant.rejectedBody;
+        ? t('live.roomPlayDisabled')
+        : t(tenant.rejectedBody ?? 'live.roomNotActive', { variant: variantName() });
     }
-    if (ctx.connectionState() === 'displaced') return 'Another tab reclaimed this seat.';
-    if (!view) return 'Opening the room socket.';
-    if (!ctx.isReplayLive()) return 'Return to latest before making a move.';
-    if (waitingForOpponent()) return 'Copy the invite link and send it to your opponent.';
+    if (ctx.connectionState() === 'displaced') return t('live.roomDisplaced');
+    if (!view) return t('live.roomOpeningSocket');
+    if (!ctx.isReplayLive()) return t('live.roomReturnToLatest');
+    if (waitingForOpponent()) return t('live.roomInviteBody');
     if (view.status.type === 'finished') {
-      const reason = tenant.reasonPhrase(view.status.reason);
+      const reason = reasonText(view.status.reason);
       return view.status.winner
-        ? `${seatName(view.status.winner)} wins by ${reason}.`
-        : `Draw by ${reason}.`;
+        ? t('result.colorWinsBy', { color: seatName(view.status.winner), reason })
+        : t('result.drawBy', { reason });
     }
     if (view.status.type === 'aborted') {
-      return 'This game ended before both sides completed their first move.';
+      return t('live.roomAbortedBody');
     }
-    if (ctx.seat() === 'spectator') return tenant.spectatorBody;
-    if (ctx.seat() === view.status.turn) return tenant.selectInstruction;
-    return 'Waiting for the opponent.';
+    if (ctx.seat() === 'spectator') return t(tenant.spectatorBody);
+    if (ctx.seat() === view.status.turn) return t(tenant.selectInstruction);
+    return t('live.roomWaitingOpponent');
   }
 
   function renderGameControls(): void {
@@ -713,16 +743,17 @@ export function createTenantRoomChrome<C extends string>(
         const abort = document.createElement('button');
         abort.type = 'button';
         abort.className = 'danger';
-        abort.textContent = 'Abort';
+        abort.textContent = t('live.abort');
         abort.addEventListener('click', () => {
           if (!readAccountPreferences().confirmGameActions) {
             sendSocket({ type: 'abort' });
             return;
           }
           openConfirmDialog({
-            title: 'Abort this game?',
-            body: 'This ends the room without recording a result.',
-            confirmLabel: 'Abort',
+            title: t('live.abortTitle'),
+            body: t('live.abortRoomBody'),
+            confirmLabel: t('live.abort'),
+            cancelLabel: t('setup.cancel'),
             confirmTone: 'danger',
             onConfirm: () => sendSocket({ type: 'abort' }),
           });
@@ -746,16 +777,17 @@ export function createTenantRoomChrome<C extends string>(
     const resign = document.createElement('button');
     resign.type = 'button';
     resign.className = 'danger';
-    resign.textContent = 'Resign';
+    resign.textContent = t('live.resign');
     resign.addEventListener('click', () => {
       if (!readAccountPreferences().confirmGameActions) {
         sendSocket({ type: 'resign' });
         return;
       }
       openConfirmDialog({
-        title: 'Resign this game?',
-        body: 'Your opponent wins. This cannot be undone.',
-        confirmLabel: 'Resign',
+        title: t('live.resignTitle'),
+        body: t('live.resignBody'),
+        confirmLabel: t('live.resign'),
+        cancelLabel: t('setup.cancel'),
         confirmTone: 'danger',
         onConfirm: () => sendSocket({ type: 'resign' }),
       });
@@ -786,15 +818,15 @@ export function createTenantRoomChrome<C extends string>(
     const remaining = deadline === null ? 0 : deadline - Date.now();
     const seconds = Math.max(0, Math.ceil(remaining / 1000));
     return isSideToMove
-      ? `Make your first move, aborting in ${seconds}s`
-      : `Waiting for first move, aborting in ${seconds}s`;
+      ? t('live.makeFirstMoveAbortingIn', { seconds })
+      : t('live.waitingFirstMoveAbortingIn', { seconds });
   }
 
   function forfeitCountdownText(): string {
     const deadline = ctx.forfeitDeadline();
     const remaining = deadline === null ? 0 : deadline - Date.now();
     const seconds = Math.max(0, Math.ceil(remaining / 1000));
-    return `Opponent left, you win in ${seconds}s`;
+    return t('live.opponentLeftWinIn', { seconds });
   }
 
   return {
@@ -810,3 +842,19 @@ export function createTenantRoomChrome<C extends string>(
     tickCountdowns,
   };
 }
+
+// Default seat labels when a tenant has no seatLabel hook: the seat name IS
+// the colour (xiangqi, jieqi, fortress, duck, atomic, fog xiangqi) or the
+// mahjong wind. An unmapped seat falls back to the capitalized token.
+const SEAT_WORD_KEYS: Readonly<Record<string, I18nKey>> = {
+  red: 'setup.red',
+  black: 'setup.black',
+  white: 'setup.white',
+  blue: 'setup.blue',
+  first: 'setup.first',
+  second: 'setup.second',
+  east: 'live.seatEast',
+  south: 'live.seatSouth',
+  west: 'live.seatWest',
+  north: 'live.seatNorth',
+};

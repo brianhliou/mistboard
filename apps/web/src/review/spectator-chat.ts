@@ -120,7 +120,7 @@ function buildGameChat(roomId: string, options: GameChatOptions): HTMLElement {
 
   const footer = document.createElement('div');
   footer.className = 'review-spectator-chat__footer';
-  renderStatus(footer, 'Loading chat...');
+  renderStatus(footer, t('live.chatLoading'));
 
   panel.append(header, feed, footer);
   if (options.resizable) attachChatResize(panel);
@@ -165,7 +165,7 @@ async function hydrateGameChat(
     result = await fetchGameChat(session.apiUrl);
   }
   if (!result.state || !Array.isArray(result.state.lines)) {
-    renderStatus(ui.footer, 'Chat is unavailable.');
+    renderStatus(ui.footer, t('live.chatUnavailable'));
     return;
   }
   renderRoom(session, ui, known, result.state);
@@ -235,7 +235,7 @@ function renderFooter(
     return;
   }
   if (state.timeoutUntil) {
-    renderStatus(footer, 'You are temporarily timed out from chat.');
+    renderStatus(footer, t('live.chatTimedOut'));
     return;
   }
   const signIn = document.createElement('a');

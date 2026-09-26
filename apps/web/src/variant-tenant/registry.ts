@@ -42,6 +42,7 @@ import {
   mahjongEnabled,
   xiangqiEnabled,
 } from '../feature-flags.js';
+import type { I18nKey } from '../i18n/catalog.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
 import { hasLikelyVariantGrant } from '../signed-in-state.js';
 
@@ -98,7 +99,8 @@ export type WebVariantTenant = {
   legacyGameSpecIds?: readonly string[];
   roomIdPrefix: string;
   enabled(): boolean;
-  pageTitle: string;
+  // Tab title: the variant's catalog name, so a zh visitor's tab reads 象棋.
+  pageTitleKey: I18nKey;
   // Post-game review route base ('/dark-xiangqi/game'); also the route main.ts
   // matches for the postgame mount. Tenants without their own postgame surface
   // (dark-chess correspondence reviews at the legacy /game/:id) omit both.
@@ -197,7 +199,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: DARK_CHESS_SPEC_ID,
     roomIdPrefix: 'dchx_',
     enabled: correspondenceEnabled,
-    pageTitle: 'Fog Chess',
+    pageTitleKey: 'variant.darkChess.name',
   },
   {
     // Standard Xiangqi (9x10, open information). Self-contained live client on
@@ -207,7 +209,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: XIANGQI_SPEC_ID,
     roomIdPrefix: 'xq_',
     enabled: xiangqiEnabled,
-    pageTitle: 'Xiangqi',
+    pageTitleKey: 'variant.xiangqi.name',
     gameRouteBase: '/xiangqi/game',
     mountPostgame: (root, roomId) =>
       import('../xiangqi-postgame.js').then(({ mountXiangqiPostgame }) =>
@@ -313,7 +315,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: DARK_XIANGQI_SPEC_ID,
     roomIdPrefix: 'dxq_',
     enabled: alwaysEnabled,
-    pageTitle: 'Fog Xiangqi',
+    pageTitleKey: 'variant.darkXiangqi.name',
     gameRouteBase: '/dark-xiangqi/game',
     mountPostgame: (root, roomId) =>
       import('../dark-xiangqi-postgame.js').then(({ mountDarkXiangqiPostgame }) =>
@@ -367,7 +369,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: JIEQI_SPEC_ID,
     roomIdPrefix: 'jq_',
     enabled: alwaysEnabled,
-    pageTitle: 'Jieqi',
+    pageTitleKey: 'variant.jieqi.name',
     gameRouteBase: '/jieqi/game',
     mountPostgame: (root, roomId) =>
       import('../live-jieqi-postgame.js').then(({ mountJieqiPostgame }) =>
@@ -432,7 +434,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: BANQI_SPEC_ID,
     roomIdPrefix: 'bq_',
     enabled: alwaysEnabled,
-    pageTitle: 'Banqi',
+    pageTitleKey: 'variant.banqi.name',
     gameRouteBase: '/banqi/game',
     mountPostgame: (root, roomId) =>
       import('../live-banqi-postgame.js').then(({ mountBanqiPostgame }) =>
@@ -492,7 +494,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: JUNGLE_SPEC_ID,
     roomIdPrefix: 'jgl_',
     enabled: jungleEnabled,
-    pageTitle: 'Jungle Chess',
+    pageTitleKey: 'variant.jungle.name',
     gameRouteBase: '/jungle/game',
     mountPostgame: (root, roomId) =>
       import('../live-jungle-postgame.js').then(({ mountJunglePostgame }) =>
@@ -554,7 +556,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: JUNGLE_FLIP_SPEC_ID,
     roomIdPrefix: 'jgf_',
     enabled: jungleFlipEnabled,
-    pageTitle: 'Flip Jungle',
+    pageTitleKey: 'variant.jungleFlip.name',
     gameRouteBase: '/jungle-flip/game',
     mountPostgame: (root, roomId) =>
       import('../live-jungle-flip-postgame.js').then(({ mountJungleFlipPostgame }) =>
@@ -615,7 +617,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: FORTRESS_XIANGQI_SPEC_ID,
     roomIdPrefix: 'fxq_',
     enabled: fortressXiangqiEnabled,
-    pageTitle: 'Fortress Xiangqi',
+    pageTitleKey: 'variant.fortressXiangqi.name',
     gameRouteBase: '/fortress-xiangqi/game',
     mountPostgame: (root, roomId) =>
       import('../fortress-xiangqi-postgame.js').then(({ mountFortressXiangqiPostgame }) =>
@@ -670,7 +672,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: DUCK_XIANGQI_SPEC_ID,
     roomIdPrefix: 'dkx_',
     enabled: duckXiangqiEnabled,
-    pageTitle: 'Duck Xiangqi',
+    pageTitleKey: 'variant.duckXiangqi.name',
     loadLiveRoomClient: () =>
       import('../live-duck-xiangqi.js').then(
         ({ bootstrapDuckXiangqiLiveRoom }) =>
@@ -741,7 +743,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
     roomIdPrefix: 'axq_',
     enabled: atomicXiangqiEnabled,
-    pageTitle: 'Atomic Xiangqi',
+    pageTitleKey: 'variant.atomicXiangqi.name',
     loadLiveRoomClient: () =>
       import('../live-atomic-xiangqi.js').then(
         ({ bootstrapAtomicXiangqiLiveRoom }) =>
@@ -800,7 +802,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     gameSpecId: MAHJONG_SPEC_ID,
     roomIdPrefix: 'mj_',
     enabled: mahjongEnabled,
-    pageTitle: 'Mahjong',
+    pageTitleKey: 'variant.mahjong.name',
     loadLiveRoomClient: () =>
       import('../live-mahjong.js').then(
         ({ bootstrapMahjongLiveRoom }) =>

@@ -411,7 +411,7 @@ if (replaySample) {
     ),
   );
 } else if (wantsTenantLiveRoom && tenantLiveRoom?.loadLiveRoomClient) {
-  setTitle(tenantLiveRoom.pageTitle);
+  setTitleKey(tenantLiveRoom.pageTitleKey);
   const loadTenantLiveRoom = tenantLiveRoom.loadLiveRoomClient;
   void mountOrReport(() =>
     loadTenantLiveRoom().then((bootstrap) => {
@@ -419,14 +419,14 @@ if (replaySample) {
     }),
   );
 } else if (liveRoomId || wantsLive) {
-  setTitle('Live');
+  setTitleKey('live.pageTitle');
   void mountOrReport(() =>
     import('./live.js').then(({ bootstrapLiveRoom }) => bootstrapLiveRoom()),
   );
 } else if (tenantPostgame?.tenant.enabled()) {
   const { tenant, mount, roomId } = tenantPostgame;
   appRoot.dataset.favoriteGameId = roomId;
-  setTitle(tenant.pageTitle);
+  setTitleKey(tenant.pageTitleKey);
   void mountOrReport(() => mount(appRoot, roomId).then(() => undefined));
 } else if (gameRoomTenantRedirect) {
   // A stale/shared /game/<tenant-id> link (e.g. /game/dxq_...): variant-tenant
