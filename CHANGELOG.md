@@ -77,6 +77,7 @@ Conventions:
 
 ### Watching and review
 
+- Pro player pages cover every player on the CXA lists, not only those in our broadcasts, and add each player's record by colour, head to head, openings in English and rating history since 2019; player and broadcast pages now carry their own titles, descriptions and share cards, and are listed in the sitemap ([4c5a389c](https://github.com/brianhliou/mistboard/commit/4c5a389c))
 - Broadcast games embed on any page (copy the code from the game's Share tab, or paste a game link into WordPress, Discourse or the forum): English names, the event and round, the engine's marks and better lines with their verdicts, and a live game that keeps up; side lines in every embed now read like the article boards ([88adbb82](https://github.com/brianhliou/mistboard/commit/88adbb82))
 - Broadcast games download as PGN with English names; xiangqi game reviews (broadcast, site and archive games) keep your place in the address, so a copied link opens on that move; broadcast game, round and event links preview as the game's board with both players ([98262a71](https://github.com/brianhliou/mistboard/commit/98262a71))
 - The broadcast calendar keeps every event we relay this year, so January's to August's events sit behind Show earlier months instead of dropping off after two months ([bb2aebba](https://github.com/brianhliou/mistboard/commit/bb2aebba))
