@@ -54,6 +54,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Study embeds of compositions show the result the line ends in ("Red wins" under a mate), as game records already did from their tags ([e6f2142a](https://github.com/brianhliou/mistboard/commit/e6f2142a))
 - Decisive-moment lessons open on the opponent's move that led there (marked on the board), name both players above and below the board, let you try again just by moving, and give a hint that names the piece and circles it ([339429d4](https://github.com/brianhliou/mistboard/commit/339429d4))
 - Guess-the-move study chapters fit the screen with the site bar back, a resizable board, a chapter list of players with the side to move marked, and a coach column that opens with whose move it is and the game it came from; the decisive-moments lessons now ask for the one move that turned the game and play the reply for you ([f48e5eb1](https://github.com/brianhliou/mistboard/commit/f48e5eb1))
 - The Duck Xiangqi launch post is now a strategy guide for your first game, at [/blog/duck-xiangqi-strategy](/blog/duck-xiangqi-strategy); the old address redirects there ([4a5bdbdc](https://github.com/brianhliou/mistboard/commit/4a5bdbdc))
