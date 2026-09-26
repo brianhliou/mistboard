@@ -1618,7 +1618,9 @@
 
 .xqb-card-seat-black .xqb-card-seat-disc {
   background: var(--seat-dark-ink, #34302e);
-  box-shadow: 0 0 0 1px var(--seat-dark-ink-border, #8f8b83);
+  /* Inset, so the ring stays inside the disc's box: the game list's players
+     column clips its overflow, and an outer ring lost its left edge there. */
+  box-shadow: inset 0 0 0 1px var(--seat-dark-ink-border, #8f8b83);
 }
 
 .xqb-card-seat-name {
