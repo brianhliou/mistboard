@@ -81,6 +81,7 @@ Conventions:
 
 ### Watching and review
 
+- Mistboard TV opens on the game in progress and lands on it when it ends; the LIVE badge is gone ([6e5cb064](https://github.com/brianhliou/mistboard/commit/6e5cb064))
 - Pro player pages cover every player on the CXA lists, not only those in our broadcasts, and add each player's record by colour, head to head, openings in English and rating history since 2019; player and broadcast pages now carry their own titles, descriptions and share cards, and are listed in the sitemap ([4c5a389c](https://github.com/brianhliou/mistboard/commit/4c5a389c))
 - Broadcast games embed on any page (copy the code from the game's Share tab, or paste a game link into WordPress, Discourse or the forum): English names, the event and round, the engine's marks and better lines with their verdicts, and a live game that keeps up; side lines in every embed now read like the article boards ([88adbb82](https://github.com/brianhliou/mistboard/commit/88adbb82))
 - Broadcast games download as PGN with English names; xiangqi game reviews (broadcast, site and archive games) keep your place in the address, so a copied link opens on that move; broadcast game, round and event links preview as the game's board with both players ([98262a71](https://github.com/brianhliou/mistboard/commit/98262a71))
@@ -123,6 +124,7 @@ Conventions:
 
 ### Site
 
+- In a blog post's annotated boards the result sits under the move list, level with the controls, and reads Red wins or Black wins; tables of names wrap on a phone instead of scrolling sideways ([d524258d](https://github.com/brianhliou/mistboard/commit/d524258d))
 - Embedded boards step like the boards in our posts (back, a menu, forward), keep the move list beside the board at its own width, fill small frames on phones, and follow your settings live on Mistboard's own pages ([8018f928](https://github.com/brianhliou/mistboard/commit/8018f928))
 - The play-online questions moved from the homepage to the top of [the FAQ](/faq); the homepage keeps the one-line summary under the tagline ([933c9104](https://github.com/brianhliou/mistboard/commit/933c9104))
 - `/bots` is the page for playing xiangqi against the computer, in English, simplified and traditional Chinese: the eight levels come first with Pikafish on top, level 2 says Start here, and each level leads with a Play xiangqi button ([d74cb0c5](https://github.com/brianhliou/mistboard/commit/d74cb0c5))
@@ -170,6 +172,7 @@ Conventions:
 
 ### Fixed
 
+- Search engines now see the full rules and blog pages and their search titles even when a page script fails to load ([fa16763c](https://github.com/brianhliou/mistboard/commit/fa16763c))
 - Fog Xiangqi shows its palaces on the square grid again; the squares were drawn over them ([27f50d46](https://github.com/brianhliou/mistboard/commit/27f50d46))
 - Duck Xiangqi follows the Square grid board choice in games and reviews; it always drew the lined board ([fcfa2271](https://github.com/brianhliou/mistboard/commit/fcfa2271))
 - Fog Xiangqi on the square grid hides every unseen square completely; a light strip used to show under hidden squares below the river and along the bottom edge, most visibly on the homepage TV ([465af280](https://github.com/brianhliou/mistboard/commit/465af280))
