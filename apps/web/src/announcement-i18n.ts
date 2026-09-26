@@ -35,6 +35,27 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-25/26 (broadcasts, pro player pages, rules for chess players, Jungle board,
+  // decisive-moment lessons) ── 直播 / 职业棋手 / 棋盘 / 研习 follow nav.* and prefs.board.
+  "Guess the move where this year's professional games turned.": '在今年职业对局的转折点上猜着法。',
+  'A new study of short lessons from the 2026 Chinese professional events. Each one opens on the move before the game turned, with both players named at the board: find a better move than the one played, and the reply is played for you. A wrong guess just takes another try, no button, and the hint names the piece to move.':
+    '一个新的研习，由 2026 年中国职业赛事中的短课组成。每一课从对局转折前的那一步开始，棋盘上下标出双方棋手：找出一步比实战更好的着法，对方的应着会自动走出。猜错了直接再走一步就行，不用点按钮；提示会告诉你该动哪个棋子。',
+  'Try the lessons': '试试这些课',
+  'Follow the Chinese professional events in English.': '用英文关注中国象棋职业赛事。',
+  "Broadcasts follows this year's Chinese professional xiangqi events round by round: event pages with standings (team leagues show their matches and table), a calendar of what is coming, and every finished game reviewed by the engine, with the advantage chart and the move marks. Games download as PGN, a link can open on a single move, and any game embeds on your own page. The Asian Individual Championship, October 2 to 8, already has its pages.":
+    '直播版块逐轮跟进今年的中国象棋职业赛事：每个赛事有自己的页面和积分表（团体联赛按场次显示，并附联赛积分榜），赛程列出接下来的比赛，每一盘下完的对局都由引擎复盘，带优势曲线和着法评注。对局可以下载为 PGN，链接可以直接打开到某一步，任何一盘棋都能嵌入你自己的网页。10 月 2 日至 8 日的亚洲个人锦标赛已经有了页面。',
+  'Open Broadcasts': '打开直播',
+  'A page for every Chinese professional player.': '每一位中国象棋职业棋手都有了自己的页面。',
+  "Every player on the Chinese Xiangqi Association's lists now has a page: record by colour, head to head, openings named in English, and rating history since 2019. Titles (GM, IM, FM, NM) come from the CXA's grade lists and the WXF's international titles, each with its source. Pro teams rank by their top five players.":
+    '中国象棋协会名单上的每一位棋手现在都有页面：执红执黑的战绩、交手记录、以英文命名的开局，以及 2019 年以来的等级分走势。称号（特级大师、大师等）来自中国象棋协会的等级称号名单和世界象棋联合会的国际称号，每一项都注明出处。职业队伍按队中前五名棋手排名。',
+  'Find a player': '查找棋手',
+  'The xiangqi rules, rewritten for chess players.': '象棋规则页为国际象棋玩家重写。',
+  'The rules page now starts from what a chess player already knows: the six rules that catch you out, the setup, repetition as the site scores it (perpetual check loses), common mistakes, the three notations and a first opening. A famous game plays out in the page.':
+    '规则页现在从国际象棋玩家已经懂的东西讲起：最容易让人出错的六条规则、开局摆法、本站如何判定重复局面（长将判负）、常见错误、三种记谱法，以及第一套开局。页面里还能直接看一盘名局。',
+  'Read the rules': '阅读规则',
+  'A Jungle board, and animal pieces without the disc.': '新的“丛林”棋盘，以及不带底盘的动物棋子。',
+  'Xiangqi has a new board under Board: the square grid on a green lawn, a cream rug in each palace and a painted river, made with children in mind. Jungle and Flip Jungle turn green with it. The Animal (no disc) piece set draws the animal pieces without their cream disc, a little larger.':
+    '象棋在“棋盘”设置里多了一款新棋盘：方格棋盘铺在绿色草地上，两个九宫各有一块米色地毯，中间是画出来的河，专为孩子设计。斗兽棋和翻翻棋也会随之变绿。“动物（无底盘）”棋子去掉了动物棋子的米色圆底，棋子稍大一些。',
   // ── 2026-09-11 (puzzles with more than one solution) ── 题目 / 将死 / 评分器 follow
   // article-i18n.ts for the same article.
   'Puzzles with more than one solution.': '有不止一个答案的题目。',
@@ -364,6 +385,28 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-25/26 (broadcasts, pro player pages, rules for chess players, Jungle board,
+  // decisive-moment lessons) ── 直播 / 职业棋手 / 棋盘 / 研习 follow nav.* and prefs.board.
+  "Guess the move where this year's professional games turned.": '在今年職業對局的轉折點上猜著法。',
+  'A new study of short lessons from the 2026 Chinese professional events. Each one opens on the move before the game turned, with both players named at the board: find a better move than the one played, and the reply is played for you. A wrong guess just takes another try, no button, and the hint names the piece to move.':
+    '一個新的研習，由 2026 年中國職業賽事中的短課組成。每一課從對局轉折前的那一步開始，棋盤上下標出雙方棋手：找出一步比實戰更好的著法，對方的應著會自動走出。猜錯了直接再走一步就行，不用點按鈕；提示會告訴你該動哪個棋子。',
+  'Try the lessons': '試試這些課',
+  'Follow the Chinese professional events in English.': '用英文關注中國象棋職業賽事。',
+  "Broadcasts follows this year's Chinese professional xiangqi events round by round: event pages with standings (team leagues show their matches and table), a calendar of what is coming, and every finished game reviewed by the engine, with the advantage chart and the move marks. Games download as PGN, a link can open on a single move, and any game embeds on your own page. The Asian Individual Championship, October 2 to 8, already has its pages.":
+    '直播版塊逐輪跟進今年的中國象棋職業賽事：每個賽事有自己的頁面和積分表（團體聯賽按場次顯示，並附聯賽積分榜），賽程列出接下來的比賽，每一盤下完的對局都由引擎覆盤，帶優勢曲線和著法評註。對局可以下載為 PGN，連結可以直接打開到某一步，任何一盤棋都能嵌入你自己的網頁。10 月 2 日至 8 日的亞洲個人錦標賽已經有了頁面。',
+  'Open Broadcasts': '打開直播',
+  'A page for every Chinese professional player.': '每一位中國象棋職業棋手都有了自己的頁面。',
+  "Every player on the Chinese Xiangqi Association's lists now has a page: record by colour, head to head, openings named in English, and rating history since 2019. Titles (GM, IM, FM, NM) come from the CXA's grade lists and the WXF's international titles, each with its source. Pro teams rank by their top five players.":
+    '中國象棋協會名單上的每一位棋手現在都有頁面：執紅執黑的戰績、交手記錄、以英文命名的開局，以及 2019 年以來的等級分走勢。稱號（特級大師、大師等）來自中國象棋協會的等級稱號名單和世界象棋聯合會的國際稱號，每一項都註明出處。職業隊伍按隊中前五名棋手排名。',
+  'Find a player': '查找棋手',
+  'The xiangqi rules, rewritten for chess players.': '象棋規則頁為國際象棋玩家重寫。',
+  'The rules page now starts from what a chess player already knows: the six rules that catch you out, the setup, repetition as the site scores it (perpetual check loses), common mistakes, the three notations and a first opening. A famous game plays out in the page.':
+    '規則頁現在從國際象棋玩家已經懂的東西講起：最容易讓人出錯的六條規則、開局擺法、本站如何判定重複局面（長將判負）、常見錯誤、三種記譜法，以及第一套開局。頁面裡還能直接看一盤名局。',
+  'Read the rules': '閱讀規則',
+  'A Jungle board, and animal pieces without the disc.':
+    '新的「叢林」棋盤，以及不帶底盤的動物棋子。',
+  'Xiangqi has a new board under Board: the square grid on a green lawn, a cream rug in each palace and a painted river, made with children in mind. Jungle and Flip Jungle turn green with it. The Animal (no disc) piece set draws the animal pieces without their cream disc, a little larger.':
+    '象棋在「棋盤」設定裡多了一款新棋盤：方格棋盤鋪在綠色草地上，兩個九宮各有一塊米色地毯，中間是畫出來的河，專為孩子設計。鬥獸棋和翻翻棋也會隨之變綠。「動物（無底盤）」棋子去掉了動物棋子的米色圓底，棋子稍大一些。',
   // ── 2026-09-11 (puzzles with more than one solution) ── 題目 / 將死 / 評分器 follow
   // article-i18n.ts for the same article.
   'Puzzles with more than one solution.': '有不止一個答案的題目。',

@@ -38,6 +38,44 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-26',
+    kind: 'release',
+    headline: "Guess the move where this year's professional games turned.",
+    body: 'A new study of short lessons from the 2026 Chinese professional events. Each one opens on the move before the game turned, with both players named at the board: find a better move than the one played, and the reply is played for you. A wrong guess just takes another try, no button, and the hint names the piece to move.',
+    href: '/study/UDfYudFF',
+    cta: 'Try the lessons',
+  },
+  {
+    date: '2026-09-25',
+    kind: 'release',
+    headline: 'Follow the Chinese professional events in English.',
+    body: "Broadcasts follows this year's Chinese professional xiangqi events round by round: event pages with standings (team leagues show their matches and table), a calendar of what is coming, and every finished game reviewed by the engine, with the advantage chart and the move marks. Games download as PGN, a link can open on a single move, and any game embeds on your own page. The Asian Individual Championship, October 2 to 8, already has its pages.",
+    href: '/broadcast/xiangqi',
+    cta: 'Open Broadcasts',
+  },
+  {
+    date: '2026-09-25',
+    kind: 'release',
+    headline: 'A page for every Chinese professional player.',
+    body: "Every player on the Chinese Xiangqi Association's lists now has a page: record by colour, head to head, openings named in English, and rating history since 2019. Titles (GM, IM, FM, NM) come from the CXA's grade lists and the WXF's international titles, each with its source. Pro teams rank by their top five players.",
+    href: '/players',
+    cta: 'Find a player',
+  },
+  {
+    date: '2026-09-25',
+    kind: 'update',
+    headline: 'The xiangqi rules, rewritten for chess players.',
+    body: 'The rules page now starts from what a chess player already knows: the six rules that catch you out, the setup, repetition as the site scores it (perpetual check loses), common mistakes, the three notations and a first opening. A famous game plays out in the page.',
+    href: '/rules/xiangqi',
+    cta: 'Read the rules',
+  },
+  {
+    date: '2026-09-25',
+    kind: 'update',
+    headline: 'A Jungle board, and animal pieces without the disc.',
+    body: 'Xiangqi has a new board under Board: the square grid on a green lawn, a cream rug in each palace and a painted river, made with children in mind. Jungle and Flip Jungle turn green with it. The Animal (no disc) piece set draws the animal pieces without their cream disc, a little larger.',
+  },
+  {
     date: '2026-09-22',
     kind: 'release',
     headline: 'The Bamboo Fragrance Studio Manual and the Hundred Games Manual are online.',
