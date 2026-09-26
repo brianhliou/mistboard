@@ -33,6 +33,7 @@
   "deploy": {
     "healthcheckPath": "/health",
     "healthcheckTimeout": 30,
-    "drainingSeconds": 20
+    "drainingSeconds": 20,
+    "startCommand": "node scripts/start.mjs"
   }
 }
