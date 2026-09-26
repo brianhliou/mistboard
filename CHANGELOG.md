@@ -186,6 +186,8 @@ Conventions:
 
 ### Fixed
 
+- The game room is in Chinese for Chinese readers: clocks, buttons, the abort countdown, resign and abort, the result and the tab title, in every variant; it was English from the first move to game over ([9a8ad1ad](https://github.com/brianhliou/mistboard/commit/9a8ad1ad))
+- On a phone the clocks sit right above and below the board, with the abort countdown and Resign under them; they used to start below the bottom of the screen ([f3cbb88d](https://github.com/brianhliou/mistboard/commit/f3cbb88d))
 - Study boards no longer call an equally good alternative "better was": a side line reads "better was" only under a move marked as a mistake, and "also" otherwise ([b2e8077b](https://github.com/brianhliou/mistboard/commit/b2e8077b))
 - A server restart during a xiangqi, jieqi, banqi or other xiangqi-family game no longer costs anyone clock time: the game pauses when the server stops and resumes once both players are back, or after 90 seconds ([4a2a5b95](https://github.com/brianhliou/mistboard/commit/4a2a5b95))
 - The Patron page now says checkout shows prices in your local currency; the FAQ no longer says every payment is in US dollars ([cc5d4df9](https://github.com/brianhliou/mistboard/commit/cc5d4df9))
