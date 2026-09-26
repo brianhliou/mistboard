@@ -152,6 +152,8 @@ export const puzzleTwoAnswersArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Mate puzzles', 'Count'],
           rows: [
             ['In the corpus', '965'],

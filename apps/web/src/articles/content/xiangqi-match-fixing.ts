@@ -113,6 +113,7 @@ export const xiangqiMatchFixingArticle: Article = {
         },
         {
           kind: 'table',
+          wrap: true,
           headers: ['Date', 'What happened'],
           rows: [
             ['~2012 onward', 'Liu Dahua privately alleges engine cheating'],
@@ -148,6 +149,8 @@ export const xiangqiMatchFixingArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Player', 'Penalty', 'National title'],
           rows: [
             ['Wang Tianyi 王天一', 'Life', '2012, 2016, 2019, 2023'],
@@ -211,6 +214,8 @@ export const xiangqiMatchFixingArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Convicted', 'Sentence'],
           rows: [
             ['Zhao Xinxin 赵鑫鑫', '4 years 9 months'],
@@ -317,6 +322,7 @@ export const xiangqiMatchFixingArticle: Article = {
         },
         {
           kind: 'table',
+          wrap: true,
           headers: ['Source', 'What it carries'],
           rows: [
             [

@@ -139,6 +139,8 @@ export const fogOpeningsArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['at White’s move 12, across 738 games', 'value'],
           rows: [
             ['games with two or more White pieces hitting d5', '76%'],
@@ -285,6 +287,8 @@ export const fogOpeningsArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['first move', 'games', 'White scores'],
           rows: [
             ['1. c4', '899', '75.8%'],
@@ -319,6 +323,8 @@ export const fogOpeningsArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Black’s first move', 'games', 'White scores', 'with Qa4', 'kings taken'],
           rows: [
             ['1… c5', '195', '58.7%', '55.9%', '0'],
@@ -436,6 +442,8 @@ export const fogOpeningsArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['in the 1…e5 and 1…e6 games', 'games', 'White scores'],
           rows: [
             ['all of them', '247', '82.2%'],
@@ -549,6 +557,8 @@ export const fogOpeningsArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['what happened to the queen on a4', 'games'],
           rows: [
             ['captured on a4', '3'],
@@ -575,6 +585,8 @@ export const fogOpeningsArticle: Article = {
       blocks: [
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['opponent rating', 'games', 'White scores'],
           rows: [
             ['under 1500', '66', '90.9%'],

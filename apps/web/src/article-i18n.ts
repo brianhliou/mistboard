@@ -36,6 +36,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // copy published. First player page; the xiangqi terms follow the champions
   // and world-title dictionaries (仙人指路, 飞相, 中炮, 车马炮).
   'yin-sheng',
+  // Machine-drafted 2026-09-25, not native-reviewed. The second player page;
+  // locked with its English copy, which publishes in the same release.
+  'cao-yanlei',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -138,6 +141,99 @@ const ZH_HANS: Record<string, string> = {
     '这对你是有好处的。如果你子力落后，不代表就输了：把它一颗强子引进长捉，MistyBanqi 可能就走进那个它看不出该拒绝的和棋。这种事多到可以量：引擎自我对弈的 200 盘里，[每六盘就有一盘和棋](/blog/banqi-statistics)，其中一半曾经走到赢定的局面。',
   '[MistyBanqi](/blog/mistybanqi) against itself at ten million nodes a move, three times the strength the site’s bot plays at. Step through it with the arrows. The [companion study](/study/FsA5sowX) has all twenty games from the run, one chapter each, with a note on how it went. Two hundred games from the same run are reduced to numbers in [Banqi by the Numbers](/blog/banqi-statistics): how big a lead is safe, and when a game is decided.':
     '[MistyBanqi](/blog/mistybanqi) 自我对弈，每步搜索一千万个节点，是本站机器人的三倍棋力。用箭头一步步看。[配套研究](/study/FsA5sowX)收了这批棋的全部二十盘，一盘一章，附上每盘怎么走完的注记。同一批棋里的两百盘被整理成数字，放在[用数字看暗棋](/blog/banqi-statistics)：领先多少才算安全，一盘棋什么时候就定了。',
+  // cao-yanlei (zh-Hans), machine-drafted 2026-09-25, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, as on the yin-sheng page.
+  'His 2026 record by event.': '他 2026 年各项赛事的战绩。',
+  Event: '赛事',
+  Dates: '日期',
+  W: '胜',
+  D: '和',
+  L: '负',
+  'Match vs Lại': '对赖理兄番棋',
+  'Jan 3–5': '1月3–5日',
+  'Jan 6–7': '1月6–7日',
+  'Team championship': '全国团体赛',
+  'Mar 28–Apr 2': '3月28日–4月2日',
+  'Chunqiu Daye arena': '春丘大叶杯擂台赛',
+  'Apr 4–6': '4月4–6日',
+  'Xintai Cup': '新泰杯',
+  'May 14': '5月14日',
+  'Gaogang Cup': '高新高港杯',
+  'Jun 4': '6月4日',
+  'Shanghai qualifying': '上海杯海选赛',
+  'Aug 9': '8月9日',
+  'League qualifier': '象甲预选赛',
+  'Aug 17–19': '8月17–19日',
+  'Gulin open': '古蔺公开赛',
+  'Aug 23': '8月23日',
+  'League, stage one': '象甲第一阶段',
+  'Sep 14–18': '9月14–18日',
+  "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.":
+    '一月的十局番棋以 12 比 8 击败世界冠军，之后一路打到中国象甲联赛第一阶段。盘面上六局，全部 75 局附引擎分析。',
+  'Cao Yanlei at the board. Photo: 象棋字典 via Sohu.':
+    '对局中的曹岩磊。图片：象棋字典，经搜狐转载。',
+  'Cao Yanlei in a dark suit and white shirt, looking down at the pieces during a tournament game.':
+    '曹岩磊身穿深色西装和白衬衫，在比赛中低头看着棋盘。',
+  "Cao Yanlei 曹岩磊 was abandoned in Sanmenxia, in Henan, before his first birthday. The couple who took him in raised him as their grandson, and the grandfather taught him xiangqi at four. He died before the boy turned six. At thirteen Cao was the youngest national master in China. Around 2011 Macau signed him, and for most of his twenties he played for Macau, often against the mainland's best: three World Championship bronzes, and in 2019 the world masters title, won against Wang Tianyi in the final. The Chinese press calls him the master of the sacrifice.":
+    '曹岩磊不到一岁时在河南三门峡被遗弃。收养他的一对老人把他当孙子养大，爷爷在他四岁时教他下象棋，在他不满六岁时去世。十三岁时，曹岩磊成为当时全国最年轻的象棋大师。2011 年前后澳门把他签了下来，他二十多岁的大部分时间都代表澳门出赛，常常对上内地最强的棋手：三次世锦赛铜牌，2019 年又在世界象棋大师赛决赛击败王天一夺冠。中文媒体叫他“弃子大师”。',
+  "He is registered to Hubei now and plays the league for Shanghai Jiahong. In January 2025 the Chinese Xiangqi Association's [match-fixing ruling](/blog/xiangqi-match-fixing) named him among the 41 people involved and gave him its lightest penalty, a public criticism, with no ban. This page is his 2026 so far.":
+    '他现在注册在湖北，联赛代表上海嘉弘出战。2025 年 1 月，中国象棋协会的[打假球处理决定](/blog/xiangqi-match-fixing)列出的 41 名涉事人员中有他，给了他最轻的处罚：通报批评，没有禁赛。这一页写的是他 2026 年到目前为止的比赛。',
+  '2026 so far': '2026 年至今',
+  "Ten events, from a ten-game match against the world champion in January to the first stage of China's top league in September. I ran all 75 games through the same engine analysis Mistboard gives your own games.":
+    '十项赛事，从一月对世界冠军的十局番棋，到九月的中国象甲联赛第一阶段。全部 75 局我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  'Baizuishan Cup': '百醉山杯',
+  "**He fights.** Watching him win the Wuyang Cup last year, the veteran Lü Qin told 羊城晚报 that Cao's style is combative and he never picks the safe line. Cao said much the same: he likes to attack, and to keep varying his play.":
+    '**他敢打。** 去年看他拿下五羊杯时，老将吕钦对《羊城晚报》说，曹岩磊的棋风很“好斗”，从不挑稳健的棋下。曹岩磊自己也这么说：他喜欢进攻，也喜欢下出不同的变化。',
+  '**He plays for the win with red.** Most of his wins come with the red pieces, and he opens with the central cannon, the most direct move in the game, almost as often as with the quiet soldier push. Yin Sheng did not play the central cannon once in his unbeaten month. With black he is happy to draw.':
+    '**执红他要赢。** 他的胜局大多是执红下出来的，而且他开局走中炮（最直接的一步）几乎跟走仙人指路一样多。尹昇在他不败的那个月一盘中炮都没走过。执黑他乐于求和。',
+  "**Zhao Panwei is the problem.** Sixteen games against him this year, and one win. Half of all Cao's losses came against Zhao. Against everyone else he loses about one game in twelve.":
+    '**赵攀伟是他的难题。** 今年对赵攀伟十六盘，只赢了一盘。曹岩磊全部的负局有一半输给了赵攀伟。对其他所有人，他大约十二盘才输一盘。',
+  "**The sacrifices are rarer than the name.** The engine confirms a real one, a piece offered and never won back, in six of his 75 games, about the same rate as Yin Sheng's unbeaten month. One is in the long match win with black below, a cannon left hanging on move 16. The oddest came against Zhao Panwei in April: he offered the same horse twice in four moves, and the game was drawn.":
+    '**真正的弃子比外号少。** 引擎确认的真弃子（送出一子、再也没有拿回来）只出现在他 75 局中的六局，跟尹昇那个不败月的比例差不多。其中一个在下面那盘执黑长局的胜局里：第 16 回合一门炮就那样挂着。最奇怪的一次是四月对赵攀伟：他在四个回合内两次送出同一匹马，结果那盘下和了。',
+  'The ten-game match': '十局番棋',
+  "The two had met before. In November 2016, at the Han Xin Cup in Sydney, Cao, playing for Macau, beat Lại Lý Huynh of Vietnam in the final, the first final of that event without a mainland Chinese player in it. Nine years later Lại became the first world champion from outside China, beating Yin Sheng in the final in Shanghai. So when a tea company booked the two of them into a room in Zhengzhou this January for ten rapid games over three evenings, Tuổi Trẻ in Vietnam billed it as China's revenge.":
+    '两人以前交过手。2016 年 11 月在悉尼的韩信杯，代表澳门的曹岩磊在决赛击败越南的赖理兄，那是这项赛事第一次决赛里没有内地棋手。九年后，赖理兄成为第一位来自中国以外的世界冠军，在上海的决赛击败了尹昇。所以今年一月，一家茶企把两人请到郑州，三个晚上下十盘快棋，越南的《青年报》把它说成中国的复仇之战。',
+  "The first evening was three draws. On the second Cao won twice, and this is the longer of the two, his only win of the match with black. Lại's soldier push on move 25 is the loose move, and Cao takes almost sixty more to collect.":
+    '第一个晚上三盘和棋。第二个晚上曹岩磊赢了两盘，这是其中较长的一盘，也是他这场番棋唯一一盘执黑的胜局。赖理兄第 25 回合挺兵是松懈的一步，曹岩磊花了将近六十个回合才把优势兑现。',
+  "Lại Lý Huynh vs Cao Yanlei, 4 January 2026. The board opens after red's 25th move, with Cao to play as black.":
+    '赖理兄对曹岩磊，2026 年 1 月 4 日。棋盘从红方第 25 回合之后开始，轮到执黑的曹岩磊走。',
+  '2026 Chunqiu Daye Cup ten-game match': '2026 春丘大叶杯十局番棋',
+  "Lại hit back on the last evening, and fast. Cao retreated a horse on move 15, the only real mistake of the game, and resigned three moves later. The Chinese sites filed it under 弃子速胜, a quick win with a sacrifice. For once the sacrifice was not Cao's.":
+    '最后一个晚上赖理兄扳回一盘，而且很快。曹岩磊第 15 回合退马，是这盘唯一真正的失误，三个回合后他就认输了。中文网站把这盘记为“弃子速胜”。这一次弃子的不是曹岩磊。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026. The board opens just after red's 15th move, with Lại to play.":
+    '曹岩磊对赖理兄，2026 年 1 月 5 日。棋盘从红方第 15 回合刚走完开始，轮到赖理兄走。',
+  'That left Cao needing a draw from the last game. He won it in 19 moves: Lại pushed his central soldier on move 12, and seven moves later he resigned.':
+    '于是最后一盘曹岩磊只需要和棋。他却 19 回合就赢了：赖理兄第 12 回合挺中卒，七个回合后认输。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, the last game. The board opens after black's 12th, with red to move.":
+    '曹岩磊对赖理兄，2026 年 1 月 5 日，最后一盘。棋盘从黑方第 12 回合之后开始，轮到红方走。',
+  'The Baizuishan Cup': '百醉山杯',
+  "The next day he went straight into an open and won seven of his ten games. The game against Li Hanlin is the strange one. Cao had been better for most of it when Li's cannon went forward on move 48 and left him lost. With the win on the board, Cao slid a soldier sideways instead, and suddenly Li was better. Li gave it straight back with his next move and resigned. The board opens on the move Cao missed.":
+    '第二天他直接去打一个公开赛，十盘赢了七盘。对李翰林那盘最奇怪。这盘大部分时间曹岩磊都占优，第 48 回合李翰林的炮往前一进，已经是输棋。赢棋就摆在那里，曹岩磊却把一个兵平到旁边，局面一下子变成李翰林占优。李翰林下一步又把优势还了回去，随即认输。棋盘停在曹岩磊漏掉的那一步。',
+  'Cao Yanlei vs Li Hanlin, 7 January 2026. Red to move, and one move keeps the win.':
+    '曹岩磊对李翰林，2026 年 1 月 7 日。轮到红方走，只有一步能保住胜势。',
+  '2026 Baizuishan Cup': '2026 百醉山杯',
+  'The Chunqiu Daye arena': '春丘大叶杯擂台赛',
+  "King of the hill: three players, one holding the arena, and each challenge is a single 20-minute game, then five-minute games until somebody wins. Everyone has four lives. In April Cao beat Zhao Panwei once and He Wenzhe twice, then lost to Zhao four times in a row, and his first season was over. In this one the position is level until Cao's cannon slides across on move 34. Zhao's reply ends it.":
+    '擂台赛：三人一组，一人守擂，每次挑战先下一盘 20 分钟的慢棋，再下五分钟的快棋直到分出胜负。每人有四条命。四月曹岩磊先赢了赵攀伟一次、何文哲两次，接着连输赵攀伟四次，第一季就此结束。这是其中一盘。直到第 34 回合曹岩磊的炮平过去之前，局面都是均势。赵攀伟的应着结束了这盘棋。',
+  "Zhao Panwei vs Cao Yanlei, 5 April 2026. The board opens after red's 34th, with black to find the move that holds.":
+    '赵攀伟对曹岩磊，2026 年 4 月 5 日。棋盘从红方第 34 回合之后开始，轮到黑方找出守住的那一步。',
+  '2026 Chunqiu Daye Cup arena': '2026 春丘大叶杯擂台赛',
+  'The league': '象甲联赛',
+  "In August he topped the qualifier for China's top league, level with Hong Kong's Feng Jiajun, and took Shanghai Jiahong up with him. His one draw there was against Yin Sheng on the first day.":
+    '八月他在象甲预选赛与香港的冯家俊并列个人第一，也把上海嘉弘带进了联赛。他在那里唯一的一盘和棋，是第一天对尹昇。',
+  "At stage one in September he was second in the individual table after nine rounds, behind Wang Yubo, and lost one game in sixteen. On the last day he beat Meng Chen, the man who knocked him out of the 2023 national championship in the quarter-final. Meng's cannon raid on move 12 gave the game away, though it took Cao until move 39 to finish it.":
+    '九月的第一阶段，九轮过后他在个人排名中位列第二，仅次于王禹博，十六盘只输一盘。最后一天他赢了孟辰，正是孟辰在 2023 年全国个人赛八强战淘汰了他。孟辰第 12 回合炮打中兵，把这盘棋送了出去，不过曹岩磊一直到第 39 回合才收官。',
+  "Cao Yanlei vs Meng Chen, 17 September 2026. The board opens after black's 12th, with red to move.":
+    '曹岩磊对孟辰，2026 年 9 月 17 日。棋盘从黑方第 12 回合之后开始，轮到红方走。',
+  "The league's second stage is in October, and the national championship runs from November 21 to 29 in Changchun. He reached the quarter-final in 2023 and went out in the last sixteen in December. The association's ranking at the end of last year had him third in China.":
+    '象甲第二阶段在十月，全国个人赛 11 月 21 日至 29 日在长春举行。他在 2023 年打进八强，去年十二月止步十六强。中国象棋协会去年年底的积分排名，他排全国第三。',
+  'All 75 games': '全部 75 局',
+  "Every game of the year is in a Mistboard study, with the engine's judgments and lines on each one, and 71 of the 75 are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
+    '今年的每一盘都在 Mistboard 的一个研究里，每盘都有引擎的判断和变化；75 盘中有 71 盘也在直播档案里，附网站的分析。资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 9 月。',
+  'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：对局、战绩与分析',
+  'Cao Yanlei at the board.': '对局中的曹岩磊。',
+  'Li Hanlin': '李翰林',
+  'Zhao Panwei': '赵攀伟',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -2904,6 +3000,100 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // cao-yanlei (zh-Hant), machine-drafted 2026-09-25, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, as on the yin-sheng page.
+  'His 2026 record by event.': '他 2026 年各項賽事的戰績。',
+  Event: '賽事',
+  Dates: '日期',
+  W: '勝',
+  D: '和',
+  L: '負',
+  'Match vs Lại': '對賴理兄番棋',
+  'Jan 3–5': '1月3–5日',
+  'Jan 6–7': '1月6–7日',
+  'Team championship': '全國團體賽',
+  'Mar 28–Apr 2': '3月28日–4月2日',
+  'Chunqiu Daye arena': '春丘大葉盃擂台賽',
+  'Apr 4–6': '4月4–6日',
+  'Xintai Cup': '新泰盃',
+  'May 14': '5月14日',
+  'Gaogang Cup': '高新高港盃',
+  'Jun 4': '6月4日',
+  'Shanghai qualifying': '上海盃海選賽',
+  'Aug 9': '8月9日',
+  'League qualifier': '象甲預選賽',
+  'Aug 17–19': '8月17–19日',
+  'Gulin open': '古藺公開賽',
+  'Aug 23': '8月23日',
+  'League, stage one': '象甲第一階段',
+  'Sep 14–18': '9月14–18日',
+  "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.":
+    '一月的十局番棋以 12 比 8 擊敗世界冠軍，之後一路打到中國象甲聯賽第一階段。盤面上六局，全部 75 局附引擎分析。',
+  'Cao Yanlei at the board. Photo: 象棋字典 via Sohu.':
+    '對局中的曹岩磊。圖片：象棋字典，經搜狐轉載。',
+  'Cao Yanlei in a dark suit and white shirt, looking down at the pieces during a tournament game.':
+    '曹岩磊身穿深色西裝和白襯衫，在比賽中低頭看著棋盤。',
+  "Cao Yanlei 曹岩磊 was abandoned in Sanmenxia, in Henan, before his first birthday. The couple who took him in raised him as their grandson, and the grandfather taught him xiangqi at four. He died before the boy turned six. At thirteen Cao was the youngest national master in China. Around 2011 Macau signed him, and for most of his twenties he played for Macau, often against the mainland's best: three World Championship bronzes, and in 2019 the world masters title, won against Wang Tianyi in the final. The Chinese press calls him the master of the sacrifice.":
+    '曹岩磊不到一歲時在河南三門峽被遺棄。收養他的一對老人把他當孫子養大，爺爺在他四歲時教他下象棋，在他不滿六歲時去世。十三歲時，曹岩磊成為當時全國最年輕的象棋大師。2011 年前後澳門把他簽了下來，他二十多歲的大部分時間都代表澳門出賽，常常對上內地最強的棋手：三次世錦賽銅牌，2019 年又在世界象棋大師賽決賽擊敗王天一奪冠。中文媒體叫他「棄子大師」。',
+  "He is registered to Hubei now and plays the league for Shanghai Jiahong. In January 2025 the Chinese Xiangqi Association's [match-fixing ruling](/blog/xiangqi-match-fixing) named him among the 41 people involved and gave him its lightest penalty, a public criticism, with no ban. This page is his 2026 so far.":
+    '他現在註冊在湖北，聯賽代表上海嘉弘出戰。2025 年 1 月，中國象棋協會的[打假球處理決定](/blog/xiangqi-match-fixing)列出的 41 名涉事人員中有他，給了他最輕的處罰：通報批評，沒有禁賽。這一頁寫的是他 2026 年到目前為止的比賽。',
+  '2026 so far': '2026 年至今',
+  "Ten events, from a ten-game match against the world champion in January to the first stage of China's top league in September. I ran all 75 games through the same engine analysis Mistboard gives your own games.":
+    '十項賽事，從一月對世界冠軍的十局番棋，到九月的中國象甲聯賽第一階段。全部 75 局我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  'Baizuishan Cup': '百醉山盃',
+  "**He fights.** Watching him win the Wuyang Cup last year, the veteran Lü Qin told 羊城晚报 that Cao's style is combative and he never picks the safe line. Cao said much the same: he likes to attack, and to keep varying his play.":
+    '**他敢打。** 去年看他拿下五羊盃時，老將吕钦對《羊城晚報》說，曹岩磊的棋風很「好鬥」，從不挑穩健的棋下。曹岩磊自己也這麼說：他喜歡進攻，也喜歡下出不同的變化。',
+  '**He plays for the win with red.** Most of his wins come with the red pieces, and he opens with the central cannon, the most direct move in the game, almost as often as with the quiet soldier push. Yin Sheng did not play the central cannon once in his unbeaten month. With black he is happy to draw.':
+    '**執紅他要贏。** 他的勝局大多是執紅下出來的，而且他開局走中炮（最直接的一步）幾乎跟走仙人指路一樣多。尹昇在他不敗的那個月一盤中炮都沒走過。執黑他樂於求和。',
+  "**Zhao Panwei is the problem.** Sixteen games against him this year, and one win. Half of all Cao's losses came against Zhao. Against everyone else he loses about one game in twelve.":
+    '**赵攀伟是他的難題。** 今年對赵攀伟十六盤，只贏了一盤。曹岩磊全部的負局有一半輸給了赵攀伟。對其他所有人，他大約十二盤才輸一盤。',
+  "**The sacrifices are rarer than the name.** The engine confirms a real one, a piece offered and never won back, in six of his 75 games, about the same rate as Yin Sheng's unbeaten month. One is in the long match win with black below, a cannon left hanging on move 16. The oddest came against Zhao Panwei in April: he offered the same horse twice in four moves, and the game was drawn.":
+    '**真正的棄子比外號少。** 引擎確認的真棄子（送出一子、再也沒有拿回來）只出現在他 75 局中的六局，跟尹昇那個不敗月的比例差不多。其中一個在下面那盤執黑長局的勝局裡：第 16 回合一門炮就那樣掛著。最奇怪的一次是四月對赵攀伟：他在四個回合內兩次送出同一匹馬，結果那盤下和了。',
+  'The ten-game match': '十局番棋',
+  "The two had met before. In November 2016, at the Han Xin Cup in Sydney, Cao, playing for Macau, beat Lại Lý Huynh of Vietnam in the final, the first final of that event without a mainland Chinese player in it. Nine years later Lại became the first world champion from outside China, beating Yin Sheng in the final in Shanghai. So when a tea company booked the two of them into a room in Zhengzhou this January for ten rapid games over three evenings, Tuổi Trẻ in Vietnam billed it as China's revenge.":
+    '兩人以前交過手。2016 年 11 月在雪梨的韓信盃，代表澳門的曹岩磊在決賽擊敗越南的賴理兄，那是這項賽事第一次決賽裡沒有內地棋手。九年後，賴理兄成為第一位來自中國以外的世界冠軍，在上海的決賽擊敗了尹昇。所以今年一月，一家茶企把兩人請到鄭州，三個晚上下十盤快棋，越南的《青年報》把它說成中國的復仇之戰。',
+  "The first evening was three draws. On the second Cao won twice, and this is the longer of the two, his only win of the match with black. Lại's soldier push on move 25 is the loose move, and Cao takes almost sixty more to collect.":
+    '第一個晚上三盤和棋。第二個晚上曹岩磊贏了兩盤，這是其中較長的一盤，也是他這場番棋唯一一盤執黑的勝局。賴理兄第 25 回合挺兵是鬆懈的一步，曹岩磊花了將近六十個回合才把優勢兌現。',
+  "Lại Lý Huynh vs Cao Yanlei, 4 January 2026. The board opens after red's 25th move, with Cao to play as black.":
+    '賴理兄對曹岩磊，2026 年 1 月 4 日。棋盤從紅方第 25 回合之後開始，輪到執黑的曹岩磊走。',
+  '2026 Chunqiu Daye Cup ten-game match': '2026 春丘大葉盃十局番棋',
+  "Lại hit back on the last evening, and fast. Cao retreated a horse on move 15, the only real mistake of the game, and resigned three moves later. The Chinese sites filed it under 弃子速胜, a quick win with a sacrifice. For once the sacrifice was not Cao's.":
+    '最後一個晚上賴理兄扳回一盤，而且很快。曹岩磊第 15 回合退馬，是這盤唯一真正的失誤，三個回合後他就認輸了。中文網站把這盤記為「棄子速勝」。這一次棄子的不是曹岩磊。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026. The board opens just after red's 15th move, with Lại to play.":
+    '曹岩磊對賴理兄，2026 年 1 月 5 日。棋盤從紅方第 15 回合剛走完開始，輪到賴理兄走。',
+  'That left Cao needing a draw from the last game. He won it in 19 moves: Lại pushed his central soldier on move 12, and seven moves later he resigned.':
+    '於是最後一盤曹岩磊只需要和棋。他卻 19 回合就贏了：賴理兄第 12 回合挺中卒，七個回合後認輸。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, the last game. The board opens after black's 12th, with red to move.":
+    '曹岩磊對賴理兄，2026 年 1 月 5 日，最後一盤。棋盤從黑方第 12 回合之後開始，輪到紅方走。',
+  'The Baizuishan Cup': '百醉山盃',
+  "The next day he went straight into an open and won seven of his ten games. The game against Li Hanlin is the strange one. Cao had been better for most of it when Li's cannon went forward on move 48 and left him lost. With the win on the board, Cao slid a soldier sideways instead, and suddenly Li was better. Li gave it straight back with his next move and resigned. The board opens on the move Cao missed.":
+    '第二天他直接去打一個公開賽，十盤贏了七盤。對李翰林那盤最奇怪。這盤大部分時間曹岩磊都佔優，第 48 回合李翰林的炮往前一進，已經是輸棋。贏棋就擺在那裡，曹岩磊卻把一個兵平到旁邊，局面一下子變成李翰林佔優。李翰林下一步又把優勢還了回去，隨即認輸。棋盤停在曹岩磊漏掉的那一步。',
+  'Cao Yanlei vs Li Hanlin, 7 January 2026. Red to move, and one move keeps the win.':
+    '曹岩磊對李翰林，2026 年 1 月 7 日。輪到紅方走，只有一步能保住勝勢。',
+  '2026 Baizuishan Cup': '2026 百醉山盃',
+  'The Chunqiu Daye arena': '春丘大葉盃擂台賽',
+  "King of the hill: three players, one holding the arena, and each challenge is a single 20-minute game, then five-minute games until somebody wins. Everyone has four lives. In April Cao beat Zhao Panwei once and He Wenzhe twice, then lost to Zhao four times in a row, and his first season was over. In this one the position is level until Cao's cannon slides across on move 34. Zhao's reply ends it.":
+    '擂台賽：三人一組，一人守擂，每次挑戰先下一盤 20 分鐘的慢棋，再下五分鐘的快棋直到分出勝負。每人有四條命。四月曹岩磊先贏了赵攀伟一次、何文哲兩次，接著連輸赵攀伟四次，第一季就此結束。這是其中一盤。直到第 34 回合曹岩磊的炮平過去之前，局面都是均勢。赵攀伟的應著結束了這盤棋。',
+  "Zhao Panwei vs Cao Yanlei, 5 April 2026. The board opens after red's 34th, with black to find the move that holds.":
+    '赵攀伟對曹岩磊，2026 年 4 月 5 日。棋盤從紅方第 34 回合之後開始，輪到黑方找出守住的那一步。',
+  '2026 Chunqiu Daye Cup arena': '2026 春丘大葉盃擂台賽',
+  'The league': '象甲聯賽',
+  "In August he topped the qualifier for China's top league, level with Hong Kong's Feng Jiajun, and took Shanghai Jiahong up with him. His one draw there was against Yin Sheng on the first day.":
+    '八月他在象甲預選賽與香港的馮家俊並列個人第一，也把上海嘉弘帶進了聯賽。他在那裡唯一的一盤和棋，是第一天對尹昇。',
+  "At stage one in September he was second in the individual table after nine rounds, behind Wang Yubo, and lost one game in sixteen. On the last day he beat Meng Chen, the man who knocked him out of the 2023 national championship in the quarter-final. Meng's cannon raid on move 12 gave the game away, though it took Cao until move 39 to finish it.":
+    '九月的第一階段，九輪過後他在個人排名中位列第二，僅次於王禹博，十六盤只輸一盤。最後一天他贏了孟辰，正是孟辰在 2023 年全國個人賽八強戰淘汰了他。孟辰第 12 回合炮打中兵，把這盤棋送了出去，不過曹岩磊一直到第 39 回合才收官。',
+  "Cao Yanlei vs Meng Chen, 17 September 2026. The board opens after black's 12th, with red to move.":
+    '曹岩磊對孟辰，2026 年 9 月 17 日。棋盤從黑方第 12 回合之後開始，輪到紅方走。',
+  "The league's second stage is in October, and the national championship runs from November 21 to 29 in Changchun. He reached the quarter-final in 2023 and went out in the last sixteen in December. The association's ranking at the end of last year had him third in China.":
+    '象甲第二階段在十月，全國個人賽 11 月 21 日至 29 日在長春舉行。他在 2023 年打進八強，去年十二月止步十六強。中國象棋協會去年年底的積分排名，他排全國第三。',
+  'All 75 games': '全部 75 局',
+  "Every game of the year is in a Mistboard study, with the engine's judgments and lines on each one, and 71 of the 75 are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; analysis by Pikafish through Mistboard's review pipeline, September 2026.":
+    '今年的每一盤都在 Mistboard 的一個研究裡，每盤都有引擎的判斷和變化；75 盤中有 71 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 9 月。',
+  'Cao Yanlei 曹岩磊: games, results, and analysis': '曹岩磊：對局、戰績與分析',
+  'Cao Yanlei at the board.': '對局中的曹岩磊。',
+  'Li Hanlin': '李翰林',
+  'Zhao Panwei': '赵攀伟',
+  'Meng Chen': '孟辰',
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
   // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',

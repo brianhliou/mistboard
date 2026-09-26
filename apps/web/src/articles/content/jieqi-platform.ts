@@ -219,6 +219,7 @@ export const jieqiPlatformArticle: Article = {
           // does; a table asserting what someone else lacks would need checking
           // every time they ship, and would be wrong before anyone noticed.
           kind: 'table',
+          wrap: true,
           headers: ['', 'On Mistboard'],
           rows: [
             ['Play the engine or a friend', 'Free, no account'],

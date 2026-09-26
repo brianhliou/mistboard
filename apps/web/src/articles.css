@@ -2073,6 +2073,22 @@
   white-space: normal;
 }
 
+/* Compact is a phone rule: on a desktop column the table keeps the usual 28px
+   gutters, and on a phone a short-celled table fits instead of scrolling. */
+@media (max-width: 600px) {
+  .article-table-compact {
+    font-size: 13px;
+  }
+
+  .article-table-compact :is(th, td) + :is(th, td) {
+    padding-left: 10px;
+  }
+
+  .article-table-compact :is(th, td) {
+    padding-right: 0;
+  }
+}
+
 .article-table-key-column td:first-child {
   font-weight: 600;
   white-space: nowrap;

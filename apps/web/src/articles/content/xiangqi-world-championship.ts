@@ -624,6 +624,8 @@ export const xiangqiWorldChampionshipArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Champion', 'Titles', 'Years', 'Association ruling'],
           rows: worldChampionTableRows(),
           caption:

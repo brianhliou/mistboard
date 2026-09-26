@@ -263,6 +263,12 @@ export const ARTICLE_META: Record<
     description:
       'The complete rules of Banqi, also called Chinese dark chess or blind chess: flip or move one square each turn, capture by rank, cannons jump. Play it free in your browser.',
   },
+  'cao-yanlei': {
+    title: 'Cao Yanlei 曹岩磊',
+    kind: 'article',
+    description:
+      "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.",
+  },
   'yin-sheng': {
     title: 'Yin Sheng 尹昇',
     kind: 'article',

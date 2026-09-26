@@ -266,6 +266,8 @@ export const puzzleMiningArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Outcome', 'Share of candidates'],
           rows: [
             ['Rejected: near-tie', '35%'],

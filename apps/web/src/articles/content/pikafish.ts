@@ -121,6 +121,8 @@ export const pikafishArticle: Article = {
           // is re-anchored; the caption carries the date so a stale table is
           // visibly stale rather than silently wrong.
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Opponent', 'Rating on the ladder'],
           rows: [
             ['Fairy-Stockfish level 1', '1637'],

@@ -29,4 +29,13 @@ export const PLAYER_PROFILES: Readonly<Record<string, PlayerProfile>> = {
     title: 'NM',
     profileHref: '/blog/yin-sheng',
   },
+  'cao-yanlei': {
+    photo: '/article-thumbs/cao-yanlei-2024-face.jpg',
+    photoCredit: '象棋字典 via Sohu',
+    born: '1991, Sanmenxia, Henan',
+    // CXA 国家大师 (2021 registration list). His grandmaster title is the WXF's,
+    // for Macau, which this tag set does not carry; facts.md § Titles.
+    title: 'NM',
+    profileHref: '/blog/cao-yanlei',
+  },
 };

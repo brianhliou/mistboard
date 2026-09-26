@@ -336,6 +336,9 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
 export const HOME_ARTICLE_SLUGS = [
+  // The second player page, dated 2026-09-25: the ten-game match against the
+  // world champion and the season after it. Newest, so it leads.
+  'cao-yanlei',
   // The banqi statistics post, scheduled for 2026-09-23: 200 engine games
   // reduced to what a player can use mid-game, and the only measured banqi
   // page in either language. Leads once live.
@@ -1952,6 +1955,7 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   table.className = 'article-table';
   if (block.keyColumn) table.classList.add('article-table-key-column');
   if (block.wrap) table.classList.add('article-table-wrap');
+  if (block.compact) table.classList.add('article-table-compact');
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
   for (const h of block.headers) {

@@ -57,6 +57,8 @@ export const banqiStatisticsArticle: Article = {
     },
     {
       kind: 'table',
+      compact: true,
+      wrap: true,
       headers: ['200 games, MistyBanqi against itself at 10M nodes', 'value'],
       rows: [
         ['decided', '168 (84%)'],

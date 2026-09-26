@@ -87,6 +87,7 @@ export const jieqiOpeningsArticle: Article = {
         },
         {
           kind: 'table',
+          wrap: true,
           headers: ['Opening', 'Verdict'],
           highlightRows: [0],
           rows: [
@@ -129,6 +130,8 @@ export const jieqiOpeningsArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['What flips up', 'Odds', 'Better opening'],
           highlightRows: [5],
           rows: [

@@ -329,6 +329,8 @@ export const yinShengArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['Player', 'Rating', 'Rank in China', 'Against Yin Sheng this run'],
           rows: [
             ["Meng Fanrui", "2567", "17", "1 win, 6 draws"],

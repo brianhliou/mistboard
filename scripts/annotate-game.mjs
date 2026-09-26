@@ -10,7 +10,12 @@
 // nothing here is a bespoke second opinion.
 
 import { readFileSync, writeFileSync } from 'node:fs';
+import { analyzeXiangqiPostgame } from '../apps/server/dist/routes/xiangqi-games.js';
 import { analyzeXiangqiGame } from '../apps/server/dist/xiangqi-analysis.js';
+import {
+  pikafishXiangqiPath,
+  XIANGQI_ANALYSIS_NODES,
+} from '../apps/server/dist/xiangqi-pikafish-engine.js';
 import {
   accuracyPercent,
   gameAccuracy,
@@ -67,8 +72,36 @@ function notatePv(prefixMoves, pvUci) {
   };
 }
 
+// --evals-from <site.json>: take the site's stored analysis (fetched by
+// scripts/player-analysis.mjs) instead of running the engine. The site's rows are
+// in our square notation (ranks 1-10); the rows below want Pikafish UCI (0-9).
+const evalsFromIdx = args.indexOf('--evals-from');
+const evalsFrom =
+  evalsFromIdx === -1 ? null : JSON.parse(readFileSync(args[evalsFromIdx + 1], 'utf8'));
+const toPikafish = (uci) =>
+  typeof uci === 'string'
+    ? uci.replace(
+        /^([a-i])(\d+)([a-i])(\d+)$/,
+        (_, f1, r1, f2, r2) => `${f1}${r1 - 1}${f2}${r2 - 1}`,
+      )
+    : uci;
+
 const started = Date.now();
-const evals = await analyzeXiangqiGame(movesUci, nodes ? { nodes } : {});
+// `moves` switches on the offered-piece pass (#315), as the site's own
+// postgame path does; without it the rows would lack `offerLine`.
+const evals = evalsFrom
+  ? evalsFrom.plies.map((p) => ({
+      ...p,
+      best: toPikafish(p.best),
+      pv: (p.pv ?? []).map(toPikafish),
+    }))
+  : await analyzeXiangqiGame(movesUci, { ...(nodes ? { nodes } : {}), moves: game.moves });
+if (evals.length !== movesUci.length + 1) {
+  console.error(
+    `analysis has ${evals.length} positions for ${movesUci.length} moves; not this game`,
+  );
+  process.exit(1);
+}
 const elapsedMs = Date.now() - started;
 
 // Red-POV win% for every position 0..N.
@@ -137,10 +170,24 @@ for (const r of rows) {
   );
 }
 
+// At the site's own budget the run IS the site's analysis: the same function
+// the postgame route caches, fed the evals above, so the row can be stored in
+// game_analysis and served instead of recomputed (scripts/upload-game-analysis.mjs).
+// Any other budget would be mislabelled under the site's key, so it gets none.
+const budget = nodes ?? XIANGQI_ANALYSIS_NODES;
+const site = evalsFrom
+  ? { engineId: evalsFrom.engineId, depth: evalsFrom.depth, plies: evalsFrom.plies }
+  : budget === XIANGQI_ANALYSIS_NODES
+    ? await analyzeXiangqiPostgame(
+        { timeline: game.moves.map((move) => ({ type: 'move-played', move })) },
+        async () => evals,
+      )
+    : null;
+
 if (jsonOut) {
   writeFileSync(
     jsonOut,
-    `${JSON.stringify({ game: { ...game, moves: undefined }, engine: { nodes: nodes ?? 1_000_000, elapsedMs }, accuracy: acc, counts, rows }, null, 2)}\n`,
+    `${JSON.stringify({ game: { ...game, moves: undefined }, engine: { nodes: budget, binary: evalsFrom ? `site:${evalsFrom.engineId}` : pikafishXiangqiPath(), elapsedMs }, accuracy: acc, counts, rows, ...(site ? { site } : {}) }, null, 2)}\n`,
   );
   console.log(`\nwrote ${jsonOut}`);
 }

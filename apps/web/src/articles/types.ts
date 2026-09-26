@@ -14,12 +14,12 @@ import type {
 } from '@mistboard/game';
 import type { AtomicXiangqiReplaySpec } from '../atomic-xiangqi-replay.js';
 import type { ChessReplaySpec } from '../chess-replay.js';
-import type { Locale } from '../i18n/locale.js';
-import type { PlayerTitle } from '../player-titles.js';
 import type { DuckXiangqiReplaySpec } from '../duck-xiangqi-replay.js';
 import type { FortressXiangqiReplaySpec } from '../fortress-xiangqi-replay.js';
 import type { HordeXiangqiReplaySpec } from '../horde-xiangqi-replay.js';
+import type { Locale } from '../i18n/locale.js';
 import type { JieqiReplaySpec } from '../jieqi-replay.js';
+import type { PlayerTitle } from '../player-titles.js';
 import type { XiangqiReplaySpec } from '../xiangqi-replay.js';
 
 export type ParagraphBlock = { kind: 'paragraph'; text: string };
@@ -260,7 +260,7 @@ export type RawSvgStepperStep = {
 export type RawSvgStepperBlock = {
   kind: 'raw-svg-stepper';
   steps: RawSvgStepperStep[];
-  header?: { players: string; event: string };   // optional title above the frame (engine-game style)
+  header?: { players: string; event: string }; // optional title above the frame (engine-game style)
   caption?: string;
 };
 
@@ -327,6 +327,10 @@ export type TableBlock = {
    *  nowrap, which suits numbers; a table of names and events does not fit a
    *  phone column on one line per cell. */
   wrap?: boolean;
+  /** On a phone: tight gutters (10px instead of 28px) and 13px text, for a
+   *  short-celled table (a record by event: name, dates, W, D, L) that must
+   *  fit a phone column with no cell on two lines and no sideways scroll. */
+  compact?: boolean;
 };
 
 // A raster figure in an article body (product screenshots, photos). `src` is a
@@ -408,10 +412,7 @@ export type ImageArticleThumbnail = {
   alt?: string;
 };
 
-export type ArticleThumbnail =
-  | BoardArticleThumbnail
-  | SvgArticleThumbnail
-  | ImageArticleThumbnail;
+export type ArticleThumbnail = BoardArticleThumbnail | SvgArticleThumbnail | ImageArticleThumbnail;
 
 type ArticleBase = {
   slug: string;

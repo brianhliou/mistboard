@@ -278,6 +278,7 @@ export const riverbankCannonArticle: Article = {
         },
         {
           kind: 'table',
+          wrap: true,
           headers: ['position', 'engine verdict'],
           rows: [
             ['game start, Red to move', '+0.06 Red: a real but small first-move edge'],

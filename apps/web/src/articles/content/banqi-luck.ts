@@ -106,6 +106,8 @@ export const banqiLuckArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['per flip', 'meaning'],
           rows: [
             ['played', 'the average value of the flip you chose'],
@@ -131,6 +133,8 @@ export const banqiLuckArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['what the g3 tile could be', 'count', 'win% for Black'],
           rows: FLIP_POOL_ROWS,
           highlightRows: [FLIP_POOL_ACTUAL_ROW],
@@ -248,6 +252,8 @@ export const banqiLuckArticle: Article = {
         },
         {
           kind: 'table',
+          compact: true,
+          wrap: true,
           headers: ['across 52 human vs Misty games', 'value'],
           rows: [
             ['human record', '14 wins, 33 losses, 5 draws'],
