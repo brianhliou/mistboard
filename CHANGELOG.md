@@ -82,6 +82,7 @@ Conventions:
 
 ### Watching and review
 
+- The homepage board works like a TV channel: it shows the live game, or a fog game still airing (joined where it is now), or the last game's final position; a game you missed is no longer replayed, and every replay plays each move at the time it really took, with the clock ticking at real speed ([09d92fb1](https://github.com/brianhliou/mistboard/commit/09d92fb1))
 - Pro players carry their title (GM, IM, FM, NM) from the CXA's grade lists and the WXF's international titles, each with a source: 90 players tagged instead of 8, and none whose grade the match-fixing rulings revoked ([14d1871e](https://github.com/brianhliou/mistboard/commit/14d1871e))
 - Broadcasts start following an event by themselves from 12 hours before it begins until a week after it ends, so an upcoming event no longer waits for someone to switch it on ([b2640430](https://github.com/brianhliou/mistboard/commit/b2640430))
 - The second player page, Cao Yanlei 曹岩磊 (/blog/cao-yanlei): the ten-game match he won against the world champion Lại Lý Huynh, then his 2026 event by event, six games on the board seen from his side, and a 75-chapter study with every game annotated ([86cc7c0d](https://github.com/brianhliou/mistboard/commit/86cc7c0d))
