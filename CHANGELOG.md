@@ -26,6 +26,9 @@ Conventions:
 
 ### Playing
 
+- A **Jungle** board for xiangqi: the square grid on a green lawn, a cream rug in each palace and a painted river, made with children in mind; pick it under Board, and Jungle and Flip Jungle turn green with it ([82a72047](https://github.com/brianhliou/mistboard/commit/82a72047))
+- **Animal (no disc)** piece set: the animal pieces without their cream disc, a little larger, with a thin outline on the lined board ([3bd84ef9](https://github.com/brianhliou/mistboard/commit/3bd84ef9))
+- The Fortress treasure diamond draws a heavier line and sits centred on its disc ([c8de4e19](https://github.com/brianhliou/mistboard/commit/c8de4e19))
 - Every bot game starts at 10 + 5 unless you pick another clock, in every variant (games against people keep their own defaults), and Fog Chess and Fog Xiangqi bot games now offer 10 + 5 as well as 5 + 5 ([dc66e529](https://github.com/brianhliou/mistboard/commit/dc66e529))
 - The game-over badges reach duck xiangqi, atomic xiangqi and jungle: a captured general is marked where it fell, a jungle den entry crowns the animal in the den, and a jungle repetition marks the pieces that repeated ([a9bfda07](https://github.com/brianhliou/mistboard/commit/a9bfda07))
 - When a xiangqi or jieqi game ends while you watch, the generals say how: a red badge on the loser's naming the ending (checkmate, resignation, timeout, perpetual check), a green crown on the winner's, grey on both for a draw ([4e80220d](https://github.com/brianhliou/mistboard/commit/4e80220d))
@@ -166,6 +169,8 @@ Conventions:
 
 ### Fixed
 
+- Fog Xiangqi shows its palaces on the square grid again; the squares were drawn over them ([27f50d46](https://github.com/brianhliou/mistboard/commit/27f50d46))
+- Duck Xiangqi follows the Square grid board choice in games and reviews; it always drew the lined board ([fcfa2271](https://github.com/brianhliou/mistboard/commit/fcfa2271))
 - Fog Xiangqi on the square grid hides every unseen square completely; a light strip used to show under hidden squares below the river and along the bottom edge, most visibly on the homepage TV ([465af280](https://github.com/brianhliou/mistboard/commit/465af280))
 - The black seat circle in a broadcast's game list is whole again; its left edge was cut off ([f501cf57](https://github.com/brianhliou/mistboard/commit/f501cf57))
 - The Chinese `/bots` tab reads 象棋人机对战 instead of 机器人 ([55104652](https://github.com/brianhliou/mistboard/commit/55104652))
