@@ -81,7 +81,9 @@ describe('player pages', () => {
 
   it('titles a player from the authored profile, else the last official list', () => {
     expect(playerTitle({ slug: 'yin-sheng', name: '尹昇' })).toBe('NM');
-    expect(playerTitle({ slug: 'wang-tianyi', name: '王天一' })).toBe('GM');
+    expect(playerTitle({ slug: 'he-wenzhe', name: '何文哲' })).toBe('NM');
+    // A life ban hides the tag: the ruling may have revoked the grade.
+    expect(playerTitle({ slug: 'wang-tianyi', name: '王天一' })).toBe(null);
     expect(playerTitle({ slug: 'nobody', name: '无名' })).toBe(null);
   });
 
@@ -171,12 +173,12 @@ describe('player pages', () => {
       lastPlayedOn: '2026-09-18',
     };
     const listed = {
-      ...player({ name: '王天一', nameEn: 'Wang Tianyi', games: 0 }),
+      ...player({ name: '何文哲', nameEn: 'He Wenzhe', games: 0 }),
       cxaOnly: true,
     };
     expect(currentSeason([meng, listed])).toBe('2026');
-    expect(matchesFilter(listed, { title: 'GM' })).toBe(true);
-    expect(matchesFilter(meng, { title: 'GM' })).toBe(false);
+    expect(matchesFilter(listed, { title: 'NM' })).toBe(true);
+    expect(matchesFilter(meng, { title: 'NM' })).toBe(false);
     expect(matchesFilter(meng, { title: 'none', group: 'men' })).toBe(true);
     expect(matchesFilter(meng, { group: 'women' })).toBe(false);
     expect(matchesFilter(meng, { season: '2026' })).toBe(true);
@@ -197,10 +199,10 @@ describe('player pages', () => {
 
   it('sorts a player with no games below every scored player', () => {
     const listed = {
-      ...player({ name: '王天一', nameEn: 'Wang Tianyi', games: 0 }),
+      ...player({ name: '何文哲', nameEn: 'He Wenzhe', games: 0 }),
       cxaOnly: true,
     };
     const loser = player({ name: '乙', nameEn: 'Yi', games: 2 });
-    expect(sortPlayers([listed, loser], 'score').map((p) => p.name)).toEqual(['乙', '王天一']);
+    expect(sortPlayers([listed, loser], 'score').map((p) => p.name)).toEqual(['乙', '何文哲']);
   });
 });

@@ -5,6 +5,7 @@
 
 import { CXA_RATINGS } from './cxa-ratings.js';
 import { PLAYER_PROFILES, type PlayerTitle } from './profiles.js';
+import { sanctionFor, titleMayShow } from './sanctions.js';
 
 export function playerTitleFor(player: {
   /** The player page slug, when known; else guessed from the English name. */
@@ -12,6 +13,8 @@ export function playerTitleFor(player: {
   name: string;
   nameEn?: string | null;
 }): PlayerTitle | null {
+  // A grade the match-fixing rulings may have revoked is not shown (sanctions.ts).
+  if (!titleMayShow(sanctionFor(player.name))) return null;
   const slug = player.slug ?? slugGuess(player.nameEn);
   const authored = slug ? PLAYER_PROFILES[slug]?.title : undefined;
   if (authored) return authored;

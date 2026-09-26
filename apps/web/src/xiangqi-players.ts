@@ -37,6 +37,7 @@ import {
 import { playerTitleFor } from './players/player-title.js';
 import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
 import { ratingHistoryFigure } from './players/rating-history-chart.js';
+import { MATCH_FIXING_ARTICLE_PATH, sanctionFor, sanctionSentence } from './players/sanctions.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { type BroadcastRailItem, broadcastSectionLayout } from './xiangqi-broadcast-pages.js';
 
@@ -935,6 +936,18 @@ function renderPlayer(
   );
   // No "All players" link: the rail's Pro players entry is the way back.
   copy.append(h1, facts);
+  // A player the match-fixing rulings named: the ruling in one neutral
+  // sentence, linked to the account of the case, and nothing beyond it.
+  const sanction = sanctionFor(player.name);
+  if (sanction) {
+    const note = document.createElement('p');
+    note.className = 'xqp-sanction';
+    const link = document.createElement('a');
+    link.href = MATCH_FIXING_ARTICLE_PATH;
+    link.textContent = 'About the case';
+    note.append(`${sanctionSentence(sanction)} `, link);
+    copy.append(note);
+  }
   if (profile?.profileHref) {
     const actions = document.createElement('div');
     actions.className = 'xqb-hero-actions xqp-header-actions';

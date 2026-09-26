@@ -84,6 +84,7 @@ const REFERENCE: PlayerReference = {
   },
   titlesByName: { 孟繁睿: 'GM' },
   titlesBySlug: { 'yin-sheng': 'NM' },
+  sanctions: {},
 };
 
 const BOARD: XiangqiPlayerBoardRecord = {
@@ -273,4 +274,19 @@ test('a card for a player with no games and no team leads with the last rating, 
     'CXA rating 2,510 · #40 (2023)',
   );
   assert.equal(playerCardContent(unrelayed, [], EMPTY_PLAYER_REFERENCE).subtitle, 'Xiangqi player');
+});
+
+test('a player the match-fixing rulings named carries the ruling in the description', () => {
+  const withRuling = {
+    ...REFERENCE,
+    sanctions: {
+      孟繁睿:
+        'Banned for 6 months by the Chinese Xiangqi Association in the 2024 to 2026 match-fixing case.',
+    },
+  };
+  assert.match(
+    playerDescription(MENG, withRuling),
+    / Banned for 6 months by the Chinese Xiangqi Association in the 2024 to 2026 match-fixing case\.$/,
+  );
+  assert.doesNotMatch(playerDescription(MENG, REFERENCE), /match-fixing/);
 });

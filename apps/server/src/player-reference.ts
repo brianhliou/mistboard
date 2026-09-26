@@ -33,6 +33,8 @@ export type PlayerReference = {
   ratings: Readonly<Record<string, PlayerRatingEntry>>;
   titlesByName: Readonly<Record<string, PlayerTitleTag>>;
   titlesBySlug: Readonly<Record<string, PlayerTitleTag>>;
+  /** The match-fixing rulings' sentence per named player, by archive name. */
+  sanctions: Readonly<Record<string, string>>;
 };
 
 export const EMPTY_PLAYER_REFERENCE: PlayerReference = {
@@ -40,6 +42,7 @@ export const EMPTY_PLAYER_REFERENCE: PlayerReference = {
   ratings: {},
   titlesByName: {},
   titlesBySlug: {},
+  sanctions: {},
 };
 
 const CACHE_MS = 60_000;
@@ -58,6 +61,7 @@ export function parsePlayerReference(json: string): PlayerReference {
     ratings: record<PlayerRatingEntry>(raw.ratings),
     titlesByName: record<PlayerTitleTag>(raw.titlesByName),
     titlesBySlug: record<PlayerTitleTag>(raw.titlesBySlug),
+    sanctions: record<string>(raw.sanctions),
   };
 }
 

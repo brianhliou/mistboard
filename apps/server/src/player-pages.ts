@@ -218,6 +218,7 @@ export function playerDescription(player: XiangqiPlayerRecord, reference: Player
     player.games > 0
       ? `${plural(player.games, 'game')} in the Mistboard archive (${recordLine(player)}).`
       : 'No games in the Mistboard archive yet.',
+    reference.sanctions[player.name] ?? null,
   ]
     .filter(Boolean)
     .join(' ');
@@ -313,6 +314,12 @@ export function renderPlayerBody(
   const parts = [
     `<h1>${title ? `<abbr title="${escapeHtml(TITLE_WORDS[title])}">${title}</abbr> ` : ''}${nameHtml(player)}</h1>`,
   ];
+  const sanction = reference.sanctions[player.name];
+  if (sanction) {
+    parts.push(
+      `<p>${escapeHtml(sanction)} <a href="/blog/xiangqi-match-fixing">About the case</a></p>`,
+    );
+  }
   const key = teamKey(player);
   if (key && player.federation) {
     parts.push(

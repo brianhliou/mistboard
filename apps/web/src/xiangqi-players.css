@@ -232,6 +232,20 @@
   color: var(--site-text);
 }
 
+/* The match-fixing ruling, when there is one: plain muted text under the
+   facts, the link in the site's link ink. No badge, no colour of alarm. */
+.xqp-sanction {
+  margin: 10px 0 0;
+  max-width: 60ch;
+  color: var(--site-muted);
+  font-size: 14px;
+  line-height: 1.45;
+}
+
+.xqp-sanction a {
+  color: var(--site-accent-strong);
+}
+
 .xqp-header-actions {
   justify-content: flex-start;
 }

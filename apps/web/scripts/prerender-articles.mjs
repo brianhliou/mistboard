@@ -514,6 +514,12 @@ try {
     const title = playerTitleFor({ name });
     if (title) playerTitlesByName[archiveName(name)] = title;
   }
+  // The match-fixing rulings' one sentence per named player (players/sanctions.ts).
+  const { SANCTIONS, sanctionSentence } = await server.ssrLoadModule('/src/players/sanctions.ts');
+  const playerSanctions = {};
+  for (const [name, sanction] of Object.entries(SANCTIONS)) {
+    playerSanctions[name] = sanctionSentence(sanction);
+  }
   const playerTitlesBySlug = {};
   for (const [slug, profile] of Object.entries(PLAYER_PROFILES)) {
     if (profile.title) playerTitlesBySlug[slug] = profile.title;
@@ -525,6 +531,7 @@ try {
       ratings: playerRatings,
       titlesByName: playerTitlesByName,
       titlesBySlug: playerTitlesBySlug,
+      sanctions: playerSanctions,
     })}\n`,
     'utf-8',
   );
