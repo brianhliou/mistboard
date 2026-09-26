@@ -472,16 +472,46 @@ try {
   }
   const published = articles.filter((a) => articleIsLive(a, builtAt));
   const publishedBySlug = new Map(published.map((a) => [a.slug, a]));
-  const crossLanguageAlternates = new Map();
+  // Every page of a translation group emits the SAME alternate set, built from
+  // the group's English page: English (x-default), its zh renderings when
+  // published, and each published content-language partner. The pairs used to
+  // be expanded per page, so /blog/co-up named only itself and English and
+  // called itself x-default while /blog/jieqi-platform named four pages with
+  // itself as x-default. Google reads a group whose members disagree as no
+  // group (2026-09-25).
+  const englishRootOf = new Map();
+  const partnersOfRoot = new Map();
   for (const pair of CROSS_LANGUAGE_PAIRS) {
-    for (const [langA, slugA] of Object.entries(pair)) {
-      const partners = Object.entries(pair)
-        .filter(([langB]) => langB !== langA)
-        .map(([langB, slugB]) => ({ lang: langB, slug: slugB }))
-        .filter((partner) => publishedBySlug.has(partner.slug));
-      if (partners.length > 0) crossLanguageAlternates.set(slugA, partners);
-    }
+    if (!publishedBySlug.has(pair.en)) continue;
+    const partners = Object.entries(pair)
+      .filter(([lang]) => lang !== 'en')
+      .map(([lang, partnerSlug]) => ({ lang, slug: partnerSlug }))
+      .filter((partner) => publishedBySlug.has(partner.slug));
+    if (partners.length === 0) continue;
+    partnersOfRoot.set(pair.en, partners);
+    for (const partner of partners) englishRootOf.set(partner.slug, pair.en);
   }
+  const articleUrl = (target) =>
+    `${host}/${target.kind === 'rules' ? 'rules' : 'blog'}/${encodeURIComponent(target.slug)}`;
+  const translationGroupLinks = (article) => {
+    const root = publishedBySlug.get(englishRootOf.get(article.slug) ?? article.slug) ?? article;
+    const rootBase = root.kind === 'rules' ? 'rules' : 'blog';
+    const rootSlug = encodeURIComponent(root.slug);
+    return [
+      `<link rel="alternate" hreflang="${root.sourceLang ?? 'en'}" href="${articleUrl(root)}" />`,
+      ...(isArticleTranslationPublished(root.slug)
+        ? [
+            `<link rel="alternate" hreflang="zh-Hans" href="${host}/zh-hans/${rootBase}/${rootSlug}" />`,
+            `<link rel="alternate" hreflang="zh-Hant" href="${host}/zh-hant/${rootBase}/${rootSlug}" />`,
+          ]
+        : []),
+      ...(partnersOfRoot.get(root.slug) ?? []).map(
+        (partner) =>
+          `<link rel="alternate" hreflang="${partner.lang}" href="${articleUrl(publishedBySlug.get(partner.slug))}" />`,
+      ),
+      `<link rel="alternate" hreflang="x-default" href="${articleUrl(root)}" />`,
+    ].join('');
+  };
   let count = 0;
 
   for (const article of published) {
@@ -494,22 +524,7 @@ try {
     // translation publication boundary.
     const imageUrl = `${host}/og/article/${slug}.png?v=${ARTICLE_OG_IMAGE_VERSION}`;
     const translationPublished = isArticleTranslationPublished(article.slug);
-    const selfHreflang = article.sourceLang ?? 'en';
-    const hreflang = [
-      `<link rel="alternate" hreflang="${selfHreflang}" href="${host}/${base}/${slug}" />`,
-      ...(translationPublished
-        ? [
-            `<link rel="alternate" hreflang="zh-Hans" href="${host}/zh-hans/${base}/${slug}" />`,
-            `<link rel="alternate" hreflang="zh-Hant" href="${host}/zh-hant/${base}/${slug}" />`,
-          ]
-        : []),
-      ...(crossLanguageAlternates.get(article.slug) ?? []).map((partner) => {
-        const partnerArticle = publishedBySlug.get(partner.slug);
-        const partnerBase = partnerArticle.kind === 'rules' ? 'rules' : 'blog';
-        return `<link rel="alternate" hreflang="${partner.lang}" href="${host}/${partnerBase}/${encodeURIComponent(partner.slug)}" />`;
-      }),
-      `<link rel="alternate" hreflang="x-default" href="${host}/${base}/${slug}" />`,
-    ].join('');
+    const hreflang = translationGroupLinks(article);
 
     const localeVariants = variantsFor(article);
     const articleVariants = translationPublished ? localeVariants : localeVariants.slice(0, 1);
