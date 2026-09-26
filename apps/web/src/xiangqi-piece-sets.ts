@@ -3,7 +3,8 @@
 // Covers all seven xiangqi roles (general/advisor/elephant/horse/chariot/cannon/
 // soldier) so the same sets serve every xiangqi-family surface. Image sets are the international default and the
 // Dobutsu animal set. The Chess-style prototype reuses the international art
-// without its surrounding disc; glyph sets cover traditional/simplified Hanzi,
+// without its surrounding disc, and 'Animal (no disc)' does the same for the
+// Dobutsu heads; glyph sets cover traditional/simplified Hanzi,
 // Western Latin initials, and stroked line-art symbols.
 // Chinese characters render from baked Noto Sans CJK SC Bold outlines (see
 // cjkGlyphMark) so the live board matches the OG cards and variant mini-boards.
@@ -15,6 +16,7 @@ export type XiangqiPieceSet =
   | 'international'
   | 'international-flat'
   | 'animal-dobutsu'
+  | 'animal-flat'
   | 'traditional'
   | 'simplified'
   | 'western'
@@ -25,6 +27,7 @@ export const XIANGQI_PIECE_SETS: ReadonlyArray<{ id: XiangqiPieceSet; label: str
   { id: 'international', label: 'International' },
   { id: 'international-flat', label: 'Chess-style' },
   { id: 'animal-dobutsu', label: 'Animal Dobutsu' },
+  { id: 'animal-flat', label: 'Animal (no disc)' },
   { id: 'traditional', label: 'Traditional' },
   { id: 'simplified', label: 'Simplified' },
   { id: 'western', label: 'Western' },
@@ -91,7 +94,7 @@ const WESTERN: Record<XiangqiPieceRole, string> = {
 
 type ImageXiangqiPieceSet = Extract<
   XiangqiPieceSet,
-  'animal-dobutsu' | 'international' | 'international-flat'
+  'animal-dobutsu' | 'animal-flat' | 'international' | 'international-flat'
 >;
 type AnimalXiangqiPieceSet = Extract<XiangqiPieceSet, 'animal-dobutsu'>;
 
@@ -152,7 +155,14 @@ export function renderXiangqiPieceGlyphed(
   const ariaLabel =
     opts.ariaLabel ??
     (opts.shrouded ? `${piece.color} hidden piece` : `${piece.color} ${piece.role}`);
-  const classAttr = opts.className ? ` class="${escapeAttr(opts.className)}"` : '';
+  // The disc-less animal heads carry a class of their own so the lined board can
+  // outline them (live-xiangqi.css): with no disc, the grid lines run straight
+  // into the head and it stops reading as a piece standing on the point.
+  const className =
+    set === 'animal-flat' && !opts.shrouded
+      ? [opts.className, 'xq-piece--bare-animal'].filter(Boolean).join(' ')
+      : opts.className;
+  const classAttr = className ? ` class="${escapeAttr(className)}"` : '';
   const styleAttr = set === 'international-flat' && !opts.shrouded ? ' style="filter:none"' : '';
   const posAttrs =
     opts.size !== undefined || opts.x !== undefined || opts.y !== undefined
@@ -178,7 +188,9 @@ export function renderXiangqiPieceGlyphed(
       `</svg>`,
     ].join('');
   }
-  if (opts.shrouded && isAnimalPieceSet(set)) {
+  // A hidden token keeps the Dobutsu disc on the disc-less set too: a lone "?"
+  // with no disc would not read as a piece at all.
+  if (opts.shrouded && (isAnimalPieceSet(set) || set === 'animal-flat')) {
     return [
       `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
       animalDiscMark(),
@@ -208,6 +220,13 @@ export function renderXiangqiPieceGlyphed(
       animalDiscMark(),
       `<image href="${escapeAttr(animalPieceHref(piece, set))}" x="0" y="0" width="100" height="100" preserveAspectRatio="xMidYMid meet"/>`,
       animalRingMark(piece.color),
+      `</svg>`,
+    ].join('');
+  }
+  if (!opts.shrouded && set === 'animal-flat') {
+    return [
+      `<svg${classAttr}${styleAttr}${posAttrs} viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg" aria-label="${escapeAttr(ariaLabel)}">`,
+      animalFlatImageMark(animalPieceHref(piece, 'animal-dobutsu')),
       `</svg>`,
     ].join('');
   }
@@ -257,6 +276,17 @@ function animalDiscMark(): string {
 function animalRingMark(color: XiangqiColor): string {
   const stroke = color === 'red' ? '#c2261e' : '#283a47';
   return `<circle cx="50" cy="50" r="45" fill="none" stroke="${stroke}" stroke-width="3.2"/>`;
+}
+
+// With no disc to fill, the heads grow 15% to carry the square, as the
+// Chess-style figures do. The masters leave 16-20% padding on every side, so at
+// this scale the drawing still lands inside the 100-unit box (about 11-92).
+const ANIMAL_FLAT_SCALE = 1.15;
+
+function animalFlatImageMark(href: string): string {
+  const box = frameValue(100 * ANIMAL_FLAT_SCALE);
+  const inset = frameValue((100 - box) / 2);
+  return `<image href="${escapeAttr(href)}" x="${inset}" y="${inset}" width="${box}" height="${box}" preserveAspectRatio="xMidYMid meet"/>`;
 }
 
 function internationalDiscMark(color: XiangqiColor): string {
@@ -326,7 +356,12 @@ function isAnimalPieceSet(set: XiangqiPieceSet): set is AnimalXiangqiPieceSet {
 }
 
 function isImagePieceSet(set: XiangqiPieceSet): set is ImageXiangqiPieceSet {
-  return set === 'international' || set === 'international-flat' || set === 'animal-dobutsu';
+  return (
+    set === 'international' ||
+    set === 'international-flat' ||
+    set === 'animal-dobutsu' ||
+    set === 'animal-flat'
+  );
 }
 
 // ?v bump: the animal art files are swapped in place (stable URLs), so a version
@@ -454,8 +489,8 @@ export function duckPieceMarks(set: XiangqiPieceSet): string {
       duckImageMark(84),
     ].join('');
   }
-  if (set === 'international-flat') {
-    // No disc in this set, so nothing frames the figure and it carries the whole
+  if (set === 'international-flat' || set === 'animal-flat') {
+    // No disc in these sets, so nothing frames the figure and it carries the whole
     // square. The other flat pieces are scaled up for the same reason.
     return duckImageMark(100);
   }
@@ -469,6 +504,10 @@ export function duckPieceMarks(set: XiangqiPieceSet): string {
     `<circle cx="50" cy="50" r="38" fill="none" stroke="${DUCK_RING}" stroke-width="1.5"/>`,
     duckImageMark(74),
   ].join('');
+}
+
+export function animalFlatTreasureMarks(color: XiangqiColor): string {
+  return animalFlatImageMark(animalTreasureHref(color));
 }
 
 export function internationalTreasureMarks(color: XiangqiColor): string {

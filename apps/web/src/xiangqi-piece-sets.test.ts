@@ -103,6 +103,25 @@ describe('renderXiangqiPieceGlyphed', () => {
     expect(general).not.toContain('fill="#fef0d7"');
   });
 
+  it('renders Animal (no disc) from the Dobutsu art, 15% larger, with no disc', () => {
+    const general = renderXiangqiPieceGlyphed(redGeneral, 'animal-flat', {
+      className: 'xq-piece',
+    });
+    expect(general).toContain('/piece-sets/xiangqi/animal-dobutsu/red-general.png?v=4');
+    expect(general).toContain('x="-7.5" y="-7.5" width="115" height="115"');
+    expect(general).toContain('class="xq-piece xq-piece--bare-animal"');
+    // Keeps the board's soft piece shadow: the heads need grounding the flat
+    // chess figures do not.
+    expect(general).not.toContain('filter:none');
+    expect(general).not.toContain('<circle');
+  });
+
+  it('keeps the Dobutsu disc on a hidden Animal (no disc) token', () => {
+    const hidden = renderXiangqiPieceGlyphed(redGeneral, 'animal-flat', { shrouded: true });
+    expect(hidden).toContain('fill="#fff2cf"');
+    expect(hidden).not.toContain('xq-piece--bare-animal');
+  });
+
   it('fits the Chess-style elephant and cannon to their silhouettes', () => {
     const elephant = renderXiangqiPieceGlyphed(
       { color: 'red', role: 'elephant' },

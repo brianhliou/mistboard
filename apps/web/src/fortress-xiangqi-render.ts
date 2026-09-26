@@ -44,6 +44,7 @@ import { xiangqiCoordLabels } from './xiangqi-coord-labels.js';
 import { drawsFortressCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 import {
+  animalFlatTreasureMarks,
   animalTreasureMarks,
   cjkGlyphMark,
   internationalFlatTreasureMarks,
@@ -391,6 +392,9 @@ function renderFortressXiangqiPiece(
 function treasureInnerMarks(color: FortressXiangqiColor, set: XiangqiPieceSet): string {
   if (set === 'animal-dobutsu') {
     return animalTreasureMarks(color);
+  }
+  if (set === 'animal-flat') {
+    return animalFlatTreasureMarks(color);
   }
   if (set === 'international') {
     return internationalTreasureMarks(color);

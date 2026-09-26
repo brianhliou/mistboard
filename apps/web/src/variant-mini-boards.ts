@@ -23,6 +23,7 @@ import {
 import { readStoredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 import { drawsVeteranSoldier } from './xiangqi-crossed-soldier.js';
 import {
+  animalFlatTreasureMarks,
   animalTreasureMarks,
   cjkGlyphMark,
   duckPieceMarks,
@@ -380,6 +381,9 @@ function fortressTreasureDisc(
   // animal pieces (no hanzi disc base — it brings its own cream fill + ring).
   if (set === 'animal-dobutsu') {
     return place(animalTreasureMarks(color));
+  }
+  if (set === 'animal-flat') {
+    return place(animalFlatTreasureMarks(color));
   }
   if (set === 'international') {
     return place(internationalTreasureMarks(color));
