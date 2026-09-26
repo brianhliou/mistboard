@@ -303,6 +303,7 @@ function buildDonateForm(
     if (selectedKey) void startCheckout(selectedKey, donateBtn, locale);
   });
   form.append(amountSegment, donateBtn);
+  form.append(note(t('patron.currencyNote', {}, locale)));
 
   if (!user) form.append(note(t('patron.signInFirst', {}, locale)));
   return form;

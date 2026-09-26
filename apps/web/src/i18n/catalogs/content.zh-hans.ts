@@ -314,6 +314,7 @@ export const ZH_HANS_CONTENT = {
   'patron.patronUntil': '你的赞助者身份有效至 {date}。谢谢。',
   'patron.signInFirst': '登录后继续',
   'patron.unavailable': '结账还没开放，不会产生任何扣款。请稍后再来。',
+  'patron.currencyNote': '价格以美元标示，结账时会换算成你所在地区的货币。',
   'patron.checkoutError': '发起结账时出了问题，请重试。',
   'patron.transparencyTitle': 'Mistboard 如何运转',
   'patron.transparency':
@@ -329,7 +330,7 @@ export const ZH_HANS_CONTENT = {
     '随时可以从本页打开账单管理页面来调整方案或取消。周期性扣款会在当前周期结束时停止。如果扣款有误，或者你想要回最近一笔付款，请在扣款后 30 天内联系我们，我们会退款。',
   'patron.faqPayQuestion': '可以用哪些方式付款？',
   'patron.faqPayAnswer':
-    '按月订阅支持银行卡。单次付款支持银行卡、支付宝和微信支付。所有金额均以美元计。',
+    '按月订阅支持银行卡。单次付款支持银行卡、支付宝和微信支付。价格以美元定价，结账时会以你所在地区的货币显示，你也可以选择用美元支付。',
   'patron.termsPrefix': '扣款、取消和退款的规定见',
   'patron.termsLink': '使用条款',
   'patron.termsSuffix': '。',

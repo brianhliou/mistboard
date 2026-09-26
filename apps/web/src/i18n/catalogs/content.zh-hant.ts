@@ -314,6 +314,7 @@ export const ZH_HANT_CONTENT = {
   'patron.patronUntil': '你的贊助者身份有效至 {date}。謝謝。',
   'patron.signInFirst': '登入後繼續',
   'patron.unavailable': '結帳還沒開放，不會產生任何扣款。請稍後再來。',
+  'patron.currencyNote': '價格以美元標示，結帳時會換算成你所在地區的貨幣。',
   'patron.checkoutError': '發起結帳時出了問題，請重試。',
   'patron.transparencyTitle': 'Mistboard 如何運轉',
   'patron.transparency':
@@ -329,7 +330,7 @@ export const ZH_HANT_CONTENT = {
     '隨時可以從本頁打開帳單管理頁面來調整方案或取消。週期性扣款會在當前週期結束時停止。如果扣款有誤，或者你想要回最近一筆付款，請在扣款後 30 天內聯絡我們，我們會退款。',
   'patron.faqPayQuestion': '可以用哪些方式付款？',
   'patron.faqPayAnswer':
-    '按月訂閱支援信用卡。單次付款支援信用卡、支付寶和微信支付。所有金額均以美元計。',
+    '按月訂閱支援信用卡。單次付款支援信用卡、支付寶和微信支付。價格以美元定價，結帳時會以你所在地區的貨幣顯示，你也可以選擇用美元支付。',
   'patron.termsPrefix': '扣款、取消和退款的規定見',
   'patron.termsLink': '使用條款',
   'patron.termsSuffix': '。',

@@ -108,6 +108,7 @@ export const EN_CONTENT = {
   'patron.patronUntil': 'You are a Patron until {date}. Thank you.',
   'patron.signInFirst': 'Sign in to continue',
   'patron.unavailable': 'Checkout is not open yet, so nothing is charged. Check back soon.',
+  'patron.currencyNote': 'Prices are in US dollars. Checkout shows them in your local currency.',
   'patron.checkoutError': 'Something went wrong starting checkout. Please try again.',
   'patron.transparencyTitle': 'How Mistboard runs',
   // Deliberately carries no itemised running cost. A page that names the monthly
@@ -129,7 +130,7 @@ export const EN_CONTENT = {
     'Open the billing portal from this page anytime to change your plan or cancel. Recurring billing stops at the end of the current period. If you were charged by mistake, or you want a recent payment back, contact us within 30 days of the charge and we will refund it.',
   'patron.faqPayQuestion': 'Which ways can I pay?',
   'patron.faqPayAnswer':
-    'Monthly takes cards. A one-time payment takes cards, Alipay and WeChat Pay. Everything is charged in US dollars.',
+    'Monthly takes cards. A one-time payment takes cards, Alipay and WeChat Pay. Prices are set in US dollars; checkout shows them in your local currency, and you can choose to pay in US dollars instead.',
   'patron.termsPrefix': 'Billing, cancellation, and refunds are covered in the ',
   'patron.termsLink': 'Terms of Use',
   'patron.termsSuffix': '.',
