@@ -359,6 +359,29 @@ function replayLine(spec: XiangqiReplaySpec): XiangqiReplayLine {
   return { moves, states, startState, firstMover, secondMover, plyOffset, total: moves.length };
 }
 
+/**
+ * The result a line's own last position settles, as a PGN tag: '1-0' when Red
+ * has mated (or left Black no legal move, 困毙), '0-1' for Black, '' when the
+ * line stops short of an ending. A composition chapter carries no result tag,
+ * so without this its embed showed no result under a line that ends in mate.
+ */
+export function resultFromFinalPosition(spec: XiangqiReplaySpec): '1-0' | '0-1' | '' {
+  // The display replay applies moves without adjudicating (it has to walk on
+  // past an arbiter's draw), so the ending is judged by the standard rules.
+  // A move those rules refuse comes back as the same state: no verdict then.
+  const { moves, startState } = replayLine(spec);
+  let last = startState;
+  for (const move of moves) {
+    const next = applyStandardXiangqiMove(last, move);
+    if (next === last) return '';
+    last = next;
+  }
+  if (last.status.type !== 'finished' || !('winner' in last.status)) return '';
+  if (last.status.winner === 'red') return '1-0';
+  if (last.status.winner === 'black') return '0-1';
+  return '';
+}
+
 export type XiangqiReplayMountOptions = { lang?: ArticleLang };
 
 /** "Red wins" for a PGN-style result tag; nothing for an unfinished `*`; the

@@ -36,7 +36,11 @@ import { reviewResultLabel } from '../review/game-review-meta.js';
 import { type StudyChapterPayload, studyChapterToReplaySpec } from '../study-chapter-spec.js';
 import { seatInkFamily } from '../variant-seat-label.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
-import { mountXiangqiReplayBoard, xiangqiResultLabel } from '../xiangqi-replay.js';
+import {
+  mountXiangqiReplayBoard,
+  resultFromFinalPosition,
+  xiangqiResultLabel,
+} from '../xiangqi-replay.js';
 import { embedRailWidthPx, mountEmbedCard } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import './embed.css';
@@ -176,7 +180,14 @@ export async function mountChapterEmbed(
       first: { name: spec.red, ink: 'red' },
       second: { name: spec.black, ink: 'black' },
     },
-    result: xiangqiResultLabel(spec.resultText, copy),
+    // A game record says who won in its tags; a composition says it on the
+    // board, so an untagged chapter reads the result off its last position.
+    result: xiangqiResultLabel(
+      spec.resultText.trim() && spec.resultText.trim() !== '*'
+        ? spec.resultText
+        : resultFromFinalPosition(spec),
+      copy,
+    ),
     credit: {
       href: credit.href,
       text: credit.text,

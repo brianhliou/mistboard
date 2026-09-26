@@ -211,6 +211,48 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it('reads a composition result off its final position when the chapter has no result tag', async () => {
+    // Helpmate 1 of the helpmates study: Black first, Red's second move mates.
+    const line = ['d8e8', 'g7f7', 'd4d8', 'f7e7'];
+    let node: { uci?: string; children: unknown[] } = { children: [] };
+    const top = node;
+    for (const uci of line) {
+      const next = { uci, children: [] };
+      node.children.push(next);
+      node = next;
+    }
+    const composition = {
+      id: 'hm1',
+      name: 'A general and one soldier',
+      variant: 'xiangqi',
+      orientation: 'red',
+      root: { version: 1, rootFen: '9/4a4/3k1a2b/6P2/9/4p3c/3r5/9/4K4/9 b - - 0 1', root: top },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [composition] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'hm1' });
+    expect(root.querySelector('.embed-card-result')?.textContent).toBe('Red wins');
+    root.remove();
+  });
+
+  it('leaves the result empty when an untagged line stops short of an ending', async () => {
+    const top = { children: [{ uci: 'h3e3', children: [] }] };
+    const opening = {
+      id: 'o1',
+      name: 'Central cannon',
+      variant: 'xiangqi',
+      orientation: 'red',
+      root: { version: 1, root: top },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [opening] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'o1' });
+    expect(root.querySelector('.embed-card-result')?.textContent ?? '').toBe('');
+    root.remove();
+  });
+
   it('draws a duck chapter with the DUCK board, not the xiangqi one', async () => {
     // The xiangqi board cannot render the duck: it lives in the seventh FEN
     // field and has no piece to stand for it. Before the dispatch, a duck
