@@ -82,6 +82,7 @@ Conventions:
 
 ### Watching and review
 
+- The second player page, Cao Yanlei 曹岩磊 (/blog/cao-yanlei): the ten-game match he won against the world champion Lại Lý Huynh, then his 2026 event by event, six games on the board seen from his side, and a 75-chapter study with every game annotated ([86cc7c0d](https://github.com/brianhliou/mistboard/commit/86cc7c0d))
 - Pages for the 13 archive players the Chinese Xiangqi Association sanctioned in the 2024 to 2026 match-fixing case say so in one sentence linked to the case write-up, and players whose ban may have revoked their grade no longer carry a GM or NM tag, on the event cards too ([51d72464](https://github.com/brianhliou/mistboard/commit/51d72464), [534426da](https://github.com/brianhliou/mistboard/commit/534426da))
 - Broadcasts sourced from dpxq show every pairing with its result, including boards whose game record was never posted (a faded start position marked Result only), and standings count them ([0d225575](https://github.com/brianhliou/mistboard/commit/0d225575))
 - Mistboard TV opens on the game in progress and lands on it when it ends; the LIVE badge is gone ([6e5cb064](https://github.com/brianhliou/mistboard/commit/6e5cb064))
@@ -127,6 +128,7 @@ Conventions:
 
 ### Site
 
+- Tables in blog posts fit a phone: short data tables tighten their spacing on a small screen and tables of sentences wrap, instead of scrolling sideways ([86cc7c0d](https://github.com/brianhliou/mistboard/commit/86cc7c0d))
 - In a blog post's annotated boards the result sits under the move list, level with the controls, and reads Red wins or Black wins; tables of names wrap on a phone instead of scrolling sideways ([d524258d](https://github.com/brianhliou/mistboard/commit/d524258d))
 - Embedded boards step like the boards in our posts (back, a menu, forward), keep the move list beside the board at its own width, fill small frames on phones, and follow your settings live on Mistboard's own pages ([8018f928](https://github.com/brianhliou/mistboard/commit/8018f928))
 - The play-online questions moved from the homepage to the top of [the FAQ](/faq); the homepage keeps the one-line summary under the tagline ([933c9104](https://github.com/brianhliou/mistboard/commit/933c9104))
@@ -231,6 +233,7 @@ Conventions:
 
 ### Technical
 
+- The web server now gets 20 seconds to shut down cleanly on a deploy, so live games pause instead of losing clock time ([af68c5b1](https://github.com/brianhliou/mistboard/commit/af68c5b1))
 - Admin metrics record what each drain and restart cost players, and a lapsed drain clears the Update pending banner ([dddb2253](https://github.com/brianhliou/mistboard/commit/dddb2253))
 - Each Vietnamese page and its English original list the same language versions, with English as the default, so search engines read them as one page in several languages ([bc121fc3](https://github.com/brianhliou/mistboard/commit/bc121fc3))
 - `/bots` serves its heading and level list in the page HTML in all three languages, so search engines that do not run the page's code read it too ([a29c7ed5](https://github.com/brianhliou/mistboard/commit/a29c7ed5))
