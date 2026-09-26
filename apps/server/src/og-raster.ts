@@ -61,8 +61,14 @@ export function redirectToDefault(response: ServerResponse): void {
 // render is byte-identical to prod and a missing font can never ship quietly
 // again. OFL attribution: apps/web/public/fonts/CREDITS.md. CJK piece
 // characters are baked paths and never go through font resolution.
-const FONT_FILES = ['NotoSans-Regular.ttf', 'NotoSans-Bold.ttf'].map((file) =>
-  resolve(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'fonts', file),
+//
+// Noto Sans SC Bold carries every other Chinese character a card prints: a
+// player page's title ("Cao Yanlei 曹岩磊"), a study named in Chinese. With
+// Noto Sans alone those rendered as empty boxes, on every player card from
+// 2026-09-21 until 2026-09-25. One weight: titles are bold, and resvg falls
+// back to the nearest weight for the rest.
+const FONT_FILES = ['NotoSans-Regular.ttf', 'NotoSans-Bold.ttf', 'NotoSansSC-Bold.otf'].map(
+  (file) => resolve(dirname(fileURLToPath(import.meta.url)), '..', 'assets', 'fonts', file),
 );
 
 // Render at 2x the SVG's nominal dimensions so the resulting PNG stays crisp

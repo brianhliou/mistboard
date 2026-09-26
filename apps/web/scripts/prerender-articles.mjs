@@ -20,7 +20,7 @@ const distDir = resolve(__dirname, '..', 'dist');
 // cannot be imported from the web build). Scrapers hold a card under its URL
 // with a year-long immutable max-age, so the LOOK of the card can only change
 // behind a new ?v=; og-image.test.ts pins the two numbers to each other.
-const ARTICLE_OG_IMAGE_VERSION = 2;
+const ARTICLE_OG_IMAGE_VERSION = 3;
 
 const host = process.env.MISTBOARD_HOST ?? 'https://mistboard.com';
 

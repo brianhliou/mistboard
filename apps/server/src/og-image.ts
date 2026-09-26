@@ -218,7 +218,9 @@ const ARTICLE_POSITION_KEY: Record<string, string> = {
 /** Bumped when the article card's LOOK changes. Article image URLs carried no
  *  version before v2, so scrapers hold the old cards under the bare URL; the
  *  page meta now appends ?v= (server-static-pages.ts). */
-export const ARTICLE_OG_IMAGE_VERSION = 2;
+//  v3 (2026-09-25): Chinese characters in a title render (Noto Sans SC in
+//  og-raster.ts); the player cards had shown them as empty boxes.
+export const ARTICLE_OG_IMAGE_VERSION = 3;
 
 /** A rules page's start-position card, or null when the slug has none. */
 function rulesPositionCard(slug: string, title: string, art: CardArt): string | null {
@@ -294,7 +296,8 @@ export async function serveArticleOgImage(params: {
  *  while v1 was live would keep showing the cut-off title indefinitely. */
 //  v3 (2026-09-12): the live board and the site's default piece set, board at
 //  full height with the title beside it (og-card-board.ts). */
-export const STUDY_OG_IMAGE_VERSION = 3;
+//  v4 (2026-09-25): Chinese study and chapter titles render instead of boxes.
+export const STUDY_OG_IMAGE_VERSION = 4;
 
 // Per-composition share card: the chapter's own starting diagram plus its name.
 // A 排局 IS its diagram, so a link to one composition should preview that
