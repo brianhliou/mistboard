@@ -137,8 +137,8 @@ export async function mountArticle(
   slug: string,
   lang?: import('./article-i18n.js').ArticleLang | null,
 ): Promise<void> {
-  root.replaceChildren();
-  root.classList.add('landing-page', 'articles-route');
+  // Load everything before clearing the root: a failed import then leaves the
+  // prerendered article on screen instead of an empty page.
   const {
     buildArticlePage,
     mountPendingWidgets,
@@ -149,13 +149,17 @@ export async function mountArticle(
   const { findArticle } = await import('./articles-data.js');
   const { translateArticle } = await import('./article-i18n.js');
   const { setBoardFamily, xiangqiAppearanceEnabled } = await import('./theme.js');
+  root.replaceChildren();
+  root.classList.add('landing-page', 'articles-route');
   const base = findArticle(slug);
   // Show the family's board/piece pickers while the article is open so the
   // diagrams react to the right controls (each family only when its flag is on).
   const family = base?.boardFamily;
   setBoardFamily(family === 'xiangqi' && xiangqiAppearanceEnabled() ? 'xiangqi' : 'chess');
   const article = base && lang ? translateArticle(base, lang) : base;
-  if (article) document.title = `${article.title} · Mistboard`;
+  // seoTitle, as the prerender uses: the display title here would replace the
+  // search title Google indexes the moment the client mounts.
+  if (article) document.title = `${article.seoTitle ?? article.title} · Mistboard`;
   const articlePage = buildArticlePage(slug, lang ?? undefined);
   root.append(buildNav(), articlePage);
   mountPendingWidgets(articlePage);

@@ -43,6 +43,7 @@ import {
 } from './notification-nav.js';
 import { setRatedModeEnabled } from './rated-flag.js';
 import { mountRestartBanner, refreshRestartBanner, setRestartBanner } from './restart-banner.js';
+import { captureServerRender } from './server-render-fallback.js';
 import { initializeThemeSettings, pinSiteTheme } from './theme.js';
 import {
   type WebVariantTenant,
@@ -178,6 +179,8 @@ if (phKey && phHost && import.meta.env.PROD && !isEmbedDocument) {
 const app = document.querySelector<HTMLDivElement>('#app');
 if (!app) throw new Error('missing #app');
 const appRoot = app;
+// Before any mount touches #app: what the server prerendered, if anything.
+const serverRender = captureServerRender(appRoot);
 
 const params = new URLSearchParams(window.location.search);
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
@@ -765,7 +768,10 @@ if (replaySample) {
     import('./landing.js').then(({ mountLanding }) => mountLanding(appRoot)),
   );
 } else if (articleSlug) {
-  setTitleKey('articles.heading');
+  // A prerendered article already carries its own title; "Articles" would
+  // stand in for it until mountArticle's imports land, and a crawler that
+  // snapshots in that window indexes the placeholder.
+  if (!serverRender.present) setTitleKey('articles.heading');
   void mountOrReport(() =>
     import('./pages-static.js').then(({ mountArticle }) =>
       mountArticle(appRoot, articleSlug, articleLang),
@@ -990,15 +996,21 @@ async function mountOrReport(run: () => Promise<void>): Promise<void> {
     // them here; awaiting the resolved promise is free for English visitors.
     await localeReady;
     await run();
+    serverRender.keepTitle(currentLocale());
     clearChunkReloadAttempt();
   } catch (err) {
     console.error(err);
+    // A prerendered page is complete without the client: put it back rather
+    // than leave a half-mounted root, whether or not a reload follows (search
+    // renderers may ignore the reload and index what is on screen).
+    serverRender.restore();
     if (reloadForChunkLoadError(err)) return;
     // Surface the swallowed mount failure to Error Tracking. Without this the
     // friendly "Page failed to load" panel below is the ONLY trace of a broken
     // route (e.g. a stale /game/<tenant-id> link 403ing on the chess shell) —
     // handled errors never reach posthog's automatic $exception hook.
     captureException(err, { context: 'route_mount', path: window.location.pathname });
+    if (serverRender.present) return;
     appRoot.replaceChildren();
     appRoot.classList.add('landing-page');
     const shell = document.createElement('main');

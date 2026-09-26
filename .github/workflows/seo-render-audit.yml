@@ -1,0 +1,44 @@
+name: SEO Render Audit
+
+# Renders every page in sitemap-pages.xml as Googlebot and fails when one
+# would be indexed wrong: an error panel, an empty page, or a placeholder
+# title the client put over the server's. The second pass blocks lazy chunks
+# (what a crawler holding a pre-deploy bundle sees); it fails only on pages
+# that have server HTML to fall back to. See scripts/seo-render-audit.mjs.
+
+on:
+  schedule:
+    # Mondays, before the 08:30 Pacific Search Console pull is read.
+    - cron: "41 14 * * 1"
+  workflow_dispatch:
+
+concurrency:
+  group: seo-render-audit
+  cancel-in-progress: true
+
+jobs:
+  audit:
+    if: github.ref == 'refs/heads/main'
+    runs-on: ubuntu-latest
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+      - name: Install dependencies
+        run: npm ci
+      - name: Install Chromium
+        run: npx playwright install --with-deps chromium
+      - name: Rendered pages
+        run: npm run seo:render-audit -- --json seo-render.json
+      - name: Rendered pages, lazy chunks blocked
+        if: always()
+        run: npm run seo:render-audit -- --block-lazy-chunks --json seo-render-blocked.json
+      - uses: actions/upload-artifact@v7
+        if: always()
+        with:
+          name: seo-render-audit
+          path: seo-render*.json

@@ -115,6 +115,8 @@
     "prod:smoke:plan": "node scripts/prod-smoke-plan.mjs",
     "prod:wait-revision": "node scripts/wait-prod-revision.mjs",
     "prod:smoke:lite": "node scripts/prod-lite-smoke.mjs",
+    "seo:render-audit": "node scripts/seo-render-audit.mjs",
+    "seo:terms": "node scripts/seo-terms.mjs",
     "prod:smoke:correspondence": "node scripts/prod-correspondence-smoke.mjs",
     "prod:smoke": "node scripts/prod-smoke.mjs",
     "prod:smoke:engines": "node scripts/prod-engine-smoke.mjs",
