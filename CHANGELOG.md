@@ -162,6 +162,7 @@ Conventions:
 
 ### Fixed
 
+- Fog Xiangqi on the square grid hides every unseen square completely; a light strip used to show under hidden squares below the river and along the bottom edge, most visibly on the homepage TV ([465af280](https://github.com/brianhliou/mistboard/commit/465af280))
 - The black seat circle in a broadcast's game list is whole again; its left edge was cut off ([f501cf57](https://github.com/brianhliou/mistboard/commit/f501cf57))
 - The Chinese `/bots` tab reads 象棋人机对战 instead of 机器人 ([55104652](https://github.com/brianhliou/mistboard/commit/55104652))
 - A broadcast game's board, moves and game list start on one line and scroll together, as on the review page; the game list used to stay pinned while the board scrolled away ([0f1de4b7](https://github.com/brianhliou/mistboard/commit/0f1de4b7))
