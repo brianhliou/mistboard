@@ -185,6 +185,7 @@ Conventions:
 
 ### Fixed
 
+- Study boards no longer call an equally good alternative "better was": a side line reads "better was" only under a move marked as a mistake, and "also" otherwise ([b2e8077b](https://github.com/brianhliou/mistboard/commit/b2e8077b))
 - A server restart during a xiangqi, jieqi, banqi or other xiangqi-family game no longer costs anyone clock time: the game pauses when the server stops and resumes once both players are back, or after 90 seconds ([4a2a5b95](https://github.com/brianhliou/mistboard/commit/4a2a5b95))
 - The Patron page now says checkout shows prices in your local currency; the FAQ no longer says every payment is in US dollars ([cc5d4df9](https://github.com/brianhliou/mistboard/commit/cc5d4df9))
 - Share cards show Chinese characters: player pages and Chinese-named studies previewed their names as empty boxes ([9bfcff51](https://github.com/brianhliou/mistboard/commit/9bfcff51))
