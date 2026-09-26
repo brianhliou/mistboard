@@ -186,6 +186,19 @@ export const ZH_HANT_CONTENT = {
     'AGPL 允許 fork，但 fork 應使用不同名稱，並避免暗示自己是官方 Mistboard 服務。',
   'source.identityForksBrand': 'Fork 和衍生專案應展示自己的公開品牌、網域和託管服務身份。',
   'faq.heading': '常見問題',
+  'faq.playWebQuestion': '有網頁版嗎？需要下載嗎？',
+  'faq.playWebAnswer':
+    'Mistboard 就是網頁版。打開瀏覽器就能下棋，電腦和手機都可以，無需下載或安裝。',
+  'faq.playComputerQuestion': '可以和電腦下嗎？',
+  'faq.playComputerAnswer':
+    '可以。人機對戰有八個難度等級，從入門到很強，最強的對手是皮卡魚（Pikafish）引擎。',
+  'faq.playBotsLink': '挑選等級',
+  'faq.playFriendQuestion': '怎麼和朋友下？',
+  'faq.playFriendAnswer': '開始對局時選擇和朋友對弈，把連結傳給朋友，對方打開連結就能入座。',
+  'faq.playOtherQuestion': '還有哪些玩法？',
+  'faq.playOtherAnswer': '揭棋、暗棋、鬥獸棋，以及原子象棋、鴨子象棋等原創變體。',
+  'faq.playReviewQuestion': '下完可以復盤嗎？',
+  'faq.playReviewAnswer': '可以。象棋對局結束後可以進入復盤，引擎會標出決定勝負的幾步。',
   'faq.darkChessQuestion': 'Mistboard 上可以玩什麼？',
   'faq.darkChessPrefix':
     'Mistboard 託管西洋棋、象棋、將棋、鬥獸棋及相關棋類中的原創策略遊戲和嚴肅變體。有些是公開資訊遊戲；有些使用迷霧或隱藏身份。',

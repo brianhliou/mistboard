@@ -53,26 +53,6 @@ export const EN_SHELL = {
     'Chinese chess for chess players, and original strategy games. Free and open source. About Mistboard...',
   'home.playSummary':
     'Free in the browser · No download or sign-up · Eight computer levels · Play a friend',
-  'home.faqTitle': 'Playing xiangqi online: common questions',
-  'home.faqQ1': 'Is there a web version? Do I need to download anything?',
-  'home.faqA1':
-    'Mistboard is the web version. Open it in a browser on a computer or a phone and play; there is nothing to download or install.',
-  'home.faqQ2': 'Do I need an account?',
-  'home.faqA2':
-    'No. Guests can play the computer or a friend straight away. An account saves your games and opens rated play.',
-  'home.faqQ3': 'Can I play against the computer?',
-  'home.faqA3':
-    'Yes. There are eight levels, from beginner to strong, and the strongest opponent is the Pikafish engine.',
-  'home.faqBotsLink': 'Choose a level',
-  'home.faqQ4': 'How do I play a friend?',
-  'home.faqA4':
-    'Start a game, choose a friend as the opponent, and send them the link. They open it and take the other seat.',
-  'home.faqQ5': 'What else can I play?',
-  'home.faqA5':
-    'Jieqi, banqi and jungle chess, and original variants such as atomic xiangqi and duck xiangqi.',
-  'home.faqQ6': 'Can I review a game afterwards?',
-  'home.faqA6':
-    'Yes. A finished xiangqi game opens in review, where the engine marks the moves that decided it.',
   'home.supportTitle': 'Mistboard Patron',
   'home.supportSubtitle': 'Become a patron',
   'home.storeTitle': 'Store',
@@ -224,20 +204,6 @@ export const CRITICAL_SHELL_I18N_KEYS = [
   'nav.language',
   'home.tagline',
   'home.playSummary',
-  'home.faqTitle',
-  'home.faqQ1',
-  'home.faqA1',
-  'home.faqQ2',
-  'home.faqA2',
-  'home.faqQ3',
-  'home.faqA3',
-  'home.faqBotsLink',
-  'home.faqQ4',
-  'home.faqA4',
-  'home.faqQ5',
-  'home.faqA5',
-  'home.faqQ6',
-  'home.faqA6',
   'home.supportTitle',
   'home.supportSubtitle',
   'home.storeTitle',

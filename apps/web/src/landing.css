@@ -2678,21 +2678,3 @@
 .landing-play-summary-sep {
   padding: 0 0.45em;
 }
-
-.landing-play-faq {
-  max-width: 1100px;
-  margin: 24px auto 0;
-  padding: 16px 20px;
-}
-
-.landing-play-faq h3 {
-  margin: 14px 0 4px;
-  font-size: 15px;
-  color: var(--site-heading);
-}
-
-.landing-play-faq p {
-  margin: 0;
-  line-height: 1.55;
-  color: var(--site-muted, var(--site-text));
-}

@@ -5,7 +5,7 @@ import './pages-static.css';
 import { loadCachedCurrentUser, readCachedUser } from './account-nav.js';
 import { buildContact } from './contact.js';
 import { t } from './i18n/catalog.js';
-import { currentLocale, type Locale } from './i18n/locale.js';
+import { currentLocale, type Locale, localizedHref } from './i18n/locale.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav, GITHUB_URL } from './site-shell.js';
 import { buildStaticPageLayout } from './static-page-shell.js';
@@ -411,6 +411,29 @@ function buildFaq(locale: Locale = currentLocale()): HTMLElement {
   heading.className = 'site-section-heading';
   heading.textContent = t('faq.heading', {}, locale);
 
+  // Playing online first: what a searcher for 象棋在线 / "xiangqi online" asks
+  // before a first game. These sat on the homepage for a day (2026-09-25) and
+  // moved here: the homepage stays the product, this page answers questions.
+  const playQuestions = [
+    ['faq.playWebQuestion', 'faq.playWebAnswer'],
+    ['faq.playComputerQuestion', 'faq.playComputerAnswer'],
+    ['faq.playFriendQuestion', 'faq.playFriendAnswer'],
+    ['faq.playOtherQuestion', 'faq.playOtherAnswer'],
+    ['faq.playReviewQuestion', 'faq.playReviewAnswer'],
+  ] as const;
+  const playBlock: HTMLElement[] = [];
+  for (const [questionKey, answerKey] of playQuestions) {
+    playBlock.push(aboutSubheading(t(questionKey, {}, locale)));
+    const answer: Array<string | Node> = [t(answerKey, {}, locale)];
+    if (answerKey === 'faq.playComputerAnswer') {
+      answer.push(
+        ' ',
+        aboutLink(t('faq.playBotsLink', {}, locale), localizedHref('/bots', locale)),
+      );
+    }
+    playBlock.push(aboutParagraph(answer));
+  }
+
   const q1 = aboutSubheading(t('faq.darkChessQuestion', {}, locale));
   const a1 = aboutParagraph([
     t('faq.darkChessPrefix', {}, locale),
@@ -452,6 +475,7 @@ function buildFaq(locale: Locale = currentLocale()): HTMLElement {
 
   section.append(
     heading,
+    ...playBlock,
     q1,
     a1,
     qAccount,

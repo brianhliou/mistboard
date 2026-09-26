@@ -269,6 +269,22 @@ export const EN_CONTENT = {
   'thanks.openSourceSuffix': ' page lists the projects and licenses Mistboard depends on.',
   'thanks.stubNote': 'This page will grow into a fuller list of credits over time.',
   'faq.heading': 'FAQ',
+  'faq.playWebQuestion': 'Is there a web version? Do I need to download anything?',
+  'faq.playWebAnswer':
+    'Mistboard is the web version. Open it in a browser on a computer or a phone and play; there is nothing to download or install.',
+  'faq.playComputerQuestion': 'Can I play against the computer?',
+  'faq.playComputerAnswer':
+    'Yes. There are eight levels, from beginner to strong, and the strongest opponent is the Pikafish engine.',
+  'faq.playBotsLink': 'Choose a level',
+  'faq.playFriendQuestion': 'How do I play a friend?',
+  'faq.playFriendAnswer':
+    'Start a game, choose a friend as the opponent, and send them the link. They open it and take the other seat.',
+  'faq.playOtherQuestion': 'What else can I play?',
+  'faq.playOtherAnswer':
+    'Jieqi, banqi and jungle chess, and original variants such as atomic xiangqi and duck xiangqi.',
+  'faq.playReviewQuestion': 'Can I review a game afterwards?',
+  'faq.playReviewAnswer':
+    'Yes. A finished xiangqi game opens in review, where the engine marks the moves that decided it.',
   'faq.darkChessQuestion': 'What games are on Mistboard?',
   'faq.darkChessPrefix':
     'Mistboard hosts original strategy games and serious variants across chess, xiangqi, Jungle, and related families. Some are open-information; some use fog or hidden identities. The ',
@@ -489,6 +505,17 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.identityForksName',
   'source.identityForksBrand',
   'faq.heading',
+  'faq.playWebQuestion',
+  'faq.playWebAnswer',
+  'faq.playComputerQuestion',
+  'faq.playComputerAnswer',
+  'faq.playBotsLink',
+  'faq.playFriendQuestion',
+  'faq.playFriendAnswer',
+  'faq.playOtherQuestion',
+  'faq.playOtherAnswer',
+  'faq.playReviewQuestion',
+  'faq.playReviewAnswer',
   'faq.darkChessQuestion',
   'faq.darkChessPrefix',
   'faq.rulesReference',
