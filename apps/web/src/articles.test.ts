@@ -237,6 +237,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/cao-yanlei',
       '/blog/banqi-statistics',
       '/blog/pikafish',
       '/blog/yin-sheng',
