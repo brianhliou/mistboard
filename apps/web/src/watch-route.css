@@ -764,48 +764,6 @@
 }
 
 /* ── Featured live-follow (mirrors the homepage viewer) ───────────────── */
-/* The LIVE pill above the featured-game card, shown while the Top channel is
-   following an in-progress game. */
-.watch-live-badge {
-  display: inline-flex;
-  align-items: center;
-  gap: 5px;
-  align-self: flex-start;
-  margin-bottom: 8px;
-  padding: 2px 9px;
-  border-radius: 999px;
-  background: color-mix(in srgb, #d64545 12%, transparent);
-  color: #c53434;
-  font-size: 11px;
-  font-weight: 700;
-  letter-spacing: 0.08em;
-}
-
-.watch-live-badge::before {
-  content: "";
-  width: 7px;
-  height: 7px;
-  border-radius: 50%;
-  background: currentColor;
-  animation: watch-live-pulse 1.6s ease-in-out infinite;
-}
-
-@keyframes watch-live-pulse {
-  0%,
-  100% {
-    opacity: 1;
-  }
-  50% {
-    opacity: 0.35;
-  }
-}
-
-@media (prefers-reduced-motion: reduce) {
-  .watch-live-badge::before {
-    animation: none;
-  }
-}
-
 /* A live broadcast is not scrubbable: the Top channel's live board follows the
    game to the latest ply, so hide the replay controls. The move list and the
    clocks stay (the live payload carries a timeline and the server clock; the

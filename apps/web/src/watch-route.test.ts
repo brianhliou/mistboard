@@ -24,6 +24,7 @@ import {
   setWatchSeatInkFamily,
   shouldPlayWatchMoveSound,
   WATCH_FEED_CACHE_MS,
+  wantsInitialLive,
   watchFeedCacheIsFresh,
   watchFeedIsDark,
   watchGamePlayers,
@@ -33,6 +34,18 @@ import {
   watchQueueResultLabel,
   watchRailAnchor,
 } from './watch-route.js';
+
+describe('wantsInitialLive', () => {
+  it('follows the live game on a bare Top landing', () => {
+    expect(wantsInitialLive('https://mistboard.com/watch')).toBe(true);
+    expect(wantsInitialLive('https://mistboard.com/watch?channel=top')).toBe(true);
+  });
+
+  it('keeps a finished-game deep link and other channels off the live fetch', () => {
+    expect(wantsInitialLive('https://mistboard.com/watch?channel=top&game=abc')).toBe(false);
+    expect(wantsInitialLive('https://mistboard.com/watch?channel=xiangqi')).toBe(false);
+  });
+});
 
 describe('watchRailAnchor', () => {
   it('keeps tall boards as the anchor', () => {

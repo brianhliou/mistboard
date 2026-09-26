@@ -223,6 +223,17 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // feed fetch below, rather than serializing it behind /api/watch.
   void loadReplayModule();
 
+  // A viewer who lands on Top came for the game in progress (the homepage's
+  // live card links here with no ?game=). Ask for it alongside the feed so the
+  // first board painted is the live one; waiting for the first poll showed the
+  // last finished game for ~4s before the live board replaced it (2026-09-25).
+  const initialLive = wantsInitialLive(window.location.href)
+    ? fetchLiveFeatured('?channel=top').catch((err) => {
+        console.warn(err);
+        return null;
+      })
+    : Promise.resolve(null);
+
   let currentFeed = await fetchWatchFeed().catch((err) => {
     console.warn(err);
     return null;
@@ -872,16 +883,14 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     }));
   };
 
-  // Left meta card + right-rail seat rows + LIVE badge for the featured game.
+  // Left meta card + right-rail seat rows for the featured game. No LIVE chip:
+  // the running clock already says the game is live.
   const renderLiveMeta = (featured: LiveFeatured): void => {
     const players = liveMetaPlayers(featured);
     const variantName = variantDisplayLabel(featured.gameSpecId);
     setWatchSeatInkFamily(watch, featured.gameSpecId ?? null);
     renderWatchMainReviewLink(watch.reviewLink, null);
     watch.metaRoot.replaceChildren();
-    const badge = document.createElement('div');
-    badge.className = 'watch-live-badge';
-    badge.textContent = t('watch.liveBadge');
     const card = createGameMetaCard({
       markerId: variantMiniIdForRawVariant(featured.gameSpecId) ?? undefined,
       headline: [t('watch.inProgress')],
@@ -889,7 +898,7 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
       players,
       status: null,
     });
-    watch.metaRoot.append(badge, card.el);
+    watch.metaRoot.append(card.el);
     watch.gameTableRoot.hidden = false;
     renderWatchHeadline(watch.headlineRoot, {
       matchup: playersMatchupLabel(players),
@@ -958,10 +967,21 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
   // The live game ended (or vanished): drop the live board and fall back to the
   // completed cross-variant feed for the Top channel.
   const exitLive = async (): Promise<void> => {
+    const endedRoomId = liveRoomId;
     dropLiveBoard();
-    // Repaint the completed cross-variant board and refresh the URL to whatever
-    // game it lands on (the live game just finished; its ?game= is now valid).
-    await renderFeed(currentFeed, currentFeed, false, { urlMode: 'replace' });
+    // The feed in hand was fetched while this game was still live, so it cannot
+    // hold it: repainting from it put the PREVIOUS finished game on the board
+    // and pinned it there (2026-09-25). Refetch, and land on the game the viewer
+    // just watched end when the feed has it.
+    const fresh = await fetchWatchFeed(undefined, { force: true }).catch((err) => {
+      console.warn(err);
+      return null;
+    });
+    const feed = fresh ?? currentFeed;
+    if (endedRoomId && feed?.unlocked.some((game) => game.roomId === endedRoomId)) {
+      selectedRoomByChannel.set(feed.activeChannel, endedRoomId);
+    }
+    await renderFeed(feed, currentFeed, true, { urlMode: 'replace' });
   };
 
   let liveTickInFlight = false;
@@ -976,13 +996,8 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
         liveActive && liveRoomId
           ? `?channel=top&room=${encodeURIComponent(liveRoomId)}&ply=${liveShownPly}`
           : '?channel=top';
-      // Bounded: a response that never completes would otherwise hold
-      // liveTickInFlight forever and freeze live mode with no error.
-      const resp = await fetch(`/api/watch/live${query}`, {
-        signal: AbortSignal.timeout(LIVE_TV_TOP_POLL_MS * 2),
-      });
-      if (resp.ok) {
-        const data = (await resp.json()) as { featured: LiveFeatured | null };
+      const data = await fetchLiveFeatured(query);
+      if (data) {
         if (data.featured) {
           if (liveActive && data.featured.roomId === liveRoomId) await updateLive(data.featured);
           else await enterLive(data.featured);
@@ -1022,6 +1037,12 @@ export async function mountWatch(root: HTMLElement): Promise<void> {
     if (livePollTimer !== null) window.clearTimeout(livePollTimer);
     dropLiveBoard();
   });
+  // With a live game in progress the live board takes the center slot before
+  // the feed renders, so renderFeed only fills the channel list and queue.
+  const firstLive = await initialLive;
+  if (firstLive?.featured && currentFeed?.activeChannel === 'top') {
+    await enterLive(firstLive.featured).catch((err) => console.warn(err));
+  }
   await renderFeed(currentFeed, null, false, { urlMode: 'replace' });
   if (!document.hidden) {
     pollTimer = window.setTimeout(() => void refreshFeed(), pollDelay(currentFeed));
@@ -1180,6 +1201,24 @@ async function requestWatchFeed(channel: string | null): Promise<WatchFeed> {
 // One fetch per (channel, in-flight window), with the result cached for
 // WATCH_FEED_CACHE_MS. `force` bypasses the cache but still joins an in-flight
 // request — the poll uses it so a refresh is never served a stale body.
+// Top with no ?game= is the only landing that follows the live game; a ?game=
+// deep link asked for that finished game, and other channels never go live.
+export function wantsInitialLive(href: string): boolean {
+  const url = new URL(href);
+  const channel = url.searchParams.get('channel');
+  return (channel === null || channel === 'top') && !url.searchParams.get('game');
+}
+
+// Null on a non-OK response. Bounded: a response that never completes would
+// otherwise hold the live tick's in-flight flag forever and freeze live mode.
+async function fetchLiveFeatured(query: string): Promise<{ featured: LiveFeatured | null } | null> {
+  const resp = await fetch(`/api/watch/live${query}`, {
+    signal: AbortSignal.timeout(LIVE_TV_TOP_POLL_MS * 2),
+  });
+  if (!resp.ok) return null;
+  return (await resp.json()) as { featured: LiveFeatured | null };
+}
+
 async function fetchWatchFeed(
   channelOverride?: string | null,
   options: { force?: boolean } = {},
