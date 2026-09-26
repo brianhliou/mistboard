@@ -190,7 +190,7 @@ function furniture(
   // last-move marks below, over the terrain, precisely because of this order).
   parts.push(
     bare
-      ? `<rect x="0" y="0" width="${boardW}" height="${boardH}" fill="${PALETTE.lightCell}"/>`
+      ? `<rect x="0" y="0" width="${boardW}" height="${boardH}" style="fill: var(--jungle-bare-land, ${PALETTE.lightCell})"/>`
       : jungleCoverImage(jungleBoardAssetHref('grass'), 0, 0, boardW, boardH),
   );
 

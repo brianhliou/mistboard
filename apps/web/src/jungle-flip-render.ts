@@ -163,7 +163,7 @@ function terrain(
   // marks below, over the terrain, precisely because of this order).
   const parts: string[] = [
     boardSkin === 'bare'
-      ? `<rect x="0" y="0" width="${boardW}" height="${boardH}" fill="${PALETTE.lightCell}"/>`
+      ? `<rect x="0" y="0" width="${boardW}" height="${boardH}" style="fill: var(--jungle-bare-land, ${PALETTE.lightCell})"/>`
       : jungleCoverImage(jungleBoardAssetHref('flip-board'), 0, 0, boardW, boardH),
   ];
   // INTERIOR lines only, and NO drawn perimeter at all: the playable background

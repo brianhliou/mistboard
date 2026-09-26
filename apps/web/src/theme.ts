@@ -274,11 +274,17 @@ export function setPieceSetPreference(pieceSet: PieceSet): void {
 }
 
 export function setXiangqiBoardChoicePreference(value: XiangqiBoardChoice): void {
-  if (value !== 'cell') {
-    applyXiangqiBoardTheme(value);
-    writeStoredXiangqiBoardTheme(value);
+  // 'Square grid' keeps whichever colour theme is stored, except Jungle: Jungle is
+  // itself a square-grid choice, so leaving it for plain squares means leaving
+  // its colours too.
+  const theme: XiangqiBoardTheme | null =
+    value !== 'cell' ? value : readStoredXiangqiBoardTheme() === 'jungle' ? 'international' : null;
+  if (theme) {
+    applyXiangqiBoardTheme(theme);
+    writeStoredXiangqiBoardTheme(theme);
   }
-  const layout: XiangqiBoardLayout = value === 'cell' ? 'cell' : 'intersection';
+  const layout: XiangqiBoardLayout =
+    value === 'cell' || value === 'jungle' ? 'cell' : 'intersection';
   applyXiangqiBoardLayout(layout);
   writeStoredXiangqiBoardLayout(layout);
   syncThemeControls();
@@ -576,7 +582,9 @@ function syncThemeControls(): void {
 }
 
 export function readXiangqiBoardChoice(): XiangqiBoardChoice {
-  return readStoredXiangqiBoardLayout() === 'cell' ? 'cell' : readStoredXiangqiBoardTheme();
+  const theme = readStoredXiangqiBoardTheme();
+  if (readStoredXiangqiBoardLayout() === 'cell') return theme === 'jungle' ? 'jungle' : 'cell';
+  return theme;
 }
 
 function syncSiteThemeControls(activeTheme: SiteTheme): void {

@@ -726,6 +726,19 @@
 .theme-tile-preview-xqboard[data-id="traditional"] {
   background: #d9bd82;
 }
+.theme-tile-preview-xqboard[data-id="jungle"] {
+  background-color: #b9d98a;
+  background-image:
+    linear-gradient(#fbe9c6, #fbe9c6),
+    conic-gradient(#a8cd78 25%, transparent 0 50%, #a8cd78 0 75%, transparent 0);
+  background-size:
+    38% 38%,
+    16px 16px;
+  background-position:
+    center,
+    0 0;
+  background-repeat: no-repeat, repeat;
+}
 
 /* Xiangqi piece tiles show a representative glyph centered on a neutral disc. */
 .theme-tile-preview-xqpiece {

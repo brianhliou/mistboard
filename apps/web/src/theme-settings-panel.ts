@@ -56,9 +56,12 @@ const xiangqiBoardThemes: Array<{ id: XiangqiBoardTheme; label: string }> = [
   { id: 'international', label: 'International' },
   { id: 'traditional', label: 'Traditional' },
 ];
+// Jungle is a theme AND a layout (it only exists on the square grid), so it is
+// listed after Square grid rather than among the intersection themes above.
 const xiangqiBoardChoices: Array<{ id: XiangqiBoardChoice; label: string }> = [
   ...xiangqiBoardThemes,
   { id: 'cell', label: 'Square grid' },
+  { id: 'jungle', label: 'Jungle' },
 ];
 
 // Fills the signed-out gear's dropdown panel: the shared appearance menu, a

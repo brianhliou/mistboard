@@ -6,7 +6,10 @@ import {
   type XiangqiPieceSet,
 } from './xiangqi-piece-sets.js';
 
-export type XiangqiBoardTheme = 'international' | 'traditional';
+// 'jungle' is the children's board (2026-09-25): a lawn of two greens, cream rugs
+// for palaces, a painted river. It is drawn on the square grid, so choosing it
+// also sets the cell layout (theme.ts).
+export type XiangqiBoardTheme = 'international' | 'traditional' | 'jungle';
 export type XiangqiBoardLayout = 'intersection' | 'cell';
 
 const xiangqiBoardStorageKey = 'mistboard.xiangqiBoardTheme';
@@ -37,6 +40,7 @@ const HANZI_PIECE_COUNTRIES: ReadonlySet<string> = new Set([
 const xiangqiBoardThemes: ReadonlyArray<{ id: XiangqiBoardTheme; label: string }> = [
   { id: 'international', label: 'International' },
   { id: 'traditional', label: 'Traditional' },
+  { id: 'jungle', label: 'Jungle' },
 ];
 const xiangqiBoardLayouts: ReadonlyArray<{ id: XiangqiBoardLayout; label: string }> = [
   { id: 'intersection', label: 'Classic intersections' },

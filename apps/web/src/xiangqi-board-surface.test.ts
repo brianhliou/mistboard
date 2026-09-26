@@ -6,7 +6,7 @@
 // The expected values are the pre-extraction output, captured by rendering the
 // live board at CELL 60 / MARGIN 36 and copying what it emitted.
 
-import { describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it } from 'vitest';
 import {
   type XiangqiSurfaceConfig,
   xiangqiSurfaceGrid,
@@ -96,5 +96,43 @@ describe('board-specific config, not xiangqi constants', () => {
     expect(xiangqiSurfacePalace(FORTRESS, 'red', 'intersection')).toBe('');
     expect(xiangqiSurfacePalaceBands(FORTRESS, 'red', 'intersection')).toBe('');
     expect(xiangqiSurfaceRiver(FORTRESS, 'red', 'intersection')).toBe('');
+  });
+});
+
+// The children's board (2026-09-25): under the Jungle theme the square grid adds a
+// cream rug to each palace and paints
+// the river with the Jungle game's water tile. Other themes and the intersection
+// layout draw exactly what they drew before.
+describe('jungle theme art', () => {
+  afterEach(() => {
+    document.documentElement.removeAttribute('data-xiangqi-board-theme');
+  });
+
+  it('lays a plain cream rug on each palace, with 3x3 seams', () => {
+    document.documentElement.dataset.xiangqiBoardTheme = 'jungle';
+    const svg = xiangqiSurfacePalaceBands(STANDARD, 'red', 'cell');
+    // Red's palace (ranks 1-3) is at the bottom from red's side: y 438..618.
+    expect(svg).toContain(
+      '<rect class="xq-live-palace-rug" x="186" y="438" width="180" height="180"/>',
+    );
+    expect(svg).toContain(
+      '<rect class="xq-live-palace-rug" x="186" y="6" width="180" height="180"/>',
+    );
+    expect(svg.match(/xq-live-palace-seam/g)).toHaveLength(8);
+  });
+
+  it('paints the river strip with water and banks', () => {
+    document.documentElement.dataset.xiangqiBoardTheme = 'jungle';
+    const svg = xiangqiSurfaceRiver(STANDARD, 'red', 'cell');
+    expect(svg).toContain('<svg class="xq-live-river-art" x="6" y="306" width="540" height="12"');
+    expect(svg).toContain('/piece-sets/jungle/dobutsu/board/water.png');
+    expect(svg.match(/xq-live-river-bank/g)).toHaveLength(2);
+  });
+
+  it('draws nothing extra on other themes or on the intersection layout', () => {
+    expect(xiangqiSurfacePalaceBands(STANDARD, 'red', 'cell')).not.toContain('palace-rug');
+    document.documentElement.dataset.xiangqiBoardTheme = 'jungle';
+    expect(xiangqiSurfacePalaceBands(STANDARD, 'red', 'intersection')).not.toContain('palace-rug');
+    expect(xiangqiSurfaceRiver(STANDARD, 'red', 'intersection')).not.toContain('water.png');
   });
 });

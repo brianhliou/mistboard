@@ -303,6 +303,28 @@
   --xq-live-ink: var(--xq-board-ink);
   --xq-live-palace-band: rgba(255, 255, 255, 0);
 }
+/* Jungle: the children's board. A lawn of two greens and a deep green ink; the
+   rugs and the painted river are drawn by xiangqi-board-surface.ts. */
+:root[data-xiangqi-board-theme="jungle"] {
+  --xq-board-bg: #b9d98a;
+  --xq-board-ink: #3d5a1e;
+  --xq-board-band: rgba(61, 90, 30, 0.08);
+  --xq-river-label-display: none;
+  --xq-diagram-bg: var(--xq-board-bg);
+  --xq-diagram-ink: var(--xq-board-ink);
+  --xq-diagram-palace-band: rgba(255, 255, 255, 0);
+  --mini-xq-board-bg: var(--xq-board-bg);
+  --mini-xq-palace-band: var(--xq-board-band);
+  --mini-xq-grid: var(--xq-board-ink);
+  --xq-live-board-bg: var(--xq-board-bg);
+  --xq-live-ink: var(--xq-board-ink);
+  --xq-live-palace-band: rgba(255, 255, 255, 0);
+  --xq-cell-light: #b9d98a;
+  --xq-cell-dark: #a8cd78;
+  /* Jungle and Flip Jungle follow along on their plain ('bare') board: the same
+     lawn instead of tan land (jungle-render.ts, jungle-flip-render.ts). */
+  --jungle-bare-land: #b9d98a;
+}
 :root[data-fog-theme="solid"] {
   --xq-diagram-fog: rgba(36, 25, 15, 0.62);
 }

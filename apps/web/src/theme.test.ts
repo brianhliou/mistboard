@@ -284,7 +284,7 @@ describe('appearance family gating', () => {
       [...document.querySelectorAll<HTMLButtonElement>('[data-theme-tile="xqboard"]')].map((tile) =>
         tile.getAttribute('aria-label'),
       ),
-    ).toEqual(['International', 'Traditional', 'Square grid']);
+    ).toEqual(['International', 'Traditional', 'Square grid', 'Jungle']);
 
     document
       .querySelector<HTMLButtonElement>('[data-theme-tile="xqboard"][data-id="cell"]')
@@ -298,6 +298,21 @@ describe('appearance family gating', () => {
     expect(window.localStorage.getItem('mistboard.xiangqiBoardTheme')).toBe('traditional');
     expect(window.localStorage.getItem('mistboard.xiangqiBoardLayout')).toBe('intersection');
     expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('intersection');
+
+    // Jungle is a theme that lives on the square grid: choosing it sets both.
+    const tile = (id: string) =>
+      document.querySelector<HTMLButtonElement>(`[data-theme-tile="xqboard"][data-id="${id}"]`);
+    tile('jungle')?.click();
+    expect(document.documentElement.dataset.xiangqiBoardTheme).toBe('jungle');
+    expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('cell');
+    expect(tile('jungle')?.getAttribute('aria-checked')).toBe('true');
+    expect(tile('cell')?.getAttribute('aria-checked')).toBe('false');
+
+    // Leaving Jungle for plain squares leaves its colours too.
+    tile('cell')?.click();
+    expect(window.localStorage.getItem('mistboard.xiangqiBoardTheme')).toBe('international');
+    expect(document.documentElement.dataset.xiangqiBoardLayout).toBe('cell');
+    expect(tile('cell')?.getAttribute('aria-checked')).toBe('true');
   });
 
   it('surfaces the xiangqi pickers, with no Game toggle, without xiangqi env flags', async () => {

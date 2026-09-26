@@ -120,15 +120,79 @@ export function xiangqiSurfacePalaceBands(
   layout: XiangqiBoardLayout,
 ): string {
   const inset = layout === 'cell' ? cfg.geo.cell / 2 : 0;
+  const jungle = layout === 'cell' && jungleThemeActive();
   return cfg.palaces
     .map((p) => {
       const a = point(cfg, p.fileMin, p.rankMin, perspective, layout);
       const b = point(cfg, p.fileMax, p.rankMax, perspective, layout);
       const x = Math.min(a.x, b.x) - inset;
       const y = Math.min(a.y, b.y) - inset;
-      return `<rect class="xq-live-palace-band" x="${x}" y="${y}" width="${Math.abs(b.x - a.x) + inset * 2}" height="${Math.abs(b.y - a.y) + inset * 2}"/>`;
+      const width = Math.abs(b.x - a.x) + inset * 2;
+      const height = Math.abs(b.y - a.y) + inset * 2;
+      const band = `<rect class="xq-live-palace-band" x="${x}" y="${y}" width="${width}" height="${height}"/>`;
+      return jungle ? band + jungleRug(cfg, x, y, width, height) : band;
     })
     .join('');
+}
+
+// JUNGLE THEME (2026-09-25). The children's board draws two things no other theme
+// does: a rug in each palace and a painted river. The theme is a root data
+// attribute, and every board re-renders on an appearance change, so reading it
+// here reaches all four xiangqi-shaped renderers without threading a flag
+// through each of them.
+function jungleThemeActive(): boolean {
+  return (
+    typeof document !== 'undefined' &&
+    document.documentElement.dataset.xiangqiBoardTheme === 'jungle'
+  );
+}
+
+// A plain cream rug. One colour on purpose: a red rug under red pieces (tried in
+// the mocks) swallowed them, and a rug with a coloured border made the pieces on
+// its outer squares look off centre, because the border ate into those squares.
+function jungleRug(
+  cfg: XiangqiSurfaceConfig,
+  x: number,
+  y: number,
+  width: number,
+  height: number,
+): string {
+  const { cell } = cfg.geo;
+  const parts = [
+    `<rect class="xq-live-palace-rug" x="${x}" y="${y}" width="${width}" height="${height}"/>`,
+  ];
+  // Faint seams keep the rug reading as squares a piece stands on.
+  const pad = cell / 10;
+  for (let c = x + cell; c < x + width - 1; c += cell) {
+    parts.push(
+      `<line class="xq-live-palace-seam" x1="${c}" y1="${y + pad}" x2="${c}" y2="${y + height - pad}"/>`,
+    );
+  }
+  for (let r = y + cell; r < y + height - 1; r += cell) {
+    parts.push(
+      `<line class="xq-live-palace-seam" x1="${x + pad}" y1="${r}" x2="${x + width - pad}" y2="${r}"/>`,
+    );
+  }
+  return parts.join('');
+}
+
+// The Jungle game's own water tile, clipped to the river strip by a nested <svg>
+// (which clips without needing a document-unique clipPath id when several
+// boards share a page), with sandy banks. At the square grid's 12-unit river the
+// mocks' lily pads shrank to dots, so they are left out until the river widens.
+function jungleRiver(x: number, y: number, width: number, height: number): string {
+  const tile = height * 6;
+  const tiles: string[] = [];
+  for (let tx = 0; tx < width; tx += tile) {
+    tiles.push(
+      `<image href="/piece-sets/jungle/dobutsu/board/water.png?v=2" x="${tx}" y="${(height - tile) / 2}" width="${tile}" height="${tile}"/>`,
+    );
+  }
+  return [
+    `<svg class="xq-live-river-art" x="${x}" y="${y}" width="${width}" height="${height}" viewBox="0 0 ${width} ${height}">${tiles.join('')}</svg>`,
+    `<line class="xq-live-river-bank" x1="${x}" y1="${y}" x2="${x + width}" y2="${y}"/>`,
+    `<line class="xq-live-river-bank" x1="${x}" y1="${y + height}" x2="${x + width}" y2="${y + height}"/>`,
+  ].join('');
 }
 
 /** The palace diagonals. */
@@ -165,6 +229,7 @@ export function xiangqiSurfaceRiver(
   if (layout === 'cell') {
     const x = margin - cell / 2;
     const y = margin - cell / 2 + (rankCount / 2) * cell;
+    if (jungleThemeActive()) return jungleRiver(x, y, fileCount * cell, riverGap);
     return `<rect class="xq-live-cell-river" x="${x}" y="${y}" width="${fileCount * cell}" height="${riverGap}"/>`;
   }
   if (!cfg.riverLabel) return '';
