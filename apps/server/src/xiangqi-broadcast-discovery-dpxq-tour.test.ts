@@ -85,6 +85,7 @@ test('a tour with no uploaded records fails rather than importing nothing silent
   assert.equal(result.ok, false);
   if (result.ok) return;
   assert.match(result.message, /lists no game records/);
+  assert.equal(result.quiet, true, 'an empty list is expected, not a fault');
 });
 
 test('discovery rejects a non-numeric tour id instead of fetching it', async () => {

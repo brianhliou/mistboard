@@ -67,7 +67,9 @@ export type DiscoveryProvider = {
          *  with the page that lists it. */
         pairings?: Array<DpxqPairing & { pageUrl: string }>;
       }
-    | { ok: false; message: string }
+    /** `quiet`: an expected empty state, not a fault (a tour whose source
+     *  has published nothing yet). The poller decides whether it stays quiet. */
+    | { ok: false; message: string; quiet?: true }
   >;
 };
 

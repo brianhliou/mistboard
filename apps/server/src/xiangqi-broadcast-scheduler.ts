@@ -1,15 +1,15 @@
 // In-server scheduled polling for xiangqi broadcast tours. A single tick loop
-// scans enabled tours from persistence (so ops changes apply without a
+// scans pollable tours from persistence (so ops changes apply without a
 // restart) and polls each one on its own interval, reusing the shared poller
 // (source policy, timeout, sync logs) and its failure backoff.
 //
-// A tour's end date bounds its polling. dpxq publishes records after the
-// round on no fixed delay (its operator, 2026-09-06: 不固定), so a finished
-// event keeps a slow poll for three weeks, then the scheduler stops polling it
-// and says so once in the sync log. Without the bound every tour ever imported
-// polled the source every 30 s forever. The stop is derived from the end date,
-// not written to the tour, so when the dpxq index sweep moves an end date
-// later (a league's next stage) polling resumes with no operator step.
+// Which tours poll is the tour's poll mode against its dates
+// (xiangqi-broadcast-poll-window.ts): `auto` polls from 12 h before the event
+// to 7 days after its last day, `on` always, `off` never. Past the end date a
+// polling tour slows to one poll per half hour, since only late record
+// uploads are still to come (dpxq's operator, 2026-09-06: 不固定). The window
+// is derived, not written to the tour, so when the dpxq index sweep moves an
+// end date later (a league's next stage) polling resumes with no operator step.
 
 import * as persistence from './persistence.js';
 import { getPool } from './persistence-db.js';
@@ -20,6 +20,7 @@ import {
 } from './xiangqi-broadcast-dpxq-index.js';
 import { defaultXiangqiBroadcastFetch } from './xiangqi-broadcast-fetch.js';
 import { requestBroadcastLiveEvalForBoard } from './xiangqi-broadcast-live-eval.js';
+import { xiangqiBroadcastPollState } from './xiangqi-broadcast-poll-window.js';
 import {
   nextXiangqiBroadcastPollDelayMs,
   pollXiangqiBroadcastSourceOnce,
@@ -32,24 +33,10 @@ export const XIANGQI_BROADCAST_SCHEDULE_MAX_INTERVAL_MS = 300_000;
 export const XIANGQI_BROADCAST_SCHEDULE_DEFAULT_INTERVAL_MS = 30_000;
 const SCHEDULER_TICK_MS = 5_000;
 export const XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS = 30 * 60_000;
-export const XIANGQI_BROADCAST_AFTER_EVENT_WINDOW_MS = 21 * 24 * 60 * 60_000;
 
 // How often the scheduler reads dpxq's tour index to keep end dates in step.
 // dpxq edits a league's row when the next stage is announced, days ahead.
 export const XIANGQI_BROADCAST_INDEX_SWEEP_MS = 6 * 60 * 60_000;
-
-export type XiangqiBroadcastPollPhase = 'event' | 'after-event' | 'ended';
-
-/** Where a tour sits against its end date: polling as set, slow after the
- *  event while late uploads land, or done. No end date polls as set. */
-export function xiangqiBroadcastPollPhase(
-  endsAt: string | null | undefined,
-  now: number,
-): XiangqiBroadcastPollPhase {
-  const end = endsAt ? Date.parse(endsAt) : Number.NaN;
-  if (!Number.isFinite(end) || now <= end) return 'event';
-  return now - end <= XIANGQI_BROADCAST_AFTER_EVENT_WINDOW_MS ? 'after-event' : 'ended';
-}
 
 export function clampXiangqiBroadcastScheduleIntervalMs(value: unknown): number {
   if (typeof value !== 'number' || !Number.isInteger(value)) {
@@ -151,9 +138,6 @@ export function createXiangqiBroadcastScheduler(
 ): XiangqiBroadcastScheduler {
   const nextPollAt = new Map<string, number>();
   const currentDelayMs = new Map<string, number>();
-  // Tours this process already logged as stopped, keyed with the end date so
-  // a moved date that ends again logs again.
-  const stoppedLogged = new Set<string>();
   // First sweep one tick after start, so a deploy mid-stage catches up at once.
   let nextSweepAt = 0;
   let ticking = false;
@@ -177,9 +161,9 @@ export function createXiangqiBroadcastScheduler(
         });
       }
       const tours = await deps.listScheduledTours();
-      const enabledSlugs = new Set(tours.map((tour) => tour.slug));
+      const listedSlugs = new Set(tours.map((tour) => tour.slug));
       for (const slug of nextPollAt.keys()) {
-        if (!enabledSlugs.has(slug)) {
+        if (!listedSlugs.has(slug)) {
           nextPollAt.delete(slug);
           currentDelayMs.delete(slug);
         }
@@ -188,24 +172,31 @@ export function createXiangqiBroadcastScheduler(
       for (const tour of tours) {
         if (!tour.sourceUrl) continue;
         const now = deps.now();
-        if (now < (nextPollAt.get(tour.slug) ?? 0)) continue;
-
-        const intervalMs = clampXiangqiBroadcastScheduleIntervalMs(tour.pollIntervalMs);
-        const phase = xiangqiBroadcastPollPhase(tour.endsAt, now);
-        if (phase === 'ended') {
-          const key = `${tour.slug}@${tour.endsAt}`;
-          if (!stoppedLogged.has(key)) {
-            stoppedLogged.add(key);
+        const state = xiangqiBroadcastPollState({ ...tour, now });
+        if (!state.polling) {
+          // A tour this process was polling whose auto window just closed
+          // says so once. Tours already outside their window at boot stay
+          // silent, so a deploy does not log every past event again.
+          if (state.reason === 'auto-closed' && nextPollAt.has(tour.slug)) {
             await deps.recordSyncLog({
               tourSlug: tour.slug,
               severity: 'info',
               kind: 'poll_stopped_after_event',
-              message: 'scheduled polling stopped three weeks after the event ended',
-              payload: { endsAt: tour.endsAt ?? null, sourceUrl: tour.sourceUrl },
+              message: 'scheduled polling stopped 7 days after the event ended',
+              payload: {
+                endsAt: tour.endsAt ?? null,
+                closesAt: state.closesAt,
+                sourceUrl: tour.sourceUrl,
+              },
             });
           }
+          nextPollAt.delete(tour.slug);
+          currentDelayMs.delete(tour.slug);
           continue;
         }
+        if (now < (nextPollAt.get(tour.slug) ?? 0)) continue;
+
+        const intervalMs = clampXiangqiBroadcastScheduleIntervalMs(tour.pollIntervalMs);
         const result = await deps.poll({
           sourceUrl: tour.sourceUrl,
           tourSlug: tour.slug,
@@ -256,10 +247,9 @@ export function createXiangqiBroadcastScheduler(
           }),
         });
         currentDelayMs.set(tour.slug, delayMs);
-        const waitMs =
-          phase === 'after-event'
-            ? Math.max(delayMs, XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS)
-            : delayMs;
+        const waitMs = state.afterEvent
+          ? Math.max(delayMs, XIANGQI_BROADCAST_AFTER_EVENT_INTERVAL_MS)
+          : delayMs;
         nextPollAt.set(tour.slug, deps.now() + waitMs);
       }
     } catch (error) {

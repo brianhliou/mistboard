@@ -1,6 +1,6 @@
 import { readFileSync } from 'node:fs';
 import { fileURLToPath } from 'node:url';
-import type { XiangqiBroadcastBoard } from '@mistboard/game';
+import type { XiangqiBroadcastBoard, XiangqiBroadcastTour } from '@mistboard/game';
 import { readXiangqiBroadcastFixturePack } from './import-xiangqi-broadcast.js';
 import { getPool } from './persistence-db.js';
 import { getGameAnalysis, saveGameAnalysis } from './persistence-game-analysis.js';
@@ -349,6 +349,43 @@ definePersistenceTests('xiangqi broadcasts', () => {
     const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: fullBoard.tourSlug });
     const rekeyLog = logs.find((log) => log.kind === 'rekeyed');
     assert.equal(rekeyLog?.payload.retiredBoardId, legacy.id);
+  });
+
+  test('a dpxq tour with no records yet polls quietly; an unreachable list still logs', async () => {
+    // Every event looks like this before its first round: the list page
+    // answers and is empty. It is not a fault, so no sync log every poll.
+    const slug = 'asian-2026-men-empty';
+    const sourceUrl = `mistboard-discover://dpxq-tour?tour=12526&tourSlug=${slug}`;
+    await importXiangqiBroadcastPack({
+      tour: {
+        schema: 'mistboard.xiangqi.broadcast.v1',
+        slug,
+        name: '2026年第21届亚洲象棋个人锦标赛 男子组',
+        sourceUrl,
+      },
+      rounds: [],
+      boards: [],
+    });
+    const poll = (pages: Record<string, string>) =>
+      pollXiangqiBroadcastSourceOnce({
+        sourceUrl,
+        tourSlug: slug,
+        fetchImpl: multiSourceFetch(pages),
+        sourcePolicy: { allowedHosts: ['www.dpxq.com'], allowLocal: false },
+      });
+
+    const empty = await poll({
+      'http://www.dpxq.com/hldcg/movelist_12526.html': '<table></table>',
+    });
+    assert.equal(empty.ok, false);
+    assert.match(empty.ok ? '' : empty.message, /lists no game records yet/);
+    assert.deepEqual(await listXiangqiBroadcastSyncLogs({ tourSlug: slug }), []);
+
+    const unreachable = await poll({});
+    assert.equal(unreachable.ok, false);
+    const logs = await listXiangqiBroadcastSyncLogs({ tourSlug: slug });
+    assert.equal(logs.length, 1);
+    assert.match(logs[0]?.message ?? '', /unreachable/);
   });
 
   test('a dpxq tour poll files every paired table; a record extends its results-only board', async () => {
@@ -961,43 +998,171 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(logs[0]?.payload.manifestUrl, 'https://fixture.invalid/manifest.json');
   });
 
-  test('tour poll schedules persist and list only enabled tours', async () => {
+  test('tour poll modes persist, default to auto, and off drops a tour from the schedule', async () => {
     const pack = await fixturePack();
     await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
 
-    assert.deepEqual(await listXiangqiBroadcastScheduledTours(), []);
+    // A new tour is auto: listed for the scheduler, which applies its window.
+    const listed = await listXiangqiBroadcastScheduledTours();
+    assert.deepEqual(listed, [
+      {
+        slug: '2025-wxc-sample',
+        sourceUrl: 'https://www.wxf-xiangqi.org/',
+        pollMode: 'auto',
+        pollIntervalMs: 30_000,
+        startsAt: '2025-09-21T00:00:00.000Z',
+        endsAt: '2025-09-27T00:00:00.000Z',
+      },
+    ]);
+    // The 2025 fixture event is long past, so auto is not polling it now.
+    const fresh = await getXiangqiBroadcastTour('2025-wxc-sample');
+    assert.equal(fresh?.pollMode, 'auto');
+    assert.equal(fresh?.pollEnabled, false);
 
     const updated = await setXiangqiBroadcastTourSchedule('2025-wxc-sample', {
-      pollEnabled: true,
+      pollMode: 'on',
       pollIntervalMs: 15_000,
     });
-    assert.deepEqual(updated, {
-      slug: '2025-wxc-sample',
-      sourceUrl: 'https://www.wxf-xiangqi.org/',
-      pollEnabled: true,
-      pollIntervalMs: 15_000,
-      endsAt: '2025-09-27T00:00:00.000Z',
-    });
-
-    const scheduled = await listXiangqiBroadcastScheduledTours();
-    assert.equal(scheduled.length, 1);
-    assert.equal(scheduled[0]?.slug, '2025-wxc-sample');
+    assert.equal(updated?.pollMode, 'on');
+    assert.equal(updated?.pollIntervalMs, 15_000);
 
     const tour = await getXiangqiBroadcastTour('2025-wxc-sample');
+    assert.equal(tour?.pollMode, 'on');
     assert.equal(tour?.pollEnabled, true);
     assert.equal(tour?.pollIntervalMs, 15_000);
+    // The retired column follows `on` so a rollback reads a sane value.
+    const legacy = await getPool().query<{ poll_enabled: boolean }>(
+      `SELECT poll_enabled FROM xiangqi_broadcast_tours WHERE slug = $1`,
+      ['2025-wxc-sample'],
+    );
+    assert.equal(legacy.rows[0]?.poll_enabled, true);
 
     // Re-importing the pack must not clobber the operator's schedule.
     await importXiangqiBroadcastPack({ tour: pack.tour, rounds: pack.rounds, boards: [] });
-    assert.equal((await getXiangqiBroadcastTour('2025-wxc-sample'))?.pollEnabled, true);
+    assert.equal((await getXiangqiBroadcastTour('2025-wxc-sample'))?.pollMode, 'on');
+
+    await setXiangqiBroadcastTourSchedule('2025-wxc-sample', {
+      pollMode: 'off',
+      pollIntervalMs: 15_000,
+    });
+    assert.deepEqual(await listXiangqiBroadcastScheduledTours(), []);
 
     assert.equal(
       await setXiangqiBroadcastTourSchedule('missing-tour', {
-        pollEnabled: true,
+        pollMode: 'on',
         pollIntervalMs: 15_000,
       }),
       null,
     );
+  });
+
+  test('migration 150 keeps polling tours on only inside their window, the rest auto', async () => {
+    const sql = readFileSync(
+      fileURLToPath(new URL('../migrations/150_xiangqi_broadcast_poll_mode.sql', import.meta.url)),
+      'utf-8',
+    );
+    const update = sql.slice(sql.indexOf('UPDATE xiangqi_broadcast_tours'));
+    const pack = await fixturePack();
+    const {
+      startsAt: _startsAt,
+      endsAt: _endsAt,
+      ...undatedTour
+    } = pack.tour as XiangqiBroadcastTour;
+    const hour = 60 * 60_000;
+    const now = Date.now();
+    const iso = (offsetMs: number) => new Date(now + offsetMs).toISOString();
+    const cases: Array<{
+      slug: string;
+      enabled: boolean;
+      startsAt: string | null;
+      endsAt: string | null;
+      expected: 'auto' | 'on';
+    }> = [
+      // Polling and live: stays on.
+      {
+        slug: 'm-live',
+        enabled: true,
+        startsAt: iso(-24 * hour),
+        endsAt: iso(24 * hour),
+        expected: 'on',
+      },
+      // Polling, ended a day ago (inside the 7-day tail): stays on.
+      {
+        slug: 'm-tail',
+        enabled: true,
+        startsAt: iso(-72 * hour),
+        endsAt: iso(-24 * hour),
+        expected: 'on',
+      },
+      // Polling, starts in 6 h (inside the 12 h lead): stays on.
+      {
+        slug: 'm-lead',
+        enabled: true,
+        startsAt: iso(6 * hour),
+        endsAt: iso(48 * hour),
+        expected: 'on',
+      },
+      // Polling with no dates: auto would never poll it, so on.
+      { slug: 'm-undated', enabled: true, startsAt: null, endsAt: null, expected: 'on' },
+      // Polling, ended a week ago: auto (the window is closed either way).
+      {
+        slug: 'm-old',
+        enabled: true,
+        startsAt: iso(-240 * hour),
+        endsAt: iso(-168 * hour),
+        expected: 'auto',
+      },
+      // Polling, a week away: auto (it opens by itself).
+      {
+        slug: 'm-soon',
+        enabled: true,
+        startsAt: iso(168 * hour),
+        endsAt: iso(240 * hour),
+        expected: 'auto',
+      },
+      // Off and upcoming: auto, so it turns on by itself.
+      {
+        slug: 'm-off-soon',
+        enabled: false,
+        startsAt: iso(168 * hour),
+        endsAt: iso(240 * hour),
+        expected: 'auto',
+      },
+      // Off and live: auto, which polls it now.
+      {
+        slug: 'm-off-live',
+        enabled: false,
+        startsAt: iso(-24 * hour),
+        endsAt: iso(24 * hour),
+        expected: 'auto',
+      },
+    ];
+    for (const entry of cases) {
+      await importXiangqiBroadcastPack({
+        tour: {
+          ...undatedTour,
+          slug: entry.slug,
+          ...(entry.startsAt ? { startsAt: entry.startsAt } : {}),
+          ...(entry.endsAt ? { endsAt: entry.endsAt } : {}),
+        },
+        rounds: [],
+        boards: [],
+      });
+      await getPool().query(
+        `UPDATE xiangqi_broadcast_tours
+            SET poll_enabled = $2, poll_mode = 'auto', starts_at = $3, ends_at = $4
+          WHERE slug = $1`,
+        [entry.slug, entry.enabled, entry.startsAt, entry.endsAt],
+      );
+    }
+    await getPool().query(update);
+    const { rows } = await getPool().query<{ slug: string; poll_mode: string }>(
+      `SELECT slug, poll_mode FROM xiangqi_broadcast_tours WHERE slug LIKE 'm-%' ORDER BY slug`,
+    );
+    const actual = Object.fromEntries(rows.map((row) => [row.slug, row.poll_mode]));
+    for (const entry of cases) {
+      assert.equal(actual[entry.slug], entry.expected, entry.slug);
+    }
   });
 
   test('the analysis sweep finds finished boards without analysis, and a move change drops a stored one', async () => {

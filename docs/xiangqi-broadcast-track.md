@@ -38,8 +38,9 @@ Landed:
   always-rollback transaction;
 - ops console can create a broadcast from a pasted source URL (preview first,
   then import), so an operator never needs shell access;
-- in-server scheduled polling: per-tour auto-poll toggle and interval in the
-  ops console, a tick scheduler that reuses the poller's policy/backoff/sync
+- in-server scheduled polling: a per-tour poll mode (Auto, the default, polls
+  from 12 hours before the event to 7 days after its last day; On always;
+  Off never) and interval in the ops console, a tick scheduler that reuses the poller's policy/backoff/sync
   logs, and quiet logging (only polls that changed something are recorded);
 - a poll always re-anchors `tour.sourceUrl` to the URL the operator polls, so
   manifest tours keep re-polling the manifest rather than the last page;

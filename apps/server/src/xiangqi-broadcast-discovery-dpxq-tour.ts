@@ -154,9 +154,11 @@ export const dpxqTourDiscoveryProvider: DiscoveryProvider = {
 
     const games = list.ok ? parseDpxqTourGameList(list.text) : [];
     if (games.length === 0 && pairings.length === 0) {
-      // Normal before a tour has any uploaded records; the caller's backoff
-      // widens the gap rather than treating it as a fault.
-      return { ok: false, message: `tour ${tour} lists no game records yet` };
+      // Normal before a tour has any uploaded records: the list page answered
+      // and is empty. Marked quiet so an upcoming event polled by its auto
+      // window does not log a failure every few minutes; the caller's backoff
+      // still widens the gap. An unreachable list is a real failure (above).
+      return { ok: false, message: `tour ${tour} lists no game records yet`, quiet: true };
     }
 
     // One page per game is not fetched here: the round is already stated by the

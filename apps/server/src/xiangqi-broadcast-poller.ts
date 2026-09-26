@@ -655,6 +655,20 @@ async function discoverManifest(
   };
 }
 
+// Quiet discovery results write no sync log, so each one says so once per
+// process in the server log, where "why has this tour imported nothing" can
+// still be answered.
+const quietDiscoveryNoted = new Set<string>();
+
+function noteQuietDiscoveryOnce(tourSlug: string, message: string): void {
+  const key = `${tourSlug}\u0000${message}`;
+  if (quietDiscoveryNoted.has(key)) return;
+  quietDiscoveryNoted.add(key);
+  console.info(
+    JSON.stringify({ level: 'info', kind: 'xiangqi_broadcast_source_empty', tourSlug, message }),
+  );
+}
+
 // A provider that states each board's round is filed by those rounds and is
 // never time-gated: see buildStatedRoundManifestSources for why. Boards the
 // store already holds complete are left out of the manifest, so an idle tour
@@ -716,6 +730,18 @@ async function discoverStatedRounds(
     spacingMs: context.leafSpacingMs,
   });
   if (!discovered.ok) {
+    // A source with nothing published yet is how every event looks before
+    // (and often during) its first round. Quiet only while we hold no boards
+    // for the tour: a source that empties after we stored games is a fault.
+    if (discovered.quiet && stored.length === 0) {
+      noteQuietDiscoveryOnce(source.tourSlug, discovered.message);
+      return {
+        ok: false,
+        kind: 'source_fetch_error',
+        message: discovered.message,
+        quiet: true,
+      };
+    }
     return { ok: false, kind: 'source_fetch_error', message: discovered.message };
   }
 

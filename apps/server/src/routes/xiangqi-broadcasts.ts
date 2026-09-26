@@ -15,6 +15,12 @@ import {
   requestBroadcastLiveEvalForBoard,
 } from './../xiangqi-broadcast-live-eval.js';
 import {
+  isXiangqiBroadcastPollMode,
+  type XiangqiBroadcastPollMode,
+  type XiangqiBroadcastPollState,
+  xiangqiBroadcastPollState,
+} from '../xiangqi-broadcast-poll-window.js';
+import {
   pollXiangqiBroadcastSourceOnce,
   type XiangqiBroadcastPollResult,
 } from './../xiangqi-broadcast-poller.js';
@@ -302,10 +308,13 @@ export async function xiangqiBroadcastOpsIndexForApi(
       return {
         tour,
         sourceUrl: tour.sourceUrl ?? null,
-        schedule: {
-          pollEnabled: tour.pollEnabled,
+        schedule: scheduleForApi({
+          sourceUrl: tour.sourceUrl ?? null,
+          pollMode: tour.pollMode,
           pollIntervalMs: tour.pollIntervalMs,
-        },
+          startsAt: tour.startsAt ?? null,
+          endsAt: tour.endsAt ?? null,
+        }),
         roundCount: rounds.length,
         boardCount: boards.length,
         liveBoardCount: boards.filter((board) => board.status === 'live').length,
@@ -459,37 +468,71 @@ export async function manualXiangqiBroadcastSourceImportForApi(
   return { ok: true, result };
 }
 
+export type XiangqiBroadcastScheduleForApi = {
+  pollMode: XiangqiBroadcastPollMode;
+  /** Derived: whether the scheduler polls the tour now. */
+  pollEnabled: boolean;
+  pollIntervalMs: number;
+  pollState: XiangqiBroadcastPollState;
+};
+
+function scheduleForApi(
+  schedule: {
+    sourceUrl: string | null;
+    pollMode: XiangqiBroadcastPollMode;
+    pollIntervalMs: number;
+    startsAt: string | null;
+    endsAt: string | null;
+  },
+  now = Date.now(),
+): XiangqiBroadcastScheduleForApi {
+  const pollState = xiangqiBroadcastPollState({ ...schedule, now });
+  return {
+    pollMode: schedule.pollMode,
+    pollEnabled: pollState.polling,
+    pollIntervalMs: schedule.pollIntervalMs,
+    pollState,
+  };
+}
+
+/** The requested mode: `mode` (auto/on/off), or the pre-mode `enabled`
+ *  boolean an older console sends (true is on, false is off). */
+function requestedPollMode(body: Record<string, unknown>): XiangqiBroadcastPollMode | null {
+  if (body.mode !== undefined) return isXiangqiBroadcastPollMode(body.mode) ? body.mode : null;
+  if (typeof body.enabled === 'boolean') return body.enabled ? 'on' : 'off';
+  return null;
+}
+
 export async function xiangqiBroadcastScheduleUpdateForApi(
   tourSlug: string,
   body: Record<string, unknown>,
   deps: XiangqiBroadcastApiPersistence = livePersistence,
+  now = Date.now(),
 ): Promise<
-  | { ok: true; schedule: { pollEnabled: boolean; pollIntervalMs: number } }
+  | { ok: true; schedule: XiangqiBroadcastScheduleForApi }
   | { ok: false; status: 400 | 404; error: string }
 > {
-  if (typeof body.enabled !== 'boolean') {
-    return { ok: false, status: 400, error: 'invalid_schedule' };
-  }
+  const mode = requestedPollMode(body);
+  if (!mode) return { ok: false, status: 400, error: 'invalid_schedule' };
   if (body.intervalMs !== undefined && !Number.isInteger(body.intervalMs)) {
     return { ok: false, status: 400, error: 'invalid_schedule' };
   }
   const tour = await deps.getXiangqiBroadcastTour(tourSlug);
   if (!tour) return { ok: false, status: 404, error: 'broadcast_not_found' };
-  if (body.enabled && !tour.sourceUrl) {
+  // Auto on a sourceless tour is the default and simply never polls; forcing
+  // it on is the operator asking for something that cannot happen.
+  if (mode === 'on' && !tour.sourceUrl) {
     return { ok: false, status: 400, error: 'missing_source_url' };
   }
 
   const updated = await deps.setXiangqiBroadcastTourSchedule(tourSlug, {
-    pollEnabled: body.enabled,
+    pollMode: mode,
     pollIntervalMs: clampXiangqiBroadcastScheduleIntervalMs(
       body.intervalMs !== undefined ? body.intervalMs : tour.pollIntervalMs,
     ),
   });
   if (!updated) return { ok: false, status: 404, error: 'broadcast_not_found' };
-  return {
-    ok: true,
-    schedule: { pollEnabled: updated.pollEnabled, pollIntervalMs: updated.pollIntervalMs },
-  };
+  return { ok: true, schedule: scheduleForApi(updated, now) };
 }
 
 export async function xiangqiBroadcastTourForApi(

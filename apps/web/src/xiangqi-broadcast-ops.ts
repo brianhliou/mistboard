@@ -1,5 +1,6 @@
 import './xiangqi-broadcast-ops.css';
 import { buildNav } from './site-shell.js';
+import { formatEventDateTime } from './xiangqi-broadcast-time.js';
 
 type SyncLog = {
   id: number;
@@ -30,7 +31,27 @@ type SourceHealth = {
   };
 };
 
-type OpsTour = {
+export type PollMode = 'auto' | 'on' | 'off';
+
+/** Mirrors the server's XiangqiBroadcastPollState. */
+export type PollState = {
+  mode: PollMode;
+  polling: boolean;
+  reason: 'on' | 'off' | 'no-source' | 'auto-undated' | 'auto-before' | 'auto-open' | 'auto-closed';
+  opensAt: string | null;
+  closesAt: string | null;
+  afterEvent: boolean;
+};
+
+export type OpsSchedule = {
+  pollMode: PollMode;
+  /** Derived by the server: whether the scheduler polls the tour now. */
+  pollEnabled: boolean;
+  pollIntervalMs: number;
+  pollState: PollState;
+};
+
+export type OpsTour = {
   tour: {
     slug: string;
     name: string;
@@ -39,10 +60,7 @@ type OpsTour = {
     endsAt?: string;
   };
   sourceUrl: string | null;
-  schedule: {
-    pollEnabled: boolean;
-    pollIntervalMs: number;
-  };
+  schedule: OpsSchedule;
   roundCount: number;
   boardCount: number;
   liveBoardCount: number;
@@ -384,19 +402,62 @@ function tourPanel(entry: OpsTour, body: HTMLElement): HTMLElement {
   return section;
 }
 
-function schedulePanel(entry: OpsTour): HTMLElement {
+const POLL_MODE_LABELS: Record<PollMode, string> = { auto: 'Auto', on: 'On', off: 'Off' };
+
+function windowTime(value: string | null): string {
+  return formatEventDateTime(value ?? undefined, 'en-US') ?? 'unknown';
+}
+
+/** One line: whether the tour polls now, and why. The window reads on the
+ *  event's clock, like every other broadcast date. */
+export function pollStatusText(schedule: OpsSchedule): string {
+  const state = schedule.pollState;
+  const cadence = state.afterEvent
+    ? 'every 30 min while late records land'
+    : `every ${Math.round(schedule.pollIntervalMs / 1000)}s`;
+  switch (state.reason) {
+    case 'on':
+      return `Polling now, ${cadence} (on: always)`;
+    case 'auto-open':
+      return `Polling now, ${cadence} (auto: window closes ${windowTime(state.closesAt)})`;
+    case 'off':
+      return 'Not polling (off)';
+    case 'no-source':
+      return 'Not polling (no source URL)';
+    case 'auto-undated':
+      return 'Not polling (auto: the tour has no dates; choose On to poll it)';
+    case 'auto-before':
+      return `Not polling (auto: window opens ${windowTime(state.opensAt)})`;
+    case 'auto-closed':
+      return `Not polling (auto: window closed ${windowTime(state.closesAt)})`;
+  }
+}
+
+export function schedulePanel(entry: OpsTour): HTMLElement {
   const panel = document.createElement('div');
   panel.className = 'xqb-ops-schedule';
 
-  const toggleLabel = document.createElement('label');
-  toggleLabel.className = 'xqb-ops-correction';
-  const toggle = document.createElement('input');
-  toggle.type = 'checkbox';
-  toggle.checked = entry.schedule.pollEnabled;
-  toggle.disabled = !entry.sourceUrl;
-  const toggleText = document.createElement('span');
-  toggleText.textContent = 'Auto-poll';
-  toggleLabel.append(toggle, toggleText);
+  const modes = document.createElement('div');
+  modes.className = 'xqb-ops-poll-modes';
+  modes.setAttribute('role', 'radiogroup');
+  modes.setAttribute('aria-label', 'Polling');
+  const modeInputs = new Map<PollMode, HTMLInputElement>();
+  for (const mode of ['auto', 'on', 'off'] as const) {
+    const label = document.createElement('label');
+    label.className = 'xqb-ops-poll-mode';
+    const input = document.createElement('input');
+    input.type = 'radio';
+    input.name = `xqb-poll-mode-${entry.tour.slug}`;
+    input.value = mode;
+    input.checked = entry.schedule.pollMode === mode;
+    // On needs a source; auto and off are always valid.
+    input.disabled = mode === 'on' && !entry.sourceUrl;
+    const text = document.createElement('span');
+    text.textContent = POLL_MODE_LABELS[mode];
+    label.append(input, text);
+    modes.append(label);
+    modeInputs.set(mode, input);
+  }
 
   const intervalLabel = document.createElement('label');
   intervalLabel.className = 'xqb-ops-schedule-interval';
@@ -406,7 +467,6 @@ function schedulePanel(entry: OpsTour): HTMLElement {
   interval.max = '300';
   interval.step = '5';
   interval.value = String(Math.round(entry.schedule.pollIntervalMs / 1000));
-  interval.disabled = !entry.sourceUrl;
   const intervalText = document.createElement('span');
   intervalText.textContent = 'seconds';
   intervalLabel.append(interval, intervalText);
@@ -415,13 +475,11 @@ function schedulePanel(entry: OpsTour): HTMLElement {
   save.type = 'button';
   save.textContent = 'Save schedule';
   save.className = 'xqb-ops-button xqb-ops-button-secondary';
-  save.disabled = !entry.sourceUrl;
 
   const status = document.createElement('span');
   status.className = 'xqb-ops-poll-result';
-  status.textContent = entry.schedule.pollEnabled
-    ? `Auto-polling every ${Math.round(entry.schedule.pollIntervalMs / 1000)}s`
-    : 'Auto-poll off';
+  status.dataset.polling = String(entry.schedule.pollState.polling);
+  status.textContent = pollStatusText(entry.schedule);
 
   save.onclick = async () => {
     const seconds = Number(interval.value);
@@ -429,6 +487,7 @@ function schedulePanel(entry: OpsTour): HTMLElement {
       status.textContent = 'Interval must be 5-300 seconds.';
       return;
     }
+    const mode = [...modeInputs.entries()].find(([, input]) => input.checked)?.[0] ?? 'auto';
     save.disabled = true;
     status.textContent = 'Saving...';
     try {
@@ -437,28 +496,24 @@ function schedulePanel(entry: OpsTour): HTMLElement {
         {
           method: 'POST',
           headers: { accept: 'application/json', 'content-type': 'application/json' },
-          body: JSON.stringify({ enabled: toggle.checked, intervalMs: seconds * 1000 }),
+          body: JSON.stringify({ mode, intervalMs: seconds * 1000 }),
         },
       );
-      const payload = (await response.json()) as {
-        schedule?: { pollEnabled: boolean; pollIntervalMs: number };
-        error?: string;
-      };
+      const payload = (await response.json()) as { schedule?: OpsSchedule; error?: string };
       if (!response.ok || !payload.schedule) {
         status.textContent = payload.error ?? 'Save failed';
         return;
       }
-      status.textContent = payload.schedule.pollEnabled
-        ? `Auto-polling every ${Math.round(payload.schedule.pollIntervalMs / 1000)}s`
-        : 'Auto-poll off';
+      status.dataset.polling = String(payload.schedule.pollState.polling);
+      status.textContent = pollStatusText(payload.schedule);
     } catch {
       status.textContent = 'Save failed';
     } finally {
-      save.disabled = !entry.sourceUrl;
+      save.disabled = false;
     }
   };
 
-  panel.append(toggleLabel, intervalLabel, save, status);
+  panel.append(modes, intervalLabel, save, status);
   return panel;
 }
 

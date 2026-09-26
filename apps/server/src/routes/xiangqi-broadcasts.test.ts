@@ -52,6 +52,7 @@ const storedBoard: StoredXiangqiBroadcastBoard = {
 
 const storedTour = {
   ...tour,
+  pollMode: 'auto' as const,
   pollEnabled: false,
   pollIntervalMs: 30_000,
   createdAt: new Date(0),
@@ -93,8 +94,9 @@ function deps(
         ? {
             slug,
             sourceUrl: tour.sourceUrl ?? null,
-            pollEnabled: schedule.pollEnabled,
+            pollMode: schedule.pollMode,
             pollIntervalMs: schedule.pollIntervalMs,
+            startsAt: tour.startsAt ?? null,
             endsAt: tour.endsAt ?? null,
           }
         : null,
@@ -522,31 +524,64 @@ test('manual source import dry run records nothing and rejects bad URLs', async 
 
 test('schedule update validates input and persists the clamped schedule', async () => {
   const saved: unknown[] = [];
+  const saving = deps({
+    setXiangqiBroadcastTourSchedule: async (slug, schedule) => {
+      saved.push({ slug, ...schedule });
+      return {
+        slug,
+        sourceUrl: tour.sourceUrl ?? null,
+        pollMode: schedule.pollMode,
+        pollIntervalMs: schedule.pollIntervalMs,
+        startsAt: tour.startsAt ?? null,
+        endsAt: tour.endsAt ?? null,
+      };
+    },
+  });
+  // The fixture event ran 2025-09-21..27; the day after it ended sits inside
+  // the auto window, a month later outside it.
+  const dayAfter = Date.parse('2025-09-28T00:00:00Z');
+  const monthAfter = Date.parse('2025-10-28T00:00:00Z');
+
   const result = await xiangqiBroadcastScheduleUpdateForApi(
     tour.slug,
-    { enabled: true, intervalMs: 1_000 },
-    deps({
-      setXiangqiBroadcastTourSchedule: async (slug, schedule) => {
-        saved.push({ slug, ...schedule });
-        return {
-          slug,
-          sourceUrl: tour.sourceUrl ?? null,
-          pollEnabled: schedule.pollEnabled,
-          pollIntervalMs: schedule.pollIntervalMs,
-          endsAt: tour.endsAt ?? null,
-        };
-      },
-    }),
+    { mode: 'on', intervalMs: 1_000 },
+    saving,
+    monthAfter,
   );
+  assert.equal(result.ok, true);
+  if (!result.ok) return;
+  assert.equal(result.schedule.pollMode, 'on');
+  assert.equal(result.schedule.pollEnabled, true);
+  assert.equal(result.schedule.pollIntervalMs, 5_000);
+  assert.equal(result.schedule.pollState.reason, 'on');
+  assert.deepEqual(saved, [{ slug: tour.slug, pollMode: 'on', pollIntervalMs: 5_000 }]);
 
-  assert.deepEqual(result, {
-    ok: true,
-    schedule: { pollEnabled: true, pollIntervalMs: 5_000 },
-  });
-  assert.deepEqual(saved, [{ slug: tour.slug, pollEnabled: true, pollIntervalMs: 5_000 }]);
+  const autoInside = await xiangqiBroadcastScheduleUpdateForApi(
+    tour.slug,
+    { mode: 'auto' },
+    saving,
+    dayAfter,
+  );
+  assert.equal(autoInside.ok && autoInside.schedule.pollEnabled, true);
+  assert.equal(autoInside.ok && autoInside.schedule.pollState.reason, 'auto-open');
+  const autoAfter = await xiangqiBroadcastScheduleUpdateForApi(
+    tour.slug,
+    { mode: 'auto' },
+    saving,
+    monthAfter,
+  );
+  assert.equal(autoAfter.ok && autoAfter.schedule.pollEnabled, false);
+  assert.equal(autoAfter.ok && autoAfter.schedule.pollState.reason, 'auto-closed');
+
+  // An older console still sends the boolean: true is on, false is off.
+  saved.length = 0;
+  await xiangqiBroadcastScheduleUpdateForApi(tour.slug, { enabled: false }, saving);
+  assert.deepEqual(saved, [{ slug: tour.slug, pollMode: 'off', pollIntervalMs: 30_000 }]);
 
   const badBody = await xiangqiBroadcastScheduleUpdateForApi(tour.slug, { enabled: 'yes' }, deps());
   assert.deepEqual(badBody, { ok: false, status: 400, error: 'invalid_schedule' });
+  const badMode = await xiangqiBroadcastScheduleUpdateForApi(tour.slug, { mode: 'always' }, deps());
+  assert.deepEqual(badMode, { ok: false, status: 400, error: 'invalid_schedule' });
 
   const badInterval = await xiangqiBroadcastScheduleUpdateForApi(
     tour.slug,
@@ -562,15 +597,35 @@ test('schedule update validates input and persists the clamped schedule', async 
   );
   assert.deepEqual(unknownTour, { ok: false, status: 404, error: 'broadcast_not_found' });
 
+  const sourceless = deps({
+    getXiangqiBroadcastTour: async (slug) =>
+      slug === tour.slug ? { ...storedTour, sourceUrl: undefined } : null,
+  });
   const noSource = await xiangqiBroadcastScheduleUpdateForApi(
     tour.slug,
-    { enabled: true },
-    deps({
-      getXiangqiBroadcastTour: async (slug) =>
-        slug === tour.slug ? { ...storedTour, sourceUrl: undefined } : null,
-    }),
+    { mode: 'on' },
+    sourceless,
   );
   assert.deepEqual(noSource, { ok: false, status: 400, error: 'missing_source_url' });
+  // Auto is the default and needs no source: it just never polls.
+  const autoNoSource = await xiangqiBroadcastScheduleUpdateForApi(
+    tour.slug,
+    { mode: 'auto' },
+    sourceless,
+  );
+  assert.equal(autoNoSource.ok, true);
+});
+
+test('ops index reports each tour mode and whether it polls now', async () => {
+  const index = await xiangqiBroadcastOpsIndexForApi(deps());
+  const schedule = index.tours[0]?.schedule;
+  assert.ok(schedule);
+  assert.equal(schedule.pollMode, 'auto');
+  // The 2025 fixture event is long past, so auto does not poll it.
+  assert.equal(schedule.pollEnabled, false);
+  assert.equal(schedule.pollState.reason, 'auto-closed');
+  assert.equal(schedule.pollState.opensAt, '2025-09-20T12:00:00.000Z');
+  assert.equal(schedule.pollState.closesAt, '2025-09-29T00:00:00.000Z');
 });
 
 test('broadcast index API features the latest live board, else the latest complete one', async () => {

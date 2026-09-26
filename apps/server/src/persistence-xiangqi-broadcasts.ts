@@ -27,12 +27,20 @@ import type pg from 'pg';
 import { getPool, withTransaction } from './persistence-db.js';
 import type { XiangqiGameSort } from './persistence-historical-xiangqi.js';
 import {
+  normalizeXiangqiBroadcastPollMode,
+  type XiangqiBroadcastPollMode,
+  xiangqiBroadcastPollState,
+} from './xiangqi-broadcast-poll-window.js';
+import {
   translatedXiangqiBroadcastBoard,
   translatedXiangqiBroadcastRound,
   translatedXiangqiBroadcastTour,
 } from './xiangqi-broadcast-translate.js';
 
 export type StoredXiangqiBroadcastTour = XiangqiBroadcastTour & {
+  /** The operator's setting: auto (the event window), on, or off. */
+  pollMode: XiangqiBroadcastPollMode;
+  /** Derived at read time: whether the scheduler polls this tour now. */
   pollEnabled: boolean;
   pollIntervalMs: number;
   createdAt: Date;
@@ -42,10 +50,12 @@ export type StoredXiangqiBroadcastTour = XiangqiBroadcastTour & {
 export type XiangqiBroadcastTourSchedule = {
   slug: string;
   sourceUrl: string | null;
-  pollEnabled: boolean;
+  pollMode: XiangqiBroadcastPollMode;
   pollIntervalMs: number;
-  /** The event's last day, ISO. The scheduler slows down past it and stops
-   *  three weeks later; null means the tour has no end and polls as set. */
+  /** The event's first and last day, ISO in the event's offset. `auto` polls
+   *  from 12 h before the start to 7 days after the end; the scheduler slows
+   *  down once the end has passed. See xiangqi-broadcast-poll-window.ts. */
+  startsAt: string | null;
   endsAt: string | null;
 };
 
@@ -162,6 +172,7 @@ type TourRow = {
   starts_at: Date | null;
   ends_at: Date | null;
   poll_enabled: boolean;
+  poll_mode: string;
   poll_interval_ms: number;
   payload: XiangqiBroadcastTour;
   created_at: Date;
@@ -240,10 +251,24 @@ function optionalString(value: string | undefined): string | null {
   return value ?? null;
 }
 
+function scheduleFromRow(row: TourRow): XiangqiBroadcastTourSchedule {
+  return {
+    slug: row.slug,
+    sourceUrl: row.source_url,
+    pollMode: normalizeXiangqiBroadcastPollMode(row.poll_mode),
+    pollIntervalMs: row.poll_interval_ms,
+    // The payload keeps the event's offset; the column is the fallback.
+    startsAt: row.payload.startsAt ?? row.starts_at?.toISOString() ?? null,
+    endsAt: row.payload.endsAt ?? row.ends_at?.toISOString() ?? null,
+  };
+}
+
 function tourFromRow(row: TourRow): StoredXiangqiBroadcastTour {
+  const schedule = scheduleFromRow(row);
   return {
     ...row.payload,
-    pollEnabled: row.poll_enabled,
+    pollMode: schedule.pollMode,
+    pollEnabled: xiangqiBroadcastPollState({ ...schedule, now: Date.now() }).polling,
     pollIntervalMs: row.poll_interval_ms,
     createdAt: row.created_at,
     updatedAt: row.updated_at,
@@ -1102,24 +1127,20 @@ export async function getXiangqiBroadcastBoard(
 
 export async function setXiangqiBroadcastTourSchedule(
   slug: string,
-  schedule: { pollEnabled: boolean; pollIntervalMs: number },
+  schedule: { pollMode: XiangqiBroadcastPollMode; pollIntervalMs: number },
 ): Promise<XiangqiBroadcastTourSchedule | null> {
+  // poll_enabled is written only so a rollback past migration 150 reads a
+  // sane value; nothing here reads it.
   const { rows } = await getPool().query<TourRow>(
     `UPDATE xiangqi_broadcast_tours
-        SET poll_enabled = $2, poll_interval_ms = $3, updated_at = now()
+        SET poll_mode = $2, poll_enabled = ($2 = 'on'), poll_interval_ms = $3,
+            updated_at = now()
       WHERE slug = $1
       RETURNING *`,
-    [slug, schedule.pollEnabled, schedule.pollIntervalMs],
+    [slug, schedule.pollMode, schedule.pollIntervalMs],
   );
   const row = rows[0];
-  if (!row) return null;
-  return {
-    slug: row.slug,
-    sourceUrl: row.source_url,
-    pollEnabled: row.poll_enabled,
-    pollIntervalMs: row.poll_interval_ms,
-    endsAt: row.ends_at?.toISOString() ?? null,
-  };
+  return row ? scheduleFromRow(row) : null;
 }
 
 /**
@@ -1228,16 +1249,14 @@ export async function extendXiangqiBroadcastTourEndsAt(
 export async function listXiangqiBroadcastScheduledTours(): Promise<
   XiangqiBroadcastTourSchedule[]
 > {
+  // Every tour that could poll; the scheduler applies each one's window
+  // (xiangqiBroadcastPollState), so the rule lives in one place.
   const { rows } = await getPool().query<TourRow>(
-    `SELECT * FROM xiangqi_broadcast_tours WHERE poll_enabled ORDER BY slug`,
+    `SELECT * FROM xiangqi_broadcast_tours
+      WHERE poll_mode <> 'off' AND source_url IS NOT NULL
+      ORDER BY slug`,
   );
-  return rows.map((row) => ({
-    slug: row.slug,
-    sourceUrl: row.source_url,
-    pollEnabled: row.poll_enabled,
-    pollIntervalMs: row.poll_interval_ms,
-    endsAt: row.ends_at?.toISOString() ?? null,
-  }));
+  return rows.map(scheduleFromRow);
 }
 
 export type XiangqiBroadcastTranslationBackfillChange = {
