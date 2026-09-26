@@ -82,6 +82,7 @@ Conventions:
 
 ### Watching and review
 
+- Broadcasts start following an event by themselves from 12 hours before it begins until a week after it ends, so an upcoming event no longer waits for someone to switch it on ([b2640430](https://github.com/brianhliou/mistboard/commit/b2640430))
 - The second player page, Cao Yanlei 曹岩磊 (/blog/cao-yanlei): the ten-game match he won against the world champion Lại Lý Huynh, then his 2026 event by event, six games on the board seen from his side, and a 75-chapter study with every game annotated ([86cc7c0d](https://github.com/brianhliou/mistboard/commit/86cc7c0d))
 - Pages for the 13 archive players the Chinese Xiangqi Association sanctioned in the 2024 to 2026 match-fixing case say so in one sentence linked to the case write-up, and players whose ban may have revoked their grade no longer carry a GM or NM tag, on the event cards too ([51d72464](https://github.com/brianhliou/mistboard/commit/51d72464), [534426da](https://github.com/brianhliou/mistboard/commit/534426da))
 - Broadcasts sourced from dpxq show every pairing with its result, including boards whose game record was never posted (a faded start position marked Result only), and standings count them ([0d225575](https://github.com/brianhliou/mistboard/commit/0d225575))
