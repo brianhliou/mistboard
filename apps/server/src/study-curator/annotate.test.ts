@@ -175,14 +175,7 @@ test('the deviation comment lands on the deviating move', async () => {
 
 test('a decisive-moment chapter roots before the move and puts the engine line first', () => {
   const game = gameOf('b4', MOVES, '1-0');
-  const chapter = buildDecisiveMomentChapter(
-    game,
-    judgeGame(UCI, EVALS),
-    recipeOf({
-      mode: 'decisive-moments',
-      study: { name: 'x', description: '', visibility: 'unlisted', orientation: 'winner' },
-    }),
-  );
+  const chapter = buildDecisiveMomentChapter(game, judgeGame(UCI, EVALS));
   assert.ok(chapter);
   assert.equal(chapter.gamebook, true);
   assert.equal(chapter.orientation, 'black');
@@ -195,10 +188,19 @@ test('a decisive-moment chapter roots before the move and puts the engine line f
   assert.equal(root.children[0]?.children[0]?.uci, 'i1h1');
   assert.equal(root.children[1]?.uci, 'i10h10');
   assert.deepEqual(root.children[1]?.annotations?.glyphs, [4]);
+  // The task, and nothing the game card already shows: provenance lives in the
+  // chapter's tags, not in the intro.
+  const intro = root.annotations?.comments?.[0]?.text ?? '';
   assert.match(
-    root.annotations?.comments?.[0]?.text ?? '',
-    /Black to move \(Yang Shizhe\), move 2/,
+    intro,
+    /^The game turned here\. Yang Shizhe played a move that gave up \d+ win% points\. Find the better one\.$/,
   );
+  assert.equal(chapter.tags?.red, 'Yin Sheng');
+  // One graded move and the reply, not the engine's whole line; the reply
+  // carries the closing note the finished lesson shows.
+  const reply = root.children[0]?.children[0];
+  assert.equal(reply?.children.length, 0);
+  assert.match(reply?.annotations?.comments?.[0]?.text ?? '', /^Found it\. .* best reply\.$/);
   assert.ok(root.annotations?.gamebook?.hint);
 });
 
@@ -206,7 +208,6 @@ test('a decisive-moment chapter is null when the loser has no open give-away', (
   const chapter = buildDecisiveMomentChapter(
     gameOf('b5', MOVES, '1-0'),
     judgeGame(UCI, evalsOf(new Array(11).fill(0))),
-    recipeOf({ mode: 'decisive-moments' }),
   );
   assert.equal(chapter, null);
 });

@@ -39,7 +39,7 @@ import {
 import type { StudyRecipe } from './recipes.js';
 
 /** Bump when the tree a given (game, analysis, recipe) produces would change. */
-export const ANNOTATOR_VERSION = 1;
+export const ANNOTATOR_VERSION = 2;
 
 // The tree grammar the study page reads (apps/web/src/review/tree-serialize.ts).
 // Duplicated here as plain JSON, the way every seeder does it.
@@ -434,12 +434,17 @@ export function decisivePosition(
 export function buildDecisiveMomentChapter(
   game: CuratorGame,
   verdicts: GameVerdicts,
-  recipe: StudyRecipe,
 ): ChapterDraft | null {
   const found = decisivePosition(game, verdicts);
   if (!found) return null;
   const { verdict, state } = found;
-  const solution = legalLine(state, verdict.pv);
+  // The key move and the best reply to it, not the whole principal variation.
+  // The lesson grades the learner's moves against this line, and past the first
+  // one the engine's choice is often one of several equally good moves, so a
+  // 30-ply line marked a strong player wrong for a different good move many
+  // moves after they had found the idea. One graded move, then the reply played
+  // for them so they see why it works.
+  const solution = legalLine(state, verdict.pv).slice(0, 2);
   const played = game.moves[verdict.ply - 1];
   if (solution.length === 0 || !played) return null;
   const mover: XiangqiColor = verdict.mover;
@@ -448,12 +453,18 @@ export function buildDecisiveMomentChapter(
   const sideEn = mover === 'red' ? 'Red' : 'Black';
   const moveNumber = Math.ceil(verdict.ply / 2);
 
-  const intro = `${sideEn} to move (${moverName}), move ${moveNumber}. ${provenanceEn(game, verdicts, recipe)} The game turned here: the move played gave up ${Math.round(verdict.drop)} win% points. Find the better move.`;
-  const introZh = (script: 'zh-Hans' | 'zh-Hant') => {
-    const t = script === 'zh-Hant';
-    const side = mover === 'red' ? (t ? '紅方' : '红方') : '黑方';
-    return `${side}走棋（${moverNameZh}），第 ${moveNumber} 回合。${provenanceZh(game, verdicts, recipe, script)}${t ? '勝負在此逆轉：實戰著法讓出了' : '胜负在此逆转：实战着法让出了'} ${Math.round(verdict.drop)} ${t ? '個勝率點。請找出更好的著法。' : '个胜率点。请找出更好的着法。'}`;
-  };
+  // Only what the position needs. The game's provenance (players, event, round,
+  // date, result) lives in the chapter's tags, which the lesson player shows as a
+  // game card above this text, and the side to move is its prompt; spelled out
+  // here as well, the one sentence that sets the task came last in a paragraph
+  // of metadata. Accuracy and engine settings describe the whole game, not this
+  // moment, so they stay on the full-game chapters.
+  const drop = Math.round(verdict.drop);
+  const intro = `The game turned here. ${moverName} played a move that gave up ${drop} win% points. Find the better one.`;
+  const introZh = (script: 'zh-Hans' | 'zh-Hant') =>
+    script === 'zh-Hant'
+      ? `勝負在此逆轉。${moverNameZh}的實戰著法讓出了 ${drop} 個勝率點。請找出更好的著法。`
+      : `胜负在此逆转。${moverNameZh}的实战着法让出了 ${drop} 个胜率点。请找出更好的着法。`;
 
   const judged = judgmentOf(verdict, true);
   const playedNode: SerializedNode = {
@@ -469,7 +480,29 @@ export function buildDecisiveMomentChapter(
     },
     children: [],
   };
-  const solutionNode = chainOf(solution);
+  // The last node's comment is what the finished lesson shows. Only claim a
+  // reply is on the board when the line has one (a mate or a short line may not).
+  const withReply = solution.length > 1;
+  const sideZh = { hans: mover === 'red' ? '红' : '黑', hant: mover === 'red' ? '紅' : '黑' };
+  const oppZh = { hans: mover === 'red' ? '黑' : '红', hant: mover === 'red' ? '黑' : '紅' };
+  const closing: NodeAnnotations = {
+    comments: [
+      {
+        text: withReply
+          ? `Found it. That move keeps ${sideEn} in the game, and this is ${mover === 'red' ? 'Black' : 'Red'}'s best reply.`
+          : `Found it. That move keeps ${sideEn} in the game.`,
+        i18n: {
+          'zh-Hans': withReply
+            ? `找到了。这步棋让${sideZh.hans}方保住了局面，这是${oppZh.hans}方的最佳应着。`
+            : `找到了。这步棋让${sideZh.hans}方保住了局面。`,
+          'zh-Hant': withReply
+            ? `找到了。這步棋讓${sideZh.hant}方保住了局面，這是${oppZh.hant}方的最佳應著。`
+            : `找到了。這步棋讓${sideZh.hant}方保住了局面。`,
+        },
+      },
+    ],
+  };
+  const solutionNode = chainOf(solution, closing);
   if (!solutionNode) return null;
 
   const root: SerializedNode = {

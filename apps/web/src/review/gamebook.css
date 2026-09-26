@@ -41,7 +41,10 @@
      is the distance from the viewport top to this grid, which a caller sets when
      it knows better. Guessing it (100dvh minus a nav-height constant) is what
      overran the viewport -- the constant was wrong whenever the header above the
-     grid was a different height than assumed. */
+     grid was a different height than assumed. Both players now measure it
+     (fitGamebookToViewport); 5.5rem is only the first frame's value. The 1rem
+     below is the grid's bottom margin, so the two must stay equal or the page
+     scrolls by the difference. */
   align-items: stretch;
   /* Declared HERE, on the common ancestor, not on .gamebook__board: the board
      frame and the brief are SIBLINGS/ANCESTORS of the board, and a custom
@@ -57,7 +60,7 @@
      the leftover middle track: at 1180px the rail and coach columns ate enough
      width to hold the board 60px under what the viewport allowed. */
   max-width: 1320px;
-  margin: 0.75rem auto 1.5rem;
+  margin: 0.75rem auto 1rem;
   padding: 0 1rem;
 }
 
@@ -89,6 +92,34 @@
   position: relative;
   width: calc(var(--gamebook-board-fit) * var(--uni-board-scale, 1));
   max-width: 100%;
+  /* Its own height, not the row's: stretched, the board frame took the full row
+     and the SVG letterboxed inside it with a dead band above and below. */
+  align-self: start;
+}
+/* The gamebook's grid item: carries the scaled width and hosts the resize grip,
+   which cannot live on the board because the board is repainted every move. */
+.gamebook__board-frame {
+  position: relative;
+  width: calc(var(--gamebook-board-fit) * var(--uni-board-scale, 1));
+  max-width: 100%;
+  align-self: start;
+}
+.gamebook__board-frame .gamebook__board {
+  width: 100%;
+}
+
+/* The guess-the-move board has nothing under it, so it takes the row's height
+   (a xiangqi board is ~1.11x as tall as wide) rather than a vh guess that
+   ignored the chrome above. The practice board keeps the default: its goal
+   brief sits under the board and has to fit in the same row. Side-by-side
+   only: stacked, the row has no definite height and the rule below applies. */
+@media (min-width: 60.0625rem) {
+  .gamebook:not(.practice) {
+    --gamebook-board-fit: min(calc(var(--gamebook-page-height) * 0.89), 40rem);
+    /* The coach is what drives a guess-the-move lesson and is read line by
+       line, so it gets the wider side; the rail is a list of names. */
+    grid-template-columns: minmax(0, 15.5rem) auto minmax(0, 22rem);
+  }
 }
 
 .gamebook__coach {
@@ -181,6 +212,91 @@
   color: #fff;
 }
 
+/* Guess-the-move coach: one panel, read top to bottom -- the prompt, the game
+   card, the lesson text, then feedback. The bubble keeps its text and loses its
+   box (a panel holding a panel); the state colour moves to the feedback line.
+   The panel is as tall as what it says. Practice styles its own coach
+   (practice.css) and is left alone. */
+.gamebook:not(.practice) .gamebook__coach {
+  align-self: start;
+  gap: 0.9rem;
+  padding: 1.1rem 1.2rem 1.2rem;
+}
+.gamebook__prompt-side {
+  display: flex;
+  align-items: center;
+  gap: 0.5rem;
+  margin: 0;
+  font-size: 1.25rem;
+  font-weight: 700;
+  line-height: 1.2;
+  color: var(--site-text);
+}
+.gamebook__prompt-dot {
+  flex: 0 0 auto;
+  width: 0.8rem;
+  height: 0.8rem;
+  border-radius: 50%;
+}
+.gamebook__prompt-side--red .gamebook__prompt-dot {
+  background: var(--ink-red, #c0563f);
+}
+.gamebook__prompt-side--black .gamebook__prompt-dot {
+  background: var(--ink-black, #574f48);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--site-text) 70%, transparent);
+}
+.gamebook__prompt-task {
+  margin: 0.25rem 0 0;
+  color: var(--site-muted);
+  font-size: 0.9rem;
+}
+.gamebook__game {
+  padding: 0.6rem 0 0.7rem;
+  border-top: 1px solid var(--site-border-soft, var(--site-border));
+  border-bottom: 1px solid var(--site-border-soft, var(--site-border));
+}
+.gamebook__game-players {
+  margin: 0;
+  font-weight: 600;
+  font-size: 0.92rem;
+}
+.gamebook__game-detail {
+  margin: 0.15rem 0 0;
+  color: var(--site-muted);
+  font-size: 0.78rem;
+  line-height: 1.4;
+}
+.gamebook:not(.practice) .gamebook__bubble {
+  padding: 0;
+  border: 0;
+  border-radius: 0;
+  background: none;
+}
+.gamebook:not(.practice) .gamebook__comment {
+  font-size: 0.95rem;
+  line-height: 1.6;
+}
+.gamebook:not(.practice) .gamebook__feedback:empty {
+  display: none;
+}
+.gamebook:not(.practice) .gamebook__feedback {
+  margin-top: 0.75rem;
+  padding: 0.5rem 0.7rem;
+  border-left: 3px solid var(--site-accent);
+  border-radius: 0 var(--site-radius-sm, 6px) var(--site-radius-sm, 6px) 0;
+  background: color-mix(in srgb, var(--site-accent) 10%, transparent);
+}
+.gamebook:not(.practice) .gamebook__coach[data-state="bad"] .gamebook__feedback,
+.gamebook:not(.practice) .gamebook__coach[data-state="failed"] .gamebook__feedback {
+  border-left-color: #ef6461;
+  background: color-mix(in srgb, #ef6461 10%, transparent);
+}
+.gamebook:not(.practice) .gamebook__coach[data-state="end"] .gamebook__feedback,
+.gamebook:not(.practice) .gamebook__coach[data-state="success"] .gamebook__feedback {
+  border-left-color: #4ea96a;
+  background: color-mix(in srgb, #4ea96a 10%, transparent);
+}
+
 /* One column below the point where a rail, a board and a panel stop fitting
    side by side. The board leads, because it is what the learner acts on. */
 @media (max-width: 60rem) {
@@ -193,8 +309,14 @@
     align-items: start;
     --gamebook-board-fit: min(78vw, 26rem);
   }
-  .gamebook__board {
+  .gamebook__board,
+  .gamebook__board-frame {
     order: -1;
+  }
+  /* The coach, not the rail, follows the board: it holds the prompt the
+     learner acts on, and after the rail it sat under every chapter row. */
+  .gamebook__aside {
+    order: 1;
   }
   .gamebook__aside,
   .gamebook__coach {

@@ -11,10 +11,12 @@ import {
   type XiangqiColor,
   type XiangqiGameState,
 } from '@mistboard/game';
+import { attachBoardResizeGrip, restoreBoardScale } from '../board-resize.js';
 import { initLiveSound, playSound } from '../live-sound.js';
 import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
 import { displayComment } from '../study-i18n.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
+import { fitGamebookToViewport } from './gamebook-fit.js';
 import { createGamebookSession, type GamebookFeedback } from './gamebook-play.js';
 import { deserializeTree, type SerializedTree } from './tree-serialize.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
@@ -27,8 +29,14 @@ export interface XiangqiGamebookOptions {
   orientation: XiangqiColor;
   title?: string;
   summary?: string;
+  /** Site nav to keep above the lesson. The mount replaces the root's children,
+   *  so a caller that rendered a nav first has to hand it back here. */
+  nav?: HTMLElement;
   /** Optional left-rail element (chapter tabs, "edit lesson", etc.). */
   aside?: HTMLElement;
+  /** The game this position came from, shown under the prompt: who played it
+   *  and where. Absent for a lesson that is not a game position. */
+  game?: { players: string; detail: string };
 }
 
 export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOptions): void {
@@ -66,16 +74,55 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     aside.append(opts.aside);
     wrap.append(aside);
   }
+  // The board host is repainted on every move, so the resize grip hangs off a
+  // stable frame around it (the practice player's pattern), and the frame is the
+  // grid item that carries the scaled width.
+  const boardFrame = document.createElement('div');
+  boardFrame.className = 'gamebook__board-frame';
   const boardEl = document.createElement('div');
   boardEl.className = 'gamebook__board xiangqi-live-board';
   boardEl.setAttribute('aria-label', 'Xiangqi lesson board');
-  wrap.append(boardEl);
+  boardFrame.append(boardEl);
+  wrap.append(boardFrame);
+  // The same grip and persisted --uni-board-scale as every other board, so a
+  // size set once holds here too.
+  restoreBoardScale();
+  attachBoardResizeGrip(boardFrame, boardFrame);
 
+  // Coach column, top to bottom: what to do (the side to play, in that side's
+  // ink), which game this is, then the lesson's own text and the feedback on the
+  // last attempt. The prompt used to be a bold line at the END of the comment,
+  // so the one instruction on the page was the last thing read.
   const coach = document.createElement('aside');
   coach.className = 'gamebook__coach';
-  const mascot = document.createElement('div');
-  mascot.className = 'gamebook__mascot';
-  mascot.textContent = '🐉';
+  const prompt = document.createElement('header');
+  prompt.className = 'gamebook__prompt';
+  const promptSide = document.createElement('p');
+  promptSide.className = `gamebook__prompt-side gamebook__prompt-side--${opts.orientation}`;
+  const promptDot = document.createElement('span');
+  promptDot.className = 'gamebook__prompt-dot';
+  promptDot.setAttribute('aria-hidden', 'true');
+  promptSide.append(promptDot, opts.orientation === 'black' ? 'Black to play' : 'Red to play');
+  const promptTask = document.createElement('p');
+  promptTask.className = 'gamebook__prompt-task';
+  promptTask.textContent = 'Find the best move.';
+  prompt.append(promptSide, promptTask);
+  coach.append(prompt);
+  if (opts.game) {
+    const game = document.createElement('div');
+    game.className = 'gamebook__game';
+    const players = document.createElement('p');
+    players.className = 'gamebook__game-players';
+    players.textContent = opts.game.players;
+    game.append(players);
+    if (opts.game.detail) {
+      const detail = document.createElement('p');
+      detail.className = 'gamebook__game-detail';
+      detail.textContent = opts.game.detail;
+      game.append(detail);
+    }
+    coach.append(game);
+  }
   const bubble = document.createElement('div');
   bubble.className = 'gamebook__bubble';
   const comment = document.createElement('p');
@@ -91,7 +138,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
   const retryBtn = button('Try again', 'gamebook__btn gamebook__btn--primary');
   const restartBtn = button('Restart lesson', 'gamebook__btn');
   controls.append(hintBtn, retryBtn, restartBtn);
-  coach.append(mascot, bubble, controls);
+  coach.append(bubble, controls);
   wrap.append(coach);
 
   const interactive = createXiangqiInteractiveBoard({
@@ -151,8 +198,9 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
       feedback.textContent = 'Lesson complete! 🎉';
     } else {
       comment.textContent = view.comment ?? '';
-      feedback.textContent =
-        justAttempted === 'good' ? 'Correct! Keep going.' : 'Your move — find the best line.';
+      // The prompt above already says whose move it is; this line reports only
+      // on an attempt.
+      feedback.textContent = justAttempted === 'good' ? 'Correct! Keep going.' : '';
     }
 
     hintBtn.hidden = view.feedback !== 'play' || !view.hint;
@@ -160,22 +208,30 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
     restartBtn.hidden = view.feedback !== 'end';
   }
 
-  const header = document.createElement('header');
-  header.className = 'gamebook__header';
-  if (opts.title) {
-    const h1 = document.createElement('h1');
-    h1.className = 'gamebook__title';
-    h1.textContent = opts.title;
-    header.append(h1);
-  }
-  if (opts.summary) {
-    const p = document.createElement('p');
-    p.className = 'gamebook__summary';
-    p.textContent = opts.summary;
-    header.append(p);
+  // A page header only when a caller wants one, as in the practice player: an
+  // empty <header> still adds a gap above the columns.
+  const chrome: HTMLElement[] = [];
+  if (opts.nav) chrome.push(opts.nav);
+  if (opts.title || opts.summary) {
+    const header = document.createElement('header');
+    header.className = 'gamebook__header';
+    if (opts.title) {
+      const h1 = document.createElement('h1');
+      h1.className = 'gamebook__title';
+      h1.textContent = opts.title;
+      header.append(h1);
+    }
+    if (opts.summary) {
+      const p = document.createElement('p');
+      p.className = 'gamebook__summary';
+      p.textContent = opts.summary;
+      header.append(p);
+    }
+    chrome.push(header);
   }
 
-  root.replaceChildren(header, wrap);
+  root.replaceChildren(...chrome, wrap);
+  fitGamebookToViewport(wrap);
   render();
 }
 

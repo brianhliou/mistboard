@@ -860,3 +860,109 @@
   background: var(--site-panel-soft);
   white-space: nowrap;
 }
+
+/* Guess-the-move chapters reuse the practice rail card (review/practice.css),
+   tightened: a title-only head, the like and copy buttons on the "N Chapters"
+   line (which stays, unlike practice: the coach does not say which chapter of
+   how many this is, and an owner's preview keeps its tools there), one-line
+   rows, and a card as tall as its list rather than the whole row. */
+.gamebook__aside:has(.study-gamebook-rail) {
+  align-self: start;
+  max-height: 100%;
+}
+/* A plain title, not the practice card's saturated block: here the rail is a
+   quiet list beside the lesson, and a filled header made it the loudest thing
+   on the page. */
+.study-gamebook-rail .practice__rail-head {
+  padding: 0.7rem 14px 0.55rem;
+  background: none;
+  color: var(--site-text);
+}
+.study-gamebook-rail .practice__rail-title {
+  margin: 0;
+  font-size: 0.95rem;
+  line-height: 1.3;
+  color: var(--site-text);
+}
+.study-gamebook-rail .study-chapters__head {
+  display: flex;
+  align-items: center;
+  padding: 0.45rem 14px;
+}
+.study-gamebook-rail__actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 0.35rem;
+  padding: 0.5rem 0.6rem;
+  border-top: 1px solid var(--site-border-soft);
+}
+.study-gamebook-rail .study-actions__like,
+.study-gamebook-rail .study-actions__clone {
+  padding: 0.1rem 0.45rem;
+  font-size: 0.74rem;
+  font-weight: 500;
+  letter-spacing: 0;
+  line-height: 1.4;
+}
+.study-gamebook-rail .study-chapters__name {
+  -webkit-line-clamp: 1;
+  overflow-wrap: normal;
+}
+.study-gamebook-rail .study-chapters__link {
+  align-items: center;
+  padding-top: 0.3rem;
+  padding-bottom: 0.3rem;
+  font-size: 0.82rem;
+}
+.study-gamebook-rail .study-chapters__row {
+  min-height: 0;
+}
+
+/* A game-position row (study-game-row.ts): players, then where in the game.
+   The dot marks the side to move in that seat's ink, so a column of rows reads
+   "who is on move" at a glance without the words "Black to play" twenty times. */
+.study-game-row {
+  display: flex;
+  flex-direction: column;
+  gap: 0.05rem;
+  min-width: 0;
+}
+.study-game-row__players,
+.study-game-row__meta {
+  overflow: hidden;
+  white-space: nowrap;
+  text-overflow: ellipsis;
+}
+.study-game-row__players {
+  line-height: 1.35;
+}
+.study-game-row__player.is-to-move {
+  color: var(--site-text);
+}
+.study-game-row__player:not(.is-to-move) {
+  color: var(--site-muted);
+}
+.study-chapters__row.is-active .study-game-row__player:not(.is-to-move) {
+  font-weight: 400;
+}
+.study-game-row__dot {
+  display: inline-block;
+  width: 0.55rem;
+  height: 0.55rem;
+  margin-right: 0.3rem;
+  border-radius: 50%;
+  vertical-align: 0.05em;
+}
+.study-game-row__dot--red {
+  background: var(--ink-red-chip, #c0563f);
+}
+.study-game-row__dot--black {
+  background: var(--ink-black, #574f48);
+  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--site-text) 70%, transparent);
+}
+.study-game-row__meta {
+  font-size: 0.72rem;
+  line-height: 1.3;
+  color: var(--site-muted);
+  font-weight: 400;
+}

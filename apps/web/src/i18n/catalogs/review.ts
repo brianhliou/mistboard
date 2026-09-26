@@ -480,6 +480,7 @@ export const EN_REVIEW = {
   // per study (study-i18n.ts); these are the fixed labels around it.
   'study.chapterCount': '{count} Chapters',
   'study.chapterCountOne': '1 Chapter',
+  'study.rowRound': 'Round {n}',
   // Tail of a study card's chapter preview, when the study holds more chapters
   // than the card lists.
   'study.chapterPreviewMore': '+{count} more',

@@ -20,6 +20,7 @@ import {
 } from './study-i18n.js';
 import './live-xiangqi.css';
 import './xiangqi-postgame.css';
+import './review/practice.css';
 import './study.css';
 import './study-index.css';
 import type { XiangqiPieceRole } from '@mistboard/game';
@@ -55,9 +56,11 @@ import {
   openChapterSettingsDialog,
   openStudySaveRecoveryDialog,
   openStudySettingsDialog,
+  type StudyRailActions,
   type StudySettingsPatch,
   type StudyVisibility,
 } from './study-controls.js';
+import { buildGameRowLabel, gameCoachContext, gameRowParts } from './study-game-row.js';
 import { buildStudyThumbnail } from './study-thumbnails.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
@@ -690,8 +693,13 @@ function renderStudy(
      * one.
      */
     const learnerView = { ...study, isOwner: false };
-    const rail = (status: HTMLElement, asLearner = false): HTMLElement =>
+    const rail = (
+      status: HTMLElement,
+      asLearner = false,
+      chapterLabel?: StudyRailActions['chapterLabel'],
+    ): HTMLElement =>
       buildStudyRail(asLearner ? learnerView : study, chapters, activeId, status, {
+        ...(chapterLabel ? { chapterLabel } : {}),
         previousListScrollTop,
         onSwitch: switchTo,
         onAdd: addChapter,
@@ -810,17 +818,55 @@ function renderStudy(
     // A gamebook chapter is played (guess-the-move) by viewers and by the owner in
     // preview; the owner authors it in the review board otherwise.
     if (gamebookable && chapter.gamebook && (!study.isOwner || previewMode)) {
+      // The practice branch's rail card, for the same reasons: the study's name
+      // heads the rail instead of floating centred above three columns it is not
+      // aligned with, and the chapter name is not repeated (it is the highlighted
+      // row). No chat either: guess-the-move is a solo drill, and the chat was a
+      // 500px empty box that squeezed the chapter list to five rows.
       const aside = document.createElement('div');
       aside.className = 'study-aside';
-      aside.append(rail(statusSpan(study.isOwner)), buildStudyChat(study.id));
+      const railCard = document.createElement('section');
+      railCard.className = 'practice__panel practice__rail-card study-gamebook-rail';
+      const railHead = document.createElement('header');
+      railHead.className = 'practice__rail-head';
+      const railTitle = document.createElement('h1');
+      railTitle.className = 'practice__rail-title';
+      railTitle.textContent = localizedStudyName(study.name, study.i18n);
+      railHead.append(railTitle);
+      // A chapter that is a position from a real game is laid out from its tags
+      // (players, side to move, move and round) rather than its sentence of a
+      // name, which a one-line row cut off mid-opponent.
+      const chapterRail = rail(statusSpan(study.isOwner), false, (model) => {
+        const full = chapters.find((entry) => entry.id === model.id);
+        const parts = full ? gameRowParts(full) : null;
+        // Players only: event, round and date are read once, in the coach's
+        // game card, rather than on twenty rows.
+        return parts ? buildGameRowLabel(parts) : null;
+      });
+      // Like and copy close the card, above the errata line, rather than sitting
+      // above the list: the card is navigation first, and in a rail this narrow
+      // they wrapped the "N Chapters" line into three.
+      const actions = studyActions(study);
+      if (actions.length > 0) {
+        const foot = document.createElement('div');
+        foot.className = 'study-actions study-gamebook-rail__actions';
+        foot.append(...actions);
+        const errata = chapterRail.querySelector('.study-errata--inline');
+        if (errata) errata.before(foot);
+        else chapterRail.append(foot);
+      }
+      railCard.append(railHead, chapterRail);
+      aside.append(railCard);
+      const game = gameCoachContext(chapter);
       mountXiangqiGamebook(root, {
         tree: chapter.root,
         orientation: chapter.orientation === 'black' ? 'black' : 'red',
-        title: localizedStudyName(study.name, study.i18n),
-        summary: localizedStudyName(chapter.name, chapter.i18n),
+        // The player replaces the root's children, so it re-mounts the site nav
+        // the render above put there; without it this chapter had no top bar.
+        nav: buildNav(),
         aside,
+        ...(game ? { game } : {}),
       });
-      attachStudyTitleRow(root, study.id, studyVariant(), studyActions(study));
       return;
     }
 

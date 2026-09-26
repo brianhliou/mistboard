@@ -30,6 +30,7 @@ import { initLiveSound, playSound } from '../live-sound.js';
 import { soundForOwnXiangqiMove } from '../live-xiangqi-sound.js';
 import { createXiangqiInteractiveBoard } from '../xiangqi-board.js';
 import { renderXiangqiPiece } from '../xiangqi-pieces.js';
+import { fitGamebookToViewport } from './gamebook-fit.js';
 import {
   createPracticeSession,
   type PracticeEval,
@@ -473,6 +474,7 @@ export function mountXiangqiPractice(
   }
 
   root.replaceChildren(...chrome, wrap);
+  fitGamebookToViewport(wrap);
   render();
   const started = session.start().then(render);
 

@@ -63,7 +63,9 @@ const state = (host: HTMLElement): string | undefined =>
 
 test('the lesson opens waiting on the learner', () => {
   const { host } = mount();
-  expect(feedback(host)).toBe('Your move — find the best line.');
+  // The prompt says whose move it is; the feedback line waits for an attempt.
+  expect(host.querySelector('.gamebook__prompt-side')?.textContent).toBe('Red to play');
+  expect(feedback(host)).toBe('');
   expect(state(host)).toBe('play');
 });
 

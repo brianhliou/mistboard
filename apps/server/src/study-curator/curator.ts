@@ -143,7 +143,7 @@ async function draftFor(
   if (recipe.mode === 'model-games') {
     return buildModelGameChapter(ranked.game, ranked.verdicts, recipe, explorer);
   }
-  return buildDecisiveMomentChapter(ranked.game, ranked.verdicts, recipe);
+  return buildDecisiveMomentChapter(ranked.game, ranked.verdicts);
 }
 
 function chapterInput(desired: DesiredChapter): persistence.NewChapterInput {

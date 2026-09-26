@@ -74,6 +74,7 @@ export const ZH_HANS_REVIEW = {
   'practice.verdictGood': '不错，继续。',
   'study.chapterCount': '{count} 章',
   'study.chapterCountOne': '1 章',
+  'study.rowRound': '第 {n} 轮',
   'study.chapterPreviewMore': '另有 {count} 章',
   'study.chatRoom': '聊天室',
   'study.chatSignIn': '登录后可聊天',
