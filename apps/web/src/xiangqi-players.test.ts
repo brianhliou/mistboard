@@ -178,7 +178,10 @@ describe('player pages', () => {
     };
     expect(currentSeason([meng, listed])).toBe('2026');
     expect(matchesFilter(listed, { title: 'NM' })).toBe(true);
+    // His grade is listed only by an aggregator, so he carries no tag
+    // (players/player-title.ts) and reads as untitled.
     expect(matchesFilter(meng, { title: 'NM' })).toBe(false);
+    expect(matchesFilter(meng, { title: 'GM' })).toBe(false);
     expect(matchesFilter(meng, { title: 'none', group: 'men' })).toBe(true);
     expect(matchesFilter(meng, { group: 'women' })).toBe(false);
     expect(matchesFilter(meng, { season: '2026' })).toBe(true);
@@ -194,7 +197,8 @@ describe('player pages', () => {
       group: 'women',
       season: '2026',
     });
-    expect(indexFilterFromSearch('?title=IM&list=other&active=soon')).toEqual({});
+    expect(indexFilterFromSearch('?title=IM')).toEqual({ title: 'IM' });
+    expect(indexFilterFromSearch('?title=CM&list=other&active=soon')).toEqual({});
   });
 
   it('sorts a player with no games below every scored player', () => {

@@ -72,20 +72,6 @@ export function isBanned(sanction: Sanction | null): boolean {
   return sanction !== null && sanction.penalty !== 'Reprimand';
 }
 
-/** Whether the page may show the player's title tag. The January 2025 notice
- *  revoked the technical grade (特级大师, 象棋大师) in its six most serious
- *  tiers, and the September 2024 one revoked Wang Tianyi's; neither notice
- *  lists every revoked name in a form we hold, so any life ban or a ban of
- *  three years or more hides the tag. Hiding a title that stands is the safe
- *  error; showing one that was revoked is not. Shorter bans and reprimands
- *  did not carry a revocation. */
-export function titleMayShow(sanction: Sanction | null): boolean {
-  if (!sanction || sanction.penalty === 'Reprimand') return true;
-  if (sanction.penalty === 'Life') return false;
-  const years = Number(/^(\d+) year/.exec(sanction.penalty)?.[1] ?? 0);
-  return years < 3;
-}
-
 /** The ruling in one neutral clause: "banned for life", "banned for 3 years",
  *  "publicly reprimanded". Only what the ruling says. */
 export function sanctionClause(sanction: Sanction): string {

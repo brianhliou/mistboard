@@ -35,7 +35,12 @@ import {
   searchFromFilter,
 } from './players/player-stats.js';
 import { playerTitleFor } from './players/player-title.js';
-import { PLAYER_PROFILES, PLAYER_TITLE_LABEL, type PlayerTitle } from './players/profiles.js';
+import {
+  PLAYER_PROFILES,
+  PLAYER_TITLE_LABEL,
+  PLAYER_TITLES,
+  type PlayerTitle,
+} from './players/profiles.js';
 import { ratingHistoryFigure } from './players/rating-history-chart.js';
 import { MATCH_FIXING_ARTICLE_PATH, sanctionFor, sanctionSentence } from './players/sanctions.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
@@ -300,7 +305,9 @@ export function indexFilterFromSearch(search: string): IndexFilter {
   const params = new URLSearchParams(search);
   const filter: IndexFilter = {};
   const title = params.get('title');
-  if (title === 'GM' || title === 'NM' || title === 'none') filter.title = title;
+  if (title === 'none' || PLAYER_TITLES.includes(title as PlayerTitle)) {
+    filter.title = title as PlayerTitle | 'none';
+  }
   const group = params.get('list');
   if (group === 'men' || group === 'women') filter.group = group;
   const season = params.get('active');
@@ -317,7 +324,7 @@ export function indexSearchFromFilter(filter: IndexFilter): string {
   return text ? `?${text}` : '';
 }
 
-/** The title tag for a player: authored first, else the last official list. */
+/** The title tag for a player (precedence: players/player-title.ts). */
 export function playerTitle(player: Pick<PlayerRecord, 'slug' | 'name'>): PlayerTitle | null {
   return playerTitleFor(player);
 }
@@ -534,8 +541,7 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
       t('broadcast.playersFilterTitle'),
       [
         ['', t('broadcast.playersAnyTitle')],
-        ['GM', 'GM'],
-        ['NM', 'NM'],
+        ...PLAYER_TITLES.map((title): [string, string] => [title, title]),
         ['none', t('broadcast.playersUntitled')],
       ],
       state.filter.title ?? '',

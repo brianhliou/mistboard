@@ -26,7 +26,9 @@ export type PlayerRatingEntry = {
   listLabel: string;
 };
 
-export type PlayerTitleTag = 'GM' | 'NM';
+/** Mirror of PlayerTitle in apps/web/src/players/profiles.ts (the server cannot
+ *  import web code); a tag not listed here is dropped when the file is read. */
+export type PlayerTitleTag = 'GM' | 'IM' | 'FM' | 'NM';
 
 export type PlayerReference = {
   points: Readonly<Record<string, PlayerPointsEntry>>;
@@ -54,13 +56,22 @@ function record<T>(value: unknown): Record<string, T> {
     : {};
 }
 
+function titles(value: unknown): Record<string, PlayerTitleTag> {
+  return Object.fromEntries(
+    Object.entries(record<unknown>(value)).filter(
+      (entry): entry is [string, PlayerTitleTag] =>
+        typeof entry[1] === 'string' && Object.hasOwn(TITLE_WORDS, entry[1]),
+    ),
+  );
+}
+
 export function parsePlayerReference(json: string): PlayerReference {
   const raw = record<unknown>(JSON.parse(json));
   return {
     points: record<PlayerPointsEntry>(raw.points),
     ratings: record<PlayerRatingEntry>(raw.ratings),
-    titlesByName: record<PlayerTitleTag>(raw.titlesByName),
-    titlesBySlug: record<PlayerTitleTag>(raw.titlesBySlug),
+    titlesByName: titles(raw.titlesByName),
+    titlesBySlug: titles(raw.titlesBySlug),
     sanctions: record<string>(raw.sanctions),
   };
 }
@@ -80,7 +91,7 @@ export async function readPlayerReference(
 }
 
 /** The title tag the web page shows (players/player-title.ts): authored on the
- *  profile first, else the player's last official list. */
+ *  profile first, else the tag the web bake worked out for the name. */
 export function referenceTitle(
   reference: PlayerReference,
   player: { slug: string; name: string },
@@ -90,5 +101,7 @@ export function referenceTitle(
 
 export const TITLE_WORDS: Readonly<Record<PlayerTitleTag, string>> = {
   GM: 'Grandmaster',
+  IM: 'International master',
+  FM: 'Federation master',
   NM: 'National master',
 };

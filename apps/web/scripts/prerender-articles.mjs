@@ -481,7 +481,9 @@ try {
   const { CXA_POINTS, CXA_POINTS_LISTS } = await server.ssrLoadModule('/src/players/cxa-points.ts');
   const { CXA_RATINGS, CXA_LISTS } = await server.ssrLoadModule('/src/players/cxa-ratings.ts');
   const { PLAYER_PROFILES } = await server.ssrLoadModule('/src/players/profiles.ts');
-  const { playerTitleFor } = await server.ssrLoadModule('/src/players/player-title.ts');
+  const { playerTitleFor, titledNames } = await server.ssrLoadModule(
+    '/src/players/player-title.ts',
+  );
   const { CXA_NAME_ALIASES } = await server.ssrLoadModule('/src/players/cxa-coverage.ts');
   // Keyed by the archive's spelling where the CXA list prints a variant one
   // (players/cxa-coverage.ts), since the server looks players up by that.
@@ -511,8 +513,13 @@ try {
       of: list?.size ?? null,
       listLabel: list?.label ?? last.list,
     };
-    const title = playerTitleFor({ name });
-    if (title) playerTitlesByName[archiveName(name)] = title;
+  }
+  // Every name a title source knows (the CXA grades, the WXF list, the 等级分
+  // lists), each through the same precedence and sanctions rule the pages use.
+  for (const name of titledNames()) {
+    const archived = archiveName(name);
+    const title = playerTitleFor({ name: archived });
+    if (title) playerTitlesByName[archived] = title;
   }
   // The match-fixing rulings' one sentence per named player (players/sanctions.ts).
   const { SANCTIONS, sanctionSentence } = await server.ssrLoadModule('/src/players/sanctions.ts');
@@ -536,7 +543,7 @@ try {
     'utf-8',
   );
   console.log(
-    `players reference: ${Object.keys(playerPoints).length} on the points list, ${Object.keys(playerRatings).length} rated`,
+    `players reference: ${Object.keys(playerPoints).length} on the points list, ${Object.keys(playerRatings).length} rated, ${Object.keys(playerTitlesByName).length} titled`,
   );
 
   const published = articles.filter((a) => articleIsLive(a, builtAt));

@@ -8,16 +8,22 @@ export type PlayerProfile = {
   photo?: string;
   photoCredit?: string;
   born?: string;
-  /** Short title tag shown before the name, lichess-style: GM, NM. */
+  /** Short title tag shown before the name, lichess-style: GM, IM, FM, NM. */
   title?: PlayerTitle;
   /** The written profile, when one exists. */
   profileHref?: string;
 };
 
-export type PlayerTitle = 'GM' | 'NM';
+// GM is the CXA's 特级大师 or the WXF's International Grandmaster; NM the
+// CXA's 国家大师; IM and FM are WXF titles only (players/player-title.ts).
+export type PlayerTitle = 'GM' | 'IM' | 'FM' | 'NM';
+
+export const PLAYER_TITLES: readonly PlayerTitle[] = ['GM', 'IM', 'FM', 'NM'];
 
 export const PLAYER_TITLE_LABEL: Readonly<Record<PlayerTitle, string>> = {
   GM: '特级大师 · Grandmaster',
+  IM: '国际大师 · International master (WXF)',
+  FM: '棋联大师 · Federation master (WXF)',
   NM: '象棋大师 · National master',
 };
 

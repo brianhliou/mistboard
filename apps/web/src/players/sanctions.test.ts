@@ -1,7 +1,8 @@
 import { describe, expect, it } from 'vitest';
 import { xiangqiMatchFixingArticle } from '../articles/content/xiangqi-match-fixing.js';
 import { playerTitleFor } from './player-title.js';
-import { isBanned, SANCTIONS, sanctionFor, sanctionSentence, titleMayShow } from './sanctions.js';
+import { isBanned, SANCTIONS, sanctionFor, sanctionSentence } from './sanctions.js';
+import { CXA_GRADES, CXA_REVOKED } from './titles.js';
 
 // The article's register: the table whose first header is "Player" and second
 // "Penalty". Each row is ["English 中文", penalty, title years].
@@ -53,14 +54,15 @@ describe('match-fixing sanctions', () => {
     expect(isBanned(sanctionFor('孟繁睿'))).toBe(false);
   });
 
-  it('hides a title the rulings may have revoked, and only then', () => {
-    expect(titleMayShow(sanctionFor('王天一'))).toBe(false);
-    expect(titleMayShow(sanctionFor('孙逸阳'))).toBe(false); // 7 years
-    expect(titleMayShow(sanctionFor('党斐'))).toBe(false); // 3 years
-    expect(titleMayShow(sanctionFor('徐崇峰'))).toBe(true); // 2 years
-    expect(titleMayShow(sanctionFor('孟辰'))).toBe(true); // 6 months
-    expect(titleMayShow(sanctionFor('曹岩磊'))).toBe(true); // reprimand
-    expect(titleMayShow(null)).toBe(true);
+  it('hides a tag only where a ruling revoked the grade', () => {
+    // Life ban, grade revoked.
     expect(playerTitleFor({ name: '王天一' })).toBe(null);
+    // Timed bans outside the revoking tiers keep the grade the CXA gave them.
+    expect(CXA_REVOKED['李少庚']).toBeUndefined();
+    expect(playerTitleFor({ name: '李少庚' })).toBe(CXA_GRADES['李少庚']?.grade ?? null);
+    // Every life ban is among the revoked.
+    for (const [name, s] of Object.entries(SANCTIONS)) {
+      if (s.penalty === 'Life') expect(CXA_REVOKED[name]).toBeDefined();
+    }
   });
 });
