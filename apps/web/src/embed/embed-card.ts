@@ -21,6 +21,7 @@ import '../review/move-list.css';
 import type { ReplayHandle } from '../replay.js';
 import { createMoveList, type MoveList, type MoveListEntry } from '../review/move-list.js';
 import { formatClock } from '../web-utils.js';
+import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import './embed.css';
 
 // Below this frame width the move list drops under the board (mirrors the
@@ -48,9 +49,6 @@ const CONTROLS_PX = 39;
 // In the stacked layout the sheet keeps at least this much height: the result
 // foot and three rows of moves (embed.css keeps the same number).
 const STACKED_MOVES_MIN_PX = 112;
-// The sheet's width cap beside the board: the review page's move column. Past
-// this the sheet is empty space, so the card stops growing and centres.
-const RAIL_MAX_WIDTH_PX = 380;
 // Gap between the card and the credit line (.embed-frame in embed.css).
 const FRAME_GAP_PX = 6;
 
@@ -134,6 +132,7 @@ const ICON = {
   prev: '<path d="M11 4.3v7.4L4.9 8z"/>',
   next: '<path d="M5 4.3v7.4L11.1 8z"/>',
   last: '<rect x="10.9" y="4" width="1.7" height="8" rx="0.7"/><path d="M3.4 4.3v7.4L9.5 8z"/>',
+  menu: '<circle cx="8" cy="3.2" r="1.5"/><circle cx="8" cy="8" r="1.5"/><circle cx="8" cy="12.8" r="1.5"/>',
 } as const;
 
 function control(icon: keyof typeof ICON, label: string, onClick: () => void): HTMLButtonElement {
@@ -298,14 +297,17 @@ export async function mountEmbedCard(
     const stacked = box.width < STACK_BELOW_PX;
     const boardWidth = fitBoardWidth(box, options.aspect, stacked, options.railWidthPx);
     boardCol.style.width = `${boardWidth}px`;
-    // Beside the board the card asks for the board plus the capped sheet and
-    // the stylesheet's max-width: 100% clamps it to the frame (the sheet then
-    // gets what is left, never less than the floor the board arithmetic kept
-    // for it). Stacked, the sheet is under the board and the card takes the
-    // frame. An explicit width, not a max: with auto margins doing the
-    // centring the card is content-sized, and the sheet has no content width
-    // of its own (its scroller is out of flow).
-    card.style.width = stacked ? '' : `${boardWidth + RAIL_MAX_WIDTH_PX + CARD_BORDER_PX}px`;
+    // Beside the board the card is the board plus the sheet at its floor, the
+    // article replay's proportions, and centres in whatever the frame has
+    // left. It used to ask for a 380px sheet, so a frame bounded by height
+    // (the xiangqi rules page at 702x600) handed its spare width to the move
+    // list and spread two columns of moves across half the card (Brian,
+    // 2026-09-25: "too much space on the right column"). Stacked, the sheet is
+    // under the board and the card takes the frame. An explicit width, not a
+    // max: with auto margins doing the centring the card is content-sized, and
+    // the sheet has no content width of its own (its scroller is out of flow).
+    const railWidth = options.railWidthPx ?? RAIL_WIDTH_PX;
+    card.style.width = stacked ? '' : `${boardWidth + railWidth + CARD_BORDER_PX}px`;
   };
   fitBoard();
   if (typeof ResizeObserver !== 'undefined') {
@@ -319,17 +321,67 @@ export async function mountEmbedCard(
   moveList = createMoveList(entries, handle.moveNumbering?.() ?? {});
   if (handle.jumpToLine) moveList.bindLine(jumpLine);
   movesRoot.append(moveList.el);
+  // The board relabels itself when the notation changes; the sheet is built
+  // from entries read once, so rebuild it from fresh ones (a xiangqi study's
+  // entries are formatted in the current notation when read).
+  window.addEventListener(xiangqiNotationChangedEvent, () => {
+    const fresh = createMoveList(handle.moveEntries?.() ?? [], handle.moveNumbering?.() ?? {});
+    if (handle.jumpToLine) fresh.bindLine(jumpLine);
+    moveList?.el.replaceWith(fresh.el);
+    moveList = fresh;
+    moveList.update(currentPly, jump);
+    if (line) moveList.highlightLine(line);
+  });
 
+  // The article replay's bar (xiangqi-replay.ts), so a framed board and a board
+  // in a Mistboard post step the same way: back, a menu, forward. The two jumps
+  // are rare next to stepping and live in the menu; the ply count is read out
+  // to assistive tech but not drawn (Brian, 2026-09-25: three buttons, no
+  // count in the middle).
+  const menu = document.createElement('div');
+  menu.className = 'embed-card-menu';
+  menu.hidden = true;
+  menu.setAttribute('role', 'menu');
+  const menuButton = control('menu', 'More', () => {
+    const open = menu.hidden;
+    menu.hidden = !open;
+    menuButton.setAttribute('aria-expanded', String(open));
+    if (open) menu.querySelector<HTMLElement>('.embed-card-menu-item')?.focus();
+  });
+  menuButton.setAttribute('aria-haspopup', 'true');
+  menuButton.setAttribute('aria-expanded', 'false');
+  const closeMenu = () => {
+    menu.hidden = true;
+    menuButton.setAttribute('aria-expanded', 'false');
+  };
+  const menuItem = (label: string, onSelect: () => void) => {
+    const item = document.createElement('button');
+    item.type = 'button';
+    item.className = 'embed-card-menu-item';
+    item.setAttribute('role', 'menuitem');
+    item.textContent = label;
+    item.addEventListener('click', () => {
+      closeMenu();
+      onSelect();
+    });
+    menu.append(item);
+  };
+  menuItem('Back to the start', () => jump(0));
+  menuItem('Jump to the end', () => jump(maxPly));
+  document.addEventListener('click', (event) => {
+    if (!menu.hidden && !controls.contains(event.target as Node)) closeMenu();
+  });
+  status.setAttribute('aria-live', 'polite');
   controls.append(
-    control('first', 'First move', () => jump(0)),
     control('prev', 'Previous move', () => {
       if (!stepLine(-1)) jump(currentPly - 1);
     }),
-    status,
+    menuButton,
     control('next', 'Next move', () => {
       if (!stepLine(1)) jump(currentPly + 1);
     }),
-    control('last', 'Last move', () => jump(maxPly)),
+    status,
+    menu,
   );
   document.addEventListener('keydown', (event) => {
     if (event.key === 'ArrowLeft') {
@@ -338,6 +390,7 @@ export async function mountEmbedCard(
       if (!stepLine(1)) jump(currentPly + 1);
     } else if (event.key === 'Home') jump(0);
     else if (event.key === 'End') jump(maxPly);
+    else if (event.key === 'Escape' && !menu.hidden) closeMenu();
     else return;
     event.preventDefault();
   });

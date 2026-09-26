@@ -382,7 +382,10 @@ describe('mountEmbedStudy', () => {
     );
     expect(moves).toHaveLength(40);
     expect(moves[11]).toBe('c10-e8');
-    root.querySelector<HTMLButtonElement>('[aria-label="Last move"]')?.click();
+    const toEnd = [...root.querySelectorAll<HTMLButtonElement>('.embed-card-menu-item')].find(
+      (item) => item.textContent === 'Jump to the end',
+    );
+    toEnd?.click();
     expect(root.querySelector('.embed-card-status')?.textContent).toBe('40 / 40');
     expect(root.querySelector('.embed-card-result')?.textContent).toBe('Black wins');
     root.remove();
@@ -442,7 +445,10 @@ describe('mountEmbedStudy', () => {
       el.textContent?.trim(),
     );
     expect(moves).toEqual(['a1', 'd4', 'b2']);
-    root.querySelector<HTMLButtonElement>('[aria-label="Last move"]')?.click();
+    const toEnd = [...root.querySelectorAll<HTMLButtonElement>('.embed-card-menu-item')].find(
+      (item) => item.textContent === 'Jump to the end',
+    );
+    toEnd?.click();
     expect(faceDown()).toBe(13);
     // The first flip bound the first seat's ink: the discs and the result
     // name the colour on the board, not the seat.

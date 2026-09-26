@@ -169,7 +169,7 @@ export const banqiStatisticsArticle: Article = {
           kind: 'embed',
           path: '/embed/study/FsA5sowX/F8fezAhm',
           title: 'Banqi: an engine game under the competition rules',
-          aspect: [702, 440],
+          aspect: [702, 446],
         } as ArticleBlock,
         {
           kind: 'paragraph',

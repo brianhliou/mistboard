@@ -204,7 +204,7 @@ export const banqiArticle: Article = {
           title: 'Banqi: an engine game under the competition rules',
           // Width-bound at the article column: a 2:1 board beside the 226px
           // sheet, plus the seat rows, controls and credit line.
-          aspect: [702, 440],
+          aspect: [702, 446],
         } as ArticleBlock,
       ],
     },

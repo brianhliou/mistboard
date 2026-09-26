@@ -158,9 +158,11 @@ export const duckXiangqiArticle: Article = {
           path: '/embed/study/uMbk76wd/RPLi9LsH',
           title: 'Duck Xiangqi: an engine game, Black captures the general on move 60',
           // Shorter than atomic's 700: duck notation (b3-b5@d9) widens the
-          // move sheet, so the board gets less of the 702px column and the
-          // card ends near 620px. Measured against the live embed 2026-09-25.
-          aspect: [702, 620],
+          // move sheet, so the board gets less of the 702px column (408px).
+          // Its full height (435px) plus the card's 202px of seat rows,
+          // controls, header and credit is 637; measured 2026-09-25, and 620
+          // left the board height-bound.
+          aspect: [702, 640],
         } as ArticleBlock,
         {
           kind: 'paragraph',

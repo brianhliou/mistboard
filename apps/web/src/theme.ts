@@ -150,8 +150,31 @@ export function initializeThemeSettings(): void {
     document.documentElement.dataset.boardFamily = defaultBoardFamily;
   }
   watchForSystemThemeChanges();
+  watchForXiangqiAppearanceInOtherDocuments();
   mountThemeControls();
   watchForNavChanges();
+}
+
+// The gear writes storage and fires its events in ITS window only. Another
+// document on the same origin hears the write through `storage`: a second tab,
+// and, the case this is for, a /embed/study frame inside a Mistboard rules page,
+// which read the settings once at load and kept them while the reader changed
+// the gear around it (Brian, 2026-09-25: the rules-page board "doesn't respond
+// to the user settings"; the post's in-page board did). On a third-party site
+// the frame's storage is partitioned from mistboard.com's, so this never fires
+// there, and an embed's ?notation= pin still wins because the notation reader
+// checks the pin first.
+function watchForXiangqiAppearanceInOtherDocuments(): void {
+  window.addEventListener('storage', (event) => {
+    const key = event.key;
+    if (key !== null && !key.startsWith('mistboard.xiangqi')) return;
+    applyXiangqiBoardLayout(readStoredXiangqiBoardLayout());
+    applyXiangqiBoardTheme(readStoredXiangqiBoardTheme());
+    applyXiangqiPieceSet(readStoredXiangqiPieceSet());
+    syncThemeControls();
+    dispatchXiangqiAppearanceChanged();
+    window.dispatchEvent(new Event(xiangqiNotationChangedEvent));
+  });
 }
 
 // Set by the active route so the settings panel shows the right board/piece
