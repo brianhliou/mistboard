@@ -151,15 +151,52 @@ export function buildNav(locale: Locale = currentLocale()): HTMLElement {
   nav.append(brand, toggle, collapse);
   placeNavAccount(nav);
   ensureNavAccountPlacement();
+  observeNavBrandFit(nav);
   return nav;
 }
 
-// Tablets (601 to 1100px) get the phone bar (hamburger, drawer) but have room
+// The wordmark stays on the bar whenever it fits and drops to the logo alone
+// when it does not. A width breakpoint would have to be sized for the widest
+// bar (admin link plus a long handle), which takes the wordmark from everyone
+// else ~130px early. Re-checked when the bar resizes or the account slot fills
+// in; the observer fires before paint, so there is no flash.
+export function fitNavBrand(nav: HTMLElement): void {
+  const brand = nav.querySelector<HTMLElement>('.site-nav-brand');
+  const links = nav.querySelector<HTMLElement>('.site-nav-links');
+  const utilities = nav.querySelector<HTMLElement>('.site-nav-utilities');
+  if (!brand || !links || !utilities) return;
+  nav.removeAttribute('data-brand');
+  // Under the drawer breakpoint the links sit in the closed drawer and the
+  // drawer CSS shows the logo alone anyway.
+  if (links.offsetParent === null || nav.clientWidth === 0) return;
+  const style = getComputedStyle(nav);
+  const gap = Number.parseFloat(style.columnGap) || 0;
+  const needed =
+    (Number.parseFloat(style.paddingLeft) || 0) +
+    (Number.parseFloat(style.paddingRight) || 0) +
+    brand.offsetWidth +
+    links.scrollWidth +
+    utilities.scrollWidth +
+    2 * gap;
+  if (needed > nav.clientWidth) nav.dataset.brand = 'mark';
+}
+
+function observeNavBrandFit(nav: HTMLElement): void {
+  if (typeof ResizeObserver === 'undefined') return;
+  const links = nav.querySelector<HTMLElement>('.site-nav-links');
+  const utilities = nav.querySelector<HTMLElement>('.site-nav-utilities');
+  const observer = new ResizeObserver(() => fitNavBrand(nav));
+  // Hiding the wordmark resizes only the brand, never these three, so the
+  // callback cannot feed itself.
+  for (const el of [nav, links, utilities]) if (el) observer.observe(el);
+}
+
+// Tablets (601 to 939px) get the phone bar (hamburger, drawer) but have room
 // for the account slot beside the toggle; phones do not, and desktop shows the
 // utilities inline anyway. CSS cannot reparent, so the slot's container moves
 // on the media query. account-nav.ts finds the slot through the nav, not the
 // utilities, so it mounts wherever the container currently sits.
-export const navTabletMediaQuery = '(min-width: 601px) and (max-width: 1100px)';
+export const navTabletMediaQuery = '(min-width: 601px) and (max-width: 939px)';
 
 function isTabletNav(): boolean {
   return typeof window.matchMedia === 'function' && window.matchMedia(navTabletMediaQuery).matches;

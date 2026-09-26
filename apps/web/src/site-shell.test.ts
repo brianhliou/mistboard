@@ -1,5 +1,11 @@
 import { afterEach, describe, expect, it } from 'vitest';
-import { buildHomeFooter, buildNav, navTabletMediaQuery, placeNavAccount } from './site-shell.js';
+import {
+  buildHomeFooter,
+  buildNav,
+  fitNavBrand,
+  navTabletMediaQuery,
+  placeNavAccount,
+} from './site-shell.js';
 
 describe('site shell nav', () => {
   afterEach(() => {
@@ -271,5 +277,48 @@ describe('site shell nav account placement', () => {
     placeNavAccount(nav);
     expect(account?.parentElement?.classList.contains('site-nav-utilities')).toBe(true);
     expect(nav.querySelector('.site-nav-utilities')?.firstElementChild).toBe(account);
+  });
+});
+
+describe('site shell nav wordmark fit', () => {
+  afterEach(() => {
+    document.body.innerHTML = '';
+  });
+
+  // jsdom has no layout, so pin the widths fitNavBrand reads: a 223px brand
+  // with its wordmark, 524px of links, 255px of utilities, no padding or gap.
+  function sizedNav(navWidth: number, linksShown = true): HTMLElement {
+    const nav = buildNav();
+    document.body.append(nav);
+    const pin = (el: Element | null, prop: string, value: unknown) =>
+      Object.defineProperty(el, prop, { configurable: true, get: () => value });
+    pin(nav, 'clientWidth', navWidth);
+    pin(nav.querySelector('.site-nav-brand'), 'offsetWidth', 223);
+    const links = nav.querySelector('.site-nav-links');
+    pin(links, 'scrollWidth', 524);
+    pin(links, 'offsetParent', linksShown ? nav : null);
+    pin(nav.querySelector('.site-nav-utilities'), 'scrollWidth', 255);
+    return nav;
+  }
+
+  it('keeps the wordmark while the whole bar fits', () => {
+    const nav = sizedNav(1002);
+    fitNavBrand(nav);
+    expect(nav.dataset.brand).toBeUndefined();
+  });
+
+  it('drops to the logo alone when the wordmark would not fit, and back', () => {
+    const nav = sizedNav(1001);
+    fitNavBrand(nav);
+    expect(nav.dataset.brand).toBe('mark');
+    Object.defineProperty(nav, 'clientWidth', { configurable: true, get: () => 1100 });
+    fitNavBrand(nav);
+    expect(nav.dataset.brand).toBeUndefined();
+  });
+
+  it('leaves the drawer bar alone (links folded away)', () => {
+    const nav = sizedNav(400, false);
+    fitNavBrand(nav);
+    expect(nav.dataset.brand).toBeUndefined();
   });
 });
