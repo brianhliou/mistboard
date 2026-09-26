@@ -66,7 +66,7 @@ describe('article public listing gates', () => {
       // Published with the variant on 2026-09-11, the same date as the
       // puzzles post; ties break on HOME_ARTICLE_SLUGS position, and this
       // index is ordered by date alone, so the newest pair leads.
-      '/blog/duck-xiangqi-build',
+      '/blog/duck-xiangqi-strategy',
       '/blog/puzzles-with-more-than-one-solution',
       // The jieqi pair shipped as one batch on 2026-09-03, because each of the
       // five jieqi pages links another in prose and a published page cannot link
@@ -241,7 +241,7 @@ describe('article public listing gates', () => {
       '/blog/atomic-xiangqi-build',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
-      '/blog/duck-xiangqi-build',
+      '/blog/duck-xiangqi-strategy',
       '/blog/puzzles-with-more-than-one-solution',
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',

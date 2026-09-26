@@ -7,13 +7,12 @@ import {
 import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-export const duckXiangqiBuildArticle: Article = {
-  slug: 'duck-xiangqi-build',
+export const duckXiangqiStrategyArticle: Article = {
+  slug: 'duck-xiangqi-strategy',
   kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
-  title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',
-  seoTitle: 'Duck Xiangqi: How Not to Lose Your First Game',
+  title: 'Duck Xiangqi Strategy for Your First Game',
   summary:
     'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.',
   showSummaryOnPage: false,
@@ -25,11 +24,11 @@ export const duckXiangqiBuildArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'Duck Xiangqi is live today. It is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.',
+      text: 'Duck Xiangqi is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.',
     },
     {
       kind: 'paragraph',
-      text: 'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is usually the one that arms your opponent’s cannon. These come from the seven engine games behind this launch, and from measuring the engine itself.',
+      text: 'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the seven engine games published with the variant and on measurements of the engine itself.',
     },
   ],
   sections: [

@@ -365,6 +365,8 @@ const RENAMED_ARTICLE_SLUGS: Record<string, string> = {
   'dark-chess': 'fog-chess',
   'dark-xiangqi': 'fog-xiangqi',
   'reveal-xiangqi': 'jieqi',
+  // Retitled from the launch post to a strategy guide on 2026-09-25.
+  'duck-xiangqi-build': 'duck-xiangqi-strategy',
 };
 
 export function injectPageMeta(html: string, meta: PageMeta): string {

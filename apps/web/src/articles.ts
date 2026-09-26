@@ -362,7 +362,7 @@ export const HOME_ARTICLE_SLUGS = [
   // promotes it. Deliberate, to put a new variant in front of people while it
   // is new; the puzzles post keeps second. Its card art is the article's own
   // thumbnail (the duck), because the slug carries no variant marker.
-  'duck-xiangqi-build',
+  'duck-xiangqi-strategy',
   // The anti-xiangqi and horde-xiangqi measurements, dated two and four days
   // after the duck launch. Write-ups with no play page, so they sit behind
   // the launch post rather than displacing it; the date alone would put them

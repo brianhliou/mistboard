@@ -91,13 +91,13 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   'jungle-flip',
   'fortress-xiangqi',
   // Machine-drafted 2026-09-11, not native-reviewed, locked the day the English
-  // copy froze. The rules page only so far: duck-xiangqi-build was published
+  // copy froze. The rules page only so far: duck-xiangqi-strategy was published
   // after this list was written and is not translated yet, so it is English
   // until its own copy is frozen.
   'duck-xiangqi',
   // Machine-drafted 2026-09-13, not native-reviewed, locked the day the English
   // copy published (the anti article) and two days after (the duck build post).
-  'duck-xiangqi-build',
+  'duck-xiangqi-strategy',
   'anti-xiangqi',
   // Machine-drafted 2026-09-15, locked the day the English copy published.
   'horde-xiangqi',
@@ -2294,7 +2294,7 @@ const ZH_HANS: Record<string, string> = {
     '今日题目，来自留下的题库。如果你找到一个网站不接受的将死，那现在就是一个 bug，我想听你说说。',
   'Today’s xiangqi puzzle': '今日象棋题目',
   'How the miner works': '挖掘器是怎么工作的',
-  // anti-xiangqi and duck-xiangqi-build. Machine-drafted 2026-09-13, not
+  // anti-xiangqi and duck-xiangqi-strategy. Machine-drafted 2026-09-13, not
   // native-reviewed; the anti terms match the brianhliou.com post's
   // vocabulary (反棋, 反象棋, 证明凭证, 僵局, 死局).
   'Antichess on the Xiangqi Board Is a Draw': '象棋棋盘上的反棋是和棋',
@@ -2334,14 +2334,13 @@ const ZH_HANS: Record<string, string> = {
   '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：轮到红方',
   '2. Cxd10 Kxd10 3. Rxh1: BLACK TO MOVE': '2. Cxd10 Kxd10 3. Rxh1：轮到黑方',
   'PLY 35 OF THE 2M GAME: A DEAD BOARD': '2M 对局第 35 步：死局',
-  'Duck Xiangqi Is Live: How Not to Lose Your First Game': '鸭子象棋上线了：怎样不输掉你的第一盘',
-  'Duck Xiangqi: How Not to Lose Your First Game': '鸭子象棋：怎样不输掉你的第一盘',
+  'Duck Xiangqi Strategy for Your First Game': '鸭子象棋攻略：你的第一盘',
   'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.':
     '双方共用一只鸭子的象棋。规则一分钟就能读完。决定你第一盘胜负的东西要花更久，首先是这一条：你放下的鸭子是对手的炮架，永远不是你的。',
-  'Duck Xiangqi is live today. It is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
-    '鸭子象棋今天上线。它是双方共用一只鸭子的象棋：你走一着普通的象棋着法，然后把鸭子放到任意一个空点上。它挡住一切，不属于任何一方，也不能被吃掉。规则大约一分钟就能读完。',
-  'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is usually the one that arms your opponent’s cannon. These come from the seven engine games behind this launch, and from measuring the engine itself.':
-    '下面写的不是规则，而是决定你第一盘胜负的东西，先从人人都会中招的那一条说起：看起来最碍事的鸭子落点，往往正是给对手的炮装上炮架的那个点。这些心得来自这次上线背后的七盘引擎对局，以及对引擎本身的测量。',
+  'Duck Xiangqi is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
+    '鸭子象棋是双方共用一只鸭子的象棋：你走一着普通的象棋着法，然后把鸭子放到任意一个空点上。它挡住一切，不属于任何一方，也不能被吃掉。规则大约一分钟就能读完。',
+  'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the seven engine games published with the variant and on measurements of the engine itself.':
+    '规则在规则页上。这篇写的是决定你第一盘胜负的东西，先从人人都会中招的那一条说起：看起来最碍事的鸭子落点，往往正是给对手的炮装上炮架的那个点。这些心得来自随这个变体一起公布的七盘引擎对局，以及对引擎本身的测量。',
   'A turn is a move plus a duck placement': '一回合是一着棋加一次放鸭',
   'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.':
     '每一回合你先走一个棋子，再放鸭子。走子就是象棋，你已经知道该怎么想。放鸭才是新的部分，第一盘棋往往就输在这里。',
@@ -4870,7 +4869,7 @@ const ZH_HANT: Record<string, string> = {
     '今日題目，來自留下的題庫。如果你找到一個網站不接受的將死，那現在就是一個 bug，我想聽你說說。',
   'Today’s xiangqi puzzle': '今日象棋題目',
   'How the miner works': '挖掘器是怎麼工作的',
-  // anti-xiangqi and duck-xiangqi-build, derived from the Simplified entries
+  // anti-xiangqi and duck-xiangqi-strategy, derived from the Simplified entries
   // by script conversion plus the Taiwan lexical forks (2026-09-13).
   'Antichess on the Xiangqi Board Is a Draw': '象棋棋盤上的反棋是和棋',
   'Anti Xiangqi: Antichess on the Xiangqi Board Is a Draw': '反象棋：象棋棋盤上的反棋是和棋',
@@ -4909,14 +4908,13 @@ const ZH_HANT: Record<string, string> = {
   '2. Rxh1 Rxb10: RED TO MOVE': '2. Rxh1 Rxb10：輪到紅方',
   '2. Cxd10 Kxd10 3. Rxh1: BLACK TO MOVE': '2. Cxd10 Kxd10 3. Rxh1：輪到黑方',
   'PLY 35 OF THE 2M GAME: A DEAD BOARD': '2M 對局第 35 步：死局',
-  'Duck Xiangqi Is Live: How Not to Lose Your First Game': '鴨子象棋上線了：怎樣不輸掉你的第一盤',
-  'Duck Xiangqi: How Not to Lose Your First Game': '鴨子象棋：怎樣不輸掉你的第一盤',
+  'Duck Xiangqi Strategy for Your First Game': '鴨子象棋攻略：你的第一盤',
   'Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.':
     '雙方共用一隻鴨子的象棋。規則一分鐘就能讀完。決定你第一盤勝負的東西要花更久，首先是這一條：你放下的鴨子是對手的炮架，永遠不是你的。',
-  'Duck Xiangqi is live today. It is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
-    '鴨子象棋今天上線。它是雙方共用一隻鴨子的象棋：你走一著普通的象棋著法，然後把鴨子放到任意一個空點上。它擋住一切，不屬於任何一方，也不能被吃掉。規則大約一分鐘就能讀完。',
-  'What follows is not the rules. It is what decides your first game, starting with the one that catches everybody: the most obstructive-looking square for the duck is usually the one that arms your opponent’s cannon. These come from the seven engine games behind this launch, and from measuring the engine itself.':
-    '下面寫的不是規則，而是決定你第一盤勝負的東西，先從人人都會中招的那一條說起：看起來最礙事的鴨子落點，往往正是給對手的炮裝上炮架的那個點。這些心得來自這次上線背後的七盤引擎對局，以及對引擎本身的測量。',
+  'Duck Xiangqi is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
+    '鴨子象棋是雙方共用一隻鴨子的象棋：你走一著普通的象棋著法，然後把鴨子放到任意一個空點上。它擋住一切，不屬於任何一方，也不能被吃掉。規則大約一分鐘就能讀完。',
+  'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the seven engine games published with the variant and on measurements of the engine itself.':
+    '規則在規則頁上。這篇寫的是決定你第一盤勝負的東西，先從人人都會中招的那一條說起：看起來最礙事的鴨子落點，往往正是給對手的炮裝上炮架的那個點。這些心得來自隨這個變體一起公布的七盤引擎對局，以及對引擎本身的測量。',
   'A turn is a move plus a duck placement': '一回合是一著棋加一次放鴨',
   'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.':
     '每一回合你先走一個棋子，再放鴨子。走子就是象棋，你已經知道該怎麼想。放鴨才是新的部分，第一盤棋往往就輸在這裡。',

@@ -28,7 +28,7 @@ import { antiXiangqiArticle } from './articles/content/anti-xiangqi.js';
 import { hordeXiangqiArticle } from './articles/content/horde-xiangqi.js';
 import { atomicXiangqiArticle } from './articles/content/atomic-xiangqi.js';
 import { atomicXiangqiBuildArticle } from './articles/content/atomic-xiangqi-build.js';
-import { duckXiangqiBuildArticle } from './articles/content/duck-xiangqi-build.js';
+import { duckXiangqiStrategyArticle } from './articles/content/duck-xiangqi-strategy.js';
 import { duckXiangqiArticle } from './articles/content/duck-xiangqi.js';
 import { fortressXiangqiArticle } from './articles/content/fortress-xiangqi.js';
 import { jieqiArticle } from './articles/content/jieqi.js';
@@ -70,7 +70,7 @@ export const articles: Article[] = [
   darkXiangqiArticle,
   fortressXiangqiArticle,
   duckXiangqiArticle,
-  duckXiangqiBuildArticle,
+  duckXiangqiStrategyArticle,
   atomicXiangqiArticle,
   atomicXiangqiBuildArticle,
   antiXiangqiArticle,
@@ -97,6 +97,7 @@ const ARTICLE_SLUG_ALIASES: Record<string, string> = {
   'dark-chess': 'fog-chess',
   'dark-xiangqi': 'fog-xiangqi',
   'reveal-xiangqi': 'jieqi',
+  'duck-xiangqi-build': 'duck-xiangqi-strategy',
 };
 
 export function findArticle(slug: string): Article | undefined {

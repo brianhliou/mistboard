@@ -191,8 +191,8 @@ export const ARTICLE_META: Record<
     description:
       'We put Horde on the xiangqi board and measured it before building anything: twelve start arrays, two soldier rules, each played four times by an engine against itself. With xiangqi’s own soldier the army wins every game by one trick; give the soldier the crossed move from the start and the game becomes a siege that draws three times in four. We are publishing the measurement, not the variant.',
   },
-  'duck-xiangqi-build': {
-    title: 'Duck Xiangqi Is Live: How Not to Lose Your First Game',
+  'duck-xiangqi-strategy': {
+    title: 'Duck Xiangqi Strategy for Your First Game',
     kind: 'article',
     description:
       'Chinese chess with one duck both players share. The screen you build is your opponent\u2019s, nothing warns you before your general is taken, and the bot places the duck at random.',
