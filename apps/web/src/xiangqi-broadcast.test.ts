@@ -442,12 +442,14 @@ describe('mountXiangqiBroadcastRound (mini-board grid)', () => {
     expect(root.querySelector('.xqb-event-side > .xqb-side-rail + .xqb-event-chat')).not.toBeNull();
     expect(root.querySelector('.xqb-event-header .xqb-link-primary')).toBeNull();
 
-    // Player names: English primary, the Chinese in the tooltip, and the
-    // official list's title before the name in its own tag (lichess's GM).
+    // Player names: English primary, the Chinese in the tooltip. Both are
+    // banned for life in the match-fixing rulings, which may have revoked the
+    // grade, so neither carries a title tag (players/sanctions.ts; the tag
+    // itself is tested in players/ and xiangqi-players.test.ts).
     const names = [...root.querySelectorAll('.xqb-board-card .xqb-card-seat-name')];
-    expect(names.map((node) => node.textContent)).toContain('GM Wang Tianyi');
-    expect(names.map((node) => node.textContent)).toContain('GM Zheng Weitong');
-    expect(names[0]?.querySelector('.xqb-player-title')?.textContent).toBe('GM');
+    expect(names.map((node) => node.textContent)).toContain('Wang Tianyi');
+    expect(names.map((node) => node.textContent)).toContain('Zheng Weitong');
+    expect(names[0]?.querySelector('.xqb-player-title')).toBeNull();
     const titles = names.map((node) => node.getAttribute('title') ?? '');
     expect(titles).toContain('王天一');
     expect(titles).toContain('郑惟桐');
@@ -778,7 +780,8 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(featured?.querySelector('.xqb-tour-card-name')?.textContent).toBe('Live Cup');
     expect(featured?.querySelector('.xqb-name-zh')?.textContent).toBe('直播杯');
     // Who is playing: ranked by the CXA lists; an unranked name stays off.
-    expect(featured?.querySelector('.xqb-tour-players')?.textContent).toBe('GM Wang Tianyi');
+    // (no title tag: a life ban hides it, players/sanctions.ts)
+    expect(featured?.querySelector('.xqb-tour-players')?.textContent).toBe('Wang Tianyi');
 
     const headings = [...root.querySelectorAll('.xqb-section h2')].map((node) => node.textContent);
     expect(headings).toEqual(['Past']);
@@ -869,7 +872,7 @@ describe('mountXiangqiBroadcastBoard (side rail + round switcher)', () => {
     // eval pill (empty until the game has an evaluation) and a live marker.
     expect(
       [...(current?.querySelectorAll('.xqb-card-seat-name') ?? [])].map((node) => node.textContent),
-    ).toEqual(['GM Wang Tianyi', 'GM Zheng Weitong']);
+    ).toEqual(['Wang Tianyi', 'Zheng Weitong']);
     expect(current?.querySelector('.xqb-rail-gauge.xqb-rail-gauge-empty')).not.toBeNull();
     // Live: the side to move marked in the score column, as on the cards.
     expect(current?.classList.contains('xqb-rail-row-live')).toBe(true);

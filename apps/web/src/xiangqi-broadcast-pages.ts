@@ -8,6 +8,7 @@ import './xiangqi-broadcast.css';
 import { t } from './i18n/catalog.js';
 import { CXA_POINTS } from './players/cxa-points.js';
 import { CXA_RATINGS } from './players/cxa-ratings.js';
+import { playerTitleFor } from './players/player-title.js';
 import { buildNav } from './site-shell.js';
 import { formatEventDateRange } from './xiangqi-broadcast-time.js';
 
@@ -61,8 +62,8 @@ export type BroadcastPlayerRef = { name: string; nameEn?: string; title?: string
  * The strongest few players of an event, for the card's "who is playing" line
  * (lichess lists the top-rated). Ranked by the latest CXA points list the
  * player is on, then by the last CXA rating, both from the data the player
- * pages carry; a player on neither list does not make the line. A 特 or 大
- * title on the rating list reads GM or NM, as on the player pages.
+ * pages carry; a player on neither list does not make the line. The title
+ * tag is the player pages' own (playerTitleFor).
  */
 export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], count = 3): string[] {
   const ranked = players
@@ -71,7 +72,7 @@ export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], coun
       const pointsRank = points?.[points.length - 1]?.rank;
       const ratings = CXA_RATINGS[player.name];
       const last = ratings?.[ratings.length - 1];
-      return { player, pointsRank, rating: last?.rating, title: last?.title ?? null };
+      return { player, pointsRank, rating: last?.rating };
     })
     .filter((entry) => entry.pointsRank !== undefined || entry.rating !== undefined)
     .sort(
@@ -79,9 +80,11 @@ export function topBroadcastPlayers(players: readonly BroadcastPlayerRef[], coun
         (a.pointsRank ?? Number.POSITIVE_INFINITY) - (b.pointsRank ?? Number.POSITIVE_INFINITY) ||
         (b.rating ?? 0) - (a.rating ?? 0),
     );
-  return ranked.slice(0, count).map(({ player, title }) => {
+  return ranked.slice(0, count).map(({ player }) => {
     const name = player.nameEn?.trim() || player.name;
-    const shown = player.title ?? (title === '特' ? 'GM' : title === '大' ? 'NM' : null);
+    // The same tag the player pages show, so a grade the match-fixing
+    // rulings may have revoked is hidden here too (players/sanctions.ts).
+    const shown = player.title ?? playerTitleFor({ name: player.name, nameEn: player.nameEn });
     return shown ? `${shown} ${name}` : name;
   });
 }
