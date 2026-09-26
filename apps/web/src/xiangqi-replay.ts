@@ -563,7 +563,11 @@ export function mountXiangqiReplay(
     // normally inside it.
     const moveInner = document.createElement('div');
     moveInner.className = 'xq-replay-move-inner';
-    moveInner.append(moveList);
+    // The result is a fixed foot under the scrolling list, the height of the
+    // control bar beside it, so the two rules line up across the card: the
+    // embed card's shape (embed-card.ts). It used to be the last item in the
+    // scroller (9dff04c7); Brian, 2026-09-25, wanted it pinned and level.
+    moveInner.append(moveList, resultFoot);
     moveCol.append(moveInner);
     const grid = document.createElement('div');
     grid.className = 'xq-replay-grid';
@@ -838,9 +842,6 @@ export function mountXiangqiReplay(
       }
       moveList.appendChild(branch);
     }
-    // Last item in the scroller, not a pinned footer: the result belongs at the
-    // end of the game, and reaching it should mean scrolling to the end.
-    moveList.appendChild(resultFoot);
   }
 
   /**
@@ -933,7 +934,7 @@ export function mountXiangqiReplay(
     }
     // The card always shows the result, the way a game page does; the running
     // narrative line is the plain stepper's job.
-    resultFoot.textContent = spec.resultText;
+    resultFoot.textContent = xiangqiResultLabel(spec.resultText, copy) || spec.resultText;
     renderMoveList();
     if (takeFocusAfterRender) {
       takeFocusAfterRender = false;

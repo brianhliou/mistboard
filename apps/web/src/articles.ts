@@ -1951,6 +1951,7 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   const table = document.createElement('table');
   table.className = 'article-table';
   if (block.keyColumn) table.classList.add('article-table-key-column');
+  if (block.wrap) table.classList.add('article-table-wrap');
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
   for (const h of block.headers) {

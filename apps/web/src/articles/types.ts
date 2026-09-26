@@ -323,6 +323,10 @@ export type TableBlock = {
   /** The first column names each row (a piece, a rule): set bold and kept on
    *  one line, so the prose columns do the wrapping. */
   keyColumn?: boolean;
+  /** Cells wrap instead of the table scrolling sideways. Tables default to
+   *  nowrap, which suits numbers; a table of names and events does not fit a
+   *  phone column on one line per cell. */
+  wrap?: boolean;
 };
 
 // A raster figure in an article body (product screenshots, photos). `src` is a

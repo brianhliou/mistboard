@@ -1685,10 +1685,18 @@
   list-style: none;
 }
 
+/* Pinned under the list and exactly the control bar's height (38px + its 1px
+   rule), so the rule above the result continues the one above the controls:
+   the embed card's .embed-card-result. */
 .xq-replay-annotated .xq-replay-result {
+  display: flex;
   flex: none;
-  margin-top: 6px;
-  padding: 8px 4px 2px;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  min-height: 39px;
+  margin: 0;
+  padding: 0 4px;
   border-top: 1px solid var(--site-border);
   font-size: 12px;
   font-weight: 600;
@@ -2059,6 +2067,10 @@
 
 .article-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.article-table-wrap {
+  white-space: normal;
 }
 
 .article-table-key-column td:first-child {
