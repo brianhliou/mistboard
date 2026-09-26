@@ -2968,10 +2968,10 @@ const ZH_HANS: Record<string, string> = {
   'Duck Xiangqi: an engine game, Black captures the general on move 60':
     '鸭子象棋：一盘引擎对局，黑方第 60 回合吃掉帅',
   // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
-  'Xiangqi: Sacrifice the Horse in 13, from a manual printed in 1632':
-    '象棋：弃马十三着，出自 1632 年刊印的棋谱',
-  'Chess: Carlsen vs Anand, World Championship 2014, Game 11':
-    '国际象棋：卡尔森对阿南德，2014 年世界冠军赛第 11 局',
+  'Sacrifice the Horse in 13': '弃马十三着',
+  'Classic manual, 1632': '古谱，1632 年',
+  'World Championship Game 11, Sochi 2014': '世界冠军赛第 11 局，2014 年索契',
+  'Anand resigns. Carlsen (White) wins the match.': '阿南德认输。卡尔森（白方）赢得这场比赛。',
   'Fortress Xiangqi: an engine game, Black mates on move 43':
     '堡垒象棋：一盘引擎对局，黑方第 43 回合将死',
   'Twenty engine games': '二十盘引擎对局',
@@ -5703,10 +5703,10 @@ const ZH_HANT: Record<string, string> = {
   'Duck Xiangqi: an engine game, Black captures the general on move 60':
     '鴨子象棋：一盤引擎對局，黑方第 60 回合吃掉帥',
   // Rules-page study embeds, second pass (2026-09-25): xiangqi, chess, fortress, jieqi.
-  'Xiangqi: Sacrifice the Horse in 13, from a manual printed in 1632':
-    '象棋：棄馬十三著，出自 1632 年刊印的棋譜',
-  'Chess: Carlsen vs Anand, World Championship 2014, Game 11':
-    '國際象棋：卡爾森對阿南德，2014 年世界冠軍賽第 11 局',
+  'Sacrifice the Horse in 13': '棄馬十三著',
+  'Classic manual, 1632': '古譜，1632 年',
+  'World Championship Game 11, Sochi 2014': '世界冠軍賽第 11 局，2014 年索契',
+  'Anand resigns. Carlsen (White) wins the match.': '阿南德認輸。卡爾森（白方）贏得這場比賽。',
   'Fortress Xiangqi: an engine game, Black mates on move 43':
     '堡壘象棋：一盤引擎對局，黑方第 43 回合將死',
   'Twenty engine games': '二十盤引擎對局',
