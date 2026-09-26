@@ -664,6 +664,84 @@ const ZH_HANS: Record<string, string> = {
 
   // -- Xiangqi primer (rules) --
   'Xiangqi Rules': '象棋规则',
+  // #410 rebuild (2026-09-25), machine-drafted, not native-reviewed.
+  'How big is a xiangqi board, and how many pieces are there?':
+    '象棋棋盘有多大？一共有多少枚棋子？',
+  'The board has 9 files and 10 ranks, 90 points in all, with pieces standing on the points rather than in squares. There are 32 pieces, 16 per side: one general, two advisors, two elephants, two horses, two chariots, two cannons and five soldiers.':
+    '棋盘有 9 条纵线、10 条横线，共 90 个交叉点，棋子落在交叉点上而不是格子里。全盘共 32 枚棋子，每方 16 枚：一个将（帅）、两个士、两个象、两匹马、两个车、两个炮和五个兵（卒）。',
+  'What do the Chinese characters on xiangqi pieces mean?': '象棋棋子上的汉字是什么意思？',
+  "Each piece is named by one character, and Red and Black mostly write the same word two ways. The generals differ: Red's 帥 means commander and Black's 將 means general. The advisors, 仕 and 士, are both read shì and mean a scholar-official. Red's elephant 相 means minister and Black's 象 means elephant, and the two are pronounced alike. The horse (傌 / 馬), chariot (俥 / 車) and cannon (炮 / 砲) are one word each, with one component added or swapped on one side: Red's cannon takes the fire radical and Black's the stone radical. The soldiers differ again: Red's 兵 is a soldier and Black's 卒 a foot soldier.":
+    '每枚棋子用一个字表示，红黑双方大多是同一个字的两种写法。将帅不同：红方的「帥」是统帅，黑方的「將」是将领。士是「仕」与「士」，都读 shì，意思是士人、官员。红方的「相」是宰相，黑方的「象」是大象，两者读音相同。马（傌 / 馬）、车（俥 / 車）、炮（炮 / 砲）各是同一个字，只是一方多了或换了一个偏旁：红方的炮是火字旁，黑方的砲是石字旁。兵卒也不同：红方的「兵」是士兵，黑方的「卒」是步卒。',
+  'What is the flying general rule?': '什么是「飞将」规则？',
+  'It is the rule that the two generals may never face each other on an open file with nothing between them (飞将 in Chinese). The name comes from the idea that a general facing the other could fly down the file and capture it. In practice any move that would leave the generals facing each other is illegal, so a general controls the file in front of it like a chariot.':
+    '就是双方将帅不能在中间无子的同一条纵线上对脸的规则（又称「白脸将」）。这个名字来自一种说法：将帅若对脸，一方可以沿纵线「飞」过去吃掉对方。实际上，任何让将帅对脸的走法都不合法，所以将帅就像车一样控制着它正前方的纵线。',
+  'Every piece captures the way it moves, except the cannon.': '除了炮，每种棋子都按走法吃子。',
+  'Any distance along a line; captures by jumping exactly one piece': '沿线走任意距离；隔一子打子',
+  Piece: '棋子',
+  'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.':
+    '写给国际象棋棋手的象棋规则：九宫与楚河汉界、炮架、将帅对脸、长将、记谱法，以及一盘可以逐步重演的名局。可在 Mistboard 上与皮卡鱼引擎或朋友对弈。',
+  'For chess players: six rule changes': '写给国际象棋棋手：六条不同的规则',
+  'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.':
+    '如果你会下国际象棋，象棋的大部分内容都会让你觉得熟悉。下面是最容易让国际象棋棋手吃亏的六条规则，后文会逐一详细说明。',
+  Rule: '规则',
+  'In chess': '国际象棋',
+  'In xiangqi': '象棋',
+  'No legal move': '无子可走',
+  'Stalemate, a draw': '逼和，算和棋',
+  'A loss for the player who cannot move': '无子可走的一方判负（困毙）',
+  'The two kings': '双方的王（将帅）',
+  'May stand on the same file': '可以站在同一条竖线上',
+  'The generals may never face each other on an open file': '将帅不能在中间无子的同一条纵线上对脸',
+  'Checking forever': '不停将军',
+  'A draw by repetition': '重复局面判和',
+  'A loss for the side giving every check': '每步都将军的一方判负（长将）',
+  Capturing: '吃子',
+  'Every piece captures the way it moves': '每种棋子都按走法吃子',
+  'The cannon captures only by jumping one piece': '炮只能隔一子打子',
+  'Knight and bishop': '马与象',
+  'The knight jumps and the bishop slides': '马可以跳子，象沿斜线滑行',
+  'The horse and elephant are stopped by a piece in their path':
+    '马和象会被路上的棋子挡住（蹩马腿、塞象眼）',
+  'Promotion and castling': '升变与王车易位',
+  'Both exist': '两者都有',
+  'Neither exists; a soldier never promotes': '两者都没有；兵卒永不升变',
+  'Setting up': '摆棋',
+  "Files are lettered a to i from Red's left and ranks numbered 1 to 10 from Red's side, so Red's back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side's cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.":
+    '从红方的左手边起，纵线依次标为 a 到 i；横线从红方一侧起标为 1 到 10，因此红方底线是第 1 横线。每一方底线从一边到另一边依次是：车、马、象、士、将、士、象、马、车。双方的炮都放在 b 线和 h 线、底线往前两格的位置（红方在第 3 横线），五个兵卒再往前一格，放在 a、c、e、g、i 五条线上。',
+  'For chess players: the chariot is exactly a rook, the horse is a knight that can be blocked, and the general is a king confined to its palace. The elephant only loosely resembles a bishop, and the advisor and the cannon have no chess counterpart.':
+    '对照国际象棋：车就是国际象棋的车，马是会被蹩腿的马，将帅是困在九宫里的王。象与国际象棋的象只是略有相似，而士和炮在国际象棋里没有对应的棋子。',
+  'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
+    '将帅不能对脸的规则也是一种进攻手段。将帅可以从一条无子的纵线远端协助将死对方，因为对方的将帅不能走到这条线上。',
+  Repetition: '重复局面',
+  'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
+    '你不能靠不停将军来挽救一盘输棋。如果同一局面出现三次，而其中一方在这一循环的每一步都在将军，这一方判负。如果双方每步都在将军，或者双方都没有将军，则判和。',
+  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. A game is also drawn after 60 consecutive plies without a capture.':
+    '正式比赛规则更进一步，还禁止长捉对方无根的棋子。Mistboard 不判定长捉，因此重复的捉子按和棋计。连续 60 个半回合没有吃子，也判和。',
+  'Mistakes chess players make': '国际象棋棋手常犯的错误',
+  'Habit from chess': '国际象棋的习惯',
+  'What happens in xiangqi': '在象棋里的结果',
+  'Moving a piece off the file between the two generals': '把挡在双方将帅之间那条纵线上的棋子走开',
+  'The move is illegal: it would leave the generals facing each other':
+    '这步棋不合法：会让将帅对脸',
+  'Heading for stalemate to save a lost game': '想靠逼和挽救输棋',
+  'Stalemate loses, so the escape is a defeat': '困毙判负，所以这条退路本身就是输棋',
+  'Checking again and again to force a draw': '反复将军以求和棋',
+  'Perpetual check loses for the side giving it': '长将的一方判负',
+  'Putting a piece between an enemy cannon and your general': '把棋子垫在对方的炮和己方将帅之间',
+  'The move is illegal: with exactly one piece between them, the cannon attacks your general':
+    '这步棋不合法：中间正好隔一子时，炮就在攻击你的将帅',
+  'Moving a horse or elephant without checking its path': '走马或象时不看路上有没有棋子',
+  "A piece on the horse's leg or the elephant's eye blocks the move":
+    '马腿或象眼上有棋子，这步就走不了',
+  'Reading xiangqi moves': '怎么读象棋棋谱',
+  "Xiangqi moves are written three ways. Mistboard shows algebraic notation by default outside Chinese: the central cannon is **Che3**, the cannon on the h file moving to e3. WXF notation numbers files from each player's right and writes the same move **C2.5**: cannon on file 2 moves sideways to file 5. Chinese notation reads the same way in characters: **炮二平五**, cannon two traverses to five. The move list setting switches between them.":
+    '象棋着法有三种写法。Mistboard 的中文界面默认使用中文记谱，其他语言默认使用代数记谱：中炮写作 **Che3**，意思是 h 线上的炮走到 e3。WXF 记谱从每一方自己的右手边给纵线编号，同一步写作 **C2.5**：第 2 线的炮平移到第 5 线。中文记谱用汉字表达同样的意思：**炮二平五**。着法列表的设置可以在三者之间切换。',
+  'A first opening': '第一个开局',
+  "The most common opening is the central cannon (中炮): Red moves a cannon to the centre file, aiming at Black's central soldier and the general behind it. Black's most common answer is the screen horses (屏风马), both horses developed toward the centre to guard that soldier. [Central Cannon vs Screen Horses](/study/4KXXmLaG) collects model games of the pairing.":
+    '最常见的开局是中炮：红方把一只炮平到中路，瞄准黑方的中卒和其后的将。黑方最常见的应法是屏风马，两匹马都向中路跳出，保护这枚中卒。[中炮对屏风马](/study/4KXXmLaG)收录了这一对局型的范局。',
+  'Is perpetual check allowed in xiangqi?': '象棋允许长将吗？',
+  'No. A player who repeats the position by giving check on every move loses. On Mistboard the side that checked on every move of a threefold repetition loses; if both sides checked throughout, or neither did, it is a draw.':
+    '不允许。靠每步将军来重复局面的一方判负。在 Mistboard 上，同一局面出现三次时，若其中一方在这一循环的每一步都在将军，这一方判负；若双方都一直在将军，或都没有将军，则判和。',
   // seoTitle: drives the localized <title>. Without an entry the zh pages would
   // regress to the English seoTitle, since seoTitle is outside articleProse.
   'Xiangqi Rules: How to Play Chinese Chess': '象棋规则：中国象棋怎么下',
@@ -694,8 +772,6 @@ const ZH_HANS: Record<string, string> = {
     '当敌方棋子攻击将帅时，即为**将军**。每一步都必须保证己方将帅安全，因此被将军的一方必须移动将帅、吃掉进攻棋子或挡住攻击。若没有合法应法，便是将死，被将军的一方告负。',
   'A player with no legal move also loses, even when the general is not in check. In Western chess that position is a stalemate draw; in xiangqi it is a win for the player who made the last move.':
     '即使将帅没有被将军，完全没有合法走法的一方也会告负。在西洋国际象棋中这是逼和；在象棋中则由走出上一着的一方获胜。',
-  'Tournament rules use detailed procedures for perpetual check, perpetual chase, and other repeated attacks. Mistboard uses two automatic draw rules: the same position three times, or 60 consecutive plies without a capture.':
-    '正式比赛规则对长将、长捉和其他重复进攻有详细判定程序。Mistboard 采用两条自动和棋规则：同一局面出现三次，或连续 60 个半回合没有吃子。',
   "To see the pieces work together, step through a famous trap from a manual printed in 1632. Red gives up a horse; when Black grabs it, Red's chariots and cannons pour through the gap and checkmate on the thirteenth move.":
     '想看棋子如何协同作战，可以逐步重演一则出自 1632 年棋谱的著名陷阱。红方故意送出一匹马，黑方一旦贪吃，红方的车炮便乘虚而入，在第十三着将死对手。',
 
@@ -958,8 +1034,6 @@ const ZH_HANS: Record<string, string> = {
     '迷雾国际象棋规则：战争迷雾下的国际象棋。每一方只能看到己方棋子可及的格子，没有将军提示，王被吃掉即负。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷雾国际象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 对 dark chess / Fog of War chess 的公开名称。Jens Bæk Nielsen 与 Torben Osted 于 1989 年发明了它。它属于隐式迷雾：没有裁判，也没有侦察动作。每一方的视野完全由己方棋子的合法走法范围推导而来。',
-  'The rules of xiangqi: palaces, the river, cannon screens, facing generals, and a famous game to play through. Now playable on Mistboard against the Pikafish engine or a friend.':
-    '象棋规则：九宫、楚河汉界、炮架、将帅照面，以及一盘可逐步回放的名局。现在可在 Mistboard 上与 Pikafish 引擎或好友对弈。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
     '象棋的现代形态在宋代（960 至 1279 年）的中国成型，炮也在这一时期加入棋盘。它的前身可以追溯到更早几个世纪，并与国际象棋、将棋、朝鲜象棋同源于更古老的印度游戏恰图兰卡。今天它是世界上参与人数最多的棋类游戏之一。',
   'Fog Xiangqi Rules': '迷雾象棋规则',
@@ -2481,7 +2555,6 @@ const ZH_HANS: Record<string, string> = {
     '八个引擎强度档位，或者用邀请链接约朋友。规则页面配有图解，讲得完整。',
   'Invite a friend': '邀请朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
-  'Piece (red / black)': '棋子（红 / 黑）',
   'General 帥 / 將': '将帅：帅 / 将',
   'Advisor 仕 / 士': '士：仕 / 士',
   'Elephant 相 / 象': '象：相 / 象',
@@ -2529,7 +2602,6 @@ const ZH_HANS: Record<string, string> = {
   Moves: '走法',
   Limits: '限制',
   'One point along a line': '沿线走一点',
-  'The same way': '与走法相同',
   'Never leaves the palace; may not face the other general on an open file':
     '不能离开九宫；两将不能在无子的同一直线上照面',
   'One point diagonally': '斜走一点',
@@ -2540,13 +2612,10 @@ const ZH_HANS: Record<string, string> = {
   'Blocked by a piece on the first point': '直走的第一点有子则蹩马腿',
   'Any distance along a line': '沿直线任意距离',
   'Cannot jump': '不能跳过棋子',
-  'Jumps exactly one piece and takes the enemy beyond it': '隔一子跳吃后面的敌子',
   'Needs a screen to capture': '吃子必须隔一子（炮架）',
   'One point forward; one point sideways too after crossing the river':
     '向前一点；过河后也可横走一点',
   'Never backward; never promotes': '永远不能后退；没有升变',
-  'The seven pieces. Every piece captures the way it moves, except the cannon.':
-    '七种棋子。除炮以外，每种棋子怎么走就怎么吃。',
   'How does each piece move in xiangqi?': '象棋每种棋子怎么走？',
   'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is occupied. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.':
     '将：在九宫内沿线走一点。士：在九宫内斜走一点。象：斜走两点（田字），不能过河。马：先直走一点再斜走一点（日字），第一点有子则蹩马腿。车：沿直线任意距离。炮：走法同车，吃子时隔一子跳吃。兵：向前一点，过河后也可横走一点。口诀：马走日、象走田、车走直路炮翻山、士走斜线护将边、小卒一去不回还。',
@@ -3445,6 +3514,84 @@ const ZH_HANT: Record<string, string> = {
 
   // -- Xiangqi primer (rules) --
   'Xiangqi Rules': '象棋規則',
+  // #410 rebuild (2026-09-25), machine-drafted, not native-reviewed.
+  'How big is a xiangqi board, and how many pieces are there?':
+    '象棋棋盤有多大？一共有多少枚棋子？',
+  'The board has 9 files and 10 ranks, 90 points in all, with pieces standing on the points rather than in squares. There are 32 pieces, 16 per side: one general, two advisors, two elephants, two horses, two chariots, two cannons and five soldiers.':
+    '棋盤有 9 條直線、10 條橫線，共 90 個交叉點，棋子落在交叉點上而不是格子裡。全盤共 32 枚棋子，每方 16 枚：一個帥（將）、兩個仕（士）、兩個相（象）、兩匹馬、兩個車、兩個炮和五個兵（卒）。',
+  'What do the Chinese characters on xiangqi pieces mean?': '象棋棋子上的漢字是什麼意思？',
+  "Each piece is named by one character, and Red and Black mostly write the same word two ways. The generals differ: Red's 帥 means commander and Black's 將 means general. The advisors, 仕 and 士, are both read shì and mean a scholar-official. Red's elephant 相 means minister and Black's 象 means elephant, and the two are pronounced alike. The horse (傌 / 馬), chariot (俥 / 車) and cannon (炮 / 砲) are one word each, with one component added or swapped on one side: Red's cannon takes the fire radical and Black's the stone radical. The soldiers differ again: Red's 兵 is a soldier and Black's 卒 a foot soldier.":
+    '每枚棋子用一個字表示，紅黑雙方大多是同一個字的兩種寫法。將帥不同：紅方的「帥」是統帥，黑方的「將」是將領。仕士是「仕」與「士」，都讀 shì，意思是士人、官員。紅方的「相」是宰相，黑方的「象」是大象，兩者讀音相同。馬（傌 / 馬）、車（俥 / 車）、炮（炮 / 砲）各是同一個字，只是一方多了或換了一個偏旁：紅方的炮是火字旁，黑方的砲是石字旁。兵卒也不同：紅方的「兵」是士兵，黑方的「卒」是步卒。',
+  'What is the flying general rule?': '什麼是「飛將」規則？',
+  'It is the rule that the two generals may never face each other on an open file with nothing between them (飞将 in Chinese). The name comes from the idea that a general facing the other could fly down the file and capture it. In practice any move that would leave the generals facing each other is illegal, so a general controls the file in front of it like a chariot.':
+    '就是雙方將帥不能在中間無子的同一條直線上對臉的規則（又稱「白臉將」）。這個名字來自一種說法：將帥若對臉，一方可以沿直線「飛」過去吃掉對方。實際上，任何讓將帥對臉的走法都不合法，所以將帥就像車一樣控制著它正前方的直線。',
+  'Every piece captures the way it moves, except the cannon.': '除了炮，每種棋子都按走法吃子。',
+  'Any distance along a line; captures by jumping exactly one piece': '沿線走任意距離；隔一子打子',
+  Piece: '棋子',
+  'The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.':
+    '寫給西洋棋棋手的象棋規則：九宮與楚河漢界、炮架、將帥對臉、長將、記譜法，以及一盤可以逐步重演的名局。可在 Mistboard 上與皮卡魚引擎或朋友對弈。',
+  'For chess players: six rule changes': '寫給西洋棋棋手：六條不同的規則',
+  'If you already play chess, most of xiangqi will feel familiar. These are the six rules that catch chess players out, each explained in full further down.':
+    '如果你會下西洋棋，象棋的大部分內容都會讓你覺得熟悉。下面是最容易讓西洋棋棋手吃虧的六條規則，後文會逐一詳細說明。',
+  Rule: '規則',
+  'In chess': '西洋棋',
+  'In xiangqi': '象棋',
+  'No legal move': '無子可走',
+  'Stalemate, a draw': '逼和，算和棋',
+  'A loss for the player who cannot move': '無子可走的一方判負（困斃）',
+  'The two kings': '雙方的王（將帥）',
+  'May stand on the same file': '可以站在同一條直線上',
+  'The generals may never face each other on an open file': '將帥不能在中間無子的同一條直線上對臉',
+  'Checking forever': '不停將軍',
+  'A draw by repetition': '重複局面判和',
+  'A loss for the side giving every check': '每步都將軍的一方判負（長將）',
+  Capturing: '吃子',
+  'Every piece captures the way it moves': '每種棋子都按走法吃子',
+  'The cannon captures only by jumping one piece': '炮只能隔一子打子',
+  'Knight and bishop': '馬與象',
+  'The knight jumps and the bishop slides': '馬可以跳子，象沿斜線滑行',
+  'The horse and elephant are stopped by a piece in their path':
+    '馬和象會被路上的棋子擋住（蹩馬腿、塞象眼）',
+  'Promotion and castling': '升變與王車易位',
+  'Both exist': '兩者都有',
+  'Neither exists; a soldier never promotes': '兩者都沒有；兵卒永不升變',
+  'Setting up': '擺棋',
+  "Files are lettered a to i from Red's left and ranks numbered 1 to 10 from Red's side, so Red's back rank is rank 1. Each back rank holds, from one edge to the other: chariot, horse, elephant, advisor, general, advisor, elephant, horse, chariot. Each side's cannons stand on the b and h files two ranks in front of it, on rank 3 for Red, and its five soldiers stand on the a, c, e, g and i files one rank further up.":
+    '從紅方的左手邊起，直線依次標為 a 到 i；橫線從紅方一側起標為 1 到 10，因此紅方底線是第 1 橫線。每一方底線從一邊到另一邊依次是：車、馬、相、仕、帥、仕、相、馬、車。雙方的炮都放在 b 線和 h 線、底線往前兩格的位置（紅方在第 3 橫線），五個兵卒再往前一格，放在 a、c、e、g、i 五條線上。',
+  'For chess players: the chariot is exactly a rook, the horse is a knight that can be blocked, and the general is a king confined to its palace. The elephant only loosely resembles a bishop, and the advisor and the cannon have no chess counterpart.':
+    '對照西洋棋：車就是西洋棋的城堡，馬是會被蹩腿的騎士，將帥是困在九宮裡的國王。相與西洋棋的主教只是略有相似，而仕和炮在西洋棋裡沒有對應的棋子。',
+  'The rule that the generals may not face each other also works as an attack. A general can help deliver checkmate from the far end of an open file, because the enemy general cannot step onto that file.':
+    '將帥不能對臉的規則也是一種進攻手段。將帥可以從一條無子的直線遠端協助將死對方，因為對方的將帥不能走到這條線上。',
+  Repetition: '重複局面',
+  'You cannot save a lost game by checking forever. If the same position occurs three times and one side gave check with every move of the repeating cycle, that side loses. If both sides checked on every move, or neither did, the game is drawn.':
+    '你不能靠不停將軍來挽救一盤輸棋。如果同一局面出現三次，而其中一方在這一循環的每一步都在將軍，這一方判負。如果雙方每步都在將軍，或者雙方都沒有將軍，則判和。',
+  'Tournament rules go one step further and also forbid chasing an unprotected piece forever. Mistboard does not judge chases, so a repeated chase is scored as a draw. A game is also drawn after 60 consecutive plies without a capture.':
+    '正式比賽規則更進一步，還禁止長捉對方無根的棋子。Mistboard 不判定長捉，因此重複的捉子按和棋計。連續 60 個半回合沒有吃子，也判和。',
+  'Mistakes chess players make': '西洋棋棋手常犯的錯誤',
+  'Habit from chess': '西洋棋的習慣',
+  'What happens in xiangqi': '在象棋裡的結果',
+  'Moving a piece off the file between the two generals': '把擋在雙方將帥之間那條直線上的棋子走開',
+  'The move is illegal: it would leave the generals facing each other':
+    '這步棋不合法：會讓將帥對臉',
+  'Heading for stalemate to save a lost game': '想靠逼和挽救輸棋',
+  'Stalemate loses, so the escape is a defeat': '困斃判負，所以這條退路本身就是輸棋',
+  'Checking again and again to force a draw': '反覆將軍以求和棋',
+  'Perpetual check loses for the side giving it': '長將的一方判負',
+  'Putting a piece between an enemy cannon and your general': '把棋子墊在對方的炮和己方將帥之間',
+  'The move is illegal: with exactly one piece between them, the cannon attacks your general':
+    '這步棋不合法：中間正好隔一子時，炮就在攻擊你的將帥',
+  'Moving a horse or elephant without checking its path': '走馬或相時不看路上有沒有棋子',
+  "A piece on the horse's leg or the elephant's eye blocks the move":
+    '馬腿或象眼上有棋子，這步就走不了',
+  'Reading xiangqi moves': '怎麼讀象棋棋譜',
+  "Xiangqi moves are written three ways. Mistboard shows algebraic notation by default outside Chinese: the central cannon is **Che3**, the cannon on the h file moving to e3. WXF notation numbers files from each player's right and writes the same move **C2.5**: cannon on file 2 moves sideways to file 5. Chinese notation reads the same way in characters: **炮二平五**, cannon two traverses to five. The move list setting switches between them.":
+    '象棋著法有三種寫法。Mistboard 的中文介面預設使用中文記譜，其他語言預設使用代數記譜：中炮寫作 **Che3**，意思是 h 線上的炮走到 e3。WXF 記譜從每一方自己的右手邊給直線編號，同一步寫作 **C2.5**：第 2 線的炮平移到第 5 線。中文記譜用漢字表達同樣的意思：**炮二平五**。著法列表的設定可以在三者之間切換。',
+  'A first opening': '第一個開局',
+  "The most common opening is the central cannon (中炮): Red moves a cannon to the centre file, aiming at Black's central soldier and the general behind it. Black's most common answer is the screen horses (屏风马), both horses developed toward the centre to guard that soldier. [Central Cannon vs Screen Horses](/study/4KXXmLaG) collects model games of the pairing.":
+    '最常見的開局是中炮：紅方把一隻炮平到中路，瞄準黑方的中卒和其後的將。黑方最常見的應法是屏風馬，兩匹馬都向中路跳出，保護這枚中卒。[中炮對屏風馬](/study/4KXXmLaG)收錄了這一對局型的範局。',
+  'Is perpetual check allowed in xiangqi?': '象棋允許長將嗎？',
+  'No. A player who repeats the position by giving check on every move loses. On Mistboard the side that checked on every move of a threefold repetition loses; if both sides checked throughout, or neither did, it is a draw.':
+    '不允許。靠每步將軍來重複局面的一方判負。在 Mistboard 上，同一局面出現三次時，若其中一方在這一循環的每一步都在將軍，這一方判負；若雙方都一直在將軍，或都沒有將軍，則判和。',
   'Xiangqi Rules: How to Play Chinese Chess': '象棋規則：中國象棋怎麼下',
   'Red and Black alternate moves, with Red first. Each side begins with 16 pieces: one general, two advisors, two elephants, two horses, two chariots, two cannons, and five soldiers. The goal is to checkmate the opposing general.':
     '紅黑雙方輪流走子，紅方先行。每一方開局有 16 枚棋子：一個將（帥）、兩個士（仕）、兩個象（相）、兩個馬、兩個車、兩個炮（砲）和五個兵（卒）。目標是將死對方的將帥。',
@@ -3473,8 +3620,6 @@ const ZH_HANT: Record<string, string> = {
     '當敵方棋子攻擊將帥時，即為**將軍**。每一步都必須保證己方將帥安全，因此被將軍的一方必須移動將帥、吃掉進攻棋子或擋住攻擊。若沒有合法應法，便是將死，被將軍的一方告負。',
   'A player with no legal move also loses, even when the general is not in check. In Western chess that position is a stalemate draw; in xiangqi it is a win for the player who made the last move.':
     '即使將帥沒有被將軍，完全沒有合法走法的一方也會告負。在西洋棋中這是逼和；在象棋中則由走出上一著的一方獲勝。',
-  'Tournament rules use detailed procedures for perpetual check, perpetual chase, and other repeated attacks. Mistboard uses two automatic draw rules: the same position three times, or 60 consecutive plies without a capture.':
-    '正式比賽規則對長將、長捉和其他重複進攻有詳細判定程序。Mistboard 採用兩條自動和棋規則：同一局面出現三次，或連續 60 個半回合沒有吃子。',
   "To see the pieces work together, step through a famous trap from a manual printed in 1632. Red gives up a horse; when Black grabs it, Red's chariots and cannons pour through the gap and checkmate on the thirteenth move.":
     '想看棋子如何協同作戰，可以逐步重演一則出自 1632 年棋譜的著名陷阱。紅方故意送出一匹馬，黑方一旦貪吃，紅方的車炮便乘虛而入，在第十三著將死對手。',
 
@@ -3715,8 +3860,6 @@ const ZH_HANT: Record<string, string> = {
     '迷霧國際象棋規則：戰爭迷霧下的國際象棋。每一方只能看到己方棋子可及的格子，沒有將軍提示，王被吃掉即負。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷霧國際象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 對 dark chess / Fog of War chess 的公開名稱。Jens Bæk Nielsen 與 Torben Osted 於 1989 年發明了它。它屬於隱式迷霧：沒有裁判，也沒有偵察動作。每一方的視野完全由己方棋子的合法走法範圍推導而來。',
-  'The rules of xiangqi: palaces, the river, cannon screens, facing generals, and a famous game to play through. Now playable on Mistboard against the Pikafish engine or a friend.':
-    '象棋規則：九宮、楚河漢界、砲架、將帥照面，以及一盤可逐步回放的名局。現在可在 Mistboard 上與 Pikafish 引擎或好友對弈。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
     '象棋的現代形態在宋代（960 至 1279 年）的中國成型，砲也在這一時期加入棋盤。它的前身可以追溯到更早幾個世紀，並與國際象棋、將棋、朝鮮象棋同源於更古老的印度遊戲恰圖蘭卡。今天它是世界上參與人數最多的棋類遊戲之一。',
   'Fog Xiangqi Rules': '迷霧象棋規則',
@@ -4987,7 +5130,6 @@ const ZH_HANT: Record<string, string> = {
     '八個引擎強度檔位，或者用邀請連結約朋友。規則頁面配有圖解，講得完整。',
   'Invite a friend': '邀請朋友',
   // banqi capture table + FAQ, jungle FAQ (2026-09-17)
-  'Piece (red / black)': '棋子（紅 / 黑）',
   'General 帥 / 將': '將帥：帥 / 將',
   'Advisor 仕 / 士': '士：仕 / 士',
   'Elephant 相 / 象': '象：相 / 象',
@@ -5102,7 +5244,6 @@ const ZH_HANT: Record<string, string> = {
   Moves: '走法',
   Limits: '限制',
   'One point along a line': '沿線走一點',
-  'The same way': '與走法相同',
   'Never leaves the palace; may not face the other general on an open file':
     '不能離開九宮；兩將不能在無子的同一直線上照面',
   'One point diagonally': '斜走一點',
@@ -5113,13 +5254,10 @@ const ZH_HANT: Record<string, string> = {
   'Blocked by a piece on the first point': '直走的第一點有子則蹩馬腿',
   'Any distance along a line': '沿直線任意距離',
   'Cannot jump': '不能跳過棋子',
-  'Jumps exactly one piece and takes the enemy beyond it': '隔一子跳吃後面的敵子',
   'Needs a screen to capture': '吃子必須隔一子（砲架）',
   'One point forward; one point sideways too after crossing the river':
     '向前一點；過河後也可橫走一點',
   'Never backward; never promotes': '永遠不能後退；沒有升變',
-  'The seven pieces. Every piece captures the way it moves, except the cannon.':
-    '七種棋子。除砲以外，每種棋子怎麼走就怎麼吃。',
   'How does each piece move in xiangqi?': '象棋每種棋子怎麼走？',
   'General: one point along a line, inside the palace. Advisor: one point diagonally, inside the palace. Elephant: two points diagonally, never across the river. Horse: one point along a line then one diagonally out, blocked if the first point is occupied. Chariot: any distance along a line. Cannon: moves like a chariot, captures by jumping exactly one piece. Soldier: one point forward, and sideways too after crossing the river.':
     '將：在九宮內沿線走一點。士：在九宮內斜走一點。象：斜走兩點（田字），不能過河。馬：先直走一點再斜走一點（日字），第一點有子則蹩馬腿。車：沿直線任意距離。砲：走法同車，吃子時隔一子跳吃。兵：向前一點，過河後也可橫走一點。口訣：馬走日、象走田、車走直路砲翻山、士走斜線護將邊、小卒一去不回還。',

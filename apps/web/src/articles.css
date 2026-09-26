@@ -1176,6 +1176,13 @@
   white-space: normal;
 }
 
+/* The xiangqi rules tables are prose in every cell (a rule, a habit, a
+   piece's limits), and at the shared nowrap the chess-comparison, pieces and
+   mistakes tables each scrolled sideways past the column (#410, 2026-09-25). */
+[data-article-slug="xiangqi"] .article-table {
+  white-space: normal;
+}
+
 /* A name never wraps. CJK breaks between any two characters, so at a narrow
    column "Yang Guanlin 杨官璘" split across three lines and 杨官璘 itself came
    apart. The name column takes the width it needs; the year list and the ruling
@@ -2052,6 +2059,11 @@
 
 .article-table tbody tr:last-child td {
   border-bottom: none;
+}
+
+.article-table-key-column td:first-child {
+  font-weight: 600;
+  white-space: nowrap;
 }
 
 .article-table-row-emphasis td {

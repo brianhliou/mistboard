@@ -320,6 +320,9 @@ export type TableBlock = {
   caption?: string;
   /** Emphasise a row (a result worth reading twice). Zero-indexed into `rows`. */
   highlightRows?: number[];
+  /** The first column names each row (a piece, a rule): set bold and kept on
+   *  one line, so the prose columns do the wrapping. */
+  keyColumn?: boolean;
 };
 
 // A raster figure in an article body (product screenshots, photos). `src` is a

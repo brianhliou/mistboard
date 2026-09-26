@@ -1950,6 +1950,7 @@ function renderTableBlock(block: TableBlock): HTMLElement {
   figure.className = 'article-figure article-figure-table';
   const table = document.createElement('table');
   table.className = 'article-table';
+  if (block.keyColumn) table.classList.add('article-table-key-column');
   const thead = document.createElement('thead');
   const headRow = document.createElement('tr');
   for (const h of block.headers) {
