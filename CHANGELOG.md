@@ -54,6 +54,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- The Duck Xiangqi launch post is now a strategy guide for your first game, at [/blog/duck-xiangqi-strategy](/blog/duck-xiangqi-strategy); the old address redirects there ([4a5bdbdc](https://github.com/brianhliou/mistboard/commit/4a5bdbdc))
 - The [xiangqi rules](/rules/xiangqi) are rewritten for chess players: the six rules that catch them out, setup, repetition as the site scores it (perpetual check loses), common mistakes, the three notations, a first opening, and new questions on the characters and the flying general ([adb78502](https://github.com/brianhliou/mistboard/commit/adb78502))
 - Chơi cờ tướng với máy: the Pikafish page in Vietnamese, at [/blog/choi-co-tuong-voi-may](/blog/choi-co-tuong-voi-may) ([19942f24](https://github.com/brianhliou/mistboard/commit/19942f24))
 - Every rules page shows its sample game in the study embed, with a link to the study it came from: Duck Xiangqi, Fortress, Jieqi, Jungle, Flip Jungle, Fog Chess, Xiangqi and Chess join Banqi and Atomic, and study embeds now draw Fortress (with both hands), Jieqi and Flip Jungle games. Flip Jungle gets a study of twenty engine games ([b304a491](https://github.com/brianhliou/mistboard/commit/b304a491))
@@ -81,6 +82,8 @@ Conventions:
 
 ### Watching and review
 
+- Pages for the 13 archive players the Chinese Xiangqi Association sanctioned in the 2024 to 2026 match-fixing case say so in one sentence linked to the case write-up, and players whose ban may have revoked their grade no longer carry a GM or NM tag, on the event cards too ([51d72464](https://github.com/brianhliou/mistboard/commit/51d72464), [534426da](https://github.com/brianhliou/mistboard/commit/534426da))
+- Broadcasts sourced from dpxq show every pairing with its result, including boards whose game record was never posted (a faded start position marked Result only), and standings count them ([0d225575](https://github.com/brianhliou/mistboard/commit/0d225575))
 - Mistboard TV opens on the game in progress and lands on it when it ends; the LIVE badge is gone ([6e5cb064](https://github.com/brianhliou/mistboard/commit/6e5cb064))
 - Pro player pages cover every player on the CXA lists, not only those in our broadcasts, and add each player's record by colour, head to head, openings in English and rating history since 2019; player and broadcast pages now carry their own titles, descriptions and share cards, and are listed in the sitemap ([4c5a389c](https://github.com/brianhliou/mistboard/commit/4c5a389c))
 - Broadcast games embed on any page (copy the code from the game's Share tab, or paste a game link into WordPress, Discourse or the forum): English names, the event and round, the engine's marks and better lines with their verdicts, and a live game that keeps up; side lines in every embed now read like the article boards ([88adbb82](https://github.com/brianhliou/mistboard/commit/88adbb82))
@@ -228,6 +231,7 @@ Conventions:
 
 ### Technical
 
+- Admin metrics record what each drain and restart cost players, and a lapsed drain clears the Update pending banner ([dddb2253](https://github.com/brianhliou/mistboard/commit/dddb2253))
 - Each Vietnamese page and its English original list the same language versions, with English as the default, so search engines read them as one page in several languages ([bc121fc3](https://github.com/brianhliou/mistboard/commit/bc121fc3))
 - `/bots` serves its heading and level list in the page HTML in all three languages, so search engines that do not run the page's code read it too ([a29c7ed5](https://github.com/brianhliou/mistboard/commit/a29c7ed5))
 - A deploy no longer compiles the six server engines from source (2.5 minutes of every 5.6-minute deploy): the Build engines workflow publishes them once per pin as a GitHub release, and the image fetches and re-verifies them with the same perft and uci gates; first deploy on this path went push-to-live in 2m19s ([c36d9fc7](https://github.com/brianhliou/mistboard/commit/c36d9fc7))
