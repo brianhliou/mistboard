@@ -163,7 +163,7 @@ describe('player pages', () => {
     );
   });
 
-  it('filters the index by title, list, team and season, and keeps it in the URL', () => {
+  it('filters the index by title, list and season, and keeps it in the URL', () => {
     const meng = {
       ...player({ name: '孟繁睿', nameEn: 'Meng Fanrui', games: 4 }),
       federation: '河北队',
@@ -177,21 +177,19 @@ describe('player pages', () => {
     expect(currentSeason([meng, listed])).toBe('2026');
     expect(matchesFilter(listed, { title: 'GM' })).toBe(true);
     expect(matchesFilter(meng, { title: 'GM' })).toBe(false);
-    expect(matchesFilter(meng, { title: 'none', group: 'men', team: 'hebei-team' })).toBe(true);
+    expect(matchesFilter(meng, { title: 'none', group: 'men' })).toBe(true);
     expect(matchesFilter(meng, { group: 'women' })).toBe(false);
     expect(matchesFilter(meng, { season: '2026' })).toBe(true);
     expect(matchesFilter(listed, { season: '2026' })).toBe(false);
     const search = indexSearchFromFilter({
       title: 'NM',
       group: 'women',
-      team: 'hebei-team',
       season: '2026',
     });
-    expect(search).toBe('?title=NM&list=women&team=hebei-team&active=2026');
+    expect(search).toBe('?title=NM&list=women&active=2026');
     expect(indexFilterFromSearch(search)).toEqual({
       title: 'NM',
       group: 'women',
-      team: 'hebei-team',
       season: '2026',
     });
     expect(indexFilterFromSearch('?title=IM&list=other&active=soon')).toEqual({});

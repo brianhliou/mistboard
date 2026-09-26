@@ -828,49 +828,6 @@ a.xqp-team:hover {
   background: #b3261e;
 }
 
-/* ---- head to head ------------------------------------------------------- */
-
-.xqp-h2h {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 10px 24px;
-  margin-top: 12px;
-  font-size: 14px;
-}
-
-.xqp-h2h-result {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: baseline;
-  gap: 4px 16px;
-}
-
-.xqp-h2h-line {
-  margin: 0;
-  display: inline-flex;
-  align-items: baseline;
-  gap: 10px;
-  color: var(--site-heading);
-  font-weight: 600;
-}
-
-.xqp-h2h-score {
-  font-size: 20px;
-  font-weight: 800;
-  font-variant-numeric: tabular-nums;
-}
-
-a.xqp-h2h-name {
-  color: inherit;
-}
-
-.xqp-h2h-games {
-  color: var(--site-muted);
-  font-size: 13px;
-  font-variant-numeric: tabular-nums;
-}
-
 /* ---- openings by colour ------------------------------------------------- */
 
 .xqp-openings {

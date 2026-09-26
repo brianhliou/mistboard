@@ -396,7 +396,6 @@ export const EN_REVIEW = {
   'broadcast.playerEccoC': 'Central Cannon vs Screen Horses',
   'broadcast.playerEccoD': 'Same and opposite direction cannons',
   'broadcast.playerEccoE': 'Pawn openings',
-  'broadcast.playerHeadToHead': 'Head to head',
   'broadcast.playerFilterColour': 'Colour',
   'broadcast.playerFilterAll': 'All',
   'broadcast.playerFilterRed': 'Red',
@@ -426,8 +425,6 @@ export const EN_REVIEW = {
   'broadcast.playersMenAndWomen': 'Men and women',
   'broadcast.playersMen': 'Men',
   'broadcast.playersWomen': 'Women',
-  'broadcast.playersFilterTeam': 'Team',
-  'broadcast.playersAnyTeam': 'Any team',
   'broadcast.playersActive': 'Played in {year}',
   'broadcast.playersCount': '{n} players',
   // /practice, the shelf of engine-adjudicated exercise sets. The card titles

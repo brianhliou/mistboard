@@ -28,9 +28,7 @@ import {
   type Opening,
   type OpeningRow,
   openingsOf,
-  opponentKey,
   opponentsOf,
-  pointsOf,
   type Record3,
   recordByColour,
   recordOf,
@@ -282,7 +280,6 @@ export function currentSeason(
 export type IndexFilter = {
   title?: PlayerTitle | 'none';
   group?: PlayerGroup;
-  team?: string;
   /** Only players with a game in this season (a year, "2026"). */
   season?: string;
 };
@@ -293,12 +290,11 @@ export function matchesFilter(player: PlayerRecord, filter: IndexFilter): boolea
     if (filter.title === 'none' ? title !== null : title !== filter.title) return false;
   }
   if (filter.group && playerGroup(player) !== filter.group) return false;
-  if (filter.team && teamKey(player) !== filter.team) return false;
   if (filter.season && !player.lastPlayedOn?.startsWith(filter.season)) return false;
   return true;
 }
 
-/** ?title=GM&list=women&team=beijing&active=2026, keeping only values that mean something. */
+/** ?title=GM&list=women&active=2026, keeping only values that mean something. */
 export function indexFilterFromSearch(search: string): IndexFilter {
   const params = new URLSearchParams(search);
   const filter: IndexFilter = {};
@@ -306,8 +302,6 @@ export function indexFilterFromSearch(search: string): IndexFilter {
   if (title === 'GM' || title === 'NM' || title === 'none') filter.title = title;
   const group = params.get('list');
   if (group === 'men' || group === 'women') filter.group = group;
-  const team = params.get('team');
-  if (team) filter.team = team;
   const season = params.get('active');
   if (season && /^\d{4}$/.test(season)) filter.season = season;
   return filter;
@@ -317,7 +311,6 @@ export function indexSearchFromFilter(filter: IndexFilter): string {
   const params = new URLSearchParams();
   if (filter.title) params.set('title', filter.title);
   if (filter.group) params.set('list', filter.group);
-  if (filter.team) params.set('team', filter.team);
   if (filter.season) params.set('active', filter.season);
   const text = params.toString();
   return text ? `?${text}` : '';
@@ -518,11 +511,7 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
   const panel = document.createElement('section');
   panel.className = 'xqp-board';
   const season = currentSeason(players);
-  const teams = sortTeams(teamsOf(players), 'name');
   const state: { filter: IndexFilter } = { filter: indexFilterFromSearch(window.location.search) };
-  if (state.filter.team && !teams.some((team) => team.key === state.filter.team)) {
-    delete state.filter.team;
-  }
   const count = document.createElement('span');
   count.className = 'xqp-filter-count';
   const table = playersTable(players, search, true, {
@@ -560,15 +549,6 @@ function renderIndex(players: PlayerRecord[]): HTMLElement & { main: HTMLElement
       ],
       state.filter.group ?? '',
       (value) => apply({ ...state.filter, group: (value || undefined) as IndexFilter['group'] }),
-    ),
-    filterSelect(
-      t('broadcast.playersFilterTeam'),
-      [
-        ['', t('broadcast.playersAnyTeam')],
-        ...teams.map((team) => [team.key, teamLabel(team)] as [string, string]),
-      ],
-      state.filter.team ?? '',
-      (value) => apply({ ...state.filter, team: value || undefined }),
     ),
   );
   if (season) {
@@ -953,21 +933,18 @@ function renderPlayer(
       ? `${player.firstPlayedOn} to ${player.lastPlayedOn}`
       : null,
   );
-  const actions = document.createElement('div');
-  actions.className = 'xqb-hero-actions xqp-header-actions';
-  const back = document.createElement('a');
-  back.className = 'xqb-link';
-  back.href = '/players';
-  back.textContent = 'All players';
-  actions.append(back);
+  // No "All players" link: the rail's Pro players entry is the way back.
+  copy.append(h1, facts);
   if (profile?.profileHref) {
+    const actions = document.createElement('div');
+    actions.className = 'xqb-hero-actions xqp-header-actions';
     const link = document.createElement('a');
     link.className = 'xqb-link xqb-link-primary';
     link.href = profile.profileHref;
     link.textContent = 'Read the profile';
     actions.append(link);
+    copy.append(actions);
   }
-  copy.append(h1, facts, actions);
   header.append(figure, copy);
   main.append(header);
 
@@ -1000,7 +977,7 @@ function renderPlayer(
   }
 
   const view = gamesView(player, boards);
-  main.append(recordSection(player, boards, view));
+  main.append(recordSection(boards, view));
   const openings = openingsSection(boards, view);
   if (openings) main.append(openings);
 
@@ -1189,13 +1166,9 @@ function resultBar(r: Record3): HTMLElement {
   return bar;
 }
 
-/** Overall, as red, as black, each row a link to those games; then the
- *  head-to-head picker, which drives the same filter as the games list. */
-function recordSection(
-  player: PlayerRecord,
-  boards: readonly PlayerBoardRecord[],
-  view: GamesView,
-): HTMLElement {
+/** Overall, as red, as black, each row a link to those games. A single
+ *  opponent's games are the games list's opponent filter. */
+function recordSection(boards: readonly PlayerBoardRecord[], view: GamesView): HTMLElement {
   const byColour = recordByColour(boards);
   const table = document.createElement('table');
   table.className = 'xqp-stats';
@@ -1259,71 +1232,7 @@ function recordSection(
   const wrap = document.createElement('div');
   wrap.className = 'xqp-stats-wrap';
   wrap.append(table);
-  return section(t('broadcast.playerRecord'), wrap, headToHead(player, boards, view));
-}
-
-/** Pick an opponent, see the score between the two and the games. */
-function headToHead(
-  player: PlayerRecord,
-  boards: readonly PlayerBoardRecord[],
-  view: GamesView,
-): HTMLElement {
-  const box = document.createElement('div');
-  box.className = 'xqp-h2h';
-  const opponents = opponentsOf(boards);
-  const picker = filterSelect(
-    t('broadcast.playerHeadToHead'),
-    [
-      ['', t('broadcast.playerFilterAnyOpponent')],
-      ...opponents.map(
-        (o) => [o.key, `${o.nameEn ?? o.name} (${o.record.games})`] as [string, string],
-      ),
-    ],
-    view.filter().opponent ?? '',
-    (value) => view.set({ ...view.filter(), opponent: value || undefined }),
-  );
-  const result = document.createElement('div');
-  result.className = 'xqp-h2h-result';
-  box.append(picker, result);
-  view.subscribe((filter) => {
-    picker.querySelector('select')!.value = filter.opponent ?? '';
-    const opponent = opponents.find((o) => o.key === filter.opponent);
-    result.replaceChildren();
-    result.hidden = !opponent;
-    if (!opponent) return;
-    // Over every game between the two, whatever the colour or opening filter.
-    const r = recordOf(boards.filter((b) => opponentKey(b.opponent) === opponent.key));
-    const me = document.createElement('span');
-    me.className = 'xqp-h2h-name';
-    me.textContent = player.nameEn ?? player.name;
-    const score = document.createElement('span');
-    score.className = 'xqp-h2h-score';
-    score.textContent = `${formatPoints(pointsOf(r))} : ${formatPoints(r.games - pointsOf(r))}`;
-    const them = document.createElement(opponent.slug ? 'a' : 'span');
-    them.className = 'xqp-h2h-name';
-    if (them instanceof HTMLAnchorElement && opponent.slug) {
-      them.href = playerHref({ slug: opponent.slug });
-    }
-    them.textContent = opponent.nameEn ?? opponent.name;
-    const line = document.createElement('p');
-    line.className = 'xqp-h2h-line';
-    line.append(me, score, them);
-    const games = document.createElement('a');
-    games.className = 'xqp-h2h-games';
-    games.href = view.href({ opponent: opponent.key });
-    games.textContent = `${r.games} games · +${r.wins} =${r.draws} -${r.losses}`;
-    games.addEventListener('click', (event) => {
-      event.preventDefault();
-      view.set({ opponent: opponent.key }, true);
-    });
-    result.append(line, games);
-  });
-  return box;
-}
-
-/** 6.5, 3, 0.5: points as a score sheet writes them. */
-function formatPoints(value: number): string {
-  return Number.isInteger(value) ? String(value) : value.toFixed(1);
+  return section(t('broadcast.playerRecord'), wrap);
 }
 
 const OPENINGS_SHOWN = 6;
