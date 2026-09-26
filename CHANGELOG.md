@@ -54,6 +54,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- Decisive-moment lessons open on the opponent's move that led there (marked on the board), name both players above and below the board, let you try again just by moving, and give a hint that names the piece and circles it ([339429d4](https://github.com/brianhliou/mistboard/commit/339429d4))
 - Guess-the-move study chapters fit the screen with the site bar back, a resizable board, a chapter list of players with the side to move marked, and a coach column that opens with whose move it is and the game it came from; the decisive-moments lessons now ask for the one move that turned the game and play the reply for you ([f48e5eb1](https://github.com/brianhliou/mistboard/commit/f48e5eb1))
 - The Duck Xiangqi launch post is now a strategy guide for your first game, at [/blog/duck-xiangqi-strategy](/blog/duck-xiangqi-strategy); the old address redirects there ([4a5bdbdc](https://github.com/brianhliou/mistboard/commit/4a5bdbdc))
 - The [xiangqi rules](/rules/xiangqi) are rewritten for chess players: the six rules that catch them out, setup, repetition as the site scores it (perpetual check loses), common mistakes, the three notations, a first opening, and new questions on the characters and the flying general ([adb78502](https://github.com/brianhliou/mistboard/commit/adb78502))
