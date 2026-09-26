@@ -625,7 +625,7 @@ test('ops index reports each tour mode and whether it polls now', async () => {
   assert.equal(schedule.pollEnabled, false);
   assert.equal(schedule.pollState.reason, 'auto-closed');
   assert.equal(schedule.pollState.opensAt, '2025-09-20T12:00:00.000Z');
-  assert.equal(schedule.pollState.closesAt, '2025-09-29T00:00:00.000Z');
+  assert.equal(schedule.pollState.closesAt, '2025-10-04T00:00:00.000Z');
 });
 
 test('broadcast index API features the latest live board, else the latest complete one', async () => {
