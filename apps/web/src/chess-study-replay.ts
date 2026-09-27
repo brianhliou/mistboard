@@ -18,6 +18,7 @@ import {
 } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
 import { animateChessBoardMove, renderDarkChessBoardSvg } from './dark-chess-render.js';
+import { revealKingCaptureForLoser } from './replay-board.js';
 import { chessUciToMove } from './review/chess-tree-adapter.js';
 import type { StudyChapterPayload, StudyTreeNode } from './study-chapter-spec.js';
 
@@ -181,9 +182,10 @@ function replayFrom(
 }
 
 /** Every square: the open board hides nothing, so the fog-capable renderer
- *  gets the full set and paints no fog. A fog chess chapter is drawn the same
+ *  gets the full set and paints no fog. A fog chess chapter opens the same
  *  way: it is a finished record its author chose to publish, and the study
- *  page's primary board for it is the revealed truth board too. */
+ *  page's primary board for it is the revealed truth board too. `setPov`
+ *  switches it to one seat's fogged view. */
 const ALL_SQUARES: Square[] = (() => {
   const squares: Square[] = [];
   for (let file = 0; file < 8; file += 1) {
@@ -193,6 +195,28 @@ const ALL_SQUARES: Square[] = (() => {
   }
   return squares;
 })();
+
+/** Which board a fog chess replay shows: the revealed truth, or one seat's
+ *  fogged view of it. Open chess has only the truth. */
+export type ChessReplayPov = 'white' | 'truth' | 'black';
+
+/** What one seat saw at a position, drawn with fog. On a king capture the
+ *  loser saw their king die, so the attacker is revealed on the capture
+ *  square, as the review board and the live replay show it. */
+function fogSeatView(state: GameState, seat: 'white' | 'black') {
+  const view = darkChessVariant.getPlayerView(state, seat);
+  if (
+    state.status.type === 'finished' &&
+    state.status.reason === 'king-captured' &&
+    state.lastMove
+  ) {
+    const attacker = state.board[state.lastMove.to];
+    const loser = state.status.winner === 'white' ? 'black' : 'white';
+    if (attacker && seat === loser)
+      return revealKingCaptureForLoser(view, state.lastMove, attacker);
+  }
+  return view;
+}
 
 export function mountChessReplayBoard(
   host: HTMLElement,
@@ -214,6 +238,8 @@ export function mountChessReplayBoard(
   }>;
   bottomSeat: () => 'first' | 'second';
   moveNumbering: () => { firstMover: 'a' | 'b'; firstNumber: number };
+  /** Fog chess only: switch between the truth and a seat's fogged view. */
+  setPov: (pov: ChessReplayPov) => void;
 } {
   const perspective = spec.perspective ?? 'white';
   const { states, labels } = replayChess(spec);
@@ -234,28 +260,41 @@ export function mountChessReplayBoard(
   host.replaceChildren(frame);
 
   let index = 0;
+  let pov: ChessReplayPov = 'truth';
+  // The board for a position under the current view: the whole board, or for
+  // fog chess a seat's fogged view of it.
+  const draw = (state: GameState, glyph?: string): string => {
+    if (spec.variant !== 'dark-chess' || pov === 'truth') {
+      return renderDarkChessBoardSvg(
+        { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
+        { perspective, showFog: false, ...(glyph ? { glyph } : {}) },
+      );
+    }
+    const view = fogSeatView(state, pov);
+    return renderDarkChessBoardSvg(
+      { board: view.board, visibleSquares: view.visibleSquares, lastMove: view.lastMove },
+      { perspective, showFog: true, ...(glyph ? { glyph } : {}) },
+    );
+  };
   // `glide` is the one-ply step being shown, if any: its move comes from the
   // position that carries it (forward: the new one; back: the one just left).
   const render = (glide?: { move: { from: Square; to: Square }; reverse: boolean }): void => {
+    // A seat's view does not glide: the move may be one that seat never saw.
     const play = () => {
-      if (glide) animateChessBoardMove(frame, glide.move, perspective, { reverse: glide.reverse });
+      if (glide && pov === 'truth') {
+        animateChessBoardMove(frame, glide.move, perspective, { reverse: glide.reverse });
+      }
     };
     if (inLine) {
       const line = lines.get(inLine.atPly);
       const state = line?.states[inLine.cursor] ?? states[inLine.atPly - 1]!;
-      frame.innerHTML = renderDarkChessBoardSvg(
-        { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
-        { perspective, showFog: false },
-      );
+      frame.innerHTML = draw(state);
       play();
       return;
     }
     const state = states[index]!;
     const glyph = index > 0 ? spec.glyphs?.[index] : undefined;
-    frame.innerHTML = renderDarkChessBoardSvg(
-      { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
-      { perspective, showFog: false, ...(glyph ? { glyph } : {}) },
-    );
+    frame.innerHTML = draw(state, glyph);
     play();
     hooks.onPlyChange?.(index, total);
   };
@@ -263,6 +302,11 @@ export function mountChessReplayBoard(
 
   return {
     destroy: () => host.replaceChildren(),
+    setPov: (next: ChessReplayPov) => {
+      if (spec.variant !== 'dark-chess' || next === pov) return;
+      pov = next;
+      render();
+    },
     jumpToPly: (ply: number) => {
       const wasInLine = inLine !== null;
       const from = index;

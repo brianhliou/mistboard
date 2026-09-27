@@ -15,7 +15,7 @@
 // public everywhere else too.
 
 import '../app-base.css';
-import type { EmbedPov, GameEvent } from '@mistboard/game';
+import { type EmbedPov, type GameEvent, maybeGameSpecForId } from '@mistboard/game';
 import { banqiResultLabel } from '../banqi-result-label.js';
 import { seatInkForVariant } from '../flip-seat-ink.js';
 import {
@@ -25,14 +25,15 @@ import {
   variantDisplayLabel,
 } from '../game-display.js';
 import { gameMetaForGame, reviewUrlForGame, timeControlLabelForGame } from '../game-meta.js';
+import { t } from '../i18n/catalog.js';
 import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
 import type { GameMeta, ReplayHandle } from '../replay.js';
 import { reviewResultLabel } from '../review/game-review-meta.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from '../showcase-dispatch.js';
-import { seatInkFamily } from '../variant-seat-label.js';
+import { seatColorWord, seatInkFamily } from '../variant-seat-label.js';
 import { webVariantTenantForSpecId } from '../variant-tenant/registry.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
-import { embedRailWidthPx, mountEmbedCard } from './embed-card.js';
+import { type EmbedCard, embedPovPicker, embedRailWidthPx, mountEmbedCard } from './embed-card.js';
 import type { EmbedGameRoute } from './embed-route.js';
 import './embed.css';
 
@@ -181,9 +182,23 @@ export async function mountEmbedGame(
     second: displayParticipantName(game, secondSeat),
   };
 
+  // A fog game carries the view picker the review and watch pages have. Its
+  // board fixes the view when it mounts (a side's pane stays fogged at the
+  // end; truth is revealed), so a new view is a fresh mount at the same ply.
+  let pov: EmbedPov | null = options.pov ?? null;
+  let card: EmbedCard | null = null;
+  const picker =
+    maybeGameSpecForId(specId)?.visibility === 'dark'
+      ? embedPovPicker(pov ?? 'truth', fogSideLabels(specId), (next) => {
+          pov = next;
+          void card?.remountBoard();
+        })
+      : null;
+
   try {
-    await mountEmbedCard(root, {
+    card = await mountEmbedCard(root, {
       header: embedGameHeader(game),
+      ...(picker ? { headerControls: picker } : {}),
       seats: {
         first: { name: names.first, ink: seatDiscInk(game, 'first') },
         second: { name: names.second, ink: seatDiscInk(game, 'second') },
@@ -202,7 +217,7 @@ export async function mountEmbedGame(
           metadataByRoomId,
           namesByRoomId: { [roomId]: names },
           onPlyChange: hooks.onPlyChange,
-          pov: options.pov ?? null,
+          pov,
         }),
     });
   } catch {
@@ -211,6 +226,14 @@ export async function mountEmbedGame(
   }
 
   document.title = `${names.first} vs ${names.second} · Mistboard`;
+}
+
+/** The side buttons' words: White and Black for fog chess, Red and the
+ *  family's second-seat word elsewhere, as the watch page's toggle reads. */
+function fogSideLabels(specId: string): { first: string; second: string } {
+  return maybeGameSpecForId(specId)?.family === 'chess'
+    ? { first: t('setup.white'), second: t('setup.black') }
+    : { first: t('setup.red'), second: seatColorWord(specId, 'black') };
 }
 
 /** "Xiangqi · 10 + 5", or the variant alone for an unclocked game. */

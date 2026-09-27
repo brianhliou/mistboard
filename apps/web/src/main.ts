@@ -825,9 +825,12 @@ if (replaySample) {
   // embed silently ignored it and always opened on move one. A chapter
   // linked to make a point about one move should be able to open on it.
   const studyPly = embedPlyFromSearch(window.location.search);
+  // `?pov=` opens a fog chess chapter in one seat's view; its picker still
+  // switches.
+  const studyPov = embedPovFromSearch(window.location.search);
   void mountOrReport(() =>
     import('./embed/embed-study-page.js').then(({ mountEmbedStudy }) =>
-      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly }),
+      mountEmbedStudy(appRoot, studyRoute, { startPly: studyPly, pov: studyPov }),
     ),
   );
 } else if (embedRoute?.kind === 'game') {

@@ -11,6 +11,7 @@
 // take as little of their surface, and know as little about their readers, as it
 // can.
 
+import type { EmbedPov } from '@mistboard/game';
 import '../app-base.css';
 import '../articles.css';
 import { mountAtomicXiangqiReplayBoard } from '../atomic-xiangqi-replay.js';
@@ -27,6 +28,7 @@ import {
   mountFortressXiangqiReplayBoard,
   replayFortressXiangqiLine,
 } from '../fortress-xiangqi-replay-board.js';
+import { t } from '../i18n/catalog.js';
 import { mountJieqiReplayBoard, replayJieqiLine } from '../jieqi-replay-board.js';
 import { mountJungleFlipReplayBoard, replayJungleFlipLine } from '../jungle-flip-replay-board.js';
 import { jungleFlipResultLabel } from '../jungle-flip-result-label.js';
@@ -41,7 +43,7 @@ import {
   resultFromFinalPosition,
   xiangqiResultLabel,
 } from '../xiangqi-replay.js';
-import { embedRailWidthPx, mountEmbedCard } from './embed-card.js';
+import { embedPovPicker, embedRailWidthPx, mountEmbedCard } from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import './embed.css';
 
@@ -60,7 +62,7 @@ function note(root: HTMLElement, message: string): void {
 export async function mountEmbedStudy(
   root: HTMLElement,
   route: EmbedStudyRoute,
-  options: { startPly?: number | null } = {},
+  options: ChapterEmbedOptions = {},
 ): Promise<void> {
   document.body.classList.add('embed-body');
   // A hook on the ROOT, not just the body. :root in app-base.css paints the page
@@ -104,6 +106,9 @@ export async function mountEmbedStudy(
 
 export type EmbedCredit = { href: string; text: string };
 
+/** Where a chapter opens: the ply, and for fog chess which seat's view. */
+export type ChapterEmbedOptions = { startPly?: number | null; pov?: EmbedPov | null };
+
 /** The variants this card can draw. A chapter of any other variant is refused
  *  by name: the old fallthrough drew it on the xiangqi board, which is how a
  *  jungle chapter once rendered as a xiangqi position with jungle squares
@@ -130,7 +135,7 @@ export async function mountChapterEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const variant = chapter.variant ?? 'xiangqi';
   if (!CHAPTER_EMBED_VARIANTS.has(variant)) {
@@ -504,7 +509,7 @@ async function mountChessEmbed(
   root: HTMLElement,
   credit: EmbedCredit,
   chapter: StudyChapterPayload,
-  options: { startPly?: number | null },
+  options: ChapterEmbedOptions,
 ): Promise<void> {
   const spec = chessChapterToReplaySpec(chapter);
   if (!spec) {
@@ -526,8 +531,19 @@ async function mountChessEmbed(
       : spec.variant === 'dark-chess'
         ? darkChessEndingLabel(spec)
         : '';
+  // A fog chess chapter carries the White / Truth / Black picker the review
+  // board has, so a reader can see what each side saw at any move.
+  let board: ReturnType<typeof mountChessReplayBoard> | null = null;
+  const pov = spec.variant === 'dark-chess' ? (options.pov ?? 'truth') : 'truth';
+  const picker =
+    spec.variant === 'dark-chess'
+      ? embedPovPicker(pov, { first: t('setup.white'), second: t('setup.black') }, (next) =>
+          board?.setPov(next),
+        )
+      : null;
   await mountEmbedCard(root, {
     header: event,
+    ...(picker ? { headerControls: picker } : {}),
     seats: {
       first: { name: tags.red ?? 'White', ink: 'white' },
       second: { name: tags.black ?? 'Black', ink: 'black' },
@@ -540,7 +556,11 @@ async function mountChessEmbed(
     aspect: boardAspectForSpec('chess'),
     railWidthPx: embedRailWidthPx('chess'),
     startPly: options.startPly ?? 0,
-    mountBoard: async (host, hooks) => mountChessReplayBoard(host, spec, hooks),
+    mountBoard: async (host, hooks) => {
+      board = mountChessReplayBoard(host, spec, hooks);
+      board.setPov(pov);
+      return board;
+    },
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

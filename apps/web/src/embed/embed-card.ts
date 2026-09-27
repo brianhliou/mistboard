@@ -17,7 +17,9 @@
 // card and the card's rows take over, fed by the handle's clockAtPly. One row
 // component, whatever is underneath it.
 
+import type { EmbedPov } from '@mistboard/game';
 import '../review/move-list.css';
+import { t } from '../i18n/catalog.js';
 import type { ReplayHandle } from '../replay.js';
 import { createMoveList, type MoveList, type MoveListEntry } from '../review/move-list.js';
 import { formatClock } from '../web-utils.js';
@@ -85,6 +87,9 @@ export type EmbedBoardHandle = Pick<
 export type EmbedCardOptions = {
   /** The line above the card: the event, or the variant and the clock. */
   header: string;
+  /** A control beside the header line (a fog game's view picker). It sits in
+   *  the header so the board fit, which measures the header, makes room. */
+  headerControls?: HTMLElement;
   seats: { first: EmbedSeat; second: EmbedSeat };
   /** "Red wins"; empty for a game without a result. */
   result: string;
@@ -106,7 +111,50 @@ export type EmbedCardOptions = {
 export type EmbedCard = {
   frame: HTMLElement;
   handle: EmbedBoardHandle;
+  /** Mount the board again in place and return to the ply it was on: how a
+   *  board that fixes its view at mount (a game's fog panes) changes view. */
+  remountBoard: () => Promise<void>;
 };
+
+/** The segmented first-seat / Truth / second-seat control for a fog game,
+ *  truth in the middle as on the review and watch pages. Sits in the header
+ *  (EmbedCardOptions.headerControls). */
+export function embedPovPicker(
+  initial: EmbedPov,
+  labels: { first: string; second: string },
+  onChange: (pov: EmbedPov) => void,
+): HTMLElement {
+  const group = document.createElement('div');
+  group.className = 'embed-pov';
+  group.setAttribute('role', 'group');
+  group.setAttribute('aria-label', 'Board perspective');
+  const options: Array<[EmbedPov, string]> = [
+    ['white', labels.first],
+    ['truth', t('watch.truth')],
+    ['black', labels.second],
+  ];
+  const buttons = options.map(([key, label]) => {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'embed-pov__button';
+    button.dataset.pov = key;
+    button.textContent = label;
+    button.addEventListener('click', () => {
+      for (const other of buttons) {
+        const active = other === button;
+        other.classList.toggle('active', active);
+        other.setAttribute('aria-pressed', active ? 'true' : 'false');
+      }
+      onChange(key);
+    });
+    const active = key === initial;
+    button.classList.toggle('active', active);
+    button.setAttribute('aria-pressed', active ? 'true' : 'false');
+    return button;
+  });
+  group.append(...buttons);
+  return group;
+}
 
 /** Board width that fits the box: the narrower of the room beside the move
  *  sheet and the room under the seat rows and controls, at the variant's aspect
@@ -173,7 +221,15 @@ export async function mountEmbedCard(
   frame.className = 'embed-frame';
   const header = document.createElement('div');
   header.className = 'embed-card-header';
-  header.textContent = options.header;
+  if (options.headerControls) {
+    const title = document.createElement('span');
+    title.className = 'embed-card-header-title';
+    title.textContent = options.header;
+    header.classList.add('embed-card-header--controls');
+    header.append(title, options.headerControls);
+  } else {
+    header.textContent = options.header;
+  }
   const card = document.createElement('div');
   card.className = 'embed-card';
   if (options.inkFamily) card.dataset.seatInkFamily = options.inkFamily;
@@ -325,6 +381,7 @@ export async function mountEmbedCard(
   // from entries read once, so rebuild it from fresh ones (a xiangqi study's
   // entries are formatted in the current notation when read).
   window.addEventListener(xiangqiNotationChangedEvent, () => {
+    if (!handle) return;
     const fresh = createMoveList(handle.moveEntries?.() ?? [], handle.moveNumbering?.() ?? {});
     if (handle.jumpToLine) fresh.bindLine(jumpLine);
     moveList?.el.replaceWith(fresh.el);
@@ -401,5 +458,26 @@ export async function mountEmbedCard(
   if (handle.jumpToPly) jump(start);
   onPlyChange(handle.jumpToPly ? currentPly : clampPly(start), maxPly);
 
-  return { frame, handle };
+  // Serialised, so a second click waits for the first mount rather than
+  // racing it into the same host.
+  let remounting: Promise<void> = Promise.resolve();
+  const remountBoard = (): Promise<void> => {
+    remounting = remounting.then(async () => {
+      const at = currentPly;
+      handle?.destroy?.();
+      handle = await options.mountBoard(boardHost, { onPlyChange });
+      rowsForBottom = null;
+      if (handle.jumpToPly) jump(at);
+      onPlyChange(at, maxPly);
+    });
+    return remounting;
+  };
+
+  return {
+    frame,
+    get handle() {
+      return handle as EmbedBoardHandle;
+    },
+    remountBoard,
+  };
 }

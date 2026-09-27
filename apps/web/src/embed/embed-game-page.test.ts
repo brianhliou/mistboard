@@ -159,6 +159,35 @@ describe('mountEmbedGame pov on the chess stack', () => {
   });
 });
 
+describe('the fog view picker on a game embed', () => {
+  it("remounts the board in the picked side's own pane, and truth revealed", async () => {
+    // The pane is fixed when the board mounts, so a new view is a new mount.
+    stubFetch(200, { game: { roomId: 'fog', variant: 'dark-chess', result: 'white-wins' } });
+    replayMounts.length = 0;
+    const root = document.createElement('div');
+    await mountEmbedGame(root, { roomId: 'fog' });
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('.embed-pov__button')];
+    expect(buttons.map((b) => b.textContent)).toEqual(['White', 'Truth', 'Black']);
+    expect(root.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe('truth');
+    buttons[2]!.click();
+    await vi.waitFor(() => expect(replayMounts).toHaveLength(2));
+    expect(replayMounts[1]?.revealOnFinish).toBe(false);
+    const panes = replayMounts[1]?.panes as { resolver: () => string } | undefined;
+    expect(panes?.resolver()).toBe('black');
+    buttons[1]!.click();
+    await vi.waitFor(() => expect(replayMounts).toHaveLength(3));
+    expect(replayMounts[2]?.revealOnFinish).toBe(true);
+    expect(replayMounts[2]?.panes).toBeUndefined();
+  });
+
+  it('gives an open game no picker', async () => {
+    stubFetch(200, { game: { roomId: 'open', variant: 'chess', result: 'white-wins' } });
+    const root = document.createElement('div');
+    await mountEmbedGame(root, { roomId: 'open' });
+    expect(root.querySelector('.embed-pov')).toBeNull();
+  });
+});
+
 describe('the card chrome the game embed shares with the study embed', () => {
   const game = (extra: Record<string, unknown>) =>
     ({ roomId: 'r', variant: 'xiangqi', result: 'red-wins', mode: 'pve', ...extra }) as never;

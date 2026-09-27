@@ -619,6 +619,67 @@ describe('mountEmbedStudy', () => {
     }
   });
 
+  it('gives a fog chess chapter a White / Truth / Black picker that fogs the board', async () => {
+    // A reader of a fog game wants to see what each side saw: the picker swaps
+    // the truth board for a seat's fogged view, and `?pov=` can open on one.
+    const line = ['e2e4', 'e7e5', 'g1f3'];
+    const tree = line.reduceRight<{ uci?: string; children?: unknown[] }>(
+      (child, uci) => ({ uci, children: child.uci ? [child] : [] }),
+      {},
+    );
+    const chapter = {
+      id: 'Fog00001',
+      name: 'Misty against itself',
+      orientation: 'red',
+      variant: 'dark-chess',
+      root: { root: { children: [tree] } },
+    };
+    stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
+    const root = document.createElement('div');
+    document.body.append(root);
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Fog00001' }, { startPly: 3 });
+    const buttons = [...root.querySelectorAll<HTMLButtonElement>('.embed-pov__button')];
+    expect(buttons.map((b) => b.dataset.pov)).toEqual(['white', 'truth', 'black']);
+    expect(root.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe('truth');
+    expect(root.querySelectorAll('.dark-chess-fog-square')).toHaveLength(0);
+    buttons[2]!.click();
+    const fogged = root.querySelectorAll('.dark-chess-fog-square').length;
+    expect(fogged).toBeGreaterThan(0);
+    expect(root.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe('black');
+    buttons[1]!.click();
+    expect(root.querySelectorAll('.dark-chess-fog-square')).toHaveLength(0);
+    root.remove();
+
+    stubFetch(200, { study: { id: 's' }, chapters: [chapter] });
+    const opened = document.createElement('div');
+    document.body.append(opened);
+    await mountEmbedStudy(opened, { studyId: 's', chapterId: 'Fog00001' }, { pov: 'white' });
+    expect(opened.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe(
+      'white',
+    );
+    expect(opened.querySelectorAll('.dark-chess-fog-square').length).toBeGreaterThan(0);
+    opened.remove();
+  });
+
+  it('gives an open chess chapter no view picker', async () => {
+    stubFetch(200, {
+      study: { id: 's' },
+      chapters: [
+        {
+          id: 'Open0001',
+          name: 'Open',
+          orientation: 'red',
+          variant: 'chess',
+          root: { root: { children: [{ uci: 'e2e4', children: [] }] } },
+        },
+      ],
+    });
+    const root = document.createElement('div');
+    await mountEmbedStudy(root, { studyId: 's', chapterId: 'Open0001' }, { pov: 'black' });
+    expect(root.querySelector('.embed-pov')).toBeNull();
+    expect(root.querySelectorAll('.dark-chess-fog-square')).toHaveLength(0);
+  });
+
   it('refuses a chapter of a variant it cannot draw, by name', async () => {
     stubFetch(200, {
       study: { id: 's' },
