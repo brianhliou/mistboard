@@ -85,6 +85,7 @@ Conventions:
 
 ### Watching and review
 
+- An embedded fog game, from a study or straight from the site, has a White, Truth and Black switch above the board: pick a side and the board shows only what that side could see at that move ([b5aee4dd](https://github.com/brianhliou/mistboard/commit/b5aee4dd))
 - Pieces glide when you step through a game on the blog and in embedded studies, lines and broadcasts, for xiangqi, chess and every variant board except Duck and the fog variants; the Fortress and Atomic game replays glide too ([0fb113f0](https://github.com/brianhliou/mistboard/commit/0fb113f0))
 - The homepage board works like a TV channel: it shows the live game, or a fog game still airing (joined where it is now), or the last game's final position; a game you missed is no longer replayed, and every replay plays each move at the time it really took, with the clock ticking at real speed ([09d92fb1](https://github.com/brianhliou/mistboard/commit/09d92fb1))
 - Pro players carry their title (GM, IM, FM, NM) from the CXA's grade lists and the WXF's international titles, each with a source: 90 players tagged instead of 8, and none whose grade the match-fixing rulings revoked ([14d1871e](https://github.com/brianhliou/mistboard/commit/14d1871e))
