@@ -67,9 +67,7 @@ const store = new Map<string, string>();
 const { DUCK_XIANGQI_FACING_PIN, DUCK_XIANGQI_HORSE_PAIR, DUCK_XIANGQI_SHARED_SCREEN } =
   await import('../apps/web/src/duck-xiangqi-rules-diagrams.js');
 const { XQ_BOARD_W, XQ_VIEWBOX_PAD } = await import('../apps/web/src/articles/diagrams.js');
-const { duckPieceMarks, renderXiangqiPieceGlyphed } = await import(
-  '../apps/web/src/xiangqi-piece-sets.js'
-);
+const { duckPieceMarks } = await import('../apps/web/src/xiangqi-piece-sets.js');
 const { allDuckXiangqiSquares, duckXiangqiGeneralsFace } = await import('@mistboard/game');
 
 const HERE = path.dirname(fileURLToPath(import.meta.url));
@@ -178,20 +176,35 @@ figure(
 
 // ── The thumbnail: the duck beside the red general ─────────────────────────
 
+// The house general art is a 1024px raster whose strokes are soft at any size,
+// so the tile draws the crown as the paths gen-anti-diagrams.mts traced from it
+// (2.9-unit strokes in the 100-unit disc frame) and stays sharp at 1920.
+function crownDisc(ink: string): string {
+  const st = `fill="none" stroke="${ink}" stroke-width="2.9" stroke-linejoin="round" stroke-linecap="round"`;
+  return [
+    `<circle cx="50" cy="50" r="46" fill="#fef0d7" stroke="${ink}" stroke-width="2.8"/>`,
+    `<rect x="31.5" y="68.6" width="37" height="6.2" rx="2.2" ${st}/>`,
+    `<path d="M45.1 68.6 V44.2 A5 5 0 0 1 55.2 44.2 V68.6" ${st}/>`,
+    `<path d="M32.6 68.6 C22.8 55 23.8 39.4 36 39.4 C40.6 39.4 43.6 41.4 45.1 45.4" ${st}/>`,
+    `<path d="M67.7 68.6 C77.5 55 76.5 39.4 64.3 39.4 C59.7 39.4 56.7 41.4 55.2 45.4" ${st}/>`,
+    `<path d="M46.4 39.4 V34 H41.6 A1.8 1.8 0 0 1 39.8 32.2 V28.4 A1.8 1.8 0 0 1 41.6 26.6 H46.4 V23 A1.8 1.8 0 0 1 48.2 21.2 H52.1 A1.8 1.8 0 0 1 53.9 23 V26.6 H58.7 A1.8 1.8 0 0 1 60.5 28.4 V32.2 A1.8 1.8 0 0 1 58.7 34 H53.9 V39.4" ${st}/>`,
+  ].join('');
+}
+
 function pairCard(width: number, height: number, size: number): string {
   // Tight: the two discs read as a pair, not as two separate marks.
   const gap = Math.round(size * 0.06);
   const x0 = (width - (size * 2 + gap)) / 2;
   const y = (height - size) / 2;
+  // #f2ede3 is the site's tile field (render_thumbnails.py FIELD). Repainting
+  // the PNG after the fact re-quantized its anti-aliased edges into stair steps.
   return [
     `<svg viewBox="0 0 ${width} ${height}" xmlns="http://www.w3.org/2000/svg"`,
     ' role="img" aria-label="Duck Xiangqi">',
-    `<rect width="${width}" height="${height}" fill="#f4f1ea"/>`,
-    renderXiangqiPieceGlyphed({ role: 'general', color: 'red' }, 'international', {
-      x: x0,
-      y,
-      size,
-    }),
+    `<rect width="${width}" height="${height}" fill="#f2ede3"/>`,
+    `<svg x="${x0}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100">`,
+    crownDisc('#c30d0d'),
+    '</svg>',
     `<svg x="${x0 + size + gap}" y="${y}" width="${size}" height="${size}" viewBox="0 0 100 100">`,
     duckPieceMarks('international'),
     '</svg>',
