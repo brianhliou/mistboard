@@ -46,7 +46,7 @@ index a7b6a9f..b92ed24 100644
          if (pos.piece_drops() && Type != CAPTURES && (pos.can_drop(Us, ALL_PIECES) || pos.two_boards()))
              for (PieceSet ps = pos.piece_types(); ps;)
 diff --git a/src/position.cpp b/src/position.cpp
-index 352b6d5..25ff999 100644
+index 352b6d5..3f61280 100644
 --- a/src/position.cpp
 +++ b/src/position.cpp
 @@ -1265,6 +1265,17 @@ bool Position::legal(Move m) const {
@@ -67,7 +67,31 @@ index 352b6d5..25ff999 100644
    if ((var->flyingGeneral && count<KING>(us)) || st->bikjang)
    {
        Square s = type_of(moved_piece(m)) == KING ? to : square<KING>(us);
-@@ -2516,10 +2527,14 @@ bool Position::see_ge(Move m, Value threshold) const {
+@@ -1323,7 +1334,22 @@ bool Position::pseudo_legal(const Move m) const {
+ 
+   // Use a slower but simpler function for uncommon cases
+   // yet we skip the legality check of MoveList<LEGAL>().
+-  if (type_of(m) != NORMAL || is_gating(m))
++  //
++  // MISTBOARD PATCH (Duck Xiangqi): the flying-general capture generated in
++  // generate_all() is not a wazir move, so the piece checks below reject it.
++  // That turned a found win into a forgotten one: the search stores the capture
++  // as the TT move, pseudo_legal() refuses it on the next visit, and MovePicker
++  // then skips it in the capture list as "the TT move" (movepick.cpp), so the
++  // node never searches it again. The engine scored "leave the file open" as
++  // level with blocking it and lost won games to it (mistboard #468). Perft
++  // cannot see this, because movegen was already right; the move is also
++  // generated without a duck square, which the wall checks below would reject.
++  // Only the flying move has a non-royal general take the other one (the two
++  // palaces never touch), so the slow path costs nothing elsewhere.
++  if (   type_of(m) != NORMAL || is_gating(m)
++      || (   var->flyingGeneral && !count<KING>(us)
++          && type_of(pc) == general_type(us)
++          && piece_on(to) == make_piece(~us, general_type(~us))))
+       return checkers() ? MoveList<    EVASIONS>(*this).contains(m)
+                         : MoveList<NON_EVASIONS>(*this).contains(m);
+ 
+@@ -2516,10 +2542,14 @@ bool Position::see_ge(Move m, Value threshold) const {
    // Flying general rule
    if (var->flyingGeneral)
    {

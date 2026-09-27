@@ -60,6 +60,13 @@
 #         prohibition stays off, which is the silent third game: generals may
 #         face and neither can do anything about it.
 #
+# And on one search: `5c3/3k5/9/2P6/9/2n6/3*5/9/9/3K5 b - - 0 1`, where lifting
+# the duck off the d-file (f10a10,a10e1) hands Red the flying capture, must
+# score mate -1 at depth 10. Perft cannot catch a search that forgets a move it
+# generated: before #468 pseudo_legal() rejected the capture as a TT move, the
+# move picker then skipped it, and this blunder scored +3.6 from depth 6 up and
+# lost a won game in the rules article.
+#
 # No NNUE. The pinned net is a standard-xiangqi net; this variant runs classical
 # eval, the same footing as xiangqi rungs 1-7.
 #

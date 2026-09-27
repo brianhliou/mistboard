@@ -48,7 +48,13 @@ export const DUCK_XIANGQI_DEFAULT_ENGINE_ID = 'fairy-stockfish-duck-xiangqi-leve
 //        prohibition went back to upstream's `count<KING>()` guard and the
 //        capture is generated in movegen instead. This plays a different game
 //        from 0.1.0, so any 0.1.0 result is not comparable.
-export const DUCK_XIANGQI_FSF_ENGINE_VERSION = '0.2.0';
+// 0.3.0: pseudo_legal() accepts the flying capture. The search found it, stored
+//        it as the TT move, then rejected that move on the next visit and never
+//        searched it again, so from depth 6 up the engine scored leaving the
+//        file open as safe and lost won games to it (#468). Same rules as
+//        0.2.0, stronger play: 0.2.0 results are comparable as games, not as
+//        strength.
+export const DUCK_XIANGQI_FSF_ENGINE_VERSION = '0.3.0';
 
 /**
  * Short form of the Fairy-Stockfish commit prod builds for this provider. MUST
@@ -72,7 +78,7 @@ export const DUCK_XIANGQI_FSF_ENGINE_REF = '1b5bdd40';
  * is what catches that.
  */
 export const DUCK_XIANGQI_FSF_PATCH_SHA256 =
-  'ae6ca490b17d452026c1b8ea5a0b0efa744c42eac91c2b5fd18c6205f2a11f4e';
+  'f563b5aa155fb0443fa40ff711324e6909617a7a1dcd69c72a9cf5a615df2223';
 
 export type DuckXiangqiEngineTier = {
   id: string;
