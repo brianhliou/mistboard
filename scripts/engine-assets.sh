@@ -153,6 +153,26 @@ perft_ok() {
     die "$6: perft(1) is not $5 for '$4'"
 }
 
+# search_ok <binary> <ini> <variant> <fen> <move> <other move> <depth> <score> <label>:
+# searched to <depth> against one alternative, <move> still scores <score> at the
+# last depth. Perft proves the move generator; this proves the search keeps what
+# the generator gave it. Stdin stays open until `bestmove`, because EOF stops
+# the search.
+search_ok() {
+  out=$(mktemp)
+  {
+    printf 'uci\nsetoption name VariantPath value %s\nsetoption name UCI_Variant value %s\nsetoption name MultiPV value 2\nucinewgame\nposition fen %s\ngo depth %s searchmoves %s %s\n' \
+      "$2" "$3" "$4" "$7" "$5" "$6"
+    i=0
+    until grep -q '^bestmove' "$out" || [ "$i" -ge 600 ]; do sleep 0.1; i=$((i + 1)); done
+    echo quit
+  } | "$1" > "$out"
+  last=$(grep "^info depth $7 .* pv $5" "$out" | tail -1 || true)
+  rm -f "$out"
+  echo "$last" | grep -q "score $8 " && log "$9 ok ($5 scores $8 at depth $7)" ||
+    die "$9: $5 does not score '$8' at depth $7: ${last:-no depth $7 line}"
+}
+
 verify() {
   bin=$1
   ini=$2
@@ -163,6 +183,11 @@ verify() {
   perft_ok "$bin/fairy-stockfish-duck-xiangqi" "$ini/duck-xiangqi.ini" duckxiangqi startpos 2554 duck-xiangqi-opening
   perft_ok "$bin/fairy-stockfish-duck-xiangqi" "$ini/duck-xiangqi.ini" duckxiangqi 'fen 9/4k4/9/9/9/4*4/P8/9/4K4/9 w - - 0 1' 430 duck-xiangqi-facing
   perft_ok "$bin/fairy-stockfish-duck-xiangqi" "$ini/duck-xiangqi.ini" duckxiangqi 'fen 9/4k4/9/9/9/9/P8/9/4K4/*8 w - - 0 1' 431 duck-xiangqi-flight
+  # #468: lifting the duck off the file loses the general to the flying capture.
+  # The pre-fix binary scores it +3.6 from depth 6 up (pseudo_legal dropped the
+  # capture from the TT); perft passes on both.
+  search_ok "$bin/fairy-stockfish-duck-xiangqi" "$ini/duck-xiangqi.ini" duckxiangqi \
+    '5c3/3k5/9/2P6/9/2n6/3*5/9/9/3K5 b - - 0 1' f10a10,a10e1 d9e9,e9d2 10 'mate -1' duck-xiangqi-flying-search
   perft_ok "$bin/fairy-stockfish-atomic-xiangqi" "$ini/atomic-xiangqi.ini" atomicxiangqi startpos 44 atomic-xiangqi-opening
   perft_ok "$bin/fairy-stockfish-atomic-xiangqi" "$ini/atomic-xiangqi.ini" atomicxiangqi 'fen 3ak4/3r5/9/9/9/9/9/3C5/9/4K4 w - - 0 1' 3 atomic-xiangqi-shot
   perft_ok "$bin/fairy-stockfish-atomic-xiangqi" "$ini/atomic-xiangqi.ini" atomicxiangqi 'fen 3ak4/9/9/9/9/9/9/3R5/9/4K4 w - - 0 1' 4 atomic-xiangqi-blast
