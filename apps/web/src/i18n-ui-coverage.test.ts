@@ -45,9 +45,6 @@ const ALLOWED: Record<string, Reason> = {
   'study-thumbnails.ts': 'content', // archive cover credits
   'videos-data.ts': 'content', // third-party video titles
   // visitor-facing debt
-  'embed/embed-card.ts': '#464',
-  'embed/embed-game-page.ts': '#464',
-  'embed/embed-study-page.ts': '#464',
   'replay-board.ts': '#464',
   'replay-icons.ts': '#464',
   'review/move-tree.ts': '#464',
