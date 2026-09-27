@@ -73,42 +73,6 @@ const G_M_139841: XiangqiReplaySpec = {
   }
 };
 
-const G_M_139842: XiangqiReplaySpec = {
-  "iccs": "b0c2 c6c5 b2a2 b9c7 a0b0 a9b9 g3g4 b7b3 h2h4 h9g7 h0g2 g9e7 c3c4 g6g5 g4g5 c5c4 g5g6 h7h5 c0e2 c4c3 g6g7 i9g9 h4h3 c7d5 i0i1 g9g7 i1d1 b9b5 c2e1 g7g3 h3h1 d5f4 d1d4 f4h3 h1f1 b5f5",
-  "red": "Cao Yanlei",
-  "black": "Lại Lý Huynh",
-  "event": "2026 Chunqiu Daye Cup ten-game match",
-  "resultText": "0-1",
-  "annotations": {
-    "byPly": {
-      "17": {
-        "glyph": "?!",
-        "note": "inaccuracy: 5.5 win% given up, eval -0.67 after. The engine wanted the line in the sibling branch.",
-        "line": "h4g4 g7e8 i0h0 h7f7 h0h7 f7f3 g2f4 c4c3 c2a1 f3f2 e3e4 b9b5 f4e2 f2a2 e2c3 b5g5 b0b3 g5g4 c0a2 g4g3 a2c0 i9g9 c3b1 g3g0 b1d2 g9g3 h7h3 g3h3 b3h3 g0g1 a1b3 g1g4",
-        "lineEval": "="
-      },
-      "25": {
-        "glyph": "?!",
-        "note": "inaccuracy: 7.2 win% given up, eval -1.77 after. The engine wanted the line in the sibling branch.",
-        "line": "d0e1 b3b2 b0d0 b9b5 g2f4 d5f4 h3c3 b5b3 d0d4 f4g2 i0i2 g9g7 c3d3 g2e3 c2e3 b2i2 a2i2 e6e5 e3g4 e5e4 d4d6 f9e8 i2g2 h5g5 g2g5 g7g5 d3d5",
-        "lineEval": "∓"
-      },
-      "29": {
-        "glyph": "?",
-        "note": "mistake: 12.9 win% given up, eval -3.66 after. The engine wanted the line in the sibling branch.",
-        "line": "d0e1 g7g2 b0d0 g2g3 d1d5 b5d5 d0d5 g3h3 c2b0 b3e3 d5d6 h3f3 b0d1 e3i3 a2a6 f9e8 d1b2 c3b3 b2c0 f3e3 c0d2 i3i0 d6d4 e3e2",
-        "lineEval": "∓"
-      },
-      "31": {
-        "glyph": "?!",
-        "note": "inaccuracy: 6.5 win% given up, eval -5.28 after. The engine wanted the line in the sibling branch.",
-        "line": "d1d4 g3h3 b0c0 b3b0 c0b0 b5b0 d4d5 h5g5 d5d6 h3g3 d6e6 b0b1 e6d6 b1b5 a3a4 b5f5 g2i1 g3e3 a2a3 e3e4 i1h3 g5g8 d6c6 f5c5 c6g6 g8b8 g6b6 b8g8 a3a6",
-        "lineEval": "−+"
-      }
-    }
-  }
-};
-
 const G_M_139844: XiangqiReplaySpec = {
   "iccs": "h2e2 h7e7 h0g2 h9g7 i0h0 i9i8 b0c2 i8d8 g3g4 b9c7 c3c4 a9a8 g2f4 d8d1 b2b4 c6c5 c4c5 a8f8 f4g6 f8f6 g4g5 e6e5 b4h4 e5e4 a0b0 e4e3 c2e3 d1d3 b0b7 d3e3 f0e1 e3e2 g0e2 e7b7 h4e4 c9a7 c5c6",
   "red": "Cao Yanlei",
@@ -120,92 +84,98 @@ const G_M_139844: XiangqiReplaySpec = {
       "22": {
         "glyph": "?!",
         "note": "inaccuracy: 7.5 win% given up, eval +1.51 after. The engine wanted the line in the sibling branch.",
-        "line": "d1g1 b4b6 e6e5 c5c6 f6c6 g6e5 c6e6 e5f3 g1c1 e2e6 g7e6 c0e2 c1c2 f0e1 c2c3 a0c0 c3e3 f3h4 c7d5 h4f5 e3e5 b6i6 e6g5 i6i5 e7f7 e1f2 d5e3 f5g3 g5h7 i5i4 h7g5 d0e1",
-        "lineEval": "±"
+        "line": "d1g1 b4b6 e6e5 c5c6 f6c6 g6e5 c6e6 e5f3 g1c1 e2e6 g7e6 c0e2 c1c2 f0e1 c2c3 a0c0 c3e3 f3h4 c7d5 h4f5 e3e5 b6i6 e6g5 i6i5 e7f7 e1f2 d5e3 f5g3 g5h7 i5i4 h7g5 d0e1"
       },
       "24": {
         "glyph": "?",
         "note": "mistake: 14.5 win% given up, eval +2.96 after. The engine wanted the line in the sibling branch.",
-        "line": "c7e6 c5c6 e6c5 a0b0 b7b1 f0e1 c5d3 h4d4 d1c1 e2e5 d9e8 h0h2 b1b2 c2b4 c1c4 h2d2 c4b4 d2d3 b2e2 c0e2 b4b0 d4h4 f6c6 h4h6 c6c7 d3d6 c7b7 g5h5 b0b5 d6c6 c9a7",
-        "lineEval": "±"
+        "line": "c7e6 c5c6 e6c5 a0b0 b7b1 f0e1 c5d3 h4d4 d1c1 e2e5 d9e8 h0h2 b1b2 c2b4 c1c4 h2d2 c4b4 d2d3 b2e2 c0e2 b4b0 d4h4 f6c6 h4h6 c6c7 d3d6 c7b7 g5h5 b0b5 d6c6 c9a7"
       }
     }
   }
 };
 
-const G_M_140016: XiangqiReplaySpec = {
-  "iccs": "c3c4 h7e7 h0g2 h9g7 i0h0 i9h9 b0c2 b9a7 c0e2 h9h5 g3g4 b7d7 h2i2 h5h0 g2h0 a9b9 a0b0 b9b5 h0g2 g6g5 g4g5 b5g5 g2f4 a6a5 d0e1 f9e8 b0d0 a7b5 b2b0 g5f5 d0d5 f5d5 f4d5 d7d6 c2b4 b5d4 b4c6 e7e3 b0b4 e3d3 b4d4 d6d4 d5f4 d4e4 c6a5 g9e7 a5b7 d3d7 b7d6 e4e3 c4c5 d7d8 c5c6 e8d7 d6c4 e3e4 c6d6 d8g8 e0d0 g8d8 i2f2 e4e5 d0e0 d8g8 c4e3 d9e8 d6e6 g8i8 f4g6 e5g5 e6d6 i8i3 e3f5 g7i8 f2f4 i3i5 f5d4 i5h5 f4e4 h5h7 d4e6 g5h5 e6f4 h5h6 g6e5 e9f9 e4b4 i8g7 a3a4 e7g5 b4b3 c9e7 b3g3 g7h9 a4a5 h6h5 a5b5 h5h6 b5c5 h6f6",
+const G_M_139982: XiangqiReplaySpec = {
+  "iccs": "h2e2 h9g7 h0g2 c6c5 i0h0 i9h9 g3g4 b9c7 b0a2 a6a5 b2c2 c7b5 g2f4 a9a6 a0a1 a6d6 h0h6 c9e7 a1f1 d9e8 c2c5 b7c7 f1b1 b5a3 b1b9 e8d9 c5d5 f9e8 e2d2 d6a6 d5d3 h7i7 h6g6 i7i3 d3i3 h9h3 f4d5 c7c0 d0e1 h3i3 g6g7 i3i5 d2d9 e8d9 d5e7 g9e7 g7e7",
   "red": "Cao Yanlei",
-  "black": "Li Hanlin",
+  "black": "Wang Yongqiang",
   "event": "2026 Baizuishan Cup",
   "resultText": "1-0",
   "annotations": {
     "byPly": {
-      "54": {
-        "glyph": "?!",
-        "note": "inaccuracy: 5.0 win% given up, eval +1.66 after. The engine wanted the line in the sibling branch.",
-        "line": "e3c3 a3a4 g7f5 i2i6 f5d4 e1d2 d4c6 f4e6 c6b4 e2c4 e8d7 d6e4 c3e3 e6g7 b4c2 g7f5 d8e8 f5e3 c2d4 a4a5 e8e4 f0e1 e4e6 e0d0 e6d6 e3d5 d4f3 i6e6 e9f9 g0e2 d9e8",
+      "22": {
+        "glyph": "?",
+        "note": "mistake: 13.8 win% given up, eval +2.13 after. The engine wanted the line in the sibling branch.",
+        "line": "h7h8 c5a5 h8f8 h6h9 f8f1 h9h1 d6d1 e2g2 b5a3 d0e1 f1f2 g2g1 d1d4 e1f2 d4f4 g1a1 b7b0 c0e2 a3c2 h1c1 c2a1",
         "lineEval": "±"
       },
-      "64": {
+      "26": {
         "glyph": "?!",
-        "note": "inaccuracy: 8.5 win% given up, eval +2.19 after. The engine wanted the line in the sibling branch.",
-        "line": "e5f5 f2g2 d8f8 f4d5 e6e5 d5c3 d7e8 c4e5 f8i8 c3a4 i8i3 a4b6 i3i4 e5f3 f5f8 f3h4 i4i1 g2g6 i1g1 h4f5 e7g5 f5g3 i6i5 b6c4 c9e7 a3a4 i5i4 g6f6 i4i3 a4a5",
-        "lineEval": "±"
+        "note": "inaccuracy: 7.1 win% given up, eval +3.13 after. The engine wanted the line in the sibling branch.",
+        "line": "d6d9 b9d9 e9d9 c5c6 a3b5 h6h1 h7i7 h1d1 d9e9 d1d5 b5a7 a2b4 a5a4 d5a5 a4b4 a5a7 h9h5 a7c7 h5f5 e2a2 f5f4"
       },
-      "92": {
+      "44": {
         "glyph": "?!",
-        "note": "inaccuracy: 8.3 win% given up, eval +3.27 after. The engine wanted the line in the sibling branch.",
-        "line": "h6h5 e5c4 h7h6 b3b7 g5e7 c4e3 h5g5 b7b9 c9a7 f4e6 h6f6 e6d4 g5i5 b9b7 a7c9 e3f5 g7h5 b7b5 i5f5 b5h5 f5g5 h5h3 i6i5 h3b3 e7g9 d4f3 g5g6 f3g5 f6f5 b3f3 f5e5 e0d0",
-        "lineEval": "±"
-      },
-      "93": {
-        "glyph": "?!",
-        "note": "inaccuracy: 5.5 win% given up, eval +2.49 after. The engine wanted the line in the sibling branch.",
-        "line": "d6d7 h6h5 e5g6 h5h4 d7d8 f9e9 f4d5 h4e4 d8e8 g7e8 g6e5 e8g9 b3g3 e9d9 a4a5 i6i5 e5g6 h7g7 d5e7 g5e7 g3g7 e7c9 g6i5 g9f7 i5g4 e4e7 g7g6 f7g5 g6d6 g5e4 d6d1 d9e9",
-        "lineEval": "+−"
-      },
-      "96": {
-        "glyph": "??",
-        "note": "blunder: 22.9 win% given up, eval +6.07 after. The engine wanted the line in the sibling branch.",
-        "line": "i6i5 d6e6 h7f7 e6e7 g5e7 f4g6 h9i7 g6h8 i7g8 e5g4 e7g5 g3g5 i5i4 h8g6 g8i7 g5f5 f9e9 g4h6 i7g6 h6i4 f7f8 a5b5 e8f7 f5d5 g6f4 d5d6 f4e6 i4h6 e6g5",
-        "lineEval": "±"
-      },
-      "97": {
-        "glyph": "??",
-        "note": "blunder: 57.4 win% given up, eval -1.93 after. The engine wanted the line in the sibling branch.",
-        "line": "g3f3 f9e9 f4h5 h7h6 f3e3 h9g7 h5g3 i6i5 e5d7 e9f9 d7b8 e7c9 e3b3 g5e7 b3b1 f9e9 b8a6 h6h9 g3e4 h9h3 e4f6 h3b3 f6g8 e9f9 e1f2 b3e3 e0d0 i5i4",
-        "lineEval": "+−"
-      },
-      "98": {
-        "glyph": "??",
-        "note": "blunder: 41.8 win% given up, eval +2.95 after. The engine wanted the line in the sibling branch.",
-        "line": "h5e5 d6e6 e5f5 e6f6 h7h1 g3a3 h9i7 b5b6 h1h6 b6b7 h6h1 b7c7 i6i5 f4d5 e7c5 a3f3 f9e9 d5c3 i7g8 c3a4 f5e5 f6e6 g8h6 f3f4 h1h5 a4b6 h6f5",
-        "lineEval": "∓"
+        "note": "inaccuracy: 8.1 win% given up, eval #9 after. The engine wanted the line in the sibling branch.",
+        "line": "i5d5 d9g9 e7c9 g9c9 d5b5 b9b5 a3b5 c9c0 b5d4 a2c1 a6b6 g7g9 e8f9 g9g6 a5a4 e3e4 a4a3 c0d0 b6b2"
       }
     }
   }
 };
 
-const G_M_140458: XiangqiReplaySpec = {
-  "iccs": "h2d2 h9g7 g3g4 i9h9 h0g2 h7i7 b0c2 c6c5 b2b6 g9e7 c0e2 b9a7 i0i1 a9a8 b6g6 b7c7 a0b0 c5c4 e2c4 a8d8 d2d6 h9h5 i1d1 a6a5 b0b6 g7h9 c2e1 i7g7 g2f4 h9f8 e1g2 f8g6 f4g6 c7c3 c4e2 h5c5 b6b0 a7b5 d1d3 c5f5 g2f4 d8d6 b0b5 c3e3 f0e1 d6d3 b5f5 e3e4 f5f7 d3g3 g0i2 g3h3 i2g0 h3g3 g0i2 g3h3 i2g0 g7g8 f7f8 g8g9 f4e6 d9e8 e6c7 h3h6 f8f6 g9i9 f6e6 e4b4 g6e7",
+const G_M_140450: XiangqiReplaySpec = {
+  "iccs": "h2f2 h9g7 h0g2 i9h9 i0h0 c6c5 g3g4 b9c7 c0e2 c9e7 b0c2 c7d5 a0a1 b7d7 b2b5 d5c3 b5b0 a9b9 a1d1 f9e8 b0c0 h7h3 c0c3 h3c3 h0h9 g7h9 d1d6 h9g7 g2f4 b9b2 i3i4 a6a5 f4g6 c5c4 d6d5 a5a4 g6f4 c3b3 c2e1 b2b1 e2c4 a4b4 e1c2 b4c4 d5d3 b3b8 e3e4 b1c1 d3b3 c1c2 f4e2 c4b4 b3b4 c2c8 e2d4 b8a8 b4a4 d7b7 d4b5 a8b8",
   "red": "Zhao Panwei",
   "black": "Cao Yanlei",
+  "event": "2026 Chunqiu Daye Cup arena",
+  "resultText": "0-1",
+  "annotations": {
+    "byPly": {
+      "35": {
+        "glyph": "?!",
+        "note": "inaccuracy: 7.4 win% given up, eval -0.91 after. The engine wanted the line in the sibling branch.",
+        "line": "g6f4 a5a4 e2c4 b2c2 f4e2 g7f5 f2c2 f5d6 e2c3 a4a3 c4e2 e6e5 c3a4 d6f5 a4b6 d7d4 c2c6 d4i4 b6c8 e9f9 c6e6 e5e4"
+      },
+      "43": {
+        "glyph": "??",
+        "note": "blunder: 15.9 win% given up, eval -3.74 after. The engine wanted the line in the sibling branch.",
+        "line": "e1g2 b1c1 f2b2 b4c4 g4g5 e7g5 d5g5 g9e7 g5b5 c4c3 f0e1 c1b1 b2e2 d7d2 e0f0 d2b2 b5d5 b1c1 f4g6 b2g2"
+      },
+      "45": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.1 win% given up, eval -4.20 after. The engine wanted the line in the sibling branch.",
+        "line": "g4g5 c4c3 g5g6 g7h9 c2e1 b3e3 e1g2 d7b7 g6f6 b1f1 f2b2 e3g3 d5d4 g3g0 f0e1 e6e5 b2b1 f1f3 d4c4 f3g3 b1b6 h9g7 f6g6 g7e6"
+      }
+    }
+  }
+};
+
+const G_M_140455: XiangqiReplaySpec = {
+  "iccs": "c3c4 g6g5 b0c2 h9g7 h2e2 i9h9 h0g2 b9c7 i0h0 b7b3 e3e4 h7h3 c2b4 c9e7 a0a1 d9e8 a1c1 g7f5 f0e1 f5g3 b4c6 g5g4 c4c5 h9h5 e4e5 g3e2 g0e2 g4g3 g2e3 e6e5 e3g4 c7e6 c6e5 e6c5 c1c4 b3b5 g4f6 h5g5 c4g4 g5g4 e5g4 e8f7 h0g0 g3f3 g4h6 f9e8 e2c4 a9d9 h6g8 e9f9 b2i2 i6i5 g0h0 h3a3 i2h2 g9i7 h2h9 a3e3 e0f0 c5e4 h9d9 b5f5 e1f2 f3f2 f0e0 e4g3 g8e7 f5e5 f6e4 f9e9 h0h9 e8f9 d9d3",
+  "red": "Cao Yanlei",
+  "black": "He Wenzhe",
   "event": "2026 Chunqiu Daye Cup arena",
   "resultText": "1-0",
   "annotations": {
     "byPly": {
-      "25": {
-        "glyph": "?!",
-        "note": "inaccuracy: 5.3 win% given up, eval -0.77 after. The engine wanted the line in the sibling branch.",
-        "line": "b0b1 a7b5 d6c6 d8d1 b1d1 h5c5 d1d8 c7b7 d8c8 d9e8 c8b8 b7a7 d0e1 i6i5 c4e2 e6e5 b8b6 c5c3 c6f6 b5d4 c2a1 a5a4 a1c0 a7a3 c0b2 a3e3 g2e3 c3e3 b2c4 e3c3 b6d6 e5e4",
-        "lineEval": "⩱"
+      "29": {
+        "glyph": "!!",
+        "note": "Brilliant: a piece offered and not recovered, confirmed along the engine's own line."
       },
-      "68": {
+      "51": {
+        "glyph": "?!",
+        "note": "inaccuracy: 5.5 win% given up, eval -0.79 after. The engine wanted the line in the sibling branch.",
+        "line": "g0h0 f3g3 b2f2 d9d3 f6d7 g3f3 f2i2 e8d7 h0h3 i6i5 h3h6 f3f2 h6f6 d7e8 f6f2 b5b8 g8f6 b8c8 f2b2 c8c4 b2b9 e8d9 i2i5 c4h4 i5d5 d3g3 b9d9 f9f8 d5f5"
+      },
+      "54": {
         "glyph": "??",
-        "note": "blunder: 42.7 win% given up, eval +6.90 after. The engine wanted the line in the sibling branch.",
-        "line": "i9i3 e6e4 h6g6 e4e6 g6e6 c7e6 i3b3 e1f0 b3b0 d0e1 i6i5 e6d4 b0b6 d4c6 e8d7 c6e5 f9e8 e5c4 b6b4 e0d0 i5i4 c4b6 i4h4 d0e0 e9d9 b6c4 c9a7 c4b6 a7c9",
-        "lineEval": "="
+        "note": "blunder: 36.3 win% given up, eval +3.23 after. The engine wanted the line in the sibling branch.",
+        "line": "f3g3 h0h2 d9d3 h2b2 d3b3 b2b3 h3b3 f6g4 b5b8 g8h6 b3b5 i3i4 b8c8 i2c2 c8c4 c2c5 e7c5 i4i5 c4e4 e1d2 g3f3"
+      },
+      "66": {
+        "glyph": "?!",
+        "note": "inaccuracy: 7.7 win% given up, eval +6.02 after. The engine wanted the line in the sibling branch.",
+        "line": "e4f6 g8f6 f5e5 e0f0 e8d9 f6g4 e3f3 f0e0 e5e4 g4f2 e7g9 h0h7 d9e8 h7h3 e4e3 h3f3 e3i3 f3h3 i3i4 f2e4 i4g4 e4d6 g4g8 h3b3 a6a5 b3b9 f9f8 d6f5 a5a4"
       }
     }
   }
@@ -312,7 +282,7 @@ export const caoYanleiArticle: Article = {
   showSummaryOnPage: false,
   status: "published",
   publishedAt: "2026-09-25",
-  updatedAt: "2026-09-25",
+  updatedAt: "2026-09-27",
   thumbnail: {
     kind: 'image',
     src: "/article-thumbs/cao-yanlei-2024-face.jpg",
@@ -329,11 +299,11 @@ export const caoYanleiArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: "Cao Yanlei 曹岩磊 was abandoned in Sanmenxia, in Henan, before his first birthday. The couple who took him in raised him as their grandson, and the grandfather taught him xiangqi at four. He died before the boy turned six. At thirteen Cao was the youngest national master in China. Around 2011 Macau signed him, and for most of his twenties he played for Macau, often against the mainland's best: three World Championship bronzes, and in 2019 the world masters title, won against Wang Tianyi in the final. The Chinese press calls him the master of the sacrifice.",
+      text: "Cao Yanlei 曹岩磊 is the player the Chinese press calls the master of the sacrifice. In January he beat the world champion, Lại Lý Huynh, in a ten-game match, and in September he was second in the individual table at the first stage of China's top league. The association's ranking at the end of last year had him third in the country.",
     },
     {
       kind: 'paragraph',
-      text: "He is registered to Hubei now and plays the league for Shanghai Jiahong. In January 2025 the Chinese Xiangqi Association's [match-fixing ruling](/blog/xiangqi-match-fixing) named him among the 41 people involved and gave him its lightest penalty, a public criticism, with no ban. This page is his 2026 so far.",
+      text: "He learned the game at four from the grandfather who raised him, and at thirteen he was the youngest national master in China. Around 2011 Macau signed him, and for most of his twenties he played for Macau, often against the mainland's best: three World Championship bronzes, and in 2019 the world masters title, won against Wang Tianyi in the final. He is registered to Hubei now and plays the league for Shanghai Jiahong. In January 2025 the Chinese Xiangqi Association's [match-fixing ruling](/blog/xiangqi-match-fixing) gave him its lightest penalty, a public criticism, with no ban. This page is his 2026 so far.",
     },
   ],
   sections: [
@@ -367,11 +337,11 @@ export const caoYanleiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "**Zhao Panwei is the problem.** Sixteen games against him this year, and one win. Half of all Cao's losses came against Zhao. Against everyone else he loses about one game in twelve.",
+          text: "**Zhao Panwei is his hardest opponent.** They met sixteen times this year, most of them in the April arena, and Cao's win is below. Against everyone else he loses about one game in twelve.",
         },
         {
           kind: 'paragraph',
-          text: "**The sacrifices are rarer than the name.** The engine confirms a real one, a piece offered and never won back, in six of his 75 games, about the same rate as Yin Sheng's unbeaten month. One is in the long match win with black below, a cannon left hanging on move 16. The oddest came against Zhao Panwei in April: he offered the same horse twice in four moves, and the game was drawn.",
+          text: "**The sacrifices are real.** The engine confirms six this year, each a piece offered and never won back. Two are on the boards below: a cannon left hanging on move 16 in the long match win with black, and a horse against He Wenzhe in April.",
         },
       ],
     },
@@ -393,16 +363,7 @@ export const caoYanleiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Lại hit back on the last evening, and fast. Cao retreated a horse on move 15, the only real mistake of the game, and resigned three moves later. The Chinese sites filed it under 弃子速胜, a quick win with a sacrifice. For once the sacrifice was not Cao's.",
-        },
-        {
-          kind: 'xq-replay',
-          spec: { ...G_M_139842, startPly: 29, perspective: 'red' },
-          caption: "Cao Yanlei vs Lại Lý Huynh, 5 January 2026. The board opens just after red's 15th move, with Lại to play.",
-        },
-        {
-          kind: 'paragraph',
-          text: "That left Cao needing a draw from the last game. He won it in 19 moves: Lại pushed his central soldier on move 12, and seven moves later he resigned.",
+          text: "Lại hit back with a quick win on the last evening, which left Cao needing a draw from the last game. He won it in 19 moves: Lại pushed his central soldier on move 12, and seven moves later he resigned.",
         },
         {
           kind: 'xq-replay',
@@ -416,12 +377,12 @@ export const caoYanleiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "The next day he went straight into an open and won seven of his ten games. The game against Li Hanlin is the strange one. Cao had been better for most of it when Li's cannon went forward on move 48 and left him lost. With the win on the board, Cao slid a soldier sideways instead, and suddenly Li was better. Li gave it straight back with his next move and resigned. The board opens on the move Cao missed.",
+          text: "The next day he went straight into an open and won seven of his ten games without losing one. On the first day he beat Wang Yongqiang in the cleanest game of his year, with an accuracy of 99. Wang's cannon slid across on move 11, Cao's chariot swung across in reply, and after Wang's 22nd move the engine sees mate in nine. Wang resigned two moves later.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_M_140016, startPly: 96, perspective: 'red' },
-          caption: "Cao Yanlei vs Li Hanlin, 7 January 2026. Red to move, and one move keeps the win.",
+          spec: { ...G_M_139982, startPly: 22, perspective: 'red' },
+          caption: "Cao Yanlei vs Wang Yongqiang, 6 January 2026. The board opens after black's 11th, with red to move.",
         },
       ],
     },
@@ -430,12 +391,25 @@ export const caoYanleiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: "King of the hill: three players, one holding the arena, and each challenge is a single 20-minute game, then five-minute games until somebody wins. Everyone has four lives. In April Cao beat Zhao Panwei once and He Wenzhe twice, then lost to Zhao four times in a row, and his first season was over. In this one the position is level until Cao's cannon slides across on move 34. Zhao's reply ends it.",
+          text: "King of the hill: three players, one holding the arena, and each challenge is a single 20-minute game, then five-minute games until somebody wins. Everyone has four lives. In April Cao beat Zhao Panwei once and He Wenzhe twice before Zhao knocked him out.",
+        },
+        {
+          kind: 'paragraph',
+          text: "The win over Zhao came with black. The game was level until Zhao pulled his chariot back on move 18. Cao's edge soldier crossed the river on that same move and kept walking, one file across on move 21 and another on move 22, straight after Zhao's horse went wrong. Zhao resigned after move 30.",
         },
         {
           kind: 'xq-replay',
-          spec: { ...G_M_140458, startPly: 67, perspective: 'black' },
-          caption: "Zhao Panwei vs Cao Yanlei, 5 April 2026. The board opens after red's 34th, with black to find the move that holds.",
+          spec: { ...G_M_140450, startPly: 35, perspective: 'black' },
+          caption: "Zhao Panwei vs Cao Yanlei, 4 April 2026. The board opens after red's 18th, with Cao to play as black.",
+        },
+        {
+          kind: 'paragraph',
+          text: "Against He Wenzhe the next day he offered a horse on move 15, one of the six sacrifices the engine confirms this year. The game stayed level until He's cannon slid to the edge on move 27. Two moves later Cao's cannon went deep, his chariot ran the length of the board on move 36, and He resigned after the next move.",
+        },
+        {
+          kind: 'xq-replay',
+          spec: { ...G_M_140455, startPly: 28, perspective: 'red' },
+          caption: "Cao Yanlei vs He Wenzhe, 5 April 2026. The board opens after black's 14th, with Cao to move.",
         },
       ],
     },
