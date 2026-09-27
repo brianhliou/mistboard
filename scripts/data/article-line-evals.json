@@ -1155,182 +1155,162 @@
     "symbol": "−+"
   },
   "cao-yanlei:0:27": {
-    "cp": 73,
+    "cp": 76,
     "mate": null,
     "symbol": "⩲"
   },
   "cao-yanlei:0:31": {
-    "cp": 8,
+    "cp": 9,
     "mate": null,
     "symbol": "="
   },
   "cao-yanlei:0:49": {
-    "cp": -93,
+    "cp": -103,
     "mate": null,
     "symbol": "∓"
   },
   "cao-yanlei:0:51": {
-    "cp": -203,
+    "cp": -184,
     "mate": null,
     "symbol": "∓"
   },
   "cao-yanlei:0:59": {
-    "cp": -286,
+    "cp": -244,
     "mate": null,
-    "symbol": "−+"
+    "symbol": "∓"
   },
   "cao-yanlei:0:75": {
-    "cp": -354,
+    "cp": -311,
     "mate": null,
     "symbol": "−+"
   },
   "cao-yanlei:0:84": {
-    "cp": -571,
+    "cp": -449,
     "mate": null,
     "symbol": "−+"
   },
   "cao-yanlei:0:153": {
-    "cp": -447,
+    "cp": -350,
     "mate": null,
     "symbol": "−+"
   },
-  "cao-yanlei:1:17": {
-    "cp": -15,
+  "cao-yanlei:1:22": {
+    "cp": 96,
+    "mate": null,
+    "symbol": "±"
+  },
+  "cao-yanlei:1:24": {
+    "cp": 93,
+    "mate": null,
+    "symbol": "±"
+  },
+  "cao-yanlei:2:22": {
+    "cp": 49,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "cao-yanlei:2:26": {
+    "cp": 207,
+    "mate": null,
+    "symbol": "±"
+  },
+  "cao-yanlei:2:44": {
+    "cp": 484,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "cao-yanlei:3:35": {
+    "cp": -8,
     "mate": null,
     "symbol": "="
   },
-  "cao-yanlei:1:25": {
-    "cp": -99,
-    "mate": null,
-    "symbol": "∓"
-  },
-  "cao-yanlei:1:29": {
+  "cao-yanlei:3:43": {
     "cp": -147,
     "mate": null,
     "symbol": "∓"
   },
-  "cao-yanlei:1:31": {
-    "cp": -341,
+  "cao-yanlei:3:45": {
+    "cp": -284,
     "mate": null,
     "symbol": "−+"
   },
-  "cao-yanlei:2:22": {
-    "cp": 102,
-    "mate": null,
-    "symbol": "±"
-  },
-  "cao-yanlei:2:24": {
-    "cp": 126,
-    "mate": null,
-    "symbol": "±"
-  },
-  "cao-yanlei:3:54": {
-    "cp": 91,
-    "mate": null,
-    "symbol": "±"
-  },
-  "cao-yanlei:3:64": {
-    "cp": 138,
-    "mate": null,
-    "symbol": "±"
-  },
-  "cao-yanlei:3:92": {
-    "cp": 221,
-    "mate": null,
-    "symbol": "±"
-  },
-  "cao-yanlei:3:93": {
-    "cp": 285,
-    "mate": null,
-    "symbol": "+−"
-  },
-  "cao-yanlei:3:96": {
-    "cp": 205,
-    "mate": null,
-    "symbol": "±"
-  },
-  "cao-yanlei:3:97": {
-    "cp": 594,
-    "mate": null,
-    "symbol": "+−"
-  },
-  "cao-yanlei:3:98": {
-    "cp": -190,
-    "mate": null,
-    "symbol": "∓"
-  },
-  "cao-yanlei:4:25": {
-    "cp": -42,
-    "mate": null,
-    "symbol": "⩱"
-  },
-  "cao-yanlei:4:68": {
-    "cp": -3,
+  "cao-yanlei:4:51": {
+    "cp": -26,
     "mate": null,
     "symbol": "="
   },
-  "cao-yanlei:5:24": {
-    "cp": 41,
+  "cao-yanlei:4:54": {
+    "cp": -81,
     "mate": null,
-    "symbol": "⩲"
+    "symbol": "⩱"
+  },
+  "cao-yanlei:4:66": {
+    "cp": 267,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "cao-yanlei:5:24": {
+    "cp": 24,
+    "mate": null,
+    "symbol": "="
   },
   "cao-yanlei:5:32": {
-    "cp": 132,
+    "cp": 123,
     "mate": null,
     "symbol": "±"
   },
   "cao-yanlei:5:34": {
-    "cp": 133,
+    "cp": 127,
     "mate": null,
     "symbol": "±"
   },
   "cao-yanlei:5:42": {
-    "cp": 170,
+    "cp": 138,
     "mate": null,
     "symbol": "±"
   },
   "cao-yanlei:5:45": {
-    "cp": 412,
+    "cp": 351,
     "mate": null,
     "symbol": "+−"
   },
   "cao-yanlei:5:47": {
-    "cp": 242,
+    "cp": 184,
     "mate": null,
     "symbol": "±"
   },
   "cao-yanlei:5:48": {
-    "cp": 217,
+    "cp": 195,
     "mate": null,
     "symbol": "±"
   },
   "cao-yanlei:5:50": {
-    "cp": 252,
+    "cp": 206,
     "mate": null,
-    "symbol": "+−"
+    "symbol": "±"
   },
   "cao-yanlei:5:53": {
-    "cp": 461,
+    "cp": 378,
     "mate": null,
     "symbol": "+−"
   },
   "cao-yanlei:5:58": {
-    "cp": 226,
+    "cp": 208,
     "mate": null,
     "symbol": "±"
   },
   "cao-yanlei:5:59": {
-    "cp": 384,
+    "cp": 281,
     "mate": null,
     "symbol": "+−"
   },
   "cao-yanlei:5:60": {
-    "cp": 259,
+    "cp": 248,
     "mate": null,
-    "symbol": "+−"
+    "symbol": "±"
   },
   "cao-yanlei:5:75": {
-    "cp": 402,
+    "cp": 295,
     "mate": null,
     "symbol": "+−"
   }
