@@ -188,6 +188,7 @@ Conventions:
 
 ### Fixed
 
+- An embedded fog study game switched to Black's view now turns the board so Black is at the bottom, as embedded games already did ([c8c3af3a](https://github.com/brianhliou/mistboard/commit/c8c3af3a))
 - The Duck Xiangqi bot no longer lifts the duck off the file between the generals when it is winning; it used to lose the general to the flying capture ([45fc6083](https://github.com/brianhliou/mistboard/commit/45fc6083))
 - The game room is in Chinese for Chinese readers: clocks, buttons, the abort countdown, resign and abort, the result and the tab title, in every variant; it was English from the first move to game over ([9a8ad1ad](https://github.com/brianhliou/mistboard/commit/9a8ad1ad))
 - On a phone the clocks sit right above and below the board, with the abort countdown and Resign under them; they used to start below the bottom of the screen ([f3cbb88d](https://github.com/brianhliou/mistboard/commit/f3cbb88d))
