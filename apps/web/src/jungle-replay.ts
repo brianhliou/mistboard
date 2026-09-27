@@ -15,7 +15,7 @@ import {
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
 import type { JungleReplaySpec } from './articles/types.js';
-import { renderJungleBoardSvg } from './jungle-render.js';
+import { animateJungleBoardMove, renderJungleBoardSvg } from './jungle-render.js';
 
 type JungleReplayCopy = {
   redLabel: string;
@@ -162,12 +162,18 @@ export function mountJungleReplay(
   host.append(header, frame, controls, slider, narrative);
 
   let index = 0;
-  function render(): void {
+  function render(animateFrom?: number): void {
     const state = states[index]!;
     frame.innerHTML = renderJungleBoardSvg(state.board, {
       perspective,
       lastMove: state.lastMove ?? null,
     });
+    // One-ply steps glide (the embed board's rule); a jump repaints instantly.
+    if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
+      const forward = index > animateFrom;
+      const move = moves[(forward ? index : animateFrom) - 1];
+      if (move) animateJungleBoardMove(frame, move, perspective, { reverse: !forward });
+    }
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
@@ -188,8 +194,9 @@ export function mountJungleReplay(
   function goto(target: number): void {
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(from);
     }
   }
   const onFirst = () => goto(0);

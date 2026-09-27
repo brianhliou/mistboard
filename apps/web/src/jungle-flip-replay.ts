@@ -18,7 +18,11 @@ import {
 } from '@mistboard/game';
 import type { ArticleLang } from './article-i18n.js';
 import type { JungleFlipReplaySpec } from './articles/types.js';
-import { type JungleFlipRenderBoard, renderJungleFlipBoardSvg } from './jungle-flip-render.js';
+import {
+  animateJungleFlipBoardMove,
+  type JungleFlipRenderBoard,
+  renderJungleFlipBoardSvg,
+} from './jungle-flip-render.js';
 
 type JungleFlipReplayCopy = {
   firstRole: string;
@@ -175,12 +179,18 @@ export function mountJungleFlipReplay(
   host.append(header, frame, controls, slider, narrative);
 
   let index = 0;
-  function render(): void {
+  function render(animateFrom?: number): void {
     const view = getJungleFlipPlayerView(states[index]!, 'red');
     frame.innerHTML = renderJungleFlipBoardSvg(view.board as JungleFlipRenderBoard, {
       lastMove: view.lastMove ?? null,
       lastMoveInk: jungleFlipLastMoverInk(view),
     });
+    // One-ply steps glide (the embed board's rule); a jump repaints instantly.
+    if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
+      const forward = index > animateFrom;
+      const move = moves[(forward ? index : animateFrom) - 1];
+      if (move) animateJungleFlipBoardMove(frame, move, 'red', { reverse: !forward });
+    }
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
@@ -202,8 +212,9 @@ export function mountJungleFlipReplay(
   function goto(target: number): void {
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(from);
     }
   }
   const onFirst = () => goto(0);

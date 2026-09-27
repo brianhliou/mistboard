@@ -20,8 +20,13 @@ import {
 } from '@mistboard/game';
 import { track } from './analytics.js';
 import type { ArticleLang } from './article-i18n.js';
+import { drawMarkerOnArrival, glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import './board-glyph-marker.css';
-import { boardLastMoveMarkersSvg, boardLastMoveOuterRadius } from './board-lastmove.js';
+import {
+  BOARD_LASTMOVE_MARKER_SELECTOR,
+  boardLastMoveMarkersSvg,
+  boardLastMoveOuterRadius,
+} from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
@@ -231,12 +236,19 @@ function piecesSvg(board: XiangqiBoard, perspective: XiangqiColor): string {
       if (!piece) return '';
       const { file, rank } = coord(sq as XiangqiSquare);
       const { x, y } = pointXY(file, rank, perspective);
-      return renderXiangqiPieceGlyphed(piece as XiangqiPiece, readStoredXiangqiPieceSet(), {
-        x: x - PIECE / 2,
-        y: y - PIECE / 2,
-        size: PIECE,
-        crossed: drawsCrossedSoldier(piece as XiangqiPiece, rank),
-      });
+      const pieceSvg = renderXiangqiPieceGlyphed(
+        piece as XiangqiPiece,
+        readStoredXiangqiPieceSet(),
+        {
+          x: x - PIECE / 2,
+          y: y - PIECE / 2,
+          size: PIECE,
+          crossed: drawsCrossedSoldier(piece as XiangqiPiece, rank),
+        },
+      );
+      // A keyed slot per piece, the live board's shape (xiangqi-board.ts), so a
+      // one-ply step can find the piece that moved and glide it.
+      return `<g class="xq-piece-slot" data-piece-square="${sq}">${pieceSvg}</g>`;
     })
     .join('');
 }
@@ -264,6 +276,40 @@ function boardSvg(
     lastMove && glyph ? glyphMarkerSvg(lastMove, glyph, perspective) : '',
   ].join('');
   return `<svg class="xq-article-svg" data-xq-layout="single" style="--xq-svg-width: ${pw}px" viewBox="0 0 ${pw} ${ph}" role="img" xmlns="http://www.w3.org/2000/svg"><g transform="translate(${PAD} ${PAD})">${body}</g></svg>`;
+}
+
+/**
+ * Glide the piece of a one-ply step, called right after the innerHTML swap that
+ * drew the final position: forward slides the piece now on `move.to` in from
+ * `move.from`; `reverse` (a back step) slides the piece now on `move.from` back
+ * from `move.to`. Every other change (a jump, entering or leaving a line, a
+ * flip) repaints instantly. Honours the piece-animation preference and reduced
+ * motion through pieceAnimationDurationMs.
+ */
+function glideReplayMove(
+  frame: HTMLElement,
+  move: XiangqiMove,
+  perspective: XiangqiColor,
+  reverse: boolean,
+): void {
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settle = reverse ? move.from : move.to;
+  const origin = reverse ? move.to : move.from;
+  const slot = frame.querySelector(`[data-piece-square="${settle}"]`);
+  if (!slot) return;
+  const o = coord(origin);
+  const s = coord(settle);
+  const from = pointXY(o.file, o.rank, perspective);
+  const to = pointXY(s.file, s.rank, perspective);
+  glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  // Forward only: a back step draws the PRIOR move's markers somewhere else, so
+  // fading them in would not track this glide. The judgment badge rides the
+  // arriving piece, so it lands with it too.
+  if (!reverse) {
+    drawMarkerOnArrival(frame.querySelector(BOARD_LASTMOVE_MARKER_SELECTOR), duration);
+    drawMarkerOnArrival(frame.querySelector('.xq-marker--glyph'), duration);
+  }
 }
 
 function lastMoveSvg(move: XiangqiMove, perspective: XiangqiColor): string {
@@ -903,12 +949,13 @@ export function mountXiangqiReplay(
       .join(' \u00b7 ');
   }
 
-  function render(): void {
+  function render(glide?: { move: XiangqiMove; reverse: boolean }): void {
     const view = viewState();
     // Only the mainline carries a verdict; a position inside an engine line is
     // not a move anyone played.
     const playedGlyph = !variation && index > 0 ? annotationAt(index)?.glyph : undefined;
     frame.innerHTML = boardSvg(view.board, view.lastMove, perspective, view.key, playedGlyph);
+    if (glide) glideReplayMove(frame, glide.move, perspective, glide.reverse);
     if (counter.isConnected) counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     // While a sideline is open the controls walk the LINE, so their enabled
     // state has to come from the line's cursor. Reading the mainline index here
@@ -1013,15 +1060,30 @@ export function mountXiangqiReplay(
         leaveVariation();
         return;
       }
+      const from = variation.cursor;
       variation.cursor = Math.min(variation.moves.length, next);
-      render();
+      if (variation.cursor === from) return;
+      // One step inside the line: forward plays line move `cursor`, back
+      // un-plays the move the cursor was on.
+      const forward = variation.cursor > from;
+      const move = variation.moves[(forward ? variation.cursor : from) - 1];
+      render(move ? { move, reverse: !forward } : undefined);
       return;
     }
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(oneStep(from, clamped));
     }
+  }
+
+  /** The glide for a mainline move from ply `from` to ply `to`, if it is one step. */
+  function oneStep(from: number, to: number): { move: XiangqiMove; reverse: boolean } | undefined {
+    if (Math.abs(to - from) !== 1) return undefined;
+    const forward = to > from;
+    const move = moves[(forward ? to : from) - 1];
+    return move ? { move, reverse: !forward } : undefined;
   }
   /**
    * Put the board on a mainline ply, leaving any line that is open.
@@ -1041,8 +1103,11 @@ export function mountXiangqiReplay(
     variation = null;
     const clamped = Math.max(0, Math.min(total, target));
     const moved = clamped !== index;
+    const from = index;
     index = clamped;
-    if (moved || wasInLine) render();
+    // Leaving a line repaints the mainline instantly: the board jumps from the
+    // line's position, which no single mainline move connects to.
+    if (moved || wasInLine) render(wasInLine ? undefined : oneStep(from, clamped));
   }
 
   const onFirst = () => goto(0);
@@ -1216,7 +1281,7 @@ export function mountXiangqiReplayBoard(
   // What the board is showing: a mainline ply, or a step inside a sideline.
   let inLine: { atPly: number; cursor: number } | null = null;
 
-  const render = (): void => {
+  const render = (glide?: { move: XiangqiMove; reverse: boolean }): void => {
     if (inLine) {
       // Replay the sideline from the position the judged move was played in;
       // an illegal token truncates the line rather than throwing.
@@ -1231,6 +1296,7 @@ export function mountXiangqiReplayBoard(
         last = mv;
       }
       frame.innerHTML = boardSvg(state.board, last, perspective, 1000 + inLine.cursor);
+      if (glide) glideReplayMove(frame, glide.move, perspective, glide.reverse);
       return;
     }
     const glyph = index > 0 ? annotated?.byPly[index]?.glyph : undefined;
@@ -1241,6 +1307,7 @@ export function mountXiangqiReplayBoard(
       index,
       glyph,
     );
+    if (glide) glideReplayMove(frame, glide.move, perspective, glide.reverse);
     hooks.onPlyChange?.(index, total);
   };
   const onAppearance = (): void => render();
@@ -1258,15 +1325,32 @@ export function mountXiangqiReplayBoard(
     jumpToPly: (ply) => {
       const clamped = Math.max(0, Math.min(total, ply));
       if (clamped === index && !inLine) return;
+      const wasInLine = inLine !== null;
+      const from = index;
       inLine = null;
       index = clamped;
-      render();
+      // One mainline step glides; a jump, or leaving a line, repaints instantly.
+      const forward = clamped > from;
+      const move = moves[(forward ? clamped : from) - 1];
+      render(
+        !wasInLine && Math.abs(clamped - from) === 1 && move
+          ? { move, reverse: !forward }
+          : undefined,
+      );
     },
     jumpToLine: (atPly, cursor) => {
       const line = lines.get(atPly);
       if (!line) return;
+      const prev = inLine;
       inLine = { atPly, cursor: Math.max(1, Math.min(line.moves.length, cursor)) };
-      render();
+      // One step inside the same line glides, like the mainline.
+      const step =
+        prev && prev.atPly === atPly && Math.abs(inLine.cursor - prev.cursor) === 1
+          ? inLine.cursor > prev.cursor
+            ? { move: line.moves[inLine.cursor - 1], reverse: false }
+            : { move: line.moves[prev.cursor - 1], reverse: true }
+          : undefined;
+      render(step?.move ? { move: step.move, reverse: step.reverse } : undefined);
     },
     plyCount: () => total,
     moveEntries: () =>

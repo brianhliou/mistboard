@@ -13,6 +13,7 @@ import {
   type FortressXiangqiMove,
   type FortressXiangqiSquare,
   getFortressXiangqiPlayerView,
+  isFortressXiangqiDropMove,
   isFortressXiangqiLegalMove,
   oppositeFortressXiangqiColor,
 } from '@mistboard/game';
@@ -20,6 +21,7 @@ import type { ArticleLang } from './article-i18n.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import './drop-reserve.css';
 import {
+  animateFortressXiangqiBoardMove,
   installFortressXiangqiBoardStyles,
   renderFortressXiangqiBoardSvg,
 } from './fortress-xiangqi-render.js';
@@ -190,10 +192,17 @@ export function mountFortressXiangqiReplay(
   host.append(header, frame, controls, slider, narrative);
 
   let index = 0;
-  function render(): void {
+  function render(animateFrom?: number): void {
     const state = states[index]!;
     const view = getFortressXiangqiPlayerView(state, perspective);
     board.innerHTML = renderFortressXiangqiBoardSvg(view, perspective);
+    // One-ply steps glide (the embed board's rule); a jump repaints instantly.
+    if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
+      const forward = index > animateFrom;
+      const move = moves[(forward ? index : animateFrom) - 1];
+      if (move && !isFortressXiangqiDropMove(move))
+        animateFortressXiangqiBoardMove(board, move, perspective, { reverse: !forward });
+    }
     fillFortressXiangqiReserve(topReserve.pieces, view, topColor);
     fillFortressXiangqiReserve(bottomReserve.pieces, view, bottomColor);
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
@@ -215,8 +224,9 @@ export function mountFortressXiangqiReplay(
   function goto(target: number): void {
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(from);
     }
   }
   const onFirst = () => goto(0);
@@ -239,7 +249,8 @@ export function mountFortressXiangqiReplay(
     }
   };
   host.addEventListener('keydown', onKey);
-  window.addEventListener(xiangqiAppearanceChangedEvent, render);
+  const onAppearance = (): void => render();
+  window.addEventListener(xiangqiAppearanceChangedEvent, onAppearance);
 
   render();
 
@@ -251,7 +262,7 @@ export function mountFortressXiangqiReplay(
       last.removeEventListener('click', onLast);
       slider.removeEventListener('input', onSlider);
       host.removeEventListener('keydown', onKey);
-      window.removeEventListener(xiangqiAppearanceChangedEvent, render);
+      window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
       host.replaceChildren();
       host.classList.remove('xq-replay', 'drop-mini-replay', 'stepper', 'notranslate');
       host.removeAttribute('translate');

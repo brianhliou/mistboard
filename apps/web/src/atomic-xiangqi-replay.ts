@@ -33,7 +33,7 @@ import {
 } from './atomic-xiangqi-board.js';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
-import { xiangqiBoardSvg } from './xiangqi-board.js';
+import { animateXiangqiBoardMove, xiangqiBoardSvg } from './xiangqi-board.js';
 import { currentXiangqiNotationStyle } from './xiangqi-notation.js';
 
 export type AtomicXiangqiReplaySpec = {
@@ -101,12 +101,18 @@ export function replayAtomicXiangqiNotation(moves: string): {
  * position at `index` for `perspective`, with the aftermath discs, and plays
  * the detonation the first time a capture ply comes on screen (stepping back
  * onto it later shows the discs without the burst, as the live room does).
+ * A one-ply step from `animateFrom` also glides the piece that moved; on a
+ * capture the capturer is gone, so there is no slot and only the burst plays.
  */
-function createBoardPainter(host: HTMLElement, states: AtomicXiangqiGameState[]) {
+function createBoardPainter(
+  host: HTMLElement,
+  states: AtomicXiangqiGameState[],
+  moves: AtomicXiangqiMove[],
+) {
   let detonatedKey: string | null = null;
   let cancelCapture: (() => void) | null = null;
   return {
-    paint(index: number, perspective: AtomicXiangqiColor): void {
+    paint(index: number, perspective: AtomicXiangqiColor, animateFrom?: number): void {
       const state = states[index]!;
       const view = getAtomicXiangqiPlayerView(state, perspective);
       const key = atomicXiangqiBlastKey(view);
@@ -124,6 +130,11 @@ function createBoardPainter(host: HTMLElement, states: AtomicXiangqiGameState[])
         coordinates: false,
         markers: atomicXiangqiBlastMarkers(view, { fresh }),
       });
+      if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
+        const forward = index > animateFrom;
+        const move = moves[(forward ? index : animateFrom) - 1];
+        if (move) animateXiangqiBoardMove(host, move, perspective, { reverse: !forward });
+      }
       if (fresh && atomicXiangqiCaptureAnimates(view)) {
         cancelCapture = animateAtomicXiangqiCapture(host, view, perspective);
       }
@@ -142,7 +153,7 @@ export function mountAtomicXiangqiReplay(
 ): AtomicXiangqiReplayController {
   const copy = replayStepperCopy(options.lang, 'xiangqi');
   const perspective = spec.perspective ?? 'red';
-  const { states, labels } = replayAtomicXiangqiNotation(spec.moves);
+  const { moves, states, labels } = replayAtomicXiangqiNotation(spec.moves);
   const total = labels.length;
 
   host.classList.add('xq-replay', 'stepper', 'notranslate');
@@ -199,10 +210,10 @@ export function mountAtomicXiangqiReplay(
 
   host.append(header, frame, controls, slider, narrative);
 
-  const painter = createBoardPainter(board, states);
+  const painter = createBoardPainter(board, states, moves);
   let index = 0;
-  function render(): void {
-    painter.paint(index, perspective);
+  function render(animateFrom?: number): void {
+    painter.paint(index, perspective, animateFrom);
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
@@ -222,8 +233,9 @@ export function mountAtomicXiangqiReplay(
   function goto(target: number): void {
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(from);
     }
   }
   const onFirst = () => goto(0);
@@ -246,7 +258,8 @@ export function mountAtomicXiangqiReplay(
     }
   };
   host.addEventListener('keydown', onKey);
-  window.addEventListener(xiangqiAppearanceChangedEvent, render);
+  const onAppearance = (): void => render();
+  window.addEventListener(xiangqiAppearanceChangedEvent, onAppearance);
 
   render();
 
@@ -259,7 +272,7 @@ export function mountAtomicXiangqiReplay(
       last.removeEventListener('click', onLast);
       slider.removeEventListener('input', onSlider);
       host.removeEventListener('keydown', onKey);
-      window.removeEventListener(xiangqiAppearanceChangedEvent, render);
+      window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
       host.replaceChildren();
       host.classList.remove('xq-replay', 'stepper', 'notranslate');
       host.removeAttribute('translate');
@@ -285,17 +298,17 @@ export function mountAtomicXiangqiReplayBoard(
   bottomSeat: () => 'first' | 'second';
 } {
   const perspective = spec.perspective ?? 'red';
-  const { states, labels } = replayAtomicXiangqiNotation(spec.moves);
+  const { moves, states, labels } = replayAtomicXiangqiNotation(spec.moves);
   const total = labels.length;
 
   const frame = document.createElement('div');
   frame.className = 'raw-svg-stepper-frame raw-svg-stepper-frame-xq';
   host.replaceChildren(frame);
-  const painter = createBoardPainter(frame, states);
+  const painter = createBoardPainter(frame, states, moves);
 
   let index = 0;
-  const render = (): void => {
-    painter.paint(index, perspective);
+  const render = (animateFrom?: number): void => {
+    painter.paint(index, perspective, animateFrom);
     hooks.onPlyChange?.(index, total);
   };
   render();
@@ -306,8 +319,9 @@ export function mountAtomicXiangqiReplayBoard(
       host.replaceChildren();
     },
     jumpToPly: (ply: number) => {
+      const from = index;
       index = Math.max(0, Math.min(total, Math.trunc(ply)));
-      render();
+      render(from);
     },
     plyCount: () => total,
     moveEntries: () => labels.map((label, i) => ({ ply: i + 1, label })),

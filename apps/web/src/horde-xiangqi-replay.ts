@@ -22,9 +22,12 @@ import {
   XQ_BOARD_H,
   XQ_BOARD_W,
   xqBoardSvg,
+  xqCoord,
+  xqPoint,
   xqSvg,
   xqVisionDemoState,
 } from './articles/diagrams.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import './live-xiangqi.css';
 import { replayStepperCopy } from './replay-stepper-copy.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
@@ -161,8 +164,28 @@ export function mountHordeXiangqiReplay(
 
   host.append(header, frame, controls, slider, narrative);
 
+  /**
+   * Glide the piece of a one-ply step after the repaint: forward slides the
+   * piece on `to` in from `from`, a back step slides the piece on `from` home.
+   * Offsets are differences of two diagram points, so the board's origin and
+   * layout (intersection or cell) cancel out.
+   */
+  function glide(move: XiangqiMove, reverse: boolean): void {
+    const duration = pieceAnimationDurationMs();
+    if (duration <= 0) return;
+    const settle = reverse ? move.from : move.to;
+    const origin = reverse ? move.to : move.from;
+    const slot = board.querySelector(`[data-piece-square="${settle}"]`);
+    if (!slot) return;
+    const o = xqCoord(origin);
+    const t = xqCoord(settle);
+    const from = xqPoint(o.file, o.rank, perspective, 0, 0);
+    const to = xqPoint(t.file, t.rank, perspective, 0, 0);
+    glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+  }
+
   let index = 0;
-  function render(): void {
+  function render(animateFrom?: number): void {
     const state = states[index]!;
     const lastMove = index ? moves[index - 1]! : null;
     board.innerHTML = xqSvg(
@@ -178,6 +201,11 @@ export function mountHordeXiangqiReplay(
         veteranSoldiers: spec.veteran,
       }),
     );
+    if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
+      const forward = index > animateFrom;
+      const move = moves[(forward ? index : animateFrom) - 1];
+      if (move) glide(move, !forward);
+    }
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
@@ -199,8 +227,9 @@ export function mountHordeXiangqiReplay(
   function goto(target: number): void {
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(from);
     }
   }
   const onFirst = () => goto(0);
@@ -223,7 +252,8 @@ export function mountHordeXiangqiReplay(
     }
   };
   host.addEventListener('keydown', onKey);
-  window.addEventListener(xiangqiAppearanceChangedEvent, render);
+  const onAppearance = (): void => render();
+  window.addEventListener(xiangqiAppearanceChangedEvent, onAppearance);
 
   render();
 
@@ -235,7 +265,7 @@ export function mountHordeXiangqiReplay(
       last.removeEventListener('click', onLast);
       slider.removeEventListener('input', onSlider);
       host.removeEventListener('keydown', onKey);
-      window.removeEventListener(xiangqiAppearanceChangedEvent, render);
+      window.removeEventListener(xiangqiAppearanceChangedEvent, onAppearance);
       host.replaceChildren();
       host.classList.remove('xq-replay', 'stepper', 'notranslate');
       host.removeAttribute('translate');

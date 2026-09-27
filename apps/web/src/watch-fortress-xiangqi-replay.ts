@@ -1,4 +1,4 @@
-import type { FortressXiangqiPlayerView } from '@mistboard/game';
+import { type FortressXiangqiPlayerView, isFortressXiangqiDropMove } from '@mistboard/game';
 import './drop-reserve.css';
 import {
   type FortressXiangqiPostgameResponse,
@@ -7,6 +7,7 @@ import {
   postgameViewAtPly,
 } from './fortress-xiangqi-postgame.js';
 import {
+  animateFortressXiangqiBoardMove,
   installFortressXiangqiBoardStyles,
   renderFortressXiangqiBoardSvg,
 } from './fortress-xiangqi-render.js';
@@ -47,5 +48,15 @@ export function mountFortressXiangqiWatchReplay(
     fillCaptures: (host, view, owner) =>
       fillFortressXiangqiReserve(host, view, owner, { allRoles: true }),
     sidedCaptures: true,
+    // One-ply steps glide, as on the xiangqi showcase: forward animates the new
+    // view's lastMove, a back step reverse-animates the move the previous ply
+    // carried. A drop has no origin square, so it just appears.
+    animateMove: (boardEl, view, prevView, direction, orientation) => {
+      const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
+      if (!move || isFortressXiangqiDropMove(move)) return;
+      animateFortressXiangqiBoardMove(boardEl, move, orientation, {
+        reverse: direction === 'back',
+      });
+    },
   });
 }

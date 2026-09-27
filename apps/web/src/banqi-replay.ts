@@ -20,11 +20,13 @@ import type { ArticleLang } from './article-i18n.js';
 import {
   BANQI_BOARD_H,
   BANQI_BOARD_W,
+  BANQI_CELL,
   banqiBoardGrid,
   banqiPiece,
   xqSvg,
 } from './articles/diagrams.js';
 import type { BanqiReplaySpec } from './articles/types.js';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 
 type BanqiReplayCopy = {
   firstRole: string;
@@ -102,13 +104,36 @@ function renderBanqiBoardDiagram(view: BanqiPlayerView): string {
     // 'a1'..'h4' → col = file (a=0); row = 4 − rank (rank 4 sits on top).
     const col = square.charCodeAt(0) - 97;
     const row = 4 - Number(square[1]);
-    parts.push(
-      entry.faceDown
-        ? banqiPiece({ shrouded: true }, col, row, 0, 0)
-        : banqiPiece({ color: entry.color, role: entry.role }, col, row, 0, 0),
-    );
+    const piece = entry.faceDown
+      ? banqiPiece({ shrouded: true }, col, row, 0, 0)
+      : banqiPiece({ color: entry.color, role: entry.role }, col, row, 0, 0);
+    // A keyed slot per piece so a one-ply step can find the mover and glide it.
+    parts.push(`<g class="banqi-piece-slot" data-piece-square="${square}">${piece}</g>`);
   }
   return xqSvg(BANQI_BOARD_W, BANQI_BOARD_H, parts.join(''));
+}
+
+/** 'a1'..'h4' to the diagram's cell: col = file, row = 4 - rank. */
+function diagramCell(square: BanqiSquare): { col: number; row: number } {
+  return { col: square.charCodeAt(0) - 97, row: 4 - Number(square[1]) };
+}
+
+/**
+ * Glide the piece of a one-ply step, after the repaint that drew the final
+ * position: forward slides the piece on `move.to` in from `move.from`, a back
+ * step slides the piece on `move.from` home from `move.to`. A flip stays put.
+ */
+function glideDiagramMove(frame: HTMLElement, move: BanqiMove, reverse: boolean): void {
+  if (move.from === move.to) return;
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settle = reverse ? move.from : move.to;
+  const origin = reverse ? move.to : move.from;
+  const slot = frame.querySelector(`[data-piece-square="${settle}"]`);
+  if (!slot) return;
+  const o = diagramCell(origin);
+  const t = diagramCell(settle);
+  glideSvgPiece(slot, (o.col - t.col) * BANQI_CELL, (o.row - t.row) * BANQI_CELL, duration);
 }
 
 export type BanqiReplayController = { destroy(): void };
@@ -199,8 +224,13 @@ export function mountBanqiReplay(
   host.append(header, frame, controls, slider, narrative);
 
   let index = 0;
-  function render(): void {
+  function render(animateFrom?: number): void {
     frame.innerHTML = renderBanqiBoardDiagram(getBanqiPlayerView(states[index]!, perspective));
+    if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
+      const forward = index > animateFrom;
+      const move = moves[(forward ? index : animateFrom) - 1];
+      if (move) glideDiagramMove(frame, move, !forward);
+    }
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;
     prev.disabled = index === 0;
@@ -222,8 +252,9 @@ export function mountBanqiReplay(
   function goto(target: number): void {
     const clamped = Math.max(0, Math.min(total, target));
     if (clamped !== index) {
+      const from = index;
       index = clamped;
-      render();
+      render(from);
     }
   }
   const onFirst = () => goto(0);

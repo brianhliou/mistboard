@@ -3,12 +3,7 @@
 // the per-article content modules and the articles-data.ts barrel can import
 // what they reference. Pure relocation — no behavior changes.
 
-import {
-  CONE_QUEEN_BOARD,
-  DISCOVERY_BOARD,
-  fogSquaresFromVisible,
-} from '@mistboard/board-render';
-import { tokenPieceSize } from '../board-metrics.js';
+import { CONE_QUEEN_BOARD, DISCOVERY_BOARD, fogSquaresFromVisible } from '@mistboard/board-render';
 import {
   applyBanqiMove,
   applyMove as applyXiangqiMove,
@@ -33,15 +28,13 @@ import {
   type XiangqiSquare,
   squareOf as xiangqiSquareOf,
 } from '@mistboard/game';
-import { BANQI_CONVERSION_GAME } from '../banqi-engine-game.js';
-import { BANQI_SAMPLE_GAME } from '../banqi-sample-game.js';
 import articleSnapshotFog from '../article-snapshot-fog.json' with { type: 'json' };
 import articleSnapshotFogBlack from '../article-snapshot-fog-black.json' with { type: 'json' };
-import {
-  type XiangqiBoardGeometry,
-  xiangqiBoardPoint,
-} from '../xiangqi-board-geometry.js';
+import { BANQI_CONVERSION_GAME } from '../banqi-engine-game.js';
+import { BANQI_SAMPLE_GAME } from '../banqi-sample-game.js';
+import { tokenPieceSize } from '../board-metrics.js';
 import type { XiangqiBoardLayout } from '../xiangqi-appearance-storage.js';
+import { type XiangqiBoardGeometry, xiangqiBoardPoint } from '../xiangqi-board-geometry.js';
 import { drawsCrossedSoldier, drawsVeteranSoldier } from '../xiangqi-crossed-soldier.js';
 import {
   DEFAULT_XIANGQI_PIECE_SET,
@@ -60,20 +53,6 @@ export {
   boardToPieces,
   piecesToBoard,
 } from '@mistboard/board-render';
-export {
-  SHOGI4_CAPTURE,
-  SHOGI4_DROP,
-  SHOGI4_JUMP_CASES,
-  SHOGI4_MOVE_ROYAL,
-  SHOGI4_PAIR_CARP,
-  SHOGI4_PAIR_FOX,
-  SHOGI4_PAIR_RACCOON,
-  SHOGI4_PAIR_TAPIR,
-  SHOGI4_RULES_THUMBNAIL,
-  SHOGI4_START_BOARD,
-  SHOGI4_WIN,
-} from '../shogi4-rules-diagrams.js';
-export { SHOGI4_GAME_STEPS, SHOGI4_GAME_TITLE } from '../shogi4-sample-game.js';
 export {
   JUNGLE_DEN_ENTRY,
   JUNGLE_ELEPHANT_STUCK,
@@ -99,6 +78,20 @@ export {
   JUNGLE_TIGER_LEAP_ACROSS,
   JUNGLE_TRAP,
 } from '../jungle-rules-diagrams.js';
+export {
+  SHOGI4_CAPTURE,
+  SHOGI4_DROP,
+  SHOGI4_JUMP_CASES,
+  SHOGI4_MOVE_ROYAL,
+  SHOGI4_PAIR_CARP,
+  SHOGI4_PAIR_FOX,
+  SHOGI4_PAIR_RACCOON,
+  SHOGI4_PAIR_TAPIR,
+  SHOGI4_RULES_THUMBNAIL,
+  SHOGI4_START_BOARD,
+  SHOGI4_WIN,
+} from '../shogi4-rules-diagrams.js';
+export { SHOGI4_GAME_STEPS, SHOGI4_GAME_TITLE } from '../shogi4-sample-game.js';
 
 // ── Standardized rules-article closings ───────────────────────────────────
 // Two kinds, picked by whether *this article's* game is playable on Mistboard
@@ -149,8 +142,14 @@ export function playClosing(opts: {
 // derived from the canonical fog-of-war variant kernel so the diagram exactly
 // matches what players see in a live game.
 export const DARK_CHESS_START_STATE = darkChessVariant.createInitialState('dark-chess-rules-start');
-export const DARK_CHESS_START_VIEW_W = darkChessVariant.getPlayerView(DARK_CHESS_START_STATE, 'white');
-export const DARK_CHESS_START_VIEW_B = darkChessVariant.getPlayerView(DARK_CHESS_START_STATE, 'black');
+export const DARK_CHESS_START_VIEW_W = darkChessVariant.getPlayerView(
+  DARK_CHESS_START_STATE,
+  'white',
+);
+export const DARK_CHESS_START_VIEW_B = darkChessVariant.getPlayerView(
+  DARK_CHESS_START_STATE,
+  'black',
+);
 export const DARK_CHESS_START_FOG_W = fogSquaresFromVisible(DARK_CHESS_START_VIEW_W.visibleSquares);
 export const DARK_CHESS_START_FOG_B = fogSquaresFromVisible(DARK_CHESS_START_VIEW_B.visibleSquares);
 
@@ -370,16 +369,16 @@ export const ENPASSANT_INITIAL: GameState = {
   halfmoveClock: 0,
 };
 export const ENPASSANT_MOVES = [
-  { from: 'b7' as Square, to: 'b5' as Square },  // 1...b5
-  { from: 'a5' as Square, to: 'b6' as Square },  // 2. axb6 e.p.
-  { from: 'd7' as Square, to: 'd5' as Square },  // 2...d5
-  { from: 'g1' as Square, to: 'h1' as Square },  // 3. Kh1 — pass; e.p. window closes
-  { from: 'f7' as Square, to: 'f5' as Square },  // 3...f5
-  { from: 'e5' as Square, to: 'f6' as Square },  // 4. exf6 e.p.
-  { from: 'h7' as Square, to: 'h5' as Square },  // 4...h5
-  { from: 'g5' as Square, to: 'h6' as Square },  // 5. gxh6 e.p.
-  { from: 'a7' as Square, to: 'a5' as Square },  // 5...a5
-  { from: 'b6' as Square, to: 'b7' as Square },  // 6. b7 — quiet push, declines bxa6 e.p.
+  { from: 'b7' as Square, to: 'b5' as Square }, // 1...b5
+  { from: 'a5' as Square, to: 'b6' as Square }, // 2. axb6 e.p.
+  { from: 'd7' as Square, to: 'd5' as Square }, // 2...d5
+  { from: 'g1' as Square, to: 'h1' as Square }, // 3. Kh1 — pass; e.p. window closes
+  { from: 'f7' as Square, to: 'f5' as Square }, // 3...f5
+  { from: 'e5' as Square, to: 'f6' as Square }, // 4. exf6 e.p.
+  { from: 'h7' as Square, to: 'h5' as Square }, // 4...h5
+  { from: 'g5' as Square, to: 'h6' as Square }, // 5. gxh6 e.p.
+  { from: 'a7' as Square, to: 'a5' as Square }, // 5...a5
+  { from: 'b6' as Square, to: 'b7' as Square }, // 6. b7 — quiet push, declines bxa6 e.p.
 ];
 export const ENPASSANT_STATES = replayMoves(ENPASSANT_INITIAL, ENPASSANT_MOVES);
 export const ENPASSANT_POSITIONS = ENPASSANT_STATES.map((state, i) => {
@@ -390,8 +389,7 @@ export const ENPASSANT_POSITIONS = ENPASSANT_STATES.map((state, i) => {
   // Per-frame call-outs: frame 2/11 (after 1...b5) names the b5/b6 e.p.
   // window; frame 5/11 (after 3.Kh1 passes) names the d5/d6 window that
   // just closed.
-  const highlightSquares: Square[] =
-    i === 1 ? ['b5', 'b6'] : i === 4 ? ['d5', 'd6'] : [];
+  const highlightSquares: Square[] = i === 1 ? ['b5', 'b6'] : i === 4 ? ['d5', 'd6'] : [];
   return {
     boards: [
       {
@@ -434,7 +432,10 @@ export const DISCOVERY_BEFORE: GameState = {
   castlingRights: [],
   halfmoveClock: 0,
 };
-export const DISCOVERY_FINAL = darkChessVariant.applyMove(DISCOVERY_BEFORE, { from: 'd3', to: 'd7' });
+export const DISCOVERY_FINAL = darkChessVariant.applyMove(DISCOVERY_BEFORE, {
+  from: 'd3',
+  to: 'd7',
+});
 export const DISCOVERY_BEFORE_FOG_W = fogFor(DISCOVERY_BEFORE, 'white');
 export const DISCOVERY_FINAL_FOG_W = fogFor(DISCOVERY_FINAL, 'white');
 
@@ -445,90 +446,102 @@ export const DISCOVERY_FINAL_FOG_W = fogFor(DISCOVERY_FINAL, 'white');
 // https://mistboard.com/game/8d0c230e-ff56-4ece-a7cc-0488b1d62640
 export const ENGINE_SAMPLE_START = darkChessVariant.createInitialState('pve-8d0c230e');
 export const ENGINE_SAMPLE_STATES = replayMoves(ENGINE_SAMPLE_START, [
-  { from: 'e2', to: 'e4' },  // 1.
-  { from: 'c7', to: 'c6' },  // 1...
-  { from: 'b1', to: 'c3' },  // 2.
-  { from: 'd7', to: 'd5' },  // 2...
-  { from: 'e4', to: 'd5' },  // 3.
-  { from: 'c6', to: 'd5' },  // 3...
-  { from: 'd2', to: 'd4' },  // 4.
-  { from: 'b8', to: 'c6' },  // 4...
-  { from: 'c1', to: 'e3' },  // 5.
-  { from: 'g8', to: 'f6' },  // 5...
-  { from: 'f1', to: 'd3' },  // 6.
-  { from: 'd8', to: 'd6' },  // 6...
-  { from: 'g1', to: 'f3' },  // 7.
-  { from: 'g7', to: 'g5' },  // 7...
-  { from: 'f3', to: 'g5' },  // 8.
-  { from: 'h8', to: 'g8' },  // 8...
-  { from: 'e1', to: 'h1' },  // 9.
-  { from: 'c8', to: 'f5' },  // 9...
-  { from: 'd3', to: 'f5' },  // 10.
-  { from: 'e7', to: 'e6' },  // 10...
-  { from: 'f5', to: 'd3' },  // 11.
-  { from: 'f6', to: 'e4' },  // 11...
-  { from: 'c3', to: 'e4' },  // 12.
-  { from: 'd5', to: 'e4' },  // 12...
-  { from: 'g5', to: 'e4' },  // 13.
-  { from: 'd6', to: 'c7' },  // 13...
-  { from: 'd1', to: 'f3' },  // 14.
-  { from: 'f8', to: 'e7' },  // 14...
-  { from: 'f3', to: 'h3' },  // 15.
-  { from: 'e8', to: 'a8' },  // 15...
-  { from: 'a2', to: 'a4' },  // 16.
-  { from: 'g8', to: 'g6' },  // 16...
-  { from: 'e3', to: 'd2' },  // 17.
-  { from: 'd8', to: 'g8' },  // 17...
-  { from: 'f1', to: 'b1' },  // 18.
-  { from: 'g6', to: 'g2' },  // 18...
-  { from: 'h3', to: 'g2' },  // 19.
-  { from: 'g8', to: 'g2' },  // 19...
-  { from: 'g1', to: 'g2' },  // 20.
-  { from: 'c6', to: 'd8' },  // 20...
-  { from: 'f2', to: 'f3' },  // 21.
-  { from: 'e7', to: 'd6' },  // 21...
-  { from: 'e4', to: 'd6' },  // 22.
-  { from: 'c7', to: 'd6' },  // 22...
-  { from: 'b1', to: 'g1' },  // 23.
-  { from: 'c8', to: 'd7' },  // 23...
-  { from: 'g2', to: 'h1' },  // 24.
-  { from: 'd8', to: 'c6' },  // 24...
-  { from: 'd2', to: 'c3' },  // 25.
-  { from: 'b7', to: 'b5' },  // 25...
-  { from: 'a4', to: 'b5' },  // 26.
-  { from: 'c6', to: 'e7' },  // 26...
-  { from: 'g1', to: 'g2' },  // 27.
-  { from: 'e7', to: 'd5' },  // 27...
-  { from: 'd3', to: 'e4' },  // 28.
-  { from: 'd5', to: 'c3' },  // 28...
-  { from: 'b2', to: 'c3' },  // 29.
-  { from: 'e6', to: 'e5' },  // 29...
-  { from: 'd4', to: 'e5' },  // 30.
-  { from: 'd6', to: 'e5' },  // 30...
-  { from: 'g2', to: 'g1' },  // 31.
-  { from: 'd7', to: 'e6' },  // 31...
-  { from: 'b5', to: 'b6' },  // 32.
-  { from: 'a7', to: 'b6' },  // 32...
-  { from: 'a1', to: 'a8' },  // 33.
-  { from: 'f7', to: 'f5' },  // 33...
-  { from: 'e4', to: 'b7' },  // 34.
-  { from: 'e6', to: 'f6' },  // 34...
-  { from: 'a8', to: 'a1' },  // 35.
-  { from: 'f5', to: 'f4' },  // 35...
-  { from: 'a1', to: 'd1' },  // 36.
-  { from: 'h7', to: 'h6' },  // 36...
-  { from: 'b7', to: 'd5' },  // 37.
-  { from: 'e5', to: 'd5' },  // 37...
-  { from: 'd1', to: 'd5' },  // 38.
+  { from: 'e2', to: 'e4' }, // 1.
+  { from: 'c7', to: 'c6' }, // 1...
+  { from: 'b1', to: 'c3' }, // 2.
+  { from: 'd7', to: 'd5' }, // 2...
+  { from: 'e4', to: 'd5' }, // 3.
+  { from: 'c6', to: 'd5' }, // 3...
+  { from: 'd2', to: 'd4' }, // 4.
+  { from: 'b8', to: 'c6' }, // 4...
+  { from: 'c1', to: 'e3' }, // 5.
+  { from: 'g8', to: 'f6' }, // 5...
+  { from: 'f1', to: 'd3' }, // 6.
+  { from: 'd8', to: 'd6' }, // 6...
+  { from: 'g1', to: 'f3' }, // 7.
+  { from: 'g7', to: 'g5' }, // 7...
+  { from: 'f3', to: 'g5' }, // 8.
+  { from: 'h8', to: 'g8' }, // 8...
+  { from: 'e1', to: 'h1' }, // 9.
+  { from: 'c8', to: 'f5' }, // 9...
+  { from: 'd3', to: 'f5' }, // 10.
+  { from: 'e7', to: 'e6' }, // 10...
+  { from: 'f5', to: 'd3' }, // 11.
+  { from: 'f6', to: 'e4' }, // 11...
+  { from: 'c3', to: 'e4' }, // 12.
+  { from: 'd5', to: 'e4' }, // 12...
+  { from: 'g5', to: 'e4' }, // 13.
+  { from: 'd6', to: 'c7' }, // 13...
+  { from: 'd1', to: 'f3' }, // 14.
+  { from: 'f8', to: 'e7' }, // 14...
+  { from: 'f3', to: 'h3' }, // 15.
+  { from: 'e8', to: 'a8' }, // 15...
+  { from: 'a2', to: 'a4' }, // 16.
+  { from: 'g8', to: 'g6' }, // 16...
+  { from: 'e3', to: 'd2' }, // 17.
+  { from: 'd8', to: 'g8' }, // 17...
+  { from: 'f1', to: 'b1' }, // 18.
+  { from: 'g6', to: 'g2' }, // 18...
+  { from: 'h3', to: 'g2' }, // 19.
+  { from: 'g8', to: 'g2' }, // 19...
+  { from: 'g1', to: 'g2' }, // 20.
+  { from: 'c6', to: 'd8' }, // 20...
+  { from: 'f2', to: 'f3' }, // 21.
+  { from: 'e7', to: 'd6' }, // 21...
+  { from: 'e4', to: 'd6' }, // 22.
+  { from: 'c7', to: 'd6' }, // 22...
+  { from: 'b1', to: 'g1' }, // 23.
+  { from: 'c8', to: 'd7' }, // 23...
+  { from: 'g2', to: 'h1' }, // 24.
+  { from: 'd8', to: 'c6' }, // 24...
+  { from: 'd2', to: 'c3' }, // 25.
+  { from: 'b7', to: 'b5' }, // 25...
+  { from: 'a4', to: 'b5' }, // 26.
+  { from: 'c6', to: 'e7' }, // 26...
+  { from: 'g1', to: 'g2' }, // 27.
+  { from: 'e7', to: 'd5' }, // 27...
+  { from: 'd3', to: 'e4' }, // 28.
+  { from: 'd5', to: 'c3' }, // 28...
+  { from: 'b2', to: 'c3' }, // 29.
+  { from: 'e6', to: 'e5' }, // 29...
+  { from: 'd4', to: 'e5' }, // 30.
+  { from: 'd6', to: 'e5' }, // 30...
+  { from: 'g2', to: 'g1' }, // 31.
+  { from: 'd7', to: 'e6' }, // 31...
+  { from: 'b5', to: 'b6' }, // 32.
+  { from: 'a7', to: 'b6' }, // 32...
+  { from: 'a1', to: 'a8' }, // 33.
+  { from: 'f7', to: 'f5' }, // 33...
+  { from: 'e4', to: 'b7' }, // 34.
+  { from: 'e6', to: 'f6' }, // 34...
+  { from: 'a8', to: 'a1' }, // 35.
+  { from: 'f5', to: 'f4' }, // 35...
+  { from: 'a1', to: 'd1' }, // 36.
+  { from: 'h7', to: 'h6' }, // 36...
+  { from: 'b7', to: 'd5' }, // 37.
+  { from: 'e5', to: 'd5' }, // 37...
+  { from: 'd1', to: 'd5' }, // 38.
 ]);
 
 export const ENGINE_SAMPLE_POSITIONS = ENGINE_SAMPLE_STATES.map((state) => {
-  const arrows = state.lastMove ? [{ orig: state.lastMove.from, dest: state.lastMove.to }] : undefined;
+  const arrows = state.lastMove
+    ? [{ orig: state.lastMove.from, dest: state.lastMove.to }]
+    : undefined;
   return {
     boards: [
-      { board: state.board, fogSquares: fogFor(state, 'white'), orientation: 'white' as const, label: "WHITE'S VIEW" },
+      {
+        board: state.board,
+        fogSquares: fogFor(state, 'white'),
+        orientation: 'white' as const,
+        label: "WHITE'S VIEW",
+      },
       { board: state.board, orientation: 'white' as const, label: 'SERVER TRUTH', arrows },
-      { board: state.board, fogSquares: fogFor(state, 'black'), orientation: 'white' as const, label: "BLACK'S VIEW" },
+      {
+        board: state.board,
+        fogSquares: fogFor(state, 'black'),
+        orientation: 'white' as const,
+        label: "BLACK'S VIEW",
+      },
     ],
   };
 });
@@ -555,7 +568,7 @@ export const VS_BRIAN_3_STATES = replayMoves(VS_BRIAN_3_START, [
   { from: 'b8', to: 'd7' },
   { from: 'g1', to: 'e2' },
   { from: 'd7', to: 'b6' },
-  { from: 'e1', to: 'h1' },  // 15. O-O (king e1 → h1 notation)
+  { from: 'e1', to: 'h1' }, // 15. O-O (king e1 → h1 notation)
   { from: 'e7', to: 'd6' },
   { from: 'e2', to: 'g3' },
   { from: 'h7', to: 'h5' },
@@ -601,8 +614,8 @@ export const VS_BRIAN_3_STATES = replayMoves(VS_BRIAN_3_START, [
   { from: 'f6', to: 'e5' },
   { from: 'g1', to: 'f1' },
   { from: 'h8', to: 'g8' },
-  { from: 'f1', to: 'e1' },  // 61. Ke1 — the fatal step onto the open e-file
-  { from: 'e5', to: 'e1' },  // 62. Rxe1 — king captured
+  { from: 'f1', to: 'e1' }, // 61. Ke1 — the fatal step onto the open e-file
+  { from: 'e5', to: 'e1' }, // 62. Rxe1 — king captured
 ]);
 
 // ── Win-condition demo: 13-ply game where white wins via bishop ────────────
@@ -624,9 +637,9 @@ export const WHITE_BISHOP_WIN_STATES = replayMoves(WHITE_BISHOP_WIN_START, [
   { from: 'b6', to: 'c5' },
   { from: 'g1', to: 'f3' },
   { from: 'd7', to: 'd5' },
-  { from: 'f1', to: 'b5' },  // 11. Bb5 — bishop on the long diagonal
-  { from: 'd5', to: 'e4' },  // 12. ...dxe4 — black grabs the e4 pawn
-  { from: 'b5', to: 'e8' },  // 13. Bxe8 — king captured on its starting square
+  { from: 'f1', to: 'b5' }, // 11. Bb5 — bishop on the long diagonal
+  { from: 'd5', to: 'e4' }, // 12. ...dxe4 — black grabs the e4 pawn
+  { from: 'b5', to: 'e8' }, // 13. Bxe8 — king captured on its starting square
 ]);
 // Frame 2 (after 11. Bb5) gets a red circle on e8 to call out that the bishop
 // is now eyeing the king's starting square through a clear diagonal.
@@ -703,9 +716,18 @@ export const CASTLE_TRIPLE_PRE: GameState = {
 };
 // White plays Ne4-f6, landing the threat on e8/f8/g8. Then Black castles
 // kingside; then White's knight captures the king on g8.
-export const CASTLE_TRIPLE_BEFORE = darkChessVariant.applyMove(CASTLE_TRIPLE_PRE, { from: 'e4', to: 'f6' });
-export const CASTLE_TRIPLE_AFTER = darkChessVariant.applyMove(CASTLE_TRIPLE_BEFORE, { from: 'e8', to: 'h8' });
-export const CASTLE_TRIPLE_FINAL = darkChessVariant.applyMove(CASTLE_TRIPLE_AFTER, { from: 'f6', to: 'g8' });
+export const CASTLE_TRIPLE_BEFORE = darkChessVariant.applyMove(CASTLE_TRIPLE_PRE, {
+  from: 'e4',
+  to: 'f6',
+});
+export const CASTLE_TRIPLE_AFTER = darkChessVariant.applyMove(CASTLE_TRIPLE_BEFORE, {
+  from: 'e8',
+  to: 'h8',
+});
+export const CASTLE_TRIPLE_FINAL = darkChessVariant.applyMove(CASTLE_TRIPLE_AFTER, {
+  from: 'f6',
+  to: 'g8',
+});
 export const CASTLE_TRIPLE_PRE_FOG_W = fogFor(CASTLE_TRIPLE_PRE, 'white');
 export const CASTLE_TRIPLE_PRE_FOG_B = fogFor(CASTLE_TRIPLE_PRE, 'black');
 export const CASTLE_TRIPLE_BEFORE_FOG_W = fogFor(CASTLE_TRIPLE_BEFORE, 'white');
@@ -741,7 +763,9 @@ export const DEDUCE_BB4_STATES = replayMoves(DEDUCE_BB4_START, [
   { from: 'f8', to: 'b4' },
 ]);
 export const DEDUCE_BB4_POSITIONS = DEDUCE_BB4_STATES.map((state, i) => {
-  const arrows = state.lastMove ? [{ orig: state.lastMove.from, dest: state.lastMove.to }] : undefined;
+  const arrows = state.lastMove
+    ? [{ orig: state.lastMove.from, dest: state.lastMove.to }]
+    : undefined;
   const isFinal = i === DEDUCE_BB4_STATES.length - 1;
   const whiteView = {
     board: state.board,
@@ -754,7 +778,12 @@ export const DEDUCE_BB4_POSITIONS = DEDUCE_BB4_STATES.map((state, i) => {
     boards: [
       whiteView,
       { board: state.board, orientation: 'white' as const, label: 'SERVER TRUTH', arrows },
-      { board: state.board, fogSquares: fogFor(state, 'black'), orientation: 'white' as const, label: "BLACK'S VIEW" },
+      {
+        board: state.board,
+        fogSquares: fogFor(state, 'black'),
+        orientation: 'white' as const,
+        label: "BLACK'S VIEW",
+      },
     ],
   };
 });
@@ -783,14 +812,29 @@ export const DEDUCE_RECAP_BEFORE: GameState = {
   castlingRights: [],
   halfmoveClock: 0,
 };
-export const DEDUCE_RECAP_AFTER = darkChessVariant.applyMove(DEDUCE_RECAP_BEFORE, { from: 'e6', to: 'd5' });
+export const DEDUCE_RECAP_AFTER = darkChessVariant.applyMove(DEDUCE_RECAP_BEFORE, {
+  from: 'e6',
+  to: 'd5',
+});
 export const DEDUCE_RECAP_POSITIONS = [DEDUCE_RECAP_BEFORE, DEDUCE_RECAP_AFTER].map((state) => {
-  const arrows = state.lastMove ? [{ orig: state.lastMove.from, dest: state.lastMove.to }] : undefined;
+  const arrows = state.lastMove
+    ? [{ orig: state.lastMove.from, dest: state.lastMove.to }]
+    : undefined;
   return {
     boards: [
-      { board: state.board, fogSquares: fogFor(state, 'white'), orientation: 'white' as const, label: "WHITE'S VIEW" },
+      {
+        board: state.board,
+        fogSquares: fogFor(state, 'white'),
+        orientation: 'white' as const,
+        label: "WHITE'S VIEW",
+      },
       { board: state.board, orientation: 'white' as const, label: 'SERVER TRUTH', arrows },
-      { board: state.board, fogSquares: fogFor(state, 'black'), orientation: 'white' as const, label: "BLACK'S VIEW" },
+      {
+        board: state.board,
+        fogSquares: fogFor(state, 'black'),
+        orientation: 'white' as const,
+        label: "BLACK'S VIEW",
+      },
     ],
   };
 });
@@ -815,17 +859,34 @@ export const DEDUCE_RECAP_NB_BEFORE: GameState = {
   castlingRights: [],
   halfmoveClock: 0,
 };
-export const DEDUCE_RECAP_NB_AFTER = darkChessVariant.applyMove(DEDUCE_RECAP_NB_BEFORE, { from: 'e6', to: 'd5' });
-export const DEDUCE_RECAP_NB_POSITIONS = [DEDUCE_RECAP_NB_BEFORE, DEDUCE_RECAP_NB_AFTER].map((state) => {
-  const arrows = state.lastMove ? [{ orig: state.lastMove.from, dest: state.lastMove.to }] : undefined;
-  return {
-    boards: [
-      { board: state.board, fogSquares: fogFor(state, 'white'), orientation: 'white' as const, label: "WHITE'S VIEW" },
-      { board: state.board, orientation: 'white' as const, label: 'SERVER TRUTH', arrows },
-      { board: state.board, fogSquares: fogFor(state, 'black'), orientation: 'white' as const, label: "BLACK'S VIEW" },
-    ],
-  };
+export const DEDUCE_RECAP_NB_AFTER = darkChessVariant.applyMove(DEDUCE_RECAP_NB_BEFORE, {
+  from: 'e6',
+  to: 'd5',
 });
+export const DEDUCE_RECAP_NB_POSITIONS = [DEDUCE_RECAP_NB_BEFORE, DEDUCE_RECAP_NB_AFTER].map(
+  (state) => {
+    const arrows = state.lastMove
+      ? [{ orig: state.lastMove.from, dest: state.lastMove.to }]
+      : undefined;
+    return {
+      boards: [
+        {
+          board: state.board,
+          fogSquares: fogFor(state, 'white'),
+          orientation: 'white' as const,
+          label: "WHITE'S VIEW",
+        },
+        { board: state.board, orientation: 'white' as const, label: 'SERVER TRUTH', arrows },
+        {
+          board: state.board,
+          fogSquares: fogFor(state, 'black'),
+          orientation: 'white' as const,
+          label: "BLACK'S VIEW",
+        },
+      ],
+    };
+  },
+);
 
 // A second capture-deduction pattern: a pawn behind the captured pawn can later
 // prove what did not capture. If the black e6-pawn took on d5, d5 would stay
@@ -854,13 +915,26 @@ export const DEDUCE_BACK_PAWN_STATES = replayMoves(DEDUCE_BACK_PAWN_START, [
   { from: 'd5', to: 'f4' },
 ]);
 export const DEDUCE_BACK_PAWN_POSITIONS = DEDUCE_BACK_PAWN_STATES.map((state, i) => {
-  const arrows = state.lastMove ? [{ orig: state.lastMove.from, dest: state.lastMove.to }] : undefined;
+  const arrows = state.lastMove
+    ? [{ orig: state.lastMove.from, dest: state.lastMove.to }]
+    : undefined;
   const highlightSquares = i === DEDUCE_BACK_PAWN_STATES.length - 1 ? ['d5' as Square] : undefined;
   return {
     boards: [
-      { board: state.board, fogSquares: fogFor(state, 'white'), orientation: 'white' as const, label: "WHITE'S VIEW", highlightSquares },
+      {
+        board: state.board,
+        fogSquares: fogFor(state, 'white'),
+        orientation: 'white' as const,
+        label: "WHITE'S VIEW",
+        highlightSquares,
+      },
       { board: state.board, orientation: 'white' as const, label: 'SERVER TRUTH', arrows },
-      { board: state.board, fogSquares: fogFor(state, 'black'), orientation: 'white' as const, label: "BLACK'S VIEW" },
+      {
+        board: state.board,
+        fogSquares: fogFor(state, 'black'),
+        orientation: 'white' as const,
+        label: "BLACK'S VIEW",
+      },
     ],
   };
 });
@@ -956,7 +1030,10 @@ export const SURVIVE_GREEDY_STATES = replayMoves(SURVIVE_BB4_FINAL, [
   { from: 'b4', to: 'e1' },
 ]);
 export const SURVIVE_GREEDY_FINAL = SURVIVE_GREEDY_STATES[SURVIVE_GREEDY_STATES.length - 1]!;
-export const SURVIVE_PATIENT_STATE = darkChessVariant.applyMove(SURVIVE_BB4_FINAL, { from: 'b1', to: 'c3' });
+export const SURVIVE_PATIENT_STATE = darkChessVariant.applyMove(SURVIVE_BB4_FINAL, {
+  from: 'b1',
+  to: 'c3',
+});
 
 // Pre-stringified captured WS frame for the server-enforced-fog article.
 // The full snapshot artifact is retained for board data and export/debug
@@ -971,10 +1048,14 @@ export function compactJsonLeaves(json: string): string {
     .replace(/\{\s*"color": ("[^"]*"),\s*"role": ("[^"]*")\s*\}/g, '{ "color": $1, "role": $2 }')
     .replace(/\{\s*"from": ("[^"]*"),\s*"to": ("[^"]*")\s*\}/g, '{ "from": $1, "to": $2 }')
     .replace(/\{\s*"black": (\d+),\s*"white": (\d+)\s*\}/g, '{ "black": $1, "white": $2 }')
-    .replace(/\[\s*(?:"[^"]*",?\s*)+\]/g, (m) => m.replace(/\s+/g, ' ').replace(/\[ /, '[').replace(/ \]/, ']'))
+    .replace(/\[\s*(?:"[^"]*",?\s*)+\]/g, (m) =>
+      m.replace(/\s+/g, ' ').replace(/\[ /, '[').replace(/ \]/, ']'),
+    )
     .replace(/\[\s*(?:\{ "from":[^\n]*\},?\s*)+\]/g, (m) => m.replace(/\s*\n\s*/g, ' '));
 }
-export const SERVER_FOG_SNAPSHOT_JSON_TEXT = compactJsonLeaves(JSON.stringify(articleSnapshotFog, null, 2));
+export const SERVER_FOG_SNAPSHOT_JSON_TEXT = compactJsonLeaves(
+  JSON.stringify(articleSnapshotFog, null, 2),
+);
 
 export const SERVER_FOG_DELTA_PAYLOAD = `{
   "type": "event-appended",
@@ -1004,14 +1085,17 @@ export const SERVER_FOG_FRAME_W = articleSnapshotFog as unknown as CapturedFrame
 export const SERVER_FOG_FRAME_B = articleSnapshotFogBlack as unknown as CapturedFrame;
 export const SERVER_FOG_FOG_W = fogSquaresFromVisible(SERVER_FOG_FRAME_W.state.visibleSquares);
 export const SERVER_FOG_FOG_B = fogSquaresFromVisible(SERVER_FOG_FRAME_B.state.visibleSquares);
-export const SERVER_FOG_TRUTH_STATE = replayMoves(darkChessVariant.createInitialState('server-fog-model'), [
-  { from: 'e2', to: 'e4' },
-  { from: 'e7', to: 'e5' },
-  { from: 'g1', to: 'f3' },
-  { from: 'b8', to: 'c6' },
-  { from: 'f1', to: 'c4' },
-  { from: 'g8', to: 'f6' },
-]).at(-1)!;
+export const SERVER_FOG_TRUTH_STATE = replayMoves(
+  darkChessVariant.createInitialState('server-fog-model'),
+  [
+    { from: 'e2', to: 'e4' },
+    { from: 'e7', to: 'e5' },
+    { from: 'g1', to: 'f3' },
+    { from: 'b8', to: 'c6' },
+    { from: 'f1', to: 'c4' },
+    { from: 'g8', to: 'f6' },
+  ],
+).at(-1)!;
 
 // Anatomy of the move-submission wire (client -> server). One small payload;
 // the loop closes here.
@@ -1106,8 +1190,7 @@ const XQ_CELL_GEO: XiangqiBoardGeometry = {
 };
 // Center the (smaller) square grid inside the fixed board box.
 const XQ_CELL_PAD_X = (XQ_BOARD_W - XQ_CELL_GEO.fileCount * XQ_CELL_SIZE) / 2;
-const XQ_CELL_PAD_Y =
-  (XQ_BOARD_H - (XQ_CELL_GEO.rankCount * XQ_CELL_SIZE + XQ_CELL_RIVER_GAP)) / 2;
+const XQ_CELL_PAD_Y = (XQ_BOARD_H - (XQ_CELL_GEO.rankCount * XQ_CELL_SIZE + XQ_CELL_RIVER_GAP)) / 2;
 const XQ_CELL_PIECE_SIZE = tokenPieceSize(XQ_CELL_SIZE);
 
 // The layout a diagram render is currently producing. Diagram SVGs come from
@@ -1165,7 +1248,12 @@ export function xqCoord(square: XiangqiSquare): { file: number; rank: number } {
 }
 
 export function xqSvgIdPart(value: string): string {
-  return value.toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '') || 'x';
+  return (
+    value
+      .toLowerCase()
+      .replace(/[^a-z0-9]+/g, '-')
+      .replace(/^-|-$/g, '') || 'x'
+  );
 }
 
 export function xqVisualRow(rank: number, perspective: XiangqiColor): number {
@@ -1212,8 +1300,12 @@ function xqPalaceAndRiver(x0: number, y0: number, perspective: XiangqiColor): st
     const b = xqPoint(palace.fileMax, bottomRank, perspective, x0, y0);
     const c = xqPoint(palace.fileMax, topRank, perspective, x0, y0);
     const d = xqPoint(palace.fileMin, bottomRank, perspective, x0, y0);
-    parts.push(`<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="xq-diagram-line" stroke-width="1"/>`);
-    parts.push(`<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" class="xq-diagram-line" stroke-width="1"/>`);
+    parts.push(
+      `<line x1="${a.x}" y1="${a.y}" x2="${b.x}" y2="${b.y}" class="xq-diagram-line" stroke-width="1"/>`,
+    );
+    parts.push(
+      `<line x1="${c.x}" y1="${c.y}" x2="${d.x}" y2="${d.y}" class="xq-diagram-line" stroke-width="1"/>`,
+    );
   }
   // River band sits between ranks 5 and 6 (file 4 is the horizontal center).
   const riverY = (xqPoint(0, 5, perspective, x0, y0).y + xqPoint(0, 6, perspective, x0, y0).y) / 2;
@@ -1255,15 +1347,23 @@ function xqIntersectionBoardGrid(x0: number, y0: number, perspective: XiangqiCol
   const riverBottom = top + 5 * XQ_CELL;
   for (let r = 0; r < 10; r += 1) {
     const y = top + r * XQ_CELL;
-    parts.push(`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-line" stroke-width="1"/>`);
+    parts.push(
+      `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-line" stroke-width="1"/>`,
+    );
   }
   for (let f = 0; f < 9; f += 1) {
     const x = left + f * XQ_CELL;
     if (f === 0 || f === 8) {
-      parts.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`);
+      parts.push(
+        `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`,
+      );
     } else {
-      parts.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}" class="xq-diagram-line" stroke-width="1"/>`);
-      parts.push(`<line x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`);
+      parts.push(
+        `<line x1="${x}" y1="${top}" x2="${x}" y2="${riverTop}" class="xq-diagram-line" stroke-width="1"/>`,
+      );
+      parts.push(
+        `<line x1="${x}" y1="${riverBottom}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`,
+      );
     }
   }
   parts.push(xqPalaceAndRiver(x0, y0, perspective));
@@ -1357,7 +1457,7 @@ export function xqPiecesLayer(
       const { file, rank } = xqCoord(sq as XiangqiSquare);
       const { x, y } = xqPoint(file, rank, perspective, x0, y0);
       const size = xqPieceSize();
-      return renderXiangqiPieceGlyphed(piece as XiangqiPiece, activeXiangqiPieceSet, {
+      const pieceSvg = renderXiangqiPieceGlyphed(piece as XiangqiPiece, activeXiangqiPieceSet, {
         x: x - size / 2,
         y: y - size / 2,
         size,
@@ -1370,6 +1470,9 @@ export function xqPiecesLayer(
           (drawsCrossedSoldier(piece as XiangqiPiece, rank) ||
             (veteranSoldiers && piece.role === 'soldier' && piece.color === 'red')),
       });
+      // Keyed by square so a stepping widget (horde-xiangqi-replay.ts) can find
+      // the piece that moved and glide it; a static figure ignores it.
+      return `<g class="xq-diagram-piece-slot" data-piece-square="${sq}">${pieceSvg}</g>`;
     })
     .join('');
 }
@@ -1409,14 +1512,19 @@ export function xqArrowLayer(
 export function xqZoneHighlights(x0: number, y0: number, perspective: XiangqiColor): string {
   const parts: string[] = [];
   const pad = 6;
-  for (const [rLo, rHi] of [[1, 3], [8, 10]] as const) {
+  for (const [rLo, rHi] of [
+    [1, 3],
+    [8, 10],
+  ] as const) {
     const lo = xqPoint(3, rLo, perspective, x0, y0);
     const hi = xqPoint(5, rHi, perspective, x0, y0);
     const x = Math.min(lo.x, hi.x) - pad;
     const y = Math.min(lo.y, hi.y) - pad;
     const w = Math.abs(hi.x - lo.x) + pad * 2;
     const h = Math.abs(hi.y - lo.y) + pad * 2;
-    parts.push(`<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#2563eb" opacity="0.13" rx="5"/>`);
+    parts.push(
+      `<rect x="${x}" y="${y}" width="${w}" height="${h}" fill="#2563eb" opacity="0.13" rx="5"/>`,
+    );
   }
   const half = xqHalfCell();
   const left = xqPoint(0, 5, perspective, x0, y0).x - half;
@@ -1510,35 +1618,54 @@ export function xqViewWithExtraVisibleSquares(
 
 export const XQ_START_RED = getXiangqiPlayerView(XQ_START, 'red', 'D');
 export const XQ_START_BLACK = getXiangqiPlayerView(XQ_START, 'black', 'D');
-export const XQ_START_TRIPTYCH = () => xqSvg(
-  XQ_BOARD_W * 3 + 56,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({ state: XQ_START, view: XQ_START_RED, x: 0, y: 0, label: "RED'S VIEW", perspective: 'red' }),
-    xqBoardSvg({ state: XQ_START, x: XQ_BOARD_W + 28, y: 0, label: 'SERVER TRUTH', perspective: 'red' }),
-    xqBoardSvg({
-      state: XQ_START,
-      view: XQ_START_BLACK,
-      x: (XQ_BOARD_W + 28) * 2,
-      y: 0,
-      label: "BLACK'S VIEW",
-      perspective: 'red',
-    }),
-  ].join(''),
-);
-export const XQ_RULES_PRIMER_START_BOARD = () => xqSvg(
-  XQ_BOARD_W,
-  XQ_BOARD_H + 52,
-  xqBoardSvg({ state: XQ_START, x: 0, y: 0, label: 'STARTING POSITION', perspective: 'red' }),
-  'xq-article-svg--hero',
-);
-export const XQ_RULES_PRIMER_THUMBNAIL = () => xqSvg(
-  XQ_BOARD_W,
-  XQ_BOARD_H,
-  [xqBoardGrid(0, 0, 'red'), xqPiecesLayer(XQ_START, null, 0, 0, 'red')].join(''),
-);
+export const XQ_START_TRIPTYCH = () =>
+  xqSvg(
+    XQ_BOARD_W * 3 + 56,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_START,
+        view: XQ_START_RED,
+        x: 0,
+        y: 0,
+        label: "RED'S VIEW",
+        perspective: 'red',
+      }),
+      xqBoardSvg({
+        state: XQ_START,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'SERVER TRUTH',
+        perspective: 'red',
+      }),
+      xqBoardSvg({
+        state: XQ_START,
+        view: XQ_START_BLACK,
+        x: (XQ_BOARD_W + 28) * 2,
+        y: 0,
+        label: "BLACK'S VIEW",
+        perspective: 'red',
+      }),
+    ].join(''),
+  );
+export const XQ_RULES_PRIMER_START_BOARD = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H + 52,
+    xqBoardSvg({ state: XQ_START, x: 0, y: 0, label: 'STARTING POSITION', perspective: 'red' }),
+    'xq-article-svg--hero',
+  );
+export const XQ_RULES_PRIMER_THUMBNAIL = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H,
+    [xqBoardGrid(0, 0, 'red'), xqPiecesLayer(XQ_START, null, 0, 0, 'red')].join(''),
+  );
 
-export function xqVisionDemoState(id: string, board: Partial<Record<XiangqiSquare, XiangqiPiece>>): XiangqiGameState {
+export function xqVisionDemoState(
+  id: string,
+  board: Partial<Record<XiangqiSquare, XiangqiPiece>>,
+): XiangqiGameState {
   return {
     id,
     board,
@@ -1564,49 +1691,51 @@ export const XQ_PRIMER_HORSE_BLOCKED = xqVisionDemoState('xq-primer-horse-blocke
   e6: { color: 'black', role: 'soldier' },
   g5: { color: 'red', role: 'soldier' },
 });
-export const XQ_PRIMER_HORSE_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_PRIMER_HORSE_OPEN,
-      x: 0,
-      y: 0,
-      label: 'UNOBSTRUCTED',
-      perspective: 'red',
-      dots: xqDots(['c4', 'c6', 'd3', 'd7', 'f3', 'f7', 'g4', 'g6']),
-    }),
-    xqBoardSvg({
-      state: XQ_PRIMER_HORSE_BLOCKED,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'LEG BLOCKED',
-      perspective: 'red',
-      dots: [
-        ...xqDots(['c4', 'c6', 'd3', 'f3', 'g4', 'g6']),
-        { square: 'd7' as XiangqiSquare, blocked: true },
-        { square: 'f7' as XiangqiSquare, blocked: true },
-      ],
-    }),
-  ].join(''),
-);
+export const XQ_PRIMER_HORSE_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_PRIMER_HORSE_OPEN,
+        x: 0,
+        y: 0,
+        label: 'UNOBSTRUCTED',
+        perspective: 'red',
+        dots: xqDots(['c4', 'c6', 'd3', 'd7', 'f3', 'f7', 'g4', 'g6']),
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_HORSE_BLOCKED,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'LEG BLOCKED',
+        perspective: 'red',
+        dots: [
+          ...xqDots(['c4', 'c6', 'd3', 'f3', 'g4', 'g6']),
+          { square: 'd7' as XiangqiSquare, blocked: true },
+          { square: 'f7' as XiangqiSquare, blocked: true },
+        ],
+      }),
+    ].join(''),
+  );
 
 // General: one orthogonal step, confined to the palace.
 export const XQ_PRIMER_GENERAL = xqVisionDemoState('xq-primer-general', {
   e2: { color: 'red', role: 'general' },
 });
-export const XQ_PRIMER_GENERAL_BOARD = () => xqSvg(
-  XQ_BOARD_W,
-  XQ_BOARD_H + 52,
-  xqBoardSvg({
-    state: XQ_PRIMER_GENERAL,
-    x: 0,
-    y: 0,
-    label: 'GENERAL',
-    perspective: 'red',
-    dots: xqDots(['d2', 'f2', 'e1', 'e3']),
-  }),
-);
+export const XQ_PRIMER_GENERAL_BOARD = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H + 52,
+    xqBoardSvg({
+      state: XQ_PRIMER_GENERAL,
+      x: 0,
+      y: 0,
+      label: 'GENERAL',
+      perspective: 'red',
+      dots: xqDots(['d2', 'f2', 'e1', 'e3']),
+    }),
+  );
 
 // The flying-general rule: two generals may not sit on the same open file with
 // nothing between them. Left board is the forbidden facing (dashed red axis);
@@ -1627,44 +1756,46 @@ export function xqFacingLine(x0: number): string {
   const yBottom = Math.max(a.y, b.y) - 16;
   return `<line x1="${a.x}" y1="${yTop}" x2="${a.x}" y2="${yBottom}" stroke="#d4351c" stroke-width="3" stroke-linecap="round" opacity="0.6" stroke-dasharray="3 5"/>`;
 }
-export const XQ_PRIMER_FACING_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_PRIMER_FACING_ILLEGAL,
-      x: 0,
-      y: 0,
-      label: 'FACING: FORBIDDEN',
-      perspective: 'red',
-      overlay: xqFacingLine(0),
-    }),
-    xqBoardSvg({
-      state: XQ_PRIMER_FACING_LEGAL,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'SCREENED: ALLOWED',
-      perspective: 'red',
-    }),
-  ].join(''),
-);
+export const XQ_PRIMER_FACING_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_PRIMER_FACING_ILLEGAL,
+        x: 0,
+        y: 0,
+        label: 'FACING: FORBIDDEN',
+        perspective: 'red',
+        overlay: xqFacingLine(0),
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_FACING_LEGAL,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'SCREENED: ALLOWED',
+        perspective: 'red',
+      }),
+    ].join(''),
+  );
 
 // Advisor: one diagonal step, confined to the palace.
 export const XQ_PRIMER_ADVISOR = xqVisionDemoState('xq-primer-advisor', {
   e2: { color: 'red', role: 'advisor' },
 });
-export const XQ_PRIMER_ADVISOR_BOARD = () => xqSvg(
-  XQ_BOARD_W,
-  XQ_BOARD_H + 52,
-  xqBoardSvg({
-    state: XQ_PRIMER_ADVISOR,
-    x: 0,
-    y: 0,
-    label: 'ADVISOR',
-    perspective: 'red',
-    dots: xqDots(['d1', 'f1', 'd3', 'f3']),
-  }),
-);
+export const XQ_PRIMER_ADVISOR_BOARD = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H + 52,
+    xqBoardSvg({
+      state: XQ_PRIMER_ADVISOR,
+      x: 0,
+      y: 0,
+      label: 'ADVISOR',
+      perspective: 'red',
+      dots: xqDots(['d1', 'f1', 'd3', 'f3']),
+    }),
+  );
 
 // Elephant: two points diagonally, never crossing the river and never passing
 // a piece on the midpoint "eye" of the diagonal. Left board shows the river
@@ -1677,35 +1808,33 @@ export const XQ_PRIMER_ELEPHANT_EYE = xqVisionDemoState('xq-primer-elephant-eye'
   e3: { color: 'red', role: 'elephant' },
   d4: { color: 'black', role: 'soldier' },
 });
-export const XQ_PRIMER_ELEPHANT_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_PRIMER_ELEPHANT_RIVER,
-      x: 0,
-      y: 0,
-      label: 'THE RIVER',
-      perspective: 'red',
-      dots: [
-        ...xqDots(['a3', 'e3']),
-        { square: 'a7' as XiangqiSquare, blocked: true },
-        { square: 'e7' as XiangqiSquare, blocked: true },
-      ],
-    }),
-    xqBoardSvg({
-      state: XQ_PRIMER_ELEPHANT_EYE,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'THE EYE',
-      perspective: 'red',
-      dots: [
-        ...xqDots(['c1', 'g1', 'g5']),
-        { square: 'c5' as XiangqiSquare, blocked: true },
-      ],
-    }),
-  ].join(''),
-);
+export const XQ_PRIMER_ELEPHANT_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_PRIMER_ELEPHANT_RIVER,
+        x: 0,
+        y: 0,
+        label: 'THE RIVER',
+        perspective: 'red',
+        dots: [
+          ...xqDots(['a3', 'e3']),
+          { square: 'a7' as XiangqiSquare, blocked: true },
+          { square: 'e7' as XiangqiSquare, blocked: true },
+        ],
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_ELEPHANT_EYE,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'THE EYE',
+        perspective: 'red',
+        dots: [...xqDots(['c1', 'g1', 'g5']), { square: 'c5' as XiangqiSquare, blocked: true }],
+      }),
+    ].join(''),
+  );
 
 // Chariot: slides any distance along open lines, cannot jump. On the e-file it
 // is stopped by the soldier (which it may capture); the other rays run free.
@@ -1713,26 +1842,37 @@ export const XQ_PRIMER_CHARIOT = xqVisionDemoState('xq-primer-chariot', {
   e4: { color: 'red', role: 'chariot' },
   e8: { color: 'black', role: 'soldier' },
 });
-export const XQ_PRIMER_CHARIOT_BOARD = () => xqSvg(
-  XQ_BOARD_W,
-  XQ_BOARD_H + 52,
-  xqBoardSvg({
-    state: XQ_PRIMER_CHARIOT,
-    x: 0,
-    y: 0,
-    label: 'CHARIOT',
-    perspective: 'red',
-    dots: [
-      ...xqDots([
-        'e5', 'e6', 'e7',
-        'e3', 'e2', 'e1',
-        'd4', 'c4', 'b4', 'a4',
-        'f4', 'g4', 'h4', 'i4',
-      ]),
-      { square: 'e8' as XiangqiSquare, capture: true },
-    ],
-  }),
-);
+export const XQ_PRIMER_CHARIOT_BOARD = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H + 52,
+    xqBoardSvg({
+      state: XQ_PRIMER_CHARIOT,
+      x: 0,
+      y: 0,
+      label: 'CHARIOT',
+      perspective: 'red',
+      dots: [
+        ...xqDots([
+          'e5',
+          'e6',
+          'e7',
+          'e3',
+          'e2',
+          'e1',
+          'd4',
+          'c4',
+          'b4',
+          'a4',
+          'f4',
+          'g4',
+          'h4',
+          'i4',
+        ]),
+        { square: 'e8' as XiangqiSquare, capture: true },
+      ],
+    }),
+  );
 
 // Cannon: moves like a chariot, but captures only by leaping exactly one
 // screen. Left board shows free movement; right board jumps the screen on e5
@@ -1745,33 +1885,47 @@ export const XQ_PRIMER_CANNON_CAPTURE = xqVisionDemoState('xq-primer-cannon-capt
   e5: { color: 'red', role: 'soldier' },
   e8: { color: 'black', role: 'chariot' },
 });
-export const XQ_PRIMER_CANNON_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_PRIMER_CANNON_MOVE,
-      x: 0,
-      y: 0,
-      label: 'MOVE',
-      perspective: 'red',
-      dots: xqDots([
-        'e5', 'e6', 'e7', 'e8', 'e9', 'e10',
-        'e3', 'e2', 'e1',
-        'd4', 'c4', 'b4', 'a4',
-        'f4', 'g4', 'h4', 'i4',
-      ]),
-    }),
-    xqBoardSvg({
-      state: XQ_PRIMER_CANNON_CAPTURE,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'CAPTURE',
-      perspective: 'red',
-      dots: [{ square: 'e8' as XiangqiSquare, capture: true }],
-    }),
-  ].join(''),
-);
+export const XQ_PRIMER_CANNON_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_PRIMER_CANNON_MOVE,
+        x: 0,
+        y: 0,
+        label: 'MOVE',
+        perspective: 'red',
+        dots: xqDots([
+          'e5',
+          'e6',
+          'e7',
+          'e8',
+          'e9',
+          'e10',
+          'e3',
+          'e2',
+          'e1',
+          'd4',
+          'c4',
+          'b4',
+          'a4',
+          'f4',
+          'g4',
+          'h4',
+          'i4',
+        ]),
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_CANNON_CAPTURE,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'CAPTURE',
+        perspective: 'red',
+        dots: [{ square: 'e8' as XiangqiSquare, capture: true }],
+      }),
+    ].join(''),
+  );
 
 // Soldier: one point straight forward; after crossing the river it may also
 // step sideways. Never backward.
@@ -1781,28 +1935,29 @@ export const XQ_PRIMER_SOLDIER_BEFORE = xqVisionDemoState('xq-primer-soldier-bef
 export const XQ_PRIMER_SOLDIER_AFTER = xqVisionDemoState('xq-primer-soldier-after', {
   e6: { color: 'red', role: 'soldier' },
 });
-export const XQ_PRIMER_SOLDIER_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_PRIMER_SOLDIER_BEFORE,
-      x: 0,
-      y: 0,
-      label: 'BEFORE THE RIVER',
-      perspective: 'red',
-      dots: xqDots(['e5']),
-    }),
-    xqBoardSvg({
-      state: XQ_PRIMER_SOLDIER_AFTER,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'ACROSS THE RIVER',
-      perspective: 'red',
-      dots: xqDots(['e7', 'd6', 'f6']),
-    }),
-  ].join(''),
-);
+export const XQ_PRIMER_SOLDIER_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_PRIMER_SOLDIER_BEFORE,
+        x: 0,
+        y: 0,
+        label: 'BEFORE THE RIVER',
+        perspective: 'red',
+        dots: xqDots(['e5']),
+      }),
+      xqBoardSvg({
+        state: XQ_PRIMER_SOLDIER_AFTER,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'ACROSS THE RIVER',
+        perspective: 'red',
+        dots: xqDots(['e7', 'd6', 'f6']),
+      }),
+    ].join(''),
+  );
 
 export const XQ_VISION_STATES = [
   {
@@ -1861,24 +2016,30 @@ export const XQ_VISION_STATES = [
 export const XQ_VISIBILITY_GRID_COLUMNS = 3;
 export const XQ_VISIBILITY_GRID_GAP = 28;
 export const XQ_VISIBILITY_GRID_ROW_H = XQ_BOARD_H + 52;
-export const XQ_VISIBILITY_GRID = () => xqSvg(
-  XQ_BOARD_W * XQ_VISIBILITY_GRID_COLUMNS + XQ_VISIBILITY_GRID_GAP * (XQ_VISIBILITY_GRID_COLUMNS - 1),
-  XQ_VISIBILITY_GRID_ROW_H * Math.ceil(XQ_VISION_STATES.length / XQ_VISIBILITY_GRID_COLUMNS),
-  XQ_VISION_STATES.map(({ state, label }, index) => {
-    const row = Math.floor(index / XQ_VISIBILITY_GRID_COLUMNS);
-    const col = index % XQ_VISIBILITY_GRID_COLUMNS;
-    const rowCount = Math.min(XQ_VISIBILITY_GRID_COLUMNS, XQ_VISION_STATES.length - row * XQ_VISIBILITY_GRID_COLUMNS);
-    const centeredRowOffset = ((XQ_VISIBILITY_GRID_COLUMNS - rowCount) * (XQ_BOARD_W + XQ_VISIBILITY_GRID_GAP)) / 2;
-    return xqBoardSvg({
-      state,
-      view: getXiangqiPlayerView(state, 'red', 'D'),
-      x: centeredRowOffset + col * (XQ_BOARD_W + XQ_VISIBILITY_GRID_GAP),
-      y: row * XQ_VISIBILITY_GRID_ROW_H,
-      label,
-      perspective: 'red',
-    });
-  }).join(''),
-);
+export const XQ_VISIBILITY_GRID = () =>
+  xqSvg(
+    XQ_BOARD_W * XQ_VISIBILITY_GRID_COLUMNS +
+      XQ_VISIBILITY_GRID_GAP * (XQ_VISIBILITY_GRID_COLUMNS - 1),
+    XQ_VISIBILITY_GRID_ROW_H * Math.ceil(XQ_VISION_STATES.length / XQ_VISIBILITY_GRID_COLUMNS),
+    XQ_VISION_STATES.map(({ state, label }, index) => {
+      const row = Math.floor(index / XQ_VISIBILITY_GRID_COLUMNS);
+      const col = index % XQ_VISIBILITY_GRID_COLUMNS;
+      const rowCount = Math.min(
+        XQ_VISIBILITY_GRID_COLUMNS,
+        XQ_VISION_STATES.length - row * XQ_VISIBILITY_GRID_COLUMNS,
+      );
+      const centeredRowOffset =
+        ((XQ_VISIBILITY_GRID_COLUMNS - rowCount) * (XQ_BOARD_W + XQ_VISIBILITY_GRID_GAP)) / 2;
+      return xqBoardSvg({
+        state,
+        view: getXiangqiPlayerView(state, 'red', 'D'),
+        x: centeredRowOffset + col * (XQ_BOARD_W + XQ_VISIBILITY_GRID_GAP),
+        y: row * XQ_VISIBILITY_GRID_ROW_H,
+        label,
+        perspective: 'red',
+      });
+    }).join(''),
+  );
 
 export const XQ_VISION_MOVE_BEFORE = xqVisionDemoState('xq-vision-move-before', {
   b1: { color: 'red', role: 'chariot' },
@@ -1897,29 +2058,30 @@ export const XQ_VISION_MOVE_AFTER: XiangqiGameState = {
   },
   lastMove: { from: 'b2' as XiangqiSquare, to: 'b9' as XiangqiSquare },
 };
-export const XQ_VISION_MOVE_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_VISION_MOVE_BEFORE,
-      view: getXiangqiPlayerView(XQ_VISION_MOVE_BEFORE, 'red', 'D'),
-      x: 0,
-      y: 0,
-      label: 'BEFORE',
-      perspective: 'red',
-    }),
-    xqBoardSvg({
-      state: XQ_VISION_MOVE_AFTER,
-      view: getXiangqiPlayerView(XQ_VISION_MOVE_AFTER, 'red', 'D'),
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'AFTER',
-      perspective: 'red',
-      arrows: [{ from: 'b2' as XiangqiSquare, to: 'b9' as XiangqiSquare }],
-    }),
-  ].join(''),
-);
+export const XQ_VISION_MOVE_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_VISION_MOVE_BEFORE,
+        view: getXiangqiPlayerView(XQ_VISION_MOVE_BEFORE, 'red', 'D'),
+        x: 0,
+        y: 0,
+        label: 'BEFORE',
+        perspective: 'red',
+      }),
+      xqBoardSvg({
+        state: XQ_VISION_MOVE_AFTER,
+        view: getXiangqiPlayerView(XQ_VISION_MOVE_AFTER, 'red', 'D'),
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'AFTER',
+        perspective: 'red',
+        arrows: [{ from: 'b2' as XiangqiSquare, to: 'b9' as XiangqiSquare }],
+      }),
+    ].join(''),
+  );
 
 export const XQ_CANNON_RULE_STATE: XiangqiGameState = {
   id: 'xq-cannon-rule',
@@ -1936,36 +2098,38 @@ export const XQ_CANNON_RULE_STATE: XiangqiGameState = {
   positionCounts: {},
 };
 export const XQ_CANNON_RULE_RED = getXiangqiPlayerView(XQ_CANNON_RULE_STATE, 'red', 'D');
-export const XQ_CANNON_RULE_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_CANNON_RULE_STATE,
-      view: XQ_CANNON_RULE_RED,
-      x: 0,
-      y: 0,
-      label: "RED'S VIEW",
-      perspective: 'red',
-    }),
-    xqBoardSvg({
-      state: XQ_CANNON_RULE_STATE,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'SERVER TRUTH',
-      perspective: 'red',
-    }),
-  ].join(''),
-);
-export const XQ_DARK_XIANGQI_THUMBNAIL = () => xqSvg(
-  XQ_BOARD_W,
-  XQ_BOARD_H,
-  [
-    xqBoardGrid(0, 0, 'red'),
-    xqFogLayer(XQ_START_RED, 0, 0, 'red', 'xq-fog-dark-xiangqi-thumbnail'),
-    xqPiecesLayer(XQ_START, XQ_START_RED, 0, 0, 'red'),
-  ].join(''),
-);
+export const XQ_CANNON_RULE_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_CANNON_RULE_STATE,
+        view: XQ_CANNON_RULE_RED,
+        x: 0,
+        y: 0,
+        label: "RED'S VIEW",
+        perspective: 'red',
+      }),
+      xqBoardSvg({
+        state: XQ_CANNON_RULE_STATE,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'SERVER TRUTH',
+        perspective: 'red',
+      }),
+    ].join(''),
+  );
+export const XQ_DARK_XIANGQI_THUMBNAIL = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H,
+    [
+      xqBoardGrid(0, 0, 'red'),
+      xqFogLayer(XQ_START_RED, 0, 0, 'red', 'xq-fog-dark-xiangqi-thumbnail'),
+      xqPiecesLayer(XQ_START, XQ_START_RED, 0, 0, 'red'),
+    ].join(''),
+  );
 
 // ── Fog Xiangqi sample game ───────────────────────────────────────────────
 // A complete public production game from 2026-07-17:
@@ -2035,7 +2199,9 @@ const XQ_FOG_SAMPLE_NARRATIVES: Partial<Record<number, string>> = {
 };
 
 function xqFogSampleTriptych(state: XiangqiGameState): string {
-  const arrows = state.lastMove ? [{ from: state.lastMove.from, to: state.lastMove.to }] : undefined;
+  const arrows = state.lastMove
+    ? [{ from: state.lastMove.from, to: state.lastMove.to }]
+    : undefined;
   return xqSvg(
     XQ_BOARD_W * 3 + 56,
     XQ_BOARD_H + 52,
@@ -2096,29 +2262,30 @@ export const JIEQI_START_VIEW_BOARD = Object.fromEntries(
   ]),
 ) as XiangqiPlayerView['board'];
 export const JIEQI_START_VIEW = xqStaticView('jieqi-start-view', JIEQI_START_VIEW_BOARD);
-export const JIEQI_START_BOARD = (labels?: { start?: string }) => xqSvg(
-  XQ_BOARD_W,
-  XQ_BOARD_H + 52,
-  xqBoardSvg({
-    state: XQ_START,
-    view: JIEQI_START_VIEW,
-    x: 0,
-    y: 0,
-    label: labels?.start ?? 'SHUFFLED START',
-    perspective: 'red',
-    shroudedStyle: 'back',
-  }),
-  // Section hero, matching the Xiangqi starting-position board.
-  'xq-article-svg--hero',
-);
-export const JIEQI_RULES_THUMBNAIL = () => xqSvg(
-  XQ_BOARD_W,
-  XQ_BOARD_H,
-  [
-    xqBoardGrid(0, 0, 'red'),
-    xqPiecesLayer(XQ_START, JIEQI_START_VIEW, 0, 0, 'red', 'back'),
-  ].join(''),
-);
+export const JIEQI_START_BOARD = (labels?: { start?: string }) =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H + 52,
+    xqBoardSvg({
+      state: XQ_START,
+      view: JIEQI_START_VIEW,
+      x: 0,
+      y: 0,
+      label: labels?.start ?? 'SHUFFLED START',
+      perspective: 'red',
+      shroudedStyle: 'back',
+    }),
+    // Section hero, matching the Xiangqi starting-position board.
+    'xq-article-svg--hero',
+  );
+export const JIEQI_RULES_THUMBNAIL = () =>
+  xqSvg(
+    XQ_BOARD_W,
+    XQ_BOARD_H,
+    [xqBoardGrid(0, 0, 'red'), xqPiecesLayer(XQ_START, JIEQI_START_VIEW, 0, 0, 'red', 'back')].join(
+      '',
+    ),
+  );
 
 export const JIEQI_REVEAL_BEFORE_BOARD: XiangqiPlayerView['board'] = {
   b1: { piece: { color: 'red', role: 'cannon' }, shrouded: true },
@@ -2133,30 +2300,31 @@ export const JIEQI_REVEAL_BEFORE_VIEW = xqStaticView(
   'jieqi-reveal-before-view',
   JIEQI_REVEAL_BEFORE_BOARD,
 );
-export const JIEQI_REVEAL_PAIR = (labels?: { before?: string; after?: string }) => xqSvg(
-  JIEQI_PAIR_W,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: JIEQI_REVEAL_BEFORE_STATE,
-      view: JIEQI_REVEAL_BEFORE_VIEW,
-      x: 0,
-      y: 0,
-      label: labels?.before ?? 'BEFORE: HORSE POINT',
-      perspective: 'red',
-      dots: [{ square: 'c3' as XiangqiSquare }],
-      shroudedStyle: 'back',
-    }),
-    xqBoardSvg({
-      state: JIEQI_REVEAL_AFTER_STATE,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: labels?.after ?? 'AFTER: REVEALED CANNON',
-      perspective: 'red',
-      arrows: [{ from: 'b1' as XiangqiSquare, to: 'c3' as XiangqiSquare }],
-    }),
-  ].join(''),
-);
+export const JIEQI_REVEAL_PAIR = (labels?: { before?: string; after?: string }) =>
+  xqSvg(
+    JIEQI_PAIR_W,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: JIEQI_REVEAL_BEFORE_STATE,
+        view: JIEQI_REVEAL_BEFORE_VIEW,
+        x: 0,
+        y: 0,
+        label: labels?.before ?? 'BEFORE: HORSE POINT',
+        perspective: 'red',
+        dots: [{ square: 'c3' as XiangqiSquare }],
+        shroudedStyle: 'back',
+      }),
+      xqBoardSvg({
+        state: JIEQI_REVEAL_AFTER_STATE,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: labels?.after ?? 'AFTER: REVEALED CANNON',
+        perspective: 'red',
+        arrows: [{ from: 'b1' as XiangqiSquare, to: 'c3' as XiangqiSquare }],
+      }),
+    ].join(''),
+  );
 
 export const JIEQI_REVEALED_ADVISOR_STATE = xqVisionDemoState('jieqi-revealed-advisor', {
   c6: { color: 'red', role: 'advisor' },
@@ -2165,49 +2333,48 @@ export const JIEQI_REVEALED_ELEPHANT_STATE = xqVisionDemoState('jieqi-revealed-e
   g7: { color: 'red', role: 'elephant' },
   f8: { color: 'black', role: 'soldier' },
 });
-export const JIEQI_REVEALED_FREEDOMS = (labels?: { advisor?: string; elephant?: string }) => xqSvg(
-  JIEQI_PAIR_W,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: JIEQI_REVEALED_ADVISOR_STATE,
-      x: 0,
-      y: 0,
-      label: labels?.advisor ?? 'ADVISOR AFTER REVEAL',
-      perspective: 'red',
-      dots: xqDots(['b5', 'd5', 'b7', 'd7']),
-    }),
-    xqBoardSvg({
-      state: JIEQI_REVEALED_ELEPHANT_STATE,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: labels?.elephant ?? 'ELEPHANT AFTER REVEAL',
-      perspective: 'red',
-      dots: [
-        ...xqDots(['e5', 'i5', 'i9']),
-        { square: 'e9' as XiangqiSquare, blocked: true },
-      ],
-    }),
-  ].join(''),
-);
+export const JIEQI_REVEALED_FREEDOMS = (labels?: { advisor?: string; elephant?: string }) =>
+  xqSvg(
+    JIEQI_PAIR_W,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: JIEQI_REVEALED_ADVISOR_STATE,
+        x: 0,
+        y: 0,
+        label: labels?.advisor ?? 'ADVISOR AFTER REVEAL',
+        perspective: 'red',
+        dots: xqDots(['b5', 'd5', 'b7', 'd7']),
+      }),
+      xqBoardSvg({
+        state: JIEQI_REVEALED_ELEPHANT_STATE,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: labels?.elephant ?? 'ELEPHANT AFTER REVEAL',
+        perspective: 'red',
+        dots: [...xqDots(['e5', 'i5', 'i9']), { square: 'e9' as XiangqiSquare, blocked: true }],
+      }),
+    ].join(''),
+  );
 
 // The start position at the same scale as the paired boards below it. The
 // rules page uses JIEQI_START_BOARD, which is a full-width hero; in an article
 // that also carries two-board figures, a hero board reads as a different
 // diagram system. Same canvas width as a pair, one board centred in it.
-export const JIEQI_START_ROW = (labels?: { start?: string }) => xqSvg(
-  JIEQI_PAIR_W,
-  XQ_BOARD_H + 52,
-  xqBoardSvg({
-    state: XQ_START,
-    view: JIEQI_START_VIEW,
-    x: JIEQI_PAIR_CENTER_X,
-    y: 0,
-    label: labels?.start ?? 'SHUFFLED START',
-    perspective: 'red',
-    shroudedStyle: 'back',
-  }),
-);
+export const JIEQI_START_ROW = (labels?: { start?: string }) =>
+  xqSvg(
+    JIEQI_PAIR_W,
+    XQ_BOARD_H + 52,
+    xqBoardSvg({
+      state: XQ_START,
+      view: JIEQI_START_VIEW,
+      x: JIEQI_PAIR_CENTER_X,
+      y: 0,
+      label: labels?.start ?? 'SHUFFLED START',
+      perspective: 'red',
+      shroudedStyle: 'back',
+    }),
+  );
 
 // ---- Jieqi openings article (slug: jieqi-openings) ----
 // The openings are named in xiangqi file notation, which the chess-side
@@ -2218,40 +2385,41 @@ export const JIEQI_START_ROW = (labels?: { start?: string }) => xqSvg(
 // them: edge pawn (a4), the 3-/7-file pawn push (c4), central pawn (e4), and
 // the cannon point crossing the river (h3 to h7). Right: taking both horses
 // with both cannons, which needs the black cannons on b8/h8 as screens.
-export const JIEQI_OPENING_MOVES = (labels?: { moves?: string; gamble?: string }) => xqSvg(
-  JIEQI_PAIR_W,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_START,
-      view: JIEQI_START_VIEW,
-      x: 0,
-      y: 0,
-      label: labels?.moves ?? 'FOUR OPENINGS, ONE MOVE EACH',
-      perspective: 'red',
-      shroudedStyle: 'back',
-      arrows: [
-        { from: 'a4' as XiangqiSquare, to: 'a5' as XiangqiSquare },
-        { from: 'c4' as XiangqiSquare, to: 'c5' as XiangqiSquare },
-        { from: 'e4' as XiangqiSquare, to: 'e5' as XiangqiSquare },
-        { from: 'h3' as XiangqiSquare, to: 'h7' as XiangqiSquare },
-      ],
-    }),
-    xqBoardSvg({
-      state: XQ_START,
-      view: JIEQI_START_VIEW,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: labels?.gamble ?? 'BOTH CANNONS TAKE BOTH HORSES',
-      perspective: 'red',
-      shroudedStyle: 'back',
-      arrows: [
-        { from: 'b3' as XiangqiSquare, to: 'b10' as XiangqiSquare },
-        { from: 'h3' as XiangqiSquare, to: 'h10' as XiangqiSquare },
-      ],
-    }),
-  ].join(''),
-);
+export const JIEQI_OPENING_MOVES = (labels?: { moves?: string; gamble?: string }) =>
+  xqSvg(
+    JIEQI_PAIR_W,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_START,
+        view: JIEQI_START_VIEW,
+        x: 0,
+        y: 0,
+        label: labels?.moves ?? 'FOUR OPENINGS, ONE MOVE EACH',
+        perspective: 'red',
+        shroudedStyle: 'back',
+        arrows: [
+          { from: 'a4' as XiangqiSquare, to: 'a5' as XiangqiSquare },
+          { from: 'c4' as XiangqiSquare, to: 'c5' as XiangqiSquare },
+          { from: 'e4' as XiangqiSquare, to: 'e5' as XiangqiSquare },
+          { from: 'h3' as XiangqiSquare, to: 'h7' as XiangqiSquare },
+        ],
+      }),
+      xqBoardSvg({
+        state: XQ_START,
+        view: JIEQI_START_VIEW,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: labels?.gamble ?? 'BOTH CANNONS TAKE BOTH HORSES',
+        perspective: 'red',
+        shroudedStyle: 'back',
+        arrows: [
+          { from: 'b3' as XiangqiSquare, to: 'b10' as XiangqiSquare },
+          { from: 'h3' as XiangqiSquare, to: 'h10' as XiangqiSquare },
+        ],
+      }),
+    ].join(''),
+  );
 
 // What a face-down piece on a cannon point is worth before you spend it, and
 // what you are left holding if it turns out to be a soldier. The black cannon
@@ -2274,35 +2442,42 @@ export const JIEQI_OPTION_AFTER_STATE = xqVisionDemoState('jieqi-option-after', 
   h10: { color: 'red', role: 'soldier' },
   h8: { color: 'black', role: 'cannon' },
 });
-export const JIEQI_OPTION_SPENT = (labels?: { before?: string; after?: string }) => xqSvg(
-  JIEQI_PAIR_W,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: JIEQI_OPTION_BEFORE_STATE,
-      view: JIEQI_OPTION_BEFORE_VIEW,
-      x: 0,
-      y: 0,
-      label: labels?.before ?? 'FACE-DOWN ON A CANNON POINT',
-      perspective: 'red',
-      shroudedStyle: 'back',
-      dots: [
-        ...xqDots(['h4', 'h5', 'h6', 'h7']),
-        { square: 'h10' as XiangqiSquare, capture: true },
-      ],
-    }),
-    xqBoardSvg({
-      state: JIEQI_OPTION_AFTER_STATE,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: labels?.after ?? 'SPENT: A SOLDIER TOOK THE HORSE',
-      perspective: 'red',
-      dots: xqDots(['g10', 'i10']),
-    }),
-  ].join(''),
-);
+export const JIEQI_OPTION_SPENT = (labels?: { before?: string; after?: string }) =>
+  xqSvg(
+    JIEQI_PAIR_W,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: JIEQI_OPTION_BEFORE_STATE,
+        view: JIEQI_OPTION_BEFORE_VIEW,
+        x: 0,
+        y: 0,
+        label: labels?.before ?? 'FACE-DOWN ON A CANNON POINT',
+        perspective: 'red',
+        shroudedStyle: 'back',
+        dots: [
+          ...xqDots(['h4', 'h5', 'h6', 'h7']),
+          { square: 'h10' as XiangqiSquare, capture: true },
+        ],
+      }),
+      xqBoardSvg({
+        state: JIEQI_OPTION_AFTER_STATE,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: labels?.after ?? 'SPENT: A SOLDIER TOOK THE HORSE',
+        perspective: 'red',
+        dots: xqDots(['g10', 'i10']),
+      }),
+    ].join(''),
+  );
 
-export function jieqiCaptureTray(x: number, y: number, label: string, detail: string, shrouded: boolean): string {
+export function jieqiCaptureTray(
+  x: number,
+  y: number,
+  label: string,
+  detail: string,
+  shrouded: boolean,
+): string {
   const pieceSize = 46;
   const cardW = (JIEQI_PAIR_W - 28) / 2;
   const cardX = x;
@@ -2328,37 +2503,43 @@ export const JIEQI_CAPTURE_BEFORE_VIEW = xqStaticView('jieqi-capture-before-view
   a4: { piece: { color: 'red', role: 'chariot' }, shrouded: false },
   a7: { piece: { color: 'black', role: 'horse' }, shrouded: true },
 });
-export const JIEQI_CAPTURE_PRIVACY = (labels?: { capture?: string; title?: string; redKnows?: string; blackKnows?: string }) => xqSvg(
-  JIEQI_PAIR_W,
-  XQ_BOARD_H + 214,
-  [
-    xqBoardSvg({
-      state: JIEQI_CAPTURE_BEFORE_STATE,
-      view: JIEQI_CAPTURE_BEFORE_VIEW,
-      x: JIEQI_PAIR_CENTER_X,
-      y: 0,
-      label: labels?.capture ?? 'CAPTURE',
-      perspective: 'red',
-      arrows: [{ from: 'a4' as XiangqiSquare, to: 'a7' as XiangqiSquare }],
-      shroudedStyle: 'back',
-    }),
-    `<text x="${JIEQI_PAIR_W / 2}" y="${XQ_BOARD_H + 82}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">${labels?.title ?? 'CAPTURED PIECE KNOWLEDGE'}</text>`,
-    jieqiCaptureTray(
-      0,
-      XQ_BOARD_H + 104,
-      labels?.redKnows ?? 'RED KNOWS',
-      'the captured piece was a horse',
-      false,
-    ),
-    jieqiCaptureTray(
-      (JIEQI_PAIR_W + 28) / 2,
-      XQ_BOARD_H + 104,
-      labels?.blackKnows ?? 'BLACK KNOWS',
-      'one dark piece disappeared',
-      true,
-    ),
-  ].join(''),
-);
+export const JIEQI_CAPTURE_PRIVACY = (labels?: {
+  capture?: string;
+  title?: string;
+  redKnows?: string;
+  blackKnows?: string;
+}) =>
+  xqSvg(
+    JIEQI_PAIR_W,
+    XQ_BOARD_H + 214,
+    [
+      xqBoardSvg({
+        state: JIEQI_CAPTURE_BEFORE_STATE,
+        view: JIEQI_CAPTURE_BEFORE_VIEW,
+        x: JIEQI_PAIR_CENTER_X,
+        y: 0,
+        label: labels?.capture ?? 'CAPTURE',
+        perspective: 'red',
+        arrows: [{ from: 'a4' as XiangqiSquare, to: 'a7' as XiangqiSquare }],
+        shroudedStyle: 'back',
+      }),
+      `<text x="${JIEQI_PAIR_W / 2}" y="${XQ_BOARD_H + 82}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">${labels?.title ?? 'CAPTURED PIECE KNOWLEDGE'}</text>`,
+      jieqiCaptureTray(
+        0,
+        XQ_BOARD_H + 104,
+        labels?.redKnows ?? 'RED KNOWS',
+        'the captured piece was a horse',
+        false,
+      ),
+      jieqiCaptureTray(
+        (JIEQI_PAIR_W + 28) / 2,
+        XQ_BOARD_H + 104,
+        labels?.blackKnows ?? 'BLACK KNOWS',
+        'one dark piece disappeared',
+        true,
+      ),
+    ].join(''),
+  );
 
 // ── Banqi rules diagrams ──────────────────────────────────────────────────
 // Future real-game diagram candidate:
@@ -2393,7 +2574,12 @@ export type BanqiPieceSpec = {
   shrouded?: boolean;
 };
 
-export function banqiCellCenter(col: number, row: number, x0: number, y0: number): { x: number; y: number } {
+export function banqiCellCenter(
+  col: number,
+  row: number,
+  x0: number,
+  y0: number,
+): { x: number; y: number } {
   return {
     x: x0 + BANQI_MARGIN + col * BANQI_CELL + BANQI_CELL / 2,
     y: y0 + BANQI_MARGIN + row * BANQI_CELL + BANQI_CELL / 2,
@@ -2410,11 +2596,15 @@ export function banqiBoardGrid(x0: number, y0: number): string {
   ];
   for (let c = 0; c <= BANQI_COLS; c += 1) {
     const x = left + c * BANQI_CELL;
-    parts.push(`<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`);
+    parts.push(
+      `<line x1="${x}" y1="${top}" x2="${x}" y2="${bottom}" class="xq-diagram-line" stroke-width="1"/>`,
+    );
   }
   for (let r = 0; r <= BANQI_ROWS; r += 1) {
     const y = top + r * BANQI_CELL;
-    parts.push(`<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-line" stroke-width="1"/>`);
+    parts.push(
+      `<line x1="${left}" y1="${y}" x2="${right}" y2="${y}" class="xq-diagram-line" stroke-width="1"/>`,
+    );
   }
   // A plain 4x8 grid — deliberately no palace diagonals or soldier/cannon start
   // brackets. Banqi keeps none of those rules, the article prose says pieces sit
@@ -2423,7 +2613,13 @@ export function banqiBoardGrid(x0: number, y0: number): string {
   return parts.join('');
 }
 
-export function banqiPiece(spec: BanqiPieceSpec, col: number, row: number, x0: number, y0: number): string {
+export function banqiPiece(
+  spec: BanqiPieceSpec,
+  col: number,
+  row: number,
+  x0: number,
+  y0: number,
+): string {
   const { x, y } = banqiCellCenter(col, row, x0, y0);
   const piece: XiangqiPiece = {
     color: spec.color ?? 'black',
@@ -2512,32 +2708,34 @@ export function banqiArrow(
   ].join('');
 }
 
-export const BANQI_SETUP_BOARD = () => xqSvg(
-  BANQI_PAIR_W,
-  BANQI_BOARD_H + 52,
-  [
-    `<text x="${BANQI_PAIR_W / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">FIRST FLIP ASSIGNS COLOR</text>`,
-    banqiBoardGrid(BANQI_CENTER_X, 28),
-    banqiBackPieces(BANQI_CENTER_X, 28, {
-      col: 3,
-      row: 1,
-      piece: { color: 'red', role: 'elephant' },
-    }),
-  ].join(''),
-);
+export const BANQI_SETUP_BOARD = () =>
+  xqSvg(
+    BANQI_PAIR_W,
+    BANQI_BOARD_H + 52,
+    [
+      `<text x="${BANQI_PAIR_W / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">FIRST FLIP ASSIGNS COLOR</text>`,
+      banqiBoardGrid(BANQI_CENTER_X, 28),
+      banqiBackPieces(BANQI_CENTER_X, 28, {
+        col: 3,
+        row: 1,
+        piece: { color: 'red', role: 'elephant' },
+      }),
+    ].join(''),
+  );
 
-export const BANQI_RULES_THUMBNAIL = () => xqSvg(
-  BANQI_BOARD_W,
-  BANQI_BOARD_H,
-  [
-    banqiBoardGrid(0, 0),
-    banqiBackPieces(0, 0, {
-      col: 3,
-      row: 1,
-      piece: { color: 'red', role: 'horse' },
-    }),
-  ].join(''),
-);
+export const BANQI_RULES_THUMBNAIL = () =>
+  xqSvg(
+    BANQI_BOARD_W,
+    BANQI_BOARD_H,
+    [
+      banqiBoardGrid(0, 0),
+      banqiBackPieces(0, 0, {
+        col: 3,
+        row: 1,
+        piece: { color: 'red', role: 'horse' },
+      }),
+    ].join(''),
+  );
 
 // Distinct thumbnail for the "How MistyBanqi Plays" engine article: a full real
 // position from the article's conversion game, after enough flips that the card
@@ -2549,8 +2747,7 @@ export const BANQI_ENGINE_THUMBNAIL = () => {
     BANQI_CONVERSION_GAME.moves,
     BANQI_ENGINE_THUMB_PLY,
   );
-  return (
-  xqSvg(
+  return xqSvg(
     BANQI_BOARD_W,
     BANQI_ENGINE_THUMB_H,
     [
@@ -2559,7 +2756,6 @@ export const BANQI_ENGINE_THUMBNAIL = () => {
       banqiPiecesFromView(view, 0, BANQI_ENGINE_THUMB_Y),
       `</g>`,
     ].join(''),
-  )
   );
 };
 
@@ -2626,34 +2822,57 @@ export const BANQI_RANK_LADDER = () => {
   );
 };
 
-export const BANQI_CANNON_CAPTURE = () => xqSvg(
-  BANQI_PAIR_W,
-  BANQI_BOARD_H + 52,
-  [
-    `<text x="${BANQI_PAIR_W / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">CANNON SCREEN CAPTURE</text>`,
-    banqiBoardGrid(BANQI_CENTER_X, 28),
-    banqiArrow(
-      { col: 1, row: 2 },
-      { col: 6, row: 2 },
-      BANQI_CENTER_X,
-      28,
-      'banqi-cannon-screen-capture',
-      BANQI_PIECE_SIZE / 2 + 4,
-    ),
-    banqiPiece({ color: 'red', role: 'cannon' }, 1, 2, BANQI_CENTER_X, 28),
-    banqiPiece({ shrouded: true }, 3, 2, BANQI_CENTER_X, 28),
-    banqiPiece({ color: 'black', role: 'general' }, 6, 2, BANQI_CENTER_X, 28),
-    // Red ring marks the capture target (the revealed enemy beyond the screen).
-    `<circle cx="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).x}" cy="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).y}" r="${BANQI_PIECE_SIZE / 2 + 4}" fill="none" stroke="#b91c1c" stroke-width="2.5"/>`,
-  ].join(''),
-);
+export const BANQI_CANNON_CAPTURE = () =>
+  xqSvg(
+    BANQI_PAIR_W,
+    BANQI_BOARD_H + 52,
+    [
+      `<text x="${BANQI_PAIR_W / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">CANNON SCREEN CAPTURE</text>`,
+      banqiBoardGrid(BANQI_CENTER_X, 28),
+      banqiArrow(
+        { col: 1, row: 2 },
+        { col: 6, row: 2 },
+        BANQI_CENTER_X,
+        28,
+        'banqi-cannon-screen-capture',
+        BANQI_PIECE_SIZE / 2 + 4,
+      ),
+      banqiPiece({ color: 'red', role: 'cannon' }, 1, 2, BANQI_CENTER_X, 28),
+      banqiPiece({ shrouded: true }, 3, 2, BANQI_CENTER_X, 28),
+      banqiPiece({ color: 'black', role: 'general' }, 6, 2, BANQI_CENTER_X, 28),
+      // Red ring marks the capture target (the revealed enemy beyond the screen).
+      `<circle cx="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).x}" cy="${banqiCellCenter(6, 2, BANQI_CENTER_X, 28).y}" r="${BANQI_PIECE_SIZE / 2 + 4}" fill="none" stroke="#b91c1c" stroke-width="2.5"/>`,
+    ].join(''),
+  );
 
 export const BANQI_TUNNEL_READING = () => {
   const wallCells = [
-    [0, 0], [1, 0], [2, 0], [3, 0], [4, 0], [5, 0], [6, 0], [7, 0],
-    [0, 1], [1, 1], [2, 1], [3, 1], [4, 1], [5, 1], [6, 1], [7, 1],
-    [0, 2], [7, 2],
-    [0, 3], [1, 3], [2, 3], [3, 3], [4, 3], [5, 3], [6, 3], [7, 3],
+    [0, 0],
+    [1, 0],
+    [2, 0],
+    [3, 0],
+    [4, 0],
+    [5, 0],
+    [6, 0],
+    [7, 0],
+    [0, 1],
+    [1, 1],
+    [2, 1],
+    [3, 1],
+    [4, 1],
+    [5, 1],
+    [6, 1],
+    [7, 1],
+    [0, 2],
+    [7, 2],
+    [0, 3],
+    [1, 3],
+    [2, 3],
+    [3, 3],
+    [4, 3],
+    [5, 3],
+    [6, 3],
+    [7, 3],
   ] as const;
   return xqSvg(
     BANQI_PAIR_W,
@@ -2661,14 +2880,10 @@ export const BANQI_TUNNEL_READING = () => {
     [
       `<text x="${BANQI_PAIR_W / 2}" y="14" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">FACE-DOWN PIECES SHAPE THE BOARD</text>`,
       banqiBoardGrid(BANQI_CENTER_X, 28),
-      ...wallCells.map(([col, row]) => banqiPiece({ shrouded: true }, col, row, BANQI_CENTER_X, 28)),
-      banqiArrow(
-        { col: 2, row: 2 },
-        { col: 5, row: 2 },
-        BANQI_CENTER_X,
-        28,
-        'banqi-tunnel-chase',
+      ...wallCells.map(([col, row]) =>
+        banqiPiece({ shrouded: true }, col, row, BANQI_CENTER_X, 28),
       ),
+      banqiArrow({ col: 2, row: 2 }, { col: 5, row: 2 }, BANQI_CENTER_X, 28, 'banqi-tunnel-chase'),
       banqiPiece({ color: 'black', role: 'chariot' }, 2, 2, BANQI_CENTER_X, 28),
       banqiPiece({ color: 'red', role: 'horse' }, 5, 2, BANQI_CENTER_X, 28),
     ].join(''),
@@ -2700,75 +2915,78 @@ export const XQ_FACING_GENERAL_CAPTURED_RED = xqViewWithExtraVisibleSquares(
 );
 export const XQ_FACING_GENERAL_STEPS = [
   {
-    svg: () => xqSvg(
-      XQ_BOARD_W * 2 + 28,
-      XQ_BOARD_H + 52,
-      [
-        xqBoardSvg({
-          state: XQ_FACING_GENERAL_BEFORE,
-          view: getXiangqiPlayerView(XQ_FACING_GENERAL_BEFORE, 'red', 'D'),
-          x: 0,
-          y: 0,
-          label: "RED'S VIEW",
-          perspective: 'red',
-        }),
-        xqBoardSvg({
-          state: XQ_FACING_GENERAL_BEFORE,
-          x: XQ_BOARD_W + 28,
-          y: 0,
-          label: 'SERVER TRUTH',
-          perspective: 'red',
-        }),
-      ].join(''),
-    ),
+    svg: () =>
+      xqSvg(
+        XQ_BOARD_W * 2 + 28,
+        XQ_BOARD_H + 52,
+        [
+          xqBoardSvg({
+            state: XQ_FACING_GENERAL_BEFORE,
+            view: getXiangqiPlayerView(XQ_FACING_GENERAL_BEFORE, 'red', 'D'),
+            x: 0,
+            y: 0,
+            label: "RED'S VIEW",
+            perspective: 'red',
+          }),
+          xqBoardSvg({
+            state: XQ_FACING_GENERAL_BEFORE,
+            x: XQ_BOARD_W + 28,
+            y: 0,
+            label: 'SERVER TRUTH',
+            perspective: 'red',
+          }),
+        ].join(''),
+      ),
   },
   {
-    svg: () => xqSvg(
-      XQ_BOARD_W * 2 + 28,
-      XQ_BOARD_H + 52,
-      [
-        xqBoardSvg({
-          state: XQ_FACING_GENERAL_EXPOSED,
-          view: getXiangqiPlayerView(XQ_FACING_GENERAL_EXPOSED, 'red', 'D'),
-          x: 0,
-          y: 0,
-          label: "RED'S VIEW",
-          perspective: 'red',
-        }),
-        xqBoardSvg({
-          state: XQ_FACING_GENERAL_EXPOSED,
-          x: XQ_BOARD_W + 28,
-          y: 0,
-          label: 'SERVER TRUTH',
-          perspective: 'red',
-          arrows: [{ from: 'd10' as XiangqiSquare, to: 'e10' as XiangqiSquare }],
-        }),
-      ].join(''),
-    ),
+    svg: () =>
+      xqSvg(
+        XQ_BOARD_W * 2 + 28,
+        XQ_BOARD_H + 52,
+        [
+          xqBoardSvg({
+            state: XQ_FACING_GENERAL_EXPOSED,
+            view: getXiangqiPlayerView(XQ_FACING_GENERAL_EXPOSED, 'red', 'D'),
+            x: 0,
+            y: 0,
+            label: "RED'S VIEW",
+            perspective: 'red',
+          }),
+          xqBoardSvg({
+            state: XQ_FACING_GENERAL_EXPOSED,
+            x: XQ_BOARD_W + 28,
+            y: 0,
+            label: 'SERVER TRUTH',
+            perspective: 'red',
+            arrows: [{ from: 'd10' as XiangqiSquare, to: 'e10' as XiangqiSquare }],
+          }),
+        ].join(''),
+      ),
   },
   {
-    svg: () => xqSvg(
-      XQ_BOARD_W * 2 + 28,
-      XQ_BOARD_H + 52,
-      [
-        xqBoardSvg({
-          state: XQ_FACING_GENERAL_CAPTURED,
-          view: XQ_FACING_GENERAL_CAPTURED_RED,
-          x: 0,
-          y: 0,
-          label: "RED'S VIEW",
-          perspective: 'red',
-        }),
-        xqBoardSvg({
-          state: XQ_FACING_GENERAL_CAPTURED,
-          x: XQ_BOARD_W + 28,
-          y: 0,
-          label: 'SERVER TRUTH',
-          perspective: 'red',
-          arrows: [{ from: 'e1' as XiangqiSquare, to: 'e10' as XiangqiSquare }],
-        }),
-      ].join(''),
-    ),
+    svg: () =>
+      xqSvg(
+        XQ_BOARD_W * 2 + 28,
+        XQ_BOARD_H + 52,
+        [
+          xqBoardSvg({
+            state: XQ_FACING_GENERAL_CAPTURED,
+            view: XQ_FACING_GENERAL_CAPTURED_RED,
+            x: 0,
+            y: 0,
+            label: "RED'S VIEW",
+            perspective: 'red',
+          }),
+          xqBoardSvg({
+            state: XQ_FACING_GENERAL_CAPTURED,
+            x: XQ_BOARD_W + 28,
+            y: 0,
+            label: 'SERVER TRUTH',
+            perspective: 'red',
+            arrows: [{ from: 'e1' as XiangqiSquare, to: 'e10' as XiangqiSquare }],
+          }),
+        ].join(''),
+      ),
   },
 ];
 
@@ -2780,27 +2998,28 @@ export const XQ_BLOCKED_HORSE_LEGS_STATE = xqVisionDemoState('xq-blocked-horse-l
   f9: { color: 'black', role: 'general' },
   g8: { color: 'black', role: 'horse' },
 });
-export const XQ_BLOCKED_HORSE_LEGS_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_BLOCKED_HORSE_LEGS_STATE,
-      view: getXiangqiPlayerView(XQ_BLOCKED_HORSE_LEGS_STATE, 'red', 'D'),
-      x: 0,
-      y: 0,
-      label: "RED'S VIEW",
-      perspective: 'red',
-    }),
-    xqBoardSvg({
-      state: XQ_BLOCKED_HORSE_LEGS_STATE,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'SERVER TRUTH',
-      perspective: 'red',
-    }),
-  ].join(''),
-);
+export const XQ_BLOCKED_HORSE_LEGS_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_BLOCKED_HORSE_LEGS_STATE,
+        view: getXiangqiPlayerView(XQ_BLOCKED_HORSE_LEGS_STATE, 'red', 'D'),
+        x: 0,
+        y: 0,
+        label: "RED'S VIEW",
+        perspective: 'red',
+      }),
+      xqBoardSvg({
+        state: XQ_BLOCKED_HORSE_LEGS_STATE,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'SERVER TRUTH',
+        perspective: 'red',
+      }),
+    ].join(''),
+  );
 
 export const XQ_BLOCKED_ELEPHANT_EYES_STATE = xqVisionDemoState('xq-blocked-elephant-eyes', {
   c5: { color: 'red', role: 'elephant' },
@@ -2808,27 +3027,28 @@ export const XQ_BLOCKED_ELEPHANT_EYES_STATE = xqVisionDemoState('xq-blocked-elep
   b4: { color: 'black', role: 'soldier' },
   f4: { color: 'black', role: 'soldier' },
 });
-export const XQ_BLOCKED_ELEPHANT_EYES_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_BLOCKED_ELEPHANT_EYES_STATE,
-      view: getXiangqiPlayerView(XQ_BLOCKED_ELEPHANT_EYES_STATE, 'red', 'D'),
-      x: 0,
-      y: 0,
-      label: "RED'S VIEW",
-      perspective: 'red',
-    }),
-    xqBoardSvg({
-      state: XQ_BLOCKED_ELEPHANT_EYES_STATE,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: 'SERVER TRUTH',
-      perspective: 'red',
-    }),
-  ].join(''),
-);
+export const XQ_BLOCKED_ELEPHANT_EYES_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_BLOCKED_ELEPHANT_EYES_STATE,
+        view: getXiangqiPlayerView(XQ_BLOCKED_ELEPHANT_EYES_STATE, 'red', 'D'),
+        x: 0,
+        y: 0,
+        label: "RED'S VIEW",
+        perspective: 'red',
+      }),
+      xqBoardSvg({
+        state: XQ_BLOCKED_ELEPHANT_EYES_STATE,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: 'SERVER TRUTH',
+        perspective: 'red',
+      }),
+    ].join(''),
+  );
 
 export const XQ_GENERAL_CAPTURE_BEFORE: XiangqiGameState = {
   id: 'xq-general-capture-before',
@@ -2863,28 +3083,37 @@ export const XQ_GENERAL_CAPTURE_AFTER = applyXiangqiMove(XQ_GENERAL_CAPTURE_BEFO
   from: 'e7' as XiangqiSquare,
   to: 'e10' as XiangqiSquare,
 });
-export const XQ_GENERAL_CAPTURE_BEFORE_RED = getXiangqiPlayerView(XQ_GENERAL_CAPTURE_BEFORE, 'red', 'D');
-export const XQ_GENERAL_CAPTURE_AFTER_RED = getXiangqiPlayerView(XQ_GENERAL_CAPTURE_AFTER, 'red', 'D');
-export const XQ_GENERAL_CAPTURE_PAIR = () => xqSvg(
-  XQ_BOARD_W * 2 + 28,
-  XQ_BOARD_H + 52,
-  [
-    xqBoardSvg({
-      state: XQ_GENERAL_CAPTURE_BEFORE,
-      view: XQ_GENERAL_CAPTURE_BEFORE_RED,
-      x: 0,
-      y: 0,
-      label: "RED'S VIEW BEFORE",
-      perspective: 'red',
-    }),
-    xqBoardSvg({
-      state: XQ_GENERAL_CAPTURE_AFTER,
-      view: XQ_GENERAL_CAPTURE_AFTER_RED,
-      x: XQ_BOARD_W + 28,
-      y: 0,
-      label: "RED'S VIEW AFTER",
-      perspective: 'red',
-      arrows: [{ from: 'e7' as XiangqiSquare, to: 'e10' as XiangqiSquare }],
-    }),
-  ].join(''),
+export const XQ_GENERAL_CAPTURE_BEFORE_RED = getXiangqiPlayerView(
+  XQ_GENERAL_CAPTURE_BEFORE,
+  'red',
+  'D',
 );
+export const XQ_GENERAL_CAPTURE_AFTER_RED = getXiangqiPlayerView(
+  XQ_GENERAL_CAPTURE_AFTER,
+  'red',
+  'D',
+);
+export const XQ_GENERAL_CAPTURE_PAIR = () =>
+  xqSvg(
+    XQ_BOARD_W * 2 + 28,
+    XQ_BOARD_H + 52,
+    [
+      xqBoardSvg({
+        state: XQ_GENERAL_CAPTURE_BEFORE,
+        view: XQ_GENERAL_CAPTURE_BEFORE_RED,
+        x: 0,
+        y: 0,
+        label: "RED'S VIEW BEFORE",
+        perspective: 'red',
+      }),
+      xqBoardSvg({
+        state: XQ_GENERAL_CAPTURE_AFTER,
+        view: XQ_GENERAL_CAPTURE_AFTER_RED,
+        x: XQ_BOARD_W + 28,
+        y: 0,
+        label: "RED'S VIEW AFTER",
+        perspective: 'red',
+        arrows: [{ from: 'e7' as XiangqiSquare, to: 'e10' as XiangqiSquare }],
+      }),
+    ].join(''),
+  );

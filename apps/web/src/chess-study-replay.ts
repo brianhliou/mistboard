@@ -17,7 +17,7 @@ import {
   standardChessVariant,
 } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from './assessment-glyphs.js';
-import { renderDarkChessBoardSvg } from './dark-chess-render.js';
+import { animateChessBoardMove, renderDarkChessBoardSvg } from './dark-chess-render.js';
 import { chessUciToMove } from './review/chess-tree-adapter.js';
 import type { StudyChapterPayload, StudyTreeNode } from './study-chapter-spec.js';
 
@@ -234,7 +234,12 @@ export function mountChessReplayBoard(
   host.replaceChildren(frame);
 
   let index = 0;
-  const render = (): void => {
+  // `glide` is the one-ply step being shown, if any: its move comes from the
+  // position that carries it (forward: the new one; back: the one just left).
+  const render = (glide?: { move: { from: Square; to: Square }; reverse: boolean }): void => {
+    const play = () => {
+      if (glide) animateChessBoardMove(frame, glide.move, perspective, { reverse: glide.reverse });
+    };
     if (inLine) {
       const line = lines.get(inLine.atPly);
       const state = line?.states[inLine.cursor] ?? states[inLine.atPly - 1]!;
@@ -242,6 +247,7 @@ export function mountChessReplayBoard(
         { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
         { perspective, showFog: false },
       );
+      play();
       return;
     }
     const state = states[index]!;
@@ -250,6 +256,7 @@ export function mountChessReplayBoard(
       { board: state.board, visibleSquares: ALL_SQUARES, lastMove: state.lastMove },
       { perspective, showFog: false, ...(glyph ? { glyph } : {}) },
     );
+    play();
     hooks.onPlyChange?.(index, total);
   };
   render();
@@ -257,15 +264,26 @@ export function mountChessReplayBoard(
   return {
     destroy: () => host.replaceChildren(),
     jumpToPly: (ply: number) => {
+      const wasInLine = inLine !== null;
+      const from = index;
       inLine = null;
       index = Math.max(0, Math.min(total, Math.trunc(ply)));
-      render();
+      // One mainline step glides; a jump, or leaving a line, repaints instantly.
+      if (wasInLine || Math.abs(index - from) !== 1) return render();
+      const carrier = states[Math.max(index, from)]!.lastMove;
+      render(carrier ? { move: carrier, reverse: index < from } : undefined);
     },
     jumpToLine: (atPly: number, cursor: number) => {
       const line = lines.get(atPly);
       if (!line) return;
+      const prev = inLine;
       inLine = { atPly, cursor: Math.max(1, Math.min(line.labels.length, Math.trunc(cursor))) };
-      render();
+      // One step inside the same line glides, like the mainline.
+      if (!prev || prev.atPly !== atPly || Math.abs(inLine.cursor - prev.cursor) !== 1) {
+        return render();
+      }
+      const carrier = line.states[Math.max(inLine.cursor, prev.cursor)]?.lastMove;
+      render(carrier ? { move: carrier, reverse: inLine.cursor < prev.cursor } : undefined);
     },
     plyCount: () => total,
     moveEntries: () =>

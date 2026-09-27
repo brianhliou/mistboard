@@ -15,6 +15,7 @@
 // shrouded by the fog layer.
 
 import {
+  createGridGeometry,
   GRID_INTERACTION_COLORS,
   type GridBoardDescriptor,
   type GridCellRef,
@@ -23,6 +24,7 @@ import {
   renderGridBoardSvg,
 } from '@mistboard/board-render';
 import type { Color, Move, PieceRole, PlayerView, Square } from '@mistboard/game';
+import { glideSvgPiece, pieceAnimationDurationMs } from './board-anim.js';
 import './board-glyph-marker.css';
 import './dark-chess-render.css';
 import { boardCoordinatesEnabled } from './display-preferences.js';
@@ -167,6 +169,32 @@ export type ChessBoardMarker = SvgBoardMarkerStyle & {
   text?: string;
 };
 
+/**
+ * Glide the piece that settled on `move.to` from its origin (or with `reverse`
+ * the piece back on `move.from`). Call AFTER the innerHTML swap. Open boards
+ * only: the study board draws every square, and a fog board must not glide
+ * (board-anim.ts). A castling rook and an en passant victim just repaint.
+ */
+export function animateChessBoardMove(
+  host: HTMLElement,
+  move: { from: Square; to: Square },
+  perspective: Color,
+  opts: { reverse?: boolean } = {},
+): void {
+  const duration = pieceAnimationDurationMs();
+  if (duration <= 0) return;
+  const settleSquare = opts.reverse ? move.from : move.to;
+  const originSquare = opts.reverse ? move.to : move.from;
+  const slot = host.querySelector(`[data-piece-square="${settleSquare}"]`);
+  if (!slot) return;
+  const geom = createGridGeometry(DARK_CHESS_DESCRIPTOR, perspective === 'black');
+  const origin = coordOf(originSquare);
+  const settle = coordOf(settleSquare);
+  const from = geom.center(origin.file, origin.rank);
+  const to = geom.center(settle.file, settle.rank);
+  glideSvgPiece(slot, from.x - to.x, from.y - to.y, duration);
+}
+
 function cellCentre(square: Square, geom: GridGeometry): { x: number; y: number } {
   const { file, rank } = coordOf(square);
   const { x, y } = geom.topLeft(file, rank);
@@ -301,7 +329,11 @@ function pieceLayer(
     const { file, rank } = coordOf(square as Square);
     const { x, y } = geom.topLeft(file, rank);
     const token = chessPiece(piece.role, piece.color, x, y, size);
-    parts.push(square === draggingFrom ? `<g class="dark-chess-drag-source">${token}</g>` : token);
+    // A keyed outer slot lets a post-render glide find the piece
+    // (animateChessBoardMove); the drag-source dimmer stays an inner wrapper.
+    const slotBody =
+      square === draggingFrom ? `<g class="dark-chess-drag-source">${token}</g>` : token;
+    parts.push(`<g class="dark-chess-piece-slot" data-piece-square="${square}">${slotBody}</g>`);
   }
   return parts.join('');
 }

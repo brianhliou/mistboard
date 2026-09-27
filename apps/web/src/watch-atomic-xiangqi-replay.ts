@@ -25,7 +25,7 @@ import { replayAtomicXiangqiNotation } from './atomic-xiangqi-replay.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';
-import { xiangqiBoardSvg } from './xiangqi-board.js';
+import { animateXiangqiBoardMove, xiangqiBoardSvg } from './xiangqi-board.js';
 
 export type AtomicXiangqiWatchReplayOptions = TenantWatchReplayOptions;
 
@@ -76,15 +76,21 @@ export function mountAtomicXiangqiWatchReplay(
         }
       },
       // A forward step onto a capture repaints with the fresh aftermath and
-      // plays the detonation; a back step, or a quiet move, keeps the plain
-      // repaint the generic already did.
-      animateMove: (boardEl, view, _prevView, direction, orientation) => {
+      // plays the detonation (the capturer is gone, so nothing glides). A quiet
+      // move glides forward, and a back step glides the previous ply's move
+      // home, on the plain repaint the generic already did.
+      animateMove: (boardEl, view, prevView, direction, orientation) => {
         cancelCapture?.();
         cancelCapture = null;
         markAtomicXiangqiBlastHost(boardEl, view);
-        if (direction !== 'forward' || !atomicXiangqiCaptureAnimates(view)) return;
-        boardEl.innerHTML = boardSvg(view, orientation, true);
-        cancelCapture = animateAtomicXiangqiCapture(boardEl, view, orientation);
+        if (direction === 'forward' && atomicXiangqiCaptureAnimates(view)) {
+          boardEl.innerHTML = boardSvg(view, orientation, true);
+          cancelCapture = animateAtomicXiangqiCapture(boardEl, view, orientation);
+          return;
+        }
+        const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
+        if (move)
+          animateXiangqiBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
       },
     },
   );
