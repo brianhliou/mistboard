@@ -515,8 +515,13 @@ async function mountChessEmbed(
   // the first mover's seat (White here), as on every other variant.
   const tags = chapter.tags ?? {};
   const event = tags.event ?? chapter.name ?? 'Study';
-  const result =
-    tags.result && tags.result !== '*'
+  // A PGN result tag reads as the localized winner line, as on every other
+  // variant; a game that ended off the board (resignation, forfeit) has only
+  // the tag to say how it ended. Any other tag text is shown as written.
+  const tagged = tagResultToken(tags.result);
+  const result = tagged
+    ? reviewResultLabel(tagged === 'red-wins' ? 'white-wins' : tagged, spec.variant)
+    : tags.result && tags.result !== '*'
       ? tags.result
       : spec.variant === 'dark-chess'
         ? darkChessEndingLabel(spec)

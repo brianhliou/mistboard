@@ -589,6 +589,36 @@ describe('mountEmbedStudy', () => {
     root.remove();
   });
 
+  it('reads a fog chess result tag as the winner line, for a game that ended off the board', async () => {
+    // Misty's resignation and forfeit games stop mid-position: nothing on the
+    // board says who won, so the chapter's 1-0 tag must, and it must read as a
+    // localized line rather than the raw PGN token.
+    const line = ['e2e4', 'e7e5', 'g1f3'];
+    const tree = line.reduceRight<{ uci?: string; children?: unknown[] }>(
+      (child, uci) => ({ uci, children: child.uci ? [child] : [] }),
+      {},
+    );
+    const chapter = (id: string, result: string) => ({
+      id,
+      name: 'Misty wins as White by resignation',
+      orientation: 'red',
+      variant: 'dark-chess',
+      tags: { result },
+      root: { root: { children: [tree] } },
+    });
+    for (const [id, tag, label] of [
+      ['Res10000', '1-0', 'White wins'],
+      ['Res01000', '0-1', 'Black wins'],
+    ] as const) {
+      stubFetch(200, { study: { id: 's' }, chapters: [chapter(id, tag)] });
+      const root = document.createElement('div');
+      document.body.append(root);
+      await mountEmbedStudy(root, { studyId: 's', chapterId: id }, {});
+      expect(root.querySelector('.embed-card-result')?.textContent).toBe(label);
+      root.remove();
+    }
+  });
+
   it('refuses a chapter of a variant it cannot draw, by name', async () => {
     stubFetch(200, {
       study: { id: 's' },
