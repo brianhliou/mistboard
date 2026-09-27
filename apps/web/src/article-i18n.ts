@@ -2688,8 +2688,8 @@ const ZH_HANS: Record<string, string> = {
   'Move any animal into the enemy den, capture all eight enemy animals, or leave your opponent with no legal move. You cannot enter your own den. The game draws on threefold repetition or 100 half-moves without a capture.':
     '任何一只动物走进敌方兽穴、吃光敌方八只动物，或让对手无棋可走，都立刻获胜。不能走进自己的兽穴。三次重复局面，或 100 个半回合没有吃子，判和。',
   'Is there a winning strategy for Jungle Chess?': '斗兽棋有必胜法吗？',
-  'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
-    '目前没有已知的必胜法。斗兽棋只被完全解到盘面剩七枚棋子，完整的十六枚棋子开局仍未解开。实战上有用的想法是：留住鼠当作对付象的答案，让狮和虎待在河边发挥跳河的威胁，并且不要让自己兽穴周围的格子无人防守。',
+  'No forced win is known. Dou Shou Qi is unsolved: the largest published endgame tablebase covers positions with up to four pieces, against sixteen at the start. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
+    '目前没有已知的必胜法。斗兽棋尚未被解开：已发表的最大残局库只涵盖盘面最多四枚棋子的局面，而开局有十六枚。实战上有用的想法是：留住鼠当作对付象的答案，让狮和虎待在河边发挥跳河的威胁，并且不要让自己兽穴周围的格子无人防守。',
   'What other names does Jungle Chess have?': '斗兽棋的英文怎么说？',
   'Dou Shou Qi, Animal Chess, Jungle, and Animal Checkers in English. Dou shou qi is the Chinese name, literally fighting-animal chess, and it is the same name in Taiwan, Hong Kong, and the mainland.':
     '英文叫 Jungle Chess、Dou Shou Qi、Animal Chess，也有人叫 Jungle 或 Animal Checkers。中文在中国大陆写作斗兽棋，台湾和香港写作鬥獸棋。',
@@ -5356,8 +5356,8 @@ const ZH_HANT: Record<string, string> = {
   'Move any animal into the enemy den, capture all eight enemy animals, or leave your opponent with no legal move. You cannot enter your own den. The game draws on threefold repetition or 100 half-moves without a capture.':
     '任何一隻動物走進敵方獸穴、吃光敵方八隻動物，或讓對手無棋可走，都立刻獲勝。不能走進自己的獸穴。三次重複局面，或 100 個半回合沒有吃子，判和。',
   'Is there a winning strategy for Jungle Chess?': '鬥獸棋有必勝法嗎？',
-  'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
-    '目前沒有已知的必勝法。鬥獸棋只被完全解到盤面剩七枚棋子，完整的十六枚棋子開局仍未解開。實戰上有用的想法是：留住鼠當作對付象的答案，讓獅和虎待在河邊發揮跳河的威脅，並且不要讓自己獸穴周圍的格子無人防守。',
+  'No forced win is known. Dou Shou Qi is unsolved: the largest published endgame tablebase covers positions with up to four pieces, against sixteen at the start. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.':
+    '目前沒有已知的必勝法。鬥獸棋尚未被解開：已發表的最大殘局庫只涵蓋盤面最多四枚棋子的局面，而開局有十六枚。實戰上有用的想法是：留住鼠當作對付象的答案，讓獅和虎待在河邊發揮跳河的威脅，並且不要讓自己獸穴周圍的格子無人防守。',
   'What other names does Jungle Chess have?': '鬥獸棋的英文怎麼說？',
   'Dou Shou Qi, Animal Chess, Jungle, and Animal Checkers in English. Dou shou qi is the Chinese name, literally fighting-animal chess, and it is the same name in Taiwan, Hong Kong, and the mainland.':
     '英文叫 Jungle Chess、Dou Shou Qi、Animal Chess，也有人叫 Jungle 或 Animal Checkers。中文在台灣和香港寫作鬥獸棋，中國大陸寫作斗兽棋。',

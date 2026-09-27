@@ -253,7 +253,7 @@ export const jungleArticle: Article = {
             {
               question: 'Is there a winning strategy for Jungle Chess?',
               answer:
-                'No forced win is known. Dou Shou Qi has been solved only up to seven pieces on the board, and the full sixteen-piece game is open. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.',
+                'No forced win is known. Dou Shou Qi is unsolved: the largest published endgame tablebase covers positions with up to four pieces, against sixteen at the start. In practice the strong ideas are to keep the rat alive as your answer to the elephant, keep the lion and tiger near the rivers where their jumps threaten, and never leave the squares around your den unguarded.',
             },
             {
               question: 'What other names does Jungle Chess have?',
