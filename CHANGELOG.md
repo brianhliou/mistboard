@@ -187,6 +187,7 @@ Conventions:
 
 ### Fixed
 
+- The Duck Xiangqi bot no longer lifts the duck off the file between the generals when it is winning; it used to lose the general to the flying capture ([45fc6083](https://github.com/brianhliou/mistboard/commit/45fc6083))
 - The game room is in Chinese for Chinese readers: clocks, buttons, the abort countdown, resign and abort, the result and the tab title, in every variant; it was English from the first move to game over ([9a8ad1ad](https://github.com/brianhliou/mistboard/commit/9a8ad1ad))
 - On a phone the clocks sit right above and below the board, with the abort countdown and Resign under them; they used to start below the bottom of the screen ([f3cbb88d](https://github.com/brianhliou/mistboard/commit/f3cbb88d))
 - Study boards no longer call an equally good alternative "better was": a side line reads "better was" only under a move marked as a mistake, and "also" otherwise ([b2e8077b](https://github.com/brianhliou/mistboard/commit/b2e8077b))
