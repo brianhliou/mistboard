@@ -642,12 +642,19 @@ describe('mountEmbedStudy', () => {
     expect(buttons.map((b) => b.dataset.pov)).toEqual(['white', 'truth', 'black']);
     expect(root.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe('truth');
     expect(root.querySelectorAll('.dark-chess-fog-square')).toHaveLength(0);
+    const bottomSeatName = () =>
+      root.querySelector('.embed-card-board')?.lastElementChild?.previousElementSibling
+        ?.textContent;
+    expect(bottomSeatName()).toContain('White');
     buttons[2]!.click();
     const fogged = root.querySelectorAll('.dark-chess-fog-square').length;
     expect(fogged).toBeGreaterThan(0);
+    // Black's view turns the board to Black, and its seat row moves under it.
+    expect(bottomSeatName()).toContain('Black');
     expect(root.querySelector('.embed-pov__button.active')?.getAttribute('data-pov')).toBe('black');
     buttons[1]!.click();
     expect(root.querySelectorAll('.dark-chess-fog-square')).toHaveLength(0);
+    expect(bottomSeatName()).toContain('White');
     root.remove();
 
     stubFetch(200, { study: { id: 's' }, chapters: [chapter] });

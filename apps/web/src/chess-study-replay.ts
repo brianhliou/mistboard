@@ -241,7 +241,10 @@ export function mountChessReplayBoard(
   /** Fog chess only: switch between the truth and a seat's fogged view. */
   setPov: (pov: ChessReplayPov) => void;
 } {
-  const perspective = spec.perspective ?? 'white';
+  // The chapter's own orientation; a seat's fogged view turns the board to
+  // that seat, as the game embed and the review board do.
+  const chapterPerspective = spec.perspective ?? 'white';
+  let perspective = chapterPerspective;
   const { states, labels } = replayChess(spec);
   const total = labels.length;
   // Sidelines replayed from the position their judged move was played in.
@@ -305,6 +308,7 @@ export function mountChessReplayBoard(
     setPov: (next: ChessReplayPov) => {
       if (spec.variant !== 'dark-chess' || next === pov) return;
       pov = next;
+      perspective = next === 'truth' ? chapterPerspective : next;
       render();
     },
     jumpToPly: (ply: number) => {
