@@ -136,6 +136,7 @@ Conventions:
 
 ### Site
 
+- The About page says what the site is for both English and Chinese speakers, one lobby and one set of games in three languages, instead of telling Chinese readers it was built for people who cannot read Chinese ([dd7a2116](https://github.com/brianhliou/mistboard/commit/dd7a2116))
 - The site describes itself as "Chinese chess and original strategy games" instead of "Chinese chess for chess players", and the Chinese pages lead with jieqi and banqi ([633da554](https://github.com/brianhliou/mistboard/commit/633da554))
 - The homepage puts Latest studies beside the daily puzzle and the forum, and the chat moves to the lower right beside the article rows ([96544bf7](https://github.com/brianhliou/mistboard/commit/96544bf7))
 - The top bar lines up with lichess's on wide screens instead of running to the edges, keeps its links on the bar down to a 940px window, and shows the full mistboard.com name whenever it fits ([c654ede1](https://github.com/brianhliou/mistboard/commit/c654ede1))
