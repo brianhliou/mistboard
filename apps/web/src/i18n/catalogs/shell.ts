@@ -50,7 +50,7 @@ export const EN_SHELL = {
   'nav.register': 'Register',
   'nav.language': 'Language',
   'home.tagline':
-    'Chinese chess for chess players, and original strategy games. Free and open source. About Mistboard...',
+    'Chinese chess and original strategy games. Free and open source. About Mistboard...',
   'home.playSummary':
     'Free in the browser · No download or sign-up · Eight computer levels · Play a friend',
   'home.supportTitle': 'Mistboard Patron',

@@ -182,11 +182,11 @@ describe('landing shell', () => {
     const link = about?.querySelector<HTMLAnchorElement>('a[href="/about"]');
 
     expect(about?.textContent).toBe(
-      'Chinese chess for chess players, and original strategy games. Free and open source. About Mistboard...',
+      'Chinese chess and original strategy games. Free and open source. About Mistboard...',
     );
     expect(link?.textContent).toBe('About Mistboard...');
     expect(about?.childNodes[0]?.textContent).toBe(
-      'Chinese chess for chess players, and original strategy games. Free and open source. ',
+      'Chinese chess and original strategy games. Free and open source. ',
     );
   });
 });

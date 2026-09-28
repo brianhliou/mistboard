@@ -163,10 +163,10 @@ export const EN_CONTENT = {
   'contact.networkError': 'Network error. Try again.',
   'about.heading': 'About Mistboard',
   'about.lede':
-    'Mistboard is a free, open-source place for chess players to learn Chinese chess, and home to the original strategy games we build.',
+    'Mistboard is a free, open-source place to play and study Chinese chess, and home to the original strategy games we build.',
   'about.whyHeading': 'Why this site exists',
   'about.whyBody':
-    "Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi. Most places to play them online assume you already read Chinese. Mistboard is built for the chess player who doesn't: pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course starts from the first move and explains each piece against the chess piece it resembles. Past the basics the site carries what a strong player expects: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.",
+    "Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi. Most places to play them online assume you already read Chinese. Mistboard is built for the player who doesn't: pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course starts from the first move and explains each piece against the chess piece it resembles. Past the basics the site carries what a strong player expects: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.",
   'about.darkChessHeading': 'What Mistboard builds',
   'about.darkChessBody':
     'Beside the traditional games sit the ones Mistboard invents. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Fortress plays on a smaller board where captured pieces return as drops, with one new piece, the Treasure. Each starts from a board people already know and changes one thing, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.',

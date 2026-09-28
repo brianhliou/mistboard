@@ -55,7 +55,7 @@ export const ZH_HANS_SHELL = {
   'nav.signIn': '登录',
   'nav.register': '注册',
   'nav.language': '语言',
-  'home.tagline': '面向国际象棋玩家的中国象棋，以及原创策略游戏。免费且开源。关于 Mistboard...',
+  'home.tagline': '中国象棋、揭棋、暗棋，以及原创策略游戏。免费且开源。关于 Mistboard...',
   'home.playSummary': '免费网页版 · 无需下载和注册 · 人机对战八个等级 · 和朋友对弈',
   'home.activityAria': '活跃度',
   'home.gamesPlayed': '局已下完',

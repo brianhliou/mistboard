@@ -3,14 +3,14 @@
 [![CI](https://github.com/brianhliou/mistboard/actions/workflows/ci.yml/badge.svg)](https://github.com/brianhliou/mistboard/actions/workflows/ci.yml)
 [![License: AGPL-3.0](https://img.shields.io/badge/license-AGPL--3.0-blue.svg)](LICENSE)
 
-<img src="assets/readme-hero.png" alt="The Mistboard homepage: a live xiangqi game, the lobby with engine opponents across nine games, and the Play a game button" title="Chinese chess for chess players, and original strategy games." />
+<img src="assets/readme-hero.png" alt="The Mistboard homepage: a live xiangqi game, the lobby with engine opponents across nine games, and the Play a game button" title="Chinese chess and original strategy games." />
 
-Mistboard is a free, open-source place for chess players to learn Chinese
-chess, and home to the original strategy games we build.
+Mistboard is a free, open-source place to play and study Chinese chess, and
+home to the original strategy games we build.
 
 Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi.
 Most places to play them online assume you already read Chinese. Mistboard is
-built for the chess player who doesn't: pieces render as icons you can identify
+built for the player who doesn't: pieces render as icons you can identify
 before you can read 車 or 砲, rules and articles are written in English rather
 than translated into it, and a beginner course starts from the first move.
 
