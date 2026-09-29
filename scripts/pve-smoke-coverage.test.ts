@@ -69,6 +69,38 @@ test('every smoked variant is wired into the release gate', async () => {
   }
 });
 
+test('every smoke the release tier runs by name is a package.json script', async () => {
+  // The release invokes `npm run prod:smoke:<name>`, so a config row and a
+  // release row with no script behind them die on `Missing script` after a
+  // green deploy, the way prod:smoke:practice did on 2026-09-06.
+  const { readFile } = await import('node:fs/promises');
+  const releaseSource = await readFile(new URL('./release-prod.mjs', import.meta.url), 'utf8');
+  const pkg = JSON.parse(await readFile(new URL('../package.json', import.meta.url), 'utf8')) as {
+    scripts: Record<string, string>;
+  };
+  const invoked = [...releaseSource.matchAll(/npmCommand\('(prod:smoke:[^']+)'/g)].map(
+    (match) => match[1],
+  );
+  const configured = Object.values(VARIANT_SMOKE_CONFIGS).map(
+    (config) => `prod:smoke:${config.name}`,
+  );
+  assert.ok(invoked.length >= 5, `expected the release smoke rows, found ${invoked.length}`);
+  const missing = [...new Set([...invoked, ...configured])].filter(
+    (script) => !(script in pkg.scripts),
+  );
+  assert.deepEqual(
+    missing,
+    [],
+    missing
+      .map(
+        (script) =>
+          `${script} is run by scripts/release-prod.mjs but is not in package.json: ` +
+          `add "${script}": "node scripts/prod-<variant>-smoke.mjs" to its scripts`,
+      )
+      .join('\n'),
+  );
+});
+
 test('EXEMPT does not drift: every exemption still names a real PvE spec', () => {
   const specs = new Set(pveGameSpecIds());
   const stale = Object.keys(EXEMPT).filter((spec) => !specs.has(spec));

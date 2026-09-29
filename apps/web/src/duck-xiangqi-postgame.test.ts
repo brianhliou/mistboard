@@ -9,9 +9,9 @@ import { afterEach, describe, expect, it, vi } from 'vitest';
 import {
   type DuckXiangqiPostgameResponse,
   duckXiangqiPostgameApiUrl,
-  duckXiangqiTurnLabel,
   mountDuckXiangqiPostgame,
 } from './duck-xiangqi-postgame.js';
+import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 
 const ROOM_ID = 'dkx_postgame';
 

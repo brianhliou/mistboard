@@ -2,7 +2,12 @@ import type { GameEvent } from '@mistboard/game';
 import './landing-play.css';
 import './landing.css';
 import './game-route.css';
-import { buildHomeArticleCards, initLandingCarousel, mountArticleThumbnails } from './articles.js';
+import {
+  buildHomeArticleCards,
+  HOME_ARTICLE_ROW_SIZE,
+  initLandingCarousel,
+  mountArticleThumbnails,
+} from './articles.js';
 import {
   displayParticipantName,
   type FeaturedGame,
@@ -714,7 +719,7 @@ function buildLandingStage(
   // cards (six per view), an announcement can take a slot, newest first. ──
   // Six, not eight: the row is one screen-width strip of "what's new", and the
   // curated list keeps growing while the strip does not.
-  const articleCards = buildHomeArticleCards(6, locale);
+  const articleCards = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale);
   articleCards?.classList.add('landing-articles-row');
 
   // ── Band 4 (grid-area: learn): the learn row beneath the blog row — the same

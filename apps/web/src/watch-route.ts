@@ -5,10 +5,10 @@ import { createGameTable } from './game-table.js';
 import { t } from './i18n/catalog.js';
 import { jungleFlipResultLabel } from './jungle-flip-result-label.js';
 import { renderVariantMarker } from './variant-markers.js';
-import type { VariantMiniId } from './variant-mini-boards.js';
 import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 import { variantMiniIdForRawVariant } from './variants.js';
 import { boardAspectForSpec } from './watch-board-aspect.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 import './watch-route.css';
 import {
   colorWinsLabel,
@@ -1836,24 +1836,6 @@ function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
   return row;
 }
 
-// The shared variant marker for each watch channel, so the TV rail reads in
-// the same icon language as the picker, rules rail, leaderboard, and profile.
-// Channel ids match VariantMiniId ids; the dark-chess channel shows the
-// dark-chess marker. An unmapped channel keeps its (empty) marker slot so the
-// rows stay grid-aligned.
-const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
-  'dark-chess': 'dark-chess',
-  xiangqi: 'xiangqi',
-  'dark-xiangqi': 'dark-xiangqi',
-  'fortress-xiangqi': 'fortress-xiangqi',
-  'duck-xiangqi': 'duck-xiangqi',
-  'atomic-xiangqi': 'atomic-xiangqi',
-  jieqi: 'jieqi',
-  banqi: 'banqi',
-  jungle: 'jungle',
-  'jungle-flip': 'jungle-flip',
-};
-
 // Lichess's `cogs` icon, used for its Bot and computer TV channels. Mistboard
 // and Lichess are both AGPL-3.0-or-later, so keep the source link beside this
 // extracted outline: https://github.com/lichess-org/lila/blob/master/public/font/lichess.sfd
@@ -1889,7 +1871,7 @@ export function renderWatchChannelList(root: HTMLElement, feed: WatchFeed | null
     const thumb = document.createElement('span');
     thumb.className = 'watch-channel-thumb';
     thumb.setAttribute('aria-hidden', 'true');
-    const miniId = CHANNEL_MINI_BY_ID[channel.id];
+    const miniId = WATCH_CHANNEL_MINI_IDS[channel.id];
     if (channel.id === 'top') {
       thumb.append(buildUiIcon('featured-channel', 'watch-channel-crown'));
     } else if (channel.id === 'engines') {

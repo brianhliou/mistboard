@@ -29,6 +29,7 @@ import {
 // correct and the page looks broken.
 import './live-xiangqi.css';
 import './duck-xiangqi.css';
+import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 import { duckXiangqiEnabled } from './feature-flags.js';
 import { t } from './i18n/catalog.js';
 import { finishBadgesForResult, generalSquareIn } from './live-finish-badges.js';
@@ -160,7 +161,7 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
     cellPrefix: 'xiangqi-move-row',
     listClass: 'xiangqi-move-list',
     masked: false,
-    notate: duckTurnLabel,
+    notate: duckXiangqiTurnLabel,
     isMoveEvent: isDuckMoveEvent,
   },
   replayCapture: {
@@ -396,14 +397,6 @@ function maybePlayTerminalSound(): void {
     playTerminalPlan(winner === null ? 'draw' : winner === seat ? 'win' : 'lose', reason);
   }
   lastStatusType = status;
-}
-
-function duckTurnLabel(move: DuckXiangqiTurn): string {
-  // `x…#` is a general capture, which ends the game and is the one turn with no
-  // duck placement.
-  return move.duckTo === null
-    ? `${move.from}x${move.to}#`
-    : `${move.from}-${move.to}@${move.duckTo}`;
 }
 
 function isDuckMoveEvent(event: TenantLiveEvent): event is DuckMoveEvent {

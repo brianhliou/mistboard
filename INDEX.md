@@ -1056,6 +1056,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/duck-xiangqi-postgame.ts` | _needs a one-line description_ |
 | `apps/web/src/duck-xiangqi-replay.ts` | _needs a one-line description_ |
 | `apps/web/src/duck-xiangqi-rules-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/duck-xiangqi-turn-label.ts` | The one Duck Xiangqi turn grammar (`e2-e5@c7`, `e2xe5#`), a zero-import leaf shared by the live room, postgame, review tree and article/embed replay. |
 | `apps/web/src/embed/embed-card.ts` | _needs a one-line description_ |
 | `apps/web/src/jungle-cues-lab.ts` | _needs a one-line description_ |
 | `apps/web/src/learn-xiangqi/learn-copy-zh.ts` | _needs a one-line description_ |
@@ -1081,6 +1082,7 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/review/xiangqi-practice.ts` | _needs a one-line description_ |
 | `apps/web/src/variant-tenant/clock-projection.ts` | _needs a one-line description_ |
 | `apps/web/src/watch-duck-xiangqi-replay.ts` | _needs a one-line description_ |
+| `apps/web/src/watch-channel-markers.ts` | Watch channel id to variant marker, shared by /watch and /games; `variant-registry-sync.test.ts` fails for a server channel without one. |
 | `apps/server/src/atomic-xiangqi-eve-adapter.ts` | Atomic Xiangqi EvE adapter: the rated-ladder runner plays the variant through the patched FSF tiers |
 | `apps/server/src/atomic-xiangqi-fsf-engine.ts` | Atomic Xiangqi Fairy-Stockfish provider: eight node-anchored tiers on the patched binary, warm sessions, the fixed-depth analysis session |
 | `apps/server/src/atomic-xiangqi-registration.ts` | Atomic Xiangqi tenant registration: rooms, lobby seek (rated), TV channel, PGN/JSON export binding, share card |

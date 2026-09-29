@@ -526,7 +526,8 @@ export function isNoindexRoute(pathname: string): boolean {
 // does not force CORP on its cross-origin subresources.
 //
 // Keep the single optional variant segment in sync with the /<variant>/game/
-// tenants in isClientRoute above.
+// tenants in isClientRoute above; apps/web/src/variant-registry-sync.test.ts
+// fails for any tenant postgame or review route this does not isolate.
 export function isReviewShellRoute(pathname: string): boolean {
   const normalized = pathname.replace(/\/+$/, '') || '/';
   return (

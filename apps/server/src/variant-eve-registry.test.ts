@@ -35,8 +35,26 @@ test('every first-party bot variant has an EvE adapter or a stated reason not to
   assert.deepEqual(
     missing,
     [],
-    'these bot variants cannot be rated: add a VariantEveAdapter to variant-eve-registry.ts ' +
-      'or a reason to NOT_EVE_RATED_VARIANTS',
+    `these bot variants cannot be rated: ${missing.join(', ')}. Add a VariantEveAdapter to ` +
+      'apps/server/src/variant-eve-registry.ts, or a reason to NOT_EVE_RATED_VARIANTS in ' +
+      'variant-eve-registry.test.ts',
+  );
+});
+
+test('NOT_EVE_RATED_VARIANTS excuses only bot variants that still lack an adapter', () => {
+  // An excuse left behind after its variant gained an adapter, or lost its
+  // bot, reads as a live decision and would quietly excuse the next rename.
+  const botVariants = new Set(
+    FIRST_PARTY_BOT_PROFILES.flatMap((profile) => Object.keys(profile.engines)),
+  );
+  const stale = [...NOT_EVE_RATED_VARIANTS.keys()].filter(
+    (variant) => eveAdapterFor(variant) !== null || !botVariants.has(variant),
+  );
+  assert.deepEqual(
+    stale,
+    [],
+    `stale NOT_EVE_RATED_VARIANTS entries: ${stale.join(', ')}. Delete them from ` +
+      'variant-eve-registry.test.ts (the variant has an adapter now, or no first-party bot).',
   );
 });
 

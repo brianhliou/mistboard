@@ -10,6 +10,7 @@
 // Plan and status: docs-private/metrics-roadmap.md.
 
 import './metrics.css';
+import { variantNameKeyForSpecId } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import { buildNav, buildNotice } from './site-shell.js';
@@ -694,27 +695,18 @@ function sortedEntries(record: Record<string, number>): BreakdownEntry[] {
 }
 
 // Public-facing variant names, keyed by the persisted games.variant id (which
-// equals the game-spec id). The canonical source is the lobby's exhaustive
-// switch in landing-play.ts (variantNameKeyForGameSpec); this display-only map
-// mirrors it with a safe prettify fallback, so an unmapped/new id degrades
-// gracefully instead of throwing.
-const VARIANT_NAME_KEYS: Record<string, I18nKey> = {
-  xiangqi: 'variant.xiangqi.name',
-  'dark-xiangqi': 'variant.darkXiangqi.name',
-  'dark-chess': 'variant.darkChess.name',
-  'fortress-xiangqi': 'variant.fortressXiangqi.name',
-  'duck-xiangqi': 'variant.duckXiangqi.name',
-  'atomic-xiangqi': 'variant.atomicXiangqi.name',
-  jieqi: 'variant.jieqi.name',
-  banqi: 'variant.banqi.name',
-  jungle: 'variant.jungle.name',
-  'jungle-flip': 'variant.jungleFlip.name',
+// equals the game-spec id). Live specs take the catalog's exhaustive table
+// (game-display.ts variantNameKeyForSpecId), so a new variant is named here
+// without an edit; this page still counts games in variants deleted from
+// GameSpecId, which keep their names below. Anything else degrades to a
+// prettified id instead of throwing.
+const RETIRED_VARIANT_NAME_KEYS: Record<string, I18nKey> = {
   'mini-xiangqi': 'variant.miniXiangqi.name',
   'dark-mini-xiangqi': 'variant.darkMiniXiangqi.name',
 };
 
 function variantPublicName(variant: string, locale: Locale): string {
-  const key = VARIANT_NAME_KEYS[variant];
+  const key = variantNameKeyForSpecId(variant) ?? RETIRED_VARIANT_NAME_KEYS[variant];
   if (key) return t(key, {}, locale);
   return variant
     .split('-')

@@ -5,6 +5,12 @@ import { STUDY_VARIANTS } from '../study-catalog.js';
 import { embedStudyRouteFromPath } from './embed-route.js';
 import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 
+/** Study variants the embed card deliberately refuses by name, each with why. */
+const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
+  'dark-xiangqi':
+    'no embed board yet (found missing 2026-09-29); a fog xiangqi chapter shows the named refusal',
+};
+
 const CHAPTER = {
   id: 'Ue0EgpS7',
   name: '1956 · The first national championship',
@@ -707,6 +713,32 @@ describe('mountEmbedStudy', () => {
     }
     expect(CHAPTER_EMBED_VARIANTS.has('dark-chess')).toBe(true);
     expect(CHAPTER_EMBED_VARIANTS.has('made-up-chess')).toBe(false);
+  });
+
+  it('draws every study variant, or records why the embed refuses it', () => {
+    // The other direction. Fog chess was a study variant with no embed branch,
+    // so the Misty write-up's embedded chapter showed the refusal (1477f52d).
+    // A new study variant now fails here until it gets a board or a line in
+    // EMBED_REFUSED_STUDY_VARIANTS.
+    const missing = STUDY_VARIANTS.map((v) => v.id).filter(
+      (id) => !CHAPTER_EMBED_VARIANTS.has(id) && !(id in EMBED_REFUSED_STUDY_VARIANTS),
+    );
+    expect(
+      missing,
+      missing
+        .map(
+          (id) =>
+            `study variant '${id}' has no embed board: add it to CHAPTER_EMBED_VARIANTS in apps/web/src/embed/embed-study-page.ts, or to EMBED_REFUSED_STUDY_VARIANTS in embed-study-page.test.ts with the reason`,
+        )
+        .join('\n'),
+    ).toEqual([]);
+    const stale = Object.keys(EMBED_REFUSED_STUDY_VARIANTS).filter(
+      (id) => CHAPTER_EMBED_VARIANTS.has(id) || !STUDY_VARIANTS.some((v) => v.id === id),
+    );
+    expect(
+      stale,
+      `EMBED_REFUSED_STUDY_VARIANTS names variants the embed now draws or no study holds: ${stale.join(', ')}; delete those lines`,
+    ).toEqual([]);
   });
 
   it('opens on the ply the link names, not always move one', async () => {

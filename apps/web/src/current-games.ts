@@ -29,7 +29,7 @@ import type { ReplayHandle } from './replay.js';
 import { buildNav, buildNotice } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
-import type { VariantMiniId } from './variant-mini-boards.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 import { formatClock, formatDayClock } from './web-utils.js';
 
 const POLL_MS = 5_000;
@@ -96,25 +96,6 @@ type CorrespondenceSeek = {
   gameSpecId: string;
   daysPerMove: number;
   creatorName: string | null;
-};
-
-// Same marker map the /watch rail uses (watch-route.ts); duplicated rather than
-// imported so this page does not pull the 2,000-line watch module into its chunk.
-const CHANNEL_MINI_BY_ID: Record<string, VariantMiniId> = {
-  'dark-chess': 'dark-chess',
-  xiangqi: 'xiangqi',
-  'dark-xiangqi': 'dark-xiangqi',
-  'fortress-xiangqi': 'fortress-xiangqi',
-  jieqi: 'jieqi',
-  banqi: 'banqi',
-  jungle: 'jungle',
-  'jungle-flip': 'jungle-flip',
-  // Duck Xiangqi. Present in watch-route.ts's copy of this map since the
-  // channel was added; missing here, which would have rendered an empty marker
-  // slot for duck rows the moment the server flag turned on. The two maps are
-  // duplicated deliberately (see above) and so drift exactly like this.
-  'duck-xiangqi': 'duck-xiangqi',
-  'atomic-xiangqi': 'atomic-xiangqi',
 };
 
 type CardState = {
@@ -454,7 +435,7 @@ function renderRail(root: HTMLElement, data: CurrentGamesResponse, active: strin
   for (const channel of data.channels) {
     const channelLabel = watchChannelLabel(channel);
     const link = railLink(channel.id, channelLabel, channel.count, active === channel.id);
-    const miniId = CHANNEL_MINI_BY_ID[channel.id];
+    const miniId = WATCH_CHANNEL_MINI_IDS[channel.id];
     const thumb = link.querySelector<HTMLElement>('.current-games-rail-thumb');
     if (thumb && miniId) {
       thumb.classList.add('notranslate');
@@ -565,7 +546,7 @@ function renderBoardPlaceholder(root: HTMLElement, game: CurrentGame): void {
   root.replaceChildren();
   const tile = document.createElement('div');
   tile.className = 'current-game-hidden';
-  const miniId = game.channelId ? CHANNEL_MINI_BY_ID[game.channelId] : undefined;
+  const miniId = game.channelId ? WATCH_CHANNEL_MINI_IDS[game.channelId] : undefined;
   if (miniId) {
     const marker = document.createElement('span');
     marker.className = 'current-game-hidden-marker notranslate';

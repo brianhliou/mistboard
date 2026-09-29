@@ -9,7 +9,7 @@ import { describe, expect, it } from 'vitest';
 // chess stack. When this test landed it caught five tenants whose game routes
 // were missing from isClientRoute (fortress-xiangqi and four since-deleted
 // tenants).
-import { isClientRoute } from '../../server/src/server-policy.js';
+import { isClientRoute, isReviewShellRoute } from '../../server/src/server-policy.js';
 // Side-effect import: populates the server tenant registry exactly like
 // apps/server/src/index.ts (and registry.test.ts) do.
 import '../../server/src/variant-tenant/register-tenants.js';
@@ -30,6 +30,7 @@ import {
 } from '../../server/src/xiangqi-engine-catalog.js';
 import { landingBotOffer } from './landing-bot-policy.js';
 import { webVariantTenants } from './variant-tenant/registry.js';
+import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
 
 const SAMPLE_ROOM_SUFFIX = 'abc123';
 
@@ -58,6 +59,27 @@ describe('web tenant routes <-> server SPA fallback allowlist', () => {
         `${tenant.gameSpecId}: review link ${url} is missing from isClientRoute() (apps/server/src/server-policy.ts)`,
       ).toBe(true);
     }
+  });
+
+  it('every tenant postgame and review route is cross-origin isolated', () => {
+    // Postgame review mounts the in-browser engine, which needs
+    // SharedArrayBuffer and so COOP/COEP; isReviewShellRoute is the server's
+    // hand-kept list of documents that get them. The dev server isolates every
+    // page, so a route missing here only breaks in prod, where Chrome readers
+    // are told the engine cannot run (the broadcast pages, f16f9e2d).
+    const missing: string[] = [];
+    for (const tenant of webVariantTenants()) {
+      const bases = new Set([tenant.gameRouteBase, tenant.reviewRouteBase ?? '/game']);
+      for (const base of bases) {
+        if (!base) continue;
+        const url = `${base}/${tenant.roomIdPrefix}${SAMPLE_ROOM_SUFFIX}`;
+        if (!isReviewShellRoute(url)) missing.push(`${tenant.gameSpecId}: ${url}`);
+      }
+    }
+    expect(
+      missing,
+      `not cross-origin isolated, so the review engine is dead in prod Chrome: add a pattern for these to isReviewShellRoute() in apps/server/src/server-policy.ts\n${missing.join('\n')}`,
+    ).toEqual([]);
   });
 });
 
@@ -117,6 +139,31 @@ describe('web tenant registry <-> server tenant registry parity', () => {
       JIEQI_DEFAULT_ENGINE_ID,
     ]);
     expect(tenant?.landing?.defaultEngineId).toBe(JIEQI_DEFAULT_ENGINE_ID);
+  });
+
+  it('every server watch channel has a variant marker', () => {
+    // The server derives a watch channel from each tenant's `watch` block;
+    // /watch and /games draw its marker from WATCH_CHANNEL_MINI_IDS. /games once
+    // kept its own copy of that map without duck-xiangqi, so every duck row would
+    // have rendered an empty marker slot at launch (aa91538e). Enabled or not:
+    // a channel is added before its flag turns on.
+    const channelIds = [
+      'dark-chess', // DARK_CHESS_CHANNEL, the one channel not derived from a tenant
+      ...serverTenants.flatMap((registration) =>
+        registration.watch ? [registration.watch.channelId] : [],
+      ),
+    ];
+    expect(channelIds.length, 'expected the server watch channels').toBeGreaterThan(5);
+    const missing = channelIds.filter((id) => !(id in WATCH_CHANNEL_MINI_IDS));
+    expect(
+      missing,
+      missing
+        .map(
+          (id) =>
+            `watch channel '${id}' has no marker: add '${id}' to WATCH_CHANNEL_MINI_IDS in apps/web/src/watch-channel-markers.ts`,
+        )
+        .join('\n'),
+    ).toEqual([]);
   });
 
   it('web tenant roomIdPrefixes are unique', () => {

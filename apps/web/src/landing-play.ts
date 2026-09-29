@@ -24,7 +24,8 @@ import {
 import { classifyTimeControl, gameSpecAnalyticsPropsForId, track } from './analytics.js';
 import { bindBotPlayControl } from './bot-play.js';
 import { correspondenceEnabled } from './feature-flags.js';
-import { type I18nKey, t } from './i18n/catalog.js';
+import { variantNameKeyForSpecId } from './game-display.js';
+import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
   LANDING_BOT_GAME_SPEC_IDS,
@@ -242,35 +243,11 @@ function enabledLandingVariantGameSpecs(
 }
 
 function variantLabelForGameSpec(gameSpecId: LandingGameSpecId, locale: Locale): string {
-  const key = variantNameKeyForGameSpec(gameSpecId);
+  // The catalog's exhaustive name table, not a local switch: the switch that
+  // lived here had no duck case, so duck fell back to English in every locale
+  // while its zh strings sat unused (aa91538e).
+  const key = variantNameKeyForSpecId(gameSpecId);
   return key ? t(key, {}, locale) : gameSpecForId(gameSpecId).publicName;
-}
-
-function variantNameKeyForGameSpec(gameSpecId: LandingGameSpecId): I18nKey | null {
-  switch (gameSpecId) {
-    case DARK_CHESS_SPEC_ID:
-      return 'variant.darkChess.name';
-    case DARK_XIANGQI_SPEC_ID:
-      return 'variant.darkXiangqi.name';
-    case JIEQI_SPEC_ID:
-      return 'variant.jieqi.name';
-    case BANQI_SPEC_ID:
-      return 'variant.banqi.name';
-    case JUNGLE_SPEC_ID:
-      return 'variant.jungle.name';
-    case JUNGLE_FLIP_SPEC_ID:
-      return 'variant.jungleFlip.name';
-    case FORTRESS_XIANGQI_SPEC_ID:
-      return 'variant.fortressXiangqi.name';
-    case DUCK_XIANGQI_SPEC_ID:
-      return 'variant.duckXiangqi.name';
-    case ATOMIC_XIANGQI_SPEC_ID:
-      return 'variant.atomicXiangqi.name';
-    case XIANGQI_SPEC_ID:
-      return 'variant.xiangqi.name';
-    default:
-      return null;
-  }
 }
 
 function parseLandingGameSpecId(value: string): LandingGameSpecId {

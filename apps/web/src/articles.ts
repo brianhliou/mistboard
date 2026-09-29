@@ -335,6 +335,8 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // index (and each variant's card marker), not in this homepage row, so this
 // list is curated down to blog/concept pieces; the kind guard in
 // buildHomeArticleCards drops any rules slug that slips back in.
+// home-article-row.test.ts fails when one of the newest HOME_ARTICLE_ROW_SIZE
+// listable articles is missing here without a recorded reason.
 export const HOME_ARTICLE_SLUGS = [
   // The second player page, dated 2026-09-25: the ten-game match against the
   // world champion and the season after it. Newest, so it leads.
@@ -432,6 +434,9 @@ export type HomeArticleCardOptions = {
   /** Cards kept regardless of age, so a quiet month cannot empty the row. */
   minCards?: number;
 };
+
+/** Cards the homepage row shows at once (landing.ts), announcement included. */
+export const HOME_ARTICLE_ROW_SIZE = 6;
 
 export function buildHomeArticleCards(
   limit = 8,

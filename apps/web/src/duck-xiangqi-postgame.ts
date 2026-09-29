@@ -6,6 +6,7 @@ import type {
 } from '@mistboard/game';
 import { DUCK_XIANGQI_SPEC_ID } from '@mistboard/game';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
+import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 // The xiangqi surface stylesheets, IN THIS ORDER. `live-xiangqi.css` carries the
 // board ground, grid, palace and river; `duck-xiangqi.css` only adds the duck and
 // the target marks. Without the first, every one of those is drawn and invisible:
@@ -88,29 +89,6 @@ export type DuckXiangqiPostgameResponse = {
 type LoadResult =
   | { ok: true; postgame: DuckXiangqiPostgameResponse }
   | { ok: false; status: number; error: string };
-
-/**
- * A turn as the move list writes it: `from-to@duck`.
- *
- * The same grammar the live room uses (`duckTurnLabel` in live-duck-xiangqi.ts),
- * duplicated rather than imported because that module is a live-client entry
- * point and this is a static page. `x…#` is the general capture, the one turn
- * that ends the game before the duck would have moved and so the one turn with
- * no `@` half.
- *
- * Takes the STRUCTURAL shape rather than `DuckXiangqiTurn`, because the watch
- * renderer labels moves straight off the wire, where a square is only a string.
- * Narrowing there would mean casting an untrusted value into the square union.
- */
-export function duckXiangqiTurnLabel(turn: {
-  from: string;
-  to: string;
-  duckTo: string | null;
-}): string {
-  return turn.duckTo === null
-    ? `${turn.from}x${turn.to}#`
-    : `${turn.from}-${turn.to}@${turn.duckTo}`;
-}
 
 export function mountDuckXiangqiPostgame(root: HTMLElement, roomId: string): void {
   root.classList.add('landing-page', 'game-route');

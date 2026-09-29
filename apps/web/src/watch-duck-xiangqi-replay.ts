@@ -13,11 +13,11 @@ import type { DuckXiangqiPlayerView } from '@mistboard/game';
 import { duckXiangqiBoardSvg } from './duck-xiangqi-board.js';
 import {
   type DuckXiangqiPostgameResponse,
-  duckXiangqiTurnLabel,
   loadDuckXiangqiPostgame,
   postgameReplayMaxPly,
   postgameViewAtPly,
 } from './duck-xiangqi-postgame.js';
+import { duckXiangqiTurnLabel } from './duck-xiangqi-turn-label.js';
 import type { ReplayHandle } from './replay.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { mountTenantWatchReplay, type TenantWatchReplayOptions } from './watch-tenant-replay.js';

@@ -1,5 +1,5 @@
 import { describe, expect, it } from 'vitest';
-import { HOME_ARTICLE_SLUGS } from './articles.js';
+import { HOME_ARTICLE_ROW_SIZE, HOME_ARTICLE_SLUGS } from './articles.js';
 import { articles } from './articles-data.js';
 
 // The homepage row is CURATED, not date-driven: it renders the slugs listed in
@@ -9,13 +9,21 @@ import { articles } from './articles-data.js';
 // entered the sitemap, the feed and the News box, and was absent from the row
 // for a day because nobody edited a second list.
 //
-// So absence has to be a recorded decision rather than an oversight. An
-// editorial article newer than the newest thing on the homepage either joins
-// the row or gets a line here saying why it did not.
+// So absence has to be a recorded decision rather than an oversight. Each of
+// the newest articles that would fill the row (HOME_ARTICLE_ROW_SIZE cards)
+// either joins it or gets a line here saying why it did not. Checking only the
+// single newest missed an article published a day before another one.
 const KEPT_OFF: Array<{ slug: string; why: string }> = [];
 
 const editorial = articles.filter(
   (article) => article.status === 'published' && article.kind !== 'rules',
+);
+
+// What the row could ever show: pages written in a language the interface does
+// not speak, and pages opted out of the index, never list (articles.ts
+// isArticleListedInThisEnv), so they are not candidates for it either.
+const listable = editorial.filter(
+  (article) => !article.sourceLang && article.showInIndex !== false,
 );
 
 describe('the homepage article row', () => {
@@ -26,17 +34,24 @@ describe('the homepage article row', () => {
     expect(stale, `slugs that are no longer published editorial articles`).toEqual([]);
   });
 
-  it('carries the newest published article, or records why not', () => {
-    const newest = [...editorial].sort((a, b) =>
-      String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')),
-    )[0];
-    expect(newest, 'no published editorial article at all').toBeTruthy();
-    const listed = HOME_ARTICLE_SLUGS.includes(newest.slug as (typeof HOME_ARTICLE_SLUGS)[number]);
-    const excused = KEPT_OFF.some((entry) => entry.slug === newest.slug);
+  it('carries the newest published articles, or records why not', () => {
+    const newest = [...listable]
+      .sort((a, b) => String(b.publishedAt ?? '').localeCompare(String(a.publishedAt ?? '')))
+      .filter((article) => !KEPT_OFF.some((entry) => entry.slug === article.slug))
+      .slice(0, HOME_ARTICLE_ROW_SIZE);
+    expect(newest.length, 'no published editorial article at all').toBeGreaterThan(0);
+    const missing = newest.filter(
+      (article) => !(HOME_ARTICLE_SLUGS as readonly string[]).includes(article.slug),
+    );
     expect(
-      listed || excused,
-      `"${newest.slug}" (${newest.publishedAt}) is the newest published article but is not on the homepage. Add it to HOME_ARTICLE_SLUGS, or add it to KEPT_OFF in this test with a reason.`,
-    ).toBe(true);
+      missing.map((article) => article.slug),
+      missing
+        .map(
+          (article) =>
+            `"${article.slug}" (${article.publishedAt}) is one of the ${HOME_ARTICLE_ROW_SIZE} newest articles but is not on the homepage: add it to HOME_ARTICLE_SLUGS in apps/web/src/articles.ts, or to KEPT_OFF in home-article-row.test.ts with a reason.`,
+        )
+        .join('\n'),
+    ).toEqual([]);
   });
 
   it('keeps every excuse pointing at a real article', () => {
