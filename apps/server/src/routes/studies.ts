@@ -43,7 +43,7 @@ const CLONE_PATH = new RegExp(`^/api/studies/(${ID})/clone$`);
 const FEATURED_PATH = new RegExp(`^/api/admin/studies/(${ID})/featured$`);
 const SLUG_PATH = new RegExp(`^/api/admin/studies/(${ID})/slug$`);
 
-function isSerializedTree(value: unknown): boolean {
+export function isSerializedTree(value: unknown): boolean {
   if (!value || typeof value !== 'object') return false;
   const tree = value as { version?: unknown; root?: unknown };
   if (tree.version !== 1) return false;
