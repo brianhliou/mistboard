@@ -164,7 +164,8 @@ export const duckXiangqiTenant: DuckXiangqiTenantType = {
   engine: {
     // The engine is replayed from the whole move list every ply
     // (`position startpos moves …`), so it sees repetition and the no-progress
-    // count exactly as the kernel does.
+    // count as the kernel does. The count only agrees because duck-xiangqi.ini
+    // sets nMoveRule to the kernel's limit (#472).
     terminalContext: 'full-history',
     isEngineClientId: isDuckXiangqiEngineClientId,
     displayName: duckXiangqiEngineDisplayName,

@@ -54,7 +54,10 @@ export const DUCK_XIANGQI_DEFAULT_ENGINE_ID = 'fairy-stockfish-duck-xiangqi-leve
 //        file open as safe and lost won games to it (#468). Same rules as
 //        0.2.0, stronger play: 0.2.0 results are comparable as games, not as
 //        strength.
-export const DUCK_XIANGQI_FSF_ENGINE_VERSION = '0.3.0';
+// 0.3.1: the .ini sets nMoveRule = 60. FSF's default drew at 100 quiet plies,
+//        the kernel at 120, and in between the engine scored every move 0 and
+//        could hang its general (#472). Same play before ply 100.
+export const DUCK_XIANGQI_FSF_ENGINE_VERSION = '0.3.1';
 
 /**
  * Short form of the Fairy-Stockfish commit prod builds for this provider. MUST

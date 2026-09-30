@@ -59,7 +59,8 @@ const ENGINE_BASE = '/engine/fairy-stockfish/';
 // that key was poisoned. Bump the suffix to mint a fresh, never-cached key that
 // fills from origin (which now always sends COEP) whenever the required response
 // headers change.
-const ENGINE_ASSET_VERSION = '1.1.12-atomic1';
+// -fortress2: fortress-xiangqi.ini turned FSF's no-capture draw off (#472).
+const ENGINE_ASSET_VERSION = '1.1.12-atomic1-fortress2';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 
 /** Human label for the engine, shown in the analysis panel. */
