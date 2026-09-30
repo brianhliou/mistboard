@@ -109,19 +109,15 @@ test('the recipe builds and verifies the same seven binaries the image expects',
 // enter our engines tarball, and the image must check it before using it.
 test('the AB-JChess net is fetched from the author, checksummed, and never packaged', () => {
   assert.doesNotMatch(recipe, /abjchess-\d+\.nnue/, 'engine-assets.sh never touches the net');
-  const step = railpack
-    .split('\n')
-    .find((line) => line.includes('github.com/lxsgx23/AB-JChess/releases/download/'));
-  assert.ok(step, "railpack.json downloads the net from the author's release");
-  assert.match(step, /[0-9a-f]{64} {2}\/tmp\/abj\.zip' \| sha256sum -c -/, 'the zip is checked');
-  assert.match(
-    step,
-    /[0-9a-f]{64} {2}\/app\/bin\/abjchess-20260911\.nnue' \| sha256sum -c -/,
-    'the extracted net is checked',
-  );
-  assert.match(step, /ABJNNUE model loaded/, 'the fetched binary loads the net before deploy');
+  const fetchNet = readFileSync(resolve(repoRoot, 'scripts/fetch-abjchess-net.sh'), 'utf8');
+  assert.match(fetchNet, /^url=https:\/\/github\.com\/lxsgx23\/AB-JChess\/releases\/download\//m);
+  assert.match(fetchNet, /^zip_sha=[0-9a-f]{64}$/m, 'the zip is checked');
+  assert.match(fetchNet, /^net_sha=[0-9a-f]{64}$/m, 'the extracted net is checked');
+  assert.match(fetchNet, /ABJNNUE model loaded/, 'the fetched binary loads the net');
+  const step = railpack.indexOf('sh /app/scripts/fetch-abjchess-net.sh /app/bin');
+  assert.ok(step > 0, 'railpack.json runs the net script');
   assert.ok(
-    railpack.indexOf(step) > railpack.indexOf('sh /app/scripts/engine-assets.sh verify'),
+    step > railpack.indexOf('sh /app/scripts/engine-assets.sh verify'),
     'the net gate runs the fetched binary, so it comes after verify',
   );
 });
