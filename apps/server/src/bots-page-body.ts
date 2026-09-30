@@ -157,9 +157,9 @@ export async function botsDirectoryBody(
       .sort((a, b) => Number(a.id === JIEQI_TOP_BOT_ID) - Number(b.id === JIEQI_TOP_BOT_ID));
     tops.forEach((bot, index) => {
       const note = index === tops.length - 1 ? ` · ${escapeHtml(copy.strongest)}` : '';
-      jieqiRungs.push(
-        `<li><a href="${botHref(bot.id)}">${escapeHtml(bot.displayName)}</a>${note}</li>`,
-      );
+      // Pikafish is Level 8 here, named like the rungs below it.
+      const label = bot.id === 'pikafish' ? copy.level(8) : bot.displayName;
+      jieqiRungs.push(`<li><a href="${botHref(bot.id)}">${escapeHtml(label)}</a>${note}</li>`);
     });
   }
   const otherGames = others

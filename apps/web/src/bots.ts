@@ -322,12 +322,22 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
               });
             }),
             ...jieqiTopRungs.map((bot) =>
-              buildBotSummaryCard(bot, {
-                ...jieqiCard,
-                badge: bot.id === jieqiStrongestId ? t('bots.strongest') : undefined,
-                subtitle: t('bots.firstParty'),
-                bio: systemBotBio(bot),
-              }),
+              // Pikafish is Level 8 here, named like the rungs below it; the
+              // AB-JChess slot above it keeps its own name, bio and badge.
+              bot.id !== 'pikafish'
+                ? buildBotSummaryCard(bot, {
+                    ...jieqiCard,
+                    badge: bot.id === jieqiStrongestId ? t('bots.strongest') : undefined,
+                    subtitle: t('bots.firstParty'),
+                    bio: systemBotBio(bot),
+                  })
+                : buildBotSummaryCard(bot, {
+                    ...jieqiCard,
+                    name: t('bots.levelName', { level: 8 }),
+                    subtitle: 'Pikafish',
+                    badge: bot.id === jieqiStrongestId ? t('bots.strongest') : undefined,
+                    bio: null,
+                  }),
             ),
           ]
         : [],

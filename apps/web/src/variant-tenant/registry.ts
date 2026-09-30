@@ -425,7 +425,9 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         },
         {
           id: 'pikafish-jieqi-strongest',
-          name: 'Pikafish',
+          // Numbered like the rungs below it: with AB-JChess above, a bare
+          // "Pikafish" read as a different engine rather than Level 8.
+          name: 'Pikafish Level 8',
           familyName: 'Pikafish',
           kind: 'container',
         },
