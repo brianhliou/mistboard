@@ -185,6 +185,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,
   'banqi-statistics': renderBanqiStatsOgSvg,
+  'one-thousand-games': renderOneThousandGamesOgSvg,
 };
 
 // Rules pages whose card is the variant's start position on the site board
@@ -769,6 +770,20 @@ function renderBanqiStatsOgSvg(title: string): string {
     ...cells,
     `<text x="${OG_WIDTH / 2}" y="${top + cellH + 52}" text-anchor="middle" font-family="${FONT}" font-size="30" fill="#9ca3af">points ahead after move 30</text>`,
     ogFooterLine(title, OG_HEIGHT - 44),
+    `</svg>`,
+  ].join('');
+}
+
+// The milestone card: the number, what it counts, and the footer. Text only,
+// on the default card's ground, so it reads at thumbnail size in any feed.
+// The footer says thanks instead of repeating the title the hero already says.
+function renderOneThousandGamesOgSvg(): string {
+  return [
+    `<svg xmlns="http://www.w3.org/2000/svg" width="${OG_WIDTH}" height="${OG_HEIGHT}" viewBox="0 0 ${OG_WIDTH} ${OG_HEIGHT}">`,
+    `<rect width="${OG_WIDTH}" height="${OG_HEIGHT}" fill="#0f1115"/>`,
+    `<text x="${OG_WIDTH / 2}" y="330" text-anchor="middle" font-family="${FONT}" font-size="230" font-weight="700" letter-spacing="-6" fill="#f3f4f6">1,000</text>`,
+    `<text x="${OG_WIDTH / 2}" y="420" text-anchor="middle" font-family="${FONT}" font-size="44" font-weight="600" letter-spacing="6" fill="#5da271">GAMES PLAYED</text>`,
+    ogFooterLine('Thank you for playing', OG_HEIGHT - 44),
     `</svg>`,
   ].join('');
 }

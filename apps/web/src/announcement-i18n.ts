@@ -35,6 +35,11 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-09-30 (1,000 games) ── 揭棋 follows variant.jieqi.name.
+  '1,000 games played on Mistboard.': 'Mistboard 上已经下完了 1,000 盘棋。',
+  'Since June 1, people have finished 1,000 games here, nearly 800 of them in September, and jieqi leads by far. Thank you for playing, for the bug reports, and for supporting the site. Ideas go on the forum; anything private goes through the Contact page.':
+    '从 6 月 1 日开始计数，这里已经下完了 1,000 盘棋，其中近 800 盘是在 9 月下的，揭棋遥遥领先。感谢大家来下棋、报告问题、支持网站。想法可以发到论坛；私人的事情请通过联系页面告诉我们。',
+  'Read the post': '阅读全文',
   // ── 2026-09-25/26 (broadcasts, pro player pages, rules for chess players, Jungle board,
   // decisive-moment lessons) ── 直播 / 职业棋手 / 棋盘 / 研习 follow nav.* and prefs.board.
   "Guess the move where this year's professional games turned.": '在今年职业对局的转折点上猜着法。',
@@ -385,6 +390,11 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-09-30 (1,000 games) ── 揭棋 follows variant.jieqi.name.
+  '1,000 games played on Mistboard.': 'Mistboard 上已經下完了 1,000 盤棋。',
+  'Since June 1, people have finished 1,000 games here, nearly 800 of them in September, and jieqi leads by far. Thank you for playing, for the bug reports, and for supporting the site. Ideas go on the forum; anything private goes through the Contact page.':
+    '從 6 月 1 日開始計數，這裡已經下完了 1,000 盤棋，其中近 800 盤是在 9 月下的，揭棋遙遙領先。感謝大家來下棋、回報問題、支持網站。想法可以發到論壇；私人的事情請透過聯絡頁面告訴我們。',
+  'Read the post': '閱讀全文',
   // ── 2026-09-25/26 (broadcasts, pro player pages, rules for chess players, Jungle board,
   // decisive-moment lessons) ── 直播 / 职业棋手 / 棋盘 / 研习 follow nav.* and prefs.board.
   "Guess the move where this year's professional games turned.": '在今年職業對局的轉折點上猜著法。',

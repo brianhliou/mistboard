@@ -1175,7 +1175,10 @@ export function mountArticleLightbox(root: HTMLElement): () => void {
   const onClick = (event: Event): void => {
     const trigger = (event.target as HTMLElement | null)?.closest?.('.article-figure-zoom');
     if (!trigger || !root.contains(trigger)) return;
-    const source = trigger.querySelector('img, svg');
+    // A themed figure holds two images; zoom the one on screen.
+    const candidates = [...trigger.querySelectorAll<HTMLElement | SVGElement>('img, svg')];
+    const source =
+      candidates.find((el) => getComputedStyle(el).display !== 'none') ?? candidates[0];
     if (!source) return;
     frame.replaceChildren(source.cloneNode(true));
     // The caption is part of the evidence, so it comes along.
@@ -1679,6 +1682,17 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   img.src = block.src;
   img.alt = block.alt;
   img.loading = 'lazy';
+  let darkImg: HTMLImageElement | null = null;
+  if (block.darkSrc) {
+    // Both ship; CSS shows the one matching the site theme, so the page is
+    // right before any script runs and when the reader flips the theme.
+    img.classList.add('article-figure-light');
+    darkImg = document.createElement('img');
+    darkImg.src = block.darkSrc;
+    darkImg.alt = block.alt;
+    darkImg.loading = 'lazy';
+    darkImg.className = 'article-figure-dark';
+  }
   // A real <button>, so the zoom is keyboard-reachable and announced, and so the
   // markup carries the affordance rather than a click handler that the prerender
   // cannot serialize. mountArticleLightbox wires the behaviour in the browser.
@@ -1686,6 +1700,7 @@ function renderImageFigureBlock(block: ImageFigureBlock): HTMLElement {
   zoom.type = 'button';
   zoom.className = 'article-figure-zoom';
   zoom.append(img);
+  if (darkImg) zoom.append(darkImg);
   figure.append(zoom);
   if (block.caption) {
     const cap = document.createElement('figcaption');

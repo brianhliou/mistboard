@@ -38,6 +38,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-09-30',
+    kind: 'status',
+    headline: '1,000 games played on Mistboard.',
+    body: 'Since June 1, people have finished 1,000 games here, nearly 800 of them in September, and jieqi leads by far. Thank you for playing, for the bug reports, and for supporting the site. Ideas go on the forum; anything private goes through the Contact page.',
+    href: '/blog/one-thousand-games',
+    cta: 'Read the post',
+  },
+  {
     date: '2026-09-26',
     kind: 'release',
     headline: "Guess the move where this year's professional games turned.",

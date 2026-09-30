@@ -339,8 +339,13 @@ export type TableBlock = {
 export type ImageFigureBlock = {
   kind: 'image-figure';
   src: string;
+  // The same figure taken in the dark theme (a site screenshot). When set, the
+  // reader sees whichever matches their site theme, not their OS setting.
+  darkSrc?: string;
   alt: string;
   caption?: string;
+  // 'article-figure-full' lets the image fill the column instead of the
+  // default 560px cap.
   className?: string;
 };
 

@@ -275,6 +275,12 @@ export const ARTICLE_META: Record<
     description:
       '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.',
   },
+  'one-thousand-games': {
+    title: '1,000 games played',
+    kind: 'article',
+    description:
+      'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.',
+  },
   'titled-players': {
     title: 'Bring your title to Mistboard',
     kind: 'article',

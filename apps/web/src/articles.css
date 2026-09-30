@@ -965,6 +965,21 @@
   border-radius: 8px;
 }
 
+.article-figure-full img {
+  max-width: 100%;
+}
+
+/* A figure with a dark-theme twin shows the one matching the site theme.
+   Scoped under the zoom button so these outrank `.article-figure-zoom img`. */
+.article-figure-zoom img.article-figure-dark,
+:root[data-effective-theme="dark"] .article-figure-zoom img.article-figure-light {
+  display: none;
+}
+
+:root[data-effective-theme="dark"] .article-figure-zoom img.article-figure-dark {
+  display: block;
+}
+
 .article-figure > svg {
   width: 100%;
   height: auto;
