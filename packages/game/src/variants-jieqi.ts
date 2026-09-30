@@ -427,13 +427,17 @@ export function findJieqiGeneral(board: JieqiBoard, color: JieqiColor): JieqiSqu
  * facing-generals rule is folded in: an enemy general with a clear file to the
  * target attacks it (moving onto that file would be an illegal face-off).
  */
-function isAttacked(board: JieqiBoard, byColor: JieqiColor, target: JieqiSquare): boolean {
+function isAttacked(
+  board: JieqiBoard,
+  byColor: JieqiColor,
+  target: JieqiSquare,
+  enemyGeneral: JieqiSquare | undefined = findJieqiGeneral(board, byColor),
+): boolean {
   for (const [sq, piece] of Object.entries(board)) {
     if (!piece || piece.color !== byColor) continue;
     if (piece.role === 'general') continue; // handled via the flying-general check below
     if (pseudoDests(board, sq as JieqiSquare).includes(target)) return true;
   }
-  const enemyGeneral = findJieqiGeneral(board, byColor);
   if (enemyGeneral) {
     const g = coordOf(enemyGeneral);
     const t = coordOf(target);
@@ -463,22 +467,43 @@ function simulateBoard(board: JieqiBoard, from: JieqiSquare, to: JieqiSquare): J
   return next;
 }
 
-function legalMovesOnBoard(board: JieqiBoard, color: JieqiColor): JieqiMove[] {
+// Both generals are located once per generation, not once per candidate: a
+// candidate moves our general only when it starts on the general's square, and
+// removes the enemy general only by capturing it. Applying a move validates and
+// scores it with this, so it runs for every move of every replayed game (#476).
+function legalMovesFromSquares(
+  board: JieqiBoard,
+  color: JieqiColor,
+  froms: Iterable<JieqiSquare>,
+  firstOnly: boolean,
+): JieqiMove[] {
   const moves: JieqiMove[] = [];
   const enemy = oppositeJieqiColor(color);
-  for (const [sq, piece] of Object.entries(board)) {
+  const ownGeneral = findJieqiGeneral(board, color);
+  const enemyGeneral = findJieqiGeneral(board, enemy);
+  for (const from of froms) {
+    const piece = board[from];
     if (!piece || piece.color !== color) continue;
-    const from = sq as JieqiSquare;
     for (const to of pseudoDests(board, from)) {
       const next = simulateBoard(board, from, to);
-      const general = findJieqiGeneral(next, color);
+      const general = from === ownGeneral ? to : ownGeneral;
       // A move that captures the enemy general (pathological after legal play)
       // leaves us with a general and no self-check — it is allowed and wins.
-      if (general && isAttacked(next, enemy, general)) continue;
+      const enemyGeneralAfter = to === enemyGeneral ? undefined : enemyGeneral;
+      if (general && isAttacked(next, enemy, general, enemyGeneralAfter)) continue;
       moves.push({ from, to });
+      if (firstOnly) return moves;
     }
   }
   return moves;
+}
+
+function legalMovesOnBoard(board: JieqiBoard, color: JieqiColor): JieqiMove[] {
+  return legalMovesFromSquares(board, color, Object.keys(board) as JieqiSquare[], false);
+}
+
+function hasLegalMove(board: JieqiBoard, color: JieqiColor): boolean {
+  return legalMovesFromSquares(board, color, Object.keys(board) as JieqiSquare[], true).length > 0;
 }
 
 export function getJieqiLegalMoves(state: JieqiGameState): JieqiMove[] {
@@ -490,7 +515,7 @@ export function getJieqiLegalMovesFrom(state: JieqiGameState, from: JieqiSquare)
   if (state.status.type !== 'playing') return [];
   const piece = state.board[from];
   if (!piece || piece.color !== state.status.turn) return [];
-  return getJieqiLegalMoves(state).filter((move) => move.from === from);
+  return legalMovesFromSquares(state.board, state.status.turn, [from], false);
 }
 
 export function isJieqiLegalMove(state: JieqiGameState, move: JieqiMove): boolean {
@@ -534,7 +559,7 @@ export function applyJieqiMove(
   if (captured?.role === 'general') {
     // Pathological under checkmate play, but score it as a win for safety.
     status = { type: 'finished', winner: turn, reason: 'checkmate' };
-  } else if (legalMovesOnBoard(board, next).length === 0) {
+  } else if (!hasLegalMove(board, next)) {
     const general = findJieqiGeneral(board, next);
     const inCheck = general ? isAttacked(board, turn, general) : true;
     status = { type: 'finished', winner: turn, reason: inCheck ? 'checkmate' : 'stalemate' };

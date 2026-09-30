@@ -19,7 +19,7 @@
 // player is offered, so the immediate-loss guard (xiangqi, fortress) and the
 // take-the-win scan (duck) run here exactly as they do in the live room.
 
-import { replayTenantEvents } from './variant-tenant/runtime.js';
+import { applyTenantEvent, replayTenantEvents } from './variant-tenant/runtime.js';
 import type {
   TenantGameStateLike,
   TenantRoomEvent,
@@ -164,9 +164,14 @@ export async function playVariantEngineGame<
     await input.onEvent?.(events[seq]!, seq);
   }
 
-  const replay = () => replayTenantEvents(adapter.tenant, events).state as State;
+  // The projection is carried forward one event at a time. Replaying the whole
+  // log every ply made a game O(n²) move applications, which blocked the worker's
+  // event loop for ~0.4 s a ply late in long jieqi and fortress games (#476).
+  let projection = replayTenantEvents(adapter.tenant, events);
+  const replay = () => projection.state as State;
   const push = async (event: Event) => {
     events.push(event);
+    projection = applyTenantEvent(adapter.tenant, projection, event);
     await input.onEvent?.(event, events.length - 1);
   };
 
