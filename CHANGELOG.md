@@ -191,7 +191,7 @@ Conventions:
 
 ### Fixed
 
-- The Duck Xiangqi and Fortress bots no longer treat a long stretch without a capture as an early draw; the Duck bot could hang its general between ply 100 and 120 ([aa092d7a](https://github.com/brianhliou/mistboard/commit/aa092d7a))
+- The Duck Xiangqi and Fortress bots no longer treat a long stretch without a capture as an early draw; the Duck bot could hang its general between ply 100 and 120 ([4c87267f](https://github.com/brianhliou/mistboard/commit/4c87267f))
 - An embedded fog study game switched to Black's view now turns the board so Black is at the bottom, as embedded games already did ([c8c3af3a](https://github.com/brianhliou/mistboard/commit/c8c3af3a))
 - The Duck Xiangqi bot no longer lifts the duck off the file between the generals when it is winning; it used to lose the general to the flying capture ([45fc6083](https://github.com/brianhliou/mistboard/commit/45fc6083))
 - The game room is in Chinese for Chinese readers: clocks, buttons, the abort countdown, resign and abort, the result and the tab title, in every variant; it was English from the first move to game over ([9a8ad1ad](https://github.com/brianhliou/mistboard/commit/9a8ad1ad))
