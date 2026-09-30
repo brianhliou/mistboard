@@ -362,6 +362,19 @@
   box-sizing: border-box;
 }
 
+/* The `hidden` attribute is only a UA-stylesheet `display: none`, and any author
+   rule that sets `display` on the element beats it, so a toggled panel stays on
+   screen. That was learned component by component at least five times
+   (mistboard:42955fa, c830618, a1139c0, d037291, ea15648) and left 30-odd
+   per-component `[hidden]` patches. One site-wide rule ends the class;
+   hidden-attribute-guard.test.ts keeps it here. Same form as Tailwind's
+   preflight: `until-found` stays searchable. */
+[hidden]:where(:not([hidden="until-found"])) {
+  /* biome-ignore lint/complexity/noImportantStyles: it has to beat every
+     component's own display rule, which is the whole point. */
+  display: none !important;
+}
+
 body {
   margin: 0;
   /* lichess's base. Only reaches text that sets no size of its own, which is
