@@ -137,6 +137,7 @@ Conventions:
 
 ### Site
 
+- **1,000 games played**: a post marking the milestone, with the statistics page on the day the count crossed ([c3945390](https://github.com/brianhliou/mistboard/commit/c3945390))
 - Each rules page ends on one rule to carry into your first game instead of a shared "playable on Mistboard" line, and About and the FAQ explain fair play and engines in plain words ([d86675e1](https://github.com/brianhliou/mistboard/commit/d86675e1))
 - The About page says what the site is for both English and Chinese speakers, one lobby and one set of games in three languages, instead of telling Chinese readers it was built for people who cannot read Chinese ([dd7a2116](https://github.com/brianhliou/mistboard/commit/dd7a2116))
 - The site describes itself as "Chinese chess and original strategy games" instead of "Chinese chess for chess players", and the Chinese pages lead with jieqi and banqi ([633da554](https://github.com/brianhliou/mistboard/commit/633da554))
