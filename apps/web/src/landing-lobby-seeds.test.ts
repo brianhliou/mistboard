@@ -49,7 +49,7 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-2|xiangqi',
       'fairy-stockfish-level-5|xiangqi',
       'fairy-stockfish-level-8|xiangqi',
-      'pikafish|jieqi',
+      'pikafish-level-4|jieqi',
       'misty|banqi',
       'fairy-stockfish-level-5|atomic-xiangqi',
       'fairy-stockfish-level-3|duck-xiangqi',
