@@ -13,7 +13,12 @@ import { articles } from './articles-data.js';
 // the newest articles that would fill the row (HOME_ARTICLE_ROW_SIZE cards)
 // either joins it or gets a line here saying why it did not. Checking only the
 // single newest missed an article published a day before another one.
-const KEPT_OFF: Array<{ slug: string; why: string }> = [];
+const KEPT_OFF: Array<{ slug: string; why: string }> = [
+  {
+    slug: 'one-thousand-games',
+    why: 'a site milestone, not something to read to play better; the News box carries it',
+  },
+];
 
 const editorial = articles.filter(
   (article) => article.status === 'published' && article.kind !== 'rules',
