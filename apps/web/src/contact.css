@@ -28,17 +28,11 @@
   margin: -4px 0 20px;
 }
 
-.contact-card {
-  background: var(--site-panel);
-  border: 1px solid var(--site-border-soft);
-  border-radius: var(--site-radius);
-  padding: 24px;
-}
-
 .contact-form {
   display: flex;
   flex-direction: column;
   gap: 18px;
+  margin-top: 8px;
 }
 
 .contact-field {
