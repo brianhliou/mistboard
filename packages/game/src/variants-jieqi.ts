@@ -55,6 +55,10 @@ export type JieqiPiece = {
   color: JieqiColor;
   role: JieqiPieceRole;
   faceDown: boolean;
+  // The identity was never determined: an imported game whose own referee dealt
+  // lazily and never revealed this piece (deal.undetermined). `role` is then a
+  // placeholder the kernel needs to stay a valid deal, never a fact to show.
+  unknown?: true;
 };
 
 export type JieqiBoard = Partial<Record<JieqiSquare, JieqiPiece>>;
@@ -69,6 +73,11 @@ export type JieqiMove = {
 export type JieqiDeal = {
   red: JieqiPieceRole[];
   black: JieqiPieceRole[];
+  // Home squares whose identity the game's source never determined (an imported
+  // lab game deals at reveal time; a piece still face-down at the end was never
+  // dealt). The roles above hold placeholders for them; pieces dealt there carry
+  // `unknown`, and every truth view shows them as unknown rather than a role.
+  undetermined?: { red: JieqiSquare[]; black: JieqiSquare[] };
 };
 
 export type JieqiGameEndReason =
@@ -77,7 +86,10 @@ export type JieqiGameEndReason =
   | 'no-capture-clock'
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Never produced by this kernel (it does not adjudicate repetition): an
+  // imported lab game whose own referee declared a threefold draw.
+  | 'repetition';
 
 export type JieqiGameStatus =
   | { type: 'playing'; turn: JieqiColor }
@@ -91,6 +103,8 @@ export type JieqiCapture = {
   owner: JieqiColor;
   role: JieqiPieceRole;
   revealedAtCapture: boolean;
+  // Captured while its identity was undetermined (see JieqiPiece.unknown).
+  unknown?: true;
 };
 
 export type JieqiGameState = {
@@ -108,7 +122,9 @@ export type JieqiGameState = {
 
 export type JieqiVisibleBoardEntry =
   | { color: JieqiColor; role: JieqiPieceRole; faceDown: false }
-  | { color: JieqiColor; faceDown: true };
+  // `unknown`: only in a truth view, for a piece whose identity was never
+  // determined (JieqiPiece.unknown). Renders as "never revealed", not a role.
+  | { color: JieqiColor; faceDown: true; unknown?: true };
 
 export type JieqiPlayerBoard = Partial<Record<JieqiSquare, JieqiVisibleBoardEntry>>;
 
@@ -233,6 +249,18 @@ export function assertValidJieqiDeal(deal: JieqiDeal): void {
   if (roleMultiset(deal.black) !== STANDARD_BLACK_MULTISET) {
     throw new Error('invalid jieqi deal: black roles are not a permutation of the standard set');
   }
+  if (deal.undetermined) {
+    for (const color of ['red', 'black'] as const) {
+      const home = new Set<JieqiSquare>(color === 'red' ? RED_HOME : BLACK_HOME);
+      for (const square of deal.undetermined[color] ?? []) {
+        if (!home.has(square)) {
+          throw new Error(
+            `invalid jieqi deal: undetermined ${square} is not a ${color} home square`,
+          );
+        }
+      }
+    }
+  }
 }
 
 function shuffleRoles(roles: JieqiPieceRole[], rng: () => number): JieqiPieceRole[] {
@@ -273,11 +301,17 @@ export function createInitialJieqiState(
   const board: JieqiBoard = {};
   board[generalSquare('red')] = { color: 'red', role: 'general', faceDown: false };
   board[generalSquare('black')] = { color: 'black', role: 'general', faceDown: false };
+  const unknown = {
+    red: new Set<JieqiSquare>(deal.undetermined?.red ?? []),
+    black: new Set<JieqiSquare>(deal.undetermined?.black ?? []),
+  };
   RED_HOME.forEach((sq, i) => {
     board[sq] = { color: 'red', role: deal.red[i], faceDown: true };
+    if (unknown.red.has(sq)) board[sq].unknown = true;
   });
   BLACK_HOME.forEach((sq, i) => {
     board[sq] = { color: 'black', role: deal.black[i], faceDown: true };
+    if (unknown.black.has(sq)) board[sq].unknown = true;
   });
   return {
     id: gameId,
@@ -548,6 +582,7 @@ export function applyJieqiMove(
           owner: captured.color,
           role: captured.role,
           revealedAtCapture: !captured.faceDown,
+          ...(captured.unknown && captured.faceDown ? { unknown: true as const } : {}),
         },
       ]
     : state.captures;
@@ -586,23 +621,43 @@ export function applyJieqiMove(
 // shape, so the review renderer can show every face-up identity. Never ship this
 // to a live client — it is the postgame-only counterpart to the per-color views.
 export function jieqiTruthView(state: JieqiGameState): JieqiPlayerView {
-  const board: JieqiPlayerBoard = {};
-  for (const [square, piece] of Object.entries(state.board)) {
-    if (piece) {
-      board[square as JieqiSquare] = { color: piece.color, role: piece.role, faceDown: false };
-    }
-  }
   return {
     id: state.id,
     perspective: 'red',
-    board,
+    board: jieqiTruthBoard(state),
     legalMoves: [],
-    captured: state.captures.map((c) => ({ owner: c.owner, role: c.role })),
+    captured: jieqiTruthCaptures(state),
     inCheck: false,
     status: state.status,
     moveNumber: state.moveNumber,
     lastMove: state.lastMove,
   };
+}
+
+/** Every identity the game determined; a never-determined piece stays unknown. */
+export function jieqiTruthBoard(state: JieqiGameState): JieqiPlayerBoard {
+  const board: JieqiPlayerBoard = {};
+  for (const [square, piece] of Object.entries(state.board)) {
+    if (!piece) continue;
+    board[square as JieqiSquare] =
+      piece.unknown && piece.faceDown
+        ? { color: piece.color, faceDown: true, unknown: true }
+        : { color: piece.color, role: piece.role, faceDown: false };
+  }
+  return board;
+}
+
+/** Every captured role, except one captured before its identity was determined. */
+export function jieqiTruthCaptures(state: JieqiGameState): JieqiCapturedView[] {
+  return state.captures.map((c) => ({ owner: c.owner, role: c.unknown ? null : c.role }));
+}
+
+/** Home squares still face-down whose identity was never determined. */
+export function jieqiUnknownSquares(state: JieqiGameState): JieqiSquare[] {
+  return (Object.entries(state.board) as [JieqiSquare, JieqiPiece | undefined][])
+    .filter(([, piece]) => piece?.unknown && piece.faceDown)
+    .map(([square]) => square)
+    .sort();
 }
 
 // The board as BOTH players see it. A face-down piece hides its role from its own

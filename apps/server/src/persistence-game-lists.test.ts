@@ -88,7 +88,7 @@ definePersistenceTests('game lists', () => {
     assert.deepEqual(games[0]?.timeControl, { kind: 'per-move', milliseconds: 100 });
   });
 
-  test('listRecentPublicGames returns public games, public-facing PvE games, and EvE games only', async () => {
+  test('listRecentPublicGames returns public games, public-facing PvE games, and EvE games only (never imported)', async () => {
     const now = new Date('2026-05-09T12:00:00.000Z');
     const shortDecisive = new Date(now.getTime() - 30_000);
     const older = new Date(now.getTime() - 60_000);
@@ -119,7 +119,9 @@ definePersistenceTests('game lists', () => {
            ('private-pve', 'dark-chess', 'black-wins', 'timeout', 24, $4, $4,
             'human-client-private', 'random-engine', NULL, NULL, 'pve', 'completed', 'private'),
            ('private-pvp', 'dark-chess', 'draw', 'truncated', 6, $4, $4,
-            'private-white', 'private-black', NULL, NULL, 'pvp', 'completed', 'private')`,
+            'private-white', 'private-black', NULL, NULL, 'pvp', 'completed', 'private'),
+           ('imported-public', 'dark-chess', 'draw', 'truncated', 40, $5, $5,
+            NULL, NULL, 'AB-JChess', 'PikaJieQi', 'imported', 'completed', 'public')`,
         [now, shortDecisive, shortTimeout, older, oneMove],
       );
       for (const roomId of [
@@ -132,6 +134,7 @@ definePersistenceTests('game lists', () => {
         'short-timeout',
         'private-pve',
         'private-pvp',
+        'imported-public',
       ]) {
         await client.query(
           `INSERT INTO events (room_id, seq, type, payload)

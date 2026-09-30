@@ -243,7 +243,47 @@ describe('buildReviewMeta', () => {
     expect(metaCard.textContent).toContain('Xiangqi');
     expect(metaCard.textContent).toContain('Alice');
     expect(metaCard.textContent).toContain('Red wins by Checkmate');
-    expect(details.classList.contains('review-spectator-chat')).toBe(true);
+    expect(details?.classList.contains('review-spectator-chat')).toBe(true);
+  });
+
+  it('shows an imported game its event and credit, engine tags, and no spectator room', () => {
+    const { metaCard, details } = buildReviewMeta({
+      markerId: 'jieqi',
+      variantName: 'Jieqi',
+      status: 'Checkmate • Red is victorious',
+      game: {
+        roomId: 'jq_ab-jchess-vs-pikajieqi-4s-2026-09-366',
+        mode: 'imported',
+        result: 'red-wins',
+        players: [
+          { color: 'red', name: 'AB-JChess', kind: 'engine' },
+          { color: 'black', name: 'PikaJieQi', kind: 'engine' },
+        ],
+        origin: {
+          event: 'AB-JChess vs PikaJieQi · 4 s · 2026-09',
+          credit: {
+            work: 'AB-JChess',
+            authors: ['Huorongrong', 'Laoxu (Kouza)'],
+            url: 'https://github.com/lxsgx23/AB-JChess',
+            permission: true,
+          },
+        },
+      },
+    });
+    expect(details).toBeUndefined();
+    const origin = metaCard.querySelector('.game-meta-card__origin');
+    expect(origin?.textContent).toContain('Event: AB-JChess vs PikaJieQi · 4 s · 2026-09');
+    const link = origin?.querySelector('a');
+    expect(link?.textContent).toBe('AB-JChess by Huorongrong and Laoxu (Kouza)');
+    expect(link?.getAttribute('href')).toBe('https://github.com/lxsgx23/AB-JChess');
+    expect(origin?.textContent).toContain('played here with their permission');
+    expect(origin?.textContent).not.toContain('\u2014');
+    expect(
+      reviewMetaPlayers([
+        { color: 'red', name: 'AB-JChess', kind: 'engine' },
+        { color: 'black', name: 'PikaJieQi', kind: 'engine' },
+      ]).map((row) => row.isEngine),
+    ).toEqual([true, true]);
   });
 
   it('marks the winning row and scores both seats from the envelope result', () => {

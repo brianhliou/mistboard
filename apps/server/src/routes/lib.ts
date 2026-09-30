@@ -144,10 +144,12 @@ export type PostgameGameSummary = {
 // Coarse subject-kind for the client: humans (accounts + bots, which have
 // profiles) vs. unregistered players (guests, and imported/manual corpus seats
 // with no profile to link to) vs. raw engine-version subjects.
-function postgameParticipantKind(
-  subjectType: persistence.GameParticipantSubjectType,
-): PostgamePlayer['kind'] {
+function postgameParticipantKind(participant: persistence.GameParticipant): PostgamePlayer['kind'] {
+  const subjectType = participant.subjectType;
   if (subjectType === 'engine-version') return 'engine';
+  // An imported seat that records an engine build (an off-site engine match)
+  // is an engine, without being a bot or an engine record on this site.
+  if (subjectType === 'imported' && participant.engineVersion) return 'engine';
   if (subjectType === 'user' || subjectType === 'bot') return 'account';
   return 'guest';
 }
@@ -164,7 +166,7 @@ export function postgamePlayers(
   corpusNames?: { whiteName: string | null; blackName: string | null },
 ): PostgamePlayer[] {
   return participants.map((participant) => {
-    const kind = postgameParticipantKind(participant.subjectType);
+    const kind = postgameParticipantKind(participant);
     const secondSide = participant.color === 'black';
     const corpusName =
       kind === 'guest'

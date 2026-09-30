@@ -32,6 +32,9 @@ import {
   type JieqiMove,
   type JieqiPieceRole,
   type JieqiPlayerView,
+  type JieqiSquare,
+  jieqiTruthBoard,
+  jieqiTruthCaptures,
   oppositeJieqiColor,
 } from '@mistboard/game';
 import { jieqiEnabled } from './feature-flags.js';
@@ -91,9 +94,22 @@ function cryptoRng(): number {
 // container so a missing setup falls back to the standard arrangement.
 function asJieqiDeal(setup: unknown): JieqiDeal | undefined {
   if (setup === null || typeof setup !== 'object') return undefined;
-  const candidate = setup as { red?: unknown; black?: unknown };
+  const candidate = setup as { red?: unknown; black?: unknown; undetermined?: unknown };
   if (!Array.isArray(candidate.red) || !Array.isArray(candidate.black)) return undefined;
-  return { red: candidate.red as JieqiPieceRole[], black: candidate.black as JieqiPieceRole[] };
+  const deal: JieqiDeal = {
+    red: candidate.red as JieqiPieceRole[],
+    black: candidate.black as JieqiPieceRole[],
+  };
+  // Imported games only: home squares the source never dealt (validated by
+  // createInitialJieqiState, which marks those pieces unknown).
+  const undetermined = candidate.undetermined as { red?: unknown; black?: unknown } | undefined;
+  if (undetermined && Array.isArray(undetermined.red) && Array.isArray(undetermined.black)) {
+    deal.undetermined = {
+      red: undetermined.red as JieqiSquare[],
+      black: undetermined.black as JieqiSquare[],
+    };
+  }
+  return deal;
 }
 
 // Identity is hidden, position is not: moves are public to both seats and to a
@@ -142,15 +158,11 @@ export function getJieqiClientView(
 // with the review page rather than a new disclosure.
 export function getJieqiTruthView(state: JieqiGameState): JieqiPlayerView {
   const base = getJieqiPlayerView(state, 'red');
-  const board: JieqiPlayerView['board'] = {};
-  for (const [square, piece] of Object.entries(state.board)) {
-    if (!piece) continue;
-    board[square as JieqiMove['from']] = { color: piece.color, role: piece.role, faceDown: false };
-  }
+  // An imported game's never-determined pieces stay unknown even here.
   return {
     ...base,
-    board,
-    captured: state.captures.map((capture) => ({ owner: capture.owner, role: capture.role })),
+    board: jieqiTruthBoard(state),
+    captured: jieqiTruthCaptures(state),
     legalMoves: [],
   };
 }
@@ -168,6 +180,12 @@ export const jieqiTenant: JieqiTenant = {
     applyMove: (state, move) => applyJieqiMove(state, move),
     isLegalMove: isJieqiLegalMove,
     finish: (state, winner, reason) => ({
+      ...state,
+      status: { type: 'finished', winner, reason },
+    }),
+    // Imported lab games only (engine-match-import.ts): the lab referee draws a
+    // threefold repetition, which this kernel deliberately does not adjudicate.
+    adjudicate: (state, winner, reason) => ({
       ...state,
       status: { type: 'finished', winner, reason },
     }),

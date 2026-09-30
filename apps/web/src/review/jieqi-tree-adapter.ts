@@ -21,6 +21,7 @@ import {
   type JieqiSquare,
   jieqiHomeSquares,
   jieqiTruthView,
+  STANDARD_JIEQI_DEAL,
 } from '@mistboard/game';
 import type { ProjectedView, VariantTreeAdapter } from './game-tree.js';
 
@@ -45,17 +46,48 @@ function splitJieqiUci(uci: string): [string, string] | null {
  *  Reads roles in jieqiHomeSquares order (the same order createInitialJieqiState
  *  consumes). Throws if a home square is missing/masked so the caller degrades to an
  *  error rather than a wrong board (generals are face-up and excluded from the
- *  deal). */
-export function recoverJieqiDeal(truth: JieqiPlayerView): JieqiDeal {
-  const readSide = (color: 'red' | 'black'): JieqiPieceRole[] =>
-    jieqiHomeSquares(color).map((square) => {
+ *  deal).
+ *
+ *  An imported game can carry pieces whose identity was NEVER determined (the
+ *  truth view marks them `unknown`). The kernel still needs a whole deal, so
+ *  those squares get a draw from what that side's set has left, and the deal
+ *  lists them as `undetermined`: the pieces stay unknown in every truth view and
+ *  in the analysis hand-off, and only a side line that moves one shows a (drawn,
+ *  hypothetical) identity. */
+export function recoverJieqiDeal(
+  truth: JieqiPlayerView,
+  rng: () => number = Math.random,
+): JieqiDeal {
+  const undetermined: Record<'red' | 'black', JieqiSquare[]> = { red: [], black: [] };
+  const readSide = (color: 'red' | 'black'): JieqiPieceRole[] => {
+    const squares = jieqiHomeSquares(color);
+    const roles = squares.map((square): JieqiPieceRole | null => {
       const entry = truth.board[square];
+      if (entry?.faceDown && entry.unknown) {
+        undetermined[color].push(square);
+        return null;
+      }
       if (!entry || entry.faceDown) {
         throw new Error(`jieqi deal recovery: home square ${square} is not revealed`);
       }
       return entry.role;
     });
-  return { red: readSide('red'), black: readSide('black') };
+    const left = [...STANDARD_JIEQI_DEAL[color]];
+    for (const role of roles) {
+      if (role === null) continue;
+      const index = left.indexOf(role);
+      if (index < 0) throw new Error(`jieqi deal recovery: too many ${color} ${role}s`);
+      left.splice(index, 1);
+    }
+    for (let i = left.length - 1; i > 0; i -= 1) {
+      const j = Math.floor(rng() * (i + 1));
+      [left[i], left[j]] = [left[j]!, left[i]!];
+    }
+    return roles.map((role) => role ?? left.pop()!);
+  };
+  const deal: JieqiDeal = { red: readSide('red'), black: readSide('black') };
+  if (undetermined.red.length + undetermined.black.length > 0) deal.undetermined = undetermined;
+  return deal;
 }
 
 function projectJieqiView(truth: JieqiGameState, revealAll: boolean): JieqiPlayerView {

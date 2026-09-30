@@ -1,3 +1,4 @@
+import type { TenantGameOrigin } from './tenant.js';
 /**
  * VariantTenant registry — the extension point that makes "a new variant is
  * one registry entry" true at the dispatch layer.
@@ -129,6 +130,12 @@ export type TenantExportGame = {
   // on its opening flip. The result is recorded by seat, so a consumer needs
   // this to know which pieces the winner actually played.
   firstMoverInk?: string | null;
+  // Imported games only: the room-created origin (event + credit).
+  origin?: TenantGameOrigin;
+  // Hidden-identity tenants only, when the game's source never determined some
+  // identities (an imported jieqi lab game): the squares, per color, holding a
+  // piece nobody ever revealed at the end. Their identity is omitted everywhere.
+  neverRevealed?: Readonly<Record<string, readonly string[]>> | null;
   // Present only for tenants with an honest movetext notation. Receives the
   // full tag block the neutral builder assembled (Event, Site, Date, Round, the
   // two color-named player tags, Result, Variant, ...) and the result token;

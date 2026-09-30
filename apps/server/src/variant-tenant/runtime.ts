@@ -41,6 +41,8 @@ import type {
 import {
   assertForfeitPolicy,
   forfeitWinnerOf,
+  isTenantAdjudicationReason,
+  isTenantGameOrigin,
   lastSeat,
   TENANT_SERVER_ONLY_EVENT_TYPES,
   tenantSeatMayAct,
@@ -369,6 +371,7 @@ const REJECTABLE_EVENT_TYPES = new Set([
   'seat-resigned',
   'game-aborted',
   'seat-forfeited',
+  'game-adjudicated',
   'clock-paused',
   'clock-resumed',
 ]);
@@ -584,6 +587,14 @@ export function applyTenantEvent<
       ...projection,
       clock: event.clock ?? freezeTenantClock(projection.clock, event.at),
       state: finishByForfeit(tenant, projection.state, event.color, 'abandonment'),
+    };
+  }
+  if (event.type === 'game-adjudicated') {
+    if (status.type !== 'playing' || !tenant.rules.adjudicate) return projection;
+    return {
+      ...projection,
+      clock: freezeTenantClock(projection.clock, event.at),
+      state: tenant.rules.adjudicate(projection.state, event.winner, event.reason),
     };
   }
   if (event.type === 'clock-paused') {
@@ -996,7 +1007,8 @@ export function isTenantEvent<
         tenant.rules.isColor(event.creatorPreference)) &&
       (event.pveBotId === undefined || typeof event.pveBotId === 'string') &&
       (event.rated === undefined || typeof event.rated === 'boolean') &&
-      (event.timeControl === undefined || isRoomTimeControl(event.timeControl))
+      (event.timeControl === undefined || isRoomTimeControl(event.timeControl)) &&
+      (event.origin === undefined || isTenantGameOrigin(event.origin))
     );
   }
   if (event.type === 'seat-assigned') {
@@ -1038,6 +1050,13 @@ export function isTenantEvent<
     return (
       tenant.rules.isColor(event.color) &&
       (event.clock === undefined || isTenantClockState(tenant, event.clock))
+    );
+  }
+  if (event.type === 'game-adjudicated') {
+    return (
+      tenant.rules.adjudicate !== undefined &&
+      (event.winner === null || tenant.rules.isColor(event.winner)) &&
+      isTenantAdjudicationReason(event.reason)
     );
   }
   if (event.type === 'clock-paused') {

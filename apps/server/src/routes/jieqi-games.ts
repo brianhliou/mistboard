@@ -60,7 +60,8 @@ type JieqiPostgameTerminal =
   | { type: 'clock-expired'; at: number; color: JieqiColor; winner: JieqiColor }
   | { type: 'seat-resigned'; at: number; color: JieqiColor; winner: JieqiColor }
   | { type: 'seat-forfeited'; at: number; color: JieqiColor; winner: JieqiColor }
-  | { type: 'game-aborted'; at: number; reason: string };
+  | { type: 'game-aborted'; at: number; reason: string }
+  | { type: 'game-adjudicated'; at: number; winner: JieqiColor | null; reason: string };
 
 // Injectable so the route can be unit-tested without a live database, mirroring
 // the Dark Mini Xiangqi route.
@@ -356,9 +357,12 @@ export async function jieqiPostgameForApi(
   // identity is known to the server here. Redaction happens below per view.
   const projection = replayTenantEvents(jieqiTenant, events);
   if (projection.state.status.type !== 'finished') return null;
+  // An imported game names its event and credits its source (engine-match-import.ts).
+  const created = events[0];
+  const origin = created?.type === 'room-created' ? created.origin : undefined;
 
   return {
-    game: postgameGameSummary(game),
+    game: { ...postgameGameSummary(game), ...(origin ? { origin } : {}) },
     state: {
       status: projection.state.status,
       moveNumber: projection.state.moveNumber,
@@ -455,6 +459,10 @@ function jieqiPostgameTimeline(
     }
     if (event.type === 'game-aborted') {
       timeline.push({ type: event.type, at: event.at, reason: event.reason });
+      continue;
+    }
+    if (event.type === 'game-adjudicated') {
+      timeline.push({ type: event.type, at: event.at, winner: event.winner, reason: event.reason });
     }
   }
   return timeline;

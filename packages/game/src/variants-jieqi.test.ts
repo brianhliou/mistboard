@@ -19,6 +19,7 @@ import {
   type JieqiPieceRole,
   jieqiHomeSquares,
   jieqiTruthView,
+  jieqiUnknownSquares,
   STANDARD_JIEQI_DEAL,
 } from './variants-jieqi.js';
 
@@ -445,4 +446,31 @@ test('the public view reports check for the side to move from the public board',
   assert.equal(getJieqiPublicView(state).inCheck, true);
   assert.equal(getJieqiPlayerView(state, 'black').inCheck, true);
   assert.equal(getJieqiPublicView(playing(state.board, 'red')).inCheck, false);
+});
+
+// Imported games: a piece whose identity the source never determined is unknown
+// in every truth view (never a role), while determined pieces show as usual.
+test('truth view shows never-determined pieces as unknown, not as a role', () => {
+  const state = createInitialJieqiState('unknown-truth', {
+    ...STANDARD_JIEQI_DEAL,
+    undetermined: { red: ['a1'], black: ['h10', 'b10'] },
+  });
+  const truth = jieqiTruthView(state);
+  assert.deepEqual(truth.board.a1, { color: 'red', faceDown: true, unknown: true });
+  assert.deepEqual(truth.board.b10, { color: 'black', faceDown: true, unknown: true });
+  assert.deepEqual(truth.board.i1, { color: 'red', role: 'chariot', faceDown: false });
+  assert.deepEqual(jieqiUnknownSquares(state), ['a1', 'b10', 'h10']);
+  // The live per-seat view is unchanged: every face-down piece is just face-down.
+  assert.deepEqual(getJieqiPlayerView(state, 'red').board.a1, { color: 'red', faceDown: true });
+  // Captured while undetermined (only possible in a side line): no role, even in truth.
+  const afterCapture = applyJieqiMove(state, { from: 'h3', to: 'h10' });
+  assert.equal(afterCapture.captures.length, 1);
+  assert.deepEqual(jieqiTruthView(afterCapture).captured, [{ owner: 'black', role: null }]);
+  // Undetermined squares must be that side's home squares.
+  assert.throws(() =>
+    createInitialJieqiState('unknown-bad', {
+      ...STANDARD_JIEQI_DEAL,
+      undetermined: { red: ['e5'], black: [] },
+    }),
+  );
 });

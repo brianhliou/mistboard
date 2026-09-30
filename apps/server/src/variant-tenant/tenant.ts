@@ -46,6 +46,56 @@ export type TenantGameStateLike<C extends string> = {
 // race, ...) never pass through here — they come out of rules.applyMove.
 export type TenantEndReason = 'timeout' | 'resignation' | 'abandonment';
 
+// Endings an OUTSIDE referee declared, for games played off-site and imported
+// (engine-match-import.ts): a lab referee that adjudicates threefold repetition,
+// which the site's own kernels deliberately do not. Never produced by a live
+// room; only a tenant that implements rules.adjudicate accepts the event.
+export const TENANT_ADJUDICATION_REASONS = ['repetition'] as const;
+export type TenantAdjudicationReason = (typeof TENANT_ADJUDICATION_REASONS)[number];
+
+export function isTenantAdjudicationReason(value: unknown): value is TenantAdjudicationReason {
+  return (TENANT_ADJUDICATION_REASONS as readonly unknown[]).includes(value);
+}
+
+/**
+ * Where an IMPORTED game came from, carried on its room-created event and shown
+ * on its review page: the event it was played in, and who to credit for the
+ * engine that played it. Public (unlike `setup`). A live room never has one.
+ */
+export type TenantGameOrigin = {
+  kind: 'imported';
+  /** Event name, e.g. "AB-JChess vs PikaJieQi · 4 s · 2026-09". */
+  event: string;
+  credit?: {
+    /** The credited work as named by its authors, e.g. "AB-JChess". */
+    work: string;
+    /** Author names exactly as written; the page joins them per locale. */
+    authors: string[];
+    url?: string;
+    /** The authors agreed to the games being published here. */
+    permission?: boolean;
+  };
+};
+
+export function isTenantGameOrigin(value: unknown): value is TenantGameOrigin {
+  if (typeof value !== 'object' || value === null) return false;
+  const origin = value as Record<string, unknown>;
+  if (origin.kind !== 'imported' || typeof origin.event !== 'string' || !origin.event) {
+    return false;
+  }
+  if (origin.credit === undefined) return true;
+  if (typeof origin.credit !== 'object' || origin.credit === null) return false;
+  const credit = origin.credit as Record<string, unknown>;
+  return (
+    typeof credit.work === 'string' &&
+    Array.isArray(credit.authors) &&
+    credit.authors.every((author) => typeof author === 'string') &&
+    (credit.url === undefined ||
+      (typeof credit.url === 'string' && /^https:\/\//.test(credit.url))) &&
+    (credit.permission === undefined || typeof credit.permission === 'boolean')
+  );
+}
+
 /**
  * A move the game will make FOR a seat when a wait runs out, and the absolute
  * time that happens.
@@ -91,6 +141,8 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       // setup MUST strip this in visibility.clientEventFor — it is never sent to
       // a client. Tenants without createSetup never set it.
       setup?: unknown;
+      // Imported games only (engine-match-import.ts): event + credit.
+      origin?: TenantGameOrigin;
     }
   | { type: 'seat-assigned'; at: number; roomId: string; clientId: string; seat: C }
   // Accepted in event logs only for tenants with wire.acceptsSeatVacated
@@ -115,6 +167,16 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       clock?: TenantClockState<C>;
     }
   | { type: 'seat-forfeited'; at: number; roomId: string; color: C; clock?: TenantClockState<C> }
+  // An imported game's ending as its own referee declared it, where the kernel
+  // would not have ended the game itself (a lab threefold repetition). Written
+  // only by the importer; no client message produces it.
+  | {
+      type: 'game-adjudicated';
+      at: number;
+      roomId: string;
+      winner: C | null;
+      reason: TenantAdjudicationReason;
+    }
   // Server bookkeeping, never sent to a client (tenantEventsForClient and the
   // live broadcast drop them): the server stopped with this game live, so its
   // clock froze at `at` instead of charging the outage to the side to move.
@@ -359,6 +421,9 @@ export type VariantTenant<
     // tables of more than two: there is no "the other player" to hand it to.
     // Omitting it on such a tenant makes the forfeit throw rather than guess.
     finishNoWinner?(state: State, reason: TenantEndReason): State;
+    // Optional: end the game as an outside referee declared (the game-adjudicated
+    // event, imported games only). A tenant without it rejects that event.
+    adjudicate?(state: State, winner: C | null, reason: TenantAdjudicationReason): State;
     abort(state: State, reason: AbortReason): State;
     isColor(value: unknown): value is C;
     isMove(value: unknown): value is M;

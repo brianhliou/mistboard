@@ -19,7 +19,11 @@ import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
-import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import {
+  buildReviewMeta,
+  type ReviewGameOrigin,
+  reviewOutcomeLine,
+} from './review/game-review-meta.js';
 import {
   fetchCachedJieqiDecisions,
   type JieqiDecisionSummary,
@@ -70,6 +74,8 @@ export type JieqiPostgameResponse = {
       rating: number | null;
       kind: 'account' | 'guest' | 'engine';
     }>;
+    /** Imported games only: the event and the source's credit. */
+    origin?: ReviewGameOrigin;
   };
   state: {
     status: JieqiGameStatus;
@@ -83,7 +89,8 @@ export type JieqiPostgameResponse = {
     color?: JieqiColor;
     move?: JieqiMove;
     ply?: number;
-    winner?: JieqiColor;
+    // null on a game-adjudicated draw (imported lab games).
+    winner?: JieqiColor | null;
     reason?: string;
   }>;
   view: JieqiPlayerView;
@@ -203,7 +210,11 @@ function renderPostgame(root: HTMLElement, postgame: JieqiPostgameResponse): voi
     seatLabels: true,
     players: playerNames,
     playerProfiles: reviewSeatProfiles(gamePlayers),
-    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
+    // An imported game's seats are off-site engines with no record here, so
+    // there is no crosstable to show.
+    ...(postgame.game.mode === 'imported'
+      ? {}
+      : crosstableConfig(postgame.game.roomId, postgame.game.players)),
     // Position hand-offs. The analysis link carries the DEALT fen (the exact
     // reveals of this game continue there); the editor link carries only the
     // public fen (it edits what is visible).

@@ -5,7 +5,11 @@
  * for side effects by variant-tenant/register-tenants.ts.
  */
 
-import { jieqiStateToPikafishFen, type RoomTimeControl } from '@mistboard/game';
+import {
+  jieqiStateToPikafishFen,
+  jieqiUnknownSquares,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import { tenantCardBinding } from './game-card-tenant.js';
 import { tenantExportBinding } from './game-export-tenant.js';
 import type { JieqiCreatorPreference, JieqiRuntimeRoom } from './jieqi-runtime.js';
@@ -126,6 +130,15 @@ registerVariantTenant({
   export: tenantExportBinding(jieqiTenant, {
     gameRouteBase: '/jieqi/game',
     uci: xiangqiExportUci,
+    neverRevealed: (state) => {
+      const squares = jieqiUnknownSquares(state);
+      if (squares.length === 0) return null;
+      const color = (square: string) => state.board[square as keyof typeof state.board]?.color;
+      return {
+        red: squares.filter((square) => color(square) === 'red'),
+        black: squares.filter((square) => color(square) === 'black'),
+      };
+    },
   }),
   // Final position only: a reveal swings the eval by luck, not by a decision,
   // so an analysis-picked ply would show a lucky flip (VariantTenantCard).

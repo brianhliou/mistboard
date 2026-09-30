@@ -28,6 +28,7 @@ import {
   terminationLabel,
 } from '../game-display.js';
 import { t } from '../i18n/catalog.js';
+import { currentLocale } from '../i18n/locale.js';
 import { profileTargetFor } from '../profile-link.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import {
@@ -69,6 +70,16 @@ export type ReviewMetaGame = {
    *  scored onto the player rows as 1 / 0 / ½. Every postgame envelope carries
    *  it; optional so surfaces that hand-build a partial game object still fit. */
   result?: string | null;
+  /** 'imported' for a game played elsewhere: no spectator room (nobody watched
+   *  it here), and `origin` names the event and credits the source. */
+  mode?: string;
+  origin?: ReviewGameOrigin;
+};
+
+/** An imported game's event and credit, as the server's room-created `origin`. */
+export type ReviewGameOrigin = {
+  event: string;
+  credit?: { work: string; authors: string[]; url?: string; permission?: boolean };
 };
 
 export type ReviewMetaConfig = {
@@ -91,8 +102,9 @@ export type ReviewMetaConfig = {
 export type ReviewMeta = {
   /** Pass as `metaCard` to mountReviewLayout / createReviewScaffold. */
   metaCard: HTMLElement;
-  /** Pass as `details` — the spectator-room panel below the meta card. */
-  details: HTMLElement;
+  /** Pass as `details` — the spectator-room panel below the meta card; absent for
+   *  an imported game, which had no spectators here. */
+  details: HTMLElement | undefined;
 };
 
 /** Build the standardized review left column (meta card + spectator room). */
@@ -107,7 +119,56 @@ export function buildReviewMeta(config: ReviewMetaConfig): ReviewMeta {
     players: reviewMetaPlayers(game.players, config.seatColors, game.result),
     status: config.status,
   });
-  return { metaCard: card.el, details: buildSpectatorChat(game.roomId) };
+  if (game.origin) card.el.append(reviewOriginBlock(game.origin));
+  return {
+    metaCard: card.el,
+    details: game.mode === 'imported' ? undefined : buildSpectatorChat(game.roomId),
+  };
+}
+
+/** Event line + credit line for an imported game. The event is plain text: the
+ *  games search filters by event for standard xiangqi only, so there is no page
+ *  to link it to yet. Names stay exactly as the source wrote them; only the
+ *  connecting words are translated. */
+export function reviewOriginBlock(origin: ReviewGameOrigin): HTMLElement {
+  const block = document.createElement('div');
+  block.className = 'game-meta-card__origin';
+  const event = document.createElement('p');
+  event.className = 'game-meta-card__origin-event';
+  event.textContent = t('replay.originEvent', { event: origin.event });
+  block.append(event);
+  const credit = origin.credit;
+  if (credit) {
+    const line = document.createElement('p');
+    line.className = 'game-meta-card__origin-credit';
+    const text = t('replay.originCredit', {
+      work: credit.work,
+      authors: joinNames(credit.authors),
+    });
+    if (credit.url) {
+      const link = document.createElement('a');
+      link.href = credit.url;
+      link.rel = 'noopener';
+      link.target = '_blank';
+      link.textContent = text;
+      line.append(link);
+    } else {
+      line.append(document.createTextNode(text));
+    }
+    if (credit.permission) {
+      line.append(document.createTextNode(t('replay.originPermission')));
+    }
+    block.append(line);
+  }
+  return block;
+}
+
+function joinNames(names: readonly string[]): string {
+  try {
+    return new Intl.ListFormat(currentLocale(), { type: 'conjunction' }).format(names);
+  } catch {
+    return names.join(', ');
+  }
 }
 
 /** Map persisted participants into meta-card player rows (engine → BOT tag).

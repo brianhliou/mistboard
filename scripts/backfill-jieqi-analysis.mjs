@@ -89,6 +89,8 @@ const { rows } = onlyRoom
   : await pool.query(
       `SELECT room_id, ply_count, result FROM games
         WHERE variant = 'jieqi' AND ended_at IS NOT NULL
+          -- Imported games (off-site engine matches) were not played here: on request only.
+          AND mode <> 'imported'
         ORDER BY ply_count ASC
         LIMIT $1`,
       [limit ?? null],

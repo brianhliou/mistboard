@@ -270,6 +270,13 @@ export function jieqiPieceGhostSvg(
   return `<svg width="${PIECE_SIZE}" height="${PIECE_SIZE}" viewBox="0 0 ${PIECE_SIZE} ${PIECE_SIZE}" xmlns="http://www.w3.org/2000/svg" aria-hidden="true">${inner}</svg>`;
 }
 
+// A piece whose identity the game never determined (an imported game's piece
+// still face-down at the end, shown in the truth view): the back with a "?",
+// so the reveal never reads as a face-down piece with a secret identity.
+function unknownMark(x: number, y: number): string {
+  return `<text class="jieqi-piece-unknown-mark" x="${x}" y="${y}" text-anchor="middle" dominant-baseline="central" font-size="${Math.round(PIECE_SIZE * 0.5)}" font-weight="700" aria-hidden="true">?</text>`;
+}
+
 // Each piece is wrapped in a positioned slot keyed by its square, so the glide
 // (animateJieqiBoardMove) can find the piece that just settled. Mirrors the
 // xiangqi / mini / fortress piece layers.
@@ -285,16 +292,25 @@ function pieceLayer(
       const dragSource = square === draggingFrom;
       const { file, rank } = jieqiCoordOf(square as JieqiSquare);
       const { x, y } = intersection(file, rank, perspective);
+      const unknown = entry.faceDown && entry.unknown === true;
       const pieceSvg = entry.faceDown
         ? renderXiangqiPieceGlyphed({ color: entry.color, role: 'soldier' }, pieceSet, {
-            ariaLabel: `${entry.color} hidden piece`,
-            className: dragSource ? 'jieqi-piece jieqi-piece--drag-source' : 'jieqi-piece',
+            ariaLabel: unknown
+              ? `${entry.color} piece, never revealed`
+              : `${entry.color} hidden piece`,
+            className: [
+              'jieqi-piece',
+              dragSource ? 'jieqi-piece--drag-source' : '',
+              unknown ? 'jieqi-piece--unknown' : '',
+            ]
+              .filter(Boolean)
+              .join(' '),
             shrouded: true,
             shroudedStyle: 'back',
             x: x - PIECE_SIZE / 2,
             y: y - PIECE_SIZE / 2,
             size: PIECE_SIZE,
-          })
+          }) + (unknown ? unknownMark(x, y) : '')
         : // A revealed soldier past the river draws with the promoted-soldier art,
           // same as the standard xiangqi board (red owns ranks 1-5, black 6-10).
           renderXiangqiPieceGlyphed({ color: entry.color, role: entry.role }, pieceSet, {
@@ -426,6 +442,13 @@ export function installJieqiBoardStyles(): void {
       user-select: none;
     }
     .jieqi-board-bg { fill: var(--mini-xq-board-bg, #f5dca8); }
+    .jieqi-piece-unknown-mark {
+      fill: #fff;
+      stroke: rgba(0, 0, 0, 0.45);
+      stroke-width: 1.5;
+      paint-order: stroke;
+      pointer-events: none;
+    }
     .jieqi-grid line {
       stroke: var(--mini-xq-grid, #5a3a14);
       stroke-width: 1.2;

@@ -623,6 +623,10 @@ export async function listRecentPublicGames(limit = 10): Promise<RecentEveGameRe
      FROM games
      LEFT JOIN eve_games ON eve_games.game_id = games.room_id
      WHERE games.status = 'completed'
+       -- Played-here games only, like the watch feeds: an imported game (a
+       -- historical corpus, an off-site engine match) is dated when it was
+       -- played elsewhere, and a 400-game match import would fill this list.
+       AND games.mode <> 'imported'
        AND NOT (games.termination = 'timeout' AND games.ply_count < $1)
        AND NOT (games.mode = 'pvp' AND games.ply_count < $3)
        AND NOT (games.mode = 'pve' AND games.ply_count < 2)

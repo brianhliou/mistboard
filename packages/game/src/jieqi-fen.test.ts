@@ -2,7 +2,9 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   jieqiMoveToPikafishUci,
+  jieqiStateToDealtFen,
   jieqiStateToPikafishFen,
+  parseJieqiFen,
   pikafishUciToJieqiMove,
 } from './jieqi-fen.js';
 import { applyJieqiMove, createInitialJieqiState, STANDARD_JIEQI_DEAL } from './variants-jieqi.js';
@@ -76,4 +78,37 @@ test('the viewer never learns which of its own dark pieces were captured', () =>
   assert.equal(truth, pool(jieqiStateToPikafishFen(captured, { viewer: 'black' })));
   assert.notEqual(truth, before);
   assert.equal(pool(jieqiStateToPikafishFen(captured, { viewer: 'red' })), before);
+});
+
+// Imported games (apps/server/src/engine-match-import.ts) carry pieces whose
+// identity the source never determined. The dealt FEN writes them as `?`, and
+// parsing a `?` samples from what the pool has left while keeping the piece
+// unknown, so a round trip never turns a draw into a stated identity.
+test('dealt FEN writes never-determined pieces as ? and keeps them unknown on parse', () => {
+  const deal = {
+    ...STANDARD_JIEQI_DEAL,
+    undetermined: { red: ['a1', 'b3'] as const, black: ['i10'] as const },
+  };
+  const state = createInitialJieqiState('fen-unknown', {
+    red: deal.red,
+    black: deal.black,
+    undetermined: { red: [...deal.undetermined.red], black: [...deal.undetermined.black] },
+  });
+  const dealt = jieqiStateToDealtFen(state);
+  const hidden = dealt.split(' ')[5]!;
+  assert.equal([...hidden].filter((ch) => ch === '?').length, 3);
+  // No role letter stands where an unknown piece sits: 30 dark pieces, 27 named.
+  assert.equal(hidden.replace(/\?/g, '').length, 27);
+
+  const parsed = parseJieqiFen(dealt, { rng: () => 0.5 });
+  assert.ok(parsed.ok);
+  assert.equal(parsed.sampled, true);
+  assert.equal(parsed.state.board.a1?.unknown, true);
+  assert.equal(parsed.state.board.i10?.unknown, true);
+  assert.equal(parsed.state.board.c1?.unknown, undefined);
+  assert.equal(jieqiStateToDealtFen(parsed.state), dealt);
+
+  // A ? never unlocks more pieces than the pool holds.
+  const tooMany = dealt.replace(/ [^ ]+$/, ` ${'?'.repeat(31)}`);
+  assert.equal(parseJieqiFen(tooMany).ok, false);
 });

@@ -60,6 +60,7 @@ import {
 } from './variant-tenant/registry.js';
 import { isTenantEventLog, replayTenantEvents } from './variant-tenant/runtime.js';
 import type {
+  TenantGameOrigin,
   TenantGameStateLike,
   TenantRoomEvent,
   VariantTenant,
@@ -106,6 +107,9 @@ export type TenantExportOptions<M, State> = {
   san?: (moves: readonly M[]) => readonly (string | null)[];
   // Flip variants: read the ink the first-mover seat bound, off the final state.
   firstMoverInk?: (state: State) => string | null;
+  // Hidden-identity variants: squares per color still holding a piece whose
+  // identity the game never determined (see TenantExportGame.neverRevealed).
+  neverRevealed?: (state: State) => Record<string, string[]> | null;
   // Tenants with an honest movetext notation bind the PGN writer here.
   writePgn?: (moves: readonly M[]) => NonNullable<TenantExportGame['writePgn']>;
 };
@@ -151,6 +155,12 @@ export function tenantExportBinding<
         ...(options.firstMoverInk
           ? { firstMoverInk: options.firstMoverInk(projection.state) }
           : {}),
+        ...(events[0]?.type === 'room-created' && events[0].origin
+          ? { origin: events[0].origin }
+          : {}),
+        ...(options.neverRevealed
+          ? { neverRevealed: options.neverRevealed(projection.state) }
+          : {}),
         ...(options.writePgn ? { writePgn: options.writePgn(moves) } : {}),
       };
     },
@@ -185,6 +195,18 @@ export type TenantGamePublication = {
   // Flip variants only: which ink the first-mover seat played (results are
   // recorded by seat).
   first_mover_ink?: string | null;
+  // Imported games only (a game played elsewhere, e.g. an off-site engine match):
+  //   event: the event it was played in;
+  //   credit: the credited work, its authors (as written) and link;
+  //   never_revealed: per color, the squares of pieces still face-down at the
+  //     end whose identity the source NEVER determined (it dealt at reveal
+  //     time). No export states an identity for them; they are unknown, not
+  //     hidden. Absent when every identity was determined.
+  origin?: {
+    event: string;
+    credit: NonNullable<TenantGameOrigin['credit']> | null;
+    never_revealed?: Record<string, string[]>;
+  };
   plies: TenantPublicationPly[];
 };
 
@@ -225,6 +247,23 @@ function publicationPlies(game: TenantExportGame): TenantPublicationPly[] {
   });
 }
 
+function publicationOrigin(game: TenantExportGame): NonNullable<TenantGamePublication['origin']> {
+  const origin = game.origin!;
+  const neverRevealed = game.neverRevealed;
+  const hasUnknown = neverRevealed && Object.values(neverRevealed).some((s) => s.length > 0);
+  return {
+    event: origin.event,
+    credit: origin.credit ?? null,
+    ...(hasUnknown
+      ? {
+          never_revealed: Object.fromEntries(
+            Object.entries(neverRevealed).map(([color, squares]) => [color, [...squares]]),
+          ),
+        }
+      : {}),
+  };
+}
+
 export function buildTenantGamePublicationJson(
   summary: RecentEveGameRecord,
   game: TenantExportGame,
@@ -253,6 +292,7 @@ export function buildTenantGamePublicationJson(
     ply_count: game.plies.length,
     license: LICENSE,
     ...(game.firstMoverInk !== undefined ? { first_mover_ink: game.firstMoverInk } : {}),
+    ...(game.origin ? { origin: publicationOrigin(game) } : {}),
     plies: publicationPlies(game),
   };
 }

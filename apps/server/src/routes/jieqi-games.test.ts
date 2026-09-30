@@ -1,11 +1,25 @@
 import assert from 'node:assert/strict';
+import { readFileSync } from 'node:fs';
+import { dirname, join } from 'node:path';
 import test from 'node:test';
-import { JIEQI_SPEC_ID, type JieqiPlayerView, STANDARD_JIEQI_DEAL } from '@mistboard/game';
+import { fileURLToPath } from 'node:url';
+import {
+  JIEQI_SPEC_ID,
+  type JieqiDeal,
+  type JieqiPlayerView,
+  STANDARD_JIEQI_DEAL,
+} from '@mistboard/game';
+import {
+  buildImportedJieqiGame,
+  type EngineMatchManifest,
+  parseEnrichedMatchJsonl,
+} from '../engine-match-import.js';
 import type { JieqiEvent } from '../jieqi-runtime.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import type { RecentEveGameRecord } from '../persistence.js';
 import { replayTenantEvents } from '../variant-tenant/runtime.js';
 import {
+  clearJieqiWatchPostgameCache,
   type JieqiPostgamePersistence,
   jieqiLiveWatchPayloadFor,
   jieqiPostgameForApi,
@@ -440,4 +454,79 @@ test('Jieqi postgame does not require launch env flags', async () => {
     if (previous === undefined) delete process.env.MISTBOARD_JIEQI_ENABLED;
     else process.env.MISTBOARD_JIEQI_ENABLED = previous;
   }
+});
+
+// ── Imported engine-match games (engine-match-import.ts) ─────────────────────
+// /embed/game/:id and /watch replay a finished jieqi game from THIS payload. An
+// imported lab game has pieces whose identity the lab never dealt; the deal holds
+// placeholders for them, and no track may state one, at any ply.
+const ENGINE_MATCH_FIXTURES = join(
+  dirname(fileURLToPath(import.meta.url)),
+  '..',
+  '..',
+  'src',
+  'fixtures',
+  'engine-match',
+);
+
+test('Jieqi watch payload for an imported game never states a never-revealed identity', async () => {
+  const manifest = JSON.parse(
+    readFileSync(join(ENGINE_MATCH_FIXTURES, 'run7-sample.match.json'), 'utf8'),
+  ) as EngineMatchManifest;
+  const rows = parseEnrichedMatchJsonl(
+    readFileSync(join(ENGINE_MATCH_FIXTURES, 'run7-sample.enriched.jsonl'), 'utf8'),
+  );
+  assert.ok(rows.length > 0);
+  clearJieqiWatchPostgameCache();
+  let checked = 0;
+  for (const row of rows) {
+    const built = buildImportedJieqiGame(manifest, row, 400);
+    assert.ok(built.ok, built.ok ? '' : built.error);
+    const { roomId, events, summary } = built.value;
+    const created = events[0];
+    assert.equal(created?.type, 'room-created');
+    const deal = (created as { setup: JieqiDeal }).setup;
+    const unknown = [...(deal.undetermined?.red ?? []), ...(deal.undetermined?.black ?? [])];
+    assert.ok(unknown.length > 0, `${roomId} has never-revealed pieces`);
+
+    const payload = await jieqiWatchPostgameForApi(
+      roomId,
+      deps(
+        gameRecord({
+          roomId,
+          mode: 'imported',
+          result: summary.result,
+          termination: summary.termination,
+          plyCount: summary.plyCount,
+          corpusId: summary.corpusId,
+          visibility: 'public',
+        }),
+        events,
+      ),
+    );
+    assert.ok(payload, `${roomId} payload`);
+    // The deal (placeholders included) never leaves the server.
+    assert.equal(JSON.stringify(payload).includes('"setup"'), false);
+    assert.equal(JSON.stringify(payload).includes('undetermined'), false);
+
+    const tracks = { truth: payload.history.truth, masked: payload.history.masked };
+    for (const [key, snapshots] of Object.entries(tracks)) {
+      assert.equal(snapshots?.length, summary.plyCount + 1, `${roomId} ${key} plies`);
+      const plies: { ply: number | string; view: JieqiPlayerView }[] = [
+        ...(snapshots ?? []),
+        { ply: 'final', view: payload.view },
+      ];
+      for (const { ply, view } of plies) {
+        for (const square of unknown) {
+          const entry = view.board[square];
+          const where = `${roomId} ${key} ply ${ply} ${square}`;
+          assert.ok(entry, `${where}: piece present`);
+          assert.equal(entry.faceDown, true, `${where}: face-down`);
+          assert.equal('role' in entry, false, `${where}: no role`);
+          checked += 1;
+        }
+      }
+    }
+  }
+  assert.ok(checked > 0);
 });
