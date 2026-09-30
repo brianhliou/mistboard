@@ -194,6 +194,7 @@ Conventions:
 
 ### Fixed
 
+- The xiangqi game database now reaches every game it counts: from page 7 on, pages used to come back empty, hiding about 1,370 broadcast games ([6f4169b0](https://github.com/brianhliou/mistboard/commit/6f4169b0))
 - In Fog of War, a side left with no moves at all (every piece blocked) now draws, instead of the game sitting stuck until a clock ran out; the rules page says so ([def1cb0b](https://github.com/brianhliou/mistboard/commit/def1cb0b))
 - A game started while the site is restarting for an update now waits and starts by itself once the server is back, with the message in your language, instead of refusing every click ([4e8a1601](https://github.com/brianhliou/mistboard/commit/4e8a1601))
 - The statistics page lists every live variant, so Atomic Xiangqi appears; games in retired variants still count toward the total ([72002664](https://github.com/brianhliou/mistboard/commit/72002664))
