@@ -22,6 +22,7 @@ import { jieqiPostgameForApi } from './routes/jieqi-games.js';
 import './variant-tenant/register-tenants.js';
 import { variantTenantForRoomId } from './variant-tenant/registry.js';
 import { isTenantEvent, replayTenantEvents } from './variant-tenant/runtime.js';
+import { isTenantGameOrigin } from './variant-tenant/tenant.js';
 
 // Three games cut from the AB-JChess vs PikaJieQi run7 match, enriched by
 // mistboard-engine lab/jieqi-abjchess-2026-09-29/enrich_match.py:
@@ -306,7 +307,40 @@ test('engine match: the import records which squares the lab never decided, and 
       url: 'https://github.com/lxsgx23/AB-JChess',
       permission: true,
     },
+    // The lab's fixed think time (row `movetime`): the game has no clock.
+    movetimeMs: 4000,
   });
+});
+
+test('engine match: movetime comes from the row, else the manifest, and must agree', () => {
+  const fromManifest = byNumber(366);
+  delete fromManifest.movetime;
+  const declared = buildImportedJieqiGame({ ...MANIFEST, movetimeMs: 2000 }, fromManifest, TOTAL);
+  assert.ok(declared.ok);
+  const created = declared.value.events[0];
+  assert.equal(created?.type === 'room-created' && created.origin?.movetimeMs, 2000);
+
+  // Neither says: no movetime at all, never a guess.
+  const unknown = build(fromManifest);
+  assert.ok(unknown.ok);
+  const bare = unknown.value.events[0];
+  assert.equal(bare?.type === 'room-created' && 'movetimeMs' in (bare.origin ?? {}), false);
+
+  const disagree = buildImportedJieqiGame({ ...MANIFEST, movetimeMs: 1000 }, byNumber(366), TOTAL);
+  assert.equal(disagree.ok, false);
+  assert.match(disagree.ok ? '' : disagree.error, /row movetime 4000 != manifest movetimeMs 1000/);
+
+  const bad = byNumber(366);
+  bad.movetime = -5;
+  assert.equal(build(bad).ok, false);
+});
+
+test('engine match: an origin movetime must be a positive whole number of ms', () => {
+  const origin = { kind: 'imported', event: 'x' };
+  assert.equal(isTenantGameOrigin({ ...origin, movetimeMs: 4000 }), true);
+  for (const movetimeMs of [0, -1, 1.5, '4000', null]) {
+    assert.equal(isTenantGameOrigin({ ...origin, movetimeMs }), false, String(movetimeMs));
+  }
 });
 
 test('engine match: the truth view never states an identity the lab never decided', async () => {
@@ -319,6 +353,7 @@ test('engine match: the truth view never states an identity the lab never decide
   });
   assert.ok(payload);
   assert.equal(payload.game.origin?.event, MANIFEST.eventName);
+  assert.equal(payload.game.origin?.movetimeMs, 4000);
   // Engine seats, not guests and not bots.
   assert.deepEqual(
     payload.game.players?.map((p) => [p.kind, p.botId]),
@@ -364,6 +399,13 @@ test('engine match: the JSON export names the event, the credit and the unknown 
   assert.equal(json.origin?.event, MANIFEST.eventName);
   assert.equal(json.origin?.credit?.url, 'https://github.com/lxsgx23/AB-JChess');
   assert.deepEqual(json.origin?.never_revealed, neverDealt(game));
+  // No clock, but not untimed: one move in 4 seconds (PGN's moves/seconds form).
+  assert.deepEqual(json.time_control, {
+    initial_ms: null,
+    increment_ms: null,
+    movetime_ms: 4000,
+    label: '1/4',
+  });
   assert.deepEqual(json.players, {
     red: { handle: 'AB-JChess' },
     black: { handle: 'PikaJieQi' },

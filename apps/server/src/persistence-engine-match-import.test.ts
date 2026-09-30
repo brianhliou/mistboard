@@ -8,7 +8,7 @@ import {
   type ImportedEngineMatchGame,
   parseEnrichedMatchJsonl,
 } from './engine-match-import.js';
-import { writeImportedEngineMatchGame } from './import-engine-match.js';
+import { guardPoolConnectionErrors, writeImportedEngineMatchGame } from './import-engine-match.js';
 import {
   getGameSummary,
   getPublicSiteStats,
@@ -16,7 +16,7 @@ import {
   listRecentPublicGames,
   listWatchUnlockedGames,
 } from './persistence.js';
-import { withTransaction } from './persistence-db.js';
+import { getPool, withTransaction } from './persistence-db.js';
 import {
   assert,
   definePersistenceTests,
@@ -32,11 +32,14 @@ const MANIFEST = JSON.parse(
   readFileSync(join(FIXTURES, 'run7-sample.match.json'), 'utf8'),
 ) as EngineMatchManifest;
 
-function builtGames(): ImportedEngineMatchGame[] {
+// `withoutMovetime` builds the games as the first import wrote them, before
+// the origin carried the lab's think time.
+function builtGames({ withoutMovetime = false } = {}): ImportedEngineMatchGame[] {
   const rows = parseEnrichedMatchJsonl(
     readFileSync(join(FIXTURES, 'run7-sample.enriched.jsonl'), 'utf8'),
   );
   return rows.map((row) => {
+    if (withoutMovetime) delete row.movetime;
     const result = buildImportedJieqiGame(MANIFEST, row, 400);
     if (!result.ok) throw new Error(result.error);
     return result.value;
@@ -131,6 +134,77 @@ definePersistenceTests('engine match import', () => {
       ]),
       1,
     );
+  });
+
+  test('persistence engine match import --replace adds the movetime to games imported without it', async () => {
+    assert.deepEqual(await writeAll(builtGames({ withoutMovetime: true })), [
+      'imported',
+      'imported',
+      'imported',
+    ]);
+    const games = builtGames();
+    const origins = async () => {
+      const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await client.connect();
+      try {
+        const { rows } = await client.query<{ movetime: number | null }>(
+          `SELECT (payload->'origin'->>'movetimeMs')::int AS movetime FROM events
+            WHERE seq = 0 AND room_id = ANY($1) ORDER BY room_id`,
+          [games.map((game) => game.roomId)],
+        );
+        return rows.map((row) => row.movetime);
+      } finally {
+        await client.end();
+      }
+    };
+    assert.deepEqual(await origins(), [null, null, null]);
+
+    // A plain re-run sees the stored games differ and leaves them alone.
+    const plain = [];
+    for (const game of games) {
+      plain.push(await withTransaction((c) => writeImportedEngineMatchGame(c, game)));
+    }
+    assert.deepEqual(
+      plain.map((r) => [r.outcome, r.detail]),
+      games.map(() => ['conflict', 'differs from the stored game (use --replace)']),
+    );
+    assert.deepEqual(await origins(), [null, null, null]);
+
+    assert.deepEqual(await writeAll(games, true), ['replaced', 'replaced', 'replaced']);
+    assert.deepEqual(await origins(), [4000, 4000, 4000]);
+    const payload = await jieqiPostgameForApi(games[0]!.roomId);
+    assert.equal(payload?.game.origin?.movetimeMs, 4000);
+    assert.deepEqual(await writeAll(games), ['unchanged', 'unchanged', 'unchanged']);
+  });
+
+  test('persistence engine match import survives its idle connection being dropped', async () => {
+    const warnings: string[] = [];
+    const detach = guardPoolConnectionErrors(getPool(), (message) => warnings.push(message));
+    try {
+      const pid = await withTransaction(async (c) => {
+        const { rows } = await c.query<{ pid: number }>(`SELECT pg_backend_pid() AS pid`);
+        return rows[0]!.pid;
+      });
+      // The client is idle in the pool now; end its session from outside, as a
+      // remote database or proxy closing the connection would. Without the
+      // guard the pool re-emits the error with no listener and the process dies.
+      const killer = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await killer.connect();
+      try {
+        await killer.query(`SELECT pg_terminate_backend($1)`, [pid]);
+      } finally {
+        await killer.end();
+      }
+      for (let i = 0; i < 50 && warnings.length === 0; i += 1) {
+        await new Promise((resolve) => setTimeout(resolve, 20));
+      }
+      assert.equal(warnings.length, 1);
+      assert.match(warnings[0]!, /idle connection closed \(terminating connection/);
+      // The pool dropped that client; the next game connects afresh.
+      assert.deepEqual(await writeAll(builtGames().slice(0, 1)), ['imported']);
+    } finally {
+      detach();
+    }
   });
 
   test('persistence engine match import --replace never touches another match import', async () => {

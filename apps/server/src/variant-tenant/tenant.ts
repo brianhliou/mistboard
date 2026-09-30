@@ -75,12 +75,26 @@ export type TenantGameOrigin = {
     /** The authors agreed to the games being published here. */
     permission?: boolean;
   };
+  /** The fixed think time per move the source played at (an engine match run
+   *  at `go movetime`), in ms. Such a game has no clock, so its pages show this
+   *  where a live game shows its time control. */
+  movetimeMs?: number;
 };
 
 export function isTenantGameOrigin(value: unknown): value is TenantGameOrigin {
   if (typeof value !== 'object' || value === null) return false;
   const origin = value as Record<string, unknown>;
   if (origin.kind !== 'imported' || typeof origin.event !== 'string' || !origin.event) {
+    return false;
+  }
+  if (
+    origin.movetimeMs !== undefined &&
+    !(
+      typeof origin.movetimeMs === 'number' &&
+      Number.isInteger(origin.movetimeMs) &&
+      origin.movetimeMs > 0
+    )
+  ) {
     return false;
   }
   if (origin.credit === undefined) return true;
@@ -141,7 +155,7 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       // setup MUST strip this in visibility.clientEventFor — it is never sent to
       // a client. Tenants without createSetup never set it.
       setup?: unknown;
-      // Imported games only (engine-match-import.ts): event + credit.
+      // Imported games only (engine-match-import.ts): event, credit, movetime.
       origin?: TenantGameOrigin;
     }
   | { type: 'seat-assigned'; at: number; roomId: string; clientId: string; seat: C }

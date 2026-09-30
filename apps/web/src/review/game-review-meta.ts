@@ -80,6 +80,9 @@ export type ReviewMetaGame = {
 export type ReviewGameOrigin = {
   event: string;
   credit?: { work: string; authors: string[]; url?: string; permission?: boolean };
+  /** A clockless game the source played at a fixed think time per move (an
+   *  engine match), in ms: the header shows it in place of "Untimed". */
+  movetimeMs?: number;
 };
 
 export type ReviewMetaConfig = {
@@ -208,11 +211,13 @@ export function reviewMetaPlayers(
 
 /** "5:00+0" / "Untimed" from the envelope's millisecond time control. Reads the
  *  flat `initialMs`/`incrementMs` first, falling back to a nested `timeControl`
- *  object (the shape a few variant envelopes use). */
+ *  object (the shape a few variant envelopes use). A clockless imported game
+ *  that ran at a fixed time per move reads "4 s a move" (origin.movetimeMs). */
 export function reviewTimeControlLabel(game: {
   initialMs?: number | null;
   incrementMs?: number | null;
   timeControl?: Record<string, unknown> | null;
+  origin?: Pick<ReviewGameOrigin, 'movetimeMs'> | null;
 }): string {
   const nested = (game.timeControl ?? null) as {
     initialMs?: number | null;
@@ -220,8 +225,24 @@ export function reviewTimeControlLabel(game: {
   } | null;
   const initialMs = game.initialMs ?? nested?.initialMs ?? null;
   const incrementMs = game.incrementMs ?? nested?.incrementMs ?? null;
-  if (initialMs === null && incrementMs === null) return t('watch.untimed');
+  if (initialMs === null && incrementMs === null) {
+    const movetimeMs = game.origin?.movetimeMs;
+    if (typeof movetimeMs === 'number' && movetimeMs > 0) {
+      return t('watch.movetime', { seconds: movetimeSecondsLabel(movetimeMs) });
+    }
+    return t('watch.untimed');
+  }
   return `${clockLabel(initialMs ?? 0)}+${Math.round((incrementMs ?? 0) / 1000)}`;
+}
+
+/** 4000 → "4", 1500 → "1.5", in the page locale's digits. */
+function movetimeSecondsLabel(movetimeMs: number): string {
+  const seconds = Math.round(movetimeMs / 100) / 10;
+  try {
+    return new Intl.NumberFormat(currentLocale(), { maximumFractionDigits: 1 }).format(seconds);
+  } catch {
+    return String(seconds);
+  }
 }
 
 /** Generic outcome word for the fixed-color variants (red/black/white + draw).

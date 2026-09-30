@@ -47,6 +47,7 @@ import {
   SCHEMA_VERSION,
   SITE_NAME,
   timeControlFromSummary,
+  withMovetime,
 } from './game-export-shared.js';
 import type { RecentEveGameRecord } from './persistence.js';
 import { postgamePlayers } from './routes/lib.js';
@@ -283,7 +284,7 @@ export function buildTenantGamePublicationJson(
     },
     variant: summary.variant,
     mode: summary.mode,
-    time_control: timeControlFromSummary(summary),
+    time_control: withMovetime(timeControlFromSummary(summary), game.origin?.movetimeMs),
     players,
     started_at: summary.startedAt.toISOString(),
     ended_at: summary.endedAt.toISOString(),
@@ -333,7 +334,7 @@ export function buildTenantGamePgn(
     Result: result,
     Variant: pgnVariantName(summary.variant),
     MistboardVariant: summary.variant,
-    TimeControl: timeControlFromSummary(summary).label,
+    TimeControl: withMovetime(timeControlFromSummary(summary), game.origin?.movetimeMs).label,
     Termination: pgnStandardTermination(termination),
     MistboardTermination: termination,
     License: LICENSE,

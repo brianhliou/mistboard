@@ -13,9 +13,12 @@
 //
 // Exit code 1 when any game is rejected by the kernel, conflicts with a row
 // already in the database, or fails to write; the other games are still written.
+// The `done:` summary always prints, and a pooled connection that drops while
+// idle (a remote database closing it after the last write) is logged, not fatal.
 
 import { readFile } from 'node:fs/promises';
 import { pathToFileURL } from 'node:url';
+import { isDeepStrictEqual } from 'node:util';
 import pg from 'pg';
 import {
   assertEngineMatchManifest,
@@ -27,7 +30,7 @@ import {
 } from './engine-match-import.js';
 import { runMigrations } from './migrate.js';
 import { close, init } from './persistence.js';
-import { withTransaction } from './persistence-db.js';
+import { getPool, withTransaction } from './persistence-db.js';
 
 export type EngineMatchWriteOutcome = 'imported' | 'unchanged' | 'replaced' | 'conflict';
 
@@ -68,11 +71,20 @@ export async function writeImportedEngineMatchGame(
     return { outcome: 'conflict', detail: `${eventCount} events but no games row` };
   }
   if (row && !options.replace) {
+    // The origin (event, credit, movetime) lives on the room-created event, so a
+    // game imported before a field existed differs here and needs --replace.
+    const created = await client.query<{ payload: { origin?: unknown } }>(
+      `SELECT payload FROM events WHERE room_id = $1 AND seq = 0`,
+      [roomId],
+    );
+    const firstEvent = game.events[0];
+    const origin = firstEvent?.type === 'room-created' ? firstEvent.origin : undefined;
     const same =
       row.result === summary.result &&
       row.termination === summary.termination &&
       row.ply_count === summary.plyCount &&
-      eventCount === game.events.length;
+      eventCount === game.events.length &&
+      isDeepStrictEqual(created.rows[0]?.payload.origin, origin);
     return same
       ? { outcome: 'unchanged' }
       : { outcome: 'conflict', detail: 'differs from the stored game (use --replace)' };
@@ -137,6 +149,41 @@ export async function writeImportedEngineMatchGame(
     [roomId, ENGINE_MATCH_EVALS_ARTIFACT, game.evals],
   );
   return { outcome: row ? 'replaced' : 'imported' };
+}
+
+/**
+ * Keep a dropped connection from killing the run. pg-pool re-emits an idle
+ * client's socket error on the Pool (with the whole Client attached as
+ * `err.client`), and a Pool with no 'error' listener turns that into an
+ * uncaught exception: the process dies mid-run or right after the last write,
+ * before the summary. A checked-out client has no listener of its own either,
+ * so it gets one as it connects; its failed query still rejects, and that game
+ * is counted as failed. Returns the detach function.
+ */
+export function guardPoolConnectionErrors(
+  pool: pg.Pool,
+  warn: (message: string) => void = (message) => console.warn(message),
+): () => void {
+  const onPoolError = (err: Error) => {
+    warn(`  pool: idle connection closed (${err.message}); later games reconnect`);
+  };
+  const onClientError = (err: Error) => {
+    warn(`  pool: connection error during a write (${err.message})`);
+  };
+  const onConnect = (client: pg.PoolClient) => client.on('error', onClientError);
+  pool.on('error', onPoolError);
+  pool.on('connect', onConnect);
+  return () => {
+    pool.off('error', onPoolError);
+    pool.off('connect', onConnect);
+  };
+}
+
+export type EngineMatchTally = Record<EngineMatchWriteOutcome | 'failed', number>;
+
+/** 0 only when every selected game was written or already there. */
+export function engineMatchExitCode(tally: EngineMatchTally, rejected: number): 0 | 1 {
+  return tally.conflict > 0 || tally.failed > 0 || rejected > 0 ? 1 : 0;
 }
 
 type Args = {
@@ -229,7 +276,8 @@ async function main(): Promise<void> {
     }
   }
   init(databaseUrl);
-  const tally: Record<EngineMatchWriteOutcome | 'failed', number> = {
+  guardPoolConnectionErrors(getPool());
+  const tally: EngineMatchTally = {
     imported: 0,
     unchanged: 0,
     replaced: 0,
@@ -252,13 +300,19 @@ async function main(): Promise<void> {
       }
     }
   } finally {
-    await close();
+    // The work is committed game by game; a failure to close the pool is
+    // reported, never a reason to skip the summary or fail a clean run.
+    try {
+      await close();
+    } catch (err) {
+      console.warn(`  pool: close failed (${(err as Error).message})`);
+    }
+    console.log(
+      `done: ${tally.imported} imported, ${tally.replaced} replaced, ${tally.unchanged} unchanged, ` +
+        `${tally.conflict} conflicts, ${tally.failed} failed, ${rejected.length} rejected`,
+    );
+    process.exitCode = engineMatchExitCode(tally, rejected.length);
   }
-  console.log(
-    `done: ${tally.imported} imported, ${tally.replaced} replaced, ${tally.unchanged} unchanged, ` +
-      `${tally.conflict} conflicts, ${tally.failed} failed, ${rejected.length} rejected`,
-  );
-  if (tally.conflict > 0 || tally.failed > 0 || rejected.length > 0) process.exitCode = 1;
 }
 
 if (process.argv[1] && import.meta.url === pathToFileURL(process.argv[1]).href) {

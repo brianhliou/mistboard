@@ -74,6 +74,9 @@ export type EngineMatchManifest = {
   credit?: NonNullable<TenantGameOrigin['credit']>;
   /** Free-form provenance, stored beside the evals (not shown). */
   source?: Record<string, unknown>;
+  /** The fixed think time per move, ms, when the rows do not carry their own
+   *  `movetime`. A row's own value wins; the two must agree when both exist. */
+  movetimeMs?: number;
 };
 
 type LabColor = 'red' | 'black';
@@ -87,6 +90,8 @@ export type EnrichedMatchGame = {
   reason: string;
   plies: number;
   secs?: number | null;
+  /** The engines' fixed think time per move, ms (`go movetime`). */
+  movetime?: number | null;
   final_fen: string;
   completion_order: number;
   deal: Record<LabColor, { roles: Record<string, string>; completed: string[] }>;
@@ -145,6 +150,9 @@ export function assertEngineMatchManifest(manifest: EngineMatchManifest): void {
   if (!isTenantGameOrigin(engineMatchOrigin(manifest))) {
     throw new Error('manifest.credit needs work, authors[] and an https url');
   }
+  if (manifest.movetimeMs !== undefined && !isMovetimeMs(manifest.movetimeMs)) {
+    throw new Error('manifest.movetimeMs must be a positive whole number of ms');
+  }
   const start = Date.parse(manifest.runStartedAt);
   const end = Date.parse(manifest.runEndedAt);
   if (!Number.isFinite(start) || !Number.isFinite(end) || end <= start) {
@@ -152,12 +160,41 @@ export function assertEngineMatchManifest(manifest: EngineMatchManifest): void {
   }
 }
 
-export function engineMatchOrigin(manifest: EngineMatchManifest): TenantGameOrigin {
+function isMovetimeMs(value: unknown): value is number {
+  return typeof value === 'number' && Number.isInteger(value) && value > 0;
+}
+
+/**
+ * The room-created origin: event, credit and, when the match ran at a fixed
+ * time per move, that time (the game has no clock, so the page would otherwise
+ * call it untimed).
+ */
+export function engineMatchOrigin(
+  manifest: EngineMatchManifest,
+  movetimeMs: number | null = manifest.movetimeMs ?? null,
+): TenantGameOrigin {
   return {
     kind: 'imported',
     event: manifest.eventName,
     ...(manifest.credit ? { credit: manifest.credit } : {}),
+    ...(movetimeMs !== null ? { movetimeMs } : {}),
   };
+}
+
+/** The game's think time per move: its row's `movetime`, else the manifest's. */
+export function engineMatchMovetimeMs(
+  manifest: EngineMatchManifest,
+  game: EnrichedMatchGame,
+): { ok: true; value: number | null } | { ok: false; error: string } {
+  const row = game.movetime ?? null;
+  const declared = manifest.movetimeMs ?? null;
+  if (row !== null && !isMovetimeMs(row)) {
+    return { ok: false, error: `movetime ${JSON.stringify(row)} is not a positive ms count` };
+  }
+  if (row !== null && declared !== null && row !== declared) {
+    return { ok: false, error: `row movetime ${row} != manifest movetimeMs ${declared}` };
+  }
+  return { ok: true, value: row ?? declared };
 }
 
 /** Stable, predictable id: re-running an import addresses the same rows. */
@@ -277,6 +314,8 @@ export function buildImportedJieqiGame(
   if (game.moves.length !== game.plies) {
     return fail(`row says ${game.plies} plies, has ${game.moves.length} moves`);
   }
+  const movetime = engineMatchMovetimeMs(manifest, game);
+  if (!movetime.ok) return fail(movetime.error);
 
   const { startedAt, endedAt } = engineMatchTiming(manifest, game, total);
   const step = game.plies > 0 ? (endedAt - startedAt) / game.plies : 0;
@@ -287,7 +326,7 @@ export function buildImportedJieqiGame(
     gameSpecId: JIEQI_SPEC_ID,
     rated: false,
     setup: deal,
-    origin: engineMatchOrigin(manifest),
+    origin: engineMatchOrigin(manifest, movetime.value),
   };
   const events: JieqiEvent[] = [created];
   let projection = replayTenantEvents(jieqiTenant, events);

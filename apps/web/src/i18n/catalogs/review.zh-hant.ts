@@ -25,6 +25,7 @@ export const ZH_HANT_REVIEW = {
   'watch.plyProgress': '第 {current} / {total} 手',
   'watch.plyProgressResult': '第 {current} / {total} 手 - {result}',
   'watch.untimed': '不限時',
+  'watch.movetime': '每步 {seconds} 秒',
   'watch.truth': '真實局面',
   'watch.firstMove': '第一手',
   'watch.previousMove': '上一手',

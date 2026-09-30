@@ -20,6 +20,30 @@ describe('reviewTimeControlLabel', () => {
     expect(reviewTimeControlLabel({})).toBe('Untimed');
   });
 
+  it('shows an imported engine match its fixed time per move instead of untimed', () => {
+    const origin = { event: 'AB-JChess vs PikaJieQi', movetimeMs: 4000 };
+    expect(reviewTimeControlLabel({ initialMs: null, incrementMs: null, origin })).toBe(
+      '4 s a move',
+    );
+    expect(reviewTimeControlLabel({ origin: { movetimeMs: 1500 } })).toBe('1.5 s a move');
+    // A clock, where there is one, still wins; no movetime is still untimed.
+    expect(reviewTimeControlLabel({ initialMs: 300_000, incrementMs: 0, origin })).toBe('5:00+0');
+    expect(reviewTimeControlLabel({ origin: { event: 'x' } as { movetimeMs?: number } })).toBe(
+      'Untimed',
+    );
+  });
+
+  it('translates the fixed time per move', async () => {
+    const { ensureLocaleCatalog } = await import('../i18n/catalog.js');
+    await ensureLocaleCatalog('zh-Hans');
+    window.history.pushState(null, '', '/zh-hans/');
+    try {
+      expect(reviewTimeControlLabel({ origin: { movetimeMs: 4000 } })).toBe('每步 4 秒');
+    } finally {
+      window.history.pushState(null, '', '/');
+    }
+  });
+
   it('falls back to a nested timeControl object when the flat fields are absent', () => {
     expect(reviewTimeControlLabel({ timeControl: { initialMs: 300_000, incrementMs: 3000 } })).toBe(
       '5:00+3',
