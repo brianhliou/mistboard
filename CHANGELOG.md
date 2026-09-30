@@ -138,6 +138,7 @@ Conventions:
 ### Site
 
 - **1,000 games played**: a post marking the milestone, with the statistics page on the day the count crossed ([c3945390](https://github.com/brianhliou/mistboard/commit/c3945390))
+- **Fourteen wins against our jieqi bot**: the jieqi ladder's post, in English and Chinese: the full-strength bot's record since August 23, and four of the games people won, each opening just before it turned ([bff62721](https://github.com/brianhliou/mistboard/commit/bff62721))
 - Each rules page ends on one rule to carry into your first game instead of a shared "playable on Mistboard" line, and About and the FAQ explain fair play and engines in plain words ([d86675e1](https://github.com/brianhliou/mistboard/commit/d86675e1))
 - The About page says what the site is for both English and Chinese speakers, one lobby and one set of games in three languages, instead of telling Chinese readers it was built for people who cannot read Chinese ([dd7a2116](https://github.com/brianhliou/mistboard/commit/dd7a2116))
 - The site describes itself as "Chinese chess and original strategy games" instead of "Chinese chess for chess players", and the Chinese pages lead with jieqi and banqi ([633da554](https://github.com/brianhliou/mistboard/commit/633da554))
@@ -195,6 +196,7 @@ Conventions:
 
 - A game started while the site is restarting for an update now waits and starts by itself once the server is back, with the message in your language, instead of refusing every click ([4e8a1601](https://github.com/brianhliou/mistboard/commit/4e8a1601))
 - The statistics page lists every live variant, so Atomic Xiangqi appears; games in retired variants still count toward the total ([72002664](https://github.com/brianhliou/mistboard/commit/72002664))
+- Games and studies embedded in articles get a taller frame on phones, so the board fills the width and the move list stays readable ([25e80811](https://github.com/brianhliou/mistboard/commit/25e80811))
 - The Duck Xiangqi and Fortress bots no longer treat a long stretch without a capture as an early draw; the Duck bot could hang its general between ply 100 and 120 ([4c87267f](https://github.com/brianhliou/mistboard/commit/4c87267f))
 - An embedded fog study game switched to Black's view now turns the board so Black is at the bottom, as embedded games already did ([c8c3af3a](https://github.com/brianhliou/mistboard/commit/c8c3af3a))
 - The Duck Xiangqi bot no longer lifts the duck off the file between the generals when it is winning; it used to lose the general to the flying capture ([45fc6083](https://github.com/brianhliou/mistboard/commit/45fc6083))
