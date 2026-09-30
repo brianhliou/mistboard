@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- **Jieqi levels**: Pikafish Level 1 to 7 join full-strength Pikafish, so jieqi has an eight-level ladder like xiangqi; the bot menu and the homepage start at Level 4, and /bots lists the levels ([bcbbdaa2](https://github.com/brianhliou/mistboard/commit/bcbbdaa2))
 - A **Jungle** board for xiangqi: the square grid on a green lawn, a cream rug in each palace and a painted river, made with children in mind; pick it under Board, and Jungle and Flip Jungle turn green with it ([82a72047](https://github.com/brianhliou/mistboard/commit/82a72047))
 - **Animal (no disc)** piece set: the animal pieces without their cream disc, a little larger, with a thin outline on the lined board ([3bd84ef9](https://github.com/brianhliou/mistboard/commit/3bd84ef9))
 - The Fortress treasure diamond draws a heavier line and sits centred on its disc ([c8de4e19](https://github.com/brianhliou/mistboard/commit/c8de4e19))
