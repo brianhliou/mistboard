@@ -193,6 +193,8 @@ Conventions:
 
 ### Fixed
 
+- A game started while the site is restarting for an update now waits and starts by itself once the server is back, with the message in your language, instead of refusing every click ([4e8a1601](https://github.com/brianhliou/mistboard/commit/4e8a1601))
+- The statistics page lists every live variant, so Atomic Xiangqi appears; games in retired variants still count toward the total ([72002664](https://github.com/brianhliou/mistboard/commit/72002664))
 - The Duck Xiangqi and Fortress bots no longer treat a long stretch without a capture as an early draw; the Duck bot could hang its general between ply 100 and 120 ([4c87267f](https://github.com/brianhliou/mistboard/commit/4c87267f))
 - An embedded fog study game switched to Black's view now turns the board so Black is at the bottom, as embedded games already did ([c8c3af3a](https://github.com/brianhliou/mistboard/commit/c8c3af3a))
 - The Duck Xiangqi bot no longer lifts the duck off the file between the generals when it is winning; it used to lose the general to the flying capture ([45fc6083](https://github.com/brianhliou/mistboard/commit/45fc6083))
@@ -259,6 +261,7 @@ Conventions:
 
 ### Technical
 
+- Jieqi moves are applied without generating every legal move, so a long game no longer stalls the server on each bot move (about 10x faster at move 100); rating runs apply one move per turn instead of replaying the game ([041c7b81](https://github.com/brianhliou/mistboard/commit/041c7b81))
 - The web server now gets 20 seconds to shut down cleanly on a deploy, so live games pause instead of losing clock time ([af68c5b1](https://github.com/brianhliou/mistboard/commit/af68c5b1))
 - Admin metrics record what each drain and restart cost players, and a lapsed drain clears the Update pending banner ([dddb2253](https://github.com/brianhliou/mistboard/commit/dddb2253))
 - Each Vietnamese page and its English original list the same language versions, with English as the default, so search engines read them as one page in several languages ([bc121fc3](https://github.com/brianhliou/mistboard/commit/bc121fc3))
