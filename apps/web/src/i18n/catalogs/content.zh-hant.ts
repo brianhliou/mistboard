@@ -162,6 +162,7 @@ export const ZH_HANT_CONTENT = {
   'stats.allGames': '全部對局',
   'stats.thisWeekSoFar': '本週已完成 {count} 局',
   'stats.byVariant': '按變體統計',
+  'stats.byVariantRetiredNote': '已下線變體的對局計入總數，但不單獨列出。',
   'stats.byMode': '按模式統計',
   'stats.unavailableHeading': '統計暫不可用',
   'stats.unavailableBody': '無法載入統計資料，請稍後再試。',

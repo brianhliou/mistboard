@@ -157,7 +157,8 @@
 .stats-weekly .stats-chart-filter {
   margin-bottom: 0.75rem;
 }
-.stats-weekly-so-far {
+.stats-weekly-so-far,
+.stats-breakdown-note {
   margin: 0.5rem 0 0;
   font-size: 0.9rem;
   color: var(--site-muted);

@@ -208,6 +208,8 @@ export const EN_CONTENT = {
   'stats.allGames': 'All games',
   'stats.thisWeekSoFar': '{count} so far this week',
   'stats.byVariant': 'Games by variant',
+  'stats.byVariantRetiredNote':
+    "Games in retired variants count toward the total but aren't listed.",
   'stats.byMode': 'Games by mode',
   'stats.unavailableHeading': 'Statistics unavailable',
   'stats.unavailableBody': 'Could not load statistics. Try again shortly.',
@@ -484,6 +486,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'stats.allGames',
   'stats.thisWeekSoFar',
   'stats.byVariant',
+  'stats.byVariantRetiredNote',
   'stats.byMode',
   'stats.unavailableHeading',
   'stats.unavailableBody',

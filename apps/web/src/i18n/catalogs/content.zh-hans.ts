@@ -162,6 +162,7 @@ export const ZH_HANS_CONTENT = {
   'stats.allGames': '全部对局',
   'stats.thisWeekSoFar': '本周已完成 {count} 局',
   'stats.byVariant': '按变体统计',
+  'stats.byVariantRetiredNote': '已下线变体的对局计入总数，但不单独列出。',
   'stats.byMode': '按模式统计',
   'stats.unavailableHeading': '统计暂不可用',
   'stats.unavailableBody': '无法加载统计数据，请稍后再试。',

@@ -10,6 +10,7 @@
 // Plan and status: docs-private/metrics-roadmap.md.
 
 import './metrics.css';
+import { CANONICAL_VARIANT_ORDER, isRetiredGameSpec } from '@mistboard/game';
 import { variantNameKeyForSpecId } from './game-display.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
@@ -25,22 +26,16 @@ import {
 } from './stats-charts.js';
 import { buildWeeklyChart, type WeeklySeries } from './weekly-chart.js';
 
-// The curated set of live variants shown on the public /stats surface, matching
-// game-specs.ts CANONICAL_VARIANT_ORDER. Retired experiments and hidden
-// chess variants stay off the public breakdown
-// and chart filter. Admin /metrics applies the same shelf to the human split;
-// the engines block at the bottom lists every variant the bots played.
-const STATS_VARIANTS: readonly string[] = [
-  'xiangqi',
-  'banqi',
-  'jieqi',
-  'fortress-xiangqi',
-  'duck-xiangqi',
-  'dark-xiangqi',
-  'dark-chess',
-  'jungle',
-  'jungle-flip',
-];
+// The live variants shown on the public /stats surface: the public shelf
+// (game-specs.ts CANONICAL_VARIANT_ORDER) minus anything retired, derived so a
+// launch or a retirement moves /stats with it. A hand list here once missed
+// atomic xiangqi for weeks. Retired variants stay off the breakdown and chart
+// filter; their games still count in the headline total, which the breakdown
+// says in a note. Admin /metrics applies the same shelf to the human split; the
+// engines block at the bottom lists every variant the bots played.
+const STATS_VARIANTS: readonly string[] = CANONICAL_VARIANT_ORDER.filter(
+  (id) => !isRetiredGameSpec(id),
+);
 
 type LiveStats = { playing: number; online: number };
 
@@ -174,7 +169,15 @@ async function mountPublicStats(root: HTMLElement): Promise<void> {
     .filter((v) => STATS_VARIANTS.includes(v.variant))
     .map((v) => ({ label: variantPublicName(v.variant, locale), count: v.count }));
   if (variantEntries.length > 0) {
-    parts.push(buildBreakdownSection(t('stats.byVariant', {}, locale), variantEntries));
+    const variantSection = buildBreakdownSection(t('stats.byVariant', {}, locale), variantEntries);
+    const listed = variantEntries.reduce((sum, entry) => sum + entry.count, 0);
+    if (listed < publicStats.totalCompletedGames) {
+      const note = document.createElement('p');
+      note.className = 'stats-breakdown-note';
+      note.textContent = t('stats.byVariantRetiredNote', {}, locale);
+      variantSection.append(note);
+    }
+    parts.push(variantSection);
   }
   parts.push(
     buildBreakdownSection(
