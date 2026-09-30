@@ -38,6 +38,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-01',
+    kind: 'release',
+    headline: 'Jieqi now has eight bot levels.',
+    body: 'Until now every jieqi game against the computer was against Pikafish at full strength, and since August 23 people have beaten it 14 times in 596 games. Levels 1 to 7 are new and easier; Level 8 is the bot you know. The post walks through how the 14 were won, each game opening at the moment it turned.',
+    href: '/blog/jieqi-bot-wins',
+    cta: 'Read the post',
+  },
+  {
     date: '2026-09-30',
     kind: 'status',
     headline: '1,000 games played on Mistboard.',

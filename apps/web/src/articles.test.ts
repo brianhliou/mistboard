@@ -49,6 +49,9 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
+      // The jieqi bot's record and the games people won, scheduled for
+      // 2026-10-01 (DEV shows it early for review).
+      '/blog/jieqi-bot-wins',
       // The 1,000-games milestone post, dated the day the count crossed.
       '/blog/one-thousand-games',
       // The second player page, published 2026-09-25.

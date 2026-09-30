@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-01 (jieqi bot levels) ── 电脑 / 级 / 回合 follow the jieqi-bot-wins article.
+  'Jieqi now has eight bot levels.': '揭棋电脑现在有八个级别。',
+  'Until now every jieqi game against the computer was against Pikafish at full strength, and since August 23 people have beaten it 14 times in 596 games. Levels 1 to 7 are new and easier; Level 8 is the bot you know. The post walks through how the 14 were won, each game opening at the moment it turned.':
+    '以前在这里和电脑下揭棋，对手一直是全力的皮卡鱼；8 月 23 日以来，棋友们在 596 盘中赢了它 14 盘。第 1 到第 7 级是新增的、更容易的级别，第 8 级就是大家熟悉的那个电脑。文章逐一讲解这 14 盘是怎么赢的，每盘都从转折的那一刻开始。',
   // ── 2026-09-30 (1,000 games) ── 揭棋 follows variant.jieqi.name.
   '1,000 games played on Mistboard.': 'Mistboard 上已经下完了 1,000 盘棋。',
   'Since June 1, people have finished 1,000 games here, nearly 800 of them in September, and jieqi leads by far. Thank you for playing, for the bug reports, and for supporting the site. Ideas go on the forum; anything private goes through the Contact page.':
@@ -390,6 +394,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-01 (jieqi bot levels) ── 電腦 / 級 / 回合 follow the jieqi-bot-wins article.
+  'Jieqi now has eight bot levels.': '揭棋電腦現在有八個級別。',
+  'Until now every jieqi game against the computer was against Pikafish at full strength, and since August 23 people have beaten it 14 times in 596 games. Levels 1 to 7 are new and easier; Level 8 is the bot you know. The post walks through how the 14 were won, each game opening at the moment it turned.':
+    '以前在這裡和電腦下揭棋，對手一直是全力的皮卡魚；8 月 23 日以來，棋友們在 596 盤中贏了它 14 盤。第 1 到第 7 級是新增的、更容易的級別，第 8 級就是大家熟悉的那個電腦。文章逐一講解這 14 盤是怎麼贏的，每盤都從轉折的那一刻開始。',
   // ── 2026-09-30 (1,000 games) ── 揭棋 follows variant.jieqi.name.
   '1,000 games played on Mistboard.': 'Mistboard 上已經下完了 1,000 盤棋。',
   'Since June 1, people have finished 1,000 games here, nearly 800 of them in September, and jieqi leads by far. Thank you for playing, for the bug reports, and for supporting the site. Ideas go on the forum; anything private goes through the Contact page.':

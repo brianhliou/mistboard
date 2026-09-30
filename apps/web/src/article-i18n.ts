@@ -32,6 +32,10 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-09-30, not native-reviewed, locked with its English
+  // copy, which publishes in the same release. Jieqi's readers are mostly
+  // Chinese-speaking, so the zh pages ship with the English one.
+  'jieqi-bot-wins',
   // Machine-drafted 2026-09-21, not native-reviewed, locked the day the English
   // copy published. First player page; the xiangqi terms follow the champions
   // and world-title dictionaries (仙人指路, 飞相, 中炮, 车马炮).
@@ -135,6 +139,95 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // jieqi-bot-wins: machine-drafted 2026-09-30, not native-reviewed.
+  'Fourteen wins against our jieqi bot': '战胜我们揭棋电脑的 14 盘棋',
+  'Beating the Pikafish jieqi bot: 14 wins in 596 games': '战胜皮卡鱼揭棋电脑：596 盘中的 14 胜',
+  'Since August 23, people have played our jieqi bot 596 times and beaten it 14 times. Here is how those games were won, and seven new levels for everyone else.':
+    '8 月 23 日以来，棋友们和我们的揭棋电脑下了 596 盘，赢了 14 盘。本文讲这些棋是怎么赢的，也介绍为大家新增的七个级别。',
+  'If you have played [jieqi](/rules/jieqi) against the computer here, you have been playing Pikafish at full strength. Until this week it was the only jieqi bot we had.':
+    '如果你在这里和电脑下过[揭棋](/rules/jieqi)，你面对的一直是全力的皮卡鱼。直到本周，它都是我们唯一的揭棋电脑。',
+  'Since August 23 it has played 596 games against more than 60 people and lost 16 of them. Two of those losses were our fault: once the engine timed out and the bot resigned, and once it walked into a mate its search could not see. That leaves 14 games that people won outright, about one in 42.':
+    '8 月 23 日以来，它和 60 多位棋友下了 596 盘，输了 16 盘。其中两盘是我们的问题：一次是引擎超时、电脑认输，一次是它走进了搜索看不到的杀棋。剩下的 14 盘是棋友实打实赢下来的，大约每 42 盘赢一盘。',
+  'That is a hard wall to learn against, so the ladder now has seven easier levels below it. The rest of this page is about the 14 wins, because they show where the top level can be beaten.':
+    '这样的对手很难拿来练棋，所以现在它下面多了七个更容易的级别。本文其余部分讲这 14 盘胜局，因为它们说明了最高级别可以在哪里被击败。',
+  'Play jieqi': '下揭棋',
+  'See all levels': '查看所有级别',
+  'Eight levels': '八个级别',
+  'Levels 1 to 7 are the same engine choosing among its top few moves, with more room for error at the lower levels. Level 8 is the bot you have been playing. We set each level by playing the bots against each other and against a player that moves at random, so every step up is measured. The ratings are on the [bots page](/bots).':
+    '第 1 到第 7 级是同一个引擎，在它最看好的几步棋里挑选，级别越低，出错的余地越大。第 8 级就是你一直在下的那个电脑。我们让这些电脑互相对弈，也和一个随机走棋的对手对弈，以此确定每个级别，所以每升一级都有实测数据。等级分见[电脑对手页面](/bots)。',
+  'If you have played jieqi here before, you were playing Level 8.':
+    '如果你以前在这里下过揭棋，你下的就是第 8 级。',
+  'How the fourteen were won': '这 14 盘是怎么赢的',
+  "Five of the 14 ended in stalemate. In jieqi, as in xiangqi, a side with no legal move loses, so trapping the bot's general with nowhere to go is a win even when it is not in check. In every one of them the bot had seen the loss coming several moves earlier, and every move it had left lost. The game below opens at move 11, just before the turn: the bot is sure it is well ahead, and one move later it is lost. Step forward with the arrows to reach the stalemate.":
+    '14 盘中有 5 盘以困毙结束。揭棋和象棋一样，无子可走的一方判负，所以即使没有将军，把电脑的老将困得无路可走也算赢。这几盘里，电脑都提前好几步就看到了败局，它剩下的每一步都是输棋。下面这盘从第 11 回合开始，正是转折之前：电脑确信自己大优，一步之后就已经输了。用箭头往后走，就能看到困毙。',
+  "Jieqi: a guest stalemates the bot's lone general after 63 moves":
+    '揭棋：一位访客在第 63 回合困毙电脑的孤帅',
+  'Five of the wins turned right after the bot moved one of its own face-down pieces. A hidden piece is revealed when it moves, and the bot tends to value that move as if the reveal will go its way. This game opens at move 15 with the bot well ahead and about to reveal a piece. The reply takes a cannon, and within a few moves the lead is gone.':
+    '有 5 盘的转折，就发生在电脑走动自己的一个暗子之后。暗子一动就会翻开，而电脑给这步棋估值时，往往当作翻出来的子会对自己有利。这盘从第 15 回合开始，电脑大优，正准备翻开一个子。对方的应着吃掉一门炮，几步之后优势就没了。',
+  "Jieqi: a guest punishes the bot's reveal and mates in 32 moves":
+    '揭棋：一位访客抓住电脑翻子的破绽，32 回合将死',
+  'Not every win needed a gamble from the bot. @tonghuiqu has four of the 14, and in the longest of them the game turned on ordinary moves, not a lucky reveal. It opens at move 19 with the game level; over the next 20 moves @tonghuiqu gains ground one step at a time, and mates on move 68.':
+    '并不是每一盘都靠电脑冒险。@tonghuiqu 赢了其中 4 盘，最长的那一盘靠的是寻常着法，而不是翻子的运气。这盘从第 19 回合开始，局面均势；接下来的 20 回合里，@tonghuiqu 一步一步扩大优势，第 68 回合将死。',
+  'Jieqi: @tonghuiqu outplays the bot over 68 moves': '揭棋：@tonghuiqu 用 68 回合下赢电脑',
+  'The winners were also patient. Five of the 14 went past 50 moves, and in this one the lead changed hands twice. It opens at move 42, with the bot ahead for the second time and about to reveal a piece. The player takes over from there and finishes it 38 moves later.':
+    '赢家也都很有耐心。14 盘中有 5 盘超过 50 回合，这一盘的优势还两度易手。它从第 42 回合开始，电脑第二次占优，正准备翻开一个子。棋友从这里扭转局面，38 回合后赢下这盘棋。',
+  'Jieqi: a guest wins an 80-move game after the lead changes twice':
+    '揭棋：优势两度易手后，一位访客赢下 80 回合的长局',
+  'All fourteen': '全部 14 盘',
+  Side: '执子',
+  'Moves played': '回合数',
+  Finish: '结局',
+  'Every game a person won against the full-strength bot from August 23 to September 29. The finish links to the game. Guests are not named.':
+    '8 月 23 日至 9 月 29 日期间，棋友战胜全力电脑的每一盘棋。点结局可以打开对局。访客不列名字。',
+  'Before August 23': '8 月 23 日之前',
+  'Until August 23 the jieqi bot ran on a quicker setting than we meant it to, searching for a fraction of a second a move. It won 13 games in a row in early August anyway. Then it lost nine in three days, most likely all to one player, which is how we noticed. We moved it to full strength that night, and none of those nine games are counted above.':
+    '8 月 23 日之前，揭棋电脑误用了一个比我们原意更快的设置，每步只搜索不到一秒。即便如此，它在 8 月上旬还是连赢了 13 盘。随后它三天里输了 9 盘，很可能都是输给同一位棋手，我们这才发现问题。当晚我们就把它调回全力，这 9 盘都没有计入上面的统计。',
+  'What is next': '接下来',
+  'We are testing a stronger jieqi engine. If it holds up, it goes in above Level 8, and we will write up how it does against positions like these.':
+    '我们正在测试一个更强的揭棋引擎。如果它经得起测试，就会排在第 8 级之上，我们也会写一写它在类似局面中的表现。',
+  'Jieqi rules': '揭棋规则',
+  Guest: '访客',
+  '@tonghuiqu': '@tonghuiqu',
+  '@boliquangtri': '@boliquangtri',
+  'Sep 4': '9月4日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_9fe33497-3ace-4465-bb15-e0736c7438ad)':
+    '[将死](/watch?channel=jieqi&game=jq_9fe33497-3ace-4465-bb15-e0736c7438ad)',
+  'Sep 13': '9月13日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_4b7e09b1-5056-4a0c-b6b1-61ed12ff03d7)':
+    '[将死](/watch?channel=jieqi&game=jq_4b7e09b1-5056-4a0c-b6b1-61ed12ff03d7)',
+  'Sep 17': '9月17日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_bed23125-b330-41f6-b88d-6fb750cb3a19)':
+    '[将死](/watch?channel=jieqi&game=jq_bed23125-b330-41f6-b88d-6fb750cb3a19)',
+  'Sep 19': '9月19日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_edca0a1c-eff0-47cb-bc19-51b441eb0859)':
+    '[困毙](/watch?channel=jieqi&game=jq_edca0a1c-eff0-47cb-bc19-51b441eb0859)',
+  '[Checkmate](/watch?channel=jieqi&game=jq_f5ab7428-e3b0-4389-8a9f-9d552665017a)':
+    '[将死](/watch?channel=jieqi&game=jq_f5ab7428-e3b0-4389-8a9f-9d552665017a)',
+  'Sep 21': '9月21日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_8ae5fc9e-6eb1-4b9f-9e75-2485137db1f5)':
+    '[困毙](/watch?channel=jieqi&game=jq_8ae5fc9e-6eb1-4b9f-9e75-2485137db1f5)',
+  '[Stalemate](/watch?channel=jieqi&game=jq_53ead5f3-3c1b-4e7d-8b30-896cce9ab8ff)':
+    '[困毙](/watch?channel=jieqi&game=jq_53ead5f3-3c1b-4e7d-8b30-896cce9ab8ff)',
+  'Sep 22': '9月22日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_3c0ae446-92b4-457e-b9eb-8da7dbef9e7b)':
+    '[困毙](/watch?channel=jieqi&game=jq_3c0ae446-92b4-457e-b9eb-8da7dbef9e7b)',
+  'Sep 23': '9月23日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_1895343d-5933-4361-84d0-21d8d06f0e5a)':
+    '[将死](/watch?channel=jieqi&game=jq_1895343d-5933-4361-84d0-21d8d06f0e5a)',
+  'Sep 24': '9月24日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_207d4371-1376-4cc9-a982-e27f4ee40e2c)':
+    '[将死](/watch?channel=jieqi&game=jq_207d4371-1376-4cc9-a982-e27f4ee40e2c)',
+  'Sep 25': '9月25日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_36a1267e-1a57-4526-a615-365ab2592edd)':
+    '[困毙](/watch?channel=jieqi&game=jq_36a1267e-1a57-4526-a615-365ab2592edd)',
+  'Sep 27': '9月27日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_823995d4-feed-4d7d-b258-367664bb0dc2)':
+    '[将死](/watch?channel=jieqi&game=jq_823995d4-feed-4d7d-b258-367664bb0dc2)',
+  'Sep 29': '9月29日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)':
+    '[将死](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)',
+  '[Checkmate](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)':
+    '[将死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   "A related blind spot involves the general. Only a soldier, the other general or a cannon's jump can take it, so a boxed-in general is in danger from one piece at a time, and the engine is slow to make room for one cornered. It will sometimes march a piece off to the far side of the board while a lone enemy soldier walks up and traps it. Same gap as the draw above: the evaluation has no real sense of a slow, quiet threat building several moves away.":
     '另一个相关的盲点跟将有关。只有卒、对方的将或炮的跳吃拿得下它，所以被围住的将一次只怕一种子，而引擎很慢才会替被逼到角落的将腾出空间。它有时候会把一颗子调到棋盘另一头，同时一颗孤零零的敌方卒走过来把它困死。跟上面那个和棋是同一个缺口：这套评估函数对于好几步之外慢慢成形的安静威胁，没有什么感觉。',
   "There's an upshot for you here. If you're losing on material, you're not necessarily lost: herd one of its strong pieces into a perpetual chase, and MistyBanqi may walk into the draw it can't see it should decline. It happens often enough to measure: in 200 games of the engine against itself, [one in six ended in a draw](/blog/banqi-statistics), and half of those had passed through a winning position.":
@@ -3002,6 +3095,95 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // jieqi-bot-wins: machine-drafted 2026-09-30, not native-reviewed.
+  'Fourteen wins against our jieqi bot': '戰勝我們揭棋電腦的 14 盤棋',
+  'Beating the Pikafish jieqi bot: 14 wins in 596 games': '戰勝皮卡魚揭棋電腦：596 盤中的 14 勝',
+  'Since August 23, people have played our jieqi bot 596 times and beaten it 14 times. Here is how those games were won, and seven new levels for everyone else.':
+    '8 月 23 日以來，棋友們和我們的揭棋電腦下了 596 盤，贏了 14 盤。本文講這些棋是怎麼贏的，也介紹為大家新增的七個級別。',
+  'If you have played [jieqi](/rules/jieqi) against the computer here, you have been playing Pikafish at full strength. Until this week it was the only jieqi bot we had.':
+    '如果你在這裡和電腦下過[揭棋](/rules/jieqi)，你面對的一直是全力的皮卡魚。直到本週，它都是我們唯一的揭棋電腦。',
+  'Since August 23 it has played 596 games against more than 60 people and lost 16 of them. Two of those losses were our fault: once the engine timed out and the bot resigned, and once it walked into a mate its search could not see. That leaves 14 games that people won outright, about one in 42.':
+    '8 月 23 日以來，它和 60 多位棋友下了 596 盤，輸了 16 盤。其中兩盤是我們的問題：一次是引擎逾時、電腦認輸，一次是它走進了搜尋看不到的殺棋。剩下的 14 盤是棋友實打實贏下來的，大約每 42 盤贏一盤。',
+  'That is a hard wall to learn against, so the ladder now has seven easier levels below it. The rest of this page is about the 14 wins, because they show where the top level can be beaten.':
+    '這樣的對手很難拿來練棋，所以現在它下面多了七個更容易的級別。本文其餘部分講這 14 盤勝局，因為它們說明了最高級別可以在哪裡被擊敗。',
+  'Play jieqi': '下揭棋',
+  'See all levels': '查看所有級別',
+  'Eight levels': '八個級別',
+  'Levels 1 to 7 are the same engine choosing among its top few moves, with more room for error at the lower levels. Level 8 is the bot you have been playing. We set each level by playing the bots against each other and against a player that moves at random, so every step up is measured. The ratings are on the [bots page](/bots).':
+    '第 1 到第 7 級是同一個引擎，在它最看好的幾步棋裡挑選，級別越低，出錯的餘地越大。第 8 級就是你一直在下的那個電腦。我們讓這些電腦互相對弈，也和一個隨機走棋的對手對弈，以此確定每個級別，所以每升一級都有實測數據。等級分見[電腦對手頁面](/bots)。',
+  'If you have played jieqi here before, you were playing Level 8.':
+    '如果你以前在這裡下過揭棋，你下的就是第 8 級。',
+  'How the fourteen were won': '這 14 盤是怎麼贏的',
+  "Five of the 14 ended in stalemate. In jieqi, as in xiangqi, a side with no legal move loses, so trapping the bot's general with nowhere to go is a win even when it is not in check. In every one of them the bot had seen the loss coming several moves earlier, and every move it had left lost. The game below opens at move 11, just before the turn: the bot is sure it is well ahead, and one move later it is lost. Step forward with the arrows to reach the stalemate.":
+    '14 盤中有 5 盤以困斃結束。揭棋和象棋一樣，無子可走的一方判負，所以即使沒有將軍，把電腦的老將困得無路可走也算贏。這幾盤裡，電腦都提前好幾步就看到了敗局，它剩下的每一步都是輸棋。下面這盤從第 11 回合開始，正是轉折之前：電腦確信自己大優，一步之後就已經輸了。用箭頭往後走，就能看到困斃。',
+  "Jieqi: a guest stalemates the bot's lone general after 63 moves":
+    '揭棋：一位訪客在第 63 回合困斃電腦的孤帥',
+  'Five of the wins turned right after the bot moved one of its own face-down pieces. A hidden piece is revealed when it moves, and the bot tends to value that move as if the reveal will go its way. This game opens at move 15 with the bot well ahead and about to reveal a piece. The reply takes a cannon, and within a few moves the lead is gone.':
+    '有 5 盤的轉折，就發生在電腦走動自己的一個暗子之後。暗子一動就會翻開，而電腦給這步棋估值時，往往當作翻出來的子會對自己有利。這盤從第 15 回合開始，電腦大優，正準備翻開一個子。對方的應著吃掉一門炮，幾步之後優勢就沒了。',
+  "Jieqi: a guest punishes the bot's reveal and mates in 32 moves":
+    '揭棋：一位訪客抓住電腦翻子的破綻，32 回合將死',
+  'Not every win needed a gamble from the bot. @tonghuiqu has four of the 14, and in the longest of them the game turned on ordinary moves, not a lucky reveal. It opens at move 19 with the game level; over the next 20 moves @tonghuiqu gains ground one step at a time, and mates on move 68.':
+    '並不是每一盤都靠電腦冒險。@tonghuiqu 贏了其中 4 盤，最長的那一盤靠的是尋常著法，而不是翻子的運氣。這盤從第 19 回合開始，局面均勢；接下來的 20 回合裡，@tonghuiqu 一步一步擴大優勢，第 68 回合將死。',
+  'Jieqi: @tonghuiqu outplays the bot over 68 moves': '揭棋：@tonghuiqu 用 68 回合下贏電腦',
+  'The winners were also patient. Five of the 14 went past 50 moves, and in this one the lead changed hands twice. It opens at move 42, with the bot ahead for the second time and about to reveal a piece. The player takes over from there and finishes it 38 moves later.':
+    '贏家也都很有耐心。14 盤中有 5 盤超過 50 回合，這一盤的優勢還兩度易手。它從第 42 回合開始，電腦第二次佔優，正準備翻開一個子。棋友從這裡扭轉局面，38 回合後贏下這盤棋。',
+  'Jieqi: a guest wins an 80-move game after the lead changes twice':
+    '揭棋：優勢兩度易手後，一位訪客贏下 80 回合的長局',
+  'All fourteen': '全部 14 盤',
+  Side: '執子',
+  'Moves played': '回合數',
+  Finish: '結局',
+  'Every game a person won against the full-strength bot from August 23 to September 29. The finish links to the game. Guests are not named.':
+    '8 月 23 日至 9 月 29 日期間，棋友戰勝全力電腦的每一盤棋。點結局可以打開對局。訪客不列名字。',
+  'Before August 23': '8 月 23 日之前',
+  'Until August 23 the jieqi bot ran on a quicker setting than we meant it to, searching for a fraction of a second a move. It won 13 games in a row in early August anyway. Then it lost nine in three days, most likely all to one player, which is how we noticed. We moved it to full strength that night, and none of those nine games are counted above.':
+    '8 月 23 日之前，揭棋電腦誤用了一個比我們原意更快的設定，每步只搜尋不到一秒。即便如此，它在 8 月上旬還是連贏了 13 盤。隨後它三天裡輸了 9 盤，很可能都是輸給同一位棋手，我們這才發現問題。當晚我們就把它調回全力，這 9 盤都沒有計入上面的統計。',
+  'What is next': '接下來',
+  'We are testing a stronger jieqi engine. If it holds up, it goes in above Level 8, and we will write up how it does against positions like these.':
+    '我們正在測試一個更強的揭棋引擎。如果它經得起測試，就會排在第 8 級之上，我們也會寫一寫它在類似局面中的表現。',
+  'Jieqi rules': '揭棋規則',
+  Guest: '訪客',
+  '@tonghuiqu': '@tonghuiqu',
+  '@boliquangtri': '@boliquangtri',
+  'Sep 4': '9月4日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_9fe33497-3ace-4465-bb15-e0736c7438ad)':
+    '[將死](/watch?channel=jieqi&game=jq_9fe33497-3ace-4465-bb15-e0736c7438ad)',
+  'Sep 13': '9月13日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_4b7e09b1-5056-4a0c-b6b1-61ed12ff03d7)':
+    '[將死](/watch?channel=jieqi&game=jq_4b7e09b1-5056-4a0c-b6b1-61ed12ff03d7)',
+  'Sep 17': '9月17日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_bed23125-b330-41f6-b88d-6fb750cb3a19)':
+    '[將死](/watch?channel=jieqi&game=jq_bed23125-b330-41f6-b88d-6fb750cb3a19)',
+  'Sep 19': '9月19日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_edca0a1c-eff0-47cb-bc19-51b441eb0859)':
+    '[困斃](/watch?channel=jieqi&game=jq_edca0a1c-eff0-47cb-bc19-51b441eb0859)',
+  '[Checkmate](/watch?channel=jieqi&game=jq_f5ab7428-e3b0-4389-8a9f-9d552665017a)':
+    '[將死](/watch?channel=jieqi&game=jq_f5ab7428-e3b0-4389-8a9f-9d552665017a)',
+  'Sep 21': '9月21日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_8ae5fc9e-6eb1-4b9f-9e75-2485137db1f5)':
+    '[困斃](/watch?channel=jieqi&game=jq_8ae5fc9e-6eb1-4b9f-9e75-2485137db1f5)',
+  '[Stalemate](/watch?channel=jieqi&game=jq_53ead5f3-3c1b-4e7d-8b30-896cce9ab8ff)':
+    '[困斃](/watch?channel=jieqi&game=jq_53ead5f3-3c1b-4e7d-8b30-896cce9ab8ff)',
+  'Sep 22': '9月22日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_3c0ae446-92b4-457e-b9eb-8da7dbef9e7b)':
+    '[困斃](/watch?channel=jieqi&game=jq_3c0ae446-92b4-457e-b9eb-8da7dbef9e7b)',
+  'Sep 23': '9月23日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_1895343d-5933-4361-84d0-21d8d06f0e5a)':
+    '[將死](/watch?channel=jieqi&game=jq_1895343d-5933-4361-84d0-21d8d06f0e5a)',
+  'Sep 24': '9月24日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_207d4371-1376-4cc9-a982-e27f4ee40e2c)':
+    '[將死](/watch?channel=jieqi&game=jq_207d4371-1376-4cc9-a982-e27f4ee40e2c)',
+  'Sep 25': '9月25日',
+  '[Stalemate](/watch?channel=jieqi&game=jq_36a1267e-1a57-4526-a615-365ab2592edd)':
+    '[困斃](/watch?channel=jieqi&game=jq_36a1267e-1a57-4526-a615-365ab2592edd)',
+  'Sep 27': '9月27日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_823995d4-feed-4d7d-b258-367664bb0dc2)':
+    '[將死](/watch?channel=jieqi&game=jq_823995d4-feed-4d7d-b258-367664bb0dc2)',
+  'Sep 29': '9月29日',
+  '[Checkmate](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)':
+    '[將死](/watch?channel=jieqi&game=jq_2538c964-9d13-4a25-98ac-bbe4639f12dd)',
+  '[Checkmate](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)':
+    '[將死](/watch?channel=jieqi&game=jq_dee4dda3-b78b-4c02-954d-01b954df94f6)',
   // cao-yanlei (zh-Hant), machine-drafted 2026-09-25, not native-reviewed. Mainland
   // players' names stay in one form in both scripts, as on the yin-sheng page.
   'His 2026 record by event.': '他 2026 年各項賽事的戰績。',

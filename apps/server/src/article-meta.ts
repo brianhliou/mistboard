@@ -275,6 +275,12 @@ export const ARTICLE_META: Record<
     description:
       '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.',
   },
+  'jieqi-bot-wins': {
+    title: 'Fourteen wins against our jieqi bot',
+    kind: 'article',
+    description:
+      'Since August 23, people have played our jieqi bot 596 times and beaten it 14 times. Here is how those games were won, and seven new levels for everyone else.',
+  },
   'one-thousand-games': {
     title: '1,000 games played',
     kind: 'article',

@@ -15,6 +15,10 @@ import { articles } from './articles-data.js';
 // single newest missed an article published a day before another one.
 const KEPT_OFF: Array<{ slug: string; why: string }> = [
   {
+    slug: 'jieqi-bot-wins',
+    why: 'announces the jieqi ladder through the bot record; the News box carries it and the row stays the fixed eight',
+  },
+  {
     slug: 'one-thousand-games',
     why: 'a site milestone, not something to read to play better; the News box carries it',
   },
