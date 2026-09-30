@@ -2328,16 +2328,16 @@ const ZH_HANS: Record<string, string> = {
     '所以鸭子既能挡路也能防守，而且是个难受的防守者：守住一路，等于每一回合都要把鸭子押在那里。',
   'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.':
     '一盘引擎全力对局，每步 8 秒。看鸭子，别看棋子：全局 120 着里有 30 着是炮隔着它开火，接近尾声时红方正用它守住一路，少了这一路帅就活不成。',
-  'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
-    '这盘棋是从同样条件下的 8 盘里挑出来的，因为鸭子在其中出力最多。8 盘里有 7 盘下完；这 7 盘都收在[配套研究](/study/uMbk76wd)里，一盘一章，并注明每盘僵持了多久、鸭子在做什么。',
+  'This game was chosen from 8 played the same way, for how much the duck does in it. It and five more engine games are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
+    '这盘棋是从同样条件下的 8 盘里挑出来的，因为鸭子在其中出力最多。它和另外五盘引擎对局都收在[配套研究](/study/uMbk76wd)里，一盘一章，并注明每盘僵持了多久、鸭子在做什么。',
   'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
     '吃掉对方将帅即获胜。无合法回合可走的一方判负，这就是象棋对困毙的处理，与鸭子国际象棋正好相反：在那边，无步可走的一方获胜。对局同样可以因超时、认输或弃局结束，和这里的其他棋一样。',
   'Two rules draw. The third occurrence of the same position is a draw, and the duck’s point is part of the position, since where it stands changes what every piece can do. Sixty moves by each player without a capture is also a draw, which is xiangqi’s own no-progress limit. Duck Chess never defined draw rules, so this half of the ruleset had to come from the xiangqi side.':
     '有两条和棋规则。同一局面第三次出现即为和棋，而鸭子所在的点也算局面的一部分，因为它站在哪里会改变每个棋子能做什么。双方各走六十回合而无吃子也判和，这是象棋自己的无进展上限。鸭子国际象棋从未定过和棋规则，所以这一半规则只能来自象棋这一边。',
-  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.':
-    '可以和八个强度的引擎对战，也可以和朋友下。上面那盘示例对局是配套研究里七盘中的一盘。',
+  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of six in the companion study.':
+    '可以和八个强度的引擎对战，也可以和朋友下。上面那盘示例对局是配套研究里六盘中的一盘。',
   'Play Duck Xiangqi': '下鸭子象棋',
-  'Seven engine games': '七盘引擎对局',
+  'Six engine games': '六盘引擎对局',
   // ── puzzles-with-more-than-one-solution (2026-09-11) ──
   // Machine-drafted, not native-reviewed, per the standing decision above. Terms follow the mining explainer: 题目, 漏着, 着法, 半回合, 复核, 厘兵. 评分器 for the grader, 挖掘器 for the miner.
   'Puzzles with more than one solution': '有不止一个答案的题目',
@@ -2437,8 +2437,8 @@ const ZH_HANS: Record<string, string> = {
     '双方共用一只鸭子的象棋。规则一分钟就能读完。决定你第一盘胜负的东西要花更久，首先是这一条：你放下的鸭子是对手的炮架，永远不是你的。',
   'Duck Xiangqi is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
     '鸭子象棋是双方共用一只鸭子的象棋：你走一着普通的象棋着法，然后把鸭子放到任意一个空点上。它挡住一切，不属于任何一方，也不能被吃掉。规则大约一分钟就能读完。',
-  'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the seven engine games published with the variant and on measurements of the engine itself.':
-    '规则在规则页上。这篇写的是决定你第一盘胜负的东西，先从人人都会中招的那一条说起：看起来最碍事的鸭子落点，往往正是给对手的炮装上炮架的那个点。这些心得来自随这个变体一起公布的七盘引擎对局，以及对引擎本身的测量。',
+  'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the six engine games published with the variant and on measurements of the engine itself.':
+    '规则在规则页上。这篇写的是决定你第一盘胜负的东西，先从人人都会中招的那一条说起：看起来最碍事的鸭子落点，往往正是给对手的炮装上炮架的那个点。这些心得来自随这个变体一起公布的六盘引擎对局，以及对引擎本身的测量。',
   'A turn is a move plus a duck placement': '一回合是一着棋加一次放鸭',
   'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.':
     '每一回合你先走一个棋子，再放鸭子。走子就是象棋，你已经知道该怎么想。放鸭才是新的部分，第一盘棋往往就输在这里。',
@@ -2456,8 +2456,8 @@ const ZH_HANS: Record<string, string> = {
   'There is no check and no checkmate': '没有将军，也没有将死',
   'You may leave your general attacked, move it onto an attacked point, and nothing on the board or in the interface says a word. Your opponent wins by actually taking it, and the game ends there.':
     '你可以让将帅处于被攻击状态，也可以把它走到被攻击的点上，棋盘和界面都不会说一个字。对手通过真的吃掉它来获胜，棋局到此结束。',
-  'This is not a theoretical risk. All seven of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
-    '这不是理论上的风险。我们发布的七盘引擎对局全部以将帅被直接吃掉告终。没有一盘走到认输、重复局面或困毙：每一盘的结束都是因为有人能吃将帅，而且吃了。每一回合都自己数一遍威胁，包括鸭子刚刚打开的那些。',
+  'This is not a theoretical risk. All six of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
+    '这不是理论上的风险。我们发布的六盘引擎对局全部以将帅被直接吃掉告终。没有一盘走到认输、重复局面或困毙：每一盘的结束都是因为有人能吃将帅，而且吃了。每一回合都自己数一遍威胁，包括鸭子刚刚打开的那些。',
   'The duck must move every turn': '鸭子每回合都必须移动',
   'A duck jamming a horse’s leg, filling an elephant’s eye or holding a file is doing that job for exactly one turn. Then it is your problem again: on your next turn you have to pick it up and put it somewhere else.':
     '蹩住马腿、塞住象眼或守住一条纵线的鸭子，只能干这件事恰好一个回合。然后它又成了你的问题：下一回合你必须把它拿起来放到别处。',
@@ -2468,16 +2468,16 @@ const ZH_HANS: Record<string, string> = {
     '机器人是打过补丁的 Fairy-Stockfish，回合里走子的那一半它走得很正经。放鸭的那一半它是在猜。这是测量出来的，不是猜测。',
   'We scored every legal duck placement after the engine’s own opening move, 58 of them, and the engine returned an identical evaluation for all 58. Raising the search from 300,000 nodes to four million changed the number but not the verdict: still identical across every placement. Fairy-Stockfish has no evaluation term for a duck or a wall, so nothing in its scoring can prefer one point to another, and the placement it reports is whatever its move ordering happened to surface.':
     '我们对引擎自己开局着法之后的每一种合法放鸭位置打分，共 58 种，引擎对这 58 种给出了完全相同的评估值。把搜索从 300,000 节点提高到四百万，数值变了，结论没变：每一种落点依然完全相同。Fairy-Stockfish 的评估里没有关于鸭子或墙的项，所以它的打分不可能偏好任何一个点，它报出的落点只是着法排序碰巧先冒出来的那一个。',
-  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all seven.':
-    '这让它在象棋的那一半是个真正的对手，在鸭子的那一半却是个糟糕的老师。如果你觉得它的落点很随意，那是因为确实如此。这些对局的走子部分仍然值得一读，下面的研习里有全部七盘。',
+  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all six.':
+    '这让它在象棋的那一半是个真正的对手，在鸭子的那一半却是个糟糕的老师。如果你觉得它的落点很随意，那是因为确实如此。这些对局的走子部分仍然值得一读，下面的研习里有全部六盘。',
   'The generals may face each other': '将帅可以对面',
   'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.':
     '在普通象棋里这是禁止的。这里一旦没有了将军，这条禁令就失去了意义，所以飞将只是一次结束棋局的吃子。它是又一个没有任何警告的威胁，也是鸭子可以打开或关闭的又一条线路。',
-  'Games run 120 to 229 plies': '对局长度在 120 到 229 步之间',
-  'That is the range across the seven engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
-    '这是七盘引擎对局的范围。请把它当成一盘完整的棋而不是小玩意，并据此选择用时：这里提供 5+5 和 10+5 两种节奏，正是出于这个原因。',
-  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all seven engine games if you want to watch it played first.':
-    '八个引擎强度，或者找个朋友。规则页有带图解的完整规则，如果想先看看别人怎么下，研习里有全部七盘引擎对局。',
+  'Games run 120 to 249 plies': '对局长度在 120 到 249 步之间',
+  'That is the range across the six engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
+    '这是六盘引擎对局的范围。请把它当成一盘完整的棋而不是小玩意，并据此选择用时：这里提供 5+5 和 10+5 两种节奏，正是出于这个原因。',
+  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all six engine games if you want to watch it played first.':
+    '八个引擎强度，或者找个朋友。规则页有带图解的完整规则，如果想先看看别人怎么下，研习里有全部六盘引擎对局。',
   Rules: '规则',
   'FIRST: A LEGAL XIANGQI MOVE': '第一步：一着合法的象棋着法',
   'THEN: THE DUCK': '第二步：放鸭子',
@@ -4999,16 +4999,16 @@ const ZH_HANT: Record<string, string> = {
     '所以鴨子既能擋路也能防守，而且是個難受的防守者：守住一路，等於每一回合都要把鴨子押在那裡。',
   'An engine game at full strength, 8 seconds a move. Watch the duck rather than the pieces: a cannon is firing over it in 30 of the 120 plies, and near the end Red is using it to hold a file its general cannot survive without.':
     '一盤引擎全力對局，每步 8 秒。看鴨子，別看棋子：全局 120 著裡有 30 著是炮隔著它開火，接近尾聲時紅方正用它守住一路，少了這一路帥就活不成。',
-  'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
-    '這盤棋是從同樣條件下的 8 盤裡挑出來的，因為鴨子在其中出力最多。8 盤裡有 7 盤下完；這 7 盤都收在[配套研究](/study/uMbk76wd)裡，一盤一章，並註明每盤僵持了多久、鴨子在做什麼。',
+  'This game was chosen from 8 played the same way, for how much the duck does in it. It and five more engine games are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.':
+    '這盤棋是從同樣條件下的 8 盤裡挑出來的，因為鴨子在其中出力最多。它和另外五盤引擎對局都收在[配套研究](/study/uMbk76wd)裡，一盤一章，並註明每盤僵持了多久、鴨子在做什麼。',
   'Capturing the enemy general wins. A player with no legal turn loses, which is xiangqi’s answer to stalemate and the reverse of Duck Chess, where a player with no move wins. Games also end by timeout, resignation, or abandonment, the same as any other game here.':
     '吃掉對方將帥即獲勝。無合法回合可走的一方判負，這就是象棋對困斃的處理，與鴨子國際象棋正好相反：在那邊，無步可走的一方獲勝。對局同樣可以因超時、認輸或棄局結束，和這裡的其他棋一樣。',
   'Two rules draw. The third occurrence of the same position is a draw, and the duck’s point is part of the position, since where it stands changes what every piece can do. Sixty moves by each player without a capture is also a draw, which is xiangqi’s own no-progress limit. Duck Chess never defined draw rules, so this half of the ruleset had to come from the xiangqi side.':
     '有兩條和棋規則。同一局面第三次出現即為和棋，而鴨子所在的點也算局面的一部分，因為它站在哪裡會改變每個棋子能做什麼。雙方各走六十回合而無吃子也判和，這是象棋自己的無進展上限。鴨子國際象棋從未定過和棋規則，所以這一半規則只能來自象棋這一邊。',
-  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.':
-    '可以和八個強度的引擎對戰，也可以和朋友下。上面那盤示例對局是配套研究裡七盤中的一盤。',
+  'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of six in the companion study.':
+    '可以和八個強度的引擎對戰，也可以和朋友下。上面那盤示例對局是配套研究裡六盤中的一盤。',
   'Play Duck Xiangqi': '下鴨子象棋',
-  'Seven engine games': '七盤引擎對局',
+  'Six engine games': '六盤引擎對局',
   // ── puzzles-with-more-than-one-solution (2026-09-11) ──
   // Script conversion of the Simplified above, not an independent translation; ASCII token stream identical (the counts, dates, the two GitHub links).
   'Puzzles with more than one solution': '有不止一個答案的題目',
@@ -5107,8 +5107,8 @@ const ZH_HANT: Record<string, string> = {
     '雙方共用一隻鴨子的象棋。規則一分鐘就能讀完。決定你第一盤勝負的東西要花更久，首先是這一條：你放下的鴨子是對手的炮架，永遠不是你的。',
   'Duck Xiangqi is Chinese chess with one duck that both players share: you make an ordinary xiangqi move, then you put the duck on any empty point. It blocks everything, belongs to nobody, and cannot be captured. The rules take about a minute to read.':
     '鴨子象棋是雙方共用一隻鴨子的象棋：你走一著普通的象棋著法，然後把鴨子放到任意一個空點上。它擋住一切，不屬於任何一方，也不能被吃掉。規則大約一分鐘就能讀完。',
-  'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the seven engine games published with the variant and on measurements of the engine itself.':
-    '規則在規則頁上。這篇寫的是決定你第一盤勝負的東西，先從人人都會中招的那一條說起：看起來最礙事的鴨子落點，往往正是給對手的炮裝上炮架的那個點。這些心得來自隨這個變體一起公布的七盤引擎對局，以及對引擎本身的測量。',
+  'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the six engine games published with the variant and on measurements of the engine itself.':
+    '規則在規則頁上。這篇寫的是決定你第一盤勝負的東西，先從人人都會中招的那一條說起：看起來最礙事的鴨子落點，往往正是給對手的炮裝上炮架的那個點。這些心得來自隨這個變體一起公布的六盤引擎對局，以及對引擎本身的測量。',
   'A turn is a move plus a duck placement': '一回合是一著棋加一次放鴨',
   'Every turn you move a piece and then place the duck. The move is xiangqi and you already know how to think about it. The placement is the new game, and it is where first games are lost.':
     '每一回合你先走一個棋子，再放鴨子。走子就是象棋，你已經知道該怎麼想。放鴨才是新的部分，第一盤棋往往就輸在這裡。',
@@ -5126,8 +5126,8 @@ const ZH_HANT: Record<string, string> = {
   'There is no check and no checkmate': '沒有將軍，也沒有將死',
   'You may leave your general attacked, move it onto an attacked point, and nothing on the board or in the interface says a word. Your opponent wins by actually taking it, and the game ends there.':
     '你可以讓將帥處於被攻擊狀態，也可以把它走到被攻擊的點上，棋盤和介面都不會說一個字。對手通過真的吃掉它來獲勝，棋局到此結束。',
-  'This is not a theoretical risk. All seven of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
-    '這不是理論上的風險。我們發佈的七盤引擎對局全部以將帥被直接吃掉告終。沒有一盤走到認輸、重複局面或困斃：每一盤的結束都是因為有人能吃將帥，而且吃了。每一回合都自己數一遍威脅，包括鴨子剛剛打開的那些。',
+  'This is not a theoretical risk. All six of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.':
+    '這不是理論上的風險。我們發佈的六盤引擎對局全部以將帥被直接吃掉告終。沒有一盤走到認輸、重複局面或困斃：每一盤的結束都是因為有人能吃將帥，而且吃了。每一回合都自己數一遍威脅，包括鴨子剛剛打開的那些。',
   'The duck must move every turn': '鴨子每回合都必須移動',
   'A duck jamming a horse’s leg, filling an elephant’s eye or holding a file is doing that job for exactly one turn. Then it is your problem again: on your next turn you have to pick it up and put it somewhere else.':
     '蹩住馬腿、塞住象眼或守住一條縱線的鴨子，只能幹這件事恰好一個回合。然後它又成了你的問題：下一回合你必須把它拿起來放到別處。',
@@ -5138,16 +5138,16 @@ const ZH_HANT: Record<string, string> = {
     '機器人是打過修補程式的 Fairy-Stockfish，回合裡走子的那一半它走得很正經。放鴨的那一半它是在猜。這是測量出來的，不是猜測。',
   'We scored every legal duck placement after the engine’s own opening move, 58 of them, and the engine returned an identical evaluation for all 58. Raising the search from 300,000 nodes to four million changed the number but not the verdict: still identical across every placement. Fairy-Stockfish has no evaluation term for a duck or a wall, so nothing in its scoring can prefer one point to another, and the placement it reports is whatever its move ordering happened to surface.':
     '我們對引擎自己開局著法之後的每一種合法放鴨位置評分，共 58 種，引擎對這 58 種給出了完全相同的評估值。把搜尋從 300,000 節點提高到四百萬，數值變了，結論沒變：每一種落點依然完全相同。Fairy-Stockfish 的評估裡沒有關於鴨子或牆的項，所以它的評分不可能偏好任何一個點，它報出的落點只是著法排序碰巧先冒出來的那一個。',
-  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all seven.':
-    '這讓它在象棋的那一半是個真正的對手，在鴨子的那一半卻是個糟糕的老師。如果你覺得它的落點很隨意，那是因為確實如此。這些對局的走子部分仍然值得一讀，下面的研習裡有全部七盤。',
+  'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all six.':
+    '這讓它在象棋的那一半是個真正的對手，在鴨子的那一半卻是個糟糕的老師。如果你覺得它的落點很隨意，那是因為確實如此。這些對局的走子部分仍然值得一讀，下面的研習裡有全部六盤。',
   'The generals may face each other': '將帥可以對面',
   'In ordinary xiangqi that is forbidden. Here the prohibition stopped making sense once check was gone, so flying the general is simply a capture that ends the game. It is one more threat with no warning attached, and one more line the duck can open or close.':
     '在普通象棋裡這是禁止的。這裡一旦沒有了將軍，這條禁令就失去了意義，所以飛將只是一次結束棋局的吃子。它是又一個沒有任何警告的威脅，也是鴨子可以打開或關閉的又一條線路。',
-  'Games run 120 to 229 plies': '對局長度在 120 到 229 步之間',
-  'That is the range across the seven engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
-    '這是七盤引擎對局的範圍。請把它當成一盤完整的棋而不是小玩意，並據此選擇用時：這裡提供 5+5 和 10+5 兩種節奏，正是出於這個原因。',
-  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all seven engine games if you want to watch it played first.':
-    '八個引擎強度，或者找個朋友。規則頁有帶圖解的完整規則，如果想先看看別人怎麼下，研習裡有全部七盤引擎對局。',
+  'Games run 120 to 249 plies': '對局長度在 120 到 249 步之間',
+  'That is the range across the six engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.':
+    '這是六盤引擎對局的範圍。請把它當成一盤完整的棋而不是小玩意，並據此選擇用時：這裡提供 5+5 和 10+5 兩種節奏，正是出於這個原因。',
+  'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all six engine games if you want to watch it played first.':
+    '八個引擎強度，或者找個朋友。規則頁有帶圖解的完整規則，如果想先看看別人怎麼下，研習裡有全部六盤引擎對局。',
   Rules: '規則',
   'FIRST: A LEGAL XIANGQI MOVE': '第一步：一著合法的象棋著法',
   'THEN: THE DUCK': '第二步：放鴨子',

@@ -166,7 +166,7 @@ export const duckXiangqiArticle: Article = {
         } as ArticleBlock,
         {
           kind: 'paragraph',
-          text: 'This game was chosen from 8 played the same way, for how much the duck does in it. 7 of the 8 finished; all 7 are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.',
+          text: 'This game was chosen from 8 played the same way, for how much the duck does in it. It and five more engine games are in the [companion study](/study/uMbk76wd), one chapter each, with a note on how long each stayed competitive and what the duck was doing.',
         },
       ],
     },
@@ -185,10 +185,10 @@ export const duckXiangqiArticle: Article = {
     },
     playClosing({
       heading: 'Where to next',
-      lead: 'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of seven in the companion study.',
+      lead: 'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of six in the companion study.',
       playLabel: 'Play Duck Xiangqi',
       playHref: '/?play=computer&gameSpecId=duck-xiangqi',
-      secondary: [{ label: 'Seven engine games', href: '/study/uMbk76wd', emphasis: 'secondary' }],
+      secondary: [{ label: 'Six engine games', href: '/study/uMbk76wd', emphasis: 'secondary' }],
     }),
   ],
 };

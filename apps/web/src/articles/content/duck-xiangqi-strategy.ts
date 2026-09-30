@@ -28,7 +28,7 @@ export const duckXiangqiStrategyArticle: Article = {
     },
     {
       kind: 'paragraph',
-      text: 'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the seven engine games published with the variant and on measurements of the engine itself.',
+      text: 'The rules page has the rules. This article is about what decides your first game, starting with the mistake that catches everybody: the square where the duck looks most obstructive is usually the one that arms your opponent’s cannon. It draws on the six engine games published with the variant and on measurements of the engine itself.',
     },
   ],
   sections: [
@@ -81,7 +81,7 @@ export const duckXiangqiStrategyArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'This is not a theoretical risk. All seven of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.',
+          text: 'This is not a theoretical risk. All six of the engine games we published end with a general captured outright. Not one reached a resignation, a repetition or a stalemate: every game ended because somebody could take the general and did. Count the threats yourself, every turn, including the ones the duck just opened.',
         },
       ],
     },
@@ -111,7 +111,7 @@ export const duckXiangqiStrategyArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all seven.',
+          text: 'That makes it a real opponent for the xiangqi half of the game and a poor teacher for the duck half. If its placements look arbitrary to you, it is because they are. The games are still worth reading for the piece play, and the study below has all six.',
         },
       ],
     },
@@ -125,22 +125,22 @@ export const duckXiangqiStrategyArticle: Article = {
       ],
     },
     {
-      heading: 'Games run 120 to 229 plies',
+      heading: 'Games run 120 to 249 plies',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'That is the range across the seven engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.',
+          text: 'That is the range across the six engine games. Expect a full-length game rather than a novelty, and pick a clock accordingly: the two paces offered here are 5+5 and 10+5 for exactly this reason.',
         },
       ],
     },
     playClosing({
       heading: 'Play it',
-      lead: 'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all seven engine games if you want to watch it played first.',
+      lead: 'Eight engine strengths, or a friend. The rules page has the whole thing with diagrams, and the study has all six engine games if you want to watch it played first.',
       playLabel: 'Play Duck Xiangqi',
       playHref: '/?play=computer&gameSpecId=duck-xiangqi',
       secondary: [
         { label: 'Rules', href: '/rules/duck-xiangqi', emphasis: 'secondary' },
-        { label: 'Seven engine games', href: '/study/uMbk76wd', emphasis: 'secondary' },
+        { label: 'Six engine games', href: '/study/uMbk76wd', emphasis: 'secondary' },
       ],
     }),
   ],
