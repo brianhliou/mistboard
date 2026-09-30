@@ -152,38 +152,70 @@ export async function tryHandle(
   return true;
 }
 
+// Every lane is sorted on its own, so placing page N of the merge needs each
+// lane's first (offset + limit) rows, not just its first page. Lanes are read in
+// LANE_PAGE chunks (the persistence queries cap a single read at 200), and the
+// window bounds how deep that walk may go: past it a page is empty, never wrong.
+const LANE_PAGE = 200;
+export const SEARCH_WINDOW = 5000;
+
+type LaneReader = (offset: number, limit: number) => Promise<UnifiedXiangqiSearchChunk>;
+
+async function readLaneHead(read: LaneReader, need: number): Promise<UnifiedXiangqiSearchChunk> {
+  const games: UnifiedXiangqiSearchItem[] = [];
+  let total = 0;
+  for (let offset = 0; offset < need; offset += LANE_PAGE) {
+    const want = Math.min(LANE_PAGE, need - offset);
+    const chunk = await read(offset, want);
+    total = chunk.total;
+    games.push(...chunk.games);
+    if (chunk.games.length < want) break;
+  }
+  return { games, total };
+}
+
+export async function pageAcrossLanes(
+  lanes: LaneReader[],
+  offset: number,
+  limit: number,
+  sort: persistence.HistoricalXiangqiGameQueryFilters['sort'],
+): Promise<UnifiedXiangqiSearchChunk> {
+  const need = Math.min(SEARCH_WINDOW, offset + limit);
+  const chunks = await Promise.all(lanes.map((read) => readLaneHead(read, need)));
+  const games = chunks
+    .flatMap((chunk) => chunk.games)
+    .sort((a, b) => compareSearchItems(a, b, sort))
+    .slice(offset, Math.min(need, offset + limit));
+  return { games, total: chunks.reduce((sum, chunk) => sum + chunk.total, 0) };
+}
+
 async function queryUnifiedXiangqiGames(filters: persistence.HistoricalXiangqiGameQueryFilters) {
   const limit = Math.max(1, Math.min(filters.limit ?? 50, 200));
   const offset = Math.max(0, filters.offset ?? 0);
   const source = filters.sourceSlug;
-  const fetchLimit = Math.min(200, offset + limit);
-  const chunks: UnifiedXiangqiSearchChunk[] = [];
+  const lanes: LaneReader[] = [];
 
   if (!source || source === 'mistboard') {
-    chunks.push(await queryMistboardXiangqiGames(filters, fetchLimit));
+    lanes.push((at, count) => queryMistboardXiangqiGames(filters, at, count));
   }
   if (!source || source === 'broadcast') {
-    chunks.push(await queryBroadcastXiangqiGames(filters, fetchLimit));
+    lanes.push((at, count) => queryBroadcastXiangqiGames(filters, at, count));
   }
   if (!source || !RESERVED_SOURCES.has(source)) {
-    chunks.push(await queryHistoricalXiangqiGames(filters, fetchLimit));
+    lanes.push((at, count) => queryHistoricalXiangqiGames(filters, at, count));
   }
-
-  const games = chunks
-    .flatMap((chunk) => chunk.games)
-    .sort((a, b) => compareSearchItems(a, b, filters.sort))
-    .slice(offset, offset + limit);
-  return { games, total: chunks.reduce((sum, chunk) => sum + chunk.total, 0) };
+  return pageAcrossLanes(lanes, offset, limit, filters.sort);
 }
 
 async function queryHistoricalXiangqiGames(
   filters: persistence.HistoricalXiangqiGameQueryFilters,
+  offset: number,
   limit: number,
 ): Promise<UnifiedXiangqiSearchChunk> {
   const page = await persistence.queryHistoricalXiangqiGames({
     ...filters,
     visibility: 'public',
-    offset: 0,
+    offset,
     limit,
   });
   return {
@@ -224,6 +256,7 @@ const PUBLIC_GAME_MODES: persistence.GameMode[] = ['pvp', 'pve'];
 
 async function queryMistboardXiangqiGames(
   filters: persistence.HistoricalXiangqiGameQueryFilters,
+  offset: number,
   limit: number,
 ): Promise<UnifiedXiangqiSearchChunk> {
   const result = mistboardResult(filters.result);
@@ -244,7 +277,7 @@ async function queryMistboardXiangqiGames(
     ...(typeof filters.plyMax === 'number' ? { plyMax: filters.plyMax } : {}),
     ...(filters.playedFrom ? { endedFrom: new Date(`${filters.playedFrom}T00:00:00.000Z`) } : {}),
     ...(filters.playedTo ? { endedTo: new Date(`${filters.playedTo}T00:00:00.000Z`) } : {}),
-    offset: 0,
+    offset,
     limit,
   });
   const games: UnifiedXiangqiSearchItem[] = page.games.map((game) => ({
@@ -299,6 +332,7 @@ function seatName(game: persistence.RecentEveGameRecord, seat: 'white' | 'black'
 
 async function queryBroadcastXiangqiGames(
   filters: persistence.HistoricalXiangqiGameQueryFilters,
+  offset: number,
   limit: number,
 ): Promise<UnifiedXiangqiSearchChunk> {
   if (filters.result === '*') return { games: [], total: 0 };
@@ -311,6 +345,7 @@ async function queryBroadcastXiangqiGames(
     playedTo: filters.playedTo,
     plyMin: filters.plyMin,
     plyMax: filters.plyMax,
+    offset,
     limit,
   });
   const games: UnifiedXiangqiSearchItem[] = page.boards.map((board) => ({

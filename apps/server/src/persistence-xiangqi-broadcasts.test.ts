@@ -882,6 +882,15 @@ definePersistenceTests('xiangqi broadcasts', () => {
     assert.equal(found.boards[0]?.blackNameEn, 'Zheng Weitong');
     assert.equal(found.boards[0]?.roundNameEn, 'Round 1');
     assert.match(found.boards[0]?.tourNameEn ?? '', /Cup$/);
+
+    // The /games search walks this lane page by page, so an offset skips rows
+    // while the total still counts the whole filtered set.
+    const skipped = await queryCompletedXiangqiBroadcastBoards({
+      player: 'Wang Tianyi',
+      offset: 1,
+    });
+    assert.deepEqual(skipped.boards, []);
+    assert.equal(skipped.total, 1);
   });
 
   test('translate-backfill recomputes cached English names without re-importing', async () => {

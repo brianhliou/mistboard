@@ -70,6 +70,7 @@ export type XiangqiBroadcastBoardSearchFilters = {
   plyMin?: number;
   plyMax?: number;
   limit?: number;
+  offset?: number;
 };
 
 export type XiangqiBroadcastBoardSearchItem = {
@@ -982,6 +983,7 @@ export async function queryCompletedXiangqiBroadcastBoards(
   filters: XiangqiBroadcastBoardSearchFilters,
 ): Promise<XiangqiBroadcastBoardSearchPage> {
   const limit = Math.max(1, Math.min(filters.limit ?? 200, 200));
+  const offset = Math.max(0, filters.offset ?? 0);
   const { clause, values } = buildCompletedBoardSearchWhere(filters);
 
   const countResult = await getPool().query<{ total: number }>(
@@ -995,7 +997,7 @@ export async function queryCompletedXiangqiBroadcastBoards(
   const total = countResult.rows[0]?.total ?? 0;
   if (total === 0) return { boards: [], total: 0 };
 
-  const pageValues = [...values, limit];
+  const pageValues = [...values, limit, offset];
   const { rows } = await getPool().query<BoardSearchRow>(
     `SELECT boards.id,
             boards.tour_slug,
@@ -1020,7 +1022,7 @@ export async function queryCompletedXiangqiBroadcastBoards(
      JOIN xiangqi_broadcast_rounds rounds ON rounds.id = boards.round_id
      WHERE ${clause}
      ORDER BY ${broadcastOrderBy(filters.sort)}
-     LIMIT $${pageValues.length}`,
+     LIMIT $${pageValues.length - 1} OFFSET $${pageValues.length}`,
     pageValues,
   );
   const boards = rows.map((row) => ({

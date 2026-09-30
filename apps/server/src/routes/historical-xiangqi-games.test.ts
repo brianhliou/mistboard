@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { parseHistoricalXiangqiGameQuery, publicTags } from './historical-xiangqi-games.js';
+import {
+  compareSearchItems,
+  pageAcrossLanes,
+  parseHistoricalXiangqiGameQuery,
+  publicTags,
+  SEARCH_WINDOW,
+} from './historical-xiangqi-games.js';
 
 function parse(query: string) {
   return parseHistoricalXiangqiGameQuery(new URLSearchParams(query));
@@ -99,4 +105,58 @@ test('an unknown sort is rejected rather than silently ignored', () => {
   assert.equal(parsed.ok, false);
   if (parsed.ok) return;
   assert.equal(parsed.error, 'invalid_sort');
+});
+
+type Lane = Parameters<typeof pageAcrossLanes>[0][number];
+type Item = Parameters<typeof compareSearchItems>[0];
+
+function fakeLane(kind: string, count: number, reads: number[]): { items: Item[]; read: Lane } {
+  const items = Array.from({ length: count }, (_, i) => {
+    const day = String(1 + (i % 28)).padStart(2, '0');
+    return {
+      id: `${kind}-${String(i).padStart(5, '0')}`,
+      sortAt: `2026-09-${day}T00:00:00.000Z`,
+      plyCount: i % 97,
+    } as Item;
+  }).sort((a, b) => compareSearchItems(a, b, undefined));
+  const read: Lane = async (offset, limit) => {
+    reads.push(limit);
+    return { games: items.slice(offset, offset + limit), total: items.length };
+  };
+  return { items, read };
+}
+
+// The lane counts are the live corpus on 2026-09-30, when every page past the
+// sixth came back empty: each lane was read once, 200 rows deep.
+test('every page of the merged search is the same slice a full sort would give', async () => {
+  const reads: number[] = [];
+  const lanes = [fakeLane('mb', 100, reads), fakeLane('bc', 1569, reads), fakeLane('hx', 1, reads)];
+  const everything = lanes
+    .flatMap((lane) => lane.items)
+    .sort((a, b) => compareSearchItems(a, b, undefined));
+  for (let offset = 0; offset < everything.length; offset += 50) {
+    const page = await pageAcrossLanes(
+      lanes.map((lane) => lane.read),
+      offset,
+      50,
+      undefined,
+    );
+    assert.equal(page.total, 1670);
+    assert.deepEqual(
+      page.games.map((game) => game.id),
+      everything.slice(offset, offset + 50).map((game) => game.id),
+      `page at offset ${offset}`,
+    );
+  }
+  assert.ok(
+    Math.max(...reads) <= 200,
+    'no single lane read asks for more than the persistence cap',
+  );
+});
+
+test('a page past the search window is empty rather than wrong', async () => {
+  const lane = fakeLane('bc', SEARCH_WINDOW + 100, []);
+  const page = await pageAcrossLanes([lane.read], SEARCH_WINDOW, 50, undefined);
+  assert.deepEqual(page.games, []);
+  assert.equal(page.total, SEARCH_WINDOW + 100);
 });
