@@ -68,7 +68,7 @@ const ZH_HANS: Record<string, string> = {
     '首页和统计页上的已完成对局数，现在只计入自六月网站上线以来访客之间、或访客与引擎之间已完成的对局。引擎对引擎的比赛、我们自己的测试对局，以及在还没有其他人发现这个网站之前我们自己下的棋，都不计入。这样一来，数字降到了原来所显示的三分之一左右；另外三分之二是我们自己。',
   'See the statistics': '查看统计',
   // ── 2026-09-20 (jieqi own-pool fix + open challenges) ──
-  'The Jieqi bot no longer knows which of your captures took its hidden pieces.':
+  'The jieqi bot no longer knows which of your captures took its hidden pieces.':
     '揭棋电脑不再知道你吃掉的是它哪些暗子。',
   "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
     '揭棋里，被吃掉的暗子只有吃子的一方知道是什么。此前电脑拿到的是它自己按真实局面剩余的暗子，所以你每吃掉它一个暗子，它就知道自己失去了什么，并据此重新估算其余暗子。现在它只按它这个座位的棋手能知道的信息来判断。它吃掉的对方棋子仍然对它可见，这是规则允许的。',
@@ -76,8 +76,8 @@ const ZH_HANS: Record<string, string> = {
   // ── 2026-09-22 (Pikafish article) ── 皮卡鱼 / 人机阶梯 / 复盘 follow article-i18n.ts
   // for the same article; the body reuses its intro sentence.
   'Pikafish on Mistboard.': '皮卡鱼在 Mistboard。',
-  'Pikafish is the strongest open-source xiangqi engine, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '皮卡鱼是最强的开源象棋引擎，多数人要先下载引擎，再配一个界面才能用。在这里，它直接在网页里跑：可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。免费，不用注册，不用安装，手机浏览器也能玩。',
+  'Pikafish is the open-source xiangqi engine built from Stockfish, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
+    '皮卡鱼是由 Stockfish 改造而来的开源象棋引擎，多数人要先下载引擎，再配一个界面才能用。在这里，它直接在网页里跑：可以直接挑战皮卡鱼本尊，也可以从八级人机阶梯的低级别开始；可以和它下揭棋；也可以把下完的棋交给它复盘。免费，不用注册，不用安装，手机浏览器也能玩。',
   // ── 2026-09-21 (Pikafish in the browser) ── 分析棋盘 follows analysis.board; 权重 follows
   // article-i18n.ts for the analysis-board sentence; variant names follow the launch entries.
   'Pikafish now runs in your browser for xiangqi analysis.':
@@ -90,8 +90,8 @@ const ZH_HANS: Record<string, string> = {
   'Until today the tiger on Mistboard leapt a river lengthwise only and the lion both ways, the reading in English Wikipedia. The Chinese rule sets, and the digital versions most players come from, give both animals the same leap, so the tiger now has it too: on the board, in the bot and the analysis engine, on the rules page in three languages, and in the puzzles (one that the new jump refutes is withdrawn). Every earlier game stays legal as played; the change only adds moves.':
     '在此之前，Mistboard 上的虎只能纵向跳河，只有狮能横跳，这是英文维基百科的读法。中文规则以及大多数棋手熟悉的电子版本都让两种动物有同样的跳法，所以现在虎也可以了：棋盘上、电脑和分析引擎里、三种语言的规则页面上，以及残局里（有一题被新跳法破解，已下架）。此前的对局按当时走法依然合法，这次改动只增加了着法。',
   'Jungle rules': '斗兽棋规则',
-  'Wanted: a neural network for Jieqi.': '征集：揭棋神经网络。',
-  "Our Jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the Jieqi bot for players.":
+  'Wanted: a neural network for jieqi.': '征集：揭棋神经网络。',
+  "Our jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the jieqi bot for players.":
     '我们的揭棋电脑是手写的传统引擎，强手能赢它。皮卡鱼的揭棋分支有搜索和专为揭棋设计的 NNUE 结构，但从未发布过可加载的权重；我们用传统引擎自己的评估训练过十个网络，没有一个能赢过它。如果你的网络在两百局对抗中赢了它，它就会成为本站的电脑，并署上你的名字。暗棋和斗兽棋以同样的条件开放，棋手还可以挑战与揭棋电脑的八局三胜。',
   'See the open challenges': '查看公开挑战',
   // ── 2026-09-17 (Atomic Xiangqi launch) ── terms follow the rules page's
@@ -302,7 +302,7 @@ const ZH_HANS: Record<string, string> = {
   'Misty 1.0 has launched.': 'Misty 1.0 已上线。',
 
   // ── bodies ──
-  'Misty runs version 1.6 in fog chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.':
+  'Misty runs version 1.6 in Fog Chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.':
     '迷雾国际象棋中的 Misty 已升级到 1.6 版，修正了以往会送后的一类失误。揭棋中的 Pikafish 现在会搜索到完整深度；此前它过早停止搜索，因此比应有的水平更容易被击败。',
   'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.':
     '标准象棋题库从 394 题增加到 1,605 题，每一题都取自已结束的对局，并在上线前经过引擎校验。',
@@ -419,7 +419,7 @@ const ZH_HANT: Record<string, string> = {
     '首頁和統計頁上的已完成對局數，現在只計入自六月網站上線以來訪客之間、或訪客與引擎之間已完成的對局。引擎對引擎的比賽、我們自己的測試對局，以及在還沒有其他人發現這個網站之前我們自己下的棋，都不計入。這樣一來，數字降到了原來所顯示的三分之一左右；另外三分之二是我們自己。',
   'See the statistics': '查看統計',
   // ── 2026-09-20 (jieqi own-pool fix + open challenges) ──
-  'The Jieqi bot no longer knows which of your captures took its hidden pieces.':
+  'The jieqi bot no longer knows which of your captures took its hidden pieces.':
     '揭棋電腦不再知道你吃掉的是它哪些暗子。',
   "Jieqi reveals a captured face-down piece to the capturer only. The bot was being told its own remaining hidden pieces from the true state, so every time you took one of its dark pieces it learned what it had lost and revalued the rest. It now reasons from what a player in its seat may know. Its opponents' captured pieces stay known to it, as the rule allows.":
     '揭棋裡，被吃掉的暗子只有吃子的一方知道是什麼。此前電腦拿到的是它自己按真實局面剩餘的暗子，所以你每吃掉它一個暗子，它就知道自己失去了什麼，並據此重新估算其餘暗子。現在它只按它這個座位的棋手能知道的資訊來判斷。它吃掉的對方棋子仍然對它可見，這是規則允許的。',
@@ -427,8 +427,8 @@ const ZH_HANT: Record<string, string> = {
   // ── 2026-09-22 (Pikafish article) ── 皮卡魚 / 人機階梯 / 復盤 follow article-i18n.ts
   // for the same article; the body reuses its intro sentence.
   'Pikafish on Mistboard.': '皮卡魚在 Mistboard。',
-  'Pikafish is the strongest open-source xiangqi engine, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
-    '皮卡魚是最強的開源象棋引擎，多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡跑：可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
+  'Pikafish is the open-source xiangqi engine built from Stockfish, and most people run it from a download and a separate interface. Here it runs in the page: play it as it comes or start lower on an eight-level ladder, play it at jieqi, or hand it a finished game to review. Free, no sign-up, nothing to install, and it works on a phone.':
+    '皮卡魚是由 Stockfish 改造而來的開源象棋引擎，多數人要先下載引擎，再搭配一個介面才能用。在這裡，它直接在網頁裡跑：可以直接挑戰皮卡魚本尊，也可以從八級人機階梯的低等級開始；可以和它下揭棋；也可以把下完的棋交給它復盤。免費，不用註冊，不用安裝，手機瀏覽器也能玩。',
   // ── 2026-09-21 (Pikafish in the browser) ── 分析棋盤 follows analysis.board; 權重 follows
   // article-i18n.ts for the analysis-board sentence; variant names follow the launch entries.
   'Pikafish now runs in your browser for xiangqi analysis.':
@@ -441,8 +441,8 @@ const ZH_HANT: Record<string, string> = {
   'Until today the tiger on Mistboard leapt a river lengthwise only and the lion both ways, the reading in English Wikipedia. The Chinese rule sets, and the digital versions most players come from, give both animals the same leap, so the tiger now has it too: on the board, in the bot and the analysis engine, on the rules page in three languages, and in the puzzles (one that the new jump refutes is withdrawn). Every earlier game stays legal as played; the change only adds moves.':
     '在此之前，Mistboard 上的虎只能縱向跳河，只有獅能橫跳，這是英文維基百科的讀法。中文規則以及大多數棋手熟悉的電子版本都讓兩種動物有同樣的跳法，所以現在虎也可以了：棋盤上、電腦和分析引擎裡、三種語言的規則頁面上，以及殘局裡（有一題被新跳法破解，已下架）。此前的對局按當時走法依然合法，這次改動只增加了著法。',
   'Jungle rules': '鬥獸棋規則',
-  'Wanted: a neural network for Jieqi.': '徵集：揭棋類神經網路。',
-  "Our Jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the Jieqi bot for players.":
+  'Wanted: a neural network for jieqi.': '徵集：揭棋類神經網路。',
+  "Our jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the jieqi bot for players.":
     '我們的揭棋電腦是手寫的傳統引擎，強手能贏它。皮卡魚的揭棋分支有搜尋和專為揭棋設計的 NNUE 結構，但從未發布過可載入的權重；我們用傳統引擎自己的評估訓練過十個網路，沒有一個能贏過它。如果你的網路在兩百局對抗中贏了它，它就會成為本站的電腦，並署上你的名字。暗棋和鬥獸棋以同樣的條件開放，棋手還可以挑戰與揭棋電腦的八局三勝。',
   'See the open challenges': '查看公開挑戰',
   // ── 2026-09-17 (Atomic Xiangqi launch) ──
@@ -639,7 +639,7 @@ const ZH_HANT: Record<string, string> = {
   'Misty 1.0 has launched.': 'Misty 1.0 已上線。',
 
   // ── bodies ──
-  'Misty runs version 1.6 in fog chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.':
+  'Misty runs version 1.6 in Fog Chess, which closes a queen hang it used to walk into. Pikafish now searches jieqi to full depth; it had been stopping early, which made it easier to beat than it should have been.':
     '迷霧國際象棋中的 Misty 已升級到 1.6 版，修正了以往會送后的一類失誤。揭棋中的 Pikafish 現在會搜尋到完整深度；此前它過早停止搜尋，因此比應有的水準更容易被擊敗。',
   'The standard xiangqi set goes from 394 puzzles to 1,605, every one mined from a finished game and checked by the engine before it ships.':
     '標準象棋題庫從 394 題增加到 1,605 題，每一題都取自已結束的對局，並在上線前經過引擎校驗。',

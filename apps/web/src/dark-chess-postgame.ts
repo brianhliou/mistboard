@@ -130,8 +130,8 @@ export function mountDarkChessPostgame(
   root.replaceChildren(buildNav());
   mountDarkChessReview(root, {
     pageClassName: 'dark-chess-review',
-    ariaLabel: 'Dark Chess postgame',
-    title: 'Dark Chess',
+    ariaLabel: 'Fog Chess postgame',
+    title: 'Fog Chess',
     summary: `${status} · ${game.plyCount} plies`,
     metaCard,
     details,

@@ -17,13 +17,13 @@ export const jieqiArticle: Article = {
     playableOnMistboard: true,
     title: 'Jieqi Rules (Reveal Xiangqi)',
     summary:
-      'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, moves first as the point it stands on, then reveals. Play it free in your browser.',
+      'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.',
     showSummaryOnPage: false,
     status: 'published',
     publishedAt: '2026-06-15',
     updatedAt: '2026-09-17',
     audience:
-      'Xiangqi players and hidden-information fans who want a clean English rules reference for Jieqi.',
+      'Xiangqi players and hidden-information fans who want a clean English rules reference for jieqi.',
     thumbnail: { kind: 'svg', svg: JIEQI_RULES_THUMBNAIL },
     intro: [
       {
@@ -197,7 +197,7 @@ export const jieqiArticle: Article = {
       },
       playClosing({
         heading: 'Play on Mistboard',
-        lead: 'Jieqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+        lead: 'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does.',
         playLabel: 'Play vs computer',
         playHref: '/?play=computer&gameSpecId=jieqi',
         secondary: [

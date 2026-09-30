@@ -52,7 +52,7 @@ export const darkChessArticle: Article = {
     // title carries theirs while the h1 keeps ours.
     seoTitle: 'Fog of War Chess Rules',
     summary:
-      'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.',
+      "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.",
     status: 'published',
     publishedAt: '2026-05-22',
     updatedAt: '2026-07-12',
@@ -309,7 +309,7 @@ export const darkChessArticle: Article = {
       },
       playClosing({
         heading: 'Play on Mistboard',
-        lead: 'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+        lead: 'You can castle out of, through or into check, and nobody tells you when your king is attacked. No account needed.',
         playLabel: 'Play vs computer',
         playHref: '/?play=computer&gameSpecId=dark-chess',
         secondary: [

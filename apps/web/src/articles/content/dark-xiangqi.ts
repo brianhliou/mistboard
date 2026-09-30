@@ -23,7 +23,7 @@ export const darkXiangqiArticle: Article = {
     // "fog of war". The summary carries the phrase; the title did not.
     seoTitle: 'Fog of War Xiangqi Rules',
     summary:
-      'Fog Xiangqi rules: xiangqi under Fog of War, where each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.',
+      "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.",
     showSummaryOnPage: false,
     status: 'published',
     playableOnMistboard: true,
@@ -185,7 +185,7 @@ export const darkXiangqiArticle: Article = {
       },
       playClosing({
         heading: 'Play on Mistboard',
-        lead: 'Fog Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+        lead: 'The generals may face each other here. A general that sees the other down a clear file can capture it. No account needed.',
         playLabel: 'Play vs computer',
         playHref: '/?play=computer&gameSpecId=dark-xiangqi',
         secondary: [

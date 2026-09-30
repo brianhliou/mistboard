@@ -24,7 +24,7 @@ export const jungleArticle: Article = {
   kind: 'rules',
   title: 'Jungle Chess Rules (Dou Shou Qi, Animal Chess)',
   summary:
-    "Jungle Chess, also called Dou Shou Qi or Animal Chess: eight ranked animals on a 7 by 9 board, rivers only the rat can cross, and a race to the opponent's den. Play rated games and analyse them free in your browser.",
+    "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.",
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-30',
@@ -266,7 +266,7 @@ export const jungleArticle: Article = {
     },
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+      lead: 'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.',
       playLabel: 'Play vs computer',
       playHref: '/?play=computer&gameSpecId=jungle',
       secondary: [

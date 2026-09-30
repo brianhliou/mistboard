@@ -158,7 +158,7 @@ export const EN_REVIEW = {
   'replay.annotate': 'Annotate',
   'replay.save': 'Save',
   'replay.update': 'Update',
-  'replay.scrubToPly': '— scrub to a ply to begin',
+  'replay.scrubToPly': 'Scrub to a move to begin.',
   'replay.noMoveAtPly': 'No move at current ply.',
   'replay.updating': 'Updating…',
   'replay.saving': 'Saving…',

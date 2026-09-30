@@ -486,8 +486,7 @@ export const EN_COMMUNITY = {
   'bots.tabTitle': 'Play xiangqi against the computer',
   'bots.eyebrow': 'Play against the computer',
   'bots.heading': 'Play xiangqi against the computer',
-  'bots.sub':
-    'Eight levels from beginner to strong, with Pikafish at the top. Free, in the browser, no account needed.',
+  'bots.sub': 'Eight levels from beginner to strong, with Pikafish at the top.',
   'bots.metaFree': 'Free',
   'bots.metaNoAccount': 'No account needed',
   'bots.metaLevels': 'Eight levels',
@@ -496,9 +495,9 @@ export const EN_COMMUNITY = {
   'bots.otherTitle': 'Other games',
   'bots.otherIntro': "Bots for Mistboard's other games.",
   'bots.pikafishBio':
-    'The strongest open-source xiangqi engine, at full strength. It plays jieqi too.',
+    'Open source, built from Stockfish, and searching three million positions a move. It plays jieqi too.',
   'bots.mistyBio':
-    "Mistboard's own engine for fog chess, fog xiangqi, banqi, jungle chess and flip jungle.",
+    "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
   'bots.firstParty': 'First-party bot',
   'bots.gameCountOne': '{count} game',
   'bots.gameCountMany': '{count} games',

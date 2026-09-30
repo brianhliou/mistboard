@@ -401,7 +401,7 @@ export const xiangqiArticle: Article = {
       },
       playClosing({
         heading: 'Play on Mistboard',
-        lead: 'Xiangqi is playable on Mistboard: find a casual or rated game against another player, take on the engine ladder, or challenge a friend. No account required. Signing in unlocks rated games.',
+        lead: "Rated games need an account. Casual games, the engine ladder and friend links don't.",
         playLabel: 'Find an opponent',
         playHref: '/?play=lobby&gameSpecId=xiangqi',
         secondary: [

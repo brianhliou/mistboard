@@ -95,7 +95,7 @@ export const titledPlayersArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Mistboard is where xiangqi is played in English. Free, open source, no ads, no paywall, no premium tier. Every board, every puzzle, every lesson is open to everyone who shows up.',
+          text: 'Mistboard is free and open source, with no ads. Every game, puzzle and lesson is open to everyone. A Patron subscription adds a badge to your profile and nothing else.',
         },
         {
           kind: 'paragraph',

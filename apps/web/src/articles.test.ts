@@ -427,7 +427,7 @@ describe('article public listing gates', () => {
         page.querySelectorAll('.article-cta').length - headerCtas,
         slug,
       ).toBeGreaterThanOrEqual(2);
-      expect(page.textContent, slug).toContain('No account required.');
+      expect(page.textContent, slug).toMatch(/No account (is )?needed|Rated games need an account/);
     }
   });
 

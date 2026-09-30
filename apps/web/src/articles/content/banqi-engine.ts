@@ -15,7 +15,7 @@ export const banqiEngineArticle: Article = {
   boardFamily: 'xiangqi',
   title: 'How MistyBanqi Plays',
   summary:
-    'MistyBanqi is the engine you play in Banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.',
+    'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-20',
@@ -95,7 +95,7 @@ export const banqiEngineArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.",
+            "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.",
         },
         {
           kind: 'paragraph',

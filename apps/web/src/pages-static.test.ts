@@ -86,7 +86,7 @@ describe('about page platform activity', () => {
 
     expect(fetchMock).toHaveBeenCalledWith('/api/stats/public', { credentials: 'same-origin' });
     expect(root.textContent).toContain('Player game activity');
-    expect(root.textContent).toContain('player-facing completed games tracked');
+    expect(root.textContent).toContain('finished games');
     expect(root.textContent).toContain('1,234');
     expect(root.textContent).toContain('last 30 days');
     expect(root.textContent).toContain('Player vs player');
@@ -123,7 +123,7 @@ describe('about page platform activity', () => {
     mountAbout(root);
     await flushPromises();
 
-    expect(root.textContent).toContain('Activity totals are unavailable');
+    expect(root.textContent).toContain("Game totals can't be shown right now.");
     expect(root.textContent).toContain('Trust by design');
   });
 
@@ -156,7 +156,7 @@ describe('about page platform activity', () => {
     expect(root.querySelector('h1')?.textContent).toBe('關於 Mistboard');
     expect(root.textContent).toContain('以設計建立信任');
     expect(root.textContent).toContain('玩家對局活動');
-    expect(root.textContent).toContain('已記錄 1,234 局面向玩家的完成對局');
+    expect(root.textContent).toContain('共 1,234 局已完成的對局');
     expect(root.textContent).toContain('過去 30 天有 56 局');
     expect(root.textContent).toContain('玩家對玩家');
     expect(root.textContent).toContain('玩家對引擎');

@@ -154,7 +154,7 @@ export const atomicXiangqiArticle: Article = {
       ],
     },
     playClosing({
-      heading: 'Where to next',
+      heading: 'Play on Mistboard',
       lead: 'Play it against the engine at any of eight strengths, or against a friend with an invite link. The [launch note](/blog/atomic-xiangqi-build) is what decides a first game; the design post has the measurements behind the cannon rule; the study has all twelve engine games, with every explosion marked and a note on the move that decided each.',
       playLabel: 'Play Atomic Xiangqi',
       playHref: '/?play=computer&gameSpecId=atomic-xiangqi',

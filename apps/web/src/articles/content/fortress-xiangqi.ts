@@ -203,7 +203,7 @@ export const fortressXiangqiArticle: Article = {
     },
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.',
+      lead: 'A piece you capture changes to your color and goes into your reserve, ready to drop back in. No account needed.',
       playLabel: 'Play vs computer',
       playHref: '/?play=computer&gameSpecId=fortress-xiangqi',
       secondary: [

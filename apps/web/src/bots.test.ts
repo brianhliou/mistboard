@@ -157,7 +157,7 @@ describe('bot pages', () => {
     ]);
     expect(sectionNames(2)).toEqual(['Misty']);
     // The stored bios are English-only; the page carries its own localized lines.
-    expect(root.textContent).toContain("Mistboard's own engine for fog chess");
+    expect(root.textContent).toContain("Mistboard's own engine for Fog Chess");
     expect(root.textContent).not.toContain('Searches hidden positions');
     const mistyCard = root.querySelector('.profile-summary-card[data-bot-id="misty"]');
     expect(mistyCard?.querySelector('.profile-summary-card-rating-value')?.textContent).toBe(

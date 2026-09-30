@@ -29,13 +29,13 @@ export const banqiArticle: Article = {
   playableOnMistboard: true,
   title: 'Banqi Rules (Chinese Dark Chess)',
   summary:
-    'Banqi, also called Chinese dark chess or blind chess: the 4 by 8 half-board game with face-down pieces, rank captures, and screen-jumping cannons. Play it free in your browser.',
+    'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-06-15',
   updatedAt: '2026-09-21',
   audience:
-    'Experienced Banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
+    'Experienced banqi players and newcomers who want the rank ladder, screen-jumping cannon, and Mistboard rules explained on one page.',
   thumbnail: { kind: 'svg', svg: BANQI_RULES_THUMBNAIL },
   intro: [
     {
@@ -247,7 +247,7 @@ export const banqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: 'Play against the engine or challenge a friend. No account required.',
+          text: 'A soldier can take the general, and the general can never take a soldier. No account needed.',
         },
         {
           kind: 'cta',

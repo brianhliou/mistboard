@@ -126,7 +126,7 @@ export const jieqiPlatformArticle: Article = {
     {
       kind: 'paragraph',
       text:
-        'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link. Free, no sign-up, nothing to install.',
+        'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.',
     },
   ],
   sections: [
@@ -177,7 +177,7 @@ export const jieqiPlatformArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued, nothing is sent anywhere, and it needs no account. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.',
+            'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued and nothing is sent anywhere. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.',
         },
         {
           kind: 'image-figure',

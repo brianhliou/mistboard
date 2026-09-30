@@ -129,21 +129,21 @@ export const ZH_HANS_CONTENT = {
     '通过链接开始对局，加入大厅，或在支持的游戏中对战引擎。对局结束后，可以从任一玩家视角复盘，也可以在规则允许时查看完整棋盘。规则和文章会介绍怎么玩，也会解释这些变体为什么成立。',
   'about.trustHeading': '以设计建立信任',
   'about.trustBody':
-    'Mistboard 把规则执行视为产品的一部分。服务器拥有完整局面，只把每位玩家允许看到的视角发送给对应浏览器。隐藏信息实时对局不能观战；完整真相复盘只在对局结束后开放。',
+    '在迷雾对局中，你的浏览器根本收不到你看不见的棋子，所以页面里没有藏着任何可以挖出来的东西。进行中的迷雾对局不能观战。揭棋和暗棋的观众看到的是棋盘的实际样子，暗子仍然背面朝上。对局结束后，所有棋盘都会完整开放复盘。',
   'about.enginesHeading': '引擎与认真对弈',
   'about.enginesBody':
-    'Mistboard 托管并开发支持变体的引擎。当游戏包含隐藏信息时，引擎会收到和人类玩家一样的受限视角，因此引擎对局既能作为对手，也能作为研究材料。',
+    'Mistboard 为各个变体运行引擎，没有现成引擎的就自己开发，比如迷雾国际象棋的 Misty。在隐藏棋子的对局中，引擎看到的和坐在同一位置的人类玩家一样，不多一分。',
   'about.openSourceHeading': '开源基础',
   'about.openSourcePrefix': 'Mistboard 以 AGPL-3.0-or-later 发布在 ',
   'about.openSourceMiddle':
-    '。规则、可见性边界、复盘模型和公开网站代码都可以检查。欢迎贡献、报告 bug 和提交文章草稿。许可和第三方鸣谢见 ',
+    '。任何人都可以阅读规则代码、决定每位玩家能看到什么的代码，以及网站的其余部分。欢迎报告 bug、提交修复和文章草稿。许可和第三方鸣谢见 ',
   'about.openSourceSuffix': '。',
   'about.activityHeading': '玩家对局活动',
   'about.activityIntro':
-    'Mistboard 会把完成的对局保存为持久复盘记录。这些统计只计算面向玩家的对局：玩家对玩家和玩家对引擎。',
+    '每一局下完的棋都会保存，可以随时回放。这些统计只计算有人参与的对局：玩家对玩家和玩家对电脑。引擎之间的对局不计入。',
   'about.activityLoading': '正在加载活动统计...',
-  'about.activityUnavailable': '持久化存储离线时，活动统计不可用。',
-  'about.activitySummaryTotal': '已记录 {total} 局面向玩家的完成对局',
+  'about.activityUnavailable': '暂时无法显示对局统计。',
+  'about.activitySummaryTotal': '共 {total} 局已完成的对局',
   'about.activitySummaryRecent': '，其中过去 30 天有 {count} 局',
   'about.activityChartHeading': '面向玩家对局累计数',
   'about.activityNoGames': '还没有记录完成的对局。',
@@ -214,13 +214,13 @@ export const ZH_HANS_CONTENT = {
   'faq.contactSuffix': '发送消息。如果是关于某局对局，请附上房间链接。',
   'faq.cheatingQuestion': 'Mistboard 如何防作弊？',
   'faq.cheatingPrefix':
-    'Mistboard 的设计不会把隐藏棋盘放在对手浏览器里等人揭开。服务器拥有完整局面，计算每位玩家的合法视角，并且只通过网络发送该玩家允许看到的受限视角。代码是',
+    '隐藏的棋子根本不会到达对手的浏览器。服务器保存完整棋盘，只把每位玩家可以看到的部分发给他，所以页面里没有东西可挖。代码是',
   'faq.openSource': '开源的',
   'faq.cheatingSuffix':
-    '，所以这个信任边界可以被检查。外部协助、账号滥用，以及试图绕过迷雾过滤器仍然违反公平竞赛规则。',
+    '，任何人都可以检查。寻求外部帮助、滥用账号或试图绕过迷雾，仍然违反公平竞赛规则。',
   'faq.enginesQuestion': 'Mistboard 引擎会看到完整棋盘吗？',
   'faq.enginesAnswer':
-    '不会。引擎只会收到所玩游戏允许它知道的信息。在隐藏信息游戏中，这意味着它拿到和人类玩家一样的受限视角；真实棋盘只留在服务器端用于裁定。',
+    '不会。在隐藏棋子的对局中，引擎看到的和坐在同一位置的人类玩家一样。完整棋盘只留在服务器上，用来判定着法和结果。',
   'faq.liveWatchQuestion': '我可以观看实时对局吗？',
   'faq.liveWatchAnswer':
     '公开信息的对局（包括象棋）可以在观战页实时观看。隐藏信息的对局在进行中不能观战，这样没有人能在对局中把完整棋盘告诉玩家。任何对局结束后，都可以从任一方视角，或在完整揭示状态下复盘。',
@@ -231,7 +231,7 @@ export const ZH_HANS_CONTENT = {
     '开局库另外使用了一份获授权的匿名网络对局数据，所以它统计的局数比棋谱库列出的要多。',
   'faq.ratedQuestion': '计分对局如何运作？',
   'faq.ratedAnswer':
-    '计分对局是支持排行榜变体中需要账号的人类对人类对局。Beta 期间，评分校准时排行榜可能是临时的。引擎对局和休闲对局不计分。',
+    '计分对局在两位已登录的玩家之间进行，仅限设有排行榜的变体。计分对局仍处于 Beta 阶段，评分在稳定下来之前可能波动较大。引擎对局和休闲对局不计分。',
   'terms.heading': '使用条款',
   'terms.intro':
     'Mistboard 是一个免费的开源爱好项目。这些是使用 mistboard.com 托管网站的基本规则。随着项目成长，这些规则会变化；本页始终是当前版本。',
@@ -306,7 +306,7 @@ export const ZH_HANS_CONTENT = {
   'patron.perkTitle': '赞助包含什么',
   'patron.perk':
     '赞助者的资料页上会有一个小红心徽章：订阅期间一直保留，单次付款则每 5 美元保留一个月。它不解锁功能，也不带来对局上的优势。',
-  'patron.supportLine': 'Mistboard 由一个人开发和运营。',
+  'patron.supportLine': 'Mistboard 靠赞助会员维持运营。',
   'patron.donate': '订阅',
   'patron.donateOnce': '单次付款',
   'patron.manage': '管理你的订阅',
@@ -317,8 +317,7 @@ export const ZH_HANS_CONTENT = {
   'patron.currencyNote': '价格以美元标示，结账时会换算成你所在地区的货币。',
   'patron.checkoutError': '发起结账时出了问题，请重试。',
   'patron.transparencyTitle': 'Mistboard 如何运转',
-  'patron.transparency':
-    'Mistboard 由一个人开发和运营。没有广告，没有投资人，也不出售数据。订阅用来支付服务器和开发时间。',
+  'patron.transparency': '没有广告，没有投资人，也不出售数据。订阅用来支付服务器和开发时间。',
   'patron.faqTitle': '常见问题',
   'patron.faqPerkQuestion': '有赞助者专属的内容吗？',
   'patron.faqPerkAnswer':
@@ -338,7 +337,7 @@ export const ZH_HANS_CONTENT = {
   'developers.heading': '开发者',
   'apiDocs.heading': 'API 文档',
   'contribute.intro':
-    'Mistboard 是免费开源的，由一个人公开开发。要做的事还有很多，无论你写不写代码，都有很多种帮忙的方式。',
+    'Mistboard 是免费开源的，公开开发。要做的事还有很多，无论你写不写代码，都有很多种帮忙的方式。',
   'contribute.playHeading': '下棋并给出反馈',
   'contribute.playBody':
     '眼下你能做的最有用的事，就是下棋，然后告诉我们哪里坏了、哪里别扭。真实对局暴露规则漏洞、含糊之处和缺失功能的速度，比任何其他方式都快。',
@@ -352,7 +351,7 @@ export const ZH_HANS_CONTENT = {
     ' 上。你可以认领一个开放的 issue，或者直接提交 pull request。源码页面列出了代码仓库，以及 Mistboard 所依赖的库。',
   'contribute.translateHeading': '帮忙翻译',
   'contribute.translateBody':
-    'Mistboard 以英文为主，简体中文和繁体中文都只译了一部分。如果你能改进某条翻译，或者想开启一门新语言，欢迎提交 issue 或 pull request。',
+    'Mistboard 提供英文、简体中文和繁体中文。中文是机器翻译的，母语读者一定能找到需要修改的地方。如果你能改进某条翻译，或者想开启一门新语言，欢迎提交 issue 或 pull request。',
   'contribute.supportHeading': '支持这个项目',
   'contribute.supportPrefix': '服务器和开发都要花钱。如果你想帮 Mistboard 保持免费、无广告，可以',
   'contribute.supportLink': '赞助 Mistboard',

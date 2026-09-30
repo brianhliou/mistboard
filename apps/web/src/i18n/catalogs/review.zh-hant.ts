@@ -333,7 +333,7 @@ export const ZH_HANT_REVIEW = {
   'replay.annotate': '批註',
   'replay.save': '儲存',
   'replay.update': '更新',
-  'replay.scrubToPly': '— 拖曳到某一步開始',
+  'replay.scrubToPly': '拖曳到某一步開始。',
   'replay.noMoveAtPly': '目前這一步沒有著法。',
   'replay.updating': '更新中…',
   'replay.saving': '儲存中…',

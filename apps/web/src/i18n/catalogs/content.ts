@@ -100,7 +100,7 @@ export const EN_CONTENT = {
   'patron.perkTitle': 'What Patron support includes',
   'patron.perk':
     'Patrons get a small heart badge on their profile: for as long as a subscription runs, or one month for every $5 of a one-time payment. It does not unlock features or gameplay advantages.',
-  'patron.supportLine': 'Mistboard is built and run by one person.',
+  'patron.supportLine': 'Patrons keep Mistboard running.',
   'patron.donate': 'Subscribe',
   'patron.donateOnce': 'Pay once',
   'patron.manage': 'Manage your subscription',
@@ -117,7 +117,7 @@ export const EN_CONTENT = {
   // 2026-08 (docs-private/patron-track.md). The measured figure still lives in
   // docs-private/COSTS.md; keep it there, not here.
   'patron.transparency':
-    'Mistboard is built and run by one person. There are no ads, no investors, and no data sales. Subscriptions pay for the servers and the development time.',
+    'There are no ads, no investors, and no data sales. Subscriptions pay for the servers and the development time.',
   'patron.faqTitle': 'Questions',
   'patron.faqPerkQuestion': 'Is anything Patron-only?',
   'patron.faqPerkAnswer':
@@ -166,7 +166,7 @@ export const EN_CONTENT = {
     'Mistboard is a free, open-source place to play and study Chinese chess, and home to the original strategy games we build.',
   'about.whyHeading': 'Why this site exists',
   'about.whyBody':
-    'Chinese chess here means xiangqi and its traditional relatives, Jieqi and Banqi. Most people who play them read Chinese, and most of what is written about them is in Chinese. Mistboard is one board for both sides of that line. The site runs in English, Simplified and Traditional Chinese on the same games, puzzles and lobby, so a player in Shanghai and a player in Toronto sit down at the same table. For English speakers, pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course explains each piece against the chess piece it resembles. Past the basics: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.',
+    'Chinese chess here means xiangqi and its traditional relatives, jieqi and banqi. Most people who play them read Chinese, and most of what is written about them is in Chinese. Mistboard is one board for both sides of that line. The site runs in English, Simplified and Traditional Chinese on the same games, puzzles and lobby, so a player in Shanghai and a player in Toronto sit down at the same table. For English speakers, pieces render as icons you can identify before you can read 車 or 砲, rules and articles are written in English rather than translated into it, and a beginner course explains each piece against the chess piece it resembles. Past the basics: engines, tactics puzzles mined from real games, an analysis board, a games database, and tournament broadcasts.',
   'about.darkChessHeading': 'What Mistboard builds',
   'about.darkChessBody':
     'Beside the traditional games sit the ones Mistboard invents. Duck Xiangqi puts a duck on the board that belongs to neither side. Fog Xiangqi hides every point your pieces cannot reach. Fortress plays on a smaller board where captured pieces return as drops, with one new piece, the Treasure. Each starts from a board people already know and changes one thing, and each gets a clear rules page and server-enforced play. More are in design. Jungle Chess, Flip Jungle, and Fog Chess are live too.',
@@ -175,22 +175,21 @@ export const EN_CONTENT = {
     "Start a game over a link, join the lobby, or play an engine where one is available. Afterward, review the game from either player's perspective or with the full board revealed when the rules allow it. Rules and articles cover both how to play and why the variants work.",
   'about.trustHeading': 'Trust by design',
   'about.trustBody':
-    'Mistboard treats rules enforcement as part of the product. The server owns the full game state and sends each browser only the view that player is allowed to see. Hidden-information live games are not spectatable; full-truth review unlocks only after a game has finished.',
+    "In Fog games your browser never receives the pieces you can't see, so there is nothing hidden on the page to dig out. A live Fog game can't be watched. In jieqi and banqi, spectators see the board as it lies, face-down pieces and all. Every board opens up for review once the game ends.",
   'about.enginesHeading': 'Engines and serious play',
   'about.enginesBody':
-    'Mistboard hosts and develops engines for supported variants. When a game hides information, engines receive the same redacted view a human player receives, making engine games useful both as opponents and as research artifacts.',
+    'Mistboard runs engines for its variants and builds its own where none existed, like Misty for Fog Chess. In a hidden-piece game the engine sees what a human in its seat would see, and nothing more.',
   'about.openSourceHeading': 'Open source foundation',
   'about.openSourcePrefix': 'Mistboard is published under AGPL-3.0-or-later on ',
   'about.openSourceMiddle':
-    '. The rules, visibility boundary, replay model, and public site code are inspectable. Contributions, bug reports, and article drafts are welcome. See ',
+    '. Anyone can read the rules code, the code that decides what each player sees, and the rest of the site. Bug reports, fixes and article drafts are welcome. See ',
   'about.openSourceSuffix': ' for license and third-party credits.',
   'about.activityHeading': 'Player game activity',
   'about.activityIntro':
-    'Mistboard tracks completed games as durable replay records. These totals count player-facing games: player vs player and player vs engine.',
+    'Every finished game is saved and can be replayed. These totals count games people played against each other or the computer. Engine-versus-engine games are left out.',
   'about.activityLoading': 'Loading activity totals...',
-  'about.activityUnavailable':
-    'Activity totals are unavailable while persistent storage is offline.',
-  'about.activitySummaryTotal': '{total} player-facing completed games tracked',
+  'about.activityUnavailable': "Game totals can't be shown right now.",
+  'about.activitySummaryTotal': '{total} finished games',
   'about.activitySummaryRecent': ', including {count} in the last 30 days',
   'about.activityChartHeading': 'Cumulative player-facing games',
   'about.activityNoGames': 'No completed games have been recorded yet.',
@@ -238,7 +237,7 @@ export const EN_CONTENT = {
   'developers.heading': 'Developers',
   'apiDocs.heading': 'API',
   'contribute.intro':
-    'Mistboard is free and open source, built in the open by one person. There is a lot to do and many ways to help, whether or not you write code.',
+    'Mistboard is free and open source, built in the open. There is a lot to do and many ways to help, whether or not you write code.',
   'contribute.playHeading': 'Play and give feedback',
   'contribute.playBody':
     'The most useful thing you can do right now is play, then tell us what broke or felt wrong. Real games surface rule bugs, unclear moments, and missing features faster than anything else.',
@@ -252,7 +251,7 @@ export const EN_CONTENT = {
     '. Pick up an open issue, or open a pull request. See the source code page for the repository and the libraries Mistboard builds on.',
   'contribute.translateHeading': 'Help with translations',
   'contribute.translateBody':
-    'Mistboard is English-first, with partial Simplified Chinese and Traditional Chinese. If you can improve a translation or start a new language, open an issue or a pull request.',
+    'Mistboard runs in English, Simplified Chinese and Traditional Chinese. The Chinese is machine-translated, so a native reader will find lines to fix. If you can improve one or start a new language, open an issue or a pull request.',
   'contribute.supportHeading': 'Support the project',
   'contribute.supportPrefix':
     'Servers and development cost money. If you want to help keep Mistboard free and ad-free, you can ',
@@ -301,13 +300,13 @@ export const EN_CONTENT = {
   'faq.contactSuffix': ". Include the room link if it's about a specific game.",
   'faq.cheatingQuestion': 'How does Mistboard prevent cheating?',
   'faq.cheatingPrefix':
-    "Mistboard is built so the hidden board is not sitting in your opponent's browser waiting to be uncovered. The server owns the full position, computes each player's legal view, and sends only that redacted view over the wire. The code is ",
+    "The hidden pieces never reach your opponent's browser. The server keeps the full board and sends each player only what they're allowed to see, so there is nothing to dig out of the page. The code is ",
   'faq.openSource': 'open source',
   'faq.cheatingSuffix':
-    ', so this trust boundary can be inspected. Outside assistance, account abuse, and attempts to break the fog filter are still fair-play violations.',
+    ', so anyone can check. Getting outside help, abusing accounts or trying to get around the fog still breaks the fair-play rules.',
   'faq.enginesQuestion': 'Do Mistboard engines see the full board?',
   'faq.enginesAnswer':
-    'No. Engines only receive the information allowed by the game they are playing. In hidden-information games, that means the same redacted view a human player receives; the true board stays server-side for adjudication.',
+    'No. In a hidden-piece game the engine sees what a human in its seat would see. The full board stays on the server, which uses it to judge moves and results.',
   'faq.liveWatchQuestion': 'Can I watch a live game?',
   'faq.liveWatchAnswer':
     'Open-information games, xiangqi included, can be watched live from Watch. Hidden-information games are not spectatable while they are in progress, so no one can feed a player the full board mid-game. Once any game finishes, anyone can replay it from either side or with the full board revealed.',
@@ -318,7 +317,7 @@ export const EN_CONTENT = {
     'The opening explorer also draws on a licensed dataset of anonymous online games, which is why its numbers cover more games than the library lists.',
   'faq.ratedQuestion': 'How does rated play work?',
   'faq.ratedAnswer':
-    'Rated play is account-backed human-vs-human play in supported ladder variants. During beta, ladders may be provisional while ratings calibrate. Engine games and casual games do not count.',
+    'Rated games are between two signed-in players, in the variants that have a ladder. While rated play is in beta, ratings can move more than usual as they settle. Engine games and casual games do not count.',
   'terms.heading': 'Terms of Use',
   'terms.intro':
     'Mistboard is a free, open-source hobby project. These are the basic rules for using the hosted site at mistboard.com. They will change as the project grows; this page is always the current version.',

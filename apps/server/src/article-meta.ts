@@ -105,7 +105,7 @@ export const ARTICLE_META: Record<
     title: 'Pikafish on Mistboard',
     kind: 'article',
     description:
-      'Play Pikafish, the strongest open-source xiangqi engine, in your browser: free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
+      'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser: free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
   },
   'jieqi-platform': {
     title: 'Jieqi on Mistboard',
@@ -123,7 +123,7 @@ export const ARTICLE_META: Record<
     title: 'Fog Chess Rules',
     kind: 'rules',
     description:
-      'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.',
+      "Fog Chess rules: you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.",
   },
   'fog-chess-concepts': {
     title: 'Fog Chess Concepts',
@@ -237,7 +237,7 @@ export const ARTICLE_META: Record<
     title: 'How MistyBanqi Plays',
     kind: 'article',
     description:
-      'MistyBanqi is the engine you play in Banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.',
+      'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.',
   },
   'server-enforced-fog': {
     title: 'Programming Fog Chess with Server-Side Truth',
@@ -249,7 +249,7 @@ export const ARTICLE_META: Record<
     title: 'Jieqi Rules (Reveal Xiangqi)',
     kind: 'rules',
     description:
-      'The complete rules of Jieqi, the hidden-piece Chinese chess variant, in English: every piece except the generals starts face-down, makes its first move as the point it stands on, and reveals itself after moving. Play it free in your browser.',
+      'The complete rules of jieqi, the hidden-piece Chinese chess variant, in English: every piece except the generals starts face-down, makes its first move as the point it stands on, and reveals itself after moving. Play it free in your browser.',
   },
   'banqi-statistics': {
     title: 'Banqi by the Numbers',
@@ -261,7 +261,7 @@ export const ARTICLE_META: Record<
     title: 'Banqi Rules (Chinese Dark Chess)',
     kind: 'rules',
     description:
-      'The complete rules of Banqi, also called Chinese dark chess or blind chess: flip or move one square each turn, capture by rank, cannons jump. Play it free in your browser.',
+      'The complete rules of banqi, also called Chinese dark chess or blind chess: flip or move one square each turn, capture by rank, cannons jump. Play it free in your browser.',
   },
   'cao-yanlei': {
     title: 'Cao Yanlei 曹岩磊',

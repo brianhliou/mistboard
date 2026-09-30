@@ -28,8 +28,8 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   'Pikafish on Mistboard': 'Chơi cờ tướng với máy: Pikafish trên Mistboard',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     'Chơi cờ tướng với máy online miễn phí: Pikafish, không cần tải về',
-  'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    'Chơi cờ tướng với máy ngay trên trình duyệt, đối thủ là Pikafish, engine cờ tướng mã nguồn mở mạnh nhất. Miễn phí, không cần tài khoản, không cần tải về. Chọn cấp độ, chơi cờ úp, và xem lại ván đấu bằng engine.',
+  'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
+    'Chơi cờ tướng với máy ngay trên trình duyệt, đối thủ là Pikafish, engine cờ tướng mã nguồn mở phát triển từ Stockfish. Miễn phí, không cần tài khoản, không cần tải về. Chọn cấp độ, chơi cờ úp, và xem lại ván đấu bằng engine.',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     'Người chơi cờ tướng muốn chơi với máy hoặc phân tích ván cờ bằng Pikafish.',
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
@@ -39,8 +39,8 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   'Play Pikafish': 'Chơi với Pikafish',
   'Play Pikafish at jieqi': 'Chơi cờ úp với Pikafish',
   'Play against Pikafish': 'Chơi với Pikafish',
-  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
-    'Một cú nhấp là bắt đầu ván. Bạn được chia một bên, một đồng hồ, và Pikafish ngồi phía bên kia, tính ba triệu thế cờ cho mỗi nước. Không cần tài khoản.',
+  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move.':
+    'Một cú nhấp là bắt đầu ván. Bạn được chia một bên, một đồng hồ, và Pikafish ngồi phía bên kia, tính ba triệu thế cờ cho mỗi nước.',
   'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
     'Ba triệu thế cờ mỗi nước là rất mạnh. Bên dưới Pikafish có tám cấp độ máy Fairy-Stockfish: cấp 1 dành cho người mới học cách đi quân tuần này, cấp 8 gần với đỉnh. Mỗi cấp có một chỉ số sức mạnh đo được qua các ván đấu với nhau, lấy mốc 1500 là một engine chỉ đi nước hợp lệ ngẫu nhiên.',
   'Measured September 2026 from engine-versus-engine games on the site. Pikafish at three million positions a move.':

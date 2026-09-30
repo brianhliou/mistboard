@@ -70,7 +70,7 @@ export const pikafishArticle: Article = {
   title: 'Pikafish on Mistboard',
   seoTitle: 'Play Pikafish Online: Free Xiangqi Engine, No Download',
   summary:
-    'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
+    'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-09-22',
@@ -107,7 +107,7 @@ export const pikafishArticle: Article = {
         {
           kind: 'paragraph',
           text:
-            'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.',
+            'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move.',
         },
         {
           kind: 'paragraph',

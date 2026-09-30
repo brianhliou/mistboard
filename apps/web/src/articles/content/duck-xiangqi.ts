@@ -184,7 +184,7 @@ export const duckXiangqiArticle: Article = {
       ],
     },
     playClosing({
-      heading: 'Where to next',
+      heading: 'Play on Mistboard',
       lead: 'Play it against the engine at any of eight strengths, or against a friend. The sample game above is one of six in the companion study.',
       playLabel: 'Play Duck Xiangqi',
       playHref: '/?play=computer&gameSpecId=duck-xiangqi',

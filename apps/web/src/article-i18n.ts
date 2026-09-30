@@ -489,8 +489,8 @@ const ZH_HANS: Record<string, string> = {
   '**Your own byline.** Send something longer and it gets edited and published under your name, with your title beside it.':
     '**署名文章。** 写一篇长一点的稿子寄来，我们会编辑后以你的名义发表，并在名字旁标上你的头衔。',
   'Why Mistboard': '为什么选择 Mistboard',
-  'Mistboard is where xiangqi is played in English. Free, open source, no ads, no paywall, no premium tier. Every board, every puzzle, every lesson is open to everyone who shows up.':
-    'Mistboard 是用英语下象棋的地方。免费、开源，没有广告，没有付费墙，也没有会员等级。每一副棋盘、每一道题目、每一节课，对每一个来到这里的人都开放。',
+  'Mistboard is free and open source, with no ads. Every game, puzzle and lesson is open to everyone. A Patron subscription adds a badge to your profile and nothing else.':
+    'Mistboard 免费、开源，没有广告。每一局棋、每一道题目、每一节课都对所有人开放。赞助会员订阅只会在你的资料页上加一个徽章，别无其他。',
   'That audience has never had a serious English-language home, and it has never had titled players to learn from. You would be among the first, on a site built to put your name in front of them rather than bury it.':
     '这批棋迷从来没有一个像样的英语大本营，也从来没有头衔棋手可以请教。你会是最早的一批，而这个网站从一开始就是为了把你的名字摆到他们面前，而不是埋起来。',
   'Verify your title': '认证你的头衔',
@@ -564,7 +564,7 @@ const ZH_HANS: Record<string, string> = {
     'Stockfish 这样的经典国际象棋引擎有一个优势：它能看到整个棋盘。它通过搜索博弈树来选择着法，向前推演双方可能走出的变化，再回传最佳变化的价值（极小化极大算法）。这种搜索假设只有一个真实局面和一条真实的延续。',
   "Under fog there is no single position to search. Misty can't see the opponent's pieces, so the board it has to reason about is a belief set: many legal boards consistent with what it has observed. A move that wins on one board can hang the king on another. Misty samples from that set, searches those worlds, and looks for a move that holds up across them.":
     '迷雾下不存在一个可供搜索的单一局面。Misty 看不到对手的棋子，因此它必须推理的是一个信念集合：许多与已观察信息一致的合法棋盘。同一步棋可能在一个棋盘上获胜，却在另一个棋盘上白送国王。Misty 从集合中采样，搜索这些可能世界，并寻找在它们之中都站得住脚的着法。',
-  'Sampling boards and searching them is the straightforward part. Combining the answers is where fog chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.':
+  'Sampling boards and searching them is the straightforward part. Combining the answers is where Fog Chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.':
     '采样棋盘并搜索它们是相对直接的部分。真正让迷雾国际象棋不再像国际象棋的，是如何汇总这些答案；Misty 的方法借自扑克：它在采样出的各个可能世界上最小化遗憾值，逐步收敛到一个对手无法利用的策略，而不是选择平均分最高的着法。公开发表的最强迷雾国际象棋引擎 Obscuro 采用同样的思路。难点在于，在时钟不停走动时，让这个模型始终忠于已经观察到的信息。',
   "What's hard": '难点在哪里',
   'Two things. The first is the possible-board set itself. A few plies into a foggy middlegame, "every consistent board" blows up fast. Misty has to keep that uncertainty under control inside a live-game time budget.':
@@ -575,7 +575,7 @@ const ZH_HANS: Record<string, string> = {
   'The current production engine is Misty 1.6. Most of the work since the first public release has been hardening, not a new personality: avoid rare king walks into hidden captures, avoid major-piece hangs in fog, stop stale search memory from leaking into a new live position, see fog-castles during search, and steer away from unstable early lines with a small opening book. Version 1.6 closes one specific queen hang. The safety check that vetoes catastrophic captures was subtracting the value of the piece being taken, so giving up a queen for a defended rook scored as a small loss rather than a disaster, and Misty walked into it in two real games before the floor that catches it shipped.':
     '当前生产引擎是 Misty 1.6。首次公开发布后的大部分工作都在加固，而不是塑造新个性：避免国王偶尔走进隐藏吃子范围，避免大子在迷雾中白送，阻止过期的搜索记忆泄漏到新的实时局面，在搜索中看见迷雾下的王车易位，并用小型开局库避开不稳定的早期变化。1.6 版修正了一处特定的白送皇后问题：否决灾难性吃子的安全检查会先减去被吃棋子的价值，于是用皇后换一个有保护的车只被算作小亏而不是灾难；在这道下限修好之前，Misty 在两盘真实对局中都走进了这个陷阱。',
   'The engine is open source': '引擎已开源',
-  "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the fog chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
+  "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the Fog Chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
     'Misty 的源代码以 GPL 协议发布在 GitHub 上，也可以从 PyPI 安装，包名是 misty-chess。公开的部分就是迷雾国际象棋引擎本身：信念枚举器、搜索、在提交着法时否决灾难性选择的守卫，以及要求 Rust 与 Python 两套实现在每一步都逐字节一致的测试套件。变体同系引擎与研究实验代码仍然是私有的。',
   'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.':
     'Obscuro 并未公开。因此据我所知，Misty 是唯一一个基于该架构、并且其他人可以运行、阅读和拆解的迷雾国际象棋引擎，这也是把它开源的主要理由。',
@@ -586,7 +586,7 @@ const ZH_HANS: Record<string, string> = {
   "Misty is the strongest Fog of War chess engine I've seen available to play, but version numbers are not ratings. The yardstick that matters is human play, and I won't put a number on it until a serious human match earns one.":
     'Misty 是我见过可以直接对弈的最强迷雾国际象棋引擎，但版本号不是等级分。真正有意义的标尺是人类实战；在一场严肃的人机比赛给出依据之前，我不会为它标上数字。',
   "What's next": '下一步是什么',
-  'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for Banqi, but those are separate engines with their own rules and evaluation problems.':
+  'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for banqi, but those are separate engines with their own rules and evaluation problems.':
     'Misty 本身会继续专注于迷雾国际象棋。同一套脱敏引擎协议现在也支持针对特定变体的同系引擎，包括迷雾迷你象棋的 Misty DMX 和暗棋的 MistyBanqi，但它们是独立引擎，各有自己的规则与评估问题。',
   "Misty is live on Mistboard, and every serious game against it sharpens the estimate of where it stands. Play one, and you're part of the benchmark.":
     'Misty 已在 Mistboard 上线，每一盘严肃的人机对局都会让我们更准确地估计它的水平。来下一盘，你也会成为这项基准的一部分。',
@@ -658,7 +658,7 @@ const ZH_HANS: Record<string, string> = {
 
   // -- How MistyBanqi Plays (engine article) --
   'How MistyBanqi Plays': 'MistyBanqi 是怎么下棋的',
-  'MistyBanqi is the engine you play in Banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
+  'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
     'MistyBanqi 是你在 Mistboard 上对弈暗棋时面对的引擎：一个采用手写评估的经典搜索引擎。它如何思考，以及一个值得知道的盲点：它会把已经赢定的棋下成和棋。',
   'How it thinks': '它如何思考',
   "Banqi hides information in its own way: every tile starts face-down, and flipping one reveals a random piece from the bag of what's left. So unlike chess, the engine's search tree mixes ordinary moves with chance events. MistyBanqi treats a flip as a chance node, averaging over the pieces the tile might turn out to be, and otherwise searches like a classical chess engine: it looks ahead through the lines both sides could play and backs up the value of the best one.":
@@ -673,7 +673,7 @@ const ZH_HANS: Record<string, string> = {
   'It can draw a game it has won': '它会把赢定的棋下成和棋',
   'Here is the same engine in a position it has completely won. It is up ten pieces to two, with nothing left to capture, and the only task is to walk the win home. It draws instead.':
     '同样这个引擎，下面处在一个它已经完全赢定的局面。它以十子对两子领先，已经没有子可吃，唯一要做的就是把胜势走到底。结果它却下成了和棋。',
-  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.":
+  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.":
     '评估里没有任何一项会因为「把优势转化为胜利」而比「单纯守住子力」给更高的分，于是一个遥遥领先的局面和一个真正已经赢下的局面，得分几乎一样。既然没有哪一项促使它取得进展，它就只是来回挪子，而暗棋的三次重复局面规则便把这盘判成和棋。',
   'It can also lose its own general': '它也可能丢掉自己的将帅',
   'How each of these was found, reproduced, and measured is written up in detail in the engineering post linked below.':
@@ -965,7 +965,7 @@ const ZH_HANS: Record<string, string> = {
     '白方看不到 a4 或 b4：黑兵挡住了这些推进，所以它们不是合法走法。有些规则会显示被阻挡的兵推进格；Mistboard 不会。',
   "En passant is chess's strangest move, so our vision rule bends for it: the capturing pawn sees the captured pawn on its adjacent square. The window is one move only. Pass on the capture and the chance is gone.":
     '吃过路兵是国际象棋中最奇特的一步，因此我们的视野规则为它破了个例：执行吃子的兵能看到相邻格子上那个将被吃掉的对方兵。这个窗口只持续一步。若放弃这次吃子，机会便不复存在。',
-  'The goal is not perfect certainty. A good fog chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
+  'The goal is not perfect certainty. A good Fog Chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
     '目标不是获得完美确定性。优秀的迷雾棋手会判断哪些隐藏局面危险到必须尊重，然后选择在那些局面中也能成立的走法。',
   'A pawn sees where it can push. Fog on a push square means an opponent piece or pawn is blocking it.':
     '兵能看到它可以推进到的格子。若推进格被迷雾遮住，就说明那里有对方的棋子或兵挡着。',
@@ -1128,8 +1128,8 @@ const ZH_HANS: Record<string, string> = {
   // one, so both English keys land on the same Chinese title. That is the
   // point of seoTitle -- 'fog of war chess' is what players type.
   'Fog of War Chess Rules': '迷雾国际象棋规则',
-  'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.':
-    '迷雾国际象棋规则：战争迷雾下的国际象棋。每一方只能看到己方棋子可及的格子，没有将军提示，王被吃掉即负。',
+  "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.":
+    '迷雾国际象棋就是只能看到己方棋子可及格子的国际象棋。没有人提示将军，王被吃掉即负，王也可能易位到自己看不见的攻击之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷雾国际象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 对 dark chess / Fog of War chess 的公开名称。Jens Bæk Nielsen 与 Torben Osted 于 1989 年发明了它。它属于隐式迷雾：没有裁判，也没有侦察动作。每一方的视野完全由己方棋子的合法走法范围推导而来。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
@@ -1138,8 +1138,8 @@ const ZH_HANS: Record<string, string> = {
   'Fog of War Xiangqi Rules': '迷雾象棋规则',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
     '迷雾象棋由 Brian H. Liou 于 2026 年设计，是 Mistboard 的原创变体。战争迷雾早在 1989 年就由 Jens Bæk Nielsen 和 Torben Osted 发明的「黑棋」引入国际象棋，如今也是 chess.com 的常规变体，却从未有人把它移植到象棋上。真正让它变得奇特的是炮。炮只能隔子吃子，所以在迷雾中，你既看不见目标，也无法确定炮架是否还在。',
-  'Fog Xiangqi rules: xiangqi under Fog of War, where each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.':
-    '战争迷雾下的象棋：每一方只能看到己方棋子可及的点位，隐藏阻挡会影响视野，擒获将帅即获胜。',
+  "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.":
+    '迷雾象棋是战争迷雾下的象棋。看不见的棋子照样可以蹩你的马腿；一方将帅若与对方之间的直线无子阻挡，就可以直接擒获。',
   'Fog Xiangqi is xiangqi under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.':
     '迷雾象棋是在战争迷雾下对弈的象棋。棋子保留正常走法，但看不见的敌方棋子会被隐藏，危险不会被提示。擒获将帅即获胜。',
   'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.':
@@ -1162,22 +1162,22 @@ const ZH_HANS: Record<string, string> = {
     '来玩 Misty 的迷雾国际象棋，或阅读面向玩家的规则文章，了解同一套视野模型。',
   'Read Fog Chess Rules': '阅读迷雾国际象棋规则',
   'Jungle Chess Rules (Dou Shou Qi, Animal Chess)': '斗兽棋规则：玩法详解与免费在线对弈',
-  "Jungle Chess, also called Dou Shou Qi or Animal Chess: eight ranked animals on a 7 by 9 board, rivers only the rat can cross, and a race to the opponent's den. Play rated games and analyse them free in your browser.":
-    '斗兽棋（又称动物棋）规则详解：棋盘 7×9，八种按等级排列的动物，只有老鼠能过的河，以及冲入对方兽穴的竞赛。免费在线对弈，支持等级分与复盘分析。',
+  "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.":
+    '斗兽棋又称动物棋，在 7×9 棋盘上摆着八种按等级排列的动物，先走进对方兽穴的一方获胜。等级最低的老鼠可以吃掉等级最高的大象。',
   'Jungle has been played online for years, mostly in apps and on Chinese game portals. Rated games, a post-game review, and an engine that tells you where it went wrong have not come with it. The serious Jungle engine work sits in academic papers and endgame tablebases, nowhere you can actually play. Mistboard puts all three in one place.':
     '斗兽棋在网上已经玩了很多年，大多在手机应用和国内游戏平台上。但等级分对局、赛后复盘，以及一台能告诉你哪一步走错的引擎，一直没有跟上。真正认真的斗兽棋引擎研究留在学术论文和残局库里，没有落在任何能实际对弈的地方。Mistboard 把这三件事放在了一起。',
   'Jungle Chess is a two-player strategy game about rank and terrain. Each side commands eight animals and tries to reach the enemy den or eliminate the enemy army.':
     '斗兽棋是一种围绕等级与地形展开的双人策略游戏。双方各指挥八种动物，目标是进入敌方兽穴或消灭敌方全部棋子。',
   'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻棋规则：玩法详解与免费在线对弈',
-  'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down, you flip to reveal, and equal ranks trade off the board. Play it free in your browser.':
-    '斗兽棋的 4×4 翻面版本，又称翻翻棋。所有动物开局均背面朝上，翻开即亮明身份，等级相同的双方同归于尽、一起离场。免费在线对弈，无需注册。',
+  'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
+    '斗兽棋的 4×4 翻面版本，又称翻翻棋。所有动物开局均背面朝上。每回合翻开一枚或走动一枚，等级相同的双方同归于尽、一起离场。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋规则：玩法详解与免费在线对弈',
-  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, moves first as the point it stands on, then reveals. Play it free in your browser.':
-    '揭棋规则详解：除将帅外的棋子都隐藏身份，首次按所在起始位置的棋子走法行棋，然后翻开并按真实身份行棋。免费在线对弈，无需注册。',
+  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
+    '揭棋规则详解：除将帅外的棋子都隐藏身份，首次按所在起始位置的棋子走法行棋，然后翻开并按真实身份行棋。',
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盘和将死目标，但隐藏所有非将帅棋子的身份。暗子首次按它所在起始位置的棋子走法移动、攻击和吃子，走完后翻开，之后按真实身份行棋。',
-  'Banqi, also called Chinese dark chess or blind chess: the 4 by 8 half-board game with face-down pieces, rank captures, and screen-jumping cannons. Play it free in your browser.':
-    '暗棋规则详解：在 4×8 半盘上进行，棋子背面朝上，按等级吃子，炮隔子跳吃，也没有王棋。免费在线对弈，无需注册。',
+  'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
+    '暗棋又称盲棋，在半张象棋棋盘上以背面朝上的棋子进行。棋子按等级吃子，例外是卒可以吃将，炮则隔一子跳吃任何棋子。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半张象棋棋盘上进行的快节奏隐藏棋子游戏。三十二枚棋子全部洗匀并背面朝上。第一次翻子决定双方颜色。之后每回合都在两种行动中选择：翻开棋子，或移动一枚已翻开的棋子。除炮外，吃子按等级进行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -1217,21 +1217,21 @@ const ZH_HANS: Record<string, string> = {
   // Machine-drafted like the rest of this dictionary (see the note at the top
   // of TRANSLATED_ARTICLE_SLUGS); not native-reviewed.
   'Every xiangqi champion since 1956': '1956年以来的每一位全国象棋冠军',
-  'Xiangqi is playable on Mistboard: find a casual or rated game against another player, take on the engine ladder, or challenge a friend. No account required. Signing in unlocks rated games.':
-    '象棋可在 Mistboard 上对弈：与其他玩家进行休闲或积分对局，挑战引擎等级阶梯，或邀请好友。无需账户即可对弈，登录后可进行积分对局。',
+  "Rated games need an account. Casual games, the engine ladder and friend links don't.":
+    '积分对局需要账户。休闲对局、引擎等级阶梯和好友链接都不需要。',
   'Find an opponent': '寻找对手',
-  'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '堡垒象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '斗兽棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '翻翻棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Jieqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '揭棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Fog Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '迷雾象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
-  'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '迷雾国际象棋可在 Mistboard 上对弈。挑战引擎或邀请好友，无需账户。',
+  'A piece you capture changes to your color and goes into your reserve, ready to drop back in. No account needed.':
+    '吃掉的棋子会变成你的颜色进入持子，随时可以打回棋盘。无需账户。',
+  'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.':
+    '陆地上的老鼠可以吃大象，大象却永远不能吃老鼠。无需账户。',
+  'When an animal takes an enemy of the same rank, both leave the board. No account needed.':
+    '动物吃同等级的敌子时，两枚棋子一起离开棋盘。无需账户。',
+  'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does.':
+    'Mistboard 采用仅向吃子方揭示的规则。你吃掉一枚暗子时会得知它是什么，对手则永远不会知道。',
+  'The generals may face each other here. A general that sees the other down a clear file can capture it. No account needed.':
+    '这里允许将帅照面。一方将帅若在无阻挡的直线上看见对方，就可以直接擒获。无需账户。',
+  'You can castle out of, through or into check, and nobody tells you when your king is attacked. No account needed.':
+    '王可以在被将军时易位，可以穿过被攻击的格子，也可以易位到被攻击的格子上；王被攻击时也没有任何提示。无需账户。',
   'CAPTURED PIECE KNOWLEDGE': '被吃暗子信息',
   General: '将',
   Advisor: '士',
@@ -2199,8 +2199,8 @@ const ZH_HANS: Record<string, string> = {
   'Black delivers checkmate on move 73.': '黑方在第 73 回合将死。',
   'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.':
     '那是[本站的一盘真实对局](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，不是演示，下面每一张截图都来自这盘棋。',
-  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link. Free, no sign-up, nothing to install.':
-    '用 1+1、3+2 或 5+5 和引擎下，或者把链接发给朋友。免费，不用注册，什么都不用装。',
+  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.':
+    '用 1+1、3+2 或 5+5 和引擎下，或者把链接发给朋友。',
   'Review your games': '复盘你的对局',
   'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.':
     '对下完的棋点一次分析，复盘会把你选的和你揭到的分开来讲，这一块是国际象棋网站没有理由去做的。常规的东西也都有：整盘棋的优势曲线、双方各自的准确率，以及每一个不准确、失误和严重失误，都标出更好的着法。分析在我们的服务器上跑，要几分钟。',
@@ -2221,8 +2221,8 @@ const ZH_HANS: Record<string, string> = {
   'Your accuracy is then built from the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
     '准确率只由这些选择算出来，所以揭得好不会把它抬高，揭得差也不会把它拉低。',
   'And it runs in your browser': '而且它就在你的浏览器里跑',
-  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued, nothing is sent anywhere, and it needs no account. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
-    '分析棋盘把同一个引擎放在你自己的机器上跑，你摆一条变化，它就把最佳着法画在棋盘上。不用排队，什么都不会传出去，也不需要账号。[引擎是开源的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以这里的某个数字如果看着不对，你可以直接去读算出它的那段代码。',
+  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued and nothing is sent anywhere. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
+    '分析棋盘把同一个引擎放在你自己的机器上跑，你摆一条变化，它就把最佳着法画在棋盘上。不用排队，什么都不会传出去。[引擎是开源的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以这里的某个数字如果看着不对，你可以直接去读算出它的那段代码。',
   'Running in a browser tab.': '就在一个浏览器标签页里跑。',
   'The analysis board with the local engine switched on: PikaJieQi at depth 18 and 335,000 nodes per second, three candidate lines each with an evaluation, and arrows for each drawn on the jieqi board.':
     '打开本地引擎后的分析棋盘：PikaJieQi 深度 18，每秒 335,000 个节点，三条候选变化各带一个评分，并在揭棋棋盘上分别画出箭头。',
@@ -2763,8 +2763,8 @@ const ZH_HANS: Record<string, string> = {
   'Pikafish on Mistboard': '皮卡鱼在线：在 Mistboard 上与皮卡鱼对弈',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     '皮卡鱼在线对弈：免费象棋引擎，网页版，无需下载',
-  'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '在浏览器里直接与最强开源象棋引擎皮卡鱼对弈。免费、不用注册、不用下载。可选难度等级，可下揭棋，还能用它复盘你的对局。',
+  'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
+    '在浏览器里直接与开源象棋引擎皮卡鱼对弈，它由 Stockfish 改造而来。免费、不用注册、不用下载。可选难度等级，可下揭棋，还能用它复盘你的对局。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方与皮卡鱼对弈或用它分析的象棋棋手。',
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
@@ -2774,8 +2774,8 @@ const ZH_HANS: Record<string, string> = {
   'Play Pikafish': '与皮卡鱼对弈',
   'Play Pikafish at jieqi': '与皮卡鱼下揭棋',
   'Play against Pikafish': '人机对弈：挑战皮卡鱼',
-  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
-    '点一下就开局。系统给你分配颜色和时钟，对面是每步搜索三百万个局面的皮卡鱼。不需要账号。',
+  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move.':
+    '点一下就开局。系统给你分配颜色和时钟，对面是每步搜索三百万个局面的皮卡鱼。',
   'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
     '每步三百万个局面很强。皮卡鱼之下还有八级 Fairy-Stockfish 人机阶梯：一级适合这周刚学会走子的人，八级已接近顶端。每一级都有实测等级分，由各级互相对弈得出，并以一个随机走合法着法的引擎定为 1500 分作基准。',
   Opponent: '对手',
@@ -2925,8 +2925,8 @@ const ZH_HANS: Record<string, string> = {
     '被吃的时候，炮排在马下面：马可以吃它。',
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '卒不能吃炮。它可以吃另一颗卒，或吃将。',
-  'Play against the engine or challenge a friend. No account required.':
-    '跟引擎下，或邀朋友对弈。不用账号。',
+  'A soldier can take the general, and the general can never take a soldier. No account needed.':
+    '卒可以吃将，将却永远不能吃卒。无需账户。',
   'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
     'Mistboard 采用台湾规则，加上台湾电脑对局协会的比赛和棋规则（Chen、Shen 与 Hsu，ICGA Journal，2010 年）：上面的 40 步无进展计数和重复局面判和。两条有文献记载的变体规则刻意不采用：炮不能吃暗子，将永远不能吃卒，就算是它的第一步也一样。如果你学的是另一套大小顺序，本页这一套才是引擎和站上每一盘棋遵守的。',
   'An engine game': '一盘引擎对局',
@@ -3434,8 +3434,8 @@ const ZH_HANT: Record<string, string> = {
   '**Your own byline.** Send something longer and it gets edited and published under your name, with your title beside it.':
     '**署名文章。** 寫一篇長一點的稿子寄來，我們會編輯後以你的名義發表，並在名字旁標上你的頭銜。',
   'Why Mistboard': '為什麼選擇 Mistboard',
-  'Mistboard is where xiangqi is played in English. Free, open source, no ads, no paywall, no premium tier. Every board, every puzzle, every lesson is open to everyone who shows up.':
-    'Mistboard 是用英語下象棋的地方。免費、開源，沒有廣告，沒有付費牆，也沒有會員等級。每一副棋盤、每一道題目、每一節課，對每一個來到這裡的人都開放。',
+  'Mistboard is free and open source, with no ads. Every game, puzzle and lesson is open to everyone. A Patron subscription adds a badge to your profile and nothing else.':
+    'Mistboard 免費、開源，沒有廣告。每一局棋、每一道題目、每一堂課都對所有人開放。贊助會員訂閱只會在你的資料頁上加一個徽章，別無其他。',
   'That audience has never had a serious English-language home, and it has never had titled players to learn from. You would be among the first, on a site built to put your name in front of them rather than bury it.':
     '這批棋迷從來沒有一個像樣的英語大本營，也從來沒有頭銜棋手可以請教。你會是最早的一批，而這個網站從一開始就是為了把你的名字擺到他們面前，而不是埋起來。',
   'Verify your title': '認證你的頭銜',
@@ -3509,7 +3509,7 @@ const ZH_HANT: Record<string, string> = {
     'Stockfish 這樣的經典國際象棋引擎有一個優勢：它能看到整個棋盤。它透過搜尋博弈樹來選擇著法，向前推演雙方可能走出的變化，再回傳最佳變化的價值（極小化極大演算法）。這種搜尋假設只有一個真實局面和一條真實的延續。',
   "Under fog there is no single position to search. Misty can't see the opponent's pieces, so the board it has to reason about is a belief set: many legal boards consistent with what it has observed. A move that wins on one board can hang the king on another. Misty samples from that set, searches those worlds, and looks for a move that holds up across them.":
     '迷霧下不存在一個可供搜尋的單一局面。Misty 看不到對手的棋子，因此它必須推理的是一個信念集合：許多與已觀察資訊一致的合法棋盤。同一步棋可能在一個棋盤上獲勝，卻在另一個棋盤上白送國王。Misty 從集合中取樣，搜尋這些可能世界，並尋找在它們之中都站得住腳的著法。',
-  'Sampling boards and searching them is the straightforward part. Combining the answers is where fog chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.':
+  'Sampling boards and searching them is the straightforward part. Combining the answers is where Fog Chess stops behaving like chess, and Misty borrows its method from poker: it minimizes regret across the sampled worlds, converging toward a strategy an opponent cannot exploit, instead of taking the move with the best average score. Obscuro, the strongest published Fog of War chess engine, works the same way. The hard part is keeping that model faithful to what has actually been observed while the clock is running.':
     '取樣棋盤並搜尋它們是相對直接的部分。真正讓迷霧國際象棋不再像國際象棋的，是如何彙總這些答案；Misty 的方法借自撲克：它在取樣出的各個可能世界上最小化遺憾值，逐步收斂到一個對手無法利用的策略，而不是選擇平均分最高的著法。公開發表的最強迷霧國際象棋引擎 Obscuro 採用同樣的思路。難點在於，在時鐘不停走動時，讓這個模型始終忠於已經觀察到的資訊。',
   "What's hard": '難點在哪裡',
   'Two things. The first is the possible-board set itself. A few plies into a foggy middlegame, "every consistent board" blows up fast. Misty has to keep that uncertainty under control inside a live-game time budget.':
@@ -3520,7 +3520,7 @@ const ZH_HANT: Record<string, string> = {
   'The current production engine is Misty 1.6. Most of the work since the first public release has been hardening, not a new personality: avoid rare king walks into hidden captures, avoid major-piece hangs in fog, stop stale search memory from leaking into a new live position, see fog-castles during search, and steer away from unstable early lines with a small opening book. Version 1.6 closes one specific queen hang. The safety check that vetoes catastrophic captures was subtracting the value of the piece being taken, so giving up a queen for a defended rook scored as a small loss rather than a disaster, and Misty walked into it in two real games before the floor that catches it shipped.':
     '目前正式環境的引擎是 Misty 1.6。首次公開發布後的大部分工作都在加固，而不是塑造新個性：避免國王偶爾走進隱藏吃子範圍，避免大子在迷霧中白送，阻止過期的搜尋記憶洩漏到新的即時局面，在搜尋中看見迷霧下的王車易位，並用小型開局庫避開不穩定的早期變化。1.6 版修正了一處特定的白送皇后問題：否決災難性吃子的安全檢查會先減去被吃棋子的價值，於是用皇后換一個有保護的車只被算作小虧而不是災難；在這道下限修好之前，Misty 在兩盤真實對局中都走進了這個陷阱。',
   'The engine is open source': '引擎已開源',
-  "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the fog chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
+  "Misty's source is on GitHub under the GPL, and it installs from PyPI as misty-chess. What ships is the Fog Chess engine itself: the belief enumerator, the search, the guards that veto a catastrophic move at commit time, and the test suite that holds the Rust and Python implementations to byte-for-byte agreement at every ply. The variant siblings and the research lab stay private.":
     'Misty 的原始碼以 GPL 授權發布在 GitHub 上，也可以從 PyPI 安裝，套件名稱是 misty-chess。公開的部分就是迷霧國際象棋引擎本身：信念列舉器、搜尋、在提交著法時否決災難性選擇的守衛，以及要求 Rust 與 Python 兩套實作在每一步都逐位元組一致的測試套件。變體同系引擎與研究實驗程式碼仍然是私有的。',
   'Obscuro is not public. So as far as I can find, Misty is the only Fog of War chess engine built on that architecture that anyone else can run, read, or take apart, and that is most of the reason to publish it.':
     'Obscuro 並未公開。因此據我所知，Misty 是唯一一個基於該架構、並且其他人可以執行、閱讀和拆解的迷霧國際象棋引擎，這也是把它開源的主要理由。',
@@ -3531,7 +3531,7 @@ const ZH_HANT: Record<string, string> = {
   "Misty is the strongest Fog of War chess engine I've seen available to play, but version numbers are not ratings. The yardstick that matters is human play, and I won't put a number on it until a serious human match earns one.":
     'Misty 是我見過可以直接對弈的最強迷霧國際象棋引擎，但版本號不是等級分。真正有意義的標尺是人類實戰；在一場嚴肅的人機比賽給出依據之前，我不會為它標上數字。',
   "What's next": '下一步是什麼',
-  'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for Banqi, but those are separate engines with their own rules and evaluation problems.':
+  'Misty itself stays focused on Fog of War chess. The same redacted engine protocol now supports variant-specific siblings, including Misty DMX for Dark Mini Xiangqi and MistyBanqi for banqi, but those are separate engines with their own rules and evaluation problems.':
     'Misty 本身會繼續專注於迷霧國際象棋。同一套去識別化引擎協定現在也支援針對特定變體的同系引擎，包括迷霧迷你象棋的 Misty DMX 和暗棋的 MistyBanqi，但它們是獨立引擎，各有自己的規則與評估問題。',
   "Misty is live on Mistboard, and every serious game against it sharpens the estimate of where it stands. Play one, and you're part of the benchmark.":
     'Misty 已在 Mistboard 上線，每一盤嚴肅的人機對局都會讓我們更準確地估計它的水準。來下一盤，你也會成為這項基準的一部分。',
@@ -3603,7 +3603,7 @@ const ZH_HANT: Record<string, string> = {
 
   // -- How MistyBanqi Plays (engine article) --
   'How MistyBanqi Plays': 'MistyBanqi 是怎麼下棋的',
-  'MistyBanqi is the engine you play in Banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
+  'MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.':
     'MistyBanqi 是你在 Mistboard 上對弈暗棋時面對的引擎：一個採用手寫評估的經典搜尋引擎。它如何思考，以及一個值得知道的盲點：它會把已經贏定的棋下成和棋。',
   'How it thinks': '它如何思考',
   "Banqi hides information in its own way: every tile starts face-down, and flipping one reveals a random piece from the bag of what's left. So unlike chess, the engine's search tree mixes ordinary moves with chance events. MistyBanqi treats a flip as a chance node, averaging over the pieces the tile might turn out to be, and otherwise searches like a classical chess engine: it looks ahead through the lines both sides could play and backs up the value of the best one.":
@@ -3618,7 +3618,7 @@ const ZH_HANT: Record<string, string> = {
   'It can draw a game it has won': '它會把贏定的棋下成和棋',
   'Here is the same engine in a position it has completely won. It is up ten pieces to two, with nothing left to capture, and the only task is to walk the win home. It draws instead.':
     '同樣這個引擎，下面處在一個它已經完全贏定的局面。它以十子對兩子領先，已經沒有子可吃，唯一要做的就是把勝勢走到底。結果它卻下成了和棋。',
-  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and Banqi's threefold-repetition rule ends the game a draw.":
+  "Nothing in the evaluation rewards converting a won position over just holding material, so a position it's winning by a mile and a position it has actually won score about the same. With no term pushing it to make progress, it shuffles, and banqi's threefold-repetition rule ends the game a draw.":
     '評估裡沒有任何一項會因為「把優勢轉化為勝利」而比「單純守住子力」給更高的分，於是一個遙遙領先的局面和一個真正已經贏下的局面，得分幾乎一樣。既然沒有哪一項促使它取得進展，它就只是來回挪子，而暗棋的三次重複局面規則便把這盤判成和棋。',
   'It can also lose its own general': '它也可能丟掉自己的將帥',
   'How each of these was found, reproduced, and measured is written up in detail in the engineering post linked below.':
@@ -3906,7 +3906,7 @@ const ZH_HANT: Record<string, string> = {
     '白方看不到 a4 或 b4：黑兵擋住了這些推進，所以它們不是合法走法。有些規則會顯示被阻擋的兵推進格；Mistboard 不會。',
   "En passant is chess's strangest move, so our vision rule bends for it: the capturing pawn sees the captured pawn on its adjacent square. The window is one move only. Pass on the capture and the chance is gone.":
     '吃過路兵是國際象棋中最奇特的一步，因此我們的視野規則為它破了個例：執行吃子的兵能看到相鄰格子上那個將被吃掉的對方兵。這個窗口只持續一步。若放棄這次吃子，機會便不復存在。',
-  'The goal is not perfect certainty. A good fog chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
+  'The goal is not perfect certainty. A good Fog Chess player learns which hidden worlds are dangerous enough to respect, then chooses moves that survive those worlds.':
     '目標不是獲得完美確定性。優秀的迷霧棋手會判斷哪些隱藏局面危險到必須尊重，然後選擇在那些局面中也能成立的走法。',
   'A pawn sees where it can push. Fog on a push square means an opponent piece or pawn is blocking it.':
     '兵能看到它可以推進到的格子。若推進格被迷霧遮住，就說明那裡有對方的棋子或兵擋著。',
@@ -4049,8 +4049,8 @@ const ZH_HANT: Record<string, string> = {
   // one, so both English keys land on the same Chinese title. That is the
   // point of seoTitle -- 'fog of war chess' is what players type.
   'Fog of War Chess Rules': '迷霧國際象棋規則',
-  'Fog Chess rules: chess under Fog of War, where each side sees only the squares its pieces reach, there are no check warnings, and the king falls by capture.':
-    '迷霧國際象棋規則：戰爭迷霧下的國際象棋。每一方只能看到己方棋子可及的格子，沒有將軍提示，王被吃掉即負。',
+  "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.":
+    '迷霧國際象棋就是只能看到己方棋子可及格子的國際象棋。沒有人提示將軍，王被吃掉即負，王也可能易位到自己看不見的攻擊之下。',
   "[Fog Chess](https://en.wikipedia.org/wiki/Dark_chess) is Mistboard's public name for dark chess, also called Fog of War chess. Jens Bæk Nielsen and Torben Osted invented it in 1989. It is the implicit-fog version of the idea: no umpire, no scan action. Each side's visibility is derived from where its pieces can legally move.":
     '[迷霧國際象棋](https://en.wikipedia.org/wiki/Dark_chess)是 Mistboard 對 dark chess / Fog of War chess 的公開名稱。Jens Bæk Nielsen 與 Torben Osted 於 1989 年發明了它。它屬於隱式迷霧：沒有裁判，也沒有偵察動作。每一方的視野完全由己方棋子的合法走法範圍推導而來。',
   'Xiangqi, also known as Chinese chess, took its modern form in China during the Song dynasty (960 to 1279), when the cannon joined the board. Its ancestors run back several centuries earlier, and it shares a common root with chess, shogi, and janggi in the older Indian game chaturanga. It is now among the most widely played board games in the world.':
@@ -4059,8 +4059,8 @@ const ZH_HANT: Record<string, string> = {
   'Fog of War Xiangqi Rules': '迷霧象棋規則',
   'Brian H. Liou designed Fog Xiangqi in 2026 as a Mistboard original. Fog of War has been played on the chess board since Jens Bæk Nielsen and Torben Osted invented dark chess in 1989, and chess.com runs it as a standard variant today. Nobody had carried it across to xiangqi. The cannon is the piece that makes it strange. It captures only by jumping over another piece, so under fog you are firing at something you cannot see, across a screen you are not certain is still there.':
     '迷霧象棋由 Brian H. Liou 於 2026 年設計，是 Mistboard 的原創變體。戰爭迷霧早在 1989 年就由 Jens Bæk Nielsen 和 Torben Osted 發明的「黑棋」引入西洋棋，如今也是 chess.com 的常規變體，卻從未有人把它移植到象棋上。真正讓它變得奇特的是砲。砲只能隔子吃子，所以在迷霧中，你既看不見目標，也無法確定砲架是否還在。',
-  'Fog Xiangqi rules: xiangqi under Fog of War, where each side sees only the points its pieces reach, hidden blockers matter, and the general falls by capture.':
-    '戰爭迷霧下的象棋：每一方只能看到己方棋子可及的點位，隱藏阻擋會影響視野，擒獲將帥即獲勝。',
+  "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.":
+    '迷霧象棋是戰爭迷霧下的象棋。看不見的棋子照樣可以蹩你的馬腿；一方將帥若與對方之間的直線無子阻擋，就可以直接擒獲。',
   'Fog Xiangqi is xiangqi under Fog of War. Pieces keep their normal movement, but unseen enemy pieces stay hidden and danger is not announced. Capture the general to win.':
     '迷霧象棋是在戰爭迷霧下對弈的象棋。棋子保留正常走法，但看不見的敵方棋子會被隱藏，危險不會被提示。擒獲將帥即獲勝。',
   'If Xiangqi is new to you, start with [Xiangqi Rules](/rules/xiangqi). If you already play xiangqi, the sections below explain only what fog changes.':
@@ -4083,15 +4083,15 @@ const ZH_HANT: Record<string, string> = {
     '來玩 Misty 的迷霧國際象棋，或閱讀面向玩家的規則文章，了解同一套視野模型。',
   'Read Fog Chess Rules': '閱讀迷霧國際象棋規則',
   'Jungle Chess Rules (Dou Shou Qi, Animal Chess)': '鬥獸棋規則：玩法詳解與免費線上對弈',
-  "Jungle Chess, also called Dou Shou Qi or Animal Chess: eight ranked animals on a 7 by 9 board, rivers only the rat can cross, and a race to the opponent's den. Play rated games and analyse them free in your browser.":
-    '鬥獸棋（又稱動物棋）規則詳解：棋盤 7×9，八種按等級排列的動物，只有老鼠能過的河，以及衝入對方獸穴的競賽。免費線上對弈，支援等級分與覆盤分析。',
+  "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.":
+    '鬥獸棋又稱動物棋，在 7×9 棋盤上擺著八種按等級排列的動物，先走進對方獸穴的一方獲勝。等級最低的老鼠可以吃掉等級最高的大象。',
   'Jungle has been played online for years, mostly in apps and on Chinese game portals. Rated games, a post-game review, and an engine that tells you where it went wrong have not come with it. The serious Jungle engine work sits in academic papers and endgame tablebases, nowhere you can actually play. Mistboard puts all three in one place.':
     '鬥獸棋在網上已經玩了很多年，大多在手機應用和中文遊戲平台上。但等級分對局、賽後覆盤，以及一台能告訴你哪一步走錯的引擎，一直沒有跟上。真正認真的鬥獸棋引擎研究留在學術論文和殘局庫裡，沒有落在任何能實際對弈的地方。Mistboard 把這三件事放在了一起。',
   'Jungle Chess is a two-player strategy game about rank and terrain. Each side commands eight animals and tries to reach the enemy den or eliminate the enemy army.':
     '鬥獸棋是一種圍繞等級與地形展開的雙人策略遊戲。雙方各指揮八種動物，目標是進入敵方獸穴或消滅敵方全部棋子。',
   'Flip Jungle Rules (Flip Dou Shou Qi)': '翻翻棋規則：玩法詳解與免費線上對弈',
-  'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down, you flip to reveal, and equal ranks trade off the board. Play it free in your browser.':
-    '鬥獸棋的 4×4 翻面版本，又稱翻翻棋。所有動物開局均背面朝上，翻開即亮明身分，等級相同的雙方同歸於盡、一起離場。免費線上對弈，無需註冊。',
+  'The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.':
+    '鬥獸棋的 4×4 翻面版本，又稱翻翻棋。所有動物開局均背面朝上。每回合翻開一枚或走動一枚，等級相同的雙方同歸於盡、一起離場。',
   'Jieqi Rules (Reveal Xiangqi)': '揭棋規則：玩法詳解與免費線上對弈',
   'Ranks and captures': '等級與吃子',
   'Each side has the same eight animals. Strongest to weakest: elephant, lion, tiger, leopard, wolf, dog, cat, rat. A piece captures an adjacent enemy of equal or lower rank.':
@@ -4870,8 +4870,8 @@ const ZH_HANT: Record<string, string> = {
   'Black delivers checkmate on move 73.': '黑方在第 73 回合將死。',
   'That is [a real game on this site](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf), not a demo, and every screenshot below comes from it.':
     '那是[本站的一盤真實對局](/jieqi/game/jq_96f40ebb-1347-4c31-babe-d777c4a88ddf)，不是演示，下面每一張截圖都來自這盤棋。',
-  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link. Free, no sign-up, nothing to install.':
-    '用 1+1、3+2 或 5+5 和引擎下，或者把連結發給朋友。免費，不用註冊，什麼都不用裝。',
+  'Play the engine at 1+1, 3+2 or 5+5, or send a friend a link.':
+    '用 1+1、3+2 或 5+5 和引擎下，或者把連結發給朋友。',
   'Review your games': '複盤你的對局',
   'Ask for analysis on a finished game and the review separates what you chose from what you drew, which is the part a chess site has no reason to do. You also get the usual: a graph of the whole game, an accuracy score for each player, and every inaccuracy, mistake and blunder marked with the move that was better. It runs on our servers and takes a few minutes.':
     '對下完的棋點一次分析，複盤會把你選的和你揭到的分開來講，這一塊是西洋棋網站沒有理由去做的。常規的東西也都有：整盤棋的優勢曲線、雙方各自的準確率，以及每一個不準確、失誤和嚴重失誤，都標出更好的著法。分析在我們的伺服器上跑，要幾分鐘。',
@@ -4892,8 +4892,8 @@ const ZH_HANT: Record<string, string> = {
   'Your accuracy is then built from the choices alone, so a lucky flip cannot flatter it and an unlucky one cannot spoil it.':
     '準確率只由這些選擇算出來，所以揭得好不會把它抬高，揭得差也不會把它拉低。',
   'And it runs in your browser': '而且它就在你的瀏覽器裡跑',
-  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued, nothing is sent anywhere, and it needs no account. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
-    '分析棋盤把同一個引擎放在你自己的機器上跑，你擺一條變化，它就把最佳著法畫在棋盤上。不用排隊，什麼都不會傳出去，也不需要帳號。[引擎是開放原始碼的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以這裡的某個數字如果看著不對，你可以直接去讀算出它的那段程式碼。',
+  'The analysis board runs the same engine on your own machine, drawing its best moves on the board as you try a line. Nothing is queued and nothing is sent anywhere. [The engine is open source](https://github.com/brianhliou/pikafish-jieqi-wasm), so if a number here looks wrong you can go and read the code that produced it.':
+    '分析棋盤把同一個引擎放在你自己的機器上跑，你擺一條變化，它就把最佳著法畫在棋盤上。不用排隊，什麼都不會傳出去。[引擎是開放原始碼的](https://github.com/brianhliou/pikafish-jieqi-wasm)，所以這裡的某個數字如果看著不對，你可以直接去讀算出它的那段程式碼。',
   'Running in a browser tab.': '就在一個瀏覽器分頁裡跑。',
   'The analysis board with the local engine switched on: PikaJieQi at depth 18 and 335,000 nodes per second, three candidate lines each with an evaluation, and arrows for each drawn on the jieqi board.':
     '打開本機引擎後的分析棋盤：PikaJieQi 深度 18，每秒 335,000 個節點，三條候選變化各帶一個評分，並在揭棋棋盤上分別畫出箭頭。',
@@ -5367,12 +5367,12 @@ const ZH_HANT: Record<string, string> = {
     '英文叫 Jungle Chess、Dou Shou Qi、Animal Chess，也有人叫 Jungle 或 Animal Checkers。中文在台灣和香港寫作鬥獸棋，中國大陸寫作斗兽棋。',
   // Overrides for every zh-Hans key that fell through to Simplified on the zh-Hant pages (2026-09-17). OpenCC s2twp, then 炮→砲 and 機器人→電腦 to match the rest of this table; prose re-read by hand.
   'The rat takes the elephant.': '鼠吃掉象。',
-  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, moves first as the point it stands on, then reveals. Play it free in your browser.':
-    '揭棋規則詳解：除將帥外的棋子都隱藏身份，首次按所在起始位置的棋子走法行棋，然後翻開並按真實身份行棋。免費線上對弈，無需註冊。',
+  'Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.':
+    '揭棋規則詳解：除將帥外的棋子都隱藏身份，首次按所在起始位置的棋子走法行棋，然後翻開並按真實身份行棋。',
   "Jieqi, also called Reveal Xiangqi, keeps xiangqi's board and checkmate goal, but hides every non-general piece. A dark piece first moves, attacks, and captures by the starting point it occupies. After that move, it reveals and plays by identity.":
     '揭棋保留象棋的棋盤和將死目標，但隱藏所有非將帥棋子的身份。暗子首次按它所在起始位置的棋子走法移動、攻擊和吃子，走完後翻開，之後按真實身份行棋。',
-  'Banqi, also called Chinese dark chess or blind chess: the 4 by 8 half-board game with face-down pieces, rank captures, and screen-jumping cannons. Play it free in your browser.':
-    '暗棋規則詳解：在 4×8 半盤上進行，棋子背面朝上，按等級吃子，砲隔子跳吃，也沒有王棋。免費線上對弈，無需註冊。',
+  'Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.':
+    '暗棋又稱盲棋，在半張象棋棋盤上以背面朝上的棋子進行。棋子按等級吃子，例外是卒可以吃將，炮則隔一子跳吃任何棋子。',
   'Banqi, also called Chinese dark chess or blind chess, is a fast hidden-piece game played on half a xiangqi board. All thirty-two pieces begin shuffled and face-down. The first flip assigns colors. After that, each turn is a choice: flip a tile or move a revealed piece. Captures follow rank, except for the cannon.':
     '暗棋是在半張象棋棋盤上進行的快節奏隱藏棋子遊戲。三十二枚棋子全部洗勻並背面朝上。第一次翻子決定雙方顏色。之後每回合都在兩種行動中選擇：翻開棋子，或移動一枚已翻開的棋子。除砲外，吃子按等級進行。',
   'Although it uses [Xiangqi](/rules/xiangqi) pieces, it is a separate game: pieces move one square, the general is not royal, and face-down tiles cannot be captured. This page describes the exact rules used on Mistboard.':
@@ -5393,21 +5393,21 @@ const ZH_HANT: Record<string, string> = {
   'Play on Mistboard': '在 Mistboard 上對弈',
   'Play vs computer': '對戰電腦',
   'Every xiangqi champion since 1956': '1956年以來的每一位全國象棋冠軍',
-  'Xiangqi is playable on Mistboard: find a casual or rated game against another player, take on the engine ladder, or challenge a friend. No account required. Signing in unlocks rated games.':
-    '象棋可在 Mistboard 上對弈：與其他玩家進行休閒或積分對局，挑戰引擎等級階梯，或邀請好友。無需帳號即可對弈，登入後可進行積分對局。',
+  "Rated games need an account. Casual games, the engine ladder and friend links don't.":
+    '積分對局需要帳號。休閒對局、引擎等級階梯和好友連結都不需要。',
   'Find an opponent': '尋找對手',
-  'Fortress Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '堡壘象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Jungle Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '鬥獸棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Flip Jungle is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '翻翻棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Jieqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '揭棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Fog Xiangqi is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '迷霧象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
-  'Fog Chess is playable on Mistboard. Play against an engine or challenge a friend. No account required.':
-    '迷霧國際象棋可在 Mistboard 上對弈。挑戰引擎或邀請好友，無需帳號。',
+  'A piece you capture changes to your color and goes into your reserve, ready to drop back in. No account needed.':
+    '吃掉的棋子會變成你的顏色進入持子，隨時可以打回棋盤。無需帳號。',
+  'A rat on land can take the elephant, and the elephant can never take a rat. No account needed.':
+    '陸地上的老鼠可以吃大象，大象卻永遠不能吃老鼠。無需帳號。',
+  'When an animal takes an enemy of the same rank, both leave the board. No account needed.':
+    '動物吃同等級的敵子時，兩枚棋子一起離開棋盤。無需帳號。',
+  'Mistboard uses capturer-only reveal. When you take a face-down piece you learn what it was, and your opponent never does.':
+    'Mistboard 採用僅向吃子方揭示的規則。你吃掉一枚暗子時會得知它是什麼，對手則永遠不會知道。',
+  'The generals may face each other here. A general that sees the other down a clear file can capture it. No account needed.':
+    '這裡允許將帥照面。一方將帥若在無阻擋的直線上看見對方，就可以直接擒獲。無需帳號。',
+  'You can castle out of, through or into check, and nobody tells you when your king is attacked. No account needed.':
+    '王可以在被將軍時易位，可以穿過被攻擊的格子，也可以易位到被攻擊的格子上；王被攻擊時也沒有任何提示。無需帳號。',
   Years: '年份',
   'The decade that was struck': '被抹去的十年',
   'Play through the whole study': '走一遍完整研究',
@@ -5500,8 +5500,8 @@ const ZH_HANT: Record<string, string> = {
   'Pikafish on Mistboard': '皮卡魚線上：在 Mistboard 上與皮卡魚對弈',
   'Play Pikafish Online: Free Xiangqi Engine, No Download':
     '皮卡魚線上對弈：免費象棋引擎，網頁版，免下載',
-  'Play Pikafish, the strongest open-source xiangqi engine, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
-    '在瀏覽器裡直接與最強開源象棋引擎皮卡魚對弈。免費、不用註冊、不用下載。可選難度等級，可下揭棋，還能用它復盤你的對局。',
+  'Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.':
+    '在瀏覽器裡直接與開源象棋引擎皮卡魚對弈，它由 Stockfish 改造而來。免費、不用註冊、不用下載。可選難度等級，可下揭棋，還能用它復盤你的對局。',
   'Xiangqi players looking for somewhere to play or analyze with Pikafish.':
     '想找地方與皮卡魚對弈或用它分析的象棋棋手。',
   '[Pikafish](https://github.com/official-pikafish/Pikafish) is the strongest open-source xiangqi engine, built from Stockfish for the Chinese board. Most people run it from a download and a separate interface. Here it runs in the page.':
@@ -5511,8 +5511,8 @@ const ZH_HANT: Record<string, string> = {
   'Play Pikafish': '與皮卡魚對弈',
   'Play Pikafish at jieqi': '與皮卡魚下揭棋',
   'Play against Pikafish': '人機對弈：挑戰皮卡魚',
-  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move. No account needed.':
-    '點一下就開局。系統給你分配顏色和時鐘，對面是每步搜尋三百萬個局面的皮卡魚。不需要帳號。',
+  'One click starts a game. You get a colour, a clock, and Pikafish on the other side, searching three million positions a move.':
+    '點一下就開局。系統給你分配顏色和時鐘，對面是每步搜尋三百萬個局面的皮卡魚。',
   'Three million positions a move is a lot. Below Pikafish sits an eight-level ladder of Fairy-Stockfish bots, level 1 for someone who learned the moves this week, level 8 close to the top. Every level has a measured rating from playing the others, anchored at 1500 to an engine that picks random legal moves.':
     '每步三百萬個局面很強。皮卡魚之下還有八級 Fairy-Stockfish 人機階梯：一級適合這週剛學會走子的人，八級已接近頂端。每一級都有實測等級分，由各級互相對弈得出，並以一個隨機走合法著法的引擎定為 1500 分作基準。',
   Opponent: '對手',
@@ -5662,8 +5662,8 @@ const ZH_HANT: Record<string, string> = {
     '被吃的時候，砲排在馬下面：馬可以吃它。',
   'A soldier cannot take a cannon. It can take the other soldier, or the general.':
     '卒不能吃砲。它可以吃另一顆卒，或吃將。',
-  'Play against the engine or challenge a friend. No account required.':
-    '跟引擎下，或邀朋友對弈。不用帳號。',
+  'A soldier can take the general, and the general can never take a soldier. No account needed.':
+    '卒可以吃將，將卻永遠不能吃卒。無需帳號。',
   'Mistboard plays Taiwanese banqi with the competition draw rules of the Taiwan Computer Game Association (Chen, Shen and Hsu, ICGA Journal, 2010): the 40-ply no-progress clock and the repetition draw above. Two documented house rules are deliberately not used: a cannon may not capture a face-down tile, and the general never captures a soldier, not even on its first move. If you learned a different ladder, the one on this page is the one the engine and every game on the site follow.':
     'Mistboard 採用台灣規則，加上台灣電腦對局協會的比賽和棋規則（Chen、Shen 與 Hsu，ICGA Journal，2010 年）：上面的 40 步無進展計數和重複局面判和。兩條有文獻記載的變體規則刻意不採用：砲不能吃暗子，將永遠不能吃卒，就算是它的第一步也一樣。如果你學的是另一套大小順序，本頁這一套才是引擎和站上每一盤棋遵守的。',
   'An engine game': '一盤引擎對局',
