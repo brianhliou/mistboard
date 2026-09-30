@@ -56,3 +56,22 @@ and a direct localized URL redirects to the complete English prerender.
 After English article edits, `npm run i18n:prune-articles` removes dictionary keys that no longer
 have a live source string. The coverage test rejects orphaned keys, including separately localized
 SVG labels, so cleanup drift cannot accumulate silently.
+
+## Finding English that leaks into Chinese pages
+
+Source greps miss most leaks, because the English is composed in code: `{color} wins`, ` vs `,
+server placeholders such as `Guest` and `BOT`, channel labels, termination codes. Find them by
+rendering:
+
+1. In Playwright, `addInitScript` sets `localStorage['mistboard.locale'] = 'zh-Hans'` (routes such as
+   `/watch`, `/games`, `/game/:id` and the review pages have no `/zh-hans/` prefix).
+2. Visit each page and dump `innerText` lines matching `/[A-Za-z]{3,}/`; ignore proper names.
+3. Sweep stateful screens, not just URLs: play a bot game to game over, open dialogs, and run under
+   phone emulation with touch. A URL-only sweep missed the tenant live room for weeks.
+
+Fix the class, not the string. Outcomes are structured (`GameOutcome` in `game-display.ts`,
+`terminationLabel()`, `watchChannelLabel()`); never re-parse a display string to recover the winner.
+`apps/web/src/i18n-ui-coverage.test.ts` fails on any visitor-facing file with three or more English
+phrases and no catalog or locale import. Its allowlist only shrinks (a stale entry fails too), so
+localizing a file removes it from the allowlist in the same change. Surfaces still in English are
+tracked on #464; the planned flows × locales × devices browser suite is #465.
