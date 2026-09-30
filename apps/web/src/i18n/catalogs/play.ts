@@ -212,6 +212,7 @@ export const EN_PLAY = {
   'result.checkmate': 'checkmate',
   'result.kingCapture': 'king capture',
   'result.drawPhrase': 'draw',
+  'result.noLegalMoves': 'no legal moves',
   'result.whiteWins': 'White wins',
   'result.blackWins': 'Black wins',
   'result.youWon': 'You won',

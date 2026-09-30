@@ -156,7 +156,7 @@ export const darkChessArticle: Article = {
           {
             kind: 'paragraph',
             text:
-              "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. There is no stalemate draw and no insufficient-material draw.",
+              "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. A side with no moves at all, every piece blocked, also draws. Otherwise you must move, even if every move walks into attack. There is no insufficient-material draw.",
           },
         ],
       },

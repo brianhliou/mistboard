@@ -25,6 +25,7 @@ test('gameEndReasons covers exactly the known reasons', () => {
     'checkmate',
     'draw',
     'king-captured',
+    'no-legal-moves',
     'resignation',
     'timeout',
   ]);

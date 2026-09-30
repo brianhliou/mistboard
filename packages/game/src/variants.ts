@@ -271,12 +271,17 @@ function applyFogMove(state: GameState, move: Move): GameState {
     lastMove: legalMove,
   };
   const positionCounts = nextPositionCounts(state, nextPositionState);
+  // Order: king captured > side to move has no moves at all (a draw: every
+  // piece is blocked, so there is nothing to force into attack) > 50-move /
+  // threefold. Moving into attack is still forced whenever any move exists.
   const nextStatus =
     capturedPiece?.role === 'king'
       ? ({ type: 'finished', winner: player, reason: 'king-captured' } as const)
-      : nextHalfmoveClock >= 100 || positionCounts[positionRepetitionKey(nextPositionState)]! >= 3
-        ? ({ type: 'finished', winner: null, reason: 'draw' } as const)
-        : playingStatus;
+      : getFogMovesForPlayer(nextPositionState, playingStatus.turn).length === 0
+        ? ({ type: 'finished', winner: null, reason: 'no-legal-moves' } as const)
+        : nextHalfmoveClock >= 100 || positionCounts[positionRepetitionKey(nextPositionState)]! >= 3
+          ? ({ type: 'finished', winner: null, reason: 'draw' } as const)
+          : playingStatus;
 
   return {
     ...state,

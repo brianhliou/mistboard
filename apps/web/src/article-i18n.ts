@@ -1048,8 +1048,8 @@ const ZH_HANS: Record<string, string> = {
     '注意 d7 的车能看到 b7 的后和 h7 的王，却看不到 a7。棋子的视野止于它走法的尽头。',
   'The game ends when a king is captured. No check, no checkmate, no warning.':
     '当一方的王被吃掉时，对局即告结束。没有将军，没有将死，也没有任何预警。',
-  "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. There is no stalemate draw and no insufficient-material draw.":
-    'Mistboard 会在三次重复局面（同一真实局面出现三次，且轮到走子的一方相同、王车易位权与吃过路兵权也相同）或五十回合规则（连续五十个回合无兵的走动、也无吃子）时自动判和。两条规则都针对真实局面，而非任何一方各自的视野。这里没有逼和，也没有子力不足判和。',
+  "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. A side with no moves at all, every piece blocked, also draws. Otherwise you must move, even if every move walks into attack. There is no insufficient-material draw.":
+    'Mistboard 会在三次重复局面（同一真实局面出现三次，且轮到走子的一方相同、王车易位权与吃过路兵权也相同）或五十回合规则（连续五十个回合无兵的走动、也无吃子）时自动判和。两条规则都针对真实局面，而非任何一方各自的视野。若一方完全无子可动（所有棋子都被堵死），同样判和。除此之外必须走棋，哪怕每一步都会走进对方的攻击范围。没有子力不足判和。',
   'A king may castle out of, through, or into check.':
     '王可以在被将军时易位，可以穿过被攻击的格子易位，也可以易位到被攻击的格子上。',
   'Pawns see forward push squares when those squares are empty. They see diagonal squares only when an enemy piece is actually there to capture.':
@@ -4078,8 +4078,8 @@ const ZH_HANT: Record<string, string> = {
     '注意 d7 的車能看到 b7 的后和 h7 的王，卻看不到 a7。棋子的視野止於它走法的盡頭。',
   'The game ends when a king is captured. No check, no checkmate, no warning.':
     '當一方的王被吃掉時，對局即告結束。沒有將軍，沒有將死，也沒有任何預警。',
-  "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. There is no stalemate draw and no insufficient-material draw.":
-    'Mistboard 會在三次重複局面（同一真實局面出現三次，且輪到走子的一方相同、王車易位權與吃過路兵權也相同）或五十回合規則（連續五十個回合無兵的走動、也無吃子）時自動判和。兩條規則都針對真實局面，而非任何一方各自的視野。這裡沒有逼和，也沒有子力不足判和。',
+  "Mistboard auto-draws games on threefold repetition (same true position three times, same side to move, same castling and en-passant rights) and the 50-move rule (fifty full moves with no pawn move or capture). Both apply to the true position, not either player's view. A side with no moves at all, every piece blocked, also draws. Otherwise you must move, even if every move walks into attack. There is no insufficient-material draw.":
+    'Mistboard 會在三次重複局面（同一真實局面出現三次，且輪到走子的一方相同、王車易位權與吃過路兵權也相同）或五十回合規則（連續五十個回合無兵的走動、也無吃子）時自動判和。兩條規則都針對真實局面，而非任何一方各自的視野。若一方完全無子可動（所有棋子都被堵死），同樣判和。除此之外必須走棋，哪怕每一步都會走進對方的攻擊範圍。沒有子力不足判和。',
   'A king may castle out of, through, or into check.':
     '王可以在被將軍時易位，可以穿過被攻擊的格子易位，也可以易位到被攻擊的格子上。',
   'Pawns see forward push squares when those squares are empty. They see diagonal squares only when an enemy piece is actually there to capture.':

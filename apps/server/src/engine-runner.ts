@@ -127,10 +127,13 @@ export async function runRandomLegalEngineGame(
     const moves = variantForId(variant).getLegalMoves(projection.state, color);
     const ply = moveCount(events);
     if (moves.length === 0) {
-      await abortGame(pool, task, gameId, ply, 'no-legal-moves');
+      // A side with no moves at all is a draw (fog rules, 2026-09-30). The
+      // variant already finishes the game on the move that causes it, so this
+      // only fires on a variant that does not; score it the same way.
+      await completeNoLegalMovesDraw(pool, task, gameId, ply);
       await recordRuntimeSummary(pool, task, gameId, {
         runner: 'typescript-in-process',
-        status: 'aborted',
+        status: 'completed',
         termination: 'no-legal-moves',
         plyCount: ply,
         wallMs: Date.now() - runnerStartedAt,
@@ -138,7 +141,7 @@ export async function runRandomLegalEngineGame(
         whiteEngineId: whiteEngine.id,
         blackEngineId: blackEngine.id,
       });
-      return { gameId, plyCount: ply, status: 'aborted' };
+      return { gameId, plyCount: ply, status: 'completed' };
     }
 
     if (ply >= maxPlies) {
@@ -396,25 +399,28 @@ async function runPythonSubprocessEngineGame(
   const plyCount = moveEvents.length;
 
   const status = projection.state.status;
+  // No moves at all is a draw whatever the runner put in `winner`.
   const resultLabel =
-    status.type === 'finished'
-      ? status.winner === 'white'
-        ? 'white-wins'
-        : status.winner === 'black'
-          ? 'black-wins'
-          : 'draw'
-      : result.winner === 'white'
-        ? 'white-wins'
-        : result.winner === 'black'
-          ? 'black-wins'
-          : 'draw';
+    result.endReason === 'no-legal-moves'
+      ? 'draw'
+      : status.type === 'finished'
+        ? status.winner === 'white'
+          ? 'white-wins'
+          : status.winner === 'black'
+            ? 'black-wins'
+            : 'draw'
+        : result.winner === 'white'
+          ? 'white-wins'
+          : result.winner === 'black'
+            ? 'black-wins'
+            : 'draw';
   const termination =
     result.endReason === 'clock-expired'
       ? 'timeout'
       : result.endReason === 'truncated'
         ? 'truncated'
         : result.endReason === 'no-legal-moves'
-          ? 'draw'
+          ? 'no-legal-moves'
           : status.type === 'finished'
             ? status.reason
             : result.endReason;
@@ -656,6 +662,27 @@ async function completeTruncatedGame(
   await reconcileExperimentJob(pool, task.jobId);
 }
 
+async function completeNoLegalMovesDraw(
+  pool: pg.Pool,
+  task: EngineGameTask,
+  gameId: string,
+  plyCount: number,
+): Promise<void> {
+  await pool.query(
+    `UPDATE games
+     SET status = 'completed',
+         result = 'draw',
+         termination = 'no-legal-moves',
+         ply_count = $2,
+         ended_at = $3,
+         aborted_reason = NULL
+     WHERE room_id = $1`,
+    [gameId, plyCount, new Date()],
+  );
+  await finishEngineGameTask(pool, task.id, task.claimToken!, 'completed');
+  await reconcileExperimentJob(pool, task.jobId);
+}
+
 async function completeTimeoutGame(
   pool: pg.Pool,
   task: EngineGameTask,
@@ -683,7 +710,7 @@ async function abortGame(
   task: EngineGameTask,
   gameId: string,
   plyCount: number,
-  termination: 'engine-failure' | 'no-legal-moves' | 'truncated' | 'worker-aborted',
+  termination: 'engine-failure' | 'truncated' | 'worker-aborted',
 ): Promise<void> {
   await pool.query(
     `UPDATE games

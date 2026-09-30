@@ -278,6 +278,7 @@ export const ZH_HANS_PLAY = {
   'live.choosePromotionPiece': '选择升变棋子',
   'result.kingCapture': '擒王',
   'result.drawPhrase': '和棋',
+  'result.noLegalMoves': '无子可动',
   'result.whiteWins': '白方获胜',
   'result.blackWins': '黑方获胜',
   'result.youWon': '你赢了',

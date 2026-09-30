@@ -1645,5 +1645,6 @@ function endGameReasonLabel(reason: string): string {
   if (reason === 'timeout') return t('replay.endTimeout');
   if (reason === 'checkmate') return t('replay.endCheckmate');
   if (reason === 'draw') return t('replay.endDraw');
+  if (reason === 'no-legal-moves') return t('replay.endNoLegalMoves');
   return reason;
 }

@@ -278,6 +278,7 @@ export const ZH_HANT_PLAY = {
   'live.choosePromotionPiece': '選擇升變棋子',
   'result.kingCapture': '擒王',
   'result.drawPhrase': '和棋',
+  'result.noLegalMoves': '無子可動',
   'result.whiteWins': '白方獲勝',
   'result.blackWins': '黑方獲勝',
   'result.youWon': '你贏了',

@@ -1294,7 +1294,31 @@ export async function playRandomEngineMoveIfReady(
     room.projection.state,
     engineSeat,
   );
-  if (moves.length === 0) return;
+  if (moves.length === 0) {
+    // Unreachable since 2026-09-30: applyFogMove finishes the game as a draw
+    // ('no-legal-moves') on the move that leaves the engine with none. If a
+    // rules change reopens it, the room must not sit silent: page it. A timed
+    // room still ends on the engine's clock.
+    logger.error(
+      {
+        kind: 'engine_no_legal_moves_while_playing',
+        room_id: room.id,
+        color: engineSeat,
+        engine_id: room.pveEngineId ?? null,
+        move_number: room.projection.state.moveNumber,
+      },
+      'engine to move with no legal moves in a playing room',
+    );
+    void sendEngineAlertNotification({
+      severity: 'critical',
+      alert_kind: 'engine_no_legal_moves_while_playing',
+      variant: room.projection.variant,
+      room_id: room.id,
+      color: engineSeat,
+      engine_id: room.pveEngineId ?? undefined,
+    }).catch(() => {});
+    return;
+  }
   const clock = room.projection.state.clock;
   const context = {
     baseThinkTimeMs: ctx.pveEngineMoveDelayMs,

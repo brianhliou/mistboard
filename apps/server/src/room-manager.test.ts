@@ -5,6 +5,8 @@ import {
   createClock,
   freezeClock,
   type GameEvent,
+  type Move,
+  parseDarkChessFen,
   replayGameEvents,
 } from '@mistboard/game';
 import type { Seat } from './payloads.js';
@@ -23,6 +25,7 @@ import {
   PVP_DISCONNECT_FORFEIT_ENABLED,
   pauseRoomOnShutdown,
   playMove,
+  playRandomEngineMoveIfReady,
   type RoomManagerContext,
   resumeRoom,
   resumeRoomIfReady,
@@ -1598,4 +1601,93 @@ test('scheduleForfeitTimeout: PvP no longer forfeits a leaver either (#436)', ()
   scheduleForfeitTimeout(makeCtx(), room);
   assert.equal(room.forfeitSeat, null);
   assert.equal(room.forfeitTimer, null);
+});
+
+// ── Fog: side to move has no moves (draw) ───────────────────────────────────
+// Sven's post in hgm's 2011 Dark Chess thread (TalkChess t=37571), a game by Uri
+// Blass: after 32. Qc2 Black has no pseudo-legal move. Until 2026-09-30 the room
+// stayed `playing` with the engine to move and returned early every turn, so an
+// untimed game hung forever. Mirror of packages/game's
+// variants-dark-chess-no-moves.test.ts.
+const SVEN_NO_MOVES_UCI =
+  'b2b3 e7e5 b3b4 f8b4 g1f3 b4f8 f3e5 b7b5 e5f7 b5b4 f7h8 b4b3 a2a4 a7a6 a4a5 h7h5 ' +
+  'c1a3 b3b2 a1a2 h5h4 b1c3 b2b1b a2a1 b1a2 g2g3 h4g3 e2e4 g3f2 e1f2 g7g6 h8g6 g8e7 ' +
+  'g6e7 f8e7 a3e7 d8e7 e4e5 e7e5 d2d3 e5c3 f1g2 e8e7 d1e1 e7d6 e1c3 a2d5 c3d2 d6c6 ' +
+  'd3d4 c6b7 g2h3 a8a7 c2c4 b7a8 a1d1 d5b7 d4d5 b7c6 d5d6 c6b7 c4c5 c7c6 d2c2';
+
+function svenMoves(): Move[] {
+  return SVEN_NO_MOVES_UCI.split(' ').map((uci) => ({
+    from: uci.slice(0, 2) as Move['from'],
+    to: uci.slice(2, 4) as Move['to'],
+    ...(uci[4] === 'b' ? { promotion: 'bishop' as const } : {}),
+  }));
+}
+
+test('playMove: the move that leaves the engine with no moves ends the game as a draw', async () => {
+  const roomId = 'fog-no-moves-room';
+  const engineId = 'builtin-random-legal';
+  const now = Date.now();
+  const moves = svenMoves();
+  assert.equal(moves.length, 63);
+  // Untimed on purpose: no clock would ever have ended the hung room.
+  const events: GameEvent[] = [
+    { type: 'room-created', at: now, roomId, variant: 'dark-chess' },
+    { type: 'seat-assigned', at: now, roomId, clientId: 'human-white', seat: 'white' },
+    { type: 'seat-assigned', at: now, roomId, clientId: engineId, seat: 'black' },
+    ...moves.slice(0, 62).map(
+      (move, index): GameEvent => ({
+        type: 'move-played',
+        at: now + index + 1,
+        roomId,
+        color: index % 2 === 0 ? 'white' : 'black',
+        move,
+      }),
+    ),
+  ];
+  const room = makeRoom(roomId, 'dark-chess', events);
+  room.mode = 'pve';
+  room.randomEngine = true;
+  room.pveEngineId = engineId;
+  assert.deepEqual(room.projection.state.status, { type: 'playing', turn: 'white' });
+  const human = makeClient('human-white', 'white', /* solo= */ true, roomId);
+  room.clients.add(human);
+  const ctx = makeCtx();
+
+  const last = moves[62]!;
+  await playMove(ctx, room, human, { type: 'move', from: last.from, to: last.to });
+
+  assert.equal(room.events.length, events.length + 1);
+  assert.equal(room.events[room.events.length - 1]!.type, 'move-played');
+  assert.deepEqual(room.projection.state.status, {
+    type: 'finished',
+    winner: null,
+    reason: 'no-legal-moves',
+  });
+  assert.equal(room.engineTimer, null, 'no engine turn may be scheduled after the game ends');
+  const summary = buildGameSummary(ctx, room);
+  assert.equal(summary.result, 'draw');
+  assert.equal(summary.termination, 'no-legal-moves');
+  assert.equal(summary.plyCount, 63);
+});
+
+test('playRandomEngineMoveIfReady: engine with no moves in a playing room appends nothing and does not throw', async () => {
+  // Unreachable through moves now; forced here to pin the guard's behaviour.
+  const roomId = 'fog-no-moves-guard';
+  const engineId = 'builtin-random-legal';
+  const room = makeRoom(roomId, 'dark-chess', [
+    { type: 'room-created', at: 1, roomId, variant: 'dark-chess' },
+    { type: 'seat-assigned', at: 1, roomId, clientId: 'human-white', seat: 'white' },
+    { type: 'seat-assigned', at: 1, roomId, clientId: engineId, seat: 'black' },
+  ]);
+  room.mode = 'pve';
+  room.randomEngine = true;
+  room.pveEngineId = engineId;
+  const parsed = parseDarkChessFen('knb5/rb1p4/p1pP4/P1P5/8/7B/2Q2K1P/3R3R b - - 1 32', roomId);
+  assert.ok(parsed.ok);
+  room.projection = { ...room.projection, state: parsed.state };
+  const before = room.events.length;
+
+  await playRandomEngineMoveIfReady(makeCtx(), room);
+
+  assert.equal(room.events.length, before);
 });

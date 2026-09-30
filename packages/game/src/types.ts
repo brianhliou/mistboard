@@ -97,7 +97,11 @@ export type GameEndReason =
   | 'king-captured'
   | 'timeout'
   | 'resignation'
-  | 'abandonment';
+  | 'abandonment'
+  // Fog of War: the side to move has no moves at all (every piece blocked).
+  // Scored as a draw (decided 2026-09-30). Same spelling as the games
+  // termination allowlist and the bot-match arbiter already use.
+  | 'no-legal-moves';
 
 export const gameEndReasons: readonly GameEndReason[] = [
   'checkmate',
@@ -106,6 +110,7 @@ export const gameEndReasons: readonly GameEndReason[] = [
   'timeout',
   'resignation',
   'abandonment',
+  'no-legal-moves',
 ] as const;
 
 export function isGameEndReason(value: unknown): value is GameEndReason {
