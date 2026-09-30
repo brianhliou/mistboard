@@ -38,6 +38,7 @@ import {
 } from './landing-bot-policy.js';
 import { rememberedPveEngine } from './pve-memory.js';
 import { isRatedModeEnabled } from './rated-flag.js';
+import { postThroughRestart } from './room-create-retry.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildUiIcon, type UiIconName } from './ui-icon.js';
 import { renderVariantMarker } from './variant-markers.js';
@@ -2361,7 +2362,7 @@ async function createCorrespondenceFromPlay(
   button.setAttribute('aria-busy', 'true');
   button.textContent = t('setup.creating', {}, locale);
   try {
-    const response = await fetch('/api/rooms', {
+    const response = await postThroughRestart('/api/rooms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({
@@ -2387,7 +2388,7 @@ async function createCorrespondenceFromPlay(
     } else if (failure.error === 'invalid_days_per_move') {
       status.textContent = 'Pick 1, 3, or 7 days per move.';
     } else if (failure.error === 'server_draining') {
-      status.textContent = 'The server is restarting. Try again in a minute.';
+      status.textContent = t('setup.serverRestartTimeout', {}, locale);
     } else {
       status.textContent = 'Correspondence is unavailable right now. Try again later.';
     }
@@ -2420,7 +2421,7 @@ async function postCorrespondenceSeekFromPlay(
   button.setAttribute('aria-busy', 'true');
   button.textContent = t('setup.posting', {}, locale);
   try {
-    const response = await fetch('/api/correspondence/seeks', {
+    const response = await postThroughRestart('/api/correspondence/seeks', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify({ daysPerMove, preferredColor: 'random' }),
@@ -2440,7 +2441,7 @@ async function postCorrespondenceSeekFromPlay(
     } else if (failure.error === 'seek_limit_reached') {
       status.textContent = 'You already have the most open games allowed. Cancel one first.';
     } else if (failure.error === 'server_draining') {
-      status.textContent = 'The server is restarting. Try again in a minute.';
+      status.textContent = t('setup.serverRestartTimeout', {}, locale);
     } else {
       status.textContent = 'Correspondence is unavailable right now. Try again later.';
     }
@@ -3032,11 +3033,21 @@ async function createRoomFromPlay(
   }
   try {
     while (true) {
-      const response = await fetch('/api/rooms', {
-        method: 'POST',
-        headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(roomCreationRequestBody(mode, setup, engineId)),
-      });
+      const response = await postThroughRestart(
+        '/api/rooms',
+        {
+          method: 'POST',
+          headers: { 'content-type': 'application/json' },
+          body: JSON.stringify(roomCreationRequestBody(mode, setup, engineId)),
+        },
+        {
+          onRestarting: () => {
+            if (status?.isConnected) status.textContent = t('setup.serverRestarting', {}, locale);
+            setButtonLabel(button, t('setup.waitingForRestart', {}, locale));
+          },
+          isActive: () => !status || status.isConnected,
+        },
+      );
       if (status && !status.isConnected) return;
       if (response.ok) {
         const data = (await response.json()) as { url?: string };

@@ -1,4 +1,5 @@
 import { rememberPveEngine } from './pve-memory.js';
+import { postThroughRestart } from './room-create-retry.js';
 
 // One-click PvE room creation against a public bot identity. The server
 // resolves the per-variant engine from the bot profile (routes/rooms.ts
@@ -13,7 +14,7 @@ export type BotPlayRequest = {
 };
 
 export async function createBotGame(request: BotPlayRequest): Promise<string> {
-  const response = await fetch('/api/rooms', {
+  const response = await postThroughRestart('/api/rooms', {
     method: 'POST',
     headers: { accept: 'application/json', 'content-type': 'application/json' },
     body: JSON.stringify({

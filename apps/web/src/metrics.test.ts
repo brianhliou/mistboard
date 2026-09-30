@@ -407,4 +407,9 @@ describe('deploy history rows', () => {
     expect(cells.slice(1, 3)).toEqual(['Restart', 'none (undrained)']);
     expect(cells[5]).toBe('1');
   });
+
+  it('calls an undrained restart with nothing live the intended path, not a failure', () => {
+    const cells = deployRowCells({ ...base, withoutDrain: true, activeGamesAtShutdown: 0 });
+    expect(cells.slice(1, 3)).toEqual(['Restart', 'not needed (0 live)']);
+  });
 });

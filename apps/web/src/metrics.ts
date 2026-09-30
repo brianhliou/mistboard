@@ -818,7 +818,9 @@ export function deployRowCells(entry: DeployHistoryEntry, locale = 'en-US'): str
   const drainCell = drain
     ? `${formatDuration(drain.durationMs)}${drain.committed ? '' : ', never committed'}`
     : entry.withoutDrain
-      ? 'none (undrained)'
+      ? entry.activeGamesAtShutdown === 0
+        ? 'not needed (0 live)'
+        : 'none (undrained)'
       : 'not recorded';
   const waited = drain
     ? drain.peakActiveGames > drain.activeGamesAtStart
@@ -866,7 +868,15 @@ function buildDeploysSection(entries: DeployHistoryEntry[]): HTMLElement {
   const body = table.createTBody();
   for (const entry of entries) {
     const row = body.insertRow();
-    if (entry.withoutDrain || (entry.activeGamesAtShutdown ?? 0) > 0) {
+    // Warn on what cost players: games live at shutdown, creates the drain
+    // refused, or an undrained restart whose live count was not recorded. An
+    // undrained restart with 0 live is release-prod's intended path (#478).
+    const live = entry.activeGamesAtShutdown;
+    if (
+      (live ?? 0) > 0 ||
+      (entry.drain?.refusedCreates ?? 0) > 0 ||
+      (entry.withoutDrain && live === null)
+    ) {
       row.classList.add('is-warning');
     }
     for (const cell of deployRowCells(entry)) row.insertCell().textContent = cell;

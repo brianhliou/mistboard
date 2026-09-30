@@ -6,6 +6,7 @@ import { correspondenceAwaitingOpponent } from './live-status.js';
 import { currentView } from './live-view.js';
 import { postGameInviteButton } from './postgame-invite.js';
 import { rematchControls } from './rematch-controls.js';
+import { postThroughRestart } from './room-create-retry.js';
 import { isColor, oppositeColor } from './web-utils.js';
 
 type RoomActionRefs = Pick<LiveRefs, 'roomActions'>;
@@ -116,7 +117,7 @@ async function createPlayAgainRoom(refs: RoomActionRefs, deps: RoomActionDeps): 
   playAgainStatus = 'creating';
   renderRoomActions(refs, deps);
   try {
-    const response = await fetch('/api/rooms', {
+    const response = await postThroughRestart('/api/rooms', {
       method: 'POST',
       headers: { 'content-type': 'application/json' },
       body: JSON.stringify(body),
