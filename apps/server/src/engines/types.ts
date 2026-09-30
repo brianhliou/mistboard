@@ -51,7 +51,9 @@ export type EngineId =
   // Fairy-Stockfish (Atomic Xiangqi ladder) + its random floor
   | `fairy-stockfish-atomic-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   | 'random-legal-atomic-xiangqi'
-  // Pikafish (Jieqi)
+  // Pikafish (Jieqi): the ladder, level 8 (strongest), two retired tiers, the random floor
+  | `pikafish-jieqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7}`
+  | 'random-legal-jieqi'
   | 'pikafish-jieqi-amateur'
   | 'pikafish-jieqi-strong'
   | 'pikafish-jieqi-strongest'

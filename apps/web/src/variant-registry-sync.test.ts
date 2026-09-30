@@ -22,7 +22,7 @@ import {
   VARIANT_DEFAULT_GAME_SPEC_IDS,
   variantDefaultTimeControl,
 } from '@mistboard/game';
-import { JIEQI_DEFAULT_ENGINE_ID } from '../../server/src/jieqi-engine.js';
+import { JIEQI_DEFAULT_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import {
   XIANGQI_DEFAULT_ENGINE_ID,
@@ -129,16 +129,20 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     expect(tenant?.landing?.defaultEngineId).toBe(XIANGQI_DEFAULT_ENGINE_ID);
   });
 
-  it('the jieqi picker offers the tier the server actually serves', () => {
-    // Jieqi exposes ONE engine option, so the picker id IS the served tier. It
-    // pointed at the depth-capped middle rung while the uncapped tier sat
-    // unreachable (2026-08-23) — every jieqi PvE game was played at depth 10.
+  it('jieqi picker engine options mirror the server ladder', () => {
+    // Hand mirror of JIEQI_PLAYABLE_ENGINES (apps/server/src/jieqi-engine.ts),
+    // strongest first. Level 8 wears the Pikafish name; the rungs below wear
+    // their tier names. Drift means a picker entry that cannot seat an engine.
     const tenant = webTenants.find((candidate) => candidate.gameSpecId === 'jieqi');
     expect(tenant?.landing?.engineOptions, 'jieqi tenant must expose engineOptions').toBeTruthy();
-    expect((tenant?.landing?.engineOptions ?? []).map((option) => option.id)).toEqual([
-      JIEQI_DEFAULT_ENGINE_ID,
-    ]);
-    expect(tenant?.landing?.defaultEngineId).toBe(JIEQI_DEFAULT_ENGINE_ID);
+    const options = tenant?.landing?.engineOptions ?? [];
+    expect(options.map((option) => ({ id: option.id, name: option.name }))).toEqual(
+      [...JIEQI_PLAYABLE_ENGINES].reverse().map((tier) => ({
+        id: tier.id,
+        name: tier.id === JIEQI_DEFAULT_ENGINE_ID ? 'Pikafish' : tier.name,
+      })),
+    );
+    expect(tenant?.landing?.defaultEngineId).toBe('pikafish-jieqi-level-4');
   });
 
   it('every server watch channel has a variant marker', () => {

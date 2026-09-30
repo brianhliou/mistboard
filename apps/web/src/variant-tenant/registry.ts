@@ -411,10 +411,11 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: jieqiEnabled,
-      // One public identity (bot-consolidation 2026-07-21): Pikafish fronts the
-      // depth-10 jieqi profile. The amateur/strongest engine ids stay
-      // server-resolvable for history and EvE; no ladder until the jieqi engine
-      // grows a real strength knob.
+      // The jieqi ladder (2026-09-29), strongest first: Pikafish (level 8, full
+      // strength) then Pikafish Level 7..1, Stockfish's Skill Level applied
+      // server-side (apps/server/src/jieqi-engine.ts). Hand mirror of
+      // JIEQI_PLAYABLE_ENGINES; parity is asserted by variant-registry-sync.test.ts.
+      // Level 4 is the default, as on the other rated ladders.
       engineOptions: [
         {
           id: 'pikafish-jieqi-strongest',
@@ -422,8 +423,50 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
           familyName: 'Pikafish',
           kind: 'container',
         },
+        {
+          id: 'pikafish-jieqi-level-7',
+          name: 'Pikafish Level 7',
+          familyName: 'Pikafish',
+          kind: 'container',
+        },
+        {
+          id: 'pikafish-jieqi-level-6',
+          name: 'Pikafish Level 6',
+          familyName: 'Pikafish',
+          kind: 'container',
+        },
+        {
+          id: 'pikafish-jieqi-level-5',
+          name: 'Pikafish Level 5',
+          familyName: 'Pikafish',
+          kind: 'container',
+        },
+        {
+          id: 'pikafish-jieqi-level-4',
+          name: 'Pikafish Level 4',
+          familyName: 'Pikafish',
+          kind: 'container',
+        },
+        {
+          id: 'pikafish-jieqi-level-3',
+          name: 'Pikafish Level 3',
+          familyName: 'Pikafish',
+          kind: 'container',
+        },
+        {
+          id: 'pikafish-jieqi-level-2',
+          name: 'Pikafish Level 2',
+          familyName: 'Pikafish',
+          kind: 'container',
+        },
+        {
+          id: 'pikafish-jieqi-level-1',
+          name: 'Pikafish Level 1',
+          familyName: 'Pikafish',
+          kind: 'container',
+        },
       ],
-      defaultEngineId: 'pikafish-jieqi-strongest',
+      defaultEngineId: 'pikafish-jieqi-level-4',
     },
   },
   {

@@ -34,6 +34,7 @@ import {
   landingBotRotationBucket,
   landingLobbyBotOffer,
   landingXiangqiBotOffers,
+  pveEngineIdForRememberedPick,
 } from './landing-bot-policy.js';
 import { rememberedPveEngine } from './pve-memory.js';
 import { isRatedModeEnabled } from './rated-flag.js';
@@ -2490,9 +2491,12 @@ function buildEngineSetupSection(
         ? engines
         : fallbackPlayableEngines();
     choiceCount = availableEngines.length;
+    const remembered = currentEngineId
+      ? pveEngineIdForRememberedPick(gameSpecId, currentEngineId)
+      : undefined;
     const selected =
-      currentEngineId && availableEngines.some((engine) => engine.id === currentEngineId)
-        ? currentEngineId
+      remembered && availableEngines.some((engine) => engine.id === remembered)
+        ? remembered
         : defaultEngineIdForGameSpec(gameSpecId, availableEngines);
     if (selected) onSelect(selected, gameSpecId);
 

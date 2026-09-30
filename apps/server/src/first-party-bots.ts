@@ -10,6 +10,8 @@
 //   - Pikafish         — the boss: full-strength Pikafish for xiangqi + jieqi.
 //   - Fairy-Stockfish Level 1..8 — the ladder, one bot per level, each playing
 //                        xiangqi, fortress xiangqi, duck xiangqi and atomic xiangqi.
+//   - Pikafish Level 1..7 — the jieqi ladder (2026-09-29, migration 151); its
+//                        level 8 is Pikafish itself.
 // Retired rosters (pre-merge Misty and
 // Pikafish tiers) stay resolvable through `legacyBotIds` and
 // `attributionEngineIds` so old rooms, replays, and game attribution keep their
@@ -31,6 +33,16 @@ export type FirstPartyBotProfile = {
 export const MISTY_DARK_CHESS_ACTIVE_ENGINE_ID = 'python-v2-v1.6';
 
 const FAIRY_STOCKFISH_LEVELS = [1, 2, 3, 4, 5, 6, 7, 8] as const;
+const PIKAFISH_JIEQI_LEVELS = [1, 2, 3, 4, 5, 6, 7] as const;
+
+function pikafishJieqiLevelProfile(level: number): FirstPartyBotProfile {
+  return {
+    id: `pikafish-level-${level}`,
+    displayName: `Pikafish Level ${level}`,
+    engines: { jieqi: `pikafish-jieqi-level-${level}` },
+    defaultGameSpecId: 'jieqi',
+  };
+}
 
 // The three retired fortress tiers were absorbed into the matching ladder
 // levels by ordinal position (the migration-056/075 convention): amateur ->
@@ -135,6 +147,7 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
     ],
   },
   ...FAIRY_STOCKFISH_LEVELS.map(fairyStockfishLevelProfile),
+  ...PIKAFISH_JIEQI_LEVELS.map(pikafishJieqiLevelProfile),
 ];
 
 const botByEngineId = new Map<string, FirstPartyBotProfile>();

@@ -17,7 +17,6 @@ import { EVE_VARIANT_IDS, eveAdapterFor, eveRoomId } from './variant-eve-registr
 const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
   ['dark-chess', 'python-worker engine; rated by the dark-chess EvE runner, not a tenant adapter'],
   ['dark-xiangqi', 'Misty DXQ, engine-service; no UCI ladder to round-robin'],
-  ['jieqi', 'single pikafish-jieqi ladder without a Skill Level knob; no calibration run yet'],
   ['banqi', 'one node-budgeted bot, nothing to rank it against'],
   ['jungle', 'in-process Misty jungle levels; no UCI ladder'],
   ['jungle-flip', 'one node-budgeted bot, nothing to rank it against'],

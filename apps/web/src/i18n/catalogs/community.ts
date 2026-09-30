@@ -492,6 +492,8 @@ export const EN_COMMUNITY = {
   'bots.metaLevels': 'Eight levels',
   'bots.ladderTitle': 'Xiangqi, level by level',
   'bots.ladderIntro': 'New to xiangqi? Start at level 2. Win a few games, then move up a level.',
+  'bots.jieqiLadderTitle': 'Jieqi, level by level',
+  'bots.jieqiLadderIntro': 'New to jieqi? Start at level 4. Win a few games, then move up a level.',
   'bots.otherTitle': 'Other games',
   'bots.otherIntro': "Bots for Mistboard's other games.",
   'bots.pikafishBio':
@@ -529,6 +531,8 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'bots.metaLevels',
   'bots.ladderTitle',
   'bots.ladderIntro',
+  'bots.jieqiLadderTitle',
+  'bots.jieqiLadderIntro',
   'bots.otherTitle',
   'bots.otherIntro',
   'bots.pikafishBio',

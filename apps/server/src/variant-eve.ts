@@ -50,11 +50,22 @@ export type VariantEveAdapter<
   legalMoves(state: State): readonly M[];
   moveToUci(move: M): string;
   legalMoveForUci(legalMoves: readonly M[], uci: string): M | null;
-  /** Ask the engine for a move given the UCI history from the start position. */
+  /**
+   * Server-secret per-game setup (a jieqi deal), stamped on the room-created event
+   * the way the live runtime does. Seeded from the pairing's opening seed, so the two
+   * colour orders of a pairing play the same deal.
+   */
+  createSetup?(seed: bigint): unknown;
+  /**
+   * Ask the engine for a move given the UCI history from the start position. `context`
+   * carries the game's events and the mover, for variants whose engine input is not a
+   * move list (jieqi: a redacted FEN built from the events, as the mover sees it).
+   */
   search(
     engineId: string,
     history: string[],
     opts: { movetimeMs: number },
+    context: { events: readonly unknown[]; color: string },
   ): Promise<{ best: string | null }>;
   /**
    * Live-path selection that runs BEFORE the search and replaces it when it
@@ -76,6 +87,8 @@ export type VariantEveMoveRequest<M> = {
   history: string[];
   legalMoves: readonly M[];
   tier: VariantEveTier;
+  events: readonly unknown[];
+  color: string;
 };
 
 /** Returns the engine's move as UCI, or null when it has none. Injectable for tests. */
@@ -121,8 +134,15 @@ export async function playVariantEngineGame<
   const moveProvider = input.moveProvider ?? defaultMoveProvider(adapter);
   const rng = input.rng ?? Math.random;
   type Event = TenantRoomEvent<C, M, Spec>;
+  const setup = adapter.createSetup?.(seedFrom(input.openingPolicy?.seed));
   const events: Event[] = [
-    { type: 'room-created', at: startedAt, roomId: input.roomId, gameSpecId: adapter.gameSpecId },
+    {
+      type: 'room-created',
+      at: startedAt,
+      roomId: input.roomId,
+      gameSpecId: adapter.gameSpecId,
+      ...(setup !== undefined ? { setup } : {}),
+    },
     {
       type: 'seat-assigned',
       at: startedAt,
@@ -205,7 +225,14 @@ export async function playVariantEngineGame<
     } else {
       move = adapter.beforeSearch?.(state, legalMoves, color) ?? null;
       if (move === null) {
-        const uci = await moveProvider({ engineId, history: [...history], legalMoves, tier });
+        const uci = await moveProvider({
+          engineId,
+          history: [...history],
+          legalMoves,
+          tier,
+          events: [...events],
+          color,
+        });
         move = uci === null ? null : adapter.legalMoveForUci(legalMoves, uci);
         if (move !== null && adapter.guard) move = adapter.guard(state, move, legalMoves);
       }
@@ -255,9 +282,12 @@ function defaultMoveProvider<
   Spec extends string,
 >(adapter: VariantEveAdapter<C, M, State, Spec>): VariantEveMoveProvider<M> {
   return async (request) => {
-    const { best } = await adapter.search(request.engineId, request.history, {
-      movetimeMs: request.tier.movetimeMs,
-    });
+    const { best } = await adapter.search(
+      request.engineId,
+      request.history,
+      { movetimeMs: request.tier.movetimeMs },
+      { events: request.events, color: request.color },
+    );
     return best;
   };
 }
@@ -277,7 +307,7 @@ function randomOpeningPlies(policy: Record<string, unknown> | undefined): number
   return typeof n === 'number' && Number.isInteger(n) && n > 0 ? n : 0;
 }
 
-function seedFrom(value: unknown): bigint {
+export function seedFrom(value: unknown): bigint {
   if (typeof value === 'string') {
     try {
       return BigInt(value);

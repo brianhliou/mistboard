@@ -95,6 +95,10 @@ const XIANGQI_RETURNING_LEVEL = 5;
 const FORTRESS_XIANGQI_LEVEL = 4;
 const DUCK_XIANGQI_LEVEL = 4;
 const ATOMIC_XIANGQI_LEVEL = 4;
+// The jieqi ladder's middle rung (Pikafish Level 1..7, level 8 is Pikafish itself),
+// the level every jieqi offer names and /bots marks "Start here".
+export const JIEQI_FIRST_GAME_LEVEL = 4;
+const JIEQI_LEVEL = JIEQI_FIRST_GAME_LEVEL;
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 
 // The Lobby rows rotate their rung and clock by bucket; Quick Pairing's chip
@@ -108,6 +112,17 @@ const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 // is variety for a returning player, not a re-tuning. The cycle is three so it
 // never locks to the two-cycle variant lineup.
 const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
+
+// The per-variant PvE memory holds a bot id after a one-click start (bot-play.ts)
+// and an engine id after a setup-dialog pick. The dialog lists engines, so a
+// remembered jieqi bot is mapped back to its engine here; otherwise it misses the
+// menu and a player who last played Pikafish reopens the dialog on Level 4.
+export function pveEngineIdForRememberedPick(gameSpecId: string, id: string): string {
+  if (gameSpecId !== JIEQI_SPEC_ID) return id;
+  if (id === 'pikafish') return 'pikafish-jieqi-strongest';
+  const level = /^pikafish-level-(\d+)$/.exec(id)?.[1];
+  return level ? `pikafish-jieqi-level-${level}` : id;
+}
 
 export type LandingBotOfferContext = {
   /** The xiangqi engine this device last started a bot game against, if any. */
@@ -152,8 +167,8 @@ export function landingBotOffer(
   if (gameSpecId === ATOMIC_XIANGQI_SPEC_ID) return fsfOffer(gameSpecId, ATOMIC_XIANGQI_LEVEL);
   if (gameSpecId === JIEQI_SPEC_ID) {
     return {
-      botId: 'pikafish',
-      botName: 'Pikafish',
+      botId: `pikafish-level-${JIEQI_LEVEL}`,
+      botName: `Pikafish Level ${JIEQI_LEVEL}`,
       gameSpecId,
       timeControlId: offerPace(gameSpecId),
     };

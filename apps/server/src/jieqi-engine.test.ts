@@ -14,6 +14,7 @@ import {
   jieqiAnalysisResourceOptions,
   jieqiEngineMove,
   jieqiEngineTierFor,
+  pickSkillMove,
   pikafishJieqiWarmSessionStats,
 } from './jieqi-engine.js';
 
@@ -234,4 +235,54 @@ test('the live block is the session handshake followed by position and go', () =
   assert.equal(commands.at(-2), `position fen ${FEN} moves h2e2`);
   assert.equal(commands.at(-1), buildJieqiGoCommand({ movetimeMs: 4_000 }));
   assert.equal(buildJieqiGoCommand({ movetimeMs: 1_200, depth: 10 }), 'go depth 10 movetime 1200');
+});
+
+test('pickSkillMove: full strength among near-equal moves, weak levels drift to worse ones', () => {
+  const line = (index: number, move: string, cp: number) => ({
+    index,
+    move,
+    cp,
+    mate: null,
+    depth: 5,
+    pv: [move],
+    bound: null,
+  });
+  const table = [
+    line(1, 'a0a1', 50),
+    line(2, 'b0b1', 40),
+    line(3, 'c0c1', -150),
+    line(4, 'd0d1', -400),
+  ];
+  // Skill 20 with no random push keeps the top move: 50 beats 40 + 80*10/128.
+  assert.equal(pickSkillMove(table, 20, () => 0)?.move, 'a0a1');
+  // Skill -9 (weakness 138 > 128): the deterministic push outweighs the loss, so the
+  // worst candidate scores highest. This is Stockfish's own rule, not a bug.
+  assert.equal(pickSkillMove(table, -9, () => 0)?.move, 'd0d1');
+  // Only the first four lines are candidates, and an empty table has no pick.
+  assert.equal(pickSkillMove([], 3), null);
+  assert.equal(pickSkillMove([line(1, 'e3e4', 0)], -9)?.move, 'e3e4');
+});
+
+test('pickSkillMove: a forced mate outranks centipawns before the push', () => {
+  const mateLine = {
+    index: 1,
+    move: 'h2e2',
+    cp: null,
+    mate: 2,
+    depth: 5,
+    pv: ['h2e2'],
+    bound: null,
+  };
+  const quiet = { index: 2, move: 'a3a4', cp: 30, mate: null, depth: 5, pv: ['a3a4'], bound: null };
+  assert.equal(pickSkillMove([mateLine, quiet], 16, () => 0)?.move, 'h2e2');
+});
+
+test('the ladder is eight levels, Lichess-shaped, with level 8 the full-strength tier', () => {
+  assert.equal(JIEQI_PLAYABLE_ENGINES.length, 8);
+  assert.deepEqual(
+    JIEQI_PLAYABLE_ENGINES.map((t) => t.skill ?? null),
+    [-9, -5, -1, 3, 7, 11, 16, null],
+  );
+  assert.ok(JIEQI_PLAYABLE_ENGINES.every((t) => !t.retired));
+  assert.equal(jieqiEngineTierFor('pikafish-jieqi-amateur')?.retired, true);
 });

@@ -34,6 +34,8 @@ const COPY: Record<
     startHere: string;
     strongest: string;
     pikafish: string;
+    jieqiTitle: string;
+    jieqiIntro: string;
     otherTitle: string;
     misty: string;
   }
@@ -49,6 +51,8 @@ const COPY: Record<
     strongest: 'strongest',
     pikafish:
       'Open source, built from Stockfish, and searching three million positions a move. It plays jieqi too.',
+    jieqiTitle: 'Jieqi, level by level',
+    jieqiIntro: 'New to jieqi? Start at level 4. Win a few games, then move up a level.',
     otherTitle: 'Other games',
     misty:
       "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
@@ -63,6 +67,8 @@ const COPY: Record<
     startHere: '从这里开始',
     strongest: '最强',
     pikafish: '开源，由 Stockfish 改造而来，每步搜索三百万个局面。也可以下揭棋。',
+    jieqiTitle: '揭棋：按等级挑选',
+    jieqiIntro: '刚开始下揭棋？从第 4 级开始。赢几盘之后，再往上挑战一级。',
     otherTitle: '其他棋类',
     misty: 'Mistboard 自研引擎，下迷雾国际象棋、迷雾象棋、暗棋、斗兽棋和翻翻棋。',
   },
@@ -76,12 +82,18 @@ const COPY: Record<
     startHere: '從這裡開始',
     strongest: '最強',
     pikafish: '開源，由 Stockfish 改造而來，每步搜尋三百萬個局面。也可以下揭棋。',
+    jieqiTitle: '揭棋：按等級挑選',
+    jieqiIntro: '剛開始下揭棋？從第 4 級開始。贏幾盤之後，再往上挑戰一級。',
     otherTitle: '其他棋類',
     misty: 'Mistboard 自研引擎，下迷霧國際象棋、迷霧象棋、暗棋、鬥獸棋和翻翻棋。',
   },
 };
 
 const LADDER_PREFIX = 'fairy-stockfish-level-';
+// The jieqi ladder (Pikafish Level 1..7; Pikafish is its top rung) and the level a
+// first-timer is given (web landing-bot-policy JIEQI_FIRST_GAME_LEVEL).
+const JIEQI_LADDER_PREFIX = 'pikafish-level-';
+const JIEQI_FIRST_GAME_LEVEL = 4;
 // The level a first-timer is given (web landing-bot-policy XIANGQI_FIRST_GAME_LEVEL).
 const FIRST_GAME_LEVEL = 2;
 
@@ -99,8 +111,9 @@ export async function botsDirectoryBody(
     const rating = bot.ratings.find((candidate) => candidate.gameSpecId === 'xiangqi');
     return rating ? new Intl.NumberFormat('en-US').format(rating.rating) : null;
   };
-  const playsXiangqi = (bot: BotDirectoryEntry) =>
-    botPlayOptions(bot).some((option) => option.gameSpecId === 'xiangqi' && option.playable);
+  const playsGame = (bot: BotDirectoryEntry, gameSpecId: string) =>
+    botPlayOptions(bot).some((option) => option.gameSpecId === gameSpecId && option.playable);
+  const playsXiangqi = (bot: BotDirectoryEntry) => playsGame(bot, 'xiangqi');
 
   const system = bots.filter((bot) => bot.ownerType === 'system');
   const ladder = system
@@ -108,7 +121,14 @@ export async function botsDirectoryBody(
     .map((bot) => ({ bot, level: Number.parseInt(bot.id.slice(LADDER_PREFIX.length), 10) }))
     .filter(({ level }) => Number.isFinite(level))
     .sort((a, b) => a.level - b.level);
-  const others = system.filter((bot) => !bot.id.startsWith(LADDER_PREFIX));
+  const jieqiLadder = system
+    .filter((bot) => bot.id.startsWith(JIEQI_LADDER_PREFIX))
+    .map((bot) => ({ bot, level: Number.parseInt(bot.id.slice(JIEQI_LADDER_PREFIX.length), 10) }))
+    .filter(({ level }) => Number.isFinite(level))
+    .sort((a, b) => a.level - b.level);
+  const others = system.filter(
+    (bot) => !bot.id.startsWith(LADDER_PREFIX) && !bot.id.startsWith(JIEQI_LADDER_PREFIX),
+  );
 
   const rungs = ladder.map(({ bot, level }) => {
     const rating = xiangqiRating(bot);
@@ -124,8 +144,19 @@ export async function botsDirectoryBody(
       `<li><a href="${botHref(bot.id)}">${escapeHtml(bot.displayName)}</a> · ${escapeHtml(copy.strongest)}. ${escapeHtml(blurb)}</li>`,
     );
   }
+  const jieqiRungs = jieqiLadder.map(({ bot, level }) => {
+    const note = level === JIEQI_FIRST_GAME_LEVEL ? ` · ${escapeHtml(copy.startHere)}` : '';
+    return `<li><a href="${botHref(bot.id)}">${escapeHtml(copy.level(level))}</a>${note}</li>`;
+  });
+  if (jieqiRungs.length > 0) {
+    for (const bot of others.filter((candidate) => playsGame(candidate, 'jieqi'))) {
+      jieqiRungs.push(
+        `<li><a href="${botHref(bot.id)}">${escapeHtml(bot.displayName)}</a> · ${escapeHtml(copy.strongest)}</li>`,
+      );
+    }
+  }
   const otherGames = others
-    .filter((bot) => !playsXiangqi(bot))
+    .filter((bot) => !playsXiangqi(bot) && !playsGame(bot, 'jieqi'))
     .map((bot) => {
       const blurb = bot.id === 'misty' ? copy.misty : bot.bio;
       return `<li><a href="${botHref(bot.id)}">${escapeHtml(bot.displayName)}</a>. ${escapeHtml(blurb)}</li>`;
@@ -138,6 +169,13 @@ export async function botsDirectoryBody(
     `<p>${escapeHtml(copy.ladderIntro)}</p>`,
     `<ul>${rungs.join('')}</ul>`,
   ];
+  if (jieqiRungs.length > 0) {
+    parts.push(
+      `<h2>${escapeHtml(copy.jieqiTitle)}</h2>`,
+      `<p>${escapeHtml(copy.jieqiIntro)}</p>`,
+      `<ul>${jieqiRungs.join('')}</ul>`,
+    );
+  }
   if (otherGames.length > 0) {
     parts.push(`<h2>${escapeHtml(copy.otherTitle)}</h2>`, `<ul>${otherGames.join('')}</ul>`);
   }

@@ -109,18 +109,30 @@ function jieqiEngineRepWindow(
   moves: string[];
   gameMoves: string[];
 } {
-  const events = room.events as readonly JieqiEvent[];
+  return jieqiEngineWindowFromEvents(room.events as readonly JieqiEvent[], seat, () =>
+    jieqiStateToPikafishFen(room.projection.state, { viewer: seat }),
+  );
+}
+
+/** The same window from an event log alone: the live room and the EvE loop (the
+ *  jieqi EvE adapter) share it, so a rated bot sees exactly what a served one does.
+ *  `fallbackFen` covers a log without its room-created event. */
+export function jieqiEngineWindowFromEvents(
+  events: readonly JieqiEvent[],
+  seat: JieqiColor,
+  fallbackFen: () => string,
+): {
+  fen: string;
+  moves: string[];
+  gameMoves: string[];
+} {
   const gameMoves: string[] = [];
   for (const event of events) {
     if (event.type === 'move-played') gameMoves.push(jieqiMoveToPikafishUci(event.move));
   }
   const created = events[0];
   if (created?.type !== 'room-created') {
-    return {
-      fen: jieqiStateToPikafishFen(room.projection.state, { viewer: seat }),
-      moves: [],
-      gameMoves,
-    };
+    return { fen: fallbackFen(), moves: [], gameMoves };
   }
   let proj = replayTenantEvents(jieqiTenant, [created]);
   let startState = proj.state;

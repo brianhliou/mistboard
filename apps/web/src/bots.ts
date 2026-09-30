@@ -10,7 +10,7 @@ import './bots.css';
 import { bindBotPlayControl } from './bot-play.js';
 import { buildCommunityLayout } from './community-rail.js';
 import { type FeaturedGame, variantDisplayLabel } from './game-display.js';
-import { XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
+import { JIEQI_FIRST_GAME_LEVEL, XIANGQI_FIRST_GAME_LEVEL } from './landing-bot-policy.js';
 import { buildBotSummaryCard } from './profile-summary-card.js';
 import {
   buildProfileDashboard,
@@ -81,6 +81,8 @@ type BotProfile = {
 class BotNotFound extends Error {}
 
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
+// The jieqi ladder's level bots (2026-09-29); its top rung is Pikafish.
+const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
 
 // /bots is the page for "play xiangqi against the computer" (象棋人机对战), in
 // all three interface languages (/zh-hans/bots, /zh-hant/bots): the heading
@@ -255,11 +257,19 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
   const ladder = system
     .filter((bot) => bot.id.startsWith(LADDER_BOT_ID_PREFIX))
     .sort((a, b) => ladderLevel(a) - ladderLevel(b));
-  const others = system.filter((bot) => !bot.id.startsWith(LADDER_BOT_ID_PREFIX));
-  const topRungs = others.filter((bot) => playsXiangqi(bot));
-  const otherGames = others.filter((bot) => !playsXiangqi(bot));
+  const jieqiLadder = system
+    .filter((bot) => bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX))
+    .sort((a, b) => ladderLevel(a) - ladderLevel(b));
+  const others = system.filter(
+    (bot) =>
+      !bot.id.startsWith(LADDER_BOT_ID_PREFIX) && !bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX),
+  );
+  const topRungs = others.filter((bot) => playsGame(bot, 'xiangqi'));
+  const jieqiTopRungs = others.filter((bot) => playsGame(bot, 'jieqi'));
+  const otherGames = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
   const community = bots.filter((bot) => bot.ownerType === 'user');
   const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
+  const jieqiCard = { ratingGameSpecId: 'jieqi', primaryPlayGameSpecId: 'jieqi' };
 
   const groups: BotRosterGroup[] = [
     {
@@ -289,6 +299,32 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
       ],
     },
     {
+      title: t('bots.jieqiLadderTitle'),
+      intro: t('bots.jieqiLadderIntro'),
+      rows: jieqiLadder.length
+        ? [
+            ...jieqiLadder.map((bot) => {
+              const level = ladderLevel(bot);
+              return buildBotSummaryCard(bot, {
+                ...jieqiCard,
+                name: t('bots.levelName', { level }),
+                subtitle: 'Pikafish',
+                badge: level === JIEQI_FIRST_GAME_LEVEL ? t('bots.startHere') : undefined,
+                bio: null,
+              });
+            }),
+            ...jieqiTopRungs.map((bot) =>
+              buildBotSummaryCard(bot, {
+                ...jieqiCard,
+                badge: t('bots.strongest'),
+                subtitle: t('bots.firstParty'),
+                bio: systemBotBio(bot),
+              }),
+            ),
+          ]
+        : [],
+    },
+    {
       title: t('bots.otherTitle'),
       intro: t('bots.otherIntro'),
       rows: otherGames.map((bot) =>
@@ -312,8 +348,8 @@ function systemBotBio(bot: BotProfile): string | undefined {
   return undefined;
 }
 
-function playsXiangqi(bot: BotProfile): boolean {
-  return playOptionsFor(bot).some((option) => option.gameSpecId === 'xiangqi' && option.playable);
+function playsGame(bot: BotProfile, gameSpecId: string): boolean {
+  return playOptionsFor(bot).some((option) => option.gameSpecId === gameSpecId && option.playable);
 }
 
 type BotRosterGroup = {
@@ -323,7 +359,7 @@ type BotRosterGroup = {
 };
 
 function ladderLevel(bot: BotProfile): number {
-  const level = Number.parseInt(bot.id.slice(LADDER_BOT_ID_PREFIX.length), 10);
+  const level = Number.parseInt(/-level-(\d+)$/.exec(bot.id)?.[1] ?? '', 10);
   return Number.isFinite(level) ? level : Number.MAX_SAFE_INTEGER;
 }
 

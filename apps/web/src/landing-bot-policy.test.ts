@@ -7,8 +7,10 @@ import {
   landingBotRotationBucket,
   landingLobbyBotOffer,
   landingXiangqiBotOffers,
+  pveEngineIdForRememberedPick,
   xiangqiPrimaryLevel,
 } from './landing-bot-policy.js';
+import { webVariantTenantForSpecId } from './variant-tenant/registry.js';
 
 describe('landing bot policy', () => {
   it('uses shared six-hour UTC buckets', () => {
@@ -116,7 +118,10 @@ describe('landing bot policy', () => {
           new Set(['misty']),
         );
       }
-      expect(new Set(rowsFor('jieqi').map((offer) => offer.botId))).toEqual(new Set(['pikafish']));
+      // Jieqi's ladder rows stay on level 4 until the ladder is rated.
+      expect(new Set(rowsFor('jieqi').map((offer) => offer.botId))).toEqual(
+        new Set(['pikafish-level-4']),
+      );
     });
 
     it('never rotates the clock below the bot default', () => {
@@ -152,7 +157,7 @@ describe('landing bot policy', () => {
   });
 
   it('uses the established house bot for every other supported variant', () => {
-    expect(landingBotOffer('jieqi')?.botId).toBe('pikafish');
+    expect(landingBotOffer('jieqi')?.botId).toBe('pikafish-level-4');
     // Every Misty variant, fog included, advertises the 10+5 bot default. For
     // the fog engines it also clears the 5s increment floor (#283) the picker
     // and the create routes enforce (isAllowedEngineTimeControl).
@@ -162,5 +167,17 @@ describe('landing bot policy', () => {
         timeControlId: '10m5',
       });
     }
+  });
+
+  it('maps a remembered jieqi bot to the engine the setup menu lists', () => {
+    const menu = webVariantTenantForSpecId('jieqi')?.landing?.engineOptions?.map((e) => e.id) ?? [];
+    for (const botId of ['pikafish', 'pikafish-level-1', 'pikafish-level-4', 'pikafish-level-7']) {
+      expect(menu).toContain(pveEngineIdForRememberedPick('jieqi', botId));
+    }
+    expect(pveEngineIdForRememberedPick('jieqi', 'pikafish')).toBe('pikafish-jieqi-strongest');
+    expect(pveEngineIdForRememberedPick('jieqi', 'pikafish-jieqi-level-3')).toBe(
+      'pikafish-jieqi-level-3',
+    );
+    expect(pveEngineIdForRememberedPick('xiangqi', 'pikafish')).toBe('pikafish');
   });
 });

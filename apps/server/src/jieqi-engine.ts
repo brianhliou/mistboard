@@ -75,38 +75,65 @@ export type JieqiEngineTier = {
   id: string;
   name: string;
   movetimeMs: number;
-  // Optional hard search-depth cap. jieqi_old has NO Skill Level / UCI_Elo knob
-  // (verified: absent from its UCI options), so depth is the only real strength
-  // limiter — a shallow classical search is genuinely beatable. The top tier omits
-  // it (full strength, time-bounded). Depths are starting points; calibrate vs play.
+  // Optional hard search-depth cap: `go depth N movetime T` stops at whichever binds.
+  // The top tier omits it (full strength, time-bounded).
   depth?: number;
+  // Stockfish-style Skill Level (-20..20). jieqi_old has NO Skill Level / UCI_Elo
+  // option, so the server applies Stockfish's own pick rule to the engine's MultiPV
+  // table (pickSkillMove below). Omitted = full strength, no MultiPV.
+  skill?: number;
+  // Retired tiers stay resolvable (old rooms, replays, attribution) but are not
+  // offered or rated.
+  retired?: boolean;
 };
 
-const JIEQI_ENGINE_TIERS = [
+// The ladder (2026-09-29): Lichess's Stockfish level table, the same one the xiangqi
+// Fairy-Stockfish ladder copies (xiangqi-fsf-engine.ts): skill -9..16, depth 5/5/5/5/5/8/13,
+// 50..500 ms. Level 8 is the full-strength bot every jieqi game used to get, under its
+// old id so its history and rating carry over. Strength per level is a starting point
+// until the EvE run rates it (jieqi-eve-adapter.ts).
+const JIEQI_LADDER_TIERS = [
+  { level: 1, skill: -9, depth: 5, movetimeMs: 50 },
+  { level: 2, skill: -5, depth: 5, movetimeMs: 100 },
+  { level: 3, skill: -1, depth: 5, movetimeMs: 150 },
+  { level: 4, skill: 3, depth: 5, movetimeMs: 200 },
+  { level: 5, skill: 7, depth: 5, movetimeMs: 300 },
+  { level: 6, skill: 11, depth: 8, movetimeMs: 400 },
+  { level: 7, skill: 16, depth: 13, movetimeMs: 500 },
+].map(
+  ({ level, ...tier }): JieqiEngineTier => ({
+    id: `pikafish-jieqi-level-${level}`,
+    name: `Pikafish Level ${level}`,
+    ...tier,
+  }),
+);
+
+const JIEQI_ENGINE_TIERS: readonly JieqiEngineTier[] = [
+  ...JIEQI_LADDER_TIERS,
+  {
+    // Level 8: no depth cap, no skill, and the movetime matches mainline Pikafish's top
+    // xiangqi rung (level-8, 4000ms). Measured at the jieqi start position on an 8-core
+    // dev box: this config reaches depth 32.
+    id: JIEQI_DEFAULT_ENGINE_ID,
+    name: 'PikaJieQi - Strongest',
+    movetimeMs: 4_000,
+  },
+  // Pre-ladder tiers (depth caps only), never offered after the Pikafish consolidation.
   {
     id: 'pikafish-jieqi-amateur',
     name: 'PikaJieQi - Amateur',
     depth: 4,
     movetimeMs: 800,
+    retired: true,
   },
   {
     id: 'pikafish-jieqi-strong',
     name: 'PikaJieQi - Strong',
     depth: 10,
     movetimeMs: 1200,
+    retired: true,
   },
-  {
-    // The tier every jieqi PvE game is served by (the web registry offers exactly one
-    // jieqi engine and the Pikafish bot profile points here). No depth cap, and the
-    // movetime matches mainline Pikafish's top xiangqi rung (level-8, 4000ms) so the
-    // two bots wearing the "Pikafish" badge at least get comparable think time.
-    // Measured at the jieqi start position on an 8-core dev box: this config reaches
-    // depth 32, against depth 10 for the 'strong' rung that used to serve every game.
-    id: JIEQI_DEFAULT_ENGINE_ID,
-    name: 'PikaJieQi - Strongest',
-    movetimeMs: 4_000,
-  },
-] as const satisfies readonly JieqiEngineTier[];
+];
 
 // Per-process search resources for LIVE play. PikaJieQi ships UCI defaults of
 // Threads=1 / Hash=16, and 16MB is badly undersized for this binary: it runs at
@@ -136,7 +163,17 @@ function jieqiLiveResourceOptions(): string[] {
   return [`setoption name Hash value ${hashMb}`, `setoption name Threads value ${threads}`];
 }
 
-export const JIEQI_PLAYABLE_ENGINES: readonly JieqiEngineTier[] = JIEQI_ENGINE_TIERS;
+/** Every tier the server can resolve, retired ones included (registry, history). */
+export const JIEQI_ALL_ENGINE_TIERS: readonly JieqiEngineTier[] = JIEQI_ENGINE_TIERS;
+
+/** The EvE-only uniformly-random mover: the 0-Elo anchor of the ladder's ratings. */
+export const JIEQI_RANDOM_ENGINE_ID = 'random-legal-jieqi';
+export const JIEQI_RANDOM_ENGINE_VERSION = 'random-legal-v1';
+
+/** The ladder, weakest first; the last entry is level 8 (JIEQI_DEFAULT_ENGINE_ID). */
+export const JIEQI_PLAYABLE_ENGINES: readonly JieqiEngineTier[] = JIEQI_ENGINE_TIERS.filter(
+  (tier) => !tier.retired,
+);
 
 const JIEQI_ENGINE_BY_ID: ReadonlyMap<string, JieqiEngineTier> = new Map(
   JIEQI_ENGINE_TIERS.map((engine) => [engine.id, engine]),
@@ -485,7 +522,59 @@ export type JieqiEngineOptions = {
   /** True for a game's first engine move: a parked process still carries the previous
    *  game's hash table, and `ucinewgame` clears it before the search. */
   newGame?: boolean;
+  /** Skill Level for a ladder tier (see pickSkillMove); omitted = full strength. */
+  skill?: number;
+  /** Uniform [0,1) source for the skill pick; injectable for deterministic tests. */
+  rng?: () => number;
 };
+
+// Stockfish's Skill Level, applied outside the engine. Stockfish (search.cpp,
+// Skill::pick_best) searches with at least 4 PVs and then, for each candidate, adds a
+// push that is bigger the weaker the level: a deterministic share of how much worse the
+// move is, plus a random share of the top-to-4th spread (capped at a pawn). The highest
+// score + push wins, so low levels drift to worse moves on purpose and high levels pick
+// among near-equals at random. The formula is linear in the scores, so running it on UCI
+// centipawns with the cap at 100 cp is the same pick as on internal units.
+// One deviation: Stockfish picks at depth 1 + level when a non-negative level reaches it
+// mid-search; this picks from the final table. With the ladder's depth caps that matters
+// only for level 4 (skill 3, cap 5: Stockfish would pick at depth 4).
+export const JIEQI_SKILL_MULTIPV = 4;
+const SKILL_PAWN_CP = 100;
+const SKILL_MATE_SCORE = 32_000;
+
+function skillScore(line: Pick<UciMultiPvLine, 'cp' | 'mate'>): number {
+  if (line.mate !== null) {
+    return line.mate > 0 ? SKILL_MATE_SCORE - line.mate : -SKILL_MATE_SCORE - line.mate;
+  }
+  return line.cp ?? 0;
+}
+
+export function pickSkillMove(
+  lines: readonly UciMultiPvLine[],
+  skill: number,
+  rng: () => number = Math.random,
+): UciMultiPvLine | null {
+  const ranked = [...lines]
+    .filter((line) => line.move !== '')
+    .sort((a, b) => a.index - b.index)
+    .slice(0, JIEQI_SKILL_MULTIPV);
+  if (ranked.length === 0) return null;
+  const top = skillScore(ranked[0]!);
+  const delta = Math.min(top - skillScore(ranked.at(-1)!), SKILL_PAWN_CP);
+  const weakness = 120 - 2 * skill;
+  let maxScore = Number.NEGATIVE_INFINITY;
+  let best: UciMultiPvLine = ranked[0]!;
+  for (const line of ranked) {
+    const score = skillScore(line);
+    const random = Math.floor(rng() * weakness);
+    const push = Math.trunc((weakness * (top - score) + delta * random) / 128);
+    if (score + push >= maxScore) {
+      maxScore = score + push;
+      best = line;
+    }
+  }
+  return best;
+}
 
 export function buildJieqiPositionCommand(fen: string, moves: readonly string[] = []): string {
   return moves.length > 0 ? `position fen ${fen} moves ${moves.join(' ')}` : `position fen ${fen}`;
@@ -499,7 +588,12 @@ export function buildJieqiPositionCommand(fen: string, moves: readonly string[] 
 export async function jieqiLiveEngineMove(
   engineId: string,
   fen: string,
-  opts: { movetimeMs?: number; moves?: readonly string[]; newGame?: boolean } = {},
+  opts: {
+    movetimeMs?: number;
+    moves?: readonly string[];
+    newGame?: boolean;
+    rng?: () => number;
+  } = {},
 ): Promise<UciEval> {
   const tier = jieqiEngineTierFor(engineId);
   if (!tier) throw new Error(`unknown Jieqi engine: ${engineId}`);
@@ -510,6 +604,8 @@ export async function jieqiLiveEngineMove(
       movetimeMs: opts.movetimeMs ?? tier.movetimeMs,
       moves: opts.moves,
       newGame: opts.newGame,
+      skill: tier.skill,
+      rng: opts.rng,
     });
   } finally {
     release();
@@ -570,19 +666,46 @@ export async function jieqiEngineMove(
  * movetime the server allotted; PikaJieQi has no Skill Level knob, so depth
  * reached against depth configured IS the strength question for this engine.
  */
-export function jieqiEngineSearch(fen: string, opts: JieqiEngineOptions = {}): Promise<UciEval> {
+export async function jieqiEngineSearch(
+  fen: string,
+  opts: JieqiEngineOptions = {},
+): Promise<UciEval> {
   const movetimeMs = opts.movetimeMs ?? 500;
   const position = buildJieqiPositionCommand(fen, opts.moves);
-  return warmSessions.withSession(jieqiLiveSessionSpec(), (session) =>
-    session.evalPosition({
-      // `ucinewgame` on a game's first move clears the previous game's hash: a memset of
-      // pages already resident, ~50 ms, no allocation.
-      positionCommand: opts.newGame ? `ucinewgame\n${position}` : position,
-      goCommand: buildJieqiGoCommand(opts),
-      timeoutMs: movetimeMs + 4000,
-      timeoutMessage: 'pikafish-jieqi move timed out',
-    }),
+  const skilled = opts.skill !== undefined;
+  // Parked sessions are shared by every tier, so each move sets MultiPV itself: a
+  // full-strength move must not inherit a ladder tier's 4 lines (it would search the
+  // same depth in a quarter of the nodes per line).
+  const prefix = [
+    opts.newGame ? 'ucinewgame' : null,
+    `setoption name MultiPV value ${skilled ? JIEQI_SKILL_MULTIPV : 1}`,
+  ].filter((line): line is string => line !== null);
+  const request = {
+    // `ucinewgame` on a game's first move clears the previous game's hash: a memset of
+    // pages already resident, ~50 ms, no allocation.
+    positionCommand: [...prefix, position].join('\n'),
+    goCommand: buildJieqiGoCommand(opts),
+    timeoutMs: movetimeMs + 4000,
+    timeoutMessage: 'pikafish-jieqi move timed out',
+  };
+  if (!skilled) {
+    return warmSessions.withSession(jieqiLiveSessionSpec(), (session) =>
+      session.evalPosition(request),
+    );
+  }
+  const table = await warmSessions.withSession(jieqiLiveSessionSpec(), (session) =>
+    session.multiPvPosition(request),
   );
+  const picked = pickSkillMove(table.lines, opts.skill!, opts.rng);
+  // No scored line (a terminal position): keep the engine's own answer.
+  if (!picked) return { best: table.best, cp: table.cp, mate: table.mate, depth: table.depth };
+  return {
+    best: picked.move,
+    cp: picked.cp,
+    mate: picked.mate,
+    depth: picked.depth,
+    pv: picked.pv,
+  };
 }
 
 /**
