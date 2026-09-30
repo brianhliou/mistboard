@@ -1,5 +1,10 @@
 import { JIEQI_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
-import { isJieqiEngineClientId, JIEQI_DEFAULT_ENGINE_ID } from './../jieqi-engine.js';
+import {
+  abJchessAvailable,
+  isJieqiEngineClientId,
+  JIEQI_ABJCHESS_ENGINE_ID,
+  JIEQI_DEFAULT_ENGINE_ID,
+} from './../jieqi-engine.js';
 import {
   createTenantRoomsRoute,
   resolveFirstMoverHumanSeat,
@@ -35,7 +40,11 @@ const jieqiRoute = createTenantRoomsRoute<
   engine: {
     kind: 'seated',
     defaultEngineId: JIEQI_DEFAULT_ENGINE_ID,
-    isEngineClientId: isJieqiEngineClientId,
+    // The AB-JChess slot needs its binary and net (a dev box usually has neither);
+    // refusing here beats a room that aborts at its first engine move.
+    isEngineClientId: (engineId) =>
+      isJieqiEngineClientId(engineId) &&
+      (engineId !== JIEQI_ABJCHESS_ENGINE_ID || abJchessAvailable()),
     seats: JIEQI_SEATS,
   },
   rated: { kind: 'reject-as-surface' },

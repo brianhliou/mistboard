@@ -498,6 +498,8 @@ export const EN_COMMUNITY = {
   'bots.otherIntro': "Bots for Mistboard's other games.",
   'bots.pikafishBio':
     'Open source, built from Stockfish, and searching three million positions a move. It plays jieqi too.',
+  'bots.abJchessBio':
+    'An open-source jieqi engine with its own neural network, by Huorongrong and Laoxu (Kouza). Played here with their permission.',
   'bots.mistyBio':
     "Mistboard's own engine for Fog Chess, Fog Xiangqi, banqi, Jungle Chess and Flip Jungle.",
   'bots.firstParty': 'First-party bot',
@@ -536,6 +538,7 @@ export const CRITICAL_COMMUNITY_I18N_KEYS = [
   'bots.otherTitle',
   'bots.otherIntro',
   'bots.pikafishBio',
+  'bots.abJchessBio',
   'bots.mistyBio',
   'bots.firstParty',
   'bots.gameCountOne',

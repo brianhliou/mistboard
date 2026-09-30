@@ -1,7 +1,7 @@
 name: Build engines
 
-# Compiles the six server engines (three patched Fairy-Stockfish builds,
-# Stockfish, Pikafish-jieqi, Pikafish) once per recipe and publishes them as
+# Compiles the seven server engines (three patched Fairy-Stockfish builds,
+# Stockfish, Pikafish-jieqi, Pikafish, AB-JChess) once per recipe and publishes them as
 # release `engines-<recipe hash>`; railpack.json fetches that release at image
 # build time instead of compiling on every deploy. The recipe and its hash live
 # in scripts/engine-assets.sh; the paths below are exactly its inputs
@@ -23,6 +23,7 @@ on:
       - stockfish.ref
       - pikafish-jieqi.ref
       - pikafish.ref
+      - ab-jchess.ref
       - scripts/engine-assets.sh
       - .github/workflows/build-engines.yml
 

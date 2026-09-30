@@ -5,15 +5,19 @@ import { join } from 'node:path';
 import test, { after } from 'node:test';
 import { firstPartyBotEngineFor } from './first-party-bots.js';
 import {
+  ABJCHESS_JIEQI_ENGINE_VERSION,
   buildJieqiAnalysisCommands,
   buildJieqiGoCommand,
   buildJieqiLiveCommands,
   buildJieqiLiveInitCommands,
+  JIEQI_ABJCHESS_ENGINE_ID,
   JIEQI_DEFAULT_ENGINE_ID,
+  JIEQI_ENGINE_VERSION,
   JIEQI_PLAYABLE_ENGINES,
   jieqiAnalysisResourceOptions,
   jieqiEngineMove,
   jieqiEngineTierFor,
+  jieqiEngineVersion,
   pickSkillMove,
   pikafishJieqiWarmSessionStats,
 } from './jieqi-engine.js';
@@ -61,10 +65,10 @@ test('the tier ladder stays ordered weakest-first', () => {
     [...depths].sort((a, b) => a - b),
     depths,
   );
-  assert.equal(
-    JIEQI_PLAYABLE_ENGINES.at(-1)?.id,
-    JIEQI_DEFAULT_ENGINE_ID,
-    'and the strongest rung is the one served',
+  assert.deepEqual(
+    JIEQI_PLAYABLE_ENGINES.slice(-2).map((t) => t.id),
+    [JIEQI_DEFAULT_ENGINE_ID, JIEQI_ABJCHESS_ENGINE_ID],
+    'level 8 (the create-route default) sits under the AB-JChess top slot',
   );
 });
 
@@ -278,11 +282,43 @@ test('pickSkillMove: a forced mate outranks centipawns before the push', () => {
 });
 
 test('the ladder is eight levels, Lichess-shaped, with level 8 the full-strength tier', () => {
-  assert.equal(JIEQI_PLAYABLE_ENGINES.length, 8);
+  const pikafish = JIEQI_PLAYABLE_ENGINES.filter((t) => t.engine === undefined);
+  assert.equal(pikafish.length, 8);
   assert.deepEqual(
-    JIEQI_PLAYABLE_ENGINES.map((t) => t.skill ?? null),
+    pikafish.map((t) => t.skill ?? null),
     [-9, -5, -1, 3, 7, 11, 16, null],
   );
   assert.ok(JIEQI_PLAYABLE_ENGINES.every((t) => !t.retired));
   assert.equal(jieqiEngineTierFor('pikafish-jieqi-amateur')?.retired, true);
+});
+
+// The top slot (2026-10) is a different binary: its seat, artifacts and catalog
+// entry must name AB-JChess's own build, and its handshake must load its net, or a
+// session parked for PikaJieQi could serve it (sessions key on bin + handshake).
+test('the AB-JChess top slot runs its own build at full strength and records its own version', () => {
+  const tier = jieqiEngineTierFor(JIEQI_ABJCHESS_ENGINE_ID);
+  assert.ok(tier);
+  assert.equal(tier.engine, 'ab-jchess');
+  assert.equal(tier.skill, undefined);
+  assert.equal(tier.depth, undefined);
+  assert.equal(tier.movetimeMs, jieqiEngineTierFor(JIEQI_DEFAULT_ENGINE_ID)?.movetimeMs);
+  assert.equal(jieqiEngineVersion(JIEQI_ABJCHESS_ENGINE_ID), ABJCHESS_JIEQI_ENGINE_VERSION);
+  assert.equal(jieqiEngineVersion(JIEQI_DEFAULT_ENGINE_ID), JIEQI_ENGINE_VERSION);
+  assert.equal(firstPartyBotEngineFor('ab-jchess', 'jieqi'), JIEQI_ABJCHESS_ENGINE_ID);
+});
+
+test('the AB-JChess handshake loads its net from MISTBOARD_ABJCHESS_NET; PikaJieQi loads none', () => {
+  const saved = process.env.MISTBOARD_ABJCHESS_NET;
+  process.env.MISTBOARD_ABJCHESS_NET = process.execPath; // any file that exists
+  try {
+    assert.ok(
+      buildJieqiLiveInitCommands('ab-jchess').includes(
+        `setoption name EvalFile value ${process.execPath}`,
+      ),
+    );
+    assert.ok(!buildJieqiLiveInitCommands().some((line) => line.includes('EvalFile')));
+  } finally {
+    if (saved === undefined) delete process.env.MISTBOARD_ABJCHESS_NET;
+    else process.env.MISTBOARD_ABJCHESS_NET = saved;
+  }
 });

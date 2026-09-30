@@ -228,6 +228,8 @@ export const EN_CONTENT = {
   'source.chessops': 'chessops: chess rules primitives, GPL-3.0-or-later.',
   'source.stockfish':
     'Stockfish: optional engine/runtime dependency for research and engine-worker flows, GPL family.',
+  'source.abJchess':
+    "AB-JChess by Huorongrong and Laoxu (Kouza): the top jieqi bot, GPL-3.0; its neural network is used with the authors' permission.",
   'source.projectIdentity': 'Project identity',
   'source.identityAssets':
     'The Mistboard name, logo, mistboard.com domain, hosted service identity, and official events are controlled project assets.',
@@ -503,6 +505,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'source.chessground',
   'source.chessops',
   'source.stockfish',
+  'source.abJchess',
   'source.projectIdentity',
   'source.identityAssets',
   'source.identityForksName',

@@ -33,13 +33,17 @@ RECIPE_VERSION=1
 # The ISA every server engine targets. Do not swap in avx2 without confirming
 # the container's CPU flags (stockfish.ref).
 ARCH=x86-64-sse41-popcnt
+# AB-JChess alone targets AVX2: its strength is its NNUE, which runs several
+# times slower on sse41. Prod web's EPYC has avx2/bmi2/avx512 (checked
+# 2026-09-30); the Build engines runner has avx2 too, so verify runs it there.
+ABJ_ARCH=x86-64-avx2
 ASSET="engines-$ARCH.tar.gz"
 RELEASE_REPO=brianhliou/mistboard
 # Every file whose content decides the binaries. The workflow's push paths and
 # the Railway watch patterns list the same files; scripts/engine-assets.test.mjs
 # fails if they drift apart.
-RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref"
-BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish"
+RECIPE_INPUTS="fairy-stockfish-xiangqi.ref fairy-stockfish-duck-xiangqi.ref fairy-stockfish-duck-xiangqi.patch fairy-stockfish-atomic-xiangqi.ref fairy-stockfish-atomic-xiangqi.patch stockfish.ref pikafish-jieqi.ref pikafish.ref ab-jchess.ref"
+BINARIES="fairy-stockfish-xiangqi fairy-stockfish-duck-xiangqi fairy-stockfish-atomic-xiangqi stockfish pikafish-jieqi pikafish ab-jchess"
 
 ROOT=$(cd "$(dirname "$0")/.." && pwd)
 JOBS=$(nproc 2>/dev/null || sysctl -n hw.ncpu 2>/dev/null || echo 4)
@@ -59,6 +63,7 @@ recipe_hash() {
   {
     echo "recipe-version=$RECIPE_VERSION"
     echo "arch=$ARCH"
+    echo "abj-arch=$ABJ_ARCH"
     for input in $RECIPE_INPUTS; do
       case "$input" in
         *.ref) echo "$input=$(pin "$input")" ;;
@@ -131,6 +136,14 @@ build() {
   cp "$work/pikafish/src/pikafish" "$bin/pikafish"
   cp "$work/pikafish/src/pikafish.nnue" "$bin/pikafish.nnue"
 
+  # The binary only: its net is fetched from the author's release by
+  # railpack.json and never packaged here (ab-jchess.ref says why).
+  ref=$(pin ab-jchess.ref)
+  log "ab-jchess @ $ref (lxsgx23/AB-JChess, $ABJ_ARCH, clang)"
+  fetch_source "$work/ab-jchess" https://github.com/lxsgx23/AB-JChess.git "$ref"
+  make -C "$work/ab-jchess/src" -j"$JOBS" ARCH="$ABJ_ARCH" COMP=clang EXTRALDFLAGS=-static build >/dev/null
+  cp "$work/ab-jchess/src/AB-JChess" "$bin/ab-jchess"
+
   chmod +x "$bin"/*
   rm -rf "$work"
   for name in $BINARIES; do
@@ -195,6 +208,7 @@ verify() {
   uci_ok "$bin/pikafish-jieqi" pikafish-jieqi uciok
   test -s "$bin/pikafish.nnue" || die "pikafish.nnue is missing or empty"
   uci_ok "$bin/pikafish" pikafish uciok
+  uci_ok "$bin/ab-jchess" ab-jchess 'id name AB JChess'
   log "verified $(tag) in $bin"
 }
 
@@ -205,6 +219,7 @@ package() {
   {
     echo "tag=$(tag)"
     echo "arch=$ARCH"
+    echo "abj-arch=$ABJ_ARCH"
     echo "recipe-version=$RECIPE_VERSION"
     for input in $RECIPE_INPUTS; do
       case "$input" in

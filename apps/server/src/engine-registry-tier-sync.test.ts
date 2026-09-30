@@ -127,8 +127,10 @@ const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
   'fairy-stockfish-duck-xiangqi',
   'fairy-stockfish-atomic-xiangqi',
   'pikafish-xiangqi',
-  // The jieqi ladder (2026-09-29), retired tiers included.
+  // The jieqi ladder (2026-09-29), retired tiers included, and the AB-JChess top
+  // slot above it (2026-10), generated from the same table.
   'pikafish-jieqi',
+  'ab-jchess',
 ]);
 
 // Retired entries kept only so old game records still resolve through

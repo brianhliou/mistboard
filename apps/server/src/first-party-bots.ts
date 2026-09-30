@@ -148,6 +148,14 @@ export const FIRST_PARTY_BOT_PROFILES: readonly FirstPartyBotProfile[] = [
   },
   ...FAIRY_STOCKFISH_LEVELS.map(fairyStockfishLevelProfile),
   ...PIKAFISH_JIEQI_LEVELS.map(pikafishJieqiLevelProfile),
+  // The top jieqi slot above Pikafish Level 8 (migration 152): named for its engine,
+  // not a level number, so a stronger engine can replace it later.
+  {
+    id: 'ab-jchess',
+    displayName: 'AB-JChess',
+    engines: { jieqi: 'ab-jchess-jieqi' },
+    defaultGameSpecId: 'jieqi',
+  },
 ];
 
 const botByEngineId = new Map<string, FirstPartyBotProfile>();

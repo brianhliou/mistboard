@@ -1,0 +1,21 @@
+1ae95ca6a960fc0caf32e791a67c8438aab60483
+# ^ The AB-JChess commit the prod image runs (scripts/engine-assets.sh reads the
+# first line; this comment is ignored).
+#
+# AB-JChess (https://github.com/lxsgx23/AB-JChess, GPL-3, by lxsgx23) is a
+# Pikafish-derived jieqi engine with its own NNUE. 1ae95ca6 is release v0.2b
+# (2026-09-30): compiles unpatched, and fixes the empty-pool FEN that searched
+# the start position instead. Measured against the PikaJieQi pin at our live
+# 4 s/move over 400 games: +92 Elo [+59, +128] (mistboard-engine
+# lab/jieqi-abjchess-2026-09-29/run6-v02b-4s.jsonl).
+#
+# Only the binary is built here. The net is NOT in our engines release: the
+# author allowed site use (lxsgx23/AB-JChess#1, 2026-09-30) on the terms that we
+# fetch it from his release and never re-host it, so railpack.json downloads his
+# v0.2b zip at image build time and checks the zip's and the net's sha256.
+# Moving this pin means re-reading his release for the matching net.
+#
+# Built with clang for x86-64-avx2 (engine-assets.sh ABJ_ARCH), not the shared
+# sse41 target: all its strength is the net, and the NNUE runs several times
+# slower without AVX2. Prod web measured 2026-09-30: AMD EPYC 9655, avx2 bmi2
+# avx512 present.

@@ -471,6 +471,8 @@ export const ZH_HANT_COMMUNITY = {
   'bots.otherTitle': '其他棋類',
   'bots.otherIntro': 'Mistboard 其他棋類的機器人。',
   'bots.pikafishBio': '開源，由 Stockfish 改造而來，每步搜尋三百萬個局面。也可以下揭棋。',
+  'bots.abJchessBio':
+    '開源揭棋引擎，自帶神經網路，作者 Huorongrong 和 Laoxu（Kouza）。經作者許可在本站使用。',
   'bots.mistyBio': 'Mistboard 自研引擎，下迷霧國際象棋、迷霧象棋、暗棋、鬥獸棋和翻翻棋。',
   'bots.firstParty': '官方機器人',
   'bots.gameCountOne': '{count} 局',

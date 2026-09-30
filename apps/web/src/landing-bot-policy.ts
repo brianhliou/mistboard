@@ -120,6 +120,7 @@ const LOBBY_LEVEL_OFFSETS = [0, -1, 1] as const;
 export function pveEngineIdForRememberedPick(gameSpecId: string, id: string): string {
   if (gameSpecId !== JIEQI_SPEC_ID) return id;
   if (id === 'pikafish') return 'pikafish-jieqi-strongest';
+  if (id === 'ab-jchess') return 'ab-jchess-jieqi';
   const level = /^pikafish-level-(\d+)$/.exec(id)?.[1];
   return level ? `pikafish-jieqi-level-${level}` : id;
 }
