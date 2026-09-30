@@ -183,8 +183,8 @@ const ZH_HANS: Record<string, string> = {
   'Until August 23 the jieqi bot ran on a quicker setting than we meant it to, searching for a fraction of a second a move. It won 13 games in a row in early August anyway. Then it lost nine in three days, most likely all to one player, which is how we noticed. We moved it to full strength that night, and none of those nine games are counted above.':
     '8 月 23 日之前，揭棋电脑误用了一个比我们原意更快的设置，每步只搜索不到一秒。即便如此，它在 8 月上旬还是连赢了 13 盘。随后它三天里输了 9 盘，很可能都是输给同一位棋手，我们这才发现问题。当晚我们就把它调回全力，这 9 盘都没有计入上面的统计。',
   'What is next': '接下来',
-  'We are testing a stronger jieqi engine. If it holds up, it goes in above Level 8, and we will write up how it does against positions like these.':
-    '我们正在测试一个更强的揭棋引擎。如果它经得起测试，就会排在第 8 级之上，我们也会写一写它在类似局面中的表现。',
+  'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, follows next week.':
+    '现在第 8 级之上还有一个更强的引擎：AB-JChess，由 Huorongrong 和 Laoxu（Kouza）开发的开源揭棋引擎，400 盘中赢了全力的皮卡鱼 248 盘。它的故事，以及它在类似局面中的表现，下周再写。',
   'Jieqi rules': '揭棋规则',
   Guest: '访客',
   '@tonghuiqu': '@tonghuiqu',
@@ -3139,8 +3139,8 @@ const ZH_HANT: Record<string, string> = {
   'Until August 23 the jieqi bot ran on a quicker setting than we meant it to, searching for a fraction of a second a move. It won 13 games in a row in early August anyway. Then it lost nine in three days, most likely all to one player, which is how we noticed. We moved it to full strength that night, and none of those nine games are counted above.':
     '8 月 23 日之前，揭棋電腦誤用了一個比我們原意更快的設定，每步只搜尋不到一秒。即便如此，它在 8 月上旬還是連贏了 13 盤。隨後它三天裡輸了 9 盤，很可能都是輸給同一位棋手，我們這才發現問題。當晚我們就把它調回全力，這 9 盤都沒有計入上面的統計。',
   'What is next': '接下來',
-  'We are testing a stronger jieqi engine. If it holds up, it goes in above Level 8, and we will write up how it does against positions like these.':
-    '我們正在測試一個更強的揭棋引擎。如果它經得起測試，就會排在第 8 級之上，我們也會寫一寫它在類似局面中的表現。',
+  'A stronger engine now sits above Level 8: AB-JChess, an open-source jieqi engine by Huorongrong and Laoxu (Kouza), which beat full-strength Pikafish in 248 of 400 games. Its story, and how it handles positions like these, follows next week.':
+    '現在第 8 級之上還有一個更強的引擎：AB-JChess，由 Huorongrong 和 Laoxu（Kouza）開發的開源揭棋引擎，400 盤中贏了全力的皮卡魚 248 盤。它的故事，以及它在類似局面中的表現，下週再寫。',
   'Jieqi rules': '揭棋規則',
   Guest: '訪客',
   '@tonghuiqu': '@tonghuiqu',
