@@ -57,6 +57,8 @@ export type EngineId =
   | 'pikafish-jieqi-amateur'
   | 'pikafish-jieqi-strong'
   | 'pikafish-jieqi-strongest'
+  // AB-JChess (Jieqi): the top slot above level 8
+  | 'ab-jchess-jieqi'
   // Pikafish (standard Xiangqi)
   | `pikafish-xiangqi-level-${1 | 2 | 3 | 4 | 5 | 6 | 7 | 8}`
   | 'pikafish-xiangqi-amateur'

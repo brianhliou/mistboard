@@ -23,6 +23,7 @@ import {
   type FortressXiangqiEngineTier,
 } from '../fortress-xiangqi-fsf-engine.js';
 import {
+  ABJCHESS_JIEQI_ENGINE_VERSION,
   JIEQI_ALL_ENGINE_TIERS,
   JIEQI_ENGINE_VERSION,
   JIEQI_RANDOM_ENGINE_ID,
@@ -872,6 +873,9 @@ function xiangqiFsfConfigHash(tier: XiangqiFsfEngineTier): string {
 // plays. Level 8 and the two retired tiers keep their historical hashes: their play is
 // unchanged, and a new hash would split their game history from their rating.
 function jieqiConfigHash(tier: JieqiEngineTier): string {
+  if (tier.engine === 'ab-jchess') {
+    return `ab-jchess-${ABJCHESS_JIEQI_ENGINE_VERSION}-movetime-${tier.movetimeMs}`;
+  }
   if (tier.id === 'pikafish-jieqi-strongest') {
     return `pikafish-jieqi-${JIEQI_ENGINE_VERSION}-movetime-4000`;
   }
@@ -885,8 +889,8 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
       tier.id,
       {
         id: tier.id as EngineId,
-        engineId: 'pikafish-jieqi',
-        engineName: 'PikaJieQi',
+        engineId: tier.engine === 'ab-jchess' ? 'ab-jchess' : 'pikafish-jieqi',
+        engineName: tier.engine === 'ab-jchess' ? 'AB-JChess' : 'PikaJieQi',
         name: tier.name,
         kind: 'container',
         gameSpecId: 'jieqi',
@@ -900,9 +904,11 @@ const JIEQI_ENGINES: Record<string, EngineDefinition> = {
         },
         notes: tier.retired
           ? 'Retired pre-ladder Jieqi tier (depth cap only); resolvable for history.'
-          : tier.skill === undefined
-            ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
-            : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
+          : tier.engine === 'ab-jchess'
+            ? "Jieqi top slot: AB-JChess 0.2b (lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)) on its 20260911 NNUE, 4000ms, Hash 256. The net is fetched from the author's release at build time, never re-hosted."
+            : tier.skill === undefined
+              ? 'Jieqi Level 8: full-strength PikaJieQi (jieqi_old, classical eval), no depth cap, 4000ms, Hash 256.'
+              : `Jieqi ladder rung: Stockfish Skill Level ${tier.skill} over a ${JIEQI_SKILL_MULTIPV}-line MultiPV, depth ${tier.depth}, ${tier.movetimeMs}ms.`,
       } satisfies EngineDefinition,
     ]),
   ),

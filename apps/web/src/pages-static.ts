@@ -395,6 +395,8 @@ function buildSource(locale: Locale = currentLocale()): HTMLElement {
     textLine(t('source.chessground', {}, locale)),
     textLine(t('source.chessops', {}, locale)),
     textLine(t('source.stockfish', {}, locale)),
+    // Its authors asked for a credit with a link (lxsgx23/AB-JChess#1).
+    linkLine(t('source.abJchess', {}, locale), 'https://github.com/lxsgx23/AB-JChess'),
   ]);
 
   const identity = sourceBlock(t('source.projectIdentity', {}, locale), [

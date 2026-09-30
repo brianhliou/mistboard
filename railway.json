@@ -24,6 +24,7 @@
       "/fairy-stockfish-atomic-xiangqi.patch",
       "/pikafish-jieqi.ref",
       "/pikafish.ref",
+      "/ab-jchess.ref",
       "/scripts/engine-assets.sh",
       "/railpack.json",
       "/railway.engine-worker.json",

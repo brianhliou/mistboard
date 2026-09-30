@@ -83,6 +83,8 @@ class BotNotFound extends Error {}
 const LADDER_BOT_ID_PREFIX = 'fairy-stockfish-level-';
 // The jieqi ladder's level bots (2026-09-29); its top rung is Pikafish.
 const JIEQI_LADDER_BOT_ID_PREFIX = 'pikafish-level-';
+// The top jieqi slot above Pikafish (level 8); server first-party-bots.ts.
+const JIEQI_TOP_BOT_ID = 'ab-jchess';
 
 // /bots is the page for "play xiangqi against the computer" (象棋人机对战), in
 // all three interface languages (/zh-hans/bots, /zh-hant/bots): the heading
@@ -265,7 +267,13 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
       !bot.id.startsWith(LADDER_BOT_ID_PREFIX) && !bot.id.startsWith(JIEQI_LADDER_BOT_ID_PREFIX),
   );
   const topRungs = others.filter((bot) => playsGame(bot, 'xiangqi'));
-  const jieqiTopRungs = others.filter((bot) => playsGame(bot, 'jieqi'));
+  // Pikafish (level 8) then the AB-JChess top slot, which alone reads Strongest.
+  const jieqiTopRungs = others
+    .filter((bot) => playsGame(bot, 'jieqi'))
+    .sort((a, b) => Number(a.id === JIEQI_TOP_BOT_ID) - Number(b.id === JIEQI_TOP_BOT_ID));
+  const jieqiStrongestId = jieqiTopRungs.some((bot) => bot.id === JIEQI_TOP_BOT_ID)
+    ? JIEQI_TOP_BOT_ID
+    : jieqiTopRungs.at(-1)?.id;
   const otherGames = others.filter((bot) => !playsGame(bot, 'xiangqi') && !playsGame(bot, 'jieqi'));
   const community = bots.filter((bot) => bot.ownerType === 'user');
   const xiangqiCard = { ratingGameSpecId: 'xiangqi', primaryPlayGameSpecId: 'xiangqi' };
@@ -316,7 +324,7 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
             ...jieqiTopRungs.map((bot) =>
               buildBotSummaryCard(bot, {
                 ...jieqiCard,
-                badge: t('bots.strongest'),
+                badge: bot.id === jieqiStrongestId ? t('bots.strongest') : undefined,
                 subtitle: t('bots.firstParty'),
                 bio: systemBotBio(bot),
               }),
@@ -344,6 +352,7 @@ function buildBotDirectorySections(bots: BotProfile[]): HTMLElement[] {
 // bio (undefined leaves the card's default in place).
 function systemBotBio(bot: BotProfile): string | undefined {
   if (bot.id === 'pikafish') return t('bots.pikafishBio');
+  if (bot.id === JIEQI_TOP_BOT_ID) return t('bots.abJchessBio');
   if (bot.id === 'misty') return t('bots.mistyBio');
   return undefined;
 }

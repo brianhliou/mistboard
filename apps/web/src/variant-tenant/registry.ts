@@ -411,12 +411,18 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       offerInMenu: alwaysEnabled,
       acceptsDeepLink: jieqiEnabled,
-      // The jieqi ladder (2026-09-29), strongest first: Pikafish (level 8, full
-      // strength) then Pikafish Level 7..1, Stockfish's Skill Level applied
-      // server-side (apps/server/src/jieqi-engine.ts). Hand mirror of
-      // JIEQI_PLAYABLE_ENGINES; parity is asserted by variant-registry-sync.test.ts.
-      // Level 4 is the default, as on the other rated ladders.
+      // The jieqi ladder (2026-09-29), strongest first: the AB-JChess top slot
+      // (2026-10), Pikafish (level 8, full strength), then Pikafish Level 7..1,
+      // Stockfish's Skill Level applied server-side (apps/server/src/jieqi-engine.ts).
+      // Hand mirror of JIEQI_PLAYABLE_ENGINES; parity is asserted by
+      // variant-registry-sync.test.ts. Level 4 is the default, as on the other rated ladders.
       engineOptions: [
+        {
+          id: 'ab-jchess-jieqi',
+          name: 'AB-JChess',
+          familyName: 'AB-JChess',
+          kind: 'container',
+        },
         {
           id: 'pikafish-jieqi-strongest',
           name: 'Pikafish',

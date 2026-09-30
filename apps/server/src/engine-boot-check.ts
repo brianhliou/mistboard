@@ -23,7 +23,7 @@ import {
   jungleFlipEnabled,
   xiangqiEnabled,
 } from './feature-flags.js';
-import { pikaJieqiPath } from './jieqi-engine.js';
+import { abJchessNetPath, abJchessPath, pikaJieqiPath } from './jieqi-engine.js';
 import { jungleEnginePath } from './jungle-engine.js';
 import { jungleFlipEnginePath } from './jungle-flip-engine.js';
 import { logger } from './obs.js';
@@ -77,6 +77,18 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     resolvePath: atomicXiangqiFsfPath,
   },
   { variant: 'jieqi', binary: 'pikafish-jieqi', enabled: jieqiEnabled, resolvePath: pikaJieqiPath },
+  {
+    // The top slot's engine and its net (fetched from the author's release by
+    // railpack.json). Missing either one hides the slot (abJchessAvailable) rather
+    // than failing the jieqi ladder.
+    variant: 'jieqi',
+    binary: 'ab-jchess',
+    enabled: jieqiEnabled,
+    resolvePath: () => {
+      abJchessNetPath();
+      return abJchessPath();
+    },
+  },
   { variant: 'banqi', binary: 'banqi-engine', enabled: banqiEnabled, resolvePath: banqiEnginePath },
   {
     variant: 'jungle',

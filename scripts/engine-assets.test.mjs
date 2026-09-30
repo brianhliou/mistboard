@@ -87,7 +87,7 @@ test('railpack fetches the published engines, verifies them, and compiles none o
   );
 });
 
-test('the recipe builds and verifies the same six binaries the image expects', () => {
+test('the recipe builds and verifies the same seven binaries the image expects', () => {
   const binaries = recipe.match(/^BINARIES="([^"]+)"$/m)[1].split(/\s+/);
   assert.deepEqual(binaries, [
     'fairy-stockfish-xiangqi',
@@ -96,7 +96,32 @@ test('the recipe builds and verifies the same six binaries the image expects', (
     'stockfish',
     'pikafish-jieqi',
     'pikafish',
+    'ab-jchess',
   ]);
-  // Every binary is built with the ISA the container was measured for.
+  // Every binary is built with the ISA the container was measured for; AB-JChess
+  // alone targets avx2 (its NNUE is its strength; ab-jchess.ref).
   assert.match(recipe, /^ARCH=x86-64-sse41-popcnt$/m);
+  assert.match(recipe, /^ABJ_ARCH=x86-64-avx2$/m);
+});
+
+// The author allowed site use on the terms that we fetch his net from his own
+// release and never re-host it (lxsgx23/AB-JChess#1). So the net must never
+// enter our engines tarball, and the image must check it before using it.
+test('the AB-JChess net is fetched from the author, checksummed, and never packaged', () => {
+  assert.doesNotMatch(recipe, /abjchess-\d+\.nnue/, 'engine-assets.sh never touches the net');
+  const step = railpack
+    .split('\n')
+    .find((line) => line.includes('github.com/lxsgx23/AB-JChess/releases/download/'));
+  assert.ok(step, "railpack.json downloads the net from the author's release");
+  assert.match(step, /[0-9a-f]{64} {2}\/tmp\/abj\.zip' \| sha256sum -c -/, 'the zip is checked');
+  assert.match(
+    step,
+    /[0-9a-f]{64} {2}\/app\/bin\/abjchess-20260911\.nnue' \| sha256sum -c -/,
+    'the extracted net is checked',
+  );
+  assert.match(step, /ABJNNUE model loaded/, 'the fetched binary loads the net before deploy');
+  assert.ok(
+    railpack.indexOf(step) > railpack.indexOf('sh /app/scripts/engine-assets.sh verify'),
+    'the net gate runs the fetched binary, so it comes after verify',
+  );
 });

@@ -93,6 +93,8 @@ const LADDER_PREFIX = 'fairy-stockfish-level-';
 // The jieqi ladder (Pikafish Level 1..7; Pikafish is its top rung) and the level a
 // first-timer is given (web landing-bot-policy JIEQI_FIRST_GAME_LEVEL).
 const JIEQI_LADDER_PREFIX = 'pikafish-level-';
+// The top jieqi slot above Pikafish (level 8); first-party-bots.ts.
+const JIEQI_TOP_BOT_ID = 'ab-jchess';
 const JIEQI_FIRST_GAME_LEVEL = 4;
 // The level a first-timer is given (web landing-bot-policy XIANGQI_FIRST_GAME_LEVEL).
 const FIRST_GAME_LEVEL = 2;
@@ -149,11 +151,16 @@ export async function botsDirectoryBody(
     return `<li><a href="${botHref(bot.id)}">${escapeHtml(copy.level(level))}</a>${note}</li>`;
   });
   if (jieqiRungs.length > 0) {
-    for (const bot of others.filter((candidate) => playsGame(candidate, 'jieqi'))) {
+    // Pikafish (level 8) then the AB-JChess top slot, which alone reads strongest.
+    const tops = others
+      .filter((candidate) => playsGame(candidate, 'jieqi'))
+      .sort((a, b) => Number(a.id === JIEQI_TOP_BOT_ID) - Number(b.id === JIEQI_TOP_BOT_ID));
+    tops.forEach((bot, index) => {
+      const note = index === tops.length - 1 ? ` · ${escapeHtml(copy.strongest)}` : '';
       jieqiRungs.push(
-        `<li><a href="${botHref(bot.id)}">${escapeHtml(bot.displayName)}</a> · ${escapeHtml(copy.strongest)}</li>`,
+        `<li><a href="${botHref(bot.id)}">${escapeHtml(bot.displayName)}</a>${note}</li>`,
       );
-    }
+    });
   }
   const otherGames = others
     .filter((bot) => !playsXiangqi(bot) && !playsGame(bot, 'jieqi'))

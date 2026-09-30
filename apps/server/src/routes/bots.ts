@@ -1,6 +1,7 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { isBotSpecPlayable, parsePublicBotId } from '../bot-profile-policy.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
+import { abJchessAvailable, JIEQI_ABJCHESS_ENGINE_ID } from '../jieqi-engine.js';
 import * as persistence from '../persistence.js';
 import type { BotProfile } from '../persistence-bots.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
@@ -24,7 +25,10 @@ export function botPlayOptions(bot: BotProfile): BotPlayOption[] {
       firstParty?.engines[gameSpecId] ??
       (gameSpecId === bot.defaultGameSpecId ? bot.activeEngineId : null);
     if (!engineId) continue;
-    options.push({ gameSpecId, engineId, playable: isBotSpecPlayable(gameSpecId) });
+    // An engine the box cannot run is unplayable, not missing: AB-JChess needs its
+    // binary and net (jieqi-engine.ts), which a dev box usually lacks.
+    const serveable = engineId !== JIEQI_ABJCHESS_ENGINE_ID || abJchessAvailable();
+    options.push({ gameSpecId, engineId, playable: isBotSpecPlayable(gameSpecId) && serveable });
   }
   return options;
 }

@@ -180,6 +180,8 @@ export const ZH_HANS_CONTENT = {
   'source.chessground': 'chessground：棋盘交互和棋子渲染，GPL-3.0-or-later。',
   'source.chessops': 'chessops：国际象棋规则基础组件，GPL-3.0-or-later。',
   'source.stockfish': 'Stockfish：研究和引擎 worker 流程的可选引擎/运行时依赖，GPL 系列。',
+  'source.abJchess':
+    'AB-JChess，作者 Huorongrong 和 Laoxu（Kouza）：本站最强的揭棋机器人，GPL-3.0；其神经网络经作者许可使用。',
   'source.projectIdentity': '项目身份',
   'source.identityAssets':
     'Mistboard 名称、标志、mistboard.com 域名、托管服务身份和官方活动都是受控项目资产。',

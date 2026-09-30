@@ -39,6 +39,17 @@ export const JIEQI_DEFAULT_ENGINE_ID = 'pikafish-jieqi-strongest';
 // 0.3.2 (2026-09-03): new binary (pikafish-jieqi.ref e75cee3a): qsearch honours
 // `go movetime` via a Threads.stop check and a main-thread check_time() at its entry.
 export const JIEQI_ENGINE_VERSION = '0.3.2';
+
+// AB-JChess (github.com/lxsgx23/AB-JChess, GPL-3, by Huorongrong and Laoxu (Kouza)): the
+// top jieqi slot since 2026-10, a Pikafish-derived engine with its own NNUE. The slot is
+// not a numbered level: it holds the strongest engine we know of and names it, so a later
+// swap never redefines a level (docs-private/engine-track/jieqi-strength-ceiling-2026-09-30.md).
+// ab-jchess.ref pins the binary; railpack.json fetches the net from the author's release
+// and checks its sha256 (his terms: never re-hosted). The version names the source
+// release and the net, since either one changes its play.
+export const JIEQI_ABJCHESS_ENGINE_ID = 'ab-jchess-jieqi';
+export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-0.2b-net-20260911';
+const ABJCHESS_NET_FILE = 'abjchess-20260911.nnue';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
@@ -85,6 +96,8 @@ export type JieqiEngineTier = {
   // Retired tiers stay resolvable (old rooms, replays, attribution) but are not
   // offered or rated.
   retired?: boolean;
+  // The binary behind the tier; omitted = PikaJieQi.
+  engine?: 'ab-jchess';
 };
 
 // The ladder (2026-09-29): Lichess's Stockfish level table, the same one the xiangqi
@@ -117,6 +130,14 @@ const JIEQI_ENGINE_TIERS: readonly JieqiEngineTier[] = [
     id: JIEQI_DEFAULT_ENGINE_ID,
     name: 'PikaJieQi - Strongest',
     movetimeMs: 4_000,
+  },
+  {
+    // The top slot: AB-JChess on level 8's budget (4000ms, Hash 256, the same threads).
+    // Full strength, so no depth cap and no skill.
+    id: JIEQI_ABJCHESS_ENGINE_ID,
+    name: 'AB-JChess',
+    movetimeMs: 4_000,
+    engine: 'ab-jchess',
   },
   // Pre-ladder tiers (depth caps only), never offered after the Pikafish consolidation.
   {
@@ -170,7 +191,8 @@ export const JIEQI_ALL_ENGINE_TIERS: readonly JieqiEngineTier[] = JIEQI_ENGINE_T
 export const JIEQI_RANDOM_ENGINE_ID = 'random-legal-jieqi';
 export const JIEQI_RANDOM_ENGINE_VERSION = 'random-legal-v1';
 
-/** The ladder, weakest first; the last entry is level 8 (JIEQI_DEFAULT_ENGINE_ID). */
+/** Everything offered, weakest first: levels 1-7, level 8 (JIEQI_DEFAULT_ENGINE_ID),
+ *  then the AB-JChess top slot. */
 export const JIEQI_PLAYABLE_ENGINES: readonly JieqiEngineTier[] = JIEQI_ENGINE_TIERS.filter(
   (tier) => !tier.retired,
 );
@@ -233,6 +255,58 @@ export function pikaJieqiPath(): string {
     if (existsSync(candidate)) return candidate;
   }
   throw new Error('PikaJieQi (jieqi) binary not found. Set MISTBOARD_PIKAFISH_PATH.');
+}
+
+// AB-JChess and its net. No dev fallback under ~/projects/tools: the checkout there is
+// 0.1b, which searches the start position on an empty pool field. Locally, build 0.2b
+// (ab-jchess.ref) and point MISTBOARD_ABJCHESS_PATH at it.
+export function abJchessPath(): string {
+  const explicit = process.env.MISTBOARD_ABJCHESS_PATH;
+  if (explicit) {
+    const resolved = resolve(explicit);
+    if (!existsSync(resolved)) {
+      throw new Error(
+        `MISTBOARD_ABJCHESS_PATH points at ${resolved} but the binary does not exist`,
+      );
+    }
+    return resolved;
+  }
+  for (const candidate of [resolve(process.cwd(), 'bin', 'ab-jchess'), '/app/bin/ab-jchess']) {
+    if (existsSync(candidate)) return candidate;
+  }
+  throw new Error('AB-JChess binary not found. Set MISTBOARD_ABJCHESS_PATH.');
+}
+
+export function abJchessNetPath(): string {
+  const explicit = process.env.MISTBOARD_ABJCHESS_NET;
+  const home = process.env.HOME;
+  const candidates = explicit
+    ? [resolve(explicit)]
+    : [
+        resolve(process.cwd(), 'bin', ABJCHESS_NET_FILE),
+        `/app/bin/${ABJCHESS_NET_FILE}`,
+        ...(home
+          ? [resolve(home, 'projects', 'tools', 'AB-JChess', 'nets', ABJCHESS_NET_FILE)]
+          : []),
+      ];
+  const found = candidates.find((candidate) => existsSync(candidate));
+  if (!found) {
+    throw new Error(
+      `AB-JChess net ${ABJCHESS_NET_FILE} not found (${candidates.join(', ')}). Set MISTBOARD_ABJCHESS_NET.`,
+    );
+  }
+  return found;
+}
+
+/** True when both the AB-JChess binary and its net resolve; the top slot is offered only then. */
+export function abJchessAvailable(): boolean {
+  try {
+    abJchessPath();
+    abJchessNetPath();
+    return true;
+  } catch {
+    return false;
+  }
 }
 
 // The classical jieqi_old build needs no net. When serving the NNUE `jieqi` branch,
@@ -506,7 +580,9 @@ export function isJieqiEngineClientId(clientId: string | undefined): boolean {
 }
 
 export function jieqiEngineVersion(clientId: string | undefined): string | null {
-  return isJieqiEngineClientId(clientId) ? JIEQI_ENGINE_VERSION : null;
+  const tier = jieqiEngineTierFor(clientId);
+  if (!tier) return null;
+  return tier.engine === 'ab-jchess' ? ABJCHESS_JIEQI_ENGINE_VERSION : JIEQI_ENGINE_VERSION;
 }
 
 // `moves`: the quiet plies since the last irreversible move (capture OR reveal), with `fen`
@@ -526,6 +602,8 @@ export type JieqiEngineOptions = {
   skill?: number;
   /** Uniform [0,1) source for the skill pick; injectable for deterministic tests. */
   rng?: () => number;
+  /** The binary (JieqiEngineTier.engine); omitted = PikaJieQi. */
+  engine?: 'ab-jchess';
 };
 
 // Stockfish's Skill Level, applied outside the engine. Stockfish (search.cpp,
@@ -606,6 +684,7 @@ export async function jieqiLiveEngineMove(
       newGame: opts.newGame,
       skill: tier.skill,
       rng: opts.rng,
+      engine: tier.engine,
     });
   } finally {
     release();
@@ -613,9 +692,11 @@ export async function jieqiLiveEngineMove(
 }
 
 /** The `uci` … `isready` handshake a live session is spawned with. Hash and Threads are
- *  set here, once per process lifetime. */
-export function buildJieqiLiveInitCommands(): string[] {
-  return ['uci', ...netOption(), ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
+ *  set here, once per process lifetime; AB-JChess loads its net here too. */
+export function buildJieqiLiveInitCommands(engine?: 'ab-jchess'): string[] {
+  const net =
+    engine === 'ab-jchess' ? [`setoption name EvalFile value ${abJchessNetPath()}`] : netOption();
+  return ['uci', ...net, ...jieqiLiveResourceOptions(), 'ucinewgame', 'isready'];
 }
 
 /** The `go` line for a live move: a depth cap (if any) stops the search early for the
@@ -632,24 +713,23 @@ export function buildJieqiGoCommand(opts: JieqiEngineOptions = {}): string {
  *  resource options and go-limit wiring are unit-testable without spawning the binary. */
 export function buildJieqiLiveCommands(fen: string, opts: JieqiEngineOptions = {}): string[] {
   return [
-    ...buildJieqiLiveInitCommands(),
+    ...buildJieqiLiveInitCommands(opts.engine),
     buildJieqiPositionCommand(fen, opts.moves),
     buildJieqiGoCommand(opts),
   ];
 }
 
-// Parked live-move processes. enginePool above still caps how many run at once, so at
-// most that many are ever parked. The idle TTL is long on purpose: a reaped session
+// Parked live-move processes, keyed by binary + handshake, so PikaJieQi and AB-JChess
+// park separately. enginePool above still caps how many run at once, so at most that
+// many of each are ever parked; an AB-JChess one holds its 133 MB net besides the hash. The idle TTL is long on purpose: a reaped session
 // means the next player pays the spawn + hash allocation on their clock, which is the
 // exact cost this cache exists to keep off the move path.
 const warmSessions = new UciWarmSessionCache({ name: 'pikafish-jieqi', idleTtlMs: 60 * 60_000 });
 
-function jieqiLiveSessionSpec() {
-  return {
-    bin: pikaJieqiPath(),
-    initCommands: buildJieqiLiveInitCommands(),
-    name: 'pikafish-jieqi',
-  };
+function jieqiLiveSessionSpec(engine?: 'ab-jchess') {
+  return engine === 'ab-jchess'
+    ? { bin: abJchessPath(), initCommands: buildJieqiLiveInitCommands(engine), name: 'ab-jchess' }
+    : { bin: pikaJieqiPath(), initCommands: buildJieqiLiveInitCommands(), name: 'pikafish-jieqi' };
 }
 
 export async function jieqiEngineMove(
@@ -688,14 +768,11 @@ export async function jieqiEngineSearch(
     timeoutMs: movetimeMs + 4000,
     timeoutMessage: 'pikafish-jieqi move timed out',
   };
+  const spec = jieqiLiveSessionSpec(opts.engine);
   if (!skilled) {
-    return warmSessions.withSession(jieqiLiveSessionSpec(), (session) =>
-      session.evalPosition(request),
-    );
+    return warmSessions.withSession(spec, (session) => session.evalPosition(request));
   }
-  const table = await warmSessions.withSession(jieqiLiveSessionSpec(), (session) =>
-    session.multiPvPosition(request),
-  );
+  const table = await warmSessions.withSession(spec, (session) => session.multiPvPosition(request));
   const picked = pickSkillMove(table.lines, opts.skill!, opts.rng);
   // No scored line (a terminal position): keep the engine's own answer.
   if (!picked) return { best: table.best, cp: table.cp, mate: table.mate, depth: table.depth };
