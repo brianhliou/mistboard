@@ -86,6 +86,7 @@ Conventions:
 
 ### Watching and review
 
+- All 400 games of the jieqi engine match between AB-JChess and PikaJieQi (4 seconds a move; AB-JChess won 248-136-16) replay on the site, with each game crediting AB-JChess by Huorongrong and Laoxu (Kouza); pieces the match never turned over show as unknown ([example](/jieqi/game/jq_ab-jchess-vs-pikajieqi-4s-2026-09-366), [7577b94e](https://github.com/brianhliou/mistboard/commit/7577b94e))
 - An embedded fog game, from a study or straight from the site, has a White, Truth and Black switch above the board: pick a side and the board shows only what that side could see at that move ([b5aee4dd](https://github.com/brianhliou/mistboard/commit/b5aee4dd))
 - Pieces glide when you step through a game on the blog and in embedded studies, lines and broadcasts, for xiangqi, chess and every variant board except Duck and the fog variants; the Fortress and Atomic game replays glide too ([0fb113f0](https://github.com/brianhliou/mistboard/commit/0fb113f0))
 - The homepage board works like a TV channel: it shows the live game, or a fog game still airing (joined where it is now), or the last game's final position; a game you missed is no longer replayed, and every replay plays each move at the time it really took, with the clock ticking at real speed ([09d92fb1](https://github.com/brianhliou/mistboard/commit/09d92fb1))
