@@ -2032,6 +2032,7 @@
 .article-figure-embed {
   align-items: stretch;
   width: 100%;
+  container: article-embed / inline-size;
 }
 
 .article-embed-frame {
@@ -2043,6 +2044,20 @@
   /* No viewport cap: the article column bounds the width, so the aspect
      ratio bounds the height, and a cap only puts a scrollbar inside the
      widget on short screens. */
+}
+
+/* Below 560px the widget stacks (embed.css: its frame query at 543px of
+   content, plus 8px of padding each side), so the board and the move list
+   share ONE column. The block's aspect is the side-by-side shape: kept on a
+   phone it gave a 390px screen a 316x360 frame, a 200px board, seat names cut
+   to one letter and two rows of moves. Stacked, the height follows the width
+   instead: the board takes the column (a 9x10 board is ~1.1x as tall as it is
+   wide) and ~300px carries the header, both seat rows, the controls and a few
+   rows of moves. An explicit height turns off the inline aspect-ratio. */
+@container article-embed (max-width: 559px) {
+  .article-embed-frame {
+    height: calc(100cqi * 1.12 + 300px);
+  }
 }
 
 /* Data tables scroll inside their own figure rather than widening the article,
