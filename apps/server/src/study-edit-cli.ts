@@ -27,14 +27,28 @@
 //       { "op": "order", "chapters": ["RPLi9LsH", "ref:g7", …] } ] }
 // A `tree` is a SerializedTree, inline or a path relative to the plan file.
 // `order` must name every chapter the study has at that point in the plan.
+// `add` takes optional chapter `tags` (red, black, result, event, date, …).
+//
+// A plan may make the study instead of naming one: `create` in place of
+// `study`, owned by a site handle, with its first chapter; `ops` then run on
+// the new study (2026-09-30: the AB-JChess annotated games, made without anyone
+// signing in as @mistboard).
+//   { "create": { "owner": "mistboard", "name": "…", "description": "…",
+//                 "visibility": "public",
+//                 "chapter": { "name": "…", "variant": "jieqi", "tree": "…",
+//                              "orientation": "red", "tags": { "red": "…" } } },
+//     "ops": [ { "op": "add", … } ] }
 
 import { readFileSync, writeFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { pathToFileURL } from 'node:url';
 import { parseArgs } from 'node:util';
+import { isStudyEligibleSpecId } from '@mistboard/game';
 import { close, init } from './persistence-db.js';
+import { findUserIdByHandle } from './persistence-dms.js';
 import {
   addChapter,
+  createStudy,
   deleteChapter,
   getStudyById,
   isStudyVisibility,
@@ -45,17 +59,39 @@ import {
   updateChapterTree,
   updateStudyMeta,
 } from './persistence-studies.js';
-import { ensureDealtRoot, isSerializedTree } from './routes/studies.js';
+import { ensureDealtRoot, isSerializedTree, parseChapterTags } from './routes/studies.js';
 
 export type StudyEditOp =
   | { op: 'study'; name?: string; description?: string; visibility?: StudyVisibility }
   | { op: 'rename'; chapter: string; name: string }
   | { op: 'tree'; chapter: string; tree: unknown }
-  | { op: 'add'; ref?: string; name: string; tree: unknown; orientation?: 'red' | 'black' }
+  | {
+      op: 'add';
+      ref?: string;
+      name: string;
+      tree: unknown;
+      orientation?: 'red' | 'black';
+      tags?: Record<string, string>;
+    }
   | { op: 'delete'; chapter: string }
   | { op: 'order'; chapters: string[] };
 
-export type StudyEditPlan = { study: string; ops: StudyEditOp[] };
+export type StudyCreateSpec = {
+  owner: string;
+  name: string;
+  description?: string;
+  visibility?: StudyVisibility;
+  chapter: {
+    name: string;
+    variant: string;
+    tree: unknown;
+    orientation?: 'red' | 'black';
+    tags?: Record<string, string>;
+  };
+};
+
+/** Either `study` (edit that one) or `create` (make it, then run `ops` on it). */
+export type StudyEditPlan = { study?: string; create?: StudyCreateSpec; ops: StudyEditOp[] };
 
 /** The accounts whose studies this tool may edit: the site's own. */
 export const SITE_OWNED_HANDLES: readonly string[] = ['mistboard'];
@@ -74,8 +110,16 @@ export function mainlinePlies(tree: unknown): number {
 /** Load a plan file, inlining any `tree` given as a path (relative to the plan). */
 export function readPlan(path: string): StudyEditPlan {
   const plan = JSON.parse(readFileSync(path, 'utf8')) as StudyEditPlan;
-  if (!plan || typeof plan.study !== 'string' || !Array.isArray(plan.ops)) {
-    throw new Error(`${path}: a plan needs "study" (an id) and "ops" (a list)`);
+  const target = (typeof plan?.study === 'string' ? 1 : 0) + (plan?.create ? 1 : 0);
+  if (!plan || target !== 1 || !Array.isArray(plan.ops)) {
+    throw new Error(
+      `${path}: a plan needs exactly one of "study" (an id) or "create", and "ops" (a list)`,
+    );
+  }
+  if (plan.create && typeof plan.create.chapter?.tree === 'string') {
+    plan.create.chapter.tree = JSON.parse(
+      readFileSync(resolve(dirname(path), plan.create.chapter.tree), 'utf8'),
+    );
   }
   for (const op of plan.ops) {
     if ((op.op === 'tree' || op.op === 'add') && typeof op.tree === 'string') {
@@ -180,6 +224,76 @@ export function checkPlan(
   return lines;
 }
 
+/** Check a `create` and describe it. Returns the study as it will stand right
+ *  after creation, so the plan's `ops` can be checked against it too. Refuses
+ *  any owner outside the site handles: this never makes a person's study. */
+export function checkCreate(
+  spec: StudyCreateSpec,
+  siteHandles: readonly string[] = SITE_OWNED_HANDLES,
+): { lines: string[]; study: StudyWithChapters } {
+  if (!siteHandles.includes(spec.owner)) {
+    throw new Error(
+      `create: owner @${spec.owner} is not one of ${siteHandles.map((h) => `@${h}`).join(', ')}`,
+    );
+  }
+  if (!spec.name?.trim()) throw new Error('create: empty name');
+  if (spec.visibility !== undefined && !isStudyVisibility(spec.visibility)) {
+    throw new Error(`create: visibility "${spec.visibility}"`);
+  }
+  const chapter = spec.chapter;
+  if (!chapter?.name?.trim()) throw new Error('create: the first chapter needs a name');
+  if (!isStudyEligibleSpecId(chapter.variant)) {
+    throw new Error(`create: variant "${chapter.variant}" cannot hold a study`);
+  }
+  if (!isSerializedTree(chapter.tree))
+    throw new Error('create: first chapter is not a SerializedTree');
+  const visibility = spec.visibility ?? 'private';
+  const plies = mainlinePlies(chapter.tree);
+  const study = {
+    id: '(new)',
+    ownerId: '(new)',
+    ownerHandle: spec.owner,
+    name: spec.name.trim(),
+    visibility,
+    chapters: [
+      { id: 'first', name: chapter.name.trim(), variant: chapter.variant, root: chapter.tree },
+    ],
+  } as unknown as StudyWithChapters;
+  return {
+    lines: [
+      `create "${study.name}" for @${spec.owner} (${visibility}), first chapter ` +
+        `"${chapter.name.trim()}" (${chapter.variant}, ${plies} plies)`,
+    ],
+    study,
+  };
+}
+
+/** Make the study a checked `create` describes, as its site owner. */
+export async function applyCreate(
+  spec: StudyCreateSpec,
+  siteHandles: readonly string[] = SITE_OWNED_HANDLES,
+): Promise<StudyWithChapters> {
+  checkCreate(spec, siteHandles);
+  const ownerId = await findUserIdByHandle(spec.owner);
+  if (!ownerId) throw new Error(`create: no account @${spec.owner}`);
+  const { chapter } = spec;
+  const created = await createStudy({
+    ownerId,
+    name: spec.name.trim(),
+    description: spec.description ?? '',
+    visibility: spec.visibility ?? 'private',
+    chapter: {
+      name: chapter.name.trim(),
+      variant: chapter.variant,
+      orientation: chapter.orientation === 'black' ? 'black' : 'red',
+      root: ensureDealtRoot(chapter.variant, chapter.tree),
+      tags: parseChapterTags(chapter.tags),
+    },
+  });
+  if (!created) throw new Error('create: persistence is not initialized');
+  return created;
+}
+
 function must<T extends { ok: boolean }>(label: string, result: T): T {
   if (!result.ok) throw new Error(`${label}: ${(result as { error?: string }).error}`);
   return result;
@@ -225,6 +339,7 @@ export async function applyPlan(
             variant,
             orientation: op.orientation === 'black' ? 'black' : 'red',
             root: ensureDealtRoot(variant, op.tree),
+            ...(op.tags === undefined ? {} : { tags: parseChapterTags(op.tags) }),
           }),
         );
         if (added.ok && op.ref !== undefined) refIds.set(op.ref, added.chapter.id);
@@ -277,7 +392,22 @@ async function main(): Promise<void> {
       return;
     }
     const plan = readPlan(values.plan!);
-    const study = await getStudyById(plan.study);
+    if (plan.create) {
+      const planned = checkCreate(plan.create);
+      for (const line of planned.lines) console.log(`- ${line}`);
+      for (const line of checkPlan(planned.study, plan)) console.log(`- ${line}`);
+      if (!values.apply) {
+        console.log('dry run: nothing written (pass --apply)');
+        return;
+      }
+      const created = await applyCreate(plan.create);
+      console.log(`created ${created.id}`);
+      await applyPlan(created, plan);
+      const after = await getStudyById(created.id);
+      console.log(`applied. now:\n${after ? describeStudy(after) : '(study gone)'}`);
+      return;
+    }
+    const study = await getStudyById(plan.study!);
     if (!study) throw new Error(`study ${plan.study} not found`);
     console.log(describeStudy(study));
     for (const line of checkPlan(study, plan)) console.log(`- ${line}`);
@@ -286,7 +416,7 @@ async function main(): Promise<void> {
       return;
     }
     await applyPlan(study, plan);
-    const after = await getStudyById(plan.study);
+    const after = await getStudyById(plan.study!);
     console.log(`applied. now:\n${after ? describeStudy(after) : '(study gone)'}`);
   } finally {
     await close();

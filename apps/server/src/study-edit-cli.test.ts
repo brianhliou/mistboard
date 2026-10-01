@@ -1,7 +1,17 @@
 import assert from 'node:assert/strict';
+import { mkdtempSync, writeFileSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
 import test from 'node:test';
 import type { StudyWithChapters } from './persistence-studies.js';
-import { checkPlan, mainlinePlies, type StudyEditPlan } from './study-edit-cli.js';
+import {
+  checkCreate,
+  checkPlan,
+  mainlinePlies,
+  readPlan,
+  type StudyCreateSpec,
+  type StudyEditPlan,
+} from './study-edit-cli.js';
 
 const line = (plies: number) => {
   let node: { uci?: string; children: unknown[] } = { children: [] };
@@ -124,4 +134,73 @@ test('rejects what the apply would fail on', () => {
     () => checkPlan(s, plan([{ op: 'study', visibility: 'secret' as never }])),
     /secret/,
   );
+});
+
+const createSpec = (over: Partial<StudyCreateSpec> = {}): StudyCreateSpec => ({
+  owner: 'mistboard',
+  name: 'AB-JChess, annotated',
+  visibility: 'public',
+  chapter: { name: 'The d3 reveal', variant: 'jieqi', tree: line(28) },
+  ...over,
+});
+
+// The create step must never make a study for a person: only a site handle may
+// own what this tool writes, the same boundary the edit ops hold.
+test('create refuses an owner that is not a site handle', () => {
+  assert.throws(
+    () => checkCreate(createSpec({ owner: 'brianhliou' })),
+    /owner @brianhliou is not one of @mistboard/,
+  );
+});
+
+test('create checks the name, the variant and the first chapter before writing', () => {
+  assert.throws(() => checkCreate(createSpec({ name: ' ' })), /empty name/);
+  assert.throws(
+    () =>
+      checkCreate(createSpec({ chapter: { name: 'x', variant: 'not-a-variant', tree: line(1) } })),
+    /cannot hold a study/,
+  );
+  assert.throws(
+    () => checkCreate(createSpec({ chapter: { name: 'x', variant: 'jieqi', tree: { nope: 1 } } })),
+    /not a SerializedTree/,
+  );
+});
+
+test('a create plan is described, and its ops check against the new study', () => {
+  const planned = checkCreate(createSpec());
+  assert.deepEqual(planned.lines, [
+    'create "AB-JChess, annotated" for @mistboard (public), first chapter "The d3 reveal" (jieqi, 28 plies)',
+  ]);
+  const lines = checkPlan(planned.study, {
+    create: createSpec(),
+    ops: [
+      { op: 'add', ref: 'g2', name: 'The b9 reveal', tree: line(126), tags: { red: 'Pikafish' } },
+      { op: 'order', chapters: ['ref:g2', 'first'] },
+    ],
+  });
+  assert.deepEqual(lines, [
+    'add "The b9 reveal" (jieqi, 126 plies)',
+    'order: "The b9 reveal", "The d3 reveal"',
+  ]);
+});
+
+test('readPlan takes exactly one of study or create, and inlines a create tree path', () => {
+  const dir = mkdtempSync(join(tmpdir(), 'study-edit-'));
+  writeFileSync(join(dir, 'g1.json'), JSON.stringify(line(4)));
+  const write = (name: string, value: unknown) => {
+    writeFileSync(join(dir, name), JSON.stringify(value));
+    return join(dir, name);
+  };
+  const plan = readPlan(
+    write('ok.json', {
+      create: { ...createSpec(), chapter: { name: 'G1', variant: 'jieqi', tree: 'g1.json' } },
+      ops: [],
+    }),
+  );
+  assert.equal(mainlinePlies(plan.create?.chapter.tree), 4);
+  assert.throws(
+    () => readPlan(write('both.json', { study: 's1', create: createSpec(), ops: [] })),
+    /exactly one of "study" \(an id\) or "create"/,
+  );
+  assert.throws(() => readPlan(write('neither.json', { ops: [] })), /exactly one of/);
 });
