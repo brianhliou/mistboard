@@ -27,6 +27,7 @@ import {
   roomModeAnalyticsProps,
 } from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
+import { setReplayAnalysisHref } from '../game-table.js';
 import {
   createLiveFinishBadges,
   type FinishBadge,
@@ -609,6 +610,12 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     lastDisplayedView = displayed;
     if (moveList.listClass) refs.moveList.classList.add(moveList.listClass);
     replay.renderShell(refs, renderAll);
+    setReplayAnalysisHref(
+      refs.actionSection,
+      view?.status.type === 'finished'
+        ? `${tenant.reviewUrl(state.room)}?ply=${replay.activePly() ?? replay.latestPly()}`
+        : null,
+    );
     refs.boardStatus.hidden = view !== null;
     chrome.renderActionStatus();
     chrome.renderGameControls();

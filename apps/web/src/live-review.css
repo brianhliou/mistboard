@@ -173,23 +173,35 @@
     min-height: 0;
     display: flex;
     flex-direction: column;
-    justify-content: center;
+    justify-content: safe center;
     gap: 0;
   }
+  /* One scroll region, lichess round anatomy: when the board is too short for
+     the whole table, only the move window gives up height. The seat rows, the
+     arrows, the notice and the post-game actions never scroll; before
+     2026-09-30 the box itself scrolled, so a finished game showed two nested
+     scrollbars and the Rematch button scrolled away. */
   .live-review__cluster .round-table__box {
     flex: 0 1 auto;
     min-height: 0;
-    overflow: auto;
-  }
-  /* The console hugs its content (toolbar + a ~4-row move window, lichess
-     parity) instead of flex-filling the box; the bottom player row's
-     margin-top:auto absorbs the leftover height. */
-  .live-review__cluster .replay-console {
-    flex: 0 0 auto;
-    min-height: 0;
+    overflow: hidden;
     display: flex;
     flex-direction: column;
-    gap: 0;
+  }
+  .live-review__cluster .round-table__box > * {
+    flex: 0 0 auto;
+  }
+  /* The console's wrapper dissolves here so the arrow band is a pinned row of
+     the box like the others and the move window is the box's one shrinking
+     item; as a shrinking wrapper it clipped the arrows away when a notice took
+     the height. */
+  .live-review__cluster .round-table__box > .replay-console {
+    display: contents;
+  }
+  /* The only region that gives up height; it keeps room for the result. */
+  .live-review__cluster .replay-console .game-table-moves {
+    flex: 0 1 auto;
+    min-height: 72px;
   }
   .live-review__cluster .replay-console .move-list {
     flex: 0 0 auto;
@@ -203,6 +215,18 @@
      against it by design (see .game-console above). */
   .live-review__cluster .review-shell__center {
     align-items: flex-start;
+  }
+  /* The console centres against the BOARD, not the row. The row is
+     viewport-tall (review-shell.css min-height) while the board is bounded by
+     its width budget and the user's grip scale, so a rail stretched to the row
+     centred ~100px below the board's middle once the board was shrunk.
+     Pin the rail to the board's rendered height (the formula the meta rail
+     uses) at the board's top edge; the centred console then lands on the
+     board's centre line. */
+  .live-review__cluster .moves-panel {
+    align-self: start;
+    box-sizing: border-box;
+    height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
   }
 }
 
@@ -226,6 +250,11 @@
      hand — the board does not move when the first capture lands. */
   .live-route--fortress-xiangqi .live-review__cluster .review-shell__center {
     align-items: center;
+  }
+  /* Their boards centre in the row, so the board-height rail centres with them. */
+  .live-route--banqi .live-review__cluster .moves-panel,
+  .live-route--fortress-xiangqi .live-review__cluster .moves-panel {
+    align-self: center;
   }
 }
 

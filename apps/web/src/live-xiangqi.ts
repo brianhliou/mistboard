@@ -74,6 +74,9 @@ type XiangqiMoveEvent = TenantMovePlayed<XiangqiColor, XiangqiMove>;
 // ── Xiangqi-owned interaction/render state ───────────────────────────────────
 
 let core: TenantLiveClientContext<XiangqiColor, StandardXiangqiPlayerView> | null = null;
+// Snapshot extras that ride the frame (read by the chrome + play-again body).
+let roomMode: 'pve' | 'pvp' = 'pvp';
+let pveEngineId: string | null = null;
 let selectedSquare: XiangqiSquare | null = null;
 // The square a piece is being dragged from. The renderer keeps a dim source
 // shadow while the shared drag layer shows the floating ghost.
@@ -125,12 +128,23 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
   gameSpecId: XIANGQI_SPEC_ID,
   defaultRoomId: 'xq_dev',
   boardClass: 'xiangqi-live-board',
+  // The server sends roomMode + the bot's engine id on every frame; before
+  // 2026-09-30 this client ignored them, so a finished bot game read as PvP and
+  // its "Play again" opened a friend room instead of the same bot.
+  chrome: {
+    roomMode: () => roomMode,
+  },
   playAgainRequestBody: (state) => ({
-    mode: 'pvp',
+    mode: roomMode,
     gameSpecId: XIANGQI_SPEC_ID,
     preferredColor: 'random',
+    ...(roomMode === 'pve' && pveEngineId ? { engineId: pveEngineId } : {}),
     ...(state.timeControl ? { timeControl: state.timeControl } : {}),
   }),
+  onFrame: (frame) => {
+    if (frame.roomMode === 'pve' || frame.roomMode === 'pvp') roomMode = frame.roomMode;
+    if (typeof frame.pveEngineId === 'string') pveEngineId = frame.pveEngineId;
+  },
   onSnapshotApplied: () => {
     if (core) maybePlayXiangqiSnapshotSound(core.state.view, core.state.seat);
   },
@@ -139,6 +153,8 @@ const client = createTenantLiveClient<XiangqiColor, StandardXiangqiPlayerView, X
   },
   resetSounds: resetXiangqiSoundState,
   resetState: () => {
+    roomMode = 'pvp';
+    pveEngineId = null;
     selectedSquare = null;
     draggingFrom = null;
   },

@@ -138,6 +138,11 @@
   --board-reveal: #d6af4e;
   --belief-opp-rgb: 194 73 67;
   --belief-own-rgb: 73 139 176;
+  /* Live clock in its last stretch (clock-emphasis.ts). */
+  --clock-emerg-bg: hsl(5, 70%, 93%);
+  --clock-emerg-border: hsl(5, 50%, 72%);
+  --clock-emerg-text: hsl(5, 62%, 36%);
+  --site-scroll-thumb: hsl(40, 5%, 74%);
   color: var(--site-text);
   background-color: var(--site-bg);
   background-image: linear-gradient(to bottom, var(--site-page-top), var(--site-bg) 220px);
@@ -188,6 +193,19 @@
   --site-warning-text: hsl(37, 70%, 70%);
   --belief-opp-rgb: 225 132 122;
   --belief-own-rgb: 116 179 213;
+  --clock-emerg-bg: hsl(5, 36%, 22%);
+  --clock-emerg-border: hsl(5, 34%, 30%);
+  --clock-emerg-text: hsl(5, 45%, 84%);
+  --site-scroll-thumb: hsl(40, 4%, 30%);
+}
+
+/* Site-wide scrollbars: a thin thumb on no rail (lichess weight) instead of the
+   platform's thick gutter. scrollbar-color inherits; scrollbar-width does not,
+   hence the universal selector (zero specificity, so a surface that hides or
+   restyles its own scrollbar still wins). */
+* {
+  scrollbar-width: thin;
+  scrollbar-color: var(--site-scroll-thumb) transparent;
 }
 
 :root[data-fog-theme="veil"] {

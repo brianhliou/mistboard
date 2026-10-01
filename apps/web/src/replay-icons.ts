@@ -11,14 +11,21 @@
  */
 export type ReplayStepAction = 'first' | 'prev' | 'next' | 'latest';
 
+// Solid, rounded transport marks on a 24px grid (lichess weight): first/last
+// pair a bar with a double triangle so the jump ends read apart from one step.
 export const REPLAY_ICON_FIRST =
-  '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M4 3h1.5v10H4zM6.5 8l5-4v8z" fill="currentColor"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><rect x="3.5" y="5.5" width="2.2" height="13" rx="0.6"/><path d="M13 6v12l-6.2-6z"/><path d="M20 6v12l-6.2-6z"/></g></svg>';
 export const REPLAY_ICON_PREV =
-  '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M11 3.5v9L5 8z" fill="currentColor"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M16 5.5v13L7.5 12z"/></svg>';
 export const REPLAY_ICON_NEXT =
-  '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M5 3.5v9L11 8z" fill="currentColor"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><path fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round" d="M8 5.5v13l8.5-6.5z"/></svg>';
 export const REPLAY_ICON_LAST =
-  '<svg viewBox="0 0 16 16" width="14" height="14" aria-hidden="true"><path d="M10.5 3H12v10h-1.5zM4.5 12V4l5 4z" fill="currentColor"/></svg>';
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="1.6" stroke-linejoin="round"><path d="M4 6v12l6.2-6z"/><path d="M11 6v12l6.2-6z"/><rect x="18.3" y="5.5" width="2.2" height="13" rx="0.6"/></g></svg>';
+
+// Open the finished game's review at the move on screen (lichess's microscope
+// slot). A plain magnifier, stroked heavy enough to sit with the solid marks.
+export const REPLAY_ICON_ANALYSIS =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6" stroke-width="2.6"/><path d="M15 15l5 5" stroke-width="3.2"/></svg>';
 
 export const REPLAY_STEPS: ReadonlyArray<{
   action: ReplayStepAction;

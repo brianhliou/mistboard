@@ -4,7 +4,7 @@ import type { LiveRefs } from './live-state.js';
 import { liveState } from './live-state.js';
 import { correspondenceAwaitingOpponent } from './live-status.js';
 import { currentView } from './live-view.js';
-import { postGameInviteButton } from './postgame-invite.js';
+import { postGameActions } from './postgame-panel.js';
 import { rematchControls } from './rematch-controls.js';
 import { postThroughRestart } from './room-create-retry.js';
 import { isColor, oppositeColor } from './web-utils.js';
@@ -31,20 +31,26 @@ export function renderRoomActions(refs: RoomActionRefs, deps: RoomActionDeps): v
   // No standing Back-home action (lichess parity): the site nav is the way out.
   const actions: HTMLElement[] = [];
   if (shouldShowPostGameRoomActions(view)) {
+    // Rematch / New opponent / Review game (postgame-panel.ts), the first two
+    // for a seated player only.
     const seat = liveState.seat;
-    if (liveState.roomMode === 'pvp' && isColor(seat)) {
-      actions.unshift(rematchControls(seat, oppositeColor(seat), deps.sendSocket));
-    } else if (liveState.roomMode === 'pve') {
-      actions.unshift(playAgainButton(refs, deps));
-    }
-    actions.unshift(
-      roomAction(t('live.reviewGame'), `/game/${encodeURIComponent(liveState.room)}`, 'primary'),
+    const seated = isColor(seat);
+    const rematch = !seated
+      ? null
+      : liveState.roomMode === 'pvp'
+        ? rematchControls(seat, oppositeColor(seat), deps.sendSocket)
+        : liveState.roomMode === 'pve'
+          ? playAgainButton(refs, deps)
+          : null;
+    refs.roomActions.replaceChildren(
+      postGameActions({
+        variant: postGameVariant(),
+        mode: liveState.roomMode,
+        seated,
+        rematch,
+        reviewHref: `/game/${encodeURIComponent(liveState.room)}`,
+      }),
     );
-    // A rematch or another bot game reuses the opponent you already had; this is
-    // the only post-game action that produces a new human one.
-    const invite = postGameInviteButton(postGameVariant());
-    if (invite) actions.push(invite);
-    refs.roomActions.replaceChildren(...actions);
     return;
   }
   // Rooms are 'playing' from creation, so the invite window is "second seat
@@ -101,10 +107,10 @@ function playAgainButton(refs: RoomActionRefs, deps: RoomActionDeps): HTMLButton
   button.disabled = playAgainStatus === 'creating';
   button.textContent =
     playAgainStatus === 'creating'
-      ? 'Creating'
+      ? t('setup.creating')
       : playAgainStatus === 'failed'
-        ? 'Try play again'
-        : 'Play again';
+        ? t('live.tryPlayAgain')
+        : t('live.rematch');
   button.addEventListener('click', () => {
     void createPlayAgainRoom(refs, deps);
   });

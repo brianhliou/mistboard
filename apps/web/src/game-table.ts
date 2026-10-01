@@ -1,5 +1,6 @@
 import './game-shell.css';
-import { REPLAY_STEPS } from './replay-icons.js';
+import { t } from './i18n/catalog.js';
+import { REPLAY_ICON_ANALYSIS, REPLAY_STEPS } from './replay-icons.js';
 
 export type GameTableRefs = {
   actionSection: HTMLElement;
@@ -29,6 +30,29 @@ export type GameTable = {
 };
 
 /**
+ * The element that scrolls a move list: the room table's wrapper (it also holds
+ * the result block that follows the list), else the list itself (replay and
+ * review panels, where the list scrolls on its own).
+ */
+export function moveListScroller(list: HTMLElement): HTMLElement {
+  const wrapper = list.parentElement;
+  return wrapper?.classList.contains('game-table-moves') ? wrapper : list;
+}
+
+/**
+ * Points the toolbar's microscope at the review page, or hides it (null) while
+ * the game is still being played. `anchor` is any element inside the console.
+ */
+export function setReplayAnalysisHref(anchor: HTMLElement, href: string | null): void {
+  const link = anchor
+    .closest('.game-console')
+    ?.querySelector<HTMLAnchorElement>('[data-replay-analysis]');
+  if (!link) return;
+  link.hidden = href === null;
+  if (href !== null && link.getAttribute('href') !== href) link.href = href;
+}
+
+/**
  * The shared right-column game table used by live rooms and Mistboard TV.
  * Behavior stays route-owned, while the player rows, replay controls, move
  * region, actions, clocks, and captures keep one DOM contract and one CSS skin.
@@ -43,8 +67,9 @@ export function createGameTable(): GameTable {
       <div data-player-top class="round-table__player round-table__player--top"></div>
       <div class="replay-console">
         <div data-replay-controls class="replay-controls"></div>
-        <div data-game-table-moves>
+        <div data-game-table-moves class="game-table-moves">
           <ol data-move-list class="move-list"></ol>
+          <div data-game-result class="game-result" hidden></div>
         </div>
         <p data-replay-meta class="replay-meta" hidden>Live</p>
       </div>
@@ -69,6 +94,16 @@ export function createGameTable(): GameTable {
   // four arrows as the standalone replay panel (replay-icons.ts) instead of the
   // ASCII text it used to render.
   const controls = el.querySelector<HTMLDivElement>('[data-replay-controls]');
+  // The microscope leads the band (lichess), hidden until the game is finished
+  // (setReplayAnalysisHref): no analysis while a game is being played.
+  const analysis = document.createElement('a');
+  analysis.dataset.replayAnalysis = '';
+  analysis.className = 'replay-analysis';
+  analysis.hidden = true;
+  analysis.title = t('live.reviewThisMove');
+  analysis.setAttribute('aria-label', t('live.reviewThisMove'));
+  analysis.innerHTML = REPLAY_ICON_ANALYSIS;
+  controls?.append(analysis);
   for (const step of REPLAY_STEPS) {
     const button = document.createElement('button');
     button.type = 'button';

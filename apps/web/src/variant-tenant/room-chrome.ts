@@ -14,17 +14,22 @@
  */
 
 import '../game-shell.css';
-import { readAccountPreferences, shouldShowClockTenths } from '../account-preferences.js';
+import {
+  readAccountPreferences,
+  shouldShowClockTenths,
+  shouldShowFinalClockTenths,
+} from '../account-preferences.js';
+import { applyClockEmphasis, setClockFace } from '../clock-emphasis.js';
 import { openConfirmDialog } from '../confirm-dialog.js';
 import { type I18nKey, t } from '../i18n/catalog.js';
 import { maybePlayLowTimeSound } from '../live-sound.js';
 import type { LiveRefs } from '../live-state.js';
-import { postGameInviteButton } from '../postgame-invite.js';
+import { postGameActions, renderGameResult, resultScore } from '../postgame-panel.js';
 import { type ProfileIdentity, playerNameEl, profileTargetFor } from '../profile-link.js';
 import { createGameMetaCard, seatResultScores } from '../review/game-meta-card.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 import { formatClock } from '../web-utils.js';
-import { capitalize, noticeBody, noticeTitle, presenceDot, roomLink } from './chrome-dom.js';
+import { capitalize, noticeBody, noticeTitle, presenceDot } from './chrome-dom.js';
 
 // Structural slice of a variant PlayerView the chrome reads (same status shape
 // as the server-side TenantGameStatus).
@@ -280,7 +285,10 @@ export function createTenantRoomChrome<C extends string>(
       tenant.colors.length <= 2
         ? [tenant.oppositeColor(orientation), orientation]
         : [...tenant.colors.filter((color) => color !== orientation), orientation];
-    const armed = !!clock && (clock.activeColor !== null || clock.runningSince !== null);
+    // A finished game's clock is stopped (no active side, not running) but its
+    // times are final, not pregame: render them as real clocks, not dimmed.
+    const ended = view?.status.type === 'finished' || view?.status.type === 'aborted';
+    const armed = !!clock && (clock.activeColor !== null || clock.runningSince !== null || ended);
 
     if (!timeControl || !clock || !armed) {
       // Side to move before the clock arms (opt-in; clarifies the opener when seat names
@@ -321,7 +329,7 @@ export function createTenantRoomChrome<C extends string>(
         row.className = isTurn ? 'pregame active' : 'pregame';
         row.dataset.color = color;
         const time = document.createElement('strong');
-        time.textContent = formatClock(clock ? clock.remainingMs[color] : timeControl.initialMs);
+        setClockFace(time, formatClock(clock ? clock.remainingMs[color] : timeControl.initialMs));
         row.append(time);
         (index === 0 ? refs!.clockTop : refs!.clockBottom).append(row);
       });
@@ -334,7 +342,6 @@ export function createTenantRoomChrome<C extends string>(
         // Only show the "clock starts after the opening moves" hint while the game
         // is actually pregame — not once it's finished/aborted (the clock just sits
         // unarmed at the final times, and the hint would be stale).
-        const ended = view?.status.type === 'finished' || view?.status.type === 'aborted';
         refs.clockNote.textContent = ended
           ? ''
           : t('live.clockStartsAfterOpening', { control: tcLabel });
@@ -384,8 +391,17 @@ export function createTenantRoomChrome<C extends string>(
       playerLine.append(toMove);
       const time = document.createElement('strong');
       const remainingMs = clockRemainingMs(clock, color, displayAt);
-      time.textContent = formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive));
+      // A finished game's final times keep their tenths (lichess), which is
+      // also what tells a 0:00 flag from a mate with 0.4 s left.
+      setClockFace(
+        time,
+        formatClock(
+          remainingMs,
+          ended ? shouldShowFinalClockTenths() : shouldShowClockTenths(remainingMs, isActive),
+        ),
+      );
       row.append(time);
+      applyClockEmphasis(row, remainingMs, timeControl.initialMs);
       const panel = panelFor(color, index);
       (panel === 'top' ? refs!.playerTop : refs!.playerBottom).append(playerLine);
       (panel === 'top' ? refs!.clockTop : refs!.clockBottom).append(row);
@@ -419,8 +435,42 @@ export function createTenantRoomChrome<C extends string>(
       }
       const strong = row.querySelector('strong');
       if (strong) {
-        strong.textContent = formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive));
+        setClockFace(
+          strong,
+          formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive)),
+        );
       }
+      applyClockEmphasis(row, remainingMs, ctx.timeControl()?.initialMs ?? null);
+    }
+  }
+
+  // "checkmate • Red is victorious": the meta card's status line, and the
+  // result block's summary at the end of the move list.
+  function finishedStatusLine(
+    status: Extract<TenantWebView<C>['status'], { type: 'finished' }>,
+  ): string {
+    return status.winner
+      ? t('result.colorVictorious', {
+          reason: reasonText(status.reason),
+          color: seatName(status.winner),
+        })
+      : t('result.drawByReason', { reason: reasonText(status.reason) });
+  }
+
+  // The result at the end of the move list (postgame-panel.ts); null clears it.
+  function renderResult(view: TenantWebView<C> | null): void {
+    if (!refs) return;
+    const status = view?.status;
+    if (status?.type === 'finished') {
+      const winnerIndex = status.winner ? tenant.colors.indexOf(status.winner) : null;
+      renderGameResult(refs.actionSection, {
+        score: tenant.colors.length === 2 ? resultScore(winnerIndex) : null,
+        summary: capitalize(finishedStatusLine(status)),
+      });
+    } else if (status?.type === 'aborted') {
+      renderGameResult(refs.actionSection, { score: null, summary: t('live.statusGameAborted') });
+    } else {
+      renderGameResult(refs.actionSection, null);
     }
   }
 
@@ -441,12 +491,7 @@ export function createTenantRoomChrome<C extends string>(
     let subline: string | null = null;
     let statusLine: string | null = null;
     if (status?.type === 'finished') {
-      statusLine = status.winner
-        ? t('result.colorVictorious', {
-            reason: reasonText(status.reason),
-            color: seatName(status.winner),
-          })
-        : t('result.drawByReason', { reason: reasonText(status.reason) });
+      statusLine = finishedStatusLine(status);
     } else if (status?.type === 'aborted') {
       statusLine = t('live.statusGameAborted');
     } else if (status?.type === 'playing') {
@@ -515,37 +560,37 @@ export function createTenantRoomChrome<C extends string>(
     row.className = 'room-actions-row';
     const view = ctx.view();
 
-    if (view?.status.type === 'finished' || view?.status.type === 'aborted') {
-      // Only finished games have a postgame review (the endpoint 404s otherwise).
-      if (view.status.type === 'finished') {
-        const review = roomLink(t('live.reviewGame'), tenant.reviewUrl(ctx.room()));
-        review.className = 'primary';
-        row.append(review);
-      }
-      // Finished PvP games offer a mutual-confirm rematch with colors swapped;
-      // PvE and non-seated finished games get an instant new room. Aborted games
-      // offer NO play-again — an instant new room after an abort creates a fresh
-      // solo room where the mover can play before the opponent joins.
-      if (view.status.type === 'finished' && ctx.roomMode() === 'pvp') {
-        const rematch = ctx.rematchControls(sendSocket);
-        if (rematch) row.append(rematch);
-        else row.append(playAgainButton());
-      } else if (view.status.type === 'finished') {
-        row.append(playAgainButton());
-      }
-      // A rematch or another bot game reuses the opponent you already had; this
-      // is the only post-game action that produces a new human one.
-      if (view.status.type === 'finished') {
-        const invite = postGameInviteButton(tenantSpecId());
-        if (invite) row.append(invite);
-      }
-      // No Home button (lichess parity): the site nav is the way out of the
-      // room. An aborted room can end up with no actions at all — leave the
-      // host empty so the wrapper row collapses instead of appending an empty
-      // button row.
-      if (row.childElementCount > 0) refs.roomActions.append(row);
+    if (view?.status.type === 'finished') {
+      // Rematch / New opponent / Review game (postgame-panel.ts). Only a seated
+      // player gets the first two: a spectator used to be offered "Play again",
+      // which opened a game of their own from someone else's room. Tenants have
+      // no mutual PvP rematch yet (rematchControls defaults to null), so a
+      // seated PvP player gets New opponent and Review.
+      const seated = seatColor() !== null;
+      const mode = ctx.roomMode();
+      const rematch = !seated
+        ? null
+        : mode === 'pvp'
+          ? ctx.rematchControls(sendSocket)
+          : mode === 'pve'
+            ? playAgainButton()
+            : null;
+      refs.roomActions.append(
+        postGameActions({
+          variant: tenantSpecId(),
+          mode,
+          seated,
+          rematch,
+          reviewHref: tenant.reviewUrl(ctx.room()),
+        }),
+      );
       return;
     }
+    // Aborted games offer NO play-again: an instant new room after an abort
+    // creates a fresh solo room where the mover can play before the opponent
+    // joins. No Home button either (lichess parity): the site nav is the way
+    // out, and the empty host collapses its row.
+    if (view?.status.type === 'aborted') return;
 
     row.append(copyInviteButton());
     refs.roomActions.append(row);
@@ -591,7 +636,7 @@ export function createTenantRoomChrome<C extends string>(
         ? t('setup.creating')
         : playAgainStatus === 'failed'
           ? t('live.tryPlayAgain')
-          : t('live.playAgain');
+          : t('live.rematch');
     button.addEventListener('click', () => {
       void createPlayAgainRoom();
     });
@@ -623,6 +668,7 @@ export function createTenantRoomChrome<C extends string>(
     refs.actionStatus.replaceChildren();
     refs.actionSection.hidden = false;
     const view = ctx.view();
+    renderResult(view);
     // During normal connected play, hide the turn notice — the board, clocks,
     // and turn flash already convey whose move it is. Scrubbing the move list
     // stays hidden too: the notice used to appear for a scrubbed replay
@@ -637,6 +683,26 @@ export function createTenantRoomChrome<C extends string>(
       seatColor() !== null &&
       ctx.connectionState() === 'connected' &&
       !waitingForOpponent()
+    ) {
+      refs.actionSection.hidden = true;
+      return;
+    }
+    // Scrubbed off live, as anyone: the lit jump-to-latest arrow marks it.
+    if (!ctx.isReplayLive() && ctx.connectionState() === 'connected') {
+      refs.actionSection.hidden = true;
+      return;
+    }
+    // A finished or aborted game says so in the result block at the end of the
+    // move list; the notice would repeat it between the list and the actions.
+    // Scrubbing a finished game shows no "Viewing replay" notice either: there
+    // is no move to make, and the lit jump-to-latest arrow marks the state.
+    // A dropped socket does not bring it back: the game is over, the result
+    // is on screen, and the socket reconnects on its own. Only a refused or
+    // moved session still warrants the notice.
+    if (
+      (view?.status.type === 'finished' || view?.status.type === 'aborted') &&
+      ctx.connectionState() !== 'rejected' &&
+      ctx.connectionState() !== 'displaced'
     ) {
       refs.actionSection.hidden = true;
       return;

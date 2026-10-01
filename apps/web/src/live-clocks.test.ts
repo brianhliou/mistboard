@@ -167,7 +167,8 @@ describe('day-scale clocks (correspondence)', () => {
       runningSince: Date.now(),
     };
     renderClocks(refs, view);
-    expect(refs.clockBottom.querySelector('strong')?.textContent).toBe('3:00');
+    // Lichess face: zero-padded minutes (clock-emphasis.ts setClockFace).
+    expect(refs.clockBottom.querySelector('strong')?.textContent).toBe('03:00');
     expect(refs.clockNote.hidden).toBe(true);
   });
 });

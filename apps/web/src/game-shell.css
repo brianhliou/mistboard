@@ -97,7 +97,11 @@
    band was invisible and the four arrows floated in dead space; --site-panel-soft
    tints against the box in both themes, and the hairlines close the band. */
 .round-table__box .replay-controls {
-  grid-template-columns: repeat(4, minmax(0, 1fr));
+  /* Columns follow the controls present: the microscope is hidden until the
+     game is finished, and a hidden item must not hold an empty fifth column. */
+  grid-template-columns: none;
+  grid-auto-flow: column;
+  grid-auto-columns: minmax(0, 1fr);
   gap: 0;
   background: var(--site-panel-soft);
   border-top: 1px solid var(--site-border-soft);
@@ -108,7 +112,7 @@
   display: flex;
   align-items: center;
   justify-content: center;
-  height: 30px;
+  height: 38px;
   border: 0;
   border-radius: 0;
   background: transparent;
@@ -119,10 +123,38 @@
   line-height: 1;
 }
 
+.round-table__box .replay-controls .replay-analysis {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: 38px;
+  color: var(--site-text);
+}
+
+.round-table__box .replay-controls .replay-analysis[hidden] {
+  display: none;
+}
+
+.round-table__box .replay-controls .replay-analysis:hover,
+.round-table__box .replay-controls .replay-analysis:focus-visible {
+  background: var(--site-panel, var(--site-surface));
+  color: var(--site-heading);
+}
+
+.round-table__box .replay-controls .replay-analysis svg,
 .round-table__box .replay-controls button svg {
   display: block;
-  width: 15px;
-  height: 15px;
+  width: 20px;
+  height: 20px;
+}
+
+/* Stepped back from the latest position: the jump-to-latest arrow lights up in
+   the brand colour instead of a "Viewing replay" notice (lichess glows it the
+   same way), so the one way back is the obvious thing to press. The button is
+   disabled at the latest position, so this is exactly the scrubbed state. */
+.round-table__box .replay-controls button[data-replay="latest"]:not(:disabled) {
+  background: var(--site-accent-soft);
+  color: var(--site-accent-strong, var(--site-accent));
 }
 
 /* Touch floor: these arrows step through a live or watched game, so on a phone
@@ -156,10 +188,20 @@
    --move-gutter is the width of the row's number cell: the base .move-row puts
    it flush at 0-34px, and a tenant that insets its rows overrides the variable
    rather than re-declaring the gradient. */
+/* The WRAPPER scrolls, not the list, so the finished-game result block that
+   follows the list (postgame-panel.ts) scrolls with the moves the way lichess's
+   does; the scroll-follow code finds it through moveListScroller (game-table.ts). */
+.round-table__box .game-table-moves {
+  max-height: 170px;
+  overflow-y: auto;
+  overscroll-behavior: contain;
+}
+
 .round-table__box .move-list {
   --move-gutter: 34px;
   height: auto;
-  max-height: 142px;
+  max-height: none;
+  overflow: visible;
   gap: 0;
   padding: 0;
   background: linear-gradient(
@@ -408,9 +450,13 @@
   grid-template-columns: 1fr;
   justify-items: start;
   align-items: center;
-  width: min(62%, 240px);
+  /* At least the lichess tab width, and wide enough for the digits it holds
+     (`00:24.9` in the last stretch is wider than `05:00`). */
+  width: fit-content;
+  max-width: 100%;
+  box-sizing: border-box;
   min-height: 52px;
-  padding: 10px 14px;
+  padding: 6px 14px;
   border: 1px solid var(--site-border);
   background: var(--site-panel);
 }
@@ -665,10 +711,90 @@
 
 .clocks strong {
   font-variant-numeric: tabular-nums;
-  font-size: 34px;
+  /* Lichess scale: the digits fill the tab instead of floating in it, and a
+     lighter weight keeps a 44px numeral from reading as a shout. */
+  /* Sized off the rail (the console is the size container, live-review.css):
+     `00:24.9` fills a 377px rail's tab at 52px and still fits a 246px one. */
+  font-size: clamp(34px, 16cqw, 60px);
+  /* The face's own width, so the tab hugs its digits instead of a fixed share
+     of the rail: 6.6ch holds the widest face, `00:00.0`, and an hours clock
+     (`1:30:00`, formatClock's shape at 60 min and over) is narrower still, so a
+     90-minute game needs no special case. Both tabs share it, so the tab does
+     not jump when tenths appear. */
+  display: inline-block;
+  min-width: 6.6ch;
+  font-weight: 400;
+  letter-spacing: 0.01em;
   line-height: 1;
   text-align: left;
   white-space: nowrap;
+}
+
+/* Clock face (clock-emphasis.ts setClockFace): the colon recedes and the tenths
+   digit sits small, so the minutes and seconds carry the tab. */
+.clocks strong .clock-sep {
+  /* 1em: the bare `.clocks span` rule (13px, for the player line) otherwise
+     shrinks the colon to a speck. */
+  position: relative;
+  top: -0.06em;
+  margin: 0 0.04em;
+  font-size: 1em;
+  opacity: 0.7;
+}
+
+.clocks strong .clock-tenths {
+  font-size: 0.7em;
+  opacity: 0.8;
+}
+
+/* Time left, as a bar along the edge the tab shares with the table (top clock:
+   its bottom edge; bottom clock: its top edge), shrinking as the clock runs.
+   --clock-left is the share of the starting time left (clock-emphasis.ts). */
+.clocks div.has-bar {
+  position: relative;
+}
+
+.clocks div.has-bar::after {
+  content: "";
+  position: absolute;
+  left: 0;
+  right: 0;
+  height: 3px;
+  background: var(--site-accent);
+  opacity: 0.45;
+  transform: scaleX(var(--clock-left, 1));
+  transform-origin: left center;
+  transition: transform 100ms linear;
+  pointer-events: none;
+}
+
+[data-clock-top] div.has-bar::after {
+  bottom: 0;
+}
+
+[data-clock-bottom] div.has-bar::after {
+  top: 0;
+}
+
+.clocks div.has-bar.active::after {
+  opacity: 1;
+}
+
+/* Emergency: the last eighth of the starting time (10-60 s) turns the tab red,
+   running or not, so a flagging clock reads from across the room. :root lifts
+   it over the dark theme's panel repaint of every .clocks div (styles.css). */
+:root .clocks div.clock-time-row.emerg {
+  border-color: var(--clock-emerg-border);
+  background: var(--clock-emerg-bg);
+  box-shadow: none;
+}
+
+.clocks div.emerg strong {
+  color: var(--clock-emerg-text);
+}
+
+.clocks div.emerg.has-bar::after {
+  background: var(--clock-emerg-text);
 }
 
 /* Player line (dot + name + turn pill), rendered into the boxed table's
@@ -1120,4 +1246,97 @@
   .debug-shell .dev-square {
     font-size: 11px;
   }
+}
+
+/* Finished game, lichess round anatomy (postgame-panel.ts): the result closes
+   the move list and scrolls with it; the actions stay pinned under the list,
+   full width, the rematch a large slab and the rest quiet text rows. */
+.game-result {
+  display: grid;
+  justify-items: center;
+  gap: 4px;
+  padding: 12px 10px 14px;
+  border-top: 1px solid var(--site-border-soft);
+  text-align: center;
+}
+
+.game-result[hidden] {
+  display: none;
+}
+
+.game-result__score {
+  color: var(--site-heading);
+  font-size: 18px;
+  font-weight: 700;
+  letter-spacing: 0.04em;
+}
+
+.game-result__summary {
+  color: var(--site-text);
+  font-size: 14px;
+  font-style: italic;
+}
+
+.round-table__row:has(> .room-actions > .postgame-actions) {
+  padding: 8px 8px 6px;
+  border-top: 1px solid var(--site-border-soft);
+}
+
+.postgame-actions {
+  display: grid;
+  gap: 2px;
+}
+
+.round-table__box .room-actions .postgame-actions a,
+.round-table__box .room-actions .postgame-actions button {
+  width: 100%;
+  min-width: 0;
+  min-height: 34px;
+  padding: 6px 12px;
+  border: 0;
+  border-radius: var(--site-radius-sm);
+  background: transparent;
+  color: var(--site-text);
+  font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+  outline: 0;
+}
+
+.round-table__box .room-actions .postgame-actions a:hover,
+.round-table__box .room-actions .postgame-actions a:focus-visible,
+.round-table__box .room-actions .postgame-actions button:hover:not(:disabled),
+.round-table__box .room-actions .postgame-actions button:focus-visible {
+  background: var(--site-panel-soft);
+  color: var(--site-heading);
+}
+
+/* The rematch: the one big target, a slab in the brand colour. A PvP offer
+   widget (.room-rematch) keeps its note line and gives its buttons the slab. */
+.round-table__box .room-actions .postgame-actions > button.postgame-actions__rematch,
+.round-table__box .room-actions .postgame-actions__rematch button {
+  min-height: 52px;
+  margin-bottom: 4px;
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+  font-size: 16px;
+  font-weight: 600;
+}
+
+.round-table__box
+  .room-actions
+  .postgame-actions
+  > button.postgame-actions__rematch:hover:not(:disabled),
+.round-table__box .room-actions .postgame-actions > button.postgame-actions__rematch:focus-visible,
+.round-table__box .room-actions .postgame-actions__rematch button:hover:not(:disabled),
+.round-table__box .room-actions .postgame-actions__rematch button:focus-visible {
+  background: var(--site-accent-strong);
+  color: var(--site-on-accent, #fff);
+}
+
+.round-table__box .room-actions .postgame-actions > button.postgame-actions__rematch.danger {
+  background: transparent;
+  color: var(--clock-emerg-text);
+  box-shadow: inset 0 0 0 1px var(--clock-emerg-border);
 }

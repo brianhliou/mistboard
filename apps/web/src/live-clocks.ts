@@ -1,5 +1,6 @@
 import { type Color, clockRemainingMs, type GameEvent, type PlayerView } from '@mistboard/game';
-import { shouldShowClockTenths } from './account-preferences.js';
+import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-preferences.js';
+import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
 import { type I18nKey, t } from './i18n/catalog.js';
 import { isLive } from './live-replay.js';
 import { maybePlayLowTimeSound } from './live-sound.js';
@@ -67,7 +68,8 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
       const row = document.createElement('div');
       row.className = isTurn ? 'pregame active' : 'pregame';
       const time = document.createElement('strong');
-      time.textContent = dayScale ? formatDayClock(tc.initialMs) : formatClock(tc.initialMs);
+      if (dayScale) time.textContent = formatDayClock(tc.initialMs);
+      else setClockFace(time, formatClock(tc.initialMs));
       row.append(time);
       (index === 0 ? refs.clockTop : refs.clockBottom).append(row);
     });
@@ -145,15 +147,25 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     toMove.setAttribute('aria-hidden', isActive ? 'false' : 'true');
     playerLine.append(toMove);
     const remainingMs = clockRemainingMs(clock, color, displayAt);
-    time.textContent =
-      daysPerMoveAllowance() !== null
-        ? formatDayClock(remainingMs)
-        : formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive));
+    if (daysPerMoveAllowance() !== null) time.textContent = formatDayClock(remainingMs);
+    else
+      setClockFace(
+        time,
+        formatClock(
+          remainingMs,
+          playing ? shouldShowClockTenths(remainingMs, isActive) : shouldShowFinalClockTenths(),
+        ),
+      );
     const classes = ['clock-time-row'];
     if (isActive) classes.push('active');
     if (isActive && flashThisRender) classes.push('just-activated');
     row.className = classes.join(' ');
     row.append(time);
+    applyClockEmphasis(
+      row,
+      remainingMs,
+      daysPerMoveAllowance() !== null ? null : roomInitialClockMs(),
+    );
     if (isActive) playerLine.classList.add('active');
     (index === 0 ? refs.playerTop : refs.playerBottom).append(playerLine);
     (index === 0 ? refs.clockTop : refs.clockBottom).append(row);
@@ -207,10 +219,14 @@ export function tickClockTimers(refs: ClockRefs, view: PlayerView | null): void 
     }
     const strong = row.querySelector('strong');
     if (strong) {
-      strong.textContent = dayScale
-        ? formatDayClock(remainingMs)
-        : formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive));
+      if (dayScale) strong.textContent = formatDayClock(remainingMs);
+      else
+        setClockFace(
+          strong,
+          formatClock(remainingMs, shouldShowClockTenths(remainingMs, isActive)),
+        );
     }
+    applyClockEmphasis(row, remainingMs, dayScale ? null : roomInitialClockMs());
   }
 }
 

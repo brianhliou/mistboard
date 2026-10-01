@@ -129,6 +129,11 @@ export function shouldShowClockTenths(remainingMs: number, active: boolean): boo
   return active && remainingMs < 10_000;
 }
 
+/** A finished game's final times: tenths unless the player turned them off. */
+export function shouldShowFinalClockTenths(): boolean {
+  return readAccountPreferences().clockTenths !== 'never';
+}
+
 function booleanOrDefault(value: unknown, fallback: boolean): boolean {
   return typeof value === 'boolean' ? value : fallback;
 }

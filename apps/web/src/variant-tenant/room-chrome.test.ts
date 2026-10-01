@@ -141,12 +141,12 @@ describe('tenant room chrome action status', () => {
     expect(refs.actionSection.hidden).toBe(true);
   });
 
-  it('shows a replay notice to a spectator scrubbed off live', () => {
+  it('shows no replay notice to a spectator scrubbed off live', () => {
+    // The lit jump-to-latest arrow marks the scrubbed state (game-shell.css);
+    // "Return to latest before making a move" never applied to a spectator.
     const { chrome, refs } = chromeHarness({ isReplayLive: false, seat: 'spectator' });
     chrome.renderActionStatus();
-    expect(refs.actionSection.hidden).toBe(false);
-    expect(refs.actionStatus.textContent).toContain('Viewing replay');
-    expect(refs.actionStatus.textContent).toContain('Return to latest before making a move.');
+    expect(refs.actionSection.hidden).toBe(true);
   });
 
   it('shows invite guidance while the opponent seat is empty pre-game', () => {
@@ -193,9 +193,20 @@ describe('tenant room chrome action status', () => {
       },
       inkTenant,
     );
+    // The result now closes the move list (postgame-panel.ts) and the notice
+    // stays hidden; the winner line must still be the ink-aware label.
+    const console = document.createElement('section');
+    console.className = 'game-console';
+    const result = document.createElement('div');
+    result.dataset.gameResult = '';
+    result.hidden = true;
+    console.append(refs.actionSection, result);
     chrome.renderActionStatus();
-    expect(refs.actionStatus.textContent).toContain('Black wins by no legal move.');
-    expect(refs.actionStatus.textContent).not.toContain('White wins');
+    expect(refs.actionSection.hidden).toBe(true);
+    expect(result.hidden).toBe(false);
+    expect(result.textContent).toContain('1-0');
+    expect(result.textContent).toContain('Black is victorious');
+    expect(result.textContent).not.toContain('White');
   });
 
   it('renders the spectator "to move" label via the tenant seatLabel', () => {
