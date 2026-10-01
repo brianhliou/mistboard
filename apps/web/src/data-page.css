@@ -1,0 +1,381 @@
+/* /data: monthly game downloads. The shell, header and variant rail are the
+   /games ones (current-games.css); this file styles the month and collection
+   tables, the licence line and the closed "About the data" notes. */
+
+/* Wider than /games (760px), as /games/search widens for its table: the month
+   table needs room for two downloads and two hashes on one line. */
+.data-shell {
+  max-width: 920px;
+}
+
+.data-about-link a,
+.data-back a {
+  color: var(--site-link, var(--site-accent-strong));
+}
+
+.data-back {
+  margin: 0 0 4px;
+  font-size: 0.9rem;
+}
+
+.data-about-page .data-main {
+  max-width: 760px;
+}
+
+.data-about-section {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+}
+
+.data-main {
+  display: flex;
+  flex-direction: column;
+  gap: 28px;
+  min-width: 0;
+}
+
+.data-months,
+.data-collections,
+.data-license {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  min-width: 0;
+}
+
+.data-section-heading {
+  margin: 0;
+  font-size: 1.1rem;
+  font-weight: 600;
+}
+
+.data-muted {
+  margin: 0;
+  color: var(--site-muted);
+}
+
+.data-note {
+  font-size: 0.9rem;
+}
+
+/* ── Tables ─────────────────────────────────────────────────────────────── */
+
+.data-table {
+  width: 100%;
+  border-collapse: collapse;
+  font-variant-numeric: tabular-nums;
+}
+
+.data-table th,
+.data-table td {
+  padding: 8px 7px;
+  text-align: left;
+  vertical-align: middle;
+  border-bottom: 1px solid var(--site-border-soft, var(--site-border, rgba(0, 0, 0, 0.08)));
+}
+
+.data-table thead th {
+  font-size: 0.8rem;
+  font-weight: 600;
+  color: var(--site-muted);
+  border-bottom-color: var(--site-border, rgba(0, 0, 0, 0.12));
+}
+
+.data-table tbody tr:nth-child(even) {
+  background: var(--site-zebra);
+}
+
+.data-table tbody th {
+  font-weight: 400;
+}
+
+.data-table .data-col-games {
+  text-align: right;
+  width: 1%;
+  white-space: nowrap;
+}
+
+.data-table .data-col-download,
+.data-table .data-col-hash {
+  width: 1%;
+  white-space: nowrap;
+}
+
+.data-table td.data-col-hash.is-empty {
+  color: var(--site-muted);
+}
+
+.data-row-title {
+  display: block;
+  font-weight: 600;
+}
+
+.data-months .data-row-title {
+  white-space: nowrap;
+}
+
+.data-credit {
+  display: block;
+  margin-top: 2px;
+  font-size: 0.85rem;
+  color: var(--site-muted);
+}
+
+.data-credit a {
+  color: var(--site-link, var(--site-accent-strong));
+}
+
+.data-downloads {
+  display: flex;
+  flex-wrap: nowrap;
+  gap: 6px;
+}
+
+.data-download {
+  display: inline-flex;
+  align-items: baseline;
+  gap: 5px;
+  padding: 3px 8px;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 6px;
+  color: var(--site-text);
+  text-decoration: none;
+  font-size: 0.85rem;
+  transition:
+    border-color 120ms ease,
+    background-color 120ms ease;
+}
+
+.data-download:hover,
+.data-download:focus-visible {
+  border-color: var(--site-accent-strong);
+  background: var(--site-hover, transparent);
+}
+
+.data-download-format {
+  font-weight: 700;
+  letter-spacing: 0.03em;
+  color: var(--site-accent-strong);
+}
+
+.data-download-size {
+  color: var(--site-muted);
+  font-size: 0.8rem;
+}
+
+.data-hash {
+  display: flex;
+  align-items: baseline;
+  gap: 6px;
+  padding: 1px 6px;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 5px;
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 0.78rem;
+  cursor: pointer;
+}
+
+.data-hash + .data-hash {
+  margin-top: 4px;
+}
+
+.data-hash:hover,
+.data-hash:focus-visible {
+  border-color: var(--site-accent-strong);
+  color: var(--site-text);
+}
+
+.data-hash-format {
+  font-weight: 600;
+}
+
+.data-hash-copy {
+  color: var(--site-accent-strong);
+  font-size: 0.72rem;
+}
+
+.data-copy {
+  padding: 1px 6px;
+  border: 1px solid var(--site-border, rgba(0, 0, 0, 0.12));
+  border-radius: 5px;
+  background: transparent;
+  color: var(--site-text);
+  font: inherit;
+  font-size: 0.75rem;
+  cursor: pointer;
+}
+
+.data-copy:hover,
+.data-copy:focus-visible {
+  border-color: var(--site-accent-strong);
+}
+
+/* ── Licence line and the /data/about page ─────────────────────────────────────────── */
+
+.data-license p {
+  margin: 0;
+  line-height: 1.55;
+}
+
+.data-license a,
+.data-about a {
+  color: var(--site-link, var(--site-accent-strong));
+}
+
+.data-cite {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  padding: 10px 14px;
+  border-left: 3px solid var(--site-accent-strong);
+  background: var(--site-zebra);
+  border-radius: 0 8px 8px 0;
+  overflow-wrap: anywhere;
+}
+
+.data-about {
+  gap: 32px;
+}
+
+.data-about p {
+  margin: 0;
+  line-height: 1.6;
+}
+
+.data-fields {
+  width: 100%;
+  border-collapse: collapse;
+  font-size: 0.9rem;
+  margin-bottom: 8px;
+}
+
+.data-fields th,
+.data-fields td {
+  padding: 6px 10px;
+  text-align: left;
+  vertical-align: top;
+  border-top: 1px solid var(--site-border-soft, var(--site-border, rgba(0, 0, 0, 0.08)));
+}
+
+.data-fields th {
+  font-weight: 400;
+  width: 34%;
+}
+
+.data-fields code {
+  overflow-wrap: anywhere;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .data-download {
+    transition: none;
+  }
+}
+
+/* Phone: each row becomes a small block. The month (or collection) and its
+   game count on the left, the downloads on the right, the hash under the
+   name. No column needs horizontal room. */
+@media (max-width: 720px) {
+  .data-table thead {
+    display: none;
+  }
+
+  .data-table,
+  .data-table tbody {
+    display: block;
+  }
+
+  .data-table tbody tr {
+    display: grid;
+    grid-template-columns: minmax(0, 1fr) auto;
+    grid-template-areas:
+      "name download"
+      "games download"
+      "hash hash";
+    column-gap: 12px;
+    padding: 10px 12px;
+    border-bottom: 1px solid var(--site-border-soft, var(--site-border, rgba(0, 0, 0, 0.08)));
+  }
+
+  .data-table tbody th,
+  .data-table tbody td {
+    display: block;
+    width: auto;
+    padding: 0;
+    border: 0;
+    text-align: left;
+    white-space: normal;
+  }
+
+  /* Undo the desktop shrink-to-fit widths (width: 1%), which outrank the
+     reset above. */
+  .data-table tbody .data-col-games,
+  .data-table tbody .data-col-download,
+  .data-table tbody .data-col-hash {
+    width: auto;
+    text-align: left;
+  }
+
+  .data-table tbody .data-col-name {
+    grid-area: name;
+  }
+
+  /* A bare number reads as a count only under its column header; on a phone
+     the cell shows "18 games" from its label instead. */
+  .data-table tbody .data-col-games {
+    grid-area: games;
+    font-size: 0;
+    color: var(--site-muted);
+  }
+
+  .data-table tbody .data-col-games::after {
+    content: attr(data-label);
+    font-size: 0.85rem;
+  }
+
+  .data-table tbody .data-col-download {
+    grid-area: download;
+    align-self: center;
+  }
+
+  .data-table tbody .data-col-download .data-downloads {
+    flex-direction: column;
+    align-items: stretch;
+  }
+
+  .data-table tbody .data-col-hash {
+    grid-area: hash;
+    margin-top: 6px;
+  }
+
+  .data-table tbody .data-col-hash.is-empty {
+    display: none;
+  }
+
+  .data-cite {
+    flex-direction: column;
+    align-items: flex-start;
+  }
+
+  .data-fields,
+  .data-fields tbody,
+  .data-fields tr,
+  .data-fields th,
+  .data-fields td {
+    display: block;
+    width: auto;
+  }
+
+  .data-fields th {
+    padding-bottom: 0;
+  }
+
+  .data-fields td {
+    border-top: 0;
+    padding-top: 2px;
+  }
+}

@@ -400,6 +400,9 @@ export function isClientRoute(pathname: string): boolean {
     // detail path (/historical-xiangqi/game/:id) is unchanged and still below.
     normalized === '/games' ||
     normalized === '/games/search' ||
+    // Monthly game downloads (apps/web/src/data-page.ts; the files are /api/data).
+    normalized === '/data' ||
+    normalized === '/data/about' ||
     // Import: paste a game, land on the analysis board. Mints nothing, so it
     // needs no server route of its own beyond being served the SPA shell.
     normalized === '/import' ||

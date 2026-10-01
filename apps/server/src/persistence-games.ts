@@ -974,6 +974,26 @@ export async function getGameSummary(roomId: string): Promise<RecentEveGameRecor
   return record ?? null;
 }
 
+// getGameSummary for many rooms in one round trip: the same columns, mapper and
+// participant attach, so a bulk export (game-data-files.ts) hands each game's
+// single-game exporter exactly the record the per-game route would. Missing or
+// unfinished rooms are absent from the map.
+export async function getGameSummaries(
+  roomIds: readonly string[],
+): Promise<Map<string, RecentEveGameRecord>> {
+  if (roomIds.length === 0) return new Map();
+  const { rows } = await getPool().query<RecentEveGameRow>(
+    `SELECT ${RECENT_EVE_SELECT_COLUMNS}
+     FROM games
+     LEFT JOIN eve_games ON eve_games.game_id = games.room_id
+     WHERE games.room_id = ANY($1)
+       AND games.status = 'completed'`,
+    [[...roomIds]],
+  );
+  const records = await attachGameParticipants(rows.map(recentEveGameRecordFromRow));
+  return new Map(records.map((record) => [record.roomId, record]));
+}
+
 // ── Head-to-head (crosstable) ────────────────────────────────────────────────
 // The record of two subjects against each other in one variant, read straight
 // off game_participants: one self-join, either seat order. "Public" here is the

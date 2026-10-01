@@ -23,6 +23,7 @@ import * as correspondenceGamesRoute from './routes/correspondence-games.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
 import * as currentGamesRoute from './routes/current-games.js';
 import * as darkXiangqiGamesRoute from './routes/dark-xiangqi-games.js';
+import * as dataRoute from './routes/data.js';
 import * as duckXiangqiGamesRoute from './routes/duck-xiangqi-games.js';
 import * as enginesRoute from './routes/engines.js';
 import * as feedbackRoute from './routes/feedback.js';
@@ -105,6 +106,7 @@ export const routes: RouteModule[] = [
   correspondenceSeeksRoute,
   // Ahead of gamesRoute: /api/games/current must not fall into /api/games/:id.
   currentGamesRoute,
+  dataRoute,
   lobbyRoute,
   xiangqiBroadcastsRoute,
   historicalXiangqiGamesRoute,

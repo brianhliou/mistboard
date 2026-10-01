@@ -501,6 +501,7 @@ const HOME_FOOTER_LINKS: ReadonlyArray<{
   { href: '/contact', labelKey: 'footer.contact' },
   { href: '/source', labelKey: 'footer.source' },
   { href: '/developers', labelKey: 'footer.developers' },
+  { href: '/data', labelKey: 'footer.data' },
   { href: '/terms', labelKey: 'footer.terms' },
   { href: '/privacy', labelKey: 'footer.privacy' },
 ];

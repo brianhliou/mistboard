@@ -719,6 +719,7 @@ export const ZH_HANT_REVIEW = {
   'games.daysPerMove': '每步 {count} 天',
   'games.recentGames': '最近的對局',
   'games.searchAll': '搜尋全部對局',
+  'games.downloadData': '下載對局資料',
   'games.hiddenWhileLive': '對局進行中，棋盤隱藏',
   'games.deadline': '剩餘 {time} 走棋',
   'games.live': '即時',

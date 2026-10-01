@@ -699,5 +699,12 @@ async function renderRecentGames(host: HTMLElement): Promise<void> {
   more.className = 'current-games-search-link';
   more.href = '/games/search';
   more.textContent = t('games.searchAll');
-  host.append(heading, list, more);
+  const data = document.createElement('a');
+  data.className = 'current-games-search-link';
+  data.href = '/data';
+  data.textContent = t('games.downloadData');
+  const links = document.createElement('div');
+  links.className = 'current-games-more-links';
+  links.append(more, data);
+  host.append(heading, list, links);
 }

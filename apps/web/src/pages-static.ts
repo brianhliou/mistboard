@@ -619,6 +619,8 @@ function buildPrivacy(locale: Locale = currentLocale()): HTMLElement {
   const h3 = aboutSubheading(t('privacy.publicGamesHeading', {}, locale));
   const p3 = aboutParagraph([
     t('privacy.publicGamesPrefix', {}, locale),
+    aboutLink(t('privacy.downloadsLink', {}, locale), '/data'),
+    t('privacy.publicGamesMiddle', {}, locale),
     aboutExternalLink(
       t('privacy.ccByLink', {}, locale),
       'https://creativecommons.org/licenses/by/4.0/',

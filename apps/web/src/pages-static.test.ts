@@ -78,6 +78,7 @@ describe('about page platform activity', () => {
       'Source code',
       'Contribute',
       'Developers',
+      'Game data',
       'API',
       'Thank you',
       'Is Mistboard lagging?',
@@ -282,7 +283,9 @@ describe('about page platform activity', () => {
     expect(root.textContent).toContain('我們收集什麼');
     expect(root.textContent).toContain('我們不會做什麼');
     expect(root.textContent).toContain('你的對局是公開的');
-    expect(root.textContent).toContain('已結束對局按 CC BY 4.0 發布。');
+    expect(root.textContent).toContain(
+      '已結束的對局是公開的，並按月發布在對局資料頁面供下載，採用 CC BY 4.0 授權。',
+    );
     expect(root.textContent).toContain('我們承諾什麼，以及不承諾什麼');
   });
 

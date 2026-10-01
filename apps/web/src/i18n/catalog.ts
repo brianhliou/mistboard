@@ -67,6 +67,7 @@ const APP_I18N_DOMAIN_DEFS: readonly AppI18nDomainDef[] = [
       'faq',
       'terms',
       'privacy',
+      'data',
     ],
     english: EN_CONTENT,
     critical: CRITICAL_CONTENT_I18N_KEYS,
