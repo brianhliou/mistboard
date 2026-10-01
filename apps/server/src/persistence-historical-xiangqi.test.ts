@@ -16,6 +16,13 @@ import {
   test,
 } from './persistence-test-support.js';
 import { tryHandle as tryHandleHistoricalRoute } from './routes/historical-xiangqi-games.js';
+// The search covers the launched variants, read from the tenant registry and
+// the launch flags, as in production.
+import './variant-tenant/register-tenants.js';
+
+for (const flag of ['XIANGQI', 'JIEQI', 'BANQI', 'MAHJONG']) {
+  process.env[`MISTBOARD_${flag}_ENABLED`] = 'true';
+}
 
 definePersistenceTests('historical xiangqi', () => {
   test('normalizes player names conservatively', () => {
@@ -230,6 +237,181 @@ definePersistenceTests('historical xiangqi', () => {
       const narrow = await respond('limit=1');
       assert.equal(narrow.games.length, 1);
       assert.equal(narrow.total, all.total, 'total is a count, not the size of the page');
+    } finally {
+      await client.end();
+    }
+  });
+
+  // The variant picker (#321): every launched variant in the feed, one when
+  // picked, unknown ids refused, and off-site engine matches reachable by
+  // source or event without flooding the default feed.
+  test('games search spans launched variants and finds engine matches by event', async () => {
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      const at = (min: number) => new Date(Date.UTC(2026, 8, 20, 10, min, 0));
+      const insertGame = async (
+        roomId: string,
+        game: {
+          variant: string;
+          mode: string;
+          result: string;
+          minute: number;
+          visibility?: string;
+          corpusId?: string | null;
+          names?: [string, string];
+        },
+      ) => {
+        await client.query(
+          `INSERT INTO games
+             (room_id, variant, result, termination, ply_count, started_at, ended_at,
+              white_name, black_name, corpus_id, mode, status, visibility)
+           VALUES ($1, $2, $3, 'checkmate', 40, $4, $4, $5, $6, $7, $8, 'completed', $9)`,
+          [
+            roomId,
+            game.variant,
+            game.result,
+            at(game.minute),
+            game.names?.[0] ?? null,
+            game.names?.[1] ?? null,
+            game.corpusId ?? null,
+            game.mode,
+            game.visibility ?? 'public',
+          ],
+        );
+      };
+      const insertOrigin = async (roomId: string, event: string) => {
+        await client.query(
+          `INSERT INTO events (room_id, seq, type, payload) VALUES ($1, 0, 'room-created', $2)`,
+          [roomId, JSON.stringify({ type: 'room-created', origin: { kind: 'imported', event } })],
+        );
+      };
+      const EVENT = 'AB-JChess vs PikaJieQi · 4 s · 2026-09';
+      const engines: [string, string] = ['AB-JChess', 'PikaJieQi'];
+
+      await insertGame('search-xq', {
+        variant: 'xiangqi',
+        mode: 'pvp',
+        result: 'red-wins',
+        minute: 1,
+      });
+      await insertGame('search-jq', {
+        variant: 'jieqi',
+        mode: 'pve',
+        result: 'black-wins',
+        minute: 2,
+      });
+      await insertGame('search-fog', {
+        variant: 'dark-chess',
+        mode: 'pvp',
+        result: 'white-wins',
+        minute: 3,
+      });
+      // Played here but not launched publicly: never listed.
+      await insertGame('search-mj', { variant: 'mahjong', mode: 'pvp', result: 'draw', minute: 4 });
+      // The engine match, newer than everything so a leak would lead the feed.
+      for (const [index, roomId] of ['search-match-1', 'search-match-2'].entries()) {
+        await insertGame(roomId, {
+          variant: 'jieqi',
+          mode: 'imported',
+          result: 'red-wins',
+          minute: 10 + index,
+          corpusId: 'ab-jchess-vs-pikajieqi-4s-2026-09',
+          names: engines,
+        });
+        await insertOrigin(roomId, EVENT);
+      }
+      // Same match, but not public: absent from every list.
+      await insertGame('search-match-private', {
+        variant: 'jieqi',
+        mode: 'imported',
+        result: 'red-wins',
+        minute: 12,
+        corpusId: 'ab-jchess-vs-pikajieqi-4s-2026-09',
+        visibility: 'unlisted',
+        names: engines,
+      });
+      await insertOrigin('search-match-private', EVENT);
+      // An older imported corpus with no origin: public, but not an engine match.
+      await insertGame('search-old-corpus', {
+        variant: 'jieqi',
+        mode: 'imported',
+        result: 'black-wins',
+        minute: 13,
+        corpusId: 'ab-jchess-old-corpus',
+        names: engines,
+      });
+
+      type Row = {
+        id: string;
+        kind: string;
+        variant: string;
+        reviewUrl: string;
+        eventName: string | null;
+        result: string;
+      };
+      const search = async (query: string) => {
+        const capture = captureResponse();
+        await tryHandleHistoricalRoute(
+          {} as never,
+          { method: 'GET', headers: {} } as unknown as IncomingMessage,
+          capture,
+          '/api/historical-xiangqi/games',
+          new URL(`http://test.local/api/historical-xiangqi/games?${query}`),
+        );
+        return {
+          status: capture.status,
+          body: JSON.parse(capture.body) as {
+            games: Row[];
+            total: number;
+            variants?: string[];
+            error?: string;
+          },
+        };
+      };
+      const ids = (rows: Row[]) => rows.map((row) => row.id).sort();
+
+      const feed = await search('limit=50');
+      assert.equal(feed.status, 200);
+      assert.deepEqual(ids(feed.body.games), ['search-fog', 'search-jq', 'search-xq']);
+      assert.equal(feed.body.total, 3, 'imported rows are not counted in the feed either');
+      assert.ok(feed.body.variants?.includes('jieqi'));
+      assert.ok(!feed.body.variants?.includes('mahjong'));
+      const byId = new Map(feed.body.games.map((row) => [row.id, row]));
+      assert.equal(byId.get('search-xq')?.reviewUrl, '/xiangqi/game/search-xq');
+      assert.equal(byId.get('search-jq')?.reviewUrl, '/jieqi/game/search-jq');
+      assert.equal(byId.get('search-fog')?.reviewUrl, '/game/search-fog');
+      assert.equal(byId.get('search-fog')?.variant, 'dark-chess');
+      assert.equal(byId.get('search-fog')?.result, '1-0', 'white-wins is the first seat');
+
+      const jieqi = await search('variant=jieqi');
+      assert.deepEqual(ids(jieqi.body.games), ['search-jq']);
+
+      // White's win in Fog Chess answers the seat-keyed "first player wins".
+      const fogWins = await search('variant=dark-chess&result=1-0');
+      assert.deepEqual(ids(fogWins.body.games), ['search-fog']);
+
+      const match = await search('variant=jieqi&event=AB-JChess');
+      assert.deepEqual(ids(match.body.games), ['search-match-1', 'search-match-2']);
+      const matchRow = match.body.games[0];
+      assert.equal(matchRow?.kind, 'engine-match');
+      assert.equal(matchRow?.eventName, EVENT, 'the row names the event, not the corpus slug');
+      assert.match(matchRow?.reviewUrl ?? '', /^\/jieqi\/game\/search-match-/);
+
+      // The event's display name finds it too, not just the slug.
+      const byName = await search(`event=${encodeURIComponent('PikaJieQi · 4 s')}`);
+      assert.deepEqual(ids(byName.body.games), ['search-match-1', 'search-match-2']);
+
+      const source = await search('source=engine-match');
+      assert.deepEqual(ids(source.body.games), ['search-match-1', 'search-match-2']);
+      const sourceElsewhere = await search('source=engine-match&variant=xiangqi');
+      assert.deepEqual(sourceElsewhere.body.games, []);
+
+      for (const bad of ['mahjong', 'mini-xiangqi', 'nope']) {
+        const refused = await search(`variant=${bad}`);
+        assert.equal(refused.status, 400, bad);
+        assert.equal(refused.body.error, 'invalid_variant');
+      }
     } finally {
       await client.end();
     }

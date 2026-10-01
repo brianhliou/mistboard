@@ -186,9 +186,12 @@ const params = new URLSearchParams(window.location.search);
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
 const replaySample = params.get('replay');
 const playDeepLink = params.get('play');
+// The dev live-room shortcut (?room= / ?variant= / ?dev). /games/search owns
+// its own ?variant= (the picker), so the shortcut must not claim that page.
 const wantsLive =
   import.meta.env.DEV &&
   !playDeepLink &&
+  path !== '/games/search' &&
   (params.has('room') || params.has('variant') || params.has('dev'));
 const page = params.get('page');
 const gameRoomId = gameRoomIdFromPath(path);
@@ -499,7 +502,8 @@ if (replaySample) {
     import('./current-games.js').then(({ mountCurrentGames }) => mountCurrentGames(appRoot)),
   );
 } else if (wantsHistoricalXiangqiSearch) {
-  setTitle('Xiangqi game search');
+  // The page retitles itself per picked variant once mounted.
+  setTitleKey('historical.heading');
   void mountOrReport(() =>
     import('./historical-xiangqi-search.js').then(({ mountHistoricalXiangqiSearch }) =>
       mountHistoricalXiangqiSearch(appRoot),

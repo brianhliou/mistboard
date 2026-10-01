@@ -236,7 +236,7 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     // is what makes it worth indexing at all.
     title: 'Xiangqi Game Database | Mistboard',
     description:
-      'Search and browse xiangqi (Chinese chess) games: tournament archives, live broadcasts, and games played on Mistboard. Filter by player, event, result, date, or length.',
+      'Search and browse xiangqi (Chinese chess) and variant games: tournament archives, live broadcasts, engine matches, and games played on Mistboard. Filter by variant, player, event, result, date, or length.',
   },
   '/import': {
     title: 'Import a Xiangqi Game | Mistboard',

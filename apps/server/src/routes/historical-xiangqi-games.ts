@@ -1,16 +1,42 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { type GameSpecId, XIANGQI_SPEC_ID } from '@mistboard/game';
+import { crosstableReviewUrl } from './../crosstable.js';
+import { flipFirstColorForRoom, isFlipInkVariant } from './../flip-first-color.js';
 import { PGN_CONTENT_TYPE } from './../game-export-shared.js';
 import { buildHistoricalXiangqiPgn } from './../historical-xiangqi-export.js';
 import * as persistence from './../persistence.js';
+import { listWatchChannels } from './../watch-channels.js';
 import { type HttpApiContext, requireMethod, requirePersistence, writeJson } from './lib.js';
 
-type ParseResult =
-  | { ok: true; filters: persistence.HistoricalXiangqiGameQueryFilters }
-  | { ok: false; error: string };
+// The search's filters: the archive's own, plus the variant picker. `variant`
+// is always a launched spec id by the time it gets here (parse rejects the rest).
+export type GameSearchFilters = persistence.HistoricalXiangqiGameQueryFilters & {
+  variant?: GameSpecId;
+};
+
+type ParseResult = { ok: true; filters: GameSearchFilters } | { ok: false; error: string };
 
 const RESULTS = new Set<persistence.HistoricalXiangqiResult>(['1-0', '0-1', '1/2-1/2', '*']);
 const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
-const RESERVED_SOURCES = new Set(['mistboard', 'broadcast']);
+
+// `source` names one lane, or (any other value) one archive source by slug.
+// 'archive' is every archive source; 'engine-match' is the off-site engine
+// matches imported as games (engine-match-import.ts).
+export const ENGINE_MATCH_SOURCE = 'engine-match';
+const RESERVED_SOURCES = new Set(['mistboard', 'broadcast', 'archive', ENGINE_MATCH_SOURCE]);
+
+export type SearchVariant = { id: GameSpecId; storedVariants: readonly string[] };
+
+// The variants the search offers: exactly the launched variant channels of
+// /watch (a registered tenant with a watch surface whose launch flag is on,
+// plus Fog Chess), in the canonical shelf order. Derived, so a variant joins
+// the picker the day it launches and a hidden one (mahjong) never does. The
+// channel's stored variant strings are what games.variant holds for it.
+export function searchableVariants(): SearchVariant[] {
+  return listWatchChannels()
+    .filter((channel) => channel.gameSpecIds.length === 1)
+    .map((channel) => ({ id: channel.gameSpecIds[0]!, storedVariants: channel.legacyVariants }));
+}
 
 // `tags` is the source's own row, stored verbatim so an import stays lossless and
 // re-derivable. Serving it verbatim is a different decision, and the wrong one:
@@ -43,7 +69,9 @@ export function publicTags(tags: Record<string, unknown>): Record<string, unknow
 
 type UnifiedXiangqiSearchItem = {
   id: string;
-  kind: 'mistboard' | 'historical' | 'broadcast';
+  kind: 'mistboard' | 'engine-match' | 'historical' | 'broadcast';
+  // The game spec the row is a game of; the archive and broadcasts are xiangqi.
+  variant: string;
   reviewUrl: string;
   sourceSlug: string;
   sourceName: string;
@@ -64,6 +92,9 @@ type UnifiedXiangqiSearchItem = {
   result: persistence.HistoricalXiangqiResult;
   plyCount: number;
   moveFormat: string;
+  // Flip variants only (banqi, jungle-flip): the ink the first seat bound on the
+  // opening flip, so the result chip can name the winner's colour.
+  firstColor?: 'red' | 'black' | null;
 };
 
 type UnifiedXiangqiSearchChunk = {
@@ -136,18 +167,24 @@ export async function tryHandle(
   if (!requireMethod(request, response, 'GET')) return true;
   if (!requirePersistence(response)) return true;
 
-  const parsed = parseHistoricalXiangqiGameQuery(parsedUrl.searchParams);
+  const launched = searchableVariants();
+  const parsed = parseHistoricalXiangqiGameQuery(
+    parsedUrl.searchParams,
+    launched.map((variant) => variant.id),
+  );
   if (!parsed.ok) {
     writeJson(response, 400, { error: parsed.error });
     return true;
   }
 
-  const page = await queryUnifiedXiangqiGames(parsed.filters);
+  const page = await queryUnifiedXiangqiGames(parsed.filters, launched);
   writeJson(response, 200, {
     games: page.games,
     total: page.total,
     offset: parsed.filters.offset ?? 0,
     limit: parsed.filters.limit ?? 50,
+    // The picker's options, so the page offers exactly what this server accepts.
+    variants: launched.map((variant) => variant.id),
   });
   return true;
 }
@@ -189,31 +226,90 @@ export async function pageAcrossLanes(
   return { games, total: chunks.reduce((sum, chunk) => sum + chunk.total, 0) };
 }
 
-async function queryUnifiedXiangqiGames(filters: persistence.HistoricalXiangqiGameQueryFilters) {
+export type SearchLane = 'played' | 'engine-match' | 'broadcast' | 'archive';
+
+// Which lanes a search reads. Pure, so the lane rules are testable without a
+// database.
+//
+// - Games played here: every launched variant, or the one picked.
+// - Engine matches: never in the unfiltered feed (one 400-game import would
+//   bury everything played here). They join when asked for by source, or when
+//   the search names an event or a player, which is how a match is found.
+// - Broadcasts and the archive are xiangqi by nature: they drop out the moment
+//   the picked variant is anything else.
+export function searchLanes(filters: GameSearchFilters): SearchLane[] {
+  const source = filters.sourceSlug;
+  const xiangqiOnly = !filters.variant || filters.variant === XIANGQI_SPEC_ID;
+  const lanes: SearchLane[] = [];
+  if (!source || source === 'mistboard') lanes.push('played');
+  if (source === ENGINE_MATCH_SOURCE || (!source && (filters.event || filters.player))) {
+    lanes.push('engine-match');
+  }
+  if (xiangqiOnly && (!source || source === 'broadcast')) lanes.push('broadcast');
+  if (xiangqiOnly && (!source || source === 'archive' || !RESERVED_SOURCES.has(source))) {
+    lanes.push('archive');
+  }
+  return lanes;
+}
+
+async function queryUnifiedXiangqiGames(
+  filters: GameSearchFilters,
+  launched: readonly SearchVariant[],
+) {
   const limit = Math.max(1, Math.min(filters.limit ?? 50, 200));
   const offset = Math.max(0, filters.offset ?? 0);
-  const source = filters.sourceSlug;
-  const lanes: LaneReader[] = [];
+  // Fail-closed: the stored strings come only from the launched list, so a
+  // variant outside it can match nothing rather than everything.
+  const storedVariants = launched
+    .filter((variant) => !filters.variant || variant.id === filters.variant)
+    .flatMap((variant) => [...variant.storedVariants]);
+  // Exhaustive over SearchLane: a new lane does not compile until it has a reader.
+  const readers: Record<SearchLane, LaneReader> = {
+    played: (at, count) => queryPlayedGames(filters, storedVariants, 'played', at, count),
+    'engine-match': (at, count) =>
+      queryPlayedGames(filters, storedVariants, 'engine-match', at, count),
+    broadcast: (at, count) => queryBroadcastXiangqiGames(filters, at, count),
+    archive: (at, count) => queryHistoricalXiangqiGames(filters, at, count),
+  };
+  const lanes = searchLanes(filters).map((lane) => readers[lane]);
+  const page = await pageAcrossLanes(lanes, offset, limit, filters.sort);
+  // Per-row extras, read for the one page actually served rather than for every
+  // row the lane walk touched.
+  await Promise.all([attachFirstColors(page.games), attachOriginEvents(page.games)]);
+  return page;
+}
 
-  if (!source || source === 'mistboard') {
-    lanes.push((at, count) => queryMistboardXiangqiGames(filters, at, count));
+async function attachFirstColors(games: UnifiedXiangqiSearchItem[]): Promise<void> {
+  await Promise.all(
+    games
+      .filter((game) => game.kind !== 'historical' && game.kind !== 'broadcast')
+      .filter((game) => isFlipInkVariant(game.variant))
+      .map(async (game) => {
+        game.firstColor = await flipFirstColorForRoom(game.id, game.variant);
+      }),
+  );
+}
+
+async function attachOriginEvents(games: UnifiedXiangqiSearchItem[]): Promise<void> {
+  const imported = games.filter((game) => game.kind === 'engine-match');
+  if (imported.length === 0) return;
+  const events = await persistence.listImportedGameOriginEvents(imported.map((game) => game.id));
+  for (const game of imported) {
+    const event = events.get(game.id);
+    if (event) game.eventName = event;
   }
-  if (!source || source === 'broadcast') {
-    lanes.push((at, count) => queryBroadcastXiangqiGames(filters, at, count));
-  }
-  if (!source || !RESERVED_SOURCES.has(source)) {
-    lanes.push((at, count) => queryHistoricalXiangqiGames(filters, at, count));
-  }
-  return pageAcrossLanes(lanes, offset, limit, filters.sort);
 }
 
 async function queryHistoricalXiangqiGames(
-  filters: persistence.HistoricalXiangqiGameQueryFilters,
+  filters: GameSearchFilters,
   offset: number,
   limit: number,
 ): Promise<UnifiedXiangqiSearchChunk> {
+  const { variant: _variant, sourceSlug, ...archiveFilters } = filters;
   const page = await persistence.queryHistoricalXiangqiGames({
-    ...filters,
+    ...archiveFilters,
+    // 'archive' is every archive source; any other non-lane value is one slug.
+    ...(sourceSlug && !RESERVED_SOURCES.has(sourceSlug) ? { sourceSlug } : {}),
     visibility: 'public',
     offset,
     limit,
@@ -222,6 +318,7 @@ async function queryHistoricalXiangqiGames(
     games: page.games.map((game) => ({
       id: game.id,
       kind: 'historical',
+      variant: XIANGQI_SPEC_ID,
       reviewUrl: `/historical-xiangqi/game/${encodeURIComponent(game.id)}`,
       sourceSlug: game.sourceSlug,
       sourceName: game.sourceName,
@@ -254,23 +351,31 @@ async function queryHistoricalXiangqiGames(
 // admin browser; they are just not what "browse xiangqi games" means.
 const PUBLIC_GAME_MODES: persistence.GameMode[] = ['pvp', 'pve'];
 
-async function queryMistboardXiangqiGames(
-  filters: persistence.HistoricalXiangqiGameQueryFilters,
+// Games stored in `games`: either played here (pvp/pve) or an off-site engine
+// match imported as games (mode 'imported' with a room-created origin; older
+// imported corpora have none and are never listed). Public rows only, in the
+// launched variants only.
+async function queryPlayedGames(
+  filters: GameSearchFilters,
+  storedVariants: readonly string[],
+  lane: 'played' | 'engine-match',
   offset: number,
   limit: number,
 ): Promise<UnifiedXiangqiSearchChunk> {
-  const result = mistboardResult(filters.result);
-  if (filters.result && !result) return { games: [], total: 0 };
+  const results = mistboardResults(filters.result);
+  if (filters.result && results.length === 0) return { games: [], total: 0 };
   // Every filter goes to SQL. Post-filtering the fetched page (the old shape)
   // both under-reports — rows matching the filter past the limit never load —
   // and makes an honest total impossible, since the count would describe the
   // unfiltered slice.
   const page = await persistence.queryGames({
-    variant: 'xiangqi',
+    variants: storedVariants,
     ...(filters.sort ? { sort: filters.sort } : {}),
-    modes: PUBLIC_GAME_MODES,
+    ...(lane === 'played'
+      ? { modes: PUBLIC_GAME_MODES }
+      : { modes: ['imported'], importedOrigin: true }),
     visibility: 'public',
-    ...(result ? { result } : {}),
+    ...(results.length > 0 ? { results } : {}),
     ...(filters.player ? { player: filters.player } : {}),
     ...(filters.event ? { event: filters.event } : {}),
     ...(typeof filters.plyMin === 'number' ? { plyMin: filters.plyMin } : {}),
@@ -280,12 +385,29 @@ async function queryMistboardXiangqiGames(
     offset,
     limit,
   });
-  const games: UnifiedXiangqiSearchItem[] = page.games.map((game) => ({
+  const games: UnifiedXiangqiSearchItem[] = [];
+  for (const game of page.games) {
+    // Every launched variant routes (searchableVariants.test pins it); a row
+    // that somehow does not is dropped rather than linked to a guessed page.
+    const reviewUrl = crosstableReviewUrl(game.roomId, game.variant);
+    if (!reviewUrl) continue;
+    games.push(playedGameItem(game, lane, reviewUrl));
+  }
+  return { games, total: page.total };
+}
+
+function playedGameItem(
+  game: persistence.RecentEveGameRecord,
+  lane: 'played' | 'engine-match',
+  reviewUrl: string,
+): UnifiedXiangqiSearchItem {
+  return {
     id: game.roomId,
-    kind: 'mistboard',
-    reviewUrl: `/xiangqi/game/${encodeURIComponent(game.roomId)}`,
-    sourceSlug: 'mistboard',
-    sourceName: 'Mistboard',
+    kind: lane === 'played' ? 'mistboard' : 'engine-match',
+    variant: game.variant,
+    reviewUrl,
+    sourceSlug: lane === 'played' ? 'mistboard' : ENGINE_MATCH_SOURCE,
+    sourceName: lane === 'played' ? 'Mistboard' : 'Engine match',
     sourceGameId: game.roomId,
     sourceUrl: null,
     eventName: game.corpusId,
@@ -303,8 +425,7 @@ async function queryMistboardXiangqiGames(
     result: historicalResult(game.result),
     plyCount: game.plyCount,
     moveFormat: 'mistboard',
-  }));
-  return { games, total: page.total };
+  };
 }
 
 // games.white_name / black_name are only populated for the lab rows; a live PvP
@@ -331,7 +452,7 @@ function seatName(game: persistence.RecentEveGameRecord, seat: 'white' | 'black'
 }
 
 async function queryBroadcastXiangqiGames(
-  filters: persistence.HistoricalXiangqiGameQueryFilters,
+  filters: GameSearchFilters,
   offset: number,
   limit: number,
 ): Promise<UnifiedXiangqiSearchChunk> {
@@ -351,6 +472,7 @@ async function queryBroadcastXiangqiGames(
   const games: UnifiedXiangqiSearchItem[] = page.boards.map((board) => ({
     id: board.id,
     kind: 'broadcast',
+    variant: XIANGQI_SPEC_ID,
     reviewUrl: `/broadcast/xiangqi/board/${encodeURIComponent(board.id)}`,
     sourceSlug: 'broadcast',
     sourceName: 'Broadcast',
@@ -398,14 +520,15 @@ export function compareSearchItems(
   return sort === 'oldest' ? a.id.localeCompare(b.id) : b.id.localeCompare(a.id);
 }
 
-function mistboardResult(
+// The stored results a seat-keyed filter means. '1-0' is "the first seat won",
+// stored as 'red-wins' in the red/black variants and 'white-wins' in chess.
+export function mistboardResults(
   result: persistence.HistoricalXiangqiResult | undefined,
-): persistence.GameResult | null {
-  if (!result) return null;
-  if (result === '1-0') return 'red-wins';
-  if (result === '0-1') return 'black-wins';
-  if (result === '1/2-1/2') return 'draw';
-  return null;
+): persistence.GameResult[] {
+  if (result === '1-0') return ['red-wins', 'white-wins'];
+  if (result === '0-1') return ['black-wins'];
+  if (result === '1/2-1/2') return ['draw'];
+  return [];
 }
 
 function historicalResult(result: string): persistence.HistoricalXiangqiResult {
@@ -415,8 +538,19 @@ function historicalResult(result: string): persistence.HistoricalXiangqiResult {
   return '*';
 }
 
-export function parseHistoricalXiangqiGameQuery(search: URLSearchParams): ParseResult {
-  const filters: persistence.HistoricalXiangqiGameQueryFilters = {};
+export function parseHistoricalXiangqiGameQuery(
+  search: URLSearchParams,
+  launchedVariants: readonly GameSpecId[] = searchableVariants().map((variant) => variant.id),
+): ParseResult {
+  const filters: GameSearchFilters = {};
+  // Fail-closed: only a launched spec id passes, matched exactly. No alias, no
+  // fallback; anything else is a 400, never "all variants".
+  const variant = search.get('variant')?.trim();
+  if (variant) {
+    const match = launchedVariants.find((id) => id === variant);
+    if (!match) return { ok: false, error: 'invalid_variant' };
+    filters.variant = match;
+  }
   setTrimmed(filters, 'sourceSlug', search.get('source'));
   setTrimmed(filters, 'player', search.get('player'));
   setTrimmed(filters, 'event', search.get('event'));

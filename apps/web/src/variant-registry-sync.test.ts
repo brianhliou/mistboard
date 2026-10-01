@@ -22,12 +22,15 @@ import {
   VARIANT_DEFAULT_GAME_SPEC_IDS,
   variantDefaultTimeControl,
 } from '@mistboard/game';
+import { crosstableReviewUrl } from '../../server/src/crosstable.js';
 import { JIEQI_DEFAULT_ENGINE_ID, JIEQI_PLAYABLE_ENGINES } from '../../server/src/jieqi-engine.js';
 import { registeredVariantTenants } from '../../server/src/variant-tenant/registry.js';
 import {
   XIANGQI_DEFAULT_ENGINE_ID,
   XIANGQI_PUBLIC_ENGINES,
 } from '../../server/src/xiangqi-engine-catalog.js';
+import type { FeaturedGame } from './game-display.js';
+import { reviewUrlForGame } from './game-meta.js';
 import { landingBotOffer } from './landing-bot-policy.js';
 import { webVariantTenants } from './variant-tenant/registry.js';
 import { WATCH_CHANNEL_MINI_IDS } from './watch-channel-markers.js';
@@ -168,6 +171,27 @@ describe('web tenant registry <-> server tenant registry parity', () => {
         )
         .join('\n'),
     ).toEqual([]);
+  });
+
+  it('every searchable variant links its games where the web mounts them', () => {
+    // /games/search rows carry a server-built reviewUrl (crosstableReviewUrl,
+    // from the server registry's export.gameRouteBase). The web decides where a
+    // game actually mounts (reviewUrlForGame, from its own registry). The search
+    // offers exactly the watch-channel variants, so each one's two answers must
+    // agree, or a row links to a page that cannot replay it.
+    const searchable = [
+      { gameSpecId: 'dark-chess', roomIdPrefix: '' },
+      ...serverTenants.filter((registration) => registration.watch),
+    ];
+    expect(searchable.length).toBeGreaterThan(5);
+    const drift: string[] = [];
+    for (const { gameSpecId, roomIdPrefix } of searchable) {
+      const roomId = `${roomIdPrefix}${SAMPLE_ROOM_SUFFIX}`;
+      const server = crosstableReviewUrl(roomId, gameSpecId);
+      const web = reviewUrlForGame({ roomId, variant: gameSpecId } as FeaturedGame);
+      if (server !== web) drift.push(`${gameSpecId}: server ${server} != web ${web}`);
+    }
+    expect(drift, drift.join('\n')).toEqual([]);
   });
 
   it('web tenant roomIdPrefixes are unique', () => {

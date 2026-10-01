@@ -1179,6 +1179,9 @@ export type GameQueryFilters = {
   // union merges on, or a page is drawn from the wrong candidate set.
   sort?: XiangqiGameSort;
   variant?: string;
+  // Stored-variant allowlist (the public games search passes the launched
+  // variants' stored strings). Like `modes`, an empty array matches nothing.
+  variants?: readonly string[];
   mode?: GameMode;
   // Mode allowlist, for callers that want several modes but not all of them —
   // the public games DB takes 'pvp' and 'pve' and leaves engine-lab self-play
@@ -1193,6 +1196,13 @@ export type GameQueryFilters = {
   player?: string;
   event?: string;
   result?: GameResult;
+  // Result allowlist, for a seat-keyed filter that spans variants: "the first
+  // seat won" is 'red-wins' in xiangqi and 'white-wins' in chess.
+  results?: readonly GameResult[];
+  // Only imported games whose room-created event carries an `origin` (an
+  // off-site engine match, engine-match-import.ts). Older imported corpora
+  // (import-corpus.ts) carry none and stay out of every public list.
+  importedOrigin?: boolean;
   termination?: GameTermination;
   rated?: boolean;
   timeClass?: TimeClass;
@@ -1238,6 +1248,11 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
     return `$${values.length}`;
   };
   if (filters.variant) conditions.push(`games.variant = ${bind(filters.variant)}`);
+  if (filters.variants) {
+    conditions.push(
+      filters.variants.length > 0 ? `games.variant = ANY(${bind([...filters.variants])})` : 'FALSE',
+    );
+  }
   if (filters.mode) conditions.push(`games.mode = ${bind(filters.mode)}`);
   if (filters.modes) {
     conditions.push(
@@ -1255,8 +1270,35 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
         ))`,
     );
   }
-  if (filters.event) conditions.push(`games.corpus_id ILIKE ${bind(`%${filters.event}%`)}`);
+  if (filters.event) {
+    // An imported game also answers to its event's display name ("AB-JChess vs
+    // PikaJieQi"), which lives on its room-created origin, not in corpus_id.
+    // The mode test comes first so the event lookup only runs for imported rows.
+    const like = `%${filters.event}%`;
+    conditions.push(
+      `(games.corpus_id ILIKE ${bind(like)}
+        OR (games.mode = 'imported' AND EXISTS (
+          SELECT 1 FROM events origin_event
+          WHERE origin_event.room_id = games.room_id AND origin_event.seq = 0
+            AND origin_event.payload->'origin'->>'event' ILIKE ${bind(like)}
+        )))`,
+    );
+  }
+  if (filters.importedOrigin) {
+    conditions.push(
+      `(games.mode = 'imported' AND EXISTS (
+        SELECT 1 FROM events origin_event
+        WHERE origin_event.room_id = games.room_id AND origin_event.seq = 0
+          AND origin_event.payload->'origin'->>'kind' = 'imported'
+      ))`,
+    );
+  }
   if (filters.result) conditions.push(`games.result = ${bind(filters.result)}`);
+  if (filters.results) {
+    conditions.push(
+      filters.results.length > 0 ? `games.result = ANY(${bind([...filters.results])})` : 'FALSE',
+    );
+  }
   if (filters.termination) conditions.push(`games.termination = ${bind(filters.termination)}`);
   if (typeof filters.rated === 'boolean') conditions.push(`games.rated = ${bind(filters.rated)}`);
   if (filters.timeClass) {
@@ -1317,6 +1359,23 @@ export async function queryGames(filters: GameQueryFilters): Promise<GameQueryPa
   );
   const games = await attachGameParticipants(rows.map(recentEveGameRecordFromRow));
   return { games, total };
+}
+
+// The event name each imported game's room-created origin carries, keyed by
+// room id, for the rows of one result page. Games without an origin are absent.
+export async function listImportedGameOriginEvents(
+  roomIds: readonly string[],
+): Promise<Map<string, string>> {
+  if (roomIds.length === 0) return new Map();
+  const { rows } = await getPool().query<{ room_id: string; event: string | null }>(
+    `SELECT room_id, payload->'origin'->>'event' AS event
+     FROM events
+     WHERE room_id = ANY($1) AND seq = 0`,
+    [[...roomIds]],
+  );
+  const events = new Map<string, string>();
+  for (const row of rows) if (row.event) events.set(row.room_id, row.event);
+  return events;
 }
 
 export async function gameAggregates(filters: GameQueryFilters): Promise<GameAggregates> {

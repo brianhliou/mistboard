@@ -521,3 +521,12 @@ body:has(
 .app-error-panel button {
   margin-top: 16px;
 }
+
+/* Reserve the scrollbar's width on every page, even when it does not scroll.
+   With a classic (non-overlay) scrollbar, a page that crossed the viewport
+   height (switching a filter, a list loading) shifted every element sideways
+   by the scrollbar's width. Overlay scrollbars (phones, most trackpads) are
+   unaffected. */
+html {
+  scrollbar-gutter: stable;
+}

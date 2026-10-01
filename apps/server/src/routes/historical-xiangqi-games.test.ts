@@ -1,11 +1,20 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { CANONICAL_VARIANT_ORDER, type GameSpecId } from '@mistboard/game';
+// The searchable variants derive from the tenant registry (via the watch
+// channels), so the registrations must be populated, as index.ts does.
+import '../variant-tenant/register-tenants.js';
+import { crosstableReviewUrl } from '../crosstable.js';
 import {
   compareSearchItems,
+  type GameSearchFilters,
+  mistboardResults,
   pageAcrossLanes,
   parseHistoricalXiangqiGameQuery,
   publicTags,
   SEARCH_WINDOW,
+  searchableVariants,
+  searchLanes,
 } from './historical-xiangqi-games.js';
 
 function parse(query: string) {
@@ -159,4 +168,108 @@ test('a page past the search window is empty rather than wrong', async () => {
   const page = await pageAcrossLanes([lane.read], SEARCH_WINDOW, 50, undefined);
   assert.deepEqual(page.games, []);
   assert.equal(page.total, SEARCH_WINDOW + 100);
+});
+
+// --- variants ---------------------------------------------------------------
+
+const LAUNCHED: GameSpecId[] = ['xiangqi', 'jieqi', 'dark-chess'];
+
+function parseWith(query: string, launched: readonly GameSpecId[] = LAUNCHED) {
+  return parseHistoricalXiangqiGameQuery(new URLSearchParams(query), launched);
+}
+
+test('a launched variant passes the parser as its own spec id', () => {
+  const parsed = parseWith('variant=jieqi&event=AB-JChess');
+  assert.ok(parsed.ok);
+  assert.equal(parsed.filters.variant, 'jieqi');
+  assert.equal(parsed.filters.event, 'AB-JChess');
+  // Blank is "every variant", not an error.
+  const blank = parseWith('variant=');
+  assert.ok(blank.ok);
+  assert.equal(blank.filters.variant, undefined);
+});
+
+test('a variant outside the launched list is a 400, never a default', () => {
+  // Retired, hidden, unlaunched, aliased and mis-cased ids all fail closed.
+  for (const variant of ['mini-xiangqi', 'mahjong', 'banqi', 'fog', 'JIEQI', 'chess', 'x']) {
+    assert.deepEqual(parseWith(`variant=${variant}`), { ok: false, error: 'invalid_variant' });
+  }
+});
+
+test('searchable variants are the launched channels in the canonical shelf order', () => {
+  const flags = [
+    'XIANGQI',
+    'JIEQI',
+    'BANQI',
+    'ATOMIC_XIANGQI',
+    'DARK_XIANGQI',
+    'DUCK_XIANGQI',
+    'FORTRESS_XIANGQI',
+    'JUNGLE',
+    'JUNGLE_FLIP',
+    'MAHJONG',
+  ];
+  const saved = flags.map((flag) => process.env[`MISTBOARD_${flag}_ENABLED`]);
+  try {
+    for (const flag of flags) process.env[`MISTBOARD_${flag}_ENABLED`] = 'true';
+    const ids = searchableVariants().map((variant) => variant.id);
+    // Every shelf variant, in shelf order; mahjong has no watch surface and
+    // stays out even with its flag on.
+    assert.deepEqual(ids, [...CANONICAL_VARIANT_ORDER]);
+    assert.ok(!ids.includes('mahjong' as GameSpecId));
+    // Every searchable variant routes its rows to its own game page.
+    for (const variant of searchableVariants()) {
+      for (const stored of variant.storedVariants) {
+        const url = crosstableReviewUrl('room1', stored);
+        assert.ok(url, `${variant.id}: no review URL for stored variant ${stored}`);
+      }
+    }
+    // A flag turned off takes its variant out of the search with it.
+    process.env.MISTBOARD_JIEQI_ENABLED = 'false';
+    assert.ok(!searchableVariants().some((variant) => variant.id === 'jieqi'));
+  } finally {
+    flags.forEach((flag, i) => {
+      const value = saved[i];
+      if (value === undefined) delete process.env[`MISTBOARD_${flag}_ENABLED`];
+      else process.env[`MISTBOARD_${flag}_ENABLED`] = value;
+    });
+  }
+});
+
+test('lanes per variant: broadcasts and the archive are xiangqi only', () => {
+  const lanes = (filters: GameSearchFilters) => searchLanes(filters);
+  assert.deepEqual(lanes({}), ['played', 'broadcast', 'archive']);
+  assert.deepEqual(lanes({ variant: 'xiangqi' }), ['played', 'broadcast', 'archive']);
+  assert.deepEqual(lanes({ variant: 'jieqi' }), ['played']);
+  assert.deepEqual(lanes({ variant: 'dark-chess' }), ['played']);
+  assert.deepEqual(lanes({ sourceSlug: 'mistboard', variant: 'jieqi' }), ['played']);
+  assert.deepEqual(lanes({ sourceSlug: 'broadcast' }), ['broadcast']);
+  assert.deepEqual(lanes({ sourceSlug: 'broadcast', variant: 'jieqi' }), []);
+  assert.deepEqual(lanes({ sourceSlug: 'archive' }), ['archive']);
+  assert.deepEqual(lanes({ sourceSlug: 'xqbase' }), ['archive']);
+  assert.deepEqual(lanes({ sourceSlug: 'xqbase', variant: 'jieqi' }), []);
+});
+
+test('engine matches stay out of the feed until a search asks for them', () => {
+  // The unfiltered feed never reads them: one 400-game import would bury it.
+  assert.ok(!searchLanes({}).includes('engine-match'));
+  assert.ok(!searchLanes({ variant: 'jieqi', result: '1-0' }).includes('engine-match'));
+  // Named by source, or found by event or player name.
+  assert.deepEqual(searchLanes({ sourceSlug: 'engine-match' }), ['engine-match']);
+  assert.deepEqual(searchLanes({ sourceSlug: 'engine-match', variant: 'jieqi' }), ['engine-match']);
+  assert.deepEqual(searchLanes({ variant: 'jieqi', event: 'AB-JChess' }), [
+    'played',
+    'engine-match',
+  ]);
+  assert.ok(searchLanes({ player: 'PikaJieQi' }).includes('engine-match'));
+  // Another source named explicitly keeps them out.
+  assert.ok(!searchLanes({ sourceSlug: 'mistboard', event: 'x' }).includes('engine-match'));
+});
+
+test('a seat-keyed result filter spans the red and white first seats', () => {
+  assert.deepEqual(mistboardResults('1-0'), ['red-wins', 'white-wins']);
+  assert.deepEqual(mistboardResults('0-1'), ['black-wins']);
+  assert.deepEqual(mistboardResults('1/2-1/2'), ['draw']);
+  assert.deepEqual(mistboardResults('*'), []);
+  assert.deepEqual(mistboardResults(undefined), []);
 });

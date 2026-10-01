@@ -302,6 +302,7 @@ export {
   listCorpusGames,
   listEngineVersionStats,
   listFavoriteGames,
+  listImportedGameOriginEvents,
   listRecentEveGames,
   listRecentPublicGames,
   listShowcaseGames,
