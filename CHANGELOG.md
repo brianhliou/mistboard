@@ -197,6 +197,7 @@ Conventions:
 
 ### Fixed
 
+- In Flip Jungle, a piece's slide now starts from the square it left for both players and on TV and review; the second player used to see every glide come from the mirrored square ([39933b48](https://github.com/brianhliou/mistboard/commit/39933b48))
 - A finished xiangqi or atomic xiangqi bot game's rematch plays the same bot again instead of opening an empty friend room, and spectators are no longer offered a game of their own ([f044599c](https://github.com/brianhliou/mistboard/commit/f044599c))
 - The xiangqi game database now reaches every game it counts: from page 7 on, pages used to come back empty, hiding about 1,370 broadcast games ([6f4169b0](https://github.com/brianhliou/mistboard/commit/6f4169b0))
 - In Fog of War, a side left with no moves at all (every piece blocked) now draws, instead of the game sitting stuck until a clock ran out; the rules page says so ([def1cb0b](https://github.com/brianhliou/mistboard/commit/def1cb0b))
