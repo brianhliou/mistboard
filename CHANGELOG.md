@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The game room's right column, redrawn after lichess: the table centres on the board, the clocks read `00:24.9` in larger digits, turn red in their last stretch and carry a time-left bar, the arrows are bolder, and a finished game puts the result at the end of the move list with Rematch, New opponent and Review game pinned below it; a magnifier opens the review at the move on screen ([f044599c](https://github.com/brianhliou/mistboard/commit/f044599c))
 - **Jieqi levels**: Pikafish Level 1 to 7 join full-strength Pikafish, so jieqi has an eight-level ladder like xiangqi; the bot menu and the homepage start at Level 4, and /bots lists the levels ([bcbbdaa2](https://github.com/brianhliou/mistboard/commit/bcbbdaa2))
 - A **Jungle** board for xiangqi: the square grid on a green lawn, a cream rug in each palace and a painted river, made with children in mind; pick it under Board, and Jungle and Flip Jungle turn green with it ([82a72047](https://github.com/brianhliou/mistboard/commit/82a72047))
 - **Animal (no disc)** piece set: the animal pieces without their cream disc, a little larger, with a thin outline on the lined board ([3bd84ef9](https://github.com/brianhliou/mistboard/commit/3bd84ef9))
@@ -195,6 +196,7 @@ Conventions:
 
 ### Fixed
 
+- A finished xiangqi or atomic xiangqi bot game's rematch plays the same bot again instead of opening an empty friend room, and spectators are no longer offered a game of their own ([f044599c](https://github.com/brianhliou/mistboard/commit/f044599c))
 - The xiangqi game database now reaches every game it counts: from page 7 on, pages used to come back empty, hiding about 1,370 broadcast games ([6f4169b0](https://github.com/brianhliou/mistboard/commit/6f4169b0))
 - In Fog of War, a side left with no moves at all (every piece blocked) now draws, instead of the game sitting stuck until a clock ran out; the rules page says so ([def1cb0b](https://github.com/brianhliou/mistboard/commit/def1cb0b))
 - A game started while the site is restarting for an update now waits and starts by itself once the server is back, with the message in your language, instead of refusing every click ([4e8a1601](https://github.com/brianhliou/mistboard/commit/4e8a1601))
