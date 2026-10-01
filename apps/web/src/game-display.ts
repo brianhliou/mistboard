@@ -243,6 +243,7 @@ export const VARIANT_NAME_KEYS: Record<GameSpecId, I18nKey | null> = {
   jungle: 'variant.jungle.name',
   'jungle-flip': 'variant.jungleFlip.name',
   xiangqi: 'variant.xiangqi.name',
+  'crazyhouse-xiangqi': 'variant.crazyhouseXiangqi.name',
   'duck-xiangqi': 'variant.duckXiangqi.name',
   'atomic-xiangqi': 'variant.atomicXiangqi.name',
   // Study-only, but it sits beside xiangqi studies on /study, so it is named.

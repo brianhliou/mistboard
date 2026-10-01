@@ -1,9 +1,10 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
+import { maybeGameSpecForId } from '@mistboard/game';
 import { isBotSpecPlayable, parsePublicBotId } from '../bot-profile-policy.js';
 import { firstPartyBotForId } from '../first-party-bots.js';
 import { abJchessAvailable, JIEQI_ABJCHESS_ENGINE_ID } from '../jieqi-engine.js';
 import * as persistence from '../persistence.js';
-import type { BotProfile } from '../persistence-bots.js';
+import type { BotProfile, BotProfilePage } from '../persistence-bots.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
 // Per-variant play descriptor for a bot. `playable` reflects the variant's
@@ -33,8 +34,33 @@ export function botPlayOptions(bot: BotProfile): BotPlayOption[] {
   return options;
 }
 
+// A spec on no public surface (publicSurface 'hidden', the admin playtests) is
+// left off every public bot response: the bot may play it for an admin, but a
+// visitor's bot profile must not name it, count it, or list its games.
+function isHiddenSpec(gameSpecId: string): boolean {
+  return maybeGameSpecForId(gameSpecId)?.publicSurface === 'hidden';
+}
+
+function pickVisibleSpecs<V>(byGameSpecId: Record<string, V>): Record<string, V> {
+  return Object.fromEntries(Object.entries(byGameSpecId).filter(([id]) => !isHiddenSpec(id)));
+}
+
+export function withoutHiddenSpecs<T extends BotProfile>(bot: T): T {
+  const visible: T = {
+    ...bot,
+    supportedGameSpecIds: bot.supportedGameSpecIds.filter((id) => !isHiddenSpec(id)),
+  };
+  const page = visible as T & Partial<BotProfilePage>;
+  if (page.games) page.games = page.games.filter((game) => !isHiddenSpec(game.variant));
+  if (page.recordsByGameSpecId)
+    page.recordsByGameSpecId = pickVisibleSpecs(page.recordsByGameSpecId);
+  if (page.gamesByGameSpecId) page.gamesByGameSpecId = pickVisibleSpecs(page.gamesByGameSpecId);
+  return visible;
+}
+
 function withPlayOptions<T extends BotProfile>(bot: T): T & { playOptions: BotPlayOption[] } {
-  return { ...bot, playOptions: botPlayOptions(bot) };
+  const visible = withoutHiddenSpecs(bot);
+  return { ...visible, playOptions: botPlayOptions(visible) };
 }
 
 function isAnySpecPlayable(bot: BotProfile): boolean {

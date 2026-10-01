@@ -3,6 +3,7 @@ import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CORRESPONDENCE_ELIGIBLE_SPEC_IDS,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   canonicalVariantOrderIndex,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
@@ -92,6 +93,7 @@ type LandingGameSpecId =
   | typeof XIANGQI_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
+  | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof MAHJONG_SPEC_ID;
 type LandingTimePresetId = TimeControlId;
 type LandingTimePreset = {
@@ -3191,6 +3193,24 @@ export function roomCreationRequestBody(
       ...(mode === 'pve' && engineId ? { engineId } : {}),
     };
   }
+  if (setup.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) {
+    // Crazyhouse Xiangqi: red/black 9x10 xiangqi with hands, casual only (no
+    // rating pool), so `rated` is pinned false. PvE sends the picked
+    // Fairy-Stockfish engine id.
+    return {
+      mode,
+      gameSpecId,
+      timeControl: setup.timeControl,
+      rated: false,
+      preferredColor:
+        setup.preferredColor === 'white'
+          ? 'red'
+          : setup.preferredColor === 'red' || setup.preferredColor === 'black'
+            ? setup.preferredColor
+            : 'random',
+      ...(mode === 'pve' && engineId ? { engineId } : {}),
+    };
+  }
   if (setup.gameSpecId === ATOMIC_XIANGQI_SPEC_ID) {
     // Atomic Xiangqi: red/black 9x10 xiangqi, casual only (no rating pool), so
     // `rated` is pinned false like duck. PvE sends the picked Fairy-Stockfish
@@ -3247,12 +3267,14 @@ export function roomCreationGameSpecId(
   | typeof MAHJONG_SPEC_ID
   | typeof DUCK_XIANGQI_SPEC_ID
   | typeof ATOMIC_XIANGQI_SPEC_ID
+  | typeof CRAZYHOUSE_XIANGQI_SPEC_ID
   | typeof XIANGQI_SPEC_ID {
   if (setup.gameSpecId === MAHJONG_SPEC_ID) return MAHJONG_SPEC_ID;
   if (setup.gameSpecId === XIANGQI_SPEC_ID) return XIANGQI_SPEC_ID;
   if (setup.gameSpecId === FORTRESS_XIANGQI_SPEC_ID) return FORTRESS_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === DUCK_XIANGQI_SPEC_ID) return DUCK_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === ATOMIC_XIANGQI_SPEC_ID) return ATOMIC_XIANGQI_SPEC_ID;
+  if (setup.gameSpecId === CRAZYHOUSE_XIANGQI_SPEC_ID) return CRAZYHOUSE_XIANGQI_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_SPEC_ID) return JUNGLE_SPEC_ID;
   if (setup.gameSpecId === JUNGLE_FLIP_SPEC_ID) return JUNGLE_FLIP_SPEC_ID;
   if (setup.gameSpecId === JIEQI_SPEC_ID) return JIEQI_SPEC_ID;

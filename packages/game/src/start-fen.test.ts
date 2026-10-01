@@ -25,6 +25,10 @@ import { jungleFlipStateToDealtFen } from './jungle-flip-fen.js';
 import { hasStartFen, normalizeStartFen, START_FEN_SPEC_IDS } from './start-fen.js';
 import { darkChessVariant, parseDarkChessFen } from './variants.js';
 import { createInitialBanqiState } from './variants-banqi.js';
+import {
+  crazyhouseXiangqiFen,
+  createInitialCrazyhouseXiangqiState,
+} from './variants-crazyhouse-xiangqi.js';
 import { createInitialDuckXiangqiState } from './variants-duck-xiangqi.js';
 import {
   createInitialFortressXiangqiState,
@@ -45,6 +49,8 @@ test('every start-fen spec round-trips its own standard start', () => {
     // Atomic Xiangqi: the standard board and spelling; the explosion is a rule
     // about captures, not positions.
     'atomic-xiangqi': standardXiangqiFen(createInitialXiangqiState('t')),
+    // Crazyhouse Xiangqi: the standard board plus the (empty) hands in brackets.
+    'crazyhouse-xiangqi': crazyhouseXiangqiFen(createInitialCrazyhouseXiangqiState('t')),
     jungle: jungleStateToEngineFen(createInitialJungleState('t')),
     'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),
     'dark-chess': 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1',

@@ -74,6 +74,9 @@ function fairyStockfishLevelProfile(level: number): FirstPartyBotProfile {
       'fortress-xiangqi': `fairy-stockfish-fortress-xiangqi-level-${level}`,
       'duck-xiangqi': `fairy-stockfish-duck-xiangqi-level-${level}`,
       'atomic-xiangqi': `fairy-stockfish-atomic-xiangqi-level-${level}`,
+      // Admin playtest: the server seats only admins and grant holders, and the
+      // public bot surfaces leave hidden specs out (routes/bots.ts).
+      'crazyhouse-xiangqi': `fairy-stockfish-crazyhouse-xiangqi-level-${level}`,
     },
     defaultGameSpecId: 'xiangqi',
     legacyBotIds: [`fairy-stockfish-xiangqi-level-${level}`, ...(legacy ? [legacy.botId] : [])],

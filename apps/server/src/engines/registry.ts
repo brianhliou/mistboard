@@ -8,6 +8,13 @@ import {
   type AtomicXiangqiEngineTier,
 } from '../atomic-xiangqi-fsf-engine.js';
 import {
+  CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION,
+  CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES,
+  CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_ID,
+  CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_VERSION,
+  type CrazyhouseXiangqiEngineTier,
+} from '../crazyhouse-xiangqi-fsf-engine.js';
+import {
   DUCK_XIANGQI_FSF_ENGINE_REF,
   DUCK_XIANGQI_FSF_ENGINE_VERSION,
   DUCK_XIANGQI_PLAYABLE_ENGINES,
@@ -765,6 +772,37 @@ function atomicXiangqiFsfConfigHash(tier: AtomicXiangqiEngineTier): string {
   return `fsf-atomic-xiangqi-${ATOMIC_XIANGQI_FSF_ENGINE_VERSION}-${ATOMIC_XIANGQI_FSF_ENGINE_REF}-skill-${tier.skill}-nodes-${tier.nodes}`;
 }
 
+// Crazyhouse Xiangqi FSF ladder (crazyhouse-xiangqi-fsf-engine.ts). The stock
+// largeboard binary, so like fortress the hash names the build version (bumped
+// on any .ini or tier change), skill and node budget; there is no ref or patch.
+const CRAZYHOUSE_XIANGQI_FSF_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES.map((tier) => [
+    tier.id,
+    {
+      id: tier.id as EngineId,
+      engineId: 'fairy-stockfish-crazyhouse-xiangqi',
+      engineName: 'Fairy-Stockfish',
+      name: tier.name,
+      kind: 'container',
+      gameSpecId: 'crazyhouse-xiangqi',
+      configHash: crazyhouseXiangqiFsfConfigHash(tier),
+      playSignature: crazyhouseXiangqiFsfConfigHash(tier),
+      config: {
+        kind: 'fairy-stockfish',
+        skill: tier.skill,
+        movetime_ms: tier.movetimeMs,
+        nodes: tier.nodes,
+      },
+      notes:
+        'Fairy-Stockfish Crazyhouse Xiangqi rung: stochastic Skill Level ladder anchored by a node budget, classical eval on the stock build with the custom variants.ini.',
+    } satisfies EngineDefinition,
+  ]),
+);
+
+function crazyhouseXiangqiFsfConfigHash(tier: CrazyhouseXiangqiEngineTier): string {
+  return `fsf-crazyhouse-xiangqi-${CRAZYHOUSE_XIANGQI_FSF_ENGINE_VERSION}-skill-${tier.skill}-nodes-${tier.nodes}`;
+}
+
 // Random-mover floors for the other xiangqi-family ladders, same role as the
 // standard one below: 0-Elo anchor, EvE-only, never player-facing.
 const VARIANT_RANDOM_ENGINES: Record<string, EngineDefinition> = {
@@ -793,6 +831,19 @@ const VARIANT_RANDOM_ENGINES: Record<string, EngineDefinition> = {
     config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
     notes:
       'Uniformly-random legal-move Atomic Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
+  } satisfies EngineDefinition,
+  [CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_ID]: {
+    id: CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_ID,
+    engineId: 'random-legal-crazyhouse-xiangqi',
+    engineName: 'Random Mover',
+    name: 'Random Mover',
+    kind: 'builtin',
+    gameSpecId: 'crazyhouse-xiangqi',
+    configHash: `random-legal-crazyhouse-xiangqi-${CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    playSignature: `random-legal-crazyhouse-xiangqi-${CRAZYHOUSE_XIANGQI_RANDOM_ENGINE_VERSION}`,
+    config: { kind: 'builtin', strategy: 'random-legal', version: 1 },
+    notes:
+      'Uniformly-random legal-move Crazyhouse Xiangqi bot. Calibration floor / 0-Elo anchor; EvE-only, not player-facing.',
   } satisfies EngineDefinition,
   [DUCK_XIANGQI_RANDOM_ENGINE_ID]: {
     id: DUCK_XIANGQI_RANDOM_ENGINE_ID,
@@ -1070,6 +1121,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...FORTRESS_XIANGQI_FSF_ENGINES,
   ...DUCK_XIANGQI_FSF_ENGINES,
   ...ATOMIC_XIANGQI_FSF_ENGINES,
+  ...CRAZYHOUSE_XIANGQI_FSF_ENGINES,
   ...VARIANT_RANDOM_ENGINES,
   ...JIEQI_ENGINES,
   ...XIANGQI_ENGINES,

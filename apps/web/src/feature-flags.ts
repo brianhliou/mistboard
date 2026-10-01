@@ -37,6 +37,13 @@ export function mahjongEnabled(): boolean {
   return import.meta.env.VITE_MAHJONG_ENABLED === 'true';
 }
 
+// Crazyhouse Xiangqi. Off by default and, like mahjong, only half the gate: the
+// spec is on the server's per-account allowlist, so with this on the table is
+// offered to admins and grant holders and to nobody else.
+export function crazyhouseXiangqiEnabled(): boolean {
+  return import.meta.env.VITE_CRAZYHOUSE_XIANGQI_ENABLED === 'true';
+}
+
 export function duckXiangqiEnabled(): boolean {
   return true;
 }

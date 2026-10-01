@@ -6,6 +6,7 @@
  */
 
 import '../banqi-registration.js';
+import '../crazyhouse-xiangqi-registration.js';
 import '../dark-chess-registration.js';
 import '../dark-xiangqi-registration.js';
 import '../atomic-xiangqi-registration.js';

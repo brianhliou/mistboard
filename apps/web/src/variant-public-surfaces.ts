@@ -28,6 +28,8 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // other xiangqi variants. The play menu is a separate switch (the tenant
   // registry's offerInMenu), still hidden.
   'atomic-xiangqi': true,
+  // Admin-only playtest (publicSurface 'hidden'): no rules page, tile or feed.
+  'crazyhouse-xiangqi': false,
   // Study-only: no rules page, no tile, no feed entry. Chess studies are
   // reachable by their own URLs and the study picker, nothing lists the game.
   chess: false,

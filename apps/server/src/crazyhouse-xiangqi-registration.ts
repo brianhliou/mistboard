@@ -1,0 +1,181 @@
+/**
+ * Crazyhouse Xiangqi registry entry. Owns the tenant's live-room map and binds
+ * the generic tenant room factory, hydration, WebSocket runtime and HTTP
+ * create route.
+ *
+ * Scope: the admin playtest. PvP by friend link and PvE against the stock
+ * Fairy-Stockfish ladder, casual only, JSON export. No lobby seek, no TV
+ * channel and no correspondence: each of those is a public listing, and the
+ * spec is publicSurface 'hidden' and allowlisted (persistence-variant-access.ts),
+ * so only admins and accounts holding a grant are seated.
+ */
+
+import type {
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
+  CrazyhouseXiangqiColor,
+  CrazyhouseXiangqiGameState,
+  CrazyhouseXiangqiMove,
+  RoomTimeControl,
+} from '@mistboard/game';
+import { crazyhouseXiangqiFen, crazyhouseXiangqiMoveToUci } from '@mistboard/game';
+import { currentAccountUser } from './account-session.js';
+import {
+  type CrazyhouseXiangqiEvent,
+  crazyhouseXiangqiTenant,
+} from './crazyhouse-xiangqi-tenant.js';
+import { tenantCardBinding } from './game-card-tenant.js';
+import { tenantExportBinding } from './game-export-tenant.js';
+import * as persistence from './persistence.js';
+import {
+  handleCrazyhouseXiangqiCreate,
+  requestsCrazyhouseXiangqi,
+} from './routes/crazyhouse-xiangqi-rooms.js';
+import { scheduleCrazyhouseXiangqiEngineMove } from './server-crazyhouse-xiangqi-engine.js';
+import { recordTenantPersistenceError } from './variant-tenant/events.js';
+import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
+import { pauseTenantRoomsOnShutdown } from './variant-tenant/lifecycle.js';
+import {
+  registerVariantTenant,
+  type TenantManagedRoom,
+  variantTenantRoomIdTaken,
+} from './variant-tenant/registry.js';
+import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
+import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
+import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
+import {
+  clearTenantRuntimeTimers,
+  createTenantWsRuntime,
+  type TenantLiveRoom,
+} from './variant-tenant/ws.js';
+
+export type CrazyhouseXiangqiRuntimeRoom = TenantRuntimeRoom<
+  'crazyhouse-xiangqi',
+  CrazyhouseXiangqiColor,
+  CrazyhouseXiangqiMove,
+  CrazyhouseXiangqiGameState,
+  typeof CRAZYHOUSE_XIANGQI_SPEC_ID
+>;
+
+type CrazyhouseXiangqiLiveRoom = TenantLiveRoom<
+  'crazyhouse-xiangqi',
+  CrazyhouseXiangqiColor,
+  CrazyhouseXiangqiMove,
+  CrazyhouseXiangqiGameState,
+  typeof CRAZYHOUSE_XIANGQI_SPEC_ID
+>;
+
+export type CrazyhouseXiangqiLiveRoomCreation =
+  | { ok: true; room: CrazyhouseXiangqiRuntimeRoom }
+  | {
+      ok: false;
+      error: 'crazyhouse_xiangqi_disabled' | 'persistence_failure' | 'room_id_collision';
+    };
+
+export const crazyhouseXiangqiRooms = new Map<string, CrazyhouseXiangqiRuntimeRoom>();
+
+const crazyhouseXiangqiWs = createTenantWsRuntime(crazyhouseXiangqiTenant, {
+  scheduleEngineMove: (ctx, room) => scheduleCrazyhouseXiangqiEngineMove(ctx, room),
+});
+
+export async function createCrazyhouseXiangqiRoom(
+  timeControl?: RoomTimeControl,
+  creatorPreference?: CrazyhouseXiangqiColor | 'random',
+  rated = false,
+  engine?: TenantRoomEngineSeat<CrazyhouseXiangqiColor>,
+): Promise<CrazyhouseXiangqiLiveRoomCreation> {
+  const created = await createTenantLiveRoom(
+    crazyhouseXiangqiTenant,
+    {
+      rooms: crazyhouseXiangqiRooms,
+      isRoomIdTaken: (roomId) => variantTenantRoomIdTaken(roomId, crazyhouseXiangqiTenant.kind),
+      appendRoomEvent: (roomId, seq, event: CrazyhouseXiangqiEvent) =>
+        persistence.appendRoomEvent(roomId, seq, event),
+      isPersistenceEnabled: persistence.isInitialized,
+      recordGameStart: persistence.recordGameStart,
+      recordPersistenceError: (roomId, seq, eventType, err) =>
+        recordTenantPersistenceError(crazyhouseXiangqiTenant, roomId, seq, eventType, err),
+    },
+    { timeControl, creatorPreference, rated, engine },
+  );
+  if (!created.ok) {
+    return created.error === 'disabled'
+      ? { ok: false, error: 'crazyhouse_xiangqi_disabled' }
+      : { ok: false, error: created.error };
+  }
+  return created;
+}
+
+export function getOrLoadCrazyhouseXiangqiRoom(
+  roomId: string,
+): Promise<CrazyhouseXiangqiRuntimeRoom | null> {
+  return getOrLoadTenantRoom(crazyhouseXiangqiTenant, crazyhouseXiangqiRooms, roomId);
+}
+
+registerVariantTenant({
+  kind: crazyhouseXiangqiTenant.kind,
+  gameSpecId: crazyhouseXiangqiTenant.gameSpecId,
+  roomIdPrefix: crazyhouseXiangqiTenant.roomIdPrefix,
+  isEngineClientId: crazyhouseXiangqiTenant.engine?.isEngineClientId,
+  engineDisplayName: (clientId) => crazyhouseXiangqiTenant.engine?.displayName(clientId) ?? null,
+  ownsSpecRouting: true,
+  errorPrefix: 'crazyhouse_xiangqi',
+  enabled: crazyhouseXiangqiTenant.enabled,
+  // No TV channel: Mistboard TV is a public listing.
+  watch: null,
+  rooms: crazyhouseXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
+  activeGameCount: () => countActiveTenantGames(crazyhouseXiangqiRooms.values()),
+  getOrLoadRoom: (roomId) =>
+    getOrLoadCrazyhouseXiangqiRoom(roomId) as Promise<TenantManagedRoom | null>,
+  attachWebSocket: (ctx, socket, request, room) =>
+    crazyhouseXiangqiWs.handleConnection(
+      {
+        defaultRoomRegion: ctx.defaultRoomRegion,
+        wsMessageLimit: ctx.wsMessageLimit,
+        wsMessageWindowMs: ctx.wsMessageWindowMs,
+      },
+      socket,
+      request,
+      room as unknown as CrazyhouseXiangqiLiveRoom,
+    ),
+  clearRuntimeTimers: (room) =>
+    clearTenantRuntimeTimers(room as unknown as CrazyhouseXiangqiLiveRoom),
+  pauseOnShutdown: (at) =>
+    pauseTenantRoomsOnShutdown(
+      crazyhouseXiangqiTenant,
+      crazyhouseXiangqiRooms.values(),
+      crazyhouseXiangqiWs.lifecycleCtx,
+      at,
+    ),
+  clearRooms: () => crazyhouseXiangqiRooms.clear(),
+  http: {
+    matchesCreateRequest: requestsCrazyhouseXiangqi,
+    handleCreate: async (ctx, request, response, body) => {
+      const accountUser = body.rated === true ? await currentAccountUser(request) : null;
+      await handleCrazyhouseXiangqiCreate(
+        { ...ctx, createCrazyhouseXiangqiRoom },
+        response,
+        body,
+        accountUser,
+      );
+    },
+  },
+  // No lobby seek: Find opponent is a public listing.
+  lobby: null,
+  // JSON only (export-formats.ts): a drop has no WXF or ICCS spelling. The uci
+  // is the engine's, drops as `P@e5`.
+  export: tenantExportBinding(crazyhouseXiangqiTenant, {
+    gameRouteBase: '/crazyhouse-xiangqi/game',
+    uci: crazyhouseXiangqiMoveToUci,
+  }),
+  // Share card: every exporting tenant binds one (og-game-tenant.test.ts). The
+  // standard xiangqi board from the FEN; no whole-game analysis to pick a ply
+  // from, so the card shows the final position.
+  card: tenantCardBinding(crazyhouseXiangqiTenant, {
+    variant: 'crazyhouse-xiangqi',
+    analysis: null,
+    fen: crazyhouseXiangqiFen,
+  }),
+  sweepDueDeadline: null,
+  createCorrespondenceGameForSeek: null,
+});

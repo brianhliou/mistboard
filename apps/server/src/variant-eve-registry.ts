@@ -4,6 +4,7 @@
 // that nothing can rate.
 
 import { atomicXiangqiEveAdapter } from './atomic-xiangqi-eve-adapter.js';
+import { crazyhouseXiangqiEveAdapter } from './crazyhouse-xiangqi-eve-adapter.js';
 import { duckXiangqiEveAdapter } from './duck-xiangqi-eve-adapter.js';
 import { fortressXiangqiEveAdapter } from './fortress-xiangqi-eve-adapter.js';
 import { jieqiEveAdapter } from './jieqi-eve-adapter.js';
@@ -15,6 +16,7 @@ const VARIANT_EVE_ADAPTERS: readonly AnyVariantEveAdapter[] = [
   fortressXiangqiEveAdapter,
   duckXiangqiEveAdapter,
   atomicXiangqiEveAdapter,
+  crazyhouseXiangqiEveAdapter,
   jieqiEveAdapter,
 ];
 
