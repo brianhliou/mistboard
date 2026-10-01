@@ -22,6 +22,16 @@ Conventions:
   this file is the complete record.
 - The file starts at 2026-09-11. Earlier history is in `git log`.
 
+## 2026-10
+
+### Site
+
+- Every finished game is now downloadable from the new [game data](/data) page: one file per variant per month, free to use under CC BY 4.0 ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
+
+### Fixed
+
+- A Fog Chess game's download no longer shows the real name of a player whose seat is set to private ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
+
 ## 2026-09
 
 ### Playing
