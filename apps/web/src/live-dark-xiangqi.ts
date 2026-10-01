@@ -179,6 +179,7 @@ const client = createTenantLiveClient<XiangqiColor, DarkXiangqiWireView, Xiangqi
   tenant: darkXiangqiWebTenant,
   gameSpecId: 'dark-xiangqi',
   defaultRoomId: 'dxq_dev',
+  flippable: true,
   boardClass: 'xiangqi-live-board',
   // Not on the Dark Xiangqi wire (golden-pinned, no snapshot extras): the forfeit
   // banner and rematch block never arm. Chrome defaults (pvp, no forfeit, no

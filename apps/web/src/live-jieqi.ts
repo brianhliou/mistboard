@@ -113,6 +113,7 @@ const client = createTenantLiveClient<JieqiColor, JieqiWireView, JieqiMove>({
   tenant: jieqiWebTenant,
   gameSpecId: 'jieqi',
   defaultRoomId: 'jq_dev',
+  flippable: true,
   boardClass: 'jieqi-live-board',
   chrome: {
     roomMode: () => roomMode,
@@ -442,8 +443,8 @@ function isJieqiMoveEvent(event: TenantLiveEvent): event is JieqiMoveEvent {
 }
 
 function orientationFor(view: JieqiWireView | null): JieqiColor {
-  const seat = core?.state.seat;
-  if (isJieqiColor(seat)) return seat;
+  // The core's orientation carries the viewer's flip.
+  if (core) return core.orientation();
   return view?.perspective ?? 'red';
 }
 

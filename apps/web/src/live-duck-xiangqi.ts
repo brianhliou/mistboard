@@ -88,6 +88,7 @@ const client = createTenantLiveClient<DuckXiangqiColor, DuckXiangqiPlayerView, D
   tenant: duckWebTenant,
   gameSpecId: DUCK_XIANGQI_SPEC_ID,
   defaultRoomId: 'dkx_dev',
+  flippable: true,
   boardClass: 'duck-xiangqi-live-board',
   finishBadges: (view, previous) =>
     view.status.type === 'finished'
@@ -404,8 +405,8 @@ function isDuckMoveEvent(event: TenantLiveEvent): event is DuckMoveEvent {
 }
 
 function orientationFor(view: DuckXiangqiPlayerView | null): DuckXiangqiColor {
-  const seat = core?.state.seat;
-  if (isDuckColor(seat)) return seat;
+  // The core's orientation carries the viewer's flip.
+  if (core) return core.orientation();
   return view?.perspective ?? 'red';
 }
 

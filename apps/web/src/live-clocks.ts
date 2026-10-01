@@ -2,6 +2,7 @@ import { type Color, clockRemainingMs, type GameEvent, type PlayerView } from '@
 import { shouldShowClockTenths, shouldShowFinalClockTenths } from './account-preferences.js';
 import { applyClockEmphasis, setClockFace } from './clock-emphasis.js';
 import { type I18nKey, t } from './i18n/catalog.js';
+import { flippedBottom } from './live-board-flip.js';
 import { isLive } from './live-replay.js';
 import { maybePlayLowTimeSound } from './live-sound.js';
 import { type LiveRefs, liveState } from './live-state.js';
@@ -39,7 +40,8 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
     // Correspondence rooms are 'playing' before the clock arms (the first
     // move starts it), so the side to move is already real and marked.
     const toMove = dayScale && view?.status.type === 'playing' ? view.status.turn : null;
-    const colors: Color[] = ['black', 'white'];
+    const colors: Color[] =
+      flippedBottom('white') === 'white' ? ['black', 'white'] : ['white', 'black'];
     colors.forEach((color, index) => {
       const isTurn = color === toMove;
       const playerLine = document.createElement('span');
@@ -89,7 +91,12 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
 
   const clock = view.clock;
   const displayAt = isLive() ? Date.now() : (clock.runningSince ?? Date.now());
-  const colors: Color[] = view.perspective === 'white' ? ['black', 'white'] : ['white', 'black'];
+  // Top first, bottom last; the bottom follows the board (seat, else the
+  // view's perspective, then the viewer's flip).
+  const bottom = flippedBottom(
+    isColor(liveState.seat) ? liveState.seat : (view.perspective ?? 'white'),
+  );
+  const colors: Color[] = bottom === 'white' ? ['black', 'white'] : ['white', 'black'];
   const isPvp = liveState.roomMode === 'pvp';
   const humanColor = isColor(liveState.seat) ? liveState.seat : null;
   const playing = view.status.type === 'playing';

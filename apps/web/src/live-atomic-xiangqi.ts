@@ -101,6 +101,7 @@ const client = createTenantLiveClient<
   tenant: atomicXiangqiWebTenant,
   gameSpecId: ATOMIC_XIANGQI_SPEC_ID,
   defaultRoomId: 'axq_dev',
+  flippable: true,
   boardClass: 'xiangqi-live-board',
   // The server sends roomMode + the bot's engine id on every frame; before
   // 2026-09-30 this client ignored them, so a finished bot game read as PvP and

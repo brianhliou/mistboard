@@ -14,6 +14,7 @@ import {
   createTenantLiveClient,
   type TenantLiveClient,
   type TenantLiveClientConfig,
+  type TenantLiveClientContext,
   type TenantLiveEvent,
   type TenantLiveFrame,
   type TenantMoveListRenderContext,
@@ -347,6 +348,34 @@ describe('tenant live-client core', () => {
     h.feedHello({});
     expect(h.client.send({ type: 'move', from: 'a1', to: 'a2' })).toBe(true);
     expect(h.sent).toContainEqual({ type: 'move', from: 'a1', to: 'a2' });
+  });
+});
+
+describe('board flip (toolbar button + f)', () => {
+  function flipHarness(flippable: boolean) {
+    let ctx: TenantLiveClientContext<TColor, TView> | null = null;
+    const h = createHarness({ flippable, setup: (c) => (ctx = c) });
+    h.feedSnapshot({});
+    if (!ctx) throw new Error('setup did not run');
+    const flip = document.querySelector<HTMLButtonElement>('[data-replay-flip]');
+    return { ctx: ctx as TenantLiveClientContext<TColor, TView>, flip };
+  }
+
+  it('turns the board over and back for a flippable room', () => {
+    const { ctx, flip } = flipHarness(true);
+    expect(ctx.orientation()).toBe('red');
+    expect(flip?.hidden).toBe(false);
+    flip?.click();
+    expect(ctx.orientation()).toBe('blue');
+    flip?.click();
+    expect(ctx.orientation()).toBe('red');
+  });
+
+  it('offers no flip in a room that has not opted in', () => {
+    const { ctx, flip } = flipHarness(false);
+    expect(flip?.hidden).toBe(true);
+    document.dispatchEvent(new KeyboardEvent('keydown', { key: 'f', bubbles: true }));
+    expect(ctx.orientation()).toBe('red');
   });
 });
 

@@ -21,6 +21,7 @@ import {
   legalDests,
   squareFileIndex,
 } from './live-board.js';
+import { flippedBottom } from './live-board-flip.js';
 import { renderCaptures as renderCaptureRows } from './live-captures.js';
 import {
   renderClocks as renderClockRows,
@@ -150,7 +151,8 @@ export function render(): void {
   // mismatched perspective if the server state was captured before the seat was
   // confirmed. Spectators fall back to the view's perspective.
   const nextOrientation = isColor(liveState.seat) ? liveState.seat : (view?.perspective ?? 'white');
-  orientation = nextOrientation;
+  // The viewer's flip (live-board-flip.ts) turns the board, not the seat.
+  orientation = flippedBottom(nextOrientation);
 
   if (liveState.debugRequested) refs.roomMeta.innerHTML = roomMetaHtml();
   renderBoardStatus(view);

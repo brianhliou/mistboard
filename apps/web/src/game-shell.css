@@ -131,7 +131,8 @@
   color: var(--site-text);
 }
 
-.round-table__box .replay-controls .replay-analysis[hidden] {
+.round-table__box .replay-controls .replay-analysis[hidden],
+.round-table__box .replay-controls .replay-flip[hidden] {
   display: none;
 }
 

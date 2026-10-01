@@ -27,7 +27,7 @@ import {
   roomModeAnalyticsProps,
 } from '../analytics.js';
 import { brandedEngineName } from '../game-display.js';
-import { setReplayAnalysisHref } from '../game-table.js';
+import { isFlipShortcut, setReplayAnalysisHref, setReplayFlipHandler } from '../game-table.js';
 import {
   createLiveFinishBadges,
   type FinishBadge,
@@ -134,6 +134,7 @@ export type TenantLiveClientContext<C extends string, V> = {
   displayedView(): V | null;
   /** Live (not scrubbed) + seated + this seat's turn. */
   canActNow(): boolean;
+  /** The viewer's bottom-of-board colour, after the viewer's own flip. */
   orientation(): C;
 };
 
@@ -287,6 +288,13 @@ export type TenantLiveClientConfig<C extends string, V extends TenantWebView<C>,
   setup(ctx: TenantLiveClientContext<C, V>): void;
   /** Viewer's bottom-of-board color. Default: seat, else view.perspective, else colors[0]. */
   orientation?(state: TenantLiveState<C, V>): C;
+  /**
+   * The board can be turned over (toolbar button + `f`). Opt-in: the board,
+   * its animation, material strips and any drop reserve must all read
+   * ctx.orientation(); a room whose renderer has no perspective, or whose
+   * reserve is bound to the bottom strip, stays off.
+   */
+  flippable?: boolean;
   moveList: TenantMoveListConfig<C, M>;
   replayCapture: TenantReplayCaptureConfig<V>;
   replayHistory?: TenantReplayHistoryConfig<C, V>;
@@ -356,7 +364,20 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     return socket?.connection() ?? 'connecting';
   }
 
+  // The viewer's flip (in memory, per room visit, like the review pages').
+  let flipped = false;
+
   function orientation(): C {
+    const base = baseOrientation();
+    return flipped && tenant.colors.length === 2 ? tenant.oppositeColor(base) : base;
+  }
+
+  function toggleFlip(): void {
+    flipped = !flipped;
+    renderAll();
+  }
+
+  function baseOrientation(): C {
     if (config.orientation) return config.orientation(state);
     if (tenant.isColor(state.seat)) return state.seat;
     const perspective = (state.view as { perspective?: unknown } | null)?.perspective;
@@ -572,6 +593,14 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
       chrome.tickCountdowns();
     }, 100);
     document.addEventListener('keydown', (event) => replay.handleKeyboard(event, renderAll));
+    if (config.flippable && tenant.colors.length === 2) {
+      setReplayFlipHandler(refs.actionSection, toggleFlip);
+      document.addEventListener('keydown', (event) => {
+        if (!isFlipShortcut(event)) return;
+        event.preventDefault();
+        toggleFlip();
+      });
+    }
     // A seated player who scrubbed back and then touches the board wants to
     // play, not to look: return to live before the tenant's click handler runs
     // (capture phase), so the same click can go on to select a piece. This

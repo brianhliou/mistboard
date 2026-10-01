@@ -27,6 +27,10 @@ export const REPLAY_ICON_LAST =
 export const REPLAY_ICON_ANALYSIS =
   '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true" fill="none" stroke="currentColor" stroke-linecap="round"><circle cx="10.5" cy="10.5" r="6" stroke-width="2.6"/><path d="M15 15l5 5" stroke-width="3.2"/></svg>';
 
+// Flip board: two solid arrows, one up and one down (lichess's flip slot).
+export const REPLAY_ICON_FLIP =
+  '<svg viewBox="0 0 24 24" width="20" height="20" aria-hidden="true"><g fill="currentColor" stroke="currentColor" stroke-width="1.4" stroke-linejoin="round"><path d="M7.5 3.5 3 9h3.2v11.5h2.6V9H12z"/><path d="M16.5 20.5 21 15h-3.2V3.5h-2.6V15H12z"/></g></svg>';
+
 export const REPLAY_STEPS: ReadonlyArray<{
   action: ReplayStepAction;
   icon: string;

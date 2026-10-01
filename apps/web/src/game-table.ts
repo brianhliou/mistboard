@@ -1,6 +1,6 @@
 import './game-shell.css';
 import { t } from './i18n/catalog.js';
-import { REPLAY_ICON_ANALYSIS, REPLAY_STEPS } from './replay-icons.js';
+import { REPLAY_ICON_ANALYSIS, REPLAY_ICON_FLIP, REPLAY_STEPS } from './replay-icons.js';
 
 export type GameTableRefs = {
   actionSection: HTMLElement;
@@ -50,6 +50,31 @@ export function setReplayAnalysisHref(anchor: HTMLElement, href: string | null):
   if (!link) return;
   link.hidden = href === null;
   if (href !== null && link.getAttribute('href') !== href) link.href = href;
+}
+
+/**
+ * Shows the toolbar's flip button and runs `onFlip` on press, or hides it (null)
+ * for a room whose board cannot flip. `anchor` is any element in the console.
+ */
+export function setReplayFlipHandler(anchor: HTMLElement, onFlip: (() => void) | null): void {
+  const button = anchor
+    .closest('.game-console')
+    ?.querySelector<HTMLButtonElement>('[data-replay-flip]');
+  if (!button) return;
+  button.hidden = onFlip === null;
+  button.onclick = onFlip;
+}
+
+/** The flip shortcut: a bare `f` outside text inputs, as on the review pages. */
+export function isFlipShortcut(event: KeyboardEvent): boolean {
+  if (event.metaKey || event.ctrlKey || event.altKey) return false;
+  if (event.key !== 'f' && event.key !== 'F') return false;
+  const target = event.target;
+  if (target instanceof HTMLElement) {
+    if (target.isContentEditable) return false;
+    if (target.closest('input, textarea, select, [contenteditable="true"]')) return false;
+  }
+  return true;
 }
 
 /**
@@ -113,6 +138,17 @@ export function createGameTable(): GameTable {
     button.innerHTML = step.icon;
     controls?.append(button);
   }
+  // Flip closes the band (lichess's slot), hidden until a room that can flip its
+  // board wires it (setReplayFlipHandler).
+  const flip = document.createElement('button');
+  flip.type = 'button';
+  flip.dataset.replayFlip = '';
+  flip.className = 'replay-flip';
+  flip.hidden = true;
+  flip.title = `${t('review.flipBoard')} (f)`;
+  flip.setAttribute('aria-label', t('review.flipBoard'));
+  flip.innerHTML = REPLAY_ICON_FLIP;
+  controls?.append(flip);
 
   const refs = {
     actionSection: el.querySelector<HTMLElement>('[data-action-section]'),

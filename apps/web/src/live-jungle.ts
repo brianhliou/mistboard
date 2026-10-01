@@ -125,6 +125,7 @@ const client = createTenantLiveClient<JungleColor, JungleWireView, JungleMove>({
   tenant: jungleWebTenant,
   gameSpecId: 'jungle',
   defaultRoomId: 'jgl_dev',
+  flippable: true,
   boardClass: 'jungle-live-board',
   chrome: {
     roomMode: () => roomMode,
