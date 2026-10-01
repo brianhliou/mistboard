@@ -94,7 +94,7 @@ export function mountJungleFlipReplayBoard(
     if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
       const forward = index > animateFrom;
       const move = forward ? played[index - 1] : played[animateFrom - 1];
-      if (move) animateJungleFlipBoardMove(frame, move, 'red', { reverse: !forward });
+      if (move) animateJungleFlipBoardMove(frame, move, { reverse: !forward });
     }
     hooks.onPlyChange?.(index, total);
   };

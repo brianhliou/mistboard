@@ -53,10 +53,10 @@ export function mountJungleFlipWatchReplay(
     // One-ply steps glide: forward animates the newly rendered view's lastMove,
     // a back step reverse-animates the move the previous ply carried. A flip is a
     // self-move and animateJungleFlipBoardMove no-ops on it.
-    animateMove: (boardEl, view, prevView, direction, orientation) => {
+    animateMove: (boardEl, view, prevView, direction) => {
       const move = direction === 'forward' ? view.lastMove : prevView?.lastMove;
       if (!move) return;
-      animateJungleFlipBoardMove(boardEl, move, orientation, { reverse: direction === 'back' });
+      animateJungleFlipBoardMove(boardEl, move, { reverse: direction === 'back' });
     },
     fillCaptures: () => {},
     reveal: { hiddenKey: 'truth', truthKey: 'revealed' },

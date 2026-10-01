@@ -20,7 +20,6 @@ import {
   ALL_JUNGLE_FLIP_SQUARES,
   type JungleFlipColor,
   type JungleFlipPieceRole,
-  type JungleFlipSeat,
   type JungleFlipSquare,
   jungleFlipCoordOf,
 } from '@mistboard/game';
@@ -246,8 +245,10 @@ function pieces(
 /**
  * Glide the piece that settled on `move.to` from its origin (or with `reverse`
  * the piece back on `move.from`). Call AFTER the innerHTML swap. Deltas come
- * from the same grid geometry the renderer uses (flip-aware). No-op at duration
- * 0 or when the slot is missing. Move payloads only, never board diffs.
+ * from the same grid geometry the renderer uses: never flipped, like the board
+ * (the deal has no sides). It took the viewer's seat until 2026-09-30, so the
+ * second mover saw every glide mirrored onto a board drawn unflipped. No-op at
+ * duration 0 or when the slot is missing. Move payloads only, never board diffs.
  *
  * A FLIP is the self-move `from === to`: nothing travelled, so there is nothing
  * to glide and no arrival to fade. Same contract as the banqi board.
@@ -255,7 +256,6 @@ function pieces(
 export function animateJungleFlipBoardMove(
   host: HTMLElement,
   move: { from: JungleFlipSquare; to: JungleFlipSquare },
-  perspective: JungleFlipSeat,
   opts: { reverse?: boolean } = {},
 ): void {
   if (move.from === move.to) return;
@@ -265,7 +265,7 @@ export function animateJungleFlipBoardMove(
   const originSquare = opts.reverse ? move.to : move.from;
   const slot = host.querySelector(`[data-piece-square="${settleSquare}"]`);
   if (!slot) return;
-  const geom = createGridGeometry(DESCRIPTOR, perspective === 'black');
+  const geom = createGridGeometry(DESCRIPTOR, false);
   const origin = jungleFlipCoordOf(originSquare);
   const settle = jungleFlipCoordOf(settleSquare);
   const from = geom.center(origin.file, origin.rank);

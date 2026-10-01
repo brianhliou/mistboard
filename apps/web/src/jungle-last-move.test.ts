@@ -246,7 +246,7 @@ describe('Jungle-family last-move indicators', () => {
 
     it('glides the arriving piece and fades the destination tint in', () => {
       const seen = recordAnimations((host) => {
-        animateJungleFlipBoardMove(host, { from: 'a1', to: 'b1' }, 'red');
+        animateJungleFlipBoardMove(host, { from: 'a1', to: 'b1' });
       });
 
       expect(seen).toEqual(['b1', 'jungle-last-move-to']);
@@ -256,17 +256,41 @@ describe('Jungle-family last-move indicators', () => {
       // A back step renders the PRIOR move's mark on a different cell, so fading
       // it would not track the reverse glide.
       const seen = recordAnimations((host) => {
-        animateJungleFlipBoardMove(host, { from: 'a1', to: 'b1' }, 'red', { reverse: true });
+        animateJungleFlipBoardMove(host, { from: 'a1', to: 'b1' }, { reverse: true });
       });
 
       expect(seen).toEqual(['a1']);
+    });
+
+    it('starts the glide from the square the piece left, on the unflipped board', () => {
+      // a1 -> b1 travels one file right, so the piece starts to the LEFT of where
+      // it lands. Until 2026-09-30 the glide took the viewer's seat and, for the
+      // second mover, started on the right of a board that is never flipped.
+      const frames: unknown[] = [];
+      const proto = Element.prototype as unknown as { animate?: unknown };
+      const original = proto.animate;
+      proto.animate = function (this: Element, keyframes: unknown) {
+        if (this.getAttribute('data-piece-square') === 'b1') frames.push(keyframes);
+        return { cancel: () => {} };
+      };
+      try {
+        const host = document.createElement('div');
+        host.innerHTML = renderJungleFlipBoardSvg(board, { shadow: false });
+        animateJungleFlipBoardMove(host, { from: 'a1', to: 'b1' });
+      } finally {
+        if (original === undefined) delete proto.animate;
+        else proto.animate = original;
+      }
+      const first = JSON.stringify(frames[0]);
+      const dx = Number(/translate\((-?[\d.]+)/.exec(first)?.[1]);
+      expect(dx).toBeLessThan(0);
     });
 
     it('does nothing at all for a flip', () => {
       // A flip is the self-move from === to: nothing travelled, so there is no
       // glide and no arrival. Same contract as the banqi board.
       const seen = recordAnimations((host) => {
-        animateJungleFlipBoardMove(host, { from: 'a1', to: 'a1' }, 'red');
+        animateJungleFlipBoardMove(host, { from: 'a1', to: 'a1' });
       });
 
       expect(seen).toEqual([]);

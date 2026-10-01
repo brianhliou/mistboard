@@ -184,18 +184,17 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
     if (!view || draggingFrom) return;
     const pending = takePendingAnimation();
     if (!pending) return;
-    const perspective = core?.orientation() ?? view.perspective;
     if (pending.kind === 'live') {
       if (pending.color === core?.state.seat) return;
-      animateJungleFlipBoardMove(liveRefs.board, pending.move, perspective);
+      animateJungleFlipBoardMove(liveRefs.board, pending.move);
       return;
     }
     if (pending.direction === 'forward') {
-      if (view.lastMove) animateJungleFlipBoardMove(liveRefs.board, view.lastMove, perspective);
+      if (view.lastMove) animateJungleFlipBoardMove(liveRefs.board, view.lastMove);
       return;
     }
     const undone = pending.prevView?.lastMove;
-    if (undone) animateJungleFlipBoardMove(liveRefs.board, undone, perspective, { reverse: true });
+    if (undone) animateJungleFlipBoardMove(liveRefs.board, undone, { reverse: true });
   },
   renderExtras: (refs, view) => renderCapturedPools(refs, view),
   onDisabled: (refs) => {

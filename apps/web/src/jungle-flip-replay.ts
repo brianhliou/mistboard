@@ -189,7 +189,7 @@ export function mountJungleFlipReplay(
     if (animateFrom !== undefined && Math.abs(index - animateFrom) === 1) {
       const forward = index > animateFrom;
       const move = moves[(forward ? index : animateFrom) - 1];
-      if (move) animateJungleFlipBoardMove(frame, move, 'red', { reverse: !forward });
+      if (move) animateJungleFlipBoardMove(frame, move, { reverse: !forward });
     }
     counter.textContent = index === 0 ? copy.start : `${index} / ${total}`;
     first.disabled = index === 0;

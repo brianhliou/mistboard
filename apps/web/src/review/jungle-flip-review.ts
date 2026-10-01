@@ -107,7 +107,9 @@ function makeJungleFlipPresentation(
     seatFor: (view) => (view.status.type === 'playing' ? view.status.turn : null),
     createBoard: (opts) => createJungleFlipInteractiveBoard(opts),
     // No glide animation (a flip has no travel; board re-renders on nav).
-    animateMove: animateJungleFlipBoardMove,
+    // The board never flips (the deal has no sides), so the glide ignores the
+    // review's perspective too.
+    animateMove: (host, move, _perspective, opts) => animateJungleFlipBoardMove(host, move, opts),
     shapeToArrow: (s: NodeShape): JungleFlipBoardArrow => ({
       from: s.orig as JungleFlipBoardArrow['from'],
       to: (s.dest ?? s.orig) as JungleFlipBoardArrow['to'],
