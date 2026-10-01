@@ -33,6 +33,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-09-30, not native-reviewed, locked with its English
+  // copy, which publishes in the same release (jieqi readers are mostly Chinese).
+  'ab-jchess',
+  // Machine-drafted 2026-09-30, not native-reviewed, locked with its English
   // copy, which publishes in the same release. Jieqi's readers are mostly
   // Chinese-speaking, so the zh pages ship with the English one.
   'jieqi-bot-wins',
@@ -139,6 +142,47 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // ab-jchess: machine-drafted 2026-09-30, not native-reviewed.
+  "All three games are in [a study](/study/a4mO6ldd), with AB-JChess's marks on the moves that cost the most. [All 400 match games](/games/search?variant=jieqi&source=engine-match) can be replayed on the site.":
+    '这三盘棋都收在[一个研究](/study/a4mO6ldd)里，代价最大的几步都有 AB-JChess 的标记。[全部 400 盘对局](/games/search?variant=jieqi&source=engine-match)都可以在网站上复盘。',
+  'In the match': '对局里的情况',
+  "The 400 match games show the same habit. In 71 of AB-JChess's 248 wins, Pikafish at some point after the opening rated itself at least six pawns ahead. In this one, it rated itself about twenty pawns up on every move from its seventh to its twelfth, while AB-JChess thought it was itself a little behind, about two chances in five. Pikafish's twelfth move turned over the piece on d10; AB-JChess rates it as throwing away nearly all of Black's chances, and mated on the next move.":
+    '400 盘对局里也是同样的毛病。AB-JChess 的 248 盘胜局中，有 71 盘皮卡鱼在开局之后某个时刻认为自己领先至少六个兵。在这一盘里，从第 7 步到第 12 步，它每一步都认为自己领先大约二十个兵，而 AB-JChess 认为自己还稍稍落后，胜机大约五分之二。皮卡鱼的第 12 步翻开了 d10 的暗子；AB-JChess 认为这步几乎断送了黑方全部的胜机，并在下一步将死了它。',
+  'Jieqi: AB-JChess mates Pikafish, which rated itself twenty pawns ahead':
+    '揭棋：AB-JChess 将死自认为领先二十个兵的皮卡鱼',
+  'AB-JChess, a stronger jieqi bot': 'AB-JChess：更强的揭棋电脑',
+  'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136':
+    'AB-JChess：以 248 比 136 战胜皮卡鱼的开源揭棋引擎',
+  'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games, and it reads the positions people beat Pikafish in very differently.':
+    '一个自带神经网络的开源揭棋引擎，现在排在皮卡鱼第 8 级之上。它在 400 盘中以 248 比 136 战胜全力的皮卡鱼，而且对棋友击败皮卡鱼的那些局面，它的看法截然不同。',
+  '[Jieqi](/rules/jieqi) on Mistboard has a new top bot. [AB-JChess](https://github.com/lxsgx23/AB-JChess) is an open-source jieqi engine by Huorongrong and Laoxu (Kouza), and we play it here with their permission. It sits above Pikafish Level 8, the bot people have been playing since August.':
+    '[揭棋](/rules/jieqi)在 Mistboard 上有了新的最强电脑。[AB-JChess](https://github.com/lxsgx23/AB-JChess) 是由 Huorongrong 和 Laoxu（Kouza）开发的开源揭棋引擎，我们经作者许可在这里使用它。它排在皮卡鱼第 8 级之上，也就是棋友们从 8 月起一直在下的那个电脑。',
+  'Before putting it on the site, we played it against that bot: 400 games at 4 seconds a move, on the same settings the site uses. AB-JChess won 248, lost 136 and drew 16, a 64% score. It won as Red and as Black.':
+    '上线之前，我们让它和那个电脑下了 400 盘，每步 4 秒，设置与网站上完全相同。AB-JChess 赢 248 盘、输 136 盘、和 16 盘，得分率 64%。执红执黑都占上风。',
+  'Play AB-JChess': '挑战 AB-JChess',
+  'Two ways to be strong': '两种强法',
+  '[Pikafish](https://github.com/official-pikafish/Pikafish) is built for speed. It looks at more than a million positions a second and judges each one by rules written by hand. AB-JChess is built from Pikafish too, but it judges positions with a neural network trained on about a billion jieqi positions. It looks at about fifty times fewer positions, and understands each one better. Its training code is public in the same repository, under [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch).':
+    '[皮卡鱼](https://github.com/official-pikafish/Pikafish)靠速度取胜。它每秒看一百多万个局面，用人工写成的规则评估每一个局面。AB-JChess 同样由皮卡鱼改造而来，但它用神经网络评估局面，这个网络用大约十亿个揭棋局面训练而成。它看的局面少了大约五十倍，但对每个局面理解得更深。它的训练代码也公开在同一个代码库里，见 [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch)。',
+  'Where the difference shows': '差别在哪里',
+  'Our post on the [fourteen wins against Pikafish](/blog/jieqi-bot-wins) showed the moments where people beat it, and many of them came right after the bot turned over one of its own face-down pieces. Pikafish tends to value that move as if the piece will turn out well. We gave the same positions to AB-JChess, each exactly as the bot saw it, with 4 seconds to think.':
+    '我们那篇[战胜皮卡鱼的 14 盘棋](/blog/jieqi-bot-wins)展示了棋友击败它的关键时刻，其中很多盘正是在电脑翻开自己一个暗子之后急转直下的。皮卡鱼往往把这步棋估得过好，好像翻出来的一定是好棋子。我们把同样的局面交给 AB-JChess，每个局面都与电脑当时看到的完全一样，每步思考 4 秒。',
+  'In this game the bot is Red and rates itself more than ten pawns ahead, a won game by its count. It turns over the piece on b3 and moves it to d3. Three of the five pieces it could turn out to be lose at once to the black cannon dropping to h1, and Black mated on the next move. AB-JChess also likes Red here, about three wins in four, but it plays the advisor from e2 to f3 instead. By its count, the reveal on d3 leaves Red almost no chance.':
+    '在这盘棋里，电脑执红，自认为领先十个兵以上，按它的估计已经赢定了。它翻开 b3 的暗子，走到 d3。这个暗子可能是五种棋子，其中三种会立刻被黑炮沉底到 h1 杀死，而黑方下一步正是这样将死了它。AB-JChess 也看好红方，大约四盘能赢三盘，但它改走仕 e2 到 f3。按它的估计，在 d3 翻子几乎让红方毫无胜机。',
+  'Jieqi: the bot reveals on d3 and is mated next move': '揭棋：电脑在 d3 翻子，下一步被将死',
+  "In the stalemate game from that post, the bot turned over the piece on b3 and sent it up the file to b9, rating the game eight pawns in its favour. AB-JChess also has Red better, a little under two wins in three, but it turns over the piece on i1 instead and marks the move to b9 as dubious. Two moves later, by AB-JChess's count, Red's chances were down to one in four.":
+    '在那篇文章的困毙局里，电脑翻开 b3 的暗子，把它沿直线送到 b9，认为自己领先八个兵。AB-JChess 也认为红方占优，三盘略少于能赢两盘，但它改翻 i1 的暗子，并把走到 b9 这步标为疑问手。按 AB-JChess 的估计，两步之后红方的胜机只剩四分之一。',
+  'Jieqi: the bot reveals on b9, rating itself eight pawns ahead':
+    '揭棋：电脑在 b9 翻子，自认为领先八个兵',
+  'At the other two reveals in that post, Pikafish rated its position at +16 and +7 pawns, far ahead by its count. AB-JChess had the bot better in the first, about five wins in six, and close to even in the second, where it chose a quiet general move instead. In the one game that turned on ordinary moves, both engines chose the same move and rated it close to level.':
+    '在那篇文章另外两次翻子的地方，皮卡鱼把局面估为 +16 和 +7 个兵，按它的估计遥遥领先。AB-JChess 认为第一个局面电脑占优，大约六盘能赢五盘；第二个局面接近均势，它还改走了一步平静的帅步。在唯一一盘靠普通着法决出胜负的棋里，两个引擎选了同一步棋，也都认为局面接近均势。',
+  'One move is not a game, so this does not show AB-JChess would have won these. The 400 games show that it is stronger; these positions show where.':
+    '一步棋不等于一盘棋，所以这并不能说明 AB-JChess 能赢下这些棋。400 盘对局说明它更强；这些局面说明它强在哪里。',
+  'Where it sits': '它排在哪里',
+  "AB-JChess is at the top of the jieqi bot list, above Level 8. Levels 1 to 8 stay Pikafish, and Level 4 is still where a new player starts. It does not take a level number: the top place holds the strongest jieqi engine we have measured, under its own name. Its rating on the [bots page](/bots), 2354 against Level 8's 2226, comes from the same bot-against-bot games that rate the levels.":
+    'AB-JChess 排在揭棋电脑列表的最上面，在第 8 级之上。第 1 到第 8 级仍是皮卡鱼，新手仍从第 4 级开始。它不占用级别编号：最高的位置留给我们实测过最强的揭棋引擎，并以它自己的名字标示。它在[电脑对手页面](/bots)上的等级分是 2354（第 8 级为 2226），和各个级别一样，来自电脑之间的对局。',
+  Thanks: '致谢',
+  'AB-JChess is open source under the GPL-3.0 licence, at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). Its authors let us use the engine and its network on Mistboard. The network is downloaded from their own release each time we build the site, never copied. Thank you, Huorongrong and Laoxu.':
+    'AB-JChess 以 GPL-3.0 许可证开源，地址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。作者允许我们在 Mistboard 上使用这个引擎及其神经网络。每次构建网站时，神经网络都从作者自己的发布页下载，从不另存副本。谢谢 Huorongrong 和 Laoxu。',
   // jieqi-bot-wins: machine-drafted 2026-09-30, not native-reviewed.
   'Fourteen wins against our jieqi bot': '战胜我们揭棋电脑的 14 盘棋',
   'Beating the Pikafish jieqi bot: 14 wins in 596 games': '战胜皮卡鱼揭棋电脑：596 盘中的 14 胜',
@@ -3095,6 +3139,47 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // ab-jchess: machine-drafted 2026-09-30, not native-reviewed.
+  "All three games are in [a study](/study/a4mO6ldd), with AB-JChess's marks on the moves that cost the most. [All 400 match games](/games/search?variant=jieqi&source=engine-match) can be replayed on the site.":
+    '這三盤棋都收在[一個研究](/study/a4mO6ldd)裡，代價最大的幾步都有 AB-JChess 的標記。[全部 400 盤對局](/games/search?variant=jieqi&source=engine-match)都可以在網站上覆盤。',
+  'In the match': '對局裡的情況',
+  "The 400 match games show the same habit. In 71 of AB-JChess's 248 wins, Pikafish at some point after the opening rated itself at least six pawns ahead. In this one, it rated itself about twenty pawns up on every move from its seventh to its twelfth, while AB-JChess thought it was itself a little behind, about two chances in five. Pikafish's twelfth move turned over the piece on d10; AB-JChess rates it as throwing away nearly all of Black's chances, and mated on the next move.":
+    '400 盤對局裡也是同樣的毛病。AB-JChess 的 248 盤勝局中，有 71 盤皮卡魚在開局之後某個時刻認為自己領先至少六個兵。在這一盤裡，從第 7 步到第 12 步，它每一步都認為自己領先大約二十個兵，而 AB-JChess 認為自己還稍稍落後，勝機大約五分之二。皮卡魚的第 12 步翻開了 d10 的暗子；AB-JChess 認為這步幾乎斷送了黑方全部的勝機，並在下一步將死了它。',
+  'Jieqi: AB-JChess mates Pikafish, which rated itself twenty pawns ahead':
+    '揭棋：AB-JChess 將死自認為領先二十個兵的皮卡魚',
+  'AB-JChess, a stronger jieqi bot': 'AB-JChess：更強的揭棋電腦',
+  'AB-JChess: the open-source jieqi engine that beat Pikafish 248 to 136':
+    'AB-JChess：以 248 比 136 戰勝皮卡魚的開源揭棋引擎',
+  'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games, and it reads the positions people beat Pikafish in very differently.':
+    '一個自帶神經網路的開源揭棋引擎，現在排在皮卡魚第 8 級之上。它在 400 盤中以 248 比 136 戰勝全力的皮卡魚，而且對棋友擊敗皮卡魚的那些局面，它的看法截然不同。',
+  '[Jieqi](/rules/jieqi) on Mistboard has a new top bot. [AB-JChess](https://github.com/lxsgx23/AB-JChess) is an open-source jieqi engine by Huorongrong and Laoxu (Kouza), and we play it here with their permission. It sits above Pikafish Level 8, the bot people have been playing since August.':
+    '[揭棋](/rules/jieqi)在 Mistboard 上有了新的最強電腦。[AB-JChess](https://github.com/lxsgx23/AB-JChess) 是由 Huorongrong 和 Laoxu（Kouza）開發的開源揭棋引擎，我們經作者許可在這裡使用它。它排在皮卡魚第 8 級之上，也就是棋友們從 8 月起一直在下的那個電腦。',
+  'Before putting it on the site, we played it against that bot: 400 games at 4 seconds a move, on the same settings the site uses. AB-JChess won 248, lost 136 and drew 16, a 64% score. It won as Red and as Black.':
+    '上線之前，我們讓它和那個電腦下了 400 盤，每步 4 秒，設定與網站上完全相同。AB-JChess 贏 248 盤、輸 136 盤、和 16 盤，得分率 64%。執紅執黑都佔上風。',
+  'Play AB-JChess': '挑戰 AB-JChess',
+  'Two ways to be strong': '兩種強法',
+  '[Pikafish](https://github.com/official-pikafish/Pikafish) is built for speed. It looks at more than a million positions a second and judges each one by rules written by hand. AB-JChess is built from Pikafish too, but it judges positions with a neural network trained on about a billion jieqi positions. It looks at about fifty times fewer positions, and understands each one better. Its training code is public in the same repository, under [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch).':
+    '[皮卡魚](https://github.com/official-pikafish/Pikafish)靠速度取勝。它每秒看一百多萬個局面，用人工寫成的規則評估每一個局面。AB-JChess 同樣由皮卡魚改造而來，但它用神經網路評估局面，這個網路用大約十億個揭棋局面訓練而成。它看的局面少了大約五十倍，但對每個局面理解得更深。它的訓練程式碼也公開在同一個程式庫裡，見 [abjchess-nnue-pytorch](https://github.com/lxsgx23/AB-JChess/tree/main/abjchess-nnue-pytorch)。',
+  'Where the difference shows': '差別在哪裡',
+  'Our post on the [fourteen wins against Pikafish](/blog/jieqi-bot-wins) showed the moments where people beat it, and many of them came right after the bot turned over one of its own face-down pieces. Pikafish tends to value that move as if the piece will turn out well. We gave the same positions to AB-JChess, each exactly as the bot saw it, with 4 seconds to think.':
+    '我們那篇[戰勝皮卡魚的 14 盤棋](/blog/jieqi-bot-wins)展示了棋友擊敗它的關鍵時刻，其中很多盤正是在電腦翻開自己一個暗子之後急轉直下的。皮卡魚往往把這步棋估得過好，好像翻出來的一定是好棋子。我們把同樣的局面交給 AB-JChess，每個局面都與電腦當時看到的完全一樣，每步思考 4 秒。',
+  'In this game the bot is Red and rates itself more than ten pawns ahead, a won game by its count. It turns over the piece on b3 and moves it to d3. Three of the five pieces it could turn out to be lose at once to the black cannon dropping to h1, and Black mated on the next move. AB-JChess also likes Red here, about three wins in four, but it plays the advisor from e2 to f3 instead. By its count, the reveal on d3 leaves Red almost no chance.':
+    '在這盤棋裡，電腦執紅，自認為領先十個兵以上，按它的估計已經贏定了。它翻開 b3 的暗子，走到 d3。這個暗子可能是五種棋子，其中三種會立刻被黑炮沉底到 h1 殺死，而黑方下一步正是這樣將死了它。AB-JChess 也看好紅方，大約四盤能贏三盤，但它改走仕 e2 到 f3。按它的估計，在 d3 翻子幾乎讓紅方毫無勝機。',
+  'Jieqi: the bot reveals on d3 and is mated next move': '揭棋：電腦在 d3 翻子，下一步被將死',
+  "In the stalemate game from that post, the bot turned over the piece on b3 and sent it up the file to b9, rating the game eight pawns in its favour. AB-JChess also has Red better, a little under two wins in three, but it turns over the piece on i1 instead and marks the move to b9 as dubious. Two moves later, by AB-JChess's count, Red's chances were down to one in four.":
+    '在那篇文章的困斃局裡，電腦翻開 b3 的暗子，把它沿直線送到 b9，認為自己領先八個兵。AB-JChess 也認為紅方佔優，三盤略少於能贏兩盤，但它改翻 i1 的暗子，並把走到 b9 這步標為疑問手。按 AB-JChess 的估計，兩步之後紅方的勝機只剩四分之一。',
+  'Jieqi: the bot reveals on b9, rating itself eight pawns ahead':
+    '揭棋：電腦在 b9 翻子，自認為領先八個兵',
+  'At the other two reveals in that post, Pikafish rated its position at +16 and +7 pawns, far ahead by its count. AB-JChess had the bot better in the first, about five wins in six, and close to even in the second, where it chose a quiet general move instead. In the one game that turned on ordinary moves, both engines chose the same move and rated it close to level.':
+    '在那篇文章另外兩次翻子的地方，皮卡魚把局面估為 +16 和 +7 個兵，按它的估計遙遙領先。AB-JChess 認為第一個局面電腦佔優，大約六盤能贏五盤；第二個局面接近均勢，它還改走了一步平靜的帥步。在唯一一盤靠普通著法決出勝負的棋裡，兩個引擎選了同一步棋，也都認為局面接近均勢。',
+  'One move is not a game, so this does not show AB-JChess would have won these. The 400 games show that it is stronger; these positions show where.':
+    '一步棋不等於一盤棋，所以這並不能說明 AB-JChess 能贏下這些棋。400 盤對局說明它更強；這些局面說明它強在哪裡。',
+  'Where it sits': '它排在哪裡',
+  "AB-JChess is at the top of the jieqi bot list, above Level 8. Levels 1 to 8 stay Pikafish, and Level 4 is still where a new player starts. It does not take a level number: the top place holds the strongest jieqi engine we have measured, under its own name. Its rating on the [bots page](/bots), 2354 against Level 8's 2226, comes from the same bot-against-bot games that rate the levels.":
+    'AB-JChess 排在揭棋電腦列表的最上面，在第 8 級之上。第 1 到第 8 級仍是皮卡魚，新手仍從第 4 級開始。它不佔用級別編號：最高的位置留給我們實測過最強的揭棋引擎，並以它自己的名字標示。它在[電腦對手頁面](/bots)上的等級分是 2354（第 8 級為 2226），和各個級別一樣，來自電腦之間的對局。',
+  Thanks: '致謝',
+  'AB-JChess is open source under the GPL-3.0 licence, at [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess). Its authors let us use the engine and its network on Mistboard. The network is downloaded from their own release each time we build the site, never copied. Thank you, Huorongrong and Laoxu.':
+    'AB-JChess 以 GPL-3.0 授權條款開源，網址是 [github.com/lxsgx23/AB-JChess](https://github.com/lxsgx23/AB-JChess)。作者允許我們在 Mistboard 上使用這個引擎及其神經網路。每次建置網站時，神經網路都從作者自己的發佈頁下載，從不另存副本。謝謝 Huorongrong 和 Laoxu。',
   // jieqi-bot-wins: machine-drafted 2026-09-30, not native-reviewed.
   'Fourteen wins against our jieqi bot': '戰勝我們揭棋電腦的 14 盤棋',
   'Beating the Pikafish jieqi bot: 14 wins in 596 games': '戰勝皮卡魚揭棋電腦：596 盤中的 14 勝',

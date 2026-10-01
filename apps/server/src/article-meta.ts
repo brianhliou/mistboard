@@ -275,6 +275,12 @@ export const ARTICLE_META: Record<
     description:
       '31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.',
   },
+  'ab-jchess': {
+    title: 'AB-JChess, a stronger jieqi bot',
+    kind: 'article',
+    description:
+      'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games, and it reads the positions people beat Pikafish in very differently.',
+  },
   'jieqi-bot-wins': {
     title: 'Fourteen wins against our jieqi bot',
     kind: 'article',

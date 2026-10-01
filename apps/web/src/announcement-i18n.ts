@@ -35,6 +35,10 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-03 (AB-JChess) ── 电脑 / 级 / 暗子 follow the ab-jchess article.
+  'AB-JChess is the new top jieqi bot.': 'AB-JChess 成为新的最强揭棋电脑。',
+  'An open-source jieqi engine by Huorongrong and Laoxu (Kouza), with its own neural network, now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games. The post shows where the difference is, in the positions people beat Pikafish in.':
+    '一个由 Huorongrong 和 Laoxu（Kouza）开发、自带神经网络的开源揭棋引擎，现在排在皮卡鱼第 8 级之上。它在 400 盘中以 248 比 136 战胜全力的皮卡鱼。文章用棋友击败皮卡鱼的那些局面，说明差别在哪里。',
   // ── 2026-10-01 (jieqi bot levels) ── 电脑 / 级 / 回合 follow the jieqi-bot-wins article.
   'Jieqi now has eight bot levels.': '揭棋电脑现在有八个级别。',
   'Until now every jieqi game against the computer was against Pikafish at full strength, and since August 23 people have beaten it 14 times in 596 games. Levels 1 to 7 are new and easier; Level 8 is the bot you know. The post walks through how the 14 were won, each game opening at the moment it turned.':
@@ -394,6 +398,10 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-03 (AB-JChess) ── 電腦 / 級 / 暗子 follow the ab-jchess article.
+  'AB-JChess is the new top jieqi bot.': 'AB-JChess 成為新的最強揭棋電腦。',
+  'An open-source jieqi engine by Huorongrong and Laoxu (Kouza), with its own neural network, now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games. The post shows where the difference is, in the positions people beat Pikafish in.':
+    '一個由 Huorongrong 和 Laoxu（Kouza）開發、自帶神經網路的開源揭棋引擎，現在排在皮卡魚第 8 級之上。它在 400 盤中以 248 比 136 戰勝全力的皮卡魚。文章用棋友擊敗皮卡魚的那些局面，說明差別在哪裡。',
   // ── 2026-10-01 (jieqi bot levels) ── 電腦 / 級 / 回合 follow the jieqi-bot-wins article.
   'Jieqi now has eight bot levels.': '揭棋電腦現在有八個級別。',
   'Until now every jieqi game against the computer was against Pikafish at full strength, and since August 23 people have beaten it 14 times in 596 games. Levels 1 to 7 are new and easier; Level 8 is the bot you know. The post walks through how the 14 were won, each game opening at the moment it turned.':
