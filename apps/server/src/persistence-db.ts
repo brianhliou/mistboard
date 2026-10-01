@@ -46,6 +46,49 @@ export function init(connectionString: string, guards?: PoolSessionGuards): void
     idleTimeoutMillis: 30_000,
     ...(settings.length === 0 ? {} : { options: settings.join(' ') }),
   });
+  guardPoolConnectionErrors(pool);
+}
+
+/**
+ * Keep a dropped connection from killing the process. pg-pool re-emits an idle
+ * client's socket error on the Pool (with the whole Client attached as
+ * `err.client`), and a Pool with no 'error' listener turns that into an
+ * uncaught exception: the live server exits and every game in it ends. The pool
+ * has already discarded that client; the next query connects afresh.
+ *
+ * A checked-out client (withTransaction, pool.connect() callers) has no
+ * listener of its own between queries either, so it gets one as it connects;
+ * the query it was running still rejects to its caller. Only `err.message` is
+ * logged: never the client, which carries the connection parameters.
+ *
+ * The client listener stays on through idle spells too, so an idle drop reaches
+ * both listeners with the same error; the client one waits a microtask and
+ * stays quiet when the pool one has logged it, so each drop is one line.
+ *
+ * init() installs this on every pool. Returns the detach function.
+ */
+export function guardPoolConnectionErrors(
+  target: pg.Pool,
+  warn: (message: string) => void = (message) => console.warn(message),
+): () => void {
+  const loggedByPool = new WeakSet<Error>();
+  const onPoolError = (err: Error) => {
+    loggedByPool.add(err);
+    warn(`[db] pool: idle connection closed (${err.message}); the next query reconnects`);
+  };
+  const onClientError = (err: Error) => {
+    queueMicrotask(() => {
+      if (loggedByPool.has(err)) return;
+      warn(`[db] pool: connection error on a checked-out client (${err.message})`);
+    });
+  };
+  const onConnect = (client: pg.PoolClient) => client.on('error', onClientError);
+  target.on('error', onPoolError);
+  target.on('connect', onConnect);
+  return () => {
+    target.off('error', onPoolError);
+    target.off('connect', onConnect);
+  };
 }
 
 export async function probeDb(): Promise<boolean> {

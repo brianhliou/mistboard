@@ -358,9 +358,7 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
 
     if (pathname === '/robots.txt') {
       response.writeHead(200, { 'content-type': 'text/plain; charset=utf-8' });
-      response.end(
-        `User-agent: *\nAllow: /\nDisallow: /database\nDisallow: /engines\nDisallow: /accounts\nSitemap: ${options.publicHost}/sitemap.xml\n`,
-      );
+      response.end(robotsTxt(options.publicHost));
       return;
     }
 
@@ -724,6 +722,26 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
 
     void serveHandler(request, response, { public: options.staticDir });
   };
+}
+
+// /api/data/ holds the /data page's monthly and collection downloads: gzip
+// files that are built on first request in the live web process and can run to
+// tens of MB. Crawlers follow the page's links to them, so they are kept off.
+// The rest of /api stays crawlable on purpose: the client-rendered pages
+// (game reviews, broadcasts, /games, /data's own listing at GET /api/data) load
+// their content from /api, and a search engine that renders the page needs those
+// fetches to see it. Every rule here is a path prefix, longest match wins.
+export function robotsTxt(publicHost: string): string {
+  return [
+    'User-agent: *',
+    'Allow: /',
+    'Disallow: /database',
+    'Disallow: /engines',
+    'Disallow: /accounts',
+    'Disallow: /api/data/',
+    `Sitemap: ${publicHost}/sitemap.xml`,
+    '',
+  ].join('\n');
 }
 
 // Vendored ceval engine assets live at /engine/<pkg>/<file> (fairy-stockfish,

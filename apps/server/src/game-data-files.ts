@@ -17,7 +17,9 @@
 // a PGN game equals its export.pgn.
 
 import { createHash } from 'node:crypto';
-import { gzip } from 'node:zlib';
+import { once } from 'node:events';
+import { performance } from 'node:perf_hooks';
+import { createGzip } from 'node:zlib';
 import {
   CANONICAL_VARIANT_ORDER,
   exportFormatsForVariant,
@@ -47,11 +49,29 @@ function canonicalIndex(variant: string): number {
   return index === -1 ? CANONICAL_VARIANT_ORDER.length : index;
 }
 
-/** The variants a monthly file can be built for: exactly the single-game export
- *  table, in the site's rail order (play menu, rules, /games). */
-export const DATA_VARIANTS: readonly string[] = Object.keys(GAME_EXPORT_FORMATS).sort(
-  (a, b) => canonicalIndex(a) - canonicalIndex(b),
-);
+/**
+ * Export-table variants /data does not offer yet, with the reason a download
+ * answers. A hidden-piece game's export names the squares a piece moved from or
+ * was turned over on, but neither the deal nor what each reveal turned out to
+ * be, so nobody can replay it (#484). Landing #484 removes these entries; the
+ * per-game export route is unaffected.
+ */
+export const DATA_WITHHELD_VARIANTS: Readonly<Record<string, string>> = {
+  jieqi: 'hidden_piece_format_pending',
+  banqi: 'hidden_piece_format_pending',
+  'jungle-flip': 'hidden_piece_format_pending',
+};
+
+function isWithheldVariant(variant: string): boolean {
+  return Object.hasOwn(DATA_WITHHELD_VARIANTS, variant);
+}
+
+/** The variants a monthly file can be built for: the single-game export table
+ *  minus DATA_WITHHELD_VARIANTS, in the site's rail order (play menu, rules,
+ *  /games). The all-variants file holds exactly these. */
+export const DATA_VARIANTS: readonly string[] = Object.keys(GAME_EXPORT_FORMATS)
+  .filter((variant) => !isWithheldVariant(variant))
+  .sort((a, b) => canonicalIndex(a) - canonicalIndex(b));
 
 /**
  * The one monthly key that is not a variant: every variant's games of the month
@@ -66,9 +86,11 @@ export function dataFormatsForVariant(variant: string): DataFileFormat[] {
   return exportFormatsForVariant(variant).map((format) => FILE_FORMAT_FOR[format]);
 }
 
-/** A monthly file's variant key: an export-table variant, or 'all'. Nothing else. */
+/** A monthly file's variant key: an offered export-table variant, or 'all'. Nothing else. */
 export function isDataVariantKey(variant: string): boolean {
-  return variant === ALL_VARIANTS_KEY || isGameExportVariant(variant);
+  return (
+    variant === ALL_VARIANTS_KEY || (isGameExportVariant(variant) && !isWithheldVariant(variant))
+  );
 }
 
 // ── Months ───────────────────────────────────────────────────────────────────
@@ -138,7 +160,8 @@ export type ParsedDataPath =
 /**
  * A download path, shape only: the month must be a real YYYY-MM (else 400), and
  * a monthly variant must be in the export table, or 'all', with that format
- * (else 404, fail closed: no variant falls back to another's exporter). Whether the month
+ * (else 404, fail closed: no variant falls back to another's exporter), and not
+ * withheld (404 naming why, DATA_WITHHELD_VARIANTS). Whether the month
  * is closed and has games, or the collection exists, is the route's question.
  */
 export function parseDataFilePath(pathname: string): ParsedDataPath | null {
@@ -151,6 +174,9 @@ export function parseDataFilePath(pathname: string): ParsedDataPath | null {
       DataFileFormat,
     ];
     if (!parseMonth(month)) return { ok: false, status: 400, error: 'invalid_month' };
+    if (isWithheldVariant(variant)) {
+      return { ok: false, status: 404, error: DATA_WITHHELD_VARIANTS[variant]! };
+    }
     if (!isDataVariantKey(variant)) return { ok: false, status: 404, error: 'unknown_variant' };
     if (!dataFormatsForVariant(variant).includes(format)) {
       return { ok: false, status: 404, error: 'format_not_available' };
@@ -271,7 +297,8 @@ export function buildDataListing(input: {
   for (const count of input.counts) {
     const range = parseMonth(count.month);
     if (!range || !isClosedMonth(range, input.now)) continue;
-    if (!isGameExportVariant(count.variant) || count.games <= 0) continue;
+    if (!isDataVariantKey(count.variant) || count.variant === ALL_VARIANTS_KEY) continue;
+    if (count.games <= 0) continue;
     seenVariants.add(count.variant);
     const files = dataFormatsForVariant(count.variant).map((format) =>
       fileEntry(
@@ -325,6 +352,8 @@ export function buildDataListing(input: {
 export type BuildDeps = {
   getGameSummaries(roomIds: readonly string[]): Promise<Map<string, RecentEveGameRecord>>;
   loadRoomsEvents(roomIds: readonly string[]): Promise<Map<string, readonly unknown[]>>;
+  /** The build's clock for its time slices (milliseconds); tests inject one. */
+  now?: () => number;
 };
 
 export type BuiltDataFile = {
@@ -338,10 +367,20 @@ export type BuiltDataFile = {
 // Small enough that a batch of long fog games stays a few MB in memory.
 const BUILD_BATCH = 100;
 
-function gzipBuffer(input: Buffer): Promise<Buffer> {
-  return new Promise((resolve, reject) => {
-    gzip(input, { level: 9 }, (error, result) => (error ? reject(error) : resolve(result)));
-  });
+// The build runs in the live web process: replaying a game is synchronous CPU
+// work, and a month is thousands of games. Without a yield, the first download
+// of 2026-09/all.jsonl.gz held the event loop for seconds between database
+// reads (event-loop lag p99 622 ms on prod, 2026-10-01), stalling every live
+// game's moves and clocks. Hand the loop back whenever one slice has run this
+// long; a setImmediate costs microseconds, so the build itself is no slower.
+export const BUILD_SLICE_MS = 10;
+
+// Uncompressed text handed to the gzip stream at a time. zlib compresses on the
+// libuv threadpool, so the main thread only copies the string.
+const GZIP_WRITE_BYTES = 1 << 20;
+
+function yieldToEventLoop(): Promise<void> {
+  return new Promise((resolve) => setImmediate(resolve));
 }
 
 /**
@@ -349,45 +388,89 @@ function gzipBuffer(input: Buffer): Promise<Buffer> {
  * export.json body per line. PGN: export.pgn bodies separated by a blank line.
  * A room whose export is not a 200 (its log no longer replays as a finished
  * game of its variant) is skipped and named, never patched up here.
+ *
+ * Never blocks the event loop for more than about one slice plus one game:
+ * replay yields every BUILD_SLICE_MS, and the gzip and sha256 run as a stream
+ * beside it, off the main thread.
  */
 export async function buildDataFileContent(
   roomIds: readonly string[],
   format: DataFileFormat,
   deps: BuildDeps,
 ): Promise<BuiltDataFile> {
+  const now = deps.now ?? (() => performance.now());
   const exportFormat = EXPORT_FORMAT_FOR[format];
-  const parts: string[] = [];
+  const gzipStream = createGzip({ level: 9 });
+  const chunks: Buffer[] = [];
+  const hash = createHash('sha256');
+  gzipStream.on('data', (chunk: Buffer) => {
+    chunks.push(chunk);
+    hash.update(chunk);
+  });
+  const ended = once(gzipStream, 'end');
+  // Observed so an error before the final await is not an unhandled rejection.
+  ended.catch(() => undefined);
+  let pending: string[] = [];
+  let pendingBytes = 0;
+  const flush = async () => {
+    if (pending.length === 0) return;
+    const text = pending.join('');
+    pending = [];
+    pendingBytes = 0;
+    if (!gzipStream.write(text)) await once(gzipStream, 'drain');
+  };
   const skipped: string[] = [];
   let gameCount = 0;
-  for (let start = 0; start < roomIds.length; start += BUILD_BATCH) {
-    const batch = roomIds.slice(start, start + BUILD_BATCH);
-    const [summaries, eventsByRoom] = await Promise.all([
-      deps.getGameSummaries(batch),
-      deps.loadRoomsEvents(batch),
-    ]);
-    for (const roomId of batch) {
-      const resolved = resolveGameExport({
-        roomId,
-        format: exportFormat,
-        summary: summaries.get(roomId) ?? null,
-        events: eventsByRoom.get(roomId) ?? null,
-      });
-      if (resolved.status !== 200) {
-        skipped.push(roomId);
-        continue;
+  try {
+    for (let start = 0; start < roomIds.length; start += BUILD_BATCH) {
+      const batch = roomIds.slice(start, start + BUILD_BATCH);
+      const [summaries, eventsByRoom] = await Promise.all([
+        deps.getGameSummaries(batch),
+        deps.loadRoomsEvents(batch),
+      ]);
+      // The reads resolve in the poll phase, and a setImmediate queued from
+      // there runs in the same turn's check phase, skipping the timers phase:
+      // the batch's first two slices would run back to back. Hop to the check
+      // phase first, so every later yield crosses a full turn (timers, I/O).
+      await yieldToEventLoop();
+      let sliceStart = now();
+      for (const roomId of batch) {
+        if (now() - sliceStart >= BUILD_SLICE_MS) {
+          await yieldToEventLoop();
+          sliceStart = now();
+        }
+        const resolved = resolveGameExport({
+          roomId,
+          format: exportFormat,
+          summary: summaries.get(roomId) ?? null,
+          events: eventsByRoom.get(roomId) ?? null,
+        });
+        if (resolved.status !== 200) {
+          skipped.push(roomId);
+          continue;
+        }
+        // A JSON body has no newline, so this ends the line; a PGN body already
+        // ends in one, so this is the blank line between two games.
+        const part = `${resolved.body}\n`;
+        pending.push(part);
+        pendingBytes += part.length;
+        gameCount += 1;
+        if (pendingBytes >= GZIP_WRITE_BYTES) await flush();
       }
-      // A JSON body has no newline, so this ends the line; a PGN body already
-      // ends in one, so this is the blank line between two games.
-      parts.push(`${resolved.body}\n`);
-      gameCount += 1;
     }
+    await flush();
+    gzipStream.end();
+    await ended;
+  } catch (error) {
+    gzipStream.destroy();
+    throw error;
   }
-  const content = await gzipBuffer(Buffer.from(parts.join(''), 'utf8'));
+  const content = Buffer.concat(chunks);
   return {
     content,
     gameCount,
     byteSize: content.byteLength,
-    sha256: createHash('sha256').update(content).digest('hex'),
+    sha256: hash.digest('hex'),
     skipped,
   };
 }

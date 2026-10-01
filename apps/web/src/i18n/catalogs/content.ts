@@ -455,7 +455,7 @@ export const EN_CONTENT = {
   'data.hiddenFog':
     'A finished fog game hides nothing, so its file holds every move of both sides, as the game page shows once the game is over. What each player could see at the time is not stored; it follows from the moves and the visibility rules in the open-source game code.',
   'data.hiddenFlip':
-    'Jieqi, Banqi and Flip Jungle files record where each piece moved or was turned over, not which piece it turned out to be. The game page replays every reveal.',
+    'Jieqi, Banqi and Flip Jungle are not in the monthly files yet. Their exports record where each piece moved or was turned over, but not the hidden starting layout or which piece each reveal turned out to be, so a downloaded game could not be replayed. They will be added once the files carry the reveals; until then the game page replays every reveal.',
   'data.hiddenNeverRevealed':
     'In the jieqi engine match download, some pieces were still face down when a game ended and their identity was never decided. origin.never_revealed lists their squares, and no file names a piece for them.',
   'data.filesHeading': 'Files and checksums',
