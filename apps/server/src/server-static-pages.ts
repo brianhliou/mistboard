@@ -33,12 +33,7 @@ import {
 } from './player-pages.js';
 import { isNoindexRoute } from './server-policy.js';
 import { broadcastSitemapEntries, listBroadcastRoundDates } from './sitemap-broadcasts.js';
-import {
-  chapterHasMoveCommentary,
-  chapterIsSubstantial,
-  chapterPageMeta,
-  renderStudyBody,
-} from './study-page-body.js';
+import { chapterPageMeta, renderStudyBody } from './study-page-body.js';
 
 export { ARTICLE_META, canonicalArticleBase };
 
@@ -241,7 +236,7 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
   '/data': {
     title: 'Game Data Downloads | Mistboard',
     description:
-      'Download every finished game played on Mistboard, one file per variant per month, as JSON lines and PGN under CC BY 4.0: xiangqi, jieqi, banqi, Fog Chess and more, plus engine match collections.',
+      'Download every finished game played on Mistboard, one file per variant per month, as JSON lines and PGN under CC BY 4.0: xiangqi, Fog Chess, Jungle and more, plus engine match collections.',
   },
   '/data/about': {
     title: 'About the Game Data | Mistboard',
@@ -461,6 +456,17 @@ export async function routePreloadLinksForPath(params: {
   return null;
 }
 
+// Routes whose query string picks what the page shows but not which page it is:
+// /watch?channel=…&game=… is the one watch page tuned to a channel or game, and
+// each combination crawled as its own URL (SEO backlog D8). They canonicalise to
+// the bare path.
+const QUERY_FREE_CANONICAL_ROUTES: ReadonlySet<string> = new Set(['/watch']);
+
+function queryFreeCanonicalPath(pathname: string): string | null {
+  const normalized = pathname.replace(/\/+$/, '') || '/';
+  return QUERY_FREE_CANONICAL_ROUTES.has(normalized) ? normalized : null;
+}
+
 /** hreflang links for a route that exists at '', '/zh-hans' and '/zh-hant'. */
 function localeAlternateLinks(publicHost: string, basePath: string): string {
   return (['en', 'zh-hans', 'zh-hant'] as const)
@@ -523,12 +529,13 @@ export async function serveSpaShellWithRoutePreloads(params: {
   const spaMeta = SPA_ROUTE_META[params.pathname];
   const routeMeta = positionMeta ?? spaMeta;
   const noindex = isNoindexRoute(params.pathname) || player?.noindex === true;
+  const canonicalPath = queryFreeCanonicalPath(params.pathname);
   // Any one signal alone is worth serving the shell ourselves: a route can have
   // meta but no preload manifest entry, or vice versa, or neither but still need
   // the robots tag. Only bail when we would add nothing over the plain static
   // file. Leaving noindex out of this condition would silently do nothing for
   // exactly the private routes that have no meta and no preloads.
-  if (!links && !routeMeta && !noindex) return false;
+  if (!links && !routeMeta && !noindex && !canonicalPath) return false;
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
   if (routeMeta && params.publicHost) {
@@ -556,6 +563,12 @@ export async function serveSpaShellWithRoutePreloads(params: {
       `<link rel="canonical" href="${escapeHtml(`${params.publicHost}${player.meta.urlPath}`)}"></head>`,
     );
   }
+  if (canonicalPath && params.publicHost && !player?.meta) {
+    html = html.replace(
+      '</head>',
+      `<link rel="canonical" href="${params.publicHost}${canonicalPath}"></head>`,
+    );
+  }
   if (noindex) {
     html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
   }
@@ -577,8 +590,10 @@ export async function serveGamePage(params: {
   response: ServerResponse;
   publicHost: string;
   staticDir: string;
+  /** Override the game lookup (tests); the default reads persistence. */
+  getGame?: (roomId: string) => Promise<persistence.RecentEveGameRecord | null>;
 }): Promise<void> {
-  const game = await persistence.getGameSummary(params.roomId);
+  const game = await (params.getGame ?? persistence.getGameSummary)(params.roomId);
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
 
@@ -591,6 +606,12 @@ export async function serveGamePage(params: {
     const imageUrl = `${params.publicHost}/og/game/${encodeURIComponent(params.roomId)}.png?v=${GAME_OG_IMAGE_VERSION}`;
     html = injectPageMeta(html, { title, description, url, imageUrl });
   }
+  // Every bare /game/:id is a Fog Chess replay, and most of them are the
+  // site's own testing games under one repeated title; they served indexable
+  // (SEO backlog D8, 2026-09-17 Search Console read). The page still serves and
+  // still previews when shared. Tenant games live at /<variant>/game/:id and go
+  // through serveSpaShellWithRoutePreloads, not here, so they are unaffected.
+  html = html.replace('</head>', '<meta name="robots" content="noindex, follow"></head>');
 
   // /game/:id bypasses the isClientRoute shell path, so bake the route's chunk
   // preloads here too (the replay/board graph is the heaviest cold load).
@@ -641,6 +662,8 @@ export async function serveStudyPage(params: {
   response: ServerResponse;
   publicHost: string;
   staticDir: string;
+  /** Override the study lookup (tests); the default reads persistence. */
+  getStudy?: (studyId: string) => Promise<persistence.StudyWithChapters | null>;
 }): Promise<void> {
   const indexPath = resolve(params.staticDir, 'index.html');
   let html = await fs.readFile(indexPath, 'utf-8');
@@ -648,7 +671,9 @@ export async function serveStudyPage(params: {
   const slug = params.localeSlug ?? 'en';
   const localePath = slug === 'en' ? '' : `/${slug}`;
   const locale = STUDY_LOCALE_BY_SLUG[slug];
-  const study = await persistence.getStudyById(params.studyId).catch(() => null);
+  const study = await (params.getStudy ?? persistence.getStudyById)(params.studyId).catch(
+    () => null,
+  );
   if (study && study.visibility === 'public') {
     const chapter = params.chapterId
       ? study.chapters.find((c) => c.id === params.chapterId)
@@ -675,16 +700,28 @@ export async function serveStudyPage(params: {
       // previews as that composition. Locale-independent: it is a board.
       imageUrl: `${params.publicHost}/og/study/${encodeURIComponent(params.studyId)}${pathSuffix}.png?v=${STUDY_OG_IMAGE_VERSION}`,
     });
-    // hreflang alternates so the locale variants read as one page in three
-    // languages rather than three competing near-duplicates.
-    const alternates = (['en', 'zh-hans', 'zh-hant'] as const)
-      .map((other) => {
-        const href = `${params.publicHost}${other === 'en' ? '' : `/${other}`}/study/${encodeURIComponent(params.studyId)}${pathSuffix}`;
-        const hreflang = other === 'en' ? 'en' : other === 'zh-hans' ? 'zh-Hans' : 'zh-Hant';
-        return `<link rel="alternate" hreflang="${hreflang}" href="${href}">`;
-      })
-      .join('');
-    html = html.replace('</head>', `${alternates}</head>`);
+    const studyPath = `/study/${encodeURIComponent(params.studyId)}`;
+    if (chapter) {
+      // A chapter is about forty server-rendered words on the study's shell,
+      // and Google folded them as duplicates without a canonical (SEO backlog
+      // D8: 1,373 of 1,492 sitemap URLs were chapters). Each one names its
+      // study, in the same locale, as the page to index; the chapter still
+      // serves, links and previews as itself. Reversible on purpose: no
+      // noindex, so a chapter that earns on its own can be given back its own
+      // canonical. hreflang stays on the study root only, since alternates of
+      // a page that canonicalises elsewhere would contradict it.
+      html = html.replace(
+        '</head>',
+        `<link rel="canonical" href="${params.publicHost}${localePath}${studyPath}"></head>`,
+      );
+    } else {
+      // hreflang alternates so the locale variants read as one page in three
+      // languages rather than three competing near-duplicates.
+      html = html.replace(
+        '</head>',
+        `${localeAlternateLinks(params.publicHost, studyPath)}</head>`,
+      );
+    }
     // oEmbed discovery. A consumer that speaks oEmbed (WordPress, Ghost,
     // Discourse) finds the provider by reading this link off the page someone
     // pasted; without it the endpoint exists but nothing knows to ask. Only on
@@ -812,61 +849,6 @@ export async function servePrerenderedPage(params: {
   params.response.end(html);
 }
 
-// Studies whose chapters are machine-enumerated: a game number or a position
-// out of a bulk set, not a thing anyone types into a search box. Their study
-// page is still advertised and their chapters still serve, they are just not
-// listed one by one.
-//
-// Measured, not guessed. Over the 90 days to 2026-09-22, Search Console had
-// 160 chapter pages earning impressions; the teaching studies carried them
-// (basic endgames 38 pages/73 impressions, Every Xiangqi Champion 22/38, and
-// the Chinese variants outperformed the English), while these two studies had
-// 344 chapter URLs in the sitemap the whole time and earned zero between them.
-//
-// Add a study here when its chapters are numbered rather than named.
-const STUDIES_WITH_ENUMERATED_CHAPTERS: ReadonlySet<string> = new Set([
-  '0t8xpyv6', // KataGo-AnimalChess vs MistyJungle: 200 engine games
-  'ibFQtGAL', // The most played move is an inaccuracy: 144 opening positions
-]);
-
-/** Whether this study's chapters are worth a sitemap entry each. */
-export function studyChaptersAreListable(studyId: string): boolean {
-  return !STUDIES_WITH_ENUMERATED_CHAPTERS.has(studyId);
-}
-
-// Studies whose chapters Search Console shows earning: 10+ chapter impressions
-// over the 90 days to 2026-09-18 (docs-private/seo/gsc/gsc-pages.tsv, summed
-// per study across the three locales). Every substantial chapter of these is
-// listed, commented or not; basic endgames carried 73 impressions and 3 of the
-// 4 chapter clicks with barely a comment on a move, which a commentary gate
-// alone would have thrown out. Re-read the TSV and redo this list at each GSC
-// pull; a study earns its way on, it is not reasoned on.
-const STUDIES_WHOSE_CHAPTERS_EARN: ReadonlySet<string> = new Set([
-  'tOceiaI7', // Xiangqi basic endgames: 38 pages, 73 impressions, 3 clicks
-  'ytSzepET', // Every Xiangqi Champion: 22 pages, 38 impressions
-  '3LGIVr59', // The Riverbank Cannon: 27 pages, 28 impressions
-  'wd6c7qvG', // Jieqi: eighteen engine games: 15 pages, 21 impressions
-  'NUVBVjFf', // Fortress Xiangqi: twenty engine games: 15 pages, 20 impressions
-  'EarRoCib', // 11 pages, 20 impressions
-  '1pfJeXA1', // Every Xiangqi World Champion: 10 pages, 14 impressions
-]);
-
-// Which chapters get a sitemap entry each. Everywhere else a chapter must carry
-// commentary on its moves: the classical manuals were listed wholesale on the
-// argument that a composition is looked up by its name, and a sample of the
-// live pages (2026-09-25) found 74 of 80 listed chapters carrying only a title,
-// a move count and a source line, three times over for the locales. The
-// unlisted chapters still serve and stay linked from their study page; this
-// decides what the site advertises, not what exists.
-export function chapterIsListable(
-  studyId: string,
-  chapter: persistence.StudyChapterRecord,
-): boolean {
-  if (!studyChaptersAreListable(studyId)) return false;
-  if (STUDIES_WHOSE_CHAPTERS_EARN.has(studyId)) return chapterIsSubstantial(chapter);
-  return chapterHasMoveCommentary(chapter);
-}
-
 // Static, always-on public routes advertised in the sitemap. Every entry
 // (except '/', served as the static index itself) must be accepted by the SPA
 // fallback allowlist (server-policy.ts isClientRoute) and must not be a
@@ -928,7 +910,14 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
 // Players and broadcasts (#458) are their own sections for the same reason:
 // they are dynamic pages dated from their latest game, and the index should
 // report on them apart from the hand-listed routes.
-export const SITEMAP_SECTIONS = ['pages', 'studies', 'chapters', 'players', 'broadcasts'] as const;
+//
+// Study chapters had a section of their own until SEO backlog D8 (2026-10-01):
+// 1,373 of the sitemap's 1,492 URLs, each about forty words on the study's
+// shell, mostly folded as duplicates. A chapter now canonicalises to its study
+// (serveStudyPage) and only the study roots are listed. The per-study chapter
+// selection that section used is in git history if a chapter set earns its way
+// back.
+export const SITEMAP_SECTIONS = ['pages', 'studies', 'players', 'broadcasts'] as const;
 export type SitemapSection = (typeof SITEMAP_SECTIONS)[number];
 
 type SitemapEntry = { path: string; lastmod?: string };
@@ -997,27 +986,6 @@ async function studySitemapEntries(): Promise<SitemapEntry[]> {
   return entries;
 }
 
-// Chapter permalinks, filtered by chapterIsListable: chapters of studies that
-// earn in Search Console, and elsewhere only chapters with commentary on their
-// moves. The set grows as annotation lands instead of advertising it early.
-async function chapterSitemapEntries(): Promise<SitemapEntry[]> {
-  const entries: SitemapEntry[] = [];
-  for (const summary of await listEveryPublicStudy()) {
-    if (!studyChaptersAreListable(summary.id)) continue;
-    const full = await persistence.getStudyById(summary.id).catch(() => null);
-    if (!full) continue;
-    const base = `/study/${encodeURIComponent(summary.id)}`;
-    for (const chapter of [...full.chapters].sort((a, b) => a.ordinal - b.ordinal)) {
-      if (!chapterIsListable(summary.id, chapter)) continue;
-      const lastmod = isoDate(chapter.updatedAt);
-      for (const path of everyLocale(`${base}/${encodeURIComponent(chapter.id)}`)) {
-        entries.push({ path, lastmod });
-      }
-    }
-  }
-  return entries;
-}
-
 // One section of the sitemap. 'pages' is the static content routes plus every
 // pre-rendered article (discovered from dist/blog/*.html, so the published set
 // stays the single source of truth in articles-data -> prerender output).
@@ -1036,7 +1004,6 @@ export async function serveSitemap(params: {
   } else {
     const loaders: Record<Exclude<SitemapSection, 'pages'>, () => Promise<SitemapEntry[]>> = {
       studies: studySitemapEntries,
-      chapters: chapterSitemapEntries,
       players: playerSectionEntries,
       broadcasts: broadcastSectionEntries,
     };

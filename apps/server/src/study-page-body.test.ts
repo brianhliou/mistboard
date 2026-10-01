@@ -4,12 +4,7 @@ import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
 import type { StudyChapterRecord, StudyWithChapters } from './persistence-studies.js';
-import {
-  chapterHasMoveCommentary,
-  chapterIsSubstantial,
-  chapterPageMeta,
-  renderStudyBody,
-} from './study-page-body.js';
+import { chapterPageMeta, renderStudyBody } from './study-page-body.js';
 
 const NOW = new Date('2026-08-08T00:00:00Z');
 
@@ -215,40 +210,6 @@ test('a chapter with no comment falls back to study name and length', () => {
   const ch = chapter({ name: 'Untitled', root: mainline(9) });
   const meta = chapterPageMeta({ study: study({ chapters: [ch] }), chapter: ch, locale: 'en' });
   assert.equal(meta.description, 'A study. 9 moves.');
-});
-
-// The sitemap gate. A one-ply chapter with no commentary is the shape the
-// defective endgame volumes shipped in; advertising those as indexable pages
-// would be claiming work that has not been done.
-test('chapter substance gates on plies or commentary, not on existing', () => {
-  assert.equal(chapterIsSubstantial(chapter({ root: mainline(20) })), true);
-  assert.equal(chapterIsSubstantial(chapter({ root: mainline(4) })), true);
-  assert.equal(chapterIsSubstantial(chapter({ root: mainline(1) })), false);
-  assert.equal(chapterIsSubstantial(chapter({ root: mainline(0) })), false);
-  // A short entry that carries real commentary is still worth a URL.
-  assert.equal(
-    chapterIsSubstantial(chapter({ root: mainline(1, [{ text: 'A genuine one-move entry.' }]) })),
-    true,
-  );
-});
-
-// An imported chapter's root comment is its title and source line; only a
-// comment on a move is commentary a reader came for.
-test('move commentary means a comment on a move, not on the root', () => {
-  assert.equal(chapterHasMoveCommentary(chapter({ root: mainline(20) })), false);
-  assert.equal(
-    chapterHasMoveCommentary(chapter({ root: mainline(6, [{ text: 'The key sacrifice.' }]) })),
-    true,
-  );
-  const rootOnly = {
-    version: 1,
-    root: {
-      annotations: { comments: [{ text: 'Problem 198. Transcribed from dpxq.' }] },
-      children: mainline(6).root.children,
-    },
-  };
-  assert.equal(chapterHasMoveCommentary(chapter({ root: rootOnly })), false);
-  assert.equal(chapterHasMoveCommentary(chapter({ root: mainline(3, [{ text: '  ' }]) })), false);
 });
 
 // serveStudyPage injects the body by string-replacing this exact anchor in the

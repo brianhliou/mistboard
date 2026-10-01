@@ -27,7 +27,7 @@ import { launchChromium } from './lib/launch-browser.mjs';
 
 const GOOGLEBOT_UA =
   'Mozilla/5.0 (Linux; Android 6.0.1; Nexus 5X Build/MMB29P) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/141.0.0.0 Mobile Safari/537.36 (compatible; Googlebot/2.1; +http://www.google.com/bot.html)';
-const SITEMAPS = ['pages', 'studies', 'chapters', 'players', 'broadcasts'];
+const SITEMAPS = ['pages', 'studies', 'players', 'broadcasts'];
 // Titles the client sets as a stand-in while a route loads. Indexed, they
 // replace a page's real title in results.
 const PLACEHOLDER_TITLES = new Set(['Articles', 'News', 'Mistboard', 'Page failed to load']);
