@@ -234,7 +234,18 @@ async function applyPlan(
   if (order.some((id) => !id)) throw new Error(`study ${recipe.id}: order references a missing id`);
   // Chapters this recipe does not own keep their place after the curated ones.
   const finalOrder = [...(order as string[]), ...plan.foreign];
-  if (finalOrder.length > 1) await studies.reorderChapters(studyId, ownerId, finalOrder);
+  // A reorder rewrites every ordinal and re-dates the study, so a run that
+  // changes nothing must skip it, or the hourly tick keeps lifting the study
+  // to the top of every list sorted by last edit.
+  const current = study?.chapters.map((chapter) => chapter.id) ?? [];
+  const sameOrder =
+    addedIds.length === 0 &&
+    plan.remove.length === 0 &&
+    current.length === finalOrder.length &&
+    current.every((id, index) => id === finalOrder[index]);
+  if (finalOrder.length > 1 && !sameOrder) {
+    await studies.reorderChapters(studyId, ownerId, finalOrder);
+  }
   return { studyId };
 }
 

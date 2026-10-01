@@ -4,6 +4,7 @@
     {
       "id": "model-games-central-cannon-vs-screen-horses-2026",
       "version": 1,
+      "enabled": false,
       "study": {
         "name": "Central Cannon vs Screen Horses: model games, 2026",
         "description": "Decisive games from the 2026 professional events in xiangqi's mainline: Red's central cannon against Black's screen horses. Chosen by the curator for a clean win and a loss that turns on one or two moves. Engine notes are Pikafish; every judged move carries its numbers and the engine's line.",
@@ -45,6 +46,7 @@
     {
       "id": "decisive-moments-2026",
       "version": 1,
+      "enabled": false,
       "study": {
         "name": "Where it turned: decisive moments, 2026",
         "description": "One position per game from the 2026 professional events: the move that decided it, with the board set before it was played. Guess the better move; the engine's line grades you and the game's own move sits beside it.",

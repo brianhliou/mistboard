@@ -47,6 +47,8 @@ type StudySummary = {
   // Preview slice of the first few chapter names (older servers may omit it).
   chapterNames?: string[];
   updatedAt: string;
+  // Public listings sort by this, so their cards show it (older servers omit it).
+  createdAt?: string;
   featuredAt?: string | null;
   // Present on public listings only (the /api/studies/public shape).
   owner?: StudyOwner;
@@ -548,7 +550,9 @@ function cardHead(study: StudySummary): HTMLElement {
 // per card head was the whole grid's height. It rides on the preview board
 // (chapter 1's), so a study with no chapter yet has none to show.
 function metaLine(study: StudySummary): string {
-  const when = timeAgo(study.updatedAt);
+  // A public card (it has an owner) shows when the study was created, the
+  // order the list is in; your own list sorts by and shows the last edit.
+  const when = timeAgo(study.owner ? (study.createdAt ?? study.updatedAt) : study.updatedAt);
   const variant = study.previewBoard?.variant;
   const lead = variant ? `${variantDisplayLabel(variant)} · ` : '';
   if (study.owner) {

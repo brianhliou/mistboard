@@ -172,7 +172,7 @@ definePersistenceTests('studies', () => {
     assert.deepEqual(second!.chapterNames, ['Chapter 1']);
   });
 
-  test('lists public studies newest-updated first and keeps like writes idempotent', async () => {
+  test('lists public studies newest-created first and keeps like writes idempotent', async () => {
     const firstOwner = await makeUser('popular-first');
     const secondOwner = await makeUser('popular-second');
     const fanOne = await makeUser('fan-one');
@@ -191,8 +191,10 @@ definePersistenceTests('studies', () => {
     await setStudyLike(first.id, fanTwo.id, true);
     await setStudyLike(second.id, fanOne.id, true);
 
-    // Recency, not likes, orders the list: `second` was published after
-    // `first`, so it leads despite having fewer likes.
+    // Recency, not likes, orders the list: `second` was created after
+    // `first`, so it leads despite having fewer likes, and an edit to `first`
+    // afterwards does not move it back to the top.
+    await updateStudyMeta(first.id, firstOwner.id, { description: 'edited later' });
     const ranked = await listTopPublicStudies(5);
     assert.deepEqual(
       ranked.map((study) => [study.name, study.likeCount]),

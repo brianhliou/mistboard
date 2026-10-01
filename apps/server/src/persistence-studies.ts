@@ -585,7 +585,10 @@ export async function listTopPublicStudies(
       WHERE s.visibility = 'public'
         AND u.profile_visibility IN ('public', 'unlisted')${filter.clause}
       GROUP BY s.id, u.handle, u.display_name
-      ORDER BY s.updated_at DESC, s.id
+      -- Newest first by creation, not by last edit: an edit to an old study
+      -- (a fixed comment, a new translation) must not put it back at the top
+      -- of "Latest studies".
+      ORDER BY s.created_at DESC, s.id
       LIMIT $1 OFFSET ${offsetParam}`,
     params,
   );
