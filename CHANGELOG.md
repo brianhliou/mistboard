@@ -28,8 +28,13 @@ Conventions:
 
 - Every finished game is now downloadable from the new [game data](/data) page: one file per variant per month, free to use under CC BY 4.0 ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
 
+### Removed
+
+- Jieqi, Banqi and Flip Jungle are off the game data page until their files can show which piece each reveal turned out to be ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))
+
 ### Fixed
 
+- The first download of a game data file no longer pauses live games while it is built ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))
 - Latest studies on the homepage and /study lists the newest studies first; an automatic hourly update no longer lifts two older studies back to the top ([5dcc4b03](https://github.com/brianhliou/mistboard/commit/5dcc4b03))
 - A Fog Chess game's download no longer shows the real name of a player whose seat is set to private ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
 
