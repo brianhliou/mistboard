@@ -88,6 +88,7 @@ Conventions:
 
 ### Watching and review
 
+- The [game database](/games/search) now searches every variant, not just xiangqi: pick one from the list on the left, and engine matches such as AB-JChess vs PikaJieQi have their own source; switching variants no longer makes the page jump ([137ccfca](https://github.com/brianhliou/mistboard/commit/137ccfca))
 - All 400 games of the jieqi engine match between AB-JChess and PikaJieQi (4 seconds a move; AB-JChess won 248-136-16) replay on the site, with each game crediting AB-JChess by Huorongrong and Laoxu (Kouza); pieces the match never turned over show as unknown ([example](/jieqi/game/jq_ab-jchess-vs-pikajieqi-4s-2026-09-366), [7577b94e](https://github.com/brianhliou/mistboard/commit/7577b94e))
 - An embedded fog game, from a study or straight from the site, has a White, Truth and Black switch above the board: pick a side and the board shows only what that side could see at that move ([b5aee4dd](https://github.com/brianhliou/mistboard/commit/b5aee4dd))
 - Pieces glide when you step through a game on the blog and in embedded studies, lines and broadcasts, for xiangqi, chess and every variant board except Duck and the fog variants; the Fortress and Atomic game replays glide too ([0fb113f0](https://github.com/brianhliou/mistboard/commit/0fb113f0))
