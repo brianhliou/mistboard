@@ -2,7 +2,7 @@ import assert from 'node:assert/strict';
 import { readdirSync, readFileSync } from 'node:fs';
 import { join, resolve } from 'node:path';
 import test from 'node:test';
-import { isIsolatedEngineAssetPath, isPageNavigationRequest } from './server-http.js';
+import { isIsolatedEngineAssetPath, isPageNavigationRequest, robotsTxt } from './server-http.js';
 
 const HTML_ACCEPT = 'text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8';
 
@@ -81,4 +81,20 @@ test('isolated engine assets: the /engine/:id admin document stays non-isolated'
   assert.equal(isIsolatedEngineAssetPath('/engine/pikafish-xiangqi-level-5'), false);
   assert.equal(isIsolatedEngineAssetPath('/engines'), false);
   assert.equal(isIsolatedEngineAssetPath('/engine/'), false);
+});
+
+// The /data downloads are built in the live web process on first request; a
+// crawler walking /data's links would trigger every build. The rest of /api
+// stays open because client-rendered pages load their content from it.
+test('robots.txt keeps crawlers off the data downloads and nothing else under /api', () => {
+  const lines = robotsTxt('https://mistboard.com').split('\n');
+  assert.ok(lines.includes('Disallow: /api/data/'));
+  assert.ok(
+    !lines.includes('Disallow: /api/'),
+    '/api/data (the listing) and page data stay crawlable',
+  );
+  for (const kept of ['Disallow: /database', 'Disallow: /engines', 'Disallow: /accounts']) {
+    assert.ok(lines.includes(kept), kept);
+  }
+  assert.ok(lines.includes('Sitemap: https://mistboard.com/sitemap.xml'));
 });

@@ -6,9 +6,9 @@ import { join } from 'node:path';
 import test from 'node:test';
 import { resetArticleScheduleCache } from './article-schedule.js';
 import { POSITION_OG_IMAGE_VERSION, POSITION_OG_VARIANTS } from './og-position.js';
+import type { RecentEveGameRecord, StudyWithChapters } from './persistence.js';
 import { isClientRoute } from './server-policy.js';
 import {
-  chapterIsListable,
   injectPageMeta,
   positionRouteMeta,
   routePreloadLinksForPath,
@@ -16,6 +16,7 @@ import {
   SITEMAP_STATIC_ROUTES,
   serveArticlePage,
   serveArticlesIndexPage,
+  serveGamePage,
   serveNotFoundShell,
   servePrerenderedPage,
   serveRulesIndexPage,
@@ -24,7 +25,6 @@ import {
   serveSpaShellWithRoutePreloads,
   serveStudyPage,
   sitemapSectionFromPath,
-  studyChaptersAreListable,
 } from './server-static-pages.js';
 
 type ResponseCapture = {
@@ -894,6 +894,8 @@ test('a finished tenant game page gets its pairing as title, the review URL as o
       /<meta property="og:image" content="https:\/\/mistboard\.com\/og\/game\/jq_x\.png\?v=1">/,
     );
     assert.match(response.body, /<div id="app"><\/div>/);
+    // Only the bare /game/:id (Fog Chess) replay is noindexed (SEO D8).
+    assert.doesNotMatch(response.body, /noindex/, pathname);
   }
 
   // A live room (no finished game) keeps the generic shell meta: the room's
@@ -1051,51 +1053,166 @@ test('serveStudyPage without persistence serves the plain shell (no meta leak, n
   assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
 });
 
-// Chapter permalinks are advertised per study, not per site: a study whose
-// chapters are numbered rather than named contributes its own URL and stops
-// there. Measured in Search Console before it was written down; the comment on
-// STUDIES_WITH_ENUMERATED_CHAPTERS carries the numbers.
-test('a study with enumerated chapters contributes no chapter URLs', () => {
-  // The engine match and the bulk position set: 344 chapter URLs, zero
-  // impressions in 90 days.
-  assert.equal(studyChaptersAreListable('0t8xpyv6'), false);
-  assert.equal(studyChaptersAreListable('ibFQtGAL'), false);
-  // Everything else can still list chapters; chapterIsListable decides which.
-  assert.equal(studyChaptersAreListable('vQveCryp'), true);
-  assert.equal(studyChaptersAreListable('tOceiaI7'), true);
+// SEO backlog D8 (2026-09-17 Search Console read): 1,373 of 1,492 sitemap URLs
+// were study chapters, each about forty words on the study's shell, folded as
+// duplicates. Chapters leave the sitemap and canonicalise to their study root;
+// study roots stay listed. Not noindex: Brian chose the reversible version.
+test('study chapters are out of the sitemap; study roots stay', () => {
+  assert.deepEqual([...SITEMAP_SECTIONS], ['pages', 'studies', 'players', 'broadcasts']);
+  const index = captureResponse();
+  serveSitemapIndex({ response: index, publicHost: 'https://mistboard.test' });
+  assert.doesNotMatch(index.body, /sitemap-chapters/);
+  assert.ok(index.body.includes('https://mistboard.test/sitemap-studies.xml'));
+  assert.equal(sitemapSectionFromPath('/sitemap-chapters.xml'), null);
 });
 
-// A study that earns in Search Console lists every substantial chapter; any
-// other lists only chapters with commentary on a move. The manual chapter here
-// is the live shape: 21 moves and a root comment naming the problem and its
-// source, nothing on a move.
-test('chapters are listed by what their study earns, or by commentary on a move', () => {
-  const tree = (plies: number, moveComment?: string) => {
-    let node: Record<string, unknown> = { children: [] };
-    for (let i = plies; i >= 1; i -= 1) {
-      const next: Record<string, unknown> = { uci: `a${i}a${i}`, children: [node] };
-      if (i === 1 && moveComment) next.annotations = { comments: [{ text: moveComment }] };
-      node = next;
-    }
-    return {
-      version: 1,
-      root: { annotations: { comments: [{ text: 'Problem 198. From dpxq.' }] }, children: [node] },
-    };
+function studyFixture() {
+  const at = new Date('2026-09-01T00:00:00Z');
+  const chapter = {
+    id: 'cAA',
+    studyId: 'S1',
+    ordinal: 0,
+    name: 'Seven Stars',
+    i18n: {},
+    variant: 'xiangqi',
+    orientation: 'red',
+    root: { version: 1, root: { children: [] } },
+    tags: {},
+    denorm: {},
+    version: 0,
+    gamebook: false,
+    practice: false,
+    practiceGoal: null,
+    createdAt: at,
+    updatedAt: at,
   };
-  const chapterOf = (root: unknown) =>
-    ({ id: 'c', ordinal: 0, root, updatedAt: new Date() }) as unknown as Parameters<
-      typeof chapterIsListable
-    >[1];
+  return {
+    id: 'S1',
+    ownerId: 'u1',
+    slug: null,
+    name: 'Compositions',
+    description: 'Classical compositions.',
+    i18n: {},
+    visibility: 'public',
+    featuredAt: null,
+    createdAt: at,
+    updatedAt: at,
+    chapters: [chapter],
+  } as unknown as StudyWithChapters;
+}
 
-  const bare = chapterOf(tree(21));
-  const annotated = chapterOf(tree(21, 'The chariot sacrifice decides it.'));
-  // Basic endgames earns: its bare chapters stay listed.
-  assert.equal(chapterIsListable('tOceiaI7', bare), true);
-  // Deep Abyss, Wide Sea does not: only an annotated chapter is listed.
-  assert.equal(chapterIsListable('vQveCryp', bare), false);
-  assert.equal(chapterIsListable('vQveCryp', annotated), true);
-  // An enumerated study lists nothing, annotated or not.
-  assert.equal(chapterIsListable('ibFQtGAL', annotated), false);
+test('a chapter page canonicalises to its study root in the same locale, and is not noindexed', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const getStudy = async () => studyFixture();
+
+  for (const [localeSlug, prefix] of [
+    ['en', ''],
+    ['zh-hans', '/zh-hans'],
+    ['zh-hant', '/zh-hant'],
+  ] as const) {
+    const response = captureResponse();
+    await serveStudyPage({
+      studyId: 'S1',
+      chapterId: 'cAA',
+      localeSlug,
+      response,
+      staticDir,
+      publicHost: 'https://mistboard.com',
+      getStudy,
+    });
+    assert.ok(
+      response.body.includes(
+        `<link rel="canonical" href="https://mistboard.com${prefix}/study/S1">`,
+      ),
+      localeSlug,
+    );
+    assert.equal(response.body.match(/rel="canonical"/g)?.length, 1, localeSlug);
+    assert.doesNotMatch(response.body, /noindex/, localeSlug);
+    // hreflang lives on the study root only; the chapter still shares as itself.
+    assert.doesNotMatch(response.body, /hreflang/, localeSlug);
+    assert.ok(
+      response.body.includes(
+        `<meta property="og:url" content="https://mistboard.com${prefix}/study/S1/cAA">`,
+      ),
+      localeSlug,
+    );
+  }
+
+  // The study root: hreflang across the three locales, no canonical added.
+  const root = captureResponse();
+  await serveStudyPage({
+    studyId: 'S1',
+    response: root,
+    staticDir,
+    publicHost: 'https://mistboard.com',
+    getStudy,
+  });
+  assert.doesNotMatch(root.body, /rel="canonical"/);
+  assert.match(
+    root.body,
+    /<link rel="alternate" hreflang="zh-Hans" href="https:\/\/mistboard\.com\/zh-hans\/study\/S1">/,
+  );
+});
+
+// /game/:id is the Fog Chess replay route only (tenant games live under
+// /<variant>/game/:id, pinned in the tenant test above). Most of these are the
+// site's own testing games, and they served indexable.
+test('a bare /game/:id replay is noindex, with or without a stored game', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const game = {
+    participants: [],
+    whiteName: 'Alice',
+    blackName: 'Bob',
+  } as unknown as RecentEveGameRecord;
+  for (const stored of [game, null]) {
+    const response = captureResponse();
+    await serveGamePage({
+      roomId: '0b6f2c1e-1111-4222-8333-444455556666',
+      response,
+      staticDir,
+      publicHost: 'https://mistboard.com',
+      getGame: async () => stored,
+    });
+    assert.equal(response.status, 200);
+    assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+  }
+});
+
+// /watch?channel=…&game=… is one page tuned to a channel or game; every
+// combination crawled as its own URL (SEO D8).
+test('/watch canonicalises to the bare path whatever its query', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  for (const [pathname, search] of [
+    ['/watch', '?channel=xiangqi&game=xq_abc'],
+    ['/watch/', '?game=xq_abc'],
+    ['/watch', ''],
+  ] as const) {
+    const response = captureResponse();
+    const served = await serveSpaShellWithRoutePreloads({
+      response,
+      staticDir,
+      pathname,
+      search,
+      publicHost: 'https://mistboard.com',
+    });
+    assert.equal(served, true, `${pathname}${search}`);
+    assert.ok(
+      response.body.includes('<link rel="canonical" href="https://mistboard.com/watch">'),
+      `${pathname}${search}`,
+    );
+  }
+  // Other routes get no canonical from this rule.
+  const other = captureResponse();
+  await serveSpaShellWithRoutePreloads({
+    response: other,
+    staticDir,
+    pathname: '/faq',
+    publicHost: 'https://mistboard.com',
+  });
+  assert.doesNotMatch(other.body, /rel="canonical"/);
 });
 
 test('the /games database carries its own route meta and sitemap entry', async () => {

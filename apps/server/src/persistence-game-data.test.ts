@@ -7,6 +7,7 @@ import './variant-tenant/register-tenants.js';
 import { banqiTenant } from './banqi-tenant.js';
 import { ensureDataFile } from './game-data-files.js';
 import { resolveGameExport } from './game-export-tenant.js';
+import { jungleTenant } from './jungle-tenant.js';
 import {
   appendRoomEvent,
   getGameSummaries,
@@ -39,8 +40,13 @@ import { createTenantRuntimeRoomFromEvents } from './variant-tenant/runtime.js';
 import { xiangqiTenant } from './xiangqi-tenant.js';
 
 const FIXTURES = resolve(dirname(fileURLToPath(import.meta.url)), '../fixtures/variant-postgame');
-// biome-ignore lint/suspicious/noExplicitAny: test harness over two tenants with opaque types.
-const TENANTS: Record<'xiangqi' | 'banqi', any> = { xiangqi: xiangqiTenant, banqi: banqiTenant };
+type SeedVariant = 'xiangqi' | 'banqi' | 'jungle';
+// biome-ignore lint/suspicious/noExplicitAny: test harness over three tenants with opaque types.
+const TENANTS: Record<SeedVariant, any> = {
+  xiangqi: xiangqiTenant,
+  banqi: banqiTenant,
+  jungle: jungleTenant,
+};
 
 type SeedOptions = {
   mode?: 'pvp' | 'pve' | 'imported';
@@ -49,11 +55,11 @@ type SeedOptions = {
   userId?: string;
   corpusId?: string | null;
   origin?: Record<string, unknown>;
-  variant?: 'xiangqi' | 'banqi';
+  variant?: SeedVariant;
 };
 
 // A finished game from the committed fixture, under a new room id (the xq_ /
-// bq_ prefix is what routes its export to the tenant).
+// bq_ / jgl_ prefix is what routes its export to the tenant).
 async function seedXiangqiGame(roomId: string, options: SeedOptions): Promise<void> {
   const variant = options.variant ?? 'xiangqi';
   const tenant = TENANTS[variant];
@@ -132,7 +138,9 @@ async function seedMonth(): Promise<void> {
   }
   await seedXiangqiGame('xq_data_a', { endedAt: '2026-08-10T12:00:00Z' });
   await seedXiangqiGame('xq_data_b', { endedAt: '2026-08-20T12:00:00Z', mode: 'pve' });
-  await seedXiangqiGame('bq_data_c', { endedAt: '2026-08-15T12:00:00Z', variant: 'banqi' });
+  await seedXiangqiGame('jgl_data_c', { endedAt: '2026-08-15T12:00:00Z', variant: 'jungle' });
+  // Banqi is withheld from /data until its export can be replayed (#484).
+  await seedXiangqiGame('bq_data_d', { endedAt: '2026-08-16T12:00:00Z', variant: 'banqi' });
   // Each of these is left out of the August file for its own reason.
   await seedXiangqiGame('xq_data_operator', {
     endedAt: '2026-08-11T12:00:00Z',
@@ -204,8 +212,9 @@ definePersistenceTests('game data files', () => {
     await seedMonth();
     clearDataListingCache();
     const listing = await loadDataListing(new Date('2026-09-15T00:00:00Z'));
-    // Only the two counted August games: the operator's game, the private one,
-    // the imported one and the aborted one are out, and September is open.
+    // Only the counted August games: the operator's game, the private one, the
+    // imported one and the aborted one are out, banqi is withheld (#484), and
+    // September is open.
     assert.deepEqual(
       listing.months.map((month) => [month.month, month.variants.map((v) => [v.variant, v.games])]),
       [
@@ -213,7 +222,7 @@ definePersistenceTests('game data files', () => {
           '2026-08',
           [
             ['xiangqi', 2],
-            ['banqi', 1],
+            ['jungle', 1],
           ],
         ],
       ],
@@ -223,6 +232,7 @@ definePersistenceTests('game data files', () => {
       listing.months[0]?.files.map((file) => [file.path, file.games]),
       [['/api/data/monthly/2026-08/all.jsonl.gz', 3]],
     );
+    assert.deepEqual(listing.variants, ['xiangqi', 'jungle']);
     assert.deepEqual(
       listing.collections.map((collection) => [collection.id, collection.event, collection.games]),
       [['test-match-2026-08', 'Test Engine vs Other Engine · 2026-08', 1]],
@@ -305,21 +315,22 @@ definePersistenceTests('game data files', () => {
       .split('\n')
       .map((line) => JSON.parse(line) as { game_id: string; variant: string });
     // Oldest first across variants; the operator, private, imported and
-    // aborted games stay out, and the open month's game is not here.
+    // aborted games stay out, the withheld banqi game (#484) is not here, and
+    // neither is the open month's game.
     assert.deepEqual(
       games.map((game) => [game.game_id, game.variant]),
       [
         ['xq_data_a', 'xiangqi'],
-        ['bq_data_c', 'banqi'],
+        ['jgl_data_c', 'jungle'],
         ['xq_data_b', 'xiangqi'],
       ],
     );
     // Each line is still that game's single export.
     const single = resolveGameExport({
-      roomId: 'bq_data_c',
+      roomId: 'jgl_data_c',
       format: 'json',
-      summary: await getGameSummary('bq_data_c'),
-      events: await loadRoom('bq_data_c'),
+      summary: await getGameSummary('jgl_data_c'),
+      events: await loadRoom('jgl_data_c'),
     });
     assert.equal(single.status === 200 && single.body, JSON.stringify(games[1]));
     assert.deepEqual(
@@ -344,7 +355,15 @@ definePersistenceTests('game data files', () => {
     assert.equal((await request('/api/data/collections/no-such-match.jsonl.gz')).status, 404);
     assert.equal((await request('/api/data/monthly/2026-13/xiangqi.jsonl.gz')).status, 400);
     assert.equal((await request('/api/data/monthly/2026-08/mahjong.jsonl.gz')).status, 404);
-    assert.equal((await request('/api/data/monthly/2026-08/jieqi.jsonl.gz')).status, 404);
+    // Hidden-piece variants are withheld until #484, with the reason named,
+    // even for a month that has their games.
+    for (const variant of ['jieqi', 'banqi', 'jungle-flip']) {
+      const withheld = await request(`/api/data/monthly/2026-08/${variant}.jsonl.gz`);
+      assert.equal(withheld.status, 404, variant);
+      assert.deepEqual(JSON.parse(withheld.body.toString('utf8')), {
+        error: 'hidden_piece_format_pending',
+      });
+    }
     // The current month (real clock) is never offered.
     const now = new Date();
     const current = `${now.getUTCFullYear()}-${String(now.getUTCMonth() + 1).padStart(2, '0')}`;

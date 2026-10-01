@@ -8,7 +8,7 @@ import {
   type ImportedEngineMatchGame,
   parseEnrichedMatchJsonl,
 } from './engine-match-import.js';
-import { guardPoolConnectionErrors, writeImportedEngineMatchGame } from './import-engine-match.js';
+import { writeImportedEngineMatchGame } from './import-engine-match.js';
 import {
   getGameSummary,
   getPublicSiteStats,
@@ -16,7 +16,7 @@ import {
   listRecentPublicGames,
   listWatchUnlockedGames,
 } from './persistence.js';
-import { getPool, withTransaction } from './persistence-db.js';
+import { getPool, guardPoolConnectionErrors, withTransaction } from './persistence-db.js';
 import {
   assert,
   definePersistenceTests,

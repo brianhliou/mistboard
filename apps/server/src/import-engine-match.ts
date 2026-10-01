@@ -30,7 +30,7 @@ import {
 } from './engine-match-import.js';
 import { runMigrations } from './migrate.js';
 import { close, init } from './persistence.js';
-import { getPool, withTransaction } from './persistence-db.js';
+import { withTransaction } from './persistence-db.js';
 
 export type EngineMatchWriteOutcome = 'imported' | 'unchanged' | 'replaced' | 'conflict';
 
@@ -151,34 +151,6 @@ export async function writeImportedEngineMatchGame(
   return { outcome: row ? 'replaced' : 'imported' };
 }
 
-/**
- * Keep a dropped connection from killing the run. pg-pool re-emits an idle
- * client's socket error on the Pool (with the whole Client attached as
- * `err.client`), and a Pool with no 'error' listener turns that into an
- * uncaught exception: the process dies mid-run or right after the last write,
- * before the summary. A checked-out client has no listener of its own either,
- * so it gets one as it connects; its failed query still rejects, and that game
- * is counted as failed. Returns the detach function.
- */
-export function guardPoolConnectionErrors(
-  pool: pg.Pool,
-  warn: (message: string) => void = (message) => console.warn(message),
-): () => void {
-  const onPoolError = (err: Error) => {
-    warn(`  pool: idle connection closed (${err.message}); later games reconnect`);
-  };
-  const onClientError = (err: Error) => {
-    warn(`  pool: connection error during a write (${err.message})`);
-  };
-  const onConnect = (client: pg.PoolClient) => client.on('error', onClientError);
-  pool.on('error', onPoolError);
-  pool.on('connect', onConnect);
-  return () => {
-    pool.off('error', onPoolError);
-    pool.off('connect', onConnect);
-  };
-}
-
 export type EngineMatchTally = Record<EngineMatchWriteOutcome | 'failed', number>;
 
 /** 0 only when every selected game was written or already there. */
@@ -275,8 +247,8 @@ async function main(): Promise<void> {
       await migrationClient.end();
     }
   }
+  // init() guards the pool: a connection dropped while idle is logged, not fatal.
   init(databaseUrl);
-  guardPoolConnectionErrors(getPool());
   const tally: EngineMatchTally = {
     imported: 0,
     unchanged: 0,

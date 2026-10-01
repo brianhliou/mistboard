@@ -59,16 +59,14 @@ if (!keyRes.ok || keyBody !== INDEXNOW_KEY) {
 const locs = (xml) => [...xml.matchAll(/<loc>([^<]+)<\/loc>/g)].map((m) => m[1].trim());
 const fetchText = (url) => fetch(url).then((r) => r.text());
 
-// /sitemap.xml is an index of sections (pages, studies, chapters); a plain
+// /sitemap.xml is an index of sections (pages, studies, players, broadcasts); a plain
 // urlset is still read as one, so the script works against a server either
 // side of that change. The release set needs only the pages section, so it
 // skips the study sections rather than making the server enumerate them.
 const root = await fetchText(`${base}/sitemap.xml`);
 let urls;
 if (root.includes('<sitemapindex')) {
-  const sections = locs(root).filter(
-    (u) => !a.prerendered || !/sitemap-(studies|chapters)/.test(u),
-  );
+  const sections = locs(root).filter((u) => !a.prerendered || !/sitemap-studies/.test(u));
   urls = (await Promise.all(sections.map(fetchText))).flatMap(locs);
 } else {
   urls = locs(root);

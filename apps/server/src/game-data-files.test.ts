@@ -1,8 +1,13 @@
 import assert from 'node:assert/strict';
+import { createHash } from 'node:crypto';
 import test from 'node:test';
+import { gunzipSync } from 'node:zlib';
 import {
+  BUILD_SLICE_MS,
+  buildDataFileContent,
   buildDataListing,
   DATA_VARIANTS,
+  DATA_WITHHELD_VARIANTS,
   dataFileKey,
   dataFormatsForVariant,
   EmptyDataFileError,
@@ -46,6 +51,14 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
     assert.equal(parsed?.ok, false, path);
     assert.equal(parsed && !parsed.ok && parsed.status, 404, path);
   }
+  // Hidden-piece variants are withheld until #484, and the 404 says why.
+  for (const variant of ['jieqi', 'banqi', 'jungle-flip']) {
+    assert.deepEqual(parseDataFilePath(`/api/data/monthly/2026-09/${variant}.jsonl.gz`), {
+      ok: false,
+      status: 404,
+      error: 'hidden_piece_format_pending',
+    });
+  }
   assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/all.jsonl.gz'), {
     ok: true,
     target: { kind: 'monthly', month: '2026-09', variant: 'all', format: 'jsonl' },
@@ -53,9 +66,16 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
   assert.equal(parseDataFilePath('/api/games/x/export.json'), null);
 });
 
-test('data variants are exactly the export table, PGN only where the single export has it', () => {
+test('data variants are the export table minus the withheld list, PGN only where the single export has it', () => {
   assert.ok(DATA_VARIANTS.includes('xiangqi'));
+  assert.ok(DATA_VARIANTS.includes('jungle'));
   assert.ok(!DATA_VARIANTS.includes('mahjong'));
+  // The all-variants file is built from DATA_VARIANTS, so this keeps the
+  // hidden-piece games out of it too (#484).
+  assert.deepEqual(Object.keys(DATA_WITHHELD_VARIANTS).sort(), ['banqi', 'jieqi', 'jungle-flip']);
+  for (const variant of Object.keys(DATA_WITHHELD_VARIANTS)) {
+    assert.ok(!DATA_VARIANTS.includes(variant), variant);
+  }
   assert.deepEqual(dataFormatsForVariant('xiangqi'), ['pgn', 'jsonl']);
   assert.deepEqual(dataFormatsForVariant('jieqi'), ['jsonl']);
   assert.deepEqual(dataFormatsForVariant('mahjong'), []);
@@ -72,8 +92,12 @@ test('the listing groups closed months newest first, with built sizes and checks
   const listing = buildDataListing({
     counts: [
       { month: '2026-10', variant: 'xiangqi', games: 3 },
-      { month: '2026-09', variant: 'jieqi', games: 4 },
+      { month: '2026-09', variant: 'jungle', games: 4 },
       { month: '2026-09', variant: 'xiangqi', games: 10 },
+      // Withheld until #484: no row, no rail entry, not in the month's total.
+      { month: '2026-09', variant: 'jieqi', games: 7 },
+      { month: '2026-09', variant: 'banqi', games: 5 },
+      { month: '2026-08', variant: 'jungle-flip', games: 3 },
       { month: '2026-08', variant: 'dark-chess', games: 2 },
       { month: '2026-08', variant: 'mahjong', games: 9 },
     ],
@@ -92,11 +116,11 @@ test('the listing groups closed months newest first, with built sizes and checks
   assert.deepEqual(
     listing.months.map((month) => [month.month, month.games, month.variants.map((v) => v.variant)]),
     [
-      ['2026-09', 14, ['xiangqi', 'jieqi']],
+      ['2026-09', 14, ['xiangqi', 'jungle']],
       ['2026-08', 2, ['dark-chess']],
     ],
   );
-  assert.deepEqual(listing.variants, ['xiangqi', 'jieqi', 'dark-chess']);
+  assert.deepEqual(listing.variants, ['xiangqi', 'dark-chess', 'jungle']);
   const xiangqi = listing.months[0]!.variants[0]!;
   assert.deepEqual(
     xiangqi.files.map((file) => [file.format, file.path, file.fileName, file.built?.bytes ?? null]),
@@ -225,4 +249,45 @@ test('a file another instance stored is served as stored, never rebuilt', async 
   assert.equal(a, b);
   assert.equal(deps.builds, 0);
   assert.equal(deps.inserts, 0);
+});
+
+// The build runs in the live web process. A month's replay held the event loop
+// for seconds on prod (2026-10-01), stalling live games, because nothing in the
+// per-game loop awaited. A fake clock that charges half a slice per read makes
+// the yields deterministic: 60 games in one batch (no database await between
+// them) must span about 30 event-loop turns, which a self-rescheduling
+// immediate counts. Without the per-slice yield the build spans a handful.
+test('a data file build hands the event loop back between games', async () => {
+  let clock = 0;
+  const deps = {
+    getGameSummaries: async () => new Map(),
+    loadRoomsEvents: async () => new Map(),
+    now: () => {
+      clock += BUILD_SLICE_MS / 2;
+      return clock;
+    },
+  };
+  let turns = 0;
+  let building = true;
+  const tick = () => {
+    turns += 1;
+    if (building) setImmediate(tick);
+  };
+  setImmediate(tick);
+  const roomIds = Array.from({ length: 60 }, (_, i) => `room-${i}`);
+  const built = await buildDataFileContent(roomIds, 'jsonl', deps);
+  building = false;
+  assert.equal(built.skipped.length, 60);
+  assert.ok(turns >= 25, `the build spanned ${turns} event-loop turns, expected about 30`);
+});
+
+test('a data file build gzips every line and checksums the gzip bytes', async () => {
+  const built = await buildDataFileContent([], 'jsonl', {
+    getGameSummaries: async () => new Map(),
+    loadRoomsEvents: async () => new Map(),
+  });
+  assert.equal(built.gameCount, 0);
+  assert.equal(gunzipSync(built.content).toString('utf8'), '');
+  assert.equal(built.byteSize, built.content.byteLength);
+  assert.equal(built.sha256, createHash('sha256').update(built.content).digest('hex'));
 });
