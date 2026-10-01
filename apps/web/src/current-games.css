@@ -411,6 +411,12 @@
   display: none;
 }
 
+.current-games-more-links {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px 20px;
+}
+
 .current-games-search-link {
   align-self: flex-start;
   color: var(--site-accent-strong);

@@ -186,12 +186,14 @@ const params = new URLSearchParams(window.location.search);
 const path = window.location.pathname.replace(/\/+$/, '') || '/';
 const replaySample = params.get('replay');
 const playDeepLink = params.get('play');
-// The dev live-room shortcut (?room= / ?variant= / ?dev). /games/search owns
-// its own ?variant= (the picker), so the shortcut must not claim that page.
+// The dev live-room shortcut (?room= / ?variant= / ?dev). /games/search and
+// /data own their own ?variant= (the picker), so the shortcut must not claim
+// those pages.
 const wantsLive =
   import.meta.env.DEV &&
   !playDeepLink &&
   path !== '/games/search' &&
+  path !== '/data' &&
   (params.has('room') || params.has('variant') || params.has('dev'));
 const page = params.get('page');
 const gameRoomId = gameRoomIdFromPath(path);
@@ -364,6 +366,10 @@ const wantsCurrentGames = path === '/games';
 // know about is a conformance failure.
 const wantsHistoricalXiangqiSearch = path === '/games/search';
 const wantsXiangqiImport = path === '/import';
+// Monthly downloads of every finished game (lichess's database.lichess.org).
+const wantsDataPage = path === '/data';
+// What the data files hold, the licence, and how hidden pieces appear.
+const wantsDataAbout = path === '/data/about';
 const historicalXiangqiGameId = historicalXiangqiGameIdFromPath(path);
 // Accepts the locale-prefixed permalink too (/zh-hans/study/:id). The locale
 // itself is already picked up from the URL by initializeLocaleFromCurrentUrl;
@@ -500,6 +506,16 @@ if (replaySample) {
   setTitleKey('nav.currentGames');
   void mountOrReport(() =>
     import('./current-games.js').then(({ mountCurrentGames }) => mountCurrentGames(appRoot)),
+  );
+} else if (wantsDataAbout) {
+  setTitleKey('data.aboutHeading');
+  void mountOrReport(() =>
+    import('./data-page.js').then(({ mountDataAbout }) => mountDataAbout(appRoot)),
+  );
+} else if (wantsDataPage) {
+  setTitleKey('data.heading');
+  void mountOrReport(() =>
+    import('./data-page.js').then(({ mountDataPage }) => mountDataPage(appRoot)),
   );
 } else if (wantsHistoricalXiangqiSearch) {
   // The page retitles itself per picked variant once mounted.

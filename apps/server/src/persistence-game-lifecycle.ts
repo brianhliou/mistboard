@@ -304,6 +304,25 @@ export async function loadRoomEvents<T extends PersistedRoomEvent>(
   return rows.map((row) => row.payload);
 }
 
+// loadRoomEvents for many rooms in one round trip (the bulk game export). Rooms
+// with no events are absent from the map, as loadRoomEvents returns null.
+export async function loadRoomsEvents(
+  roomIds: readonly string[],
+): Promise<Map<string, PersistedRoomEvent[]>> {
+  const byRoom = new Map<string, PersistedRoomEvent[]>();
+  if (roomIds.length === 0) return byRoom;
+  const { rows } = await getPool().query<{ room_id: string; payload: PersistedRoomEvent }>(
+    'SELECT room_id, payload FROM events WHERE room_id = ANY($1) ORDER BY room_id, seq ASC',
+    [[...roomIds]],
+  );
+  for (const row of rows) {
+    const events = byRoom.get(row.room_id);
+    if (events) events.push(row.payload);
+    else byRoom.set(row.room_id, [row.payload]);
+  }
+  return byRoom;
+}
+
 export async function appendEvent(roomId: string, seq: number, event: GameEvent): Promise<void> {
   await appendRoomEvent(roomId, seq, event);
 }

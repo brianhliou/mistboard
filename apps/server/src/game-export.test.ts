@@ -277,3 +277,29 @@ test('player names come from participants when whiteName/blackName are null', ()
   assert.equal(json.players.white.handle, '@alice-handle');
   assert.equal(json.players.black.handle, 'Mistboard Engine v3.2');
 });
+
+test('a private seat exports as Anonymous in JSON and PGN, never its name', () => {
+  const { summary, events } = fixtureGame();
+  summary.participants = [
+    {
+      color: 'white',
+      displayName: 'secret-handle',
+      subjectType: 'user',
+      subjectId: 'u1',
+      visibility: 'private',
+    },
+    {
+      color: 'black',
+      displayName: 'bob',
+      subjectType: 'user',
+      subjectId: 'u2',
+      visibility: 'public',
+    },
+  ];
+  const payload = buildGamePublicationJson(summary, events);
+  assert.equal(payload.players.white.handle, 'Anonymous');
+  assert.equal(payload.players.black.handle, 'bob');
+  const pgn = buildGamePgn(summary, events);
+  assert.ok(pgn.includes('[White "Anonymous"]'));
+  assert.ok(!pgn.includes('secret-handle'));
+});

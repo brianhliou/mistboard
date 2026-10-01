@@ -772,6 +772,7 @@ export const EN_REVIEW = {
   'games.daysPerMove': '{count} days per move',
   'games.recentGames': 'Recent games',
   'games.searchAll': 'Search all games',
+  'games.downloadData': 'Download game data',
   'games.hiddenWhileLive': 'Board hidden while the game is live',
   'games.deadline': '{time} to move',
   'games.live': 'Live',

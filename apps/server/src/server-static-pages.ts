@@ -238,6 +238,16 @@ const SPA_ROUTE_META: Record<string, SpaRouteMeta> = {
     description:
       'Search and browse xiangqi (Chinese chess) and variant games: tournament archives, live broadcasts, engine matches, and games played on Mistboard. Filter by variant, player, event, result, date, or length.',
   },
+  '/data': {
+    title: 'Game Data Downloads | Mistboard',
+    description:
+      'Download every finished game played on Mistboard, one file per variant per month, as JSON lines and PGN under CC BY 4.0: xiangqi, jieqi, banqi, Fog Chess and more, plus engine match collections.',
+  },
+  '/data/about': {
+    title: 'About the Game Data | Mistboard',
+    description:
+      'What the Mistboard monthly game files hold: the JSONL and PGN formats field by field, the CC BY 4.0 license, which games are included, and how fog and face-down pieces appear.',
+  },
   '/import': {
     title: 'Import a Xiangqi Game | Mistboard',
     description:
@@ -885,6 +895,8 @@ export const SITEMAP_STATIC_ROUTES: readonly string[] = [
   '/study',
   '/games',
   '/games/search',
+  '/data',
+  '/data/about',
   '/import',
   '/feed',
   '/videos',

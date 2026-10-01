@@ -719,6 +719,7 @@ export const ZH_HANS_REVIEW = {
   'games.daysPerMove': '每步 {count} 天',
   'games.recentGames': '最近的对局',
   'games.searchAll': '搜索全部对局',
+  'games.downloadData': '下载对局数据',
   'games.hiddenWhileLive': '对局进行中，棋盘隐藏',
   'games.deadline': '剩余 {time} 走棋',
   'games.live': '实时',

@@ -74,6 +74,7 @@ export const ZH_HANS_SHELL = {
   'footer.contact': '联系',
   'footer.source': '源码',
   'footer.developers': '开发者',
+  'footer.data': '对局数据',
   'footer.github': 'GitHub',
   'footer.terms': '条款',
   'footer.privacy': '隐私',

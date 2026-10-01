@@ -293,9 +293,9 @@ export const ZH_HANT_CONTENT = {
   'privacy.noDoBody':
     '沒有廣告。我們不出售你的資料。不錄製你的螢幕。我們尊重 Do Not Track。休閒對局不需要帳號。',
   'privacy.publicGamesHeading': '你的對局是公開的',
-  'privacy.publicGamesPrefix': '已結束對局按 ',
+  'privacy.publicGamesPrefix': '已結束的對局是公開的，並按月發布在',
   'privacy.ccByLink': 'CC BY 4.0',
-  'privacy.publicGamesSuffix': ' 發布。',
+  'privacy.publicGamesSuffix': ' 授權。',
   'privacy.promisesHeading': '我們承諾什麼，以及不承諾什麼',
   'privacy.promisesBody':
     '我們承諾把隱藏資訊保留在伺服器端，並告訴你我們收集什麼。我們不承諾你的資料、帳號或評分能在開發期間保留。它們可能會在不另行通知的情況下改變或消失。不要把任何你承受不起遺失的東西放在 Mistboard 上。',
@@ -370,4 +370,75 @@ export const ZH_HANT_CONTENT = {
   'thanks.openSourceLink': '原始碼',
   'thanks.openSourceSuffix': '頁面列出了 Mistboard 依賴的專案及其授權條款。',
   'thanks.stubNote': '這個頁面今後會擴展成一份更完整的致謝名單。',
+  'data.colMonth': '月份',
+  'data.colGames': '對局',
+  'data.colDownload': '下載',
+  'data.colHash': 'SHA-256',
+  'data.builtNote': '檔案在第一次有人下載時產生；之後這裡會顯示它的大小和 SHA-256。',
+  'data.allVariantsNote': '每月一個包含全部變體的 JSONL 檔案；每一行都註明了變體。',
+  'data.copy': '複製',
+  'data.copied': '已複製',
+  'data.copyFailed': '請按 Ctrl+C',
+  'data.copyHash': '複製 {format} 的 SHA-256',
+  'data.copyCitation': '複製署名',
+  'data.licenseBody':
+    '署名即註明 Mistboard 並連結到對局資料頁面，上面那一行就夠了。引擎對局下載還需保留其對局顯示的署名。',
+  'privacy.publicGamesMiddle': '供下載，採用 ',
+  'data.aboutLink': '檔案裡有什麼、授權，以及隱藏棋子如何呈現',
+  'data.backToData': '返回對局資料',
+  'data.aboutSubtitle': '每月檔案包含什麼、如何署名，以及哪些不包含在內。',
+  'data.heading': '對局資料',
+  'data.subtitle': '在 Mistboard 下完的每一盤對局，每個變體每月一個檔案。依 CC BY 4.0 免費使用。',
+  'data.variantsLabel': '變體',
+  'data.allVariants': '全部變體',
+  'data.unavailable': '無法載入對局資料',
+  'data.gamesOne': '{count} 盤對局',
+  'data.gamesMany': '{count} 盤對局',
+  'data.countOneMonth': '{months} 個月，{games}',
+  'data.countManyMonths': '{months} 個月，{games}',
+  'data.noMonths': '還沒有已結束且有對局的月份。',
+  'data.currentMonthNote': '{month}結束後會加入。',
+  'data.downloadLabel': '下載 {format}：{file}',
+  'data.aboutHeading': '關於資料',
+  'data.formatsHeading': '格式',
+  'data.formatJsonl':
+    'JSONL：每行一盤對局，gzip 壓縮。每一行與該對局頁面上單獨下載的 JSON 完全相同。欄位：',
+  'data.fieldGame': '對局編號及其在 Mistboard 上的頁面。',
+  'data.fieldVariant': '變體編號，以及 pvp（人對人）或 pve（人對機器人）。',
+  'data.fieldPlayers': '各方在對局頁面上顯示的名字，依顏色區分。設為私密的座位顯示為 Anonymous。',
+  'data.fieldTimeControl':
+    '初始時間和每步加時（毫秒），並附 5+3 這樣的標籤；不限時則為 null。按每步固定用時進行的引擎對局附 movetime_ms。',
+  'data.fieldTimes': '對局開始和結束的時間，ISO 8601 格式，UTC。',
+  'data.fieldResult': '獲勝顏色或和棋，以及對局如何結束：將死、超時、認輸等。',
+  'data.fieldPlies':
+    '依序列出每一步：走子方、uci 格式的著法、該變體有記譜法時的 san（否則為 null），以及每步之後雙方的剩餘時間。',
+  'data.fieldInk': '僅暗棋和翻翻棋：先手翻出的顏色。',
+  'data.fieldOrigin': '僅引擎對局下載：賽事、署名，以及始終未揭開的棋子所在的格子。',
+  'data.formatMoves':
+    'uci 著法是座標：h2e2 是走子，@c3 是翻開一枚暗子，R@d4 是從手中打入（堡壘象棋），b3e3@e6 是一回合鴨子象棋，最後是鴨子的落點。',
+  'data.formatPgn':
+    'PGN：用於有其他程式可讀記譜法的變體：迷霧國際象棋用 SAN，象棋和原子象棋用 WXF，迷霧象棋用 ICCS 座標。對局之間空一行，並帶有 Site（對局頁面）、MistboardVariant、MistboardTermination 和 License 標籤。沒有記譜標準的變體只提供 JSONL。',
+  'data.licenseHeading': '授權',
+  'data.licensePrefix': '這些檔案依 ',
+  'data.licenseSuffix':
+    ' 發布。可用於任何用途，商業或非商業皆可，只要註明 Mistboard 並連結到對局資料頁面，例如：',
+  'data.citation': 'Game data from Mistboard, https://mistboard.com/data, CC BY 4.0.',
+  'data.includedHeading': '包含哪些對局',
+  'data.included':
+    '自 2026 年 6 月起在本站下完的每一盤對局：人對人或人對機器人，計分或休閒，登入或以訪客身分。對局依結束時所在的月份（UTC）歸檔。',
+  'data.excluded':
+    '不包含：中止的對局和雙方都還沒走棋就結束的對局、營運和測試本站的帳號下的對局、非公開對局、引擎對引擎的對局，以及引擎對局等匯入的對局。當月結束後才會加入。',
+  'data.hiddenHeading': '隱藏資訊',
+  'data.hiddenFog':
+    '已結束的迷霧對局不再隱藏任何資訊，所以檔案包含雙方的每一步，與對局結束後頁面上顯示的一致。當時每位玩家能看到什麼並未儲存；可以由著法和開源遊戲程式碼中的視野規則推出。',
+  'data.hiddenFlip':
+    '揭棋、暗棋和翻翻棋的檔案記錄每枚棋子走到哪裡或在哪裡被翻開，而不記錄它翻開後是什麼棋子。對局頁面會重播每一次揭開。',
+  'data.hiddenNeverRevealed':
+    '在揭棋引擎對局下載中，有些棋子在對局結束時仍是暗子，身分從未確定。origin.never_revealed 列出它們所在的格子，任何檔案都不會為它們寫出棋子。',
+  'data.filesHeading': '檔案與校驗和',
+  'data.filesBuilt':
+    '檔案在第一次有人下載時由資料庫產生，之後不再改變。檔案產生後，對局資料頁面會顯示它的大小和 SHA-256，可以用 sha256sum 校驗下載。',
+  'data.filesHosting':
+    '檔案由本站直接提供。當某個月的檔案超過約 100 MB，或下載流量開始產生費用時，會遷移到物件儲存（Cloudflare R2）。',
+  'privacy.downloadsLink': '對局資料頁面',
 } satisfies Partial<Record<ContentI18nKey, string>>;

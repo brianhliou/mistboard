@@ -70,6 +70,7 @@ export function definePersistenceTests(area: string, registerTests: () => void):
       await client.query(
         `TRUNCATE
            auth_rate_limit_buckets,
+           game_data_files,
            stripe_events,
            engine_move_jobs,
            live_engine_games,
