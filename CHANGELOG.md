@@ -49,6 +49,7 @@ Conventions:
 
 ### Fixed
 
+- in Jieqi and Jungle game review, the board shows the ?!, ? or ?? mark on the selected move, and a judged reveal names the better move ("Mistake. i5-i0 was best.") ([d40f4fb1](https://github.com/brianhliou/mistboard/commit/d40f4fb1))
 - The homepage board no longer stays live with a running clock when the server stops answering ([602e3d40](https://github.com/brianhliou/mistboard/commit/602e3d40))
 - The first download of a game data file no longer pauses live games while it is built ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))
 - Latest studies on the homepage and /study lists the newest studies first; an automatic hourly update no longer lifts two older studies back to the top ([5dcc4b03](https://github.com/brianhliou/mistboard/commit/5dcc4b03))
