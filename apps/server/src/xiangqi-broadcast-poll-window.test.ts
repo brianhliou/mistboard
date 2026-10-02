@@ -39,6 +39,37 @@ test('auto polls from 12 h before the start to 7 days after the end', () => {
   assert.equal(after.reason, 'auto-closed');
 });
 
+test('a tour seeded after its event polls for the tail counted from its creation', () => {
+  // The 2026 women's league qualifier: played 09-20..22, seeded 10-02, after
+  // its own window had closed on 09-29.
+  const QUALIFIER = {
+    sourceUrl: 'mistboard-discover://dpxq-tour?tour=12791&tourSlug=2026-womens-league-qualifier',
+    startsAt: '2026-09-20T00:00:00+08:00',
+    endsAt: '2026-09-22T23:59:59+08:00',
+    pollMode: 'auto' as const,
+  };
+  const createdAt = new Date('2026-10-02T04:50:00Z');
+  const state = (now: string, seeded: Date | null = createdAt) =>
+    xiangqiBroadcastPollState({ ...QUALIFIER, createdAt: seeded, now: at(now) });
+
+  // Without the creation time the window is closed, which is the bug.
+  assert.equal(state('2026-10-02T05:00:00Z', null).reason, 'auto-closed');
+  assert.equal(state('2026-10-02T05:00:00Z').reason, 'auto-open');
+  assert.equal(state('2026-10-02T05:00:00Z').afterEvent, true);
+  assert.equal(state('2026-10-09T04:49:00Z').polling, true);
+  assert.equal(state('2026-10-09T04:51:00Z').reason, 'auto-closed');
+  assert.equal(state('2026-10-02T05:00:00Z').closesAt, '2026-10-09T12:50:00+08:00');
+  // A tour seeded before its event keeps the event's own window.
+  const early = xiangqiBroadcastPollState({
+    ...ASIAN,
+    pollMode: 'auto',
+    createdAt: '2026-09-25T18:31:06.212Z',
+    now: at('2026-10-16T00:00:00+08:00'),
+  });
+  assert.equal(early.reason, 'auto-closed');
+  assert.equal(early.closesAt, '2026-10-15T23:59:59+08:00');
+});
+
 test('auto with no dates never polls; one missing date reads as a one-day event', () => {
   const undated = xiangqiBroadcastPollState({
     pollMode: 'auto',
