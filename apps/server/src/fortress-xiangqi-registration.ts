@@ -37,7 +37,7 @@ import {
 } from './variant-tenant/registry.js';
 import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -121,6 +121,7 @@ registerVariantTenant({
   isEngineClientId: fortressXiangqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => fortressXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(fortressXiangqiTenant),
   errorPrefix: 'fortress_xiangqi',
   enabled: fortressXiangqiTenant.enabled,
   rooms: fortressXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,

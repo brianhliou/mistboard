@@ -1,39 +1,45 @@
-// Crazyhouse Xiangqi — standard xiangqi, and a captured piece changes sides.
+// Crazyhouse Xiangqi: xiangqi where a captured piece changes sides, and the
+// advisors and elephants start in hand.
 //
-// One sentence on top of xiangqi: a captured piece goes to the capturer's
-// hand, and on your turn you may instead drop a piece from your hand onto any
-// empty point where that piece could stand in a normal xiangqi game; a drop
-// may not give check. Concretely:
+// The rules, on top of xiangqi:
 //
-//   - advisors drop only on their own palace's five advisor points;
-//   - elephants drop only on their own seven elephant points;
-//   - soldiers drop on their own half only on the soldier files' two home
-//     ranks (red a4 a5 c4 c5 e4 e5 g4 g5 i4 i5), or anywhere across the river;
-//   - chariots, horses and cannons drop on any empty point;
-//   - the general is never in hand (it is mated, never taken);
-//   - no nifu: any number of soldiers may share a file;
-//   - a drop that gives check is illegal, whatever makes it check: the
-//     dropped piece attacking the general, or the dropped piece becoming the
-//     screen for one of your own cannons.
+//   - the start: each side's advisors and elephants begin in hand (two of
+//     each), so the back rank reads chariot, horse, empty, empty, general,
+//     empty, empty, horse, chariot; every other piece stands where it does in
+//     xiangqi;
+//   - a captured piece goes to the capturer's hand, and on your turn you may
+//     instead drop a piece from your hand onto any empty point where that
+//     piece could stand:
+//       - advisors and elephants: any point of your own half;
+//       - soldiers: the soldier files' two home ranks on your own half (red
+//         a4 a5 c4 c5 e4 e5 g4 g5 i4 i5), or anywhere across the river;
+//       - chariots, horses and cannons: any empty point;
+//       - the general is never in hand (it is mated, never taken);
+//   - advisors move one diagonal step and elephants two (the eye blocks, as in
+//     xiangqi), anywhere on their own half; neither ever crosses the river;
+//   - a drop may give check, and mate;
+//   - no nifu: any number of soldiers may share a file.
 //
-// Everything else is xiangqi: the generals may not face, you may not leave
-// your general attacked, checkmate and stalemate both lose for the side with
-// no move, and a three-fold repetition is a draw unless one side checked on
-// every move of the cycle, which loses ('chasing', as standard xiangqi spells
-// it). Repetition counts whole positions, hands included; a capture does not
-// reset it, because a captured piece can be dropped back and the position
-// rebuilt.
+// Everything else is xiangqi: the general stays in its palace, the generals
+// may not face, you may not leave your general attacked, checkmate and
+// stalemate both lose for the side with no move, and a three-fold repetition
+// is a draw unless one side checked on every move of the cycle, which loses
+// ('chasing', as standard xiangqi spells it). Repetition counts whole
+// positions, hands included; a capture does not reset it, because a captured
+// piece can be dropped back and the position rebuilt.
 //
-// The lab name is "one-sentence C" (docs-private/drop-game-lab/fullboard/).
-// The engine is stock Fairy-Stockfish with apps/server/src/crazyhouse-
-// xiangqi.ini; packages/game/src/fixtures/crazyhouse-xiangqi-parity.json holds
-// its legal moves and perft-2 counts over real game positions, and the test
-// beside this file requires this kernel to agree at every one of them.
+// The lab name is s9-hand-free-check (docs-private/drop-game-lab/fullboard/,
+// Sweeps 9-11); it replaced "one-sentence C" (standard start, palace-bound
+// advisors, no drop check) on 2026-10-02. The engine is stock Fairy-Stockfish
+// with apps/server/src/crazyhouse-xiangqi.ini;
+// packages/game/src/fixtures/crazyhouse-xiangqi-parity.json holds its legal
+// moves and perft-2 counts over real game positions, and the test beside this
+// file requires this kernel to agree at every one of them.
 //
-// Geometry is the configurable rule kernel's (xiangqi-rule-kernel.ts, in its
-// standard configuration): piece moves, regions, the placement codec. This
-// module adds the hands, the drops, a fast reverse attack test (the kernel's
-// forward one is too slow to filter ~300 drops a position), and the
+// Geometry is the configurable rule kernel's (xiangqi-rule-kernel.ts) with
+// advisors freed to the own half: piece moves, regions, the placement codec.
+// This module adds the hands, the drops, a fast reverse attack test (the
+// kernel's forward one is too slow to filter ~300 drops a position), and the
 // production shape: an abortable status, the end reasons persistence knows,
 // a player view.
 
@@ -46,11 +52,11 @@ import type {
   XiangqiPieceRole,
   XiangqiSquare,
 } from './variants-xiangqi.js';
-import { createInitialXiangqiBoard } from './variants-xiangqi.js';
 import {
   allXiangqiSquares,
   coordOf,
   inBounds,
+  inOwnHalf,
   inPalace,
   parsePlacement,
   placementOf,
@@ -162,8 +168,14 @@ export const CRAZYHOUSE_XIANGQI_DROP_ROLES = [
   'soldier',
 ] as const satisfies readonly CrazyhouseXiangqiDropRole[];
 
-export const CRAZYHOUSE_XIANGQI_START_FEN =
-  'rnbakabnr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RNBAKABNR[] w - - 0 1';
+/** The start placement: xiangqi without its advisors and elephants, which begin in hand. */
+const START_PLACEMENT = 'rn2k2nr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RN2K2NR';
+
+/** Each side's hand at the start. */
+const START_HAND: CrazyhouseXiangqiHand = { elephant: 2, advisor: 2 };
+
+/** The start as crazyhouseXiangqiFen writes it (pocket in R N B A C P order). */
+export const CRAZYHOUSE_XIANGQI_START_FEN = `${START_PLACEMENT}[BBAAbbaa] w - - 0 1`;
 
 /** Plies without a capture before the game is drawn: the site's xiangqi rule. */
 export const CRAZYHOUSE_XIANGQI_PROGRESS_CLOCK_LIMIT = 60;
@@ -171,8 +183,12 @@ export const CRAZYHOUSE_XIANGQI_PROGRESS_CLOCK_LIMIT = 60;
 /** Occurrences of one position (board, hands, side to move) that end the game. */
 export const CRAZYHOUSE_XIANGQI_REPETITION_COUNT = 3;
 
-/** The kernel's standard configuration: the geometry every move here uses. */
-const RULES = resolveXiangqiRules({});
+/**
+ * The geometry every move here uses: xiangqi's, except that an advisor steps
+ * diagonally anywhere on its own half instead of only in its palace. The
+ * elephant's region is already the own half; only the general keeps a palace.
+ */
+const RULES = resolveXiangqiRules({ advisorRegion: 'ownHalf' });
 
 const SQUARES = allXiangqiSquares();
 
@@ -207,14 +223,6 @@ const HORSE: readonly (readonly [number, number, number, number])[] = [
   [-2, -1, -1, 0],
 ];
 
-const ADVISOR_POINTS: Record<CrazyhouseXiangqiColor, ReadonlySet<XiangqiSquare>> = {
-  red: new Set(['d1', 'f1', 'e2', 'd3', 'f3']),
-  black: new Set(['d8', 'f8', 'e9', 'd10', 'f10']),
-};
-const ELEPHANT_POINTS: Record<CrazyhouseXiangqiColor, ReadonlySet<XiangqiSquare>> = {
-  red: new Set(['c1', 'g1', 'a3', 'e3', 'i3', 'c5', 'g5']),
-  black: new Set(['c6', 'g6', 'a8', 'e8', 'i8', 'c10', 'g10']),
-};
 const SOLDIER_FILES: ReadonlySet<number> = new Set([0, 2, 4, 6, 8]);
 
 // ── Colours, moves, regions ────────────────────────────────────────────────
@@ -232,8 +240,10 @@ export function isCrazyhouseXiangqiDropMove(
 }
 
 /**
- * Could a `color` piece of `role` stand on `square` in a game of xiangqi?
- * This is the drop rule, and the bar the FEN parser holds a position to.
+ * Could a `color` piece of `role` stand on `square` in this game? This is
+ * the drop rule, and the bar the FEN parser holds a position to: the general
+ * in its palace, advisors and elephants anywhere on their own half, soldiers
+ * on the points a soldier can reach, everything else anywhere.
  */
 export function crazyhouseXiangqiCanStand(
   role: XiangqiPieceRole,
@@ -246,9 +256,8 @@ export function crazyhouseXiangqiCanStand(
       return inPalace(color, file, rank);
     }
     case 'advisor':
-      return ADVISOR_POINTS[color].has(square);
     case 'elephant':
-      return ELEPHANT_POINTS[color].has(square);
+      return inOwnHalf(color, coordOf(square).rank);
     case 'soldier': {
       const { file, rank } = coordOf(square);
       if (color === 'red')
@@ -467,7 +476,16 @@ function stateFrom(
 }
 
 export function createInitialCrazyhouseXiangqiState(gameId: string): CrazyhouseXiangqiGameState {
-  return stateFrom(gameId, createInitialXiangqiBoard(), emptyHands(), 'red', 0, 1);
+  const board = parsePlacement(START_PLACEMENT);
+  if (!board) throw new Error('crazyhouse-xiangqi: bad start placement');
+  return stateFrom(
+    gameId,
+    board,
+    { red: { ...START_HAND }, black: { ...START_HAND } },
+    'red',
+    0,
+    1,
+  );
 }
 
 function positionOf(state: CrazyhouseXiangqiGameState): CrazyhouseXiangqiPosition | null {
@@ -553,15 +571,16 @@ function attackedBy(
       if (piece?.color === by && piece.role === 'soldier') return true;
     }
   }
-  // Advisor and elephant, for completeness: neither can reach an enemy general.
-  if (inPalace(by, tf, tr)) {
+  // Advisor and elephant, for completeness: neither leaves its own half, so
+  // neither can reach an enemy general.
+  if (inOwnHalf(by, tr)) {
     for (const [df, dr] of DIAG) {
       if (!inBounds(tf + df, tr + dr)) continue;
       const piece = at(board, tf + df, tr + dr);
       if (piece?.color === by && piece.role === 'advisor') return true;
     }
   }
-  if (by === 'red' ? tr <= 5 : tr >= 6) {
+  if (inOwnHalf(by, tr)) {
     for (const [df, dr] of DIAG) {
       if (!inBounds(tf + 2 * df, tr + 2 * dr)) continue;
       const piece = at(board, tf + 2 * df, tr + 2 * dr);
@@ -657,8 +676,7 @@ function legalDrops(
   const { board, hands, turn } = position;
   const enemy = oppositeCrazyhouseXiangqiColor(turn);
   const own = kings[turn];
-  const theirs = kings[enemy];
-  if (!own || !theirs) return [];
+  if (!own || !kings[enemy]) return [];
   const roles = CRAZYHOUSE_XIANGQI_DROP_ROLES.filter(
     (role) => (hands[turn][role] ?? 0) > 0 && (only === undefined || role === only),
   );
@@ -671,16 +689,16 @@ function legalDrops(
     const nearOwn = nearGeneral(square, own);
     // Away from your own general, a drop cannot parry a check, nor expose one.
     if (inCheck && !nearOwn) continue;
-    const nearTheirs = nearGeneral(square, theirs);
     for (const role of roles) {
       if (!crazyhouseXiangqiCanStand(role, turn, square)) continue;
-      if (nearOwn || nearTheirs) {
+      // Near it, the drop must not leave your general attacked: it must parry
+      // a check, and must not become the screen for an enemy cannon. A drop
+      // that gives check, or mates, is legal.
+      if (nearOwn) {
         work[square] = { color: turn, role };
-        const legal =
-          !(nearOwn && attackedBy(work as XiangqiBoard, enemy, own)) &&
-          !(nearTheirs && attackedBy(work as XiangqiBoard, turn, theirs));
+        const exposed = attackedBy(work as XiangqiBoard, enemy, own);
         work[square] = undefined;
-        if (!legal) continue;
+        if (exposed) continue;
       }
       out.push({ drop: role, to: square });
     }

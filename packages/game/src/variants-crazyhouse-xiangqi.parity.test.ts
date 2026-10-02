@@ -31,7 +31,10 @@ type FixturePosition = {
   fen: string;
   checkers?: string;
   moves: string;
-  checkBlockedDrops?: string;
+  /** Legal drops that give check: the engine refuses each one under `dropChecks = false`. */
+  checkingDrops?: string;
+  /** Advisor and elephant moves and drops the engine allows only with their regions widened to the whole board. */
+  riverBlocked?: string;
   perft2: number;
 };
 type Fixture = {
@@ -87,7 +90,12 @@ test('the fixture covers what it claims to', () => {
     assert.ok(count >= 20, `only ${count} positions with ${letter} in the mover's hand`);
   }
   assert.ok(fixture.positions.filter((p) => p.checkers).length >= 20);
-  assert.ok(fixture.positions.filter((p) => p.checkBlockedDrops).length >= 20);
+  assert.ok(fixture.positions.filter((p) => p.checkingDrops).length >= 20);
+  assert.ok(
+    fixture.positions.filter((p) => p.riverBlocked?.split(' ').some((m) => !m.includes('@')))
+      .length >= 20,
+    'advisor/elephant board moves the river forbids',
+  );
 });
 
 test('legal moves match Fairy-Stockfish at every fixture position', () => {
@@ -112,12 +120,22 @@ test('legal moves match Fairy-Stockfish at every fixture position', () => {
   );
 });
 
-test('no drop the engine refuses for giving check is offered', () => {
+test('every drop that gives check is offered', () => {
   for (const p of fixture.positions) {
-    if (!p.checkBlockedDrops) continue;
+    if (!p.checkingDrops) continue;
     const ours = new Set(uciList(positionOf(p.fen)));
-    for (const drop of p.checkBlockedDrops.split(' ')) {
-      assert.ok(!ours.has(drop), `${drop} gives check at ${p.fen}`);
+    for (const drop of p.checkingDrops.split(' ')) {
+      assert.ok(ours.has(drop), `${drop} gives check, legally, at ${p.fen}`);
+    }
+  }
+});
+
+test('no advisor or elephant crosses the river, by move or by drop', () => {
+  for (const p of fixture.positions) {
+    if (!p.riverBlocked) continue;
+    const ours = new Set(uciList(positionOf(p.fen)));
+    for (const move of p.riverBlocked.split(' ')) {
+      assert.ok(!ours.has(move), `${move} crosses the river at ${p.fen}`);
     }
   }
 });
@@ -141,9 +159,10 @@ test('replaying the games reaches the engine FEN at every fixture position', () 
   for (const [gameIndex, game] of fixture.games.entries()) {
     const moves = game.moves.split(' ');
     const wanted = new Map((byGame.get(gameIndex) ?? []).map((p) => [p.ply, p.fen]));
+    const start = createInitialCrazyhouseXiangqiState('t');
     let position: CrazyhouseXiangqiPosition = {
-      board: createInitialCrazyhouseXiangqiState('t').board,
-      hands: { red: {}, black: {} },
+      board: start.board,
+      hands: start.hands,
       turn: 'red',
     };
     for (let ply = 0; ply <= moves.length; ply += 1) {

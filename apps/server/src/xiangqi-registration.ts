@@ -32,7 +32,7 @@ import {
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
 import { createTenantCorrespondenceGameForSeek } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import { XIANGQI_ANALYSIS_ENGINE_ID, XIANGQI_ANALYSIS_REQUEST_DEPTH } from './xiangqi-analysis.js';
 import {
   xiangqiExportUci,
@@ -139,6 +139,7 @@ registerVariantTenant({
   isEngineClientId: xiangqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => xiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(xiangqiTenant),
   errorPrefix: 'xiangqi',
   enabled: xiangqiTenant.enabled,
   rooms: xiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,

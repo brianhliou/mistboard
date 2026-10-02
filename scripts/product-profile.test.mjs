@@ -8,6 +8,7 @@ test('product profile contains exactly the intended live game specs', () => {
     'fortress-xiangqi',
     'duck-xiangqi',
     'atomic-xiangqi',
+    'crazyhouse-xiangqi',
     'banqi',
     'jungle',
     'jungle-flip',

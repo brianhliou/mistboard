@@ -23,6 +23,18 @@ export const VARIANT_SMOKE_CONFIGS = {
     // knob, not part of the contract.
     engineSeat: { prefix: 'fairy-stockfish-atomic-xiangqi-' },
   },
+  crazyhouse: {
+    name: 'crazyhouse',
+    label: 'Crazyhouse Xiangqi',
+    usage: 'npm run prod:smoke:crazyhouse -- [options]',
+    gameSpecId: 'crazyhouse-xiangqi',
+    // Stock Fairy-Stockfish with crazyhouse-xiangqi.ini, classical eval; the
+    // same ceiling as atomic and fortress, which cover a cold spawn.
+    defaultTimeoutMs: 40_000,
+    // Prefix-matched like the others: the rung the room hands a player is a
+    // knob, not part of the contract.
+    engineSeat: { prefix: 'fairy-stockfish-crazyhouse-xiangqi-' },
+  },
   duck: {
     name: 'duck',
     label: 'Duck',

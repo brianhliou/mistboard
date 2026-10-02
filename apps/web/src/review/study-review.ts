@@ -150,6 +150,20 @@ export async function mountStudyReview(
         root: parsed ? { truth: parsed, fen: atomicXiangqiFen(parsed) } : undefined,
       });
     }
+    case 'crazyhouse-xiangqi': {
+      const [
+        { mountCrazyhouseXiangqiReview },
+        { crazyhouseXiangqiFen, parseCrazyhouseXiangqiFen },
+      ] = await Promise.all([import('./crazyhouse-xiangqi-review.js'), import('@mistboard/game')]);
+      // Fairy-Stockfish's spelling, both hands in the pocket brackets.
+      const parsed = rootFen ? parseCrazyhouseXiangqiFen(rootFen, STUDY_GAME_ID) : null;
+      return mountCrazyhouseXiangqiReview(root, {
+        ...base,
+        root: parsed?.ok
+          ? { truth: parsed.state, fen: crazyhouseXiangqiFen(parsed.state) }
+          : undefined,
+      });
+    }
     case 'dark-chess': {
       const [{ mountDarkChessReview }, { parseDarkChessFen, darkChessFen }] = await Promise.all([
         import('./dark-chess-review.js'),

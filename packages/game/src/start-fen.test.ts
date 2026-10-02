@@ -49,7 +49,7 @@ test('every start-fen spec round-trips its own standard start', () => {
     // Atomic Xiangqi: the standard board and spelling; the explosion is a rule
     // about captures, not positions.
     'atomic-xiangqi': standardXiangqiFen(createInitialXiangqiState('t')),
-    // Crazyhouse Xiangqi: the standard board plus the (empty) hands in brackets.
+    // Crazyhouse Xiangqi: xiangqi without advisors and elephants, which wait in the hands.
     'crazyhouse-xiangqi': crazyhouseXiangqiFen(createInitialCrazyhouseXiangqiState('t')),
     jungle: jungleStateToEngineFen(createInitialJungleState('t')),
     'fortress-xiangqi': fortressXiangqiEngineFen(createInitialFortressXiangqiState('t')),

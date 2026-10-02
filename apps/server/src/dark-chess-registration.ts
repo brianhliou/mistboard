@@ -44,6 +44,7 @@ import {
   createTenantCorrespondenceGameForSeek,
   createTenantLiveRoom,
 } from './variant-tenant/room-factory.js';
+import { tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import { createTenantWsRuntime, type TenantLiveRoom } from './variant-tenant/ws.js';
 
@@ -151,6 +152,7 @@ registerVariantTenant({
   // live lobby reaches chess via registry MISS); this registration owns only
   // the dchx_ correspondence slice.
   ownsSpecRouting: false,
+  replays: tenantReplayCheck(darkChessTenant),
   errorPrefix: 'correspondence',
   enabled: correspondenceEnabled,
   rooms: darkChessTenantRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,

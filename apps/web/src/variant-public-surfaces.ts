@@ -28,8 +28,7 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
   // other xiangqi variants. The play menu is a separate switch (the tenant
   // registry's offerInMenu), still hidden.
   'atomic-xiangqi': true,
-  // Admin-only playtest (publicSurface 'hidden'): no rules page, tile or feed.
-  'crazyhouse-xiangqi': false,
+  'crazyhouse-xiangqi': true,
   // Study-only: no rules page, no tile, no feed entry. Chess studies are
   // reachable by their own URLs and the study picker, nothing lists the game.
   chess: false,
@@ -38,7 +37,12 @@ const VARIANT_PUBLIC_SURFACE_ENABLED = {
 const gameSpecIds = new Set<string>(GAME_SPECS.map((spec) => spec.id));
 // Reachable by URL, unlisted and unindexed: /rules/shogi4 is linked from
 // outside the site and stays up, but is not a Mistboard variant.
-const HIDDEN_RULES_SLUGS = new Set(['shogi4']);
+// /rules/crazyhouse-xiangqi documents a public variant whose rules page is held
+// back for more polish and feedback (Brian, 2026-10-02): the game stays in the
+// picker and the lobby, the page stays up for anyone with the URL, and nothing
+// lists or indexes it. The server's NON_INDEXED_ARTICLE_SLUGS carries the same
+// slug (articles-meta-sync.test.ts holds the two together).
+const HIDDEN_RULES_SLUGS = new Set(['shogi4', 'crazyhouse-xiangqi']);
 const RULES_GAME_SPEC_BY_SLUG: Record<string, GameSpecId> = {
   'fog-chess': 'dark-chess',
   'fog-xiangqi': 'dark-xiangqi',

@@ -473,8 +473,11 @@ type ArticleBase = {
     title?: PlayerTitle;
   };
   showSummaryOnPage?: boolean;
-  // Non-variant guest pages only. Variant rules listings are controlled in
-  // variant-public-surfaces.ts so one switch covers every public rail/widget.
+  // false keeps an indexed page out of the listings (rules rail and index,
+  // article index, homepage cards) while its URL and search presence stay:
+  // guest pages (shogi4) and rules pages deliberately de-ranked from the rail
+  // (chess). Hiding a whole variant from public surfaces, or
+  // an unindexed rules page, is variant-public-surfaces.ts instead.
   showInIndex?: boolean;
   // Which homepage row the card sits in. Unset is the general row, so a new
   // article lands on the homepage with no second edit; 'deep-dives' moves it to

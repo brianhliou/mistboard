@@ -6,7 +6,7 @@
 // the shared largeboard binary that `fairyStockfishPath()` resolves (prod's
 // /app/bin/fairy-stockfish, the fortress ladder's) plays it identically to the
 // lab reference. packages/game/src/fixtures/crazyhouse-xiangqi-parity.json ties
-// the .ini to the game kernel: legal moves and perft-2 at 370 positions.
+// the .ini to the game kernel: legal moves and perft-2 at 449 positions.
 //
 // Structurally this is the Atomic Xiangqi provider (warm FSF session per tier,
 // node + skill rungs, classical eval forced) on the stock binary, with the

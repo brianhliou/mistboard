@@ -227,23 +227,79 @@
   .live-review__cluster .moves-panel {
     align-self: start;
     box-sizing: border-box;
-    height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+    /* A FLOOR, never a cap. From 2026-09-30 to 10-02 this was `height`, and a
+       board shorter than the table (banqi's 8x4 strip is 395px; flip jungle,
+       any board shrunk by the grip) clipped the table from the bottom: the move
+       list, the seat row and Resign/Abort disappeared. The table is its
+       content's height at least; the board only stretches it. */
+    min-height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
   }
 }
 
+/* The flip variants whose board leaves room below it: banqi's 8x4 strip
+   (less than half the room row's height) and flip jungle's 4x4 square. The
+   centre column stacks the board and the face-down tally under it
+   (hidden-pool-placement.ts moves the pool there: the centre column has the
+   width, the right rail needs the height); on a wide screen the three columns
+   are one band (below). */
+:is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .review-shell__center {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+}
+:is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .hidden-pool--under-board {
+  /* Board discs at ~40% size: the tally reads as the board's own inventory. */
+  --capture-piece-size: clamp(26px, calc(var(--uni-board-width, 360px) * 0.05), 36px);
+  box-sizing: border-box;
+  width: var(--uni-board-width, 100%);
+  max-width: 100%;
+  margin-top: 0;
+  /* No rule above it: the board's own edge already closes the board, and a
+     second line read as a divider between two unrelated panels. */
+  border-top: 0;
+  padding: 0 4px;
+  /* Red and black side by side: one row of the board's width, not a column
+     that leaves the right half of the board's footprint empty. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+}
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__caption {
+  grid-column: 1 / -1;
+}
+
 @media (min-width: 1260px) {
-  /* Banqi's 8×4 board is much shorter than the viewport-height room
-     rails. Center it like the right-side game console instead of leaving both
-     primary game surfaces stranded at different vertical positions. */
-  .live-route--banqi .live-review__cluster .review-shell__center {
-    align-items: center;
+  /* The three columns are one band the height of the board and its tally,
+     centred in the room row: the row's height is the content's (not the
+     viewport's), both rails stretch to it, and the table stays the compact
+     centred console the tall boards use, so the two clocks sit a console's
+     height apart. Full-height rails (tried 10-02) dwarfed the short board and
+     put the clocks the screen's height apart. */
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster {
+    grid-template-rows: auto;
+    align-content: center;
+  }
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .meta-panel {
+    max-height: none;
+  }
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .moves-panel {
+    align-self: stretch;
+  }
+  /* All three columns start on the board's top edge. Centred, the table rode
+     up and down the rail with its content (a finished game's table is shorter
+     than a live one's) and never lined up with the board or the info card. */
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .game-console {
+    justify-content: flex-start;
   }
 
-  /* Fortress centers for the same reason banqi does, arrived at from the
-     opposite direction: banqi's board is too SHORT for the row, fortress's 7x8
-     board is tall but still shorter than the full-height room rails, so
-     top-pinning strands ~130px of dead space under the board and leaves the
-     board and the game console reading as two surfaces at different heights.
+  /* Fortress centers its board: the 7x8 board is tall but still shorter
+     than the full-height room rails, so top-pinning strands ~130px of dead
+     space under the board and leaves the board and the game console reading
+     as two surfaces at different heights.
 
      The reserve bands are already pinned to a fixed height whether or not a
      pocket holds anything (.rail-material.drop-mini-reserve-strip above), so
@@ -252,8 +308,7 @@
   .live-route--fortress-xiangqi .live-review__cluster .review-shell__center {
     align-items: center;
   }
-  /* Their boards centre in the row, so the board-height rail centres with them. */
-  .live-route--banqi .live-review__cluster .moves-panel,
+  /* Its board centres in the row, so the board-height rail centres with it. */
   .live-route--fortress-xiangqi .live-review__cluster .moves-panel {
     align-self: center;
   }

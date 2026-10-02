@@ -88,7 +88,7 @@ import {
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
 import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
-import { hasFinalVariantMarker, renderVariantMarker } from './variant-markers.js';
+import { renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
   gameSpecIdFromRulesSlug,
@@ -96,6 +96,7 @@ import {
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
   rulesSlugRetired,
+  variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
 import { DEFAULT_XIANGQI_PIECE_SET, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
@@ -2046,7 +2047,10 @@ function ctaKindForHref(href: string): 'play' | 'nav' {
 function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLElement | null {
   const gameSpecId = gameSpecIdFromRulesSlug(slug);
   if (!gameSpecId) return null;
-  if (!rulesSlugPublicSurfaceEnabled(slug)) return null;
+  // The variant's switch, not the page's: an unlisted rules page for a public
+  // variant (crazyhouse-xiangqi while its page is held back) still offers the
+  // board, and a hidden variant (mahjong) still does not.
+  if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
 
   const game = variantNavLabel(title);
   const row = document.createElement('div');
@@ -2432,15 +2436,16 @@ export function renderArticleThumbnail(
 
 // Variant rules articles whose rail/landing thumbnail is the shared variant
 // marker. Base-game articles map to their no-fog markers so the whole rail
-// reads in one visual language.
+// reads in one visual language. Chess is study-only, not a variant, and has no
+// marker: its rules page keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
-  chess: 'chess',
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   'atomic-xiangqi': 'atomic-xiangqi',
+  'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
   jungle: 'jungle',
@@ -2453,9 +2458,7 @@ function renderVariantMiniThumb(slug: string): HTMLElement | null {
   const miniId = VARIANT_MINI_BY_SLUG[slug];
   if (!miniId) return null;
   const wrap = document.createElement('div');
-  wrap.className = hasFinalVariantMarker(miniId)
-    ? 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb'
-    : 'articles-index-card-thumb variant-mini-thumb';
+  wrap.className = 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb';
   wrap.setAttribute('aria-hidden', 'true');
   markNoTranslate(wrap);
   wrap.innerHTML = renderVariantMarker(miniId, { size: 100 });

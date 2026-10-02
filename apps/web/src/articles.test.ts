@@ -13,6 +13,7 @@ import {
   buildRulesIndex,
 } from './articles.js';
 import { articles } from './articles-data.js';
+import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
 
@@ -222,6 +223,20 @@ describe('article public listing gates', () => {
     expect(
       page.querySelector('.article-variant-sidebar a[href="/zh-hant/rules/banqi"]'),
     ).not.toBeNull();
+  });
+
+  it('names the cannon blind shot as the rejected banqi house rule, in every language', () => {
+    // The 09-17 copy listed Mistboard's own rules as the house rules it rejects.
+    const en = buildArticlePage('banqi').textContent ?? '';
+    expect(en).toContain('A common house rule lets a cannon also fire at a face-down tile');
+    expect(en).not.toContain('house rules are deliberately not used');
+    expect(en).not.toContain('Taiwan Computer Game Association');
+    expect(buildArticlePage('banqi', 'zh-Hans').textContent).toContain(
+      '常见的一条家规允许炮隔子打暗子',
+    );
+    expect(buildArticlePage('banqi', 'zh-Hant').textContent).toContain(
+      '常見的一條家規允許砲隔子打暗子',
+    );
   });
 
   it('publishes the completed Fortress Xiangqi localization', () => {
@@ -527,6 +542,30 @@ describe('rules variant sidebar', () => {
     for (const label of labels) {
       expect(label, `rail label "${label}" leaks page-title freight`).not.toMatch(/Rules|\(|：/);
     }
+  });
+
+  // Brian, 2026-10-02: Crazyhouse's page is held back for polish (unlisted and
+  // unindexed, HIDDEN_RULES_SLUGS) while the game stays public. It shows in
+  // neither the rail nor the /rules index, and still renders.
+  it('keeps the Crazyhouse Xiangqi rules page out of the rail and index', () => {
+    for (const slug of ['xiangqi', 'crazyhouse-xiangqi']) {
+      const sidebar = buildArticlePage(slug).querySelector('.article-variant-sidebar');
+      expect(sidebar, slug).not.toBeNull();
+      expect(sidebar?.querySelector('a[href="/rules/crazyhouse-xiangqi"]'), slug).toBeNull();
+    }
+    const index = buildRulesIndex();
+    expect(index.querySelector('a[href="/rules/crazyhouse-xiangqi"]')).toBeNull();
+    expect(rulesSlugPublicSurfaceEnabled('crazyhouse-xiangqi')).toBe(false);
+  });
+
+  // The page is unlisted, the game is not: a reader who reaches it from a game
+  // still gets the play row, gated on the variant's switch rather than the page's.
+  it('still offers the board on the unlisted Crazyhouse Xiangqi rules page', () => {
+    const page = buildArticlePage('crazyhouse-xiangqi');
+    expect(page.querySelector('h1')?.textContent).toContain('Crazyhouse Xiangqi');
+    const playRow = page.querySelector('.article-cta-row.article-play-cta');
+    expect(playRow).not.toBeNull();
+    expect(playRow?.querySelector('a[href*="gameSpecId=crazyhouse-xiangqi"]')).not.toBeNull();
   });
 
   it('omits the variant sidebar on non-rules articles', () => {

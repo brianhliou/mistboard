@@ -30,7 +30,8 @@ DOCKER_USER=$(id -u):$(id -g) docker compose run --rm emscripten \
   make -C .. emscripten_build ARCH=wasm embedded_nnue=no
 
 cat "$ROOT/apps/web/public/engine/fairy-stockfish/fortress-xiangqi.ini" \
-    "$ROOT/apps/server/src/atomic-xiangqi.ini" > public/variants.ini
+    "$ROOT/apps/server/src/atomic-xiangqi.ini" \
+    "$ROOT/apps/server/src/crazyhouse-xiangqi.ini" > public/variants.ini
 cp "$ROOT/scripts/engine-wasm/fairy-stockfish-wasm-gate.cjs" public/gate.cjs
 docker compose run --rm -T node node public/gate.cjs
 

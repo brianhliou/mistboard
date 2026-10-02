@@ -26,6 +26,7 @@ import { jungleFlipHiddenPool, jungleFlipLastMoverInk } from '@mistboard/game';
 import './live-xiangqi.css';
 import { jungleFlipEnabled } from './feature-flags.js';
 import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
+import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import {
   animateJungleFlipBoardMove,
@@ -204,6 +205,7 @@ const client = createTenantLiveClient<JungleFlipSeat, JungleFlipWireView, Jungle
   setup: (ctx) => {
     core = ctx;
     installJungleFlipBoardInteraction(ctx.refs);
+    placeHiddenPoolUnderBoard(ctx.refs);
     installSelectionClickAway({
       roots: () => [core?.refs.board],
       hasSelection: () => selectedSquare !== null,

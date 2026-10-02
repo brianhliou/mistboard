@@ -80,7 +80,25 @@ describe('crazyhouse xiangqi board view', () => {
     fillCrazyhouseXiangqiReserve(black, view, 'black');
     expect(red.querySelectorAll('button[data-drop="horse"]').length).toBe(1);
     expect(black.querySelectorAll('button').length).toBe(0);
-    expect(black.querySelectorAll('.drop-mini-reserve-piece').length).toBe(1);
+    // The captured cannon beside the advisors and elephants Black started with.
+    expect(black.querySelectorAll('.drop-mini-reserve-piece').length).toBe(3);
+  });
+
+  it('starts with advisors and elephants in hand, and drops them anywhere on the own half', () => {
+    const view = getCrazyhouseXiangqiPlayerView(createInitialCrazyhouseXiangqiState('t'), 'red');
+    expect(view.hands).toEqual({
+      red: { advisor: 2, elephant: 2 },
+      black: { advisor: 2, elephant: 2 },
+    });
+    for (const role of ['advisor', 'elephant'] as const) {
+      const targets = crazyhouseXiangqiDropTargets(view, role);
+      const rank = (square: string) => Number(square.slice(1));
+      // Every empty point of ranks 1-5 (45 points, 12 occupied), none across the river.
+      expect(targets.length).toBe(33);
+      expect(targets.every((square) => rank(square) <= 5)).toBe(true);
+      expect(targets).toContain('a5');
+      expect(targets).not.toContain('a6');
+    }
   });
 });
 

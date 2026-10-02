@@ -324,7 +324,7 @@ test('the default plan: five variants, modest caps (fortress and atomic cut, 202
 test('fail closed: an admin-only, adapterless or unknown variant is skipped, never defaulted', () => {
   const config = botVsBotConfigFromEnv({
     MISTBOARD_BOT_VS_BOT_VARIANTS:
-      'crazyhouse-xiangqi, jungle-flip, dark-xiangqi, nope, jieqi, jieqi, fortress-xiangqi',
+      'mahjong, crazyhouse-xiangqi, jungle-flip, dark-xiangqi, nope, jieqi, jieqi, fortress-xiangqi',
   } as NodeJS.ProcessEnv);
   // Cut from the defaults, fortress still runs when named: its adapter stays.
   assert.deepEqual(
@@ -335,8 +335,10 @@ test('fail closed: an admin-only, adapterless or unknown variant is skipped, nev
     ],
   );
   assert.deepEqual(config.skipped, [
-    // Has an adapter and a ladder, but is an admin playtest (publicSurface hidden).
-    { variant: 'crazyhouse-xiangqi', reason: 'not-public' },
+    // Built, but hidden (publicSurface 'hidden'): never scheduled.
+    { variant: 'mahjong', reason: 'not-public' },
+    // Public with an EvE adapter, but no scheduled ladder in BOT_LADDERS.
+    { variant: 'crazyhouse-xiangqi', reason: 'no-ladder' },
     { variant: 'jungle-flip', reason: 'no-eve-adapter' },
     { variant: 'dark-xiangqi', reason: 'no-eve-adapter' },
     { variant: 'nope', reason: 'unknown-variant' },

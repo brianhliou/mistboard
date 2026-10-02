@@ -62,7 +62,7 @@
   "crazyhouse-xiangqi": {
     "title": "Crazyhouse Xiangqi Rules",
     "kind": "rules",
-    "description": "Xiangqi where a captured piece joins your hand: on your turn you may drop it on any empty point where it could stand in a normal game, as long as the drop does not give check.",
+    "description": "Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.",
     "status": "published"
   },
   "duck-xiangqi": {

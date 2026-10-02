@@ -204,6 +204,9 @@ const RULES_POSITION_CARDS: Record<string, { variant: PositionOgVariant; redFog?
   // Unlisted, but a rules link is still shared: the card is the standard
   // array on the standard board, which is the array atomic starts from.
   'atomic-xiangqi': { variant: 'atomic-xiangqi' },
+  // The kernel's start (startPositionFen): the standard array without its
+  // advisors and elephants, which start in hand.
+  'crazyhouse-xiangqi': { variant: 'crazyhouse-xiangqi' },
   jungle: { variant: 'jungle' },
   'jungle-flip': { variant: 'jungle-flip' },
 };

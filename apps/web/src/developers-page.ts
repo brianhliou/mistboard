@@ -53,6 +53,7 @@ const TV_CHANNELS = [
   'fortress-xiangqi',
   'duck-xiangqi',
   'atomic-xiangqi',
+  'crazyhouse-xiangqi',
   'dark-xiangqi',
   'dark-chess',
   'jungle',

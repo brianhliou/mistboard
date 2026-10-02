@@ -28,6 +28,7 @@ import { banqiHiddenPool } from '@mistboard/game';
 import './live-xiangqi.css';
 import { banqiEnabled } from './feature-flags.js';
 import { renderHiddenPoolPanel } from './hidden-pool-panel.js';
+import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 import { t } from './i18n/catalog.js';
 import { banqiClickResult } from './live-banqi-interaction.js';
 import {
@@ -212,6 +213,7 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     core = ctx;
     installBanqiBoardStyles();
     installBanqiBoardInteraction(ctx.refs);
+    placeHiddenPoolUnderBoard(ctx.refs);
     // Repaint when the viewer changes their xiangqi piece set in settings — the
     // board and captured pool both render from the stored set, so a live game
     // must hot-reload it (mirrors the chess family's boardAppearanceChangedEvent

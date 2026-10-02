@@ -26,6 +26,9 @@ Conventions:
 
 ### Playing
 
+- The Flip Jungle room has a larger board with the face-down pieces under it, laid out like the banqi room ([574656cf](https://github.com/brianhliou/mistboard/commit/574656cf))
+- The banqi room is laid out around its wide board, with the face-down pieces under the board and the table level with it ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
+- Crazyhouse Xiangqi is open to everyone: captured pieces join your hand, advisors and elephants start in hand and roam their own half, and a drop may give check; rated in the lobby ([e463a334](https://github.com/brianhliou/mistboard/commit/e463a334))
 - in-game buttons and the clock span the move column; after a bot game the postgame offers New game, and Challenge a friend opens on a random side ([6e9613e2](https://github.com/brianhliou/mistboard/commit/6e9613e2))
 - The homepage's play panel is now one row per game: pick a bot level and clock and press Play, or switch to Play a person for open and rated games ([0c8f1f8f](https://github.com/brianhliou/mistboard/commit/0c8f1f8f))
 - Every game can now be played rated through Find opponent between signed-in players: jieqi, Duck Xiangqi, banqi, Jungle, Flip Jungle and Fog Xiangqi join xiangqi, Fortress and Atomic; rated Atomic games now update ratings ([27542e79](https://github.com/brianhliou/mistboard/commit/27542e79))
@@ -59,6 +62,7 @@ Conventions:
 
 ### Site
 
+- the Crazyhouse Xiangqi rules page is unlisted while it is revised, and its News entry links to the game ([ce818f36](https://github.com/brianhliou/mistboard/commit/ce818f36))
 - the privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - less empty space above and below the footer on the homepage ([774f9cff](https://github.com/brianhliou/mistboard/commit/774f9cff))
 - the changelog shows the latest two months, and each older month has its own page ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
@@ -73,6 +77,10 @@ Conventions:
 
 ### Fixed
 
+- Banqi and Flip Jungle rooms show Resign, the move list and your own seat row again, after two days hidden on short boards ([6ffe2f45](https://github.com/brianhliou/mistboard/commit/6ffe2f45))
+- a game whose stored moves no longer replay now reads as not found and stays out of TV and game lists ([e463a334](https://github.com/brianhliou/mistboard/commit/e463a334))
+- The banqi rules page names the cannon house rule it does not play, instead of listing its own rules as rejected ones ([1a95e357](https://github.com/brianhliou/mistboard/commit/1a95e357))
+- Embedded banqi games no longer leave a blank band under the board ([1a95e357](https://github.com/brianhliou/mistboard/commit/1a95e357))
 - rematch now swaps colours, including in xiangqi; Copy invite shows only while a seat is empty ([6e9613e2](https://github.com/brianhliou/mistboard/commit/6e9613e2))
 - a finished broadcast whose source never posted games says No games published instead of promising records ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - an open game whose player has left now drops off the list within 10 seconds, and a matched game you join alone ends after 30 seconds instead of showing an invite link ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))

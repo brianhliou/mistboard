@@ -9,15 +9,16 @@
 // a fixture to edit.
 //
 // The games are the variant lab's (docs-private/drop-game-lab/fullboard/games/,
-// "one-sentence C" = s8-std-legal-nocheck): the 16 strong games (5 s/move)
-// and the 30 depth-12 games. Positions kept: the start, every 5th ply of the
-// strong games, every 60th of the depth-12 games, and, from every ply of every
-// game, a capped sample of the rare cases a sampled ply can miss: the side to
-// move in check with a piece in hand, and a drop refused only because it
-// would give check through a cannon screen. The refused drops are found by
-// running the same positions under a sibling variant with `dropChecks = true`
-// and taking the difference, so the fixture names them without trusting the
-// kernel.
+// s9-hand-free-check, the rule set the .ini flattens): the 16 strong games
+// (5 s/move) and the 30 depth-12 games. Positions kept: the start, every 5th
+// ply of the strong games, every 30th of the depth-12 games, and, from every
+// ply of every game, a capped sample of the cases a sampled ply can miss: the
+// side to move in check with a piece in hand, a drop that gives check (a
+// cannon-screen check first), and a move or drop the river forbids an
+// advisor or elephant. The last two are found by running the same positions
+// under sibling variants, one with `dropChecks = false` and one with the
+// advisors' and elephants' regions widened to the whole board, and taking the
+// difference, so the fixture names them without trusting the kernel.
 //
 // Usage:
 //   node scripts/generate-crazyhouse-xiangqi-parity-fixture.mjs
@@ -38,14 +39,18 @@ const GAMES_DIR =
 const INI = join(ROOT, 'apps/server/src/crazyhouse-xiangqi.ini');
 const OUT = join(ROOT, 'packages/game/src/fixtures/crazyhouse-xiangqi-parity.json');
 const VARIANT = 'crazyhousexiangqi';
-const VARIANT_DROP_CHECKS = 'crazyhousexiangqidropchecks';
+// Siblings, used only to name moves: no drop may check; advisors and elephants cross.
+const VARIANT_NO_DROP_CHECKS = 'crazyhousexiangqinodropchecks';
+const VARIANT_CROSSING = 'crazyhousexiangqicrossing';
 
 const SOURCES = [
-  { name: 'strong', file: 's8-std-legal-nocheck-strong.json', every: 5 },
-  { name: 'd12', file: 's8-std-legal-nocheck.json', every: 60 },
+  { name: 'strong', file: 's9-hand-free-check-strong.json', every: 5 },
+  { name: 'd12', file: 's9-hand-free-check.json', every: 30 },
 ];
 const EXTRA_IN_CHECK_WITH_HAND = 25;
-const EXTRA_SCREEN_BLOCKED = 25;
+const EXTRA_SCREEN_CHECK = 25;
+const EXTRA_DROP_CHECK = 25;
+const EXTRA_RIVER_BLOCKED = 25;
 
 // ── Fairy-Stockfish ─────────────────────────────────────────────────────────
 
@@ -53,7 +58,18 @@ const tmp = mkdtempSync(join(tmpdir(), 'chx-parity-'));
 const iniPath = join(tmp, 'variants.ini');
 writeFileSync(
   iniPath,
-  `${readFileSync(INI, 'utf8')}\n[${VARIANT_DROP_CHECKS}:${VARIANT}]\ndropChecks = true\n`,
+  [
+    readFileSync(INI, 'utf8'),
+    `[${VARIANT_NO_DROP_CHECKS}:${VARIANT}]`,
+    'dropChecks = false',
+    `[${VARIANT_CROSSING}:${VARIANT}]`,
+    ...['White', 'Black'].flatMap((color) =>
+      ['Fers', 'Elephant'].map(
+        (piece) => `mobilityRegion${color}${piece} = *1 *2 *3 *4 *5 *6 *7 *8 *9 *10`,
+      ),
+    ),
+    '',
+  ].join('\n'),
 );
 
 function engineSession(variant, commands) {
@@ -142,8 +158,8 @@ function parseBoard(fen) {
 
 /**
  * Would a piece dropped on `square` become the screen between one of the
- * mover's cannons and the enemy general? Only then is a refused drop refused
- * for a reason the dropped piece itself has nothing to do with.
+ * mover's cannons and the enemy general? Then the drop checks for a reason
+ * the dropped piece itself has nothing to do with: the case easiest to miss.
  */
 function isScreenCheck(board, square, moverIsRed) {
   const general = [...board].find(([, p]) => p === (moverIsRed ? 'k' : 'K'))?.[0];
@@ -198,17 +214,32 @@ console.log(`walking ${all.length} plies of ${games.length} games`);
 const commands = all.map((p) => p.command);
 const shown = displayPositions(VARIANT, commands);
 const stockPerft = perftPositions(VARIANT, commands, 1);
-const withChecks = perftPositions(VARIANT_DROP_CHECKS, commands, 1);
+// The siblings get each position as a FEN: replaying the game's moves would
+// stop at the first one a sibling refuses (a checking drop, for one).
+const fenCommands = shown.map((s) => `position fen ${s.fen}`);
+const noDropChecks = perftPositions(VARIANT_NO_DROP_CHECKS, fenCommands, 1);
+const crossing = perftPositions(VARIANT_CROSSING, fenCommands, 1);
 
 const records = all.map((p, i) => {
   const s = { ...shown[i], moves: stockPerft[i].moves };
   const legal = new Set(s.moves);
-  const blocked = withChecks[i].moves.filter((m) => !legal.has(m));
-  for (const m of blocked) {
+  const quiet = new Set(noDropChecks[i].moves);
+  for (const m of quiet) {
+    if (!legal.has(m)) throw new Error(`dropChecks = false added a move: ${m} at ${s.fen}`);
+  }
+  const checking = s.moves.filter((m) => !quiet.has(m));
+  for (const m of checking) {
     if (!m.includes('@')) throw new Error(`dropChecks changed a board move: ${m} at ${s.fen}`);
   }
   const moverIsRed = s.fen.split(' ')[1] === 'w';
   const board = parseBoard(s.fen);
+  const riverBlocked = crossing[i].moves.filter((m) => !legal.has(m));
+  for (const m of riverBlocked) {
+    const piece = m.includes('@') ? m[0] : board.get(m.match(/^[a-i]\d+/)[0])?.toUpperCase();
+    if (piece !== 'A' && piece !== 'B') {
+      throw new Error(`the crossing sibling added a ${piece} move: ${m} at ${s.fen}`);
+    }
+  }
   const pocket = /\[([^\]]*)\]/.exec(s.fen)?.[1] ?? '';
   const hand = [...pocket].filter((ch) => (ch === ch.toUpperCase()) === moverIsRed);
   return {
@@ -216,8 +247,9 @@ const records = all.map((p, i) => {
     fen: s.fen,
     checkers: s.checkers,
     moves: [...s.moves].sort(),
-    blocked: [...blocked].sort(),
-    screenBlocked: blocked.filter((m) => isScreenCheck(board, m.split('@')[1], moverIsRed)),
+    checking: [...checking].sort(),
+    screenChecks: checking.filter((m) => isScreenCheck(board, m.split('@')[1], moverIsRed)),
+    riverBlocked: [...riverBlocked].sort(),
     hand: hand.map((ch) => ch.toUpperCase()),
   };
 });
@@ -248,10 +280,24 @@ for (const record of spread(
   choose(record, 'check-with-hand');
 }
 for (const record of spread(
-  records.filter((r) => r.screenBlocked.length > 0 && !chosen.has(r.fen)),
-  EXTRA_SCREEN_BLOCKED,
+  records.filter((r) => r.screenChecks.length > 0 && !chosen.has(r.fen)),
+  EXTRA_SCREEN_CHECK,
 )) {
-  choose(record, 'screen-blocked');
+  choose(record, 'screen-check');
+}
+for (const record of spread(
+  records.filter((r) => r.checking.length > 0 && !chosen.has(r.fen)),
+  EXTRA_DROP_CHECK,
+)) {
+  choose(record, 'drop-check');
+}
+// Board moves first: a drop across the river is the rarer and easier half,
+// and every position with an advisor or elephant in hand already has those.
+for (const record of spread(
+  records.filter((r) => r.riverBlocked.some((m) => !m.includes('@')) && !chosen.has(r.fen)),
+  EXTRA_RIVER_BLOCKED,
+)) {
+  choose(record, 'river-blocked');
 }
 const selected = [...chosen.values()].sort(
   (a, b) => a.record.gameIndex - b.record.gameIndex || a.record.ply - b.record.ply,
@@ -276,7 +322,8 @@ const positions = selected.map(({ record, why }, i) => ({
   fen: record.fen,
   ...(record.checkers ? { checkers: record.checkers } : {}),
   moves: record.moves.join(' '),
-  ...(record.blocked.length ? { checkBlockedDrops: record.blocked.join(' ') } : {}),
+  ...(record.checking.length ? { checkingDrops: record.checking.join(' ') } : {}),
+  ...(record.riverBlocked.length ? { riverBlocked: record.riverBlocked.join(' ') } : {}),
   perft2: perft2[i].nodes,
 }));
 const fixture = {
@@ -301,9 +348,15 @@ console.log(`wrote ${OUT}`);
 console.log(`  ${positions.length} positions, ${(json.length / 1024).toFixed(0)} KB`);
 console.log(`  side to move holds (positions): ${JSON.stringify(withRole)}`);
 console.log(`  in check: ${selected.filter(({ record }) => record.checkers).length}`);
+const tally = (key, filter = () => true) => {
+  const lists = selected.map(({ record }) => record[key].filter(filter));
+  return `${lists.filter((l) => l.length).length} positions, ${lists.reduce((n, l) => n + l.length, 0)} moves`;
+};
+console.log(`  with a drop that checks: ${tally('checking')}`);
+console.log(`  with a drop that checks through a cannon screen: ${tally('screenChecks')}`);
 console.log(
-  `  with a check-blocked drop: ${selected.filter(({ record }) => record.blocked.length).length} positions, ${selected.reduce((n, { record }) => n + record.blocked.length, 0)} drops`,
+  `  with an advisor/elephant board move the river forbids: ${tally('riverBlocked', (m) => !m.includes('@'))}`,
 );
 console.log(
-  `  with a cannon-screen-blocked drop: ${selected.filter(({ record }) => record.screenBlocked.length).length} positions, ${selected.reduce((n, { record }) => n + record.screenBlocked.length, 0)} drops`,
+  `  with an advisor/elephant drop the river forbids: ${tally('riverBlocked', (m) => m.includes('@'))}`,
 );

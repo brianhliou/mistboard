@@ -471,6 +471,34 @@ export async function mountVariantAnalysisPage(
       });
       return;
     }
+    case 'crazyhouse-xiangqi': {
+      // Fairy-Stockfish's crazyhousexiangqi FEN, pocket in brackets, so a
+      // pasted position keeps its hands. The editor has no hands (it writes an
+      // empty pocket), so the hand-off carries the board and the turn.
+      const [
+        { mountCrazyhouseXiangqiReview },
+        { crazyhouseXiangqiTreeAdapter },
+        { crazyhouseXiangqiFen, parseCrazyhouseXiangqiFen },
+      ] = await Promise.all([
+        import('./review/crazyhouse-xiangqi-review.js'),
+        import('./review/crazyhouse-xiangqi-tree-adapter.js'),
+        import('@mistboard/game'),
+      ]);
+      const parsed = fenParam ? parseCrazyhouseXiangqiFen(fenParam, ANALYSIS_GAME_ID) : null;
+      const rootTruth = parsed?.ok ? parsed.state : crazyhouseXiangqiTreeAdapter.initialTruth();
+      mountCrazyhouseXiangqiReview(root, {
+        ...base,
+        summary: summaryFor(parsed?.ok === true),
+        root: parsed?.ok
+          ? { truth: parsed.state, fen: crazyhouseXiangqiFen(parsed.state) }
+          : undefined,
+        moves: movesFromParam(movesParam, crazyhouseXiangqiTreeAdapter, rootTruth),
+        importPanel: makeImportPanel(id, crazyhouseXiangqiTreeAdapter, rootTruth),
+        onLineChange: syncLineToUrl(crazyhouseXiangqiTreeAdapter),
+        boardEditorHref: (node) => editorHref(id, crazyhouseXiangqiFen(node)),
+      });
+      return;
+    }
     default: {
       // Fail-closed: a new catalog member must get its own case, never another
       // variant's board.

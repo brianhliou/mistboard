@@ -19,6 +19,7 @@ import { internalEngineAnalysisConfigured } from './../internal-engine-client.js
 import * as persistence from './../persistence.js';
 import { LIVE_ENGINE_DECISION_ARTIFACT_TYPE } from './../persistence-game-lifecycle.js';
 import type { RecentEveGameRecord } from './../persistence-games.js';
+import { filterReplayableGames, isReplayableGame } from '../replayable-games.js';
 import { eventReplayResponse, parsePositiveInteger, withDelayedAir } from './../server-policy.js';
 import { listWatchChannels, type WatchChannel, watchChannelForId } from './../watch-channels.js';
 import {
@@ -226,7 +227,11 @@ export async function tryHandle(
     const offset = boundedInt(parsedUrl.searchParams.get('offset'), 0, 0, Number.MAX_SAFE_INTEGER);
     const limit = boundedInt(parsedUrl.searchParams.get('limit'), 15, 1, 50);
     const page = await persistence.listFavoriteGames(user.id, offset, limit);
-    writeJson(response, 200, page);
+    const games = await filterReplayableGames(page.games);
+    writeJson(response, 200, {
+      games,
+      total: Math.max(0, page.total - (page.games.length - games.length)),
+    });
     return true;
   }
 
@@ -357,7 +362,15 @@ export async function tryHandle(
     // for every channel, so it comes from the short-lived rail cache when warm:
     // 2 queries instead of 20 on a click-through, which is the whole browsing
     // pattern this surface is for.
-    const active = await loadChannel(channel);
+    // The active channel's list is what the client opens: drop games whose
+    // stored log no longer replays (replayable-games.ts) before anything reads it.
+    const loadedActive = await loadChannel(channel);
+    const activeUnlocked = await filterReplayableGames(loadedActive.unlocked);
+    const active = {
+      ...loadedActive,
+      unlocked: activeUnlocked,
+      topPlayer: channelTopPlayer(activeUnlocked),
+    };
     const cachedRail = cachedWatchRail(now.getTime());
     let rail: readonly WatchRailRow[];
     if (cachedRail) {
@@ -397,7 +410,7 @@ export async function tryHandle(
 
   if (pathname === '/api/games/recent') {
     if (!requirePersistence(response)) return true;
-    const games = await persistence.listRecentPublicGames(10);
+    const games = await filterReplayableGames(await persistence.listRecentPublicGames(10));
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ games }));
     return true;
@@ -413,7 +426,11 @@ export async function tryHandle(
     ];
     // delayedAir: whether the homepage TV may air the game after the fact (fog
     // variants only; live-capable ones only ever show frozen). See airsOnDelay.
-    const games = withDelayedAir(await persistence.listShowcaseGames({ variants }));
+    // A game whose stored log no longer replays (its variant's rules changed
+    // under it) would air as "This game could not be loaded": skip it.
+    const games = withDelayedAir(
+      await filterReplayableGames(await persistence.listShowcaseGames({ variants })),
+    );
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ games }));
     return true;
@@ -564,7 +581,9 @@ export async function tryHandle(
     }
     const { a, b } = resolution.pair;
     const [games, tallies] = await Promise.all([
-      persistence.queryHeadToHeadGames(a, b, game.variant, CROSSTABLE_GAME_LIMIT),
+      persistence
+        .queryHeadToHeadGames(a, b, game.variant, CROSSTABLE_GAME_LIMIT)
+        .then((rows) => filterReplayableGames(rows)),
       persistence.tallyHeadToHeadGames(a, b, game.variant),
     ]);
     writeJson(
@@ -579,7 +598,7 @@ export async function tryHandle(
   if (summaryMatch) {
     const roomId = decodeURIComponent(summaryMatch[1]!);
     const game = await gameSummaryForApi(ctx, roomId);
-    if (!game) {
+    if (!game || !(await isReplayableGame(roomId))) {
       response.writeHead(404, { 'content-type': 'application/json' });
       response.end(JSON.stringify({ error: 'not_found' }));
       return true;
@@ -655,7 +674,7 @@ export async function tryHandle(
 
   if (pathname === '/api/eve-games/recent') {
     if (!requirePersistence(response)) return true;
-    const games = await persistence.listRecentEveGames();
+    const games = await filterReplayableGames(await persistence.listRecentEveGames());
     response.writeHead(200, { 'content-type': 'application/json' });
     response.end(JSON.stringify({ games }));
     return true;

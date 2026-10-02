@@ -5,13 +5,14 @@
 // everything here, so existing `from './ceval.js'` importers are unaffected.
 
 /** Variants a client engine can evaluate. `xiangqi` uses Pikafish,
- *  `fortressxiangqi`/`atomicxiangqi`/`chess` use Fairy-Stockfish, `jieqi` uses
+ *  `fortressxiangqi`/`atomicxiangqi`/`crazyhousexiangqi`/`chess` use Fairy-Stockfish, `jieqi` uses
  *  PikaJieQi, and the remaining variants use Misty. createCeval() dispatches to
  *  the appropriate backend. */
 export type CevalVariant =
   | 'xiangqi'
   | 'fortressxiangqi'
   | 'atomicxiangqi'
+  | 'crazyhousexiangqi'
   // Standard chess on Fairy-Stockfish's built-in variant, classical eval (no
   // net shipped): the study-only chess spec's review panel.
   | 'chess'

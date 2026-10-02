@@ -174,18 +174,22 @@ test('serveArticlePage redirects an unpublished localized article to its English
 test('serveArticlePage marks an unlisted rules page as non-indexable', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
-  const response = captureResponse();
 
-  await serveArticlePage({
-    slug: 'shogi4',
-    base: 'rules',
-    response,
-    publicHost: 'https://mistboard.test',
-    staticDir,
-  });
+  // crazyhouse-xiangqi: a public variant whose rules page is held back
+  // (2026-10-02).
+  for (const slug of ['shogi4', 'crazyhouse-xiangqi']) {
+    const response = captureResponse();
+    await serveArticlePage({
+      slug,
+      base: 'rules',
+      response,
+      publicHost: 'https://mistboard.test',
+      staticDir,
+    });
 
-  assert.equal(response.status, 200);
-  assert.match(response.body, /<meta name="robots" content="noindex, follow">/);
+    assert.equal(response.status, 200, slug);
+    assert.match(response.body, /<meta name="robots" content="noindex, follow">/, slug);
+  }
 });
 
 // Every localized surface must be reachable AND advertised. Before this the
@@ -241,10 +245,12 @@ test('the Chinese home pages and blog indexes are routed, advertised and titled'
 test('serveSitemap omits unlisted and retired rules while retaining public articles', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await mkdir(join(staticDir, 'rules'), { recursive: true });
+  await mkdir(join(staticDir, 'zh-hans', 'rules'), { recursive: true });
   await mkdir(join(staticDir, 'blog'), { recursive: true });
-  for (const slug of ['xiangqi', 'shogi4', 'kriegspiel']) {
+  for (const slug of ['xiangqi', 'shogi4', 'kriegspiel', 'crazyhouse-xiangqi']) {
     await writeFile(join(staticDir, 'rules', `${slug}.html`), '<h1>rules</h1>');
   }
+  await writeFile(join(staticDir, 'zh-hans', 'rules', 'crazyhouse-xiangqi.html'), '<h1>规则</h1>');
   await writeFile(join(staticDir, 'blog', 'misty.html'), '<h1>article</h1>');
   const response = captureResponse();
 
@@ -258,7 +264,7 @@ test('serveSitemap omits unlisted and retired rules while retaining public artic
   assert.equal(response.status, 200);
   assert.match(response.body, /https:\/\/mistboard\.test\/rules\/xiangqi/);
   assert.match(response.body, /https:\/\/mistboard\.test\/blog\/misty/);
-  assert.doesNotMatch(response.body, /shogi4|kriegspiel/);
+  assert.doesNotMatch(response.body, /shogi4|kriegspiel|crazyhouse-xiangqi/);
 });
 
 // Search Console reports indexing per submitted sitemap, so the index splits

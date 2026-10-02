@@ -28,6 +28,7 @@ const STUDY_VARIANT_IDS = [
   'dark-xiangqi',
   'duck-xiangqi',
   'fortress-xiangqi',
+  'crazyhouse-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',

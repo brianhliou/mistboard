@@ -95,10 +95,18 @@
 }
 
 /* Flip Jungle is a square 4x4 board (viewBox ~286x286); cap the width so four
-   cells never balloon to the full height budget. */
+   cells never balloon to the full height budget. 720 matches banqi's cap (was
+   520, which read small on a full screen, Brian 2026-10-02). From the
+   two-column layout up the face-down tally sits under the board
+   (hidden-pool-placement.ts), so the height budget leaves its two rows room. */
 .live-route--jungle-flip {
   --uni-board-aspect: 1;
-  --uni-board-max: 520px;
+  --uni-board-max: 720px;
+}
+@media (min-width: 800px) {
+  .live-route--jungle-flip {
+    --uni-board-chrome-h: 110px;
+  }
 }
 
 .live-route--jungle-flip .board-status {

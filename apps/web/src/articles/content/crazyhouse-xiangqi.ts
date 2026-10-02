@@ -1,13 +1,19 @@
+import {
+  CRAZYHOUSE_XIANGQI_DROP_REGION_BOARD,
+  CRAZYHOUSE_XIANGQI_RIVER_PAIR,
+  CRAZYHOUSE_XIANGQI_START_BOARD,
+} from '../../crazyhouse-xiangqi-rules-diagrams.js';
 import { playClosing } from '../diagrams.js';
 import type { Article } from '../types.js';
 
-// Written while the table is an admin playtest (publicSurface 'hidden',
-// allowlisted on the server), so it is unlisted and non-indexed
-// (apps/server/src/article-meta.ts NON_INDEXED_ARTICLE_SLUGS) and English only.
-// Every rule here is the kernel's, packages/game/src/variants-crazyhouse-
-// xiangqi.ts: the drop points are crazyhouseXiangqiCanStand, the no-check
-// drop is the legal-move filter, and the endings are applyCrazyhouseXiangqiMove.
-// Change the two together.
+// Listed and indexed with the public launch, in English and machine-drafted
+// zh-Hans / zh-Hant (article-i18n.ts). Every rule here is the kernel's,
+// packages/game/src/variants-crazyhouse-xiangqi.ts: the start is
+// createInitialCrazyhouseXiangqiState, the drop points are
+// crazyhouseXiangqiCanStand, the advisor and elephant moves are its rule
+// geometry, and the endings are applyCrazyhouseXiangqiMove. The diagrams are
+// drawn from the kernel (crazyhouse-xiangqi-rules-diagrams.ts). Change the
+// two together.
 export const crazyhouseXiangqiArticle: Article = {
   slug: 'crazyhouse-xiangqi',
   gameSpecId: 'crazyhouse-xiangqi',
@@ -15,24 +21,63 @@ export const crazyhouseXiangqiArticle: Article = {
   kind: 'rules',
   title: 'Crazyhouse Xiangqi Rules',
   summary:
-    'Xiangqi where a captured piece joins your hand: on your turn you may drop it on any empty point where it could stand in a normal game, as long as the drop does not give check.',
+    'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.',
   showSummaryOnPage: false,
   status: 'published',
   publishedAt: '2026-10-01',
   playableOnMistboard: true,
   audience:
     'Xiangqi players trying the drop version for the first time, and Crazyhouse players who want the xiangqi rules stated precisely.',
+  thumbnail: { kind: 'svg', svg: CRAZYHOUSE_XIANGQI_START_BOARD },
   intro: [
     {
       kind: 'paragraph',
-      text: 'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with one addition. Captured pieces join your hand. On your turn you may drop one of them on any empty point where that piece could stand in a normal game. A drop may not give check.',
+      text: 'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. Captured pieces join your hand, and on your turn you may drop one of them instead of moving. Each side also starts with its two advisors and two elephants in hand, and those pieces move anywhere on their own side of the river.',
     },
     {
       kind: 'paragraph',
-      text: 'Everything else is xiangqi: the board, the starting array, how each piece moves, the palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.',
+      text: 'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.',
+    },
+    // TODO link brianhliou.com/posts/crazyhouse-xiangqi/ once published
+    {
+      kind: 'paragraph',
+      text: 'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi already exist, with no settled standard: Moshe Callen’s Drop-Xiangqi (2007) takes shogi’s drop rules whole, Fairy-Stockfish’s built-in xiangqihouse allows drops only on your own half of the board, and no other site we found offers crazyhouse xiangqi as a game to play. To choose the rules, Fairy-Stockfish played well over 1,600 games across more than 40 candidate rule sets on the full board, and the set described here kept games even and decisive while giving advisors and elephants real play. As far as we found, it is the first crazyhouse xiangqi rule set chosen by measuring engine play on the full board.',
     },
   ],
   sections: [
+    {
+      heading: 'The start',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: CRAZYHOUSE_XIANGQI_START_BOARD,
+          caption: 'The start. Both hands hold two advisors and two elephants.',
+        },
+        {
+          kind: 'paragraph',
+          text: 'Red moves first, and the first move may already be a drop.',
+        },
+      ],
+    },
+    {
+      heading: 'Advisors and elephants',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'An advisor moves one point diagonally and an elephant two, and an elephant is still blocked when the point between is occupied. Neither is held to its usual points: an advisor may leave the palace, and an elephant may stand on any point, as long as both stay on their own side of the river. Neither ever crosses it.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: CRAZYHOUSE_XIANGQI_RIVER_PAIR,
+          caption:
+            'An advisor on e5 and an elephant on c5, on the river bank. The dots are where each may move; the crosses are the points the river keeps them from.',
+        },
+      ],
+    },
     {
       heading: 'Captured pieces change sides',
       blocks: [
@@ -55,7 +100,7 @@ export const crazyhouseXiangqiArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: '**Where a piece may land.** Only on a point where that piece could stand in a normal game of xiangqi:',
+          text: '**Where a piece may land.** Only on a point where that piece could stand:',
         },
         {
           kind: 'table',
@@ -64,8 +109,7 @@ export const crazyhouseXiangqiArticle: Article = {
           wrap: true,
           rows: [
             ['Chariot, horse, cannon', 'Any empty point.'],
-            ['Advisor', 'One of the five advisor points of your own palace.'],
-            ['Elephant', 'One of the seven elephant points on your own side of the river.'],
+            ['Advisor, elephant', 'Any empty point on your own side of the river.'],
             [
               'Soldier',
               'On your own side, one of the five soldier files, on the rank where soldiers start or the rank in front of it. Across the river, any empty point.',
@@ -73,16 +117,18 @@ export const crazyhouseXiangqiArticle: Article = {
           ],
         },
         {
+          kind: 'raw-svg',
+          svg: CRAZYHOUSE_XIANGQI_DROP_REGION_BOARD,
+          caption:
+            'At the start, Red may drop an advisor or an elephant on any of the marked points.',
+        },
+        {
           kind: 'paragraph',
           text: 'Any number of soldiers may share a file. A soldier dropped across the river already moves sideways, as a soldier that walked there would.',
         },
         {
           kind: 'paragraph',
-          text: '**A drop may not give check.** Whatever makes it check is ruled out: the dropped piece attacking the general itself, or the dropped piece becoming the screen one of your own cannons fires over. You may still drop a piece to block a check against your own general. A drop that gives check is not on the board as a choice; the game does not offer it.',
-        },
-        {
-          kind: 'paragraph',
-          text: 'Moves give check as they do in any game of xiangqi. Only drops are restricted.',
+          text: '**A drop may give check, and may mate.** The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. The one drop you may not make is one that leaves your own general in check: a drop may block a check, but it may not become the screen an enemy cannon fires over at your general.',
         },
       ],
     },
@@ -91,7 +137,7 @@ export const crazyhouseXiangqiArticle: Article = {
       blocks: [
         {
           kind: 'paragraph',
-          text: '**Checkmate wins.** As in xiangqi, so does stalemate: a player with no legal move loses, in check or not. Count your drops as moves. A player with a piece in hand and an empty point to put it on is rarely out of moves.',
+          text: '**Checkmate wins,** by a move or by a drop. As in xiangqi, so does stalemate: a player with no legal move loses, in check or not. Count your drops as moves. A player with a piece in hand and an empty point to put it on is rarely out of moves.',
         },
         {
           kind: 'paragraph',
@@ -114,14 +160,19 @@ export const crazyhouseXiangqiArticle: Article = {
           kind: 'faq',
           items: [
             {
-              question: 'Why can I not drop my chariot on that point?',
+              question: 'Can a drop give check?',
               answer:
-                'The drop would give check. A chariot dropped on the general’s file or rank with nothing in between checks it, and so does any piece dropped between one of your cannons and the general, because it becomes the cannon’s screen.',
+                'Yes. A drop may check and may mate, directly or by becoming the screen for one of your cannons. The only drop you may not make is one that leaves your own general in check.',
             },
             {
-              question: 'Why does my elephant only drop on some points?',
+              question: 'Why can my elephant not cross the river?',
               answer:
-                'An elephant can only ever stand on its seven points on its own side of the river, and an advisor on its five palace points. A drop puts a piece where a game could have put it, nowhere else.',
+                'Advisors and elephants never cross it, by move or by drop. On your own side of the river they may stand on any point, so that whole half is open to them.',
+            },
+            {
+              question: 'Why do advisors and elephants start in hand?',
+              answer:
+                'So both sides have pieces to drop from the first move, placed where the game needs them instead of on fixed points.',
             },
             {
               question: 'Does a drop reset the sixty-ply count?',
@@ -134,7 +185,7 @@ export const crazyhouseXiangqiArticle: Article = {
     },
     playClosing({
       heading: 'Play on Mistboard',
-      lead: 'Crazyhouse Xiangqi is on Mistboard against the Fairy-Stockfish ladder or a friend with an invite link. It is still being tested and is open to invited accounts.',
+      lead: 'Crazyhouse Xiangqi is on Mistboard against the Fairy-Stockfish ladder, a friend with an invite link, or whoever is waiting in the lobby.',
       playLabel: 'Play the computer',
       playHref: '/?play=computer&gameSpecId=crazyhouse-xiangqi',
     }),
