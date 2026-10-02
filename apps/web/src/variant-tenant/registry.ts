@@ -884,8 +884,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        // Casual only: no crazyhouse_xiangqi pool in the user_ratings CHECK.
-        supportsRated: false,
+        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],

@@ -171,6 +171,7 @@ test('RATED_POOL_BASES derives from the rated flag and matches the RatingVariant
     xiangqi: true,
     duck_xiangqi: true,
     atomic_xiangqi: true,
+    crazyhouse_xiangqi: true,
   };
   assert.deepEqual(Object.keys(unionMembers).sort(), [...RATED_POOL_BASES].sort());
 });
@@ -183,6 +184,7 @@ test('ratingPoolForSpec is rated for launched pools and null for casual-only spe
   assert.equal(ratingPoolForSpec(JUNGLE_SPEC_ID), 'jungle');
   assert.equal(ratingPoolForSpec(JUNGLE_FLIP_SPEC_ID), 'jungle_flip');
   assert.equal(ratingPoolForSpec(ATOMIC_XIANGQI_SPEC_ID), 'atomic_xiangqi');
+  assert.equal(ratingPoolForSpec(CRAZYHOUSE_XIANGQI_SPEC_ID), 'crazyhouse_xiangqi');
   assert.equal(isRatedPoolBase('jieqi'), true);
   assert.equal(isRatedPoolBase('jungle'), true);
   assert.equal(isRatedPoolBase('jungle_flip'), true);

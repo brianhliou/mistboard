@@ -108,8 +108,7 @@ export type RatingPoolBaseId =
   | 'duck_xiangqi'
   // Migration 147 added it to the user_ratings CHECK.
   | 'atomic_xiangqi'
-  // Unrated, and not in the user_ratings CHECK: the pool exists because every
-  // spec names one, not because anything writes to it.
+  // Migration 158 added it to the user_ratings CHECK.
   | 'crazyhouse_xiangqi';
 
 export type GameSpecId =
@@ -522,8 +521,8 @@ export const GAME_SPECS: readonly GameSpec[] = [
     // Rules engine: packages/game/src/variants-crazyhouse-xiangqi.ts, tied to
     // the engine by fixtures/crazyhouse-xiangqi-parity.json.
     //
-    // Public casual variant (launched from the admin-only playtest). Casual
-    // only: no rated flag, no pool in the user_ratings CHECK.
+    // Public variant (launched from the admin-only playtest), rated through
+    // Find opponent like every lobby variant; friend links and PvE stay casual.
     id: CRAZYHOUSE_XIANGQI_SPEC_ID,
     publicName: 'Crazyhouse Xiangqi',
     family: 'xiangqi',
@@ -537,6 +536,9 @@ export const GAME_SPECS: readonly GameSpec[] = [
     ratingPoolBase: 'crazyhouse_xiangqi',
     publicSurface: 'casual',
     runtimeStatus: 'live',
+    // Migration 158 added 'crazyhouse_xiangqi' to the user_ratings CHECK,
+    // which is what makes this honest (the duck and atomic recipe).
+    rated: true,
   },
   {
     // Jungle / Dou Shou Qi (斗兽棋): perfect-information 7×9 animal-rank game. Eight
@@ -654,6 +656,7 @@ export type RatingVariant = Extract<
   | 'xiangqi'
   | 'duck_xiangqi'
   | 'atomic_xiangqi'
+  | 'crazyhouse_xiangqi'
 >;
 
 // The active rated-pool set, derived from the `rated` flag. This is the ONE

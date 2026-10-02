@@ -4,9 +4,9 @@
  * create route.
  *
  * Scope: a public casual variant. PvP by friend link and a lobby seek, PvE
- * against the stock Fairy-Stockfish ladder, a TV channel, JSON export; all
- * unrated (no crazyhouse_xiangqi pool in the user_ratings CHECK). No
- * correspondence.
+ * against the stock Fairy-Stockfish ladder, a TV channel, JSON export. The
+ * lobby seek may be rated (crazyhouse_xiangqi pool, migration 158); friend
+ * links and PvE stay casual. No correspondence.
  */
 
 import type {
@@ -167,13 +167,13 @@ registerVariantTenant({
       );
     },
   },
-  // Find-opponent seek, unrated: there is no rating pool for it, so a rated
-  // seek would fail at the point of writing the result.
+  // Find-opponent seek, rated on request: the crazyhouse_xiangqi pool is in
+  // the user_ratings CHECK since migration 158.
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createCrazyhouseXiangqiRoom(timeControl, 'random', false);
+    createRoom: async (timeControl, rated) => {
+      const created = await createCrazyhouseXiangqiRoom(timeControl, 'random', rated);
       if (!created.ok) throw new Error(`crazyhouse_xiangqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },

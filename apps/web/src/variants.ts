@@ -29,6 +29,7 @@ import {
 import {
   atomicXiangqiEnabled,
   banqiEnabled,
+  crazyhouseXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -62,6 +63,7 @@ export interface VariantDef {
 const fortressXiangqiOn = fortressXiangqiEnabled();
 const duckXiangqiOn = duckXiangqiEnabled();
 const atomicXiangqiOn = atomicXiangqiEnabled();
+const crazyhouseXiangqiOn = crazyhouseXiangqiEnabled();
 const xiangqiOn = xiangqiEnabled();
 const jieqiOn = jieqiEnabled();
 const banqiOn = banqiEnabled();
@@ -72,6 +74,7 @@ const darkChessSpec = gameSpecForId(DARK_CHESS_SPEC_ID);
 const fortressXiangqiSpec = gameSpecForId(FORTRESS_XIANGQI_SPEC_ID);
 const duckXiangqiSpec = gameSpecForId(DUCK_XIANGQI_SPEC_ID);
 const atomicXiangqiSpec = gameSpecForId(ATOMIC_XIANGQI_SPEC_ID);
+const crazyhouseXiangqiSpec = gameSpecForId(CRAZYHOUSE_XIANGQI_SPEC_ID);
 const xiangqiSpec = gameSpecForId(XIANGQI_SPEC_ID);
 const darkXiangqiSpec = gameSpecForId(DARK_XIANGQI_SPEC_ID);
 const jieqiSpec = gameSpecForId(JIEQI_SPEC_ID);
@@ -193,6 +196,18 @@ export const VARIANTS: VariantDef[] = [
     enabled: false,
     onLeaderboard: fortressXiangqiOn,
     onProfile: fortressXiangqiOn,
+  },
+  // Crazyhouse: xiangqi with captures to hand and drops. Rated through the
+  // lobby seek on the duck and atomic terms (migration 158).
+  {
+    id: currentRatingVariantForSpec(CRAZYHOUSE_XIANGQI_SPEC_ID),
+    gameSpecId: crazyhouseXiangqiSpec.id,
+    apiParam: CRAZYHOUSE_XIANGQI_SPEC_ID,
+    label: crazyhouseXiangqiSpec.publicName,
+    miniId: 'crazyhouse-xiangqi',
+    enabled: false,
+    onLeaderboard: crazyhouseXiangqiOn,
+    onProfile: crazyhouseXiangqiOn,
   },
   {
     id: currentRatingVariantForSpec(DARK_CHESS_SPEC_ID),
