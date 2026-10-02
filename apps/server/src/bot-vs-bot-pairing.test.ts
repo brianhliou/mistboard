@@ -74,6 +74,7 @@ test('each variant ladder is the engines its first-party bots play, and only its
     'jieqi',
     'duck-xiangqi',
     'atomic-xiangqi',
+    'crazyhouse-xiangqi',
     'fortress-xiangqi',
     'banqi',
     'jungle',

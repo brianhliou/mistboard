@@ -32,8 +32,13 @@ import { reviewResultLabel } from '../review/game-review-meta.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from '../showcase-dispatch.js';
 import { seatColorWord, seatInkFamily } from '../variant-seat-label.js';
 import { webVariantTenantForSpecId } from '../variant-tenant/registry.js';
-import { boardAspectForSpec } from '../watch-board-aspect.js';
-import { type EmbedCard, embedPovPicker, embedRailWidthPx, mountEmbedCard } from './embed-card.js';
+import {
+  type EmbedCard,
+  embedColumnAspect,
+  embedPovPicker,
+  embedRailWidthPx,
+  mountEmbedCard,
+} from './embed-card.js';
 import type { EmbedGameRoute } from './embed-route.js';
 import './embed.css';
 
@@ -208,7 +213,9 @@ export async function mountEmbedGame(
         href: reviewUrlForGame(game) ?? `/game/${encodeURIComponent(roomId)}`,
         text: `${names.first} vs ${names.second} · mistboard.com`,
       },
-      aspect: boardAspectForSpec(specId),
+      // A drop variant's watch board carries both hands above and below it
+      // (embed.css, .showcase-reserve), so the column is taller than the board.
+      aspect: embedColumnAspect(specId),
       railWidthPx: embedRailWidthPx(specId),
       startPly: options.startPly ?? null,
       inkFamily: seatInkFamily(game.variant),

@@ -15,6 +15,7 @@ const ANALYSIS_PATH: Record<EmbedLineRoute['variant'], string> = {
   xiangqi: '/analysis/xiangqi',
   'duck-xiangqi': '/analysis/duck-xiangqi',
   'atomic-xiangqi': '/analysis/atomic-xiangqi',
+  'crazyhouse-xiangqi': '/analysis/crazyhouse-xiangqi',
   banqi: '/analysis/banqi',
   jungle: '/analysis/jungle',
   chess: '/rules/chess',

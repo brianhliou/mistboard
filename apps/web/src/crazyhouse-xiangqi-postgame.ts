@@ -4,7 +4,6 @@ import {
   type CrazyhouseXiangqiGameStatus,
   type CrazyhouseXiangqiMove,
   type CrazyhouseXiangqiPlayerView,
-  exportFormatsForVariant,
 } from '@mistboard/game';
 import './landing.css';
 import './game-route.css';
@@ -19,9 +18,8 @@ import {
 } from './review/crazyhouse-xiangqi-review.js';
 import { crosstableConfig } from './review/crosstable.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
-import { gameExportLinks, gameImageLink } from './review/game-export-links.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
-import { downloadRow } from './review/underboard-tabs.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
@@ -195,17 +193,7 @@ export function crazyhouseXiangqiReviewConfig(
     },
     playerProfiles: reviewSeatProfiles(gamePlayers),
     ...crosstableConfig(postgame.game.roomId, postgame.game.players),
-    // Downloads and the board image. No Embed row: /embed/game does not draw
-    // this variant yet, so the iframe code would embed "could not be loaded".
-    shareExtra: [
-      downloadRow([
-        ...gameExportLinks(
-          postgame.game.roomId,
-          exportFormatsForVariant(CRAZYHOUSE_XIANGQI_SPEC_ID),
-        ),
-        gameImageLink(postgame.game.roomId),
-      ]),
-    ],
+    ...gameExportShareExtra(CRAZYHOUSE_XIANGQI_SPEC_ID, postgame.game.roomId),
     // Server whole-game analysis on the stock Fairy-Stockfish, DB-cached: an
     // already-analysed game loads from cache on open (a GET that never
     // computes). Requesting a fresh compute is account-gated (the server

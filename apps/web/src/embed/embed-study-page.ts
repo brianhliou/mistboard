@@ -21,10 +21,13 @@ import {
   mountChessReplayBoard,
   replayChess,
 } from '../chess-study-replay.js';
+import {
+  mountCrazyhouseXiangqiReplayBoard,
+  replayCrazyhouseXiangqiLine,
+} from '../crazyhouse-xiangqi-replay-board.js';
 import { mountDuckXiangqiReplayBoard } from '../duck-xiangqi-replay.js';
 import { seatInkForVariant } from '../flip-seat-ink.js';
 import {
-  FORTRESS_EMBED_HAND_RATIO,
   mountFortressXiangqiReplayBoard,
   replayFortressXiangqiLine,
 } from '../fortress-xiangqi-replay-board.js';
@@ -43,7 +46,12 @@ import {
   resultFromFinalPosition,
   xiangqiResultLabel,
 } from '../xiangqi-replay.js';
-import { embedPovPicker, embedRailWidthPx, mountEmbedCard } from './embed-card.js';
+import {
+  embedColumnAspect,
+  embedPovPicker,
+  embedRailWidthPx,
+  mountEmbedCard,
+} from './embed-card.js';
 import type { EmbedStudyRoute } from './embed-route.js';
 import './embed.css';
 
@@ -118,6 +126,7 @@ export const CHAPTER_EMBED_VARIANTS: ReadonlySet<string> = new Set([
   'duck-xiangqi',
   'atomic-xiangqi',
   'fortress-xiangqi',
+  'crazyhouse-xiangqi',
   'jieqi',
   'banqi',
   'jungle',
@@ -160,6 +169,10 @@ export async function mountChapterEmbed(
   }
   if (variant === 'fortress-xiangqi') {
     await mountFortressXiangqiEmbed(root, credit, chapter, options);
+    return;
+  }
+  if (variant === 'crazyhouse-xiangqi') {
+    await mountCrazyhouseXiangqiEmbed(root, credit, chapter, options);
     return;
   }
   if (variant === 'jieqi') {
@@ -399,9 +412,6 @@ async function mountFortressXiangqiEmbed(
   const tags = chapter.tags ?? {};
   const final = line.states[line.states.length - 1]!;
   const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
-  // The hands ride above and below the board and scale with it, so the column
-  // the card sizes is taller than the board alone by both bands.
-  const boardAspect = boardAspectForSpec('fortress-xiangqi');
   await mountEmbedCard(root, {
     header: tags.event ?? chapter.name ?? 'Study',
     seats: {
@@ -410,11 +420,48 @@ async function mountFortressXiangqiEmbed(
     },
     result: token ? reviewResultLabel(token, 'fortress-xiangqi') : '',
     credit: { href: credit.href, text: credit.text },
-    aspect: 1 / (1 / boardAspect + 2 * FORTRESS_EMBED_HAND_RATIO),
+    // The hands ride above and below the board and scale with it, so the column
+    // the card sizes is taller than the board alone by both bands.
+    aspect: embedColumnAspect('fortress-xiangqi'),
     railWidthPx: embedRailWidthPx('fortress-xiangqi'),
     startPly: options.startPly ?? 0,
     mountBoard: async (host, hooks) =>
       mountFortressXiangqiReplayBoard(host, line, { perspective: 'red' }, hooks),
+  });
+  document.title = `${chapter.name ?? 'Study'} · Mistboard`;
+}
+
+// Crazyhouse Xiangqi is its own branch for the fortress reason: a drop (`P@e5`)
+// is not an ICCS move, so the xiangqi spec conversion would end the mainline at
+// the first one, and the hands need drawing beside the board. A chapter made on
+// the analysis board carries no rootFen: it starts from the standard position.
+async function mountCrazyhouseXiangqiEmbed(
+  root: HTMLElement,
+  credit: EmbedCredit,
+  chapter: StudyChapterPayload,
+  options: { startPly?: number | null },
+): Promise<void> {
+  const line = replayCrazyhouseXiangqiLine(chapter.root?.rootFen, mainlineTokens(chapter));
+  if (!line) {
+    note(root, 'This chapter has no position to show.');
+    return;
+  }
+  const tags = chapter.tags ?? {};
+  const final = line.states[line.states.length - 1]!;
+  const token = tagResultToken(tags.result) ?? statusResultToken(final.status);
+  await mountEmbedCard(root, {
+    header: tags.event ?? chapter.name ?? 'Study',
+    seats: {
+      first: { name: tags.red ?? 'Red', ink: 'red' },
+      second: { name: tags.black ?? 'Black', ink: 'black' },
+    },
+    result: token ? reviewResultLabel(token, 'crazyhouse-xiangqi') : '',
+    credit: { href: credit.href, text: credit.text },
+    aspect: embedColumnAspect('crazyhouse-xiangqi'),
+    railWidthPx: embedRailWidthPx('crazyhouse-xiangqi'),
+    startPly: options.startPly ?? 0,
+    mountBoard: async (host, hooks) =>
+      mountCrazyhouseXiangqiReplayBoard(host, line, { perspective: 'red' }, hooks),
   });
   document.title = `${chapter.name ?? 'Study'} · Mistboard`;
 }

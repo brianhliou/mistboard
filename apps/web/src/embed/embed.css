@@ -289,11 +289,14 @@ body.embed-body {
 
 /* The study boards that paint a bare svg into their own frame (jieqi, flip
    jungle, fortress): width-driven, height from the viewBox, like the rest. */
-.embed-board :is(.jieqi-embed-board, .jungle-flip-embed-board, .fxq-embed-board-svg) {
+.embed-board
+:is(.jieqi-embed-board, .jungle-flip-embed-board, .fxq-embed-board-svg, .chx-embed-board-svg) {
   line-height: 0;
 }
 
-.embed-board :is(.jieqi-embed-board, .jungle-flip-embed-board, .fxq-embed-board-svg) > svg {
+.embed-board
+  :is(.jieqi-embed-board, .jungle-flip-embed-board, .fxq-embed-board-svg, .chx-embed-board-svg)
+  > svg {
   display: block;
   width: 100%;
   height: auto;
@@ -342,6 +345,47 @@ body.embed-body {
 
 .embed-board .fxq-embed-hand .drop-mini-reserve-piece.is-empty {
   opacity: 0.24;
+}
+
+/* Crazyhouse Xiangqi: each hand as the game room's pocket (drop-pocket.ts,
+   the rounded bar with a count badge bottom-right) in a band above and below
+   the board. The replay widget's hands drew pieces bigger than the board's;
+   here the slot is 0.085 of the board width, a size under an on-board disc
+   (54/552), so the pocket reads as the room's at any frame width. The band is
+   0.12 of the board width, CRAZYHOUSE_EMBED_HAND_RATIO in
+   crazyhouse-xiangqi-replay-board.ts, which the card's arithmetic reads. The
+   bar hugs its six slots and centres in the band instead of spanning the
+   board, and stops being its own size container so the slot reads the
+   board's width. */
+.embed-board .chx-embed-board {
+  container-type: inline-size;
+}
+
+.embed-board .chx-embed-hand-band {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  height: calc(100cqw * 0.12);
+}
+
+.embed-board .chx-embed-hand.drop-mini-reserve-strip.drop-pocket {
+  --pocket-pad: calc(100cqw * 0.008);
+  --pocket-gap: calc(100cqw * 0.01);
+
+  container-type: normal;
+  width: auto;
+}
+
+.embed-board .chx-embed-hand .drop-mini-reserve-row {
+  --pocket-slot: calc(100cqw * 0.085);
+
+  width: auto;
+}
+
+.embed-board .chx-embed-hand .drop-mini-reserve-piece {
+  flex: 0 0 var(--pocket-slot);
+  width: var(--pocket-slot);
+  height: var(--pocket-slot);
 }
 
 /* Back, a menu, forward: the article replay's bar (articles.css,
@@ -616,6 +660,102 @@ body.embed-body {
 
 .embed-board .showcase-seat.active .showcase-seat-clock {
   color: var(--site-text, inherit);
+}
+
+/* A drop variant's game board (the tenant watch renderer, sidedCaptures):
+   [hand, board, hand] in one row. The homepage stacks them in landing.css,
+   which the embed does not load, so here the row became three columns, the
+   hands at their live-room size squeezed the board to nothing and the card
+   collapsed. Stack them as the study embed does: each hand a band above and
+   below the board sized off the board's width, the column's aspect taken from
+   embedColumnAspect (EMBED_HAND_BAND_RATIO in embed-card.ts keeps the band
+   numbers). Crazyhouse draws the hand as the game room's pocket bar, 0.085
+   slots in a 0.12 band, matching .chx-embed-hand; Fortress as its study embed
+   does, 62/516 slots in a 0.13 band, no bar. Scoped to the card: the TV
+   embed has its own stage. */
+.embed-card .embed-board .replay-layout-solo .showcase-board-row:has(> .showcase-reserve) {
+  --embed-hand-band: 0.12;
+  --embed-hand-slot: 0.085;
+  --embed-hand-pad: calc(100cqw * 0.008);
+  --embed-hand-bar: color-mix(in srgb, var(--site-border) 46%, transparent);
+
+  container-type: inline-size;
+  flex-direction: column;
+  align-items: stretch;
+  gap: 0;
+}
+
+.embed-card
+  .embed-board
+  .replay-layout-solo
+  .showcase-board-row:has(> .showcase-reserve):has(.fxq-board) {
+  --embed-hand-band: 0.13;
+  --embed-hand-slot: calc(62 / 516);
+  --embed-hand-pad: 0px;
+  --embed-hand-bar: transparent;
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve.drop-mini-reserve-strip {
+  display: flex;
+  flex: 0 0 auto;
+  align-items: center;
+  justify-content: center;
+  box-sizing: border-box;
+  width: 100%;
+  height: calc(100cqw * var(--embed-hand-band));
+  min-height: 0;
+  padding: 0;
+  overflow: visible;
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-row {
+  flex: 0 0 auto;
+  width: auto;
+  gap: calc(100cqw * 0.01);
+  padding: var(--embed-hand-pad);
+  border-radius: var(--site-radius, 10px);
+  background: var(--embed-hand-bar);
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece {
+  flex: 0 0 calc(100cqw * var(--embed-hand-slot));
+  width: calc(100cqw * var(--embed-hand-slot));
+  height: calc(100cqw * var(--embed-hand-slot));
+  min-width: 0;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece svg {
+  width: 100%;
+  height: 100%;
+}
+
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .drop-mini-reserve-piece.is-empty {
+  opacity: 0.26;
+  filter: grayscale(1);
+}
+
+/* The count badge bottom-right, as on the game room's pocket. */
+.embed-card .embed-board .showcase-board-row > .showcase-reserve .captures-count-badge {
+  position: absolute;
+  display: inline-grid;
+  place-items: center;
+  box-sizing: border-box;
+  line-height: 1;
+  right: -3px;
+  bottom: -3px;
+  min-width: clamp(14px, calc(100cqw * var(--embed-hand-slot) * 0.4), 19px);
+  height: clamp(14px, calc(100cqw * var(--embed-hand-slot) * 0.4), 19px);
+  padding: 0 3px;
+  border: 1.5px solid var(--site-panel, #ffffff);
+  border-radius: 999px;
+  background: var(--site-accent);
+  color: var(--site-on-accent, #ffffff);
+  font-size: clamp(9px, calc(100cqw * var(--embed-hand-slot) * 0.27), 12px);
+  font-variant-numeric: tabular-nums;
 }
 
 /* The chessground fallback (fog chess and its cousins) renders the review

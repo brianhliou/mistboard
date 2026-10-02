@@ -9,6 +9,7 @@ import {
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   exportFormatsForVariant,
+  GAME_EXPORT_FORMATS,
   type GameExportFormat,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -29,6 +30,7 @@ import {
   flipOrBoardMoveUci,
   fortressXiangqiExportUci,
   type GameExportResponse,
+  pgnVariantName,
   resolveGameExport,
   tenantExportBinding,
 } from './game-export-tenant.js';
@@ -554,4 +556,32 @@ test('every registered tenant binds an export exactly when the format table list
   for (const spec of [XIANGQI_SPEC_ID, DARK_XIANGQI_SPEC_ID, JIEQI_SPEC_ID, BANQI_SPEC_ID]) {
     assert.ok(seen.has(spec), `${spec} is registered`);
   }
+});
+
+test('the PGN Variant tag is the registry public name for every exported tenant variant', () => {
+  // Dark chess exports through game-export.ts, not the tenant path.
+  const expected: Record<string, string> = {
+    xiangqi: 'Xiangqi',
+    'dark-xiangqi': 'Fog Xiangqi',
+    jieqi: 'Jieqi',
+    banqi: 'Banqi',
+    'fortress-xiangqi': 'Fortress',
+    'duck-xiangqi': 'Duck Xiangqi',
+    'atomic-xiangqi': 'Atomic Xiangqi',
+    'crazyhouse-xiangqi': 'Crazyhouse Xiangqi',
+    jungle: 'Jungle Chess',
+    'jungle-flip': 'Flip Jungle',
+  };
+  // A variant that starts exporting must be pinned here.
+  assert.deepEqual(
+    Object.keys(GAME_EXPORT_FORMATS)
+      .filter((variant) => variant !== DARK_CHESS_SPEC_ID)
+      .sort(),
+    Object.keys(expected).sort(),
+  );
+  for (const [variant, name] of Object.entries(expected)) {
+    assert.equal(pgnVariantName(variant), name, variant);
+  }
+  // A string that is no spec keeps its raw id rather than borrowing a name.
+  assert.equal(pgnVariantName('not-a-variant'), 'not-a-variant');
 });

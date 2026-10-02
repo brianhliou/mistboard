@@ -70,6 +70,12 @@ describe('Crazyhouse Xiangqi postgame review', () => {
     expect(root.querySelector('svg')).not.toBeNull();
   });
 
+  it('offers the embed code under Share & export, as the other variants do', async () => {
+    const root = await mounted();
+    const codes = [...root.querySelectorAll<HTMLTextAreaElement>('textarea')].map((el) => el.value);
+    expect(codes.some((code) => code.includes('/embed/game/'))).toBe(true);
+  });
+
   it('opens on the final position, where the last move was a drop', async () => {
     const root = await mounted();
     // The last move is a drop: ringed where it landed, with no from-point.

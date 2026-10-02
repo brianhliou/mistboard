@@ -13,8 +13,8 @@
 // own bot ladder.
 //
 // Fail closed: a variant with no EvE adapter, no ladder rung the adapter can
-// play, or no public surface (an admin playtest such as crazyhouse-xiangqi, a
-// retired spec) is skipped and logged, never mapped to another variant's ladder.
+// play, or no public surface (a hidden spec such as mahjong, a retired spec) is
+// skipped and logged, never mapped to another variant's ladder.
 // A variant whose engine is a binary the worker may lack (banqi, jungle) queues
 // its games with that capability required, so a worker without the binary never
 // claims them: they wait (and, holding the in-flight slot, stop more being
@@ -79,7 +79,8 @@ export const BOT_VS_BOT_MAX_DAILY_MAX = 5_000;
 // against two before. Sized to the engine-worker budget (memory
 // bot_hosting_cost_engine_worker): each game is a few engine-minutes on a box
 // that is idle most of the day. Fortress and atomic still run if named in
-// MISTBOARD_BOT_VS_BOT_VARIANTS (their adapters stay), at 1/day.
+// MISTBOARD_BOT_VS_BOT_VARIANTS (their adapters stay), at 1/day; so does
+// crazyhouse-xiangqi (public 2026-10-02), which has a ladder but no default.
 export const BOT_VS_BOT_VARIANT_DEFAULTS: Readonly<
   Record<string, { dailyMax: number; targetActive: number }>
 > = {

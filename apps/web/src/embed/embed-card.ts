@@ -17,11 +17,12 @@
 // card and the card's rows take over, fed by the handle's clockAtPly. One row
 // component, whatever is underneath it.
 
-import type { EmbedPov } from '@mistboard/game';
+import { type EmbedPov, hasOwnKey } from '@mistboard/game';
 import '../review/move-list.css';
 import { t } from '../i18n/catalog.js';
 import type { ReplayHandle } from '../replay.js';
 import { createMoveList, type MoveList, type MoveListEntry } from '../review/move-list.js';
+import { boardAspectForSpec } from '../watch-board-aspect.js';
 import { formatClock } from '../web-utils.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import './embed.css';
@@ -54,6 +55,30 @@ const CONTROLS_PX = 39;
 const STACKED_MOVES_MIN_PX = 112;
 // Gap between the card and the credit line (.embed-frame in embed.css).
 const FRAME_GAP_PX = 6;
+
+/** Each hand's band, above and below the board, as a share of the board's
+ *  width, for the drop variants whose hands ride in the column. The card sizes
+ *  the column from one aspect ratio, so the hands scale with the board for that
+ *  ratio to hold; embed.css keeps the same numbers, for the study boards
+ *  (.fxq-embed-hand, .chx-embed-hand-band) and the game boards
+ *  (.showcase-reserve). Fortress: a 62/516 slot plus its gap. Crazyhouse: a
+ *  0.085 slot (an on-board disc is 54/552, so a piece in hand reads a size
+ *  smaller than one in play, as in the game room) plus the pocket bar's
+ *  padding and a gap. */
+export const EMBED_HAND_BAND_RATIO: Readonly<Record<string, number>> = {
+  'fortress-xiangqi': 0.13,
+  'crazyhouse-xiangqi': 0.12,
+};
+
+/** The board column's aspect: the board's own, made taller by both hand bands
+ *  for a variant that draws them. Cosmetic sizing like boardAspectForSpec, so an
+ *  unknown id takes the bare board's ratio. */
+export function embedColumnAspect(specId: string | null | undefined): number {
+  const board = boardAspectForSpec(specId);
+  const hand =
+    specId && hasOwnKey(EMBED_HAND_BAND_RATIO, specId) ? (EMBED_HAND_BAND_RATIO[specId] ?? 0) : 0;
+  return hand ? 1 / (1 / board + 2 * hand) : board;
+}
 
 /** The sheet's floor for a variant, by the width of the notation it writes.
  *  Same shape as boardAspectForSpec: cosmetic sizing, so an unknown id takes

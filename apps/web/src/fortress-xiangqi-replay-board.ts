@@ -64,12 +64,6 @@ export function replayFortressXiangqiLine(
   return { states, played };
 }
 
-/** Each hand's band height as a share of the board's width: the pocket piece is
- *  62/516 of the board (drop-reserve.css, the review pocket), plus its gap. The
- *  card sizes the board column from one aspect ratio, so the hands have to
- *  scale with the board for that ratio to hold (embed.css keeps the number). */
-export const FORTRESS_EMBED_HAND_RATIO = 0.13;
-
 export function mountFortressXiangqiReplayBoard(
   host: HTMLElement,
   line: FortressXiangqiReplayLine,
