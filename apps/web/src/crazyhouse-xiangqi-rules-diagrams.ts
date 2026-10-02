@@ -147,6 +147,8 @@ export const CRAZYHOUSE_XIANGQI_INTRO_BOARD = () =>
     positionWithHands('chx-rules-intro', sampleGameEnd(), 'MATE WITH A DROPPED SOLDIER', 0, {
       dots: dropRing('e9'),
     }),
+    // The lead board, at the size Fortress and Duck give theirs.
+    'xq-article-svg--hero',
   );
 
 // ── The start ───────────────────────────────────────────────────────────────
@@ -169,7 +171,6 @@ export const CRAZYHOUSE_XIANGQI_START_BOARD = () => {
     XQ_BOARD_W,
     BOTH_HANDS_H,
     positionWithHands('chx-rules-start', START, 'START: ADVISORS AND ELEPHANTS IN HAND', 0),
-    'xq-article-svg--hero',
   );
 };
 

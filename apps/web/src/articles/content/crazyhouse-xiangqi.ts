@@ -14,30 +14,6 @@ import { CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES } from '../../crazyhouse-xiangqi-s
 import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-/**
- * The engine definition the "For engines and other sites" section prints:
- * the variant section of apps/server/src/crazyhouse-xiangqi.ini, verbatim.
- * crazyhouse-xiangqi-article.test.ts holds the two equal.
- */
-export const CRAZYHOUSE_XIANGQI_ENGINE_DEFINITION = `[crazyhousexiangqi:xiangqi]
-startFen = rn2k2nr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RN2K2NR[BBAAbbaa] w - - 0 1
-pieceDrops = true
-capturesToHand = true
-dropChecks = true
-flyingGeneral = true
-stalemateValue = loss
-nFoldRule = 3
-nFoldValue = draw
-perpetualCheckIllegal = true
-chasingRule = none
-nMoveRule = 0
-mobilityRegionWhiteFers = *1 *2 *3 *4 *5
-mobilityRegionBlackFers = *6 *7 *8 *9 *10
-mobilityRegionWhiteElephant = *1 *2 *3 *4 *5
-mobilityRegionBlackElephant = *6 *7 *8 *9 *10
-mobilityRegionWhiteSoldier = a4 a5 c4 c5 e4 e5 g4 g5 i4 i5 *6 *7 *8 *9 *10
-mobilityRegionBlackSoldier = *1 *2 *3 *4 *5 a6 a7 c6 c7 e6 e7 g6 g7 i6 i7`;
-
 // Held back from the index and noindexed while it is polished
 // (HIDDEN_RULES_SLUGS, variant-public-surfaces.ts); the zh-Hans / zh-Hant
 // copy is machine-drafted (article-i18n.ts). Every rule here is the kernel's,
@@ -77,7 +53,7 @@ export const crazyhouseXiangqiArticle: Article = {
     // TODO link the deep-dive post once published
     {
       kind: 'paragraph',
-      text: 'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets, and published so any site or engine can adopt it.',
+      text: 'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets.',
     },
     {
       kind: 'paragraph',
@@ -95,6 +71,7 @@ export const crazyhouseXiangqiArticle: Article = {
         {
           kind: 'raw-svg',
           svg: CRAZYHOUSE_XIANGQI_START_BOARD,
+          className: 'article-figure-xq--pair-board',
           caption:
             'The start. Black’s hand is above the board and Red’s below, two advisors and two elephants each.',
         } as ArticleBlock,
@@ -244,20 +221,6 @@ export const crazyhouseXiangqiArticle: Article = {
         {
           kind: 'paragraph',
           text: 'This game was picked from sixteen played the same way. A study with more of them will follow.',
-        },
-      ],
-    },
-    {
-      heading: 'For engines and other sites',
-      blocks: [
-        {
-          kind: 'paragraph',
-          text: 'Fairy-Stockfish plays these rules with no patch. This is the variant definition Mistboard’s engine runs; add it to a variants.ini and the engine knows the game as `crazyhousexiangqi`.',
-        },
-        { kind: 'code', language: 'ini', text: CRAZYHOUSE_XIANGQI_ENGINE_DEFINITION },
-        {
-          kind: 'paragraph',
-          text: 'One rule lives outside it. Mistboard draws a game after sixty plies without a capture, but Fairy-Stockfish resets its own count on a drop as well, so the definition turns that count off and the site applies the sixty-ply draw itself.',
         },
       ],
     },

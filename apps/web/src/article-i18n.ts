@@ -3260,8 +3260,8 @@ const ZH_HANS: Record<string, string> = {
     '疯狂屋象棋就是带打入的[象棋](/rules/xiangqi)。吃掉的棋子作为你自己的棋子进入你的持子；每一步，你要么在棋盘上走一枚棋子，要么从持子中取出一枚打入一个空点。此外，双方开局时两士两象都在持子里。',
   'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.':
     '下方示范对局的最后局面。红方把兵打入 e9（圈出处）将死对方。双方的持子画在各自一侧：黑方在棋盘上方，红方在下方。',
-  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets, and published so any site or engine can adopt it.':
-    'Brian H. Liou 于 2026 年设计了这一版本，作为 Mistboard 原创。此前已有人为象棋提出过打入规则，如 Moshe Callen 的 Drop-Xiangqi（2007）和 Fairy-Stockfish 内置的 xiangqihouse，但都没有成为公认的标准。这一版是一套完整的规则，经过 40 多套候选规则、远超 1,600 盘引擎对局的检验，公开发布，任何网站或引擎都可以采用。',
+  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets.':
+    'Brian H. Liou 于 2026 年设计了这一版本，作为 Mistboard 原创。此前已有人为象棋提出过打入规则，如 Moshe Callen 的 Drop-Xiangqi（2007）和 Fairy-Stockfish 内置的 xiangqihouse，但都没有成为公认的标准。这一版是一套完整的规则，经过 40 多套候选规则、远超 1,600 盘引擎对局的检验。',
   'Advisors and elephants start in hand': '士和象开局在持子里',
   'The start. Black’s hand is above the board and Red’s below, two advisors and two elephants each.':
     '开局。黑方的持子在棋盘上方，红方的在下方，各有两士两象。',
@@ -3300,11 +3300,6 @@ const ZH_HANS: Record<string, string> = {
   'Red mates with a soldier dropped on e9. Red wins.': '红方把兵打入 e9 将死。红方胜。',
   'This game was picked from sixteen played the same way. A study with more of them will follow.':
     '这盘棋是从同样条件下的十六盘对局中挑出来的。收录更多对局的研究稍后发布。',
-  'For engines and other sites': '供引擎和其他网站使用',
-  'Fairy-Stockfish plays these rules with no patch. This is the variant definition Mistboard’s engine runs; add it to a variants.ini and the engine knows the game as `crazyhousexiangqi`.':
-    'Fairy-Stockfish 无需打补丁就能按这套规则下棋。下面是 Mistboard 引擎所用的变体定义；把它加进 variants.ini，引擎就会以 `crazyhousexiangqi` 识别这个游戏。',
-  'One rule lives outside it. Mistboard draws a game after sixty plies without a capture, but Fairy-Stockfish resets its own count on a drop as well, so the definition turns that count off and the site applies the sixty-ply draw itself.':
-    '有一条规则不在定义里。Mistboard 在连续六十个半回合没有吃子时判和，但 Fairy-Stockfish 在打入时也会把自己的计数清零，所以定义里关掉了这个计数，由网站自己执行六十个半回合判和。',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.':
     '被吃的子归入吃子一方持子、士和象开局就在持子里的象棋：把持子打入任何一个它能站的空点，可以将军，也可以将死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
@@ -6430,8 +6425,8 @@ const ZH_HANT: Record<string, string> = {
     '瘋狂屋象棋就是帶打入的[象棋](/rules/xiangqi)。吃掉的棋子作為你自己的棋子進入你的持子；每一步，你要麼在棋盤上走一枚棋子，要麼從持子中取出一枚打入一個空點。此外，雙方開局時兩士兩象都在持子裡。',
   'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.':
     '下方示範對局的最後局面。紅方把兵打入 e9（圈出處）將死對方。雙方的持子畫在各自一側：黑方在棋盤上方，紅方在下方。',
-  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets, and published so any site or engine can adopt it.':
-    'Brian H. Liou 於 2026 年設計了這一版本，作為 Mistboard 原創。此前已有人為象棋提出過打入規則，如 Moshe Callen 的 Drop-Xiangqi（2007）和 Fairy-Stockfish 內建的 xiangqihouse，但都沒有成為公認的標準。這一版是一套完整的規則，經過 40 多套候選規則、遠超 1,600 盤引擎對局的檢驗，公開發布，任何網站或引擎都可以採用。',
+  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets.':
+    'Brian H. Liou 於 2026 年設計了這一版本，作為 Mistboard 原創。此前已有人為象棋提出過打入規則，如 Moshe Callen 的 Drop-Xiangqi（2007）和 Fairy-Stockfish 內建的 xiangqihouse，但都沒有成為公認的標準。這一版是一套完整的規則，經過 40 多套候選規則、遠超 1,600 盤引擎對局的檢驗。',
   'Advisors and elephants start in hand': '士和象開局在持子裡',
   'The start. Black’s hand is above the board and Red’s below, two advisors and two elephants each.':
     '開局。黑方的持子在棋盤上方，紅方的在下方，各有兩士兩象。',
@@ -6470,11 +6465,6 @@ const ZH_HANT: Record<string, string> = {
   'Red mates with a soldier dropped on e9. Red wins.': '紅方把兵打入 e9 將死。紅方勝。',
   'This game was picked from sixteen played the same way. A study with more of them will follow.':
     '這盤棋是從同樣條件下的十六盤對局中挑出來的。收錄更多對局的研究稍後發布。',
-  'For engines and other sites': '供引擎和其他網站使用',
-  'Fairy-Stockfish plays these rules with no patch. This is the variant definition Mistboard’s engine runs; add it to a variants.ini and the engine knows the game as `crazyhousexiangqi`.':
-    'Fairy-Stockfish 無需打補丁就能按這套規則下棋。下面是 Mistboard 引擎所用的變體定義；把它加進 variants.ini，引擎就會以 `crazyhousexiangqi` 識別這個遊戲。',
-  'One rule lives outside it. Mistboard draws a game after sixty plies without a capture, but Fairy-Stockfish resets its own count on a drop as well, so the definition turns that count off and the site applies the sixty-ply draw itself.':
-    '有一條規則不在定義裡。Mistboard 在連續六十個半回合沒有吃子時判和，但 Fairy-Stockfish 在打入時也會把自己的計數清零，所以定義裡關掉了這個計數，由網站自己執行六十個半回合判和。',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.':
     '被吃的子歸入吃子一方持子、士和象開局就在持子裡的象棋：把持子打入任何一個它能站的空點，可以將軍，也可以將死。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':

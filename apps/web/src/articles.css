@@ -1048,6 +1048,15 @@
   width: min(48.5%, 100%);
 }
 
+/* A single board drawn at the on-screen size of one board in a paired
+   diagram (a 604-unit pair fills the 702px column, so ~342px), rather than its
+   292px natural width or the hero's 480. Set on the figure (RawSvgBlock
+   className), not by slug; the Crazyhouse Xiangqi start board uses it. On a
+   phone it takes the column, as a pair does. */
+.article-figure-xq.article-figure-xq--pair-board > .xq-article-svg[data-xq-layout="single"] {
+  width: min(342px, 100%);
+}
+
 /* A starting-position board marked as the section hero should match the
    interactive board width. Scope this to the semantic hero class rather than
    an article slug so public route aliases cannot silently disable the sizing. */
