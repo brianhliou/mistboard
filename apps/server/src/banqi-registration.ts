@@ -1,7 +1,8 @@
 /**
  * Banqi registry entry. Owns the tenant's live-room map, the room-factory
- * binding, and hydration. No rematch flow yet. Matchmaking is casual random-seat
- * (unrated); PvP, live-clock only (PvE and correspondence come later). Imported
+ * binding, and hydration. No rematch flow yet. Matchmaking is random-seat,
+ * rated or casual (lobby.supportsRated); PvP, live-clock only (PvE and
+ * correspondence come later). Imported
  * for side effects by variant-tenant/register-tenants.ts.
  */
 
@@ -46,6 +47,8 @@ export async function createBanqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: BanqiCreatorPreference,
   engine?: BanqiRoomEngineSeat,
+  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  rated = false,
 ): Promise<BanqiLiveRoomCreation> {
   return createBanqiLiveRoom(
     {
@@ -59,6 +62,7 @@ export async function createBanqiRoom(
     timeControl,
     creatorPreference,
     engine,
+    rated,
   );
 }
 
@@ -114,10 +118,10 @@ registerVariantTenant({
       handleBanqiCreate({ ...ctx, createBanqiRoom }, response, body),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createBanqiRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createBanqiRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`banqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },

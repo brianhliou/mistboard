@@ -1604,6 +1604,11 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
 export const landingVariantSupportsPve = (gameSpecId: LandingGameSpecId): boolean =>
   variantSupportsPve(gameSpecId);
 
+/** Whether a lobby seek for this variant may be rated (its tenant capability;
+ *  the server's lobby.supportsRated agrees, variant-registry-sync.test.ts). */
+export const landingVariantSupportsRated = (gameSpecId: LandingGameSpecId): boolean =>
+  landingGameSpecCapabilities(gameSpecId).supportsRated;
+
 /** Which variant a first-time player lands on. Xiangqi is the flagship (the
  *  same one bare `/analysis` opens), so the dialog opens there rather than on
  *  the fog variant it used to default to. Dark chess stays the last resort

@@ -30,6 +30,7 @@ import {
   type LandingGameSpecId,
   type LobbyCorrespondenceSeek,
   landingVariantSupportsPve,
+  landingVariantSupportsRated,
   type OpenLobbyRequest,
   openLandingSetupDialog,
   variantLabelForGameSpec,
@@ -186,6 +187,9 @@ export function panelBotPaces(gameSpecId: LandingGameSpecId): {
 /** Paces a person can be sought at: the live clocks (rated narrows them), then
  *  days per move for the correspondence variants, casual only. */
 export function panelPersonPaces(gameSpecId: LandingGameSpecId, mode: PersonMode): PersonPace[] {
+  // A casual-only variant has no rated seek, so its row drops out of Rated
+  // rather than offering a Find the lobby would refuse.
+  if (mode === 'rated' && !landingVariantSupportsRated(gameSpecId)) return [];
   const allowed = allowedTimePresetIds(gameSpecId, mode === 'rated', 'lobby');
   const live: PersonPace[] = TIME_CONTROLS.filter((tc) => allowed.has(tc.id)).map((tc) => ({
     kind: 'live',

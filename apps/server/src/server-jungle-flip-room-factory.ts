@@ -39,6 +39,7 @@ export async function createJungleFlipLiveRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JungleFlipCreatorPreference,
   engine?: JungleFlipRoomEngineSeat,
+  rated = false,
 ): Promise<JungleFlipLiveRoomCreation> {
   const created = await createTenantLiveRoom(
     jungleFlipTenant,
@@ -50,7 +51,7 @@ export async function createJungleFlipLiveRoom(
       isPersistenceEnabled: ctx.isPersistenceEnabled,
       recordPersistenceError: ctx.recordPersistenceError,
     },
-    { timeControl, creatorPreference, engine },
+    { timeControl, creatorPreference, engine, rated },
   );
   if (!created.ok) {
     return created.error === 'disabled'

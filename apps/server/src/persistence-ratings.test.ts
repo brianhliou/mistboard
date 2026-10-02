@@ -1,3 +1,4 @@
+import { GAME_SPECS, ratingPoolForSpec } from '@mistboard/game';
 import {
   abortRunningGame,
   createUser,
@@ -201,6 +202,96 @@ definePersistenceTests('ratings', () => {
       assert.equal(black.games_played, 1);
     } finally {
       await client.end();
+    }
+  });
+
+  test('rated PvP game rates both seats in its own pool for every rated variant', async () => {
+    // The rating block found its two seats through a hand-kept spec-id list of
+    // red/black variants. Every variant missing from it (atomic, duck, dark
+    // xiangqi, jungle, flip jungle) recorded rated=true and moved nobody's
+    // rating, the same silent skip as the #151 xiangqi regression above. Every
+    // rated spec is driven here, so a new rated variant is covered on arrival.
+    const now = new Date();
+    const ratedSpecs = GAME_SPECS.filter((spec) => ratingPoolForSpec(spec.id) !== null);
+    assert.ok(ratedSpecs.length > 0);
+    for (const [index, spec] of ratedSpecs.entries()) {
+      const pool = ratingPoolForSpec(spec.id)!;
+      const [firstColor, secondColor] = spec.board.startsWith('chess-')
+        ? (['white', 'black'] as const)
+        : (['red', 'black'] as const);
+      const firstId = `user_pool_${index}_first`;
+      const secondId = `user_pool_${index}_second`;
+      for (const [slot, id] of [firstId, secondId].entries()) {
+        await createUser({
+          id,
+          email: `${id}@example.com`,
+          emailVerifiedAt: now,
+          handle: `pool${index}${slot === 0 ? 'a' : 'b'}`,
+          displayName: id,
+          now,
+        });
+      }
+      const roomId = `rated-pool-${spec.id}`;
+      await recordGameEnd(roomId, {
+        variant: spec.id,
+        mode: 'pvp',
+        rated: true,
+        result: 'black-wins',
+        termination: 'resignation',
+        plyCount: 3,
+        startedAt: now,
+        endedAt: now,
+        initialMs: 180000,
+        incrementMs: 2000,
+        whiteClient: null,
+        blackClient: null,
+        whiteName: null,
+        blackName: null,
+        corpusId: null,
+        participants: [
+          {
+            color: firstColor,
+            displayName: firstId,
+            subjectType: 'user',
+            subjectId: firstId,
+            visibility: 'public',
+          },
+          {
+            color: secondColor,
+            displayName: secondId,
+            subjectType: 'user',
+            subjectId: secondId,
+            visibility: 'public',
+          },
+        ],
+        visibility: 'public',
+      });
+
+      const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+      await client.connect();
+      try {
+        const { rows } = await client.query<{ user_id: string; elo_rating: number }>(
+          `SELECT user_id, elo_rating FROM user_ratings
+           WHERE variant = $1 AND time_class = 'blitz' AND user_id = ANY($2)`,
+          [pool, [firstId, secondId]],
+        );
+        assert.equal(rows.length, 2, `${spec.id}: both seats got a ${pool} rating row`);
+        const first = rows.find((row) => row.user_id === firstId)!;
+        const second = rows.find((row) => row.user_id === secondId)!;
+        assert.ok(second.elo_rating > 1500, `${spec.id}: winner ${second.elo_rating}`);
+        assert.ok(first.elo_rating < 1500, `${spec.id}: loser ${first.elo_rating}`);
+        const participants = await client.query<{ elo_after: number | null }>(
+          'SELECT elo_after FROM game_participants WHERE game_id = $1',
+          [roomId],
+        );
+        assert.equal(
+          participants.rows.filter((row) => row.elo_after !== null).length,
+          2,
+          `${spec.id}: both participant rows carry the rating event`,
+        );
+      } finally {
+        await client.end();
+      }
     }
   });
 
