@@ -79,8 +79,9 @@ export const BOT_VS_BOT_MAX_DAILY_MAX = 5_000;
 // against two before. Sized to the engine-worker budget (memory
 // bot_hosting_cost_engine_worker): each game is a few engine-minutes on a box
 // that is idle most of the day. Fortress and atomic still run if named in
-// MISTBOARD_BOT_VS_BOT_VARIANTS (their adapters stay), at 1/day; so does
-// crazyhouse-xiangqi (public 2026-10-02), which has a ladder but no default.
+// MISTBOARD_BOT_VS_BOT_VARIANTS (their adapters stay), at 1/day.
+// crazyhouse-xiangqi joined at 1/day on 2026-10-02 (Brian: "yes on the bot
+// schedule"), so Watch shows the new variant's bot games: eight a day in all.
 export const BOT_VS_BOT_VARIANT_DEFAULTS: Readonly<
   Record<string, { dailyMax: number; targetActive: number }>
 > = {
@@ -89,6 +90,7 @@ export const BOT_VS_BOT_VARIANT_DEFAULTS: Readonly<
   'duck-xiangqi': { dailyMax: 1, targetActive: 1 },
   jungle: { dailyMax: 1, targetActive: 1 },
   banqi: { dailyMax: 1, targetActive: 1 },
+  'crazyhouse-xiangqi': { dailyMax: 1, targetActive: 1 },
 };
 export const BOT_VS_BOT_DEFAULT_VARIANTS: readonly string[] = Object.keys(
   BOT_VS_BOT_VARIANT_DEFAULTS,

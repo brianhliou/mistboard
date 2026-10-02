@@ -282,7 +282,7 @@ test('a skipped variant is logged once, not every tick', async () => {
   );
 });
 
-test('the default plan: five variants, modest caps (fortress and atomic cut, 2026-10-01)', () => {
+test('the default plan: six variants, modest caps (fortress and atomic cut 2026-10-01, crazyhouse in 2026-10-02)', () => {
   const config = botVsBotConfigFromEnv({} as NodeJS.ProcessEnv);
   assert.deepEqual(
     config.plans.map((plan) => [plan.variant, plan.dailyMax, plan.targetActive]),
@@ -292,6 +292,7 @@ test('the default plan: five variants, modest caps (fortress and atomic cut, 202
       ['duck-xiangqi', 1, 1],
       ['jungle', 1, 1],
       ['banqi', 1, 1],
+      ['crazyhouse-xiangqi', 1, 1],
     ],
   );
   assert.deepEqual(config.skipped, []);
