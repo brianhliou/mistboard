@@ -41,6 +41,7 @@ Conventions:
 
 ### Site
 
+- Jieqi, Banqi and Flip Jungle are back on the [game data](/data) page, and every downloaded game of theirs now records what each flipped piece turned out to be, so it replays from the file alone ([9037d497](https://github.com/brianhliou/mistboard/commit/9037d497))
 - Every finished game is now downloadable from the new [game data](/data) page: one file per variant per month, free to use under CC BY 4.0 ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
 
 ### Removed
