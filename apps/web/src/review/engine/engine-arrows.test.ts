@@ -5,6 +5,8 @@ import {
   bestMoveArrow,
   bestMoveArrowWithParser,
   bestMoveMarkerWithParser,
+  betterMoveArrowsWithParser,
+  candidateArrowsWithParser,
   engineArrowsFromLines,
   engineArrowsFromLinesWithParser,
   engineMarkersFromLinesWithParser,
@@ -200,5 +202,60 @@ describe('variant-specific engine move parsers', () => {
     expect(
       bestMoveMarkerWithParser('drop', (uci) => (uci === 'drop' ? { to: 'a4' } : null)),
     ).toEqual([expect.objectContaining({ square: 'a4', className: 'engine-marker--best' })]);
+  });
+});
+
+describe("candidateArrowsWithParser (a chance ply's ranked set)", () => {
+  // The real jieqi ply-27 reveal: three alternatives, the best ~2-3 win points clear.
+  const RANKED = [
+    { uci: 'e1d0', win: 69.79 },
+    { uci: 'e1f2', win: 67.46 },
+    { uci: 'e1d2', win: 66.59 },
+  ];
+
+  it('draws one arrow per alternative, best last (on top) in the best-move style', () => {
+    const arrows = candidateArrowsWithParser(RANKED, pikafishUciToJieqiMove);
+    expect(arrows.map((a) => `${a.from}-${a.to}`)).toEqual(['e2-d3', 'e2-f3', 'e2-d1']);
+    const best = arrows.at(-1)!;
+    expect(best).toMatchObject({ className: 'xq-arrow--best', width: 14, opacity: 0.4 });
+  });
+
+  it('weights alternates by the win% they concede, not by rank', () => {
+    const arrows = candidateArrowsWithParser(RANKED, pikafishUciToJieqiMove);
+    const [third, second] = arrows;
+    expect(second).toMatchObject({ className: 'xq-arrow--alt', opacity: 0.35 });
+    expect(third).toMatchObject({ className: 'xq-arrow--alt', opacity: 0.35 });
+    expect(second!.width!).toBeGreaterThanOrEqual(third!.width!);
+    expect(second!.width!).toBeLessThan(14);
+  });
+
+  it('drops an alternate that concedes past the cutoff, and skips moves without travel', () => {
+    const arrows = candidateArrowsWithParser(
+      [
+        { uci: 'e1d0', win: 70 },
+        { uci: 'e1f2', win: 40 },
+      ],
+      pikafishUciToJieqiMove,
+    );
+    expect(arrows).toHaveLength(1);
+    expect(
+      candidateArrowsWithParser([{ uci: 'b2b2', win: 60 }], (uci) => ({
+        from: uci.slice(0, 2),
+        to: uci.slice(2, 4),
+      })),
+    ).toEqual([]);
+  });
+
+  it('betterMoveArrowsWithParser picks the single-move or the ranked-set drawing', () => {
+    expect(
+      betterMoveArrowsWithParser({ kind: 'move', uci: 'h3e3' }, (uci) => ({
+        from: uci.slice(0, 2),
+        to: uci.slice(2, 4),
+      })),
+    ).toEqual([expect.objectContaining({ from: 'h3', to: 'e3', className: 'xq-arrow--best' })]);
+    expect(
+      betterMoveArrowsWithParser({ kind: 'candidates', moves: RANKED }, pikafishUciToJieqiMove),
+    ).toHaveLength(3);
+    expect(betterMoveArrowsWithParser(null, pikafishUciToJieqiMove)).toEqual([]);
   });
 });

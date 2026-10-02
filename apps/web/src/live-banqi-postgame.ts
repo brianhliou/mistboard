@@ -18,7 +18,7 @@ import { banqiEnabled } from './feature-flags.js';
 import { installBanqiBoardStyles } from './live-banqi-render.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import {
-  type BanqiDecisionSummary,
+  banqiDecisionOverlay,
   fetchCachedBanqiDecisions,
   requestBanqiDecisions,
 } from './review/banqi-decisions.js';
@@ -29,7 +29,6 @@ import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-anal
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { analysisHref, editorHref } from './review/position-links.js';
-import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 
@@ -237,31 +236,12 @@ function renderPostgame(root: HTMLElement, postgame: BanqiPostgameResponse): voi
     decisions: {
       fetchCached: () =>
         fetchCachedBanqiDecisions(postgame.game.roomId).then((summary) =>
-          summary ? toDecisionOverlay(summary) : null,
+          summary ? banqiDecisionOverlay(summary) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestBanqiDecisions(postgame.game.roomId).then(toDecisionOverlay),
+      run: () => requestBanqiDecisions(postgame.game.roomId).then(banqiDecisionOverlay),
     },
   });
-}
-
-// Adapt the banqi-specific decomposition summary to the review's variant-agnostic overlay shape.
-function toDecisionOverlay(summary: BanqiDecisionSummary): DecisionOverlay {
-  return {
-    byPly: new Map(
-      [...summary.byPly].map(([ply, view]) => [
-        ply,
-        {
-          judgment: view.judgment,
-          accuracy: view.accuracy,
-          luck: view.luck,
-          playedRank: view.playedRank,
-        },
-      ]),
-    ),
-    red: { reveals: summary.red.reveals, decisionAccuracy: summary.red.decisionAccuracy },
-    black: { reveals: summary.black.reveals, decisionAccuracy: summary.black.decisionAccuracy },
-  };
 }
 
 // Banqi is symmetric, so the review reduces to the single truth surface. Exported

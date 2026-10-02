@@ -41,6 +41,7 @@ import {
   bestMoveMarkerWithParser,
   engineArrowsFromLinesWithParser,
   engineMarkersFromLinesWithParser,
+  parseFortressEngineMove,
 } from './engine/engine-arrows.js';
 import { fortressXiangqiTreeAdapter } from './fortress-xiangqi-tree-adapter.js';
 import type { NodeShape } from './game-tree.js';
@@ -57,14 +58,6 @@ import {
 function formatFortressEngineMove(uci: string): string {
   const move = fsfUciToFortressXiangqiMove(uci);
   return move ? fortressXiangqiMoveLabel(move) : uci;
-}
-
-function parseFortressBoardMove(
-  uci: string,
-): { from?: FortressXiangqiBoardArrow['from']; to: FortressXiangqiBoardArrow['to'] } | null {
-  const move = fsfUciToFortressXiangqiMove(uci);
-  if (!move) return null;
-  return isFortressXiangqiDropMove(move) ? { to: move.to } : move;
 }
 
 /** Config for a Fortress Xiangqi review mount. */
@@ -91,11 +84,11 @@ const fortressPresentation: TreePresentation<
     formatPvMove: formatFortressEngineMove,
     moveFromEngineUci: fsfUciToFortressXiangqiMove,
     engineArrowsFromLines: (lines) =>
-      engineArrowsFromLinesWithParser(lines, parseFortressBoardMove),
+      engineArrowsFromLinesWithParser(lines, parseFortressEngineMove),
     engineMarkersFromLines: (lines) =>
-      engineMarkersFromLinesWithParser(lines, parseFortressBoardMove),
-    bestMoveArrow: (best) => bestMoveArrowWithParser(best, parseFortressBoardMove),
-    bestMoveMarker: (best) => bestMoveMarkerWithParser(best, parseFortressBoardMove),
+      engineMarkersFromLinesWithParser(lines, parseFortressEngineMove),
+    bestMoveArrow: (best) => bestMoveArrowWithParser(best, parseFortressEngineMove),
+    bestMoveMarker: (best) => bestMoveMarkerWithParser(best, parseFortressEngineMove),
   },
   boardHostClassName: 'fortress-xiangqi-postgame-board fortress-xiangqi-live-board',
   boardWrapClassName: 'dxq-postgame__board-wrap review-board-host',

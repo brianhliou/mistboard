@@ -1,12 +1,4 @@
-import {
-  DARK_CHESS_SPEC_ID,
-  darkChessFen,
-  darkChessVariant,
-  type GameEvent,
-  type GameState,
-  type Move,
-  moveToAlgebraic,
-} from '@mistboard/game';
+import { DARK_CHESS_SPEC_ID, darkChessFen, type GameEvent, type Move } from '@mistboard/game';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import './game-shell.css';
 import './landing.css';
@@ -19,17 +11,16 @@ import { t } from './i18n/catalog.js';
 import { reviewSeatProfiles } from './profile-link.js';
 import { crosstableConfig } from './review/crosstable.js';
 import {
-  type DarkChessDecisionSummary,
+  darkChessDecisionOverlay,
   fetchCachedDarkChessDecisions,
   requestDarkChessDecisions,
 } from './review/dark-chess-decisions.js';
-import { formatDarkChessMove, mountDarkChessReview } from './review/dark-chess-review.js';
+import { mountDarkChessReview } from './review/dark-chess-review.js';
 import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { analysisHref, editorHref } from './review/position-links.js';
 import { CHESS_SEAT_COLORS } from './review/review-seat-colors.js';
-import type { DecisionOverlay } from './review/tree-review.js';
 import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
@@ -178,92 +169,11 @@ export function mountDarkChessPostgame(
     decisions: {
       fetchCached: () =>
         fetchCachedDarkChessDecisions(game.roomId).then((summary) =>
-          summary ? toDecisionOverlay(summary, moves) : null,
+          summary ? darkChessDecisionOverlay(summary, moves) : null,
         ),
       canRun: isLikelySignedIn(),
-      run: () => requestDarkChessDecisions(game.roomId).then((s) => toDecisionOverlay(s, moves)),
+      run: () =>
+        requestDarkChessDecisions(game.roomId).then((s) => darkChessDecisionOverlay(s, moves)),
     },
   });
-}
-
-/**
- * Name a candidate move the way the move list does. The block used to render
- * coordinates ("c2-d2") beside a move list in SAN ("Qd2") — the same move twice,
- * in two notations, which is most of why the card was hard to read.
- *
- * Replays once to recover the position before each ply, since SAN is only defined
- * against a position. Every step degrades to the coordinate label rather than
- * throwing: Misty writes castling in standard UCI
- * ("e1g1") where this kernel offers king-onto-rook ("e1h1"), so a candidate can
- * legitimately fail to match.
- */
-function sanNamer(moves: Move[]): (ply: number, uci: string) => string {
-  const before: GameState[] = [];
-  try {
-    let state = darkChessVariant.createInitialState('analysis');
-    for (const move of moves) {
-      before.push(state);
-      state = darkChessVariant.applyMove(state, move);
-    }
-  } catch {
-    // Replay diverged; every lookup below falls back to the coordinate label.
-  }
-  return (ply, uci) => {
-    const fallback = formatDarkChessMove(uci);
-    const state = before[ply - 1];
-    if (!state || state.status.type !== 'playing') return fallback;
-    const from = uci.slice(0, 2);
-    const to = uci.slice(2, 4);
-    const legal = darkChessVariant.getLegalMoves(state, state.status.turn);
-    const match = legal.find((candidate) => candidate.from === from && candidate.to === to);
-    if (!match) return fallback;
-    try {
-      return moveToAlgebraic(state, match);
-    } catch {
-      return fallback;
-    }
-  };
-}
-
-// Adapt the fog decomposition to the review's variant-agnostic overlay. Two seams matter here:
-// the shell keys its seats red/black (first mover first), so white's summary goes under `red`;
-// and candidate moves are named in SAN, because the review layer must never see engine UCI.
-// `luck` is deliberately omitted — fog's luck axis is the categorical verdict, not a signed
-// swing (see DecisionMoveInfo.luck).
-function toDecisionOverlay(summary: DarkChessDecisionSummary, moves: Move[]): DecisionOverlay {
-  const san = sanNamer(moves);
-  return {
-    byPly: new Map(
-      [...summary.byPly].map(([ply, view]) => [
-        ply,
-        {
-          judgment: view.judgment,
-          accuracy: view.accuracy,
-          playedRank: view.playedRank,
-          // Alternatives only where the choice actually cost something. jieqi shows
-          // them on every decision because its decisions ARE the reveal plies — a
-          // few dozen genuine moments. Under fog every ply is a decision, so the
-          // same rule drew a candidate block under all 53 moves of a 53-ply game
-          // when only 7 cleared the noise deadband; the other 46 asserted a
-          // distinction the analyzer had already judged to be engine noise.
-          ...(view.judgment && view.candidates?.length
-            ? {
-                candidates: view.candidates.map((c, index) => ({
-                  label: san(ply, c.move),
-                  win: Math.round(c.win),
-                  // The engine's OWN rank. The played move is appended to the
-                  // ranked set when it missed the cut, so its row position is not
-                  // its rank — showing the position told the reader a 21st-choice
-                  // move was second best.
-                  rank: c.played ? (view.playedRank ?? index + 1) : index + 1,
-                  ...(c.played ? { played: true as const } : {}),
-                })),
-              }
-            : {}),
-        },
-      ]),
-    ),
-    red: { reveals: summary.white.decisions, decisionAccuracy: summary.white.decisionAccuracy },
-    black: { reveals: summary.black.decisions, decisionAccuracy: summary.black.decisionAccuracy },
-  };
 }

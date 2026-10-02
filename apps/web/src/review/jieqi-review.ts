@@ -21,6 +21,7 @@ import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import {
   bestMoveArrowWithParser,
+  candidateArrowsWithParser,
   engineArrowsFromLinesWithParser,
 } from './engine/engine-arrows.js';
 import type { NodeShape, VariantTreeAdapter } from './game-tree.js';
@@ -63,6 +64,8 @@ function makeJieqiPresentation(
       engineArrowsFromLines: (lines) =>
         engineArrowsFromLinesWithParser(lines, pikafishUciToJieqiMove),
       bestMoveArrow: (best) => bestMoveArrowWithParser(best, pikafishUciToJieqiMove),
+      // A reveal's ranked alternatives, weighted: the arrows behind "?? e1-d1 was best."
+      candidateArrows: (moves) => candidateArrowsWithParser(moves, pikafishUciToJieqiMove),
     },
     // The analysis engine's best move is Pikafish UCI (0-indexed ranks, no flips); render it in
     // board coords ("e8-a8") for the "… was best" advice line, not the raw "e7a7".

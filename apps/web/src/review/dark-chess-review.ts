@@ -8,7 +8,9 @@
 // branches on the TRUE move history like an open variant.
 
 import type { Color, GameState, Move, PlayerView } from '@mistboard/game';
+import type { ChessBoardMarker } from '../dark-chess-render.js';
 import { createDarkChessInteractiveBoard } from '../dark-chess-tree-board.js';
+import { formatDarkChessMove } from './dark-chess-decisions.js';
 import { darkChessTreeAdapter } from './dark-chess-tree-adapter.js';
 import type { NodeShape } from './game-tree.js';
 import {
@@ -18,15 +20,9 @@ import {
   type TreeReviewHandle,
 } from './tree-review.js';
 
-/** Board notation for a plain chess UCI move ("e2e4" -> "e2-e4", "a7a8q" -> "a7-a8=Q").
- *  Shared by the "… was best." advice line and the decisions alternatives block, so the two
- *  can never drift into different dialects on the same page. */
-export function formatDarkChessMove(uci: string): string {
-  const from = uci.slice(0, 2);
-  const to = uci.slice(2, 4);
-  const promo = uci.length > 4 ? `=${uci.slice(4, 5).toUpperCase()}` : '';
-  return `${from}-${to}${promo}`;
-}
+// Board notation for chess UCI; lives with the decisions module (CSS-free, shared with the
+// game embed). Re-exported here for existing importers.
+export { formatDarkChessMove };
 
 /** Config for a Fog Chess review mount. */
 export type DarkChessReviewConfig = TreeReviewConfig<Move, GameState>;
@@ -71,6 +67,15 @@ const darkChessPresentation: TreePresentation<
   animateMove: () => {},
   shapeToArrow: (s: NodeShape) => s,
   shapeToMarker: (s: NodeShape) => s,
+  // The judgment badge on the square the move landed on, as every other review board
+  // draws it. Fog keeps its policy on the best MOVE (never quoted, never drawn); the
+  // verdict on the move played is not hindsight, so it shows.
+  moveGlyphMarker: (move: Move, glyph): ChessBoardMarker => ({
+    square: move.to,
+    kind: 'glyph',
+    text: glyph.text,
+    className: `xq-marker--${glyph.tone}`,
+  }),
 };
 
 export function mountDarkChessReview(

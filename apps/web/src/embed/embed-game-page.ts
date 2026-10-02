@@ -33,7 +33,14 @@ import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from '../showca
 import { seatColorWord, seatInkFamily } from '../variant-seat-label.js';
 import { webVariantTenantForSpecId } from '../variant-tenant/registry.js';
 import { boardAspectForSpec } from '../watch-board-aspect.js';
-import { type EmbedCard, embedPovPicker, embedRailWidthPx, mountEmbedCard } from './embed-card.js';
+import { type EmbedAnalysis, embedAnalysisVariant, loadEmbedAnalysis } from './embed-analysis.js';
+import {
+  type EmbedBoardHandle,
+  type EmbedCard,
+  embedPovPicker,
+  embedRailWidthPx,
+  mountEmbedCard,
+} from './embed-card.js';
 import type { EmbedGameRoute } from './embed-route.js';
 import './embed.css';
 
@@ -195,6 +202,30 @@ export async function mountEmbedGame(
         })
       : null;
 
+  // The stored analysis, if the game has one: glyphs and "X was best." on the sheet, the
+  // better move on the board. Fetched alongside the board (a GET of the cache, never a
+  // compute); until it lands, and when there is none, the embed is the plain replay.
+  let analysis: EmbedAnalysis | null = null;
+  let eventsPromise: Promise<GameEvent[]> | null = null;
+  const events = (): Promise<GameEvent[]> => {
+    eventsPromise ??= loadEvents(roomId);
+    return eventsPromise;
+  };
+  let boardReady: (handle: EmbedBoardHandle) => void = () => {};
+  const handleReady = new Promise<EmbedBoardHandle>((resolve) => {
+    boardReady = resolve;
+  });
+  const analysisLoad = embedAnalysisVariant(specId)
+    ? loadEmbedAnalysis(specId, roomId, {
+        // The tenant boards report their moves as squares; the chess path reads the record.
+        playedMoves: async () => {
+          const handle = await handleReady;
+          return handle.playedMoves?.() ?? playedSquaresFromEvents(await events());
+        },
+        events,
+      }).catch(() => null)
+    : Promise.resolve(null);
+
   try {
     card = await mountEmbedCard(root, {
       header: embedGameHeader(game),
@@ -212,13 +243,18 @@ export async function mountEmbedGame(
       railWidthPx: embedRailWidthPx(specId),
       startPly: options.startPly ?? null,
       inkFamily: seatInkFamily(game.variant),
-      mountBoard: (host, hooks) =>
-        mountBoard(host, specId, roomId, {
+      mountBoard: async (host, hooks) => {
+        const handle = await mountBoard(host, specId, roomId, {
           metadataByRoomId,
           namesByRoomId: { [roomId]: names },
           onPlyChange: hooks.onPlyChange,
           pov,
-        }),
+        });
+        // A remount (a fog game's view change) keeps the overlay it had.
+        if (analysis) handle.setBoardOverlay?.(analysis.overlayAtPly);
+        boardReady(handle);
+        return handle;
+      },
     });
   } catch {
     note(root, 'This game could not be loaded.');
@@ -226,6 +262,13 @@ export async function mountEmbedGame(
   }
 
   document.title = `${names.first} vs ${names.second} · Mistboard`;
+
+  const loaded = await analysisLoad;
+  if (loaded && card) {
+    analysis = loaded;
+    card.setAnnotations(loaded.annotations);
+    card.handle.setBoardOverlay?.(loaded.overlayAtPly);
+  }
 }
 
 /** The side buttons' words: White and Black for fog chess, Red and the
@@ -234,6 +277,23 @@ function fogSideLabels(specId: string): { first: string; second: string } {
   return maybeGameSpecForId(specId)?.family === 'chess'
     ? { first: t('setup.white'), second: t('setup.black') }
     : { first: t('setup.red'), second: seatColorWord(specId, 'black') };
+}
+
+/** The record's moves as board squares, for a board that cannot report its own (the
+ *  chess path), numbered by order of play. */
+function playedSquaresFromEvents(
+  events: readonly GameEvent[],
+): Array<{ ply: number; from?: string; to?: string }> {
+  return events
+    .filter((event) => event.type === 'move-played')
+    .map((event, index) => {
+      const move = (event as { move?: { from?: unknown; to?: unknown } }).move;
+      return {
+        ply: index + 1,
+        ...(typeof move?.from === 'string' ? { from: move.from } : {}),
+        ...(typeof move?.to === 'string' ? { to: move.to } : {}),
+      };
+    });
 }
 
 /** "Xiangqi · 10 + 5", or the variant alone for an unclocked game. */
