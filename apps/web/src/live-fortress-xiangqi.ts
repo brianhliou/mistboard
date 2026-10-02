@@ -32,7 +32,6 @@ import {
   fortressXiangqiDropTargets,
   fortressXiangqiMoveLabel,
 } from './fortress-xiangqi-view.js';
-import { t } from './i18n/catalog.js';
 import { playSound, playTerminalPlan } from './live-sound.js';
 import type { LiveRefs } from './live-state.js';
 import { setBoardFamily, xiangqiAppearanceChangedEvent } from './theme.js';
@@ -135,16 +134,14 @@ const client = createTenantLiveClient<
   renderBoard: renderBoardReconciled,
   renderExtras: (refs, view) => {
     renderReserves(refs, view);
-    renderCheckStatus(refs, view);
   },
   onDisabled: (refs) => {
     // Mirror the pre-guard renderAll steps the original ran even when the flag
-    // was off: reconcile, then paint the reserve strips + check notice, then
+    // was off: reconcile, then paint the reserve strips, then
     // clear the selection.
     reconcileInteractionState(core?.state.view ?? null);
     const view = core?.displayedView() ?? null;
     renderReserves(refs, view);
-    renderCheckStatus(refs, view);
     selectedSquare = null;
     selectedDropRole = null;
   },
@@ -239,25 +236,6 @@ function renderBoardReconciled(liveRefs: LiveRefs, view: FortressXiangqiPlayerVi
   renderBoard(liveRefs, view);
 }
 
-function renderCheckStatus(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | null): void {
-  if (view?.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;
-  liveRefs.actionSection.hidden = false;
-  liveRefs.actionStatus.replaceChildren();
-  const notice = document.createElement('div');
-  notice.className = 'action-notice danger';
-  const title = document.createElement('strong');
-  title.textContent = t('live.checkTitle');
-  const body = document.createElement('p');
-  body.textContent =
-    core?.state.seat === view.perspective
-      ? t('live.checkYourGeneral')
-      : t('live.checkColorGeneral', {
-          color: t(view.perspective === 'red' ? 'setup.red' : 'setup.black'),
-        });
-  notice.append(title, body);
-  liveRefs.actionStatus.append(notice);
-}
-
 function renderBoard(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | null): void {
   liveRefs.board.className = 'board fortress-xiangqi-live-board';
   liveRefs.board.setAttribute('aria-label', 'Fortress board');
@@ -288,8 +266,9 @@ function renderReserves(liveRefs: LiveRefs, view: FortressXiangqiPlayerView | nu
   if (!view) return;
   const bottom = orientationFor(view);
   const top = bottom === 'red' ? 'black' : 'red';
-  fillFortressXiangqiReserve(liveRefs.capturesTop, view, top);
+  fillFortressXiangqiReserve(liveRefs.capturesTop, view, top, { pocket: true });
   fillFortressXiangqiReserve(liveRefs.capturesBottom, view, bottom, {
+    pocket: true,
     interactive: canInteract(view) && core?.state.seat === bottom,
     selectedRole: selectedDropRole,
     onSelect: (role) => {
