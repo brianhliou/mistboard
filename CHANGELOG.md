@@ -55,6 +55,7 @@ Conventions:
 
 ### Fixed
 
+- a Fog Chess or Fog Xiangqi game against the bot no longer ends in a forfeit when the engine server restarts mid-game; the bot reconnects and plays on ([96cde925](https://github.com/brianhliou/mistboard/commit/96cde925))
 - in Jieqi and Jungle game review, the board shows the ?!, ? or ?? mark on the selected move, and a judged reveal names the better move ("Mistake. i5-i0 was best.") ([d40f4fb1](https://github.com/brianhliou/mistboard/commit/d40f4fb1))
 - The homepage board no longer stays live with a running clock when the server stops answering ([602e3d40](https://github.com/brianhliou/mistboard/commit/602e3d40))
 - The first download of a game data file no longer pauses live games while it is built ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))

@@ -1,4 +1,5 @@
 import type { Color, GameEvent, GameSpecId, GameState, Move } from '@mistboard/game';
+import type { LiveEngineReservationHolder } from '../server-live-engine-reservations.js';
 
 export type EngineKind = 'builtin' | 'typescript-bundle' | 'wasm' | 'container';
 
@@ -86,7 +87,14 @@ export type EngineClientId = EngineId | 'random-engine';
 export type EngineMoveContext = {
   baseThinkTimeMs?: number;
   clockRemainingMs?: number;
-  engineReservationId?: string;
+  /**
+   * The room holding this game's engine-service seat. A turn the worker
+   * rejects for an unknown seat (it restarted) renews the seat and writes the
+   * new id back here (#477).
+   */
+  engineReservation?: LiveEngineReservationHolder;
+  /** False once the game no longer needs its seat; a late renewal is released. */
+  engineReservationStillNeeded?: () => boolean;
   events?: GameEvent[];
   state: GameState;
   color: Color;
