@@ -5,14 +5,16 @@
 // hit-testing) + installSelectionClickAway — and delegates rendering to
 // renderJungleBoardSvg with its interactive/selected/targets/draggingFrom options.
 //
-// Engine and user arrows share the SVG overlay layer. Point markers remain the
-// next review-capability slice.
+// Engine and user arrows share the SVG overlay layer; the review's move glyph
+// and best-move ring go in the marker layer.
 
 import type { JungleColor, JungleMove, JunglePlayerView, JungleSquare } from '@mistboard/game';
 import {
   JUNGLE_BOARD_VIEW,
   type JungleBoardArrow,
+  type JungleBoardMarker,
   jungleArrowSvg,
+  jungleMarkerSvgFor,
   junglePieceGhostSvg,
   renderJungleBoardSvg,
 } from './jungle-render.js';
@@ -41,7 +43,7 @@ export interface JungleInteractiveBoard {
   render(view: JunglePlayerView | null, perspective: JungleColor): void;
   clearSelection(): void;
   setArrows(arrows: readonly JungleBoardArrow[]): void;
-  setMarkers(): void;
+  setMarkers(markers: readonly JungleBoardMarker[]): void;
 }
 
 export function createJungleInteractiveBoard(
@@ -50,6 +52,7 @@ export function createJungleInteractiveBoard(
   let selectedSquare: JungleSquare | null = null;
   let draggingFrom: JungleSquare | null = null;
   let arrows: readonly JungleBoardArrow[] = [];
+  let markers: readonly JungleBoardMarker[] = [];
 
   function render(view: JunglePlayerView | null, perspective: JungleColor): void {
     if (!view) {
@@ -67,6 +70,7 @@ export function createJungleInteractiveBoard(
       draggingFrom,
       interactive: true,
       arrows,
+      markers,
     });
   }
 
@@ -76,6 +80,18 @@ export function createJungleInteractiveBoard(
     if (layer) {
       layer.innerHTML = arrows
         .map((arrow) => jungleArrowSvg(arrow, opts.getPerspective()))
+        .join('');
+    }
+  }
+
+  // The review's move glyph and best-move ring: patched in place like the
+  // arrows, and kept across renders.
+  function setMarkers(next: readonly JungleBoardMarker[]): void {
+    markers = next;
+    const layer = opts.board.querySelector('.jungle-board-markers');
+    if (layer) {
+      layer.innerHTML = markers
+        .map((marker) => jungleMarkerSvgFor(marker, opts.getPerspective()))
         .join('');
     }
   }
@@ -167,5 +183,5 @@ export function createJungleInteractiveBoard(
     },
   });
 
-  return { render, clearSelection, setArrows, setMarkers: () => {} };
+  return { render, clearSelection, setArrows, setMarkers };
 }

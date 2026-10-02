@@ -398,6 +398,11 @@ export function jungleArrowSvg(arrow: JungleBoardArrow, perspective: JungleColor
   return jungleArrowSvgWithGeometry(arrow, geom);
 }
 
+/** A marker drawn for a perspective, for patching the marker layer in place. */
+export function jungleMarkerSvgFor(marker: JungleBoardMarker, perspective: JungleColor): string {
+  return jungleMarkerSvg(marker, createGridGeometry(DESCRIPTOR, perspective === 'black'));
+}
+
 export function jungleMarkerSvg(marker: JungleBoardMarker, geom: GridGeometry): string {
   const { file, rank } = jungleCoordOf(marker.square);
   const center = geom.center(file, rank);

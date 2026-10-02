@@ -339,6 +339,16 @@ export type DecisionMoveInfo = {
   candidates?: DecisionCandidate[];
 };
 
+/** " e8-a8 was best." for a judged chance ply whose top-ranked alternative is
+ *  not the move played; empty when the table is missing or the played move led it. */
+export function decisionBestQuote(info: DecisionMoveInfo): string {
+  // Best first; a table that is a subset carries ranks, and its first row is
+  // only the best move when it says rank 1.
+  const top = info.candidates?.[0];
+  if (!top || top.played || (top.rank !== undefined && top.rank !== 1)) return '';
+  return ` ${top.label} was best.`;
+}
+
 /** One ranked alternative, display-ready. */
 export type DecisionCandidate = {
   /** Board-notation move text, e.g. "e8-a8". */
@@ -2100,9 +2110,13 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
             // The judge supplies the word too. With the eval track no longer
             // grading these plies there is no comment to inherit, and a bare
             // glyph makes the reader guess at severity.
+            // The word, then the move the decision layer ranked first ("Mistake.
+            // i5-i0 was best."), as the eval track writes it for quiet plies.
+            // This names a move the mover could have chosen from what they saw,
+            // so it is advice, not hindsight.
             ...(info.judgment
               ? {
-                  comment: `${ADVICE_LABEL[info.judgment]}.`,
+                  comment: `${ADVICE_LABEL[info.judgment]}.${decisionBestQuote(info)}`,
                   commentClass: info.judgment,
                 }
               : {}),

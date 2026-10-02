@@ -8,7 +8,7 @@ import {
 import { describe, expect, it } from 'vitest';
 import { computeGameAnalysis } from './game-analysis.js';
 import { mountJieqiReview } from './jieqi-review.js';
-import type { DecisionOverlay } from './tree-review.js';
+import { type DecisionOverlay, decisionBestQuote } from './tree-review.js';
 
 // End-to-end wiring test (jsdom): mount the jieqi review with a fake analysis + decision overlay
 // and assert the visual outputs the decomposition adds — the reveal glyph + per-move luck badge on
@@ -101,5 +101,70 @@ describe('jieqi decision overlay wiring', () => {
     );
 
     root.remove();
+  });
+
+  it('names the better reveal in the advice line', async () => {
+    const root = document.createElement('div');
+    document.body.append(root);
+    const moves = firstMoves(3);
+    const overlay: DecisionOverlay = {
+      byPly: new Map([
+        [
+          1,
+          {
+            judgment: 'mistake',
+            accuracy: 71,
+            luck: -12,
+            playedRank: 2,
+            candidates: [
+              { label: 'i5-i0', win: 60 },
+              { label: 'b3-b10', win: 48, played: true },
+            ],
+          },
+        ],
+      ]),
+      red: { reveals: 1, decisionAccuracy: 71 },
+      black: { reveals: 0, decisionAccuracy: 100 },
+    };
+    mountJieqiReview(root, 'room-y', STANDARD_JIEQI_DEAL, {
+      ariaLabel: 'test',
+      title: 'Jieqi',
+      summary: 'test',
+      moves,
+      analysis: {
+        requestLabel: 'Analyse',
+        fetchCached: async () => fakeAnalysis(moves.length),
+        run: async () => fakeAnalysis(moves.length),
+      },
+      decisions: { fetchCached: async () => overlay, canRun: true, run: async () => overlay },
+    });
+    await Promise.resolve();
+    await Promise.resolve();
+    await new Promise((r) => setTimeout(r, 0));
+
+    expect(root.textContent).toContain('Mistake. i5-i0 was best.');
+    root.remove();
+  });
+});
+
+describe('decisionBestQuote', () => {
+  const base = { judgment: 'mistake' as const, accuracy: 70, playedRank: 2 };
+  it('quotes the top alternative when it was not played', () => {
+    expect(
+      decisionBestQuote({
+        ...base,
+        candidates: [
+          { label: 'a', win: 60 },
+          { label: 'b', win: 50, played: true },
+        ],
+      }),
+    ).toBe(' a was best.');
+  });
+  it('says nothing when the played move led, the table is missing, or the first row is not rank 1', () => {
+    expect(
+      decisionBestQuote({ ...base, candidates: [{ label: 'a', win: 60, played: true }] }),
+    ).toBe('');
+    expect(decisionBestQuote(base)).toBe('');
+    expect(decisionBestQuote({ ...base, candidates: [{ label: 'c', win: 40, rank: 3 }] })).toBe('');
   });
 });
