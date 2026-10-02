@@ -167,7 +167,7 @@ export const abJchessArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: 'In this game the bot is Red and rates itself more than ten pawns ahead, a won game by its count. It turns over the piece on b3 and moves it to d3. Three of the five pieces it could turn out to be lose at once to the black cannon dropping to h1, and Black mated on the next move. AB-JChess also likes Red here, about three wins in four, but it plays the advisor from e2 to f3 instead. By its count, the reveal gives away about a third of Red\'s chances before the piece even turns over.',
+          text: 'In this game the bot is Red and rates itself more than ten pawns ahead, a won game by its count. It turns over the piece on b3 and moves it to d3. Three of the five pieces it could turn out to be lose at once to the black cannon dropping to h1, and Black mated on the next move. AB-JChess also likes Red here, about three wins in four, but it moves the advisor off e2 instead. By its count, the reveal gives away about a third of Red\'s chances before the piece even turns over.',
         },
         gameEmbed(
           'jq_23d2a761-b37d-4bf0-a786-3ce7edf7e0fd',
