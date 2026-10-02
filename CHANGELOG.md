@@ -29,6 +29,10 @@ Conventions:
 - The game-over badges play again each time you step back onto the final move ([9434239f](https://github.com/brianhliou/mistboard/commit/9434239f))
 - Fortress Xiangqi shows every droppable piece in each player's tray, faded until you hold it, with a count when you hold two or more ([13f88a60](https://github.com/brianhliou/mistboard/commit/13f88a60))
 
+### Learning and puzzles
+
+- the 1,000 games played post reads in Simplified and Traditional Chinese ([/zh-hans/blog/one-thousand-games](/zh-hans/blog/one-thousand-games)) ([85975f14](https://github.com/brianhliou/mistboard/commit/85975f14))
+
 ### Watching and review
 
 - Game search hides games shorter than ten plies by default, with one click to show them ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
