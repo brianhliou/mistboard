@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The game-over badges play again each time you step back onto the final move ([9434239f](https://github.com/brianhliou/mistboard/commit/9434239f))
 - Fortress Xiangqi shows every droppable piece in each player's tray, faded until you hold it, with a count when you hold two or more ([13f88a60](https://github.com/brianhliou/mistboard/commit/13f88a60))
 
 ### Watching and review
