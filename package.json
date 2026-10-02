@@ -20,6 +20,7 @@
     "db:seed:qa-fixtures": "env DATABASE_URL=postgres://mistboard:mistboard@localhost:5435/mistboard npm run seed:qa-fixtures --workspace @mistboard/server",
     "db:seed:qa": "npm run db:migrate && npm run db:seed:profiles && npm run db:seed:variant-fixtures && npm run db:seed:watch && npm run db:seed:qa-fixtures",
     "generate:variant-fixtures": "npm run generate:variant-fixtures --workspace @mistboard/server",
+    "articles:meta": "UPDATE_ARTICLE_META=1 npm run test:unit --workspace @mistboard/web -- src/articles-meta-sync.test.ts",
     "variant:catalog": "tsx scripts/variant-catalog.ts",
     "lab": "tsx scripts/variant-lab/lab/cli.ts",
     "study:edit": "tsx apps/server/src/study-edit-cli.ts",

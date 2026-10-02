@@ -1,0 +1,266 @@
+{
+  "ab-jchess": {
+    "title": "AB-JChess, a stronger jieqi bot",
+    "kind": "article",
+    "description": "An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games, and it reads the positions people beat Pikafish in very differently.",
+    "status": "published"
+  },
+  "anti-xiangqi": {
+    "title": "Antichess on the Xiangqi Board Is a Draw",
+    "kind": "article",
+    "description": "We put antichess on the xiangqi board and measured it before designing anything. Black has two moves to find in the opening, Red cannot go wrong, and then the palace keeps five pieces a side out of reach. Every other opening loses, 63 of them provably. We are publishing the measurement, not the variant.",
+    "status": "published"
+  },
+  "atomic-xiangqi": {
+    "title": "Atomic Xiangqi Rules",
+    "kind": "rules",
+    "description": "Xiangqi where a capture is an explosion. The capturer, the captured piece and the four neighbouring pieces go; soldiers survive; a cannon shot takes only its target; and a blast threat on the general is check.",
+    "status": "published"
+  },
+  "atomic-xiangqi-build": {
+    "title": "Atomic Xiangqi Is Live: What Decides Your First Game",
+    "kind": "article",
+    "description": "Chinese chess where a capture is an explosion. The rules take a minute. What decides your first game is the three points beside your general, the cannon that no longer clears a rank, and a chariot on your advisor file counting as check.",
+    "status": "published"
+  },
+  "banqi": {
+    "title": "Banqi Rules (Chinese Dark Chess)",
+    "kind": "rules",
+    "description": "Banqi, also called Chinese dark chess or blind chess, is played face-down on half a xiangqi board. Pieces capture by rank, except that the soldier takes the general and the cannon jumps a screen to take anything.",
+    "status": "published"
+  },
+  "banqi-statistics": {
+    "title": "Banqi by the Numbers",
+    "kind": "article",
+    "description": "MistyBanqi played itself 200 times at ten million nodes a move under the Taiwanese competition rules. On the engine’s own point scale, a lead under ten points is a coin flip at every stage of the game, and the side that loses its general first loses 87% of the time.",
+    "status": "published"
+  },
+  "cao-yanlei": {
+    "title": "Cao Yanlei 曹岩磊",
+    "kind": "article",
+    "description": "Beat the world champion 12 to 8 in a ten-game match in January, then the rest of his season through the first stage of China's top league. Six games on the board, all 75 analysed.",
+    "status": "published"
+  },
+  "chess": {
+    "title": "Chess Rules",
+    "kind": "rules",
+    "description": "Standard chess rules, the primer behind Fog Chess: castling, promotion, en passant, the draw rules, and a famous game to play through.",
+    "status": "published"
+  },
+  "choi-co-tuong-voi-may": {
+    "title": "Chơi cờ tướng với máy: Pikafish trên Mistboard",
+    "kind": "article",
+    "description": "Chơi cờ tướng với máy ngay trên trình duyệt, đối thủ là Pikafish, engine cờ tướng mã nguồn mở phát triển từ Stockfish. Miễn phí, không cần tài khoản, không cần tải về. Chọn cấp độ, chơi cờ úp, và xem lại ván đấu bằng engine.",
+    "status": "published"
+  },
+  "co-up": {
+    "title": "Cờ úp trên Mistboard",
+    "kind": "article",
+    "description": "Chơi cờ úp với máy hoặc với bạn bè, miễn phí và không cần tài khoản, rồi xem lại ván đấu với phân tích tách riêng phần bạn chọn khỏi phần bạn lật trúng.",
+    "status": "published"
+  },
+  "crazyhouse-xiangqi": {
+    "title": "Crazyhouse Xiangqi Rules",
+    "kind": "rules",
+    "description": "Xiangqi where a captured piece joins your hand: on your turn you may drop it on any empty point where it could stand in a normal game, as long as the drop does not give check.",
+    "status": "published"
+  },
+  "duck-xiangqi": {
+    "title": "Duck Xiangqi Rules",
+    "kind": "rules",
+    "description": "Duck Chess on the xiangqi board. Every turn is a move and then a duck placement, the duck blocks and screens like a piece, and you win by capturing the general.",
+    "status": "published"
+  },
+  "duck-xiangqi-strategy": {
+    "title": "Duck Xiangqi Strategy for Your First Game",
+    "kind": "article",
+    "description": "Chinese chess with one duck both players share. The rules take a minute to read. What decides your first game takes longer, starting with the fact that the duck you place is a cannon platform for your opponent and never for you.",
+    "status": "published"
+  },
+  "fog-chess": {
+    "title": "Fog Chess Rules",
+    "kind": "rules",
+    "description": "Fog Chess is chess where you see only the squares your own pieces can reach. Nobody announces check, so a king is lost by being captured, and it can castle into an attack it can't see.",
+    "status": "published"
+  },
+  "fog-chess-concepts": {
+    "title": "Fog Chess Concepts",
+    "kind": "article",
+    "description": "Strategy concepts for Fog Chess: read fogged squares and capture clues, model the hidden positions you could be facing, cluster them into the few that matter, and pick moves that survive every one.",
+    "status": "draft"
+  },
+  "fog-openings": {
+    "title": "An Opening System for Fog Chess",
+    "kind": "article",
+    "description": "A complete Fog of War chess opening system built on 1.c4 and 2.Qa4, measured across 899 games. The queen doubles as a sensor and sometimes captures the king on move three. Which Black replies hold, which collapse, and where the system stops working.",
+    "status": "draft"
+  },
+  "fog-xiangqi": {
+    "title": "Fog Xiangqi Rules",
+    "kind": "rules",
+    "description": "Fog Xiangqi is xiangqi under Fog of War. A piece you can't see can still block your horse, and a general with a clear file to the other general can capture it.",
+    "status": "published"
+  },
+  "fortress-xiangqi": {
+    "title": "Fortress Xiangqi Rules",
+    "kind": "rules",
+    "description": "A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.",
+    "status": "published"
+  },
+  "horde-xiangqi": {
+    "title": "Horde on the Xiangqi Board: The River Is a Cliff",
+    "kind": "article",
+    "description": "We put Horde on the xiangqi board and measured it before building anything: twelve start arrays, two soldier rules, each played four times by an engine against itself. With xiangqi’s own soldier the army wins every game by one trick; give the soldier the crossed move from the start and the game becomes a siege that draws three times in four. We are publishing the measurement, not the variant.",
+    "status": "published"
+  },
+  "how-puzzle-mining-works": {
+    "title": "I built a xiangqi puzzle miner",
+    "kind": "article",
+    "description": "A miner that reads real xiangqi games, finds the moves people got wrong, and keeps the positions where exactly one move wins. About one blunder in nine survives it. Here is the algorithm, the code, and some of what it kept and threw away.",
+    "status": "published"
+  },
+  "jieqi": {
+    "title": "Jieqi Rules (Reveal Xiangqi)",
+    "kind": "rules",
+    "description": "Jieqi, the hidden-piece Chinese chess variant, explained in English. Every piece but the general starts face-down, makes its first move as the piece whose point it stands on, then turns face-up.",
+    "status": "published"
+  },
+  "jieqi-bot-wins": {
+    "title": "Fourteen wins against our jieqi bot",
+    "kind": "article",
+    "description": "Since August 23, people have played our jieqi bot 596 times and beaten it 14 times. Here is how those games were won, and seven new levels for everyone else.",
+    "status": "published"
+  },
+  "jieqi-openings": {
+    "title": "What Strong Jieqi Players Believe About the Opening",
+    "kind": "article",
+    "description": "Jieqi has no opening book. It has an argument about the first move, running on Chinese forums among players with thousands of games, never written down in English. Why a face-down piece is a one-shot option you can waste, five openings ranked, and the pawn push weighed against the crossed cannon on all six reveals.",
+    "status": "published"
+  },
+  "jieqi-platform": {
+    "title": "Jieqi on Mistboard",
+    "kind": "article",
+    "description": "Play jieqi against the engine or a friend, free and without an account, then review the game with analysis that separates your choices from your luck.",
+    "status": "published"
+  },
+  "jungle": {
+    "title": "Jungle Chess Rules (Dou Shou Qi, Animal Chess)",
+    "kind": "rules",
+    "description": "Jungle Chess, also called Dou Shou Qi or Animal Chess, puts eight ranked animals on a 7 by 9 board, and the first to walk into the other's den wins. The rat, the lowest rank, can take the elephant, the highest.",
+    "status": "published"
+  },
+  "jungle-flip": {
+    "title": "Flip Jungle Rules (Flip Dou Shou Qi)",
+    "kind": "rules",
+    "description": "The 4×4 flip version of Jungle Chess, also called flip Dou Shou Qi or flip animal chess. Every animal starts face-down. Each turn you flip one or move one, and equal ranks trade off the board.",
+    "status": "published"
+  },
+  "khai-cuoc-co-up": {
+    "title": "Người chơi cờ úp giỏi tin gì về khai cuộc",
+    "kind": "article",
+    "description": "Cờ úp không có sách khai cuộc. Nó chỉ có một cuộc tranh luận về nước đi đầu tiên, chạy nhiều năm trên các diễn đàn Trung Quốc giữa những người chơi hàng nghìn ván, chưa từng được viết ra bằng tiếng Anh hay tiếng Việt. Vì sao một quân úp là quyền chọn dùng đúng một lần mà bạn có thể phí đi, năm khai cuộc được xếp hạng, và thế tiến tốt đặt lên bàn cân với pháo qua sông trên cả sáu khả năng lật.",
+    "status": "published"
+  },
+  "luat-co-up": {
+    "title": "Luật cờ úp",
+    "kind": "article",
+    "description": "Luật cờ úp đầy đủ: cách bày quân, cách đi quân úp trước và sau khi lật, ăn quân úp, chiếu bí và các trường hợp hòa.",
+    "status": "published"
+  },
+  "mahjong": {
+    "title": "Hong Kong Mahjong Rules",
+    "kind": "rules",
+    "description": "How a hand of Hong Kong mahjong is played on Mistboard: the deal, claiming discards, why a complete hand is not always a win, and the faan table the site scores with.",
+    "status": "published"
+  },
+  "misty": {
+    "title": "How Misty Plays",
+    "kind": "article",
+    "description": "Misty is Mistboard's Fog of War chess engine: how it sees, searches possible boards, avoids hidden catastrophes, and where the current version stands.",
+    "status": "published"
+  },
+  "mistybanqi": {
+    "title": "How MistyBanqi Plays",
+    "kind": "article",
+    "description": "MistyBanqi is the engine you play in banqi on Mistboard: a classical search engine with a hand-written evaluation. How it thinks, and the blind spot worth knowing: it can draw a game it has already won.",
+    "status": "published"
+  },
+  "one-thousand-games": {
+    "title": "1,000 games played",
+    "kind": "article",
+    "description": "Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.",
+    "status": "published"
+  },
+  "pikafish": {
+    "title": "Pikafish on Mistboard",
+    "kind": "article",
+    "description": "Play Pikafish, the open-source xiangqi engine built from Stockfish, in your browser. Free, no account, no download. Choose a level, play it at jieqi, and review your games with it.",
+    "status": "published"
+  },
+  "puzzles-with-more-than-one-solution": {
+    "title": "Puzzles with more than one solution",
+    "kind": "article",
+    "description": "A solver found a real mate and was told to try again. 382 served puzzles could do that. How the miner admitted them, the patch that half-fixed it, the rule lichess uses instead, and what came out of the corpus.",
+    "status": "published"
+  },
+  "riverbank-cannon": {
+    "title": "The Riverbank Cannon Problem",
+    "kind": "article",
+    "description": "Red’s opening cannon reaches the riverbank first, one move from firing down any of five files, and in fog you never see it coming. Whether that breaks the game came down to one elephant move, one poisoned defense, and a coin flip we priced with the engine.",
+    "status": "published"
+  },
+  "server-enforced-fog": {
+    "title": "Programming Fog Chess with Server-Side Truth",
+    "kind": "article",
+    "description": "How Mistboard keeps hidden information on the server: canonical state, seat-scoped views, private live rooms, and public postgame review.",
+    "status": "published"
+  },
+  "shogi4": {
+    "title": "Shogi4 (4×4 Shogi) Rules",
+    "kind": "rules",
+    "description": "The complete rules of Shogi4 (4x4 Shogi), Oca Studios' public-domain animal drop-shogi on a 4×4 board: how the Carp, Tapir, Raccoon-dog, Fox, and royal move, plus the friendly-jump, evolution, drops, and king-capture wins.",
+    "status": "published"
+  },
+  "skill-vs-luck": {
+    "title": "Separating Skill from Luck in Flip Games",
+    "kind": "article",
+    "description": "Half the moves in banqi, jieqi, and flip jungle are dice rolls, so a chess-style review blames you for variance. Mistboard’s game review splits every flip into the decision and the tile: luck-stripped accuracy, a luck line on the advantage graph, and what 52 human-versus-engine games say about who really earned their wins.",
+    "status": "published"
+  },
+  "titled-players": {
+    "title": "Bring your title to Mistboard",
+    "kind": "article",
+    "description": "Verified titled players get a gold badge beside their name, a coaching page students can find, and a front page that will carry their work. Verification takes about two minutes.",
+    "status": "published"
+  },
+  "xiangqi": {
+    "title": "Xiangqi Rules",
+    "kind": "rules",
+    "description": "The rules of xiangqi for chess players: the palace and river, cannon screens, facing generals, perpetual check, notation, and a famous game to play through. Playable on Mistboard against the Pikafish engine or a friend.",
+    "status": "published"
+  },
+  "xiangqi-champions": {
+    "title": "Every Xiangqi Champion",
+    "kind": "article",
+    "description": "Every winner of the Chinese national xiangqi championship since 1956, and an annotated game for thirteen of them. Plus the nine hundred years before the title existed, and the decade that has been struck from the record.",
+    "status": "published"
+  },
+  "xiangqi-match-fixing": {
+    "title": "The Xiangqi Match-Fixing Case",
+    "kind": "article",
+    "description": "Between 2024 and 2026 the Chinese Xiangqi Association sanctioned 49 people for buying and selling games, and a Hangzhou court convicted six grandmasters of bribery. What happened, why it paid, who ruled, and what is still unproven.",
+    "status": "published"
+  },
+  "xiangqi-world-championship": {
+    "title": "The Xiangqi World Championship",
+    "kind": "article",
+    "description": "Every winner of the Xiangqi World Championship since 1990, why the Chinese national title is the harder one, and how a Vietnamese player took it out of China for the first time in 2025.",
+    "status": "published"
+  },
+  "yin-sheng": {
+    "title": "Yin Sheng 尹昇",
+    "kind": "article",
+    "description": "31 games without a loss across the league qualifier, the Shanghai Cup and the first league stage, August to September 2026. How he plays, five games on the board, all 31 analysed.",
+    "status": "published"
+  }
+}

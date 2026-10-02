@@ -285,7 +285,7 @@ Edit task → find file → open only that file.
 | `persistence-engine-seats.ts` | Centralized live-engine seat accounting (Postgres) across an elastic worker fleet; the multi-replica replacement for the in-memory reservation store. NOT yet wired (flag-gated later) |
 | `accounts-count.ts` | CLI: count accounts (total + new in last 7/30d) |
 | `accounts-list.ts` | CLI: list accounts (id/email/created_at) |
-| `article-meta.ts` | Server-side article slug → page meta (title/description/kind) for share cards + canonical URL space; kept in sync with `articles-data.ts` via a web test |
+| `article-meta.ts` | Server-side article slug → page meta (title/description/kind) for share cards + canonical URL space; the per-article table is `article-meta.generated.json`, generated from `articles-data.ts` by `npm run articles:meta` (never hand-edited; `articles-meta-sync.test.ts` fails when stale) |
 | `auth-rate-limit.ts` | In-memory per-key sliding-window rate limiter for auth endpoints (persistence-free defense-in-depth); re-exports `clientIpForRateLimit` from `server-policy.ts` |
 | `engine-paths.ts` | Single source of truth for resolving the private `mistboard-engine` repo paths from the public server (`MISTBOARD_ENGINE_DIR` env, else `../mistboard-engine` sibling) |
 | `dev-decision-log-artifacts.ts` | Local-dev bridge that reshapes live-engine decision-log JSONL into review artifact summaries/payloads when persistence is disabled; gated by `FOW_DECISION_LOG_DIR` or the engine repo's `lab/decision_log/` |
@@ -597,6 +597,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `article-thumbnail-locale.test.ts` | A thumbnail render thunk gets the page locale: the Pikafish card leads with the reader script (PIKAFISH in English, 皮卡鱼/皮卡魚 in Chinese) with the other name above it and its own tagline, and `renderArticleThumbnail` paints the locale it is passed rather than the ambient one |
 | `articles.css` | Article index, article page, and article interactive widget styles loaded by `articles.ts` |
 | `articles-data.ts` | Article content (large; content not code) |
+| `article-server-meta.ts` | Renders the server's `article-meta.generated.json` from `articles-data.ts` (title, kind, summary as description, status); used by `articles-meta-sync.test.ts` and `npm run articles:meta` |
 | `article-i18n.ts` | Article localization strings and language helpers |
 | `i18n/catalog.ts` | Shared client UI translation registry and `t()` helper: English is statically bundled (the fallback and compile-time key authority), zh catalogs live in a MUTABLE locale registry filled by `ensureLocaleCatalog(locale)`, which dynamic-imports one lazy chunk per locale (`i18n/locales/*`) so English-only visitors never download them; after the bootstrap await, `t()` stays synchronous |
 | `i18n/catalogs/shell.ts` | Navigation, site-shell, appearance, connection, homepage-widget, and error-state translation strings (English, the key authority) |
