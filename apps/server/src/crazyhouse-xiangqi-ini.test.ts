@@ -169,3 +169,17 @@ test('stock Fairy-Stockfish resets its move counter on a drop (why nMoveRule sta
       'set nMoveRule = CRAZYHOUSE_XIANGQI_PROGRESS_CLOCK_LIMIT / 2 and update the test above.',
   );
 });
+
+test('the browser engine plays the same variant definition as the server', () => {
+  // The analysis board loads its own copy; comments may differ, rules may not.
+  const rules = (text: string) =>
+    text
+      .split('\n')
+      .map((line) => line.trim())
+      .filter((line) => line !== '' && !line.startsWith('#') && !line.startsWith(';'));
+  const web = readFileSync(
+    resolve(repoRoot, 'apps/web/public/engine/fairy-stockfish/crazyhouse-xiangqi.ini'),
+    'utf8',
+  );
+  assert.deepEqual(rules(web), rules(INI));
+});
