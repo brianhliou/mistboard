@@ -4,6 +4,7 @@
 // retro state or the position changes.
 import './retro.css';
 import { t } from '../i18n/catalog.js';
+import { seatDiscEl } from '../seat-disc.js';
 import type { RetroController, RetroSide } from './retro.js';
 import type { ReviewInk } from './review-seat-colors.js';
 
@@ -95,9 +96,7 @@ export function createRetroPanel<Node>(
   }
 
   function sideDisc(): HTMLElement {
-    const disc = document.createElement('span');
-    disc.className = `retro-box__disc retro-box__disc--${opts.discInk ?? ctrl.side}`;
-    return disc;
+    return seatDiscEl(opts.discInk ?? ctrl.side, 'retro-box__disc');
   }
 
   function mark(text: string, tone: 'win' | 'fail' | 'off'): HTMLElement {

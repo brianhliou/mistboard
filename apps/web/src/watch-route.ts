@@ -38,6 +38,7 @@ import {
 import { createMoveList, type MoveList } from './review/move-list.js';
 import { installReviewKeyboard } from './review/review-layout.js';
 import { createReviewShell } from './review/review-shell.js';
+import { seatDiscEl } from './seat-disc.js';
 import { showcaseRendererKindForSpec, specIdForShowcaseVariant } from './showcase-dispatch.js';
 import { buildLoadingState, buildNav } from './site-shell.js';
 import { buildUiIcon } from './ui-icon.js';
@@ -1815,11 +1816,9 @@ function renderWatchPlayerRows(
 function watchGameTablePlayer(player: GameMetaPlayer): HTMLElement {
   const row = document.createElement('span');
   row.className = 'clock-player-line watch-game-table__player';
-  const disc = document.createElement('span');
   // A null color is a flip variant whose opening flip has not bound an ink yet:
-  // render the neutral ring rather than guessing a side.
-  disc.className = `watch-player-disc watch-player-disc--${player.color ?? 'unbound'}`;
-  disc.setAttribute('aria-hidden', 'true');
+  // the disc renders the neutral ring rather than guessing a side.
+  const disc = seatDiscEl(player.color, 'watch-player-disc');
   row.append(disc, playerNameEl(player.name, player.profile ?? null, 'clock-name'));
   if (player.isEngine) {
     const bot = document.createElement('span');

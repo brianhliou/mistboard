@@ -45,8 +45,21 @@ export type VariantEveAdapter<
   tenant: VariantTenant<any, C, M, State, any, Spec>;
   /** Resolve an engine id to its playing tier; null for engines this variant cannot play. */
   tierFor(engineId: string | undefined): VariantEveTier | null;
-  /** The EvE-only uniformly-random mover, the 0-Elo anchor. Never player-facing. */
+  /**
+   * The EvE-only uniformly-random mover, the 0-Elo anchor. Never player-facing.
+   * An adapter without one plays games for data only: nothing can rate it
+   * (no anchor, so no rating_policy is ever stamped on its jobs).
+   */
   randomEngineId?: string;
+  /**
+   * For an engine that is a standalone binary the image may or may not carry
+   * (railpack fetches banqi-engine and jungle-engine behind build flags): the
+   * worker capability a task of this variant requires, and the probe that says
+   * whether this box has the binary. A worker without it never claims the task,
+   * so a missing binary leaves the game queued instead of failing it.
+   */
+  requiredCapability?: string;
+  available?(): boolean;
   legalMoves(state: State): readonly M[];
   moveToUci(move: M): string;
   legalMoveForUci(legalMoves: readonly M[], uci: string): M | null;

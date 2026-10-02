@@ -38,6 +38,7 @@ import {
   JIEQI_SKILL_MULTIPV,
   type JieqiEngineTier,
 } from '../jieqi-engine.js';
+import { JUNGLE_RUST_ENGINE_VERSION, JUNGLE_RUST_TIER_LIST } from '../jungle-engine.js';
 import {
   XIANGQI_FSF_ENGINE_REF,
   XIANGQI_FSF_ENGINE_VERSION,
@@ -1113,6 +1114,34 @@ const JUNGLE_FLIP_ENGINES: Record<string, EngineDefinition> = {
   },
 };
 
+// MistyJungle (Jungle): the Rust tiers prod serves (jungle-engine.ts), registered so
+// the EvE runner can load them for the bot-vs-bot scheduler's jungle games (#488).
+// Generated from the tier table, so the catalog cannot drift from what plays; the
+// hash names the build and the node budget, the banqi convention.
+const JUNGLE_ENGINES: Record<string, EngineDefinition> = Object.fromEntries(
+  JUNGLE_RUST_TIER_LIST.map((tier) => {
+    // The names server-jungle-engine.ts shows: the offered tier is Misty herself.
+    const level = tier.id.replace('misty-jungle-level-', '');
+    const name = tier.id === 'misty-jungle-level-2' ? 'Misty' : `Misty Jungle level ${level}`;
+    const signature = `misty-jungle-${JUNGLE_RUST_ENGINE_VERSION}-nodes-${tier.nodes}`;
+    return [
+      tier.id,
+      {
+        id: tier.id as EngineId,
+        engineId: 'misty-jungle',
+        engineName: 'MistyJungle',
+        name,
+        kind: 'container',
+        gameSpecId: 'jungle',
+        configHash: signature,
+        playSignature: signature,
+        config: { kind: 'jungle-uci', nodes: tier.nodes, movetime_ms: tier.movetimeCapMs },
+        notes: `MistyJungle ${JUNGLE_RUST_ENGINE_VERSION} Rust UCI engine, ${tier.nodes} nodes under a ${tier.movetimeCapMs} ms cap.`,
+      } satisfies EngineDefinition,
+    ];
+  }),
+);
+
 const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...BUILTIN_ENGINES,
   ...PYTHON_ENGINES,
@@ -1127,6 +1156,7 @@ const KNOWN_ENGINES: Record<string, EngineDefinition> = {
   ...XIANGQI_ENGINES,
   ...BANQI_ENGINES,
   ...JUNGLE_FLIP_ENGINES,
+  ...JUNGLE_ENGINES,
 };
 
 /**

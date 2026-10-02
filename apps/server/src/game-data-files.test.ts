@@ -9,10 +9,12 @@ import {
   DATA_VARIANTS,
   DATA_WITHHELD_VARIANTS,
   dataFileKey,
+  dataFileName,
   dataFormatsForVariant,
   EmptyDataFileError,
   type EnsureDeps,
   ensureDataFile,
+  hashedDataFilePath,
   isClosedMonth,
   listableCollections,
   parseDataFilePath,
@@ -171,6 +173,99 @@ test('the listing groups closed months newest first, with built sizes and checks
     ],
   );
   assert.equal(listing.license, 'CC BY 4.0');
+});
+
+test('engine-game files have their own paths, keys and names, and fail closed the same way', () => {
+  assert.deepEqual(parseDataFilePath('/api/data/engine-monthly/2026-09/jieqi.jsonl.gz'), {
+    ok: true,
+    target: { kind: 'engine-monthly', month: '2026-09', variant: 'jieqi', format: 'jsonl' },
+    hash: null,
+  });
+  assert.deepEqual(
+    parseDataFilePath('/api/data/engine-monthly/2026-09/all.0123456789ab.jsonl.gz'),
+    {
+      ok: true,
+      target: { kind: 'engine-monthly', month: '2026-09', variant: 'all', format: 'jsonl' },
+      hash: '0123456789ab',
+    },
+  );
+  const bad = (path: string) => {
+    const parsed = parseDataFilePath(path);
+    return parsed && !parsed.ok ? parsed.status : 'ok';
+  };
+  assert.equal(bad('/api/data/engine-monthly/2026-13/jieqi.jsonl.gz'), 400);
+  assert.equal(bad('/api/data/engine-monthly/2026-09/mahjong.jsonl.gz'), 404);
+  assert.equal(bad('/api/data/engine-monthly/2026-09/all.pgn.gz'), 404);
+  assert.equal(bad('/api/data/engine-monthly/2026-09/duck-xiangqi.pgn.gz'), 404);
+  assert.equal(bad('/api/data/engine-monthly/nope'), 404);
+  const target = {
+    kind: 'engine-monthly',
+    month: '2026-09',
+    variant: 'jieqi',
+    format: 'pgn',
+  } as const;
+  // Never the human file's key: a human build cannot be served as an engine one.
+  assert.equal(dataFileKey(target), 'engine-monthly/2026-09/jieqi.pgn.gz');
+  assert.notEqual(dataFileKey(target), dataFileKey({ ...target, kind: 'monthly' }));
+  assert.equal(dataFileName(target), 'mistboard_engine_jieqi_2026-09.pgn.gz');
+  assert.equal(
+    hashedDataFilePath(target, 'b'.repeat(64)),
+    '/api/data/engine-monthly/2026-09/jieqi.bbbbbbbbbbbb.pgn.gz',
+  );
+});
+
+test('engine games are listed in their own months, never folded into the human ones', () => {
+  const listing = buildDataListing({
+    counts: [{ month: '2026-09', variant: 'xiangqi', games: 10 }],
+    engineCounts: [
+      { month: '2026-09', variant: 'xiangqi', games: 60 },
+      { month: '2026-09', variant: 'duck-xiangqi', games: 30 },
+      { month: '2026-10', variant: 'jieqi', games: 2 },
+    ],
+    stored: [],
+    collections: [],
+    now: NOW,
+  });
+  // The human month is untouched by the engine games.
+  assert.deepEqual(
+    listing.months.map((month) => [month.month, month.games, month.variants.map((v) => v.variant)]),
+    [['2026-09', 10, ['xiangqi']]],
+  );
+  assert.deepEqual(
+    listing.months[0]?.files.map((file) => file.path),
+    ['/api/data/monthly/2026-09/all.jsonl.gz'],
+  );
+  // Closed months only, like the human files.
+  assert.deepEqual(
+    listing.engineMonths.map((month) => [
+      month.month,
+      month.games,
+      month.variants.map((v) => [v.variant, v.games]),
+    ]),
+    [
+      [
+        '2026-09',
+        90,
+        [
+          ['xiangqi', 60],
+          ['duck-xiangqi', 30],
+        ],
+      ],
+    ],
+  );
+  assert.deepEqual(
+    listing.engineMonths[0]?.files.map((file) => [file.path, file.fileName]),
+    [['/api/data/engine-monthly/2026-09/all.jsonl.gz', 'mistboard_engine_all_2026-09.jsonl.gz']],
+  );
+  assert.deepEqual(
+    listing.engineMonths[0]?.variants[0]?.files.map((file) => file.path),
+    [
+      '/api/data/engine-monthly/2026-09/xiangqi.pgn.gz',
+      '/api/data/engine-monthly/2026-09/xiangqi.jsonl.gz',
+    ],
+  );
+  // A variant with engine games only still gets a rail entry.
+  assert.deepEqual(listing.variants, ['xiangqi', 'duck-xiangqi']);
 });
 
 test('a collection needs one exportable variant and an import origin', () => {

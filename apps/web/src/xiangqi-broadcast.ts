@@ -31,6 +31,7 @@ import { formatEval, winProbRed } from './review/engine/eval-format.js';
 import { buildBroadcastChat } from './review/spectator-chat.js';
 import { formatXiangqiEngineMove } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
+import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
@@ -1082,7 +1083,6 @@ function renderEventShell(
   body: HTMLElement,
   currentBoardId: string,
 ): HTMLElement {
-  const hasRound = data.round.id !== '';
   const boardOpen = currentBoardId !== '';
   const main = broadcastShell();
   main.classList.add('xqb-event');
@@ -1102,8 +1102,10 @@ function renderEventShell(
   layout.append(content);
   // The round's pairings, lichess's left column: scan the round without the
   // thumbnails, and jump straight to a board from any tab. The same list on
-  // every page of the round, the open board marked.
-  const rail = hasRound ? sideRail(data, currentBoardId) : null;
+  // every page of the round, the open board marked. A tour with no round yet
+  // keeps the column too (an empty list and the chat), so the page has the
+  // shape it will have once games arrive instead of one stretched panel.
+  const rail = sideRail(data, currentBoardId);
   if (rail) {
     layout.classList.add('xqb-event-layout-with-rail');
     // The list and the event's chat room, lichess's left column. Beside the
@@ -2799,8 +2801,7 @@ function cardSeat(
 ): HTMLElement {
   const row = document.createElement('span');
   row.className = `xqb-card-seat xqb-card-seat-${color}${score === '1' ? ' xqb-card-seat-winner' : ''}`;
-  const disc = document.createElement('span');
-  disc.className = 'xqb-card-seat-disc';
+  const disc = seatDiscEl(color, 'xqb-card-seat-disc');
   const name = document.createElement('span');
   name.className = 'xqb-card-seat-name';
   // The title before the name, in its own ink (lichess's GM, FM): the feed's
@@ -2902,6 +2903,9 @@ function sideRail(
   const heading = document.createElement('h2');
   if (header) {
     heading.append(header);
+  } else if (context.round.id === '') {
+    // No round to link to yet: the heading names what the list will hold.
+    heading.append(t('broadcast.boards'));
   } else {
     const back = document.createElement('a');
     back.href = `/broadcast/xiangqi/${encodeURIComponent(

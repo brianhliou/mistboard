@@ -405,7 +405,8 @@ export const ZH_HANS_CONTENT = {
   'data.formatJsonl':
     'JSONL：每行一盘对局，gzip 压缩。每一行与该对局页面上单独下载的 JSON 完全相同。字段：',
   'data.fieldGame': '对局编号及其在 Mistboard 上的页面。',
-  'data.fieldVariant': '变体编号，以及 pvp（人对人）或 pve（人对机器人）。',
+  'data.fieldVariant':
+    '变体编号，以及 pvp（人对人）、pve（人对机器人），或在机器人对局文件中的 eve（机器人对机器人）。',
   'data.fieldPlayers': '各方在对局页面上显示的名字，按颜色区分。设为私密的座位显示为 Anonymous。',
   'data.fieldTimeControl':
     '初始时间和每步加时（毫秒），并附 5+3 这样的标签；不限时则为 null。按每步固定用时进行的引擎对局附 movetime_ms。',
@@ -430,7 +431,7 @@ export const ZH_HANS_CONTENT = {
   'data.included':
     '自 2026 年 6 月起在本站下完的每一盘对局：人对人或人对机器人，计分或休闲，登录或以访客身份。对局按结束时所在的月份（UTC）归档。',
   'data.excluded':
-    '不包含：中止的对局和双方都还没走棋就结束的对局、运营和测试本站的账号下的对局、非公开对局、引擎对引擎的对局，以及引擎对局等导入的对局。当月结束后才会加入。',
+    '不包含：中止的对局和双方都还没走棋就结束的对局、运营和测试本站的账号下的对局、非公开对局、机器人对局（它们有单独的文件），以及引擎对局等导入的对局。当月结束后才会加入。',
   'data.hiddenHeading': '隐藏信息',
   'data.hiddenFog':
     '已结束的迷雾对局不再隐藏任何信息，所以文件包含双方的每一步，与对局结束后页面上显示的一致。当时每位玩家能看到什么并未保存；可以由着法和开源游戏代码中的视野规则推出。',
@@ -454,4 +455,9 @@ export const ZH_HANS_CONTENT = {
   'data.filesHosting':
     '文件由本站直接提供。当某个月的文件超过约 100 MB，或下载流量开始产生费用时，会迁移到对象存储（Cloudflare R2）。',
   'privacy.downloadsLink': '对局数据页面',
+  'data.engineHeading': '机器人对局',
+  'data.engineNote':
+    '本站自己的机器人之间的对局，每天几盘。它们有单独的文件，从不出现在上面的文件中。',
+  'data.engineAbout':
+    '本站每天安排几盘自己的机器人之间的对局，就是你可以对战的那些机器人，涵盖多个变体，并在本站自己的服务器上进行。这些对局发布在单独的月度文件中，位于对局数据页面的“机器人对局”下，mode 为 eve。它们从不出现在人类对局的文件中，也不计入本站的统计或等级分。揭棋机器人对局和本站其他对局一样在开局时发牌，因此带有 deal_fen。',
 } satisfies Partial<Record<ContentI18nKey, string>>;

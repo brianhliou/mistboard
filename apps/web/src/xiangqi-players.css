@@ -801,25 +801,9 @@ a.xqp-team:hover {
 }
 
 /* A seat disc before a colour's label, in the family's inks. */
-.xqp-colour-dot-red::before,
-.xqp-colour-dot-black::before {
-  content: "";
-  display: inline-block;
-  width: 0.7em;
-  height: 0.7em;
+.xqp-colour-dot {
+  --seat-disc-size: 0.7em;
   margin-right: 0.45em;
-  border-radius: 50%;
-  vertical-align: 0.02em;
-}
-
-.xqp-colour-dot-red::before {
-  background: var(--ink-red, #c0563f);
-}
-
-.xqp-colour-dot-black::before {
-  background: var(--ink-black, #34302e);
-  /* Black on the dark panel needs an edge to be there at all. */
-  box-shadow: 0 0 0 1px var(--site-border);
 }
 
 .xqp-result-bar {

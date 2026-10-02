@@ -35,6 +35,10 @@ Conventions:
 
 ### Watching and review
 
+- a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([c2abab09](https://github.com/brianhliou/mistboard/commit/c2abab09))
+- a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([f15ea83a](https://github.com/brianhliou/mistboard/commit/f15ea83a))
+- Our bots now play each other every day in xiangqi, jieqi, Duck Xiangqi, Jungle Chess and Banqi, and those games are searchable under Engine games and downloadable from the [game data](/data) page ([ec3a7712](https://github.com/brianhliou/mistboard/commit/ec3a7712))
+- a broadcast with no games yet keeps its game list and chat column, so the page has the same shape before play as during it ([b792d6b5](https://github.com/brianhliou/mistboard/commit/b792d6b5))
 - The homepage TV marks each player with a disc in their colour, so Banqi and Flip Jungle show who plays which side (a dashed ring until the first flip decides it) ([f27e98d0](https://github.com/brianhliou/mistboard/commit/f27e98d0))
 - in Jieqi game review, a reveal is graded on what its player could know, counting their own face-down pieces that were captured unseen ([a730bab6](https://github.com/brianhliou/mistboard/commit/a730bab6))
 - Game search hides games shorter than ten plies by default, with one click to show them ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
@@ -47,6 +51,7 @@ Conventions:
 
 ### Site
 
+- Every player colour disc on the site is now one shared design, and the black disc stays visible on the dark theme ([c3d5a774](https://github.com/brianhliou/mistboard/commit/c3d5a774))
 - Jieqi, Banqi and Flip Jungle are back on the [game data](/data) page, and every downloaded game of theirs now records what each flipped piece turned out to be, so it replays from the file alone ([9037d497](https://github.com/brianhliou/mistboard/commit/9037d497))
 - Every finished game is now downloadable from the new [game data](/data) page: one file per variant per month, free to use under CC BY 4.0 ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
 
@@ -56,6 +61,7 @@ Conventions:
 
 ### Fixed
 
+- starting a Fog Xiangqi bot game during a site update no longer blocks other bot games for 30 minutes ([9ec82c36](https://github.com/brianhliou/mistboard/commit/9ec82c36))
 - a Fog Chess or Fog Xiangqi game against the bot no longer ends in a forfeit when the engine server restarts mid-game; the bot reconnects and plays on ([96cde925](https://github.com/brianhliou/mistboard/commit/96cde925))
 - in Jieqi and Jungle game review, the board shows the ?!, ? or ?? mark on the selected move, and a judged reveal names the better move ("Mistake. i5-i0 was best.") ([d40f4fb1](https://github.com/brianhliou/mistboard/commit/d40f4fb1))
 - The homepage board no longer stays live with a running clock when the server stops answering ([602e3d40](https://github.com/brianhliou/mistboard/commit/602e3d40))

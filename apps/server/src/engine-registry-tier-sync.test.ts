@@ -115,6 +115,7 @@ const TIER_BACKED_CONFIG_KINDS: ReadonlySet<EngineConfig['kind']> = new Set([
   'pikafish-xiangqi',
   'banqi-uci',
   'jungle-flip-uci',
+  'jungle-uci',
 ]);
 
 // Families the registry GENERATES from their tier list (Object.fromEntries over
@@ -132,6 +133,8 @@ const GENERATED_FROM_TIER_TABLE: ReadonlySet<string> = new Set([
   // slot above it (2026-10), generated from the same table.
   'pikafish-jieqi',
   'ab-jchess',
+  // The jungle Rust tiers (#488), generated from JUNGLE_RUST_TIER_LIST.
+  'misty-jungle',
 ]);
 
 // Retired entries kept only so old game records still resolve through

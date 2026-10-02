@@ -1013,6 +1013,8 @@ definePersistenceTests('xiangqi broadcasts', () => {
 
     // A new tour is auto: listed for the scheduler, which applies its window.
     const listed = await listXiangqiBroadcastScheduledTours();
+    const createdAt = listed[0]?.createdAt;
+    assert.equal(typeof createdAt, 'string');
     assert.deepEqual(listed, [
       {
         slug: '2025-wxc-sample',
@@ -1021,12 +1023,20 @@ definePersistenceTests('xiangqi broadcasts', () => {
         pollIntervalMs: 30_000,
         startsAt: '2025-09-21T00:00:00.000Z',
         endsAt: '2025-09-27T00:00:00.000Z',
+        createdAt,
       },
     ]);
-    // The 2025 fixture event is long past, so auto is not polling it now.
+    // The 2025 fixture event is long past, but the tour was seeded just now:
+    // a backfill polls for the tail counted from its creation.
     const fresh = await getXiangqiBroadcastTour('2025-wxc-sample');
     assert.equal(fresh?.pollMode, 'auto');
-    assert.equal(fresh?.pollEnabled, false);
+    assert.equal(fresh?.pollEnabled, true);
+    // Seeded more than the tail ago, auto stops polling it.
+    await getPool().query(
+      `UPDATE xiangqi_broadcast_tours SET created_at = now() - interval '8 days' WHERE slug = $1`,
+      ['2025-wxc-sample'],
+    );
+    assert.equal((await getXiangqiBroadcastTour('2025-wxc-sample'))?.pollEnabled, false);
 
     const updated = await setXiangqiBroadcastTourSchedule('2025-wxc-sample', {
       pollMode: 'on',

@@ -1,6 +1,6 @@
-// Pairing policy for automated xiangqi bot-vs-bot generation (Phase 2 of #196).
-// Two lanes over the 9-rung public strength ladder (FSF levels 1-8 + the elite
-// Pikafish on top):
+// Pairing policy for automated bot-vs-bot generation (Phase 2 of #196; every
+// variant with a scheduled plan since #488). Two lanes over one variant's
+// public strength ladder (xiangqi: FSF levels 1-8 + the elite Pikafish on top):
 //
 //   - content     — populates /watch. Top-heavy (favours the strongest rungs so
 //                   the feed shows strong play); mirrors (same engine both sides)
@@ -14,6 +14,12 @@
 //
 // Pure + rng-injected so it is deterministic under test.
 
+import { ATOMIC_XIANGQI_PLAYABLE_ENGINES } from './atomic-xiangqi-fsf-engine.js';
+import { BANQI_PLAYABLE_ENGINES } from './banqi-engine.js';
+import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
+import { FORTRESS_XIANGQI_PLAYABLE_ENGINES } from './fortress-xiangqi-fsf-engine.js';
+import { JIEQI_PLAYABLE_ENGINES } from './jieqi-engine.js';
+import { JUNGLE_RUST_TIER_LIST } from './jungle-engine.js';
 import { XIANGQI_PUBLIC_ENGINES } from './xiangqi-engine-catalog.js';
 
 export type BotVsBotLane = 'content' | 'calibration';
@@ -25,6 +31,27 @@ export type BotVsBotPairingChoice = { lane: BotVsBotLane; pairing: BotVsBotPairi
 // last). Kept as a function so callers can override for tests.
 export function xiangqiBotLadder(): string[] {
   return XIANGQI_PUBLIC_ENGINES.map((engine) => engine.id);
+}
+
+// Each variant's ladder, weakest first: the engines its first-party bots play
+// (bot-vs-bot-pairing.test.ts pins every rung to a first-party bot of that
+// variant). A variant missing here has no ladder, and the scheduler skips it;
+// nothing falls back to the xiangqi ladder. Banqi has one rung, so its bot plays
+// itself; jungle's three Rust tiers are its one offered bot (level 2, the
+// strongest) and the two retired levels that still attribute to Misty.
+const BOT_LADDERS: Readonly<Record<string, () => string[]>> = {
+  xiangqi: xiangqiBotLadder,
+  jieqi: () => JIEQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  'fortress-xiangqi': () => FORTRESS_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  'duck-xiangqi': () => DUCK_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  'atomic-xiangqi': () => ATOMIC_XIANGQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  banqi: () => BANQI_PLAYABLE_ENGINES.map((engine) => engine.id),
+  jungle: () => [...JUNGLE_RUST_TIER_LIST].sort((a, b) => a.nodes - b.nodes).map((tier) => tier.id),
+};
+
+/** A variant's public bot ladder, weakest first, or null when it has none. */
+export function botLadderFor(variant: string): string[] | null {
+  return Object.hasOwn(BOT_LADDERS, variant) ? BOT_LADDERS[variant]!() : null;
 }
 
 // How many of the strongest rungs the content lane draws from.

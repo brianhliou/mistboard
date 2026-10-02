@@ -311,15 +311,15 @@ describe('tenant room chrome player names', () => {
 describe('tenant room chrome player discs', () => {
   function discClasses(refs: LiveRefs): string[] {
     return [...refs.gameInfo.querySelectorAll('.game-meta-card__disc')].map((disc) =>
-      [...disc.classList].filter((name) => name !== 'game-meta-card__disc').join(' '),
+      [...disc.classList].filter((name) => name.startsWith('seat-disc--')).join(' '),
     );
   }
 
   it('tints the disc by seat when the seat name IS the color', () => {
     const { chrome, refs } = chromeHarness();
     chrome.renderMeta();
-    // colors: ['white', 'red'] -> hollow light, filled red.
-    expect(discClasses(refs)).toEqual(['game-meta-card__disc--light', 'game-meta-card__disc--red']);
+    // colors: ['white', 'red'] -> the white ink, the red ink.
+    expect(discClasses(refs)).toEqual(['seat-disc--white', 'seat-disc--red']);
   });
 
   it('tints the disc by the BOUND INK, not the seat, for a flip variant', () => {
@@ -338,7 +338,7 @@ describe('tenant room chrome player discs', () => {
       flipTenant,
     );
     chrome.renderMeta();
-    expect(discClasses(refs)).toEqual(['game-meta-card__disc--dark', 'game-meta-card__disc--red']);
+    expect(discClasses(refs)).toEqual(['seat-disc--black', 'seat-disc--red']);
   });
 
   it('renders a neutral disc while a flip variant has no ink bound yet', () => {
@@ -349,10 +349,7 @@ describe('tenant room chrome player discs', () => {
     };
     const { chrome, refs } = chromeHarness({}, preFlipTenant);
     chrome.renderMeta();
-    expect(discClasses(refs)).toEqual([
-      'game-meta-card__disc--unbound',
-      'game-meta-card__disc--unbound',
-    ]);
+    expect(discClasses(refs)).toEqual(['seat-disc--unbound', 'seat-disc--unbound']);
   });
 });
 

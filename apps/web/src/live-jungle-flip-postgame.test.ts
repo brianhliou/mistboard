@@ -132,19 +132,19 @@ describe('Flip Jungle postgame page', () => {
     const playerRows = root.querySelectorAll('.game-meta-card__player');
     expect(playerRows[0]?.textContent).toContain('First player');
     expect(playerRows[0]?.querySelector('.game-meta-card__disc')?.classList).toContain(
-      'game-meta-card__disc--dark',
+      'seat-disc--black',
     );
     expect(playerRows[1]?.querySelector('.game-meta-card__disc')?.classList).toContain(
-      'game-meta-card__disc--red',
+      'seat-disc--red',
     );
 
     const analysisPlayers = root.querySelectorAll('.analysis-summary__player');
     expect(analysisPlayers[0]?.textContent).toContain('First player');
     expect(analysisPlayers[0]?.querySelector('.analysis-summary__dot')?.classList).toContain(
-      'analysis-summary__dot--black',
+      'seat-disc--black',
     );
     expect(analysisPlayers[1]?.querySelector('.analysis-summary__dot')?.classList).toContain(
-      'analysis-summary__dot--red',
+      'seat-disc--red',
     );
     expect(root.querySelector('.advantage-chart__zone')?.classList).toContain(
       'advantage-chart__zone--black',

@@ -1518,4 +1518,27 @@ describe('event header before any round exists', () => {
     expect(header).toContain('Test Cup');
     expect(header).not.toMatch(/0 rounds/);
   });
+
+  it('keeps the left column, an empty game list over the chat', async () => {
+    stubFetchJson(() => ({
+      tour: {
+        schema: XIANGQI_BROADCAST_SCHEMA,
+        slug: 't',
+        name: 'Test Cup',
+        startsAt: '2026-10-02T00:00:00+08:00',
+        endsAt: '2026-10-08T23:59:59+08:00',
+      },
+      rounds: [],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(root.querySelector('.xqb-event-layout-with-rail')).not.toBeNull();
+    expect(root.querySelector('.xqb-event-side > .xqb-side-rail + .xqb-event-chat')).not.toBeNull();
+    const heading = root.querySelector('.xqb-side-rail h2');
+    expect(heading?.textContent).toBe('Boards');
+    // No round to link to yet, so the heading is not a link.
+    expect(heading?.querySelector('a')).toBeNull();
+    expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe('No games yet');
+  });
 });

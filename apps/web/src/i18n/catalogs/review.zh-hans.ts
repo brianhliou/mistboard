@@ -371,6 +371,8 @@ export const ZH_HANS_REVIEW = {
   'historical.sourcePlayedHere': '在 Mistboard 对弈',
   'historical.sourceEngineMatches': '引擎对局',
   'historical.sourceEngineMatch': '引擎对局',
+  'historical.sourceEngineGames': '机器人对局',
+  'historical.sourceEngineGame': '机器人对局',
   'historical.sourceBroadcasts': '赛事直播',
   'historical.firstWins': '先手获胜',
   'historical.secondWins': '后手获胜',

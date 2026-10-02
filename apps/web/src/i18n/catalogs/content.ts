@@ -425,7 +425,7 @@ export const EN_CONTENT = {
     "JSONL: one game per line, gzip compressed. Each line is the same JSON as that game's own download on its game page. Fields:",
   'data.fieldGame': "The game's id and its page on Mistboard.",
   'data.fieldVariant':
-    'The variant id, and pvp (people against people) or pve (a person against a bot).',
+    'The variant id, and pvp (people against people), pve (a person against a bot) or, in the engine game files, eve (a bot against a bot).',
   'data.fieldPlayers':
     'The name each seat shows on the game page, keyed by color. A seat set to private reads Anonymous.',
   'data.fieldTimeControl':
@@ -453,7 +453,7 @@ export const EN_CONTENT = {
   'data.included':
     'Every finished game played on the site since June 2026, people against people or against the bots, rated and casual, signed in or as a guest. A game is filed under the month it ended, in UTC.',
   'data.excluded':
-    'Left out: aborted games and games that ended before both sides moved, games played by the accounts that run and test the site, games that are not public, engine against engine games, and imported games such as engine matches. The current month is added once it ends.',
+    'Left out: aborted games and games that ended before both sides moved, games played by the accounts that run and test the site, games that are not public, engine games (they have files of their own), and imported games such as engine matches. The current month is added once it ends.',
   'data.hiddenHeading': 'Hidden information',
   'data.hiddenFog':
     'A finished fog game hides nothing, so its file holds every move of both sides, as the game page shows once the game is over. What each player could see at the time is not stored; it follows from the moves and the visibility rules in the open-source game code.',
@@ -477,6 +477,11 @@ export const EN_CONTENT = {
   'data.filesHosting':
     "The site serves the files itself. They move to object storage (Cloudflare R2) once a month's file passes about 100 MB, or once download bandwidth starts to cost money.",
   'privacy.downloadsLink': 'game data page',
+  'data.engineHeading': 'Engine games',
+  'data.engineNote':
+    "Games the site's own bots play each other, a few a day. They have files of their own and are never in the files above.",
+  'data.engineAbout':
+    "The site schedules a few games a day between its own bots, the same bots you can play, in several variants, and plays them on its own servers. They are published in their own monthly files, under Engine games on the game data page, with mode eve. They are never in the files of games people played, and they are not counted in the site's statistics or ratings. A Jieqi engine game is dealt like any other game on the site, so it has deal_fen.",
 } as const;
 
 export type ContentI18nKey = keyof typeof EN_CONTENT;
@@ -748,4 +753,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'data.filesBuilt',
   'data.filesHosting',
   'privacy.downloadsLink',
+  'data.engineHeading',
+  'data.engineNote',
+  'data.engineAbout',
 ] as const satisfies readonly ContentI18nKey[];
