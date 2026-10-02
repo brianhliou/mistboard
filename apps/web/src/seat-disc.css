@@ -1,0 +1,41 @@
+/* Compact showcase seat disc (seat-disc.ts). Same look as the /watch seat-row disc
+   (.watch-player-disc): a 1px-ringed circle in the seat's ink, the dark ink read
+   from the seat-disc token so the Jungle family paints blue. Centred on the row
+   rather than baseline-aligned: an empty box has no text baseline, so baseline
+   alignment would sit it on the name's descender line. */
+.seat-disc {
+  flex: 0 0 auto;
+  align-self: center;
+  width: 12px;
+  height: 12px;
+  box-sizing: border-box;
+  border-radius: 50%;
+  border: 1px solid var(--site-border);
+  background: #f4f1e9;
+}
+
+/* The dark fill is the theme's lifted black (seat-disc-ink.css), ringed in the
+   muted text colour: the /watch disc's #2b2b2b on --site-border all but vanishes
+   on the dark panel, and here the disc is the only thing naming the colour. */
+.seat-disc--black,
+.seat-disc--blue {
+  background: var(--seat-dark-ink, var(--ink-black, #2b2b2b));
+  border-color: var(--seat-dark-ink-border, var(--site-muted));
+}
+
+.seat-disc--red {
+  background: #b23b3b;
+}
+
+.seat-disc--unbound {
+  background: transparent;
+  border-style: dashed;
+  opacity: 0.55;
+}
+
+/* The name takes the slack after the disc, so a space-between row reads
+   disc + name ... clock rather than centring the name. Covers both renderers'
+   name spans (tenant .showcase-seat-name, chess .replay-clock-side). */
+.seat-disc + :is(.showcase-seat-name, .replay-clock-side) {
+  margin-right: auto;
+}

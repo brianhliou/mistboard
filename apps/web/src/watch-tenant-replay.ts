@@ -23,6 +23,7 @@ import type { GameMeta, ReplayHandle } from './replay.js';
 import { createPane, type ReplayPaneHandle } from './replay-board.js';
 import { createGameHeaderStrip } from './replay-meta.js';
 import type { MoveListEntry } from './review/move-list.js';
+import { seatDiscEl } from './seat-disc.js';
 import {
   projectShowcaseClock,
   reconstructShowcaseClocks,
@@ -143,6 +144,9 @@ export type TenantWatchAdapter<Postgame extends WatchPostgameMeta, View, ViewKey
   // words for the two seats, which a flip tenant must override with the bound ink
   // so the rail agrees with the board and the result chip above it.
   seatLabel?(seat: 'red' | 'black', postgame: Postgame): string;
+  // And once more for the compact seat disc: the ink the seat plays, or null while
+  // a flip tenant's opening flip has not bound one. Tenants where seat == ink omit it.
+  seatInk?(seat: 'red' | 'black', postgame: Postgame): 'red' | 'black' | null;
   // OPTIONAL piece-glide hook, called after each pane's innerHTML swap when the
   // ply moved by exactly ONE (autoplay tick or manual step). `view` is the pane's
   // freshly rendered view, `prevView` the same pane's view at the previous ply
@@ -187,6 +191,13 @@ export type TenantWatchReplayOptions = {
    * the preview shows the board alone. The featured board and full TV keep them.
    */
   hideReserve?: boolean;
+  /**
+   * Compact only: lead each seat row with a disc in the ink that seat plays (the
+   * /watch seat-row disc). The homepage TV opts in; flip variants (Banqi, Flip
+   * Jungle) are otherwise unreadable there, since nothing says which name owns
+   * which colour. A seat whose ink is not bound yet gets the dashed ring.
+   */
+  seatDiscs?: boolean;
   /**
    * Called once when the game reaches its final ply under autoplay (after the
    * loop hold), instead of restarting the same game. Lets an outer showcase
@@ -526,12 +537,15 @@ export async function mountTenantWatchReplay<
   const compactSeatRow = (
     name: string,
     side: 'first' | 'second',
+    disc: { ink: string | null } | null,
   ): { row: HTMLElement; clockEl: HTMLElement } => {
     const row = document.createElement('div');
     row.className = 'showcase-seat';
     // Which move-order seat this row names, for a host that wants to paint the
-    // seat's ink beside it (the game embed). The row itself stays colour-blind.
+    // seat's ink beside it (the game embed). The row is colour-blind unless the
+    // host asked for seatDiscs.
     row.dataset.seat = side;
+    if (disc) row.append(seatDiscEl(disc.ink));
     const nameEl = document.createElement('span');
     nameEl.className = 'showcase-seat-name';
     nameEl.textContent = name;
@@ -918,8 +932,13 @@ export async function mountTenantWatchReplay<
           : side === 'first'
             ? t('replay.red', {}, locale)
             : t('replay.black', {}, locale);
-      const topSeat = compactSeatRow(nameFor(topSide), topSide);
-      const bottomSeat = compactSeatRow(nameFor(bottomSide), bottomSide);
+      const discFor = (side: 'first' | 'second'): { ink: string | null } | null => {
+        if (options.seatDiscs !== true) return null;
+        const seat = side === 'first' ? 'red' : 'black';
+        return { ink: adapter.seatInk ? adapter.seatInk(seat, postgame) : seat };
+      };
+      const topSeat = compactSeatRow(nameFor(topSide), topSide, discFor(topSide));
+      const bottomSeat = compactSeatRow(nameFor(bottomSide), bottomSide, discFor(bottomSide));
       compactSeats = {
         top: { row: topSeat.row, clockEl: topSeat.clockEl, side: topSide },
         bottom: { row: bottomSeat.row, clockEl: bottomSeat.clockEl, side: bottomSide },

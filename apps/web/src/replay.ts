@@ -92,6 +92,7 @@ import {
   type WallClockReplayPosition,
 } from './replay-wall-clock.js';
 import type { MoveListEntry } from './review/move-list.js';
+import { seatDiscEl } from './seat-disc.js';
 import { escapeHtml } from './web-utils.js';
 
 const replayAbortControllers = new WeakMap<HTMLElement, AbortController>();
@@ -193,6 +194,8 @@ export type ReplayOptions = {
   showCaptures?: boolean;
   /** Split captured pieces above and below POV boards instead of one strip below. */
   captureLayout?: 'single' | 'split';
+  /** Lead each clock row with a disc in that side's colour (homepage TV). */
+  seatDiscs?: boolean;
   /** Compact-mode clock placement. Defaults to the historical board-edge rows. */
   compactClockLayout?: 'board-edges' | 'stacked' | 'captures';
   /** End-result placement. Defaults to pane footer labels. */
@@ -398,6 +401,10 @@ export async function mountReplay(
   if (gameMetaPanel) root.append(gameMetaPanel.el);
   if (movesPanel) root.append(movesPanel.el);
   const clockPanel = createClockPanel();
+  if (options.seatDiscs === true) {
+    clockPanel.whiteRow.prepend(seatDiscEl('white'));
+    clockPanel.blackRow.prepend(seatDiscEl('black'));
+  }
   // In compact + single-POV mode (landing hero) the truth pane is CSS-hidden,
   // so clocks hosted on truth would also be hidden. Track the current host
   // pane so we can move the clock rows when the visible pane changes across

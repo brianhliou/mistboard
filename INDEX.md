@@ -748,6 +748,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `banqi-sample-game.ts` | Banqi rules-article sample game data (a real MistyBanqi-vs-human game), replayed by `banqi-replay.ts` |
 | `banqi-engine-game.ts` | "How MistyBanqi Plays" article sample game data (a real prod game where MistyBanqi draws a won position by repetition), replayed by `banqi-replay.ts` |
 | `flip-seat-ink.ts` | The seat→ink map for flip variants (banqi, jungle-flip), keyed on the spec's `setup` rule so the family is read out of the registry. Shared by the two result-label modules and by `/watch`'s seat rows; `seatInkForVariant` passes every non-flip variant straight through |
+| `seat-disc.ts` + `seat-disc.css` | The seat disc (the /watch seat-row circle) the compact showcase rows draw beside each name when a host passes `seatDiscs` (homepage TV only); ink from the tenant adapter's `seatInk` hook, so banqi and flip jungle paint the colour the first flip bound |
 | `banqi-result-label.ts` | Banqi seat→bound-ink result labels (`seatInkLabel`/`banqiResultLabel`): translates the stored move-order seat to the ink that bound on the opening flip. Import-light so result-only surfaces (the watch queue) reuse it without board renderers |
 | `jungle-flip-result-label.ts` | Flip Jungle seat→bound-ink result labels for postgame and watch surfaces; falls back to first/second before the opening flip binds ink |
 | `watch-banqi-replay.ts` | Mistboard TV (`/watch`) renderer for Banqi — thin adapter over `watch-tenant-replay.ts` (single public truth surface, no fog) |
