@@ -162,6 +162,12 @@ test('analysis resource options ignore the live env knobs', () => {
       'setoption name Hash value 256',
       'setoption name Threads value 1',
     ]);
+    // AB-JChess analysis: a smaller fixed table (its budgets are tens of thousands of
+    // nodes), still a literal and still one thread.
+    assert.deepEqual(jieqiAnalysisResourceOptions('ab-jchess'), [
+      'setoption name Hash value 64',
+      'setoption name Threads value 1',
+    ]);
   } finally {
     if (prevHash === undefined) delete process.env.MISTBOARD_PIKAFISH_JIEQI_HASH_MB;
     else process.env.MISTBOARD_PIKAFISH_JIEQI_HASH_MB = prevHash;

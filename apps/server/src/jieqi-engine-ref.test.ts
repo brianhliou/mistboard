@@ -9,8 +9,13 @@ import { readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { JIEQI_ANALYSIS_ENGINE_ID, JIEQI_DECISIONS_ENGINE_ID } from './jieqi-analysis.js';
-import { PIKAFISH_JIEQI_ENGINE_REF } from './jieqi-engine.js';
+import {
+  ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID,
+  ABJCHESS_JIEQI_DECISIONS_ENGINE_ID,
+  JIEQI_ANALYSIS_ENGINE_ID,
+  JIEQI_DECISIONS_ENGINE_ID,
+} from './jieqi-analysis.js';
+import { ABJCHESS_ENGINE_REF, PIKAFISH_JIEQI_ENGINE_REF } from './jieqi-engine.js';
 
 const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const refFile = resolve(repoRoot, 'pikafish-jieqi.ref');
@@ -40,4 +45,18 @@ test('both analysis cache keys carry the engine ref', () => {
   // would leave the other silently reusing the previous engine's numbers.
   assert.ok(JIEQI_ANALYSIS_ENGINE_ID.includes(PIKAFISH_JIEQI_ENGINE_REF));
   assert.ok(JIEQI_DECISIONS_ENGINE_ID.includes(PIKAFISH_JIEQI_ENGINE_REF));
+});
+
+// The same pairing for AB-JChess (#482): ab-jchess.ref is what the image builds, and its
+// short form is in both AB analysis cache keys.
+test('ABJCHESS_ENGINE_REF is the short form of the pinned ab-jchess.ref commit', () => {
+  const pinned = readFileSync(resolve(repoRoot, 'ab-jchess.ref'), 'utf8').split('\n')[0]!.trim();
+  assert.match(pinned, /^[0-9a-f]{40}$/);
+  assert.ok(
+    pinned.startsWith(ABJCHESS_ENGINE_REF),
+    `ab-jchess.ref pins ${pinned} but ABJCHESS_ENGINE_REF is ${ABJCHESS_ENGINE_REF}: move the ` +
+      'constant so cached AB-JChess analysis recomputes on the new binary.',
+  );
+  assert.ok(ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID.includes(ABJCHESS_ENGINE_REF));
+  assert.ok(ABJCHESS_JIEQI_DECISIONS_ENGINE_ID.includes(ABJCHESS_ENGINE_REF));
 });

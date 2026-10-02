@@ -63,12 +63,16 @@ export function createAdvantageChart(
     /** Move text for the position at `ply` (e.g. "12... h10-i10"), shown in the
      *  hover readout above the eval. Omitted = the readout shows the eval alone. */
     moveLabel?: (ply: number) => string | null;
+    /** Win-curve constant of the engine that produced `evals` (winPercentK of the
+     *  analysis engineId). Omitted = lila's curve. */
+    winK?: number;
   },
 ): AdvantageChart {
   const maxPly = Math.max(1, evals.length - 1);
   const xOf = (ply: number) => (ply / maxPly) * VIEW_W;
   const yFor = (win: number) => PAD_Y + (1 - win / 100) * (VIEW_H - 2 * PAD_Y);
-  const yOf = (e: PlyEval) => yFor(winPercent(e.cp, e.mate));
+  const winOf = (e: PlyEval) => winPercent(e.cp, e.mate, opts.winK);
+  const yOf = (e: PlyEval) => yFor(winOf(e));
 
   const el = document.createElement('section');
   el.className = 'advantage-chart';
@@ -344,7 +348,7 @@ export function createAdvantageChart(
     const ghostPoints: string[] = [];
     for (const e of evals) {
       cumulative += redLuckByPly.get(e.ply) ?? 0;
-      const ghostWin = Math.max(0, Math.min(100, winPercent(e.cp, e.mate) - cumulative));
+      const ghostWin = Math.max(0, Math.min(100, winOf(e) - cumulative));
       ghostPoints.push(`${xOf(e.ply).toFixed(1)},${yFor(ghostWin).toFixed(1)}`);
     }
     ghostLine.setAttribute('points', ghostPoints.join(' '));

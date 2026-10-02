@@ -18,7 +18,7 @@ import {
   resolveJieqiAnalysis,
   resolveJieqiDecisions,
 } from './../jieqi-analysis.js';
-import { jieqiEngineBinaryAvailable } from './../jieqi-engine.js';
+import { jieqiAnalysisEngineAvailable } from './../jieqi-engine.js';
 import { jieqiRooms } from './../jieqi-registration.js';
 import type { JieqiEvent, JieqiProjection } from './../jieqi-runtime.js';
 import { jieqiTenant } from './../jieqi-tenant.js';
@@ -101,9 +101,13 @@ const handleAnalysisRoutes = createGameAnalysisRoutes({
   variantLabel: 'Jieqi',
   enabled: jieqiEnabled,
   requiresPersistence: true,
-  // Fail closed, not open: the analysis engine is the PikaJieQi binary ONLY. A missing
-  // binary is a broken deploy, so surface it (alertable log + 503) instead of a weaker eval.
-  engineBinary: { available: jieqiEngineBinaryAvailable, label: 'PikaJieQi binary' },
+  // Fail closed, not open: analysis runs on AB-JChess when its binary and net resolve,
+  // else on PikaJieQi (jieqiAnalysisEngine). With neither present the deploy is broken,
+  // so surface it (alertable log + 503) instead of a weaker eval.
+  engineBinary: {
+    available: jieqiAnalysisEngineAvailable,
+    label: 'jieqi analysis engine (AB-JChess or PikaJieQi)',
+  },
   loadInputs: loadFinishedJieqiGameInputs,
   countPlies: (inputs) => inputs.moves.length,
   resolveAnalysis: (roomId, inputs, computeIfMissing) =>

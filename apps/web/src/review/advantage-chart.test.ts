@@ -93,6 +93,25 @@ function pointerAt(svg: SVGSVGElement, clientX: number): void {
   svg.dispatchEvent(new PointerEvent('pointermove', { clientX, bubbles: true }));
 }
 
+describe('advantage chart win curve', () => {
+  it('plots the same cp higher on a steeper engine curve', () => {
+    const series: PlyEval[] = [
+      { ply: 0, cp: 0, mate: null, best: null },
+      { ply: 1, cp: 150, mate: null, best: null },
+    ];
+    const lastY = (winK?: number): number => {
+      const chart = createAdvantageChart(series, { onJump: () => {}, winK });
+      const points = (chart.el.querySelector('.advantage-chart__line') as SVGPolylineElement)
+        .getAttribute('points')!
+        .split(' ');
+      return Number(points.at(-1)!.split(',')[1]);
+    };
+    // +150cp is ~63% on lila's curve and ~81% on AB-JChess's (K 0.00985): a smaller y.
+    expect(lastY(0.00985)).toBeLessThan(lastY() - 5);
+    expect(lastY(undefined)).toBe(lastY(0.00368208));
+  });
+});
+
 describe('advantage chart frame', () => {
   it('keeps a forced mate off the frame edge', () => {
     const chart = createAdvantageChart(

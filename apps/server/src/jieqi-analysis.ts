@@ -10,11 +10,15 @@
 //      moves — there is no separate from===to flip as in banqi). So a "chance" ply is a move
 //      whose source piece was face-down beforehand; jieqiChancePlies() detects those by replay.
 //
-// The backend is the PikaJieQi (Pikafish jieqi_old) binary ONLY (no in-process fallback): we
-// read its `info … score` via evaluateJieqiFen. Unlike the 3 custom engines, Pikafish already
-// emits a score, so no engine change was needed — jieqi was analysis-ready. A missing binary
-// fails closed at the route (503), and an all-null sweep throws VacuousAnalysisError (never
-// cached) — so a broken or score-less engine can't cache a flat, mistake-free game.
+// The backend is a UCI binary (no in-process fallback): AB-JChess when its binary and net
+// resolve (prod since 2026-10, #482), else PikaJieQi (Pikafish jieqi_old), chosen per compute
+// by jieqiAnalysisEngine(). Each engine has its own profile below (budgets, cache ids, win
+// curve), and a stored analysis keeps the id of the engine that computed it: the client draws
+// and grades it on that engine's curve (winPercentK), and a read falls back to whichever
+// engine's row exists, so games analysed before the switch keep their PikaJieQi analysis. A
+// missing binary fails closed at the route (503), and an all-null sweep throws
+// VacuousAnalysisError (never cached) — so a broken or score-less engine can't cache a flat,
+// mistake-free game.
 
 import {
   applyJieqiMove,
@@ -24,7 +28,9 @@ import {
   type JieqiGameState,
   type JieqiMove,
   type JieqiPieceRole,
+  WIN_PCT_K,
   winPercent,
+  winPercentK,
 } from '@mistboard/game';
 import {
   type AnalysisProgressStore,
@@ -38,10 +44,14 @@ import {
   VacuousAnalysisError,
 } from './game-analysis-sweep.js';
 import {
+  ABJCHESS_ENGINE_REF,
+  ABJCHESS_NET_FILE,
   evaluateJieqiFen,
-  evaluateJieqiMultiPv,
   JIEQI_ANALYSIS_ENGINE_VERSION,
+  type JieqiAnalysisEngine,
+  type JieqiAnalysisEvaluators,
   type JieqiEvalBudget,
+  jieqiAnalysisEngine,
   PIKAFISH_JIEQI_ENGINE_REF,
   withJieqiAnalysisSession,
 } from './jieqi-engine.js';
@@ -115,6 +125,64 @@ const TERMINAL_CP = 30_000;
 // key — the search dial is JIEQI_ANALYSIS_NODES and it lives here, in the id.
 export const JIEQI_ANALYSIS_ENGINE_ID = `pikafish-jieqi-analysis@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+history1+nodes${JIEQI_ANALYSIS_NODES}+consistent1`;
 
+// ── AB-JChess budgets (#482) ─────────────────────────────────────────────────────
+//
+// AB-JChess is ~50x slower per node than PikaJieQi and stronger per node: single-threaded it
+// searched ~30k nps on prod web (EPYC 9655, avx2 build) and, measured on an M-series dev box
+// over a real 28-ply game (jq_23d2a761), ~35k nps in the all-dark opening rising to ~100k in
+// the middlegame (its net is lazily loaded on the first `go`, ~0.5 s once per session). It
+// prints no `info` line until a search is a few hundred ms old, but on every position measured
+// the last scored line before `bestmove` was an exact score from the last completed iteration
+// (never bound-only), which is what the reader keeps (a bound is only its last resort). A fixed depth is unreachable at these rates (depth 16 would be
+// minutes), so it gets a node budget for the same reason PikaJieQi does (see
+// JIEQI_ANALYSIS_NODES): every ply buys the same search.
+//
+// 50k nodes is ~1.7 s per ply on prod in the opening and ~1 s later (0.5-0.9 s locally), so
+// a 100-ply sweep is ~2-3 min. It still reaches depth 8-9 in the all-dark opening and 11-19
+// from the middlegame on, and finds the mate-in-1 that ends that game at once.
+const ABJCHESS_ANALYSIS_NODES = 50_000;
+const ABJCHESS_CONSISTENCY_RESEARCH_NODES = ABJCHESS_ANALYSIS_NODES * 4;
+// A safety net, never the dial: 200k nodes (the re-search) at 30k nps is ~7 s. Binding it
+// would take a box under ~7k nps, and that ply would stop being reproducible.
+const ABJCHESS_ANALYSIS_MOVETIME_CAP_MS = 30_000;
+// Decisions: a reveal costs one MultiPV search (it only names the candidate moves; its
+// scores never reach the output) plus one eval per (candidate, hidden role), up to ~24. Each
+// eval gets 20k nodes (~0.7 s on prod) and the MultiPV table 100k (~3 s), so a reveal is
+// ~10-15 s and a game's decomposition a few minutes, like PikaJieQi's depth-16 pass was.
+const ABJCHESS_DECISION_NODES = 20_000;
+const ABJCHESS_DECISION_MULTIPV_NODES = 100_000;
+
+const ABJCHESS_NET_TAG = ABJCHESS_NET_FILE.replace(/\.nnue$/, '');
+
+// The re-search rule, stated in WIN% so it means the same on either engine's scale. 200cp
+// was chosen on lila's curve, where it is a ~17.6-point swing out of equality; AB-JChess's
+// cp are steeper (+112cp is already 75%), so the same 200cp there would be a ~38-point swing
+// and would almost never fire. PikaJieQi keeps its original cp rule: its cache ids predate
+// this and promise the evals they were computed with.
+const JIEQI_CONSISTENCY_THRESHOLD_WIN = winPercent(JIEQI_CONSISTENCY_THRESHOLD_CP, null) - 50;
+
+/** Everything about one analysis engine that a cached result depends on. */
+export type JieqiAnalysisProfile = {
+  engine: JieqiAnalysisEngine;
+  /** Cache id of the Layer-1 sweep; also what the client reads the win curve off. */
+  analysisEngineId: string;
+  /** Cache id of the Layer-2 decisions blob. */
+  decisionsEngineId: string;
+  /** Win-curve constant for this engine's cp (winPercentK of its ids). */
+  winK: number;
+  sweepNodes: number;
+  researchNodes: number;
+  movetimeCapMs: number;
+  /** Parent/child consistency rule (reconcileJieqiSeries). */
+  consistency: { unit: 'cp'; threshold: number } | { unit: 'win'; threshold: number };
+  /** Budget of one decisions eval (a pool-mean term). */
+  decisionEval: JieqiEvalBudget;
+  /** Budget of the decisions MultiPV table (candidate moves only). */
+  decisionMultiPv: JieqiEvalBudget;
+};
+
+export const ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID = `ab-jchess-jieqi-analysis@1+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_ANALYSIS_NODES}+consistent-win1`;
+
 export type JieqiRepetitionWindow = {
   fen: string;
   moves: readonly string[];
@@ -150,12 +218,13 @@ export async function evaluateJieqiPosition(
     moves: [],
   },
   nodes: number = JIEQI_ANALYSIS_NODES,
+  movetimeCapMs: number = JIEQI_ANALYSIS_MOVETIME_CAP_MS,
 ): Promise<JieqiPositionEval> {
   const mover: JieqiColor = state.status.type === 'playing' ? state.status.turn : 'red';
   const sign = mover === 'red' ? 1 : -1;
   const evaluation = await evaluateFen(repetitionWindow.fen, {
     nodes,
-    movetimeMs: JIEQI_ANALYSIS_MOVETIME_CAP_MS,
+    movetimeMs: movetimeCapMs,
     moves: repetitionWindow.moves,
   });
   return {
@@ -226,6 +295,7 @@ export async function analyzeJieqiPostgame(
     nodes?: number,
   ) => Promise<JieqiPositionEval>,
   progress?: AnalysisProgressStore<SweepPlyEval>,
+  profile: JieqiAnalysisProfile = currentJieqiAnalysisProfile(),
 ): Promise<JieqiGameAnalysis> {
   let state = createInitialJieqiState('analysis', deal);
   const states: JieqiGameState[] = [state];
@@ -266,16 +336,31 @@ export async function analyzeJieqiPostgame(
     ) => Promise<JieqiPositionEval>,
   ): Promise<SweepPlyEval[]> => {
     const swept = await sweep(evaluatePosition);
-    return reconcileJieqiSeries(swept, states, repetitionWindows, deterministic, evaluatePosition);
+    return reconcileJieqiSeries(
+      swept,
+      states,
+      repetitionWindows,
+      deterministic,
+      evaluatePosition,
+      profile,
+    );
   };
   const plies = evaluate
     ? await withEvaluator(evaluate)
-    : await withJieqiAnalysisSession((evaluateFen) =>
-        withEvaluator((s, repetitionWindow, nodes) =>
-          evaluateJieqiPosition(s, evaluateFen, repetitionWindow, nodes),
-        ),
+    : await withJieqiAnalysisSession(
+        (evaluateFen) =>
+          withEvaluator((s, repetitionWindow, nodes) =>
+            evaluateJieqiPosition(
+              s,
+              evaluateFen,
+              repetitionWindow,
+              nodes ?? profile.sweepNodes,
+              profile.movetimeCapMs,
+            ),
+          ),
+        profile.engine,
       );
-  return { engineId: JIEQI_ANALYSIS_ENGINE_ID, depth: JIEQI_ANALYSIS_DEPTH, plies };
+  return { engineId: profile.analysisEngineId, depth: JIEQI_ANALYSIS_DEPTH, plies };
 }
 
 /** Red-seat-POV scalar that orders cp and mate scores together, so a ply that found a mate is
@@ -315,14 +400,27 @@ export async function reconcileJieqiSeries(
     repetitionWindow: JieqiRepetitionWindow,
     nodes?: number,
   ) => Promise<JieqiPositionEval>,
+  rule: Pick<JieqiAnalysisProfile, 'consistency' | 'researchNodes' | 'winK'> = {
+    consistency: { unit: 'cp', threshold: JIEQI_CONSISTENCY_THRESHOLD_CP },
+    researchNodes: JIEQI_CONSISTENCY_RESEARCH_NODES,
+    winK: WIN_PCT_K,
+  },
 ): Promise<SweepPlyEval[]> {
   const out = plies.map((ply) => ({ ...ply }));
   // Move k is Red's when k is odd (Red moves first), so a gain for the mover of move k is a
   // rise in the red-seat POV series for Red and a fall for Black.
   const moverSign = (k: number): number => (k % 2 === 1 ? 1 : -1);
+  // Red-seat-POV scalar on the rule's own unit: cp (PikaJieQi's original rule) or win% on
+  // the engine's curve (AB-JChess), so one threshold means the same swing on either engine.
+  const scalar = (evaluation: { cp: number | null; mate: number | null }): number | null => {
+    if (rule.consistency.unit === 'cp') return comparableCp(evaluation);
+    if (evaluation.cp == null && evaluation.mate == null) return null;
+    return winPercent(evaluation.cp, evaluation.mate, rule.winK);
+  };
+  const threshold = rule.consistency.threshold;
   const moverGain = (k: number): number | null => {
-    const child = comparableCp(out[k]!);
-    const parent = comparableCp(out[k - 1]!);
+    const child = scalar(out[k]!);
+    const parent = scalar(out[k - 1]!);
     if (child == null || parent == null) return null;
     return (child - parent) * moverSign(k);
   };
@@ -331,11 +429,11 @@ export async function reconcileJieqiSeries(
     const parentState = states[k - 1]!;
     if (parentState.status.type !== 'playing') continue;
     const gain = moverGain(k);
-    if (gain == null || gain <= JIEQI_CONSISTENCY_THRESHOLD_CP) continue;
+    if (gain == null || gain <= threshold) continue;
     const rescored = await evaluatePosition(
       parentState,
       repetitionWindows[k - 1]!,
-      JIEQI_CONSISTENCY_RESEARCH_NODES,
+      rule.researchNodes,
     );
     // Only a re-search that actually scored replaces the swept numbers. A scoreless answer
     // (a stalled or stale binary) would otherwise punch a null into a series that had a
@@ -344,7 +442,7 @@ export async function reconcileJieqiSeries(
       out[k - 1] = { ...out[k - 1]!, cp: rescored.cp, mate: rescored.mate, best: rescored.best };
     }
     const after = moverGain(k);
-    if (after != null && after > JIEQI_CONSISTENCY_THRESHOLD_CP) out[k - 1]!.unstable = true;
+    if (after != null && after > threshold) out[k - 1]!.unstable = true;
   }
   return out;
 }
@@ -426,9 +524,20 @@ export async function resolveJieqiAnalysis(
   cache: JieqiAnalysisCache = liveAnalysisCache,
   analyze?: (moves: readonly JieqiMove[], deal: JieqiDeal) => Promise<JieqiGameAnalysis>,
   computeIfMissing = true,
+  profile: JieqiAnalysisProfile = currentJieqiAnalysisProfile(),
 ): Promise<JieqiGameAnalysis | null> {
-  const engineId = JIEQI_ANALYSIS_ENGINE_ID;
+  const engineId = profile.analysisEngineId;
   const depth = JIEQI_ANALYSIS_DEPTH;
+  // A game analysed by the other engine keeps that analysis, under its own id, rather
+  // than being recomputed: its cp are only meaningful on that engine's curve, and the id
+  // travels with the plies so the client picks the right one.
+  const stored = await firstStoredResult(
+    cache,
+    roomId,
+    depth,
+    jieqiStoredIdsFor(profile, 'analysisEngineId'),
+  );
+  if (stored) return { engineId: stored.engineId, depth, plies: stored.value };
   // Incremental checkpoints only on the real (default-analyzer) path; injected
   // analyzers (tests) keep the plain contract.
   const progress = analyze
@@ -443,7 +552,7 @@ export async function resolveJieqiAnalysis(
     compute: async () => {
       const analysis = analyze
         ? await analyze(moves, deal)
-        : await analyzeJieqiPostgame(moves, deal, undefined, progress ?? undefined);
+        : await analyzeJieqiPostgame(moves, deal, undefined, progress ?? undefined, profile);
       return analysis.plies;
     },
     validate: (series) => {
@@ -476,15 +585,16 @@ export async function resolveJieqiAnalysis(
 // pool — then 0 luck is exactly "the average outcome". realized is one term of that same mean, so
 // luck is a clean, same-search, mean-zero-in-expectation quantity (no cross-depth noise).
 
-// Budget. Each candidate move's baseline is a small fan of single-position evals (one per distinct
-// hidden role), all at this depth so realized and the mean share one search. MultiPV only picks
-// the candidate ceiling moves; its clamped scores never reach the output. ~ a few evals per
-// reveal → a couple of minutes for a whole game, one-time and cached.
+// Budget (PikaJieQi; AB-JChess budgets nodes, see ABJCHESS_DECISION_NODES). Each candidate
+// move's baseline is a small fan of single-position evals (one per distinct hidden role), all at
+// this depth so realized and the mean share one search. MultiPV only picks the candidate ceiling
+// moves; its clamped scores never reach the output. ~ a few evals per reveal → a couple of
+// minutes for a whole game, one-time and cached.
 const JIEQI_DECISION_DEPTH = 16;
 const JIEQI_DECISION_MOVETIME_CAP_MS = 6_000;
-// Matches the pikajieqi-analysis engine pool's slot count: with launch
-// concurrency == pool slots, no fan-out eval ever waits in the pool queue.
-const JIEQI_DECISION_EVAL_CONCURRENCY = 2;
+// One: every decisions eval runs on the run's single analysis session, which answers one
+// `go` at a time, so a wider fan-out would only queue inside the session.
+const JIEQI_DECISION_EVAL_CONCURRENCY = 1;
 const JIEQI_DECISION_MULTIPV = 12;
 // How many of the engine's top moves to true-baseline as the decision ceiling (plus the played
 // move). The engine's own ranking is unreliable under the clamp, so we re-score a few and take the
@@ -532,21 +642,32 @@ export type JieqiDecisionDeps = {
   ) => Promise<{ cp: number | null; mate: number | null }>;
 };
 
-const liveDecisionDeps: JieqiDecisionDeps = {
-  multiPv: (fen, repetitionWindow) =>
-    evaluateJieqiMultiPv(repetitionWindow?.fen ?? fen, {
-      depth: JIEQI_DECISION_DEPTH,
-      movetimeMs: JIEQI_DECISION_MOVETIME_CAP_MS,
-      multiPv: JIEQI_DECISION_MULTIPV,
-      moves: repetitionWindow?.moves,
-    }),
-  evalPosition: (fen, repetitionWindow) =>
-    evaluateJieqiFen(repetitionWindow?.fen ?? fen, {
-      depth: JIEQI_DECISION_DEPTH,
-      movetimeMs: JIEQI_DECISION_MOVETIME_CAP_MS,
-      moves: repetitionWindow?.moves,
-    }).then((e) => ({ cp: e.cp, mate: e.mate })),
-};
+/** Decision deps over one analysis session. Every search starts on a cleared hash
+ *  (`fresh`), so each number depends only on its own position and budget: the same
+ *  contract the old process-per-eval path had, without reloading the engine (and, for
+ *  AB-JChess, its 133 MB net) several hundred times per game. */
+export function jieqiDecisionDepsFromSession(
+  session: JieqiAnalysisEvaluators,
+  profile: JieqiAnalysisProfile,
+): JieqiDecisionDeps {
+  return {
+    multiPv: (fen, repetitionWindow) =>
+      session.multiPv(repetitionWindow?.fen ?? fen, {
+        ...profile.decisionMultiPv,
+        multiPv: JIEQI_DECISION_MULTIPV,
+        moves: repetitionWindow?.moves,
+        fresh: true,
+      }),
+    evalPosition: (fen, repetitionWindow) =>
+      session
+        .evaluateFen(repetitionWindow?.fen ?? fen, {
+          ...profile.decisionEval,
+          moves: repetitionWindow?.moves,
+          fresh: true,
+        })
+        .then((e) => ({ cp: e.cp, mate: e.mate })),
+  };
+}
 
 function jieqiRepetitionWindowAfterMove(
   state: JieqiGameState,
@@ -571,26 +692,29 @@ async function moverWinAfter(
   mover: JieqiColor,
   evalPosition: JieqiDecisionDeps['evalPosition'],
   repetitionWindow: JieqiRepetitionWindow,
+  winK: number,
 ): Promise<number> {
   if (post.status.type === 'finished') {
     const winner = post.status.winner;
     return winner === mover ? 100 : winner === null ? 50 : 0;
   }
   const { cp, mate } = await evalPosition(jieqiStateToPikafishFen(post), repetitionWindow);
-  return winPercent(cp == null ? null : -cp, mate == null ? null : -mate);
+  // The engine's own curve: AB-JChess cp mean more win% than PikaJieQi cp.
+  return winPercent(cp == null ? null : -cp, mate == null ? null : -mate, winK);
 }
 
 // The TRUE pool-mean baseline (win%, mover POV) of `move` from a pre-move `state`, plus the
 // realized win% (the actual role's term). For a NON-reveal move (a known piece) there is no chance
 // node, so baseline === realized === a single eval. For a reveal, the moved dark square is
 // uniformly one of the mover's remaining hidden pieces, so we average the post-move win% over that
-// role multiset (per-role evals run concurrently; the shared engine pool throttles them).
+// role multiset (per-role evals run one after another on the run's analysis session).
 async function poolMeanWin(
   state: JieqiGameState,
   move: JieqiMove,
   mover: JieqiColor,
   evalPosition: JieqiDecisionDeps['evalPosition'],
   repetitionWindow: JieqiRepetitionWindow,
+  winK: number,
 ): Promise<{ baseline: number; realized: number }> {
   const source = state.board[move.from];
   if (!source?.faceDown) {
@@ -600,6 +724,7 @@ async function poolMeanWin(
       mover,
       evalPosition,
       jieqiRepetitionWindowAfterMove(state, move, post, repetitionWindow),
+      winK,
     );
     return { baseline: win, realized: win };
   }
@@ -611,9 +736,8 @@ async function poolMeanWin(
   }
   const total = [...pool.values()].reduce((a, b) => a + b, 0);
   const roles = [...pool.keys()];
-  // Bounded fan-out (mirrors banqi): launch concurrency == the analysis pool's
-  // slot count, so no counterfactual eval ever waits in the pool queue and one
-  // queue timeout can no longer detonate the whole batch.
+  // Bounded fan-out (mirrors banqi), now width 1: every eval goes to the one session
+  // this decisions run holds, which answers one search at a time anyway.
   const wins = await mapWithConcurrency(roles, JIEQI_DECISION_EVAL_CONCURRENCY, (role) => {
     // Counterfactual: this dark square is `role` instead of its true role. The MULTISET of the
     // mover's remaining hidden roles is FIXED — we only relocate which one lies under move.from —
@@ -642,6 +766,7 @@ async function poolMeanWin(
       mover,
       evalPosition,
       jieqiRepetitionWindowAfterMove(cf, move, post, repetitionWindow),
+      winK,
     );
   });
   let baseline = 0;
@@ -664,9 +789,24 @@ async function poolMeanWin(
 export async function analyzeJieqiDecisions(
   moves: readonly JieqiMove[],
   deal: JieqiDeal,
-  deps: JieqiDecisionDeps = liveDecisionDeps,
+  deps?: JieqiDecisionDeps,
   progress?: AnalysisProgressStore<JieqiDecision>,
+  profile: JieqiAnalysisProfile = currentJieqiAnalysisProfile(),
 ): Promise<JieqiDecision[]> {
+  if (!deps) {
+    // The live path: one analysis session for the whole decomposition.
+    return withJieqiAnalysisSession(
+      (evaluateFen, multiPv) =>
+        analyzeJieqiDecisions(
+          moves,
+          deal,
+          jieqiDecisionDepsFromSession({ evaluateFen, multiPv }, profile),
+          progress,
+          profile,
+        ),
+      profile.engine,
+    );
+  }
   let state = createInitialJieqiState('analysis', deal);
   let repetitionWindow: JieqiRepetitionWindow = {
     fen: jieqiStateToPikafishFen(state),
@@ -710,6 +850,7 @@ export async function analyzeJieqiDecisions(
           mover,
           deps.evalPosition,
           repetitionWindow,
+          profile.winK,
         );
         scored.push({ move: uci, win: baseline, ...(uci === playedUci ? { played: true } : {}) });
         if (uci === playedUci) {
@@ -746,6 +887,74 @@ export async function analyzeJieqiDecisions(
 // to invalidate cached decisions when the algorithm changes without an engine change. d3 adds
 // the live repetition window; d2 fixed counterfactual hidden-role-multiset preservation.
 export const JIEQI_DECISIONS_ENGINE_ID = `pikafish-jieqi-decisions@${JIEQI_ANALYSIS_ENGINE_VERSION}+${PIKAFISH_JIEQI_ENGINE_REF}+d3`;
+export const ABJCHESS_JIEQI_DECISIONS_ENGINE_ID = `ab-jchess-jieqi-decisions@1+${ABJCHESS_ENGINE_REF}+${ABJCHESS_NET_TAG}+nodes${ABJCHESS_DECISION_NODES}+mpv${ABJCHESS_DECISION_MULTIPV_NODES}+d3`;
+
+// ── Engine profiles ───────────────────────────────────────────────────────────────
+
+export const PIKAFISH_JIEQI_ANALYSIS_PROFILE: JieqiAnalysisProfile = {
+  engine: 'pikafish-jieqi',
+  analysisEngineId: JIEQI_ANALYSIS_ENGINE_ID,
+  decisionsEngineId: JIEQI_DECISIONS_ENGINE_ID,
+  winK: winPercentK(JIEQI_ANALYSIS_ENGINE_ID),
+  sweepNodes: JIEQI_ANALYSIS_NODES,
+  researchNodes: JIEQI_CONSISTENCY_RESEARCH_NODES,
+  movetimeCapMs: JIEQI_ANALYSIS_MOVETIME_CAP_MS,
+  consistency: { unit: 'cp', threshold: JIEQI_CONSISTENCY_THRESHOLD_CP },
+  decisionEval: { depth: JIEQI_DECISION_DEPTH, movetimeMs: JIEQI_DECISION_MOVETIME_CAP_MS },
+  decisionMultiPv: { depth: JIEQI_DECISION_DEPTH, movetimeMs: JIEQI_DECISION_MOVETIME_CAP_MS },
+};
+
+export const ABJCHESS_JIEQI_ANALYSIS_PROFILE: JieqiAnalysisProfile = {
+  engine: 'ab-jchess',
+  analysisEngineId: ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID,
+  decisionsEngineId: ABJCHESS_JIEQI_DECISIONS_ENGINE_ID,
+  winK: winPercentK(ABJCHESS_JIEQI_ANALYSIS_ENGINE_ID),
+  sweepNodes: ABJCHESS_ANALYSIS_NODES,
+  researchNodes: ABJCHESS_CONSISTENCY_RESEARCH_NODES,
+  movetimeCapMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,
+  consistency: { unit: 'win', threshold: JIEQI_CONSISTENCY_THRESHOLD_WIN },
+  decisionEval: { nodes: ABJCHESS_DECISION_NODES, movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS },
+  decisionMultiPv: {
+    nodes: ABJCHESS_DECISION_MULTIPV_NODES,
+    movetimeMs: ABJCHESS_ANALYSIS_MOVETIME_CAP_MS,
+  },
+};
+
+const JIEQI_ANALYSIS_PROFILES: readonly JieqiAnalysisProfile[] = [
+  ABJCHESS_JIEQI_ANALYSIS_PROFILE,
+  PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+];
+
+export function jieqiAnalysisProfileFor(engine: JieqiAnalysisEngine): JieqiAnalysisProfile {
+  return engine === 'ab-jchess' ? ABJCHESS_JIEQI_ANALYSIS_PROFILE : PIKAFISH_JIEQI_ANALYSIS_PROFILE;
+}
+
+/** The profile NEW analysis is computed with: AB-JChess when it resolves, else PikaJieQi. */
+export function currentJieqiAnalysisProfile(): JieqiAnalysisProfile {
+  return jieqiAnalysisProfileFor(jieqiAnalysisEngine());
+}
+
+/** The ids a read may serve, in preference order: the computing engine's own first, then
+ *  every other engine's, so neither engine's existing rows are ever orphaned. */
+function jieqiStoredIdsFor(
+  profile: JieqiAnalysisProfile,
+  key: 'analysisEngineId' | 'decisionsEngineId',
+): string[] {
+  return [profile[key], ...JIEQI_ANALYSIS_PROFILES.filter((p) => p !== profile).map((p) => p[key])];
+}
+
+async function firstStoredResult<T>(
+  cache: { get(roomId: string, engineId: string, depth: number): Promise<T | null> },
+  roomId: string,
+  depth: number,
+  engineIds: readonly string[],
+): Promise<{ engineId: string; value: T } | null> {
+  for (const engineId of engineIds) {
+    const value = await cache.get(roomId, engineId, depth);
+    if (value) return { engineId, value };
+  }
+  return null;
+}
 
 export type JieqiDecisionsCache = {
   get(roomId: string, engineId: string, depth: number): Promise<JieqiDecision[] | null>;
@@ -776,9 +985,19 @@ export async function resolveJieqiDecisions(
   cache: JieqiDecisionsCache = liveDecisionsCache,
   analyze?: (moves: readonly JieqiMove[], deal: JieqiDeal) => Promise<JieqiDecision[]>,
   computeIfMissing = true,
+  profile: JieqiAnalysisProfile = currentJieqiAnalysisProfile(),
 ): Promise<JieqiDecisionsResult | null> {
-  const engineId = JIEQI_DECISIONS_ENGINE_ID;
+  const engineId = profile.decisionsEngineId;
   const depth = JIEQI_DECISION_DEPTH;
+  // Decisions are stored in win%, already on their engine's curve, so either engine's
+  // blob reads correctly; serve whichever exists before computing.
+  const stored = await firstStoredResult(
+    cache,
+    roomId,
+    depth,
+    jieqiStoredIdsFor(profile, 'decisionsEngineId'),
+  );
+  if (stored) return { engineId: stored.engineId, depth, decisions: stored.value };
   const progress = analyze
     ? null
     : liveAnalysisProgressStore<JieqiDecision>(roomId, engineId, depth);
@@ -791,7 +1010,7 @@ export async function resolveJieqiDecisions(
     compute: () =>
       analyze
         ? analyze(moves, deal)
-        : analyzeJieqiDecisions(moves, deal, undefined, progress ?? undefined),
+        : analyzeJieqiDecisions(moves, deal, undefined, progress ?? undefined, profile),
     validate: (series) => {
       // A scoreless engine makes every position eval null, so every win% collapses to 50
       // (best === played === realized). Never cache that; a fixed engine recomputes.

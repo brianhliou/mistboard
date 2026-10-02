@@ -19,7 +19,7 @@
 
 import '../seat-disc-ink.css';
 import './seat-labels.css';
-import { type MoveJudgment, winPercent } from '@mistboard/game';
+import { type MoveJudgment, winPercent, winPercentK } from '@mistboard/game';
 import { ASSESSMENT_GLYPH } from '../assessment-glyphs.js';
 import { t } from '../i18n/catalog.js';
 import { type ProfileTarget, playerNameEl } from '../profile-link.js';
@@ -1899,6 +1899,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     const evalByPly = new Map(analysis.evals.map((entry) => [entry.ply, entry]));
     const bestPlayed = new Set(analysis.bestPlayedPlies);
     const chance = new Set(analysis.chancePlies);
+    const winK = winPercentK(analysis.engineId);
     for (const move of analysis.moves) {
       if (move.judgment !== null || chance.has(move.ply)) continue;
       const parent = nodes[move.ply - 1];
@@ -1906,8 +1907,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       const before = evalByPly.get(move.ply - 1);
       const after = evalByPly.get(move.ply);
       if (!parent || !played?.move || !before || !after) continue;
-      const redBefore = winPercent(before.cp, before.mate);
-      const redAfter = winPercent(after.cp, after.mate);
+      const redBefore = winPercent(before.cp, before.mate, winK);
+      const redAfter = winPercent(after.cp, after.mate, winK);
       // Every win% handed to a rule is the MOVER's, so a rule never has to know
       // which seat it is looking at.
       const toMover = (red: number): number => (move.mover === 'red' ? red : 100 - red);
@@ -1927,8 +1928,10 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
           winAfter: toMover(redAfter),
           playedBest: bestPlayed.has(move.ply),
           pv: after.pv ?? [],
-          secondBestWin: secondBest ? toMover(winPercent(secondBest.cp, secondBest.mate)) : null,
-          winTwoPliesAgo: twoAgo ? toMover(winPercent(twoAgo.cp, twoAgo.mate)) : null,
+          secondBestWin: secondBest
+            ? toMover(winPercent(secondBest.cp, secondBest.mate, winK))
+            : null,
+          winTwoPliesAgo: twoAgo ? toMover(winPercent(twoAgo.cp, twoAgo.mate, winK)) : null,
           pvAfterCapture: after.offerLine?.pv ?? [],
         });
       } catch {
@@ -1954,6 +1957,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
       : undefined;
     chart = createAdvantageChart(analysis.evals, {
       seatColors: config.seatColors,
+      winK: winPercentK(analysis.engineId),
       phases: gamePhases,
       // Names the ply under the pointer in the chart's hover readout, in the same
       // "5. b1-c3" / "5… c7-c6" form the move tree numbers its rows with, so the
