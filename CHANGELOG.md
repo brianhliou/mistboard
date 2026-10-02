@@ -35,6 +35,7 @@ Conventions:
 
 ### Watching and review
 
+- in Jieqi game review, a reveal is graded on what its player could know, counting their own face-down pieces that were captured unseen ([a730bab6](https://github.com/brianhliou/mistboard/commit/a730bab6))
 - Game search hides games shorter than ten plies by default, with one click to show them ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 - Every game page's Share and export panel can download a board image and copy an embed code ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 - jieqi computer analysis now runs on AB-JChess, the strongest jieqi engine on the site, and its chart and move marks use AB-JChess's own scale; games analysed earlier keep their Pikafish analysis ([d561cb46](https://github.com/brianhliou/mistboard/commit/d561cb46))
