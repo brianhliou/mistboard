@@ -223,6 +223,17 @@ describe('landing bot ladder (homepage play panel)', () => {
     }
   });
 
+  it('marks only the rungs that play on a trained net as NNUE', () => {
+    const nnue = (spec: string) =>
+      landingBotLadder(spec)
+        .filter((rung) => rung.nnue)
+        .map((rung) => rung.botId);
+    expect(nnue('xiangqi')).toEqual(['fairy-stockfish-level-8', 'pikafish']);
+    expect(nnue('jieqi')).toEqual(['ab-jchess']);
+    expect(nnue('fortress-xiangqi')).toEqual([]);
+    expect(nnue('banqi')).toEqual([]);
+  });
+
   it('gives the house-built variants a single Misty', () => {
     for (const spec of ['dark-chess', 'dark-xiangqi', 'banqi', 'jungle', 'jungle-flip']) {
       expect(ids(spec)).toEqual(['misty']);

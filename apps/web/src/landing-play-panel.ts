@@ -117,7 +117,7 @@ function stepper(opts: {
   className: string;
   count: number;
   index: number;
-  render: (index: number) => { text: string; named?: boolean };
+  render: (index: number) => { text: string; sub?: string; named?: boolean };
   onChange: (index: number) => void;
   prevLabel: string;
   nextLabel: string;
@@ -133,8 +133,17 @@ function stepper(opts: {
   value.className = 'pp-step-value';
   let index = opts.index;
   const paint = (): void => {
-    const { text, named } = opts.render(index);
-    value.textContent = text;
+    const { text, sub, named } = opts.render(index);
+    const main = document.createElement('span');
+    main.className = 'pp-step-main';
+    main.textContent = text;
+    value.replaceChildren(main);
+    if (sub) {
+      const small = document.createElement('small');
+      small.className = 'pp-step-sub';
+      small.textContent = sub;
+      value.append(small);
+    }
     value.classList.toggle('is-named', Boolean(named));
     prev.disabled = index <= 0;
     next.disabled = index >= opts.count - 1;
@@ -377,9 +386,20 @@ export function buildPlayPanel(
         index: current.at,
         render: (i) => {
           const rung = ladder[i]!;
+          // Named bots read yellow wherever they appear (Pikafish, AB-JChess,
+          // Misty); the line under says which engine a level is and whether
+          // it plays on a trained net.
+          const nnue = rung.nnue ? ' · NNUE' : '';
           return rung.level === null
-            ? { text: rung.name, named: ladder.length > 1 }
-            : { text: t('lobby.panelLevel', { level: rung.level }, locale) };
+            ? {
+                text: rung.name,
+                sub: rung.nnue ? 'NNUE' : t('lobby.panelOwnEngine', {}, locale),
+                named: true,
+              }
+            : {
+                text: t('lobby.panelLevel', { level: rung.level }, locale),
+                sub: `${rung.engine}${nnue}`,
+              };
         },
         onChange: (i) => {
           current.at = i;
@@ -827,10 +847,9 @@ export function buildPlayPanel(
           },
         );
       });
-      row.addEventListener('click', (event) => {
-        if ((event.target as HTMLElement).closest('button, a')) return;
-        act.click();
-      });
+      // No whole-row click here, unlike the computer rows: a stray click on a
+      // person row posted a public seek nobody meant to make, and 15 s later
+      // the bot offer appeared out of nowhere. Only Find searches.
       paint();
       row.append(marker(gameSpecId, label), name, clockStep, waiting, act);
       personRows.append(row);

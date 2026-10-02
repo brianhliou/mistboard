@@ -289,6 +289,12 @@ export type LandingBotRung = {
   level: number | null;
   /** Display name for a named rung (Pikafish, AB-JChess, Misty). */
   name: string;
+  /** The engine family behind the rung, shown under the level. */
+  engine: 'Fairy-Stockfish' | 'Pikafish' | 'AB-JChess' | 'Misty';
+  /** Evaluates with a trained net. Only xiangqi Fairy-Stockfish Level 8 (the
+   *  official xiangqi net), xiangqi Pikafish and AB-JChess do: the jieqi
+   *  Pikafish levels run classical, its jieqi branch has never had weights. */
+  nnue: boolean;
 };
 
 const FSF_LADDER_SPECS: readonly LandingBotGameSpecId[] = [
@@ -306,9 +312,17 @@ export function landingBotLadder(gameSpecId: string): readonly LandingBotRung[] 
       botId: `${LADDER_BOT_ID_PREFIX}${i + 1}`,
       level: i + 1,
       name: `Fairy-Stockfish Level ${i + 1}`,
+      engine: 'Fairy-Stockfish',
+      nnue: gameSpecId === XIANGQI_SPEC_ID && i + 1 === 8,
     }));
     if (gameSpecId === XIANGQI_SPEC_ID) {
-      levels.push({ botId: 'pikafish', level: null, name: 'Pikafish' });
+      levels.push({
+        botId: 'pikafish',
+        level: null,
+        name: 'Pikafish',
+        engine: 'Pikafish',
+        nnue: true,
+      });
     }
     return levels;
   }
@@ -318,14 +332,22 @@ export function landingBotLadder(gameSpecId: string): readonly LandingBotRung[] 
         botId: `pikafish-level-${i + 1}`,
         level: i + 1,
         name: `Pikafish Level ${i + 1}`,
+        engine: 'Pikafish' as const,
+        nnue: false,
       })),
       // The jieqi ladder's top numbered rung is the `pikafish` bot itself
       // (pikafish-jieqi-strongest on the server), shown as Level 8.
-      { botId: 'pikafish', level: JIEQI_LADDER_TOP_LEVEL + 1, name: 'Pikafish Level 8' },
-      { botId: 'ab-jchess', level: null, name: 'AB-JChess' },
+      {
+        botId: 'pikafish',
+        level: JIEQI_LADDER_TOP_LEVEL + 1,
+        name: 'Pikafish Level 8',
+        engine: 'Pikafish',
+        nnue: false,
+      },
+      { botId: 'ab-jchess', level: null, name: 'AB-JChess', engine: 'AB-JChess', nnue: true },
     ];
   }
-  return [{ botId: 'misty', level: null, name: 'Misty' }];
+  return [{ botId: 'misty', level: null, name: 'Misty', engine: 'Misty', nnue: false }];
 }
 
 // The rung a remembered pick lands on: a bot id from a one-click start, or the

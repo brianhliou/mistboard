@@ -390,8 +390,6 @@ export const EN_PLAY = {
   'live.guestAre': 'Guest ({color})',
   'live.toMove': 'to move',
   'live.yourMovePill': 'your move',
-  'live.clockStartsAfterOpening': '{control} · clock starts after the opening moves',
-  'live.clockStartsWhenReady': '{control} · clock starts when both players are ready',
   'live.oneDayPerMoveNote': '1 day per move',
   'live.daysPerMoveNote': '{count} days per move',
   'live.copyInvite': 'Copy invite',
@@ -486,6 +484,7 @@ export const EN_PLAY = {
   'lobby.panelVersus': '{variant} vs {opponent}',
   'lobby.panelAnonymous': 'Anonymous',
   'lobby.panelYours': 'Yours',
+  'lobby.panelOwnEngine': 'our own engine',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;
@@ -679,8 +678,6 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.guestAre',
   'live.toMove',
   'live.yourMovePill',
-  'live.clockStartsAfterOpening',
-  'live.clockStartsWhenReady',
   'live.oneDayPerMoveNote',
   'live.daysPerMoveNote',
   'live.copyInvite',

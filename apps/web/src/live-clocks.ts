@@ -75,17 +75,10 @@ export function renderClocks(refs: ClockRefs, view: PlayerView | null): void {
       row.append(time);
       (index === 0 ? refs.clockTop : refs.clockBottom).append(row);
     });
-    if (tc) {
-      const incrementSec = Math.round(tc.incrementMs / 1000);
-      const tcLabel =
-        incrementSec > 0
-          ? `${formatClock(tc.initialMs)}+${incrementSec}`
-          : formatClock(tc.initialMs);
-      refs.clockNote.textContent = dayScale
-        ? daysPerMoveNote()
-        : t('live.clockStartsWhenReady', { control: tcLabel });
-      refs.clockNote.hidden = false;
-    }
+    // Correspondence keeps its days-per-move line (it states the pace); live
+    // games drop the pregame "clock starts when ready" hint (Brian, 2026-10-02).
+    refs.clockNote.textContent = tc && dayScale ? daysPerMoveNote() : '';
+    refs.clockNote.hidden = !(tc && dayScale);
     return;
   }
 

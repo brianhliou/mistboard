@@ -333,20 +333,11 @@ export function createTenantRoomChrome<C extends string>(
         row.append(time);
         (index === 0 ? refs!.clockTop : refs!.clockBottom).append(row);
       });
-      if (timeControl) {
-        const incrementSec = Math.round(timeControl.incrementMs / 1000);
-        const tcLabel =
-          incrementSec > 0
-            ? `${formatClock(timeControl.initialMs)}+${incrementSec}`
-            : formatClock(timeControl.initialMs);
-        // Only show the "clock starts after the opening moves" hint while the game
-        // is actually pregame — not once it's finished/aborted (the clock just sits
-        // unarmed at the final times, and the hint would be stale).
-        refs.clockNote.textContent = ended
-          ? ''
-          : t('live.clockStartsAfterOpening', { control: tcLabel });
-        refs.clockNote.hidden = ended;
-      }
+      // No pregame "clock starts after the opening moves" note (Brian,
+      // 2026-10-02): the header already names the time control, and the
+      // unarmed clocks say the rest.
+      refs.clockNote.textContent = '';
+      refs.clockNote.hidden = true;
       lastActiveClockColor = null;
       return;
     }
