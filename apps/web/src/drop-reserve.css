@@ -144,16 +144,16 @@ button.drop-mini-reserve-piece:disabled {
 }
 
 /* Crazyhouse Xiangqi rules-page replay (crazyhouse-xiangqi-replay.ts): the
-   board at the size of one board in the page's diagram pairs, and the hands'
+   board at the size of one board in the page's diagram pairs (330px wood), and the hands'
    discs at the board's piece size (the homepage showcase's rule, landing.css),
    with no tile behind them. The frame is the size container, so 100cqw is the
    frame width and the board is min(342px, 100cqw). */
 .chx-replay-frame .chx-replay-board {
-  width: min(342px, 100%);
+  width: min(330px, 100%);
 }
 
 .chx-replay-frame .drop-mini-reserve-strip {
-  --chx-board-piece: calc(min(342px, 100cqw) * 0.094);
+  --chx-board-piece: calc(min(330px, 100cqw) * 0.094);
   --drop-mini-hand-piece-size: var(--chx-board-piece);
   --drop-mini-hand-tile-size: var(--chx-board-piece);
   --drop-mini-hand-band-height: calc(var(--chx-board-piece) + 12px);

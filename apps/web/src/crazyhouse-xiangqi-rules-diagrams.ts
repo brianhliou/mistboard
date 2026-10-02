@@ -168,8 +168,6 @@ export const CRAZYHOUSE_XIANGQI_INTRO_BOARD = () =>
     positionWithHands('chx-rules-intro', sampleGameEnd(), 'MATE WITH A DROPPED SOLDIER', 0, {
       dots: dropRing('e9'),
     }),
-    // The lead board, at the size Fortress and Duck give theirs.
-    'xq-article-svg--hero',
   );
 
 // ── The start ───────────────────────────────────────────────────────────────

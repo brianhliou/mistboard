@@ -48,6 +48,7 @@ export const crazyhouseXiangqiArticle: Article = {
     {
       kind: 'raw-svg',
       svg: CRAZYHOUSE_XIANGQI_INTRO_BOARD,
+      className: 'article-figure-xq--pair-board',
       caption:
         'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.',
     } as ArticleBlock,
