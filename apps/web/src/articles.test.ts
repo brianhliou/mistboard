@@ -224,6 +224,20 @@ describe('article public listing gates', () => {
     ).not.toBeNull();
   });
 
+  it('names the cannon blind shot as the rejected banqi house rule, in every language', () => {
+    // The 09-17 copy listed Mistboard's own rules as the house rules it rejects.
+    const en = buildArticlePage('banqi').textContent ?? '';
+    expect(en).toContain('A common house rule lets a cannon also fire at a face-down tile');
+    expect(en).not.toContain('house rules are deliberately not used');
+    expect(en).not.toContain('Taiwan Computer Game Association');
+    expect(buildArticlePage('banqi', 'zh-Hans').textContent).toContain(
+      '常见的一条家规允许炮隔子打暗子',
+    );
+    expect(buildArticlePage('banqi', 'zh-Hant').textContent).toContain(
+      '常見的一條家規允許砲隔子打暗子',
+    );
+  });
+
   it('publishes the completed Fortress Xiangqi localization', () => {
     const simplified = buildArticlePage('fortress-xiangqi', 'zh-Hans');
     const traditional = buildArticlePage('fortress-xiangqi', 'zh-Hant');
