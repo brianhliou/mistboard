@@ -36,6 +36,7 @@ Conventions:
 
 ### Watching and review
 
+- upcoming events on the broadcasts page are listed soonest first ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
 - The third player page, Lại Lý Huynh 赖理兄 (/blog/lai-ly-huynh), the world champion: his unbeaten 2025 title run and the final he won with black, the year since, five wins on the board and a 38-chapter study; in English, Chinese and, a first for a player page, Vietnamese (/blog/lai-ly-huynh-co-tuong) ([dc9614b2](https://github.com/brianhliou/mistboard/commit/dc9614b2))
 - an event stays under Upcoming until its first games are posted, and the top card on the broadcasts page says why it leads ([a6b33f1e](https://github.com/brianhliou/mistboard/commit/a6b33f1e))
 - a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([c2abab09](https://github.com/brianhliou/mistboard/commit/c2abab09))
@@ -54,6 +55,7 @@ Conventions:
 
 ### Site
 
+- the changelog shows the latest two months, and each older month has its own page ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
 - The homepage's second article row is now Deep dives, starting with the player pages, and every new post appears on the homepage the day it publishes ([45217d23](https://github.com/brianhliou/mistboard/commit/45217d23))
 - Every player colour disc on the site is now one shared design, and the black disc stays visible on the dark theme ([c3d5a774](https://github.com/brianhliou/mistboard/commit/c3d5a774))
 - Jieqi, Banqi and Flip Jungle are back on the [game data](/data) page, and every downloaded game of theirs now records what each flipped piece turned out to be, so it replays from the file alone ([9037d497](https://github.com/brianhliou/mistboard/commit/9037d497))
