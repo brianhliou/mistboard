@@ -253,7 +253,10 @@
   width: var(--uni-board-width, 100%);
   max-width: 100%;
   margin-top: 0;
-  padding: 10px 4px 0;
+  /* No rule above it: the board's own edge already closes the board, and a
+     second line read as a divider between two unrelated panels. */
+  border-top: 0;
+  padding: 0 4px;
   /* Red and black side by side: one row of the board's width, not a column
      that leaves the right half of the board's footprint empty. */
   display: grid;
@@ -280,6 +283,12 @@
   }
   .live-route--banqi .live-review__cluster .moves-panel {
     align-self: stretch;
+  }
+  /* All three columns start on the board's top edge. Centred, the table rode
+     up and down the rail with its content (a finished game's table is shorter
+     than a live one's) and never lined up with the board or the info card. */
+  .live-route--banqi .live-review__cluster .game-console {
+    justify-content: flex-start;
   }
 
   /* Fortress centers its board: the 7x8 board is tall but still shorter
