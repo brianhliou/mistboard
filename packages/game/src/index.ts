@@ -11,6 +11,7 @@ export * from './events.js';
 export * from './export-formats.js';
 export * from './game-specs.js';
 export * from './games-search.js';
+export * from './hidden-piece-record.js';
 export * from './hidden-pool.js';
 export * from './jieqi-fen.js';
 export * from './js-compat.js';

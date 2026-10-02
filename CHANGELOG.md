@@ -29,6 +29,10 @@ Conventions:
 - The game-over badges play again each time you step back onto the final move ([9434239f](https://github.com/brianhliou/mistboard/commit/9434239f))
 - Fortress Xiangqi shows every droppable piece in each player's tray, faded until you hold it, with a count when you hold two or more ([13f88a60](https://github.com/brianhliou/mistboard/commit/13f88a60))
 
+### Learning and puzzles
+
+- the 1,000 games played post reads in Simplified and Traditional Chinese ([/zh-hans/blog/one-thousand-games](/zh-hans/blog/one-thousand-games)) ([85975f14](https://github.com/brianhliou/mistboard/commit/85975f14))
+
 ### Watching and review
 
 - Game search hides games shorter than ten plies by default, with one click to show them ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
@@ -41,6 +45,7 @@ Conventions:
 
 ### Site
 
+- Jieqi, Banqi and Flip Jungle are back on the [game data](/data) page, and every downloaded game of theirs now records what each flipped piece turned out to be, so it replays from the file alone ([9037d497](https://github.com/brianhliou/mistboard/commit/9037d497))
 - Every finished game is now downloadable from the new [game data](/data) page: one file per variant per month, free to use under CC BY 4.0 ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
 
 ### Removed

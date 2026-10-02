@@ -5,10 +5,12 @@
 //
 // The split is about honesty, not effort. PGN needs a move notation a reader
 // can follow: chess has SAN, xiangqi has WXF/ICCS. Fog xiangqi shares the 9x10
-// board and its moves serialize in ICCS coordinates. Hidden-identity and flip
-// variants (jieqi, banqi, jungle-flip), drops (fortress), and jungle have no
-// notation standard; a "PGN" of coordinate pairs would be JSON wearing a hat, so
-// they get the JSON publication only. A shuffled start would need [SetUp]/[FEN] support.
+// board and its moves serialize in ICCS coordinates. The hidden-piece variants
+// (jieqi, banqi, jungle-flip) write a movetext whose every reveal names the
+// piece it turned over (ICGA notation for banqi; hidden-piece-record.ts), so
+// their PGN replays on its own. Drops (fortress) and jungle have no notation
+// standard; a "PGN" of coordinate pairs would be JSON wearing a hat, so they get
+// the JSON publication only.
 //
 // Deliberately an explicit map with no fallback: a variant absent here exports
 // nothing, and adding one is a conscious decision about its notation.
@@ -21,8 +23,8 @@ export const GAME_EXPORT_FORMATS = {
   'dark-chess': ['pgn', 'json'],
   xiangqi: ['pgn', 'json'],
   'dark-xiangqi': ['pgn', 'json'],
-  jieqi: ['json'],
-  banqi: ['json'],
+  jieqi: ['pgn', 'json'],
+  banqi: ['pgn', 'json'],
   'fortress-xiangqi': ['json'],
   // JSON only, for the same reason as the others: a turn here is a piece move
   // AND a duck placement, and neither WXF nor ICCS has anything to say about the
@@ -37,7 +39,7 @@ export const GAME_EXPORT_FORMATS = {
   // not reconstruct the game.
   'crazyhouse-xiangqi': ['json'],
   jungle: ['json'],
-  'jungle-flip': ['json'],
+  'jungle-flip': ['pgn', 'json'],
 } as const satisfies Readonly<Record<string, readonly GameExportFormat[]>>;
 
 export type GameExportVariant = keyof typeof GAME_EXPORT_FORMATS;

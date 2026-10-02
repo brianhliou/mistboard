@@ -1,7 +1,7 @@
 // The Share & export tab's rows for a finished game played here (lichess: the
 // "Share & export" underboard tab): a Download row with the canonical exports
 // (the Game Publishing Track's `/api/games/:roomId/export.{pgn,json}`, the PGN
-// with the CC BY header and the schema-v1.0 JSON) and the game's board image,
+// with the CC BY header and the versioned JSON (schema_version)) and the game's board image,
 // then an Embed row with the iframe code for `/embed/game/:roomId`. Every
 // postgame surface hands the result to the tab through `shareExtra`, so these
 // live in one place across variants. Which formats a variant offers comes from

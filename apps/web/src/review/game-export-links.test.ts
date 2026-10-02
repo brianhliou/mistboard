@@ -25,8 +25,10 @@ describe('the finished game share rows', () => {
       ['JSON', '/api/games/xq_abc/export.json', 'mistboard-xq_abc.json'],
       ['Image', '/og/game/xq_abc.png', 'mistboard-xq_abc.png'],
     ]);
-    // A JSON-only variant still gets its image.
-    expect(rows('jieqi', 'jq_1').links.map(([text]) => text)).toEqual(['JSON', 'Image']);
+    // The hidden-piece variants offer PGN too since their movetext names every
+    // reveal (#484); a JSON-only variant still gets its image.
+    expect(rows('jieqi', 'jq_1').links.map(([text]) => text)).toEqual(['PGN', 'JSON', 'Image']);
+    expect(rows('jungle', 'jgl_1').links.map(([text]) => text)).toEqual(['JSON', 'Image']);
   });
 
   it('offers the embed iframe for the game, at the site default frame size', () => {

@@ -11,7 +11,7 @@ import {
 
 const LISTING: DataListing = {
   license: 'CC BY 4.0',
-  schemaVersion: '1.0',
+  schemaVersion: '1.1',
   variants: ['xiangqi', 'jieqi'],
   months: [
     {

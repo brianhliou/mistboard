@@ -3,7 +3,12 @@ import { readFileSync } from 'node:fs';
 import { dirname, join } from 'node:path';
 import test from 'node:test';
 import { fileURLToPath } from 'node:url';
-import { JIEQI_SPEC_ID, STANDARD_JIEQI_DEAL } from '@mistboard/game';
+import {
+  JIEQI_SPEC_ID,
+  parseHiddenPiecePgn,
+  replayHiddenPieceRecord,
+  STANDARD_JIEQI_DEAL,
+} from '@mistboard/game';
 import { banqiTenant } from './banqi-tenant.js';
 import {
   buildImportedJieqiGame,
@@ -14,7 +19,7 @@ import {
   type ImportedEngineMatchGame,
   parseEnrichedMatchJsonl,
 } from './engine-match-import.js';
-import { buildTenantGamePublicationJson } from './game-export-tenant.js';
+import { buildTenantGamePgn, buildTenantGamePublicationJson } from './game-export-tenant.js';
 import type { JieqiEvent } from './jieqi-runtime.js';
 import { jieqiTenant } from './jieqi-tenant.js';
 import type { RecentEveGameRecord } from './persistence.js';
@@ -386,7 +391,7 @@ test('engine match: the truth view never states an identity the lab never decide
   }
 });
 
-test('engine match: the JSON export names the event, the credit and the unknown squares', () => {
+test('engine match: the export names the event, the credit, the unknown squares and the lab reveals', () => {
   const game = byNumber(366);
   const built = build(game);
   assert.ok(built.ok);
@@ -410,9 +415,57 @@ test('engine match: the JSON export names the event, the credit and the unknown 
     red: { handle: 'AB-JChess' },
     black: { handle: 'PikaJieQi' },
   });
-  // Moves only: no export states any identity, the lab's or a placeholder.
-  const text = JSON.stringify(json);
-  for (const role of ['chariot', 'advisor', 'cannon', 'soldier', 'horse', 'elephant']) {
-    assert.equal(text.includes(role), false, role);
+  // No deal: the lab drew each identity at reveal time, so the stored deal's
+  // never-revealed squares are a completion nobody played (#484).
+  assert.equal(json.deal_fen, undefined);
+  // Every identity the export states is one the lab decided while playing: a
+  // ply's reveal, and a face-down piece it captured. Nothing else.
+  assert.equal(json.plies.length, game.moves.length);
+  game.moves.forEach((record, index) => {
+    const ply = json.plies[index]!;
+    assert.deepEqual(
+      ply.revealed ?? null,
+      record.reveal ? { color: record.color, role: record.reveal } : null,
+      `ply ${record.ply} reveal`,
+    );
+    const hidden = record.capture?.wasFaceDown
+      ? { color: record.capture.color, role: record.capture.role }
+      : null;
+    assert.deepEqual(ply.captured_hidden ?? null, hidden, `ply ${record.ply} capture`);
+  });
+  // And the PGN carries no DealFEN either.
+  const pgn = buildTenantGamePgn(recordFor(built.value), finished, '/jieqi/game');
+  assert.ok(pgn);
+  assert.equal(pgn.includes('DealFEN'), false);
+});
+
+test('engine match: every fixture game replays from its export alone to the lab final position', () => {
+  for (const game of games) {
+    const built = build(structuredClone(game));
+    assert.ok(built.ok, String(game.game));
+    const exporter = variantTenantForRoomId(built.value.roomId)?.export;
+    assert.ok(exporter);
+    const finished = exporter.finishedGame(built.value.events, built.value.roomId);
+    assert.ok(finished);
+    const record = recordFor(built.value);
+    const json = buildTenantGamePublicationJson(record, finished, '/jieqi/game');
+    const fromJson = replayHiddenPieceRecord(json);
+    assert.ok(fromJson.ok, `${game.game}: ${JSON.stringify(fromJson)}`);
+    // Board, non-zero pool counts, clocks: the lab omits zero counts, and a
+    // finished kernel state has no side to move.
+    const comparable = (fen: string) => {
+      const [board, , pool = '', clock, fullmove] = fen.split(' ');
+      const counts = (pool.match(/[A-Za-z]\d+/g) ?? []).filter((c) => !/^[A-Za-z]0$/.test(c));
+      return [board, counts.join(''), clock, fullmove].join(' ');
+    };
+    assert.equal(comparable(fromJson.finalFen), comparable(game.final_fen), String(game.game));
+    const pgn = buildTenantGamePgn(record, finished, '/jieqi/game');
+    assert.ok(pgn);
+    const parsed = parseHiddenPiecePgn(pgn);
+    assert.ok(parsed.ok);
+    assert.equal(parsed.record.deal_fen, undefined);
+    const fromPgn = replayHiddenPieceRecord(parsed.record);
+    assert.ok(fromPgn.ok);
+    assert.equal(fromPgn.finalFen, fromJson.finalFen, String(game.game));
   }
 });

@@ -38,7 +38,7 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
-    date: '2026-10-03',
+    date: '2026-10-02',
     kind: 'release',
     headline: 'AB-JChess is the new top jieqi bot.',
     body: 'An open-source jieqi engine by Huorongrong and Laoxu (Kouza), with its own neural network, now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games. The post shows where the difference is, in the positions people beat Pikafish in.',

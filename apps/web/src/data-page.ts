@@ -566,6 +566,7 @@ const FIELD_ROWS: ReadonlyArray<[string, I18nKey]> = [
   ['result, termination', 'data.fieldResult'],
   ['plies', 'data.fieldPlies'],
   ['first_mover_ink', 'data.fieldInk'],
+  ['deal_fen', 'data.fieldDeal'],
   ['origin', 'data.fieldOrigin'],
 ];
 
@@ -649,7 +650,12 @@ export function mountDataAbout(root: HTMLElement): void {
       'data.hiddenHeading',
       paragraph(t('data.hiddenFog')),
       paragraph(t('data.hiddenFlip')),
+      paragraph(t('data.hiddenReveal')),
+      paragraph(t('data.hiddenBanqi')),
+      paragraph(t('data.hiddenBanqiLetters')),
+      paragraph(t('data.hiddenDeal')),
       paragraph(t('data.hiddenNeverRevealed')),
+      paragraph(t('data.hiddenReplayer')),
     ),
     aboutSection(
       'data.filesHeading',

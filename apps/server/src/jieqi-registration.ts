@@ -6,6 +6,8 @@
  */
 
 import {
+  jieqiPlyReveal,
+  jieqiStateToDealtFen,
   jieqiStateToPikafishFen,
   jieqiUnknownSquares,
   type RoomTimeControl,
@@ -125,11 +127,13 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
-  // JSON only: hidden identities reveal as pieces move, so no notation names a
-  // jieqi move honestly. Moves are ICCS coordinates on the shared 9x10 board.
+  // Moves are ICCS coordinates on the shared 9x10 board. Each ply names what it
+  // turned over and any face-down piece it captured, and a site game carries
+  // its deal, so the JSON and the PGN both replay (#484, hidden-piece-record.ts).
   export: tenantExportBinding(jieqiTenant, {
     gameRouteBase: '/jieqi/game',
     uci: xiangqiExportUci,
+    hiddenPieces: { variant: 'jieqi', reveal: jieqiPlyReveal, dealFen: jieqiStateToDealtFen },
     neverRevealed: (state) => {
       const squares = jieqiUnknownSquares(state);
       if (squares.length === 0) return null;

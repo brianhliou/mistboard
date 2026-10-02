@@ -7,6 +7,8 @@
 
 import {
   jungleFlipInkForSeat,
+  jungleFlipPlyReveal,
+  jungleFlipStateToDealtFen,
   jungleFlipStateToEngineFen,
   type RoomTimeControl,
 } from '@mistboard/game';
@@ -125,12 +127,17 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
-  // JSON only. As in banqi, results are by SEAT and the first seat's bound ink
-  // rides along.
+  // As in banqi, results are by SEAT and the first seat's bound ink rides
+  // along; each flip names what it turned over and the deal rides along (#484).
   export: tenantExportBinding(jungleFlipTenant, {
     gameRouteBase: '/jungle-flip/game',
     uci: flipOrBoardMoveUci,
     firstMoverInk: (state) => state.firstColor,
+    hiddenPieces: {
+      variant: 'jungle-flip',
+      reveal: jungleFlipPlyReveal,
+      dealFen: jungleFlipStateToDealtFen,
+    },
   }),
   // Final position only: a flip swings the eval by luck (VariantTenantCard).
   card: tenantCardBinding(jungleFlipTenant, {

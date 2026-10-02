@@ -411,13 +411,15 @@ export const ZH_HANS_CONTENT = {
   'data.fieldTimes': '对局开始和结束的时间，ISO 8601 格式，UTC。',
   'data.fieldResult': '获胜颜色或和棋，以及对局如何结束：将死、超时、认输等。',
   'data.fieldPlies':
-    '按顺序列出每一步：走子方、uci 格式的着法、该变体有记谱法时的 san（否则为 null），以及每步之后双方的剩余时间。',
+    '按顺序列出每一步：走子方、uci 格式的着法、该变体有记谱法时的 san（否则为 null），以及每步之后双方的剩余时间。在揭棋、暗棋和翻翻棋中，翻开棋子的着法还带有 revealed，揭棋中吃掉暗子的着法带有 captured_hidden，两者都是颜色加兵种。',
   'data.fieldInk': '仅暗棋和翻翻棋：先手翻出的颜色。',
+  'data.fieldDeal':
+    '本站下的揭棋、暗棋和翻翻棋对局：开局的暗子布局，以写明每枚暗子的 FEN 表示。引擎对局没有此字段。',
   'data.fieldOrigin': '仅引擎对局下载：赛事、署名，以及始终未揭开的棋子所在的格子。',
   'data.formatMoves':
     'uci 着法是坐标：h2e2 是走子，@c3 是翻开一枚暗子，R@d4 是从手中打入（堡垒象棋），b3e3@e6 是一回合鸭子象棋，最后是鸭子的落点。',
   'data.formatPgn':
-    'PGN：用于有其他程序可读记谱法的变体：迷雾国际象棋用 SAN，象棋和原子象棋用 WXF，迷雾象棋用 ICCS 坐标。对局之间空一行，并带有 Site（对局页面）、MistboardVariant、MistboardTermination 和 License 标签。没有记谱标准的变体只提供 JSONL。',
+    'PGN：用于着法能写成可独立重放文本的变体：迷雾国际象棋用 SAN，象棋和原子象棋用 WXF，迷雾象棋和揭棋用 ICCS 坐标，暗棋用 ICGA 记谱法，翻翻棋用坐标。对局之间空一行，并带有 Site（对局页面）、MistboardVariant、MistboardTermination 和 License 标签。其他变体只提供 JSONL。',
   'data.licenseHeading': '许可',
   'data.licensePrefix': '这些文件按 ',
   'data.licenseSuffix':
@@ -432,9 +434,19 @@ export const ZH_HANS_CONTENT = {
   'data.hiddenFog':
     '已结束的迷雾对局不再隐藏任何信息，所以文件包含双方的每一步，与对局结束后页面上显示的一致。当时每位玩家能看到什么并未保存；可以由着法和开源游戏代码中的视野规则推出。',
   'data.hiddenFlip':
-    '揭棋、暗棋和翻翻棋暂未收入月度文件。它们的导出只记录每枚棋子走到哪里或在哪里被翻开，既没有暗子的初始布局，也没有每次翻开的是什么棋子，所以下载的对局无法重放。等文件能记录翻开的棋子后再加入；在此之前，对局页面会重放每一次揭开。',
+    '揭棋、暗棋和翻翻棋开局时棋子背面朝上。它们的文件写明每次翻开的是什么棋子，所以下载的对局只凭着法就能重放，两种格式都可以。',
+  'data.hiddenReveal':
+    '着法带有翻开的棋子。在 PGN 中，着法翻开的棋子写在 = 之后，红方大写，黑方小写，所以任何 PGN 读取器都会把它当作着法的一部分：揭棋如 e3e4=R，翻翻棋如 @c3=E。揭棋吃掉暗子时再加 x= 和被吃的棋子：b0b7=Cx=n。字母沿用各自 FEN 的字母：揭棋 R 车、N 马、B 相、A 仕、C 炮、P 兵；翻翻棋 R 鼠、C 猫、D 狗、W 狼、P 豹、T 虎、L 狮、E 象。',
+  'data.hiddenBanqi':
+    '暗棋 PGN 依照 Chen、Shen 和 Hsu 的记谱法（ICGA Journal，2010）：b4-b2 是走子；论文中写作 d8(P) 的翻子，这里写作 d8=P，因为 PGN 会把括号读成变着。字母沿用论文：K 帅、G 仕、M 相、R 车、N 马、C 炮、P 兵。它的棋盘是 4 列 8 行，所以本站坐标要互换：本站的 a 到 h 列是 ICGA 的第 1 到 8 行，本站的第 1 到 4 行是 ICGA 的 a 到 d 列。JSON 保留本站坐标。',
+  'data.hiddenBanqiLetters':
+    '注意 G：在暗棋着法中它是仕，在暗棋 FEN 中却是帅。FEN 的字母为 G 帅、A 仕、E 相、R 车、H 马、C 炮、S 兵。',
+  'data.hiddenDeal':
+    '有暗子布局时会一并提供。本站的每盘对局在开始时就把棋子全部发好，所以其 JSON 带有 deal_fen，PGN 带有 DealFEN 标签：在该变体的 FEN 后加第六个字段，按棋盘顺序（从最上一行开始）写出每枚暗子。FEN 标签是背面朝上的初始局面。着法中的每次翻开都与布局一致，两个 FEN 都使用本站的坐标和字母。',
   'data.hiddenNeverRevealed':
-    '在揭棋引擎对局下载中，有些棋子在对局结束时仍是暗子，身份从未确定。origin.never_revealed 列出它们所在的格子，任何文件都不会为它们写出棋子。',
+    '引擎对局下载没有暗子布局。对局自己的裁判程序在棋子翻开时才决定它是什么，所以对局结束时仍是暗子的棋子从未有过身份：origin.never_revealed 列出它们所在的格子，任何文件都不会为它们写出棋子。它们的着法带有每一次翻开，所以同样可以重放。',
+  'data.hiddenReplayer':
+    '开源游戏代码中有一个参考重放器 replayHiddenPieceRecord，可以从任一文件重建对局，并逐一核对翻开的棋子与布局。',
   'data.filesHeading': '文件与校验和',
   'data.filesBuilt':
     '文件在第一次有人下载时由数据库生成，之后不再改变。文件生成后，对局数据页面会显示它的大小和 SHA-256，可以用 sha256sum 校验下载。',

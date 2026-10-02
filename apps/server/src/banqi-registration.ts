@@ -5,7 +5,13 @@
  * for side effects by variant-tenant/register-tenants.ts.
  */
 
-import { banqiInkForSeat, banqiStateToEngineFen, type RoomTimeControl } from '@mistboard/game';
+import {
+  banqiInkForSeat,
+  banqiPlyReveal,
+  banqiStateToDealtFen,
+  banqiStateToEngineFen,
+  type RoomTimeControl,
+} from '@mistboard/game';
 import type { BanqiCreatorPreference, BanqiRuntimeRoom } from './banqi-runtime.js';
 import { banqiTenant } from './banqi-tenant.js';
 import { tenantCardBinding } from './game-card-tenant.js';
@@ -116,12 +122,15 @@ registerVariantTenant({
       return { id: created.room.id, region: 'global' };
     },
   },
-  // JSON only. Results are recorded by SEAT; the ink the first seat bound on its
-  // opening flip rides along so a consumer can tell which pieces the winner played.
+  // Results are recorded by SEAT; the ink the first seat bound on its opening
+  // flip rides along so a consumer can tell which pieces the winner played. Each
+  // flip names what it turned over and the deal rides along; the PGN movetext is
+  // ICGA's (#484, hidden-piece-record.ts).
   export: tenantExportBinding(banqiTenant, {
     gameRouteBase: '/banqi/game',
     uci: flipOrBoardMoveUci,
     firstMoverInk: (state) => state.firstColor,
+    hiddenPieces: { variant: 'banqi', reveal: banqiPlyReveal, dealFen: banqiStateToDealtFen },
   }),
   // Final position only: a flip swings the eval by luck (VariantTenantCard).
   card: tenantCardBinding(banqiTenant, {
