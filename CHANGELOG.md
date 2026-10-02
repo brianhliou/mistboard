@@ -49,6 +49,7 @@ Conventions:
 
 ### Site
 
+- Every player colour disc on the site is now one shared design, and the black disc stays visible on the dark theme ([c3d5a774](https://github.com/brianhliou/mistboard/commit/c3d5a774))
 - Jieqi, Banqi and Flip Jungle are back on the [game data](/data) page, and every downloaded game of theirs now records what each flipped piece turned out to be, so it replays from the file alone ([9037d497](https://github.com/brianhliou/mistboard/commit/9037d497))
 - Every finished game is now downloadable from the new [game data](/data) page: one file per variant per month, free to use under CC BY 4.0 ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
 
