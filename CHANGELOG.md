@@ -55,6 +55,7 @@ Conventions:
 
 ### Site
 
+- The privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - less empty space above and below the footer on the homepage ([774f9cff](https://github.com/brianhliou/mistboard/commit/774f9cff))
 - the changelog shows the latest two months, and each older month has its own page ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
 - The homepage's second article row is now Deep dives, starting with the player pages, and every new post appears on the homepage the day it publishes ([45217d23](https://github.com/brianhliou/mistboard/commit/45217d23))
@@ -68,6 +69,8 @@ Conventions:
 
 ### Fixed
 
+- studies and game reviews without move notes no longer leave an empty gap between the board and the tabs below it ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
+- diagram labels and blog cards on Chinese and Vietnamese pages are translated ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - starting a Fog Xiangqi bot game during a site update no longer blocks other bot games for 30 minutes ([9ec82c36](https://github.com/brianhliou/mistboard/commit/9ec82c36))
 - a Fog Chess or Fog Xiangqi game against the bot no longer ends in a forfeit when the engine server restarts mid-game; the bot reconnects and plays on ([96cde925](https://github.com/brianhliou/mistboard/commit/96cde925))
 - in Jieqi and Jungle game review, the board shows the ?!, ? or ?? mark on the selected move, and a judged reveal names the better move ("Mistake. i5-i0 was best.") ([d40f4fb1](https://github.com/brianhliou/mistboard/commit/d40f4fb1))
