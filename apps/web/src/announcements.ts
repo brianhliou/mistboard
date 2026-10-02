@@ -45,6 +45,20 @@ const baseAnnouncements: Announcement[] = [
   {
     date: '2026-10-02',
     kind: 'release',
+    headline: 'Every game on Mistboard can now be played rated.',
+    body: 'Sign in and use Find opponent. A rated game between two signed-in players now counts in every variant: xiangqi, jieqi, Banqi, Jungle, Flip Jungle, and Duck, Fog, Fortress and Atomic Xiangqi. Games against a friend or a bot stay casual.',
+    href: '/?play=lobby',
+    cta: 'Find an opponent',
+  },
+  {
+    date: '2026-10-02',
+    kind: 'release',
+    headline: 'The homepage starts a game in one click.',
+    body: "Pick a game, set the bot's level and clock, and press Play. Each row remembers your last pick, and Play again reruns your last game. The Play a person tab shows anyone waiting and every open correspondence game, with a casual or rated switch.",
+  },
+  {
+    date: '2026-10-02',
+    kind: 'release',
     headline: 'Games played on Mistboard are now free to download.',
     body: 'The new game data page has a file for each variant and month since June, about 1,100 games so far, free to use under CC BY 4.0. Jieqi, Banqi and Flip Jungle files record what each flipped piece turned out to be, so every game replays from the file alone. Game search now covers every variant too.',
     href: '/data',

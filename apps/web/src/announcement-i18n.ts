@@ -35,6 +35,14 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-02 (rated on every game; homepage play panel) ── 计分 / 寻找对手 / 休闲 / 通信 / 再来一局 / 与真人对弈 follow the play catalog.
+  'Every game on Mistboard can now be played rated.': 'Mistboard 上的每种棋现在都可以下计分对局。',
+  'Sign in and use Find opponent. A rated game between two signed-in players now counts in every variant: xiangqi, jieqi, Banqi, Jungle, Flip Jungle, and Duck, Fog, Fortress and Atomic Xiangqi. Games against a friend or a bot stay casual.':
+    '登录后使用“寻找对手”。两位已登录玩家之间的计分对局现在在所有变体中都会计分：象棋、揭棋、暗棋、斗兽棋、翻翻棋，以及鸭子象棋、迷雾象棋、堡垒象棋和原子象棋。与好友或机器人的对局仍为休闲对局。',
+  'Find an opponent': '寻找对手',
+  'The homepage starts a game in one click.': '在首页一键开始对局。',
+  "Pick a game, set the bot's level and clock, and press Play. Each row remembers your last pick, and Play again reruns your last game. The Play a person tab shows anyone waiting and every open correspondence game, with a casual or rated switch.":
+    '选择棋种，设置机器人的级别和用时，然后点击开始。每一行都会记住你上次的选择，“再来一局”会重开你的上一盘。“与真人对弈”标签显示正在等待的玩家和所有公开的通信对局，并可切换休闲或计分。',
   // ── 2026-10-02 (game data downloads) ── 对局数据 follows data.heading; 暗棋 / 翻翻棋 follow variant names.
   'Games played on Mistboard are now free to download.':
     '现在可以免费下载在 Mistboard 上下过的棋局。',
@@ -404,6 +412,14 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-02 (rated on every game; homepage play panel) ── 計分 / 尋找對手 / 休閒 / 通信 / 再來一局 / 與真人對弈 follow the play catalog.
+  'Every game on Mistboard can now be played rated.': 'Mistboard 上的每種棋現在都可以下計分對局。',
+  'Sign in and use Find opponent. A rated game between two signed-in players now counts in every variant: xiangqi, jieqi, Banqi, Jungle, Flip Jungle, and Duck, Fog, Fortress and Atomic Xiangqi. Games against a friend or a bot stay casual.':
+    '登入後使用「尋找對手」。兩位已登入玩家之間的計分對局現在在所有變體中都會計分：象棋、揭棋、暗棋、鬥獸棋、翻翻棋，以及鴨子象棋、迷霧象棋、堡壘象棋和原子象棋。與好友或機器人的對局仍為休閒對局。',
+  'Find an opponent': '尋找對手',
+  'The homepage starts a game in one click.': '在首頁一鍵開始對局。',
+  "Pick a game, set the bot's level and clock, and press Play. Each row remembers your last pick, and Play again reruns your last game. The Play a person tab shows anyone waiting and every open correspondence game, with a casual or rated switch.":
+    '選擇棋種，設定機器人的級別和用時，然後點擊開始。每一列都會記住你上次的選擇，「再來一局」會重開你的上一盤。「與真人對弈」分頁顯示正在等待的玩家和所有公開的通信對局，並可切換休閒或計分。',
   // ── 2026-10-02 (game data downloads) ── 對局資料 follows data.heading; 暗棋 / 翻翻棋 follow variant names.
   'Games played on Mistboard are now free to download.':
     '現在可以免費下載在 Mistboard 上下過的棋局。',

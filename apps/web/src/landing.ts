@@ -647,8 +647,8 @@ function buildLandingStage(
   // is the complementary "join a game" surface. ──
   const lobbyPanel = document.createElement('section');
   lobbyPanel.className = 'landing-lobby-panel';
-  // `?hero=grid` swaps in the bot-first play panel (#491) for review; the
-  // lichess-shaped tabs stay the default until it is promoted.
+  // The bot-first play panel (#491) is the default; `?hero=lobby` brings the
+  // lichess-shaped tabs back on a device (playPanelEnabled).
   lobbyPanel.append(
     playPanelEnabled()
       ? buildPlayPanel(locale, { hydrate: !opts.skipLiveWidgets })

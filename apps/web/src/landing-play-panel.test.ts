@@ -280,11 +280,12 @@ describe('homepage play panel', () => {
     expect(orderPanelSpecs(['banqi', 'xiangqi'], undefined)).toEqual(['xiangqi', 'banqi']);
   });
 
-  it('turns on with ?hero=grid, stays on, and turns off with ?hero=lobby', () => {
+  it('is on by default; ?hero=lobby brings the old tabs back until ?hero=grid', () => {
+    expect(playPanelEnabled('')).toBe(true);
+    expect(playPanelEnabled('?hero=lobby')).toBe(false);
     expect(playPanelEnabled('')).toBe(false);
     expect(playPanelEnabled('?hero=grid')).toBe(true);
     expect(playPanelEnabled('')).toBe(true);
-    expect(playPanelEnabled('?hero=lobby')).toBe(false);
   });
 });
 

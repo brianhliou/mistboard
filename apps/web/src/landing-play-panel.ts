@@ -964,15 +964,17 @@ function formatClock(timeControl: { initialMs: number; incrementMs: number }): s
   return `${Number.isInteger(minutes) ? minutes : minutes.toFixed(1)}+${timeControl.incrementMs / 1000}`;
 }
 
-/** Whether this visit should show the new panel: `?hero=grid` turns it on and
- *  remembers it on this device, `?hero=lobby` turns it back off. */
+/** Whether this visit shows the play panel. It is the default (promoted
+ *  2026-10-02); `?hero=lobby` brings the old lichess-shaped tabs back on this
+ *  device and `?hero=grid` returns to the panel. */
 export function playPanelEnabled(search: string = window.location.search): boolean {
   const param = new URLSearchParams(search).get('hero');
   try {
-    if (param === 'grid') localStorage.setItem('mistboard.heroGrid', '1');
-    if (param === 'lobby') localStorage.removeItem('mistboard.heroGrid');
-    return localStorage.getItem('mistboard.heroGrid') === '1';
+    localStorage.removeItem('mistboard.heroGrid');
+    if (param === 'lobby') localStorage.setItem('mistboard.heroLobby', '1');
+    if (param === 'grid') localStorage.removeItem('mistboard.heroLobby');
+    return localStorage.getItem('mistboard.heroLobby') !== '1';
   } catch {
-    return param === 'grid';
+    return param !== 'lobby';
   }
 }
