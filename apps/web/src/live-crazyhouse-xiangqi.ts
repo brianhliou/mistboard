@@ -31,7 +31,6 @@ import {
   isCrazyhouseXiangqiDropRole,
 } from './crazyhouse-xiangqi-view.js';
 import { crazyhouseXiangqiEnabled } from './feature-flags.js';
-import { t } from './i18n/catalog.js';
 import { finishBadgesForResult, generalSquareIn } from './live-finish-badges.js';
 import { playSound } from './live-sound.js';
 import type { LiveRefs, SoundKind } from './live-state.js';
@@ -138,7 +137,6 @@ const client = createTenantLiveClient<
   renderBoard: renderBoardReconciled,
   renderExtras: (refs, view) => {
     renderHands(refs, view);
-    renderCheckStatus(refs, view);
   },
   finishBadges: (view, previous) =>
     view.status.type === 'finished'
@@ -175,7 +173,6 @@ const client = createTenantLiveClient<
   onDisabled: (refs) => {
     const view = core?.displayedView() ?? null;
     renderHands(refs, view);
-    renderCheckStatus(refs, view);
     selectedSquare = null;
     selectedDropRole = null;
   },
@@ -305,9 +302,10 @@ function renderHands(liveRefs: LiveRefs, view: CrazyhouseXiangqiPlayerView | nul
   if (!view) return;
   const bottom = core?.orientation() ?? view.perspective;
   const top = bottom === 'red' ? 'black' : 'red';
-  fillCrazyhouseXiangqiReserve(liveRefs.capturesTop, view, top);
+  fillCrazyhouseXiangqiReserve(liveRefs.capturesTop, view, top, { pocket: true });
   const ownHand = core?.state.seat === bottom;
   fillCrazyhouseXiangqiReserve(liveRefs.capturesBottom, view, bottom, {
+    pocket: true,
     interactive: canInteract(view) && ownHand,
     selectedRole: selectedDropRole,
     onSelect: (role) => {
@@ -317,25 +315,6 @@ function renderHands(liveRefs: LiveRefs, view: CrazyhouseXiangqiPlayerView | nul
       core?.renderAll();
     },
   });
-}
-
-function renderCheckStatus(liveRefs: LiveRefs, view: CrazyhouseXiangqiPlayerView | null): void {
-  if (view?.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;
-  liveRefs.actionSection.hidden = false;
-  liveRefs.actionStatus.replaceChildren();
-  const notice = document.createElement('div');
-  notice.className = 'action-notice danger';
-  const title = document.createElement('strong');
-  title.textContent = t('live.checkTitle');
-  const body = document.createElement('p');
-  body.textContent =
-    core?.state.seat === view.perspective
-      ? t('live.checkYourGeneral')
-      : t('live.checkColorGeneral', {
-          color: t(view.perspective === 'red' ? 'setup.red' : 'setup.black'),
-        });
-  notice.append(title, body);
-  liveRefs.actionStatus.append(notice);
 }
 
 // ── Interaction ──────────────────────────────────────────────────────────────

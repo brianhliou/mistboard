@@ -653,37 +653,9 @@
   padding-block: 4px;
 }
 
-/* The pocket as lichess draws a crazyhouse one: a filled band the width of the
-   rail, one evenly spaced slot per droppable role, and the roles you hold none
-   of ghosted rather than absent. Two things follow from drawing the empty slots
-   instead of hiding them — the row never reads as blank space, and a piece
-   always appears in the SAME slot, so a capture fills a gap rather than
-   re-flowing the row. */
-.review-material-row.drop-mini-reserve-strip--all-roles {
-  padding-block: 0;
-  border-radius: var(--site-radius, 10px);
-  background: var(--site-panel-muted, color-mix(in srgb, var(--site-border) 45%, transparent));
-}
-
-.review-material-row.drop-mini-reserve-strip--all-roles .drop-mini-reserve-row {
-  display: flex;
-  align-items: center;
-  justify-content: space-evenly;
-  height: 100%;
-  gap: 0;
-}
-
-/* Held-none slots keep their footprint and stay legible as a silhouette. Lichess
-   uses 0.1; a xiangqi disc is line art rather than a solid figure, so it needs
-   more than that to register at all at rail size. */
-.review-material-row.drop-mini-reserve-strip--all-roles .drop-mini-reserve-piece.is-empty {
-  opacity: 0.22;
-}
-
-.review-material-row.drop-mini-reserve-strip--all-roles .drop-mini-reserve-piece {
-  background: transparent;
-  border-color: transparent;
-}
+/* The drop pocket (fortress, crazyhouse) draws its own bar, slots, ghosts and
+   badge in drop-reserve.css (.drop-pocket), the same bar the live room shows
+   beside the clocks; this rail only hosts it. */
 
 .review-material-row .review-material-points {
   align-self: center;

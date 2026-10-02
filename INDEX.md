@@ -687,7 +687,7 @@ Run with `MISTBOARD_ALLOW_IN_MEMORY_PERSISTENCE=true npm run test:integration --
 | `jungle-render.ts` | Jungle (斗兽棋) board SVG renderer: thin adapter over the shared `renderGridBoardSvg` cell-board core (7×9 descriptor) — draws the two river lakes + dens + traps as a furniture layer, the 8 animals as character discs, and flip-aware ranked engine/user arrows through the shared SVG overlay geometry. Concrete colours so it also renders standalone (rsvg/resvg) |
 | `jungle-flip-render.ts` | Flip Jungle (兽棋/翻翻棋) board SVG renderer: thin adapter over `renderGridBoardSvg` (4×4 descriptor) — face-down tiles as neutral "back" discs, revealed tiles as ink-coloured animal discs, movement recommendations as arrows, and flip recommendations as ranked rings |
 | `fortress-xiangqi-render.ts` | Bespoke SVG renderer for the 7×8 Fortress Xiangqi board: opposite-corner palaces, river band, pieces on intersections, the Treasure glyph (Dobutsu-style disc where no piece-set art exists), and flip-aware ranked engine/user arrows |
-| `fortress-xiangqi-view.ts` | Shared Fortress Xiangqi view helpers: legal board/drop target derivation, move labels, and reserve strip rendering (reuses the shared `drop-reserve.css` styling) |
+| `fortress-xiangqi-view.ts` | Shared Fortress Xiangqi view helpers: legal board/drop target derivation, move labels, the pocket display order, and reserve rendering through `drop-pocket.ts` |
 | `live-fortress-xiangqi.ts` | Fortress Xiangqi live room client on the generic `variant-tenant/live-client.ts` core: open 7x8 board, board moves, reserve drops, draggable hands, move list, and replay capture |
 | `fortress-xiangqi-postgame.ts` | Fortress Xiangqi postgame/review route renderer: truth-board replay with reserve strips and per-ply history from the postgame API |
 | `fortress-xiangqi-replay.ts` | Fortress Xiangqi rules-article replay: parses board/drop notation (R/N/C/P/T/A/E), replays through the real kernel, and renders the sample game on the live board renderer with reserve strips |
@@ -1117,9 +1117,12 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/server/src/crazyhouse-xiangqi-ini.test.ts` | Pins every game-ending option in crazyhouse-xiangqi.ini to the kernel; measures why nMoveRule stays 0 (FSF resets on drops) |
 | `apps/server/src/routes/crazyhouse-xiangqi-rooms.ts` | Crazyhouse Xiangqi room creation route (PvP + PvE, casual only) |
 | `apps/server/src/routes/crazyhouse-xiangqi-games.ts` | Crazyhouse Xiangqi postgame API: truth view and per-ply snapshots with both hands |
-| `apps/web/src/crazyhouse-xiangqi-view.ts` | Crazyhouse Xiangqi board view over xiangqi-board.ts (drop targets, drop last-move ring), hand strips, notation, end phrases |
+| `apps/web/src/crazyhouse-xiangqi-view.ts` | Crazyhouse Xiangqi board view over xiangqi-board.ts (drop targets, drop last-move ring), the pocket display order and hands through `drop-pocket.ts`, notation, end phrases |
+| `apps/web/src/drop-pocket.ts` | `fillDropPocket`: one side's hand for the xiangqi drop variants (Fortress, Crazyhouse). `pocket: true` draws the lichess crazyhouse pocket (every role in a fixed order, empty roles faded, count badge from two; `.drop-pocket` in `drop-reserve.css`) for the live room, review and postgame; the replay panes, puzzles and embed keep the legacy strip |
 | `apps/web/src/live-crazyhouse-xiangqi.ts` | Crazyhouse Xiangqi live room: xiangqi board plus both hands, click/drag drops from hand |
-| `apps/web/src/crazyhouse-xiangqi-postgame.ts` | Crazyhouse Xiangqi postgame: snapshot replay with both hands and a move list (no tree review yet) |
+| `apps/web/src/crazyhouse-xiangqi-postgame.ts` | Crazyhouse Xiangqi postgame: the crazyhouse tree review over the game's move list, opening on the final position; downloads and image, no embed row (the embed does not draw this variant) |
+| `apps/web/src/review/crazyhouse-xiangqi-review.ts` | `mountCrazyhouseXiangqiReview`: Crazyhouse Xiangqi presentation over mountTreeReview; standard 9x10 board, both pockets at every ply, drop landing ring, no client engine (`engine: null`) |
+| `apps/web/src/review/crazyhouse-xiangqi-tree-adapter.ts` | Crazyhouse Xiangqi VariantTreeAdapter (kernel replay incl. drops, FSF UCI `P@e5` node keys) |
 | `apps/web/src/xiangqi-broadcast-review.ts` | _needs a one-line description_ |
 | `apps/web/src/xiangqi-broadcast-matches.ts` | A team league round grouped by match (slow and blitz games per table, from `board.details`) and the league table, scored by the 2026 league's 规程 (game 2/1/0, match 3/1.5/0) |
 | `apps/web/src/xiangqi-broadcast-standings.ts` | _needs a one-line description_ |

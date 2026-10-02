@@ -461,8 +461,6 @@ export const EN_PLAY = {
   'live.duckPlaceTitle': 'Now place the duck',
   'live.duckPlaceBody': 'Any empty point. Your move is not sent until you do.',
   'live.checkTitle': 'Check',
-  'live.checkYourGeneral': 'Your general is in check. Answer the threat.',
-  'live.checkColorGeneral': '{color} general is in check.',
   'live.atomicCheckYour':
     'Your general can be taken or blown up next move. A repeated check like this loses.',
   'live.atomicCheckColor':
@@ -730,8 +728,6 @@ export const CRITICAL_PLAY_I18N_KEYS = [
   'live.duckPlaceTitle',
   'live.duckPlaceBody',
   'live.checkTitle',
-  'live.checkYourGeneral',
-  'live.checkColorGeneral',
   'live.atomicCheckYour',
   'live.atomicCheckColor',
 ] as const satisfies readonly PlayI18nKey[];
