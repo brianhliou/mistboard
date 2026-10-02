@@ -35,6 +35,7 @@ import {
   currentJieqiAnalysisProfile,
   JIEQI_ANALYSIS_ENGINE_ID,
   JIEQI_DECISIONS_ENGINE_ID,
+  JIEQI_LEGACY_DECISIONS_ENGINE_IDS,
   type JieqiAnalysisCache,
   type JieqiDecision,
   type JieqiDecisionsCache,
@@ -263,6 +264,55 @@ test('decisions fall back the same way: a PikaJieQi blob is served under its own
   assert.equal(result?.engineId, JIEQI_DECISIONS_ENGINE_ID);
   assert.deepEqual(result?.decisions, legacy);
   assert.equal(computes, 0);
+});
+
+test('mover-view grading (#487) re-keys both engines’ decisions; their old rows are still served', async () => {
+  // New computes file under the d4-mover ids, never under the all-knowing d3 ones.
+  assert.match(ABJCHESS_JIEQI_DECISIONS_ENGINE_ID, /^ab-jchess-jieqi-decisions@2\+.*\+d4-mover$/);
+  assert.match(JIEQI_DECISIONS_ENGINE_ID, /^pikafish-jieqi-decisions@.*\+d4-mover$/);
+  for (const legacy of JIEQI_LEGACY_DECISIONS_ENGINE_IDS) {
+    assert.match(legacy, /\+d3$/);
+    assert.notEqual(legacy, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID);
+    assert.notEqual(legacy, JIEQI_DECISIONS_ENGINE_ID);
+  }
+  const old: JieqiDecision[] = [
+    { ply: 3, mover: 'red', bestWin: 55, playedWin: 50, realizedWin: 30, playedRank: 2 },
+  ];
+  for (const legacy of JIEQI_LEGACY_DECISIONS_ENGINE_IDS) {
+    for (const profile of [ABJCHESS_JIEQI_ANALYSIS_PROFILE, PIKAFISH_JIEQI_ANALYSIS_PROFILE]) {
+      const cache = keyedCache<JieqiDecision[]>();
+      await cache.save('room-legacy', legacy, 16, old);
+      let computes = 0;
+      const result = await resolveJieqiDecisions(
+        'room-legacy',
+        [],
+        STANDARD_JIEQI_DEAL,
+        cache as JieqiDecisionsCache,
+        async () => {
+          computes += 1;
+          return [];
+        },
+        true,
+        profile,
+      );
+      assert.equal(result?.engineId, legacy);
+      assert.deepEqual(result?.decisions, old);
+      assert.equal(computes, 0);
+    }
+  }
+  // A game with no stored row computes fresh under the new id.
+  const cache = keyedCache<JieqiDecision[]>();
+  const fresh = await resolveJieqiDecisions(
+    'room-new',
+    [],
+    STANDARD_JIEQI_DEAL,
+    cache as JieqiDecisionsCache,
+    async () => old,
+    true,
+    ABJCHESS_JIEQI_ANALYSIS_PROFILE,
+  );
+  assert.equal(fresh?.engineId, ABJCHESS_JIEQI_DECISIONS_ENGINE_ID);
+  assert.deepEqual(cache.saved, [ABJCHESS_JIEQI_DECISIONS_ENGINE_ID]);
 });
 
 // ── Each engine's cp on its own curve ────────────────────────────────────────
