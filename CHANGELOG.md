@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- The homepage's play panel is now one row per game: pick a bot level and clock and press Play, or switch to Play a person for open and rated games ([0c8f1f8f](https://github.com/brianhliou/mistboard/commit/0c8f1f8f))
 - Every game can now be played rated through Find opponent between signed-in players: jieqi, Duck Xiangqi, banqi, Jungle, Flip Jungle and Fog Xiangqi join xiangqi, Fortress and Atomic; rated Atomic games now update ratings ([27542e79](https://github.com/brianhliou/mistboard/commit/27542e79))
 - new game rooms no longer show the 'clock starts after the opening moves' note; the header already shows the time control ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - The game-over badges play again each time you step back onto the final move ([9434239f](https://github.com/brianhliou/mistboard/commit/9434239f))
