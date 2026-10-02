@@ -25,6 +25,7 @@ import {
   jieqiAnalysisRepetitionWindows,
   jieqiChancePlies,
   jieqiDeterministicPlies,
+  PIKAFISH_JIEQI_ANALYSIS_PROFILE,
   resolveJieqiAnalysis,
   resolveJieqiDecisions,
 } from './jieqi-analysis.js';
@@ -72,11 +73,17 @@ function memoryCache(): JieqiAnalysisCache & { saves: number } {
 test('analyzeJieqiPostgame reconstructs N+1 plies from the deal and evaluates each position', async () => {
   const { moves } = playGame(STANDARD_JIEQI_DEAL, 6);
   const seenTurns: string[] = [];
-  const analysis = await analyzeJieqiPostgame(moves, STANDARD_JIEQI_DEAL, async (state) => {
-    assert.equal(state.status.type, 'playing');
-    seenTurns.push(state.status.type === 'playing' ? state.status.turn : 'x');
-    return { cp: 42, mate: null, best: 'z' };
-  });
+  const analysis = await analyzeJieqiPostgame(
+    moves,
+    STANDARD_JIEQI_DEAL,
+    async (state) => {
+      assert.equal(state.status.type, 'playing');
+      seenTurns.push(state.status.type === 'playing' ? state.status.turn : 'x');
+      return { cp: 42, mate: null, best: 'z' };
+    },
+    undefined,
+    PIKAFISH_JIEQI_ANALYSIS_PROFILE,
+  );
 
   // Ply 0 (initial) .. ply N (after the last move): N+1 contiguous points.
   assert.equal(analysis.plies.length, moves.length + 1);

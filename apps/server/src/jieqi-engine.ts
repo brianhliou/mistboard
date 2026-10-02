@@ -22,7 +22,6 @@ import { logger } from './obs.js';
 import {
   boundedEnvInt,
   runUciEval,
-  runUciMultiPv,
   UciEnginePool,
   UciEngineSession,
   type UciEval,
@@ -49,7 +48,11 @@ export const JIEQI_ENGINE_VERSION = '0.3.2';
 // release and the net, since either one changes its play.
 export const JIEQI_ABJCHESS_ENGINE_ID = 'ab-jchess-jieqi';
 export const ABJCHESS_JIEQI_ENGINE_VERSION = 'abj-0.2b-net-20260911';
-const ABJCHESS_NET_FILE = 'abjchess-20260911.nnue';
+export const ABJCHESS_NET_FILE = 'abjchess-20260911.nnue';
+// Short form of ab-jchess.ref, the AB-JChess commit the prod image builds. Part of the
+// AB analysis cache keys for the same reason PIKAFISH_JIEQI_ENGINE_REF is part of the
+// PikaJieQi ones (see below); jieqi-engine-ref.test.ts keeps the two in step.
+export const ABJCHESS_ENGINE_REF = '1ae95ca6';
 // ANALYSIS pins its own version. The 0.2.0 bump above is a LIVE-PLAY search-config change
 // (top-tier movetime + Hash/Threads, see jieqiLiveResourceOptions); the two paths are
 // independent, so a live-play change must not invalidate cached sweeps. Bump this one only
@@ -223,6 +226,20 @@ const analysisPool = new UciEnginePool({
   queueTimeoutMessage: 'pikafish-jieqi analysis queue timed out',
 });
 
+// AB-JChess analysis gets its own pool, ONE slot by default: each process holds the
+// 133 MB net besides its hash, on the same `web` box as the WS server and the live AB
+// sessions. A sweep or a decisions run holds its one session for the whole run, and
+// the analysis job lane already runs one jieqi job at a time, so one slot costs no
+// throughput. The live-play pool above is separate and unchanged.
+const abJchessAnalysisPool = new UciEnginePool({
+  name: 'abjchess-analysis',
+  maxProcessesEnvVar: 'MISTBOARD_ABJCHESS_ANALYSIS_MAX_PROCESSES',
+  queueTimeoutEnvVar: 'MISTBOARD_ABJCHESS_ANALYSIS_QUEUE_TIMEOUT_MS',
+  defaultMaxProcesses: 1,
+  defaultQueueTimeoutMs: 30_000,
+  queueTimeoutMessage: 'ab-jchess analysis queue timed out',
+});
+
 // How many times ONE sweep may respawn its analysis engine after a crash. Low on
 // purpose: recovering from the occasional PikaJieQi segfault is the goal, but an
 // engine that dies on position after position is a real failure and must surface
@@ -327,9 +344,9 @@ export function jieqiEngineTierFor(engineId: string | undefined): JieqiEngineTie
   return JIEQI_ENGINE_BY_ID.get(engineId) ?? null;
 }
 
-// Presence check for the fail-closed analysis path: true when the PikaJieQi binary resolves.
-// The analysis route uses this to return 503 (not a silent weaker eval) when the build is
-// missing the engine — mirrors banqiEngineBinaryAvailable() / jungleEngineBinaryAvailable().
+// Presence check: true when the PikaJieQi binary resolves (live levels 1-8, the live
+// prewarm). The analysis route gates on jieqiAnalysisEngineAvailable() below instead,
+// which also accepts AB-JChess.
 export function jieqiEngineBinaryAvailable(): boolean {
   try {
     pikaJieqiPath();
@@ -337,6 +354,24 @@ export function jieqiEngineBinaryAvailable(): boolean {
   } catch {
     return false;
   }
+}
+
+/** The binary behind server-side jieqi analysis (sweep + decisions). */
+export type JieqiAnalysisEngine = 'ab-jchess' | 'pikafish-jieqi';
+
+/**
+ * Which engine computes NEW jieqi analysis: AB-JChess whenever its binary and net
+ * resolve (prod), else PikaJieQi, so a dev box or CI without the net still analyses.
+ * Each engine files under its own cache ids and the client reads the curve off the
+ * stored id, so the two never mix inside one series (jieqi-analysis.ts).
+ */
+export function jieqiAnalysisEngine(): JieqiAnalysisEngine {
+  return abJchessAvailable() ? 'ab-jchess' : 'pikafish-jieqi';
+}
+
+/** The analysis route's fail-closed gate: either engine can serve it. */
+export function jieqiAnalysisEngineAvailable(): boolean {
+  return abJchessAvailable() || jieqiEngineBinaryAvailable();
 }
 
 // Per-process search resources for ANALYSIS. Single-threaded, because parallel search
@@ -354,8 +389,25 @@ export function jieqiEngineBinaryAvailable(): boolean {
 // (depth 20: 1043 cp / 1,106,314 nodes vs 1050 cp / 851,161). The cache key captures
 // engine ref and depth, not ARCH, so ONLY an x86-64 build (what railpack builds) may
 // write these rows. scripts/backfill-jieqi-analysis.mjs enforces that at runtime.
-export function jieqiAnalysisResourceOptions(): string[] {
-  return ['setoption name Hash value 256', 'setoption name Threads value 1'];
+//
+// AB-JChess analysis runs a 64 MB table. Its budgets are tens of thousands of nodes
+// (it searches ~30-70k nps single-threaded, ~50x slower per node than PikaJieQi), so
+// even a 200k-node re-search touches a few percent of 64 MB; the remaining 192 MB would
+// buy nothing but resident memory on the web box. Same reproducibility argument: fixed.
+export function jieqiAnalysisResourceOptions(
+  engine: JieqiAnalysisEngine = 'pikafish-jieqi',
+): string[] {
+  const hashMb = engine === 'ab-jchess' ? 64 : 256;
+  return [`setoption name Hash value ${hashMb}`, 'setoption name Threads value 1'];
+}
+
+/** The `uci` … `isready` handshake an analysis session is spawned with: the engine's
+ *  net (AB-JChess always loads its own; PikaJieQi only when MISTBOARD_PIKAFISH_NET is
+ *  set), then the fixed analysis Hash/Threads. */
+export function buildJieqiAnalysisInitCommands(engine: JieqiAnalysisEngine): string[] {
+  const net =
+    engine === 'ab-jchess' ? [`setoption name EvalFile value ${abJchessNetPath()}`] : netOption();
+  return ['uci', ...net, ...jieqiAnalysisResourceOptions(engine), 'ucinewgame', 'isready'];
 }
 
 /**
@@ -432,17 +484,54 @@ export async function evaluateJieqiFen(
   }
 }
 
+/** One analysis eval request on a session: the budget, the repetition window, and two
+ *  per-request switches a shared session needs because it outlives any one search. */
+export type JieqiAnalysisRequest = JieqiEvalBudget & {
+  moves?: readonly string[];
+  /** Clear the hash (`ucinewgame`) before this search, so its result depends only on
+   *  (fen, moves, budget) and not on what the session searched before. The decisions
+   *  pass sets it: its evals used to run one process each, and keep that contract. */
+  fresh?: boolean;
+};
+
+/** The evaluators an analysis session hands its caller. Scores are side-to-move POV. */
+export type JieqiAnalysisEvaluators = {
+  evaluateFen: (fen: string, opts: JieqiAnalysisRequest) => Promise<UciEval>;
+  /** The ranked MultiPV table for one search. MultiPV is set per request, so a single
+   *  eval on the same session never inherits the table's width. */
+  multiPv: (
+    fen: string,
+    opts: JieqiAnalysisRequest & { multiPv: number },
+  ) => Promise<UciMultiPvLine[]>;
+};
+
+function jieqiAnalysisSessionSpec(engine: JieqiAnalysisEngine) {
+  return engine === 'ab-jchess'
+    ? {
+        bin: abJchessPath(),
+        name: 'ab-jchess-analysis',
+        pool: abJchessAnalysisPool,
+      }
+    : {
+        bin: pikaJieqiPath(),
+        name: 'pikafish-jieqi-analysis',
+        pool: analysisPool,
+      };
+}
+
 /**
- * Run `fn` with a FEN evaluator backed by ONE persistent PikaJieQi process (the
- * xiangqi #168 pattern): binary spawn + option setup (including the optional
- * MISTBOARD_PIKAFISH_NET EvalFile — exactly what the per-spawn path loads) happen
- * once for the whole sweep, then each position is a `position fen …` + a `go`
- * round-trip built by the SAME jieqiGoCommand evaluateJieqiFen uses, so the
- * eval semantics (and the versioned analysis engine id) are unchanged. Scores are
- * side-to-move POV; the caller owns normalization, and the redacted FEN is sent
- * as-is (the engine never sees a hidden id). Holds one analysis-pool slot for the
- * duration, so a sweep never occupies a live bot-move slot; the session is always
- * killed on the way out.
+ * Run `fn` with evaluators backed by ONE persistent analysis process (the xiangqi #168
+ * pattern): binary spawn + option setup + net load happen once for the whole run, then
+ * each position is a `position fen …` + `go` round-trip built by the SAME
+ * jieqiGoCommand the per-spawn path uses, so eval semantics are unchanged. `engine`
+ * picks the binary (jieqiAnalysisEngine() by default: AB-JChess when it resolves). The
+ * sweep and the decisions pass both run here: decisions used to spawn a process per
+ * eval, several hundred per game, which for AB-JChess would mean reloading a 133 MB net
+ * each time. Scores are side-to-move POV; the caller owns normalization, and the
+ * redacted FEN is sent as-is (the engine never sees a hidden id). Holds one slot of the
+ * engine's analysis pool for the duration, so a run never occupies a live bot-move
+ * slot, and the session is always killed on the way out: nothing is left parked between
+ * runs, so an idle server holds no analysis process.
  *
  * SURVIVES AN ENGINE DEATH. A whole-game sweep walks 40-100+ positions through ONE
  * process, so without recovery a single engine exit fails the entire sweep — and
@@ -455,118 +544,56 @@ export async function evaluateJieqiFen(
  */
 export async function withJieqiAnalysisSession<T>(
   fn: (
-    evaluateFen: (
-      fen: string,
-      opts: JieqiEvalBudget & { moves?: readonly string[] },
-    ) => Promise<UciEval>,
+    evaluateFen: JieqiAnalysisEvaluators['evaluateFen'],
+    multiPv: JieqiAnalysisEvaluators['multiPv'],
   ) => Promise<T>,
+  engine: JieqiAnalysisEngine = jieqiAnalysisEngine(),
 ): Promise<T> {
-  const release = await analysisPool.acquire();
-  const spawnSession = () =>
-    new UciEngineSession({
-      bin: pikaJieqiPath(),
-      name: 'pikafish-jieqi-analysis',
-      initCommands: [
-        'uci',
-        ...netOption(),
-        ...jieqiAnalysisResourceOptions(),
-        'ucinewgame',
-        'isready',
-      ],
-    });
+  const spec = jieqiAnalysisSessionSpec(engine);
+  const initCommands = buildJieqiAnalysisInitCommands(engine);
+  const release = await spec.pool.acquire();
+  const spawnSession = () => new UciEngineSession({ bin: spec.bin, name: spec.name, initCommands });
   let session = spawnSession();
   let respawns = 0;
+  const request = (fen: string, opts: JieqiAnalysisRequest, multiPv: number) => ({
+    positionCommand: [
+      opts.fresh ? 'ucinewgame' : null,
+      `setoption name MultiPV value ${Math.max(1, Math.floor(multiPv))}`,
+      buildJieqiPositionCommand(fen, opts.moves),
+    ]
+      .filter((line): line is string => line !== null)
+      .join('\n'),
+    goCommand: jieqiGoCommand(opts),
+    timeoutMs: opts.movetimeMs + 4_000,
+    timeoutMessage: `${spec.name} eval timed out`,
+  });
+  // Only a DEAD session is worth respawning for. A rejection from a session that is
+  // still alive is a real error and must surface unchanged.
+  const withRespawn = async <R>(run: (s: UciEngineSession) => Promise<R>): Promise<R> => {
+    try {
+      return await run(session);
+    } catch (err) {
+      if (!session.failed || respawns >= ANALYSIS_SESSION_MAX_RESPAWNS) throw err;
+      respawns += 1;
+      logger.warn(
+        { err: String(err), engine, respawns, max: ANALYSIS_SESSION_MAX_RESPAWNS },
+        'jieqi analysis session died mid-run; respawning and retrying the eval',
+      );
+      session.close();
+      session = spawnSession();
+      await session.ready();
+      return await run(session);
+    }
+  };
   try {
     await session.ready();
-    return await fn(async (fen, opts) => {
-      const request = {
-        positionCommand: buildJieqiPositionCommand(fen, opts.moves),
-        goCommand: jieqiGoCommand(opts),
-        timeoutMs: opts.movetimeMs + 4_000,
-        timeoutMessage: 'pikafish-jieqi analysis eval timed out',
-      };
-      try {
-        return await session.evalPosition(request);
-      } catch (err) {
-        // Only a DEAD session is worth respawning for. A rejection from a session
-        // that is still alive is a real error and must surface unchanged.
-        if (!session.failed || respawns >= ANALYSIS_SESSION_MAX_RESPAWNS) throw err;
-        respawns += 1;
-        logger.warn(
-          { err: String(err), respawns, max: ANALYSIS_SESSION_MAX_RESPAWNS },
-          'pikafish-jieqi analysis session died mid-sweep; respawning and retrying the eval',
-        );
-        session.close();
-        session = spawnSession();
-        await session.ready();
-        return await session.evalPosition(request);
-      }
-    });
+    return await fn(
+      (fen, opts) => withRespawn((s) => s.evalPosition(request(fen, opts, 1))),
+      async (fen, opts) =>
+        (await withRespawn((s) => s.multiPvPosition(request(fen, opts, opts.multiPv)))).lines,
+    );
   } finally {
     session.close();
-    release();
-  }
-}
-
-// Decision-vs-luck analysis (Layer 2): the per-root-move EV table for a redacted position, in
-// ONE search. Pikafish models dark pieces as chance nodes, so each root move's score is its
-// probability-weighted (downside-adjusted) EXPECTED value over the reveal pool — an honest,
-// non-god-view number. We use MultiPV rather than the plain-search top move because that top
-// move is unreliable under jieqi's noisy no-net eval (verified: the plain best and the MultiPV
-// best disagree); the MultiPV table is internally consistent (all rows same conditions), which
-// is what the bestEV-vs-playedEV comparison needs. `multiPv` bounds the table width (cost scales
-// with it). Scores are side-to-move POV; the caller normalizes. Gated through the analysis pool.
-export async function evaluateJieqiMultiPv(
-  fen: string,
-  opts: { depth: number; movetimeMs: number; multiPv: number; moves?: readonly string[] },
-): Promise<UciMultiPvLine[]> {
-  const commands = [
-    'uci',
-    ...netOption(),
-    ...jieqiAnalysisResourceOptions(),
-    `setoption name MultiPV value ${Math.max(1, Math.floor(opts.multiPv))}`,
-    'ucinewgame',
-    'isready',
-    buildJieqiPositionCommand(fen, opts.moves),
-    `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs}`,
-  ];
-  const release = await analysisPool.acquire();
-  try {
-    return await runUciMultiPv({
-      bin: pikaJieqiPath(),
-      commands,
-      timeoutMs: opts.movetimeMs + 4_000,
-      timeoutMessage: 'pikafish-jieqi multipv eval timed out',
-    });
-  } finally {
-    release();
-  }
-}
-
-// The EV of ONE specific root move (its chance-averaged score), via `searchmoves`. Used as the
-// fallback for a played move that fell outside the MultiPV table's width. Side-to-move POV.
-export async function evaluateJieqiMoveEv(
-  fen: string,
-  move: string,
-  opts: { depth: number; movetimeMs: number; moves?: readonly string[] },
-): Promise<UciEval> {
-  const commands = [
-    'uci',
-    ...netOption(),
-    'ucinewgame',
-    'isready',
-    buildJieqiPositionCommand(fen, opts.moves),
-    `go depth ${Math.max(1, Math.floor(opts.depth))} movetime ${opts.movetimeMs} searchmoves ${move}`,
-  ];
-  const release = await analysisPool.acquire();
-  try {
-    return await runUciEval({
-      bin: pikaJieqiPath(),
-      commands,
-      timeoutMs: opts.movetimeMs + 4_000,
-      timeoutMessage: 'pikafish-jieqi searchmoves eval timed out',
-    });
-  } finally {
     release();
   }
 }

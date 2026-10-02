@@ -1,6 +1,14 @@
 import assert from 'node:assert/strict';
 import { test } from 'node:test';
-import { accuracyPercent, gameAccuracy, moveJudgment, winPercent } from './analysis.js';
+import {
+  ABJCHESS_WIN_PCT_K,
+  accuracyPercent,
+  gameAccuracy,
+  moveJudgment,
+  WIN_PCT_K,
+  winPercent,
+  winPercentK,
+} from './analysis.js';
 
 test('winPercent is 50 at even and monotonic in cp', () => {
   assert.equal(winPercent(0, null), 50);
@@ -18,6 +26,33 @@ test('winPercent maps mates through the lila mate->cp ladder', () => {
   assert.ok(winPercent(null, 1) > winPercent(null, 9));
   // A mate always beats the cp clamp ceiling (mate-in-10+ = 1100cp > 1000cp).
   assert.ok(winPercent(null, 15) > winPercent(1000, null));
+});
+
+test('winPercent takes an engine curve constant; the default stays lila', () => {
+  // The default is unchanged: 200cp on lila's curve is the ~67.6% the jieqi consistency
+  // threshold was written against.
+  assert.equal(winPercent(200, null), winPercent(200, null, WIN_PCT_K));
+  assert.ok(Math.abs(winPercent(200, null) - 67.6) < 0.1);
+  // AB-JChess's fitted curve: p = 1/(1+exp(-0.00985*cp)), so +112cp is 75%.
+  assert.ok(Math.abs(winPercent(112, null, ABJCHESS_WIN_PCT_K) - 75) < 0.1);
+  // The same cp means more on AB's steeper curve, and the curve stays symmetric.
+  assert.ok(winPercent(150, null, ABJCHESS_WIN_PCT_K) > winPercent(150, null));
+  assert.ok(
+    Math.abs(
+      winPercent(-150, null, ABJCHESS_WIN_PCT_K) -
+        (100 - winPercent(150, null, ABJCHESS_WIN_PCT_K)),
+    ) < 1e-9,
+  );
+  assert.equal(winPercent(null, null, ABJCHESS_WIN_PCT_K), 50);
+});
+
+test('winPercentK picks the curve from the stored analysis engine id', () => {
+  assert.equal(winPercentK('ab-jchess-jieqi-analysis@0.1.0+1ae95ca6'), ABJCHESS_WIN_PCT_K);
+  assert.equal(winPercentK('ab-jchess-jieqi-decisions@0.1.0+1ae95ca6'), ABJCHESS_WIN_PCT_K);
+  assert.equal(winPercentK('pikafish-jieqi-analysis@0.4.0+e75cee3a'), WIN_PCT_K);
+  assert.equal(winPercentK('pikafish'), WIN_PCT_K);
+  assert.equal(winPercentK(undefined), WIN_PCT_K);
+  assert.equal(winPercentK(null), WIN_PCT_K);
 });
 
 test('winPercent clamps extreme cp so it never exceeds the bounds', () => {
