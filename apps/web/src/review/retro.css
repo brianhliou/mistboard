@@ -64,21 +64,7 @@
   color: var(--site-muted);
 }
 .retro-box__disc {
-  flex: 0 0 auto;
-  width: 26px;
-  height: 26px;
-  border-radius: 50%;
-  border: 2px solid var(--site-border);
-}
-.retro-box__disc--red {
-  background: #c0563f;
-}
-.retro-box__disc--black {
-  background: var(--seat-dark-ink, #34302e);
-}
-.retro-box__disc--white {
-  background: #e9e5dc;
-  border-color: #b8b1a5;
+  --seat-disc-size: 26px;
 }
 .retro-box__icon {
   flex: 0 0 auto;

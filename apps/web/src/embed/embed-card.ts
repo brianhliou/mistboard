@@ -25,6 +25,7 @@ import { createMoveList, type MoveList, type MoveListEntry } from '../review/mov
 import { formatClock } from '../web-utils.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import './embed.css';
+import { seatDiscEl } from '../seat-disc.js';
 
 // Below this frame width the move list drops under the board (mirrors the
 // @media rule in embed.css; the two must agree or the board is sized for the
@@ -201,9 +202,7 @@ function seatRow(seat: EmbedSeat, side: 'first' | 'second'): SeatRow {
   const el = document.createElement('div');
   el.className = 'embed-card-seat';
   el.dataset.seat = side;
-  const disc = document.createElement('span');
-  disc.className = `embed-seat-disc embed-seat-disc--${seat.ink ?? 'unbound'}`;
-  disc.setAttribute('aria-hidden', 'true');
+  const disc = seatDiscEl(seat.ink, 'embed-seat-disc');
   const name = document.createElement('span');
   name.className = 'embed-card-seat-name';
   name.textContent = seat.name;

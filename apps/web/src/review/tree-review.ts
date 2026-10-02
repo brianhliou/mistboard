@@ -35,6 +35,7 @@ import { createAnnotationEditor } from './annotations-editor.js';
 // Brush colours for the node's user-drawn shapes. Imported here, not only
 // from the editor: the board draws shapes on surfaces that hide the panel.
 import '../variant-tenant/board-annotations.css';
+import { seatDiscEl } from '../seat-disc.js';
 import {
   alternativesEnabled,
   setAlternativesEnabled,
@@ -805,8 +806,7 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     ): void => {
       el.className = `review-seat review-seat--${slot} review-seat--${ink}`;
       el.replaceChildren();
-      const disc = document.createElement('span');
-      disc.className = 'review-seat__disc';
+      const disc = seatDiscEl(ink === UNBOUND_SEAT_INK ? null : ink, 'review-seat__disc');
       // A seat with no name falls back to its ink word, which names nobody, so
       // the link is bound to the resolved name rather than the slot.
       const shown = displayName(name);

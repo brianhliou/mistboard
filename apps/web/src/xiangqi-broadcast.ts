@@ -31,6 +31,7 @@ import { formatEval, winProbRed } from './review/engine/eval-format.js';
 import { buildBroadcastChat } from './review/spectator-chat.js';
 import { formatXiangqiEngineMove } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
+import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
@@ -2800,8 +2801,7 @@ function cardSeat(
 ): HTMLElement {
   const row = document.createElement('span');
   row.className = `xqb-card-seat xqb-card-seat-${color}${score === '1' ? ' xqb-card-seat-winner' : ''}`;
-  const disc = document.createElement('span');
-  disc.className = 'xqb-card-seat-disc';
+  const disc = seatDiscEl(color, 'xqb-card-seat-disc');
   const name = document.createElement('span');
   name.className = 'xqb-card-seat-name';
   // The title before the name, in its own ink (lichess's GM, FM): the feed's

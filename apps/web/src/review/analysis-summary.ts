@@ -12,6 +12,7 @@ import '../seat-disc-ink.css';
 import './analysis-summary.css';
 import type { MoveJudgment } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
+import { seatDiscEl } from '../seat-disc.js';
 import {
   type GameAnalysis,
   type GamePhases,
@@ -124,8 +125,7 @@ function playerBlock(
 
   const head = document.createElement('div');
   head.className = 'analysis-summary__head';
-  const dot = document.createElement('span');
-  dot.className = `analysis-summary__dot analysis-summary__dot--${color}`;
+  const dot = seatDiscEl(color, 'analysis-summary__dot');
   const name = document.createElement('span');
   name.className = 'analysis-summary__name';
   name.textContent = label;
