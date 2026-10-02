@@ -49,7 +49,7 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // AB-JChess, the new top jieqi bot, scheduled for 2026-10-03.
+      // AB-JChess, the new top jieqi bot, scheduled for 2026-10-02.
       '/blog/ab-jchess',
       // The jieqi bot's record and the games people won, scheduled for
       // 2026-10-01 (DEV shows it early for review).

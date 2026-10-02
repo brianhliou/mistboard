@@ -73,7 +73,7 @@ export const abJchessArticle: Article = {
     'An open-source jieqi engine with its own neural network now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games, and it reads the positions people beat Pikafish in very differently.',
   showSummaryOnPage: false,
   status: 'published',
-  publishedAt: '2026-10-03',
+  publishedAt: '2026-10-02',
   thumbnail: { kind: 'svg', svg: AB_JCHESS_THUMBNAIL },
   boardFamily: 'xiangqi',
   audience: 'People who play jieqi against the bot on Mistboard.',
