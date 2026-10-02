@@ -163,15 +163,14 @@ registerVariantTenant({
   // game nobody could accept; that stops being true at launch, and a variant
   // with no seek is one two humans cannot find each other in.
   //
-  // NOT rated: `supportsRated: false` matches the tenant's own landing
-  // capability. Duck has no `duck_xiangqi` rating pool (the user_ratings CHECK
-  // constraint would reject it), so a rated seek would fail at the point of
-  // writing the result rather than at the point of creating the game.
+  // Rated since 2026-10-02, in step with the web tenant's capability flag
+  // (the duck_xiangqi pool has been in the user_ratings CHECK since migration
+  // 142). lobby-rated.test.ts holds every tenant to threading the flag.
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createDuckXiangqiRoom(timeControl, 'random', false);
+    createRoom: async (timeControl, rated) => {
+      const created = await createDuckXiangqiRoom(timeControl, 'random', rated);
       if (!created.ok) throw new Error(`duck_xiangqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },

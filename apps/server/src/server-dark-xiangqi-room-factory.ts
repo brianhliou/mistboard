@@ -37,6 +37,7 @@ export async function createDarkXiangqiLiveRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: DarkXiangqiCreatorPreference,
   engine?: DarkXiangqiRoomEngineSeat,
+  rated = false,
 ): Promise<DarkXiangqiLiveRoomCreation> {
   const created = await createTenantLiveRoom(
     darkXiangqiTenant,
@@ -51,7 +52,7 @@ export async function createDarkXiangqiLiveRoom(
       isPersistenceEnabled: ctx.isPersistenceEnabled,
       recordPersistenceError: ctx.recordPersistenceError,
     },
-    { timeControl, creatorPreference, engine },
+    { timeControl, creatorPreference, engine, rated },
   );
   if (!created.ok) {
     return created.error === 'disabled'

@@ -1,7 +1,7 @@
 /**
  * Flip Jungle registry entry. Owns the tenant's live-room map, the room-factory
  * binding, and hydration. PvP + PvE (Tier-B MistyJungleFlip UCI engine);
- * matchmaking is casual random-seat (unrated). Imported for side effects by
+ * matchmaking is random-seat, rated or casual. Imported for side effects by
  * variant-tenant/register-tenants.ts.
  */
 
@@ -46,6 +46,8 @@ export async function createJungleFlipRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JungleFlipCreatorPreference,
   engine?: JungleFlipRoomEngineSeat,
+  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  rated = false,
 ): Promise<JungleFlipLiveRoomCreation> {
   return createJungleFlipLiveRoom(
     {
@@ -59,6 +61,7 @@ export async function createJungleFlipRoom(
     timeControl,
     creatorPreference,
     engine,
+    rated,
   );
 }
 
@@ -119,10 +122,10 @@ registerVariantTenant({
       handleJungleFlipCreate({ ...ctx, createJungleFlipRoom }, response, body),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createJungleFlipRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createJungleFlipRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`jungle_flip_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },

@@ -1,13 +1,4 @@
-import {
-  BANQI_SPEC_ID,
-  type Color,
-  FORTRESS_XIANGQI_SPEC_ID,
-  JIEQI_SPEC_ID,
-  TIME_CONTROLS,
-  type TimeClass,
-  XIANGQI_SPEC_ID,
-  type XiangqiColor,
-} from '@mistboard/game';
+import { type Color, TIME_CONTROLS, type TimeClass, type XiangqiColor } from '@mistboard/game';
 import type { MahjongSeat } from '@mistboard/mahjong';
 import { engineVersionDisplayName } from './engine-registry.js';
 import { botEngineAttributions, firstPartyBotForEngine } from './first-party-bots.js';
@@ -1578,7 +1569,7 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
         initialMs: summary.initialMs,
         incrementMs: summary.incrementMs,
       });
-      const colors = ratedParticipantColorsForVariant(summary.variant);
+      const colors = ratedParticipantColors(participants);
       const whiteParticipant = participants.find((p) => p.color === colors.white);
       const blackParticipant = participants.find((p) => p.color === colors.black);
       if (
@@ -1602,19 +1593,18 @@ export async function recordGameEnd(roomId: string, summary: GameSummary): Promi
   });
 }
 
-function ratedParticipantColorsForVariant(variant: string): {
+function ratedParticipantColors(participants: readonly { color: GameParticipantColor }[]): {
   white: RatedParticipantColor;
   black: RatedParticipantColor;
 } {
-  // Jieqi + Banqi are red/black (red = first mover = the white rating slot, like
-  // DMX; banqi keys on the SEAT, not ink). The default result mapping
-  // below then applies (red-wins -> white-wins, black-wins passthrough), so no result arm.
-  if (variant === JIEQI_SPEC_ID || variant === BANQI_SPEC_ID)
-    return { white: 'red', black: 'black' };
-  // Standard + Fortress Xiangqi are red/black too. Missing here meant the
-  // rating block found no 'white' participant and SILENTLY skipped: the #151
-  // flip's first rated game recorded rated=true but moved nobody's rating.
-  if (variant === XIANGQI_SPEC_ID || variant === FORTRESS_XIANGQI_SPEC_ID)
+  // A red/black game (every xiangqi-family tenant, banqi and both jungles) puts
+  // red, the first mover, in the white rating slot; banqi keys on the SEAT, not
+  // ink. The result mapping below then applies (red-wins -> white-wins,
+  // black-wins passthrough). Read off the seats rather than a spec-id list: the
+  // list version rated only the variants someone remembered to add, and every
+  // other rated red/black game recorded rated=true and moved nobody's rating
+  // (xiangqi at the #151 flip, then atomic, duck, dark xiangqi and both jungles).
+  if (participants.some((participant) => participant.color === 'red'))
     return { white: 'red', black: 'black' };
   return { white: 'white', black: 'black' };
 }
