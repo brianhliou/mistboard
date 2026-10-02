@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- Every game can now be played rated through Find opponent between signed-in players: jieqi, Duck Xiangqi, banqi, Jungle, Flip Jungle and Fog Xiangqi join xiangqi, Fortress and Atomic; rated Atomic games now update ratings ([27542e79](https://github.com/brianhliou/mistboard/commit/27542e79))
 - new game rooms no longer show the 'clock starts after the opening moves' note; the header already shows the time control ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - The game-over badges play again each time you step back onto the final move ([9434239f](https://github.com/brianhliou/mistboard/commit/9434239f))
 - Fortress Xiangqi shows every droppable piece in each player's tray, faded until you hold it, with a count when you hold two or more ([13f88a60](https://github.com/brianhliou/mistboard/commit/13f88a60))
