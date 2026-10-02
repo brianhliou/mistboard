@@ -60,6 +60,8 @@ type CtxOverrides = Partial<{
   timeControl: { initialMs: number; incrementMs: number } | null;
   isReplayLive: boolean;
   variantDetail: string | null;
+  lobbyMatch: boolean;
+  abortDeadline: number | null;
 }>;
 
 function chromeHarness(
@@ -77,7 +79,7 @@ function chromeHarness(
     seats: () => overrides.seats ?? { white: 'c-white', red: 'c-red' },
     seatDisplayNames: () => overrides.seatDisplayNames ?? {},
     seatProfiles: () => overrides.seatProfiles ?? {},
-    abortDeadline: () => null,
+    abortDeadline: () => overrides.abortDeadline ?? null,
     forfeitDeadline: () => null,
     roomMode: () => 'pvp',
     room: () => 'test_room',
@@ -86,6 +88,7 @@ function chromeHarness(
     orientation: () => 'white',
     playAgainRequestBody: () => ({}),
     rematchControls: () => null,
+    lobbyMatch: () => overrides.lobbyMatch ?? false,
     ...(overrides.variantDetail !== undefined
       ? { variantDetail: () => overrides.variantDetail ?? null }
       : {}),
@@ -400,6 +403,48 @@ describe('tenant room chrome meta and invite emphasis', () => {
   });
 });
 
+// A lobby match pairs two players who were both already waiting, so its room has
+// no invite link to share. Prod, 2026-10-02: a jieqi joiner whose matched seeker
+// had closed the tab sat under "Copy the invite link and send it to your
+// opponent" until the server's no-show abort (LOBBY_NO_SHOW_ABORT_MS) ended it.
+describe('tenant room chrome lobby rooms', () => {
+  const absentOpponent = { connectedSeats: { white: true, red: false } };
+
+  it('tells a lobby player its opponent is connecting, never to share an invite', () => {
+    const { chrome, refs } = chromeHarness({ ...absentOpponent, lobbyMatch: true });
+    chrome.renderActionStatus();
+    expect(refs.actionSection.hidden).toBe(false);
+    expect(refs.actionStatus.textContent).toContain('Waiting for your opponent to connect.');
+    expect(refs.actionStatus.textContent).not.toContain('invite');
+    expect(refs.actionStatus.textContent).not.toContain('Invite');
+  });
+
+  it('offers no invite link in a lobby room', () => {
+    const { chrome, refs } = chromeHarness({ ...absentOpponent, lobbyMatch: true });
+    chrome.renderRoomActions();
+    expect(refs.roomActions.textContent).not.toContain('Copy invite');
+  });
+
+  it('counts the no-show abort down in its own words, not as a first-move warning', () => {
+    const { chrome, refs } = chromeHarness({
+      ...absentOpponent,
+      lobbyMatch: true,
+      abortDeadline: Date.now() + 20_000,
+    });
+    chrome.renderGameControls();
+    expect(refs.gameControls.textContent).toContain('Opponent has not connected, aborting in');
+    expect(refs.gameControls.textContent).not.toContain('Make your first move');
+  });
+
+  it('keeps the invite prompt and button for an invite room', () => {
+    const { chrome, refs } = chromeHarness({ ...absentOpponent, lobbyMatch: false });
+    chrome.renderActionStatus();
+    chrome.renderRoomActions();
+    expect(refs.actionStatus.textContent).toContain('Copy the invite link');
+    expect(refs.roomActions.textContent).toContain('Copy invite');
+  });
+});
+
 // #427: the room was English end to end for zh visitors with every suite green.
 // Render the whole chrome in each zh locale and read it back for Latin words.
 describe('tenant room chrome in Chinese', () => {
@@ -448,6 +493,18 @@ describe('tenant room chrome in Chinese', () => {
       const spectator = chromeHarness({ seat: 'spectator', connectionState: 'reconnecting' });
       spectator.chrome.renderActionStatus();
       texts.push(spectator.refs.actionStatus.textContent ?? '');
+
+      const lobby = chromeHarness({
+        connectedSeats: { white: true, red: false },
+        lobbyMatch: true,
+        abortDeadline: Date.now() + 20_000,
+      });
+      lobby.chrome.renderActionStatus();
+      lobby.chrome.renderGameControls();
+      texts.push(
+        lobby.refs.actionStatus.textContent ?? '',
+        lobby.refs.gameControls.textContent ?? '',
+      );
 
       expect(texts.flatMap(latin)).toEqual([]);
       expect(texts.join(' ')).toContain('象棋');

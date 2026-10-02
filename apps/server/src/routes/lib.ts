@@ -50,6 +50,8 @@ export interface HttpApiContext {
   rooms: Map<string, Room>;
   lobbyTickets: Map<string, LobbyTicket>;
   lobbyQueue: LobbyTicket[];
+  // Clock for lobby ticket TTL and liveness; tests inject one. Defaults to Date.now.
+  now?(): number;
   databaseRequired: boolean;
   pveBuiltinEngineClientId: string;
   annotationsFile: string;
@@ -63,6 +65,7 @@ export interface HttpApiContext {
     rated?: boolean,
     options?: {
       randomSeating?: boolean;
+      lobbyMatch?: boolean;
       engineColor?: 'white' | 'black';
       engineReservationId?: string;
       botId?: string;

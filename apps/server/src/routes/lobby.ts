@@ -10,6 +10,7 @@ import {
   type VariantTenantRegistration,
   variantTenantForSpecId,
 } from './../variant-tenant/registry.js';
+import { createAsLobbyMatch } from './../variant-tenant/room-factory.js';
 import {
   type HttpApiContext,
   isAllowedRatedTimeControl,
@@ -22,6 +23,23 @@ import {
 
 const lobbyTicketTtlMs = 5 * 60 * 1000;
 const lobbyPollAfterMs = 1_000;
+// An unmatched seek is alive only while its tab keeps polling GET
+// /api/lobby/:id (every lobbyPollAfterMs). A closed tab or a backgrounded phone
+// stops polling without sending the DELETE, and such a ticket used to stay listed
+// and matchable for the whole TTL: whoever took it landed in a room its creator
+// never entered (prod, 2026-10-02). Ten polls of slack covers a slow network or
+// a throttled background timer; a seeker that misses all ten is gone.
+export const LOBBY_TICKET_STALE_MS = 10_000;
+
+function lobbyNow(ctx: HttpApiContext): number {
+  return ctx.now?.() ?? Date.now();
+}
+
+// Matched tickets are exempt: the matched ticket is how a seeker who comes back
+// finds its room, so it keeps the TTL however long it went quiet.
+function isLiveSeek(ticket: LobbyTicket, now: number): boolean {
+  return ticket.roomId === null && now - ticket.lastPolledAt < LOBBY_TICKET_STALE_MS;
+}
 
 export async function tryHandle(
   ctx: HttpApiContext,
@@ -33,7 +51,7 @@ export async function tryHandle(
 
   if (pathname === '/api/lobby') {
     if (method === 'GET') {
-      pruneLobbyTickets(ctx);
+      pruneLobbyTickets(ctx, lobbyNow(ctx));
       writeJson(response, 200, { requests: lobbyOpenRequests(ctx) });
       return true;
     }
@@ -134,7 +152,8 @@ export async function tryHandle(
 
   const lobbyMatch = pathname.match(/^\/api\/lobby\/([^/]+)$/);
   if (lobbyMatch) {
-    pruneLobbyTickets(ctx);
+    const now = lobbyNow(ctx);
+    pruneLobbyTickets(ctx, now);
     const ticketId = decodeURIComponent(lobbyMatch[1]!);
     const ticket = ctx.lobbyTickets.get(ticketId);
     if (!ticket) {
@@ -142,6 +161,8 @@ export async function tryHandle(
       return true;
     }
     if (method === 'GET') {
+      // The seeker's own poll is the heartbeat that keeps its seek listed.
+      ticket.lastPolledAt = now;
       writeJson(response, 200, lobbyTicketResponse(ticket));
       return true;
     }
@@ -165,20 +186,24 @@ async function joinLobby(
   timeControl: RoomTimeControl | undefined,
   rated = false,
 ): Promise<LobbyTicket> {
-  pruneLobbyTickets(ctx);
+  const now = lobbyNow(ctx);
+  pruneLobbyTickets(ctx, now);
   const timeKey = timeControlKey(timeControl);
   // Tickets only match within the same game spec, so chess and variant-tenant
-  // seekers never pair with each other even at the same time control.
+  // seekers never pair with each other even at the same time control. A seek
+  // whose tab stopped polling is never a match (pruned above; re-checked here so
+  // the rule holds even if the prune changes).
   const matchedTicket = ctx.lobbyQueue.find(
     (ticket) =>
-      ticket.roomId === null &&
+      isLiveSeek(ticket, now) &&
       ticket.gameSpecId === gameSpecId &&
       ticket.rated === rated &&
       timeControlKey(ticket.timeControl) === timeKey,
   );
   const ticket: LobbyTicket = {
     id: randomUUID(),
-    createdAt: Date.now(),
+    createdAt: now,
+    lastPolledAt: now,
     gameSpecId,
     rated,
     region: null,
@@ -200,7 +225,7 @@ async function joinLobby(
     ctx.lobbyTickets.delete(ticket.id);
     throw err;
   }
-  const matchedAt = Date.now();
+  const matchedAt = lobbyNow(ctx);
   matchedTicket.matchedAt = matchedAt;
   matchedTicket.roomId = room.id;
   matchedTicket.region = room.region;
@@ -222,8 +247,12 @@ async function createLobbyRoom(
   timeControl: RoomTimeControl | undefined,
   rated: boolean,
 ): Promise<{ id: string; region: string }> {
-  if (registration?.lobby) {
-    return registration.lobby.createRoom(timeControl, rated);
+  // Both paths mark the room as a lobby match: it gets the short no-show window
+  // instead of an invite room's long join window, and its client shows no
+  // invite prompt (lifecycle-windows.ts LOBBY_NO_SHOW_ABORT_MS).
+  const lobby = registration?.lobby;
+  if (lobby) {
+    return createAsLobbyMatch(() => lobby.createRoom(timeControl, rated));
   }
   const room: Room = await ctx.createRoom(
     'pvp',
@@ -231,7 +260,7 @@ async function createLobbyRoom(
     ctx.pveBuiltinEngineClientId,
     timeControl,
     rated,
-    { randomSeating: true },
+    { randomSeating: true, lobbyMatch: true },
   );
   return { id: room.id, region: room.region ?? 'global' };
 }
@@ -244,9 +273,11 @@ function cancelLobbyTicket(ctx: HttpApiContext, ticketId: string): void {
   if (queueIndex >= 0) ctx.lobbyQueue.splice(queueIndex, 1);
 }
 
-function pruneLobbyTickets(ctx: HttpApiContext, now = Date.now()): void {
+function pruneLobbyTickets(ctx: HttpApiContext, now: number): void {
   for (const [ticketId, ticket] of ctx.lobbyTickets) {
-    if (now - ticket.createdAt >= lobbyTicketTtlMs) {
+    const expired = now - ticket.createdAt >= lobbyTicketTtlMs;
+    const abandonedSeek = ticket.roomId === null && !isLiveSeek(ticket, now);
+    if (expired || abandonedSeek) {
       ctx.lobbyTickets.delete(ticketId);
     }
   }
@@ -275,9 +306,9 @@ function lobbyTicketResponse(ticket: LobbyTicket): Record<string, unknown> {
 }
 
 function lobbyOpenRequests(ctx: HttpApiContext): Array<Record<string, unknown>> {
-  const now = Date.now();
+  const now = lobbyNow(ctx);
   return ctx.lobbyQueue
-    .filter((ticket) => ticket.roomId === null)
+    .filter((ticket) => isLiveSeek(ticket, now))
     .slice(0, 20)
     .map((ticket) => ({
       gameSpecId: ticket.gameSpecId,

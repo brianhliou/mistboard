@@ -5,6 +5,7 @@
  * running-game record.
  */
 
+import { AsyncLocalStorage } from 'node:async_hooks';
 import { randomUUID } from 'node:crypto';
 import type { RoomTimeControl } from '@mistboard/game';
 import type * as persistence from '../persistence.js';
@@ -17,6 +18,18 @@ import type {
   TenantRuntimeRoom,
   VariantTenant,
 } from './tenant.js';
+
+// Set while the lobby route creates a matched room (routes/lobby.ts). Every
+// tenant's lobby.createRoom ends in createTenantLiveRoom through its own
+// positional create helpers, so marking the room here covers every tenant, and
+// any future one, without threading a flag through each of them. Scoped to the
+// one awaited call: nothing created outside it is marked.
+const lobbyMatchScope = new AsyncLocalStorage<true>();
+
+/** Run `create` so that every tenant room it makes is marked a lobby match. */
+export function createAsLobbyMatch<T>(create: () => Promise<T>): Promise<T> {
+  return lobbyMatchScope.run(true, create);
+}
 
 /** PvE: seat an engine in `seat` at creation (its clientId is the engine id),
  * holding the given engine-service seat reservation for the game. Omit
@@ -81,9 +94,12 @@ export async function createTenantLiveRoom<
      */
     engines?: readonly TenantRoomEngineSeat<C>[];
     rated?: boolean;
+    /** Made by a lobby match. Defaults to whether createAsLobbyMatch is running. */
+    lobbyMatch?: boolean;
   } = {},
 ): Promise<TenantLiveRoomCreation<Kind, C, M, State, Spec>> {
   const { timeControl, creatorPreference, engine, engines, rated = false } = options;
+  const lobbyMatch = options.lobbyMatch ?? lobbyMatchScope.getStore() === true;
   if (engine && engines) {
     throw new Error('pass either engine or engines, not both');
   }
@@ -99,6 +115,7 @@ export async function createTenantLiveRoom<
       pveBotId: firstEngine?.botId,
       rated,
       timeControl,
+      lobbyMatch: lobbyMatch && engineSeats.length === 0,
     });
     if (!created.ok) return created;
     const room = created.room;

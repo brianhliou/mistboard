@@ -145,6 +145,10 @@ export type TenantChromeContext<C extends string> = {
   // Post-game rematch block for a seated player, or null to fall back to
   // play-again. Tenant-owned because the shared control reads liveState.
   rematchControls(sendSocket: (payload: unknown) => boolean): HTMLElement | null;
+  // The lobby paired this room (snapshot `lobbyMatch`): both players were already
+  // waiting, so there is no invite link to share. An absent opponent is shown as
+  // still connecting, and the server aborts if they never do.
+  lobbyMatch(): boolean;
   // Optional suffix on the meta panel's Variant row (e.g. a time-control
   // label: "Jieqi · 5+5").
   variantDetail?(): string | null;
@@ -591,6 +595,8 @@ export function createTenantRoomChrome<C extends string>(
     // joins. No Home button either (lichess parity): the site nav is the way
     // out, and the empty host collapses its row.
     if (view?.status.type === 'aborted') return;
+    // A lobby room has no friend to invite.
+    if (ctx.lobbyMatch()) return;
 
     row.append(copyInviteButton());
     refs.roomActions.append(row);
@@ -750,7 +756,9 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() === 'displaced') return t('live.statusSessionMoved');
     if (!view) return t('live.statusConnecting');
     if (!ctx.isReplayLive()) return t('live.titleViewingReplay');
-    if (waitingForOpponent()) return t('live.titleInviteOpponent');
+    if (waitingForOpponent()) {
+      return ctx.lobbyMatch() ? t('live.statusWaitingForOpponent') : t('live.titleInviteOpponent');
+    }
     if (view.status.type === 'finished') return t('live.titleGameFinished');
     if (view.status.type === 'aborted') return t('live.statusGameAborted');
     if (ctx.seat() === view.status.turn) return t('live.statusYourMove');
@@ -769,7 +777,9 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() === 'displaced') return t('live.roomDisplaced');
     if (!view) return t('live.roomOpeningSocket');
     if (!ctx.isReplayLive()) return t('live.roomReturnToLatest');
-    if (waitingForOpponent()) return t('live.roomInviteBody');
+    if (waitingForOpponent()) {
+      return ctx.lobbyMatch() ? t('live.roomWaitingOpponentConnect') : t('live.roomInviteBody');
+    }
     if (view.status.type === 'finished') {
       const reason = reasonText(view.status.reason);
       return view.status.winner
@@ -883,6 +893,11 @@ export function createTenantRoomChrome<C extends string>(
     const deadline = ctx.abortDeadline();
     const remaining = deadline === null ? 0 : deadline - Date.now();
     const seconds = Math.max(0, Math.ceil(remaining / 1000));
+    // In a lobby room the deadline running while the opponent is away is the
+    // no-show window: nobody owes a move yet, they have not arrived.
+    if (ctx.lobbyMatch() && waitingForOpponent()) {
+      return t('live.opponentNotConnectedAbortingIn', { seconds });
+    }
     return isSideToMove
       ? t('live.makeFirstMoveAbortingIn', { seconds })
       : t('live.waitingFirstMoveAbortingIn', { seconds });

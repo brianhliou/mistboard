@@ -20,6 +20,7 @@ import {
   ABORT_WINDOW_MS,
   FORFEIT_WINDOW_MS,
   JOIN_WINDOW_MS,
+  LOBBY_NO_SHOW_ABORT_MS,
   PVP_DISCONNECT_FORFEIT_ENABLED,
 } from '../lifecycle-windows.js';
 import { logger } from '../obs.js';
@@ -30,6 +31,7 @@ import {
   tenantClockRemainingMs,
   tenantPauseEventFor,
   tenantResumeEventFor,
+  tenantRoomIsLobbyMatch,
 } from './runtime.js';
 import type {
   TenantAbortPhase,
@@ -598,7 +600,14 @@ function scheduleTenantAbortTimeout<
     room.abortPhase = null;
     return;
   }
-  if (phase === 'unjoined' && someSeatConnected(tenant, room)) {
+  // A lobby room's open seat belongs to a player the lobby already paired, not
+  // a friend who may still click a link: it gets the short no-show window,
+  // anchored to creation, whoever is sitting in the room (lifecycle-windows.ts).
+  const lobbyNoShow =
+    phase === 'unjoined' &&
+    tenantRoomIsLobbyMatch(room) &&
+    clockPolicyKindFor(room.projection.timeControl) !== 'days-per-move';
+  if (phase === 'unjoined' && !lobbyNoShow && someSeatConnected(tenant, room)) {
     // Somebody is sitting in this room with the page open, waiting for an
     // opponent. That is not an abandoned room and must never be aborted under
     // them, however long they wait — the bug being fixed is the room nobody is
@@ -627,7 +636,11 @@ function scheduleTenantAbortTimeout<
     return;
   }
   const now = ctx.now?.() ?? Date.now();
-  if (room.abortPhase !== phase || room.abortDeadline === null) {
+  if (lobbyNoShow) {
+    // From the event log, not "now": reconnects and a restart never extend it.
+    room.abortPhase = phase;
+    room.abortDeadline = (room.events[0]?.at ?? now) + LOBBY_NO_SHOW_ABORT_MS;
+  } else if (room.abortPhase !== phase || room.abortDeadline === null) {
     room.abortPhase = phase;
     // The phase is part of the guard above, so a seat filling flips
     // 'unjoined' -> '<first>-1' and recomputes the deadline down to the short
