@@ -331,69 +331,17 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // articles, so the caller can omit it. Thumbnails are bound by the caller's
 // mountArticleThumbnails pass; rotation is started by initLandingCarousel once
 // the section is in the document (it needs measured widths).
-// Editorial articles only. Rules reference pages are surfaced on the /rules
-// index (and each variant's card marker), not in this homepage row, so this
-// list is curated down to blog/concept pieces; the kind guard in
-// buildHomeArticleCards drops any rules slug that slips back in.
-// home-article-row.test.ts fails when one of the newest HOME_ARTICLE_ROW_SIZE
-// listable articles is missing here without a recorded reason.
-export const HOME_ARTICLE_SLUGS = [
-  // The second player page, dated 2026-09-25: the ten-game match against the
-  // world champion and the season after it. Newest, so it leads.
-  'cao-yanlei',
-  // The banqi statistics post, scheduled for 2026-09-23: 200 engine games
-  // reduced to what a player can use mid-game, and the only measured banqi
-  // page in either language. Leads once live.
-  'banqi-statistics',
-  // The Pikafish page, scheduled for 2026-09-22 (publish-time.ts): the page a
-  // reader who searched 皮卡鱼在线 lands on, one click from a game (growth plan
-  // lane 0). Leads once live, since 09-22 is newer than the player page below.
-  'pikafish',
-  // The first player page, dated 2026-09-21: a Chinese pro's month, five games
-  // on the board. The first that is about a person.
-  'yin-sheng',
-  // The Atomic Xiangqi launch note led while the variant was new, as the duck
-  // one did before it; dated 2026-09-16.
-  'atomic-xiangqi-build',
-  // The jieqi pair, shipped together on 2026-09-03 and dated a day apart. The
-  // platform page is the clearest case of a page that sends a reader straight
-  // into something they can do here rather than something to read about; the
-  // openings article is where that reader goes next, and it exists in no
-  // language but Chinese anywhere else.
-  'jieqi-openings',
-  'jieqi-platform',
-  // The Duck Xiangqi launch post LEADS the row: it shares 2026-09-11 with the
-  // puzzles post and ties break on position here, so listing it first is what
-  // promotes it. Deliberate, to put a new variant in front of people while it
-  // is new; the puzzles post keeps second. Its card art is the article's own
-  // thumbnail (the duck), because the slug carries no variant marker.
-  'duck-xiangqi-strategy',
-  // The anti-xiangqi and horde-xiangqi measurements, dated two and four days
-  // after the duck launch. Write-ups with no play page, so they sit behind
-  // the launch post rather than displacing it; the date alone would put them
-  // first.
-  'anti-xiangqi',
-  'horde-xiangqi',
-  // Second while the duck launch is new; it led the row before that, and
-  // takes the lead back when duck ages out.
-  'puzzles-with-more-than-one-solution',
-  // Held the lead until the jieqi pair shipped, on the same reasoning: it sends
-  // a reader into something they can do rather than something to read about,
-  // and the method it documents is not published anywhere else for xiangqi.
-  'how-puzzle-mining-works',
-  // The one page here that exists nowhere else in English. It sits directly
-  // above the two champion lists it explains, which is the order a reader
-  // wants them in.
-  'xiangqi-match-fixing',
-  'xiangqi-champions',
-  'xiangqi-world-championship',
-  'titled-players',
-  'riverbank-cannon',
-  'skill-vs-luck',
-  'misty',
-  'mistybanqi',
-  'server-enforced-fog',
-] as const;
+// Every listed editorial article is a candidate, newest first: publishing an
+// article is what puts it on the homepage, with no second list to edit. The row
+// used to render a hand-kept slug list, and articles shipped without joining it
+// (the world-championship post for a day, the jieqi-bot-wins post when its
+// session excused it). Rules reference pages live on /rules, never here.
+//
+// The one thing still hand-written is the order of articles that share a
+// publish date: a slug listed here goes ahead of an unlisted one on the same
+// day. The Duck Xiangqi launch post shares 2026-09-11 with the puzzles post and
+// leads it, to put a new variant in front of people while it is new.
+export const HOME_ARTICLE_LEAD_ON_TIE = ['duck-xiangqi-strategy'] as const;
 
 type HomeCardItem =
   | {
@@ -433,7 +381,15 @@ export type HomeArticleCardOptions = {
   maxAgeDays?: number;
   /** Cards kept regardless of age, so a quiet month cannot empty the row. */
   minCards?: number;
+  /**
+   * Which homepage row to build. 'latest' (the default) is every article with no
+   * homeRow plus the newest announcement; 'deep-dives' is the articles tagged
+   * for it, with no age cut, since a player page does not go stale in 60 days.
+   */
+  row?: HomeArticleRow;
 };
+
+export type HomeArticleRow = 'latest' | 'deep-dives';
 
 /** Cards the homepage row shows at once (landing.ts), announcement included. */
 export const HOME_ARTICLE_ROW_SIZE = 6;
@@ -443,17 +399,23 @@ export function buildHomeArticleCards(
   locale: Locale = currentLocale(),
   options: HomeArticleCardOptions = {},
 ): HTMLElement | null {
-  const eligible = new Map(
-    articles.filter(isArticleListedInThisEnv).map((article) => [article.slug, article]),
-  );
-  const articleItems = HOME_ARTICLE_SLUGS.flatMap<HomeCardItem>((slug, index) => {
-    const article = eligible.get(slug);
-    // Rules reference pages live on /rules, never this editorial row.
-    return article && article.kind !== 'rules'
-      ? [{ kind: 'article', date: articleDateKey(article), order: index + 1, article }]
-      : [];
-  });
-  const latestAnnouncement = latestVisibleAnnouncement();
+  const leadOnTie = HOME_ARTICLE_LEAD_ON_TIE as readonly string[];
+  const tieRank = (article: Article): number => {
+    const index = leadOnTie.indexOf(article.slug);
+    return index === -1 ? leadOnTie.length : index;
+  };
+  const row = options.row ?? 'latest';
+  const articleItems = articles
+    .filter((article) => isArticleListedInThisEnv(article) && article.kind !== 'rules')
+    .filter((article) => (article.homeRow ?? 'latest') === row)
+    .sort((a, b) => tieRank(a) - tieRank(b) || compareArticlesNewestFirst(a, b))
+    .map<HomeCardItem>((article, index) => ({
+      kind: 'article',
+      date: articleDateKey(article),
+      order: index + 1,
+      article,
+    }));
+  const latestAnnouncement = row === 'latest' ? latestVisibleAnnouncement() : undefined;
   const announcementItems: HomeCardItem[] = latestAnnouncement
     ? [
         {
@@ -466,7 +428,9 @@ export function buildHomeArticleCards(
     : [];
   const ordered = [...announcementItems, ...articleItems].sort(compareHomeCardItems);
 
-  const maxAgeDays = options.maxAgeDays ?? HOME_CARD_MAX_AGE_DAYS;
+  const maxAgeDays =
+    options.maxAgeDays ??
+    (row === 'deep-dives' ? Number.POSITIVE_INFINITY : HOME_CARD_MAX_AGE_DAYS);
   const minCards = options.minCards ?? HOME_CARD_MIN;
   const now = options.now ?? new Date();
   // A card with an unparseable date counts as fresh rather than being dropped:
@@ -489,12 +453,23 @@ export function buildHomeArticleCards(
 
   const section = document.createElement('section');
   section.className = 'landing-articles';
-  section.setAttribute('aria-label', t('articles.heading', {}, locale));
+  section.setAttribute(
+    'aria-label',
+    t(row === 'deep-dives' ? 'articles.deepDives' : 'articles.heading', {}, locale),
+  );
 
-  // No header row: the label ("Read") and the "All articles →" link are dropped
-  // to match lichess's blog strip (cards only) and to reclaim vertical space for
-  // the taller 8:5 thumbnails. The whole /blog index stays reachable from
-  // the primary nav.
+  // No header row on the general strip: the label ("Read") and the "All
+  // articles →" link are dropped to match lichess's blog strip (cards only) and
+  // to reclaim vertical space for the taller 8:5 thumbnails. The whole /blog
+  // index stays reachable from the primary nav. The deep-dives row does carry a
+  // one-word label (trial, 2026-10-01): without it the two strips look the same
+  // and the split means nothing to a reader.
+  if (row === 'deep-dives') {
+    const label = document.createElement('h2');
+    label.className = 'landing-row-label';
+    label.textContent = t('articles.deepDives', {}, locale);
+    section.append(label);
+  }
   const carousel = document.createElement('div');
   carousel.className = 'landing-carousel';
 

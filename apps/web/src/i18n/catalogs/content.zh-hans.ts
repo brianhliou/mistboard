@@ -48,6 +48,7 @@ export const ZH_HANS_CONTENT = {
   'videos.previousVideos': '上一个视频',
   'videos.moreVideos': '更多视频',
   'articles.heading': '文章',
+  'articles.deepDives': '深度文章',
   'articles.read': '阅读',
   'articles.intro': '原创策略游戏的文章、规则说明与引擎工作。',
   'articles.allArticles': '全部文章',

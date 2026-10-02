@@ -39,7 +39,7 @@
      initial screen): event banners + the game viewer (left), the tall tabbed
      lobby panel (center, the focal element), the single Play button + activity
      stats (right). Band 2: daily puzzle (left), forum topics (center), top
-     studies (right). Bands 3-4: the blog row then the learn row in the center,
+     studies (right). Bands 3-4: the blog row then the deep-dives row in the center,
      flanked by the News feed (left) and the lobby chat (right), each spanning
      both rows. */
   /* lila proportions: the lobby is the dominant element (lila's app is 66% of a
@@ -53,7 +53,7 @@
     "left   panel  play"
     "puzzle forum  studies"
     "news   blogs  chat"
-    "news   learn  chat";
+    "news   dives  chat";
   --landing-col-gap: clamp(10px, 0.9vw, 15px);
   --landing-row-gap: clamp(14px, 1.8vw, 24px);
   column-gap: var(--landing-col-gap);
@@ -317,7 +317,7 @@
   min-width: 0;
 }
 
-/* Bands 3-4 right rail: the lobby chat, spanning the blog and learn rows like
+/* Bands 3-4 right rail: the lobby chat, spanning the blog and deep-dives rows like
    News on the left (the stretch lives in the desktop block). It traded places
    with Top studies 2026-09-26: the band-2 slot is the only one of the three that
    starts above a desktop fold, and a quiet chat there read as an empty site. */
@@ -329,8 +329,8 @@
   min-width: 0;
 }
 
-/* Bands 3-4 left rail: News spans the blog and learn rows on desktop, so its box
-   stretches from the blog row's top edge to the learn row's bottom edge (the
+/* Bands 3-4 left rail: News spans the blog and deep-dives rows on desktop, so its box
+   stretches from the blog row's top edge to the deep-dives row's bottom edge (the
    stretch itself lives in the desktop block; stacked, the box keeps its own
    fixed height) and scrolls inside. Band-2 right rail: Top studies, stretched to
    the band's shared height and fitting whole rows to it (site-box-fit.ts). */
@@ -1132,141 +1132,23 @@
   line-height: 1.35;
 }
 
-/* Band 4: the learn row mirrors the blog row (same centered center-column
-   area, three compact cards per view), so the two strips read as a matched pair.
-   Only the thumbnail contents and the one-line blurb differ. */
-.landing-learn-row {
-  grid-area: learn;
-  /* The learn row pairs with the blog strip above it, so it sits tighter than
-     the band-to-band row-gap: pull it up by (row-gap - col-gap) so the gap to the
-     blog row matches the inter-column gap. */
+/* Band 4: the deep-dives row is the blog row's carousel again, in its own
+   grid area, pulled up against the blog row like the learn row it replaced. */
+.landing-dives-row {
+  grid-area: dives;
   margin-top: calc(var(--landing-col-gap) - var(--landing-row-gap));
 }
 
-.landing-learn-row .landing-learn-card {
-  flex-basis: calc((100% - 2 * var(--landing-carousel-gap)) / 3);
-}
-
-/* A portrait board inside a landscape frame: the frame takes the board's own
-   wood colour, so the diagram reads as one tile edge to edge instead of a small
-   board floating on the panel grey. The board's rounded corners disappear into
-   the same fill. The video card and the manual card's empty state override
-   this below and via .is-empty. */
-.landing-learn-row .landing-learn-card-thumb {
-  background: var(--xq-diagram-bg, #d9bd82);
-}
-
-.landing-learn-card-thumb .articles-index-card-thumb {
-  display: grid;
-  place-items: center;
-  width: 100%;
-  height: 100%;
-  /* The index wrapper paints its own panel grey and inset ring; both would
-     frame the board inside the wood field. */
-  border-radius: 0;
-  background: transparent;
-  box-shadow: none;
-}
-
-.landing-learn-card-thumb .articles-index-card-thumb svg {
-  max-width: 100%;
-  max-height: 100%;
-}
-
-.landing-learn-row .landing-learn-card-title {
-  margin: 7px 0 2px;
-  padding: 0 9px;
-  font-size: 12.5px;
-  line-height: 1.35;
-}
-
-/* One-line blurb under the title: what the card leads to. Ellipsized. */
-.landing-learn-card-blurb {
-  display: block;
-  margin: 0 0 9px;
-  padding: 0 9px;
-  overflow: hidden;
+/* The deep-dives row's label: quiet, so the cards stay the subject. */
+.landing-row-label {
+  margin: 0;
+  padding: 0 2px;
   color: var(--site-muted);
-  font-size: 11px;
-  line-height: 1.3;
-  white-space: nowrap;
-  text-overflow: ellipsis;
-}
-
-/* The one video card (our episode) keeps the video grammar inside the learn
-   card frame: photographic still, play glyph, duration pill, Mistboard badge.
-   The thumb keeps the base card's 8:5 frame so it is dimensionally identical to
-   the board cards beside it; the still is object-fit: cover. Dark fill shows
-   only while the still loads or if it 404s — a video-frame placeholder, not the
-   blog row's light panel. Scoped past the base thumb rule so it wins regardless
-   of source order. */
-.landing-learn-row .landing-video-card-thumb {
-  background: #0e120f;
-}
-
-.landing-video-card-img {
-  display: block;
-  width: 100%;
-  height: 100%;
-  object-fit: cover;
-}
-
-/* Play glyph badge, centered — the at-a-glance "this is a video" cue. */
-.landing-video-card-play {
-  position: absolute;
-  top: 50%;
-  left: 50%;
-  z-index: 1;
-  display: grid;
-  place-items: center;
-  width: 42px;
-  height: 42px;
-  transform: translate(-50%, -50%);
-  border-radius: 999px;
-  background: color-mix(in srgb, #0b0f0c 62%, transparent);
-  color: #ffffff;
-  font-size: 15px;
-  /* Nudge the triangle glyph toward optical center of the circle. */
-  padding-left: 3px;
-  backdrop-filter: blur(2px);
-  transition:
-    background 120ms ease,
-    transform 120ms ease;
-}
-
-.landing-video-card:hover .landing-video-card-play {
-  background: var(--site-accent);
-  transform: translate(-50%, -50%) scale(1.06);
-}
-
-/* Duration pill, bottom-right — YouTube grammar. */
-.landing-video-card-duration {
-  position: absolute;
-  right: 6px;
-  bottom: 6px;
-  z-index: 1;
-  padding: 2px 6px;
-  border-radius: 4px;
-  background: color-mix(in srgb, #0b0f0c 78%, transparent);
-  color: #ffffff;
-  font-size: 10px;
-  font-weight: 500;
-  line-height: 1.1;
-}
-
-/* First-party badge, top-left — mirrors the /videos "Mistboard" tag. */
-.landing-video-card-badge {
-  position: absolute;
-  top: -1px;
-  left: -1px;
-  z-index: 1;
-  padding: 3px 7px 4px;
-  border-radius: var(--site-radius) 0 7px 0;
-  background: color-mix(in srgb, var(--site-accent) 92%, transparent);
-  color: #ffffff;
-  font-size: 10px;
+  font-size: 12px;
   font-weight: 600;
-  line-height: 1.1;
+  letter-spacing: 0.06em;
+  line-height: 1.2;
+  text-transform: uppercase;
 }
 
 .landing-carousel {
@@ -2208,13 +2090,13 @@
   }
 
   /* ── Stretched boxes ─────────────────────────────────────────────────────────
-     News and the chat span the blog + learn rows and fill the spanned area:
-     top-aligned with the blog row, bottom-aligned with the learn row, each body
+     News and the chat span the blog + deep-dives rows and fill the spanned area:
+     top-aligned with the blog row, bottom-aligned with the deep-dives row, each body
      scrolling inside. Top studies fills band 2 beside the puzzle and forum,
      fitting whole rows to the box. All three are taken out of flow (absolute in
      the stretched column) so their own content contributes NOTHING to the auto
      row heights: in flow a long timeline would inflate rows 3-4 and tear the
-     blog row away from the learn row. */
+     blog row away from the deep-dives row. */
   .landing-news-column,
   .landing-chat-column,
   .landing-studies-column {
@@ -2381,7 +2263,7 @@
   /* Two columns (lichess's middle band: the lobby app plus one side column).
      The left rail folds into the right one: the center keeps the lobby panel
      with the forum and chat under it, the rail carries the Play button, the
-     viewer, the daily puzzle and Top studies, and the blog row, the learn row
+     viewer, the daily puzzle and Top studies, and the blog row, the deep-dives row
      and News span both. Both columns scale with the window (a fixed 340px rail
      beside a fluid center read as the center alone resizing): the rail is a
      viewport fraction, re-sourced into the rail-width token so the viewer and
@@ -2399,7 +2281,7 @@
       "forum puzzle"
       "studies chat"
       "blogs blogs"
-      "learn learn"
+      "dives dives"
       "news  news";
     --landing-puzzle-board-height: calc(var(--landing-rail-width) * 612 / 552);
     --landing-lower-widget-height: calc(
@@ -2451,7 +2333,7 @@
 @media (max-width: 959px) {
   /* Collapse to one column: Play button + activity, the lobby panel, banners +
      viewer, then the band-2 widgets (puzzle, forum, studies), the blog row, the
-     learn row, and the two side-rail boxes (chat, news). */
+     deep-dives row, and the two side-rail boxes (chat, news). */
   .landing-demo {
     grid-template-columns: minmax(0, 1fr);
     grid-template-areas:
@@ -2462,7 +2344,7 @@
       "forum"
       "studies"
       "blogs"
-      "learn"
+      "dives"
       "chat"
       "news";
     max-width: 640px;
@@ -2548,10 +2430,6 @@
   }
 
   .landing-articles-row .landing-article-card {
-    flex-basis: calc((100% - var(--landing-carousel-gap)) / 2);
-  }
-
-  .landing-learn-row .landing-learn-card {
     flex-basis: calc((100% - var(--landing-carousel-gap)) / 2);
   }
 }
