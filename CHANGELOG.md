@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- in-game buttons and the clock span the move column; after a bot game the postgame offers New game, and Challenge a friend opens on a random side ([6e9613e2](https://github.com/brianhliou/mistboard/commit/6e9613e2))
 - The homepage's play panel is now one row per game: pick a bot level and clock and press Play, or switch to Play a person for open and rated games ([0c8f1f8f](https://github.com/brianhliou/mistboard/commit/0c8f1f8f))
 - Every game can now be played rated through Find opponent between signed-in players: jieqi, Duck Xiangqi, banqi, Jungle, Flip Jungle and Fog Xiangqi join xiangqi, Fortress and Atomic; rated Atomic games now update ratings ([27542e79](https://github.com/brianhliou/mistboard/commit/27542e79))
 - new game rooms no longer show the 'clock starts after the opening moves' note; the header already shows the time control ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
@@ -72,6 +73,7 @@ Conventions:
 
 ### Fixed
 
+- rematch now swaps colours, including in xiangqi; Copy invite shows only while a seat is empty ([6e9613e2](https://github.com/brianhliou/mistboard/commit/6e9613e2))
 - a finished broadcast whose source never posted games says No games published instead of promising records ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - an open game whose player has left now drops off the list within 10 seconds, and a matched game you join alone ends after 30 seconds instead of showing an invite link ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - studies and game reviews without move notes no longer leave an empty gap between the board and the tabs below it ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
