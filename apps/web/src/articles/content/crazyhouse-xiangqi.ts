@@ -2,6 +2,7 @@ import {
   CRAZYHOUSE_XIANGQI_ADVISOR_PAIR,
   CRAZYHOUSE_XIANGQI_CAPTURE_PAIR,
   CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR,
+  CRAZYHOUSE_XIANGQI_DROP_MATE_PAIR,
   CRAZYHOUSE_XIANGQI_ELEPHANT_PAIR,
   CRAZYHOUSE_XIANGQI_INTRO_BOARD,
   CRAZYHOUSE_XIANGQI_START_BOARD,
@@ -175,6 +176,12 @@ export const crazyhouseXiangqiArticle: Article = {
           svg: CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR,
           caption:
             'Left, a horse dropped on d8 checks the general on e10. Right, a soldier dropped on e6 gives Red’s cannon on e3 its screen.',
+        } as ArticleBlock,
+        {
+          kind: 'raw-svg',
+          svg: CRAZYHOUSE_XIANGQI_DROP_MATE_PAIR,
+          caption:
+            'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.',
         } as ArticleBlock,
       ],
     },

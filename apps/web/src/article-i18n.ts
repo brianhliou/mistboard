@@ -3256,6 +3256,8 @@ const ZH_HANS: Record<string, string> = {
     '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
   // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
   'Crazyhouse Xiangqi Rules': '疯狂屋象棋规则',
+  'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.':
+    '示范对局的最后一步。左图：轮到红方走，持子里有三个兵。右图：其中一个打入 e9，将死 f9 的将。',
   'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. A piece you capture joins your hand as one of your own, and each turn you either move a piece on the board or drop one from your hand onto an empty point. Both sides also start with their two advisors and two elephants in hand.':
     '疯狂屋象棋就是带打入的[象棋](/rules/xiangqi)。吃掉的棋子作为你自己的棋子进入你的持子；每一步，你要么在棋盘上走一枚棋子，要么从持子中取出一枚打入一个空点。此外，双方开局时两士两象都在持子里。',
   'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.':
@@ -3394,6 +3396,8 @@ const ZH_HANS: Record<string, string> = {
   // crazyhouse xiangqi (the kernel-built diagrams, crazyhouse-xiangqi-rules-diagrams.ts)
   'START: ADVISORS AND ELEPHANTS IN HAND': '开局：士和象都在持子里',
   'MATE WITH A DROPPED SOLDIER': '打入兵将死',
+  'BEFORE THE DROP': '打入之前',
+  'AFTER: MATE': '之后：将死',
   'A MOVE': '走子',
   'A DROP': '打入',
   'BEFORE THE CAPTURE': '吃子之前',
@@ -6421,6 +6425,8 @@ const ZH_HANT: Record<string, string> = {
     '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
   // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
   'Crazyhouse Xiangqi Rules': '瘋狂屋象棋規則',
+  'The sample game’s last move. Left, Red to move with three soldiers in hand. Right, one dropped on e9 mates the general on f9.':
+    '示範對局的最後一步。左圖：輪到紅方走，持子裡有三個兵。右圖：其中一個打入 e9，將死 f9 的將。',
   'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. A piece you capture joins your hand as one of your own, and each turn you either move a piece on the board or drop one from your hand onto an empty point. Both sides also start with their two advisors and two elephants in hand.':
     '瘋狂屋象棋就是帶打入的[象棋](/rules/xiangqi)。吃掉的棋子作為你自己的棋子進入你的持子；每一步，你要麼在棋盤上走一枚棋子，要麼從持子中取出一枚打入一個空點。此外，雙方開局時兩士兩象都在持子裡。',
   'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.':
@@ -6559,6 +6565,8 @@ const ZH_HANT: Record<string, string> = {
   // crazyhouse xiangqi (the kernel-built diagrams, crazyhouse-xiangqi-rules-diagrams.ts)
   'START: ADVISORS AND ELEPHANTS IN HAND': '開局：士和象都在持子裡',
   'MATE WITH A DROPPED SOLDIER': '打入兵將死',
+  'BEFORE THE DROP': '打入之前',
+  'AFTER: MATE': '之後：將死',
   'A MOVE': '走子',
   'A DROP': '打入',
   'BEFORE THE CAPTURE': '吃子之前',

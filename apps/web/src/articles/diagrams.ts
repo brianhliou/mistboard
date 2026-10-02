@@ -1586,47 +1586,75 @@ export function xqBoardSvg(opts: {
 // holds, or a diagram is ambiguous. One strip per side, the width of the board:
 // the side at the top of the board above it, the side at the bottom below it,
 // as the live room draws its pockets. Only held roles are drawn, in the order
-// the caller gives; a count over one gets a badge, as the live pocket's does
-// (drop-pocket.ts). An empty hand is an empty tray, never a missing one.
+// the caller gives, at the board's own piece size. An empty hand is an empty
+// tray, never a missing one.
+//
+// The count badge is the live pocket's (drop-pocket.ts + drop-reserve.css
+// `.drop-pocket .captures-count-badge`), scaled to the piece: shown at two or
+// more, bottom-right, overhanging the disc by 3/48 of it, 0.4 of the disc
+// across, numeral 0.27 of the disc, in the site accent with a panel-coloured
+// rim (articles.css `.xq-diagram-hand-badge`).
 
-export const XQ_HAND_STRIP_H = 34;
 const XQ_HAND_GAP = 6;
-const XQ_HAND_PIECE = 26;
-const XQ_HAND_SLOT = 36;
+const XQ_HAND_PAD = 8;
+const XQ_HAND_SPACING = 8;
+/** The pocket's badge geometry, as fractions of its 48px slot. */
+const POCKET_BADGE = { diameter: 0.4, overhang: 3 / 48, font: 0.27, rim: 1.5 / 48 } as const;
 
 export type XqHandEntry = { role: XiangqiPiece['role']; count: number };
-export type XqHandStrip = { color: XiangqiColor; entries: readonly XqHandEntry[] };
+export type XqHandStrip = {
+  color: XiangqiColor;
+  entries: readonly XqHandEntry[];
+  /** Disc size; defaults to the board's (XQ_PIECE_SIZE). */
+  pieceSize?: number;
+};
+
+const handPiece = (strip: XqHandStrip) => strip.pieceSize ?? XQ_PIECE_SIZE;
+/** A strip's height: its disc plus padding. */
+export const xqHandStripHeight = (strip: XqHandStrip) => handPiece(strip) + XQ_HAND_PAD;
+
+function xqHandBadge(count: number, discRight: number, discBottom: number, size: number): string {
+  const d = size * POCKET_BADGE.diameter;
+  const cx = discRight + size * POCKET_BADGE.overhang - d / 2;
+  const cy = discBottom + size * POCKET_BADGE.overhang - d / 2;
+  return [
+    `<circle cx="${cx}" cy="${cy}" r="${d / 2}" class="xq-diagram-hand-badge" fill="hsl(165, 56%, 28%)" stroke="#ffffff" stroke-width="${size * POCKET_BADGE.rim}"/>`,
+    `<text x="${cx}" y="${cy}" dominant-baseline="central" font-family="system-ui, sans-serif" font-size="${size * POCKET_BADGE.font}" font-weight="800" class="xq-diagram-hand-badge-count" fill="#ffffff" text-anchor="middle">${count}</text>`,
+  ].join('');
+}
 
 /** One side's hand as a strip of pieces, XQ_BOARD_W wide, top-left at (x, y). */
 export function xqHandStrip(strip: XqHandStrip, x: number, y: number): string {
+  const size = handPiece(strip);
+  const slot = size + XQ_HAND_SPACING;
   const held = strip.entries.filter((entry) => entry.count > 0);
   const parts = [
-    `<rect x="${x}" y="${y}" width="${XQ_BOARD_W}" height="${XQ_HAND_STRIP_H}" rx="6" class="xq-diagram-hand" data-hand="${strip.color}"/>`,
+    `<rect x="${x}" y="${y}" width="${XQ_BOARD_W}" height="${xqHandStripHeight(strip)}" rx="6" class="xq-diagram-hand" data-hand="${strip.color}"/>`,
   ];
-  let cx = x + XQ_BOARD_W / 2 - ((held.length - 1) * XQ_HAND_SLOT) / 2;
-  const top = y + (XQ_HAND_STRIP_H - XQ_HAND_PIECE) / 2;
+  let cx = x + XQ_BOARD_W / 2 - ((held.length - 1) * slot) / 2;
+  const top = y + XQ_HAND_PAD / 2;
   for (const entry of held) {
     const piece = renderXiangqiPieceGlyphed(
       { color: strip.color, role: entry.role },
       activeXiangqiPieceSet,
-      { x: cx - XQ_HAND_PIECE / 2, y: top, size: XQ_HAND_PIECE },
+      { x: cx - size / 2, y: top, size },
     );
-    const badge =
-      entry.count > 1
-        ? `<circle cx="${cx + XQ_HAND_PIECE / 2 - 1}" cy="${top + 3}" r="7" fill="#1f2937"/><text x="${cx + XQ_HAND_PIECE / 2 - 1}" y="${top + 6.5}" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">${entry.count}</text>`
-        : '';
+    const badge = entry.count > 1 ? xqHandBadge(entry.count, cx + size / 2, top + size, size) : '';
     parts.push(
       `<g class="xq-diagram-hand-piece" data-hand-role="${strip.color}-${entry.role}" data-count="${entry.count}">${piece}${badge}</g>`,
     );
-    cx += XQ_HAND_SLOT;
+    cx += slot;
   }
   return parts.join('');
 }
 
 /** Height of a labelled board with the given strips (xqSvg's height argument). */
-export function xqBoardWithHandsHeight(strips: { top?: XqHandStrip; bottom?: XqHandStrip }): number {
-  const strip = XQ_HAND_STRIP_H + XQ_HAND_GAP;
-  return 28 + XQ_BOARD_H + (strips.top ? strip : 0) + (strips.bottom ? strip : 0) + 4;
+export function xqBoardWithHandsHeight(strips: {
+  top?: XqHandStrip;
+  bottom?: XqHandStrip;
+}): number {
+  const band = (strip?: XqHandStrip) => (strip ? xqHandStripHeight(strip) + XQ_HAND_GAP : 0);
+  return 28 + XQ_BOARD_H + band(strips.top) + band(strips.bottom) + 4;
 }
 
 /**
@@ -1637,7 +1665,7 @@ export function xqBoardWithHandsSvg(
   opts: Parameters<typeof xqBoardSvg>[0] & { top?: XqHandStrip; bottom?: XqHandStrip },
 ): string {
   const { top, bottom, ...board } = opts;
-  const boardOffset = 28 + (top ? XQ_HAND_STRIP_H + XQ_HAND_GAP : 0);
+  const boardOffset = 28 + (top ? xqHandStripHeight(top) + XQ_HAND_GAP : 0);
   return [
     xqBoardSvg({ ...board, boardOffset }),
     top ? xqHandStrip(top, opts.x, opts.y + 28) : '',

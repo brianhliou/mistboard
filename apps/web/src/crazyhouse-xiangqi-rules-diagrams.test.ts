@@ -3,6 +3,7 @@ import {
   CRAZYHOUSE_XIANGQI_ADVISOR_PAIR,
   CRAZYHOUSE_XIANGQI_CAPTURE_PAIR,
   CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR,
+  CRAZYHOUSE_XIANGQI_DROP_MATE_PAIR,
   CRAZYHOUSE_XIANGQI_ELEPHANT_PAIR,
   CRAZYHOUSE_XIANGQI_INTRO_BOARD,
   CRAZYHOUSE_XIANGQI_START_BOARD,
@@ -36,6 +37,7 @@ describe('crazyhouse xiangqi rules diagrams', () => {
     ZONE_ANYWHERE: CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE,
     ZONE_SOLDIER: CRAZYHOUSE_XIANGQI_ZONE_SOLDIER,
     DROP_CHECK_PAIR: CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR,
+    DROP_MATE_PAIR: CRAZYHOUSE_XIANGQI_DROP_MATE_PAIR,
     ADVISOR_PAIR: CRAZYHOUSE_XIANGQI_ADVISOR_PAIR,
     ELEPHANT_PAIR: CRAZYHOUSE_XIANGQI_ELEPHANT_PAIR,
   };
@@ -85,6 +87,32 @@ describe('crazyhouse xiangqi rules diagrams', () => {
   it('gives check with a dropped horse and with a dropped cannon screen', () => {
     const svg = CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR();
     expect(rings(svg)).toBe(2);
+  });
+
+  it('shows the mating drop: three soldiers in hand, then two and a ringed soldier on e9', () => {
+    const svg = CRAZYHOUSE_XIANGQI_DROP_MATE_PAIR();
+    expect(rings(svg)).toBe(1);
+    expect(held(svg, 'red')).toContain('soldier3');
+    expect(held(svg, 'red')).toContain('soldier2');
+  });
+
+  it('badges a count of two or more the way the live pocket does, and only then', () => {
+    const svg = CRAZYHOUSE_XIANGQI_INTRO_BOARD();
+    // Red holds soldier x2 and three singles; Black a single horse.
+    expect(count(svg, /class="xq-diagram-hand-badge"/g)).toBe(1);
+    expect(svg).toMatch(/class="xq-diagram-hand-badge-count"[^>]*>2</);
+  });
+
+  it('draws hand pieces at the board piece size, and the zone pieces larger', () => {
+    const sizes = (svg: string) =>
+      [...svg.matchAll(/data-hand-role="[^"]+" data-count="\d+"><svg[^>]*width="([\d.]+)"/g)].map(
+        (m) => Number(m[1]),
+      );
+    const start = sizes(CRAZYHOUSE_XIANGQI_START_BOARD());
+    const zone = sizes(CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE());
+    expect(start.length).toBe(4);
+    expect(zone.length).toBe(3);
+    expect(Math.min(...zone)).toBeGreaterThan(Math.max(...start));
   });
 
   it('steps the advisor to four diagonals off the palace, and stops it at the river', () => {

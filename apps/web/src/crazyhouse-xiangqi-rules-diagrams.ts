@@ -121,10 +121,20 @@ const dropRing = (square: XiangqiSquare) => [{ square, capture: true }];
 
 // ── The intro: how the sample game ends ─────────────────────────────────────
 
-/** The sample game's last position: Red's soldier, dropped on e9, mates. */
-function sampleGameEnd(): CrazyhouseXiangqiGameState {
-  let state = createInitialCrazyhouseXiangqiState('chx-rules-sample');
-  for (const token of CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES.split(' ')) state = play(state, token);
+/**
+ * The sample game's last two positions: Red to move, then Red's soldier,
+ * dropped on e9, mating the general on f9.
+ */
+function sampleGameFinish(): {
+  before: CrazyhouseXiangqiGameState;
+  end: CrazyhouseXiangqiGameState;
+} {
+  let before = createInitialCrazyhouseXiangqiState('chx-rules-sample');
+  let state = before;
+  for (const token of CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES.split(' ')) {
+    before = state;
+    state = play(state, token);
+  }
   const last = state.lastMove;
   if (
     state.status.type !== 'finished' ||
@@ -137,7 +147,18 @@ function sampleGameEnd(): CrazyhouseXiangqiGameState {
   ) {
     fail('the sample game no longer ends with a soldier dropped on e9 for mate');
   }
-  return state;
+  if (
+    before.status.type !== 'playing' ||
+    state.board.f9?.role !== 'general' ||
+    (state.hands.red.soldier ?? 0) + 1 !== before.hands.red.soldier
+  ) {
+    fail('the sample game’s mating drop is not the one the captions describe');
+  }
+  return { before, end: state };
+}
+
+function sampleGameEnd(): CrazyhouseXiangqiGameState {
+  return sampleGameFinish().end;
 }
 
 export const CRAZYHOUSE_XIANGQI_INTRO_BOARD = () =>
@@ -257,22 +278,30 @@ function dropZone(role: CrazyhouseXiangqiDropRole): CrazyhouseXiangqiSquare[] {
   return region;
 }
 
+// The pieces a region belongs to sit over its board, larger than a board
+// piece: they are the only thing telling the three boards apart.
+const ZONE_PIECE = 40;
+
 function zoneBoard(
   roles: readonly CrazyhouseXiangqiDropRole[],
   label: string,
   points: CrazyhouseXiangqiSquare[],
 ): string {
+  const top: XqHandStrip = {
+    color: 'red',
+    entries: roles.map((role) => ({ role, count: 1 })),
+    pieceSize: ZONE_PIECE,
+  };
   return xqSvg(
     XQ_BOARD_W,
-    xqBoardWithHandsHeight({ top: { color: 'red', entries: [] } }),
+    xqBoardWithHandsHeight({ top }),
     xqBoardWithHandsSvg({
       state: demo(`chx-rules-zone-${roles[0]}`, {}),
       x: 0,
       y: 0,
       label,
       perspective: 'red',
-      // The pieces this region belongs to, over their board.
-      top: { color: 'red', entries: roles.map((role) => ({ role, count: 1 })) },
+      top,
       dots: xqDots(points),
     }),
   );
@@ -340,6 +369,22 @@ function dropCheckPanel(
     arrows: [{ from: attacker, to: 'e10' }],
   });
 }
+
+/** The sample game's last move: three soldiers in Red's hand, then one dropped on e9 for mate. */
+export const CRAZYHOUSE_XIANGQI_DROP_MATE_PAIR = () => {
+  const { before, end } = sampleGameFinish();
+  if (before.hands.red.soldier !== 3) fail('Red no longer holds three soldiers before the mate');
+  return xqSvg(
+    PAIR_W,
+    BOTH_HANDS_H,
+    [
+      positionWithHands('chx-rules-mate-before', before, 'BEFORE THE DROP', 0),
+      positionWithHands('chx-rules-mate-after', end, 'AFTER: MATE', XQ_BOARD_W + PAIR_GAP, {
+        dots: dropRing('e9'),
+      }),
+    ].join(''),
+  );
+};
 
 export const CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR = () =>
   xqSvg(

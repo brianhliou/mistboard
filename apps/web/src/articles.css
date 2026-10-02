@@ -1104,6 +1104,16 @@
   stroke-width: 1;
 }
 
+/* The count badge on a held piece: the live pocket's colours
+   (drop-reserve.css `.drop-pocket .captures-count-badge`). */
+.xq-article-svg .xq-diagram-hand-badge {
+  fill: var(--site-accent, hsl(165, 56%, 28%));
+  stroke: var(--site-panel, #ffffff);
+}
+.xq-article-svg .xq-diagram-hand-badge-count {
+  fill: var(--site-on-accent, #ffffff);
+}
+
 .xq-article-svg .xq-jieqi-capture-card {
   fill: var(--site-panel-soft, transparent);
   stroke: var(--site-border-soft, var(--xq-diagram-ink, #4b3c2a));

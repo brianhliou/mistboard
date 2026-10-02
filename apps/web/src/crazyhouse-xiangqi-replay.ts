@@ -130,7 +130,7 @@ export function mountCrazyhouseXiangqiReplay(
 
   const frame = document.createElement('div');
   frame.className =
-    'raw-svg-stepper-frame raw-svg-stepper-frame-xq replay-pane drop-mini-replay-frame';
+    'raw-svg-stepper-frame raw-svg-stepper-frame-xq replay-pane drop-mini-replay-frame chx-replay-frame';
   const topHand = handHost(handLabel(sideName(topColor)));
   const board = document.createElement('div');
   board.className = 'drop-mini-replay-board chx-replay-board';
