@@ -26,6 +26,7 @@ Conventions:
 
 ### Playing
 
+- new game rooms no longer show the 'clock starts after the opening moves' note; the header already shows the time control ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - The game-over badges play again each time you step back onto the final move ([9434239f](https://github.com/brianhliou/mistboard/commit/9434239f))
 - Fortress Xiangqi shows every droppable piece in each player's tray, faded until you hold it, with a count when you hold two or more ([13f88a60](https://github.com/brianhliou/mistboard/commit/13f88a60))
 
@@ -69,6 +70,8 @@ Conventions:
 
 ### Fixed
 
+- a finished broadcast whose source never posted games says No games published instead of promising records ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
+- an open game whose player has left now drops off the list within 10 seconds, and a matched game you join alone ends after 30 seconds instead of showing an invite link ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - studies and game reviews without move notes no longer leave an empty gap between the board and the tabs below it ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - diagram labels and blog cards on Chinese and Vietnamese pages are translated ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - starting a Fog Xiangqi bot game during a site update no longer blocks other bot games for 30 minutes ([9ec82c36](https://github.com/brianhliou/mistboard/commit/9ec82c36))
