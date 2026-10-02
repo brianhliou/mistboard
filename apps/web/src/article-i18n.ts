@@ -3375,6 +3375,9 @@ const ZH_HANS: Record<string, string> = {
   'ELEPHANT, OPEN': '象，畅通',
   'ELEPHANT, EYE FILLED': '象，塞眼',
   'THE ONLY PLACEMENTS THAT SURVIVE': '仅存的安全落点',
+  // crazyhouse xiangqi (the kernel-built diagrams, crazyhouse-xiangqi-rules-diagrams.ts)
+  'START: ADVISORS AND ELEPHANTS IN HAND': '开局：士和象都在持子里',
+  'WHERE AN ADVISOR OR ELEPHANT MAY DROP': '士或象可以打入的点',
   // shogi4 (two-line labels, one key per line)
   '✓ straight': '✓ 直走',
   '✓ diagonal': '✓ 斜走',
@@ -6511,6 +6514,9 @@ const ZH_HANT: Record<string, string> = {
   'ELEPHANT, OPEN': '象，暢通',
   'ELEPHANT, EYE FILLED': '象，塞眼',
   'THE ONLY PLACEMENTS THAT SURVIVE': '僅存的安全落點',
+  // crazyhouse xiangqi (the kernel-built diagrams, crazyhouse-xiangqi-rules-diagrams.ts)
+  'START: ADVISORS AND ELEPHANTS IN HAND': '開局：士和象都在持子裡',
+  'WHERE AN ADVISOR OR ELEPHANT MAY DROP': '士或象可以打入的點',
   // shogi4 (two-line labels, one key per line)
   '✓ straight': '✓ 直走',
   '✓ diagonal': '✓ 斜走',

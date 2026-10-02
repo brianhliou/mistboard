@@ -25,6 +25,7 @@ import {
 const TENANT_FLAGS = [
   'MISTBOARD_ATOMIC_XIANGQI_ENABLED',
   'MISTBOARD_BANQI_ENABLED',
+  'MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED',
   'MISTBOARD_DARK_XIANGQI_ENABLED',
   'MISTBOARD_DUCK_XIANGQI_ENABLED',
   'MISTBOARD_FORTRESS_XIANGQI_ENABLED',
@@ -95,7 +96,7 @@ test('every tenant lobby match creates a room marked as a lobby match', async ()
     const lobbyTenants = registeredVariantTenants().filter(
       (registration) => registration.lobby !== null && registration.ownsSpecRouting,
     );
-    assert.ok(lobbyTenants.length >= 9, `expected every lobby tenant, got ${lobbyTenants.length}`);
+    assert.ok(lobbyTenants.length >= 10, `expected every lobby tenant, got ${lobbyTenants.length}`);
     for (const registration of lobbyTenants) {
       assert.ok(registration.enabled(), `${registration.kind} must be enabled for the test`);
       const ctx = lobbyContext();
