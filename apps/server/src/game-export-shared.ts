@@ -6,7 +6,7 @@
 
 import type { RecentEveGameRecord } from './persistence.js';
 
-export const SCHEMA_VERSION = '1.0';
+export const SCHEMA_VERSION = '1.1';
 export const LICENSE = 'CC BY 4.0';
 export const DEFAULT_SITE_HOST = 'https://mistboard.com';
 export const SITE_NAME = 'Mistboard';

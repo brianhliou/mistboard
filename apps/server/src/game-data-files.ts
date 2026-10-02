@@ -58,17 +58,13 @@ function canonicalIndex(variant: string): number {
 }
 
 /**
- * Export-table variants /data does not offer yet, with the reason a download
- * answers. A hidden-piece game's export names the squares a piece moved from or
- * was turned over on, but neither the deal nor what each reveal turned out to
- * be, so nobody can replay it (#484). Landing #484 removes these entries; the
- * per-game export route is unaffected.
+ * Export-table variants /data does not offer, with the reason a download
+ * answers. Empty since #484 made the hidden-piece exports (jieqi, banqi,
+ * jungle-flip) replayable; kept so a variant whose export cannot be replayed
+ * yet can be held back from the monthly files without touching its per-game
+ * export.
  */
-export const DATA_WITHHELD_VARIANTS: Readonly<Record<string, string>> = {
-  jieqi: 'hidden_piece_format_pending',
-  banqi: 'hidden_piece_format_pending',
-  'jungle-flip': 'hidden_piece_format_pending',
-};
+export const DATA_WITHHELD_VARIANTS: Readonly<Record<string, string>> = {};
 
 function isWithheldVariant(variant: string): boolean {
   return Object.hasOwn(DATA_WITHHELD_VARIANTS, variant);
