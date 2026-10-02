@@ -170,6 +170,39 @@ describe('createLiveFinishBadges', () => {
     expect(layer()).toBeNull();
   });
 
+  it('plays again from the start each time the viewer steps back onto the final position', () => {
+    const { stage, badges, layer } = setup();
+    badges.play('game-1', played);
+    const first = layer();
+    badges.sync('game-1', false);
+    expect(layer()).toBeNull();
+    badges.sync('game-1', true);
+    expect(layer()).not.toBeNull();
+    expect(layer()).not.toBe(first);
+    expect(stage.querySelectorAll('.finish-badge')).toHaveLength(2);
+  });
+
+  it('keeps exactly one layer when the viewer steps on and off quickly', () => {
+    const { stage, badges } = setup();
+    badges.play('game-1', played);
+    for (let i = 0; i < 20; i += 1) {
+      badges.sync('game-1', i % 2 === 0);
+      badges.sync('game-1', true);
+    }
+    expect(stage.querySelectorAll('.finish-badges')).toHaveLength(1);
+    expect(stage.querySelectorAll('.finish-badge')).toHaveLength(2);
+  });
+
+  it('never plays for a game it did not see finish, and forgets a game once another is in the room', () => {
+    const { badges, layer } = setup();
+    badges.sync('game-1', true);
+    expect(layer()).toBeNull();
+    badges.play('game-1', played);
+    badges.sync('game-2', true);
+    badges.sync('game-1', true);
+    expect(layer()).toBeNull();
+  });
+
   it('clears when a different game is in the room', () => {
     const { badges, layer } = setup();
     badges.play('game-1', played);
