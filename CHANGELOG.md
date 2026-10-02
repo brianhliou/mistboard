@@ -35,6 +35,8 @@ Conventions:
 
 ### Watching and review
 
+- a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([c2abab09](https://github.com/brianhliou/mistboard/commit/c2abab09))
+- a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([f15ea83a](https://github.com/brianhliou/mistboard/commit/f15ea83a))
 - Our bots now play each other every day in xiangqi, jieqi, Duck Xiangqi, Jungle Chess and Banqi, and those games are searchable under Engine games and downloadable from the [game data](/data) page ([ec3a7712](https://github.com/brianhliou/mistboard/commit/ec3a7712))
 - a broadcast with no games yet keeps its game list and chat column, so the page has the same shape before play as during it ([b792d6b5](https://github.com/brianhliou/mistboard/commit/b792d6b5))
 - The homepage TV marks each player with a disc in their colour, so Banqi and Flip Jungle show who plays which side (a dashed ring until the first flip decides it) ([f27e98d0](https://github.com/brianhliou/mistboard/commit/f27e98d0))

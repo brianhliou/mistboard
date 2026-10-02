@@ -10,6 +10,11 @@
 // stopped silently. `on` always polls (an operator's override for a late
 // upload or an undated tour); `off` never does.
 //
+// A tour seeded after its event (a backfill: the 2026 women's league qualifier
+// was added ten days after its window closed) gets the same seven-day tail
+// counted from when it was created, so it imports itself instead of waiting
+// for an operator to press Poll.
+//
 // Everything here is derived from the dates at read time, never written back,
 // so when the dpxq index sweep moves an end date later (a league's next
 // stage) an `auto` tour resumes with no operator step.
@@ -86,13 +91,22 @@ export function xiangqiBroadcastPollState(input: {
   sourceUrl: string | null | undefined;
   startsAt: string | null | undefined;
   endsAt: string | null | undefined;
+  /** When the tour was seeded; a tour seeded after its event polls for the
+   *  tail counted from here. */
+  createdAt?: string | Date | null;
   now: number;
 }): XiangqiBroadcastPollState {
   const start = parsedMs(input.startsAt);
   const end = parsedMs(input.endsAt);
+  const created =
+    input.createdAt instanceof Date ? input.createdAt.getTime() : parsedMs(input.createdAt);
   // One missing date reads as a one-day event on the other.
   const windowStart = start ?? end;
   const windowEnd = end ?? start;
+  // The tail runs from the event's end, or from the tour's creation when it
+  // was seeded later than that.
+  const tailFrom =
+    windowEnd !== null && created !== null && created > windowEnd ? created : windowEnd;
   const opensAt =
     windowStart === null
       ? null
@@ -101,10 +115,10 @@ export function xiangqiBroadcastPollState(input: {
           (start !== null ? input.startsAt : input.endsAt) ?? '',
         );
   const closesAt =
-    windowEnd === null
+    tailFrom === null
       ? null
       : isoInOffsetOf(
-          windowEnd + XIANGQI_BROADCAST_POLL_TAIL_MS,
+          tailFrom + XIANGQI_BROADCAST_POLL_TAIL_MS,
           (end !== null ? input.endsAt : input.startsAt) ?? '',
         );
   const afterEvent = windowEnd !== null && input.now > windowEnd;
@@ -119,7 +133,7 @@ export function xiangqiBroadcastPollState(input: {
   if (input.now < windowStart - XIANGQI_BROADCAST_POLL_LEAD_MS) {
     return { ...base, polling: false, reason: 'auto-before' };
   }
-  if (input.now > windowEnd + XIANGQI_BROADCAST_POLL_TAIL_MS) {
+  if (input.now > (tailFrom ?? windowEnd) + XIANGQI_BROADCAST_POLL_TAIL_MS) {
     return { ...base, polling: false, reason: 'auto-closed' };
   }
   return { ...base, polling: true, reason: 'auto-open' };

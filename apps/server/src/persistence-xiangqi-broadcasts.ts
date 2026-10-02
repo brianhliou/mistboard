@@ -57,6 +57,8 @@ export type XiangqiBroadcastTourSchedule = {
    *  down once the end has passed. See xiangqi-broadcast-poll-window.ts. */
   startsAt: string | null;
   endsAt: string | null;
+  /** When the tour was seeded: a backfill's poll tail runs from here. */
+  createdAt?: string;
 };
 
 export type XiangqiBroadcastBoardSearchFilters = {
@@ -261,6 +263,7 @@ function scheduleFromRow(row: TourRow): XiangqiBroadcastTourSchedule {
     // The payload keeps the event's offset; the column is the fallback.
     startsAt: row.payload.startsAt ?? row.starts_at?.toISOString() ?? null,
     endsAt: row.payload.endsAt ?? row.ends_at?.toISOString() ?? null,
+    createdAt: row.created_at.toISOString(),
   };
 }
 
