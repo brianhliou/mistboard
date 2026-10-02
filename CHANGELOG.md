@@ -61,6 +61,7 @@ Conventions:
 
 ### Site
 
+- the Crazyhouse Xiangqi rules page is unlisted while it is revised, and its News entry links to the game ([ce818f36](https://github.com/brianhliou/mistboard/commit/ce818f36))
 - the privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - less empty space above and below the footer on the homepage ([774f9cff](https://github.com/brianhliou/mistboard/commit/774f9cff))
 - the changelog shows the latest two months, and each older month has its own page ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
