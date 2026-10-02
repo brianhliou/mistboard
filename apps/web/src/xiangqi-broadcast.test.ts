@@ -838,11 +838,13 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     };
     stubFetchJson(() => ({
       tours: [
+        // Out of date order, as the API returns them.
+        entry('changchun', inDays(51), inDays(59), 0),
         entry('asian-men', hoursAgo(14), inDays(6), 0),
+        entry('singapore', inDays(40), inDays(45), 0),
         entry('asian-women', hoursAgo(14), inDays(6), 0),
         // Three days in and still nothing from the source.
         entry('quiet-league', hoursAgo(72), inDays(2), 0),
-        entry('singapore', inDays(40), inDays(45), 0),
       ],
     }));
     const root = document.createElement('div');
@@ -858,7 +860,8 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(zone('Ongoing')).toBeUndefined();
     // The earliest start leads, labelled as the next event.
     expect(names(zone('Next up'))).toEqual(['quiet-league']);
-    expect(names(zone('Upcoming'))).toEqual(['asian-men', 'asian-women', 'singapore']);
+    // Soonest first.
+    expect(names(zone('Upcoming'))).toEqual(['asian-men', 'asian-women', 'singapore', 'changchun']);
     const status = (slug: string) =>
       [...root.querySelectorAll('.xqb-tour-card')]
         .find((card) => card.querySelector('.xqb-tour-card-name')?.textContent === slug)

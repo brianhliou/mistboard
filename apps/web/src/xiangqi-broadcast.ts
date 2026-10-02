@@ -855,12 +855,15 @@ function renderIndex(
   const ongoing = inPhase('ongoing');
   // Not started, or started by the calendar with nothing posted yet: an event
   // on its first day in Manila is still upcoming to a reader in California.
-  const upcoming = inPhase('upcoming');
+  // Soonest first, unlike Past and Ongoing.
+  const upcoming = inPhase('upcoming').sort(
+    (a, b) => dateMs(a.tour.startsAt) - dateMs(b.tour.startsAt),
+  );
   const past = inPhase('past');
   const featured =
     sortByFreshness(live)[0] ??
     sortByEventDate(ongoing)[0] ??
-    [...upcoming].sort((a, b) => dateMs(a.tour.startsAt) - dateMs(b.tour.startsAt))[0] ??
+    upcoming[0] ??
     sortByEventDate(past)[0] ??
     null;
   const without = (entries: BroadcastIndexEntry[]) => entries.filter((entry) => entry !== featured);
