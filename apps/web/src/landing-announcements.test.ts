@@ -3,6 +3,7 @@ import { localizeAnnouncement } from './announcement-i18n.js';
 import { type AnnouncementKind, announcementSlug, announcements } from './announcements.js';
 import { localizedArticleHref } from './article-i18n.js';
 import { articles } from './articles-data.js';
+import { localizedHref } from './i18n/locale.js';
 import { buildLandingAnnouncements } from './landing-announcements.js';
 import { newsDiscInkForKind, newsDiscMarkForKind } from './news-disc.js';
 import { buildNewsPage } from './news-page.js';
@@ -247,7 +248,9 @@ describe('landing announcements', () => {
     const article = articleSlug ? articles.find((a) => a.slug === articleSlug) : undefined;
     const newestFeatureHref = article
       ? localizedArticleHref(article, 'zh-Hant')
-      : newestRailEntry?.href;
+      : newestRailEntry
+        ? localizedHref(newestRailEntry.href ?? '', 'zh-Hant')
+        : undefined;
 
     expect(landing.getAttribute('aria-label')).toBe('新聞');
     expect(firstRow?.getAttribute('href')).toBe(newestHref);
