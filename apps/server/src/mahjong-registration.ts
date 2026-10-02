@@ -39,7 +39,7 @@ import {
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -124,6 +124,7 @@ registerVariantTenant({
   isEngineClientId: isMahjongBotClientId,
   engineDisplayName: (clientId) => (isMahjongBotClientId(clientId) ? 'Mahjong bot' : null),
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(mahjongTenant),
   errorPrefix: 'mahjong',
   enabled: mahjongTenant.enabled,
   // No TV channel. A table whose scoring is unverified should not be the board

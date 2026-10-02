@@ -11,6 +11,7 @@
 import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -80,18 +81,26 @@ const jungleFlipSpec = gameSpecForId(JUNGLE_FLIP_SPEC_ID);
 
 // Marker coverage is broader than the rated/current variant registry: the play
 // picker can surface casual tenants, and rules/articles can reference variants
-// that are not leaderboard rows.
-const VARIANT_MINI_BY_GAME_SPEC: Partial<Record<GameSpecId, VariantMiniId>> = {
+// that are not leaderboard rows. Exhaustive over GameSpecId: a new spec does not
+// compile until it names its marker, or says null on purpose (a spec that is
+// never shown as a variant). variant-markers.test.ts holds every live spec
+// outside that null list to a marker file on disk.
+const VARIANT_MINI_BY_GAME_SPEC: Record<GameSpecId, VariantMiniId | null> = {
   [DARK_CHESS_SPEC_ID]: 'dark-chess',
   [FORTRESS_XIANGQI_SPEC_ID]: 'fortress-xiangqi',
   [DUCK_XIANGQI_SPEC_ID]: 'duck-xiangqi',
   [ATOMIC_XIANGQI_SPEC_ID]: 'atomic-xiangqi',
+  [CRAZYHOUSE_XIANGQI_SPEC_ID]: 'crazyhouse-xiangqi',
   [XIANGQI_SPEC_ID]: 'xiangqi',
   [DARK_XIANGQI_SPEC_ID]: 'dark-xiangqi',
   [JIEQI_SPEC_ID]: 'jieqi',
   [BANQI_SPEC_ID]: 'banqi',
   [JUNGLE_SPEC_ID]: 'jungle',
   [JUNGLE_FLIP_SPEC_ID]: 'jungle-flip',
+  // Behind a server flag and a per-account grant; no variant surface shows it.
+  mahjong: null,
+  // Study-only (game-specs.ts): never playable, so never a variant marker.
+  chess: null,
 };
 
 // Public variants lead in the shared CANONICAL_VARIANT_ORDER (packages/game);

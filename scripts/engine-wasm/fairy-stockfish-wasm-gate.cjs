@@ -13,6 +13,16 @@ const CASES = [
   ['atomicxiangqi', 'fen 3ak4/3r5/9/9/9/9/9/3C5/9/4K4 w - - 0 1', 3],
   ['atomicxiangqi', 'fen 3ak4/9/9/9/9/9/9/3R5/9/4K4 w - - 0 1', 4],
   ['fortressxiangqi', 'startpos', null],
+  // Crazyhouse Xiangqi (stock options): the start (advisors and elephants in
+  // hand), and a game position where a soldier drop gives check and the river
+  // stops an elephant and an advisor; counts from
+  // packages/game/src/fixtures/crazyhouse-xiangqi-parity.json.
+  ['crazyhousexiangqi', 'startpos', 108],
+  [
+    'crazyhousexiangqi',
+    'fen C3P4/4nk3/1r4n2/2pb1a1rp/1a3cpc1/P2CA2RP/2PB2P2/4A1N2/3N5/1R2K1B2[Pbp] w - - 1 31',
+    84,
+  ],
   ['xiangqi', 'startpos', 44],
 ];
 

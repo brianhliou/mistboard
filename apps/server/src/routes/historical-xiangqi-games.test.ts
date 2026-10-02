@@ -211,6 +211,7 @@ test('searchable variants are the launched channels in the canonical shelf order
     'DARK_XIANGQI',
     'DUCK_XIANGQI',
     'FORTRESS_XIANGQI',
+    'CRAZYHOUSE_XIANGQI',
     'JUNGLE',
     'JUNGLE_FLIP',
     'MAHJONG',

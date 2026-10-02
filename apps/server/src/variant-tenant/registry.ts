@@ -190,6 +190,13 @@ export type VariantTenantRegistration = {
   export?: VariantTenantExport | null;
   // Share card for finished games, or null/absent (see VariantTenantCard).
   card?: VariantTenantCard | null;
+  // Does a stored log still replay under the current rules? Bound with
+  // tenantReplayCheck(tenant) (variant-tenant/runtime.ts). The list and picker
+  // surfaces (homepage TV, /watch, recent games, profile history) run it
+  // through filterReplayableGames before showing a game, so a game whose rules
+  // changed under it is skipped instead of failing to load (replay-guard.ts).
+  // Absent: only games already known to fail are skipped.
+  replays?: (events: readonly unknown[], roomId: string) => boolean;
   // Mistboard TV channel for this tenant, or null/absent when it has no watch
   // surface. Derived into WatchChannel by watch-channels.ts.
   watch?: VariantTenantWatchChannel | null;

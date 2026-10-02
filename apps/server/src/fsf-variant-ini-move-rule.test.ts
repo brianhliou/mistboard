@@ -50,3 +50,17 @@ test('the browser copy of fortress-xiangqi.ini keeps the same move rule', () => 
     nMoveRule(resolve(serverDir, 'fortress-xiangqi.ini')),
   );
 });
+
+// The browser analysis board's copy carries the server's stanza verbatim: the
+// header may differ, the variant definition may not, or the analysis board and
+// the bot play different games.
+test('the browser copy of crazyhouse-xiangqi.ini is the server stanza verbatim', () => {
+  const stanza = (path: string) => {
+    const text = readFileSync(path, 'utf8');
+    return text.slice(text.indexOf('['));
+  };
+  assert.equal(
+    stanza(resolve(webEngineDir, 'crazyhouse-xiangqi.ini')),
+    stanza(resolve(serverDir, 'crazyhouse-xiangqi.ini')),
+  );
+});

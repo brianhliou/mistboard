@@ -29,6 +29,7 @@ const BOARD_ASPECT_BY_SPEC_ID: Readonly<Record<string, number>> = {
   'dark-xiangqi': 9 / 10,
   'duck-xiangqi': 9 / 10,
   'atomic-xiangqi': 9 / 10,
+  'crazyhouse-xiangqi': 9 / 10,
   // Fortress xiangqi: 7 x 8 (fortress-xiangqi-render.ts).
   'fortress-xiangqi': 7 / 8,
   'mini-open-xiangqi': 1,

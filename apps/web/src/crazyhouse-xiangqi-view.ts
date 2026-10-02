@@ -117,6 +117,9 @@ export function fillCrazyhouseXiangqiReserve(
     onSelect?(role: CrazyhouseXiangqiDropRole): void;
     /** The lichess pocket bar (drop-pocket.ts); off draws a held-only strip. */
     pocket?: boolean;
+    /** Every role ghosted in place without the pocket bar: the TV showcase's
+     *  strip (landing.css `--all-roles`), the shape Fortress's showcase uses. */
+    allRoles?: boolean;
   } = {},
 ): void {
   fillDropPocket(host, {

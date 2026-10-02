@@ -17,6 +17,10 @@ import { fileURLToPath } from 'node:url';
 import {
   CRAZYHOUSE_XIANGQI_PROGRESS_CLOCK_LIMIT,
   CRAZYHOUSE_XIANGQI_REPETITION_COUNT,
+  CRAZYHOUSE_XIANGQI_START_FEN,
+  crazyhouseXiangqiDropRegion,
+  crazyhouseXiangqiFen,
+  createInitialCrazyhouseXiangqiState,
 } from '@mistboard/game';
 import { CRAZYHOUSE_XIANGQI_FSF_VARIANT } from './crazyhouse-xiangqi-fsf-engine.js';
 import { fairyStockfishPath } from './uci-engine-harness.js';
@@ -42,8 +46,30 @@ test('the .ini names every game-ending rule the kernel enforces', () => {
   assert.equal(option('perpetualCheckIllegal'), 'true');
   // No chase law in the kernel; the xiangqi parent would bring AXF's.
   assert.equal(option('chasingRule'), 'none');
-  // No drop may give check.
-  assert.equal(option('dropChecks'), 'false');
+  // A drop may give check, and mate.
+  assert.equal(option('dropChecks'), 'true');
+});
+
+test('the .ini starts where the kernel starts and confines advisors and elephants to their own half', () => {
+  // Advisors and elephants in hand, the back rank R N . . K . . N R.
+  const startFen = INI.match(/^startFen\s*=\s*(.+?)\s*$/m)?.[1];
+  assert.equal(startFen, CRAZYHOUSE_XIANGQI_START_FEN);
+  assert.equal(startFen, crazyhouseXiangqiFen(createInitialCrazyhouseXiangqiState('ini-test')));
+  // The mobility region is where a piece moves and where it drops.
+  const red = '*1 *2 *3 *4 *5';
+  const black = '*6 *7 *8 *9 *10';
+  const region = (name: string) =>
+    INI.match(new RegExp(`^${name}\\s*=\\s*(.+?)\\s*$`, 'm'))?.[1] ?? null;
+  assert.equal(region('mobilityRegionWhiteFers'), red);
+  assert.equal(region('mobilityRegionBlackFers'), black);
+  assert.equal(region('mobilityRegionWhiteElephant'), red);
+  assert.equal(region('mobilityRegionBlackElephant'), black);
+  for (const role of ['advisor', 'elephant'] as const) {
+    assert.deepEqual(
+      crazyhouseXiangqiDropRegion(role, 'red').map((sq) => Number(sq.slice(1)) <= 5),
+      Array(45).fill(true),
+    );
+  }
 });
 
 test('the .ini keeps no move-count draw because no FSF setting matches the kernel clock', () => {

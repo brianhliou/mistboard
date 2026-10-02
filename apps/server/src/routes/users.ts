@@ -6,6 +6,7 @@ import {
   parseRatingTimeClass,
   parseRatingVariant,
 } from './../rating-buckets.js';
+import { filterReplayableGames } from './../replayable-games.js';
 import { requireMethod, requirePersistence, writeJson } from './lib.js';
 
 const HANDLE_PATTERN = /^[a-zA-Z0-9_-]{1,40}$/;
@@ -92,7 +93,12 @@ export async function tryHandle(
       writeJson(response, 404, { error: 'not_found' });
       return true;
     }
-    writeJson(response, 200, { games: page.games, total: page.total });
+    // Skip games whose stored log no longer replays (replayable-games.ts).
+    const games = await filterReplayableGames(page.games);
+    writeJson(response, 200, {
+      games,
+      total: Math.max(0, page.total - (page.games.length - games.length)),
+    });
     return true;
   }
 

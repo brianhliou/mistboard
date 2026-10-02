@@ -50,10 +50,10 @@ describe('landing lobby bot seeks', () => {
       'fairy-stockfish-level-5|xiangqi',
       'fairy-stockfish-level-8|xiangqi',
       'pikafish-level-4|jieqi',
-      'misty|banqi',
       'fairy-stockfish-level-5|atomic-xiangqi',
       'fairy-stockfish-level-3|duck-xiangqi',
       'fairy-stockfish-level-5|fortress-xiangqi',
+      'fairy-stockfish-level-4|crazyhouse-xiangqi',
       'misty|dark-chess',
     ]);
     expect(new Set(signature).size).toBe(9);
@@ -208,11 +208,11 @@ describe('landing lobby bot seeks', () => {
     expect(xiangqi?.textContent).toBe('—');
     expect(xiangqi?.getAttribute('data-pool-rating')).toBe('2450?');
     // Unmatched bots keep the placeholder rather than guessing a number.
-    const banqi = panel.querySelector(
-      '.landing-lobby-seed[data-bot-id="misty"][data-game-spec="banqi"] .landing-lobby-seed-rating',
+    const crazyhouse = panel.querySelector(
+      '.landing-lobby-seed[data-bot-id="fairy-stockfish-level-4"][data-game-spec="crazyhouse-xiangqi"] .landing-lobby-seed-rating',
     );
-    expect(banqi?.textContent).toBe('—');
-    expect(banqi?.getAttribute('title')).toBeNull();
+    expect(crazyhouse?.textContent).toBe('—');
+    expect(crazyhouse?.getAttribute('title')).toBeNull();
   });
 
   it('lists human seeks above the bots in one table with the same column grammar', async () => {
@@ -310,6 +310,7 @@ describe('landing lobby bot seeks', () => {
       'dark-xiangqi',
       'duck-xiangqi',
       'fortress-xiangqi',
+      'crazyhouse-xiangqi',
       'dark-chess',
       'jungle',
       'jungle-flip',

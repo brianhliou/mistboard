@@ -38,6 +38,14 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
+    date: '2026-10-01',
+    kind: 'release',
+    headline: 'Crazyhouse Xiangqi has launched.',
+    body: 'Chinese chess with crazyhouse drops: a piece you capture joins your hand, and on any turn you may drop it instead of moving, on any empty point where that piece could stand. Each side starts with its advisors and elephants in hand, and they roam their own half of the board. A drop may give check, and may mate. Eight bot levels, a friend or the lobby; the analysis board runs Fairy-Stockfish in your browser.',
+    href: '/rules/crazyhouse-xiangqi',
+    cta: 'Study the rules',
+  },
+  {
     date: '2026-10-03',
     kind: 'release',
     headline: 'AB-JChess is the new top jieqi bot.',

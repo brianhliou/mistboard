@@ -1,8 +1,10 @@
-// Crazyhouse Xiangqi is an admin playtest, gated the way mahjong is: the flag
-// opens room creation, the per-account allowlist (139) decides who sits down.
-// These cases run the same two calls the WebSocket seat path makes
+// Crazyhouse Xiangqi was an admin playtest gated the way mahjong is (the
+// per-account allowlist, 139). Launched 2026-10 as a public casual variant: the
+// flag opens room creation and anyone may sit down, signed in or not. These
+// cases run the same two calls the WebSocket seat path makes
 // (variant-tenant/ws.ts: mayPlayVariant, then assignTenantSeat) against a real
-// crazyhouse room, so the refusal is proved on this tenant, not on a stand-in.
+// crazyhouse room, so the open door is proved on this tenant, not on a
+// stand-in, and the grant table is never asked.
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import type pg from 'pg';
@@ -61,14 +63,14 @@ async function botRoom() {
   return created.room;
 }
 
-test('crazyhouse xiangqi: a signed-in player without a grant is refused the seat', async () => {
+test('crazyhouse xiangqi: a signed-in player is seated without a grant', async () => {
   const room = await botRoom();
   try {
     const player = account({ id: 'player-1' });
     const { pool, calls } = noGrants();
     const granted = await mayPlayVariant(player, crazyhouseXiangqiTenant.gameSpecId, pool);
-    assert.equal(granted, false);
-    assert.deepEqual(calls, [['player-1', 'crazyhouse-xiangqi']], 'the grant table was asked');
+    assert.equal(granted, true);
+    assert.deepEqual(calls, [], 'not allowlisted, so the grant table is not asked');
     const assignment = assignTenantSeat(
       crazyhouseXiangqiTenant,
       room,
@@ -78,17 +80,18 @@ test('crazyhouse xiangqi: a signed-in player without a grant is refused the seat
       null,
       granted,
     );
-    assert.deepEqual(assignment, { ok: false, reason: 'variant not granted' });
+    assert.ok(assignment.ok, 'the player takes the open seat');
+    assert.equal(assignment.seat, 'red');
   } finally {
     crazyhouseXiangqiRooms.delete(room.id);
   }
 });
 
-test('crazyhouse xiangqi: a signed-out visitor is refused the seat', async () => {
+test('crazyhouse xiangqi: a signed-out visitor is seated', async () => {
   const room = await botRoom();
   try {
     const granted = await mayPlayVariant(null, crazyhouseXiangqiTenant.gameSpecId);
-    assert.equal(granted, false);
+    assert.equal(granted, true);
     const assignment = assignTenantSeat(
       crazyhouseXiangqiTenant,
       room,
@@ -98,20 +101,21 @@ test('crazyhouse xiangqi: a signed-out visitor is refused the seat', async () =>
       null,
       granted,
     );
-    assert.deepEqual(assignment, { ok: false, reason: 'variant not granted' });
+    assert.ok(assignment.ok, 'the guest takes the open seat');
+    assert.equal(assignment.seat, 'red');
   } finally {
     crazyhouseXiangqiRooms.delete(room.id);
   }
 });
 
-test('crazyhouse xiangqi: an admin is seated without a grant row', async () => {
+test('crazyhouse xiangqi: an admin is seated too', async () => {
   const room = await botRoom();
   try {
     const admin = account({ id: 'admin-1', accountRole: 'admin' });
     const { pool, calls } = noGrants();
     const granted = await mayPlayVariant(admin, crazyhouseXiangqiTenant.gameSpecId, pool);
     assert.equal(granted, true);
-    assert.deepEqual(calls, [], 'the admin role is the grant; no query');
+    assert.deepEqual(calls, [], 'no grant query');
     const assignment = assignTenantSeat(
       crazyhouseXiangqiTenant,
       room,

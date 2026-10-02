@@ -88,7 +88,7 @@ import {
   xiangqiAppearanceChangedEvent,
 } from './theme.js';
 import { buildUiIcon, uiIconForAnnouncementKind } from './ui-icon.js';
-import { hasFinalVariantMarker, renderVariantMarker } from './variant-markers.js';
+import { renderVariantMarker } from './variant-markers.js';
 import type { VariantMiniId } from './variant-mini-boards.js';
 import {
   gameSpecIdFromRulesSlug,
@@ -2454,15 +2454,16 @@ export function renderArticleThumbnail(
 
 // Variant rules articles whose rail/landing thumbnail is the shared variant
 // marker. Base-game articles map to their no-fog markers so the whole rail
-// reads in one visual language.
+// reads in one visual language. Chess is study-only, not a variant, and has no
+// marker: its rules page keeps its own board thumbnail.
 const VARIANT_MINI_BY_SLUG: Record<string, VariantMiniId> = {
-  chess: 'chess',
   'fog-chess': 'dark-chess',
   xiangqi: 'xiangqi',
   'fog-xiangqi': 'dark-xiangqi',
   'fortress-xiangqi': 'fortress-xiangqi',
   'duck-xiangqi': 'duck-xiangqi',
   'atomic-xiangqi': 'atomic-xiangqi',
+  'crazyhouse-xiangqi': 'crazyhouse-xiangqi',
   jieqi: 'jieqi',
   banqi: 'banqi',
   jungle: 'jungle',
@@ -2475,9 +2476,7 @@ function renderVariantMiniThumb(slug: string): HTMLElement | null {
   const miniId = VARIANT_MINI_BY_SLUG[slug];
   if (!miniId) return null;
   const wrap = document.createElement('div');
-  wrap.className = hasFinalVariantMarker(miniId)
-    ? 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb'
-    : 'articles-index-card-thumb variant-mini-thumb';
+  wrap.className = 'articles-index-card-thumb variant-mini-thumb variant-marker-thumb';
   wrap.setAttribute('aria-hidden', 'true');
   markNoTranslate(wrap);
   wrap.innerHTML = renderVariantMarker(miniId, { size: 100 });

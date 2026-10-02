@@ -44,64 +44,102 @@ function dropSquares(state: CrazyhouseXiangqiGameState, uciLetter: string): stri
     .sort();
 }
 
-test('the start is standard xiangqi with empty hands, and round-trips its FEN', () => {
+test('the start: advisors and elephants in hand, the rest of xiangqi on the board', () => {
   const state = createInitialCrazyhouseXiangqiState('t');
   assert.equal(crazyhouseXiangqiFen(state), CRAZYHOUSE_XIANGQI_START_FEN);
-  assert.deepEqual(state.hands, { red: {}, black: {} });
-  assert.equal(getCrazyhouseXiangqiLegalMoves(state).length, 44);
+  assert.deepEqual(state.hands, {
+    red: { advisor: 2, elephant: 2 },
+    black: { advisor: 2, elephant: 2 },
+  });
+  for (const square of ['c1', 'd1', 'f1', 'g1', 'c10', 'd10', 'f10', 'g10'])
+    assert.equal(state.board[square as 'c1'], undefined, square);
+  assert.deepEqual(state.board.e1, { color: 'red', role: 'general' });
   assert.equal(
     crazyhouseXiangqiFen(fromFen(CRAZYHOUSE_XIANGQI_START_FEN)),
     CRAZYHOUSE_XIANGQI_START_FEN,
   );
-  // Standard xiangqi's perft from the start: no capture is possible before ply 3.
+  // Fairy-Stockfish's counts with apps/server/src/crazyhouse-xiangqi.ini.
+  assert.equal(getCrazyhouseXiangqiLegalMoves(state).length, 108);
   assert.equal(
     crazyhouseXiangqiPerft({ board: state.board, hands: state.hands, turn: 'red' }, 2),
-    1920,
+    11620,
   );
 });
 
 test('a capture goes to the capturer’s hand as its own colour', () => {
+  const start = { advisor: 2, elephant: 2 };
   const state = play(createInitialCrazyhouseXiangqiState('t'), 'h3h10');
-  assert.deepEqual(state.hands, { red: { horse: 1 }, black: {} });
+  assert.deepEqual(state.hands, { red: { ...start, horse: 1 }, black: start });
   assert.equal(state.progressClock, 0);
   const recaptured = play(state, 'i10h10');
-  assert.deepEqual(recaptured.hands, { red: { horse: 1 }, black: { cannon: 1 } });
-  assert.match(crazyhouseXiangqiFen(recaptured), /\[Nc\] w /);
+  assert.deepEqual(recaptured.hands, {
+    red: { ...start, horse: 1 },
+    black: { ...start, cannon: 1 },
+  });
+  assert.match(crazyhouseXiangqiFen(recaptured), /\[NBBAAbbaac\] w /);
   // Red may now drop its horse; black's cannon waits for black's turn.
   assert.ok(isCrazyhouseXiangqiLegalMove(recaptured, { drop: 'horse', to: 'e5' }));
   assert.ok(!isCrazyhouseXiangqiLegalMove(recaptured, { drop: 'cannon', to: 'e5' }));
   const dropped = play(recaptured, 'N@e5');
-  assert.deepEqual(dropped.hands.red, {});
+  assert.deepEqual(dropped.hands.red, start);
   assert.deepEqual(dropped.board.e5, { color: 'red', role: 'horse' });
 });
 
 test('drops go where the piece could stand: advisors, elephants and soldiers', () => {
   // Bare generals off each other's file, red to move with one of each.
   const red = fromFen('4k4/9/9/9/9/9/9/9/9/3K5[ABP] w - - 0 1');
-  assert.deepEqual(dropSquares(red, 'A'), ['d3', 'e2', 'f1', 'f3']);
-  assert.deepEqual(dropSquares(red, 'B'), ['a3', 'c1', 'c5', 'e3', 'g1', 'g5', 'i3']);
+  const ownHalf = (color: 'red' | 'black', occupied: string) =>
+    crazyhouseXiangqiDropRegion('advisor', color)
+      .filter((s) => s !== occupied)
+      .sort();
+  // Advisors and elephants: every empty point of the own half, none across the river.
+  assert.equal(ownHalf('red', 'd1').length, 44);
+  assert.deepEqual(dropSquares(red, 'A'), ownHalf('red', 'd1'));
+  assert.deepEqual(dropSquares(red, 'B'), ownHalf('red', 'd1'));
+  assert.ok(dropSquares(red, 'A').every((s) => Number(s.slice(1)) <= 5));
   const soldiers = dropSquares(red, 'P');
   // Home half: only the soldier files' two ranks.
   assert.deepEqual(
     soldiers.filter((s) => Number(s.slice(1)) <= 5),
     ['a4', 'a5', 'c4', 'c5', 'e4', 'e5', 'g4', 'g5', 'i4', 'i5'],
   );
-  // Across the river: anywhere empty, except the three points that check e10.
-  for (const square of ['e9', 'd10', 'f10']) assert.ok(!soldiers.includes(square), square);
-  assert.equal(soldiers.length, 10 + 45 - 1 - 3);
-  assert.ok(soldiers.includes('b6') && soldiers.includes('a10'));
+  // Across the river: every empty point, the three that check e10 included.
+  for (const square of ['e9', 'd10', 'f10', 'b6', 'a10'])
+    assert.ok(soldiers.includes(square), square);
+  assert.equal(soldiers.length, 10 + 45 - 1);
 
   const black = fromFen('4k4/9/9/9/9/9/9/9/9/3K5[abp] b - - 0 1');
-  assert.deepEqual(dropSquares(black, 'A'), ['d10', 'd8', 'e9', 'f10', 'f8']);
-  assert.deepEqual(dropSquares(black, 'B'), ['a8', 'c10', 'c6', 'e8', 'g10', 'g6', 'i8']);
+  assert.deepEqual(dropSquares(black, 'A'), ownHalf('black', 'e10'));
+  assert.deepEqual(dropSquares(black, 'B'), ownHalf('black', 'e10'));
   const blackSoldiers = dropSquares(black, 'P');
   assert.deepEqual(
     blackSoldiers.filter((s) => Number(s.slice(1)) >= 6),
     ['a6', 'a7', 'c6', 'c7', 'e6', 'e7', 'g6', 'g7', 'i6', 'i7'],
   );
-  for (const square of ['d2', 'c1', 'e1']) assert.ok(!blackSoldiers.includes(square), square);
-  assert.equal(blackSoldiers.length, 10 + 45 - 1 - 3);
-  assert.deepEqual(crazyhouseXiangqiDropRegion('advisor', 'red'), ['d1', 'f1', 'e2', 'd3', 'f3']);
+  for (const square of ['d2', 'c1', 'e1']) assert.ok(blackSoldiers.includes(square), square);
+  assert.equal(blackSoldiers.length, 10 + 45 - 1);
+  assert.equal(crazyhouseXiangqiDropRegion('elephant', 'red').length, 45);
+  assert.ok(crazyhouseXiangqiDropRegion('elephant', 'black').every((s) => Number(s.slice(1)) >= 6));
+});
+
+test('advisors and elephants roam their own half and never cross the river', () => {
+  // A red advisor on e5 and elephant on c5, both on the river bank.
+  const state = fromFen('4k4/9/9/9/9/2B1A4/9/9/9/3K5[] w - - 0 1');
+  const from = (square: string) =>
+    getCrazyhouseXiangqiLegalMoves(state)
+      .map(crazyhouseXiangqiMoveToUci)
+      .filter((uci) => uci.startsWith(square))
+      .map((uci) => uci.slice(square.length))
+      .sort();
+  assert.deepEqual(from('e5'), ['d4', 'f4']);
+  assert.deepEqual(from('c5'), ['a3', 'e3']);
+  // The eye still blocks: a piece on d4 shuts the elephant out of e3.
+  const blocked = fromFen('4k4/9/9/9/9/2B6/3N5/9/9/3K5[] w - - 0 1');
+  assert.ok(!isCrazyhouseXiangqiLegalMove(blocked, { from: 'c5', to: 'e3' }));
+  assert.ok(isCrazyhouseXiangqiLegalMove(blocked, { from: 'c5', to: 'a3' }));
+  // An advisor off the palace steps anywhere diagonal on its own half.
+  const deep = fromFen('4k4/9/9/9/9/9/9/9/9/A2K5[] w - - 0 1');
+  assert.ok(isCrazyhouseXiangqiLegalMove(deep, { from: 'a1', to: 'b2' }));
 });
 
 test('no nifu: soldiers may share a file', () => {
@@ -109,23 +147,28 @@ test('no nifu: soldiers may share a file', () => {
   assert.ok(isCrazyhouseXiangqiLegalMove(state, { drop: 'soldier', to: 'a5' }));
 });
 
-test('a drop may not give check, a cannon screen included', () => {
+test('a drop may give check, through a cannon screen too', () => {
   // Red cannon on e5 bears on the black general along the e-file once it has a screen.
   const state = fromFen('4k4/9/9/9/9/4C4/9/9/9/3K5[NR] w - - 0 1');
   const horse = dropSquares(state, 'N');
-  // Any point between general and cannon becomes the screen.
-  for (const square of ['e9', 'e8', 'e7', 'e6']) assert.ok(!horse.includes(square), square);
-  // A horse a jump from the general with a free leg checks directly.
-  for (const square of ['g9', 'c9']) assert.ok(!horse.includes(square), square);
-  // A hobbled jump or a point off every line is fine.
-  assert.ok(horse.includes('f9') && horse.includes('d7') && horse.includes('a1'));
+  // Any point between general and cannon becomes the screen: a legal check.
+  for (const square of ['e9', 'e8', 'e7', 'e6']) assert.ok(horse.includes(square), square);
+  // A horse a jump from the general with a free leg checks directly: legal.
+  for (const square of ['g9', 'c9', 'f9', 'd7', 'a1']) assert.ok(horse.includes(square), square);
   const chariot = dropSquares(state, 'R');
-  // On rank 10 or the e-file the chariot checks; elsewhere it is free.
-  for (const square of ['a10', 'd10', 'f10', 'i10', 'e8'])
-    assert.ok(!chariot.includes(square), square);
-  assert.ok(chariot.includes('a9') && chariot.includes('e4'));
-  // A board move may still check: drops are the only thing forbidden.
-  assert.ok(isCrazyhouseXiangqiLegalMove(state, { from: 'd1', to: 'd2' }));
+  for (const square of ['a10', 'd10', 'f10', 'i10', 'e8', 'a9', 'e4'])
+    assert.ok(chariot.includes(square), square);
+  const checked = play(state, 'N@e7');
+  assert.equal(checked.status.type, 'playing');
+  assert.equal(getCrazyhouseXiangqiPlayerView(checked, 'black').inCheck, true);
+  assert.ok(checked.history.at(-1)?.check);
+});
+
+test('a drop may mate', () => {
+  // Chariots on d2 and f2 hold the d- and f-files; a chariot dropped on the
+  // e-file checks, and the black general has nowhere to go.
+  const mated = play(fromFen('4k4/9/9/9/9/9/9/9/3R1R3/3K5[R] w - - 0 1'), 'R@e5');
+  assert.deepEqual(mated.status, { type: 'finished', winner: 'red', reason: 'checkmate' });
 });
 
 test('a drop must parry a check, and may not open one on its own general', () => {
@@ -176,11 +219,13 @@ test('checkmate wins, unless a piece in hand can be dropped to block', () => {
   const before = '4k4/8R/9/9/9/9/9/9/9/R2K5[] w - - 0 1';
   const mated = play(fromFen(before), 'a1a10');
   assert.deepEqual(mated.status, { type: 'finished', winner: 'red', reason: 'checkmate' });
-  // With an elephant in hand black blocks on c10, its own elephant point.
+  // With an elephant in hand black blocks on any point between: its own half.
   const blocked = play(fromFen(before.replace('[]', '[b]')), 'a1a10');
   assert.equal(blocked.status.type, 'playing');
-  assert.deepEqual(getCrazyhouseXiangqiLegalMoves(blocked).map(crazyhouseXiangqiMoveToUci), [
+  assert.deepEqual(getCrazyhouseXiangqiLegalMoves(blocked).map(crazyhouseXiangqiMoveToUci).sort(), [
+    'B@b10',
     'B@c10',
+    'B@d10',
   ]);
 });
 
@@ -188,7 +233,8 @@ test('the FEN parser rejects what play cannot produce', () => {
   const bad = [
     '4k4/9/9/9/9/9/9/9/9/3K5[K] w - - 0 1', // general in hand
     '4k4/9/9/9/9/9/9/9/9/3K5[RRRRR] w - - 0 1', // five chariots
-    '4k4/9/9/9/9/9/9/9/A8/3K5[] w - - 0 1', // advisor off its points
+    '4k4/9/9/9/A8/9/9/9/9/3K5[] w - - 0 1', // red advisor across the river (a6)
+    '4k4/9/9/9/9/4b4/9/9/9/3K5[] w - - 0 1', // black elephant across the river (e5)
     '4k4/9/9/9/9/9/1P7/9/9/3K5[] w - - 0 1', // red soldier on b4
     '4k4/9/9/9/9/9/9/9/9/4K4[] w - - 0 1', // facing generals
     '3rk4/9/9/9/9/9/9/9/9/3K5[] b - - 0 1', // red general attacked, black to move
@@ -228,11 +274,15 @@ test('illegal moves and finished games throw; abort keeps the board', () => {
 test('the player view carries both hands and the check flag', () => {
   const state = play(createInitialCrazyhouseXiangqiState('t'), 'h3h10', 'i10h10');
   const view = getCrazyhouseXiangqiPlayerView(state, 'black');
-  assert.deepEqual(view.hands, { red: { horse: 1 }, black: { cannon: 1 } });
+  assert.deepEqual(view.hands, {
+    red: { advisor: 2, elephant: 2, horse: 1 },
+    black: { advisor: 2, elephant: 2, cannon: 1 },
+  });
   assert.equal(view.inCheck, false);
   assert.ok(view.legalMoves.some((m) => 'drop' in m && m.drop === 'horse'));
   view.hands.red.horse = 9;
   assert.equal(state.hands.red.horse, 1);
+  assert.ok(view.legalMoves.some((m) => 'drop' in m && m.drop === 'advisor'));
   const checked = fromFen('3k5/9/9/9/9/4r4/9/9/9/4K4[N] w - - 0 1');
   assert.equal(getCrazyhouseXiangqiPlayerView(checked, 'red').inCheck, true);
 });

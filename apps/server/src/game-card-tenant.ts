@@ -7,6 +7,7 @@
 
 import type { PositionOgVariant } from './og-position.js';
 import type { VariantTenantCard } from './variant-tenant/registry.js';
+import { guardTenantReplay } from './variant-tenant/replay-guard.js';
 import {
   applyTenantEvent,
   isTenantEventLog,
@@ -56,12 +57,16 @@ export function tenantCardBinding<
       let projection = replayTenantEvents(tenant, [created]);
       let plies = 0;
       let wanted: State | null = ply === 0 ? projection.state : null;
-      for (const event of events.slice(1) as TenantRoomEvent<C, M, Spec>[]) {
-        projection = applyTenantEvent(tenant, projection, event);
-        if (event.type !== 'move-played') continue;
-        plies += 1;
-        if (plies === ply) wanted = projection.state;
-      }
+      // Same boundary as replayTenantEvents: a log the current rules refuse
+      // throws UnreplayableTenantGameError (replay-guard.ts).
+      guardTenantReplay(tenant.kind, created.roomId, () => {
+        for (const event of events.slice(1) as TenantRoomEvent<C, M, Spec>[]) {
+          projection = applyTenantEvent(tenant, projection, event);
+          if (event.type !== 'move-played') continue;
+          plies += 1;
+          if (plies === ply) wanted = projection.state;
+        }
+      });
       if (projection.state.status.type !== 'finished') return null;
       if (wanted === null) return null;
       return options.fen(wanted);

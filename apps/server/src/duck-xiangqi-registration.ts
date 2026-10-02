@@ -40,7 +40,7 @@ import {
 } from './variant-tenant/registry.js';
 import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -116,6 +116,7 @@ registerVariantTenant({
   isEngineClientId: duckXiangqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => duckXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(duckXiangqiTenant),
   errorPrefix: 'duck_xiangqi',
   enabled: duckXiangqiTenant.enabled,
   // Mistboard TV channel. This block is the whole switch: the watch channel

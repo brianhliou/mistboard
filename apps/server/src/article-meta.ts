@@ -14,7 +14,7 @@ export type ArticleKind = 'rules' | 'article';
 // (apps/web/src/variant-public-surfaces.ts has `mahjong: false`); it leaves
 // this set the day the variant goes public, and articles-meta-sync.test.ts
 // fails if the two disagree.
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong', 'crazyhouse-xiangqi']);
+const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong']);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web
@@ -219,7 +219,7 @@ export const ARTICLE_META: Record<
     title: 'Crazyhouse Xiangqi Rules',
     kind: 'rules',
     description:
-      'Xiangqi where a captured piece joins your hand: on your turn you may drop it on any empty point where it could stand in a normal game, as long as the drop does not give check.',
+      'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.',
   },
   'fortress-xiangqi': {
     title: 'Fortress Xiangqi Rules',

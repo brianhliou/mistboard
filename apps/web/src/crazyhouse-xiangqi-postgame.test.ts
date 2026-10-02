@@ -68,10 +68,14 @@ describe('Crazyhouse Xiangqi postgame review', () => {
     // The last move is a drop: ringed where it landed, with no from-point.
     expect(root.querySelectorAll('.xq-live-lastmove-ring').length).toBe(1);
     expect(root.querySelector('.xq-live-lastmove-from')).toBeNull();
-    // Both drops have been played, so neither hand holds anything.
-    expect(
-      root.querySelectorAll('.review-material-row .drop-mini-reserve-piece:not(.is-empty)'),
-    ).toHaveLength(0);
+    // Both captures have been dropped back, so each hand holds only the
+    // advisors and elephants it started with.
+    const held = [
+      ...root.querySelectorAll<HTMLElement>(
+        '.review-material-row .drop-mini-reserve-piece:not(.is-empty)',
+      ),
+    ].map((el) => `${el.closest<HTMLElement>('[data-hand]')?.dataset.hand} ${el.dataset.role}`);
+    expect(held.sort()).toEqual(['black advisor', 'black elephant', 'red advisor', 'red elephant']);
   });
 
   it('shows both pockets at every ply, six slots each in the fixed order', async () => {
@@ -85,7 +89,8 @@ describe('Crazyhouse Xiangqi postgame review', () => {
       );
       expect(roles).toEqual(['soldier', 'cannon', 'horse', 'chariot', 'elephant', 'advisor']);
     }
-    // Two plies back (after Rxh10): Red holds the horse, Black the cannon.
+    // Two plies back (after Rxh10): Red holds the horse, Black the cannon,
+    // beside the advisors and elephants both started with.
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
     const held = [
@@ -93,12 +98,19 @@ describe('Crazyhouse Xiangqi postgame review', () => {
         '.review-material-row .drop-mini-reserve-piece:not(.is-empty)',
       ),
     ].map((el) => `${el.closest<HTMLElement>('[data-hand]')?.dataset.hand} ${el.dataset.role}`);
-    expect(held.sort()).toEqual(['black cannon', 'red horse']);
+    expect(held.sort()).toEqual([
+      'black advisor',
+      'black cannon',
+      'black elephant',
+      'red advisor',
+      'red elephant',
+      'red horse',
+    ]);
   });
 
-  it('has no engine panel or eval gauge', async () => {
+  it('has the local engine panel (the browser Fairy-Stockfish)', async () => {
     const root = await mounted();
-    expect(root.querySelector('.ceval, .engine-panel, .eval-gauge, .review-eval-gauge')).toBeNull();
+    expect(root.querySelector('.engine-panel')).not.toBeNull();
   });
 });
 

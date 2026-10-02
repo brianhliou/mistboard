@@ -18,6 +18,8 @@ import type { XiangqiColor, XiangqiPieceRole } from '@mistboard/game';
 import { readDisplayPreferences } from './display-preferences.js';
 import { variantDisplayLabel } from './game-display.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { FINAL_VARIANT_MARKERS } from './variant-markers.js';
+import type { VariantMiniId } from './variant-mini-boards.js';
 import { renderXiangqiPieceGlyphed } from './xiangqi-piece-sets.js';
 import { xiangqiCharacter } from './xiangqi-pieces.js';
 
@@ -26,30 +28,29 @@ import { xiangqiCharacter } from './xiangqi-pieces.js';
 // and variant-markers.css paints it by masking `currentColor`. Rendering one in
 // an <img> shows a blank white square on a light panel, which is exactly what
 // the first cut of this file did.
-const VARIANT_FLAIR: Record<string, { specId: string; path: string }> = {
-  'variant-xiangqi': { specId: 'xiangqi', path: '/variant-markers/final/elephant-chess.png' },
-  'variant-fortress-xiangqi': {
-    specId: 'fortress-xiangqi',
-    path: '/variant-markers/final/fortress.png',
-  },
-  'variant-duck-xiangqi': {
-    specId: 'duck-xiangqi',
-    path: '/variant-markers/final/duck-elephant-chess.png',
-  },
-  'variant-atomic-xiangqi': {
-    specId: 'atomic-xiangqi',
-    path: '/variant-markers/final/atomic.png',
-  },
-  'variant-jieqi': { specId: 'jieqi', path: '/variant-markers/final/flip-elephant-chess.png' },
-  'variant-banqi': { specId: 'banqi', path: '/variant-markers/final/half-flip-chess.png' },
-  'variant-jungle': { specId: 'jungle', path: '/variant-markers/final/jungle-chess.png' },
-  'variant-jungle-flip': { specId: 'jungle-flip', path: '/variant-markers/final/flip-jungle.png' },
-  'variant-dark-xiangqi': {
-    specId: 'dark-xiangqi',
-    path: '/variant-markers/final/fog-elephant-chess.png',
-  },
-  'variant-dark-chess': { specId: 'dark-chess', path: '/variant-markers/final/fog-chess.png' },
-};
+// Each variant flair is `variant-<marker id>`, and its mask path is read from
+// FINAL_VARIANT_MARKERS rather than a second copy of the file names, so a flair
+// can only point at a marker that exists. Order is the picker's order and must
+// match the server list (flair-sync.test.ts).
+const VARIANT_FLAIR_IDS = [
+  'xiangqi',
+  'fortress-xiangqi',
+  'duck-xiangqi',
+  'atomic-xiangqi',
+  'crazyhouse-xiangqi',
+  'jieqi',
+  'banqi',
+  'jungle',
+  'jungle-flip',
+  'dark-xiangqi',
+  'dark-chess',
+] as const satisfies readonly VariantMiniId[];
+const VARIANT_FLAIR: Record<string, { specId: string; path: string }> = Object.fromEntries(
+  VARIANT_FLAIR_IDS.map((id) => [
+    `variant-${id}`,
+    { specId: id, path: FINAL_VARIANT_MARKERS[id].path },
+  ]),
+);
 
 // Red and black take different characters for the same role, which is the
 // point: picking 傌 over 馬 says which side you like playing.

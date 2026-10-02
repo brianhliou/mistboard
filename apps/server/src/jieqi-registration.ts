@@ -36,7 +36,7 @@ import {
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import { xiangqiExportUci } from './xiangqi-game-export.js';
 
 export const jieqiRooms = new Map<string, JieqiLiveRoom>();
@@ -87,6 +87,7 @@ registerVariantTenant({
   isEngineClientId: jieqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => jieqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(jieqiTenant),
   errorPrefix: 'jieqi',
   enabled: jieqiTenant.enabled,
   rooms: jieqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,

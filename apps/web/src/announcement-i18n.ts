@@ -107,6 +107,10 @@ const ZH_HANS: Record<string, string> = {
   "Our jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the jieqi bot for players.":
     '我们的揭棋电脑是手写的传统引擎，强手能赢它。皮卡鱼的揭棋分支有搜索和专为揭棋设计的 NNUE 结构，但从未发布过可加载的权重；我们用传统引擎自己的评估训练过十个网络，没有一个能赢过它。如果你的网络在两百局对抗中赢了它，它就会成为本站的电脑，并署上你的名字。暗棋和斗兽棋以同样的条件开放，棋手还可以挑战与揭棋电脑的八局三胜。',
   'See the open challenges': '查看公开挑战',
+  // ── 2026-10-01 (Crazyhouse Xiangqi launch) ── 持子 / 打入 follow the rules page.
+  'Crazyhouse Xiangqi has launched.': '疯狂屋象棋已上线。',
+  'Chinese chess with crazyhouse drops: a piece you capture joins your hand, and on any turn you may drop it instead of moving, on any empty point where that piece could stand. Each side starts with its advisors and elephants in hand, and they roam their own half of the board. A drop may give check, and may mate. Eight bot levels, a friend or the lobby; the analysis board runs Fairy-Stockfish in your browser.':
+    '带打入规则的象棋：吃掉的棋子进入你的持子，轮到你时可以不走子，而把它打入任何一个该棋子能站的空点。双方开局时士和象都在持子里，可以在己方半盘随意走动。打入可以将军，也可以将死。八级电脑、好友或大厅对手；分析棋盘在你的浏览器里运行 Fairy-Stockfish。',
   // ── 2026-09-17 (Atomic Xiangqi launch) ── terms follow the rules page's
   // entries in article-i18n.ts; 原子象棋 follows variant.atomicXiangqi.name.
   'Atomic Xiangqi has launched.': '原子象棋已上线。',
@@ -471,6 +475,10 @@ const ZH_HANT: Record<string, string> = {
   "Our jieqi bot is a hand-written classical engine, and a strong player beats it. Pikafish's jieqi branch has the search and a jieqi NNUE architecture but has never had weights to load; we trained ten nets on the classical engine's own evaluations and none beat it. If yours does over a 200-game match, it becomes the bot on this site, with your name on it. Banqi and Jungle are open on the same terms, and there is a best-of-eight against the jieqi bot for players.":
     '我們的揭棋電腦是手寫的傳統引擎，強手能贏它。皮卡魚的揭棋分支有搜尋和專為揭棋設計的 NNUE 結構，但從未發布過可載入的權重；我們用傳統引擎自己的評估訓練過十個網路，沒有一個能贏過它。如果你的網路在兩百局對抗中贏了它，它就會成為本站的電腦，並署上你的名字。暗棋和鬥獸棋以同樣的條件開放，棋手還可以挑戰與揭棋電腦的八局三勝。',
   'See the open challenges': '查看公開挑戰',
+  // ── 2026-10-01 (Crazyhouse Xiangqi launch) ── see the ZH_HANS note above.
+  'Crazyhouse Xiangqi has launched.': '瘋狂屋象棋已上線。',
+  'Chinese chess with crazyhouse drops: a piece you capture joins your hand, and on any turn you may drop it instead of moving, on any empty point where that piece could stand. Each side starts with its advisors and elephants in hand, and they roam their own half of the board. A drop may give check, and may mate. Eight bot levels, a friend or the lobby; the analysis board runs Fairy-Stockfish in your browser.':
+    '帶打入規則的象棋：吃掉的棋子進入你的持子，輪到你時可以不走子，而把它打入任何一個該棋子能站的空點。雙方開局時士和象都在持子裡，可以在己方半盤隨意走動。打入可以將軍，也可以將死。八級電腦、好友或大廳對手；分析棋盤在你的瀏覽器裡運行 Fairy-Stockfish。',
   // ── 2026-09-17 (Atomic Xiangqi launch) ──
   'Atomic Xiangqi has launched.': '原子象棋已上線。',
   'Chinese chess where every capture is an explosion: the piece that captures, the piece it takes and everything on the four points beside it are removed. Soldiers survive a blast; a general does not, so a capture next to the enemy general wins on the spot and you can never capture next to your own. The cannon is the one exception, its shot takes only its target. A threat to blow up the general counts as check for the repetition rule. Same set, same array, eight bot levels or a friend.':

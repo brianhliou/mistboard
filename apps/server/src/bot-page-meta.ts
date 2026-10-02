@@ -26,6 +26,7 @@ const GAME_NAMES: Record<string, string> = {
   'fortress-xiangqi': 'fortress xiangqi',
   'duck-xiangqi': 'duck xiangqi',
   'atomic-xiangqi': 'atomic xiangqi',
+  'crazyhouse-xiangqi': 'crazyhouse xiangqi',
 };
 
 function gameList(specIds: readonly string[]): string {
