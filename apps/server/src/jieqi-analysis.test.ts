@@ -422,6 +422,205 @@ function decisionsMemoryCache(): JieqiDecisionsCache & { saves: number } {
   return cache;
 }
 
+// A kernel game in which Black takes a RED piece while it is still face-down, and Red's very
+// next move is a reveal. Returns the moves, the captured role and the pre-reveal state.
+function darkCaptureThenReveal(deal: JieqiDeal): {
+  moves: JieqiMove[];
+  capturedRole: JieqiPieceRole;
+  beforeReveal: ReturnType<typeof createInitialJieqiState>;
+} {
+  let state = createInitialJieqiState('t', deal);
+  const moves: JieqiMove[] = [];
+  let capturedRole: JieqiPieceRole | null = null;
+  for (let i = 0; i < 200 && state.status.type === 'playing'; i += 1) {
+    const legal = getJieqiLegalMoves(state);
+    const turn = state.status.turn;
+    const reveal = legal.find(
+      (m) => state.board[m.from]?.faceDown === true && state.board[m.to] == null,
+    );
+    if (turn === 'red' && capturedRole) {
+      assert.ok(reveal, 'red has a quiet reveal after the dark capture');
+      return { moves: [...moves, reveal], capturedRole, beforeReveal: state };
+    }
+    const darkTake =
+      turn === 'black'
+        ? legal.find((m) => {
+            const target = state.board[m.to];
+            return target?.color === 'red' && target.faceDown === true;
+          })
+        : undefined;
+    // Red feeds a dark piece forward (soldier-file reveals) until Black can take one dark.
+    const move = darkTake ?? reveal ?? legal[0]!;
+    if (darkTake) capturedRole = state.board[darkTake.to]!.role;
+    moves.push(move);
+    state = applyJieqiMove(state, move);
+  }
+  throw new Error('no dark capture followed by a red reveal in 200 plies');
+}
+
+// Red's hidden-pool total in a FEN's restPieces field, and red dark tiles on its board.
+function redPoolTotal(fen: string): number {
+  return [...fen.split(' ')[2]!.matchAll(/([A-Z])(\d+)/g)].reduce((a, m) => a + Number(m[2]), 0);
+}
+function redDarkTiles(fen: string): number {
+  return [...fen.split(' ')[0]!].filter((c) => c === 'X').length;
+}
+
+test('a reveal is graded from its mover’s view: its own dark piece captured face-down stays in its pool (#487)', async () => {
+  const { moves, capturedRole, beforeReveal } = darkCaptureThenReveal(STANDARD_JIEQI_DEAL);
+  const calls: { kind: 'mpv' | 'eval'; fen: string; windowFen: string | undefined }[] = [];
+  await analyzeJieqiDecisions(moves, STANDARD_JIEQI_DEAL, {
+    multiPv: async (fen, window) => {
+      calls.push({ kind: 'mpv', fen, windowFen: window?.fen });
+      return [mpvLine(1, 'no-match', 0)];
+    },
+    evalPosition: async (fen, window) => {
+      calls.push({ kind: 'eval', fen, windowFen: window?.fen });
+      return { cp: 0, mate: null };
+    },
+  });
+  // Everything sent for Red's last reveal: its MultiPV table, then every pool-mean term.
+  const lastMpv = calls.map((c) => c.kind).lastIndexOf('mpv');
+  const reveal = calls.slice(lastMpv);
+  assert.ok(reveal.length > 1, 'the reveal ran its MultiPV table and its pool-mean evals');
+
+  const moverView = jieqiStateToPikafishFen(beforeReveal, { viewer: 'red' });
+  const allKnowing = jieqiStateToPikafishFen(beforeReveal);
+  assert.notEqual(moverView, allKnowing);
+  assert.equal(reveal[0]!.fen, moverView);
+  assert.equal(reveal[0]!.windowFen, moverView);
+  // Red never saw what Black took, so its pool still counts it: one more hidden piece than it
+  // has dark tiles left, in every position its reveal is graded on (window included).
+  const roleChar = {
+    chariot: 'R',
+    advisor: 'A',
+    cannon: 'C',
+    soldier: 'P',
+    horse: 'N',
+    elephant: 'B',
+  }[capturedRole as Exclude<JieqiPieceRole, 'general'>];
+  assert.ok(new RegExp(`${roleChar}\\d`).test(moverView.split(' ')[2]!));
+  for (const call of reveal) {
+    for (const fen of [call.fen, call.windowFen!]) {
+      assert.equal(redPoolTotal(fen), redDarkTiles(fen) + 1, `${call.kind}: ${fen}`);
+    }
+  }
+});
+
+// A seeded kernel game that stops at a Red reveal where Red has lost a dark piece, face-down,
+// whose identity no Red dark tile still holds: Red believes its dark square may be that piece,
+// though the truth says it cannot be. Deterministic: the first seed that produces it.
+function revealWithCapturedIdentityOffBoard(): {
+  moves: JieqiMove[];
+  reveal: JieqiMove;
+  before: ReturnType<typeof createInitialJieqiState>;
+  offBoardRole: JieqiPieceRole;
+} {
+  for (let seed = 1; seed < 500; seed += 1) {
+    let rng = seed;
+    const rand = (): number => {
+      rng = (rng * 1103515245 + 12345) % 2147483648;
+      return rng / 2147483648;
+    };
+    let state = createInitialJieqiState('t', STANDARD_JIEQI_DEAL);
+    const moves: JieqiMove[] = [];
+    for (let i = 0; i < 200 && state.status.type === 'playing'; i += 1) {
+      const legal = getJieqiLegalMoves(state);
+      const turn = state.status.turn;
+      const reveals = legal.filter(
+        (m) => state.board[m.from]?.faceDown === true && state.board[m.to] == null,
+      );
+      if (turn === 'red' && reveals.length > 0) {
+        const onBoard = new Set(
+          Object.values(state.board)
+            .filter((p) => p?.color === 'red' && p.faceDown)
+            .map((p) => p!.role),
+        );
+        const off = state.captures.find(
+          (c) => c.owner === 'red' && !c.revealedAtCapture && !onBoard.has(c.role),
+        );
+        if (off) {
+          const reveal = reveals[0]!;
+          return { moves: [...moves, reveal], reveal, before: state, offBoardRole: off.role };
+        }
+      }
+      const darkTakes =
+        turn === 'black'
+          ? legal.filter((m) => {
+              const target = state.board[m.to];
+              return target?.color === 'red' && target.faceDown === true;
+            })
+          : [];
+      const pick = darkTakes.length > 0 ? darkTakes : reveals.length > 0 ? reveals : legal;
+      const move = pick[Math.floor(rand() * pick.length)]!;
+      moves.push(move);
+      state = applyJieqiMove(state, move);
+    }
+  }
+  throw new Error('no seed produced a reveal with an off-board captured identity');
+}
+
+// The piece char a FEN's board shows on a platform square (rank 1..10, file a..i).
+function fenCharAt(fen: string, square: string): string {
+  const file = square.charCodeAt(0) - 97;
+  const rank = Number(square.slice(1));
+  const row = fen
+    .split(' ')[0]!
+    .split('/')
+    [10 - rank]!.replace(/\d/g, (d) => '.'.repeat(Number(d)));
+  return row[file]!;
+}
+
+test('a reveal’s pool mean averages over the identities its mover believes possible, captured-dark ones included (#487)', async () => {
+  const { moves, reveal, before, offBoardRole } = revealWithCapturedIdentityOffBoard();
+  // The mover's believed pool: its dark tiles plus its own pieces captured face-down.
+  const believed = new Map<JieqiPieceRole, number>();
+  for (const p of Object.values(before.board)) {
+    if (p?.color === 'red' && p.faceDown) believed.set(p.role, (believed.get(p.role) ?? 0) + 1);
+  }
+  for (const c of before.captures) {
+    if (c.owner === 'red' && !c.revealedAtCapture)
+      believed.set(c.role, (believed.get(c.role) ?? 0) + 1);
+  }
+  assert.ok(believed.has(offBoardRole));
+  // Distinct opponent-to-move cp per revealed identity, read off the square the piece lands on.
+  const roleCp: Record<string, number> = { R: -500, A: -100, C: -300, P: -50, N: -200, B: 100 };
+  const charRole: Record<string, JieqiPieceRole> = {
+    R: 'chariot',
+    A: 'advisor',
+    C: 'cannon',
+    P: 'soldier',
+    N: 'horse',
+    B: 'elephant',
+  };
+  const revealedTerms = new Set<JieqiPieceRole>();
+  const revealPly = moves.length;
+  const decisions = await analyzeJieqiDecisions(moves, STANDARD_JIEQI_DEAL, {
+    multiPv: async () => {
+      revealedTerms.clear(); // each reveal starts with its table: keep only the last one's terms
+      return [mpvLine(1, jieqiMoveToPikafishUci(reveal), 0)];
+    },
+    evalPosition: async (fen) => {
+      const ch = fenCharAt(fen, reveal.to);
+      if (ch in roleCp) revealedTerms.add(charRole[ch]!);
+      return { cp: roleCp[ch] ?? 0, mate: null };
+    },
+  });
+  const d = decisions.find((x) => x.ply === revealPly)!;
+  // Every believed identity got its own term, the off-board one included.
+  assert.deepEqual([...revealedTerms].sort(), [...believed.keys()].sort());
+  const total = [...believed.values()].reduce((a, b) => a + b, 0);
+  let expected = 0;
+  for (const [role, count] of believed) {
+    const ch = Object.keys(charRole).find((k) => charRole[k] === role)!;
+    expected += (count / total) * winPercent(-roleCp[ch]!, null);
+  }
+  assert.ok(Math.abs(d.playedWin - expected) < 1e-6, `playedWin ${d.playedWin} vs ${expected}`);
+  const actual = before.board[reveal.from]!.role;
+  const actualCh = Object.keys(charRole).find((k) => charRole[k] === actual)!;
+  assert.ok(Math.abs(d.realizedWin - winPercent(-roleCp[actualCh]!, null)) < 1e-6);
+});
+
 const sampleDecision = (ply: number): JieqiDecision => ({
   ply,
   mover: ply % 2 === 1 ? 'red' : 'black',

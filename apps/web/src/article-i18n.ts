@@ -32,6 +32,9 @@ export const ARTICLE_LANG_PREFIX: Record<ArticleLang, string> = {
 // contract. A partial dictionary may exist while work is in progress, but it
 // is never a promise that the public article is localized.
 export const TRANSLATED_ARTICLE_SLUGS = [
+  // Machine-drafted 2026-10-01, not native-reviewed, locked the day after the
+  // English copy published (2026-09-30); its News entry was already in zh.
+  'one-thousand-games',
   // Machine-drafted 2026-09-30, not native-reviewed, locked with its English
   // copy, which publishes in the same release (jieqi readers are mostly Chinese).
   'ab-jchess',
@@ -142,6 +145,27 @@ export function localizedArticleHref(article: Article, locale: Locale): string {
 }
 
 const ZH_HANS: Record<string, string> = {
+  // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed.
+  '1,000 games played': '已下完 1,000 盘棋',
+  'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盘对局',
+  'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
+    '从 6 月 1 日起，棋友们在 Mistboard 上下完了 1,000 盘棋，大部分是在 9 月下的。感谢大家来下棋。',
+  'Mistboard passed 1,000 finished games this week. A game counts once both sides have moved and it ends, against another person or a bot. Engine matches and our test accounts are left out, and counting started on June 1.':
+    'Mistboard 本周下完的棋突破了 1,000 盘。一盘棋只要双方都走过棋并且下完，就计为一盘，不论对手是人还是电脑。引擎之间的对局和我们的测试账号不计在内，计数从 6 月 1 日开始。',
+  'The Mistboard statistics page: 1,000 games played, games per week climbing from a handful in June to nearly 400 in the week of September 21, jieqi far ahead by variant, and almost every game against a bot.':
+    'Mistboard 统计页面：已下 1,000 盘棋；每周对局数从 6 月的寥寥几盘升到 9 月 21 日那一周的近 400 盘；按变体看揭棋遥遥领先；几乎所有对局都是和电脑下的。',
+  'The statistics page on the day the count reached 1,000.': '计数达到 1,000 盘当天的统计页面。',
+  'June had 12 games. September has had nearly 800, and the week of September 21 alone had 387. The [statistics page](/stats) keeps the running count.':
+    '6 月只有 12 盘。9 月已经有近 800 盘，光是 9 月 21 日那一周就有 387 盘。[统计页面](/stats)会持续更新计数。',
+  '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 608 of the first 1,000. [Banqi](/rules/banqi) and [xiangqi](/rules/xiangqi) come next with 96 and 82, then Fog Chess, Jungle, Fog Xiangqi, Duck Xiangqi, Flip Jungle and Fortress Xiangqi. Seven of those games were between two people; the rest were against the bots.':
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝下开局的象棋，在前 1,000 盘里占了 608 盘。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分别是 96 盘和 82 盘，然后是迷雾国际象棋、斗兽棋、迷雾象棋、鸭子象棋、翻翻棋和堡垒象棋。这些对局里只有 7 盘是两个人对下，其余都是和电脑下的。',
+  'Thank you': '感谢',
+  'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
+    '感谢每一位来下过棋、报告过问题，或者成为[赞助会员](/patron)支持网站的朋友。我们要把这里做成下中国象棋和原创棋类游戏最好的地方，免费并且[开源](https://github.com/brianhliou/mistboard)。',
+  'Ideas and questions go on the [forum](/forum), where other players can add to them. Anything private, like a bug with your account or billing trouble, goes through [Contact](/contact). What you tell us decides what comes next.':
+    '想法和问题请发到[论坛](/forum)，其他棋友也能在下面补充。私人的事情，比如账号出了问题或付款遇到麻烦，请通过[联系](/contact)页面告诉我们。你们的意见决定我们接下来做什么。',
+  'Play a game': '开始对局',
+  'Send feedback': '发送反馈',
   // ab-jchess: machine-drafted 2026-09-30, not native-reviewed.
   "All three games are in [a study](/study/a4mO6ldd), with AB-JChess's marks on the moves that cost the most. [All 400 match games](/games/search?variant=jieqi&source=engine-match) can be replayed on the site.":
     '这三盘棋都收在[一个研究](/study/a4mO6ldd)里，代价最大的几步都有 AB-JChess 的标记。[全部 400 盘对局](/games/search?variant=jieqi&source=engine-match)都可以在网站上复盘。',
@@ -3139,6 +3163,28 @@ const ZH_HANT: Record<string, string> = {
   // authored Taiwan lexical or glyph fork below overrides that shared value.
   // Keep this spread first so new Traditional entries cannot be overwritten.
   ...ZH_HANS,
+  // one-thousand-games: machine-drafted 2026-10-01, not native-reviewed. Variant names follow the
+  // rules pages (迷霧國際象棋, 鬥獸棋, 鴨子象棋, 翻翻棋, 堡壘象棋).
+  '1,000 games played': '已下完 1,000 盤棋',
+  'Mistboard passes 1,000 games': 'Mistboard 突破 1,000 盤對局',
+  'Since June 1, people have finished 1,000 games on Mistboard, most of them in September. Thank you for playing.':
+    '從 6 月 1 日起，棋友們在 Mistboard 上下完了 1,000 盤棋，大部分是在 9 月下的。感謝大家來下棋。',
+  'Mistboard passed 1,000 finished games this week. A game counts once both sides have moved and it ends, against another person or a bot. Engine matches and our test accounts are left out, and counting started on June 1.':
+    'Mistboard 本週下完的棋突破了 1,000 盤。一盤棋只要雙方都走過棋並且下完，就計為一盤，不論對手是人還是電腦。引擎之間的對局和我們的測試帳號不計在內，計數從 6 月 1 日開始。',
+  'The Mistboard statistics page: 1,000 games played, games per week climbing from a handful in June to nearly 400 in the week of September 21, jieqi far ahead by variant, and almost every game against a bot.':
+    'Mistboard 統計頁面：已下 1,000 盤棋；每週對局數從 6 月的寥寥幾盤升到 9 月 21 日那一週的近 400 盤；按變體看揭棋遙遙領先；幾乎所有對局都是和電腦下的。',
+  'The statistics page on the day the count reached 1,000.': '計數達到 1,000 盤當天的統計頁面。',
+  'June had 12 games. September has had nearly 800, and the week of September 21 alone had 387. The [statistics page](/stats) keeps the running count.':
+    '6 月只有 12 盤。9 月已經有近 800 盤，光是 9 月 21 日那一週就有 387 盤。[統計頁面](/stats)會持續更新計數。',
+  '[Jieqi](/rules/jieqi), xiangqi with the pieces face down, is 608 of the first 1,000. [Banqi](/rules/banqi) and [xiangqi](/rules/xiangqi) come next with 96 and 82, then Fog Chess, Jungle, Fog Xiangqi, Duck Xiangqi, Flip Jungle and Fortress Xiangqi. Seven of those games were between two people; the rest were against the bots.':
+    '[揭棋](/rules/jieqi)，也就是棋子背面朝下開局的象棋，在前 1,000 盤裡占了 608 盤。其次是[暗棋](/rules/banqi)和[象棋](/rules/xiangqi)，分別是 96 盤和 82 盤，然後是迷霧國際象棋、鬥獸棋、迷霧象棋、鴨子象棋、翻翻棋和堡壘象棋。這些對局裡只有 7 盤是兩個人對下，其餘都是和電腦下的。',
+  'Thank you': '感謝',
+  'Thank you to everyone who played a game, reported a bug, or supports the site as a [patron](/patron). We are building the best place to play Chinese chess and original board games, free and [open source](https://github.com/brianhliou/mistboard).':
+    '感謝每一位來下過棋、回報過問題，或者成為[贊助會員](/patron)支持網站的朋友。我們要把這裡做成下中國象棋和原創棋類遊戲最好的地方，免費並且[開源](https://github.com/brianhliou/mistboard)。',
+  'Ideas and questions go on the [forum](/forum), where other players can add to them. Anything private, like a bug with your account or billing trouble, goes through [Contact](/contact). What you tell us decides what comes next.':
+    '想法和問題請發到[論壇](/forum)，其他棋友也能在下面補充。私人的事情，比如帳號出了問題或付款遇到麻煩，請透過[聯絡](/contact)頁面告訴我們。你們的意見決定我們接下來做什麼。',
+  'Play a game': '開始對局',
+  'Send feedback': '送出回饋',
   // ab-jchess: machine-drafted 2026-09-30, not native-reviewed.
   "All three games are in [a study](/study/a4mO6ldd), with AB-JChess's marks on the moves that cost the most. [All 400 match games](/games/search?variant=jieqi&source=engine-match) can be replayed on the site.":
     '這三盤棋都收在[一個研究](/study/a4mO6ldd)裡，代價最大的幾步都有 AB-JChess 的標記。[全部 400 盤對局](/games/search?variant=jieqi&source=engine-match)都可以在網站上覆盤。',

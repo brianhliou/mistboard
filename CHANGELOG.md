@@ -29,8 +29,13 @@ Conventions:
 - The game-over badges play again each time you step back onto the final move ([9434239f](https://github.com/brianhliou/mistboard/commit/9434239f))
 - Fortress Xiangqi shows every droppable piece in each player's tray, faded until you hold it, with a count when you hold two or more ([13f88a60](https://github.com/brianhliou/mistboard/commit/13f88a60))
 
+### Learning and puzzles
+
+- the 1,000 games played post reads in Simplified and Traditional Chinese ([/zh-hans/blog/one-thousand-games](/zh-hans/blog/one-thousand-games)) ([85975f14](https://github.com/brianhliou/mistboard/commit/85975f14))
+
 ### Watching and review
 
+- in Jieqi game review, a reveal is graded on what its player could know, counting their own face-down pieces that were captured unseen ([a730bab6](https://github.com/brianhliou/mistboard/commit/a730bab6))
 - Game search hides games shorter than ten plies by default, with one click to show them ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 - Every game page's Share and export panel can download a board image and copy an embed code ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 - jieqi computer analysis now runs on AB-JChess, the strongest jieqi engine on the site, and its chart and move marks use AB-JChess's own scale; games analysed earlier keep their Pikafish analysis ([d561cb46](https://github.com/brianhliou/mistboard/commit/d561cb46))
