@@ -7,7 +7,11 @@
  * on the same code path as human moves.
  */
 
-import { getLegalMoves as getXiangqiLegalMoves, type XiangqiColor } from '@mistboard/game';
+import {
+  type EngineTurnResponse,
+  getLegalMoves as getXiangqiLegalMoves,
+  type XiangqiColor,
+} from '@mistboard/game';
 import type { DarkXiangqiEvent } from './dark-xiangqi-runtime.js';
 import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
@@ -17,9 +21,9 @@ import {
 } from './engine-move-guard.js';
 import { buildXiangqiEngineTurnRequest } from './engine-protocol/build-xiangqi.js';
 import { isDarkXiangqiEngineClientId, loadEngine } from './engines/registry.js';
-import { requestInternalEngineTurn } from './internal-engine-client.js';
 import { engineCounters, logger } from './obs.js';
 import type { DarkXiangqiLiveRoom } from './server-dark-xiangqi-types.js';
+import { requestLiveEngineTurnWithRenewal } from './server-live-engine-reservations.js';
 import { queueEngineDecision } from './variant-tenant/engine-decisions.js';
 import { tenantClockRemainingMs } from './variant-tenant/runtime.js';
 
@@ -130,14 +134,22 @@ export async function playDarkXiangqiEngineMoveIfReady(
     engine.livePolicy?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
   );
 
-  let response: Awaited<ReturnType<typeof requestInternalEngineTurn>>;
+  let response: EngineTurnResponse;
+  const turnStartedAt = Date.now();
   try {
-    response = await requestInternalEngineTurn(
+    response = await requestLiveEngineTurnWithRenewal({
+      holder: room,
       request,
-      watchdogTimeoutMs,
-      room.engineReservationId ?? undefined,
-      { computeBudgetMs },
-    );
+      budget: { computeBudgetMs, watchdogTimeoutMs },
+      // Re-derive from the clock left now: an outage spends the engine's time.
+      rebudget: () =>
+        budgetFor(
+          remainingMs === null ? null : Math.max(0, remainingMs - (Date.now() - turnStartedAt)),
+          incrementMs,
+          engine.livePolicy?.timeoutMs ?? DEFAULT_TIMEOUT_MS,
+        ),
+      stillNeeded: () => room.projection.state.status.type === 'playing',
+    });
   } catch (err) {
     logger.error(
       {

@@ -30,5 +30,11 @@
       "/railway.engine-worker.json",
       "/tsconfig.base.json"
     ]
+  },
+  "deploy": {
+    "healthcheckPath": "/health",
+    "healthcheckTimeout": 120,
+    "drainingSeconds": 75,
+    "startCommand": "node scripts/start.mjs"
   }
 }
