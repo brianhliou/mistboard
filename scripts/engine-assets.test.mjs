@@ -173,3 +173,33 @@ test('the Fairy-Stockfish xiangqi net is checksummed and loaded after the binari
   assert.match(fetchNet, /NNUE evaluation using/, 'the fetched binary loads the net');
   assert.match(fetchNet, /fairy-stockfish-xiangqi-nnue-ok/, 'the step prints its success line');
 });
+
+// Every binary or data file the image downloads is checked against a sha256
+// pinned in this repo (2026-10-02): the inline curl steps for our own engines
+// checked only that the file existed, so a replaced release asset would ship.
+test('railpack downloads nothing inline except the rust toolchain installer', () => {
+  const inline = railpackCommands().filter(
+    (command) => /\bcurl\b/.test(command) && !command.includes('https://sh.rustup.rs'),
+  );
+  assert.deepEqual(inline, [], 'download through a checksummed scripts/fetch-*.sh instead');
+});
+
+test('every release asset railpack fetches has a pinned sha256', () => {
+  const script = readFileSync(resolve(repoRoot, 'scripts/fetch-release-asset.sh'), 'utf8');
+  const fetched = railpackCommands().flatMap((command) => [
+    ...command.matchAll(/fetch-release-asset\.sh \/app\/bin ([\w.-]+)/g),
+  ]);
+  assert.ok(fetched.length > 0, 'railpack fetches release assets');
+  for (const [, name] of fetched) {
+    const entry = script.match(
+      new RegExp(`^  ${name.replaceAll('.', '\\.')}\\)\\n(.*\\n.*);;`, 'm'),
+    );
+    assert.ok(entry, `scripts/fetch-release-asset.sh has no entry for ${name}`);
+    assert.match(entry[1], /sha=[0-9a-f]{64}\b/, `${name} pins a sha256`);
+  }
+  const largeboard = readFileSync(
+    resolve(repoRoot, 'scripts/fetch-fairy-stockfish-largeboard.sh'),
+    'utf8',
+  );
+  assert.match(largeboard, /^sha=[0-9a-f]{64}$/m, 'the largeboard binary pins a sha256');
+});
