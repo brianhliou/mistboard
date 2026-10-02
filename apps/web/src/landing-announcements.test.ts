@@ -56,14 +56,14 @@ describe('landing announcements', () => {
     }
   });
 
-  // Brian, 2026-10-02: the game launched, its rules page is held back. A News
-  // entry linking the unlisted page would be filtered off every News surface,
-  // so the launch entry points at the board instead and stays visible.
-  it('keeps the Crazyhouse Xiangqi launch on /feed, linking to play, not its rules page', () => {
+  // Brian, 2026-10-02: the launch entry points at the board. It was written
+  // while the rules page was held back; the page is public now and the entry
+  // keeps the play link.
+  it('keeps the Crazyhouse Xiangqi launch on /feed, linking to play', () => {
     vi.stubEnv('DEV', true);
     const entry = announcements().find((e) => e.headline === 'Crazyhouse Xiangqi has launched.');
     expect(entry?.href).toBe('/?play=computer&gameSpecId=crazyhouse-xiangqi');
-    expect(rulesHrefPublicSurfaceEnabled('/rules/crazyhouse-xiangqi')).toBe(false);
+    expect(rulesHrefPublicSurfaceEnabled('/rules/crazyhouse-xiangqi')).toBe(true);
 
     const news = buildNewsPage();
     expect(news.textContent).toContain('Crazyhouse Xiangqi has launched.');
@@ -306,12 +306,17 @@ describe('landing announcements', () => {
 
     for (const variant of leaderboardVariants) {
       const slug = readerFacingRuleSlugs[variant.gameSpecId] ?? variant.gameSpecId;
-      // A launched variant whose rules page is held back (unlisted) announces
-      // the board instead; a /rules link to it would be filtered off News.
-      const expected = rulesHrefPublicSurfaceEnabled(`/rules/${slug}`)
-        ? `/rules/${slug}`
-        : `/?play=computer&gameSpecId=${variant.gameSpecId}`;
-      expect(announcementHrefs).toContain(expected);
+      // A launch may announce the rules page or the board. The board is the
+      // only choice while a rules page is held back (a /rules link to an
+      // unlisted page is filtered off News), and Crazyhouse Xiangqi's launch
+      // keeps its play link now that its page is public (Brian, 2026-10-02).
+      const rules = `/rules/${slug}`;
+      const play = `/?play=computer&gameSpecId=${variant.gameSpecId}`;
+      const accepted = rulesHrefPublicSurfaceEnabled(rules) ? [rules, play] : [play];
+      expect(
+        accepted.some((href) => announcementHrefs.has(href)),
+        `${variant.gameSpecId}: no launch announcement linking ${accepted.join(' or ')}`,
+      ).toBe(true);
     }
   });
 });

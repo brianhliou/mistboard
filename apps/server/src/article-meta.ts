@@ -27,11 +27,10 @@ const GENERATED = generated as Record<string, GeneratedArticleMeta>;
 // /rules/mahjong is the page for a table that is admin-only and allowlisted
 // (apps/web/src/variant-public-surfaces.ts has `mahjong: false`); it leaves
 // this set the day the variant goes public, and articles-meta-sync.test.ts
-// fails if the two disagree. /rules/crazyhouse-xiangqi is the reverse case:
-// the game is public, its rules page is held back for polish (Brian,
-// 2026-10-02) and is reached only by URL; it is in HIDDEN_RULES_SLUGS on the
-// web side, and leaves both sets together.
-const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong', 'crazyhouse-xiangqi']);
+// fails if the two disagree. A public variant's rules page held back for
+// polish goes here and in HIDDEN_RULES_SLUGS on the web side, and leaves both
+// sets together (/rules/crazyhouse-xiangqi did, 2026-10-02).
+const NON_INDEXED_ARTICLE_SLUGS = new Set(['shogi4', 'mahjong']);
 
 // Rules pages for retired variants (docs-private/variant-retirement-plan.md,
 // #396; the spec side is runtimeStatus 'retired' in packages/game, the web

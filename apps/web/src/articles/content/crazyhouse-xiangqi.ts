@@ -15,9 +15,8 @@ import { CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES } from '../../crazyhouse-xiangqi-s
 import { playClosing } from '../diagrams.js';
 import type { Article, ArticleBlock } from '../types.js';
 
-// Held back from the index and noindexed while it is polished
-// (HIDDEN_RULES_SLUGS, variant-public-surfaces.ts); the zh-Hans / zh-Hant
-// copy is machine-drafted (article-i18n.ts). Every rule here is the kernel's,
+// Listed and indexed (public 2026-10-02 after a same-day polish hold); the
+// zh-Hans / zh-Hant copy is machine-drafted (article-i18n.ts). Every rule here is the kernel's,
 // packages/game/src/variants-crazyhouse-xiangqi.ts: the start is
 // createInitialCrazyhouseXiangqiState, the drop zones are
 // crazyhouseXiangqiDropRegion, the advisor and elephant moves are its rule

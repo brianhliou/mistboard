@@ -2080,8 +2080,8 @@ function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLEle
   const gameSpecId = gameSpecIdFromRulesSlug(slug);
   if (!gameSpecId) return null;
   // The variant's switch, not the page's: an unlisted rules page for a public
-  // variant (crazyhouse-xiangqi while its page is held back) still offers the
-  // board, and a hidden variant (mahjong) still does not.
+  // variant (crazyhouse-xiangqi's, while it was held back for polish) still
+  // offers the board, and a hidden variant (mahjong) still does not.
   if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
 
   const game = variantNavLabel(title);

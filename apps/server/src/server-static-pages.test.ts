@@ -175,9 +175,7 @@ test('serveArticlePage marks an unlisted rules page as non-indexable', async () 
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
 
-  // crazyhouse-xiangqi: a public variant whose rules page is held back
-  // (2026-10-02).
-  for (const slug of ['shogi4', 'crazyhouse-xiangqi']) {
+  for (const slug of ['shogi4']) {
     const response = captureResponse();
     await serveArticlePage({
       slug,
@@ -190,6 +188,22 @@ test('serveArticlePage marks an unlisted rules page as non-indexable', async () 
     assert.equal(response.status, 200, slug);
     assert.match(response.body, /<meta name="robots" content="noindex, follow">/, slug);
   }
+});
+
+// Held back for polish on 2026-10-02 and public the same day: indexable now.
+test('serveArticlePage leaves the Crazyhouse Xiangqi rules page indexable', async () => {
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  const response = captureResponse();
+  await serveArticlePage({
+    slug: 'crazyhouse-xiangqi',
+    base: 'rules',
+    response,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+  });
+  assert.equal(response.status, 200);
+  assert.doesNotMatch(response.body, /noindex/);
 });
 
 // Every localized surface must be reachable AND advertised. Before this the
@@ -264,7 +278,8 @@ test('serveSitemap omits unlisted and retired rules while retaining public artic
   assert.equal(response.status, 200);
   assert.match(response.body, /https:\/\/mistboard\.test\/rules\/xiangqi/);
   assert.match(response.body, /https:\/\/mistboard\.test\/blog\/misty/);
-  assert.doesNotMatch(response.body, /shogi4|kriegspiel|crazyhouse-xiangqi/);
+  assert.match(response.body, /https:\/\/mistboard\.test\/rules\/crazyhouse-xiangqi/);
+  assert.doesNotMatch(response.body, /shogi4|kriegspiel/);
 });
 
 // Search Console reports indexing per submitted sitemap, so the index splits
