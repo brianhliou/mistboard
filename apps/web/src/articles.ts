@@ -96,6 +96,7 @@ import {
   rulesHrefPublicSurfaceEnabled,
   rulesSlugPublicSurfaceEnabled,
   rulesSlugRetired,
+  variantPublicSurfaceEnabled,
   variantSupportsPve,
 } from './variant-public-surfaces.js';
 import { DEFAULT_XIANGQI_PIECE_SET, type XiangqiPieceSet } from './xiangqi-piece-sets.js';
@@ -2046,7 +2047,10 @@ function ctaKindForHref(href: string): 'play' | 'nav' {
 function buildRulesPlayCta(slug: string, title: string, locale: Locale): HTMLElement | null {
   const gameSpecId = gameSpecIdFromRulesSlug(slug);
   if (!gameSpecId) return null;
-  if (!rulesSlugPublicSurfaceEnabled(slug)) return null;
+  // The variant's switch, not the page's: an unlisted rules page for a public
+  // variant (crazyhouse-xiangqi while its page is held back) still offers the
+  // board, and a hidden variant (mahjong) still does not.
+  if (!variantPublicSurfaceEnabled(gameSpecId)) return null;
 
   const game = variantNavLabel(title);
   const row = document.createElement('div');

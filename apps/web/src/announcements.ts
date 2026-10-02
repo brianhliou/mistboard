@@ -47,8 +47,11 @@ const baseAnnouncements: Announcement[] = [
     kind: 'release',
     headline: 'Crazyhouse Xiangqi has launched.',
     body: 'Chinese chess with crazyhouse drops: a piece you capture joins your hand, and on any turn you may drop it instead of moving, on any empty point where that piece could stand. Each side starts with its advisors and elephants in hand, and they roam their own half of the board. A drop may give check, and may mate. Eight bot levels, a friend or the lobby; the analysis board runs Fairy-Stockfish in your browser.',
-    href: '/rules/crazyhouse-xiangqi',
-    cta: 'Study the rules',
+    // Points at the board, not /rules/crazyhouse-xiangqi: that page is held
+    // back for polish and unlisted (variant-public-surfaces.ts), and a News
+    // entry linking it would be filtered out of every News surface.
+    href: '/?play=computer&gameSpecId=crazyhouse-xiangqi',
+    cta: 'Play Crazyhouse Xiangqi',
   },
   {
     date: '2026-10-02',

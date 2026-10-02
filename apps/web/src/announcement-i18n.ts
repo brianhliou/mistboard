@@ -123,6 +123,7 @@ const ZH_HANS: Record<string, string> = {
   'See the open challenges': '查看公开挑战',
   // ── 2026-10-01 (Crazyhouse Xiangqi launch) ── 持子 / 打入 follow the rules page.
   'Crazyhouse Xiangqi has launched.': '疯狂屋象棋已上线。',
+  'Play Crazyhouse Xiangqi': '下疯狂屋象棋',
   'Chinese chess with crazyhouse drops: a piece you capture joins your hand, and on any turn you may drop it instead of moving, on any empty point where that piece could stand. Each side starts with its advisors and elephants in hand, and they roam their own half of the board. A drop may give check, and may mate. Eight bot levels, a friend or the lobby; the analysis board runs Fairy-Stockfish in your browser.':
     '带打入规则的象棋：吃掉的棋子进入你的持子，轮到你时可以不走子，而把它打入任何一个该棋子能站的空点。双方开局时士和象都在持子里，可以在己方半盘随意走动。打入可以将军，也可以将死。八级电脑、好友或大厅对手；分析棋盘在你的浏览器里运行 Fairy-Stockfish。',
   // ── 2026-09-17 (Atomic Xiangqi launch) ── terms follow the rules page's
@@ -505,6 +506,7 @@ const ZH_HANT: Record<string, string> = {
   'See the open challenges': '查看公開挑戰',
   // ── 2026-10-01 (Crazyhouse Xiangqi launch) ── see the ZH_HANS note above.
   'Crazyhouse Xiangqi has launched.': '瘋狂屋象棋已上線。',
+  'Play Crazyhouse Xiangqi': '下瘋狂屋象棋',
   'Chinese chess with crazyhouse drops: a piece you capture joins your hand, and on any turn you may drop it instead of moving, on any empty point where that piece could stand. Each side starts with its advisors and elephants in hand, and they roam their own half of the board. A drop may give check, and may mate. Eight bot levels, a friend or the lobby; the analysis board runs Fairy-Stockfish in your browser.':
     '帶打入規則的象棋：吃掉的棋子進入你的持子，輪到你時可以不走子，而把它打入任何一個該棋子能站的空點。雙方開局時士和象都在持子裡，可以在己方半盤隨意走動。打入可以將軍，也可以將死。八級電腦、好友或大廳對手；分析棋盤在你的瀏覽器裡運行 Fairy-Stockfish。',
   // ── 2026-09-17 (Atomic Xiangqi launch) ──

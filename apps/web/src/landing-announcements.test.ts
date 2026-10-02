@@ -56,6 +56,24 @@ describe('landing announcements', () => {
     }
   });
 
+  // Brian, 2026-10-02: the game launched, its rules page is held back. A News
+  // entry linking the unlisted page would be filtered off every News surface,
+  // so the launch entry points at the board instead and stays visible.
+  it('keeps the Crazyhouse Xiangqi launch on /feed, linking to play, not its rules page', () => {
+    vi.stubEnv('DEV', true);
+    const entry = announcements().find((e) => e.headline === 'Crazyhouse Xiangqi has launched.');
+    expect(entry?.href).toBe('/?play=computer&gameSpecId=crazyhouse-xiangqi');
+    expect(rulesHrefPublicSurfaceEnabled('/rules/crazyhouse-xiangqi')).toBe(false);
+
+    const news = buildNewsPage();
+    expect(news.textContent).toContain('Crazyhouse Xiangqi has launched.');
+    const links = [...news.querySelectorAll<HTMLAnchorElement>('a')].map((a) =>
+      a.getAttribute('href'),
+    );
+    expect(links).toContain('/?play=computer&gameSpecId=crazyhouse-xiangqi');
+    expect(links).not.toContain('/rules/crazyhouse-xiangqi');
+  });
+
   it('retires the Drop Mini Xiangqi launch announcement from the homepage News rail', () => {
     // Xiangqi pivot: drop-mini's public surface is off (variantPublicSurfaceEnabled
     // = false), so its launch row no longer shows on the homepage News rail (the
@@ -288,7 +306,12 @@ describe('landing announcements', () => {
 
     for (const variant of leaderboardVariants) {
       const slug = readerFacingRuleSlugs[variant.gameSpecId] ?? variant.gameSpecId;
-      expect(announcementHrefs).toContain(`/rules/${slug}`);
+      // A launched variant whose rules page is held back (unlisted) announces
+      // the board instead; a /rules link to it would be filtered off News.
+      const expected = rulesHrefPublicSurfaceEnabled(`/rules/${slug}`)
+        ? `/rules/${slug}`
+        : `/?play=computer&gameSpecId=${variant.gameSpecId}`;
+      expect(announcementHrefs).toContain(expected);
     }
   });
 });

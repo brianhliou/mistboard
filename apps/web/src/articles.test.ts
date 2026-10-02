@@ -13,6 +13,7 @@ import {
   buildRulesIndex,
 } from './articles.js';
 import { articles } from './articles-data.js';
+import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
 const articleStyles = readFileSync('src/articles.css', 'utf8');
 
@@ -543,6 +544,34 @@ describe('rules variant sidebar', () => {
     }
   });
 
+  // Brian, 2026-10-02: Fortress's page leaves the rail the way chess did
+  // (showInIndex) and stays indexed; Crazyhouse's page is held back for polish
+  // (unlisted and unindexed, HIDDEN_RULES_SLUGS) while the game stays public.
+  // Neither shows in the rail or on the /rules index; both still render.
+  it('keeps the Fortress and Crazyhouse Xiangqi rules pages out of the rail and index', () => {
+    for (const slug of ['xiangqi', 'fortress-xiangqi', 'crazyhouse-xiangqi']) {
+      const sidebar = buildArticlePage(slug).querySelector('.article-variant-sidebar');
+      expect(sidebar, slug).not.toBeNull();
+      expect(sidebar?.querySelector('a[href="/rules/fortress-xiangqi"]'), slug).toBeNull();
+      expect(sidebar?.querySelector('a[href="/rules/crazyhouse-xiangqi"]'), slug).toBeNull();
+    }
+    const index = buildRulesIndex();
+    expect(index.querySelector('a[href="/rules/fortress-xiangqi"]')).toBeNull();
+    expect(index.querySelector('a[href="/rules/crazyhouse-xiangqi"]')).toBeNull();
+    expect(rulesSlugPublicSurfaceEnabled('fortress-xiangqi')).toBe(true);
+    expect(rulesSlugPublicSurfaceEnabled('crazyhouse-xiangqi')).toBe(false);
+  });
+
+  // The page is unlisted, the game is not: a reader who reaches it from a game
+  // still gets the play row, gated on the variant's switch rather than the page's.
+  it('still offers the board on the unlisted Crazyhouse Xiangqi rules page', () => {
+    const page = buildArticlePage('crazyhouse-xiangqi');
+    expect(page.querySelector('h1')?.textContent).toContain('Crazyhouse Xiangqi');
+    const playRow = page.querySelector('.article-cta-row.article-play-cta');
+    expect(playRow).not.toBeNull();
+    expect(playRow?.querySelector('a[href*="gameSpecId=crazyhouse-xiangqi"]')).not.toBeNull();
+  });
+
   it('omits the variant sidebar on non-rules articles', () => {
     const page = buildArticlePage('fog-chess-concepts');
     expect(page.querySelector('.article-variant-sidebar')).toBeNull();
@@ -577,12 +606,7 @@ describe('rules variant sidebar', () => {
       hrefs.indexOf('/rules/fog-xiangqi'),
     );
     expect(hrefs.indexOf('/rules/fog-xiangqi')).toBeLessThan(hrefs.indexOf('/rules/duck-xiangqi'));
-    expect(hrefs.indexOf('/rules/duck-xiangqi')).toBeLessThan(
-      hrefs.indexOf('/rules/fortress-xiangqi'),
-    );
-    expect(hrefs.indexOf('/rules/fortress-xiangqi')).toBeLessThan(
-      hrefs.indexOf('/rules/fog-chess'),
-    );
+    expect(hrefs.indexOf('/rules/duck-xiangqi')).toBeLessThan(hrefs.indexOf('/rules/fog-chess'));
     expect(hrefs.indexOf('/rules/fog-chess')).toBeLessThan(hrefs.indexOf('/rules/jungle'));
     expect(hrefs.indexOf('/rules/jungle')).toBeLessThan(hrefs.indexOf('/rules/jungle-flip'));
   });
