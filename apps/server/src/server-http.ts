@@ -66,6 +66,7 @@ type ServerHttpHandlerOptions = {
     rated?: boolean,
     options?: {
       randomSeating?: boolean;
+      lobbyMatch?: boolean;
       engineColor?: 'white' | 'black';
       engineReservationId?: string;
       creatorPreference?: 'white' | 'black';

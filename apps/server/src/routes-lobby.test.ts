@@ -4,7 +4,7 @@ import test from 'node:test';
 import { JIEQI_SPEC_ID, JUNGLE_SPEC_ID, type RoomTimeControl } from '@mistboard/game';
 import { jieqiEnabled, jungleEnabled } from './feature-flags.js';
 import { type HttpApiContext, isAllowedFullTimeControl } from './routes/lib.js';
-import { tryHandle } from './routes/lobby.js';
+import { LOBBY_TICKET_STALE_MS, tryHandle } from './routes/lobby.js';
 import type { Room } from './server-types.js';
 import { registerVariantTenant } from './variant-tenant/registry.js';
 
@@ -207,7 +207,7 @@ test('lobby: two matching chess requests create one dark-chess room with the exa
     'engine',
     tc,
     false,
-    { randomSeating: true },
+    { randomSeating: true, lobbyMatch: true },
   ]);
 });
 
@@ -442,3 +442,122 @@ function withFlag(value: boolean, fn: () => Promise<void>): Promise<void> {
 }
 
 export { post, responseJson, tc, testContext, withFlag };
+
+// ── Ticket liveness ──────────────────────────────────────────────
+//
+// A seek is only as alive as the tab behind it. The seeker's page polls GET
+// /api/lobby/:id every pollAfterMs; a closed tab or a backgrounded phone stops
+// polling without ever sending the DELETE. Before liveness, such a ticket stayed
+// on the open list (and matchable) for the full 5-minute TTL, and whoever took
+// it landed in a room its creator never entered (prod, 2026-10-02, jieqi).
+
+function lobbyGet(): IncomingMessage {
+  return { method: 'GET', headers: {} } as unknown as IncomingMessage;
+}
+
+async function getPath(ctx: HttpApiContext, pathname: string): Promise<ResponseCapture> {
+  const response = captureResponse();
+  const handled = await tryHandle(ctx, lobbyGet(), response, pathname);
+  assert.equal(handled, true);
+  return response;
+}
+
+async function openRequests(ctx: HttpApiContext): Promise<unknown[]> {
+  const res = await getPath(ctx, '/api/lobby');
+  assert.equal(res.status, 200);
+  return responseJson(res).requests as unknown[];
+}
+
+function clockedContext(): {
+  ctx: HttpApiContext;
+  chessCalls: CreateRoomCall[];
+  advance(ms: number): void;
+} {
+  let now = 1_000_000;
+  const { ctx, chessCalls } = testContext({ now: () => now });
+  return {
+    ctx,
+    chessCalls,
+    advance(ms: number) {
+      now += ms;
+    },
+  };
+}
+
+test('lobby liveness: the server asks for polls well inside the staleness window', async () => {
+  const { ctx } = clockedContext();
+  const res = await post(ctx, { timeControl: tc });
+  const pollAfterMs = responseJson(res).pollAfterMs as number;
+  assert.equal(LOBBY_TICKET_STALE_MS, 10_000);
+  assert.ok(pollAfterMs * 3 <= LOBBY_TICKET_STALE_MS, `pollAfterMs ${pollAfterMs} too slow`);
+});
+
+test('lobby liveness: a seeker that stops polling leaves the open list after 10 s', async () => {
+  const { ctx, advance } = clockedContext();
+  await post(ctx, { timeControl: tc });
+  assert.equal((await openRequests(ctx)).length, 1);
+  advance(LOBBY_TICKET_STALE_MS - 1);
+  assert.equal((await openRequests(ctx)).length, 1, 'still inside the window');
+  advance(2);
+  assert.equal((await openRequests(ctx)).length, 0, 'a dead seeker must not be listed');
+});
+
+test('lobby liveness: a new seek never pairs with a ticket that stopped polling', async () => {
+  const { ctx, chessCalls, advance } = clockedContext();
+  await post(ctx, { timeControl: tc });
+  advance(LOBBY_TICKET_STALE_MS + 1);
+  // No list read in between: matching itself has to refuse the dead ticket.
+  const joiner = await post(ctx, { timeControl: tc });
+  assert.equal(joiner.status, 202);
+  assert.equal(responseJson(joiner).status, 'waiting');
+  assert.equal(chessCalls.length, 0, 'no room may be created against a dead seeker');
+  const listed = await openRequests(ctx);
+  assert.equal(listed.length, 1, 'only the fresh joiner is listed');
+  assert.equal((listed[0] as { waitingMs: number }).waitingMs, 0);
+});
+
+test('lobby liveness: a seeker polling every second stays listed and matchable', async () => {
+  const { ctx, chessCalls, advance } = clockedContext();
+  const seek = await post(ctx, { timeControl: tc });
+  const ticketId = responseJson(seek).ticketId as string;
+  for (let second = 0; second < 30; second += 1) {
+    advance(1_000);
+    const poll = await getPath(ctx, `/api/lobby/${ticketId}`);
+    assert.equal(poll.status, 200);
+    assert.equal(responseJson(poll).status, 'waiting');
+  }
+  assert.equal((await openRequests(ctx)).length, 1);
+  const joiner = await post(ctx, { timeControl: tc });
+  assert.equal(joiner.status, 201);
+  assert.equal(chessCalls.length, 1);
+  // The seeker learns of the match on its next poll.
+  advance(1_000);
+  const matched = await getPath(ctx, `/api/lobby/${ticketId}`);
+  assert.equal(responseJson(matched).status, 'matched');
+});
+
+test('lobby liveness: a matched ticket is not reaped for going quiet', async () => {
+  // Staleness is about seeks; a matched ticket is how a backgrounded seeker
+  // finds its room when it comes back, so it keeps the TTL.
+  const { ctx, advance } = clockedContext();
+  const seek = await post(ctx, { timeControl: tc });
+  const ticketId = responseJson(seek).ticketId as string;
+  await post(ctx, { timeControl: tc });
+  advance(LOBBY_TICKET_STALE_MS * 3);
+  const late = await getPath(ctx, `/api/lobby/${ticketId}`);
+  assert.equal(late.status, 200);
+  assert.equal(responseJson(late).status, 'matched');
+});
+
+test('lobby liveness: polling does not extend the 5-minute cap', async () => {
+  const { ctx, advance } = clockedContext();
+  const seek = await post(ctx, { timeControl: tc });
+  const ticketId = responseJson(seek).ticketId as string;
+  let status: number | null = 200;
+  for (let second = 0; second < 5 * 60 && status === 200; second += 1) {
+    advance(1_000);
+    status = (await getPath(ctx, `/api/lobby/${ticketId}`)).status;
+  }
+  assert.equal(status, 404, 'the ticket must expire at the TTL even while polled');
+  assert.equal((await openRequests(ctx)).length, 0);
+});

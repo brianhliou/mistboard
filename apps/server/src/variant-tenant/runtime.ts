@@ -272,6 +272,7 @@ export function createTenantRuntimeRoom<
     pveBotId?: string;
     rated?: boolean;
     timeControl?: RoomTimeControl;
+    lobbyMatch?: boolean;
   } = {},
 ): TenantRoomCreation<Kind, C, M, State, Spec> {
   // A tenant with more than two seats that has not said what a forfeit does
@@ -293,6 +294,7 @@ export function createTenantRuntimeRoom<
       ...(options.rated ? { rated: true } : {}),
       ...(options.timeControl ? { timeControl: options.timeControl } : {}),
       ...(setup !== undefined ? { setup } : {}),
+      ...(options.lobbyMatch ? { lobbyMatch: true } : {}),
     },
   ];
   if (options.timeControl) {
@@ -809,8 +811,17 @@ export function tenantSnapshotPayload<
     seatProfiles: tenantSeatProfiles(tenant, room),
     state,
     timeControl: room.projection.timeControl,
+    // Only on lobby rooms, so every invite room's wire (and golden fixture) is
+    // unchanged. Tells the client there is no invite link to share.
+    ...(tenantRoomIsLobbyMatch(room) ? { lobbyMatch: true } : {}),
     ...(tenant.wire?.snapshotExtras?.(room, client) ?? {}),
   };
+}
+
+/** Was this room made by a lobby match? Read off the durable room-created event. */
+export function tenantRoomIsLobbyMatch(room: { events: readonly { type: string }[] }): boolean {
+  const first = room.events[0] as { type: string; lobbyMatch?: unknown } | undefined;
+  return first?.type === 'room-created' && first.lobbyMatch === true;
 }
 
 export function tenantRematchOfferFlags<C extends string>(
@@ -1008,7 +1019,8 @@ export function isTenantEvent<
       (event.pveBotId === undefined || typeof event.pveBotId === 'string') &&
       (event.rated === undefined || typeof event.rated === 'boolean') &&
       (event.timeControl === undefined || isRoomTimeControl(event.timeControl)) &&
-      (event.origin === undefined || isTenantGameOrigin(event.origin))
+      (event.origin === undefined || isTenantGameOrigin(event.origin)) &&
+      (event.lobbyMatch === undefined || typeof event.lobbyMatch === 'boolean')
     );
   }
   if (event.type === 'seat-assigned') {

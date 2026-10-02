@@ -9,6 +9,7 @@ import {
   parseDarkChessFen,
   replayGameEvents,
 } from '@mistboard/game';
+import { LOBBY_NO_SHOW_ABORT_MS } from './lifecycle-windows.js';
 import type { Seat } from './payloads.js';
 import { DEFAULT_ACCOUNT_PREFERENCES, type UserAccount } from './persistence.js';
 import {
@@ -1507,6 +1508,42 @@ test('scheduleAbortTimeout: re-running within the same phase preserves the deadl
   scheduleAbortTimeout(ctx, room);
   assert.equal(room.abortDeadline, firstDeadline, 're-broadcast must not extend the window');
   clearAbortTimer(room);
+});
+
+// Lobby no-show (prod, 2026-10-02): a lobby-matched room whose opponent never
+// connects must not leave the other player waiting forever, which is what an
+// invite room does (correctly) while someone sits in it.
+function oneSeatEvents(id: string): GameEvent[] {
+  return [
+    { type: 'room-created', at: 1_000, roomId: id, variant: 'dark-chess' },
+    { type: 'seat-assigned', at: 2_000, roomId: id, clientId: 'w', seat: 'white' },
+  ];
+}
+
+test('scheduleAbortTimeout: a lobby room aborts 30 s after creation when the opponent never comes', async (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout', 'Date'], now: 6_000 });
+  const room = makeRoom('lobby-no-show', 'dark-chess', oneSeatEvents('lobby-no-show'));
+  room.lobbyMatch = true;
+  room.clients.add(makeClient('w', 'white', false, room.id));
+  scheduleAbortTimeout(makeCtx(), room);
+  assert.equal(room.abortPhase, 'unjoined');
+  assert.equal(room.abortDeadline, 1_000 + LOBBY_NO_SHOW_ABORT_MS, 'anchored to creation');
+  t.mock.timers.tick(1_000 + LOBBY_NO_SHOW_ABORT_MS - 6_000 - 1);
+  await Promise.resolve();
+  assert.equal(room.projection.state.status.type, 'playing');
+  t.mock.timers.tick(100);
+  for (let i = 0; i < 5; i += 1) await Promise.resolve();
+  assert.equal(room.projection.state.status.type, 'aborted');
+  clearAbortTimer(room);
+});
+
+test('scheduleAbortTimeout: an invite room with its creator present keeps waiting', () => {
+  const room = makeRoom('invite-waiting', 'dark-chess', oneSeatEvents('invite-waiting'));
+  room.clients.add(makeClient('w', 'white', false, room.id));
+  scheduleAbortTimeout(makeCtx(), room);
+  assert.equal(room.abortPhase, null);
+  assert.equal(room.abortDeadline, null);
+  assert.equal(room.abortTimer, null);
 });
 
 // ── scheduleForfeitTimeout ────────────────────────────────────────────────────
