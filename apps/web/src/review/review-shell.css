@@ -1174,6 +1174,10 @@
   border-color: transparent;
   background: none;
 }
+/* No notes anywhere in the game: nothing to reserve the two lines for. */
+.review-comment-panel--unused {
+  display: none;
+}
 
 /* Bubble marker on a commented move in the move list. */
 .review-move-list__comment-marker {

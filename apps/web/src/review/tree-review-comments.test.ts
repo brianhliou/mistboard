@@ -26,7 +26,7 @@ const ANNOTATED_TREE: SerializedTree = {
   },
 };
 
-function mount(): HTMLElement {
+function mount(initialTree: SerializedTree = ANNOTATED_TREE): HTMLElement {
   const root = document.createElement('div');
   document.body.append(root);
   mountXiangqiReview(root, {
@@ -34,7 +34,7 @@ function mount(): HTMLElement {
     title: 'Study',
     summary: '',
     moves: [],
-    initialTree: ANNOTATED_TREE,
+    initialTree,
     analysis: null,
   });
   return root;
@@ -52,6 +52,28 @@ beforeEach(() => pinXiangqiNotation('coordinate'));
 afterEach(() => pinXiangqiNotation(null));
 
 describe('viewer-visible study comments', () => {
+  it('shows no comment box at all in a game without notes', () => {
+    const root = mount({
+      version: 1,
+      root: { children: [{ uci: 'h3e3', children: [{ uci: 'h8e8', children: [] }] }] },
+    });
+    const panel = root.querySelector('.review-comment-panel');
+    // No reserved two-line gap between the board and the tabs.
+    expect(panel?.classList.contains('review-comment-panel--unused')).toBe(true);
+    key('ArrowLeft');
+    expect(panel?.classList.contains('review-comment-panel--unused')).toBe(true);
+    root.remove();
+  });
+
+  it('keeps the box on uncommented moves of a game with notes, so stepping never reflows', () => {
+    const root = mount();
+    // Mount lands on h8e8, which has no note; the game has others.
+    const panel = root.querySelector('.review-comment-panel');
+    expect(panel?.classList.contains('review-comment-panel--empty')).toBe(true);
+    expect(panel?.classList.contains('review-comment-panel--unused')).toBe(false);
+    root.remove();
+  });
+
   it('marks commented moves and shows the current node text under the board', () => {
     const root = mount();
     // Two commented MOVES carry bubble markers (the root has no move cell).
