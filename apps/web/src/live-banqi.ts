@@ -212,6 +212,7 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     core = ctx;
     installBanqiBoardStyles();
     installBanqiBoardInteraction(ctx.refs);
+    placeHiddenPoolUnderBoard(ctx.refs);
     // Repaint when the viewer changes their xiangqi piece set in settings — the
     // board and captured pool both render from the stored set, so a live game
     // must hot-reload it (mirrors the chess family's boardAppearanceChangedEvent
@@ -243,6 +244,33 @@ const client = createTenantLiveClient<BanqiSeat, BanqiWireView, BanqiMove>({
     plyForView: (view, ctx) => replayPlyForView(view, ctx.positionChanged, ctx.latestPly),
   },
 });
+
+// Banqi's board is a wide 8x4 strip: from the two-column layout up, the centre
+// column has width to spare under it and the right rail needs every pixel for
+// the table, so the face-down tally moves under the board
+// (live-review.css .hidden-pool--under-board). A phone stacks the seat row
+// right under the board, so there the tally stays at the foot of the table.
+// The ref is kept, so renderBanqiMaterial paints the same node wherever it is.
+export const BANQI_POOL_UNDER_BOARD_QUERY = '(min-width: 800px)';
+
+export function placeHiddenPoolUnderBoard(
+  refs: Pick<LiveRefs, 'board' | 'hiddenPool'>,
+  media: Pick<MediaQueryList, 'matches' | 'addEventListener'> = window.matchMedia(
+    BANQI_POOL_UNDER_BOARD_QUERY,
+  ),
+): void {
+  const center = refs.board.closest<HTMLElement>('.review-shell__center');
+  const home = refs.hiddenPool.parentElement;
+  if (!center || !home) return;
+  const homeNext = refs.hiddenPool.nextSibling;
+  const place = (underBoard: boolean): void => {
+    refs.hiddenPool.classList.toggle('hidden-pool--under-board', underBoard);
+    if (underBoard) center.append(refs.hiddenPool);
+    else home.insertBefore(refs.hiddenPool, homeNext);
+  };
+  place(media.matches);
+  media.addEventListener('change', (event) => place(event.matches));
+}
 
 export function bootstrapBanqiLiveRoom(): void {
   client.bootstrap();

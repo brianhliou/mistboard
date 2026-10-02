@@ -26,6 +26,7 @@
       "/scripts/fetch-fairy-stockfish-largeboard.sh",
       "/scripts/fetch-fsf-xiangqi-net.sh",
       "/scripts/fetch-abjchess-net.sh",
+      "/scripts/fetch-release-asset.sh",
       "/engine.ref",
       "/scripts/build.mjs",
       "/scripts/start.mjs",
