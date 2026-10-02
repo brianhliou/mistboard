@@ -1,8 +1,9 @@
-// GET /api/data: the /data page's listing (closed months by variant, imported
-// collections, which files are built). The files, content-addressed
-// (game-data-files.ts):
+// GET /api/data: the /data page's listing (closed months by variant, the
+// scheduled engine games' months, imported collections, which files are built).
+// The files, content-addressed (game-data-files.ts):
 //
-//   /api/data/monthly/<YYYY-MM>/<variant>.<jsonl|pgn>.gz and
+//   /api/data/monthly/<YYYY-MM>/<variant>.<jsonl|pgn>.gz,
+//   /api/data/engine-monthly/<YYYY-MM>/<variant>.<jsonl|pgn>.gz (#488) and
 //   /api/data/collections/<corpus id>.<jsonl|pgn>.gz build the file on first
 //   request and store it, then 302 to the build's own URL, cached a minute.
 //
@@ -94,13 +95,15 @@ export async function loadDataListing(now: Date = new Date()): Promise<DataListi
   ) {
     return listingCache.listing;
   }
-  const [counts, stored, collectionRows] = await Promise.all([
+  const [counts, engineCounts, stored, collectionRows] = await Promise.all([
     countPublishedGamesByMonth(DATA_VARIANTS, new Date(monthStart)),
+    countPublishedGamesByMonth(DATA_VARIANTS, new Date(monthStart), 'engine'),
     listStoredDataFiles(),
     listCollectionRows(),
   ]);
   const listing = buildDataListing({
     counts,
+    engineCounts,
     stored,
     collections: listableCollections(collectionRows),
     now,
@@ -115,11 +118,16 @@ type ResolvedTarget =
 
 // The rooms a not-yet-built file will hold, or why there is no such file.
 async function resolveTarget(target: DataFileTarget, now: Date): Promise<ResolvedTarget> {
-  if (target.kind === 'monthly') {
+  if (target.kind !== 'collection') {
     const range = parseMonth(target.month)!;
     if (!isClosedMonth(range, now)) return { status: 404, error: 'month_not_closed' };
     const variants = target.variant === ALL_VARIANTS_KEY ? DATA_VARIANTS : [target.variant];
-    const roomIds = await listPublishedRoomIds(variants, range.from, range.to);
+    const roomIds = await listPublishedRoomIds(
+      variants,
+      range.from,
+      range.to,
+      target.kind === 'engine-monthly' ? 'engine' : 'human',
+    );
     if (roomIds.length === 0) return { status: 404, error: 'no_games' };
     return { roomIds: async () => roomIds };
   }

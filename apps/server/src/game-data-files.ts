@@ -1,5 +1,10 @@
 // The /data page's downloads: every closed month's finished games, one gzip
-// file per variant and format, plus one file per imported collection.
+// file per variant and format, plus one file per imported collection, plus
+// (#488) the same monthly files for the engine games the site's own bots play
+// each other on a schedule. Engine games have their own keys, paths and
+// section of the listing, and never enter a human file: a human file's rooms
+// come from publishedGame, an engine file's from publishedEngineGame
+// (persistence-game-data.ts), and the two WHERE clauses share no mode.
 //
 // Hosting (decided 2026-10-01): no object store and no cron. A file is built the
 // first time someone asks for it, straight from the games table, gzipped, and
@@ -128,14 +133,17 @@ export function isClosedMonth(range: MonthRange, now: Date): boolean {
 
 export const DATA_API_PREFIX = '/api/data';
 
+/** 'monthly' holds human games; 'engine-monthly' the scheduled engine games. */
+export type DataMonthlyKind = 'monthly' | 'engine-monthly';
+
 export type DataFileTarget =
-  | { kind: 'monthly'; month: string; variant: string; format: DataFileFormat }
+  | { kind: DataMonthlyKind; month: string; variant: string; format: DataFileFormat }
   | { kind: 'collection'; corpusId: string; format: DataFileFormat };
 
 export function dataFileKey(target: DataFileTarget): string {
-  return target.kind === 'monthly'
-    ? `monthly/${target.month}/${target.variant}.${target.format}.gz`
-    : `collections/${target.corpusId}.${target.format}.gz`;
+  return target.kind === 'collection'
+    ? `collections/${target.corpusId}.${target.format}.gz`
+    : `${target.kind}/${target.month}/${target.variant}.${target.format}.gz`;
 }
 
 export function dataFilePath(target: DataFileTarget): string {
@@ -144,9 +152,9 @@ export function dataFilePath(target: DataFileTarget): string {
 
 /** What the browser saves the file as, lichess style: mistboard_<what>_<month>. */
 export function dataFileName(target: DataFileTarget): string {
-  return target.kind === 'monthly'
-    ? `mistboard_${target.variant}_${target.month}.${target.format}.gz`
-    : `mistboard_${target.corpusId}.${target.format}.gz`;
+  if (target.kind === 'collection') return `mistboard_${target.corpusId}.${target.format}.gz`;
+  const prefix = target.kind === 'engine-monthly' ? 'mistboard_engine' : 'mistboard';
+  return `${prefix}_${target.variant}_${target.month}.${target.format}.gz`;
 }
 
 /** Hex digits of the sha256 a content-addressed URL carries: 48 bits, which
@@ -161,16 +169,16 @@ export function dataFileHash(sha256: string): string {
  *  DATA_HASH_LENGTH hex of its sha256 before the format. */
 export function hashedDataFilePath(target: DataFileTarget, sha256: string): string {
   const hash = dataFileHash(sha256);
-  return target.kind === 'monthly'
-    ? `${DATA_API_PREFIX}/monthly/${target.month}/${target.variant}.${hash}.${target.format}.gz`
-    : `${DATA_API_PREFIX}/collections/${target.corpusId}.${hash}.${target.format}.gz`;
+  return target.kind === 'collection'
+    ? `${DATA_API_PREFIX}/collections/${target.corpusId}.${hash}.${target.format}.gz`
+    : `${DATA_API_PREFIX}/${target.kind}/${target.month}/${target.variant}.${hash}.${target.format}.gz`;
 }
 
 const SLUG = '[a-z0-9][a-z0-9-]{0,119}';
 // A slug has no dot, so `<slug>.<12 hex>.<format>.gz` cannot be read two ways.
 const HASH = `(?:\\.([0-9a-f]{${DATA_HASH_LENGTH}}))?`;
 const MONTHLY_PATH_RE = new RegExp(
-  `^${DATA_API_PREFIX}/monthly/([^/]+)/(${SLUG})${HASH}\\.(jsonl|pgn)\\.gz$`,
+  `^${DATA_API_PREFIX}/(monthly|engine-monthly)/([^/]+)/(${SLUG})${HASH}\\.(jsonl|pgn)\\.gz$`,
 );
 const COLLECTION_PATH_RE = new RegExp(
   `^${DATA_API_PREFIX}/collections/(${SLUG})${HASH}\\.(jsonl|pgn)\\.gz$`,
@@ -190,8 +198,9 @@ export type ParsedDataPath =
 export function parseDataFilePath(pathname: string): ParsedDataPath | null {
   const monthly = MONTHLY_PATH_RE.exec(pathname);
   if (monthly) {
-    const [, month, variant, hash, format] = monthly as unknown as [
+    const [, kind, month, variant, hash, format] = monthly as unknown as [
       string,
+      DataMonthlyKind,
       string,
       string,
       string | undefined,
@@ -205,7 +214,7 @@ export function parseDataFilePath(pathname: string): ParsedDataPath | null {
     if (!dataFormatsForVariant(variant).includes(format)) {
       return { ok: false, status: 404, error: 'format_not_available' };
     }
-    return { ok: true, target: { kind: 'monthly', month, variant, format }, hash: hash ?? null };
+    return { ok: true, target: { kind, month, variant, format }, hash: hash ?? null };
   }
   const collection = COLLECTION_PATH_RE.exec(pathname);
   if (collection) {
@@ -217,7 +226,10 @@ export function parseDataFilePath(pathname: string): ParsedDataPath | null {
     ];
     return { ok: true, target: { kind: 'collection', corpusId, format }, hash: hash ?? null };
   }
-  if (pathname.startsWith(`${DATA_API_PREFIX}/monthly/`)) {
+  if (
+    pathname.startsWith(`${DATA_API_PREFIX}/monthly/`) ||
+    pathname.startsWith(`${DATA_API_PREFIX}/engine-monthly/`)
+  ) {
     return { ok: false, status: 404, error: 'not_found' };
   }
   if (pathname.startsWith(`${DATA_API_PREFIX}/collections/`)) {
@@ -263,10 +275,13 @@ export type DataCollection = {
 export type DataListing = {
   license: string;
   schemaVersion: string;
-  /** Variants with at least one listed game, in the site's rail order. */
+  /** Variants with at least one listed game (human or engine), in the site's rail order. */
   variants: string[];
-  /** Closed months with games, newest first. */
+  /** Closed months with human games, newest first. */
   months: DataMonth[];
+  /** Closed months with scheduled engine games, newest first: the same shape,
+   *  their own files (#488). Never folded into `months`. */
+  engineMonths: DataMonth[];
   collections: DataCollection[];
 };
 
@@ -316,43 +331,60 @@ function fileEntry(
   };
 }
 
-export function buildDataListing(input: {
-  counts: readonly PublishedMonthCount[];
-  stored: readonly StoredDataFileMeta[];
-  collections: readonly ListedCollection[];
-  now: Date;
-}): DataListing {
-  const stored = new Map(input.stored.map((file) => [file.key, file]));
+// The closed months of one kind of monthly file, newest first, each with its
+// variants in rail order and its all-variants file.
+function buildMonths(
+  kind: DataMonthlyKind,
+  counts: readonly PublishedMonthCount[],
+  stored: ReadonlyMap<string, StoredDataFileMeta>,
+  now: Date,
+  seenVariants: Set<string>,
+): DataMonth[] {
   const byMonth = new Map<string, DataMonthVariant[]>();
-  const seenVariants = new Set<string>();
-  for (const count of input.counts) {
+  for (const count of counts) {
     const range = parseMonth(count.month);
-    if (!range || !isClosedMonth(range, input.now)) continue;
+    if (!range || !isClosedMonth(range, now)) continue;
     if (!isDataVariantKey(count.variant) || count.variant === ALL_VARIANTS_KEY) continue;
     if (count.games <= 0) continue;
     seenVariants.add(count.variant);
     const files = dataFormatsForVariant(count.variant).map((format) =>
-      fileEntry(
-        { kind: 'monthly', month: count.month, variant: count.variant, format },
-        count.games,
-        stored,
-      ),
+      fileEntry({ kind, month: count.month, variant: count.variant, format }, count.games, stored),
     );
     const list = byMonth.get(count.month) ?? [];
     list.push({ variant: count.variant, games: count.games, files });
     byMonth.set(count.month, list);
   }
   const order = (variant: string) => DATA_VARIANTS.indexOf(variant);
-  const months: DataMonth[] = [...byMonth.entries()]
+  return [...byMonth.entries()]
     .sort(([a], [b]) => (a < b ? 1 : a > b ? -1 : 0))
     .map(([month, variants]) => {
       variants.sort((a, b) => order(a.variant) - order(b.variant));
       const games = variants.reduce((sum, v) => sum + v.games, 0);
       const files = dataFormatsForVariant(ALL_VARIANTS_KEY).map((format) =>
-        fileEntry({ kind: 'monthly', month, variant: ALL_VARIANTS_KEY, format }, games, stored),
+        fileEntry({ kind, month, variant: ALL_VARIANTS_KEY, format }, games, stored),
       );
       return { month, games, files, variants };
     });
+}
+
+export function buildDataListing(input: {
+  counts: readonly PublishedMonthCount[];
+  /** Scheduled engine games per (closed month, variant); absent means none. */
+  engineCounts?: readonly PublishedMonthCount[];
+  stored: readonly StoredDataFileMeta[];
+  collections: readonly ListedCollection[];
+  now: Date;
+}): DataListing {
+  const stored = new Map(input.stored.map((file) => [file.key, file]));
+  const seenVariants = new Set<string>();
+  const months = buildMonths('monthly', input.counts, stored, input.now, seenVariants);
+  const engineMonths = buildMonths(
+    'engine-monthly',
+    input.engineCounts ?? [],
+    stored,
+    input.now,
+    seenVariants,
+  );
   const collections: DataCollection[] = input.collections.map((collection) => ({
     id: collection.corpusId,
     event: collection.origin.event,
@@ -374,6 +406,7 @@ export function buildDataListing(input: {
     schemaVersion: SCHEMA_VERSION,
     variants: DATA_VARIANTS.filter((variant) => seenVariants.has(variant)),
     months,
+    engineMonths,
     collections,
   };
 }

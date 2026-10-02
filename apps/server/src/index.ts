@@ -5,6 +5,7 @@ import pg from 'pg';
 import { WebSocketServer } from 'ws';
 // Populates the VariantTenant registry (one registration module per variant).
 import './variant-tenant/register-tenants.js';
+import { type BotVsBotScheduler, startBotVsBotScheduler } from './bot-vs-bot-scheduler.js';
 import { darkXiangqiRooms } from './dark-xiangqi-registration.js';
 import { MISTY_DARK_CHESS_ACTIVE_ENGINE_ID } from './first-party-bots.js';
 import { prewarmJieqiEngine } from './jieqi-engine.js';
@@ -56,7 +57,6 @@ import {
   registeredVariantTenants,
   setVariantTenantFallbackRoomLookup,
 } from './variant-tenant/registry.js';
-import { type BotVsBotScheduler, startBotVsBotScheduler } from './xiangqi-bot-vs-bot-scheduler.js';
 import {
   type BroadcastAnalysisSweep,
   startBroadcastAnalysisSweep,

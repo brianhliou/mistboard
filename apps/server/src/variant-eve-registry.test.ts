@@ -9,18 +9,70 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
 import { knownEngineIds, loadEngine } from './engine-registry.js';
+import { eveGameVisibility, eveTermination } from './engine-runner.js';
 import { FIRST_PARTY_BOT_PROFILES } from './first-party-bots.js';
-import { EVE_VARIANT_IDS, eveAdapterFor, eveRoomId } from './variant-eve-registry.js';
+import {
+  EVE_VARIANT_IDS,
+  eveAdapterFor,
+  eveRoomId,
+  eveWorkerCapabilities,
+} from './variant-eve-registry.js';
 
 // Bots whose engines are not UCI ladders the EvE runner plays (the python-worker
 // dark-chess engines, the Misty variant engines). Each needs its own reason.
 const NOT_EVE_RATED_VARIANTS: ReadonlyMap<string, string> = new Map([
   ['dark-chess', 'python-worker engine; rated by the dark-chess EvE runner, not a tenant adapter'],
   ['dark-xiangqi', 'Misty DXQ, engine-service; no UCI ladder to round-robin'],
-  ['banqi', 'one node-budgeted bot, nothing to rank it against'],
-  ['jungle', 'in-process Misty jungle levels; no UCI ladder'],
   ['jungle-flip', 'one node-budgeted bot, nothing to rank it against'],
 ]);
+
+// Variants with an adapter that plays scheduled data games (#488) but that is
+// NOT ladder-rated: no random floor, so no anchor, so no job of theirs can carry
+// a rating_policy and nothing reaches the Elo report. Each needs its reason.
+const EVE_DATA_ONLY_VARIANTS: ReadonlyMap<string, string> = new Map([
+  ['banqi', 'one node-budgeted bot that plays itself; nothing to rank it against'],
+  ['jungle', 'one offered bot (level 2) and two retired levels; never ladder-rated'],
+]);
+
+test('data-only adapters have no random floor, so nothing can rate them', () => {
+  for (const variant of EVE_VARIANT_IDS) {
+    const adapter = eveAdapterFor(variant)!;
+    if (EVE_DATA_ONLY_VARIANTS.has(variant)) {
+      assert.equal(adapter.randomEngineId, undefined, `${variant} must not have a rating anchor`);
+    } else {
+      assert.ok(adapter.randomEngineId, `${variant}: a rated adapter needs its random floor`);
+    }
+  }
+  for (const variant of EVE_DATA_ONLY_VARIANTS.keys()) {
+    assert.ok(eveAdapterFor(variant), `${variant} is listed data-only but has no adapter`);
+  }
+});
+
+test('binary-backed adapters ask workers for their engine, and the worker probes it', () => {
+  assert.equal(eveAdapterFor('banqi')?.requiredCapability, 'banqi_engine');
+  assert.equal(eveAdapterFor('jungle')?.requiredCapability, 'jungle_engine');
+  const capabilities = eveWorkerCapabilities();
+  assert.deepEqual(Object.keys(capabilities).sort(), ['banqi_engine', 'jungle_engine']);
+  for (const value of Object.values(capabilities)) assert.equal(typeof value, 'boolean');
+  // A missing binary is false, never an error: point both resolvers at nothing.
+  const saved = {
+    banqi: process.env.MISTBOARD_BANQI_ENGINE_PATH,
+    jungle: process.env.MISTBOARD_JUNGLE_ENGINE_PATH,
+  };
+  process.env.MISTBOARD_BANQI_ENGINE_PATH = '/nonexistent/banqi-engine';
+  process.env.MISTBOARD_JUNGLE_ENGINE_PATH = '/nonexistent/jungle-engine';
+  try {
+    assert.deepEqual(eveWorkerCapabilities(), { banqi_engine: false, jungle_engine: false });
+  } finally {
+    for (const [key, value] of [
+      ['MISTBOARD_BANQI_ENGINE_PATH', saved.banqi],
+      ['MISTBOARD_JUNGLE_ENGINE_PATH', saved.jungle],
+    ] as const) {
+      if (value === undefined) delete process.env[key];
+      else process.env[key] = value;
+    }
+  }
+});
 
 test('every first-party bot variant has an EvE adapter or a stated reason not to', () => {
   const missing: string[] = [];
@@ -91,4 +143,19 @@ test('EvE room ids sit under the tenant prefix', () => {
   assert.equal(eveRoomId(eveAdapterFor('fortress-xiangqi')!, 'task1'), 'fxq_eve_task1');
   assert.equal(eveRoomId(eveAdapterFor('duck-xiangqi')!, 'task1'), 'dkx_eve_task1');
   assert.equal(eveAdapterFor('crossroads-chess'), null);
+});
+
+test('EvE rows store terminations the games table accepts, and only a public ask is public', () => {
+  // jieqi's kernel ends a game on 'no-capture-clock'; the column's allowlist
+  // spells it 'progress-clock' (games_termination_check), as a live room stores it.
+  const jieqi = eveAdapterFor('jieqi')!;
+  assert.equal(eveTermination(jieqi, 'no-capture-clock'), 'progress-clock');
+  assert.equal(eveTermination(jieqi, 'checkmate'), 'checkmate');
+  assert.equal(eveTermination(jieqi, 'truncated'), 'truncated');
+  assert.equal(eveTermination(eveAdapterFor('xiangqi')!, 'checkmate'), 'checkmate');
+
+  assert.equal(eveGameVisibility({ visibility: 'public' }), 'public');
+  assert.equal(eveGameVisibility({}), 'link');
+  assert.equal(eveGameVisibility({ visibility: 'unlisted' }), 'link');
+  assert.equal(eveGameVisibility({ visibility: 'PUBLIC' }), 'link');
 });

@@ -198,6 +198,8 @@ export const EN_REVIEW = {
   'historical.sourcePlayedHere': 'Played on Mistboard',
   'historical.sourceEngineMatches': 'Engine matches',
   'historical.sourceEngineMatch': 'Engine match',
+  'historical.sourceEngineGames': 'Engine games',
+  'historical.sourceEngineGame': 'Engine game',
   'historical.sourceBroadcasts': 'Broadcasts',
   'historical.firstWins': 'First player wins',
   'historical.secondWins': 'Second player wins',
