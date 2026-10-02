@@ -1,28 +1,51 @@
+import { existsSync, readFileSync, writeFileSync } from 'node:fs';
+import { dirname, resolve } from 'node:path';
+import { fileURLToPath } from 'node:url';
 import { describe, expect, it } from 'vitest';
-// The server cannot import the web bundle, so apps/server/src/article-meta.ts
-// hand-duplicates each article's title and kind. This test is what makes that
-// duplication safe: publishing or renaming an article in articles-data without
-// updating the server map fails here instead of shipping a wrong-direction
-// 301 (kind falls back to 'article', so /rules/<slug> redirects away from its
-// own prerendered page) or a generic share card.
+// The server cannot import the web article modules, so it reads
+// apps/server/src/article-meta.generated.json, rendered from articles-data by
+// article-server-meta.ts. This test is what keeps that file current: adding,
+// renaming, publishing or re-describing an article without regenerating fails
+// here instead of shipping a wrong-direction 301 (kind falls back to 'article',
+// so /rules/<slug> redirects away from its own prerendered page), a generic
+// share card, or an indexable shell for an unpublished draft.
+// `npm run articles:meta` runs this file with UPDATE_ARTICLE_META=1 to rewrite it.
 import {
   ARTICLE_META,
   articleIsIndexable,
   articleIsUnpublished,
 } from '../../server/src/article-meta.js';
 import { isArticleTranslationPublished } from './article-i18n.js';
+import {
+  renderServerArticleMeta,
+  SERVER_ARTICLE_META_COMMAND,
+  SERVER_ARTICLE_META_FILE,
+} from './article-server-meta.js';
 import { articles } from './articles-data.js';
 import { SUPPORTED_LOCALES } from './i18n/locale.js';
 import { rulesSlugPublicSurfaceEnabled } from './variant-public-surfaces.js';
 
-describe('articles-data <-> server ARTICLE_META sync', () => {
+const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '..', '..', '..');
+const generatedPath = resolve(repoRoot, SERVER_ARTICLE_META_FILE);
+
+describe('articles-data -> server article-meta.generated.json', () => {
+  it('the committed generated file matches articles-data', () => {
+    const expected = renderServerArticleMeta(articles);
+    if (process.env.UPDATE_ARTICLE_META === '1') {
+      writeFileSync(generatedPath, expected);
+    }
+    const actual = existsSync(generatedPath) ? readFileSync(generatedPath, 'utf-8') : '';
+    expect(
+      actual === expected,
+      `${SERVER_ARTICLE_META_FILE} is stale: run \`${SERVER_ARTICLE_META_COMMAND}\` and commit the result`,
+    ).toBe(true);
+  });
+
+  // Belt and braces over the file comparison: what the server actually loads.
   it('every article has a server ARTICLE_META entry with matching title and kind', () => {
     for (const article of articles) {
       const meta = ARTICLE_META[article.slug];
-      expect(
-        meta,
-        `'${article.slug}' is missing from ARTICLE_META (apps/server/src/article-meta.ts)`,
-      ).toBeDefined();
+      expect(meta, `'${article.slug}' is missing from ARTICLE_META`).toBeDefined();
       expect(meta?.title, `ARTICLE_META title drifted for '${article.slug}'`).toBe(article.title);
       expect(meta?.kind, `ARTICLE_META kind drifted for '${article.slug}'`).toBe(article.kind);
       expect(
@@ -33,15 +56,12 @@ describe('articles-data <-> server ARTICLE_META sync', () => {
   });
 
   // The server answers /blog/<slug> with a 200 shell + real title/description
-  // even for an article the web build hides, so an unpublished article that is
-  // not marked here leaks an indexable page for work that is not ready.
+  // even for an article the web build hides, so it has to know which are drafts.
   it('unpublished articles are marked unpublished on the server', () => {
     for (const article of articles) {
       expect(
         articleIsUnpublished(article.slug),
-        article.status === 'published'
-          ? `'${article.slug}' is published but still listed in UNPUBLISHED_ARTICLE_SLUGS`
-          : `'${article.slug}' is status '${article.status}' but missing from UNPUBLISHED_ARTICLE_SLUGS (apps/server/src/article-meta.ts), so the server would serve it as indexable`,
+        `'${article.slug}' is status '${article.status}' but the server disagrees`,
       ).toBe(article.status !== 'published');
     }
   });

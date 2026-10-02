@@ -7,7 +7,14 @@ import {
   parseJieqiFen,
   pikafishUciToJieqiMove,
 } from './jieqi-fen.js';
-import { applyJieqiMove, createInitialJieqiState, STANDARD_JIEQI_DEAL } from './variants-jieqi.js';
+import {
+  applyJieqiMove,
+  createInitialJieqiState,
+  getJieqiLegalMoves,
+  type JieqiColor,
+  type JieqiGameState,
+  STANDARD_JIEQI_DEAL,
+} from './variants-jieqi.js';
 
 // The exact FEN the Pikafish jieqi/jieqi_old binary prints for `position startpos`
 // (verified by running the engine). Our encoder must reproduce it byte-for-byte —
@@ -78,6 +85,68 @@ test('the viewer never learns which of its own dark pieces were captured', () =>
   assert.equal(truth, pool(jieqiStateToPikafishFen(captured, { viewer: 'black' })));
   assert.notEqual(truth, before);
   assert.equal(pool(jieqiStateToPikafishFen(captured, { viewer: 'red' })), before);
+});
+
+// Pool counts per side from a FEN's restPieces field, e.g. { red: { R: 2, ... }, black: { r: 2 } }.
+function poolCounts(fen: string): Record<JieqiColor, Record<string, number>> {
+  const out: Record<JieqiColor, Record<string, number>> = { red: {}, black: {} };
+  for (const [, ch, n] of fen.split(' ')[2]!.matchAll(/([A-Za-z])(\d+)/g)) {
+    out[ch === ch!.toUpperCase() ? 'red' : 'black'][ch!.toUpperCase()] = Number(n);
+  }
+  return out;
+}
+
+const POOL_CHAR: Record<string, string> = {
+  chariot: 'R',
+  advisor: 'A',
+  cannon: 'C',
+  soldier: 'P',
+  horse: 'N',
+  elephant: 'B',
+};
+
+test('a seat’s view differs from the all-knowing FEN by exactly its own dark pieces captured face-down', () => {
+  // A real kernel game that keeps capturing face-down pieces on both sides (seeded, so
+  // deterministic). At every ply, for each viewer: the opponent's pool is the truth (the viewer
+  // captured those pieces and saw them), and its own pool is the truth plus each of its own
+  // pieces the opponent took while still dark. Board, side to move and clocks never differ.
+  let seed = 7;
+  const rand = (): number => {
+    seed = (seed * 1103515245 + 12345) % 2147483648;
+    return seed / 2147483648;
+  };
+  let state: JieqiGameState = createInitialJieqiState('t', STANDARD_JIEQI_DEAL);
+  const darkCaptures: Record<JieqiColor, number> = { red: 0, black: 0 };
+  for (let ply = 0; ply < 160 && state.status.type === 'playing'; ply += 1) {
+    const truth = jieqiStateToPikafishFen(state);
+    for (const viewer of ['red', 'black'] as const) {
+      const seen = jieqiStateToPikafishFen(state, { viewer });
+      const opponent: JieqiColor = viewer === 'red' ? 'black' : 'red';
+      assert.deepEqual(
+        seen.split(' ').filter((_, i) => i !== 2),
+        truth.split(' ').filter((_, i) => i !== 2),
+      );
+      const expected = poolCounts(truth);
+      for (const c of state.captures) {
+        if (c.owner === viewer && !c.revealedAtCapture) {
+          const ch = POOL_CHAR[c.role]!;
+          expected[viewer][ch] = (expected[viewer][ch] ?? 0) + 1;
+        }
+      }
+      const got = poolCounts(seen);
+      assert.deepEqual(got[opponent], poolCounts(truth)[opponent], `ply ${ply} ${viewer}`);
+      assert.deepEqual(got[viewer], expected[viewer], `ply ${ply} ${viewer}`);
+    }
+    const legal = getJieqiLegalMoves(state);
+    const darkTakes = legal.filter((m) => state.board[m.to]?.faceDown === true);
+    const pick = darkTakes.length > 0 && rand() < 0.8 ? darkTakes : legal;
+    const move = pick[Math.floor(rand() * pick.length)]!;
+    const target = state.board[move.to];
+    if (target?.faceDown) darkCaptures[target.color] += 1;
+    state = applyJieqiMove(state, move);
+  }
+  // The walk exercised both directions, so the per-side assertions above were not vacuous.
+  assert.ok(darkCaptures.red > 0 && darkCaptures.black > 0, JSON.stringify(darkCaptures));
 });
 
 // Imported games (apps/server/src/engine-match-import.ts) carry pieces whose

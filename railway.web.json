@@ -26,6 +26,11 @@
       "/pikafish.ref",
       "/ab-jchess.ref",
       "/scripts/engine-assets.sh",
+      "/scripts/checkout-private-engine.sh",
+      "/scripts/check_engine_serveable.py",
+      "/scripts/fetch-fairy-stockfish-largeboard.sh",
+      "/scripts/fetch-fsf-xiangqi-net.sh",
+      "/scripts/fetch-abjchess-net.sh",
       "/railpack.json",
       "/railway.web.json",
       "/tsconfig.base.json"

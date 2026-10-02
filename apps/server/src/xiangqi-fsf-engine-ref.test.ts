@@ -16,6 +16,9 @@ const repoRoot = resolve(dirname(fileURLToPath(import.meta.url)), '../../..');
 const refFile = resolve(repoRoot, 'fairy-stockfish-xiangqi.ref');
 const recipe = readFileSync(resolve(repoRoot, 'scripts/engine-assets.sh'), 'utf8');
 const railpack = readFileSync(resolve(repoRoot, 'railpack.json'), 'utf8');
+// The net step lives in a script railpack runs (inline railpack commands were cut
+// at their first single quote, so its checks never ran).
+const netScript = readFileSync(resolve(repoRoot, 'scripts/fetch-fsf-xiangqi-net.sh'), 'utf8');
 
 function pinnedRef(): string {
   return readFileSync(refFile, 'utf8').split('\n')[0]!.trim();
@@ -43,19 +46,23 @@ test('the recipe builds from the .ref file and railpack fetches the net the prov
     'the image installs the published build beside the net',
   );
   assert.ok(
-    railpack.includes(`/app/bin/${XIANGQI_FSF_NNUE_NET}`),
-    `railpack must place ${XIANGQI_FSF_NNUE_NET} beside the xiangqi binary`,
+    railpack.includes('sh /app/scripts/fetch-fsf-xiangqi-net.sh /app/bin'),
+    'railpack must run the net script into /app/bin, beside the xiangqi binary',
+  );
+  assert.ok(
+    netScript.includes(`net=${XIANGQI_FSF_NNUE_NET}`),
+    `the script must fetch ${XIANGQI_FSF_NNUE_NET}`,
   );
   // The net is named by its sha256 prefix; the build verifies the FULL digest, and
   // the digest it checks must be the one the name promises.
   const prefix = XIANGQI_FSF_NNUE_NET.replace(/^xiangqi-/, '').replace(/\.nnue$/, '');
   assert.match(
-    railpack,
-    new RegExp(`'${prefix}[0-9a-f]{52}  /app/bin/${XIANGQI_FSF_NNUE_NET.replace('.', '\\.')}'`),
-    'railpack sha256 check must pin the digest whose prefix names the net',
+    netScript,
+    new RegExp(`net_sha=${prefix}[0-9a-f]{52}\\n`),
+    'the script sha256 check must pin the digest whose prefix names the net',
   );
   assert.ok(
-    railpack.includes("grep -q 'NNUE evaluation using'"),
+    netScript.includes("grep -q 'NNUE evaluation using'"),
     'the build must prove the binary loads the net, not just that both files exist',
   );
 });
