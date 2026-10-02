@@ -237,9 +237,9 @@
 }
 
 /* Banqi's 8x4 board is a wide strip, less than half the height of the room
-   row. The board pins to the top of the centre column with the face-down
-   tally under it (live-banqi.ts moves the pool there: the centre column has
-   the width, the right rail needs the height). */
+   row. The centre column stacks the board and the face-down tally under it
+   (live-banqi.ts moves the pool there: the centre column has the width, the
+   right rail needs the height); on a wide screen the band centres (below). */
 .live-route--banqi .live-review__cluster .review-shell__center {
   flex-direction: column;
   align-items: center;
@@ -265,28 +265,27 @@
 }
 
 @media (min-width: 1260px) {
-  /* Both rails take the full room row, as they do beside the tall boards: the
-     chat runs to the bottom of the screen, and the table's move list grows to
-     fill the rail instead of the table centring as a short console. */
+  /* The three columns are one band the height of the board and its tally,
+     centred in the room row: the row's height is the content's (not the
+     viewport's), both rails stretch to it, and the table stays the compact
+     centred console the tall boards use, so the two clocks sit a console's
+     height apart. Full-height rails (tried 10-02) dwarfed the short board and
+     put the clocks the screen's height apart. */
+  .live-route--banqi .live-review__cluster {
+    grid-template-rows: auto;
+    align-content: center;
+  }
   .live-route--banqi .live-review__cluster .meta-panel {
     max-height: none;
   }
   .live-route--banqi .live-review__cluster .moves-panel {
     align-self: stretch;
   }
-  .live-route--banqi .live-review__cluster .round-table__box,
-  .live-route--banqi .live-review__cluster .replay-console .game-table-moves {
-    flex: 1 1 auto;
-  }
-  /* The ~4-row cap (game-shell.css) is for a console centred beside a tall
-     board; here the list owns the height the rail gives it. */
-  .live-route--banqi .live-review__cluster .replay-console .game-table-moves {
-    max-height: none;
-  }
 
   /* Fortress centers its board: the 7x8 board is tall but still shorter
-     than the full-height room rails, so top-pinning strands ~130px of dead space under the board and leaves the
-     board and the game console reading as two surfaces at different heights.
+     than the full-height room rails, so top-pinning strands ~130px of dead
+     space under the board and leaves the board and the game console reading
+     as two surfaces at different heights.
 
      The reserve bands are already pinned to a fixed height whether or not a
      pocket holds anything (.rail-material.drop-mini-reserve-strip above), so
