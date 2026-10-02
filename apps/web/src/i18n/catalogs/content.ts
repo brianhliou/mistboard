@@ -376,7 +376,7 @@ export const EN_CONTENT = {
     'Mistboard is a free, open-source hobby project. This page describes what we collect on the hosted site at mistboard.com. It will change as the project grows; this page is always the current version.',
   'privacy.collectHeading': 'What we collect',
   'privacy.collectBody':
-    'Aggregate analytics, the games you play, and, if you make an account, your handle and email. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest.',
+    'Analytics, the games you play, and, if you make an account, your handle and email. We use PostHog for analytics: it keeps a per-browser history of the pages you visit and what you do on them, linked to your account if you sign in. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest.',
   'privacy.noDoHeading': "What we don't do",
   'privacy.noDoBody':
     "No ads. We don't sell your data. No recordings of your screen. We respect Do Not Track. Casual play needs no account.",
