@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
 import {
@@ -62,6 +62,8 @@ type CtxOverrides = Partial<{
   variantDetail: string | null;
   lobbyMatch: boolean;
   abortDeadline: number | null;
+  roomMode: string;
+  playAgainRequestBody: Record<string, unknown>;
 }>;
 
 function chromeHarness(
@@ -81,12 +83,12 @@ function chromeHarness(
     seatProfiles: () => overrides.seatProfiles ?? {},
     abortDeadline: () => overrides.abortDeadline ?? null,
     forfeitDeadline: () => null,
-    roomMode: () => 'pvp',
+    roomMode: () => overrides.roomMode ?? 'pvp',
     room: () => 'test_room',
     debugRequested: () => false,
     isReplayLive: () => overrides.isReplayLive ?? true,
     orientation: () => 'white',
-    playAgainRequestBody: () => ({}),
+    playAgainRequestBody: () => overrides.playAgainRequestBody ?? {},
     rematchControls: () => null,
     lobbyMatch: () => overrides.lobbyMatch ?? false,
     ...(overrides.variantDetail !== undefined
@@ -388,18 +390,69 @@ describe('tenant room chrome meta and invite emphasis', () => {
     expect(refs.gameInfo.textContent).not.toContain('White');
   });
 
-  it('marks copy-invite primary only while waiting for the opponent', () => {
+  it('offers copy-invite only while waiting for the opponent', () => {
     const waiting = chromeHarness({ connectedSeats: { white: true, red: false } });
     waiting.chrome.renderRoomActions();
     const waitingCopy = waiting.refs.roomActions.querySelector('button');
     expect(waitingCopy?.textContent).toBe('Copy invite');
     expect(waitingCopy?.className).toBe('primary');
 
+    // Both players in: the invite has nothing left to do (Brian's playtest,
+    // 2026-10-02: it sat in the column for the whole game).
     const playing = chromeHarness();
     playing.chrome.renderRoomActions();
-    const playingCopy = playing.refs.roomActions.querySelector('button');
-    expect(playingCopy?.textContent).toBe('Copy invite');
-    expect(playingCopy?.className).toBe('');
+    expect(playing.refs.roomActions.textContent).not.toContain('Copy invite');
+  });
+
+  it('offers no copy-invite in a bot game', () => {
+    // The engine seat reports connected, so a PvE room is never waiting.
+    const bot = chromeHarness({ roomMode: 'pve', seats: { white: 'c-white', red: 'engine' } });
+    bot.chrome.renderRoomActions();
+    expect(bot.refs.roomActions.textContent).not.toContain('Copy invite');
+  });
+});
+
+describe('tenant room chrome bot rematch', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const finished: TenantWebView<Color> = {
+    id: 'test_room',
+    status: { type: 'finished', winner: 'red', reason: 'resignation' },
+    moveNumber: 9,
+  };
+
+  async function rematchBody(seat: Color): Promise<Record<string, unknown>> {
+    const fetchSpy = vi.fn(async () => new Response('{}', { status: 500 }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const { chrome, refs } = chromeHarness({
+      view: finished,
+      seat,
+      roomMode: 'pve',
+      // What the tenants send today: a coin flip.
+      playAgainRequestBody: { mode: 'pve', gameSpecId: 'xiangqi', preferredColor: 'random' },
+    });
+    chrome.renderRoomActions();
+    const rematch = refs.roomActions.querySelector<HTMLButtonElement>(
+      'button.postgame-actions__rematch',
+    );
+    expect(rematch?.textContent).toBe('Rematch');
+    rematch?.click();
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const init = (fetchSpy.mock.calls[0] as unknown[])[1] as RequestInit;
+    return JSON.parse(String(init.body)) as Record<string, unknown>;
+  }
+
+  // Brian stayed Red on a Crazyhouse Xiangqi rematch against the bot: the
+  // tenant asked for 'random'. A rematch swaps sides, as on lichess.
+  it('asks for the opposite seat of the game just played', async () => {
+    expect(await rematchBody('white')).toMatchObject({
+      mode: 'pve',
+      gameSpecId: 'xiangqi',
+      preferredColor: 'red',
+    });
+    expect(await rematchBody('red')).toMatchObject({ preferredColor: 'white' });
   });
 });
 

@@ -52,6 +52,8 @@ describe('postGameInviteButton', () => {
     const href = el?.getAttribute('href') ?? '';
     expect(href).toContain('play=friend');
     expect(href).toContain('variant=xiangqi');
+    // The friend game starts on the coin flip, not the last remembered side.
+    expect(href).toContain('side=random');
   });
 
   it('renders nothing rather than a link that would open another variant', () => {

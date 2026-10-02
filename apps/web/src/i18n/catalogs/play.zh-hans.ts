@@ -381,6 +381,7 @@ export const ZH_HANS_PLAY = {
   'live.copyInvite': '复制邀请',
   'live.playAgain': '再下一局',
   'live.newOpponent': '换个对手',
+  'live.newGame': '新对局',
   'live.tryPlayAgain': '重试再下一局',
   'live.titlePlayingOff': '无法对局',
   'live.titleRoomUnavailable': '房间不可用',

@@ -588,6 +588,11 @@ export function createTenantRoomChrome<C extends string>(
     if (view?.status.type === 'aborted') return;
     // A lobby room has no friend to invite.
     if (ctx.lobbyMatch()) return;
+    // The invite link only while the opponent is still missing: never in a bot
+    // game (the engine seat reports connected), and not once both players are
+    // in, where the button used to sit in the column for the whole game
+    // (Brian's playtest, 2026-10-02).
+    if (!waitingForOpponent()) return;
 
     row.append(copyInviteButton());
     refs.roomActions.append(row);
@@ -607,7 +612,7 @@ export function createTenantRoomChrome<C extends string>(
   function copyInviteButton(): HTMLButtonElement {
     const copy = document.createElement('button');
     copy.type = 'button';
-    if (waitingForOpponent()) copy.className = 'primary';
+    copy.className = 'primary';
     copy.textContent = t('live.copyInvite');
     copy.addEventListener('click', () => {
       navigator.clipboard
@@ -640,6 +645,20 @@ export function createTenantRoomChrome<C extends string>(
     return button;
   }
 
+  // A bot rematch swaps sides (lichess): the seat opposite this game's. The
+  // tenants used to send 'random' (xiangqi, fortress, atomic, duck, crazyhouse,
+  // dark xiangqi), so a rematch kept the player's colour half the time; only
+  // banqi and jungle alternated, each in its own body. Seat names are the
+  // preferredColor tokens for every two-seat tenant (red/black), and on the
+  // flip variants they are move order, so this alternates who opens. A table
+  // of four (mahjong) keeps the tenant's own body.
+  function playAgainBody(): Record<string, unknown> {
+    const body = ctx.playAgainRequestBody();
+    const seat = seatColor();
+    if (seat === null || tenant.colors.length !== 2) return body;
+    return { ...body, preferredColor: tenant.oppositeColor(seat) };
+  }
+
   async function createPlayAgainRoom(): Promise<void> {
     playAgainStatus = 'creating';
     renderRoomActions();
@@ -647,7 +666,7 @@ export function createTenantRoomChrome<C extends string>(
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(ctx.playAgainRequestBody()),
+        body: JSON.stringify(playAgainBody()),
       });
       if (!response.ok) throw new Error(`play-again failed: ${response.status}`);
       const data = (await response.json()) as { url?: string };

@@ -1,5 +1,5 @@
 import { afterEach, describe, expect, it, vi } from 'vitest';
-import { buildLiveRoomChat } from './spectator-chat.js';
+import { buildLiveRoomChat, buildSpectatorChat } from './spectator-chat.js';
 
 describe('live room chat', () => {
   afterEach(() => {
@@ -38,7 +38,15 @@ describe('live room chat', () => {
 
     expect(panel.getAttribute('aria-label')).toBe('Game chat');
     expect(panel.textContent).toContain('Chat room');
-    expect(panel.querySelector('[role="separator"][aria-label="Resize chat"]')).not.toBeNull();
+    // No resize handle in the live room: its rail flex-fills the chat to the
+    // board line, so the drag did nothing (Brian, 2026-10-02). The review
+    // page's spectator room keeps it, where a drag does resize the panel.
+    expect(panel.querySelector('[role="separator"][aria-label="Resize chat"]')).toBeNull();
+    expect(
+      buildSpectatorChat('room with spaces').querySelector(
+        '[role="separator"][aria-label="Resize chat"]',
+      ),
+    ).not.toBeNull();
     expect(fetchSpy).toHaveBeenCalledWith('/api/chat/player/room%20with%20spaces');
     expect(
       Array.from(panel.querySelectorAll<HTMLButtonElement>('.review-spectator-chat__quick-button'))

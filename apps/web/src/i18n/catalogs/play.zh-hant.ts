@@ -381,6 +381,7 @@ export const ZH_HANT_PLAY = {
   'live.copyInvite': '複製邀請',
   'live.playAgain': '再下一局',
   'live.newOpponent': '換個對手',
+  'live.newGame': '新對局',
   'live.tryPlayAgain': '重試再下一局',
   'live.titlePlayingOff': '無法對局',
   'live.titleRoomUnavailable': '房間無法使用',
