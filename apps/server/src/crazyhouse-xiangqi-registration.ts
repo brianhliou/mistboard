@@ -19,6 +19,10 @@ import type {
 import { crazyhouseXiangqiFen, crazyhouseXiangqiMoveToUci } from '@mistboard/game';
 import { currentAccountUser } from './account-session.js';
 import {
+  CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH,
+  CRAZYHOUSE_XIANGQI_ANALYSIS_ENGINE_ID,
+} from './crazyhouse-xiangqi-fsf-engine.js';
+import {
   type CrazyhouseXiangqiEvent,
   crazyhouseXiangqiTenant,
 } from './crazyhouse-xiangqi-tenant.js';
@@ -185,11 +189,15 @@ registerVariantTenant({
     uci: crazyhouseXiangqiMoveToUci,
   }),
   // Share card: every exporting tenant binds one (og-game-tenant.test.ts). The
-  // standard xiangqi board from the FEN; no whole-game analysis to pick a ply
-  // from, so the card shows the final position.
+  // standard xiangqi board from the FEN. The card reads the stored whole-game
+  // analysis to show the turning point rather than the final position, the
+  // atomic terms: an eval swing here is a decision, not a reveal.
   card: tenantCardBinding(crazyhouseXiangqiTenant, {
     variant: 'crazyhouse-xiangqi',
-    analysis: null,
+    analysis: {
+      engineId: CRAZYHOUSE_XIANGQI_ANALYSIS_ENGINE_ID,
+      depth: CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH,
+    },
     fen: crazyhouseXiangqiFen,
   }),
   sweepDueDeadline: null,

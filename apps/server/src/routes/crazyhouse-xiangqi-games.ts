@@ -1,8 +1,9 @@
 /**
- * Crazyhouse Xiangqi postgame route: `GET /api/crazyhouse-xiangqi/games/:id`.
+ * Crazyhouse Xiangqi postgame route: `GET /api/crazyhouse-xiangqi/games/:id`,
+ * plus the whole-game analysis routes under it (`…/analysis`, the shared
+ * factory).
  *
- * Shape-for-shape the Atomic Xiangqi route minus the whole-game analysis (an
- * admin playtest has no review engine yet). Open information, so the payload
+ * Shape-for-shape the Atomic Xiangqi route. Open information, so the payload
  * carries one view (`truth`) built from Red's perspective, both hands
  * included, and both seats plus spectators get it. The per-ply history is the
  * server's own snapshots, so the replay board reads each ply's hands without
@@ -16,17 +17,35 @@ import {
   type CrazyhouseXiangqiGameState,
   type CrazyhouseXiangqiMove,
   type CrazyhouseXiangqiPlayerView,
+  crazyhouseXiangqiMoveToUci,
   getCrazyhouseXiangqiPlayerView,
   oppositeCrazyhouseXiangqiColor,
 } from '@mistboard/game';
+import {
+  CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH,
+  CRAZYHOUSE_XIANGQI_ANALYSIS_ENGINE_ID,
+  withCrazyhouseXiangqiAnalysisSession,
+} from './../crazyhouse-xiangqi-fsf-engine.js';
 import { crazyhouseXiangqiRooms } from './../crazyhouse-xiangqi-registration.js';
 import {
   type CrazyhouseXiangqiEvent,
   crazyhouseXiangqiTenant,
 } from './../crazyhouse-xiangqi-tenant.js';
 import { crazyhouseXiangqiEnabled } from './../feature-flags.js';
+import {
+  type AnalysisProgressStore,
+  liveAnalysisProgressStore,
+  resolveCachedComputation,
+} from './../game-analysis-kernel.js';
+import {
+  isVacuousAnalysis,
+  type SweepPlyEval,
+  sweepPlyEvals,
+  VacuousAnalysisError,
+} from './../game-analysis-sweep.js';
 import * as persistence from './../persistence.js';
 import { buildTenantGameSummary } from './../variant-tenant/events.js';
+import { UnreplayableTenantGameError } from './../variant-tenant/replay-guard.js';
 import {
   applyTenantEvent,
   isTenantEventLog,
@@ -34,6 +53,7 @@ import {
   tenantPveEngineId,
 } from './../variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './../variant-tenant/tenant.js';
+import { createGameAnalysisRoutes, type GameAnalysisRouteDeps } from './game-analysis-route.js';
 import { type HttpApiContext, postgamePlayers, requireMethod, writeJson } from './lib.js';
 
 type CrazyhouseXiangqiPostgameSnapshot = {
@@ -92,6 +112,62 @@ const defaultPersistence: CrazyhouseXiangqiPostgamePersistence = {
   loadRoomEvents: (roomId) => persistence.loadRoomEvents<CrazyhouseXiangqiEvent>(roomId),
 };
 
+// Computer analysis: full-strength fixed-depth eval of every ply on the stock
+// Fairy-Stockfish (the ladder's binary and .ini), cached and coalesced. Mirrors
+// the atomic analysis route; the engine's `best` is already the kernel's UCI
+// spelling (drops `N@e5`), so there is no rewrite step. Gates/envelopes: the
+// shared factory. No engineBinary gate: binary resolution happens lazily inside
+// the eval, and a sweep that produced no score is a 503.
+export function createCrazyhouseXiangqiAnalysisRoutes(
+  deps: {
+    persistence?: CrazyhouseXiangqiPostgamePersistence;
+    cache?: CrazyhouseXiangqiAnalysisCache;
+    analyze?: (movesUci: string[]) => Promise<SweepPlyEval[]>;
+    route?: GameAnalysisRouteDeps;
+  } = {},
+) {
+  return createGameAnalysisRoutes(
+    {
+      routeId: 'crazyhouse-xiangqi',
+      logPrefix: 'crazyhouse_xiangqi',
+      variantLabel: 'Crazyhouse Xiangqi',
+      enabled: crazyhouseXiangqiEnabled,
+      requiresPersistence: false,
+      loadInputs: (roomId) => crazyhouseXiangqiAnalysisInputs(roomId, deps.persistence),
+      countPlies: (payload) =>
+        payload.timeline.filter((entry) => entry.type === 'move-played').length,
+      resolveAnalysis: (roomId, payload, computeIfMissing) =>
+        resolveCrazyhouseXiangqiAnalysis(
+          roomId,
+          payload,
+          deps.cache ?? liveAnalysisCache,
+          deps.analyze,
+          computeIfMissing,
+        ),
+    },
+    deps.route,
+  );
+}
+
+const handleAnalysisRoutes = createCrazyhouseXiangqiAnalysisRoutes();
+
+/**
+ * The analysis inputs for a finished game, or null (404). A game stored under
+ * retired rules no longer replays (variant-tenant/replay-guard.ts); it has no
+ * moves to analyse, so it is a missing game here too, never a 500.
+ */
+export async function crazyhouseXiangqiAnalysisInputs(
+  roomId: string,
+  deps: CrazyhouseXiangqiPostgamePersistence = defaultPersistence,
+) {
+  try {
+    return await crazyhouseXiangqiPostgameForApi(roomId, deps);
+  } catch (err) {
+    if (err instanceof UnreplayableTenantGameError) return null;
+    throw err;
+  }
+}
+
 export async function tryHandle(
   _ctx: HttpApiContext,
   request: IncomingMessage,
@@ -99,6 +175,8 @@ export async function tryHandle(
   pathname: string,
   _parsedUrl: URL,
 ): Promise<boolean> {
+  if (await handleAnalysisRoutes(request, response, pathname)) return true;
+
   const postgameMatch = pathname.match(/^\/api\/crazyhouse-xiangqi\/games\/([^/]+)$/);
   if (!postgameMatch) return false;
 
@@ -116,6 +194,115 @@ export async function tryHandle(
   }
   writeJson(response, 200, payload);
   return true;
+}
+
+export type CrazyhouseXiangqiGameAnalysis = {
+  engineId: string;
+  depth: number;
+  plies: SweepPlyEval[];
+};
+
+type CrazyhouseXiangqiAnalysisPayload = {
+  timeline: ReadonlyArray<{ type: string; move?: CrazyhouseXiangqiMove }>;
+};
+
+// The whole-game sweep: the shared prefix walker bound to ONE persistent FSF
+// session (spawn + variant setup once, then incremental position/go per ply).
+// With a `progress` store the sweep checkpoints after every evaluated ply and
+// resumes from the last checkpoint.
+function crazyhouseXiangqiAnalysisSweep(
+  movesUci: string[],
+  progress?: AnalysisProgressStore<SweepPlyEval>,
+): Promise<SweepPlyEval[]> {
+  return withCrazyhouseXiangqiAnalysisSession((evaluate) =>
+    // The session evaluator carries the fixed analysis depth internally; the
+    // sweep's depth argument is the nominal cache dimension, not a search limit.
+    sweepPlyEvals(
+      movesUci,
+      (moves) => evaluate(moves),
+      CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH,
+      progress,
+    ),
+  );
+}
+
+/**
+ * Build the Red-POV eval series for a finished game from its postgame payload.
+ * Board moves become `<from><to>` and drops `<L>@<to>`, the kernel's own UCI,
+ * which is also the engine's; the hands follow from the move list (see
+ * crazyhouseXiangqiAnalysisPositionCommand). `analyze` is injectable for tests.
+ */
+export async function analyzeCrazyhouseXiangqiPostgame(
+  payload: CrazyhouseXiangqiAnalysisPayload,
+  analyze: (movesUci: string[]) => Promise<SweepPlyEval[]> = (movesUci) =>
+    crazyhouseXiangqiAnalysisSweep(movesUci),
+): Promise<CrazyhouseXiangqiGameAnalysis> {
+  const movesUci = payload.timeline
+    .filter((entry): entry is { type: 'move-played'; move: CrazyhouseXiangqiMove } =>
+      Boolean(entry.type === 'move-played' && entry.move),
+    )
+    .map((entry) => crazyhouseXiangqiMoveToUci(entry.move));
+  const plies = await analyze(movesUci);
+  return {
+    engineId: CRAZYHOUSE_XIANGQI_ANALYSIS_ENGINE_ID,
+    depth: CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH,
+    plies,
+  };
+}
+
+// Cache read/write, injectable for tests. Live impl reads/writes the
+// variant-agnostic game_analysis table (no-ops when persistence is disabled).
+export type CrazyhouseXiangqiAnalysisCache = {
+  get(roomId: string, engineId: string, depth: number): Promise<SweepPlyEval[] | null>;
+  save(roomId: string, engineId: string, depth: number, plies: SweepPlyEval[]): Promise<void>;
+};
+
+const liveAnalysisCache: CrazyhouseXiangqiAnalysisCache = {
+  get: (roomId, engineId, depth) => persistence.getGameAnalysis(roomId, engineId, depth),
+  save: (roomId, engineId, depth, plies) =>
+    persistence.saveGameAnalysis(roomId, engineId, depth, plies),
+};
+
+/**
+ * Cache-first, coalesced whole-game analysis (shared skeleton:
+ * game-analysis-kernel). Serve a stored result immediately, else compute once
+ * (sharing one in-flight promise), persist it, and return. A scoreless sweep
+ * throws VacuousAnalysisError and is never cached; the route maps it to 503.
+ */
+export async function resolveCrazyhouseXiangqiAnalysis(
+  roomId: string,
+  payload: CrazyhouseXiangqiAnalysisPayload,
+  cache: CrazyhouseXiangqiAnalysisCache = liveAnalysisCache,
+  analyze?: (movesUci: string[]) => Promise<SweepPlyEval[]>,
+  computeIfMissing = true,
+): Promise<CrazyhouseXiangqiGameAnalysis | null> {
+  const engineId = CRAZYHOUSE_XIANGQI_ANALYSIS_ENGINE_ID;
+  const depth = CRAZYHOUSE_XIANGQI_ANALYSIS_DEPTH;
+  // Incremental checkpoints only on the real (default-analyzer) path; injected
+  // analyzers (tests) keep the plain contract.
+  const progress = analyze
+    ? null
+    : liveAnalysisProgressStore<SweepPlyEval>(roomId, engineId, depth);
+  const plies = await resolveCachedComputation<SweepPlyEval[]>({
+    roomId,
+    engineId,
+    depth,
+    cache,
+    computeIfMissing,
+    compute: async () =>
+      (
+        await analyzeCrazyhouseXiangqiPostgame(
+          payload,
+          analyze ??
+            ((movesUci) => crazyhouseXiangqiAnalysisSweep(movesUci, progress ?? undefined)),
+        )
+      ).plies,
+    validate: (series) => {
+      if (isVacuousAnalysis(series)) throw new VacuousAnalysisError('crazyhouse-xiangqi');
+    },
+    afterSave: progress ? () => progress.clear() : undefined,
+  });
+  return plies ? { engineId, depth, plies } : null;
 }
 
 export async function crazyhouseXiangqiPostgameForApi(

@@ -8,6 +8,7 @@ import {
 } from '@mistboard/game';
 import './landing.css';
 import './game-route.css';
+import { loginHrefForCurrentPage } from './auth-redirect.js';
 import { crazyhouseXiangqiEnabled } from './feature-flags.js';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -17,9 +18,11 @@ import {
   mountCrazyhouseXiangqiReview,
 } from './review/crazyhouse-xiangqi-review.js';
 import { crosstableConfig } from './review/crosstable.js';
+import { fetchCachedGameAnalysis, requestGameAnalysis } from './review/game-analysis.js';
 import { gameExportLinks, gameImageLink } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { downloadRow } from './review/underboard-tabs.js';
+import { isLikelySignedIn } from './signed-in-state.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
 
@@ -27,9 +30,8 @@ import { setBoardFamily } from './theme.js';
 // (review/crazyhouse-xiangqi-review.ts) over the game's move list, the surface
 // Fortress and Atomic Xiangqi have: branching board, both pockets at every ply,
 // annotations, share and export. It opens on the final position. The local
-// engine panel runs the browser Fairy-Stockfish; there is no whole-game
-// analysis route on the server, so there is no advantage chart or analysis
-// button.
+// engine panel runs the browser Fairy-Stockfish; the whole-game analysis
+// (advantage chart, move judgments) is the server's, as Atomic's is.
 
 type CrazyhouseXiangqiViewKey = 'truth';
 
@@ -204,8 +206,19 @@ export function crazyhouseXiangqiReviewConfig(
         gameImageLink(postgame.game.roomId),
       ]),
     ],
-    // No whole-game analysis route exists for this variant.
-    analysis: null,
+    // Server whole-game analysis on the stock Fairy-Stockfish, DB-cached: an
+    // already-analysed game loads from cache on open (a GET that never
+    // computes). Requesting a fresh compute is account-gated (the server
+    // rejects anon POSTs), so a signed-out visitor gets a sign-in CTA instead
+    // of a request that would 401.
+    analysis: {
+      requestLabel: isLikelySignedIn()
+        ? t('replay.requestComputerAnalysis')
+        : t('replay.signInToRequestAnalysis'),
+      requestHref: isLikelySignedIn() ? undefined : loginHrefForCurrentPage(),
+      fetchCached: () => fetchCachedGameAnalysis('crazyhouse-xiangqi', postgame.game.roomId),
+      run: () => requestGameAnalysis('crazyhouse-xiangqi', postgame.game.roomId),
+    },
   };
 }
 
