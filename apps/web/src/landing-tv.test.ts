@@ -43,7 +43,13 @@ vi.mock('./showcase-board.js', () => ({
   ),
 }));
 
-import { airWindowFor, type LandingTvMode, mountLandingTv } from './landing-tv.js';
+import {
+  airWindowFor,
+  type LandingTvMode,
+  LIVE_POLL_MAX_FAILURES,
+  LIVE_POLL_TIMEOUT_MS,
+  mountLandingTv,
+} from './landing-tv.js';
 import type { ShowcaseEntry } from './showcase-cycler.js';
 
 const POLL_MS = 4_000;
@@ -474,5 +480,104 @@ test('a fog game whose air already closed before the visitor arrived shows froze
   expect(mounts).toHaveLength(1);
   expect(mounts[0]!.options.autoplay).toBe(false);
   expect(lastMode()).toEqual({ mode: 'frozen', roomId: 'fogGame' });
+  tv.destroy();
+});
+
+// A fetch that never answers until its abort signal fires (a request stuck on a
+// container swap). Without a timeout it stalled the poll loop for good.
+function hangingFetch() {
+  return vi.fn(
+    (_url: string, init?: { signal?: AbortSignal }) =>
+      new Promise((_resolve, reject) => {
+        init?.signal?.addEventListener('abort', () =>
+          reject(new DOMException('aborted', 'AbortError')),
+        );
+      }),
+  );
+}
+
+test('a hung live poll times out, polling resumes, and a followed game hands off', async () => {
+  featuredResponse = { featured: liveFeatured('liveGame', 3) };
+  const tv = await mountController([]);
+  await flush();
+  const live = mounts[0]!;
+  expect(live.options.live).toBe(true);
+
+  const fetchMock = hangingFetch();
+  vi.stubGlobal('fetch', fetchMock);
+  live.handle.loadGame.mockClear();
+  for (let i = 0; i < LIVE_POLL_MAX_FAILURES; i += 1) {
+    await tick(); // the next poll starts and hangs
+    await vi.advanceTimersByTimeAsync(LIVE_POLL_TIMEOUT_MS);
+    await flush();
+  }
+  // Every poll was abandoned and a new one started: the loop never stalled.
+  expect(fetchMock).toHaveBeenCalledTimes(LIVE_POLL_MAX_FAILURES);
+  // The board stopped presenting the game as live: the handoff ran through the
+  // live handle (loading the finished record), as a featured:null answer does.
+  expect(live.handle.loadGame).toHaveBeenCalledWith('liveGame');
+  expect(lastMode()).toEqual({ mode: 'frozen', roomId: 'liveGame' });
+  tv.destroy();
+});
+
+test('failed polls while following a live game hand off after a run, not on a blip', async () => {
+  featuredResponse = { featured: liveFeatured('liveGame', 3) };
+  const tv = await mountController([]);
+  await flush();
+  const live = mounts[0]!;
+  live.handle.loadGame.mockClear();
+
+  const failing = vi.fn(async () => ({ json: async () => ({}), ok: false, status: 502 }));
+  vi.stubGlobal('fetch', failing);
+  for (let i = 0; i < LIVE_POLL_MAX_FAILURES - 1; i += 1) await tick();
+  // A blip keeps the live board.
+  expect(live.handle.loadGame).not.toHaveBeenCalled();
+  expect(lastMode()).toEqual({ mode: 'live', roomId: 'liveGame' });
+
+  // The server answers again: the count resets, so later failures start over.
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({ json: async () => featuredResponse, ok: true })),
+  );
+  await tick();
+  vi.stubGlobal('fetch', failing);
+  for (let i = 0; i < LIVE_POLL_MAX_FAILURES - 1; i += 1) await tick();
+  expect(live.handle.loadGame).not.toHaveBeenCalled();
+
+  await tick();
+  expect(live.handle.loadGame).toHaveBeenCalledWith('liveGame');
+  expect(lastMode()).toEqual({ mode: 'frozen', roomId: 'liveGame' });
+  tv.destroy();
+});
+
+test('showing the tab while a poll is in flight does not start a second poll loop', async () => {
+  const tv = await mountController([entryA]);
+  await flush();
+  let release: (() => void) | null = null;
+  const slow = vi.fn(
+    () =>
+      new Promise((resolve) => {
+        release = () => resolve({ json: async () => ({ featured: null }), ok: true });
+      }),
+  );
+  vi.stubGlobal('fetch', slow);
+  await tick(); // a poll is now in flight
+  expect(slow).toHaveBeenCalledTimes(1);
+  setVisibility('hidden');
+  setVisibility('visible');
+  await flush();
+  expect(slow).toHaveBeenCalledTimes(1);
+
+  vi.stubGlobal(
+    'fetch',
+    vi.fn(async () => ({ json: async () => featuredResponse, ok: true })),
+  );
+  release!();
+  await flush();
+  const steady = vi.mocked(fetch);
+  await tick();
+  await tick();
+  // One loop: one poll per interval.
+  expect(steady).toHaveBeenCalledTimes(2);
   tv.destroy();
 });

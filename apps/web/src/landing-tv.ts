@@ -37,6 +37,15 @@ import type { ShowcaseEntry } from './showcase-cycler.js';
 import { showcaseRendererKindForSpec } from './showcase-dispatch.js';
 
 const LIVE_POLL_MS = 4_000;
+// A live poll that has not answered by now is abandoned. Without a bound, one
+// hung request (a deploy swapping containers) stopped polling for good: the
+// next poll is only scheduled after the fetch settles, so the board stayed
+// "live" with the mover's clock ticking down until the tab was hidden and shown.
+export const LIVE_POLL_TIMEOUT_MS = 8_000;
+// Consecutive failed polls (error status, network error, timeout) after which a
+// followed live game is treated as gone and handed off, as if the feed had
+// answered featured:null. One failure is a blip; three is ~20 s of no answer.
+export const LIVE_POLL_MAX_FAILURES = 3;
 
 // A delayed air: `entry` goes on at `startMs` (when it ended) and stays on until
 // `endMs` (as long again as the game lasted).
@@ -127,6 +136,10 @@ export async function mountLandingTv(
   // trip it: while following, loadPostgameOverride always answers.
   let liveLoadFailed = false;
   let pollTimer: number | null = null;
+  // One poll at a time: a visibility change while a poll is in flight must not
+  // start a second loop beside it (each would keep rescheduling itself).
+  let pollInFlight = false;
+  let failedPolls = 0;
 
   // Serializes every mount/load: poll ticks, pool swaps, and onGameEnd all
   // funnel through here so re-mounts can't interleave.
@@ -444,11 +457,22 @@ export async function mountLandingTv(
 
   const schedulePoll = (): void => {
     if (destroyed) return;
+    stopPolling();
     pollTimer = window.setTimeout(() => void pollLive(), LIVE_POLL_MS);
   };
 
+  const fetchLive = async (url: string): Promise<Response> => {
+    const controller = new AbortController();
+    const timer = window.setTimeout(() => controller.abort(), LIVE_POLL_TIMEOUT_MS);
+    try {
+      return await fetch(url, { signal: controller.signal });
+    } finally {
+      window.clearTimeout(timer);
+    }
+  };
+
   const pollLive = async (): Promise<void> => {
-    if (destroyed) return;
+    if (destroyed || pollInFlight) return;
     if (!options.isConnected()) {
       stopPolling();
       return;
@@ -457,15 +481,18 @@ export async function mountLandingTv(
       schedulePoll();
       return;
     }
+    pollInFlight = true;
+    let answered = false;
     try {
       const following = mode === 'live' && currentRoomId !== null;
       const channel = encodeURIComponent(options.channel ?? 'top');
       const query = following
         ? `?channel=${channel}&room=${encodeURIComponent(currentRoomId!)}&ply=${shownLivePly}`
         : `?channel=${channel}`;
-      const resp = await fetch(`/api/watch/live${query}`);
+      const resp = await fetchLive(`/api/watch/live${query}`);
       if (resp.ok) {
         const data = (await resp.json()) as { featured: LiveFeatured | null };
+        answered = true;
         if (data.featured) {
           const featured = data.featured;
           enqueue(() => showLive(featured));
@@ -476,7 +503,22 @@ export async function mountLandingTv(
         }
       }
     } catch {
-      // Transient network failure: keep whatever is on the board.
+      // Network failure or timeout: counted below.
+    } finally {
+      pollInFlight = false;
+    }
+    if (answered) {
+      failedPolls = 0;
+    } else {
+      failedPolls += 1;
+      // A blip keeps whatever is on the board. A run of failures while following
+      // means the server cannot vouch for the game any more (it restarted, or is
+      // unreachable): stop presenting it as live, the same handoff a featured:null
+      // answer runs, so its clock stops counting down.
+      if (failedPolls >= LIVE_POLL_MAX_FAILURES && mode === 'live') {
+        failedPolls = 0;
+        enqueue(finishLiveHandoff);
+      }
     }
     schedulePoll();
   };
