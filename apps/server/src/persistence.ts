@@ -487,7 +487,11 @@ export type {
   PublicStatsWeek,
   SiteStats,
 } from './persistence-site-stats.js';
-export { getPublicSiteStats, getSiteStats } from './persistence-site-stats.js';
+export {
+  getPublicSiteStats,
+  getRecentCountedGamesByVariant,
+  getSiteStats,
+} from './persistence-site-stats.js';
 export { rememberStatsExcludedDevice } from './persistence-stats-excluded-devices.js';
 export type {
   AddChapterResult,

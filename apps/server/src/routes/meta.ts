@@ -10,6 +10,11 @@ import { readEventLoopLagMs } from '../server-event-loop-lag.js';
 import { getProxyTrustWarning } from '../server-policy.js';
 import { aggregateEnginePoolStats } from '../uci-engine-harness.js';
 import {
+  getVariantOrder,
+  VARIANT_ORDER_WINDOW_DAYS,
+  type VariantOrderResponse,
+} from '../variant-order.js';
+import {
   type HttpApiContext,
   isHttpAdminAuthorized,
   isHttpAdminSession,
@@ -105,7 +110,33 @@ export async function tryHandle(
         // Durable count is best-effort; fall back to the live-only count.
       }
     }
-    writeJson(response, 200, { playing, online: stats.onlineIdentities.size });
+    // playingBySpec stays live-only: a correspondence game nobody has open is
+    // in play but has no one at the board, which is what the per-variant
+    // "N playing" on the homepage claims.
+    writeJson(response, 200, {
+      playing,
+      online: stats.onlineIdentities.size,
+      playingBySpec: stats.playingBySpec,
+    });
+    return true;
+  }
+
+  if (pathname === '/api/play/variant-order') {
+    if (!requireMethod(request, response, 'GET')) return true;
+    // Homepage play panel order (variant-order.ts). Best-effort like the
+    // correspondence fold above: a failed read returns an empty order, which
+    // the client treats as "keep your own", and is not cached.
+    let body: VariantOrderResponse;
+    try {
+      body = await getVariantOrder();
+    } catch {
+      body = {
+        order: [],
+        windowDays: VARIANT_ORDER_WINDOW_DAYS,
+        computedAt: new Date().toISOString(),
+      };
+    }
+    writeJson(response, 200, body, { 'cache-control': 'public, max-age=600' });
     return true;
   }
 

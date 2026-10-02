@@ -1,3 +1,4 @@
+import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
 import { rememberPveEngine } from './pve-memory.js';
 import { postThroughRestart } from './room-create-retry.js';
 
@@ -47,6 +48,10 @@ export function bindBotPlayControl(
     pendingLabel?: string;
     errorLabel?: string;
     onStateChange?: (state: 'idle' | 'pending' | 'error') => void;
+    /** Labels the started game (game_started.entry_source). */
+    source?: GameStartSource;
+    /** Runs after the room exists, before navigating (e.g. remember the pick). */
+    onCreated?: (request: BotPlayRequest) => void;
   } = {},
 ): void {
   let pending = false;
@@ -75,6 +80,8 @@ export function bindBotPlayControl(
         // itself; otherwise the device never "remembers" the game it just
         // played and the next visit hands out the first-game rung again (#365).
         rememberPveEngine(req.gameSpecId, req.botId);
+        if (opts.source) rememberGameStartSource(opts.source);
+        opts.onCreated?.(req);
         window.location.href = url;
       },
       () => {

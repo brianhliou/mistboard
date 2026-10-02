@@ -8,6 +8,7 @@ import {
   timeClassForPace,
   type VariantId,
 } from '@mistboard/game';
+import { takeGameStartSource } from './game-start-source.js';
 import type { Locale, LocaleResolution } from './i18n/locale.js';
 import { inferredXiangqiPieceSet } from './xiangqi-appearance-storage.js';
 
@@ -302,7 +303,7 @@ export function createGameLifecycleTracker(): GameLifecycleTracker {
       if (statusType === lastStatusType) return;
       if (statusType === 'playing' && lastStatusType !== 'playing') {
         playingSinceMs = Date.now();
-        track('game_started', baseProps);
+        track('game_started', { ...baseProps, entry_source: takeGameStartSource() });
       }
       if (statusType === 'finished' && input.outcome) {
         track('game_finished', {

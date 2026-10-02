@@ -1,0 +1,455 @@
+/* Homepage play panel (#491). Sits in the same grid slot and card as the old
+   lobby board (.landing-lobby-board / .landing-lobby-card in landing.css), so
+   band 1 keeps its height; rows that overflow scroll inside the card. */
+
+.pp-board {
+  /* A fixed height, not landing.css's min-height: the person tab's search bar
+     and the computer tab's top rows must scroll the list, not grow band 1. */
+  height: clamp(460px, 60vh, 680px);
+  --pp-gold: #d6a03c;
+  --pp-gold-text: #b07a17;
+  --pp-gold-soft: color-mix(in srgb, var(--pp-gold) 14%, transparent);
+  --pp-pad: 14px;
+}
+
+:root[data-effective-theme="dark"] .pp-board {
+  --pp-gold-text: #e3b35a;
+}
+
+.pp-tabs {
+  display: flex;
+  align-items: flex-end;
+  gap: 22px;
+  padding: 0 4px 6px;
+}
+
+.pp-tab {
+  padding: 4px 0 6px;
+  border: 0;
+  border-bottom: 2px solid transparent;
+  background: none;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 16px;
+  font-weight: 500;
+  cursor: pointer;
+}
+
+.pp-tab:hover {
+  color: var(--site-text);
+}
+
+.pp-tab.is-active {
+  color: var(--site-accent-strong);
+  border-bottom-color: var(--site-accent-strong);
+}
+
+.pp-badge {
+  display: inline-block;
+  min-width: 17px;
+  margin-left: 7px;
+  padding: 0 5px;
+  border-radius: 9px;
+  background: var(--pp-gold);
+  color: #221a08;
+  font-size: 11px;
+  font-weight: 700;
+  line-height: 17px;
+  text-align: center;
+  vertical-align: 2px;
+}
+
+.pp-badge[hidden] {
+  display: none;
+}
+
+.pp-card {
+  flex: 1 1 0;
+  min-height: 0;
+}
+
+.pp-view {
+  display: flex;
+  flex: 1;
+  min-height: 0;
+  flex-direction: column;
+}
+
+.pp-view[hidden] {
+  display: none;
+}
+
+.pp-scroll {
+  flex: 1;
+  min-height: 0;
+  overflow-y: auto;
+}
+
+.pp-thumb {
+  width: 26px;
+  height: 26px;
+}
+
+/* ── Rows ── */
+.pp-row {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) 132px 92px 78px;
+  grid-template-areas: "icon name level clock act";
+  align-items: center;
+  column-gap: 14px;
+  min-height: 42px;
+  padding: 0 var(--pp-pad);
+  border-bottom: 1px solid var(--site-border-soft);
+  cursor: pointer;
+}
+
+.pp-row-person {
+  grid-template-columns: 26px minmax(0, 1fr) 118px 74px 78px;
+  grid-template-areas: "icon name clock wait act";
+}
+
+.pp-row:hover {
+  background: var(--site-hover);
+}
+
+.pp-row > .pp-thumb {
+  grid-area: icon;
+}
+.pp-row > .pp-name {
+  grid-area: name;
+}
+.pp-row > .pp-step-level {
+  grid-area: level;
+}
+.pp-row > .pp-step-clock {
+  grid-area: clock;
+}
+.pp-row > .pp-act {
+  grid-area: act;
+}
+.pp-row > .pp-waiting {
+  grid-area: wait;
+}
+
+.pp-name {
+  min-width: 0;
+  overflow: hidden;
+  color: var(--site-text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pp-name small {
+  color: var(--site-muted);
+  font-size: 12.5px;
+}
+
+.pp-playing {
+  margin-left: 8px;
+  color: var(--pp-gold-text);
+  font-size: 12px;
+  font-style: normal;
+}
+
+.pp-waiting {
+  color: var(--pp-gold-text);
+  font-size: 12px;
+  text-align: center;
+  white-space: nowrap;
+}
+
+/* ── Stepper ── */
+.pp-step {
+  display: flex;
+  align-items: center;
+  gap: 3px;
+  min-width: 0;
+}
+
+.pp-step-btn {
+  flex: none;
+  width: 22px;
+  height: 24px;
+  padding: 0;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 4px;
+  background: var(--site-panel-soft);
+  color: var(--site-muted);
+  font: inherit;
+  line-height: 1;
+  cursor: pointer;
+}
+
+.pp-step-btn:hover:not(:disabled) {
+  border-color: var(--site-accent);
+  color: var(--site-text);
+}
+
+.pp-step-btn:disabled {
+  opacity: 0.3;
+  cursor: default;
+}
+
+.pp-step.is-fixed .pp-step-btn {
+  visibility: hidden;
+}
+
+.pp-step-value {
+  flex: 1;
+  min-width: 0;
+  overflow: hidden;
+  color: var(--site-text);
+  font-size: 12.5px;
+  text-align: center;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pp-step-value.is-named {
+  color: var(--pp-gold-text);
+}
+
+.pp-row-person .pp-step-value.is-named {
+  color: var(--site-accent-strong);
+}
+
+.pp-row.has-waiting .pp-step-clock .pp-step-value {
+  color: var(--pp-gold-text);
+  font-weight: 600;
+}
+
+/* ── The "soft" action: tinted, solid on row hover (Brian, 2026-10-01). ── */
+.pp-act {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  height: 30px;
+  padding: 0 12px;
+  border: 0;
+  border-radius: 5px;
+  background: color-mix(in srgb, var(--site-accent) 22%, transparent);
+  color: var(--site-accent-strong);
+  font: inherit;
+  font-size: 13.5px;
+  font-weight: 600;
+  text-decoration: none;
+  white-space: nowrap;
+  cursor: pointer;
+}
+
+.pp-row:hover .pp-act,
+.pp-act:hover,
+.pp-act:focus-visible {
+  background: var(--site-accent);
+  color: var(--site-on-accent);
+}
+
+.pp-act:disabled {
+  cursor: default;
+  opacity: 0.7;
+}
+
+.pp-act-join {
+  background: var(--pp-gold);
+  color: #221a08;
+}
+
+.pp-act-join:hover {
+  background: var(--pp-gold);
+  filter: brightness(1.08);
+  color: #221a08;
+}
+
+/* ── Rows that exist only when true ── */
+.pp-feature {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto;
+  align-items: center;
+  column-gap: 12px;
+  padding: 7px var(--pp-pad);
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.pp-feature-again {
+  background: var(--site-accent-soft);
+}
+
+.pp-feature-waiting {
+  background: var(--pp-gold-soft);
+  box-shadow: inset 3px 0 0 var(--pp-gold);
+}
+
+.pp-feature-text {
+  display: flex;
+  flex-direction: column;
+  min-width: 0;
+}
+
+.pp-kicker {
+  color: var(--site-accent-strong);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pp-feature-waiting .pp-kicker {
+  color: var(--pp-gold-text);
+}
+
+.pp-feature-title {
+  overflow: hidden;
+  color: var(--site-text);
+  font-size: 14px;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.pp-feature-title small {
+  color: var(--site-muted);
+  font-size: 12.5px;
+}
+
+.pp-feature .pp-act {
+  padding: 0 16px;
+}
+
+/* ── Play a person ── */
+.pp-control {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
+  padding: 8px var(--pp-pad);
+  border-bottom: 1px solid var(--site-border-soft);
+  color: var(--site-muted);
+  font-size: 12px;
+}
+
+.pp-mode {
+  display: inline-flex;
+  overflow: hidden;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 6px;
+}
+
+.pp-mode-btn {
+  padding: 4px 14px;
+  border: 0;
+  background: none;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 13px;
+  cursor: pointer;
+}
+
+.pp-mode-btn.is-active {
+  background: var(--site-panel-soft);
+  color: var(--site-text);
+}
+
+.pp-note {
+  text-align: right;
+}
+
+.pp-section {
+  padding: 7px var(--pp-pad) 5px;
+  border-bottom: 1px solid var(--site-border-soft);
+  color: var(--site-muted);
+  font-size: 10.5px;
+  font-weight: 600;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
+}
+
+.pp-offer {
+  display: grid;
+  grid-template-columns: 26px minmax(0, 1fr) auto auto;
+  align-items: center;
+  column-gap: 12px;
+  min-height: 44px;
+  padding: 0 var(--pp-pad);
+  border-bottom: 1px solid var(--site-border-soft);
+}
+
+.pp-offer-pace {
+  color: var(--site-muted);
+  font-size: 12.5px;
+  white-space: nowrap;
+}
+
+.pp-offer-pace.is-slow {
+  color: var(--site-accent-strong);
+}
+
+.pp-yours {
+  color: var(--site-muted);
+  font-size: 12.5px;
+}
+
+.pp-search {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  justify-content: space-between;
+  gap: 8px;
+  padding: 8px var(--pp-pad);
+  border-top: 1px solid var(--site-border-soft);
+  color: var(--site-muted);
+  font-size: 12.5px;
+}
+
+.pp-search[hidden] {
+  display: none;
+}
+
+.pp-search .landing-engine-offer {
+  flex-basis: 100%;
+}
+
+.pp-search-cancel {
+  padding: 4px 12px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 5px;
+  background: none;
+  color: var(--site-text);
+  font: inherit;
+  cursor: pointer;
+}
+
+/* Phone width: name and action on the first line, steppers under them. */
+@media (max-width: 640px) {
+  .pp-board {
+    --pp-pad: 10px;
+  }
+
+  .pp-tabs {
+    gap: 16px;
+  }
+
+  .pp-tab {
+    font-size: 15px;
+  }
+
+  .pp-row,
+  .pp-row-person {
+    grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr) 70px;
+    grid-template-areas:
+      "icon name name act"
+      ". level clock act";
+    row-gap: 6px;
+    padding-top: 7px;
+    padding-bottom: 7px;
+  }
+
+  .pp-row-person {
+    grid-template-areas:
+      "icon name wait act"
+      ". clock clock act";
+  }
+
+  .pp-note {
+    display: none;
+  }
+}

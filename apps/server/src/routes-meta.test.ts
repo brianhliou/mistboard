@@ -76,7 +76,7 @@ function room(status: 'playing' | 'waiting', clients: Client[], mode: Room['mode
   return {
     clients: new Set(clients),
     mode,
-    projection: { state: { status: { type: status } } },
+    projection: { variant: 'dark-chess', state: { status: { type: status } } },
   } as unknown as Room;
 }
 
@@ -84,7 +84,9 @@ function liveStatsContext(rooms: Map<string, Room>): HttpApiContext {
   return { rooms } as unknown as HttpApiContext;
 }
 
-async function liveStats(rooms: Map<string, Room>): Promise<{ playing: number; online: number }> {
+type LiveStats = { playing: number; online: number; playingBySpec: Record<string, number> };
+
+async function liveStats(rooms: Map<string, Room>): Promise<LiveStats> {
   const response = captureResponse();
   const handled = await tryHandle(
     liveStatsContext(rooms),
@@ -95,7 +97,7 @@ async function liveStats(rooms: Map<string, Room>): Promise<{ playing: number; o
   );
   assert.equal(handled, true);
   assert.equal(response.status, 200);
-  return JSON.parse(response.body) as { playing: number; online: number };
+  return JSON.parse(response.body) as LiveStats;
 }
 
 test('live-stats counts a signed-in user once across multiple rooms/tabs', async () => {
@@ -200,6 +202,61 @@ test('live-stats keeps signed-in and anonymous id spaces separate', async () => 
   ]);
   const stats = await liveStats(rooms);
   assert.equal(stats.online, 2);
+});
+
+// playingBySpec feeds the homepage's per-variant "N playing": a room counts
+// only when it is genuinely in play AND a person holds a seat, so an EvE
+// bakeoff room (spectated or not) never makes a variant look busy.
+test('live-stats playingBySpec counts in-play rooms with a seated human, per spec', async () => {
+  const rooms = new Map<string, Room>([
+    ['pvp', room('playing', [client('a', 'u1', 'white'), client('b', 'u2', 'black')], 'pvp')],
+    ['guest-pve', room('playing', [client('g1', null, 'white')], 'pve')],
+    ['eve', room('playing', [client('watcher', 'u4')], 'eve')],
+    ['lobby', room('waiting', [client('w', 'u5', 'white')], 'pvp')],
+  ]);
+  fakeTenantRooms.set(
+    'ttest_1',
+    tenantRoom('ttest_1', [{ id: 'tc1', userId: 'u6', seat: 'red' }], 'playing'),
+  );
+  fakeTenantRooms.set(
+    'ttest_2',
+    tenantRoom('ttest_2', [{ id: 'tc2', userId: null, seat: 'spectator' }], 'playing'),
+  );
+  fakeTenantRooms.set('ttest_3', tenantRoom('ttest_3', [], 'playing'));
+  const stats = await liveStats(rooms);
+  assert.deepEqual(stats.playingBySpec, { 'dark-chess': 2, 'test-tenant-spec': 1 });
+  // The headline count is unchanged: every in-play room, EvE included.
+  assert.equal(stats.playing, 6);
+});
+
+test('live-stats playingBySpec leaves out paused rooms and omits zero entries', async () => {
+  const paused = agedRoom(5_000, { paused: true });
+  (paused.clients as Set<Client>).add(client('p1', 'u1', 'white'));
+  const stats = await liveStats(new Map<string, Room>([['paused', paused]]));
+  assert.deepEqual(stats.playingBySpec, {});
+});
+
+// ── /api/play/variant-order ─────────────────────────────────────────────────
+
+test('play/variant-order returns an empty order without a database', async () => {
+  const response = captureResponse();
+  const handled = await tryHandle(
+    liveStatsContext(new Map()),
+    getRequest(),
+    response,
+    '/api/play/variant-order',
+    new URL('http://localhost/api/play/variant-order'),
+  );
+  assert.equal(handled, true);
+  assert.equal(response.status, 200);
+  const body = JSON.parse(response.body) as {
+    order: string[];
+    windowDays: number;
+    computedAt: string;
+  };
+  assert.deepEqual(body.order, []);
+  assert.equal(body.windowDays, 28);
+  assert.ok(!Number.isNaN(Date.parse(body.computedAt)));
 });
 
 // ── /api/players/online ─────────────────────────────────────────────────────

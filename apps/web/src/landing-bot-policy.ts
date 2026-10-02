@@ -274,3 +274,77 @@ function isLandingBotGameSpecId(gameSpecId: string): gameSpecId is LandingBotGam
 function positiveModulo(value: number, divisor: number): number {
   return ((Math.trunc(value) % divisor) + divisor) % divisor;
 }
+
+// ── The homepage play panel's level stepper ──
+// Every public bot a variant can be played against, weakest first, so the
+// stepper walks the real ladder: xiangqi's Fairy-Stockfish Levels 1-8 then
+// full-strength Pikafish; jieqi's Pikafish Levels 1-8 (Level 8 is the
+// `pikafish` bot, the strongest Pikafish setting), then AB-JChess; the other Fairy-Stockfish variants Levels 1-8; the house-built
+// variants a single Misty (no stepper). Mirrors the server roster in
+// apps/server/src/first-party-bots.ts; a rung the server cannot serve fails the
+// room create, so landing-bot-policy.test.ts pins the ids.
+export type LandingBotRung = {
+  botId: string;
+  /** Ladder level when the rung is a numbered level; null for a named bot. */
+  level: number | null;
+  /** Display name for a named rung (Pikafish, AB-JChess, Misty). */
+  name: string;
+};
+
+const FSF_LADDER_SPECS: readonly LandingBotGameSpecId[] = [
+  XIANGQI_SPEC_ID,
+  FORTRESS_XIANGQI_SPEC_ID,
+  DUCK_XIANGQI_SPEC_ID,
+  ATOMIC_XIANGQI_SPEC_ID,
+];
+const JIEQI_LADDER_TOP_LEVEL = 7;
+
+export function landingBotLadder(gameSpecId: string): readonly LandingBotRung[] {
+  if (!isLandingBotGameSpecId(gameSpecId)) return [];
+  if (FSF_LADDER_SPECS.includes(gameSpecId)) {
+    const levels: LandingBotRung[] = Array.from({ length: 8 }, (_, i) => ({
+      botId: `${LADDER_BOT_ID_PREFIX}${i + 1}`,
+      level: i + 1,
+      name: `Fairy-Stockfish Level ${i + 1}`,
+    }));
+    if (gameSpecId === XIANGQI_SPEC_ID) {
+      levels.push({ botId: 'pikafish', level: null, name: 'Pikafish' });
+    }
+    return levels;
+  }
+  if (gameSpecId === JIEQI_SPEC_ID) {
+    return [
+      ...Array.from({ length: JIEQI_LADDER_TOP_LEVEL }, (_, i) => ({
+        botId: `pikafish-level-${i + 1}`,
+        level: i + 1,
+        name: `Pikafish Level ${i + 1}`,
+      })),
+      // The jieqi ladder's top numbered rung is the `pikafish` bot itself
+      // (pikafish-jieqi-strongest on the server), shown as Level 8.
+      { botId: 'pikafish', level: JIEQI_LADDER_TOP_LEVEL + 1, name: 'Pikafish Level 8' },
+      { botId: 'ab-jchess', level: null, name: 'AB-JChess' },
+    ];
+  }
+  return [{ botId: 'misty', level: null, name: 'Misty' }];
+}
+
+// The rung a remembered pick lands on: a bot id from a one-click start, or the
+// engine id the setup dialog stored for jieqi (pveEngineIdForRememberedPick's
+// inverse). Anything unrecognised returns -1 and the caller uses its default.
+export function landingBotLadderIndex(
+  ladder: readonly LandingBotRung[],
+  remembered: string | null | undefined,
+): number {
+  if (!remembered) return -1;
+  const direct = ladder.findIndex((rung) => rung.botId === remembered);
+  if (direct >= 0) return direct;
+  const jieqiLevel = /^pikafish-jieqi-level-(\d+)$/.exec(remembered)?.[1];
+  const botId = jieqiLevel
+    ? `pikafish-level-${jieqiLevel}`
+    : remembered === 'pikafish-jieqi-strongest'
+      ? 'pikafish'
+      : remembered === 'ab-jchess-jieqi'
+        ? 'ab-jchess'
+        : null;
+  return botId ? ladder.findIndex((rung) => rung.botId === botId) : -1;
+}
