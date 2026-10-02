@@ -2654,6 +2654,11 @@
     width: 100%;
   }
 
+  /* A pair-board single takes the full width a pair figure does here. */
+  .article-figure-xq.article-figure-xq--pair-board > .xq-article-svg[data-xq-layout="single"] {
+    width: 100%;
+  }
+
   .article-figure-xq > .xq-article-svg[data-xq-layout="wide"],
   .raw-svg-stepper-frame-xq > .xq-article-svg[data-xq-layout="wide"] {
     width: 100%;
