@@ -17,6 +17,11 @@
 // already lists them live from the API. Post when a WORK is finished (a manual,
 // not a volume) or at a milestone worth a reader's attention. Individual
 // publications reach people through the studies widget and /study on their own.
+//
+// GAMES-PLAYED MILESTONES (Brian, 2026-10-01): when an entry celebrates a
+// games-played milestone, mention that every game is downloadable from /data
+// (free under CC BY 4.0) and link it. The archive grows with every milestone,
+// and researchers and engine authors are the audience for it.
 
 import { articleGoesLiveAt } from './articles/publish-time.js';
 
@@ -37,6 +42,14 @@ export type Announcement = {
 };
 
 const baseAnnouncements: Announcement[] = [
+  {
+    date: '2026-10-02',
+    kind: 'release',
+    headline: 'Games played on Mistboard are now free to download.',
+    body: 'The new game data page has a file for each variant and month since June, about 1,100 games so far, free to use under CC BY 4.0. Jieqi, Banqi and Flip Jungle files record what each flipped piece turned out to be, so every game replays from the file alone. Game search now covers every variant too.',
+    href: '/data',
+    cta: 'See the files',
+  },
   {
     date: '2026-10-02',
     kind: 'release',

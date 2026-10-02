@@ -35,6 +35,12 @@ export type AnnouncementLang = Extract<Locale, 'zh-Hans' | 'zh-Hant'>;
 export const ANNOUNCEMENT_LANGS: AnnouncementLang[] = ['zh-Hans', 'zh-Hant'];
 
 const ZH_HANS: Record<string, string> = {
+  // ── 2026-10-02 (game data downloads) ── 对局数据 follows data.heading; 暗棋 / 翻翻棋 follow variant names.
+  'Games played on Mistboard are now free to download.':
+    '现在可以免费下载在 Mistboard 上下过的棋局。',
+  'The new game data page has a file for each variant and month since June, about 1,100 games so far, free to use under CC BY 4.0. Jieqi, Banqi and Flip Jungle files record what each flipped piece turned out to be, so every game replays from the file alone. Game search now covers every variant too.':
+    '新的对局数据页按变体和月份提供文件，从 6 月开始，目前约 1,100 盘，按 CC BY 4.0 免费使用。揭棋、暗棋和翻翻棋的文件记录了每个翻开的棋子是什么，所以每盘棋只靠文件就能完整复盘。对局搜索现在也覆盖所有变体。',
+  'See the files': '查看文件',
   // ── 2026-10-02 (AB-JChess) ── 电脑 / 级 / 暗子 follow the ab-jchess article.
   'AB-JChess is the new top jieqi bot.': 'AB-JChess 成为新的最强揭棋电脑。',
   'An open-source jieqi engine by Huorongrong and Laoxu (Kouza), with its own neural network, now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games. The post shows where the difference is, in the positions people beat Pikafish in.':
@@ -398,6 +404,12 @@ const ZH_HANS: Record<string, string> = {
 };
 
 const ZH_HANT: Record<string, string> = {
+  // ── 2026-10-02 (game data downloads) ── 對局資料 follows data.heading; 暗棋 / 翻翻棋 follow variant names.
+  'Games played on Mistboard are now free to download.':
+    '現在可以免費下載在 Mistboard 上下過的棋局。',
+  'The new game data page has a file for each variant and month since June, about 1,100 games so far, free to use under CC BY 4.0. Jieqi, Banqi and Flip Jungle files record what each flipped piece turned out to be, so every game replays from the file alone. Game search now covers every variant too.':
+    '新的對局資料頁按變體和月份提供檔案，從 6 月開始，目前約 1,100 盤，依 CC BY 4.0 免費使用。揭棋、暗棋和翻翻棋的檔案記錄了每個翻開的棋子是什麼，所以每盤棋只靠檔案就能完整復盤。對局搜尋現在也涵蓋所有變體。',
+  'See the files': '查看檔案',
   // ── 2026-10-02 (AB-JChess) ── 電腦 / 級 / 暗子 follow the ab-jchess article.
   'AB-JChess is the new top jieqi bot.': 'AB-JChess 成為新的最強揭棋電腦。',
   'An open-source jieqi engine by Huorongrong and Laoxu (Kouza), with its own neural network, now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games. The post shows where the difference is, in the positions people beat Pikafish in.':
