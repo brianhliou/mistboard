@@ -24,6 +24,10 @@ Conventions:
 
 ## 2026-10
 
+### Watching and review
+
+- jieqi computer analysis now runs on AB-JChess, the strongest jieqi engine on the site, and its chart and move marks use AB-JChess's own scale; games analysed earlier keep their Pikafish analysis ([d561cb46](https://github.com/brianhliou/mistboard/commit/d561cb46))
+
 ### Site
 
 - Every finished game is now downloadable from the new [game data](/data) page: one file per variant per month, free to use under CC BY 4.0 ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
