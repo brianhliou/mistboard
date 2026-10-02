@@ -2,6 +2,8 @@ import { describe, expect, it } from 'vitest';
 import {
   fairyStockfishLevel,
   LANDING_BOT_GAME_SPEC_IDS,
+  landingBotLadder,
+  landingBotLadderIndex,
   landingBotLineup,
   landingBotOffer,
   landingBotRotationBucket,
@@ -179,5 +181,83 @@ describe('landing bot policy', () => {
       'pikafish-jieqi-level-3',
     );
     expect(pveEngineIdForRememberedPick('xiangqi', 'pikafish')).toBe('pikafish');
+  });
+});
+
+describe('landing bot ladder (homepage play panel)', () => {
+  const ids = (spec: string) => landingBotLadder(spec).map((rung) => rung.botId);
+
+  // These ids must exist in apps/server/src/first-party-bots.ts for the variant,
+  // or the one-click create fails. Pinned here because the web cannot import it.
+  it('walks xiangqi Fairy-Stockfish 1-8, then full-strength Pikafish', () => {
+    expect(ids('xiangqi')).toEqual([
+      ...Array.from({ length: 8 }, (_, i) => `fairy-stockfish-level-${i + 1}`),
+      'pikafish',
+    ]);
+  });
+
+  it('walks jieqi Pikafish Levels 1-8 (Level 8 is the pikafish bot), then AB-JChess', () => {
+    expect(ids('jieqi')).toEqual([
+      ...Array.from({ length: 7 }, (_, i) => `pikafish-level-${i + 1}`),
+      'pikafish',
+      'ab-jchess',
+    ]);
+    expect(landingBotLadder('jieqi').map((rung) => rung.level)).toEqual([
+      1,
+      2,
+      3,
+      4,
+      5,
+      6,
+      7,
+      8,
+      null,
+    ]);
+  });
+
+  it('gives the other Fairy-Stockfish variants eight levels and no named top', () => {
+    for (const spec of ['fortress-xiangqi', 'duck-xiangqi', 'atomic-xiangqi']) {
+      expect(ids(spec)).toEqual(
+        Array.from({ length: 8 }, (_, i) => `fairy-stockfish-level-${i + 1}`),
+      );
+    }
+  });
+
+  it('marks only the rungs that play on a trained net as NNUE', () => {
+    const nnue = (spec: string) =>
+      landingBotLadder(spec)
+        .filter((rung) => rung.nnue)
+        .map((rung) => rung.botId);
+    expect(nnue('xiangqi')).toEqual(['fairy-stockfish-level-8', 'pikafish']);
+    expect(nnue('jieqi')).toEqual(['ab-jchess']);
+    expect(nnue('fortress-xiangqi')).toEqual([]);
+    expect(nnue('banqi')).toEqual([]);
+  });
+
+  it('gives the house-built variants a single Misty', () => {
+    for (const spec of ['dark-chess', 'dark-xiangqi', 'banqi', 'jungle', 'jungle-flip']) {
+      expect(ids(spec)).toEqual(['misty']);
+    }
+    expect(ids('not-a-variant')).toEqual([]);
+  });
+
+  it('starts every ladder variant on a rung its canonical offer names', () => {
+    for (const spec of LANDING_BOT_GAME_SPEC_IDS) {
+      const offer = landingBotOffer(spec);
+      expect(landingBotLadderIndex(landingBotLadder(spec), offer?.botId)).toBeGreaterThanOrEqual(0);
+    }
+  });
+
+  it('maps the setup dialog’s remembered jieqi engines back onto the ladder', () => {
+    const ladder = landingBotLadder('jieqi');
+    expect(ladder[landingBotLadderIndex(ladder, 'pikafish-jieqi-level-5')]?.botId).toBe(
+      'pikafish-level-5',
+    );
+    expect(ladder[landingBotLadderIndex(ladder, 'pikafish-jieqi-strongest')]?.botId).toBe(
+      'pikafish',
+    );
+    expect(ladder[landingBotLadderIndex(ladder, 'ab-jchess-jieqi')]?.botId).toBe('ab-jchess');
+    expect(landingBotLadderIndex(ladder, 'something-else')).toBe(-1);
+    expect(landingBotLadderIndex(ladder, null)).toBe(-1);
   });
 });

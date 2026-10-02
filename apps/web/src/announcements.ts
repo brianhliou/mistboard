@@ -17,6 +17,11 @@
 // already lists them live from the API. Post when a WORK is finished (a manual,
 // not a volume) or at a milestone worth a reader's attention. Individual
 // publications reach people through the studies widget and /study on their own.
+//
+// GAMES-PLAYED MILESTONES (Brian, 2026-10-01): when an entry celebrates a
+// games-played milestone, mention that every game is downloadable from /data
+// (free under CC BY 4.0) and link it. The archive grows with every milestone,
+// and researchers and engine authors are the audience for it.
 
 import { articleGoesLiveAt } from './articles/publish-time.js';
 
@@ -38,7 +43,7 @@ export type Announcement = {
 
 const baseAnnouncements: Announcement[] = [
   {
-    date: '2026-10-01',
+    date: '2026-10-02',
     kind: 'release',
     headline: 'Crazyhouse Xiangqi has launched.',
     body: 'Chinese chess with crazyhouse drops: a piece you capture joins your hand, and on any turn you may drop it instead of moving, on any empty point where that piece could stand. Each side starts with its advisors and elephants in hand, and they roam their own half of the board. A drop may give check, and may mate. Eight bot levels, a friend or the lobby; the analysis board runs Fairy-Stockfish in your browser.',
@@ -46,7 +51,29 @@ const baseAnnouncements: Announcement[] = [
     cta: 'Study the rules',
   },
   {
-    date: '2026-10-03',
+    date: '2026-10-02',
+    kind: 'release',
+    headline: 'Every game on Mistboard can now be played rated.',
+    body: 'Sign in and use Find opponent. A rated game between two signed-in players now counts in every variant: xiangqi, jieqi, Banqi, Jungle, Flip Jungle, and Duck, Fog, Fortress and Atomic Xiangqi. Games against a friend or a bot stay casual.',
+    href: '/?play=lobby',
+    cta: 'Find an opponent',
+  },
+  {
+    date: '2026-10-02',
+    kind: 'release',
+    headline: 'The homepage starts a game in one click.',
+    body: "Pick a game, set the bot's level and clock, and press Play. Each row remembers your last pick, and Play again reruns your last game. The Play a person tab shows anyone waiting and every open correspondence game, with a casual or rated switch.",
+  },
+  {
+    date: '2026-10-02',
+    kind: 'release',
+    headline: 'Games played on Mistboard are now free to download.',
+    body: 'The new game data page has a file for each variant and month since June, about 1,100 games so far, free to use under CC BY 4.0. Jieqi, Banqi and Flip Jungle files record what each flipped piece turned out to be, so every game replays from the file alone. Game search now covers every variant too.',
+    href: '/data',
+    cta: 'See the files',
+  },
+  {
+    date: '2026-10-02',
     kind: 'release',
     headline: 'AB-JChess is the new top jieqi bot.',
     body: 'An open-source jieqi engine by Huorongrong and Laoxu (Kouza), with its own neural network, now sits above Pikafish Level 8. It beat full-strength Pikafish 248 to 136 in 400 games. The post shows where the difference is, in the positions people beat Pikafish in.',

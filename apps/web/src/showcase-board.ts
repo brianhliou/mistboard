@@ -54,6 +54,10 @@ export type ShowcaseBoardOptions = {
   // went on air. Autoplay joins the broadcast at the ply it is on now and plays on
   // at the recorded timing. Both renderer paths honor it.
   airStartMs?: number;
+  // A disc in each seat's ink beside the player names (homepage TV), on both
+  // renderer paths. Off by default: the other compact hosts hide or restyle the
+  // seat rows.
+  seatDiscs?: boolean;
 };
 
 export async function mountShowcaseBoard(
@@ -78,6 +82,7 @@ export async function mountShowcaseBoard(
         : {}),
       ...(options.onLoadError ? { onLoadError: options.onLoadError } : {}),
       ...(options.airStartMs !== undefined ? { airStartMs: options.airStartMs } : {}),
+      ...(options.seatDiscs ? { seatDiscs: true } : {}),
     });
   }
 
@@ -94,6 +99,7 @@ export async function mountShowcaseBoard(
     metadataMode: 'compact',
     metadataByRoomId: options.metadataByRoomId,
     hideGameIdPill: true,
+    ...(options.seatDiscs ? { seatDiscs: true } : {}),
     showCaptures: false,
     compactClockLayout: 'board-edges',
     endStatusMode: 'clock',

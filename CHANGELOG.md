@@ -26,11 +26,29 @@ Conventions:
 
 ### Playing
 
+- in-game buttons and the clock span the move column; after a bot game the postgame offers New game, and Challenge a friend opens on a random side ([6e9613e2](https://github.com/brianhliou/mistboard/commit/6e9613e2))
+- The homepage's play panel is now one row per game: pick a bot level and clock and press Play, or switch to Play a person for open and rated games ([0c8f1f8f](https://github.com/brianhliou/mistboard/commit/0c8f1f8f))
+- Every game can now be played rated through Find opponent between signed-in players: jieqi, Duck Xiangqi, banqi, Jungle, Flip Jungle and Fog Xiangqi join xiangqi, Fortress and Atomic; rated Atomic games now update ratings ([27542e79](https://github.com/brianhliou/mistboard/commit/27542e79))
+- new game rooms no longer show the 'clock starts after the opening moves' note; the header already shows the time control ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - The game-over badges play again each time you step back onto the final move ([9434239f](https://github.com/brianhliou/mistboard/commit/9434239f))
 - Fortress Xiangqi shows every droppable piece in each player's tray, faded until you hold it, with a count when you hold two or more ([13f88a60](https://github.com/brianhliou/mistboard/commit/13f88a60))
 
+### Learning and puzzles
+
+- The jieqi bot wins post shows each game from the winner's side ([e2800c4d](https://github.com/brianhliou/mistboard/commit/e2800c4d))
+- the 1,000 games played post reads in Simplified and Traditional Chinese ([/zh-hans/blog/one-thousand-games](/zh-hans/blog/one-thousand-games)) ([85975f14](https://github.com/brianhliou/mistboard/commit/85975f14))
+
 ### Watching and review
 
+- upcoming events on the broadcasts page are listed soonest first ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
+- The third player page, Lại Lý Huynh 赖理兄 (/blog/lai-ly-huynh), the world champion: his unbeaten 2025 title run and the final he won with black, the year since, five wins on the board and a 38-chapter study; in English, Chinese and, a first for a player page, Vietnamese (/blog/lai-ly-huynh-co-tuong) ([dc9614b2](https://github.com/brianhliou/mistboard/commit/dc9614b2))
+- an event stays under Upcoming until its first games are posted, and the top card on the broadcasts page says why it leads ([a6b33f1e](https://github.com/brianhliou/mistboard/commit/a6b33f1e))
+- a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([c2abab09](https://github.com/brianhliou/mistboard/commit/c2abab09))
+- a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([f15ea83a](https://github.com/brianhliou/mistboard/commit/f15ea83a))
+- Our bots now play each other every day in xiangqi, jieqi, Duck Xiangqi, Jungle Chess and Banqi, and those games are searchable under Engine games and downloadable from the [game data](/data) page ([ec3a7712](https://github.com/brianhliou/mistboard/commit/ec3a7712))
+- a broadcast with no games yet keeps its game list and chat column, so the page has the same shape before play as during it ([b792d6b5](https://github.com/brianhliou/mistboard/commit/b792d6b5))
+- The homepage TV marks each player with a disc in their colour, so Banqi and Flip Jungle show who plays which side (a dashed ring until the first flip decides it) ([f27e98d0](https://github.com/brianhliou/mistboard/commit/f27e98d0))
+- in Jieqi game review, a reveal is graded on what its player could know, counting their own face-down pieces that were captured unseen ([a730bab6](https://github.com/brianhliou/mistboard/commit/a730bab6))
 - Game search hides games shorter than ten plies by default, with one click to show them ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 - Every game page's Share and export panel can download a board image and copy an embed code ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
 - jieqi computer analysis now runs on AB-JChess, the strongest jieqi engine on the site, and its chart and move marks use AB-JChess's own scale; games analysed earlier keep their Pikafish analysis ([d561cb46](https://github.com/brianhliou/mistboard/commit/d561cb46))
@@ -41,6 +59,12 @@ Conventions:
 
 ### Site
 
+- the privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
+- less empty space above and below the footer on the homepage ([774f9cff](https://github.com/brianhliou/mistboard/commit/774f9cff))
+- the changelog shows the latest two months, and each older month has its own page ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
+- The homepage's second article row is now Deep dives, starting with the player pages, and every new post appears on the homepage the day it publishes ([45217d23](https://github.com/brianhliou/mistboard/commit/45217d23))
+- Every player colour disc on the site is now one shared design, and the black disc stays visible on the dark theme ([c3d5a774](https://github.com/brianhliou/mistboard/commit/c3d5a774))
+- Jieqi, Banqi and Flip Jungle are back on the [game data](/data) page, and every downloaded game of theirs now records what each flipped piece turned out to be, so it replays from the file alone ([9037d497](https://github.com/brianhliou/mistboard/commit/9037d497))
 - Every finished game is now downloadable from the new [game data](/data) page: one file per variant per month, free to use under CC BY 4.0 ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))
 
 ### Removed
@@ -49,6 +73,13 @@ Conventions:
 
 ### Fixed
 
+- rematch now swaps colours, including in xiangqi; Copy invite shows only while a seat is empty ([6e9613e2](https://github.com/brianhliou/mistboard/commit/6e9613e2))
+- a finished broadcast whose source never posted games says No games published instead of promising records ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
+- an open game whose player has left now drops off the list within 10 seconds, and a matched game you join alone ends after 30 seconds instead of showing an invite link ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
+- studies and game reviews without move notes no longer leave an empty gap between the board and the tabs below it ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
+- diagram labels and blog cards on Chinese and Vietnamese pages are translated ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
+- starting a Fog Xiangqi bot game during a site update no longer blocks other bot games for 30 minutes ([9ec82c36](https://github.com/brianhliou/mistboard/commit/9ec82c36))
+- a Fog Chess or Fog Xiangqi game against the bot no longer ends in a forfeit when the engine server restarts mid-game; the bot reconnects and plays on ([96cde925](https://github.com/brianhliou/mistboard/commit/96cde925))
 - in Jieqi and Jungle game review, the board shows the ?!, ? or ?? mark on the selected move, and a judged reveal names the better move ("Mistake. i5-i0 was best.") ([d40f4fb1](https://github.com/brianhliou/mistboard/commit/d40f4fb1))
 - The homepage board no longer stays live with a running clock when the server stops answering ([602e3d40](https://github.com/brianhliou/mistboard/commit/602e3d40))
 - The first download of a game data file no longer pauses live games while it is built ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))

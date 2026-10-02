@@ -406,6 +406,7 @@ const PARAMETRIC_ROUTE_SAMPLES: Record<string, readonly string[]> = {
   '^\\/inbox(?:\\/([^/]+))?$': ['/inbox', '/inbox/somehandle'],
   '^\\/coach(?:\\/([^/]+))?$': ['/coach', '/coach/somehandle'],
   '^\\/players\\/([^/]+)$': ['/players/yin-sheng'],
+  '^\\/changelog\\/\\d{4}-\\d{2}$': ['/changelog/2026-09'],
   '^\\/players\\/teams\\/([^/]+)$': ['/players/teams/hebei-team'],
   '^(?:\\/(?:zh-hans|zh-hant))?\\/study\\/([A-Za-z0-9]+)$': [
     '/study/Ab12cd',

@@ -9,10 +9,12 @@ import {
   DATA_VARIANTS,
   DATA_WITHHELD_VARIANTS,
   dataFileKey,
+  dataFileName,
   dataFormatsForVariant,
   EmptyDataFileError,
   type EnsureDeps,
   ensureDataFile,
+  hashedDataFilePath,
   isClosedMonth,
   listableCollections,
   parseDataFilePath,
@@ -43,7 +45,7 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
   for (const path of [
     '/api/data/monthly/2026-09/mahjong.jsonl.gz',
     '/api/data/monthly/2026-09/kriegspiel.jsonl.gz',
-    '/api/data/monthly/2026-09/jieqi.pgn.gz',
+    '/api/data/monthly/2026-09/jungle.pgn.gz',
     '/api/data/monthly/2026-09/all.pgn.gz',
     '/api/data/monthly/2026-09/everything.jsonl.gz',
     '/api/data/monthly/2026-09/xiangqi.zip',
@@ -57,13 +59,15 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
     assert.equal(parsed?.ok, false, path);
     assert.equal(parsed && !parsed.ok && parsed.status, 404, path);
   }
-  // Hidden-piece variants are withheld until #484, and the 404 says why.
+  // The hidden-piece variants are offered since #484, in JSONL and PGN.
   for (const variant of ['jieqi', 'banqi', 'jungle-flip']) {
-    assert.deepEqual(parseDataFilePath(`/api/data/monthly/2026-09/${variant}.jsonl.gz`), {
-      ok: false,
-      status: 404,
-      error: 'hidden_piece_format_pending',
-    });
+    for (const format of ['jsonl', 'pgn'] as const) {
+      assert.deepEqual(parseDataFilePath(`/api/data/monthly/2026-09/${variant}.${format}.gz`), {
+        ok: true,
+        target: { kind: 'monthly', month: '2026-09', variant, format },
+        hash: null,
+      });
+    }
   }
   assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/all.jsonl.gz'), {
     ok: true,
@@ -81,12 +85,6 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
     target: { kind: 'collection', corpusId: 'a-match', format: 'pgn' },
     hash: 'ffffffffffff',
   });
-  // A withheld variant stays withheld under any hash.
-  assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/jieqi.0123456789ab.jsonl.gz'), {
-    ok: false,
-    status: 404,
-    error: 'hidden_piece_format_pending',
-  });
   assert.equal(parseDataFilePath('/api/games/x/export.json'), null);
 });
 
@@ -94,14 +92,14 @@ test('data variants are the export table minus the withheld list, PGN only where
   assert.ok(DATA_VARIANTS.includes('xiangqi'));
   assert.ok(DATA_VARIANTS.includes('jungle'));
   assert.ok(!DATA_VARIANTS.includes('mahjong'));
-  // The all-variants file is built from DATA_VARIANTS, so this keeps the
-  // hidden-piece games out of it too (#484).
-  assert.deepEqual(Object.keys(DATA_WITHHELD_VARIANTS).sort(), ['banqi', 'jieqi', 'jungle-flip']);
-  for (const variant of Object.keys(DATA_WITHHELD_VARIANTS)) {
-    assert.ok(!DATA_VARIANTS.includes(variant), variant);
+  // Nothing is withheld since #484: the all-variants file, built from
+  // DATA_VARIANTS, holds the hidden-piece games too.
+  assert.deepEqual(DATA_WITHHELD_VARIANTS, {});
+  for (const variant of ['jieqi', 'banqi', 'jungle-flip']) {
+    assert.ok(DATA_VARIANTS.includes(variant), variant);
+    assert.deepEqual(dataFormatsForVariant(variant), ['pgn', 'jsonl'], variant);
   }
   assert.deepEqual(dataFormatsForVariant('xiangqi'), ['pgn', 'jsonl']);
-  assert.deepEqual(dataFormatsForVariant('jieqi'), ['jsonl']);
   assert.deepEqual(dataFormatsForVariant('mahjong'), []);
 });
 
@@ -118,7 +116,7 @@ test('the listing groups closed months newest first, with built sizes and checks
       { month: '2026-10', variant: 'xiangqi', games: 3 },
       { month: '2026-09', variant: 'jungle', games: 4 },
       { month: '2026-09', variant: 'xiangqi', games: 10 },
-      // Withheld until #484: no row, no rail entry, not in the month's total.
+      // The hidden-piece variants are listed like any other since #484.
       { month: '2026-09', variant: 'jieqi', games: 7 },
       { month: '2026-09', variant: 'banqi', games: 5 },
       { month: '2026-08', variant: 'jungle-flip', games: 3 },
@@ -140,11 +138,18 @@ test('the listing groups closed months newest first, with built sizes and checks
   assert.deepEqual(
     listing.months.map((month) => [month.month, month.games, month.variants.map((v) => v.variant)]),
     [
-      ['2026-09', 14, ['xiangqi', 'jungle']],
-      ['2026-08', 2, ['dark-chess']],
+      ['2026-09', 26, ['xiangqi', 'jieqi', 'banqi', 'jungle']],
+      ['2026-08', 5, ['dark-chess', 'jungle-flip']],
     ],
   );
-  assert.deepEqual(listing.variants, ['xiangqi', 'dark-chess', 'jungle']);
+  assert.deepEqual(listing.variants, [
+    'xiangqi',
+    'jieqi',
+    'banqi',
+    'dark-chess',
+    'jungle',
+    'jungle-flip',
+  ]);
   const xiangqi = listing.months[0]!.variants[0]!;
   assert.deepEqual(
     xiangqi.files.map((file) => [file.format, file.path, file.fileName, file.built?.bytes ?? null]),
@@ -163,11 +168,104 @@ test('the listing groups closed months newest first, with built sizes and checks
   assert.deepEqual(
     listing.months.map((month) => month.files.map((file) => [file.path, file.games])),
     [
-      [['/api/data/monthly/2026-09/all.jsonl.gz', 14]],
-      [['/api/data/monthly/2026-08/all.jsonl.gz', 2]],
+      [['/api/data/monthly/2026-09/all.jsonl.gz', 26]],
+      [['/api/data/monthly/2026-08/all.jsonl.gz', 5]],
     ],
   );
   assert.equal(listing.license, 'CC BY 4.0');
+});
+
+test('engine-game files have their own paths, keys and names, and fail closed the same way', () => {
+  assert.deepEqual(parseDataFilePath('/api/data/engine-monthly/2026-09/jieqi.jsonl.gz'), {
+    ok: true,
+    target: { kind: 'engine-monthly', month: '2026-09', variant: 'jieqi', format: 'jsonl' },
+    hash: null,
+  });
+  assert.deepEqual(
+    parseDataFilePath('/api/data/engine-monthly/2026-09/all.0123456789ab.jsonl.gz'),
+    {
+      ok: true,
+      target: { kind: 'engine-monthly', month: '2026-09', variant: 'all', format: 'jsonl' },
+      hash: '0123456789ab',
+    },
+  );
+  const bad = (path: string) => {
+    const parsed = parseDataFilePath(path);
+    return parsed && !parsed.ok ? parsed.status : 'ok';
+  };
+  assert.equal(bad('/api/data/engine-monthly/2026-13/jieqi.jsonl.gz'), 400);
+  assert.equal(bad('/api/data/engine-monthly/2026-09/mahjong.jsonl.gz'), 404);
+  assert.equal(bad('/api/data/engine-monthly/2026-09/all.pgn.gz'), 404);
+  assert.equal(bad('/api/data/engine-monthly/2026-09/duck-xiangqi.pgn.gz'), 404);
+  assert.equal(bad('/api/data/engine-monthly/nope'), 404);
+  const target = {
+    kind: 'engine-monthly',
+    month: '2026-09',
+    variant: 'jieqi',
+    format: 'pgn',
+  } as const;
+  // Never the human file's key: a human build cannot be served as an engine one.
+  assert.equal(dataFileKey(target), 'engine-monthly/2026-09/jieqi.pgn.gz');
+  assert.notEqual(dataFileKey(target), dataFileKey({ ...target, kind: 'monthly' }));
+  assert.equal(dataFileName(target), 'mistboard_engine_jieqi_2026-09.pgn.gz');
+  assert.equal(
+    hashedDataFilePath(target, 'b'.repeat(64)),
+    '/api/data/engine-monthly/2026-09/jieqi.bbbbbbbbbbbb.pgn.gz',
+  );
+});
+
+test('engine games are listed in their own months, never folded into the human ones', () => {
+  const listing = buildDataListing({
+    counts: [{ month: '2026-09', variant: 'xiangqi', games: 10 }],
+    engineCounts: [
+      { month: '2026-09', variant: 'xiangqi', games: 60 },
+      { month: '2026-09', variant: 'duck-xiangqi', games: 30 },
+      { month: '2026-10', variant: 'jieqi', games: 2 },
+    ],
+    stored: [],
+    collections: [],
+    now: NOW,
+  });
+  // The human month is untouched by the engine games.
+  assert.deepEqual(
+    listing.months.map((month) => [month.month, month.games, month.variants.map((v) => v.variant)]),
+    [['2026-09', 10, ['xiangqi']]],
+  );
+  assert.deepEqual(
+    listing.months[0]?.files.map((file) => file.path),
+    ['/api/data/monthly/2026-09/all.jsonl.gz'],
+  );
+  // Closed months only, like the human files.
+  assert.deepEqual(
+    listing.engineMonths.map((month) => [
+      month.month,
+      month.games,
+      month.variants.map((v) => [v.variant, v.games]),
+    ]),
+    [
+      [
+        '2026-09',
+        90,
+        [
+          ['xiangqi', 60],
+          ['duck-xiangqi', 30],
+        ],
+      ],
+    ],
+  );
+  assert.deepEqual(
+    listing.engineMonths[0]?.files.map((file) => [file.path, file.fileName]),
+    [['/api/data/engine-monthly/2026-09/all.jsonl.gz', 'mistboard_engine_all_2026-09.jsonl.gz']],
+  );
+  assert.deepEqual(
+    listing.engineMonths[0]?.variants[0]?.files.map((file) => file.path),
+    [
+      '/api/data/engine-monthly/2026-09/xiangqi.pgn.gz',
+      '/api/data/engine-monthly/2026-09/xiangqi.jsonl.gz',
+    ],
+  );
+  // A variant with engine games only still gets a rail entry.
+  assert.deepEqual(listing.variants, ['xiangqi', 'duck-xiangqi']);
 });
 
 test('a collection needs one exportable variant and an import origin', () => {
@@ -201,7 +299,8 @@ test('a collection needs one exportable variant and an import origin', () => {
   assert.deepEqual(listing.collections[0]?.credit, origin.credit);
   assert.deepEqual(
     listing.collections[0]?.files.map((file) => file.path),
-    ['/api/data/collections/match.jsonl.gz'],
+    // A jieqi engine match gets a PGN too since #484.
+    ['/api/data/collections/match.pgn.gz', '/api/data/collections/match.jsonl.gz'],
   );
 });
 

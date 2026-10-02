@@ -48,12 +48,21 @@ import { parseStandardXiangqiFen, standardXiangqiEngineFen } from '../packages/g
 import { resolve as stubCss } from './lib/stub-css-hooks.mjs';
 
 const HOME = process.env.HOME ?? '';
+// The site's own engine (the pikafish.ref build) when this Mac has it, so the
+// verdicts match production; the January 2026 official build is a different
+// engine (docs-private/players/README.md § 3) and is only the fallback.
+const PINNED = resolve(HOME, 'projects/tools/pikafish-6a59ee2f/src');
+const HAS_PINNED = existsSync(resolve(PINNED, 'pikafish'));
 const BIN =
   process.env.MISTBOARD_PIKAFISH_XIANGQI_PATH ??
-  resolve(HOME, 'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon');
+  (HAS_PINNED
+    ? resolve(PINNED, 'pikafish')
+    : resolve(HOME, 'projects/tools/pikafish-official-2026-01-02/MacOS/pikafish-apple-silicon'));
 const NET =
   process.env.MISTBOARD_PIKAFISH_XIANGQI_NET ??
-  resolve(HOME, 'projects/tools/pikafish-official-2026-01-02/pikafish.nnue');
+  (HAS_PINNED
+    ? resolve(PINNED, 'pikafish.nnue')
+    : resolve(HOME, 'projects/tools/pikafish-official-2026-01-02/pikafish.nnue'));
 
 // Article modules import stylesheets, and some read `window` at module scope to
 // pick up a stored board theme. Neither exists under node. Both are stubbed
@@ -309,7 +318,11 @@ async function main() {
   send('uci');
   await until((l) => l === 'uciok');
   if (existsSync(NET)) send(`setoption name EvalFile value ${NET}`);
-  send('setoption name Threads value 4');
+  // One thread when measuring part of the set: a multi-threaded search at a fixed
+  // node budget is not repeatable, and a page build re-measuring its own lines
+  // flipped a verdict between two runs at four (2026-10-01). A full run keeps
+  // four for speed and owns the whole file anyway.
+  send(`setoption name Threads value ${only ? 1 : 4}`);
   send('isready');
   await until((l) => l === 'readyok');
 

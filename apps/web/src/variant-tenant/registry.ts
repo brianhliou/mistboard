@@ -347,7 +347,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: false,
+        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        supportsRated: true,
         supportsTimeControl: true,
       },
       engineOptions: [
@@ -521,7 +522,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'black',
         secondGlyph: '2',
         secondLabel: 'Second',
-        supportsRated: false,
+        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -580,7 +582,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'black',
         secondGlyph: '象',
         secondLabel: 'Blue',
-        supportsRated: false,
+        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -642,7 +645,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         secondColor: 'black',
         secondGlyph: '2',
         secondLabel: 'Second',
-        supportsRated: false,
+        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -696,7 +700,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: false,
+        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
@@ -750,7 +755,8 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        supportsRated: false,
+        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        supportsRated: true,
         supportsTimeControl: true,
       },
       // 1+1 is omitted; every other xiangqi tenant offers all four.

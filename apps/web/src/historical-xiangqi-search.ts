@@ -28,7 +28,7 @@ export type HistoricalXiangqiResult = '1-0' | '0-1' | '1/2-1/2' | '*';
 
 export type HistoricalXiangqiGameListItem = {
   id: string;
-  kind: 'mistboard' | 'engine-match' | 'historical' | 'broadcast';
+  kind: 'mistboard' | 'engine-match' | 'engine-game' | 'historical' | 'broadcast';
   // The row's game spec. Absent from older responses, which were xiangqi only.
   variant?: string;
   reviewUrl: string;
@@ -116,11 +116,15 @@ const STRING_FILTER_KEYS = [
 // Source values the server reads as a lane rather than an archive slug.
 const SOURCE_MISTBOARD = 'mistboard';
 const SOURCE_ENGINE_MATCH = 'engine-match';
+// The games the site's own bots play each other on a schedule (#488). Like
+// engine matches, off in the mixed feed until asked for.
+const SOURCE_ENGINE_GAME = 'engine-game';
 const SOURCE_BROADCAST = 'broadcast';
 const SOURCE_ARCHIVE = 'archive';
 const LANE_SOURCES: ReadonlySet<string> = new Set([
   SOURCE_MISTBOARD,
   SOURCE_ENGINE_MATCH,
+  SOURCE_ENGINE_GAME,
   SOURCE_BROADCAST,
   SOURCE_ARCHIVE,
 ]);
@@ -333,7 +337,12 @@ function writeFilters(filters: Filters): void {
 /** Broadcasts and the archive are xiangqi only; every other source spans variants. */
 function sourceFitsVariant(source: string, variant: string): boolean {
   if (!variant || variant === XIANGQI_SPEC_ID) return true;
-  return source === '' || source === SOURCE_MISTBOARD || source === SOURCE_ENGINE_MATCH;
+  return (
+    source === '' ||
+    source === SOURCE_MISTBOARD ||
+    source === SOURCE_ENGINE_MATCH ||
+    source === SOURCE_ENGINE_GAME
+  );
 }
 
 /** The filters with another variant picked: back to the first page, and a
@@ -531,6 +540,7 @@ function sourceOptions(variant: string, current: string): { value: string; label
     { value: '', label: t('historical.anySource') },
     { value: SOURCE_MISTBOARD, label: t('historical.sourcePlayedHere') },
     { value: SOURCE_ENGINE_MATCH, label: t('historical.sourceEngineMatches') },
+    { value: SOURCE_ENGINE_GAME, label: t('historical.sourceEngineGames') },
   ];
   if (sourceFitsVariant(SOURCE_BROADCAST, variant)) {
     options.push(
@@ -860,6 +870,7 @@ export function historicalXiangqiOutcomeLabel(result: HistoricalXiangqiResult): 
 function gameKindLabel(kind: HistoricalXiangqiGameListItem['kind']): string {
   if (kind === 'mistboard') return t('historical.sourceMistboard');
   if (kind === 'engine-match') return t('historical.sourceEngineMatch');
+  if (kind === 'engine-game') return t('historical.sourceEngineGame');
   if (kind === 'broadcast') return t('historical.sourceBroadcast');
   return t('historical.sourceArchive');
 }
@@ -877,7 +888,9 @@ export function eventLine(game: HistoricalXiangqiGameListItem): string {
   const parts = [game.eventNameEn ?? game.eventName, roundPart, game.site].filter(Boolean);
   if (parts.length > 0) return parts.join(' · ');
   // A game played here has no event to name, and its room id is not one.
-  if (game.kind === 'mistboard' || game.kind === 'engine-match') return '';
+  if (game.kind === 'mistboard' || game.kind === 'engine-match' || game.kind === 'engine-game') {
+    return '';
+  }
   if (game.sourceGameId) return `Source game ${game.sourceGameId}`;
   return 'No event metadata';
 }

@@ -67,6 +67,7 @@ type ServerHttpHandlerOptions = {
     rated?: boolean,
     options?: {
       randomSeating?: boolean;
+      lobbyMatch?: boolean;
       engineColor?: 'white' | 'black';
       engineReservationId?: string;
       creatorPreference?: 'white' | 'black';
@@ -605,6 +606,22 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       }).catch(() => {
         request.url = '/';
         void serveHandler(request, response, { public: options.staticDir });
+      });
+      return;
+    }
+
+    // A month the changelog no longer shows in full, prerendered as its own
+    // page. A month without one is on /changelog itself (the latest two) or not
+    // in the log at all; either way the anchor there is the answer.
+    const changelogMonth = /^\/changelog\/(\d{4}-\d{2})$/.exec(pathname)?.[1];
+    if (changelogMonth) {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: `changelog-${changelogMonth}.html` as const,
+      }).catch(() => {
+        response.writeHead(302, { location: `/changelog#${changelogMonth}` });
+        response.end();
       });
       return;
     }

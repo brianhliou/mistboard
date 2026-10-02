@@ -44,4 +44,12 @@ export const PLAYER_PROFILES: Readonly<Record<string, PlayerProfile>> = {
     title: 'NM',
     profileHref: '/blog/cao-yanlei',
   },
+  'lai-ly-huynh': {
+    photo: '/article-thumbs/lai-ly-huynh-2026-face.jpg',
+    photoCredit: 'Vietnam Xiangqi Federation via Thanh Niên',
+    born: '1990, Vĩnh Long, Vietnam',
+    // WXF International Grandmaster IGM0067 (official list 2022-11-24).
+    title: 'GM',
+    profileHref: '/blog/lai-ly-huynh',
+  },
 };

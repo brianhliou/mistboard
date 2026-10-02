@@ -48,6 +48,7 @@ export const ZH_HANT_CONTENT = {
   'videos.previousVideos': '上一個影片',
   'videos.moreVideos': '更多影片',
   'articles.heading': '文章',
+  'articles.deepDives': '深度文章',
   'articles.read': '閱讀',
   'articles.intro': '原創策略遊戲的文章、規則說明與引擎工作。',
   'articles.allArticles': '全部文章',
@@ -288,7 +289,7 @@ export const ZH_HANT_CONTENT = {
     'Mistboard 是一個免費的開源興趣專案。本頁說明我們在 mistboard.com 託管網站上收集什麼。隨著專案成長，本頁會變化；本頁始終是目前版本。',
   'privacy.collectHeading': '我們收集什麼',
   'privacy.collectBody':
-    '彙總分析資料、你下過的對局，以及如果你建立帳號，你的使用者名稱和信箱。你的瀏覽器會在本機儲存中保存一個隨機識別碼，以便把你未登入時下的對局在統計中計為同一位訪客；它不是 Cookie，不會離開本站，也不會顯示給其他玩家。圍繞計分對局，為保持誠實公平，我們會收集更多資料。',
+    '分析資料、你下過的對局，以及如果你建立帳號，你的使用者名稱和信箱。我們使用 PostHog 做分析：它會按瀏覽器記錄你造訪的頁面和在頁面上的操作，如果你登入，這些記錄會關聯到你的帳號。你的瀏覽器會在本機儲存中保存一個隨機識別碼，以便把你未登入時下的對局在統計中計為同一位訪客；它不是 Cookie，不會離開本站，也不會顯示給其他玩家。圍繞計分對局，為保持誠實公平，我們會收集更多資料。',
   'privacy.noDoHeading': '我們不會做什麼',
   'privacy.noDoBody':
     '沒有廣告。我們不出售你的資料。不錄製你的螢幕。我們尊重 Do Not Track。休閒對局不需要帳號。',
@@ -404,20 +405,23 @@ export const ZH_HANT_CONTENT = {
   'data.formatJsonl':
     'JSONL：每行一盤對局，gzip 壓縮。每一行與該對局頁面上單獨下載的 JSON 完全相同。欄位：',
   'data.fieldGame': '對局編號及其在 Mistboard 上的頁面。',
-  'data.fieldVariant': '變體編號，以及 pvp（人對人）或 pve（人對機器人）。',
+  'data.fieldVariant':
+    '變體編號，以及 pvp（人對人）、pve（人對機器人），或在機器人對局檔案中的 eve（機器人對機器人）。',
   'data.fieldPlayers': '各方在對局頁面上顯示的名字，依顏色區分。設為私密的座位顯示為 Anonymous。',
   'data.fieldTimeControl':
     '初始時間和每步加時（毫秒），並附 5+3 這樣的標籤；不限時則為 null。按每步固定用時進行的引擎對局附 movetime_ms。',
   'data.fieldTimes': '對局開始和結束的時間，ISO 8601 格式，UTC。',
   'data.fieldResult': '獲勝顏色或和棋，以及對局如何結束：將死、超時、認輸等。',
   'data.fieldPlies':
-    '依序列出每一步：走子方、uci 格式的著法、該變體有記譜法時的 san（否則為 null），以及每步之後雙方的剩餘時間。',
+    '依序列出每一步：走子方、uci 格式的著法、該變體有記譜法時的 san（否則為 null），以及每步之後雙方的剩餘時間。在揭棋、暗棋和翻翻棋中，翻開棋子的著法還帶有 revealed，揭棋中吃掉暗子的著法帶有 captured_hidden，兩者都是顏色加兵種。',
   'data.fieldInk': '僅暗棋和翻翻棋：先手翻出的顏色。',
+  'data.fieldDeal':
+    '本站下的揭棋、暗棋和翻翻棋對局：開局的暗子佈局，以寫明每枚暗子的 FEN 表示。引擎對局沒有此欄位。',
   'data.fieldOrigin': '僅引擎對局下載：賽事、署名，以及始終未揭開的棋子所在的格子。',
   'data.formatMoves':
     'uci 著法是座標：h2e2 是走子，@c3 是翻開一枚暗子，R@d4 是從手中打入（堡壘象棋），b3e3@e6 是一回合鴨子象棋，最後是鴨子的落點。',
   'data.formatPgn':
-    'PGN：用於有其他程式可讀記譜法的變體：迷霧國際象棋用 SAN，象棋和原子象棋用 WXF，迷霧象棋用 ICCS 座標。對局之間空一行，並帶有 Site（對局頁面）、MistboardVariant、MistboardTermination 和 License 標籤。沒有記譜標準的變體只提供 JSONL。',
+    'PGN：用於著法能寫成可獨立重播文字的變體：迷霧國際象棋用 SAN，象棋和原子象棋用 WXF，迷霧象棋和揭棋用 ICCS 座標，暗棋用 ICGA 記譜法，翻翻棋用座標。對局之間空一行，並帶有 Site（對局頁面）、MistboardVariant、MistboardTermination 和 License 標籤。其他變體只提供 JSONL。',
   'data.licenseHeading': '授權',
   'data.licensePrefix': '這些檔案依 ',
   'data.licenseSuffix':
@@ -427,18 +431,33 @@ export const ZH_HANT_CONTENT = {
   'data.included':
     '自 2026 年 6 月起在本站下完的每一盤對局：人對人或人對機器人，計分或休閒，登入或以訪客身分。對局依結束時所在的月份（UTC）歸檔。',
   'data.excluded':
-    '不包含：中止的對局和雙方都還沒走棋就結束的對局、營運和測試本站的帳號下的對局、非公開對局、引擎對引擎的對局，以及引擎對局等匯入的對局。當月結束後才會加入。',
+    '不包含：中止的對局和雙方都還沒走棋就結束的對局、營運和測試本站的帳號下的對局、非公開對局、機器人對局（它們有獨立的檔案），以及引擎對局等匯入的對局。當月結束後才會加入。',
   'data.hiddenHeading': '隱藏資訊',
   'data.hiddenFog':
     '已結束的迷霧對局不再隱藏任何資訊，所以檔案包含雙方的每一步，與對局結束後頁面上顯示的一致。當時每位玩家能看到什麼並未儲存；可以由著法和開源遊戲程式碼中的視野規則推出。',
   'data.hiddenFlip':
-    '揭棋、暗棋和翻翻棋暫未收入月度檔案。它們的匯出只記錄每枚棋子走到哪裡或在哪裡被翻開，既沒有暗子的初始佈局，也沒有每次翻開的是什麼棋子，所以下載的對局無法重播。等檔案能記錄翻開的棋子後再加入；在此之前，對局頁面會重播每一次揭開。',
+    '揭棋、暗棋和翻翻棋開局時棋子背面朝上。它們的檔案寫明每次翻開的是什麼棋子，所以下載的對局只憑著法就能重播，兩種格式都可以。',
+  'data.hiddenReveal':
+    '著法帶有翻開的棋子。在 PGN 中，著法翻開的棋子寫在 = 之後，紅方大寫，黑方小寫，所以任何 PGN 讀取器都會把它當作著法的一部分：揭棋如 e3e4=R，翻翻棋如 @c3=E。揭棋吃掉暗子時再加 x= 和被吃的棋子：b0b7=Cx=n。字母沿用各自 FEN 的字母：揭棋 R 車、N 馬、B 相、A 仕、C 炮、P 兵；翻翻棋 R 鼠、C 貓、D 狗、W 狼、P 豹、T 虎、L 獅、E 象。',
+  'data.hiddenBanqi':
+    '暗棋 PGN 依照 Chen、Shen 和 Hsu 的記譜法（ICGA Journal，2010）：b4-b2 是走子；論文中寫作 d8(P) 的翻子，這裡寫作 d8=P，因為 PGN 會把括號讀成變著。字母沿用論文：K 帥、G 仕、M 相、R 車、N 馬、C 炮、P 兵。它的棋盤是 4 欄 8 列，所以本站座標要互換：本站的 a 到 h 欄是 ICGA 的第 1 到 8 列，本站的第 1 到 4 列是 ICGA 的 a 到 d 欄。JSON 保留本站座標。',
+  'data.hiddenBanqiLetters':
+    '注意 G：在暗棋著法中它是仕，在暗棋 FEN 中卻是帥。FEN 的字母為 G 帥、A 仕、E 相、R 車、H 馬、C 炮、S 兵。',
+  'data.hiddenDeal':
+    '有暗子佈局時會一併提供。本站的每盤對局在開始時就把棋子全部發好，所以其 JSON 帶有 deal_fen，PGN 帶有 DealFEN 標籤：在該變體的 FEN 後加第六個欄位，依棋盤順序（從最上一列開始）寫出每枚暗子。FEN 標籤是背面朝上的初始局面。著法中的每次翻開都與佈局一致，兩個 FEN 都使用本站的座標和字母。',
   'data.hiddenNeverRevealed':
-    '在揭棋引擎對局下載中，有些棋子在對局結束時仍是暗子，身分從未確定。origin.never_revealed 列出它們所在的格子，任何檔案都不會為它們寫出棋子。',
+    '引擎對局下載沒有暗子佈局。對局自己的裁判程式在棋子翻開時才決定它是什麼，所以對局結束時仍是暗子的棋子從未有過身分：origin.never_revealed 列出它們所在的格子，任何檔案都不會為它們寫出棋子。它們的著法帶有每一次翻開，所以同樣可以重播。',
+  'data.hiddenReplayer':
+    '開源遊戲程式碼中有一個參考重播器 replayHiddenPieceRecord，可以從任一檔案重建對局，並逐一核對翻開的棋子與佈局。',
   'data.filesHeading': '檔案與校驗和',
   'data.filesBuilt':
     '檔案在第一次有人下載時由資料庫產生，之後不再改變。檔案產生後，對局資料頁面會顯示它的大小和 SHA-256，可以用 sha256sum 校驗下載。',
   'data.filesHosting':
     '檔案由本站直接提供。當某個月的檔案超過約 100 MB，或下載流量開始產生費用時，會遷移到物件儲存（Cloudflare R2）。',
   'privacy.downloadsLink': '對局資料頁面',
+  'data.engineHeading': '機器人對局',
+  'data.engineNote':
+    '本站自己的機器人之間的對局，每天幾盤。它們有獨立的檔案，從不出現在上面的檔案中。',
+  'data.engineAbout':
+    '本站每天安排幾盤自己的機器人之間的對局，就是你可以對戰的那些機器人，涵蓋多個變體，並在本站自己的伺服器上進行。這些對局發布在獨立的月度檔案中，位於對局資料頁面的「機器人對局」下，mode 為 eve。它們從不出現在人類對局的檔案中，也不計入本站的統計或等級分。揭棋機器人對局和本站其他對局一樣在開局時發牌，因此帶有 deal_fen。',
 } satisfies Partial<Record<ContentI18nKey, string>>;

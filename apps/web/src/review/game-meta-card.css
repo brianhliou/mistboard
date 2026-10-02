@@ -155,49 +155,6 @@
   color: var(--site-text);
 }
 
-.game-meta-card__disc {
-  flex: 0 0 auto;
-  width: 12px;
-  height: 12px;
-  border-radius: 50%;
-  border: 2px solid var(--site-text);
-  box-sizing: border-box;
-}
-
-.game-meta-card__disc--dark {
-  /* Fixed dark fill — was var(--site-text), which inverts to a light gray in dark
-     mode and made the black side read as whitish. This matches the light-mode
-     text color (so light mode is unchanged); the --site-text disc border stays a
-     contrasting ring, keeping the disc visible on a dark card. */
-  background: var(--seat-dark-ink, hsl(40, 3%, 30%));
-  border-color: var(--seat-dark-ink-border, var(--site-text));
-}
-
-.game-meta-card__disc--light {
-  /* A real light fill, not `transparent`. Transparent took whatever the CARD was,
-     so in dark mode the WHITE seat rendered DARKER than the black seat sitting
-     right under it and the two discs read backwards. The fill is what carries the
-     ink; the --site-text ring keeps the disc defined on a light card. */
-  background: #f4f1e9;
-}
-
-/* Flip variants before the opening flip binds an ink: nobody owns a colour yet, so
-   the disc is an empty muted ring rather than a guess. Distinct from --light, which
-   is a real ink (chess white). */
-.game-meta-card__disc--unbound {
-  background: transparent;
-  border-style: dashed;
-  opacity: 0.55;
-}
-
-/* Red seat (xiangqi family + jungle): a filled red disc so a red-vs-black game
-   reads as red/black rather than hollow/black. Matches the eval-bar / analysis
-   chart red (#c0563f). */
-.game-meta-card__disc--red {
-  background: #c0563f;
-  border-color: #8f3d2c;
-}
-
 .game-meta-card__bot {
   flex: 0 0 auto;
   font-size: 10px;

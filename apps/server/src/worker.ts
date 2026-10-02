@@ -1,3 +1,4 @@
+import { createServer, type Server } from 'node:http';
 import { hostname } from 'node:os';
 import pg from 'pg';
 import {
@@ -21,6 +22,7 @@ import { type EngineHttpService, startEngineHttpService } from './engine-service
 import { runMigrations } from './migrate.js';
 import { startObservability } from './obs.js';
 import { disposeAllPythonPools, getPythonPool } from './python-pool.js';
+import { eveWorkerCapabilities } from './variant-eve-registry.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -38,7 +40,11 @@ const maxTasks =
   parsePositiveInteger(process.env.WORKER_MAX_TASKS) ?? (loop ? Number.POSITIVE_INFINITY : 1);
 const idleSleepMs = parsePositiveInteger(process.env.WORKER_IDLE_SLEEP_MS) ?? 5_000;
 const cleanupIntervalMs = parsePositiveInteger(process.env.WORKER_CLEANUP_INTERVAL_MS) ?? 60_000;
-const workerCapabilities = { engine_games: true };
+// engine_games, plus one flag per variant whose engine is a binary this image may
+// lack (banqi-engine, jungle-engine: railpack fetches them behind build flags).
+// A scheduled game of such a variant requires its flag, so a worker without the
+// binary never claims it (#488).
+const workerCapabilities = { engine_games: true, ...eveWorkerCapabilities() };
 const workerResourceLimits = {
   concurrency: Number.parseInt(process.env.WORKER_CONCURRENCY ?? '1', 10),
 };
@@ -48,9 +54,16 @@ const engineHttpPort =
   parsePositiveInteger(process.env.PORT) ??
   3001;
 const engineHttpHost = process.env.MISTBOARD_ENGINE_SERVICE_HOST ?? '::';
+// Railway's deploy healthcheck probes PORT. When the engine service listens on
+// MISTBOARD_ENGINE_SERVICE_PORT instead, a health-only listener answers there,
+// bound after warmup like the service itself, so "healthy" still means "can
+// serve a move" (#477).
+const railwayHealthPort = parsePositiveInteger(process.env.PORT);
 
 const pool = new pg.Pool({ connectionString: databaseUrl, max: 4 });
 let engineHttpService: EngineHttpService | null = null;
+let engineHttpClosing: Promise<void> | null = null;
+let healthServer: Server | null = null;
 let stopObs: (() => void) | null = null;
 let activeWorkerRunId: string | null = null;
 let activeTask: EngineGameTask | null = null;
@@ -82,6 +95,9 @@ try {
       host: engineHttpHost,
       port: engineHttpPort,
     });
+    if (railwayHealthPort !== null && railwayHealthPort !== engineHttpPort && !shuttingDown) {
+      healthServer = await startHealthListener(engineHttpHost, railwayHealthPort);
+    }
     stopObs = startObservability({ roomCount: () => 0, wsClientCount: () => 0 });
   }
   await migrate(databaseUrl);
@@ -104,7 +120,16 @@ try {
     dryRun,
     loop,
     maxTasks: Number.isFinite(maxTasks) ? maxTasks : 'unbounded',
+    capabilities: workerCapabilities,
   });
+  // Say so once when a binary is missing: that variant's scheduled games will
+  // wait in the queue until a worker that has it comes up.
+  const missingEngines = Object.entries(workerCapabilities)
+    .filter(([, present]) => !present)
+    .map(([capability]) => capability);
+  if (missingEngines.length > 0) {
+    log('worker_engine_binaries_missing', { capabilities: missingEngines });
+  }
 
   let processedTasks = 0;
   while (!shuttingDown && processedTasks < maxTasks) {
@@ -195,6 +220,8 @@ try {
   process.exitCode = 1;
 } finally {
   stopObservability();
+  // Waits for in-flight turns when SIGTERM already started the close: the
+  // python pools must outlive the last move they are computing.
   await closeEngineHttpService();
   disposeAllPythonPools();
   await pool.end();
@@ -303,16 +330,55 @@ function sleep(ms: number): Promise<void> {
   });
 }
 
-async function closeEngineHttpService(): Promise<void> {
-  if (!engineHttpService) return;
+/**
+ * Idempotent: SIGTERM starts the close and the main loop's `finally` awaits
+ * the same promise, so in-flight turns finish before the pools are disposed.
+ * Railway's drainingSeconds (railway.engine-worker.json) bounds the wait.
+ */
+function closeEngineHttpService(): Promise<void> {
   const service = engineHttpService;
+  const health = healthServer;
   engineHttpService = null;
-  try {
-    await service.close();
-    log('engine_http_stopped', { port: service.port });
-  } catch (err) {
-    log('engine_http_stop_failed', { error: (err as Error).message });
-  }
+  healthServer = null;
+  // Nothing new to close (a second call, or SIGTERM before the port bound):
+  // hand back the close already in flight.
+  if (!service && !health) return engineHttpClosing ?? Promise.resolve();
+  const previous = engineHttpClosing ?? Promise.resolve();
+  engineHttpClosing = previous.then(async () => {
+    health?.close();
+    health?.closeIdleConnections();
+    if (!service) return;
+    const startedAt = Date.now();
+    try {
+      await service.close();
+      log('engine_http_stopped', { port: service.port, drain_ms: Date.now() - startedAt });
+    } catch (err) {
+      log('engine_http_stop_failed', { error: (err as Error).message });
+    }
+  });
+  return engineHttpClosing;
+}
+
+function startHealthListener(host: string, port: number): Promise<Server> {
+  const server = createServer((req, res) => {
+    const draining = shuttingDown || engineHttpService === null;
+    const ok = req.method === 'GET' && req.url === '/health' && !draining;
+    const status = ok ? 200 : req.url === '/health' ? 503 : 404;
+    const body = JSON.stringify(ok ? { ok: true, service: 'engine-worker' } : { ok: false });
+    res.writeHead(status, {
+      'content-length': Buffer.byteLength(body),
+      'content-type': 'application/json; charset=utf-8',
+    });
+    res.end(body);
+  });
+  return new Promise((resolve, reject) => {
+    server.once('error', reject);
+    server.listen(port, host, () => {
+      server.off('error', reject);
+      log('engine_health_listener_started', { port });
+      resolve(server);
+    });
+  });
 }
 
 function stopObservability(): void {

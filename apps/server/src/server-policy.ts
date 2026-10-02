@@ -365,6 +365,7 @@ export function isClientRoute(pathname: string): boolean {
     normalized === '/privacy' ||
     normalized === '/contribute' ||
     normalized === '/changelog' ||
+    /^\/changelog\/\d{4}-\d{2}$/.test(normalized) ||
     normalized === '/developers' ||
     normalized === '/api-docs' ||
     normalized === '/thanks' ||

@@ -49,8 +49,10 @@ describe('article public listing gates', () => {
     ].map((link) => link.getAttribute('href'));
 
     expect(hrefs).toEqual([
-      // AB-JChess, the new top jieqi bot, scheduled for 2026-10-03.
+      // AB-JChess, the new top jieqi bot, scheduled for 2026-10-02.
       '/blog/ab-jchess',
+      // The third player page, the world champion Lại Lý Huynh, 2026-10-02.
+      '/blog/lai-ly-huynh',
       // The jieqi bot's record and the games people won, scheduled for
       // 2026-10-01 (DEV shows it early for review).
       '/blog/jieqi-bot-wins',
@@ -73,7 +75,7 @@ describe('article public listing gates', () => {
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
       // Published with the variant on 2026-09-11, the same date as the
-      // puzzles post; ties break on HOME_ARTICLE_SLUGS position, and this
+      // puzzles post; ties break on HOME_ARTICLE_LEAD_ON_TIE, and this
       // index is ordered by date alone, so the newest pair leads.
       '/blog/duck-xiangqi-strategy',
       '/blog/puzzles-with-more-than-one-solution',
@@ -241,13 +243,15 @@ describe('article public listing gates', () => {
       ) ?? []),
     ].map((link) => link.getAttribute('href'));
 
-    // Rules reference pages are excluded from this row; only editorial
-    // (blog/concept) articles appear, newest first.
+    // Rules reference pages are excluded from this row; every listed editorial
+    // (blog/concept) article without a homeRow appears, newest first, with no
+    // curated list. Deep dives have their own row (next test).
     expect(hrefs).toEqual([
-      '/blog/cao-yanlei',
+      '/blog/ab-jchess',
+      '/blog/jieqi-bot-wins',
+      '/blog/one-thousand-games',
       '/blog/banqi-statistics',
       '/blog/pikafish',
-      '/blog/yin-sheng',
       '/blog/atomic-xiangqi-build',
       '/blog/horde-xiangqi',
       '/blog/anti-xiangqi',
@@ -256,15 +260,32 @@ describe('article public listing gates', () => {
       '/blog/jieqi-openings',
       '/blog/jieqi-platform',
       '/blog/how-puzzle-mining-works',
-      '/blog/xiangqi-match-fixing',
-      '/blog/xiangqi-world-championship',
       '/blog/xiangqi-champions',
       '/blog/titled-players',
       '/blog/riverbank-cannon',
       '/blog/skill-vs-luck',
+      '/blog/fog-openings',
       '/blog/misty',
       '/blog/mistybanqi',
       '/blog/server-enforced-fog',
+      '/blog/fog-chess-concepts',
+    ]);
+  });
+
+  it('fills the deep-dives row with the tagged articles, newest first, and nothing else', () => {
+    const hrefs = [
+      ...(buildHomeArticleCards(50, undefined, {
+        row: 'deep-dives',
+      })?.querySelectorAll<HTMLAnchorElement>('.landing-article-card') ?? []),
+    ].map((link) => link.getAttribute('href'));
+
+    // No age cut on this row, so this holds whatever the date.
+    expect(hrefs).toEqual([
+      '/blog/lai-ly-huynh',
+      '/blog/cao-yanlei',
+      '/blog/yin-sheng',
+      '/blog/xiangqi-match-fixing',
+      '/blog/xiangqi-world-championship',
     ]);
   });
 

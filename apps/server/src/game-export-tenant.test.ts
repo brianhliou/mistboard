@@ -2,12 +2,20 @@ import assert from 'node:assert/strict';
 import test from 'node:test';
 import {
   BANQI_SPEC_ID,
+  banqiPlyReveal,
+  banqiStateToDealtFen,
+  createInitialBanqiState,
+  createInitialJieqiState,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   exportFormatsForVariant,
   type GameExportFormat,
   JIEQI_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
+  jieqiPlyReveal,
+  jieqiStateToDealtFen,
+  jungleFlipPlyReveal,
+  jungleFlipStateToDealtFen,
   STANDARD_BANQI_DEAL,
   STANDARD_JIEQI_DEAL,
   STANDARD_JUNGLE_FLIP_DEAL,
@@ -53,16 +61,23 @@ const darkXiangqiExport = tenantExportBinding(darkXiangqiTenant, {
 const jieqiExport = tenantExportBinding(jieqiTenant, {
   gameRouteBase: '/jieqi/game',
   uci: xiangqiExportUci,
+  hiddenPieces: { variant: 'jieqi', reveal: jieqiPlyReveal, dealFen: jieqiStateToDealtFen },
 });
 const banqiExport = tenantExportBinding(banqiTenant, {
   gameRouteBase: '/banqi/game',
   uci: flipOrBoardMoveUci,
   firstMoverInk: (state) => state.firstColor,
+  hiddenPieces: { variant: 'banqi', reveal: banqiPlyReveal, dealFen: banqiStateToDealtFen },
 });
 const jungleFlipExport = tenantExportBinding(jungleFlipTenant, {
   gameRouteBase: '/jungle-flip/game',
   uci: flipOrBoardMoveUci,
   firstMoverInk: (state) => state.firstColor,
+  hiddenPieces: {
+    variant: 'jungle-flip',
+    reveal: jungleFlipPlyReveal,
+    dealFen: jungleFlipStateToDealtFen,
+  },
 });
 
 function participant(
@@ -155,7 +170,7 @@ test('xiangqi JSON publication is keyed red/black with ICCS uci and WXF san', ()
   assert.ok(game, 'a finished log exports');
   const payload = buildTenantGamePublicationJson(summary, game, xiangqiExport.gameRouteBase);
 
-  assert.equal(payload.schema_version, '1.0');
+  assert.equal(payload.schema_version, '1.1');
   assert.equal(payload.game_id, XQ_ROOM);
   assert.equal(payload.source.game_url, 'https://mistboard.com/xiangqi/game/xq_export');
   assert.equal(payload.variant, 'xiangqi');
@@ -204,7 +219,7 @@ test('xiangqi PGN carries Red/Black tags, the review URL, and WXF movetext', () 
   assert.ok(pgn.includes('[Termination "normal"]'));
   assert.ok(pgn.includes('[MistboardTermination "resignation"]'));
   assert.ok(pgn.includes('[License "CC BY 4.0"]'));
-  assert.ok(pgn.includes('[MistboardSchema "1.0"]'));
+  assert.ok(pgn.includes('[MistboardSchema "1.1"]'));
   assert.ok(pgn.endsWith('\n\n1. C2.5 H8+7 2. H8+7 1-0\n'), pgn);
 });
 
@@ -330,7 +345,7 @@ test('an in-progress fog chess log still answers 403 (legacy path unchanged)', (
 
 const BQ_ROOM = 'bq_export';
 
-test('banqi JSON encodes the opening flip as "@a1" and reports the first seat ink', () => {
+test('banqi JSON encodes the opening flip as "@a1", names what it turned over, and carries the deal', () => {
   const events: unknown[] = [
     ...preamble(BQ_ROOM, BANQI_SPEC_ID, STANDARD_BANQI_DEAL),
     { type: 'move-played', at: 4, roomId: BQ_ROOM, color: 'red', move: { from: 'a1', to: 'a1' } },
@@ -349,9 +364,20 @@ test('banqi JSON encodes the opening flip as "@a1" and reports the first seat in
     mover: 'red',
     uci: '@a1',
     san: null,
+    revealed: { color: 'red', role: 'general' },
     red_clock_ms_after: null,
     black_clock_ms_after: null,
   });
+  assert.equal(
+    payload.deal_fen,
+    banqiStateToDealtFen(createInitialBanqiState('x', STANDARD_BANQI_DEAL)),
+  );
+  const pgn = buildTenantGamePgn(summary, game, banqiExport.gameRouteBase);
+  assert.ok(pgn);
+  assert.ok(pgn.includes('[Variant "Banqi"]'));
+  assert.ok(pgn.includes(`[DealFEN "${payload.deal_fen}"]`));
+  // ICGA: site a1 is ICGA a1, and the red general is K.
+  assert.ok(pgn.includes('\n\n1. a1=K 1-0\n'), pgn);
 });
 
 test('flip jungle JSON encodes the flip and the first seat ink the same way', () => {
@@ -390,7 +416,7 @@ function finishedJieqiEvents(): unknown[] {
   ];
 }
 
-test('jieqi exports JSON with ICCS uci and no san; PGN is 501 by the format table', () => {
+test('jieqi exports ICCS uci with the reveal and the hidden capture, in JSON and PGN', () => {
   const summary = gameRecord({ roomId: JQ_ROOM, variant: JIEQI_SPEC_ID });
   const lookup = () => registration(JIEQI_SPEC_ID, jieqiExport);
 
@@ -407,16 +433,24 @@ test('jieqi exports JSON with ICCS uci and no san; PGN is 501 by the format tabl
   assert.equal(json.contentType, 'application/json; charset=utf-8');
   const payload = JSON.parse(json.body);
   assert.equal(payload.source.game_url, 'https://mistboard.com/jieqi/game/jq_export');
+  // The b3 cannon (standard deal) turns over and takes the face-down b10 horse.
   assert.deepEqual(payload.plies, [
     {
       ply: 1,
       mover: 'red',
       uci: 'b2b9',
       san: null,
+      revealed: { color: 'red', role: 'cannon' },
+      captured_hidden: { color: 'black', role: 'horse' },
       red_clock_ms_after: null,
       black_clock_ms_after: null,
     },
   ]);
+  assert.equal(
+    payload.deal_fen,
+    jieqiStateToDealtFen(createInitialJieqiState('x', STANDARD_JIEQI_DEAL)),
+  );
+  assert.equal(payload.schema_version, '1.1');
 
   const pgn = resolveGameExport({
     roomId: JQ_ROOM,
@@ -425,8 +459,18 @@ test('jieqi exports JSON with ICCS uci and no san; PGN is 501 by the format tabl
     events: finishedJieqiEvents(),
     tenantForRoomId: lookup,
   });
-  assert.equal(pgn.status, 501);
-  assert.deepEqual(pgn.body, { error: 'export_not_supported_for_variant', variant: 'jieqi' });
+  assert.equal(pgn.status, 200);
+  if (pgn.status !== 200) return;
+  assert.equal(pgn.contentType, 'application/x-chess-pgn; charset=utf-8');
+  assert.ok(pgn.body.includes('[Variant "Jieqi"]'));
+  assert.ok(pgn.body.includes('[SetUp "1"]'));
+  assert.ok(
+    pgn.body.includes(
+      '[FEN "xxxxkxxxx/9/1x5x1/x1x1x1x1x/9/9/X1X1X1X1X/1X5X1/9/XXXXKXXXX w R2A2C2P5N2B2r2a2c2p5n2b2 0 1"]',
+    ),
+  );
+  assert.ok(pgn.body.includes(`[DealFEN "${payload.deal_fen}"]`));
+  assert.ok(pgn.body.endsWith('\n\n1. b2b9=Cx=n 1-0\n'), pgn.body);
 });
 
 test('xiangqi resolves through the dispatch with the PGN content type and filename extension', () => {

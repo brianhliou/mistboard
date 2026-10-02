@@ -64,7 +64,7 @@ const LUAT_CO_UP_THUMBNAIL = [
   'font-size="40" font-weight="700" fill="#b9832f">C\u1edc \u00daP</text>',
   '<text x="160" y="138" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
   'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
-  'LU\u1eacT CH\u01a1I</text>',
+  'LU\u1eacT CH\u01a0I</text>',
   '<circle cx="96" cy="172" r="12" fill="#f3e6c4" stroke="#b91c1c" stroke-width="2"/>',
   ...[0, 1, 2, 3].map((i) => {
     const red = i % 2 === 1;

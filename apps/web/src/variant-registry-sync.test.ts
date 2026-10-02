@@ -117,6 +117,23 @@ describe('web tenant registry <-> server tenant registry parity', () => {
     }
   });
 
+  it('web rated capability matches the server lobby for every variant', () => {
+    // The client decides whether to OFFER a rated seek and the server lobby
+    // decides whether one is honoured. Fortress Xiangqi was rated on the server
+    // and casual on the web, so nobody could reach its pool; the reverse gives a
+    // Rated toggle whose every seek the lobby refuses (501).
+    for (const tenant of webTenants) {
+      if (!tenant.landing) continue;
+      const serverRated = serverTenants
+        .filter((registration) => registration.gameSpecId === tenant.gameSpecId)
+        .some((registration) => registration.lobby?.supportsRated === true);
+      expect(
+        tenant.landing.capabilities.supportsRated,
+        `${tenant.gameSpecId}: web supportsRated disagrees with the server lobby.supportsRated`,
+      ).toBe(serverRated);
+    }
+  });
+
   it('xiangqi picker engine options mirror the server engine catalog', () => {
     // The web engineOptions list is a hand-maintained mirror of the server's
     // XIANGQI_PUBLIC_ENGINES (apps/server/src/xiangqi-engine-catalog.ts): the

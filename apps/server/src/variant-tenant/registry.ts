@@ -20,7 +20,7 @@ import type { TenantGameOrigin } from './tenant.js';
  */
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { isRetiredGameSpec, type RoomTimeControl } from '@mistboard/game';
+import { type HiddenPieceIdentity, isRetiredGameSpec, type RoomTimeControl } from '@mistboard/game';
 import type { WebSocket } from 'ws';
 import {
   censusDeployGate,
@@ -90,6 +90,7 @@ export type TenantCreateHttpContext = {
   isDraining(): boolean;
   drainDeadlineMs(): number | null;
   reserveLiveEngineSeat(engineId: string, color: 'white' | 'black'): Promise<string | null>;
+  releaseLiveEngineReservation(reservationId: string, reason: string): void;
 };
 
 // Mistboard TV channel metadata for a registered tenant. Optional: tenants
@@ -118,6 +119,12 @@ export type TenantExportPly = {
   san: string | null;
   // Remaining clock per color after the move, when the event carried a clock.
   clockMsAfter: Readonly<Record<string, number>> | null;
+  // Hidden-piece tenants only (jieqi, banqi, jungle-flip): the identity this ply
+  // turned over, and the identity of a face-down piece it captured. Absent when
+  // the ply did neither, and never stated for a piece whose identity the game
+  // never determined.
+  revealed?: HiddenPieceIdentity;
+  capturedHidden?: HiddenPieceIdentity;
 };
 
 export type TenantExportPgnResult = '1-0' | '0-1' | '1/2-1/2' | '*';
@@ -136,6 +143,10 @@ export type TenantExportGame = {
   // identities (an imported jieqi lab game): the squares, per color, holding a
   // piece nobody ever revealed at the end. Their identity is omitted everywhere.
   neverRevealed?: Readonly<Record<string, readonly string[]>> | null;
+  // Hidden-piece tenants only: the start as the variant's dealt FEN, when the
+  // game had a real deal (every site game). Absent for an imported game, whose
+  // source drew identities at reveal time: its stored deal is partly invented.
+  dealFen?: string;
   // Present only for tenants with an honest movetext notation. Receives the
   // full tag block the neutral builder assembled (Event, Site, Date, Round, the
   // two color-named player tags, Result, Variant, ...) and the result token;

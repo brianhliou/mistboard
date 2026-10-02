@@ -208,7 +208,8 @@ const wantsFaq = path === '/faq' || page === 'faq';
 const wantsTerms = path === '/terms' || page === 'terms';
 const wantsPrivacy = path === '/privacy' || page === 'privacy';
 const wantsContribute = path === '/contribute' || page === 'contribute';
-const wantsChangelog = path === '/changelog' || page === 'changelog';
+const wantsChangelog =
+  path === '/changelog' || /^\/changelog\/\d{4}-\d{2}$/.exec(path) !== null || page === 'changelog';
 const wantsDevelopers = path === '/developers' || page === 'developers';
 const wantsApiDocs = path === '/api-docs' || page === 'api-docs';
 const wantsThanks = path === '/thanks' || page === 'thanks';

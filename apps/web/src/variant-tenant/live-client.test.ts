@@ -216,6 +216,18 @@ describe('tenant live-client core', () => {
     expect(h.client.state.forfeitDeadline).toBeNull();
   });
 
+  it('learns a lobby room from the frame and keeps knowing it', () => {
+    // The server sends lobbyMatch only on lobby rooms; the chrome reads it to
+    // drop the invite prompt for a room that has no friend to invite.
+    const h = createHarness();
+    h.feedHello({});
+    expect(h.client.state.lobbyMatch).toBe(false);
+    h.feedSnapshot({ lobbyMatch: true });
+    expect(h.client.state.lobbyMatch).toBe(true);
+    h.feedSnapshot({});
+    expect(h.client.state.lobbyMatch).toBe(true);
+  });
+
   it('drives the shared lifecycle frame from viewer-safe room state', () => {
     const h = createHarness();
     h.feedHello({

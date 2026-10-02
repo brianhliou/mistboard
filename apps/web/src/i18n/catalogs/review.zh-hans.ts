@@ -371,6 +371,8 @@ export const ZH_HANS_REVIEW = {
   'historical.sourcePlayedHere': '在 Mistboard 对弈',
   'historical.sourceEngineMatches': '引擎对局',
   'historical.sourceEngineMatch': '引擎对局',
+  'historical.sourceEngineGames': '机器人对局',
+  'historical.sourceEngineGame': '机器人对局',
   'historical.sourceBroadcasts': '赛事直播',
   'historical.firstWins': '先手获胜',
   'historical.secondWins': '后手获胜',
@@ -513,6 +515,9 @@ export const ZH_HANS_REVIEW = {
   'broadcast.formatWomensLeague':
     '赛制：双循环共18轮，每场三台，各下一局慢棋（基本用时40分钟，每步加20秒）。慢棋总分高者以3比0取胜；慢棋总分相同，由两队和棋台次的棋手加赛一局快棋（10分钟，每步加5秒），胜方得2分、负方得1分。',
   'broadcast.railNoGames': '暂无对局',
+  'broadcast.noGamesPublished': '未发布棋谱',
+  'broadcast.noGamesInEndedEvent': '本赛事已结束，来源尚未发布棋谱。如有发布，将在此显示。',
+  'broadcast.noGamesInEndedRound': '来源尚未发布本轮棋谱。如有发布，将在此显示。',
   'broadcast.resultOnly': '仅有结果',
   'broadcast.resultOnlyHint': '来源只公布了本局结果，没有公布棋谱。',
   'broadcast.gameNotStarted': '未开始',
@@ -534,6 +539,9 @@ export const ZH_HANS_REVIEW = {
   'broadcast.roundLive': '{round} · 直播中',
   'broadcast.roundOn': '{round} · {date}',
   'broadcast.startsOn': '{date} 开始',
+  'broadcast.startsToday': '今日开赛',
+  'broadcast.nextUp': '下一项赛事',
+  'broadcast.latest': '最近赛事',
   'broadcast.calendarTitle': '直播赛程',
   'broadcast.calendarNote':
     '来自东萍象棋网赛事追踪的重要赛事，以及我们转播的赛事。日期以主办方公布为准，可能调整。',

@@ -1,11 +1,14 @@
 /**
  * Jieqi registry entry. Owns the tenant's live-room map, the room-factory
- * binding, and hydration. No rematch flow yet. Matchmaking is casual random-seat
- * (unrated); PvP, live-clock only (PvE and correspondence come later). Imported
+ * binding, and hydration. No rematch flow yet. Matchmaking is random-seat,
+ * rated or casual (lobby.supportsRated); PvP, live-clock only (PvE and
+ * correspondence come later). Imported
  * for side effects by variant-tenant/register-tenants.ts.
  */
 
 import {
+  jieqiPlyReveal,
+  jieqiStateToDealtFen,
   jieqiStateToPikafishFen,
   jieqiUnknownSquares,
   type RoomTimeControl,
@@ -45,6 +48,8 @@ export async function createJieqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JieqiCreatorPreference,
   engine?: JieqiRoomEngineSeat,
+  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  rated = false,
 ): Promise<JieqiLiveRoomCreation> {
   return createJieqiLiveRoom(
     {
@@ -58,6 +63,7 @@ export async function createJieqiRoom(
     timeControl,
     creatorPreference,
     engine,
+    rated,
   );
 }
 
@@ -114,23 +120,27 @@ registerVariantTenant({
       handleJieqiCreate({ ...ctx, createJieqiRoom }, response, body),
   },
   lobby: {
-    // Rated opened 2026-08-28, in step with the web tenant's capability flag.
+    // Rated opened 2026-08-28, in step with the web tenant's capability flag;
+    // until 2026-10-02 createRoom dropped the flag, so every rated seek made a
+    // casual room (lobby-rated.test.ts now holds every tenant to threading it).
     // Both sides have to agree: the client decides whether to OFFER a rated seek
     // and this decides whether one is honoured, so flipping either alone gives a
     // rated toggle the lobby rejects, or a rated pool nothing can reach.
     supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createJieqiRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createJieqiRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`jieqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },
   },
-  // JSON only: hidden identities reveal as pieces move, so no notation names a
-  // jieqi move honestly. Moves are ICCS coordinates on the shared 9x10 board.
+  // Moves are ICCS coordinates on the shared 9x10 board. Each ply names what it
+  // turned over and any face-down piece it captured, and a site game carries
+  // its deal, so the JSON and the PGN both replay (#484, hidden-piece-record.ts).
   export: tenantExportBinding(jieqiTenant, {
     gameRouteBase: '/jieqi/game',
     uci: xiangqiExportUci,
+    hiddenPieces: { variant: 'jieqi', reveal: jieqiPlyReveal, dealFen: jieqiStateToDealtFen },
     neverRevealed: (state) => {
       const squares = jieqiUnknownSquares(state);
       if (squares.length === 0) return null;

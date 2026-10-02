@@ -104,8 +104,8 @@ describe('mountEmbedStudy', () => {
       'Li Yiting',
     ]);
     expect(seats.map((s) => s.querySelector('.embed-seat-disc')?.className)).toEqual([
-      'embed-seat-disc embed-seat-disc--black',
-      'embed-seat-disc embed-seat-disc--red',
+      'embed-seat-disc seat-disc seat-disc--black',
+      'embed-seat-disc seat-disc seat-disc--red',
     ]);
     // A chapter has no clocks; the slots stay empty rather than reading 0:00.
     expect(seats.every((s) => s.querySelector('.embed-card-seat-clock')?.textContent === '')).toBe(
@@ -509,7 +509,7 @@ describe('mountEmbedStudy', () => {
       'MistyFlip A',
     ]);
     expect(seats[1]?.querySelector('.embed-seat-disc')?.className).toBe(
-      `embed-seat-disc embed-seat-disc--${firstInk}`,
+      `embed-seat-disc seat-disc seat-disc--${firstInk}`,
     );
     expect(root.querySelector('.embed-card')?.getAttribute('data-seat-ink-family')).toBe('jungle');
     expect(root.querySelector('.embed-card-result')?.textContent).toBe(

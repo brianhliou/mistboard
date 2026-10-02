@@ -267,6 +267,17 @@ export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persis
   // Finished Fog Xiangqi games are public like every other variant; the fog
   // live-spectate gate is separate and unaffected.
   const visibility: persistence.GameVisibility = 'public';
+  const participants = [
+    tenantParticipant(darkXiangqiTenant, 'red', room, visibility),
+    tenantParticipant(darkXiangqiTenant, 'black', room, visibility),
+  ];
+  // Same rule as buildTenantGameSummary: a rated lobby room counts only as PvP
+  // between two accounts. This was a hardcoded `false` while Fog Xiangqi
+  // matchmaking was casual-only.
+  const rated =
+    room.rated &&
+    !engineSeat &&
+    participants.every((participant) => participant.subjectType === 'user');
   return {
     variant: DARK_XIANGQI_SPEC_ID,
     mode,
@@ -282,12 +293,9 @@ export function buildDarkXiangqiGameSummary(room: DarkXiangqiTenantRoom): persis
     corpusId: null,
     initialMs: room.projection.timeControl?.initialMs ?? null,
     incrementMs: room.projection.timeControl?.incrementMs ?? null,
-    rated: false,
+    rated,
     visibility,
-    participants: [
-      tenantParticipant(darkXiangqiTenant, 'red', room, visibility),
-      tenantParticipant(darkXiangqiTenant, 'black', room, visibility),
-    ],
+    participants,
     // An engine cannot abandon: record the failure, not a win for the human.
     abortedAs: engineFailureAbort({
       engineSeat,

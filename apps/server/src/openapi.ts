@@ -269,7 +269,34 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
         responses: {
           '200': OK({
             type: 'object',
-            properties: { playing: { type: 'integer' }, online: { type: 'integer' } },
+            properties: {
+              playing: { type: 'integer' },
+              online: { type: 'integer' },
+              playingBySpec: {
+                type: 'object',
+                description:
+                  'Live games in play per game spec id with at least one person seated; zero entries are omitted.',
+                additionalProperties: { type: 'integer' },
+              },
+            },
+          }),
+        },
+      },
+    },
+    '/api/play/variant-order': {
+      get: {
+        tags: ['Site'],
+        summary: 'Variants ordered by recent play',
+        description:
+          'Game spec ids ordered by counted human games that ended in the last 28 days, most first; ties in the canonical order. Cached for six hours. Empty without a database.',
+        responses: {
+          '200': OK({
+            type: 'object',
+            properties: {
+              order: { type: 'array', items: { type: 'string' } },
+              windowDays: { type: 'integer' },
+              computedAt: { type: 'string', format: 'date-time' },
+            },
           }),
         },
       },

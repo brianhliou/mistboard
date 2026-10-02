@@ -81,6 +81,9 @@ export const CHOI_CO_TUONG_VOI_MAY_VI: Record<string, string> = {
   'Does the jieqi engine see my hidden pieces?': 'Engine cờ úp có nhìn thấy quân úp của tôi không?',
   'No. It receives the same face-down board you see, and the deal is known to nobody, not you, not the engine, not your opponent.':
     'Không. Nó nhận đúng bàn cờ đã úp như bạn thấy, và lần xáo quân không ai biết: không phải bạn, không phải engine, không phải đối thủ.',
+
+  // Index card tagline (inside its SVG). PIKAFISH is a name and stays.
+  'PLAY IT IN YOUR BROWSER': 'CHƠI NGAY TRÊN TRÌNH DUYỆT',
 };
 
 export const choiCoTuongVoiMayArticle = deriveTranslation(pikafishArticle, {

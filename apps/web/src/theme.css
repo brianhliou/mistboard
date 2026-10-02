@@ -951,7 +951,6 @@
 :root[data-effective-theme="dark"]
 :is(
   .action-notice.danger,
-  .game-controls button.danger,
   .confirm-dialog-actions button.danger,
   .room-actions button.danger,
   .info-notice.danger

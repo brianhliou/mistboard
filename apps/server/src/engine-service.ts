@@ -52,20 +52,23 @@ export async function startEngineHttpService(
     ((request: EngineTurnRequest, watchdogTimeoutMs: number, computeBudgetMs: number) =>
       choosePythonEngineTurn(request, watchdogTimeoutMs, computeBudgetMs, poolSize));
   const token = (options.token ?? process.env.MISTBOARD_INTERNAL_ENGINE_TOKEN ?? '').trim() || null;
+  const lifecycle = { draining: false };
 
   const server = createServer((req, res) => {
-    void handleRequest(req, res, { handler, limiter, reservations, token }).catch((err) => {
-      const status = err instanceof HttpError ? err.status : 500;
-      logger.error(
-        {
-          kind: 'engine_http_error',
-          status,
-          error: err instanceof Error ? err.message : String(err),
-        },
-        'engine HTTP request failed',
-      );
-      writeJson(res, status, { error: status === 500 ? 'internal_error' : err.message });
-    });
+    void handleRequest(req, res, { handler, limiter, lifecycle, reservations, token }).catch(
+      (err) => {
+        const status = err instanceof HttpError ? err.status : 500;
+        logger.error(
+          {
+            kind: 'engine_http_error',
+            status,
+            error: err instanceof Error ? err.message : String(err),
+          },
+          'engine HTTP request failed',
+        );
+        writeJson(res, status, { error: status === 500 ? 'internal_error' : err.message });
+      },
+    );
   });
 
   await new Promise<void>((resolve, reject) => {
@@ -94,7 +97,24 @@ export async function startEngineHttpService(
 
   return {
     port,
-    close: () => closeServer(server),
+    close: () => {
+      // Stop intake, let in-flight turns finish. A request that arrives on a
+      // kept-alive socket after this gets a retryable 503 and a closed socket,
+      // so the web side reconnects to the replacement worker (#477).
+      if (!lifecycle.draining) {
+        lifecycle.draining = true;
+        logger.info(
+          {
+            kind: 'engine_http_draining',
+            port,
+            active_moves: limiter.activeCount(),
+            queued_moves: limiter.queueDepth(),
+          },
+          'engine HTTP service draining',
+        );
+      }
+      return closeServer(server);
+    },
   };
 }
 
@@ -164,13 +184,22 @@ async function handleRequest(
   context: {
     handler: EngineTurnHandler;
     limiter: AsyncLimiter;
+    lifecycle: { draining: boolean };
     reservations: EngineReservationStore;
     token: string | null;
   },
 ): Promise<void> {
   const url = new URL(req.url ?? '/', 'http://engine-worker.internal');
   if (req.method === 'GET' && url.pathname === HEALTH_PATH) {
+    if (context.lifecycle.draining) {
+      writeJson(res, 503, { ok: false, service: 'engine-worker', draining: true }, { close: true });
+      return;
+    }
     writeJson(res, 200, { ok: true, service: 'engine-worker' });
+    return;
+  }
+  if (context.lifecycle.draining) {
+    writeJson(res, 503, { error: 'engine_draining' }, { close: true });
     return;
   }
 
@@ -284,14 +313,41 @@ async function handleRequest(
 
   const request = parseEngineTurnRequest(parsed);
   const reservationId = reservationIdFromRequest(req);
-  if (
-    !reservationId ||
-    !context.reservations.touch(reservationId, {
-      color: request.color,
-      engineId: request.engineId,
-    })
-  ) {
-    writeJson(res, 409, { error: 'invalid_engine_reservation' });
+  const seat = reservationId
+    ? context.reservations.touch(reservationId, {
+        color: request.color,
+        engineId: request.engineId,
+      })
+    : ({ ok: false, reason: 'missing' } as const);
+  if (!seat.ok) {
+    // The reason lets the web side tell a forgotten seat (this worker restarted:
+    // renew quietly) from a seat held under another engine or colour (a bug).
+    if (seat.reason === 'mismatch') {
+      logger.warn(
+        {
+          kind: 'engine_reservation_mismatch',
+          game_id: request.gameId,
+          reservation_id: reservationId,
+          expected_engine_id: request.engineId,
+          expected_color: request.color,
+          reserved_engine_id: seat.reservation.engineId,
+          reserved_color: seat.reservation.color,
+        },
+        'engine reservation engine/colour mismatch',
+      );
+    }
+    writeJson(res, 409, {
+      error: 'invalid_engine_reservation',
+      reason: seat.reason,
+      ...(seat.reason === 'mismatch'
+        ? {
+            reservation: {
+              engineId: seat.reservation.engineId,
+              color: seat.reservation.color,
+            },
+          }
+        : {}),
+    });
     return;
   }
   const watchdogTimeoutMs = parseWatchdogTimeout(req);
@@ -362,7 +418,9 @@ async function handleRequest(
       throw err;
     }
   });
-  writeJson(res, 200, response);
+  // A turn that finishes during a drain closes its socket, so the close does
+  // not wait out the keep-alive timeout on a connection no one will reuse.
+  writeJson(res, 200, response, { close: context.lifecycle.draining });
 }
 
 async function readJson(req: IncomingMessage): Promise<Record<string, unknown>> {
@@ -549,17 +607,20 @@ class EngineReservationStore {
       color: 'white' | 'black';
       engineId: string;
     },
-  ): boolean {
+  ):
+    | { ok: true }
+    | { ok: false; reason: 'unknown' }
+    | { ok: false; reason: 'mismatch'; reservation: EngineReservation } {
     this.pruneExpired();
     const reservation = this.reservations.get(id);
-    if (!reservation) return false;
+    if (!reservation) return { ok: false, reason: 'unknown' };
     if (reservation.engineId !== expected.engineId || reservation.color !== expected.color) {
-      return false;
+      return { ok: false, reason: 'mismatch', reservation };
     }
     const now = Date.now();
     reservation.lastSeenAt = now;
     reservation.expiresAt = now + this.options.ttlMs;
-    return true;
+    return { ok: true };
   }
 
   release(id: string): void {
@@ -597,21 +658,30 @@ async function readBody(req: IncomingMessage): Promise<string> {
   return Buffer.concat(chunks).toString('utf8');
 }
 
-function writeJson(res: ServerResponse, status: number, payload: unknown): void {
+function writeJson(
+  res: ServerResponse,
+  status: number,
+  payload: unknown,
+  options: { close?: boolean } = {},
+): void {
   const body = JSON.stringify(payload);
   res.writeHead(status, {
     'content-length': Buffer.byteLength(body),
     'content-type': 'application/json; charset=utf-8',
+    ...(options.close ? { connection: 'close' } : {}),
   });
   res.end(body);
 }
 
 function closeServer(server: Server): Promise<void> {
   return new Promise((resolve, reject) => {
+    // Resolves once in-flight requests have answered; idle kept-alive sockets
+    // are dropped now so they cannot carry a new turn into a closing worker.
     server.close((err) => {
-      if (err) reject(err);
+      if (err && (err as NodeJS.ErrnoException).code !== 'ERR_SERVER_NOT_RUNNING') reject(err);
       else resolve();
     });
+    server.closeIdleConnections();
   });
 }
 

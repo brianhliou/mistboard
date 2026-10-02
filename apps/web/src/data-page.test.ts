@@ -11,7 +11,7 @@ import {
 
 const LISTING: DataListing = {
   license: 'CC BY 4.0',
-  schemaVersion: '1.0',
+  schemaVersion: '1.1',
   variants: ['xiangqi', 'jieqi'],
   months: [
     {
@@ -180,6 +180,66 @@ describe('/data page', () => {
     expect(window.location.search).toBe('');
   });
 
+  it('lists engine games in their own table under their own heading, never in the human rows', async () => {
+    const engineFile = (variant: string, games: number) => ({
+      format: 'jsonl' as const,
+      path: `/api/data/engine-monthly/2026-09/${variant}.jsonl.gz`,
+      fileName: `mistboard_engine_${variant}_2026-09.jsonl.gz`,
+      games,
+      built: null,
+    });
+    const withEngine: DataListing = {
+      ...LISTING,
+      variants: ['xiangqi', 'jieqi', 'duck-xiangqi'],
+      engineMonths: [
+        {
+          month: '2026-09',
+          games: 90,
+          files: [engineFile('all', 90)],
+          variants: [
+            { variant: 'xiangqi', games: 60, files: [engineFile('xiangqi', 60)] },
+            { variant: 'duck-xiangqi', games: 30, files: [engineFile('duck-xiangqi', 30)] },
+          ],
+        },
+      ],
+    };
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => ({ ok: true, json: async () => withEngine })),
+    );
+    const root = await mounted();
+    const human = [...root.querySelectorAll('.data-months .data-table:not(.data-table-engine) tr')];
+    expect(human.map((row) => row.querySelector('a')?.getAttribute('href') ?? null)).toEqual([
+      null,
+      '/api/data/monthly/2026-09/all.jsonl.gz',
+    ]);
+    const headings = [...root.querySelectorAll('.data-months h2')].map((h) => h.textContent);
+    expect(headings).toEqual(['All variants', 'Engine games']);
+    expect(rowCells(root, '.data-months .data-table-engine').length).toBe(0);
+    const engineRows = [...root.querySelectorAll('.data-table-engine tbody tr')];
+    expect(engineRows.map((row) => row.querySelector('.data-col-games')?.textContent)).toEqual([
+      '90',
+    ]);
+    expect(root.querySelector('.data-table-engine a')?.getAttribute('href')).toBe(
+      '/api/data/engine-monthly/2026-09/all.jsonl.gz',
+    );
+    // The human count line is the human games only.
+    expect(root.querySelector('.current-games-count')?.textContent).toBe('12 games in 1 month');
+
+    // A variant with no engine games shows no engine section at all.
+    root
+      .querySelector<HTMLAnchorElement>('.current-games-rail-link[data-variant="jieqi"]')
+      ?.click();
+    expect(root.querySelector('.data-table-engine')).toBeNull();
+    // One with engine games only: no human month, its engine month below.
+    root
+      .querySelector<HTMLAnchorElement>('.current-games-rail-link[data-variant="duck-xiangqi"]')
+      ?.click();
+    expect(root.querySelector('.data-table-engine a')?.getAttribute('href')).toBe(
+      '/api/data/engine-monthly/2026-09/duck-xiangqi.jsonl.gz',
+    );
+  });
+
   it('/data/about shows every section openly, with a way back', () => {
     window.history.replaceState(null, '', '/data/about');
     const root = document.createElement('main');
@@ -192,8 +252,10 @@ describe('/data page', () => {
       'License',
       'What is included',
       'Hidden information',
+      'Engine games',
       'Files and checksums',
     ]);
+    expect(root.textContent).toContain('never in the files of games people played');
     expect(root.querySelector('.data-back a')?.getAttribute('href')).toBe('/data');
     expect(root.querySelector('.data-fields')).not.toBeNull();
     expect(root.querySelector('.data-cite')?.textContent).toContain(

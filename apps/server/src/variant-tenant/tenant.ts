@@ -157,6 +157,9 @@ export type TenantRoomEvent<C extends string, M, Spec extends string = string> =
       setup?: unknown;
       // Imported games only (engine-match-import.ts): event, credit, movetime.
       origin?: TenantGameOrigin;
+      // Created by a lobby match (routes/lobby.ts), not an invite link. Public.
+      // Durable so a hydrated room keeps its no-show window and its client copy.
+      lobbyMatch?: boolean;
     }
   | { type: 'seat-assigned'; at: number; roomId: string; clientId: string; seat: C }
   // Accepted in event logs only for tenants with wire.acceptsSeatVacated

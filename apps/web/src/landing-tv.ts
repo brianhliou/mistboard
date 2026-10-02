@@ -35,6 +35,7 @@ import { renderWatchReplayFailure } from './replay-skeleton.js';
 import { mountShowcaseBoard } from './showcase-board.js';
 import type { ShowcaseEntry } from './showcase-cycler.js';
 import { showcaseRendererKindForSpec } from './showcase-dispatch.js';
+import { seatInkFamily } from './variant-seat-label.js';
 
 const LIVE_POLL_MS = 4_000;
 // A live poll that has not answered by now is abandoned. Without a bound, one
@@ -205,9 +206,15 @@ export async function mountLandingTv(
     const priorHeight = handle ? root.offsetHeight : 0;
     destroyHandle();
     if (priorHeight > 0) root.style.minHeight = `${priorHeight}px`;
+    // The seat discs' dark ink is blue for the Jungle family (seat-disc-ink.css).
+    // Re-stamped per mount, since one root shows every variant in turn.
+    const inkFamily = seatInkFamily(entry.specId);
+    if (inkFamily) root.dataset.seatInkFamily = inkFamily;
+    else delete root.dataset.seatInkFamily;
     try {
       const next = await mountShowcaseBoard(root, entry.specId, entry.roomId, {
         metadataByRoomId: options.metadataByRoomId,
+        seatDiscs: true,
         namesByRoomId: options.namesByRoomId,
         loaderForId: options.loaderForId,
         pov: entry.pov,

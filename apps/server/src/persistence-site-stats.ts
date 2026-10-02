@@ -321,6 +321,28 @@ export async function getPublicSiteStats(
   };
 }
 
+// Counted games per variant that ENDED inside the trailing window, most first.
+// The homepage play panel orders its variants by this (variant-order.ts);
+// `games.variant` holds the game spec id ('dark-chess', 'xiangqi', ...), the
+// same key the tenants and the legacy room write at game start.
+export async function getRecentCountedGamesByVariant(
+  windowDays: number,
+  options: PublicSiteStatsOptions = {},
+): Promise<Array<{ variant: string; count: number }>> {
+  const now = options.now ?? new Date();
+  const { rows } = await getPool().query<{ variant: string; n: number }>(
+    `SELECT g.variant, count(*)::int AS n
+     FROM games g
+     WHERE ${COUNTED}
+       AND g.ended_at > $1::timestamptz - ($2::int * INTERVAL '1 day')
+       AND g.ended_at <= $1::timestamptz
+     GROUP BY g.variant
+     ORDER BY n DESC, g.variant ASC`,
+    [now, windowDays],
+  );
+  return rows.map((r) => ({ variant: r.variant, count: r.n }));
+}
+
 function isoDate(value: Date | string): string {
   if (value instanceof Date) return value.toISOString().slice(0, 10);
   return value;

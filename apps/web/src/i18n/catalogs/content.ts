@@ -46,6 +46,7 @@ export const EN_CONTENT = {
   'videos.previousVideos': 'Previous videos',
   'videos.moreVideos': 'More videos',
   'articles.heading': 'Articles',
+  'articles.deepDives': 'Deep dives',
   'articles.read': 'Read',
   'articles.intro': 'Essays, rules notes, and engine work for original strategy games.',
   'articles.allArticles': 'All articles',
@@ -375,7 +376,7 @@ export const EN_CONTENT = {
     'Mistboard is a free, open-source hobby project. This page describes what we collect on the hosted site at mistboard.com. It will change as the project grows; this page is always the current version.',
   'privacy.collectHeading': 'What we collect',
   'privacy.collectBody':
-    'Aggregate analytics, the games you play, and, if you make an account, your handle and email. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest.',
+    'Analytics, the games you play, and, if you make an account, your handle and email. We use PostHog for analytics: it keeps a per-browser history of the pages you visit and what you do on them, linked to your account if you sign in. Your browser keeps a random id in its local storage so games you play without an account can be counted as one visitor in our statistics; it is not a cookie, never leaves this site, and is not shown to other players. We collect more around rated play to keep it honest.',
   'privacy.noDoHeading': "What we don't do",
   'privacy.noDoBody':
     "No ads. We don't sell your data. No recordings of your screen. We respect Do Not Track. Casual play needs no account.",
@@ -424,7 +425,7 @@ export const EN_CONTENT = {
     "JSONL: one game per line, gzip compressed. Each line is the same JSON as that game's own download on its game page. Fields:",
   'data.fieldGame': "The game's id and its page on Mistboard.",
   'data.fieldVariant':
-    'The variant id, and pvp (people against people) or pve (a person against a bot).',
+    'The variant id, and pvp (people against people), pve (a person against a bot) or, in the engine game files, eve (a bot against a bot).',
   'data.fieldPlayers':
     'The name each seat shows on the game page, keyed by color. A seat set to private reads Anonymous.',
   'data.fieldTimeControl':
@@ -433,14 +434,16 @@ export const EN_CONTENT = {
   'data.fieldResult':
     'The winning color or draw, and how the game ended: checkmate, timeout, resignation and so on.',
   'data.fieldPlies':
-    "Every move in order: the mover, the move as uci, san where the variant has a notation (otherwise null), and each side's clock after the move.",
+    "Every move in order: the mover, the move as uci, san where the variant has a notation (otherwise null), and each side's clock after the move. In Jieqi, Banqi and Flip Jungle a move that turned a piece over also has revealed, and a Jieqi move that captured a face-down piece has captured_hidden, each a color and a role.",
   'data.fieldInk': 'Banqi and Flip Jungle only: the color the first player turned up.',
+  'data.fieldDeal':
+    'Jieqi, Banqi and Flip Jungle games played on the site: the starting deal, as a FEN that names every face-down piece. Engine matches have none.',
   'data.fieldOrigin':
     'Engine match downloads only: the event, the credit, and any squares whose piece was never revealed.',
   'data.formatMoves':
     'A uci move is coordinates: h2e2 moves a piece, @c3 turns over a face-down piece, R@d4 drops a piece from hand (Fortress Xiangqi), and b3e3@e6 is a Duck Xiangqi turn with the duck square last.',
   'data.formatPgn':
-    'PGN, for the variants with a notation other programs read: SAN for Fog Chess, WXF for Xiangqi and Atomic Xiangqi, ICCS coordinates for Fog Xiangqi. Games are separated by a blank line and carry Site (the game page), MistboardVariant, MistboardTermination and License tags. Variants without a notation standard are JSONL only.',
+    'PGN, for the variants whose moves can be written so the text replays on its own: SAN for Fog Chess, WXF for Xiangqi and Atomic Xiangqi, ICCS coordinates for Fog Xiangqi and Jieqi, ICGA notation for Banqi, and coordinates for Flip Jungle. Games are separated by a blank line and carry Site (the game page), MistboardVariant, MistboardTermination and License tags. The other variants are JSONL only.',
   'data.licenseHeading': 'License',
   'data.licensePrefix': 'The files are published under ',
   'data.licenseSuffix':
@@ -450,26 +453,42 @@ export const EN_CONTENT = {
   'data.included':
     'Every finished game played on the site since June 2026, people against people or against the bots, rated and casual, signed in or as a guest. A game is filed under the month it ended, in UTC.',
   'data.excluded':
-    'Left out: aborted games and games that ended before both sides moved, games played by the accounts that run and test the site, games that are not public, engine against engine games, and imported games such as engine matches. The current month is added once it ends.',
+    'Left out: aborted games and games that ended before both sides moved, games played by the accounts that run and test the site, games that are not public, engine games (they have files of their own), and imported games such as engine matches. The current month is added once it ends.',
   'data.hiddenHeading': 'Hidden information',
   'data.hiddenFog':
     'A finished fog game hides nothing, so its file holds every move of both sides, as the game page shows once the game is over. What each player could see at the time is not stored; it follows from the moves and the visibility rules in the open-source game code.',
   'data.hiddenFlip':
-    'Jieqi, Banqi and Flip Jungle are not in the monthly files yet. Their exports record where each piece moved or was turned over, but not the hidden starting layout or which piece each reveal turned out to be, so a downloaded game could not be replayed. They will be added once the files carry the reveals; until then the game page replays every reveal.',
+    'Jieqi, Banqi and Flip Jungle start with pieces face down. Their files say what every reveal turned out to be, so a downloaded game replays from its moves alone, in either format.',
+  'data.hiddenReveal':
+    "Moves carry reveals. In PGN the piece a move turned over follows it after =, upper case for red and lower case for black, so any PGN reader keeps it as part of the move: e3e4=R in Jieqi, @c3=E in Flip Jungle. A Jieqi capture of a face-down piece adds x= and the captured piece: b0b7=Cx=n. The letters are each FEN's own: Jieqi R chariot, N horse, B elephant, A advisor, C cannon, P soldier; Flip Jungle R rat, C cat, D dog, W wolf, P leopard, T tiger, L lion, E elephant.",
+  'data.hiddenBanqi':
+    "Banqi PGN follows the notation of Chen, Shen and Hsu (ICGA Journal, 2010): b4-b2 moves a piece, and a flip the paper writes d8(P) is written d8=P here, because PGN reads parentheses as a side line. The letters are the paper's: K king, G guard, M minister, R rook, N knight, C cannon, P pawn. Its board is 4 columns by 8 rows, so the site's coordinates swap: site files a to h are ICGA rows 1 to 8, and site ranks 1 to 4 are ICGA columns a to d. JSON keeps the site's coordinates.",
+  'data.hiddenBanqiLetters':
+    'Careful with G: in Banqi moves it is a guard, but in the Banqi FEN it is the general. The FEN letters are G general, A advisor, E elephant, R chariot, H horse, C cannon, S soldier.',
+  'data.hiddenDeal':
+    "The deal is included when there is one. Every game played on the site is dealt in full when it starts, so its JSON has deal_fen and its PGN a DealFEN tag: the variant's FEN with a sixth field naming each face-down piece in board order, top rank first. The FEN tag is the face-down start. Every reveal in the moves matches the deal, and both FENs use the site's coordinates and letters.",
   'data.hiddenNeverRevealed':
-    'In the jieqi engine match download, some pieces were still face down when a game ended and their identity was never decided. origin.never_revealed lists their squares, and no file names a piece for them.',
+    "Engine match downloads have no deal. The match's own referee decided each piece when it was turned over, so a piece still face down at the end never had an identity: origin.never_revealed lists those squares, and no file names a piece for them. Their moves carry every reveal, so they replay the same way.",
+  'data.hiddenReplayer':
+    'The open-source game code has a reference replayer, replayHiddenPieceRecord, that rebuilds a game from either file and checks every reveal against the deal.',
   'data.filesHeading': 'Files and checksums',
   'data.filesBuilt':
     'A file is built from the database the first time anyone downloads it and never changes after that. Its size and SHA-256 appear on the game data page once it exists, so a download can be checked with sha256sum.',
   'data.filesHosting':
     "The site serves the files itself. They move to object storage (Cloudflare R2) once a month's file passes about 100 MB, or once download bandwidth starts to cost money.",
   'privacy.downloadsLink': 'game data page',
+  'data.engineHeading': 'Engine games',
+  'data.engineNote':
+    "Games the site's own bots play each other, a few a day. They have files of their own and are never in the files above.",
+  'data.engineAbout':
+    "The site schedules a few games a day between its own bots, the same bots you can play, in several variants, and plays them on its own servers. They are published in their own monthly files, under Engine games on the game data page, with mode eve. They are never in the files of games people played, and they are not counted in the site's statistics or ratings. A Jieqi engine game is dealt like any other game on the site, so it has deal_fen.",
 } as const;
 
 export type ContentI18nKey = keyof typeof EN_CONTENT;
 
 export const CRITICAL_CONTENT_I18N_KEYS = [
   'articles.heading',
+  'articles.deepDives',
   'articles.read',
   'articles.intro',
   'articles.allArticles',
@@ -710,6 +729,7 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'data.fieldResult',
   'data.fieldPlies',
   'data.fieldInk',
+  'data.fieldDeal',
   'data.fieldOrigin',
   'data.formatMoves',
   'data.formatPgn',
@@ -723,9 +743,17 @@ export const CRITICAL_CONTENT_I18N_KEYS = [
   'data.hiddenHeading',
   'data.hiddenFog',
   'data.hiddenFlip',
+  'data.hiddenReveal',
+  'data.hiddenBanqi',
+  'data.hiddenBanqiLetters',
+  'data.hiddenDeal',
   'data.hiddenNeverRevealed',
+  'data.hiddenReplayer',
   'data.filesHeading',
   'data.filesBuilt',
   'data.filesHosting',
   'privacy.downloadsLink',
+  'data.engineHeading',
+  'data.engineNote',
+  'data.engineAbout',
 ] as const satisfies readonly ContentI18nKey[];

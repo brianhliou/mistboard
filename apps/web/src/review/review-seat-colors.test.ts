@@ -31,8 +31,6 @@ describe('ink coverage across the review surfaces', () => {
   // which is silent: no error, no test failure, just a seat that says nothing.
   const INKS: ReviewInk[] = ['red', 'black', 'white'];
   const surfaces: ReadonlyArray<[string, string, string]> = [
-    ['analysis summary dot', 'src/review/analysis-summary.css', '.analysis-summary__dot--'],
-    ['retro disc', 'src/review/retro.css', '.retro-box__disc--'],
     ['move-time bar', 'src/review/review-shell.css', '.review-move-times__bar--'],
     ['advantage area', 'src/review/advantage-chart.css', '.advantage-chart__area--'],
     ['advantage zone', 'src/review/advantage-chart.css', '.advantage-chart__zone--'],

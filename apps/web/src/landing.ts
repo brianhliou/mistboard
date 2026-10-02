@@ -38,9 +38,9 @@ import {
   type PlayableEngine,
   setRoomNavigator,
 } from './landing-play.js';
+import { buildPlayPanel, playPanelEnabled } from './landing-play-panel.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
 import { type LandingTvMode, mountLandingTv } from './landing-tv.js';
-import { buildHomeLearnRow } from './learn-row.js';
 import { type GameMeta, mountReplay } from './replay.js';
 import { renderWatchReplaySkeleton } from './replay-skeleton.js';
 import { enginePanelsForReview, loadGameForReview } from './review.js';
@@ -647,7 +647,13 @@ function buildLandingStage(
   // is the complementary "join a game" surface. ──
   const lobbyPanel = document.createElement('section');
   lobbyPanel.className = 'landing-lobby-panel';
-  lobbyPanel.append(buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }));
+  // The bot-first play panel (#491) is the default; `?hero=lobby` brings the
+  // lichess-shaped tabs back on a device (playPanelEnabled).
+  lobbyPanel.append(
+    playPanelEnabled()
+      ? buildPlayPanel(locale, { hydrate: !opts.skipLiveWidgets })
+      : buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }),
+  );
 
   // ── Play column (grid-area: play, band 1 right): the small h1 tagline, then
   // the single unified Play button (the setup dialog owns the opponent choice)
@@ -716,19 +722,18 @@ function buildLandingStage(
   studiesColumn.append(buildTopStudiesWidget({ hydrate: !opts.skipLiveWidgets }));
 
   // ── Band 3 (grid-area: blogs): the full-width blog row — compact article
-  // cards (six per view), an announcement can take a slot, newest first. ──
-  // Six, not eight: the row is one screen-width strip of "what's new", and the
-  // curated list keeps growing while the strip does not.
+  // cards, an announcement can take a slot, newest first. Every article with no
+  // homeRow lands here on publish. ──
   const articleCards = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale);
   articleCards?.classList.add('landing-articles-row');
 
-  // ── Band 4 (grid-area: learn): the learn row beneath the blog row — the same
-  // carousel, filled with first-party cards that walk a new player from the
-  // rules to the bot to the classical manuals (see learn-row.ts). It replaced
-  // the curated YouTube strip on 2026-09-16; unlike that strip it is never
-  // omitted, so the band and the rails beside it have one height everywhere. ──
-  const learnRow = buildHomeLearnRow({ locale });
-  learnRow.classList.add('landing-learn-row');
+  // ── Band 4 (grid-area: dives): the deep-dives row beneath it, the same
+  // carousel filled with articles tagged homeRow: 'deep-dives' (player pages,
+  // game deep dives), no age cut. It replaced the learn row (learn-row.ts) on
+  // 2026-10-01: one learn_card_clicked in two weeks against 177 homepage
+  // visitors. ──
+  const deepDives = buildHomeArticleCards(HOME_ARTICLE_ROW_SIZE, locale, { row: 'deep-dives' });
+  deepDives?.classList.add('landing-articles-row', 'landing-dives-row');
 
   // ── Bands 3-4 side rails: the News feed on the left (its full history stays at
   // /feed) and the lobby chat on the right. Both span the blog AND learn rows,
@@ -793,7 +798,7 @@ function buildLandingStage(
     studiesColumn,
   );
   if (articleCards) section.append(articleCards);
-  section.append(learnRow);
+  if (deepDives) section.append(deepDives);
 
   // Center tenant (SVG) showcase boards within the square box so a non-square
   // (portrait xiangqi) board pillarboxes symmetrically rather than jamming against

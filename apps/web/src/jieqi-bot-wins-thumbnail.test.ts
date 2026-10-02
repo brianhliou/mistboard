@@ -25,3 +25,24 @@ describe('jieqi-bot-wins card', () => {
     expect(svg.match(/stroke="#d4351c"/g)).toHaveLength(4);
   });
 });
+
+// Every game is shown from the winner's side: the two Black wins are turned so
+// the player sits at the bottom, the two Red wins keep the default view.
+describe('jieqi-bot-wins game embeds', () => {
+  it('turns each board to the side that won', () => {
+    const paths = (jieqiBotWinsArticle.sections ?? [])
+      .flatMap((section) => section.blocks)
+      .flatMap((block) => (block?.kind === 'embed' ? [block.path] : []));
+    expect(
+      paths.map((path) => [
+        path.split('/')[3]?.slice(0, 11),
+        new URL(path, 'https://x').searchParams.get('pov'),
+      ]),
+    ).toEqual([
+      ['jq_53ead5f3', 'black'],
+      ['jq_207d4371', 'white'],
+      ['jq_4b7e09b1', 'white'],
+      ['jq_2538c964', 'black'],
+    ]);
+  });
+});

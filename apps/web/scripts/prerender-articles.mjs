@@ -206,7 +206,7 @@ const ROUTE_PRELOADS = [
     pattern: '^/(?:about|source|contact|patron|faq|terms|privacy|feed|news)$',
     module: 'src/pages-static.ts',
   },
-  { pattern: '^/changelog$', module: 'src/changelog-page.ts' },
+  { pattern: '^/changelog(?:/\\d{4}-\\d{2})?$', module: 'src/changelog-page.ts' },
 ];
 
 async function writeRoutePreloadManifest(manifest, shellHtml) {
@@ -423,6 +423,7 @@ try {
     { en: 'jieqi-openings', vi: 'khai-cuoc-co-up' },
     { en: 'jieqi', vi: 'luat-co-up' },
     { en: 'pikafish', vi: 'choi-co-tuong-voi-may' },
+    { en: 'lai-ly-huynh', vi: 'lai-ly-huynh-co-tuong' },
   ];
 
   // Scheduled posts (published, dated in the future at build time) are left
@@ -912,6 +913,30 @@ try {
   );
   await fs.writeFile(resolve(distDir, 'changelog.html'), changelogHtml, 'utf-8');
   console.log('prerendered /changelog (changelog.html)');
+
+  // /changelog/YYYY-MM: every month older than the ones /changelog shows in
+  // full gets its own page, served by the server's /changelog/:month route.
+  const { changelogArchiveMonthIds, formatMonth } =
+    await server.ssrLoadModule('/src/changelog-page.ts');
+  const archiveMonths = changelogArchiveMonthIds();
+  for (const monthId of archiveMonths) {
+    const label = formatMonth(monthId, 'en');
+    let monthHtml = shell.replace(
+      '<div id="app"></div>',
+      `<div id="app" class="landing-page changelog-route">${renderChangelogShellForPrerender(monthId)}</div>`,
+    );
+    monthHtml = injectPageMeta(monthHtml, {
+      title: `Changelog: ${label} | Mistboard`,
+      description: `Every change to mistboard.com in ${label}: playing, learning, watching, community, the site, removals and fixes, each linking its commit.`,
+      url: `${host}/changelog/${monthId}`,
+    });
+    monthHtml = monthHtml.replace(
+      '</head>',
+      `<link rel="canonical" href="${host}/changelog/${monthId}" />${changelogAssetLinks}</head>`,
+    );
+    await fs.writeFile(resolve(distDir, `changelog-${monthId}.html`), monthHtml, 'utf-8');
+  }
+  console.log(`prerendered ${archiveMonths.length} /changelog/YYYY-MM month pages`);
 
   // feed.xml: the same archive as RSS 2.0, so the announcements are followable
   // without opening the site. Gated by the same public-surface filter as the

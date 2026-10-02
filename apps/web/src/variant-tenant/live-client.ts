@@ -117,6 +117,8 @@ export type TenantLiveState<C extends string, V> = {
   events: TenantLiveEvent[];
   abortDeadline: number | null;
   forfeitDeadline: number | null;
+  // The lobby made this room (snapshot `lobbyMatch`, sent only when true).
+  lobbyMatch: boolean;
 };
 
 // Everything a tenant's interaction/setup code needs from the core. Handed to
@@ -336,6 +338,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     events: [],
     abortDeadline: null,
     forfeitDeadline: null,
+    lobbyMatch: false,
   };
 
   let socket: TenantSocketClient | null = null;
@@ -418,6 +421,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     orientation,
     playAgainRequestBody: () => config.playAgainRequestBody(state),
     rematchControls: config.chrome?.rematchControls ?? (() => null),
+    lobbyMatch: () => state.lobbyMatch,
     ...(config.chrome?.variantDetail ? { variantDetail: config.chrome.variantDetail } : {}),
   });
 
@@ -447,6 +451,9 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     // flip jungle warned nobody before their 30 s ran out (#436).
     state.forfeitDeadline =
       typeof frame.forfeitDeadline === 'number' ? frame.forfeitDeadline : null;
+    // A room fact like the countdowns, so read here for every tenant. Sticky:
+    // a room never stops being a lobby room.
+    if (frame.lobbyMatch === true) state.lobbyMatch = true;
     if (frame.events) state.events = frame.events;
     config.onFrame?.(frame);
   }
@@ -518,6 +525,7 @@ export function createTenantLiveClient<C extends string, V extends TenantWebView
     state.room = room;
     state.forfeitDeadline = null;
     state.abortDeadline = null;
+    state.lobbyMatch = false;
     lastCapturedView = null;
     lastCapturedKey = null;
     pendingLiveAnimation = null;

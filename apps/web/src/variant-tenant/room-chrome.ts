@@ -145,6 +145,10 @@ export type TenantChromeContext<C extends string> = {
   // Post-game rematch block for a seated player, or null to fall back to
   // play-again. Tenant-owned because the shared control reads liveState.
   rematchControls(sendSocket: (payload: unknown) => boolean): HTMLElement | null;
+  // The lobby paired this room (snapshot `lobbyMatch`): both players were already
+  // waiting, so there is no invite link to share. An absent opponent is shown as
+  // still connecting, and the server aborts if they never do.
+  lobbyMatch(): boolean;
   // Optional suffix on the meta panel's Variant row (e.g. a time-control
   // label: "Jieqi · 5+5").
   variantDetail?(): string | null;
@@ -333,20 +337,11 @@ export function createTenantRoomChrome<C extends string>(
         row.append(time);
         (index === 0 ? refs!.clockTop : refs!.clockBottom).append(row);
       });
-      if (timeControl) {
-        const incrementSec = Math.round(timeControl.incrementMs / 1000);
-        const tcLabel =
-          incrementSec > 0
-            ? `${formatClock(timeControl.initialMs)}+${incrementSec}`
-            : formatClock(timeControl.initialMs);
-        // Only show the "clock starts after the opening moves" hint while the game
-        // is actually pregame — not once it's finished/aborted (the clock just sits
-        // unarmed at the final times, and the hint would be stale).
-        refs.clockNote.textContent = ended
-          ? ''
-          : t('live.clockStartsAfterOpening', { control: tcLabel });
-        refs.clockNote.hidden = ended;
-      }
+      // No pregame "clock starts after the opening moves" note (Brian,
+      // 2026-10-02): the header already names the time control, and the
+      // unarmed clocks say the rest.
+      refs.clockNote.textContent = '';
+      refs.clockNote.hidden = true;
       lastActiveClockColor = null;
       return;
     }
@@ -591,6 +586,13 @@ export function createTenantRoomChrome<C extends string>(
     // joins. No Home button either (lichess parity): the site nav is the way
     // out, and the empty host collapses its row.
     if (view?.status.type === 'aborted') return;
+    // A lobby room has no friend to invite.
+    if (ctx.lobbyMatch()) return;
+    // The invite link only while the opponent is still missing: never in a bot
+    // game (the engine seat reports connected), and not once both players are
+    // in, where the button used to sit in the column for the whole game
+    // (Brian's playtest, 2026-10-02).
+    if (!waitingForOpponent()) return;
 
     row.append(copyInviteButton());
     refs.roomActions.append(row);
@@ -610,7 +612,7 @@ export function createTenantRoomChrome<C extends string>(
   function copyInviteButton(): HTMLButtonElement {
     const copy = document.createElement('button');
     copy.type = 'button';
-    if (waitingForOpponent()) copy.className = 'primary';
+    copy.className = 'primary';
     copy.textContent = t('live.copyInvite');
     copy.addEventListener('click', () => {
       navigator.clipboard
@@ -643,6 +645,20 @@ export function createTenantRoomChrome<C extends string>(
     return button;
   }
 
+  // A bot rematch swaps sides (lichess): the seat opposite this game's. The
+  // tenants used to send 'random' (xiangqi, fortress, atomic, duck, crazyhouse,
+  // dark xiangqi), so a rematch kept the player's colour half the time; only
+  // banqi and jungle alternated, each in its own body. Seat names are the
+  // preferredColor tokens for every two-seat tenant (red/black), and on the
+  // flip variants they are move order, so this alternates who opens. A table
+  // of four (mahjong) keeps the tenant's own body.
+  function playAgainBody(): Record<string, unknown> {
+    const body = ctx.playAgainRequestBody();
+    const seat = seatColor();
+    if (seat === null || tenant.colors.length !== 2) return body;
+    return { ...body, preferredColor: tenant.oppositeColor(seat) };
+  }
+
   async function createPlayAgainRoom(): Promise<void> {
     playAgainStatus = 'creating';
     renderRoomActions();
@@ -650,7 +666,7 @@ export function createTenantRoomChrome<C extends string>(
       const response = await fetch('/api/rooms', {
         method: 'POST',
         headers: { 'content-type': 'application/json' },
-        body: JSON.stringify(ctx.playAgainRequestBody()),
+        body: JSON.stringify(playAgainBody()),
       });
       if (!response.ok) throw new Error(`play-again failed: ${response.status}`);
       const data = (await response.json()) as { url?: string };
@@ -750,7 +766,9 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() === 'displaced') return t('live.statusSessionMoved');
     if (!view) return t('live.statusConnecting');
     if (!ctx.isReplayLive()) return t('live.titleViewingReplay');
-    if (waitingForOpponent()) return t('live.titleInviteOpponent');
+    if (waitingForOpponent()) {
+      return ctx.lobbyMatch() ? t('live.statusWaitingForOpponent') : t('live.titleInviteOpponent');
+    }
     if (view.status.type === 'finished') return t('live.titleGameFinished');
     if (view.status.type === 'aborted') return t('live.statusGameAborted');
     if (ctx.seat() === view.status.turn) return t('live.statusYourMove');
@@ -769,7 +787,9 @@ export function createTenantRoomChrome<C extends string>(
     if (ctx.connectionState() === 'displaced') return t('live.roomDisplaced');
     if (!view) return t('live.roomOpeningSocket');
     if (!ctx.isReplayLive()) return t('live.roomReturnToLatest');
-    if (waitingForOpponent()) return t('live.roomInviteBody');
+    if (waitingForOpponent()) {
+      return ctx.lobbyMatch() ? t('live.roomWaitingOpponentConnect') : t('live.roomInviteBody');
+    }
     if (view.status.type === 'finished') {
       const reason = reasonText(view.status.reason);
       return view.status.winner
@@ -883,6 +903,11 @@ export function createTenantRoomChrome<C extends string>(
     const deadline = ctx.abortDeadline();
     const remaining = deadline === null ? 0 : deadline - Date.now();
     const seconds = Math.max(0, Math.ceil(remaining / 1000));
+    // In a lobby room the deadline running while the opponent is away is the
+    // no-show window: nobody owes a move yet, they have not arrived.
+    if (ctx.lobbyMatch() && waitingForOpponent()) {
+      return t('live.opponentNotConnectedAbortingIn', { seconds });
+    }
     return isSideToMove
       ? t('live.makeFirstMoveAbortingIn', { seconds })
       : t('live.waitingFirstMoveAbortingIn', { seconds });

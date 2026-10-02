@@ -1,4 +1,9 @@
-import { createUser, getPublicSiteStats, getSiteStats } from './persistence.js';
+import {
+  createUser,
+  getPublicSiteStats,
+  getRecentCountedGamesByVariant,
+  getSiteStats,
+} from './persistence.js';
 import {
   assert,
   definePersistenceTests,
@@ -159,6 +164,42 @@ definePersistenceTests('site stats', () => {
       completedGames: 1,
       cumulativeGames: 1,
     });
+  });
+
+  test('getRecentCountedGamesByVariant counts counted games ended inside the window', async () => {
+    const now = new Date('2026-09-30T12:00:00.000Z');
+    const inside = new Date('2026-09-20T12:00:00.000Z');
+    const outside = new Date('2026-08-20T12:00:00.000Z');
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      await client.query(
+        `INSERT INTO games
+           (room_id, variant, result, termination, ply_count, started_at, ended_at,
+            white_client, black_client, white_name, black_name, mode, status, visibility)
+         VALUES
+           ('order-jieqi-1', 'jieqi', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('order-jieqi-2', 'jieqi', 'red-wins', 'resignation', 30, $1, $1,
+            'human', 'engine', NULL, NULL, 'pve', 'completed', 'public'),
+           ('order-banqi-1', 'banqi', 'red-wins', 'resignation', 30, $1, $1,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('order-banqi-old', 'banqi', 'red-wins', 'resignation', 30, $2, $2,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('order-banqi-old-2', 'banqi', 'red-wins', 'resignation', 30, $2, $2,
+            'red', 'black', NULL, NULL, 'pvp', 'completed', 'public'),
+           ('order-xiangqi-eve', 'xiangqi', 'draw', 'truncated', 40, $1, $1,
+            'engine:red', 'engine:black', NULL, NULL, 'eve', 'completed', 'public')`,
+        [inside, outside],
+      );
+    } finally {
+      await client.end();
+    }
+    const rows = await getRecentCountedGamesByVariant(28, { now });
+    assert.deepEqual(rows, [
+      { variant: 'jieqi', count: 2 },
+      { variant: 'banqi', count: 1 },
+    ]);
   });
 
   test('getSiteStats counts accounts and their recent growth', async () => {

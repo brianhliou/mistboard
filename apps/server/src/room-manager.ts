@@ -28,6 +28,7 @@ import {
   ABORT_WINDOW_MS,
   FORFEIT_WINDOW_MS,
   JOIN_WINDOW_MS,
+  LOBBY_NO_SHOW_ABORT_MS,
   PVP_DISCONNECT_FORFEIT_ENABLED,
 } from './lifecycle-windows.js';
 import {
@@ -700,10 +701,15 @@ export function scheduleAbortTimeout(ctx: RoomManagerContext, room: Room): void 
   // but 'unjoined' is exempt from that: those rooms have no clock yet by
   // construction, and skipping them is what leaked them.
   const untimedAndOwesAMove = phase !== 'unjoined' && !room.projection.state.clock;
+  // A lobby room's open seat belongs to a player the lobby already paired: it
+  // gets the short no-show window from creation, whoever sits in the room
+  // (lifecycle-windows.ts LOBBY_NO_SHOW_ABORT_MS).
+  const lobbyNoShow = phase === 'unjoined' && room.lobbyMatch === true;
   // Somebody is sitting in the room with the page open, waiting for an
   // opponent. Never abort under them, however long they wait — the leak being
-  // closed is the room nobody is in.
-  const stillWaitingWithSomeonePresent = phase === 'unjoined' && someSeatConnected(room);
+  // closed is the room nobody is in. Not for a lobby room: nobody is coming.
+  const stillWaitingWithSomeonePresent =
+    phase === 'unjoined' && !lobbyNoShow && someSeatConnected(room);
   if (
     phase === null ||
     room.projection.paused ||
@@ -719,7 +725,10 @@ export function scheduleAbortTimeout(ctx: RoomManagerContext, room: Room): void 
   // white completing move 1 flips the phase and starts black a fresh window,
   // and a seat filling flips 'unjoined' so the long join window collapses to
   // the short pregame one instead of continuing to run.
-  if (room.abortPhase !== phase || room.abortDeadline === null) {
+  if (lobbyNoShow) {
+    room.abortPhase = phase;
+    room.abortDeadline = (room.events[0]?.at ?? Date.now()) + LOBBY_NO_SHOW_ABORT_MS;
+  } else if (room.abortPhase !== phase || room.abortDeadline === null) {
     room.abortPhase = phase;
     room.abortDeadline = Date.now() + (phase === 'unjoined' ? JOIN_WINDOW_MS : ABORT_WINDOW_MS);
   }
@@ -731,7 +740,7 @@ export function scheduleAbortTimeout(ctx: RoomManagerContext, room: Room): void 
     // Re-check presence at fire time, not just at schedule time: a player can
     // reclaim a seat via seat token without appending an event, so the
     // scheduler does not always re-run on reconnect.
-    if (currentPhase === 'unjoined' && someSeatConnected(room)) return;
+    if (currentPhase === 'unjoined' && room.lobbyMatch !== true && someSeatConnected(room)) return;
     const fromSeq = room.events.length;
     void appendEvent(ctx, room, {
       type: 'game-aborted',
@@ -1325,7 +1334,8 @@ export async function playRandomEngineMoveIfReady(
     clockRemainingMs: clock ? clockRemainingMs(clock, engineSeat, now) : undefined,
     events: room.events,
     incrementMs: clock?.incrementMs,
-    engineReservationId: room.engineReservationId ?? undefined,
+    engineReservation: room,
+    engineReservationStillNeeded: () => room.projection.state.status.type === 'playing',
     state: room.projection.state,
     color: engineSeat,
     legalMoves: moves,

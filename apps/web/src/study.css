@@ -946,19 +946,8 @@
   font-weight: 400;
 }
 .study-game-row__dot {
-  display: inline-block;
-  width: 0.55rem;
-  height: 0.55rem;
+  --seat-disc-size: 0.55rem;
   margin-right: 0.3rem;
-  border-radius: 50%;
-  vertical-align: 0.05em;
-}
-.study-game-row__dot--red {
-  background: var(--ink-red-chip, #c0563f);
-}
-.study-game-row__dot--black {
-  background: var(--ink-black, #574f48);
-  box-shadow: 0 0 0 1.5px color-mix(in srgb, var(--site-text) 70%, transparent);
 }
 .study-game-row__meta {
   font-size: 0.72rem;

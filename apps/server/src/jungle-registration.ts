@@ -1,7 +1,7 @@
 /**
  * Jungle registry entry. Owns the tenant's live-room map, the room-factory binding,
  * and hydration. PvP, live-clock only at this checkpoint (PvE bot + correspondence
- * come later). Matchmaking is casual random-seat (unrated). Imported for side
+ * come later). Matchmaking is random-seat, rated or casual. Imported for side
  * effects by variant-tenant/register-tenants.ts.
  */
 
@@ -41,6 +41,8 @@ export async function createJungleRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JungleCreatorPreference,
   engine?: JungleRoomEngineSeat,
+  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  rated = false,
 ): Promise<JungleLiveRoomCreation> {
   return createJungleLiveRoom(
     {
@@ -54,6 +56,7 @@ export async function createJungleRoom(
     timeControl,
     creatorPreference,
     engine,
+    rated,
   );
 }
 
@@ -106,10 +109,10 @@ registerVariantTenant({
       handleJungleCreate({ ...ctx, createJungleRoom }, response, body),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createJungleRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createJungleRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`jungle_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },

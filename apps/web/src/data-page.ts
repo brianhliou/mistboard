@@ -8,7 +8,9 @@
 // phone), "All variants" first and the default; one compact table for the
 // selected variant with a row per month; then the licence line. The notes on
 // the files live on their own page, /data/about (mountDataAbout below). The
-// selection lives in ?variant= so a link can be shared. Imported engine
+// selection lives in ?variant= so a link can be shared. Below the human games,
+// the selected variant's engine games (#488: the site's bots playing each other
+// on a schedule) get their own table of their own files. Imported engine
 // matches still download from /api/data/collections/..., linked from their
 // studies, but are not listed here.
 
@@ -57,6 +59,8 @@ export type DataListing = {
   schemaVersion: string;
   variants: string[];
   months: DataMonth[];
+  /** The scheduled engine games' months, their own files. Absent from older responses. */
+  engineMonths?: DataMonth[];
   collections: DataCollection[];
 };
 
@@ -318,20 +322,23 @@ function note(text: string): HTMLParagraphElement {
   return p;
 }
 
-/** The month rows of the selected variant, newest first. */
+/** The month rows of the selected variant, newest first: the human games'
+ *  files, or with `engine` the engine games' own. */
 export function monthRows(
   listing: DataListing,
   variant: string,
+  games: 'human' | 'engine' = 'human',
 ): Array<{ month: string; games: number; files: DataFileEntry[] }> {
+  const months = games === 'engine' ? (listing.engineMonths ?? []) : listing.months;
   if (variant === ALL_VARIANTS) {
-    return listing.months.map((month) => ({
+    return months.map((month) => ({
       month: month.month,
       games: month.games,
       files: month.files,
     }));
   }
   const rows: Array<{ month: string; games: number; files: DataFileEntry[] }> = [];
-  for (const month of listing.months) {
+  for (const month of months) {
     const row = month.variants.find((entry) => entry.variant === variant);
     if (row) rows.push({ month: month.month, games: row.games, files: row.files });
   }
@@ -507,6 +514,16 @@ function renderMonths(
       `${t('data.builtNote')} ${t('data.currentMonthNote', { month: formatMonth(currentMonthKey()) })}`,
     ),
   );
+  // The engine games, only where there are some: their own heading, note and
+  // table, after everything about the human files.
+  const engineRows = monthRows(listing, variant, 'engine');
+  if (engineRows.length > 0) {
+    const { table, body } = dataTable('data.colMonth');
+    table.classList.add('data-table-engine');
+    for (const row of engineRows)
+      body.append(tableRow(monthName(row.month), row.games, row.files, onDownload));
+    host.append(sectionHeading(t('data.engineHeading')), note(t('data.engineNote')), table);
+  }
 }
 
 // ── Licence credit and About the data ────────────────────────────────────────
@@ -566,6 +583,7 @@ const FIELD_ROWS: ReadonlyArray<[string, I18nKey]> = [
   ['result, termination', 'data.fieldResult'],
   ['plies', 'data.fieldPlies'],
   ['first_mover_ink', 'data.fieldInk'],
+  ['deal_fen', 'data.fieldDeal'],
   ['origin', 'data.fieldOrigin'],
 ];
 
@@ -649,8 +667,14 @@ export function mountDataAbout(root: HTMLElement): void {
       'data.hiddenHeading',
       paragraph(t('data.hiddenFog')),
       paragraph(t('data.hiddenFlip')),
+      paragraph(t('data.hiddenReveal')),
+      paragraph(t('data.hiddenBanqi')),
+      paragraph(t('data.hiddenBanqiLetters')),
+      paragraph(t('data.hiddenDeal')),
       paragraph(t('data.hiddenNeverRevealed')),
+      paragraph(t('data.hiddenReplayer')),
     ),
+    aboutSection('data.engineHeading', paragraph(t('data.engineAbout'))),
     aboutSection(
       'data.filesHeading',
       paragraph(t('data.filesBuilt')),

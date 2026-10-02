@@ -23,9 +23,10 @@ import {
   XIANGQI_SPEC_ID,
 } from '@mistboard/game';
 import { classifyTimeControl, gameSpecAnalyticsPropsForId, track } from './analytics.js';
-import { bindBotPlayControl } from './bot-play.js';
+import { type BotPlayRequest, bindBotPlayControl, createBotGame } from './bot-play.js';
 import { correspondenceEnabled } from './feature-flags.js';
 import { variantNameKeyForSpecId } from './game-display.js';
+import { type GameStartSource, rememberGameStartSource } from './game-start-source.js';
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
 import {
@@ -64,7 +65,7 @@ export type PlayableEngine = {
 // the dialog's own mode switcher. Absent means an internal reopen.
 type LandingSetupSource = 'hero' | 'deep-link' | 'correspondence' | 'mode-switch';
 
-type LandingPlayChoice = {
+export type LandingPlayChoice = {
   engineId?: string;
   engines?: PlayableEngine[];
   initialGameSpecId?: LandingGameSpecId;
@@ -80,9 +81,18 @@ type LandingPlayChoice = {
   // instead of real time. The Correspondence tab's own CTA uses it so the dialog
   // it opens matches the tab the player clicked from.
   initialTimeMode?: 'realtime' | 'correspondence';
+  /** Preselects this days-per-move chip when opening on correspondence. */
+  initialCorrespondenceDays?: number;
+  /**
+   * Opens on this side instead of the stored pick. The postgame "Challenge a
+   * friend" link passes 'random' (`&side=random`): a friend game started from a
+   * finished room should start on the coin flip, not on whichever side the
+   * player last chose in the friend dialog.
+   */
+  initialColor?: LandingColorPreference;
 };
-type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
-type LandingGameSpecId =
+export type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
+export type LandingGameSpecId =
   | typeof DARK_CHESS_SPEC_ID
   | typeof DARK_XIANGQI_SPEC_ID
   | typeof JIEQI_SPEC_ID
@@ -145,7 +155,7 @@ type LobbyTicketResponse = {
   ticketId?: string;
   url?: string;
 };
-type OpenLobbyRequest = {
+export type OpenLobbyRequest = {
   gameSpecId?: string;
   rated?: boolean;
   timeControl: {
@@ -159,7 +169,7 @@ type RoomCreationFailure = {
 };
 
 const ENGINE_SEAT_RETRY_MS = 3_000;
-const LANDING_TIME_PRESETS: LandingTimePreset[] = TIME_CONTROLS.map((tc) => ({
+export const LANDING_TIME_PRESETS: LandingTimePreset[] = TIME_CONTROLS.map((tc) => ({
   id: tc.id,
   label: tc.label,
   initialMs: tc.initialMs,
@@ -197,7 +207,7 @@ function defaultPresetForMode(
 // three official live controls. Both the engine pin above and `rated` NARROW
 // that set rather than replacing it, so a variant that does not offer a pace
 // casually never offers it rated or against a bot either.
-function allowedTimePresetIds(
+export function allowedTimePresetIds(
   gameSpecId: LandingGameSpecId,
   rated: boolean,
   mode: LandingPlayMode,
@@ -222,7 +232,7 @@ function allowedTimePresetIds(
 }
 // Dark chess is always offered. Integrated tenant variants join the normal play
 // entry points through their registry landing config.
-function enabledLandingVariantGameSpecs(
+export function enabledLandingVariantGameSpecs(
   _mode: LandingPlayMode,
   locale: Locale,
 ): { gameSpecId: LandingGameSpecId; label: string }[] {
@@ -246,7 +256,7 @@ function enabledLandingVariantGameSpecs(
   return specs;
 }
 
-function variantLabelForGameSpec(gameSpecId: LandingGameSpecId, locale: Locale): string {
+export function variantLabelForGameSpec(gameSpecId: LandingGameSpecId, locale: Locale): string {
   // The catalog's exhaustive name table, not a local switch: the switch that
   // lived here had no duck case, so duck fell back to English in every locale
   // while its zh strings sat unused (aa91538e).
@@ -639,6 +649,7 @@ function engineSeedRow(seed: LandingEngineSeed, locale: Locale): HTMLElement {
       preferredColor: 'random',
     }),
     {
+      source: 'lobby-bot',
       onStateChange: (state) => {
         if (state === 'pending') mode.textContent = t('lobby.botStarting', {}, locale);
         else if (state === 'error') mode.textContent = t('lobby.botStartFailed', {}, locale);
@@ -859,6 +870,8 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
           },
           status,
           locale,
+          undefined,
+          { startSource: 'quick-pair' },
         );
       });
       row.append(chip);
@@ -913,6 +926,7 @@ function buildQuickPairPools(locale: Locale): QuickPairPools {
         {
           pendingLabel: t('lobby.botStarting', {}, locale),
           errorLabel: t('lobby.botStartFailed', {}, locale),
+          source: 'quick-pair',
         },
       );
       row.append(botChip);
@@ -1368,6 +1382,7 @@ function lobbyTableRow(request: OpenLobbyRequest, locale: Locale): HTMLElement {
     // the seek was taken in the refresh window, so fail fast instead of
     // queueing invisibly.
     joinLobbyFromPlay(join, setup, status, locale, undefined, {
+      startSource: 'lobby-seek',
       onNoInstantMatch: () => {
         modeLabel.textContent = t('play.offerTaken', {}, locale);
         window.setTimeout(() => {
@@ -1382,7 +1397,7 @@ function lobbyTableRow(request: OpenLobbyRequest, locale: Locale): HTMLElement {
   return row;
 }
 
-type LobbyCorrespondenceSeek = {
+export type LobbyCorrespondenceSeek = {
   id: string;
   gameSpecId: string;
   daysPerMove: number;
@@ -1393,11 +1408,11 @@ type LobbyCorrespondenceSeek = {
 // What the tab knows after one poll. `disabled` is the server's own answer
 // (404 correspondence_disabled), kept distinct from "no seeks" and from a
 // transient network failure so only the first one hides the CTA.
-type LobbyCorrespondenceFeed =
+export type LobbyCorrespondenceFeed =
   | { status: 'ok'; seeks: LobbyCorrespondenceSeek[] }
   | { status: 'disabled' };
 
-async function fetchCorrespondenceSeeks(): Promise<LobbyCorrespondenceFeed> {
+export async function fetchCorrespondenceSeeks(): Promise<LobbyCorrespondenceFeed> {
   const response = await fetch('/api/correspondence/seeks').catch(() => null);
   if (!response) return { status: 'ok', seeks: [] };
   if (response.status === 404) {
@@ -1497,7 +1512,7 @@ function lobbyRequestRow(request: OpenLobbyRequest, locale: Locale = currentLoca
   return row;
 }
 
-async function fetchOpenLobbyRequests(): Promise<OpenLobbyRequest[]> {
+export async function fetchOpenLobbyRequests(): Promise<OpenLobbyRequest[]> {
   const response = await fetch('/api/lobby');
   if (!response.ok) throw new Error(`lobby requests failed: ${response.status}`);
   const data = (await response.json()) as { requests?: OpenLobbyRequest[] };
@@ -1546,7 +1561,8 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
       });
       break;
-    case 'friend':
+    case 'friend': {
+      const side = normalizeStoredColorPreference(params.get('side'));
       openLandingSetupDialog({
         engineId: defaultEngineId,
         engines: availableEngines,
@@ -1559,8 +1575,10 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         mode: 'pvp',
         modeSwitcher: true,
         ratedDisabled: true,
+        ...(side ? { initialColor: side } : {}),
       });
       break;
+    }
     case 'engine':
     case 'computer':
       openLandingSetupDialog({
@@ -1583,6 +1601,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   params.delete('play');
   params.delete('gameSpecId');
   params.delete('variant');
+  params.delete('side');
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
   window.history.replaceState(null, '', url);
@@ -1593,8 +1612,13 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
 // instead of offering a dead "Play the engine" that silently falls back to a
 // PvP room. The rule itself lives in variant-public-surfaces so that the rules
 // pages, which link straight into this dialog, cannot answer it differently.
-const landingVariantSupportsPve = (gameSpecId: LandingGameSpecId): boolean =>
+export const landingVariantSupportsPve = (gameSpecId: LandingGameSpecId): boolean =>
   variantSupportsPve(gameSpecId);
+
+/** Whether a lobby seek for this variant may be rated (its tenant capability;
+ *  the server's lobby.supportsRated agrees, variant-registry-sync.test.ts). */
+export const landingVariantSupportsRated = (gameSpecId: LandingGameSpecId): boolean =>
+  landingGameSpecCapabilities(gameSpecId).supportsRated;
 
 /** Which variant a first-time player lands on. Xiangqi is the flagship (the
  *  same one bare `/analysis` opens), so the dialog opens there rather than on
@@ -1613,7 +1637,7 @@ function defaultLandingGameSpecId(
   return first?.gameSpecId ?? DARK_CHESS_SPEC_ID;
 }
 
-function openLandingSetupDialog(choice: LandingPlayChoice): void {
+export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   const locale = choice.locale ?? currentLocale();
   const existing = document.querySelector('.landing-setup-overlay');
   existing?.remove();
@@ -1675,7 +1699,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // over from the real-time preset above. Only offered for Challenge-a-friend
   // and Find opponent on casual dark chess.
   let selectedCorrespondenceDays: number | null = wantsCorrespondence
-    ? DEFAULT_CORRESPONDENCE_DAYS
+    ? (choice.initialCorrespondenceDays ?? DEFAULT_CORRESPONDENCE_DAYS)
     : null;
   // Which side of the time-control segmented toggle is active. Drives whether the
   // real-time presets or the correspondence day-chips show; only ever flips to
@@ -1702,7 +1726,8 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // the colors are variant-declared: xiangqi storing 'red' would coerce to the
   // SECOND seat in a variant whose first mover is black. A stored preference or
   // the legacy global key counts as a past explicit choice.
-  const storedColor = storedPreference.preferredColor ?? loadStoredColorPreference();
+  const storedColor =
+    choice.initialColor ?? storedPreference.preferredColor ?? loadStoredColorPreference();
   let colorIsExplicit = storedColor !== undefined;
   let preferredColor: LandingColorPreference =
     storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);
@@ -2014,6 +2039,7 @@ function openLandingSetupDialog(choice: LandingPlayChoice): void {
         ? t('setup.createRoom', {}, locale)
         : t('setup.startGame', {}, locale);
   startButton.addEventListener('click', () => {
+    rememberGameStartSource('setup-dialog');
     if (selectedCorrespondenceDays !== null) {
       // Challenge a friend creates a private invite room; Find opponent posts an
       // open seek to the board (color server-assigned there, like the live pool).
@@ -3319,7 +3345,7 @@ function sleep(ms: number): Promise<void> {
   return new Promise((resolve) => window.setTimeout(resolve, ms));
 }
 
-function joinLobbyFromPlay(
+export function joinLobbyFromPlay(
   button: HTMLButtonElement,
   setup: LandingRoomSetup,
   status: HTMLElement,
@@ -3330,6 +3356,11 @@ function joinLobbyFromPlay(
      *  instantly (the offer was taken in the refresh window), delete the
      *  freshly-created ticket and hand control back to the caller. */
     onNoInstantMatch?: () => void;
+    /** Labels the game this wait ends in (game_started.entry_source). */
+    startSource?: GameStartSource;
+    /** The bot the 15 s "nobody came" offer starts when no engine id is given:
+     *  the homepage panel names a public bot, not an engine. */
+    botFallback?: BotPlayRequest;
   },
 ): () => void {
   const controller = new AbortController();
@@ -3392,11 +3423,28 @@ function joinLobbyFromPlay(
     : setup;
   const engineRepaced = engineSetup !== setup;
 
+  const botFallback = opts?.botFallback;
+  const hasFallback = Boolean(engineId || botFallback);
   const acceptEngineOffer = (playButton: HTMLButtonElement) => {
-    if (!engineId) return;
+    if (!hasFallback) return;
     track('lobby_engine_offer_accepted', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
     cancel();
-    void createRoomFromPlay(playButton, 'pve', engineId, engineSetup, status, locale);
+    rememberGameStartSource('engine-offer');
+    if (engineId) {
+      void createRoomFromPlay(playButton, 'pve', engineId, engineSetup, status, locale);
+      return;
+    }
+    if (!botFallback) return;
+    playButton.disabled = true;
+    createBotGame({ ...botFallback, timeControl: engineSetup.timeControl }).then(
+      (url) => {
+        window.location.href = url;
+      },
+      () => {
+        playButton.disabled = false;
+        status.textContent = t('lobby.botStartFailed', {}, locale);
+      },
+    );
   };
 
   const dismissEngineOffer = () => {
@@ -3406,7 +3454,7 @@ function joinLobbyFromPlay(
   };
 
   const showEngineOffer = () => {
-    if (!engineId || offerEl !== null || !status.isConnected) return;
+    if (!hasFallback || offerEl !== null || !status.isConnected) return;
     status.hidden = true;
     track('lobby_engine_offer_shown', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
 
@@ -3443,7 +3491,7 @@ function joinLobbyFromPlay(
   };
 
   const scheduleEngineOffer = () => {
-    if (!engineId) return;
+    if (!hasFallback) return;
     clearOfferTimer();
     offerTimer = window.setTimeout(() => {
       offerTimer = null;
@@ -3452,7 +3500,7 @@ function joinLobbyFromPlay(
           elapsedMs: Date.now() - queueJoinedAt,
           thresholdMs: ENGINE_OFFER_AFTER_MS,
           stillWaiting: active && offerEl === null,
-          hasEngine: Boolean(engineId),
+          hasEngine: hasFallback,
         })
       ) {
         showEngineOffer();
@@ -3463,6 +3511,7 @@ function joinLobbyFromPlay(
   const redirectIfMatched = (ticket: LobbyTicketResponse): boolean => {
     if (ticket.status !== 'matched' || !ticket.url) return false;
     track('lobby_match_found', { ...bucketProps, waitMs: Date.now() - queueJoinedAt });
+    if (opts?.startSource) rememberGameStartSource(opts.startSource);
     window.location.href = ticket.url;
     return true;
   };

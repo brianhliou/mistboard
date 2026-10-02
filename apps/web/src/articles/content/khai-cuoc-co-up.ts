@@ -21,10 +21,9 @@
 // date, so it publishes when the English page does, and articles-meta-sync
 // fails the build until the server's unpublished set agrees.
 //
-// The three diagrams keep English labels baked into their SVG: the block type is
-// `svg: string | (() => string)` and the renderer calls the thunk with no
-// arguments, so the label parameters those builders accept are unreachable from
-// here. Captions around them are translated. Same limitation the zh pages have.
+// The diagram labels below are swapped inside the rendered SVG by
+// deriveTranslation, since the renderer calls the thunk with no arguments and
+// the label parameters those builders accept are unreachable from here.
 
 import { deriveTranslation } from '../derived-translation.js';
 import { jieqiOpeningsArticle } from './jieqi-openings.js';
@@ -155,6 +154,13 @@ export const KHAI_CUOC_CO_UP_VI: Record<string, string> = {
     '[Một cách ghi biên bản cho cờ úp và cờ lật](https://zhuanlan.zhihu.com/p/638758588) (《天天象棋》揭棋和翻翻棋的记谱法). Đề xuất một cách ghi lại các ván cờ này, thứ vốn chưa tồn tại. Chỉ mang tính tham khảo.',
   'There is no jieqi opening database and no published statistics. The fifty games cited above are our own, they are mostly humans losing to Pikafish, and they are nowhere near enough to settle whether the pawn push really outperforms the crossed cannon. They are enough to say what people here actually play.':
     'Không có cơ sở dữ liệu khai cuộc cờ úp và không có thống kê nào được công bố. Năm mươi ván dẫn ở trên là của chính chúng tôi, phần lớn là người chơi thua Pikafish, và chúng còn xa mới đủ để kết luận tiến tốt có thực sự hơn pháo qua sông hay không. Chúng chỉ đủ để nói người chơi ở đây thật sự đi những nước gì.',
+
+  // Diagram labels (inside the SVG; the rules page luat-co-up uses the same terms)
+  'SHUFFLED START': 'THẾ BAN ĐẦU ĐÃ XÁO',
+  'FACE-DOWN ON A CANNON POINT': 'QUÂN ÚP Ở VỊ TRÍ PHÁO',
+  'SPENT: A SOLDIER TOOK THE HORSE': 'ĐÃ TIÊU: MỘT CON TỐT ĂN MÃ',
+  'FOUR OPENINGS, ONE MOVE EACH': 'BỐN KHAI CUỘC, MỖI CÁI MỘT NƯỚC',
+  'BOTH CANNONS TAKE BOTH HORSES': 'HAI PHÁO ĂN HAI MÃ',
 };
 
 export const khaiCuocCoUpArticle = deriveTranslation(jieqiOpeningsArticle, {

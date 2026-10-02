@@ -19,7 +19,7 @@ describe('postGameActions', () => {
     expect(labels(box)).toEqual(['Review game']);
   });
 
-  it('orders a seated bot game rematch, new opponent, review, then the friend invite', () => {
+  it('orders a seated bot game rematch, new game, review, then the friend invite', () => {
     const rematch = document.createElement('button');
     rematch.textContent = 'Rematch';
     const box = postGameActions({
@@ -29,7 +29,9 @@ describe('postGameActions', () => {
       rematch,
       reviewHref: '/game/x',
     });
-    expect(labels(box)).toEqual(['Rematch', 'New opponent', 'Review game', 'Challenge a friend']);
+    // A bot game's second action is "New game" (the dialog reopens on the same
+    // bot), not "New opponent" (lichess's post-AI-game label).
+    expect(labels(box)).toEqual(['Rematch', 'New game', 'Review game', 'Challenge a friend']);
     expect(rematch.classList.contains('postgame-actions__rematch')).toBe(true);
     const newOpponent = box.children[1] as HTMLAnchorElement;
     expect(newOpponent.getAttribute('href')).toContain('play=computer');

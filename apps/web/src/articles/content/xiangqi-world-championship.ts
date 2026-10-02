@@ -1,3 +1,5 @@
+import type { Locale } from '../../i18n/locale.js';
+import { cardMark } from '../text-card.js';
 import {
   sanctionedWorldChampions,
   WORLD_CHAMPIONS,
@@ -107,24 +109,23 @@ const C_BV0kkYY4: XiangqiReplaySpec = {
 // Same text card as the champions article, which is the point: they are a pair,
 // and a reader who has seen one should recognise the other as its sibling rather
 // than as an unrelated page. 世界 (world) against that piece's 冠军 (champion).
-const WORLD_TITLE_THUMBNAIL = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-  'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-  'aria-label="A card reading World, the xiangqi world title, since 1990">',
-  '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-  '<text x="160" y="60" text-anchor="middle" font-family="\'Noto Sans SC\', ',
-  '\'PingFang SC\', \'Hiragino Sans GB\', \'Microsoft YaHei\', system-ui, sans-serif" ',
-  'font-size="26" font-weight="700" letter-spacing="10" fill="#b9832f" ',
-  'opacity="0.5">\u4e16\u754c</text>',
-  '<text x="160" y="116" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="40" font-weight="700" fill="#b9832f">WORLD TITLE</text>',
-  '<text x="160" y="150" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
-  'AND WHY IT IS NOT THE HARDER ONE</text>',
-  '<text x="160" y="176" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">SINCE 1990</text>',
-  '</svg>',
-].join('');
+const WORLD_TITLE_THUMBNAIL = (locale?: Locale): string =>
+  [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
+    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
+    'aria-label="A card reading World, the xiangqi world title, since 1990">',
+    '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
+    cardMark(
+      { eyebrowY: 60, leadY: 116, latin: 'WORLD TITLE', hanzi: '\u4e16\u754c', zhHans: '世界冠军', zhHant: '世界冠軍' },
+      locale,
+    ),
+    '<text x="160" y="150" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
+    'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
+    'AND WHY IT IS NOT THE HARDER ONE</text>',
+    '<text x="160" y="176" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
+    'font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">SINCE 1990</text>',
+    '</svg>',
+  ].join('');
 
 
 // 2015 · Zheng Weitong over the man who would take the title ten years later.
@@ -558,6 +559,7 @@ const C_MC2023: XiangqiReplaySpec = {
 
 export const xiangqiWorldChampionshipArticle: Article = {
   slug: 'xiangqi-world-championship',
+  homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',

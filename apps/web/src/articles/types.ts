@@ -476,6 +476,10 @@ type ArticleBase = {
   // Non-variant guest pages only. Variant rules listings are controlled in
   // variant-public-surfaces.ts so one switch covers every public rail/widget.
   showInIndex?: boolean;
+  // Which homepage row the card sits in. Unset is the general row, so a new
+  // article lands on the homepage with no second edit; 'deep-dives' moves it to
+  // the row beneath (player pages and game deep dives).
+  homeRow?: 'deep-dives';
   status: 'outline' | 'draft' | 'published';
   audience: string;
   // ISO-8601 dates (YYYY-MM-DD). When present, rendered in the article meta.

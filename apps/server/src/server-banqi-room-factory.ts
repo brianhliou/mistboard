@@ -34,6 +34,7 @@ export async function createBanqiLiveRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: BanqiCreatorPreference,
   engine?: BanqiRoomEngineSeat,
+  rated = false,
 ): Promise<BanqiLiveRoomCreation> {
   const created = await createTenantLiveRoom(
     banqiTenant,
@@ -45,7 +46,7 @@ export async function createBanqiLiveRoom(
       isPersistenceEnabled: ctx.isPersistenceEnabled,
       recordPersistenceError: ctx.recordPersistenceError,
     },
-    { timeControl, creatorPreference, engine },
+    { timeControl, creatorPreference, engine, rated },
   );
   if (!created.ok) {
     return created.error === 'disabled'

@@ -1495,30 +1495,6 @@
   color: var(--site-heading);
 }
 
-.xq-replay-annotated .xq-replay-seat-dot {
-  width: 12px;
-  height: 12px;
-  flex: none;
-  border-radius: 50%;
-  border: 1px solid var(--site-border);
-}
-
-.xq-replay-annotated .xq-replay-seat--red .xq-replay-seat-dot {
-  background: #c0392b;
-  border-color: #c0392b;
-}
-
-/* Literal ink, not --site-heading. That token is the HEADING TEXT colour, which
-   is near-white on the dark theme, so the black seat rendered as a white dot
-   next to the black player's name while red beside it was a literal #c0392b.
-   A piece colour is not a theme colour: it names which side is which and has to
-   survive the theme, the way .watch-player-disc--black does with the same ink.
-   The border stays --site-border rather than the fill, so the dot keeps a ring
-   and stays visible against a dark card. */
-.xq-replay-annotated .xq-replay-seat--black .xq-replay-seat-dot {
-  background: #2b2b2b;
-}
-
 .xq-replay-annotated .xq-replay-seat-name {
   min-width: 0;
   overflow: hidden;

@@ -48,6 +48,7 @@ export const ZH_HANS_CONTENT = {
   'videos.previousVideos': '上一个视频',
   'videos.moreVideos': '更多视频',
   'articles.heading': '文章',
+  'articles.deepDives': '深度文章',
   'articles.read': '阅读',
   'articles.intro': '原创策略游戏的文章、规则说明与引擎工作。',
   'articles.allArticles': '全部文章',
@@ -288,7 +289,7 @@ export const ZH_HANS_CONTENT = {
     'Mistboard 是一个免费的开源爱好项目。本页说明我们在 mistboard.com 托管网站上收集什么。随着项目成长，本页会变化；本页始终是当前版本。',
   'privacy.collectHeading': '我们收集什么',
   'privacy.collectBody':
-    '汇总分析数据、你下过的对局，以及如果你创建账号，你的用户名和邮箱。你的浏览器会在本地存储中保存一个随机标识，以便把你未登录时下的对局在统计中计为同一位访客；它不是 Cookie，不会离开本站，也不会展示给其他玩家。围绕计分对局，为保持诚实公平，我们会收集更多数据。',
+    '分析数据、你下过的对局，以及如果你创建账号，你的用户名和邮箱。我们使用 PostHog 做分析：它会按浏览器记录你访问的页面和在页面上的操作，如果你登录，这些记录会关联到你的账号。你的浏览器会在本地存储中保存一个随机标识，以便把你未登录时下的对局在统计中计为同一位访客；它不是 Cookie，不会离开本站，也不会展示给其他玩家。围绕计分对局，为保持诚实公平，我们会收集更多数据。',
   'privacy.noDoHeading': '我们不会做什么',
   'privacy.noDoBody':
     '没有广告。我们不出售你的数据。不录制你的屏幕。我们尊重 Do Not Track。休闲对局不需要账号。',
@@ -404,20 +405,23 @@ export const ZH_HANS_CONTENT = {
   'data.formatJsonl':
     'JSONL：每行一盘对局，gzip 压缩。每一行与该对局页面上单独下载的 JSON 完全相同。字段：',
   'data.fieldGame': '对局编号及其在 Mistboard 上的页面。',
-  'data.fieldVariant': '变体编号，以及 pvp（人对人）或 pve（人对机器人）。',
+  'data.fieldVariant':
+    '变体编号，以及 pvp（人对人）、pve（人对机器人），或在机器人对局文件中的 eve（机器人对机器人）。',
   'data.fieldPlayers': '各方在对局页面上显示的名字，按颜色区分。设为私密的座位显示为 Anonymous。',
   'data.fieldTimeControl':
     '初始时间和每步加时（毫秒），并附 5+3 这样的标签；不限时则为 null。按每步固定用时进行的引擎对局附 movetime_ms。',
   'data.fieldTimes': '对局开始和结束的时间，ISO 8601 格式，UTC。',
   'data.fieldResult': '获胜颜色或和棋，以及对局如何结束：将死、超时、认输等。',
   'data.fieldPlies':
-    '按顺序列出每一步：走子方、uci 格式的着法、该变体有记谱法时的 san（否则为 null），以及每步之后双方的剩余时间。',
+    '按顺序列出每一步：走子方、uci 格式的着法、该变体有记谱法时的 san（否则为 null），以及每步之后双方的剩余时间。在揭棋、暗棋和翻翻棋中，翻开棋子的着法还带有 revealed，揭棋中吃掉暗子的着法带有 captured_hidden，两者都是颜色加兵种。',
   'data.fieldInk': '仅暗棋和翻翻棋：先手翻出的颜色。',
+  'data.fieldDeal':
+    '本站下的揭棋、暗棋和翻翻棋对局：开局的暗子布局，以写明每枚暗子的 FEN 表示。引擎对局没有此字段。',
   'data.fieldOrigin': '仅引擎对局下载：赛事、署名，以及始终未揭开的棋子所在的格子。',
   'data.formatMoves':
     'uci 着法是坐标：h2e2 是走子，@c3 是翻开一枚暗子，R@d4 是从手中打入（堡垒象棋），b3e3@e6 是一回合鸭子象棋，最后是鸭子的落点。',
   'data.formatPgn':
-    'PGN：用于有其他程序可读记谱法的变体：迷雾国际象棋用 SAN，象棋和原子象棋用 WXF，迷雾象棋用 ICCS 坐标。对局之间空一行，并带有 Site（对局页面）、MistboardVariant、MistboardTermination 和 License 标签。没有记谱标准的变体只提供 JSONL。',
+    'PGN：用于着法能写成可独立重放文本的变体：迷雾国际象棋用 SAN，象棋和原子象棋用 WXF，迷雾象棋和揭棋用 ICCS 坐标，暗棋用 ICGA 记谱法，翻翻棋用坐标。对局之间空一行，并带有 Site（对局页面）、MistboardVariant、MistboardTermination 和 License 标签。其他变体只提供 JSONL。',
   'data.licenseHeading': '许可',
   'data.licensePrefix': '这些文件按 ',
   'data.licenseSuffix':
@@ -427,18 +431,33 @@ export const ZH_HANS_CONTENT = {
   'data.included':
     '自 2026 年 6 月起在本站下完的每一盘对局：人对人或人对机器人，计分或休闲，登录或以访客身份。对局按结束时所在的月份（UTC）归档。',
   'data.excluded':
-    '不包含：中止的对局和双方都还没走棋就结束的对局、运营和测试本站的账号下的对局、非公开对局、引擎对引擎的对局，以及引擎对局等导入的对局。当月结束后才会加入。',
+    '不包含：中止的对局和双方都还没走棋就结束的对局、运营和测试本站的账号下的对局、非公开对局、机器人对局（它们有单独的文件），以及引擎对局等导入的对局。当月结束后才会加入。',
   'data.hiddenHeading': '隐藏信息',
   'data.hiddenFog':
     '已结束的迷雾对局不再隐藏任何信息，所以文件包含双方的每一步，与对局结束后页面上显示的一致。当时每位玩家能看到什么并未保存；可以由着法和开源游戏代码中的视野规则推出。',
   'data.hiddenFlip':
-    '揭棋、暗棋和翻翻棋暂未收入月度文件。它们的导出只记录每枚棋子走到哪里或在哪里被翻开，既没有暗子的初始布局，也没有每次翻开的是什么棋子，所以下载的对局无法重放。等文件能记录翻开的棋子后再加入；在此之前，对局页面会重放每一次揭开。',
+    '揭棋、暗棋和翻翻棋开局时棋子背面朝上。它们的文件写明每次翻开的是什么棋子，所以下载的对局只凭着法就能重放，两种格式都可以。',
+  'data.hiddenReveal':
+    '着法带有翻开的棋子。在 PGN 中，着法翻开的棋子写在 = 之后，红方大写，黑方小写，所以任何 PGN 读取器都会把它当作着法的一部分：揭棋如 e3e4=R，翻翻棋如 @c3=E。揭棋吃掉暗子时再加 x= 和被吃的棋子：b0b7=Cx=n。字母沿用各自 FEN 的字母：揭棋 R 车、N 马、B 相、A 仕、C 炮、P 兵；翻翻棋 R 鼠、C 猫、D 狗、W 狼、P 豹、T 虎、L 狮、E 象。',
+  'data.hiddenBanqi':
+    '暗棋 PGN 依照 Chen、Shen 和 Hsu 的记谱法（ICGA Journal，2010）：b4-b2 是走子；论文中写作 d8(P) 的翻子，这里写作 d8=P，因为 PGN 会把括号读成变着。字母沿用论文：K 帅、G 仕、M 相、R 车、N 马、C 炮、P 兵。它的棋盘是 4 列 8 行，所以本站坐标要互换：本站的 a 到 h 列是 ICGA 的第 1 到 8 行，本站的第 1 到 4 行是 ICGA 的 a 到 d 列。JSON 保留本站坐标。',
+  'data.hiddenBanqiLetters':
+    '注意 G：在暗棋着法中它是仕，在暗棋 FEN 中却是帅。FEN 的字母为 G 帅、A 仕、E 相、R 车、H 马、C 炮、S 兵。',
+  'data.hiddenDeal':
+    '有暗子布局时会一并提供。本站的每盘对局在开始时就把棋子全部发好，所以其 JSON 带有 deal_fen，PGN 带有 DealFEN 标签：在该变体的 FEN 后加第六个字段，按棋盘顺序（从最上一行开始）写出每枚暗子。FEN 标签是背面朝上的初始局面。着法中的每次翻开都与布局一致，两个 FEN 都使用本站的坐标和字母。',
   'data.hiddenNeverRevealed':
-    '在揭棋引擎对局下载中，有些棋子在对局结束时仍是暗子，身份从未确定。origin.never_revealed 列出它们所在的格子，任何文件都不会为它们写出棋子。',
+    '引擎对局下载没有暗子布局。对局自己的裁判程序在棋子翻开时才决定它是什么，所以对局结束时仍是暗子的棋子从未有过身份：origin.never_revealed 列出它们所在的格子，任何文件都不会为它们写出棋子。它们的着法带有每一次翻开，所以同样可以重放。',
+  'data.hiddenReplayer':
+    '开源游戏代码中有一个参考重放器 replayHiddenPieceRecord，可以从任一文件重建对局，并逐一核对翻开的棋子与布局。',
   'data.filesHeading': '文件与校验和',
   'data.filesBuilt':
     '文件在第一次有人下载时由数据库生成，之后不再改变。文件生成后，对局数据页面会显示它的大小和 SHA-256，可以用 sha256sum 校验下载。',
   'data.filesHosting':
     '文件由本站直接提供。当某个月的文件超过约 100 MB，或下载流量开始产生费用时，会迁移到对象存储（Cloudflare R2）。',
   'privacy.downloadsLink': '对局数据页面',
+  'data.engineHeading': '机器人对局',
+  'data.engineNote':
+    '本站自己的机器人之间的对局，每天几盘。它们有单独的文件，从不出现在上面的文件中。',
+  'data.engineAbout':
+    '本站每天安排几盘自己的机器人之间的对局，就是你可以对战的那些机器人，涵盖多个变体，并在本站自己的服务器上进行。这些对局发布在单独的月度文件中，位于对局数据页面的“机器人对局”下，mode 为 eve。它们从不出现在人类对局的文件中，也不计入本站的统计或等级分。揭棋机器人对局和本站其他对局一样在开局时发牌，因此带有 deal_fen。',
 } satisfies Partial<Record<ContentI18nKey, string>>;

@@ -40,41 +40,7 @@
 }
 
 .review-seat__disc {
-  flex: none;
-  width: 11px;
-  height: 11px;
-  border: 1px solid var(--site-border);
-  border-radius: 50%;
-  background: var(--site-surface);
-}
-
-/* A seat disc carries the INK its player has, so it must NOT flip with the theme.
-   `var(--site-text)` did exactly that: it inverts to a light grey in dark mode, so
-   the BLACK seat rendered nearly white. Fixed values now, with one neutral ring
-   that stays visible on a light card and a dark one alike. */
-.review-seat--red .review-seat__disc {
-  border-color: #a63328;
-  background: #a63328;
-}
-
-.review-seat--white .review-seat__disc {
-  border-color: #8f8b83;
-  background: #f4f1e9;
-}
-
-/* Flip variants before the opening reveal binds an ink: the players are known and
-   the colours are not, so the disc is an empty dashed ring rather than a guess.
-   Mirrors the meta card's --unbound and the /watch rows. */
-.review-seat--unbound .review-seat__disc {
-  background: transparent;
-  border-color: var(--site-muted);
-  border-style: dashed;
-  opacity: 0.55;
-}
-
-.review-seat--black .review-seat__disc {
-  border-color: var(--seat-dark-ink-border, #8f8b83);
-  background: var(--seat-dark-ink, #34302e);
+  --seat-disc-size: 11px;
 }
 
 .review-seat__name {

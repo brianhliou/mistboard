@@ -468,19 +468,7 @@
 }
 
 .puzzle-source-disc {
-  flex: none;
-  width: 10px;
-  height: 10px;
-  border: 1px solid var(--site-border);
-  border-radius: 50%;
-}
-
-.puzzle-source-disc--red {
-  background: #c0392b;
-}
-
-.puzzle-source-disc--black {
-  background: #454545;
+  --seat-disc-size: 10px;
 }
 
 .puzzle-source-player-name {

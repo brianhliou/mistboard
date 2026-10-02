@@ -4,6 +4,7 @@
 // surface (no per-color triptych) and there is no fog to pass to the renderer.
 import type { BanqiPlayerView } from '@mistboard/game';
 import { banqiResultLabel, seatInkLabel } from './banqi-result-label.js';
+import { flipSeatInk } from './flip-seat-ink.js';
 import {
   type BanqiPostgameResponse,
   type BanqiPostgameViewKey,
@@ -73,6 +74,7 @@ export function mountBanqiWatchReplay(
       // result is seat-keyed, so translate it to the bound ink for display.
       resultLabel: (result, postgame) => banqiResultLabel(result, postgame.view.firstColor),
       seatLabel: (seat, postgame) => seatInkLabel(seat, postgame.view.firstColor),
+      seatInk: (seat, postgame) => flipSeatInk(seat, postgame.view.firstColor ?? null),
     },
   );
 }

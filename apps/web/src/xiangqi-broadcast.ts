@@ -31,6 +31,7 @@ import { formatEval, winProbRed } from './review/engine/eval-format.js';
 import { buildBroadcastChat } from './review/spectator-chat.js';
 import { formatXiangqiEngineMove } from './review/xiangqi-review.js';
 import { buildXiangqiReplayFromMoves } from './review/xiangqi-review-model.js';
+import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { xiangqiAppearanceChangedEvent } from './theme.js';
 import { animateXiangqiBoardMove } from './xiangqi-board.js';
@@ -845,27 +846,33 @@ function renderIndex(
   heading.textContent = t('broadcast.tournamentBroadcasts');
 
   const now = Date.now();
-  const live = data.tours.filter((entry) => entry.liveBoardCount > 0);
-  const upcoming = data.tours.filter(
-    (entry) => entry.liveBoardCount === 0 && isAfter(entry.tour.startsAt, now),
+  const phases = data.tours.map((entry) => ({ entry, phase: tourIndexPhase(entry, now) }));
+  const inPhase = (phase: TourIndexPhase) =>
+    phases.filter((item) => item.phase === phase).map((item) => item.entry);
+  const live = inPhase('live');
+  // Started and not over, with games posted but no board moving right now
+  // (the women's league between rounds).
+  const ongoing = inPhase('ongoing');
+  // Not started, or started by the calendar with nothing posted yet: an event
+  // on its first day in Manila is still upcoming to a reader in California.
+  // Soonest first, unlike Past and Ongoing.
+  const upcoming = inPhase('upcoming').sort(
+    (a, b) => dateMs(a.tour.startsAt) - dateMs(b.tour.startsAt),
   );
-  // Started but not over, with no board moving right now (the women's league
-  // between rounds): ongoing, not past.
-  const started = data.tours.filter(
-    (entry) => entry.liveBoardCount === 0 && !isAfter(entry.tour.startsAt, now),
-  );
-  const ongoing = started.filter((entry) => isAfter(entry.tour.endsAt, now));
-  const past = started.filter((entry) => !isAfter(entry.tour.endsAt, now));
+  const past = inPhase('past');
   const featured =
     sortByFreshness(live)[0] ??
     sortByEventDate(ongoing)[0] ??
-    [...upcoming].sort((a, b) => dateMs(a.tour.startsAt) - dateMs(b.tour.startsAt))[0] ??
+    upcoming[0] ??
+    // The latest past event with games: one the source never posted is no
+    // event to lead with.
+    sortByEventDate(past.filter((entry) => entry.boardCount > 0))[0] ??
     sortByEventDate(past)[0] ??
     null;
   const without = (entries: BroadcastIndexEntry[]) => entries.filter((entry) => entry !== featured);
 
   const content: HTMLElement[] = [heading];
-  if (featured) content.push(featuredTourCard(featured));
+  if (featured) content.push(featuredTourZone(featured, tourIndexPhase(featured, now)));
   if (without(live).length > 0) {
     content.push(tourZone(t('broadcast.liveNow'), sortByFreshness(without(live)), true));
   }
@@ -894,9 +901,30 @@ function dateMs(value: string | null | undefined): number {
   return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
 }
 
+type TourIndexPhase = 'live' | 'ongoing' | 'upcoming' | 'past';
+
+// Which index section an event belongs in. An event leaves Upcoming when its
+// first games are posted, not when its start date passes in the event's time
+// zone; once its end date passes it is past, posted or not.
+function tourIndexPhase(entry: BroadcastIndexEntry, now: number): TourIndexPhase {
+  if (entry.liveBoardCount > 0) return 'live';
+  if (isAfter(entry.tour.startsAt, now)) return 'upcoming';
+  if (!isAfter(entry.tour.endsAt, now)) return 'past';
+  return entry.boardCount > 0 ? 'ongoing' : 'upcoming';
+}
+
+const DAY_MS = 86_400_000;
+
 function isAfter(value: string | null | undefined, now: number): boolean {
   const ms = value ? Date.parse(value) : Number.NaN;
   return Number.isFinite(ms) && ms > now;
+}
+
+/** The event's last day has passed. An undated event has not ended: it may
+ *  still post. */
+function tourHasEnded(tour: { endsAt?: string | null }, now = Date.now()): boolean {
+  const ms = tour.endsAt ? Date.parse(tour.endsAt) : Number.NaN;
+  return Number.isFinite(ms) && ms <= now;
 }
 
 /**
@@ -929,6 +957,20 @@ function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boole
       live: false,
     };
   }
+  if (entry.boardCount === 0 && isAfter(entry.tour.endsAt, Date.now())) {
+    // Started by the calendar, nothing posted: its first day says so, a later
+    // day waits on the source like a played round with no records.
+    const sinceStart = Date.now() - dateMs(entry.tour.startsAt);
+    return {
+      text: sinceStart < DAY_MS ? t('broadcast.startsToday') : t('broadcast.awaitingRecords'),
+      live: false,
+    };
+  }
+  if (entry.boardCount === 0 && tourHasEnded(entry.tour)) {
+    // Over by the calendar and the source never posted a game: say so, or
+    // the card under Past reads as an event we have and show nothing of.
+    return { text: t('broadcast.noGamesPublished'), live: false };
+  }
   if (latest) {
     const date = formatEventDay(latest.startsAt ?? undefined);
     return {
@@ -959,10 +1001,22 @@ function topPlayersEl(entry: BroadcastIndexEntry, count: number): HTMLElement | 
   return el;
 }
 
-/** The featured event, large: the board beside the event, lichess's hero card. */
-function featuredTourCard(entry: BroadcastIndexEntry): HTMLElement {
-  const card = tourCard(entry, { featured: true });
-  return card;
+/**
+ * The featured event, large: the board beside the event, lichess's hero card,
+ * under a heading that says why it is the one on top.
+ */
+function featuredTourZone(entry: BroadcastIndexEntry, phase: TourIndexPhase): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'xqb-section xqb-featured-zone';
+  const heading = document.createElement('h2');
+  heading.textContent = {
+    live: t('broadcast.liveNow'),
+    ongoing: t('broadcast.ongoing'),
+    upcoming: t('broadcast.nextUp'),
+    past: t('broadcast.latest'),
+  }[phase];
+  section.append(heading, tourCard(entry, { featured: true }));
+  return section;
 }
 
 /** The next few events on the calendar that we do not have a page for yet. */
@@ -1082,7 +1136,6 @@ function renderEventShell(
   body: HTMLElement,
   currentBoardId: string,
 ): HTMLElement {
-  const hasRound = data.round.id !== '';
   const boardOpen = currentBoardId !== '';
   const main = broadcastShell();
   main.classList.add('xqb-event');
@@ -1102,8 +1155,10 @@ function renderEventShell(
   layout.append(content);
   // The round's pairings, lichess's left column: scan the round without the
   // thumbnails, and jump straight to a board from any tab. The same list on
-  // every page of the round, the open board marked.
-  const rail = hasRound ? sideRail(data, currentBoardId) : null;
+  // every page of the round, the open board marked. A tour with no round yet
+  // keeps the column too (an empty list and the chat), so the page has the
+  // shape it will have once games arrive instead of one stretched panel.
+  const rail = sideRail(data, currentBoardId);
   if (rail) {
     layout.classList.add('xqb-event-layout-with-rail');
     // The list and the event's chat room, lichess's left column. Beside the
@@ -1310,7 +1365,9 @@ function renderBoardsTab(
         data.round.startsAt !== undefined &&
         !roundHasStarted(data.round)
         ? t('broadcast.roundNotStarted')
-        : t('broadcast.noGamesYet'),
+        : tourHasEnded(data.tour)
+          ? t('broadcast.noGamesInEndedRound')
+          : t('broadcast.noGamesYet'),
     );
     const source = broadcastSourcePageHref(data.round.sourceUrl ?? data.tour.sourceUrl);
     if (source) {
@@ -1858,7 +1915,9 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     }
     const when = document.createElement('p');
     when.className = 'xqb-note';
-    when.textContent = t('broadcast.noGamesInEvent');
+    when.textContent = tourHasEnded(data.tour)
+      ? t('broadcast.noGamesInEndedEvent')
+      : t('broadcast.noGamesInEvent');
     note.append(when);
     wrap.append(note);
   }
@@ -2799,8 +2858,7 @@ function cardSeat(
 ): HTMLElement {
   const row = document.createElement('span');
   row.className = `xqb-card-seat xqb-card-seat-${color}${score === '1' ? ' xqb-card-seat-winner' : ''}`;
-  const disc = document.createElement('span');
-  disc.className = 'xqb-card-seat-disc';
+  const disc = seatDiscEl(color, 'xqb-card-seat-disc');
   const name = document.createElement('span');
   name.className = 'xqb-card-seat-name';
   // The title before the name, in its own ink (lichess's GM, FM): the feed's
@@ -2902,6 +2960,9 @@ function sideRail(
   const heading = document.createElement('h2');
   if (header) {
     heading.append(header);
+  } else if (context.round.id === '') {
+    // No round to link to yet: the heading names what the list will hold.
+    heading.append(t('broadcast.boards'));
   } else {
     const back = document.createElement('a');
     back.href = `/broadcast/xiangqi/${encodeURIComponent(
@@ -2928,7 +2989,9 @@ function sideRail(
   if (boards.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'xqb-rail-empty';
-    empty.textContent = t('broadcast.railNoGames');
+    empty.textContent = tourHasEnded(context.tour)
+      ? t('broadcast.noGamesPublished')
+      : t('broadcast.railNoGames');
     list.append(empty);
   }
   let currentRow: HTMLElement | null = null;

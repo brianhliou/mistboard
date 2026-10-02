@@ -784,8 +784,9 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(featured?.querySelector('.xqb-tour-players')?.textContent).toBe('Wang Tianyi');
 
     const headings = [...root.querySelectorAll('.xqb-section h2')].map((node) => node.textContent);
-    expect(headings).toEqual(['Past']);
-    const pastCard = root.querySelector('.xqb-section .xqb-tour-card');
+    // The top card says why it is on top.
+    expect(headings).toEqual(['Live now', 'Past']);
+    const pastCard = root.querySelector('.xqb-section:not(.xqb-featured-zone) .xqb-tour-card');
     expect(pastCard?.querySelector('.xqb-tour-status')?.textContent).toMatch(/^Round 5 · Jul 8/);
     expect(pastCard?.textContent).not.toContain('Updated');
 
@@ -817,6 +818,111 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     );
     expect(root.querySelectorAll('.xqb-tour-card').length).toBe(1);
     expect(broadcastOpenedCalls()).toEqual([{ surface: 'index', locale: 'en' }]);
+  });
+
+  it('keeps an event that started by its own calendar but has no games under Upcoming', async () => {
+    // The Asian championship case: 14 hours into its first day in Manila,
+    // evening before in California, nothing posted yet.
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+    const inDays = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+    const entry = (slug: string, startsAt: string, endsAt: string, boardCount: number) => {
+      const base = indexEntry({ slug, name: slug, live: false, updatedAt: hoursAgo(1) });
+      return {
+        ...base,
+        tour: { ...base.tour, startsAt, endsAt },
+        roundCount: boardCount > 0 ? 1 : 0,
+        boardCount,
+        completeBoardCount: boardCount,
+        featuredBoard: boardCount > 0 ? base.featuredBoard : null,
+      };
+    };
+    stubFetchJson(() => ({
+      tours: [
+        // Out of date order, as the API returns them.
+        entry('changchun', inDays(51), inDays(59), 0),
+        entry('asian-men', hoursAgo(14), inDays(6), 0),
+        entry('singapore', inDays(40), inDays(45), 0),
+        entry('asian-women', hoursAgo(14), inDays(6), 0),
+        // Three days in and still nothing from the source.
+        entry('quiet-league', hoursAgo(72), inDays(2), 0),
+      ],
+    }));
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastIndex(root);
+
+    const zone = (title: string) =>
+      [...root.querySelectorAll('.xqb-section')].find(
+        (section) => section.querySelector('h2')?.textContent === title,
+      );
+    const names = (section: Element | undefined) =>
+      [...(section?.querySelectorAll('.xqb-tour-card-name') ?? [])].map((n) => n.textContent);
+
+    expect(zone('Ongoing')).toBeUndefined();
+    // The earliest start leads, labelled as the next event.
+    expect(names(zone('Next up'))).toEqual(['quiet-league']);
+    // Soonest first.
+    expect(names(zone('Upcoming'))).toEqual(['asian-men', 'asian-women', 'singapore', 'changchun']);
+    const status = (slug: string) =>
+      [...root.querySelectorAll('.xqb-tour-card')]
+        .find((card) => card.querySelector('.xqb-tour-card-name')?.textContent === slug)
+        ?.querySelector('.xqb-tour-status')?.textContent;
+    expect(status('asian-men')).toBe('Starts today');
+    expect(status('quiet-league')).toBe('Awaiting records');
+    expect(status('singapore')).toMatch(/^Starts /);
+  });
+
+  it('says an ended event with no games had none published, and leads with one that has games', async () => {
+    // The 2026 women's league: over by the calendar, nothing from the source.
+    const daysAgo = (d: number) => new Date(Date.now() - d * 86_400_000).toISOString();
+    const entry = (slug: string, endsDaysAgo: number, boardCount: number) => {
+      const base = indexEntry({ slug, name: slug, live: false, updatedAt: daysAgo(1) });
+      return {
+        ...base,
+        tour: { ...base.tour, startsAt: daysAgo(endsDaysAgo + 4), endsAt: daysAgo(endsDaysAgo) },
+        roundCount: 18,
+        boardCount,
+        completeBoardCount: boardCount,
+        featuredBoard: boardCount > 0 ? base.featuredBoard : null,
+      };
+    };
+    stubFetchJson(() => ({
+      tours: [entry('empty-league', 4, 0), entry('played-qualifier', 9, 21)],
+    }));
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastIndex(root);
+
+    // The newer event posted nothing, so the older one with games leads.
+    expect(root.querySelector('.xqb-tour-card-featured .xqb-tour-card-name')?.textContent).toBe(
+      'played-qualifier',
+    );
+    const card = [...root.querySelectorAll('.xqb-tour-card')].find(
+      (el) => el.querySelector('.xqb-tour-card-name')?.textContent === 'empty-league',
+    );
+    expect(card?.querySelector('.xqb-tour-status')?.textContent).toBe('No games published');
+  });
+
+  it('moves a started event to Ongoing once its first games are posted', async () => {
+    const base = indexEntry({
+      slug: 'asian-men',
+      name: 'asian-men',
+      live: false,
+      updatedAt: new Date().toISOString(),
+    });
+    stubFetchJson(() => ({
+      tours: [
+        {
+          ...base,
+          tour: {
+            ...base.tour,
+            startsAt: new Date(Date.now() - 14 * 3_600_000).toISOString(),
+            endsAt: new Date(Date.now() + 6 * 86_400_000).toISOString(),
+          },
+        },
+      ],
+    }));
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastIndex(root);
+    expect(root.querySelector('.xqb-featured-zone h2')?.textContent).toBe('Ongoing');
   });
 });
 
@@ -1144,6 +1250,42 @@ describe('event page (tabs, default round, standings)', () => {
     // game list says there are none yet.
     expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe('No games yet');
     expect(root.querySelector('.xqb-event-side')).not.toBeNull();
+  });
+
+  it('says an ended event never had its games published, not that they are coming', async () => {
+    stubFetchJson(() => ({
+      ...ROUND,
+      boards: [],
+      rounds: [{ ...ROUND.rounds[0], boardCount: 0, liveBoardCount: 0, scheduledBoardCount: 0 }],
+      round: { ...ROUND.round, startsAt: '2020-01-01T09:00:00+08:00' },
+      tour: {
+        ...ROUND.tour,
+        startsAt: '2020-01-01T00:00:00+08:00',
+        endsAt: '2020-01-05T23:59:59+08:00',
+        sourceUrl: 'mistboard-discover://dpxq-tour?tour=12524&tourSlug=t',
+      },
+    }));
+    stubEventSource();
+
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastRound(root, 't', 'r');
+    // No game anywhere, so it opens on the Overview, which says the event is over.
+    const pending = root.querySelector('.xqb-overview-pending')?.textContent ?? '';
+    expect(pending).toContain('This event is over and the source has not published its games');
+    expect(pending).not.toContain('round by round');
+    (
+      [...root.querySelectorAll('.xqb-tab')].find(
+        (tab) => tab.textContent === 'Boards',
+      ) as HTMLButtonElement
+    ).click();
+    const empty = root.querySelector('.xqb-empty');
+    expect(empty?.textContent).toContain("The source has not published this round's games");
+    expect(empty?.textContent).not.toContain('usually after play');
+    // The source link stays: it is where the games would come from.
+    expect(empty?.querySelector('a')).not.toBeNull();
+    expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe(
+      'No games published',
+    );
   });
 
   it('renders round times in the event clock, not the viewer clock', async () => {
@@ -1517,5 +1659,28 @@ describe('event header before any round exists', () => {
     const header = root.querySelector('.xqb-event-header')?.textContent ?? '';
     expect(header).toContain('Test Cup');
     expect(header).not.toMatch(/0 rounds/);
+  });
+
+  it('keeps the left column, an empty game list over the chat', async () => {
+    stubFetchJson(() => ({
+      tour: {
+        schema: XIANGQI_BROADCAST_SCHEMA,
+        slug: 't',
+        name: 'Test Cup',
+        startsAt: '2099-10-02T00:00:00+08:00',
+        endsAt: '2099-10-08T23:59:59+08:00',
+      },
+      rounds: [],
+    }));
+    stubEventSource();
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastTour(root, 't');
+    expect(root.querySelector('.xqb-event-layout-with-rail')).not.toBeNull();
+    expect(root.querySelector('.xqb-event-side > .xqb-side-rail + .xqb-event-chat')).not.toBeNull();
+    const heading = root.querySelector('.xqb-side-rail h2');
+    expect(heading?.textContent).toBe('Boards');
+    // No round to link to yet, so the heading is not a link.
+    expect(heading?.querySelector('a')).toBeNull();
+    expect(root.querySelector('.xqb-side-rail .xqb-rail-empty')?.textContent).toBe('No games yet');
   });
 });

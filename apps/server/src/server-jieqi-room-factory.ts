@@ -34,6 +34,7 @@ export async function createJieqiLiveRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: JieqiCreatorPreference,
   engine?: JieqiRoomEngineSeat,
+  rated = false,
 ): Promise<JieqiLiveRoomCreation> {
   const created = await createTenantLiveRoom(
     jieqiTenant,
@@ -45,7 +46,7 @@ export async function createJieqiLiveRoom(
       isPersistenceEnabled: ctx.isPersistenceEnabled,
       recordPersistenceError: ctx.recordPersistenceError,
     },
-    { timeControl, creatorPreference, engine },
+    { timeControl, creatorPreference, engine, rated },
   );
   if (!created.ok) {
     return created.error === 'disabled'

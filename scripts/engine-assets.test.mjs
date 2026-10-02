@@ -73,7 +73,7 @@ test('railpack fetches the published engines, verifies them, and compiles none o
   const verify = railpack.indexOf(
     'sh /app/scripts/engine-assets.sh verify /app/bin /app/apps/server/src',
   );
-  const net = railpack.indexOf('xiangqi-c07e94a5c7cb.nnue');
+  const net = railpack.indexOf('sh /app/scripts/fetch-fsf-xiangqi-net.sh /app/bin');
   assert.ok(fetch > 0, 'railpack.json must fetch the engine assets');
   assert.ok(verify > fetch, 'verify runs after fetch');
   assert.ok(
@@ -120,4 +120,56 @@ test('the AB-JChess net is fetched from the author, checksummed, and never packa
     step > railpack.indexOf('sh /app/scripts/engine-assets.sh verify'),
     'the net gate runs the fetched binary, so it comes after verify',
   );
+});
+
+// Railpack cuts an inline build command at its first single quote and still
+// passes the build (2026-09-30): the AB-JChess net step ran only its download,
+// and the Fairy-Stockfish xiangqi net step only its download too, so neither
+// checksum nor load check ever ran. Logic with quotes goes in a set -eu script
+// under scripts/, which railpack runs as `sh /app/scripts/<name> ...`.
+function railpackCommands() {
+  const { steps } = JSON.parse(railpack);
+  return Object.values(steps).flatMap((step) =>
+    (step.commands ?? []).filter((command) => typeof command === 'string'),
+  );
+}
+
+test('no railpack build command contains a single quote', () => {
+  const quoted = railpackCommands().filter((command) => command.includes("'"));
+  assert.deepEqual(
+    quoted,
+    [],
+    'railpack cuts inline commands at the first single quote; move these into scripts/*.sh',
+  );
+});
+
+test('every script railpack runs exists, fails fast, and redeploys every service when it changes', () => {
+  const scripts = new Set();
+  for (const command of railpackCommands()) {
+    for (const match of command.matchAll(/\/app\/scripts\/([\w.-]+)/g)) scripts.add(match[1]);
+  }
+  assert.ok(scripts.size > 0, 'railpack runs scripts from /app/scripts');
+  for (const name of scripts) {
+    const path = resolve(repoRoot, 'scripts', name);
+    assert.ok(existsSync(path), `railpack runs scripts/${name}, which does not exist`);
+    if (name.endsWith('.sh')) {
+      assert.match(readFileSync(path, 'utf8'), /^set -eu$/m, `scripts/${name} must set -eu`);
+    }
+  }
+  for (const file of ['railway.web.json', 'railway.json', 'railway.engine-worker.json']) {
+    const { build } = JSON.parse(readFileSync(resolve(repoRoot, file), 'utf8'));
+    for (const name of scripts) {
+      assert.ok(
+        build.watchPatterns.includes(`/scripts/${name}`),
+        `${file} must watch /scripts/${name}, or a change to it never deploys`,
+      );
+    }
+  }
+});
+
+test('the Fairy-Stockfish xiangqi net is checksummed and loaded after the binaries are verified', () => {
+  const fetchNet = readFileSync(resolve(repoRoot, 'scripts/fetch-fsf-xiangqi-net.sh'), 'utf8');
+  assert.match(fetchNet, /^net_sha=[0-9a-f]{64}$/m, 'the net is checked');
+  assert.match(fetchNet, /NNUE evaluation using/, 'the fetched binary loads the net');
+  assert.match(fetchNet, /fairy-stockfish-xiangqi-nnue-ok/, 'the step prints its success line');
 });

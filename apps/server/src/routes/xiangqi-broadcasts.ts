@@ -314,6 +314,7 @@ export async function xiangqiBroadcastOpsIndexForApi(
           pollIntervalMs: tour.pollIntervalMs,
           startsAt: tour.startsAt ?? null,
           endsAt: tour.endsAt ?? null,
+          createdAt: tour.createdAt,
         }),
         roundCount: rounds.length,
         boardCount: boards.length,
@@ -483,6 +484,7 @@ function scheduleForApi(
     pollIntervalMs: number;
     startsAt: string | null;
     endsAt: string | null;
+    createdAt?: string | Date | null;
   },
   now = Date.now(),
 ): XiangqiBroadcastScheduleForApi {

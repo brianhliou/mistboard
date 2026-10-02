@@ -7,6 +7,7 @@
 import { t } from './i18n/catalog.js';
 import './live-xiangqi.css';
 import { type JungleFlipPlayerView, jungleFlipLastMoverInk } from '@mistboard/game';
+import { flipSeatInk } from './flip-seat-ink.js';
 import {
   animateJungleFlipBoardMove,
   type JungleFlipRenderBoard,
@@ -62,5 +63,6 @@ export function mountJungleFlipWatchReplay(
     reveal: { hiddenKey: 'truth', truthKey: 'revealed' },
     resultLabel: (result, postgame) => jungleFlipResultLabel(result, postgame.view.firstColor),
     seatLabel: (seat, postgame) => jungleFlipSeatInkLabel(seat, postgame.view.firstColor),
+    seatInk: (seat, postgame) => flipSeatInk(seat, postgame.view.firstColor ?? null),
   });
 }

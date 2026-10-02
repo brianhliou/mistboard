@@ -7,7 +7,12 @@ import {
   type RoomTimeControl,
 } from '@mistboard/game';
 import { type DarkChessTenantEvent, darkChessTenant } from '../dark-chess-tenant.js';
-import { PVP_DISCONNECT_FORFEIT_ENABLED } from '../lifecycle-windows.js';
+import {
+  ABORT_WINDOW_MS,
+  JOIN_WINDOW_MS,
+  LOBBY_NO_SHOW_ABORT_MS,
+  PVP_DISCONNECT_FORFEIT_ENABLED,
+} from '../lifecycle-windows.js';
 import {
   clearTenantRuntimeTimers,
   scheduleTenantLifecycleTimers,
@@ -197,4 +202,97 @@ test('replay applies the days-per-move reset through the tenant projection', () 
   assert.equal(room.projection.clock?.remainingMs.white, 3 * DAY_MS);
   assert.equal(room.projection.clock?.activeColor, 'black');
   assert.equal(room.projection.clock?.runningSince, sixHoursLater);
+});
+
+// ── Lobby no-show (prod, 2026-10-02) ──────────────────────────────────────
+//
+// A lobby match creates a room exactly like an invite link, so a seeker whose
+// tab had died left the joiner alone in it. The 'unjoined' phase never aborts
+// while someone sits in the room (right for an invite: waiting for a friend is
+// normal), so the joiner waited forever under a "copy the invite link" prompt.
+// A lobby room has nobody to invite: both players were already waiting, so an
+// opponent who has not connected within LOBBY_NO_SHOW_ABORT_MS is not coming.
+
+function lobbyRoomEvents(roomId: string, options: { lobby: boolean }): DarkChessTenantEvent[] {
+  const [created, ...rest] = roomEvents(roomId, LIVE_TC);
+  return [
+    { ...created!, ...(options.lobby ? { lobbyMatch: true } : {}) } as DarkChessTenantEvent,
+    ...rest.slice(0, 2), // clock-started + white seated; black never arrives
+  ];
+}
+
+test('a lobby room whose opponent never connects aborts 30 s after creation', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const room = hydrate(lobbyRoomEvents('dchx_lobby_no_show', { lobby: true }));
+  room.clients.add({ displaced: false, seat: 'white' });
+  const appended: { type: string; reason?: string }[] = [];
+  const created = 1_000;
+  const scheduledAt = created + 5_000; // the seeker connects 5 s after the match
+  try {
+    scheduleTenantLifecycleTimers(darkChessTenant, room, {
+      appendEvent: async (_room, event) => {
+        appended.push(event);
+        return 0;
+      },
+      broadcastEventAppended: () => {},
+      now: () => scheduledAt,
+    });
+    assert.equal(LOBBY_NO_SHOW_ABORT_MS, 30_000);
+    assert.equal(room.abortDeadline, created + LOBBY_NO_SHOW_ABORT_MS, 'anchored to creation');
+    assert.equal(room.abortPhase, 'unjoined');
+    t.mock.timers.tick(created + LOBBY_NO_SHOW_ABORT_MS - scheduledAt - 1);
+    assert.equal(appended.length, 0, 'not before the window closes');
+    t.mock.timers.tick(100);
+    assert.equal(appended.length, 1);
+    assert.equal(appended[0]?.type, 'game-aborted');
+    assert.equal(appended[0]?.reason, 'pregame-timeout');
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('an invite room in the same state keeps waiting with no abort armed', (t) => {
+  t.mock.timers.enable({ apis: ['setTimeout'] });
+  const room = hydrate(lobbyRoomEvents('dchx_invite_waiting', { lobby: false }));
+  room.clients.add({ displaced: false, seat: 'white' });
+  const appended: { type: string; reason?: string }[] = [];
+  try {
+    scheduleTenantLifecycleTimers(darkChessTenant, room, {
+      appendEvent: async (_room, event) => {
+        appended.push(event);
+        return 0;
+      },
+      broadcastEventAppended: () => {},
+      now: () => 6_000,
+    });
+    assert.equal(room.abortDeadline, null, 'a friend link waits for the friend');
+    assert.equal(room.abortTimer, null);
+    t.mock.timers.tick(JOIN_WINDOW_MS * 2);
+    assert.equal(appended.length, 0);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('a lobby room nobody connected to also closes at the no-show window', () => {
+  const room = hydrate(lobbyRoomEvents('dchx_lobby_empty', { lobby: true }));
+  try {
+    scheduleTenantLifecycleTimers(darkChessTenant, room, lifecycleContext());
+    assert.equal(room.abortPhase, 'unjoined');
+    assert.equal(room.abortDeadline, 1_000 + LOBBY_NO_SHOW_ABORT_MS);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
+});
+
+test('a lobby room with both seats filled uses the ordinary first-move window', () => {
+  const [created, ...rest] = roomEvents('dchx_lobby_full', LIVE_TC);
+  const room = hydrate([{ ...created!, lobbyMatch: true } as DarkChessTenantEvent, ...rest]);
+  try {
+    scheduleTenantLifecycleTimers(darkChessTenant, room, lifecycleContext());
+    assert.equal(room.abortPhase, 'white-1');
+    assert.equal(room.abortDeadline, 1_000_000 + ABORT_WINDOW_MS);
+  } finally {
+    clearTenantRuntimeTimers(room);
+  }
 });

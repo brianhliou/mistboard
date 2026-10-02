@@ -21,6 +21,7 @@ export type DarkXiangqiCreateContext = {
   isDraining(): boolean;
   drainDeadlineMs(): number | null;
   reserveLiveEngineSeat(engineId: string, color: 'white' | 'black'): Promise<string | null>;
+  releaseLiveEngineReservation(reservationId: string, reason: string): void;
   createDarkXiangqiRoom(
     timeControl?: RoomTimeControl,
     creatorPreference?: 'red' | 'black' | 'random',
@@ -88,6 +89,17 @@ export async function handleDarkXiangqiCreate(
     (engineDefault
       ? { initialMs: engineDefault.initialMs, incrementMs: engineDefault.incrementMs }
       : null);
+  // Both refusals come before the seat reservation: a seat taken by a request
+  // that then 503s sits leaked on the worker until its 30-minute expiry (four
+  // of them filled every seat on 2026-10-01 during a release drain).
+  if (ctx.databaseRequired && !persistence.isInitialized()) {
+    writeJson(response, 503, { error: 'persistence_disabled' });
+    return;
+  }
+  if (ctx.isDraining()) {
+    writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
+    return;
+  }
   const botId = typeof body.botId === 'string' ? body.botId : undefined;
   let engine:
     | { engineId: string; seat: 'red' | 'black'; reservationId: string; botId?: string }
@@ -118,21 +130,20 @@ export async function handleDarkXiangqiCreate(
     }
     engine = { engineId, seat: engineSeat, reservationId, ...(botId ? { botId } : {}) };
   }
-  if (ctx.databaseRequired && !persistence.isInitialized()) {
-    writeJson(response, 503, { error: 'persistence_disabled' });
-    return;
-  }
-  if (ctx.isDraining()) {
-    writeJson(response, 503, { error: 'server_draining', restartAt: ctx.drainDeadlineMs() });
-    return;
-  }
 
-  const created = await ctx.createDarkXiangqiRoom(
-    effectiveTimeControl ?? undefined,
-    preferredColor,
-    engine,
-  );
+  let created: Awaited<ReturnType<DarkXiangqiCreateContext['createDarkXiangqiRoom']>>;
+  try {
+    created = await ctx.createDarkXiangqiRoom(
+      effectiveTimeControl ?? undefined,
+      preferredColor,
+      engine,
+    );
+  } catch (err) {
+    if (engine) ctx.releaseLiveEngineReservation(engine.reservationId, 'room-create-failed');
+    throw err;
+  }
   if (!created.ok) {
+    if (engine) ctx.releaseLiveEngineReservation(engine.reservationId, 'room-create-failed');
     const status =
       created.error === 'dark_xiangqi_disabled'
         ? 404

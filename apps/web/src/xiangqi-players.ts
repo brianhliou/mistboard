@@ -43,6 +43,7 @@ import {
 } from './players/profiles.js';
 import { ratingHistoryFigure } from './players/rating-history-chart.js';
 import { MATCH_FIXING_ARTICLE_PATH, sanctionFor, sanctionSentence } from './players/sanctions.js';
+import { seatDiscEl } from './seat-disc.js';
 import { buildLoadingState, buildNav, buildNotice } from './site-shell.js';
 import { type BroadcastRailItem, broadcastSectionLayout } from './xiangqi-broadcast-pages.js';
 
@@ -1220,8 +1221,9 @@ function recordSection(boards: readonly PlayerBoardRecord[], view: GamesView): H
     name.scope = 'row';
     const link = document.createElement('a');
     link.href = view.href({ colour });
-    link.className = colour ? `xqp-stats-link xqp-colour-dot-${colour}` : 'xqp-stats-link';
-    link.textContent = label;
+    link.className = 'xqp-stats-link';
+    if (colour) link.append(seatDiscEl(colour, 'xqp-colour-dot'));
+    link.append(label);
     link.addEventListener('click', (event) => {
       event.preventDefault();
       view.set({ colour }, true);
@@ -1282,8 +1284,11 @@ function openingsSection(
     const column = document.createElement('div');
     column.className = 'xqp-openings-col';
     const h3 = document.createElement('h3');
-    h3.className = `xqp-openings-head xqp-colour-dot-${colour}`;
-    h3.textContent = t(colour === 'red' ? 'broadcast.playerAsRed' : 'broadcast.playerAsBlack');
+    h3.className = 'xqp-openings-head';
+    h3.append(
+      seatDiscEl(colour, 'xqp-colour-dot'),
+      t(colour === 'red' ? 'broadcast.playerAsRed' : 'broadcast.playerAsBlack'),
+    );
     column.append(h3);
     const list = document.createElement('ol');
     list.className = 'xqp-opening-list';

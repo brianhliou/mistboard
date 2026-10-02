@@ -2,7 +2,7 @@
  * Dark Xiangqi (9x10, hidden/dev-only) registry entry. Owns the tenant's
  * live-room map, the room-factory binding, and hydration (moved out of
  * index.ts at the registry dispatch collapse). No rematch flow yet. Matchmaking
- * is casual random-seat (unrated) and gated by the tenant enable flag. Imported
+ * is random-seat, rated or casual, and gated by the tenant enable flag. Imported
  * for side effects by variant-tenant/register-tenants.ts.
  */
 
@@ -45,6 +45,8 @@ export async function createDarkXiangqiRoom(
   timeControl?: RoomTimeControl,
   creatorPreference?: DarkXiangqiCreatorPreference,
   engine?: DarkXiangqiRoomEngineSeat,
+  // Lobby matchmaking only: POST /api/rooms (friend links, PvE) never forwards it.
+  rated = false,
 ): Promise<DarkXiangqiLiveRoomCreation> {
   return createDarkXiangqiLiveRoom(
     {
@@ -58,6 +60,7 @@ export async function createDarkXiangqiRoom(
     timeControl,
     creatorPreference,
     engine,
+    rated,
   );
 }
 
@@ -118,10 +121,10 @@ registerVariantTenant({
       handleDarkXiangqiCreate({ ...ctx, createDarkXiangqiRoom }, response, body),
   },
   lobby: {
-    supportsRated: false,
+    supportsRated: true,
     allowsTimeControl: isAllowedFullTimeControl,
-    createRoom: async (timeControl) => {
-      const created = await createDarkXiangqiRoom(timeControl, 'random');
+    createRoom: async (timeControl, rated) => {
+      const created = await createDarkXiangqiRoom(timeControl, 'random', undefined, rated);
       if (!created.ok) throw new Error(`dark_xiangqi_room_create_failed:${created.error}`);
       return { id: created.room.id, region: 'global' };
     },

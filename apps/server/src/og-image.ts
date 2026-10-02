@@ -181,6 +181,7 @@ const CUSTOM_ARTICLE_OG_SVGS: Record<
   misty: renderMistyOgSvg,
   'yin-sheng': playerFaceOgSvg('article-thumbs/yin-sheng-2022-face.jpg'),
   'cao-yanlei': playerFaceOgSvg('article-thumbs/cao-yanlei-2024-face.jpg'),
+  'lai-ly-huynh': playerFaceOgSvg('article-thumbs/lai-ly-huynh-2026-face.jpg'),
   'xiangqi-champions': renderChampionsOgSvg,
   'xiangqi-world-championship': renderWorldTitleOgSvg,
   'how-puzzle-mining-works': renderPuzzleMiningOgSvg,

@@ -1,4 +1,4 @@
-import { afterEach, describe, expect, it } from 'vitest';
+import { afterEach, describe, expect, it, vi } from 'vitest';
 import type { LiveRefs } from '../live-state.js';
 import type { ProfileIdentity } from '../profile-link.js';
 import {
@@ -60,6 +60,10 @@ type CtxOverrides = Partial<{
   timeControl: { initialMs: number; incrementMs: number } | null;
   isReplayLive: boolean;
   variantDetail: string | null;
+  lobbyMatch: boolean;
+  abortDeadline: number | null;
+  roomMode: string;
+  playAgainRequestBody: Record<string, unknown>;
 }>;
 
 function chromeHarness(
@@ -77,15 +81,16 @@ function chromeHarness(
     seats: () => overrides.seats ?? { white: 'c-white', red: 'c-red' },
     seatDisplayNames: () => overrides.seatDisplayNames ?? {},
     seatProfiles: () => overrides.seatProfiles ?? {},
-    abortDeadline: () => null,
+    abortDeadline: () => overrides.abortDeadline ?? null,
     forfeitDeadline: () => null,
-    roomMode: () => 'pvp',
+    roomMode: () => overrides.roomMode ?? 'pvp',
     room: () => 'test_room',
     debugRequested: () => false,
     isReplayLive: () => overrides.isReplayLive ?? true,
     orientation: () => 'white',
-    playAgainRequestBody: () => ({}),
+    playAgainRequestBody: () => overrides.playAgainRequestBody ?? {},
     rematchControls: () => null,
+    lobbyMatch: () => overrides.lobbyMatch ?? false,
     ...(overrides.variantDetail !== undefined
       ? { variantDetail: () => overrides.variantDetail ?? null }
       : {}),
@@ -311,15 +316,15 @@ describe('tenant room chrome player names', () => {
 describe('tenant room chrome player discs', () => {
   function discClasses(refs: LiveRefs): string[] {
     return [...refs.gameInfo.querySelectorAll('.game-meta-card__disc')].map((disc) =>
-      [...disc.classList].filter((name) => name !== 'game-meta-card__disc').join(' '),
+      [...disc.classList].filter((name) => name.startsWith('seat-disc--')).join(' '),
     );
   }
 
   it('tints the disc by seat when the seat name IS the color', () => {
     const { chrome, refs } = chromeHarness();
     chrome.renderMeta();
-    // colors: ['white', 'red'] -> hollow light, filled red.
-    expect(discClasses(refs)).toEqual(['game-meta-card__disc--light', 'game-meta-card__disc--red']);
+    // colors: ['white', 'red'] -> the white ink, the red ink.
+    expect(discClasses(refs)).toEqual(['seat-disc--white', 'seat-disc--red']);
   });
 
   it('tints the disc by the BOUND INK, not the seat, for a flip variant', () => {
@@ -338,7 +343,7 @@ describe('tenant room chrome player discs', () => {
       flipTenant,
     );
     chrome.renderMeta();
-    expect(discClasses(refs)).toEqual(['game-meta-card__disc--dark', 'game-meta-card__disc--red']);
+    expect(discClasses(refs)).toEqual(['seat-disc--black', 'seat-disc--red']);
   });
 
   it('renders a neutral disc while a flip variant has no ink bound yet', () => {
@@ -349,10 +354,7 @@ describe('tenant room chrome player discs', () => {
     };
     const { chrome, refs } = chromeHarness({}, preFlipTenant);
     chrome.renderMeta();
-    expect(discClasses(refs)).toEqual([
-      'game-meta-card__disc--unbound',
-      'game-meta-card__disc--unbound',
-    ]);
+    expect(discClasses(refs)).toEqual(['seat-disc--unbound', 'seat-disc--unbound']);
   });
 });
 
@@ -388,18 +390,111 @@ describe('tenant room chrome meta and invite emphasis', () => {
     expect(refs.gameInfo.textContent).not.toContain('White');
   });
 
-  it('marks copy-invite primary only while waiting for the opponent', () => {
+  it('offers copy-invite only while waiting for the opponent', () => {
     const waiting = chromeHarness({ connectedSeats: { white: true, red: false } });
     waiting.chrome.renderRoomActions();
     const waitingCopy = waiting.refs.roomActions.querySelector('button');
     expect(waitingCopy?.textContent).toBe('Copy invite');
     expect(waitingCopy?.className).toBe('primary');
 
+    // Both players in: the invite has nothing left to do (Brian's playtest,
+    // 2026-10-02: it sat in the column for the whole game).
     const playing = chromeHarness();
     playing.chrome.renderRoomActions();
-    const playingCopy = playing.refs.roomActions.querySelector('button');
-    expect(playingCopy?.textContent).toBe('Copy invite');
-    expect(playingCopy?.className).toBe('');
+    expect(playing.refs.roomActions.textContent).not.toContain('Copy invite');
+  });
+
+  it('offers no copy-invite in a bot game', () => {
+    // The engine seat reports connected, so a PvE room is never waiting.
+    const bot = chromeHarness({ roomMode: 'pve', seats: { white: 'c-white', red: 'engine' } });
+    bot.chrome.renderRoomActions();
+    expect(bot.refs.roomActions.textContent).not.toContain('Copy invite');
+  });
+});
+
+describe('tenant room chrome bot rematch', () => {
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const finished: TenantWebView<Color> = {
+    id: 'test_room',
+    status: { type: 'finished', winner: 'red', reason: 'resignation' },
+    moveNumber: 9,
+  };
+
+  async function rematchBody(seat: Color): Promise<Record<string, unknown>> {
+    const fetchSpy = vi.fn(async () => new Response('{}', { status: 500 }));
+    vi.stubGlobal('fetch', fetchSpy);
+    const { chrome, refs } = chromeHarness({
+      view: finished,
+      seat,
+      roomMode: 'pve',
+      // What the tenants send today: a coin flip.
+      playAgainRequestBody: { mode: 'pve', gameSpecId: 'xiangqi', preferredColor: 'random' },
+    });
+    chrome.renderRoomActions();
+    const rematch = refs.roomActions.querySelector<HTMLButtonElement>(
+      'button.postgame-actions__rematch',
+    );
+    expect(rematch?.textContent).toBe('Rematch');
+    rematch?.click();
+    await vi.waitFor(() => expect(fetchSpy).toHaveBeenCalled());
+    const init = (fetchSpy.mock.calls[0] as unknown[])[1] as RequestInit;
+    return JSON.parse(String(init.body)) as Record<string, unknown>;
+  }
+
+  // Brian stayed Red on a Crazyhouse Xiangqi rematch against the bot: the
+  // tenant asked for 'random'. A rematch swaps sides, as on lichess.
+  it('asks for the opposite seat of the game just played', async () => {
+    expect(await rematchBody('white')).toMatchObject({
+      mode: 'pve',
+      gameSpecId: 'xiangqi',
+      preferredColor: 'red',
+    });
+    expect(await rematchBody('red')).toMatchObject({ preferredColor: 'white' });
+  });
+});
+
+// A lobby match pairs two players who were both already waiting, so its room has
+// no invite link to share. Prod, 2026-10-02: a jieqi joiner whose matched seeker
+// had closed the tab sat under "Copy the invite link and send it to your
+// opponent" until the server's no-show abort (LOBBY_NO_SHOW_ABORT_MS) ended it.
+describe('tenant room chrome lobby rooms', () => {
+  const absentOpponent = { connectedSeats: { white: true, red: false } };
+
+  it('tells a lobby player its opponent is connecting, never to share an invite', () => {
+    const { chrome, refs } = chromeHarness({ ...absentOpponent, lobbyMatch: true });
+    chrome.renderActionStatus();
+    expect(refs.actionSection.hidden).toBe(false);
+    expect(refs.actionStatus.textContent).toContain('Waiting for your opponent to connect.');
+    expect(refs.actionStatus.textContent).not.toContain('invite');
+    expect(refs.actionStatus.textContent).not.toContain('Invite');
+  });
+
+  it('offers no invite link in a lobby room', () => {
+    const { chrome, refs } = chromeHarness({ ...absentOpponent, lobbyMatch: true });
+    chrome.renderRoomActions();
+    expect(refs.roomActions.textContent).not.toContain('Copy invite');
+  });
+
+  it('counts the no-show abort down in its own words, not as a first-move warning', () => {
+    const { chrome, refs } = chromeHarness({
+      ...absentOpponent,
+      lobbyMatch: true,
+      abortDeadline: Date.now() + 20_000,
+    });
+    chrome.renderGameControls();
+    expect(refs.gameControls.textContent).toContain('Opponent has not connected, aborting in');
+    expect(refs.gameControls.textContent).not.toContain('Make your first move');
+  });
+
+  it('keeps the invite prompt and button for an invite room', () => {
+    const { chrome, refs } = chromeHarness({ ...absentOpponent, lobbyMatch: false });
+    chrome.renderActionStatus();
+    chrome.renderRoomActions();
+    expect(refs.actionStatus.textContent).toContain('Copy the invite link');
+    expect(refs.roomActions.textContent).toContain('Copy invite');
   });
 });
 
@@ -451,6 +546,18 @@ describe('tenant room chrome in Chinese', () => {
       const spectator = chromeHarness({ seat: 'spectator', connectionState: 'reconnecting' });
       spectator.chrome.renderActionStatus();
       texts.push(spectator.refs.actionStatus.textContent ?? '');
+
+      const lobby = chromeHarness({
+        connectedSeats: { white: true, red: false },
+        lobbyMatch: true,
+        abortDeadline: Date.now() + 20_000,
+      });
+      lobby.chrome.renderActionStatus();
+      lobby.chrome.renderGameControls();
+      texts.push(
+        lobby.refs.actionStatus.textContent ?? '',
+        lobby.refs.gameControls.textContent ?? '',
+      );
 
       expect(texts.flatMap(latin)).toEqual([]);
       expect(texts.join(' ')).toContain('象棋');
