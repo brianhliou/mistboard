@@ -117,7 +117,7 @@ function stepper(opts: {
   className: string;
   count: number;
   index: number;
-  render: (index: number) => { text: string; sub?: string; named?: boolean };
+  render: (index: number) => { text: string; tag?: string; sub?: string; named?: boolean };
   onChange: (index: number) => void;
   prevLabel: string;
   nextLabel: string;
@@ -133,10 +133,16 @@ function stepper(opts: {
   value.className = 'pp-step-value';
   let index = opts.index;
   const paint = (): void => {
-    const { text, sub, named } = opts.render(index);
+    const { text, tag, sub, named } = opts.render(index);
     const main = document.createElement('span');
     main.className = 'pp-step-main';
     main.textContent = text;
+    if (tag) {
+      const tagEl = document.createElement('span');
+      tagEl.className = 'pp-step-tag';
+      tagEl.textContent = tag;
+      main.append(tagEl);
+    }
     value.replaceChildren(main);
     if (sub) {
       const small = document.createElement('small');
@@ -386,19 +392,17 @@ export function buildPlayPanel(
         index: current.at,
         render: (i) => {
           const rung = ladder[i]!;
-          // Named bots read yellow wherever they appear (Pikafish, AB-JChess,
-          // Misty); the line under says which engine a level is and whether
-          // it plays on a trained net.
-          const nnue = rung.nnue ? ' · NNUE' : '';
+          // One grammar on every row (Brian, 2026-10-02): the top line is
+          // always the engine, with an NNUE tag on the rungs that play on a
+          // net; the second line is the level, only for an engine that has
+          // levels. Names stay plain: gold in this panel means a person.
+          const tag = rung.nnue ? 'NNUE' : undefined;
           return rung.level === null
-            ? {
-                text: rung.name,
-                sub: rung.nnue ? 'NNUE' : t('lobby.panelOwnEngine', {}, locale),
-                named: true,
-              }
+            ? { text: rung.name, ...(tag ? { tag } : {}) }
             : {
-                text: t('lobby.panelLevel', { level: rung.level }, locale),
-                sub: `${rung.engine}${nnue}`,
+                text: rung.engine,
+                ...(tag ? { tag } : {}),
+                sub: t('lobby.panelLevel', { level: rung.level }, locale),
               };
         },
         onChange: (i) => {

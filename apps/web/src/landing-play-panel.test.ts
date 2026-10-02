@@ -21,7 +21,12 @@ function row(board: HTMLElement, spec: string, kind: 'bot' | 'person' = 'bot'): 
 }
 
 function stepValue(el: HTMLElement, which: 'level' | 'clock'): string {
-  return el.querySelector(`.pp-step-${which} .pp-step-main`)?.textContent ?? '';
+  // The level a rung reads as: its second line when the engine has levels,
+  // otherwise the engine name alone (the NNUE tag is not part of it).
+  const value = el.querySelector(`.pp-step-${which} .pp-step-value`);
+  const sub = value?.querySelector('.pp-step-sub')?.textContent;
+  if (sub) return sub;
+  return value?.querySelector('.pp-step-main')?.firstChild?.textContent ?? '';
 }
 
 function clickNext(el: HTMLElement, which: 'level' | 'clock', times = 1): void {
@@ -84,25 +89,29 @@ describe('homepage play panel', () => {
     const banqi = row(board, 'banqi');
     expect(stepValue(banqi, 'level')).toBe('Misty');
     expect(banqi.querySelector('.pp-step-level')?.classList.contains('is-fixed')).toBe(true);
-    // Named bots read yellow everywhere, Misty included.
-    expect(
-      banqi.querySelector('.pp-step-level .pp-step-value')?.classList.contains('is-named'),
-    ).toBe(true);
+    expect(banqi.querySelector('.pp-step-level .pp-step-sub')).toBeNull();
+    expect(banqi.querySelector('.pp-step-level .pp-step-tag')).toBeNull();
   });
 
-  it('says which engine a level is and marks the ones on a net', () => {
+  it('puts the engine on top, NNUE beside it, and the level under it', () => {
     const board = buildPlayPanel('en', { hydrate: false });
     const xiangqi = row(board, 'xiangqi');
-    const sub = () => xiangqi.querySelector('.pp-step-level .pp-step-sub')?.textContent;
-    expect(sub()).toBe('Fairy-Stockfish');
+    const main = () =>
+      xiangqi.querySelector('.pp-step-level .pp-step-main')?.firstChild?.textContent;
+    const tag = () => xiangqi.querySelector('.pp-step-level .pp-step-tag')?.textContent ?? null;
+    const sub = () => xiangqi.querySelector('.pp-step-level .pp-step-sub')?.textContent ?? null;
+    expect([main(), tag(), sub()]).toEqual(['Fairy-Stockfish', null, 'Level 2']);
     clickNext(xiangqi, 'level', 6);
-    expect(stepValue(xiangqi, 'level')).toBe('Level 8');
-    expect(sub()).toBe('Fairy-Stockfish · NNUE');
+    expect([main(), tag(), sub()]).toEqual(['Fairy-Stockfish', 'NNUE', 'Level 8']);
     clickNext(xiangqi, 'level');
-    expect(stepValue(xiangqi, 'level')).toBe('Pikafish');
-    expect(sub()).toBe('NNUE');
+    expect([main(), tag(), sub()]).toEqual(['Pikafish', 'NNUE', null]);
     const jieqi = row(board, 'jieqi');
-    expect(jieqi.querySelector('.pp-step-level .pp-step-sub')?.textContent).toBe('Pikafish');
+    expect(jieqi.querySelector('.pp-step-level .pp-step-main')?.firstChild?.textContent).toBe(
+      'Pikafish',
+    );
+    expect(jieqi.querySelector('.pp-step-level .pp-step-tag')).toBeNull();
+    // No name is gold: gold in this panel means a person.
+    expect(board.querySelector('.pp-step-level .is-named')).toBeNull();
   });
 
   it('only searches for a person from Find, never from a stray row click', () => {

@@ -486,7 +486,6 @@ export const EN_PLAY = {
   'lobby.panelVersus': '{variant} vs {opponent}',
   'lobby.panelAnonymous': 'Anonymous',
   'lobby.panelYours': 'Yours',
-  'lobby.panelOwnEngine': 'our own engine',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;

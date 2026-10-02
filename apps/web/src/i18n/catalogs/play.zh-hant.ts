@@ -468,5 +468,4 @@ export const ZH_HANT_PLAY = {
   'lobby.panelVersus': '{variant} 對 {opponent}',
   'lobby.panelAnonymous': '匿名',
   'lobby.panelYours': '你的',
-  'lobby.panelOwnEngine': '本站自研引擎',
 } satisfies Partial<Record<PlayI18nKey, string>>;

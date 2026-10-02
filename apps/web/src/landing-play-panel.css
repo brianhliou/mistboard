@@ -93,7 +93,7 @@
 /* ── Rows ── */
 .pp-row {
   display: grid;
-  grid-template-columns: 30px minmax(0, 1fr) 168px 92px 78px;
+  grid-template-columns: 30px minmax(0, 1fr) 190px 92px 78px;
   grid-template-areas: "icon name level clock act";
   align-items: center;
   column-gap: 14px;
@@ -218,8 +218,16 @@
   font-size: 10.5px;
 }
 
-.pp-step-value.is-named .pp-step-main {
-  color: var(--pp-gold-text);
+.pp-step-tag {
+  margin-left: 5px;
+  padding: 0 4px;
+  border: 1px solid var(--site-border-soft);
+  border-radius: 3px;
+  color: var(--site-muted);
+  font-size: 9.5px;
+  font-weight: 600;
+  letter-spacing: 0.04em;
+  vertical-align: 1px;
 }
 
 .pp-row-person .pp-step-value.is-named .pp-step-main {
@@ -444,12 +452,15 @@
     font-size: 15px;
   }
 
+  /* Phones: the clock rides the first line beside the game; the engine
+     stepper gets the whole second line so "Fairy-Stockfish NNUE" fits. */
   .pp-row,
   .pp-row-person {
-    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr) 70px;
+    grid-template-columns: 28px minmax(0, 1fr) 82px 54px;
     grid-template-areas:
-      "icon name name act"
-      ". level clock act";
+      "icon name clock act"
+      ". level level act";
+    column-gap: 8px;
     row-gap: 6px;
     padding-top: 7px;
     padding-bottom: 7px;
@@ -457,11 +468,27 @@
 
   .pp-row-person {
     grid-template-areas:
-      "icon name wait act"
-      ". clock clock act";
+      "icon name clock act"
+      ". wait wait act";
+  }
+
+  .pp-step-btn {
+    width: 20px;
+  }
+
+  .pp-name {
+    font-size: 14px;
+  }
+
+  .pp-act {
+    padding: 0 8px;
   }
 
   .pp-note {
     display: none;
+  }
+
+  .pp-step-value {
+    font-size: 12.5px;
   }
 }
