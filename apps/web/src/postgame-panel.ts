@@ -8,8 +8,11 @@
 //
 //   Rematch        seated players only: the same opponent again (a PvP rematch
 //                  offer, or a fresh game against the same bot, sides swapped)
-//   New opponent   seated players only: the play dialog, same variant, as a
-//                  bot picker (PvE) or Find opponent (PvP)
+//   New opponent   seated players only: the play dialog, same variant, as
+//   / New game     Find opponent after a PvP game ("New opponent") or as the
+//                  bot picker after a bot game ("New game": the dialog offers
+//                  the same bot and settings, so "opponent" read oddly; lichess
+//                  labels its post-AI-game button the same way)
 //   Review game    everyone
 //   Challenge a friend
 //                  after a BOT game only, a row like the two above it: it is
@@ -101,7 +104,8 @@ export function postGameActions(input: PostGameActionsInput): HTMLDivElement {
 
   const opponentHref = input.seated ? newOpponentHref(input.variant, input.mode) : null;
   if (opponentHref) {
-    box.append(actionLink(t('live.newOpponent'), opponentHref, report('new_opponent')));
+    const label = input.mode === 'pve' ? t('live.newGame') : t('live.newOpponent');
+    box.append(actionLink(label, opponentHref, report('new_opponent')));
   }
 
   if (input.reviewHref) {

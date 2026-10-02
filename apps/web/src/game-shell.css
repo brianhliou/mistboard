@@ -444,16 +444,16 @@
 }
 
 /* Clock rows hold only the big time (the player line lives in the boxed
-   table's player rows): one column, left-aligned, lichess-large. The clock is
-   a partial-width tab joined to the boxed table — rounded on its outer
-   corners only, sharing the table's edge on the joining side. */
+   table's player rows): one column, left-aligned, lichess-large. The clock
+   spans the full column, the same width as the boxed table it joins, rounded
+   on its outer corners and sharing the table's whole edge on the joining side.
+   It used to be a partial-width lichess tab (`fit-content`), which left a
+   ~40% gap to its right beside the full-width table (Brian, 2026-10-02). */
 .clocks div {
   grid-template-columns: 1fr;
   justify-items: start;
   align-items: center;
-  /* At least the lichess tab width, and wide enough for the digits it holds
-     (`00:24.9` in the last stretch is wider than `05:00`). */
-  width: fit-content;
+  width: 100%;
   max-width: 100%;
   box-sizing: border-box;
   min-height: 52px;
@@ -472,32 +472,16 @@
   border-radius: 0 0 var(--site-radius, 10px) var(--site-radius, 10px);
 }
 
-/* Square the table corner the clock tab sits on, so the two read as one shape. */
+/* Square the whole table edge the full-width clock sits on, so clock, table
+   and clock read as one stacked block. */
 [data-clock-top]:not(:empty) + .round-table__box {
   border-top-left-radius: 0;
+  border-top-right-radius: 0;
 }
 
 .round-table__box:has(+ [data-clock-bottom]:not(:empty)) {
   border-bottom-left-radius: 0;
-}
-
-/* col1 (phone): the partial-width tab is a RAIL idiom. Stacked full-bleed under
-   the board it reads as an unresolved 62% block left-aligned against a
-   full-width card, so the clock takes the full column and the pair squares the
-   whole joining edge instead of one corner: clock, table and clock read as one
-   stacked block. */
-@media (max-width: 799px) {
-  .clocks div {
-    width: 100%;
-  }
-
-  [data-clock-top]:not(:empty) + .round-table__box {
-    border-top-right-radius: 0;
-  }
-
-  .round-table__box:has(+ [data-clock-bottom]:not(:empty)) {
-    border-bottom-right-radius: 0;
-  }
+  border-bottom-right-radius: 0;
 }
 
 .clocks div.pregame {
@@ -589,20 +573,27 @@
   }
 }
 
-/* In-game controls (Abort / Resign): one row of small centered buttons
-   (lichess round anatomy), with the abort/forfeit countdown as a muted line
-   above them. */
+/* In-game controls (Abort / Resign): the lichess in-game action row. Every
+   action spans the column, sharing the row equally when there are several,
+   in the same flat uppercase skin as the postgame actions (.postgame-actions)
+   that replace them when the game ends, so the column does not jump from a
+   small centred button to full-width rows (Brian, 2026-10-02). The
+   abort/forfeit countdown is a muted line above them. */
+.round-table__row:has(> .game-controls) {
+  padding: 6px 8px;
+}
+
 .game-controls {
   display: flex;
   flex-wrap: wrap;
-  align-items: center;
-  justify-content: center;
-  gap: 8px;
+  align-items: stretch;
+  gap: 2px;
 }
 
 .game-controls .abort-countdown,
 .game-controls .forfeit-countdown {
   flex-basis: 100%;
+  padding: 2px 0 4px;
   text-align: center;
   font-size: 12px;
   line-height: 1.35;
@@ -610,40 +601,40 @@
 }
 
 .game-controls button {
-  display: inline-block;
-  width: auto;
-  min-height: 28px;
-  border: 1px solid var(--site-border);
+  flex: 1 1 0;
+  min-width: 0;
+  min-height: 34px;
+  border: 0;
   border-radius: var(--site-radius-sm);
-  background: linear-gradient(to bottom, var(--site-metal-top), var(--site-metal-bottom));
+  background: transparent;
   color: var(--site-text);
-  padding: 4px 18px;
+  padding: 6px 12px;
   cursor: pointer;
   font: inherit;
   font-size: 13px;
+  font-weight: 500;
+  letter-spacing: 0.06em;
+  text-transform: uppercase;
   text-align: center;
+  outline: 0;
 }
 
 .game-controls button:hover:not(:disabled),
 .game-controls button:focus-visible {
-  border-color: var(--site-accent);
-  background: linear-gradient(
-    to bottom,
-    var(--site-metal-top-hover),
-    var(--site-metal-bottom-hover)
-  );
-  outline: 3px solid var(--site-focus);
+  background: var(--site-panel-soft);
+  color: var(--site-heading);
 }
 
-.game-controls button.danger {
-  border-color: #c79898;
-  color: #7a2f2f;
+.game-controls button:focus-visible {
+  box-shadow: inset 0 0 0 2px var(--site-focus);
 }
 
+/* Resign / Abort end the game: neutral at rest like lichess's flag, the
+   danger tone only under the pointer. */
 .game-controls button.danger:hover:not(:disabled),
 .game-controls button.danger:focus-visible {
-  border-color: #b94a4a;
-  outline-color: rgba(185, 74, 74, 0.18);
+  background: color-mix(in srgb, var(--clock-emerg-border) 30%, transparent);
+  color: var(--clock-emerg-text);
 }
 
 .confirm-dialog {

@@ -441,6 +441,26 @@ describe('landing play panel', () => {
     expect(selectedModalColor()).toBe('Random');
   });
 
+  // Brian's playtest (2026-10-02): the postgame "Challenge a friend" opened on
+  // Black, the side his last friend dialog remembered. The postgame link asks
+  // for the coin flip explicitly, and the stored pick must not override it.
+  it('opens the postgame friend link on Random over a remembered side', () => {
+    window.localStorage.setItem(
+      'mistboard:setup:pvp',
+      JSON.stringify({ gameSpecId: 'xiangqi', preferredColor: 'black' }),
+    );
+    window.history.replaceState(null, '', '/?play=friend&variant=xiangqi');
+    maybeOpenPlayDeepLink([]);
+    // The remembered pick still wins on a plain friend link.
+    expect(selectedModalColor()).toBe('Black');
+    document.querySelector('.landing-setup-overlay')?.remove();
+
+    window.history.replaceState(null, '', '/?play=friend&variant=xiangqi&side=random');
+    maybeOpenPlayDeepLink([]);
+    expect(selectedModalColor()).toBe('Random');
+    expect(window.location.search).toBe('');
+  });
+
   // Sides are variant-declared, so an untouched default must not persist as if it
   // were a pick: xiangqi's 'red' coerces to the SECOND seat in any variant whose
   // first mover is not red, which would seat a player who never chose anything.

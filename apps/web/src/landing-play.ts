@@ -83,6 +83,13 @@ export type LandingPlayChoice = {
   initialTimeMode?: 'realtime' | 'correspondence';
   /** Preselects this days-per-move chip when opening on correspondence. */
   initialCorrespondenceDays?: number;
+  /**
+   * Opens on this side instead of the stored pick. The postgame "Challenge a
+   * friend" link passes 'random' (`&side=random`): a friend game started from a
+   * finished room should start on the coin flip, not on whichever side the
+   * player last chose in the friend dialog.
+   */
+  initialColor?: LandingColorPreference;
 };
 export type LandingPlayMode = 'lobby' | 'pvp' | 'pve';
 export type LandingGameSpecId =
@@ -1554,7 +1561,8 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         ratedDisabled: !isRatedModeEnabled() || !isLikelySignedIn(),
       });
       break;
-    case 'friend':
+    case 'friend': {
+      const side = normalizeStoredColorPreference(params.get('side'));
       openLandingSetupDialog({
         engineId: defaultEngineId,
         engines: availableEngines,
@@ -1567,8 +1575,10 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
         mode: 'pvp',
         modeSwitcher: true,
         ratedDisabled: true,
+        ...(side ? { initialColor: side } : {}),
       });
       break;
+    }
     case 'engine':
     case 'computer':
       openLandingSetupDialog({
@@ -1591,6 +1601,7 @@ export function maybeOpenPlayDeepLink(engines: PlayableEngine[]): void {
   params.delete('play');
   params.delete('gameSpecId');
   params.delete('variant');
+  params.delete('side');
   const query = params.toString();
   const url = `${window.location.pathname}${query ? `?${query}` : ''}${window.location.hash}`;
   window.history.replaceState(null, '', url);
@@ -1715,7 +1726,8 @@ export function openLandingSetupDialog(choice: LandingPlayChoice): void {
   // the colors are variant-declared: xiangqi storing 'red' would coerce to the
   // SECOND seat in a variant whose first mover is black. A stored preference or
   // the legacy global key counts as a past explicit choice.
-  const storedColor = storedPreference.preferredColor ?? loadStoredColorPreference();
+  const storedColor =
+    choice.initialColor ?? storedPreference.preferredColor ?? loadStoredColorPreference();
   let colorIsExplicit = storedColor !== undefined;
   let preferredColor: LandingColorPreference =
     storedColor ?? defaultColorPreference(choice.mode, selectedGameSpecId);

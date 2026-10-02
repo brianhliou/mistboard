@@ -68,7 +68,13 @@ export function buildLiveRoomChat(roomId: string): HTMLElement {
     title: t('study.chatRoom'),
     apiUrl: playerChatApiUrl(roomId),
     fallback: { apiUrl: gameChatApiUrl(roomId), title: t('review.spectatorRoom') },
-    resizable: true,
+    // No drag separator in the live room (Brian, 2026-10-02: "a handle that does
+    // nothing"). The room's rail is capped at the board's height and the chat
+    // flex-fills it (live-review.css), and that rule outranks the manual-height
+    // class, so a drag changed nothing. Even working, it could only shrink the
+    // chat off the board line the room aligns it to. Review and study rails
+    // keep it: there a drag does resize the room.
+    resizable: false,
   });
 }
 
