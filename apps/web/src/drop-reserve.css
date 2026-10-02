@@ -197,3 +197,114 @@ button.drop-mini-reserve-piece:disabled {
 .replay-captures.drop-mini-reserve-strip--all-roles .drop-mini-reserve-piece.is-empty {
   opacity: 0.24;
 }
+
+/* ── The drop pocket (drop-pocket.ts) ──────────────────────────────────────
+   A side's hand as lichess draws a crazyhouse pocket: a rounded bar holding a
+   slot for EVERY droppable role in a fixed order, held roles in full colour,
+   roles held none of faded in place, a count badge from two up. Live room
+   (beside each clock), review rail and postgame all draw this one bar.
+
+   The bar is its own size container: the slots split its width by the role
+   count (--pocket-slots, set by drop-pocket.ts), so seven Fortress roles and six
+   Crazyhouse roles both fill the bar at any rail or phone width, and the bar's
+   height follows from the slot size instead of a band that has to be guessed
+   per surface. Three classes so it outranks the surface bands
+   (.live-review__cluster .rail-material, .review-material-row) it replaces. */
+.drop-mini-reserve-strip.drop-pocket.drop-mini-reserve-strip--all-roles {
+  --drop-mini-hand-band-height: auto;
+  --pocket-pad: 3px;
+  --pocket-gap: 2px;
+
+  container-type: inline-size;
+  display: block;
+  box-sizing: border-box;
+  width: 100%;
+  height: auto;
+  min-height: 0;
+  padding: var(--pocket-pad);
+  border-radius: var(--site-radius, 10px);
+  background: color-mix(in srgb, var(--site-border) 46%, transparent);
+  box-shadow: inset 0 1px 3px rgb(0 0 0 / 0.18);
+  overflow: visible;
+}
+
+.drop-pocket .drop-mini-reserve-row {
+  --pocket-slot: clamp(
+    20px,
+    calc((100cqw - (var(--pocket-slots, 7) - 1) * var(--pocket-gap)) / var(--pocket-slots, 7)),
+    48px
+  );
+
+  display: flex;
+  align-items: center;
+  justify-content: space-evenly;
+  gap: var(--pocket-gap);
+  width: 100%;
+  height: var(--pocket-slot);
+  min-height: 0;
+}
+
+.drop-pocket .drop-mini-reserve-piece {
+  flex: 0 1 var(--pocket-slot);
+  min-width: 0;
+  width: auto;
+  height: auto;
+  max-height: var(--pocket-slot);
+  aspect-ratio: 1;
+  padding: 0;
+  border: 0;
+  border-radius: 50%;
+  background: transparent;
+  transition:
+    opacity 120ms ease,
+    background-color 120ms ease,
+    box-shadow 120ms ease;
+}
+
+.drop-pocket .drop-mini-reserve-piece svg {
+  width: 100%;
+  height: 100%;
+  filter: drop-shadow(0 1px 1px rgb(0 0 0 / 0.28));
+}
+
+/* Held none: the silhouette stays in its slot, faded and drained of colour so
+   it cannot be read as a red or black piece you own. Lichess uses 0.1; a
+   xiangqi disc is line art on cream, which vanishes at that on a light bar. */
+.drop-pocket .drop-mini-reserve-piece.is-empty {
+  opacity: 0.26;
+  filter: grayscale(1);
+}
+
+.drop-pocket .drop-mini-reserve-piece.is-empty svg {
+  filter: none;
+}
+
+.drop-pocket button.drop-mini-reserve-piece:not(:disabled) {
+  cursor: pointer;
+}
+
+.drop-pocket button.drop-mini-reserve-piece:hover:not(:disabled) {
+  background: color-mix(in srgb, var(--site-accent) 22%, transparent);
+  border-color: transparent;
+}
+
+/* The piece lifted for a drop: the same accent ring the rest of the site uses
+   for "this one is active", round like the disc it wraps. */
+.drop-pocket .drop-mini-reserve-piece.selected,
+.drop-pocket button.drop-mini-reserve-piece.selected:hover {
+  background: color-mix(in srgb, var(--site-accent) 34%, transparent);
+  box-shadow: 0 0 0 2px var(--site-accent);
+}
+
+.drop-pocket .captures-count-badge {
+  right: -3px;
+  bottom: -3px;
+  min-width: clamp(14px, calc(var(--pocket-slot) * 0.4), 19px);
+  height: clamp(14px, calc(var(--pocket-slot) * 0.4), 19px);
+  padding: 0 3px;
+  border: 1.5px solid var(--site-panel, #ffffff);
+  background: var(--site-accent);
+  color: var(--site-on-accent, #ffffff);
+  font-size: clamp(9px, calc(var(--pocket-slot) * 0.27), 12px);
+  font-variant-numeric: tabular-nums;
+}

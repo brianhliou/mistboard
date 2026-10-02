@@ -5,8 +5,8 @@
 //     xiangqi view the shared board renders (xiangqi-board.ts). Drops leave
 //     legalMoves (the board's click layer only knows from/to), and a drop as
 //     the last move becomes `lastDropSquare`, the destination ring alone;
-//   - the HANDS: the shared pocket strip (drop-reserve.css) in the xiangqi
-//     piece set, a held-only strip per side;
+//   - the HANDS: the shared drop pocket (drop-pocket.ts) in the reader's
+//     xiangqi piece set;
 //   - drop targets, move notation, the end-of-game phrase.
 
 import {
@@ -20,6 +20,7 @@ import {
   isCrazyhouseXiangqiDropMove,
   type StandardXiangqiPlayerView,
 } from '@mistboard/game';
+import { fillDropPocket } from './drop-pocket.js';
 import type { TenantReasonKey } from './variant-tenant/room-chrome.js';
 import { renderXiangqiPiece } from './xiangqi-pieces.js';
 
@@ -91,7 +92,21 @@ export function isCrazyhouseXiangqiDropRole(value: string): value is CrazyhouseX
   return (CRAZYHOUSE_XIANGQI_DROP_ROLES as readonly string[]).includes(value);
 }
 
-/** One side's hand as a pocket strip. Interactive only for the side that may drop. */
+/**
+ * Pocket display order, the lichess crazyhouse order carried to xiangqi: the
+ * attackers from cheapest up, then the defenders. Display only: the FEN and the
+ * engine spell hands in CRAZYHOUSE_XIANGQI_DROP_ROLES order (R N B A C P).
+ */
+export const CRAZYHOUSE_XIANGQI_POCKET_ORDER = [
+  'soldier',
+  'cannon',
+  'horse',
+  'chariot',
+  'elephant',
+  'advisor',
+] as const satisfies readonly CrazyhouseXiangqiDropRole[];
+
+/** One side's hand as a pocket. Interactive only for the side that may drop. */
 export function fillCrazyhouseXiangqiReserve(
   host: HTMLElement,
   view: Pick<CrazyhouseXiangqiPlayerView, 'hands'>,
@@ -100,56 +115,22 @@ export function fillCrazyhouseXiangqiReserve(
     interactive?: boolean;
     selectedRole?: CrazyhouseXiangqiDropRole | null;
     onSelect?(role: CrazyhouseXiangqiDropRole): void;
+    /** The lichess pocket bar (drop-pocket.ts); off draws a held-only strip. */
+    pocket?: boolean;
   } = {},
 ): void {
-  host.classList.add('drop-mini-reserve-strip');
-  host
-    .closest<HTMLElement>('.board-shell, .replay-pane')
-    ?.classList.add('drop-mini-reserve-container');
-  host.replaceChildren();
-  host.dataset.hand = owner;
-  const held = CRAZYHOUSE_XIANGQI_DROP_ROLES.map((role) => ({
-    role,
-    count: view.hands[owner][role] ?? 0,
-  })).filter((entry) => entry.count > 0);
-  host.classList.toggle('has-captures', held.length > 0);
-  if (held.length === 0) return;
-
-  const row = document.createElement('div');
-  row.className = 'drop-mini-reserve-row';
-  for (const entry of held) {
-    const tile = options.interactive
-      ? document.createElement('button')
-      : document.createElement('span');
-    tile.className = [
-      'drop-mini-reserve-piece',
-      entry.count > 1 ? 'has-count' : '',
-      options.selectedRole === entry.role ? 'selected' : '',
-    ]
-      .filter(Boolean)
-      .join(' ');
-    if (tile instanceof HTMLButtonElement) {
-      tile.type = 'button';
-      tile.dataset.drop = entry.role;
-      tile.setAttribute('aria-grabbed', options.selectedRole === entry.role ? 'true' : 'false');
-      tile.addEventListener('click', () => options.onSelect?.(entry.role));
-    }
-    tile.setAttribute('aria-label', `${owner} ${entry.role} x${entry.count}`);
+  fillDropPocket(host, {
+    owner,
+    entries: CRAZYHOUSE_XIANGQI_POCKET_ORDER.map((role) => ({
+      role,
+      count: view.hands[owner][role] ?? 0,
+    })),
+    ...options,
     // A piece in hand has no point, so it cannot answer the river question:
     // draw the plain soldier, which is what it is until it lands.
-    tile.innerHTML = renderXiangqiPiece(
-      { color: owner, role: entry.role },
-      { ariaLabel: `${owner} ${entry.role}`, crossed: false },
-    );
-    if (entry.count > 1) {
-      const badge = document.createElement('span');
-      badge.className = 'captures-count-badge';
-      badge.textContent = String(entry.count);
-      tile.append(badge);
-    }
-    row.append(tile);
-  }
-  host.append(row);
+    renderPiece: (role) =>
+      renderXiangqiPiece({ color: owner, role }, { ariaLabel: `${owner} ${role}`, crossed: false }),
+  });
 }
 
 /** The reason phrase for the room chrome's and the postgame's end-of-game line. */

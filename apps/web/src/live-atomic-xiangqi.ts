@@ -260,7 +260,7 @@ function renderBoard(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | null): 
   }
 }
 
-// The fortress notice, with this game's meaning of check: the perspective's
+// The check notice, with this game's meaning of check: the perspective's
 // general can be removed next move, by capture or by a blast beside it.
 function renderCheckStatus(liveRefs: LiveRefs, view: AtomicXiangqiPlayerView | null): void {
   if (view?.status.type !== 'playing' || !view.inCheck || !core?.replay.isLive()) return;

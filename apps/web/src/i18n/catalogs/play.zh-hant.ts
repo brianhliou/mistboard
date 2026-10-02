@@ -445,8 +445,6 @@ export const ZH_HANT_PLAY = {
   'live.duckPlaceTitle': '現在放置鴨子',
   'live.duckPlaceBody': '任一空位皆可。放好鴨子之前，你的著法不會送出。',
   'live.checkTitle': '將軍',
-  'live.checkYourGeneral': '你的將帥被將軍了。請應將。',
-  'live.checkColorGeneral': '{color}的將帥被將軍了。',
   'live.atomicCheckYour': '你的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',
   'live.atomicCheckColor': '{color}的將帥下一步可能被吃或被炸。這樣的重複將軍會判負。',
 } satisfies Partial<Record<PlayI18nKey, string>>;

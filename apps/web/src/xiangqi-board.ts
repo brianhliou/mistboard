@@ -593,6 +593,10 @@ export interface XiangqiInteractiveBoardOptions {
    *  reader's preference, right for a board they are playing on. */
   coordinates?: boolean;
   coordinateStyle?: XiangqiNotationStyle;
+  /** Optional: the point a drop variant's last move landed a piece on, ringed
+   *  in place of the from/to pair a drop does not have (crazyhouse review).
+   *  Read on every render; null or absent = the view's own lastMove. */
+  lastDropSquare?: () => XiangqiSquare | null;
 }
 
 export interface XiangqiInteractiveBoard {
@@ -628,6 +632,7 @@ export function createXiangqiInteractiveBoard(
       draggingFrom,
       arrows,
       markers,
+      lastDropSquare: opts.lastDropSquare?.() ?? null,
       ...(opts.coordinates === undefined ? {} : { coordinates: opts.coordinates }),
       ...(opts.coordinateStyle === undefined ? {} : { coordinateStyle: opts.coordinateStyle }),
     });

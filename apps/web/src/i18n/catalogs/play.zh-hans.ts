@@ -445,8 +445,6 @@ export const ZH_HANS_PLAY = {
   'live.duckPlaceTitle': '现在放置鸭子',
   'live.duckPlaceBody': '任一空位皆可。放好鸭子之前，你的着法不会发出。',
   'live.checkTitle': '将军',
-  'live.checkYourGeneral': '你的将帅被将军了。请应将。',
-  'live.checkColorGeneral': '{color}的将帅被将军了。',
   'live.atomicCheckYour': '你的将帅下一步可能被吃或被炸。这样的重复将军会判负。',
   'live.atomicCheckColor': '{color}的将帅下一步可能被吃或被炸。这样的重复将军会判负。',
 } satisfies Partial<Record<PlayI18nKey, string>>;

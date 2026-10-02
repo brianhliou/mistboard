@@ -14,10 +14,12 @@
 // blown up in atomic, a jungle den) falls back to the board's hit cell for that
 // square (`[data-square]`).
 //
-// It plays only on a live playing -> finished transition (the caller passes the
-// lifecycle effect), so reloading a finished room or scrubbing a replay never
-// replays it. It clears when the viewer leaves the final position or a new game
-// starts in the room.
+// It starts on a live playing -> finished transition (the caller passes the
+// lifecycle effect), so reloading a finished room never plays it. It clears when
+// the viewer leaves the final position, and plays again from the start each time
+// the viewer steps back onto it (Brian, 2026-10-01). Re-entering rebuilds the
+// layer, so stepping on and off quickly restarts one CSS animation rather than
+// stacking them; there are no timers to cancel. A new game in the room forgets it.
 
 import './live-finish-badges.css';
 import { terminationLabel } from './game-display.js';
@@ -181,7 +183,13 @@ export type LiveFinishBadges = {
 
 export function createLiveFinishBadges(stage: HTMLElement, board: HTMLElement): LiveFinishBadges {
   let layer: HTMLElement | null = null;
-  let activeGameId: string | null = null;
+  // The last game played here, kept after its layer clears so stepping back
+  // onto the final position can play it again.
+  let played: {
+    gameId: string;
+    badges: readonly FinishBadge[];
+    options: { delayMs?: number };
+  } | null = null;
   const resize =
     typeof ResizeObserver === 'undefined' ? null : new ResizeObserver(() => position());
   resize?.observe(stage);
@@ -216,30 +224,46 @@ export function createLiveFinishBadges(stage: HTMLElement, board: HTMLElement): 
     }
   }
 
-  function clear(): void {
+  function removeLayer(): void {
     layer?.remove();
     layer = null;
-    activeGameId = null;
+  }
+
+  function clear(): void {
+    removeLayer();
+    played = null;
+  }
+
+  function show(badges: readonly FinishBadge[], options: { delayMs?: number }): void {
+    removeLayer();
+    layer = document.createElement('div');
+    layer.className = 'finish-badges';
+    if (options.delayMs !== undefined) {
+      layer.style.setProperty('--finish-badge-delay', `${options.delayMs}ms`);
+    }
+    layer.append(...badges.map(badgeElement));
+    stage.append(layer);
+    position();
   }
 
   return {
     play(gameId, badges, options = {}) {
       clear();
       if (badges.length === 0) return;
-      layer = document.createElement('div');
-      layer.className = 'finish-badges';
-      if (options.delayMs !== undefined) {
-        layer.style.setProperty('--finish-badge-delay', `${options.delayMs}ms`);
-      }
-      layer.append(...badges.map(badgeElement));
-      stage.append(layer);
-      activeGameId = gameId;
-      position();
+      played = { gameId, badges, options };
+      show(badges, options);
     },
     sync(gameId, atFinalPosition) {
-      if (!layer) return;
-      if (gameId !== activeGameId || !atFinalPosition) {
+      if (played && played.gameId !== gameId) {
         clear();
+        return;
+      }
+      if (!atFinalPosition) {
+        removeLayer();
+        return;
+      }
+      if (!layer && played) {
+        show(played.badges, played.options);
         return;
       }
       position();

@@ -4,32 +4,31 @@ import {
   type CrazyhouseXiangqiGameStatus,
   type CrazyhouseXiangqiMove,
   type CrazyhouseXiangqiPlayerView,
+  exportFormatsForVariant,
 } from '@mistboard/game';
 import './landing.css';
 import './game-route.css';
-import './live-xiangqi.css';
-import './drop-reserve.css';
-import './crazyhouse-xiangqi.css';
-import {
-  crazyhouseXiangqiBoardView,
-  crazyhouseXiangqiLastDrop,
-  crazyhouseXiangqiMoveLabel,
-  fillCrazyhouseXiangqiReserve,
-} from './crazyhouse-xiangqi-view.js';
 import { crazyhouseXiangqiEnabled } from './feature-flags.js';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { reviewSeatProfiles } from './profile-link.js';
+import {
+  type CrazyhouseXiangqiReviewConfig,
+  mountCrazyhouseXiangqiReview,
+} from './review/crazyhouse-xiangqi-review.js';
+import { crosstableConfig } from './review/crosstable.js';
+import { gameExportLinks, gameImageLink } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
+import { downloadRow } from './review/underboard-tabs.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
-import { xiangqiBoardSvg } from './xiangqi-board.js';
 
-// Postgame for Crazyhouse Xiangqi: a replay of the server's own per-ply
-// snapshots (board AND both hands at every ply), a move list, and the meta
-// card. Deliberately not the branching tree review the launched xiangqi
-// variants have: the admin playtest has no review engine, and the tree review
-// would need a drop-aware tree adapter it does not have yet. Perfect
-// information, one view for everyone.
+// Postgame review for Crazyhouse Xiangqi: the crazyhouse tree review
+// (review/crazyhouse-xiangqi-review.ts) over the game's move list, the surface
+// Fortress and Atomic Xiangqi have: branching board, both pockets at every ply,
+// annotations, share and export. It opens on the final position. There is no
+// engine for this variant in the browser or behind a whole-game analysis
+// route, so the review carries no eval gauge, engine panel or analysis button.
 
 type CrazyhouseXiangqiViewKey = 'truth';
 
@@ -134,10 +133,34 @@ export function postgameViewAtPly(
 }
 
 function renderPostgame(root: HTMLElement, postgame: CrazyhouseXiangqiPostgameResponse): void {
-  const moves = postgame.timeline
-    .filter((entry) => entry.type === 'move-played' && entry.move)
-    .map((entry) => entry.move as CrazyhouseXiangqiMove);
-  const maxPly = Math.max(0, ...(postgame.history?.truth ?? []).map((snapshot) => snapshot.ply));
+  root.replaceChildren(buildNav());
+  mountCrazyhouseXiangqiReview(root, crazyhouseXiangqiReviewConfig(postgame));
+}
+
+/** The review mount for a finished game: the mainline from the timeline, the
+ *  meta card, seats, crosstable and the share/export panel. */
+export function crazyhouseXiangqiReviewConfig(
+  postgame: CrazyhouseXiangqiPostgameResponse,
+): CrazyhouseXiangqiReviewConfig {
+  // Perfect information: the tree rebuilds every position from the move list
+  // through the kernel. The server's per-ply snapshots stay on the response
+  // for postgameViewAtPly below.
+  const moveEvents = postgame.timeline.filter(
+    (entry) => entry.type === 'move-played' && entry.move,
+  );
+  const moves = moveEvents.map((entry) => entry.move as CrazyhouseXiangqiMove);
+
+  // Per-ply elapsed time from consecutive event timestamps (the server keeps no
+  // per-move clock, so the first ply is measured from the earliest event).
+  let prevAt = postgame.timeline[0]?.at ?? moveEvents[0]?.at ?? 0;
+  const moveTimes = moveEvents.map((entry) => {
+    const delta = Math.max(0, entry.at - prevAt);
+    prevAt = entry.at;
+    return delta;
+  });
+  const hasMoveTimes = moveTimes.some((ms) => ms > 0);
+
+  const gamePlayers = postgame.game.players ?? [];
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   const { metaCard, details } = buildReviewMeta({
     markerId: 'xiangqi',
@@ -146,116 +169,39 @@ function renderPostgame(root: HTMLElement, postgame: CrazyhouseXiangqiPostgameRe
     status,
   });
 
-  // Red at the bottom; the flip button turns it.
-  let orientation: CrazyhouseXiangqiColor = 'red';
-  let ply = maxPly;
-
-  const shell = document.createElement('main');
-  shell.className = 'game-shell chx-postgame';
-  shell.setAttribute('aria-label', 'Crazyhouse Xiangqi postgame');
-
-  const heading = document.createElement('h1');
-  heading.textContent = variantDisplayLabel(CRAZYHOUSE_XIANGQI_SPEC_ID);
-  const summary = document.createElement('p');
-  summary.className = 'chx-postgame__summary';
-  summary.textContent = `${status} · ${postgame.game.plyCount} plies`;
-
-  const layout = document.createElement('div');
-  layout.className = 'chx-postgame__layout';
-
-  const boardColumn = document.createElement('section');
-  boardColumn.className = 'chx-postgame__board-column board-shell';
-  const handTop = document.createElement('div');
-  handTop.className = 'chx-postgame__hand';
-  const board = document.createElement('div');
-  board.className = 'chx-postgame__board board xiangqi-live-board';
-  const handBottom = document.createElement('div');
-  handBottom.className = 'chx-postgame__hand';
-  const controls = document.createElement('div');
-  controls.className = 'chx-postgame__controls';
-  const plyLabel = document.createElement('span');
-  plyLabel.className = 'chx-postgame__ply';
-
-  const button = (label: string, title: string, onClick: () => void): HTMLButtonElement => {
-    const el = document.createElement('button');
-    el.type = 'button';
-    el.className = 'secondary-button';
-    el.textContent = label;
-    el.title = title;
-    el.setAttribute('aria-label', title);
-    el.addEventListener('click', onClick);
-    return el;
+  return {
+    pageClassName: 'crazyhouse-xiangqi-review',
+    ariaLabel: 'Crazyhouse Xiangqi postgame',
+    title: variantDisplayLabel(CRAZYHOUSE_XIANGQI_SPEC_ID),
+    summary: `${status} · ${postgame.game.plyCount} plies`,
+    metaCard,
+    details,
+    moves,
+    moveTimes: hasMoveTimes ? moveTimes : undefined,
+    // The magnifier in the finished room lands here: open on the result, not
+    // on an empty board the reader has to fast-forward through.
+    initialPosition: 'end',
+    seatLabels: true,
+    players: {
+      red: gamePlayers.find((p) => p.color === 'red')?.name,
+      black: gamePlayers.find((p) => p.color === 'black')?.name,
+    },
+    playerProfiles: reviewSeatProfiles(gamePlayers),
+    ...crosstableConfig(postgame.game.roomId, postgame.game.players),
+    // Downloads and the board image. No Embed row: /embed/game does not draw
+    // this variant yet, so the iframe code would embed "could not be loaded".
+    shareExtra: [
+      downloadRow([
+        ...gameExportLinks(
+          postgame.game.roomId,
+          exportFormatsForVariant(CRAZYHOUSE_XIANGQI_SPEC_ID),
+        ),
+        gameImageLink(postgame.game.roomId),
+      ]),
+    ],
+    // No whole-game analysis route exists for this variant.
+    analysis: null,
   };
-  controls.append(
-    button('|<', t('watch.firstMove'), () => go(0)),
-    button('<', t('watch.previousMove'), () => go(ply - 1)),
-    plyLabel,
-    button('>', t('watch.nextMove'), () => go(ply + 1)),
-    button('>|', t('watch.lastMove'), () => go(maxPly)),
-    button('⇅', t('review.flipBoard'), () => {
-      orientation = orientation === 'red' ? 'black' : 'red';
-      paint();
-    }),
-  );
-  boardColumn.append(handTop, board, handBottom, controls);
-
-  const side = document.createElement('aside');
-  side.className = 'chx-postgame__side';
-  const moveList = document.createElement('ol');
-  moveList.className = 'chx-postgame__moves';
-  moves.forEach((move, index) => {
-    const item = document.createElement('li');
-    const link = document.createElement('button');
-    link.type = 'button';
-    link.className = 'chx-postgame__move';
-    link.dataset.ply = String(index + 1);
-    link.textContent = crazyhouseXiangqiMoveLabel(move);
-    link.addEventListener('click', () => go(index + 1));
-    item.append(link);
-    moveList.append(item);
-  });
-  side.append(metaCard, moveList);
-  if (details) side.append(details);
-
-  layout.append(boardColumn, side);
-  shell.append(heading, summary, layout);
-  root.replaceChildren(buildNav(), shell);
-
-  function go(next: number): void {
-    ply = Math.max(0, Math.min(maxPly, next));
-    paint();
-  }
-
-  function paint(): void {
-    const view = postgameViewAtPly(postgame, ply);
-    board.innerHTML = xiangqiBoardSvg(crazyhouseXiangqiBoardView(view), orientation, {
-      interactive: false,
-      selectedSquare: null,
-      draggingFrom: null,
-      lastDropSquare: crazyhouseXiangqiLastDrop(view),
-    });
-    const top = orientation === 'red' ? 'black' : 'red';
-    fillCrazyhouseXiangqiReserve(handTop, view, top);
-    fillCrazyhouseXiangqiReserve(handBottom, view, orientation);
-    plyLabel.textContent = `${ply} / ${maxPly}`;
-    for (const el of moveList.querySelectorAll<HTMLElement>('.chx-postgame__move')) {
-      el.classList.toggle('is-current', Number(el.dataset.ply) === ply);
-    }
-  }
-
-  document.addEventListener('keydown', (event) => {
-    if (!shell.isConnected) return;
-    if (event.target instanceof HTMLInputElement || event.target instanceof HTMLTextAreaElement)
-      return;
-    if (event.key === 'ArrowLeft') go(ply - 1);
-    else if (event.key === 'ArrowRight') go(ply + 1);
-    else if (event.key === 'Home') go(0);
-    else if (event.key === 'End') go(maxPly);
-    else return;
-    event.preventDefault();
-  });
-
-  paint();
 }
 
 function messageView(text: string): HTMLElement {
