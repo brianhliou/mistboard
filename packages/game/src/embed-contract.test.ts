@@ -1,6 +1,12 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { embedPathForTarget, embedTargetFromUrl } from './embed-contract.js';
+import {
+  EMBED_DEFAULT_HEIGHT,
+  EMBED_DEFAULT_WIDTH,
+  embedHeightForWidth,
+  embedPathForTarget,
+  embedTargetFromUrl,
+} from './embed-contract.js';
 
 // The forum expands a line that is only a URL, and the oEmbed provider answers
 // for the same URL; both read this parser, so the table below is the whole
@@ -146,5 +152,20 @@ test('the frameable path round-trips through the target', () => {
     assert.equal(embedPathForTarget(target), path, url);
     // The embed path is itself a target, and the same one.
     assert.deepEqual(embedTargetFromUrl(`https://mistboard.com${path}`), target, path);
+  }
+});
+
+test('a banqi game gets a frame as short as its sideways board', () => {
+  // The widget measured 444px tall at 760 wide and 575 at 1000 (2026-10-02);
+  // the default ratio gave it 700 and a blank band under every forum embed.
+  assert.equal(embedHeightForWidth(EMBED_DEFAULT_WIDTH), EMBED_DEFAULT_HEIGHT);
+  assert.equal(embedHeightForWidth(EMBED_DEFAULT_WIDTH, 'xiangqi'), EMBED_DEFAULT_HEIGHT);
+  for (const [width, natural] of [
+    [760, 444],
+    [1000, 575],
+  ]) {
+    const height = embedHeightForWidth(width, 'banqi');
+    assert.ok(height >= natural, `${width}: ${height} clips the ${natural}px widget`);
+    assert.ok(height <= natural + 40, `${width}: ${height} leaves a band under ${natural}px`);
   }
 });

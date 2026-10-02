@@ -54,9 +54,21 @@ export function clampEmbedWidth(raw: string | number | null | undefined): number
   return Math.min(EMBED_MAX_WIDTH, Math.max(EMBED_MIN_WIDTH, Math.round(value)));
 }
 
-/** Height that preserves the default aspect ratio at `width`. */
-export function embedHeightForWidth(width: number): number {
-  return Math.round(width * (EMBED_DEFAULT_HEIGHT / EMBED_DEFAULT_WIDTH));
+/**
+ * Height at the default width for a banqi game. Its 4x8 board lies on its side,
+ * so the widget is wide and short: measured 444px tall at 760 wide and 575 at
+ * 1000, where the default 700 left a blank band under every banqi embed.
+ */
+export const EMBED_BANQI_HEIGHT = 460;
+
+/**
+ * Height that preserves the widget's aspect ratio at `width`. `variant` is the
+ * finished game's variant when the frame is a game; every board but banqi's is
+ * near-square and takes the default ratio.
+ */
+export function embedHeightForWidth(width: number, variant?: string): number {
+  const atDefaultWidth = variant === 'banqi' ? EMBED_BANQI_HEIGHT : EMBED_DEFAULT_HEIGHT;
+  return Math.round(width * (atDefaultWidth / EMBED_DEFAULT_WIDTH));
 }
 
 /** `/embed/study/:studyId/:chapterId`, the frameable page itself. */
