@@ -2,6 +2,7 @@ import { type GameSpecId, maybeGameSpecForId } from '@mistboard/game';
 import {
   atomicXiangqiEnabled,
   banqiEnabled,
+  crazyhouseXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -97,6 +98,13 @@ const GATED_GAME_SPECS = {
     enabled: atomicXiangqiEnabled,
     disabledError: 'atomic_xiangqi_disabled',
     notIntegratedError: 'atomic_xiangqi_not_integrated',
+  },
+  // Admin playtest: the flag opens room creation, the per-account allowlist
+  // (persistence-variant-access.ts) decides who is seated.
+  'crazyhouse-xiangqi': {
+    enabled: crazyhouseXiangqiEnabled,
+    disabledError: 'crazyhouse_xiangqi_disabled',
+    notIntegratedError: 'crazyhouse_xiangqi_not_integrated',
   },
   // Study-only by design, not by omission: there is no flag to flip. Every
   // room request answers 501 and that is the intended, permanent answer.

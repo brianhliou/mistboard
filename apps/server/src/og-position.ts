@@ -27,7 +27,9 @@ import {
   banqiMoverInk,
   banqiSquareOf,
   banqiStateToEngineFen,
+  crazyhouseXiangqiFen,
   createInitialBanqiState,
+  createInitialCrazyhouseXiangqiState,
   createInitialDuckXiangqiState,
   createInitialFortressXiangqiState,
   createInitialJieqiState,
@@ -51,6 +53,7 @@ import {
   jungleSquareOf,
   jungleStateToEngineFen,
   parseBanqiFen,
+  parseCrazyhouseXiangqiFen,
   parseDarkChessFen,
   parseDuckXiangqiFen,
   parseFortressXiangqiFen,
@@ -88,6 +91,10 @@ export const POSITION_OG_VARIANTS = [
   // board and FEN as standard xiangqi: the explosion is a rule about captures,
   // not positions, so any xiangqi-legal position is an atomic one.
   'atomic-xiangqi',
+  // Admin playtest; here because its finished games export (JSON) and every
+  // exporting tenant binds a share card. The card draws the board; the hands
+  // ride in the FEN's brackets and are not drawn.
+  'crazyhouse-xiangqi',
 ] as const;
 
 export type PositionOgVariant = (typeof POSITION_OG_VARIANTS)[number];
@@ -306,6 +313,22 @@ export function resolvePositionOg(
         board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras },
       };
     }
+    case 'crazyhouse-xiangqi': {
+      // The standard board plus both hands in brackets (Fairy-Stockfish's
+      // spelling). The parser holds every piece to a point it could stand on.
+      const parsed = parseCrazyhouseXiangqiFen(trimmed, 'og-card');
+      if (!parsed.ok) return null;
+      const pieces: XiangqiOgPiece[] = Object.entries(parsed.state.board).flatMap(
+        ([square, piece]) =>
+          piece ? [{ ...xqCoord(square), color: piece.color, role: piece.role }] : [],
+      );
+      return {
+        variant,
+        publicFen: crazyhouseXiangqiFen(parsed.state),
+        toMove: inkToMove(parsed.state.status.type === 'playing' ? parsed.state.status.turn : null),
+        board: { kind: 'intersection', ...XIANGQI_GEOMETRY, pieces, extras: [] },
+      };
+    }
     case 'jieqi': {
       // The deal (sixth field, or a sample when absent) never leaves this
       // block: a face-down piece is projected to its square and ink only.
@@ -475,6 +498,8 @@ export function startPositionFen(variant: PositionOgVariant): string {
       return jungleStateToEngineFen(createInitialJungleState('og-card'));
     case 'duck-xiangqi':
       return duckXiangqiFen(createInitialDuckXiangqiState('og-card'));
+    case 'crazyhouse-xiangqi':
+      return crazyhouseXiangqiFen(createInitialCrazyhouseXiangqiState('og-card'));
     case 'dark-chess':
       return 'rnbqkbnr/pppppppp/8/8/8/8/PPPPPPPP/RNBQKBNR w KQkq - 0 1';
     default: {

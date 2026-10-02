@@ -114,6 +114,7 @@ export const ZH_HANT_PLAY = {
   'variant.fortressXiangqi.name': '堡壘象棋',
   'variant.duckXiangqi.name': '鴨子象棋',
   'variant.atomicXiangqi.name': '原子象棋',
+  'variant.crazyhouseXiangqi.name': '瘋狂屋象棋',
   'variant.darkChess.name': '迷霧國際象棋',
   'variant.jungle.name': '鬥獸棋',
   'variant.jungleFlip.name': '翻翻棋',

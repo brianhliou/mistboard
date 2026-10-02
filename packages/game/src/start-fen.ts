@@ -28,6 +28,7 @@ import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
   CHESS_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -43,6 +44,7 @@ import { jungleStateToEngineFen, parseJungleFen } from './jungle-fen.js';
 import { jungleFlipStateToDealtFen, parseJungleFlipFen } from './jungle-flip-fen.js';
 import { darkChessFen, parseDarkChessFen, parseStandardChessFen } from './variants.js';
 import { createBanqiDeal, createInitialBanqiState } from './variants-banqi.js';
+import { crazyhouseXiangqiFen, parseCrazyhouseXiangqiFen } from './variants-crazyhouse-xiangqi.js';
 import { fortressXiangqiEngineFen, parseFortressXiangqiFen } from './variants-fortress-xiangqi.js';
 import { createInitialJieqiState, createJieqiDeal } from './variants-jieqi.js';
 import { createInitialJungleFlipState, createJungleFlipDeal } from './variants-jungle-flip.js';
@@ -60,6 +62,7 @@ export const START_FEN_SPEC_IDS: readonly GameSpecId[] = [
   JUNGLE_FLIP_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   ATOMIC_XIANGQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   CHESS_SPEC_ID,
 ];
 
@@ -124,6 +127,13 @@ export function normalizeStartFen(spec: string, fen: string): NormalizeStartFenR
       // no facing) is the right one.
       const parsed = parseStandardXiangqiFen(fen);
       return parsed.ok ? { ok: true, fen: standardXiangqiFen(parsed.state) } : parsed;
+    }
+    case CRAZYHOUSE_XIANGQI_SPEC_ID: {
+      // The standard board with both hands in brackets, Fairy-Stockfish's
+      // spelling. The parser's bar: every piece on a point it could stand on,
+      // no more of a role than the two sets hold, no general in hand.
+      const parsed = parseCrazyhouseXiangqiFen(fen);
+      return parsed.ok ? { ok: true, fen: crazyhouseXiangqiFen(parsed.state) } : parsed;
     }
     case JUNGLE_SPEC_ID: {
       const parsed = parseJungleFen(fen);

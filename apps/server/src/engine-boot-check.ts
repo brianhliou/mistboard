@@ -16,6 +16,7 @@ import { sendEngineAlertNotification } from './engine-alert-email.js';
 import {
   atomicXiangqiEnabled,
   banqiEnabled,
+  crazyhouseXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
   jieqiEnabled,
@@ -56,6 +57,14 @@ const ENGINE_PROBES: readonly EngineProbe[] = [
     variant: 'fortress-xiangqi',
     binary: 'fairy-stockfish',
     enabled: fortressXiangqiEnabled,
+    resolvePath: fairyStockfishPath,
+  },
+  {
+    // The shared stock binary, like fortress: crazyhouse xiangqi is a custom
+    // variants.ini over the built-in xiangqi, no patch.
+    variant: 'crazyhouse-xiangqi',
+    binary: 'fairy-stockfish',
+    enabled: crazyhouseXiangqiEnabled,
     resolvePath: fairyStockfishPath,
   },
   {

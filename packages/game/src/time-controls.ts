@@ -6,6 +6,7 @@
 import type { RoomTimeControl } from './events.js';
 import {
   ATOMIC_XIANGQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -189,6 +190,8 @@ const VARIANT_DEFAULT_TIME_CONTROLS: Readonly<Partial<Record<GameSpecId, TimeCon
   // Xiangqi's pace: same board, same array, and one more thing to see before
   // every capture.
   [ATOMIC_XIANGQI_SPEC_ID]: '10m5',
+  // Xiangqi's pace, and every capture hands the opponent a piece to place.
+  [CRAZYHOUSE_XIANGQI_SPEC_ID]: '10m5',
 };
 
 /** The house pace, for every variant that does not name its own. */

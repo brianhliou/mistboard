@@ -21,6 +21,7 @@ import * as chatRoute from './routes/chat.js';
 import * as coachesRoute from './routes/coaches.js';
 import * as correspondenceGamesRoute from './routes/correspondence-games.js';
 import * as correspondenceSeeksRoute from './routes/correspondence-seeks.js';
+import * as crazyhouseXiangqiGamesRoute from './routes/crazyhouse-xiangqi-games.js';
 import * as currentGamesRoute from './routes/current-games.js';
 import * as darkXiangqiGamesRoute from './routes/dark-xiangqi-games.js';
 import * as dataRoute from './routes/data.js';
@@ -115,6 +116,7 @@ export const routes: RouteModule[] = [
   fortressXiangqiGamesRoute,
   duckXiangqiGamesRoute,
   atomicXiangqiGamesRoute,
+  crazyhouseXiangqiGamesRoute,
   darkXiangqiGamesRoute,
   jieqiGamesRoute,
   jungleGamesRoute,

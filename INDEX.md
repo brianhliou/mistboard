@@ -21,6 +21,7 @@ Edit task → find file → open only that file.
 | `bughouse.ts` | Pure Chess Bughouse aggregate: two-board match state, capture transfer, drops, clocks, timeouts, event replay, and partner-request projection |
 | `variants.ts` | Variants (`standardChessVariant`, `darkChessVariant`); fog kernel: `fogVisibleSquares`, `fogMovesFrom`, `fogPawnMoves`, `fogSlideMoves`, `fogCastlingMoves`, `applyFogMove` |
 | `variants-xiangqi.ts` | FoW Xiangqi variant; cannon vision = field of fire |
+| `variants-crazyhouse-xiangqi.ts` | Crazyhouse Xiangqi kernel: standard xiangqi over `xiangqi-rule-kernel.ts` geometry plus hands and drops (a piece drops where it could stand; no drop may give check), FSF FEN/UCI dialect, perpetual-check law. Tied to stock Fairy-Stockfish (`apps/server/src/crazyhouse-xiangqi.ini`) by `fixtures/crazyhouse-xiangqi-parity.json` (regenerate: `scripts/generate-crazyhouse-xiangqi-parity-fixture.mjs`) |
 | `xiangqi-broadcast.ts` | Canonical xiangqi broadcast payload/tape types, runtime validators, fixture replay validation, and the Mistboard coordinate schema for tournament broadcasts |
 | `xiangqi-vision-kernel.ts` | Geometry-parameterized FoW vision walks shared by the xiangqi-family kernels (full Xiangqi and Fog Xiangqi): the cannon screen-walk, horse blocked-leg walk, and rook/slider ray walk + `VisionAccum`/`emptyVision`, driven by a per-variant `VisionProbe`. Per-piece rules that genuinely differ (general/advisor/elephant/soldier/pawn) stay in each variant kernel |
 | `events.ts` | `GameEvent` union type, `replayGameEvents` reducer, `GameProjection` |
@@ -1108,6 +1109,17 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/review/atomic-xiangqi-review.ts` | Atomic Xiangqi tree-review presentation: aftermath-aware board, Fairy-Stockfish ceval on the patched browser build |
 | `apps/web/src/review/atomic-xiangqi-tree-adapter.ts` | Atomic Xiangqi VariantTreeAdapter (kernel replay, FSF UCI in and out) |
 | `apps/web/src/watch-atomic-xiangqi-replay.ts` | Atomic Xiangqi TV/watch replay adapter with detonations on forward steps |
+| `apps/server/src/crazyhouse-xiangqi-tenant.ts` | Crazyhouse Xiangqi variant tenant: board moves and `{drop,to}` drops on the wire, total termination map |
+| `apps/server/src/crazyhouse-xiangqi-registration.ts` | Crazyhouse Xiangqi registration (admin playtest): rooms, JSON export, share card; no lobby, no TV |
+| `apps/server/src/crazyhouse-xiangqi-fsf-engine.ts` | Crazyhouse Xiangqi Fairy-Stockfish provider: Fortress tier table on the STOCK binary + crazyhouse-xiangqi.ini, warm sessions, classical eval |
+| `apps/server/src/server-crazyhouse-xiangqi-engine.ts` | Crazyhouse Xiangqi live bot loop: kernel-validated engine move, time-boxed immediate-loss guard, decision artifact |
+| `apps/server/src/crazyhouse-xiangqi-eve-adapter.ts` | Crazyhouse Xiangqi EvE adapter so the ladder can be rated |
+| `apps/server/src/crazyhouse-xiangqi-ini.test.ts` | Pins every game-ending option in crazyhouse-xiangqi.ini to the kernel; measures why nMoveRule stays 0 (FSF resets on drops) |
+| `apps/server/src/routes/crazyhouse-xiangqi-rooms.ts` | Crazyhouse Xiangqi room creation route (PvP + PvE, casual only) |
+| `apps/server/src/routes/crazyhouse-xiangqi-games.ts` | Crazyhouse Xiangqi postgame API: truth view and per-ply snapshots with both hands |
+| `apps/web/src/crazyhouse-xiangqi-view.ts` | Crazyhouse Xiangqi board view over xiangqi-board.ts (drop targets, drop last-move ring), hand strips, notation, end phrases |
+| `apps/web/src/live-crazyhouse-xiangqi.ts` | Crazyhouse Xiangqi live room: xiangqi board plus both hands, click/drag drops from hand |
+| `apps/web/src/crazyhouse-xiangqi-postgame.ts` | Crazyhouse Xiangqi postgame: snapshot replay with both hands and a move list (no tree review yet) |
 | `apps/web/src/xiangqi-broadcast-review.ts` | _needs a one-line description_ |
 | `apps/web/src/xiangqi-broadcast-matches.ts` | A team league round grouped by match (slow and blitz games per table, from `board.details`) and the league table, scored by the 2026 league's 规程 (game 2/1/0, match 3/1.5/0) |
 | `apps/web/src/xiangqi-broadcast-standings.ts` | _needs a one-line description_ |
