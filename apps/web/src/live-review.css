@@ -227,22 +227,65 @@
   .live-review__cluster .moves-panel {
     align-self: start;
     box-sizing: border-box;
-    height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
+    /* A FLOOR, never a cap. From 2026-09-30 to 10-02 this was `height`, and a
+       board shorter than the table (banqi's 8x4 strip is 395px; flip jungle,
+       any board shrunk by the grip) clipped the table from the bottom: the move
+       list, the seat row and Resign/Abort disappeared. The table is its
+       content's height at least; the board only stretches it. */
+    min-height: calc(var(--uni-board-width) / var(--uni-board-aspect, 1));
   }
 }
 
+/* Banqi's 8x4 board is a wide strip, less than half the height of the room
+   row. The board pins to the top of the centre column with the face-down
+   tally under it (live-banqi.ts moves the pool there: the centre column has
+   the width, the right rail needs the height). */
+.live-route--banqi .live-review__cluster .review-shell__center {
+  flex-direction: column;
+  align-items: center;
+  justify-content: flex-start;
+  gap: 14px;
+}
+.live-route--banqi .live-review__cluster .hidden-pool--under-board {
+  /* Board discs at ~40% size: the tally reads as the board's own inventory. */
+  --capture-piece-size: clamp(26px, calc(var(--uni-board-width, 360px) * 0.05), 36px);
+  box-sizing: border-box;
+  width: var(--uni-board-width, 100%);
+  max-width: 100%;
+  margin-top: 0;
+  padding: 10px 4px 0;
+  /* Red and black side by side: one row of the board's width, not a column
+     that leaves the right half of the board's footprint empty. */
+  display: grid;
+  grid-template-columns: repeat(2, minmax(0, 1fr));
+  column-gap: 24px;
+}
+.live-route--banqi .live-review__cluster .hidden-pool--under-board .hidden-pool__caption {
+  grid-column: 1 / -1;
+}
+
 @media (min-width: 1260px) {
-  /* Banqi's 8×4 board is much shorter than the viewport-height room
-     rails. Center it like the right-side game console instead of leaving both
-     primary game surfaces stranded at different vertical positions. */
-  .live-route--banqi .live-review__cluster .review-shell__center {
-    align-items: center;
+  /* Both rails take the full room row, as they do beside the tall boards: the
+     chat runs to the bottom of the screen, and the table's move list grows to
+     fill the rail instead of the table centring as a short console. */
+  .live-route--banqi .live-review__cluster .meta-panel {
+    max-height: none;
+  }
+  .live-route--banqi .live-review__cluster .moves-panel {
+    align-self: stretch;
+  }
+  .live-route--banqi .live-review__cluster .round-table__box,
+  .live-route--banqi .live-review__cluster .replay-console .game-table-moves {
+    flex: 1 1 auto;
+  }
+  /* The ~4-row cap (game-shell.css) is for a console centred beside a tall
+     board; here the list owns the height the rail gives it. */
+  .live-route--banqi .live-review__cluster .replay-console .game-table-moves {
+    max-height: none;
   }
 
-  /* Fortress centers for the same reason banqi does, arrived at from the
-     opposite direction: banqi's board is too SHORT for the row, fortress's 7x8
-     board is tall but still shorter than the full-height room rails, so
-     top-pinning strands ~130px of dead space under the board and leaves the
+  /* Fortress centers its board: the 7x8 board is tall but still shorter
+     than the full-height room rails, so top-pinning strands ~130px of dead space under the board and leaves the
      board and the game console reading as two surfaces at different heights.
 
      The reserve bands are already pinned to a fixed height whether or not a
@@ -252,8 +295,7 @@
   .live-route--fortress-xiangqi .live-review__cluster .review-shell__center {
     align-items: center;
   }
-  /* Their boards centre in the row, so the board-height rail centres with them. */
-  .live-route--banqi .live-review__cluster .moves-panel,
+  /* Its board centres in the row, so the board-height rail centres with it. */
   .live-route--fortress-xiangqi .live-review__cluster .moves-panel {
     align-self: center;
   }

@@ -91,6 +91,7 @@
     "ci:browser-smoke:plan": "node scripts/ci-browser-smoke-plan.mjs",
     "hooks:install": "git config core.hooksPath .githooks",
     "visual:check": "node scripts/visual-check.mjs",
+    "room:layout-check": "node scripts/room-layout-check.mjs",
     "mobile:loop": "node scripts/mobile-loop.mjs",
     "test:e2e:smoke": "npm run visual:check",
     "test:auth:local": "node scripts/auth-nav-smoke.mjs",
