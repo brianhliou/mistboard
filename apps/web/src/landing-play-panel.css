@@ -100,7 +100,6 @@
   min-height: 46px;
   padding: 0 var(--pp-pad);
   border-bottom: 1px solid var(--site-border-soft);
-  cursor: pointer;
 }
 
 .pp-row-person {

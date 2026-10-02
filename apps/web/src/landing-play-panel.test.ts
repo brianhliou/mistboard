@@ -126,6 +126,17 @@ describe('homepage play panel', () => {
     expect(board.querySelector<HTMLElement>('.pp-search')?.hidden).toBe(true);
   });
 
+  it('starts a bot game only from Play, never from a stray row click', () => {
+    const fetchSpy = vi.fn(async () => Response.json({}));
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en', { hydrate: false });
+    document.body.append(board);
+    const bot = row(board, 'xiangqi');
+    bot.querySelector<HTMLElement>('.pp-name')!.click();
+    bot.click();
+    expect(fetchSpy).not.toHaveBeenCalled();
+  });
+
   it('never offers a fog bot a clock under a 5 s increment (#283)', () => {
     const fog = panelBotPaces('dark-chess');
     expect(fog.ids.length).toBeGreaterThan(0);
