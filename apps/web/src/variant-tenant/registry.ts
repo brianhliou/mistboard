@@ -174,10 +174,6 @@ const alwaysEnabled = () => true;
 // cannot open, and they would land as a spectator at an empty table with
 // nothing explaining why.
 const mahjongOffered = (): boolean => mahjongEnabled() && hasLikelyVariantGrant(MAHJONG_SPEC_ID);
-// Crazyhouse Xiangqi is gated the same way (an admin playtest on the server's
-// allowlist), for the same reason.
-const crazyhouseXiangqiOffered = (): boolean =>
-  crazyhouseXiangqiEnabled() && hasLikelyVariantGrant(CRAZYHOUSE_XIANGQI_SPEC_ID);
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -858,9 +854,7 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
     // capturer's hand to be dropped back (on a point it could stand on, never
     // giving check). Rules engine: packages/game/src/variants-crazyhouse-xiangqi.ts.
     //
-    // Admin playtest: offered only to an account the server would seat (the
-    // build flag plus a grant named on /api/auth/me; admins hold every one). No
-    // TV channel and no watch replay: Mistboard TV is a public listing.
+    // Launched: in the play menu like every other xiangqi tenant.
     gameSpecId: CRAZYHOUSE_XIANGQI_SPEC_ID,
     roomIdPrefix: 'chx_',
     enabled: crazyhouseXiangqiEnabled,
@@ -877,17 +871,27 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
       import('../crazyhouse-xiangqi-postgame.js').then(({ mountCrazyhouseXiangqiPostgame }) =>
         mountCrazyhouseXiangqiPostgame(root, roomId),
       ),
+    // Mistboard TV channel; renders in the 'xiangqi' family (intersection
+    // board), with both hands flanking it.
+    watch: {
+      family: 'xiangqi',
+      mountReplay: (root, roomId, options) =>
+        import('../watch-crazyhouse-xiangqi-replay.js').then(
+          ({ mountCrazyhouseXiangqiWatchReplay }) =>
+            mountCrazyhouseXiangqiWatchReplay(root, roomId, options),
+        ),
+    },
     landing: {
       capabilities: {
         ...XIANGQI_CAPABILITIES_BASE,
-        // Casual only: no crazyhouse_xiangqi pool in the user_ratings CHECK.
-        supportsRated: false,
+        // Rated lobby seeks (2026-10-02, every lobby variant); friend links and PvE stay casual.
+        supportsRated: true,
         supportsTimeControl: true,
       },
       timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
       // Both on the SAME predicate (the conformance test checks the pair).
-      offerInMenu: crazyhouseXiangqiOffered,
-      acceptsDeepLink: crazyhouseXiangqiOffered,
+      offerInMenu: crazyhouseXiangqiEnabled,
+      acceptsDeepLink: crazyhouseXiangqiEnabled,
       // Eight-level Fairy-Stockfish ladder on the stock binary, ordered
       // strongest-first like the other xiangqi pickers.
       engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({

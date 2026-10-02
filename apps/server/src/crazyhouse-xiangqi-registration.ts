@@ -3,11 +3,10 @@
  * the generic tenant room factory, hydration, WebSocket runtime and HTTP
  * create route.
  *
- * Scope: the admin playtest. PvP by friend link and PvE against the stock
- * Fairy-Stockfish ladder, casual only, JSON export. No lobby seek, no TV
- * channel and no correspondence: each of those is a public listing, and the
- * spec is publicSurface 'hidden' and allowlisted (persistence-variant-access.ts),
- * so only admins and accounts holding a grant are seated.
+ * Scope: a public casual variant. PvP by friend link and a lobby seek, PvE
+ * against the stock Fairy-Stockfish ladder, a TV channel, JSON export. The
+ * lobby seek may be rated (crazyhouse_xiangqi pool, migration 158); friend
+ * links and PvE stay casual. No correspondence.
  */
 
 import type {
@@ -30,6 +29,7 @@ import {
   handleCrazyhouseXiangqiCreate,
   requestsCrazyhouseXiangqi,
 } from './routes/crazyhouse-xiangqi-rooms.js';
+import { isAllowedFullTimeControl } from './routes/lib.js';
 import { scheduleCrazyhouseXiangqiEngineMove } from './server-crazyhouse-xiangqi-engine.js';
 import { recordTenantPersistenceError } from './variant-tenant/events.js';
 import { getOrLoadTenantRoom } from './variant-tenant/hydration.js';
@@ -41,7 +41,7 @@ import {
 } from './variant-tenant/registry.js';
 import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -119,10 +119,17 @@ registerVariantTenant({
   isEngineClientId: crazyhouseXiangqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => crazyhouseXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(crazyhouseXiangqiTenant),
   errorPrefix: 'crazyhouse_xiangqi',
   enabled: crazyhouseXiangqiTenant.enabled,
-  // No TV channel: Mistboard TV is a public listing.
-  watch: null,
+  // Mistboard TV channel. Like the others it inherits this tenant's `enabled`,
+  // so it stays dark behind the flag.
+  watch: {
+    channelId: 'crazyhouse-xiangqi',
+    family: 'xiangqi',
+    label: 'Crazyhouse Xiangqi',
+    legacyVariants: ['crazyhouse-xiangqi'],
+  },
   rooms: crazyhouseXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,
   activeGameCount: () => countActiveTenantGames(crazyhouseXiangqiRooms.values()),
   getOrLoadRoom: (roomId) =>
@@ -160,8 +167,17 @@ registerVariantTenant({
       );
     },
   },
-  // No lobby seek: Find opponent is a public listing.
-  lobby: null,
+  // Find-opponent seek, rated on request: the crazyhouse_xiangqi pool is in
+  // the user_ratings CHECK since migration 158.
+  lobby: {
+    supportsRated: true,
+    allowsTimeControl: isAllowedFullTimeControl,
+    createRoom: async (timeControl, rated) => {
+      const created = await createCrazyhouseXiangqiRoom(timeControl, 'random', rated);
+      if (!created.ok) throw new Error(`crazyhouse_xiangqi_room_create_failed:${created.error}`);
+      return { id: created.room.id, region: 'global' };
+    },
+  },
   // JSON only (export-formats.ts): a drop has no WXF or ICCS spelling. The uci
   // is the engine's, drops as `P@e5`.
   export: tenantExportBinding(crazyhouseXiangqiTenant, {

@@ -38,7 +38,7 @@ import {
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 
 export const jungleFlipRooms = new Map<string, JungleFlipLiveRoom>();
 
@@ -91,6 +91,7 @@ registerVariantTenant({
   isEngineClientId: jungleFlipTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => jungleFlipTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(jungleFlipTenant),
   errorPrefix: 'jungle_flip',
   enabled: jungleFlipTenant.enabled,
   rooms: jungleFlipRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,

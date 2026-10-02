@@ -20,6 +20,7 @@ import { escapeXml, OG_FONT, OG_HEIGHT, OG_WIDTH } from './og-primitives.js';
 import { createPngCache, redirectToDefault, svgToPng, writePng } from './og-raster.js';
 import * as persistence from './persistence.js';
 import type { StoredPlyEval } from './persistence-game-analysis.js';
+import { isReplayableGame } from './replayable-games.js';
 import { postgamePlayers } from './routes/lib.js';
 import {
   type VariantTenantCard,
@@ -54,6 +55,20 @@ const liveStore: TenantGameCardStore = {
   analysis: (roomId, engineId, depth) => persistence.getGameAnalysis(roomId, engineId, depth),
 };
 
+async function storedGameReplays(
+  registration: VariantTenantRegistration,
+  roomId: string,
+  store: TenantGameCardStore,
+): Promise<boolean> {
+  return isReplayableGame(roomId, {
+    registrationForRoomId: () => registration,
+    loadRoomsEvents: async () => {
+      const events = await store.events(roomId);
+      return new Map(events ? [[roomId, events]] : []);
+    },
+  });
+}
+
 // ── The game behind a URL ──────────────────────────────────────────────────────
 
 export type TenantGameCard = {
@@ -83,6 +98,9 @@ export async function tenantGameCard(
   if (!isPositionOgVariant(card.variant)) return null;
   const game = await store.summary(roomId);
   if (!game || game.variant !== registration.gameSpecId) return null;
+  // A game whose stored log no longer replays has no card and no page meta
+  // (replay-guard.ts): the page keeps its generic meta, the image its default.
+  if (!(await storedGameReplays(registration, roomId, store))) return null;
   const outcome = outcomeLine(game);
   if (!outcome) return null;
   // Tenant participants are written in tenant.colors order

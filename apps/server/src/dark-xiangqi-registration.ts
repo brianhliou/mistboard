@@ -36,7 +36,7 @@ import {
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import { xiangqiExportUci, xiangqiPgnWriter } from './xiangqi-game-export.js';
 
 export const darkXiangqiRooms = new Map<string, DarkXiangqiLiveRoom>();
@@ -88,6 +88,7 @@ registerVariantTenant({
     legacyVariants: ['dark-xiangqi'],
   },
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(darkXiangqiTenant),
   errorPrefix: 'dark_xiangqi',
   enabled: darkXiangqiTenant.enabled,
   rooms: darkXiangqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,

@@ -26,9 +26,10 @@ import { setBoardFamily } from './theme.js';
 // Postgame review for Crazyhouse Xiangqi: the crazyhouse tree review
 // (review/crazyhouse-xiangqi-review.ts) over the game's move list, the surface
 // Fortress and Atomic Xiangqi have: branching board, both pockets at every ply,
-// annotations, share and export. It opens on the final position. There is no
-// engine for this variant in the browser or behind a whole-game analysis
-// route, so the review carries no eval gauge, engine panel or analysis button.
+// annotations, share and export. It opens on the final position. The local
+// engine panel runs the browser Fairy-Stockfish; there is no whole-game
+// analysis route on the server, so there is no advantage chart or analysis
+// button.
 
 type CrazyhouseXiangqiViewKey = 'truth';
 
@@ -59,6 +60,10 @@ export type CrazyhouseXiangqiPostgameResponse = {
   state: {
     status: CrazyhouseXiangqiGameStatus;
     moveNumber: number;
+    // Read by the TV chrome (watch-tenant-replay.ts): the live clock anchor and
+    // the time control, both on every tenant postgame.
+    clock?: unknown;
+    timeControl?: { initialMs: number; incrementMs: number };
   };
   timeline: Array<{
     type: string;

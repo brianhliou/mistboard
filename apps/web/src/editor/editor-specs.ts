@@ -564,6 +564,27 @@ function xiangqiSpec(id: 'xiangqi' | 'dark-xiangqi' | 'atomic-xiangqi'): EditorS
   return spec;
 }
 
+// ── Crazyhouse Xiangqi ──────────────────────────────────────────────────────
+
+// The xiangqi board and pieces in Fairy-Stockfish's crazyhousexiangqi spelling
+// (crazyhouseXiangqiFen): "<placement>[pocket] <w|b> - - 0 <moveNumber>". Like
+// the Fortress editor, this one has no hands: the pocket is written empty and a
+// pasted one is dropped. Where a piece may stand is the kernel's rule
+// (crazyhouseXiangqiCanStand), checked when the analysis board parses the FEN.
+const CRAZYHOUSE_XIANGQI_SPEC: EditorSpec = {
+  ...xiangqiSpec('xiangqi'),
+  id: 'crazyhouse-xiangqi',
+  toFen: (model) =>
+    `${writePlacement(model.board, XIANGQI_GRAMMAR)}[] ${model.turn === 'black' ? 'b' : 'w'} - - 0 1`,
+  fromFen: (fen) => {
+    const fields = fen.trim().split(/\s+/);
+    const placement = (fields[0] ?? '').replace(/\[.*$/, '');
+    const board = readPlacement(placement, XIANGQI_GRAMMAR);
+    if (!board) return null;
+    return { ...emptyModel(turnOf(fields[1], 'red', 'black')), board };
+  },
+};
+
 // ── Jieqi ───────────────────────────────────────────────────────────────────
 
 const JIEQI_GRAMMAR: PlacementGrammar = { ...XIANGQI_GRAMMAR, faceDown: 'coloured' };
@@ -1255,6 +1276,7 @@ export const EDITOR_SPECS: Record<EditorVariantId, EditorSpec> = {
   // Same pieces, same board, same FEN grammar; the explosion is a rule of
   // play, not of position, so the editor has nothing to add for it.
   'atomic-xiangqi': xiangqiSpec('atomic-xiangqi'),
+  'crazyhouse-xiangqi': CRAZYHOUSE_XIANGQI_SPEC,
   'dark-chess': DARK_CHESS_SPEC,
   'duck-xiangqi': DUCK_XIANGQI_SPEC,
 };

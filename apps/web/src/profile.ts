@@ -200,6 +200,7 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
   fortress_xiangqi: 'variant.fortressXiangqi.name',
   duck_xiangqi: 'variant.duckXiangqi.name',
   atomic_xiangqi: 'variant.atomicXiangqi.name',
+  crazyhouse_xiangqi: 'variant.crazyhouseXiangqi.name',
   xiangqi: 'variant.xiangqi.name',
 };
 

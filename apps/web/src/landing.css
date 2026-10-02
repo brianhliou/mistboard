@@ -2481,9 +2481,13 @@
 
    Sized as a fraction of the reserve's OWN width rather than a container query:
    this strip is a sibling of the pane, not a descendant, so `cqw` never resolves
-   here (the note above). The reserve is width:100% of the board column, so
-   `flex: 1 1 0` across seven slots lands each within a few percent of a board
-   piece at any board size, and tracks it on resize.
+   here (the note above). The reserve is width:100% of the board column, the
+   same width as the board, so a percentage basis tracks the board's piece size
+   at any board size and on resize. A board piece is ~11.2% of the board's width
+   (38px on a 340px board); --showcase-slot holds a pocket disc just under that.
+   It used to be `flex: 1 1 0`, which split the row by the slot count instead:
+   six Crazyhouse slots came out ~53px, each pocket disc bigger than the pieces
+   on the board it sat beside, and seven Fortress slots ~45px.
 
    The band grows a little taller than the old 34px. That is the trade the fixed
    height was avoiding, and it is safe now: seven slots is a constant, so the row
@@ -2491,6 +2495,7 @@
    there rather than adding one. */
 .showcase-widget .replay-layout-solo .showcase-reserve.drop-mini-reserve-strip--all-roles {
   --showcase-slot-gap: 3px;
+  --showcase-slot: 10.5%;
 
   height: auto;
   min-height: 0;
@@ -2511,7 +2516,7 @@
   .replay-layout-solo
   .showcase-reserve.drop-mini-reserve-strip--all-roles
   .drop-mini-reserve-piece {
-  flex: 1 1 0;
+  flex: 0 1 var(--showcase-slot);
   min-width: 0;
   width: auto;
   height: auto;
@@ -2527,6 +2532,16 @@
   svg {
   width: 100%;
   height: 100%;
+}
+
+/* Fortress draws a narrower board (516 wide, fewer files), so its pieces are a
+   larger share of the width: ~12.6% (43px on a 340px board). Match its discs to
+   that board the same way. */
+.showcase-widget
+  .replay-layout-solo
+  .showcase-board-row:has(.fxq-board)
+  .showcase-reserve.drop-mini-reserve-strip--all-roles {
+  --showcase-slot: 11.6%;
 }
 
 /* Line art on a disc needs more than lichess's 0.1 to register at this size. */

@@ -39,7 +39,7 @@ import {
   type TenantManagedRoom,
   variantTenantRoomIdTaken,
 } from './variant-tenant/registry.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 
 export const banqiRooms = new Map<string, BanqiLiveRoom>();
 
@@ -92,6 +92,7 @@ registerVariantTenant({
   isEngineClientId: banqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => banqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(banqiTenant),
   errorPrefix: 'banqi',
   enabled: banqiTenant.enabled,
   rooms: banqiRooms as unknown as ReadonlyMap<string, TenantManagedRoom>,

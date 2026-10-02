@@ -20,6 +20,7 @@ const BASELINE_PICKER_SPECS = [
   'dark-xiangqi',
   'duck-xiangqi',
   'fortress-xiangqi',
+  'crazyhouse-xiangqi',
   'dark-chess',
   'jungle',
   'jungle-flip',

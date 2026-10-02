@@ -1200,6 +1200,11 @@ async function runSmoke({ deployRequired, headRevision }) {
       tag: 'atomic',
       command: npmCommand('prod:smoke:atomic', baseArgs()),
     },
+    {
+      label: 'prod Crazyhouse Xiangqi smoke',
+      tag: 'crazyhouse',
+      command: npmCommand('prod:smoke:crazyhouse', baseArgs()),
+    },
     { label: 'prod DXQ smoke', tag: 'dxq', command: npmCommand('prod:smoke:dxq', baseArgs()) },
     {
       label: 'prod Jieqi smoke',

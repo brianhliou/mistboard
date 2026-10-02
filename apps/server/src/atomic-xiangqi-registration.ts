@@ -44,7 +44,7 @@ import {
 } from './variant-tenant/registry.js';
 import type { TenantRoomEngineSeat } from './variant-tenant/room-factory.js';
 import { createTenantLiveRoom } from './variant-tenant/room-factory.js';
-import { countActiveTenantGames } from './variant-tenant/runtime.js';
+import { countActiveTenantGames, tenantReplayCheck } from './variant-tenant/runtime.js';
 import type { TenantRuntimeRoom } from './variant-tenant/tenant.js';
 import {
   clearTenantRuntimeTimers,
@@ -122,6 +122,7 @@ registerVariantTenant({
   isEngineClientId: atomicXiangqiTenant.engine?.isEngineClientId,
   engineDisplayName: (clientId) => atomicXiangqiTenant.engine?.displayName(clientId) ?? null,
   ownsSpecRouting: true,
+  replays: tenantReplayCheck(atomicXiangqiTenant),
   errorPrefix: 'atomic_xiangqi',
   enabled: atomicXiangqiTenant.enabled,
   // Mistboard TV channel, listed with the rules page (2026-09-17). Like the

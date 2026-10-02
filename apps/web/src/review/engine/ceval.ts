@@ -60,7 +60,8 @@ const ENGINE_BASE = '/engine/fairy-stockfish/';
 // fills from origin (which now always sends COEP) whenever the required response
 // headers change.
 // -fortress2: fortress-xiangqi.ini turned FSF's no-capture draw off (#472).
-const ENGINE_ASSET_VERSION = '1.1.12-atomic1-fortress2';
+// -crazyhouse1: crazyhouse-xiangqi.ini joined the custom variants.
+const ENGINE_ASSET_VERSION = '1.1.12-atomic1-fortress2-crazyhouse1';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 
 /** Human label for the engine, shown in the analysis panel. */
@@ -68,8 +69,13 @@ export const CEVAL_ENGINE_NAME = 'Fairy-Stockfish';
 
 /** The custom-variant definitions written into the engine at load. Atomic's
  *  four patch-only options (blastShape, blastImmuneTypes, cannonShotBlasts,
- *  lethalCheck) parse only on the patched build vendored here; see the README. */
-const CUSTOM_VARIANT_INIS = ['fortress-xiangqi.ini', 'atomic-xiangqi.ini'] as const;
+ *  lethalCheck) parse only on the patched build vendored here; see the README.
+ *  Crazyhouse's options are all stock. */
+const CUSTOM_VARIANT_INIS = [
+  'fortress-xiangqi.ini',
+  'atomic-xiangqi.ini',
+  'crazyhouse-xiangqi.ini',
+] as const;
 
 /** Whether the client engine for `variant` can run in this page. Fairy-Stockfish,
  *  Pikafish and PikaJieQi need SharedArrayBuffer (cross-origin isolation); the

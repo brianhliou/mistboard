@@ -14,15 +14,15 @@ const bot = {
   id: 'fairy-stockfish-level-1',
   defaultGameSpecId: 'xiangqi',
   activeEngineId: 'fairy-stockfish-xiangqi-level-1',
-  supportedGameSpecIds: ['xiangqi', 'fortress-xiangqi', 'crazyhouse-xiangqi'],
-  games: [game('xiangqi'), game('crazyhouse-xiangqi')],
+  supportedGameSpecIds: ['xiangqi', 'fortress-xiangqi', 'mahjong'],
+  games: [game('xiangqi'), game('mahjong')],
   recordsByGameSpecId: {
     xiangqi: { games: 1, wins: 0, losses: 1, draws: 0 },
-    'crazyhouse-xiangqi': { games: 1, wins: 1, losses: 0, draws: 0 },
+    mahjong: { games: 1, wins: 1, losses: 0, draws: 0 },
   },
   gamesByGameSpecId: {
     xiangqi: [game('xiangqi')],
-    'crazyhouse-xiangqi': [game('crazyhouse-xiangqi')],
+    mahjong: [game('mahjong')],
   },
 } as unknown as BotProfilePage;
 
@@ -35,7 +35,7 @@ test('a hidden spec leaves every public bot field', () => {
   );
   assert.deepEqual(Object.keys(visible.recordsByGameSpecId), ['xiangqi']);
   assert.deepEqual(Object.keys(visible.gamesByGameSpecId), ['xiangqi']);
-  assert.ok(botPlayOptions(visible).every((option) => option.gameSpecId !== 'crazyhouse-xiangqi'));
+  assert.ok(botPlayOptions(visible).every((option) => option.gameSpecId !== 'mahjong'));
   // The source row is untouched: the play path still reads the full list.
-  assert.ok(bot.supportedGameSpecIds.includes('crazyhouse-xiangqi'));
+  assert.ok(bot.supportedGameSpecIds.includes('mahjong'));
 });

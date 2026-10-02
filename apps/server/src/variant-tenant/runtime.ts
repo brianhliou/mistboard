@@ -23,6 +23,12 @@ import {
   liveSeatEngineName,
 } from '../first-party-bots.js';
 import { roomViewPolicy } from '../server-policy.js';
+import {
+  guardTenantReplay,
+  noteReplayableTenantGame,
+  noteUnreplayableTenantGame,
+  UnreplayableTenantGameError,
+} from './replay-guard.js';
 import type {
   TenantClientEvent,
   TenantClockState,
@@ -66,7 +72,7 @@ export type TenantRoomHydration<
   Spec extends string = string,
 > =
   | { ok: true; room: TenantRuntimeRoom<Kind, C, M, State, Spec> }
-  | { ok: false; error: 'empty_event_log' | 'invalid_event_log' };
+  | { ok: false; error: 'empty_event_log' | 'invalid_event_log' | 'unreplayable_event_log' };
 
 export function isTenantRoomId(tenant: { roomIdPrefix: string }, roomId: string): boolean {
   return roomId.startsWith(tenant.roomIdPrefix);
@@ -324,10 +330,21 @@ export function createTenantRuntimeRoomFromEvents<
 >(
   tenant: VariantTenant<Kind, C, M, State, View, Spec>,
   events: readonly TenantRoomEvent<C, M, Spec>[],
-  projection = replayTenantEvents(tenant, events),
+  replayed?: TenantProjection<C, State, Spec>,
 ): TenantRoomHydration<Kind, C, M, State, Spec> {
   if (events.length === 0) return { ok: false, error: 'empty_event_log' };
   if (!isTenantEventLog(tenant, events)) return { ok: false, error: 'invalid_event_log' };
+  let projection: TenantProjection<C, State, Spec>;
+  try {
+    projection = replayed ?? replayTenantEvents(tenant, events);
+  } catch (err) {
+    // A log the current rules refuse (replay-guard.ts): the room is gone, not
+    // a server fault, so hydration answers like any other unloadable log.
+    if (err instanceof UnreplayableTenantGameError) {
+      return { ok: false, error: 'unreplayable_event_log' };
+    }
+    throw err;
+  }
   const first = events[0]!;
   const pveBotId = first.type === 'room-created' ? (first.pveBotId ?? null) : null;
   return {
@@ -450,7 +467,44 @@ export function replayTenantEvents<
           first.setup,
         )
       : initialTenantProjection(tenant, firstRoomId);
-  return events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed);
+  // The replay boundary: a stored log the current rules refuse (a variant's
+  // rules changed under an old game) becomes UnreplayableTenantGameError, which
+  // every read surface treats as "no such game" (replay-guard.ts).
+  return guardTenantReplay(tenant.kind, first?.roomId, () =>
+    events.reduce((projection, event) => applyTenantEvent(tenant, projection, event), seed),
+  );
+}
+
+/**
+ * Does this stored log still replay under the tenant's current rules? The
+ * check list and picker surfaces run before they show a game
+ * (VariantTenantRegistration.replays, replayable-games.ts). A log that fails
+ * the schema check counts as not replayable too: no read surface can open it.
+ */
+export function tenantReplayCheck<
+  Kind extends string,
+  C extends string,
+  M,
+  State extends TenantGameStateLike<C>,
+  View,
+  Spec extends string,
+>(
+  tenant: VariantTenant<Kind, C, M, State, View, Spec>,
+): (events: readonly unknown[], roomId: string) => boolean {
+  return (events, roomId) => {
+    if (!isTenantEventLog(tenant, events, roomId)) {
+      noteUnreplayableTenantGame(tenant.kind, roomId, new Error('invalid event log'));
+      return false;
+    }
+    try {
+      replayTenantEvents(tenant, events);
+    } catch (err) {
+      if (err instanceof UnreplayableTenantGameError) return false;
+      throw err;
+    }
+    noteReplayableTenantGame(roomId);
+    return true;
+  };
 }
 
 /**

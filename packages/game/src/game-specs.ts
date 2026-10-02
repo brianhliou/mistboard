@@ -32,9 +32,9 @@ export type MovementRulesId =
   // movement id because the capture rule changes what every piece can legally
   // do: a capture beside your own general is not a move.
   | 'atomic-xiangqi'
-  // Crazyhouse Xiangqi: standard xiangqi geometry, and a captured piece joins
-  // the capturer's hand to be dropped back. Its own movement id because a turn
-  // may be a drop, and a drop may not give check.
+  // Crazyhouse Xiangqi: xiangqi geometry with advisors and elephants free on
+  // their own half, and a captured piece joins the capturer's hand to be
+  // dropped back. Its own movement id because a turn may be a drop.
   | 'crazyhouse-xiangqi';
 // 'last-mover': win by leaving the opponent with no legal move (banqi). The
 // general is NOT royal — capturing it does not end the game (the opponent flips
@@ -66,6 +66,9 @@ export type SetupRulesId =
   | 'jungle-standard'
   | 'jungle-flip-deal'
   | 'fortress-standard'
+  // Crazyhouse Xiangqi: xiangqi's array without advisors and elephants, which
+  // start in each side's hand.
+  | 'defenders-in-hand'
   | 'mahjong-deal';
 export type ReserveRulesId = 'none' | 'crazyhouse';
 export type DropPolicyId =
@@ -77,10 +80,10 @@ export type DropPolicyId =
   // only where they may legally stand (palace / own half).
   | 'attacker-anywhere-defender-home'
   // Crazyhouse Xiangqi: a piece drops on any empty point where it could stand
-  // in a game of xiangqi (advisors and elephants on their own points, soldiers
-  // on their files' home ranks or across the river, the rest anywhere), and a
-  // drop may not give check.
-  | 'standing-point-no-check'
+  // (advisors and elephants anywhere on their own half, soldiers on their
+  // files' home ranks or across the river, the rest anywhere), check and mate
+  // allowed.
+  | 'standing-point'
   | 'seen-squares-only';
 export type GameSpecSurface = 'hidden' | 'beta' | 'casual' | 'rated';
 /**
@@ -105,8 +108,7 @@ export type RatingPoolBaseId =
   | 'duck_xiangqi'
   // Migration 147 added it to the user_ratings CHECK.
   | 'atomic_xiangqi'
-  // Unrated, and not in the user_ratings CHECK: the pool exists because every
-  // spec names one, not because anything writes to it.
+  // Migration 158 added it to the user_ratings CHECK.
   | 'crazyhouse_xiangqi';
 
 export type GameSpecId =
@@ -128,10 +130,11 @@ export type GameSpecId =
   // reachable by URL and from its rules page only.
   | 'atomic-xiangqi'
   // Crazyhouse Xiangqi: xiangqi where a captured piece joins the capturer's
-  // hand and may be dropped back. Rules engine:
-  // packages/game/src/variants-crazyhouse-xiangqi.ts; engine: stock
-  // Fairy-Stockfish with apps/server/src/crazyhouse-xiangqi.ini. Design and
-  // measurements: docs-private/drop-game-lab/fullboard/ ("one-sentence C").
+  // hand and may be dropped back, and the advisors and elephants start in
+  // hand. Rules engine: packages/game/src/variants-crazyhouse-xiangqi.ts;
+  // engine: stock Fairy-Stockfish with apps/server/src/crazyhouse-xiangqi.ini.
+  // Design and measurements: docs-private/drop-game-lab/fullboard/
+  // (s9-hand-free-check).
   | 'crazyhouse-xiangqi'
   // Standard (open-information) Xiangqi — ordinary 9x10 Chinese chess. The
   // open-info sibling of Dark Xiangqi; check-aware legality + checkmate via the
@@ -222,6 +225,10 @@ export const STUDY_ELIGIBLE_SPEC_IDS: readonly GameSpecId[] = [
   // sorted by canonicalVariantOrderIndex.
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
+  // Crazyhouse Xiangqi: a tree-review stack (review/crazyhouse-xiangqi-tree-
+  // adapter.ts + -review.ts) and the standard start; a chapter's rootFen
+  // carries both hands in the pocket brackets.
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -248,7 +255,7 @@ export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
   // The Chinese-chess pillar first, in play order (2026-09-17 read: jieqi is
   // 59% of counted human games, xiangqi and banqi next), then the originals,
   // confidence first (atomic, then fog xiangqi, which bridges to fog chess,
-  // then duck, then fortress), then the rest of the games.
+  // then duck, then fortress, then crazyhouse), then the rest of the games.
   XIANGQI_SPEC_ID,
   JIEQI_SPEC_ID,
   BANQI_SPEC_ID,
@@ -256,6 +263,7 @@ export const CANONICAL_VARIANT_ORDER: readonly GameSpecId[] = [
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
   FORTRESS_XIANGQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   JUNGLE_SPEC_ID,
   JUNGLE_FLIP_SPEC_ID,
@@ -503,18 +511,18 @@ export const GAME_SPECS: readonly GameSpec[] = [
     rated: true,
   },
   {
-    // Crazyhouse Xiangqi: standard xiangqi, plus a captured piece goes to the
+    // Crazyhouse Xiangqi: xiangqi, plus a captured piece goes to the
     // capturer's hand, and on your turn you may instead drop a piece from hand
-    // onto any empty point where it could stand in a game of xiangqi; a drop
-    // may not give check. Checkmate, stalemate and the perpetual-check law
-    // are xiangqi's; repetition counts the hands.
+    // onto any empty point where it could stand. Advisors and elephants start
+    // in hand and move anywhere on their own half; a drop may check and mate.
+    // Checkmate, stalemate and the perpetual-check law are xiangqi's;
+    // repetition counts the hands.
     //
     // Rules engine: packages/game/src/variants-crazyhouse-xiangqi.ts, tied to
     // the engine by fixtures/crazyhouse-xiangqi-parity.json.
     //
-    // Admin-only for the playtest, the pairing Mahjong uses: built ('live')
-    // and on no surface ('hidden'). Casual only: no rated flag, no pool in the
-    // user_ratings CHECK. A public launch is a checkpoint decision.
+    // Public variant (launched from the admin-only playtest), rated through
+    // Find opponent like every lobby variant; friend links and PvE stay casual.
     id: CRAZYHOUSE_XIANGQI_SPEC_ID,
     publicName: 'Crazyhouse Xiangqi',
     family: 'xiangqi',
@@ -522,12 +530,15 @@ export const GAME_SPECS: readonly GameSpec[] = [
     movement: 'crazyhouse-xiangqi',
     objective: 'checkmate',
     visibility: 'open',
-    setup: 'standard',
+    setup: 'defenders-in-hand',
     reserves: 'crazyhouse',
-    dropPolicy: 'standing-point-no-check',
+    dropPolicy: 'standing-point',
     ratingPoolBase: 'crazyhouse_xiangqi',
-    publicSurface: 'hidden',
+    publicSurface: 'casual',
     runtimeStatus: 'live',
+    // Migration 158 added 'crazyhouse_xiangqi' to the user_ratings CHECK,
+    // which is what makes this honest (the duck and atomic recipe).
+    rated: true,
   },
   {
     // Jungle / Dou Shou Qi (斗兽棋): perfect-information 7×9 animal-rank game. Eight
@@ -645,6 +656,7 @@ export type RatingVariant = Extract<
   | 'xiangqi'
   | 'duck_xiangqi'
   | 'atomic_xiangqi'
+  | 'crazyhouse_xiangqi'
 >;
 
 // The active rated-pool set, derived from the `rated` flag. This is the ONE

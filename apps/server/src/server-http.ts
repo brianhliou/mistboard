@@ -36,6 +36,7 @@ import {
   sitemapSectionFromPath,
 } from './server-static-pages.js';
 import type { LobbyTicket, Room } from './server-types.js';
+import { UnreplayableTenantGameError } from './variant-tenant/replay-guard.js';
 import { viewerCountryCookie, viewerCountryFromRequest } from './viewer-country.js';
 import { broadcastViewers } from './xiangqi-broadcast-viewers.js';
 
@@ -209,29 +210,9 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
     }
 
     if (url.startsWith('/api/')) {
-      void handleApiRequest(buildApiContext(options), request, response).catch((err) => {
-        // An oversized body is a client error, not a server fault: answering 500
-        // sends the caller hunting a nonexistent bug (it cost a real debugging
-        // session on the studies API), so map it to 413 and skip the error log.
-        const tooLarge = err instanceof RequestBodyTooLargeError;
-        if (!tooLarge) {
-          console.error(
-            JSON.stringify({
-              level: 'error',
-              kind: 'api_handler_failure',
-              url,
-              error: (err as Error).message,
-              at: Date.now(),
-            }),
-          );
-        }
-        if (!response.headersSent) {
-          response.writeHead(tooLarge ? 413 : 500, { 'content-type': 'application/json' });
-          response.end(
-            JSON.stringify({ error: tooLarge ? 'request_body_too_large' : 'internal_error' }),
-          );
-        }
-      });
+      void handleApiRequest(buildApiContext(options), request, response).catch((err) =>
+        answerApiFailure(response, url, err),
+      );
       return;
     }
 
@@ -748,6 +729,48 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
 // (game reviews, broadcasts, /games, /data's own listing at GET /api/data) load
 // their content from /api, and a search engine that renders the page needs those
 // fetches to see it. Every rule here is a path prefix, longest match wins.
+/**
+ * The API's catch-all: what a handler that threw answers.
+ *
+ * - A stored game the current rules no longer replay (a variant's rules
+ *   changed under it) is a game that no longer exists: 404 not_found, not 500.
+ *   The replay guard already warned once for the room
+ *   (variant-tenant/replay-guard.ts), so nothing is logged here.
+ * - An oversized body is a client error, not a server fault: answering 500
+ *   sends the caller hunting a nonexistent bug (it cost a real debugging
+ *   session on the studies API), so it maps to 413 and skips the error log.
+ * - Anything else is a 500 with an error log.
+ */
+export function answerApiFailure(
+  response: Pick<ServerResponse, 'headersSent' | 'writeHead' | 'end'>,
+  url: string,
+  err: unknown,
+): void {
+  if (err instanceof UnreplayableTenantGameError) {
+    if (!response.headersSent) {
+      response.writeHead(404, { 'content-type': 'application/json' });
+      response.end(JSON.stringify({ error: 'not_found' }));
+    }
+    return;
+  }
+  const tooLarge = err instanceof RequestBodyTooLargeError;
+  if (!tooLarge) {
+    console.error(
+      JSON.stringify({
+        level: 'error',
+        kind: 'api_handler_failure',
+        url,
+        error: (err as Error).message,
+        at: Date.now(),
+      }),
+    );
+  }
+  if (!response.headersSent) {
+    response.writeHead(tooLarge ? 413 : 500, { 'content-type': 'application/json' });
+    response.end(JSON.stringify({ error: tooLarge ? 'request_body_too_large' : 'internal_error' }));
+  }
+}
+
 export function robotsTxt(publicHost: string): string {
   return [
     'User-agent: *',

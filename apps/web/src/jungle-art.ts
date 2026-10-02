@@ -1,6 +1,6 @@
 // Shared Jungle / Flip Jungle art recipe — the SINGLE source of truth for the dobutsu
-// token + terrain look, imported by the vanilla board (jungle-render.ts), the flip board
-// (jungle-flip-render.ts), and the ingress markers (variant-mini-boards.ts). Adjust the
+// token + terrain look, imported by the vanilla board (jungle-render.ts) and the flip board
+// (jungle-flip-render.ts). Adjust the
 // look here once and every jungle surface follows.
 //
 // CANONICAL: this recipe + the in-app piece set (apps/web/public/.../dobutsu) are the

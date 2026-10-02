@@ -21,9 +21,6 @@ import { VARIANT_SMOKE_CONFIGS } from './lib/variant-smoke-configs.mjs';
 const EXEMPT: Readonly<Record<string, string>> = {
   // Covered by prod:smoke:engines, which plays the fog-chess engine directly.
   'dark-chess': 'prod:smoke:engines',
-  // Admin playtest: off in prod, and the seat is allowlisted, so an anonymous
-  // smoke could not sit down. A smoke row is part of its launch.
-  'crazyhouse-xiangqi': 'admin playtest, not launched',
 };
 
 function pveGameSpecIds(): string[] {

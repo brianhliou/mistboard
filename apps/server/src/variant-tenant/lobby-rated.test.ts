@@ -16,12 +16,20 @@ import test from 'node:test';
 import { type GameSpecId, ratingPoolForSpec } from '@mistboard/game';
 import { atomicXiangqiTenant } from '../atomic-xiangqi-tenant.js';
 import { banqiTenant } from '../banqi-tenant.js';
+import { crazyhouseXiangqiTenant } from '../crazyhouse-xiangqi-tenant.js';
 import { darkXiangqiTenant } from '../dark-xiangqi-tenant.js';
 import { duckXiangqiTenant } from '../duck-xiangqi-tenant.js';
 import { fortressXiangqiTenant } from '../fortress-xiangqi-tenant.js';
 import { jieqiTenant } from '../jieqi-tenant.js';
 import { jungleFlipTenant } from '../jungle-flip-tenant.js';
 import { jungleTenant } from '../jungle-tenant.js';
+import { createUser, recordGameEnd } from '../persistence.js';
+import {
+  definePersistenceTests,
+  test as persistenceTest,
+  pg,
+  TEST_DATABASE_URL,
+} from '../persistence-test-support.js';
 import { xiangqiTenant } from '../xiangqi-tenant.js';
 import { buildTenantGameSummary } from './events.js';
 import './register-tenants.js';
@@ -135,6 +143,7 @@ const RATED_LOBBY_TENANTS = [
   xiangqiTenant,
   fortressXiangqiTenant,
   atomicXiangqiTenant,
+  crazyhouseXiangqiTenant,
   duckXiangqiTenant,
   jieqiTenant,
   banqiTenant,
@@ -236,4 +245,65 @@ test('lobby: the rated flag adds no hidden information to any seat or spectator 
       }
     });
   }
+});
+
+// End to end through the database: a seek matched in the lobby, a finished game
+// between two accounts, and the result write. The unit tests above prove each
+// hop; this proves the pool exists in the user_ratings CHECK (migration 158)
+// and both ratings move, the step that failed silently for atomic and duck.
+definePersistenceTests('lobby rated', () => {
+  persistenceTest('a rated Crazyhouse Xiangqi lobby game moves both ratings', async () => {
+    const registration = registeredVariantTenants().find(
+      (candidate) => candidate.gameSpecId === crazyhouseXiangqiTenant.gameSpecId,
+    );
+    assert.ok(registration?.lobby?.supportsRated, 'crazyhouse lobby must offer rated seeks');
+    const now = new Date();
+    for (const id of ['user_chx_red', 'user_chx_black']) {
+      await createUser({
+        id,
+        email: `${id}@example.com`,
+        emailVerifiedAt: now,
+        handle: id.replace(/_/g, ''),
+        displayName: id,
+        now,
+      });
+    }
+    await withTenantEnabled(registration, async () => {
+      const created = await registration.lobby!.createRoom(BLITZ, true);
+      const room = registration.rooms.get(created.id) as unknown as
+        | (ReturnType<typeof createTenantRuntimeRoom> & { ok: true })['room']
+        | undefined;
+      assert.ok(room, 'the lobby room is live');
+      assert.equal(room.rated, true);
+      room.seatTokens = {
+        red: userSeatToken('red', 'user_chx_red'),
+        black: userSeatToken('black', 'user_chx_black'),
+      };
+      const tenant = crazyhouseXiangqiTenant as unknown as AnyTenant;
+      room.projection.state = tenant.rules.finish(room.projection.state, 'black', 'resignation');
+      const summary =
+        tenant.persistence.buildGameSummary?.(room) ?? buildTenantGameSummary(tenant, room);
+      assert.equal(summary.rated, true);
+      await recordGameEnd(created.id, summary);
+    });
+
+    const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+    await client.connect();
+    try {
+      const { rows } = await client.query<{ user_id: string; elo_rating: number }>(
+        `SELECT user_id, elo_rating FROM user_ratings
+         WHERE variant = 'crazyhouse_xiangqi' AND time_class = 'blitz'`,
+      );
+      const red = rows.find((row) => row.user_id === 'user_chx_red');
+      const black = rows.find((row) => row.user_id === 'user_chx_black');
+      assert.ok(
+        red && black,
+        `both seats got a crazyhouse_xiangqi rating row: ${JSON.stringify(rows)}`,
+      );
+      assert.ok(black.elo_rating > 1500, `winner ${black.elo_rating}`);
+      assert.ok(red.elo_rating < 1500, `loser ${red.elo_rating}`);
+    } finally {
+      await client.end();
+    }
+  });
 });

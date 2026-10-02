@@ -9,6 +9,8 @@ import { CHAPTER_EMBED_VARIANTS, mountEmbedStudy } from './embed-study-page.js';
 const EMBED_REFUSED_STUDY_VARIANTS: Readonly<Record<string, string>> = {
   'dark-xiangqi':
     'no embed board yet (found missing 2026-09-29); a fog xiangqi chapter shows the named refusal',
+  'crazyhouse-xiangqi':
+    'no replay board with pockets yet (studies opened at launch, 2026-10-01); a crazyhouse chapter shows the named refusal',
 };
 
 const CHAPTER = {

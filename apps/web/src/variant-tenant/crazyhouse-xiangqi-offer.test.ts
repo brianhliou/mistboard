@@ -1,10 +1,10 @@
-import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-// Crazyhouse Xiangqi is an admin playtest on the server's allowlist (139), the
-// mahjong terms: the build flag alone must not put it in a play menu. An
-// account is offered the table only when /api/auth/me named it among the
-// variants that account can sit down at (admins get every allowlisted spec).
-describe('crazyhouse xiangqi is offered only to an account the server would seat', () => {
+// Crazyhouse Xiangqi was an admin playtest on the server's allowlist, offered
+// only to an account /api/auth/me named it for. Launched 2026-10: it is in the
+// play menu for every visitor, signed in or not, like the other xiangqi
+// variants, and a grant list that does not name it changes nothing.
+describe('crazyhouse xiangqi is offered to every visitor', () => {
   beforeEach(() => {
     vi.resetModules();
     Object.defineProperty(window, 'localStorage', {
@@ -13,34 +13,18 @@ describe('crazyhouse xiangqi is offered only to an account the server would seat
     });
   });
 
-  afterEach(() => {
-    vi.unstubAllEnvs();
+  it('is in the menu and takes deep links with no grant at all', async () => {
+    const { webVariantTenantForSpecId } = await import('./registry.js');
+    const landing = webVariantTenantForSpecId('crazyhouse-xiangqi')?.landing;
+    expect(landing?.offerInMenu()).toBe(true);
+    expect(landing?.acceptsDeepLink()).toBe(true);
   });
 
-  it('is not offered with the flag off, grant or no grant', async () => {
-    vi.stubEnv('VITE_CRAZYHOUSE_XIANGQI_ENABLED', 'false');
+  it('does not depend on the resolved grants', async () => {
     const { setResolvedVariantGrants } = await import('../signed-in-state.js');
     const { webVariantTenantForSpecId } = await import('./registry.js');
     const landing = webVariantTenantForSpecId('crazyhouse-xiangqi')?.landing;
-    setResolvedVariantGrants(['crazyhouse-xiangqi']);
-    expect(landing?.offerInMenu()).toBe(false);
-    expect(landing?.acceptsDeepLink()).toBe(false);
-  });
-
-  it('with the flag on, follows the resolved grants', async () => {
-    vi.stubEnv('VITE_CRAZYHOUSE_XIANGQI_ENABLED', 'true');
-    const { setResolvedVariantGrants } = await import('../signed-in-state.js');
-    const { webVariantTenantForSpecId } = await import('./registry.js');
-    const landing = webVariantTenantForSpecId('crazyhouse-xiangqi')?.landing;
-
-    // A visitor, and a player whose grants name only mahjong, see no door.
-    expect(landing?.offerInMenu()).toBe(false);
     setResolvedVariantGrants(['mahjong']);
-    expect(landing?.offerInMenu()).toBe(false);
-    expect(landing?.acceptsDeepLink()).toBe(false);
-
-    // An admin's /api/auth/me names every allowlisted spec.
-    setResolvedVariantGrants(['mahjong', 'crazyhouse-xiangqi']);
     expect(landing?.offerInMenu()).toBe(true);
     expect(landing?.acceptsDeepLink()).toBe(true);
   });

@@ -11,11 +11,14 @@
 //   - a DROP as the last move is ringed on the point it landed on (a drop has
 //     no origin, so the from/to pair has nothing to draw).
 //
-// NO CLIENT ENGINE (`engine: null`): there is no browser Fairy-Stockfish build
-// for crazyhouse xiangqi, so the eval gauge and the engine panel are omitted,
-// the way the Duck and fog reviews omit them. Board moves can be explored from
-// any node; drops replay in the mainline but are not playable from the rail,
-// the same scope the Fortress review has.
+// The client engine is the shared Fairy-Stockfish core (engine/ceval.ts) with
+// crazyhouse-xiangqi.ini written into it at load: stock options only, and the
+// core matched the native engine at every parity-fixture position. Positions
+// are fed as UCI from the start (positionMode 'moves'); the tree adapter's UCI
+// is already Fairy-Stockfish's (board `a1a2`, drop `P@e5`), so a drop in a PV
+// lands as a ring on its point rather than an arrow. Board moves can be
+// explored from any node; drops replay in the mainline but are not playable
+// from the rail, the same scope the Fortress review has.
 
 import {
   type CrazyhouseXiangqiColor,
@@ -24,6 +27,7 @@ import {
   type CrazyhouseXiangqiPlayerView,
   type CrazyhouseXiangqiSquare,
   crazyhouseXiangqiFen,
+  crazyhouseXiangqiMoveFromUci,
   getCrazyhouseXiangqiPlayerView,
   isCrazyhouseXiangqiDropMove,
 } from '@mistboard/game';
@@ -33,6 +37,7 @@ import '../drop-reserve.css';
 import {
   crazyhouseXiangqiBoardView,
   crazyhouseXiangqiLastDrop,
+  crazyhouseXiangqiMoveLabel,
   fillCrazyhouseXiangqiReserve,
 } from '../crazyhouse-xiangqi-view.js';
 import { xiangqiAppearanceChangedEvent } from '../theme.js';
@@ -46,6 +51,12 @@ import {
 import { xiangqiBoardAspect } from '../xiangqi-board-aspect.js';
 import { xiangqiNotationChangedEvent } from '../xiangqi-notation.js';
 import { crazyhouseXiangqiTreeAdapter } from './crazyhouse-xiangqi-tree-adapter.js';
+import {
+  bestMoveArrowWithParser,
+  bestMoveMarkerWithParser,
+  engineArrowsFromLinesWithParser,
+  engineMarkersFromLinesWithParser,
+} from './engine/engine-arrows.js';
 import type { NodeShape } from './game-tree.js';
 import {
   mountTreeReview,
@@ -119,6 +130,22 @@ function createCrazyhouseXiangqiReviewBoard(
   };
 }
 
+/** Engine UCI as a board overlay: a board move is an arrow, a drop (no
+ *  origin) a ring on the point it lands on. */
+function parseCrazyhouseEngineMove(
+  uci: string,
+): { from?: CrazyhouseXiangqiSquare; to: CrazyhouseXiangqiSquare } | null {
+  const move = crazyhouseXiangqiMoveFromUci(uci);
+  if (!move) return null;
+  return isCrazyhouseXiangqiDropMove(move) ? { to: move.to } : move;
+}
+
+/** A PV move in the room's own notation (`b1-c3`, `N@e5`). */
+function formatCrazyhouseEngineMove(uci: string): string {
+  const move = crazyhouseXiangqiMoveFromUci(uci);
+  return move ? crazyhouseXiangqiMoveLabel(move) : uci;
+}
+
 const crazyhouseXiangqiPresentation: TreePresentation<
   CrazyhouseXiangqiMove,
   CrazyhouseXiangqiGameState,
@@ -128,7 +155,20 @@ const crazyhouseXiangqiPresentation: TreePresentation<
   XiangqiBoardMarker
 > = {
   adapter: crazyhouseXiangqiTreeAdapter,
-  engine: null,
+  engine: {
+    panelVariant: 'crazyhousexiangqi',
+    fen: (truth) => crazyhouseXiangqiFen(truth),
+    // A mated or stalemated position has nothing to search; the engine would
+    // sit on "thinking".
+    canEvaluatePosition: (truth) => truth.status.type === 'playing',
+    formatPvMove: formatCrazyhouseEngineMove,
+    engineArrowsFromLines: (lines) =>
+      engineArrowsFromLinesWithParser(lines, parseCrazyhouseEngineMove),
+    engineMarkersFromLines: (lines) =>
+      engineMarkersFromLinesWithParser(lines, parseCrazyhouseEngineMove),
+    bestMoveArrow: (best) => bestMoveArrowWithParser(best, parseCrazyhouseEngineMove),
+    bestMoveMarker: (best) => bestMoveMarkerWithParser(best, parseCrazyhouseEngineMove),
+  },
   // The Share card's FEN box: Fairy-Stockfish's crazyhousexiangqi spelling,
   // pocket in brackets, so the position can be pasted into an engine.
   fen: (truth) => crazyhouseXiangqiFen(truth),

@@ -106,8 +106,14 @@ test('Crazyhouse Xiangqi postgame returns the finished game with hands in every 
     truth.map((snapshot) => snapshot.ply),
     [0, 1, 2, 3],
   );
-  assert.deepEqual(truth[1]?.view.hands, { red: { horse: 1 }, black: {} });
-  assert.deepEqual(truth[2]?.view.hands, { red: { horse: 1 }, black: { cannon: 1 } });
+  // Each side starts holding its advisors and elephants.
+  const start = { advisor: 2, elephant: 2 };
+  assert.deepEqual(truth[0]?.view.hands, { red: start, black: start });
+  assert.deepEqual(truth[1]?.view.hands, { red: { ...start, horse: 1 }, black: start });
+  assert.deepEqual(truth[2]?.view.hands, {
+    red: { ...start, horse: 1 },
+    black: { ...start, cannon: 1 },
+  });
   // The drop empties the hand and puts the horse on the board.
   assert.equal(truth[3]?.view.hands.red.horse ?? 0, 0);
   assert.deepEqual(truth[3]?.view.board.e5, { color: 'red', role: 'horse' });
