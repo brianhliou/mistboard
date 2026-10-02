@@ -38,6 +38,7 @@ Conventions:
 
 ### Learning and puzzles
 
+- the Crazyhouse Xiangqi rules page is rebuilt around boards with both hands drawn: drop zones, drop check and mate, and an engine game to play through ([d2170ca3](https://github.com/brianhliou/mistboard/commit/d2170ca3))
 - The jieqi bot wins post shows each game from the winner's side ([e2800c4d](https://github.com/brianhliou/mistboard/commit/e2800c4d))
 - the 1,000 games played post reads in Simplified and Traditional Chinese ([/zh-hans/blog/one-thousand-games](/zh-hans/blog/one-thousand-games)) ([85975f14](https://github.com/brianhliou/mistboard/commit/85975f14))
 
