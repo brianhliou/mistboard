@@ -846,17 +846,17 @@ function renderIndex(
   heading.textContent = t('broadcast.tournamentBroadcasts');
 
   const now = Date.now();
-  const live = data.tours.filter((entry) => entry.liveBoardCount > 0);
-  const upcoming = data.tours.filter(
-    (entry) => entry.liveBoardCount === 0 && isAfter(entry.tour.startsAt, now),
-  );
-  // Started but not over, with no board moving right now (the women's league
-  // between rounds): ongoing, not past.
-  const started = data.tours.filter(
-    (entry) => entry.liveBoardCount === 0 && !isAfter(entry.tour.startsAt, now),
-  );
-  const ongoing = started.filter((entry) => isAfter(entry.tour.endsAt, now));
-  const past = started.filter((entry) => !isAfter(entry.tour.endsAt, now));
+  const phases = data.tours.map((entry) => ({ entry, phase: tourIndexPhase(entry, now) }));
+  const inPhase = (phase: TourIndexPhase) =>
+    phases.filter((item) => item.phase === phase).map((item) => item.entry);
+  const live = inPhase('live');
+  // Started and not over, with games posted but no board moving right now
+  // (the women's league between rounds).
+  const ongoing = inPhase('ongoing');
+  // Not started, or started by the calendar with nothing posted yet: an event
+  // on its first day in Manila is still upcoming to a reader in California.
+  const upcoming = inPhase('upcoming');
+  const past = inPhase('past');
   const featured =
     sortByFreshness(live)[0] ??
     sortByEventDate(ongoing)[0] ??
@@ -866,7 +866,7 @@ function renderIndex(
   const without = (entries: BroadcastIndexEntry[]) => entries.filter((entry) => entry !== featured);
 
   const content: HTMLElement[] = [heading];
-  if (featured) content.push(featuredTourCard(featured));
+  if (featured) content.push(featuredTourZone(featured, tourIndexPhase(featured, now)));
   if (without(live).length > 0) {
     content.push(tourZone(t('broadcast.liveNow'), sortByFreshness(without(live)), true));
   }
@@ -894,6 +894,20 @@ function dateMs(value: string | null | undefined): number {
   const ms = value ? Date.parse(value) : Number.NaN;
   return Number.isFinite(ms) ? ms : Number.POSITIVE_INFINITY;
 }
+
+type TourIndexPhase = 'live' | 'ongoing' | 'upcoming' | 'past';
+
+// Which index section an event belongs in. An event leaves Upcoming when its
+// first games are posted, not when its start date passes in the event's time
+// zone; once its end date passes it is past, posted or not.
+function tourIndexPhase(entry: BroadcastIndexEntry, now: number): TourIndexPhase {
+  if (entry.liveBoardCount > 0) return 'live';
+  if (isAfter(entry.tour.startsAt, now)) return 'upcoming';
+  if (!isAfter(entry.tour.endsAt, now)) return 'past';
+  return entry.boardCount > 0 ? 'ongoing' : 'upcoming';
+}
+
+const DAY_MS = 86_400_000;
 
 function isAfter(value: string | null | undefined, now: number): boolean {
   const ms = value ? Date.parse(value) : Number.NaN;
@@ -930,6 +944,15 @@ function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boole
       live: false,
     };
   }
+  if (entry.boardCount === 0 && isAfter(entry.tour.endsAt, Date.now())) {
+    // Started by the calendar, nothing posted: its first day says so, a later
+    // day waits on the source like a played round with no records.
+    const sinceStart = Date.now() - dateMs(entry.tour.startsAt);
+    return {
+      text: sinceStart < DAY_MS ? t('broadcast.startsToday') : t('broadcast.awaitingRecords'),
+      live: false,
+    };
+  }
   if (latest) {
     const date = formatEventDay(latest.startsAt ?? undefined);
     return {
@@ -960,10 +983,22 @@ function topPlayersEl(entry: BroadcastIndexEntry, count: number): HTMLElement | 
   return el;
 }
 
-/** The featured event, large: the board beside the event, lichess's hero card. */
-function featuredTourCard(entry: BroadcastIndexEntry): HTMLElement {
-  const card = tourCard(entry, { featured: true });
-  return card;
+/**
+ * The featured event, large: the board beside the event, lichess's hero card,
+ * under a heading that says why it is the one on top.
+ */
+function featuredTourZone(entry: BroadcastIndexEntry, phase: TourIndexPhase): HTMLElement {
+  const section = document.createElement('section');
+  section.className = 'xqb-section xqb-featured-zone';
+  const heading = document.createElement('h2');
+  heading.textContent = {
+    live: t('broadcast.liveNow'),
+    ongoing: t('broadcast.ongoing'),
+    upcoming: t('broadcast.nextUp'),
+    past: t('broadcast.latest'),
+  }[phase];
+  section.append(heading, tourCard(entry, { featured: true }));
+  return section;
 }
 
 /** The next few events on the calendar that we do not have a page for yet. */

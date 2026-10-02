@@ -536,6 +536,9 @@ export const ZH_HANS_REVIEW = {
   'broadcast.roundLive': '{round} · 直播中',
   'broadcast.roundOn': '{round} · {date}',
   'broadcast.startsOn': '{date} 开始',
+  'broadcast.startsToday': '今日开赛',
+  'broadcast.nextUp': '下一项赛事',
+  'broadcast.latest': '最近赛事',
   'broadcast.calendarTitle': '直播赛程',
   'broadcast.calendarNote':
     '来自东萍象棋网赛事追踪的重要赛事，以及我们转播的赛事。日期以主办方公布为准，可能调整。',
