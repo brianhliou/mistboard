@@ -35,6 +35,7 @@ Conventions:
 
 ### Watching and review
 
+- an event stays under Upcoming until its first games are posted, and the top card on the broadcasts page says why it leads ([a6b33f1e](https://github.com/brianhliou/mistboard/commit/a6b33f1e))
 - a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([c2abab09](https://github.com/brianhliou/mistboard/commit/c2abab09))
 - a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([f15ea83a](https://github.com/brianhliou/mistboard/commit/f15ea83a))
 - Our bots now play each other every day in xiangqi, jieqi, Duck Xiangqi, Jungle Chess and Banqi, and those games are searchable under Engine games and downloadable from the [game data](/data) page ([ec3a7712](https://github.com/brianhliou/mistboard/commit/ec3a7712))
