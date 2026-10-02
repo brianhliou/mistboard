@@ -176,12 +176,8 @@ test('serveArticlePage marks an unlisted rules page as non-indexable', async () 
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
 
   // crazyhouse-xiangqi: a public variant whose rules page is held back
-  // (2026-10-02). fortress-xiangqi left the rail only and stays indexed.
-  for (const [slug, noindex] of [
-    ['shogi4', true],
-    ['crazyhouse-xiangqi', true],
-    ['fortress-xiangqi', false],
-  ] as const) {
+  // (2026-10-02).
+  for (const slug of ['shogi4', 'crazyhouse-xiangqi']) {
     const response = captureResponse();
     await serveArticlePage({
       slug,
@@ -192,11 +188,7 @@ test('serveArticlePage marks an unlisted rules page as non-indexable', async () 
     });
 
     assert.equal(response.status, 200, slug);
-    if (noindex) {
-      assert.match(response.body, /<meta name="robots" content="noindex, follow">/, slug);
-    } else {
-      assert.doesNotMatch(response.body, /noindex/, slug);
-    }
+    assert.match(response.body, /<meta name="robots" content="noindex, follow">/, slug);
   }
 });
 
@@ -255,13 +247,7 @@ test('serveSitemap omits unlisted and retired rules while retaining public artic
   await mkdir(join(staticDir, 'rules'), { recursive: true });
   await mkdir(join(staticDir, 'zh-hans', 'rules'), { recursive: true });
   await mkdir(join(staticDir, 'blog'), { recursive: true });
-  for (const slug of [
-    'xiangqi',
-    'shogi4',
-    'kriegspiel',
-    'crazyhouse-xiangqi',
-    'fortress-xiangqi',
-  ]) {
+  for (const slug of ['xiangqi', 'shogi4', 'kriegspiel', 'crazyhouse-xiangqi']) {
     await writeFile(join(staticDir, 'rules', `${slug}.html`), '<h1>rules</h1>');
   }
   await writeFile(join(staticDir, 'zh-hans', 'rules', 'crazyhouse-xiangqi.html'), '<h1>规则</h1>');
@@ -278,8 +264,6 @@ test('serveSitemap omits unlisted and retired rules while retaining public artic
   assert.equal(response.status, 200);
   assert.match(response.body, /https:\/\/mistboard\.test\/rules\/xiangqi/);
   assert.match(response.body, /https:\/\/mistboard\.test\/blog\/misty/);
-  // Off the rail is not out of the index: fortress stays sitemapped.
-  assert.match(response.body, /https:\/\/mistboard\.test\/rules\/fortress-xiangqi/);
   assert.doesNotMatch(response.body, /shogi4|kriegspiel|crazyhouse-xiangqi/);
 });
 

@@ -18,10 +18,6 @@ export const fortressXiangqiArticle: Article = {
   boardFamily: 'xiangqi',
   kind: 'rules',
   playableOnMistboard: true,
-  // Hidden from the rules rail and index 2026-10-02 (Brian), the way
-  // /rules/chess is: the variant stays live and the page stays indexed and
-  // reachable by URL and from its News entries; it is not being retired.
-  showInIndex: false,
   title: 'Fortress Xiangqi Rules',
   summary:
     'A compact Xiangqi variant with captured pieces in reserve, piece drops, and one new piece: the Treasure.',

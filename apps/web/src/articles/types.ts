@@ -476,7 +476,7 @@ type ArticleBase = {
   // false keeps an indexed page out of the listings (rules rail and index,
   // article index, homepage cards) while its URL and search presence stay:
   // guest pages (shogi4) and rules pages deliberately de-ranked from the rail
-  // (chess, fortress-xiangqi). Hiding a whole variant from public surfaces, or
+  // (chess). Hiding a whole variant from public surfaces, or
   // an unindexed rules page, is variant-public-surfaces.ts instead.
   showInIndex?: boolean;
   // Which homepage row the card sits in. Unset is the general row, so a new
