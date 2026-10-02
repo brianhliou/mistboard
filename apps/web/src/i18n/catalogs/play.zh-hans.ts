@@ -375,8 +375,6 @@ export const ZH_HANS_PLAY = {
   'live.guestAre': '访客（{color}）',
   'live.toMove': '走棋',
   'live.yourMovePill': '轮到你',
-  'live.clockStartsAfterOpening': '{control} · 开局几步后开始计时',
-  'live.clockStartsWhenReady': '{control} · 双方就绪后开始计时',
   'live.oneDayPerMoveNote': '每步 1 天',
   'live.daysPerMoveNote': '每步 {count} 天',
   'live.copyInvite': '复制邀请',
@@ -468,4 +466,5 @@ export const ZH_HANS_PLAY = {
   'lobby.panelVersus': '{variant} 对 {opponent}',
   'lobby.panelAnonymous': '匿名',
   'lobby.panelYours': '你的',
+  'lobby.panelOwnEngine': '本站自研引擎',
 } satisfies Partial<Record<PlayI18nKey, string>>;

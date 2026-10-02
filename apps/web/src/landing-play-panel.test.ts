@@ -21,7 +21,7 @@ function row(board: HTMLElement, spec: string, kind: 'bot' | 'person' = 'bot'): 
 }
 
 function stepValue(el: HTMLElement, which: 'level' | 'clock'): string {
-  return el.querySelector(`.pp-step-${which} .pp-step-value`)?.textContent ?? '';
+  return el.querySelector(`.pp-step-${which} .pp-step-main`)?.textContent ?? '';
 }
 
 function clickNext(el: HTMLElement, which: 'level' | 'clock', times = 1): void {
@@ -84,6 +84,37 @@ describe('homepage play panel', () => {
     const banqi = row(board, 'banqi');
     expect(stepValue(banqi, 'level')).toBe('Misty');
     expect(banqi.querySelector('.pp-step-level')?.classList.contains('is-fixed')).toBe(true);
+    // Named bots read yellow everywhere, Misty included.
+    expect(
+      banqi.querySelector('.pp-step-level .pp-step-value')?.classList.contains('is-named'),
+    ).toBe(true);
+  });
+
+  it('says which engine a level is and marks the ones on a net', () => {
+    const board = buildPlayPanel('en', { hydrate: false });
+    const xiangqi = row(board, 'xiangqi');
+    const sub = () => xiangqi.querySelector('.pp-step-level .pp-step-sub')?.textContent;
+    expect(sub()).toBe('Fairy-Stockfish');
+    clickNext(xiangqi, 'level', 6);
+    expect(stepValue(xiangqi, 'level')).toBe('Level 8');
+    expect(sub()).toBe('Fairy-Stockfish · NNUE');
+    clickNext(xiangqi, 'level');
+    expect(stepValue(xiangqi, 'level')).toBe('Pikafish');
+    expect(sub()).toBe('NNUE');
+    const jieqi = row(board, 'jieqi');
+    expect(jieqi.querySelector('.pp-step-level .pp-step-sub')?.textContent).toBe('Pikafish');
+  });
+
+  it('only searches for a person from Find, never from a stray row click', () => {
+    const fetchSpy = vi.fn(async () => Response.json({}));
+    vi.stubGlobal('fetch', fetchSpy);
+    const board = buildPlayPanel('en', { hydrate: false });
+    document.body.append(board);
+    const person = row(board, 'xiangqi', 'person');
+    person.querySelector<HTMLElement>('.pp-name')!.click();
+    person.click();
+    expect(fetchSpy).not.toHaveBeenCalled();
+    expect(board.querySelector<HTMLElement>('.pp-search')?.hidden).toBe(true);
   });
 
   it('never offers a fog bot a clock under a 5 s increment (#283)', () => {

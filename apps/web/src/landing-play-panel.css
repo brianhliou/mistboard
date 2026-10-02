@@ -86,25 +86,25 @@
 }
 
 .pp-thumb {
-  width: 26px;
-  height: 26px;
+  width: 30px;
+  height: 30px;
 }
 
 /* ── Rows ── */
 .pp-row {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) 132px 92px 78px;
+  grid-template-columns: 30px minmax(0, 1fr) 168px 92px 78px;
   grid-template-areas: "icon name level clock act";
   align-items: center;
   column-gap: 14px;
-  min-height: 42px;
+  min-height: 46px;
   padding: 0 var(--pp-pad);
   border-bottom: 1px solid var(--site-border-soft);
   cursor: pointer;
 }
 
 .pp-row-person {
-  grid-template-columns: 26px minmax(0, 1fr) 118px 74px 78px;
+  grid-template-columns: 30px minmax(0, 1fr) 118px 74px 78px;
   grid-template-areas: "icon name clock wait act";
 }
 
@@ -135,7 +135,7 @@
   min-width: 0;
   overflow: hidden;
   color: var(--site-text);
-  font-size: 14px;
+  font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -196,21 +196,33 @@
 }
 
 .pp-step-value {
+  display: flex;
   flex: 1;
+  flex-direction: column;
   min-width: 0;
-  overflow: hidden;
   color: var(--site-text);
-  font-size: 12.5px;
+  font-size: 13.5px;
+  line-height: 1.15;
   text-align: center;
+}
+
+.pp-step-main,
+.pp-step-sub {
+  overflow: hidden;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
 
-.pp-step-value.is-named {
+.pp-step-sub {
+  color: var(--site-muted);
+  font-size: 10.5px;
+}
+
+.pp-step-value.is-named .pp-step-main {
   color: var(--pp-gold-text);
 }
 
-.pp-row-person .pp-step-value.is-named {
+.pp-row-person .pp-step-value.is-named .pp-step-main {
   color: var(--site-accent-strong);
 }
 
@@ -264,7 +276,7 @@
 /* ── Rows that exist only when true ── */
 .pp-feature {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto;
   align-items: center;
   column-gap: 12px;
   padding: 7px var(--pp-pad);
@@ -301,7 +313,7 @@
 .pp-feature-title {
   overflow: hidden;
   color: var(--site-text);
-  font-size: 14px;
+  font-size: 15px;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -365,10 +377,10 @@
 
 .pp-offer {
   display: grid;
-  grid-template-columns: 26px minmax(0, 1fr) auto auto;
+  grid-template-columns: 30px minmax(0, 1fr) auto auto;
   align-items: center;
   column-gap: 12px;
-  min-height: 44px;
+  min-height: 46px;
   padding: 0 var(--pp-pad);
   border-bottom: 1px solid var(--site-border-soft);
 }
@@ -434,7 +446,7 @@
 
   .pp-row,
   .pp-row-person {
-    grid-template-columns: 26px minmax(0, 1fr) minmax(0, 1fr) 70px;
+    grid-template-columns: 30px minmax(0, 1fr) minmax(0, 1fr) 70px;
     grid-template-areas:
       "icon name name act"
       ". level clock act";
