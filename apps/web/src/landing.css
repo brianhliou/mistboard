@@ -5,12 +5,20 @@
   gap: clamp(14px, 2vw, 24px);
   align-content: start;
   min-height: calc(100vh - 54px);
-  padding: clamp(14px, 2vw, 28px) clamp(12px, 2vw, 28px) clamp(28px, 4vw, 56px);
+  padding: clamp(14px, 2vw, 28px) clamp(12px, 2vw, 28px) clamp(12px, 1vw, 14px);
   /* Transparent so the single page gradient on #app (anchored at the very top,
      shared with the nav) shows through continuously. Painting --site-stage-bg
      here restarts a fresh gradient at the stage's top edge, which butts the
      nav's warm top against the stage's lighter body and reads as a hard seam. */
   background: transparent;
+}
+
+/* The footer sits one band gap below the last band: the stage's own gap is
+   the space above it, so the shared footer's page margin would stack a second
+   one (96px above the links at 1440 wide, 70px below; now ~40 and ~28). */
+.landing-stage > .landing-footer {
+  margin-top: 0;
+  padding-top: 16px;
 }
 
 .landing-demo {
