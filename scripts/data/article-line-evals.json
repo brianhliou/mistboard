@@ -1313,5 +1313,150 @@
     "cp": 295,
     "mate": null,
     "symbol": "+−"
+  },
+  "lai-ly-huynh:0:39": {
+    "cp": -4,
+    "mate": null,
+    "symbol": "="
+  },
+  "lai-ly-huynh:0:119": {
+    "cp": -433,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "lai-ly-huynh:1:33": {
+    "cp": -46,
+    "mate": null,
+    "symbol": "⩱"
+  },
+  "lai-ly-huynh:1:43": {
+    "cp": -359,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "lai-ly-huynh:1:56": {
+    "cp": -466,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "lai-ly-huynh:1:57": {
+    "cp": -403,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "lai-ly-huynh:2:22": {
+    "cp": 1,
+    "mate": null,
+    "symbol": "="
+  },
+  "lai-ly-huynh:2:26": {
+    "cp": 125,
+    "mate": null,
+    "symbol": "±"
+  },
+  "lai-ly-huynh:2:31": {
+    "cp": 195,
+    "mate": null,
+    "symbol": "±"
+  },
+  "lai-ly-huynh:2:40": {
+    "cp": 86,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "lai-ly-huynh:2:41": {
+    "cp": 94,
+    "mate": null,
+    "symbol": "±"
+  },
+  "lai-ly-huynh:2:49": {
+    "cp": 63,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "lai-ly-huynh:2:56": {
+    "cp": -44,
+    "mate": null,
+    "symbol": "⩱"
+  },
+  "lai-ly-huynh:2:63": {
+    "cp": 93,
+    "mate": null,
+    "symbol": "±"
+  },
+  "lai-ly-huynh:2:71": {
+    "cp": -24,
+    "mate": null,
+    "symbol": "="
+  },
+  "lai-ly-huynh:2:74": {
+    "cp": -168,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "lai-ly-huynh:2:75": {
+    "cp": -37,
+    "mate": null,
+    "symbol": "⩱"
+  },
+  "lai-ly-huynh:2:93": {
+    "cp": -439,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "lai-ly-huynh:2:94": {
+    "cp": null,
+    "mate": -1,
+    "symbol": "−+"
+  },
+  "lai-ly-huynh:3:17": {
+    "cp": -19,
+    "mate": null,
+    "symbol": "="
+  },
+  "lai-ly-huynh:3:25": {
+    "cp": -95,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "lai-ly-huynh:3:29": {
+    "cp": -164,
+    "mate": null,
+    "symbol": "∓"
+  },
+  "lai-ly-huynh:3:31": {
+    "cp": -345,
+    "mate": null,
+    "symbol": "−+"
+  },
+  "lai-ly-huynh:4:19": {
+    "cp": 49,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "lai-ly-huynh:4:20": {
+    "cp": 0,
+    "mate": null,
+    "symbol": "="
+  },
+  "lai-ly-huynh:4:22": {
+    "cp": 54,
+    "mate": null,
+    "symbol": "⩲"
+  },
+  "lai-ly-huynh:4:34": {
+    "cp": 174,
+    "mate": null,
+    "symbol": "±"
+  },
+  "lai-ly-huynh:4:35": {
+    "cp": 290,
+    "mate": null,
+    "symbol": "+−"
+  },
+  "lai-ly-huynh:4:72": {
+    "cp": 624,
+    "mate": null,
+    "symbol": "+−"
   }
 }

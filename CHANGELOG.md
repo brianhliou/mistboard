@@ -31,10 +31,12 @@ Conventions:
 
 ### Learning and puzzles
 
+- The jieqi bot wins post shows each game from the winner's side ([e2800c4d](https://github.com/brianhliou/mistboard/commit/e2800c4d))
 - the 1,000 games played post reads in Simplified and Traditional Chinese ([/zh-hans/blog/one-thousand-games](/zh-hans/blog/one-thousand-games)) ([85975f14](https://github.com/brianhliou/mistboard/commit/85975f14))
 
 ### Watching and review
 
+- The third player page, Lại Lý Huynh 赖理兄 (/blog/lai-ly-huynh), the world champion: his unbeaten 2025 title run and the final he won with black, the year since, five wins on the board and a 38-chapter study; in English, Chinese and, a first for a player page, Vietnamese (/blog/lai-ly-huynh-co-tuong) ([dc9614b2](https://github.com/brianhliou/mistboard/commit/dc9614b2))
 - an event stays under Upcoming until its first games are posted, and the top card on the broadcasts page says why it leads ([a6b33f1e](https://github.com/brianhliou/mistboard/commit/a6b33f1e))
 - a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([c2abab09](https://github.com/brianhliou/mistboard/commit/c2abab09))
 - a broadcast added after its event finished now fetches its games by itself for a week, instead of waiting for a manual poll ([f15ea83a](https://github.com/brianhliou/mistboard/commit/f15ea83a))

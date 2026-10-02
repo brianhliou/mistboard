@@ -161,6 +161,18 @@
     "description": "Cờ úp không có sách khai cuộc. Nó chỉ có một cuộc tranh luận về nước đi đầu tiên, chạy nhiều năm trên các diễn đàn Trung Quốc giữa những người chơi hàng nghìn ván, chưa từng được viết ra bằng tiếng Anh hay tiếng Việt. Vì sao một quân úp là quyền chọn dùng đúng một lần mà bạn có thể phí đi, năm khai cuộc được xếp hạng, và thế tiến tốt đặt lên bàn cân với pháo qua sông trên cả sáu khả năng lật.",
     "status": "published"
   },
+  "lai-ly-huynh": {
+    "title": "Lại Lý Huynh 赖理兄",
+    "kind": "article",
+    "description": "The first world champion from outside China, unbeaten in Shanghai and winner of the final with black. His title run and the year since, five wins on the board, 38 games analysed.",
+    "status": "published"
+  },
+  "lai-ly-huynh-co-tuong": {
+    "title": "Lại Lý Huynh",
+    "kind": "article",
+    "description": "Nhà vô địch cờ tướng thế giới đầu tiên không đến từ Trung Quốc, bất bại ở Thượng Hải và thắng trận chung kết khi cầm quân Đen. Hành trình lên ngôi và một năm sau đó, năm ván thắng trên bàn cờ, 38 ván được phân tích.",
+    "status": "published"
+  },
   "luat-co-up": {
     "title": "Luật cờ úp",
     "kind": "article",

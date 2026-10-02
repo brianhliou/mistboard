@@ -49,6 +49,9 @@ export const TRANSLATED_ARTICLE_SLUGS = [
   // Machine-drafted 2026-09-25, not native-reviewed. The second player page;
   // locked with its English copy, which publishes in the same release.
   'cao-yanlei',
+  // Machine-drafted 2026-10-01, not native-reviewed. The third player page; locked
+  // with its English copy, which publishes in the same release.
+  'lai-ly-huynh',
   // Machine-drafted 2026-09-03, not native-reviewed, locked the day the English
   // copy published. The openings article's dictionary was already complete and
   // waiting: the lock requires a PUBLISHED article, so it could not be listed
@@ -397,6 +400,103 @@ const ZH_HANS: Record<string, string> = {
   'Cao Yanlei at the board.': '对局中的曹岩磊。',
   'Wang Yongqiang': '王永强',
   'Zhao Panwei': '赵攀伟',
+  // lai-ly-huynh (zh-Hans), machine-drafted 2026-10-01, not native-reviewed. Mainland
+  // players' names stay in one form in both scripts, as on the cao-yanlei page; the
+  // two 羊城晚报 quotes are his own words from the Chinese original, not back-translated.
+  // Shared keys (title, Event, Dates, W, D, L, Opponent, Red, Black, the players'
+  // names) already exist above and are reused.
+  'Lại Lý Huynh 赖理兄, the world xiangqi champion: games and analysis':
+    '赖理兄，世界象棋冠军：对局与分析',
+  'The first world champion from outside China, unbeaten in Shanghai and winner of the final with black. His title run and the year since, five wins on the board, 38 games analysed.':
+    '第一位来自中国以外的世界冠军，上海世锦赛一局未输，决赛执黑取胜。他的夺冠之路和此后一年，盘面上五盘胜局，38 局附引擎分析。',
+  'Lại Lý Huynh at the board.': '对局中的赖理兄。',
+  'English-speaking xiangqi players, and Vietnamese fans who want his games in one place with analysis.':
+    '说英语的象棋棋友，以及想把他的对局连同分析集中在一处看的越南棋迷。',
+  'Lại Lý Huynh in a white team shirt, arms folded, looking down at the board during a game.':
+    '赖理兄身穿白色队服，双臂交叉，在对局中低头看着棋盘。',
+  'Lại Lý Huynh at the Five Rams Cup, Guangzhou, February 2026. Photo: Vietnam Xiangqi Federation, via Thanh Niên.':
+    '2026 年 2 月，广州五羊杯上的赖理兄。图片：越南象棋联合会，经 Thanh Niên 转载。',
+  "Lại Lý Huynh 赖理兄 is the world champion. In Shanghai last September he went through the World Xiangqi Championship without losing a game and won the final against China's Yin Sheng with the black pieces, the first player from outside China to take the title. The Chinese press calls him Vietnam's king of xiangqi, 越南棋王. At home his fans call him Nam Phương công tử, the young master from the South.":
+    '赖理兄是现任世界冠军。去年九月在上海，他在世界象棋锦标赛中一局未输，决赛执黑击败中国的尹昇，成为第一位夺得这一头衔的中国以外棋手。中文媒体称他为“越南棋王”。在越南国内，棋迷叫他 Nam Phương công tử，意思是“南方公子”。',
+  "He was born in 1990 in Vĩnh Long, in the Mekong Delta, and learned the game watching his father play. He has won Vietnam's national championship six times and holds the WXF's International Grandmaster title. In 2016 he became the first foreign player in China's top league, for Hangzhou, and in 2023 he won the league with them. In February he was the first wildcard ever to reach the final of the Five Rams Cup, China's invitation event for its national champions.":
+    '他 1990 年生于湄公河三角洲的永隆，看父亲下棋学会了象棋。他六次夺得越南全国冠军，拥有世界象棋联合会的国际特级大师称号。2016 年他代表杭州出战，成为中国象甲联赛的第一位外籍棋手，2023 年随杭州队夺得联赛冠军。今年二月，他成为五羊杯历史上第一位打进决赛的外卡棋手，五羊杯是中国邀请全国冠军参加的邀请赛。',
+  'This page is his year as champion: the title run, the year since, and five of his wins on the board. I ran the 38 individual games we hold through the same engine analysis Mistboard gives your own games.':
+    '这一页写的是他当世界冠军的这一年：夺冠之路、此后一年，以及盘面上他的五盘胜局。我们收录的 38 盘个人赛对局，我都用 Mistboard 给你的对局做的同一套引擎分析跑过一遍。',
+  '**He wins with black.** Five of his six wins in Shanghai came with the black pieces, the side that moves second, the final among them. Across the 38 individual games we hold he won eight with black and three with red. With red he mostly draws, thirteen of his eighteen red games.':
+    '**他执黑赢棋。** 他在上海的六盘胜局中有五盘是执黑（后走的一方）赢的，决赛也在其中。我们收录的 38 盘个人赛对局里，他执黑赢了八盘，执红只赢三盘。执红他大多是和棋，十八盘执红有十三盘和。',
+  '**He opens with the Cross-Palace Cannon.** In eleven of his eighteen red games his first move slid a cannon across to the far side of his own palace. It is a quieter start than the central cannon, and it leaves the game to be won later.':
+    '**他开局走过宫炮。** 十八盘执红的对局里有十一盘，他第一步就把一门炮平过九宫，放到九宫另一侧。这比中炮开局安静，把赢棋留到后面。',
+  '**He was precise when it counted.** His median accuracy across the nine games in Shanghai was 98. The engine confirms three sacrifices in his year, a piece offered and never won back, and one of them came in the world final.':
+    '**关键时刻他下得很准。** 他在上海九盘棋的准确率中位数是 98。引擎确认他这一年有三次真弃子，都是送出一子、再也没有拿回来，其中一次就在世锦赛决赛。',
+  '**He learned from China\'s best.** "The league gave me a very valuable chance to learn," he told 羊城晚报 in February. "I could play and at the same time study how China\'s top players play." He has trained with engines since 2005.':
+    '**他向中国最强的棋手学习。** 他今年二月对《羊城晚报》说：“象甲联赛给了我非常宝贵的学习机会。我可以一边比赛，一边观摩学习中国顶尖棋手的棋路和技巧。”他从 2005 年起就用引擎训练。',
+  'The world title': '世界冠军',
+  "He had been one game from the title before. In Houston in 2023 he reached the final against Meng Chen, drew the slow game and lost the rapid tiebreak. Two years later the championship ran in Shanghai from 22 to 27 September, eight rounds and then a final between the top two. He won five and drew three, against Yin Sheng on the first day, Meng Fanrui and Malaysia's Li Dezhi, and finished level with Yin Sheng on 13 points.":
+    '他以前也离冠军只差一盘棋。2023 年在休斯敦，他打进决赛对孟辰，慢棋和了，快棋加赛输了。两年后，世锦赛于 9 月 22 日至 27 日在上海举行，先赛八轮，再由前两名下决赛。他五胜三和，和的是第一天的尹昇、孟繁睿和马来西亚的黎德志，最后与尹昇同积 13 分。',
+  Round: '轮次',
+  Colour: '执子',
+  Result: '结果',
+  Win: '胜',
+  Draw: '和',
+  Final: '决赛',
+  'Ryan Emmanuel Haris (East Malaysia)': '莱恩（东马来西亚）',
+  'Yin Sheng (China)': '尹昇（中国）',
+  'Mingjian Li (USA)': '李铭坚（美国）',
+  'Tony Fung Ga Zen (Hong Kong)': '冯家俊（香港）',
+  'Calvin Tay Yelin (East Malaysia)': '郑义霖（东马来西亚）',
+  'Meng Fanrui (China)': '孟繁睿（中国）',
+  'Chong Heung Ming (Philippines)': '庄宏明（菲律宾）',
+  'Li Dezhi (Malaysia)': '黎德志（马来西亚）',
+  'His world championship, round by round.': '他的世锦赛，逐轮战绩。',
+  "In round three he met the United States' Mingjian Li, who held him level for nineteen moves. Li's chariot push on move 20 let it go. Lại finished at 98 percent accuracy and needed another 47 moves to bring it home.":
+    '第三轮他遇到美国的李铭坚，对方和他均势周旋了十九个回合。李铭坚第 20 回合进车，把局面送了出去。赖理兄全盘准确率 98%，又走了 47 个回合才把这盘棋拿下。',
+  "Mingjian Li vs Lại Lý Huynh, 23 September 2025, round 3. The board opens after red's 20th move, with Lại to play as black.":
+    '李铭坚对赖理兄，2025 年 9 月 23 日，第 3 轮。棋盘从红方第 20 回合之后开始，轮到执黑的赖理兄走。',
+  '2025 World Xiangqi Championship, round 3': '2025 世界象棋锦标赛，第 3 轮',
+  "In round seven Chong Heung Ming of the Philippines slid his cannon across on move 17. Lại's horse jumped into the centre the same move, the engine's own first choice, and his cannon followed it in. Chong resigned after move 32.":
+    '第七轮，菲律宾的庄宏明第 17 回合平炮。赖理兄同一回合跃马入中，正是引擎的首选，随后他的炮也跟了进去。庄宏明在第 32 回合后认输。',
+  "Chong Heung Ming vs Lại Lý Huynh, 25 September 2025, round 7. The board opens after red's 17th move, with Lại to play as black.":
+    '庄宏明对赖理兄，2025 年 9 月 25 日，第 7 轮。棋盘从红方第 17 回合之后开始，轮到执黑的赖理兄走。',
+  '2025 World Xiangqi Championship, round 7': '2025 世界象棋锦标赛，第 7 轮',
+  "The final was one game, Yin Sheng with red. Yin Sheng pressed early, and by move 27 it was level again. Lại pushed his central cannon into Yin Sheng's camp, a piece offer the engine rates as the best move on the board. Yin Sheng took it, and the engine still called the game level. On move 38 his advisor stepped back. From there Lại's soldier on the third file walked down the board, and Yin Sheng resigned after move 52.":
+    '决赛只下一盘，尹昇执红。尹昇开局施压，到第 27 回合局面又回到均势。赖理兄把中炮打进尹昇的阵地，这是一步弃子，引擎认为是当时盘面上的最佳着法。尹昇吃了炮，引擎仍判局面均势。第 38 回合尹昇退士。此后赖理兄的三路卒一路向下挺进，尹昇在第 52 回合后认输。',
+  "Yin Sheng vs Lại Lý Huynh, 27 September 2025, the final. The board opens after red's 27th move, with Lại to play as black.":
+    '尹昇对赖理兄，2025 年 9 月 27 日，决赛。棋盘从红方第 27 回合之后开始，轮到执黑的赖理兄走。',
+  '2025 World Xiangqi Championship, final': '2025 世界象棋锦标赛，决赛',
+  "Yin Sheng was born in 2005. A year later he went 31 games without a loss and has [his own page](/blog/yin-sheng). The championship's history, and Lại's earlier games in it, are on the [world championship page](/blog/xiangqi-world-championship).":
+    '尹昇生于 2005 年。一年后他连续 31 局不败，他也有[自己的专页](/blog/yin-sheng)。世锦赛的历史，以及赖理兄早年在这项赛事里的对局，见[世界象棋锦标赛专页](/blog/xiangqi-world-championship)。',
+  'The year since': '此后一年',
+  "At home the title made him a national figure. In June the state awarded him the First-Class Labour Order, and in April he won the rapid title at the national championship. Most of his games this year, though, were against China's best on their ground, and those are in the table below.":
+    '在越南国内，这个冠军让他成了家喻户晓的人物。六月国家授予他一级劳动勋章，四月他在全国锦标赛上拿下快棋冠军。不过他今年的大部分对局，是在中国的地盘上对阵中国最强的棋手，都列在下表。',
+  'World Rapid Open, Shanghai': '世界快棋公开赛，上海',
+  'Sep 26, 2025': '2025年9月26日',
+  'Match vs Cao Yanlei, Zhengzhou': '对曹岩磊番棋，郑州',
+  'Dukang arena final, Zhengzhou': '酒祖杜康杯擂台赛年终总决赛，郑州',
+  'Jan 9–10': '1月9–10日',
+  'Five Rams Cup, Guangzhou': '五羊杯，广州',
+  'Feb 25–Mar 1': '2月25日–3月1日',
+  May: '5月',
+  'Vietnam vs Guangdong, Đà Nẵng': '越南对广东，岘港',
+  Jul: '7月',
+  'The year since the title, events with a complete record.': '夺冠后的一年，只列战绩完整的赛事。',
+  "In January a tea company booked him and Cao Yanlei into a room in Zhengzhou for [ten rapid games](/broadcast/xiangqi/2026-chunqiu-dayie-ten-game-match) over three evenings, a rematch of their 2016 Han Xin Cup final in Sydney. Cao won the match 12 to 8, and [his page](/blog/cao-yanlei) tells it from his side. Lại's win was game eight, with black, in 18 moves. Cao's horse stepped back on move 15; Lại's chariot went straight up the file in reply, his horse followed, and Cao resigned three moves later.":
+    '一月，一家茶企把他和曹岩磊请到郑州，三个晚上下[十盘快棋](/broadcast/xiangqi/2026-chunqiu-dayie-ten-game-match)，重演两人 2016 年在悉尼的韩信杯决赛。曹岩磊以 12 比 8 赢下番棋，[他的专页](/blog/cao-yanlei)从他那一方讲了这场比赛。赖理兄赢的是第八盘，执黑，18 回合。曹岩磊第 15 回合退马，赖理兄随即进车直冲，马也跟了上去，三个回合后曹岩磊认输。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, game 8 of the match. The board opens after red's 15th move, with Lại to play as black.":
+    '曹岩磊对赖理兄，2026 年 1 月 5 日，番棋第 8 盘。棋盘从红方第 15 回合之后开始，轮到执黑的赖理兄走。',
+  '2026 ten-game match, game 8': '2026 春丘大叶杯十局番棋，第 8 盘',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions. In February it gave its first wildcard to Lại, and he reached the final. In the semi-final he beat Zhao Panwei, the opponent Cao Yanlei found hardest all year, winning the first game with red and drawing the second. Zhao's horse jumped forward on move 17; Lại's horses came forward and Zhao resigned after move 40. Cheng Yudong beat him in the final, a draw and then a loss. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
+    '广州的五羊杯邀请的是中国的全国冠军。今年二月它第一次发出外卡，给了赖理兄，他一路打进决赛。半决赛他击败赵攀伟，就是曹岩磊全年最难对付的那位对手：第一盘执红获胜，第二盘弈和。赵攀伟第 17 回合跃马进击，赖理兄的双马随之跃出，赵攀伟在第 40 回合后认输。决赛他负于程宇东，一和一负。[整项赛事](/broadcast/xiangqi/2026-wuyang-cup)都在直播档案里。',
+  "Lại Lý Huynh vs Zhao Panwei, 28 February 2026, Five Rams Cup semi-final, game 1. The board opens after black's 17th move, with Lại to move.":
+    '赖理兄对赵攀伟，2026 年 2 月 28 日，五羊杯半决赛第 1 盘。棋盘从黑方第 17 回合之后开始，轮到赖理兄走。',
+  '2026 Five Rams Cup, semi-final': '2026 五羊杯，半决赛',
+  '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
+    '他在广州说：“自从世锦赛夺冠之后，越南国内关注象棋的人越来越多了，开始下棋、喜欢象棋的人也明显变多了。”',
+  'All 38 games': '全部 38 局',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 15 of them are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; the round table from the WXF results book; the Five Rams Cup and arena records from VnExpress, and the Vietnam vs Guangdong record from VnExpress and 象棋热情; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '本页的每一盘都在 Mistboard 的一个研究里，附引擎的判断和变化；其中 15 盘也在直播档案里，附网站的分析。资料来源：棋谱来自 dpxq.com，该数据库不一定收齐每项赛事的全部对局；逐轮战绩表来自世界象棋联合会的成绩册；五羊杯和擂台赛战绩来自 VnExpress，越南对广东的战绩来自 VnExpress 和象棋热情；分析由 Pikafish 经 Mistboard 的复盘流程完成，2026 年 10 月。',
+  'His games in the archive': '他在档案里的对局',
+  'Mingjian Li': '李铭坚',
+  'Chong Heung Ming': '庄宏明',
   // yin-sheng (zh-Hans), machine-drafted 2026-09-21, not native-reviewed. Mainland
   // players' names stay in one form in both scripts.
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：对局、战绩与分析',
@@ -3411,6 +3511,102 @@ const ZH_HANT: Record<string, string> = {
   'Wang Yongqiang': '王永强',
   'Zhao Panwei': '赵攀伟',
   'Meng Chen': '孟辰',
+  // lai-ly-huynh (zh-Hant), machine-drafted 2026-10-01, not native-reviewed. After the
+  // spread, like cao-yanlei's. Mainland players' names stay simplified (赵攀伟, 程宇东);
+  // 賴理兄 and the foreign players (李銘堅, 莊宏明, 馮家俊, 鄭義霖, 萊恩) convert, as on
+  // the world championship page.
+  'Lại Lý Huynh 赖理兄, the world xiangqi champion: games and analysis':
+    '賴理兄，世界象棋冠軍：對局與分析',
+  'The first world champion from outside China, unbeaten in Shanghai and winner of the final with black. His title run and the year since, five wins on the board, 38 games analysed.':
+    '第一位來自中國以外的世界冠軍，上海世錦賽一局未輸，決賽執黑取勝。他的奪冠之路和此後一年，盤面上五盤勝局，38 局附引擎分析。',
+  'Lại Lý Huynh at the board.': '對局中的賴理兄。',
+  'English-speaking xiangqi players, and Vietnamese fans who want his games in one place with analysis.':
+    '說英語的象棋棋友，以及想把他的對局連同分析集中在一處看的越南棋迷。',
+  'Lại Lý Huynh in a white team shirt, arms folded, looking down at the board during a game.':
+    '賴理兄身穿白色隊服，雙臂交叉，在對局中低頭看著棋盤。',
+  'Lại Lý Huynh at the Five Rams Cup, Guangzhou, February 2026. Photo: Vietnam Xiangqi Federation, via Thanh Niên.':
+    '2026 年 2 月，廣州五羊盃上的賴理兄。圖片：越南象棋聯合會，經 Thanh Niên 轉載。',
+  "Lại Lý Huynh 赖理兄 is the world champion. In Shanghai last September he went through the World Xiangqi Championship without losing a game and won the final against China's Yin Sheng with the black pieces, the first player from outside China to take the title. The Chinese press calls him Vietnam's king of xiangqi, 越南棋王. At home his fans call him Nam Phương công tử, the young master from the South.":
+    '賴理兄是現任世界冠軍。去年九月在上海，他在世界象棋錦標賽中一局未輸，決賽執黑擊敗中國的尹昇，成為第一位奪得這一頭銜的中國以外棋手。中文媒體稱他為「越南棋王」。在越南國內，棋迷叫他 Nam Phương công tử，意思是「南方公子」。',
+  "He was born in 1990 in Vĩnh Long, in the Mekong Delta, and learned the game watching his father play. He has won Vietnam's national championship six times and holds the WXF's International Grandmaster title. In 2016 he became the first foreign player in China's top league, for Hangzhou, and in 2023 he won the league with them. In February he was the first wildcard ever to reach the final of the Five Rams Cup, China's invitation event for its national champions.":
+    '他 1990 年生於湄公河三角洲的永隆，看父親下棋學會了象棋。他六次奪得越南全國冠軍，擁有世界象棋聯合會的國際特級大師稱號。2016 年他代表杭州出戰，成為中國象甲聯賽的第一位外籍棋手，2023 年隨杭州隊奪得聯賽冠軍。今年二月，他成為五羊盃歷史上第一位打進決賽的外卡棋手，五羊盃是中國邀請全國冠軍參加的邀請賽。',
+  'This page is his year as champion: the title run, the year since, and five of his wins on the board. I ran the 38 individual games we hold through the same engine analysis Mistboard gives your own games.':
+    '這一頁寫的是他當世界冠軍的這一年：奪冠之路、此後一年，以及盤面上他的五盤勝局。我們收錄的 38 盤個人賽對局，我都用 Mistboard 給你的對局做的同一套引擎分析跑過一遍。',
+  '**He wins with black.** Five of his six wins in Shanghai came with the black pieces, the side that moves second, the final among them. Across the 38 individual games we hold he won eight with black and three with red. With red he mostly draws, thirteen of his eighteen red games.':
+    '**他執黑贏棋。** 他在上海的六盤勝局中有五盤是執黑（後走的一方）贏的，決賽也在其中。我們收錄的 38 盤個人賽對局裡，他執黑贏了八盤，執紅只贏三盤。執紅他大多是和棋，十八盤執紅有十三盤和。',
+  '**He opens with the Cross-Palace Cannon.** In eleven of his eighteen red games his first move slid a cannon across to the far side of his own palace. It is a quieter start than the central cannon, and it leaves the game to be won later.':
+    '**他開局走過宮炮。** 十八盤執紅的對局裡有十一盤，他第一步就把一門炮平過九宮，放到九宮另一側。這比中炮開局安靜，把贏棋留到後面。',
+  '**He was precise when it counted.** His median accuracy across the nine games in Shanghai was 98. The engine confirms three sacrifices in his year, a piece offered and never won back, and one of them came in the world final.':
+    '**關鍵時刻他下得很準。** 他在上海九盤棋的準確率中位數是 98。引擎確認他這一年有三次真棄子，都是送出一子、再也沒有拿回來，其中一次就在世錦賽決賽。',
+  '**He learned from China\'s best.** "The league gave me a very valuable chance to learn," he told 羊城晚报 in February. "I could play and at the same time study how China\'s top players play." He has trained with engines since 2005.':
+    '**他向中國最強的棋手學習。** 他今年二月對《羊城晚報》說：「象甲聯賽給了我非常寶貴的學習機會。我可以一邊比賽，一邊觀摩學習中國頂尖棋手的棋路和技巧。」他從 2005 年起就用引擎訓練。',
+  'The world title': '世界冠軍',
+  "He had been one game from the title before. In Houston in 2023 he reached the final against Meng Chen, drew the slow game and lost the rapid tiebreak. Two years later the championship ran in Shanghai from 22 to 27 September, eight rounds and then a final between the top two. He won five and drew three, against Yin Sheng on the first day, Meng Fanrui and Malaysia's Li Dezhi, and finished level with Yin Sheng on 13 points.":
+    '他以前也離冠軍只差一盤棋。2023 年在休斯敦，他打進決賽對孟辰，慢棋和了，快棋加賽輸了。兩年後，世錦賽於 9 月 22 日至 27 日在上海舉行，先賽八輪，再由前兩名下決賽。他五勝三和，和的是第一天的尹昇、孟繁睿和馬來西亞的黎德志，最後與尹昇同積 13 分。',
+  Round: '輪次',
+  Colour: '執子',
+  Result: '結果',
+  Win: '勝',
+  Draw: '和',
+  Final: '決賽',
+  'Ryan Emmanuel Haris (East Malaysia)': '萊恩（東馬來西亞）',
+  'Yin Sheng (China)': '尹昇（中國）',
+  'Mingjian Li (USA)': '李銘堅（美國）',
+  'Tony Fung Ga Zen (Hong Kong)': '馮家俊（香港）',
+  'Calvin Tay Yelin (East Malaysia)': '鄭義霖（東馬來西亞）',
+  'Meng Fanrui (China)': '孟繁睿（中國）',
+  'Chong Heung Ming (Philippines)': '莊宏明（菲律賓）',
+  'Li Dezhi (Malaysia)': '黎德志（馬來西亞）',
+  'His world championship, round by round.': '他的世錦賽，逐輪戰績。',
+  "In round three he met the United States' Mingjian Li, who held him level for nineteen moves. Li's chariot push on move 20 let it go. Lại finished at 98 percent accuracy and needed another 47 moves to bring it home.":
+    '第三輪他遇到美國的李銘堅，對方和他均勢周旋了十九個回合。李銘堅第 20 回合進車，把局面送了出去。賴理兄全盤準確率 98%，又走了 47 個回合才把這盤棋拿下。',
+  "Mingjian Li vs Lại Lý Huynh, 23 September 2025, round 3. The board opens after red's 20th move, with Lại to play as black.":
+    '李銘堅對賴理兄，2025 年 9 月 23 日，第 3 輪。棋盤從紅方第 20 回合之後開始，輪到執黑的賴理兄走。',
+  '2025 World Xiangqi Championship, round 3': '2025 世界象棋錦標賽，第 3 輪',
+  "In round seven Chong Heung Ming of the Philippines slid his cannon across on move 17. Lại's horse jumped into the centre the same move, the engine's own first choice, and his cannon followed it in. Chong resigned after move 32.":
+    '第七輪，菲律賓的莊宏明第 17 回合平炮。賴理兄同一回合躍馬入中，正是引擎的首選，隨後他的炮也跟了進去。莊宏明在第 32 回合後認輸。',
+  "Chong Heung Ming vs Lại Lý Huynh, 25 September 2025, round 7. The board opens after red's 17th move, with Lại to play as black.":
+    '莊宏明對賴理兄，2025 年 9 月 25 日，第 7 輪。棋盤從紅方第 17 回合之後開始，輪到執黑的賴理兄走。',
+  '2025 World Xiangqi Championship, round 7': '2025 世界象棋錦標賽，第 7 輪',
+  "The final was one game, Yin Sheng with red. Yin Sheng pressed early, and by move 27 it was level again. Lại pushed his central cannon into Yin Sheng's camp, a piece offer the engine rates as the best move on the board. Yin Sheng took it, and the engine still called the game level. On move 38 his advisor stepped back. From there Lại's soldier on the third file walked down the board, and Yin Sheng resigned after move 52.":
+    '決賽只下一盤，尹昇執紅。尹昇開局施壓，到第 27 回合局面又回到均勢。賴理兄把中炮打進尹昇的陣地，這是一步棄子，引擎認為是當時盤面上的最佳著法。尹昇吃了炮，引擎仍判局面均勢。第 38 回合尹昇退士。此後賴理兄的三路卒一路向下挺進，尹昇在第 52 回合後認輸。',
+  "Yin Sheng vs Lại Lý Huynh, 27 September 2025, the final. The board opens after red's 27th move, with Lại to play as black.":
+    '尹昇對賴理兄，2025 年 9 月 27 日，決賽。棋盤從紅方第 27 回合之後開始，輪到執黑的賴理兄走。',
+  '2025 World Xiangqi Championship, final': '2025 世界象棋錦標賽，決賽',
+  "Yin Sheng was born in 2005. A year later he went 31 games without a loss and has [his own page](/blog/yin-sheng). The championship's history, and Lại's earlier games in it, are on the [world championship page](/blog/xiangqi-world-championship).":
+    '尹昇生於 2005 年。一年後他連續 31 局不敗，他也有[自己的專頁](/blog/yin-sheng)。世錦賽的歷史，以及賴理兄早年在這項賽事裡的對局，見[世界象棋錦標賽專頁](/blog/xiangqi-world-championship)。',
+  'The year since': '此後一年',
+  "At home the title made him a national figure. In June the state awarded him the First-Class Labour Order, and in April he won the rapid title at the national championship. Most of his games this year, though, were against China's best on their ground, and those are in the table below.":
+    '在越南國內，這個冠軍讓他成了家喻戶曉的人物。六月國家授予他一級勞動勳章，四月他在全國錦標賽上拿下快棋冠軍。不過他今年的大部分對局，是在中國的地盤上對陣中國最強的棋手，都列在下表。',
+  'World Rapid Open, Shanghai': '世界快棋公開賽，上海',
+  'Sep 26, 2025': '2025年9月26日',
+  'Match vs Cao Yanlei, Zhengzhou': '對曹岩磊番棋，鄭州',
+  'Dukang arena final, Zhengzhou': '酒祖杜康盃擂台賽年終總決賽，鄭州',
+  'Jan 9–10': '1月9–10日',
+  'Five Rams Cup, Guangzhou': '五羊盃，廣州',
+  'Feb 25–Mar 1': '2月25日–3月1日',
+  May: '5月',
+  'Vietnam vs Guangdong, Đà Nẵng': '越南對廣東，峴港',
+  Jul: '7月',
+  'The year since the title, events with a complete record.': '奪冠後的一年，只列戰績完整的賽事。',
+  "In January a tea company booked him and Cao Yanlei into a room in Zhengzhou for [ten rapid games](/broadcast/xiangqi/2026-chunqiu-dayie-ten-game-match) over three evenings, a rematch of their 2016 Han Xin Cup final in Sydney. Cao won the match 12 to 8, and [his page](/blog/cao-yanlei) tells it from his side. Lại's win was game eight, with black, in 18 moves. Cao's horse stepped back on move 15; Lại's chariot went straight up the file in reply, his horse followed, and Cao resigned three moves later.":
+    '一月，一家茶企把他和曹岩磊請到鄭州，三個晚上下[十盤快棋](/broadcast/xiangqi/2026-chunqiu-dayie-ten-game-match)，重演兩人 2016 年在雪梨的韓信盃決賽。曹岩磊以 12 比 8 贏下番棋，[他的專頁](/blog/cao-yanlei)從他那一方講了這場比賽。賴理兄贏的是第八盤，執黑，18 回合。曹岩磊第 15 回合退馬，賴理兄隨即進車直衝，馬也跟了上去，三個回合後曹岩磊認輸。',
+  "Cao Yanlei vs Lại Lý Huynh, 5 January 2026, game 8 of the match. The board opens after red's 15th move, with Lại to play as black.":
+    '曹岩磊對賴理兄，2026 年 1 月 5 日，番棋第 8 盤。棋盤從紅方第 15 回合之後開始，輪到執黑的賴理兄走。',
+  '2026 ten-game match, game 8': '2026 春丘大葉盃十局番棋，第 8 盤',
+  "The Five Rams Cup in Guangzhou (五羊杯) invites China's national champions. In February it gave its first wildcard to Lại, and he reached the final. In the semi-final he beat Zhao Panwei, the opponent Cao Yanlei found hardest all year, winning the first game with red and drawing the second. Zhao's horse jumped forward on move 17; Lại's horses came forward and Zhao resigned after move 40. Cheng Yudong beat him in the final, a draw and then a loss. The [whole event](/broadcast/xiangqi/2026-wuyang-cup) is in the broadcast archive.":
+    '廣州的五羊盃邀請的是中國的全國冠軍。今年二月它第一次發出外卡，給了賴理兄，他一路打進決賽。半決賽他擊敗赵攀伟，就是曹岩磊全年最難對付的那位對手：第一盤執紅獲勝，第二盤弈和。赵攀伟第 17 回合躍馬進擊，賴理兄的雙馬隨之躍出，赵攀伟在第 40 回合後認輸。決賽他負於程宇东，一和一負。[整項賽事](/broadcast/xiangqi/2026-wuyang-cup)都在直播檔案裡。',
+  "Lại Lý Huynh vs Zhao Panwei, 28 February 2026, Five Rams Cup semi-final, game 1. The board opens after black's 17th move, with Lại to move.":
+    '賴理兄對赵攀伟，2026 年 2 月 28 日，五羊盃半決賽第 1 盤。棋盤從黑方第 17 回合之後開始，輪到賴理兄走。',
+  '2026 Five Rams Cup, semi-final': '2026 五羊盃，半決賽',
+  '"Since I won the world championship, more people in Vietnam follow xiangqi," he said in Guangzhou, "and more of them have started playing."':
+    '他在廣州說：「自從世錦賽奪冠之後，越南國內關注象棋的人越來越多了，開始下棋、喜歡象棋的人也明顯變多了。」',
+  'All 38 games': '全部 38 局',
+  "Every game on this page is in a Mistboard study with the engine's judgments and lines, and 15 of them are in the broadcast archive with the site's analysis. Sources: game records from dpxq.com, which may not hold every game of an event; the round table from the WXF results book; the Five Rams Cup and arena records from VnExpress, and the Vietnam vs Guangdong record from VnExpress and 象棋热情; analysis by Pikafish through Mistboard's review pipeline, October 2026.":
+    '本頁的每一盤都在 Mistboard 的一個研究裡，附引擎的判斷和變化；其中 15 盤也在直播檔案裡，附網站的分析。資料來源：棋譜來自 dpxq.com，該資料庫不一定收齊每項賽事的全部對局；逐輪戰績表來自世界象棋聯合會的成績冊；五羊盃和擂台賽戰績來自 VnExpress，越南對廣東的戰績來自 VnExpress 和象棋熱情；分析由 Pikafish 經 Mistboard 的復盤流程完成，2026 年 10 月。',
+  'His games in the archive': '他在檔案裡的對局',
+  'Mingjian Li': '李銘堅',
+  'Chong Heung Ming': '莊宏明',
   // yin-sheng (zh-Hant), machine-drafted 2026-09-21, not native-reviewed. After the
   // spread, or the Simplified entries win (they did, for one deploy).
   'Yin Sheng 尹昇: games, results, and analysis': '尹昇：對局、戰績與分析',
