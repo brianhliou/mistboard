@@ -236,17 +236,19 @@
   }
 }
 
-/* Banqi's 8x4 board is a wide strip, less than half the height of the room
-   row. The centre column stacks the board and the face-down tally under it
-   (live-banqi.ts moves the pool there: the centre column has the width, the
-   right rail needs the height); on a wide screen the band centres (below). */
-.live-route--banqi .live-review__cluster .review-shell__center {
+/* The flip variants whose board leaves room below it: banqi's 8x4 strip
+   (less than half the room row's height) and flip jungle's 4x4 square. The
+   centre column stacks the board and the face-down tally under it
+   (hidden-pool-placement.ts moves the pool there: the centre column has the
+   width, the right rail needs the height); on a wide screen the three columns
+   are one band (below). */
+:is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .review-shell__center {
   flex-direction: column;
   align-items: center;
   justify-content: flex-start;
   gap: 14px;
 }
-.live-route--banqi .live-review__cluster .hidden-pool--under-board {
+:is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .hidden-pool--under-board {
   /* Board discs at ~40% size: the tally reads as the board's own inventory. */
   --capture-piece-size: clamp(26px, calc(var(--uni-board-width, 360px) * 0.05), 36px);
   box-sizing: border-box;
@@ -263,7 +265,10 @@
   grid-template-columns: repeat(2, minmax(0, 1fr));
   column-gap: 24px;
 }
-.live-route--banqi .live-review__cluster .hidden-pool--under-board .hidden-pool__caption {
+:is(.live-route--banqi, .live-route--jungle-flip)
+  .live-review__cluster
+  .hidden-pool--under-board
+  .hidden-pool__caption {
   grid-column: 1 / -1;
 }
 
@@ -274,20 +279,20 @@
      centred console the tall boards use, so the two clocks sit a console's
      height apart. Full-height rails (tried 10-02) dwarfed the short board and
      put the clocks the screen's height apart. */
-  .live-route--banqi .live-review__cluster {
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster {
     grid-template-rows: auto;
     align-content: center;
   }
-  .live-route--banqi .live-review__cluster .meta-panel {
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .meta-panel {
     max-height: none;
   }
-  .live-route--banqi .live-review__cluster .moves-panel {
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .moves-panel {
     align-self: stretch;
   }
   /* All three columns start on the board's top edge. Centred, the table rode
      up and down the rail with its content (a finished game's table is shorter
      than a live one's) and never lined up with the board or the info card. */
-  .live-route--banqi .live-review__cluster .game-console {
+  :is(.live-route--banqi, .live-route--jungle-flip) .live-review__cluster .game-console {
     justify-content: flex-start;
   }
 

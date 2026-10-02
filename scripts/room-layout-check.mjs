@@ -63,7 +63,7 @@ for (const viewport of viewports) {
       if (!m.seatInside) fail("the viewer's seat row is clipped out of the table");
       if (m.movesHeight < 72) fail(`the move window is ${m.movesHeight}px, under its 72px floor`);
       if (m.horizontalOverflow > 1) fail(`horizontal overflow ${m.horizontalOverflow}px`);
-      if (spec === 'banqi') {
+      if (spec === 'banqi' || spec === 'jungle-flip') {
         if (!m.poolUnderBoard || m.poolTop < m.boardBottom)
           fail('the face-down tally is not under the board');
         if (viewport.width >= 1260 && Math.abs(m.metaBottom - m.railBottom) > 2) {

@@ -2879,3 +2879,20 @@ a.article-meta-author:hover .article-meta-author-name {
   padding-right: 18px;
   font-variant-numeric: tabular-nums;
 }
+
+/* What each move cost one side (articles/move-cost-chart.ts). Marked moves
+   wear the review's judgment colours; unmarked ones are neutral ink. */
+.article-figure-move-cost {
+  --move-cost-quiet: #b9b5ad;
+  align-items: stretch;
+}
+.article-figure-move-cost > .move-cost-chart {
+  display: block;
+  width: 100%;
+  height: auto;
+  max-width: 702px;
+  margin: 0 auto;
+}
+:root[data-effective-theme="dark"] .article-figure-move-cost {
+  --move-cost-quiet: #6f6b64;
+}

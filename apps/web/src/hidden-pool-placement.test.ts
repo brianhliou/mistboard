@@ -1,9 +1,10 @@
 import { describe, expect, it } from 'vitest';
-import { placeHiddenPoolUnderBoard } from './live-banqi.js';
+import { placeHiddenPoolUnderBoard } from './hidden-pool-placement.js';
 
-// The face-down tally lives under banqi's wide board from the two-column layout
-// up (the right rail needs its height for the table, 2026-10-02 incident), and
-// at the foot of the table on a phone, where the seat row hugs the board. The
+// The face-down tally lives under the flip variants' boards (banqi, flip
+// jungle) from the two-column layout up (the right rail needs its height for
+// the table, 2026-10-02 incident), and at the foot of the table on a phone,
+// where the seat row hugs the board. The
 // layout itself is checked in a real browser by scripts/room-layout-check.mjs.
 
 function room() {
@@ -31,7 +32,7 @@ function fakeMedia(matches: boolean) {
   };
 }
 
-describe('banqi face-down tally placement', () => {
+describe('face-down tally placement', () => {
   it('sits under the board in the centre column on a wide layout', () => {
     const { host, refs } = room();
     placeHiddenPoolUnderBoard(refs, fakeMedia(true).media);
