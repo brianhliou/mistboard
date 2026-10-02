@@ -35,6 +35,7 @@ Conventions:
 
 ### Watching and review
 
+- a broadcast with no games yet keeps its game list and chat column, so the page has the same shape before play as during it ([b792d6b5](https://github.com/brianhliou/mistboard/commit/b792d6b5))
 - The homepage TV marks each player with a disc in their colour, so Banqi and Flip Jungle show who plays which side (a dashed ring until the first flip decides it) ([f27e98d0](https://github.com/brianhliou/mistboard/commit/f27e98d0))
 - in Jieqi game review, a reveal is graded on what its player could know, counting their own face-down pieces that were captured unseen ([a730bab6](https://github.com/brianhliou/mistboard/commit/a730bab6))
 - Game search hides games shorter than ten plies by default, with one click to show them ([cce12ac5](https://github.com/brianhliou/mistboard/commit/cce12ac5))
