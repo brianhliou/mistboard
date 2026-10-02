@@ -73,6 +73,8 @@ Conventions:
 
 ### Fixed
 
+- The banqi rules page names the cannon house rule it does not play, instead of listing its own rules as rejected ones ([1a95e357](https://github.com/brianhliou/mistboard/commit/1a95e357))
+- Embedded banqi games no longer leave a blank band under the board ([1a95e357](https://github.com/brianhliou/mistboard/commit/1a95e357))
 - rematch now swaps colours, including in xiangqi; Copy invite shows only while a seat is empty ([6e9613e2](https://github.com/brianhliou/mistboard/commit/6e9613e2))
 - a finished broadcast whose source never posted games says No games published instead of promising records ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
 - an open game whose player has left now drops off the list within 10 seconds, and a matched game you join alone ends after 30 seconds instead of showing an invite link ([0bd24a2a](https://github.com/brianhliou/mistboard/commit/0bd24a2a))
