@@ -55,7 +55,7 @@ Conventions:
 
 ### Site
 
-- The privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
+- the privacy page now names PostHog and what it records ([3ec676b4](https://github.com/brianhliou/mistboard/commit/3ec676b4))
 - less empty space above and below the footer on the homepage ([774f9cff](https://github.com/brianhliou/mistboard/commit/774f9cff))
 - the changelog shows the latest two months, and each older month has its own page ([95b11226](https://github.com/brianhliou/mistboard/commit/95b11226))
 - The homepage's second article row is now Deep dives, starting with the player pages, and every new post appears on the homepage the day it publishes ([45217d23](https://github.com/brianhliou/mistboard/commit/45217d23))
