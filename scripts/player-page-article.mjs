@@ -37,6 +37,7 @@
 //   [FILL: what goes here]           a hole; refuses to build without --preview
 //   Anything else is a paragraph; wrapped lines are joined with a space.
 
+import { spawnSync } from 'node:child_process';
 import { existsSync, readFileSync, writeFileSync } from 'node:fs';
 import { basename, dirname, join } from 'node:path';
 
@@ -47,6 +48,12 @@ const out = outIdx === -1 ? null : args[outIdx + 1];
 // A draft still holding [FILL: …] marks refuses to build; --preview renders each
 // one as a visible paragraph so the page can be read locally before it is done.
 const PREVIEW = args.includes('--preview');
+// Every engine line on a board ends in a verdict (+−, ±, =, …), measured by
+// article-line-evals.mjs. A page used to ship without them whenever nobody
+// remembered that second step (the 2026-10-01 player page did), so with --out
+// the build measures this page's unmeasured lines itself and rebuilds.
+// --no-measure skips it; a build that still lacks a verdict then refuses.
+const NO_MEASURE = args.includes('--no-measure');
 if (!draftPath) {
   console.error('usage: player-page-article.mjs <draft.md> [--out <article.ts>] [--preview]');
   process.exit(1);
@@ -178,6 +185,7 @@ const lineEvalsPath = join(repoRoot, 'scripts/data/article-line-evals.json');
 const lineEvals = existsSync(lineEvalsPath) ? JSON.parse(readFileSync(lineEvalsPath, 'utf8')) : {};
 
 const seen = new Set();
+const unmeasured = [];
 const specConsts = [];
 const seatsByKey = new Map();
 for (const [boardIndex, { key, constName }] of boards.entries()) {
@@ -199,6 +207,7 @@ for (const [boardIndex, { key, constName }] of boards.entries()) {
   for (const [ply, ann] of Object.entries(byPly)) {
     const verdict = lineEvals[`${meta.slug}:${boardIndex}:${ply}`];
     if (ann.line && verdict?.symbol) ann.lineEval = verdict.symbol;
+    else if (ann.line) unmeasured.push(`${meta.slug}:${boardIndex}:${ply}`);
   }
   const ordered = Object.fromEntries(
     Object.entries(byPly).sort(([a], [b]) => Number(a) - Number(b)),
@@ -290,6 +299,31 @@ ${sections
 if (out) {
   writeFileSync(out, ts);
   console.error(`${boards.length} boards, ${sections.length} sections -> ${out}`);
+  if (unmeasured.length && !PREVIEW) {
+    if (NO_MEASURE) {
+      fail(
+        `${unmeasured.length} engine lines have no verdict (${unmeasured.slice(0, 3).join(', ')}…): ` +
+          `run without --no-measure, or node scripts/article-line-evals.mjs --only ${meta.slug}:`,
+      );
+    }
+    // The measuring script reads the article file just written, so it measures
+    // exactly what the page renders; --only merges this page's keys into the
+    // shared file and leaves every other article's verdicts untouched.
+    console.error(`${unmeasured.length} engine lines have no verdict: measuring ${meta.slug}`);
+    const measured = spawnSync(
+      process.execPath,
+      [join(repoRoot, 'scripts/article-line-evals.mjs'), '--only', `${meta.slug}:`],
+      { cwd: repoRoot, stdio: 'inherit' },
+    );
+    if (measured.status !== 0) fail('measuring the engine lines failed');
+    const rebuilt = spawnSync(process.execPath, [process.argv[1], ...args, '--no-measure'], {
+      stdio: 'inherit',
+    });
+    process.exit(rebuilt.status ?? 1);
+  }
 } else {
+  if (unmeasured.length && !PREVIEW) {
+    fail(`${unmeasured.length} engine lines have no verdict: build with --out to measure them`);
+  }
   process.stdout.write(ts);
 }

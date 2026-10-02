@@ -423,6 +423,7 @@ try {
     { en: 'jieqi-openings', vi: 'khai-cuoc-co-up' },
     { en: 'jieqi', vi: 'luat-co-up' },
     { en: 'pikafish', vi: 'choi-co-tuong-voi-may' },
+    { en: 'lai-ly-huynh', vi: 'lai-ly-huynh-co-tuong' },
   ];
 
   // Scheduled posts (published, dated in the future at build time) are left

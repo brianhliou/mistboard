@@ -338,6 +338,9 @@ function buildRulesLanding(lang?: ArticleLang): HTMLElement {
 // home-article-row.test.ts fails when one of the newest HOME_ARTICLE_ROW_SIZE
 // listable articles is missing here without a recorded reason.
 export const HOME_ARTICLE_SLUGS = [
+  // The third player page, dated 2026-10-02: the world champion's title run and
+  // the year since. Moves to the Deep dives row (homeRow) when that field lands.
+  'lai-ly-huynh',
   // The second player page, dated 2026-09-25: the ten-game match against the
   // world champion and the season after it. Newest, so it leads.
   'cao-yanlei',

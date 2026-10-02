@@ -12,6 +12,8 @@ import { CO_UP_VI } from './articles/content/co-up.js';
 import { jieqiOpeningsArticle } from './articles/content/jieqi-openings.js';
 import { jieqiPlatformArticle } from './articles/content/jieqi-platform.js';
 import { KHAI_CUOC_CO_UP_VI } from './articles/content/khai-cuoc-co-up.js';
+import { laiLyHuynhArticle } from './articles/content/lai-ly-huynh.js';
+import { LAI_LY_HUYNH_CO_TUONG_VI } from './articles/content/lai-ly-huynh-co-tuong.js';
 import { pikafishArticle } from './articles/content/pikafish.js';
 import { untranslatedStrings } from './articles/derived-translation.js';
 import { buildArticlePage } from './articles.js';
@@ -21,6 +23,7 @@ const DERIVED = [
   { slug: 'co-up', source: jieqiPlatformArticle, dict: CO_UP_VI },
   { slug: 'khai-cuoc-co-up', source: jieqiOpeningsArticle, dict: KHAI_CUOC_CO_UP_VI },
   { slug: 'choi-co-tuong-voi-may', source: pikafishArticle, dict: CHOI_CO_TUONG_VOI_MAY_VI },
+  { slug: 'lai-ly-huynh-co-tuong', source: laiLyHuynhArticle, dict: LAI_LY_HUYNH_CO_TUONG_VI },
 ];
 
 describe('derived translations', () => {

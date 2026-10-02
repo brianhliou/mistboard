@@ -51,6 +51,8 @@ describe('article public listing gates', () => {
     expect(hrefs).toEqual([
       // AB-JChess, the new top jieqi bot, scheduled for 2026-10-02.
       '/blog/ab-jchess',
+      // The third player page, the world champion Lại Lý Huynh, 2026-10-02.
+      '/blog/lai-ly-huynh',
       // The jieqi bot's record and the games people won, scheduled for
       // 2026-10-01 (DEV shows it early for review).
       '/blog/jieqi-bot-wins',
@@ -244,6 +246,7 @@ describe('article public listing gates', () => {
     // Rules reference pages are excluded from this row; only editorial
     // (blog/concept) articles appear, newest first.
     expect(hrefs).toEqual([
+      '/blog/lai-ly-huynh',
       '/blog/cao-yanlei',
       '/blog/banqi-statistics',
       '/blog/pikafish',
