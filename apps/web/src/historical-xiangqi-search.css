@@ -133,6 +133,28 @@
   font-weight: 600;
 }
 
+/* What the default Min plies floor hides, under the count. */
+.historical-xiangqi-floor {
+  margin: -0.4rem 0 0.85rem;
+  color: var(--site-muted);
+  font-size: 0.88rem;
+}
+
+.historical-xiangqi-floor-clear {
+  padding: 0;
+  border: 0;
+  background: none;
+  color: var(--site-accent-strong);
+  font: inherit;
+  font-weight: 600;
+  cursor: pointer;
+}
+
+.historical-xiangqi-floor-clear:hover,
+.historical-xiangqi-floor-clear:focus-visible {
+  text-decoration: underline;
+}
+
 .historical-xiangqi-results {
   display: flex;
   flex-direction: column;

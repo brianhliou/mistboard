@@ -106,7 +106,9 @@ function devApiProxyPlugin(): Plugin {
     apply: 'serve',
     configureServer(server) {
       server.middlewares.use((req, res, next) => {
-        if (!req.url?.startsWith('/api/')) {
+        // /og/ too: the per-game images the Share & export tab downloads are
+        // drawn by the server, which owns that path in production.
+        if (!req.url?.startsWith('/api/') && !req.url?.startsWith('/og/')) {
           next();
           return;
         }

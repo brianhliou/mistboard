@@ -1,6 +1,10 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
-import { CANONICAL_VARIANT_ORDER, type GameSpecId } from '@mistboard/game';
+import {
+  CANONICAL_VARIANT_ORDER,
+  GAMES_SEARCH_DEFAULT_MIN_PLIES,
+  type GameSpecId,
+} from '@mistboard/game';
 // The searchable variants derive from the tenant registry (via the watch
 // channels), so the registrations must be populated, as index.ts does.
 import '../variant-tenant/register-tenants.js';
@@ -11,6 +15,8 @@ import {
   mistboardResults,
   pageAcrossLanes,
   parseHistoricalXiangqiGameQuery,
+  playedPlyFloor,
+  playedPlyMin,
   publicTags,
   SEARCH_WINDOW,
   searchableVariants,
@@ -272,4 +278,30 @@ test('a seat-keyed result filter spans the red and white first seats', () => {
   assert.deepEqual(mistboardResults('1/2-1/2'), ['draw']);
   assert.deepEqual(mistboardResults('*'), []);
   assert.deepEqual(mistboardResults(undefined), []);
+});
+
+// The default floor hides games abandoned in the opening, which are most of
+// the short rows and nearly all guest-vs-bot. It applies to games played here
+// only when the search sets no minimum: broadcasts and the archive have no
+// games that short, and their shortest real games (agreed draws) must stay.
+test('the default minimum length applies to games played here only, and only by default', () => {
+  assert.deepEqual(playedPlyMin({}, 'played'), { plyMin: GAMES_SEARCH_DEFAULT_MIN_PLIES });
+  assert.deepEqual(playedPlyMin({}, 'engine-match'), {});
+  // Any minimum the search sets wins, 0 (no minimum) included.
+  assert.deepEqual(playedPlyMin({ plyMin: 0 }, 'played'), { plyMin: 0 });
+  assert.deepEqual(playedPlyMin({ plyMin: 30 }, 'engine-match'), { plyMin: 30 });
+  // The response names the floor it applied, so the page can say what is hidden.
+  assert.equal(playedPlyFloor({}), GAMES_SEARCH_DEFAULT_MIN_PLIES);
+  assert.equal(playedPlyFloor({ plyMin: 0 }), null);
+  assert.equal(playedPlyFloor({ sourceSlug: 'broadcast' }), null);
+  assert.equal(playedPlyFloor({ sourceSlug: 'archive' }), null);
+  assert.equal(playedPlyFloor({ sourceSlug: 'mistboard' }), GAMES_SEARCH_DEFAULT_MIN_PLIES);
+  assert.equal(GAMES_SEARCH_DEFAULT_MIN_PLIES, 10);
+});
+
+test('an omitted plyMin stays omitted, so the default floor can tell it from 0', () => {
+  const omitted = parse('');
+  assert.ok(omitted.ok && omitted.filters.plyMin === undefined);
+  const zero = parse('plyMin=0');
+  assert.ok(zero.ok && zero.filters.plyMin === 0);
 });

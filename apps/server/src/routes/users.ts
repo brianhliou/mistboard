@@ -70,13 +70,24 @@ export async function tryHandle(
     // fail-closed: an unknown value yields null, which serves the unfiltered
     // history rather than erroring or, worse, matching nothing.
     const ratingVariant = parseRatingVariant(parsedUrl.searchParams.get('variant'));
-    const page = await persistence.getUserGamesPage(
-      handle,
-      viewer?.id ?? null,
-      offset,
-      limit,
+    // Result (from the profile owner's seat) and opponent handle. A value that
+    // is not one is a 400: unlike the pool, a typo here would otherwise read as
+    // "this player never lost".
+    const resultParam = parsedUrl.searchParams.get('result');
+    if (resultParam && !persistence.isProfileGameResultFilter(resultParam)) {
+      writeJson(response, 400, { error: 'invalid_result' });
+      return true;
+    }
+    const opponent = parsedUrl.searchParams.get('vs')?.trim() ?? '';
+    if (opponent && !HANDLE_PATTERN.test(opponent)) {
+      writeJson(response, 400, { error: 'invalid_opponent' });
+      return true;
+    }
+    const page = await persistence.getUserGamesPage(handle, viewer?.id ?? null, offset, limit, {
       ratingVariant,
-    );
+      result: persistence.isProfileGameResultFilter(resultParam) ? resultParam : null,
+      opponent: opponent || null,
+    });
     if (!page) {
       writeJson(response, 404, { error: 'not_found' });
       return true;

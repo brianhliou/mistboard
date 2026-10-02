@@ -62,6 +62,9 @@ export type ReviewLayoutAdapter = {
   enginePanel?: HTMLElement;
   analysisSummary?: HTMLElement;
   underboard?: HTMLElement;
+  /** The underboard sits below the fold rather than shrinking the board (see
+   *  the scaffold option of the same name). */
+  underboardOverflows?: boolean;
   /** Eval gauge (thin vertical bar) — gets its own grid column between the
    *  board and the tools rail (lichess's gauge area). Hidden on col1. */
   gauge?: HTMLElement;
@@ -469,6 +472,7 @@ export function mountReviewLayout(root: HTMLElement, adapter: ReviewLayoutAdapte
     secondaryWidthPx: adapter.secondaryWidthPx,
     boardMaxPx: adapter.boardMaxPx,
     underboard: adapter.underboard,
+    underboardOverflows: adapter.underboardOverflows,
     enginePanel: adapter.enginePanel,
     moves: adapter.moves,
     moveComment: adapter.moveComment,

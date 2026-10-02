@@ -1,6 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
 import {
+  DEFAULT_MIN_PLIES,
   eventLine,
+  gamesSearchPageUrl,
   type HistoricalXiangqiGameListItem,
   historicalXiangqiOutcomeLabel,
   historicalXiangqiResultLabel,
@@ -511,6 +513,117 @@ function listItem(
     ...overrides,
   };
 }
+
+// Most short rows are openings a guest abandoned against a bot. The default
+// floor hides them from games played here; the form shows it, it stays out of
+// the URL while it is the default, and clearing it is a choice the URL keeps.
+describe('the default minimum length', () => {
+  beforeEach(() => {
+    window.history.replaceState(null, '', '/games/search');
+  });
+
+  afterEach(() => {
+    vi.unstubAllGlobals();
+  });
+
+  const minPliesInput = (root: HTMLElement) =>
+    root.querySelector<HTMLInputElement>('input[type="number"]');
+
+  it('shows in the form and the summary, but not in the URL or the query', async () => {
+    const requested: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        requested.push(url);
+        return jsonResponse({ total: 3, offset: 0, limit: 50, games: [], playedPlyFloor: 10 });
+      }),
+    );
+    const root = document.createElement('div');
+    await mountHistoricalXiangqiSearch(root);
+
+    expect(requested[0]).toBe('/api/historical-xiangqi/games?limit=50');
+    expect(window.location.search).toBe('');
+    expect(minPliesInput(root)?.value).toBe(DEFAULT_MIN_PLIES);
+    expect(root.querySelector('.historical-xiangqi-floor')?.textContent).toContain(
+      'Games played here shorter than 10 plies are hidden.',
+    );
+  });
+
+  it('clears to no minimum from the summary, and the URL keeps the choice', async () => {
+    const requested: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        requested.push(url);
+        const floored = !url.includes('plyMin=');
+        return jsonResponse({
+          total: 0,
+          offset: 0,
+          limit: 50,
+          games: [],
+          playedPlyFloor: floored ? 10 : null,
+        });
+      }),
+    );
+    const root = document.createElement('div');
+    await mountHistoricalXiangqiSearch(root);
+    root.querySelector<HTMLButtonElement>('.historical-xiangqi-floor-clear')?.click();
+    await vi.waitFor(() => expect(requested).toHaveLength(2));
+
+    expect(requested[1]).toBe('/api/historical-xiangqi/games?plyMin=0&limit=50');
+    expect(window.location.search).toBe('?plyMin=0');
+    await vi.waitFor(() => expect(root.querySelector('.historical-xiangqi-floor')).toBeNull());
+    expect(minPliesInput(root)?.value).toBe('0');
+  });
+
+  it('reads an emptied field as no minimum, and Reset brings the default back', async () => {
+    const requested: string[] = [];
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async (url: string) => {
+        requested.push(url);
+        return jsonResponse({ total: 0, offset: 0, limit: 50, games: [] });
+      }),
+    );
+    const root = document.createElement('div');
+    await mountHistoricalXiangqiSearch(root);
+    const form = root.querySelector<HTMLFormElement>('form.historical-xiangqi-filters');
+    const input = minPliesInput(root);
+    if (!form || !input) throw new Error('filter form did not render');
+    input.value = '';
+    form.dispatchEvent(new Event('submit', { bubbles: true, cancelable: true }));
+    await vi.waitFor(() => expect(requested).toHaveLength(2));
+    expect(window.location.search).toBe('?plyMin=0');
+
+    const reset = Array.from(root.querySelectorAll<HTMLButtonElement>('button')).find(
+      (button) => button.textContent === 'Reset',
+    );
+    reset?.click();
+    await vi.waitFor(() => expect(requested).toHaveLength(3));
+    expect(requested[2]).toBe('/api/historical-xiangqi/games?limit=50');
+    expect(window.location.search).toBe('');
+    expect(minPliesInput(root)?.value).toBe(DEFAULT_MIN_PLIES);
+  });
+
+  it('a link that names its own minimum keeps it', () => {
+    expect(
+      gamesSearchPageUrl({
+        sort: 'recent',
+        variant: 'jieqi',
+        player: '',
+        event: '',
+        source: '',
+        result: '',
+        from: '',
+        to: '',
+        plyMin: '20',
+        plyMax: '',
+        offset: 0,
+        limit: 50,
+      }),
+    ).toBe('/games/search?variant=jieqi&plyMin=20');
+  });
+});
 
 function jsonResponse(body: unknown): Response {
   return new Response(JSON.stringify(body), {

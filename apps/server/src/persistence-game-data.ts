@@ -165,6 +165,31 @@ export async function listStoredDataFiles(): Promise<StoredDataFileMeta[]> {
   }));
 }
 
+/** A stored file's row without its bytes: what a redirect to its hashed URL
+ *  needs, for one indexed read instead of the whole file. */
+export async function getStoredDataFileMeta(key: string): Promise<StoredDataFileMeta | null> {
+  const { rows } = await getPool().query<{
+    file_key: string;
+    game_count: number;
+    byte_size: number;
+    sha256: string;
+    built_at: Date;
+  }>(
+    `SELECT file_key, game_count, byte_size, sha256, built_at
+     FROM game_data_files WHERE file_key = $1`,
+    [key],
+  );
+  const row = rows[0];
+  if (!row) return null;
+  return {
+    key: row.file_key,
+    gameCount: row.game_count,
+    byteSize: row.byte_size,
+    sha256: row.sha256,
+    builtAt: row.built_at,
+  };
+}
+
 export async function getStoredDataFile(key: string): Promise<StoredDataFile | null> {
   const { rows } = await getPool().query<{
     file_key: string;

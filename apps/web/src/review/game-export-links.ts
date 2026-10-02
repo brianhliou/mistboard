@@ -1,13 +1,23 @@
-// Download links for a finished game's canonical exports (the Game Publishing
-// Track's `/api/games/:roomId/export.{pgn,json}`): the PGN with the CC BY header
-// and the schema-v1.0 JSON. Every postgame surface hands the result to the
-// Share & export tab through `shareExtra`, so the downloads live in one place
-// across variants (lichess: the "Share & export" underboard tab). Which formats
-// a variant offers comes from the shared table in @mistboard/game, the same one
-// the server gates on, so a link never points at a 501.
+// The Share & export tab's rows for a finished game played here (lichess: the
+// "Share & export" underboard tab): a Download row with the canonical exports
+// (the Game Publishing Track's `/api/games/:roomId/export.{pgn,json}`, the PGN
+// with the CC BY header and the schema-v1.0 JSON) and the game's board image,
+// then an Embed row with the iframe code for `/embed/game/:roomId`. Every
+// postgame surface hands the result to the tab through `shareExtra`, so these
+// live in one place across variants. Which formats a variant offers comes from
+// the shared table in @mistboard/game, the same one the server gates on, so a
+// link never points at a 501.
+//
+// Finished games only, by construction: every caller is a postgame page, whose
+// payload the server serves only once the game is over and its hidden
+// information (fog, face-down pieces) is public. The embed route and the image
+// apply the same gate on their own side.
 
 import { exportFormatsForVariant, type GameExportFormat } from '@mistboard/game';
-import { type DownloadLink, downloadRow } from './underboard-tabs.js';
+import { gameEmbedCode } from '../embed-code.js';
+import { variantDisplayLabel } from '../game-display.js';
+import { t } from '../i18n/catalog.js';
+import { type DownloadLink, downloadRow, shareRow } from './underboard-tabs.js';
 
 export function gameExportLinks(
   roomId: string,
@@ -21,14 +31,38 @@ export function gameExportLinks(
   }));
 }
 
-/** The `shareExtra` config for a finished game of `variant`: one Download row
- *  with a link per exportable format, or nothing when the variant exports none
- *  (the row is omitted rather than shown empty). Spread it into the review config. */
+/** The game's board card (`/og/game/:id.png`, the image its share previews
+ *  use), saved as mistboard-<id>.png. */
+export function gameImageLink(roomId: string): DownloadLink {
+  return {
+    text: t('underboard.image'),
+    href: `/og/game/${encodeURIComponent(roomId)}.png`,
+    filename: `mistboard-${roomId}.png`,
+  };
+}
+
+/** A Share & export row holding the iframe code for the game's embed. */
+export function gameEmbedRow(roomId: string, variant: string, origin: string): HTMLElement {
+  const code = document.createElement('textarea');
+  code.value = gameEmbedCode(roomId, `${variantDisplayLabel(variant)} · Mistboard`, origin);
+  code.rows = 2;
+  // Dressed like the Moves field above it: the row is built outside the tab.
+  code.className = 'review-share__field review-share__field--moves';
+  code.readOnly = true;
+  return shareRow(t('underboard.embed'), code);
+}
+
+/** The `shareExtra` config for a finished game of `variant`: the Download row
+ *  (each exportable format, then the image) and the Embed row. Spread it into
+ *  the review config. */
 export function gameExportShareExtra(
   variant: string,
   roomId: string,
-): { shareExtra: HTMLElement[] } | Record<string, never> {
-  const formats = exportFormatsForVariant(variant);
-  if (formats.length === 0) return {};
-  return { shareExtra: [downloadRow(gameExportLinks(roomId, formats))] };
+  origin: string = window.location.origin,
+): { shareExtra: HTMLElement[] } {
+  const links = [
+    ...gameExportLinks(roomId, exportFormatsForVariant(variant)),
+    gameImageLink(roomId),
+  ];
+  return { shareExtra: [downloadRow(links), gameEmbedRow(roomId, variant, origin)] };
 }

@@ -26,10 +26,12 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
   assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/xiangqi.pgn.gz'), {
     ok: true,
     target: { kind: 'monthly', month: '2026-09', variant: 'xiangqi', format: 'pgn' },
+    hash: null,
   });
   assert.deepEqual(parseDataFilePath('/api/data/collections/some-match-2026-09.jsonl.gz'), {
     ok: true,
     target: { kind: 'collection', corpusId: 'some-match-2026-09', format: 'jsonl' },
+    hash: null,
   });
   for (const month of ['2026-13', '2026-9', '26-09', 'latest']) {
     const parsed = parseDataFilePath(`/api/data/monthly/${month}/xiangqi.jsonl.gz`);
@@ -46,6 +48,10 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
     '/api/data/monthly/2026-09/everything.jsonl.gz',
     '/api/data/monthly/2026-09/xiangqi.zip',
     '/api/data/collections/../etc.jsonl.gz',
+    // A hash is exactly 12 lowercase hex digits.
+    '/api/data/monthly/2026-09/xiangqi.abc.jsonl.gz',
+    '/api/data/monthly/2026-09/xiangqi.ABCDEF123456.jsonl.gz',
+    '/api/data/monthly/2026-09/xiangqi.0123456789abc.jsonl.gz',
   ]) {
     const parsed = parseDataFilePath(path);
     assert.equal(parsed?.ok, false, path);
@@ -62,6 +68,24 @@ test('parseDataFilePath fails closed: malformed month 400, unknown variant or fo
   assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/all.jsonl.gz'), {
     ok: true,
     target: { kind: 'monthly', month: '2026-09', variant: 'all', format: 'jsonl' },
+    hash: null,
+  });
+  // The content-addressed form of the same files.
+  assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/all.0123456789ab.jsonl.gz'), {
+    ok: true,
+    target: { kind: 'monthly', month: '2026-09', variant: 'all', format: 'jsonl' },
+    hash: '0123456789ab',
+  });
+  assert.deepEqual(parseDataFilePath('/api/data/collections/a-match.ffffffffffff.pgn.gz'), {
+    ok: true,
+    target: { kind: 'collection', corpusId: 'a-match', format: 'pgn' },
+    hash: 'ffffffffffff',
+  });
+  // A withheld variant stays withheld under any hash.
+  assert.deepEqual(parseDataFilePath('/api/data/monthly/2026-09/jieqi.0123456789ab.jsonl.gz'), {
+    ok: false,
+    status: 404,
+    error: 'hidden_piece_format_pending',
   });
   assert.equal(parseDataFilePath('/api/games/x/export.json'), null);
 });
@@ -126,9 +150,11 @@ test('the listing groups closed months newest first, with built sizes and checks
     xiangqi.files.map((file) => [file.format, file.path, file.fileName, file.built?.bytes ?? null]),
     [
       ['pgn', '/api/data/monthly/2026-09/xiangqi.pgn.gz', 'mistboard_xiangqi_2026-09.pgn.gz', null],
+      // Built: its content-addressed URL. Not yet built: the plain URL that
+      // builds it and redirects there.
       [
         'jsonl',
-        '/api/data/monthly/2026-09/xiangqi.jsonl.gz',
+        '/api/data/monthly/2026-09/xiangqi.aaaaaaaaaaaa.jsonl.gz',
         'mistboard_xiangqi_2026-09.jsonl.gz',
         2048,
       ],

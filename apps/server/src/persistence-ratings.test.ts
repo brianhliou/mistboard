@@ -910,30 +910,34 @@ definePersistenceTests('ratings', () => {
     const all = await getUserGamesPage('pool-player', null, 0, 20);
     assert.equal(all?.total, 4);
 
-    const xiangqi = await getUserGamesPage('pool-player', null, 0, 20, 'xiangqi');
+    const xiangqi = await getUserGamesPage('pool-player', null, 0, 20, {
+      ratingVariant: 'xiangqi',
+    });
     assert.equal(xiangqi?.total, 2);
     assert.deepEqual(
       xiangqi?.games.map((game) => game.roomId),
       ['pool-xq-2', 'pool-xq-1'],
     );
 
-    const jieqi = await getUserGamesPage('pool-player', null, 0, 20, 'jieqi');
+    const jieqi = await getUserGamesPage('pool-player', null, 0, 20, { ratingVariant: 'jieqi' });
     assert.equal(jieqi?.total, 1);
     assert.equal(jieqi?.games[0]?.roomId, 'pool-jq-1');
 
     // The legacy row answers to its pool, not to its literal variant string.
-    const fog = await getUserGamesPage('pool-player', null, 0, 20, 'fog');
+    const fog = await getUserGamesPage('pool-player', null, 0, 20, { ratingVariant: 'fog' });
     assert.equal(fog?.total, 1);
     assert.equal(fog?.games[0]?.roomId, 'pool-legacy-1');
 
     // total is the FILTERED total, so "Load more" stops at the right place.
-    const firstPage = await getUserGamesPage('pool-player', null, 0, 1, 'xiangqi');
+    const firstPage = await getUserGamesPage('pool-player', null, 0, 1, {
+      ratingVariant: 'xiangqi',
+    });
     assert.equal(firstPage?.total, 2);
     assert.equal(firstPage?.games.length, 1);
     assert.equal(firstPage?.games[0]?.roomId, 'pool-xq-2');
 
     // A pool the player has never touched is empty, not unfiltered.
-    const banqi = await getUserGamesPage('pool-player', null, 0, 20, 'banqi');
+    const banqi = await getUserGamesPage('pool-player', null, 0, 20, { ratingVariant: 'banqi' });
     assert.equal(banqi?.total, 0);
     assert.deepEqual(banqi?.games, []);
   });

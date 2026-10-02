@@ -1,5 +1,5 @@
 import type { IncomingMessage, ServerResponse } from 'node:http';
-import { type GameSpecId, XIANGQI_SPEC_ID } from '@mistboard/game';
+import { GAMES_SEARCH_DEFAULT_MIN_PLIES, type GameSpecId, XIANGQI_SPEC_ID } from '@mistboard/game';
 import { crosstableReviewUrl } from './../crosstable.js';
 import { flipFirstColorForRoom, isFlipInkVariant } from './../flip-first-color.js';
 import { PGN_CONTENT_TYPE } from './../game-export-shared.js';
@@ -185,6 +185,9 @@ export async function tryHandle(
     limit: parsed.filters.limit ?? 50,
     // The picker's options, so the page offers exactly what this server accepts.
     variants: launched.map((variant) => variant.id),
+    // The floor the games played here were read with when the search set no
+    // `plyMin`, or null when it set one, so the page can say what is hidden.
+    playedPlyFloor: playedPlyFloor(parsed.filters),
   });
   return true;
 }
@@ -378,7 +381,7 @@ async function queryPlayedGames(
     ...(results.length > 0 ? { results } : {}),
     ...(filters.player ? { player: filters.player } : {}),
     ...(filters.event ? { event: filters.event } : {}),
-    ...(typeof filters.plyMin === 'number' ? { plyMin: filters.plyMin } : {}),
+    ...playedPlyMin(filters, lane),
     ...(typeof filters.plyMax === 'number' ? { plyMax: filters.plyMax } : {}),
     ...(filters.playedFrom ? { endedFrom: new Date(`${filters.playedFrom}T00:00:00.000Z`) } : {}),
     ...(filters.playedTo ? { endedTo: new Date(`${filters.playedTo}T00:00:00.000Z`) } : {}),
@@ -394,6 +397,26 @@ async function queryPlayedGames(
     games.push(playedGameItem(game, lane, reviewUrl));
   }
   return { games, total: page.total };
+}
+
+/** The default floor this search applied, or null: it set its own `plyMin`, or
+ *  it does not read the games played here at all (a broadcast-only search). */
+export function playedPlyFloor(filters: GameSearchFilters): number | null {
+  if (typeof filters.plyMin === 'number') return null;
+  return searchLanes(filters).includes('played') ? GAMES_SEARCH_DEFAULT_MIN_PLIES : null;
+}
+
+// The minimum length a played-games lane reads: the search's own `plyMin` when
+// it set one (0 included), else the default floor for games played here, which
+// hides openings abandoned at ply 2 (GAMES_SEARCH_DEFAULT_MIN_PLIES). Engine
+// matches are imported real games and keep no floor, as broadcasts and the
+// archive do.
+export function playedPlyMin(
+  filters: Pick<GameSearchFilters, 'plyMin'>,
+  lane: 'played' | 'engine-match',
+): { plyMin?: number } {
+  if (typeof filters.plyMin === 'number') return { plyMin: filters.plyMin };
+  return lane === 'played' ? { plyMin: GAMES_SEARCH_DEFAULT_MIN_PLIES } : {};
 }
 
 function playedGameItem(

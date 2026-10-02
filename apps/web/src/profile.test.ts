@@ -929,4 +929,102 @@ describe('profile ratings rail', () => {
     });
     expect(filterBar()?.hidden).toBe(true);
   });
+
+  it('holds result and opponent filters in the URL and sends them to the games query', async () => {
+    window.history.replaceState(null, '', '/@/urlfilter?result=win&vs=bob');
+    const game = (roomId: string) => ({
+      roomId,
+      variant: 'xiangqi',
+      mode: 'pvp' as const,
+      rated: false,
+      result: 'red-wins',
+      termination: 'resignation',
+      plyCount: 20,
+      whiteName: null,
+      blackName: null,
+      corpusId: null,
+      endedAt: '2026-07-01T12:00:00.000Z',
+      participants: [
+        {
+          color: 'red',
+          displayName: 'me',
+          subjectType: 'user',
+          subjectId: 'u1',
+          visibility: 'public',
+          handle: 'urlfilter',
+        },
+        {
+          color: 'black',
+          displayName: 'Bob',
+          subjectType: 'user',
+          subjectId: 'u2',
+          visibility: 'public',
+          handle: 'bob',
+        },
+      ],
+      playerColor: 'red',
+    });
+    const gamesRequests: string[] = [];
+    vi.spyOn(globalThis, 'fetch').mockImplementation(async (input) => {
+      const url = String(input);
+      const json = (body: unknown) =>
+        new Response(JSON.stringify(body), {
+          headers: { 'content-type': 'application/json' },
+          status: 200,
+        });
+      if (url.includes('/rating-history')) return json({ points: [] });
+      if (url.includes('/games?')) {
+        gamesRequests.push(url);
+        return json({ games: [game('xq-win')], total: 1 });
+      }
+      return json({
+        profile: {
+          isViewer: false,
+          relation: null,
+          user: {
+            handle: 'urlfilter',
+            displayName: 'urlfilter',
+            bio: '',
+            profileVisibility: 'public',
+            accountRole: 'player',
+            createdAt: '2026-05-01T00:00:00.000Z',
+          },
+          ratings: [],
+          puzzleRatings: [],
+          games: [game('xq-win'), game('xq-2')],
+          gamesTotal: 2,
+        },
+      });
+    });
+
+    const root = document.createElement('div');
+    const { mountProfile } = await import('./profile.js');
+    await mountProfile(root, 'urlfilter');
+
+    // The link opens on the filtered Games tab, already queried.
+    await vi.waitFor(() => expect(gamesRequests).toHaveLength(1));
+    expect(gamesRequests[0]).toContain('result=win');
+    expect(gamesRequests[0]).toContain('vs=bob');
+    const chip = root.querySelector<HTMLElement>('.profile-games-filter');
+    expect(chip?.hidden).toBe(false);
+    expect(chip?.textContent).toContain('Wins · vs @bob');
+    expect(
+      root
+        .querySelector<HTMLButtonElement>('.profile-games-result[data-result="win"]')
+        ?.getAttribute('aria-pressed'),
+    ).toBe('true');
+    expect(root.querySelector<HTMLInputElement>('.profile-games-opponent-input')?.value).toBe(
+      'bob',
+    );
+
+    root.querySelector<HTMLButtonElement>('.profile-games-result[data-result="loss"]')?.click();
+    await vi.waitFor(() => expect(gamesRequests).toHaveLength(2));
+    expect(gamesRequests[1]).toContain('result=loss');
+    expect(window.location.search).toBe('?result=loss&vs=bob');
+
+    chip?.querySelector<HTMLButtonElement>('.profile-games-filter-clear')?.click();
+    expect(window.location.search).toBe('');
+    expect(chip?.hidden).toBe(true);
+    window.history.replaceState(null, '', '/');
+  });
 });

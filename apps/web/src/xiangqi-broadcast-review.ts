@@ -263,7 +263,10 @@ function embedRow(boardId: string, title: string): HTMLElement {
   const code = document.createElement('textarea');
   code.value = broadcastEmbedCode(boardId, title, window.location.origin);
   code.rows = 2;
-  return shareRow('Embed', code);
+  // Dressed like the Moves field above it: the row is built outside the tab.
+  code.className = 'review-share__field review-share__field--moves';
+  code.readOnly = true;
+  return shareRow(t('underboard.embed'), code);
 }
 
 function exportLink(boardId: string): { text: string; href: string; filename: string } {

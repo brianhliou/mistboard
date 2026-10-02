@@ -643,16 +643,27 @@ export function buildOpenApiDocument(origin: string): Record<string, unknown> {
           pathParam('handle', 'The player’s handle.'),
           query('offset', { type: 'integer', minimum: 0, default: 0 }, 'Skip this many.'),
           query('limit', { type: 'integer', minimum: 1, maximum: 50, default: 15 }, 'Page size.'),
+          query(
+            'variant',
+            { type: 'string' },
+            'Rating pool, e.g. `xiangqi`; unknown values list every variant.',
+          ),
+          query(
+            'result',
+            { type: 'string', enum: ['win', 'loss', 'draw'] },
+            'Result from this player’s seat.',
+          ),
+          query('vs', { type: 'string' }, 'Opponent handle (case-insensitive, exact).'),
         ],
         responses: {
           '200': OK({
             type: 'object',
             properties: {
               games: { type: 'array', items: { type: 'object' } },
-              total: { type: 'integer' },
+              total: { type: 'integer', description: 'Games matching the filters.' },
             },
           }),
-          '400': ERROR_RESPONSE('`invalid_handle`'),
+          '400': ERROR_RESPONSE('`invalid_handle`, `invalid_result`, `invalid_opponent`'),
           '404': NOT_FOUND,
           '503': PERSISTENCE,
         },

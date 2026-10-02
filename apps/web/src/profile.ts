@@ -1,6 +1,11 @@
 // Profile + leaderboard pages — extracted from landing.ts.
 
-import { FORTRESS_XIANGQI_SPEC_ID, JUNGLE_SPEC_ID, type RatingVariant } from '@mistboard/game';
+import {
+  FORTRESS_XIANGQI_SPEC_ID,
+  hasOwnKey,
+  JUNGLE_SPEC_ID,
+  type RatingVariant,
+} from '@mistboard/game';
 import './account-profile.css';
 import { browserTimeZone } from './browser-time-zone.js';
 import { openChallengeDialog } from './challenge-dialog.js';
@@ -16,6 +21,15 @@ import {
   prependTitleBadge,
   titleFullName,
 } from './player-titles.js';
+import {
+  buildProfileGamesToolbar,
+  hasProfileGamesFilter,
+  NO_PROFILE_GAMES_FILTER,
+  type ProfileGamesFilter,
+  profileGamesFilterFromSearch,
+  profileGamesFilterParams,
+  profileUrlWithFilter,
+} from './profile-games-tools.js';
 import {
   buildProfileDashboard,
   buildProfileGameRow,
@@ -193,6 +207,10 @@ const PROFILE_VARIANT_LABEL_KEY: Record<ProfileRatingVariant, I18nKey> = {
 // registry.
 const PROFILE_VARIANT_ORDER: ProfileRatingVariant[] = profileRatingVariants.map((v) => v.id);
 
+function isProfileRatingVariant(value: string): value is ProfileRatingVariant {
+  return hasOwnKey(PROFILE_VARIANT_LABEL_KEY, value);
+}
+
 class ProfileNotFound extends Error {}
 
 export async function mountProfile(root: HTMLElement, handle: string): Promise<void> {
@@ -227,7 +245,14 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
     return;
   }
 
-  const selectedVariant = defaultSelectedProfileVariant(profile.ratings);
+  // The Games filters live in the URL (?variant=&result=&vs=), so a filtered
+  // list survives a reload and can be linked. A variant in the URL also selects
+  // that row of the rating rail, the control that sets it.
+  const initialFilter = profileGamesFilterFromSearch(
+    window.location.search,
+    isProfileRatingVariant,
+  );
+  const selectedVariant = initialFilter.variant ?? defaultSelectedProfileVariant(profile.ratings);
   const selectedTimeClass =
     preferredBucketForVariant(profile.ratings, selectedVariant)?.timeClass ??
     DEFAULT_LEADERBOARD_TIME_CLASS;
@@ -251,7 +276,7 @@ export async function mountProfile(root: HTMLElement, handle: string): Promise<v
   const overview = buildProfileOverview(profile, spotlight, locale);
   void hydrateProfilePresence(overview, profile.user.handle, locale);
 
-  const tabs = buildProfileTabs(profile, locale);
+  const tabs = buildProfileTabs(profile, locale, initialFilter);
   const ratings = buildProfileRatings(profile.ratings, locale, {
     selectedVariant,
     onSelect: (variant, timeClass) => {
@@ -1658,10 +1683,11 @@ type ProfileTabsHandle = { el: HTMLElement; setGamesVariant(variant: ProfileRati
 function buildProfileTabs(
   profile: UserProfile,
   locale: Locale = currentLocale(),
+  initialFilter: ProfileGamesFilter = NO_PROFILE_GAMES_FILTER,
 ): ProfileTabsHandle {
   const activityPanel = buildProfileActivity(profile, locale);
-  let gamesVariant: ProfileRatingVariant | null = null;
-  let gamesPanel = buildProfileGames(profile, locale, null);
+  let filter = initialFilter;
+  let gamesPanel = buildProfileGames(profile, locale, filter);
   const saved = profile.isViewer ? buildSavedGamesPanel(locale) : null;
   const gamesGroup = document.createElement('section');
   gamesGroup.className = 'profile-games-group';
@@ -1670,6 +1696,12 @@ function buildProfileTabs(
   gamesPanel.id = `profile-games-all-${profile.user.handle}`;
   if (saved) saved.panel.id = `profile-saved-${profile.user.handle}`;
   if (saved) saved.panel.hidden = true;
+
+  // Result and opponent above the list, and the chip naming
+  // what the list is scoped to. They belong to the All-games list, so the
+  // Saved sub-tab hides them.
+  const controls = document.createElement('div');
+  controls.className = 'profile-games-controls';
 
   let loadSaved: (() => void) | null = null;
   // Set when the viewer's own profile renders the All-games / Saved sub-tabs.
@@ -1695,18 +1727,19 @@ function buildProfileTabs(
         subtab.setAttribute('aria-selected', String(subtab === button));
       }
       gamesPanel.hidden = panel !== gamesPanel;
+      controls.hidden = panel !== gamesPanel;
       saved.panel.hidden = panel !== saved.panel;
     };
     setAllGamesCount = (total) => setProfileGamesSubtabCount(allGamesSubtab, total);
     allGamesSubtab.addEventListener('click', () => activateGamesSubtab(allGamesSubtab, gamesPanel));
     savedSubtab.addEventListener('click', () => activateGamesSubtab(savedSubtab, saved.panel));
     gameSubtabs.append(allGamesSubtab, savedSubtab);
-    gamesGroup.append(gameSubtabs, gamesPanel, saved.panel);
+    gamesGroup.append(gameSubtabs, controls, gamesPanel, saved.panel);
     loadSaved = () => {
       void saved.load((total) => setProfileGamesSubtabCount(savedSubtab, total));
     };
   } else {
-    gamesGroup.append(gamesPanel);
+    gamesGroup.append(controls, gamesPanel);
   }
 
   // A visible, clearable chip. Without it the list would silently be a subset --
@@ -1722,21 +1755,41 @@ function buildProfileTabs(
   clearButton.textContent = t('profile.showAllGames', {}, locale);
   filterBar.append(filterLabel, clearButton);
 
-  const renderGames = (variant: ProfileRatingVariant | null) => {
-    gamesVariant = variant;
-    const next = buildProfileGames(profile, locale, variant, setAllGamesCount);
-    next.id = gamesPanel.id;
-    next.hidden = gamesPanel.hidden;
-    gamesPanel.replaceWith(next);
-    gamesPanel = next;
-    filterBar.hidden = variant === null;
-    if (variant) filterLabel.textContent = profileVariantLabel(variant, locale);
+  const toolbar = buildProfileGamesToolbar({
+    handle: profile.user.handle,
+    filter,
+    locale,
+    onChange: (next) => renderGames(next),
+  });
+  controls.append(toolbar.el, filterBar);
+  toolbar.suggestOpponents(opponentHandles(profile.games, profile.user.handle));
+
+  const syncChip = () => {
+    filterBar.hidden = !hasProfileGamesFilter(filter);
+    filterLabel.textContent = profileGamesFilterLabel(filter, locale);
   };
+  const renderGames = (next: ProfileGamesFilter) => {
+    filter = next;
+    const nextPanel = buildProfileGames(profile, locale, filter, setAllGamesCount, (games) =>
+      toolbar.suggestOpponents(opponentHandles(games, profile.user.handle)),
+    );
+    nextPanel.id = gamesPanel.id;
+    nextPanel.hidden = gamesPanel.hidden;
+    gamesPanel.replaceWith(nextPanel);
+    gamesPanel = nextPanel;
+    toolbar.sync(filter);
+    syncChip();
+    window.history.replaceState(
+      window.history.state,
+      '',
+      profileUrlWithFilter(window.location.href, filter),
+    );
+  };
+  syncChip();
   clearButton.addEventListener('click', () => {
-    renderGames(null);
+    renderGames(NO_PROFILE_GAMES_FILTER);
     setAllGamesCount(profile.gamesTotal);
   });
-  gamesGroup.prepend(filterBar);
 
   const shellEl = buildProfileTabsShell([
     { label: t('profile.activity', {}, locale), panel: activityPanel },
@@ -1749,13 +1802,44 @@ function buildProfileTabs(
       onActivate: () => loadSaved?.(),
     },
   ]);
+  // A link that carries a filter opens on the Games tab it filters.
+  if (hasProfileGamesFilter(initialFilter)) {
+    Array.from(shellEl.querySelectorAll<HTMLButtonElement>('[role="tab"]'))
+      .find((tab) => tab.id === `${gamesGroup.id}-tab`)
+      ?.click();
+  }
 
   return {
     el: shellEl,
     setGamesVariant: (variant) => {
-      if (variant !== gamesVariant) renderGames(variant);
+      if (variant !== filter.variant) renderGames({ ...filter, variant });
     },
   };
+}
+
+// The handles of the other signed-in seats in these games, for the opponent
+// field's suggestions. Only a linkable handle (open, non-private account) is
+// ever present on a participant, which is also all the filter can match.
+function opponentHandles(games: readonly FeaturedGame[], self: string): string[] {
+  const handles: string[] = [];
+  for (const game of games) {
+    for (const participant of game.participants ?? []) {
+      const handle = participant.handle;
+      if (handle && handle.toLowerCase() !== self.toLowerCase()) handles.push(handle);
+    }
+  }
+  return handles;
+}
+
+/** The chip's words: "Jieqi · Wins · vs bob", in the locale. */
+function profileGamesFilterLabel(filter: ProfileGamesFilter, locale: Locale): string {
+  const parts: string[] = [];
+  if (filter.variant) parts.push(profileVariantLabel(filter.variant, locale));
+  if (filter.result === 'win') parts.push(t('profile.filterWins', {}, locale));
+  if (filter.result === 'loss') parts.push(t('profile.filterLosses', {}, locale));
+  if (filter.result === 'draw') parts.push(t('profile.filterDraws', {}, locale));
+  if (filter.vs) parts.push(t('profile.filterVs', { handle: filter.vs }, locale));
+  return parts.join(' · ');
 }
 
 function setProfileGamesSubtabCount(button: HTMLButtonElement, count: number): void {
@@ -2412,7 +2496,7 @@ function profileGameAppender(list: HTMLElement, locale: Locale): (games: Feature
 function profileGamesMore(
   handle: string,
   locale: Locale,
-  variant: ProfileRatingVariant | null,
+  filter: ProfileGamesFilter,
   startRendered: number,
   appendGames: (games: FeaturedGame[]) => void,
 ): HTMLElement {
@@ -2426,7 +2510,7 @@ function profileGamesMore(
   button.addEventListener('click', async () => {
     button.disabled = true;
     button.textContent = t('profile.loadingMore', {}, locale);
-    const page = await fetchUserGamesPage(handle, rendered, PROFILE_GAMES_PAGE, variant).catch(
+    const page = await fetchUserGamesPage(handle, rendered, PROFILE_GAMES_PAGE, filter).catch(
       (err) => {
         console.warn(err);
         return null;
@@ -2450,16 +2534,17 @@ function profileGamesMore(
   return moreWrap;
 }
 
-// The Games panel scoped to one pool. Renders immediately with a placeholder so
+// The Games panel under a filter. Renders immediately with a placeholder so
 // the click feels instant, then fills in from the server-filtered first page.
 function buildFilteredProfileGames(
   profile: UserProfile,
   locale: Locale,
-  variant: ProfileRatingVariant,
+  filter: ProfileGamesFilter,
   // Reports the FILTERED total once it lands, so counts rendered outside this
   // panel (the All-games sub-tab) follow the list instead of sitting on the
   // lifetime figure above a shorter list.
   onTotal?: (total: number) => void,
+  onGames?: (games: FeaturedGame[]) => void,
 ): HTMLElement {
   const section = document.createElement('section');
   section.className = 'profile-games';
@@ -2472,15 +2557,12 @@ function buildFilteredProfileGames(
   section.append(body);
 
   void (async () => {
-    const page = await fetchUserGamesPage(
-      profile.user.handle,
-      0,
-      PROFILE_GAMES_PAGE,
-      variant,
-    ).catch((err) => {
-      console.warn(err);
-      return null;
-    });
+    const page = await fetchUserGamesPage(profile.user.handle, 0, PROFILE_GAMES_PAGE, filter).catch(
+      (err) => {
+        console.warn(err);
+        return null;
+      },
+    );
     body.replaceChildren();
     onTotal?.(page?.total ?? 0);
     if (!page || page.games.length === 0) {
@@ -2488,22 +2570,29 @@ function buildFilteredProfileGames(
       empty.className = 'landing-games-empty';
       // Names the variant: a bare "no games" under a variant selector reads as
       // "this player has never played", which is a different claim.
-      empty.textContent = t(
-        'profile.noVariantGames',
-        { variant: profileVariantLabel(variant, locale) },
-        locale,
-      );
+      empty.textContent =
+        filter.variant && !filter.result && !filter.vs
+          ? t(
+              'profile.noVariantGames',
+              { variant: profileVariantLabel(filter.variant, locale) },
+              locale,
+            )
+          : t('profile.noFilteredGames', {}, locale);
       body.append(empty);
       return;
     }
     const list = document.createElement('ol');
     list.className = 'profile-game-list profile-activity';
-    const appendGames = profileGameAppender(list, locale);
+    const appendRows = profileGameAppender(list, locale);
+    const appendGames = (games: FeaturedGame[]) => {
+      appendRows(games);
+      onGames?.(games);
+    };
     appendGames(page.games);
     body.append(list);
     if (page.games.length < page.total) {
       body.append(
-        profileGamesMore(profile.user.handle, locale, variant, page.games.length, appendGames),
+        profileGamesMore(profile.user.handle, locale, filter, page.games.length, appendGames),
       );
     }
   })();
@@ -2511,20 +2600,23 @@ function buildFilteredProfileGames(
   return section;
 }
 
-// The Games panel, optionally scoped to one rating pool.
+// The Games panel, optionally filtered by pool, result and opponent.
 //
-// `variant` null renders the profile's own first page with no fetch (the common
-// case, and what the initial mount does). A pool renders a placeholder and then
-// swaps in the server-filtered first page: the list is paginated, so the filter
-// has to be a query, not a client-side narrowing of a page that may not contain
-// the pool's games at all.
+// No filter renders the profile's own first page with no fetch (the common
+// case, and what the initial mount does). A filter renders a placeholder and
+// then swaps in the server-filtered first page: the list is paginated, so the
+// filter has to be a query, not a client-side narrowing of a page that may not
+// contain the matching games at all.
 function buildProfileGames(
   profile: UserProfile,
   locale: Locale = currentLocale(),
-  variant: ProfileRatingVariant | null = null,
+  filter: ProfileGamesFilter = NO_PROFILE_GAMES_FILTER,
   onTotal?: (total: number) => void,
+  onGames?: (games: FeaturedGame[]) => void,
 ): HTMLElement {
-  if (variant) return buildFilteredProfileGames(profile, locale, variant, onTotal);
+  if (hasProfileGamesFilter(filter)) {
+    return buildFilteredProfileGames(profile, locale, filter, onTotal, onGames);
+  }
   const section = document.createElement('section');
   section.className = 'profile-games';
   // No heading: the Games tab (with its count) is this panel's label.
@@ -2545,7 +2637,13 @@ function buildProfileGames(
 
   if (profile.games.length >= profile.gamesTotal) return section;
   section.append(
-    profileGamesMore(profile.user.handle, locale, null, profile.games.length, appendGames),
+    profileGamesMore(
+      profile.user.handle,
+      locale,
+      NO_PROFILE_GAMES_FILTER,
+      profile.games.length,
+      appendGames,
+    ),
   );
   return section;
 }
@@ -2561,11 +2659,12 @@ async function fetchUserGamesPage(
   handle: string,
   offset: number,
   limit: number,
-  variant: ProfileRatingVariant | null = null,
+  filter: ProfileGamesFilter = NO_PROFILE_GAMES_FILTER,
 ): Promise<{ games: FeaturedGame[]; total: number } | null> {
   // `total` comes back scoped to the same filter, so callers can page a filtered
   // list without tracking two different totals.
-  const query = variant ? `&variant=${encodeURIComponent(variant)}` : '';
+  const filterQuery = profileGamesFilterParams(filter).toString();
+  const query = filterQuery ? `&${filterQuery}` : '';
   const resp = await fetch(
     `/api/users/${encodeURIComponent(handle)}/games?offset=${offset}&limit=${limit}${query}`,
   );

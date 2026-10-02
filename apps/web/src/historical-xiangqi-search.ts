@@ -10,7 +10,11 @@
 import './current-games.css';
 import './seat-disc-ink.css';
 import './historical-xiangqi-search.css';
-import { maybeGameSpecForId, XIANGQI_SPEC_ID } from '@mistboard/game';
+import {
+  GAMES_SEARCH_DEFAULT_MIN_PLIES,
+  maybeGameSpecForId,
+  XIANGQI_SPEC_ID,
+} from '@mistboard/game';
 import { flipSeatInk, isFlipSeatVariant } from './flip-seat-ink.js';
 import { colorWinsLabel, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
@@ -58,6 +62,9 @@ export type HistoricalXiangqiSearchResponse = {
   limit: number;
   // The launched variants this server searches, in the canonical shelf order.
   variants?: string[];
+  // The minimum length the games played here were read with when the search set
+  // none, or null (it set one, or it reads no games played here).
+  playedPlyFloor?: number | null;
 };
 
 export type GamesSort = 'recent' | 'oldest' | 'longest' | 'shortest';
@@ -80,6 +87,13 @@ export type GamesSearchFilters = {
 type Filters = GamesSearchFilters;
 
 const DEFAULT_LIMIT = 50;
+
+// Min plies as the form shows it with nothing chosen: the floor the server
+// applies to games played here when the search sets none. It stays out of the
+// URL (and so out of the API query) while it is the default; clearing the field
+// means no minimum, written `plyMin=0` so a reload keeps it.
+export const DEFAULT_MIN_PLIES = String(GAMES_SEARCH_DEFAULT_MIN_PLIES);
+const NO_MIN_PLIES = '0';
 const SORTS: readonly GamesSort[] = ['recent', 'oldest', 'longest', 'shortest'];
 
 function isGamesSort(value: string): value is GamesSort {
@@ -120,7 +134,7 @@ const EMPTY_FILTERS: Filters = {
   result: '',
   from: '',
   to: '',
-  plyMin: '',
+  plyMin: DEFAULT_MIN_PLIES,
   plyMax: '',
   offset: 0,
   limit: DEFAULT_LIMIT,
@@ -206,6 +220,13 @@ export async function mountHistoricalXiangqiSearch(root: HTMLElement): Promise<v
       renderVariantRail(rail, variants, filters);
     }
     summaryHost.replaceChildren(totalLine(data.total));
+    if (typeof data.playedPlyFloor === 'number') {
+      summaryHost.append(
+        floorNote(data.playedPlyFloor, () =>
+          applyFilters({ ...filters, plyMin: NO_MIN_PLIES, offset: 0 }),
+        ),
+      );
+    }
     resultsHost.replaceChildren(buildResults(data, applyFilters));
     resultsHost.removeAttribute('aria-busy');
   };
@@ -237,6 +258,7 @@ function filterParams(filters: Filters): URLSearchParams {
   const params = new URLSearchParams();
   for (const key of STRING_FILTER_KEYS) {
     const value = (filters[key] ?? '').trim();
+    if (key === 'plyMin' && value === DEFAULT_MIN_PLIES) continue;
     if (value) params.set(key, value);
   }
   if (filters.sort !== 'recent') params.set('sort', filters.sort);
@@ -297,7 +319,7 @@ function readFilters(): Filters {
     result: str('result'),
     from: str('from'),
     to: str('to'),
-    plyMin: str('plyMin'),
+    plyMin: params.has('plyMin') ? str('plyMin').trim() || NO_MIN_PLIES : DEFAULT_MIN_PLIES,
     plyMax: str('plyMax'),
     offset: Number.isFinite(offset) && offset > 0 ? offset : 0,
     limit: Number.isFinite(limit) && limit > 0 ? Math.min(limit, 200) : DEFAULT_LIMIT,
@@ -434,6 +456,7 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
   inputs.set('to', to.input);
   form.append(to.field);
   const plyMin = numberInput(t('historical.minPlies'), filters.plyMin);
+  plyMin.input.title = t('historical.minPliesHint', { plies: DEFAULT_MIN_PLIES });
   inputs.set('plyMin', plyMin.input);
   form.append(plyMin.field);
   const plyMax = numberInput(t('historical.maxPlies'), filters.plyMax);
@@ -482,6 +505,8 @@ function buildFilterForm(filters: Filters, onApply: (next: Filters) => void): HT
   const collect = (offset: number): Filters => {
     const next: Filters = { ...filters, offset };
     for (const [key, input] of inputs) (next[key] as string) = input.value.trim();
+    // A cleared Min plies is a choice (no minimum), not a return to the default.
+    if (next.plyMin === '') next.plyMin = NO_MIN_PLIES;
     for (const [key, select] of selects) {
       if (key === 'limit') next.limit = Number.parseInt(select.value, 10);
       else if (key === 'sort') next.sort = isGamesSort(select.value) ? select.value : 'recent';
@@ -789,6 +814,22 @@ function statusLine(text: string): HTMLElement {
   const p = document.createElement('p');
   p.className = 'historical-xiangqi-status';
   p.textContent = text;
+  return p;
+}
+
+/** Says what the default floor hides, beside the count, with the way to show
+ *  it. The Min plies field holds the same number and clears the same way. */
+function floorNote(plies: number, onShowAll: () => void): HTMLElement {
+  const p = document.createElement('p');
+  p.className = 'historical-xiangqi-floor';
+  const text = document.createElement('span');
+  text.textContent = t('historical.floorNote', { plies: String(plies) });
+  const button = document.createElement('button');
+  button.type = 'button';
+  button.className = 'historical-xiangqi-floor-clear';
+  button.textContent = t('historical.floorShowAll');
+  button.addEventListener('click', onShowAll);
+  p.append(text, ' ', button);
   return p;
 }
 

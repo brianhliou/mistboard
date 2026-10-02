@@ -4,8 +4,16 @@
 // Hosting (decided 2026-10-01): no object store and no cron. A file is built the
 // first time someone asks for it, straight from the games table, gzipped, and
 // stored once in Postgres (game_data_files, migration 153) with its sha256 and
-// size; every later request is served from that row with immutable cache
-// headers. Only closed months are offered, so a stored file never goes stale.
+// size. Only closed months are offered, so a stored file changes only when a
+// migration deliberately rebuilds it.
+//
+// URLs are content-addressed (2026-10-01). Cloudflare caches whatever the
+// origin marks immutable, and after migration 154 rebuilt September's
+// all-variants file it kept serving the old copy for hours. So only a URL that
+// names the bytes is immutable: <file>.<first 12 hex of the sha256>.<format>.gz.
+// The plain <file>.<format>.gz builds the file if needed and redirects there
+// with a short cache, and a hash that no longer matches the stored file is a
+// 404 naming the current URL, never stale bytes.
 // Move the bytes to Cloudflare R2 when one month's file passes about 100 MB, or
 // when download bandwidth starts to cost money. The file key is already the
 // object path.
@@ -145,16 +153,35 @@ export function dataFileName(target: DataFileTarget): string {
     : `mistboard_${target.corpusId}.${target.format}.gz`;
 }
 
+/** Hex digits of the sha256 a content-addressed URL carries: 48 bits, which
+ *  no two builds of one file will share by accident. */
+export const DATA_HASH_LENGTH = 12;
+
+export function dataFileHash(sha256: string): string {
+  return sha256.slice(0, DATA_HASH_LENGTH);
+}
+
+/** The immutable URL of one build of a file: the plain path with the first
+ *  DATA_HASH_LENGTH hex of its sha256 before the format. */
+export function hashedDataFilePath(target: DataFileTarget, sha256: string): string {
+  const hash = dataFileHash(sha256);
+  return target.kind === 'monthly'
+    ? `${DATA_API_PREFIX}/monthly/${target.month}/${target.variant}.${hash}.${target.format}.gz`
+    : `${DATA_API_PREFIX}/collections/${target.corpusId}.${hash}.${target.format}.gz`;
+}
+
 const SLUG = '[a-z0-9][a-z0-9-]{0,119}';
+// A slug has no dot, so `<slug>.<12 hex>.<format>.gz` cannot be read two ways.
+const HASH = `(?:\\.([0-9a-f]{${DATA_HASH_LENGTH}}))?`;
 const MONTHLY_PATH_RE = new RegExp(
-  `^${DATA_API_PREFIX}/monthly/([^/]+)/(${SLUG})\\.(jsonl|pgn)\\.gz$`,
+  `^${DATA_API_PREFIX}/monthly/([^/]+)/(${SLUG})${HASH}\\.(jsonl|pgn)\\.gz$`,
 );
 const COLLECTION_PATH_RE = new RegExp(
-  `^${DATA_API_PREFIX}/collections/(${SLUG})\\.(jsonl|pgn)\\.gz$`,
+  `^${DATA_API_PREFIX}/collections/(${SLUG})${HASH}\\.(jsonl|pgn)\\.gz$`,
 );
 
 export type ParsedDataPath =
-  | { ok: true; target: DataFileTarget }
+  | { ok: true; target: DataFileTarget; hash: string | null }
   | { ok: false; status: 400 | 404; error: string };
 
 /**
@@ -167,10 +194,11 @@ export type ParsedDataPath =
 export function parseDataFilePath(pathname: string): ParsedDataPath | null {
   const monthly = MONTHLY_PATH_RE.exec(pathname);
   if (monthly) {
-    const [, month, variant, format] = monthly as unknown as [
+    const [, month, variant, hash, format] = monthly as unknown as [
       string,
       string,
       string,
+      string | undefined,
       DataFileFormat,
     ];
     if (!parseMonth(month)) return { ok: false, status: 400, error: 'invalid_month' };
@@ -181,12 +209,17 @@ export function parseDataFilePath(pathname: string): ParsedDataPath | null {
     if (!dataFormatsForVariant(variant).includes(format)) {
       return { ok: false, status: 404, error: 'format_not_available' };
     }
-    return { ok: true, target: { kind: 'monthly', month, variant, format } };
+    return { ok: true, target: { kind: 'monthly', month, variant, format }, hash: hash ?? null };
   }
   const collection = COLLECTION_PATH_RE.exec(pathname);
   if (collection) {
-    const [, corpusId, format] = collection as unknown as [string, string, DataFileFormat];
-    return { ok: true, target: { kind: 'collection', corpusId, format } };
+    const [, corpusId, hash, format] = collection as unknown as [
+      string,
+      string,
+      string | undefined,
+      DataFileFormat,
+    ];
+    return { ok: true, target: { kind: 'collection', corpusId, format }, hash: hash ?? null };
   }
   if (pathname.startsWith(`${DATA_API_PREFIX}/monthly/`)) {
     return { ok: false, status: 404, error: 'not_found' };
@@ -201,6 +234,8 @@ export function parseDataFilePath(pathname: string): ParsedDataPath | null {
 
 export type DataFileEntry = {
   format: DataFileFormat;
+  /** The built file's content-addressed URL, or the plain URL that builds it
+   *  (and redirects to that one) before the first download. */
   path: string;
   fileName: string;
   /** Games the file holds: the stored count once built, the live count before. */
@@ -276,7 +311,7 @@ function fileEntry(
   const built = stored.get(dataFileKey(target));
   return {
     format: target.format,
-    path: dataFilePath(target),
+    path: built ? hashedDataFilePath(target, built.sha256) : dataFilePath(target),
     fileName: dataFileName(target),
     games: built ? built.gameCount : games,
     built: built

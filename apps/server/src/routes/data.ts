@@ -1,11 +1,22 @@
 // GET /api/data: the /data page's listing (closed months by variant, imported
-// collections, which files are built). GET /api/data/monthly/<YYYY-MM>/<variant>
-// .<jsonl|pgn>.gz and /api/data/collections/<corpus id>.<jsonl|pgn>.gz: the
-// files themselves, built on first request and stored (game-data-files.ts).
+// collections, which files are built). The files, content-addressed
+// (game-data-files.ts):
+//
+//   /api/data/monthly/<YYYY-MM>/<variant>.<jsonl|pgn>.gz and
+//   /api/data/collections/<corpus id>.<jsonl|pgn>.gz build the file on first
+//   request and store it, then 302 to the build's own URL, cached a minute.
+//
+//   The same paths with .<12 hex of the sha256> before the format serve the
+//   stored bytes, immutable for a year. A hash that is not the stored file's
+//   (it was rebuilt) is a 404 naming the current URL: a hashed URL never
+//   answers with bytes other than the ones it names, so no cache in front of
+//   the site can hold a stale copy under it.
 //
 // Fail closed: a malformed month is 400; an unknown variant, a format the
 // variant does not export, a month that is not closed or has no games, and an
-// unknown collection are 404. Nothing falls back to another variant's file.
+// unknown collection are 404. Nothing falls back to another variant's file. A
+// query string on a file URL is a 400: Cloudflare keys its cache on the whole
+// URL, and `?anything` would otherwise mint a second cached copy of a file.
 
 import type { IncomingMessage, ServerResponse } from 'node:http';
 import { createAuthRateLimiter } from '../auth-rate-limit.js';
@@ -17,11 +28,13 @@ import {
   DATA_VARIANTS,
   type DataFileTarget,
   type DataListing,
+  dataFileHash,
   dataFileKey,
   dataFileName,
   dataFormatsForVariant,
   EmptyDataFileError,
   ensureDataFile,
+  hashedDataFilePath,
   isClosedMonth,
   listableCollections,
   parseDataFilePath,
@@ -31,6 +44,7 @@ import { getGameSummaries, loadRoomsEvents } from '../persistence.js';
 import {
   countPublishedGamesByMonth,
   getStoredDataFile,
+  getStoredDataFileMeta,
   insertDataFileIfAbsent,
   listCollectionRoomIds,
   listCollectionRows,
@@ -40,11 +54,20 @@ import {
 import { clientIpForRateLimit } from '../server-policy.js';
 import { type HttpApiContext, requireMethod, requirePersistence, writeJson } from './lib.js';
 
+// The redirect from a plain URL to its build: long enough to absorb a burst of
+// clicks at the edge, short enough that a rebuilt file's new URL takes over
+// within a minute.
+const REDIRECT_CACHE = 'public, max-age=60';
+// Errors are never cached: a 404 for a hash may be answered differently once
+// the month is built, and a 429 is per address.
+const NO_STORE = 'no-store';
+
 // Serving a stored file is one row read; building one is a month of games, but
-// it happens once per file ever, and builds run one at a time. Thirty files per
-// ten minutes per address covers someone taking every variant of a month, and
-// stops a loop from pinning the database.
-const DOWNLOAD_LIMIT = 30;
+// it happens once per file ever, and builds run one at a time. A download is
+// two requests (the plain URL's redirect, then the file), so sixty per ten
+// minutes per address is thirty files: someone taking every variant of a
+// month. It stops a loop from pinning the database.
+const DOWNLOAD_LIMIT = 60;
 const DOWNLOAD_WINDOW_MS = 10 * 60 * 1000;
 let downloadLimiter = createAuthRateLimiter(DOWNLOAD_LIMIT, DOWNLOAD_WINDOW_MS);
 
@@ -115,6 +138,7 @@ export async function tryHandle(
   request: IncomingMessage,
   response: ServerResponse,
   pathname: string,
+  parsedUrl?: URL,
 ): Promise<boolean> {
   if (pathname === DATA_API_PREFIX) {
     if (!requireMethod(request, response, 'GET')) return true;
@@ -125,48 +149,90 @@ export async function tryHandle(
   }
 
   if (!pathname.startsWith(`${DATA_API_PREFIX}/`)) return false;
+  const noStore = { 'cache-control': NO_STORE };
   const parsed = parseDataFilePath(pathname);
   if (!parsed) {
-    writeJson(response, 404, { error: 'not_found' });
+    writeJson(response, 404, { error: 'not_found' }, noStore);
     return true;
   }
   if (!requireMethod(request, response, 'GET', 'HEAD')) return true;
   if (!parsed.ok) {
-    writeJson(response, parsed.status, { error: parsed.error });
+    writeJson(response, parsed.status, { error: parsed.error }, noStore);
+    return true;
+  }
+  if (parsedUrl?.search) {
+    writeJson(response, 400, { error: 'unexpected_query' }, noStore);
     return true;
   }
   if (!requirePersistence(response)) return true;
   if (!downloadLimiter.check(clientIpForRateLimit(request))) {
-    writeJson(response, 429, { error: 'rate_limited' }, { 'retry-after': '600' });
+    writeJson(response, 429, { error: 'rate_limited' }, { ...noStore, 'retry-after': '600' });
     return true;
   }
 
   const target = parsed.target;
-  // A stored file is served as stored: it was a closed month (or a collection)
-  // when it was built, and a closed month does not change.
-  let file = await getStoredDataFile(dataFileKey(target));
-  if (!file) {
+  if (parsed.hash) {
+    await serveHashedFile(request, response, target, parsed.hash);
+    return true;
+  }
+
+  // The plain URL: build if this is the file's first request, then send the
+  // reader to the build's own URL. A stored file was a closed month (or a
+  // collection) when it was built, so it is never rebuilt here.
+  let sha256 = (await getStoredDataFileMeta(dataFileKey(target)))?.sha256 ?? null;
+  if (!sha256) {
     const resolved = await resolveTarget(target, new Date());
     if ('status' in resolved) {
-      writeJson(response, resolved.status, { error: resolved.error });
+      writeJson(response, resolved.status, { error: resolved.error }, noStore);
       return true;
     }
     try {
-      file = await ensureDataFile(target, resolved.roomIds, {
+      const file = await ensureDataFile(target, resolved.roomIds, {
         getGameSummaries,
         loadRoomsEvents,
         getStoredDataFile,
         insertDataFileIfAbsent,
         log: (message) => console.warn(message),
       });
+      sha256 = file.sha256;
     } catch (error) {
       if (!(error instanceof EmptyDataFileError)) throw error;
-      writeJson(response, 404, { error: 'no_games' });
+      writeJson(response, 404, { error: 'no_games' }, noStore);
       return true;
     }
     clearDataListingCache();
   }
+  response.writeHead(302, {
+    location: hashedDataFilePath(target, sha256),
+    'cache-control': REDIRECT_CACHE,
+  });
+  response.end();
+  return true;
+}
 
+async function serveHashedFile(
+  request: IncomingMessage,
+  response: ServerResponse,
+  target: DataFileTarget,
+  hash: string,
+): Promise<void> {
+  const file = await getStoredDataFile(dataFileKey(target));
+  if (!file || dataFileHash(file.sha256) !== hash) {
+    // Not these bytes: never built, or rebuilt since this URL was handed out.
+    // Name the current build so a person or a script can follow it on purpose;
+    // a redirect would quietly hand over different bytes under a URL whose
+    // whole point is to name one exact file (and a 301 is cached for good).
+    writeJson(
+      response,
+      404,
+      {
+        error: file ? 'stale_hash' : 'not_built',
+        ...(file ? { current: hashedDataFilePath(target, file.sha256) } : {}),
+      },
+      { 'cache-control': NO_STORE },
+    );
+    return;
+  }
   const etag = `"${file.sha256}"`;
   const headers = {
     'content-type': 'application/gzip',
@@ -179,9 +245,8 @@ export async function tryHandle(
   if (request.headers['if-none-match'] === etag) {
     response.writeHead(304, headers);
     response.end();
-    return true;
+    return;
   }
   response.writeHead(200, { ...headers, 'content-length': String(file.byteSize) });
   response.end(request.method === 'HEAD' ? undefined : file.content);
-  return true;
 }

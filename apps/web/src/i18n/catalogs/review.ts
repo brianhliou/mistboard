@@ -219,6 +219,10 @@ export const EN_REVIEW = {
   'historical.fromLabel': 'From',
   'historical.toLabel': 'To',
   'historical.minPlies': 'Min plies',
+  'historical.minPliesHint':
+    'Games played here shorter than this are hidden. {plies} unless you change it; clear it to show every game.',
+  'historical.floorNote': 'Games played here shorter than {plies} plies are hidden.',
+  'historical.floorShowAll': 'Show them',
   'historical.maxPlies': 'Max plies',
   'historical.sortLabel': 'Sort by',
   'historical.sortRecent': 'Newest first',
@@ -687,6 +691,8 @@ export const EN_REVIEW = {
   'underboard.crosstable': 'Crosstable',
   'underboard.shareExport': 'Share & export',
   'underboard.download': 'Download',
+  'underboard.image': 'Image',
+  'underboard.embed': 'Embed',
   'underboard.crosstableLoading': 'Loading the head-to-head record',
   'underboard.crosstableUnavailable': 'No head-to-head record is available for this game.',
   'underboard.crosstableGuest':

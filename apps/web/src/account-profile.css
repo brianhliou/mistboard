@@ -2192,6 +2192,105 @@
   color: var(--site-muted);
 }
 
+/* The Games list's tools: result switch and opponent search.
+   One row under the sub-tabs, in the same soft band as the tab strip, so the
+   controls read as the list's header rather than as page content. */
+.profile-games-controls[hidden] {
+  display: none;
+}
+
+.profile-games-tools {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 10px 14px;
+  padding: 10px 16px;
+  border-bottom: 1px solid var(--site-border-soft);
+  background: var(--site-panel-soft);
+}
+
+.profile-games-results {
+  display: inline-flex;
+  border: 1px solid var(--site-border);
+  border-radius: 999px;
+  overflow: hidden;
+  background: var(--site-panel);
+}
+
+.profile-games-result {
+  appearance: none;
+  min-height: 30px;
+  padding: 0 13px;
+  border: 0;
+  border-right: 1px solid var(--site-border-soft);
+  background: transparent;
+  color: var(--site-muted);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 650;
+  cursor: pointer;
+}
+
+.profile-games-result:last-child {
+  border-right: 0;
+}
+
+.profile-games-result:hover {
+  background: var(--site-hover);
+  color: var(--site-heading);
+}
+
+.profile-games-result[aria-pressed="true"] {
+  background: var(--site-accent);
+  color: var(--site-on-accent, #fff);
+}
+
+.profile-games-result:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 2px;
+}
+
+.profile-games-opponent {
+  margin: 0;
+}
+
+.profile-games-opponent-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  color: var(--site-muted);
+  font-size: 13px;
+  font-weight: 650;
+}
+
+.profile-games-opponent-input {
+  width: 10.5rem;
+  min-height: 30px;
+  padding: 0 10px;
+  border: 1px solid var(--site-border);
+  border-radius: 8px;
+  background: var(--site-panel);
+  color: var(--site-text);
+  font: inherit;
+  font-size: 13px;
+  font-weight: 500;
+}
+
+.profile-games-opponent-input:focus-visible {
+  outline: 2px solid var(--site-focus);
+  outline-offset: 1px;
+}
+
+@media (max-width: 560px) {
+  .profile-games-opponent,
+  .profile-games-opponent-label,
+  .profile-games-opponent-input {
+    flex: 1 1 auto;
+    width: auto;
+    min-width: 0;
+  }
+}
+
 /* The "showing one variant" chip above a filtered games list. Sits inside the
    games group, above the list, so the scope of what follows is stated rather
    than inferred from the rows. Hidden entirely when the list is unfiltered. */

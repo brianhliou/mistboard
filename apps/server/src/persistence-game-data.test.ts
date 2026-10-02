@@ -182,9 +182,22 @@ async function seedMonth(): Promise<void> {
   }
 }
 
+async function sqlQuery(text: string): Promise<void> {
+  const client = new pg.Client({ connectionString: TEST_DATABASE_URL });
+  await client.connect();
+  try {
+    await client.query(text);
+  } finally {
+    await client.end();
+  }
+}
+
 type CapturedResponse = { status: number; headers: Record<string, string>; body: Buffer };
 
-async function request(pathname: string): Promise<CapturedResponse> {
+async function request(
+  pathname: string,
+  headers: Record<string, string> = {},
+): Promise<CapturedResponse> {
   const captured: CapturedResponse = { status: 0, headers: {}, body: Buffer.alloc(0) };
   const response = {
     writeHead(status: number, headers: Record<string, string> = {}) {
@@ -196,15 +209,26 @@ async function request(pathname: string): Promise<CapturedResponse> {
       if (chunk !== undefined) captured.body = Buffer.from(chunk);
     },
   } as unknown as ServerResponse;
+  const url = new URL(`http://localhost${pathname}`);
   const req = {
     method: 'GET',
     url: pathname,
-    headers: {},
+    headers,
     socket: { remoteAddress: '127.0.0.1' },
   } as unknown as IncomingMessage;
-  const handled = await tryHandle({} as HttpApiContext, req, response, pathname);
+  const handled = await tryHandle({} as HttpApiContext, req, response, url.pathname, url);
   assert.equal(handled, true, pathname);
   return captured;
+}
+
+// What a browser does with a /data link: the plain URL answers with a redirect
+// to the build's own URL, which answers with the bytes.
+async function download(pathname: string): Promise<CapturedResponse & { location: string }> {
+  const redirect = await request(pathname);
+  assert.equal(redirect.status, 302, pathname);
+  assert.equal(redirect.headers['cache-control'], 'public, max-age=60');
+  const location = redirect.headers.location!;
+  return { ...(await request(location)), location };
 }
 
 definePersistenceTests('game data files', () => {
@@ -277,11 +301,12 @@ definePersistenceTests('game data files', () => {
     await seedMonth();
     resetDataDownloadLimiterForTests();
     const [first, second] = await Promise.all([
-      request('/api/data/monthly/2026-08/xiangqi.jsonl.gz'),
-      request('/api/data/monthly/2026-08/xiangqi.jsonl.gz'),
+      download('/api/data/monthly/2026-08/xiangqi.jsonl.gz'),
+      download('/api/data/monthly/2026-08/xiangqi.jsonl.gz'),
     ]);
     assert.equal(first.status, 200);
     assert.equal(second.status, 200);
+    assert.equal(first.location, second.location);
     assert.ok(first.body.equals(second.body));
     assert.equal(first.headers['cache-control'], 'public, max-age=31536000, immutable');
     assert.equal(first.headers['x-mistboard-games'], '2');
@@ -291,6 +316,15 @@ definePersistenceTests('game data files', () => {
       ['monthly/2026-08/xiangqi.jsonl.gz'],
     );
     assert.equal(first.headers['x-mistboard-sha256'], stored[0]?.sha256);
+    // The URL names the bytes it serves.
+    assert.equal(
+      first.location,
+      `/api/data/monthly/2026-08/xiangqi.${stored[0]?.sha256.slice(0, 12)}.jsonl.gz`,
+    );
+    assert.equal(
+      first.headers['content-disposition'],
+      'attachment; filename="mistboard_xiangqi_2026-08.jsonl.gz"',
+    );
     // The file is the counted games only.
     const ids = gunzipSync(first.body)
       .toString('utf8')
@@ -304,8 +338,8 @@ definePersistenceTests('game data files', () => {
     await seedMonth();
     resetDataDownloadLimiterForTests();
     const [first, second] = await Promise.all([
-      request('/api/data/monthly/2026-08/all.jsonl.gz'),
-      request('/api/data/monthly/2026-08/all.jsonl.gz'),
+      download('/api/data/monthly/2026-08/all.jsonl.gz'),
+      download('/api/data/monthly/2026-08/all.jsonl.gz'),
     ]);
     assert.equal(first.status, 200);
     assert.ok(first.body.equals(second.body));
@@ -344,7 +378,11 @@ definePersistenceTests('game data files', () => {
   test('the collection downloads with its origin, and unknown files fail closed', async () => {
     await seedMonth();
     resetDataDownloadLimiterForTests();
-    const collection = await request('/api/data/collections/test-match-2026-08.jsonl.gz');
+    const collection = await download('/api/data/collections/test-match-2026-08.jsonl.gz');
+    assert.match(
+      collection.location,
+      /^\/api\/data\/collections\/test-match-2026-08\.[0-9a-f]{12}\.jsonl\.gz$/,
+    );
     assert.equal(collection.status, 200);
     const [line] = gunzipSync(collection.body).toString('utf8').trimEnd().split('\n');
     const game = JSON.parse(line!) as { game_id: string; mode: string; origin?: { event: string } };
@@ -372,5 +410,68 @@ definePersistenceTests('game data files', () => {
       (await listStoredDataFiles()).map((file) => file.key),
       ['collections/test-match-2026-08.jsonl.gz'],
     );
+  });
+
+  // Migration 154 rebuilt September's all-variants file and Cloudflare kept
+  // serving the old bytes, because the plain URL was marked immutable. Now only
+  // a hashed URL is, and a rebuilt file's old hash answers 404, never old bytes.
+  test('a rebuilt file gets a new URL, and the old hashed URL stops serving', async () => {
+    await seedMonth();
+    resetDataDownloadLimiterForTests();
+    clearDataListingCache();
+    const plain = '/api/data/monthly/2026-08/xiangqi.jsonl.gz';
+    const first = await download(plain);
+    assert.equal(first.status, 200);
+
+    // The listing now links the build itself.
+    clearDataListingCache();
+    const listing = await loadDataListing(new Date('2026-09-15T00:00:00Z'));
+    const xiangqi = listing.months[0]?.variants.find((entry) => entry.variant === 'xiangqi');
+    const jsonl = xiangqi?.files.find((file) => file.format === 'jsonl');
+    const pgn = xiangqi?.files.find((file) => file.format === 'pgn');
+    assert.equal(jsonl?.path, first.location);
+    assert.equal(pgn?.path, '/api/data/monthly/2026-08/xiangqi.pgn.gz', 'unbuilt: the plain URL');
+
+    // A revalidation of the hashed URL is a 304 with the same immutable headers.
+    const revalidated = await request(first.location, {
+      'if-none-match': `"${first.headers['x-mistboard-sha256']}"`,
+    });
+    assert.equal(revalidated.status, 304);
+    assert.equal(revalidated.headers['cache-control'], 'public, max-age=31536000, immutable');
+
+    // Rebuild with different contents (what a migration does): delete the row,
+    // drop a game, and ask again.
+    await sqlQuery(
+      `DELETE FROM game_data_files WHERE file_key = 'monthly/2026-08/xiangqi.jsonl.gz'`,
+    );
+    await sqlQuery(`UPDATE games SET visibility = 'private' WHERE room_id = 'xq_data_b'`);
+    const second = await download(plain);
+    assert.equal(second.status, 200);
+    assert.notEqual(second.location, first.location);
+    assert.equal(gunzipSync(second.body).toString('utf8').trimEnd().split('\n').length, 1);
+
+    const stale = await request(first.location);
+    assert.equal(stale.status, 404);
+    assert.equal(stale.headers['cache-control'], 'no-store');
+    assert.deepEqual(JSON.parse(stale.body.toString('utf8')), {
+      error: 'stale_hash',
+      current: second.location,
+    });
+    // A hash for a file never built is a 404 too, and not cached.
+    const never = await request('/api/data/monthly/2026-08/jungle.0123456789ab.jsonl.gz');
+    assert.equal(never.status, 404);
+    assert.deepEqual(JSON.parse(never.body.toString('utf8')), { error: 'not_built' });
+  });
+
+  test('a query string on a file URL is refused, so it cannot mint a second cached copy', async () => {
+    await seedMonth();
+    resetDataDownloadLimiterForTests();
+    const plain = await request('/api/data/monthly/2026-08/xiangqi.jsonl.gz?v=2');
+    assert.equal(plain.status, 400);
+    assert.deepEqual(JSON.parse(plain.body.toString('utf8')), { error: 'unexpected_query' });
+    const first = await download('/api/data/monthly/2026-08/xiangqi.jsonl.gz');
+    const hashed = await request(`${first.location}?cachebust=1`);
+    assert.equal(hashed.status, 400);
+    assert.equal(hashed.headers['cache-control'], 'no-store');
   });
 });

@@ -399,6 +399,8 @@ export {
 } from './persistence-practice.js';
 export type {
   ProfileBucketRating,
+  ProfileGameFilters,
+  ProfileGameResultFilter,
   ProfileRatingHistory,
   ProfileRatingHistoryPoint,
   PublicProfileUser,
@@ -410,6 +412,7 @@ export {
   getUserGamesPage,
   getUserProfileByHandle,
   getUserRatingHistory,
+  isProfileGameResultFilter,
   updateUserAccountPreference,
   updateUserDmPolicy,
   updateUserLocale,

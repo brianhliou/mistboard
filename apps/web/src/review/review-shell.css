@@ -774,6 +774,10 @@
   align-items: center;
   gap: 12px;
   min-width: 0;
+  /* Fill the board track. The track is a flex row that centres its child, so
+     without this the column shrinks to its content: a narrow underboard (a
+     Share & export tab alone) shrank the board with it. */
+  width: 100%;
 }
 /* Stretch to the board-stage width so the chart / POV boards line up under the
    board rather than shrinking to their own content. */

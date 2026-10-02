@@ -19,9 +19,11 @@ import './game-route.css';
 import { duckXiangqiEnabled } from './feature-flags.js';
 import { gameOutcome, variantDisplayLabel } from './game-display.js';
 import { t } from './i18n/catalog.js';
+import { gameExportShareExtra } from './review/game-export-links.js';
 import { buildReviewMeta, reviewOutcomeLine } from './review/game-review-meta.js';
 import { createMoveList, type MoveListEntry } from './review/move-list.js';
 import { mountReviewLayout } from './review/review-layout.js';
+import { underboardPanel } from './review/underboard-tabs.js';
 import { buildNav } from './site-shell.js';
 import { setBoardFamily } from './theme.js';
 import { LIVE_BOARD_SURFACE } from './xiangqi-board.js';
@@ -152,7 +154,17 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
   boardHost.style.width = '100%';
   boardHost.style.aspectRatio = `${DUCK_BOARD_VIEWBOX.width} / ${DUCK_BOARD_VIEWBOX.height}`;
 
-  const moveList = createMoveList(moveEntries(postgame), { title: t('replay.moves') });
+  const entries = moveEntries(postgame);
+  const moveList = createMoveList(entries, { title: t('replay.moves') });
+  // Share & export only: a snapshot replay has no analysis, times or tree, but
+  // its game still downloads, embeds and has an image like every other.
+  const shareMoves = document.createElement('textarea');
+  shareMoves.value = entries.map((entry) => entry.label).join(' ');
+  const underboard = underboardPanel(document.createElement('div'), {
+    shareMovesInput: shareMoves,
+    gameUrl: window.location.href,
+    ...gameExportShareExtra(DUCK_XIANGQI_SPEC_ID, postgame.game.roomId),
+  });
 
   const status = reviewOutcomeLine(gameOutcome(postgame.game.result), postgame.game.termination);
   // Glyph, not markerId: `VariantMiniId` has no 'duck-xiangqi' member yet, and a
@@ -174,6 +186,8 @@ function renderPostgame(root: HTMLElement, postgame: DuckXiangqiPostgameResponse
     metaCard,
     details,
     moves: moveList.el,
+    underboard,
+    underboardOverflows: true,
     boards: [{ key: 'truth', el: boardHost, tier: 'primary' }],
     boardAspect: DUCK_BOARD_VIEWBOX.width / DUCK_BOARD_VIEWBOX.height,
     boardCols: 9,
