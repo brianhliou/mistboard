@@ -3256,47 +3256,68 @@ const ZH_HANS: Record<string, string> = {
     '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
   // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
   'Crazyhouse Xiangqi Rules': '疯狂屋象棋规则',
+  'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. A piece you capture joins your hand as one of your own, and each turn you either move a piece on the board or drop one from your hand onto an empty point. Both sides also start with their two advisors and two elephants in hand.':
+    '疯狂屋象棋就是带打入的[象棋](/rules/xiangqi)。吃掉的棋子作为你自己的棋子进入你的持子；每一步，你要么在棋盘上走一枚棋子，要么从持子中取出一枚打入一个空点。此外，双方开局时两士两象都在持子里。',
+  'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.':
+    '下方示范对局的最后局面。红方把兵打入 e9（圈出处）将死对方。双方的持子画在各自一侧：黑方在棋盘上方，红方在下方。',
+  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets, and published so any site or engine can adopt it.':
+    'Brian H. Liou 于 2026 年设计了这一版本，作为 Mistboard 原创。此前已有人为象棋提出过打入规则，如 Moshe Callen 的 Drop-Xiangqi（2007）和 Fairy-Stockfish 内置的 xiangqihouse，但都没有成为公认的标准。这一版是一套完整的规则，经过 40 多套候选规则、远超 1,600 盘引擎对局的检验，公开发布，任何网站或引擎都可以采用。',
+  'Advisors and elephants start in hand': '士和象开局在持子里',
+  'The start. Black’s hand is above the board and Red’s below, two advisors and two elephants each.':
+    '开局。黑方的持子在棋盘上方，红方的在下方，各有两士两象。',
+  'Advisors and elephants move anywhere on their own half': '士和象可以在己方半盘任意行走',
+  'An advisor steps one point diagonally and an elephant two, as in xiangqi, and an elephant is still blocked when the point between (its eye) is occupied. What changes is where they may go: an advisor is no longer held to the palace, nor an elephant to its seven points. Both may go anywhere on their own side of the river, and neither ever crosses it.':
+    '和象棋一样，士斜走一格，象斜走两格；中间那个点（象眼）被占时，象仍然不能走。变化在于它们能去的地方：士不再限于九宫，象也不再限于原来的七个点。两者都可以在己方河界这一侧任意行走，但永远不能过河。',
+  'Left, an advisor on c2, outside the palace, steps to any of four points. Right, on the river bank at e5 it has two; the crosses are the points the river keeps it from.':
+    '左图：九宫外 c2 的士可以走到四个点中的任何一个。右图：在河岸 e5 上只有两个点可走；叉号是被河界挡住的点。',
+  'An elephant dropped off its seven old points moves on from there by the same two-point step, and never gets back onto them.':
+    '打入到原来七个点之外的象，从那里起照样斜走两格，而且永远回不到那七个点上。',
+  'Left, an elephant dropped on d3 reaches b1, b5, f1 and f5, none of them a point a xiangqi elephant ever stands on. Right, a soldier on e4 fills its eye, and the step to f5 is gone.':
+    '左图：打入 d3 的象可以走到 b1、b5、f1 和 f5，这些都不是象棋里的象能站的点。右图：e4 的兵塞住了象眼，走向 f5 的那一步就没有了。',
+  'Each turn is a move or a drop': '每一步要么走子，要么打入',
+  'On your turn you do one thing: move a piece on the board, or take a piece from your hand and put it on an empty point. A drop is the whole turn, and dropping is never required.':
+    '轮到你时，只做一件事：在棋盘上走一枚棋子，或者从持子中取出一枚棋子放到一个空点上。打入就是这一步的全部，而且从来不是必须的。',
+  'Two ways to start. Left, Red moves the cannon from h3 to e3. Right, Red drops an elephant on e3 instead, and Red’s hand is one elephant lighter.':
+    '两种开局方式。左图：红方把炮从 h3 走到 e3。右图：红方改为把一只象打入 e3，红方持子里就少了一只象。',
+  'Captured pieces join your hand': '吃掉的棋子进入你的持子',
+  'Red’s chariot takes the black horse on c7, and a red horse joins the soldier already in Red’s hand.':
+    '红车吃掉 c7 的黑马，红方持子里原有一个兵，现在又多了一匹红马。',
+  'Where each piece may drop': '每种棋子可以打入的位置',
+  'A piece may be dropped only on an empty point where it could stand, which leaves three zones. Chariots, horses and cannons may go anywhere. Advisors and elephants stay on your own half of the board. A soldier may go on any of its ten home points (the five soldier files, on the rank where soldiers start and the rank in front of it) or anywhere across the river.':
+    '棋子只能打入它能站的空点，因此分为三个区域。车、马、炮可以打入任何地方。士和象只能留在己方半盘。兵可以打入它的十个本方点（五条兵线上，兵的起始横线及其前一条横线），或者河对岸的任何点。',
+  'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse or cannon, and 10 plus 45 for a soldier. Black’s are the mirror image.':
+    '红方在空棋盘上的打入区域：士或象 45 个点，车、马、炮全部 90 个点，兵 10 加 45 个点。黑方的区域与之上下对称。',
+  'A drop may give check and mate': '打入可以将军，也可以将死',
+  'The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. A drop may also block a check. The one drop you may not make is one that leaves your own general in check, such as a piece that becomes the screen an enemy cannon fires over at your general.':
+    '打入的棋子可以自己攻击对方将帅，也可以成为己方某个炮隔着打将的炮架。打入也可以挡将。唯一不允许的打入，是让己方将帅处于被将军状态的打入，例如打入的棋子成了对方炮隔着打己方将帅的炮架。',
+  'Left, a horse dropped on d8 checks the general on e10. Right, a soldier dropped on e6 gives Red’s cannon on e3 its screen.':
+    '左图：打入 d8 的马将军 e10 的将。右图：打入 e6 的兵成了红方 e3 炮的炮架。',
+  'Fairy-Stockfish against itself under these rules, five seconds a move. Both sides drop advisors and elephants on points they never reach in xiangqi, and Red’s attack comes out of its hand: seven of its checks are drops, and the last is mate.':
+    'Fairy-Stockfish 按这套规则自我对弈，每步五秒。双方都把士和象打入象棋里到不了的点，红方的进攻则来自持子：它有七次将军是打入，最后一次就是将死。',
+  'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.':
+    '留意第 6 回合红方打入 d4 的士、第 18 回合黑方打入角上 a10 的象、第 31 回合红方打入将军的炮，以及第 49 回合的将死。',
+  'Crazyhouse Xiangqi · engine game, 5 seconds a move': '疯狂屋象棋 · 引擎对局，每步 5 秒',
+  'Red mates with a soldier dropped on e9. Red wins.': '红方把兵打入 e9 将死。红方胜。',
+  'This game was picked from sixteen played the same way. A study with more of them will follow.':
+    '这盘棋是从同样条件下的十六盘对局中挑出来的。收录更多对局的研究稍后发布。',
+  'For engines and other sites': '供引擎和其他网站使用',
+  'Fairy-Stockfish plays these rules with no patch. This is the variant definition Mistboard’s engine runs; add it to a variants.ini and the engine knows the game as `crazyhousexiangqi`.':
+    'Fairy-Stockfish 无需打补丁就能按这套规则下棋。下面是 Mistboard 引擎所用的变体定义；把它加进 variants.ini，引擎就会以 `crazyhousexiangqi` 识别这个游戏。',
+  'One rule lives outside it. Mistboard draws a game after sixty plies without a capture, but Fairy-Stockfish resets its own count on a drop as well, so the definition turns that count off and the site applies the sixty-ply draw itself.':
+    '有一条规则不在定义里。Mistboard 在连续六十个半回合没有吃子时判和，但 Fairy-Stockfish 在打入时也会把自己的计数清零，所以定义里关掉了这个计数，由网站自己执行六十个半回合判和。',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.':
     '被吃的子归入吃子一方持子、士和象开局就在持子里的象棋：把持子打入任何一个它能站的空点，可以将军，也可以将死。',
-  'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. Captured pieces join your hand, and on your turn you may drop one of them instead of moving. Each side also starts with its two advisors and two elephants in hand, and those pieces move anywhere on their own side of the river.':
-    '疯狂屋象棋就是带打入的[象棋](/rules/xiangqi)。吃掉的棋子进入你的持子，轮到你时，可以不走子，改为打入其中一枚。此外，双方开局时两士两象都在持子里，这两种棋子可以在己方河界这一侧的任何地方行走。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
     '其余一切都是象棋：棋盘、其他棋子的走法、待在九宫里的将帅、河界、双方将帅不能在同一条直线上无子相隔地照面的规则，以及对局结束的方式。',
-  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi already exist, with no settled standard: Moshe Callen’s Drop-Xiangqi (2007) takes shogi’s drop rules whole, Fairy-Stockfish’s built-in xiangqihouse allows drops only on your own half of the board, and no other site we found offers crazyhouse xiangqi as a game to play. To choose the rules, Fairy-Stockfish played well over 1,600 games across more than 40 candidate rule sets on the full board, and the set described here kept games even and decisive while giving advisors and elephants real play. As far as we found, it is the first crazyhouse xiangqi rule set chosen by measuring engine play on the full board.':
-    'Brian H. Liou 于 2026 年设计了这一版本，作为 Mistboard 原创。象棋的打入规则此前已有，但没有公认的标准：Moshe Callen 的 Drop-Xiangqi（2007）整套照搬将棋的打入规则，Fairy-Stockfish 内置的 xiangqihouse 只允许在己方半盘打入；我们也没有找到其他可以下疯狂屋象棋的网站。为了确定规则，Fairy-Stockfish 在完整棋盘上用 40 多套候选规则下了远超 1,600 盘棋，这里介绍的这一套既让双方机会均等、容易分出胜负，又让士和象真正有用武之地。据我们所知，这是第一套通过在完整棋盘上测量引擎对局来选定的疯狂屋象棋规则。',
-  'The start': '开局',
   'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
     '双方开局时，两士两象都在持子里，不在棋盘上。底线依次是车、马、两个空点、将帅、两个空点、马、车。炮和兵的位置与平常相同。',
-  'The start. Both hands hold two advisors and two elephants.': '开局。双方持子里各有两士两象。',
   'Red moves first, and the first move may already be a drop.': '红方先走，第一步就可以打入。',
-  'Advisors and elephants': '士和象',
-  'An advisor moves one point diagonally and an elephant two, and an elephant is still blocked when the point between is occupied. Neither is held to its usual points: an advisor may leave the palace, and an elephant may stand on any point, as long as both stay on their own side of the river. Neither ever crosses it.':
-    '士斜走一格，象斜走两格；象的中间点（象眼）被占时仍然不能走。两者都不再限于原来的位置：士可以走出九宫，象可以站在任何点上，只要都留在己方河界这一侧。两者永远不能过河。',
-  'An advisor on e5 and an elephant on c5, on the river bank. The dots are where each may move; the crosses are the points the river keeps them from.':
-    '河岸上的士（e5）和象（c5）。圆点是它们能走到的位置；叉号是被河界挡住的点。',
-  'Captured pieces change sides': '被吃的子换边',
   'When you capture a piece it leaves the board and goes into your hand as one of your own. Take a black horse and you hold a red horse. Both hands are shown beside the board, so you always know what your opponent can drop.':
     '你吃掉一枚棋子后，它离开棋盘，作为你自己的棋子进入你的持子。吃掉黑马，你就持有一匹红马。双方的持子都显示在棋盘旁边，所以你随时知道对手能打入什么。',
   'The general is never captured, so it is never in a hand. Every other piece can be: chariots, horses, elephants, advisors, cannons and soldiers.':
     '将帅永远不会被吃，所以永远不会成为持子。其他棋子都可以：车、马、象、士、炮和兵。',
-  'Dropping a piece': '打入',
-  'A turn is either a normal move or a drop. To drop, take a piece from your hand and place it on an empty point. That is your whole turn.':
-    '每一步要么是普通走子，要么是打入。打入时，从持子中取出一枚棋子，放到一个空点上。这就是你这一步的全部。',
-  '**Where a piece may land.** Only on a point where that piece could stand:':
-    '**棋子可以落在哪里。**只能落在该棋子能站的点上：',
-  'May be dropped on': '可以打入的位置',
-  'Chariot, horse, cannon': '车、马、炮',
-  'Any empty point.': '任何空点。',
-  'Advisor, elephant': '士、象',
-  'Any empty point on your own side of the river.': '己方河界这一侧的任何空点。',
-  'On your own side, one of the five soldier files, on the rank where soldiers start or the rank in front of it. Across the river, any empty point.':
-    '在己方一侧：五条兵线之一，位于兵的起始横线或其前一条横线上。过了河：任何空点。',
-  'At the start, Red may drop an advisor or an elephant on any of the marked points.':
-    '开局时，红方可以把士或象打入任何一个标记的点。',
   'Any number of soldiers may share a file. A soldier dropped across the river already moves sideways, as a soldier that walked there would.':
     '同一条直线上可以有任意多个兵。打入到河对岸的兵已经可以横走，和走过河的兵一样。',
-  '**A drop may give check, and may mate.** The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. The one drop you may not make is one that leaves your own general in check: a drop may block a check, but it may not become the screen an enemy cannon fires over at your general.':
-    '**打入可以将军，也可以将死。**打入的棋子可以自己攻击对方将帅，也可以成为己方某个炮隔着打将的炮架。唯一不允许的打入，是让己方将帅处于被将军状态的打入：打入可以挡将，但不能成为对方某个炮隔着打己方将帅的炮架。',
   'How the game ends': '对局如何结束',
   '**Checkmate wins,** by a move or by a drop. As in xiangqi, so does stalemate: a player with no legal move loses, in check or not. Count your drops as moves. A player with a piece in hand and an empty point to put it on is rarely out of moves.':
     '**将死获胜，**无论是走子将死还是打入将死。和象棋一样，困毙也获胜：无子可动的一方判负，无论是否被将军。打入也算着法。手里有持子、盘上又有空点可放的一方，很少会无棋可走。',
@@ -3377,7 +3398,17 @@ const ZH_HANS: Record<string, string> = {
   'THE ONLY PLACEMENTS THAT SURVIVE': '仅存的安全落点',
   // crazyhouse xiangqi (the kernel-built diagrams, crazyhouse-xiangqi-rules-diagrams.ts)
   'START: ADVISORS AND ELEPHANTS IN HAND': '开局：士和象都在持子里',
-  'WHERE AN ADVISOR OR ELEPHANT MAY DROP': '士或象可以打入的点',
+  'MATE WITH A DROPPED SOLDIER': '打入兵将死',
+  'A MOVE': '走子',
+  'A DROP': '打入',
+  'BEFORE THE CAPTURE': '吃子之前',
+  'AFTER: A RED HORSE IN HAND': '之后：红马进入持子',
+  'HOME POINTS AND OVER THE RIVER': '本方兵点与河对岸',
+  'A DROP THAT CHECKS': '打入将军',
+  'A DROP THAT SCREENS': '打入作炮架',
+  'ADVISOR OUTSIDE THE PALACE': '九宫外的士',
+  'ADVISOR ON THE RIVER BANK': '河岸上的士',
+  'ELEPHANT OFF ITS OLD POINTS': '离开原来象位的象',
   // shogi4 (two-line labels, one key per line)
   '✓ straight': '✓ 直走',
   '✓ diagonal': '✓ 斜走',
@@ -6395,47 +6426,68 @@ const ZH_HANT: Record<string, string> = {
     '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
   // -- Crazyhouse Xiangqi (rules page), machine-drafted 2026-10-02 for the hand-start rules, not native-reviewed --
   'Crazyhouse Xiangqi Rules': '瘋狂屋象棋規則',
+  'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. A piece you capture joins your hand as one of your own, and each turn you either move a piece on the board or drop one from your hand onto an empty point. Both sides also start with their two advisors and two elephants in hand.':
+    '瘋狂屋象棋就是帶打入的[象棋](/rules/xiangqi)。吃掉的棋子作為你自己的棋子進入你的持子；每一步，你要麼在棋盤上走一枚棋子，要麼從持子中取出一枚打入一個空點。此外，雙方開局時兩士兩象都在持子裡。',
+  'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.':
+    '下方示範對局的最後局面。紅方把兵打入 e9（圈出處）將死對方。雙方的持子畫在各自一側：黑方在棋盤上方，紅方在下方。',
+  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets, and published so any site or engine can adopt it.':
+    'Brian H. Liou 於 2026 年設計了這一版本，作為 Mistboard 原創。此前已有人為象棋提出過打入規則，如 Moshe Callen 的 Drop-Xiangqi（2007）和 Fairy-Stockfish 內建的 xiangqihouse，但都沒有成為公認的標準。這一版是一套完整的規則，經過 40 多套候選規則、遠超 1,600 盤引擎對局的檢驗，公開發布，任何網站或引擎都可以採用。',
+  'Advisors and elephants start in hand': '士和象開局在持子裡',
+  'The start. Black’s hand is above the board and Red’s below, two advisors and two elephants each.':
+    '開局。黑方的持子在棋盤上方，紅方的在下方，各有兩士兩象。',
+  'Advisors and elephants move anywhere on their own half': '士和象可以在己方半盤任意行走',
+  'An advisor steps one point diagonally and an elephant two, as in xiangqi, and an elephant is still blocked when the point between (its eye) is occupied. What changes is where they may go: an advisor is no longer held to the palace, nor an elephant to its seven points. Both may go anywhere on their own side of the river, and neither ever crosses it.':
+    '和象棋一樣，士斜走一格，象斜走兩格；中間那個點（象眼）被佔時，象仍然不能走。變化在於它們能去的地方：士不再限於九宮，象也不再限於原來的七個點。兩者都可以在己方河界這一側任意行走，但永遠不能過河。',
+  'Left, an advisor on c2, outside the palace, steps to any of four points. Right, on the river bank at e5 it has two; the crosses are the points the river keeps it from.':
+    '左圖：九宮外 c2 的士可以走到四個點中的任何一個。右圖：在河岸 e5 上只有兩個點可走；叉號是被河界擋住的點。',
+  'An elephant dropped off its seven old points moves on from there by the same two-point step, and never gets back onto them.':
+    '打入到原來七個點之外的象，從那裡起照樣斜走兩格，而且永遠回不到那七個點上。',
+  'Left, an elephant dropped on d3 reaches b1, b5, f1 and f5, none of them a point a xiangqi elephant ever stands on. Right, a soldier on e4 fills its eye, and the step to f5 is gone.':
+    '左圖：打入 d3 的象可以走到 b1、b5、f1 和 f5，這些都不是象棋裡的象能站的點。右圖：e4 的兵塞住了象眼，走向 f5 的那一步就沒有了。',
+  'Each turn is a move or a drop': '每一步要麼走子，要麼打入',
+  'On your turn you do one thing: move a piece on the board, or take a piece from your hand and put it on an empty point. A drop is the whole turn, and dropping is never required.':
+    '輪到你時，只做一件事：在棋盤上走一枚棋子，或者從持子中取出一枚棋子放到一個空點上。打入就是這一步的全部，而且從來不是必須的。',
+  'Two ways to start. Left, Red moves the cannon from h3 to e3. Right, Red drops an elephant on e3 instead, and Red’s hand is one elephant lighter.':
+    '兩種開局方式。左圖：紅方把炮從 h3 走到 e3。右圖：紅方改為把一隻象打入 e3，紅方持子裡就少了一隻象。',
+  'Captured pieces join your hand': '吃掉的棋子進入你的持子',
+  'Red’s chariot takes the black horse on c7, and a red horse joins the soldier already in Red’s hand.':
+    '紅車吃掉 c7 的黑馬，紅方持子裡原有一個兵，現在又多了一匹紅馬。',
+  'Where each piece may drop': '每種棋子可以打入的位置',
+  'A piece may be dropped only on an empty point where it could stand, which leaves three zones. Chariots, horses and cannons may go anywhere. Advisors and elephants stay on your own half of the board. A soldier may go on any of its ten home points (the five soldier files, on the rank where soldiers start and the rank in front of it) or anywhere across the river.':
+    '棋子只能打入它能站的空點，因此分為三個區域。車、馬、炮可以打入任何地方。士和象只能留在己方半盤。兵可以打入它的十個本方點（五條兵線上，兵的起始橫線及其前一條橫線），或者河對岸的任何點。',
+  'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse or cannon, and 10 plus 45 for a soldier. Black’s are the mirror image.':
+    '紅方在空棋盤上的打入區域：士或象 45 個點，車、馬、炮全部 90 個點，兵 10 加 45 個點。黑方的區域與之上下對稱。',
+  'A drop may give check and mate': '打入可以將軍，也可以將死',
+  'The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. A drop may also block a check. The one drop you may not make is one that leaves your own general in check, such as a piece that becomes the screen an enemy cannon fires over at your general.':
+    '打入的棋子可以自己攻擊對方將帥，也可以成為己方某個炮隔著打將的炮架。打入也可以擋將。唯一不允許的打入，是讓己方將帥處於被將軍狀態的打入，例如打入的棋子成了對方炮隔著打己方將帥的炮架。',
+  'Left, a horse dropped on d8 checks the general on e10. Right, a soldier dropped on e6 gives Red’s cannon on e3 its screen.':
+    '左圖：打入 d8 的馬將軍 e10 的將。右圖：打入 e6 的兵成了紅方 e3 炮的炮架。',
+  'Fairy-Stockfish against itself under these rules, five seconds a move. Both sides drop advisors and elephants on points they never reach in xiangqi, and Red’s attack comes out of its hand: seven of its checks are drops, and the last is mate.':
+    'Fairy-Stockfish 按這套規則自我對弈，每步五秒。雙方都把士和象打入象棋裡到不了的點，紅方的進攻則來自持子：它有七次將軍是打入，最後一次就是將死。',
+  'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.':
+    '留意第 6 回合紅方打入 d4 的士、第 18 回合黑方打入角上 a10 的象、第 31 回合紅方打入將軍的炮，以及第 49 回合的將死。',
+  'Crazyhouse Xiangqi · engine game, 5 seconds a move': '瘋狂屋象棋 · 引擎對局，每步 5 秒',
+  'Red mates with a soldier dropped on e9. Red wins.': '紅方把兵打入 e9 將死。紅方勝。',
+  'This game was picked from sixteen played the same way. A study with more of them will follow.':
+    '這盤棋是從同樣條件下的十六盤對局中挑出來的。收錄更多對局的研究稍後發布。',
+  'For engines and other sites': '供引擎和其他網站使用',
+  'Fairy-Stockfish plays these rules with no patch. This is the variant definition Mistboard’s engine runs; add it to a variants.ini and the engine knows the game as `crazyhousexiangqi`.':
+    'Fairy-Stockfish 無需打補丁就能按這套規則下棋。下面是 Mistboard 引擎所用的變體定義；把它加進 variants.ini，引擎就會以 `crazyhousexiangqi` 識別這個遊戲。',
+  'One rule lives outside it. Mistboard draws a game after sixty plies without a capture, but Fairy-Stockfish resets its own count on a drop as well, so the definition turns that count off and the site applies the sixty-ply draw itself.':
+    '有一條規則不在定義裡。Mistboard 在連續六十個半回合沒有吃子時判和，但 Fairy-Stockfish 在打入時也會把自己的計數清零，所以定義裡關掉了這個計數，由網站自己執行六十個半回合判和。',
   'Xiangqi where a captured piece joins your hand and the advisors and elephants start there: drop a piece on any empty point where it could stand, check and mate included.':
     '被吃的子歸入吃子一方持子、士和象開局就在持子裡的象棋：把持子打入任何一個它能站的空點，可以將軍，也可以將死。',
-  'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. Captured pieces join your hand, and on your turn you may drop one of them instead of moving. Each side also starts with its two advisors and two elephants in hand, and those pieces move anywhere on their own side of the river.':
-    '瘋狂屋象棋就是帶打入的[象棋](/rules/xiangqi)。吃掉的棋子進入你的持子，輪到你時，可以不走子，改為打入其中一枚。此外，雙方開局時兩士兩象都在持子裡，這兩種棋子可以在己方河界這一側的任何地方行走。',
   'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.':
     '其餘一切都是象棋：棋盤、其他棋子的走法、待在九宮裡的將帥、河界、雙方將帥不能在同一條直線上無子相隔地照面的規則，以及對局結束的方式。',
-  'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi already exist, with no settled standard: Moshe Callen’s Drop-Xiangqi (2007) takes shogi’s drop rules whole, Fairy-Stockfish’s built-in xiangqihouse allows drops only on your own half of the board, and no other site we found offers crazyhouse xiangqi as a game to play. To choose the rules, Fairy-Stockfish played well over 1,600 games across more than 40 candidate rule sets on the full board, and the set described here kept games even and decisive while giving advisors and elephants real play. As far as we found, it is the first crazyhouse xiangqi rule set chosen by measuring engine play on the full board.':
-    'Brian H. Liou 於 2026 年設計了這一版本，作為 Mistboard 原創。象棋的打入規則此前已有，但沒有公認的標準：Moshe Callen 的 Drop-Xiangqi（2007）整套照搬將棋的打入規則，Fairy-Stockfish 內建的 xiangqihouse 只允許在己方半盤打入；我們也沒有找到其他可以下瘋狂屋象棋的網站。為了確定規則，Fairy-Stockfish 在完整棋盤上用 40 多套候選規則下了遠超 1,600 盤棋，這裡介紹的這一套既讓雙方機會均等、容易分出勝負，又讓士和象真正有用武之地。據我們所知，這是第一套透過在完整棋盤上測量引擎對局來選定的瘋狂屋象棋規則。',
-  'The start': '開局',
   'Each side begins with its two advisors and two elephants in hand, not on the board. The back rank reads chariot, horse, two empty points, the general, two empty points, horse, chariot. The cannons and soldiers stand where they always do.':
     '雙方開局時，兩士兩象都在持子裡，不在棋盤上。底線依次是車、馬、兩個空點、將帥、兩個空點、馬、車。炮和兵的位置與平常相同。',
-  'The start. Both hands hold two advisors and two elephants.': '開局。雙方持子裡各有兩士兩象。',
   'Red moves first, and the first move may already be a drop.': '紅方先走，第一步就可以打入。',
-  'Advisors and elephants': '士和象',
-  'An advisor moves one point diagonally and an elephant two, and an elephant is still blocked when the point between is occupied. Neither is held to its usual points: an advisor may leave the palace, and an elephant may stand on any point, as long as both stay on their own side of the river. Neither ever crosses it.':
-    '士斜走一格，象斜走兩格；象的中間點（象眼）被佔時仍然不能走。兩者都不再限於原來的位置：士可以走出九宮，象可以站在任何點上，只要都留在己方河界這一側。兩者永遠不能過河。',
-  'An advisor on e5 and an elephant on c5, on the river bank. The dots are where each may move; the crosses are the points the river keeps them from.':
-    '河岸上的士（e5）和象（c5）。圓點是它們能走到的位置；叉號是被河界擋住的點。',
-  'Captured pieces change sides': '被吃的子換邊',
   'When you capture a piece it leaves the board and goes into your hand as one of your own. Take a black horse and you hold a red horse. Both hands are shown beside the board, so you always know what your opponent can drop.':
     '你吃掉一枚棋子後，它離開棋盤，作為你自己的棋子進入你的持子。吃掉黑馬，你就持有一匹紅馬。雙方的持子都顯示在棋盤旁邊，所以你隨時知道對手能打入什麼。',
   'The general is never captured, so it is never in a hand. Every other piece can be: chariots, horses, elephants, advisors, cannons and soldiers.':
     '將帥永遠不會被吃，所以永遠不會成為持子。其他棋子都可以：車、馬、象、士、炮和兵。',
-  'Dropping a piece': '打入',
-  'A turn is either a normal move or a drop. To drop, take a piece from your hand and place it on an empty point. That is your whole turn.':
-    '每一步要麼是一般走子，要麼是打入。打入時，從持子中取出一枚棋子，放到一個空點上。這就是你這一步的全部。',
-  '**Where a piece may land.** Only on a point where that piece could stand:':
-    '**棋子可以落在哪裡。**只能落在該棋子能站的點上：',
-  'May be dropped on': '可以打入的位置',
-  'Chariot, horse, cannon': '車、馬、炮',
-  'Any empty point.': '任何空點。',
-  'Advisor, elephant': '士、象',
-  'Any empty point on your own side of the river.': '己方河界這一側的任何空點。',
-  'On your own side, one of the five soldier files, on the rank where soldiers start or the rank in front of it. Across the river, any empty point.':
-    '在己方一側：五條兵線之一，位於兵的起始橫線或其前一條橫線上。過了河：任何空點。',
-  'At the start, Red may drop an advisor or an elephant on any of the marked points.':
-    '開局時，紅方可以把士或象打入任何一個標記的點。',
   'Any number of soldiers may share a file. A soldier dropped across the river already moves sideways, as a soldier that walked there would.':
     '同一條直線上可以有任意多個兵。打入到河對岸的兵已經可以橫走，和走過河的兵一樣。',
-  '**A drop may give check, and may mate.** The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. The one drop you may not make is one that leaves your own general in check: a drop may block a check, but it may not become the screen an enemy cannon fires over at your general.':
-    '**打入可以將軍，也可以將死。**打入的棋子可以自己攻擊對方將帥，也可以成為己方某個炮隔著打將的炮架。唯一不允許的打入，是讓己方將帥處於被將軍狀態的打入：打入可以擋將，但不能成為對方某個炮隔著打己方將帥的炮架。',
   'How the game ends': '對局如何結束',
   '**Checkmate wins,** by a move or by a drop. As in xiangqi, so does stalemate: a player with no legal move loses, in check or not. Count your drops as moves. A player with a piece in hand and an empty point to put it on is rarely out of moves.':
     '**將死獲勝，**無論是走子將死還是打入將死。和象棋一樣，困斃也獲勝：無子可動的一方判負，無論是否被將軍。打入也算著法。手裡有持子、盤上又有空點可放的一方，很少會無棋可走。',
@@ -6516,7 +6568,17 @@ const ZH_HANT: Record<string, string> = {
   'THE ONLY PLACEMENTS THAT SURVIVE': '僅存的安全落點',
   // crazyhouse xiangqi (the kernel-built diagrams, crazyhouse-xiangqi-rules-diagrams.ts)
   'START: ADVISORS AND ELEPHANTS IN HAND': '開局：士和象都在持子裡',
-  'WHERE AN ADVISOR OR ELEPHANT MAY DROP': '士或象可以打入的點',
+  'MATE WITH A DROPPED SOLDIER': '打入兵將死',
+  'A MOVE': '走子',
+  'A DROP': '打入',
+  'BEFORE THE CAPTURE': '吃子之前',
+  'AFTER: A RED HORSE IN HAND': '之後：紅馬進入持子',
+  'HOME POINTS AND OVER THE RIVER': '本方兵點與河對岸',
+  'A DROP THAT CHECKS': '打入將軍',
+  'A DROP THAT SCREENS': '打入作炮架',
+  'ADVISOR OUTSIDE THE PALACE': '九宮外的士',
+  'ADVISOR ON THE RIVER BANK': '河岸上的士',
+  'ELEPHANT OFF ITS OLD POINTS': '離開原來象位的象',
   // shogi4 (two-line labels, one key per line)
   '✓ straight': '✓ 直走',
   '✓ diagonal': '✓ 斜走',

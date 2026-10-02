@@ -1086,6 +1086,15 @@
   fill: var(--xq-diagram-fog, rgba(36, 25, 15, 0.55));
 }
 
+/* A side's hand (pieces held off the board) in a drop-variant diagram
+   (xqHandStrip): a tray in the page's panel colour, so it reads as part of
+   the figure and not as more board. */
+.xq-article-svg .xq-diagram-hand {
+  fill: var(--site-panel-soft, rgba(0, 0, 0, 0.04));
+  stroke: var(--site-border-soft, var(--xq-diagram-ink, #4b3c2a));
+  stroke-width: 1;
+}
+
 .xq-article-svg .xq-jieqi-capture-card {
   fill: var(--site-panel-soft, transparent);
   stroke: var(--site-border-soft, var(--xq-diagram-ink, #4b3c2a));

@@ -1553,10 +1553,13 @@ export function xqBoardSvg(opts: {
   overlay?: string;
   /** Draw every red soldier with the crossed art (Horde Xiangqi's veterans). */
   veteranSoldiers?: boolean;
+  /** Distance from the label row to the board's top edge (default 28). A
+   *  board with a hand strip above it (xqBoardWithHandsSvg) leaves room here. */
+  boardOffset?: number;
 }): string {
   const perspective = opts.perspective ?? opts.view?.perspective ?? 'red';
   const view = opts.view ?? null;
-  const boardY = opts.y + 28;
+  const boardY = opts.y + (opts.boardOffset ?? 28);
   const clipId = `xq-fog-${xqSvgIdPart(opts.state.id)}-${xqSvgIdPart(opts.label)}-${Math.round(opts.x)}-${Math.round(boardY)}-${perspective}`;
   return [
     `<text x="${opts.x + XQ_BOARD_W / 2}" y="${opts.y + 14}" font-family="system-ui, sans-serif" font-size="13" font-weight="700" class="xq-diagram-title" text-anchor="middle">${opts.label}</text>`,
@@ -1575,6 +1578,70 @@ export function xqBoardSvg(opts: {
     ),
     xqArrowLayer(opts.arrows, opts.x, boardY, perspective),
     opts.overlay ?? '',
+  ].join('');
+}
+
+// ── Hands: pieces held off the board, drawn with the board ────────────────
+// The drop variants (Crazyhouse Xiangqi) need the position AND what each side
+// holds, or a diagram is ambiguous. One strip per side, the width of the board:
+// the side at the top of the board above it, the side at the bottom below it,
+// as the live room draws its pockets. Only held roles are drawn, in the order
+// the caller gives; a count over one gets a badge, as the live pocket's does
+// (drop-pocket.ts). An empty hand is an empty tray, never a missing one.
+
+export const XQ_HAND_STRIP_H = 34;
+const XQ_HAND_GAP = 6;
+const XQ_HAND_PIECE = 26;
+const XQ_HAND_SLOT = 36;
+
+export type XqHandEntry = { role: XiangqiPiece['role']; count: number };
+export type XqHandStrip = { color: XiangqiColor; entries: readonly XqHandEntry[] };
+
+/** One side's hand as a strip of pieces, XQ_BOARD_W wide, top-left at (x, y). */
+export function xqHandStrip(strip: XqHandStrip, x: number, y: number): string {
+  const held = strip.entries.filter((entry) => entry.count > 0);
+  const parts = [
+    `<rect x="${x}" y="${y}" width="${XQ_BOARD_W}" height="${XQ_HAND_STRIP_H}" rx="6" class="xq-diagram-hand" data-hand="${strip.color}"/>`,
+  ];
+  let cx = x + XQ_BOARD_W / 2 - ((held.length - 1) * XQ_HAND_SLOT) / 2;
+  const top = y + (XQ_HAND_STRIP_H - XQ_HAND_PIECE) / 2;
+  for (const entry of held) {
+    const piece = renderXiangqiPieceGlyphed(
+      { color: strip.color, role: entry.role },
+      activeXiangqiPieceSet,
+      { x: cx - XQ_HAND_PIECE / 2, y: top, size: XQ_HAND_PIECE },
+    );
+    const badge =
+      entry.count > 1
+        ? `<circle cx="${cx + XQ_HAND_PIECE / 2 - 1}" cy="${top + 3}" r="7" fill="#1f2937"/><text x="${cx + XQ_HAND_PIECE / 2 - 1}" y="${top + 6.5}" font-family="system-ui, sans-serif" font-size="10" font-weight="700" fill="#fff" text-anchor="middle">${entry.count}</text>`
+        : '';
+    parts.push(
+      `<g class="xq-diagram-hand-piece" data-hand-role="${strip.color}-${entry.role}" data-count="${entry.count}">${piece}${badge}</g>`,
+    );
+    cx += XQ_HAND_SLOT;
+  }
+  return parts.join('');
+}
+
+/** Height of a labelled board with the given strips (xqSvg's height argument). */
+export function xqBoardWithHandsHeight(strips: { top?: XqHandStrip; bottom?: XqHandStrip }): number {
+  const strip = XQ_HAND_STRIP_H + XQ_HAND_GAP;
+  return 28 + XQ_BOARD_H + (strips.top ? strip : 0) + (strips.bottom ? strip : 0) + 4;
+}
+
+/**
+ * xqBoardSvg with a hand strip above and/or below the board. The label stays
+ * on top; the strips sit between it and the board, and under the board.
+ */
+export function xqBoardWithHandsSvg(
+  opts: Parameters<typeof xqBoardSvg>[0] & { top?: XqHandStrip; bottom?: XqHandStrip },
+): string {
+  const { top, bottom, ...board } = opts;
+  const boardOffset = 28 + (top ? XQ_HAND_STRIP_H + XQ_HAND_GAP : 0);
+  return [
+    xqBoardSvg({ ...board, boardOffset }),
+    top ? xqHandStrip(top, opts.x, opts.y + 28) : '',
+    bottom ? xqHandStrip(bottom, opts.x, opts.y + boardOffset + XQ_BOARD_H + XQ_HAND_GAP) : '',
   ].join('');
 }
 

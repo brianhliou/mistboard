@@ -1,19 +1,53 @@
 import {
-  CRAZYHOUSE_XIANGQI_DROP_REGION_BOARD,
-  CRAZYHOUSE_XIANGQI_RIVER_PAIR,
+  CRAZYHOUSE_XIANGQI_ADVISOR_PAIR,
+  CRAZYHOUSE_XIANGQI_CAPTURE_PAIR,
+  CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR,
+  CRAZYHOUSE_XIANGQI_ELEPHANT_PAIR,
+  CRAZYHOUSE_XIANGQI_INTRO_BOARD,
   CRAZYHOUSE_XIANGQI_START_BOARD,
+  CRAZYHOUSE_XIANGQI_TURN_PAIR,
+  CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE,
+  CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF,
+  CRAZYHOUSE_XIANGQI_ZONE_SOLDIER,
 } from '../../crazyhouse-xiangqi-rules-diagrams.js';
+import { CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES } from '../../crazyhouse-xiangqi-sample-game.js';
 import { playClosing } from '../diagrams.js';
-import type { Article } from '../types.js';
+import type { Article, ArticleBlock } from '../types.js';
 
-// Listed and indexed with the public launch, in English and machine-drafted
-// zh-Hans / zh-Hant (article-i18n.ts). Every rule here is the kernel's,
+/**
+ * The engine definition the "For engines and other sites" section prints:
+ * the variant section of apps/server/src/crazyhouse-xiangqi.ini, verbatim.
+ * crazyhouse-xiangqi-article.test.ts holds the two equal.
+ */
+export const CRAZYHOUSE_XIANGQI_ENGINE_DEFINITION = `[crazyhousexiangqi:xiangqi]
+startFen = rn2k2nr/9/1c5c1/p1p1p1p1p/9/9/P1P1P1P1P/1C5C1/9/RN2K2NR[BBAAbbaa] w - - 0 1
+pieceDrops = true
+capturesToHand = true
+dropChecks = true
+flyingGeneral = true
+stalemateValue = loss
+nFoldRule = 3
+nFoldValue = draw
+perpetualCheckIllegal = true
+chasingRule = none
+nMoveRule = 0
+mobilityRegionWhiteFers = *1 *2 *3 *4 *5
+mobilityRegionBlackFers = *6 *7 *8 *9 *10
+mobilityRegionWhiteElephant = *1 *2 *3 *4 *5
+mobilityRegionBlackElephant = *6 *7 *8 *9 *10
+mobilityRegionWhiteSoldier = a4 a5 c4 c5 e4 e5 g4 g5 i4 i5 *6 *7 *8 *9 *10
+mobilityRegionBlackSoldier = *1 *2 *3 *4 *5 a6 a7 c6 c7 e6 e7 g6 g7 i6 i7`;
+
+// Held back from the index and noindexed while it is polished
+// (HIDDEN_RULES_SLUGS, variant-public-surfaces.ts); the zh-Hans / zh-Hant
+// copy is machine-drafted (article-i18n.ts). Every rule here is the kernel's,
 // packages/game/src/variants-crazyhouse-xiangqi.ts: the start is
-// createInitialCrazyhouseXiangqiState, the drop points are
-// crazyhouseXiangqiCanStand, the advisor and elephant moves are its rule
+// createInitialCrazyhouseXiangqiState, the drop zones are
+// crazyhouseXiangqiDropRegion, the advisor and elephant moves are its rule
 // geometry, and the endings are applyCrazyhouseXiangqiMove. The diagrams are
-// drawn from the kernel (crazyhouse-xiangqi-rules-diagrams.ts). Change the
-// two together.
+// drawn from the kernel (crazyhouse-xiangqi-rules-diagrams.ts) and the sample
+// game is replayed through it; captions that name a count or a move number
+// are pinned by those modules' tests. Change the two together.
 export const crazyhouseXiangqiArticle: Article = {
   slug: 'crazyhouse-xiangqi',
   gameSpecId: 'crazyhouse-xiangqi',
@@ -32,21 +66,27 @@ export const crazyhouseXiangqiArticle: Article = {
   intro: [
     {
       kind: 'paragraph',
-      text: 'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. Captured pieces join your hand, and on your turn you may drop one of them instead of moving. Each side also starts with its two advisors and two elephants in hand, and those pieces move anywhere on their own side of the river.',
+      text: 'Crazyhouse Xiangqi is [xiangqi](/rules/xiangqi) with drops. A piece you capture joins your hand as one of your own, and each turn you either move a piece on the board or drop one from your hand onto an empty point. Both sides also start with their two advisors and two elephants in hand.',
+    },
+    {
+      kind: 'raw-svg',
+      svg: CRAZYHOUSE_XIANGQI_INTRO_BOARD,
+      caption:
+        'The last position of the sample game below. Red mates by dropping a soldier on e9, ringed. Each side’s hand is drawn on its own side of the board: Black’s above, Red’s below.',
+    } as ArticleBlock,
+    // TODO link the deep-dive post once published
+    {
+      kind: 'paragraph',
+      text: 'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi have been proposed before, in Moshe Callen’s Drop-Xiangqi (2007) and in Fairy-Stockfish’s built-in xiangqihouse, but none became a settled standard. This one is a complete rule set, tested in well over 1,600 engine games across more than 40 candidate rule sets, and published so any site or engine can adopt it.',
     },
     {
       kind: 'paragraph',
       text: 'Everything else is xiangqi: the board, how the other pieces move, the general in its palace, the river, the rule that the two generals may not face each other on an open file, and the way a game ends.',
     },
-    // TODO link brianhliou.com/posts/crazyhouse-xiangqi/ once published
-    {
-      kind: 'paragraph',
-      text: 'Brian H. Liou designed this version in 2026 as a Mistboard original. Drop rules for xiangqi already exist, with no settled standard: Moshe Callen’s Drop-Xiangqi (2007) takes shogi’s drop rules whole, Fairy-Stockfish’s built-in xiangqihouse allows drops only on your own half of the board, and no other site we found offers crazyhouse xiangqi as a game to play. To choose the rules, Fairy-Stockfish played well over 1,600 games across more than 40 candidate rule sets on the full board, and the set described here kept games even and decisive while giving advisors and elephants real play. As far as we found, it is the first crazyhouse xiangqi rule set chosen by measuring engine play on the full board.',
-    },
   ],
   sections: [
     {
-      heading: 'The start',
+      heading: 'Advisors and elephants start in hand',
       blocks: [
         {
           kind: 'paragraph',
@@ -55,8 +95,9 @@ export const crazyhouseXiangqiArticle: Article = {
         {
           kind: 'raw-svg',
           svg: CRAZYHOUSE_XIANGQI_START_BOARD,
-          caption: 'The start. Both hands hold two advisors and two elephants.',
-        },
+          caption:
+            'The start. Black’s hand is above the board and Red’s below, two advisors and two elephants each.',
+        } as ArticleBlock,
         {
           kind: 'paragraph',
           text: 'Red moves first, and the first move may already be a drop.',
@@ -64,27 +105,58 @@ export const crazyhouseXiangqiArticle: Article = {
       ],
     },
     {
-      heading: 'Advisors and elephants',
+      heading: 'Advisors and elephants move anywhere on their own half',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'An advisor moves one point diagonally and an elephant two, and an elephant is still blocked when the point between is occupied. Neither is held to its usual points: an advisor may leave the palace, and an elephant may stand on any point, as long as both stay on their own side of the river. Neither ever crosses it.',
+          text: 'An advisor steps one point diagonally and an elephant two, as in xiangqi, and an elephant is still blocked when the point between (its eye) is occupied. What changes is where they may go: an advisor is no longer held to the palace, nor an elephant to its seven points. Both may go anywhere on their own side of the river, and neither ever crosses it.',
         },
         {
           kind: 'raw-svg',
-          svg: CRAZYHOUSE_XIANGQI_RIVER_PAIR,
+          svg: CRAZYHOUSE_XIANGQI_ADVISOR_PAIR,
           caption:
-            'An advisor on e5 and an elephant on c5, on the river bank. The dots are where each may move; the crosses are the points the river keeps them from.',
+            'Left, an advisor on c2, outside the palace, steps to any of four points. Right, on the river bank at e5 it has two; the crosses are the points the river keeps it from.',
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'An elephant dropped off its seven old points moves on from there by the same two-point step, and never gets back onto them.',
         },
+        {
+          kind: 'raw-svg',
+          svg: CRAZYHOUSE_XIANGQI_ELEPHANT_PAIR,
+          caption:
+            'Left, an elephant dropped on d3 reaches b1, b5, f1 and f5, none of them a point a xiangqi elephant ever stands on. Right, a soldier on e4 fills its eye, and the step to f5 is gone.',
+        } as ArticleBlock,
       ],
     },
     {
-      heading: 'Captured pieces change sides',
+      heading: 'Each turn is a move or a drop',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'On your turn you do one thing: move a piece on the board, or take a piece from your hand and put it on an empty point. A drop is the whole turn, and dropping is never required.',
+        },
+        {
+          kind: 'raw-svg',
+          svg: CRAZYHOUSE_XIANGQI_TURN_PAIR,
+          caption:
+            'Two ways to start. Left, Red moves the cannon from h3 to e3. Right, Red drops an elephant on e3 instead, and Red’s hand is one elephant lighter.',
+        } as ArticleBlock,
+      ],
+    },
+    {
+      heading: 'Captured pieces join your hand',
       blocks: [
         {
           kind: 'paragraph',
           text: 'When you capture a piece it leaves the board and goes into your hand as one of your own. Take a black horse and you hold a red horse. Both hands are shown beside the board, so you always know what your opponent can drop.',
         },
+        {
+          kind: 'raw-svg',
+          svg: CRAZYHOUSE_XIANGQI_CAPTURE_PAIR,
+          caption:
+            'Red’s chariot takes the black horse on c7, and a red horse joins the soldier already in Red’s hand.',
+        } as ArticleBlock,
         {
           kind: 'paragraph',
           text: 'The general is never captured, so it is never in a hand. Every other piece can be: chariots, horses, elephants, advisors, cannons and soldiers.',
@@ -92,44 +164,41 @@ export const crazyhouseXiangqiArticle: Article = {
       ],
     },
     {
-      heading: 'Dropping a piece',
+      heading: 'Where each piece may drop',
       blocks: [
         {
           kind: 'paragraph',
-          text: 'A turn is either a normal move or a drop. To drop, take a piece from your hand and place it on an empty point. That is your whole turn.',
+          text: 'A piece may be dropped only on an empty point where it could stand, which leaves three zones. Chariots, horses and cannons may go anywhere. Advisors and elephants stay on your own half of the board. A soldier may go on any of its ten home points (the five soldier files, on the rank where soldiers start and the rank in front of it) or anywhere across the river.',
         },
         {
-          kind: 'paragraph',
-          text: '**Where a piece may land.** Only on a point where that piece could stand:',
-        },
-        {
-          kind: 'table',
-          headers: ['Piece', 'May be dropped on'],
-          keyColumn: true,
-          wrap: true,
-          rows: [
-            ['Chariot, horse, cannon', 'Any empty point.'],
-            ['Advisor, elephant', 'Any empty point on your own side of the river.'],
-            [
-              'Soldier',
-              'On your own side, one of the five soldier files, on the rank where soldiers start or the rank in front of it. Across the river, any empty point.',
-            ],
+          kind: 'svg-row',
+          items: [
+            { svg: CRAZYHOUSE_XIANGQI_ZONE_OWN_HALF },
+            { svg: CRAZYHOUSE_XIANGQI_ZONE_ANYWHERE },
+            { svg: CRAZYHOUSE_XIANGQI_ZONE_SOLDIER },
           ],
-        },
-        {
-          kind: 'raw-svg',
-          svg: CRAZYHOUSE_XIANGQI_DROP_REGION_BOARD,
           caption:
-            'At the start, Red may drop an advisor or an elephant on any of the marked points.',
-        },
+            'Red’s drop zones on an empty board: 45 points for an advisor or elephant, all 90 for a chariot, horse or cannon, and 10 plus 45 for a soldier. Black’s are the mirror image.',
+        } as ArticleBlock,
         {
           kind: 'paragraph',
           text: 'Any number of soldiers may share a file. A soldier dropped across the river already moves sideways, as a soldier that walked there would.',
         },
+      ],
+    },
+    {
+      heading: 'A drop may give check and mate',
+      blocks: [
         {
           kind: 'paragraph',
-          text: '**A drop may give check, and may mate.** The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. The one drop you may not make is one that leaves your own general in check: a drop may block a check, but it may not become the screen an enemy cannon fires over at your general.',
+          text: 'The dropped piece may attack the general itself, or become the screen one of your own cannons fires over. A drop may also block a check. The one drop you may not make is one that leaves your own general in check, such as a piece that becomes the screen an enemy cannon fires over at your general.',
         },
+        {
+          kind: 'raw-svg',
+          svg: CRAZYHOUSE_XIANGQI_DROP_CHECK_PAIR,
+          caption:
+            'Left, a horse dropped on d8 checks the general on e10. Right, a soldier dropped on e6 gives Red’s cannon on e3 its screen.',
+        } as ArticleBlock,
       ],
     },
     {
@@ -150,6 +219,45 @@ export const crazyhouseXiangqiArticle: Article = {
         {
           kind: 'paragraph',
           text: 'Time, resignation and abandonment end a game as they do everywhere else on Mistboard.',
+        },
+      ],
+    },
+    {
+      heading: 'A sample game',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Fairy-Stockfish against itself under these rules, five seconds a move. Both sides drop advisors and elephants on points they never reach in xiangqi, and Red’s attack comes out of its hand: seven of its checks are drops, and the last is mate.',
+        },
+        {
+          kind: 'crazyhouse-xiangqi-replay',
+          spec: {
+            moves: CRAZYHOUSE_XIANGQI_SAMPLE_GAME_MOVES,
+            red: 'Fairy-Stockfish',
+            black: 'Fairy-Stockfish',
+            event: 'Crazyhouse Xiangqi · engine game, 5 seconds a move',
+            resultText: 'Red mates with a soldier dropped on e9. Red wins.',
+          },
+          caption:
+            'Watch Red’s advisor dropped on d4 on move 6, Black’s elephant dropped in the corner on a10 on move 18, the cannon Red drops with check on move 31, and the mate on move 49.',
+        } as ArticleBlock,
+        {
+          kind: 'paragraph',
+          text: 'This game was picked from sixteen played the same way. A study with more of them will follow.',
+        },
+      ],
+    },
+    {
+      heading: 'For engines and other sites',
+      blocks: [
+        {
+          kind: 'paragraph',
+          text: 'Fairy-Stockfish plays these rules with no patch. This is the variant definition Mistboard’s engine runs; add it to a variants.ini and the engine knows the game as `crazyhousexiangqi`.',
+        },
+        { kind: 'code', language: 'ini', text: CRAZYHOUSE_XIANGQI_ENGINE_DEFINITION },
+        {
+          kind: 'paragraph',
+          text: 'One rule lives outside it. Mistboard draws a game after sixty plies without a capture, but Fairy-Stockfish resets its own count on a drop as well, so the definition turns that count off and the site applies the sixty-ply draw itself.',
         },
       ],
     },
