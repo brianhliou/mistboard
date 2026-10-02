@@ -38,6 +38,7 @@ import {
   type PlayableEngine,
   setRoomNavigator,
 } from './landing-play.js';
+import { buildPlayPanel, playPanelEnabled } from './landing-play-panel.js';
 import { homepageShowcaseGames, pickHeroPovForGame } from './landing-showcase.js';
 import { type LandingTvMode, mountLandingTv } from './landing-tv.js';
 import { type GameMeta, mountReplay } from './replay.js';
@@ -646,7 +647,13 @@ function buildLandingStage(
   // is the complementary "join a game" surface. ──
   const lobbyPanel = document.createElement('section');
   lobbyPanel.className = 'landing-lobby-panel';
-  lobbyPanel.append(buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }));
+  // `?hero=grid` swaps in the bot-first play panel (#491) for review; the
+  // lichess-shaped tabs stay the default until it is promoted.
+  lobbyPanel.append(
+    playPanelEnabled()
+      ? buildPlayPanel(locale, { hydrate: !opts.skipLiveWidgets })
+      : buildLobbyPanel(locale, { hydrate: !opts.skipLiveWidgets }),
+  );
 
   // ── Play column (grid-area: play, band 1 right): the small h1 tagline, then
   // the single unified Play button (the setup dialog owns the opponent choice)

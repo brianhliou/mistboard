@@ -465,6 +465,27 @@ export const EN_PLAY = {
     'Your general can be taken or blown up next move. A repeated check like this loses.',
   'live.atomicCheckColor':
     '{color}’s general can be taken or blown up next move. A repeated check like this loses.',
+  'lobby.panelTabComputer': 'Play the computer',
+  'lobby.panelTabPerson': 'Play a person',
+  'lobby.panelPlayAgain': 'Play again',
+  'lobby.panelPlayerWaiting': 'A player is waiting',
+  'lobby.panelPlay': 'Play',
+  'lobby.panelFind': 'Find',
+  'lobby.panelPost': 'Post',
+  'lobby.panelLevel': 'Level {level}',
+  'lobby.panelPlayingCount': '{count} playing',
+  'lobby.panelEasier': 'Easier opponent',
+  'lobby.panelHarder': 'Stronger opponent',
+  'lobby.panelFaster': 'Faster clock',
+  'lobby.panelSlower': 'Slower clock',
+  'lobby.panelBotFallbackNote': 'No one joins in 15 s? We offer a bot.',
+  'lobby.panelRatedNote': 'Rated: {clocks}.',
+  'lobby.panelRatedSignIn': 'Sign in to play rated',
+  'lobby.panelOpenGames': 'Open games',
+  'lobby.panelStartOne': 'Start one',
+  'lobby.panelVersus': '{variant} vs {opponent}',
+  'lobby.panelAnonymous': 'Anonymous',
+  'lobby.panelYours': 'Yours',
 } as const;
 
 export type PlayI18nKey = keyof typeof EN_PLAY;
