@@ -35,6 +35,7 @@ Conventions:
 
 ### Watching and review
 
+- Our bots now play each other every day in xiangqi, jieqi, Duck Xiangqi, Jungle Chess and Banqi, and those games are searchable under Engine games and downloadable from the [game data](/data) page ([ec3a7712](https://github.com/brianhliou/mistboard/commit/ec3a7712))
 - a broadcast with no games yet keeps its game list and chat column, so the page has the same shape before play as during it ([b792d6b5](https://github.com/brianhliou/mistboard/commit/b792d6b5))
 - The homepage TV marks each player with a disc in their colour, so Banqi and Flip Jungle show who plays which side (a dashed ring until the first flip decides it) ([f27e98d0](https://github.com/brianhliou/mistboard/commit/f27e98d0))
 - in Jieqi game review, a reveal is graded on what its player could know, counting their own face-down pieces that were captured unseen ([a730bab6](https://github.com/brianhliou/mistboard/commit/a730bab6))
