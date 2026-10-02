@@ -46,6 +46,9 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   // Xiangqi Open (dpxq 12529) admits anyone, so B like the national opens.
   '2026-world-rapid-championship': 'A',
   '2026-world-xiangqi-open': 'B',
+  // 全国象棋个人赛 (dpxq 12461, 11-21..29 in 长春): the national individual
+  // championship, the title event of the domestic year.
+  '2026-national-individual-championship': 'A',
   // The second tier, backfilled the same way: the 广东十虎 exhibitions and the
   // national opens. Professionals play, but the fields are mixed, so they do
   // not give a name a player page of its own.
