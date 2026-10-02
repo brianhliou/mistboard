@@ -1082,7 +1082,6 @@ function renderEventShell(
   body: HTMLElement,
   currentBoardId: string,
 ): HTMLElement {
-  const hasRound = data.round.id !== '';
   const boardOpen = currentBoardId !== '';
   const main = broadcastShell();
   main.classList.add('xqb-event');
@@ -1102,8 +1101,10 @@ function renderEventShell(
   layout.append(content);
   // The round's pairings, lichess's left column: scan the round without the
   // thumbnails, and jump straight to a board from any tab. The same list on
-  // every page of the round, the open board marked.
-  const rail = hasRound ? sideRail(data, currentBoardId) : null;
+  // every page of the round, the open board marked. A tour with no round yet
+  // keeps the column too (an empty list and the chat), so the page has the
+  // shape it will have once games arrive instead of one stretched panel.
+  const rail = sideRail(data, currentBoardId);
   if (rail) {
     layout.classList.add('xqb-event-layout-with-rail');
     // The list and the event's chat room, lichess's left column. Beside the
@@ -2902,6 +2903,9 @@ function sideRail(
   const heading = document.createElement('h2');
   if (header) {
     heading.append(header);
+  } else if (context.round.id === '') {
+    // No round to link to yet: the heading names what the list will hold.
+    heading.append(t('broadcast.boards'));
   } else {
     const back = document.createElement('a');
     back.href = `/broadcast/xiangqi/${encodeURIComponent(
