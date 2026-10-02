@@ -835,6 +835,7 @@ export async function servePrerenderedPage(params: {
     | 'learn-xiangqi.html'
     | 'feed.html'
     | 'changelog.html'
+    | `changelog-${string}.html`
     | 'puzzles.html'
     | 'patron.html';
 }): Promise<void> {

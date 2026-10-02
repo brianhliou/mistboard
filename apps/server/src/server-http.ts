@@ -628,6 +628,22 @@ export function createHttpRequestHandler(options: ServerHttpHandlerOptions) {
       return;
     }
 
+    // A month the changelog no longer shows in full, prerendered as its own
+    // page. A month without one is on /changelog itself (the latest two) or not
+    // in the log at all; either way the anchor there is the answer.
+    const changelogMonth = /^\/changelog\/(\d{4}-\d{2})$/.exec(pathname)?.[1];
+    if (changelogMonth) {
+      void servePrerenderedPage({
+        response,
+        staticDir: options.staticDir,
+        file: `changelog-${changelogMonth}.html` as const,
+      }).catch(() => {
+        response.writeHead(302, { location: `/changelog#${changelogMonth}` });
+        response.end();
+      });
+      return;
+    }
+
     // Default-locale learn page gets its prerendered stage map; localized
     // paths stay on the client-rendered shell below.
     if (pathname === '/learn/xiangqi') {
