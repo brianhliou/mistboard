@@ -515,6 +515,9 @@ export const ZH_HANT_REVIEW = {
   'broadcast.formatWomensLeague':
     '賽制：雙循環共18輪，每場三台，各下一局慢棋（基本用時40分鐘，每步加20秒）。慢棋總分高者以3比0取勝；慢棋總分相同，由兩隊和棋台次的棋手加賽一局快棋（10分鐘，每步加5秒），勝方得2分、負方得1分。',
   'broadcast.railNoGames': '暫無對局',
+  'broadcast.noGamesPublished': '未發布棋譜',
+  'broadcast.noGamesInEndedEvent': '本賽事已結束，來源尚未發布棋譜。如有發布，將在此顯示。',
+  'broadcast.noGamesInEndedRound': '來源尚未發布本輪棋譜。如有發布，將在此顯示。',
   'broadcast.resultOnly': '僅有結果',
   'broadcast.resultOnlyHint': '來源只公布了本局結果，沒有公布棋譜。',
   'broadcast.gameNotStarted': '未開始',

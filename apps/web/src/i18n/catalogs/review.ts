@@ -347,6 +347,11 @@ export const EN_REVIEW = {
   'broadcast.formatWomensLeague':
     "How it is played: a double round robin over 18 rounds, each match three tables of one slow game (40 minutes plus 20 seconds a move). The higher total takes the match 3-0; a level match goes to one blitz game (10 minutes plus 5 seconds) between the drawn tables' players, won 2-1.",
   'broadcast.railNoGames': 'No games yet',
+  'broadcast.noGamesPublished': 'No games published',
+  'broadcast.noGamesInEndedEvent':
+    'This event is over and the source has not published its games. If it does, they appear here.',
+  'broadcast.noGamesInEndedRound':
+    "The source has not published this round's games. If it does, they appear here.",
   'broadcast.resultOnly': 'Result only',
   'broadcast.resultOnlyHint': "The source published this result without the game's moves.",
   'broadcast.gameNotStarted': 'Not started',

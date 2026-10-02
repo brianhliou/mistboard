@@ -864,6 +864,9 @@ function renderIndex(
     sortByFreshness(live)[0] ??
     sortByEventDate(ongoing)[0] ??
     upcoming[0] ??
+    // The latest past event with games: one the source never posted is no
+    // event to lead with.
+    sortByEventDate(past.filter((entry) => entry.boardCount > 0))[0] ??
     sortByEventDate(past)[0] ??
     null;
   const without = (entries: BroadcastIndexEntry[]) => entries.filter((entry) => entry !== featured);
@@ -917,6 +920,13 @@ function isAfter(value: string | null | undefined, now: number): boolean {
   return Number.isFinite(ms) && ms > now;
 }
 
+/** The event's last day has passed. An undated event has not ended: it may
+ *  still post. */
+function tourHasEnded(tour: { endsAt?: string | null }, now = Date.now()): boolean {
+  const ms = tour.endsAt ? Date.parse(tour.endsAt) : Number.NaN;
+  return Number.isFinite(ms) && ms <= now;
+}
+
 /**
  * The card's status line, lichess's "Round 8 · in 11 hours": live, else the
  * next seeded round, else a start date still ahead, else the latest round
@@ -955,6 +965,11 @@ function tourStatusLine(entry: BroadcastIndexEntry): { text: string; live: boole
       text: sinceStart < DAY_MS ? t('broadcast.startsToday') : t('broadcast.awaitingRecords'),
       live: false,
     };
+  }
+  if (entry.boardCount === 0 && tourHasEnded(entry.tour)) {
+    // Over by the calendar and the source never posted a game: say so, or
+    // the card under Past reads as an event we have and show nothing of.
+    return { text: t('broadcast.noGamesPublished'), live: false };
   }
   if (latest) {
     const date = formatEventDay(latest.startsAt ?? undefined);
@@ -1350,7 +1365,9 @@ function renderBoardsTab(
         data.round.startsAt !== undefined &&
         !roundHasStarted(data.round)
         ? t('broadcast.roundNotStarted')
-        : t('broadcast.noGamesYet'),
+        : tourHasEnded(data.tour)
+          ? t('broadcast.noGamesInEndedRound')
+          : t('broadcast.noGamesYet'),
     );
     const source = broadcastSourcePageHref(data.round.sourceUrl ?? data.tour.sourceUrl);
     if (source) {
@@ -1898,7 +1915,9 @@ function renderOverviewTab(data: BroadcastRoundResponse, state?: EventPageState)
     }
     const when = document.createElement('p');
     when.className = 'xqb-note';
-    when.textContent = t('broadcast.noGamesInEvent');
+    when.textContent = tourHasEnded(data.tour)
+      ? t('broadcast.noGamesInEndedEvent')
+      : t('broadcast.noGamesInEvent');
     note.append(when);
     wrap.append(note);
   }
@@ -2970,7 +2989,9 @@ function sideRail(
   if (boards.length === 0) {
     const empty = document.createElement('p');
     empty.className = 'xqb-rail-empty';
-    empty.textContent = t('broadcast.railNoGames');
+    empty.textContent = tourHasEnded(context.tour)
+      ? t('broadcast.noGamesPublished')
+      : t('broadcast.railNoGames');
     list.append(empty);
   }
   let currentRow: HTMLElement | null = null;
