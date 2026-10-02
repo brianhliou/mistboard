@@ -16,8 +16,8 @@ const TITLED_PLAYERS_THUMBNAIL = [
   // alone leaves the rect unfilled (it rendered black). The var keeps the card
   // theme-aware and the fallback matches the xiangqi board.
   '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-  '<text x="160" y="100" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="64" font-weight="700" letter-spacing="2" fill="#b9832f">XGM</text>',
-  '<text x="160" y="138" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="17" font-weight="600" letter-spacing="1.5" fill="#b9832f" opacity="0.62">XIM \u00b7 XNM \u00b7 GM \u00b7 IM \u00b7 FM</text>',
+  '<text x="160" y="100" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="64" font-weight="700" letter-spacing="2" fill="#b9832f" translate="no">XGM</text>',
+  '<text x="160" y="138" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="17" font-weight="600" letter-spacing="1.5" fill="#b9832f" opacity="0.62" translate="no">XIM \u00b7 XNM \u00b7 GM \u00b7 IM \u00b7 FM</text>',
   '<text x="160" y="166" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">VERIFIED TITLES</text>',
   '</svg>',
 ].join('');

@@ -72,6 +72,11 @@ export const CO_UP_VI: Record<string, string> = {
   "Start playing": "Bắt đầu chơi",
   "Read the rules": "Xem luật cờ úp",
   "/rules/jieqi": "/blog/luat-co-up",
+
+  // Index card (deriveTranslation swaps the words inside its SVG). Same shape as
+  // luat-co-up's card: the phrase the reader typed, big, under the 揭棋 eyebrow.
+  JIEQI: 'CỜ ÚP',
+  'EVERY PIECE FACE DOWN': 'MỌI QUÂN ĐỀU ÚP',
 };
 
 export const coUpArticle = deriveTranslation(jieqiPlatformArticle, {

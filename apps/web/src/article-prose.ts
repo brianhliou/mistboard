@@ -1,8 +1,8 @@
 // Prose extraction shared by the translation-coverage test and the
 // i18n:coverage reporter. Only strings a reader sees as natural-language copy
-// are treated as translatable. Board labels baked into specs and generated SVG,
-// and code-block payloads, are deliberately excluded as a separate, known
-// localization gap.
+// are treated as translatable. Labels baked into generated SVG are not prose
+// fields; articles/svg-labels.ts extracts those and the coverage test gates them
+// separately. Code-block payloads stay excluded.
 import type { Article, ArticleBlock, ArticleSection } from './articles-data.js';
 
 export type Prose = { path: string; text: string };
