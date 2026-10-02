@@ -8,6 +8,7 @@ import {
   translationKeys,
 } from './article-i18n.js';
 import { articleProse, articleTranslationSourceStrings } from './article-prose.js';
+import { articleCardLabels, articleDiagramLabels } from './articles/svg-labels.js';
 import { type Article, articles } from './articles-data.js';
 
 // Slugs whose English copy is editorially frozen AND fully translated into
@@ -38,6 +39,42 @@ describe('article translation coverage', () => {
       expect(missing, `untranslated strings:\n${missing.join('\n')}`).toEqual([]);
     });
   }
+
+  // Diagram labels live inside generated SVG, where articleProse cannot see
+  // them, so until 2026-10-01 this file read every rules page as covered while
+  // the zh jieqi page showed SHUFFLED START, BEFORE: HORSE POINT and CAPTURE in
+  // English (68 labels across eight locked pages). localizeSvgMarkup looks each
+  // <text> node up by its trimmed text; this checks the same key.
+  it('every locked article translates its diagram labels in all zh scripts', () => {
+    const missing: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const article = published.find((a) => a.slug === slug);
+      if (!article) continue;
+      for (const { path, text } of articleDiagramLabels(article)) {
+        for (const lang of ARTICLE_LANGS) {
+          if (!hasTranslation(lang, text)) missing.push(`[${lang}] ${slug} ${path}: ${text}`);
+        }
+      }
+    }
+    expect(missing, `untranslated diagram labels:\n${missing.join('\n')}`).toEqual([]);
+  });
+
+  // The index card is the same gap one step earlier: a zh reader met "GAMES
+  // PLAYED" and "SINCE 1956" before opening the article. Read as each script
+  // renders it, so a card that sets its own zh lead (cardMark) is checked as such.
+  it('every locked article translates its index card in all zh scripts', () => {
+    const missing: string[] = [];
+    for (const slug of TRANSLATED_ARTICLE_SLUGS) {
+      const article = published.find((a) => a.slug === slug);
+      if (!article) continue;
+      for (const lang of ARTICLE_LANGS) {
+        for (const text of articleCardLabels(article, lang)) {
+          if (!hasTranslation(lang, text)) missing.push(`[${lang}] ${slug} card: ${text}`);
+        }
+      }
+    }
+    expect(missing, `untranslated card words:\n${missing.join('\n')}`).toEqual([]);
+  });
 
   // seoTitle drives the document <title> and og:title but is NOT prose, so the
   // loop above cannot see it missing. A locked article without an entry ships a

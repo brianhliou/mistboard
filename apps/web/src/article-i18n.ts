@@ -3250,6 +3250,90 @@ const ZH_HANS: Record<string, string> = {
   'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盘引擎对局，红方第 28 回合获胜',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收录了这一批全部二十盘对局，每盘都从自己的发牌开始，并附有对局经过的说明。',
+
+  // -- Diagram labels across the rules pages, machine-drafted 2026-10-01. --
+  // localizeSvgMarkup swaps <text> nodes through this dictionary; the coverage
+  // test now gates them (articleDiagramLabels), so a new label fails CI here.
+  // jieqi rules
+  'SHUFFLED START': '洗混后的开局',
+  'BEFORE: HORSE POINT': '翻子前：马位',
+  'AFTER: REVEALED CANNON': '翻子后：翻出炮',
+  'ADVISOR AFTER REVEAL': '翻明后的士',
+  'ELEPHANT AFTER REVEAL': '翻明后的象',
+  CAPTURE: '吃子',
+  // jieqi openings
+  'FACE-DOWN ON A CANNON POINT': '炮位上的暗子',
+  'SPENT: A SOLDIER TOOK THE HORSE': '已用掉：一个兵吃了马',
+  'FOUR OPENINGS, ONE MOVE EACH': '四种开局，各走一步',
+  'BOTH CANNONS TAKE BOTH HORSES': '双炮打双马',
+  // xiangqi rules (the piece names also label the fog xiangqi vision boards)
+  'STARTING POSITION': '初始局面',
+  GENERAL: '将',
+  ADVISOR: '士',
+  ELEPHANT: '象',
+  HORSE: '马',
+  CHARIOT: '车',
+  CANNON: '炮',
+  SOLDIER: '兵',
+  'FACING: FORBIDDEN': '对脸：禁止',
+  'SCREENED: ALLOWED': '有子相隔：允许',
+  'THE RIVER': '河界',
+  'THE EYE': '象眼',
+  UNOBSTRUCTED: '无阻挡',
+  'LEG BLOCKED': '蹩马腿',
+  MOVE: '走子',
+  'BEFORE THE RIVER': '过河前',
+  'ACROSS THE RIVER': '过河后',
+  // fog xiangqi
+  "RED'S VIEW": '红方视野',
+  "RED'S VIEW BEFORE": '红方视野：之前',
+  "RED'S VIEW AFTER": '红方视野：之后',
+  // fortress xiangqi
+  MOVES: '走法',
+  'SCREEN CAPTURE': '隔架吃子',
+  'RIVER-LOCKED': '不能过河',
+  'EYE BLOCKED': '塞象眼',
+  'ANY EMPTY POINT': '任意空点',
+  'YOUR OWN HALF': '己方半场',
+  'YOUR OWN PALACE': '己方九宫',
+  // duck xiangqi
+  'ONE TURN IN': '走完一回合',
+  'STARTING POSITION, NO DUCK YET': '初始局面，还没有鸭子',
+  'HORSE, OPEN': '马，畅通',
+  'HORSE, LEG BLOCKED': '马，蹩腿',
+  'ELEPHANT, OPEN': '象，畅通',
+  'ELEPHANT, EYE FILLED': '象，塞眼',
+  'THE ONLY PLACEMENTS THAT SURVIVE': '仅存的安全落点',
+  // shogi4 (two-line labels, one key per line)
+  '✓ straight': '✓ 直走',
+  '✓ diagonal': '✓ 斜走',
+  leap: '跳越',
+  '✕ not over': '✕ 不能跳越',
+  'an enemy': '敌方棋子',
+  '✕ not onto': '✕ 不能落在',
+  'your own': '己方棋子上',
+  farm: '农场',
+  before: '之前',
+  after: '之后',
+  // jungle and flip jungle rank ladder (Rat, Tiger, Lion, Elephant were already keyed)
+  Leopard: '豹',
+  Wolf: '狼',
+  Dog: '狗',
+  Cat: '猫',
+  // -- Index card words (renderArticleThumbnail swaps them on zh pages), 2026-10-01. --
+  // The big hanzi lead on the champions, world-title and jieqi cards is set by cardMark,
+  // not here; the English eyebrow it leaves is translate="no".
+  'GAMES PLAYED': '盘棋已下完',
+  'EVERY PIECE FACE DOWN': '每枚棋子都背面朝下',
+  'EVERY XIANGQI TITLE': '每一届全国个人赛',
+  'SINCE 1956': '1956 年至今',
+  'AND WHY IT IS NOT THE HARDER ONE': '以及它为何不是更难的那个',
+  'SINCE 1990': '1990 年至今',
+  '12% of blunders become puzzles': '12% 的漏着成为题目',
+  'AND WHY THE REST ARE NOT': '以及其余为何落选',
+  '10 of the last 13 champions': '近 13 位冠军中有 10 位',
+  'CHINESE XIANGQI ASSOCIATION RULINGS': '中国象棋协会处罚决定',
+  'VERIFIED TITLES': '已核实的头衔',
 };
 
 const ZH_HANT: Record<string, string> = {
@@ -6235,6 +6319,90 @@ const ZH_HANT: Record<string, string> = {
   'Flip Jungle: an engine game, Red wins on move 28': '翻翻棋：一盤引擎對局，紅方第 28 回合獲勝',
   'The [companion study](/study/uKxJ60mN) has all twenty games from the run, each opening into its own deal, with a note on how it went.':
     '[配套研究](/study/uKxJ60mN)收錄了這一批全部二十盤對局，每盤都從自己的發牌開始，並附有對局經過的說明。',
+
+  // -- Diagram labels across the rules pages, machine-drafted 2026-10-01. --
+  // localizeSvgMarkup swaps <text> nodes through this dictionary; the coverage
+  // test now gates them (articleDiagramLabels), so a new label fails CI here.
+  // jieqi rules
+  'SHUFFLED START': '洗混後的開局',
+  'BEFORE: HORSE POINT': '翻子前：馬位',
+  'AFTER: REVEALED CANNON': '翻子後：翻出炮',
+  'ADVISOR AFTER REVEAL': '翻明後的士',
+  'ELEPHANT AFTER REVEAL': '翻明後的象',
+  CAPTURE: '吃子',
+  // jieqi openings
+  'FACE-DOWN ON A CANNON POINT': '炮位上的暗子',
+  'SPENT: A SOLDIER TOOK THE HORSE': '已用掉：一個兵吃了馬',
+  'FOUR OPENINGS, ONE MOVE EACH': '四種開局，各走一步',
+  'BOTH CANNONS TAKE BOTH HORSES': '雙炮打雙馬',
+  // xiangqi rules (the piece names also label the fog xiangqi vision boards)
+  'STARTING POSITION': '初始局面',
+  GENERAL: '將',
+  ADVISOR: '士',
+  ELEPHANT: '象',
+  HORSE: '馬',
+  CHARIOT: '車',
+  CANNON: '炮',
+  SOLDIER: '兵',
+  'FACING: FORBIDDEN': '對臉：禁止',
+  'SCREENED: ALLOWED': '有子相隔：允許',
+  'THE RIVER': '河界',
+  'THE EYE': '象眼',
+  UNOBSTRUCTED: '無阻擋',
+  'LEG BLOCKED': '蹩馬腿',
+  MOVE: '走子',
+  'BEFORE THE RIVER': '過河前',
+  'ACROSS THE RIVER': '過河後',
+  // fog xiangqi
+  "RED'S VIEW": '紅方視野',
+  "RED'S VIEW BEFORE": '紅方視野：之前',
+  "RED'S VIEW AFTER": '紅方視野：之後',
+  // fortress xiangqi
+  MOVES: '走法',
+  'SCREEN CAPTURE': '隔架吃子',
+  'RIVER-LOCKED': '不能過河',
+  'EYE BLOCKED': '塞象眼',
+  'ANY EMPTY POINT': '任意空點',
+  'YOUR OWN HALF': '己方半場',
+  'YOUR OWN PALACE': '己方九宮',
+  // duck xiangqi
+  'ONE TURN IN': '走完一回合',
+  'STARTING POSITION, NO DUCK YET': '初始局面，還沒有鴨子',
+  'HORSE, OPEN': '馬，暢通',
+  'HORSE, LEG BLOCKED': '馬，蹩腿',
+  'ELEPHANT, OPEN': '象，暢通',
+  'ELEPHANT, EYE FILLED': '象，塞眼',
+  'THE ONLY PLACEMENTS THAT SURVIVE': '僅存的安全落點',
+  // shogi4 (two-line labels, one key per line)
+  '✓ straight': '✓ 直走',
+  '✓ diagonal': '✓ 斜走',
+  leap: '跳越',
+  '✕ not over': '✕ 不能跳越',
+  'an enemy': '敵方棋子',
+  '✕ not onto': '✕ 不能落在',
+  'your own': '己方棋子上',
+  farm: '農場',
+  before: '之前',
+  after: '之後',
+  // jungle and flip jungle rank ladder (Rat, Tiger, Lion, Elephant were already keyed)
+  Leopard: '豹',
+  Wolf: '狼',
+  Dog: '狗',
+  Cat: '貓',
+  // -- Index card words (renderArticleThumbnail swaps them on zh pages), 2026-10-01. --
+  // The big hanzi lead on the champions, world-title and jieqi cards is set by cardMark,
+  // not here; the English eyebrow it leaves is translate="no".
+  'GAMES PLAYED': '盤棋已下完',
+  'EVERY PIECE FACE DOWN': '每枚棋子都背面朝下',
+  'EVERY XIANGQI TITLE': '每一屆全國個人賽',
+  'SINCE 1956': '1956 年至今',
+  'AND WHY IT IS NOT THE HARDER ONE': '以及它為何不是更難的那個',
+  'SINCE 1990': '1990 年至今',
+  '12% of blunders become puzzles': '12% 的漏著成為題目',
+  'AND WHY THE REST ARE NOT': '以及其餘為何落選',
+  '10 of the last 13 champions': '近 13 位冠軍中有 10 位',
+  'CHINESE XIANGQI ASSOCIATION RULINGS': '中國象棋協會處罰決定',
+  'VERIFIED TITLES': '已核實的頭銜',
 };
 
 const ARTICLE_DICTS: Record<ArticleLang, Record<string, string>> = {

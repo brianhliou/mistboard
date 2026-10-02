@@ -1,3 +1,5 @@
+import type { Locale } from '../../i18n/locale.js';
+import { cardMark } from '../text-card.js';
 import type { Article } from '../types.js';
 import type { XiangqiReplaySpec } from '../../xiangqi-replay.js';
 import {
@@ -1021,24 +1023,23 @@ const C_aHRbltmz: XiangqiReplaySpec = {
 // purpose: two cards in one row that are almost alike read as a mistake. The CJK
 // stack is explicit because Roboto carries no hanzi and the platform fallback
 // differs.
-const CHAMPIONS_THUMBNAIL = [
-  '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
-  'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
-  'aria-label="A card reading Champions, every xiangqi title, 1956 to 2025">',
-  '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
-  '<text x="160" y="60" text-anchor="middle" font-family="\'Noto Sans SC\', ',
-  '\'PingFang SC\', \'Hiragino Sans GB\', \'Microsoft YaHei\', system-ui, sans-serif" ',
-  'font-size="26" font-weight="700" letter-spacing="10" fill="#b9832f" ',
-  'opacity="0.5">\u51a0\u519b</text>',
-  '<text x="160" y="116" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="40" font-weight="700" fill="#b9832f">CHAMPIONS</text>',
-  '<text x="160" y="150" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
-  'EVERY XIANGQI TITLE</text>',
-  '<text x="160" y="176" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
-  'font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">SINCE 1956</text>',
-  '</svg>',
-].join('');
+const CHAMPIONS_THUMBNAIL = (locale?: Locale): string =>
+  [
+    '<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 320 200" ',
+    'preserveAspectRatio="xMidYMid slice" width="320" height="200" role="img" ',
+    'aria-label="A card reading Champions, every xiangqi title, 1956 to 2025">',
+    '<rect x="0" y="0" width="320" height="200" fill="var(--xq-diagram-bg, #d9bd82)"/>',
+    cardMark(
+      { eyebrowY: 60, leadY: 116, latin: 'CHAMPIONS', hanzi: '\u51a0\u519b', zhHans: '冠军', zhHant: '冠軍' },
+      locale,
+    ),
+    '<text x="160" y="150" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
+    'font-size="15" font-weight="600" letter-spacing="1.4" fill="#b9832f" opacity="0.62">',
+    'EVERY XIANGQI TITLE</text>',
+    '<text x="160" y="176" text-anchor="middle" font-family="Roboto, system-ui, sans-serif" ',
+    'font-size="12" letter-spacing="2.4" fill="#5a4626" opacity="0.72">SINCE 1956</text>',
+    '</svg>',
+  ].join('');
 
 export const xiangqiChampionsArticle: Article = {
   slug: 'xiangqi-champions',

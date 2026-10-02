@@ -1644,7 +1644,7 @@ function localizeInlineSvgText(root: ParentNode, lang?: ArticleLang): void {
     )
     .forEach((node) => {
       const text = node.textContent;
-      if (!text) return;
+      if (!text || node.getAttribute('translate') === 'no') return;
       node.textContent = translateArticleText(lang, text.trim());
     });
 }
@@ -2382,6 +2382,9 @@ export function renderArticleThumbnail(
       template.innerHTML = raw.trim();
       const svg = template.content.firstElementChild;
       if (svg instanceof SVGSVGElement) {
+        // Card words go through the article dictionary like a figure's labels,
+        // so a zh index does not carry English cards (2026-10-01).
+        if (locale === 'zh-Hans' || locale === 'zh-Hant') localizeInlineSvgText(svg, locale);
         markNoTranslate(svg);
         svg.setAttribute('width', '100%');
         svg.setAttribute('height', '100%');
