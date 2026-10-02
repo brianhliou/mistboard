@@ -272,6 +272,22 @@ test('engine matches stay out of the feed until a search asks for them', () => {
   assert.ok(!searchLanes({ sourceSlug: 'mistboard', event: 'x' }).includes('engine-match'));
 });
 
+test('engine games (the bots, on a schedule) stay out of the feed until a search asks', () => {
+  assert.ok(!searchLanes({}).includes('engine-game'));
+  assert.ok(!searchLanes({ variant: 'jieqi' }).includes('engine-game'));
+  assert.ok(!searchLanes({ sourceSlug: 'mistboard' }).includes('engine-game'));
+  assert.ok(!searchLanes({ sourceSlug: 'engine-match' }).includes('engine-game'));
+  // Named by source (any variant: they are played here), or found by a bot's name.
+  assert.deepEqual(searchLanes({ sourceSlug: 'engine-game' }), ['engine-game']);
+  assert.deepEqual(searchLanes({ sourceSlug: 'engine-game', variant: 'jieqi' }), ['engine-game']);
+  assert.ok(searchLanes({ player: 'Pikafish' }).includes('engine-game'));
+  // They have no event, so an event search does not read them.
+  assert.ok(!searchLanes({ event: 'AB-JChess' }).includes('engine-game'));
+  // Like engine matches they keep no default length floor.
+  assert.deepEqual(playedPlyMin({}, 'engine-game'), {});
+  assert.equal(playedPlyFloor({ sourceSlug: 'engine-game' }), null);
+});
+
 test('a seat-keyed result filter spans the red and white first seats', () => {
   assert.deepEqual(mistboardResults('1-0'), ['red-wins', 'white-wins']);
   assert.deepEqual(mistboardResults('0-1'), ['black-wins']);

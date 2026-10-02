@@ -48,6 +48,7 @@ export const ZH_HANT_CONTENT = {
   'videos.previousVideos': '上一個影片',
   'videos.moreVideos': '更多影片',
   'articles.heading': '文章',
+  'articles.deepDives': '深度文章',
   'articles.read': '閱讀',
   'articles.intro': '原創策略遊戲的文章、規則說明與引擎工作。',
   'articles.allArticles': '全部文章',
@@ -404,7 +405,8 @@ export const ZH_HANT_CONTENT = {
   'data.formatJsonl':
     'JSONL：每行一盤對局，gzip 壓縮。每一行與該對局頁面上單獨下載的 JSON 完全相同。欄位：',
   'data.fieldGame': '對局編號及其在 Mistboard 上的頁面。',
-  'data.fieldVariant': '變體編號，以及 pvp（人對人）或 pve（人對機器人）。',
+  'data.fieldVariant':
+    '變體編號，以及 pvp（人對人）、pve（人對機器人），或在機器人對局檔案中的 eve（機器人對機器人）。',
   'data.fieldPlayers': '各方在對局頁面上顯示的名字，依顏色區分。設為私密的座位顯示為 Anonymous。',
   'data.fieldTimeControl':
     '初始時間和每步加時（毫秒），並附 5+3 這樣的標籤；不限時則為 null。按每步固定用時進行的引擎對局附 movetime_ms。',
@@ -429,7 +431,7 @@ export const ZH_HANT_CONTENT = {
   'data.included':
     '自 2026 年 6 月起在本站下完的每一盤對局：人對人或人對機器人，計分或休閒，登入或以訪客身分。對局依結束時所在的月份（UTC）歸檔。',
   'data.excluded':
-    '不包含：中止的對局和雙方都還沒走棋就結束的對局、營運和測試本站的帳號下的對局、非公開對局、引擎對引擎的對局，以及引擎對局等匯入的對局。當月結束後才會加入。',
+    '不包含：中止的對局和雙方都還沒走棋就結束的對局、營運和測試本站的帳號下的對局、非公開對局、機器人對局（它們有獨立的檔案），以及引擎對局等匯入的對局。當月結束後才會加入。',
   'data.hiddenHeading': '隱藏資訊',
   'data.hiddenFog':
     '已結束的迷霧對局不再隱藏任何資訊，所以檔案包含雙方的每一步，與對局結束後頁面上顯示的一致。當時每位玩家能看到什麼並未儲存；可以由著法和開源遊戲程式碼中的視野規則推出。',
@@ -453,4 +455,9 @@ export const ZH_HANT_CONTENT = {
   'data.filesHosting':
     '檔案由本站直接提供。當某個月的檔案超過約 100 MB，或下載流量開始產生費用時，會遷移到物件儲存（Cloudflare R2）。',
   'privacy.downloadsLink': '對局資料頁面',
+  'data.engineHeading': '機器人對局',
+  'data.engineNote':
+    '本站自己的機器人之間的對局，每天幾盤。它們有獨立的檔案，從不出現在上面的檔案中。',
+  'data.engineAbout':
+    '本站每天安排幾盤自己的機器人之間的對局，就是你可以對戰的那些機器人，涵蓋多個變體，並在本站自己的伺服器上進行。這些對局發布在獨立的月度檔案中，位於對局資料頁面的「機器人對局」下，mode 為 eve。它們從不出現在人類對局的檔案中，也不計入本站的統計或等級分。揭棋機器人對局和本站其他對局一樣在開局時發牌，因此帶有 deal_fen。',
 } satisfies Partial<Record<ContentI18nKey, string>>;

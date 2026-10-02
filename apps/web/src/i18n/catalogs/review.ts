@@ -198,6 +198,8 @@ export const EN_REVIEW = {
   'historical.sourcePlayedHere': 'Played on Mistboard',
   'historical.sourceEngineMatches': 'Engine matches',
   'historical.sourceEngineMatch': 'Engine match',
+  'historical.sourceEngineGames': 'Engine games',
+  'historical.sourceEngineGame': 'Engine game',
   'historical.sourceBroadcasts': 'Broadcasts',
   'historical.firstWins': 'First player wins',
   'historical.secondWins': 'Second player wins',
@@ -366,6 +368,9 @@ export const EN_REVIEW = {
   'broadcast.roundLive': '{round} · Live',
   'broadcast.roundOn': '{round} · {date}',
   'broadcast.startsOn': 'Starts {date}',
+  'broadcast.startsToday': 'Starts today',
+  'broadcast.nextUp': 'Next up',
+  'broadcast.latest': 'Latest',
   'broadcast.calendarTitle': 'Broadcast calendar',
   'broadcast.calendarNote':
     'Top events from the dpxq.com tournament tracker, and the events we relay. Dates are as the organisers publish them, and they can move.',

@@ -90,6 +90,7 @@ export type TenantCreateHttpContext = {
   isDraining(): boolean;
   drainDeadlineMs(): number | null;
   reserveLiveEngineSeat(engineId: string, color: 'white' | 'black'): Promise<string | null>;
+  releaseLiveEngineReservation(reservationId: string, reason: string): void;
 };
 
 // Mistboard TV channel metadata for a registered tenant. Optional: tenants

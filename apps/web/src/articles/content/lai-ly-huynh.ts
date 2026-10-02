@@ -269,6 +269,7 @@ const G_M_140313: XiangqiReplaySpec = {
 
 export const laiLyHuynhArticle: Article = {
   slug: "lai-ly-huynh",
+  homeRow: "deep-dives",
   kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',

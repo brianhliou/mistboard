@@ -44,11 +44,16 @@ const JIEQI_BOT_WINS_THUMBNAIL = (): string => {
 // Games are finished rooms, so /embed/game shows every piece. Each opens at
 // `ply` (plies played, 0 = start), the bot to move just before the game turns,
 // read from the bot's own evals in its move records. Sized like the study
-// embeds: width-bound at the 702px column beside the move sheet.
+// embeds: width-bound at the 702px column beside the move sheet. The board is
+// turned to the winner (`pov`), read from their side in WINS, so a Black win
+// shows the player at the bottom.
 function gameEmbed(roomId: string, ply: number, title: string): ArticleBlock {
+  const win = WINS.find((row) => row[5] === roomId);
+  if (!win) throw new Error(`jieqi-bot-wins: ${roomId} is not in WINS`);
+  const pov = win[2] === 'Black' ? 'black' : 'white';
   return {
     kind: 'embed',
-    path: `/embed/game/${roomId}?ply=${ply}`,
+    path: `/embed/game/${roomId}?ply=${ply}&pov=${pov}`,
     title,
     aspect: [702, 696],
   } as ArticleBlock;

@@ -209,6 +209,115 @@ test('Dark Xiangqi PvE route returns 503 when no engine seat is available', asyn
   }
 });
 
+// 2026-10-01 21:11 PT: a draining server answered four Fog Xiangqi bot starts
+// with 503 after each had reserved a seat, so the worker's four seats sat
+// leaked for 30 minutes and the next Fog Chess bot game got engine_busy.
+test('Dark Xiangqi PvE route takes no engine seat while the server drains', async () => {
+  const before = process.env[darkXiangqiFlag];
+  process.env[darkXiangqiFlag] = 'true';
+  try {
+    let reserveCalls = 0;
+    const response = captureResponse();
+    await handleDarkXiangqiCreate(
+      testContext({
+        isDraining: () => true,
+        reserveLiveEngineSeat: async () => {
+          reserveCalls += 1;
+          return 'reservation';
+        },
+      }),
+      response,
+      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve' },
+    );
+
+    assert.equal(response.status, 503);
+    assert.equal(responseJson(response).error, 'server_draining');
+    assert.equal(reserveCalls, 0);
+  } finally {
+    restoreFlag(before);
+  }
+});
+
+test('Dark Xiangqi PvE route takes no engine seat while persistence is down', async () => {
+  const before = process.env[darkXiangqiFlag];
+  process.env[darkXiangqiFlag] = 'true';
+  try {
+    let reserveCalls = 0;
+    const response = captureResponse();
+    await handleDarkXiangqiCreate(
+      testContext({
+        databaseRequired: true,
+        reserveLiveEngineSeat: async () => {
+          reserveCalls += 1;
+          return 'reservation';
+        },
+      }),
+      response,
+      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve' },
+    );
+
+    assert.equal(response.status, 503);
+    assert.deepEqual(responseJson(response), { error: 'persistence_disabled' });
+    assert.equal(reserveCalls, 0);
+  } finally {
+    restoreFlag(before);
+  }
+});
+
+test('Dark Xiangqi PvE route releases its engine seat when the room is not created', async () => {
+  const before = process.env[darkXiangqiFlag];
+  process.env[darkXiangqiFlag] = 'true';
+  try {
+    for (const failure of ['persistence_failure', 'room_id_collision', 'throws'] as const) {
+      const released: Array<[string, string]> = [];
+      const response = captureResponse();
+      const run = handleDarkXiangqiCreate(
+        testContext({
+          reserveLiveEngineSeat: async () => `reservation-${failure}`,
+          releaseLiveEngineReservation: (id, reason) => released.push([id, reason]),
+          createDarkXiangqiRoom: async () => {
+            if (failure === 'throws') throw new Error('room factory exploded');
+            return { ok: false, error: failure };
+          },
+        }),
+        response,
+        { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve' },
+      );
+      if (failure === 'throws') {
+        await assert.rejects(run, /room factory exploded/);
+      } else {
+        await run;
+        assert.deepEqual(responseJson(response), { error: failure });
+      }
+      assert.deepEqual(released, [[`reservation-${failure}`, 'room-create-failed']], failure);
+    }
+  } finally {
+    restoreFlag(before);
+  }
+});
+
+test('Dark Xiangqi PvE route keeps its engine seat when the room is created', async () => {
+  const before = process.env[darkXiangqiFlag];
+  process.env[darkXiangqiFlag] = 'true';
+  try {
+    const released: string[] = [];
+    const response = captureResponse();
+    await handleDarkXiangqiCreate(
+      testContext({
+        reserveLiveEngineSeat: async () => 'reservation',
+        releaseLiveEngineReservation: (id) => released.push(id),
+      }),
+      response,
+      { gameSpecId: DARK_XIANGQI_SPEC_ID, mode: 'pve' },
+    );
+
+    assert.equal(response.status, 201);
+    assert.deepEqual(released, []);
+  } finally {
+    restoreFlag(before);
+  }
+});
+
 test('Dark Xiangqi PvE route rejects an unknown engineId before room creation', async () => {
   const before = process.env[darkXiangqiFlag];
   process.env[darkXiangqiFlag] = 'true';
@@ -493,6 +602,7 @@ function testContext(overrides: Partial<DarkXiangqiCreateContext> = {}): DarkXia
     drainDeadlineMs: () => null,
     isDraining: () => false,
     reserveLiveEngineSeat: async () => null,
+    releaseLiveEngineReservation: () => {},
     ...overrides,
   };
 }

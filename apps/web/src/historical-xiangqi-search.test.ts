@@ -362,7 +362,12 @@ describe('games search variant picker', () => {
       '',
       'mistboard',
       'engine-match',
+      'engine-game',
     ]);
+    // The bots' scheduled games are their own source, offered for any variant.
+    expect(
+      [...(source?.options ?? [])].find((option) => option.value === 'engine-game')?.textContent,
+    ).toBe('Engine games');
   });
 
   it('names the result options in the picked variant colours', async () => {
@@ -484,6 +489,10 @@ describe('games search variant picker', () => {
         listItem({ kind: 'engine-match', eventName: 'AB-JChess vs PikaJieQi · 4 s · 2026-09' }),
       ),
     ).toBe('AB-JChess vs PikaJieQi · 4 s · 2026-09');
+    // An engine game has no event either: two of the site's bots, on a schedule.
+    expect(
+      eventLine(listItem({ kind: 'engine-game', eventName: null, sourceGameId: 'jq_eve_1' })),
+    ).toBe('');
   });
 });
 

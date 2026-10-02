@@ -558,6 +558,7 @@ const C_MC2023: XiangqiReplaySpec = {
 
 export const xiangqiWorldChampionshipArticle: Article = {
   slug: 'xiangqi-world-championship',
+  homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',

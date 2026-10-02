@@ -38,6 +38,17 @@ export const XIANGQI_BROADCAST_TOUR_LEVELS: Readonly<Record<string, XiangqiBroad
   // women): the continental championship, graded before its games arrive.
   '2026-asian-individual-men': 'A',
   '2026-asian-individual-women': 'A',
+  // 女甲 预选赛 (dpxq 12791, 09-20..22 in 绥芬河): the women's league qualifier,
+  // graded like the men's. dpxq posted pairings and results but no records.
+  '2026-womens-league-qualifier': 'A',
+  // Singapore, 11-10..15, the WXF's world events: the 4th World Rapid
+  // Championship (dpxq 12528) is federation entries, so A; the 5th World
+  // Xiangqi Open (dpxq 12529) admits anyone, so B like the national opens.
+  '2026-world-rapid-championship': 'A',
+  '2026-world-xiangqi-open': 'B',
+  // 全国象棋个人赛 (dpxq 12461, 11-21..29 in 长春): the national individual
+  // championship, the title event of the domestic year.
+  '2026-national-individual-championship': 'A',
   // The second tier, backfilled the same way: the 广东十虎 exhibitions and the
   // national opens. Professionals play, but the fields are mixed, so they do
   // not give a name a player page of its own.

@@ -20,6 +20,7 @@
 //   slug: cao-yanlei                 slug, export, title, seoTitle, summary,
 //   ---                              status, updatedAt, publishedAt, thumbnail,
 //                                    thumbnailAlt, audience, readNext (comma list),
+//                                    homeRow (deep-dives for a player page),
 //                                    player (his name as the specs spell it: every
 //                                    board opens from his side)
 //   <!-- a note -->                  dropped
@@ -276,7 +277,7 @@ ${specConsts.join('\n\n')}
 
 export const ${meta.export}: Article = {
   slug: ${q(meta.slug)},
-  kind: 'article',
+${meta.homeRow ? `  homeRow: ${q(meta.homeRow)},\n` : ''}  kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',
   title: ${q(meta.title)},

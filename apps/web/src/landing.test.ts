@@ -131,10 +131,20 @@ describe('landing shell', () => {
     // Bands 3-4 side rails: News (left) and Top studies (right) span both rows.
     expect(demo?.querySelector(':scope > .landing-news-column')).not.toBeNull();
     expect(demo?.querySelector(':scope > .landing-studies-column')).not.toBeNull();
-    // Band 4: the learn row sits in its own grid-area beneath the blog row.
-    const learnRow = demo?.querySelector(':scope > .landing-learn-row');
-    expect(learnRow).not.toBeNull();
-    expect(learnRow?.querySelectorAll('.landing-learn-card').length).toBeGreaterThan(0);
+    // Band 4: the deep-dives row sits in its own grid-area beneath the blog row,
+    // and the player pages are in it, not in the blog row above.
+    const deepDives = demo?.querySelector(':scope > .landing-dives-row');
+    expect(deepDives).not.toBeNull();
+    expect(
+      deepDives?.querySelector('.landing-article-card[href="/blog/yin-sheng"]'),
+    ).not.toBeNull();
+    expect(
+      demo?.querySelector(
+        ':scope > .landing-articles-row:not(.landing-dives-row) .landing-article-card[href="/blog/yin-sheng"]',
+      ),
+    ).toBeNull();
+    expect(deepDives?.querySelector('.landing-row-label')?.textContent).toBe('Deep dives');
+    expect(demo?.querySelector('.landing-learn-row')).toBeNull();
     expect(demo?.querySelector('.landing-left-column .landing-board-column')).not.toBeNull();
     // The support/store pair left the homepage (patronage stays in the nav).
     expect(demo?.querySelector('.landing-support-row')).toBeNull();

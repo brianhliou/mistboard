@@ -21,6 +21,7 @@ import './game-meta-card.css';
 import { t } from '../i18n/catalog.js';
 import { type ProfileTarget, playerNameEl } from '../profile-link.js';
 import { timeAgo } from '../relative-time.js';
+import { seatDiscEl } from '../seat-disc.js';
 import { renderVariantMarker } from '../variant-markers.js';
 import type { VariantMiniId } from '../variant-mini-boards.js';
 
@@ -109,21 +110,6 @@ export type GameMetaCard = {
   setStatus(text: string | null): void;
 };
 
-// Colors whose player disc renders dark; everything else renders light. Chess
-// white/black and xiangqi red/black both map correctly.
-const DARK_COLORS = new Set(['black', 'blue']);
-
-// Ink-disc tint. 'red' gets a filled RED disc (so red-vs-black variants — xiangqi,
-// jungle, fortress, banqi, jieqi, … — read as red/black, not hollow/black); dark
-// inks fill dark; everything else (white) is the hollow light disc. `null` is a
-// flip variant before its opening flip: no ink is bound, so tint nothing rather
-// than guessing.
-function discToneClass(color: string | null): string {
-  if (color === null) return 'game-meta-card__disc--unbound';
-  if (color === 'red') return 'game-meta-card__disc--red';
-  return DARK_COLORS.has(color) ? 'game-meta-card__disc--dark' : 'game-meta-card__disc--light';
-}
-
 export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
   const el = document.createElement('section');
   el.className = 'game-meta-card';
@@ -188,10 +174,9 @@ export function createGameMetaCard(config: GameMetaCardConfig): GameMetaCard {
     for (const player of players) {
       const row = document.createElement('div');
       row.className = 'game-meta-card__player';
-      const disc = document.createElement('span');
-      disc.className = `game-meta-card__disc ${discToneClass(player.color)}`;
-      disc.setAttribute('aria-hidden', 'true');
-      row.append(disc);
+      // A null color is a flip variant before its opening flip: the shared disc
+      // draws the unbound ring rather than guessing.
+      row.append(seatDiscEl(player.color, 'game-meta-card__disc'));
       if (player.isEngine) {
         const bot = document.createElement('span');
         bot.className = 'game-meta-card__bot';

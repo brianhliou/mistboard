@@ -784,8 +784,9 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     expect(featured?.querySelector('.xqb-tour-players')?.textContent).toBe('Wang Tianyi');
 
     const headings = [...root.querySelectorAll('.xqb-section h2')].map((node) => node.textContent);
-    expect(headings).toEqual(['Past']);
-    const pastCard = root.querySelector('.xqb-section .xqb-tour-card');
+    // The top card says why it is on top.
+    expect(headings).toEqual(['Live now', 'Past']);
+    const pastCard = root.querySelector('.xqb-section:not(.xqb-featured-zone) .xqb-tour-card');
     expect(pastCard?.querySelector('.xqb-tour-status')?.textContent).toMatch(/^Round 5 · Jul 8/);
     expect(pastCard?.textContent).not.toContain('Updated');
 
@@ -817,6 +818,78 @@ describe('mountXiangqiBroadcastIndex (live and past zones)', () => {
     );
     expect(root.querySelectorAll('.xqb-tour-card').length).toBe(1);
     expect(broadcastOpenedCalls()).toEqual([{ surface: 'index', locale: 'en' }]);
+  });
+
+  it('keeps an event that started by its own calendar but has no games under Upcoming', async () => {
+    // The Asian championship case: 14 hours into its first day in Manila,
+    // evening before in California, nothing posted yet.
+    const hoursAgo = (h: number) => new Date(Date.now() - h * 3_600_000).toISOString();
+    const inDays = (d: number) => new Date(Date.now() + d * 86_400_000).toISOString();
+    const entry = (slug: string, startsAt: string, endsAt: string, boardCount: number) => {
+      const base = indexEntry({ slug, name: slug, live: false, updatedAt: hoursAgo(1) });
+      return {
+        ...base,
+        tour: { ...base.tour, startsAt, endsAt },
+        roundCount: boardCount > 0 ? 1 : 0,
+        boardCount,
+        completeBoardCount: boardCount,
+        featuredBoard: boardCount > 0 ? base.featuredBoard : null,
+      };
+    };
+    stubFetchJson(() => ({
+      tours: [
+        entry('asian-men', hoursAgo(14), inDays(6), 0),
+        entry('asian-women', hoursAgo(14), inDays(6), 0),
+        // Three days in and still nothing from the source.
+        entry('quiet-league', hoursAgo(72), inDays(2), 0),
+        entry('singapore', inDays(40), inDays(45), 0),
+      ],
+    }));
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastIndex(root);
+
+    const zone = (title: string) =>
+      [...root.querySelectorAll('.xqb-section')].find(
+        (section) => section.querySelector('h2')?.textContent === title,
+      );
+    const names = (section: Element | undefined) =>
+      [...(section?.querySelectorAll('.xqb-tour-card-name') ?? [])].map((n) => n.textContent);
+
+    expect(zone('Ongoing')).toBeUndefined();
+    // The earliest start leads, labelled as the next event.
+    expect(names(zone('Next up'))).toEqual(['quiet-league']);
+    expect(names(zone('Upcoming'))).toEqual(['asian-men', 'asian-women', 'singapore']);
+    const status = (slug: string) =>
+      [...root.querySelectorAll('.xqb-tour-card')]
+        .find((card) => card.querySelector('.xqb-tour-card-name')?.textContent === slug)
+        ?.querySelector('.xqb-tour-status')?.textContent;
+    expect(status('asian-men')).toBe('Starts today');
+    expect(status('quiet-league')).toBe('Awaiting records');
+    expect(status('singapore')).toMatch(/^Starts /);
+  });
+
+  it('moves a started event to Ongoing once its first games are posted', async () => {
+    const base = indexEntry({
+      slug: 'asian-men',
+      name: 'asian-men',
+      live: false,
+      updatedAt: new Date().toISOString(),
+    });
+    stubFetchJson(() => ({
+      tours: [
+        {
+          ...base,
+          tour: {
+            ...base.tour,
+            startsAt: new Date(Date.now() - 14 * 3_600_000).toISOString(),
+            endsAt: new Date(Date.now() + 6 * 86_400_000).toISOString(),
+          },
+        },
+      ],
+    }));
+    const root = document.createElement('div');
+    await mountXiangqiBroadcastIndex(root);
+    expect(root.querySelector('.xqb-featured-zone h2')?.textContent).toBe('Ongoing');
   });
 });
 

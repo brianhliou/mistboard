@@ -29,6 +29,7 @@ import {
 } from './board-lastmove.js';
 import { tokenPieceSize } from './board-metrics.js';
 import { type ReplayStepperCopy, replayStepperCopy } from './replay-stepper-copy.js';
+import { seatDiscEl } from './seat-disc.js';
 import { readStoredXiangqiPieceSet, xiangqiAppearanceChangedEvent } from './theme.js';
 import { drawsCrossedSoldier } from './xiangqi-crossed-soldier.js';
 import { currentXiangqiNotationStyle, xiangqiNotationChangedEvent } from './xiangqi-notation.js';
@@ -577,8 +578,7 @@ export function mountXiangqiReplay(
     const seat = (name: string, side: 'red' | 'black') => {
       const el = document.createElement('div');
       el.className = `xq-replay-seat xq-replay-seat--${side}`;
-      const dot = document.createElement('span');
-      dot.className = 'xq-replay-seat-dot';
+      const dot = seatDiscEl(side, 'xq-replay-seat-dot');
       const label = document.createElement('span');
       label.className = 'xq-replay-seat-name';
       label.textContent = name;

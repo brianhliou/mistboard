@@ -12,6 +12,7 @@ import type { MahjongSeat } from '@mistboard/mahjong';
 import { engineVersionDisplayName } from './engine-registry.js';
 import { botEngineAttributions, firstPartyBotForEngine } from './first-party-bots.js';
 import { getPool, withTransaction } from './persistence-db.js';
+import { scheduledEngineGame } from './persistence-game-data.js';
 import type {
   GameMode,
   GameReviewStatus,
@@ -1223,6 +1224,9 @@ export type GameQueryFilters = {
   // off-site engine match, engine-match-import.ts). Older imported corpora
   // (import-corpus.ts) carry none and stay out of every public list.
   importedOrigin?: boolean;
+  // Only the bot-vs-bot scheduler's engine games (#488, scheduledEngineGame in
+  // persistence-game-data.ts), not lab bake-off imports that are also mode 'eve'.
+  scheduledEngine?: boolean;
   termination?: GameTermination;
   rated?: boolean;
   timeClass?: TimeClass;
@@ -1313,6 +1317,7 @@ export function buildGameQueryWhere(filters: GameQueryFilters): {
       ))`,
     );
   }
+  if (filters.scheduledEngine) conditions.push(scheduledEngineGame('games'));
   if (filters.result) conditions.push(`games.result = ${bind(filters.result)}`);
   if (filters.results) {
     conditions.push(

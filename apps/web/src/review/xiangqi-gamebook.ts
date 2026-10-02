@@ -22,6 +22,7 @@ import { deserializeTree, type SerializedTree } from './tree-serialize.js';
 import { xiangqiTreeAdapter } from './xiangqi-tree-adapter.js';
 import './gamebook.css';
 import './seat-labels.css';
+import { seatDiscEl } from '../seat-disc.js';
 
 export interface XiangqiGamebookOptions {
   /** The solution tree (with per-node hint/deviation/comment). */
@@ -251,8 +252,7 @@ export function mountXiangqiGamebook(root: HTMLElement, opts: XiangqiGamebookOpt
 function seatStrip(name: string, ink: XiangqiColor, slot: 'top' | 'bottom'): HTMLElement {
   const el = document.createElement('div');
   el.className = `review-seat review-seat--${slot} review-seat--${ink}`;
-  const disc = document.createElement('span');
-  disc.className = 'review-seat__disc';
+  const disc = seatDiscEl(ink, 'review-seat__disc');
   const label = document.createElement('span');
   label.className = 'review-seat__name';
   label.textContent = name;

@@ -43,6 +43,7 @@ const MATCH_FIXING_THUMBNAIL = [
  */
 export const xiangqiMatchFixingArticle: Article = {
   slug: 'xiangqi-match-fixing',
+  homeRow: 'deep-dives',
   kind: 'article',
   publisher: 'mistboard',
   boardFamily: 'xiangqi',

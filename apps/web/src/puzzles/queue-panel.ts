@@ -12,6 +12,7 @@ import {
 } from '@mistboard/game';
 import { t } from '../i18n/catalog.js';
 import { currentLocale } from '../i18n/locale.js';
+import { seatDiscEl } from '../seat-disc.js';
 import { renderVariantMarker } from '../variant-markers.js';
 import { colorLabel, type PuzzleSummary } from './adapter.js';
 import type { UserPuzzleRating } from './api.js';
@@ -305,9 +306,7 @@ function sourceGamePlayerLine(
 ): HTMLSpanElement {
   const line = document.createElement('span');
   line.className = 'puzzle-source-player';
-  const disc = document.createElement('span');
-  disc.className = `puzzle-source-disc puzzle-source-disc--${color}`;
-  disc.setAttribute('aria-hidden', 'true');
+  const disc = seatDiscEl(color, 'puzzle-source-disc');
   const label = document.createElement('span');
   label.className = 'puzzle-source-player-name';
   label.textContent =

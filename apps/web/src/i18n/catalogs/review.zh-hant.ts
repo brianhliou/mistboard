@@ -371,6 +371,8 @@ export const ZH_HANT_REVIEW = {
   'historical.sourcePlayedHere': '在 Mistboard 對弈',
   'historical.sourceEngineMatches': '引擎對局',
   'historical.sourceEngineMatch': '引擎對局',
+  'historical.sourceEngineGames': '機器人對局',
+  'historical.sourceEngineGame': '機器人對局',
   'historical.sourceBroadcasts': '賽事直播',
   'historical.firstWins': '先手獲勝',
   'historical.secondWins': '後手獲勝',
@@ -534,6 +536,9 @@ export const ZH_HANT_REVIEW = {
   'broadcast.roundLive': '{round} · 直播中',
   'broadcast.roundOn': '{round} · {date}',
   'broadcast.startsOn': '{date} 開始',
+  'broadcast.startsToday': '今日開賽',
+  'broadcast.nextUp': '下一項賽事',
+  'broadcast.latest': '最近賽事',
   'broadcast.calendarTitle': '直播賽程',
   'broadcast.calendarNote':
     '來自東萍象棋網賽事追蹤的重要賽事，以及我們轉播的賽事。日期以主辦方公布為準，可能調整。',

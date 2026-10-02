@@ -8,6 +8,7 @@
 
 import { t } from './i18n/catalog.js';
 import { currentLocale, type Locale } from './i18n/locale.js';
+import { seatDiscEl } from './seat-disc.js';
 import { localizedChapterTags } from './study-i18n.js';
 
 export type GameRowChapter = {
@@ -65,10 +66,7 @@ function player(name: string, seat: 'red' | 'black', toMove: boolean): HTMLEleme
   if (toMove) {
     el.classList.add('is-to-move');
     // Decorative: the link's title carries "Black to play" in words.
-    const dot = document.createElement('span');
-    dot.className = `study-game-row__dot study-game-row__dot--${seat}`;
-    dot.setAttribute('aria-hidden', 'true');
-    el.append(dot);
+    el.append(seatDiscEl(seat, 'study-game-row__dot'));
   }
   el.append(name);
   return el;
