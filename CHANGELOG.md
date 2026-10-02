@@ -34,6 +34,7 @@ Conventions:
 
 ### Fixed
 
+- The homepage board no longer stays live with a running clock when the server stops answering ([602e3d40](https://github.com/brianhliou/mistboard/commit/602e3d40))
 - The first download of a game data file no longer pauses live games while it is built ([4ce02088](https://github.com/brianhliou/mistboard/commit/4ce02088))
 - Latest studies on the homepage and /study lists the newest studies first; an automatic hourly update no longer lifts two older studies back to the top ([5dcc4b03](https://github.com/brianhliou/mistboard/commit/5dcc4b03))
 - A Fog Chess game's download no longer shows the real name of a player whose seat is set to private ([b4162222](https://github.com/brianhliou/mistboard/commit/b4162222))

@@ -183,24 +183,9 @@ try {
     } else {
       console.log('production drain: not required (0 active games)');
     }
-    // Precondition only. safe-deploy resolves the token itself from the same
-    // two sources, so the value never crosses this process's argv or output;
-    // checking here just keeps a release from running ci:quick and then dying
+    // Precondition only: keeps a release from running ci:quick and then dying
     // at the drain step.
-    if (release.drainRequired) {
-      // describeDrainToken separates "never stored" from "stored but this
-      // process cannot read it" — remedies that share nothing. The old message
-      // named only the first, which on 2026-09-09 sent a session to the
-      // Railway dashboard for an answer the lookup already had.
-      const token = describeDrainToken();
-      if (!token.ok) {
-        throw new Error(
-          `A drain token is required for this deploy (${
-            liveGames === null ? 'active game count unreadable' : `${liveGames} active game(s)`
-          }), and it is not usable here (${token.status}). ${token.detail}`,
-        );
-      }
-    }
+    if (release.drainRequired) requireUsableDrainToken(liveGames);
   }
 
   if (options.localCi) {
@@ -222,6 +207,24 @@ try {
 
   if (options.push) {
     catchUpWithMain();
+    // The first count was read before the local gate, minutes ago. A game that
+    // started since would be killed by the container swap undrained (2026-10-01:
+    // the 10:38 PDT swap logged shutdown_without_drain with one game live), so
+    // read it again right before the push that triggers the deploy.
+    if (release.deployRequired && !release.drainRequired) {
+      const liveGames = await fetchActiveGameCount();
+      if (liveGames !== 0) {
+        release.drainRequired = true;
+        console.log(
+          `production drain: required at push (${
+            liveGames === null
+              ? 'could not read active game count; failing safe'
+              : `${liveGames} active game(s) started during the release`
+          })`,
+        );
+        requireUsableDrainToken(liveGames);
+      }
+    }
     if (release.drainRequired) {
       runTimed('production drain', [
         'node',
@@ -1356,6 +1359,23 @@ function safeDeployBaseArgs() {
     '--owner',
     release.drainOwner,
   ];
+}
+
+// safe-deploy resolves the token itself from the same two sources, so the value
+// never crosses this process's argv or output; this only checks it is usable.
+// describeDrainToken separates "never stored" from "stored but this process
+// cannot read it" — remedies that share nothing. The old message named only the
+// first, which on 2026-09-09 sent a session to the Railway dashboard for an
+// answer the lookup already had.
+function requireUsableDrainToken(liveGames) {
+  const token = describeDrainToken();
+  if (!token.ok) {
+    throw new Error(
+      `A drain token is required for this deploy (${
+        liveGames === null ? 'active game count unreadable' : `${liveGames} active game(s)`
+      }), and it is not usable here (${token.status}). ${token.detail}`,
+    );
+  }
 }
 
 // Read production's live-game count so the release can decide whether a drain

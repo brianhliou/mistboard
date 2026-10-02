@@ -64,6 +64,14 @@ export function mahjongEnabled(): boolean {
   return process.env.MISTBOARD_MAHJONG_ENABLED === 'true';
 }
 
+// Crazyhouse Xiangqi (xiangqi where captured pieces change sides) live rooms.
+// Server-side opt-in, default off, and gated twice the way mahjong is: the spec
+// is on the per-account allowlist (139), so with this flag on only admins and
+// accounts holding a grant are seated. It is an admin playtest, not a launch.
+export function crazyhouseXiangqiEnabled(): boolean {
+  return process.env.MISTBOARD_CRAZYHOUSE_XIANGQI_ENABLED === 'true';
+}
+
 // Jieqi (full-board xiangqi with hidden identities) live rooms. Server-side
 // opt-in, default off — the tenant exists but is not launched.
 export function jieqiEnabled(): boolean {

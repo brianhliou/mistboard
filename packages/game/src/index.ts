@@ -31,6 +31,7 @@ export * from './types.js';
 export * from './variants.js';
 export * from './variants-atomic-xiangqi.js';
 export * from './variants-banqi.js';
+export * from './variants-crazyhouse-xiangqi.js';
 export * from './variants-duck-xiangqi.js';
 export * from './variants-fortress-xiangqi.js';
 export * from './variants-jieqi.js';

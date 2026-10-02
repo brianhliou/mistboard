@@ -27,6 +27,10 @@ const KERNEL_PROGRESS_PLIES: Record<string, number | null> = {
   'atomic-xiangqi.ini': ATOMIC_XIANGQI_RULES.progressClock,
   // Fortress ends only on mate, stalemate and repetition.
   'fortress-xiangqi.ini': null,
+  // crazyhouse-xiangqi.ini is the one exception: its kernel HAS a 60-ply clock,
+  // but FSF resets its counter on every drop and the kernel only on a capture,
+  // so no nMoveRule matches and it is off. Pinned, with the measurement, in
+  // crazyhouse-xiangqi-ini.test.ts.
 };
 
 for (const [ini, plies] of Object.entries(KERNEL_PROGRESS_PLIES)) {

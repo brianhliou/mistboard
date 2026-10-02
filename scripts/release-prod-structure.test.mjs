@@ -26,3 +26,18 @@ test('release-prod declares all its module state above the run block', () => {
     'top-level declarations below the run block are uninitialized while it runs; move them above it',
   );
 });
+
+// The drain decision read production's active-game count once, before the
+// local gate, and acted on it minutes later. A game that started in between was
+// killed by the container swap with no drain (2026-10-01, 10:38 PDT). The push
+// step has to re-read the count after catching up with main and before pushing.
+test('release-prod re-reads the active game count right before the push', () => {
+  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'release-prod.mjs');
+  const source = readFileSync(file, 'utf8');
+  const catchUp = source.indexOf('    catchUpWithMain();\n');
+  const push = source.indexOf('pushCommand(release.headRevision)');
+  assert.ok(catchUp > 0 && push > catchUp, 'expected catchUpWithMain() before the release push');
+  const between = source.slice(catchUp, push);
+  assert.match(between, /await fetchActiveGameCount\(\)/);
+  assert.match(between, /requireUsableDrainToken\(/);
+});

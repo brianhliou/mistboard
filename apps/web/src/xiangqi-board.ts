@@ -145,6 +145,14 @@ export interface XiangqiBoardSvgState {
   arrows?: readonly XiangqiBoardArrow[];
   /** Point markers (learn-mode collectible stars / annotation rings). */
   markers?: readonly XiangqiBoardMarker[];
+  /** Points a piece in hand may be dropped on (a drop variant's selected hand
+   *  role). Drawn and hit-tested exactly like a selected piece's move targets,
+   *  so a drop target reads as one more legal destination. */
+  dropTargets?: readonly XiangqiSquare[];
+  /** The point the last move DROPPED a piece on. A drop has no origin, so it
+   *  gets the destination ring alone (the token-board grammar for drops); the
+   *  view's lastMove then carries only board moves. */
+  lastDropSquare?: XiangqiSquare | null;
 }
 
 /** A decoration pinned to one intersection: 'star' = a collectible item
@@ -207,14 +215,14 @@ export function xiangqiBoardSvg(
       <g class="xq-live-palace">${xiangqiSurfacePalace(surface, perspective, layout)}</g>
       <g class="xq-live-river" ${NON_SELECTABLE_RIVER_ATTRS}>${xiangqiSurfaceRiver(surface, perspective, layout)}</g>
       <g class="xq-live-coords" aria-hidden="true" pointer-events="none">${coords}</g>
-      <g class="xq-live-lastmove">${lastMoveLayer(view, perspective, layout)}</g>
+      <g class="xq-live-lastmove">${state.lastDropSquare ? lastDropLayer(state.lastDropSquare, perspective, layout) : lastMoveLayer(view, perspective, layout)}</g>
       <g class="xq-live-selection">${selectionLayer(state.selectedSquare, perspective, layout)}</g>
       <g class="xq-live-hints">${state.interactive ? '' : hintLayer(view, perspective, state.selectedSquare, layout)}</g>
       <g class="xq-live-pieces">${pieceLayer(view, perspective, state.draggingFrom, layout, state.pieceSet)}</g>
       <g class="xq-live-markers" aria-hidden="true" pointer-events="none">${markerLayer(state.markers ?? [], perspective, layout, 'point')}</g>
       <g class="xq-live-arrows" aria-hidden="true" pointer-events="none">${arrowLayer(state.arrows ?? [], perspective, layout)}</g>
       <g class="xq-live-glyphs" aria-hidden="true" pointer-events="none">${markerLayer(state.markers ?? [], perspective, layout, 'glyph')}</g>
-      <g class="xq-live-clicks">${state.interactive ? clickLayer(view, perspective, state.selectedSquare, layout) : ''}</g>
+      <g class="xq-live-clicks">${state.interactive ? clickLayer(view, perspective, state.selectedSquare, layout, state.dropTargets) : ''}</g>
     </svg>
   `;
 }
@@ -246,6 +254,19 @@ function lastMoveLayer(
   // 2026-08-30; this board is the one the proportions were tuned on, so it
   // passes its own PIECE_SIZE and gets the canonical radii straight back.
   return boardLastMoveMarkersSvg({ from: fromCenter, to: toCenter }, PIECE_SIZE);
+}
+
+function lastDropLayer(
+  square: XiangqiSquare,
+  perspective: XiangqiColor,
+  layout: XiangqiBoardLayout,
+): string {
+  const to = coordOf(square);
+  const toCenter = intersection(to.file, to.rank, perspective, layout);
+  if (layout === 'cell') {
+    return `<rect class="xq-live-lastmove-square xq-live-lastmove-to" x="${toCenter.x - CELL / 2}" y="${toCenter.y - CELL / 2}" width="${CELL}" height="${CELL}"/>`;
+  }
+  return boardLastMoveMarkersSvg({ to: toCenter }, PIECE_SIZE);
 }
 
 // ── Arrows (engine PV hints) ─────────────────────────────────────────────────
@@ -451,8 +472,10 @@ function clickLayer(
   perspective: XiangqiColor,
   selectedSquare: XiangqiSquare | null,
   layout: XiangqiBoardLayout,
+  dropTargets: readonly XiangqiSquare[] = [],
 ): string {
   const targets = new Map<XiangqiSquare, { capture: boolean }>();
+  for (const square of dropTargets) targets.set(square, { capture: false });
   if (selectedSquare) {
     for (const move of view.legalMoves) {
       if (move.from === selectedSquare) {

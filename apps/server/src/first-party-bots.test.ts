@@ -1,5 +1,6 @@
 import assert from 'node:assert/strict';
 import test from 'node:test';
+import { CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES } from './crazyhouse-xiangqi-fsf-engine.js';
 import { DUCK_XIANGQI_PLAYABLE_ENGINES } from './duck-xiangqi-fsf-engine.js';
 import {
   botEngineAttributions,
@@ -117,6 +118,11 @@ test('every public xiangqi, fortress and duck engine resolves to a first-party b
     const bot = firstPartyBotForEngine(tier.id);
     assert.ok(bot, `${tier.id}: no first-party bot profile claims this engine id`);
     assert.equal(firstPartyBotEngineFor(bot.id, 'duck-xiangqi'), tier.id);
+  }
+  for (const tier of CRAZYHOUSE_XIANGQI_PLAYABLE_ENGINES) {
+    const bot = firstPartyBotForEngine(tier.id);
+    assert.ok(bot, `${tier.id}: no first-party bot profile claims this engine id`);
+    assert.equal(firstPartyBotEngineFor(bot.id, 'crazyhouse-xiangqi'), tier.id);
   }
 });
 

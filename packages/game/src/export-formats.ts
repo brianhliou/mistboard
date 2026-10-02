@@ -33,6 +33,9 @@ export const GAME_EXPORT_FORMATS = {
   // ATOMIC kernel (atomic-xiangqi-game-export.ts); a standard replay would
   // diverge at the first capture.
   'atomic-xiangqi': ['pgn', 'json'],
+  // JSON only. A drop has no WXF or ICCS spelling, so a PGN movetext would
+  // not reconstruct the game.
+  'crazyhouse-xiangqi': ['json'],
   jungle: ['json'],
   'jungle-flip': ['json'],
 } as const satisfies Readonly<Record<string, readonly GameExportFormat[]>>;

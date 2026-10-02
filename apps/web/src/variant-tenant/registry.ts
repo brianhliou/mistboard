@@ -16,6 +16,7 @@
 import {
   ATOMIC_XIANGQI_SPEC_ID,
   BANQI_SPEC_ID,
+  CRAZYHOUSE_XIANGQI_SPEC_ID,
   DARK_CHESS_SPEC_ID,
   DARK_XIANGQI_SPEC_ID,
   DUCK_XIANGQI_SPEC_ID,
@@ -33,6 +34,7 @@ import {
 import {
   atomicXiangqiEnabled,
   correspondenceEnabled,
+  crazyhouseXiangqiEnabled,
   darkXiangqiEnabled,
   duckXiangqiEnabled,
   fortressXiangqiEnabled,
@@ -172,6 +174,10 @@ const alwaysEnabled = () => true;
 // cannot open, and they would land as a spectator at an empty table with
 // nothing explaining why.
 const mahjongOffered = (): boolean => mahjongEnabled() && hasLikelyVariantGrant(MAHJONG_SPEC_ID);
+// Crazyhouse Xiangqi is gated the same way (an admin playtest on the server's
+// allowlist), for the same reason.
+const crazyhouseXiangqiOffered = (): boolean =>
+  crazyhouseXiangqiEnabled() && hasLikelyVariantGrant(CRAZYHOUSE_XIANGQI_SPEC_ID);
 // Retired/hidden from the play-menu picker (2026-07-03 xiangqi pivot,
 // project_xiangqi_pivot_track). Discoverability only: acceptsDeepLink stays live
 // so existing games + physical/kids deep links keep working, and the live client
@@ -839,6 +845,52 @@ const ALL_WEB_VARIANT_TENANTS: readonly WebVariantTenant[] = [
         kind: 'container',
       })),
       defaultEngineId: 'fairy-stockfish-atomic-xiangqi-level-4',
+    },
+  },
+  {
+    // Crazyhouse Xiangqi: standard 9x10 xiangqi, and a captured piece joins the
+    // capturer's hand to be dropped back (on a point it could stand on, never
+    // giving check). Rules engine: packages/game/src/variants-crazyhouse-xiangqi.ts.
+    //
+    // Admin playtest: offered only to an account the server would seat (the
+    // build flag plus a grant named on /api/auth/me; admins hold every one). No
+    // TV channel and no watch replay: Mistboard TV is a public listing.
+    gameSpecId: CRAZYHOUSE_XIANGQI_SPEC_ID,
+    roomIdPrefix: 'chx_',
+    enabled: crazyhouseXiangqiEnabled,
+    pageTitleKey: 'variant.crazyhouseXiangqi.name',
+    loadLiveRoomClient: () =>
+      import('../live-crazyhouse-xiangqi.js').then(
+        ({ bootstrapCrazyhouseXiangqiLiveRoom }) =>
+          () =>
+            bootstrapCrazyhouseXiangqiLiveRoom(),
+      ),
+    gameRouteBase: '/crazyhouse-xiangqi/game',
+    reviewRouteBase: '/crazyhouse-xiangqi/game',
+    mountPostgame: (root, roomId) =>
+      import('../crazyhouse-xiangqi-postgame.js').then(({ mountCrazyhouseXiangqiPostgame }) =>
+        mountCrazyhouseXiangqiPostgame(root, roomId),
+      ),
+    landing: {
+      capabilities: {
+        ...XIANGQI_CAPABILITIES_BASE,
+        // Casual only: no crazyhouse_xiangqi pool in the user_ratings CHECK.
+        supportsRated: false,
+        supportsTimeControl: true,
+      },
+      timePresetIds: ['1m1', '3m2', '5m5', '10m5'],
+      // Both on the SAME predicate (the conformance test checks the pair).
+      offerInMenu: crazyhouseXiangqiOffered,
+      acceptsDeepLink: crazyhouseXiangqiOffered,
+      // Eight-level Fairy-Stockfish ladder on the stock binary, ordered
+      // strongest-first like the other xiangqi pickers.
+      engineOptions: [8, 7, 6, 5, 4, 3, 2, 1].map((level) => ({
+        id: `fairy-stockfish-crazyhouse-xiangqi-level-${level}`,
+        name: `Fairy-Stockfish Level ${level}`,
+        familyName: 'Fairy-Stockfish',
+        kind: 'container',
+      })),
+      defaultEngineId: 'fairy-stockfish-crazyhouse-xiangqi-level-4',
     },
   },
   {
