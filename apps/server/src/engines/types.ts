@@ -75,7 +75,9 @@ export type EngineId =
   | 'misty-banqi-strongest'
   // Fairy-Stockfish (Mini Xiangqi)
   // MistyJungleFlip (Flip Jungle)
-  | 'misty-jungle-flip';
+  | 'misty-jungle-flip'
+  // MistyJungle Rust tiers (Jungle): level 2 is the one offered bot, 1 and 3 retired
+  | `misty-jungle-level-${1 | 2 | 3}`;
 
 /**
  * A seat's client id that denotes a registered engine. Superset of `EngineId`
@@ -142,7 +144,8 @@ export type EngineConfigKind =
   | 'pikafish'
   | 'pikafish-xiangqi'
   | 'banqi-uci'
-  | 'jungle-flip-uci';
+  | 'jungle-flip-uci'
+  | 'jungle-uci';
 
 /** In-process TypeScript baseline engines (capture-seeker, random-legal). */
 export type BuiltinEngineConfig = {
@@ -213,6 +216,13 @@ export type JungleFlipUciEngineConfig = {
   movetime_ms: number;
 };
 
+/** MistyJungle standalone Rust UCI engine tiers (jungle-engine.ts JUNGLE_RUST_TIER_LIST). */
+export type JungleUciEngineConfig = {
+  kind: 'jungle-uci';
+  nodes: number;
+  movetime_ms: number;
+};
+
 export type EngineConfig =
   | BuiltinEngineConfig
   | PythonSubprocessEngineConfig
@@ -220,7 +230,8 @@ export type EngineConfig =
   | PikafishEngineConfig
   | PikafishXiangqiEngineConfig
   | BanqiUciEngineConfig
-  | JungleFlipUciEngineConfig;
+  | JungleFlipUciEngineConfig
+  | JungleUciEngineConfig;
 
 export type EngineDefinition = {
   id: EngineId;

@@ -22,6 +22,7 @@ import { type EngineHttpService, startEngineHttpService } from './engine-service
 import { runMigrations } from './migrate.js';
 import { startObservability } from './obs.js';
 import { disposeAllPythonPools, getPythonPool } from './python-pool.js';
+import { eveWorkerCapabilities } from './variant-eve-registry.js';
 
 const databaseUrl = process.env.DATABASE_URL;
 if (!databaseUrl) {
@@ -39,7 +40,11 @@ const maxTasks =
   parsePositiveInteger(process.env.WORKER_MAX_TASKS) ?? (loop ? Number.POSITIVE_INFINITY : 1);
 const idleSleepMs = parsePositiveInteger(process.env.WORKER_IDLE_SLEEP_MS) ?? 5_000;
 const cleanupIntervalMs = parsePositiveInteger(process.env.WORKER_CLEANUP_INTERVAL_MS) ?? 60_000;
-const workerCapabilities = { engine_games: true };
+// engine_games, plus one flag per variant whose engine is a binary this image may
+// lack (banqi-engine, jungle-engine: railpack fetches them behind build flags).
+// A scheduled game of such a variant requires its flag, so a worker without the
+// binary never claims it (#488).
+const workerCapabilities = { engine_games: true, ...eveWorkerCapabilities() };
 const workerResourceLimits = {
   concurrency: Number.parseInt(process.env.WORKER_CONCURRENCY ?? '1', 10),
 };
@@ -115,7 +120,16 @@ try {
     dryRun,
     loop,
     maxTasks: Number.isFinite(maxTasks) ? maxTasks : 'unbounded',
+    capabilities: workerCapabilities,
   });
+  // Say so once when a binary is missing: that variant's scheduled games will
+  // wait in the queue until a worker that has it comes up.
+  const missingEngines = Object.entries(workerCapabilities)
+    .filter(([, present]) => !present)
+    .map(([capability]) => capability);
+  if (missingEngines.length > 0) {
+    log('worker_engine_binaries_missing', { capabilities: missingEngines });
+  }
 
   let processedTasks = 0;
   while (!shuttingDown && processedTasks < maxTasks) {

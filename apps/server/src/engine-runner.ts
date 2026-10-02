@@ -285,6 +285,11 @@ async function runVariantEngineGame(
   secondEngine: EngineDefinition,
   runnerStartedAt: number,
 ): Promise<{ gameId: string; plyCount: number; status: 'completed' | 'aborted' }> {
+  // Fail closed before any row exists: a worker should never have claimed this
+  // task without the capability, but a binary can vanish after boot.
+  if (adapter.available && !adapter.available()) {
+    throw new Error(`${adapter.gameSpecId} engine binary is not available on this worker`);
+  }
   for (const engine of [firstEngine, secondEngine]) {
     if (engine.id !== adapter.randomEngineId && adapter.tierFor(engine.id) === null) {
       throw new Error(
@@ -316,7 +321,13 @@ async function runVariantEngineGame(
        SET status = 'completed', result = $2, termination = $3, ply_count = $4,
            ended_at = $5, aborted_reason = NULL
        WHERE room_id = $1`,
-      [gameId, result.result, result.termination, result.plyCount, new Date()],
+      [
+        gameId,
+        result.result,
+        eveTermination(adapter, result.termination),
+        result.plyCount,
+        new Date(),
+      ],
     );
     await finishEngineGameTask(pool, task.id, task.claimToken!, 'completed');
     await reconcileExperimentJob(pool, task.jobId);
@@ -548,9 +559,9 @@ async function createRunningVariantGame(
     `INSERT INTO games
        (room_id, variant, result, termination, ply_count, started_at, ended_at,
         white_client, black_client, white_name, black_name, corpus_id,
-        mode, status, review_status, initial_ms, increment_ms)
+        mode, status, review_status, initial_ms, increment_ms, visibility, rated)
      VALUES ($1, $2, NULL, NULL, 0, $3, NULL,
-        $4, $5, $6, $7, NULL, 'eve', 'running', 'unreviewed', $8, $9)
+        $4, $5, $6, $7, NULL, 'eve', 'running', 'unreviewed', $8, $9, $10, false)
      ON CONFLICT (room_id) DO NOTHING`,
     [
       gameId,
@@ -562,6 +573,7 @@ async function createRunningVariantGame(
       secondEngine.name,
       roomTimeControl?.initialMs ?? null,
       roomTimeControl?.incrementMs ?? null,
+      eveGameVisibility(task.config),
     ],
   );
   await upsertEngineGameParticipants(pool, gameId, firstEngine, secondEngine, adapter.colors);
@@ -725,6 +737,31 @@ async function abortGame(
   );
   await finishEngineGameTask(pool, task.id, task.claimToken!, 'aborted', termination);
   await reconcileExperimentJob(pool, task.jobId);
+}
+
+/**
+ * The games.termination an EvE result is stored as. The loop reports the
+ * kernel's own reason, and a kernel can spell one differently from the column's
+ * allowlist (jieqi's 'no-capture-clock' is stored 'progress-clock'), so it goes
+ * through the tenant's persistence mapping, as a live room's does. Without it a
+ * jieqi game drawn on the no-capture clock failed the games_termination_check
+ * and was never completed. 'truncated' is the loop's own and passes as is.
+ */
+export function eveTermination(adapter: AnyVariantEveAdapter, termination: string): string {
+  return termination === 'truncated'
+    ? termination
+    : adapter.tenant.persistence.termination(termination);
+}
+
+/**
+ * The visibility an EvE game row is written with (and it is never `rated`: that
+ * column means a rated game between people, and its default is true). Only a task that asks for
+ * 'public' gets it (the bot-vs-bot scheduler's games, public data since #488);
+ * everything else, rating tournaments included, keeps the column's default,
+ * 'link'. Allowlist: any other value is 'link', never something wider.
+ */
+export function eveGameVisibility(config: Record<string, unknown>): 'public' | 'link' {
+  return config.visibility === 'public' ? 'public' : 'link';
 }
 
 function variantFromTask(task: EngineGameTask): VariantId {

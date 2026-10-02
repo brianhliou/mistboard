@@ -21,9 +21,18 @@ const DATE_ONLY = /^\d{4}-\d{2}-\d{2}$/;
 
 // `source` names one lane, or (any other value) one archive source by slug.
 // 'archive' is every archive source; 'engine-match' is the off-site engine
-// matches imported as games (engine-match-import.ts).
+// matches imported as games (engine-match-import.ts); 'engine-game' is the
+// games the site's own bots play each other on a schedule (#488,
+// bot-vs-bot-scheduler.ts).
 export const ENGINE_MATCH_SOURCE = 'engine-match';
-const RESERVED_SOURCES = new Set(['mistboard', 'broadcast', 'archive', ENGINE_MATCH_SOURCE]);
+export const ENGINE_GAME_SOURCE = 'engine-game';
+const RESERVED_SOURCES = new Set([
+  'mistboard',
+  'broadcast',
+  'archive',
+  ENGINE_MATCH_SOURCE,
+  ENGINE_GAME_SOURCE,
+]);
 
 export type SearchVariant = { id: GameSpecId; storedVariants: readonly string[] };
 
@@ -69,7 +78,7 @@ export function publicTags(tags: Record<string, unknown>): Record<string, unknow
 
 type UnifiedXiangqiSearchItem = {
   id: string;
-  kind: 'mistboard' | 'engine-match' | 'historical' | 'broadcast';
+  kind: 'mistboard' | 'engine-match' | 'engine-game' | 'historical' | 'broadcast';
   // The game spec the row is a game of; the archive and broadcasts are xiangqi.
   variant: string;
   reviewUrl: string;
@@ -229,7 +238,7 @@ export async function pageAcrossLanes(
   return { games, total: chunks.reduce((sum, chunk) => sum + chunk.total, 0) };
 }
 
-export type SearchLane = 'played' | 'engine-match' | 'broadcast' | 'archive';
+export type SearchLane = 'played' | 'engine-match' | 'engine-game' | 'broadcast' | 'archive';
 
 // Which lanes a search reads. Pure, so the lane rules are testable without a
 // database.
@@ -238,6 +247,9 @@ export type SearchLane = 'played' | 'engine-match' | 'broadcast' | 'archive';
 // - Engine matches: never in the unfiltered feed (one 400-game import would
 //   bury everything played here). They join when asked for by source, or when
 //   the search names an event or a player, which is how a match is found.
+// - Engine games (the bots' scheduled games): the same rule, for the same
+//   reason: several a day, every day, would crowd out the games people play.
+//   They have no event, so only a source or a player name brings them in.
 // - Broadcasts and the archive are xiangqi by nature: they drop out the moment
 //   the picked variant is anything else.
 export function searchLanes(filters: GameSearchFilters): SearchLane[] {
@@ -248,6 +260,7 @@ export function searchLanes(filters: GameSearchFilters): SearchLane[] {
   if (source === ENGINE_MATCH_SOURCE || (!source && (filters.event || filters.player))) {
     lanes.push('engine-match');
   }
+  if (source === ENGINE_GAME_SOURCE || (!source && filters.player)) lanes.push('engine-game');
   if (xiangqiOnly && (!source || source === 'broadcast')) lanes.push('broadcast');
   if (xiangqiOnly && (!source || source === 'archive' || !RESERVED_SOURCES.has(source))) {
     lanes.push('archive');
@@ -271,6 +284,8 @@ async function queryUnifiedXiangqiGames(
     played: (at, count) => queryPlayedGames(filters, storedVariants, 'played', at, count),
     'engine-match': (at, count) =>
       queryPlayedGames(filters, storedVariants, 'engine-match', at, count),
+    'engine-game': (at, count) =>
+      queryPlayedGames(filters, storedVariants, 'engine-game', at, count),
     broadcast: (at, count) => queryBroadcastXiangqiGames(filters, at, count),
     archive: (at, count) => queryHistoricalXiangqiGames(filters, at, count),
   };
@@ -351,17 +366,38 @@ async function queryHistoricalXiangqiGames(
 // a calibration run between two of our own bots, not a game anyone played — and
 // they outnumber everything else, so leaving them in buries the real games under
 // Pikafish-vs-Fairy-Stockfish self-play. They stay reachable by id and in the
-// admin browser; they are just not what "browse xiangqi games" means.
+// admin browser; they are just not what "browse xiangqi games" means. The public
+// ones (the scheduler's, #488) have their own lane, 'engine-game', off by default.
 const PUBLIC_GAME_MODES: persistence.GameMode[] = ['pvp', 'pve'];
 
-// Games stored in `games`: either played here (pvp/pve) or an off-site engine
-// match imported as games (mode 'imported' with a room-created origin; older
-// imported corpora have none and are never listed). Public rows only, in the
-// launched variants only.
+type StoredGameLane = 'played' | 'engine-match' | 'engine-game';
+
+// What each lane over `games` reads. Imported rows need a room-created origin
+// (older imported corpora have none and are never listed); EvE rows must be the
+// scheduler's (public since #488; lab bake-off imports are public 'eve' rows
+// too, and stay out).
+function laneModeFilters(lane: StoredGameLane): Partial<persistence.GameQueryFilters> {
+  if (lane === 'played') return { modes: PUBLIC_GAME_MODES };
+  if (lane === 'engine-match') return { modes: ['imported'], importedOrigin: true };
+  return { modes: ['eve'], scheduledEngine: true };
+}
+
+const LANE_SOURCE: Record<
+  StoredGameLane,
+  { kind: UnifiedXiangqiSearchItem['kind']; name: string }
+> = {
+  played: { kind: 'mistboard', name: 'Mistboard' },
+  'engine-match': { kind: 'engine-match', name: 'Engine match' },
+  'engine-game': { kind: 'engine-game', name: 'Engine game' },
+};
+
+// Games stored in `games`: played here (pvp/pve), an off-site engine match
+// imported as games, or the bots' scheduled engine games. Public rows only, in
+// the launched variants only.
 async function queryPlayedGames(
   filters: GameSearchFilters,
   storedVariants: readonly string[],
-  lane: 'played' | 'engine-match',
+  lane: StoredGameLane,
   offset: number,
   limit: number,
 ): Promise<UnifiedXiangqiSearchChunk> {
@@ -374,9 +410,7 @@ async function queryPlayedGames(
   const page = await persistence.queryGames({
     variants: storedVariants,
     ...(filters.sort ? { sort: filters.sort } : {}),
-    ...(lane === 'played'
-      ? { modes: PUBLIC_GAME_MODES }
-      : { modes: ['imported'], importedOrigin: true }),
+    ...laneModeFilters(lane),
     visibility: 'public',
     ...(results.length > 0 ? { results } : {}),
     ...(filters.player ? { player: filters.player } : {}),
@@ -410,10 +444,10 @@ export function playedPlyFloor(filters: GameSearchFilters): number | null {
 // it set one (0 included), else the default floor for games played here, which
 // hides openings abandoned at ply 2 (GAMES_SEARCH_DEFAULT_MIN_PLIES). Engine
 // matches are imported real games and keep no floor, as broadcasts and the
-// archive do.
+// archive do; so do engine games, where no one abandons an opening.
 export function playedPlyMin(
   filters: Pick<GameSearchFilters, 'plyMin'>,
-  lane: 'played' | 'engine-match',
+  lane: StoredGameLane,
 ): { plyMin?: number } {
   if (typeof filters.plyMin === 'number') return { plyMin: filters.plyMin };
   return lane === 'played' ? { plyMin: GAMES_SEARCH_DEFAULT_MIN_PLIES } : {};
@@ -421,16 +455,17 @@ export function playedPlyMin(
 
 function playedGameItem(
   game: persistence.RecentEveGameRecord,
-  lane: 'played' | 'engine-match',
+  lane: StoredGameLane,
   reviewUrl: string,
 ): UnifiedXiangqiSearchItem {
+  const source = LANE_SOURCE[lane];
   return {
     id: game.roomId,
-    kind: lane === 'played' ? 'mistboard' : 'engine-match',
+    kind: source.kind,
     variant: game.variant,
     reviewUrl,
-    sourceSlug: lane === 'played' ? 'mistboard' : ENGINE_MATCH_SOURCE,
-    sourceName: lane === 'played' ? 'Mistboard' : 'Engine match',
+    sourceSlug: source.kind,
+    sourceName: source.name,
     sourceGameId: game.roomId,
     sourceUrl: null,
     eventName: game.corpusId,

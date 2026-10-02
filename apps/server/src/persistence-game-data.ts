@@ -8,11 +8,47 @@
 // on the page and the rooms a build reads come from the same WHERE clause, so
 // the two cannot disagree about what "the games of September" means.
 
-import { countedHumanGame } from './persistence-counted-games.js';
+import { bothSidesMoved, countedHumanGame } from './persistence-counted-games.js';
 import { getPool } from './persistence-db.js';
 
 export function publishedGame(gamesAlias = 'g'): string {
   return `${countedHumanGame(gamesAlias)} AND ${gamesAlias}.visibility = 'public'`;
+}
+
+// A game the bot-vs-bot scheduler queued (#488): its eve_games row points at a
+// job the scheduler wrote. 'public' alone is not enough to mean that: lab
+// bake-off imports (import-bakeoff-run.ts) are mode 'eve' and public by
+// default, and they are thousands of research games, not the site's bots on a
+// schedule. Every engine-game surface (the /data files, the /games/search
+// source) reads through this.
+export function scheduledEngineGame(gamesAlias = 'g'): string {
+  return `${gamesAlias}.mode = 'eve' AND EXISTS (
+    SELECT 1 FROM eve_games seg
+    JOIN eve_jobs sej ON sej.id = seg.job_id
+    WHERE seg.game_id = ${gamesAlias}.room_id
+      AND sej.config->>'source' = 'bot-vs-bot-scheduler'
+  )`;
+}
+
+// An engine-game file (#488) holds the finished, public games the scheduler
+// queued between the site's own bots (rating tournaments stay 'link'). Mode
+// 'eve' only, so no row can be both this and publishedGame, whose modes are
+// pvp/pve. A game the worker stopped at its ply cap ('truncated') is left out:
+// its log never reaches a finished position, so it has no single-game export
+// to put in a file.
+export function publishedEngineGame(gamesAlias = 'g'): string {
+  return `${gamesAlias}.status = 'completed'
+    AND ${gamesAlias}.visibility = 'public'
+    AND ${gamesAlias}.termination IS DISTINCT FROM 'truncated'
+    AND ${bothSidesMoved(gamesAlias)}
+    AND ${scheduledEngineGame(gamesAlias)}`;
+}
+
+/** Which games a monthly file holds: the human games, or the engine games. */
+export type MonthlyGames = 'human' | 'engine';
+
+function monthlyWhere(games: MonthlyGames): string {
+  return games === 'engine' ? publishedEngineGame('g') : publishedGame('g');
 }
 
 export type PublishedMonthCount = { month: string; variant: string; games: number };
@@ -22,13 +58,14 @@ export type PublishedMonthCount = { month: string; variant: string; games: numbe
 export async function countPublishedGamesByMonth(
   variants: readonly string[],
   before: Date,
+  games: MonthlyGames = 'human',
 ): Promise<PublishedMonthCount[]> {
   const { rows } = await getPool().query<{ month: string; variant: string; games: number }>(
     `SELECT to_char(date_trunc('month', g.ended_at AT TIME ZONE 'UTC'), 'YYYY-MM') AS month,
             g.variant,
             count(*)::int AS games
      FROM games g
-     WHERE ${publishedGame('g')}
+     WHERE ${monthlyWhere(games)}
        AND g.variant = ANY($1)
        AND g.ended_at < $2
      GROUP BY 1, 2
@@ -45,11 +82,12 @@ export async function listPublishedRoomIds(
   variants: readonly string[],
   from: Date,
   to: Date,
+  games: MonthlyGames = 'human',
 ): Promise<string[]> {
   const { rows } = await getPool().query<{ room_id: string }>(
     `SELECT g.room_id
      FROM games g
-     WHERE ${publishedGame('g')}
+     WHERE ${monthlyWhere(games)}
        AND g.variant = ANY($1)
        AND g.ended_at >= $2
        AND g.ended_at < $3
@@ -140,7 +178,7 @@ export type StoredDataFile = StoredDataFileMeta & { content: Buffer };
 
 export type NewDataFile = {
   key: string;
-  kind: 'monthly' | 'collection';
+  kind: 'monthly' | 'engine-monthly' | 'collection';
   format: 'jsonl' | 'pgn';
   gameCount: number;
   byteSize: number;

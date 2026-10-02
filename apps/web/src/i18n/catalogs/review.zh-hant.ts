@@ -371,6 +371,8 @@ export const ZH_HANT_REVIEW = {
   'historical.sourcePlayedHere': '在 Mistboard 對弈',
   'historical.sourceEngineMatches': '引擎對局',
   'historical.sourceEngineMatch': '引擎對局',
+  'historical.sourceEngineGames': '機器人對局',
+  'historical.sourceEngineGame': '機器人對局',
   'historical.sourceBroadcasts': '賽事直播',
   'historical.firstWins': '先手獲勝',
   'historical.secondWins': '後手獲勝',
