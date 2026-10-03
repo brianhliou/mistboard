@@ -5,14 +5,14 @@ Xiangqi review analysis.
 
 - Upstream source: `official-pikafish/Pikafish`
 - Upstream base commit: `23b9466c981f0f3a1133f92de1a6f86406c4eccc`
-- Distributed commit: `e75cee3a3698794b4b6f5574a8774f0575bc0c21`
+- Distributed commit: `bcc83f88ee18760e60903d1a3aaa61ef6f70f2c9`
   (`brianhliou/pikafish-jieqi-wasm`, branch `jieqi_old-mistboard`)
 - Build toolchain: `emscripten/emsdk:3.1.74`
 - License: GPL-3.0-or-later (`COPYING.txt`)
 - Network: none; this build uses the branch's handcrafted evaluation
 
 Since 2026-08-31 this is not a stock upstream build. `source.patch` carries the
-WASM entry points **and** two engine changes. The server binary carries both:
+WASM entry points **and** our engine changes. The server binary carries both:
 the analysis board and the bot are deliberately the same engine, and moving one
 without the other breaks that.
 
@@ -29,6 +29,12 @@ waited on the slowest helper. Server-side that was the tail of the #335
 timeouts; in the browser it is a search that overruns the depth the user asked
 for.
 
+`src/misc.h`, `src/search.cpp` (2026-10-02, #497): reveals are scored honestly.
+`ScoreCalc` flipped each revealed identity's score for one colour, keyed on a field
+nothing assigns, so Black's reveals took the best identity instead of the worst.
+And an identity whose PV search failed low returned the window edge, which the
+average took as an exact score; fail-lows at the root are now re-searched.
+
 The build exposes a persistent `pikajieqi_command(const char*)` UCI entry point.
 `worker.js` hosts the module and forwards streaming UCI output to the web client.
 The generated module uses pthreads and therefore requires a cross-origin-isolated
@@ -36,7 +42,7 @@ document.
 
 ## Rebuild
 
-`pikajieqi-source-e75cee3.tar.gz` is the complete corresponding source used for
+`pikajieqi-source-bcc83f8.tar.gz` is the complete corresponding source used for
 the distributed binary. Extract it and run:
 
 ```sh

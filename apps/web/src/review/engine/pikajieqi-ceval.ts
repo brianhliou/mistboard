@@ -13,7 +13,7 @@ import { createMultiPvBurstCollector, createThrottledEmitter } from './multipv-b
 import { parseInfo } from './uci-info.js';
 
 const ENGINE_BASE = '/engine/pikafish-jieqi/';
-const ENGINE_ASSET_VERSION = 'e75cee3-emsdk3174-coep1';
+const ENGINE_ASSET_VERSION = 'bcc83f8-emsdk3174-coep1';
 const engineAsset = (file: string): string => `${ENGINE_BASE}${file}?v=${ENGINE_ASSET_VERSION}`;
 const EMIT_THROTTLE_MS = 80;
 const EMPTY_UPDATE: CevalUpdate = {
