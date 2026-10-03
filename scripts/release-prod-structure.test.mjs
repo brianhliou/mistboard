@@ -27,6 +27,17 @@ test('release-prod declares all its module state above the run block', () => {
   );
 });
 
+// The local gate asks pre-push-check for its plan with the release's file list.
+// Without the base revision the plan's verify step falls back to the working
+// tree, which is clean in a release, and runs nothing (2026-10-02, b40cb193).
+test('release-prod passes the target revision to the local gate plan', () => {
+  const file = path.join(path.dirname(fileURLToPath(import.meta.url)), 'release-prod.mjs');
+  const source = readFileSync(file, 'utf8');
+  assert.match(source, /localGateFor\(\s*ciPlan\.changedFiles,\s*release\.targetRevision,/);
+  assert.match(source, /localGateFor\(\s*changed,\s*remote,/);
+  assert.match(source, /'--plan',\s*'--json',\s*'--base',\s*baseRevision,\s*'--files'/);
+});
+
 // The drain decision read production's active-game count once, before the
 // local gate, and acted on it minutes later. A game that started in between was
 // killed by the container swap with no drain (2026-10-01, 10:38 PDT). The push
