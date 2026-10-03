@@ -75,6 +75,22 @@ describe('Jieqi postgame page', () => {
     document.dispatchEvent(new KeyboardEvent('keydown', { key: 'ArrowLeft' }));
     expect(root.querySelector('.review-move-list__move--current')).toBeNull();
   });
+
+  it('opens on the ply a ?ply= link names, not the final position', async () => {
+    vi.stubGlobal(
+      'fetch',
+      vi.fn(async () => jsonResponse(postgameFixture())),
+    );
+    window.history.replaceState(null, '', '/?ply=0');
+    const root = document.createElement('div');
+
+    mountJieqiPostgame(root, 'jq_postgame');
+    await flushPromises();
+
+    expect(root.textContent).toContain(OPENING_SAN);
+    // ply 0 is the start position: no move is current, though the game has one.
+    expect(root.querySelector('.review-move-list__move--current')).toBeNull();
+  });
 });
 
 function postgameFixture() {

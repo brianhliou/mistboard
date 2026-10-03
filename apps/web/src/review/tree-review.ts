@@ -1166,6 +1166,30 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     if (injected) moveTree.rebuild();
   }
 
+  // A judged chance move ("?! c6-b8 was best." on a reveal) gets its top-ranked
+  // alternative as a ONE-move branch, so the move the advice names can be clicked
+  // like a quiet move's refutation. Never a line: past a reveal nothing is
+  // knowable (see MarkBetter), so the branch stops at the move itself.
+  function injectCandidateMoves(marks: ReadonlyMap<number, AnalysisMark>): void {
+    const decodeUci = presentation.engine?.moveFromEngineUci;
+    const nodes = mainlineNodes();
+    let injected = false;
+    for (const [ply, mark] of marks) {
+      if (mark.better?.kind !== 'candidates') continue;
+      const top = mark.better.moves[0]?.uci;
+      const parent = nodes[ply - 1];
+      if (!top || !parent) continue;
+      const pvMove = decodeUci ? decodeUci(top, parent.truth) : adapter.fromUci(top, parent.truth);
+      if (!pvMove || adapter.moveKey(pvMove) === nodes[ply]?.id) continue;
+      if (parent.children.some((child) => child.id === adapter.moveKey(pvMove))) continue;
+      const next = tree.addMove(tree.pathTo(parent), pvMove);
+      if (!next) continue;
+      compKeys.add(pathKey(next));
+      injected = true;
+    }
+    if (injected) moveTree.rebuild();
+  }
+
   // Promoting a computer line is an explicit adoption: clear the comp flags on the
   // connected line (ancestors and descendants) so a saved study keeps it.
   function adoptCompLine(path: TreePath): void {
@@ -2022,6 +2046,16 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
     // rest of the game, which reads as confusing rather than informative. The per-move luck (🎲
     // badges) and the luck-free accuracy already carry the decision-vs-luck story. The chart's
     // setLuckOverlay() is kept intact so a future, better-signposted treatment can re-enable it.
+    if (gameAnalysis) {
+      injectCandidateMoves(
+        analysisMarks({
+          analysis: gameAnalysis,
+          decisions: overlay,
+          quoteEvalBestMove: presentation.quoteEvalBestMove !== false,
+          formatBestMove: formatBestForAdvice,
+        }),
+      );
+    }
     refreshMoveTreeAnnotations();
     render();
   }
@@ -2070,7 +2104,8 @@ export function mountTreeReview<Move, Truth, View, Color, Arrow, Marker>(
         // reveal gets a luck readout, never graded. Chance plies get the ranked
         // alternatives instead of a refutation line: past a reveal nothing is
         // knowable, so a LINE would be a fiction while a ranked SET is exactly what
-        // the server scored.
+        // the server scored. The top alternative alone is grafted as a one-move
+        // branch (injectCandidateMoves) so the advice's move can be clicked.
         const luck = mark.luck;
         byPathKey.set(pathKey(tree.pathTo(node)), {
           suffix: mark.suffix,
