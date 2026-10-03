@@ -130,7 +130,7 @@ const NARRATIVE: Record<number, Array<{ ply: number; text: (r: Reading) => strin
     {
       ply: 42,
       text: (r) =>
-        `Black turns over b10, a soldier, and ${PIKA}'s own score for Red jumps to ${r.pk}. ${AB} had Red above 80% from ply 36.`,
+        `Black turns over b10, a soldier, and ${PIKA}'s own score for Red jumps to ${r.pk}. ${AB} had Red above 80% from move 18.`,
     },
     { ply: 53, text: () => 'Black has no legal move and loses.' },
   ],
@@ -158,7 +158,7 @@ const NARRATIVE: Record<number, Array<{ ply: number; text: (r: Reading) => strin
     {
       ply: 41,
       text: (r) =>
-        `The chariot has taken two horses on the back row. ${PIKA} now has Red at ${r.pk} and stays above 80% to the end; ${AB} got there on ply 34.`,
+        `The chariot has taken two horses on the back row. ${PIKA} now has Red at ${r.pk} and stays above 80% to the end; ${AB} got there on move 17.`,
     },
     { ply: 95, text: () => 'Black has no legal move and loses.' },
   ],

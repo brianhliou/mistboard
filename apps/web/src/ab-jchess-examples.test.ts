@@ -13,6 +13,7 @@ import {
   abJchessArticle,
   abScoreSeries,
 } from './articles/content/ab-jchess.js';
+import { moveLabel } from './articles/eval-compare-chart.js';
 
 // The post quotes numbers read off the examples data; these tests are where the
 // prose and the data meet, so an edit to either fails here first.
@@ -82,9 +83,15 @@ describe('ab-jchess examples prose', () => {
     expect([s68.settledAb, s68.settledPk]).toEqual([36, 45]);
     expect([s6.settledAb, s6.settledPk]).toEqual([34, 41]);
     const text = prose();
-    expect(text).toContain('AB-JChess stays above 80% from ply 36, Pikafish from ply 45.');
-    expect(text).toContain('AB-JChess stays above 80% from ply 34, Pikafish from ply 41.');
-    expect(text).toContain('9 plies later in game 68 and 7 in game 6');
+    // The prose counts moves the way the boards and the charts' move axis do.
+    const move = (ply: number): number => Number.parseInt(moveLabel(ply), 10);
+    expect([move(36), move(45), move(34), move(41)]).toEqual([18, 23, 17, 21]);
+    expect(text).toContain('Pikafish agrees from move 23.');
+    expect(text).toContain('Pikafish agrees from move 21.');
+    expect(text).toContain('AB-JChess had Red above 80% from move 17, Pikafish from move 21.');
+    expect(text).toContain(
+      'on move 23 rather than 18 in game 68, and on move 21 rather than 17 in game 6',
+    );
   });
 
   it("quotes game 68's numbers from the data", () => {

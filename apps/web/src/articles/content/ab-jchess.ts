@@ -95,7 +95,23 @@ export const AB_JCHESS_STUDY = {
   chapters: { 68: 'xoqhrDS4', 6: 'Wb0NC9yA' },
 } as const;
 
-function gameChart(game: number, heading: string, ariaLabel: string): ArticleBlock {
+type ChartNote = { lines: readonly string[]; side: 'left' | 'right'; level: number };
+
+/**
+ * One game's chart, the KataGo post's style: moves numbered as on the board
+ * below it, each line named on the plot, and two notes: on AB-JChess's line at
+ * the position the board opens on, and on Pikafish's line where it comes round
+ * (its settle point). The plies come from the data; words and placement from
+ * the post.
+ */
+function gameChart(
+  game: number,
+  heading: string,
+  ariaLabel: string,
+  opensAt: number,
+  labelsAt: number,
+  notes: { opens: ChartNote; agrees: ChartNote },
+): ArticleBlock {
   const g = abExampleGame(game);
   const s = abScoreSeries(g);
   return {
@@ -111,9 +127,14 @@ function gameChart(game: number, heading: string, ariaLabel: string): ArticleBlo
       nameB: 'Pikafish',
       a: s.ab,
       b: s.pk,
-      threshold: { level: AB_SETTLE_LEVEL, settledA: s.settledAb, settledB: s.settledPk },
-      marks: pikaMoveMarks(g).map((m) => ({ ply: m.ply + 1, glyph: MARK_GLYPH[m.mark] })),
-      xLabel: 'Ply',
+      xLabel: 'Move',
+      axis: 'move',
+      yTicks: [0.5, 1],
+      lineLabels: { at: labelsAt, a: 'AB-JChess thinks', b: 'Pikafish thinks' },
+      callouts: [
+        { ply: opensAt, on: 'a', ...notes.opens },
+        { ply: s.settledPk!, on: 'b', ...notes.agrees },
+      ],
     }),
   };
 }
@@ -186,42 +207,62 @@ export const abJchessArticle: Article = {
         },
         {
           kind: 'paragraph',
-          text: "Here are two of AB-JChess's wins, both as Red, where its score climbed while Pikafish's stayed level. We scored every position again with both engines, AB-JChess searching 1 million positions and the fixed Pikafish 64 million, and turned each engine's numbers into an expected score with a curve fitted on the match. Each chart shows AB-JChess's score as each engine saw it. A dotted line marks the ply from which that engine kept it above the dashed 80% line, and ?! marks a Pikafish move that cost 5 to 10 points by AB-JChess's count; neither game has a worse one. A ply is one side's move.",
+          text: "Here are two of AB-JChess's wins, both as Red, where its score climbed while Pikafish's stayed level. We scored every position again with both engines, AB-JChess searching 1 million positions and the fixed Pikafish 64 million, and turned each engine's numbers into an expected score with a curve fitted on the match. Each chart shows AB-JChess's score as each engine saw it, with moves numbered as on the board below it. On the boards, ?! marks a Pikafish move that cost 5 to 10 points by AB-JChess's count; neither game has a worse one.",
         },
         { kind: 'sub-heading', text: 'Game 68: two advisors and an elephant, for an attack' },
         {
           kind: 'paragraph',
-          text: "Pikafish, as Black, took a face-down advisor with its chariot on ply 22, then sent the horse that came up on b1 into Red's camp, where it took the second advisor and an elephant. AB-JChess spent those moves bringing a chariot, a horse and a soldier near Black's king. From ply 25 to ply 41, AB-JChess never had Red below 69%; Pikafish, searching the same positions, had Red between 40% and 58%.",
+          text: "Pikafish, as Black, took a face-down advisor with its chariot on move 11, then sent the horse that came up on b1 into Red's camp, where it took the second advisor and an elephant. AB-JChess spent those moves bringing a chariot, a horse and a soldier near Black's king. From move 13 to move 21, AB-JChess never had Red below 69%; Pikafish, searching the same positions, had Red between 40% and 58%.",
         },
         gameChart(
           68,
           "Game 68: AB-JChess's score, as each engine saw it",
-          "Game 68, AB-JChess's expected score by ply as AB-JChess and Pikafish saw it. AB-JChess stays above 80% from ply 36, Pikafish from ply 45.",
+          "Game 68, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 18 AB-JChess has Red at 85% and Pikafish at 50%; Pikafish agrees from move 23.",
+          36,
+          26,
+          {
+            opens: {
+              side: 'left',
+              level: 0.97,
+              lines: ['Move 18: the horse takes the elephant', 'AB-JChess 85%, Pikafish 50%'],
+            },
+            agrees: { side: 'right', level: 0.42, lines: ['Move 23: Pikafish', 'agrees'] },
+          },
         ),
         gameEmbed(68, 36, "Jieqi, game 68: Pikafish's moves marked by AB-JChess"),
         {
           kind: 'paragraph',
-          text: "On ply 36 the horse took the elephant on c1. AB-JChess had Red at 85%; Pikafish had Red at 50%, and during the game it had reported 47%. Red's elephant took the horse three plies later. Pikafish's own score for Red reached 85% on ply 42, when the piece it turned over on b10 came up a soldier. AB-JChess had been above 80% since ply 36.",
+          text: "On move 18 the horse took the elephant on c1. AB-JChess had Red at 85%; Pikafish had Red at 50%, and during the game it had reported 47%. Red's elephant took the horse on move 20. Pikafish's own score for Red reached 85% on move 21, when the piece it turned over on b10 came up a soldier.",
         },
         { kind: 'sub-heading', text: 'Game 6: one chariot against a face-down back row' },
         {
           kind: 'paragraph',
-          text: "In game 6 AB-JChess took an advisor with its chariot on ply 29 and let the chariots come off. After ply 31 Red had the only chariot on the board, and the seven pieces Black had not turned over could only be five soldiers and two horses. AB-JChess had Red at 83%; Pikafish had Red at 48%.",
+          text: "In game 6 AB-JChess took an advisor with its chariot on move 15 and let the chariots come off. After move 16 Red had the only chariot on the board, and the seven pieces Black had not turned over could only be five soldiers and two horses. AB-JChess had Red at 83%; Pikafish had Red at 48%.",
         },
         gameChart(
           6,
           "Game 6: AB-JChess's score, as each engine saw it",
-          "Game 6, AB-JChess's expected score by ply as AB-JChess and Pikafish saw it. AB-JChess stays above 80% from ply 34, Pikafish from ply 41.",
+          "Game 6, AB-JChess's expected score by move as AB-JChess and Pikafish saw it. On move 16 AB-JChess has Red at 83% and Pikafish at 48%; Pikafish agrees from move 21.",
+          31,
+          22,
+          {
+            opens: {
+              side: 'left',
+              level: 0.97,
+              lines: ['Move 16: the chariots are off', 'AB-JChess 83%, Pikafish 48%'],
+            },
+            agrees: { side: 'right', level: 0.42, lines: ['Move 21: Pikafish', 'agrees'] },
+          },
         ),
         gameEmbed(6, 31, "Jieqi, game 6: Pikafish's moves marked by AB-JChess"),
         {
           kind: 'paragraph',
-          text: "Red's chariot reached Black's back row on ply 37 and took two horses there. AB-JChess stayed above 80% from ply 34, Pikafish from ply 41.",
+          text: "Red's chariot reached Black's back row on move 19 and took two horses there. AB-JChess had Red above 80% from move 17, Pikafish from move 21.",
         },
         { kind: 'sub-heading', text: 'What a longer search says' },
         {
           kind: 'paragraph',
-          text: "We searched each of the five marked moves again, the game move and AB-JChess's choice each on its own: AB-JChess at 4 million positions, the fixed Pikafish at 256 million. AB-JChess still puts two of them 5 points or more below its choice and the other three within 2 points. Pikafish prefers AB-JChess's choice once and its own game move four times. So the single moves are close calls. The gap is in the scores the two engines give the positions, and in both games Pikafish's own score came round to AB-JChess's later: 9 plies later in game 68 and 7 in game 6. The study shows both engines' numbers at every marked move.",
+          text: "We searched each of the five marked moves again, the game move and AB-JChess's choice each on its own: AB-JChess at 4 million positions, the fixed Pikafish at 256 million. AB-JChess still puts two of them 5 points or more below its choice and the other three within 2 points. Pikafish prefers AB-JChess's choice once and its own game move four times. So the single moves are close calls. The gap is in the scores the two engines give the positions, and in both games Pikafish's own score came round to AB-JChess's later: on move 23 rather than 18 in game 68, and on move 21 rather than 17 in game 6. The study shows both engines' numbers at every marked move.",
         },
       ],
     },
