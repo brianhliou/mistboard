@@ -109,15 +109,64 @@ export async function mountArticlesIndex(
   mountArticleThumbnails(index);
 }
 
-/* /blog, baked at build time. The index is authored data with no live or
- * per-account content, so the prerendered DOM is exactly the page a reader
- * gets. It was the one sitemap-advertised article surface still answering with
- * an empty shell while every individual post was prerendered. Default locale
- * and the "By Mistboard" view only: the localized indexes and the (currently
- * empty) community view stay on the client-rendered shell. */
-export async function renderArticlesIndexShellForPrerender(): Promise<string> {
+/* /blog, /zh-hans/blog and /zh-hant/blog, baked at build time. The index is
+ * authored data with no live or per-account content, so the prerendered DOM is
+ * exactly the page a reader gets. The "By Mistboard" view only: the (currently
+ * empty) community view stays on the client-rendered shell. The two Chinese
+ * indexes served a 4.7KB shell with no canonical or hreflang until 2026-10-02
+ * while sitting in the sitemap. */
+export async function renderArticlesIndexShellForPrerender(
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): Promise<string> {
   const { buildArticlesIndex } = await import('./articles.js');
-  return `${buildNav().outerHTML}${buildArticlesIndex(undefined, 'mistboard').outerHTML}`;
+  const locale: Locale = lang ?? 'en';
+  return `${buildNav(locale).outerHTML}${buildArticlesIndex(lang ?? undefined, 'mistboard').outerHTML}`;
+}
+
+// Meta and head links for each baked blog index. The three indexes are one
+// page in three languages, so every one names the same alternate set (hreflang
+// is a property of the group, not the page) and a self-referencing canonical.
+// Title and description match ARTICLES_INDEX_META in
+// apps/server/src/server-static-pages.ts, which covers the shell fallback.
+const ARTICLES_INDEX_PRERENDER_META: Record<
+  Locale,
+  { title: string; description: string; pathPrefix: string }
+> = {
+  en: {
+    title: 'Articles | Mistboard',
+    description: 'Long-form writing on original strategy games, rules, and engine research.',
+    pathPrefix: '',
+  },
+  'zh-Hans': {
+    title: '文章 | Mistboard',
+    description: '原创策略游戏的文章、规则说明与引擎工作。',
+    pathPrefix: '/zh-hans',
+  },
+  'zh-Hant': {
+    title: '文章 | Mistboard',
+    description: '原創策略遊戲的文章、規則說明與引擎工作。',
+    pathPrefix: '/zh-hant',
+  },
+};
+
+export function articlesIndexPrerenderHead(
+  host: string,
+  lang?: import('./article-i18n.js').ArticleLang | null,
+): { title: string; description: string; url: string; htmlLang: Locale; headLinks: string } {
+  const locale: Locale = lang ?? 'en';
+  const meta = ARTICLES_INDEX_PRERENDER_META[locale];
+  const urlFor = (l: Locale) => `${host}${ARTICLES_INDEX_PRERENDER_META[l].pathPrefix}/blog`;
+  const url = urlFor(locale);
+  const alternates = (['en', 'zh-Hans', 'zh-Hant'] as const)
+    .map((l) => `<link rel="alternate" hreflang="${l}" href="${urlFor(l)}" />`)
+    .join('');
+  return {
+    title: meta.title,
+    description: meta.description,
+    url,
+    htmlLang: locale,
+    headLinks: `<link rel="canonical" href="${url}" />${alternates}<link rel="alternate" hreflang="x-default" href="${urlFor('en')}" />`,
+  };
 }
 
 export async function mountRulesIndex(

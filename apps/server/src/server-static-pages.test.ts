@@ -321,6 +321,46 @@ test('the sitemap is an index of sections, and articles carry their own lastmod'
   assert.doesNotMatch(pages.body, /\/study\//);
 });
 
+// /zh-hans/blog and /zh-hant/blog are in the sitemap; until 2026-10-02 they
+// answered with the 4.7KB shell (no canonical, no hreflang, no post titles)
+// while /blog served its baked file. Each locale serves its own baked index,
+// and the community view stays on the shell.
+test('serveArticlesIndexPage serves each locale its own prerendered index', async () => {
+  resetArticleScheduleCache();
+  const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
+  await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
+  await writeFile(join(staticDir, 'blog.html'), '<html><body>baked en index</body></html>');
+  for (const langDir of ['zh-hans', 'zh-hant']) {
+    await mkdir(join(staticDir, langDir), { recursive: true });
+    await writeFile(
+      join(staticDir, langDir, 'blog.html'),
+      `<html><body>baked ${langDir} index</body></html>`,
+    );
+  }
+
+  for (const langPrefix of [undefined, 'zh-hans', 'zh-hant']) {
+    const response = captureResponse();
+    await serveArticlesIndexPage({
+      response,
+      publicHost: 'https://mistboard.test',
+      staticDir,
+      langPrefix,
+    });
+    assert.equal(response.status, 200);
+    assert.match(response.body, new RegExp(`baked ${langPrefix ?? 'en'} index`));
+  }
+
+  const community = captureResponse();
+  await serveArticlesIndexPage({
+    response: community,
+    publicHost: 'https://mistboard.test',
+    staticDir,
+    langPrefix: 'zh-hans',
+    view: 'community',
+  });
+  assert.doesNotMatch(community.body, /baked/, 'the community view stays on the shell');
+});
+
 // A scheduled post (published, dated ahead) has no prerendered file; before
 // its moment the server must 404 rather than hand a crawler the shell with
 // real meta, and once it is live the stale prerendered blog index must give
@@ -514,10 +554,10 @@ test('serveArticlesIndexPage serves the prerendered post list when the build bak
   assert.match(response.body, /baked post list/);
 });
 
-// Only the default-locale "By Mistboard" list is baked. The localized indexes
-// and the community view are still client-rendered, and handing them the
-// English baked file would ship the wrong language or the wrong list.
-test('serveArticlesIndexPage keeps localized and community views on the shell', async () => {
+// Each locale's "By Mistboard" list has its own baked file. A localized index
+// whose file is missing, and the community view, stay on the shell: handing
+// them the English baked file would ship the wrong language or the wrong list.
+test('serveArticlesIndexPage never hands a localized or community view the English file', async () => {
   const staticDir = await mkdtemp(join(tmpdir(), 'mistboard-static-'));
   await writeFile(join(staticDir, 'index.html'), indexHtml(), 'utf-8');
   await writeFile(

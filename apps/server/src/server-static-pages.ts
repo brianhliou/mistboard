@@ -1171,17 +1171,18 @@ export async function serveArticlesIndexPage(params: {
   const langKey =
     params.langPrefix === 'zh-hans' || params.langPrefix === 'zh-hant' ? params.langPrefix : 'en';
 
-  // The default-locale post list is prerendered (blog.html). The localized
-  // indexes and the community view are not, and stay on the shell below.
-  // Once a scheduled post has gone live since the build, blog.html predates
-  // it; the shell renders a current list client-side until the next deploy.
+  // Each locale's post list is prerendered (blog.html, zh-hans/blog.html,
+  // zh-hant/blog.html). The community view is not, and stays on the shell
+  // below. Once a scheduled post has gone live since the build, the baked list
+  // predates it; the shell renders a current list client-side until the next
+  // deploy.
   if (
-    langKey === 'en' &&
     params.view !== 'community' &&
     !prerenderedIndexIsStale(await readArticleSchedule(params.staticDir))
   ) {
+    const bakedFile = langKey === 'en' ? 'blog.html' : `${langKey}/blog.html`;
     const prerendered = await fs
-      .readFile(resolve(params.staticDir, 'blog.html'), 'utf-8')
+      .readFile(resolve(params.staticDir, bakedFile), 'utf-8')
       .catch(() => null);
     if (prerendered !== null) {
       params.response.writeHead(200, { 'content-type': 'text/html; charset=utf-8' });

@@ -1,5 +1,8 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+import { isArticleTranslationPublished, translateArticle } from './article-i18n.js';
+import { articles } from './articles-data.js';
 import {
+  articlesIndexPrerenderHead,
   mountAbout,
   mountContact,
   mountFaq,
@@ -8,6 +11,7 @@ import {
   mountPrivacy,
   mountSource,
   mountTerms,
+  renderArticlesIndexShellForPrerender,
 } from './pages-static.js';
 
 async function flushPromises(): Promise<void> {
@@ -301,5 +305,60 @@ describe('about page platform activity', () => {
     expect(root.textContent).toContain('這個頁面不存在，或已經移動。');
     expect(root.textContent).toContain('返回首頁');
     expect(root.textContent).toContain('還是找不到？聯絡。');
+  });
+});
+
+// The zh blog indexes were served as a client-rendered shell with no canonical
+// or hreflang until 2026-10-02; the prerender now bakes one per locale. The
+// baked DOM must be the localized list, and every member of the group must
+// name the same alternates with its own canonical.
+describe('prerendered blog index', () => {
+  it('bakes the Chinese post titles into the zh indexes', async () => {
+    const zhOnly = articles.filter(
+      (a) =>
+        a.kind === 'article' &&
+        a.status === 'published' &&
+        isArticleTranslationPublished(a.slug) &&
+        translateArticle(a, 'zh-Hans').title !== a.title,
+    );
+    expect(zhOnly.length).toBeGreaterThan(0);
+    const sample = zhOnly[0];
+    if (!sample) throw new Error('no translated article');
+
+    const hans = await renderArticlesIndexShellForPrerender('zh-Hans');
+    const hant = await renderArticlesIndexShellForPrerender('zh-Hant');
+    const en = await renderArticlesIndexShellForPrerender();
+    expect(hans).toContain(translateArticle(sample, 'zh-Hans').title);
+    expect(hant).toContain(translateArticle(sample, 'zh-Hant').title);
+    expect(en).toContain(sample.title);
+    expect(hans).not.toBe(en);
+  });
+
+  it('gives each index a self canonical and the same alternate set', () => {
+    const host = 'https://mistboard.com';
+    const heads = [undefined, 'zh-Hans', 'zh-Hant'].map((lang) =>
+      articlesIndexPrerenderHead(host, lang as 'zh-Hans' | 'zh-Hant' | undefined),
+    );
+    expect(heads.map((h) => h.url)).toEqual([
+      `${host}/blog`,
+      `${host}/zh-hans/blog`,
+      `${host}/zh-hant/blog`,
+    ]);
+    const alternatesOf = (links: string) =>
+      (links.match(/<link rel="alternate" hreflang=[^>]*>/g) ?? []).join('');
+    for (const head of heads) {
+      expect(head.headLinks).toContain(`<link rel="canonical" href="${head.url}" />`);
+      expect(alternatesOf(head.headLinks)).toBe(alternatesOf(heads[0]?.headLinks ?? ''));
+    }
+    const alternates = alternatesOf(heads[0]?.headLinks ?? '');
+    for (const [lang, href] of [
+      ['en', `${host}/blog`],
+      ['zh-Hans', `${host}/zh-hans/blog`],
+      ['zh-Hant', `${host}/zh-hant/blog`],
+      ['x-default', `${host}/blog`],
+    ]) {
+      expect(alternates).toContain(`hreflang="${lang}" href="${href}"`);
+    }
+    expect(heads[1]?.title).toBe('文章 | Mistboard');
   });
 });
