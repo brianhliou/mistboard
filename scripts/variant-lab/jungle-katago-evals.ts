@@ -22,7 +22,6 @@
 //     --games-file ~/projects/brianhliou.com/assets/jungle-games/katago-vs-misty-2026-09-21.jsonl \
 //     --games 0,5,10 [--every-game 5] [--stride 4] [--shard 0/3] --out evals.jsonl
 
-import { type ChildProcessWithoutNullStreams, spawn } from 'node:child_process';
 import { appendFileSync, existsSync, readFileSync } from 'node:fs';
 import { dirname, resolve } from 'node:path';
 import { fileURLToPath } from 'node:url';
@@ -34,6 +33,7 @@ import {
   jungleRepSeedFens,
   jungleStateToEngineFen,
 } from '@mistboard/game';
+import { Kata, LineProc } from './jungle-katago-bridge.js';
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const HOME = process.env.HOME ?? '';
@@ -65,116 +65,6 @@ const EVERY_GAME = Number(arg('--every-game', '0'));
 const GAME_LIST = arg('--games', '').split(',').filter(Boolean).map(Number);
 const [SHARD, SHARDS] = arg('--shard', '0/1').split('/').map(Number) as [number, number];
 const OUT = resolve(arg('--out', 'jungle-katago-evals.jsonl'));
-
-class LineProc {
-  #proc: ChildProcessWithoutNullStreams;
-  #buf = '';
-  #waiter: {
-    done: (l: string) => boolean;
-    resolve: (ls: string[]) => void;
-    lines: string[];
-  } | null = null;
-  constructor(bin: string, args: string[]) {
-    this.#proc = spawn(bin, args, { stdio: ['pipe', 'pipe', 'ignore'] });
-    this.#proc.stdout.setEncoding('utf8');
-    this.#proc.stdout.on('data', (chunk: string) => {
-      this.#buf += chunk;
-      let nl = this.#buf.indexOf('\n');
-      while (nl >= 0) {
-        const line = this.#buf.slice(0, nl).replace(/\r$/, '');
-        this.#buf = this.#buf.slice(nl + 1);
-        const w = this.#waiter;
-        if (w) {
-          w.lines.push(line);
-          if (w.done(line)) {
-            this.#waiter = null;
-            w.resolve(w.lines);
-          }
-        }
-        nl = this.#buf.indexOf('\n');
-      }
-    });
-  }
-  request(cmds: string[], done: (l: string) => boolean): Promise<string[]> {
-    return new Promise((res) => {
-      this.#waiter = { done, resolve: res, lines: [] };
-      for (const c of cmds) this.#proc.stdin.write(`${c}\n`);
-    });
-  }
-  quit(cmd: string): void {
-    this.#proc.stdin.write(`${cmd}\n`);
-    this.#proc.stdin.end();
-  }
-}
-
-const FILES = 'abcdefg';
-const fromKata = (v: string): string =>
-  /^[A-Ga-g][1-9]$/.test(v)
-    ? `${FILES[6 - FILES.indexOf(v[0]!.toLowerCase())]}${v.slice(1)}`
-    : v.toLowerCase();
-
-function toKataFen(fen: string): { board: string; turn: 'w' | 'b' } {
-  const [board, turn] = fen.split(' ');
-  const ranks = board!.split('/').map((rank) => {
-    const cells: string[] = [];
-    for (const ch of rank) {
-      if (ch >= '1' && ch <= '9') for (let i = 0; i < Number(ch); i += 1) cells.push('.');
-      else cells.push(ch === 'P' ? 'J' : ch === 'p' ? 'j' : ch);
-    }
-    cells.reverse();
-    let out = '';
-    let run = 0;
-    for (const c of cells) {
-      if (c === '.') run += 1;
-      else {
-        if (run) out += String(run);
-        run = 0;
-        out += c;
-      }
-    }
-    if (run) out += String(run);
-    return out;
-  });
-  return { board: ranks.join('/'), turn: turn === 'r' ? 'w' : 'b' };
-}
-
-type KInfo = { move: string; visits: number; winrateBlack: number; drawPct: number; pv: string[] };
-
-function parseKataInfo(line: string): KInfo[] {
-  const out: KInfo[] = [];
-  for (const seg of line.split(/(?:^|\s)info\s/).filter((s) => s.trim())) {
-    const t = seg.trim().split(/\s+/);
-    const get = (k: string): string => t[t.indexOf(k) + 1]!;
-    const pvAt = t.indexOf('pv');
-    out.push({
-      move: fromKata(get('move')),
-      visits: Number(get('visits')),
-      winrateBlack: Number(get('winrate')),
-      // KataGomo reports the draw percentage in the scoreMean slot.
-      drawPct: Number(get('scoreMean')),
-      pv: t.slice(pvAt + 1, pvAt + 9).map(fromKata),
-    });
-  }
-  return out;
-}
-
-class Kata {
-  p = new LineProc(KATAGO, ['gtp', '-model', MODEL, '-config', CONFIG]);
-  async cmd(c: string): Promise<string[]> {
-    const lines = await this.p.request([c], (l) => l === '');
-    const err = lines.find((l) => l.startsWith('?'));
-    if (err) throw new Error(`katago ${c}: ${err}`);
-    return lines;
-  }
-  async evaluate(fen: string): Promise<KInfo[]> {
-    const { board, turn } = toKataFen(fen);
-    await this.cmd('clear_board');
-    await this.cmd(`setfen ${board} ${turn}`);
-    const lines = await this.cmd('kata-genmove_analyze 100000');
-    const info = lines.filter((l) => l.startsWith('info')).at(-1) ?? '';
-    return parseKataInfo(info).sort((a, b) => b.visits - a.visits);
-  }
-}
 
 class Misty {
   p = new LineProc(MISTY, []);
@@ -232,7 +122,7 @@ async function main(): Promise<void> {
   const todo = mine.filter((j) => !done.has(`${j.rec.game}:${j.ply}`));
   console.log(`games ${chosen.length}, positions ${mine.length} in shard, ${todo.length} to do`);
 
-  const kata = new Kata();
+  const kata = new Kata(KATAGO, MODEL, CONFIG);
   const misty = new Misty();
   await misty.p.request(['uci'], (l) => l === 'uciok');
   const replayed = new Map<number, JungleGameState[]>();

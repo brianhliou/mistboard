@@ -4,13 +4,18 @@ import {
   engineUciToJungleMove,
   type JungleGameState,
   type JungleSquare,
+  jungleStateToEngineFen,
 } from '@mistboard/game';
 import { describe, expect, it } from 'vitest';
 import {
   evaluatedGame,
   KATAGO_EVALS,
+  KATAGO_LINES,
+  KATAGO_STUDY,
   katagoJungleArticle,
   katagoScoreSeries,
+  lineStart,
+  studyChapterHref,
 } from './articles/content/katago-jungle.js';
 import { evalCompareChartSvg } from './articles/eval-compare-chart.js';
 import {
@@ -60,6 +65,44 @@ describe('katago-jungle evals data', () => {
   });
 });
 
+describe('katago-jungle lines', () => {
+  it('replays every KataGo line through the kernel from its game position', () => {
+    expect(KATAGO_LINES.length).toBeGreaterThanOrEqual(3);
+    for (const l of KATAGO_LINES) {
+      let state = lineStart(l.game, l.ply);
+      // A sideline: its first move is not the move the game played.
+      expect(l.line[0]).not.toBe(evaluatedGame(l.game).moves[l.ply]);
+      for (const uci of l.line) {
+        const next = applyJungleMove(state, engineUciToJungleMove(uci)!);
+        expect(next, `${l.game}@${l.ply}: ${uci}`).toBeTruthy();
+        state = next!;
+      }
+    }
+  });
+
+  it('puts each line board at its game position, and links the study chapters', () => {
+    const embeds = katagoJungleArticle.sections
+      .flatMap((s) => s.blocks)
+      .filter((b): b is Extract<typeof b, { kind: 'embed' }> => b?.kind === 'embed');
+    const lineEmbeds = embeds.filter((b) => b.path.startsWith('/embed/line/jungle?'));
+    expect(lineEmbeds).toHaveLength(2);
+    for (const [embed, game, ply] of [
+      [lineEmbeds[0]!, 67, 56],
+      [lineEmbeds[1]!, 94, 99],
+    ] as const) {
+      const q = new URLSearchParams(embed.path.split('?')[1]);
+      expect(q.get('fen')!.replace(/_/g, ' ')).toBe(jungleStateToEngineFen(lineStart(game, ply)));
+      expect(q.get('moves')!.split(',')).toEqual(
+        KATAGO_LINES.find((l) => l.game === game && l.ply === ply)!.line,
+      );
+    }
+    expect(
+      embeds.filter((b) => b.path.startsWith(`/embed/study/${KATAGO_STUDY.id}/`)),
+    ).toHaveLength(2);
+    expect(studyChapterHref(94)).toBe(`/study/${KATAGO_STUDY.id}/${KATAGO_STUDY.chapters[94]}`);
+  });
+});
+
 describe('katago-jungle charts', () => {
   it('draw each game from the data: both settle plies, and one mark per marked move', () => {
     for (const [game, a, b] of [
@@ -104,10 +147,15 @@ describe('katago-jungle prose matches the data', () => {
     ]);
     expect([s.settledKata, s.settledMisty, g.plies]).toEqual([57, 72, 90]);
     const text = prose();
-    expect(text).toContain('from 61% to 92%');
-    expect(text).toContain('113 centipawns ahead');
-    expect(text).toContain('at +111');
+    expect(text).toContain('from 61% to 92% while Misty still read +111');
+    expect(text).toContain('won a wolf on ply 21');
     expect(text).toContain('Misty got there on ply 72, 15 plies later');
+    // KataGo's line for red from ply 56: lion b1-b2, red at 37% after it.
+    const line = KATAGO_LINES.find((l) => l.game === 67 && l.ply === 56)!;
+    expect(line.line[0]).toBe('b1b2');
+    expect(lineStart(67, 56).board.b1).toMatchObject({ role: 'lion', color: 'red' });
+    expect(pct(1 - line.kataBlackStart!)).toBe('37%');
+    expect(text).toContain('starts with lion b1-b2 and keeps red at 37%');
   });
 
   it('game 94: the wolf, the slow climb, the cat, and who settled when', () => {
@@ -139,9 +187,15 @@ describe('katago-jungle prose matches the data', () => {
     ]);
     expect([s.settledKata, s.settledMisty, g.plies]).toEqual([100, 104, 117]);
     const text = prose();
-    expect(text).toContain('from 50% to 63% by ply 90');
-    expect(text).toContain('from 63% to 98%');
-    expect(text).toContain('at +80, and found the forced loss four plies later');
+    expect(text).toContain('crept from 50% to 63%');
+    expect(text).toContain('won a wolf on ply 38');
+    expect(text).toContain('KataGo went from 63% to 98%');
+    expect(text).toContain('Misty read +80 and found the forced loss four plies later');
     expect(text).toContain('15 and 4 plies before Misty');
+    const line = KATAGO_LINES.find((l) => l.game === 94 && l.ply === 99)!;
+    expect(line.line[0]).toBe('d6d7');
+    expect(lineStart(94, 99).board.d6).toMatchObject({ role: 'elephant', color: 'black' });
+    expect(pct(line.kataBlackStart!)).toBe('38%');
+    expect(text).toContain('elephant d6-d7, keeps black at 38%');
   });
 });

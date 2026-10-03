@@ -37,6 +37,20 @@ export type EvaluatedGame = {
 
 export type EvalsData = { games: EvaluatedGame[] };
 
+/** KataGo's own line from a position of a match game: its choice for both
+ *  sides, every ply searched fresh. Shown as a study sideline and a line board. */
+export type KatagoLine = {
+  game: number;
+  /** Plies played before the line starts; the line replaces move ply + 1. */
+  ply: number;
+  line: string[];
+  /** Visits each ply was searched with. */
+  visits: number;
+  /** KataGo's expected score for black after the line's first move, and at its end. */
+  kataBlackStart: number | null;
+  kataBlackEnd: number | null;
+};
+
 const FORCED = 900_000;
 
 /** Misty's centipawns for black as black's expected score. */
