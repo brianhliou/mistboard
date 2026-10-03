@@ -1134,3 +1134,66 @@ Numbered raw SQL files starting at `001_init.sql`; the count moves fast (105+ as
 | `apps/web/src/xiangqi-broadcast-matches.ts` | A team league round grouped by match (slow and blitz games per table, from `board.details`) and the league table, scored by the 2026 league's 规程 (game 2/1/0, match 3/1.5/0) |
 | `apps/web/src/xiangqi-broadcast-standings.ts` | _needs a one-line description_ |
 | `apps/web/src/xiangqi-broadcast-time.ts` | _needs a one-line description_ |
+| `apps/web/src/xiangqi-broadcast-embed-code.ts` | The iframe code a creator pastes to put one broadcast game on their own page (#454) |
+| `apps/web/src/xiangqi-broadcast-pages.ts` | The broadcast section's own pages beside the index, with the shared left rail (Broadcasts, Calendar, About, Pro players, Pro teams) |
+| `apps/web/src/xiangqi-broadcast-pgn.ts` | PGN for a broadcast game, with English names in the Red/Black/team tags, for creators covering pro games (#454) |
+| `apps/web/src/xiangqi-players.ts` | Player pages over the broadcast archive: `/players` and `/players/<slug>`, every board a player sat at |
+| `apps/server/src/atomic-xiangqi-game-export.ts` | _needs a one-line description_ |
+| `apps/server/src/banqi-eve-adapter.ts` | _needs a one-line description_ |
+| `apps/server/src/bots-page-body.ts` | _needs a one-line description_ |
+| `apps/server/src/cxa-listed-players.ts` | _needs a one-line description_ |
+| `apps/server/src/deploy-history.ts` | _needs a one-line description_ |
+| `apps/server/src/engine-match-import.ts` | _needs a one-line description_ |
+| `apps/server/src/game-data-files.ts` | _needs a one-line description_ |
+| `apps/server/src/import-engine-match.ts` | _needs a one-line description_ |
+| `apps/server/src/jieqi-eve-adapter.ts` | _needs a one-line description_ |
+| `apps/server/src/jungle-eve-adapter.ts` | _needs a one-line description_ |
+| `apps/server/src/og-broadcast.ts` | _needs a one-line description_ |
+| `apps/server/src/og-player.ts` | _needs a one-line description_ |
+| `apps/server/src/persistence-game-data.ts` | _needs a one-line description_ |
+| `apps/server/src/persistence-xiangqi-players.ts` | _needs a one-line description_ |
+| `apps/server/src/player-pages.ts` | _needs a one-line description_ |
+| `apps/server/src/player-reference.ts` | _needs a one-line description_ |
+| `apps/server/src/replayable-games.ts` | _needs a one-line description_ |
+| `apps/server/src/routes/data.ts` | _needs a one-line description_ |
+| `apps/server/src/sitemap-broadcasts.ts` | _needs a one-line description_ |
+| `apps/server/src/variant-tenant/replay-guard.ts` | _needs a one-line description_ |
+| `apps/server/src/xiangqi-broadcast-dpxq-pairings.ts` | _needs a one-line description_ |
+| `apps/server/src/xiangqi-broadcast-levels.ts` | _needs a one-line description_ |
+| `apps/web/src/articles/svg-labels.ts` | _needs a one-line description_ |
+| `apps/web/src/articles/text-card.ts` | _needs a one-line description_ |
+| `apps/web/src/banqi-replay-board.ts` | _needs a one-line description_ |
+| `apps/web/src/banqi-rules-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/clock-emphasis.ts` | _needs a one-line description_ |
+| `apps/web/src/crazyhouse-xiangqi-replay-board.ts` | _needs a one-line description_ |
+| `apps/web/src/crazyhouse-xiangqi-replay.ts` | _needs a one-line description_ |
+| `apps/web/src/crazyhouse-xiangqi-rules-diagrams.ts` | _needs a one-line description_ |
+| `apps/web/src/crazyhouse-xiangqi-sample-game.ts` | _needs a one-line description_ |
+| `apps/web/src/data-page.ts` | _needs a one-line description_ |
+| `apps/web/src/embed-code.ts` | _needs a one-line description_ |
+| `apps/web/src/embed/embed-analysis.ts` | _needs a one-line description_ |
+| `apps/web/src/embed/embed-broadcast-page.ts` | _needs a one-line description_ |
+| `apps/web/src/embed/embed-line-page.ts` | _needs a one-line description_ |
+| `apps/web/src/fortress-xiangqi-replay-board.ts` | _needs a one-line description_ |
+| `apps/web/src/hidden-pool-placement.ts` | _needs a one-line description_ |
+| `apps/web/src/jieqi-replay-board.ts` | _needs a one-line description_ |
+| `apps/web/src/jungle-flip-replay-board.ts` | _needs a one-line description_ |
+| `apps/web/src/jungle-replay-board.ts` | _needs a one-line description_ |
+| `apps/web/src/live-atomic-xiangqi-sound.ts` | _needs a one-line description_ |
+| `apps/web/src/live-board-flip.ts` | _needs a one-line description_ |
+| `apps/web/src/players/cxa-coverage.ts` | _needs a one-line description_ |
+| `apps/web/src/players/cxa-points.ts` | _needs a one-line description_ |
+| `apps/web/src/players/cxa-ratings.ts` | _needs a one-line description_ |
+| `apps/web/src/players/ecco-english.ts` | _needs a one-line description_ |
+| `apps/web/src/players/player-stats.ts` | _needs a one-line description_ |
+| `apps/web/src/players/player-title.ts` | _needs a one-line description_ |
+| `apps/web/src/players/profiles.ts` | _needs a one-line description_ |
+| `apps/web/src/players/rating-history-chart.ts` | _needs a one-line description_ |
+| `apps/web/src/players/sanctions.ts` | _needs a one-line description_ |
+| `apps/web/src/postgame-panel.ts` | _needs a one-line description_ |
+| `apps/web/src/profile-games-tools.ts` | _needs a one-line description_ |
+| `apps/web/src/review/analysis-marks.ts` | _needs a one-line description_ |
+| `apps/web/src/review/move-advice-text.ts` | _needs a one-line description_ |
+| `apps/web/src/room-create-retry.ts` | _needs a one-line description_ |
+| `apps/web/src/server-render-fallback.ts` | _needs a one-line description_ |
+| `apps/web/src/watch-crazyhouse-xiangqi-replay.ts` | _needs a one-line description_ |
