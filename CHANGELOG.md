@@ -52,6 +52,7 @@ Conventions:
 
 ### Watching and review
 
+- Jungle bot games now pair only Misty and KataGo, at the strength you play against ([e4d993df](https://github.com/brianhliou/mistboard/commit/e4d993df))
 - A post on the reveal bug in our Pikafish jieqi bot (/blog/pikafish-reveal-bug): what went wrong, where it is in the code, the fix, and what it cost in strength; in English and Chinese ([b9ef83cf](https://github.com/brianhliou/mistboard/commit/b9ef83cf))
 - The AB-JChess post links all 400 match games, each with its own review page ([8b6617f1](https://github.com/brianhliou/mistboard/commit/8b6617f1))
 - Embedded Jungle studies show comments, move marks and side lines, like the study page ([fa06feca](https://github.com/brianhliou/mistboard/commit/fa06feca))
